@@ -103,3 +103,11 @@ test('renderStarHistorySvg produces stable accessible light and dark charts', ()
   assert.match(dark, /#0d1117/);
   assert.doesNotMatch(light, /NaN|undefined/);
 });
+
+test('a new repository renders an honest zero-star chart', () => {
+  const series = buildDailySeries([], new Date('2026-10-10T00:00:00Z'));
+  assert.deepEqual(series, [{ date: '2026-10-10', count: 0 }]);
+  const svg = renderStarHistorySvg(series, { repository: 'SivanCola/deeper', theme: 'light' });
+  assert.match(svg, /0 stars/);
+  assert.doesNotMatch(svg, /NaN|undefined/);
+});

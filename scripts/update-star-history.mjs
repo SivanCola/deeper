@@ -103,7 +103,7 @@ export async function fetchAllStargazers({
 }
 
 export function buildDailySeries(timestamps, asOf = new Date()) {
-  if (timestamps.length === 0) throw new Error('The repository has no stargazers');
+  if (timestamps.length === 0) return [{ date: asOf.toISOString().slice(0, 10), count: 0 }];
 
   const byDay = new Map();
   for (const timestamp of timestamps) {
@@ -186,7 +186,7 @@ export function renderStarHistorySvg(
   const timeSpan = Math.max(86_400_000, lastTime - firstTime);
   const spanDays = timeSpan / 86_400_000;
   const total = series.at(-1).count;
-  const yMaximum = niceMaximum(total);
+  const yMaximum = Math.max(5, niceMaximum(total));
   const xFor = (timestamp) => margin.left + ((timestamp - firstTime) / timeSpan) * plotWidth;
   const yFor = (count) => margin.top + plotHeight - (count / yMaximum) * plotHeight;
 
