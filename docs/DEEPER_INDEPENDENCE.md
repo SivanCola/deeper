@@ -67,6 +67,29 @@ repository and obtain publishing rights for the npm `@sivancola` user or organiz
 | `HOMEBREW_TAP_TOKEN` | Write access to your separate `homebrew-deeper` tap / 自有 tap 写入权限 |
 | `RELEASE_TAG_TOKEN` | Dedicated token allowed by your tag rules and allowed to read attestations / 发布标签身份 |
 
+### Homebrew token / Homebrew 专用 Token
+
+Use a fine-grained GitHub personal access token owned by `SivanCola`, restricted
+to **only** `SivanCola/homebrew-deeper`, with **Contents: Read and write** and the
+automatically required **Metadata: Read-only** permission. No account, Actions,
+administration, or workflow permission is needed. Set an expiration (for example,
+90 days) and replace the secret before it expires. Save the token as the repository
+Actions secret `HOMEBREW_TAP_TOKEN` in **SivanCola/deeper**, where the release
+workflows run. Do not save it in the tap repository or commit it to either repository.
+
+创建 fine-grained PAT：资源所有者选 `SivanCola`，只选 `homebrew-deeper` 仓库；
+权限仅需 `Contents: Read and write` 和自动附带的 `Metadata: Read-only`。
+设置有效期，在过期前更换 Deeper 仓库中的 Secret。凭据保存在
+`SivanCola/deeper` 的 Settings → Secrets and variables → Actions，名称为
+`HOMEBREW_TAP_TOKEN`，不要贴到聊天或提交进代码。
+
+The tap's `main` branch must exist. The first stable release creates
+`Casks/deeper.rb`; later releases update that file. A tap with only a README and
+license is ready for setup but does not offer an installable cask yet.
+
+tap 需要已有 `main` 分支。首次正式稳定发布会创建 `Casks/deeper.rb`，之后更新
+该文件；仅完成 tap 和 Token 配置时，还不能通过 Homebrew 安装尚未发布的版本。
+
 Repository Variables / 仓库变量:
 
 - `MINISIGN_PUBLIC_KEY`: the single base64 key line from `deeper.pub`, matching the
