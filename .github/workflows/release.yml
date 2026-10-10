@@ -250,12 +250,12 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
       - name: Download sealed release candidate
         if: ${{ inputs.candidate_artifact_name != '' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ inputs.candidate_artifact_name }}
           path: ${{ runner.temp }}/release-candidate
@@ -265,7 +265,7 @@ jobs:
         run: sha256sum -c SHA256SUMS
       - name: Download orchestrator-reviewed release notes
         if: ${{ inputs.orchestrated }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: orchestrator-reviewed-release-notes
           path: /tmp/orchestrator-reviewed-release-notes

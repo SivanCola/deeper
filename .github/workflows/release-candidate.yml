@@ -46,7 +46,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -203,7 +203,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -235,7 +235,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
       - name: Build each CLI binary once and package both surfaces
@@ -245,7 +245,7 @@ jobs:
           RELEASE_BUILD_TIME="$(git show -s --format=%cI "$RELEASE_SOURCE_SHA")"
           export RELEASE_BUILD_TIME
           node scripts/build-release-cli-candidate.mjs "${{ needs.resolve.outputs.version }}" candidate-cli
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: candidate-cli-${{ needs.resolve.outputs.candidate_id }}
           path: |
@@ -299,46 +299,46 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: candidate-cli-${{ needs.resolve.outputs.candidate_id }}
           path: payload
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-darwin-arm64
           path: payload/desktop/darwin-arm64
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-darwin-amd64
           path: payload/desktop/darwin-amd64
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-darwin-universal
           path: payload/desktop/darwin-universal
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-windows-amd64
           path: payload/desktop/windows-amd64
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-windows-arm64
           path: payload/desktop/windows-arm64
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-linux-amd64
           path: payload/desktop/linux-amd64
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-receipt-windows-amd64
           path: payload/evidence
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-receipt-windows-arm64
           path: payload/evidence
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop.outputs.artifact_prefix }}-receipt-macos-universal-intel
           path: payload/evidence
@@ -357,12 +357,12 @@ jobs:
           git worktree add --detach "$worktree" "${{ github.sha }}"
           node "$worktree/scripts/release-notes.mjs" render --version "v${{ needs.resolve.outputs.version }}" --output payload/evidence/release-notes.md
           git worktree remove "$worktree"
-      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: payload/**/*
       - name: Upload immutable candidate payload
         id: payload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ needs.resolve.outputs.artifact_namespace }}-payload-${{ needs.resolve.outputs.candidate_id }}
           path: payload
@@ -371,7 +371,7 @@ jobs:
           retention-days: 30
       - name: Retain native acceptance evidence
         id: evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ needs.resolve.outputs.artifact_namespace }}-evidence-${{ needs.resolve.outputs.candidate_id }}
           path: payload/evidence
@@ -407,10 +407,10 @@ jobs:
           else
             node scripts/release-candidate.mjs verify payload record/record.json
           fi
-      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: record/record.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ needs.resolve.outputs.artifact_namespace }}-record-${{ needs.resolve.outputs.candidate_id }}
           path: record/record.json
@@ -460,7 +460,7 @@ jobs:
             --summary "$GITHUB_STEP_SUMMARY" \
             --output "$RUNNER_TEMP/candidate-timing.json" \
             --title "Release candidate timing"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-candidate-timing-${{ needs.resolve.outputs.candidate_id || github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/candidate-timing.json
