@@ -67,6 +67,44 @@ repository and obtain publishing rights for the npm `@sivancola` user or organiz
 | `HOMEBREW_TAP_TOKEN` | Write access to your separate `homebrew-deeper` tap / 自有 tap 写入权限 |
 | `RELEASE_TAG_TOKEN` | Dedicated token allowed by your tag rules and allowed to read attestations / 发布标签身份 |
 
+### npm account and token / npm 账号与 Token
+
+The npm user `sivancola` owns the personal scope `@sivancola`; a separate npm
+organization is not needed for the configured seven public CLI packages. Save a
+dedicated granular access token as the repository Actions secret `NPM_TOKEN` in
+`SivanCola/deeper`. Limit package access to the `@sivancola` scope for initial
+publication, leave organization access disabled, and set an expiration. Scope
+access covers its current and future packages; after the first real release, a
+replacement token can instead select only the seven Deeper packages.
+
+npm 账号 `sivancola` 的个人 scope 是 `@sivancola`，当前七个公开 CLI 包无需另建组织。
+创建专用 granular access token，并保存在 Deeper 仓库的 `NPM_TOKEN` Secret。
+首次发布前可只授权 `@sivancola` scope，组织权限保持 No access，并设置有效期。
+scope 授权涵盖其中现有及未来的包；首次真实发布后，可换成仅授权七个 Deeper 包的 Token。
+
+The current publisher runs `npm publish` and manages dist-tags. It requires
+**Read and write (publish and stage)**; a **stage only** token cannot publish new
+versions through this workflow. Unattended token-based publication requires
+explicit authorization for the token's **Bypass two-factor authentication**
+permission. This permission applies to that token's package automation, not a
+request to disable account 2FA. Never commit or paste the token into chat.
+
+现有工作流直接执行 `npm publish` 并管理 dist-tags，需选择
+`Read and write (publish and stage)`。`stage only` 无法完成这条流程的新版本发布。
+无人值守的 Token 发布还需明确授权该 Token 的 `Bypass two-factor authentication`；
+这不是关闭账号 2FA。不要把 Token 提交进代码或贴到聊天中。
+
+npm has announced removal of direct publication with granular access tokens in
+January 2027. Before that transition, migrate the release workflow to trusted
+publishing or staged publishing; renewing this token alone will not preserve the
+current direct-publish behavior. Configuring credentials does not publish or
+reserve a package. See [npm token documentation](https://docs.npmjs.com/about-access-tokens/)
+and [trusted publishing](https://docs.npmjs.com/trusted-publishers/).
+
+npm 已公告将在 2027 年 1 月停止 granular token 的新版本直发能力；届时需要将
+发布流程迁移到 trusted publishing 或 staged publishing，仅续期 Token 无法解决。
+配置凭据不会发布或占用 npm 包名。
+
 ### Homebrew token / Homebrew 专用 Token
 
 Use a fine-grained GitHub personal access token owned by `SivanCola`, restricted
