@@ -21,7 +21,7 @@ const receipt: WorktreeMergeResult = {
   targetBranch: "main",
   mergedCommit: "merge-head",
   worktreeRoot: "/worktree",
-  worktreeBranch: "reasonix/delivery-test",
+  worktreeBranch: "deeper/delivery-test",
   worktreeHead: "worktree-head",
 };
 

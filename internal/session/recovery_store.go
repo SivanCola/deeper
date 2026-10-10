@@ -18,10 +18,10 @@ import (
 	"github.com/klauspost/compress/zstd"
 	bolt "go.etcd.io/bbolt"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/agent"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
 )
 
 // Version 8 carries the live message ids the writer checks new completions

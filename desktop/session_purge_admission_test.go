@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 func TestPurgeCommandUnrelatedSessionMustNotBlockPurge(t *testing.T) {

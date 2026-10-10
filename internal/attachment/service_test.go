@@ -16,7 +16,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/sessioncontent"
 )
 
 func TestPrepareAndCommitRoundTrip(t *testing.T) {

@@ -24,7 +24,7 @@ export function PermissionPresetChoice({
 }) {
   const t = useT();
   // Windows has no OS-level shell sandbox: the workspace preset still confines
-  // Reasonix file tools, but shell commands run unconfined, so say so here.
+  // Deeper file tools, but shell commands run unconfined, so say so here.
   const windows = useWindowChromeStore((state) => state.platform) === "windows";
   const preset = normalizeToolApprovalMode(value);
   const [confirmingFullAccess, setConfirmingFullAccess] = useState(false);

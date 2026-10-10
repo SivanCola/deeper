@@ -6,8 +6,8 @@ import (
 	"log"
 	"path/filepath"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
 )
 
 // The top-level runs field remains readable by the previous sidecar reader;
@@ -47,7 +47,7 @@ func (e *HeartbeatEngine) readRunHistorySidecar(cfg heartbeatConfig) (map[string
 		return nil, nil
 	}
 	if sidecar.SchemaVersion > heartbeatRunHistorySchemaVersion {
-		return nil, fmt.Errorf("heartbeat run-history sidecar schemaVersion %d is newer than this binary supports (%d); upgrade Reasonix", sidecar.SchemaVersion, heartbeatRunHistorySchemaVersion)
+		return nil, fmt.Errorf("heartbeat run-history sidecar schemaVersion %d is newer than this binary supports (%d); upgrade Deeper", sidecar.SchemaVersion, heartbeatRunHistorySchemaVersion)
 	}
 	if sidecar.SchemaVersion == 0 && sidecar.Revision == 0 && sidecar.Previous == nil {
 		return sidecar.Runs, nil

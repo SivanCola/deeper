@@ -103,7 +103,7 @@ for (const phase of ["idle", "executing", "finishing"] as const) {
 {
   const dom = installDom();
   let posts = 0;
-  installBridgeApp({ EnqueueInboxFollowup: async () => { posts++; throw new Error("reasonix_error:inbox_not_submitted"); } });
+  installBridgeApp({ EnqueueInboxFollowup: async () => { posts++; throw new Error("deeper_error:inbox_not_submitted"); } });
   runtimeStateStore.commit(state("finishing", 1));
   const view = await renderComposer();
   await paste("rejected follow-up");

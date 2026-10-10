@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/session"
+import "deeper/internal/session"
 
 type WorkspaceSessionSummary struct {
 	Ref             session.SessionRef `json:"ref"`

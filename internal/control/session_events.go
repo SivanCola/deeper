@@ -13,11 +13,11 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/turnevent"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/turnevent"
 )
 
 func sessionDirectory(sessionPath string) string {

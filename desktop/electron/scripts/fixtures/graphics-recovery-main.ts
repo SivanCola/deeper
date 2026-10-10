@@ -7,7 +7,7 @@ import { QuitSequencer } from "../../src/main/lifecycle.js";
 import { MainWindow, DEFAULT_GEOMETRY } from "../../src/main/window.js";
 import { AppZoomStore } from "../../src/main/zoomStore.js";
 
-const profile = process.env.REASONIX_RECOVERY_TEST_HOME!;
+const profile = process.env.DEEPER_RECOVERY_TEST_HOME!;
 mkdirSync(profile, { recursive: true });
 app.setPath("userData", profile);
 const boot = loadGraphicsBootstrap(profile, process.env, process.argv);
@@ -17,7 +17,7 @@ const graphics = new GraphicsSettingsStore(boot.configPath, boot);
 const events: string[] = [], prompts: Electron.MessageBoxOptions[] = [], responses: number[] = [];
 let relaunchArgs: string[] = [], flushHangs = false, reloads = 0;
 let duringDialog: (() => void) | undefined;
-if (process.env.REASONIX_RECOVERY_NATIVE_DIALOG !== "1") {
+if (process.env.DEEPER_RECOVERY_NATIVE_DIALOG !== "1") {
   dialog.showMessageBox = (async (...args: unknown[]) => {
     const options = args[args.length - 1] as Electron.MessageBoxOptions;
     prompts.push(options);
@@ -37,7 +37,7 @@ const lifecycle = new QuitSequencer({
 const host = installGraphicsRecovery({ graphics, lifecycle, log, logsDir: profile, build: "test", temporary });
 main = new MainWindow({
   preloadPath: join(profile, "unused-preload.cjs"),
-  appURL: "data:text/html,<title>Reasonix recovery test</title><h1>Recovery test</h1>",
+  appURL: "data:text/html,<title>Deeper recovery test</title><h1>Recovery test</h1>",
   platform: process.platform, log, zoomStore: new AppZoomStore(join(profile, "zoom.json")),
   isQuitting: () => lifecycle.isQuitting,
   onRendererFailure: (details, canReload) => host.recovery.fault({ role: "renderer", ...details }, canReload),
@@ -53,7 +53,7 @@ async function until(check: () => boolean, timeout = 10_000): Promise<void> {
 }
 void app.whenReady().then(async () => {
   main.create(DEFAULT_GEOMETRY); await main.loadApp(); main.show("test");
-  const mode = process.env.REASONIX_RECOVERY_TEST_MODE;
+  const mode = process.env.DEEPER_RECOVERY_TEST_MODE;
   if (mode === "gpu" || mode === "native") {
     flushHangs = true; responses.push(0, 0);
     app.emit("child-process-gone", {}, { type: "GPU", reason: "crashed", exitCode: 1 });

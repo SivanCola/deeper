@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func TestRecoveryCloseWaitsForTerminalFanout(t *testing.T) {

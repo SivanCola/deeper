@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 type strictNoWarningReasoningProvider struct{ *testutil.MockProvider }

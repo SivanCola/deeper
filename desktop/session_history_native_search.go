@@ -12,9 +12,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/config"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/projectiondb"
+	"deeper/internal/session"
 )
 
 // The native preparation owns both databases. Search is admitted only after

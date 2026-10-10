@@ -3,11 +3,11 @@ package boot
 import (
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/extension/sidecar"
-	"reasonix/internal/extensioncontract"
+	"deeper/internal/config"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/extension/sidecar"
+	"deeper/internal/extensioncontract"
 )
 
 // RuntimeReload is previous-generation state for incremental sidecar adoption
@@ -166,7 +166,7 @@ func planForPreflight(opts Options, toGen uint64) *extension.RuntimePlan {
 	if opts.Extensions == nil && opts.Graph == nil {
 		return nil
 	}
-	toGraph, err := buildRuntimeGraph(config.ReasonixHomeDir(), nil)
+	toGraph, err := buildRuntimeGraph(config.DeeperHomeDir(), nil)
 	if err != nil {
 		return nil
 	}
@@ -186,7 +186,7 @@ func finalizeBuildResult(res *BuildResult, publish bool) *BuildResult {
 	if res == nil {
 		return nil
 	}
-	if graph, err := buildRuntimeGraph(config.ReasonixHomeDir(), nil); err == nil {
+	if graph, err := buildRuntimeGraph(config.DeeperHomeDir(), nil); err == nil {
 		attachPlanAndStatus(res, nil, graph, 0, nil)
 	}
 	if publish {

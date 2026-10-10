@@ -1,6 +1,6 @@
 package openai
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // OutputBudget reports the default total output budget sent by this client.
 func (c *client) OutputBudget() int { return c.maxOutputTokens }

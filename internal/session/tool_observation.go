@@ -3,7 +3,7 @@ package session
 import (
 	"context"
 	"database/sql"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/sessioncontent"
 )
 
 // ToolObservation separates execution evidence from resident result bodies.

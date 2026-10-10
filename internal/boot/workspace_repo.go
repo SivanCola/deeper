@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 // workspaceRepoTimeout bounds the one git call a session open makes.

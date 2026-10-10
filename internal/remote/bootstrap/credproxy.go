@@ -9,18 +9,18 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/remote/sftpfs"
+	"deeper/internal/config"
+	"deeper/internal/remote/sftpfs"
 )
 
 // TokenEnvName is the remote .env entry read by the installed provider.
-const TokenEnvName = "REASONIX_PROXY_TOKEN"
+const TokenEnvName = "DEEPER_PROXY_TOKEN"
 
-const managedProviderComment = "# managed by the Reasonix desktop credential proxy — safe to delete"
+const managedProviderComment = "# managed by the Deeper desktop credential proxy — safe to delete"
 
 // managedProviderNamePrefix is the provider-name prefix every desktop proxy
 // provider carries (desktop/cred_proxy.go credentialProxyProviderName + "-").
-const managedProviderNamePrefix = "reasonix-desktop-proxy-"
+const managedProviderNamePrefix = "deeper-desktop-proxy-"
 
 // tomlAssignmentString parses trimmed as a TOML `key = "value"` line and
 // returns the unquoted string value. Whitespace around the equals sign and an
@@ -77,9 +77,9 @@ func isRemoteMissing(err error) bool {
 	return err != nil && (errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "no such file"))
 }
 
-// remoteConfigPath is ~/.reasonix/config.toml on the remote host.
+// remoteConfigPath is ~/.deeper/config.toml on the remote host.
 func remoteConfigPath(home string) string {
-	return path.Join(home, ".reasonix", "config.toml")
+	return path.Join(home, ".deeper", "config.toml")
 }
 
 // tomlString renders s as a basic TOML string.
@@ -315,7 +315,7 @@ func rewriteManagedProviderBaseURLs(text, baseURL string) (string, bool) {
 // the remote global .env, preserving every other line. Reports whether the
 // value was written or already current.
 func ensureCredentialToken(ctx context.Context, fs *sftpfs.FS, home, envName, token string) (bool, error) {
-	envPath := path.Join(home, ".reasonix", ".env")
+	envPath := path.Join(home, ".deeper", ".env")
 	data, _, _, rerr := fs.ReadFile(ctx, envPath, 1<<20)
 	if rerr != nil && !isRemoteMissing(rerr) {
 		return false, fmt.Errorf("bootstrap: read remote .env: %w", rerr)

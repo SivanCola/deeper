@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"reasonix/internal/historywork"
+	"deeper/internal/historywork"
 )
 
 func (c *Catalog) projectRegistryRow(ctx context.Context, tx *sql.Tx, p ProjectRecord, rootKey string) (bool, error) {

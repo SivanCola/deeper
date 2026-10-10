@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/pluginpkg"
 )
 
 // writePluginFile writes one file inside a plugin package fixture.
@@ -26,15 +26,15 @@ func parseResourcesPlugin(t *testing.T) pluginpkg.Package {
 	t.Helper()
 	root := t.TempDir()
 	writePluginFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "res",
   "contributes": {
     "prompts": ["prompts"],
-    "themes": ["themes/*.reasonix-theme"]
+    "themes": ["themes/*.deeper-theme"]
   }
 }`)
 	writePluginFile(t, filepath.Join(root, "prompts", "plan.md"), "---\ndescription: plan\n---\nPlan $ARGUMENTS")
-	writePluginFile(t, filepath.Join(root, "themes", "neon.reasonix-theme"), "theme bytes")
+	writePluginFile(t, filepath.Join(root, "themes", "neon.deeper-theme"), "theme bytes")
 	pkg, _, err := pluginpkg.ParseDir(root)
 	if err != nil {
 		t.Fatalf("ParseDir: %v", err)
@@ -122,7 +122,7 @@ func TestManifestV1ValidatorListsStayInSync(t *testing.T) {
 	}
 	root := t.TempDir()
 	manifest := `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "sync-check",
   "runtime": {
     "command": "sync-runtime",

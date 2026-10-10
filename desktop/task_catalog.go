@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/taskcatalog"
-	"reasonix/internal/taskmonitor"
+	"deeper/internal/control"
+	"deeper/internal/taskcatalog"
+	"deeper/internal/taskmonitor"
 )
 
 type TaskPageRequest struct {

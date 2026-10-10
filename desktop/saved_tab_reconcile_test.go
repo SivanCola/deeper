@@ -11,14 +11,14 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/draftstate"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 func newSavedTabReconcileTestApp(t *testing.T) *App {

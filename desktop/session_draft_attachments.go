@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/internal/control"
+	"deeper/desktop/internal/draftstate"
+	"deeper/internal/control"
 )
 
 func draftAdmissionError(err error) error {

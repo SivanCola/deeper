@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unicode"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // TestNoBuiltinToolNameHasWhitespace pins the invariant that lets

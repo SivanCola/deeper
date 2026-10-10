@@ -15,12 +15,12 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/sessioncontent"
 )
 
 const (
 	V4SchemaVersion      = 4
-	V4Codec              = "reasonix.session.linear/v4"
+	V4Codec              = "deeper.session.linear/v4"
 	v4InlinePayloadBytes = 64 << 10
 	v4MaxFrameBytes      = 8 << 20
 	v4FrameHeaderBytes   = 12

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"reasonix/internal/localeenv"
-	"reasonix/internal/provider"
+	"deeper/internal/localeenv"
+	"deeper/internal/provider"
 )
 
 var (
@@ -79,7 +79,7 @@ func SetProtectSensitiveFiles(enabled bool) { protectSensitiveFilesEnabled.Store
 func ProtectSensitiveFiles() bool { return protectSensitiveFilesEnabled.Load() }
 
 // RegisterCredentialEnvKeys permanently marks names whose values came from
-// Reasonix's credential store. Registration is a process-lifetime union so two
+// Deeper's credential store. Registration is a process-lifetime union so two
 // concurrent workspaces with different custom providers cannot make each
 // other's saved keys visible to tools. Explicit per-tool/plugin env config may
 // still add a value back after ProcessEnv has produced the safe base env.
@@ -141,7 +141,7 @@ func filterRegisteredCredentialEnv(env []string) []string {
 }
 
 // ProcessEnv returns the environment for shell/tool subprocesses. Values loaded
-// from Reasonix's credential store are always removed. Other credential-like
+// from Deeper's credential store are always removed. Other credential-like
 // inherited variables are removed only when the user opted into [secrets]
 // filter_subprocess_env, preserving existing gh/git/npm workflows by default.
 func ProcessEnv() []string {

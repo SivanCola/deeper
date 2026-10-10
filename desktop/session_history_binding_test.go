@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 func TestNativeHistoryCacheFailureDoesNotFallBackToFullReplay(t *testing.T) {
@@ -31,7 +31,7 @@ func TestNativeHistoryCacheFailureDoesNotFallBackToFullReplay(t *testing.T) {
 	if err := os.WriteFile(cache, []byte("cache unavailable"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("REASONIX_CACHE_HOME", cache)
+	t.Setenv("DEEPER_CACHE_HOME", cache)
 	request := normalizeHistorySliceRequest(HistorySliceRequest{Entries: 1, Turns: 1})
 	if _, err := a.coldHistorySlice(tabSessionDir(tab), tab.SessionPath, request); err == nil {
 		t.Fatal("cache failure silently fell back to full compatibility replay")

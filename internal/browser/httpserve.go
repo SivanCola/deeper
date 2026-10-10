@@ -60,7 +60,7 @@ func (h *httpHandler) capability(w http.ResponseWriter, r *http.Request) {
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !h.authorized(r) {
-		w.Header().Set("WWW-Authenticate", `Bearer realm="reasonix-browser"`)
+		w.Header().Set("WWW-Authenticate", `Bearer realm="deeper-browser"`)
 		writeWireError(w, http.StatusUnauthorized, "unauthorized", "invalid browser broker token")
 		return
 	}

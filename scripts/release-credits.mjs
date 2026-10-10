@@ -5,7 +5,7 @@
 
 import { execFileSync } from "node:child_process";
 
-export const defaultRepository = "esengine/DeepSeek-Reasonix";
+export const defaultRepository = "SivanCola/deeper";
 
 export const CreditErrorCode = Object.freeze({
   noToken: "release_credits.no_token",
@@ -118,7 +118,7 @@ export function githubRefLookup({
   attempts = 4,
 } = {}) {
   const [owner, name] = repository.split("/");
-  const headers = { "Content-Type": "application/json", "User-Agent": "reasonix-release-credits" };
+  const headers = { "Content-Type": "application/json", "User-Agent": "deeper-release-credits" };
   if (token) headers.Authorization = `Bearer ${token}`;
   const body = (ref) => JSON.stringify({ query: refQuery, variables: { owner, name, number: ref } });
 

@@ -8,7 +8,7 @@ import (
 )
 
 // RepairGuidanceView is a read-only repair hint for platforms where
-// Reasonix must not run the system package manager. Command is an allowlisted,
+// Deeper must not run the system package manager. Command is an allowlisted,
 // copy-only suggestion; it is never passed to a shell by the desktop backend.
 type RepairGuidanceView struct {
 	Manager string `json:"manager"`

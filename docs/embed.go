@@ -1,4 +1,4 @@
-// Package docs exposes the product documentation bundled with each Reasonix
+// Package docs exposes the product documentation bundled with each Deeper
 // build. Runtime consumers should retrieve focused sections instead of adding
 // the full corpus to the provider-visible prompt.
 package docs

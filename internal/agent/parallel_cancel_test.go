@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // stubbornTool ignores its context: it returns only when released.

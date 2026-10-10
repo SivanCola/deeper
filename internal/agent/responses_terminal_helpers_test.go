@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/responses"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/provider/responses"
+	"deeper/internal/tool"
 )
 
 type terminalExpectation struct {

@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // ErrMigratedModelUnavailable marks a saved selection whose migrated OpenCode

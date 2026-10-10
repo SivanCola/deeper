@@ -3,7 +3,7 @@ package sandbox
 import (
 	"context"
 
-	"reasonix/internal/permissionpreset"
+	"deeper/internal/permissionpreset"
 )
 
 type permissionPresetContextKey struct{}

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/permission"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/permission"
+	"deeper/internal/tool"
 )
 
 type approvalChoice struct {

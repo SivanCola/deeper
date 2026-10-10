@@ -12,7 +12,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 func TestDeepSeekCatalogUpgradePreservesSelectionsAndDeletion(t *testing.T) {

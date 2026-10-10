@@ -22,7 +22,7 @@ test("external URLs are limited to http, https and mailto", () => {
   assert.equal(isOpenableExternalURL("mailto:a@b.c"), true);
   assert.equal(isOpenableExternalURL("file:///etc/passwd"), false);
   assert.equal(isOpenableExternalURL("javascript:alert(1)"), false);
-  assert.equal(isOpenableExternalURL("reasonix://app/"), false);
+  assert.equal(isOpenableExternalURL("deeper://app/"), false);
   assert.equal(isOpenableExternalURL("not a url"), false);
   assert.equal(isOpenableExternalURL(42), false);
 });

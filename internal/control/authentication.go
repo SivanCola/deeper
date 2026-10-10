@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // AuthenticationStatus describes whether this controller generation may start
@@ -70,7 +70,7 @@ func (e *AuthenticationError) Error() string {
 	}
 	switch s.Status {
 	case AuthenticationMissingCredential:
-		return fmt.Sprintf("%s is missing its API key; use /setup here, or exit and run `reasonix setup` in your shell", label)
+		return fmt.Sprintf("%s is missing its API key; use /setup here, or exit and run `deeper setup` in your shell", label)
 	case AuthenticationRejected:
 		return fmt.Sprintf("%s rejected the configured credential; update it with /setup, choose another model, or retry explicitly", label)
 	case AuthenticationCredentialStoreUnavailable:

@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/store"
+	"deeper/internal/tool"
 )
 
 type blockingPinnedProvider struct {

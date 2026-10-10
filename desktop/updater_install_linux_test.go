@@ -41,15 +41,15 @@ func TestDetectLinuxInstallProfilePortableWritable(t *testing.T) {
 	}
 }
 
-func TestIsDpkgOwnedReasonixRejectsEmpty(t *testing.T) {
-	if isDpkgOwnedReasonix("") {
+func TestIsDpkgOwnedDeeperRejectsEmpty(t *testing.T) {
+	if isDpkgOwnedDeeper("") {
 		t.Fatal("empty path must not be dpkg-owned")
 	}
-	if isDpkgOwnedReasonix("relative/path") {
+	if isDpkgOwnedDeeper("relative/path") {
 		t.Fatal("relative path must not be dpkg-owned")
 	}
 	// A random absolute path that is not packaged.
-	if isDpkgOwnedReasonix(filepath.Join(t.TempDir(), "reasonix-desktop")) {
+	if isDpkgOwnedDeeper(filepath.Join(t.TempDir(), "deeper-desktop")) {
 		t.Fatal("unpackaged path must not be dpkg-owned")
 	}
 }

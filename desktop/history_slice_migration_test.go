@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 // TestHistorySliceColdLegacyEventFormat pages an ancient event-record

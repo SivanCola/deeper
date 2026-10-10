@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/sessioncatalog"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestLegacyTopicArchiveVisibility(t *testing.T) {

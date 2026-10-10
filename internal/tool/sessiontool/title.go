@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/store"
+	"deeper/internal/tool"
 )
 
 // TitleChangedFunc projects a successful canonical title write into optional

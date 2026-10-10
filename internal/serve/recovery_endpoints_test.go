@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
 )
 
 type pendingPromptAPI struct {

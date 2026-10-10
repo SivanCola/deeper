@@ -3,7 +3,7 @@ package jobs
 import (
 	"context"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // HasTimedOut reports whether teardown returned before every job had unwound.

@@ -1,8 +1,8 @@
 package control
 
 import (
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
 )
 
 // InheritLifecycleFrom carries same-session lifecycle state across controller

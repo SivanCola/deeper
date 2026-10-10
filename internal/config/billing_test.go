@@ -3,8 +3,8 @@ package config
 import (
 	"testing"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/provider"
 )
 
 func TestDisplayCurrencyIndependentOfListPrices(t *testing.T) {

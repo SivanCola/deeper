@@ -16,11 +16,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func modelSettingsBootTab(t *testing.T, app *App, id, root, model string) *WorkspaceTab {
@@ -66,7 +66,7 @@ func TestModelSettingsRemovalRetryKeepsFailedTargetAndAppliesInactiveSibling(t *
 	working := modelSettingsBootTab(t, app, "working", workingRoot, oldRef)
 	app.activeTabID = broken.ID
 	oldBroken, oldWorking := broken.Ctrl, working.Ctrl
-	if err := os.WriteFile(filepath.Join(brokenRoot, "reasonix.toml"), []byte("[agent]\nsystem_prompt_file = \"/outside-workspace/prompt.md\"\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(brokenRoot, "deeper.toml"), []byte("[agent]\nsystem_prompt_file = \"/outside-workspace/prompt.md\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := app.DeleteProvider("old"); err != nil {
@@ -104,7 +104,7 @@ func TestModelSettingsProjectOverrideSkipsRebuild(t *testing.T) {
 	app.ctx = context.Background()
 	app.readyHook = func() {}
 	projectRoot := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectRoot, "reasonix.toml"), []byte("[agent]\nplanner_model = \""+oldRef+"\"\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(projectRoot, "deeper.toml"), []byte("[agent]\nplanner_model = \""+oldRef+"\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	project := modelSettingsBootTab(t, app, "project", projectRoot, oldRef)

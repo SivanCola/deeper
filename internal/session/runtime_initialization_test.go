@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // Both messages have valid canonical identities, but their display records

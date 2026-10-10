@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 // newIdentityBusyServe wires an exclusive-session serve whose replacement

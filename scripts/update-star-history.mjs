@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 const API_VERSION = '2026-03-10';
-const DEFAULT_REPOSITORY = 'esengine/DeepSeek-Reasonix';
+const DEFAULT_REPOSITORY = 'SivanCola/deeper';
 
 export function parseLinkHeader(value) {
   const links = {};
@@ -26,7 +26,7 @@ async function requestPage(url, token, fetchImpl) {
         headers: {
           Accept: 'application/vnd.github.star+json',
           Authorization: `Bearer ${token}`,
-          'User-Agent': 'DeepSeek-Reasonix-star-history-updater',
+          'User-Agent': 'deeper-star-history-updater',
           'X-GitHub-Api-Version': API_VERSION,
         },
         signal: AbortSignal.timeout(30_000),

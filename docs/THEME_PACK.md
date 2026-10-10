@@ -1,6 +1,6 @@
-# Reasonix Theme Pack V2
+# Deeper Theme Pack V2
 
-Native theme packs for the Reasonix desktop app. Packs are controlled skins:
+Native theme packs for the Deeper desktop app. Packs are controlled skins:
 semantic color tokens, density/corner recipes, and optional local images for
 the home and task/workspace scenes. They **cannot** run CSS, JavaScript, fonts,
 remote URLs, or SVG scripts. V1 packs remain valid and use the home image in
@@ -59,8 +59,8 @@ The gallery has four groups:
 | --- | --- | --- | --- | --- |
 | **Base styles** | Six visual directions (Graphite, Aurora, Slate, Carbon, Nocturne, Amber), token-less | no (duplicate first) | no | no |
 | **Official themes** | Eight read-only packs embedded in the installer (manifest + original background + thumbnail, MIT) | no (duplicate first) | no | no |
-| **User themes** | Created in the editor, duplicated, or imported as `.reasonix-theme` | yes | yes | yes |
-| **Plugin themes** | `.reasonix-theme` packs contributed by enabled plugins (Manifest v2 `contributes.themes`), read straight from the plugin root — never copied into the user library | no | no (disable/uninstall the plugin) | no |
+| **User themes** | Created in the editor, duplicated, or imported as `.deeper-theme` | yes | yes | yes |
+| **Plugin themes** | `.deeper-theme` packs contributed by enabled plugins (Manifest v2 `contributes.themes`), read straight from the plugin root — never copied into the user library | no | no (disable/uninstall the plugin) | no |
 
 - All 14 built-in ids (6 base + 8 official) are **reserved**: save, import, copy-over
   and delete all refuse collisions.
@@ -93,14 +93,14 @@ The gallery has four groups:
 | `official-noir-gold` | Noir Gold / 黑金序曲 | carbon | Black velvet, gold spotlights, original gentleman |
 
 Previews are shown inside the app's theme library (Settings → Appearance) from
-real Reasonix builds. **Screenshots of the app must not be imported as theme
+real Deeper builds. **Screenshots of the app must not be imported as theme
 backgrounds.** Asset provenance, hashes and licence ledger:
 [THEME_ASSETS.md](./THEME_ASSETS.md) · generator scripts in
 `scripts/official-theme-art/` (procedural, fixed seeds, reproducible).
 
 ## Package format
 
-Distribute as a `.reasonix-theme` ZIP. The archive root may contain **only**:
+Distribute as a `.deeper-theme` ZIP. The archive root may contain **only**:
 
 | File | Required | Notes |
 | --- | --- | --- |
@@ -200,7 +200,7 @@ Colors must **not** include `url()`, gradients, or arbitrary CSS.
 
 ## Storage
 
-| Path under Reasonix home | Purpose |
+| Path under Deeper home | Purpose |
 | --- | --- |
 | `desktop-theme-state.json` | Versioned active theme pointer (not `config.toml`) |
 | `themes/<id>/` | User theme library (`theme.json` + up to two optional scene images) |
@@ -210,7 +210,7 @@ Legacy installs without theme state keep the previous appearance. Old app versio
 ## Desktop bridge (frontend)
 
 List / activate / reset / save / delete / copy / import / export / pick background.
-The UI only receives temporary asset URLs (`/__reasonix_theme_asset/...`) or data URLs — never absolute host paths.
+The UI only receives temporary asset URLs (`/__deeper_theme_asset/...`) or data URLs — never absolute host paths.
 
 Import: same id is rejected until the user confirms atomic replace. Built-ins cannot be overwritten or deleted. Corrupt / missing packs fall back to the Graphite path. `/theme reset` and the command palette restore entry clear the pack.
 
@@ -230,7 +230,7 @@ A minimal, royalty-free starter (no portrait photos):
   "schemaVersion": 1,
   "id": "paper-dawn",
   "name": "Paper Dawn",
-  "author": "Reasonix",
+  "author": "Deeper",
   "description": "Template theme — solid tokens only, no background image.",
   "license": "CC0-1.0",
   "baseStyle": "graphite",
@@ -273,4 +273,4 @@ A minimal, royalty-free starter (no portrait photos):
 }
 ```
 
-Zip as `paper-dawn.reasonix-theme` with only `theme.json` at the root.
+Zip as `paper-dawn.deeper-theme` with only `theme.json` at the root.

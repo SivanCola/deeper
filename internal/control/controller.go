@@ -28,45 +28,45 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/agent"
-	"reasonix/internal/agentpreset"
-	"reasonix/internal/autoresearch"
-	"reasonix/internal/billing"
-	"reasonix/internal/capability"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/command"
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/extension/uihub"
-	"reasonix/internal/gitcmd"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/guardian"
-	"reasonix/internal/hook"
-	"reasonix/internal/i18n"
-	"reasonix/internal/jobs"
-	"reasonix/internal/mcpinteraction"
-	"reasonix/internal/memory"
-	"reasonix/internal/nilutil"
-	"reasonix/internal/permission"
-	"reasonix/internal/permissionpreset"
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/plugin"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncontext"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/shellrun"
-	"reasonix/internal/skill"
-	"reasonix/internal/store"
-	"reasonix/internal/taskmonitor"
-	"reasonix/internal/tool"
-	"reasonix/internal/workspacelease"
+	"deeper/internal/ablation"
+	"deeper/internal/agent"
+	"deeper/internal/agentpreset"
+	"deeper/internal/autoresearch"
+	"deeper/internal/billing"
+	"deeper/internal/capability"
+	"deeper/internal/checkpoint"
+	"deeper/internal/command"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/extension/uihub"
+	"deeper/internal/gitcmd"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/guardian"
+	"deeper/internal/hook"
+	"deeper/internal/i18n"
+	"deeper/internal/jobs"
+	"deeper/internal/mcpinteraction"
+	"deeper/internal/memory"
+	"deeper/internal/nilutil"
+	"deeper/internal/permission"
+	"deeper/internal/permissionpreset"
+	"deeper/internal/persistentshell"
+	"deeper/internal/plugin"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/session"
+	"deeper/internal/sessioncontext"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/shellrun"
+	"deeper/internal/skill"
+	"deeper/internal/store"
+	"deeper/internal/taskmonitor"
+	"deeper/internal/tool"
+	"deeper/internal/workspacelease"
 )
 
 // ErrTurnRunning reports that a caller tried to start a second foreground turn
@@ -712,7 +712,7 @@ type Options struct {
 	// prompt.
 	OnRememberPlanModeReadOnlyCommand func(prefix string) PlanModeReadOnlyCommandTrustResult
 	// OnPersistWriteAccess writes sandbox.allow_write and an optional permission
-	// rule to the workspace reasonix.toml as one transaction.
+	// rule to the workspace deeper.toml as one transaction.
 	OnPersistWriteAccess PersistWriteAccessFunc
 	// WriteRoots is the session-scoped writable directory manager shared with
 	// built-in file tools and bash.
@@ -962,7 +962,7 @@ func (c *Controller) initializeTaskRecorder(store taskmonitor.WriteStore) {
 		return
 	}
 	if store == nil {
-		store = taskmonitor.NewFileStore(filepath.Join(".reasonix", "tasks"))
+		store = taskmonitor.NewFileStore(filepath.Join(".deeper", "tasks"))
 	}
 	sessionID := func() string { return c.parentSessionID() }
 	if c.background.scope != nil {
@@ -1060,7 +1060,7 @@ func (c *Controller) SetProviderResolver(r provider.Resolver) {
 // SetOnSessionRecovered installs the ownership handoff invoked before the
 // controller commits to an automatically created recovery branch. Frontends
 // that acquire their session owner after controller construction (for example
-// reasonix serve) use this before publishing the controller.
+// deeper serve) use this before publishing the controller.
 func (c *Controller) SetOnSessionRecovered(fn func(SessionRecoveryInfo) error) {
 	if c == nil {
 		return
@@ -1242,7 +1242,7 @@ const (
 const SandboxEscapeApprovalTool = "sandbox_escape"
 
 // ManagedConfigWriteApprovalTool is the internal Tool name used for per-write
-// approval when a file tool targets a Reasonix-managed config file outside the
+// approval when a file tool targets a Deeper-managed config file outside the
 // workspace write roots. It is a fresh human decision: config files control
 // providers, sandbox rules, permissions, and MCP servers for future sessions,
 // so YOLO/auto approval must never answer it.
@@ -1692,7 +1692,7 @@ func (c *Controller) submitCommandOrTurnReady(trimmed, input, display string, sc
 			return
 		}
 		// A custom command wins over a skill of the same name; both resolve to a
-		// turn. Built-ins and their explicit Reasonix namespace are handled above.
+		// turn. Built-ins and their explicit Deeper namespace are handled above.
 		if sent, ok := c.CustomCommand(trimmed); ok {
 			c.runGuardedWithAdmission(func(ctx context.Context) error {
 				return runGoalLoop(ctx, sent, sent, display)
@@ -2000,7 +2000,7 @@ func (c *Controller) noticeDetail(text, detail string) {
 }
 
 // Run executes a turn synchronously, returning the agent's error. Used by the
-// headless `reasonix run` path, where the Sink renders to stdout and the caller
+// headless `deeper run` path, where the Sink renders to stdout and the caller
 // just needs the exit status — no TurnDone event, no cancel bookkeeping.
 func (c *Controller) runReady(ctx context.Context, input string) (err error) {
 	ctx = extension.ContextWithRuntimeOwner(ctx, c.RuntimeOwner())
@@ -2310,7 +2310,7 @@ func rulesWithoutFreshHumanApproval(rules []permission.Rule) []permission.Rule {
 }
 
 // ApplyHeadlessApprovalMode configures the executor gate for a non-interactive
-// (`reasonix run`) session from an explicit --permission-mode. Unlike
+// (`deeper run`) session from an explicit --permission-mode. Unlike
 // EnableInteractiveApproval it installs no blocking approver, asker, or
 // fresh-approval prompt: there is no key loop to answer them, and the default
 // infinite approval timeout would wedge the run forever on an Ask rule, the
@@ -3642,7 +3642,7 @@ func (c *Controller) recoverExternallyRemovedSession(path string, saveErr error)
 	slog.Warn("controller: active session was removed externally; moved runtime to stable recovery path",
 		"path", path, "recovery", info.Path, "existing", info.Existing)
 	c.sink.Emit(sessionRecoveryNotice(event.NoticeCodeSessionRecoveryForked,
-		"the open session file was removed outside Reasonix; your active conversation was preserved as one recovery copy"))
+		"the open session file was removed outside Deeper; your active conversation was preserved as one recovery copy"))
 	return info.Path, nil
 }
 
@@ -4557,7 +4557,7 @@ func (c *Controller) AddMCPServer(e config.PluginEntry) (int, error) {
 
 // ConnectMCPServer connects an MCP server entry for this session without writing
 // it to config. Desktop owns config placement so it can keep user-level settings
-// out of project reasonix.toml while preserving the CLI AddMCPServer semantics.
+// out of project deeper.toml while preserving the CLI AddMCPServer semantics.
 func (c *Controller) ConnectMCPServer(e config.PluginEntry) (int, error) {
 	return c.connectMCPServer(e)
 }
@@ -5404,7 +5404,7 @@ func (c *Controller) Bypass() bool {
 // the SessionAPI surface; each is a thin delegation. See memory.go.
 
 // QuickAdd appends a one-line note to the doc-memory file for scope (project
-// REASONIX.md by default) — the write side of "#<note>". Returns the file written.
+// DEEPER.md by default) — the write side of "#<note>". Returns the file written.
 func (c *Controller) QuickAdd(scope memory.Scope, note string) (string, error) {
 	return c.memory.quickAdd(scope, note)
 }
@@ -5540,7 +5540,7 @@ func sandboxEscapeApprovalReason(reason string) string {
 	return reason
 }
 
-// managedConfigWriteApprover routes a file tool's Reasonix-managed config write
+// managedConfigWriteApprover routes a file tool's Deeper-managed config write
 // through the fresh-human approval prompt (see ManagedConfigWriteApprovalTool).
 // A session grant is tool-wide (mirroring sandbox_escape): one "allow for this
 // session" covers the rest of the repair flow across the handful of managed
@@ -5829,7 +5829,7 @@ func (c *Controller) requestApprovalDecisionWithOptions(ctx context.Context, too
 	// Claude's PermissionRequest contract answers the dialog on the plugin's
 	// behalf (auto-allow/auto-deny) instead of merely observing it, so a
 	// decision here must preempt the prompt rather than just notify — this
-	// runs synchronously and before the dialog is shown. Native Reasonix
+	// runs synchronously and before the dialog is shown. Native Deeper
 	// PermissionRequest hooks stay advisory-only (see claudePermissionBlocking).
 	//
 	// Hook auto-allow cannot replace a fresh-human decision. Interactive

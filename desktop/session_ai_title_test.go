@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/sessioncatalog"
 )
 
 type desktopSessionTitleProvider struct {

@@ -1,6 +1,6 @@
 package control
 
-import "reasonix/internal/jobs"
+import "deeper/internal/jobs"
 
 // ModelApplicationDetails contains only user-facing state; never credentials,
 // request bodies, internal paths, or mutable resolver configuration.

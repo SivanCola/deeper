@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // TestSetBotSettingsDingtalkRoundTrip 验证钉钉配置经 SetBotSettings 后能正确落盘并被读回。

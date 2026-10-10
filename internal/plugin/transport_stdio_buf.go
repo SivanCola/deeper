@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 // tailBuffer keeps the last limit bytes written, for truncating a process's

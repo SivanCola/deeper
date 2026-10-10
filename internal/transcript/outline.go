@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/textutil"
+	"deeper/internal/textutil"
 )
 
 const (

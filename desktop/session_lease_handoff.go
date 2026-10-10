@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 // handoffSessionLease acquires path and publishes it on the tab without

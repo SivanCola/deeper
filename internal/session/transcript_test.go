@@ -3,10 +3,10 @@ package session
 import (
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/transcript"
-	"reasonix/internal/turnevent"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/transcript"
+	"deeper/internal/turnevent"
 )
 
 func TestRuntimeTranscriptCoverageIncludesNonVisibleBusinessCommits(t *testing.T) {

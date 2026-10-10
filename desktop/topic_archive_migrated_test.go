@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 func TestMigratedTopicArchiveOwnershipRollback(t *testing.T) {

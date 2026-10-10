@@ -3,7 +3,7 @@ package control
 import (
 	"testing"
 
-	"reasonix/internal/skill"
+	"deeper/internal/skill"
 )
 
 func TestSlashArgItemsLazyResolvesOnlyDynamicStructuredCommands(t *testing.T) {

@@ -16,9 +16,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/projectiondb"
+	"deeper/internal/store"
 )
 
 const defaultMissingGrace = 30 * time.Second

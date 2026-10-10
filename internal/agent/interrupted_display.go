@@ -2,9 +2,9 @@ package agent
 
 import (
 	"context"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 	"errors"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
 	"strings"
 )
 

@@ -8,17 +8,17 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/gitcmd"
-	"reasonix/internal/hook"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/secrets"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/gitcmd"
+	"deeper/internal/hook"
+	"deeper/internal/sandbox"
+	"deeper/internal/secrets"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 func reviewCommand(args []string) int {
@@ -46,7 +46,7 @@ func reviewCommand(args []string) int {
 	// falls through a keyless default to the next configured provider
 	// (issue #6996), so a user whose default_model no longer has a key
 	// (e.g. they migrated providers) does not have to add --model to
-	// every `reasonix review` invocation.
+	// every `deeper review` invocation.
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error: failed to load config:", err)
@@ -89,7 +89,7 @@ func reviewCommand(args []string) int {
 	}
 
 	// 5. Build a review-scoped sub-agent registry from the user's own config:
-	// the checkout's reasonix.toml may not choose a binary or a sandbox here.
+	// the checkout's deeper.toml may not choose a binary or a sandbox here.
 	secrets.RegisterCredentialEnvKeys(cfg.CredentialEnvNames())
 	reg := buildReviewSubagentRegistry(reviewSk, reviewToolConfig(), root)
 
@@ -133,7 +133,7 @@ func buildReviewSubagentRegistry(reviewSk skill.Skill, cfg *config.Config, root 
 	// mirroring boot's addBuiltins: readers/search bound to the configured
 	// forbid-read roots, bash to the OS sandbox spec plus the session-data
 	// guard. The zero-value tools registered at init honor none of the user's
-	// [sandbox] config, so `reasonix review` previously read forbid_read
+	// [sandbox] config, so `deeper review` previously read forbid_read
 	// paths a normal session would refuse.
 	writeRoots := cfg.WriteRootsForRoot(root)
 	forbidReadRoots := boot.RuntimeForbidReadRoots(cfg, root)
@@ -156,7 +156,7 @@ func buildReviewSubagentRegistry(reviewSk skill.Skill, cfg *config.Config, root 
 	if reviewSk.ReadOnly {
 		// The built-in review skill declares read-only; enforce it here exactly
 		// like the in-session runner does (writer tools stripped, bash under the
-		// permission-classified read-only policy) so `reasonix review` is not a
+		// permission-classified read-only policy) so `deeper review` is not a
 		// writable backdoor.
 		return agent.ReadOnlySubagentToolRegistry(parentReg, reviewSk.AllowedTools)
 	}
@@ -227,7 +227,7 @@ func buildReviewTask(diff string, extra string) string {
 
 // reviewHookRunner takes hooks and their shell from user-level sources only: a
 // review usually runs in a checkout under review, and neither its
-// .reasonix/settings.json nor its reasonix.toml may choose a process this host
+// .deeper/settings.json nor its deeper.toml may choose a process this host
 // executes, not even by a bare command name resolving against the checkout
 // cwd. Each run is its own hook session.
 func reviewHookRunner(root string) *hook.Runner {

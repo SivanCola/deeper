@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // A user-typed inline skill invocation must reach the provider in the same
@@ -38,7 +38,7 @@ func TestEffectInlineSkillInvocationReachesProviderPinned(t *testing.T) {
 			dir := robustTempDir(t)
 			t.Chdir(dir)
 			rec = &effectRecordingProvider{}
-			writeFile(t, dir, "reasonix.toml", `
+			writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -53,8 +53,8 @@ kind = "boot-effect-skill-invocation"
 model = "x"
 `)
 			approveWorkspace(t, dir)
-			writeFile(t, dir, ".reasonix/skills/probe/SKILL.md", "---\ndescription: probe skill\ntriggers: probe, tidy\nauto-use: require\n---\nPROBE BODY\nthen run /other")
-			writeFile(t, dir, ".reasonix/skills/other/SKILL.md", "---\ndescription: other skill\ntriggers: other\nauto-use: require\n---\nOTHER BODY")
+			writeFile(t, dir, ".deeper/skills/probe/SKILL.md", "---\ndescription: probe skill\ntriggers: probe, tidy\nauto-use: require\n---\nPROBE BODY\nthen run /other")
+			writeFile(t, dir, ".deeper/skills/other/SKILL.md", "---\ndescription: other skill\ntriggers: other\nauto-use: require\n---\nOTHER BODY")
 			ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
 			if err != nil {
 				t.Fatalf("Build: %v", err)

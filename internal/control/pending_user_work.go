@@ -1,6 +1,6 @@
 package control
 
-import "reasonix/internal/sessioninbox"
+import "deeper/internal/sessioninbox"
 
 // hasPendingUserWork reads only already-owned state and an already open inbox.
 // It never creates an inbox or holds a Controller lock while taking an

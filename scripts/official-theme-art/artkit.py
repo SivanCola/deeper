@@ -1,4 +1,4 @@
-"""Shared procedural art toolkit for Reasonix official theme backgrounds.
+"""Shared procedural art toolkit for Deeper official theme backgrounds.
 
 All artwork is generated from scratch with numpy + PIL. No reference pixels,
 no third-party assets, no text, no UI mockery. Fixed seeds make every render

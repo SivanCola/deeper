@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncatalog"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestMetadataTopicTextFilterUsesLazyUnicodeSnapshot(t *testing.T) {

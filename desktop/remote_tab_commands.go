@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func (a *App) RenameRemoteProjectSession(hostID, workspace, name, title string) error {

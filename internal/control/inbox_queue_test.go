@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/event"
+	"deeper/internal/sessioninbox"
 )
 
 func TestInboxQueueFullBodySavePreservesEnvelopeAndSession(t *testing.T) {

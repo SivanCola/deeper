@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/internal/config"
 	"errors"
-	"reasonix/internal/config"
 )
 
 var errProjectStateCollisionAssignment = errors.New("project state collision assignment")

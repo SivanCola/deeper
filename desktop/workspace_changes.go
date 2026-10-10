@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/diff"
-	"reasonix/internal/gitcmd"
+	"deeper/internal/control"
+	"deeper/internal/diff"
+	"deeper/internal/gitcmd"
 )
 
 type gitStatusEntry struct {
@@ -134,7 +134,7 @@ func (a *App) workspaceChanges(ctx context.Context, tabID string) WorkspaceChang
 		if acc.hasSession {
 			acc.view.Sources = append(acc.view.Sources, "session")
 			// Session-owned files with a recorded preimage can one-click revert
-			// to the first Reasonix touch (not Git HEAD).
+			// to the first Deeper touch (not Git HEAD).
 			if ctrl != nil {
 				if state, ok := ctrl.CheckpointFileState(acc.view.Path); ok && state.Owned {
 					acc.view.CanSessionRevert = true
@@ -186,7 +186,7 @@ func (a *App) workspaceRepoForTab(tabID string) (gitcmd.Repo, error) {
 // WorkspaceChangeDetail returns the current patch for one file in the
 // requested tab. Git is authoritative when available because HEAD -> worktree
 // includes both staged and unstaged edits. Session checkpoints provide a
-// git-free fallback and cover files edited by Reasonix before Git notices them.
+// git-free fallback and cover files edited by Deeper before Git notices them.
 func (a *App) WorkspaceChangeDetail(tabID, path string) (WorkspaceChangeDetailView, error) {
 	workspaceRoot, ctrl, ok := a.workspaceChangesTarget(strings.TrimSpace(tabID))
 	if !ok {

@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
+	"deeper/internal/config"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
 )
 
 // Stage 6b1 dispatch wiring tests: the boot builds the dispatcher, runs the
@@ -60,7 +60,7 @@ func TestBootSystemPromptStrategyAttribution(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	home := config.ReasonixHomeDir()
+	home := config.DeeperHomeDir()
 
 	// Baseline: no sidecars — no dispatcher, and the golden-path fingerprint.
 	plain, err := BuildRuntime(context.Background(), Options{})
@@ -137,7 +137,7 @@ func TestBootStableExtensionCacheGuard(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.ReasonixHomeDir(), "stable-strategist", map[string]any{
+	installBootFakePlugin(t, config.DeeperHomeDir(), "stable-strategist", map[string]any{
 		"replaces": []string{"system_prompt"},
 		"env":      map[string]string{bootFakeEnvReplacePrompt: "STABLE EXTENSION PROMPT"},
 	})
@@ -195,7 +195,7 @@ func TestBootSystemPromptStrategyFailureFailsBuild(t *testing.T) {
 		dir := robustTempDir(t)
 		t.Chdir(dir)
 		writeRuntimeFixture(t, dir)
-		installBootFakePlugin(t, config.ReasonixHomeDir(), "blocker", map[string]any{
+		installBootFakePlugin(t, config.DeeperHomeDir(), "blocker", map[string]any{
 			"replaces": []string{"system_prompt"},
 			"env":      map[string]string{bootFakeEnvBlockEvent: "system_prompt.build"},
 		})
@@ -213,7 +213,7 @@ func TestBootSystemPromptStrategyFailureFailsBuild(t *testing.T) {
 		dir := robustTempDir(t)
 		t.Chdir(dir)
 		writeRuntimeFixture(t, dir)
-		installBootFakePlugin(t, config.ReasonixHomeDir(), "violator", map[string]any{
+		installBootFakePlugin(t, config.DeeperHomeDir(), "violator", map[string]any{
 			"replaces": []string{"system_prompt"},
 			"env":      map[string]string{bootFakeEnvInvalidEvent: "system_prompt.build"},
 		})
@@ -233,7 +233,7 @@ func TestBootSystemPromptBuildEventObserved(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	home := config.ReasonixHomeDir()
+	home := config.DeeperHomeDir()
 	eventLog := filepath.Join(dir, "events.log")
 
 	// The slot owner replaces the prompt; the observer subscribes to

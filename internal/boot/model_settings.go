@@ -1,9 +1,9 @@
 package boot
 
 import (
+	"deeper/internal/config"
+	"deeper/internal/provider"
 	"fmt"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
 )
 
 func runtimeModelContinuationReader(root, modelName string, old *config.Config, settings *config.ModelRuntimeSettings, externalResolvers ...provider.Resolver) func() error {

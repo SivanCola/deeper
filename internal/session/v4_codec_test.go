@@ -12,7 +12,7 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/sessioncontent"
 )
 
 func TestV4CodecExternalizesLargePayloadAndRoundTripsExactBytes(t *testing.T) {

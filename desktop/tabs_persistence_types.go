@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
+	"deeper/internal/boot"
+	"deeper/internal/control"
 )
 
 type desktopTabEntry struct {

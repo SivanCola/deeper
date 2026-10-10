@@ -2,8 +2,8 @@ package session
 
 import (
 	"bytes"
+	"deeper/internal/provider"
 	"encoding/json"
-	"reasonix/internal/provider"
 	"reflect"
 	"testing"
 )

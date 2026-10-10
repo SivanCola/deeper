@@ -10,7 +10,7 @@ export function analyseProfile(profile: CpuProfile): ProfileFrame[] {
     const frame = nodes.get(id);
     if (!frame) continue;
     // Built application scripts only: omit eval, external URLs and user paths.
-    if (!frame.url.startsWith("reasonix://app/")) continue;
+    if (!frame.url.startsWith("deeper://app/")) continue;
     const file = frame.url.split("/").pop()?.split(/[?#]/)[0] ?? "";
     if (!/^[\w.-]+\.m?js$/.test(file)) continue;
     const row = rows.get(id) ?? { label: `${frame.functionName.replace(/[\r\n]/g, " ").slice(0, 100) || "(anonymous)"} (${file}:${frame.lineNumber + 1})`, samples: 0, selfMs: 0 };

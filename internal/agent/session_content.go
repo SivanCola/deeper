@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // ContentDigest returns the canonical digest used by the session WAL and

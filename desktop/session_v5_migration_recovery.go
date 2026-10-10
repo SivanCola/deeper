@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/store"
 )
 
 // Recovery copies are durable safety artifacts, not ordinary conversations.

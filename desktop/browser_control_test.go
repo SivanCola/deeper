@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 func browserControlTab() *WorkspaceTab {

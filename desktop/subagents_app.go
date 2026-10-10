@@ -9,17 +9,17 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/hook"
-	"reasonix/internal/permission"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/hook"
+	"deeper/internal/permission"
+	"deeper/internal/sandbox"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 // SubagentProfileInput is the desktop-bound shape for authoring a subagent
@@ -272,7 +272,7 @@ func (a *App) DeleteSubagentProfile(name, scope string) error {
 
 // TrySubagentProfile runs a subagent profile once, synchronously, fully
 // isolated from any live session — it builds its own provider and tool
-// registry straight from config, like the standalone `reasonix review` CLI
+// registry straight from config, like the standalone `deeper review` CLI
 // command (internal/cli/review.go), and never touches Controller.RunSkill or
 // any part of the Chat Runtime critical path. Because it needs nothing saved
 // to disk, it runs directly against the caller's current form values (input),
@@ -319,7 +319,7 @@ func (a *App) TrySubagentProfile(input SubagentProfileInput, task string) (strin
 	}()
 
 	// Resolve config against the active tab's workspace, not the desktop
-	// process's CWD — project-level reasonix.toml (sandbox roots, permissions)
+	// process's CWD — project-level deeper.toml (sandbox roots, permissions)
 	// must apply to the try run exactly as it would to a real session there.
 	// Snapshot under the lock: WorkspaceRoot is rewritten under a.mu (spelling
 	// normalization, session-binding redirects) and must not be read bare.
@@ -435,7 +435,7 @@ func trySubagentToolRegistry(cfg *config.Config, root string, allowedTools []str
 		ProxySpec:       cfg.NetworkProxySpec(),
 		ReadPaths:       builtin.NewPathResolver(),
 		SessionGuard:    builtin.NewSessionDataGuard(config.MemoryUserDir(), cfg.AllowWriteRoots()),
-		ManagedConfig:   builtin.NewManagedConfigPaths(config.ReasonixManagedConfigPaths()),
+		ManagedConfig:   builtin.NewManagedConfigPaths(config.DeeperManagedConfigPaths()),
 	}
 	parentReg := tool.NewRegistry()
 	for _, tl := range ws.Tools() {

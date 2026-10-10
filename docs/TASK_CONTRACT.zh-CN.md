@@ -5,7 +5,7 @@
 <a href="./TASK_CONTRACT.md">English</a>
 
 复杂任务最适合写成一份**任务合约**：背景是什么、要完成什么动作、结果怎么交付、哪些边界不能越过，以及什么时候才需要暂停问用户。
-有些 prompt 模板把最后一段叫 “Checkpoint”；Reasonix 文档里叫 “Pause policy”，避免和 Checkpoints/Rewind 快照混淆。
+有些 prompt 模板把最后一段叫 “Checkpoint”；Deeper 文档里叫 “Pause policy”，避免和 Checkpoints/Rewind 快照混淆。
 
 这不是更长的角色设定。更强的 coding agent 通常不需要用户教它一步步思考；它更需要清楚的任务边界和验收标准。
 
@@ -35,7 +35,7 @@ Pause policy:
 除非下一步涉及不可逆或对外可见操作、任务范围变化，或需要我提供信息，否则请继续完成任务后再汇报。
 ```
 
-## Reasonix 如何使用它
+## Deeper 如何使用它
 
 - **普通聊天**可以直接粘贴这份模板，适合一次性任务。
 - **Goal 模式**会把目标当作任务合约持续推进，由模型显式报告完成或阻塞；用户控制和资源限制始终有效。

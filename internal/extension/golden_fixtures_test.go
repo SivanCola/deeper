@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"reasonix/internal/extension"
+	"deeper/internal/extension"
 )
 
 func fixturesDir(t *testing.T) string {
@@ -81,7 +81,7 @@ func TestGoldenManifestV2Shape(t *testing.T) {
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc["apiVersion"] != "reasonix.io/plugin/v2" {
+	if doc["apiVersion"] != "deeper.io/plugin/v2" {
 		t.Fatalf("apiVersion = %v", doc["apiVersion"])
 	}
 }

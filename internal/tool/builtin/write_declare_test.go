@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func TestFileToolsDeclareParentDirectories(t *testing.T) {

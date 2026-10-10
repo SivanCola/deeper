@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/store"
 	"os"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
 	"sync"
 )
 

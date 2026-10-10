@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // Advice is a non-blocking steering signal for a stalled read.

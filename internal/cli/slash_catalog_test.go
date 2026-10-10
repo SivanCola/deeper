@@ -8,11 +8,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/command"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/memory"
-	"reasonix/internal/skill"
+	"deeper/internal/command"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/memory"
+	"deeper/internal/skill"
 )
 
 func TestSlashCatalogCachesAcrossKeystrokes(t *testing.T) {
@@ -311,7 +311,7 @@ func TestSlashArgDataRebuildsWhenPopupReopens(t *testing.T) {
 func BenchmarkSlashArgCompletionKeystroke(b *testing.B) {
 	root := b.TempDir()
 	b.Setenv("HOME", root)
-	b.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	b.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	b.Setenv("XDG_CONFIG_HOME", root+"/config")
 	b.Chdir(root)
 	ctrl := newOwnedTestController(b, control.Options{})
@@ -341,7 +341,7 @@ func BenchmarkSlashArgCompletionKeystroke(b *testing.B) {
 func BenchmarkSlashEffortArgCompletionKeystroke(b *testing.B) {
 	root := b.TempDir()
 	b.Setenv("HOME", root)
-	b.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	b.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	b.Setenv("XDG_CONFIG_HOME", root+"/config")
 	b.Chdir(root)
 	ctrl := newOwnedTestController(b, control.Options{})

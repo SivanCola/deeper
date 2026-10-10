@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func chunksOf(t *testing.T, events ...string) []provider.Chunk {

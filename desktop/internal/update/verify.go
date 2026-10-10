@@ -7,19 +7,17 @@ import (
 	"aead.dev/minisign"
 )
 
-// publicKey is the minisign public key that desktop release artifacts are signed
-// with. The public half is safe to embed; the private half lives only in CI
-// secrets (generated with `cmd/sign genkey`). Key ID AF12CA46F4A9EBB0. If the
-// signing key is ever rotated, regenerate and update this constant in lockstep
-// with the CI secret.
-const publicKey = `untrusted comment: minisign public key: AF12CA46F4A9EBB0
-RWSw66n0RsoSr6Zhh6qt5YO95YkpCayTOCMFVDNUQSjJYwxoYngNVBSq`
+// Releases link Deeper's own public key; unconfigured builds reject updates.
+var publicKey string
 
 // Verify reports whether sig (the contents of a .minisig file) is a valid minisign
 // signature of data under the embedded public key. A nil return means the artifact
 // is authentic; any error means do not trust it. Callers MUST verify before
 // touching disk — never apply an update whose signature has not checked out.
 func Verify(data, sig []byte) error { return verifyWith(publicKey, data, sig) }
+
+// VerifyWithKey lets release tooling validate its explicitly configured key.
+func VerifyWithKey(key string, data, sig []byte) error { return verifyWith(key, data, sig) }
 
 // verifyWith is the testable core: it parses an arbitrary public-key text and
 // verifies the signature, letting tests use a throwaway key pair without the

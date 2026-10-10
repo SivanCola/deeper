@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/tool"
+	"deeper/internal/capability"
+	"deeper/internal/tool"
 )
 
 type capabilityContextKey struct{}

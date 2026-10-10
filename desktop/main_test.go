@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/skill/skillwatch"
-	"reasonix/internal/testenv"
+	"deeper/internal/skill/skillwatch"
+	"deeper/internal/testenv"
 )
 
 // TestLifecycleDiagnosticsUsePreShellOwnershipGate pins the ordering that keeps
@@ -43,23 +43,23 @@ func TestLifecycleDiagnosticsUsePreShellOwnershipGate(t *testing.T) {
 
 // TestMain isolates user config/state/cache dirs for the whole package. Without
 // this, tests that persist desktop state, sessions, cache, or CLI-style config
-// can leak into the developer's real Reasonix directories.
+// can leak into the developer's real Deeper directories.
 func TestMain(m *testing.M) {
 	// The watcher helper re-executes os.Executable(), which here is this test
 	// binary: serve the pipe instead of re-running the suite.
 	if skillwatch.MaybeRunHelper() {
 		return
 	}
-	dir, err := os.MkdirTemp("", "reasonix-desktop-test")
+	dir, err := os.MkdirTemp("", "deeper-desktop-test")
 	if err != nil {
 		os.Exit(1)
 	}
 	os.Setenv("HOME", dir)
-	os.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	os.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	os.Setenv("USERPROFILE", dir)
 	os.Setenv("XDG_CONFIG_HOME", dir+"/config")
-	os.Setenv("REASONIX_STATE_HOME", dir+"/state")
-	os.Setenv("REASONIX_CACHE_HOME", dir+"/cache")
+	os.Setenv("DEEPER_STATE_HOME", dir+"/state")
+	os.Setenv("DEEPER_CACHE_HOME", dir+"/cache")
 	os.Setenv("AppData", dir)
 	// Tests fail closed for telemetry. Any test that expects a request must
 	// replace the relevant endpoint with an httptest.Server explicitly.
@@ -88,7 +88,7 @@ func TestDesktopTestTelemetryEndpointsAreFailClosed(t *testing.T) {
 		"ping":    pingEndpoint,
 		"metrics": metricsEndpoint,
 	} {
-		if strings.Contains(endpoint, "crash.reasonix.io") {
+		if strings.Contains(endpoint, "crash.deeper.io") {
 			t.Fatalf("%s test endpoint targets production: %s", name, endpoint)
 		}
 	}

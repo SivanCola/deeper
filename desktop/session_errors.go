@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"syscall"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // Sanitized errors surfaced when a destructive or restore session operation

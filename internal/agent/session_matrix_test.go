@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // Matrix pins that must also run on a real Windows runner (session lock,

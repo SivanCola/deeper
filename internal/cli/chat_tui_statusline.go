@@ -9,7 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/hook"
+	"deeper/internal/hook"
 )
 
 // statuslineMsg carries the latest custom status-line output (one line, ""

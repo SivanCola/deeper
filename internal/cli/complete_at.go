@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/fileref"
+	"deeper/internal/control"
+	"deeper/internal/fileref"
 )
 
 // activeAtToken finds the @-reference token under the cursor. cursor is a byte

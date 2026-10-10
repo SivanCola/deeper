@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestResolveTerminalStartDirUsesFilesystemTypeAndContainsSymlinks(t *testing.T) {
@@ -59,12 +59,12 @@ func TestResolveTerminalStartDirUsesFilesystemTypeAndContainsSymlinks(t *testing
 }
 
 func TestResolveTerminalCommandTrustsOnlyUserConfigPath(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
-	t.Setenv("REASONIX_SAFE_MODE", "")
+	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPER_SAFE_MODE", "")
 	root := t.TempDir()
 	projectShell := testExecutable(t, root, "project-shell")
 	projectConfig := "[tools.shell]\nprefer = \"bash\"\npath = " + strconv.Quote(projectShell) + "\n"
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(projectConfig), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(projectConfig), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -73,7 +73,7 @@ func TestResolveTerminalCommandTrustsOnlyUserConfigPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	if command.path == projectShell {
-		t.Fatal("project reasonix.toml selected the integrated terminal executable")
+		t.Fatal("project deeper.toml selected the integrated terminal executable")
 	}
 
 	userShell := testExecutable(t, t.TempDir(), "user-shell")
@@ -102,7 +102,7 @@ func TestTerminalEnvironmentOverridesInheritedTerminalCapabilities(t *testing.T)
 		"PATH=/bin",
 		"TERM=dumb",
 		"colorterm=legacy",
-		"REASONIX_TEST=value",
+		"DEEPER_TEST=value",
 	})
 	joined := strings.Join(env, "\n")
 	if strings.Count(strings.ToUpper(joined), "TERM=") != 2 {
@@ -111,7 +111,7 @@ func TestTerminalEnvironmentOverridesInheritedTerminalCapabilities(t *testing.T)
 	if !strings.Contains(joined, "TERM=xterm-256color") || !strings.Contains(joined, "COLORTERM=truecolor") {
 		t.Fatalf("terminal capability overrides missing: %q", env)
 	}
-	if !strings.Contains(joined, "PATH=/bin") || !strings.Contains(joined, "REASONIX_TEST=value") {
+	if !strings.Contains(joined, "PATH=/bin") || !strings.Contains(joined, "DEEPER_TEST=value") {
 		t.Fatalf("terminal environment dropped unrelated variables: %q", env)
 	}
 }
@@ -546,7 +546,7 @@ func TestTerminalSurvivesTakeoverSpectatorTransition(t *testing.T) {
 }
 
 func TestTerminalWorkspaceRebindClosesOldSessionsAndReopensTheTabGate(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	app := NewApp()
 	oldRoot := t.TempDir()
 	newRoot := t.TempDir()

@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/hook"
-	"reasonix/internal/installsource"
-	"reasonix/internal/pluginpkg"
-	"reasonix/internal/secrets"
+	"deeper/internal/config"
+	"deeper/internal/hook"
+	"deeper/internal/installsource"
+	"deeper/internal/pluginpkg"
+	"deeper/internal/secrets"
 )
 
 func pluginCommand(args []string) int {
@@ -50,14 +50,14 @@ func pluginCommand(args []string) int {
 
 func pluginUsage() {
 	fmt.Fprintln(os.Stderr, `usage:
-  reasonix plugin install <source> [--yes] [--dry-run] [--link] [--replace]
-  reasonix plugin list
-  reasonix plugin show <name>
-  reasonix plugin enable <name>
-  reasonix plugin disable <name>
-  reasonix plugin remove <name>
-  reasonix plugin doctor <name>
-  reasonix plugin migrate <name> --to-v2`)
+  deeper plugin install <source> [--yes] [--dry-run] [--link] [--replace]
+  deeper plugin list
+  deeper plugin show <name>
+  deeper plugin enable <name>
+  deeper plugin disable <name>
+  deeper plugin remove <name>
+  deeper plugin doctor <name>
+  deeper plugin migrate <name> --to-v2`)
 }
 
 func pluginInstallCommand(args []string) int {
@@ -238,7 +238,7 @@ func redactInstallSourceJSON(raw string) (string, error) {
 }
 
 func pluginListCommand() int {
-	st, err := pluginpkg.LoadState(config.ReasonixHomeDir())
+	st, err := pluginpkg.LoadState(config.DeeperHomeDir())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
@@ -278,7 +278,7 @@ func pluginShowCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "plugin %q is not installed\n", args[0])
 		return 1
 	}
-	root := pluginpkg.ResolveRoot(config.ReasonixHomeDir(), p.Root)
+	root := pluginpkg.ResolveRoot(config.DeeperHomeDir(), p.Root)
 	pkg, warnings, err := pluginpkg.ParseDir(root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -408,7 +408,7 @@ func pluginMigrateCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "plugin %q is not installed\n", name)
 		return 1
 	}
-	root := pluginpkg.ResolveRoot(config.ReasonixHomeDir(), p.Root)
+	root := pluginpkg.ResolveRoot(config.DeeperHomeDir(), p.Root)
 	pkg, _, err := pluginpkg.ParseNativeForMigrate(root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "migrate parse:", err)
@@ -445,12 +445,12 @@ func pluginDoctorCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "plugin %q is not installed\n", args[0])
 		return 1
 	}
-	root := pluginpkg.ResolveRoot(config.ReasonixHomeDir(), p.Root)
+	root := pluginpkg.ResolveRoot(config.DeeperHomeDir(), p.Root)
 	pkg, warnings, err := pluginpkg.ParseDir(root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "invalid:", err)
 		if strings.Contains(err.Error(), "missing apiVersion") {
-			fmt.Fprintf(os.Stderr, "remediation: reasonix plugin migrate %s --to-v2\n", args[0])
+			fmt.Fprintf(os.Stderr, "remediation: deeper plugin migrate %s --to-v2\n", args[0])
 		}
 		return 1
 	}
@@ -517,7 +517,7 @@ func pluginDoctorCommand(args []string) int {
 }
 
 // checkRuntimeCommand verifies a Manifest v2 runtime command resolves to
-// something runnable. ${REASONIX_PLUGIN_ROOT} expands to the installed root;
+// something runnable. ${DEEPER_PLUGIN_ROOT} expands to the installed root;
 // other relative path forms resolve against the plugin root. Bare executable
 // names are looked up on PATH (a miss is a warning, not a failure — PATH
 // varies by environment).
@@ -545,7 +545,7 @@ func pluginSetEnabledCommand(args []string, enabled bool) int {
 		fmt.Fprintln(os.Stderr, "plugin enable/disable requires a plugin name")
 		return 2
 	}
-	if err := pluginpkg.SetEnabled(config.ReasonixHomeDir(), args[0], enabled); err != nil {
+	if err := pluginpkg.SetEnabled(config.DeeperHomeDir(), args[0], enabled); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
@@ -554,7 +554,7 @@ func pluginSetEnabledCommand(args []string, enabled bool) int {
 }
 
 func findInstalledPlugin(name string) (pluginpkg.InstalledPlugin, bool, error) {
-	st, err := pluginpkg.LoadState(config.ReasonixHomeDir())
+	st, err := pluginpkg.LoadState(config.DeeperHomeDir())
 	if err != nil {
 		return pluginpkg.InstalledPlugin{}, false, err
 	}

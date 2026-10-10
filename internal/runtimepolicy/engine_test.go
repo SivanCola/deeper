@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 func TestMergeDecisionsIsMonotonic(t *testing.T) {

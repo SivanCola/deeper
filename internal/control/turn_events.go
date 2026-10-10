@@ -9,13 +9,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/transcript"
-	"reasonix/internal/turnevent"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/session"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/transcript"
+	"deeper/internal/turnevent"
 )
 
 // turnEventSink persists lifecycle envelopes before frontend publication.

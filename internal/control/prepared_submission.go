@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/imageinput"
-	"reasonix/internal/session"
+	"deeper/internal/imageinput"
+	"deeper/internal/session"
 )
 
 // PreparedSubmission is a host-only immutable admission candidate. Its fields

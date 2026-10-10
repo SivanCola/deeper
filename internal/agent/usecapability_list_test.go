@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/capability"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 func TestUseCapabilityListSummarizesMCPWithoutExpandingCachedDirectories(t *testing.T) {
-	t.Setenv("REASONIX_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
 	specs := []plugin.Spec{
 		{Name: "disabled", Type: "stdio", Command: "disabled-mcp", Authorized: true},
 		{Name: "enabled", Type: "stdio", Command: "enabled-mcp", Authorized: true},

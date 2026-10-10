@@ -1,9 +1,9 @@
 package main
 
 import (
+	"deeper/internal/event"
+	"deeper/internal/provider"
 	"encoding/json"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
 	"slices"
 )
 

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"reasonix/internal/config"
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/config"
+	"deeper/internal/pluginpkg"
 )
 
 type StorageSettingsView struct {
@@ -19,7 +19,7 @@ func (a *App) StorageSettings() StorageSettingsView {
 		DefaultWorkspace: storageDefaultWorkspace(),
 		StatePath:        config.MemoryUserDir(),
 		CachePath:        config.CacheDir(),
-		ExtensionsPath:   pluginpkg.PluginsDir(config.ReasonixHomeDir()),
+		ExtensionsPath:   pluginpkg.PluginsDir(config.DeeperHomeDir()),
 	}
 }
 

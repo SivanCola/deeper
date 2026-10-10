@@ -168,7 +168,7 @@ model = "deepseek-v4-flash"
 `
 	home := t.TempDir()
 	workspace := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
 		t.Fatal(err)

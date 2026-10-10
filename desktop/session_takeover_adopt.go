@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
+	"deeper/internal/agent"
+	"deeper/internal/config"
 )
 
 // takeoverAfterAdoptGrantHookForTest pauses a direct local-session adoption

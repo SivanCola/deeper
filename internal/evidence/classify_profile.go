@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"reasonix/internal/shellsafe"
+	"deeper/internal/shellsafe"
 )
 
 // ClassifyEffect returns the concrete effect profile for one invocation.

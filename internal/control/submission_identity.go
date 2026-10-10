@@ -12,10 +12,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/attachment"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/attachment"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 // SubmissionRequest fingerprints the actual operation, never only its label.
@@ -402,7 +402,7 @@ func (c *Controller) prepareSubmissionImagesContext(ctx context.Context, req Sub
 		sources = append(sources, attachment.Source{Existing: ref, DisplayName: ref.DisplayName, Path: key})
 	}
 	// Structured attachments promise image understanding for this turn. Legacy
-	// @.reasonix/attachments paths are also frozen below, but a text-only model may
+	// @.deeper/attachments paths are also frozen below, but a text-only model may
 	// retain them as tool-readable references without a vision fallback.
 	prepared.requiresImageUnderstanding = len(sources) > 0
 	for _, source := range c.explicitImageSources(req.Input) {

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // wholeWorkspaceDelegate stands in for run_skill/task at depth 0: its Execute

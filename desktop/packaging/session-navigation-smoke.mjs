@@ -1,5 +1,5 @@
 // Real packaged sidebar -> navigation owner -> service -> transcript regression.
-// Usage: node desktop/packaging/session-navigation-smoke.mjs /path/Reasonix.app
+// Usage: node desktop/packaging/session-navigation-smoke.mjs /path/Deeper.app
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
@@ -11,7 +11,7 @@ import { waitForSmokeCondition } from "./smoke-poll.mjs";
 
 const require = createRequire(new URL("../electron/package.json", import.meta.url));
 const { _electron } = require("playwright");
-const home = mkdtempSync(join(tmpdir(), "reasonix-sidebar-navigation-"));
+const home = mkdtempSync(join(tmpdir(), "deeper-sidebar-navigation-"));
 const server = createServer(async (req, res) => {
   let raw = "";
   for await (const chunk of req) raw += chunk;
@@ -27,21 +27,21 @@ writeFileSync(join(home, "config.toml"), `default_model = "fixture/model"\n[desk
 let application, page;
 let failed = false;
 try {
-  application = await _electron.launch({ executablePath: join(process.argv[2], "Contents/MacOS/Reasonix"),
+  application = await _electron.launch({ executablePath: join(process.argv[2], "Contents/MacOS/Deeper"),
     env: { ...packagedSmokeEnv(process.env, home), SIDEBAR_FIXTURE_KEY: "local-fixture" } });
   page = await application.firstWindow();
   page.setDefaultTimeout(15000);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.waitForFunction(() => Boolean(window.reasonixDesktop));
+  await page.waitForFunction(() => Boolean(window.deeperDesktop));
   await page.evaluate(() => {
     window.__navigationSmokeEvents = [];
-    window.reasonixDesktop.on("topic:activation", event => {
+    window.deeperDesktop.on("topic:activation", event => {
       window.__navigationSmokeEvents.push(event);
       if (window.__navigationSmokeEvents.length > 64) window.__navigationSmokeEvents.shift();
     });
   });
-  const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.reasonixDesktop.invoke(method, args), { method, args });
+  const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
   const active = async () => (await invoke("ListTabs")).find(tab => tab.active);
   const transcriptContains = (text, expected = true) => page.waitForFunction(({ text, expected }) =>
     (document.querySelector(".chat-transcript")?.textContent?.includes(text) ?? false) === expected, { text, expected });
@@ -94,17 +94,17 @@ try {
   failed = true;
   if (page) {
     const state = await page.evaluate(async () => ({
-      tabs: await window.reasonixDesktop.invoke("ListTabs", []),
-      topics: await window.reasonixDesktop.invoke("ListProjectTopics", [{ scope: "global", limit: 50 }]).catch(error => ({ error: String(error) })),
+      tabs: await window.deeperDesktop.invoke("ListTabs", []),
+      topics: await window.deeperDesktop.invoke("ListProjectTopics", [{ scope: "global", limit: 50 }]).catch(error => ({ error: String(error) })),
       sidebar: document.querySelector(".project-tree")?.textContent,
       transcript: await (async () => {
-        const tab = (await window.reasonixDesktop.invoke("ListTabs", [])).find(tab => tab.active);
+        const tab = (await window.deeperDesktop.invoke("ListTabs", [])).find(tab => tab.active);
         if (!tab) return null;
-        return window.reasonixDesktop.invoke("TranscriptSnapshotForTab", [tab.id, { records: 32 }]).catch(error => ({ error: String(error) }));
+        return window.deeperDesktop.invoke("TranscriptSnapshotForTab", [tab.id, { records: 32 }]).catch(error => ({ error: String(error) }));
       })(),
       body: document.body.innerText,
       activationEvents: window.__navigationSmokeEvents,
-      catalog: await window.reasonixDesktop.invoke("GetProjectTreeSnapshot", []).catch(error => ({ error: String(error) })),
+      catalog: await window.deeperDesktop.invoke("GetProjectTreeSnapshot", []).catch(error => ({ error: String(error) })),
     })).catch(error => ({ error: String(error) }));
     writeFileSync(join(home, "navigation-failure.json"), JSON.stringify(state, null, 2));
     await page.screenshot({ path: join(home, "navigation-failure.png"), fullPage: true }).catch(() => {});

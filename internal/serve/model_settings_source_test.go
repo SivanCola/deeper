@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 // The injected build is the deterministic interleaving boundary: a second save

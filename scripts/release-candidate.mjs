@@ -18,9 +18,9 @@ export const desktopPlatforms = [
   "windows-amd64", "windows-arm64", "linux-amd64",
 ];
 export const npmPackages = [
-  "reasonix", "reasonix-cli-darwin-arm64", "reasonix-cli-darwin-x64",
-  "reasonix-cli-linux-arm64", "reasonix-cli-linux-x64",
-  "reasonix-cli-win32-arm64", "reasonix-cli-win32-x64",
+  "sivancola-deeper", "sivancola-deeper-cli-darwin-arm64", "sivancola-deeper-cli-darwin-x64",
+  "sivancola-deeper-cli-linux-arm64", "sivancola-deeper-cli-linux-x64",
+  "sivancola-deeper-cli-win32-arm64", "sivancola-deeper-cli-win32-x64",
 ];
 
 export function artifactNamespace(purpose = "release") {
@@ -71,7 +71,7 @@ function requireIdentity(metadata) {
   if (metadata.evidenceArtifactName !== `${namespace}-evidence-${metadata.candidateId ?? candidateId(metadata.version, metadata.sourceSHA, metadata.catalogSha256)}`) {
     throw new Error("invalid evidenceArtifactName");
   }
-  if (metadata.repository !== "esengine/DeepSeek-Reasonix") throw new Error("untrusted candidate repository");
+  if (metadata.repository !== "SivanCola/deeper") throw new Error("untrusted candidate repository");
   if (metadata.workflow !== ".github/workflows/release-candidate.yml") throw new Error("untrusted candidate workflow");
 }
 
@@ -91,10 +91,10 @@ function requirePayloadLayout(root, files) {
     }
   }
   const cli = [
-    "reasonix-darwin-amd64.tar.gz", "reasonix-darwin-arm64.tar.gz",
-    "reasonix-linux-amd64.tar.gz", "reasonix-linux-arm64.tar.gz",
-    "reasonix-windows-amd64.zip", "reasonix-windows-arm64.zip", "SHA256SUMS",
-    "reasonix.rb",
+    "deeper-darwin-amd64.tar.gz", "deeper-darwin-arm64.tar.gz",
+    "deeper-linux-amd64.tar.gz", "deeper-linux-arm64.tar.gz",
+    "deeper-windows-amd64.zip", "deeper-windows-arm64.zip", "SHA256SUMS",
+    "deeper.rb",
   ];
   for (const name of cli) if (!names.has(`cli/${name}`)) throw new Error(`candidate is missing CLI asset: ${name}`);
   const tarballs = [...names].filter(name => name.startsWith("npm/") && name.endsWith(".tgz"));

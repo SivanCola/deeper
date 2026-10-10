@@ -17,12 +17,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // newCanonicalTakeoverTUI builds an exclusive-session TUI over a fresh
@@ -416,7 +416,7 @@ func TestDiscoverCLIServesSkipsDeadPIDs(t *testing.T) {
 	if err := os.MkdirAll(stateDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	write := func(slug, addr string, pid int) {
 		t.Helper()
 		state := map[string]any{"pid": pid, "addr": addr, "workspace": "/tmp/" + slug}

@@ -52,4 +52,4 @@ P3 only: a later product-wide icon pass could introduce official runtime logos c
 
 ## Retrospective
 
-The existing Reasonix skill already covers the reusable lessons applied here: repair shared draft ownership, test failure ordering, and inspect stylesheet specificity in the rendered UI. No additional skill rule was needed.
+The existing Deeper skill already covers the reusable lessons applied here: repair shared draft ownership, test failure ordering, and inspect stylesheet specificity in the rendered UI. No additional skill rule was needed.

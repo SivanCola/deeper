@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/guardian"
-	"reasonix/internal/permission"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/guardian"
+	"deeper/internal/permission"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
-const dynamicBashCommand = "git status $(touch /tmp/reasonix-dynamic-approval)"
+const dynamicBashCommand = "git status $(touch /tmp/deeper-dynamic-approval)"
 
 type dynamicApprovalResult struct {
 	allow bool
@@ -29,7 +29,7 @@ func requestDynamicBashApproval(c *Controller) <-chan dynamicApprovalResult {
 			context.Background(),
 			"bash",
 			dynamicBashCommand,
-			json.RawMessage(`{"command":"git status $(touch /tmp/reasonix-dynamic-approval)"}`),
+			json.RawMessage(`{"command":"git status $(touch /tmp/deeper-dynamic-approval)"}`),
 		)
 		done <- dynamicApprovalResult{allow: allow, err: err}
 	}()
@@ -61,7 +61,7 @@ func TestDynamicBashUsesTheSamePresetDecisionAsOtherCommands(t *testing.T) {
 				}
 			})})
 			c.SetToolApprovalMode(tt.mode)
-			args := json.RawMessage(`{"command":"git status $(touch /tmp/reasonix-dynamic-approval)"}`)
+			args := json.RawMessage(`{"command":"git status $(touch /tmp/deeper-dynamic-approval)"}`)
 			allow, reason, err := c.newInteractiveGate().Check(context.Background(), "bash", args, false)
 			if err != nil || !allow || reason != "" {
 				t.Fatalf("preset decision = (%v,%q,%v), want allow", allow, reason, err)
@@ -239,7 +239,7 @@ func TestDynamicBashSkipsGuardianAllow(t *testing.T) {
 }
 
 func TestHeadlessDynamicBashApprovalModes(t *testing.T) {
-	args := json.RawMessage(`{"command":"git status $(touch /tmp/reasonix-dynamic-approval)"}`)
+	args := json.RawMessage(`{"command":"git status $(touch /tmp/deeper-dynamic-approval)"}`)
 	for _, tt := range []struct {
 		mode string
 		want bool

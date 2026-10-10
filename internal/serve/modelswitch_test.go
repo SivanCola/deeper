@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 // TestControllerAccessorIsRaceSafe guards the switchModel concurrency contract:

@@ -12,14 +12,14 @@ import (
 
 func TestFileStoreSaveTaskWaitsForTransientSnapshotReader(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 	ctx := context.Background()
 	now := time.Now()
 	snapshot := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s1", State: TaskStateRunning, Version: 1, CreatedAt: now, UpdatedAt: now}
 	if err := store.SaveTask(ctx, dir, snapshot); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, ".reasonix", "tasks", "t1", "snapshot.json")
+	path := filepath.Join(dir, ".deeper", "tasks", "t1", "snapshot.json")
 	reader, err := os.Open(path) // ordinary Windows readers omit delete sharing
 	if err != nil {
 		t.Fatal(err)

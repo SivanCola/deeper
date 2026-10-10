@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/ablation"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // TestEffectSessionLogUpgradeKeepsModelMessagesThroughRealBuild freezes the
@@ -26,7 +26,7 @@ func TestEffectSessionLogUpgradeKeepsModelMessagesThroughRealBuild(t *testing.T)
 
 	rec := &effectRecordingProvider{}
 	provider.Register("boot-effect-session-log", func(provider.Config) (provider.Provider, error) { return rec, nil })
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

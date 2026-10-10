@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/sqliteuri"
+	"deeper/internal/sqliteuri"
 
 	_ "modernc.org/sqlite"
 )

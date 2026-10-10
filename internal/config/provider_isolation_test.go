@@ -89,7 +89,7 @@ func TestSaveAfterLoadForEditDoesNotWriteForeignProviderFields(t *testing.T) {
 func TestLoadForRootKeepsCustomProviderFreeOfOfficialDefaults(t *testing.T) {
 	home := t.TempDir()
 	ws := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte(customProviderTOML), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestLoadForRootKeepsCustomProviderFreeOfOfficialDefaults(t *testing.T) {
 func TestLastKnownGoodRecoveryKeepsCustomProviderFreeOfOfficialDefaults(t *testing.T) {
 	home := t.TempDir()
 	ws := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 
 	// Malformed live config forces the last-known-good branch.
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("config_version = ["), 0o600); err != nil {
@@ -207,7 +207,7 @@ func TestOfficialDeepSeekProviderStillGetsItsDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			home := t.TempDir()
 			ws := t.TempDir()
-			t.Setenv("REASONIX_HOME", home)
+			t.Setenv("DEEPER_HOME", home)
 			path := filepath.Join(home, "config.toml")
 			if err := os.WriteFile(path, []byte(officialDeepSeekTOML(name)), 0o600); err != nil {
 				t.Fatal(err)
@@ -248,7 +248,7 @@ func TestMissingCanonicalDeepSeekUsesChatDefault(t *testing.T) {
 func TestExplicitOpenAIDeepSeekProviderIsNotMigrated(t *testing.T) {
 	home := t.TempDir()
 	ws := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	raw := `config_version = 1
 default_model = "deepseek-flash/deepseek-v4-flash"
@@ -283,7 +283,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 func TestOfficialDeepSeekBackfillRespectsDeclaredValues(t *testing.T) {
 	home := t.TempDir()
 	ws := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	declared := `config_version = 1
 default_model = "deepseek-flash/deepseek-v4-flash"
 

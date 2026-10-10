@@ -5,13 +5,13 @@ import (
 	"runtime"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/sandbox"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/sandbox"
 )
 
 // Shell support discovery and repair guidance. The Git.Git winget manifest may
-// elevate even with user scope, so Reasonix never launches that installer and
+// elevate even with user scope, so Deeper never launches that installer and
 // Windows exposes only the official manual link.
 
 // shellInstallActionGitForWindows is the single install action id hosts may

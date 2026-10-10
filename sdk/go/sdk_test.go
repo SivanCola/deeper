@@ -455,7 +455,7 @@ func TestUIActionSubmit(t *testing.T) {
 			return nil
 		},
 		Submit: func(_ context.Context, surfaceID string, values map[string]any) error {
-			if surfaceID != "form-1" || values["name"] != "reasonix" {
+			if surfaceID != "form-1" || values["name"] != "deeper" {
 				return errTest
 			}
 			return nil
@@ -480,7 +480,7 @@ func TestUIActionSubmit(t *testing.T) {
 	}
 
 	resp = host.request(MethodExtensionUISubmit, UISubmitParams{
-		SurfaceID: "form-1", SessionID: "sess-1", Generation: 7, Values: map[string]any{"name": "reasonix"},
+		SurfaceID: "form-1", SessionID: "sess-1", Generation: 7, Values: map[string]any{"name": "deeper"},
 	})
 	var submitResult UISubmitResult
 	if err := json.Unmarshal(resp.Result, &submitResult); err != nil || !submitResult.Accepted {

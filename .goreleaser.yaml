@@ -1,29 +1,29 @@
 version: 2
-project_name: reasonix
+project_name: deeper
 
 before:
   hooks:
     - go mod download
 
 builds:
-  - id: reasonix
-    main: ./cmd/reasonix
-    binary: reasonix
+  - id: deeper
+    main: ./cmd/deeper
+    binary: deeper
     env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
     ldflags:
-      # Inject version identity for `reasonix version --verbose/--json` (Integration D/E).
+      # Inject version identity for `deeper version --verbose/--json` (Integration D/E).
       # buildTimeUTC is the goreleaser run time (UTC), not vcs.time.
-      - -s -w -X main.version={{ .Tag }} -X main.gitCommit={{ .ShortCommit }} -X main.buildTimeUTC={{ .Date }} -X reasonix/internal/productdocs.linkedVersion={{ .Tag }} -X reasonix/internal/productdocs.linkedRevision={{ .Commit }}
+      - -s -w -X main.version={{ .Tag }} -X main.gitCommit={{ .ShortCommit }} -X main.buildTimeUTC={{ .Date }} -X deeper/internal/productdocs.linkedVersion={{ .Tag }} -X deeper/internal/productdocs.linkedRevision={{ .Commit }}
     goos: [darwin, linux, windows]
     goarch: [amd64, arm64]
 
 archives:
-  - id: reasonix
-    ids: [reasonix]
-    name_template: "reasonix-{{ .Os }}-{{ .Arch }}"
+  - id: deeper
+    ids: [deeper]
+    name_template: "deeper-{{ .Os }}-{{ .Arch }}"
     formats: [tar.gz]
     format_overrides:
       - goos: windows
@@ -34,8 +34,8 @@ checksum:
   algorithm: sha256
 
 homebrew_casks:
-  - name: reasonix
-    ids: [reasonix]
+  - name: deeper
+    ids: [deeper]
     # Prereleases (including v*-preview.* and v*-rc*) must not update the stable
     # tap; brew has no separate prerelease channel, so uploading either cask
     # would make it the default `brew install`.
@@ -43,26 +43,26 @@ homebrew_casks:
     # longer drags brew along — a stable `v*` cask can ship while npm stays on rc.
     skip_upload: "auto"
     repository:
-      owner: esengine
-      name: homebrew-reasonix
+      owner: SivanCola
+      name: homebrew-deeper
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    homepage: "https://github.com/esengine/DeepSeek-Reasonix"
+    homepage: "https://github.com/SivanCola/deeper"
     description: "Cache-first DeepSeek coding agent for the terminal."
     commit_author:
-      name: reasonix
-      email: reasonix@deepseek.com
+      name: deeper
+      email: 32437197+SivanCola@users.noreply.github.com
     # The CLI archive is not notarized, so the cask still strips quarantine.
     # GoReleaser's hooks field renders the deprecated `postflight do` stanza;
     # emit Homebrew's `postflight_steps` directly until upstream supports it.
     custom_block: |
       postflight_steps do
         if OS.mac?
-          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/reasonix"]
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/deeper"]
         end
       end
 
 release:
   prerelease: auto
   make_latest: false
-  name_template: "Reasonix CLI {{ .Tag }}"
+  name_template: "Deeper CLI {{ .Tag }}"

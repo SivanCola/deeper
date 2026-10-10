@@ -7,11 +7,11 @@ import (
 	"runtime"
 	"strings"
 
-	"reasonix/internal/installlayout"
-	"reasonix/internal/proc"
+	"deeper/internal/installlayout"
+	"deeper/internal/proc"
 )
 
-const shellServiceEnv = "REASONIX_DESKTOP_SERVICE"
+const shellServiceEnv = "DEEPER_DESKTOP_SERVICE"
 
 // exitIfShellBootstrapped hands a plain desktop launch to the Electron shell
 // installed beside this binary and exits; the shell restarts this binary as
@@ -56,7 +56,7 @@ func bootstrapShell(exe, goos string, args, env []string) (handled bool, exitCod
 }
 
 // shellExecutableBeside resolves app/<shell> next to exe, or Contents/MacOS/
-// Reasonix beside the service inside a macOS bundle, and never exe itself.
+// Deeper beside the service inside a macOS bundle, and never exe itself.
 func shellExecutableBeside(exe, goos string) (string, bool) {
 	exe = filepath.Clean(exe)
 	shell := shellPathForExecutable(exe, goos)
@@ -80,7 +80,7 @@ func shellPathForExecutable(exe, goos string) string {
 		}
 	} else if goos == "linux" && dir == "/usr/bin" {
 		// The native package keeps executables in /usr/bin and Chromium in /usr/lib.
-		shell = filepath.Join("/usr/lib/reasonix", installlayout.AppShellDirName, name)
+		shell = filepath.Join("/usr/lib/deeper", installlayout.AppShellDirName, name)
 	}
 	return shell
 }

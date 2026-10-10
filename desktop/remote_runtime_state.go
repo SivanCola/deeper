@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type remoteRuntimeSync struct {

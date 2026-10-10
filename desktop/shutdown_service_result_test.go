@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 type busyShutdownExecution struct{}

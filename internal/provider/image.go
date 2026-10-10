@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/attachment"
+	"deeper/internal/attachment"
 )
 
 const (

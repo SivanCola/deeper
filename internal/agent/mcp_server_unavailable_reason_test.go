@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // "disabled" and "never registered" have different causes and different fixes.

@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/historywork"
+	"deeper/internal/fileops"
+	"deeper/internal/historywork"
 )
 
 type displayImportCheckpoint struct {

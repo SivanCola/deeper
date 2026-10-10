@@ -1,5 +1,5 @@
 .scroll-diagnostics {
-  --reasonix-draggable: no-drag;
+  --deeper-draggable: no-drag;
   position: absolute;
   left: 14px;
   bottom: 14px;

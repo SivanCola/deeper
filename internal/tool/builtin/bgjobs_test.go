@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/jobs"
-	"reasonix/internal/planmode"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/jobs"
+	"deeper/internal/planmode"
+	"deeper/internal/tool"
 )
 
 // End-to-end through the actual tools: a background bash job runs under a manager

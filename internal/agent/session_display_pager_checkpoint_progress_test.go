@@ -13,11 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/historywork"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileops"
+	"deeper/internal/historywork"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func TestCheckpointPagerResumesDurableBatchAfterReopen(t *testing.T) {
@@ -101,7 +101,7 @@ func checkCheckpointPagerResume(t *testing.T, mode string) {
 			t.Fatal(err)
 		}
 		child := exec.CommandContext(t.Context(), executable, "-test.run=^TestCheckpointPagerCrashHelper$")
-		child.Env = append(os.Environ(), "REASONIX_CHECKPOINT_CRASH_SOURCE="+source, "REASONIX_CHECKPOINT_CRASH_CACHE="+cache)
+		child.Env = append(os.Environ(), "DEEPER_CHECKPOINT_CRASH_SOURCE="+source, "DEEPER_CHECKPOINT_CRASH_CACHE="+cache)
 		if output, err := child.CombinedOutput(); err != nil {
 			t.Fatalf("interrupted child: %v\n%s", err, output)
 		}
@@ -180,7 +180,7 @@ func checkCheckpointPagerResume(t *testing.T, mode string) {
 // A separate process exits after SQLite commits, without unwinding the file,
 // database or lock owners. Reopening must recover its WAL and committed offset.
 func TestCheckpointPagerCrashHelper(t *testing.T) {
-	source, cache := os.Getenv("REASONIX_CHECKPOINT_CRASH_SOURCE"), os.Getenv("REASONIX_CHECKPOINT_CRASH_CACHE")
+	source, cache := os.Getenv("DEEPER_CHECKPOINT_CRASH_SOURCE"), os.Getenv("DEEPER_CHECKPOINT_CRASH_CACHE")
 	if source == "" || cache == "" {
 		return
 	}

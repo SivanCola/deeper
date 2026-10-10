@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/plugin"
+	"deeper/internal/control"
+	"deeper/internal/plugin"
 )
 
 func TestMCPAppBindingSurvivesActiveTabSwitchAndClosesOriginalHost(t *testing.T) {

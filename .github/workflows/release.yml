@@ -110,10 +110,10 @@ jobs:
           ALLOW_PREVIEW_RECOVERY: ${{ inputs.allow_preview_recovery }}
         run: |
           set -euo pipefail
-          git fetch origin main-v2
+          git fetch origin main
           sha="$(git rev-parse "$RELEASE_TAG^{commit}")"
-          if ! git merge-base --is-ancestor "$sha" origin/main-v2; then
-            echo "::error::$RELEASE_TAG points to $sha, which is not on main-v2 history"
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::$RELEASE_TAG points to $sha, which is not on main history"
             exit 1
           fi
           if [ "$ALLOW_PREVIEW_RECOVERY" = "true" ]; then
@@ -121,8 +121,8 @@ jobs:
               echo "::error::Preview recovery requires the approved Preview orchestrator"
               exit 1
             fi
-          elif [ "$RELEASE_CHANNEL" = "preview" ] && [ "$sha" != "$(git rev-parse origin/main-v2)" ]; then
-              echo "::error::CLI Preview must tag current main-v2; $RELEASE_TAG points to $sha"
+          elif [ "$RELEASE_CHANNEL" = "preview" ] && [ "$sha" != "$(git rev-parse origin/main)" ]; then
+              echo "::error::CLI Preview must tag current main; $RELEASE_TAG points to $sha"
               exit 1
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
@@ -349,20 +349,20 @@ jobs:
           TAG: ${{ needs.resolve.outputs.tag }}
         run: |
           gh release create "$TAG" \
-            "$RUNNER_TEMP/release-candidate/cli/reasonix-darwin-amd64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/reasonix-darwin-arm64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/reasonix-linux-amd64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/reasonix-linux-arm64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/reasonix-windows-amd64.zip" \
-            "$RUNNER_TEMP/release-candidate/cli/reasonix-windows-arm64.zip" \
+            "$RUNNER_TEMP/release-candidate/cli/deeper-darwin-amd64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deeper-darwin-arm64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deeper-linux-amd64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deeper-linux-arm64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deeper-windows-amd64.zip" \
+            "$RUNNER_TEMP/release-candidate/cli/deeper-windows-arm64.zip" \
             "$RUNNER_TEMP/release-candidate/cli/SHA256SUMS" \
-            --title "Reasonix CLI $TAG" --notes-file /tmp/release-notes.md --latest=false
+            --title "Deeper CLI $TAG" --notes-file /tmp/release-notes.md --latest=false
 
       - name: Publish prepared Homebrew cask
         if: ${{ inputs.candidate_artifact_name != '' && needs.resolve.outputs.channel == 'stable' && vars.CLI_PUBLISH_FROZEN != 'true' }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: node release-control/scripts/publish-homebrew-cask.mjs "$RUNNER_TEMP/release-candidate/cli/reasonix.rb"
+        run: node release-control/scripts/publish-homebrew-cask.mjs "$RUNNER_TEMP/release-candidate/cli/deeper.rb"
 
       - name: Publish product release notes
         env:
@@ -376,7 +376,7 @@ jobs:
           TAG: ${{ needs.resolve.outputs.tag }}
           NOTES_TAG: ${{ needs.resolve.outputs.notes_version }}
           CLI_PUBLISH_FROZEN: ${{ vars.CLI_PUBLISH_FROZEN == 'true' }}
-          HAS_R2: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' && secrets.R2_ACCOUNT_ID != '' && secrets.R2_BUCKET != '' }}
+          HAS_R2: ${{ vars.ENABLE_R2_MIRROR == 'true' && secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' && secrets.R2_ACCOUNT_ID != '' && secrets.R2_BUCKET != '' }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
@@ -399,12 +399,12 @@ jobs:
           fi
 
           required_assets='[
-            "reasonix-darwin-amd64.tar.gz",
-            "reasonix-darwin-arm64.tar.gz",
-            "reasonix-linux-amd64.tar.gz",
-            "reasonix-linux-arm64.tar.gz",
-            "reasonix-windows-amd64.zip",
-            "reasonix-windows-arm64.zip",
+            "deeper-darwin-amd64.tar.gz",
+            "deeper-darwin-arm64.tar.gz",
+            "deeper-linux-amd64.tar.gz",
+            "deeper-linux-arm64.tar.gz",
+            "deeper-windows-amd64.zip",
+            "deeper-windows-arm64.zip",
             "SHA256SUMS"
           ]'
           gh api "repos/${{ github.repository }}/releases/tags/$TAG" > /tmp/cli-release.raw.json
@@ -418,7 +418,7 @@ jobs:
               tag_name: $release.tag_name,
               prerelease: $release.prerelease,
               html_url: $release.html_url,
-              release_notes_url: ("https://reasonix.io/changelog/" + $notes_tag + "/"),
+              release_notes_url: ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_tag + "/"),
               assets: [
                 $required[] as $name |
                 $assets[$name] |
@@ -529,7 +529,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.resolve.outputs.tag }}
-          HAS_R2: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' && secrets.R2_ACCOUNT_ID != '' && secrets.R2_BUCKET != '' }}
+          HAS_R2: ${{ vars.ENABLE_R2_MIRROR == 'true' && secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' && secrets.R2_ACCOUNT_ID != '' && secrets.R2_BUCKET != '' }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
@@ -544,7 +544,7 @@ jobs:
             echo "R2 secrets not configured; skipping desktop manifest compatibility asset"
             exit 0
           fi
-          # dl.reasonix.io serves 403 to GitHub Actions egress IPs (Cloudflare bot
+          # An optional mirror may restrict GitHub Actions egress IPs (Cloudflare bot
           # protection), so read the manifest over the authenticated S3 API instead
           # of the public edge.
           aws configure set aws_access_key_id "${{ secrets.R2_ACCESS_KEY_ID }}"
@@ -552,10 +552,10 @@ jobs:
           aws configure set region auto
           aws s3 cp "s3://${R2_BUCKET}/latest/latest.json" latest.raw.json \
             --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          jq '.download_page = "https://reasonix.io/?download=desktop#start"' latest.raw.json > latest.json
+          jq '.download_page = "https://github.com/SivanCola/deeper/releases"' latest.raw.json > latest.json
           jq -e '
             ([.platforms[] | (.url, .sig)] |
-              all(type == "string" and startswith("https://dl.reasonix.io/") and (contains("/releases/latest/") | not)))
+              all(type == "string" and startswith("https://github.com/SivanCola/deeper/releases/download/") and (contains("/releases/latest/") | not)))
           ' latest.json >/dev/null
           gh release upload "$TAG" latest.json --clobber
 
@@ -568,7 +568,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.resolve.outputs.tag }}
-          HAS_R2: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' && secrets.R2_ACCOUNT_ID != '' && secrets.R2_BUCKET != '' }}
+          HAS_R2: ${{ vars.ENABLE_R2_MIRROR == 'true' && secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' && secrets.R2_ACCOUNT_ID != '' && secrets.R2_BUCKET != '' }}
         run: |
           set -euo pipefail
           case "$TAG" in
@@ -627,7 +627,7 @@ jobs:
           esac
           version="${TAG#v}"
           if ! git ls-remote --exit-code origin "refs/tags/npm-v$version" >/dev/null; then
-            echo "::error::the npm-v$version tag was never pushed — the npm channel is being left behind and 'npm update -g' users will be downgraded to the old 'latest'. Push it: git tag npm-v$version ${TAG} && git push origin npm-v$version (or 'npm dist-tag add reasonix@$version latest' for an already-published version)."
+            echo "::error::the npm-v$version tag was never pushed — the npm channel is being left behind and 'npm update -g' users will be downgraded to the old 'latest'. Push it: git tag npm-v$version ${TAG} && git push origin npm-v$version (or 'npm dist-tag add deeper@$version latest' for an already-published version)."
             exit 1
           fi
           if [ "${CLI_PUBLISH_FROZEN:-}" = "true" ]; then
@@ -635,7 +635,7 @@ jobs:
             exit 0
           fi
           for attempt in 1 2 3 4 5 6; do
-            got="$(npm view reasonix dist-tags.latest 2>/dev/null || true)"
+            got="$(npm view deeper dist-tags.latest 2>/dev/null || true)"
             if [ -n "$got" ]; then
               newest="$(printf '%s\n%s\n' "$got" "$version" | sort -V | tail -1)"
               if [ "$newest" = "$got" ]; then

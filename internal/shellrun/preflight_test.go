@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"reasonix/internal/proc"
-	"reasonix/internal/tool"
+	"deeper/internal/proc"
+	"deeper/internal/tool"
 )
 
 func TestRunForegroundExecutesRequestedCommandOnce(t *testing.T) {

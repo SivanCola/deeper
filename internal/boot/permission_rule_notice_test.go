@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type captureSink struct{ events []event.Event }

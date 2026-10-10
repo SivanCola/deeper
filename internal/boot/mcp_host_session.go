@@ -3,8 +3,8 @@ package boot
 import (
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
 )
 
 // capabilityServerInventory adds explicitly supplied host-session servers to

@@ -10,8 +10,8 @@ function windowsApp() {
 }
 
 test("Desktop has its own identity across Studio generations", () => {
-  assert.equal(APP_USER_MODEL_ID, "io.reasonix.desktop");
-  for (const other of ["Reasonix", "io.reasonix.studio", "dev.reasonix.desktop"]) {
+  assert.equal(APP_USER_MODEL_ID, "io.github.sivancola.deeper");
+  for (const other of ["Deeper", "io.github.sivancola.deeper.studio", "io.github.sivancola.deeper.dev"]) {
     assert.notEqual(APP_USER_MODEL_ID, other);
   }
 });
@@ -41,17 +41,17 @@ test("main applies the identity at load time rather than after readiness", () =>
 });
 
 test("new taskbar pins relaunch the permanent launcher for versioned and flat installs", () => {
-  for (const executable of [String.raw`C:\Apps\Reasonix test\versions\v1.38.6\app\Reasonix.exe`, String.raw`C:\Apps\Reasonix test\app\Reasonix.exe`]) {
-    const launcher = String.raw`C:\Apps\Reasonix test\reasonix-launcher.exe`;
+  for (const executable of [String.raw`C:\Apps\Deeper test\versions\v1.38.6\app\Deeper.exe`, String.raw`C:\Apps\Deeper test\app\Deeper.exe`]) {
+    const launcher = String.raw`C:\Apps\Deeper test\deeper-launcher.exe`;
     assert.deepEqual(windowsTaskbarDetails(executable, (path) => path === launcher), {
       appId: APP_USER_MODEL_ID,
       appIconPath: launcher,
       appIconIndex: 0,
       relaunchCommand: `"${launcher}"`,
-      relaunchDisplayName: "Reasonix",
+      relaunchDisplayName: "Deeper",
     });
   }
-  assert.equal(windowsTaskbarDetails(String.raw`C:\Apps\Reasonix\app\Reasonix.exe`, () => false), undefined);
+  assert.equal(windowsTaskbarDetails(String.raw`C:\Apps\Deeper\app\Deeper.exe`, () => false), undefined);
   assert.equal(windowsTaskbarDetails(String.raw`C:\Other\electron.exe`, () => true), undefined);
 });
 
@@ -62,10 +62,10 @@ test("every created Windows window gets relaunch metadata and other platforms do
   type Listener = (event: unknown, window: { setAppDetails(details: object): void }) => void;
   const listeners: Listener[] = [];
   const target = { on: (event: string, callback: Listener) => { assert.equal(event, "browser-window-created"); listeners.push(callback); } };
-  registerTaskbarRelaunch(target, "darwin", "/Applications/Reasonix", true, () => true);
-  registerTaskbarRelaunch(target, "win32", String.raw`C:\Apps\Reasonix\app\Reasonix.exe`, false, () => true);
+  registerTaskbarRelaunch(target, "darwin", "/Applications/Deeper", true, () => true);
+  registerTaskbarRelaunch(target, "win32", String.raw`C:\Apps\Deeper\app\Deeper.exe`, false, () => true);
   assert.equal(listeners.length, 0);
-  registerTaskbarRelaunch(target, "win32", String.raw`C:\Apps\Reasonix\app\Reasonix.exe`, true, () => true);
+  registerTaskbarRelaunch(target, "win32", String.raw`C:\Apps\Deeper\app\Deeper.exe`, true, () => true);
   const listener = listeners[0];
   assert.ok(listener);
   const applied: object[] = [];
@@ -76,8 +76,8 @@ test("every created Windows window gets relaunch metadata and other platforms do
 });
 
 test("taskbar pins prefer the canonical entry even when the legacy launcher exists", () => {
-  const shell = String.raw`C:\Apps\Reasonix\versions\v1.38.9\app\Reasonix.exe`;
-  const canonical = String.raw`C:\Apps\Reasonix\Reasonix.exe`;
+  const shell = String.raw`C:\Apps\Deeper\versions\v1.38.9\app\Deeper.exe`;
+  const canonical = String.raw`C:\Apps\Deeper\Deeper.exe`;
   assert.equal(windowsTaskbarDetails(shell, () => true)?.relaunchCommand, `"${canonical}"`);
   assert.equal(windowsTaskbarDetails(shell, path => path === canonical)?.appIconPath, canonical);
 });

@@ -1,9 +1,9 @@
-# Match the production package smoke environment: inherited Reasonix overrides
+# Match the production package smoke environment: inherited Deeper overrides
 # must not redirect state/cache writes or enable a development-only launch.
 function Get-WindowsAcceptanceEnvironment {
   $snapshot = @{}
   foreach ($entry in Get-ChildItem Env:) {
-    if ($entry.Name -match '^REASONIX_|^(NODE_OPTIONS|ELECTRON_RUN_AS_NODE)$') {
+    if ($entry.Name -match '^DEEPER_|^(NODE_OPTIONS|ELECTRON_RUN_AS_NODE)$') {
       $snapshot[$entry.Name] = $entry.Value
     }
   }
@@ -27,10 +27,10 @@ function Enter-WindowsAcceptanceEnvironment {
     foreach ($key in $snapshot.Keys) {
       [Environment]::SetEnvironmentVariable($key, $null, 'Process')
     }
-    $env:REASONIX_HOME = [IO.Path]::GetFullPath($DataHome)
-    $env:REASONIX_STATE_HOME = $env:REASONIX_HOME
-    $env:REASONIX_CACHE_HOME = Join-Path $env:REASONIX_HOME 'cache'
-    $env:REASONIX_NONINTERACTIVE = '1'
+    $env:DEEPER_HOME = [IO.Path]::GetFullPath($DataHome)
+    $env:DEEPER_STATE_HOME = $env:DEEPER_HOME
+    $env:DEEPER_CACHE_HOME = Join-Path $env:DEEPER_HOME 'cache'
+    $env:DEEPER_NONINTERACTIVE = '1'
     return $snapshot
   } catch {
     Restore-WindowsAcceptanceEnvironment -Snapshot $snapshot

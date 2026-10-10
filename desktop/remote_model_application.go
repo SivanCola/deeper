@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // Once a source-bound Serve supports the enhanced protocol, it owns refresh

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // Keepalives prevent quiet turns from being closed by common 30–60 s proxies.

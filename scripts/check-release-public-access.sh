@@ -2,6 +2,14 @@
 set -euo pipefail
 test "$#" -eq 1 || { echo 'usage: check-release-public-access.sh VERSION' >&2; exit 2; }
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [ "${DEEPER_RELEASE_BOOTSTRAP_CHECK:-false}" = "true" ]; then
+	state="$(node "$script_dir/github-release-bootstrap.mjs")"
+	if [ "$state" = "empty" ]; then
+		echo 'First Deeper stable release: pointer access is verified after publication'
+		exit 0
+	fi
+	test "$state" = ready
+fi
 manifest="$(mktemp)"
 trap 'rm -f -- "$manifest"' EXIT
 # The current Stable version normally predates a new candidate. This gate checks

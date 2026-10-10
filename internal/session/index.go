@@ -11,11 +11,11 @@ import (
 	"path/filepath"
 	"sort"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 const (
-	sparseIndexCodec    = "reasonix.session.offset-index/v1"
+	sparseIndexCodec    = "deeper.session.offset-index/v1"
 	sparseIndexInterval = 256
 	sparseIdentityBytes = 4096
 )

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/tool"
 )
 
 // PlanGuard hard-blocks writes while Plan mode is active, including YOLO.

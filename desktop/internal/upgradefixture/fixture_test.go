@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestEncodeLegacyHistoryEscapesJSONContent(t *testing.T) {
@@ -65,7 +65,7 @@ func TestVerifyLegacyHistoryChecksContentAfterByteRewrite(t *testing.T) {
 }
 
 func TestRunRestoresEnvironmentOnSuccessAndFailure(t *testing.T) {
-	for _, key := range []string{"REASONIX_HOME", "REASONIX_STATE_HOME", "REASONIX_CACHE_HOME"} {
+	for _, key := range []string{"DEEPER_HOME", "DEEPER_STATE_HOME", "DEEPER_CACHE_HOME"} {
 		t.Setenv(key, "untouched-"+key)
 	}
 	home := filepath.Join(t.TempDir(), "isolated")
@@ -78,7 +78,7 @@ func TestRunRestoresEnvironmentOnSuccessAndFailure(t *testing.T) {
 		if mode != "create" && err == nil {
 			t.Fatalf("%s must fail before app startup", mode)
 		}
-		for _, key := range []string{"REASONIX_HOME", "REASONIX_STATE_HOME", "REASONIX_CACHE_HOME"} {
+		for _, key := range []string{"DEEPER_HOME", "DEEPER_STATE_HOME", "DEEPER_CACHE_HOME"} {
 			if got := os.Getenv(key); got != "untouched-"+key {
 				t.Fatalf("%s leaked %s=%q", mode, key, got)
 			}

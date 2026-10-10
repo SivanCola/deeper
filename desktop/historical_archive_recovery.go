@@ -4,7 +4,7 @@ import (
 	"context"
 	"slices"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 // Recovery takes source guards in the same order as initial archive staging,

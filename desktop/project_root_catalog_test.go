@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestSessionCatalogTargetsIncludeRestoredProjectTab(t *testing.T) {

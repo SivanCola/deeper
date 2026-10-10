@@ -5,8 +5,8 @@ import (
 	"errors"
 	"os"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 func existingTranscript(path string) bool {

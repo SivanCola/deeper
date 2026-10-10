@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/packagegrant"
+	"deeper/internal/packagegrant"
 )
 
 const (

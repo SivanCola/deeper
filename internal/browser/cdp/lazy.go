@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 // Lazy is the executor a session is configured with but has not paid for yet.

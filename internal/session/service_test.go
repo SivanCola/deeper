@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 func TestServiceForkAndRewindUsePersistedTurnBoundaries(t *testing.T) {

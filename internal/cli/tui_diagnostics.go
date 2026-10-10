@@ -133,14 +133,14 @@ type realTicker struct{ *time.Ticker }
 
 func (t realTicker) C() <-chan time.Time { return t.Ticker.C }
 
-func startTUIDiagnostics(reasonixHome string) *tuiDiagnostics {
+func startTUIDiagnostics(deeperHome string) *tuiDiagnostics {
 	d := &tuiDiagnostics{
 		previous:  slog.Default(),
 		writer:    io.Discard,
 		stopWatch: make(chan struct{}),
 		phase:     watchdogBooting,
 	}
-	if logDir := tuiDiagnosticLogDir(reasonixHome); logDir != "" {
+	if logDir := tuiDiagnosticLogDir(deeperHome); logDir != "" {
 		if err := os.MkdirAll(logDir, 0o700); err == nil {
 			pruneTUIDiagnosticLogs(logDir, time.Now())
 			if file, err := os.CreateTemp(logDir, "cli-tui-*.log"); err == nil {
@@ -649,11 +649,11 @@ func (d *tuiDiagnostics) Close() {
 	})
 }
 
-func tuiDiagnosticLogDir(reasonixHome string) string {
-	if strings.TrimSpace(reasonixHome) == "" {
+func tuiDiagnosticLogDir(deeperHome string) string {
+	if strings.TrimSpace(deeperHome) == "" {
 		return ""
 	}
-	return filepath.Join(reasonixHome, "logs")
+	return filepath.Join(deeperHome, "logs")
 }
 
 func pruneTUIDiagnosticLogs(logDir string, now time.Time) {

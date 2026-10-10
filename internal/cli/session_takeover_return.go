@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // returnCurrentMirror refreshes the binding after pushLocked while sendMu

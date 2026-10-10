@@ -7,14 +7,14 @@ import { createServer } from "vite";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(root, ".pw-browsers");
 const { chromium } = await import("playwright");
-const port = Number(process.env.REASONIX_INDEPENDENT_BROWSER_PORT ?? 4687);
+const port = Number(process.env.DEEPER_INDEPENDENT_BROWSER_PORT ?? 4687);
 const server = await createServer({ root, logLevel: "error", server: { host: "127.0.0.1", port, strictPort: true, hmr: false, watch: { ignored: ["**"] } } });
 await server.listen();
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: "en-US" });
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
-const evidence = process.env.REASONIX_INDEPENDENT_EVIDENCE ?? path.join(tmpdir(), "reasonix-independent-browser");
+const evidence = process.env.DEEPER_INDEPENDENT_EVIDENCE ?? path.join(tmpdir(), "deeper-independent-browser");
 const row = title => page.locator(".project-tree__topic-main").filter({ hasText: title });
 async function dragRow(sourceTitle, target, position = "before") {
   const source = row(sourceTitle).locator("..");

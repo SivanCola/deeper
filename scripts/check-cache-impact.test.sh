@@ -6,7 +6,7 @@ check="$repo_root/scripts/check-cache-impact.sh"
 
 reviewed_body=$'Cache-impact: low - standing instructions change the stable prefix once\nCache-guard: bash scripts/check-cache-impact.test.sh\nSystem-prompt-review: reviewed as a durable static instruction change'
 
-PR_BODY="$reviewed_body" "$check" REASONIX.md >/dev/null
+PR_BODY="$reviewed_body" "$check" DEEPER.md >/dev/null
 PR_BODY="$reviewed_body" "$check" services/api/AGENTS.local.md >/dev/null
 
 PR_BODY=$'Cache-impact: none - refactor preserves provider-visible bytes\nCache-guard: go test ./internal/boot\nSystem-prompt-review: reviewed provider-visible output as unchanged' \
@@ -20,7 +20,7 @@ if PR_BODY='' "$check" CLAUDE.md >/dev/null 2>&1; then
 fi
 
 if PR_BODY=$'Cache-impact: none - text-only policy update\nCache-guard: bash scripts/check-cache-impact.test.sh\nSystem-prompt-review: reviewed as static' \
-	"$check" REASONIX.local.md >/dev/null 2>&1; then
+	"$check" DEEPER.local.md >/dev/null 2>&1; then
 	echo "standing instruction declared as no cache impact unexpectedly passed" >&2
 	exit 1
 fi

@@ -3,14 +3,14 @@
 package main
 
 import (
+	"deeper/desktop/internal/instanceidentity"
+	"deeper/internal/config"
 	"os"
-	"reasonix/desktop/internal/instanceidentity"
-	"reasonix/internal/config"
 )
 
 func startUpdateEndpoint() (func(), error) {
 	if !hostRPCRequested(os.Args[1:]) {
 		return func() {}, nil
 	}
-	return instanceidentity.ListenEndpoint(instanceidentity.ForHome(config.ReasonixHomeDir()))
+	return instanceidentity.ListenEndpoint(instanceidentity.ForHome(config.DeeperHomeDir()))
 }

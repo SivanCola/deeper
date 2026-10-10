@@ -4,11 +4,11 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // errPermissionSessionChanged refuses a preset choice read from a session the
-// tab no longer shows; the bridge carries it as reasonix_error:permission_session_changed.
+// tab no longer shows; the bridge carries it as deeper_error:permission_session_changed.
 var errPermissionSessionChanged = errors.New("permission choice was made in another session")
 
 const permissionSessionChangedCode = "permission_session_changed"

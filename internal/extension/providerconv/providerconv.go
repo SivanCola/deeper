@@ -11,9 +11,9 @@ package providerconv
 import (
 	"errors"
 
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/provider"
-	"reasonix/internal/secrets"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/provider"
+	"deeper/internal/secrets"
 )
 
 // MessagesToProtocol copies provider messages into their public wire form,

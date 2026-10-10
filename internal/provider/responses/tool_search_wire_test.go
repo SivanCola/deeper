@@ -3,7 +3,7 @@ package responses
 import (
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestNativeToolSearchRequiresFirstPartyResponsesAndKnownModel(t *testing.T) {

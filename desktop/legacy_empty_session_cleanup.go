@@ -15,12 +15,12 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/filelock"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/filelock"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 const legacyEmptySessionCleanupEvent = "legacy-empty-session-cleanup:changed"

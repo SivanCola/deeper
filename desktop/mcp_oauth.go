@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/mcpdiag"
-	"reasonix/internal/mcplaunch"
-	"reasonix/internal/netclient"
-	"reasonix/internal/plugin"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/mcpdiag"
+	"deeper/internal/mcplaunch"
+	"deeper/internal/netclient"
+	"deeper/internal/plugin"
 )
 
 func (a *App) mcpLaunchSpec(root, name string) (plugin.Spec, error) {
@@ -41,8 +41,8 @@ func (a *App) mcpLaunchSpecForEntryWithConfig(root string, entry config.PluginEn
 	}
 	specs := boot.PluginSpecsForRootWithOptions([]config.PluginEntry{entry}, root, boot.PluginSpecOptions{
 		DefaultCallTimeout: time.Duration(cfg.MCPCallTimeoutSeconds()) * time.Second,
-		LaunchManager:      mcplaunch.ForWorkspace(config.ReasonixHomeDir(), root),
-		ConfigSource:       "workspace_config", StateHome: config.ReasonixHomeDir(),
+		LaunchManager:      mcplaunch.ForWorkspace(config.DeeperHomeDir(), root),
+		ConfigSource:       "workspace_config", StateHome: config.DeeperHomeDir(),
 		WriterRoots: cfg.WriteRootsForRoot(root), ForbidReadRoots: boot.RuntimeForbidReadRoots(cfg, root),
 		Network: cfg.Sandbox.Network, OAuthHTTPClient: oauthHTTPClient,
 	})
@@ -63,7 +63,7 @@ var (
 	}
 )
 
-// AuthenticateMCPServer authorizes a remote MCP in private Reasonix state and
+// AuthenticateMCPServer authorizes a remote MCP in private Deeper state and
 // reconnects every controller sharing the active host.
 func (a *App) AuthenticateMCPServer(name string) error {
 	_, ctrl, root := a.activeMCPRuntime()
@@ -98,7 +98,7 @@ func (a *App) AuthenticateMCPServer(name string) error {
 	return a.ReconnectMCPServer(name)
 }
 
-// ClearMCPServerAuthentication removes Reasonix-owned auth state without
+// ClearMCPServerAuthentication removes Deeper-owned auth state without
 // signing out the third-party browser session or removing the server.
 func (a *App) ClearMCPServerAuthentication(name string) error {
 	defer a.lockMCPMutation("clear-auth")()
@@ -124,7 +124,7 @@ func (a *App) ClearMCPServerAuthentication(name string) error {
 	}
 	specs := boot.PluginSpecsForRootWithOptions([]config.PluginEntry{entry}, root, boot.PluginSpecOptions{
 		DefaultCallTimeout: 30 * time.Second, ConfigSource: string(entry.Source),
-		StateHome: config.ReasonixHomeDir(), Network: true,
+		StateHome: config.DeeperHomeDir(), Network: true,
 	})
 	if len(specs) == 1 {
 		if _, err := plugin.ClearHTTPMCPOAuth(specs[0]); err != nil {

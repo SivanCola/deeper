@@ -6,10 +6,10 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 )
 
 type legacyCleanupBatchBuilder struct {

@@ -3,11 +3,11 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"deeper/desktop/internal/draftstate"
+	"deeper/desktop/internal/workspacestate"
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/desktop/internal/workspacestate"
 	"testing"
 )
 
@@ -71,7 +71,7 @@ func TestTaggedWorkspaceFixturesSurviveManualCreationUpgrade(t *testing.T) {
 }
 
 func TestTaggedDraftFixturePreservesAllRecoveryIdentities(t *testing.T) {
-	for _, version := range []string{"main-v2-pr10469", "main-v2-pr10572", "1.38.11"} {
+	for _, version := range []string{"main-pr10469", "main-pr10572", "1.38.11"} {
 		t.Run(version, func(t *testing.T) { verifyTaggedDraftRecovery(t, version) })
 	}
 }

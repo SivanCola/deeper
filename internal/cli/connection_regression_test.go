@@ -8,19 +8,19 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 func TestAuditSetupEditsEffectiveProviderSource(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	root := t.TempDir()
 	global := config.Default()
 	global.Providers = []config.ProviderEntry{{Name: "relay", Kind: "openai", BaseURL: "https://global.invalid/v1", Model: "chat", APIKeyEnv: "GLOBAL_KEY"}}
 	if err := global.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	project := filepath.Join(root, "reasonix.toml")
+	project := filepath.Join(root, "deeper.toml")
 	if err := os.WriteFile(project, []byte("[[providers]]\nname = \"relay\"\nkind = \"openai\"\nbase_url = \"https://project.invalid/v1\"\nmodel = \"chat\"\napi_key_env = \"PROJECT_KEY\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestAuditSetupPasteDoesNotEnterChat(t *testing.T) {
 }
 
 func TestAuditShellSetupKeyOnlyEditPersists(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	c := config.Default()
 	c.Providers = []config.ProviderEntry{{Name: "relay", Kind: "openai", BaseURL: "https://relay.invalid/v1", Model: "chat", APIKeyEnv: "OLD_KEY"}}
 	path := config.UserConfigPath()
@@ -98,7 +98,7 @@ func TestAuditShellSetupKeyOnlyEditPersists(t *testing.T) {
 }
 
 func TestAuditShellSetupDistinctConnectionKeysStaySeparate(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	c := config.Default()
 	c.Providers = []config.ProviderEntry{{Name: "a", Kind: "openai", BaseURL: "https://relay.invalid/v1", Model: "chat", APIKeyEnv: "SHARED_KEY"}, {Name: "b", Kind: "openai", BaseURL: "https://relay.invalid/v1", Model: "chat", APIKeyEnv: "SHARED_KEY"}}
 	c.DefaultModel = "a/chat"
@@ -137,7 +137,7 @@ func TestAuditShellSetupDistinctConnectionKeysStaySeparate(t *testing.T) {
 }
 
 func TestShellCredentialOnlyEditRejectsConcurrentRotation(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	path := config.UserConfigPath()
 	c := config.Default()
 	c.Providers = []config.ProviderEntry{{Name: "relay", Kind: "openai", Model: "chat", BaseURL: "https://relay.invalid/v1", APIKeyEnv: "OLD_KEY"}}

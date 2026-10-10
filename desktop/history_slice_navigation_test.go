@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestColdHistoryPagesRemainReachableInBothDirections(t *testing.T) {

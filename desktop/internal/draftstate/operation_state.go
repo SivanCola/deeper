@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	filelock "reasonix/internal/identitylock"
+	filelock "deeper/internal/identitylock"
 )
 
 const operationColumns = `id,draft_id,workspace_id,draft_revision,session_id,topic_id,submission_id,fingerprint,request_json,phase,error,created_at,updated_at,request_id,source_digest,operation_revision,execution_json`

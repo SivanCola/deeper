@@ -5,9 +5,9 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/tool"
 )
 
 type workspaceEffectiveCall struct {

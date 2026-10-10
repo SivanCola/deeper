@@ -1,9 +1,9 @@
 package session
 
 import (
-	"reasonix/internal/sessioncontent"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/store"
+	"deeper/internal/sessioncontent"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/store"
 )
 
 func collectInboxContentRefs(sessionDir string) []sessioncontent.Ref {

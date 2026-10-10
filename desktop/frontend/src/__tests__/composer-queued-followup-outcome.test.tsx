@@ -24,7 +24,7 @@ const queuedSnapshot = {
   revision: 2, paused: false, recovered: false, itemsCount: 1, bytes: 12, maxItems: 64, maxBytes: 1024,
   items: [{ id: "queued-1", intent: "followup", state: "queued", preview: "queued while busy" }],
 };
-const queuedError = () => Object.assign(new Error("reasonix_error:queued_followup"), {
+const queuedError = () => Object.assign(new Error("deeper_error:queued_followup"), {
   code: "business",
   data: { method: "SubmitRemoteTabWithSubmission", queuedFollowup: { itemId: "queued-1", disposition: "queued_followup", position: 0, paused: false } },
 });

@@ -1,10 +1,10 @@
 package serve
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/control"
 	"encoding/json"
 	"net/http"
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
 )
 
 func (s *Server) cancelSession(w http.ResponseWriter, _ *http.Request) {

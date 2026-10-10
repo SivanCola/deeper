@@ -6,8 +6,8 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"reasonix/internal/config"
-	"reasonix/internal/shellparse"
+	"deeper/internal/config"
+	"deeper/internal/shellparse"
 )
 
 // IssueAwaitingApproval marks a project hook held back until the user approves
@@ -101,7 +101,7 @@ func ApproveProjectHooksAs(opts LoadOptions, settings Settings) error {
 	if !ok {
 		return nil
 	}
-	return config.NewProjectProgramStore(reasonixHomeForOptions(opts)).Approve(opts.ProjectRoot, program)
+	return config.NewProjectProgramStore(deeperHomeForOptions(opts)).Approve(opts.ProjectRoot, program)
 }
 
 // ApproveProjectHooks records the project's hooks as they stand now.
@@ -110,7 +110,7 @@ func ApproveProjectHooks(opts LoadOptions) error {
 	if !ok {
 		return nil
 	}
-	return config.NewProjectProgramStore(reasonixHomeForOptions(opts)).Approve(opts.ProjectRoot, program)
+	return config.NewProjectProgramStore(deeperHomeForOptions(opts)).Approve(opts.ProjectRoot, program)
 }
 
 // appendApprovedProjectHooks adds the project's hooks only when approved as
@@ -128,7 +128,7 @@ func appendApprovedProjectHooks(out *[]ResolvedHook, opts LoadOptions, path stri
 }
 
 func projectProgramApproved(opts LoadOptions, program config.ProjectProgram) bool {
-	ok, err := config.NewProjectProgramStore(reasonixHomeForOptions(opts)).Approved(opts.ProjectRoot, program)
+	ok, err := config.NewProjectProgramStore(deeperHomeForOptions(opts)).Approved(opts.ProjectRoot, program)
 	return err == nil && ok
 }
 

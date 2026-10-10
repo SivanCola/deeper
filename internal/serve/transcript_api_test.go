@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/servecontract"
-	canonical "reasonix/internal/session"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/servecontract"
+	canonical "deeper/internal/session"
+	"deeper/internal/transcript"
 )
 
 func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {

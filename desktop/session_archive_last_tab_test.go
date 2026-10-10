@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
 )
 
 // Archiving the only visible session hands the surface to the empty welcome.

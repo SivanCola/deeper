@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // CommitRewindForTab executes prepare (if planID empty) then commit immediately.

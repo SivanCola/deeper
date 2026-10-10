@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/serve"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/serve"
+	"deeper/internal/transcript"
 )
 
 // A Serve whose foreground is a path-backed session (the controller POST

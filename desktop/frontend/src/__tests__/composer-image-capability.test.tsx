@@ -103,7 +103,7 @@ function installBridgeApp(methods: Record<string, unknown>) {
 		ReleaseAttachmentTarget: async () => {},
 		StageImageForTarget: async (token: string, _operationID: string, displayName: string, mime: string, dataURL: string) => ({
 			draftId: "",
-			path: legacySave ? await legacySave(token, dataURL) : ".reasonix/attachments/mock.png",
+			path: legacySave ? await legacySave(token, dataURL) : ".deeper/attachments/mock.png",
 			displayName,
 			mime,
 			width: 1,
@@ -290,7 +290,7 @@ await verifyUnsupportedAttachmentCapability(
   installBridgeApp({
     SavePastedImageForTarget: async () => {
       saveCalls += 1;
-      return ".reasonix/attachments/mock.png";
+      return ".deeper/attachments/mock.png";
     },
     AttachmentDataURLForTarget: async () => "data:image/png;base64,iVBORw0KGgo=",
   });
@@ -319,7 +319,7 @@ await verifyUnsupportedAttachmentCapability(
   const dom = installDom();
   const sent: Array<{ display: string; submit?: string }> = [];
   installBridgeApp({
-    SavePastedImageForTarget: async () => ".reasonix/attachments/mock.png",
+    SavePastedImageForTarget: async () => ".deeper/attachments/mock.png",
     AttachmentDataURLForTarget: async () => "data:image/png;base64,iVBORw0KGgo=",
   });
   const { root, rerender } = await renderComposer({
@@ -346,7 +346,7 @@ await verifyUnsupportedAttachmentCapability(
   eq(sent.length, 1, "switching to a text-only model still sends the image ref for tool use");
   ok(toastText().includes("image-understanding model") || toastText().includes("图片理解模型"), "text-only send points to the image-understanding setting");
   eq(document.querySelector(".composer__prompt") === null, true, "image-input warning does not render inside the composer layout");
-  ok(sent[0]?.submit?.includes("@.reasonix/attachments/mock.png") === true, "submitted text retains the local image attachment ref");
+  ok(sent[0]?.submit?.includes("@.deeper/attachments/mock.png") === true, "submitted text retains the local image attachment ref");
 
   await act(async () => {
     root.unmount();
@@ -358,7 +358,7 @@ await verifyUnsupportedAttachmentCapability(
   const dom = installDom();
   const sent: string[] = [];
   installBridgeApp({
-    SavePastedImageForTarget: async () => ".reasonix/attachments/mock.png",
+    SavePastedImageForTarget: async () => ".deeper/attachments/mock.png",
     AttachmentDataURLForTarget: async () => "data:image/png;base64,iVBORw0KGgo=",
   });
   const { root } = await renderComposer({
@@ -390,7 +390,7 @@ await verifyUnsupportedAttachmentCapability(
 {
   const dom = installDom();
   installBridgeApp({
-    SavePastedImageForTarget: async () => ".reasonix/attachments/mock.png",
+    SavePastedImageForTarget: async () => ".deeper/attachments/mock.png",
     AttachmentDataURLForTarget: async () => "data:image/png;base64,iVBORw0KGgo=",
   });
   const { root } = await renderComposer({ imageInputEnabled: true });
@@ -429,7 +429,7 @@ await verifyUnsupportedAttachmentCapability(
   installBridgeApp({
     AttachmentDataURL: async () => "data:image/png;base64,iVBORw0KGgo=",
   });
-  const { root, paint } = renderUserMessage("check @[photo.png](.reasonix/attachments/mock.png)");
+  const { root, paint } = renderUserMessage("check @[photo.png](.deeper/attachments/mock.png)");
   await paint();
   await waitFor(() => Boolean(document.querySelector(".msg-attachment--image img")));
   const thumb = document.querySelector(".msg-attachment--image") as HTMLElement | null;
@@ -461,7 +461,7 @@ await verifyUnsupportedAttachmentCapability(
   installBridgeApp({
     AttachmentDataURL: async () => "data:image/png;base64,iVBORw0KGgo=",
   });
-  const { root, paint } = renderUserMessage("check @[photo.png](.reasonix/attachments/mock.png)", {
+  const { root, paint } = renderUserMessage("check @[photo.png](.deeper/attachments/mock.png)", {
     turn: 1,
   });
   await paint();

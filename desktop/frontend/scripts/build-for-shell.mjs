@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { shellFromEnv } from "./shell-css.mjs";
 
-const shell = shellFromEnv({ REASONIX_SHELL: process.argv[2] ?? "" });
+const shell = shellFromEnv({ DEEPER_SHELL: process.argv[2] ?? "" });
 const frontend = fileURLToPath(new URL("..", import.meta.url));
 const bundleOnly = process.argv.includes("--bundle-only");
 const commands = bundleOnly
@@ -16,7 +16,7 @@ for (const args of commands) {
   const result = spawnSync("pnpm", args, {
     cwd: frontend,
     stdio: "inherit",
-    env: { ...process.env, REASONIX_SHELL: shell },
+    env: { ...process.env, DEEPER_SHELL: shell },
     shell: process.platform === "win32",
   });
   status = result.status ?? 1;

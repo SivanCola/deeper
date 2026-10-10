@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func (a *Agent) prepareToolBatch(ctx context.Context, calls []provider.ToolCall) error {
@@ -54,6 +54,6 @@ func (a *Agent) applyDispatchGenerationGate(plan *toolCallPlan) (toolOutcome, bo
 	if live.Generation == scheduled.Generation && live.ReadOnly == scheduled.ReadOnly && live.ParallelSafe == scheduled.ParallelSafe {
 		return toolOutcome{}, false
 	}
-	msg := "blocked: tool safety or schema generation changed after scheduling; the call was not dispatched with a stale read-only classification. Retry so Reasonix can apply the current contract."
+	msg := "blocked: tool safety or schema generation changed after scheduling; the call was not dispatched with a stale read-only classification. Retry so Deeper can apply the current contract."
 	return toolOutcome{output: msg, blocked: true, errMsg: firstLine(msg)}, true
 }

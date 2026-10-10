@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 func TestArchiveRuntimeMutationOutlastsBriefBackgroundHolders(t *testing.T) {

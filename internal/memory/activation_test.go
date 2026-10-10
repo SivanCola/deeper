@@ -75,7 +75,7 @@ func TestPinnedBudgetRejectsOverflowAndAllowsUpdates(t *testing.T) {
 	if _, err := store.SaveWithOptions(Memory{
 		Name: "second-pin", Description: "overflowing pinned fact",
 		Activation: ActivationPinned, Body: strings.Repeat("x", 200),
-	}, SaveOptions{}); err == nil || !strings.Contains(err.Error(), "REASONIX.md") {
+	}, SaveOptions{}); err == nil || !strings.Contains(err.Error(), "DEEPER.md") {
 		t.Fatalf("overflow must be rejected with the instructions hint, got %v", err)
 	}
 

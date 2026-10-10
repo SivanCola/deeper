@@ -1,7 +1,7 @@
 package main
 
 // Workspace change invalidation lives at the desktop boundary. Agent events
-// cover Reasonix writes; fsnotify covers IDE and external terminal edits.
+// cover Deeper writes; fsnotify covers IDE and external terminal edits.
 // The hub emits bounded metadata; panels decide which resources to reload.
 
 import (
@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"deeper/internal/event"
+	"deeper/internal/fileref"
+	"deeper/internal/gitcmd"
 	"github.com/fsnotify/fsnotify"
-	"reasonix/internal/event"
-	"reasonix/internal/fileref"
-	"reasonix/internal/gitcmd"
 )
 
 const (

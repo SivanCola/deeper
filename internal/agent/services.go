@@ -4,18 +4,18 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/diff"
-	"reasonix/internal/event"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/jobs"
-	"reasonix/internal/mcpinteraction"
-	"reasonix/internal/memory"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/tool"
-	"reasonix/internal/workspacelease"
+	"deeper/internal/checkpoint"
+	"deeper/internal/diff"
+	"deeper/internal/event"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/jobs"
+	"deeper/internal/mcpinteraction"
+	"deeper/internal/memory"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/tool"
+	"deeper/internal/workspacelease"
 )
 
 // agentServices are the collaborators an Agent talks to, separated from the
@@ -54,7 +54,7 @@ type agentServices struct {
 	// call. Keeping it host-only avoids tool-schema and prompt-prefix churn.
 	permissionPreset func() string
 	// configWrite can ask the user whether a file tool may write a
-	// Reasonix-managed config file outside the workspace roots.
+	// Deeper-managed config file outside the workspace roots.
 	configWrite tool.ConfigWriteApprover
 	// writeRoots is the session-scoped writable directory manager.
 	writeRoots *sandbox.WritableRootSet

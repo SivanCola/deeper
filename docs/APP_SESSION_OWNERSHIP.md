@@ -79,7 +79,7 @@ The App memory workflow builds the requested clean commit once. Ordinary fronten
 pull requests run one short process with 32 full, 32 windowed, 32 safety, and 128
 mixed round trips. App lifecycle, Transcript, navigation, subscription ownership,
 memory fixture and CI-routing changes run the full three-process protocol. Pushes
-to `main-v2`, daily schedules and manual dispatches also run the full protocol:
+to `main`, daily schedules and manual dispatches also run the full protocol:
 each process executes 128 full, 128 windowed, 128 safety, and 512 mixed trips.
 
 The aggregate requires every checkpoint and heap snapshot, distinct shard

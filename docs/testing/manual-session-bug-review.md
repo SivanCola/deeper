@@ -27,7 +27,7 @@
 
 新测试由现有前端发现式测试入口自动收录，不需要手工注册，也没有延长时间限制或跳过断言。
 额外验证包括生产/测试 TypeScript 检查、App 生命周期回归、仓库静态检查和生产构建。
-main-v2 叠加验证固定在 `f26283afb2f5`，与历史兼容测试报告相同。
+main 叠加验证固定在 `f26283afb2f5`，与历史兼容测试报告相同。
 
 重建后的 macOS arm64 `v1.38.12-preview.1` 完整打包应用通过了三次独立新建、请求重试、
 正常退出、图片恢复、强制结束壳后的输入恢复、归档和最后会话空白欢迎页验证。
@@ -102,8 +102,8 @@ native Windows/Linux qualification is still unavailable on this macOS host.
 - `go test -race . -run 'TestFormalComposerTarget|TestManualCreation|TestSessionComposer' -count=1` 通过。
 - Desktop 全模块使用仓库已有的 11 个互斥分组全部通过，清单校验覆盖 2929 个本平台顶层测试，
   包括 1.38.3–1.38.11 历史写入器数据。单进程运行在 10 分钟总期限处超时（当时子用例仅运行
-  5 秒、无断言失败），因此采用现有完整分组；没有增加超时或跳过测试。此前固定 main-v2
-  `f26283afb2f5` 的叠加证据继续保留，本轮未重新抓取或验证之后的新 main-v2 头。
+  5 秒、无断言失败），因此采用现有完整分组；没有增加超时或跳过测试。此前固定 main
+  `f26283afb2f5` 的叠加证据继续保留，本轮未重新抓取或验证之后的新 main 头。
 - 完整 macOS arm64 ZIP 严格签名验证通过，SHA-256：
   `a637ecb0674953be4baf8e798906e1e317af11e02efb0aa5385b49c72cd11379`。
 - `composer-wiring-smoke.mjs` 从真实新建按钮与图片粘贴事件开始，验证 host 确认后的重复读取、

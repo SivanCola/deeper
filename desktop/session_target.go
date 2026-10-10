@@ -6,11 +6,11 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncatalog"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/session"
+	"deeper/internal/sessioncatalog"
 )
 
 type SessionOperationMode int

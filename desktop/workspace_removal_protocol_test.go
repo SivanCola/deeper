@@ -8,10 +8,10 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // Removing a project can select a surviving historical JSONL tab. Opening a

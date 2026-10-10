@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 func recoveryOnlyHasContent(sessions []sessioncatalog.SessionRecord) bool {

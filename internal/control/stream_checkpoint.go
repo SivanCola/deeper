@@ -6,10 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // openStreamOutput accumulates the deltas of the stream whose message has not

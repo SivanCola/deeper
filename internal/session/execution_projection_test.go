@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"deeper/internal/provider"
 	bolt "go.etcd.io/bbolt"
-	"reasonix/internal/provider"
 )
 
 func TestRejectedToolEvidenceSurvivesWireResetAndColdRecovery(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // persistMaintenanceOperation has its own durability barrier: maintenance is

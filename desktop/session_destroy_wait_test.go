@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
 )
 
 func TestWaitDestroyHandlesPrefersBoundedWait(t *testing.T) {

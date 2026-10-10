@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestRegisterRemoteTabOpenReviveCarriesSelectedTitle(t *testing.T) {

@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
 )
 
 const missingReasoningWarnStateFilename = "tool-call-reasoning-warning.json"
@@ -90,7 +90,7 @@ var missingReasoningWarnClaimFlights = struct {
 // missingReasoningWarnProcessLocks serializes transactions for one state file
 // before they enter filelock.Acquire. The file lock's short deadline is meant
 // to bound waits on another process, not make distinct local incidents lose
-// persistence while queued behind a slower Windows atomic write. Reasonix uses
+// persistence while queued behind a slower Windows atomic write. Deeper uses
 // one state path per home, so retaining these few mutexes for the process
 // lifetime is bounded in normal operation.
 var missingReasoningWarnProcessLocks sync.Map
@@ -375,7 +375,7 @@ func (s *missingReasoningWarnState) persistClaimAt(fingerprint string, observedA
 // this active incident should receive its one recovery retry. Concurrent
 // observations of the same incident in this process share one leader; the file
 // lock covers the leader's read-check-write transactions against other
-// processes sharing the Reasonix home.
+// processes sharing the Deeper home.
 func (s *missingReasoningWarnState) claimAt(fingerprint string, observedAt time.Time) bool {
 	fingerprint = strings.TrimSpace(fingerprint)
 	if s == nil || s.dir == "" || !validMissingReasoningFingerprint(fingerprint) {

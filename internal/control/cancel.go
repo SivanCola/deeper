@@ -1,8 +1,8 @@
 package control
 
 import (
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 // CancelReceipt acknowledges a session-scoped Stop request. Accepted means the

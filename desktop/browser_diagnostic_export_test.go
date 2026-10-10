@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/browserops"
-	"reasonix/internal/browser"
-	"reasonix/internal/secrets"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/browserops"
+	"deeper/internal/browser"
+	"deeper/internal/secrets"
+	"deeper/internal/session"
 )
 
 type diagnosticRequestHost func(context.Context, string, any, any) error
@@ -311,7 +311,7 @@ func TestBrowserDiagnosticAppendHandlesEmptyAndLargeDocuments(t *testing.T) {
 func TestBrowserDiagnosticHostEvidenceFinalJSON(t *testing.T) {
 	scope := strings.Repeat("a", 64)
 	report := json.RawMessage(`{"available":true,"scope":"` + scope + `","entries":[{"kind":"page","message":"https://example.test/path http://example.test/path"}]}`)
-	if fixture := os.Getenv("REASONIX_BROWSER_DIAGNOSTIC_FIXTURE"); fixture != "" {
+	if fixture := os.Getenv("DEEPER_BROWSER_DIAGNOSTIC_FIXTURE"); fixture != "" {
 		data, err := os.ReadFile(fixture)
 		if err != nil {
 			t.Fatal(err)

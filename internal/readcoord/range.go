@@ -6,7 +6,7 @@ package readcoord
 import (
 	"slices"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // Normalize drops empty ranges and merges overlaps and adjacency into the

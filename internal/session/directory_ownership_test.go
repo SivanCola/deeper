@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	filelock "reasonix/internal/identitylock"
+	filelock "deeper/internal/identitylock"
 )
 
 func writerProbeFixture(t *testing.T) string {

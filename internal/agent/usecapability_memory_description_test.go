@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/memory"
-	"reasonix/internal/tool"
+	"deeper/internal/memory"
+	"deeper/internal/tool"
 )
 
 func TestUseCapabilityMemoryDescriptionNamesRoutableTools(t *testing.T) {

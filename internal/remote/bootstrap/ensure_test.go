@@ -13,9 +13,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"reasonix/internal/remote"
-	"reasonix/internal/remote/sftpfs"
-	"reasonix/internal/remote/sshtest"
+	"deeper/internal/remote"
+	"deeper/internal/remote/sftpfs"
+	"deeper/internal/remote/sshtest"
 )
 
 // fakeConn scripts exec responses and shares a real sftpfs.FS backed by an
@@ -91,7 +91,7 @@ func ok(stdout string) (remote.ExecResult, error) {
 }
 
 // TestEnsureServeLaunchesWhenAbsent drives a full cold start: no prior state,
-// reasonix already on PATH, serve writes its port file.
+// deeper already on PATH, serve writes its port file.
 func TestEnsureServeLaunchesWhenAbsent(t *testing.T) {
 	skipOnWindows(t)
 	root := t.TempDir()
@@ -100,9 +100,9 @@ func TestEnsureServeLaunchesWhenAbsent(t *testing.T) {
 		switch {
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v reasonix"):
+		case strings.Contains(cmd, "command -v deeper"):
 			// LocateCommand: report a path and a fresh version.
-			return ok("/usr/bin/reasonix\nreasonix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+			return ok("/usr/bin/deeper\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
 		case strings.Contains(cmd, "nohup"):
 			// Simulate serve writing the port file, then echo the pid.
 			if portFile != "" {
@@ -223,8 +223,8 @@ func TestEnsureServeRelaunchesDeadProcess(t *testing.T) {
 			return ok("0\n") // dead
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux aarch64\n")
-		case strings.Contains(cmd, "command -v reasonix"):
-			return ok("/usr/bin/reasonix\nreasonix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+		case strings.Contains(cmd, "command -v deeper"):
+			return ok("/usr/bin/deeper\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
 		case strings.Contains(cmd, "nohup"):
 			_ = os.WriteFile(paths.PortFile, []byte("127.0.0.1:6001\n"), 0o600)
 			return ok("999\n")
@@ -255,7 +255,7 @@ func TestEnsureServeInstallNeverErrorsWhenAbsent(t *testing.T) {
 		switch {
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v reasonix"):
+		case strings.Contains(cmd, "command -v deeper"):
 			return ok("\n") // not found anywhere
 		default:
 			return ok("")
@@ -287,7 +287,7 @@ func TestEnsureServeUpgradeFailurePreservesOutdatedProcess(t *testing.T) {
 			return ok("no\n")
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v reasonix"):
+		case strings.Contains(cmd, "command -v deeper"):
 			return ok("\n")
 		}
 		return ok("")
@@ -328,8 +328,8 @@ func TestEnsureServeTokenStageFailurePreservesOutdatedProcess(t *testing.T) {
 			return ok("no\n")
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v reasonix"):
-			return ok("/usr/bin/reasonix\nreasonix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+		case strings.Contains(cmd, "command -v deeper"):
+			return ok("/usr/bin/deeper\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
 		case strings.Contains(cmd, "nohup"):
 			t.Fatal("replacement launched after token staging failed")
 		}
@@ -371,8 +371,8 @@ func TestEnsureServeRetirementFailurePreservesExistingToken(t *testing.T) {
 			return ok("no\n")
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v reasonix"):
-			return ok("/usr/bin/reasonix\nreasonix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+		case strings.Contains(cmd, "command -v deeper"):
+			return ok("/usr/bin/deeper\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
 		case strings.Contains(cmd, "nohup"):
 			t.Fatal("replacement launched after retirement failed")
 		}
@@ -406,7 +406,7 @@ func TestEnsureServeDarwinRetiresOldPIDAfterBinaryReplacement(t *testing.T) {
 	if err := os.WriteFile(paths.TokenFile, []byte("existing-token\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	local := filepath.Join(root, "local-reasonix")
+	local := filepath.Join(root, "local-deeper")
 	if err := os.WriteFile(local, []byte("fresh-darwin-cli"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -429,9 +429,9 @@ func TestEnsureServeDarwinRetiresOldPIDAfterBinaryReplacement(t *testing.T) {
 		case strings.Contains(cmd, "uname"):
 			return ok("Darwin arm64\n")
 		case strings.Contains(cmd, "BIN=; if [ -x "+shellQuote(uploaded)):
-			return ok(uploaded + "\nreasonix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
-		case strings.Contains(cmd, "command -v reasonix"):
-			return ok(uploaded + "\nreasonix v1.0.0\nportfile:yes\nsessionevents:no\ndetachedheal:no\ncaps:no\n")
+			return ok(uploaded + "\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+		case strings.Contains(cmd, "command -v deeper"):
+			return ok(uploaded + "\nnix v1.0.0\nportfile:yes\nsessionevents:no\ndetachedheal:no\ncaps:no\n")
 		case strings.Contains(cmd, "nohup"):
 			_ = os.WriteFile(paths.PortFile, []byte("127.0.0.1:6002\n"), 0o600)
 			return ok("999\n")

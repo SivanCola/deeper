@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/sessioninbox"
 )
 
 func TestInboxWailsErrorsUseStableCodes(t *testing.T) {
@@ -35,7 +35,7 @@ func TestInboxWailsErrorsUseStableCodes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := inboxBridgeError(tt.err)
-			if got.Error() != "reasonix_error:"+tt.code {
+			if got.Error() != "deeper_error:"+tt.code {
 				t.Fatalf("error = %q, want stable code %q", got, tt.code)
 			}
 			if !errors.Is(got, tt.err) {
@@ -67,10 +67,10 @@ func TestSteerInboxItemPausedReturnsStableCode(t *testing.T) {
 		t.Fatal(err)
 	}
 	failedReceipt, err := app.SteerInboxItem("test", receipt.ItemID)
-	if err == nil || err.Error() != "reasonix_error:inbox_paused" {
+	if err == nil || err.Error() != "deeper_error:inbox_paused" {
 		t.Fatalf("SteerInboxItem error = %v, want stable paused code", err)
 	}
-	if failedReceipt.Error != "reasonix_error:inbox_paused" {
+	if failedReceipt.Error != "deeper_error:inbox_paused" {
 		t.Fatalf("SteerInboxItem receipt error = %q, want stable paused code", failedReceipt.Error)
 	}
 }

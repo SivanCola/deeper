@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-const repository = "esengine/DeepSeek-Reasonix";
+const repository = "SivanCola/deeper";
 
 // Release tags contain no slash after refs/tags/. Unknown pattern syntax is
 // treated conservatively: it may include a tag, but cannot exclude one.
@@ -45,7 +45,7 @@ export function verifyIdentity({ actor, repo, rulesets, expectedActor, expectedI
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (!process.env.GH_TOKEN) throw new Error("RELEASE_TAG_TOKEN is required; the default Actions token is not a release identity");
-  if (process.env.GITHUB_ACTIONS === "true" && (process.env.GITHUB_REPOSITORY !== repository || process.env.GITHUB_REF !== "refs/heads/main-v2" || process.env.GITHUB_REF_PROTECTED !== "true")) throw new Error("Release identity checks require protected official main-v2");
+  if (process.env.GITHUB_ACTIONS === "true" && (process.env.GITHUB_REPOSITORY !== repository || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_REF_PROTECTED !== "true")) throw new Error("Release identity checks require protected official main");
   const api = endpoint => JSON.parse(execFileSync("gh", ["api", endpoint], { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] }));
   const listed = JSON.parse(execFileSync("gh", ["api", "--paginate", "--slurp", `repos/${repository}/rulesets?includes_parents=true&per_page=100`], { encoding: "utf8" })).flat();
   const result = verifyIdentity({

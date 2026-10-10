@@ -11,7 +11,7 @@ import (
 
 	"github.com/atotto/clipboard"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 // wslClipboardWriteScript reads stdin as UTF-8 and lets Windows PowerShell

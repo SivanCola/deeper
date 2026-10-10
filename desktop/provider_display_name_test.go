@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/internal/config"
 	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
-	"reasonix/internal/config"
 	"testing"
 )
 

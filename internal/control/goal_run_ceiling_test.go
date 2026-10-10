@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // workingGoalTool is a writer, so every round counts as acting on the

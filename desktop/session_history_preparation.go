@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/fileops"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/fileops"
+	"deeper/internal/store"
 )
 
 // One preparation owns a source/head generation. Readers own references,

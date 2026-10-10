@@ -9,12 +9,12 @@ import (
 	"reflect"
 	"strings"
 
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/extension/providerconv"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/extension/providerconv"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 // Extension Protocol v2 agent-side wiring. The agent consults the

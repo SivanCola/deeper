@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/control"
+	"deeper/internal/session"
+	"deeper/internal/sessioncontent"
 )
 
 const sessionHistoryContentChunkBytes = 1 << 20

@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 // A reclaim releases the CLI's writer and closes the runtime's store; the

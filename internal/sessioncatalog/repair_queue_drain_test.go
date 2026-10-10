@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // The wake channel coalesces on one key and is sized by QueueCapacity, so a

@@ -2,11 +2,11 @@ package session
 
 import (
 	"context"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
 	"strings"
 	"testing"
 )

@@ -228,27 +228,27 @@ func (gw *BotGateway) handleControlMetrics(w http.ResponseWriter, r *http.Reques
 	retained := len(gw.controllers)
 	gw.mu.Unlock()
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-	fmt.Fprintf(w, "# TYPE reasonix_bot_active_sessions gauge\nreasonix_bot_active_sessions %d\n", gw.sessions.ActiveCount())
-	fmt.Fprintf(w, "# TYPE reasonix_bot_retained_sessions gauge\nreasonix_bot_retained_sessions %d\n", retained)
-	fmt.Fprintln(w, "# TYPE reasonix_bot_adapter_messages_total counter")
+	fmt.Fprintf(w, "# TYPE deeper_bot_active_sessions gauge\nnix_bot_active_sessions %d\n", gw.sessions.ActiveCount())
+	fmt.Fprintf(w, "# TYPE deeper_bot_retained_sessions gauge\nnix_bot_retained_sessions %d\n", retained)
+	fmt.Fprintln(w, "# TYPE deeper_bot_adapter_messages_total counter")
 	for _, health := range gw.AdapterHealth() {
 		labels := adapterMetricLabels(health)
-		fmt.Fprintf(w, "reasonix_bot_adapter_messages_total{%s} %d\n", labels, health.Messages)
+		fmt.Fprintf(w, "deeper_bot_adapter_messages_total{%s} %d\n", labels, health.Messages)
 	}
-	fmt.Fprintln(w, "# TYPE reasonix_bot_adapter_sends_total counter")
+	fmt.Fprintln(w, "# TYPE deeper_bot_adapter_sends_total counter")
 	for _, health := range gw.AdapterHealth() {
 		labels := adapterMetricLabels(health)
-		fmt.Fprintf(w, "reasonix_bot_adapter_sends_total{%s} %d\n", labels, health.Sends)
+		fmt.Fprintf(w, "deeper_bot_adapter_sends_total{%s} %d\n", labels, health.Sends)
 	}
-	fmt.Fprintln(w, "# TYPE reasonix_bot_adapter_send_errors_total counter")
+	fmt.Fprintln(w, "# TYPE deeper_bot_adapter_send_errors_total counter")
 	for _, health := range gw.AdapterHealth() {
 		labels := adapterMetricLabels(health)
-		fmt.Fprintf(w, "reasonix_bot_adapter_send_errors_total{%s} %d\n", labels, health.SendErrors)
+		fmt.Fprintf(w, "deeper_bot_adapter_send_errors_total{%s} %d\n", labels, health.SendErrors)
 	}
-	fmt.Fprintln(w, "# TYPE reasonix_bot_adapter_status gauge")
+	fmt.Fprintln(w, "# TYPE deeper_bot_adapter_status gauge")
 	for _, health := range gw.AdapterHealth() {
 		labels := adapterMetricLabels(health)
-		fmt.Fprintf(w, "reasonix_bot_adapter_status{%s,status=\"%s\"} 1\n", labels, prometheusLabelValue(health.Status))
+		fmt.Fprintf(w, "deeper_bot_adapter_status{%s,status=\"%s\"} 1\n", labels, prometheusLabelValue(health.Status))
 	}
 }
 

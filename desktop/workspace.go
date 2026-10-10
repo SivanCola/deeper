@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
 )
 
 // The desktop is a GUI app: launched from Finder or `open`, it starts with the
@@ -18,9 +18,9 @@ import (
 // cwd isn't writable.
 
 // workspaceStatePath is where the last working folder is remembered (under the
-// user config dir, shared with the rest of Reasonix's state).
+// user config dir, shared with the rest of Deeper's state).
 func workspaceStatePath() string {
-	dir := config.MemoryUserDir() // …/reasonix
+	dir := config.MemoryUserDir() // …/deeper
 	if dir == "" {
 		return ""
 	}
@@ -176,7 +176,7 @@ func cwdWritable() bool {
 	if err != nil {
 		return false
 	}
-	f, err := os.CreateTemp(cwd, ".reasonix-wtest-*")
+	f, err := os.CreateTemp(cwd, ".deeper-wtest-*")
 	if err != nil {
 		return false
 	}

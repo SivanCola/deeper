@@ -7,8 +7,8 @@ import (
 	"sort"
 	"sync"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 type PendingPromptOwner struct {

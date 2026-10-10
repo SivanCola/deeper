@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/tool"
 )
 
 const liveArgumentLabel = "中文🙂\nsecond line"

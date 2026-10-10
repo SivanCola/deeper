@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestSaveConflictRecoveryBranchAtCapStaysBounded(t *testing.T) {

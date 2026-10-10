@@ -22,18 +22,18 @@ func TestLauncherMaintenanceRepairsWithoutStartingDesktop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	launcher := filepath.Join(root, "reasonix-launcher.exe")
+	launcher := filepath.Join(root, "deeper-launcher.exe")
 	if err := os.WriteFile(launcher, data, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(root, "versions", "v1.38.6", "app", "Reasonix.exe")
+	target := filepath.Join(root, "versions", "v1.38.6", "app", "Deeper.exe")
 	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(target, []byte("not executable: maintenance must not start a shell"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(root, "Reasonix.lnk")
+	link := filepath.Join(root, "Deeper.lnk")
 	script := filepath.Join(root, "shortcut.ps1")
 	const source = `param($Link, $Target, $Action)
 $ErrorActionPreference = 'Stop'
@@ -71,7 +71,7 @@ if ($Action -eq 'create') {
 	}
 	targetInfo, targetErr := os.Stat(got.Target)
 	launcherInfo, launcherErr := os.Stat(launcher)
-	if targetErr != nil || launcherErr != nil || !os.SameFile(targetInfo, launcherInfo) || got.ID != "io.reasonix.desktop" || got.Arguments != `--session "workspace name"` {
+	if targetErr != nil || launcherErr != nil || !os.SameFile(targetInfo, launcherInfo) || got.ID != "io.github.sivancola.deeper" || got.Arguments != `--session "workspace name"` {
 		t.Fatalf("maintenance shortcut = %+v", got)
 	}
 }

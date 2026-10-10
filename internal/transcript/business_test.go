@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/provider"
-	"reasonix/internal/turnevent"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/provider"
+	"deeper/internal/turnevent"
 )
 
 func businessFrame(t *testing.T, p *Projection, covered uint64, e event.Event) {

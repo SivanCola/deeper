@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/installlayout"
+	"deeper/internal/installlayout"
 )
 
 func writeShellBootstrapFixture(t *testing.T, goos string) (exe, shell string) {
@@ -18,10 +18,10 @@ func writeShellBootstrapFixture(t *testing.T, goos string) (exe, shell string) {
 	root := t.TempDir()
 	name := installlayout.ShellExecutableNameFor(goos)
 	if goos == "darwin" {
-		dir := filepath.Join(root, "Reasonix.app", "Contents", "MacOS")
-		exe, shell = filepath.Join(dir, "reasonix-desktop"), filepath.Join(dir, name)
+		dir := filepath.Join(root, "Deeper.app", "Contents", "MacOS")
+		exe, shell = filepath.Join(dir, "deeper-desktop"), filepath.Join(dir, name)
 	} else {
-		exe, shell = filepath.Join(root, "reasonix-desktop"), filepath.Join(root, installlayout.AppShellDirName, name)
+		exe, shell = filepath.Join(root, "deeper-desktop"), filepath.Join(root, installlayout.AppShellDirName, name)
 	}
 	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
 		t.Fatal(err)
@@ -53,16 +53,16 @@ func TestBootstrapShellExecutableBesideResolvesPerPlatform(t *testing.T) {
 
 func TestMacBundleContentsRecognizesSupportedServiceLayouts(t *testing.T) {
 	app := filepath.Join(t.TempDir(), "parent.app cache", "应用.app", "Contents")
-	for _, relative := range []string{"MacOS/reasonix-desktop", "Resources/service/reasonix-desktop"} {
+	for _, relative := range []string{"MacOS/deeper-desktop", "Resources/service/deeper-desktop"} {
 		exe := filepath.Join(app, filepath.FromSlash(relative))
 		if got, ok := macAppContentsForExecutable(exe); !ok || got != app {
 			t.Fatalf("%s: contents = %q ok=%v, want %q", relative, got, ok, app)
 		}
 	}
 	for _, exe := range []string{
-		filepath.Join(app, "Resources", "reasonix-desktop"),
-		filepath.Join(t.TempDir(), "reasonix-desktop"),
-		"relative/reasonix-desktop",
+		filepath.Join(app, "Resources", "deeper-desktop"),
+		filepath.Join(t.TempDir(), "deeper-desktop"),
+		"relative/deeper-desktop",
 	} {
 		if got, ok := macAppContentsForExecutable(exe); ok {
 			t.Fatalf("unexpected contents %q for %q", got, exe)
@@ -71,16 +71,16 @@ func TestMacBundleContentsRecognizesSupportedServiceLayouts(t *testing.T) {
 }
 
 func TestMacResourcesServiceFindsBundleShell(t *testing.T) {
-	contents := filepath.Join(t.TempDir(), "Reasonix.app", "Contents")
-	exe := filepath.Join(contents, "Resources", "service", "reasonix-desktop")
-	want := filepath.Join(contents, "MacOS", "Reasonix")
+	contents := filepath.Join(t.TempDir(), "Deeper.app", "Contents")
+	exe := filepath.Join(contents, "Resources", "service", "deeper-desktop")
+	want := filepath.Join(contents, "MacOS", "Deeper")
 	if got := shellPathForExecutable(exe, "darwin"); got != want {
 		t.Fatalf("shell = %q, want %q", got, want)
 	}
 }
 
 func TestBootstrapShellExecutableBesideNeverReturnsItself(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "Reasonix.app", "Contents", "MacOS")
+	dir := filepath.Join(t.TempDir(), "Deeper.app", "Contents", "MacOS")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -96,14 +96,14 @@ func TestBootstrapShellExecutableBesideNeverReturnsItself(t *testing.T) {
 func TestBootstrapShellStartsDetachedShellWithServiceEnvAndArgs(t *testing.T) {
 	exe, shell := writeShellBootstrapFixture(t, runtime.GOOS)
 	out := filepath.Join(t.TempDir(), "shell.out")
-	script := "#!/bin/sh\nprintf '%s\\n' \"$REASONIX_DESKTOP_SERVICE\" \"$@\" > \"$REASONIX_TEST_SHELL_OUT\"\n"
+	script := "#!/bin/sh\nprintf '%s\\n' \"$DEEPER_DESKTOP_SERVICE\" \"$@\" > \"$DEEPER_TEST_SHELL_OUT\"\n"
 	if err := os.MkdirAll(filepath.Dir(shell), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(shell, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	env := append(os.Environ(), "REASONIX_TEST_SHELL_OUT="+out, shellServiceEnv+"=stale", ozonePlatformEnv+"=wayland")
+	env := append(os.Environ(), "DEEPER_TEST_SHELL_OUT="+out, shellServiceEnv+"=stale", ozonePlatformEnv+"=wayland")
 	handled, code := bootstrapShell(exe, runtime.GOOS, []string{"--flag", "two words"}, env)
 	if !handled || code != 0 {
 		t.Fatalf("bootstrap handled=%v code=%d", handled, code)
@@ -143,9 +143,9 @@ func TestBootstrapShellIgnoresHostLaunchModes(t *testing.T) {
 
 func TestLinuxBootstrapMatchesPackagedLayouts(t *testing.T) {
 	for exe, want := range map[string]string{
-		"/opt/reasonix/reasonix-desktop":                  "/opt/reasonix/app/Reasonix",
-		"/opt/reasonix/versions/v1.39.0/reasonix-desktop": "/opt/reasonix/versions/v1.39.0/app/Reasonix",
-		"/usr/bin/reasonix-desktop":                       "/usr/lib/reasonix/app/Reasonix",
+		"/opt/deeper/deeper-desktop":                  "/opt/deeper/app/Deeper",
+		"/opt/deeper/versions/v1.39.0/deeper-desktop": "/opt/deeper/versions/v1.39.0/app/Deeper",
+		"/usr/bin/deeper-desktop":                     "/usr/lib/deeper/app/Deeper",
 	} {
 		if got := shellPathForExecutable(exe, "linux"); got != want {
 			t.Errorf("%s: got %s want %s", exe, got, want)

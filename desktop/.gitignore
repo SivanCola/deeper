@@ -31,8 +31,8 @@
 !/build/linux
 /build/linux/*
 !/build/linux/nfpm.yaml
-!/build/linux/reasonix.desktop
-!/build/linux/io.reasonix.desktop.update.policy
+!/build/linux/deeper.desktop
+!/build/linux/io.github.sivancola.deeper.update.policy
 !/build/linux/postinstall.sh
 !/build/linux/icons
 !/build/linux/icons/**
@@ -41,10 +41,10 @@
 *.test
 
 # Local config symlinks for desktop development (point at the repo-root
-# reasonix.toml/.env so the desktop app resolves the same config/keys the CLI
+# deeper.toml/.env so the desktop app resolves the same config/keys the CLI
 # does). Never commit.
-/reasonix.toml
+/deeper.toml
 /.env
 
-# `go build` binary produced in-tree (module reasonix/desktop → "desktop")
+# `go build` binary produced in-tree (module deeper/desktop → "desktop")
 /desktop

@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/i18n"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/i18n"
+	"deeper/internal/session"
 )
 
 // headlessResumeTarget resolves --resume/--continue for the non-interactive

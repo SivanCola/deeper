@@ -11,7 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 const gitStatusTimeout = 700 * time.Millisecond

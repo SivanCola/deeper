@@ -8,8 +8,8 @@ import (
 )
 
 func TestProjectCredentialEditPreservesUnknownProviderFields(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
-	path := filepath.Join(t.TempDir(), "reasonix.toml")
+	t.Setenv("DEEPER_HOME", t.TempDir())
+	path := filepath.Join(t.TempDir(), "deeper.toml")
 	body := "[[providers]]\nname='relay'\nkind='openai'\nbase_url='https://relay.invalid/v1'\nmodel='chat'\napi_key_env='OLD_KEY'\nfuture_option='keep-me'\n"
 	if err := os.WriteFile(path, []byte(body), 0600); err != nil {
 		t.Fatal(err)

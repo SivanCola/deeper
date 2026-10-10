@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func contentDigest(content string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(content))) }

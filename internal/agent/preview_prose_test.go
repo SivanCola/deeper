@@ -7,7 +7,7 @@ func TestPreviewProseDropsLeadingFileRefs(t *testing.T) {
 		{"@src/App.tsx 帮我把这个组件拆一下", "帮我把这个组件拆一下"},
 		{"@a.ts @b.ts fix the imports", "fix the imports"},
 		{"  @src/App.tsx\tcheck this", "check this"},
-		{"@__reasonix_external_folder/mock/notes/ summarise", "summarise"},
+		{"@__deeper_external_folder/mock/notes/ summarise", "summarise"},
 		{"no refs here", "no refs here"},
 		{"look at @src/App.tsx", "look at @src/App.tsx"},
 	} {

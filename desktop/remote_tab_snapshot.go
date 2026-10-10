@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 // errRemoteTabStatusSuperseded marks the benign lost race where a /status

@@ -1,7 +1,7 @@
-// Package plugin is Reasonix's MCP client. It connects to external MCP servers and
+// Package plugin is Deeper's MCP client. It connects to external MCP servers and
 // adapts their tools to the tool.Tool interface, so the agent treats plugin tools
 // and built-ins uniformly. The official MCP Go SDK owns protocol negotiation and
-// JSON-RPC sessions across stdio, Streamable HTTP, and legacy HTTP+SSE; Reasonix
+// JSON-RPC sessions across stdio, Streamable HTTP, and legacy HTTP+SSE; Deeper
 // retains product policy, lifecycle supervision, and transport security.
 package plugin
 
@@ -22,11 +22,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/mcplaunch"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/secrets"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/mcplaunch"
+	"deeper/internal/sandbox"
+	"deeper/internal/secrets"
+	"deeper/internal/tool"
 )
 
 // MCPProcessMode selects how a local stdio MCP process is launched.
@@ -74,13 +74,13 @@ type Spec struct {
 	URL     string
 	Headers map[string]string
 	// DefaultStartupTimeout is the background initialize + tools/list safety cap
-	// for this server. Zero keeps Reasonix's built-in default.
+	// for this server. Zero keeps Deeper's built-in default.
 	DefaultStartupTimeout time.Duration
 	// StartupTimeout overrides DefaultStartupTimeout for this server. It is
 	// host-only lifecycle policy and never changes provider-visible tool schemas.
 	StartupTimeout time.Duration
 	// DefaultCallTimeout is the global MCP call cap for this server. Zero keeps
-	// Reasonix's built-in defaultCallTimeout.
+	// Deeper's built-in defaultCallTimeout.
 	DefaultCallTimeout time.Duration
 	// CallTimeout overrides DefaultCallTimeout for all calls to this server.
 	// Zero falls back to DefaultCallTimeout.
@@ -90,13 +90,13 @@ type Spec struct {
 	// model-visible mcp__server__tool names.
 	ToolTimeouts map[string]time.Duration
 	// Dir, when set, is the working directory of a stdio subprocess. Empty means
-	// inherit reasonix's cwd (the default for user-configured plugins). It exists
+	// inherit deeper's cwd (the default for user-configured plugins). It exists
 	// for cwd-aware servers like CodeGraph, which detect the project from the
 	// directory they are launched in — they must be pinned to the project root.
 	Dir string
 	// WorkspaceRoot is the project root exposed through the MCP roots capability.
 	// It is runtime-only and intentionally separate from Dir: user-installed
-	// stdio servers keep inheriting Reasonix's cwd while still receiving the
+	// stdio servers keep inheriting Deeper's cwd while still receiving the
 	// explicit workspace root when they ask for roots/list.
 	WorkspaceRoot string
 	// Stderr optionally mirrors plugin subprocess stderr output. Stderr is always
@@ -148,7 +148,7 @@ type Spec struct {
 // transport carries JSON-RPC messages to and from one MCP server. call sends a
 // request and returns its result; close releases resources. Transports route MCP
 // progress notifications to the active tool call and answer the client
-// capabilities Reasonix advertises (currently ping and roots/list).
+// capabilities Deeper advertises (currently ping and roots/list).
 type transport interface {
 	call(ctx context.Context, method string, params any) (json.RawMessage, error)
 	close()
@@ -249,7 +249,7 @@ type StartPolicy struct {
 
 	// SkipPersistence disables RecordStartup / SaveCachedSchema side effects.
 	// Use for read-only live probes (capability diagnostics) that must not
-	// write MCP stats or schema cache files under Reasonix home.
+	// write MCP stats or schema cache files under Deeper home.
 	SkipPersistence bool
 }
 
@@ -626,7 +626,7 @@ func (h *Host) removeClientResourcesLocked(c *Client) {
 	h.resources = kept
 }
 
-// Client is one MCP server connection plus Reasonix's product-facing catalogs.
+// Client is one MCP server connection plus Deeper's product-facing catalogs.
 // MCP operations are transport-agnostic and go through the supervised SDK session.
 type Client struct {
 	name       string
@@ -1547,7 +1547,7 @@ func (c *Client) withProgress(ctx context.Context, method string, params any) (a
 		return params, func() {}
 	}
 
-	token := fmt.Sprintf("reasonix-%d", c.progressID.Add(1))
+	token := fmt.Sprintf("deeper-%d", c.progressID.Add(1))
 	copyParams := make(map[string]any, len(callParams))
 	maps.Copy(copyParams, callParams)
 	meta := map[string]any{}
@@ -1620,7 +1620,7 @@ func formatTimeout(timeout time.Duration) string {
 	return timeout.String()
 }
 
-// toolName builds Reasonix's canonical model-visible name
+// toolName builds Deeper's canonical model-visible name
 // "mcp__<server>__<tool>". The registry separately resolves unique portable
 // and Claude plugin-qualified references without exposing duplicate schemas.
 func toolName(server, raw string) string {
@@ -1815,10 +1815,10 @@ func (t *remoteTool) callRaw(ctx context.Context, args json.RawMessage) (json.Ra
 	}
 	if t.client.toolCatalogStale() {
 		t.client.ensureToolsRefresh()
-		return nil, fmt.Errorf("MCP server %q changed its tool catalog and the refresh is still pending or failed; retry so Reasonix can apply the current schema and safety metadata", t.client.name)
+		return nil, fmt.Errorf("MCP server %q changed its tool catalog and the refresh is still pending or failed; retry so Deeper can apply the current schema and safety metadata", t.client.name)
 	}
 	if t.generation == 0 || t.generation != t.client.catalogGeneration {
-		return nil, fmt.Errorf("MCP server %q changed tool %q after this call was authorized; retry so Reasonix can apply the current schema and safety metadata", t.client.name, t.rawName)
+		return nil, fmt.Errorf("MCP server %q changed tool %q after this call was authorized; retry so Deeper can apply the current schema and safety metadata", t.client.name, t.rawName)
 	}
 	var argMap map[string]any
 	if len(args) > 0 {
@@ -1842,7 +1842,7 @@ func (t *remoteTool) callRaw(ctx context.Context, args json.RawMessage) (json.Ra
 		// is intentional and does not block; destructive promotion or lost
 		// authorization must produce zero tools/call.
 		if !t.MCPServerAuthorized() || destructive {
-			return nil, fmt.Errorf("MCP server %q changed the authorization or destructive classification for tool %q; the call was blocked before dispatch — retry so Reasonix can re-apply the current Planner MCP safety boundary", t.client.name, t.rawName)
+			return nil, fmt.Errorf("MCP server %q changed the authorization or destructive classification for tool %q; the call was blocked before dispatch — retry so Deeper can re-apply the current Planner MCP safety boundary", t.client.name, t.rawName)
 		}
 	}
 	tool.ObserveRemoteDispatch(ctx)

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 
 var desktopProjectOrganizationFileMu sync.Mutex
 
-// Project-tree organization lives in a sidecar older Reasonix builds do not
+// Project-tree organization lives in a sidecar older Deeper builds do not
 // know about and therefore cannot rewrite. desktop-projects.json retains the
 // inline fields for one-release interoperability, while this file is the
 // durable source when a user temporarily downgrades and the old build saves.

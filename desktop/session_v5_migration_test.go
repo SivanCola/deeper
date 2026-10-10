@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // These fixtures have no Desktop header or open tab, just like v4-only

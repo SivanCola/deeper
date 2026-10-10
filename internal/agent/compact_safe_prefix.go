@@ -3,7 +3,7 @@ package agent
 import (
 	"fmt"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // summaryPlanMarginRatio is the planning headroom left under the window for

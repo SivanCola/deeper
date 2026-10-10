@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"deeper/internal/history"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/store"
 	"github.com/fsnotify/fsnotify"
-	"reasonix/internal/history"
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/store"
 )
 
 // Directory notifications admit only dirty roots. The periodic audit remains

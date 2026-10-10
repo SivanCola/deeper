@@ -73,8 +73,8 @@ func TestAppliesOfficialDeepSeekV4ProPersona(t *testing.T) {
 func TestApplyOfficialDeepSeekV4ProPersonaPrependsOnce(t *testing.T) {
 	t.Parallel()
 	pro := &ProviderEntry{BaseURL: "https://api.deepseek.com", Model: "deepseek-v4-pro"}
-	got := ApplyOfficialDeepSeekV4ProPersona("You are Reasonix, a coding agent.", pro)
-	want := OfficialDeepSeekV4ProPersona + "\n\nYou are Reasonix, a coding agent."
+	got := ApplyOfficialDeepSeekV4ProPersona("You are Deeper, a coding agent.", pro)
+	want := OfficialDeepSeekV4ProPersona + "\n\nYou are Deeper, a coding agent."
 	if got != want {
 		t.Fatalf("prepend = %q, want %q", got, want)
 	}

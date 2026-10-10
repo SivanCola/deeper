@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 func TestBashHereDocIssue5624CommandsReturnPromptly(t *testing.T) {

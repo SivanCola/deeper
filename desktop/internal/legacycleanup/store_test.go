@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 func TestStoreFreezesInitialCandidateSetAndRoundTripsUpdates(t *testing.T) {

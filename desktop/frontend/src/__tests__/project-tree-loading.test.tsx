@@ -4,7 +4,7 @@ import { mock } from "node:test";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
 import type { Root } from "react-dom/client";
-import type { ReasonixDesktopHost } from "../lib/desktopHost";
+import type { DeeperDesktopHost } from "../lib/desktopHost";
 import type { ProjectNode, ProjectTopicPage, ProjectTopicPageRequest, SessionGroup } from "../lib/types";
 
 const dom = new JSDOM('<html><body><div id="root"></div></body></html>', { url: "http://localhost/", pretendToBeVisual: true });
@@ -72,14 +72,14 @@ const bindings = {
   Platform: async () => "darwin",
   RemoteConnectionStatuses: async () => [],
 };
-window.reasonixDesktop = {
+window.deeperDesktop = {
   kind: "electron", contract: { commands: Object.keys(bindings) }, platform: { os: "darwin" }, native: {},
   invoke: (method: string, args: unknown[]) => (bindings as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>)[method](...args),
   on: (name: string, cb: (...args: unknown[]) => void) => {
     const set = listeners.get(name) ?? new Set(); set.add(cb); listeners.set(name, set);
     return () => set.delete(cb);
   },
-} as unknown as ReasonixDesktopHost;
+} as unknown as DeeperDesktopHost;
 
 const container = document.getElementById("root")!;
 let root: Root;

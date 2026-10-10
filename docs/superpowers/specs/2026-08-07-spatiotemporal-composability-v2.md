@@ -2,7 +2,7 @@
 
 ## Context
 
-Reasonix already has a solid extension kernel: `Contribution → RuntimeSnapshot`,
+Deeper already has a solid extension kernel: `Contribution → RuntimeSnapshot`,
 `RuntimeSet` reverse/idempotent cleanup with generation guards, Builder freeze
 and activate stages, and `Rebuild` that keeps the old controller on failure.
 
@@ -17,7 +17,7 @@ language:
 
 ## Fixed decisions
 
-- Upgrade native plugins to `reasonix.io/plugin/v2`
+- Upgrade native plugins to `deeper.io/plugin/v2`
 - Reject v1 and legacy native manifests (no apiVersion) at install, doctor, boot
 - Keep existing stdio/HTTP transport; do not rewrite the transport layer
 - Do not introduce an external runtime dependency
@@ -94,11 +94,11 @@ participate in canonical hashing.
 
 ## Manifest v2
 
-Native `reasonix-plugin.json` requires:
+Native `deeper-plugin.json` requires:
 
 ```json
 {
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "example",
   "version": "2.0.0",
   "requires": [...],
@@ -199,10 +199,10 @@ In addition to the existing frozen table, v2 adds:
 
 ## Migration
 
-- `reasonix plugin migrate <name> --to-v2` rewrites only pre-extension native
+- `deeper plugin migrate <name> --to-v2` rewrites only pre-extension native
   manifests that omit `apiVersion`, backs up the original, and errors on
   dependencies it cannot infer. It does not accept Manifest v1.
-- `reasonix plugin doctor` reports dependency and protocol errors
+- `deeper plugin doctor` reports dependency and protocol errors
 - v1 / missing apiVersion native manifests fail install, doctor, and boot
 
 ## Acceptance
@@ -224,7 +224,7 @@ In addition to the existing frozen table, v2 adds:
 | --- | --- |
 | EffectScope / LiveScope / RuntimeSet | Done |
 | extensioncontract + DependencyGraph + RuntimePlan | Done |
-| Manifest `reasonix.io/plugin/v2` + reject v1 | Done |
+| Manifest `deeper.io/plugin/v2` + reject v1 | Done |
 | Extension Protocol major v2 + schema/SDK gen | Done |
 | PublishGate + stale UI/provider chunk drop | Done |
 | Sidecar incremental adopt (StartPackagesWithPlan) | Done |

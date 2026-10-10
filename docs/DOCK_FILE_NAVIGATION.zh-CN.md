@@ -32,9 +32,9 @@
 - **只有显式命令推进修订。** 等价命令会保持条目对象与条目列表完全一致，
   因此仍有效的内容读取不会被重新启动。
 
-## Harness 设计 → Reasonix 实现
+## Harness 设计 → Deeper 实现
 
-| Harness 设计 | Reasonix 实现 |
+| Harness 设计 | Deeper 实现 |
 | --- | --- |
 | 命令驱动导航：打开由事件触发，渲染只读取结果 | `FileNavigationOwner`（`lib/fileNavigationOwner.ts`）提交记录；`WorkspaceDockRegion` 不再在渲染中构造请求；`useFileNavigationRecord`（`app-shell/useFileNavigation.ts`）只读取 |
 | 稳定资源身份：按文件规范坐标识别，不按对象引用 | `FileResourceRef` / `FileAccessContext` / `ResolvedFileResource`（`lib/fileResource.ts`）；后端解析的 `identityPath` 合并相对/绝对路径别名，访问上下文另行区分 workspace、presented 与验证引用读取 |

@@ -7,21 +7,21 @@ import { fileURLToPath } from 'node:url';
 import { _electron } from 'playwright';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const home = mkdtempSync(join(tmpdir(), 'reasonix-draft-native-'));
+const home = mkdtempSync(join(tmpdir(), 'deeper-draft-native-'));
 const workspace = join(home, 'workspace');
 mkdirSync(workspace);
 const report = { home, checks: [] };
 const check = name => { report.checks.push(name); console.log(`PASS ${name}`); };
 const launch = () => _electron.launch({ args: [root], env: { ...process.env,
-  REASONIX_HOME: home, REASONIX_STATE_HOME: home, REASONIX_CACHE_HOME: join(home,'cache'),
-  REASONIX_DEV: '1', REASONIX_DESKTOP_SERVICE: resolve(root,'../build/bin/reasonix-desktop-service') }, timeout:60000 });
+  DEEPER_HOME: home, DEEPER_STATE_HOME: home, DEEPER_CACHE_HOME: join(home,'cache'),
+  DEEPER_DEV: '1', DEEPER_DESKTOP_SERVICE: resolve(root,'../build/bin/deeper-desktop-service') }, timeout:60000 });
 async function ready(app) {
   const page = await app.firstWindow();
-  await page.waitForFunction(() => Boolean(window.reasonixDesktop) && !document.querySelector('.boot-shell'), null, { timeout:60000 });
-  await page.waitForFunction(async () => { try { await window.reasonixDesktop.invoke('ListTabs', []); return true; } catch { return false; } }, null, { timeout:60000 });
+  await page.waitForFunction(() => Boolean(window.deeperDesktop) && !document.querySelector('.boot-shell'), null, { timeout:60000 });
+  await page.waitForFunction(async () => { try { await window.deeperDesktop.invoke('ListTabs', []); return true; } catch { return false; } }, null, { timeout:60000 });
   return page;
 }
-const invoke = (page, name, args=[]) => page.evaluate(({name,args}) => window.reasonixDesktop.invoke(name,args),{name,args});
+const invoke = (page, name, args=[]) => page.evaluate(({name,args}) => window.deeperDesktop.invoke(name,args),{name,args});
 const installClipboardFixture = shell => shell.evaluate(async ({clipboard,ClipboardItem}) => {
   globalThis.__draftSmokeClipboard = await Promise.all((await clipboard.read()).map(async item => new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)]))))));
   const png = new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aY1sAAAAASUVORK5CYII=','base64')],{type:'image/png'});
@@ -55,7 +55,7 @@ try {
   draft = saved.draft;
   await invoke(page,'SetSessionDraftRestoreTarget',[draft.id]);
   check('native clipboard attachment is saved to the captured workspace with a confirmed digest');
-  await page.evaluate(() => window.__reasonixFlushSessionDraft?.());
+  await page.evaluate(() => window.__deeperFlushSessionDraft?.());
   await shell.close();
   shell = await launch();
   page = await ready(shell);
@@ -79,7 +79,7 @@ try {
   await cdp.send('Input.dispatchDragEvent',{type:'dragOver',...drag});
   await cdp.send('Input.dispatchDragEvent',{type:'drop',...drag});
   await page.waitForFunction(async id => {
-    const state = await window.reasonixDesktop.invoke('GetSessionDraftState',[id]);
+    const state = await window.deeperDesktop.invoke('GetSessionDraftState',[id]);
     const content = JSON.parse(state.draft.contentJson);
     return content.attachments.length > 1 || content.workspaceRefs.length > 0;
   }, draft.id);
@@ -91,7 +91,7 @@ try {
     await composer.focus();
     await page.keyboard.press('Meta+v');
     await page.waitForFunction(async ({id,count}) => {
-      const state = await window.reasonixDesktop.invoke('GetSessionDraftState',[id]);
+      const state = await window.deeperDesktop.invoke('GetSessionDraftState',[id]);
       return JSON.parse(state.draft.contentJson).attachments.length > count;
     }, {id:draft.id,count:beforePaste});
   } finally { await restoreClipboard(shell); }

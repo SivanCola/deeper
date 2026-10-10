@@ -8,30 +8,30 @@ import { rewriteDragRegions, shellFromEnv } from "./shell-css.mjs";
 const stylesPath = resolve(dirname(fileURLToPath(import.meta.url)), "../src/styles.css");
 
 test("browser build keeps the custom property byte-for-byte", () => {
-  const css = ".tabbar{--reasonix-draggable:drag}.tabbar *{--reasonix-draggable: no-drag}";
+  const css = ".tabbar{--deeper-draggable:drag}.tabbar *{--deeper-draggable: no-drag}";
   assert.equal(rewriteDragRegions(css, "browser"), css);
 });
 
 test("electron build rewrites every drag declaration", () => {
-  const css = ".tabbar{--reasonix-draggable:drag}.tabbar *{--reasonix-draggable: no-drag}/* --reasonix-draggable marks */";
+  const css = ".tabbar{--deeper-draggable:drag}.tabbar *{--deeper-draggable: no-drag}/* --deeper-draggable marks */";
   assert.equal(
     rewriteDragRegions(css, "electron"),
-    ".tabbar{-webkit-app-region:drag}.tabbar *{-webkit-app-region: no-drag}/* --reasonix-draggable marks */",
+    ".tabbar{-webkit-app-region:drag}.tabbar *{-webkit-app-region: no-drag}/* --deeper-draggable marks */",
   );
 });
 
 test("electron keeps chrome no-drag but does not punch the titlebar with transcript boxes", () => {
   const css = [
-    ".topicbar{--reasonix-draggable:drag}",
-    ".topicbar button{--reasonix-draggable:no-drag}",
-    ".topicbar__title-edit{--reasonix-draggable:no-drag}",
-    ".topicbar__title-input{--reasonix-draggable:no-drag}",
-    ".msg{--reasonix-draggable:no-drag}",
+    ".topicbar{--deeper-draggable:drag}",
+    ".topicbar button{--deeper-draggable:no-drag}",
+    ".topicbar__title-edit{--deeper-draggable:no-drag}",
+    ".topicbar__title-input{--deeper-draggable:no-drag}",
+    ".msg{--deeper-draggable:no-drag}",
     ".reasoning__head{-webkit-app-region:no-drag}",
     ".tool__head{-webkit-app-region:no-drag}",
-    ".management-screen{--reasonix-draggable:no-drag}",
-    ".settings-modal-backdrop{--reasonix-draggable:no-drag}",
-    ".workbench-dock__tools{--reasonix-draggable:no-drag}",
+    ".management-screen{--deeper-draggable:no-drag}",
+    ".settings-modal-backdrop{--deeper-draggable:no-drag}",
+    ".workbench-dock__tools{--deeper-draggable:no-drag}",
   ].join("");
   const out = rewriteDragRegions(css, "electron");
   assert.match(out, /\.topicbar\{-webkit-app-region:\s*drag\}/);
@@ -47,7 +47,7 @@ test("electron keeps chrome no-drag but does not punch the titlebar with transcr
 });
 
 test("chrome selector does not match unrelated topicbar or topbar class names", () => {
-  const css = ".topicbarfoo{--reasonix-draggable:no-drag}.topbar2{--reasonix-draggable:no-drag}";
+  const css = ".topicbarfoo{--deeper-draggable:no-drag}.topbar2{--deeper-draggable:no-drag}";
   const out = rewriteDragRegions(css, "electron");
   assert.equal(out, css);
 });
@@ -73,7 +73,7 @@ test("electron stylesheet rewrite leaves transcript boxes out of app-region", ()
 
 test("shell selection is explicit", () => {
   assert.equal(shellFromEnv({}), "browser");
-  assert.equal(shellFromEnv({ REASONIX_SHELL: "electron" }), "electron");
-  assert.throws(() => shellFromEnv({ REASONIX_SHELL: "wails" }), "the Wails shell is retired");
-  assert.throws(() => shellFromEnv({ REASONIX_SHELL: "tauri" }));
+  assert.equal(shellFromEnv({ DEEPER_SHELL: "electron" }), "electron");
+  assert.throws(() => shellFromEnv({ DEEPER_SHELL: "wails" }), "the Wails shell is retired");
+  assert.throws(() => shellFromEnv({ DEEPER_SHELL: "tauri" }));
 });

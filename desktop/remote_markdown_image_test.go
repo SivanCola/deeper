@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/netclient"
+	"deeper/internal/netclient"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -26,7 +26,7 @@ func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return fn(req)
 }
 
-func TestRemoteMarkdownImageUsesReasonixProxySpec(t *testing.T) {
+func TestRemoteMarkdownImageUsesDeeperProxySpec(t *testing.T) {
 	png := append([]byte(nil), markdownImageTestPNG...)
 	wantSpec := netclient.ProxySpec{Mode: netclient.ModeCustom, URL: "socks5://127.0.0.1:10808"}
 	var gotSpec netclient.ProxySpec

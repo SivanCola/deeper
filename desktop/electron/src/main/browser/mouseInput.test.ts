@@ -9,12 +9,12 @@ function fixture(kind: "main" | "local" | "remote") {
   const page = new FakePage(1);
   const child = new FakeFrame(2, "https://child.test", () => undefined);
   child.parent = page.mainFrame; page.mainFrame.children.push(child);
-  page.run = source => source.includes("reasonix:pageInputReady") ? true : kind === "main" ? null : { index: 0, x: 40, y: 20 };
+  page.run = source => source.includes("deeper:pageInputReady") ? true : kind === "main" ? null : { index: 0, x: 40, y: 20 };
   page.debugger.respond = (method, raw) => {
     const params = raw as Record<string, unknown>;
     if (method === "Page.getFrameTree") return { frameTree: { frame: { id: "root" } } };
     if (method === "Page.createIsolatedWorld") return { executionContextId: params.frameId === "root" ? 1 : 2 };
-    if (method === "Runtime.evaluate") return params.returnByValue ? { result: { value: String(params.expression).includes("reasonix:pageInputReady") ? true : null } } : { result: { objectId: "owner" } };
+    if (method === "Runtime.evaluate") return params.returnByValue ? { result: { value: String(params.expression).includes("deeper:pageInputReady") ? true : null } } : { result: { objectId: "owner" } };
     if (method === "DOM.describeNode") return { node: { frameId: "child", backendNodeId: 10 } };
     if (method === "Target.getTargets") return { targetInfos: kind === "remote" ? [{ targetId: "child", type: "iframe" }] : [] };
     if (method === "Target.attachToTarget") return { sessionId: "child-session" };

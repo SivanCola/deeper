@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 type childIsolationGoalOwner struct{ updates int }

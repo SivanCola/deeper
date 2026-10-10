@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 // Source fences track identity/lifecycle, not file length, mtime, title or index

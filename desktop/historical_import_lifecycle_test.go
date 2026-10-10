@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/identitylock"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func newHistoricalLifecycleApp(t *testing.T) *App {

@@ -46,7 +46,7 @@ export function useAppChromeCommands(input: AppChromeCommandsInput) {
   });
 
   // The OS drag region ignores anything with detail !== 1, so a double click
-  // on a --reasonix-draggable region never reaches the shell. Both platforms that hide
+  // on a --deeper-draggable region never reaches the shell. Both platforms that hide
   // their native title bar need this handled here.
   const chromeDoubleClickZooms = input.windowsFrameless || input.platform === "darwin";
   const handleChromeTitlebarDoubleClick = useCommittedCommand((event: ReactMouseEvent<HTMLDivElement>) => {

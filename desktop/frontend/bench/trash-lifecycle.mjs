@@ -12,7 +12,7 @@ try {
   };
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  const url = process.env.REASONIX_TRASH_BROWSER_URL || "http://127.0.0.1:4771/bench/trash-lifecycle.html";
+  const url = process.env.DEEPER_TRASH_BROWSER_URL || "http://127.0.0.1:4771/bench/trash-lifecycle.html";
   await page.goto(url);
   await openDelete();
   await page.getByRole("dialog").waitFor();

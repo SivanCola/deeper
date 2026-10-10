@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // appendForkTurn commits one turn into a live exclusive session. A completed
@@ -222,7 +222,7 @@ func TestForkSessionRouteCreatesChildWithoutSwitchingParent(t *testing.T) {
 		t.Fatalf("created child = %+v", created)
 	}
 	// The response never moves the serve session: the parent keeps its identity
-	// and its path, and the X-Reasonix-Session-ID header still names the parent.
+	// and its path, and the X-Deeper-Session-ID header still names the parent.
 	if after, ok := ctrl.SessionRef(); !ok || after != ref || ctrl.SessionPath() != parentPath {
 		t.Fatalf("parent identity = %+v (ok=%v path=%q)", after, ok, ctrl.SessionPath())
 	}

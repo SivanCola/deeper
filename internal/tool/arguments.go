@@ -177,7 +177,7 @@ func compileArgumentSchema(fingerprint string, raw []byte) compiledArgumentSchem
 		compiler := jsonschema.NewCompiler()
 		compiler.UseLoader(nil)
 		compiler.DefaultDraft(draft)
-		resource := "urn:reasonix:argument-schema:" + fingerprint
+		resource := "urn:deeper:argument-schema:" + fingerprint
 		if err := compiler.AddResource(resource, doc); err != nil {
 			return nil, err
 		}

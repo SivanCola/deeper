@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 const sampleSSHConfig = `

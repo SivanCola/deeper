@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/desktop/internal/sessionui"
 	"errors"
-	"reasonix/desktop/internal/sessionui"
 )
 
 func sessionUIError(err error, target, operation string) error {

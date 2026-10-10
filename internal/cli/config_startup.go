@@ -1,9 +1,9 @@
 package cli
 
 import (
+	"deeper/internal/config"
 	"fmt"
 	"os"
-	"reasonix/internal/config"
 )
 
 func migrateLegacyConfigForCLI() {

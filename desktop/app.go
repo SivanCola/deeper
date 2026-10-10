@@ -4,6 +4,41 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"deeper/desktop/internal/browserops"
+	"deeper/desktop/internal/instanceidentity"
+	"deeper/internal/agent"
+	"deeper/internal/billing"
+	"deeper/internal/boot"
+	"deeper/internal/botruntime"
+	"deeper/internal/checkpoint"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/extension/providerext"
+	"deeper/internal/fileref"
+	fileenc "deeper/internal/fileutil/encoding"
+	"deeper/internal/historywork"
+	"deeper/internal/i18n"
+	"deeper/internal/mcpdiag"
+	"deeper/internal/mcpregistry"
+	"deeper/internal/memory"
+	"deeper/internal/notify"
+	"deeper/internal/plugin"
+	"deeper/internal/proc"
+	"deeper/internal/provider"
+	"deeper/internal/repair"
+	"deeper/internal/session"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/skill"
+	"deeper/internal/skill/skillwatch"
+	"deeper/internal/store"
+	"deeper/internal/taskcatalog"
+	"deeper/internal/taskmonitor"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
+	"deeper/internal/transcript"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -16,41 +51,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reasonix/desktop/internal/browserops"
-	"reasonix/desktop/internal/instanceidentity"
-	"reasonix/internal/agent"
-	"reasonix/internal/billing"
-	"reasonix/internal/boot"
-	"reasonix/internal/botruntime"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/extension/providerext"
-	"reasonix/internal/fileref"
-	fileenc "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/historywork"
-	"reasonix/internal/i18n"
-	"reasonix/internal/mcpdiag"
-	"reasonix/internal/mcpregistry"
-	"reasonix/internal/memory"
-	"reasonix/internal/notify"
-	"reasonix/internal/plugin"
-	"reasonix/internal/proc"
-	"reasonix/internal/provider"
-	"reasonix/internal/repair"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/skill"
-	"reasonix/internal/skill/skillwatch"
-	"reasonix/internal/store"
-	"reasonix/internal/taskcatalog"
-	"reasonix/internal/taskmonitor"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
-	"reasonix/internal/transcript"
 	"regexp"
 	goruntime "runtime"
 	"slices"
@@ -82,7 +82,7 @@ const eventChannel = "agent:event"
 
 const singleInstanceIDPrefix = instanceidentity.Prefix
 
-func singleInstanceID() string { return instanceidentity.ForHome(config.ReasonixHomeDir()) }
+func singleInstanceID() string { return instanceidentity.ForHome(config.DeeperHomeDir()) }
 
 // PromptHistoryEntry is one user prompt extracted from a session JSONL file.
 // The frontend uses these for ↑/↓ prompt-history navigation.
@@ -6586,7 +6586,7 @@ type CommandInfo struct {
 }
 
 // Commands lists the slash commands available this session — built-in actions,
-// custom commands (.reasonix/commands), and MCP prompts — for the composer's "/"
+// custom commands (.deeper/commands), and MCP prompts — for the composer's "/"
 // autocomplete menu.
 func (a *App) Commands() []CommandInfo {
 	out := builtinCommandInfos()
@@ -7618,7 +7618,7 @@ func withPluginConfigInWorkspace(v ServerView, p config.PluginEntry, workspace s
 func mcpServerSource(source config.MCPConfigSource) (kind, configSource string) {
 	switch source {
 	case config.MCPSourceProjectConfig:
-		return "project", "reasonix.toml"
+		return "project", "deeper.toml"
 	case config.MCPSourceProjectMCPJSON:
 		return "project", ".mcp.json"
 	case config.MCPSourcePluginPackage:
@@ -8545,7 +8545,7 @@ func (a *App) ReconnectMCPServer(name string) error {
 }
 
 // SetMCPServerEnabled is the durable enable/disable switch for an installed MCP
-// server. It writes $REASONIX_HOME/mcp-activation.json and updates the live
+// server. It writes $DEEPER_HOME/mcp-activation.json and updates the live
 // registry: disable removes tools and may stop the process; enable restores
 // cached tools and starts the process only on the next real tool call.
 func (a *App) SetMCPServerEnabled(name string, enabled bool) error {
@@ -9086,9 +9086,9 @@ func (e *sessionLeaseBusyError) Error() string {
 	// the session itself (startup bind), not changing a setting on it.
 	setting := strings.TrimSpace(e.setting)
 	if setting == "" {
-		return "this session is already open in another Reasonix window or still running in the background; close the other window or open a copy"
+		return "this session is already open in another Deeper window or still running in the background; close the other window or open a copy"
 	}
-	return fmt.Sprintf("this session is already open in another Reasonix window or still running in the background; close the other window or open a copy before changing %s", setting)
+	return fmt.Sprintf("this session is already open in another Deeper window or still running in the background; close the other window or open a copy before changing %s", setting)
 }
 
 func (e *sessionLeaseBusyError) Unwrap() error {
@@ -9133,7 +9133,7 @@ var (
 	// transient in-process holder. CleanupStaleRunning and catalog persistence
 	// can hold the session lease or save lock briefly while a concurrent tab
 	// bind or archive begins; those callers must not surface a spurious
-	// "already open in another Reasonix window" error for ownership that is
+	// "already open in another Deeper window" error for ownership that is
 	// genuinely free once the short operation finishes. A lease held by another
 	// window or process stays held for its whole lifetime, so the bounded retry
 	// still fails fast there.
@@ -9643,10 +9643,10 @@ func (a *App) SetEffortForTab(tabID, level string) error {
 }
 
 // SetAgentPresetDeprecatedNotice is returned by the deprecated execution-mode
-// Wails methods. Reasonix runs one adaptive standard execution; these methods
+// Wails methods. Deeper runs one adaptive standard execution; these methods
 // remain bound for one compatibility version as no-op wrappers: they never
 // require an idle tab, never save a mode, and never rebuild an agent.
-const SetAgentPresetDeprecatedNotice = "Reasonix now uses one adaptive standard execution: planning, verification, and review strength follow task risk automatically. Execution modes are no longer switchable; this call is accepted for compatibility and ignored."
+const SetAgentPresetDeprecatedNotice = "Deeper now uses one adaptive standard execution: planning, verification, and review strength follow task risk automatically. Execution modes are no longer switchable; this call is accepted for compatibility and ignored."
 
 func (a *App) SetTokenMode(mode string) error {
 	// Deprecated no-op compatibility wrapper.
@@ -10151,7 +10151,7 @@ func (a *App) readFilePathForTab(tabID, displayPath, path string, forceSource bo
 		store.extend(token, 2*time.Hour)
 		out.Kind = kind
 		out.Mime = mime
-		out.URL = "/__reasonix_workspace_media/" + token + "/" + url.PathEscape(info.Name())
+		out.URL = "/__deeper_workspace_media/" + token + "/" + url.PathEscape(info.Name())
 		return out
 	}
 	f, err := os.Open(path)
@@ -10388,7 +10388,7 @@ func (a *App) CreatePresentedBrowserPreviewForTab(tabID, toolCallID, path string
 }
 
 func (a *App) extendWorkspaceBrowserPreviewToken(resourceURL string) {
-	const prefix = "/__reasonix_workspace_media/"
+	const prefix = "/__deeper_workspace_media/"
 	trimmed := strings.TrimPrefix(resourceURL, prefix)
 	if trimmed == resourceURL {
 		return
@@ -10438,7 +10438,7 @@ func (a *App) RevokeWorkspaceMediaPreview(resourceURL string) {
 }
 
 func (a *App) revokeWorkspaceMediaPath(resourcePath string) {
-	const prefix = "/__reasonix_workspace_media/"
+	const prefix = "/__deeper_workspace_media/"
 	trimmed := strings.TrimPrefix(resourcePath, prefix)
 	if trimmed == resourcePath {
 		return
@@ -10790,7 +10790,7 @@ func createExportTempFile(dir string) (*os.File, os.FileMode, error) {
 		if _, err := rand.Read(suffix[:]); err != nil {
 			return nil, 0, fmt.Errorf("generate export temp name: %w", err)
 		}
-		path := filepath.Join(dir, ".reasonix-export-"+hex.EncodeToString(suffix[:]))
+		path := filepath.Join(dir, ".deeper-export-"+hex.EncodeToString(suffix[:]))
 		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 		if errors.Is(err, os.ErrExist) {
 			continue
@@ -10888,7 +10888,7 @@ func exportOperationError(operation, path string, err error) error {
 func safeExportFilename(name string) string {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return "reasonix-session.md"
+		return "deeper-session.md"
 	}
 	return filepath.Base(name)
 }
@@ -11024,7 +11024,7 @@ type MemoryView struct {
 // writableScopes are the quick-add targets the panel offers, broad → specific.
 var writableScopes = []memory.Scope{memory.ScopeUser, memory.ScopeProject, memory.ScopeLocal}
 
-// Memory returns the loaded memory for the panel: the REASONIX.md hierarchy,
+// Memory returns the loaded memory for the panel: the DEEPER.md hierarchy,
 // active/archived auto-memories, and the writable scopes. Read-only; mutations
 // go through Remember / SaveDoc.
 func (a *App) Memory() MemoryView {
@@ -11682,7 +11682,7 @@ func (a *App) NeedsOnboarding() bool {
 }
 
 // ConnectKey validates apiKey against the balance endpoint, persists it to
-// Reasonix's global .env, and rebuilds the controller so the new key takes effect.
+// Deeper's global .env, and rebuilds the controller so the new key takes effect.
 func (a *App) ConnectKey(apiKey string) (string, error) {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {

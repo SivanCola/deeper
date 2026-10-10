@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 var ErrImportConflict = errors.New("legacy transcript and session event source conflict")

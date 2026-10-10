@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"reasonix/internal/completion"
-	"reasonix/internal/event"
+	"deeper/internal/completion"
+	"deeper/internal/event"
 )
 
 // emitTurnShadows records end-of-turn facts without a quality decision.

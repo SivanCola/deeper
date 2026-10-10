@@ -3,8 +3,8 @@ package transcript
 import (
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 // A cancelled attempt persists its partial output through

@@ -27,27 +27,27 @@ if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/reasonix-docs-verify.XXXXXX")"
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/deeper-docs-verify.XXXXXX")"
 cleanup() {
 	case "$tmp_dir" in
-	*/reasonix-docs-verify.*) rm -rf -- "$tmp_dir" ;;
+	*/deeper-docs-verify.*) rm -rf -- "$tmp_dir" ;;
 	*) echo "refusing to clean unexpected docs verification directory: $tmp_dir" >&2 ;;
 	esac
 }
 trap cleanup EXIT
 
-binary="$tmp_dir/reasonix"
+binary="$tmp_dir/deeper"
 build_time_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 git_commit="$(printf '%s' "$revision" | cut -c1-12)"
-ldflags="-s -w -X main.version=$version -X main.gitCommit=$git_commit -X main.buildTimeUTC=$build_time_utc -X reasonix/internal/productdocs.linkedVersion=$version -X reasonix/internal/productdocs.linkedRevision=$revision"
+ldflags="-s -w -X main.version=$version -X main.gitCommit=$git_commit -X main.buildTimeUTC=$build_time_utc -X deeper/internal/productdocs.linkedVersion=$version -X deeper/internal/productdocs.linkedRevision=$revision"
 (
 	cd "$repo_root"
-	CGO_ENABLED=0 go build -trimpath -ldflags="$ldflags" -o "$binary" ./cmd/reasonix
+	CGO_ENABLED=0 go build -trimpath -ldflags="$ldflags" -o "$binary" ./cmd/deeper
 )
 
-mkdir -p "$tmp_dir/reasonix-home"
+mkdir -p "$tmp_dir/deeper-home"
 manifest="$(
-	REASONIX_HOME="$tmp_dir/reasonix-home" "$binary" docs-manifest \
+	DEEPER_HOME="$tmp_dir/deeper-home" "$binary" docs-manifest \
 		--verify-source "$repo_root" \
 		--expect-version "$version" \
 		--expect-revision "$revision"

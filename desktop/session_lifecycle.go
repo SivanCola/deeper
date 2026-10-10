@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 func (a *App) archiveSessionRefsWithOperation(refs []session.SessionRef, operationID string, dependencies ...string) error {

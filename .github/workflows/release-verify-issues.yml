@@ -20,7 +20,7 @@ on:
     types: [published]
   push:
     branches:
-      - main-v2
+      - main
     paths:
       - '.github/workflows/release-verify-issues.yml'
       - 'scripts/release-verify-issues.mjs'
@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   notify:
-    if: github.repository == 'esengine/DeepSeek-Reasonix'
+    if: github.repository == 'SivanCola/deeper'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

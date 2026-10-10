@@ -12,7 +12,7 @@ test("normalizes app zoom and defaults safely", () => {
 });
 
 test("migrates only explicitly user-owned legacy zoom", async () => {
-  const root = await mkdtemp(join(tmpdir(), "reasonix-zoom-"));
+  const root = await mkdtemp(join(tmpdir(), "deeper-zoom-"));
   const legacy = join(root, "desktop-zoom.json");
   await writeFile(legacy, JSON.stringify({ zoomFactor: 0.7 }));
   const store = new AppZoomStore(join(root, "electron-app-zoom.json"), legacy);
@@ -23,7 +23,7 @@ test("migrates only explicitly user-owned legacy zoom", async () => {
 });
 
 test("persists user value and reset", async () => {
-  const root = await mkdtemp(join(tmpdir(), "reasonix-zoom-"));
+  const root = await mkdtemp(join(tmpdir(), "deeper-zoom-"));
   const file = join(root, "nested", "zoom.json");
   const store = new AppZoomStore(file);
   await store.set(0.85);

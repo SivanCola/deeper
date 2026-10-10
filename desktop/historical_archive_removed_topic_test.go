@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 )
 
 // Earlier purge writers dropped the deleted session's topic from every receipt,

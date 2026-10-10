@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestArchiveRetiresCachedCanonicalRuntime(t *testing.T) {

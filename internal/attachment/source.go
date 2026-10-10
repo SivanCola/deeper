@@ -196,7 +196,7 @@ func sameSourceEntry(lstat func(string) (os.FileInfo, error), name string, opene
 // ReadWorkspaceImageBytes shares confined, race-resistant file access with
 // legacy preview callers, which retain their own decoding policy.
 func ReadWorkspaceImageBytes(root, path string, maxBytes int64) ([]byte, error) {
-	return readPathBytes(root, path, ".reasonix/attachments", maxBytes)
+	return readPathBytes(root, path, ".deeper/attachments", maxBytes)
 }
 
 func resolveSourcePath(root, path string) (string, error) {

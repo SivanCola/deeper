@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 	"encoding/base64"
 	"encoding/json"
 	"image"
@@ -10,8 +12,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
 	"slices"
 	"strings"
 	"testing"
@@ -212,7 +212,7 @@ func TestRemoteSessionExportPinsExplicitIdentityAcrossTabSwitch(t *testing.T) {
 			return remoteRuntimeTestResponse(req, http.StatusOK, remoteRuntimeTestJSON(t, snapshot)), nil
 		case "/session-export/document":
 			response := remoteRuntimeTestResponse(req, http.StatusOK, `[{"id":"SOURCE-A"}]`)
-			response.Header.Set("X-Reasonix-Export-Records", "1")
+			response.Header.Set("X-Deeper-Export-Records", "1")
 			return response, nil
 		case "/session-export/validate":
 			return remoteRuntimeTestResponse(req, http.StatusNoContent, ""), nil

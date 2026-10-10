@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 func TestClearSessionRefusesWhileTurnRuns(t *testing.T) {

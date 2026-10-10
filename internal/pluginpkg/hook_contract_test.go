@@ -115,7 +115,7 @@ func TestNativeManifestRejectsUnsupportedHookShell(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, NativeManifest)
 	writeTestFile(t, path, `{
-  "apiVersion":"reasonix.io/plugin/v2",
+  "apiVersion":"deeper.io/plugin/v2",
   "name":"bad-shell",
   "hooks":{"SessionStart":[{"command":"echo ok","shell":"fish"}]}
 }`)

@@ -4466,5 +4466,5 @@
   "scope": "Real UI navigation, bidirectional paging, cache accounting, worker drain and SVG object URL release for checkpoint/schema-1 fixtures; not whole-process memory or idle-runtime qualification.",
   "runner": "desktop/packaging/history-cache-soak.mjs",
   "runnerSha256": "3bdeaf8601a5a867406e33b7a28267d864d885a88eb802e7ccd192a918c1286b",
-  "command": "node desktop/packaging/history-cache-soak.mjs desktop/build/candidate/darwin-arm64/Reasonix.app"
+  "command": "node desktop/packaging/history-cache-soak.mjs desktop/build/candidate/darwin-arm64/Deeper.app"
 }

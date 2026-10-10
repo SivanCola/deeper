@@ -12,9 +12,9 @@ import (
 	"io"
 	"os"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/historywork"
-	"reasonix/internal/provider"
+	"deeper/internal/fileops"
+	"deeper/internal/historywork"
+	"deeper/internal/provider"
 )
 
 // Build an offset-only projection for a checkpoint without publishing or

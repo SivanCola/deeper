@@ -13,8 +13,8 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/remote/bootstrap"
+	"deeper/internal/config"
+	"deeper/internal/remote/bootstrap"
 )
 
 type failingRequestBody struct{}
@@ -319,7 +319,7 @@ func TestCredentialEnsureHealsEveryConfigBeforeReload(t *testing.T) {
 
 func TestEnsureServerRejectsRemovedHost(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 	client := newLifecycleSSHClient(nil)
 	mgr := newDesktopRemoteManager(nil)
@@ -405,7 +405,7 @@ func TestRewriteJSONModelGuards(t *testing.T) {
 // TestCredentialModeConfigRoundTrip pins the host entry field end to end.
 func TestCredentialModeConfigRoundTrip(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 	if err := editUserConfig(func(c *config.Config) error {
 		return c.UpsertRemoteHost(config.RemoteHostEntry{

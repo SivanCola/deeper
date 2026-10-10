@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 type providerRemovalPlan struct {

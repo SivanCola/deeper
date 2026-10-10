@@ -15,7 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 type SaveOptions struct {
@@ -150,7 +150,7 @@ func (s Store) validatePinnedBudget(m Memory) error {
 	if total <= PinnedGuidanceBudgetChars {
 		return nil
 	}
-	return fmt.Errorf("pinning this fact would put pinned guidance at %d chars, over the %d budget: rules that must always hold belong in REASONIX.md/AGENTS.md instructions; unpin or consolidate existing pinned facts first", total, PinnedGuidanceBudgetChars)
+	return fmt.Errorf("pinning this fact would put pinned guidance at %d chars, over the %d budget: rules that must always hold belong in DEEPER.md/AGENTS.md instructions; unpin or consolidate existing pinned facts first", total, PinnedGuidanceBudgetChars)
 }
 
 func (s Store) SaveWithOptions(m Memory, opts SaveOptions) (SaveResult, error) {
@@ -592,7 +592,7 @@ func newMemoryID(name string, now time.Time) string {
 }
 
 func legacyMemoryID(name string, scope FactScope) string {
-	sum := sha256.Sum256([]byte("reasonix-memory-v2\x00" + string(NormalizeFactScope(string(scope))) + "\x00" + slug(name)))
+	sum := sha256.Sum256([]byte("deeper-memory-v2\x00" + string(NormalizeFactScope(string(scope))) + "\x00" + slug(name)))
 	return "legacy-" + hex.EncodeToString(sum[:12])
 }
 

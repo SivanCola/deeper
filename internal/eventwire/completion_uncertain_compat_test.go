@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // An older client does not know completion_uncertain and ignores the additive

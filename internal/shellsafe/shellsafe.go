@@ -9,7 +9,7 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"reasonix/internal/shellparse"
+	"deeper/internal/shellparse"
 )
 
 // readOnlyCommands holds single-word commands whose base name alone implies a
@@ -138,7 +138,7 @@ func ClassifyReadOnlyCommand(command string) (base, sub string, fields []string,
 	return "", "", nil, false
 }
 
-const resolvedSubstitutionPlaceholder = "__reasonix_read_only_substitution__"
+const resolvedSubstitutionPlaceholder = "__deeper_read_only_substitution__"
 
 var substitutionSafeCommands = map[string]bool{
 	"cat": true, "head": true, "tail": true, "ls": true,

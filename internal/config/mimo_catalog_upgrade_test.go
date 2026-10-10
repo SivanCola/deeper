@@ -10,7 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 func TestMimoCatalogUpgradePreservesSelectionsAndDeletion(t *testing.T) {

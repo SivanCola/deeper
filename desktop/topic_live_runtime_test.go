@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestStartTopicActivationKeepsExplicitRepresentativeSeparateFromLiveSibling(t *testing.T) {

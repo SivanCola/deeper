@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"deeper/internal/mcpdiag"
+	"deeper/internal/mcpinteraction"
+	"deeper/internal/tool"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
-	"reasonix/internal/mcpdiag"
-	"reasonix/internal/mcpinteraction"
-	"reasonix/internal/tool"
 )
 
 // SessionState is the transport lifecycle state exposed to local diagnostics.
@@ -78,7 +78,7 @@ type sessionBuild struct {
 // sdkSessionTransport is the single connection owner for one configured MCP
 // server. The official SDK owns JSON-RPC correlation, cancellation, protocol
 // negotiation, Streamable HTTP listening, and graceful protocol close.
-// Reasonix owns product timeouts, process isolation, security policy, and
+// Deeper owns product timeouts, process isolation, security policy, and
 // failure-atomic session replacement.
 type sdkSessionTransport struct {
 	name string
@@ -338,7 +338,7 @@ func (t *sdkSessionTransport) build(ctx context.Context, generation uint64) (*ma
 			"mimeTypes": []any{AppsMimeType},
 		})
 	}
-	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "reasonix", Version: mcpClientVersion()}, &mcpsdk.ClientOptions{
+	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "deeper", Version: mcpClientVersion()}, &mcpsdk.ClientOptions{
 		Capabilities:       capabilities,
 		ElicitationHandler: elicitationHandler,
 		ToolListChangedHandler: func(_ context.Context, req *mcpsdk.ToolListChangedRequest) {

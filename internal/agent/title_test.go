@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestReasoningLanguageDirectiveIsNotUserAuthored(t *testing.T) {

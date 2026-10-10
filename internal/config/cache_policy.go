@@ -9,7 +9,7 @@ import (
 // the provider's base_url. Used by cold-resume prune to decide whether the
 // provider cache is still warm after a session idle period.
 //
-// The legacy main-v2 default (24h) is deliberately preserved for DeepSeek and
+// The legacy main default (24h) is deliberately preserved for DeepSeek and
 // unknown vendors: DeepSeek's Context Caching on Disk retains prefixes for
 // "several hours to days", so the long-standing 24h threshold is correct for
 // it and must not regress. Only vendors with a documented, much shorter

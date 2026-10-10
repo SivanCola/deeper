@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // maxStepsPause is a resumable stop after a positive model-round budget.

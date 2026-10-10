@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/serve"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/serve"
 )
 
 // A submit that races a session switch is refused by the serve's
@@ -45,7 +45,7 @@ func TestRemoteSubmitRacingRouteChangeRetriesThenReportsTransient(t *testing.T) 
 		error
 		RPCErrorData() map[string]any
 	}
-	if !errors.As(err, &coded) || coded.Error() != "reasonix_error:inbox_target_transient" {
+	if !errors.As(err, &coded) || coded.Error() != "deeper_error:inbox_target_transient" {
 		t.Fatalf("raced submit = %v, want the transient outcome", err)
 	}
 	if coded.RPCErrorData()["transient"] != true {

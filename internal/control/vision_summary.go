@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/imageinput"
+	"deeper/internal/provider"
 )
 
 // prepareVisionTurn shares the same per-session processor as tool results.

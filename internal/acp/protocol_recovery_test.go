@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestProtocolRecoveryACPRejectsMissingAndUnsupportedToken(t *testing.T) {

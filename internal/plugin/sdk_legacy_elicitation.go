@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"reasonix/internal/mcpinteraction"
+	"deeper/internal/mcpinteraction"
 )
 
 type legacyElicitationCall struct {

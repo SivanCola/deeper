@@ -3,7 +3,7 @@ package session
 import (
 	"encoding/json"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // StreamCheckpointKind carries the output a still-open stream has produced,

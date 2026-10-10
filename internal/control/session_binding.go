@@ -9,13 +9,13 @@ import (
 	"log/slog"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/permissionpreset"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/permissionpreset"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // NativeLegacySession identifies a path-backed controller across hot rebuilds.

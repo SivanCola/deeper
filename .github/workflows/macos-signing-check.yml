@@ -4,12 +4,15 @@ name: Verify macOS signing
 # workflow only builds, notarizes, and retains diagnostics; it cannot publish.
 on: workflow_dispatch
 
+env:
+  MINISIGN_PUBLIC_KEY: ${{ vars.MINISIGN_PUBLIC_KEY }}
+
 permissions:
   contents: read
 
 jobs:
   verify:
-    if: github.repository == 'esengine/DeepSeek-Reasonix' && github.ref == 'refs/heads/main-v2' && github.ref_protected
+    if: github.repository == 'SivanCola/deeper' && github.ref == 'refs/heads/main' && github.ref_protected
     runs-on: macos-14
     environment: release
     timeout-minutes: 35
@@ -69,9 +72,9 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" "${existing_keychains[@]}"
           printf '%s' "$APPLE_API_KEY_P8" | base64 --decode > "$APPLE_API_KEY_PATH"
           scripts/desktop-build.sh darwin/universal v0.0.0-signing-check stable
-          node desktop/packaging/verify.mjs desktop/build/candidate/darwin-universal/Reasonix.app --kind darwin-app-dir
-          codesign --verify --deep --strict desktop/build/candidate/darwin-universal/Reasonix.app
-          test -s dist/Reasonix-darwin-universal.dmg
+          node desktop/packaging/verify.mjs desktop/build/candidate/darwin-universal/Deeper.app --kind darwin-app-dir
+          codesign --verify --deep --strict desktop/build/candidate/darwin-universal/Deeper.app
+          test -s dist/Deeper-darwin-universal.dmg
       - name: Upload Apple notarization diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

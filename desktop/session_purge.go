@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 // PurgeCanonicalSession permanently removes only archived sessions. Adoption

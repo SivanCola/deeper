@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/event"
-	"reasonix/internal/permissionpreset"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/permissionpreset"
+	"deeper/internal/provider"
 )
 
 type Projection struct {

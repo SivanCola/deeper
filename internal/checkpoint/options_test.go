@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/diff"
+	"deeper/internal/diff"
 )
 
 func TestOptionsOverrideRetentionDefaults(t *testing.T) {

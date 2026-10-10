@@ -6,9 +6,9 @@ import (
 	"net"
 	"os/exec"
 
+	"deeper/internal/proc"
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/sys/windows"
-	"reasonix/internal/proc"
 )
 
 func listenShellControl(name string) (net.Listener, error) {

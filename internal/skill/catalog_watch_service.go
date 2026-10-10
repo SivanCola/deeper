@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"reasonix/internal/skill/skillwatch"
+	"deeper/internal/skill/skillwatch"
 )
 
 // WatchService is the host-lifetime shared physical watcher.

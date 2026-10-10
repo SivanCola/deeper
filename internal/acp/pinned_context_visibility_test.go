@@ -3,7 +3,7 @@ package acp
 import (
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestTitleFromHistorySkipsPinnedContextRevision(t *testing.T) {

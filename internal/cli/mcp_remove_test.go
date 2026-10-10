@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
 )
 
-func TestMCPRemoveCLIClearsReasonixOAuthState(t *testing.T) {
+func TestMCPRemoveCLIClearsDeeperOAuthState(t *testing.T) {
 	isolateCLIConfigHome(t)
 	workspace := t.TempDir()
 	t.Chdir(workspace)
@@ -47,7 +47,7 @@ name = "shared"
 type = "http"
 url = "https://mcp.example.test/mcp"
 `
-	if err := os.WriteFile(filepath.Join(workspace, "reasonix.toml"), []byte(projectConfig), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(workspace, "deeper.toml"), []byte(projectConfig), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	oauthState := writeCLIAuthState(t, workspace, global.Name, resource)
@@ -62,7 +62,7 @@ url = "https://mcp.example.test/mcp"
 
 func writeCLIAuthState(t *testing.T, workspace, name, resource string) string {
 	t.Helper()
-	stateDir := plugin.MCPStateDir(config.ReasonixHomeDir(), workspace, name)
+	stateDir := plugin.MCPStateDir(config.DeeperHomeDir(), workspace, name)
 	if err := os.MkdirAll(stateDir, 0o700); err != nil {
 		t.Fatal(err)
 	}

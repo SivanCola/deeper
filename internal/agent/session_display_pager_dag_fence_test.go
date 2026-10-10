@@ -8,9 +8,9 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/historywork"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/store"
+	"deeper/internal/historywork"
+	"deeper/internal/projectiondb"
+	"deeper/internal/store"
 )
 
 func TestDAGPagerResumeFencesSourceAndBranchChanges(t *testing.T) {

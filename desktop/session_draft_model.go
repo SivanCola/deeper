@@ -7,9 +7,9 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/internal/config"
-	"reasonix/internal/extension/providerext"
+	"deeper/desktop/internal/draftstate"
+	"deeper/internal/config"
+	"deeper/internal/extension/providerext"
 )
 
 func draftSubmissionFingerprint(request SessionDraftSubmissionRequest) (string, string, error) {

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/retrieval"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/retrieval"
 )
 
 const (

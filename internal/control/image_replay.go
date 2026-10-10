@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"slices"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/attachment"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/attachment"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 // imageReadError distinguishes local attachment loss from upload/auth failures.

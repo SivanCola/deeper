@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/internal/attachment"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 func TestHistoricalImageLossDoesNotBlockTextOrHealthyImages(t *testing.T) {

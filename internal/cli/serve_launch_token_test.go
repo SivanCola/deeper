@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/serve"
-	"reasonix/internal/stats"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/serve"
+	"deeper/internal/stats"
 )
 
 func TestAuthDisabledServeKeepsLaunchTokenOffTheTerminal(t *testing.T) {
-	// serve.New starts the process-wide usage catalog under REASONIX_HOME; it
+	// serve.New starts the process-wide usage catalog under DEEPER_HOME; it
 	// must be closed before the home is removed, or Windows refuses the delete.
 	closeUsage := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -26,7 +26,7 @@ func TestAuthDisabledServeKeepsLaunchTokenOffTheTerminal(t *testing.T) {
 		}
 	}
 	closeUsage()
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	t.Cleanup(closeUsage)
 	ctrl := newOwnedTestController(t, control.Options{SessionDir: t.TempDir()})
 	t.Cleanup(ctrl.Close)

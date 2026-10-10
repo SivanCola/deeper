@@ -1,8 +1,8 @@
 package cli
 
 import (
+	"deeper/internal/event"
 	"fmt"
-	"reasonix/internal/event"
 	"time"
 )
 

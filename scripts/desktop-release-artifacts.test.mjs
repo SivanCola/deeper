@@ -15,7 +15,7 @@ const env = {
 const identity = releaseIdentity(env);
 
 test("Windows signing finalization works in a fresh checkout for both architectures", t => {
-  const root = mkdtempSync(path.join(tmpdir(), "reasonix-signing-checkout-"));
+  const root = mkdtempSync(path.join(tmpdir(), "deeper-signing-checkout-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const put = (name, content, mode) => {
     const target = path.join(root, name);
@@ -33,7 +33,7 @@ test("Windows signing finalization works in a fresh checkout for both architectu
   put("commands/go", `#!/usr/bin/env bash
 set -euo pipefail
 case "$3" in
-  windows-payload) printf '{}' > "$4/reasonix-payload.json" ;;
+  windows-payload) printf '{}' > "$4/deeper-payload.json" ;;
   sign) shift 3; for file in "$@"; do printf signature > "$file.minisig"; done ;;
   verify) test -s "$4.minisig" ;;
   *) exit 1 ;;
@@ -44,8 +44,8 @@ set -euo pipefail
 test -s project.nsi
 test -s ../icon.ico
 test -d ../../bin
-test -s reasonix_project.nsh
-test -s reasonix-payload.json.minisig
+test -s deeper_project.nsh
+test -s deeper-payload.json.minisig
 test -s app/resources/app.asar
 printf installer > ../../bin/fixture-installer.exe
 `, 0o755);
@@ -62,24 +62,24 @@ printf installer > ../../bin/fixture-installer.exe
     // consume the first architecture's generated installer or payload.
     rmSync(path.join(root, "desktop/build/bin"), { recursive: true, force: true });
     const payload = `payload-${arch}`;
-    for (const name of ["reasonix-desktop.exe", "reasonix-guard.exe", "reasonix-launcher.exe",
-      "reasonix-update-helper.exe", "reasonix-cli.exe", "reasonix-uninstall.exe",
-      "app/Reasonix.exe", "app/resources/bin/reasonix-cli-launcher.exe",
+    for (const name of ["deeper-desktop.exe", "deeper-guard.exe", "deeper-launcher.exe",
+      "deeper-update-helper.exe", "deeper-cli.exe", "deeper-uninstall.exe",
+      "app/Deeper.exe", "app/resources/bin/deeper-cli-launcher.exe",
       "app/resources/app.asar", "app/resources/build.json", "app/resources/app/index.html"]) {
       put(`${payload}/${name}`, `${arch}:${name}`);
     }
-    put(`signing-work-${arch}/desktop/build/windows/installer/reasonix_project.nsh`, '!define REASONIX_VERSION_TAG "v1.2.3"\n');
+    put(`signing-work-${arch}/desktop/build/windows/installer/deeper_project.nsh`, '!define DEEPER_VERSION_TAG "v1.2.3"\n');
     run(process.execPath, ["desktop/packaging/signing-files.mjs", payload]);
     run("bash", ["scripts/finalize-windows-signed-candidate.sh", arch, `signing-work-${arch}`,
       payload, `dist-${arch}`, `bundle-${arch}`, "v1.2.3"]);
     assert.equal(readFileSync(path.join(root, "desktop/build/windows/installer/project.nsi"), "utf8"),
       readFileSync(new URL("../desktop/build/windows/installer/project.nsi", import.meta.url), "utf8"));
-    assert.ok(readFileSync(path.join(root, `dist-${arch}/Reasonix-windows-${arch}.zip`)).length > 0);
-    assert.ok(readFileSync(path.join(root, `dist-${arch}/Reasonix-windows-${arch}-installer.exe.minisig`)).length > 0);
+    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deeper-windows-${arch}.zip`)).length > 0);
+    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deeper-windows-${arch}-installer.exe.minisig`)).length > 0);
   }
 });
 function fixture(t) {
-  const root = mkdtempSync(path.join(tmpdir(), "reasonix-signed-handoff-"));
+  const root = mkdtempSync(path.join(tmpdir(), "deeper-signed-handoff-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const bundles = path.join(root, "bundles");
   mkdirSync(bundles);
@@ -119,7 +119,7 @@ test("publisher selects only complete platform bundles beside unsigned intermedi
 
 test("another run, future attempt and missing identity cannot be reused", () => {
   for (const change of [{ GITHUB_RUN_ID: "124" }, { RELEASE_ARTIFACT_PREFIX: "desktop-123-3-preflight" },
-    { RELEASE_SOURCE_SHA: "" }, { RELEASE_CONTROL_SHA: "main-v2" }, { GITHUB_RUN_ATTEMPT: "" }]) {
+    { RELEASE_SOURCE_SHA: "" }, { RELEASE_CONTROL_SHA: "main" }, { GITHUB_RUN_ATTEMPT: "" }]) {
     assert.throws(() => releaseIdentity({ ...env, ...change }));
   }
 });

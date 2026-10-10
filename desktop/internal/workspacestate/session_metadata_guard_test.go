@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 func TestMetadataCommitHoldsLifecycleFileLockAndRejectsArchiveRestore(t *testing.T) {

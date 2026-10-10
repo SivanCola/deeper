@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/event"
 )
 
 var errTestFailure = errors.New("failed")

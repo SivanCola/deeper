@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/jobs"
-	"reasonix/internal/planmode"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/jobs"
+	"deeper/internal/planmode"
+	"deeper/internal/tool"
 )
 
 // job_output / job_kill operate background jobs registered by shell and task

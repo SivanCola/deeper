@@ -42,7 +42,7 @@ export function useSessionBannerCommands(options: { remote: boolean; reloadConfi
 
   const showReleaseNotes = useCommittedCommand((latest: string) => {
     const version = latest.replace(/^(?:desktop-)?v/, "");
-    void openExternal(`https://reasonix.io/changelog/v${version}/`);
+    void openExternal(`https://github.com/SivanCola/deeper/releases/tag/v${version}/`);
   });
 
   return { reclaimSession, openTakeoverDialog, closeTakeoverDialog, openConfigFile, reloadConfigFile, showReleaseNotes };

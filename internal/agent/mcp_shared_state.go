@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"reasonix/internal/plugin"
+	"deeper/internal/plugin"
 )
 
 // The live-connection view every frontend on one session observes. It is

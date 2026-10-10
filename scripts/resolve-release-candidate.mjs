@@ -29,8 +29,8 @@ export function validateCandidateRun(run, recordArtifact, repository) {
   if (run.repository?.full_name !== repository || run.path !== ".github/workflows/release-candidate.yml") {
     throw new Error("candidate artifact was not produced by the protected candidate workflow");
   }
-  if (run.head_branch !== "main-v2" || !["workflow_dispatch", "push"].includes(run.event) || run.status !== "completed" || run.conclusion !== "success") {
-    throw new Error("candidate producer run is not a successful protected main-v2 dispatch");
+  if (run.head_branch !== "main" || !["workflow_dispatch", "push"].includes(run.event) || run.status !== "completed" || run.conclusion !== "success") {
+    throw new Error("candidate producer run is not a successful protected main dispatch");
   }
 }
 

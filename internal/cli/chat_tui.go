@@ -21,25 +21,25 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/billing"
-	"reasonix/internal/boot"
-	"reasonix/internal/command"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/gitcmd"
-	"reasonix/internal/i18n"
-	"reasonix/internal/memory"
-	"reasonix/internal/migration"
-	"reasonix/internal/outputstyle"
-	"reasonix/internal/plugin"
-	"reasonix/internal/provider"
-	"reasonix/internal/recovery"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/billing"
+	"deeper/internal/boot"
+	"deeper/internal/command"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/gitcmd"
+	"deeper/internal/i18n"
+	"deeper/internal/memory"
+	"deeper/internal/migration"
+	"deeper/internal/outputstyle"
+	"deeper/internal/plugin"
+	"deeper/internal/provider"
+	"deeper/internal/recovery"
+	"deeper/internal/sandbox"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 // chatTUI is a bubbletea Model that normally owns the terminal with an
@@ -69,9 +69,9 @@ type chatTUI struct {
 	// mouseCaptureOff releases mouse ownership back to the terminal (View() sets
 	// tea.MouseModeNone instead of MouseModeCellMotion) so its native
 	// click-drag selection and right-click context menu work again. Toggled by
-	// "/mouse" or REASONIX_DISABLE_MOUSE at startup; trades away in-app
+	// "/mouse" or DEEPER_DISABLE_MOUSE at startup; trades away in-app
 	// drag-select, the transcript scrollbar, and wheel-scroll while it's on,
-	// since the terminal no longer forwards those events to Reasonix.
+	// since the terminal no longer forwards those events to Deeper.
 	mouseCaptureOff bool
 
 	input       textarea.Model
@@ -373,7 +373,7 @@ type chatTUI struct {
 	// (/mcp) from it.
 	host *plugin.Host
 
-	// commands are custom slash commands loaded from .reasonix/commands; each renders
+	// commands are custom slash commands loaded from .deeper/commands; each renders
 	// its template with the typed args and sends the result as a turn.
 	commands []command.Command
 
@@ -1118,7 +1118,7 @@ func (m chatTUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.MouseClickMsg:
-		// Match the complete terminal right-click convention while Reasonix owns
+		// Match the complete terminal right-click convention while Deeper owns
 		// the mouse: copy an active selection, otherwise paste clipboard text into
 		// the visible composer. Left-press begins a selection unless it lands on
 		// the transcript scrollbar or a shell-output hint line.
@@ -1240,7 +1240,7 @@ func (m chatTUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.composerSel = composerSelection{}
 				return m, nil
 			}
-			// The terminal cannot see Reasonix's application-owned highlight, and
+			// The terminal cannot see Deeper's application-owned highlight, and
 			// macOS commonly consumes Cmd+C before it reaches the TUI. Copy on drag
 			// release just like transcript selection so the visible selection always
 			// has a usable clipboard result.
@@ -1593,7 +1593,7 @@ func (m chatTUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Terminal-convention copy without Ctrl+C's destructive side
 			// effects: copy an active selection if there is one, otherwise do
 			// nothing (no clear-input, no cancel, no quit). The selection lives
-			// in-app because Reasonix owns the mouse, so the terminal's own
+			// in-app because Deeper owns the mouse, so the terminal's own
 			// Ctrl+Insert (which copies the terminal selection) would see an
 			// empty one.
 			if sel.active && !sel.empty() {
@@ -4031,7 +4031,7 @@ func (m *chatTUI) toggleVerboseReasoning(notify bool) {
 		_ = m.cfg.SetShowReasoning(m.showReasoning)
 		path := config.SourcePath()
 		if path == "" {
-			path = "reasonix.toml"
+			path = "deeper.toml"
 		}
 		saveErr = config.EditConfigFile(path, func(cfg *config.Config) error {
 			return cfg.SetShowReasoning(m.showReasoning)
@@ -4051,7 +4051,7 @@ func (m *chatTUI) toggleVerboseReasoning(notify bool) {
 	}
 }
 
-// toggleMouseCapture flips whether Reasonix owns the mouse. It's session-only
+// toggleMouseCapture flips whether Deeper owns the mouse. It's session-only
 // (unlike /verbose, this accommodates the terminal/multiplexer at hand rather
 // than recording a lasting preference) — mirrors nativeScrollback, which is
 // likewise never persisted to config. Clears any in-app selection/scrollbar
@@ -4377,7 +4377,7 @@ func (m *chatTUI) showStatusDetails() {
 	m.commitLine(strings.Join(lines, "\n"))
 }
 
-// activeConfigTag names the config file actually in effect. A ./reasonix.toml
+// activeConfigTag names the config file actually in effect. A ./deeper.toml
 // outranks the user-global file, so a session started in a directory holding
 // one silently ignores global edits unless the source is visible (#3317).
 func activeConfigTag() string {
@@ -4450,7 +4450,7 @@ func (m *chatTUI) runExportCommand(input string) {
 	}
 
 	var b strings.Builder
-	b.WriteString("# reasonix session\n\n")
+	b.WriteString("# deeper session\n\n")
 	lastRole := provider.Role("")
 	exportedMessages := 0
 	for _, msg := range cliHistoryWithoutPinnedContextRevisions(msgs) {
@@ -4669,8 +4669,8 @@ func (m *chatTUI) notice(note string) {
 }
 
 // showRemoteHosts renders a read-only summary of configured remote hosts. The
-// remote session lives in a `reasonix serve` on the remote host, so connecting
-// happens from a terminal (`reasonix remote connect`), not inside this chat.
+// remote session lives in a `deeper serve` on the remote host, so connecting
+// happens from a terminal (`deeper remote connect`), not inside this chat.
 func (m *chatTUI) showRemoteHosts() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -4692,7 +4692,7 @@ func (m *chatTUI) showRemoteHosts() {
 		}
 		fmt.Fprintf(&b, "  · %s  %s\n", h.Name, target)
 	}
-	fmt.Fprintf(&b, "  run `reasonix remote connect <name>` in a terminal to open the remote workspace")
+	fmt.Fprintf(&b, "  run `deeper remote connect <name>` in a terminal to open the remote workspace")
 	m.commitLine(dim(b.String()))
 }
 
@@ -4815,7 +4815,7 @@ func interruptedTurnDisplayNotice() string {
 // at the top of the session.
 func renderTUIBanner(label, missing string, width int) string {
 	var b strings.Builder
-	b.WriteString(accent("◆") + " " + bold("reasonix") + "  " + dim("· "+label) + "\n")
+	b.WriteString(accent("◆") + " " + bold("deeper") + "  " + dim("· "+label) + "\n")
 	b.WriteString(dim("  "+i18n.M.ChatTip) + "\n")
 	if missing != "" {
 		b.WriteString(wrapForViewport("  ! "+missing, width, activeCLITheme.warn) + "\n")
@@ -4846,7 +4846,7 @@ func renderUserBubble(line string, width int, planMode bool) string {
 	return "  " + accent(prefix+line)
 }
 
-var cliImageRefRe = regexp.MustCompile(`(?:^|\s)@\.reasonix/attachments/clipboard-\d{8}-\d{6}\.\d+(?:-(?:\d{6}|[a-f0-9]{8}))?\.(?:png|jpg|jpeg|gif|webp)`)
+var cliImageRefRe = regexp.MustCompile(`(?:^|\s)@\.deeper/attachments/clipboard-\d{8}-\d{6}\.\d+(?:-(?:\d{6}|[a-f0-9]{8}))?\.(?:png|jpg|jpeg|gif|webp)`)
 
 func displayLineForImageRefs(line string) string {
 	idx := 0

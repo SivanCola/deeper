@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/tool"
 )
 
 // boundWriterFixture builds a workspace with an in-claim directory and an

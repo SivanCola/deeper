@@ -1,6 +1,6 @@
 package cli
 
-import "reasonix/internal/control"
+import "deeper/internal/control"
 
 // handleModeShortcut routes every permission/collaboration shortcut through one
 // owner. Terminals may emit Shift+Tab as either "shift+tab" or CSI-Z "backtab"

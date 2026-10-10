@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/attachment"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/attachment"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/sessioncontent"
 )
 
 // SetTitle updates mutable session metadata through the canonical event log.

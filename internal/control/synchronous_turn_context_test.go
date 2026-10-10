@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 type synchronousContextKey struct{}

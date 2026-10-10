@@ -6,10 +6,10 @@ import (
 	"math"
 	"sync/atomic"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/extension/providerext"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/extension/providerext"
+	"deeper/internal/provider"
 )
 
 // Only a threshold is shared, never the mutable config snapshot. Foreground

@@ -12,19 +12,19 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func TestExpandPastedBlocksImage(t *testing.T) {
 	m := &chatTUI{pastedBlocks: []pastedBlock{
-		{label: "[image #1]", text: "@.reasonix/attachments/clipboard-20260601-010203.000001.png", image: true},
+		{label: "[image #1]", text: "@.deeper/attachments/clipboard-20260601-010203.000001.png", image: true},
 		{label: "[Pasted text #2 · 3 lines]", text: "a\nb\nc"},
 	}}
 	got := m.expandPastedBlocks("look at [image #1] and [Pasted text #2 · 3 lines]")
-	want := "look at @.reasonix/attachments/clipboard-20260601-010203.000001.png and " +
+	want := "look at @.deeper/attachments/clipboard-20260601-010203.000001.png and " +
 		renderFoldedPasteBlock(m.pastedBlocks[1])
 	if got != want {
 		t.Fatalf("expandPastedBlocks = %q, want %q", got, want)
@@ -220,7 +220,7 @@ func TestTakeNextPasteIDSynchronizesAdoptedControllerHistory(t *testing.T) {
 }
 
 func TestDisplayLineForImageRefs(t *testing.T) {
-	got := displayLineForImageRefs("describe @.reasonix/attachments/clipboard-20260601-010203.000001.png @.reasonix/attachments/clipboard-20260601-010204.000002-000002.jpg")
+	got := displayLineForImageRefs("describe @.deeper/attachments/clipboard-20260601-010203.000001.png @.deeper/attachments/clipboard-20260601-010204.000002-000002.jpg")
 	want := "describe [image1] [image2]"
 	if got != want {
 		t.Fatalf("displayLineForImageRefs = %q, want %q", got, want)
@@ -381,7 +381,7 @@ func TestPasteShellEscapedImagePathInsertsImageToken(t *testing.T) {
 	if len(updated.pastedBlocks) != 1 || !updated.pastedBlocks[0].image {
 		t.Fatalf("pastedBlocks = %+v, want one image block", updated.pastedBlocks)
 	}
-	if text := updated.pastedBlocks[0].text; !strings.HasPrefix(text, "@.reasonix/attachments/clipboard-") || !strings.HasSuffix(text, ".png") {
+	if text := updated.pastedBlocks[0].text; !strings.HasPrefix(text, "@.deeper/attachments/clipboard-") || !strings.HasSuffix(text, ".png") {
 		t.Fatalf("image block text = %q, want saved attachment ref", text)
 	}
 }
@@ -446,9 +446,9 @@ func TestPasteMultipleShellEscapedImagePathsInsertsImageTokens(t *testing.T) {
 }
 
 func TestMissingPastedImagePathRemainsText(t *testing.T) {
-	content := `/definitely-missing/reasonix-image.png`
+	content := `/definitely-missing/deeper-image.png`
 	if runtime.GOOS == "windows" {
-		content = `C:/definitely-missing/reasonix-image.png`
+		content = `C:/definitely-missing/deeper-image.png`
 	}
 
 	m := newTestChatTUI()

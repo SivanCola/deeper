@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/bot/dingtalk"
-	"reasonix/internal/bot/feishu"
-	"reasonix/internal/bot/qq"
-	"reasonix/internal/bot/weixin"
-	"reasonix/internal/config"
-	"reasonix/internal/permissionpreset"
+	"deeper/internal/bot"
+	"deeper/internal/bot/dingtalk"
+	"deeper/internal/bot/feishu"
+	"deeper/internal/bot/qq"
+	"deeper/internal/bot/weixin"
+	"deeper/internal/config"
+	"deeper/internal/permissionpreset"
 )
 
 // EnabledPlatforms resolves the requested channel list against the saved config.

@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func TestBootLegacyTabReusesMigratedIdentityAfterMetadataRefresh(t *testing.T) {

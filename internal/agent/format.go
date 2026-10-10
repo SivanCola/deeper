@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // responseFormatContextKey carries a per-turn structured-output request through

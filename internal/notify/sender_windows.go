@@ -8,7 +8,7 @@ import (
 	"git.sr.ht/~jackmordaunt/go-toast/v2"
 	"golang.org/x/sys/windows/registry"
 
-	"reasonix/internal/appidentity"
+	"deeper/internal/appidentity"
 )
 
 // PlatformSender delivers notifications through the Windows Toast API.
@@ -41,7 +41,7 @@ func registerDesktopNotifications(register func(toast.AppData) error, displayNam
 }
 
 // go-toast defaults DisplayName to the ID. Change only our new registration;
-// the old "Reasonix" registration still belongs to installed Studio releases.
+// the old "Deeper" registration still belongs to installed Studio releases.
 func setNotificationDisplayName(id, name string) error {
 	path := filepath.Join("Software", "Classes", "AppUserModelId", id)
 	key, err := registry.OpenKey(registry.CURRENT_USER, path, registry.SET_VALUE)

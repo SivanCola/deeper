@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/attachment"
+	"deeper/internal/projectiondb"
+	"deeper/internal/sessioncontent"
 )
 
 const sessionAttachmentReadLimit = 1 << 20

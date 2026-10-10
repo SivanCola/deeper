@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/pathidentity"
+	"deeper/internal/pathidentity"
 )
 
 func TestInspectDoesNotReadContentOrCreateMissingTail(t *testing.T) {

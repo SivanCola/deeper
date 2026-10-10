@@ -1,6 +1,6 @@
 package boot
 
-import "reasonix/internal/config"
+import "deeper/internal/config"
 
 func appendCorePolicies(prompt string) string {
 	for _, policy := range []string{config.UserDecisionPolicy, config.WorkPracticePolicy, config.LanguagePolicy} {

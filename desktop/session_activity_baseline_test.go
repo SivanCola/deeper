@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func TestSessionActivityBaselineColdPendingMetadataIsNotComplete(t *testing.T) {

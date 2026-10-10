@@ -1,6 +1,6 @@
 # Release candidates
 
-The protected `main-v2` control workflow prepares an immutable candidate after
+The protected `main` control workflow prepares an immutable candidate after
 reviewed Stable Notes are embedded. `Prepare release candidate` with `version`
 builds the shared CLI/npm files, signs Desktop files, runs final-package native
 acceptance, and seals a record. `Publish release candidate` accepts only that
@@ -40,13 +40,13 @@ a new release, but rejects HTTP errors, browser challenges, and malformed JSON.
 无效 JSON 必须失败。离线契约测试与在线可访问性检查相互独立。
 
 After every publisher succeeds, postflight verifies the tags, the CLI and
-Desktop GitHub Releases, npm, the Desktop Stable manifest on `dl.reasonix.io`
+Desktop GitHub Releases, npm, the Desktop Stable manifest on GitHub latest
 and the Homebrew cask, then attaches `release-event.json`. Publication is
 complete when those product surfaces are verified. A 90-day ledger records the
 source/control SHA, observed surfaces, and the exact failed stage. On recovery
 a proven newer Stable pointer is preserved, never a failed HTTP observation.
 
-发布任务全部成功后，postflight 核验三个标签、CLI 与桌面端 GitHub Release、npm、`dl.reasonix.io`
+发布任务全部成功后，postflight 核验三个标签、CLI 与桌面端 GitHub Release、npm、GitHub latest
 上的桌面端 Stable 清单和 Homebrew cask，再附上 `release-event.json`；这些产品渠道全部核验通过即发布完成。
 90 天台账保留产品/控制 SHA、已验证渠道及失败阶段。恢复时只有确证存在更新的 Stable 指针才予以保留，
 HTTP 失败不会被当作“新版已发布”。
@@ -58,7 +58,7 @@ catalog, so a new version's page is released there, not here.
 官网不在此流程内：它由 `website` 分支独立构建和部署，更新日志由该分支自己的发布目录渲染，新版本页面在那里发布。
 
 For qualification without publication, dispatch `Prepare release candidate` on
-protected `main-v2` with `version` and `rehearsal=true`. An already reviewed
+protected `main` with `version` and `rehearsal=true`. An already reviewed
 version may be used for this isolated run. It uses separate
 `release-candidate-rehearsal-*` artifacts, records `purpose=rehearsal`, and
 cannot pass the normal publish resolver or payload verifier. The Desktop child
@@ -66,7 +66,7 @@ accepts the existing version tag only in this non-publishing mode. The run must
 still complete source CI, signing, and native acceptance. It creates no tags,
 GitHub Releases, npm packages, Homebrew updates, or R2 pointers.
 
-After sealing, run `Verify release candidate rehearsal` on `main-v2` with its
+After sealing, run `Verify release candidate rehearsal` on `main` with its
 candidate ID. This independent workflow downloads the exact record and payload
 artifact IDs. It checks the GitHub archive digest, protected producer run,
 OIDC file attestations, sealed file digests, and native acceptance receipts.
@@ -86,13 +86,13 @@ Publication requires the repository secret `RELEASE_TAG_TOKEN` and variable
 by the release-tag rulesets, with repository Contents write access. Do not copy
 a workstation login token or repurpose another integration's secret. Configure
 this dedicated credential before enabling publication; there is no default
-`GITHUB_TOKEN` fallback. The token is available only to protected `main-v2`
+`GITHUB_TOKEN` fallback. The token is available only to protected `main`
 identity-check and activation steps, not candidate builds.
 
 发布前需配置仓库 secret `RELEASE_TAG_TOKEN` 和变量 `RELEASE_TAG_ACTOR`（凭据所有者登录名）。
 使用标签保护规则已允许的维护者身份，并授予目标仓库 Contents 写权限。不要复制工作站登录凭据，
 也不要挪用其他集成的 secret。未配置时发布预检直接失败，不回退到默认 `GITHUB_TOKEN`。
-该凭据只在受保护 `main-v2` 的身份检查及标签激活步骤使用，不传给候选构建。
+该凭据只在受保护 `main` 的身份检查及标签激活步骤使用，不传给候选构建。
 
 Before approval, the workflow reads the authenticated actor, repository push
 access, and inherited rulesets. Activation repeats those checks, binds the actor

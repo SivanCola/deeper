@@ -1,8 +1,8 @@
 package main
 
 import (
-	"reasonix/internal/attachment"
-	"reasonix/internal/transcript"
+	"deeper/internal/attachment"
+	"deeper/internal/transcript"
 )
 
 func historyDisplayAttachments(inputs []attachment.ImageInput) []transcript.Attachment {

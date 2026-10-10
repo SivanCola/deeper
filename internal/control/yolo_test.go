@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/permission"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/permission"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 // TestAutoApproveToolsStillRequiresExplicitPlanApproval proves that YOLO/full

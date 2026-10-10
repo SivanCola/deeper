@@ -13,7 +13,7 @@ func TestStableRelaunchPrefersCanonicalWindowsEntry(t *testing.T) {
 	}
 	root := t.TempDir()
 	seedVersionedLayout(t, root, "v1.38.9", "old")
-	canonical := writeTempMember(t, root, "Reasonix.exe", "new")
+	canonical := writeTempMember(t, root, "Deeper.exe", "new")
 	got, err := StableRelaunchPath(root)
 	if err != nil || got != canonical {
 		t.Fatalf("got=%q err=%v", got, err)
@@ -22,7 +22,7 @@ func TestStableRelaunchPrefersCanonicalWindowsEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err = StableRelaunchPath(root)
-	if err != nil || got != filepath.Join(root, "reasonix-launcher.exe") {
+	if err != nil || got != filepath.Join(root, "deeper-launcher.exe") {
 		t.Fatalf("fallback=%q err=%v", got, err)
 	}
 }

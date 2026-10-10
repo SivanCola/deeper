@@ -11,11 +11,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"reasonix/internal/pathidentity"
+	"deeper/internal/pathidentity"
 )
 
-const Prefix = "com.reasonix.desktop"
-const UpdateEnvironmentKey = "REASONIX_UPDATE_INSTANCE_ID"
+const Prefix = "io.github.sivancola.deeper"
+const UpdateEnvironmentKey = "DEEPER_UPDATE_INSTANCE_ID"
 
 var trayNamespace = uuid.MustParse("af8b2b6e-cf17-43b9-afb9-b0bf2695d8ac")
 
@@ -30,7 +30,7 @@ func CanonicalHome(home string) string {
 func ResolveHome(home string) (pathidentity.Identity, error) {
 	home = strings.TrimSpace(home)
 	if home == "" {
-		return pathidentity.Identity{}, errors.New("Reasonix data home is empty")
+		return pathidentity.Identity{}, errors.New("Deeper data home is empty")
 	}
 	baseDir := ""
 	if !filepath.IsAbs(home) {
@@ -86,11 +86,11 @@ func UpdateEnvironment(base []string, home string) []string {
 	env := make([]string, 0, len(base)+2)
 	for _, entry := range base {
 		key, _, _ := strings.Cut(entry, "=")
-		if !strings.EqualFold(key, "REASONIX_HOME") && !strings.EqualFold(key, UpdateEnvironmentKey) {
+		if !strings.EqualFold(key, "DEEPER_HOME") && !strings.EqualFold(key, UpdateEnvironmentKey) {
 			env = append(env, entry)
 		}
 	}
-	return append(env, "REASONIX_HOME="+home, UpdateEnvironmentKey+"="+ForHome(home))
+	return append(env, "DEEPER_HOME="+home, UpdateEnvironmentKey+"="+ForHome(home))
 }
 
 func UpdateID() string { return os.Getenv(UpdateEnvironmentKey) }

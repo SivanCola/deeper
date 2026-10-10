@@ -2,8 +2,8 @@ package serve
 
 import (
 	"context"
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
+	"deeper/internal/boot"
+	"deeper/internal/control"
 )
 
 func (s *Server) buildModelCandidate(ctx context.Context, ref string, opts boot.Options, inherit bool) (*control.Controller, error) {

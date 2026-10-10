@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/browser"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/servecontract"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/browser"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/servecontract"
+	"deeper/internal/session"
 )
 
 // brokerTestExecutor records the session header each call arrived with.

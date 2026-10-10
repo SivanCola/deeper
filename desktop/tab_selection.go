@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // activeOrSingleLocalTab resolves the workspace tab a local command should

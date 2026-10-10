@@ -73,7 +73,7 @@ export function useInheritedDraftModels<T extends InheritedDraftModelEntry>(
 
   useEffect(() => {
     const listener = () => { void refresh(); };
-    window.addEventListener("reasonix:model-catalog-changed", listener);
-    return () => window.removeEventListener("reasonix:model-catalog-changed", listener);
+    window.addEventListener("deeper:model-catalog-changed", listener);
+    return () => window.removeEventListener("deeper:model-catalog-changed", listener);
   }, [refresh]);
 }

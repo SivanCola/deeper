@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // mcpHTTPServer is a minimal Streamable HTTP MCP server for tests. When sse is
@@ -242,7 +242,7 @@ func TestHTTPTransportDoesNotLoadOAuthStateWithStaticAPIKey(t *testing.T) {
 	}
 	defer transport.close()
 	if transport.oauth != nil {
-		t.Fatal("static authentication must disable Reasonix OAuth state")
+		t.Fatal("static authentication must disable Deeper OAuth state")
 	}
 	resp, err := transport.do(context.Background(), []byte(`{}`))
 	if err != nil {
@@ -552,7 +552,7 @@ func TestHTTPTransportSessionMissingWithoutSessionDoesNotLoop(t *testing.T) {
 		t.Fatal("tools/list unexpectedly succeeded")
 	}
 	// The SDK performs its bounded modern-to-legacy protocol discovery fallback,
-	// but Reasonix must not treat a sessionless 404 as a lost established session
+	// but Deeper must not treat a sessionless 404 as a lost established session
 	// and start another supervisor generation.
 	if got := initializeCount.Load(); got != 2 {
 		t.Fatalf("initialize requests = %d, want the SDK's two bounded protocol probes", got)

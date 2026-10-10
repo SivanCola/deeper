@@ -3,8 +3,8 @@ package control
 import (
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
 )
 
 // Enabling extensions must never sever the audit channels: every capability

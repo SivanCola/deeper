@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 
 	"modernc.org/sqlite"
 )
@@ -31,7 +31,7 @@ func init() {
 	// This function is deliberately not persisted in a schema/index: older
 	// readers can still open the disposable database unchanged. Filtering can
 	// inspect metadata keys, but never resolves source paths or decodes bodies.
-	sqlite.MustRegisterDeterministicScalarFunction("reasonix_catalog_source_key", 1,
+	sqlite.MustRegisterDeterministicScalarFunction("deeper_catalog_source_key", 1,
 		func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
 			pathKey, ok := args[0].(string)
 			if !ok {
@@ -154,11 +154,11 @@ func (c *Catalog) ListOrdinarySessions(ctx context.Context, req OrdinaryPageRequ
 		args = append(args, req.ExcludedTopicIDsJSON)
 	}
 	if req.IncludeSourceKeysJSON != "" {
-		where += ` AND reasonix_catalog_source_key(s.path_key) IN (SELECT value FROM json_each(?))`
+		where += ` AND deeper_catalog_source_key(s.path_key) IN (SELECT value FROM json_each(?))`
 		args = append(args, req.IncludeSourceKeysJSON)
 	}
 	if req.ExcludeSourceKeysJSON != "" && req.ExcludeSourceKeysJSON != "[]" {
-		where += ` AND reasonix_catalog_source_key(s.path_key) NOT IN (SELECT value FROM json_each(?))`
+		where += ` AND deeper_catalog_source_key(s.path_key) NOT IN (SELECT value FROM json_each(?))`
 		args = append(args, req.ExcludeSourceKeysJSON)
 	}
 	var cursor *ordinaryCursor

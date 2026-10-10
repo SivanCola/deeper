@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/gitcmd"
+	"deeper/internal/control"
+	"deeper/internal/gitcmd"
 )
 
 const workspaceRepoOpenLimit = 3 * time.Second

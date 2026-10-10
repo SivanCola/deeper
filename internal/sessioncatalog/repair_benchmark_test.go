@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // BenchmarkRepairWave1056 measures the persistent due query, 64-row result

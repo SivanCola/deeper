@@ -1,7 +1,7 @@
 package control
 
 import (
-	"reasonix/internal/event"
+	"deeper/internal/event"
 	"sync"
 	"time"
 )

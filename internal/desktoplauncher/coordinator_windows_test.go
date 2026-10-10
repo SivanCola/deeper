@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/desktopinstance"
-	"reasonix/internal/installlayout"
+	"deeper/internal/desktopinstance"
+	"deeper/internal/installlayout"
 )
 
 func TestPortableRemoteLocationStopsBeforeDesktopCoordination(t *testing.T) {
@@ -150,7 +150,7 @@ func coordinatedLaunchFixture(t *testing.T, portable bool) string {
 	if err := os.MkdirAll(filepath.Join(active, "app"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(active, "reasonix-desktop.exe"), []byte("desktop"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(active, "deeper-desktop.exe"), []byte("desktop"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := installlayout.WriteCurrent(root, installlayout.CurrentPointer{

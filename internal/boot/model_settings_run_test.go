@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func TestModelSettingsChildCreatedAfterSaveInheritsAcceptedRunSnapshot(t *testing.T) {

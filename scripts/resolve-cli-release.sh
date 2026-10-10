@@ -11,8 +11,8 @@ if [ "${IN_ORCHESTRATED:-false}" = "true" ]; then
 	tag="${IN_TAG:?orchestrated CLI release requires tag}"
 else
 	if [ "${EVENT_NAME:-}" = "workflow_dispatch" ]; then
-		if [ "${CALLER_REF:-}" != "refs/heads/main-v2" ] || [ "${CALLER_REF_PROTECTED:-}" != "true" ]; then
-			echo "::error::manual CLI releases must run from protected main-v2" >&2
+		if [ "${CALLER_REF:-}" != "refs/heads/main" ] || [ "${CALLER_REF_PROTECTED:-}" != "true" ]; then
+			echo "::error::manual CLI releases must run from protected main" >&2
 			exit 1
 		fi
 		tag="${IN_TAG:?manual CLI release requires an existing protected tag}"

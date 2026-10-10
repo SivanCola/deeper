@@ -1,6 +1,6 @@
 # Session Recovery and Parallel Work
 
-Reasonix keeps transcript persistence and workspace mutation as separate safety
+Deeper keeps transcript persistence and workspace mutation as separate safety
 boundaries. Read-only work and non-overlapping file claims can run concurrently;
 opaque writers such as unrestricted shell or unknown MCP mutations retain the
 workspace write lease. Git worktrees provide an isolated checkout when a task
@@ -23,7 +23,7 @@ switched, renamed, and retired inside the log. Nothing creates a second
 session file, and a head that was retired keeps its bytes until a single writer
 rotates the log.
 
-Format-1 transcripts (saved before Reasonix 1.39.0 and not yet upgraded) keep
+Format-1 transcripts (saved before Deeper 1.39.0 and not yet upgraded) keep
 their version identity in branch metadata:
 
 - `normal` is an ordinary conversation transcript.
@@ -72,9 +72,9 @@ existing merge flow.
 `-recovery-` files made before the upgrade are not imported into the log. They
 remain format-1 sessions of the same lineage: listed under *View versions*,
 selectable, and covered copies are still moved to recoverable trash by the
-existing sweep and by `reasonix sessions cleanup`. A format-2 log never forms
+existing sweep and by `deeper sessions cleanup`. A format-2 log never forms
 a recovery group, so cleanup reports zero candidates for it, and
-`reasonix sessions diagnose` counts session logs, heads, covered heads, and
+`deeper sessions diagnose` counts session logs, heads, covered heads, and
 retired heads next to the recovery-copy numbers.
 
 ## Compatibility
@@ -89,6 +89,6 @@ retired heads next to the recovery-copy numbers.
 | `-recovery-<hex>.jsonl` | format-1 lineage | not imported; listed as before | unchanged | compatible |
 | session catalog `v8.sqlite` | v7 file isolated | native | separate generation files | compatible |
 
-Format 2 opens in Reasonix 1.39.0 and newer. Mixed installations should
+Format 2 opens in Deeper 1.39.0 and newer. Mixed installations should
 upgrade the older side before sharing a session directory; the older binary
 reports the newer format and does not modify the file.

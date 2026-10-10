@@ -2,13 +2,13 @@ package control
 
 import (
 	"context"
+	"deeper/internal/session"
 	"encoding/json"
 	"errors"
-	"reasonix/internal/session"
 	"time"
 
-	"reasonix/internal/transcript"
-	"reasonix/internal/turnevent"
+	"deeper/internal/transcript"
+	"deeper/internal/turnevent"
 )
 
 var ErrTranscriptProjectionUnavailable = errors.New("transcript projection is unavailable")

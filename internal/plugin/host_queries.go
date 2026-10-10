@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // Prompts returns every MCP prompt discovered across connected servers.

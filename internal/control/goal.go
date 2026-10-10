@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/evidence"
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/store"
+	"deeper/internal/evidence"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/store"
 )
 
 const (

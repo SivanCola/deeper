@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // Classes describe ownership, not a promise that each raw field is hashed:

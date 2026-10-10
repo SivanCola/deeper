@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
 )
 
 type legacyGoalProjection struct {

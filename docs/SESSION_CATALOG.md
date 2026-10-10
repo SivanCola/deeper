@@ -1,6 +1,6 @@
 # Session Catalog and Desktop Startup
 
-Reasonix keeps session transcripts, event logs, metadata sidecars, and
+Deeper keeps session transcripts, event logs, metadata sidecars, and
 `desktop-projects.json` as the only authoritative session data. The desktop
 project tree reads a disposable SQLite projection from
 `<cache root>/session-catalog/v8.sqlite`; deleting that database never deletes
@@ -48,7 +48,7 @@ existence is not a migration signal. Local cache files use WAL,
 remote cache path falls back to an in-memory catalog so storage failures cannot
 block the application.
 
-At open, Reasonix runs an integrity check. A corrupt or unmigratable database is
+At open, Deeper runs an integrity check. A corrupt or unmigratable database is
 renamed with a `.corrupt-<timestamp>` suffix and replaced. The replacement is
 rebuilt from sidecars and transcripts in the background. The quarantine and
 rebuild paths never remove authoritative files.
@@ -90,15 +90,15 @@ longer has a synchronous filesystem fallback.
 Inspect the catalog without creating or changing it:
 
 ```sh
-reasonix sessions diagnose
-reasonix sessions diagnose --json
+deeper sessions diagnose
+deeper sessions diagnose --json
 ```
 
 Replace only the disposable projection and index all saved desktop projects:
 
 ```sh
-reasonix sessions reindex
-reasonix sessions reindex --json
+deeper sessions reindex
+deeper sessions reindex --json
 ```
 
 Use repeated `--dir PATH` flags to rebuild from an explicit set of directories.
@@ -111,7 +111,7 @@ previous index is retained for rollback.
 Manifest validation and plugin handshakes are independent from catalog and
 project-tree work. An incompatible plugin is reported as
 `disabled_incompatible`; the core controller remains usable. A legacy manifest
-under Reasonix's managed plugin directory is atomically upgraded with a backup.
+under Deeper's managed plugin directory is atomically upgraded with a backup.
 Development directories, absolute external roots, and symlinked sources are
 never rewritten automatically and include a manual migration hint instead.
 

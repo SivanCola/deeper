@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/transcript"
 )
 
 func TestPreloadedPageDoesNotEraseNewlyCommittedTurn(t *testing.T) {

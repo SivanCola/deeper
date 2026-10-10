@@ -10,11 +10,11 @@ import (
 	"strings"
 	"syscall"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/i18n"
-	"reasonix/internal/serve"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/i18n"
+	"deeper/internal/serve"
 )
 
 // runServe exposes the controller's HTTP and SSE frontend.
@@ -88,7 +88,7 @@ func prepareServeFrontend(opts serveFrontendOptions) (_ *serveFrontendResources,
 		resources.artifacts = append(resources.artifacts, opts.pidFile)
 	}
 	if opts.command == "web" {
-		resources.registration, err = registerWebInstance(config.ReasonixHomeDir(), resources.displayAddr)
+		resources.registration, err = registerWebInstance(config.DeeperHomeDir(), resources.displayAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func runServeFrontend(ctrl *control.Controller, srv *serve.Server, cfg config.Se
 }
 
 func reportServeFrontend(ctrl *control.Controller, srv *serve.Server, cfg config.ServeConfig, address string, opts serveFrontendOptions) {
-	fmt.Printf("reasonix %s — %s on http://%s\n", opts.command, ctrl.Label(), address)
+	fmt.Printf("deeper %s — %s on http://%s\n", opts.command, ctrl.Label(), address)
 	reportServeAuth(os.Stdout, srv, address, opts)
 	if warning := serve.PlainHTTPAuthWarning(cfg, address); warning != "" {
 		fmt.Fprintf(os.Stderr, "  %s\n", warning)

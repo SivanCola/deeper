@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	filelock "reasonix/internal/identitylock"
+	filelock "deeper/internal/identitylock"
 )
 
 const desktopProjectsFileLockTimeout = 2 * time.Second

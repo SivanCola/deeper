@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/remote/bootstrap"
+	"deeper/internal/remote/bootstrap"
 )
 
 // serveCapabilityBrowser is the token a serve advertises on its token

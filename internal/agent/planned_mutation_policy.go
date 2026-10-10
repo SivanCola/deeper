@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"reasonix/internal/runtimepolicy"
+	"deeper/internal/runtimepolicy"
 )
 
 // applyExecutionPreflight classifies the resolved call and applies the

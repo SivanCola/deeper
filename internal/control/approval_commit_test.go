@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/permission"
+	"deeper/internal/event"
+	"deeper/internal/permission"
 )
 
 type failingPromptAnswerSink struct{ err error }

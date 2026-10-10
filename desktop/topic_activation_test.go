@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/evidence"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/evidence"
 )
 
 // activationEventRecorder captures "topic:activation" events through the

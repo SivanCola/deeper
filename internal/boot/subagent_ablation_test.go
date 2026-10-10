@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/skill"
+	"deeper/internal/ablation"
+	"deeper/internal/skill"
 )
 
 // The arm is only a control if it removes delegation whichever tool reaches it.

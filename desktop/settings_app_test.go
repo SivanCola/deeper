@@ -12,15 +12,15 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/hook"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/sandbox"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/hook"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
+	"deeper/internal/sandbox"
 )
 
 func TestWithFreshSystemPromptReplacesExistingSystemMessage(t *testing.T) {
@@ -1563,7 +1563,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 	}
 
 	brokenRoot := t.TempDir()
-	if err := os.WriteFile(filepath.Join(brokenRoot, "reasonix.toml"), []byte(`[agent]
+	if err := os.WriteFile(filepath.Join(brokenRoot, "deeper.toml"), []byte(`[agent]
 system_prompt_file = "/outside-workspace/system.md"
 `), 0o600); err != nil {
 		t.Fatal(err)
@@ -1803,7 +1803,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 		t.Fatal(err)
 	}
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte("# project config\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte("# project config\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, project)
@@ -1952,7 +1952,7 @@ func TestSetCompactRatioRejectsActiveWorkBeforeSaving(t *testing.T) {
 func TestSetDesktopLanguagePersistsResponseLanguageAndUpdatesLiveTabs(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	projectRoot := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectRoot, "reasonix.toml"), []byte("language = \"zh\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectRoot, "deeper.toml"), []byte("language = \"zh\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, projectRoot)
@@ -2022,7 +2022,7 @@ func TestSetDesktopCurrencyPersistsDisplayWithoutRewritingOfficialPricing(t *tes
 func TestSetReasoningLanguageUpdatesLiveTabControllers(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	projectRoot := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectRoot, "reasonix.toml"), []byte("[agent]\nreasoning_language = \"en\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectRoot, "deeper.toml"), []byte("[agent]\nreasoning_language = \"en\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, projectRoot)
@@ -2369,7 +2369,7 @@ func TestProjectHooksSettingsUseActiveWorkspaceRootAndLoadOnceSaved(t *testing.T
 	if len(view.Hooks) != 1 || view.Hooks[0].Event != string(hook.Stop) || view.Hooks[0].Description != "Turn done" {
 		t.Fatalf("project hooks = %+v", view.Hooks)
 	}
-	if _, err := os.Stat(filepath.Join(project, ".reasonix", "settings.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(project, ".deeper", "settings.json")); err != nil {
 		t.Fatalf("project hooks settings file missing: %v", err)
 	}
 	loaded := hook.Load(hook.LoadOptions{ProjectRoot: project})
@@ -2395,10 +2395,10 @@ func TestSaveHooksSettingsForRootUsesDisplayedProjectRoot(t *testing.T) {
 	}}); err != nil {
 		t.Fatalf("SaveHooksSettingsForRoot: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(projectA, ".reasonix", "settings.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(projectA, ".deeper", "settings.json")); err != nil {
 		t.Fatalf("displayed project root settings missing: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(projectB, ".reasonix", "settings.json")); err == nil {
+	if _, err := os.Stat(filepath.Join(projectB, ".deeper", "settings.json")); err == nil {
 		t.Fatal("active project root was written instead of displayed project root")
 	}
 }
@@ -2453,7 +2453,7 @@ func TestLoadDesktopUserConfigForViewDoesNotPersistLegacyProviderAccess(t *testi
 	}
 }
 
-// A checkout's reasonix.toml never becomes the user's config: not its [bot]
+// A checkout's deeper.toml never becomes the user's config: not its [bot]
 // connections, not its sandbox, whether or not the user has a config yet.
 func TestDesktopUserConfigNeverAdoptsTheWorkspaceFile(t *testing.T) {
 	for name, userBody := range map[string]string{"no user config": "", "user config": "default_model = \"local/m1\"\n"} {
@@ -2470,7 +2470,7 @@ func TestDesktopUserConfigNeverAdoptsTheWorkspaceFile(t *testing.T) {
 			}
 			root := t.TempDir()
 			project := "[bot]\nenabled = true\nmodel = \"local/m1\"\n[permissions]\nmode = \"allow\"\n"
-			if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			approveWorkspace(t, root)

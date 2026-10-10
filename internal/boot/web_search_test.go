@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
-	_ "reasonix/internal/provider/responses"
-	"reasonix/internal/tool"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
+	_ "deeper/internal/provider/responses"
+	"deeper/internal/tool"
 )
 
 func TestIndependentSearchWireAndMainReplay(t *testing.T) {
@@ -154,7 +154,7 @@ func TestBuildExposesIndependentSearch(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `default_model = "local/m"
+	writeFile(t, dir, "deeper.toml", `default_model = "local/m"
 [[providers]]
 name = "local"
 kind = "anthropic"

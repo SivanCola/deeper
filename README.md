@@ -1,5 +1,8 @@
+> Deeper is independently maintained at [SivanCola/deeper](https://github.com/SivanCola/deeper).
+> 独立应用身份、更新通道与发布凭据见 [Deeper independence](docs/DEEPER_INDEPENDENCE.md)。原许可证和作者信息见 NOTICE。
+
 <p align="center">
-  <img src="docs/logo-ghost-wave-effect.svg" alt="Reasonix" width="360"/>
+  <img src="docs/logo-ghost-wave-effect.svg" alt="Deeper" width="360"/>
 </p>
 
 <p align="center">
@@ -15,26 +18,26 @@
   &nbsp;·&nbsp;
   <a href="./docs/SPEC.md">Spec</a>
   &nbsp;·&nbsp;
-  <a href="https://esengine.github.io/DeepSeek-Reasonix/">Website</a>
+  <a href="https://sivancola.github.io/deeper/">Website</a>
   &nbsp;·&nbsp;
   <strong><a href="https://discord.gg/XF78rEME2D">Discord</a></strong>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/reasonix"><img src="https://img.shields.io/npm/v/reasonix.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/esengine/DeepSeek-Reasonix/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/reasonix.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
-  <a href="https://www.npmjs.com/package/reasonix"><img src="https://img.shields.io/npm/dm/reasonix.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/stargazers"><img src="https://img.shields.io/github/stars/esengine/DeepSeek-Reasonix.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
-  <a href="https://atomgit.com/esengine/DeepSeek-Reasonix"><img src="https://atomgit.com/esengine/DeepSeek-Reasonix/star/badge.svg" alt="AtomGit stars"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors"><img src="https://img.shields.io/github/contributors/esengine/DeepSeek-Reasonix.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/discussions"><img src="https://img.shields.io/github/discussions/esengine/DeepSeek-Reasonix.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
+  <a href="https://www.npmjs.com/package/deeper"><img src="https://img.shields.io/npm/v/deeper.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
+  <a href="https://github.com/SivanCola/deeper/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SivanCola/deeper/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/deeper.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
+  <a href="https://www.npmjs.com/package/deeper"><img src="https://img.shields.io/npm/dm/deeper.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
+  <a href="https://github.com/SivanCola/deeper/stargazers"><img src="https://img.shields.io/github/stars/SivanCola/deeper.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
+  <a href="https://atomgit.com/SivanCola/deeper"><img src="https://atomgit.com/SivanCola/deeper/star/badge.svg" alt="AtomGit stars"/></a>
+  <a href="https://github.com/SivanCola/deeper/graphs/contributors"><img src="https://img.shields.io/github/contributors/SivanCola/deeper.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
+  <a href="https://github.com/SivanCola/deeper/discussions"><img src="https://img.shields.io/github/discussions/SivanCola/deeper.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
   <a href="https://discord.gg/XF78rEME2D"><img src="https://img.shields.io/badge/discord-join-5865F2.svg?style=flat-square&labelColor=161b22&logo=discord&logoColor=white" alt="Discord"/></a>
 </p>
 
 <p align="center">
-  <a href="https://trendshift.io/repositories/27020?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/27020/monthly?language=Go" alt="esengine/DeepSeek-Reasonix | Trendshift" width="250" height="55"/></a>
-  <a href="https://trendshift.io/repositories/27020?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/27020" alt="esengine/DeepSeek-Reasonix | Trendshift" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/27020?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/27020/monthly?language=Go" alt="SivanCola/deeper | Trendshift" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/27020?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/27020" alt="SivanCola/deeper | Trendshift" width="250" height="55"/></a>
 </p>
 
 <br/>
@@ -57,7 +60,7 @@
 ## Features
 
 - **Config-driven.** Providers, the agent, enabled tools, and plugins are all
-  declared in `reasonix.toml`. No hardcoded models.
+  declared in `deeper.toml`. No hardcoded models.
 - **Multi-model & composable.** DeepSeek ships as a preset; any
   OpenAI-compatible endpoint is a config entry, not new code. Optionally run
   two models together (executor + planner) in separate, cache-stable sessions.
@@ -73,8 +76,8 @@
 
 ## Install
 
-Choose the path that matches how you want to use Reasonix. The CLI/TUI,
-desktop app, and VS Code extension all use the same local Reasonix engine.
+Choose the path that matches how you want to use Deeper. The CLI/TUI,
+desktop app, and VS Code extension all use the same local Deeper engine.
 
 ### Path A: CLI / TUI
 
@@ -82,16 +85,16 @@ Install the native binary through npm on any supported platform, or use
 Homebrew on macOS:
 
 ```sh
-npm i -g reasonix                  # any OS; pulls the prebuilt native binary
-brew install esengine/reasonix/reasonix   # macOS
+npm i -g deeper                  # any OS; pulls the prebuilt native binary
+brew install SivanCola/deeper/deeper   # macOS
 ```
 
 Prebuilt archives (`darwin|linux|windows × amd64|arm64`) and `SHA256SUMS` are on
-every [GitHub release](https://github.com/esengine/DeepSeek-Reasonix/releases).
+every [GitHub release](https://github.com/SivanCola/deeper/releases).
 
 ### Path B: Desktop app
 
-Use the [official download page](https://reasonix.io/?download=desktop#start)
+Use the [official download page](https://github.com/SivanCola/deeper/releases)
 for the latest desktop build.
 
 | Platform | Package | Architecture |
@@ -105,20 +108,20 @@ Windows installers are code-signed with a Certum code-signing certificate.
 ### Path C: VS Code extension
 
 Complete Path A first. The extension does not bundle the CLI; it starts your
-local `reasonix acp` backend and adds native chat, editor context, tool-call
+local `deeper acp` backend and adds native chat, editor context, tool-call
 approvals, model selection, and workspace sessions.
 
-- **VS Code:** [install from Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=SivanLiu.reasonix-agent)
-- **VSCodium / Eclipse Theia:** [install from Open VSX Registry](https://open-vsx.org/extension/SivanLiu/reasonix-agent)
-- **Extension ID:** `SivanLiu.reasonix-agent` · [source and usage guide](https://github.com/SivanCola/reasonix-vscode)
+- **VS Code:** [install from Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=SivanLiu.deeper-agent)
+- **VSCodium / Eclipse Theia:** [install from Open VSX Registry](https://open-vsx.org/extension/SivanLiu/deeper-agent)
+- **Extension ID:** `SivanLiu.deeper-agent` · [source and usage guide](https://github.com/SivanCola/deeper-vscode)
 
 ### Path D: Build from source
 
 Clone the repository first:
 
 ```sh
-git clone https://github.com/esengine/DeepSeek-Reasonix.git
-cd DeepSeek-Reasonix
+git clone https://github.com/SivanCola/deeper.git
+cd deeper
 ```
 
 #### CLI
@@ -127,7 +130,7 @@ The CLI build requires **Go 1.26+**. The module pins a `toolchain` directive;
 keep `GOTOOLCHAIN=auto` so Go downloads the pinned toolchain, or install it.
 
 ```sh
-make build      # -> bin/reasonix(.exe)
+make build      # -> bin/deeper(.exe)
 make cross      # -> dist/ (darwin|linux|windows × amd64|arm64)
 ```
 
@@ -150,19 +153,19 @@ Chromium. See the [desktop build guide](desktop/README.md#prerequisites).
 These commands are for the CLI/TUI installed through Path A:
 
 ```sh
-reasonix setup                      # configure a provider and model
-reasonix                            # start an interactive session
-reasonix run "implement the TODOs in main.go"
+deeper setup                      # configure a provider and model
+deeper                            # start an interactive session
+deeper run "implement the TODOs in main.go"
 ```
 
-In an interactive session, run `/init` when you want Reasonix to create project
+In an interactive session, run `/init` when you want Deeper to create project
 instructions.
 
 ### Desktop app
 
 Download the installer for your platform from the
-[official download page](https://reasonix.io/?download=desktop#start), install
-and launch Reasonix, then configure a provider and model in the app. The CLI
+[official download page](https://github.com/SivanCola/deeper/releases), install
+and launch Deeper, then configure a provider and model in the app. The CLI
 commands above are not required for the desktop app.
 
 For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.md)**,
@@ -189,11 +192,11 @@ For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.m
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=esengine%2FDeepSeek-Reasonix&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=SivanCola%2Fdeeper&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/esengine/DeepSeek-Reasonix/star-history/assets/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/esengine/DeepSeek-Reasonix/star-history/assets/star-history/star-history-light.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/esengine/DeepSeek-Reasonix/star-history/assets/star-history/star-history-light.svg" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/SivanCola/deeper/star-history/assets/star-history/star-history-dark.svg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/SivanCola/deeper/star-history/assets/star-history/star-history-light.svg" />
+   <img alt="Star History Chart" src="https://raw.githubusercontent.com/SivanCola/deeper/star-history/assets/star-history/star-history-light.svg" />
  </picture>
 </a>
 
@@ -201,11 +204,11 @@ For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.m
 
 ## Acknowledgments
 
-A small list of folks whose work has shaped Reasonix the most — the current top
+A small list of folks whose work has shaped Deeper the most — the current top
 20 contributors by commit count. The full contributor graph is on
-[GitHub](https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors?all=1).
+[GitHub](https://github.com/SivanCola/deeper/graphs/contributors?all=1).
 
-<!-- reasonix-top-contributors:start -->
+<!-- deeper-top-contributors:start -->
 | Contributor | Contributor | Contributor | Contributor |
 | --- | --- | --- | --- |
 | [**SivanCola**](https://github.com/SivanCola) | [**esengine**](https://github.com/esengine) | [**ttmouse**](https://github.com/ttmouse) | [**lifu963**](https://github.com/lifu963) |
@@ -213,13 +216,13 @@ A small list of folks whose work has shaped Reasonix the most — the current to
 | [**Li-Charles-One**](https://github.com/Li-Charles-One) | **merge-order-check** | [**light-front-theory**](https://github.com/light-front-theory) | **Yan Li** |
 | [**eghrhegpe**](https://github.com/eghrhegpe) | **wufengfan** | [**Bernardxu123**](https://github.com/Bernardxu123) | [**HaoyueQin**](https://github.com/HaoyueQin) |
 | [**CVEngineer66**](https://github.com/CVEngineer66) | [**JesonChou**](https://github.com/JesonChou) | [**SuMuxi66**](https://github.com/SuMuxi66) | [**lanshi17**](https://github.com/lanshi17) |
-<!-- reasonix-top-contributors:end -->
+<!-- deeper-top-contributors:end -->
 
 Special thanks to [**Bernardxu123**](https://github.com/Bernardxu123) for designing the project logo and intro video.
 
 <p align="center">
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=esengine/DeepSeek-Reasonix&max=100&columns=12" alt="Contributors to esengine/DeepSeek-Reasonix" width="860"/>
+  <a href="https://github.com/SivanCola/deeper/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=SivanCola/deeper&max=100&columns=12" alt="Contributors to SivanCola/deeper" width="860"/>
   </a>
 </p>
 
@@ -230,14 +233,14 @@ Special thanks to [**Bernardxu123**](https://github.com/Bernardxu123) for design
 <p align="center">
   <sub>MIT — see <a href="./LICENSE">LICENSE</a></sub>
   <br/>
-  <sub>Built by the community at <a href="https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors">esengine/DeepSeek-Reasonix</a></sub>
+  <sub>Built by the community at <a href="https://github.com/SivanCola/deeper/graphs/contributors">SivanCola/deeper</a></sub>
 </p>
 
 ---
 
 <p align="center"><sub><strong>Support this project</strong></sub></p>
 
-If Reasonix has been useful and you'd like to say thanks, you can. It stays a
+If Deeper has been useful and you'd like to say thanks, you can. It stays a
 coffee, not a contract — donations don't buy feature priority or change how
 issues get triaged.
 

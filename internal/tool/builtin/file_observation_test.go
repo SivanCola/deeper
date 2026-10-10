@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/tool"
+	"deeper/internal/fileops"
+	"deeper/internal/tool"
 )
 
 func observedContext() context.Context {

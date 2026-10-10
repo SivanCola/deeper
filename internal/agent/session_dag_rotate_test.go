@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func TestDAGConcurrentAppendersKeepBothHeads(t *testing.T) {

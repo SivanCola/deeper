@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"strings"
 
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 type sessionLocatorKind uint8

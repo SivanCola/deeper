@@ -1,6 +1,6 @@
 # Session Resource Governance Upgrade
 
-> Baseline: `main-v2` @ `2553bb31c`, merged on 2026-09-15
+> Baseline: `main` @ `2553bb31c`, merged on 2026-09-15
 > Scope: Desktop history, streaming Markdown, tool details, body reads, media release, and skillwatch diagnostics
 
 ## Motivation
@@ -71,7 +71,7 @@ Local gates cover Go session/serve/skill/boot packages, race tests for skillwatc
 
 The browser fixture passed on its first run on 2026-09-15 using macOS arm64 and Chromium 153. At 240 turns it measured 129.3 ms initial load, 2040.7 ms deep paging, 1173.6 ms streaming publication, 24.1 ms input p95, and 12,090 DOM nodes. The 1000-turn compatibility stress case measured 147.6 ms, 23175.6 ms, 4987.7 ms, 45.9 ms, and 47,834 DOM nodes respectively. Session-switch p95 was 44 ms, measured JS heap growth was 349,380 bytes, and anchor drift was zero. The 1000-turn full-page DOM count also demonstrates that the 12,000 budget is enforced per Markdown publication page, not as a global transcript hard cap.
 
-The production frontend build passed every bundle budget, and `desktop/ go test ./...` passed (the main package took 335.895 s). Root `go test ./...` had only three pre-existing `cmd/reasonix-legacy-migrator` failures, all reporting `pending update belongs to a different installation: pending update bundle is not the current Guard installation`; the remaining root packages touched by this change passed.
+The production frontend build passed every bundle budget, and `desktop/ go test ./...` passed (the main package took 335.895 s). Root `go test ./...` had only three pre-existing `cmd/deeper-legacy-migrator` failures, all reporting `pending update belongs to a different installation: pending update bundle is not the current Guard installation`; the remaining root packages touched by this change passed.
 
 Still required before a performance release claim:
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/serve"
+	"deeper/internal/serve"
 )
 
 // runServeListenerAfterReady opens the browser only after HTTP responds.

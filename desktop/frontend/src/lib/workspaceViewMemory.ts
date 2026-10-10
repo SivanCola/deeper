@@ -17,7 +17,7 @@ interface ProjectViews {
   views: Record<string, ViewState>;
 }
 type Snapshot = WorkspaceTreeMemorySnapshot & { openTabs?: string[]; filter?: string };
-const STORAGE_KEY = "reasonix.workspaceViews.v1";
+const STORAGE_KEY = "deeper.workspaceViews.v1";
 const PREFIX = "dock-view:";
 const projects = new Map<string, ProjectViews>();
 let hydrated = false;

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestNewHonorsExplicitDeepSeekReasoningProtocol(t *testing.T) {

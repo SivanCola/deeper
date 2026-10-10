@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func legacyCompactionFixture(t *testing.T) (string, []provider.Message, []provider.Message) {

@@ -3,7 +3,7 @@ package jobs
 import (
 	"strings"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 func mergePublishedEvidence(dst *evidence.ChildEvidenceSummary, summary evidence.ChildEvidenceSummary) {

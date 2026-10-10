@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestOfficialDeepSeekVisionSKUEmbedsUserImages(t *testing.T) {

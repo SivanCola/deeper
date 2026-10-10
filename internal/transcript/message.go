@@ -3,9 +3,9 @@
 package transcript
 
 import (
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/provider"
 )
 
 type Message struct {

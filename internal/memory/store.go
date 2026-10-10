@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/frontmatter"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/frontmatter"
 )
 
 // Store is the scoped auto-memory store: project and global directories of
@@ -27,8 +27,8 @@ import (
 // current project or every project, while Type only classifies its contents.
 // List() and Index() merge both directories so every session sees the full set.
 type Store struct {
-	Dir       string // ...reasonix/projects/<project directory>/memory
-	GlobalDir string // ...reasonix/memory/global (shared across projects)
+	Dir       string // ...deeper/projects/<project directory>/memory
+	GlobalDir string // ...deeper/memory/global (shared across projects)
 }
 
 // Type classifies a memory, mirroring the auto-memory taxonomy.
@@ -103,7 +103,7 @@ type ArchivedMemory struct {
 }
 
 // StoreFor resolves the auto-memory directory for a project working dir under
-// Reasonix home, e.g. ~/.reasonix/projects/-Users-me-proj/memory.
+// Deeper home, e.g. ~/.deeper/projects/-Users-me-proj/memory.
 // A "" userDir (config dir unresolvable) yields a zero Store, which all methods
 // treat as a disabled no-op.
 func StoreFor(userDir, cwd string) Store {
@@ -540,7 +540,7 @@ func (s Store) ListAll() []Memory {
 }
 
 // PinnedGuidanceBudgetChars caps the total pinned-body runes session-context
-// carries. Guidance that must always hold belongs in REASONIX.md/AGENTS.md
+// carries. Guidance that must always hold belongs in DEEPER.md/AGENTS.md
 // instructions; pinned memory is the bounded middle tier between instructions
 // and retrieval-only facts, and the cap is enforced at write time so the
 // snapshot always equals exactly what the user curated.

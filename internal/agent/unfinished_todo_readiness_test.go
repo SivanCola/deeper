@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // TestOpenTurnMayEndWithIncompleteTodosAfterWrite proves an ordinary session

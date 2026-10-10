@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func headlessRunFixture(t *testing.T, root, id string) {

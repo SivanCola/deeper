@@ -1,10 +1,10 @@
 package responses
 
 import (
+	"deeper/internal/provider"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"reasonix/internal/provider"
 	"reflect"
 	"strings"
 	"testing"

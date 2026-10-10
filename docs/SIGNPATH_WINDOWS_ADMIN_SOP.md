@@ -1,12 +1,12 @@
-# Reasonix Windows SignPath 配置与验收 SOP
+# Deeper Windows SignPath 配置与验收 SOP
 
 本文供 SignPath 管理员、GitHub 仓库管理员和 Release Maintainer 配置并验收
-Reasonix Windows Authenticode 两阶段签名链路。
+Deeper Windows Authenticode 两阶段签名链路。
 
 关联变更：
 
-- PR：[esengine/DeepSeek-Reasonix#6904](https://github.com/esengine/DeepSeek-Reasonix/pull/6904)
-- 历史 Preview 渠道改造（仅供兼容背景）：[esengine/DeepSeek-Reasonix#6155](https://github.com/esengine/DeepSeek-Reasonix/pull/6155)
+- PR：[SivanCola/deeper#6904](https://github.com/SivanCola/deeper/pull/6904)
+- 历史 Preview 渠道改造（仅供兼容背景）：[SivanCola/deeper#6155](https://github.com/SivanCola/deeper/pull/6155)
 - 本 SOP 的验收对象：每次执行前通过 PR API 读回的当前 PR Head
 - 签名工作流：`.github/workflows/release-stable.yml`、
   `.github/workflows/release-desktop.yml`
@@ -58,11 +58,11 @@ SignPath 权限说明：
 
 截至 2026-07-25 的线上核对结果：
 
-- SignPath 组织：`DeepSeek-Reasonix [OSS]`
-- SignPath 项目：`DeepSeek-Reasonix`
+- SignPath 组织：`deeper [OSS]`
+- SignPath 项目：`deeper`
 - 项目状态：`VALID`
 - Repository URL：
-  `https://github.com/esengine/DeepSeek-Reasonix.git`
+  `https://github.com/SivanCola/deeper.git`
 - 当前 Artifact Configurations：
   - `Initial version`
   - `windows-installer`，状态为 `DEFAULT`
@@ -74,7 +74,7 @@ SignPath 权限说明：
 - `release-signing` 的 Allowed build definitions 精确允许：
   - `.github/workflows/release-stable.yml`
   - `.github/workflows/release-desktop.yml`
-- `release-signing` 的 Allowed branches 必须精确为 `main-v2`；正式版标签由
+- `release-signing` 的 Allowed branches 必须精确为 `main`；正式版标签由
   最小 relay workflow 转发到该受保护控制面。
 - `test-signing-ci-approval` 使用测试证书，只允许 `CI builds` 提交和审批，
   Required approvals 为 `1`，并启用相同的 Trusted Build、Origin 和 Build
@@ -88,7 +88,7 @@ SignPath 权限说明：
 
 1. 登录 SignPath。
 2. 进入 `Projects`。
-3. 打开 `DeepSeek-Reasonix`。
+3. 打开 `deeper`。
 4. 进入项目编辑或项目权限设置。
 5. 在 `Configurators` 中添加负责维护签名配置的用户或用户组。
 6. 保存。
@@ -106,11 +106,11 @@ SignPath 权限说明：
 - 仓库路径：
   `.signpath/artifact-configurations/windows-payload.xml`
 - 固定版本：
-  [windows-payload.xml@fe354e5](https://github.com/SivanCola/DeepSeek-Reasonix/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-payload.xml)
+  [windows-payload.xml@fe354e5](https://github.com/SivanCola/deeper/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-payload.xml)
 
 ### 5.2 导入步骤
 
-1. SignPath → `Projects` → `DeepSeek-Reasonix`。
+1. SignPath → `Projects` → `deeper`。
 2. 找到 `Artifact Configurations`。
 3. 点击 `Add`。
 4. 选择 `Custom`。
@@ -139,12 +139,12 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 
 该配置需要给以下 6 个 EXE 执行 `authenticode-sign`：
 
-- `reasonix-desktop.exe`
-- `reasonix-guard.exe`
-- `reasonix-launcher.exe`
-- `reasonix-update-helper.exe`
-- `reasonix-cli.exe`
-- `reasonix-uninstall.exe`
+- `deeper-desktop.exe`
+- `deeper-guard.exe`
+- `deeper-launcher.exe`
+- `deeper-update-helper.exe`
+- `deeper-cli.exe`
+- `deeper-uninstall.exe`
 
 参考：
 
@@ -159,7 +159,7 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 - 仓库路径：
   `.signpath/artifact-configurations/windows-installer-v2.xml`
 - 固定版本：
-  [windows-installer-v2.xml@fe354e5](https://github.com/SivanCola/DeepSeek-Reasonix/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-installer-v2.xml)
+  [windows-installer-v2.xml@fe354e5](https://github.com/SivanCola/deeper/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-installer-v2.xml)
 
 ### 6.2 导入步骤
 
@@ -231,7 +231,7 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 - 如果启用 Origin Verification，仓库地址必须为：
 
   ```text
-  https://github.com/esengine/DeepSeek-Reasonix.git
+  https://github.com/SivanCola/deeper.git
   ```
 
 ### 8.2 `release-signing`
@@ -246,10 +246,10 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 - Repository URL：
 
   ```text
-  https://github.com/esengine/DeepSeek-Reasonix.git
+  https://github.com/SivanCola/deeper.git
   ```
 
-- Allowed branches：**只能填写 `main-v2`**
+- Allowed branches：**只能填写 `main`**
 - Allowed build definitions：**只能逐行填写以下两个精确路径**：
 
   ```text
@@ -270,12 +270,12 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 - 策略状态为 `VALID`。
 - `Use approval process` 已开启。
 - Trusted Build System 和 Origin Verification 仍然开启。
-- Allowed branches 精确显示 `main-v2`，没有 `**`、`v*`、
+- Allowed branches 精确显示 `main`，没有 `**`、`v*`、
   `desktop-v*` 或临时测试分支。
 - Allowed build definitions 与仓库机器契约逐项相同，没有通配符。
 
 正式版的 `vX.Y.Z` 标签事件由 `release-stable-trigger.yml` 转发：relay
-只携带候选 tag，实际顶层发布 workflow 固定运行在受保护的 `main-v2`，再签署
+只携带候选 tag，实际顶层发布 workflow 固定运行在受保护的 `main`，再签署
 `vX.Y.Z`、`npm-vX.Y.Z` 和 `desktop-vX.Y.Z` 共同指向的不可变候选 SHA。
 不能把 Allowed branches 改成标签通配符，因为普通分支也可以取形如
 `v-malicious` 的名字。
@@ -314,13 +314,13 @@ You can either enable the approval process or use another certificate.
 - 不得把个人 Interactive User 的 Token 用作 `SIGNPATH_API_TOKEN`。
 - `SIGNPATH_ORGANIZATION_ID` 必须指向正确的 OSS 组织。
 - GitHub `release` environment 的审批人仍然有效。
-- `release-signing` 的 Allowed branches 精确为 `main-v2`。
+- `release-signing` 的 Allowed branches 精确为 `main`。
 
 正式验收前，应使签名契约 attestation 失效：
 
 ```bash
 gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
-  --repo esengine/DeepSeek-Reasonix \
+  --repo SivanCola/deeper \
   --body unverified
 ```
 
@@ -332,8 +332,8 @@ gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
 
 Fork PR 工作流拿不到官方仓库的 SignPath Secrets，因此不能直接在 PR 分支
 完成真实签名。不要为了合并前验证而放宽 `release-signing` 的精确
-`main-v2` 分支限制。代码、workflow 契约和无 Secrets 的打包测试在 PR 中
-通过后，合并到受保护的 `main-v2`，再执行正式证书预检。
+`main` 分支限制。代码、workflow 契约和无 Secrets 的打包测试在 PR 中
+通过后，合并到受保护的 `main`，再执行正式证书预检。
 
 零发布预检由 `.github/workflows/release-stable.yml` 在唯一的 `release`
 environment 获批后自动调用。它使用 `release-signing` 和正式证书验证
@@ -345,7 +345,7 @@ AMD64/ARM64，由 `CI builds` 自动批准 SignPath 请求，并跳过 publish j
 ./scripts/release-stable.sh X.Y.Z
 ```
 
-该命令先验证远端 `main-v2` 的 reviewed Notes 和精确 SHA CI，再原子创建三个
+该命令先验证远端 `main` 的 reviewed Notes 和精确 SHA CI，再原子创建三个
 正式版标签；随后 relay 启动受保护控制面。预检完成前，CLI、npm 和 Desktop
 三个公开 publisher 均不会启动，因此 SignPath 策略漂移不会形成半发布。
 不要为了预检重新引入 Preview/RC 标签或 `canary` environment。
@@ -354,16 +354,16 @@ AMD64/ARM64，由 `CI builds` 自动批准 SignPath 请求，并跳过 publish j
 
 ```bash
 RUN_ID="$(gh run list \
-  --repo esengine/DeepSeek-Reasonix \
+  --repo SivanCola/deeper \
   --workflow release-stable.yml \
-  --branch main-v2 \
+  --branch main \
   --event workflow_dispatch \
   --limit 1 \
   --json databaseId \
   --jq '.[0].databaseId')"
 
 gh run watch "$RUN_ID" \
-  --repo esengine/DeepSeek-Reasonix \
+  --repo SivanCola/deeper \
   --exit-status
 ```
 
@@ -413,7 +413,7 @@ SignPath Signing Requests 中应出现 4 个成功请求：
 - `release-signing` 的 Build Definitions 精确允许
   `.github/workflows/release-stable.yml`、
   `.github/workflows/release-desktop.yml`。
-- `release-signing` 的 Allowed branches 精确为 `main-v2`。
+- `release-signing` 的 Allowed branches 精确为 `main`。
 - `CI builds` 是 `release-signing` 的 Submitter 和 Approver，GitHub Secret 使用其专用
   Token。
 - AMD64 和 ARM64 正式证书零发布预检全部成功。
@@ -423,7 +423,7 @@ SignPath Signing Requests 中应出现 4 个成功请求：
 
 ```bash
 gh variable get SIGNPATH_RELEASE_SIGNING_ATTESTATION \
-  --repo esengine/DeepSeek-Reasonix
+  --repo SivanCola/deeper
 ```
 
 值必须为 `v1:` 加 64 位小写十六进制 SHA-256。只要 workflow、签名脚本、
@@ -449,7 +449,7 @@ Status = Valid
 在干净的 Windows 11 AMD64 和 ARM64 环境中检查安装目录：
 
 ```powershell
-Get-ChildItem "<Reasonix安装目录>" -Recurse -Filter *.exe |
+Get-ChildItem "<Deeper安装目录>" -Recurse -Filter *.exe |
   ForEach-Object {
     $signature = Get-AuthenticodeSignature $_.FullName
     [PSCustomObject]@{
@@ -491,7 +491,7 @@ Get-ChildItem "<Reasonix安装目录>" -Recurse -Filter *.exe |
 
 ```bash
 gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
-  --repo esengine/DeepSeek-Reasonix \
+  --repo SivanCola/deeper \
   --body unverified
 ```
 
@@ -508,7 +508,7 @@ gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
 - [ ] `release-signing` 已开启 Trusted Build System
 - [ ] `release-signing` 已开启 Origin Verification
 - [ ] `release-signing` 的 Allowed build definitions 精确为 `.github/workflows/release-stable.yml` 和 `.github/workflows/release-desktop.yml`
-- [ ] `release-signing` 的 Allowed branches 精确为 `main-v2`
+- [ ] `release-signing` 的 Allowed branches 精确为 `main`
 - [ ] `release-signing` 的 SignPath 审批已开启，Required approvals 为 `1`
 - [ ] GitHub `release` environment 的正式发布审批人和响应流程已经明确
 - [ ] AMD64 正式证书零发布预检两阶段签名成功
@@ -528,4 +528,4 @@ gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
 - [SignPath Projects](https://docs.signpath.io/projects)
 - [SignPath Users and Permissions](https://docs.signpath.io/users/)
 - [SignPath GitHub Trusted Build System](https://docs.signpath.io/trusted-build-systems/github)
-- [Reasonix PR #6904](https://github.com/esengine/DeepSeek-Reasonix/pull/6904)
+- [Deeper PR #6904](https://github.com/SivanCola/deeper/pull/6904)

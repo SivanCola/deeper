@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func ambiguousResumeWorkspace(t *testing.T) (string, string) {
 	t.Helper()
-	t.Setenv("REASONIX_STATE_HOME", t.TempDir())
+	t.Setenv("DEEPER_STATE_HOME", t.TempDir())
 	t.Chdir(t.TempDir())
 	dir := resolveCLISessionDir()
 	if err := os.MkdirAll(dir, 0o700); err != nil {

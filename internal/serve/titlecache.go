@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 // titleCache persists generated session titles to <dir>/.session-titles.json.

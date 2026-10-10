@@ -3,10 +3,10 @@ package control
 import (
 	"encoding/json"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/secrets"
-	"reasonix/internal/session"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/secrets"
+	"deeper/internal/session"
 )
 
 // One bounded, optional record shares the terminal commit. Cold exports can

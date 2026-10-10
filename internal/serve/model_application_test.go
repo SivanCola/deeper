@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
 )
 
 func modelApplicationServer(t *testing.T) (*Server, *jobs.SessionBackgroundScope, *atomic.Int32) {

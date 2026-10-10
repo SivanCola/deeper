@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/internal/control"
 	"errors"
-	"reasonix/internal/control"
 )
 
 // RunShellForTabWithID uses the same durable admission as model turns. The

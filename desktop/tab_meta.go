@@ -1,10 +1,10 @@
 package main
 
 import (
-	"reasonix/internal/control"
-	"reasonix/internal/gitcmd"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/gitcmd"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
 )
 
 // TabMeta is the frontend-facing shape of one tab.

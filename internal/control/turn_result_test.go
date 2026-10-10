@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/checkpoint"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 type resultWritingRunner struct {

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // AddOfficialProviderAccess adds one curated desktop provider template to the

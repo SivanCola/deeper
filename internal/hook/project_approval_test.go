@@ -9,7 +9,7 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // A checkout's hooks run on the first event of the first session, so they wait

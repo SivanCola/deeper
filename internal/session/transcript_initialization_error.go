@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"reasonix/internal/transcript"
+	"deeper/internal/transcript"
 )
 
 // TranscriptInitializationError crosses service and migration boundaries

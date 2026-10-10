@@ -39,14 +39,14 @@ export type TranscriptDiagnostic = RendererDiagnosticPayload & {
 
 const active = new Map<number, string>();
 let nextOwner = 1;
-const crashSnapshotHost = globalThis as typeof globalThis & { __reasonixTranscriptDiagnostics?: string };
+const crashSnapshotHost = globalThis as typeof globalThis & { __deeperTranscriptDiagnostics?: string };
 
 function formatDiagnostic(event: TranscriptDiagnostic): string {
   return `${event.event} stage=${event.stage} reason=${event.reason} type=${event.errorType} transport=${event.transport} revision=${event.revision} commit=${event.commit} attempts=${event.attempts} failures=${event.failures} duration_ms=${event.durationMs}`;
 }
 
 function syncCrashSnapshot(): void {
-  crashSnapshotHost.__reasonixTranscriptDiagnostics = [...active.values()].join("\n");
+  crashSnapshotHost.__deeperTranscriptDiagnostics = [...active.values()].join("\n");
 }
 
 export function newTranscriptDiagnosticOwner(): number {

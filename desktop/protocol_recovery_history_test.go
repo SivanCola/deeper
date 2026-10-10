@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/internal/provider"
 	"encoding/json"
-	"reasonix/internal/provider"
 	"strings"
 	"testing"
 )

@@ -37,7 +37,7 @@ async function fixture() {
   const module = { exports: {} as any };
   const require = createRequire(import.meta.url);
   new Function("require", "module", "exports", (await bundled).outputFiles[0].text)((name: string) => name === "electron" ? electron : require(name), module, module.exports);
-  const window = new module.exports.MainWindow({ platform: "win32", appURL: "reasonix://app/index.html", preloadPath: "unused", zoomStore: { current: { appZoomFactor: 1 } }, log: { warn() {}, error() {} }, onShellAction() {}, onAppDomReady() {} });
+  const window = new module.exports.MainWindow({ platform: "win32", appURL: "deeper://app/index.html", preloadPath: "unused", zoomStore: { current: { appZoomFactor: 1 } }, log: { warn() {}, error() {} }, onShellAction() {}, onAppDomReady() {} });
   const geometry = { ...module.exports.DEFAULT_GEOMETRY };
   return { window, windows, loads, scripts, geometry };
 }
@@ -98,7 +98,7 @@ test("app window flushes the renderer draft through a fixed internal script", as
   f.window.create(f.geometry);
   const app = f.window.loadApp();
   await f.window.flushSessionDraft();
-  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__reasonixFlushSessionDraft?.())"]);
+  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__deeperFlushSessionDraft?.())"]);
   f.loads.shift()!();
   await app;
 });
@@ -108,7 +108,7 @@ test("app window can release the renderer draft exit barrier after a veto", asyn
   f.window.create(f.geometry);
   const app = f.window.loadApp();
   await f.window.resumeSessionDraftEditing();
-  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__reasonixResumeSessionDraftEditing?.())"]);
+  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__deeperResumeSessionDraftEditing?.())"]);
   f.loads.shift()!();
   await app;
 });

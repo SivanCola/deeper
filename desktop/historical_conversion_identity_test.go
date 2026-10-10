@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/session"
 )
 
 // Lineage migration carries a legacy head into the receipt for its converted

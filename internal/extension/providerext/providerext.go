@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/providerconv"
-	"reasonix/internal/extension/sidecar"
-	"reasonix/internal/provider"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/providerconv"
+	"deeper/internal/extension/sidecar"
+	"deeper/internal/provider"
 )
 
 // ProviderClient is the slice of a live sidecar connection the adapter needs.

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 const (

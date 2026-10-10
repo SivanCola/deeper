@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func TestSubmitClearDiscardsCurrentContextWithoutSavingTranscript(t *testing.T) {

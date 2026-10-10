@@ -3,10 +3,10 @@ package cli
 import (
 	"testing"
 
-	"reasonix/internal/command"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/skill"
+	"deeper/internal/command"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/skill"
 )
 
 func TestSlashArgSnapshotSurvivesNoMatchWithinEditingSession(t *testing.T) {

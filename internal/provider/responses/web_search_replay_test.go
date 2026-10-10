@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestConversationDigestIncludesEnabledWebSearchReplayItems(t *testing.T) {

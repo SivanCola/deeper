@@ -6472,63 +6472,63 @@
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/app-runtime/useAppChromeCommands.ts",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/components/ChatTranscript.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/components/ComposerWorkspaceContextBar.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/components/ManagementPageShell.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/components/ScrollDiagnosticPanel.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/components/SettingsPanel.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/components/SettingsSelect.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/custom/features/heartbeat/heartbeat.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
     },
     {
       "kind": "css-marker",
-      "name": "--reasonix-draggable",
+      "name": "--deeper-draggable",
       "location": "desktop/frontend/src/styles.css",
       "class": "keep-business",
       "owner": "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"
@@ -6549,7 +6549,7 @@
     },
     {
       "kind": "persistence",
-      "name": ".reasonix-export-publication.lock",
+      "name": ".deeper-export-publication.lock",
       "location": "desktop/session_export_journal.go:87",
       "class": "keep-business",
       "owner": "format unchanged; read by both shells"
@@ -6967,7 +6967,7 @@
     },
     {
       "kind": "artifact",
-      "name": "Reasonix-darwin-\u003carch\u003e.dmg",
+      "name": "Deeper-darwin-\u003carch\u003e.dmg",
       "detail": "drag-to-install; human download",
       "location": "scripts/desktop-build.sh:10",
       "class": "keep-business",
@@ -6975,7 +6975,7 @@
     },
     {
       "kind": "artifact",
-      "name": "Reasonix-linux-\u003carch\u003e.deb",
+      "name": "Deeper-linux-\u003carch\u003e.deb",
       "detail": "Debian/Ubuntu package; native updater",
       "location": "scripts/desktop-build.sh:14",
       "class": "keep-business",
@@ -6983,7 +6983,7 @@
     },
     {
       "kind": "artifact",
-      "name": "Reasonix-linux-\u003carch\u003e.tar.gz",
+      "name": "Deeper-linux-\u003carch\u003e.tar.gz",
       "detail": "desktop + guard + CLI + app/ tree; portable updater",
       "location": "scripts/desktop-build.sh:13",
       "class": "keep-business",
@@ -6991,7 +6991,7 @@
     },
     {
       "kind": "artifact",
-      "name": "Reasonix-windows-\u003carch\u003e-installer.exe",
+      "name": "Deeper-windows-\u003carch\u003e-installer.exe",
       "detail": "NSIS per-user installer; updater channel",
       "location": "scripts/desktop-build.sh:11",
       "class": "keep-business",
@@ -6999,7 +6999,7 @@
     },
     {
       "kind": "artifact",
-      "name": "Reasonix-windows-\u003carch\u003e.zip",
+      "name": "Deeper-windows-\u003carch\u003e.zip",
       "detail": "portable human download",
       "location": "scripts/desktop-build.sh:12",
       "class": "keep-business",

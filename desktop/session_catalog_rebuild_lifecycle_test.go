@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/sessioncatalog"
 )
 
 func waitForSessionCatalogForTest(t *testing.T, app *App, previous *sessioncatalog.Catalog) *sessioncatalog.Catalog {

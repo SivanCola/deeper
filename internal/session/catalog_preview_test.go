@@ -10,7 +10,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestCatalogPreviewUsesAuthoredTextBeforeTruncation(t *testing.T) {

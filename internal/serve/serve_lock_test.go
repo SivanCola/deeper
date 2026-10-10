@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
 )
 
 type blockingRequestBody struct {

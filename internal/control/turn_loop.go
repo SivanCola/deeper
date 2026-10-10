@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 type queuedTurnKind int

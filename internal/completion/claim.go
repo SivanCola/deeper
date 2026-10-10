@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 // Claim is the model's own account of the work, as passed to update_goal. It

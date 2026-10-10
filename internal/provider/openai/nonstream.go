@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // sseProbe watches the stream's lines so an incomplete stream can say whether

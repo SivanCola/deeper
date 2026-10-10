@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-const modulePrefix = "reasonix/"
+const modulePrefix = "deeper/"
 
 // Transport-agnostic control.Controller sits behind every frontend; nothing
-// below it may reach up. See REASONIX.md.
+// below it may reach up. See DEEPER.md.
 var frontends = []string{
 	"internal/acp",
 	"internal/boot",

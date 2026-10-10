@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func TestNewBlankSessionCanBeArchived(t *testing.T) {

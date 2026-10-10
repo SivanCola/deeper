@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 func skipNonPOSIX(t *testing.T) {

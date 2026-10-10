@@ -18,7 +18,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 const (

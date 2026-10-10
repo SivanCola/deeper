@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func TestObservedDeletionCannotBecomeBlindCreate(t *testing.T) {

@@ -2,13 +2,13 @@ package main
 
 import (
 	cryptorand "crypto/rand"
+	"deeper/internal/control"
+	"deeper/internal/serve"
+	"deeper/internal/sessioninbox"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
-	"reasonix/internal/control"
-	"reasonix/internal/serve"
-	"reasonix/internal/sessioninbox"
 	"strings"
 	"time"
 )
@@ -74,7 +74,7 @@ type queuedFollowupError struct {
 	receipt InboxReceiptView
 }
 
-func (e *queuedFollowupError) Error() string { return "reasonix_error:queued_followup" }
+func (e *queuedFollowupError) Error() string { return "deeper_error:queued_followup" }
 
 func (e *queuedFollowupError) RPCErrorData() map[string]any {
 	return map[string]any{"queuedFollowup": e.receipt}

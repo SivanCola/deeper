@@ -1,6 +1,6 @@
 package attachment
 
-import "reasonix/internal/sessioncontent"
+import "deeper/internal/sessioncontent"
 
 const (
 	RefVersion = 1

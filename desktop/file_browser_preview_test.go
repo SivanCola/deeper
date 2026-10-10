@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 type previewTestExecutor struct {

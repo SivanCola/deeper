@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 // livePage exercises the snapshot walker and every input path the executor
@@ -36,11 +36,11 @@ const livePage = `<!doctype html>
 //
 // Run with:
 //
-//	REASONIX_LIVE_CHROME=1 go test ./internal/browser/cdp \
+//	DEEPER_LIVE_CHROME=1 go test ./internal/browser/cdp \
 //	  -run '^TestLiveChrome$' -v -count=1 -timeout=3m
 func TestLiveChrome(t *testing.T) {
-	if os.Getenv("REASONIX_LIVE_CHROME") != "1" {
-		t.Skip("set REASONIX_LIVE_CHROME=1 to run the real Chrome end-to-end test")
+	if os.Getenv("DEEPER_LIVE_CHROME") != "1" {
+		t.Skip("set DEEPER_LIVE_CHROME=1 to run the real Chrome end-to-end test")
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -83,7 +83,7 @@ func TestLiveChrome(t *testing.T) {
 
 	act(t, ctx, exec, browser.ActRequest{
 		OperationID: "live-type", TabID: tab.ID, DocumentToken: snap.DocumentToken,
-		Action: browser.ActionType, Ref: queryRef, Text: "reasonix",
+		Action: browser.ActionType, Ref: queryRef, Text: "deeper",
 	})
 	act(t, ctx, exec, browser.ActRequest{
 		OperationID: "live-select", TabID: tab.ID, DocumentToken: snap.DocumentToken,
@@ -98,7 +98,7 @@ func TestLiveChrome(t *testing.T) {
 	if err != nil {
 		t.Fatalf("snapshot after acting: %v", err)
 	}
-	if !strings.Contains(after.Tree, "submitted:reasonix:two") {
+	if !strings.Contains(after.Tree, "submitted:deeper:two") {
 		t.Fatalf("the page did not observe the typed text, the selection, and the click:\n%s", after.Tree)
 	}
 	if after.DocumentToken == snap.DocumentToken {

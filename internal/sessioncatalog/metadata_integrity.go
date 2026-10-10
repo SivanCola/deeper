@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"reasonix/internal/projectiondb"
+	"deeper/internal/projectiondb"
 )
 
 var ErrCatalogInvalidated = errors.New("catalog generation invalidated")

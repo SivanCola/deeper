@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Resolve and authorize the immutable source commit for a Desktop publication.
-# The workflow control plane must run from protected main-v2. Stable/RC builds
-# use an existing tag on main-v2 history; Preview builds use the exact main-v2
+# The workflow control plane must run from protected main. Stable/RC builds
+# use an existing tag on main history; Preview builds use the exact main
 # commit selected when the protected workflow was dispatched.
 set -euo pipefail
 
@@ -96,16 +96,16 @@ preview)
 	;;
 esac
 
-git fetch "$release_remote" main-v2 --tags
-main_sha="$(git rev-parse "$release_remote/main-v2^{commit}")"
+git fetch "$release_remote" main --tags
+main_sha="$(git rev-parse "$release_remote/main^{commit}")"
 
 if [ "$orchestrated" = "true" ]; then
 	candidate="$approved_sha"
 else
 	if [ "$caller_event" != "workflow_dispatch" ] ||
-		[ "$caller_ref" != "refs/heads/main-v2" ] ||
+		[ "$caller_ref" != "refs/heads/main" ] ||
 		[ "$caller_ref_protected" != "true" ]; then
-		echo "::error::standalone Desktop releases must run from protected main-v2" >&2
+		echo "::error::standalone Desktop releases must run from protected main" >&2
 		exit 1
 	fi
 	if [ "$caller_sha" != "$caller_workflow_sha" ]; then
@@ -128,7 +128,7 @@ if ! git cat-file -e "$candidate^{commit}" 2>/dev/null; then
 	exit 1
 fi
 if ! git merge-base --is-ancestor "$candidate" "$main_sha"; then
-	echo "::error::Desktop candidate $candidate is not on main-v2 history at $main_sha" >&2
+	echo "::error::Desktop candidate $candidate is not on main history at $main_sha" >&2
 	exit 1
 fi
 
@@ -149,7 +149,7 @@ elif git show-ref --verify --quiet "refs/tags/$tag"; then
 	echo "::error::Desktop Preview uses an immutable asset directory, not a Git tag: $tag" >&2
 	exit 1
 elif [ "$orchestrated" != "true" ] && [ "$require_current_main" = "true" ] && [ "$candidate" != "$main_sha" ]; then
-	echo "::error::Desktop Preview must use current main-v2 $main_sha, got: $candidate" >&2
+	echo "::error::Desktop Preview must use current main $main_sha, got: $candidate" >&2
 	exit 1
 fi
 

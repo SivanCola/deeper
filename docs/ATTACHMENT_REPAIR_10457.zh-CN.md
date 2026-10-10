@@ -3,13 +3,13 @@
 [English](ATTACHMENT_REPAIR_10457.md)
 
 附件改造来源为 PR head `b582ebabe089fb75a6ee8ba23dddcb0a48a873ca`，先语义重放到
-`main-v2` `93fb72870758f2ff60ae24386406b0e5f0782f0e`，再变基到最新主线
+`main` `93fb72870758f2ff60ae24386406b0e5f0782f0e`，再变基到最新主线
 `9b0cc56e5c0e60d92cb447b360ef8fa018c7c72b`。初始基线已包含 #10469
 的持久草稿和 #10471 的固定快照导出，最新基线还包含 #10500 的模型级 reasoning
 能力解析。相对上一版 `bd0733b9` 的 `git range-diff` 仅变化了生成的 Desktop
 契约摘要，附件补丁与后续主线行为均保留，也未整合 #10346。
 借鉴 harness `ddefc45fbc7f8e46dd73185e68295696d1297887` 的批次接纳、
-会话授权和独立取消机制，保留 Reasonix 原图字节、内容库与现有请求策略。
+会话授权和独立取消机制，保留 Deeper 原图字节、内容库与现有请求策略。
 
 ## 用户可见行为
 
@@ -78,16 +78,16 @@ Responses、Anthropic 三类协议的旧 `Images []string` provider 可见字节
 与附件补丁 patch-id 等价的集成候选已完成 root 和 Desktop 全量 Go、相关 race、全部
 409 个前端套件、typecheck、正式构建与包体积门禁、契约 freshness、inventory 和仓库
 lint。最终变基通过 `range-diff` 保留附件语义，并重跑受影响的模型路由、Desktop 和
-前端门禁。Desktop Linux cross-lint 仍报告 `main-v2` 基线中 4 个未改动的 tray 桩函数，
+前端门禁。Desktop Linux cross-lint 仍报告 `main` 基线中 4 个未改动的 tray 桩函数，
 不属于附件回归。
 
 第二层只在准备推送的最终 SHA 上执行一次。使用 `scripts/desktop-build.sh` 生成 ZIP，
 解压到全新目录；不要运行尚未组装 CLI/service 的中间 Electron 壳。随后执行：
 
 ```sh
-node desktop/packaging/smoke.mjs /isolated/Reasonix.app
+node desktop/packaging/smoke.mjs /isolated/Deeper.app
 node desktop/packaging/attachment-native-smoke.mjs \
-  /isolated/Reasonix.app /isolated/evidence
+  /isolated/Deeper.app /isolated/evidence
 ```
 
 自动验收启动正式打包的壳和 service，使用独立数据目录与本机 loopback provider，检查

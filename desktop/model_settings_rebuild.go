@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/control"
+import "deeper/internal/control"
 
 // snapshotSettingsRebuildSource secures the outgoing runtime before migrating
 // it. Callers hold runtimeRebuildMu and the tab's turn admission gate.

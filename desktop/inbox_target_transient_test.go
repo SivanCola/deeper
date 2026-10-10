@@ -16,7 +16,7 @@ func codedCode(t *testing.T, err error) (string, map[string]any) {
 	if !errors.As(err, &coded) {
 		t.Fatalf("error %v is not an inboxCodedError", err)
 	}
-	return strings.TrimPrefix(coded.Error(), "reasonix_error:"), coded.RPCErrorData()
+	return strings.TrimPrefix(coded.Error(), "deeper_error:"), coded.RPCErrorData()
 }
 
 // A fence that clears by itself must be machine-distinguishable from a
@@ -45,7 +45,7 @@ func TestInboxTargetFenceClassifiesTransientStates(t *testing.T) {
 			if code != "inbox_target_transient" || data["transient"] != true {
 				t.Fatalf("code=%q data=%v, want transient", code, data)
 			}
-			if !strings.HasPrefix(err.Error(), "reasonix_error:"+"inbox_target_transient") {
+			if !strings.HasPrefix(err.Error(), "deeper_error:"+"inbox_target_transient") {
 				t.Fatalf("wire error = %q", err.Error())
 			}
 		})

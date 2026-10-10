@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/hook"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/hook"
 )
 
 type trustOptions struct {
@@ -23,7 +23,7 @@ func trustCommand(args []string) int {
 }
 
 // runTrust lists the programs a workspace's own files name and records the
-// person's approval of them, as they stand now, under their Reasonix home.
+// person's approval of them, as they stand now, under their Deeper home.
 func runTrust(args []string, in *bufio.Scanner, out io.Writer, interactive bool) int {
 	opts, err := parseTrustOptions(args)
 	if err != nil {
@@ -31,7 +31,7 @@ func runTrust(args []string, in *bufio.Scanner, out io.Writer, interactive bool)
 		return 2
 	}
 	root := boot.ResolveWorkspaceRoot(opts.dir)
-	store := config.NewProjectProgramStore(config.ReasonixHomeDir())
+	store := config.NewProjectProgramStore(config.DeeperHomeDir())
 	if opts.revoke {
 		if err := store.Revoke(root); err != nil {
 			fmt.Fprintln(out, "revoke:", err)
@@ -49,7 +49,7 @@ func runTrust(args []string, in *bufio.Scanner, out io.Writer, interactive bool)
 		fmt.Fprintf(out, "Nothing in %s is waiting for approval.\n", root)
 		return 0
 	}
-	fmt.Fprintf(out, "%s names programs Reasonix would run on your machine:\n", root)
+	fmt.Fprintf(out, "%s names programs Deeper would run on your machine:\n", root)
 	for _, p := range pending {
 		fmt.Fprintf(out, "  [%s] %s\n      %s\n      declaration: %s\n", p.Kind, p.Name, p.Detail, p.Declaration)
 		for _, f := range p.Files {
@@ -58,7 +58,7 @@ func runTrust(args []string, in *bufio.Scanner, out io.Writer, interactive bool)
 	}
 	if !opts.yes {
 		if !interactive {
-			fmt.Fprintln(out, "Nothing approved. Review them, then run `reasonix trust --yes` here to approve.")
+			fmt.Fprintln(out, "Nothing approved. Review them, then run `deeper trust --yes` here to approve.")
 			return 1
 		}
 		if answer := ask(in, out, "Approve them as they are now?", "y/N"); !strings.EqualFold(strings.TrimSpace(answer), "y") {
@@ -100,11 +100,11 @@ func parseTrustOptions(args []string) (trustOptions, error) {
 		case strings.HasPrefix(arg, "--dir="):
 			opts.dir = strings.TrimPrefix(arg, "--dir=")
 		default:
-			return opts, fmt.Errorf("usage: reasonix trust [--dir PATH] [--yes|--revoke] (unknown argument %q)", arg)
+			return opts, fmt.Errorf("usage: deeper trust [--dir PATH] [--yes|--revoke] (unknown argument %q)", arg)
 		}
 	}
 	if opts.yes && opts.revoke {
-		return opts, fmt.Errorf("usage: reasonix trust [--dir PATH] [--yes|--revoke] (choose one)")
+		return opts, fmt.Errorf("usage: deeper trust [--dir PATH] [--yes|--revoke] (choose one)")
 	}
 	return opts, nil
 }

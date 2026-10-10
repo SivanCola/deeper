@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/provider"
-	_ "reasonix/internal/provider/anthropic"
-	"reasonix/internal/provider/openai"
-	_ "reasonix/internal/provider/responses"
+	"deeper/internal/provider"
+	_ "deeper/internal/provider/anthropic"
+	"deeper/internal/provider/openai"
+	_ "deeper/internal/provider/responses"
 )
 
 const (

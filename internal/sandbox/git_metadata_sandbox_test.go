@@ -341,7 +341,7 @@ func TestSandboxProtectsHostLinkedWorktreeCommondir(t *testing.T) {
 	base := realTempDir(t)
 	ws := filepath.Join(base, "ws")
 	newRepo(t, ws)
-	for i, linked := range []string{filepath.Join(base, "managed", "cand"), filepath.Join(ws, ".reasonix", "wt", "cand2")} {
+	for i, linked := range []string{filepath.Join(base, "managed", "cand"), filepath.Join(ws, ".deeper", "wt", "cand2")} {
 		gitIn(t, ws, "worktree", "add", "-q", "--detach", linked)
 		id := filepath.Base(linked)
 		evil := filepath.Join(ws, fmt.Sprintf("evil%d", i))

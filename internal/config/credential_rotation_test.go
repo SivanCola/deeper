@@ -96,14 +96,14 @@ func TestRotationRewritesANameOnlyThisProviderReads(t *testing.T) {
 	if names := storedCredentialNames(t); len(names) != 1 || journalCount(t) != 0 {
 		t.Fatalf("store holds %v with %d journals; the previous value must be gone once published", names, journalCount(t))
 	}
-	if raw, _ := os.ReadFile(UserCredentialsPath()); strings.Contains(string(raw), "REASONIX_ROTATION_") {
+	if raw, _ := os.ReadFile(UserCredentialsPath()); strings.Contains(string(raw), "DEEPER_ROTATION_") {
 		t.Fatalf("the dropped backup left a line behind:\n%s", raw)
 	}
 }
 
 func TestRotationUsesAPrivateSlotFromAProjectFile(t *testing.T) {
 	rotationFixture(t)
-	project := filepath.Join(t.TempDir(), "reasonix.toml")
+	project := filepath.Join(t.TempDir(), "deeper.toml")
 	cfg := Default()
 	cfg.Providers = []ProviderEntry{teamProvider("p")}
 	if err := cfg.SaveTo(project); err != nil {

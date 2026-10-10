@@ -1,8 +1,8 @@
 package event
 
 import (
-	"reasonix/internal/evidence"
-	"reasonix/internal/nilutil"
+	"deeper/internal/evidence"
+	"deeper/internal/nilutil"
 )
 
 // AuditForwarder forwards every optional sink capability to Inner. Embed it in

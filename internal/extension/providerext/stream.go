@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/providerconv"
-	"reasonix/internal/provider"
-	"reasonix/internal/secrets"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/providerconv"
+	"deeper/internal/provider"
+	"deeper/internal/secrets"
 )
 
 // extensionStream is one in-flight sidecar provider stream. Its fields are

@@ -17,11 +17,11 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/attachment"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/attachment"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/transcript"
 )
 
 type Item map[string]any
@@ -81,7 +81,7 @@ func BuildForRef(ctx context.Context, q *session.Query, ref session.SessionRef, 
 	doc := &Document{Snapshot: snapshot, Directory: dir}
 	title := strings.NewReplacer("\r", " ", "\n", " ").Replace(snapshot.Title)
 	if title == "" {
-		title = "Reasonix session"
+		title = "Deeper session"
 	}
 	heading := fmt.Sprintf("# %s\n\nSnapshot: %s · sequence %d\n\n", title, snapshot.CapturedAt.Format("2006-01-02T15:04:05Z07:00"), snapshot.SnapshotSequence)
 	if _, err = io.WriteString(md, heading); err != nil {

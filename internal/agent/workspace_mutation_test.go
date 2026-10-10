@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/checkpoint"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func TestObservedFileChangePromotesRepositoryOnlyReceiptToContentMutation(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 func filePreviewLifecycleFixture(t *testing.T) (*App, *WorkspaceTab, FileBrowserPreviewRequest) {

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/sessioncontent"
 )
 
 // historyLogProgress couples coverage to the end of the same validated batch.

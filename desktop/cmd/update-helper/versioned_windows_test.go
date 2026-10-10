@@ -7,14 +7,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/installlayout"
-	"reasonix/internal/repair"
+	"deeper/internal/installlayout"
+	"deeper/internal/repair"
 )
 
 func writeVersionedWindowsStaging(t *testing.T, dir, prefix, version string, names ...string) {
 	t.Helper()
 	if len(names) == 0 {
-		names = []string{"reasonix-desktop.exe", "reasonix-cli.exe", "reasonix-update-helper.exe", "reasonix-launcher.exe"}
+		names = []string{"deeper-desktop.exe", "deeper-cli.exe", "deeper-update-helper.exe", "deeper-launcher.exe"}
 	}
 	for _, name := range names {
 		path := filepath.Join(dir, filepath.FromSlash(name))
@@ -33,7 +33,7 @@ func versionedWindowsTransaction(installDir, version, createdAt string) *repair.
 		SchemaVersion: 1,
 		ToVersion:     version,
 		TargetKind:    "file",
-		TargetPath:    filepath.Join(installDir, "reasonix-desktop.exe"),
+		TargetPath:    filepath.Join(installDir, "deeper-desktop.exe"),
 		CreatedAt:     createdAt,
 	}
 }
@@ -44,10 +44,10 @@ func TestPreferVersionedWindowsActivation(t *testing.T) {
 		t.Fatal("empty staging must not prefer versioned")
 	}
 	for _, name := range []string{
-		"reasonix-desktop.exe",
-		"reasonix-cli.exe",
-		"reasonix-update-helper.exe",
-		"reasonix-launcher.exe",
+		"deeper-desktop.exe",
+		"deeper-cli.exe",
+		"deeper-update-helper.exe",
+		"deeper-launcher.exe",
 	} {
 		if err := os.WriteFile(filepath.Join(staging, name), []byte(name), 0o700); err != nil {
 			t.Fatal(err)
@@ -63,17 +63,17 @@ func TestActivateVersionedWindowsFromStaging(t *testing.T) {
 	installDir := t.TempDir()
 	staging := t.TempDir()
 	writeVersionedWindowsStaging(t, staging, "payload:", "v1.20.0",
-		"reasonix-desktop.exe",
-		"reasonix-cli.exe",
-		"reasonix-update-helper.exe",
-		"reasonix-launcher.exe",
-		"reasonix-guard.exe",
+		"deeper-desktop.exe",
+		"deeper-cli.exe",
+		"deeper-update-helper.exe",
+		"deeper-launcher.exe",
+		"deeper-guard.exe",
 	)
 	// Seed a flat desktop so cleanup is observable.
-	if err := os.WriteFile(filepath.Join(installDir, "reasonix-desktop.exe"), []byte("old"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(installDir, "deeper-desktop.exe"), []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(installDir, "reasonix-guard.exe"), []byte("old-guard"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(installDir, "deeper-guard.exe"), []byte("old-guard"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 
@@ -93,24 +93,24 @@ func TestActivateVersionedWindowsFromStaging(t *testing.T) {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(desktop)
-	if err != nil || string(raw) != "payload:reasonix-desktop.exe" {
+	if err != nil || string(raw) != "payload:deeper-desktop.exe" {
 		t.Fatalf("desktop payload = %q err=%v", raw, err)
 	}
-	for _, name := range []string{"Reasonix.exe", "reasonix-cli.exe"} {
+	for _, name := range []string{"Deeper.exe", "deeper-cli.exe"} {
 		if _, err := os.Stat(filepath.Join(installDir, name)); err != nil {
 			t.Fatalf("root entry %s: %v", name, err)
 		}
 	}
-	if _, err := os.Lstat(filepath.Join(installDir, "reasonix-launcher.exe")); !os.IsNotExist(err) {
+	if _, err := os.Lstat(filepath.Join(installDir, "deeper-launcher.exe")); !os.IsNotExist(err) {
 		t.Fatalf("new versioned root created a legacy entry: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(installDir, "reasonix-desktop.exe")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(installDir, "deeper-desktop.exe")); !os.IsNotExist(err) {
 		t.Fatal("flat desktop should be removed")
 	}
-	if _, err := os.Stat(filepath.Join(installDir, "reasonix-guard.exe")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(installDir, "deeper-guard.exe")); !os.IsNotExist(err) {
 		t.Fatal("flat guard should be removed")
 	}
-	if prefer := preferRelaunchPath("", installDir); filepath.Base(prefer) != "Reasonix.exe" {
+	if prefer := preferRelaunchPath("", installDir); filepath.Base(prefer) != "Deeper.exe" {
 		t.Fatalf("prefer relaunch = %s", prefer)
 	}
 }
@@ -119,12 +119,12 @@ func TestActivateVersionedWindowsFromStagingPublishesShellTree(t *testing.T) {
 	acceptWindowsPayloadManifestForTest(t)
 	installDir := t.TempDir()
 	staging := t.TempDir()
-	tree := []string{"app/Reasonix.exe", "app/resources/app.asar", "app/locales/en-US.pak"}
+	tree := []string{"app/Deeper.exe", "app/resources/app.asar", "app/locales/en-US.pak"}
 	writeVersionedWindowsStaging(t, staging, "payload:", "v1.30.0", append([]string{
-		"reasonix-desktop.exe",
-		"reasonix-cli.exe",
-		"reasonix-update-helper.exe",
-		"reasonix-launcher.exe",
+		"deeper-desktop.exe",
+		"deeper-cli.exe",
+		"deeper-update-helper.exe",
+		"deeper-launcher.exe",
 	}, tree...)...)
 	if err := activateVersionedWindowsFromStaging(versionedWindowsTransaction(installDir, "v1.30.0", "2026-01-01T00:00:00Z"), staging); err != nil {
 		t.Fatal(err)
@@ -144,7 +144,7 @@ func TestActivateVersionedWindowsFromStagingPublishesShellTree(t *testing.T) {
 func TestVersionedWindowsUpgradePreservesExistingLegacyEntry(t *testing.T) {
 	acceptWindowsPayloadManifestForTest(t)
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "reasonix-launcher.exe"), []byte("old"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper-launcher.exe"), []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	for _, version := range []string{"v1.38.9", "v1.39.0"} {
@@ -153,9 +153,9 @@ func TestVersionedWindowsUpgradePreservesExistingLegacyEntry(t *testing.T) {
 		if err := activateVersionedWindowsFromStaging(versionedWindowsTransaction(root, version, version), staging); err != nil {
 			t.Fatal(err)
 		}
-		for _, name := range []string{"Reasonix.exe", "reasonix-launcher.exe"} {
+		for _, name := range []string{"Deeper.exe", "deeper-launcher.exe"} {
 			body, err := os.ReadFile(filepath.Join(root, name))
-			if err != nil || string(body) != version+":reasonix-launcher.exe" {
+			if err != nil || string(body) != version+":deeper-launcher.exe" {
 				t.Fatalf("%s=%q (%v)", name, body, err)
 			}
 		}
@@ -166,19 +166,19 @@ func TestActivateVersionedWindowsUsesVerifiedThinCLIEntry(t *testing.T) {
 	acceptWindowsPayloadManifestForTest(t)
 	installDir := t.TempDir()
 	staging := t.TempDir()
-	const entry = "app/resources/bin/reasonix-cli-launcher.exe"
+	const entry = "app/resources/bin/deeper-cli-launcher.exe"
 	writeVersionedWindowsStaging(t, staging, "payload:", "v1.39.0",
-		"reasonix-desktop.exe", "reasonix-cli.exe", "reasonix-update-helper.exe",
-		"reasonix-launcher.exe", "app/Reasonix.exe", entry)
+		"deeper-desktop.exe", "deeper-cli.exe", "deeper-update-helper.exe",
+		"deeper-launcher.exe", "app/Deeper.exe", entry)
 	if err := activateVersionedWindowsFromStaging(versionedWindowsTransaction(installDir, "v1.39.0", "2026-01-01T00:00:00Z"), staging); err != nil {
 		t.Fatal(err)
 	}
-	rootCLI, err := os.ReadFile(filepath.Join(installDir, "reasonix-cli.exe"))
+	rootCLI, err := os.ReadFile(filepath.Join(installDir, "deeper-cli.exe"))
 	if err != nil || string(rootCLI) != "payload:"+entry {
 		t.Fatalf("root CLI=%q err=%v, want verified thin entry", rootCLI, err)
 	}
-	fullCLI, err := os.ReadFile(filepath.Join(installDir, "versions", "v1.39.0", "reasonix-cli.exe"))
-	if err != nil || string(fullCLI) != "payload:reasonix-cli.exe" {
+	fullCLI, err := os.ReadFile(filepath.Join(installDir, "versions", "v1.39.0", "deeper-cli.exe"))
+	if err != nil || string(fullCLI) != "payload:deeper-cli.exe" {
 		t.Fatalf("version CLI=%q err=%v, want full CLI", fullCLI, err)
 	}
 }
@@ -188,13 +188,13 @@ func TestActivateVersionedWindowsFromStagingRejectsManifestDrift(t *testing.T) {
 	installDir := t.TempDir()
 	staging := t.TempDir()
 	writeVersionedWindowsStaging(t, staging, "payload:", "v1.30.0",
-		"reasonix-desktop.exe",
-		"reasonix-cli.exe",
-		"reasonix-update-helper.exe",
-		"reasonix-launcher.exe",
-		"app/Reasonix.exe",
+		"deeper-desktop.exe",
+		"deeper-cli.exe",
+		"deeper-update-helper.exe",
+		"deeper-launcher.exe",
+		"app/Deeper.exe",
 	)
-	if err := os.WriteFile(filepath.Join(staging, "app", "Reasonix.exe"), []byte("tampered"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(staging, "app", "Deeper.exe"), []byte("tampered"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := activateVersionedWindowsFromStaging(versionedWindowsTransaction(installDir, "v1.30.0", "2026-01-01T00:00:00Z"), staging); err == nil {
@@ -203,7 +203,7 @@ func TestActivateVersionedWindowsFromStagingRejectsManifestDrift(t *testing.T) {
 	if installlayout.HasCurrent(installDir) {
 		t.Fatal("current.json was written after a rejected payload")
 	}
-	if err := os.Remove(filepath.Join(staging, "reasonix-payload.json")); err != nil {
+	if err := os.Remove(filepath.Join(staging, "deeper-payload.json")); err != nil {
 		t.Fatal(err)
 	}
 	if err := activateVersionedWindowsFromStaging(versionedWindowsTransaction(installDir, "v1.30.0", "2026-01-01T00:00:00Z"), staging); err == nil {
@@ -232,7 +232,7 @@ func TestPreferRelaunchPathIgnoresStaleVersionedDesktop(t *testing.T) {
 		t.Fatalf("previous desktop should remain: %v", err)
 	}
 	got := preferRelaunchPath(oldDesktop, installDir)
-	if filepath.Base(got) != "Reasonix.exe" {
+	if filepath.Base(got) != "Deeper.exe" {
 		t.Fatalf("preferRelaunchPath(%s) = %s, want install-root launcher", oldDesktop, got)
 	}
 }
@@ -242,11 +242,11 @@ func TestInstallStagedWindowsReleaseUnitPrefersVersioned(t *testing.T) {
 	installDir := t.TempDir()
 	staging := t.TempDir()
 	writeVersionedWindowsStaging(t, staging, "p:", "v1.20.0",
-		"reasonix-desktop.exe",
-		"reasonix-cli.exe",
-		"reasonix-update-helper.exe",
-		"reasonix-launcher.exe",
-		"reasonix-guard.exe",
+		"deeper-desktop.exe",
+		"deeper-cli.exe",
+		"deeper-update-helper.exe",
+		"deeper-launcher.exe",
+		"deeper-guard.exe",
 	)
 	// Minimal claimed unit (versioned path does not need full flat file list).
 	claimed := versionedWindowsTransaction(installDir, "v1.20.0", "2026-01-01T00:00:00Z")

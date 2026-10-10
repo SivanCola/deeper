@@ -7,12 +7,12 @@ import (
 	"path"
 	"strings"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/config"
-	"reasonix/internal/i18n"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/attachment"
+	"deeper/internal/config"
+	"deeper/internal/i18n"
+	"deeper/internal/imageinput"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 func (c *Controller) StageImage(ctx context.Context, displayName, mime, dataURL string) (attachment.DraftCredential, error) {

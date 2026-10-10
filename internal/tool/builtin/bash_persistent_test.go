@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/sandbox"
+	"deeper/internal/persistentshell"
+	"deeper/internal/sandbox"
 )
 
 func TestPowerShellNeverUsesPersistentSession(t *testing.T) {

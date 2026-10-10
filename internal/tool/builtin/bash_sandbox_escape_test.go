@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 type fakeSandboxEscapeApprover struct {

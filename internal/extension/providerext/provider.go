@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/providerconv"
-	"reasonix/internal/provider"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/providerconv"
+	"deeper/internal/provider"
 )
 
 // Provider is the host-side handle for one extension-hosted provider ref.

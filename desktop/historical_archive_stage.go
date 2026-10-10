@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 	"fmt"
 	"path/filepath"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
 	"slices"
 	"strings"
 )

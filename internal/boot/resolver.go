@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/providerext"
-	"reasonix/internal/extension/sidecar"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/extension"
+	"deeper/internal/extension/providerext"
+	"deeper/internal/extension/sidecar"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
 )
 
 // LocalProviderResolver preserves the historical config-backed provider path.
@@ -208,7 +208,7 @@ func resolveModelEntry(resolver provider.Resolver, cfg *config.Config, modelName
 		}
 		available += strings.Join(pluginRefs, "/")
 	}
-	return nil, "", fmt.Errorf("%w %q (configured: %s); note: defining [[providers]] replaces the built-in presets, so add a [[providers]] entry for it or use a configured name, or run `reasonix setup` to reconfigure", ErrUnknownModel, modelName, available)
+	return nil, "", fmt.Errorf("%w %q (configured: %s); note: defining [[providers]] replaces the built-in presets, so add a [[providers]] entry for it or use a configured name, or run `deeper setup` to reconfigure", ErrUnknownModel, modelName, available)
 }
 
 // extensionCatalogRefs returns the plugin-namespaced refs a resolver's catalog

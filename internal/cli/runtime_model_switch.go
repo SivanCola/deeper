@@ -5,8 +5,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/control"
-	"reasonix/internal/i18n"
+	"deeper/internal/control"
+	"deeper/internal/i18n"
 )
 
 func (m *chatTUI) handleModelSwitch(msg modelSwitchMsg) []tea.Cmd {

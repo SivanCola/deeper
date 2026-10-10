@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"sync"
 
-	"reasonix/desktop/internal/hostrpc"
+	"deeper/desktop/internal/hostrpc"
 )
 
 // hostShellBridge is present only when the Electron shell drives this
@@ -44,7 +44,7 @@ func (b *hostShellBridge) trayLabels(locale string) hostTrayLabels {
 		OpenTooltip: labels.openTooltip,
 		QuitTitle:   labels.quitTitle,
 		QuitTooltip: labels.quitTooltip,
-		Tooltip:     "Reasonix",
+		Tooltip:     "Deeper",
 	}
 }
 
@@ -186,7 +186,7 @@ func (b *hostShellBridge) quit() error {
 	return b.server.Request(ctx, "host/app.quit", struct{}{}, nil)
 }
 
-// relaunchDesktop restarts Reasonix after an update. Under the shell the
+// relaunchDesktop restarts Deeper after an update. Under the shell the
 // restart is owned by Electron; the Wails build exits itself after handing
 // off to the thin launcher.
 func (a *App) relaunchDesktop(relaunchBinary bool) {
@@ -209,7 +209,7 @@ func (a *App) relaunchDesktop(relaunchBinary bool) {
 	os.Exit(0)
 }
 
-// relaunchAfterPortableUpdate restarts Reasonix once the platform installer
+// relaunchAfterPortableUpdate restarts Deeper once the platform installer
 // owns the swap. Under the shell on macOS the detached hand-off reopens the
 // swapped bundle itself, so the shell must only quit.
 func (a *App) relaunchAfterPortableUpdate() {

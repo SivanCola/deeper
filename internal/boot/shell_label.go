@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 // resolvedShellLabel preserves the cache-stable kind label when the user did

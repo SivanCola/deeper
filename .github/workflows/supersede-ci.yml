@@ -7,7 +7,7 @@ name: Supersede CI
 
 on:
   push:
-    branches: [main-v2]
+    branches: [main]
 
 permissions:
   actions: write
@@ -27,9 +27,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main-v2&event=push&per_page=30" \
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=30" \
             --jq '.workflow_runs[] | select(.status != "completed") | "\(.id) \(.head_sha)"')"
-          [ -n "$runs" ] || { echo "no unfinished ci.yml runs on main-v2"; exit 0; }
+          [ -n "$runs" ] || { echo "no unfinished ci.yml runs on main"; exit 0; }
           while read -r id sha; do
             [ -n "$id" ] || continue
             if [ "$sha" = "$GITHUB_SHA" ]; then

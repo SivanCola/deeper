@@ -3,9 +3,9 @@ package control
 import (
 	"context"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/sessioncontext"
-	"reasonix/internal/skill"
+	"deeper/internal/agent"
+	"deeper/internal/sessioncontext"
+	"deeper/internal/skill"
 )
 
 // withTurnContext attaches current role-specific snapshots to a host turn.

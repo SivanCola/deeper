@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/topicstate"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/topicstate"
 )
 
 func topicRemovalFixture(t *testing.T, scope, title string) (*App, TopicMeta, string) {

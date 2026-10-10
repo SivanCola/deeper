@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 // Conversion receipts certify adoption of a particular history, not ownership
@@ -110,7 +110,7 @@ func (a *App) reconcileCanonicalConversion(ctx context.Context, source desktopMi
 // Validate the full referenced content closure before consuming a residual
 // directory. A transcript digest alone does not prove attachment blobs readable.
 func verifyCanonicalConversionClosure(ctx context.Context, path string) error {
-	tmp, err := os.MkdirTemp("", "reasonix-conversion-proof-")
+	tmp, err := os.MkdirTemp("", "deeper-conversion-proof-")
 	if err != nil {
 		return err
 	}

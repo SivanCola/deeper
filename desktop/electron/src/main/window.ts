@@ -90,7 +90,7 @@ export class MainWindow {
       minWidth: Math.min(Math.round(geometry.minWidth), display.workArea.width),
       minHeight: Math.min(Math.round(geometry.minHeight), display.workArea.height),
       show: false,
-      title: "Reasonix",
+      title: "Deeper",
       backgroundColor: "#1a1a2e",
       titleBarStyle: deps.platform === "darwin" ? "hiddenInset" : "default",
       frame: !geometry.frameless,
@@ -307,7 +307,7 @@ export class MainWindow {
     const win = this.browserWindow;
     if (!win || this.content !== "app" || win.webContents.isDestroyed()) return;
     await win.webContents.executeJavaScript(
-      "Promise.resolve(globalThis.__reasonixFlushSessionDraft?.())",
+      "Promise.resolve(globalThis.__deeperFlushSessionDraft?.())",
       true,
     );
   }
@@ -316,7 +316,7 @@ export class MainWindow {
     const win = this.browserWindow;
     if (!win || this.content !== "app" || win.webContents.isDestroyed()) return;
     await win.webContents.executeJavaScript(
-      "Promise.resolve(globalThis.__reasonixResumeSessionDraftEditing?.())",
+      "Promise.resolve(globalThis.__deeperResumeSessionDraftEditing?.())",
       true,
     );
   }

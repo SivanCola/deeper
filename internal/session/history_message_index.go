@@ -7,10 +7,10 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/attachment"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/agent"
+	"deeper/internal/attachment"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
 )
 
 func indexOneMessage(ctx context.Context, content *sessioncontent.Store, state *historyBuildState, message provider.Message, sequence uint64, upsert bool) error {

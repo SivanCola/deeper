@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
-	_ "reasonix/internal/tool/builtin" // Initialize compile-time tool identities.
+	"deeper/internal/config"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
+	_ "deeper/internal/tool/builtin" // Initialize compile-time tool identities.
 )
 
 // SkillHealthOptions configures skill/MCP capability diagnostics for doctor.

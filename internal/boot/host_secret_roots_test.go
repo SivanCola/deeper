@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/sandbox"
+	"deeper/internal/config"
+	"deeper/internal/sandbox"
 )
 
 func TestRuntimeForbidReadRootsCoverServeLaunchTokens(t *testing.T) {
-	t.Setenv("REASONIX_HOME", filepath.Join(isolateConfigHome(t), "reasonix-home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(isolateConfigHome(t), "deeper-home"))
 	tokenFile := filepath.Join(t.TempDir(), "serve.token")
 	config.RegisterHostSecretPath(tokenFile)
 
@@ -36,7 +36,7 @@ func TestSandboxedShellCannotReadServeLaunchTokens(t *testing.T) {
 	// Every file sits inside the write root: Linux masks /tmp with a tmpfs, so a
 	// file anywhere else under it would read as missing whether denied or not.
 	work := robustTempDir(t)
-	t.Setenv("REASONIX_HOME", filepath.Join(work, "reasonix-home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(work, "deeper-home"))
 	remoteDir := config.RemoteStateDir()
 	if err := os.MkdirAll(remoteDir, 0o700); err != nil {
 		t.Fatal(err)

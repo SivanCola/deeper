@@ -113,8 +113,8 @@ console.log("\nuse controller meta");
     "model busy guard is localized",
   );
   eq(
-    modelSwitchNoticeText("this session is already open in another Reasonix window or still running in the background; close the other window or open a copy before changing model"),
-    "This session is open in another Reasonix window or still running in the background. Close that window, stop the background run, or open a copy before changing models.",
+    modelSwitchNoticeText("this session is already open in another Deeper window or still running in the background; close the other window or open a copy before changing model"),
+    "This session is open in another Deeper window or still running in the background. Close that window, stop the background run, or open a copy before changing models.",
     "model lease conflict explains the safe path",
   );
   eq(
@@ -146,8 +146,8 @@ console.log("\nuse controller meta");
     "effort busy guard is worded as temporary",
   );
   eq(
-    effortSwitchNoticeText("this session is already open in another Reasonix window or still running in the background; close the other window or open a copy before changing effort"),
-    "This session is open in another Reasonix window or still running in the background. Close that window, stop the background run, or open a copy before changing effort.",
+    effortSwitchNoticeText("this session is already open in another Deeper window or still running in the background; close the other window or open a copy before changing effort"),
+    "This session is open in another Deeper window or still running in the background. Close that window, stop the background run, or open a copy before changing effort.",
     "effort lease conflict explains the safe path",
   );
   eq(
@@ -205,12 +205,12 @@ console.log("\nuse controller meta");
   );
   eq(
     localizedBackendNoticeText("session changed on disk; adopted the newer transcript"),
-    "The session changed on disk, so Reasonix adopted the newer transcript.",
+    "The session changed on disk, so Deeper adopted the newer transcript.",
     "adopted transcript notice can be normalized",
   );
   eq(
     localizedBackendNoticeText("session changed on disk; adopted the newer transcript (local changes already covered)"),
-    "The session changed on disk, so Reasonix adopted the newer transcript; the local changes were already covered.",
+    "The session changed on disk, so Deeper adopted the newer transcript; the local changes were already covered.",
     "covered adopted transcript notice can be normalized",
   );
   eq(
@@ -253,7 +253,7 @@ console.log("\nuse controller meta");
   );
   eq(
     localizedNoticeText("reworded covered adoption", "session_recovery_adopted_covered"),
-    "The session changed on disk, so Reasonix adopted the newer transcript; the local changes were already covered.",
+    "The session changed on disk, so Deeper adopted the newer transcript; the local changes were already covered.",
     "covered session adoption localization uses its stable notice code",
   );
   eq(

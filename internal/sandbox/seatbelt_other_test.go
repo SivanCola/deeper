@@ -60,7 +60,7 @@ func TestBwrapArgsForArgsMountsTemporaryExecutableAfterMasks(t *testing.T) {
 
 func TestBwrapProtectedWriteArgsRemountsReadonly(t *testing.T) {
 	home := t.TempDir()
-	state := filepath.Join(home, ".reasonix")
+	state := filepath.Join(home, ".deeper")
 	sessions := filepath.Join(state, "sessions")
 	if err := os.MkdirAll(sessions, 0o755); err != nil {
 		t.Fatal(err)

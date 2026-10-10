@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/repair"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/repair"
 )
 
 const (

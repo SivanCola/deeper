@@ -14,7 +14,7 @@ import {
 } from "./crash";
 import { recordFrontendDiagnostic } from "./frontendDiagnosticBridge";
 
-export const RECOVERABLE_ERROR_EVENT = "reasonix:recoverable-error";
+export const RECOVERABLE_ERROR_EVENT = "deeper:recoverable-error";
 
 export type RecoverableErrorDetail = { message: string };
 

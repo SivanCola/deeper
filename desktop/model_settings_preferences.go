@@ -1,9 +1,9 @@
 package main
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/config"
 	"fmt"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
 	"strings"
 )
 

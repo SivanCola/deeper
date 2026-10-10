@@ -1,6 +1,6 @@
 package control
 
-import "reasonix/internal/event"
+import "deeper/internal/event"
 
 func (s *inboxEventSink) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot) {
 	if s != nil {

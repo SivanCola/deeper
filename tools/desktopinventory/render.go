@@ -26,7 +26,7 @@ var kindTitle = map[string]string{
 	kindCIJob:          "CI and release jobs",
 }
 
-// migrationBaseline is the deliberately frozen main-v2 checkpoint. Do not
+// migrationBaseline is the deliberately frozen main checkpoint. Do not
 // derive it from checkout refs: shallow CI clones and synthetic PR merge
 // commits have different histories despite containing identical source files.
 // Advance this checkpoint explicitly when integrating another mainline baseline.

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 func TestSessionMachineListIsStableAndRedacted(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"crypto/sha256"
 	"os"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // classifySnapshotWrite decides the write shape for a save. Writer-bound

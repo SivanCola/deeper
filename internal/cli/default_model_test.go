@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/event"
 )
 
 const (
-	defaultModelTestConfiguredEnv = "REASONIX_CLI_TEST_CONFIGURED_KEY"
-	defaultModelTestKeylessEnv    = "REASONIX_CLI_TEST_KEYLESS_KEY"
+	defaultModelTestConfiguredEnv = "DEEPER_CLI_TEST_CONFIGURED_KEY"
+	defaultModelTestKeylessEnv    = "DEEPER_CLI_TEST_KEYLESS_KEY"
 )
 
 func newDefaultModelTestConfig() *config.Config {
@@ -183,7 +183,7 @@ func TestResolveServeModelUsesGlobalChatFallback(t *testing.T) {
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile("reasonix.toml", []byte(`
+	if err := os.WriteFile("deeper.toml", []byte(`
 default_model = "project/project-chat"
 
 [[providers]]
@@ -228,7 +228,7 @@ func TestNewChatTUIKeepsExplicitKeylessControllerModel(t *testing.T) {
 	}
 }
 
-// setCredential writes a "configured" sentinel key into Reasonix's user
+// setCredential writes a "configured" sentinel key into Deeper's user
 // credentials store, or clears it. ProviderEntry.Configured() resolves keys
 // only from that store (not from process env), so this is the only way to
 // flip a test provider between configured and keyless.
@@ -266,7 +266,7 @@ func TestResolveModelForCLIMissingKeyNamesCredentialFile(t *testing.T) {
 		t.Fatal("expected an error for a model whose key is only in the shell environment")
 	}
 	msg := err.Error()
-	for _, want := range []string{`model "deepseek-flash"`, config.UserCredentialsPath(), "reasonix setup"} {
+	for _, want := range []string{`model "deepseek-flash"`, config.UserCredentialsPath(), "deeper setup"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("error %q does not mention %q", msg, want)
 		}

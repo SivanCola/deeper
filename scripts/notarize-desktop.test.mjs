@@ -11,12 +11,12 @@ const env = { APPLE_API_KEY_PATH: "private/key.p8", APPLE_API_KEY_ID: "key-id", 
 const ok = (value = {}) => ({ status: 0, stdout: JSON.stringify(value) });
 
 function fixture(t, { kind = "app", status = "Accepted", submit, log, fail } = {}) {
-  const diagnosticsDir = mkdtempSync(join(tmpdir(), "reasonix-notary-test-"));
+  const diagnosticsDir = mkdtempSync(join(tmpdir(), "deeper-notary-test-"));
   t.after(() => rmSync(diagnosticsDir, { recursive: true, force: true }));
   const calls = [], warnings = [];
   const execute = () => notarizeDesktop({
-    archive: kind === "app" ? "upload.zip" : "Reasonix.dmg",
-    target: kind === "app" ? "Reasonix.app" : "Reasonix.dmg",
+    archive: kind === "app" ? "upload.zip" : "Deeper.dmg",
+    target: kind === "app" ? "Deeper.app" : "Deeper.dmg",
     kind, diagnosticsDir, env, warn: (message) => warnings.push(message),
     run: (command, args) => {
       calls.push([command, ...args]);
@@ -44,8 +44,8 @@ for (const kind of ["app", "dmg"]) {
     assert.deepEqual(f.calls[1].slice(-3), ["--wait", "--output-format", "json"]);
     assert.equal(f.calls[2][3], id);
     assert.deepEqual(f.calls.at(-1), kind === "app"
-      ? ["spctl", "--assess", "--verbose=4", "--type", "exec", "Reasonix.app"]
-      : ["spctl", "--assess", "--verbose=4", "--type", "open", "--context", "context:primary-signature", "Reasonix.dmg"]);
+      ? ["spctl", "--assess", "--verbose=4", "--type", "exec", "Deeper.app"]
+      : ["spctl", "--assess", "--verbose=4", "--type", "open", "--context", "context:primary-signature", "Deeper.dmg"]);
     assert.deepEqual(f.report("submission"), { id, status: "Accepted", exitCode: 0, signal: null });
     assert.equal(f.report("notary-log").jobId, id);
     for (const name of readdirSync(f.diagnosticsDir)) {
@@ -66,7 +66,7 @@ for (const status of ["Invalid", "Rejected", "In Progress", undefined]) {
 }
 
 test("Apple rejection details are preserved in the log artifact", (t) => {
-  const issues = [{ severity: "error", path: "Reasonix.app/Contents/MacOS/Reasonix", message: "The signature is invalid." }];
+  const issues = [{ severity: "error", path: "Deeper.app/Contents/MacOS/Deeper", message: "The signature is invalid." }];
   const f = fixture(t, { status: "Invalid", log: ok({ jobId: id, issues }) });
   assert.throws(f.execute, /Invalid/);
   assert.deepEqual(f.report("notary-log").issues, issues);
@@ -139,7 +139,7 @@ test("both release artifacts use the shared notarization gate and diagnostics su
 test("historical log workflow only reads Apple submissions from the protected release environment", () => {
   const workflow = readFileSync(new URL("../.github/workflows/apple-notary-log.yml", import.meta.url), "utf8");
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /github\.ref == 'refs\/heads\/main-v2' && github\.ref_protected/);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main' && github\.ref_protected/);
   assert.match(workflow, /environment: release/);
   assert.match(workflow, /contents: read/);
   assert.match(workflow, /SUBMISSION_ID: \$\{\{ inputs.submission_id \}\}/);
@@ -154,7 +154,7 @@ test("historical log workflow only reads Apple submissions from the protected re
 
 for (const scenario of ["success", "log-failure", "invalid-id"]) {
   test(`historical workflow shell: ${scenario}, with credential cleanup`, (t) => {
-    const root = mkdtempSync(join(tmpdir(), "reasonix-notary-workflow-"));
+    const root = mkdtempSync(join(tmpdir(), "deeper-notary-workflow-"));
     t.after(() => rmSync(root, { recursive: true, force: true }));
     const xcrun = join(root, "xcrun");
     writeFileSync(xcrun, `#!${process.execPath}

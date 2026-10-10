@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/tool"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/tool"
 )
 
 type kimiActionFixture struct {
@@ -57,7 +57,7 @@ func (f *kimiActionFixture) Execute(ctx context.Context, raw json.RawMessage) (s
 			return "", err
 		}
 		cmd := exec.CommandContext(ctx, binary, "-test.run=^TestLiveKimiFixedVerifierChild$")
-		cmd.Env = []string{"REASONIX_FIXTURE_VERIFY=" + f.path, "REASONIX_FIXTURE_EXPECTED=" + f.expected}
+		cmd.Env = []string{"DEEPER_FIXTURE_VERIFY=" + f.path, "DEEPER_FIXTURE_EXPECTED=" + f.expected}
 		if output, err := cmd.CombinedOutput(); err != nil {
 			return string(output), err
 		}
@@ -73,12 +73,12 @@ func (f *kimiActionFixture) Execute(ctx context.Context, raw json.RawMessage) (s
 // The child executes this fixed verifier only, with no provider credentials or
 // arbitrary model-controlled commands, paths, or executable source.
 func TestLiveKimiFixedVerifierChild(t *testing.T) {
-	path := os.Getenv("REASONIX_FIXTURE_VERIFY")
+	path := os.Getenv("DEEPER_FIXTURE_VERIFY")
 	if path == "" {
 		t.Skip("fixed verifier child only")
 	}
 	actual, err := os.ReadFile(path)
-	if err != nil || string(actual) != os.Getenv("REASONIX_FIXTURE_EXPECTED") {
+	if err != nil || string(actual) != os.Getenv("DEEPER_FIXTURE_EXPECTED") {
 		t.Fatal("fixture verification failed")
 	}
 }

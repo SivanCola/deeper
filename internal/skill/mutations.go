@@ -9,7 +9,7 @@ import (
 
 	"strings"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 func (s *Store) Create(name string, scope Scope) (string, error) {
@@ -29,7 +29,7 @@ func (s *Store) CreateWithContent(name string, scope Scope, content string) (str
 		if s.projectRoot == "" {
 			return "", fmt.Errorf("project scope requires a workspace — run from a project directory, or use global scope")
 		}
-		root = filepath.Join(s.projectRoot, ".reasonix", SkillsDirname)
+		root = filepath.Join(s.projectRoot, ".deeper", SkillsDirname)
 	default:
 		root = s.globalSkillsRoot()
 	}
@@ -183,10 +183,10 @@ func (s *Store) Delete(name string, scope Scope) error {
 }
 
 func (s *Store) globalSkillsRoot() string {
-	if s.reasonixHomeDir != "" {
-		return filepath.Join(s.reasonixHomeDir, SkillsDirname)
+	if s.deeperHomeDir != "" {
+		return filepath.Join(s.deeperHomeDir, SkillsDirname)
 	}
-	return filepath.Join(s.homeDir, ".reasonix", SkillsDirname)
+	return filepath.Join(s.homeDir, ".deeper", SkillsDirname)
 }
 
 // loadBodyWithReferences appends a directory-layout skill's sibling

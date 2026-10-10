@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
 )
 
 const forkOperationsSchemaVersion = 1

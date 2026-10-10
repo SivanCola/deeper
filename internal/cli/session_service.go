@@ -3,7 +3,7 @@ package cli
 import (
 	"sync"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // cliSessionServices is the process host registry shared by chat, run, serve,

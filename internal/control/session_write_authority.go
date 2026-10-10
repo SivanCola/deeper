@@ -6,9 +6,9 @@ import (
 	"errors"
 	"reflect"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 // BindSessionWriteAuthority issues a generation-bound write authority from

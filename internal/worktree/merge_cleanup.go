@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 type cleanupRetention struct {
@@ -97,7 +97,7 @@ func beginRetainedCleanup(ctx context.Context, metadata mergeMetadata, expectedH
 		}
 		return retention, err
 	}
-	cleanupDir := filepath.Join(filepath.Dir(metadata.WorktreeRoot), ".reasonix-cleanup")
+	cleanupDir := filepath.Join(filepath.Dir(metadata.WorktreeRoot), ".deeper-cleanup")
 	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
 		return emptyCleanupRetention(), err
 	}

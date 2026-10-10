@@ -7,9 +7,9 @@ import (
 	"slices"
 	"time"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // sessionDAGWriterQuietPeriod is how long another writer must have been silent

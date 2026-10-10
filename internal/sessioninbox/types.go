@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"reasonix/internal/attachment"
+	"deeper/internal/attachment"
 )
 
 // SchemaVersion is the on-disk format version. Unknown higher versions load

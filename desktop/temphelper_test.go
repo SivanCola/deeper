@@ -13,11 +13,11 @@ import (
 // that surfaces as "being used by another process"; on Linux a write racing
 // RemoveAll surfaces as "directory not empty". Plain t.TempDir turns that
 // teardown race into a red test even though every assertion passed (the
-// recurring main-v2 CI flake). Retrying absorbs the race; a dir that never frees
+// recurring main CI flake). Retrying absorbs the race; a dir that never frees
 // is logged, not fatal, so a genuine leak stays visible without the flake.
 func robustTempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "reasonix-test-*")
+	dir, err := os.MkdirTemp("", "deeper-test-*")
 	if err != nil {
 		t.Fatalf("robustTempDir: %v", err)
 	}

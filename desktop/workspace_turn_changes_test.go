@@ -1,14 +1,14 @@
 package main
 
 import (
+	"deeper/internal/checkpoint"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/provider"
+	"deeper/internal/turnevent"
 	"encoding/json"
 	"path/filepath"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/provider"
-	"reasonix/internal/turnevent"
 	"testing"
 )
 

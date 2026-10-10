@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
 )
 
 func TestBuildFailsWhenPlannerModelIsUnresolvable(t *testing.T) {
@@ -16,7 +16,7 @@ func TestBuildFailsWhenPlannerModelIsUnresolvable(t *testing.T) {
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, testutil.NewMock("planner-missing"))
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "executor"
 
 [agent]

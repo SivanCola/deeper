@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"reasonix/internal/bot"
+	"deeper/internal/bot"
 )
 
 // newIdempotencyKey returns a random key for the Feishu create/reply `uuid`

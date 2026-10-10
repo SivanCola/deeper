@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/provider"
+	"deeper/internal/store"
+	"deeper/internal/tool"
 )
 
 // goalRuntimeController wires a controller with a scripted reporting model.

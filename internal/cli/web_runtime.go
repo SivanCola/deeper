@@ -16,9 +16,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/store"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	"deeper/internal/store"
 )
 
 func serveConfigWithCommandDefaults(command string, authExplicit bool, cfg config.ServeConfig) config.ServeConfig {
@@ -131,12 +131,12 @@ type webInstanceRegistration struct {
 	releaseOne sync.Once
 }
 
-func registerWebInstance(reasonixHome, addr string) (*webInstanceRegistration, error) {
-	if strings.TrimSpace(reasonixHome) == "" {
-		return nil, errors.New("cannot register Web instance: Reasonix home is empty")
+func registerWebInstance(deeperHome, addr string) (*webInstanceRegistration, error) {
+	if strings.TrimSpace(deeperHome) == "" {
+		return nil, errors.New("cannot register Web instance: Deeper home is empty")
 	}
 	registry := &webInstanceRegistry{
-		dir:               filepath.Join(reasonixHome, "server", webInstanceDirectoryName),
+		dir:               filepath.Join(deeperHome, "server", webInstanceDirectoryName),
 		now:               time.Now,
 		heartbeatInterval: webInstanceHeartbeat,
 		processAlive:      webInstanceProcessAlive,
@@ -146,7 +146,7 @@ func registerWebInstance(reasonixHome, addr string) (*webInstanceRegistration, e
 
 func (r *webInstanceRegistry) register(addr string, pid int) (*webInstanceRegistration, error) {
 	if strings.TrimSpace(r.dir) == "" {
-		return nil, errors.New("cannot register Web instance: Reasonix home is empty")
+		return nil, errors.New("cannot register Web instance: Deeper home is empty")
 	}
 	host, rawPort, err := net.SplitHostPort(addr)
 	if err != nil {

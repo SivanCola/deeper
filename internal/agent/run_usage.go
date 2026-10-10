@@ -3,9 +3,9 @@ package agent
 import (
 	"encoding/json"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // estimateFailedAttemptUsage fills Estimated usage when a body attempt ends

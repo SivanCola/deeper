@@ -18,12 +18,12 @@ import (
 // PluginRootEnvVar is the variable a runtime command may use to address
 // files inside its own installed package. It expands at launch time, never
 // through a shell.
-const PluginRootEnvVar = "${REASONIX_PLUGIN_ROOT}"
+const PluginRootEnvVar = "${DEEPER_PLUGIN_ROOT}"
 
 // RuntimeSpec declares a plugin-owned runtime process (Manifest v2). The
-// command is exec form only: Reasonix never runs it through a shell, so
+// command is exec form only: Deeper never runs it through a shell, so
 // pipes, && and ; carry no special meaning. Command may start with
-// ${REASONIX_PLUGIN_ROOT} to address a binary inside the installed package;
+// ${DEEPER_PLUGIN_ROOT} to address a binary inside the installed package;
 // the expansion happens at launch time (see ExpandRuntimeCommand for the
 // diagnostics-time equivalent).
 type RuntimeSpec struct {
@@ -581,7 +581,7 @@ func globThemePattern(root, pattern string) ([]string, error) {
 	return matches, nil
 }
 
-// ExpandRuntimeCommand substitutes the ${REASONIX_PLUGIN_ROOT} prefix with
+// ExpandRuntimeCommand substitutes the ${DEEPER_PLUGIN_ROOT} prefix with
 // the package root. Launch-time expansion lives with the runtime supervisor
 // (a later stage); this exists so diagnostics can resolve the on-disk path.
 func ExpandRuntimeCommand(command, root string) string {

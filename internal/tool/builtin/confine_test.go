@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/secrets"
-	"reasonix/internal/testenv"
-	"reasonix/internal/tool"
+	"deeper/internal/config"
+	"deeper/internal/sandbox"
+	"deeper/internal/secrets"
+	"deeper/internal/testenv"
+	"deeper/internal/tool"
 )
 
 func TestPowerShellToolUsesPwshIdentityAndConfinedLegacyAlias(t *testing.T) {
@@ -285,7 +285,7 @@ func TestManagedConfigWriteFailsClosedWithoutApprover(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := config.Default()
-	managed := NewManagedConfigPaths(config.ReasonixManagedConfigPaths())
+	managed := NewManagedConfigPaths(config.DeeperManagedConfigPaths())
 	w := writeFile{roots: realRoots(cfg.WriteRootsForRoot(project)), managed: managed}
 
 	// Headless runs and sub-agents with no interactive parent carry no approver
@@ -312,7 +312,7 @@ func TestManagedConfigWriteGatedOnApprover(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := config.Default()
-	managed := NewManagedConfigPaths(config.ReasonixManagedConfigPaths())
+	managed := NewManagedConfigPaths(config.DeeperManagedConfigPaths())
 	w := writeFile{roots: realRoots(cfg.WriteRootsForRoot(project)), managed: managed}
 
 	// Approved: current config.toml and the legacy v0.x config.json become
@@ -321,7 +321,7 @@ func TestManagedConfigWriteGatedOnApprover(t *testing.T) {
 	ctx := tool.WithConfigWriteApprover(context.Background(), approve)
 	for _, target := range []string{
 		config.UserConfigPath(),
-		filepath.Join(home, ".reasonix", "config.json"),
+		filepath.Join(home, ".deeper", "config.json"),
 	} {
 		args, _ := json.Marshal(map[string]string{"path": target, "content": "{}\n"})
 		if _, err := w.Execute(ctx, args); err != nil {
@@ -336,7 +336,7 @@ func TestManagedConfigWriteGatedOnApprover(t *testing.T) {
 	}
 
 	// Declined: the approver's reason surfaces to the model and nothing lands.
-	decline := &stubConfigWriteApprover{allow: false, reason: "the user declined this Reasonix config write"}
+	decline := &stubConfigWriteApprover{allow: false, reason: "the user declined this Deeper config write"}
 	dctx := tool.WithConfigWriteApprover(context.Background(), decline)
 	declinedTarget := config.UserConfigPath()
 	if err := os.Remove(declinedTarget); err != nil && !os.IsNotExist(err) {
@@ -350,14 +350,14 @@ func TestManagedConfigWriteGatedOnApprover(t *testing.T) {
 		t.Fatalf("declined config must not be created, stat err=%v", err)
 	}
 
-	// Even with an always-allowing approver, non-config files in the Reasonix
+	// Even with an always-allowing approver, non-config files in the Deeper
 	// home and the rest of the OS home stay denied — the escape hatch is
 	// file-level, not directory-level.
 	for _, target := range []string{
 		filepath.Join(home, "notes.txt"),
-		filepath.Join(home, ".reasonix", ".env"),
-		filepath.Join(home, ".reasonix", "settings.json"),
-		filepath.Join(home, ".reasonix", "skills", "evil", "SKILL.md"),
+		filepath.Join(home, ".deeper", ".env"),
+		filepath.Join(home, ".deeper", "settings.json"),
+		filepath.Join(home, ".deeper", "skills", "evil", "SKILL.md"),
 	} {
 		asked := len(approve.asked)
 		args, _ := json.Marshal(map[string]string{"path": target, "content": "nope\n"})
@@ -373,20 +373,20 @@ func TestManagedConfigWriteGatedOnApprover(t *testing.T) {
 	}
 }
 
-// TestManagedConfigWriteAsksEvenInsideRoots pins that a Reasonix-managed config
+// TestManagedConfigWriteAsksEvenInsideRoots pins that a Deeper-managed config
 // file stays gated behind the fresh per-write approval even when the write
 // roots already cover it: YOLO and a widened allow_write must never let an
 // agent rewrite config.toml silently.
 func TestManagedConfigWriteAsksEvenInsideRoots(t *testing.T) {
 	home := isolateBuiltinTestUserState(t)
-	if err := os.MkdirAll(filepath.Join(home, ".reasonix"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(home, ".deeper"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	cfg := config.Default()
 	userConfig := config.UserConfigPath()
 	// The whole isolated home is a write root, config.toml included.
 	cfg.Sandbox.AllowWrite = []string{home}
-	managed := NewManagedConfigPaths(config.ReasonixManagedConfigPaths())
+	managed := NewManagedConfigPaths(config.DeeperManagedConfigPaths())
 	w := writeFile{roots: realRoots(cfg.WriteRootsForRoot(home)), managed: managed}
 	args, _ := json.Marshal(map[string]string{"path": userConfig, "content": "{}\n"})
 
@@ -409,7 +409,7 @@ func TestManagedConfigWriteAsksEvenInsideRoots(t *testing.T) {
 	}
 
 	// Declined: reason surfaces, nothing lands.
-	decline := &stubConfigWriteApprover{allow: false, reason: "the user declined this Reasonix config write"}
+	decline := &stubConfigWriteApprover{allow: false, reason: "the user declined this Deeper config write"}
 	dctx := tool.WithConfigWriteApprover(context.Background(), decline)
 	if err := os.Remove(userConfig); err != nil {
 		t.Fatalf("remove approved config before declined write: %v", err)
@@ -441,7 +441,7 @@ func TestBashSandboxConfinement(t *testing.T) {
 	if err != nil {
 		t.Skipf("no home dir: %v", err)
 	}
-	work, err := os.MkdirTemp(home, ".reasonix-bashsb-*")
+	work, err := os.MkdirTemp(home, ".deeper-bashsb-*")
 	if err != nil {
 		t.Skipf("cannot create work dir under home: %v", err)
 	}
@@ -457,7 +457,7 @@ func TestBashSandboxConfinement(t *testing.T) {
 	if _, err := b.Execute(context.Background(), inArgs); err != nil {
 		t.Fatalf("bash write inside root failed: %v", err)
 	}
-	outPath := filepath.Join(home, ".reasonix-bashsb-escape.txt")
+	outPath := filepath.Join(home, ".deeper-bashsb-escape.txt")
 	t.Cleanup(func() { os.Remove(outPath) })
 	outCommand := "echo nope > " + outPath
 	outArgs, _ := json.Marshal(map[string]string{"command": outCommand})

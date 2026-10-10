@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	previous "reasonix/desktop/internal/workspacestate/testdata/v2previous"
+	previous "deeper/desktop/internal/workspacestate/testdata/v2previous"
 )
 
 func TestPurgeV2UpgradeRejectsPreviousWriterWithoutLosingEvidence(t *testing.T) {

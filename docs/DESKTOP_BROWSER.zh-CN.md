@@ -2,7 +2,7 @@
 
 [English](DESKTOP_BROWSER.md)
 
-桌面浏览器是 Reasonix 窗口内由用户与 Agent 共同操作的原生 Chromium 表面。网站在壳
+桌面浏览器是 Deeper 窗口内由用户与 Agent 共同操作的原生 Chromium 表面。网站在壳
 拥有的 Electron `WebContentsView` 中渲染；Agent 的每项能力都经过 Go 桌面服务，因此
 本地与远程 Agent、审批、取消、证据与操作记录共享同一实现。本文是浏览器面板、壳的
 表面管理器、Go `BrowserExecutor` 与 Agent 可见工具之间的契约。背后没有壳的会话由
@@ -18,9 +18,9 @@ Agent 工具调用 ─▶ Go BrowserExecutor ─▶ ledger.reserve ─▶ host/b
 ## 表面与信任
 
 - 应用窗口可信。网站视图不可信：sandbox 开启，context isolation 开启，无 Node
-  integration，无应用 preload，不能访问 `reasonix://`。它们唯一的 preload 只观察可信
+  integration，无应用 preload，不能访问 `deeper://`。它们唯一的 preload 只观察可信
   用户输入以请求接管，不向页面暴露任何东西。
-- 分区：`persist:browser` 是同一 Reasonix 数据目录下共享的登录分区；`temp:<id>` 分区
+- 分区：`persist:browser` 是同一 Deeper 数据目录下共享的登录分区；`temp:<id>` 分区
   只存在于内存，最后一个标签关闭即丢弃。远程 Serve 窗口与 MCP App 框架使用各自分区，
   从不与浏览器分区共享。
 - 壳中的 `BrowserSurfaceManager` 拥有创建、可见性、边界、焦点与销毁。React 面板提交
@@ -142,21 +142,21 @@ Go 通过现有通道把文件转成图像或文件结果。上传只读取任�
 
 ## 远程 Agent
 
-远程 Reasonix Agent 通过现有 SSH 连接与转发管理器，以承载同一 `BrowserExecutor` 契约的
+远程 Deeper Agent 通过现有 SSH 连接与转发管理器，以承载同一 `BrowserExecutor` 契约的
 受限 Host RPC 使用本机浏览器。授权绑定远程连接世代、会话与任务；断线、重连或切换会话
 即撤销。浏览器授权与 provider 代理凭据分开；没有共享 token。旧的远程 Serve 构建通过
 能力协商不宣告浏览器，保留全部现有远程功能。
 
 线上形态是每台桌面一个 loopback HTTP broker。全新 Serve 的 bootstrap 把
-`REASONIX_BROWSER_BROKER` / `REASONIX_BROWSER_TOKEN`（仅进程环境）指向经反向转发的
+`DEEPER_BROWSER_BROKER` / `DEEPER_BROWSER_TOKEN`（仅进程环境）指向经反向转发的
 broker；被复用的 Serve 在桌面轮换路由后通过 `POST /browser/broker` 重新指向。broker 为
 每个主机连接世代铸一个随机 bearer token——注册新世代即替换主机旧 token——鉴权后才把
 `/v1/browser/<method>` 派发给 `browser.Executor`。每个请求携带
-`X-Reasonix-Browser-Session`；broker 把它解析到唯一展示该会话的桌面标签，其余一律以
+`X-Deeper-Browser-Session`；broker 把它解析到唯一展示该会话的桌面标签，其余一律以
 `no_grant` 拒绝。壳在桌面写出的截图与下载经现有 SFTP 通道中转进远程主机的每工作区
-暂存目录（`~/.reasonix/browser-relay/<workspace>/`），serve 侧工具只读对它们而言是
+暂存目录（`~/.deeper/browser-relay/<workspace>/`），serve 侧工具只读对它们而言是
 本机的路径。带 broker 启动的 Serve 在 `/auth/token` 握手的
-`X-Reasonix-Serve-Capabilities` 响应头中宣告 `browser`。
+`X-Deeper-Serve-Capabilities` 响应头中宣告 `browser`。
 
 ## 验收
 

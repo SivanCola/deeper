@@ -1,4 +1,4 @@
-// Package cli implements reasonix's command-line entry: subcommand routing, flag
+// Package cli implements deeper's command-line entry: subcommand routing, flag
 // parsing, assembly from config, and exit codes. The core is config-driven —
 // providers and tools are resolved from configuration, not hardcoded.
 package cli
@@ -26,26 +26,26 @@ import (
 	"time"
 	"unicode/utf16"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/extension/providerext"
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/i18n"
-	"reasonix/internal/jobs"
-	"reasonix/internal/netclient"
-	"reasonix/internal/notify"
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/plugin"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/serve"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/telemetry"
-	"reasonix/internal/winaclresidue"
+	"deeper/internal/ablation"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/extension/providerext"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/i18n"
+	"deeper/internal/jobs"
+	"deeper/internal/netclient"
+	"deeper/internal/notify"
+	"deeper/internal/persistentshell"
+	"deeper/internal/plugin"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
+	"deeper/internal/serve"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/telemetry"
+	"deeper/internal/winaclresidue"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/pflag"
@@ -66,7 +66,7 @@ func Run(args []string, version string) int {
 }
 
 // RunWithBuildInfo is the full CLI entry with optional build metadata for
-// `reasonix version --verbose` / `--json`.
+// `deeper version --verbose` / `--json`.
 func RunWithBuildInfo(args []string, info BuildInfo) int {
 	// Older Windows builds could leave sandbox ACL residue behind after a
 	// crash; sweep it in the background so no tool output waits on icacls.
@@ -88,10 +88,10 @@ func RunWithBuildInfo(args []string, info BuildInfo) int {
 	if cmd == "--acp" {
 		cmd = "acp"
 	}
-	// -p/--print is one-shot print mode. reasonix has no interactive -p, so a
+	// -p/--print is one-shot print mode. deeper has no interactive -p, so a
 	// print flag anywhere in a leading flag run (no explicit subcommand) routes
-	// the whole set to `run --print` — `reasonix --model X -p "task"` works, not
-	// only `reasonix -p ...`.
+	// the whole set to `run --print` — `deeper --model X -p "task"` works, not
+	// only `deeper -p ...`.
 	if cmd == "-p" || cmd == "--print" || (isDefaultInteractiveFlag(cmd) && hasLeadingPrintFlag(args)) {
 		args = append([]string{"run", "--print"}, stripLeadingPrintFlag(args)...)
 		cmd = "run"
@@ -142,7 +142,7 @@ func RunWithBuildInfo(args []string, info BuildInfo) int {
 	case "init":
 		// Project memory (AGENTS.md) is model-generated in-session — `/init` runs
 		// the codebase analysis. This CLI entry just points there (and to `setup`
-		// for config), so `reasonix init` isn't a dead end.
+		// for config), so `deeper init` isn't a dead end.
 		configureCLIThemeFromConfig()
 		return initHint()
 	case "acp":
@@ -497,7 +497,7 @@ func runAgent(args []string, version string) int {
 	dir := fs.String("dir", "", "change to this directory first (project root); config, sandbox and file tools resolve from here")
 	cont := registerContinueFlag(fs)
 	resume := fs.String("resume", "", "resume by session file path, session ID, or machine session ID (takes precedence over --continue)")
-	copySession := fs.Bool("copy", false, "with --resume/--continue: duplicate the session and continue in the copy (escape hatch when the original is held by another Reasonix process)")
+	copySession := fs.Bool("copy", false, "with --resume/--continue: duplicate the session and continue in the copy (escape hatch when the original is held by another Deeper process)")
 	takeover := fs.Bool("takeover", false, "with --resume/--continue: when a resident serve on this machine holds the session, take it over instead of refusing")
 	effort := fs.String("effort", "", "session reasoning effort override")
 	permissionMode := fs.String("permission-mode", "workspace-write", "permission mode: read-only | workspace-write | danger-full-access")
@@ -670,7 +670,7 @@ func runAgent(args []string, version string) int {
 	if strings.TrimSpace(*effort) != "" {
 		effortOverride = effort
 	}
-	// `reasonix run` is headless: there is no key loop to answer approval or ask
+	// `deeper run` is headless: there is no key loop to answer approval or ask
 	// prompts, and the approval timeout defaults to infinite. Installing the
 	// interactive approver/asker here would let an Ask rule, the `ask` tool, or a
 	// sandbox/config approval wedge the run forever. Map the mode onto a
@@ -853,8 +853,8 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 
 	// Build serve config, merging CLI flags over config file.
 	serveCfg := serveConfigWithCommandDefaults(opts.command, authExplicit, cfg.Serve)
-	// `reasonix web` is a local browser entry point and defaults to a freshly
-	// generated token. `reasonix serve` keeps its existing config-driven default,
+	// `deeper web` is a local browser entry point and defaults to a freshly
+	// generated token. `deeper serve` keeps its existing config-driven default,
 	// and an explicit --auth always wins for both commands.
 	if *auth != "" {
 		serveCfg.AuthMode = *auth
@@ -966,14 +966,14 @@ func chatREPL(args []string, version string) int {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 2
 	}
-	fs := pflag.NewFlagSet("reasonix", pflag.ContinueOnError)
+	fs := pflag.NewFlagSet("deeper", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
 	model := fs.String("model", "", "provider name (default: config default_model)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	cont := registerContinueFlag(fs)
 	resume := fs.StringP("resume", "r", "", "resume by session ID/query, or open the picker when no value is given")
 	fs.Lookup("resume").NoOptDefVal = resumePickerSentinel
-	copySession := fs.Bool("copy", false, "with --resume/--continue: duplicate the selected session and continue in the copy (escape hatch when the original is held by another Reasonix process)")
+	copySession := fs.Bool("copy", false, "with --resume/--continue: duplicate the selected session and continue in the copy (escape hatch when the original is held by another Deeper process)")
 	legacyYolo := fs.Bool("dangerously-skip-permissions", false, "deprecated: use --permission-mode danger-full-access")
 	fs.BoolVar(legacyYolo, "yolo", false, "deprecated alias; migrates to workspace-write")
 	_ = fs.MarkHidden("dangerously-skip-permissions")
@@ -1015,7 +1015,7 @@ func chatREPL(args []string, version string) int {
 	// Bubble Tea owns the terminal from the resume picker through controller
 	// shutdown. Start diagnostics before config/controller work so hangs leave a
 	// non-zero log with milestones (#7435, #7507).
-	diagnostics := startTUIDiagnostics(config.ReasonixHomeDir())
+	diagnostics := startTUIDiagnostics(config.DeeperHomeDir())
 	defer diagnostics.Close()
 	diagnostics.Milestone("config_load_begin")
 	cfg, err := config.Load()
@@ -1401,7 +1401,7 @@ func reserveNativeScrollbackFrame(w io.Writer, rows int) {
 }
 
 // setupTargets is where the wizard writes: the TOML config and the credential
-// store. Keys always go to Reasonix's global .env so they
+// store. Keys always go to Deeper's global .env so they
 // never land in a project's own .env; only the config location is project-local
 // under --local.
 type setupTargets struct {
@@ -1410,37 +1410,37 @@ type setupTargets struct {
 }
 
 // defaultConfigTarget is the user-global config file, falling back to a
-// project-local reasonix.toml only when the user config dir can't be resolved.
+// project-local deeper.toml only when the user config dir can't be resolved.
 func defaultConfigTarget() string {
 	if p := config.UserConfigPath(); p != "" {
 		return p
 	}
-	return "reasonix.toml"
+	return "deeper.toml"
 }
 
-// defaultEnvTarget is the display target for the reasonix-owned global
-// Reasonix global .env.
+// defaultEnvTarget is the display target for the deeper-owned global
+// Deeper global .env.
 func defaultEnvTarget() string {
 	return config.CredentialsTargetDescription()
 }
 
 func setupUsage(w io.Writer) {
-	fmt.Fprintln(w, "usage: reasonix setup [--local|-l] [path]")
-	fmt.Fprintln(w, "Interactive configuration wizard. Writes a reasonix config and stores the")
-	fmt.Fprintln(w, "provider API key in Reasonix's credential file, never in the config itself.")
-	fmt.Fprintln(w, "  --local, -l   write ./reasonix.toml instead of the user-global config")
+	fmt.Fprintln(w, "usage: deeper setup [--local|-l] [path]")
+	fmt.Fprintln(w, "Interactive configuration wizard. Writes a deeper config and stores the")
+	fmt.Fprintln(w, "provider API key in Deeper's credential file, never in the config itself.")
+	fmt.Fprintln(w, "  --local, -l   write ./deeper.toml instead of the user-global config")
 	fmt.Fprintln(w, "  path          write the config to this path instead of the default")
 }
 
-// resolveSetupTargets picks where `reasonix setup` writes. Keys always go to the
-// global env. The config goes to the user-global dir by default, to ./reasonix.toml
+// resolveSetupTargets picks where `deeper setup` writes. Keys always go to the
+// global env. The config goes to the user-global dir by default, to ./deeper.toml
 // under --local, or to an explicit path argument when given.
 func resolveSetupTargets(args []string) setupTargets {
 	t := setupTargets{config: defaultConfigTarget(), env: defaultEnvTarget()}
 	for _, a := range args {
 		switch a {
 		case "--local", "-l":
-			t.config = "reasonix.toml"
+			t.config = "deeper.toml"
 		default:
 			t.config = a
 		}
@@ -1456,9 +1456,9 @@ func displayPath(p string) string {
 	return p
 }
 
-// setupConfig runs the configuration wizard (the `reasonix setup` command),
-// writing config.toml to the user-global dir (or ./reasonix.toml under --local)
-// and API keys to Reasonix's global .env — never a project's own .env.
+// setupConfig runs the configuration wizard (the `deeper setup` command),
+// writing config.toml to the user-global dir (or ./deeper.toml under --local)
+// and API keys to Deeper's global .env — never a project's own .env.
 // Project memory is a separate concern — the in-session `/init` skill generates
 // AGENTS.md (see initHint).
 func setupConfig(args []string) int {
@@ -1495,7 +1495,7 @@ func setupConfig(args []string) int {
 	if isInteractive() {
 		rc := interactiveSetup(t.config, t.env)
 		if rc == 0 {
-			fmt.Printf(i18n.M.TryHintFmt+"\n", bold("reasonix"))
+			fmt.Printf(i18n.M.TryHintFmt+"\n", bold("deeper"))
 		}
 		return rc
 	}
@@ -1531,10 +1531,10 @@ func writeDefaultConfig(path string) int {
 	return 0
 }
 
-// initHint handles `reasonix init`. Unlike a config scaffold, project memory is
+// initHint handles `deeper init`. Unlike a config scaffold, project memory is
 // model-generated by analyzing the codebase, so it lives as the in-session
 // `/init` skill rather than a CLI command. This entry just points the user there
-// (and to `reasonix setup` for config) so the verb isn't a dead end.
+// (and to `deeper setup` for config) so the verb isn't a dead end.
 func initHint() int {
 	fmt.Println(i18n.M.InitHint)
 	return 0
@@ -1567,7 +1567,7 @@ func interactiveSetup(configPath, envPath string) int {
 	// in their language before any substantive prompt.
 	fmt.Println()
 	fmt.Print(boxed([]string{
-		accent("◆") + " " + fmt.Sprintf(i18n.M.WelcomeTitleFmt, bold("reasonix")),
+		accent("◆") + " " + fmt.Sprintf(i18n.M.WelcomeTitleFmt, bold("deeper")),
 		"",
 		dim(i18n.M.NoConfigYet),
 	}))
@@ -1751,12 +1751,12 @@ func containsString(xs []string, v string) bool {
 
 // filterStaleCustomEntries drops the wizard's own magic-name entries
 // (Name="custom" with Kind="openai" or Name="anthropic" with Kind="anthropic")
-// that older versions of the wizard wrote into reasonix.toml. They collide
+// that older versions of the wizard wrote into deeper.toml. They collide
 // with the wizard's "custom" / "anthropic" menu items on re-run, showing up
 // as duplicate broken entries. The new wizard writes host-derived slugs
 // (e.g. "custom-token-sensenova-cn") so a hit on the magic name is
 // unambiguously stale. The returned slice is the dropped set so the caller
-// can warn the user to clean up reasonix.toml by hand.
+// can warn the user to clean up deeper.toml by hand.
 func filterStaleCustomEntries(providers []config.ProviderEntry) (kept, dropped []config.ProviderEntry) {
 	for _, p := range providers {
 		if p.Name == "custom" && p.Kind == "openai" {
@@ -1777,9 +1777,9 @@ func filterStaleCustomEntries(providers []config.ProviderEntry) (kept, dropped [
 // "custom-token-sensenova-cn" or "anthropic-api-anthropic-com". We can't
 // reuse the wizard's menu-item labels ("custom" / "anthropic") because
 // those would collide with the menu item itself and end up rendered as
-// duplicate provider entries on subsequent re-runs of `reasonix setup`.
+// duplicate provider entries on subsequent re-runs of `deeper setup`.
 // The host-based slug also gives users a meaningful name to grep for in
-// reasonix.toml. Falls back to a short sha1 of the raw URL when the URL
+// deeper.toml. Falls back to a short sha1 of the raw URL when the URL
 // doesn't parse, so even malformed input still produces a unique name.
 func providerSlug(kind, baseURL string) string {
 	var host string
@@ -1879,7 +1879,7 @@ func fnv1a32Hex(s string) string {
 }
 
 // providerFamily is a wizard-only grouping of provider SKUs by vendor; it does
-// not exist in config because users editing reasonix.toml deal with SKU names
+// not exist in config because users editing deeper.toml deal with SKU names
 // directly.
 type providerFamily struct {
 	key  string
@@ -1936,7 +1936,7 @@ func promptCustomProviderManual() (providerPromptResult, error) {
 // Pre-filled values (baseURL, keyEnv, apiKey) are reused as-is when non-empty
 // so the URL-fetch flow can fall through to manual entry without re-asking
 // the user for information they've already typed. An empty apiKey is allowed
-// — the key step happens later in the wizard and Reasonix's global .env is updated then.
+// — the key step happens later in the wizard and Deeper's global .env is updated then.
 func promptCustomProviderManualWith(in *bufio.Scanner, baseURL, keyEnv string, keyEnvTyped bool, apiKey string) (providerPromptResult, error) {
 	fmt.Println()
 	if baseURL == "" {
@@ -2208,7 +2208,7 @@ func providersWithMissingKeys(cfg *config.Config) []config.ProviderEntry {
 // setup asks whether to re-enter it; Enter keeps and re-pins the existing value.
 // Otherwise the user is asked once per env var (deduped across providers that
 // share one, e.g. both DeepSeek models). Returns KEY=value lines for the
-// Reasonix global .env. Re-pinning keeps hand-edited or previously saved values
+// Deeper global .env. Re-pinning keeps hand-edited or previously saved values
 // aligned with the user's latest setup choice.
 func configureKeys(selected []config.ProviderEntry, r io.Reader, w io.Writer) []string {
 	in := bufio.NewScanner(r)
@@ -2271,7 +2271,7 @@ func isTTY(f *os.File) bool {
 
 // appendEnv merges KEY=value lines into a .env file. Existing assignments of
 // any key that's about to be written are dropped first, then the new values
-// are appended — so re-running `reasonix setup` with a corrected key replaces the
+// are appended — so re-running `deeper setup` with a corrected key replaces the
 // stale one instead of stacking duplicates. The new values are also
 // pinned into the current process env so a chat session started right after
 // init picks up the fresh keys without a restart.
@@ -2474,7 +2474,7 @@ func configTelemetryCommand(args []string) int {
 		return 1
 	}
 	if cfg.CLITelemetryMode() == "off" {
-		if err := cleanupCLITelemetry(config.ReasonixHomeDir()); err != nil {
+		if err := cleanupCLITelemetry(config.DeeperHomeDir()); err != nil {
 			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "telemetry disabled, but pending metrics could not be deleted:", err)
 			return 1
 		}
@@ -2516,7 +2516,7 @@ func configAutoPlanCompatibilityCommand(args []string) int {
 
 func configReasoningLanguageCommand(args []string) int {
 	fs := flag.NewFlagSet("config reasoning-language", flag.ContinueOnError)
-	local := fs.Bool("local", false, "write ./reasonix.toml instead of the user config")
+	local := fs.Bool("local", false, "write ./deeper.toml instead of the user config")
 	if code, ok := parseCommandFlags(fs, args); !ok {
 		return code
 	}
@@ -2541,7 +2541,7 @@ func configReasoningLanguageCommand(args []string) int {
 	}
 	path := config.UserConfigPath()
 	if *local {
-		path = "reasonix.toml"
+		path = "deeper.toml"
 	}
 	if path == "" {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "cannot resolve config path")
@@ -2586,7 +2586,7 @@ func configReasoningLanguageCommand(args []string) int {
 
 func configCompactRatioCommand(args []string) int {
 	fs := flag.NewFlagSet("config compact-ratio", flag.ContinueOnError)
-	local := fs.Bool("local", false, "write ./reasonix.toml instead of the user config")
+	local := fs.Bool("local", false, "write ./deeper.toml instead of the user config")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -2615,7 +2615,7 @@ func configCompactRatioCommand(args []string) int {
 	path := config.UserConfigPath()
 	scope := "user"
 	if *local {
-		path = "reasonix.toml"
+		path = "deeper.toml"
 		scope = "project"
 	}
 	if path == "" {
@@ -2660,8 +2660,8 @@ func configCompactRatioCommand(args []string) int {
 }
 
 func compactRatioSource() string {
-	if config.ConfigFileDefinesCompactRatio("reasonix.toml") {
-		return "project: " + displayPath("reasonix.toml")
+	if config.ConfigFileDefinesCompactRatio("deeper.toml") {
+		return "project: " + displayPath("deeper.toml")
 	}
 	if path := config.UserConfigPath(); path != "" && config.ConfigFileDefinesCompactRatio(path) {
 		return "user: " + displayPath(path)
@@ -2676,22 +2676,22 @@ func formatCompactRatioPercent(ratio float64) string {
 
 func configUsage() {
 	fmt.Print(`Usage:
-  reasonix config reasoning-language [--local] [auto|zh|en]
-  reasonix config compact-ratio [--local] [30..85]
-  reasonix config currency [auto|CNY|USD]
-  reasonix config telemetry [auto|on|off]
+  deeper config reasoning-language [--local] [auto|zh|en]
+  deeper config compact-ratio [--local] [30..85]
+  deeper config currency [auto|CNY|USD]
+  deeper config telemetry [auto|on|off]
 `)
 }
 
 func configTelemetryUsage() {
 	fmt.Print(`Usage:
-  reasonix config telemetry [auto|on|off]
+  deeper config telemetry [auto|on|off]
 `)
 }
 
 func configCompactRatioUsage() {
 	fmt.Print(`Usage:
-  reasonix config compact-ratio [--local] [30..85]
+  deeper config compact-ratio [--local] [30..85]
 `)
 }
 
@@ -2704,7 +2704,7 @@ func startCLITelemetryWithIO(cfg *config.Config, opts telemetry.Options, in io.R
 		cfg = config.Default()
 	}
 	opts.Mode = cfg.CLITelemetryMode()
-	opts.HomeDir = config.ReasonixHomeDir()
+	opts.HomeDir = config.DeeperHomeDir()
 	opts.Proxy = cfg.NetworkProxySpec()
 	opts.Language = cfg.Language
 
@@ -2757,18 +2757,18 @@ func cliTelemetrySessionMode(cont, resume, copySession bool) string {
 
 func configAutoPlanCompatibilityUsage() {
 	fmt.Print(`Usage:
-  reasonix config auto-plan [off]
+  deeper config auto-plan [off]
 `)
 }
 
 func configReasoningLanguageUsage() {
 	fmt.Print(`Usage:
-  reasonix config reasoning-language [--local] [auto|zh|en]
+  deeper config reasoning-language [--local] [auto|zh|en]
 `)
 }
 
 func configCurrencyUsage() {
 	fmt.Print(`Usage:
-  reasonix config currency [auto|CNY|USD]
+  deeper config currency [auto|CNY|USD]
 `)
 }

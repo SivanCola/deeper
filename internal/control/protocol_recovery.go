@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 const ProtocolRecoveryAction = "protocol_recovery"

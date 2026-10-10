@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func TestSetPlanModeSameValueDoesNotAppendDomainState(t *testing.T) {

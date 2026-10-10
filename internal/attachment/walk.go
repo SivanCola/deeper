@@ -3,7 +3,7 @@ package attachment
 import (
 	"encoding/json"
 
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/sessioncontent"
 )
 
 // CollectJSONRefs extracts attachment objects from any JSON value that may

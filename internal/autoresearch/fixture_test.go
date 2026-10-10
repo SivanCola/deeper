@@ -15,7 +15,7 @@ func writeArchiveFixture(t *testing.T, workspaceRoot, taskID, goal string, crite
 	if resolved, err := filepath.EvalSymlinks(workspaceRoot); err == nil {
 		workspaceRoot = resolved
 	}
-	root := filepath.Join(workspaceRoot, ".reasonix", "autoresearch", taskID)
+	root := filepath.Join(workspaceRoot, ".deeper", "autoresearch", taskID)
 	state := filepath.Join(root, "state")
 	logs := filepath.Join(root, "logs")
 	if err := os.MkdirAll(state, 0o755); err != nil {

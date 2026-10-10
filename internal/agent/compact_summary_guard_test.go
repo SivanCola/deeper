@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/extension/protocol"
 )
 
 func TestCompactionPrepareCannotExpandAutomaticSummaryPastWindow(t *testing.T) {

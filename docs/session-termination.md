@@ -2,7 +2,7 @@
 
 ## Contract / 契约
 
-Reasonix keeps the Go runtime, v4 physical log, SQLite projections and Desktop
+Deeper keeps the Go runtime, v4 physical log, SQLite projections and Desktop
 Stop RPC. Cancellation now stages explicit message mutations and accepts them
 with the terminal facts in one atomic commit. `history/replace` remains available
 for import and intentional history edits, but is not the cancellation commit.
@@ -143,7 +143,7 @@ not counted as passes.
 Windows 11 ARM64 的原生运行复现，未测试 Windows x64 硬件。最终模块运行结果
 及包身份以任务最终结果为准；中途失败或中断不算通过。
 
-Final tested ZIP: `dist/Reasonix-darwin-arm64.zip`, version
+Final tested ZIP: `dist/Deeper-darwin-arm64.zip`, version
 `v0.0.0-termination-local`, source revision `b21deef…+dirty`, SHA-256
 `a3640d502d784194a95e1b96c27eb0ae9f39212eead5698b638e3cb9a6aecd55`.
 It was extracted into a fresh directory and passed strict deep codesign
@@ -166,7 +166,7 @@ Windows 补验（2026-09-16）：构建前逐一比对所有改动文件的 SHA-
 和便携 ZIP。最初 NSIS 工具目录权限不足，通过复制工具到专用测试目录解决，
 未修改产品代码或原工具目录权限。
 
-Tested archive: `dist/Reasonix-windows-arm64.zip`, version
+Tested archive: `dist/Deeper-windows-arm64.zip`, version
 `v0.0.0-termination-local`, SHA-256
 `859f720c74c59c86da62edc4a19bbf34aa166db63e3da0264771337ede253637`.
 The archive passed structural verification (463 entries), was freshly extracted
@@ -202,7 +202,7 @@ PR 评审补充：不带活动回合的修复批次恢复已撤回输入时，�
 修复。此补充有 session/control 定向、race 和 lint 证据；上方包哈希早于此修复，
 不能作为重新构建后的最终提交包证据。
 
-Integration with the ProjectTree/session-recovery changes on `main-v2` retains
+Integration with the ProjectTree/session-recovery changes on `main` retains
 their cold-history preparation, complete-batch indexing and authored-preview
 rules. The bounded catalog reducer now shares input metadata with the execution
 projection, including retracted/restored ownership, while discarding message

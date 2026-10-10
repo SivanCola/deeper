@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"reasonix/internal/skill/skillwatch"
+	"deeper/internal/skill/skillwatch"
 )
 
 // The host owns one watcher for its whole lifetime: a second service would be a

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/plugin"
+	"deeper/internal/capability"
+	"deeper/internal/plugin"
 )
 
 // listServerInfo is one configured MCP server entry returned by action=list.

@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/capability"
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
+	"deeper/internal/agent"
+	"deeper/internal/capability"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
 )
 
 type invokedSkillsKey struct{}

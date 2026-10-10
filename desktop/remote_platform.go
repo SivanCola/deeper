@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/remote/bootstrap"
+	"deeper/internal/remote/bootstrap"
 )
 
 // CheckRemotePlatform verifies the connected host runs a supported OS

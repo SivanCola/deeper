@@ -1,9 +1,9 @@
 package cli
 
 import (
+	"deeper/internal/event"
+	"deeper/internal/i18n"
 	"fmt"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
 	"strings"
 	"time"
 )

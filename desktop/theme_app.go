@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // themeMu serializes theme library mutations (import/save/delete/activate).
@@ -662,9 +662,9 @@ func (a *App) ImportThemePack(sourcePath string, replace bool) (ThemeImportResul
 			return ThemeImportResult{}, fmt.Errorf("no theme package selected")
 		}
 		picked, err := a.nativeHost().OpenFileDialog(a.ctx, nativeDialogOptions{
-			Title: "Import Reasonix Theme",
+			Title: "Import Deeper Theme",
 			Filters: []nativeFileFilter{
-				{DisplayName: "Reasonix Theme (*.reasonix-theme)", Pattern: "*.reasonix-theme"},
+				{DisplayName: "Deeper Theme (*.deeper-theme)", Pattern: "*.deeper-theme"},
 				{DisplayName: "ZIP (*.zip)", Pattern: "*.zip"},
 			},
 		})
@@ -725,10 +725,10 @@ func (a *App) ExportThemePack(id, destPath string) (string, error) {
 		}
 		defaultName := id + themePackExt
 		picked, err := a.nativeHost().SaveFileDialog(a.ctx, nativeDialogOptions{
-			Title:           "Export Reasonix Theme",
+			Title:           "Export Deeper Theme",
 			DefaultFilename: defaultName,
 			Filters: []nativeFileFilter{
-				{DisplayName: "Reasonix Theme (*.reasonix-theme)", Pattern: "*.reasonix-theme"},
+				{DisplayName: "Deeper Theme (*.deeper-theme)", Pattern: "*.deeper-theme"},
 			},
 		})
 		if err != nil {

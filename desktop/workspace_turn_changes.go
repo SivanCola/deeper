@@ -1,8 +1,8 @@
 package main
 
 import (
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/provider"
+	"deeper/internal/checkpoint"
+	"deeper/internal/provider"
 	"unicode/utf8"
 )
 

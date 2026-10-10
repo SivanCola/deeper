@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // All tabEventSink context mutations go through the locked setContext /

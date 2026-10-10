@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/tool"
 )
 
 func TestPressureCompactionDoesNotCallChunkedFold(t *testing.T) {

@@ -1,0 +1,11 @@
+Deeper is an independently maintained derivative of DeepSeek-Reasonix.
+Upstream: https://github.com/esengine/DeepSeek-Reasonix
+Initial source: main-v2, bddb48202a92e4a20b728d1b4485242137ea615d
+
+Copyright (c) 2026 Reasonix Contributors
+The original MIT license is preserved verbatim in LICENSE.
+Original commit authors, contribution history, acknowledgments, release notes,
+and historical validation evidence remain credited to their original authors.
+
+Independent repository: https://github.com/SivanCola/deeper
+Deeper is not an official Reasonix release or update channel.

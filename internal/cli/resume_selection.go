@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 // modelForResumePath answers which model a resumed run should use. An explicit

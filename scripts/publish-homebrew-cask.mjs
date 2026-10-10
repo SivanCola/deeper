@@ -33,18 +33,18 @@ async function publish(file) {
   const token = process.env.HOMEBREW_TAP_TOKEN;
   if (!token) throw new Error("HOMEBREW_TAP_TOKEN is required");
   const candidate = readFileSync(file, "utf8");
-  const api = "https://api.github.com/repos/esengine/homebrew-reasonix/contents/Casks/reasonix.rb";
+  const api = "https://api.github.com/repos/SivanCola/homebrew-deeper/contents/Casks/deeper.rb";
   const current = await request(api, token);
   const existing = Buffer.from(current.content, "base64").toString("utf8");
   if (decideCaskUpdate(existing, candidate) === "reuse") return;
   await request(api, token, {
     method: "PUT",
     body: JSON.stringify({
-      message: `chore: update Reasonix to ${candidate.match(VERSION_RE).slice(1).join(".")}`,
+      message: `chore: update Deeper to ${candidate.match(VERSION_RE).slice(1).join(".")}`,
       content: Buffer.from(candidate).toString("base64"),
       sha: current.sha,
       branch: "main",
-      committer: { name: "reasonix", email: "reasonix@deepseek.com" },
+      committer: { name: "SivanCola", email: "32437197+SivanCola@users.noreply.github.com" },
     }),
   });
 }

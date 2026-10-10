@@ -3,8 +3,8 @@ package control
 import (
 	"context"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 func withTurnInputOrigin(ctx context.Context, synthetic bool) context.Context {

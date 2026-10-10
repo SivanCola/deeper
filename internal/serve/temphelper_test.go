@@ -11,7 +11,7 @@ import (
 // failing the test on cleanup-only races.
 func robustTempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "reasonix-serve-test-*")
+	dir, err := os.MkdirTemp("", "deeper-serve-test-*")
 	if err != nil {
 		t.Fatalf("robustTempDir: %v", err)
 	}

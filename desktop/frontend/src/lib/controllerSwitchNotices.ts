@@ -58,7 +58,7 @@ function settingSwitchNoticeText(err: unknown, setting: "effort" | "model" | "to
     if (jobs > 0) return t(keys.busyJobs, { n: jobs });
     return t(keys.busy);
   }
-  if (lower.includes("already open in another reasonix window") || lower.includes("session lease held")) return t(keys.leaseHeld);
+  if (lower.includes("already open in another deeper window") || lower.includes("session lease held")) return t(keys.leaseHeld);
   if (lower.includes("workspace is still starting")) return t(keys.starting);
   if (lower.startsWith("workspace failed to start")) return t(keys.startupFailed, { err: msg });
   if (lower.includes(`changed while switching ${setting}`) || (lower.includes("tab ") && lower.includes("not found"))) return t(keys.retry);

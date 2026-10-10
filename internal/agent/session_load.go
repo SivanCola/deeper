@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // sessionLoadResult is one transcript read from disk: the messages of the

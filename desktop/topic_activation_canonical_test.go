@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 func canonicalTopicHistoryReady(t *testing.T, app *App, tabID string) session.HistoryWindowPage {

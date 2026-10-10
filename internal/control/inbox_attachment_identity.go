@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/sessioninbox"
 )
 
 //nolint:unused // The reliability layer persists this stable attachment fingerprint.

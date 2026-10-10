@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/permissionpreset"
+	"deeper/internal/permissionpreset"
 )
 
 // normalizeLoadedConfig applies post-merge compatibility repairs and validates
@@ -29,7 +29,7 @@ func normalizeLoadedConfig(cfg *Config) error {
 	normalizeLegacyMimoCustomProviders(cfg)
 	normalizeLegacyProviderModels(cfg)
 	normalizeDesktopOfficialProviderAccess(cfg)
-	// Project reasonix.toml files remain read-only during runtime loading, but
+	// Project deeper.toml files remain read-only during runtime loading, but
 	// exact catalog routes can still safely repair a stale protocol in memory.
 	// The user-global startup path persists the same repair before this load.
 	repairProviderEndpointContracts(cfg)

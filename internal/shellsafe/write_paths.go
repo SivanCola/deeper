@@ -1,8 +1,8 @@
 package shellsafe
 
 import (
+	"deeper/internal/shellparse"
 	"mvdan.cc/sh/v3/syntax"
-	"reasonix/internal/shellparse"
 	"strings"
 )
 

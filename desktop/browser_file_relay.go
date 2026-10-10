@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/remote/sftpfs"
-	"reasonix/internal/store"
+	"deeper/internal/remote/sftpfs"
+	"deeper/internal/store"
 )
 
 // browserRelayMaxBytes bounds one staged capture; screenshots and downloads
@@ -59,7 +59,7 @@ func (r sftpFileRelay) Fetch(ctx context.Context, workspace, remotePath, localDi
 		roots = append(roots, relaySFTPPath(workspace, home))
 	}
 	if homeErr == nil {
-		roots = append(roots, path.Join(home, ".reasonix", "browser-relay", store.RemoteWorkspaceSlug(workspace)))
+		roots = append(roots, path.Join(home, ".deeper", "browser-relay", store.RemoteWorkspaceSlug(workspace)))
 	}
 	owned := false
 	for _, root := range roots {
@@ -142,7 +142,7 @@ func (r sftpFileRelay) Stage(ctx context.Context, workspace, localPath string) (
 	if err != nil {
 		return "", fmt.Errorf("browser relay: resolve remote home: %w", err)
 	}
-	dir := path.Join(home, ".reasonix", "browser-relay", store.RemoteWorkspaceSlug(workspace))
+	dir := path.Join(home, ".deeper", "browser-relay", store.RemoteWorkspaceSlug(workspace))
 	if err := fs.MkdirAll(ctx, dir); err != nil {
 		return "", fmt.Errorf("browser relay: remote scratch dir: %w", err)
 	}

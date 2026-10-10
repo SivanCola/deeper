@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // seedTaskMemory populates an isolated memory state root from the task's
@@ -54,7 +54,7 @@ func seedTaskMemory(taskDir, work string) ([]string, error) {
 			return nil, err
 		}
 	}
-	return []string{"REASONIX_STATE_HOME=" + stateHome}, nil
+	return []string{"DEEPER_STATE_HOME=" + stateHome}, nil
 }
 
 // taskExperimentEnv assembles one run's experiment environment: the policy
@@ -63,14 +63,14 @@ func seedTaskMemory(taskDir, work string) ([]string, error) {
 func taskExperimentEnv(cfg suiteConfig, t task, work string) (env []string, note string) {
 	switch cfg.policy {
 	case "ebm":
-		env = append(env, "REASONIX_EXPERIMENT_EBM=1")
+		env = append(env, "DEEPER_EXPERIMENT_EBM=1")
 	case "governor":
-		env = append(env, "REASONIX_EXPERIMENT_GOVERNOR=1")
+		env = append(env, "DEEPER_EXPERIMENT_GOVERNOR=1")
 	case "memory-off":
-		env = append(env, "REASONIX_EXPERIMENT_NO_MEMORY=1")
+		env = append(env, "DEEPER_EXPERIMENT_NO_MEMORY=1")
 	}
 	if cfg.forkCapture != "" {
-		env = append(env, "REASONIX_EXPERIMENT_FORK_CAPTURE_DIR="+filepath.Join(cfg.forkCapture, t.ID))
+		env = append(env, "DEEPER_EXPERIMENT_FORK_CAPTURE_DIR="+filepath.Join(cfg.forkCapture, t.ID))
 	}
 	seedEnv, err := seedTaskMemory(t.dir, work)
 	if err != nil {

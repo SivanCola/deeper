@@ -3,7 +3,7 @@ package control
 import (
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestIsSyntheticUserMessageHostRecovery(t *testing.T) {

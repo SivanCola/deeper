@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/update"
+	"deeper/desktop/internal/update"
 )
 
 func TestStagedWindowsPayloadMembersBindSignedDigests(t *testing.T) {
 	staging := t.TempDir()
-	names := []string{"reasonix-desktop.exe", "app/Reasonix.exe", "app/resources/app.asar"}
+	names := []string{"deeper-desktop.exe", "app/Deeper.exe", "app/resources/app.asar"}
 	hashes := make(map[string]string, len(names))
 	for _, name := range names {
 		path := filepath.Join(staging, filepath.FromSlash(name))
@@ -34,7 +34,7 @@ func TestStagedWindowsPayloadMembersBindSignedDigests(t *testing.T) {
 			t.Fatalf("member %d = %+v", i, member)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(staging, "app", "Reasonix.exe"), []byte("drift"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(staging, "app", "Deeper.exe"), []byte("drift"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := stagedWindowsPayloadMembers(staging, hashes, names); err == nil {

@@ -74,7 +74,7 @@ export function SessionTakeoverDialog({ tabId, onClose }: { tabId: string; onClo
   const busy = busyMode !== null;
   let body: React.ReactNode;
   if (queryError) {
-    body = <span className="reasonix-confirm-dialog__message-error"><ErrorMessage error={t("takeover.unavailable", { reason: queryError })} /></span>;
+    body = <span className="deeper-confirm-dialog__message-error"><ErrorMessage error={t("takeover.unavailable", { reason: queryError })} /></span>;
   } else if (!view) {
     body = <span>{t("takeover.querying")}</span>;
   } else if (!view.available) {
@@ -94,19 +94,19 @@ export function SessionTakeoverDialog({ tabId, onClose }: { tabId: string; onClo
   return createPortal(
     <div
       data-app-overlay=""
-      className="modal-backdrop reasonix-confirm-backdrop"
+      className="modal-backdrop deeper-confirm-backdrop"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
     >
-      <div className="modal reasonix-confirm-dialog session-takeover-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}>
-        <div className="modal__title reasonix-confirm-dialog__title" id={titleId}>{t("takeover.title")}</div>
-        <div className="reasonix-confirm-dialog__message" id={messageId}>
+      <div className="modal deeper-confirm-dialog session-takeover-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}>
+        <div className="modal__title deeper-confirm-dialog__title" id={titleId}>{t("takeover.title")}</div>
+        <div className="deeper-confirm-dialog__message" id={messageId}>
           {body}
-          {actionError ? <span className="reasonix-confirm-dialog__message-error"><ErrorMessage error={actionError} /></span> : null}
+          {actionError ? <span className="deeper-confirm-dialog__message-error"><ErrorMessage error={actionError} /></span> : null}
         </div>
-        <div className="modal__actions reasonix-confirm-dialog__actions">
+        <div className="modal__actions deeper-confirm-dialog__actions">
           <button ref={cancelRef} className="btn btn--small" type="button" disabled={busy} onClick={onClose}>
             {t("takeover.cancel")}
           </button>
@@ -260,7 +260,7 @@ export function HistoricalSessionBanners({ tab, navigate, captureNavigation, ope
     <span className="banner__hint">{updateError ? failureNotice(updateError) : m(busy ? "historicalImporting" : "historicalImportToSend")}</span>
     <span className="banner__spacer" />
     {updateError && recoveryDetails}
-    <button id="reasonix-prepare-restored-session" type="button" className="btn btn--small" disabled={busy} onClick={() => void importSource()}>{m("historicalImportOpen")}</button>
+    <button id="deeper-prepare-restored-session" type="button" className="btn btn--small" disabled={busy} onClick={() => void importSource()}>{m("historicalImportOpen")}</button>
   </div>;
   if (!update) return null;
   return <div className={`banner ${updateError ? "banner--error" : "banner--warning"} banner--actionable`} role={updateError ? "alert" : "status"}>

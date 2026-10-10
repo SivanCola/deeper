@@ -655,7 +655,7 @@ func TestEnterRemoteSessionPathReturnsSpectatorMountSynchronously(t *testing.T) 
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("X-Reasonix-Session-Path", path)
+		w.Header().Set("X-Deeper-Session-Path", path)
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer srv.Close()

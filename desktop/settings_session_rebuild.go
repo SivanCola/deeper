@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 func (a *App) buildLegacySettingReplacement(

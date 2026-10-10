@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/extension"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/extension"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // RebuildFrom is Rebuild using previous BuildResult for incremental sidecars
@@ -117,7 +117,7 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 		opts.WorkspaceRepo = old.WorkspaceRepo()
 	}
 
-	home := config.ReasonixHomeDir()
+	home := config.DeeperHomeDir()
 	// fromGraph must be the PREVIOUS generation's graph when available.
 	// Building "current disk" for both from and to collapses every plan to no-op.
 	var fromGraph *extension.DependencyGraph

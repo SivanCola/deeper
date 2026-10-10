@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/agent"
+import "deeper/internal/agent"
 
 // SessionMeta summarises one saved session for the history panel.
 type SessionMeta struct {

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/store"
 )
 
 func TestSnapshotConflictDiagnosticCountsLogicalTopicWithoutLeakingIdentity(t *testing.T) {

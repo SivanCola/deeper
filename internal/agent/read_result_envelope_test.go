@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // envelopeReader is a stand-in reader that reports a fixed delivery, so the

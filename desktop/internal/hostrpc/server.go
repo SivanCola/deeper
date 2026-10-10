@@ -10,9 +10,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"reasonix/desktop/internal/instanceidentity"
-	"reasonix/internal/extension/rpcwire"
-	"reasonix/internal/pathidentity"
+	"deeper/desktop/internal/instanceidentity"
+	"deeper/internal/extension/rpcwire"
+	"deeper/internal/pathidentity"
 )
 
 // Hooks are the lifecycle owners behind the desktop/* requests. A nil hook

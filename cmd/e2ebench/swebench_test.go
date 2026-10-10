@@ -8,8 +8,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/config"
+	"deeper/internal/ablation"
+	"deeper/internal/config"
 )
 
 // The harness prints an unmangled local image key but pulls a mangled one; the
@@ -56,7 +56,7 @@ func TestSwebenchPromptWithholdsTheAnswerKey(t *testing.T) {
 }
 
 func TestEncodePredictionsWritesOneHarnessRecordPerLine(t *testing.T) {
-	out, err := encodePredictions("reasonix", map[string]string{
+	out, err := encodePredictions("deeper", map[string]string{
 		"a__a-1": "diff --git a/x b/x\n",
 		"b__b-2": "diff --git a/y b/y\n",
 	}, []string{"a__a-1", "missing__missing-9", "b__b-2"})
@@ -67,7 +67,7 @@ func TestEncodePredictionsWritesOneHarnessRecordPerLine(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("lines = %d, want 2 (an instance with no patch is skipped, not emitted empty)", len(lines))
 	}
-	for _, want := range []string{`"instance_id":"a__a-1"`, `"model_name_or_path":"reasonix"`, `"model_patch":"diff --git a/x b/x\n"`} {
+	for _, want := range []string{`"instance_id":"a__a-1"`, `"model_name_or_path":"deeper"`, `"model_patch":"diff --git a/x b/x\n"`} {
 		if !strings.Contains(lines[0], want) {
 			t.Errorf("first record missing %q: %s", want, lines[0])
 		}

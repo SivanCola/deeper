@@ -3,8 +3,8 @@ package control
 import (
 	"errors"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 // turnOutcome maps a finished run's typed pause onto the TurnDone outcome

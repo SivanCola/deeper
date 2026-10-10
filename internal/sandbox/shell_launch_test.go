@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/internal/secrets"
+	"deeper/internal/secrets"
 )
 
 func TestWindowsPowerShellCandidatesIncludeStoreAlias(t *testing.T) {

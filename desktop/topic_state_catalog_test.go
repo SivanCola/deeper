@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // A remote project group's qualified root ("remote-project:<host>:<workspace>")

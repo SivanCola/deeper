@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/sidecar"
-	"reasonix/internal/extensioncontract"
-	"reasonix/internal/provider"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/sidecar"
+	"deeper/internal/extensioncontract"
+	"deeper/internal/provider"
 )
 
 func TestRebuildPlanNoOpCacheGuard(t *testing.T) {

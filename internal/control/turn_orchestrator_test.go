@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/hook"
-	"reasonix/internal/provider"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/hook"
+	"deeper/internal/provider"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 type plannerMetadataRunner struct {

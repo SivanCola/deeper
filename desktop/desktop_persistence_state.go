@@ -5,10 +5,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/sessionui"
-	"reasonix/internal/config"
+	"deeper/desktop/internal/draftstate"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/sessionui"
+	"deeper/internal/config"
 )
 
 // desktopPersistenceState groups process-lifetime stores and their recovery

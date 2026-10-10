@@ -8,29 +8,29 @@ import { spawnSync } from "node:child_process";
 import { nsisProjectDefines } from "../desktop/packaging/lib.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const temp = mkdtempSync(join(tmpdir(), "reasonix nsis contract "));
+const temp = mkdtempSync(join(tmpdir(), "deeper nsis contract "));
 try {
   const installer = join(temp, "windows", "installer");
   mkdirSync(join(temp, "bin"), { recursive: true });
   mkdirSync(installer, { recursive: true });
   copyFileSync(join(root, "desktop/build/windows/installer/project.nsi"), join(installer, "project.nsi"));
   copyFileSync(join(root, "desktop/build/windows/icon.ico"), join(temp, "windows", "icon.ico"));
-  writeFileSync(join(installer, "reasonix_project.nsh"), nsisProjectDefines({
-    projectName: "reasonix-desktop", companyName: "Reasonix", productName: "Reasonix", copyright: "Reasonix",
+  writeFileSync(join(installer, "deeper_project.nsh"), nsisProjectDefines({
+    projectName: "deeper-desktop", companyName: "Deeper", productName: "Deeper", copyright: "Deeper",
   }, "v0.0.0-ci"));
   if (process.platform !== "win32") {
-    writeFileSync(join(installer, "reasonix_host.nsh"), `!define REASONIX_UNINST_FINALIZE '/bin/cp -f "%1" "reasonix-uninstall.exe"'\n`);
+    writeFileSync(join(installer, "deeper_host.nsh"), `!define DEEPER_UNINST_FINALIZE '/bin/cp -f "%1" "deeper-uninstall.exe"'\n`);
   }
   for (const arch of ["AMD64", "ARM64"]) {
     mkdirSync(join(installer, "app"), { recursive: true });
-    for (const name of ["reasonix-desktop.exe", "reasonix-launcher.exe", "reasonix-guard.exe", "reasonix-update-helper.exe", "reasonix-cli.exe", "app/Reasonix.exe"]) {
+    for (const name of ["deeper-desktop.exe", "deeper-launcher.exe", "deeper-guard.exe", "deeper-update-helper.exe", "deeper-cli.exe", "app/Deeper.exe"]) {
       writeFileSync(join(installer, name), Buffer.alloc(1024, 42));
     }
-    const output = join(installer, "reasonix-uninstall.exe");
+    const output = join(installer, "deeper-uninstall.exe");
     function compile(only, success = true) {
       rmSync(output, { force: true });
-      const args = [`-DARG_REASONIX_${arch}_BINARY=reasonix-desktop.exe`];
-      if (only) args.push("-DARG_REASONIX_UNINSTALLER_ONLY");
+      const args = [`-DARG_DEEPER_${arch}_BINARY=deeper-desktop.exe`];
+      if (only) args.push("-DARG_DEEPER_UNINSTALLER_ONLY");
       const result = spawnSync("makensis", [...args, "project.nsi"], { cwd: installer, encoding: "utf8" });
       assert.ifError(result.error);
       if (!success) {
@@ -57,7 +57,7 @@ try {
     const bootstrap = compile(true);
     assert.equal(bootstrap.instructions, original.instructions, `${arch}: uninstall instructions changed`);
     rmSync(join(installer, "app"), { recursive: true });
-    rmSync(join(installer, "reasonix-desktop.exe"));
+    rmSync(join(installer, "deeper-desktop.exe"));
     assert.deepEqual(compile(true), bootstrap, `${arch}: uninstaller depends on install payload`);
     compile(false, false);
     console.log(`${arch}: shared uninstall instructions preserved; bootstrap needs no Electron payload`);

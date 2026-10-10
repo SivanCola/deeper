@@ -15,7 +15,7 @@ import (
 
 func TestFileStore_ListTasks_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 
 	tasks, err := store.ListTasks(context.Background(), dir)
 	if err != nil {
@@ -28,10 +28,10 @@ func TestFileStore_ListTasks_EmptyDir(t *testing.T) {
 
 func TestFileStore_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 
 	// Write a task snapshot
-	taskDir := filepath.Join(dir, ".reasonix", "tasks", "task-1")
+	taskDir := filepath.Join(dir, ".deeper", "tasks", "task-1")
 	if err := os.MkdirAll(taskDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -61,9 +61,9 @@ func TestFileStore_RoundTrip(t *testing.T) {
 
 func TestFileStore_ListEvents_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 
-	taskDir := filepath.Join(dir, ".reasonix", "tasks", "t1")
+	taskDir := filepath.Join(dir, ".deeper", "tasks", "t1")
 	if err := os.MkdirAll(taskDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -90,8 +90,8 @@ func TestFileStore_ListEvents_RoundTrip(t *testing.T) {
 
 func TestFileStore_ListEvents_AfterCursor(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
-	taskDir := filepath.Join(dir, ".reasonix", "tasks", "t1")
+	store := NewFileStore(".deeper/tasks")
+	taskDir := filepath.Join(dir, ".deeper", "tasks", "t1")
 	os.MkdirAll(taskDir, 0o755)
 	events := `{"sequence":1,"timestamp":"2025-01-01T00:00:01Z","event_type":"e","task_id":"t1","session_id":"s","state":"queued"}
 {"sequence":2,"timestamp":"2025-01-01T00:00:02Z","event_type":"e","task_id":"t1","session_id":"s","state":"running"}
@@ -106,7 +106,7 @@ func TestFileStore_ListEvents_AfterCursor(t *testing.T) {
 
 func TestFileStore_RejectsPathTraversal_TaskID(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 
 	_, err := store.GetTask(context.Background(), dir, "../escape")
 	if err == nil || !strings.Contains(err.Error(), "path separator") {
@@ -116,7 +116,7 @@ func TestFileStore_RejectsPathTraversal_TaskID(t *testing.T) {
 
 func TestFileStore_AcceptsCleanableProjectDir(t *testing.T) {
 	parent := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 	now := time.Now()
 
 	for _, projectDir := range []string{
@@ -142,7 +142,7 @@ func TestFileStore_AcceptsCleanableProjectDir(t *testing.T) {
 
 func TestFileStore_RejectsEmptyTaskID(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 
 	_, err := store.GetTask(context.Background(), dir, "")
 	if err == nil || !strings.Contains(err.Error(), "must not be empty") {
@@ -152,7 +152,7 @@ func TestFileStore_RejectsEmptyTaskID(t *testing.T) {
 
 func TestFileStore_RejectsDotTaskID(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 
 	_, err := store.GetTask(context.Background(), dir, ".")
 	if err == nil || !strings.Contains(err.Error(), "invalid") {
@@ -162,7 +162,7 @@ func TestFileStore_RejectsDotTaskID(t *testing.T) {
 
 func TestFileStore_RejectsDotDotTaskID(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 
 	_, err := store.GetTask(context.Background(), dir, "..")
 	if err == nil || !strings.Contains(err.Error(), "invalid") {
@@ -173,7 +173,7 @@ func TestFileStore_RejectsDotDotTaskID(t *testing.T) {
 func TestFileStore_RejectsSymlinkTaskDirectory(t *testing.T) {
 	project := t.TempDir()
 	outside := t.TempDir()
-	root := filepath.Join(project, ".reasonix", "tasks")
+	root := filepath.Join(project, ".deeper", "tasks")
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestFileStore_RejectsSymlinkTaskDirectory(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "evil", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	if err := NewFileStore(".reasonix/tasks").SaveTask(context.Background(), project, snap); err == nil {
+	if err := NewFileStore(".deeper/tasks").SaveTask(context.Background(), project, snap); err == nil {
 		t.Fatal("expected symlink task directory to be rejected")
 	}
 	if _, err := os.Stat(filepath.Join(outside, "snapshot.json")); !os.IsNotExist(err) {
@@ -192,11 +192,11 @@ func TestFileStore_RejectsSymlinkTaskDirectory(t *testing.T) {
 func TestFileStore_RejectsSymlinkStoreParent(t *testing.T) {
 	project := t.TempDir()
 	outside := t.TempDir()
-	if err := os.Symlink(outside, filepath.Join(project, ".reasonix")); err != nil {
+	if err := os.Symlink(outside, filepath.Join(project, ".deeper")); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	if err := NewFileStore(".reasonix/tasks").SaveTask(context.Background(), project, snap); err == nil {
+	if err := NewFileStore(".deeper/tasks").SaveTask(context.Background(), project, snap); err == nil {
 		t.Fatal("expected symlink store parent to be rejected")
 	}
 	if _, err := os.Stat(filepath.Join(outside, "tasks", "t1", "snapshot.json")); !os.IsNotExist(err) {
@@ -219,12 +219,12 @@ func TestFileStore_DefaultProjectRejectsSymlinkStoreParent(t *testing.T) {
 			t.Errorf("restore working directory: %v", err)
 		}
 	})
-	if err := os.Symlink(outside, ".reasonix"); err != nil {
+	if err := os.Symlink(outside, ".deeper"); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
 	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	if err := NewFileStore(".reasonix/tasks").SaveTask(context.Background(), "", snap); err == nil {
+	if err := NewFileStore(".deeper/tasks").SaveTask(context.Background(), "", snap); err == nil {
 		t.Fatal("expected default project scope to reject symlink store parent")
 	}
 	if _, err := os.Stat(filepath.Join(outside, "tasks", "t1", "snapshot.json")); !os.IsNotExist(err) {
@@ -235,7 +235,7 @@ func TestFileStore_DefaultProjectRejectsSymlinkStoreParent(t *testing.T) {
 func TestFileStore_RejectsSymlinkSnapshotAndEvents(t *testing.T) {
 	project := t.TempDir()
 	outside := t.TempDir()
-	root := filepath.Join(project, ".reasonix", "tasks", "t1")
+	root := filepath.Join(project, ".deeper", "tasks", "t1")
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestFileStore_RejectsSymlinkSnapshotAndEvents(t *testing.T) {
 			t.Skipf("symlink unavailable: %v", err)
 		}
 	}
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 	if _, err := store.GetTask(context.Background(), project, "t1"); err == nil {
 		t.Fatal("expected snapshot symlink to be rejected")
 	}
@@ -255,7 +255,7 @@ func TestFileStore_RejectsSymlinkSnapshotAndEvents(t *testing.T) {
 
 func TestFileStore_WritablePathsUsePrivateModes(t *testing.T) {
 	project := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 	now := time.Now()
 	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: now, UpdatedAt: now}
 	if err := store.SaveTask(context.Background(), project, snap); err != nil {
@@ -268,11 +268,11 @@ func TestFileStore_WritablePathsUsePrivateModes(t *testing.T) {
 		return // Windows does not expose POSIX permission bits through os.FileMode.
 	}
 	checks := map[string]os.FileMode{
-		filepath.Join(project, ".reasonix", "tasks"):                        0o700,
-		filepath.Join(project, ".reasonix", "tasks", "t1"):                  0o700,
-		filepath.Join(project, ".reasonix", "tasks", "t1", "snapshot.json"): 0o600,
-		filepath.Join(project, ".reasonix", "tasks", "t1", "events.jsonl"):  0o600,
-		filepath.Join(project, ".reasonix", "tasks", "t1", "task.lock"):     0o600,
+		filepath.Join(project, ".deeper", "tasks"):                        0o700,
+		filepath.Join(project, ".deeper", "tasks", "t1"):                  0o700,
+		filepath.Join(project, ".deeper", "tasks", "t1", "snapshot.json"): 0o600,
+		filepath.Join(project, ".deeper", "tasks", "t1", "events.jsonl"):  0o600,
+		filepath.Join(project, ".deeper", "tasks", "t1", "task.lock"):     0o600,
 	}
 	for path, want := range checks {
 		info, err := os.Stat(path)
@@ -287,7 +287,7 @@ func TestFileStore_WritablePathsUsePrivateModes(t *testing.T) {
 
 func TestFileStore_SaveTask_VersionConflict(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 	ctx := context.Background()
 	now := time.Now().Truncate(time.Second)
 	v1 := TaskSnapshot{
@@ -323,7 +323,7 @@ func TestFileStore_SaveTask_ConcurrentCAS(t *testing.T) {
 	dir := t.TempDir()
 	ctx := context.Background()
 	now := time.Now().Truncate(time.Second)
-	seed := NewFileStore(".reasonix/tasks")
+	seed := NewFileStore(".deeper/tasks")
 	v1 := TaskSnapshot{
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1, CreatedAt: now, UpdatedAt: now,
@@ -336,7 +336,7 @@ func TestFileStore_SaveTask_ConcurrentCAS(t *testing.T) {
 		snap := v1
 		snap.Version = v
 		snap.State = TaskStateSucceeded
-		return NewFileStore(".reasonix/tasks").SaveTask(ctx, dir, snap)
+		return NewFileStore(".deeper/tasks").SaveTask(ctx, dir, snap)
 	}
 
 	start := make(chan struct{})
@@ -378,9 +378,9 @@ func TestFileStore_SaveTask_ConcurrentCAS(t *testing.T) {
 // version check and being overwritten.
 func TestFileStore_SaveTask_CorruptSnapshotRejected(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 	ctx := context.Background()
-	taskDir := filepath.Join(dir, ".reasonix", "tasks", "t1")
+	taskDir := filepath.Join(dir, ".deeper", "tasks", "t1")
 	if err := os.MkdirAll(taskDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

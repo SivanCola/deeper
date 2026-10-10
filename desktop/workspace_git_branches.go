@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 func (a *App) gitWorkspaceRepoForTab(tabID, expectedRoot string) (gitcmd.Repo, error) {

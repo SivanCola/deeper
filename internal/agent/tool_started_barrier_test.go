@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // A checked sink models the durable acknowledgement, independently of the

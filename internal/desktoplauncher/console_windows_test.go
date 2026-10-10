@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/installlayout"
+	"deeper/internal/installlayout"
 )
 
-const consoleTestEnv = "REASONIX_LAUNCHER_CONSOLE_TEST"
+const consoleTestEnv = "DEEPER_LAUNCHER_CONSOLE_TEST"
 
 //go:embed testdata/console-probe/main.go
 var consoleProbeSource string
@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 	window, _, _ := kernel.NewProc("GetConsoleWindow").Call()
 	fmt.Printf("console-state %s %d %d\n", name, cp, window)
 	switch name {
-	case "reasonix-launcher.exe", "Reasonix.exe":
+	case "deeper-launcher.exe", "Deeper.exe":
 		os.Exit(Run(os.Args[1:], "test"))
 	default:
 		panic("unexpected console test executable: " + name)
@@ -64,7 +64,7 @@ func TestLauncherDoesNotCreateConsoleWindow(t *testing.T) {
 	peOffset := binary.LittleEndian.Uint32(guiBytes[0x3c:0x40])
 	binary.LittleEndian.PutUint16(guiBytes[peOffset+24+68:], 2)
 	probeBytes := buildConsoleProbe(t)
-	for _, entry := range []string{"reasonix-launcher.exe", "Reasonix.exe"} {
+	for _, entry := range []string{"deeper-launcher.exe", "Deeper.exe"} {
 		for _, legacy := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/legacy=%t", entry, legacy), func(t *testing.T) {
 				root := t.TempDir()
@@ -72,9 +72,9 @@ func TestLauncherDoesNotCreateConsoleWindow(t *testing.T) {
 				if err := os.MkdirAll(active, 0o755); err != nil {
 					t.Fatal(err)
 				}
-				paths := []string{filepath.Join(root, entry), filepath.Join(active, "reasonix-desktop.exe")}
+				paths := []string{filepath.Join(root, entry), filepath.Join(active, "deeper-desktop.exe")}
 				if legacy {
-					paths = append(paths, filepath.Join(root, "reasonix-guard.exe"))
+					paths = append(paths, filepath.Join(root, "deeper-guard.exe"))
 				} else if err := writeConsoleTestPointer(root); err != nil {
 					t.Fatal(err)
 				}
@@ -119,7 +119,7 @@ func TestLauncherDoesNotCreateConsoleWindow(t *testing.T) {
 					}
 				}
 				if legacy {
-					if _, err := os.Stat(filepath.Join(root, "reasonix-guard.exe")); !os.IsNotExist(err) {
+					if _, err := os.Stat(filepath.Join(root, "deeper-guard.exe")); !os.IsNotExist(err) {
 						t.Errorf("completed legacy migrator was not removed: %v", err)
 					}
 				}

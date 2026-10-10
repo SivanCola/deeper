@@ -21,27 +21,27 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/hook"
-	"reasonix/internal/memory"
-	"reasonix/internal/netclient"
-	"reasonix/internal/plugin"
-	"reasonix/internal/pluginpkg"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/secrets"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/hook"
+	"deeper/internal/memory"
+	"deeper/internal/netclient"
+	"deeper/internal/plugin"
+	"deeper/internal/pluginpkg"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/secrets"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 
-	// Blank import registers the provider kind the same way cmd/reasonix's main
+	// Blank import registers the provider kind the same way cmd/deeper's main
 	// does; importing builtin above registers the built-in tools.
-	_ "reasonix/internal/provider/anthropic"
-	_ "reasonix/internal/provider/openai"
+	_ "deeper/internal/provider/anthropic"
+	_ "deeper/internal/provider/openai"
 )
 
 func TestAgentKeepPolicyFromConfig(t *testing.T) {
@@ -57,14 +57,14 @@ func TestAgentKeepPolicyFromConfig(t *testing.T) {
 }
 
 // TestBuildFoldsProjectMemoryIntoSystemPrompt is the end-to-end proof of the
-// cache-first wiring: a project REASONIX.md is discovered at boot and folded
+// cache-first wiring: a project DEEPER.md is discovered at boot and folded
 // into the session's system message (the cached prefix), and the `remember`
 // tool is registered. It builds a real Controller from a throwaway project dir.
 func TestBuildFoldsProjectMemoryIntoSystemPrompt(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -75,10 +75,10 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
-	writeFile(t, dir, "REASONIX.md", "Project rule: always run go vet before committing.")
+	writeFile(t, dir, "DEEPER.md", "Project rule: always run go vet before committing.")
 
 	ctrl, err := Build(context.Background(), Options{}) // RequireKey false: no network/key needed
 	if err != nil {
@@ -93,7 +93,7 @@ api_key_env = "REASONIX_TEST_KEY_UNSET"
 		t.Fatalf("base prompt missing from system message:\n%s", sys)
 	}
 	if !strings.Contains(sys, "always run go vet before committing") {
-		t.Fatalf("project REASONIX.md not folded into system message:\n%s", sys)
+		t.Fatalf("project DEEPER.md not folded into system message:\n%s", sys)
 	}
 	// Base must come first so it stays a valid cache prefix when memory changes.
 	if strings.Index(sys, "BASE SYSTEM PROMPT") > strings.Index(sys, "always run go vet") {
@@ -101,7 +101,7 @@ api_key_env = "REASONIX_TEST_KEY_UNSET"
 	}
 
 	if mem := ctrl.Memory(); mem == nil || len(mem.Docs) == 0 {
-		t.Fatal("controller memory set is empty after discovering REASONIX.md")
+		t.Fatal("controller memory set is empty after discovering DEEPER.md")
 	}
 }
 
@@ -110,7 +110,7 @@ func TestBuildRunsCleanupPendingReconciler(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -121,7 +121,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 	sessionDir := filepath.Join(t.TempDir(), "sessions")
@@ -146,11 +146,11 @@ api_key_env = "REASONIX_TEST_KEY_UNSET"
 }
 
 func TestBuildRunsCleanupPendingDespiteSafeModeEnv(t *testing.T) {
-	// v1.20+: REASONIX_SAFE_MODE no longer skips cleanup reconciliation.
+	// v1.20+: DEEPER_SAFE_MODE no longer skips cleanup reconciliation.
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	t.Setenv("REASONIX_SAFE_MODE", "1")
+	t.Setenv("DEEPER_SAFE_MODE", "1")
 
 	called := false
 	ctrl, err := Build(context.Background(), Options{
@@ -165,7 +165,7 @@ func TestBuildRunsCleanupPendingDespiteSafeModeEnv(t *testing.T) {
 	}
 	defer ctrl.Close()
 	if !called {
-		t.Fatal("cleanup-pending reconciler must still run when REASONIX_SAFE_MODE is set")
+		t.Fatal("cleanup-pending reconciler must still run when DEEPER_SAFE_MODE is set")
 	}
 }
 
@@ -175,7 +175,7 @@ func TestBuildRegistersUsableHistoryAndMemoryRetrievalTools(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -455,7 +455,7 @@ func TestBuildSubagentSkillFailedContinuationPersistsTranscript(t *testing.T) {
 	registerBootSubagentTestProvider()
 	prov := &bootSubagentTestProvider{}
 	setBootSubagentTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -525,7 +525,7 @@ func TestBuildSubagentStoreHonorsSessionDirOverride(t *testing.T) {
 	registerBootSubagentTestProvider()
 	prov := &bootSubagentTestProvider{}
 	setBootSubagentTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -579,7 +579,7 @@ func TestBuildSubagentSkillUsesLiveReasoningLanguage(t *testing.T) {
 	registerBootSubagentTestProvider()
 	prov := &bootSubagentTestProvider{}
 	setBootSubagentTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -623,7 +623,7 @@ func TestBuildUsesConfiguredLanguageForResponsePreference(t *testing.T) {
 	registerBootSubagentTestProvider()
 	prov := &bootSubagentTestProvider{}
 	setBootSubagentTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 language = "en"
 
@@ -666,7 +666,7 @@ func TestBuildReviewSubagentSkillEnforcesReadOnlyBash(t *testing.T) {
 	registerBootSubagentTestProvider()
 	prov := &bootSubagentTestProvider{}
 	setBootSubagentTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -762,7 +762,7 @@ func TestBuildRunSkillSubagentRegistryHonorsReadOnlyFlag(t *testing.T) {
 		testutil.Turn{Text: "done"},
 	)
 	setBootTokenProfileTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 [agent]
 system_prompt = "BASE"
@@ -774,9 +774,9 @@ kind = "boot-token-profile-test"
 model = "x"
 `)
 	approveWorkspace(t, dir)
-	writeFile(t, dir, ".reasonix/skills/wskill.md",
+	writeFile(t, dir, ".deeper/skills/wskill.md",
 		"---\ndescription: writer skill\nrunAs: subagent\nallowed-tools: bash, read_file, write_file\n---\nwriter body")
-	writeFile(t, dir, ".reasonix/skills/roskill.md",
+	writeFile(t, dir, ".deeper/skills/roskill.md",
 		"---\ndescription: read-only skill\nrunAs: subagent\nallowed-tools: bash, read_file, write_file\nread-only: true\n---\nread-only body")
 
 	ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
@@ -923,7 +923,7 @@ func (p *bootSubagentTestProvider) Stream(_ context.Context, req provider.Reques
 		case 0:
 			chunks = []provider.Chunk{{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{
 				ID: "vision-mcp-1", Name: "mcp__vision-reader__inspect",
-				Arguments: `{"path":".reasonix/attachments/shot.png"}`,
+				Arguments: `{"path":".deeper/attachments/shot.png"}`,
 			}}}
 		case 1:
 			chunks = []provider.Chunk{{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{
@@ -994,7 +994,7 @@ func TestBuildHeadlessRunRunsTaskSubagentWithoutSessionPath(t *testing.T) {
 	registerHeadlessTaskTestProvider()
 	prov := &headlessTaskTestProvider{}
 	setHeadlessTaskTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -1051,7 +1051,7 @@ func TestBuildRunsPreToolUseInsideTaskSubagent(t *testing.T) {
 			registerHeadlessTaskTestProvider()
 			prov := &headlessTaskTestProvider{hookProbe: true, delegationTool: delegationTool}
 			setHeadlessTaskTestProvider(t, prov)
-			writeFile(t, dir, "reasonix.toml", `
+			writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [[providers]]
@@ -1062,7 +1062,7 @@ model = "x"
 			approveWorkspace(t, dir)
 			writeFile(t, dir, "marker.txt", "dummy hook probe")
 			if delegationTool == "run_skill" || delegationTool == "read_only_skill" {
-				writeFile(t, dir, ".reasonix/skills/hook-probe.md", "---\ndescription: inspect a marker\nrunAs: subagent\nallowed-tools: read_file\n---\nRead the requested file.")
+				writeFile(t, dir, ".deeper/skills/hook-probe.md", "---\ndescription: inspect a marker\nrunAs: subagent\nallowed-tools: read_file\n---\nRead the requested file.")
 			}
 			logPath := filepath.Join(dir, "hook.log")
 			script := filepath.Join(dir, "deny-read.sh")
@@ -1074,7 +1074,7 @@ model = "x"
 			if err != nil {
 				t.Fatal(err)
 			}
-			writeFile(t, dir, ".reasonix/settings.json", string(settings))
+			writeFile(t, dir, ".deeper/settings.json", string(settings))
 			if err := hook.ApproveProjectHooks(hook.LoadOptions{ProjectRoot: dir}); err != nil {
 				t.Fatal(err)
 			}
@@ -1230,7 +1230,7 @@ func TestBuildHeadlessApprovalModePropagatesToTaskSubagentGate(t *testing.T) {
 		registerHeadlessTaskWriteTestProvider()
 		prov := &headlessTaskWriteTestProvider{}
 		setHeadlessTaskWriteTestProvider(t, prov)
-		writeFile(t, dir, "reasonix.toml", `
+		writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -1291,13 +1291,13 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `), 0o644); err != nil {
 		t.Fatalf("write user config: %v", err)
 	}
 
 	dir := robustTempDir(t)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -1309,7 +1309,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -1346,7 +1346,7 @@ func TestRecoveryHeadlessModeUsesExplicitFrontendCapability(t *testing.T) {
 		t.Fatal("a bounded bot approval timeout must not make recovery headless")
 	}
 	if !recoveryHeadlessMode(Options{HeadlessApprovalMode: control.ToolApprovalAuto}) {
-		t.Fatal("reasonix run Auto mode must fail closed instead of waiting for a card")
+		t.Fatal("deeper run Auto mode must fail closed instead of waiting for a card")
 	}
 	if !recoveryHeadlessMode(Options{HeadlessApprovalMode: control.ToolApprovalAsk}) {
 		t.Fatal("all explicit headless permission modes must use the non-waiting recovery path")
@@ -1370,7 +1370,7 @@ func TestBuildInteractiveApprovalModeSwitchPropagatesToTaskSubagentGate(t *testi
 	registerHeadlessTaskWriteTestProvider()
 	prov := &headlessTaskWriteTestProvider{}
 	setHeadlessTaskWriteTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -1758,7 +1758,7 @@ func TestBuildHonorsSessionDirOverride(t *testing.T) {
 	dir := t.TempDir()
 	isolateConfigHome(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [[providers]]
@@ -1766,7 +1766,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -1794,7 +1794,7 @@ func TestBuildDiscoversSkills(t *testing.T) {
 	registerBootTokenProfileTestProvider()
 	prov := testutil.NewMock("skills-context", testutil.Turn{Text: "done"})
 	setBootTokenProfileTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -1806,7 +1806,7 @@ kind = "boot-token-profile-test"
 model = "x"
 `)
 	approveWorkspace(t, dir)
-	writeFile(t, dir, ".reasonix/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
+	writeFile(t, dir, ".deeper/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
 
 	ctrl, err := Build(context.Background(), Options{})
 	if err != nil {
@@ -1848,15 +1848,15 @@ model = "x"
 }
 
 func TestBuildDiscoversSkillsDespiteSafeModeEnv(t *testing.T) {
-	// v1.20+: skill discovery is not gated by REASONIX_SAFE_MODE.
+	// v1.20+: skill discovery is not gated by DEEPER_SAFE_MODE.
 	dir := robustTempDir(t)
 	home := robustTempDir(t)
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("REASONIX_SAFE_MODE", "1")
+	t.Setenv("DEEPER_SAFE_MODE", "1")
 	t.Chdir(dir)
-	writeFile(t, dir, ".reasonix/skills/project-skill.md", "---\ndescription: project skill\n---\nplaybook")
-	writeFile(t, home, ".reasonix/skills/global-skill.md", "---\ndescription: global skill\n---\nplaybook")
+	writeFile(t, dir, ".deeper/skills/project-skill.md", "---\ndescription: project skill\n---\nplaybook")
+	writeFile(t, home, ".deeper/skills/global-skill.md", "---\ndescription: global skill\n---\nplaybook")
 
 	ctrl, err := Build(context.Background(), Options{SessionDir: filepath.Join(t.TempDir(), "sessions")})
 	if err != nil {
@@ -1865,22 +1865,22 @@ func TestBuildDiscoversSkillsDespiteSafeModeEnv(t *testing.T) {
 	defer ctrl.Close()
 
 	if skills := ctrl.AllSkills(); len(skills) == 0 {
-		t.Fatal("skills must still be discovered when REASONIX_SAFE_MODE is set")
+		t.Fatal("skills must still be discovered when DEEPER_SAFE_MODE is set")
 	}
 }
 
 func TestBuildKeepsPluginSkillModelNameBareAndSlashNameQualified(t *testing.T) {
 	dir := robustTempDir(t)
 	home := robustTempDir(t)
-	reasonixHome := filepath.Join(home, ".reasonix")
+	deeperHome := filepath.Join(home, ".deeper")
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("REASONIX_HOME", reasonixHome)
+	t.Setenv("DEEPER_HOME", deeperHome)
 	t.Chdir(dir)
 	registerBootTokenProfileTestProvider()
 	prov := testutil.NewMock("plugin-skills-context", testutil.Turn{Text: "done"})
 	setBootTokenProfileTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -1892,10 +1892,10 @@ kind = "boot-token-profile-test"
 model = "x"
 `)
 	approveWorkspace(t, dir)
-	pluginRoot := filepath.Join(reasonixHome, "plugins", "superpowers")
+	pluginRoot := filepath.Join(deeperHome, "plugins", "superpowers")
 	writeFile(t, pluginRoot, pluginpkg.CodexManifest, `{"name":"superpowers","skills":"skills"}`)
 	writeFile(t, pluginRoot, "skills/plan/SKILL.md", "---\ndescription: Plugin plan\n---\nPlugin body")
-	if err := pluginpkg.Upsert(reasonixHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
 		Name: "superpowers", Root: "plugins/superpowers", ManifestKind: "codex", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
@@ -1960,7 +1960,7 @@ func TestBuildTokenFullMatchesDefaultRequestPrefix(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -1972,7 +1972,7 @@ kind = "boot-token-profile-test"
 model = "x"
 `)
 	approveWorkspace(t, dir)
-	writeFile(t, dir, ".reasonix/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
+	writeFile(t, dir, ".deeper/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
 
 	defaultReq := firstTokenProfileRequest(t, "")
 	fullReq := firstTokenProfileRequest(t, TokenModeFull)
@@ -2005,7 +2005,7 @@ func TestBuildTokenBalancedAliasMatchesDefaultRequestPrefix(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2068,7 +2068,7 @@ func TestBuildTokenDeliverySharesUnifiedSurfaceAndExecutionPolicy(t *testing.T) 
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2129,7 +2129,7 @@ name = "planner"
 kind = "boot-token-profile-test"
 model = "planner-model"`
 		}
-		writeFile(t, dir, "reasonix.toml", fmt.Sprintf(`
+		writeFile(t, dir, "deeper.toml", fmt.Sprintf(`
 default_model = "executor"
 
 [agent]
@@ -2180,7 +2180,7 @@ func TestBuildInjectsEnvironmentBlockIntoSessionContextByDefaultAndEconomy(t *te
 			isolateConfigHome(t)
 			dir := robustTempDir(t)
 			t.Chdir(dir)
-			writeFile(t, dir, "reasonix.toml", `
+			writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2213,7 +2213,7 @@ func TestBuildSkipsEnvironmentBlockWhenDisabled(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [environment]
@@ -2252,7 +2252,7 @@ func TestBuildDoesNotExecuteWorkspaceEnvironmentOverride(t *testing.T) {
 	if err := os.WriteFile(toolPath, []byte(body), 0o755); err != nil {
 		t.Fatalf("write fake tool: %v", err)
 	}
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [environment.tools]
@@ -2285,7 +2285,7 @@ func TestToolContractDocCoversDefaultBootSurfaces(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2370,7 +2370,7 @@ func TestBuildTokenEconomyStartsWithLeanToolSurface(t *testing.T) {
 	registerBootTokenProfileTestProvider()
 	prov := testutil.NewMock("token-economy", testutil.Turn{Text: "done"})
 	setBootTokenProfileTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2383,10 +2383,10 @@ model = "x"
 
 [[plugins]]
 name = "mockmcp"
-command = "reasonix-missing-mockmcp"
+command = "deeper-missing-mockmcp"
 `)
 	approveWorkspace(t, dir)
-	writeFile(t, dir, ".reasonix/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
+	writeFile(t, dir, ".deeper/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
 
 	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, TokenMode: "economy"})
 	if err != nil {
@@ -2437,7 +2437,7 @@ func TestUseCapabilityDispatchesOptionalToolsWithoutSchemaGrowth(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeFile(t, dir, "a.go", "package a\n// needle_token_ucap\n")
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2518,7 +2518,7 @@ func TestUseCapabilitySurfaceStableAcrossRoleSettings(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2578,7 +2578,7 @@ func TestUseCapabilityWorksInPlanMode(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeFile(t, dir, "a.go", "package a\n// plan_needle\n")
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2632,7 +2632,7 @@ func TestBuildLegacyPlanModeReadOnlyCommandsDoesNotEmitGateWarning(t *testing.T)
 	registerBootTokenProfileTestProvider()
 	prov := testutil.NewMock("plan-mode-read-only-commands", testutil.Turn{Text: "done"})
 	setBootTokenProfileTestProvider(t, prov)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2690,7 +2690,7 @@ func TestBuildOmitsDisabledSkillsFromPromptAndRuntimeList(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2704,10 +2704,10 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
-	writeFile(t, dir, ".reasonix/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
+	writeFile(t, dir, ".deeper/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
 
 	ctrl, err := Build(context.Background(), Options{})
 	if err != nil {
@@ -2740,9 +2740,9 @@ func TestBuildOmitsExcludedSkillRootsFromContextAndRuntimeList(t *testing.T) {
 	home := isolateConfigHome(t)
 	t.Chdir(dir)
 	excluded := filepath.Join(home, ".agents", "skills")
-	writeFile(t, config.ReasonixHomeDir(), "skills/keep.md", "---\ndescription: keep\n---\nplaybook")
+	writeFile(t, config.DeeperHomeDir(), "skills/keep.md", "---\ndescription: keep\n---\nplaybook")
 	writeFile(t, home, ".agents/skills/noisy.md", "---\ndescription: noisy\n---\nplaybook")
-	writeFile(t, dir, "reasonix.toml", fmt.Sprintf(`
+	writeFile(t, dir, "deeper.toml", fmt.Sprintf(`
 default_model = "test-model"
 
 [agent]
@@ -2756,7 +2756,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `, excluded))
 	approveWorkspace(t, dir)
 
@@ -2789,7 +2789,7 @@ func TestBuildWithoutMemoryLeavesNoDynamicMemoryInSystem(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2800,7 +2800,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -2826,7 +2826,7 @@ func TestBuildAddsCurrentWorkspaceToSessionContext(t *testing.T) {
 	projectA := robustTempDir(t)
 	projectB := robustTempDir(t)
 	for _, dir := range []string{projectA, projectB} {
-		writeFile(t, dir, "reasonix.toml", `
+		writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2893,7 +2893,7 @@ func TestCurrentWorkspacePromptLineEscapesControlCharacters(t *testing.T) {
 func TestBuildLanguagePolicyIsAppended(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2904,7 +2904,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -2923,7 +2923,7 @@ api_key_env = "REASONIX_TEST_KEY_UNSET"
 func TestBuildAppendsUserDecisionPolicyToCustomSystemPrompt(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -2934,7 +2934,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -2976,17 +2976,17 @@ func shellQuoteForTest(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
-// rememberHome isolates the Reasonix home the project allow record lives in.
+// rememberHome isolates the Deeper home the project allow record lives in.
 func rememberHome(t *testing.T) string {
 	t.Helper()
 	home := robustTempDir(t)
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	return home
 }
 
 func projectAllowRules(t *testing.T, workspace string) []string {
 	t.Helper()
-	grant, err := config.NewProjectGrantStore(config.ReasonixHomeDir()).Grant(workspace)
+	grant, err := config.NewProjectGrantStore(config.DeeperHomeDir()).Grant(workspace)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2994,13 +2994,13 @@ func projectAllowRules(t *testing.T, workspace string) []string {
 }
 
 // A workspace's "always" is the user's decision, so it lands under their home
-// and never in a reasonix.toml a checkout ships.
+// and never in a deeper.toml a checkout ships.
 func TestRememberPermissionRuleUsesWorkspaceRoot(t *testing.T) {
 	rememberHome(t)
 	cwd := robustTempDir(t)
 	workspace := robustTempDir(t)
 	t.Chdir(cwd)
-	writeFile(t, workspace, "reasonix.toml", "[permissions]\nallow = [\"Bash(workspace*)\"]\n")
+	writeFile(t, workspace, "deeper.toml", "[permissions]\nallow = [\"Bash(workspace*)\"]\n")
 	approveWorkspace(t, workspace)
 
 	const rule = "Bash(go test ./...)"
@@ -3014,7 +3014,7 @@ func TestRememberPermissionRuleUsesWorkspaceRoot(t *testing.T) {
 	if hasPermissionRule(projectAllowRules(t, cwd), rule) {
 		t.Fatal("remembered rule was filed under the process cwd")
 	}
-	if got := config.LoadForEdit(filepath.Join(workspace, "reasonix.toml")); hasPermissionRule(got.Permissions.Allow, rule) {
+	if got := config.LoadForEdit(filepath.Join(workspace, "deeper.toml")); hasPermissionRule(got.Permissions.Allow, rule) {
 		t.Fatalf("remembered rule was written into the checkout: %v", got.Permissions.Allow)
 	}
 	cfg, err := config.LoadForRootReadOnly(workspace)
@@ -3092,13 +3092,13 @@ func TestRememberPermissionRuleSerializesCrossProcessWriters(t *testing.T) {
 		cmd.Stdout = &outputs[worker]
 		cmd.Stderr = &outputs[worker]
 		cmd.Env = append(os.Environ(),
-			"REASONIX_PERMISSION_HOME="+home,
-			"REASONIX_PERMISSION_HELPER=1",
-			"REASONIX_PERMISSION_WORKSPACE="+workspace,
-			"REASONIX_PERMISSION_READY_DIR="+readyDir,
-			"REASONIX_PERMISSION_START="+startPath,
-			fmt.Sprintf("REASONIX_PERMISSION_WORKER=%d", worker),
-			fmt.Sprintf("REASONIX_PERMISSION_RULES=%d", rulesPerWorker),
+			"DEEPER_PERMISSION_HOME="+home,
+			"DEEPER_PERMISSION_HELPER=1",
+			"DEEPER_PERMISSION_WORKSPACE="+workspace,
+			"DEEPER_PERMISSION_READY_DIR="+readyDir,
+			"DEEPER_PERMISSION_START="+startPath,
+			fmt.Sprintf("DEEPER_PERMISSION_WORKER=%d", worker),
+			fmt.Sprintf("DEEPER_PERMISSION_RULES=%d", rulesPerWorker),
 		)
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
@@ -3146,19 +3146,19 @@ func TestRememberPermissionRuleSerializesCrossProcessWriters(t *testing.T) {
 }
 
 func TestRememberPermissionRuleProcessHelper(t *testing.T) {
-	if os.Getenv("REASONIX_PERMISSION_HELPER") != "1" {
+	if os.Getenv("DEEPER_PERMISSION_HELPER") != "1" {
 		return
 	}
-	workspace := os.Getenv("REASONIX_PERMISSION_WORKSPACE")
-	readyDir := os.Getenv("REASONIX_PERMISSION_READY_DIR")
-	startPath := os.Getenv("REASONIX_PERMISSION_START")
-	t.Setenv("REASONIX_CACHE_HOME", readyDir)
-	t.Setenv("REASONIX_HOME", os.Getenv("REASONIX_PERMISSION_HOME"))
-	worker, err := strconv.Atoi(os.Getenv("REASONIX_PERMISSION_WORKER"))
+	workspace := os.Getenv("DEEPER_PERMISSION_WORKSPACE")
+	readyDir := os.Getenv("DEEPER_PERMISSION_READY_DIR")
+	startPath := os.Getenv("DEEPER_PERMISSION_START")
+	t.Setenv("DEEPER_CACHE_HOME", readyDir)
+	t.Setenv("DEEPER_HOME", os.Getenv("DEEPER_PERMISSION_HOME"))
+	worker, err := strconv.Atoi(os.Getenv("DEEPER_PERMISSION_WORKER"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	rules, err := strconv.Atoi(os.Getenv("REASONIX_PERMISSION_RULES"))
+	rules, err := strconv.Atoi(os.Getenv("DEEPER_PERMISSION_RULES"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3197,14 +3197,14 @@ func TestRememberPermissionRuleKeepsWorkspaceRulesOutOfUserConfig(t *testing.T) 
 	if userCfg := config.LoadForEdit(filepath.Join(home, "config.toml")); hasPermissionRule(userCfg.Permissions.Allow, rule) {
 		t.Fatalf("workspace rule was written to user config: %v", userCfg.Permissions.Allow)
 	}
-	if _, err := os.Stat(filepath.Join(workspace, "reasonix.toml")); !os.IsNotExist(err) {
-		t.Fatalf("remembering created a reasonix.toml in the checkout, err=%v", err)
+	if _, err := os.Stat(filepath.Join(workspace, "deeper.toml")); !os.IsNotExist(err) {
+		t.Fatalf("remembering created a deeper.toml in the checkout, err=%v", err)
 	}
 }
 
 func seedProjectGrant(t *testing.T, workspace string, rules ...string) {
 	t.Helper()
-	if err := config.NewProjectGrantStore(config.ReasonixHomeDir()).Update(workspace, func(g config.ProjectGrant) (config.ProjectGrant, error) {
+	if err := config.NewProjectGrantStore(config.DeeperHomeDir()).Update(workspace, func(g config.ProjectGrant) (config.ProjectGrant, error) {
 		g.Allow = rules
 		return g, nil
 	}); err != nil {
@@ -3231,7 +3231,7 @@ func TestRememberDynamicBashLiteralIsNotCoveredByBroadRule(t *testing.T) {
 	workspace := robustTempDir(t)
 	seedProjectGrant(t, workspace, "Bash(git*)")
 
-	const literal = "Bash=git status $(touch /tmp/reasonix-dynamic-approval)"
+	const literal = "Bash=git status $(touch /tmp/deeper-dynamic-approval)"
 	res := rememberPermissionRule(workspace, literal)
 	if !res.Saved || res.CoveredBy != "" || res.Err != nil {
 		t.Fatalf("remember dynamic literal = %+v, want newly saved rule", res)
@@ -3274,12 +3274,12 @@ func TestRememberPermissionRulePrunesNarrowRulesWhenSavingBroaderRule(t *testing
 }
 
 // With no workspace named, the process directory is the workspace, and its
-// reasonix.toml stays untouched.
+// deeper.toml stays untouched.
 func TestRememberPermissionRuleEmptyRootFilesUnderTheWorkingDirectory(t *testing.T) {
 	rememberHome(t)
 	cwd := robustTempDir(t)
 	t.Chdir(cwd)
-	writeFile(t, cwd, "reasonix.toml", "[permissions]\nallow = [\"Bash(cwd*)\"]\n")
+	writeFile(t, cwd, "deeper.toml", "[permissions]\nallow = [\"Bash(cwd*)\"]\n")
 	approveWorkspace(t, cwd)
 
 	const rule = "Bash(go env)"
@@ -3289,7 +3289,7 @@ func TestRememberPermissionRuleEmptyRootFilesUnderTheWorkingDirectory(t *testing
 	if !hasPermissionRule(projectAllowRules(t, cwd), rule) {
 		t.Fatalf("rule missing from the working directory's record: %v", projectAllowRules(t, cwd))
 	}
-	if cwdCfg := config.LoadForEdit(filepath.Join(cwd, "reasonix.toml")); hasPermissionRule(cwdCfg.Permissions.Allow, rule) {
+	if cwdCfg := config.LoadForEdit(filepath.Join(cwd, "deeper.toml")); hasPermissionRule(cwdCfg.Permissions.Allow, rule) {
 		t.Fatalf("empty root wrote into the cwd project file: %v", cwdCfg.Permissions.Allow)
 	}
 }
@@ -3304,27 +3304,27 @@ func TestRememberPlanModeReadOnlyCommandUsesWorkspaceRoot(t *testing.T) {
 	cwd := robustTempDir(t)
 	workspace := robustTempDir(t)
 	t.Chdir(cwd)
-	writeFile(t, cwd, "reasonix.toml", `
+	writeFile(t, cwd, "deeper.toml", `
 [agent]
 plan_mode_read_only_commands = ["cwd query"]
 `)
 	approveWorkspace(t, cwd)
-	writeFile(t, workspace, "reasonix.toml", `
+	writeFile(t, workspace, "deeper.toml", `
 [agent]
 plan_mode_read_only_commands = ["workspace query"]
 `)
 	approveWorkspace(t, workspace)
 
 	res := rememberPlanModeReadOnlyCommand(workspace, "gh issue view")
-	if !res.Saved || res.Path != filepath.Join(workspace, "reasonix.toml") {
+	if !res.Saved || res.Path != filepath.Join(workspace, "deeper.toml") {
 		t.Fatalf("remember result = %+v, want saved to workspace config", res)
 	}
 
-	cwdCfg := config.LoadForEdit(filepath.Join(cwd, "reasonix.toml"))
+	cwdCfg := config.LoadForEdit(filepath.Join(cwd, "deeper.toml"))
 	if hasPlanModeReadOnlyCommand(cwdCfg.Agent.PlanModeReadOnlyCommands, "gh issue view") {
 		t.Fatalf("remembered command was written to cwd config: %v", cwdCfg.Agent.PlanModeReadOnlyCommands)
 	}
-	workspaceCfg := config.LoadForEdit(filepath.Join(workspace, "reasonix.toml"))
+	workspaceCfg := config.LoadForEdit(filepath.Join(workspace, "deeper.toml"))
 	if !hasPlanModeReadOnlyCommand(workspaceCfg.Agent.PlanModeReadOnlyCommands, "gh issue view") {
 		t.Fatalf("remembered command missing from workspace config: %v", workspaceCfg.Agent.PlanModeReadOnlyCommands)
 	}
@@ -3332,7 +3332,7 @@ plan_mode_read_only_commands = ["workspace query"]
 
 func TestRememberPlanModeReadOnlyCommandSkipsCoveredPrefix(t *testing.T) {
 	workspace := robustTempDir(t)
-	writeFile(t, workspace, "reasonix.toml", `
+	writeFile(t, workspace, "deeper.toml", `
 [agent]
 plan_mode_read_only_commands = ["gh issue view"]
 `)
@@ -3342,7 +3342,7 @@ plan_mode_read_only_commands = ["gh issue view"]
 	if res.Saved || res.CoveredBy != "gh issue view" {
 		t.Fatalf("remember result = %+v, want already covered", res)
 	}
-	cfg := config.LoadForEdit(filepath.Join(workspace, "reasonix.toml"))
+	cfg := config.LoadForEdit(filepath.Join(workspace, "deeper.toml"))
 	if len(cfg.Agent.PlanModeReadOnlyCommands) != 1 || cfg.Agent.PlanModeReadOnlyCommands[0] != "gh issue view" {
 		t.Fatalf("plan-mode read-only commands = %v, want only existing prefix", cfg.Agent.PlanModeReadOnlyCommands)
 	}
@@ -3362,7 +3362,7 @@ func hasPlanModeReadOnlyCommand(commands []string, want string) bool {
 }
 
 // TestBuildMigratesLegacyConfigEndToEnd drives the real boot path: a v0.x
-// ~/.reasonix/config.json with no v1+ config present must be imported during
+// ~/.deeper/config.json with no v1+ config present must be imported during
 // Build — config written, key pinned into the env, and the user told via a notice.
 func TestBuildMigratesLegacyConfigEndToEnd(t *testing.T) {
 	home := robustTempDir(t)
@@ -3370,18 +3370,18 @@ func TestBuildMigratesLegacyConfigEndToEnd(t *testing.T) {
 	t.Setenv("USERPROFILE", home)                               // os.UserHomeDir on Windows
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config")) // os.UserConfigDir on Linux
 	t.Setenv("AppData", filepath.Join(home, "AppData"))         // os.UserConfigDir on Windows
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	t.Setenv("DEEPSEEK_API_KEY", "") // track for cleanup; migration os.Setenv's it live
 
 	proj := robustTempDir(t)
 	t.Chdir(proj)
 	// Project config merges over the migrated user config without dropping the
 	// migrated plugins.
-	writeFile(t, proj, "reasonix.toml", "")
+	writeFile(t, proj, "deeper.toml", "")
 	approveWorkspace(t, proj)
-	writeFile(t, filepath.Join(home, ".reasonix"), "config.json",
+	writeFile(t, filepath.Join(home, ".deeper"), "config.json",
 		`{"apiKey":"sk-e2e","lang":"zh","mcpServers":{"fs":{"command":"npx","args":["-y","server-fs"]}}}`)
-	writeFile(t, filepath.Join(home, ".reasonix", "sessions"), "chat-1.events.jsonl",
+	writeFile(t, filepath.Join(home, ".deeper", "sessions"), "chat-1.events.jsonl",
 		`{"type":"user.message","id":1,"ts":"t","turn":0,"text":"hello from v0.x"}`+"\n"+
 			`{"type":"model.final","id":2,"ts":"t","turn":0,"content":"hi","toolCalls":[],"usage":{},"costUsd":0}`+"\n")
 
@@ -3445,10 +3445,10 @@ func TestBuildMigratesLegacyConfigEndToEnd(t *testing.T) {
 
 func TestBuildMigratesDeprecatedAgentStepLimitsWithOneNotice(t *testing.T) {
 	home := isolateConfigHome(t)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, "reasonix-home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(home, "deeper-home"))
 	project := robustTempDir(t)
-	configPath := filepath.Join(project, "reasonix.toml")
-	writeFile(t, project, "reasonix.toml", `
+	configPath := filepath.Join(project, "deeper.toml")
+	writeFile(t, project, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -3460,7 +3460,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, project)
 
@@ -3511,10 +3511,10 @@ api_key_env = "REASONIX_TEST_KEY_UNSET"
 
 func TestBuildMigratesDeprecatedRedactToolOutputWithOneNotice(t *testing.T) {
 	home := isolateConfigHome(t)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, "reasonix-home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(home, "deeper-home"))
 	project := robustTempDir(t)
-	configPath := filepath.Join(project, "reasonix.toml")
-	writeFile(t, project, "reasonix.toml", `
+	configPath := filepath.Join(project, "deeper.toml")
+	writeFile(t, project, "deeper.toml", `
 default_model = "test-model"
 
 [secrets]
@@ -3525,7 +3525,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, project)
 
@@ -3582,7 +3582,7 @@ func TestBuildMigratesLegacySessionsFromConfigSessionDir(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 
 	proj := robustTempDir(t)
-	writeFile(t, proj, "reasonix.toml", "")
+	writeFile(t, proj, "deeper.toml", "")
 	approveWorkspace(t, proj)
 
 	legacyConfig := config.LegacyUserConfigPath()
@@ -3639,17 +3639,17 @@ func TestBuildSkipsLegacySessionMigrationWhenIsolated(t *testing.T) {
 	}
 	home := robustTempDir(t)
 	xdg := filepath.Join(home, "xdg-config")
-	reasonixHome := filepath.Join(home, "rx-home")
+	deeperHome := filepath.Join(home, "rx-home")
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", xdg)
-	t.Setenv("REASONIX_HOME", reasonixHome)
+	t.Setenv("DEEPER_HOME", deeperHome)
 
 	proj := robustTempDir(t)
-	writeFile(t, proj, "reasonix.toml", "[codegraph]\nenabled = false\n")
+	writeFile(t, proj, "deeper.toml", "[codegraph]\nenabled = false\n")
 	approveWorkspace(t, proj)
 
-	legacyRoot := filepath.Join(xdg, "reasonix")
+	legacyRoot := filepath.Join(xdg, "deeper")
 	writeFile(t, filepath.Join(legacyRoot, "sessions"), "xdg-flat.events.jsonl",
 		`{"type":"user.message","id":1,"ts":"t","turn":0,"text":"hello from xdg"}`+"\n"+
 			`{"type":"model.final","id":2,"ts":"t","turn":0,"content":"hi from xdg","toolCalls":[],"usage":{},"costUsd":0}`+"\n")
@@ -3669,11 +3669,11 @@ func TestBuildSkipsLegacySessionMigrationWhenIsolated(t *testing.T) {
 	defer ctrl.Close()
 
 	if _, err := os.Stat(filepath.Join(config.SessionDir(), "xdg-flat.jsonl")); !os.IsNotExist(err) {
-		t.Fatal("legacy XDG flat session was imported but must not be when REASONIX_HOME is set")
+		t.Fatal("legacy XDG flat session was imported but must not be when DEEPER_HOME is set")
 	}
 	projectPath := filepath.Join(config.MemoryUserDir(), "projects", slug, "sessions", "project-chat.jsonl")
 	if _, err := os.Stat(projectPath); !os.IsNotExist(err) {
-		t.Fatal("legacy project session was imported but must not be when REASONIX_HOME is set")
+		t.Fatal("legacy project session was imported but must not be when DEEPER_HOME is set")
 	}
 }
 
@@ -3872,7 +3872,7 @@ func TestBuildMigratesLegacyEagerTierToBackground(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -3883,11 +3883,11 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 
 [[plugins]]
 name = "legacy-eager"
-command = "reasonix-missing-legacy-eager-mcp"
+command = "deeper-missing-legacy-eager-mcp"
 tier = "eager"
 `)
 	approveWorkspace(t, dir)
@@ -3905,7 +3905,7 @@ tier = "eager"
 	if len(failures) != 1 || failures[0].Name != "legacy-eager" {
 		t.Fatalf("failures = %+v, want background startup failure for migrated legacy eager plugin", failures)
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, "reasonix.toml"))
+	raw, err := os.ReadFile(filepath.Join(dir, "deeper.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3919,7 +3919,7 @@ func TestBuildMigratesLegacyLazyTierToBackground(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -3930,11 +3930,11 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 
 [[plugins]]
 name = "legacy-lazy"
-command = "reasonix-missing-legacy-lazy-mcp"
+command = "deeper-missing-legacy-lazy-mcp"
 tier = "lazy"
 `)
 	approveWorkspace(t, dir)
@@ -3952,7 +3952,7 @@ tier = "lazy"
 	if len(failures) != 1 || failures[0].Name != "legacy-lazy" {
 		t.Fatalf("failures = %+v, want background startup failure for migrated legacy lazy plugin", failures)
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, "reasonix.toml"))
+	raw, err := os.ReadFile(filepath.Join(dir, "deeper.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3971,7 +3971,7 @@ func TestBuildDefaultsToNearestGitRoot(t *testing.T) {
 	if err := os.MkdirAll(subdir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, root, "reasonix.toml", `
+	writeFile(t, root, "deeper.toml", `
 default_model = "root-model"
 
 [agent]
@@ -3982,7 +3982,7 @@ name = "root-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, root)
 	t.Chdir(subdir)
@@ -4031,7 +4031,7 @@ func TestAppendUniquePathsDeduplicatesSymlinkEquivalentRoots(t *testing.T) {
 }
 
 func TestRuntimeForbidReadRootsAddsGlobalCredentialFileExceptOnWindows(t *testing.T) {
-	t.Setenv("REASONIX_HOME", filepath.Join(isolateConfigHome(t), "reasonix-home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(isolateConfigHome(t), "deeper-home"))
 	configured := filepath.Join(t.TempDir(), "configured-secret")
 	projectEnv := filepath.Join(t.TempDir(), ".env")
 	for _, path := range []string{configured, projectEnv} {
@@ -4067,8 +4067,8 @@ func TestRuntimeForbidReadRootsAddsGlobalCredentialFileExceptOnWindows(t *testin
 
 func TestRuntimeForbidReadRootsFiltersUnconfiguredStoredCredential(t *testing.T) {
 	home := isolateConfigHome(t)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, "reasonix-home"))
-	const staleKey = "REASONIX_TEST_UNCONFIGURED_STORED_CREDENTIAL"
+	t.Setenv("DEEPER_HOME", filepath.Join(home, "deeper-home"))
+	const staleKey = "DEEPER_TEST_UNCONFIGURED_STORED_CREDENTIAL"
 	t.Setenv(staleKey, "opaque-stale-value")
 	credentialPath := config.UserCredentialsPath()
 	if err := os.MkdirAll(filepath.Dir(credentialPath), 0o700); err != nil {
@@ -4115,7 +4115,7 @@ func TestBuildAdditionalDirsAllowWriterAndPreserveToolSchemas(t *testing.T) {
 	root := robustTempDir(t)
 	extra := t.TempDir()
 	t.Chdir(root)
-	writeFile(t, root, "reasonix.toml", `
+	writeFile(t, root, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -4190,7 +4190,7 @@ func TestBuildAdditionalDirsReachSandboxedBashWriteRoots(t *testing.T) {
 	root := robustTempDir(t)
 	extra := t.TempDir()
 	t.Chdir(root)
-	writeFile(t, root, "reasonix.toml", `
+	writeFile(t, root, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -4244,7 +4244,7 @@ func TestBuildMigratesLegacyEagerBeforeStatsDemotion(t *testing.T) {
 		}
 	}
 
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -4255,11 +4255,11 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 
 [[plugins]]
 name = "slowserver"
-command = "reasonix-missing-slow-mcp-binary"
+command = "deeper-missing-slow-mcp-binary"
 tier = "eager"
 `)
 	approveWorkspace(t, dir)
@@ -4441,12 +4441,12 @@ func TestHelperProcess(t *testing.T) {
 }
 
 // TestBuildKeepsSourceConnectorAndSkillToolsDespiteSafeModeEnv pins that
-// v1.20+ no longer strips tools when REASONIX_SAFE_MODE is set.
+// v1.20+ no longer strips tools when DEEPER_SAFE_MODE is set.
 func TestBuildKeepsSourceConnectorAndSkillToolsDespiteSafeModeEnv(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	t.Setenv("REASONIX_SAFE_MODE", "1")
+	t.Setenv("DEEPER_SAFE_MODE", "1")
 
 	ctrl, err := Build(context.Background(), Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
@@ -4464,11 +4464,11 @@ func TestBuildKeepsSourceConnectorAndSkillToolsDespiteSafeModeEnv(t *testing.T) 
 	// Provider-visible surface is the unified core; optional tools remain
 	// registered for use_capability dispatch even under safe mode.
 	if !names["use_capability"] {
-		t.Fatal("expected use_capability when REASONIX_SAFE_MODE is set")
+		t.Fatal("expected use_capability when DEEPER_SAFE_MODE is set")
 	}
 	for _, want := range []string{platformShellToolName(), "read_file", "write_file"} {
 		if !names[want] {
-			t.Fatalf("expected core tool %s when REASONIX_SAFE_MODE is set", want)
+			t.Fatalf("expected core tool %s when DEEPER_SAFE_MODE is set", want)
 		}
 	}
 }

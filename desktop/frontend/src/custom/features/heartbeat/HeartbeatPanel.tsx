@@ -80,7 +80,7 @@ export function HeartbeatView({ onOpenTopic, active = true, onBack = () => {} }:
   // 重新打开面板/切换视图后恢复，无需每次重拖。
   const [listWidthPct, setListWidthPct] = useState(() => {
     try {
-      const raw = localStorage.getItem("reasonix-heartbeat-list-width");
+      const raw = localStorage.getItem("deeper-heartbeat-list-width");
       const cached = raw === null ? 40 : Number(raw);
       return Number.isFinite(cached) ? Math.min(70, Math.max(30, cached)) : 40;
     } catch {
@@ -415,7 +415,7 @@ export function HeartbeatView({ onOpenTopic, active = true, onBack = () => {} }:
       setListWidthPct(clamped);
       // 拖拽过程中同步缓存（最后一次 onMove 即松手时的值，无需在 onUp 再写）
       try {
-        localStorage.setItem("reasonix-heartbeat-list-width", String(clamped));
+        localStorage.setItem("deeper-heartbeat-list-width", String(clamped));
       } catch {
         // Storage may be unavailable in hardened webviews; in-memory state still works.
       }

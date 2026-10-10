@@ -4,9 +4,9 @@ import (
 	"context"
 	"slices"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontext"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontext"
 )
 
 // TurnContextBundle carries role-specific runtime snapshots without changing

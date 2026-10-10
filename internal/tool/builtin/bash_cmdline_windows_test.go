@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func powerShellCommandAtUnits(t *testing.T, sh sandbox.Shell, units int) string {

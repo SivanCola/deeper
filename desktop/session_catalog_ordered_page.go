@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/internal/sessioncatalog"
 	"fmt"
-	"reasonix/internal/sessioncatalog"
 	"sort"
 	"strconv"
 	"strings"

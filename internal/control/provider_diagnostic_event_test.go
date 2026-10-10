@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 	"golang.org/x/net/http2"
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
 )
 
 type diagnosticFailureTransport struct {

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 var errSessionNavigationSuperseded = errors.New("session navigation was superseded")

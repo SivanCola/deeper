@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func usageEvent(source string, prompt, completion int) event.Event {

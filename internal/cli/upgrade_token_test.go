@@ -16,7 +16,7 @@ func TestFetchLatestReleaseAuthenticatesWithGitHubToken(t *testing.T) {
 
 	client := &http.Client{Transport: upgradeRoundTripFunc(func(request *http.Request) (*http.Response, error) {
 		switch request.URL.String() {
-		case cliGatewayBase + "/stable/latest.json":
+		case cliGatewayBase + "/cli-latest.json":
 			gatewayAuth = request.Header.Get("Authorization")
 			return &http.Response{StatusCode: http.StatusNotFound, Status: "404 Not Found", Header: make(http.Header),
 				Body: io.NopCloser(strings.NewReader("")), Request: request}, nil

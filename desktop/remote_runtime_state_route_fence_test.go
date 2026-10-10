@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // Exercise the real GET capture boundary: a request started before a route

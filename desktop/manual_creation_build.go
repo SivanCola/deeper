@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // Register only after boot success. Publication locks unwind before this join;

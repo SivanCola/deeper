@@ -3,7 +3,7 @@ package control
 import (
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func billedGoalTurn() []provider.Chunk {

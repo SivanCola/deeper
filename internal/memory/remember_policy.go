@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"reasonix/internal/secrets"
+	"deeper/internal/secrets"
 )
 
 const maxAutoRememberBodyRunes = 6000

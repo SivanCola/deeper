@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/proc"
-	"reasonix/internal/secrets"
+	"deeper/internal/proc"
+	"deeper/internal/secrets"
 )
 
 // powerShellLaunches reports whether a found PowerShell can start. A Store

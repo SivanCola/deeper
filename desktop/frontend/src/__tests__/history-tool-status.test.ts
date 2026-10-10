@@ -160,15 +160,15 @@ eq(archivedError[0]?.kind === "tool" && archivedError[0].error, "error: permissi
 
 const localOnlyDupes = toolItems([
   { role: "user", content: "first" },
-  { role: "tool", toolCallId: "__reasonix_local_only__", toolName: "__reasonix_local_only__", content: "partial one" },
+  { role: "tool", toolCallId: "__deeper_local_only__", toolName: "__deeper_local_only__", content: "partial one" },
   { role: "user", content: "second" },
-  { role: "tool", toolCallId: "__reasonix_local_only__", toolName: "__reasonix_local_only__", content: "partial two" },
+  { role: "tool", toolCallId: "__deeper_local_only__", toolName: "__deeper_local_only__", content: "partial two" },
 ] as HistoryMessage[]);
 eq(localOnlyDupes.length, 2, "each interrupted-turn local-only record hydrates as its own tool item");
 eq(
   localOnlyDupes[0]?.id !== localOnlyDupes[1]?.id,
   true,
-  "repeated __reasonix_local_only__ toolCallIds uniquify so transcript row keys cannot collide after restart",
+  "repeated __deeper_local_only__ toolCallIds uniquify so transcript row keys cannot collide after restart",
 );
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

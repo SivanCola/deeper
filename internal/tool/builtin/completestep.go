@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // Keep a hidden tombstone so stale model requests receive an actionable error

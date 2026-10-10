@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // SessionDisplayIndexSchemaVersion is the on-disk schema of the display index

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func TestProviderFailurePersistsStructuredFailedTerminal(t *testing.T) {

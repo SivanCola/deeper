@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/plugin"
+	"deeper/internal/control"
+	"deeper/internal/plugin"
 )
 
 // MCPAppInstanceView describes one live App surface for the frontend.

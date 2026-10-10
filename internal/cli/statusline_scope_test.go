@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/hook"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/hook"
 )
 
 // A project's configuration cannot choose commands the TUI runs: the footer
@@ -23,7 +23,7 @@ func TestProjectStatuslineCommandNeverRunsFromTheTUI(t *testing.T) {
 	isolateUserConfig(t)
 	repo := t.TempDir()
 	marker := filepath.Join(repo, "statusline-ran")
-	if err := os.WriteFile(filepath.Join(repo, "reasonix.toml"), []byte("[statusline]\ncommand = \"touch "+marker+"\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, "deeper.toml"), []byte("[statusline]\ncommand = \"touch "+marker+"\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	t.Chdir(repo)

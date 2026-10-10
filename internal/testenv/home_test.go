@@ -10,16 +10,16 @@ import (
 func TestIsolateUserStateRedirectsAndRestoresCallerEnvironment(t *testing.T) {
 	callerHome := t.TempDir()
 	callerEnvironment := map[string]string{
-		"HOME":                callerHome,
-		"USERPROFILE":         callerHome,
-		"XDG_CONFIG_HOME":     filepath.Join(callerHome, "caller-config"),
-		"XDG_CACHE_HOME":      filepath.Join(callerHome, "caller-xdg-cache"),
-		"XDG_STATE_HOME":      filepath.Join(callerHome, "caller-xdg-state"),
-		"AppData":             filepath.Join(callerHome, "caller-appdata"),
-		"LocalAppData":        filepath.Join(callerHome, "caller-local-appdata"),
-		"REASONIX_HOME":       filepath.Join(callerHome, "explicit-reasonix-home"),
-		"REASONIX_STATE_HOME": filepath.Join(callerHome, "caller-state"),
-		"REASONIX_CACHE_HOME": filepath.Join(callerHome, "caller-cache"),
+		"HOME":              callerHome,
+		"USERPROFILE":       callerHome,
+		"XDG_CONFIG_HOME":   filepath.Join(callerHome, "caller-config"),
+		"XDG_CACHE_HOME":    filepath.Join(callerHome, "caller-xdg-cache"),
+		"XDG_STATE_HOME":    filepath.Join(callerHome, "caller-xdg-state"),
+		"AppData":           filepath.Join(callerHome, "caller-appdata"),
+		"LocalAppData":      filepath.Join(callerHome, "caller-local-appdata"),
+		"DEEPER_HOME":       filepath.Join(callerHome, "explicit-deeper-home"),
+		"DEEPER_STATE_HOME": filepath.Join(callerHome, "caller-state"),
+		"DEEPER_CACHE_HOME": filepath.Join(callerHome, "caller-cache"),
 	}
 	for key, value := range callerEnvironment {
 		t.Setenv(key, value)
@@ -51,7 +51,7 @@ func TestIsolateUserStateRedirectsAndRestoresCallerEnvironment(t *testing.T) {
 			t.Errorf("%s inside isolated test process = %q, want %q", key, got, want)
 		}
 	}
-	for _, key := range []string{"REASONIX_HOME", "REASONIX_STATE_HOME", "REASONIX_CACHE_HOME"} {
+	for _, key := range []string{"DEEPER_HOME", "DEEPER_STATE_HOME", "DEEPER_CACHE_HOME"} {
 		if _, ok := os.LookupEnv(key); ok {
 			t.Fatalf("%s remained set inside isolated test process", key)
 		}

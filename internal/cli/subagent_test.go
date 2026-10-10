@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/pluginpkg"
-	"reasonix/internal/skill"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/pluginpkg"
+	"deeper/internal/skill"
 )
 
 func TestSubagentProfileCLIManageRoundTrip(t *testing.T) {
@@ -88,7 +88,7 @@ func TestSubagentProfileCLIManageRoundTrip(t *testing.T) {
 
 func TestSubagentListIncludesQualifiedPluginAgents(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	project := t.TempDir()
 	t.Chdir(project)
 	root := filepath.Join(home, "plugins", "commercial-legal")
@@ -141,7 +141,7 @@ func TestSubagentProfileCLIRejectsBuiltinCollisionAndRichSkillEdit(t *testing.T)
 		t.Fatalf("builtin collision output = %q", errOut)
 	}
 
-	path := filepath.Join(project, ".reasonix", "skills", "rich", skill.SkillFile)
+	path := filepath.Join(project, ".deeper", "skills", "rich", skill.SkillFile)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestSubagentProfileCLIRejectsBuiltinCollisionAndRichSkillEdit(t *testing.T)
 		t.Fatalf("rich edit output = %q", errOut)
 	}
 	// Positive: managed read-only frontmatter is editable and round-trips.
-	roPath := filepath.Join(project, ".reasonix", "skills", "readonly-agent", skill.SkillFile)
+	roPath := filepath.Join(project, ".deeper", "skills", "readonly-agent", skill.SkillFile)
 	if err := os.MkdirAll(filepath.Dir(roPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestSubagentProfileCLIRejectsReservedAndCustomCommandNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chdir(original) })
-	commandPath := filepath.Join(project, ".reasonix", "commands", "formatter.md")
+	commandPath := filepath.Join(project, ".deeper", "commands", "formatter.md")
 	if err := os.MkdirAll(filepath.Dir(commandPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestSubagentProfileCLIEditBuiltinModelOverride(t *testing.T) {
 		Kind:             "openai",
 		BaseURL:          "https://offline.example.com",
 		Model:            "chat",
-		APIKeyEnv:        "REASONIX_SUBAGENT_OFFLINE_KEY",
+		APIKeyEnv:        "DEEPER_SUBAGENT_OFFLINE_KEY",
 		SupportedEfforts: []string{"low", "high"},
 		DefaultEffort:    "low",
 	}}
@@ -368,7 +368,7 @@ func TestRootHelpListsSubagentCommand(t *testing.T) {
 			t.Fatalf("help rc = %d", rc)
 		}
 	})
-	if !strings.Contains(out, "reasonix subagent <list|create|edit|delete|try|run>") {
+	if !strings.Contains(out, "deeper subagent <list|create|edit|delete|try|run>") {
 		t.Fatalf("help output missing subagent command:\n%s", out)
 	}
 }

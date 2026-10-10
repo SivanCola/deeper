@@ -31,7 +31,7 @@ def areas(paths):
 
 
 def main():
-    baseline, main_tip = git("rev-parse", "HEAD"), git("rev-parse", "origin/main-v2")
+    baseline, main_tip = git("rev-parse", "HEAD"), git("rev-parse", "origin/main")
     releases = []
     for patch in range(3, 12):
         tag = f"desktop-v1.38.{patch}"
@@ -51,7 +51,7 @@ def main():
             continue
         number = re.search(r"#(\d+)", title)
         covered_by = next((release["tag"] for release in releases
-                           if subprocess.run(["git", "merge-base", "--is-ancestor", commit, release["commit"]], cwd=ROOT).returncode == 0), "main-v2 after 1.38.11")
+                           if subprocess.run(["git", "merge-base", "--is-ancestor", commit, release["commit"]], cwd=ROOT).returncode == 0), "main after 1.38.11")
         prs.append({"commit": commit, "pr": int(number[1]) if number else None, "title": title,
                     "areas": domains, "firstRelease": covered_by,
                     "inRollbackBaseline": subprocess.run(["git", "merge-base", "--is-ancestor", commit, baseline], cwd=ROOT).returncode == 0})

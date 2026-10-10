@@ -4,13 +4,13 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
 )
 
 func (a *App) metaForTab(tabID string) Meta {

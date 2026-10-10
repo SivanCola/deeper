@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/event"
 )
 
 func TestModelSettingsApprovalResumeKeepsAcceptedCredential(t *testing.T) {

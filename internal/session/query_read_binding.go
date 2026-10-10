@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"reasonix/internal/historywork"
+	"deeper/internal/historywork"
 )
 
 type queryReadScope struct {

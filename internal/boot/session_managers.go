@@ -1,10 +1,10 @@
 package boot
 
 import (
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/persistentshell"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 func sessionManagers(opts Options) (*sessiontemp.Manager, *persistentshell.Manager) {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/sandbox"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/sandbox"
 )
 
 var windowsHookBash struct {

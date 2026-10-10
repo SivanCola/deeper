@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 // reloadRuntimeFixture writes the config the ReloadRuntime tests share (one

@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/memory"
-	"reasonix/internal/permission"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/memory"
+	"deeper/internal/permission"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // runHeadlessWriteOnce drives one write_file tool call through a headless gate in
@@ -157,7 +157,7 @@ func TestApplyHeadlessApprovalModeDontAskDeniesWithoutPrompting(t *testing.T) {
 }
 
 func TestApplyHeadlessApprovalModeAllowsOnlyLowRiskProjectMemoryCreate(t *testing.T) {
-	safeArgs := `{"name":"release-target","description":"Project release target","type":"reference","scope":"project","body":"Release from main-v2."}`
+	safeArgs := `{"name":"release-target","description":"Project release target","type":"reference","scope":"project","body":"Release from main."}`
 	for _, tc := range []struct {
 		name       string
 		args       string
@@ -166,7 +166,7 @@ func TestApplyHeadlessApprovalModeAllowsOnlyLowRiskProjectMemoryCreate(t *testin
 	}{
 		{name: "safe project create", args: safeArgs, policy: permission.New("ask", nil, nil, nil), wantMemory: true},
 		{name: "explicit deny wins", args: safeArgs, policy: permission.New("ask", nil, nil, []string{"remember"})},
-		{name: "global create", args: `{"name":"release-target","description":"Release target","type":"reference","scope":"global","body":"Release from main-v2."}`, policy: permission.New("ask", nil, nil, nil)},
+		{name: "global create", args: `{"name":"release-target","description":"Release target","type":"reference","scope":"global","body":"Release from main."}`, policy: permission.New("ask", nil, nil, nil)},
 		{name: "user preference", args: `{"name":"preferred-editor","description":"Preferred editor","type":"user","scope":"project","body":"Use Vim."}`, policy: permission.New("ask", nil, nil, nil)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

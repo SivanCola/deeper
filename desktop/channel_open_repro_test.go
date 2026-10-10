@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 // TestOpenChannelSessionGlobalBotAcrossDirs 回归：bot/channel 会话可能位于

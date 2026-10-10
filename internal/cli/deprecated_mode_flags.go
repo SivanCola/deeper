@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/agentpreset"
+	"deeper/internal/agentpreset"
 )
 
 var deprecatedModeNoticeOnce sync.Once

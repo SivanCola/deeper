@@ -8,7 +8,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestCompactionPartialCommitThenBudgetFailure(t *testing.T) {

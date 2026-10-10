@@ -9,7 +9,7 @@ const COPY = {
   en: {
     missing: "This model connection needs an API key.",
     rejected: "The provider rejected this connection's credential.",
-    unavailable: "Reasonix could not read the credential store.",
+    unavailable: "Deeper could not read the credential store.",
     configure: "Configure credential",
     retry: "Retry once",
     authorized: "One authentication retry is ready. Send your message when ready.",
@@ -17,7 +17,7 @@ const COPY = {
   zh: {
     missing: "当前模型连接需要 API Key。",
     rejected: "Provider 拒绝了当前连接的凭据。",
-    unavailable: "Reasonix 无法读取凭据存储。",
+    unavailable: "Deeper 无法读取凭据存储。",
     configure: "配置凭据",
     retry: "重试一次",
     authorized: "已允许一次认证重试，可以重新发送消息。",
@@ -25,7 +25,7 @@ const COPY = {
   "zh-TW": {
     missing: "目前模型連線需要 API Key。",
     rejected: "Provider 拒絕了目前連線的憑據。",
-    unavailable: "Reasonix 無法讀取憑據儲存。",
+    unavailable: "Deeper 無法讀取憑據儲存。",
     configure: "設定憑據",
     retry: "重試一次",
     authorized: "已允許一次認證重試，可以重新傳送訊息。",

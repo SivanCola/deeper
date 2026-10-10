@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/transcript"
+	"deeper/internal/transcript"
 )
 
 func TestWriteSessionMarkdownStreamsCompleteRecords(t *testing.T) {

@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
-// TestRealOpenCodeGoDeepSeekResponsesWebSearch exercises Reasonix's stateless
+// TestRealOpenCodeGoDeepSeekResponsesWebSearch exercises Deeper's stateless
 // Responses request, server-side web search, and replay-item capture against the
 // OpenCode Go DeepSeek Flash route.
 func TestRealOpenCodeGoDeepSeekResponsesWebSearch(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func TestACPBeginRefusesWhileStateChangeIsInFlight(t *testing.T) {

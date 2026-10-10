@@ -1,6 +1,6 @@
 package control
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 type interruptedTailEvidence struct {
 	turnID string

@@ -151,7 +151,7 @@ export function buildHostCallTable(deps: HostCallDeps): HostCallTable {
       openTooltip: str(params, "openTooltip"),
       quitTitle: str(params, "quitTitle", "Quit"),
       quitTooltip: str(params, "quitTooltip"),
-      tooltip: str(params, "tooltip", "Reasonix"),
+      tooltip: str(params, "tooltip", "Deeper"),
     }),
     "host/tray.destroy": done(() => deps.tray.destroy()),
     ...(deps.browser ?? {}),

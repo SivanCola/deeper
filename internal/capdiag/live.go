@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
 )
 
 func lookPath(cmd string) (string, error) {
@@ -19,8 +19,8 @@ func lookPath(cmd string) (string, error) {
 // probeLiveMCP starts automatic-intent servers in an isolated Host, records
 // connection results, and always closes the Host (including stdio children).
 // Persistence (startup stats / schema cache) is disabled so --live stays
-// free of cache/state side effects under Reasonix home.
-func probeLiveMCP(rep *MCPReport, cfg *config.Config, root, home, reasonixHome string, timeout time.Duration) []Issue {
+// free of cache/state side effects under Deeper home.
+func probeLiveMCP(rep *MCPReport, cfg *config.Config, root, home, deeperHome string, timeout time.Duration) []Issue {
 	var issues []Issue
 	if cfg == nil {
 		return issues
@@ -37,7 +37,7 @@ func probeLiveMCP(rep *MCPReport, cfg *config.Config, root, home, reasonixHome s
 
 	// Only probe servers that would start on their own; a project-declared one
 	// the user has not enabled must not start here either.
-	enabled := enabledMCPNames(cfg, root, reasonixHome)
+	enabled := enabledMCPNames(cfg, root, deeperHome)
 	var auto []config.PluginEntry
 	for _, p := range cfg.Plugins {
 		if enabled[p.Name] {
@@ -102,13 +102,13 @@ func probeLiveMCP(rep *MCPReport, cfg *config.Config, root, home, reasonixHome s
 		}
 	}
 	for _, f := range host.Failures() {
-		errText := sanitizeErrTextWithPaths(f.Error, root, home, reasonixHome)
+		errText := sanitizeErrTextWithPaths(f.Error, root, home, deeperHome)
 		if i, ok := byName[f.Name]; ok {
 			rep.Servers[i].RuntimeStatus = "failed"
 			rep.Servers[i].Error = errText
 			rep.Servers[i].StartupStage = f.Stage
 			rep.Servers[i].StartupElapsedMS = f.Elapsed.Milliseconds()
-			rep.Servers[i].Stderr = sanitizeErrTextWithPaths(f.Stderr, root, home, reasonixHome)
+			rep.Servers[i].Stderr = sanitizeErrTextWithPaths(f.Stderr, root, home, deeperHome)
 		}
 		issues = append(issues, Issue{
 			Severity: "error", Code: "mcp.start_failed", Subsystem: "mcp",
@@ -159,11 +159,11 @@ Host is always closed after the probe.`)
 }
 
 // enabledMCPNames resolves which servers start on their own, reading the
-// activation store under reasonixHome.
-func enabledMCPNames(cfg *config.Config, root, reasonixHome string) map[string]bool {
+// activation store under deeperHome.
+func enabledMCPNames(cfg *config.Config, root, deeperHome string) map[string]bool {
 	store := config.DefaultMCPActivationStore()
-	if strings.TrimSpace(reasonixHome) != "" {
-		store = config.NewMCPActivationStore(reasonixHome)
+	if strings.TrimSpace(deeperHome) != "" {
+		store = config.NewMCPActivationStore(deeperHome)
 	}
 	out := map[string]bool{}
 	for _, p := range cfg.EnabledPlugins(root, store) {

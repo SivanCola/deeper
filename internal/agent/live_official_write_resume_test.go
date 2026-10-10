@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 // A real model prepares the built-in write. We checkpoint its actual intent,

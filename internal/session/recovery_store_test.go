@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"deeper/internal/provider"
 	bolt "go.etcd.io/bbolt"
-	"reasonix/internal/provider"
 )
 
 func TestRecoveryCheckpointRestoresTailAndIdempotencyWithoutPrefixReplay(t *testing.T) {

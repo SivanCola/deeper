@@ -3,7 +3,7 @@ package responses
 import (
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // resolveEndpoints returns the trimmed base URL and the URL requests POST to.

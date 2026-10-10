@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestReconcilePublishesOnlyCompletedDirectorySnapshot(t *testing.T) {

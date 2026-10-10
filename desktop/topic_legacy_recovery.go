@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func sessionOrderInfoIsHiddenRecovery(info agent.SessionOrderInfo, parentDir string) bool {

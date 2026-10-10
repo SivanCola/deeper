@@ -1,12 +1,12 @@
 # 统一会话 v4 落地实施报告
 
 日期：2026-09-14  
-基线：`main-v2` 的 `744c2e94ec77b577fbe3f1c93c769b1c3388bd21`
+基线：`main` 的 `744c2e94ec77b577fbe3f1c93c769b1c3388bd21`
 
 ## 已交付能力
 
 - `internal/session` 是唯一生产会话服务。新建和继续写入统一使用
-  `reasonix.session.linear/v4` 与 `storageRevision: 1`；旧 checkpoint、DAG、
+  `deeper.session.linear/v4` 与 `storageRevision: 1`；旧 checkpoint、DAG、
   preview、线性 v3/v3.1 和未发布 v4 草稿只作为迁移输入。
 - 大字段在事件接受前发布到 SHA-256 内容存储。内容支持流式写入、范围读取、
   分块校验、同授权域去重，并随导出归档形成完整引用闭包。

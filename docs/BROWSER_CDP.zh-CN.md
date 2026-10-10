@@ -3,7 +3,7 @@
 [English](BROWSER_CDP.md)
 
 [桌面浏览器](DESKTOP_BROWSER.zh-CN.md)由 Electron 外壳提供，用户和 agent 共用同一个
-Chromium 界面。CLI、`reasonix serve` 和 headless 会话背后没有外壳，于是同一批
+Chromium 界面。CLI、`deeper serve` 和 headless 会话背后没有外壳，于是同一批
 `browser_*` 工具注册之后无人应答，只能失败关闭。
 
 这个后端是宿主中立的 `browser.Executor` 的第三个实现（前两个是 Electron 外壳和
@@ -17,7 +17,7 @@ SSH broker）：它通过 DevTools 协议驱动一个外部 Chrome。工具、�
 enabled = true
 ```
 
-普通路径到此为止。第一次调用浏览器工具时，Reasonix 才会用一次性 profile 启动一个
+普通路径到此为止。第一次调用浏览器工具时，Deeper 才会用一次性 profile 启动一个
 自己持有的 Chrome，并随会话一起结束。会话启动时不做任何事：没碰过浏览器的会话不为
 浏览器付出任何代价。
 
@@ -38,7 +38,7 @@ endpoint = "http://127.0.0.1:9222"
 | `enabled` | 默认关闭。打开后工具才会拿到真实浏览器。 |
 | `endpoint` | 运行中 Chrome 的 DevTools 端点。留空则自行启动一个。 |
 | `allow_remote_endpoint` | 允许非 loopback 端点，默认关闭。 |
-| `chrome_path` | 浏览器可执行文件。留空则按常见位置查找 Chrome、Chromium 和 Edge，再读 `REASONIX_CHROME` 与 `CHROME_PATH`。 |
+| `chrome_path` | 浏览器可执行文件。留空则按常见位置查找 Chrome、Chromium 和 Edge，再读 `DEEPER_CHROME` 与 `CHROME_PATH`。 |
 | `chrome_args` | 额外启动参数，例如代理。 |
 | `user_data_dir` | 自行启动时使用的 profile。留空使用一次性目录，登录态不会比会话活得更久。 |
 | `headless` | 无窗口启动。 |
@@ -107,7 +107,7 @@ go test ./internal/browser/... ./internal/boot/
 接管监听——只有对着真实浏览器才算真正被执行过：
 
 ```bash
-REASONIX_LIVE_CHROME=1 go test ./internal/browser/cdp -run '^TestLiveChrome$' -v -count=1
+DEEPER_LIVE_CHROME=1 go test ./internal/browser/cdp -run '^TestLiveChrome$' -v -count=1
 ```
 
 该测试需要本机安装 Chrome，否则保持跳过。

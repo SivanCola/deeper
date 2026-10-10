@@ -61,7 +61,7 @@ func (c *Config) ProviderEditPath(root, name string) (string, error) {
 		return "", fmt.Errorf("unknown provider %q", name)
 	}
 	if c.providerSources[providerMergeKey(*entry)] == providerSourceProject {
-		return filepath.Join(root, "reasonix.toml"), nil
+		return filepath.Join(root, "deeper.toml"), nil
 	}
 	return UserConfigPath(), nil
 }

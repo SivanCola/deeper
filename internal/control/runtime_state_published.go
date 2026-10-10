@@ -1,6 +1,6 @@
 package control
 
-import "reasonix/internal/event"
+import "deeper/internal/event"
 
 // PublishedRuntimeStateReader is the observation boundary for UI projections.
 // It never refreshes owners or waits for a controller, session, or tool lock.

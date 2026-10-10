@@ -1,4 +1,4 @@
-// Command starterextension is the smallest installable Reasonix code
+// Command starterextension is the smallest installable Deeper code
 // extension. It rewrites inputs beginning with "starter: " so developers can
 // verify the complete manifest -> sidecar -> intercept path before adding more
 // capabilities.
@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	extension "github.com/esengine/DeepSeek-Reasonix/sdk/go"
+	extension "github.com/SivanCola/deeper/sdk/go"
 )
 
 const inputPrefix = "starter: "

@@ -1,12 +1,12 @@
 package main
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 	"os"
 	"path/filepath"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
 	"strings"
 	"testing"
 	"time"

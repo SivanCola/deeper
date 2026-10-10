@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 func TestBindChildWriteRootsSnapshotsParentGrants(t *testing.T) {

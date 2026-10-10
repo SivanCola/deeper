@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 // newSingleProgram digests a single program path with the binary's content, so

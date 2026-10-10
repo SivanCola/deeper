@@ -1,8 +1,8 @@
 package acp
 
-// ReasonixExtensionCapabilities advertises Reasonix-specific ACP extensions.
+// DeeperExtensionCapabilities advertises Deeper-specific ACP extensions.
 // ACP v1 reserves agentCapabilities._meta for vendor capability discovery.
-type ReasonixExtensionCapabilities struct {
+type DeeperExtensionCapabilities struct {
 	// MCPInteraction advertises the opt-in reverse request for MCP elicitation.
 	MCPInteraction *MCPInteractionCapability `json:"mcpInteraction,omitempty"`
 	SessionSteer   *SessionSteerCapability   `json:"sessionSteer,omitempty"`

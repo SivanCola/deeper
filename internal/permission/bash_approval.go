@@ -3,7 +3,7 @@ package permission
 import (
 	"strings"
 
-	"reasonix/internal/shellparse"
+	"deeper/internal/shellparse"
 )
 
 type bashApprovalClass uint8

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/internal/config"
+	"deeper/desktop/internal/draftstate"
+	"deeper/internal/config"
 )
 
 func writeDraftDefaultModelConfig(t *testing.T, model string) {

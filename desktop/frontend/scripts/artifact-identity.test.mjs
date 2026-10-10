@@ -8,7 +8,7 @@ import test from "node:test";
 import { buildInputIdentity, createFrontendArtifact, frontendProducerAttempt, verifyFrontendArtifact } from "./artifact-identity.mjs";
 
 function fixture(t) {
-  const root = mkdtempSync(path.join(os.tmpdir(), "reasonix-frontend-artifact-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "deeper-frontend-artifact-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   for (const dir of ["desktop/frontend/src", "desktop/frontend/dist"]) mkdirSync(path.join(root, dir), { recursive: true });
   for (const [name, value] of [["desktop/package.json", "{}"], ["desktop/pnpm-lock.yaml", "lock"],
@@ -66,7 +66,7 @@ test("consumer retries verify the producer attempt while rebuilt producers advan
   // A consumer may be on run attempt 2 while its successful producer remains
   // on attempt 1. Verification must use the producer output, not consumer state.
   const consumerAttempt = "2";
-  const env = { GITHUB_RUN_ATTEMPT: consumerAttempt, REASONIX_FRONTEND_PRODUCER_ATTEMPT: "1" };
+  const env = { GITHUB_RUN_ATTEMPT: consumerAttempt, DEEPER_FRONTEND_PRODUCER_ATTEMPT: "1" };
   assert.equal(verifyFrontendArtifact({ ...options, attempt: frontendProducerAttempt(env) }).workflow.attempt, "1");
   assert.throws(() => verifyFrontendArtifact({ ...options, attempt: frontendProducerAttempt({ GITHUB_RUN_ATTEMPT: consumerAttempt }) }), /attempt mismatch/);
   assert.equal(frontendProducerAttempt({}), undefined);

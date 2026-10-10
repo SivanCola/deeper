@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func dingtalkConfigFromView(view DingtalkBotView, current config.DingtalkBotConfig) config.DingtalkBotConfig {

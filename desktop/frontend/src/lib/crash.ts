@@ -132,7 +132,7 @@ function cancelCapture(requestId = activeCaptureId): void {
   void desktopHost().native.cancelRendererProfile?.(requestId).catch(() => {});
 }
 
-const PERF_REPORTED_STORAGE_KEY = "reasonix:perf-reported";
+const PERF_REPORTED_STORAGE_KEY = "deeper:perf-reported";
 
 // Idempotent per pressure label: once a category is reported (persisted per build) or
 // dismissed (session only), stop re-surfacing it so a steady slowdown can't spam prompts.
@@ -250,7 +250,7 @@ function formatText(label: string, normalized: NormalizedError, extra?: string):
   const detail = normalized.stack || normalized.errorMessage;
   const crumbs = dumpBreadcrumbs();
   const buildCommit = currentBuildCommit();
-  const transcriptText = (globalThis as { __reasonixTranscriptDiagnostics?: string }).__reasonixTranscriptDiagnostics ?? "";
+  const transcriptText = (globalThis as { __deeperTranscriptDiagnostics?: string }).__deeperTranscriptDiagnostics ?? "";
   return [`[${label}]`, detail, extra?.trim(), transcriptText && `--- transcript failures ---\n${transcriptText}`,
     crumbs && `--- breadcrumbs ---\n${crumbs}`, `occurred ${new Date().toISOString()}`, `build ${buildCommit}`]
     .filter(Boolean).join("\n\n");

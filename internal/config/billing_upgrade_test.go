@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/provider"
 )
 
 // A config still holding the August Flash anchor must be quoted at the

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestOpenSessionUsesRecentBaselineWithoutQueryIndexes(t *testing.T) {

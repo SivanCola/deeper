@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // Names lists the tool names in the order Tools returns them.

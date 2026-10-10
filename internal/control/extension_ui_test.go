@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/uihub"
+	"deeper/internal/event"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/uihub"
 )
 
 // fakeExtensionClient is the uihub.ActionClient double for the controller

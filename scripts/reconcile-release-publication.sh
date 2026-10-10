@@ -10,10 +10,10 @@ output="${RELEASE_LEDGER_OUTPUT:?}"
 [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 2
 [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 2
 [[ "$operation" =~ ^(publish|recover)$ ]] || exit 2
-test "$repository" = esengine/DeepSeek-Reasonix || exit 2
+test "$repository" = SivanCola/deeper || exit 2
 if [ "${GITHUB_ACTIONS:-}" = true ]; then
 	test "$GITHUB_REPOSITORY" = "$repository"
-	test "$GITHUB_REF" = refs/heads/main-v2
+	test "$GITHUB_REF" = refs/heads/main
 	test "$GITHUB_REF_PROTECTED" = true
 fi
 work="$(mktemp -d)"

@@ -3,7 +3,7 @@ package event
 import "testing"
 
 // These values are the persisted event contract before ToolStarted was added
-// (origin/main-v2). New events must not reinterpret existing lifecycle records.
+// (origin/main). New events must not reinterpret existing lifecycle records.
 func TestToolStartedPreservesPersistedKindValues(t *testing.T) {
 	legacy := []struct {
 		name  string

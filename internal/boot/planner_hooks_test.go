@@ -10,9 +10,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/hook"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/hook"
+	"deeper/internal/provider"
 )
 
 const plannerHookProbeKind = "boot-planner-hook-probe"
@@ -55,7 +55,7 @@ func TestBuildRunsPreToolUseInsidePlanner(t *testing.T) {
 		plannerHookProbeCurrent = nil
 		plannerHookProbeMu.Unlock()
 	})
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "executor"
 
 [agent]
@@ -88,7 +88,7 @@ model = "planner-model"
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, dir, ".reasonix/settings.json", string(settings))
+	writeFile(t, dir, ".deeper/settings.json", string(settings))
 	if err := hook.ApproveProjectHooks(hook.LoadOptions{ProjectRoot: dir}); err != nil {
 		t.Fatal(err)
 	}

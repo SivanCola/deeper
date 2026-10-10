@@ -2,12 +2,12 @@
 
 ## Supported Versions
 
-Reasonix security fixes are prioritized for the currently developed Go rewrite
+Deeper security fixes are prioritized for the currently developed Go rewrite
 and the current 1.x release line.
 
 | Version or branch | Security support |
 | --- | --- |
-| `main-v2` / 1.x releases | Supported |
+| `main` / 1.x releases | Supported |
 | `v1` / 0.x legacy branch | Critical fixes only, where practical |
 | Older releases, forks, or modified builds | Not covered unless the issue is reproducible upstream |
 
@@ -28,7 +28,7 @@ Preferred reporting path:
 
 Please include:
 
-- Affected Reasonix version, commit, operating system, and installation method.
+- Affected Deeper version, commit, operating system, and installation method.
 - The feature or surface involved, such as CLI, desktop app, HTTP `serve`, bot
   gateway, MCP plugin, built-in tool, updater, or configuration loading.
 - Clear reproduction steps using dummy credentials and non-sensitive files.
@@ -42,7 +42,7 @@ workspace files, or third-party user data.
 
 ## Security Boundaries
 
-Reasonix is a local coding agent. Many features intentionally operate on the
+Deeper is a local coding agent. Many features intentionally operate on the
 user's local machine and workspace, including file reads, file writes, shell
 commands, MCP plugins, language servers, bot sessions, and model-provider
 requests. A finding is security-relevant when it crosses a supported boundary or
@@ -67,7 +67,7 @@ The following are normally treated as trusted local/operator-controlled inputs
 unless another bug lets an untrusted actor supply them:
 
 - CLI arguments and text typed directly by the local user.
-- The user's own configuration under the Reasonix home directory.
+- The user's own configuration under the Deeper home directory.
 - Explicit `@path` references supplied by the local user to attach local files.
 - MCP servers, language servers, hooks, and slash commands installed, enabled,
   or approved by the local user.
@@ -91,8 +91,8 @@ when they bypass the intended boundary:
 
 ## Project Configuration
 
-Files that arrive with a workspace are untrusted input: `reasonix.toml`,
-`.reasonix/settings.json`, `.mcp.json` and the project `.env`. Cloning a
+Files that arrive with a workspace are untrusted input: `deeper.toml`,
+`.deeper/settings.json`, `.mcp.json` and the project `.env`. Cloning a
 repository is not a decision to trust its author, so these files may narrow
 what the user configured and never widen it.
 
@@ -109,15 +109,15 @@ what the user configured and never widen it.
 | `[[providers]]` | Declare them; they stay out of use until approved, and model settings naming them fall back to the user's |
 
 An "always allow" answer, or extra write access, granted in a workspace is
-stored under the Reasonix home, not in the workspace.
+stored under the Deeper home, not in the workspace.
 
 Programs a workspace names for the host to run stay off until the user
 approves them for that workspace:
 
 - Hooks, language server commands, `tools.search.rg_path`,
   `tools.shell.path` and `[browser]` launch settings are approved with
-  `reasonix trust`, or for hooks from the desktop hooks settings.
-- An approval is stored under the Reasonix home with a digest of the
+  `deeper trust`, or for hooks from the desktop hooks settings.
+- An approval is stored under the Deeper home with a digest of the
   declaration and of the workspace files it names; any change needs approval
   again. Approvals and grants belong to one workspace folder.
 - Hooks and language servers are checked against their approval again before
@@ -138,7 +138,7 @@ user's approval is a security issue.
 
 ## `@` File References
 
-Reasonix supports `@path` references so users can include local files and images
+Deeper supports `@path` references so users can include local files and images
 in a prompt. This is intentional local functionality, but implementations must
 preserve these invariants:
 
@@ -160,7 +160,7 @@ inside the configured workspace or be clearly limited to trusted local CLI use.
 The following reports are usually out of scope unless they demonstrate a bypass
 of one of the boundaries above:
 
-- A local user intentionally asks Reasonix to read, edit, or send their own
+- A local user intentionally asks Deeper to read, edit, or send their own
   files to a configured model provider.
 - A local user installs or enables a malicious MCP server, hook, slash command,
   language server, or shell command and then grants it permission.
@@ -169,9 +169,9 @@ of one of the boundaries above:
 - Denial-of-service issues that only affect the local user's own session and do
   not corrupt files, leak secrets, or bypass permissions.
 - Issues requiring administrator/root access on the user's machine before
-  interacting with Reasonix.
+  interacting with Deeper.
 - Vulnerabilities in third-party services, models, proxies, or plugins that are
-  not caused by Reasonix behavior.
+  not caused by Deeper behavior.
 
 ## Coordinated Disclosure
 

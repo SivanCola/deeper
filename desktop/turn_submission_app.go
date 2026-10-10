@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/session"
 	"errors"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
 	"strings"
 )
 

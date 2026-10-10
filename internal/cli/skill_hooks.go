@@ -9,9 +9,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/skill"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/skill"
 )
 
 func (m *chatTUI) runSkillSubcommand(input string) {
@@ -63,7 +63,7 @@ func (m *chatTUI) skillList() {
 		skills = managementSlashSkills(m.ctrl)
 	}
 	if len(skills) == 0 {
-		m.notice("no skills found. Add SKILL.md / <name>.md under .reasonix/skills (project) or ~/.reasonix/skills (global); .agents/.agent/.claude skills dirs also work. Invoke with /<name> or run_skill.")
+		m.notice("no skills found. Add SKILL.md / <name>.md under .deeper/skills (project) or ~/.deeper/skills (global); .agents/.agent/.claude skills dirs also work. Invoke with /<name> or run_skill.")
 		return
 	}
 	m.commitLine(renderSkillList(m.width, sortedSkills(skills), m.disabledSkillNames()))

@@ -91,7 +91,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 	}
 	for _, want := range []string{
 		`uses: ./release-control/.github/actions/setup-certum`,
-		`github.repository == 'esengine/DeepSeek-Reasonix'`,
+		`github.repository == 'SivanCola/deeper'`,
 		`Certum credentials are required for public Windows releases`,
 		`SIGNPATH_RELEASE_SIGNING_ATTESTATION does not match the current protected signing contract`,
 		`(needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.preflight_artifact_prefix != '' && inputs.orchestrated && inputs.signing_preflight_verified))`,
@@ -113,7 +113,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`go run ./cmd/sign windows-payload`,
 		`go run ./cmd/sign sign`,
 		`go run ./cmd/sign verify`,
-		`REASONIX_REQUIRE_PAYLOAD_MANIFEST=1`,
+		`DEEPER_REQUIRE_PAYLOAD_MANIFEST=1`,
 		`sign-certum.ps1" -FilePath "$installer"`,
 		`verify-windows-authenticode.ps1`,
 		`-ExpectedThumbprint "$CERTUM_KEY_ID"`,
@@ -161,8 +161,8 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`rm -f -- "$INSTALLER_DIR/$PAYLOAD_MANIFEST" "$INSTALLER_DIR/$PAYLOAD_SIGNATURE"`,
 		`cp "$PAYLOAD/$PAYLOAD_MANIFEST" "$INSTALLER_DIR/$PAYLOAD_MANIFEST"`,
 		`cp "$PAYLOAD/$PAYLOAD_SIGNATURE" "$INSTALLER_DIR/$PAYLOAD_SIGNATURE"`,
-		`REASONIX_REQUIRE_PAYLOAD_MANIFEST`,
-		`"-DARG_REASONIX_SIGNED_UNINSTALLER=${uninstaller_path}"`,
+		`DEEPER_REQUIRE_PAYLOAD_MANIFEST`,
+		`"-DARG_DEEPER_SIGNED_UNINSTALLER=${uninstaller_path}"`,
 		`cp "$PAYLOAD/$LAUNCHERNAME.exe" "$portable_staging/$APPNAME.exe"`,
 		`cp -R "$PAYLOAD/app" "$portable_staging/versions/$version_label/app"`,
 		`"$ROOT/scripts/verify-windows-portable.sh" "$portable_staging"`,
@@ -181,8 +181,8 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		"Expand-Archive",
 		`Get-ChildItem -LiteralPath $extractRoot -Recurse -File`,
 		`$activeDir.Replace("\", "/") -ne "versions/$activeVersion"`,
-		`Portable = (Join-Path $activeDir "reasonix-desktop.exe")`,
-		`Portable = "Reasonix.exe"; Payload = "reasonix-launcher.exe"`,
+		`Portable = (Join-Path $activeDir "deeper-desktop.exe")`,
+		`Portable = "Deeper.exe"; Payload = "deeper-launcher.exe"`,
 		`Compare-Object $expectedPE $actualPE`,
 		`[ValidateSet("canonical", "legacy-dual")]`,
 		"Get-FileHash -Algorithm SHA256",
@@ -244,12 +244,12 @@ func TestWindowsPackagerRejectsMissingOrPartialRequiredPayloadManifest(t *testin
 		t.Run(tc.name, func(t *testing.T) {
 			payload := t.TempDir()
 			for _, name := range []string{
-				"reasonix-desktop.exe",
-				"reasonix-guard.exe",
-				"reasonix-launcher.exe",
-				"reasonix-update-helper.exe",
-				"reasonix-cli.exe",
-				"reasonix-uninstall.exe",
+				"deeper-desktop.exe",
+				"deeper-guard.exe",
+				"deeper-launcher.exe",
+				"deeper-update-helper.exe",
+				"deeper-cli.exe",
+				"deeper-uninstall.exe",
 			} {
 				if err := os.WriteFile(filepath.Join(payload, name), []byte(name), 0o600); err != nil {
 					t.Fatal(err)
@@ -260,25 +260,25 @@ func TestWindowsPackagerRejectsMissingOrPartialRequiredPayloadManifest(t *testin
 			if err := os.MkdirAll(filepath.Join(payload, "app"), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(payload, "app", "Reasonix.exe"), []byte("shell"), 0o600); err != nil {
+			if err := os.WriteFile(filepath.Join(payload, "app", "Deeper.exe"), []byte("shell"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			signingList := "app/Reasonix.exe\nreasonix-cli.exe\nreasonix-desktop.exe\nreasonix-guard.exe\nreasonix-launcher.exe\nreasonix-uninstall.exe\nreasonix-update-helper.exe\n"
+			signingList := "app/Deeper.exe\ndeeper-cli.exe\ndeeper-desktop.exe\ndeeper-guard.exe\ndeeper-launcher.exe\ndeeper-uninstall.exe\ndeeper-update-helper.exe\n"
 			if err := os.WriteFile(filepath.Join(payload, "signing-files.txt"), []byte(signingList), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			if tc.manifest {
-				if err := os.WriteFile(filepath.Join(payload, "reasonix-payload.json"), []byte("{}"), 0o600); err != nil {
+				if err := os.WriteFile(filepath.Join(payload, "deeper-payload.json"), []byte("{}"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
 			if tc.signature {
-				if err := os.WriteFile(filepath.Join(payload, "reasonix-payload.json.minisig"), []byte("sig"), 0o600); err != nil {
+				if err := os.WriteFile(filepath.Join(payload, "deeper-payload.json.minisig"), []byte("sig"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
 			cmd := exec.Command("bash", "../scripts/package-windows-desktop.sh", "amd64", payload)
-			cmd.Env = append(os.Environ(), "REASONIX_REQUIRE_PAYLOAD_MANIFEST=1")
+			cmd.Env = append(os.Environ(), "DEEPER_REQUIRE_PAYLOAD_MANIFEST=1")
 			output, err := cmd.CombinedOutput()
 			if err == nil || !strings.Contains(string(output), tc.want) {
 				t.Fatalf("packager error = %v, output = %q, want %q", err, output, tc.want)
@@ -297,7 +297,7 @@ func TestProductionSigningRunsOnlyFromProtectedControlPlane(t *testing.T) {
 		t.Fatal("production workflows must not run directly with a tag-shaped SignPath origin")
 	}
 	if strings.Contains(candidate, "\n    tags:") || strings.Contains(candidate, "\n  pull_request") ||
-		!strings.Contains(candidate, "\n  push:\n    branches: [main-v2]\n    paths:\n      - release-notes/releases.json") {
+		!strings.Contains(candidate, "\n  push:\n    branches: [main]\n    paths:\n      - release-notes/releases.json") {
 		t.Fatal("automatic preparation must use the protected Notes push, never tags or PR heads")
 	}
 	activation := readTestFile(t, "../scripts/release-candidate-tags.sh")
@@ -331,22 +331,22 @@ func TestProductionSigningRunsOnlyFromProtectedControlPlane(t *testing.T) {
 
 func TestSignPathConfigurationsCoverExactWindowsPayload(t *testing.T) {
 	flatPayload := map[string]bool{
-		"reasonix-desktop.exe":       true,
-		"reasonix-guard.exe":         true,
-		"reasonix-launcher.exe":      true,
-		"reasonix-update-helper.exe": true,
-		"reasonix-cli.exe":           true,
-		"reasonix-uninstall.exe":     true,
+		"deeper-desktop.exe":       true,
+		"deeper-guard.exe":         true,
+		"deeper-launcher.exe":      true,
+		"deeper-update-helper.exe": true,
+		"deeper-cli.exe":           true,
+		"deeper-uninstall.exe":     true,
 	}
 
 	payload := parseSignPathConfiguration(t, "windows-payload.xml")
 	// The signed unit is the flat Go payload plus every PE file in the Electron
-	// app/ tree: Reasonix.exe is explicit, the rest ride the pe-file-set glob.
+	// app/ tree: Deeper.exe is explicit, the rest ride the pe-file-set glob.
 	if len(payload.Zip.Files) != len(flatPayload)+1 {
 		t.Fatalf("windows-payload.xml files = %d, want %d", len(payload.Zip.Files), len(flatPayload)+1)
 	}
 	for _, file := range payload.Zip.Files {
-		if !flatPayload[file.Path] && file.Path != "app/Reasonix.exe" {
+		if !flatPayload[file.Path] && file.Path != "app/Deeper.exe" {
 			t.Errorf("windows-payload.xml contains unexpected path %q", file.Path)
 		}
 		if file.Sign == nil || file.Verify != nil {

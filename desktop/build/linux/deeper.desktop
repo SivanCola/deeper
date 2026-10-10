@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Deeper
+Comment=Deeper desktop — an Electron shell around the Go kernel
+Exec=deeper-launcher
+Icon=deeper-desktop
+Categories=Development;Utility;
+Terminal=false
+StartupWMClass=Deeper

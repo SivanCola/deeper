@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 // SessionCheckpointBoundary identifies a semantic durability barrier. A

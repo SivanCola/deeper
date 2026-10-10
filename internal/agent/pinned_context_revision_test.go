@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func pinnedTestState(t *testing.T, snapshot PinnedContextSnapshot) pinnedContextState {

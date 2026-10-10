@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(editFile{}) }
 
 // editFile replaces an exact string in a file. roots confines the target to the
-// workspace when non-empty (see writeFile); guard rejects Reasonix session-data
+// workspace when non-empty (see writeFile); guard rejects Deeper session-data
 // targets (see SessionDataGuard); workDir, when non-empty, is the directory a
 // relative path resolves against (see resolveIn).
 type editFile struct {

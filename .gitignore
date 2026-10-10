@@ -3,8 +3,8 @@
 /dist/
 /stage/
 /npm/.stage/
-/reasonix
-/reasonix.exe
+/deeper
+/deeper.exe
 /e2ebench
 /e2ebench.exe
 
@@ -30,34 +30,34 @@ mem.prof
 /desktop/desktop
 /desktop/frontend/dist/*
 !/desktop/frontend/dist/.gitkeep
-/desktop/frontend/.reasonix-frontend-artifact.json
+/desktop/frontend/.deeper-frontend-artifact.json
 /desktop/frontend/sourcemaps/
 /desktop/electron/dist/
 
-# Environment / local config (reasonix.example.toml is the shared template)
+# Environment / local config (deeper.example.toml is the shared template)
 .env
 .env.local
 *.local
 **/.firebase-crash-migration-state.json
 **/.firebase-crash-migration-state.json.tmp-*
-/reasonix.toml
+/deeper.toml
 /desktop/.env
-/desktop/reasonix.toml
+/desktop/deeper.toml
 
 # Node / frontend dependencies and caches
 node_modules/
 .pnpm-store/
 .npm/
 
-# Project-local Reasonix state; keep the checked-in review command.
-/.reasonix/*
-!/.reasonix/commands/
-!/.reasonix/commands/review.md
+# Project-local Deeper state; keep the checked-in review command.
+/.deeper/*
+!/.deeper/commands/
+!/.deeper/commands/review.md
 
-# Stray Reasonix state written under a package dir by a test whose RealPath
+# Stray Deeper state written under a package dir by a test whose RealPath
 # resolves to CWD (e.g. remote bootstrap EnsureServe). Never commit these.
-internal/**/.reasonix/
-desktop/**/.reasonix/
+internal/**/.deeper/
+desktop/**/.deeper/
 
 # CodeGraph per-project index (rebuilt locally; never committed)
 .codegraph/
@@ -79,6 +79,6 @@ scripts/official-theme-art/out/
 scripts/official-theme-art/__pycache__/
 site/.generated/
 
-# Committed pointer at REASONIX.md; overrides a global CLAUDE.md ignore rule.
+# Committed pointer at DEEPER.md; overrides a global CLAUDE.md ignore rule.
 !/CLAUDE.md
 desktop/desktop.exe

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // rewind rewinds the session to a checkpoint.

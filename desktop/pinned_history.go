@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 func historyPersistedUserRole(role provider.Role, pinnedRevision bool) provider.Role {
 	if pinnedRevision && role == provider.RoleUser {

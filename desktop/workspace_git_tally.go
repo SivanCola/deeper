@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 const (

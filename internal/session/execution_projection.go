@@ -1,6 +1,6 @@
 package session
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // rejectedToolResult contains only host-recorded identities and state, never
 // tool bodies or model-authored claims about whether a call executed.

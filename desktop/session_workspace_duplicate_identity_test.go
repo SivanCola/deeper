@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
 )
 
 // The repair removes the losing record, while a saved tab can still name it.

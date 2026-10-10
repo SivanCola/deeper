@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 // readIndexIn treats a missing index as empty, but does not hide other read errors.

@@ -11,10 +11,10 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/session"
 )
 
 type RecoveryEntryView struct {

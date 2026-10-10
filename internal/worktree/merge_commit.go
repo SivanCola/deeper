@@ -10,12 +10,12 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 const (
-	mergeCommitterName  = "Reasonix"
-	mergeCommitterEmail = "reasonix@local"
+	mergeCommitterName  = "Deeper"
+	mergeCommitterEmail = "deeper@local"
 )
 
 type sourceMutationFence struct {
@@ -159,7 +159,7 @@ func updateMergeRefs(ctx context.Context, inspection MergeInspection, originalHe
 // run from the source checkout also tries to lock HEAD for its reflog.
 func createDetachedRefTransactionDir(ctx context.Context, sourceRoot gitcmd.Repo) (string, error) {
 	commonDir := sourceRoot.CommonDir
-	transactionDir, err := os.MkdirTemp("", "reasonix-ref-transaction-")
+	transactionDir, err := os.MkdirTemp("", "deeper-ref-transaction-")
 	if err != nil {
 		return "", fmt.Errorf("create detached ref transaction directory: %w", err)
 	}
@@ -174,7 +174,7 @@ func createDetachedRefTransactionDir(ctx context.Context, sourceRoot gitcmd.Repo
 		_ = removeDetachedRefTransactionDir(transactionDir)
 		return "", err
 	}
-	if err := write("HEAD", "ref: refs/reasonix/merge-back-ref-transaction\n"); err != nil {
+	if err := write("HEAD", "ref: refs/deeper/merge-back-ref-transaction\n"); err != nil {
 		_ = removeDetachedRefTransactionDir(transactionDir)
 		return "", err
 	}

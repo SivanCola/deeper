@@ -10,11 +10,11 @@ const root = resolve(import.meta.dirname, "..");
 // The fixture uses production protocol, preload, diagnostic owner and Worker.
 // Mode and paths remain JSON data, never interpolated executable source.
 export async function performanceFixture(monitor = true, { archiveWorker = false, benchmark = false } = {}) {
-  const temp = mkdtempSync(join(tmpdir(), "reasonix-perf-"));
+  const temp = mkdtempSync(join(tmpdir(), "deeper-perf-"));
   let app;
   try {
     mkdirSync(join(temp, "assets"));
-    writeFileSync(join(temp, "index.html"), '<!doctype html><title>Reasonix diagnostic fixture</title><button id="work">Work</button><pre id="output"></pre><script src="/assets/workload.js"></script>');
+    writeFileSync(join(temp, "index.html"), '<!doctype html><title>Deeper diagnostic fixture</title><button id="work">Work</button><pre id="output"></pre><script src="/assets/workload.js"></script>');
     await build({
       bundle: true, platform: "browser", format: "iife", target: "chrome130",
       entryPoints: [join(import.meta.dirname, "fixtures/performance-renderer.ts")],
@@ -39,7 +39,7 @@ export async function performanceFixture(monitor = true, { archiveWorker = false
     await build({ ...common, entryPoints: [join(import.meta.dirname, "fixtures/performance-main.ts")], outfile: join(temp, "main.cjs") });
     app = await _electron.launch({ args: [join(temp, "main.cjs")] });
     const page = await app.firstWindow();
-    await page.waitForFunction(() => Boolean(window.diagnosticFixture && window.reasonixDesktop));
+    await page.waitForFunction(() => Boolean(window.diagnosticFixture && window.deeperDesktop));
     if (!benchmark) await page.bringToFront();
     return { app, page, temp, async close() { await app.close(); rmSync(temp, { recursive: true, force: true }); } };
   } catch (error) {

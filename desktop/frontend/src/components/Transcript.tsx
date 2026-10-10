@@ -295,7 +295,7 @@ function ChatSession(props: TranscriptProps & { sessionKey: string }) {
             }}
             onRetryJump={() => { void jump.retry(); }}
             onCancelJump={() => jump.cancel()} /></Suspense>
-          <div ref={scroller} id={`reasonix-chat-transcript-${tabId ?? "local"}`} className="transcript chat-flow-scroll" tabIndex={0} data-transcript-render-mode="full"
+          <div ref={scroller} id={`deeper-chat-transcript-${tabId ?? "local"}`} className="transcript chat-flow-scroll" tabIndex={0} data-transcript-render-mode="full"
             data-transcript-hydrating={hydrating} data-scroll-mode={position.following ? "tail" : "reader"}>
             <div ref={column} className="chat-column">
               <TranscriptConnection tabId={tabId} />

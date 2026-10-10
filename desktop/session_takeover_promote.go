@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 var takeoverBuildLocalSpectatorCandidateForTest func(*App, *WorkspaceTab, tabRuntimeSnapshot, string, *agent.Session) (*sessionRebindCandidate, error)

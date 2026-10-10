@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 type recordingTitleProvider struct {

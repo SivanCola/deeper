@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/store"
+	"deeper/internal/fileutil"
+	"deeper/internal/store"
 )
 
 func TestEnqueueSnapshotAndRead(t *testing.T) {

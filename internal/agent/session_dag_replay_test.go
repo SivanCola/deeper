@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func dagTestSession(t *testing.T) string {

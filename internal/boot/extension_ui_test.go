@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/extension/protocol"
 )
 
 // uiSinkRecorder collects controller events for the stage-8a boot tests.
@@ -44,7 +44,7 @@ func bootWithFakeUIPlugin(t *testing.T, name string, runtime map[string]any, sin
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.ReasonixHomeDir(), name, runtime)
+	installBootFakePlugin(t, config.DeeperHomeDir(), name, runtime)
 	res, err := BuildRuntime(context.Background(), Options{Sink: sink})
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)

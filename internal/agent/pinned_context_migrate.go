@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/store"
+	"deeper/internal/fileutil"
+	"deeper/internal/store"
 )
 
 func migratePinnedContextSidecar(oldPath, newPath, newID string) error {

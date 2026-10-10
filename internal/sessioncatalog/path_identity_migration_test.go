@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/projectiondb"
+	"deeper/internal/projectiondb"
 )
 
 func TestPathIdentityMigrationsInvalidateLegacyProjectionForAuthoritativeRebuild(t *testing.T) {

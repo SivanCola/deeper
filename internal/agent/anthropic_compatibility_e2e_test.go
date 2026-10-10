@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/anthropic"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/provider/anthropic"
 )
 
 func TestCustomAnthropicCompatibilityToolLoop(t *testing.T) {

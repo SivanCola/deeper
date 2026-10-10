@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // RetryAuthenticationForTab authorizes one explicit request attempt for a

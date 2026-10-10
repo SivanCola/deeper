@@ -1,8 +1,8 @@
 package responses
 
 import (
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
 )
 
 func newFromConfig(cfg provider.Config) (provider.Provider, error) {

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/attachment"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
 )
 
 func TestHistoryMessagesIncludeSessionAttachments(t *testing.T) {

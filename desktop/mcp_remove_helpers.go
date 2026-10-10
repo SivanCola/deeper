@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"reasonix/internal/config"
-	"reasonix/internal/mcpdiag"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/mcpdiag"
+	"deeper/internal/plugin"
 )
 
 func reconcileRemovedMCPAuthentication(name string, roots []string) error {
@@ -27,7 +27,7 @@ func reconcileRemovedMCPAuthentication(name string, roots []string) error {
 			remainingResource = mcpdiag.HTTPMCPOAuthResource(entry.Type, entry.URL, mcpdiag.HasAuthConfig(entry.Headers, entry.Env, entry.URL))
 		}
 		if _, err := plugin.ReconcileHTTPMCPOAuthAfterRemoval(plugin.Spec{
-			Name: name, StateDir: plugin.MCPStateDir(config.ReasonixHomeDir(), root, name),
+			Name: name, StateDir: plugin.MCPStateDir(config.DeeperHomeDir(), root, name),
 		}, remainingResource); err != nil {
 			cleanupErrors = append(cleanupErrors, fmt.Errorf("reconcile OAuth state for %q: %w", name, err))
 		}

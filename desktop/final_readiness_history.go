@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 	"fmt"
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
 	"strings"
 )
 

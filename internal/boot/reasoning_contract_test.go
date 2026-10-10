@@ -1,10 +1,10 @@
 package boot
 
 import (
+	"deeper/internal/config"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
 	"errors"
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
 	"reflect"
 	"testing"
 )

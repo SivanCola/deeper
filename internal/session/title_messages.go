@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
 )
 
 // TitleMessages reads the first authored turns from the durable UI history.

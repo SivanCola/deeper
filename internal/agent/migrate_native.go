@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 // moveFlatImport re-homes a session left in the global directory by a flat

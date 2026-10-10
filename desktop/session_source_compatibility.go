@@ -13,12 +13,12 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/session"
-	"reasonix/internal/topicstate"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	"deeper/internal/session"
+	"deeper/internal/topicstate"
 )
 
 func desktopSourceKey(path, head string) string {

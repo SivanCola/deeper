@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/evidence"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/evidence"
 )
 
 // SchemaVersion identifies the record layout; bump on breaking changes.

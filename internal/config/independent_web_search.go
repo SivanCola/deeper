@@ -1,8 +1,8 @@
 package config
 
 import (
+	"deeper/internal/provider"
 	"fmt"
-	"reasonix/internal/provider"
 	"slices"
 	"strings"
 )

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func loadedGoalDraftMode(goal string) bool {

@@ -9,7 +9,7 @@ import (
 
 func TestShortcutRepairUsesLauncherRootAndExactInstallerPaths(t *testing.T) {
 	root := t.TempDir()
-	paths := []string{filepath.Join(t.TempDir(), "Reasonix.lnk"), filepath.Join(t.TempDir(), "Reasonix.LNK")}
+	paths := []string{filepath.Join(t.TempDir(), "Deeper.lnk"), filepath.Join(t.TempDir(), "Deeper.LNK")}
 	called := false
 	err := repairInstallerShortcuts(paths, func() (string, error) { return root, nil }, func(gotRoot string, gotPaths []string) error {
 		called = true
@@ -25,7 +25,7 @@ func TestShortcutRepairUsesLauncherRootAndExactInstallerPaths(t *testing.T) {
 
 func TestShortcutRepairRejectsInvalidArgumentsBeforeAnyWrite(t *testing.T) {
 	root := t.TempDir()
-	for _, paths := range [][]string{nil, {"relative.lnk"}, {filepath.Join(root, "Reasonix.exe")}, {filepath.Join(root, "good.lnk"), "bad.lnk"}} {
+	for _, paths := range [][]string{nil, {"relative.lnk"}, {filepath.Join(root, "Deeper.exe")}, {filepath.Join(root, "good.lnk"), "bad.lnk"}} {
 		err := repairInstallerShortcuts(paths, func() (string, error) { return root, nil }, func(string, []string) error {
 			t.Fatal("invalid maintenance arguments reached the repair writer")
 			return nil
@@ -44,7 +44,7 @@ func TestShortcutRepairDoesNotFallThroughToDesktopLaunch(t *testing.T) {
 
 func TestShortcutRepairPropagatesErrors(t *testing.T) {
 	want := errors.New("access denied")
-	path := filepath.Join(t.TempDir(), "Reasonix.lnk")
+	path := filepath.Join(t.TempDir(), "Deeper.lnk")
 	err := repairInstallerShortcuts([]string{path}, func() (string, error) { return "", want }, func(string, []string) error {
 		t.Fatal("root failure reached writer")
 		return nil

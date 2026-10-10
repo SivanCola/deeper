@@ -3,7 +3,7 @@ package control
 import (
 	"strings"
 
-	"reasonix/internal/skill"
+	"deeper/internal/skill"
 )
 
 var managementNoticeCommands = map[string]struct{}{

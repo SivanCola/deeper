@@ -9,10 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/event"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 // waitForGoalTerminal is the CLI/ACP/bot observer. It owns no Activity and

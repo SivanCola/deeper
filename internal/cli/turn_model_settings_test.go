@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 func TestTurnAppliesExternalCredentialSaveBeforeAuthentication(t *testing.T) {

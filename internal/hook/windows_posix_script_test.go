@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/pluginpkg"
 )
 
 func TestWindowsExtensionlessPOSIXPluginHookUsesBash(t *testing.T) {

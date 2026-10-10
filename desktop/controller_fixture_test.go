@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // newFixtureController binds writable session ownership to the test lifetime.

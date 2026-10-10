@@ -1,7 +1,7 @@
 package main
 
 import (
-	"reasonix/internal/config"
+	"deeper/internal/config"
 	"testing"
 )
 

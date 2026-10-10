@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 )
 
 // canonicalResumeScanCap bounds how many final-format catalog rows one resume

@@ -9,8 +9,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 type shutdownSnapshotSpy struct {

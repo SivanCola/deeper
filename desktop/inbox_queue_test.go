@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/serve"
-	"reasonix/internal/servecontract"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/serve"
+	"deeper/internal/servecontract"
+	"deeper/internal/sessioninbox"
 )
 
 func TestRemoteInboxQueueCapabilitiesAndIdentity(t *testing.T) {

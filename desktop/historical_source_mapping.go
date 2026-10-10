@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func historicalSourceKeyMatches(mappingKey, sourceID string) bool {

@@ -27,7 +27,7 @@ func TestDriverOverridesReadRealLinkedWorktreeConfigs(t *testing.T) {
 		t.Fatal(err)
 	}
 	run(main, "add", "tracked.txt")
-	run(main, "-c", "user.name=Reasonix Test", "-c", "user.email=reasonix@example.invalid", "commit", "--quiet", "-m", "initial")
+	run(main, "-c", "user.name=Deeper Test", "-c", "user.email=deeper@example.invalid", "commit", "--quiet", "-m", "initial")
 	run(main, "config", "extensions.worktreeConfig", "true")
 	run(main, "config", "filter.common.process", "malicious-process")
 	run(main, "worktree", "add", "--quiet", "--detach", linked, "HEAD")

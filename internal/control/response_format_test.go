@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 func TestIsNonTurnHTTPInput(t *testing.T) {

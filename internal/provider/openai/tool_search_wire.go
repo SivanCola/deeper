@@ -1,6 +1,6 @@
 package openai
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 func encodeChatTools(req provider.Request, mimo bool) []chatTool {
 	var tools []chatTool

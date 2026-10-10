@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func historicalReconciliationCheckpoint(source historicalSource, migration desktopMigrationSource) (desktopMigrationCheckpoint, error) {
@@ -52,7 +52,7 @@ func openHistoricalReconciliationSource(ctx context.Context, source historicalSo
 	cleanup := func() {}
 	if source.format != "canonical" {
 		var err error
-		root, err = os.MkdirTemp("", "reasonix-history-proof-")
+		root, err = os.MkdirTemp("", "deeper-history-proof-")
 		if err != nil {
 			return nil, session.SessionRef{}, cleanup, err
 		}

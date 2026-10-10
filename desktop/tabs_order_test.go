@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
 	"strings"
 	"sync"
 	"testing"

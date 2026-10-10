@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func compactionPersistenceHistory(tools bool) *agent.Session {

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 func (c *Controller) terminalSessionEvents(e event.Event, projection session.Projection) ([]session.Event, error) {

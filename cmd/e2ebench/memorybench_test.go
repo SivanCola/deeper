@@ -71,10 +71,10 @@ func TestSeedTaskMemoryBuildsIsolatedStateRoot(t *testing.T) {
 		}
 	}
 	env, err := seedTaskMemory(taskDir, work)
-	if err != nil || len(env) != 1 || !strings.HasPrefix(env[0], "REASONIX_STATE_HOME=") {
+	if err != nil || len(env) != 1 || !strings.HasPrefix(env[0], "DEEPER_STATE_HOME=") {
 		t.Fatalf("env = %v err = %v", env, err)
 	}
-	stateHome := strings.TrimPrefix(env[0], "REASONIX_STATE_HOME=")
+	stateHome := strings.TrimPrefix(env[0], "DEEPER_STATE_HOME=")
 	if _, err := os.Stat(filepath.Join(stateHome, "memory", "global", "pref.md")); err != nil {
 		t.Fatalf("global seed missing: %v", err)
 	}

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 func TestRenameSessionResolvesVersionOutsideActiveProject(t *testing.T) {

@@ -1,11 +1,11 @@
-# Reasonix Desktop (Electron shell)
+# Deeper Desktop (Electron shell)
 
 ## macOS 1.38.7 update recovery
 
 Desktop 1.38.7 can report `current executable is not inside a macOS .app bundle`
-before it installs a newer build. Quit Reasonix, mount the Apple Silicon, Intel,
+before it installs a newer build. Quit Deeper, mount the Apple Silicon, Intel,
 or Universal DMG from the official download page, and replace
-`/Applications/Reasonix.app`. The application bundle is replaced; settings,
+`/Applications/Deeper.app`. The application bundle is replaced; settings,
 sessions, and other user data remain in their existing user-data directories.
 After this one-time full install, verify automatic update by updating the repaired
 build to the next candidate. Do not treat the manual replacement itself as an
@@ -13,10 +13,10 @@ automatic-update pass.
 
 Model/provider setup: [English guide](../docs/MODEL_SETTINGS.md) · [中文指南](../docs/MODEL_SETTINGS.zh-CN.md).
 
-A native desktop window around the Reasonix Go kernel. The same
+A native desktop window around the Deeper Go kernel. The same
 transport-agnostic `control.Controller` that backs the chat TUI and the HTTP/SSE
 server is driven by the Electron shell through the desktop host protocol — the
-Go binary runs as a supervised service (`reasonix-desktop --host-rpc` over
+Go binary runs as a supervised service (`deeper-desktop --host-rpc` over
 stdio), the shell owns the window, tray, menu and renderer lifecycle. See
 [the host protocol](../docs/DESKTOP_HOST_PROTOCOL.md) and
 [the migration record](../docs/DESKTOP_SHELL_MIGRATION.md).
@@ -24,7 +24,7 @@ stdio), the shell owns the window, tray, menu and renderer lifecycle. See
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Electron shell (desktop/electron)                           │
-│    renderer: bridge.ts ──invoke──▶ window.reasonixDesktop     │
+│    renderer: bridge.ts ──invoke──▶ window.deeperDesktop     │
 │    bridge.ts ◀─events── host.on("agent:event")                │
 └───────────────▲───────────────────────────┬─────────────────┘
         desktop/invoke (JSON-RPC over stdio) │ desktop/event
@@ -41,11 +41,11 @@ stdio), the shell owns the window, tray, menu and renderer lifecycle. See
 
 ## Why a nested module
 
-`desktop/` is its own Go module (`module reasonix/desktop`, `replace reasonix =>
+`desktop/` is its own Go module (`module deeper/desktop`, `replace deeper =>
 ../`). That keeps the CGO desktop build entirely separate from the CLI's
 `CGO_ENABLED=0` single-static-binary guarantee: the parent module's `go build /
 vet / test ./...` skip this directory, while the import path stays under
-`reasonix/` so it can still import the `reasonix/internal/*` kernel.
+`deeper/` so it can still import the `deeper/internal/*` kernel.
 
 ## Prerequisites
 
@@ -79,7 +79,7 @@ the equivalent manual sequence remains:
 ```sh
 cd desktop
 pnpm install                                   # one workspace: frontend + electron
-go build -o build/bin/reasonix-desktop-service .
+go build -o build/bin/deeper-desktop-service .
 pnpm --dir frontend build:electron             # rewrites drag regions for Chromium
 pnpm --dir electron start                      # launches the shell against the service
 ```
@@ -166,12 +166,11 @@ The Linux artifact bundles Electron's Chromium and ships a root-owned
 git tag desktop-v1.1.0 && git push origin desktop-v1.1.0
 ```
 
-The app checks `latest.json` on startup (R2 first, then the
-`crash.reasonix.io` desktop release gateway) and shows an update banner when a
-newer version is published; **Settings → Software update** has a manual check.
-The gateway resolves only the desktop `desktop-v*` release line and never uses
-GitHub's repository-wide `/releases/latest` shortcut, so updater behavior does
-not depend on homepage badge semantics. Self-update behavior by platform:
+The app checks `latest.json` attached to the latest stable release in
+[SivanCola/deeper](https://github.com/SivanCola/deeper/releases) and shows an
+update banner when a newer version is published; **Settings → Software update**
+has a manual check. Stable promotion attaches the verified Desktop pointer to
+the CLI release before advancing GitHub latest. Self-update behavior by platform:
 
 - **Linux portable (`.tar.gz`)** — download, verify the minisign signature, replace
   the binaries in the install directory, and relaunch through Guard. No elevation.
@@ -180,7 +179,7 @@ not depend on homepage badge semantics. Self-update behavior by platform:
   --only-upgrade`, then relaunch through Guard. The first build that ships the
   update helper and Polkit policy is a one-time bootstrap: existing `.deb` users
   should overwrite-install once with
-  `sudo apt install ./Reasonix-linux-amd64.deb` (no uninstall required). After
+  `sudo apt install ./Deeper-linux-amd64.deb` (no uninstall required). After
   that, in-app authorized updates work. If Polkit/`pkexec` is unavailable, use
   the same manual command. Failed installs leave the running app intact so you
   can retry; successful installs are managed by apt/dpkg and are not auto-downgraded.
@@ -203,20 +202,21 @@ not depend on homepage badge semantics. Self-update behavior by platform:
   quarantine attribute when Gatekeeper reports the app "is damaged" or is from an
   unidentified developer:
   ```sh
-  xattr -dr com.apple.quarantine /Applications/Reasonix.app
+  xattr -dr com.apple.quarantine /Applications/Deeper.app
   ```
   The release workflow's `HAS_APPLE_CERT` gate controls the signed, notarized,
   self-updating path.
 
 ### Verifying a download
 
-Artifacts are signed with minisign (public key ID `AF12CA46F4A9EBB0`). The `.minisig`
+Artifacts are signed with Deeper's own minisign key, configured via
+`MINISIGN_PUBLIC_KEY`; see [release setup](../docs/DEEPER_INDEPENDENCE.md). The `.minisig`
 signature sits next to each artifact in the release; verify with the
 [minisign](https://jedisct1.github.io/minisign/) CLI:
 
 ```sh
-minisign -Vm Reasonix-darwin-arm64.zip \
-  -P RWSw66n0RsoSr6Zhh6qt5YO95YkpCayTOCMFVDNUQSjJYwxoYngNVBSq
+minisign -Vm Deeper-darwin-arm64.zip \
+  -P "$MINISIGN_PUBLIC_KEY"
 ```
 
 ## Editor seams and workspace file previews
@@ -262,7 +262,7 @@ is native-shell behavior, not per-engine rendering quirks:
   root-owned 4755 `chrome-sandbox`, never `--no-sandbox`). Close-to-background is
   enabled only after a DBus health probe confirms a live StatusNotifierWatcher,
   a registered visual host, and this app's registered StatusNotifierItem. If any
-  of them disappears while the main window is hidden, Reasonix presents the
+  of them disappears while the main window is hidden, Deeper presents the
   window again until the tray recovers.
 - **Windows** — the shell follows the OS light/dark setting. Remote Markdown
   images are fetched by the Go backend with the configured proxy and re-served
@@ -271,7 +271,7 @@ is native-shell behavior, not per-engine rendering quirks:
   HTTP(S)-proxy, and SOCKS-proxy connections are pinned to those vetted IPs
   while preserving the original Host and TLS SNI.
 - **macOS** — inset/hidden title bar; the CSS marks the top bar as an OS drag
-  region (the Electron build rewrites `--reasonix-draggable` to
+  region (the Electron build rewrites `--deeper-draggable` to
   `-webkit-app-region`) and leaves room for the traffic lights.
 - **Renderer recovery** — the shell reloads a crashed renderer
   (`render-process-gone`) and reports service state to the UI; a renderer that
@@ -299,7 +299,7 @@ desktop/
       lib/
         types.ts         wire contract (mirrors wire.go)
         bridge.ts        desktop host bridge + browser dev mock
-        desktopHost.ts   the only module touching window.reasonixDesktop
+        desktopHost.ts   the only module touching window.deeperDesktop
         useController.ts event-stream reducer + command surface (the hook)
       components/
         Transcript, Message, ToolCard, Composer, ApprovalModal, ContextGauge,
@@ -309,7 +309,8 @@ desktop/
 
 ## Telemetry
 
-The desktop app sends one anonymous ping per launch to `crash.reasonix.io`:
+The desktop app can send one anonymous ping per launch when the operator sets
+`DEEPER_PING_ENDPOINT`; no collector is configured by default. The ping contains:
 a random anonymous install id (generated locally and not an account id), app
 version, OS, architecture, Windows build/revision or bounded Linux
 distribution/kernel/session facts, and the renderer engine tag. When the

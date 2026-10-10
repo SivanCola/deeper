@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/historywork"
-	"reasonix/internal/provider"
+	"deeper/internal/historywork"
+	"deeper/internal/provider"
 )
 
 // Query is the read model shared by desktop, CLI, Serve, ACP and bots. It uses

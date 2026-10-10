@@ -8,10 +8,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/imageinput"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 type summaryProvider struct {

@@ -38,31 +38,31 @@ func isUserConfigPath(path string) bool {
 	return false
 }
 
-// IsUserConfigPath reports whether path is one of Reasonix's current or legacy
+// IsUserConfigPath reports whether path is one of Deeper's current or legacy
 // user-global config locations. Other paths use project-scoped rendering.
 func IsUserConfigPath(path string) bool {
 	return isUserConfigPath(path)
 }
 
 // Save writes the configuration back to the file it was loaded from
-// (SourcePath), or to ./reasonix.toml when none exists yet — the conventional
+// (SourcePath), or to ./deeper.toml when none exists yet — the conventional
 // project-local target a fresh GUI session would create.
 func (c *Config) Save() error {
 	path := SourcePath()
 	if path == "" {
-		path = "reasonix.toml"
+		path = "deeper.toml"
 	}
 	return c.SaveTo(path)
 }
 
 // SaveForRoot saves root's project config when it exists, falling back to the
-// user's global config when root has no reasonix.toml. Existing project files
+// user's global config when root has no deeper.toml. Existing project files
 // are edited from their own TOML only, never from a runtime user+project merge.
 func (c *Config) SaveForRoot(root string) error {
 	root = resolveRoot(root)
-	projectTOML := "reasonix.toml"
+	projectTOML := "deeper.toml"
 	if root != "." {
-		projectTOML = filepath.Join(root, "reasonix.toml")
+		projectTOML = filepath.Join(root, "deeper.toml")
 	}
 	if _, err := os.Stat(projectTOML); err == nil {
 		projectCfg := LoadForEditWithoutCredentials(projectTOML)

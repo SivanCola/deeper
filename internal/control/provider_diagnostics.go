@@ -3,7 +3,7 @@ package control
 import (
 	"sync"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 type providerDiagnostic struct {

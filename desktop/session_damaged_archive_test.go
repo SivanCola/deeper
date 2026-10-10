@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func reopenLifecycleFixture(t *testing.T, a *App, ref session.SessionRef) (*session.Runtime, func()) {

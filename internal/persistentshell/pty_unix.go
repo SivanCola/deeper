@@ -10,7 +10,7 @@ import (
 
 	"github.com/creack/pty"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 type unixPTY struct {

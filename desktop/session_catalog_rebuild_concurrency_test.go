@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/config"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestConcurrentRebuildSessionCatalogCallersShareFailure(t *testing.T) {

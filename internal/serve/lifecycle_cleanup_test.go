@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 // Close the host rather than its initial controller: resume and model changes

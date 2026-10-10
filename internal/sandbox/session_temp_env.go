@@ -3,7 +3,7 @@ package sandbox
 import "runtime"
 
 // SessionTempEnvKeys are the standard temporary-directory environment variables
-// Reasonix overrides for session-private temporary directories.
+// Deeper overrides for session-private temporary directories.
 var SessionTempEnvKeys = []string{
 	"TMPDIR", "TMP", "TEMP",
 	// Build tools commonly write to host-global caches even when their inputs

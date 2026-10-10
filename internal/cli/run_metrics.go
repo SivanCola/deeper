@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/capability"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/fileutil"
+	"deeper/internal/billing"
+	"deeper/internal/capability"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/fileutil"
 )
 
 // SourceUsage is one Usage origin's share of a run. Steps counts every billed

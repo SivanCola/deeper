@@ -3,7 +3,7 @@ package readcoord
 import (
 	"time"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // Scope identifies the file a read requirement targets.

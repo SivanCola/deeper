@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/usagecatalog"
+	"deeper/internal/usagecatalog"
 )
 
 // DailyTokens is one day's token usage and turn count in a trend series.

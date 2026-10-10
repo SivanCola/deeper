@@ -1,9 +1,9 @@
-// Package remote is the SSH transport for Reasonix's remote module: host
+// Package remote is the SSH transport for Deeper's remote module: host
 // resolution ([remote] config + ~/.ssh/config), authentication, host-key
-// verification (system known_hosts read-only + a Reasonix-managed TOFU file),
+// verification (system known_hosts read-only + a Deeper-managed TOFU file),
 // a supervised connection with keepalive and exponential-backoff reconnect,
 // shared SFTP access, and port-forward lifecycle. The agent itself never runs
-// through this package — remote workspaces are driven by a `reasonix serve`
+// through this package — remote workspaces are driven by a `deeper serve`
 // process bootstrapped on the remote host (internal/remote/bootstrap) and
 // reached through a forwarded loopback port.
 //

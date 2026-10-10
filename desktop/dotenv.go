@@ -1,10 +1,10 @@
 package main
 
 import (
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
-// upsertDotEnv stores KEY=value in Reasonix's global .env and applies it to the
+// upsertDotEnv stores KEY=value in Deeper's global .env and applies it to the
 // running process so a rebuild picks it up without a restart.
 func upsertDotEnv(key, value string) error {
 	_, err := config.SetCredential(key, value)

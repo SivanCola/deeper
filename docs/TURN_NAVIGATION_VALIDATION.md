@@ -15,7 +15,7 @@
 的实际事件回归，验证旧回包不能替换正文或恢复尾部跟随。
 
 本轮前端完整回归、类型检查、Hooks lint、仓库 lint 和生产构建均通过。
-变基到最新 `main-v2` 后，启动原始体积实测 2049.5 KiB，门槛按既有 Linux
+变基到最新 `main` 后，启动原始体积实测 2049.5 KiB，门槛按既有 Linux
 生产者差值校准为 2049.7 KiB；压缩体积和其他预算保持不变。
 
 验证基线：`8ad1f01bdfb6c7a47e115335909654b51eceb82f` 加本工作区未提交改动。
@@ -56,8 +56,8 @@
 | 新目录 Electron 回归 | `node bench/turn-outline.mjs --electron` |
 
 浏览器命令需将 `PLAYWRIGHT_BROWSERS_PATH` 指向本机已安装的 Playwright 浏览器缓存。
-可设置 `REASONIX_OUTLINE_EVIDENCE` 指定 JSON 与截图输出目录，默认位于系统临时目录下
-的 `reasonix-turn-outline-evidence`。
+可设置 `DEEPER_OUTLINE_EVIDENCE` 指定 JSON 与截图输出目录，默认位于系统临时目录下
+的 `deeper-turn-outline-evidence`。
 
 持久化测试覆盖首末页、追加后的固定切面、摘要编辑、撤回后的重新编号与空目录、
 索引查询计划及旧 schema 兼容。远程测试覆盖独立能力协商、规范会话身份、切面参数

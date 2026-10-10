@@ -127,14 +127,14 @@ await act(async () => root.render(<LocaleProvider><HistoricalSessionBanners
 /></LocaleProvider>));
 assert.deepEqual(preparedSelectors, [], "restoring a legacy tab never starts preparation automatically");
 assert.ok(document.body.textContent?.includes("Import this conversation to keep sending messages"), "the banner states why sending waits");
-await act(async () => document.getElementById("reasonix-prepare-restored-session")!.click());
+await act(async () => document.getElementById("deeper-prepare-restored-session")!.click());
 assert.deepEqual(preparedSelectors, [{ source }], "the action prepares the source instead of reopening it in place");
 assert.deepEqual(pendingIntents, [{ kind: "canonical-session", ref: { hostId: "local", sessionId: "imported-source" } }],
   "a prepared source opens as its canonical session");
 const [canonicalTab] = seedActiveTabMetaList([{ ...baseProps.tab, historicalSource: source }], baseProps.tab);
 assert.equal(canonicalTab.historicalSource, undefined, "canonical metadata omission clears the old preparation state");
 await act(async () => root.render(<LocaleProvider><HistoricalSessionBanners {...baseProps} tab={canonicalTab} /></LocaleProvider>));
-assert.equal(document.getElementById("reasonix-prepare-restored-session"), null, "successful activation removes the preparation action");
+assert.equal(document.getElementById("deeper-prepare-restored-session"), null, "successful activation removes the preparation action");
 const failingSourceTab = { ...baseProps.tab, sessionId: undefined, ready: false, historicalSource: source };
 let recoveryOpened = 0;
 const openFailures: unknown[] = [];
@@ -144,7 +144,7 @@ await act(async () => root.render(<LocaleProvider><HistoricalSessionBanners tab=
   navigate={async intent => { openFailures.push(intent); throw new Error("open refused: workspace registry busy"); }}
   openRecoveryDetails={() => { recoveryOpened++; }} /></LocaleProvider>));
 assert.equal(document.body.textContent?.includes("Review recovery details"), false, "recovery details appear only with a failure");
-await act(async () => document.getElementById("reasonix-prepare-restored-session")!.click());
+await act(async () => document.getElementById("deeper-prepare-restored-session")!.click());
 const failureAlert = () => document.querySelector('[role="alert"]');
 assert.ok(failureAlert()?.textContent?.includes("records a different project folder"), "the banner names the failure class the host reported");
 await act(async () => failureAlert()!.querySelector<HTMLButtonElement>(".user-error__toggle")!.click());
@@ -154,7 +154,7 @@ assert.equal(recoveryOpened, 1, "the promised recovery details open");
 assert.deepEqual(openFailures, [], "a failed preparation never navigates");
 preparedSource = { operationId: "prepare-ready", sourceKey: "legacy", status: "ready", revision: 10,
   target: { hostId: "local", sessionId: "imported-source" }, retryable: false };
-await act(async () => document.getElementById("reasonix-prepare-restored-session")!.click());
+await act(async () => document.getElementById("deeper-prepare-restored-session")!.click());
 assert.ok(failureAlert()?.textContent?.includes("Imported, but the conversation could not be opened"), "an open failure is not reported as an import failure");
 await act(async () => failureAlert()!.querySelector<HTMLButtonElement>(".user-error__toggle")!.click());
 assert.ok(failureAlert()?.textContent?.includes("open refused: workspace registry busy"), "the open failure keeps its cause");

@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/installlayout"
-	"reasonix/internal/repair"
+	"deeper/internal/installlayout"
+	"deeper/internal/repair"
 )
 
 const testInstallerSHA256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -84,7 +84,7 @@ func TestStageVerifiedInstallerRejectsSourceHashDrift(t *testing.T) {
 func TestRunRequiresTargetVersionBeforeStartingInstaller(t *testing.T) {
 	stubDesktopHandoff(t)
 	if code := run([]string{
-		"--installer", `C:\Temp\Reasonix-installer.exe`,
+		"--installer", `C:\Temp\Deeper-installer.exe`,
 		"--installer-sha256", testInstallerSHA256,
 	}); code != 2 {
 		t.Fatalf("run without --to-version = %d, want 2", code)
@@ -95,7 +95,7 @@ func TestRunVersionedLayoutDoesNotReadOrClaimLegacyPending(t *testing.T) {
 	stubDesktopHandoff(t)
 	installDir := t.TempDir()
 	seed := t.TempDir()
-	for _, name := range []string{"reasonix-desktop.exe", "reasonix-cli.exe", "reasonix-update-helper.exe"} {
+	for _, name := range []string{"deeper-desktop.exe", "deeper-cli.exe", "deeper-update-helper.exe"} {
 		if err := os.WriteFile(filepath.Join(seed, name), []byte("old-"+name), 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -105,11 +105,11 @@ func TestRunVersionedLayoutDoesNotReadOrClaimLegacyPending(t *testing.T) {
 		Version:     "v1.20.0",
 		RequestID:   "seed-windows-helper",
 		Members: []installlayout.Member{
-			{Name: "reasonix-desktop.exe", Path: filepath.Join(seed, "reasonix-desktop.exe")},
-			{Name: "reasonix-cli.exe", Path: filepath.Join(seed, "reasonix-cli.exe")},
-			{Name: "reasonix-update-helper.exe", Path: filepath.Join(seed, "reasonix-update-helper.exe")},
+			{Name: "deeper-desktop.exe", Path: filepath.Join(seed, "deeper-desktop.exe")},
+			{Name: "deeper-cli.exe", Path: filepath.Join(seed, "deeper-cli.exe")},
+			{Name: "deeper-update-helper.exe", Path: filepath.Join(seed, "deeper-update-helper.exe")},
 		},
-		RequiredNames: []string{"reasonix-desktop.exe", "reasonix-cli.exe", "reasonix-update-helper.exe"},
+		RequiredNames: []string{"deeper-desktop.exe", "deeper-cli.exe", "deeper-update-helper.exe"},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestRunVersionedLayoutDoesNotReadOrClaimLegacyPending(t *testing.T) {
 		"--installer", filepath.Join(installDir, "installer.exe"),
 		"--installer-sha256", testInstallerSHA256,
 		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "reasonix-launcher.exe"),
+		"--relaunch", filepath.Join(installDir, "deeper-launcher.exe"),
 		"--to-version", "v1.20.1",
 		"--install-layout", "versioned-v1",
 	}); code != 0 {
@@ -248,7 +248,7 @@ func TestRunVersionedUpdateRelaunchesLauncherNotOldDesktop(t *testing.T) {
 	if !verified {
 		t.Fatal("versioned update did not verify its desktop owner")
 	}
-	if filepath.Base(relaunchPath) != "Reasonix.exe" {
+	if filepath.Base(relaunchPath) != "Deeper.exe" {
 		t.Fatalf("relaunch path = %s, want install-root launcher (not %s)", relaunchPath, oldDesktop)
 	}
 	if relaunchPath == oldDesktop {
@@ -274,7 +274,7 @@ func TestRelaunchPublishedInstallBlockedOwnerPreventsRelaunch(t *testing.T) {
 	}
 	if code := relaunchPublishedInstall(
 		log.New(io.Discard, "", 0),
-		filepath.Join(t.TempDir(), "reasonix-desktop.exe"),
+		filepath.Join(t.TempDir(), "deeper-desktop.exe"),
 		t.TempDir(),
 		"relaunch",
 	); code != 1 {
@@ -287,7 +287,7 @@ func TestRelaunchPublishedInstallBlockedOwnerPreventsRelaunch(t *testing.T) {
 
 func TestRunHoldsReleaseUnitLockAcrossInstallerHandoff(t *testing.T) {
 	stubDesktopHandoff(t)
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	installDir := t.TempDir()
 	pending := prepareLegacyWindowsUpdate(t, installDir, "v2")
 	var events []string
@@ -347,7 +347,7 @@ func TestRunHoldsReleaseUnitLockAcrossInstallerHandoff(t *testing.T) {
 		"--installer", filepath.Join(installDir, "installer.exe"),
 		"--installer-sha256", testInstallerSHA256,
 		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "reasonix-desktop.exe"),
+		"--relaunch", filepath.Join(installDir, "deeper-desktop.exe"),
 		"--to-version", pending.ToVersion,
 		"--created-at", pending.CreatedAt,
 		"--transaction-id", repair.UpdateTransactionID(pending),
@@ -358,7 +358,7 @@ func TestRunHoldsReleaseUnitLockAcrossInstallerHandoff(t *testing.T) {
 		pending.ToVersion,
 		pending.CreatedAt,
 		repair.UpdateTransactionID(pending),
-		filepath.Join(installDir, "reasonix-desktop.exe"),
+		filepath.Join(installDir, "deeper-desktop.exe"),
 		strings.Join(windowsReleaseUnitPaths(installDir), "\x00"),
 	}, "\x01")
 	if len(events) != 10 || events[0] != "wait" || events[1] != wantClaim ||
@@ -429,7 +429,7 @@ func TestRunRelaunchesWhenLegacyPendingCannotBeClaimed(t *testing.T) {
 	waitForProcessExitFn = func(uint32, time.Duration) error { return nil }
 	relaunched := false
 	startRelaunchFn = func(path, dir string) error {
-		relaunched = path == filepath.Join(installDir, "reasonix-desktop.exe") && dir == installDir
+		relaunched = path == filepath.Join(installDir, "deeper-desktop.exe") && dir == installDir
 		return nil
 	}
 	claimPendingFileUpdateFn = func(string, string, string, string, []string, time.Duration) (*repair.UpdateTransaction, func(), error) {
@@ -441,7 +441,7 @@ func TestRunRelaunchesWhenLegacyPendingCannotBeClaimed(t *testing.T) {
 		"--installer", filepath.Join(installDir, "installer.exe"),
 		"--installer-sha256", testInstallerSHA256,
 		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "reasonix-desktop.exe"),
+		"--relaunch", filepath.Join(installDir, "deeper-desktop.exe"),
 		"--to-version", "v2",
 		"--created-at", "2026-08-02T00:00:00Z",
 		"--transaction-id", strings.Repeat("a", 64),
@@ -455,7 +455,7 @@ func TestRunRelaunchesWhenLegacyPendingCannotBeClaimed(t *testing.T) {
 
 func TestRunCancelsTransactionWhenStagedExtractionFails(t *testing.T) {
 	stubDesktopHandoff(t)
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	installDir := t.TempDir()
 	originalWait := waitForProcessExitFn
 	originalInstaller := runInstallerFn
@@ -493,7 +493,7 @@ func TestRunCancelsTransactionWhenStagedExtractionFails(t *testing.T) {
 		"--installer", filepath.Join(installDir, "installer.exe"),
 		"--installer-sha256", testInstallerSHA256,
 		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "reasonix-desktop.exe"),
+		"--relaunch", filepath.Join(installDir, "deeper-desktop.exe"),
 		"--to-version", "v2",
 		"--created-at", claimed.CreatedAt,
 		"--transaction-id", transactionID,
@@ -507,7 +507,7 @@ func TestRunCancelsTransactionWhenStagedExtractionFails(t *testing.T) {
 
 func TestRunTreatsInstalledReleaseUnitRecordingFailureAsApplyFailure(t *testing.T) {
 	stubDesktopHandoff(t)
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	installDir := t.TempDir()
 	originalWait := waitForProcessExitFn
 	originalInstaller := runInstallerFn
@@ -558,7 +558,7 @@ func TestRunTreatsInstalledReleaseUnitRecordingFailureAsApplyFailure(t *testing.
 		"--installer", filepath.Join(installDir, "installer.exe"),
 		"--installer-sha256", testInstallerSHA256,
 		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "reasonix-desktop.exe"),
+		"--relaunch", filepath.Join(installDir, "deeper-desktop.exe"),
 		"--to-version", "v2",
 		"--created-at", claimed.CreatedAt,
 		"--transaction-id", transactionID,
@@ -576,7 +576,7 @@ func TestRunTreatsInstalledReleaseUnitRecordingFailureAsApplyFailure(t *testing.
 
 func TestRunRelaunchesWhenStagingIdentityCannotBeBound(t *testing.T) {
 	stubDesktopHandoff(t)
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	installDir := t.TempDir()
 	originalWait := waitForProcessExitFn
 	originalInstaller := runInstallerFn
@@ -619,7 +619,7 @@ func TestRunRelaunchesWhenStagingIdentityCannotBeBound(t *testing.T) {
 		"--installer", filepath.Join(installDir, "installer.exe"),
 		"--installer-sha256", testInstallerSHA256,
 		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "reasonix-desktop.exe"),
+		"--relaunch", filepath.Join(installDir, "deeper-desktop.exe"),
 		"--to-version", claimed.ToVersion,
 		"--created-at", claimed.CreatedAt,
 		"--transaction-id", repair.UpdateTransactionID(claimed),

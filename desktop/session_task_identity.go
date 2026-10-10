@@ -1,8 +1,8 @@
 package main
 
 import (
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 // controllerTaskSessionID never derives a canonical identity from its empty

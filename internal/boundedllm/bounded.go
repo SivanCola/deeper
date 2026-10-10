@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/nilutil"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/nilutil"
+	"deeper/internal/provider"
 )
 
 const (

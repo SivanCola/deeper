@@ -7,7 +7,7 @@ import { createServer } from "vite";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(root, ".pw-browsers");
 const { chromium } = await import("playwright");
-const evidence = process.env.REASONIX_MAINTENANCE_EVIDENCE ?? "/tmp/reasonix-maintenance-submit-evidence";
+const evidence = process.env.DEEPER_MAINTENANCE_EVIDENCE ?? "/tmp/deeper-maintenance-submit-evidence";
 const server = await createServer({ root, logLevel: "error", server: { host: "127.0.0.1", port: 0 } });
 await server.listen();
 let browser;

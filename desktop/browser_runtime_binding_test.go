@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 func TestBrowserExecutorFollowsRuntimeDetachAndReattach(t *testing.T) {

@@ -2,7 +2,7 @@ package sessioncatalog
 
 import (
 	"context"
-	"reasonix/internal/projectiondb"
+	"deeper/internal/projectiondb"
 )
 
 func openCatalogProjection(ctx context.Context, opts Options) (*projectiondb.Handle, error) {

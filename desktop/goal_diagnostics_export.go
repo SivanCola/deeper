@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/desktop/internal/hostrpc"
-	"reasonix/internal/control"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/servecontract"
+	"deeper/desktop/internal/hostrpc"
+	"deeper/internal/control"
+	"deeper/internal/fileutil"
+	"deeper/internal/servecontract"
 )
 
 // ExportGoalDiagnostics lets the user save the authoritative event stream,
@@ -112,7 +112,7 @@ func writeGoalDiagnosticsFile(path string, write func(io.Writer) error) error {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".reasonix-goal-diagnostics-*")
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".deeper-goal-diagnostics-*")
 	if err != nil {
 		return exportOperationError("save goal diagnostics", path, err)
 	}

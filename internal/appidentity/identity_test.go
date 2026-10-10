@@ -6,8 +6,8 @@ import (
 )
 
 func TestAppUserModelIDIsStableAndVersionIndependent(t *testing.T) {
-	if AppUserModelID != "io.reasonix.desktop" {
-		t.Fatalf("AppUserModelID = %q, want stable desktop identity %q", AppUserModelID, "io.reasonix.desktop")
+	if AppUserModelID != "io.github.sivancola.deeper" {
+		t.Fatalf("AppUserModelID = %q, want stable desktop identity %q", AppUserModelID, "io.github.sivancola.deeper")
 	}
 	if strings.ContainsAny(AppUserModelID, " \t\r\n") || len(AppUserModelID) > 128 {
 		t.Fatalf("invalid AppUserModelID %q", AppUserModelID)
@@ -24,6 +24,6 @@ func TestAppUserModelIDDoesNotMergeStudio(t *testing.T) {
 
 func TestAppUserModelIDDoesNotMergeLegacyTauriDesktop(t *testing.T) {
 	if AppUserModelID == legacyTauriAppUserModelID {
-		t.Fatalf("current AppUserModelID %q must remain distinct from Reasonix Desktop 0.53", AppUserModelID)
+		t.Fatalf("current AppUserModelID %q must remain distinct from Deeper Desktop 0.53", AppUserModelID)
 	}
 }

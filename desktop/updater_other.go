@@ -5,7 +5,7 @@ package main
 import (
 	"os/exec"
 
-	"reasonix/internal/repair"
+	"deeper/internal/repair"
 )
 
 // installerCommand exists only so updater.go compiles off Windows; applyWindows is

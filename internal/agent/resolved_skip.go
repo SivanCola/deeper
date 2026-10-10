@@ -3,8 +3,8 @@ package agent
 import (
 	"encoding/json"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/tool"
 )
 
 // resolvedSkipOutcome completes proxy actions that resolve locally, without a

@@ -47,7 +47,7 @@ func TestResolveMarkdownImageForTabWorkspaceAndRemotePolicy(t *testing.T) {
 
 	app := NewApp()
 	local := app.ResolveMarkdownImageForTab("", "docs/screen%20shot.png")
-	if local.ErrorCode != "" || !strings.HasPrefix(local.URL, "/__reasonix_workspace_media/") || local.Mime != "image/png" {
+	if local.ErrorCode != "" || !strings.HasPrefix(local.URL, "/__deeper_workspace_media/") || local.Mime != "image/png" {
 		t.Fatalf("local image = %+v", local)
 	}
 	if strings.HasPrefix(local.URL, "file:") || !strings.HasPrefix(local.OpenHref, "file://") {

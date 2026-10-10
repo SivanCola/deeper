@@ -3,7 +3,7 @@ package bot
 import (
 	"context"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // finishSessionTeardown retires the last sessions and then releases the

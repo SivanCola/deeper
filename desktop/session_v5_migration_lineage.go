@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 // A conversion is linked by persisted provenance, never by title or a coincident
@@ -182,7 +182,7 @@ type desktopMigrationStagedNode struct {
 // histories survive; equal/prefix ancestors get receipts for the same target.
 // Incomparable continuations remain separate conversations.
 func (a *App) migrateConversionLineage(ctx context.Context, path, headID string, source desktopMigrationSource, cp *desktopMigrationCheckpoint, workspaceID string) (retErr error) {
-	tmp, err := os.MkdirTemp("", "reasonix-lineage-")
+	tmp, err := os.MkdirTemp("", "deeper-lineage-")
 	if err != nil {
 		return err
 	}

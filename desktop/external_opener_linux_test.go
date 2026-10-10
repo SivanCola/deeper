@@ -77,7 +77,7 @@ func TestFindLinuxDesktopEntryMatchesNormalizedAliasesThenSubstrings(t *testing.
 }
 
 func TestLinuxExternalOpenerCommandPerTerminalArguments(t *testing.T) {
-	const workdir = "/tmp/reasonix workspace"
+	const workdir = "/tmp/deeper workspace"
 	cases := []struct {
 		mode   string
 		target string

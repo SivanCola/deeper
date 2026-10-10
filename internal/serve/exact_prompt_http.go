@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 type exactPromptResolver interface {

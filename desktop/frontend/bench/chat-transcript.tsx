@@ -29,7 +29,7 @@ function weatherTurn(): Item[] {
     { kind: "tool", id: "weather-search", name: "web_search", args: JSON.stringify({ query: "上海今天天气 实时温度" }), output: "Weather sources", searchSources: [{ title: "天气数据（测试来源）", url: "https://example.com/weather" }], status: "done" },
     { kind: "tool", id: "weather-error", name: "web_fetch", args: JSON.stringify({ url: "https://example.com/weather" }), error: "DNS lookup failed", status: "error" },
     { kind: "assistant", id: "weather-progress", text: "一个来源暂时无法访问，正在核对另一来源。", reasoning: "切换到另一来源。", streaming: false },
-    { kind: "notice", id: "weather-permission", level: "info", title: "已记录决策", text: "permission saved to /tmp/weather-fixture/reasonix.toml: curl --max-time 20 https://example.com/weather" },
+    { kind: "notice", id: "weather-permission", level: "info", title: "已记录决策", text: "permission saved to /tmp/weather-fixture/deeper.toml: curl --max-time 20 https://example.com/weather" },
     { kind: "tool", id: "weather-bash", name: "bash", args: JSON.stringify({ command: "printf '25.5°C 晴\\n'", description: "获取并核对上海天气" }), output: "25.5°C 晴\n", status: "done",
       execution: { kind: "shell", shell: "bash", state: "completed", exitCode: 0, supportsAndAnd: true } },
     { kind: "tool", id: "weather-write-html", name: "write_file", args: JSON.stringify({ path: "output/shanghai-weather.html" }), output: "wrote output/shanghai-weather.html", readOnly: false, status: "done", fileDiff: { diff: "", added: 4, removed: 0 } },
@@ -132,7 +132,7 @@ function Fixture() {
           { role: "user", origin: "user", content: '<response-language>internal policy</response-language>你是谁', raw_content: "你是谁" },
           { role: "user", content: '<capability-route>legacy internal route</capability-route>旧会话问题' },
           { role: "user", origin: "user", raw_content: '<response-language>用户引用的 XML</response-language>' },
-          { role: "assistant", content: "我是 Reasonix。" },
+          { role: "assistant", content: "我是 Deeper。" },
         ].map((raw, i) => canonicalMessage({ messageId: `authored-${i}`, position: i, version: 1, role: raw.role }, raw));
         clearLive(); setItems(historyMessagesToItems(messages, "authored").items); setRunning(false); setSession(value => value + 1);
       },

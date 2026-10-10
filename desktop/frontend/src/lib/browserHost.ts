@@ -1,5 +1,5 @@
 // Renderer view of the shell's browser surface manager. Mirrors the
-// `window.reasonixDesktop.browser` preload API (docs/DESKTOP_BROWSER.md).
+// `window.deeperDesktop.browser` preload API (docs/DESKTOP_BROWSER.md).
 export type BrowserTabMode = "agent" | "human";
 
 export interface BrowserTabView {

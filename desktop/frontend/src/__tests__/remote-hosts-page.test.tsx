@@ -105,7 +105,7 @@ await act(async () => {
   button("Remove")?.click();
   await flush();
 });
-const firstDialog = document.querySelector<HTMLElement>(".reasonix-confirm-dialog");
+const firstDialog = document.querySelector<HTMLElement>(".deeper-confirm-dialog");
 ok(Boolean(firstDialog), "remove opens the in-app confirmation dialog");
 ok(firstDialog?.textContent?.includes("Build box") === true, "confirmation identifies the host being removed");
 ok(removeCalls === 0, "host is not removed before confirmation");
@@ -114,7 +114,7 @@ await act(async () => {
   button("Cancel", firstDialog ?? document)?.click();
   await flush();
 });
-ok(removeCalls === 0 && document.querySelector(".reasonix-confirm-dialog") === null, "Cancel keeps the host and closes the dialog");
+ok(removeCalls === 0 && document.querySelector(".deeper-confirm-dialog") === null, "Cancel keeps the host and closes the dialog");
 
 await act(async () => {
   button("Edit")?.click();
@@ -149,7 +149,7 @@ await act(async () => {
   button("Remove")?.click();
   await flush();
 });
-const secondDialog = document.querySelector<HTMLElement>(".reasonix-confirm-dialog");
+const secondDialog = document.querySelector<HTMLElement>(".deeper-confirm-dialog");
 await act(async () => {
   button("Remove", secondDialog ?? document)?.click();
   await flush();
@@ -176,7 +176,7 @@ await act(async () => {
   await flush();
 });
 await act(async () => {
-  button("Delete", document.querySelector(".reasonix-confirm-dialog") ?? document)?.click();
+  button("Delete", document.querySelector(".deeper-confirm-dialog") ?? document)?.click();
   await flush();
 });
 ok(cleanCalls.join(",") === "mirrors", "confirmed mirror cleanup calls the backend once");
@@ -191,7 +191,7 @@ await act(async () => {
 await act(async () => {
   button("Delete mirrors")?.click();
   await flush();
-  button("Cancel", document.querySelector(".reasonix-confirm-dialog") ?? document)?.click();
+  button("Cancel", document.querySelector(".deeper-confirm-dialog") ?? document)?.click();
   await flush();
 });
 ok(cleanCalls.length === 1, "cancelled cleanup does not call the backend");

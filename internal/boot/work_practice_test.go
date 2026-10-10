@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/config"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/config"
 )
 
 func TestBuildAppendsWorkPracticePolicyToCustomSystemPrompt(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -23,7 +23,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -61,7 +61,7 @@ func TestBuildInjectsOfflineNoteOnlyWhenEnvironmentDeclaresIt(t *testing.T) {
 		registerBootTokenProfileTestProvider()
 		prov := testutil.NewMock("offline-context", testutil.Turn{Text: "done"})
 		setBootTokenProfileTestProvider(t, prov)
-		writeFile(t, dir, "reasonix.toml", `
+		writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

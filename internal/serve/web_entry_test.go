@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 func TestServeIndexPageAndSessionDeepLink(t *testing.T) {

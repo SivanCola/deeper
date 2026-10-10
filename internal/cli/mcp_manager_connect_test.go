@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/plugin"
 )
 
 // gatedMCPServer answers MCP over HTTP but holds initialize until release is
@@ -72,7 +72,7 @@ auto_start = false
 startup_timeout_seconds = 10
 `
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(raw), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -187,8 +187,8 @@ func TestApplyMCPModeRecordsPluginConnectFailure(t *testing.T) {
 	isolateUserConfig(t)
 	t.Setenv("PATH", "")
 	cfg := config.Default()
-	cfg.Plugins = []config.PluginEntry{{Name: "broken", Command: "definitely-missing-reasonix-mcp", Tier: "background"}}
-	if err := cfg.SaveTo("reasonix.toml"); err != nil {
+	cfg.Plugins = []config.PluginEntry{{Name: "broken", Command: "definitely-missing-deeper-mcp", Tier: "background"}}
+	if err := cfg.SaveTo("deeper.toml"); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 
@@ -199,7 +199,7 @@ func TestApplyMCPModeRecordsPluginConnectFailure(t *testing.T) {
 	m.mcp = &mcpManager{
 		stage: mcpStageMode,
 		name:  "broken",
-		snapshot: mcpSnapshot{configPath: "reasonix.toml", servers: []mcpServerView{{
+		snapshot: mcpSnapshot{configPath: "deeper.toml", servers: []mcpServerView{{
 			Name: "broken", Transport: "stdio", Status: "deferred", Configured: true, Tier: "background",
 		}}},
 	}

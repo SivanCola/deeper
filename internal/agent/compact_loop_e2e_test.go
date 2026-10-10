@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/tool"
 )
 
 // fatTool returns a fixed-size blob, standing in for a real read_file / bash

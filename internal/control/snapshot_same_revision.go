@@ -3,7 +3,7 @@ package control
 import (
 	"errors"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // persistSessionSnapshot writes path with snapshot semantics, escalating to an

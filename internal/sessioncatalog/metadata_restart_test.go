@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/historywork"
+	"deeper/internal/historywork"
 )
 
 func TestMetadataQueueSupersedesInvalidScanBeforeReadingItsRemainder(t *testing.T) {

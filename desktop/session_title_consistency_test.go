@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // sidebarLabelForSession returns the label the project tree paints for ref.

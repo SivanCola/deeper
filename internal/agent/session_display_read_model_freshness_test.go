@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func TestAppendSessionDisplayReadModelRejectsEqualMTime(t *testing.T) {

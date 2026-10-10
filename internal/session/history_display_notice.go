@@ -2,10 +2,10 @@ package session
 
 import (
 	"context"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
 	"encoding/json"
 	"errors"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
 )
 
 func indexDisplayNotice(ctx context.Context, content *sessioncontent.Store, state *historyBuildState, event Event) error {

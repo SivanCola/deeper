@@ -21,12 +21,12 @@ function ok(value: unknown, message: string) {
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);
-  const meta: Meta = { label: "test", ready: true, eventChannel: "mcp-registry-channel", cwd: "/tmp/reasonix-test", workspaceRoot: "/tmp/reasonix-test" };
+  const meta: Meta = { label: "test", ready: true, eventChannel: "mcp-registry-channel", cwd: "/tmp/deeper-test", workspaceRoot: "/tmp/deeper-test" };
   const tabs: TabMeta[] = [{
     id: "tab-mcp-registry",
     scope: "project",
-    workspaceRoot: "/tmp/reasonix-test",
-    workspaceName: "reasonix-test",
+    workspaceRoot: "/tmp/deeper-test",
+    workspaceName: "deeper-test",
     topicId: "topic-mcp-registry",
     topicTitle: "Registry",
     label: "Registry",
@@ -35,7 +35,7 @@ function ok(value: unknown, message: string) {
     mode: "normal",
     toolApprovalMode: "auto",
     active: true,
-    cwd: "/tmp/reasonix-test",
+    cwd: "/tmp/deeper-test",
   }];
   let servers: ServerView[] = [];
   let installed: MCPServerInput | null = null;
@@ -326,12 +326,12 @@ console.log("capabilities panel MCP actions");
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);
-  const meta: Meta = { label: "test", ready: true, eventChannel: "test-channel", cwd: "/tmp/reasonix-test", workspaceRoot: "/tmp/reasonix-test" };
+  const meta: Meta = { label: "test", ready: true, eventChannel: "test-channel", cwd: "/tmp/deeper-test", workspaceRoot: "/tmp/deeper-test" };
   const tabs: TabMeta[] = [{
     id: "tab-1",
     scope: "project",
-    workspaceRoot: "/tmp/reasonix-test",
-    workspaceName: "reasonix-test",
+    workspaceRoot: "/tmp/deeper-test",
+    workspaceName: "deeper-test",
     topicId: "topic-1",
     topicTitle: "Test",
     label: "Test",
@@ -340,7 +340,7 @@ console.log("capabilities panel MCP actions");
     mode: "normal",
     toolApprovalMode: "auto",
     active: true,
-    cwd: "/tmp/reasonix-test",
+    cwd: "/tmp/deeper-test",
   }];
   let servers: ServerView[] = [{
     name: "github",
@@ -404,12 +404,12 @@ console.log("capabilities panel MCP actions");
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);
-  const meta: Meta = { label: "test", ready: true, eventChannel: "authorize-mcp-channel", cwd: "/tmp/reasonix-test", workspaceRoot: "/tmp/reasonix-test" };
+  const meta: Meta = { label: "test", ready: true, eventChannel: "authorize-mcp-channel", cwd: "/tmp/deeper-test", workspaceRoot: "/tmp/deeper-test" };
   const tabs: TabMeta[] = [{
     id: "tab-authorize-mcp",
     scope: "project",
-    workspaceRoot: "/tmp/reasonix-test",
-    workspaceName: "reasonix-test",
+    workspaceRoot: "/tmp/deeper-test",
+    workspaceName: "deeper-test",
     topicId: "topic-authorize-mcp",
     topicTitle: "Authorize MCP",
     label: "Authorize MCP",
@@ -418,7 +418,7 @@ console.log("capabilities panel MCP actions");
     mode: "normal",
     toolApprovalMode: "auto",
     active: true,
-    cwd: "/tmp/reasonix-test",
+    cwd: "/tmp/deeper-test",
   }];
   let servers: ServerView[] = [{
     name: "github",
@@ -427,7 +427,7 @@ console.log("capabilities panel MCP actions");
     runtimeState: "ready",
     configured: true,
     source: "project",
-    configSource: "reasonix.toml",
+    configSource: "deeper.toml",
     autoStart: true,
     tools: 3,
     prompts: 0,
@@ -475,7 +475,7 @@ console.log("capabilities panel MCP actions");
   await waitFor("trusted project MCP", () => Boolean(document.querySelector('[data-status="connected"]')));
   ok(document.body.textContent?.includes("This project"), "project MCP is grouped under This project");
   ok(document.body.textContent?.includes("Global MCP"), "user-installed MCP is grouped by its global scope");
-  ok(document.body.textContent?.includes("Install once and use automatically in every Reasonix project."), "global MCP explains its cross-project availability");
+  ok(document.body.textContent?.includes("Install once and use automatically in every Deeper project."), "global MCP explains its cross-project availability");
   ok(document.body.textContent?.includes("Project"), "project MCP row shows a project source badge");
   ok(document.body.textContent?.includes("Declared by this project and available automatically."), "project MCP explains zero-confirmation availability");
   ok(!findButton("Install and use"), "trusted project MCP has no install confirmation");
@@ -521,7 +521,7 @@ console.log("capabilities panel MCP actions");
     await flush();
   });
   await waitFor("connected project server detail", () => Boolean(document.querySelector(".cap-mcp-subpage")));
-  ok(document.body.textContent?.includes("Current project · reasonix.toml"), "project MCP details show their configuration source");
+  ok(document.body.textContent?.includes("Current project · deeper.toml"), "project MCP details show their configuration source");
   ok(!findButton("Review changes"), "a trusted connected project server does not show a change alarm");
   ok(!findButton("Revoke trust"), "normal MCP details do not expose a second authorization-management workflow");
 
@@ -536,12 +536,12 @@ console.log("capabilities panel MCP actions");
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);
-  const meta: Meta = { label: "test", ready: true, eventChannel: "managed-mcp-channel", cwd: "/tmp/reasonix-test", workspaceRoot: "/tmp/reasonix-test" };
+  const meta: Meta = { label: "test", ready: true, eventChannel: "managed-mcp-channel", cwd: "/tmp/deeper-test", workspaceRoot: "/tmp/deeper-test" };
   const tabs: TabMeta[] = [{
     id: "tab-managed-mcp",
     scope: "project",
-    workspaceRoot: "/tmp/reasonix-test",
-    workspaceName: "reasonix-test",
+    workspaceRoot: "/tmp/deeper-test",
+    workspaceName: "deeper-test",
     topicId: "topic-managed-mcp",
     topicTitle: "Managed MCP",
     label: "Managed MCP",
@@ -550,7 +550,7 @@ console.log("capabilities panel MCP actions");
     mode: "normal",
     toolApprovalMode: "auto",
     active: true,
-    cwd: "/tmp/reasonix-test",
+    cwd: "/tmp/deeper-test",
   }];
   const servers: ServerView[] = [{
     name: "helper",
@@ -608,12 +608,12 @@ console.log("capabilities panel MCP actions");
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);
-  const meta: Meta = { label: "test", ready: true, eventChannel: "runtime-mcp-channel", cwd: "/tmp/reasonix-test", workspaceRoot: "/tmp/reasonix-test" };
+  const meta: Meta = { label: "test", ready: true, eventChannel: "runtime-mcp-channel", cwd: "/tmp/deeper-test", workspaceRoot: "/tmp/deeper-test" };
   const tabs: TabMeta[] = [{
     id: "tab-runtime-mcp",
     scope: "project",
-    workspaceRoot: "/tmp/reasonix-test",
-    workspaceName: "reasonix-test",
+    workspaceRoot: "/tmp/deeper-test",
+    workspaceName: "deeper-test",
     topicId: "topic-runtime-mcp",
     topicTitle: "Runtime MCP",
     label: "Runtime MCP",
@@ -622,7 +622,7 @@ console.log("capabilities panel MCP actions");
     mode: "normal",
     toolApprovalMode: "auto",
     active: true,
-    cwd: "/tmp/reasonix-test",
+    cwd: "/tmp/deeper-test",
   }];
   const servers: ServerView[] = [{
     name: "runtime-only",
@@ -670,12 +670,12 @@ console.log("capabilities panel MCP actions");
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);
-  const meta: Meta = { label: "test", ready: true, eventChannel: "mcp-editor-channel", cwd: "/tmp/reasonix-test", workspaceRoot: "/tmp/reasonix-test" };
+  const meta: Meta = { label: "test", ready: true, eventChannel: "mcp-editor-channel", cwd: "/tmp/deeper-test", workspaceRoot: "/tmp/deeper-test" };
   const tabs: TabMeta[] = [{
     id: "tab-mcp-editor",
     scope: "project",
-    workspaceRoot: "/tmp/reasonix-test",
-    workspaceName: "reasonix-test",
+    workspaceRoot: "/tmp/deeper-test",
+    workspaceName: "deeper-test",
     topicId: "topic-mcp-editor",
     topicTitle: "MCP editor",
     label: "MCP editor",
@@ -684,7 +684,7 @@ console.log("capabilities panel MCP actions");
     mode: "normal",
     toolApprovalMode: "auto",
     active: true,
-    cwd: "/tmp/reasonix-test",
+    cwd: "/tmp/deeper-test",
   }];
   let addedInput: MCPServerInput | undefined;
   let servers: ServerView[] = [

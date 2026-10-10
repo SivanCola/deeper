@@ -13,9 +13,9 @@ import (
 
 func TestShortcutMigrationAcceptsShortAndLongPathsForTheSameFile(t *testing.T) {
 	migrationTestCOM(t)
-	root := filepath.Join(t.TempDir(), "Reasonix identity validation")
-	launcher := filepath.Join(root, "reasonix-launcher.exe")
-	target := filepath.Join(root, "versions", "v1.38.6", "app", "Reasonix.exe")
+	root := filepath.Join(t.TempDir(), "Deeper identity validation")
+	launcher := filepath.Join(root, "deeper-launcher.exe")
+	target := filepath.Join(root, "versions", "v1.38.6", "app", "Deeper.exe")
 	migrationTestFile(t, launcher)
 	migrationTestFile(t, target)
 	rootPtr, err := windows.UTF16PtrFromString(root)
@@ -31,10 +31,10 @@ func TestShortcutMigrationAcceptsShortAndLongPathsForTheSameFile(t *testing.T) {
 	if strings.EqualFold(shortRoot, root) {
 		t.Skip("the test volume does not create DOS short names")
 	}
-	path := filepath.Join(root, "Reasonix.lnk")
+	path := filepath.Join(root, "Deeper.lnk")
 	migrationTestShortcut(t, path, migrationShortcutState{
-		target: filepath.Join(shortRoot, "versions", "v1.38.6", "app", "Reasonix.exe"),
-		id:     "Reasonix", workingDirectory: shortRoot, showCmd: 1,
+		target: filepath.Join(shortRoot, "versions", "v1.38.6", "app", "Deeper.exe"),
+		id:     "Deeper", workingDirectory: shortRoot, showCmd: 1,
 	})
 	changed, err := repairOwnedShortcut(path, shortRoot)
 	if err != nil || !changed {
@@ -44,7 +44,7 @@ func TestShortcutMigrationAcceptsShortAndLongPathsForTheSameFile(t *testing.T) {
 	if !migrationSamePath(got.target, launcher) || got.id != AppUserModelID {
 		t.Fatalf("short-root repair returned %+v", got)
 	}
-	other := filepath.Join(t.TempDir(), "reasonix-launcher.exe")
+	other := filepath.Join(t.TempDir(), "deeper-launcher.exe")
 	if err := os.WriteFile(other, []byte("another installation"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -55,9 +55,9 @@ func TestShortcutMigrationAcceptsShortAndLongPathsForTheSameFile(t *testing.T) {
 
 func TestCanonicalShortcutMigratesShortLegacyFilename(t *testing.T) {
 	migrationTestCOM(t)
-	root := filepath.Join(t.TempDir(), "Reasonix long installation path")
-	legacy := filepath.Join(root, "reasonix-launcher.exe")
-	canonical := filepath.Join(root, "Reasonix.exe")
+	root := filepath.Join(t.TempDir(), "Deeper long installation path")
+	legacy := filepath.Join(root, "deeper-launcher.exe")
+	canonical := filepath.Join(root, "Deeper.exe")
 	migrationTestFile(t, legacy)
 	migrationTestFile(t, canonical)
 	ptr, err := windows.UTF16PtrFromString(legacy)
@@ -73,7 +73,7 @@ func TestCanonicalShortcutMigratesShortLegacyFilename(t *testing.T) {
 	if strings.EqualFold(filepath.Base(short), filepath.Base(legacy)) {
 		t.Skip("volume does not create DOS short filenames")
 	}
-	link := filepath.Join(root, "Reasonix.lnk")
+	link := filepath.Join(root, "Deeper.lnk")
 	migrationTestShortcut(t, link, migrationShortcutState{target: short, icon: short, id: AppUserModelID, workingDirectory: root, showCmd: 1})
 	if changed, err := repairOwnedShortcut(link, root); err != nil || !changed {
 		t.Fatalf("repair=%v, %v", changed, err)

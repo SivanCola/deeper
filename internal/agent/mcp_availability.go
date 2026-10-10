@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
 )
 
 func (r *MCPCapabilityRuntime) serverRegistered(server string) bool {
@@ -33,7 +33,7 @@ func mcpServerOffMessage(server string, decision config.MCPDecision) string {
 	if !decision.AwaitsUser() {
 		return mcpServerDisabledMessage(server)
 	}
-	return fmt.Sprintf("MCP server %q is off [%s]: this project declares it, and it starts only after the user reviews and enables it (reasonix mcp enable %s, /mcp connect, or the MCP panel). Tell the user if it is needed.", server, decision.Code(), server)
+	return fmt.Sprintf("MCP server %q is off [%s]: this project declares it, and it starts only after the user reviews and enables it (deeper mcp enable %s, /mcp connect, or the MCP panel). Tell the user if it is needed.", server, decision.Code(), server)
 }
 
 // serverDecision resolves why entry is off; an enabled server is simply on.

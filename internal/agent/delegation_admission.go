@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // admissionGatedDelegations are the delegation tools expensive enough to need

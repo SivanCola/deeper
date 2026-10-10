@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/mod/semver"
 
-	"reasonix/internal/config"
-	"reasonix/internal/installlayout"
+	"deeper/internal/config"
+	"deeper/internal/installlayout"
 )
 
 var supersededUpdateBeforeArchive = func(string) {}
@@ -23,7 +23,7 @@ var supersededAppUpdateAfterBackupArchive = func(string) {}
 // target bundle, and only for records the health commit cannot settle: no
 // recorded backup identity, a recorded backup that is gone, or a target already
 // reached whose record no longer verifies. A surviving backup is moved aside;
-// the original transaction is archived under Reasonix repair state. Neither is
+// the original transaction is archived under Deeper repair state. Neither is
 // deleted, so support can still inspect or manually recover the old bundle.
 func ArchiveSupersededPendingAppBundleUpdate(runningVersion string) (bool, error) {
 	tx, err := ReadPendingUpdate()
@@ -195,7 +195,7 @@ func archiveSupersededAppBundleBackup(tx *UpdateTransaction, transactionID strin
 	if len(shortID) > 16 {
 		shortID = shortID[:16]
 	}
-	base := fmt.Sprintf("%s.reasonix-retired-%s-%s", tx.BackupPath, shortID, time.Now().UTC().Format("20060102T150405.000000000Z"))
+	base := fmt.Sprintf("%s.deeper-retired-%s-%s", tx.BackupPath, shortID, time.Now().UTC().Format("20060102T150405.000000000Z"))
 	for attempt := range 16 {
 		archive := fmt.Sprintf("%s-%d", base, attempt)
 		if err := renameRepairNodeNoReplace(tx.BackupPath, archive); err != nil {

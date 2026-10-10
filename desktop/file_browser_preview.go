@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 const fileBrowserPreviewTimeout = 60 * time.Second
@@ -245,7 +245,7 @@ func (a *App) prepareFileBrowserPreview(tabID string, request FileBrowserPreview
 	}
 	a.extendWorkspaceBrowserPreviewToken(preview.URL)
 	store := a.ensureMediaTokenStore()
-	token := strings.SplitN(strings.TrimPrefix(preview.URL, "/__reasonix_workspace_media/"), "/", 2)[0]
+	token := strings.SplitN(strings.TrimPrefix(preview.URL, "/__deeper_workspace_media/"), "/", 2)[0]
 	return preparedFileBrowserPreview{url: origin + preview.URL, identity: identity, release: func() { store.revoke(token) }}, nil
 }
 

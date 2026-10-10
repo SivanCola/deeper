@@ -39,7 +39,7 @@ func TestLegacyAnchorSafetyGateIsDecodeOnly(t *testing.T) {
 func TestProjectCannotOverrideLegacyAnchorSafetyGate(t *testing.T) {
 	isolateUserConfigHome(t)
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[agent]\nlegacy_anchor_safety_gate = true\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[agent]\nlegacy_anchor_safety_gate = true\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)

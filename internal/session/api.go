@@ -58,7 +58,7 @@ const (
 // SessionKind records what created a store; empty is an ordinary conversation.
 type SessionKind string
 
-// SessionKindHeadlessRun marks a one-shot `reasonix run`/`-p` store. It stays
+// SessionKindHeadlessRun marks a one-shot `deeper run`/`-p` store. It stays
 // resumable, but it is not a conversation a sidebar should offer.
 const SessionKindHeadlessRun SessionKind = "headless-run"
 

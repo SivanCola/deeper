@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // deferredStreamSink keeps selected stream events local until the caller

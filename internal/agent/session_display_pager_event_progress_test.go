@@ -12,11 +12,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/historywork"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileops"
+	"deeper/internal/historywork"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func eventResumeOptions(t *testing.T, source, cache string) (projectiondb.OpenOptions, string, int64) {
@@ -95,7 +95,7 @@ func checkEventPagerResume(t *testing.T, mode string) {
 			t.Fatal(err)
 		}
 		child := exec.CommandContext(t.Context(), executable, "-test.run=^TestEventPagerCrashHelper$")
-		child.Env = append(os.Environ(), "REASONIX_EVENT_CRASH_SOURCE="+source, "REASONIX_EVENT_CRASH_CACHE="+cache)
+		child.Env = append(os.Environ(), "DEEPER_EVENT_CRASH_SOURCE="+source, "DEEPER_EVENT_CRASH_CACHE="+cache)
 		if output, err := child.CombinedOutput(); err != nil {
 			t.Fatalf("child failed: %v\n%s", err, output)
 		}
@@ -168,7 +168,7 @@ func checkEventPagerResume(t *testing.T, mode string) {
 }
 
 func TestEventPagerCrashHelper(t *testing.T) {
-	source, cache := os.Getenv("REASONIX_EVENT_CRASH_SOURCE"), os.Getenv("REASONIX_EVENT_CRASH_CACHE")
+	source, cache := os.Getenv("DEEPER_EVENT_CRASH_SOURCE"), os.Getenv("DEEPER_EVENT_CRASH_CACHE")
 	if source == "" || cache == "" {
 		return
 	}

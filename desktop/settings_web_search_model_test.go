@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/internal/config"
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"reasonix/internal/config"
 	"strings"
 	"testing"
 )
@@ -34,7 +34,7 @@ func TestWebSearchModelSettingsCandidatesAndStaleRef(t *testing.T) {
 func TestWebSearchModelProjectOverrideView(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[agent]\nweb_search_model = \"project/m\"\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[agent]\nweb_search_model = \"project/m\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	cfg := config.Default()

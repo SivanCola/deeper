@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/session"
 	"os"
 	"path/filepath"
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
 	"strings"
 )
 

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/plugin"
+	"deeper/internal/plugin"
 )
 
 func TestMCPServerViewSessionDiagnosticsRemainOptional(t *testing.T) {

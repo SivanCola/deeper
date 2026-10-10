@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 type SessionLifecycleTarget struct {

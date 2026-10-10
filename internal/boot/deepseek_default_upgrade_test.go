@@ -2,17 +2,17 @@ package boot
 
 import (
 	"context"
+	"deeper/internal/config"
+	"deeper/internal/event"
 	"os"
 	"path/filepath"
-	"reasonix/internal/config"
-	"reasonix/internal/event"
 	"strings"
 	"testing"
 )
 
 func TestBuildRestoresDeepSeekChatDefaultWithOneNotice(t *testing.T) {
 	home := isolateConfigHome(t)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, "reasonix-home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(home, "deeper-home"))
 	userPath := config.UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(userPath), 0o700); err != nil {
 		t.Fatal(err)

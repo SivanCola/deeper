@@ -39,7 +39,7 @@ else
   base="${CACHE_IMPACT_BASE_SHA:-${BASE_SHA:-}}"
   head="${CACHE_IMPACT_HEAD_SHA:-${HEAD_SHA:-HEAD}}"
   if [[ -z "$base" ]]; then
-    base="$(git merge-base origin/main-v2 "$head" 2>/dev/null || git merge-base main-v2 "$head")"
+    base="$(git merge-base origin/main "$head" 2>/dev/null || git merge-base main "$head")"
   fi
   diff_base="$base"
   if merge_base="$(git merge-base "$base" "$head" 2>/dev/null)"; then
@@ -60,10 +60,10 @@ standing_instruction_changed=()
 
 for file in "${changed_files[@]:-}"; do
   case "$file" in
-    REASONIX.md|AGENTS.md|CLAUDE.md|\
-    REASONIX.local.md|AGENTS.local.md|CLAUDE.local.md|\
-    */REASONIX.md|*/AGENTS.md|*/CLAUDE.md|\
-    */REASONIX.local.md|*/AGENTS.local.md|*/CLAUDE.local.md)
+    DEEPER.md|AGENTS.md|CLAUDE.md|\
+    DEEPER.local.md|AGENTS.local.md|CLAUDE.local.md|\
+    */DEEPER.md|*/AGENTS.md|*/CLAUDE.md|\
+    */DEEPER.local.md|*/AGENTS.local.md|*/CLAUDE.local.md)
       standing_instruction_changed+=("$file")
       cache_sensitive+=("$file")
       system_prompt_sensitive+=("$file")

@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"reasonix/internal/diff"
-	fileenc "reasonix/internal/fileutil/encoding"
+	"deeper/internal/diff"
+	fileenc "deeper/internal/fileutil/encoding"
 )
 
 func write(t *testing.T, p, s string) {

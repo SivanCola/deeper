@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/shellparse"
+	"deeper/internal/shellparse"
 )
 
 // CommandMatches reports whether a cited verification command is proven by a

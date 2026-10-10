@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 func TestLegacyShellAliasesPassArgumentGateWithoutDescription(t *testing.T) {

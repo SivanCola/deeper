@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/provider"
-	"reasonix/internal/turnevent"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/provider"
+	"deeper/internal/turnevent"
 )
 
 func TestDisplayTurnBufferPreservesStreamingReplacementAndTools(t *testing.T) {

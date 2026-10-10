@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { consumeGraphicsRecoveryArg, GRAPHICS_RECOVERY_ARG, GraphicsSettingsStore, loadGraphicsBootstrap } from "./graphics.js";
 
-const home = () => mkdtempSync(join(tmpdir(), "reasonix-graphics-"));
+const home = () => mkdtempSync(join(tmpdir(), "deeper-graphics-"));
 
 test("defaults to enabled without creating a config", () => {
   const b = loadGraphicsBootstrap(home(), {}, []);
@@ -33,7 +33,7 @@ test("environment and command-line overrides disable without changing the saved 
   const b = loadGraphicsBootstrap(root, {}, []);
   const store = new GraphicsSettingsStore(b.configPath, b);
   await store.setHardwareAcceleration(true);
-  const overridden = loadGraphicsBootstrap(root, { REASONIX_DISABLE_GPU: "1" }, []);
+  const overridden = loadGraphicsBootstrap(root, { DEEPER_DISABLE_GPU: "1" }, []);
   assert.equal(overridden.state.override, "environment");
   assert.equal(overridden.state.startupEnabled, false);
   assert.equal(loadGraphicsBootstrap(root, {}, ["--disable-gpu"]).state.override, "command-line");

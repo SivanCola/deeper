@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/tool"
+	"deeper/internal/attachment"
+	"deeper/internal/tool"
 )
 
 // Bound encoded payload size consistently with MCP image results.

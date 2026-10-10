@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 func TestJunctionLocksExcludeLegacyAndCurrentWriters(t *testing.T) {

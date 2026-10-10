@@ -8,7 +8,7 @@ import (
 )
 
 func TestFrozenModelCredentialsIncludeMissingValue(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	c := Default()
 	c.Providers = []ProviderEntry{{Name: "test", APIKeyEnv: "MODEL_SNAPSHOT_KEY", Model: "m"}}
 	c.FreezeProviderCredentials()
@@ -46,7 +46,7 @@ func TestModelRuntimeFingerprintIgnoresNewSessionDefault(t *testing.T) {
 }
 
 func TestSaveModelSettingsPreservesUnknownFields(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	path := UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		t.Fatal(err)

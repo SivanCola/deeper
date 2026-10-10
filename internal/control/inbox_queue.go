@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/sessioninbox"
 )
 
 // InboxQueueRequest is the additive, session-fenced queue editing protocol.

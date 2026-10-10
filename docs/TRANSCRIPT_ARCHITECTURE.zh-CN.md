@@ -1,6 +1,6 @@
 # 自然文档流聊天区架构
 
-本文描述唯一生产聊天实现，替代 TranscriptKernel、虚拟窗口及尺寸账本。渲染参考本地 DeepSeek Harness `c291e7961a`；保留 Reasonix controller、存储、输入框、审批和外围工作台。当前同步与历史行为遵循[会话同步 v2](TRANSCRIPT_V2.md)及[滚动与历史契约](TRANSCRIPT_SCROLL_CONTRACT.zh-CN.md)。完整轮次导航通过持久化摘要索引和直接历史窗口定位实现。
+本文描述唯一生产聊天实现，替代 TranscriptKernel、虚拟窗口及尺寸账本。渲染参考本地 DeepSeek Harness `c291e7961a`；保留 Deeper controller、存储、输入框、审批和外围工作台。当前同步与历史行为遵循[会话同步 v2](TRANSCRIPT_V2.md)及[滚动与历史契约](TRANSCRIPT_SCROLL_CONTRACT.zh-CN.md)。完整轮次导航通过持久化摘要索引和直接历史窗口定位实现。
 
 ## 职责划分
 

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func TestNativeHistoryPromptBoundsPreview(t *testing.T) {

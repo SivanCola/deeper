@@ -4,7 +4,7 @@
 
 ## Messages while a turn is running
 
-You can continue typing while Reasonix works. Add the message to the queue to
+You can continue typing while Deeper works. Add the message to the queue to
 run later, or choose **Guide current turn** to supply it to the active turn at
 its next supported boundary. Guidance is not an immediate interruption of a
 model request. If the turn finishes before guidance is accepted, the inbox
@@ -12,7 +12,7 @@ retains the message for a later turn.
 
 The current input is saved automatically. A rejected submission keeps the text
 and restores editing automatically when its status can be confirmed. If a reply
-is lost, Reasonix checks the existing submission instead of sending it again.
+is lost, Deeper checks the existing submission instead of sending it again.
 An unresolved result shows one **Retry** action to check recovery; it does not
 resend the message. Input remains protected until the result is known.
 
@@ -22,7 +22,7 @@ Queue-item editing retains its separate conflict handling.
 
 ## Controls
 
-Use the **+** menu to attach content or enable Plan or Goal mode. Reasonix uses
+Use the **+** menu to attach content or enable Plan or Goal mode. Deeper uses
 one standard execution behavior; there is no delivery-quality selector or
 mode chip. Permission remains a separate Read only/Workspace write/Full access menu. Model and
 reasoning effort have independent selectors; unsupported models hide effort.

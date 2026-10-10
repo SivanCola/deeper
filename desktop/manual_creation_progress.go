@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"reasonix/desktop/internal/sessionui"
+	"deeper/desktop/internal/sessionui"
 )
 
 // ManualCreationProgress is local observational state, never a lease or a

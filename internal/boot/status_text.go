@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/extension"
+	"deeper/internal/extension"
 )
 
 // FormatRuntimeStatus renders a doctor-facing explanation of component

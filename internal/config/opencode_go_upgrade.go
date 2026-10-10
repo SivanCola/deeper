@@ -13,10 +13,10 @@ import (
 	"slices"
 	"strings"
 
+	"deeper/internal/fileutil"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/provider"
 	"github.com/BurntSushi/toml"
-	"reasonix/internal/fileutil"
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/provider"
 )
 
 const openCodeGoUpgradeVersion = 10

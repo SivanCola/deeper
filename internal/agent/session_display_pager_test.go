@@ -2,18 +2,18 @@ package agent
 
 import (
 	"context"
+	"deeper/internal/fileops"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reasonix/internal/fileops"
 	"reflect"
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func TestDisplayPagerDistinguishesAncientEventsFromDamagedCheckpoint(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // HeadRecord is one head of a schema-2 session as the catalog projects it.

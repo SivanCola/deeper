@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
 )
 
 type capabilitySink struct {

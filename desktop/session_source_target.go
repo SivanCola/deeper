@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/internal/session"
 	"encoding/json"
 	"errors"
 	"net/url"
-	"reasonix/internal/session"
 	"strings"
 )
 

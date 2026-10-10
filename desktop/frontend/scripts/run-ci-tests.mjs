@@ -12,11 +12,11 @@ const plan = testPlan(scripts, discoveredTests());
 if (process.argv.includes("--list")) {
   console.log(JSON.stringify(plan, null, 2));
 } else {
-  const concurrency = Number(process.env.REASONIX_TEST_CONCURRENCY ?? 2);
+  const concurrency = Number(process.env.DEEPER_TEST_CONCURRENCY ?? 2);
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 4) throw new Error("test concurrency must be 1 to 4");
   const require = createRequire(import.meta.url);
   const commands = { tsx: require.resolve("tsx/cli"), tsc: require.resolve("typescript/bin/tsc") };
-  const logs = mkdtempSync(path.join(tmpdir(), "reasonix-ci-tests-"));
+  const logs = mkdtempSync(path.join(tmpdir(), "deeper-ci-tests-"));
   let failed = false;
   let completed = 0;
   const children = new Set();

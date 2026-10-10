@@ -207,7 +207,7 @@ console.log("\nmermaid rendering");
   ok(markdownSource.includes("streamingMarkdownCommitInterval"), "streaming markdown applies an adaptive parse budget");
   ok(markdownSource.includes('text.slice(renderedText.length)'), "streaming markdown exposes an immediate lightweight tail");
   ok(markdownSource.includes("requestIdleCallback"), "large Markdown finalization waits for browser idle time");
-  ok(markdownSource.includes("reasonix:markdown-finalize"), "large Markdown finalization emits a performance measure");
+  ok(markdownSource.includes("deeper:markdown-finalize"), "large Markdown finalization emits a performance measure");
   ok(markdownSource.includes("splitStableMarkdownSections"), "large Markdown retains completed top-level sections");
   ok(markdownRendererSource.includes("bare = false"), "stable Markdown sections share one semantic container");
   ok(

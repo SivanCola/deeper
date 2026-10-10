@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/tool"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/tool"
+	"deeper/internal/transcript"
 )
 
 func TestSteerEventFollowsDurableConsumedTransition(t *testing.T) {

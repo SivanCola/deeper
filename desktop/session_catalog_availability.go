@@ -5,7 +5,7 @@ import (
 	"os"
 	"sort"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 type catalogWorkspaceAvailability struct {

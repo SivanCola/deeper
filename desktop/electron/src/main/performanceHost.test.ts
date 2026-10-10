@@ -33,7 +33,7 @@ test("navigation while the consent dialog is open cancels export", async () => {
   const contents = Object.assign(new EventEmitter(), { isDestroyed: () => false, takeHeapSnapshot: async () => { throw Error("must not capture"); } });
   const win = Object.assign(new EventEmitter(), { webContents: contents, isVisible: () => true, isFocused: () => true });
   const host = createPerformanceHost({ window: () => win as unknown as BrowserWindow, workerPath: "unused", locale: () => "en", dialog: {
-    showMessageBox: async () => { contents.emit("did-start-navigation", {}, "reasonix://app", false, true); return { response: 1, checkboxChecked: false }; },
+    showMessageBox: async () => { contents.emit("did-start-navigation", {}, "deeper://app", false, true); return { response: 1, checkboxChecked: false }; },
     showSaveDialog: async () => { throw Error("must not save"); },
   } });
   assert.deepEqual(await host.exportHeapSnapshot(), { status: "cancelled" });

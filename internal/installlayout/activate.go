@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	filelock "reasonix/internal/identitylock"
+	filelock "deeper/internal/identitylock"
 )
 
-const activationLockName = ".reasonix-activate.lock"
+const activationLockName = ".deeper-activate.lock"
 
 // Member is one file to publish into a version directory.
 type Member struct {
@@ -272,11 +272,11 @@ func resolveWindowsRootEntries(req *ActivationRequest, installRoot string) error
 
 func windowsRootMembers(root string, sources WindowsRootEntrySources) ([]Member, []string, error) {
 	members := []Member{
-		{Name: "Reasonix.exe", Path: sources.LauncherPath},
-		{Name: "reasonix-cli.exe", Path: sources.CLIEntryPath},
+		{Name: "Deeper.exe", Path: sources.LauncherPath},
+		{Name: "deeper-cli.exe", Path: sources.CLIEntryPath},
 	}
-	names := []string{"Reasonix.exe", "reasonix-cli.exe"}
-	const legacy = "reasonix-launcher.exe"
+	names := []string{"Deeper.exe", "deeper-cli.exe"}
+	const legacy = "deeper-launcher.exe"
 	info, err := os.Lstat(filepath.Join(root, legacy))
 	if err == nil {
 		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {

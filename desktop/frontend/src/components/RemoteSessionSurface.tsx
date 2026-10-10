@@ -57,11 +57,11 @@ export function RemoteSessionSurface({ tab, session, surfaceCommitToken, onSurfa
   ));
   const formActionDisabled = formUpgradeRequired || formIdentityUnavailable;
   const capabilityError = promptUpgradeRequired
-    ? "This remote Reasonix Serve must be upgraded before this card can be answered safely."
+    ? "This remote Deeper Serve must be upgraded before this card can be answered safely."
     : promptIdentityUnavailable
       ? "This card's exact request identity is unavailable. Refresh the session before answering."
     : formUpgradeRequired
-      ? "This remote Reasonix Serve must be upgraded before this form can be submitted safely."
+      ? "This remote Deeper Serve must be upgraded before this form can be submitted safely."
       : formIdentityUnavailable
         ? "This form's exact publication identity is unavailable. Refresh the session before submitting."
       : "";
@@ -87,7 +87,7 @@ export function RemoteSessionSurface({ tab, session, surfaceCommitToken, onSurfa
   });
   const resolvePrompt = (prompt: { id: string; turnId?: string; runtimeEpoch?: string }, kind: PromptKind, answer: Record<string, unknown>) => {
     if (!tab.interactionTargetSupported || !app.ResolveRemoteTabPromptExact) {
-      return Promise.reject(new Error("This remote Reasonix Serve must be upgraded before this card can be answered safely."));
+      return Promise.reject(new Error("This remote Deeper Serve must be upgraded before this card can be answered safely."));
     }
     return app.ResolveRemoteTabPromptExact(exactPromptTarget(prompt, kind), answer);
   };
@@ -98,7 +98,7 @@ export function RemoteSessionSurface({ tab, session, surfaceCommitToken, onSurfa
     setBusyFormKey(requestKey);
     runAction(async () => {
       if (!tab.extensionFormInstanceSupported || !app.SubmitRemoteTabExtensionFormExact) {
-        throw new Error("This remote Reasonix Serve must be upgraded before this form can be submitted safely.");
+        throw new Error("This remote Deeper Serve must be upgraded before this form can be submitted safely.");
       }
       await app.SubmitRemoteTabExtensionFormExact({
         tabId: tab.id,

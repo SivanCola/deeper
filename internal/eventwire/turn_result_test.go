@@ -1,9 +1,9 @@
 package eventwire
 
 import (
+	"deeper/internal/checkpoint"
+	"deeper/internal/event"
 	"encoding/json"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/event"
 	"testing"
 )
 

@@ -9,23 +9,23 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/remote"
+	"deeper/internal/remote"
 )
 
 func TestLaunchCommandExportsBrowserBrokerEnvOnly(t *testing.T) {
 	paths := StatePaths{Dir: "/d", TokenFile: "/d/t", PortFile: "/d/p", PidFile: "/d/i", LogFile: "/d/l"}
-	cmd := LaunchCommand("/usr/bin/reasonix", "/ws", paths, nil, &BrowserBrokerOptions{
+	cmd := LaunchCommand("/usr/bin/deeper", "/ws", paths, nil, &BrowserBrokerOptions{
 		BaseURL: "http://127.0.0.1:41234", Token: "br'oker $tok",
 	})
-	want := `REASONIX_BROWSER_BROKER='http://127.0.0.1:41234' REASONIX_BROWSER_TOKEN='br'\''oker $tok' $SX nohup '/usr/bin/reasonix' serve`
+	want := `DEEPER_BROWSER_BROKER='http://127.0.0.1:41234' DEEPER_BROWSER_TOKEN='br'\''oker $tok' $SX nohup '/usr/bin/deeper' serve`
 	if !strings.Contains(cmd, want) {
 		t.Fatalf("launch command lacks the quoted broker environment:\n%s", cmd)
 	}
 	if strings.Contains(cmd, "--browser") {
 		t.Fatalf("broker must not travel in argv:\n%s", cmd)
 	}
-	plain := LaunchCommand("/usr/bin/reasonix", "/ws", paths, nil, nil)
-	if strings.Contains(plain, "REASONIX_BROWSER") {
+	plain := LaunchCommand("/usr/bin/deeper", "/ws", paths, nil, nil)
+	if strings.Contains(plain, "DEEPER_BROWSER") {
 		t.Fatalf("no broker must leave no environment behind:\n%s", plain)
 	}
 	if !strings.Contains(plain, "SX=setsid; $SX nohup") {
@@ -34,7 +34,7 @@ func TestLaunchCommandExportsBrowserBrokerEnvOnly(t *testing.T) {
 }
 
 func TestBrowserBrokerSupportedCommandProbesHelpMarker(t *testing.T) {
-	cmd := BrowserBrokerSupportedCommand("/home/x/'; rm -rf ~; echo '/reasonix")
+	cmd := BrowserBrokerSupportedCommand("/home/x/'; rm -rf ~; echo '/deeper")
 	for _, want := range []string{"serve --help", "'browser-broker'", "echo yes", "echo no", `'\''; rm -rf ~; echo '\''`} {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("probe command missing %q:\n%s", want, cmd)
@@ -52,8 +52,8 @@ func launchConn(t *testing.T, root, answer string) (*fakeConn, *string) {
 		switch {
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v reasonix"):
-			return ok("/usr/bin/reasonix\nreasonix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+		case strings.Contains(cmd, "command -v deeper"):
+			return ok("/usr/bin/deeper\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
 		case strings.Contains(cmd, "grep -q -- 'browser-broker'"):
 			return ok(answer + "\n")
 		case strings.Contains(cmd, "nohup"):
@@ -87,7 +87,7 @@ func TestEnsureServeLaunchesWithBrowserBrokerWhenAdvertised(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("broker callback ran %d times, want once before launch", calls)
 	}
-	if !strings.Contains(*launch, "REASONIX_BROWSER_BROKER='http://127.0.0.1:5151' REASONIX_BROWSER_TOKEN='gen-1' $SX nohup") {
+	if !strings.Contains(*launch, "DEEPER_BROWSER_BROKER='http://127.0.0.1:5151' DEEPER_BROWSER_TOKEN='gen-1' $SX nohup") {
 		t.Fatalf("launch command lacks the broker environment:\n%s", *launch)
 	}
 }
@@ -109,7 +109,7 @@ func TestEnsureServeSkipsBrowserBrokerForOlderServe(t *testing.T) {
 	if called {
 		t.Fatal("broker callback must not run (and no forward be opened) for a serve that does not advertise browser-broker")
 	}
-	if strings.Contains(*launch, "REASONIX_BROWSER") {
+	if strings.Contains(*launch, "DEEPER_BROWSER") {
 		t.Fatalf("older serve received broker environment:\n%s", *launch)
 	}
 }
@@ -129,7 +129,7 @@ func TestEnsureServeLaunchesWithoutBrowserWhenBrokerFails(t *testing.T) {
 	if err != nil || res.State.PID != 54321 {
 		t.Fatalf("a failed broker must not block the launch: %+v %v", res, err)
 	}
-	if strings.Contains(*launch, "REASONIX_BROWSER") {
+	if strings.Contains(*launch, "DEEPER_BROWSER") {
 		t.Fatalf("failed broker leaked environment:\n%s", *launch)
 	}
 	if !slices.Contains(steps, "browser_broker:unavailable: reverse tunnel refused") {

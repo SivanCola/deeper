@@ -9,7 +9,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 type fakeProvider struct {

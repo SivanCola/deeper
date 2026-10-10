@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/identitylock"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	"deeper/internal/identitylock"
 )
 
 type historicalImportQueueSidecar struct {

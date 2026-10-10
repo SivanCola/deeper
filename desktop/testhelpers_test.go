@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 // Test-only helpers for the desktop suite. They exercise production state

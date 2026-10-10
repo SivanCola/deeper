@@ -1,6 +1,6 @@
 # Permission presets
 
-Reasonix uses one permission preset for every execution surface: Desktop, CLI,
+Deeper uses one permission preset for every execution surface: Desktop, CLI,
 Serve, ACP, bots, automations, and subagents. Collaboration mode (Normal, Plan,
 or Goal) controls how work advances; the permission preset controls the enforced
 filesystem and process boundary.
@@ -9,15 +9,15 @@ filesystem and process boundary.
 | --- | --- | --- |
 | **Read only** (`read-only`) | Workspace and session files are mounted read only. | Reads run directly. Writes and unknown external side effects require an exact one-time or session grant. |
 | **Workspace write** (`workspace-write`) | The workspace and session-private temporary directory are writable. | Default. Ordinary commands, pipes, command substitution, inline Python/Node, builds, and tests run without syntax-based prompts while they remain inside the boundary. |
-| **Full access** (`danger-full-access`) | Commands use the normal host path as the current OS user; Reasonix filesystem and network sandboxing are disabled. | Ordinary `ask` fallbacks are skipped. Explicit host `deny` rules still apply before launch, but Reasonix does not constrain the launched process. |
+| **Full access** (`danger-full-access`) | Commands use the normal host path as the current OS user; Deeper filesystem and network sandboxing are disabled. | Ordinary `ask` fallbacks are skipped. Explicit host `deny` rules still apply before launch, but Deeper does not constrain the launched process. |
 
-- **Collaboration mode** (Normal / Plan / Goal) decides how Reasonix advances the task. There is no automatic task mode or selectable quality floor. Verification obligations come from real tool actions, project rules, task risk, and explicit user requirements.
+- **Collaboration mode** (Normal / Plan / Goal) decides how Deeper advances the task. There is no automatic task mode or selectable quality floor. Verification obligations come from real tool actions, project rules, task risk, and explicit user requirements.
 - **Permission preset** decides the enforced filesystem and process boundary and when exact grants are requested.
 
 macOS enforces restricted presets with Seatbelt and Linux uses bubblewrap. If
 the required backend cannot start there, restricted presets fail closed;
-Reasonix never offers to silently rerun the command without isolation. Windows
-has no OS-level shell sandbox: restricted presets still confine Reasonix file
+Deeper never offers to silently rerun the command without isolation. Windows
+has no OS-level shell sandbox: restricted presets still confine Deeper file
 tools and request exact grants, but shell commands run as the current OS user.
 
 ## Approval scope
@@ -45,10 +45,10 @@ the retry must carry the matching `denial_id` and a justification.
 New sessions default to workspace write:
 
 ```sh
-reasonix --permission-mode read-only
-reasonix --permission-mode workspace-write
-reasonix --permission-mode danger-full-access
-reasonix run --permission-mode workspace-write "run the tests"
+deeper --permission-mode read-only
+deeper --permission-mode workspace-write
+deeper --permission-mode danger-full-access
+deeper run --permission-mode workspace-write "run the tests"
 ```
 
 In the interactive CLI, `Shift+Tab` cycles Read only → Workspace write →

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/sessioncatalog"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestOrganizationAdmissionRejectsAdoptionAfterResolution(t *testing.T) {

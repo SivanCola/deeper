@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/sqliteuri"
+	"deeper/internal/sqliteuri"
 )
 
 type readViewKey struct{}

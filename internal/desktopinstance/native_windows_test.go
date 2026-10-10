@@ -50,7 +50,7 @@ func TestNativeStatusPipeValidatesIdentityAndProtocol(t *testing.T) {
 		{"valid", 1, p.pid, true}, {"wrong-pid", 1, p.pid + 1, false}, {"future-schema", 2, p.pid, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			name, _ := windows.UTF16PtrFromString(fmt.Sprintf(`\\.\pipe\reasonix-shell-v1-%d`, p.pid))
+			name, _ := windows.UTF16PtrFromString(fmt.Sprintf(`\\.\pipe\deeper-shell-v1-%d`, p.pid))
 			pipe, err := windows.CreateNamedPipe(name, windows.PIPE_ACCESS_OUTBOUND, windows.PIPE_TYPE_BYTE, 1, StatusLimit+1, 0, 2000, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -63,7 +63,7 @@ func TestNativeStatusPipeValidatesIdentityAndProtocol(t *testing.T) {
 					done <- err
 					return
 				}
-				data, _ := json.Marshal(Status{SchemaVersion: tc.schema, Product: "com.reasonix.desktop", PID: tc.pid, Version: "v1.38.7", Generation: "test", HomeKey: ProfileKey(t.TempDir()), Lifecycle: "failed", Service: "exited"})
+				data, _ := json.Marshal(Status{SchemaVersion: tc.schema, Product: "io.github.sivancola.deeper", PID: tc.pid, Version: "v1.38.7", Generation: "test", HomeKey: ProfileKey(t.TempDir()), Lifecycle: "failed", Service: "exited"})
 				var n uint32
 				err = windows.WriteFile(pipe, append(data, '\n'), &n, nil)
 				if err == nil {
@@ -83,12 +83,12 @@ func TestNativeStatusPipeValidatesIdentityAndProtocol(t *testing.T) {
 }
 
 func TestNativeProcessIdentityAndPIDReuseFence(t *testing.T) {
-	if os.Getenv("REASONIX_PROCESS_TEST_CHILD") == "1" {
+	if os.Getenv("DEEPER_PROCESS_TEST_CHILD") == "1" {
 		time.Sleep(time.Minute)
 		return
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestNativeProcessIdentityAndPIDReuseFence$")
-	cmd.Env = append(os.Environ(), "REASONIX_PROCESS_TEST_CHILD=1")
+	cmd.Env = append(os.Environ(), "DEEPER_PROCESS_TEST_CHILD=1")
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -166,12 +166,12 @@ func TestNativeInspectCurrentUser(t *testing.T) {
 
 func TestUnsupportedPortableLocationNotificationIsActionable(t *testing.T) {
 	title, body := notificationContent(fmt.Errorf("launch: %w", NewUnsupportedPortableLocationError("unc")))
-	if title != "Reasonix 无法从当前位置启动" {
+	if title != "Deeper 无法从当前位置启动" {
 		t.Fatalf("title = %q", title)
 	}
 	for _, want := range []string{
 		"Copy the entire extracted folder to a local Windows drive",
-		"start Reasonix.exe, or use the installer",
+		"start Deeper.exe, or use the installer",
 		"请将整个解压目录复制到 Windows 本地磁盘",
 		"或使用安装器",
 	} {
@@ -209,7 +209,7 @@ func TestPortableLocationDiagnosticContainsClassificationButNoPath(t *testing.T)
 
 // Optional local diagnostic: never runs against the user's default profile.
 func TestNativeExplicitFixtureInspection(t *testing.T) {
-	root, home := os.Getenv("REASONIX_TEST_INSPECT_ROOT"), os.Getenv("REASONIX_TEST_INSPECT_HOME")
+	root, home := os.Getenv("DEEPER_TEST_INSPECT_ROOT"), os.Getenv("DEEPER_TEST_INSPECT_HOME")
 	if root == "" || home == "" {
 		t.Skip("explicit isolated installed fixture required")
 	}

@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // Round-count semantics must not depend on hundreds of host fsync latencies.

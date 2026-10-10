@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/remote"
+	"deeper/internal/remote"
 )
 
 // StatePaths are the absolute remote-side paths for one workspace's serve
-// state. All are under ~/.reasonix/remote.
+// state. All are under ~/.deeper/remote.
 type StatePaths struct {
-	Dir       string // ~/.reasonix/remote
+	Dir       string // ~/.deeper/remote
 	StateJSON string
 	TokenFile string
 	LogFile   string
@@ -65,7 +65,7 @@ func LaunchCommand(bin, workspace string, p StatePaths, cred *CredentialProxyOpt
 func StopCommand(pid int, p StatePaths) string {
 	return fmt.Sprintf(
 		"T=%s; P=%s; ours() { A=$(ps -p %d -o args= 2>/dev/null || ps -p %d -o command= 2>/dev/null); "+
-			"case \"$A\" in *reasonix*serve*\"$T\"*\"$P\"*) return 0;; *) return 1;; esac; }; "+
+			"case \"$A\" in *deeper*serve*\"$T\"*\"$P\"*) return 0;; *) return 1;; esac; }; "+
 			"ours || exit 0; kill -TERM %d 2>/dev/null; "+
 			"for i in 1 2 3 4 5; do kill -0 %d 2>/dev/null || exit 0; ours || exit 0; sleep 1; done; "+
 			"ours && kill -KILL %d 2>/dev/null; exit 0",
@@ -74,7 +74,7 @@ func StopCommand(pid int, p StatePaths) string {
 }
 
 // ServeAliveCommand prints "1" only when pid is running AND its command line
-// looks like a reasonix serve process. Checking the args (not just `kill -0`)
+// looks like a deeper serve process. Checking the args (not just `kill -0`)
 // prevents a recycled PID — now owned by an unrelated process — from being
 // mistaken for the serve and later signalled by StopCommand. Each requireArgs
 // fragment must additionally appear in the args, in order after the token and
@@ -85,7 +85,7 @@ func ServeAliveCommand(pid int, p StatePaths, requireArgs ...string) string {
 	var decls strings.Builder
 	fmt.Fprintf(&decls, "T=%s; P=%s; ", shellQuote(p.TokenFile), shellQuote(p.PortFile))
 	var pattern strings.Builder
-	pattern.WriteString("*reasonix*serve*\"$T\"*\"$P\"*")
+	pattern.WriteString("*deeper*serve*\"$T\"*\"$P\"*")
 	for i, arg := range requireArgs {
 		fmt.Fprintf(&decls, "R%d=%s; ", i, shellQuote(arg))
 		fmt.Fprintf(&pattern, "\"$R%d\"*", i)
@@ -123,9 +123,9 @@ const serveDetachedHealMarker = "detached-heal"
 // ServeCapsToken is the rolling capability revision advertised in serve help.
 // Bump this when the desktop requires a newer wire/runtime contract. The CLI
 // imports this value so the advertised token cannot drift from the probe.
-const ServeCapsToken = "reasonix-serve-caps-20260928a"
+const ServeCapsToken = "deeper-serve-caps-20260928a"
 
-// LocateCommand probes for a usable reasonix binary and the exact Serve
+// LocateCommand probes for a usable deeper binary and the exact Serve
 // capabilities required by the desktop. Capability probes are authoritative:
 // an old binary can have an otherwise acceptable product version.
 func LocateCommand(uploadedBin string) string {
@@ -143,16 +143,16 @@ func LocateUploadedCommand(uploadedBin string) string {
 // current global prefix. A stale login-PATH binary must not shadow a package
 // that was just installed to repair missing Serve capabilities.
 func LocateNPMGlobalCommand() string {
-	resolve := "BIN=; P=\"$(npm prefix -g 2>/dev/null)\"; if [ -n \"$P\" ] && [ -x \"$P/bin/reasonix\" ]; then BIN=\"$P/bin/reasonix\"; fi; "
+	resolve := "BIN=; P=\"$(npm prefix -g 2>/dev/null)\"; if [ -n \"$P\" ] && [ -x \"$P/bin/deeper\" ]; then BIN=\"$P/bin/deeper\"; fi; "
 	return locateResolvedCommand(resolve)
 }
 
 func locateCommand(uploadedBin string, preferUploaded bool) string {
 	resolve := fmt.Sprintf(
-		"BIN=\"$(command -v reasonix 2>/dev/null)\"; if [ -z \"$BIN\" ] && [ -x %s ]; then BIN=%s; fi; ",
+		"BIN=\"$(command -v deeper 2>/dev/null)\"; if [ -z \"$BIN\" ] && [ -x %s ]; then BIN=%s; fi; ",
 		shellQuote(uploadedBin), shellQuote(uploadedBin),
 	)
-	fallback := "if [ -z \"$BIN\" ]; then P=\"$(npm prefix -g 2>/dev/null)\"; if [ -n \"$P\" ] && [ -x \"$P/bin/reasonix\" ]; then BIN=\"$P/bin/reasonix\"; fi; fi; "
+	fallback := "if [ -z \"$BIN\" ]; then P=\"$(npm prefix -g 2>/dev/null)\"; if [ -n \"$P\" ] && [ -x \"$P/bin/deeper\" ]; then BIN=\"$P/bin/deeper\"; fi; fi; "
 	if preferUploaded {
 		resolve = fmt.Sprintf("BIN=; if [ -x %s ]; then BIN=%s; fi; ", shellQuote(uploadedBin), shellQuote(uploadedBin))
 		fallback = ""

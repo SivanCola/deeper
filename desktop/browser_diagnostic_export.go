@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/desktop/internal/browserops"
-	"reasonix/internal/config"
-	"reasonix/internal/extension/rpcwire"
+	"deeper/desktop/internal/browserops"
+	"deeper/internal/config"
+	"deeper/internal/extension/rpcwire"
 )
 
 func browserDiagnosticScope(hostID, sessionID string) string {

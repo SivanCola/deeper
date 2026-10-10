@@ -16,12 +16,12 @@ import (
 
 const (
 	contractPath = ".signpath/contracts/release-signing.yml"
-	projectSlug  = "DeepSeek-Reasonix"
+	projectSlug  = "deeper"
 	policySlug   = "release-signing"
-	repository   = "https://github.com/esengine/DeepSeek-Reasonix.git"
+	repository   = "https://github.com/SivanCola/deeper.git"
 )
 
-var expectedBranches = []string{"main-v2"}
+var expectedBranches = []string{"main"}
 
 type releaseSigningContract struct {
 	Version                 int      `yaml:"version"`
@@ -367,7 +367,7 @@ func contractFingerprint(root string, contract releaseSigningContract) ([sha256.
 	names := append([]string{contractPath}, contract.FingerprintFiles...)
 	sort.Strings(names)
 	hash := sha256.New()
-	_, _ = io.WriteString(hash, "reasonix-signpath-release-contract-v1\x00")
+	_, _ = io.WriteString(hash, "deeper-signpath-release-contract-v1\x00")
 	for _, name := range names {
 		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
 		if err != nil {

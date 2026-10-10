@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 func historicalArchiveFixture(t *testing.T) (*App, SessionSelector, *session.Service) {

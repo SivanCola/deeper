@@ -9,7 +9,7 @@ import (
 
 func TestCommitConnectionCredentialIsolatesSelectedConnection(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	cfg := Default()
 	one := ProviderEntry{Name: "one", Kind: "openai", BaseURL: "https://one.invalid/v1", Models: []string{"chat"}, Default: "chat", APIKeyEnv: "SHARED_API_KEY"}
@@ -36,7 +36,7 @@ func TestCommitConnectionCredentialIsolatesSelectedConnection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.Persisted || !strings.HasPrefix(result.Slot, "REASONIX_CONNECTION_") {
+	if !result.Persisted || !strings.HasPrefix(result.Slot, "DEEPER_CONNECTION_") {
 		t.Fatalf("result = %+v", result)
 	}
 	saved, err := LoadForEditReadOnlyStrict(path)
@@ -70,7 +70,7 @@ func TestCommitConnectionCredentialIsolatesSelectedConnection(t *testing.T) {
 
 func TestCommitConnectionCredentialDurableRequestReceipt(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	cfg := Default()
 	cfg.Providers = []ProviderEntry{{Name: "relay", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "chat", APIKeyEnv: "OLD_KEY"}}
 	path := UserConfigPath()

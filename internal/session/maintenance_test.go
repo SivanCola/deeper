@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 func TestPurgeOwnershipAndFailureAtomicity(t *testing.T) {

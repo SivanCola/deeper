@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/recovery"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/recovery"
+	"deeper/internal/store"
 )
 
 const (
@@ -324,7 +324,7 @@ func machineTime(value time.Time) string {
 func loadMachineIdentityKey() ([]byte, error) {
 	root := strings.TrimSpace(config.MemoryUserDir())
 	if root == "" {
-		return nil, fmt.Errorf("machine identity: Reasonix state directory is unavailable")
+		return nil, fmt.Errorf("machine identity: Deeper state directory is unavailable")
 	}
 	path := filepath.Join(root, machineIdentityKeyFile)
 	key, err := readMachineIdentityKey(path)
@@ -382,7 +382,7 @@ func machineSessionIDWithKey(branchID string, identityKey []byte) string {
 		return ""
 	}
 	digest := hmac.New(sha256.New, identityKey)
-	_, _ = digest.Write([]byte("reasonix-machine-session-v1\x00"))
+	_, _ = digest.Write([]byte("deeper-machine-session-v1\x00"))
 	_, _ = digest.Write([]byte(branchID))
 	return "session_" + hex.EncodeToString(digest.Sum(nil)[:16])
 }

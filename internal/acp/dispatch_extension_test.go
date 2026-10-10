@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/uihub"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/uihub"
 )
 
 func extStatusEvent(severity string) event.Event {
@@ -119,10 +119,10 @@ func TestUpdateSinkExtensionSupportedClientGetsMetaAndText(t *testing.T) {
 		t.Fatalf("structured update sessionUpdate = %v, want %q", u["sessionUpdate"], extensionSurfaceUpdateKind)
 	}
 	meta, _ := u["_meta"].(map[string]any)
-	vendor, _ := meta["reasonix.io"].(map[string]any)
+	vendor, _ := meta["deeper.io"].(map[string]any)
 	surface, _ := vendor["extensionSurface"].(map[string]any)
 	if surface == nil {
-		t.Fatalf("structured update missing _meta.reasonix.io.extensionSurface: %v", u)
+		t.Fatalf("structured update missing _meta.deeper.io.extensionSurface: %v", u)
 	}
 	if surface["kind"] != "card" || surface["pluginId"] != "alpha" || surface["surfaceId"] != "c1" {
 		t.Errorf("surface DTO = %v", surface)
@@ -183,12 +183,12 @@ func TestInitializeAdvertisesExtensionSurface(t *testing.T) {
 	if !ok {
 		t.Fatalf("initialize returned %T", result)
 	}
-	vendor, ok := ir.AgentCapabilities.Meta["reasonix.io"].(ReasonixExtensionCapabilities)
+	vendor, ok := ir.AgentCapabilities.Meta["deeper.io"].(DeeperExtensionCapabilities)
 	if !ok {
-		t.Fatalf("_meta[reasonix.io] = %T", ir.AgentCapabilities.Meta["reasonix.io"])
+		t.Fatalf("_meta[deeper.io] = %T", ir.AgentCapabilities.Meta["deeper.io"])
 	}
 	if vendor.ExtensionSurface == nil || !vendor.ExtensionSurface.Supported ||
-		vendor.ExtensionSurface.SchemaVersion != reasonixExtensionSurfaceSchemaVersion {
+		vendor.ExtensionSurface.SchemaVersion != deeperExtensionSurfaceSchemaVersion {
 		t.Fatalf("extensionSurface capability = %+v", vendor.ExtensionSurface)
 	}
 
@@ -210,8 +210,8 @@ func TestInitializeAdvertisesExtensionSurface(t *testing.T) {
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	got := decoded.AgentCapabilities.Meta["reasonix.io"].ExtensionSurface
-	if got == nil || !got.Supported || got.SchemaVersion != reasonixExtensionSurfaceSchemaVersion {
+	got := decoded.AgentCapabilities.Meta["deeper.io"].ExtensionSurface
+	if got == nil || !got.Supported || got.SchemaVersion != deeperExtensionSurfaceSchemaVersion {
 		t.Fatalf("wire extensionSurface = %+v", got)
 	}
 }
@@ -224,18 +224,18 @@ func TestClientExtensionSurfaceSupportedParsing(t *testing.T) {
 	}{
 		{"absent", nil, false},
 		{"vendor block absent", map[string]any{"other": true}, false},
-		{"capability absent", map[string]any{"reasonix.io": map[string]any{}}, false},
-		{"supported", map[string]any{"reasonix.io": map[string]any{
+		{"capability absent", map[string]any{"deeper.io": map[string]any{}}, false},
+		{"supported", map[string]any{"deeper.io": map[string]any{
 			"extensionSurface": map[string]any{"supported": true, "schemaVersion": 1},
 		}}, true},
-		{"explicit false", map[string]any{"reasonix.io": map[string]any{
+		{"explicit false", map[string]any{"deeper.io": map[string]any{
 			"extensionSurface": map[string]any{"supported": false},
 		}}, false},
-		{"malformed vendor", map[string]any{"reasonix.io": "nope"}, false},
-		{"malformed capability", map[string]any{"reasonix.io": map[string]any{
+		{"malformed vendor", map[string]any{"deeper.io": "nope"}, false},
+		{"malformed capability", map[string]any{"deeper.io": map[string]any{
 			"extensionSurface": "nope",
 		}}, false},
-		{"malformed flag", map[string]any{"reasonix.io": map[string]any{
+		{"malformed flag", map[string]any{"deeper.io": map[string]any{
 			"extensionSurface": map[string]any{"supported": "yes"},
 		}}, false},
 	}
@@ -254,7 +254,7 @@ func TestInitializeRecordsClientExtensionSurfaceSupport(t *testing.T) {
 	params := InitializeParams{
 		ProtocolVersion: 1,
 		ClientCapabilities: ClientCapabilities{Meta: map[string]any{
-			"reasonix.io": map[string]any{
+			"deeper.io": map[string]any{
 				"extensionSurface": map[string]any{"supported": true, "schemaVersion": 1},
 			},
 		}},

@@ -14,10 +14,10 @@ package event
 import (
 	"encoding/json"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/evidence"
-	"reasonix/internal/nilutil"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/evidence"
+	"deeper/internal/nilutil"
+	"deeper/internal/provider"
 )
 
 // Kind tags an Event. Read the field(s) documented for that kind.

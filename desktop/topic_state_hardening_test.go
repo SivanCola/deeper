@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/topicstate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/topicstate"
 )
 
 func TestTopicIndexRepairDoesNotOverwriteConcurrentManualRename(t *testing.T) {
@@ -355,7 +355,7 @@ func TestFutureTopicSchemaWithoutLegacyReturnsVisibleReadError(t *testing.T) {
 		}
 	}
 	_, err = NewApp().ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: workspaceRoot})
-	if err == nil || !strings.Contains(err.Error(), "newer Reasonix version") {
+	if err == nil || !strings.Contains(err.Error(), "newer Deeper version") {
 		t.Fatalf("bridge read error = %v", err)
 	}
 	if strings.Contains(err.Error(), workspaceRoot) {

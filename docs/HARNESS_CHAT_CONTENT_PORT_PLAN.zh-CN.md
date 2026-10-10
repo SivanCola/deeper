@@ -1,8 +1,8 @@
-# Reasonix 聊天内容与交互宿主移植
+# Deeper 聊天内容与交互宿主移植
 
 状态：已实施。本文原先的待实施方案已由当前实现和验收记录取代。完整中文说明见 [CHAT_CONTENT_HOST.zh-CN.md](CHAT_CONTENT_HOST.zh-CN.md)，英文说明见 [CHAT_CONTENT_HOST.md](CHAT_CONTENT_HOST.md)。
 
-实现参考本地 DeepSeek Harness `c291e7961a515f6d7af9304e7fd1d257929aef26` 的聊天内容组织和交互方式。Reasonix 保留自己的会话协议、`present` 工具、权限体系、资源读取接口和 Electron 工作台，没有复制 Cordis 或 Harness 的整个 Conversation 框架。
+实现参考本地 DeepSeek Harness `c291e7961a515f6d7af9304e7fd1d257929aef26` 的聊天内容组织和交互方式。Deeper 保留自己的会话协议、`present` 工具、权限体系、资源读取接口和 Electron 工作台，没有复制 Cordis 或 Harness 的整个 Conversation 框架。
 
 关键默认决策已经落实：
 

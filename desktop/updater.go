@@ -24,11 +24,11 @@ import (
 
 	"golang.org/x/mod/semver"
 
-	"reasonix/desktop/internal/update"
-	"reasonix/internal/config"
-	"reasonix/internal/installlayout"
-	"reasonix/internal/netclient"
-	"reasonix/internal/repair"
+	"deeper/desktop/internal/update"
+	"deeper/internal/config"
+	"deeper/internal/installlayout"
+	"deeper/internal/netclient"
+	"deeper/internal/repair"
 )
 
 // updater.go is the transport-free core of the desktop auto-updater: manifest
@@ -36,17 +36,11 @@ import (
 // has no shell dependency so the logic is unit-tested directly; updater_app.go is
 // the thin bridge binding that wires these into App methods and progress events.
 
-// Manifest endpoints — R2 CDN first (fast, especially in CN), then the crash
-// worker release gateway, then GitHub as the stable channel's last resort. The
-// selected update channel picks the rolling pointer; it is user-configurable and
-// independent from the build channel embedded for diagnostics/backcompat. The
-// gateway still avoids GitHub's repository-wide /releases/latest shortcut so the
-// app is not coupled to GitHub's homepage badge semantics.
+// Deeper updates use the manifest attached to the latest stable CLI release.
 const (
-	r2Base                     = "https://dl.reasonix.io"
-	releaseGatewayBase         = "https://crash.reasonix.io/v1/desktop/releases"
-	downloadPageURL            = "https://reasonix.io/#start"
-	manifestDownloadPageURL    = "https://reasonix.io/?download=desktop#start"
+	githubReleaseAssetBase     = "https://github.com/SivanCola/deeper/releases/download"
+	downloadPageURL            = "https://github.com/SivanCola/deeper/releases"
+	manifestDownloadPageURL    = "https://github.com/SivanCola/deeper/releases"
 	httpTimeout                = 15 * time.Second
 	manifestEndpointTimeout    = 5 * time.Second
 	maxDesktopReleaseAssetSize = int64(1 << 30)
@@ -61,13 +55,8 @@ var (
 	sha256RE               = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
 
-// githubManifestFallback is the stable channel's last-resort manifest source.
-// dl.reasonix.io and crash.reasonix.io share one Cloudflare zone, so bot
-// protection that 403s a user's egress IP takes out both first-party endpoints
-// at once (#6005); GitHub is separate infrastructure. The repo-wide latest
-// shortcut resolves to whichever release line holds that badge, so a manifest
-// from another line must be rejected by validation, not assumed absent.
-const githubManifestFallback = "https://github.com/esengine/DeepSeek-Reasonix/releases/latest/download/latest.json"
+// GitHub latest is advanced only after CLI and Desktop artifacts are verified.
+const githubManifestEndpoint = "https://github.com/SivanCola/deeper/releases/latest/download/latest.json"
 
 func normalizeUpdateChannel(ch string) string {
 	return config.NormalizeDesktopUpdateChannel(ch)
@@ -94,11 +83,7 @@ func runningUpdateChannel() string {
 // in the order fetchManifest tries them.
 func manifestEndpoints(selected string) []string {
 	_ = selected
-	return []string{
-		r2Base + "/latest/latest.json",
-		releaseGatewayBase + "/stable/latest.json",
-		githubManifestFallback,
-	}
+	return []string{githubManifestEndpoint}
 }
 
 // updaterUserAgent identifies updater traffic. Go's default Go-http-client UA
@@ -106,7 +91,7 @@ func manifestEndpoints(selected string) []string {
 // lets the release edge allowlist updater requests and makes them attributable
 // in server logs.
 func updaterUserAgent(selected string) string {
-	return fmt.Sprintf("Reasonix-Updater/%s (%s/%s; build=%s; update=%s)", version, runtime.GOOS, runtime.GOARCH, channel, normalizeUpdateChannel(selected))
+	return fmt.Sprintf("Deeper-Updater/%s (%s/%s; build=%s; update=%s)", version, runtime.GOOS, runtime.GOARCH, channel, normalizeUpdateChannel(selected))
 }
 
 // downloadPage is the human-facing releases page shown when self-update is
@@ -114,10 +99,6 @@ func updaterUserAgent(selected string) string {
 func downloadPage(selected string) string {
 	_ = selected
 	u, _ := url.Parse(downloadPageURL)
-	query := u.Query()
-	query.Set("download", "desktop")
-	query.Del("channel")
-	u.RawQuery = query.Encode()
 	return u.String()
 }
 
@@ -133,15 +114,17 @@ func manifestDownloadPage(selected, manifestPage string) string {
 		u.User != nil {
 		return downloadPage(selected)
 	}
-	host := strings.ToLower(u.Hostname())
-	if host != "reasonix.io" && !strings.HasSuffix(host, ".reasonix.io") {
+	if strings.EqualFold(u.Hostname(), "github.com") && strings.HasPrefix(u.Path, "/SivanCola/deeper") {
+		return downloadPage(selected)
+	}
+	if u.Hostname() != "github.com" {
 		return u.String()
 	}
 	query := u.Query()
 	query.Set("download", "desktop")
 	query.Del("channel")
 	u.RawQuery = query.Encode()
-	u.Fragment = "start"
+	u.Fragment = ""
 	return u.String()
 }
 
@@ -229,9 +212,7 @@ func validateUpdateRedirect(req *http.Request, via []*http.Request) error {
 
 func isTrustedUpdateRedirectHost(host string) bool {
 	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
-	return host == "reasonix.io" ||
-		strings.HasSuffix(host, ".reasonix.io") ||
-		host == "github.com" ||
+	return host == "github.com" ||
 		strings.HasSuffix(host, ".githubusercontent.com")
 }
 
@@ -285,9 +266,8 @@ func desktopAssetBases(selected, version string, allowLegacyPreview bool) []stri
 	_ = allowLegacyPreview
 	tag := desktopReleaseTag(selected, version)
 	return []string{
-		fmt.Sprintf("%s/%s/", r2Base, tag),
-		fmt.Sprintf("https://github.com/esengine/DeepSeek-Reasonix/releases/download/%s/", tag),
-		fmt.Sprintf("https://github.com/esengine/DeepSeek-Reasonix/releases/download/%s/", version),
+		fmt.Sprintf("%s/%s/", githubReleaseAssetBase, tag),
+		fmt.Sprintf("https://github.com/SivanCola/deeper/releases/download/%s/", version),
 	}
 }
 
@@ -345,9 +325,9 @@ func validateDesktopManifest(selected string, m *update.Manifest) error {
 	requiredAssets := append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...)
 	if !legacyManifest {
 		downloadAssets := legacyDesktopDownloadAssets
-		if _, arm := m.Downloads["Reasonix-darwin-arm64.dmg"]; arm {
+		if _, arm := m.Downloads["Deeper-darwin-arm64.dmg"]; arm {
 			downloadAssets = requiredDesktopDownloadAssets
-		} else if _, intel := m.Downloads["Reasonix-darwin-amd64.dmg"]; intel {
+		} else if _, intel := m.Downloads["Deeper-darwin-amd64.dmg"]; intel {
 			downloadAssets = requiredDesktopDownloadAssets
 		}
 		requiredAssets = append(requiredAssets, downloadAssets...)
@@ -518,7 +498,7 @@ func defaultUpdateCacheBaseDir() (string, error) {
 	if err != nil {
 		base = os.TempDir()
 	}
-	return filepath.Join(base, "Reasonix", "updates"), nil
+	return filepath.Join(base, "Deeper", "updates"), nil
 }
 
 func updateCacheDir() (string, error) {
@@ -547,7 +527,7 @@ func assetFileName(asset update.Asset, version string) string {
 		}
 	}
 	clean := strings.NewReplacer("/", "-", "\\", "-", ":", "-", " ", "-").Replace(version)
-	return "Reasonix-" + clean + "-" + update.CurrentPlatform() + ".update"
+	return "Deeper-" + clean + "-" + update.CurrentPlatform() + ".update"
 }
 
 func writeAtomic(path string, data []byte, mode os.FileMode) error {
@@ -1016,9 +996,9 @@ func extractBinary(targz []byte, name string) ([]byte, error) {
 
 func extractLinuxReleaseUnit(targz []byte) (map[string][]byte, error) {
 	const (
-		desktop = "reasonix-desktop"
-		guard   = "reasonix-guard"
-		cli     = "reasonix"
+		desktop = "deeper-desktop"
+		guard   = "deeper-guard"
+		cli     = "deeper"
 	)
 	want := map[string]struct{}{desktop: {}, guard: {}, cli: {}}
 	found := make(map[string][]byte, len(want))
@@ -1069,9 +1049,9 @@ func applyLinux(targz []byte, prepared *repair.UpdateTransaction) error {
 	if err != nil {
 		return err
 	}
-	bin := release["reasonix-desktop"]
-	guard := release["reasonix-guard"]
-	cli := release["reasonix"]
+	bin := release["deeper-desktop"]
+	guard := release["deeper-guard"]
+	cli := release["deeper"]
 	exe := currentExecutablePathForLinux()
 	if exe == "" {
 		return fmt.Errorf("update: current executable path is unavailable")
@@ -1111,7 +1091,7 @@ func applyLinux(targz []byte, prepared *repair.UpdateTransaction) error {
 
 // applyLinuxVersioned publishes a verified compatibility tarball into a new
 // version directory and swaps current.json last. The tar still contains the
-// one-shot reasonix-guard member for v1.18-v1.19 updaters, but v1.20+ ignores
+// one-shot deeper-guard member for v1.18-v1.19 updaters, but v1.20+ ignores
 // that member and never persists it again.
 func applyLinuxVersioned(targz []byte, targetVersion string) error {
 	return activateLinuxShellRelease(targz, targetVersion, currentInstallDirForLinuxUpdate())
@@ -1126,12 +1106,12 @@ var applyLinuxReleaseUnit = func(
 	bin, guard, cli []byte,
 ) ([]repair.FileUpdateInstallReceipt, error) {
 	receipts := make([]repair.FileUpdateInstallReceipt, 0, 3)
-	receipt, err := repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "reasonix"), cli, 0o700)
+	receipt, err := repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deeper"), cli, 0o700)
 	if err != nil {
 		return receipts, fmt.Errorf("update CLI sidecar: %w", err)
 	}
 	receipts = append(receipts, receipt)
-	receipt, err = repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "reasonix-guard"), guard, 0o700)
+	receipt, err = repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deeper-guard"), guard, 0o700)
 	if err != nil {
 		return receipts, fmt.Errorf("update Guard: %w", err)
 	}
@@ -1275,7 +1255,7 @@ func releaseUnitPathsFor(dir, goos string) []string {
 		if desktop, err := installlayout.ActiveDesktopPath(dir); err == nil {
 			paths = append(paths, desktop)
 		} else {
-			paths = append(paths, filepath.Join(dir, "reasonix-desktop.exe"))
+			paths = append(paths, filepath.Join(dir, "deeper-desktop.exe"))
 		}
 		if helper, err := installlayout.ActiveUpdateHelperPath(dir); err == nil {
 			paths = append(paths, helper)
@@ -1283,7 +1263,7 @@ func releaseUnitPathsFor(dir, goos string) []string {
 		if cli, err := installlayout.ActiveCLIPath(dir); err == nil {
 			paths = append(paths, cli)
 		}
-		for _, name := range []string{"reasonix-launcher.exe", "reasonix-cli.exe", "Reasonix.exe"} {
+		for _, name := range []string{"deeper-launcher.exe", "deeper-cli.exe", "Deeper.exe"} {
 			paths = append(paths, filepath.Join(dir, name))
 		}
 		return paths
@@ -1292,9 +1272,9 @@ func releaseUnitPathsFor(dir, goos string) []string {
 	paths := make([]string, 0, len(names)+1)
 	switch goos {
 	case "linux":
-		paths = append(paths, filepath.Join(dir, "reasonix-desktop"))
+		paths = append(paths, filepath.Join(dir, "deeper-desktop"))
 	case "windows":
-		paths = append(paths, filepath.Join(dir, "reasonix-desktop.exe"))
+		paths = append(paths, filepath.Join(dir, "deeper-desktop.exe"))
 	}
 	if len(names) == 0 {
 		return paths
@@ -1308,11 +1288,11 @@ func releaseUnitPathsFor(dir, goos string) []string {
 func updateSiblingNames(goos string) []string {
 	switch goos {
 	case "windows":
-		// Legacy flat release unit. reasonix-guard.exe may still exist on disk
+		// Legacy flat release unit. deeper-guard.exe may still exist on disk
 		// during migration from 1.18–1.19.1; the new layout omits it.
-		return []string{"reasonix-guard.exe", "reasonix-launcher.exe", "reasonix-update-helper.exe", "reasonix-cli.exe", "Reasonix.exe"}
+		return []string{"deeper-guard.exe", "deeper-launcher.exe", "deeper-update-helper.exe", "deeper-cli.exe", "Deeper.exe"}
 	case "linux":
-		return []string{"reasonix-guard", "reasonix"}
+		return []string{"deeper-guard", "deeper"}
 	default:
 		return nil
 	}

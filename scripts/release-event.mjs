@@ -33,7 +33,7 @@ export function validateReleaseEvent(event, release) {
     invariant(event.candidateSha === release.candidateSha, "release event candidateSha does not match reviewed notes");
   }
   invariant(/^\d{4}-\d{2}-\d{2}T/.test(event.publishedAt), "release event publishedAt must be an ISO timestamp");
-  invariant(event.releaseNotesUrl === `https://reasonix.io/changelog/v${release.version}/`, "release event URL is invalid");
+  invariant(event.releaseNotesUrl === `https://github.com/SivanCola/deeper/releases/tag/v${release.version}/`, "release event URL is invalid");
   invariant(event.builds && typeof event.builds === "object", "release event builds are required");
   for (const surface of ["cli", "desktop", "npm"]) {
     invariant(typeof event.builds[surface] === "string" && event.builds[surface], `release event builds.${surface} is required`);
@@ -59,7 +59,7 @@ async function main() {
       channel: release.channel === "prerelease" ? "preview" : "stable",
       candidateSha: args.sha,
       publishedAt: args["published-at"] || new Date().toISOString(),
-      releaseNotesUrl: `https://reasonix.io/changelog/v${release.version}/`,
+      releaseNotesUrl: `https://github.com/SivanCola/deeper/releases/tag/v${release.version}/`,
       builds: release.builds,
     }, release);
     await writeFile(resolve(args.output), `${JSON.stringify(event, null, 2)}\n`);

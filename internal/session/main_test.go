@@ -3,7 +3,7 @@ package session
 import (
 	"testing"
 
-	"reasonix/internal/testenv"
+	"deeper/internal/testenv"
 )
 
 // A Service holds its writer lease until CloseAll or its idle TTL, so a test

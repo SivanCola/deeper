@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"reasonix/internal/provider/openai"
+	"deeper/internal/provider/openai"
 )
 
 func TestEffectiveVisionEnablesPinnedOfficialDeepSeekVisionSKU(t *testing.T) {

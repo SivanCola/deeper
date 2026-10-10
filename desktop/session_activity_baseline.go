@@ -1,7 +1,7 @@
 package main
 
 import (
-	"reasonix/internal/session"
+	"deeper/internal/session"
 	"strconv"
 )
 

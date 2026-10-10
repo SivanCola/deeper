@@ -9,18 +9,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // crash_app.go is the crash/feedback/performance reporting surface. Frontend
 // reports are sent on an explicit user click. Native fatal/lifecycle reports are
 // queued locally and sent on a later launch only when desktop telemetry is on.
 
-var crashEndpoint = "https://crash.reasonix.io/v1/report"
+var crashEndpoint = os.Getenv("DEEPER_REPORT_ENDPOINT")
 
 const maxCrashDetailBytes = 16 << 10
 const maxCrashStackBytes = 8 << 10
@@ -341,6 +342,9 @@ func crashReportFromDetail(kind, detail string) (crashReport, error) {
 }
 
 func (a *App) ReportCrash(kind, detail string) error {
+	if crashEndpoint == "" {
+		return fmt.Errorf("Deeper report endpoint is not configured")
+	}
 	r, err := crashReportFromDetail(kind, detail)
 	if err != nil {
 		return err

@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"reasonix/internal/completion"
-	"reasonix/internal/event"
+	"deeper/internal/completion"
+	"deeper/internal/event"
 )
 
 // completionReceipt projects the report onto the delivery shape. Runs with

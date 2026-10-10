@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestWorkspacePlaceholderRuntimeIdentity(t *testing.T) {

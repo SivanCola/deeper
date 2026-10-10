@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"os"
 
-	"reasonix/desktop/internal/hostrpc"
-	"reasonix/internal/control"
-	"reasonix/internal/secrets"
-	"reasonix/internal/servecontract"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/hostrpc"
+	"deeper/internal/control"
+	"deeper/internal/secrets"
+	"deeper/internal/servecontract"
+	"deeper/internal/session"
 )
 
 func (a *App) writeSessionDiagnosticExport(job *sessionExportJob) error {

@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/memory"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/config"
+	"deeper/internal/memory"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestNewCollidingProjectGetsOwnStateWithoutMovingExistingProject(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	root := t.TempDir()
 	first := filepath.Join(root, "front-end", "app")
 	second := filepath.Join(root, "front", "end-app")
@@ -117,7 +117,7 @@ func TestNewCollidingProjectGetsOwnStateWithoutMovingExistingProject(t *testing.
 func TestLegacyProjectImportsKeepExistingCollisionState(t *testing.T) {
 	for _, source := range []string{"workspace-list", "sidebar-recovery"} {
 		t.Run(source, func(t *testing.T) {
-			t.Setenv("REASONIX_HOME", t.TempDir())
+			t.Setenv("DEEPER_HOME", t.TempDir())
 			root := t.TempDir()
 			first := filepath.Join(root, "front-end", "app")
 			second := filepath.Join(root, "front", "end-app")
@@ -157,7 +157,7 @@ func TestLegacyProjectImportsKeepExistingCollisionState(t *testing.T) {
 }
 
 func TestProjectRegistrationKeepsOpeningOnProjectListLockFailure(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	root := t.TempDir()
 	lockPath := filepath.Join(desktopConfigDir(), desktopProjectsFile+".lock")
 	if err := os.MkdirAll(lockPath, 0o700); err != nil {
@@ -170,7 +170,7 @@ func TestProjectRegistrationKeepsOpeningOnProjectListLockFailure(t *testing.T) {
 }
 
 func TestCollidingProjectRegistrationFailsBeforeUsingUnownedState(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	root := t.TempDir()
 	first := filepath.Join(root, "front-end", "app")
 	second := filepath.Join(root, "front", "end-app")
@@ -196,7 +196,7 @@ func TestCollidingProjectRegistrationFailsBeforeUsingUnownedState(t *testing.T) 
 }
 
 func TestPreviouslyRecordedCollisionKeepsBothLegacyPaths(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	root := t.TempDir()
 	first := filepath.Join(root, "front-end", "app")
 	second := filepath.Join(root, "front", "end-app")

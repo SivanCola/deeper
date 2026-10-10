@@ -5,7 +5,7 @@ package builtin
 import (
 	"testing"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 // Restricted presets must not demand an OS sandbox on Windows: the platform

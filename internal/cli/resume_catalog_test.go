@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func createCanonicalTestSession(t *testing.T, v4root, id, prompt string) {
@@ -370,7 +370,7 @@ func TestOtherProjectResumeRowsUseMigrationMapWithoutForeignService(t *testing.T
 	if err := os.MkdirAll(otherDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	projectsFile := filepath.Join(config.ReasonixHomeDir(), "desktop-projects.json")
+	projectsFile := filepath.Join(config.DeeperHomeDir(), "desktop-projects.json")
 	previous, readErr := os.ReadFile(projectsFile)
 	t.Cleanup(func() {
 		if readErr != nil {

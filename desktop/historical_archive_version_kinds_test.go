@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func forkLegacyVersion(t *testing.T, legacy *agent.Session, path, kind, name, answer string) string {

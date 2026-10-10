@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 const defaultReviewOutputTokens = 2048

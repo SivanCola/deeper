@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func (s *Server) registerRuntimeRecoveryRoutes(mux *http.ServeMux) {

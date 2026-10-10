@@ -1,9 +1,9 @@
 package config
 
 import (
+	fileencoding "deeper/internal/fileutil/encoding"
 	"fmt"
 	"os"
-	fileencoding "reasonix/internal/fileutil/encoding"
 )
 
 // SaveWebSearchModelTo preserves comments and unknown fields in an existing user

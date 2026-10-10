@@ -3,8 +3,8 @@ package event
 import (
 	"sync"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/nilutil"
+	"deeper/internal/evidence"
+	"deeper/internal/nilutil"
 )
 
 // Sync wraps a Sink so concurrent Emit calls are serialized. The base Sink

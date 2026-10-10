@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/control"
 )
 
 type failureAtomicBotController struct {

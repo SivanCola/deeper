@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 func TestLegacyTokenRhythmReasoningAgreesAcrossConsumers(t *testing.T) {

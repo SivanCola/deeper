@@ -20,8 +20,8 @@ func TestStepFunPresetsDeclareTheServedContextWindow(t *testing.T) {
 
 func TestLoadForRootGivesInstalledStepFunPresetsTheirContextWindow(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	body := `[[providers]]
 name = "stepfun"
 preset_id = "stepfun"

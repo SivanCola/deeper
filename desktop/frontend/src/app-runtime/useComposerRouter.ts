@@ -66,21 +66,21 @@ export function useComposerRouter(input: ComposerRouterInput) {
     }
     const model = /^\/model\s+(\S+)$/.exec(trimmed);
     if (model) {
-      if (await ports.switchModel(model[1], sourceTabId) === false) throw new Error("reasonix_error:inbox_not_submitted");
+      if (await ports.switchModel(model[1], sourceTabId) === false) throw new Error("deeper_error:inbox_not_submitted");
       return;
     }
     if (trimmed === "/memory") {
-      if (activeTabMirror().current !== sourceTabId) throw new Error("reasonix_error:inbox_not_submitted");
+      if (activeTabMirror().current !== sourceTabId) throw new Error("deeper_error:inbox_not_submitted");
       ports.setSettingsTarget("memory");
       return;
     }
     if (trimmed === "/clear") {
-      if (activeTabMirror().current !== sourceTabId) throw new Error("reasonix_error:inbox_not_submitted");
+      if (activeTabMirror().current !== sourceTabId) throw new Error("deeper_error:inbox_not_submitted");
       ports.setClearContextPending(true);
       return;
     }
     if (trimmed === "/new") {
-      if (activeTabMirror().current !== sourceTabId) throw new Error("reasonix_error:inbox_not_submitted");
+      if (activeTabMirror().current !== sourceTabId) throw new Error("deeper_error:inbox_not_submitted");
       await ports.newSession();
       return;
     }
@@ -88,7 +88,7 @@ export function useComposerRouter(input: ComposerRouterInput) {
       ? decisionSurfaceMockFromInput(trimmed)
       : null;
     if (decisionMock === "workspace_conflict" || decisionMock === "mode_jobs" || decisionMock === "close_active" || decisionMock === "clear_context") {
-      if (activeTabMirror().current !== sourceTabId) throw new Error("reasonix_error:inbox_not_submitted");
+      if (activeTabMirror().current !== sourceTabId) throw new Error("deeper_error:inbox_not_submitted");
       ports.clearWorkspaceConflict();
       ports.setPendingClose(null);
       ports.setClearContextPending(false);

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func recordCanonicalUsage(t *testing.T, tab *WorkspaceTab, requests int) {

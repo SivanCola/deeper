@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // Run after controllers and lifecycle barriers release their bindings.

@@ -144,7 +144,7 @@ export function useRemoteSessionActions(
   ) => {
     const remote = index.get(topicId);
     if (!remote) return false;
-    if (!remote.writable) throw new Error("This remote service cannot identify that session precisely. Upgrade the remote Reasonix service before changing it.");
+    if (!remote.writable) throw new Error("This remote service cannot identify that session precisely. Upgrade the remote Deeper service before changing it.");
     // The synthesized current blank session intentionally has an empty name.
     // Its rename/pin/delete bindings still own that row and must decide whether
     // the requested mutation is supported; never report success without

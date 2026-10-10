@@ -2,8 +2,8 @@ import { useEffect } from "react";
 
 declare global {
   interface Window {
-    __reasonixFlushSessionDraft?: () => Promise<void>;
-    __reasonixResumeSessionDraftEditing?: () => void;
+    __deeperFlushSessionDraft?: () => Promise<void>;
+    __deeperResumeSessionDraftEditing?: () => void;
   }
 }
 
@@ -22,11 +22,11 @@ export function useSessionComposerLifecycle() {
     const resume = () => {
       void import("../lib/sessionComposerPersistence").then(input => input.resumeSessionComposerEditing());
     };
-    window.__reasonixFlushSessionDraft = flush;
-    window.__reasonixResumeSessionDraftEditing = resume;
+    window.__deeperFlushSessionDraft = flush;
+    window.__deeperResumeSessionDraftEditing = resume;
     return () => {
-      if (window.__reasonixFlushSessionDraft === flush) delete window.__reasonixFlushSessionDraft;
-      if (window.__reasonixResumeSessionDraftEditing === resume) delete window.__reasonixResumeSessionDraftEditing;
+      if (window.__deeperFlushSessionDraft === flush) delete window.__deeperFlushSessionDraft;
+      if (window.__deeperResumeSessionDraftEditing === resume) delete window.__deeperResumeSessionDraftEditing;
     };
   }, []);
 }

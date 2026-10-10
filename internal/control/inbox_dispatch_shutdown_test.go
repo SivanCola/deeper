@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/sessioninbox"
 )
 
 func TestControllerShutdownJoinsInboxScanBeforeReturning(t *testing.T) {

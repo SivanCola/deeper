@@ -3,7 +3,7 @@ package serve
 import (
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestHistoryMessagesExposeOnlyBuiltInPresentMetadata(t *testing.T) {

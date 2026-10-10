@@ -10,8 +10,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 func hasModel(c *Config, model string) *ProviderEntry {
@@ -1280,8 +1280,8 @@ price = { cache_hit = 0.0028, input = 0.14, output = 0.28, currency = "$" }
 
 func TestLoadForRootAutoCurrencyKeepsPersistedOfficialUSDPrice(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	body := `language = "zh"
 
 [[providers]]
@@ -1333,8 +1333,8 @@ price = { cache_hit = 0.0028, input = 0.14, output = 0.28, currency = "$" }
 
 func TestLoadForRootAutoCurrencyDoesNotMixPartialOfficialPrices(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	body := `language = "zh"
 
 [[providers]]
@@ -1401,12 +1401,12 @@ func TestDeepSeekOfficialPricingCurrencyResolution(t *testing.T) {
 func TestLoadForRootKeepsPricingRegionUserGlobal(t *testing.T) {
 	home := t.TempDir()
 	project := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[desktop]\nlanguage = \"en\"\ncurrency = \"USD\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte("[desktop]\nlanguage = \"zh\"\ncurrency = \"CNY\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte("[desktop]\nlanguage = \"zh\"\ncurrency = \"CNY\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1447,7 +1447,7 @@ func TestApplyDeepSeekOfficialDefaultPricingExplicitCurrencyWins(t *testing.T) {
 }
 
 func TestResetOfficialProviderPricingOnUpgradeRunsOnce(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "reasonix.toml")
+	path := filepath.Join(t.TempDir(), "deeper.toml")
 	c := &Config{
 		ConfigVersion: 2,
 		Providers: []ProviderEntry{

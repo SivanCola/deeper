@@ -8,12 +8,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func TestProviderDiagnosticsPersistOnlyUnsuccessfulTurns(t *testing.T) {

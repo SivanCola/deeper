@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func setDesktopBuildIdentityForTest(t *testing.T, buildVersion, buildChannel string) {

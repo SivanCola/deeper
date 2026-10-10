@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
+	"deeper/internal/tool"
 )
 
 // echoTool is a trivial read-only tool used to drive a multi-step tool loop:
@@ -151,7 +151,7 @@ func hitRate(u *provider.Usage) int {
 	return u.CacheHitTokens * 100 / denom
 }
 
-const systemPrompt = "You are reasonix, a coding agent. Be concise and follow project conventions. " +
+const systemPrompt = "You are deeper, a coding agent. Be concise and follow project conventions. " +
 	"This system prompt is the cacheable head of every request and must never change between turns."
 
 // longReasoning stands in for a deepseek-reasoner chain-of-thought that the agent
@@ -351,12 +351,12 @@ func TestSetSessionResetsSessionCache(t *testing.T) {
 }
 
 func TestReleaseCacheHitGuard(t *testing.T) {
-	if os.Getenv("REASONIX_RELEASE_CACHE_GUARD") == "" {
-		t.Skip("set REASONIX_RELEASE_CACHE_GUARD=1 to run the release cache guard")
+	if os.Getenv("DEEPER_RELEASE_CACHE_GUARD") == "" {
+		t.Skip("set DEEPER_RELEASE_CACHE_GUARD=1 to run the release cache guard")
 	}
 
-	threshold := envInt("REASONIX_CACHE_GUARD_THRESHOLD", 90)
-	maxLowCases := envInt("REASONIX_CACHE_GUARD_MAX_LOW_CASES", 1)
+	threshold := envInt("DEEPER_CACHE_GUARD_THRESHOLD", 90)
+	maxLowCases := envInt("DEEPER_CACHE_GUARD_MAX_LOW_CASES", 1)
 	for _, size := range []int{64 << 10, 256 << 10} {
 		verifyLargeToolOutputCacheContract(t, size)
 		t.Logf("CACHE_GUARD_RESULT: case=large-tool-%dk status=pass provider_bytes_max=%d", size>>10, maxToolOutputBytes)
@@ -449,7 +449,7 @@ func TestReleaseCacheHitGuard(t *testing.T) {
 		}
 		msg := fmt.Sprintf("%d cache guard cases are below %d%%: %s", len(lows), threshold, strings.Join(parts, ", "))
 		t.Logf("CACHE_GUARD_WARNING: %s", msg)
-		if os.Getenv("REASONIX_CACHE_GUARD_STRICT") != "" {
+		if os.Getenv("DEEPER_CACHE_GUARD_STRICT") != "" {
 			t.Fatal(msg)
 		}
 	}

@@ -859,15 +859,15 @@ Every entry carries one class: `keep-business` keeps its Go implementation and c
 
 | Name | Detail | Location | Class | New owner |
 | --- | --- | --- | --- | --- |
-| `--reasonix-draggable` |  | desktop/frontend/src/app-runtime/useAppChromeCommands.ts | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/components/ChatTranscript.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/components/ComposerWorkspaceContextBar.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/components/ManagementPageShell.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/components/ScrollDiagnosticPanel.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/components/SettingsPanel.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/components/SettingsSelect.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/custom/features/heartbeat/heartbeat.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
-| `--reasonix-draggable` |  | desktop/frontend/src/styles.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/app-runtime/useAppChromeCommands.ts | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/components/ChatTranscript.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/components/ComposerWorkspaceContextBar.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/components/ManagementPageShell.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/components/ScrollDiagnosticPanel.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/components/SettingsPanel.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/components/SettingsSelect.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/custom/features/heartbeat/heartbeat.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
+| `--deeper-draggable` |  | desktop/frontend/src/styles.css | keep-business (保留业务实现) | rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle |
 | `data-native-drop-target` |  | desktop/frontend/src/components/Composer.tsx | keep-business (保留业务实现) | `native.onFilesDropped (HTML5 drop + getPathForFile)` |
 | `data-native-drop-target` |  | desktop/frontend/src/lib/desktopHost.ts | keep-business (保留业务实现) | `native.onFilesDropped (HTML5 drop + getPathForFile)` |
 
@@ -875,7 +875,7 @@ Every entry carries one class: `keep-business` keeps its Go implementation and c
 
 | Name | Detail | Location | Class | New owner |
 | --- | --- | --- | --- | --- |
-| `.reasonix-export-publication.lock` |  | desktop/session_export_journal.go:87 | keep-business (保留业务实现) | format unchanged; read by both shells |
+| `.deeper-export-publication.lock` |  | desktop/session_export_journal.go:87 | keep-business (保留业务实现) | format unchanged; read by both shells |
 | `desktop-remote.json` |  | desktop/remote_prefs.go:39 | keep-business (保留业务实现) | format unchanged; read by both shells |
 | `desktop-window.json` |  | desktop/window_state.go:46 | keep-business (保留业务实现) | format unchanged; read by both shells |
 | `desktop-workspaces.json` |  | desktop/workspace.go:35 | keep-business (保留业务实现) | format unchanged; read by both shells |
@@ -951,11 +951,11 @@ Every entry carries one class: `keep-business` keeps its Go implementation and c
 
 | Name | Detail | Location | Class | New owner |
 | --- | --- | --- | --- | --- |
-| `Reasonix-darwin-<arch>.dmg` | drag-to-install; human download | scripts/desktop-build.sh:10 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
-| `Reasonix-linux-<arch>.deb` | Debian/Ubuntu package; native updater | scripts/desktop-build.sh:14 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
-| `Reasonix-linux-<arch>.tar.gz` | desktop + guard + CLI + app/ tree; portable updater | scripts/desktop-build.sh:13 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
-| `Reasonix-windows-<arch>-installer.exe` | NSIS per-user installer; updater channel | scripts/desktop-build.sh:11 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
-| `Reasonix-windows-<arch>.zip` | portable human download | scripts/desktop-build.sh:12 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
+| `Deeper-darwin-<arch>.dmg` | drag-to-install; human download | scripts/desktop-build.sh:10 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
+| `Deeper-linux-<arch>.deb` | Debian/Ubuntu package; native updater | scripts/desktop-build.sh:14 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
+| `Deeper-linux-<arch>.tar.gz` | desktop + guard + CLI + app/ tree; portable updater | scripts/desktop-build.sh:13 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
+| `Deeper-windows-<arch>-installer.exe` | NSIS per-user installer; updater channel | scripts/desktop-build.sh:11 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
+| `Deeper-windows-<arch>.zip` | portable human download | scripts/desktop-build.sh:12 | keep-business (保留业务实现) | same file name and installer identity; Electron payload inside |
 
 ## CI and release jobs
 

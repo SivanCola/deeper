@@ -1,4 +1,4 @@
-// pathidentityprobe compares path metadata without loading Reasonix configuration
+// pathidentityprobe compares path metadata without loading Deeper configuration
 // or acquiring locks. Its only write is a new diagnostic report.
 package main
 
@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"time"
 
-	"reasonix/internal/pathidentity"
+	"deeper/internal/pathidentity"
 )
 
 var sourceCommit = "development"
@@ -56,7 +56,7 @@ func run(output string, timeout time.Duration, paths []string) error {
 		if err != nil {
 			return err
 		}
-		output = filepath.Join(filepath.Dir(exe), "reasonix-path-probe-"+time.Now().UTC().Format("20060102-150405.000000000")+".json")
+		output = filepath.Join(filepath.Dir(exe), "deeper-path-probe-"+time.Now().UTC().Format("20060102-150405.000000000")+".json")
 	}
 	// Exclusive creation refuses to overwrite any existing file or final symlink.
 	file, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)

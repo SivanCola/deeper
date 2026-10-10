@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func TestSubagentStoreContinueLoadsSavedTranscript(t *testing.T) {
@@ -898,8 +898,8 @@ func TestSubagentStoreCleanupStaleRunningSkipsForeignLiveParent(t *testing.T) {
 	parentPath := filepath.Join(sessionDir, spec.ParentSession+".jsonl")
 	cmd := exec.Command(os.Args[0], "-test.run=^TestSubagentStoreForeignLeaseHelper$")
 	cmd.Env = append(os.Environ(),
-		"REASONIX_SUBAGENT_LEASE_HELPER=1",
-		"REASONIX_SUBAGENT_LEASE_PATH="+parentPath,
+		"DEEPER_SUBAGENT_LEASE_HELPER=1",
+		"DEEPER_SUBAGENT_LEASE_PATH="+parentPath,
 	)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -965,10 +965,10 @@ func TestSubagentStoreCleanupStaleRunningSkipsForeignLiveParent(t *testing.T) {
 }
 
 func TestSubagentStoreForeignLeaseHelper(t *testing.T) {
-	if os.Getenv("REASONIX_SUBAGENT_LEASE_HELPER") != "1" {
+	if os.Getenv("DEEPER_SUBAGENT_LEASE_HELPER") != "1" {
 		return
 	}
-	lease, err := TryAcquireSessionLease(os.Getenv("REASONIX_SUBAGENT_LEASE_PATH"))
+	lease, err := TryAcquireSessionLease(os.Getenv("DEEPER_SUBAGENT_LEASE_PATH"))
 	if err != nil {
 		t.Fatalf("TryAcquireSessionLease: %v", err)
 	}

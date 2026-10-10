@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"reasonix/internal/completion"
-	"reasonix/internal/evidence"
+	"deeper/internal/completion"
+	"deeper/internal/evidence"
 	"testing"
 )
 

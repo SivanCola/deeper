@@ -7,14 +7,14 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/nilutil"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/nilutil"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 const (
-	headlessWriteAccessHint = "this directory is outside the writable roots. Restart with --add-dir /abs/path, add it to [sandbox].allow_write in reasonix.toml, or use an interactive session to approve the directory."
+	headlessWriteAccessHint = "this directory is outside the writable roots. Restart with --add-dir /abs/path, add it to [sandbox].allow_write in deeper.toml, or use an interactive session to approve the directory."
 	subagentWriteAccessHint = "this sub-agent cannot expand write access. Ask the parent agent to request the directories (bash additional_write_dirs, or write the file after the parent is granted that directory)."
 )
 
@@ -81,7 +81,7 @@ func (t *TaskTool) buildSubagentRegistry(spec ProfileExecSpec, toolNames []strin
 }
 
 // SetConfigWriteApprover installs the optional per-write approval path used by
-// file tools for Reasonix-managed config outside the workspace roots.
+// file tools for Deeper-managed config outside the workspace roots.
 func (a *Agent) SetConfigWriteApprover(g tool.ConfigWriteApprover) {
 	if nilutil.IsNil(g) {
 		g = nil

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 type RuntimeSessionState struct {

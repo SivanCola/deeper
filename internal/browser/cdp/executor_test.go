@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 // openTab opens one tab and returns it with a fresh snapshot's token.

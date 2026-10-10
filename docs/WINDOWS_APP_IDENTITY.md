@@ -1,25 +1,25 @@
 # Windows application identity
 
-Reasonix Desktop uses the version-independent AppUserModelID
-`io.reasonix.desktop` for its Electron windows, launcher, Go desktop process,
-shortcuts, and notifications. Its visible notification name remains `Reasonix`.
-This identity is separate from Reasonix Studio (`io.reasonix.studio`) and the
-older Tauri desktop (`dev.reasonix.desktop`). Wails Studio v2.10.0 and older
-Reasonix Desktop builds used the shared ID `Reasonix`; new Desktop builds no
+Deeper Desktop uses the version-independent AppUserModelID
+`io.github.sivancola.deeper` for its Electron windows, launcher, Go desktop process,
+shortcuts, and notifications. Its visible notification name remains `Deeper`.
+This identity is separate from Deeper Studio (`io.github.sivancola.deeper.studio`) and the
+older Tauri desktop (`io.github.sivancola.deeper.dev`). Wails Studio v2.10.0 and older
+Deeper Desktop builds used the shared ID `Deeper`; new Desktop builds no
 longer claim it.
 
 ## Installation and upgrade
 
-Use `Reasonix.exe` at the installation root to open Desktop; `reasonix-cli.exe`
+Use `Deeper.exe` at the installation root to open Desktop; `deeper-cli.exe`
 is the separate command-line entry. New installations and ZIPs extracted into
 an empty directory contain only that GUI entry. Existing installations retain
-`reasonix-launcher.exe` when present, with no scheduled removal, so old pins,
+`deeper-launcher.exe` when present, with no scheduled removal, so old pins,
 custom shortcuts and scripts continue working. Managed upgrades update both
 names from the same verified launcher bytes. Files inside `versions/`, including
-the Electron `app/Reasonix.exe`, remain internal components.
+the Electron `app/Deeper.exe`, remain internal components.
 
 Before showing any Electron window, Desktop sets its relaunch command and icon
-to `Reasonix.exe`, falling back to the legacy launcher when necessary. New taskbar pins therefore
+to `Deeper.exe`, falling back to the legacy launcher when necessary. New taskbar pins therefore
 do not depend on the versioned Electron executable or its service-path environment.
 
 The installer applies the identity to the exact shortcuts it creates before
@@ -27,21 +27,21 @@ launching Desktop. It invokes the installed launcher with the maintenance
 command `--repair-shortcuts <absolute.lnk...>`, which repairs existing, owned
 links and exits without starting a window, a service, or a legacy migrator.
 
-Normal launcher and desktop startup also repair existing Reasonix-named links
+Normal launcher and desktop startup also repair existing Deeper-named links
 in the installation directory, private/public desktop and Start Menu Programs
-directories (including their Reasonix subdirectory), and the current user's
+directories (including their Deeper subdirectory), and the current user's
 taskbar pin directory. A filename alone never proves
 ownership: the resolved target must be a recognized entry inside this
 installation. Directory junctions pointing outside it are not accepted.
 
-An owned shortcut with an empty ID or the old `Reasonix` ID adopts the new ID.
+An owned shortcut with an empty ID or the old `Deeper` ID adopts the new ID.
 An already updated shortcut can still have a stale target or icon repaired.
 Explicit Studio, Tauri, and unknown IDs are left unchanged, even if the link
-is named Reasonix. Separate installations are not modified.
+is named Deeper. Separate installations are not modified.
 
-Links into `versions/<version>/reasonix-desktop.exe` or
-`versions/<version>/app/Reasonix.exe`, as well as a flat `app/Reasonix.exe`, move to the permanent
-`Reasonix.exe` when it exists; owned links to `reasonix-launcher.exe` also move
+Links into `versions/<version>/deeper-desktop.exe` or
+`versions/<version>/app/Deeper.exe`, as well as a flat `app/Deeper.exe`, move to the permanent
+`Deeper.exe` when it exists; owned links to `deeper-launcher.exe` also move
 to this canonical entry. With only the legacy launcher available, repair keeps
 using that valid entry. The obsolete version can then be
 removed without breaking that shortcut. The repair preserves launch arguments,
@@ -58,8 +58,8 @@ unpin it, start Desktop through its permanent launcher, and pin it again.
 
 ## Coexistence and rollback
 
-Signed update payloads and `/REASONIXSTAGE=1` still contain
-`reasonix-launcher.exe`: already installed update helpers require this name.
+Signed update payloads and `/DEEPERSTAGE=1` still contain
+`deeper-launcher.exe`: already installed update helpers require this name.
 The installed layout is selected separately. An old helper can upgrade directly
 and may publish both entry names. A new helper preserves an existing legacy entry
 but does not create one in a canonical-only installation. `current.json` schema 1,
@@ -78,7 +78,7 @@ release. An old launcher or desktop can restore the old shortcut ID; a later
 complete upgrade repairs owned links again. Mixing binaries from different
 releases is not an identity compatibility guarantee.
 
-The old `Reasonix` notification registration and notification history are not
+The old `Deeper` notification registration and notification history are not
 deleted or migrated: an installed Studio version may still own them. New
 Desktop notifications use their own registration. Windows notification
 preferences associated with the old identity are not copied to the new one.

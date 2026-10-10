@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/checkpoint"
+	"deeper/internal/checkpoint"
 )
 
 func TestServeCheckpointMetasExposeRewindCapabilities(t *testing.T) {

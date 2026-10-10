@@ -1,5 +1,5 @@
 // Queue layout and drag mechanics adapted from ZCode (Apache-2.0).
-// Reasonix retains the original queue identity and an independent edit draft.
+// Deeper retains the original queue identity and an independent edit draft.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";

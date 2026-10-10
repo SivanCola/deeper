@@ -1,8 +1,8 @@
 package eventwire
 
 import (
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // Event is the JSON-friendly form shared by event frontends.

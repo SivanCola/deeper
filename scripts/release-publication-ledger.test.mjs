@@ -7,7 +7,7 @@ const release = { isDraft: false, isPrerelease: false, assets: [{ name: "asset.z
 const packages = latest => npmPackageNames.map(name => ({
   name,
   version: "1.2.3",
-  reasonixCandidateSha: sha,
+  deeperCandidateSha: sha,
   gitHead: sha,
   integrity: "sha512-example",
   latest,
@@ -64,7 +64,7 @@ test("pointer ownership requires an exact release or a proven newer recovery poi
 
 test("a frozen line records its own npm dist-tag and no Homebrew surface", () => {
   const frozenPackages = distTagVersion => npmPackageNames.map(name => ({
-    name, version: "1.2.3", reasonixCandidateSha: sha, gitHead: sha, integrity: "sha512-example",
+    name, version: "1.2.3", deeperCandidateSha: sha, gitHead: sha, integrity: "sha512-example",
     distTag: "legacy-v1", distTagVersion,
   }));
   const core = createCoreLedger({

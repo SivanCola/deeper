@@ -11,7 +11,7 @@ const tab: RecoveredTab = { id: "tab-2", taskId: "task", sessionId: "session", u
 test("recovery preserves future fields but never capabilities and rejects expired preview URLs", () => {
   const directory = mkdtempSync(join(tmpdir(), "browser-recovery-")), path = join(directory, "tabs.json");
   try {
-    writeFileSync(path, JSON.stringify({ version: 1, future: 42, tabs: [{ ...tab, custom: true, grantId: "old", refs: [1], password: "secret" }, { ...tab, id: "tab-3", url: "http://localhost/__reasonix_workspace_media/expired" }] }));
+    writeFileSync(path, JSON.stringify({ version: 1, future: 42, tabs: [{ ...tab, custom: true, grantId: "old", refs: [1], password: "secret" }, { ...tab, id: "tab-3", url: "http://localhost/__deeper_workspace_media/expired" }] }));
     const store = new BrowserRecoveryStore(path, assert.fail);
     assert.equal(store.tabs.length, 1);
     store.save(store.tabs);
@@ -42,7 +42,7 @@ test("file preview recovery persists source references without expiring bearer U
   try {
     const reference = { source: "workspace" as const, path: "index.html", toolCallId: "" };
     const store = new BrowserRecoveryStore(path, assert.fail);
-    store.save([{ ...tab, url: "http://localhost/__reasonix_workspace_media/SECRET", fileReference: reference }]);
+    store.save([{ ...tab, url: "http://localhost/__deeper_workspace_media/SECRET", fileReference: reference }]);
     assert.equal(readFileSync(path, "utf8").includes("SECRET"), false);
     const loaded = new BrowserRecoveryStore(path, assert.fail);
     assert.deepEqual(loaded.tabs[0].fileReference, reference);

@@ -5,7 +5,7 @@ import { REGISTRY_KEY } from "./snapshot.js";
 import { acquireDebugger, type DebuggerSender } from "./debuggerLease.js";
 import { runChildFrame } from "./frameRuntime.js";
 
-const OBJECT_GROUP = "reasonix-upload";
+const OBJECT_GROUP = "deeper-upload";
 
 // The executable source is fixed. Snapshot metadata crosses the CDP boundary
 // only as call arguments, never as JavaScript source text.

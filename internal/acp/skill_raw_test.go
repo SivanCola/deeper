@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 type skillRawFactory struct {

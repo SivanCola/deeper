@@ -1,6 +1,6 @@
-// Package extension is the Go SDK for Reasonix extension sidecars speaking
+// Package extension is the Go SDK for Deeper extension sidecars speaking
 // Extension Protocol v2 over stdio. An extension is a separate process: the
-// Reasonix host launches it, sends extension/initialize first, drives
+// Deeper host launches it, sends extension/initialize first, drives
 // intercepts, events, provider streams, and UI calls, and finally asks it to
 // stop with extension/shutdown.
 //
@@ -16,7 +16,7 @@
 // should exit with code 0; the host reaps it by that exit status.
 //
 // Protocol reference: docs/EXTENSION_PROTOCOL.generated.md and
-// internal/extension/protocol/schema.generated.json in the Reasonix
+// internal/extension/protocol/schema.generated.json in the Deeper
 // repository.
 package extension
 
@@ -277,7 +277,7 @@ func Serve(ctx context.Context, h Handler, opts Options) error {
 	}
 	logger := opts.Logger
 	if logger == nil {
-		logger = log.New(os.Stderr, "reasonix-extension: ", log.LstdFlags)
+		logger = log.New(os.Stderr, "deeper-extension: ", log.LstdFlags)
 	}
 	s := &server{
 		handler: h,

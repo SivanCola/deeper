@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/taskmonitor"
+	"deeper/internal/taskmonitor"
 )
 
 func captureErr(t *testing.T, fn func() int) (int, string) {
@@ -100,17 +100,17 @@ func TestTaskUnknownSubcommandsNameValidOnes(t *testing.T) {
 		{
 			name:      "task",
 			run:       func() int { return taskCommand([]string{"bogus"}) },
-			wantUsage: "usage: reasonix task <list|show|monitor|status|events|stop|cancel|requeue|open-session|tmux> [flags]",
+			wantUsage: "usage: deeper task <list|show|monitor|status|events|stop|cancel|requeue|open-session|tmux> [flags]",
 		},
 		{
 			name:      "task monitor",
 			run:       func() int { return taskMonitorCommand(store, []string{"bogus"}) },
-			wantUsage: "usage: reasonix task monitor <list|status|events|stop|cancel|requeue|open-session> [flags]",
+			wantUsage: "usage: deeper task monitor <list|status|events|stop|cancel|requeue|open-session> [flags]",
 		},
 		{
 			name:      "task tmux",
 			run:       func() int { return taskTmuxCmd(store, []string{"bogus"}) },
-			wantUsage: "usage: reasonix task tmux <attach|status|open|detach>",
+			wantUsage: "usage: deeper task tmux <attach|status|open|detach>",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

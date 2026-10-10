@@ -16,9 +16,9 @@ import (
 func TestRepairOwnedShortcutsDiscoversPublicAndProductProgramFolders(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	launcher := filepath.Join(root, "reasonix-launcher.exe")
+	launcher := filepath.Join(root, "deeper-launcher.exe")
 	migrationTestFile(t, launcher)
-	studioTarget := filepath.Join(t.TempDir(), "reasonix-studio.exe")
+	studioTarget := filepath.Join(t.TempDir(), "deeper-studio.exe")
 	migrationTestFile(t, studioTarget)
 
 	// Every known-folder request is confined to this temporary tree. Unknown
@@ -47,8 +47,8 @@ func TestRepairOwnedShortcutsDiscoversPublicAndProductProgramFolders(t *testing.
 		folders[*windows.FOLDERID_PublicDesktop],
 		folders[*windows.FOLDERID_Programs],
 		folders[*windows.FOLDERID_CommonPrograms],
-		filepath.Join(folders[*windows.FOLDERID_Programs], "Reasonix"),
-		filepath.Join(folders[*windows.FOLDERID_CommonPrograms], "Reasonix"),
+		filepath.Join(folders[*windows.FOLDERID_Programs], "Deeper"),
+		filepath.Join(folders[*windows.FOLDERID_CommonPrograms], "Deeper"),
 		filepath.Join(folders[*windows.FOLDERID_RoamingAppData], "Microsoft", "Internet Explorer", "Quick Launch", "User Pinned", "TaskBar"),
 	}
 	var ownedPaths []string
@@ -57,14 +57,14 @@ func TestRepairOwnedShortcutsDiscoversPublicAndProductProgramFolders(t *testing.
 		if err := os.MkdirAll(location, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		owned := filepath.Join(location, "Reasonix.lnk")
+		owned := filepath.Join(location, "Deeper.lnk")
 		migrationTestShortcut(t, owned, migrationShortcutState{
-			target: launcher, id: "Reasonix", icon: launcher, workingDirectory: root, showCmd: 1,
+			target: launcher, id: "Deeper", icon: launcher, workingDirectory: root, showCmd: 1,
 		})
 		ownedPaths = append(ownedPaths, owned)
-		studio := filepath.Join(location, "Reasonix Studio.lnk")
+		studio := filepath.Join(location, "Deeper Studio.lnk")
 		migrationTestShortcut(t, studio, migrationShortcutState{
-			target: studioTarget, id: "Reasonix", icon: studioTarget, workingDirectory: filepath.Dir(studioTarget), showCmd: 1,
+			target: studioTarget, id: "Deeper", icon: studioTarget, workingDirectory: filepath.Dir(studioTarget), showCmd: 1,
 		})
 		studioBefore[studio] = migrationReadBytes(t, studio)
 	}
@@ -87,7 +87,7 @@ func TestRepairOwnedShortcutsDiscoversPublicAndProductProgramFolders(t *testing.
 	}
 	for _, path := range ownedPaths {
 		got := migrationReadShortcut(t, path)
-		if got.id != "io.reasonix.desktop" || !migrationSamePath(got.target, launcher) {
+		if got.id != "io.github.sivancola.deeper" || !migrationSamePath(got.target, launcher) {
 			t.Errorf("discovered shortcut was not repaired: %s: %+v", path, got)
 		}
 	}

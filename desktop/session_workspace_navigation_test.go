@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/boot"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 func TestOpenSessionSelectsLocalTabAfterRemote(t *testing.T) {

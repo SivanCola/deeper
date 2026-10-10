@@ -3,10 +3,10 @@ package agent
 import (
 	"context"
 	"crypto/rand"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 	"errors"
 	"fmt"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
 )
 
 func (a *Agent) emitToolStarted(c provider.ToolCall) error {

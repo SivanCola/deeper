@@ -1,6 +1,6 @@
 package agent
 
-import "reasonix/internal/plancontract"
+import "deeper/internal/plancontract"
 
 // SetPlanContract records the approved plan this turn executes, or clears it
 // when the turn runs without one. The coordinator sets it before every executor

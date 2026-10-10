@@ -2,8 +2,8 @@ package agent
 
 import (
 	"context"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/event"
+	"deeper/internal/checkpoint"
+	"deeper/internal/event"
 )
 
 func fleetCallContext(ctx context.Context) (string, event.Sink) {

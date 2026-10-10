@@ -1,6 +1,9 @@
-# Releasing Reasonix
+> Deeper is independently maintained at [SivanCola/deeper](https://github.com/SivanCola/deeper).
+> 独立应用身份、更新通道与发布凭据见 [Deeper independence](DEEPER_INDEPENDENCE.md)。原许可证和作者信息见 NOTICE。
 
-Reasonix prepares immutable, accepted release candidates before it creates any
+# Releasing Deeper
+
+Deeper prepares immutable, accepted release candidates before it creates any
 public tag. Publication consumes those exact files after one approval; recovery
 observes public state and fills only missing stages.
 
@@ -22,7 +25,7 @@ atomic push and must never be moved, deleted, or recreated. The Go SDK module
    Notes PR.
 2. Merge the Notes PR after its required checks and review complete. The merge
    automatically starts **Prepare release candidate**. A maintainer may also
-   dispatch that workflow on protected `main-v2` with `version`. Both entrypoints
+   dispatch that workflow on protected `main` with `version`. Both entrypoints
    freeze the protected event SHA before the runner starts; arbitrary SHA inputs
    and PR-head execution are not accepted.
 3. Wait for the candidate workflow to build the shared CLI/npm binaries, build
@@ -42,7 +45,7 @@ atomic push and must never be moved, deleted, or recreated. The Go SDK module
    owned Pages deployment, hydrated download verification, and the publication
    ledger.
 
-The candidate is fixed when Notes are reviewed. Later `main-v2` merges do not
+The candidate is fixed when Notes are reviewed. Later `main` merges do not
 invalidate it. A product fix or a change to embedded Notes creates a new
 candidate. Do not replace source files during packaging or claim an old binary
 contains new embedded Notes.
@@ -54,7 +57,7 @@ acceptance control SHAs, Notes catalog and rendered-body hashes, workflow run
 and attempt, exact payload artifact ID, signing fingerprint, every file size
 and SHA-256, and native Windows/macOS acceptance receipts. GitHub artifact
 attestations bind both the record and every payload file to the protected
-candidate workflow on `main-v2`.
+candidate workflow on `main`.
 
 Candidate payloads are retained for 30 days. Records, native receipts,
 publication ledgers, and timing reports are retained for 90 days. An expired
@@ -143,7 +146,7 @@ Desktop Stable manifest, but it no longer:
 - moves npm `latest`, `canary` or `next`, or waits for `latest`.
 
 npm packages are still published, under the `legacy-v1` dist-tag, so `npm i -g
-reasonix@legacy-v1` (or `reasonix@1`) resolves to this line. npm refuses `v1` as
+deeper@legacy-v1` (or `deeper@1`) resolves to this line. npm refuses `v1` as
 a tag name because it parses as a semver range. Postflight and **Verify
 release** check `legacy-v1` instead of `latest` and skip the Homebrew cask.
 

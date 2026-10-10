@@ -130,7 +130,7 @@ test("windows master key strips the DPAPI prefix", () => {
 });
 
 test("the newest profile with cookies wins", () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-chrome-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-chrome-"));
   writeCookiesDatabase(root, "Default", []);
   writeCookiesDatabase(root, "Profile 1", []);
   mkdirSync(join(root, "Crashpad"), { recursive: true });
@@ -140,7 +140,7 @@ test("the newest profile with cookies wins", () => {
 });
 
 test("imports decryptable cookies and skips the ones it cannot use", async () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-chrome-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-chrome-"));
   writeCookiesDatabase(root, "Default", [
     { host_key: ".example.test", name: "sid", encrypted_value: encryptCBC("token-1", ".example.test"), path: "/", expires_utc: FUTURE, is_secure: 1, is_httponly: 1, samesite: 1 },
     { host_key: "expired.test", name: "old", encrypted_value: encryptCBC("token-2", "expired.test"), path: "/", expires_utc: PAST, is_secure: 0, is_httponly: 0, samesite: -1 },
@@ -167,7 +167,7 @@ test("imports decryptable cookies and skips the ones it cannot use", async () =>
 });
 
 test("a rejected cookie is skipped instead of failing the import", async () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-chrome-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-chrome-"));
   writeCookiesDatabase(root, "Default", [
     { host_key: "example.test", name: "sid", encrypted_value: encryptCBC("token", "example.test"), path: "/", expires_utc: FUTURE, is_secure: 1, is_httponly: 0, samesite: -1 },
   ]);
@@ -180,7 +180,7 @@ test("a rejected cookie is skipped instead of failing the import", async () => {
 });
 
 test("import failures surface as typed codes", async () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-chrome-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-chrome-"));
   await assert.rejects(
     () => importChromeCookies(deps([]), root, []),
     (error: unknown) => error instanceof ChromeImportError && error.code === "profile-not-found",

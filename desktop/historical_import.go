@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/historywork"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/historywork"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 var errHistoricalSourceBusy = errors.New("historical session is in use; close the other instance and retry")

@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 
 	"golang.org/x/sys/windows"
 )

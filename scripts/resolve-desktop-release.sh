@@ -23,7 +23,7 @@ if [ "${IN_CHANNEL:-stable}" = "preview" ] || [ "${IN_CHANNEL:-stable}" = "canar
 		exit 1
 	fi
 	if [ -n "${IN_TAG:-}" ]; then
-		echo "::error::Desktop Preview versions are synthesized from protected main-v2; tag must be empty" >&2
+		echo "::error::Desktop Preview versions are synthesized from protected main; tag must be empty" >&2
 		exit 1
 	fi
 	base="${IN_BASE_VERSION:?preview dispatch requires base_version}"

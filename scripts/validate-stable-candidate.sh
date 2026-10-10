@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bind a normal official release to the main-v2 commit that introduced or
+# Bind a normal official release to the main commit that introduced or
 # updated its reviewed release-notes record.
 set -euo pipefail
 
@@ -22,10 +22,10 @@ parent="$(git rev-parse "$candidate^1" 2>/dev/null)" || {
 	exit 1
 }
 
-work_dir="$(mktemp -d "${TMPDIR:-/tmp}/reasonix-stable-candidate.XXXXXX")"
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/deeper-stable-candidate.XXXXXX")"
 cleanup() {
 	case "$work_dir" in
-	*/reasonix-stable-candidate.*) rm -rf -- "$work_dir" ;;
+	*/deeper-stable-candidate.*) rm -rf -- "$work_dir" ;;
 	*) echo "refusing to clean unexpected candidate directory: $work_dir" >&2 ;;
 	esac
 }

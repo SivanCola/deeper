@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/pathidentity"
+	"deeper/internal/pathidentity"
 )
 
 var (

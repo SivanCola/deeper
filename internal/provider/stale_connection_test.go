@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/netclient"
+	"deeper/internal/netclient"
 )
 
 // deadUpstreamTunnel forwards bytes to a TLS backend. Connections accepted up

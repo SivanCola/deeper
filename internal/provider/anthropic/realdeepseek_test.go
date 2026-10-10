@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
-// TestRealOpenCodeGoDeepSeekAnthropicWebSearch exercises Reasonix's complete
+// TestRealOpenCodeGoDeepSeekAnthropicWebSearch exercises Deeper's complete
 // Messages serialization and server-side web search parser against the OpenCode
 // Go DeepSeek Flash route. The key stays process-local; ordinary CI never runs it.
 func TestRealOpenCodeGoDeepSeekAnthropicWebSearch(t *testing.T) {

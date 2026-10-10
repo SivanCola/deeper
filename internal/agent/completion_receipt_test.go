@@ -3,8 +3,8 @@ package agent
 import (
 	"testing"
 
-	"reasonix/internal/completion"
-	"reasonix/internal/evidence"
+	"deeper/internal/completion"
+	"deeper/internal/evidence"
 )
 
 func TestReceiptCarriesWhatProseDoesNot(t *testing.T) {

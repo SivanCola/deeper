@@ -11,7 +11,7 @@ import (
 	"slices"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 const (

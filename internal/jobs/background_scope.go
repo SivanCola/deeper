@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/workspacelease"
+	"deeper/internal/event"
+	"deeper/internal/workspacelease"
 )
 
 // SessionBackgroundScope owns resources which outlive a controller generation.

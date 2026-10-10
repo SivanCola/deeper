@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"reasonix/internal/config"
-	"reasonix/internal/usagecatalog"
+	"deeper/internal/config"
+	"deeper/internal/usagecatalog"
 )
 
 func init() {

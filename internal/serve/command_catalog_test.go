@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/command"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/skill"
+	"deeper/internal/command"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/skill"
 )
 
 func TestServeCommandsUsesActiveControllerCatalog(t *testing.T) {

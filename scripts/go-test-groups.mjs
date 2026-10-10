@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 
 export const beneath = (pkg, root) => pkg === root || pkg.startsWith(`${root}/`);
 
-export const internalRoots = (...names) => names.map(name => `reasonix/internal/${name}`);
+export const internalRoots = (...names) => names.map(name => `deeper/internal/${name}`);
 
 /** `go list ./...`, or `{packages: null}` with the listing's own exit status. */
 export function listPackages() {

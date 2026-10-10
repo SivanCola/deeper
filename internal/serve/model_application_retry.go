@@ -2,10 +2,10 @@ package serve
 
 import (
 	"context"
+	"deeper/internal/control"
+	"deeper/internal/secrets"
 	"errors"
 	"log/slog"
-	"reasonix/internal/control"
-	"reasonix/internal/secrets"
 	"sync"
 	"time"
 )

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 func snapshotReadError(err error) (*ReadError, bool) {

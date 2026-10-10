@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestModelCapabilityResolverHonorsExplicitConfigBeforeCache(t *testing.T) {
@@ -87,11 +87,11 @@ func TestModelCapabilityResolverUsesOtherCuratedPresetCatalogs(t *testing.T) {
 
 func TestModelCapabilityResolverLoadsIndependentCache(t *testing.T) {
 	dir := t.TempDir()
-	oldCache := os.Getenv("REASONIX_CACHE_HOME")
-	if err := os.Setenv("REASONIX_CACHE_HOME", dir); err != nil {
+	oldCache := os.Getenv("DEEPER_CACHE_HOME")
+	if err := os.Setenv("DEEPER_CACHE_HOME", dir); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.Setenv("REASONIX_CACHE_HOME", oldCache) })
+	t.Cleanup(func() { _ = os.Setenv("DEEPER_CACHE_HOME", oldCache) })
 
 	entry := ProviderEntry{Name: "custom", Kind: "openai", BaseURL: "https://example.test", Model: "vision"}
 	writer := NewModelCapabilityResolver()

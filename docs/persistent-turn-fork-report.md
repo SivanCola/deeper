@@ -1,7 +1,7 @@
 # Persistent turn fork implementation report
 
 Date: 2026-09-14
-Base: `main-v2` at `236db8c16`
+Base: `main` at `236db8c16`
 
 A completed turn can now be forked into an independent child session while its
 parent keeps running, while the parent is read-only, and after a restart. The
@@ -140,7 +140,7 @@ agent:
 | Locale parity across `en.ts` / `zh.ts` / `zh-TW.ts` | all 11 `chat.branch*` keys present in each |
 | `node bench/fork-targets.mjs` (Chromium, real Transcript) | PASS on the final tree |
 | `node bench/fork-targets-app.mjs` (built app, `/?mock=1`) | PASS on the final tree |
-| `make lint-cross` | root linux/darwin/windows clean; stopped on four pre-existing unused Desktop linux tray stubs, unchanged from `origin/main-v2` |
+| `make lint-cross` | root linux/darwin/windows clean; stopped on four pre-existing unused Desktop linux tray stubs, unchanged from `origin/main` |
 
 The browser bench runs against the real `Transcript` with isolated fixture data
 and reads the rendered DOM, not internal state:
@@ -193,7 +193,7 @@ read-only source yielding a writable child with the source log unchanged; a
   launched, so production-mode shell/service startup is unverified.
 - **Windows and Linux runtime.** Root cross-platform lint passed for linux,
   darwin, and windows. Desktop linux cross-lint remains blocked by four
-  pre-existing unused tray stubs that are unchanged from `origin/main-v2`; no
+  pre-existing unused tray stubs that are unchanged from `origin/main`; no
   packaged application was run on either platform.
 - **Live provider calls.** No real-API run was made; the child's inherited
   context is verified against persisted projections, not against a provider.

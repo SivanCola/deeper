@@ -4,15 +4,15 @@ import (
 	"log/slog"
 	"os"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/skill/skillwatch"
+	"deeper/internal/boot"
+	"deeper/internal/skill/skillwatch"
 )
 
 // sharedSkillWatchService returns the one skill-watch service this host shares
 // across every controller it builds.
 //
 // Each service owns a helper process: a service per build spawned a 56MB
-// reasonix-desktop.exe and tore one down on every tab-controller rebuild, and
+// deeper-desktop.exe and tore one down on every tab-controller rebuild, and
 // because a helper lives until its build is closed, rebuilds left several
 // resident at once. One service per host keeps exactly one helper for the
 // process lifetime.

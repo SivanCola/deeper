@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func writeSchemaTwoSession(t *testing.T, path string) (*agent.Session, *agent.Session) {

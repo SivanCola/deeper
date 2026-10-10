@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a bug in DeepSeek-Reasonix
+description: Report a bug in deeper
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -14,7 +14,7 @@ body:
       label: Version line
       description: Which line are you running?
       options:
-        - "v2 — Go rewrite (1.x), main-v2 (active development)"
+        - "v2 — Go rewrite (1.x), main (active development)"
         - "v3 — Studio (2.x), studio"
     validations:
       required: true
@@ -22,7 +22,7 @@ body:
     id: version
     attributes:
       label: Exact version
-      description: Output of `reasonix --version`.
+      description: Output of `deeper --version`.
       placeholder: e.g. 1.0.0
     validations:
       required: true

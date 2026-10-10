@@ -7,8 +7,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func TestSubagentResultToolContractIsStableAndReadOnly(t *testing.T) {

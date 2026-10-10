@@ -10,7 +10,7 @@ import (
 func loadWithStatusline(t *testing.T, user, project string) *Config {
 	t.Helper()
 	home, root := t.TempDir(), t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", home)
@@ -19,7 +19,7 @@ func loadWithStatusline(t *testing.T, user, project string) *Config {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[statusline]\ncommand = \""+project+"\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[statusline]\ncommand = \""+project+"\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRoot(root)

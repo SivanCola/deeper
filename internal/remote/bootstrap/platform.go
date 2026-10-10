@@ -34,8 +34,8 @@ func ParseUname(out string) (goos, goarch string, err error) {
 	return goos, goarch, nil
 }
 
-// ParseVersion extracts a semver-ish string from `reasonix --version` output
-// like "reasonix v1.9.0" or "1.9.0".
+// ParseVersion extracts a semver-ish string from `deeper --version` output
+// like "deeper v1.9.0" or "1.9.0".
 func ParseVersion(out string) (string, error) {
 	for field := range strings.FieldsSeq(strings.TrimSpace(out)) {
 		v := strings.TrimPrefix(field, "v")

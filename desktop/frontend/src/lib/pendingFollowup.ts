@@ -66,5 +66,5 @@ export function queuedFollowupOutcome(error: unknown): QueuedFollowupOutcome | u
 export function followupNotSubmitted(error: unknown): boolean {
   const outcome = submissionOutcome(error);
   if (outcome) return outcome === "not_accepted";
-  return /reasonix_error:(?:inbox_(?:not_submitted|capacity_items|capacity_bytes|item_too_large|empty|schema_readonly)|channel_read_only|workspace_start(?:ing|_failed)|image_attachment_unreadable)(?:$|\b)/.test(String(error));
+  return /deeper_error:(?:inbox_(?:not_submitted|capacity_items|capacity_bytes|item_too_large|empty|schema_readonly)|channel_read_only|workspace_start(?:ing|_failed)|image_attachment_unreadable)(?:$|\b)/.test(String(error));
 }

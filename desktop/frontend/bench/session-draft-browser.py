@@ -51,8 +51,8 @@ with sync_playwright() as p:
     page.locator('.palette input').fill('New session')
     page.get_by_role('option').filter(has_text='New session').first.click()
     expect(composer).to_have_value('persistent draft ownership fixture')
-    page.evaluate('() => window.__reasonixFlushSessionDraft()')
-    page.evaluate('() => window.__reasonixResumeSessionDraftEditing()')
+    page.evaluate('() => window.__deeperFlushSessionDraft()')
+    page.evaluate('() => window.__deeperResumeSessionDraftEditing()')
     # Each sample begins from a different, fully installed history surface.
     times = []
     for _ in range(30):

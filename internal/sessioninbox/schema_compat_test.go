@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 func TestPreviousInboxReaderPausesSchemaThree(t *testing.T) {

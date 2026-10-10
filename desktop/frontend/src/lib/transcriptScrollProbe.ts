@@ -58,13 +58,13 @@ export function recordTranscriptScrollDiagnostic(type: string, fields: Record<st
   recordFrontendDiagnostic("transcript", `transcript.${type}`, fields);
   // The bench harness (desktop/frontend/bench) installs this page-side hook to
   // attach the diagnostic stream to replay failure output.
-  if (typeof window !== "undefined") window.__REASONIX_TRANSCRIPT_SCROLL_DIAGNOSTIC__?.(type, fields);
+  if (typeof window !== "undefined") window.__DEEPER_TRANSCRIPT_SCROLL_DIAGNOSTIC__?.(type, fields);
 }
 
 declare global {
   interface Window {
-    __REASONIX_TRANSCRIPT_SCROLL_WRITE__?: (write: TranscriptScrollWriteRecord) => void;
-    __REASONIX_TRANSCRIPT_SCROLL_DIAGNOSTIC__?: (type: string, fields: Record<string, unknown>) => void;
+    __DEEPER_TRANSCRIPT_SCROLL_WRITE__?: (write: TranscriptScrollWriteRecord) => void;
+    __DEEPER_TRANSCRIPT_SCROLL_DIAGNOSTIC__?: (type: string, fields: Record<string, unknown>) => void;
   }
 }
 
@@ -99,5 +99,5 @@ export function noteTranscriptScrollWrite(write: TranscriptScrollWriteRecord): v
       stagnantFrames: write.stagnantFrames,
     });
   }
-  window.__REASONIX_TRANSCRIPT_SCROLL_WRITE__?.(write);
+  window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__?.(write);
 }

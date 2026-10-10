@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/tool"
 )
 
 func TestSessionParentLive(t *testing.T) {

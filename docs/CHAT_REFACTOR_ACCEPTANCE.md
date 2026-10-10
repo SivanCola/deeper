@@ -1,4 +1,4 @@
-# Reasonix chat refactor: delivery and acceptance
+# Deeper chat refactor: delivery and acceptance
 
 [简体中文](CHAT_REFACTOR_ACCEPTANCE.zh-CN.md) · [Architecture and capability decisions](TRANSCRIPT_ARCHITECTURE.md) · [Environment](evidence/chat-refactor/environment.json)
 

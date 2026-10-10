@@ -28,5 +28,5 @@ export function pageRuntimeSource(): string {
 
 export function scriptCall(method: string, input: unknown): string {
   if (!/^page[A-Za-z]+$/.test(method)) throw new Error("invalid browser page method");
-  return `/* reasonix:${method} */ (() => {\n${pageRuntimeSource()}\nreturn ReasonixPageRuntime[${JSON.stringify(method)}](${JSON.stringify(input)});\n})()`;
+  return `/* deeper:${method} */ (() => {\n${pageRuntimeSource()}\nreturn DeeperPageRuntime[${JSON.stringify(method)}](${JSON.stringify(input)});\n})()`;
 }

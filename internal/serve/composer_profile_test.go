@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 type checkedAnswerAPI struct {

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestResetManualSessionOrderKeepsSavedOrderAndGroups(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestEstimateMessagesTokensOmitsEncryptedSearchRaw(t *testing.T) {

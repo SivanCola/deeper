@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 // Measures the existing runtime-lock scope as well as elapsed deletion time.

@@ -132,7 +132,7 @@ installDesktopHostStub(({
           applyChoice(preset, expectedRevision);
         } else {
           const [, expectedSessionID, preset, expectedRevision] = args as [string, string, string, number];
-          if (expectedSessionID !== current) throw new Error("reasonix_error:permission_session_changed");
+          if (expectedSessionID !== current) throw new Error("deeper_error:permission_session_changed");
           applyChoice(preset, expectedRevision);
         }
         return { sessionId: current, generation: 1, revision: sessions[current].revision, preset: sessions[current].preset, workspaceRoot: "/repo", grants: [] };

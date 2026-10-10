@@ -14,7 +14,7 @@ on:
         default: false
         type: boolean
   push:
-    branches: [main-v2]
+    branches: [main]
     paths:
       - release-notes/releases.json
 
@@ -65,7 +65,7 @@ jobs:
           RELEASE_REVOKED_CANDIDATES: ${{ vars.RELEASE_REVOKED_CANDIDATES }}
         run: |
           set -euo pipefail
-          git fetch origin main-v2 --tags
+          git fetch origin main --tags
           if [ "$EVENT_NAME" = push ]; then
             version="$(jq -r '.releases[0].version // empty' release-notes/releases.json)"
             source_sha="$PUSH_SHA"
@@ -102,10 +102,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Verify release control helpers and signing configuration
         env:
-          OFFICIAL_REPOSITORY: ${{ github.repository == 'esengine/DeepSeek-Reasonix' }}
+          OFFICIAL_REPOSITORY: ${{ github.repository == 'SivanCola/deeper' }}
           HAS_APPLE_SIGNING: ${{ secrets.APPLE_CERT_P12 != '' && secrets.APPLE_CERT_PASSWORD != '' && secrets.APPLE_API_KEY_P8 != '' && secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER_ID != '' }}
           HAS_CERTUM_SIGNING: ${{ secrets.CERTUM_USERNAME != '' && secrets.CERTUM_OTP_URI != '' && secrets.CERTUM_KEY_ID != '' }}
-          HAS_MINISIGN: ${{ secrets.MINISIGN_PRIVATE_KEY != '' && secrets.MINISIGN_PASSWORD != '' }}
+          HAS_MINISIGN: ${{ secrets.MINISIGN_PRIVATE_KEY != '' && secrets.MINISIGN_PASSWORD != '' && vars.MINISIGN_PUBLIC_KEY != '' }}
+          GH_TOKEN: ${{ github.token }}
+          DEEPER_RELEASE_BOOTSTRAP_CHECK: "true"
         run: |
           bash scripts/validate-release-control-plane.sh
           bash scripts/check-release-public-access.sh "${{ steps.candidate.outputs.version }}"
@@ -151,7 +153,7 @@ jobs:
           signer_sha="$(jq -r .head_sha "$RUNNER_TEMP/existing-run.json")"
           gh attestation verify "$RUNNER_TEMP/existing-record/record.json" --repo "$GITHUB_REPOSITORY" \
             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release-candidate.yml" \
-            --signer-digest "$signer_sha" --source-ref refs/heads/main-v2 --deny-self-hosted-runners
+            --signer-digest "$signer_sha" --source-ref refs/heads/main --deny-self-hosted-runners
           inspected="$RUNNER_TEMP/existing-inspected.outputs"
           GITHUB_OUTPUT="$inspected" node scripts/resolve-release-candidate.mjs inspect "$CANDIDATE_ID" \
             "$RUNNER_TEMP/existing-record/record.json" "$RUNNER_TEMP/existing-record-artifact.json" \
@@ -351,7 +353,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          worktree="$(mktemp -d "$RUNNER_TEMP/reasonix-notes.XXXXXX")"
+          worktree="$(mktemp -d "$RUNNER_TEMP/deeper-notes.XXXXXX")"
           git worktree add --detach "$worktree" "${{ github.sha }}"
           node "$worktree/scripts/release-notes.mjs" render --version "v${{ needs.resolve.outputs.version }}" --output payload/evidence/release-notes.md
           git worktree remove "$worktree"
@@ -426,7 +428,7 @@ jobs:
             echo
             echo '```sh'
             if [ "$PURPOSE" = rehearsal ]; then
-              echo "gh workflow run release-candidate-verify.yml --ref main-v2 -f candidate_id='${{ needs.resolve.outputs.candidate_id }}'"
+              echo "gh workflow run release-candidate-verify.yml --ref main -f candidate_id='${{ needs.resolve.outputs.candidate_id }}'"
             else
               echo "./scripts/release-stable.sh '${{ needs.resolve.outputs.candidate_id }}'"
             fi

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/store"
+	"deeper/internal/event"
+	"deeper/internal/store"
 )
 
 // TestValidatePathSegment exhaustively covers the segment validator that guards

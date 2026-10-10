@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/installlayout"
-	"reasonix/internal/proc"
+	"deeper/internal/installlayout"
+	"deeper/internal/proc"
 )
 
 // relaunchThroughLauncher starts the permanent thin launcher (or the active

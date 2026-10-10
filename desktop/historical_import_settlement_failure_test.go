@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestHistoricalImportRetriesSettlementAfterReceiptCompletes(t *testing.T) {

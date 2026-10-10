@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // landCause is why a turn was told to finalize. kind selects the pause the Run

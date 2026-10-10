@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func TestFailedSessionRebindReleasesPreviousWriter(t *testing.T) {

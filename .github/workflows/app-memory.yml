@@ -2,9 +2,9 @@ name: App memory screening
 
 on:
   pull_request:
-    branches: [main-v2]
+    branches: [main]
   push:
-    branches: [main-v2]
+    branches: [main]
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     env:
-      REASONIX_APP_MEMORY_PROFILE: ${{ needs.changes.outputs.memory_profile }}
+      DEEPER_APP_MEMORY_PROFILE: ${{ needs.changes.outputs.memory_profile }}
     defaults:
       run:
         working-directory: desktop/frontend
@@ -117,7 +117,7 @@ jobs:
       matrix:
         shard: ${{ fromJSON(needs.changes.outputs.memory_shards) }}
     env:
-      REASONIX_APP_MEMORY_PROFILE: ${{ needs.changes.outputs.memory_profile }}
+      DEEPER_APP_MEMORY_PROFILE: ${{ needs.changes.outputs.memory_profile }}
     defaults:
       run:
         working-directory: desktop/frontend
@@ -145,9 +145,9 @@ jobs:
       - run: cp -a "$RUNNER_TEMP/app-memory-build/dist/." dist/
       - name: Run complete independent memory process
         env:
-          REASONIX_APP_MEMORY_SHARD: ${{ matrix.shard }}
-          REASONIX_APP_MEMORY_PREPARED: ${{ runner.temp }}/app-memory-build/identity.json
-          REASONIX_APP_MEMORY_ARTIFACTS: ${{ runner.temp }}/app-memory-results
+          DEEPER_APP_MEMORY_SHARD: ${{ matrix.shard }}
+          DEEPER_APP_MEMORY_PREPARED: ${{ runner.temp }}/app-memory-build/identity.json
+          DEEPER_APP_MEMORY_ARTIFACTS: ${{ runner.temp }}/app-memory-results
           PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
         run: node bench/app-memory.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 // subagentModelSelection resolves a child's model override to the entry that

@@ -2,9 +2,9 @@ package control
 
 import (
 	"context"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 	"errors"
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
 )
 
 // InitializeReservedSession initializes only an explicitly reserved, still empty

@@ -1,6 +1,6 @@
 package config
 
-import "reasonix/internal/provider/openai"
+import "deeper/internal/provider/openai"
 
 // migrateStoredDeepSeekEffort preserves the wire value of saved pre-contract
 // aliases. New user selections still go through strict NormalizeEffort validation.

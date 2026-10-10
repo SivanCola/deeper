@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/pluginpkg"
-	"reasonix/internal/secrets"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/pluginpkg"
+	"deeper/internal/secrets"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/skill"
+	"deeper/internal/skill"
 )
 
 func TestSubmitInvocationDisplayKeepsSharedTextAcrossSeveralInlineSkills(t *testing.T) {

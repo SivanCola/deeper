@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func listSessionsAfterPinnedOwnerReconcile(t *testing.T, app *App, dir, workspaceRoot string) []SessionMeta {

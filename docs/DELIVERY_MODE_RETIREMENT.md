@@ -6,7 +6,7 @@
 
 [简体中文](#简体中文)
 
-Reasonix no longer offers Delivery as a session mode. New and restored local
+Deeper no longer offers Delivery as a session mode. New and restored local
 sessions use standard execution. Plan, Goal, project checks, task-risk rules,
 explicit user verification requirements, and recorded test evidence continue to
 work independently.
@@ -21,7 +21,7 @@ Historical checkpoints and receipts are preserved. A historical
 `policy_floor=delivery` stamp no longer creates requirements when the current
 task contract is rebuilt, and an ordinary old pause is informational rather than
 a current blocker. Plan and Goal checkpoints still follow their existing
-recovery rules. Reasonix never clears missing checks or rewrites failed evidence
+recovery rules. Deeper never clears missing checks or rewrites failed evidence
 as passed.
 
 The desktop client does not send policy changes to remote hosts. If an older
@@ -34,7 +34,7 @@ make old runtimes adopt the new semantics.
 
 ## 简体中文
 
-Reasonix 不再提供“交付”会话模式。新建和恢复的本地会话统一采用标准执行。
+Deeper 不再提供“交付”会话模式。新建和恢复的本地会话统一采用标准执行。
 Plan、Goal、项目检查、任务风险规则、用户显式验证要求和真实测试记录继续独立生效。
 
 旧 `/preset`、`/work-mode`、`/profile`、HTTP、桌面和 ACP 输入作为兼容入口保留。
@@ -43,7 +43,7 @@ Plan、Goal、项目检查、任务风险规则、用户显式验证要求和真
 
 历史检查点和回执原样保留。重建当前任务合同时，历史 `policy_floor=delivery` 印记不再
 产生要求；普通任务过去的暂停只作为历史信息展示，不再成为当前阻断。Plan 和 Goal
-检查点继续使用原有恢复规则。Reasonix 不会清空缺项，也不会把失败证据改写成通过。
+检查点继续使用原有恢复规则。Deeper 不会清空缺项，也不会把失败证据改写成通过。
 
 桌面客户端不会向远端发送策略切换。旧远端若返回 Delivery 状态或由它产生的暂停，
 客户端会保留真实状态和恢复操作，并按远端会话显示一次升级提示；升级远端服务后才会

@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 // .NET maps named pipes to these Unix sockets. This also permits exercising

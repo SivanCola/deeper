@@ -9,7 +9,7 @@ import (
 )
 
 func TestWorkerLeaseIndependentProcess(t *testing.T) {
-	if path := os.Getenv("REASONIX_DRAFT_LOCK_FIXTURE"); path != "" {
+	if path := os.Getenv("DEEPER_DRAFT_LOCK_FIXTURE"); path != "" {
 		s := New(path)
 		defer s.Close()
 		if release, err := s.WorkerLease("same-session"); err == nil {
@@ -25,7 +25,7 @@ func TestWorkerLeaseIndependentProcess(t *testing.T) {
 	}
 	defer release()
 	child := exec.Command(os.Args[0], "-test.run=^TestWorkerLeaseIndependentProcess$")
-	child.Env = append(os.Environ(), "REASONIX_DRAFT_LOCK_FIXTURE="+s.path)
+	child.Env = append(os.Environ(), "DEEPER_DRAFT_LOCK_FIXTURE="+s.path)
 	if output, err := child.CombinedOutput(); err != nil {
 		t.Fatalf("child: %v %s", err, output)
 	}

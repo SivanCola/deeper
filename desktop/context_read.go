@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // contextRead binds every field in an overview response to one runtime. Reads

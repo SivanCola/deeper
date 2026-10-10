@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 const (

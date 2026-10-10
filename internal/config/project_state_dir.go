@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 const projectCollisionMarker = ".workspace-root"

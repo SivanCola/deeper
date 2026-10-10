@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/desktop/internal/sessionui"
-	"reasonix/internal/identitylock"
+	"deeper/desktop/internal/sessionui"
+	"deeper/internal/identitylock"
 )
 
 var errManualCreationIdentity = errors.New("invalid manual creation identity or state")

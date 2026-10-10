@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/taskmonitor"
+	"deeper/internal/taskmonitor"
 )
 
 const legacySensitiveSummary = `command "deploy --token secret" failed in /Users/alice/private`
@@ -475,7 +475,7 @@ func TestTaskCommand_PreservesMachineShowRoute(t *testing.T) {
 // taskStore so the CLI uses the production FileStore path.
 func writeTaskData(t *testing.T, dir string) {
 	t.Helper()
-	taskDir := filepath.Join(dir, ".reasonix", "tasks", "task-1")
+	taskDir := filepath.Join(dir, ".deeper", "tasks", "task-1")
 	if err := os.MkdirAll(taskDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

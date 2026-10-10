@@ -1,7 +1,7 @@
 # 持久轮次分叉实施报告
 
 日期：2026-09-14
-基线：`main-v2` 的 `236db8c16`
+基线：`main` 的 `236db8c16`
 
 已完成的轮次现在可以分叉为独立的子会话：父会话继续运行时分叉、父会话只读时分
 叉，以及重启之后分叉。判定“该轮次已结束”的依据是持久化的事件日志，
@@ -117,7 +117,7 @@
 | `en.ts` / `zh.ts` / `zh-TW.ts` 之间的 locale 一致性 | 11 个 `chat.branch*` key 在三个文件中齐全 |
 | `node bench/fork-targets.mjs`（Chromium，真实 Transcript） | 在最终工作树 PASS |
 | `node bench/fork-targets-app.mjs`（已构建应用，`/?mock=1`） | 在最终工作树 PASS |
-| `make lint-cross` | 根目录 linux/darwin/windows clean；在 4 个既有的 Desktop linux tray unused stub 处停止，这些文件与 `origin/main-v2` 一致 |
+| `make lint-cross` | 根目录 linux/darwin/windows clean；在 4 个既有的 Desktop linux tray unused stub 处停止，这些文件与 `origin/main` 一致 |
 
 浏览器 bench 针对真实的 `Transcript` 运行，使用隔离的 fixture 数据，
 并读取渲染后的 DOM，而不是内部状态：
@@ -161,7 +161,7 @@
 - **打包的桌面端和原生 shell。** 没有构建、签名或启动任何包，因此生产模式下
   的 shell/service 启动未经验证。
 - **Windows 与 Linux 运行时。** 根目录的 linux、darwin、windows 跨平台 lint
-  已通过；Desktop linux 跨平台 lint 仍被 4 个既有且与 `origin/main-v2` 一致
+  已通过；Desktop linux 跨平台 lint 仍被 4 个既有且与 `origin/main` 一致
   的 tray unused stub 阻塞；两个平台都没有运行打包应用。
 - **真实 provider 调用。** 没有进行任何真实 API 运行；子会话继承的上下文是依
   据持久化投影验证的，而不是依据 provider 验证的。

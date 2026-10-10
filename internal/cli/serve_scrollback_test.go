@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/serve"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/sandbox"
+	"deeper/internal/serve"
 )
 
 // The line serve prints goes into a tmux pane, and a sandboxed command (network
@@ -26,7 +26,7 @@ func TestSandboxCannotReadServeTokenFromScrollback(t *testing.T) {
 	if err != nil {
 		t.Skip("no tmux")
 	}
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	for _, mode := range []string{"none", "token"} {
 		ctrl := newOwnedTestController(t, control.Options{SessionDir: t.TempDir()})
 		srv := serve.New(ctrl, serve.NewBroadcaster(), config.ServeConfig{AuthMode: mode})

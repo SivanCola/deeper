@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestCopySessionCopiesFullHistoryAndIsIdempotentPerOperation(t *testing.T) {

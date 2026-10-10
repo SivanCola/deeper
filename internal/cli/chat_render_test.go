@@ -7,8 +7,8 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // newTestChatTUI builds a chatTUI with just the pieces the streaming/commit and
@@ -103,7 +103,7 @@ func TestIngestSeparatesReasoningFromAnswer(t *testing.T) {
 	if len(m.transcript) != 3 || !strings.Contains(m.transcript[2], "Hello") {
 		t.Fatalf("answer should commit as a separate entry, transcript=%v", m.transcript)
 	}
-	if plain := ansi.Strip(m.transcript[2]); !strings.HasPrefix(plain, "  ◆ Reasonix\n\n  Hello answer") {
+	if plain := ansi.Strip(m.transcript[2]); !strings.HasPrefix(plain, "  ◆ Deeper\n\n  Hello answer") {
 		t.Fatalf("answer should have an explicit assistant identity and indented body, got %q", plain)
 	}
 }
@@ -116,7 +116,7 @@ func TestAssistantAnswerWithoutReasoningHasNoLeadingSpacer(t *testing.T) {
 	if len(m.transcript) != 1 {
 		t.Fatalf("direct answer should remain one compact block, got %d: %v", len(m.transcript), m.transcript)
 	}
-	if plain := ansi.Strip(m.transcript[0]); !strings.HasPrefix(plain, "  ◆ Reasonix\n\n  Direct answer") {
+	if plain := ansi.Strip(m.transcript[0]); !strings.HasPrefix(plain, "  ◆ Deeper\n\n  Direct answer") {
 		t.Fatalf("direct answer block = %q", plain)
 	}
 }
@@ -324,19 +324,19 @@ func TestConsecutiveToolCallsKeepMarkersUnderOwnCard(t *testing.T) {
 	// shellOutputs, which collapseShellSlot uses to recover the line count
 	// after the live state has been reset by the second beginToolRunning.
 	m.ingestEvent(event.Event{Kind: event.ToolDispatch, Tool: event.Tool{ID: "shell-1", Name: "bash", Args: `{"command":"git status"}`}})
-	m.ingestEvent(event.Event{Kind: event.ToolProgress, Tool: event.Tool{ID: "shell-1", Output: "On branch main-v2\n"}})
+	m.ingestEvent(event.Event{Kind: event.ToolProgress, Tool: event.Tool{ID: "shell-1", Output: "On branch main\n"}})
 	// Second bash dispatched before the first finishes; this switches
 	// m.toolStreamID to "shell-2" and resets the live streaming state.
 	m.ingestEvent(event.Event{Kind: event.ToolDispatch, Tool: event.Tool{ID: "shell-2", Name: "bash", Args: `{"command":"git branch -a"}`}})
 	// The second bash also streams one chunk of output so its collapse
 	// produces a real ⎿ marker (not the zero-output blank fallback).
-	m.ingestEvent(event.Event{Kind: event.ToolProgress, Tool: event.Tool{ID: "shell-2", Output: "* main-v2\n"}})
+	m.ingestEvent(event.Event{Kind: event.ToolProgress, Tool: event.Tool{ID: "shell-2", Output: "* main\n"}})
 	// Late progress for the FIRST bash — the path that previously stacked
 	// its marker under the second card.
 	m.ingestEvent(event.Event{Kind: event.ToolProgress, Tool: event.Tool{ID: "shell-1", Output: "nothing to commit\n"}})
 	// Now finish both; each should collapse in place under its own card.
-	m.ingestEvent(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "shell-1", Name: "bash", Output: "On branch main-v2\nnothing to commit\n"}})
-	m.ingestEvent(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "shell-2", Name: "bash", Output: "* main-v2\n"}})
+	m.ingestEvent(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "shell-1", Name: "bash", Output: "On branch main\nnothing to commit\n"}})
+	m.ingestEvent(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "shell-2", Name: "bash", Output: "* main\n"}})
 
 	// Locate each tool's card. With the fix the transcript is exactly
 	// [card1, marker1, "", card2, marker2] — 5 lines, one marker per
@@ -374,11 +374,11 @@ func TestConsecutiveToolCallsKeepMarkersUnderOwnCard(t *testing.T) {
 	}
 
 	// The first card's marker must reflect the full output of the first
-	// run ("On branch main-v2" AND "nothing to commit"), not just the
+	// run ("On branch main" AND "nothing to commit"), not just the
 	// first chunk. The bug left only the pre-late-progress chunk in
 	// transcript[idx1+1], so the second line would be missing.
 	marker1 := transcript[idx1+1]
-	if !strings.Contains(marker1, "On branch main-v2") || !strings.Contains(marker1, "nothing to commit") {
+	if !strings.Contains(marker1, "On branch main") || !strings.Contains(marker1, "nothing to commit") {
 		t.Fatalf("first card's marker should preview the full output of shell-1, got %q", marker1)
 	}
 }
@@ -479,18 +479,18 @@ func TestConsecutiveNonShellToolsDoNotRenderNegativeLineCount(t *testing.T) {
 
 func TestTodoPanelKeepsLastSuccessfulTodoWrite(t *testing.T) {
 	m := newTestChatTUI()
-	initial := `{"todos":[{"content":"Sync main-v2","status":"in_progress"},{"content":"Push origin","status":"pending"}]}`
-	failed := `{"todos":[{"content":"Sync main-v2","status":"completed"},{"content":"Push origin","status":"in_progress"}]}`
+	initial := `{"todos":[{"content":"Sync main","status":"in_progress"},{"content":"Push origin","status":"pending"}]}`
+	failed := `{"todos":[{"content":"Sync main","status":"completed"},{"content":"Push origin","status":"in_progress"}]}`
 
 	m.ingestEvent(event.Event{Kind: event.ToolDispatch, Tool: event.Tool{ID: "todo-1", Name: "todo_write", Args: initial}})
-	m.ingestEvent(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "todo-1", Name: "todo_write", Args: initial, Output: "Todos updated", TodoWritten: true, Todos: []event.Todo{{Content: "Sync main-v2", Status: "in_progress"}, {Content: "Push origin", Status: "pending"}}}})
-	if len(m.todos) != 2 || m.todos[0].Content != "Sync main-v2" || m.todos[0].Status != "in_progress" {
+	m.ingestEvent(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "todo-1", Name: "todo_write", Args: initial, Output: "Todos updated", TodoWritten: true, Todos: []event.Todo{{Content: "Sync main", Status: "in_progress"}, {Content: "Push origin", Status: "pending"}}}})
+	if len(m.todos) != 2 || m.todos[0].Content != "Sync main" || m.todos[0].Status != "in_progress" {
 		t.Fatalf("todos after successful result = %+v", m.todos)
 	}
 
 	m.ingestEvent(event.Event{Kind: event.ToolDispatch, Tool: event.Tool{ID: "todo-2", Name: "todo_write", Args: failed}})
 	m.ingestEvent(event.Event{Kind: event.ToolResult, Tool: event.Tool{ID: "todo-2", Name: "todo_write", Args: failed, Err: "invalid status"}})
-	if len(m.todos) != 2 || m.todos[0].Content != "Sync main-v2" || m.todos[0].Status != "in_progress" {
+	if len(m.todos) != 2 || m.todos[0].Content != "Sync main" || m.todos[0].Status != "in_progress" {
 		t.Fatalf("failed todo_write must not replace the panel: got %+v", m.todos)
 	}
 }
@@ -658,7 +658,7 @@ func TestSubagentProgressOrdinaryToolProgressUnaffected(t *testing.T) {
 }
 
 // TestSubagentProgressUnknownReservedChannelIgnored locks forward compatibility:
-// an older CLI must suppress a future reasonix.subagent.* channel instead of
+// an older CLI must suppress a future deeper.subagent.* channel instead of
 // treating its body as ordinary tool output.
 func TestSubagentProgressUnknownReservedChannelIgnored(t *testing.T) {
 	m := newTestChatTUI()

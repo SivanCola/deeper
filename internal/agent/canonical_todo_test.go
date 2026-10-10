@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 func TestTodoStateAllowsParallelAndOutOfOrderStatuses(t *testing.T) {

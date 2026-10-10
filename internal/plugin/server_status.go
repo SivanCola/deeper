@@ -1,6 +1,6 @@
 package plugin
 
-import "reasonix/internal/tool"
+import "deeper/internal/tool"
 
 // ToolInfo is the human-facing metadata returned by MCP tools/list for one tool.
 type ToolInfo struct {

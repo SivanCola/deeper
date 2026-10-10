@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
-	"reasonix/internal/tool"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/store"
+	"deeper/internal/tool"
+	"deeper/internal/transcript"
 )
 
 func TestTranscriptFollowSupportsLegacyProjection(t *testing.T) {

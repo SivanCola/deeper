@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/projectiondb"
+	"deeper/internal/sessioncontent"
 )
 
 // History window reading (capability history-window-v1) pages a bounded

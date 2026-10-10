@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/extension/uihub"
-	"reasonix/internal/i18n"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/extension/uihub"
+	"deeper/internal/i18n"
 )
 
 // Extension structured-UI rendering (Extension Protocol v2). The

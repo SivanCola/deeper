@@ -1,6 +1,6 @@
 package boot
 
-import "reasonix/internal/config"
+import "deeper/internal/config"
 
 func runtimeConfigHostClassification() []configTypeClassification {
 	return []configTypeClassification{

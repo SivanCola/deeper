@@ -3,10 +3,10 @@ package main
 import (
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/plugin"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/plugin"
 )
 
 type sessionOpenEnvironment struct {

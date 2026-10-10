@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
+	"deeper/internal/boot"
+	"deeper/internal/config"
 )
 
 // TestProviderModel sends a bounded, tool-free probe through the configured

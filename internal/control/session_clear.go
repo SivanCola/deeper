@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
 )
 
 // ClearSession discards the current conversation without preserving it in

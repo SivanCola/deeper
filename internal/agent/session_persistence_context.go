@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
 )
 
 const sessionContextWriteChunk = 256 << 10

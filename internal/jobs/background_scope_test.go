@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type scopeEventSink struct{ emit func(event.Event) }

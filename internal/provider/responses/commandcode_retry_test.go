@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 type commandCodeRoundTripFunc func(*http.Request) (*http.Response, error)

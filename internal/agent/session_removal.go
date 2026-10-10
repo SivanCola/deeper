@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"reasonix/internal/pathidentity"
-	"reasonix/internal/store"
+	"deeper/internal/pathidentity"
+	"deeper/internal/store"
 )
 
 // SessionRemovalGuard holds a session's save lock and lease lock for the

@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // streamScanEndError classifies why the SSE scanner stopped. A clean close

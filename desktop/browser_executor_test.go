@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/desktop/internal/browserops"
-	"reasonix/internal/browser"
-	"reasonix/internal/extension/rpcwire"
+	"deeper/desktop/internal/browserops"
+	"deeper/internal/browser"
+	"deeper/internal/extension/rpcwire"
 )
 
 type fakeBrowserHost struct {

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // ContextReport renders the current context state as a one-line summary plus

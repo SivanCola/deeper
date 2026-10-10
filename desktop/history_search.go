@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // historyServerSearch copies card-visible search fields and drops encrypted
 // replay payloads. Those stay on the session message for the next provider turn.

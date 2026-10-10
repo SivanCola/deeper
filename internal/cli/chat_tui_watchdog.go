@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func (m *chatTUI) noteWatchdogRunning() {

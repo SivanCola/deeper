@@ -61,10 +61,10 @@ func TestPrepareUpdateRecoversFromUnusablePendingTransaction(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			home := t.TempDir()
-			t.Setenv("REASONIX_HOME", home)
-			target := filepath.Join(t.TempDir(), "reasonix-desktop")
+			t.Setenv("DEEPER_HOME", home)
+			target := filepath.Join(t.TempDir(), "deeper-desktop")
 			originalExecutable := repairExecutable
-			repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "reasonix-guard"), nil }
+			repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
 			t.Cleanup(func() { repairExecutable = originalExecutable })
 			if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 				t.Fatal(err)
@@ -92,10 +92,10 @@ func TestPrepareUpdateRecoversFromUnusablePendingTransaction(t *testing.T) {
 // preparing over one would overwrite the fixed backup paths it still owns.
 func TestPrepareUpdateStillRefusesOverRecoverableTransaction(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
-	target := filepath.Join(t.TempDir(), "reasonix-desktop")
+	t.Setenv("DEEPER_HOME", home)
+	target := filepath.Join(t.TempDir(), "deeper-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "reasonix-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -117,7 +117,7 @@ func TestPrepareUpdateStillRefusesOverRecoverableTransaction(t *testing.T) {
 // Reconciliation must clear debris too, otherwise startup keeps reporting a
 // recovery failure that nothing can resolve.
 func TestReconcilePendingUpdateQuarantinesDebris(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	writePendingUpdateRaw(t, `{"schema_version":1,"to_version":"v2"`)
 
 	result, err := ReconcilePendingUpdate("v1")
@@ -138,7 +138,7 @@ func TestReconcilePendingUpdateQuarantinesDebris(t *testing.T) {
 // Quarantine preserves evidence rather than deleting it, and repeated recovery
 // never overwrites an earlier copy.
 func TestQuarantinePendingUpdatePreservesEveryCopy(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	for i := range 3 {
 		writePendingUpdateRaw(t, `{"broken":`)
 		aside, err := quarantinePendingUpdate("test")
@@ -162,7 +162,7 @@ func TestQuarantinePendingUpdatePreservesEveryCopy(t *testing.T) {
 // installation is not debris: it may own real rollback material and simply be
 // observed from the wrong install, so it must survive classification.
 func TestSelfDescribingTransactionIsNotTreatedAsDebris(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	body, err := json.Marshal(UpdateTransaction{
 		SchemaVersion: updateTransactionVersion,
 		ToVersion:     "v2",
@@ -170,7 +170,7 @@ func TestSelfDescribingTransactionIsNotTreatedAsDebris(t *testing.T) {
 		Platform:      "test",
 		CreatedAt:     time.Now().UTC().Format(time.RFC3339Nano),
 		TargetKind:    "file",
-		TargetPath:    filepath.Join("elsewhere", "reasonix-desktop"),
+		TargetPath:    filepath.Join("elsewhere", "deeper-desktop"),
 	})
 	if err != nil {
 		t.Fatal(err)

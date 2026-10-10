@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/recovery"
+	"deeper/internal/agent"
+	"deeper/internal/recovery"
 )
 
 // ResolveRecovery is retained as a wire-compatible endpoint for older clients.

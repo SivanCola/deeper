@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/jobs"
-	"reasonix/internal/tool"
+	"deeper/internal/jobs"
+	"deeper/internal/tool"
 )
 
 func TestContextualBuiltinVisibilityFollowsOwningContext(t *testing.T) {

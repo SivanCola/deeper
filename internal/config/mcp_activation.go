@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/mcplaunch"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/mcplaunch"
 )
 
 // MCP activation is the durable enable/disable switch for configured servers.
@@ -43,7 +43,7 @@ type MCPActivationOverride struct {
 	Identity  string             `json:"identity,omitempty"` // approved declaration digest, project servers only
 }
 
-// MCPActivationFile is the on-disk shape of $REASONIX_HOME/mcp-activation.json.
+// MCPActivationFile is the on-disk shape of $DEEPER_HOME/mcp-activation.json.
 type MCPActivationFile struct {
 	Version   int                     `json:"version"`
 	Overrides []MCPActivationOverride `json:"overrides"`
@@ -55,19 +55,19 @@ type MCPActivationStore struct {
 	mu   sync.Mutex
 }
 
-// MCPActivationPath returns the durable activation file under Reasonix home.
-func MCPActivationPath(reasonixHome string) string {
-	return filepath.Join(strings.TrimSpace(reasonixHome), mcpActivationFilename)
+// MCPActivationPath returns the durable activation file under Deeper home.
+func MCPActivationPath(deeperHome string) string {
+	return filepath.Join(strings.TrimSpace(deeperHome), mcpActivationFilename)
 }
 
-// NewMCPActivationStore opens the activation store for reasonixHome.
-func NewMCPActivationStore(reasonixHome string) *MCPActivationStore {
-	return &MCPActivationStore{path: MCPActivationPath(reasonixHome)}
+// NewMCPActivationStore opens the activation store for deeperHome.
+func NewMCPActivationStore(deeperHome string) *MCPActivationStore {
+	return &MCPActivationStore{path: MCPActivationPath(deeperHome)}
 }
 
-// DefaultMCPActivationStore uses the process Reasonix home.
+// DefaultMCPActivationStore uses the process Deeper home.
 func DefaultMCPActivationStore() *MCPActivationStore {
-	return NewMCPActivationStore(ReasonixHomeDir())
+	return NewMCPActivationStore(DeeperHomeDir())
 }
 
 // Path returns the store file path.
@@ -237,7 +237,7 @@ func (s *MCPActivationStore) saveLocked(file MCPActivationFile) error {
 }
 
 // lockUpdates serializes the full read-modify-write transaction across both
-// independent store instances and separate Reasonix processes. Atomic rename
+// independent store instances and separate Deeper processes. Atomic rename
 // prevents torn JSON; this lock additionally prevents the last writer from
 // silently dropping another server's override.
 func (s *MCPActivationStore) lockUpdates() (func(), error) {

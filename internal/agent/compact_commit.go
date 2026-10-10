@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 type summaryProjectionCommit struct {

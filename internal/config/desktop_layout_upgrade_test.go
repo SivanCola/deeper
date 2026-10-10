@@ -96,7 +96,7 @@ func TestApplyUserConfigUpgradesOnStartupDoesNotRewriteFutureClassicConfig(t *te
 func isolatedDesktopLayoutUserConfigPath(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)

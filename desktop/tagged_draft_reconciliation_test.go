@@ -3,11 +3,11 @@ package main
 import (
 	"testing"
 
-	"reasonix/desktop/internal/draftstate"
+	"deeper/desktop/internal/draftstate"
 )
 
 func TestTaggedDraftRestartReconcilesWithoutReplay(t *testing.T) {
-	for _, version := range []string{"main-v2-pr10469", "main-v2-pr10572", "1.38.11"} {
+	for _, version := range []string{"main-pr10469", "main-pr10572", "1.38.11"} {
 		t.Run(version, func(t *testing.T) {
 			isolateDesktopUserDirs(t)
 			path := copyRollbackFixture(t, version, "drafts.sqlite")

@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/textutil"
+	"deeper/internal/projectiondb"
+	"deeper/internal/textutil"
 )
 
 func ensureHistoryOutlineIndexes(ctx context.Context, db *sql.DB) error {

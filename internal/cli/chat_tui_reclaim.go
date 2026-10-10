@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 // tuiSessionReclaimedMsg tells the live TUI that the takeover mirror has

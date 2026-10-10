@@ -1,4 +1,4 @@
-# 会话归档方案：main-v2 适配审查 / Archive integration review
+# 会话归档方案：main 适配审查 / Archive integration review
 
 审查日期 / Reviewed: 2026-09-16.
 
@@ -13,7 +13,7 @@ draft code and merge probes describe that earlier assessment only.
 ## 基线与结论 / Baseline and verdict
 
 - 当前工作基线 / Working base: `738e9b956efecc65c9bdb34af39d490081379af5`.
-- 本次获取的 main-v2 / Reviewed upstream: `a4b83056a99ff1da1700a585e8b9da71fb872838`.
+- 本次获取的 main / Reviewed upstream: `a4b83056a99ff1da1700a585e8b9da71fb872838`.
 - #10392: `8b426dc870f8887a5e89067617e9a91380213ed5`.
 - #10395: `a4b83056a99ff1da1700a585e8b9da71fb872838`.
 
@@ -89,7 +89,7 @@ Permanent deletion removes the application session/current store; retained upgra
 
 ## 实施与验证次序 / Integration and validation order
 
-1. 保存当前完整改动，在最新 main-v2 的独立工作树集成；原工作树保留。Preserve local edits and integrate in a separate current-main worktree.
+1. 保存当前完整改动，在最新 main 的独立工作树集成；原工作树保留。Preserve local edits and integrate in a separate current-main worktree.
 2. 先保留 #10392/#10395 的实现和回归，再接入 schema 2 与 receipt 对账，移除重复转换入口。Keep upstream regressions first, then integrate the registry and reconciliation.
 3. 接入生命周期、运行时绑定、标题和任务；覆盖旧路径、所有 head、隐藏/离线工作区及补登记。Integrate lifecycle/runtime/title/task behavior across legacy and canonical identities.
 4. 完成回收站 UI、翻译、样式和 purge 事务；改掉旧“三分区”测试与文档。Finish the single-trash UI and purge transaction; replace obsolete three-section expectations.

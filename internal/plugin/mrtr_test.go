@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
+	"deeper/internal/mcpinteraction"
 	mcpjsonrpc "github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
-	"reasonix/internal/mcpinteraction"
 )
 
 // scriptedBroker answers every elicitation with a canned result.

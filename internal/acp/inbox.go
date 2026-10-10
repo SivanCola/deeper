@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/sessioninbox"
 )
 
 func (s *service) sessionAPI(sess *acpSession) (control.SessionAPI, error) {

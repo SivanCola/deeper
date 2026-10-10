@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/cli"
+	"deeper/internal/cli"
 )
 
 // jsonTags collects a struct's JSON field names, descending into embedded and

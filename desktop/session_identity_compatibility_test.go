@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
-	"reasonix/internal/taskmonitor"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/session"
+	"deeper/internal/taskmonitor"
 )
 
 func TestAuditCanonicalRestoreReturnsToSidebar(t *testing.T) {

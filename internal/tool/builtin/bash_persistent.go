@@ -9,11 +9,11 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/shellparse"
-	"reasonix/internal/shellrun"
-	"reasonix/internal/tool"
+	"deeper/internal/persistentshell"
+	"deeper/internal/sandbox"
+	"deeper/internal/shellparse"
+	"deeper/internal/shellrun"
+	"deeper/internal/tool"
 )
 
 // shellResetNotice tells the model that session shell state is gone. Without it

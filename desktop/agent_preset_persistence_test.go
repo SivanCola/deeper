@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/control"
 )
 
 func TestSaveTabSessionMetaFoldsDeliveryFloorToStandard(t *testing.T) {

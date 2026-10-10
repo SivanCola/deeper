@@ -363,7 +363,7 @@ func (a *App) ExportScrollDiagnostics(payload string) (string, error) {
 	if a.ctx == nil {
 		return "", nil
 	}
-	defaultFilename := fmt.Sprintf("reasonix-scroll-diagnostics-%s.zip", reportID[:8])
+	defaultFilename := fmt.Sprintf("deeper-scroll-diagnostics-%s.zip", reportID[:8])
 	path, err := a.nativeHost().SaveFileDialog(a.ctx, nativeDialogOptions{
 		Title:                "Export scroll diagnostics",
 		DefaultDirectory:     dialogDefaultDirectory(a.activeWorkspaceRoot()),

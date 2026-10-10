@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // A real controller delivers TurnDone while its admission gate is still held.

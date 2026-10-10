@@ -6,6 +6,7 @@ cd "$root"
 node --test scripts/release-candidate.test.mjs scripts/resolve-release-candidate.test.mjs \
 	scripts/verify-release-artifact-archive.test.mjs scripts/release-publication-ledger.test.mjs \
 	scripts/reconcile-release-publication.test.mjs
+node --test scripts/publish-github-update-pointer.test.mjs scripts/github-release-bootstrap.test.mjs
 bash scripts/release-candidate-tags.test.sh
 bash scripts/release-stable.test.sh
 echo 'release executable contracts: PASS'

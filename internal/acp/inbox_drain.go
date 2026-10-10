@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/sessioninbox"
 )
 
 type acpInboxController interface {

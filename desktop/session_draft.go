@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/command"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
-	"reasonix/internal/skill"
+	"deeper/desktop/internal/draftstate"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/command"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/session"
+	"deeper/internal/skill"
 )
 
 type SessionDraftSettings struct {

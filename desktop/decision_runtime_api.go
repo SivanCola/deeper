@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
 	"fmt"
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
 )
 
 // PromptAnswerView is the Wails-safe union for all interactive cards.

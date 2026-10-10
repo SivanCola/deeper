@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 type desktopAuthenticationRunner struct{ calls atomic.Int32 }

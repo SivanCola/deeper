@@ -33,8 +33,8 @@ jobs:
           RELEASE_REVOKED_CANDIDATES: ${{ vars.RELEASE_REVOKED_CANDIDATES }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REPOSITORY" = esengine/DeepSeek-Reasonix
-          test "$GITHUB_REF" = refs/heads/main-v2
+          test "$GITHUB_REPOSITORY" = SivanCola/deeper
+          test "$GITHUB_REF" = refs/heads/main
           test "$GITHUB_REF_PROTECTED" = true
           node scripts/resolve-release-candidate.mjs resolve-rehearsal "${{ inputs.candidate_id }}"
       - name: Download and verify producer record
@@ -55,7 +55,7 @@ jobs:
           signer_sha="$(jq -r .head_sha "$RUNNER_TEMP/producer-run.json")"
           gh attestation verify record/record.json --repo "$GITHUB_REPOSITORY" \
             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release-candidate.yml" \
-            --signer-digest "$signer_sha" --source-ref refs/heads/main-v2 --deny-self-hosted-runners
+            --signer-digest "$signer_sha" --source-ref refs/heads/main --deny-self-hosted-runners
           node scripts/resolve-release-candidate.mjs inspect-rehearsal "${{ inputs.candidate_id }}" \
             record/record.json "$RUNNER_TEMP/record-artifact.json" "$RUNNER_TEMP/producer-run.json"
       - name: Verify exact signed payload and native acceptance evidence
@@ -80,11 +80,11 @@ jobs:
           find payload -type f -print0 | xargs -0 -P 8 -I{} \
             gh attestation verify {} --repo "$GITHUB_REPOSITORY" \
             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release-candidate.yml" \
-            --signer-digest "$signer_digest" --source-ref refs/heads/main-v2 \
+            --signer-digest "$signer_digest" --source-ref refs/heads/main \
             --deny-self-hosted-runners >/dev/null
           node scripts/release-candidate.mjs verify-rehearsal payload record/record.json >/dev/null
-          git fetch origin main-v2
-          git merge-base --is-ancestor "${{ steps.inspected.outputs.source_sha }}" origin/main-v2
+          git fetch origin main
+          git merge-base --is-ancestor "${{ steps.inspected.outputs.source_sha }}" origin/main
           jq -n \
             --arg candidate "${{ inputs.candidate_id }}" \
             --arg source "${{ steps.inspected.outputs.source_sha }}" \

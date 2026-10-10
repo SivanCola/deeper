@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestModelSettingsEveryOperationWithoutSessionRejectsForeignFields(t *testing.T) {

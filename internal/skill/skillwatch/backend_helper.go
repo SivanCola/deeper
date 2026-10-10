@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 // helperClient speaks the pipe protocol to a watcher helper process. Control
@@ -87,7 +87,7 @@ func defaultHelperCommand(ctx context.Context) (helperProcess, error) {
 	return &execHelper{cmd: cmd, stdin: stdin, stdout: stdout}, nil
 }
 
-const watchHelperEnv = "REASONIX_SKILL_WATCH_HELPER"
+const watchHelperEnv = "DEEPER_SKILL_WATCH_HELPER"
 
 type execHelper struct {
 	cmd    *exec.Cmd

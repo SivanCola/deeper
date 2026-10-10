@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // truncatingProvider reports a fixed prompt size however much is sent, which is
@@ -92,7 +92,7 @@ func truncationRun(t *testing.T, kind string, p *truncatingProvider) *noticeSink
 	t.Chdir(dir)
 
 	provider.Register(kind, func(provider.Config) (provider.Provider, error) { return p, nil })
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

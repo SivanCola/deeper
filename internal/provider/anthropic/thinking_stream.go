@@ -1,6 +1,6 @@
 package anthropic
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 func updateThinkingStream(blocks map[int]*provider.ThinkingBlock, ev streamEvent, send func(provider.Chunk) bool) bool {
 	chunk := provider.Chunk{Type: provider.ChunkReasoning}

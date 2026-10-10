@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"maps"
 
-	"reasonix/internal/extension/rpcwire"
-	"reasonix/internal/pathidentity"
+	"deeper/internal/extension/rpcwire"
+	"deeper/internal/pathidentity"
 )
 
 // Error codes from docs/DESKTOP_HOST_PROTOCOL.md. Business errors raised by
@@ -21,7 +21,7 @@ const (
 )
 
 // Identity is what the service reports about itself in hello and checks
-// the shell against. Home is the canonical Reasonix data home.
+// the shell against. Home is the canonical Deeper data home.
 type Identity struct {
 	Version string
 	Channel string

@@ -12,8 +12,8 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/historywork"
-	"reasonix/internal/provider"
+	"deeper/internal/historywork"
+	"deeper/internal/provider"
 )
 
 func dagPagerBatch(ctx context.Context, db *sql.DB, p *dagPagerProgress, work func(*sql.Tx) error) error {

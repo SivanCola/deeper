@@ -20,9 +20,9 @@ export function applicationMenuTemplate(deps: MenuDeps): MenuItemConstructorOpti
       submenu: [
         { label: "Settings", accelerator: "CmdOrCtrl+,", click: () => deps.openSettings() },
         { label: "Toggle Developer Tools", accelerator: "CmdOrCtrl+I", click: () => deps.toggleDevTools() },
-        { label: "Show Reasonix", click: () => deps.showWindow() },
+        { label: "Show Deeper", click: () => deps.showWindow() },
         { type: "separator" },
-        { label: "Quit Reasonix", accelerator: "CmdOrCtrl+Q", click: () => deps.quit() },
+        { label: "Quit Deeper", accelerator: "CmdOrCtrl+Q", click: () => deps.quit() },
       ],
     },
     { role: "editMenu" },

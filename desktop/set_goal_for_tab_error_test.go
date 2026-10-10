@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 type rejectingGoalSession struct {

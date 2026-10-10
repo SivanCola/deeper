@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 // reclaim is the remote side's way back: it asks the local writer to yield
@@ -56,7 +56,7 @@ func (s *Server) reclaim(w http.ResponseWriter, r *http.Request) {
 			deadline := time.Now().Add(10 * time.Second)
 			for leaseHeldByForeignRuntime(realPath) {
 				if time.Now().After(deadline) {
-					http.Error(w, "session is held by a local Reasonix window that never registered a mirror; close that window or retry after it exits", http.StatusConflict)
+					http.Error(w, "session is held by a local Deeper window that never registered a mirror; close that window or retry after it exits", http.StatusConflict)
 					return
 				}
 				time.Sleep(handoffPollInterval)
@@ -155,7 +155,7 @@ func (s *Server) reclaimIdentity(w http.ResponseWriter, r *http.Request, body ha
 			deadline := time.Now().Add(10 * time.Second)
 			for session.ProbeWriterHeld(dir) {
 				if time.Now().After(deadline) {
-					http.Error(w, "session is held by a local Reasonix window that never registered a mirror; close that window or retry after it exits", http.StatusConflict)
+					http.Error(w, "session is held by a local Deeper window that never registered a mirror; close that window or retry after it exits", http.StatusConflict)
 					return
 				}
 				time.Sleep(handoffPollInterval)

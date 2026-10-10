@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // Chunked session recovery summarizes an over-length transcript in

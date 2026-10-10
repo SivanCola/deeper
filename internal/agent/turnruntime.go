@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"reasonix/internal/completion"
-	"reasonix/internal/runtimepolicy"
+	"deeper/internal/completion"
+	"deeper/internal/runtimepolicy"
 )
 
 // turnRuntime is the host state for exactly one Agent.Run. beginRunTurn builds

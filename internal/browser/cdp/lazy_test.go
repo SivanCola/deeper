@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 func TestLazyAttachesOnFirstUseOnly(t *testing.T) {

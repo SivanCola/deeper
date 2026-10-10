@@ -9,8 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/proc"
-	"reasonix/internal/secrets"
+	"deeper/internal/proc"
+	"deeper/internal/secrets"
 )
 
 // baseConfig is the -c override set every invocation carries.
@@ -159,7 +159,7 @@ func build(ctx context.Context, dir string, repoEnv, extraConfig, args []string)
 // search, for commands that name their repository by URL: no repository's
 // config reaches them. The returned cleanup removes the directory.
 func Detached(cmd *exec.Cmd) (cleanup func(), err error) {
-	dir, err := os.MkdirTemp("", "reasonix-git-")
+	dir, err := os.MkdirTemp("", "deeper-git-")
 	if err != nil {
 		return func() {}, err
 	}

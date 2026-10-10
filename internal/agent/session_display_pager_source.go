@@ -3,13 +3,13 @@ package agent
 import (
 	"context"
 	"database/sql"
+	"deeper/internal/fileops"
+	"deeper/internal/projectiondb"
+	"deeper/internal/store"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"reasonix/internal/fileops"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/store"
 )
 
 type displayPagerEventSource struct {

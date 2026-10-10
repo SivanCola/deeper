@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/skill"
+	"deeper/internal/event"
+	"deeper/internal/skill"
 )
 
 type goalWorkCallbackRunner struct{ run func() error }

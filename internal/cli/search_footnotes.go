@@ -1,10 +1,10 @@
 package cli
 
 import (
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 	"encoding/json"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
 	"strings"
 )
 

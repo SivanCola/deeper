@@ -49,20 +49,20 @@ function cleanEnvDir(input: HomeEnvironment, name: string): string {
   return clean(dir);
 }
 
-// Mirrors internal/config.ReasonixHomeDir so the hello `instance.home` matches
+// Mirrors internal/config.DeeperHomeDir so the hello `instance.home` matches
 // what the Go service computes for the same environment.
-export function reasonixHome(input: HomeEnvironment): string {
-  const explicit = cleanEnvDir(input, "REASONIX_HOME");
+export function deeperHome(input: HomeEnvironment): string {
+  const explicit = cleanEnvDir(input, "DEEPER_HOME");
   if (explicit !== "") return explicit;
   const home = userHome(input);
   if (input.platform === "win32") {
     const appData = (input.env.APPDATA ?? "").trim();
-    if (appData !== "") return clean(appData + sep + "reasonix");
-    if (home !== "") return clean(home + sep + "AppData" + sep + "Roaming" + sep + "reasonix");
+    if (appData !== "") return clean(appData + sep + "deeper");
+    if (home !== "") return clean(home + sep + "AppData" + sep + "Roaming" + sep + "deeper");
     return "";
   }
-  if (home !== "") return clean(home + sep + ".reasonix");
+  if (home !== "") return clean(home + sep + ".deeper");
   const xdg = (input.env.XDG_CONFIG_HOME ?? "").trim();
-  if (xdg !== "") return clean(xdg + sep + "reasonix");
+  if (xdg !== "") return clean(xdg + sep + "deeper");
   return "";
 }

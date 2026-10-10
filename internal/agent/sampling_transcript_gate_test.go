@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func TestSamplingTranscriptGateBlocksInvalidArgumentsBeforeProvider(t *testing.T) {

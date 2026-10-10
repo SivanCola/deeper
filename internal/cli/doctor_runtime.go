@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"reasonix/internal/boot"
+	"deeper/internal/boot"
 )
 
 func doctorRuntimeCommand(args []string) int {

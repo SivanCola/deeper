@@ -10,9 +10,9 @@ import (
 	"sort"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/historywork"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/historywork"
+	"deeper/internal/session"
 )
 
 type historicalCatalogEntry struct {

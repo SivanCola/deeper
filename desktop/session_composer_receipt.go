@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/internal/sessioninbox"
 	"encoding/json"
-	"reasonix/internal/sessioninbox"
 )
 
 // A queued follow-up has an inbox receipt before it has any user-message row.

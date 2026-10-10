@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 func gitMetadataWorkspace(t *testing.T) string {

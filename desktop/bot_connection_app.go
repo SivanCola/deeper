@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/bot/feishu"
-	"reasonix/internal/bot/weixin"
-	"reasonix/internal/botruntime"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/bot"
+	"deeper/internal/bot/feishu"
+	"deeper/internal/bot/weixin"
+	"deeper/internal/botruntime"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 type BotConnectionCredentialView struct {
@@ -274,13 +274,13 @@ func (a *App) TestBotConnection(id, target string) (BotConnectionDiagnostic, err
 		feishuCfg.Domain = firstNonEmptyBot(conn.Domain, feishuCfg.Domain)
 		feishuCfg.AppID = firstNonEmptyBot(conn.Credential.AppID, feishuCfg.AppID)
 		feishuCfg.AppSecretEnv = firstNonEmptyBot(conn.Credential.AppSecretEnv, feishuCfg.AppSecretEnv)
-		result, err = feishu.SendText(ctx, feishuCfg, target, "Reasonix bot 测试消息：连接和发送链路可用。")
+		result, err = feishu.SendText(ctx, feishuCfg, target, "Deeper bot 测试消息：连接和发送链路可用。")
 	case "weixin":
 		weixinCfg := cfg.Bot.Weixin
 		weixinCfg.Enabled = true
 		weixinCfg.AccountID = firstNonEmptyBot(conn.Credential.AccountID, weixinCfg.AccountID)
 		weixinCfg.TokenEnv = firstNonEmptyBot(conn.Credential.TokenEnv, weixinCfg.TokenEnv)
-		result, err = weixin.SendText(ctx, weixinCfg, target, "Reasonix bot 测试消息：连接和发送链路可用。")
+		result, err = weixin.SendText(ctx, weixinCfg, target, "Deeper bot 测试消息：连接和发送链路可用。")
 	}
 	if err != nil {
 		return botConnectionDiagnostic(conn, conn.ID, "error", "send", "test_send_failed", err.Error(), true), nil
@@ -324,7 +324,7 @@ func (a *App) TestDingtalkBot() (BotConnectionDiagnostic, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	// domain 传空：匹配任意 domain 的钉钉 adapter（空 domain 视为匹配任意）。
-	result, err := a.botRuntime.TestSendToAdapter(ctx, connID, "", "Reasonix bot 测试消息：钉钉配置与发送链路可用。")
+	result, err := a.botRuntime.TestSendToAdapter(ctx, connID, "", "Deeper bot 测试消息：钉钉配置与发送链路可用。")
 	if err != nil {
 		if strings.Contains(err.Error(), "requires a known chat") {
 			return botConnectionDiagnostic(nil, "dingtalk", "warning", "send", "dingtalk_test_send_no_chat", "还没有可发送的钉钉会话：请先在钉钉中给机器人发一条消息，之后即可发送测试消息。", false), nil

@@ -1,13 +1,13 @@
 package main
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/store"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
 	"strings"
 )
 

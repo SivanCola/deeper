@@ -2,16 +2,16 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-root="$(mktemp -d "${TMPDIR:-/tmp}/reasonix-candidate-source-test.XXXXXX")"
+root="$(mktemp -d "${TMPDIR:-/tmp}/deeper-candidate-source-test.XXXXXX")"
 cleanup() {
-	case "$root" in */reasonix-candidate-source-test.*) rm -rf -- "$root" ;; *) exit 1 ;; esac
+	case "$root" in */deeper-candidate-source-test.*) rm -rf -- "$root" ;; *) exit 1 ;; esac
 }
 trap cleanup EXIT
 
 remote="$root/remote.git"
 work="$root/work"
 git init -q --bare "$remote"
-git init -q -b main-v2 "$work"
+git init -q -b main "$work"
 git -C "$work" config user.name test
 git -C "$work" config user.email test@example.invalid
 mkdir -p "$work/release-notes"
@@ -26,7 +26,7 @@ git -C "$work" commit -q -m notes
 candidate="$(git -C "$work" rev-parse HEAD)"
 git -C "$work" commit --allow-empty -q -m "unrelated later merge"
 git -C "$work" remote add origin "$remote"
-git -C "$work" push -q origin main-v2
+git -C "$work" push -q origin main
 
 (
 	cd "$work"

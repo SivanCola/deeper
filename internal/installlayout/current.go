@@ -1,5 +1,5 @@
-// Package installlayout implements the Reasonix v1.20+ versioned install layout:
-// InstallRoot/{current.json, reasonix-launcher, versions/<version>/...}.
+// Package installlayout implements the Deeper v1.20+ versioned install layout:
+// InstallRoot/{current.json, deeper-launcher, versions/<version>/...}.
 //
 // The desktop launcher only reads current.json and starts the active desktop
 // binary. It never counts crashes, chooses previous versions, or enters a
@@ -19,7 +19,7 @@ import (
 	"strings"
 	"unicode"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 const (
@@ -246,9 +246,9 @@ func cleanInstallRoot(installRoot string) (string, error) {
 // DesktopBinaryName is the platform-specific desktop executable base name.
 func DesktopBinaryName() string {
 	if runtime.GOOS == "windows" {
-		return "reasonix-desktop.exe"
+		return "deeper-desktop.exe"
 	}
-	return "reasonix-desktop"
+	return "deeper-desktop"
 }
 
 // CLIBinaryName is the platform-specific CLI executable base name inside a
@@ -261,13 +261,13 @@ func CLIBinaryName() string {
 // Packaging tools use it while building Windows payloads on other hosts.
 func CLIBinaryNameFor(goos string) string {
 	if goos == "windows" {
-		return "reasonix-cli.exe"
+		return "deeper-cli.exe"
 	}
-	return "reasonix-cli"
+	return "deeper-cli"
 }
 
 // FlatCLIBinaryName is the CLI executable base name in a flat install root
-// before migration. Unix archives ship it as "reasonix" beside the desktop
+// before migration. Unix archives ship it as "deeper" beside the desktop
 // binary; only Windows uses the versioned name there.
 func FlatCLIBinaryName() string {
 	return FlatCLIBinaryNameFor(runtime.GOOS)
@@ -276,17 +276,17 @@ func FlatCLIBinaryName() string {
 // FlatCLIBinaryNameFor returns the flat-root CLI name for an explicit target OS.
 func FlatCLIBinaryNameFor(goos string) string {
 	if goos == "windows" {
-		return "reasonix-cli.exe"
+		return "deeper-cli.exe"
 	}
-	return "reasonix"
+	return "deeper"
 }
 
 // UpdateHelperBinaryName is the platform-specific update helper name.
 func UpdateHelperBinaryName() string {
 	if runtime.GOOS == "windows" {
-		return "reasonix-update-helper.exe"
+		return "deeper-update-helper.exe"
 	}
-	return "reasonix-update-helper"
+	return "deeper-update-helper"
 }
 
 // ActiveDesktopPath resolves the active desktop executable from current.json.
@@ -406,15 +406,15 @@ func ActiveUpdateHelperPath(installRoot string) (string, error) {
 // legacy installed entry; do not rename it in signed update payloads.
 func LauncherBinaryName() string {
 	if runtime.GOOS == "windows" {
-		return "reasonix-launcher.exe"
+		return "deeper-launcher.exe"
 	}
-	return "reasonix-launcher"
+	return "deeper-launcher"
 }
 
 // CanonicalLauncherBinaryName is the preferred installed GUI entry.
 func CanonicalLauncherBinaryName() string {
 	if runtime.GOOS == "windows" {
-		return "Reasonix.exe"
+		return "Deeper.exe"
 	}
 	return LauncherBinaryName()
 }
@@ -422,7 +422,7 @@ func CanonicalLauncherBinaryName() string {
 // PortableAliasName is the historical name for the canonical Windows entry.
 func PortableAliasName() string {
 	if runtime.GOOS == "windows" {
-		return "Reasonix.exe"
+		return "Deeper.exe"
 	}
 	return ""
 }

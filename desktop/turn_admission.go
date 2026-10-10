@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 type imageCapabilitySnapshot interface{ ImageCapabilityChanged() bool }

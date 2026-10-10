@@ -4,7 +4,7 @@ import (
 	"context"
 	"unicode/utf8"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // slimToolResultRunes bounds one tool result inside a transcript-form summary

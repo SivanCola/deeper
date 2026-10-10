@@ -6,24 +6,24 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/pluginpkg"
 )
 
 // installV2RuntimePlugin writes a Manifest v2 package with a runtime into
-// the test Reasonix home and registers it in plugin state.
+// the test Deeper home and registers it in plugin state.
 func installV2RuntimePlugin(t *testing.T, home string) string {
 	t.Helper()
 	root := filepath.Join(home, "plugins", "example")
 	writePluginTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "example",
   "version": "1.0.0",
   "contributes": {
     "prompts": ["prompts"],
-    "themes": ["themes/*.reasonix-theme"]
+    "themes": ["themes/*.deeper-theme"]
   },
   "runtime": {
-    "command": "${REASONIX_PLUGIN_ROOT}/bin/example",
+    "command": "${DEEPER_PLUGIN_ROOT}/bin/example",
     "args": ["--serve"],
     "required": true,
     "intercepts": ["input.receive", "tool.before"],
@@ -32,10 +32,10 @@ func installV2RuntimePlugin(t *testing.T, home string) string {
   }
 }`)
 	writePluginTestFile(t, filepath.Join(root, "prompts", "plan.md"), "---\ndescription: plan\n---\nPlan $ARGUMENTS")
-	writePluginTestFile(t, filepath.Join(root, "themes", "neon.reasonix-theme"), "theme bytes")
+	writePluginTestFile(t, filepath.Join(root, "themes", "neon.deeper-theme"), "theme bytes")
 	writePluginTestFile(t, filepath.Join(root, "bin", "example"), "#!/bin/sh\n")
 	if err := pluginpkg.Upsert(home, pluginpkg.InstalledPlugin{
-		Name: "example", Root: "plugins/example", Version: "1.0.0", ManifestKind: "reasonix", Enabled: true,
+		Name: "example", Root: "plugins/example", Version: "1.0.0", ManifestKind: "deeper", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func installV2RuntimePlugin(t *testing.T, home string) string {
 
 func TestPluginShowRendersRuntimeFullTrust(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	installV2RuntimePlugin(t, home)
 
 	out := captureStdout(t, func() {
@@ -56,7 +56,7 @@ func TestPluginShowRendersRuntimeFullTrust(t *testing.T) {
 		"prompts: 1",
 		"themes: 1",
 		"runtime: FULL TRUST",
-		"command: ${REASONIX_PLUGIN_ROOT}/bin/example --serve",
+		"command: ${DEEPER_PLUGIN_ROOT}/bin/example --serve",
 		"intercepts: input.receive, tool.before",
 		"replaces: system_prompt",
 		"capabilities: interceptors, ui",
@@ -72,7 +72,7 @@ func TestPluginShowRendersRuntimeFullTrust(t *testing.T) {
 
 func TestPluginDoctorValidatesV2Runtime(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	installV2RuntimePlugin(t, home)
 
 	out := captureStdout(t, func() {
@@ -87,7 +87,7 @@ func TestPluginDoctorValidatesV2Runtime(t *testing.T) {
 
 func TestPluginDoctorFailsForMissingRuntimeCommand(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	root := installV2RuntimePlugin(t, home)
 	// Remove the runtime binary so the command no longer resolves.
 	if err := os.Remove(filepath.Join(root, "bin", "example")); err != nil {
@@ -106,17 +106,17 @@ func TestPluginDoctorFailsForMissingRuntimeCommand(t *testing.T) {
 
 func TestPluginDoctorReportsMissingV2PathsAsWarnings(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	root := filepath.Join(home, "plugins", "gap")
 	writePluginTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "gap",
   "contributes": {
-    "themes": ["themes/*.reasonix-theme"]
+    "themes": ["themes/*.deeper-theme"]
   }
 }`)
 	if err := pluginpkg.Upsert(home, pluginpkg.InstalledPlugin{
-		Name: "gap", Root: "plugins/gap", ManifestKind: "reasonix", Enabled: true,
+		Name: "gap", Root: "plugins/gap", ManifestKind: "deeper", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestPluginDoctorReportsMissingV2PathsAsWarnings(t *testing.T) {
 			t.Fatalf("plugin doctor rc = %d, want 0 (missing themes are warnings, not failures)", rc)
 		}
 	})
-	if !strings.Contains(out, `theme glob "themes/*.reasonix-theme" matched no files`) {
+	if !strings.Contains(out, `theme glob "themes/*.deeper-theme" matched no files`) {
 		t.Fatalf("doctor output missing the glob warning:\n%s", out)
 	}
 }

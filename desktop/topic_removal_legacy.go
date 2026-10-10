@@ -4,8 +4,8 @@ import (
 	"os"
 	"slices"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
 )
 
 // Old installations may have chat files but no indexed topic metadata. Their

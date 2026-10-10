@@ -2,8 +2,8 @@ package agent
 
 import (
 	"context"
+	"deeper/internal/plugin"
 	"fmt"
-	"reasonix/internal/plugin"
 )
 
 // listServerTools renders the live tool directory of a connected server and

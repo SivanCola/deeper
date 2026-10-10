@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/fileops"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(moveFile{}) }
@@ -20,7 +20,7 @@ func init() { tool.RegisterBuiltin(moveFile{}) }
 var renameFile = renameNoReplace
 
 // moveFile moves or renames one file. roots, when non-empty, confine both the
-// source and destination to the workspace; guard rejects Reasonix session-data
+// source and destination to the workspace; guard rejects Deeper session-data
 // endpoints on either side (a move out of the store mutates it too); workDir
 // resolves relative paths.
 type moveFile struct {
@@ -140,7 +140,7 @@ func (m moveFile) Execute(ctx context.Context, args json.RawMessage) (string, er
 }
 
 func renameSameFileDestination(src, dst string) error {
-	tmp, err := os.CreateTemp(filepath.Dir(src), ".reasonix-move-*")
+	tmp, err := os.CreateTemp(filepath.Dir(src), ".deeper-move-*")
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func copyRegularFileAndRemoveSource(src, dst string, info os.FileInfo) error {
 		return ErrFileChanged
 	}
 	target, version := fileops.DiskHandleSnapshot(src, in, opened)
-	out, err := os.CreateTemp(filepath.Dir(dst), ".reasonix-move-*")
+	out, err := os.CreateTemp(filepath.Dir(dst), ".deeper-move-*")
 	if err != nil {
 		return err
 	}

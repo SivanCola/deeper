@@ -2,8 +2,8 @@ package serve
 
 import (
 	"context"
+	"deeper/internal/config"
 	"fmt"
-	"reasonix/internal/config"
 )
 
 func (s *Server) switchEffortExpected(ctx context.Context, level, expectedPath string) error {

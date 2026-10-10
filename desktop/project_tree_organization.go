@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/desktop/internal/workspacestate"
 	"fmt"
-	"reasonix/desktop/internal/workspacestate"
 	"strings"
 	"unicode/utf8"
 )

@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/provider"
+	"deeper/internal/attachment"
+	"deeper/internal/provider"
 )
 
 type rawUserInputKey struct{}

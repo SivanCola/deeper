@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestServeConfigWithCommandDefaults(t *testing.T) {

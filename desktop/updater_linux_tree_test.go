@@ -10,14 +10,14 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/installlayout"
+	"deeper/internal/installlayout"
 )
 
 func TestLinuxShellRejectsExpandedSizeOverflow(t *testing.T) {
 	var archive bytes.Buffer
 	gz := gzip.NewWriter(&archive)
 	tw := tar.NewWriter(gz)
-	if err := tw.WriteHeader(&tar.Header{Name: "reasonix", Mode: 0755, Size: 1}); err != nil {
+	if err := tw.WriteHeader(&tar.Header{Name: "deeper", Mode: 0755, Size: 1}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tw.Write([]byte("x")); err != nil {
@@ -42,7 +42,7 @@ func linuxShellArchive(t *testing.T, extra *tar.Header, omit string) []byte {
 	var out bytes.Buffer
 	gz := gzip.NewWriter(&out)
 	tw := tar.NewWriter(gz)
-	names := append([]string{"reasonix-desktop", "reasonix", "reasonix-launcher", "reasonix-guard"}, installlayout.ShellRequiredNames("linux")...)
+	names := append([]string{"deeper-desktop", "deeper", "deeper-launcher", "deeper-guard"}, installlayout.ShellRequiredNames("linux")...)
 	names = append(names, "app/chrome-sandbox", "app/locales/en-US.pak")
 	for _, name := range names {
 		if name == omit {
@@ -83,14 +83,14 @@ func TestLinuxShellUpdateAtomicallyPublishesResourcesAndLauncher(t *testing.T) {
 	if err != nil || ptr.ActiveVersion != "v1.39.1" {
 		t.Fatalf("pointer=%+v %v", ptr, err)
 	}
-	for _, name := range append(installlayout.ShellRequiredNames("linux"), "app/locales/en-US.pak", "reasonix-desktop", "reasonix") {
+	for _, name := range append(installlayout.ShellRequiredNames("linux"), "app/locales/en-US.pak", "deeper-desktop", "deeper") {
 		p := filepath.Join(root, "versions", ptr.ActiveVersion, filepath.FromSlash(name))
 		data, err := os.ReadFile(p)
 		if err != nil || string(data) != "new-"+name {
 			t.Errorf("bad %s: %v", name, err)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(root, "reasonix-launcher")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "deeper-launcher")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -103,7 +103,7 @@ func TestLinuxShellUpdateRejectsPartialOrUnsafeTreeWithoutMovingPointer(t *testi
 		"missing renderer": {nil, "app/resources/app.asar"},
 		"traversal":        {&tar.Header{Name: "app/../outside", Typeflag: tar.TypeReg}, ""},
 		"symlink":          {&tar.Header{Name: "app/link", Linkname: "/tmp", Typeflag: tar.TypeSymlink}, ""},
-		"duplicate":        {&tar.Header{Name: "app/Reasonix", Typeflag: tar.TypeReg}, ""},
+		"duplicate":        {&tar.Header{Name: "app/Deeper", Typeflag: tar.TypeReg}, ""},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestLinuxShellUpdateRejectsPartialOrUnsafeTreeWithoutMovingPointer(t *testi
 }
 
 func TestLinuxShellExtractionCannotFollowPreexistingLinksOutsideStaging(t *testing.T) {
-	for _, name := range []string{"app", "app/resources", "reasonix-desktop"} {
+	for _, name := range []string{"app", "app/resources", "deeper-desktop"} {
 		t.Run(name, func(t *testing.T) {
 			staging, outside := t.TempDir(), t.TempDir()
 			sentinel := filepath.Join(outside, "keep")
@@ -131,7 +131,7 @@ func TestLinuxShellExtractionCannotFollowPreexistingLinksOutsideStaging(t *testi
 				t.Fatal(err)
 			}
 			target := outside
-			if name == "reasonix-desktop" {
+			if name == "deeper-desktop" {
 				target = sentinel
 			}
 			link := filepath.Join(staging, filepath.FromSlash(name))

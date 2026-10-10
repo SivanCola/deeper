@@ -17,12 +17,12 @@ let browser, electronApp, profile;
 try {
   let page;
   if (native) {
-    profile = await mkdtemp(path.join(tmpdir(), "reasonix-responsive-dock-"));
+    profile = await mkdtemp(path.join(tmpdir(), "deeper-responsive-dock-"));
     const main = path.join(profile, "main.cjs");
     await copyFile(path.join(root, "bench/transcript-layout-electron.cjs"), main);
     const requireElectron = createRequire(path.join(root, "../electron/package.json"));
     electronApp = await _electron.launch({ executablePath: requireElectron("electron"), args: [main],
-      env: { ...process.env, REASONIX_LAYOUT_URL: "about:blank" } });
+      env: { ...process.env, DEEPER_LAYOUT_URL: "about:blank" } });
     page = await electronApp.firstWindow();
   } else {
     browser = await chromium.launch({ headless: true });
@@ -35,7 +35,7 @@ try {
   await resize(1600, 1000);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.addInitScript(() => localStorage.setItem("reasonix-lang", "en"));
+  await page.addInitScript(() => localStorage.setItem("deeper-lang", "en"));
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?mock=bench&bench=1`);
   await page.locator("textarea.composer__input:not([aria-hidden=true])").waitFor();
   await selectSession(page, "bench:small-6t");
@@ -57,7 +57,7 @@ try {
   await splitter.focus();
   await page.keyboard.press("ArrowLeft");
   await near(736);
-  const saved = await page.evaluate(() => localStorage.getItem("reasonix.layoutPreferences.v1"));
+  const saved = await page.evaluate(() => localStorage.getItem("deeper.layoutPreferences.v1"));
   await dock.getByRole("button", { name: "Close workspace panel", exact: true }).click();
   await dock.waitFor({ state: "detached" });
   await page.locator(".topicbar__chrome-btn--workspace[aria-pressed=false]").click();
@@ -103,7 +103,7 @@ try {
   }
   await resize(1600, 1000);
   await near(736);
-  assert.equal(await page.evaluate(() => localStorage.getItem("reasonix.layoutPreferences.v1")), saved);
+  assert.equal(await page.evaluate(() => localStorage.getItem("deeper.layoutPreferences.v1")), saved);
   await page.reload();
   await near(736);
   const handle = await splitter.boundingBox();

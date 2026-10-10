@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/historywork"
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/historywork"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/store"
 )
 
 // Reuse catalog metadata instead of enumerating legacy directories a second

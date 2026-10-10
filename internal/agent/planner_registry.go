@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // ask is deliberately absent: a planner that needs a user-owned decision asks

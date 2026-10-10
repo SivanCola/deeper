@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/plancontract"
+	"deeper/internal/plancontract"
 )
 
 func submitPlan(t *testing.T, ctx context.Context, args string) (string, error) {

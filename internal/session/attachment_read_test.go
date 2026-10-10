@@ -12,11 +12,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/store"
+	"deeper/internal/attachment"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/store"
 )
 
 const attachmentReadPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="

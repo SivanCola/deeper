@@ -11,7 +11,7 @@
       "testAndSubtestResults": 146,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 353.185
         }
       ],
@@ -24,23 +24,23 @@
       "testAndSubtestResults": 165,
       "packages": [
         {
-          "package": "reasonix/internal/topicstate",
+          "package": "deeper/internal/topicstate",
           "seconds": 2.418
         },
         {
-          "package": "reasonix/internal/sessioninbox",
+          "package": "deeper/internal/sessioninbox",
           "seconds": 3.301
         },
         {
-          "package": "reasonix/internal/transcript",
+          "package": "deeper/internal/transcript",
           "seconds": 14.129
         },
         {
-          "package": "reasonix/internal/sessioncatalog",
+          "package": "deeper/internal/sessioncatalog",
           "seconds": 38.288
         },
         {
-          "package": "reasonix/internal/session",
+          "package": "deeper/internal/session",
           "seconds": 287.73
         }
       ],
@@ -53,7 +53,7 @@
       "testAndSubtestResults": 7,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 203.337
         }
       ],
@@ -66,7 +66,7 @@
       "testAndSubtestResults": 5,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 133.952
         }
       ],
@@ -79,7 +79,7 @@
       "testAndSubtestResults": 3,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 174.357
         }
       ],
@@ -92,7 +92,7 @@
       "testAndSubtestResults": 5,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 204.632
         }
       ],
@@ -105,7 +105,7 @@
       "testAndSubtestResults": 15,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 1.69
         }
       ],
@@ -118,7 +118,7 @@
       "testAndSubtestResults": 3,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 5.736
         }
       ],
@@ -131,41 +131,41 @@
       "testAndSubtestResults": 9,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 39.216
         }
       ],
       "logSHA256": "ecf3d59586585f0243c9fba32216ac01bb49569585d9fcf23f381efb4a7b818b"
     },
     {
-      "gate": "main-v2-root",
+      "gate": "main-root",
       "status": "passed",
       "topLevelTests": 283,
       "testAndSubtestResults": 333,
       "packages": [
         {
-          "package": "reasonix/internal/transcript",
+          "package": "deeper/internal/transcript",
           "seconds": 0.44
         },
         {
-          "package": "reasonix/internal/agent",
+          "package": "deeper/internal/agent",
           "seconds": 13.988
         },
         {
-          "package": "reasonix/internal/control",
+          "package": "deeper/internal/control",
           "seconds": 163.982
         }
       ],
       "logSHA256": "fb0a24f6834c3ce2044880e3aa6d3bfa3263d1ae9f1a778711bac60b2d0e84ea"
     },
     {
-      "gate": "main-v2-desktop-race",
+      "gate": "main-desktop-race",
       "status": "passed",
       "topLevelTests": 13,
       "testAndSubtestResults": 26,
       "packages": [
         {
-          "package": "reasonix/desktop",
+          "package": "deeper/desktop",
           "seconds": 14.108
         }
       ],
@@ -176,8 +176,8 @@
     "platform": "darwin-arm64",
     "version": "v1.38.12-preview.1",
     "artifactsSHA256": {
-      "MacOS/Reasonix": "fe5611f724912bfb042b96b1004b4fd58ca8709fa47359b1c95b204adac279d5",
-      "Resources/service/reasonix-desktop": "fb7cdcab394fe5bcc519df8d5a4536ea71b9b809d312dc716818fa093a54971d",
+      "MacOS/Deeper": "fe5611f724912bfb042b96b1004b4fd58ca8709fa47359b1c95b204adac279d5",
+      "Resources/service/deeper-desktop": "fb7cdcab394fe5bcc519df8d5a4536ea71b9b809d312dc716818fa093a54971d",
       "Resources/app.asar": "33e1dcca8c4fb4128110c5fcb28a585c7edbfc8f33c68538df2881f63654709f"
     },
     "historicalVersions": [
@@ -266,7 +266,7 @@
       "tests": 27
     },
     {
-      "gate": "main-v2 import identity race regression",
+      "gate": "main import identity race regression",
       "status": "passed",
       "packageSeconds": 9.038
     },
@@ -288,8 +288,8 @@
     "repositoryLint": "passed",
     "nativePlatform": "darwin-arm64",
     "artifactsSHA256": {
-      "MacOS/Reasonix": "0ac2b2779e5ae8e29b42f3b4ff4f8417c5e2b9e4d4f398d6cd9d714e9e166a35",
-      "Resources/service/reasonix-desktop": "498e49aecf3c9566773bfcdf7d573276600a3ab65591aa28c7926abe870d414c",
+      "MacOS/Deeper": "0ac2b2779e5ae8e29b42f3b4ff4f8417c5e2b9e4d4f398d6cd9d714e9e166a35",
+      "Resources/service/deeper-desktop": "498e49aecf3c9566773bfcdf7d573276600a3ab65591aa28c7926abe870d414c",
       "Resources/app.asar": "33e1dcca8c4fb4128110c5fcb28a585c7edbfc8f33c68538df2881f63654709f"
     },
     "nativeScenarios": [

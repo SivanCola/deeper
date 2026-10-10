@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func projectionConfig(t *testing.T) *config.Config {
@@ -14,7 +14,7 @@ func projectionConfig(t *testing.T) *config.Config {
 	cfg := config.Default()
 	cfg.Providers = []config.ProviderEntry{{
 		Name: "fixture", Kind: "openai", Model: "chat", BaseURL: "https://example.invalid",
-		APIKeyEnv: "REASONIX_PROJECTION_TEST_KEY",
+		APIKeyEnv: "DEEPER_PROJECTION_TEST_KEY",
 	}}
 	cfg.DefaultModel = "fixture/chat"
 	cfg.Agent.CompactRatio = .85
@@ -24,7 +24,7 @@ func projectionConfig(t *testing.T) *config.Config {
 
 func TestRuntimeConfigFingerprintIgnoresPresentation(t *testing.T) {
 	isolateConfigHome(t)
-	t.Setenv("REASONIX_PROJECTION_TEST_KEY", "fixture-key")
+	t.Setenv("DEEPER_PROJECTION_TEST_KEY", "fixture-key")
 	cases := []struct {
 		name string
 		edit func(*config.Config)
@@ -58,7 +58,7 @@ func TestRuntimeConfigFingerprintIgnoresPresentation(t *testing.T) {
 
 func TestRuntimeConfigFingerprintRetainsRuntimeDependencies(t *testing.T) {
 	isolateConfigHome(t)
-	t.Setenv("REASONIX_PROJECTION_TEST_KEY", "fixture-key")
+	t.Setenv("DEEPER_PROJECTION_TEST_KEY", "fixture-key")
 	cases := []struct {
 		name string
 		edit func(*config.Config)
@@ -112,10 +112,10 @@ func TestRuntimeConfigFingerprintRetainsRuntimeDependencies(t *testing.T) {
 
 func TestRuntimeConfigFingerprintRetainsFrozenCredentials(t *testing.T) {
 	isolateConfigHome(t)
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	writeKey := func(value string) {
 		t.Helper()
-		if err := os.WriteFile(config.UserCredentialsPath(), []byte("REASONIX_PROJECTION_TEST_KEY="+value+"\n"), 0o600); err != nil {
+		if err := os.WriteFile(config.UserCredentialsPath(), []byte("DEEPER_PROJECTION_TEST_KEY="+value+"\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -153,18 +153,18 @@ func TestRuntimeConfigFingerprintIncludesExpandedDependencies(t *testing.T) {
 		name string
 		edit func(*config.Config)
 	}{
-		{"proxy", func(c *config.Config) { c.Network.Proxy.Password = "${REASONIX_PROJECTION_VALUE}" }},
-		{"write roots", func(c *config.Config) { c.Sandbox.AllowWrite = []string{"${REASONIX_PROJECTION_VALUE}"} }},
-		{"read roots", func(c *config.Config) { c.Sandbox.ForbidRead = []string{"${REASONIX_PROJECTION_VALUE}"} }},
-		{"skill roots", func(c *config.Config) { c.Skills.Paths = []string{"${REASONIX_PROJECTION_VALUE}"} }},
+		{"proxy", func(c *config.Config) { c.Network.Proxy.Password = "${DEEPER_PROJECTION_VALUE}" }},
+		{"write roots", func(c *config.Config) { c.Sandbox.AllowWrite = []string{"${DEEPER_PROJECTION_VALUE}"} }},
+		{"read roots", func(c *config.Config) { c.Sandbox.ForbidRead = []string{"${DEEPER_PROJECTION_VALUE}"} }},
+		{"skill roots", func(c *config.Config) { c.Skills.Paths = []string{"${DEEPER_PROJECTION_VALUE}"} }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := projectionConfig(t)
 			tc.edit(cfg)
-			t.Setenv("REASONIX_PROJECTION_VALUE", "/fixture/first")
+			t.Setenv("DEEPER_PROJECTION_VALUE", "/fixture/first")
 			before := runtimeConfigFingerprint(cfg)
-			t.Setenv("REASONIX_PROJECTION_VALUE", "/fixture/second")
+			t.Setenv("DEEPER_PROJECTION_VALUE", "/fixture/second")
 			if after := runtimeConfigFingerprint(cfg); before == "" || after == "" || after == before {
 				t.Fatal("changed expanded dependency did not invalidate runtime reuse")
 			}

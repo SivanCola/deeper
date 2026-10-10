@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // editUserConfig runs mutate against the user-global config under the edit lock

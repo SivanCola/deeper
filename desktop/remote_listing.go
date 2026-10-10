@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/servecontract"
+	"deeper/internal/servecontract"
 )
 
 const (
@@ -112,9 +112,9 @@ func servePost(ctx context.Context, client *http.Client, url string, body []byte
 	return err
 }
 
-const expectedSessionPathHeader = "X-Reasonix-Expected-Session-Path"
-const expectedSessionIDHeader = "X-Reasonix-Expected-Session-ID"
-const expectedModelSettingsHeader = "X-Reasonix-Expected-Model-Settings"
+const expectedSessionPathHeader = "X-Deeper-Expected-Session-Path"
+const expectedSessionIDHeader = "X-Deeper-Expected-Session-ID"
+const expectedModelSettingsHeader = "X-Deeper-Expected-Model-Settings"
 const remoteSessionIDRoutePrefix = "session-id:"
 
 func remoteSessionIdentityRoute(path, sessionID string) string {
@@ -188,7 +188,7 @@ type serveSessionIdentity struct {
 	TakenOver bool
 }
 
-const sessionTakenOverHeader = "X-Reasonix-Taken-Over"
+const sessionTakenOverHeader = "X-Deeper-Taken-Over"
 
 func servePostSessionIdentityForSession(ctx context.Context, client *http.Client, url string, body []byte, expectedPath string) (serveSessionIdentity, error) {
 	if body == nil {
@@ -214,8 +214,8 @@ func servePostSessionIdentityForSession(ctx context.Context, client *http.Client
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return serveSessionIdentity{
-			Path:      strings.TrimSpace(resp.Header.Get("X-Reasonix-Session-Path")),
-			SessionID: strings.TrimSpace(resp.Header.Get("X-Reasonix-Session-ID")),
+			Path:      strings.TrimSpace(resp.Header.Get("X-Deeper-Session-Path")),
+			SessionID: strings.TrimSpace(resp.Header.Get("X-Deeper-Session-ID")),
 			// A 204 with the taken-over header means the serve mounted this
 			// caller as a read-only spectator: another runtime owns the writer.
 			TakenOver: strings.TrimSpace(resp.Header.Get(sessionTakenOverHeader)) != "",
@@ -252,7 +252,7 @@ func serveDoForSession(ctx context.Context, client *http.Client, method, url str
 
 // serveCapabilitiesHeader carries the comma-joined capability tokens a serve
 // advertises on a successful token handshake (e.g. "browser").
-const serveCapabilitiesHeader = "X-Reasonix-Serve-Capabilities"
+const serveCapabilitiesHeader = "X-Deeper-Serve-Capabilities"
 const serveCapabilityExecutionV2 = "execution-v2"
 const serveCapabilitySessions = "session-history-v1"
 const serveCapabilitySessionContentV1 = "session-content-v1"

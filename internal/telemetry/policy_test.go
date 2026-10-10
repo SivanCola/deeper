@@ -5,7 +5,7 @@ import "testing"
 func clearPolicyEnv(t *testing.T) {
 	t.Helper()
 	for _, key := range []string{
-		"DO_NOT_TRACK", "REASONIX_TELEMETRY", "CI", "CONTINUOUS_INTEGRATION",
+		"DO_NOT_TRACK", "DEEPER_TELEMETRY", "CI", "CONTINUOUS_INTEGRATION",
 		"GITHUB_ACTIONS", "GITLAB_CI", "BUILDKITE", "CIRCLECI", "JENKINS_URL",
 		"TEAMCITY_VERSION", "TF_BUILD",
 	} {
@@ -45,7 +45,7 @@ func TestEnabledHonorsEnvironmentOptOuts(t *testing.T) {
 	clearPolicyEnv(t)
 	for _, tc := range []struct{ key, value string }{
 		{key: "DO_NOT_TRACK", value: "1"},
-		{key: "REASONIX_TELEMETRY", value: "0"},
+		{key: "DEEPER_TELEMETRY", value: "0"},
 		{key: "CI", value: "true"},
 		{key: "GITHUB_ACTIONS", value: "1"},
 	} {

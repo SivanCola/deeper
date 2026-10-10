@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 func (a *App) metadataTopicPage(req ProjectTopicPageRequest) (ProjectTopicPage, error) {

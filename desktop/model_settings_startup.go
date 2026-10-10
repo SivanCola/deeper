@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/control"
 	"errors"
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
 	"strings"
 )
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func isWriteAccessApproval(a event.Approval) bool {
@@ -53,7 +53,7 @@ func renderWriteAccessText(a event.Approval) string {
 			fmt.Fprintf(&b, "原因: %s\n", wa.Justification)
 		}
 		if wa.BroadHomeAccess {
-			b.WriteString("警告: 这将授权写入整个用户主目录。Reasonix 会话和运行时状态仍受保护。\n")
+			b.WriteString("警告: 这将授权写入整个用户主目录。Deeper 会话和运行时状态仍受保护。\n")
 		}
 		if wa.OrdinaryPermissionNeeded {
 			b.WriteString("此选择也会授权当前匹配操作。\n")

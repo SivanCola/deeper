@@ -4,10 +4,10 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
-// Built-in skills ship with Reasonix and back the dedicated subagent tools
+// Built-in skills ship with Deeper and back the dedicated subagent tools
 // (explore / research / review / security_review) plus inline playbooks such as
 // test. A user/project file with the same name overrides the
 // built-in (see Store.List / Store.Read). Tool names in the bodies match
@@ -34,7 +34,7 @@ Continue until the question is answered with evidence, or identify the concrete 
 
 ` + negativeClaimRule
 
-const builtinInstallCapabilityBody = `This skill is INLINED. Use it when the user asks to install a Reasonix MCP server or skill from a URL, local file, local folder, .mcp.json, or package name. For removing a previously installed skill or MCP server, follow the "Uninstall" rules at the bottom — same tool, different op.
+const builtinInstallCapabilityBody = `This skill is INLINED. Use it when the user asks to install a Deeper MCP server or skill from a URL, local file, local folder, .mcp.json, or package name. For removing a previously installed skill or MCP server, follow the "Uninstall" rules at the bottom — same tool, different op.
 
 Operate as an installer, not as a shell-script guesser:
 1. Extract the source string exactly from the user's request. It may be an https URL, GitHub URL, local path, .mcp.json, executable path, or npm package name.
@@ -94,7 +94,7 @@ Resolve environment issues within the authorized reversible scope. Ask only when
 
 const builtinInitBody = `The user invoked /init to create or improve durable project instructions.
 
-Find existing AGENTS.md, REASONIX.md, or CLAUDE.md and follow their imports to the authoritative document. Preserve thin wrappers and unrelated user guidance; update the owning file rather than creating a competing instruction source. Use AGENTS.md for a new project with no existing instruction document.
+Find existing AGENTS.md, DEEPER.md, or CLAUDE.md and follow their imports to the authoritative document. Preserve thin wrappers and unrelated user guidance; update the owning file rather than creating a competing instruction source. Use AGENTS.md for a new project with no existing instruction document.
 
 Inspect enough code, manifests, and scripts to establish non-obvious project contracts and verified commands. Keep always-loaded guidance concise: ownership boundaries, important defaults, safe local workflows, and concrete completion criteria. Link task-specific procedures only where they are needed.
 
@@ -232,7 +232,7 @@ func builtinSkills() []Skill {
 		},
 		{
 			Name:        "install-capability",
-			Description: "Install or uninstall Reasonix skills and MCP servers through install_source plans.",
+			Description: "Install or uninstall Deeper skills and MCP servers through install_source plans.",
 			Body:        builtinInstallCapabilityBody,
 			Scope:       ScopeBuiltin,
 			Path:        "(builtin)",
@@ -275,7 +275,7 @@ func builtinSkills() []Skill {
 			AutoUse:     "suggest",
 		},
 	}
-	// Embedded directory skills (reasonix-guide, …) append after the const
+	// Embedded directory skills (deeper-guide, …) append after the const
 	// playbooks so the index order stays deterministic and bodies stay on-demand.
 	return append(base, loadEmbeddedBuiltins()...)
 }

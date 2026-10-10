@@ -7,7 +7,7 @@ lifecycle](READ_EVIDENCE_LIFECYCLE.md).
 
 <a href="./TOOL_CONTRACT.zh-CN.md">简体中文</a>
 
-This document records the Reasonix compile-time built-in tool contract. The
+This document records the Deeper compile-time built-in tool contract. The
 provider surface is selected once when the session boots: POSIX hosts expose
 `bash`; Windows hosts expose `pwsh`. Compatibility aliases remain executable
 for old session replay but are omitted from new provider schemas.
@@ -68,7 +68,7 @@ The test checks that every registered built-in tool has a documented name, read-
 
 ## Default Full Boot Surface
 
-In a default full-token boot, Reasonix sends the built-in tools above plus the
+In a default full-token boot, Deeper sends the built-in tools above plus the
 session, memory, skill, subagent, LSP, install, and slash-command tools below:
 
 Every session uses this exact executor tool surface plus one stable

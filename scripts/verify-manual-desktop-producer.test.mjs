@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { verifyProducer } from "./verify-manual-desktop-producer.mjs";
 
 function fixture() {
-  return [{ repository: { full_name: "esengine/DeepSeek-Reasonix" }, head_sha: "09cdab3866d77c6ff0d007ee61b6aca3128ebe54", head_branch: "main-v2", event: "workflow_dispatch", path: ".github/workflows/release-stable.yml", run_attempt: 1, status: "completed" },
+  return [{ repository: { full_name: "SivanCola/deeper" }, head_sha: "09cdab3866d77c6ff0d007ee61b6aca3128ebe54", head_branch: "main", event: "workflow_dispatch", path: ".github/workflows/release-stable.yml", run_attempt: 1, status: "completed" },
     ["darwin-arm64", "darwin-amd64", "darwin-universal", "windows-amd64", "windows-arm64", "linux-amd64"].map(platform => ({ name: `verify stable SignPath control plane / build (${platform}, preflight)`, conclusion: "success" }))];
 }
 test("accepts only the protected producer with a complete successful matrix", () => {

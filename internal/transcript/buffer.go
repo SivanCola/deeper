@@ -1,10 +1,10 @@
 package transcript
 
 import (
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/provider"
 	"fmt"
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/provider"
 	"slices"
 	"strings"
 )

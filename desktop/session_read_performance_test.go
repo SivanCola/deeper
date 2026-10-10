@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncatalog"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestProjectTreeSnapshotIsReadOnlyAcrossManyUnmigratedWorkspaces(t *testing.T) {

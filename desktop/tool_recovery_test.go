@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 func TestRemoteToolRecoveryKeepsIdentityAndNeverReplaysUnknownPost(t *testing.T) {

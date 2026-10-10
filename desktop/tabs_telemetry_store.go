@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/session"
 )
 
 const canonicalTelemetryDir = "session-telemetry"

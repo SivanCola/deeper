@@ -1,7 +1,7 @@
 # Previous workspace v2 implementation
 
 Frozen, unmodified `store.go`, `lifecycle.go`, and `lifecycle_json.go` from
-`esengine/DeepSeek-Reasonix` commit `1f598bc9d616248feb6f916e936a9ff6dd61ec82`.
+`SivanCola/deeper` commit `1f598bc9d616248feb6f916e936a9ff6dd61ec82`.
 Only compatibility tests import this package. Tests require neither Git nor network.
 The previous writer is intentionally not concurrency-safe for purge/restore; this
 fixture proves format readability and unrelated-field round trips, not safe mixed-version deletion.

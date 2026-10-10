@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncatalog"
 )
 
 // forkThreeIdenticalRecoveryCopies builds one lineage whose parent went on to
@@ -193,7 +193,7 @@ func TestRecoveryCopySweepRespectsConfigGate(t *testing.T) {
 	catalog := openSweepTestCatalog(t, dir)
 	app := sweepTestApp(catalog)
 
-	configDir := filepath.Join(home, ".reasonix")
+	configDir := filepath.Join(home, ".deeper")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -14,7 +14,7 @@ func TestExistingProjectGrantsCoverDeclarationsAndDoNotResurrect(t *testing.T) {
 	out := t.TempDir()
 	rule := "Bash=echo exact $(value)"
 	_, root := loadScoped(t, "", "[permissions]\nallow = "+renderStringArray([]string{rule})+"\n[sandbox]\nallow_write = ["+tomlQuote(filepath.Join(out, "child"))+"]\n")
-	store := NewProjectGrantStore(ReasonixHomeDir())
+	store := NewProjectGrantStore(DeeperHomeDir())
 	if err := store.Update(root, func(g ProjectGrant) (ProjectGrant, error) {
 		g.Allow = []string{rule}
 		g.AllowWrite = []string{out}
@@ -50,7 +50,7 @@ func TestEquivalentProjectRootUsesExistingUserValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	userPath := filepath.Clean(parent)
 	projectPath := parent + string(filepath.Separator) + "."
 	if runtime.GOOS == "windows" {
@@ -59,7 +59,7 @@ func TestEquivalentProjectRootUsesExistingUserValue(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[sandbox]\nworkspace_root = "+tomlQuote(userPath)+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[sandbox]\nworkspace_root = "+tomlQuote(projectPath)+"\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[sandbox]\nworkspace_root = "+tomlQuote(projectPath)+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -148,7 +148,7 @@ func TestLegacyProjectDeclarationsAreNotGrantsOrLoadFailures(t *testing.T) {
 	}
 	project := "# preserved comment\n[model_roles]\nanswerer = 'unchanged'\n[permissions]\nallow = " + renderStringArray(rules) + "\n"
 	cfg, root := loadScoped(t, "[permissions]\nmode='ask'\ndeny=['Bash(rm:*)']\n", project)
-	file := filepath.Join(root, "reasonix.toml")
+	file := filepath.Join(root, "deeper.toml")
 	before, _ := os.Stat(file)
 	if cfg.HasLoadWarnings() || len(cfg.Permissions.Allow) != 0 || len(cfg.IgnoredProjectSettings()) != 39 {
 		t.Fatalf("warnings=%v permissions=%+v ignored=%v", cfg.LoadWarnings(), cfg.Permissions, cfg.IgnoredProjectSettings())
@@ -166,7 +166,7 @@ func TestLegacyProjectDeclarationsAreNotGrantsOrLoadFailures(t *testing.T) {
 }
 func TestCorruptProjectGrantsRemainLoadWarnings(t *testing.T) {
 	_, root := loadScoped(t, "", "")
-	path := NewProjectGrantStore(ReasonixHomeDir()).Path()
+	path := NewProjectGrantStore(DeeperHomeDir()).Path()
 	if err := os.WriteFile(path, []byte("{broken"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestCorruptProjectGrantsRemainLoadWarnings(t *testing.T) {
 func TestProjectUnknownPresetWarningKeepsItsOrigin(t *testing.T) {
 	cfg, root := loadScoped(t, "[desktop]\ndefault_tool_approval_mode='workspace-write'\n", "[desktop]\ndefault_tool_approval_mode='unknown-project-preset'\n")
 	warnings := strings.Join(cfg.LoadWarnings(), "\n")
-	if !strings.Contains(warnings, "project config sets desktop.default_tool_approval_mode") || !strings.Contains(warnings, "unknown-project-preset") || strings.Contains(warnings, filepath.Join(ReasonixHomeDir(), "config.toml")) {
+	if !strings.Contains(warnings, "project config sets desktop.default_tool_approval_mode") || !strings.Contains(warnings, "unknown-project-preset") || strings.Contains(warnings, filepath.Join(DeeperHomeDir(), "config.toml")) {
 		t.Fatalf("root=%s warnings=%s", root, warnings)
 	}
 }

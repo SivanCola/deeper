@@ -6,12 +6,12 @@
 #
 # Output lands in <repo>/dist/ with stable, platform-keyed names that
 # desktop/cmd/sign's `manifest` subcommand maps back to update.PlatformKey:
-#   macOS:   Reasonix-darwin-<arm64|amd64>.zip           (ditto archive; updater channel)
-#            Reasonix-darwin-<arch>.dmg                  (drag-to-install; human download)
-#   Windows: Reasonix-windows-<arch>-installer.exe       (NSIS per-user installer; updater channel)
-#            Reasonix-windows-<arch>.zip                 (portable human download)
-#   Linux:   Reasonix-linux-<arch>.tar.gz                (desktop + guard + CLI + app/ tree; portable updater)
-#            Reasonix-linux-<arch>.deb                   (Debian/Ubuntu package; native updater)
+#   macOS:   Deeper-darwin-<arm64|amd64>.zip           (ditto archive; updater channel)
+#            Deeper-darwin-<arch>.dmg                  (drag-to-install; human download)
+#   Windows: Deeper-windows-<arch>-installer.exe       (NSIS per-user installer; updater channel)
+#            Deeper-windows-<arch>.zip                 (portable human download)
+#   Linux:   Deeper-linux-<arch>.tar.gz                (desktop + guard + CLI + app/ tree; portable updater)
+#            Deeper-linux-<arch>.deb                   (Debian/Ubuntu package; native updater)
 #
 # Usage: scripts/desktop-build.sh <os/arch> <version> [channel]
 #   e.g. scripts/desktop-build.sh darwin/arm64 v1.1.0
@@ -35,13 +35,13 @@ os="${PLATFORM%/*}"
 arch="${PLATFORM#*/}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APPNAME="Reasonix"            # Electron productName -> Reasonix.app / Reasonix.exe
-BINNAME="reasonix-desktop"    # Go desktop service (and the active version entry the launcher starts)
-CLINAME="reasonix"            # bundled CLI sidecar used for remote serve upload
-WINDOWS_CLINAME="reasonix-cli" # Windows cannot store Reasonix.exe and reasonix.exe separately
-WINDOWS_CLI_ENTRY="reasonix-cli-launcher.exe"
-GUARDNAME="reasonix-guard"
-LAUNCHERNAME="reasonix-launcher"
+APPNAME="Deeper"            # Electron productName -> Deeper.app / Deeper.exe
+BINNAME="deeper-desktop"    # Go desktop service (and the active version entry the launcher starts)
+CLINAME="deeper"            # bundled CLI sidecar used for remote serve upload
+WINDOWS_CLINAME="deeper-cli" # Windows cannot store Deeper.exe and deeper.exe separately
+WINDOWS_CLI_ENTRY="deeper-cli-launcher.exe"
+GUARDNAME="deeper-guard"
+LAUNCHERNAME="deeper-launcher"
 windows_resource_tool_dir=""
 windows_host_include=""
 
@@ -56,7 +56,7 @@ fi
 # Short commit + real UTC build clock for CLI `version --verbose/--json`.
 GIT_COMMIT="$(git -C "$ROOT" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
 BUILD_TIME_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-product_docs_ldflags="-X reasonix/internal/productdocs.linkedVersion=$VERSION -X reasonix/internal/productdocs.linkedRevision=$SOURCE_REVISION"
+product_docs_ldflags="-X deeper/internal/productdocs.linkedVersion=$VERSION -X deeper/internal/productdocs.linkedRevision=$SOURCE_REVISION"
 cli_identity_ldflags="-X main.version=$VERSION -X main.gitCommit=$GIT_COMMIT -X main.buildTimeUTC=$BUILD_TIME_UTC $product_docs_ldflags"
 
 cleanup() {
@@ -71,34 +71,34 @@ trap cleanup EXIT
 
 cd "$ROOT/desktop"
 
-# build_guard produces the one-shot legacy migrator still named reasonix-guard
+# build_guard produces the one-shot legacy migrator still named deeper-guard
 # in compatibility payloads for 1.18–1.19.1 updaters. Source is intentionally
 # separate from the removed Guard recovery product.
 build_guard() {
-	echo "==> go build Reasonix legacy migrator (compat name reasonix-guard)"
+	echo "==> go build Deeper legacy migrator (compat name deeper-guard)"
 	mkdir -p "$(dirname "$guard_out")"
 	if [ "$arch" = universal ]; then
 		guard_tmp=$(mktemp -d)
-		(cd "$ROOT" && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_tmp/amd64" ./cmd/reasonix-legacy-migrator)
-		(cd "$ROOT" && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_tmp/arm64" ./cmd/reasonix-legacy-migrator)
+		(cd "$ROOT" && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_tmp/amd64" ./cmd/deeper-legacy-migrator)
+		(cd "$ROOT" && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_tmp/arm64" ./cmd/deeper-legacy-migrator)
 		lipo -create "$guard_tmp/amd64" "$guard_tmp/arm64" -output "$guard_out"
 		rm -rf "$guard_tmp"
 	else
-		(cd "$ROOT" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_out" ./cmd/reasonix-legacy-migrator)
+		(cd "$ROOT" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_out" ./cmd/deeper-legacy-migrator)
 	fi
 }
 
 build_cli() {
-	echo "==> go build Reasonix CLI sidecar"
+	echo "==> go build Deeper CLI sidecar"
 	mkdir -p "$(dirname "$cli_out")"
 	if [ "$arch" = universal ]; then
 		cli_tmp=$(mktemp -d)
-		(cd "$ROOT" && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $cli_identity_ldflags" -o "$cli_tmp/amd64" ./cmd/reasonix)
-		(cd "$ROOT" && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $cli_identity_ldflags" -o "$cli_tmp/arm64" ./cmd/reasonix)
+		(cd "$ROOT" && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $cli_identity_ldflags" -o "$cli_tmp/amd64" ./cmd/deeper)
+		(cd "$ROOT" && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $cli_identity_ldflags" -o "$cli_tmp/arm64" ./cmd/deeper)
 		lipo -create "$cli_tmp/amd64" "$cli_tmp/arm64" -output "$cli_out"
 		rm -rf "$cli_tmp"
 	else
-		(cd "$ROOT" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $cli_identity_ldflags" -o "$cli_out" ./cmd/reasonix)
+		(cd "$ROOT" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $cli_identity_ldflags" -o "$cli_out" ./cmd/deeper)
 	fi
 }
 
@@ -148,6 +148,11 @@ fi
 # from resources/build.json written by package.mjs. macOS Developer ID builds
 # enable the in-app self-update path.
 service_ldflags="-X main.version=$VERSION -X main.channel=$CHANNEL $product_docs_ldflags"
+update_key_ldflags=""
+if [ -n "${MINISIGN_PUBLIC_KEY:-}" ]; then
+	update_key_ldflags="-X deeper/desktop/internal/update.publicKey=$MINISIGN_PUBLIC_KEY"
+	service_ldflags="$service_ldflags $update_key_ldflags"
+fi
 [ "$os" = "darwin" ] && [ "${HAS_APPLE_CERT:-}" = "true" ] && service_ldflags="$service_ldflags -X main.macSelfUpdate=true"
 # The Windows service must be a GUI-subsystem image: the shell spawns it with
 # --host-rpc over inherited pipes, so it never needs a console, and a CONSOLE
@@ -155,12 +160,12 @@ service_ldflags="-X main.version=$VERSION -X main.channel=$CHANNEL $product_docs
 # "flash of black box" in #10148). -H is a Windows-only linker flag.
 [ "$os" = "windows" ] && service_ldflags="$service_ldflags -H windowsgui"
 
-# build_service compiles the Go desktop service (reasonix-desktop). It stays
+# build_service compiles the Go desktop service (deeper-desktop). It stays
 # the active version entry the thin launcher starts: without --host-rpc it
 # bootstraps the Electron shell from app/ and exits; the shell then spawns it
 # with --host-rpc as the service (see docs/DESKTOP_SHELL_MIGRATION.md phase E).
 build_service() {
-	echo "==> go build Reasonix desktop service"
+	echo "==> go build Deeper desktop service"
 	mkdir -p "$(dirname "$service_out")"
 	if [ "$arch" = universal ]; then
 		service_tmp=$(mktemp -d)
@@ -178,12 +183,12 @@ build_service() {
 }
 
 # package_shell runs @electron/packager via the packaging script and leaves the
-# bundle at desktop/build/electron/<os>-<arch>/ (Reasonix.app on macOS, app/
+# bundle at desktop/build/electron/<os>-<arch>/ (Deeper.app on macOS, app/
 # elsewhere). It also builds the frontend (build:electron) with the channel
-# threaded through REASONIX_CHANNEL.
+# threaded through DEEPER_CHANNEL.
 package_shell() {
 	echo "==> package Electron shell ($PLATFORM)"
-	REASONIX_COMMIT="$SOURCE_SHA" REASONIX_BUILD_TIME="$BUILD_TIME_UTC" \
+	DEEPER_COMMIT="$SOURCE_SHA" DEEPER_BUILD_TIME="$BUILD_TIME_UTC" \
 		node "$ROOT/desktop/packaging/package.mjs" "$PLATFORM" "$VERSION" "$CHANNEL"
 }
 
@@ -210,8 +215,8 @@ darwin)
 	ln -s "../Resources/service/$BINNAME" "$app/Contents/MacOS/$BINNAME"
 	[ "$(readlink "$app/Contents/MacOS/$BINNAME")" = "../Resources/service/$BINNAME" ] || { echo "macOS service compatibility link is invalid" >&2; exit 1; }
 	[ -x "$app/Contents/MacOS/$BINNAME" ] || { echo "macOS service compatibility link is broken" >&2; exit 1; }
-	# Contents/MacOS already holds the Electron executable "Reasonix"; on
-	# case-insensitive APFS a "reasonix" sibling would overwrite it, so the
+	# Contents/MacOS already holds the Electron executable "Deeper"; on
+	# case-insensitive APFS a "deeper" sibling would overwrite it, so the
 	# CLI sidecar ships next to the service copy the shell actually launches
 	# (desktopCLIBinaryPath resolves it beside the running service).
 	cp "$cli_out" "$app/Contents/Resources/service/$CLINAME"
@@ -278,45 +283,45 @@ darwin)
 	;;
 windows)
 	windows_resource_tool_dir=$(mktemp -d)
-	windows_host_include="$ROOT/desktop/build/windows/installer/reasonix_host.nsh"
+	windows_host_include="$ROOT/desktop/build/windows/installer/deeper_host.nsh"
 	case "$(uname -s 2>/dev/null || printf '%s' unknown)" in
 		Darwin* | Linux* | FreeBSD*)
-			printf '%s\n' '!define REASONIX_UNINST_FINALIZE '\''/bin/cp -f "%1" "reasonix-uninstall.exe"'\''' >"$windows_host_include"
+			printf '%s\n' '!define DEEPER_UNINST_FINALIZE '\''/bin/cp -f "%1" "deeper-uninstall.exe"'\''' >"$windows_host_include"
 			;;
 		*)
-			printf '%s\n' '!define REASONIX_UNINST_FINALIZE '\''cmd.exe /C copy /Y "%1" "reasonix-uninstall.exe" >NUL'\''' >"$windows_host_include"
+			printf '%s\n' '!define DEEPER_UNINST_FINALIZE '\''cmd.exe /C copy /Y "%1" "deeper-uninstall.exe" >NUL'\''' >"$windows_host_include"
 			;;
 	esac
-	windows_resource_tool="$windows_resource_tool_dir/reasonix-windows-resource.exe"
+	windows_resource_tool="$windows_resource_tool_dir/deeper-windows-resource.exe"
 	echo "==> build Windows resource stamper"
 	go build -trimpath -o "$windows_resource_tool" ./cmd/windows-resource
 
 	installer_dir="$ROOT/desktop/build/windows/installer"
 	guard_out="$installer_dir/$GUARDNAME.exe"
 	build_guard
-	stamp_windows_executable "$guard_out" "Reasonix Legacy Migrator" "$GUARDNAME" "$GUARDNAME.exe"
+	stamp_windows_executable "$guard_out" "Deeper Legacy Migrator" "$GUARDNAME" "$GUARDNAME.exe"
 	launcher_out="$installer_dir/$LAUNCHERNAME.exe"
 	echo "==> go build Windows GUI thin launcher"
 	(cd "$ROOT" && GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -trimpath \
-		-ldflags="-s -w -H windowsgui -X main.version=$VERSION" -o "$launcher_out" ./cmd/reasonix-launcher)
-	stamp_windows_executable "$launcher_out" "Reasonix Launcher" "$LAUNCHERNAME" "$LAUNCHERNAME.exe"
-	UPDATE_HELPER="reasonix-update-helper.exe"
+		-ldflags="-s -w -H windowsgui -X main.version=$VERSION" -o "$launcher_out" ./cmd/deeper-launcher)
+	stamp_windows_executable "$launcher_out" "Deeper Launcher" "$LAUNCHERNAME" "$LAUNCHERNAME.exe"
+	UPDATE_HELPER="deeper-update-helper.exe"
 	echo "==> go build Windows update helper"
-	GOOS=windows GOARCH="$arch" go build -trimpath -ldflags="-s -w" \
+	GOOS=windows GOARCH="$arch" go build -trimpath -ldflags="-s -w $update_key_ldflags" \
 		-o "$installer_dir/$UPDATE_HELPER" ./cmd/update-helper
-	stamp_windows_executable "$installer_dir/$UPDATE_HELPER" "Reasonix Update Helper" "reasonix-update-helper" "$UPDATE_HELPER"
+	stamp_windows_executable "$installer_dir/$UPDATE_HELPER" "Deeper Update Helper" "deeper-update-helper" "$UPDATE_HELPER"
 	cli_out="$installer_dir/$WINDOWS_CLINAME.exe"
 	build_cli
-	stamp_windows_executable "$cli_out" "Reasonix CLI" "$WINDOWS_CLINAME" "$WINDOWS_CLINAME.exe"
+	stamp_windows_executable "$cli_out" "Deeper CLI" "$WINDOWS_CLINAME" "$WINDOWS_CLINAME.exe"
 	cli_entry_out="$ROOT/desktop/build/bin/$WINDOWS_CLI_ENTRY"
 	echo "==> go build Windows CLI entry"
 	(cd "$ROOT" && GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -trimpath \
-		-ldflags="-s -w" -o "$cli_entry_out" ./cmd/reasonix-cli-launcher)
-	stamp_windows_executable "$cli_entry_out" "Reasonix CLI Launcher" "reasonix-cli-launcher" "$WINDOWS_CLI_ENTRY"
+		-ldflags="-s -w" -o "$cli_entry_out" ./cmd/deeper-cli-launcher)
+	stamp_windows_executable "$cli_entry_out" "Deeper CLI Launcher" "deeper-cli-launcher" "$WINDOWS_CLI_ENTRY"
 
 	service_out="$ROOT/desktop/build/bin/$BINNAME.exe"
 	build_service
-	stamp_windows_executable "$service_out" "Reasonix Desktop" "$BINNAME" "$BINNAME.exe"
+	stamp_windows_executable "$service_out" "Deeper Desktop" "$BINNAME" "$BINNAME.exe"
 	# NSIS File sources live next to project.nsi; the service joins the flat
 	# payload files there (package-windows-desktop.sh overwrites them with the
 	# signed copies before the second pass).
@@ -334,15 +339,15 @@ windows)
 	# uninstaller must never enter the signing payload.
 	# Compile only the shared uninstall section here; compressing the entire
 	# Electron payload just to discard this installer costs another five minutes.
-	rm -f "$installer_dir/reasonix-uninstall.exe"
+	rm -f "$installer_dir/deeper-uninstall.exe"
 	find "$ROOT/desktop/build/bin" -maxdepth 1 -type f -name '*installer*.exe' -delete
-	arch_binary_define="ARG_REASONIX_AMD64_BINARY"
-	[ "$arch" = arm64 ] && arch_binary_define="ARG_REASONIX_ARM64_BINARY"
+	arch_binary_define="ARG_DEEPER_AMD64_BINARY"
+	[ "$arch" = arm64 ] && arch_binary_define="ARG_DEEPER_ARM64_BINARY"
 	(
 		cd "$installer_dir"
-		makensis -DARG_REASONIX_UNINSTALLER_ONLY "-D${arch_binary_define}=$installer_dir/$BINNAME.exe" project.nsi
+		makensis -DARG_DEEPER_UNINSTALLER_ONLY "-D${arch_binary_define}=$installer_dir/$BINNAME.exe" project.nsi
 	)
-	[ -s "$installer_dir/reasonix-uninstall.exe" ] || { echo "first NSIS pass did not produce reasonix-uninstall.exe" >&2; exit 1; }
+	[ -s "$installer_dir/deeper-uninstall.exe" ] || { echo "first NSIS pass did not produce deeper-uninstall.exe" >&2; exit 1; }
 
 	# Keep one canonical payload for SignPath: the flat Go executables plus the
 	# Electron app/ tree. The release workflow signs these files, then calls
@@ -351,7 +356,7 @@ windows)
 	payload_dir="$ROOT/desktop/build/windows/signing-payload"
 	rm -rf -- "$payload_dir"
 	mkdir -p "$payload_dir"
-	for name in "$BINNAME.exe" "$GUARDNAME.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "reasonix-uninstall.exe"; do
+	for name in "$BINNAME.exe" "$GUARDNAME.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deeper-uninstall.exe"; do
 		cp "$installer_dir/$name" "$payload_dir/$name"
 	done
 	cp -R "$installer_dir/app" "$payload_dir/app"
@@ -360,7 +365,7 @@ windows)
 	node "$ROOT/desktop/packaging/signing-files.mjs" "$payload_dir"
 	# A signed release rebuilds the installer and portable archive from the
 	# signed payload; compressing the unsigned pair here would be discarded.
-	if [ "${REASONIX_WINDOWS_PAYLOAD_ONLY:-0}" = "1" ]; then
+	if [ "${DEEPER_WINDOWS_PAYLOAD_ONLY:-0}" = "1" ]; then
 		mkdir -p "$ROOT/dist"
 	else
 		VERSION="$VERSION" "$ROOT/scripts/package-windows-desktop.sh" "$arch" "$payload_dir"
@@ -370,14 +375,14 @@ windows)
 linux)
 	service_out="$ROOT/desktop/build/bin/$BINNAME"
 	build_service
-	# Linux still ships a one-shot migrator named reasonix-guard in the portable
+	# Linux still ships a one-shot migrator named deeper-guard in the portable
 	# tarball so 1.18–1.19.1 updaters can hand off.
 	guard_out="$ROOT/desktop/build/bin/$GUARDNAME"
 	build_guard
 	launcher_out="$ROOT/desktop/build/bin/$LAUNCHERNAME"
 	echo "==> go build Linux thin launcher"
 	(cd "$ROOT" && GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath \
-		-ldflags="-s -w -X main.version=$VERSION" -o "$launcher_out" ./cmd/reasonix-launcher)
+		-ldflags="-s -w -X main.version=$VERSION" -o "$launcher_out" ./cmd/deeper-launcher)
 	cli_out="$ROOT/desktop/build/bin/$CLINAME"
 	build_cli
 	package_shell
@@ -387,21 +392,21 @@ linux)
 	cp -R "build/electron/${os}-${arch}/app" "build/bin/app"
 
 	for desktop_contract in \
-		'Exec=reasonix-launcher' \
-		'Icon=reasonix-desktop' \
-		'StartupWMClass=Reasonix'; do
-		grep -F -x -q "$desktop_contract" build/linux/reasonix.desktop || { echo "Linux desktop entry missing: $desktop_contract" >&2; exit 1; }
+		'Exec=deeper-launcher' \
+		'Icon=deeper-desktop' \
+		'StartupWMClass=Deeper'; do
+		grep -F -x -q "$desktop_contract" build/linux/deeper.desktop || { echo "Linux desktop entry missing: $desktop_contract" >&2; exit 1; }
 	done
 	# Portable Linux tarball: service + thin launcher + one-shot migrator
-	# (compat name reasonix-guard) + CLI + the Electron app/ tree. After the
+	# (compat name deeper-guard) + CLI + the Electron app/ tree. After the
 	# migrator runs, Guard self-deletes.
 	tar -cf - -C build/bin "$BINNAME" "$LAUNCHERNAME" "$GUARDNAME" "$CLINAME" app | \
 		gzip -9 >"$ROOT/dist/${APPNAME}-linux-${arch}.tar.gz"
 	# Build the privileged update helper shipped inside the .deb. Portable tarball
 	# installs do not need it; only the dpkg package installs helper + Polkit policy.
-	echo "==> go build reasonix-update-helper"
-	GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" \
-		-o "build/bin/reasonix-update-helper" ./cmd/update-helper
+	echo "==> go build deeper-update-helper"
+	GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION $update_key_ldflags" \
+		-o "build/bin/deeper-update-helper" ./cmd/update-helper
 	# .deb for Debian/Ubuntu. Portable updater still uses the tarball under
 	# platforms[]; .deb is published under native_packages. Debian versions use
 	# "~" for prereleases so 1.18.0~rc.1 < 1.18.0 (policy version ordering).
@@ -420,13 +425,13 @@ linux)
 		--target "$ROOT/dist/${APPNAME}-linux-${arch}.deb"
 	# Contract smoke: helper, policy, package identity, Electron tree, sandbox.
 	deb_path="$ROOT/dist/${APPNAME}-linux-${arch}.deb"
-	dpkg-deb --field "$deb_path" Package | grep -x 'reasonix-desktop' >/dev/null
+	dpkg-deb --field "$deb_path" Package | grep -x 'deeper-desktop' >/dev/null
 	dpkg-deb --field "$deb_path" Version | grep -x "$deb_version" >/dev/null
 	dpkg-deb --field "$deb_path" Depends | grep -F 'pkexec' >/dev/null
-	dpkg-deb --contents "$deb_path" | grep -E 'usr/lib/reasonix/reasonix-update-helper' >/dev/null
-	dpkg-deb --contents "$deb_path" | grep -E 'usr/share/polkit-1/actions/io.reasonix.desktop.update.policy' >/dev/null
-	dpkg-deb --contents "$deb_path" | grep -E "usr/lib/reasonix/app/${APPNAME}" >/dev/null
-	dpkg-deb --contents "$deb_path" | grep -E 'usr/lib/reasonix/app/chrome-sandbox' >/dev/null
+	dpkg-deb --contents "$deb_path" | grep -E 'usr/lib/deeper/deeper-update-helper' >/dev/null
+	dpkg-deb --contents "$deb_path" | grep -E 'usr/share/polkit-1/actions/io.github.sivancola.deeper.update.policy' >/dev/null
+	dpkg-deb --contents "$deb_path" | grep -E "usr/lib/deeper/app/${APPNAME}" >/dev/null
+	dpkg-deb --contents "$deb_path" | grep -E 'usr/lib/deeper/app/chrome-sandbox' >/dev/null
 	node "$ROOT/desktop/packaging/verify.mjs" "$ROOT/dist/${APPNAME}-linux-${arch}.tar.gz" --kind linux-tar
 	node "$ROOT/desktop/packaging/verify.mjs" "$deb_path" --kind linux-deb
 	;;
@@ -445,7 +450,7 @@ darwin) report_bundle="$ROOT/desktop/build/candidate/darwin-${arch}/${APPNAME}.a
 windows) report_bundle="$ROOT/desktop/build/windows/signing-payload" ;;
 linux) report_bundle="$ROOT/desktop/build/bin" ;;
 esac
-REASONIX_COMMIT="$SOURCE_SHA" REASONIX_BUILD_SECONDS="$((SECONDS - build_started_seconds))" \
+DEEPER_COMMIT="$SOURCE_SHA" DEEPER_BUILD_SECONDS="$((SECONDS - build_started_seconds))" \
 	node "$ROOT/desktop/packaging/size-report.mjs" \
 		--platform "$PLATFORM" \
 		--version "$VERSION" \

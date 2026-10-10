@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/plugin"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/plugin"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 func TestSkillDiagnosticsFollowRuntimeBindingScope(t *testing.T) {

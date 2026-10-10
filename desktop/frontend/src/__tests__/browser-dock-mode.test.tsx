@@ -6,7 +6,7 @@ import { JSDOM } from "jsdom";
 
 import { WorkspaceDockRegion, type WorkspaceDockRegionProps } from "../app-shell/WorkspaceDockRegion";
 import type { DesktopBrowserHost } from "../lib/browserHost";
-import type { ReasonixDesktopHost } from "../lib/desktopHost";
+import type { DeeperDesktopHost } from "../lib/desktopHost";
 import { LocaleProvider, type Translator } from "../lib/i18n";
 import { availableDockEntries } from "../lib/dockEntries";
 import { useLayoutStore, type RightDockMode } from "../store/layout";
@@ -24,7 +24,7 @@ const browser: DesktopBrowserHost = {
   navigate: async () => {}, setZoom: async () => {}, toggleDevTools: async () => {}, resume: async () => {}, takeover: async () => {},
   setLayout: noop, setOverlay: noop, onTabs: () => noop, onDownload: () => noop,
 };
-const electron: ReasonixDesktopHost = {
+const electron: DeeperDesktopHost = {
   kind: "electron",
   contract: { protocolVersion: 1, digest: "test", commands: [] },
   platform: { os: "linux", arch: "x64", versions: {} },
@@ -72,7 +72,7 @@ try {
   await act(async () => pickerEntries[0].click());
   assert.deepEqual(picks, ["context"], "picking an entry opens that view through the shared command");
 
-  window.reasonixDesktop = electron;
+  window.deeperDesktop = electron;
   assert.equal(availableDockEntries(true).some((entry) => entry.defaultTab === "browser"), true,
     "the Electron host offers the browser entry");
 
@@ -92,7 +92,7 @@ try {
   await settle();
   assert.equal(document.querySelector(".browser-panel"), null, "closing the browser tab unmounts the panel");
 
-  delete window.reasonixDesktop;
+  delete window.deeperDesktop;
   await act(async () => root.unmount());
   console.log("browser dock mode: gating, tab render and lazy mount passed");
 } finally {

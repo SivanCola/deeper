@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/jobs"
+	"deeper/internal/evidence"
+	"deeper/internal/jobs"
 )
 
 // publishBackgroundEvidence retains host-only workspace context so persisted

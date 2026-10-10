@@ -3,7 +3,7 @@ package jobs
 import (
 	"testing"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 func TestTaskMutationEvidencePreservesPathsWithoutRisk(t *testing.T) {

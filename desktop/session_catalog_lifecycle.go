@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/history"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/taskcatalog"
+	"deeper/internal/history"
+	"deeper/internal/projectiondb"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/taskcatalog"
 )
 
 func (a *App) runSessionCatalog(ctx context.Context, initialReconcileDone chan struct{}, metadataRequests <-chan struct{}) {

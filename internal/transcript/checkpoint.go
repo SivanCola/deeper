@@ -7,9 +7,9 @@ import (
 	"os"
 	"reflect"
 
-	"reasonix/internal/eventwire"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/store"
+	"deeper/internal/eventwire"
+	"deeper/internal/fileutil"
+	"deeper/internal/store"
 )
 
 // Checkpoint is the durable display state, separate from provider messages.

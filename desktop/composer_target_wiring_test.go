@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 func TestFormalComposerTargetPreservesFileBrowserAndIdentity(t *testing.T) {

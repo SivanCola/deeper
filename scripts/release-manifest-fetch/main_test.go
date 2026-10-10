@@ -21,7 +21,7 @@ func TestFetchManifestUsesUpdaterClientAndRejectsChallenges(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				wantAgent := "Reasonix-Updater/v1.38.12 (" + runtime.GOOS + "/" + runtime.GOARCH + "; build=stable; update=stable)"
+				wantAgent := "Deeper-Updater/v1.38.12 (" + runtime.GOOS + "/" + runtime.GOARCH + "; build=stable; update=stable)"
 				if got := request.Header.Get("User-Agent"); got != wantAgent {
 					t.Errorf("User-Agent = %q, want %q", got, wantAgent)
 				}

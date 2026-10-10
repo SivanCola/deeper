@@ -1,9 +1,9 @@
 package boot
 
 import (
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 func canonicalBuiltinName(name string) string {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/tool"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(updateGoal{}) }

@@ -9,11 +9,11 @@ import (
 	"io"
 	"os"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/historywork"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileops"
+	"deeper/internal/historywork"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // DisplayPager is a disposable disk projection of exact legacy byte offsets.

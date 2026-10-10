@@ -22,10 +22,10 @@ import (
 	"syscall"
 	"time"
 
-	"reasonix/desktop/internal/hostrpc"
-	"reasonix/desktop/internal/instanceidentity"
-	"reasonix/internal/config"
-	"reasonix/internal/extension/rpcwire"
+	"deeper/desktop/internal/hostrpc"
+	"deeper/desktop/internal/instanceidentity"
+	"deeper/internal/config"
+	"deeper/internal/extension/rpcwire"
 )
 
 const (
@@ -297,7 +297,7 @@ func hostIdentity() hostrpc.Identity {
 		Version: version,
 		Channel: channel,
 		Commit:  buildCommit(),
-		Home:    instanceidentity.AccessHome(config.ReasonixHomeDir()),
+		Home:    instanceidentity.AccessHome(config.DeeperHomeDir()),
 	}
 }
 

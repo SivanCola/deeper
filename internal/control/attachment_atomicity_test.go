@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func TestMixedDraftAndOrdinaryWorkspaceImageAreBothPrepared(t *testing.T) {
@@ -46,7 +46,7 @@ func TestInvalidImageBatchNeverStartsEndpointOrGoal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			input := "inspect @" + good + " @.reasonix/attachments/missing.png"
+			input := "inspect @" + good + " @.deeper/attachments/missing.png"
 			setupCalled := false
 			switch endpoint {
 			case "run":

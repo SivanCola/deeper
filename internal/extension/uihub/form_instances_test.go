@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/extension/protocol"
 )
 
 func publishTestForm(t *testing.T, h *Hub, handler UIHandler, surfaceID string) string {

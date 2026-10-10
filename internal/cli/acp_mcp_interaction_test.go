@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"reasonix/internal/acp"
-	"reasonix/internal/plugin"
+	"deeper/internal/acp"
+	"deeper/internal/plugin"
 	"testing"
 )
 

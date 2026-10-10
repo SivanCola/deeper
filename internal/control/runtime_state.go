@@ -8,11 +8,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
-	"reasonix/internal/session"
-	"reasonix/internal/turnevent"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
+	"deeper/internal/session"
+	"deeper/internal/turnevent"
 )
 
 // RuntimeStateReader is optional so older embedders of SessionAPI keep working.

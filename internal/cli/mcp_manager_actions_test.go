@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/plugin"
 )
 
 func TestSplitEditorCommandUsesStaticShellWords(t *testing.T) {
@@ -70,7 +70,7 @@ auto_start = false
 	writeConfig := func(root, token string) {
 		t.Helper()
 		raw := minimalTestModelTOML + strings.ReplaceAll(pluginConfig, "TOKEN", token)
-		if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(raw), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(raw), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -83,7 +83,7 @@ auto_start = false
 		t.Fatalf("setupProfile: %v", err)
 	}
 	defer ctrl.Close()
-	oauthState := filepath.Join(plugin.MCPStateDir(config.ReasonixHomeDir(), controllerRoot, "dida"), "oauth.json")
+	oauthState := filepath.Join(plugin.MCPStateDir(config.DeeperHomeDir(), controllerRoot, "dida"), "oauth.json")
 	if err := os.MkdirAll(filepath.Dir(oauthState), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ auto_start = false
 	model := chatTUI{ctrl: ctrl, pendingCommit: &pending}
 	model.clearMCPAuthentication(mcpServerView{Name: "dida"})
 
-	controllerRaw, err := os.ReadFile(filepath.Join(controllerRoot, "reasonix.toml"))
+	controllerRaw, err := os.ReadFile(filepath.Join(controllerRoot, "deeper.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ auto_start = false
 		!strings.Contains(string(controllerRaw), "workspace=main") {
 		t.Fatalf("controller config authentication was not cleared:\n%s", controllerRaw)
 	}
-	cwdRaw, err := os.ReadFile(filepath.Join(cwdRoot, "reasonix.toml"))
+	cwdRaw, err := os.ReadFile(filepath.Join(cwdRoot, "deeper.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/mcpinteraction"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/mcpinteraction"
 )
 
-const mcpInteractionMethod = "_reasonix.io/mcp/request_interaction"
+const mcpInteractionMethod = "_deeper.io/mcp/request_interaction"
 
 func (s *updateSink) bindControllerPrompts(ctrl *control.Controller, interactions bool) {
 	s.bindApprove(ctrl.Approve)
@@ -56,7 +56,7 @@ type MCPInteractionResult struct {
 }
 
 func clientMCPInteractionSupported(caps ClientCapabilities) bool {
-	vendor, ok := caps.Meta["reasonix.io"].(map[string]any)
+	vendor, ok := caps.Meta["deeper.io"].(map[string]any)
 	if !ok {
 		return false
 	}

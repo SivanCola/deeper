@@ -61,7 +61,7 @@ function buildHost(input: {
 }
 
 function chromeHome(): string {
-  const home = mkdtempSync(join(tmpdir(), "reasonix-chrome-home-"));
+  const home = mkdtempSync(join(tmpdir(), "deeper-chrome-home-"));
   const profile = join(home, "Library", "Application Support", "Google", "Chrome", "Default");
   mkdirSync(profile, { recursive: true });
   const key = pbkdf2Sync("safe-storage-password", "saltysalt", 1003, 16, "sha1");
@@ -79,7 +79,7 @@ function chromeHome(): string {
 }
 
 test("the control switch persists and is pushed to the host", async () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-browser-control-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-browser-control-"));
   const { host, pushed } = hostFor(root);
   assert.equal(host.state().controlEnabled, true);
   assert.deepEqual(pushed, []);
@@ -90,7 +90,7 @@ test("the control switch persists and is pushed to the host", async () => {
 });
 
 test("the certificate policy follows every guest session, including later ones", async () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-browser-control-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-browser-control-"));
   const { host } = hostFor(root);
   const first = fakeSession();
   host.trackSession("persist:browser", first as unknown as BrowserSession);
@@ -109,7 +109,7 @@ test("the certificate policy follows every guest session, including later ones",
 });
 
 test("cache and data actions target the built-in browser partition", async () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-browser-control-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-browser-control-"));
   const { host, shared } = hostFor(root);
   await host.clearCache();
   await host.clearAllData();
@@ -118,11 +118,11 @@ test("cache and data actions target the built-in browser partition", async () =>
 });
 
 test("import reports missing Chrome and missing profiles separately", async () => {
-  const empty = mkdtempSync(join(tmpdir(), "reasonix-browser-control-"));
+  const empty = mkdtempSync(join(tmpdir(), "deeper-browser-control-"));
   const missing = hostFor(empty);
   assert.deepEqual(await missing.host.importChromeLogin(), { ok: false, reason: "chrome-missing" });
 
-  const home = mkdtempSync(join(tmpdir(), "reasonix-browser-control-"));
+  const home = mkdtempSync(join(tmpdir(), "deeper-browser-control-"));
   mkdirSync(join(home, "Library", "Application Support", "Google", "Chrome"), { recursive: true });
   const noProfile = hostFor(home);
   assert.deepEqual(await noProfile.host.importChromeLogin(), { ok: false, reason: "profile-not-found" });

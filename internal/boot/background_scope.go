@@ -1,13 +1,13 @@
 package boot
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
+	"deeper/internal/workspacelease"
 	"fmt"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
-	"reasonix/internal/workspacelease"
 	"time"
 )
 

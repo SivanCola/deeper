@@ -1,8 +1,8 @@
 package control
 
 import (
+	"deeper/internal/jobs"
 	"fmt"
-	"reasonix/internal/jobs"
 )
 
 // ReserveBackgroundReplacement supports hosts with their own candidate factory.

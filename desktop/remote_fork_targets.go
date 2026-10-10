@@ -19,7 +19,7 @@ func remoteForkTargetsSupported(tab *remoteTab) bool {
 	return tab != nil && tab.capabilities[serveCapabilitySessionForkTargetsV1]
 }
 
-const remoteForkUnsupported = "this remote Reasonix Serve does not support " + serveCapabilitySessionForkTargetsV1 + "; upgrade it to fork a remote turn into an independent session"
+const remoteForkUnsupported = "this remote Deeper Serve does not support " + serveCapabilitySessionForkTargetsV1 + "; upgrade it to fork a remote turn into an independent session"
 
 func (a *App) ForkTargetsRemoteTab(tabID string) (ForkTargetSetView, error) {
 	empty := ForkTargetSetView{Targets: []ForkTargetView{}}

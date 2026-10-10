@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"deeper/internal/sessioncatalog"
 	"encoding/json"
-	"reasonix/internal/sessioncatalog"
 )
 
 // The snapshot lease guards both fixed query inputs and cursor checkpoints.

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/event"
+	"deeper/internal/extension/protocol"
 )
 
 const testCredential = "api_key=sk-abcdef1234567890SECRETKEY"

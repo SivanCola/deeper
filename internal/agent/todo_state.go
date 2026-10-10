@@ -5,7 +5,7 @@ package agent
 // ledger; this mirror only gives a running executor immediate semantic access.
 
 import (
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 // SeedTodoState is a test/compatibility helper for constructing an in-memory

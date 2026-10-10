@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 func projectTopicLess(left, right ProjectNode, sortMode string, manualOrder bool) bool {

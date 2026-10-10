@@ -82,7 +82,7 @@ func TestCodeUnderTestDoesNotRunAnAmbientHook(t *testing.T) {
 		t.Fatalf("git add: %v%s", err, stderrSuffix(stderr))
 	}
 	if _, stderr, err := runGit(context.Background(), opened(t, repo),
-		"-c", "user.name=Reasonix Test", "-c", "user.email=reasonix@example.invalid",
+		"-c", "user.name=Deeper Test", "-c", "user.email=deeper@example.invalid",
 		"commit", "-m", "change"); err != nil {
 		t.Fatalf("git commit: %v%s", err, stderrSuffix(stderr))
 	}

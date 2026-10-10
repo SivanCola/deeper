@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/store"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/store"
 )
 
 const (

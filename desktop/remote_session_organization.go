@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
 	"encoding/json"
 	"fmt"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
 	"slices"
 )
 

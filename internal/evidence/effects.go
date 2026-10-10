@@ -3,7 +3,7 @@ package evidence
 import (
 	"encoding/json"
 
-	"reasonix/internal/shellsafe"
+	"deeper/internal/shellsafe"
 )
 
 // ToolEffects projects shell effects onto policy and evidence boundaries.

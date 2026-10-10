@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestAskExactResolutionDeliversOnceAfterReplay(t *testing.T) {

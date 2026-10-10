@@ -94,7 +94,7 @@ func writeExportPDF(ctx context.Context, dst io.Writer, dir string, count int, t
 	for _, unit := range encoded {
 		fmt.Fprintf(&hexTitle, "%04X", unit)
 	}
-	w.object(3+count*3, "<< /Title <"+hexTitle.String()+"> /Producer (Reasonix) >>", offsets)
+	w.object(3+count*3, "<< /Title <"+hexTitle.String()+"> /Producer (Deeper) >>", offsets)
 	xref := w.offset
 	w.write(fmt.Sprintf("xref\n0 %d\n0000000000 65535 f \n", len(offsets)))
 	for _, offset := range offsets[1:] {

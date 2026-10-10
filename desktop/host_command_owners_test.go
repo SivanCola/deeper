@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/desktop/internal/hostrpc"
+	"deeper/desktop/internal/hostrpc"
 )
 
 func TestHostCommandOwnersMatchSource(t *testing.T) {

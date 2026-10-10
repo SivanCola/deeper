@@ -418,8 +418,8 @@ func gitTest(t *testing.T, repo string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
 	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_NAME=Reasonix Test", "GIT_AUTHOR_EMAIL=reasonix@example.invalid",
-		"GIT_COMMITTER_NAME=Reasonix Test", "GIT_COMMITTER_EMAIL=reasonix@example.invalid")
+		"GIT_AUTHOR_NAME=Deeper Test", "GIT_AUTHOR_EMAIL=deeper@example.invalid",
+		"GIT_COMMITTER_NAME=Deeper Test", "GIT_COMMITTER_EMAIL=deeper@example.invalid")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)

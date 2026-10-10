@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/sessionui"
+	"deeper/desktop/internal/sessionui"
 )
 
 type manualCreationScanStore struct {

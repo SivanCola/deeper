@@ -1,8 +1,8 @@
 package control
 
 import (
+	"deeper/internal/sessioninbox"
 	"errors"
-	"reasonix/internal/sessioninbox"
 )
 
 var ErrInboxSessionChanged = errors.New("inbox session changed before submission")

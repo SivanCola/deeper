@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/historywork"
+	"deeper/internal/historywork"
 )
 
 type sessionMetadataRead struct {

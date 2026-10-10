@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/anthropic"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/provider/responses"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/provider/anthropic"
+	"deeper/internal/provider/openai"
+	"deeper/internal/provider/responses"
 )
 
 func TestLegacyImageResolverPreservesSerializedProtocolBytes(t *testing.T) {

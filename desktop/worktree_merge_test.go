@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/worktree"
+	"deeper/internal/control"
+	"deeper/internal/worktree"
 )
 
 func TestWorktreeCleanupResultJSONKeepsArraysAndOptionalRecoveryReceipt(t *testing.T) {
@@ -39,7 +39,7 @@ func TestAppInspectAndMergeWorktreeBackUsesRequestIdentity(t *testing.T) {
 	inspectWorktreeMerge = func(_ context.Context, root, _ string) (worktree.MergeInspection, error) {
 		return worktree.MergeInspection{
 			Available: true, CanMerge: true, WorktreeRoot: worktreeRoot, SourceRoot: sourceRoot,
-			WorktreeBranch: "reasonix/delivery-test", TargetBranch: "main", WorktreeHead: "worktree-head",
+			WorktreeBranch: "deeper/delivery-test", TargetBranch: "main", WorktreeHead: "worktree-head",
 			WorktreeStateToken: "state-token", TargetHead: "target-head", AheadCount: 2, FilesChanged: 1, ChangedFiles: []string{"feature.go"},
 			ConflictFiles: []string{}, Blockers: []worktree.MergeBlocker{}, CleanupBlockers: []worktree.MergeBlocker{},
 		}, nil
@@ -49,7 +49,7 @@ func TestAppInspectAndMergeWorktreeBackUsesRequestIdentity(t *testing.T) {
 		merged = request
 		return worktree.MergeResult{
 			Merged: true, SourceRoot: sourceRoot, TargetBranch: "main", MergedCommit: "merged-head",
-			WorktreeRoot: worktreeRoot, WorktreeBranch: "reasonix/delivery-test", WorktreeHead: "worktree-head",
+			WorktreeRoot: worktreeRoot, WorktreeBranch: "deeper/delivery-test", WorktreeHead: "worktree-head",
 		}, nil
 	}
 
@@ -238,7 +238,7 @@ func TestAppFinalizeWorktreeMergeRequiresNoRuntimeReference(t *testing.T) {
 	finalizeWorktreeMerge = func(_ context.Context, _ string, _ worktree.CleanupRequest) (worktree.CleanupResult, error) {
 		called = true
 		return worktree.CleanupResult{
-			RecoveryRetained: true, RecoveryRoot: filepath.Join(filepath.Dir(worktreeRoot), ".reasonix-cleanup", "recovery-test"),
+			RecoveryRetained: true, RecoveryRoot: filepath.Join(filepath.Dir(worktreeRoot), ".deeper-cleanup", "recovery-test"),
 			RecoveryWorktreeRegistered: true, BranchRetained: true, Blockers: []worktree.MergeBlocker{},
 		}, nil
 	}
@@ -264,7 +264,7 @@ func TestAppFinalizeRetainedWorktreeRemovesOnlyFormerProjectRegistration(t *test
 	sourceRoot := t.TempDir()
 	allocationRoot := t.TempDir()
 	worktreeRoot := filepath.Join(allocationRoot, "repository")
-	recoveryRoot := filepath.Join(allocationRoot, ".reasonix-cleanup", "recovery-test")
+	recoveryRoot := filepath.Join(allocationRoot, ".deeper-cleanup", "recovery-test")
 	if err := os.MkdirAll(worktreeRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}

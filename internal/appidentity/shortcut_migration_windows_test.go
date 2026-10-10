@@ -17,7 +17,7 @@ import (
 )
 
 func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *testing.T) {
-	for _, id := range []string{"Reasonix", ""} {
+	for _, id := range []string{"Deeper", ""} {
 		for _, customIcon := range []bool{false, true} {
 			name := id
 			if name == "" {
@@ -29,9 +29,9 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 			t.Run(name, func(t *testing.T) {
 				migrationTestCOM(t)
 				root := t.TempDir()
-				launcher := filepath.Join(root, "reasonix-launcher.exe")
+				launcher := filepath.Join(root, "deeper-launcher.exe")
 				versionDir := filepath.Join(root, "versions", "v1.20.0")
-				target := filepath.Join(versionDir, "app", "Reasonix.exe")
+				target := filepath.Join(versionDir, "app", "Deeper.exe")
 				migrationTestFile(t, launcher)
 				migrationTestFile(t, target)
 				icon, iconIndex := target, int32(0)
@@ -40,10 +40,10 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 					iconIndex = 2
 					migrationTestFile(t, icon)
 				}
-				path := filepath.Join(t.TempDir(), "Reasonix.lnk")
+				path := filepath.Join(t.TempDir(), "Deeper.lnk")
 				before := migrationShortcutState{
 					target: target, id: id, arguments: `--session "work space"`,
-					description: "My Reasonix workspace", workingDirectory: filepath.Dir(target),
+					description: "My Deeper workspace", workingDirectory: filepath.Dir(target),
 					icon: icon, iconIndex: iconIndex, showCmd: 3,
 				}
 				migrationTestShortcut(t, path, before)
@@ -53,8 +53,8 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 					t.Fatalf("repair = (%v, %v), want (true, nil)", changed, err)
 				}
 				got := migrationReadShortcut(t, path)
-				if !migrationSamePath(got.target, launcher) || got.id != "io.reasonix.desktop" {
-					t.Fatalf("migrated target/id = %q/%q, want %q/io.reasonix.desktop", got.target, got.id, launcher)
+				if !migrationSamePath(got.target, launcher) || got.id != "io.github.sivancola.deeper" {
+					t.Fatalf("migrated target/id = %q/%q, want %q/io.github.sivancola.deeper", got.target, got.id, launcher)
 				}
 				if got.arguments != before.arguments || got.description != before.description || got.showCmd != before.showCmd {
 					t.Fatalf("repair changed unrelated properties: got %+v, before %+v", got, before)
@@ -92,16 +92,16 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 
 func TestRepairOwnedShortcutLeavesSeparateStudioInstallationsByteIdentical(t *testing.T) {
 	for _, test := range []struct{ name, executable, id string }{
-		{"legacy_studio", "reasonix-studio.exe", "Reasonix"},
-		{"electron_studio", "Reasonix Studio.exe", "io.reasonix.studio"},
+		{"legacy_studio", "deeper-studio.exe", "Deeper"},
+		{"electron_studio", "Deeper Studio.exe", "io.github.sivancola.deeper.studio"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			migrationTestCOM(t)
 			root, studioRoot := t.TempDir(), t.TempDir()
-			migrationTestFile(t, filepath.Join(root, "reasonix-launcher.exe"))
+			migrationTestFile(t, filepath.Join(root, "deeper-launcher.exe"))
 			target := filepath.Join(studioRoot, test.executable)
 			migrationTestFile(t, target)
-			path := filepath.Join(t.TempDir(), "Reasonix Studio.lnk")
+			path := filepath.Join(t.TempDir(), "Deeper Studio.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
 				target: target, id: test.id, arguments: "--workspace studio",
 				description: "Studio", workingDirectory: studioRoot, icon: target, showCmd: 1,
@@ -112,14 +112,14 @@ func TestRepairOwnedShortcutLeavesSeparateStudioInstallationsByteIdentical(t *te
 }
 
 func TestRepairOwnedShortcutPreservesExplicitForeignIdentityInsideCurrentInstall(t *testing.T) {
-	for _, id := range []string{"io.reasonix.studio", "dev.reasonix.desktop", "com.example.custom"} {
+	for _, id := range []string{"io.github.sivancola.deeper.studio", "io.github.sivancola.deeper.dev", "com.example.custom"} {
 		t.Run(id, func(t *testing.T) {
 			migrationTestCOM(t)
 			root := t.TempDir()
-			target := filepath.Join(root, "versions", "v1.20.0", "app", "Reasonix.exe")
+			target := filepath.Join(root, "versions", "v1.20.0", "app", "Deeper.exe")
 			migrationTestFile(t, target)
-			migrationTestFile(t, filepath.Join(root, "reasonix-launcher.exe"))
-			path := filepath.Join(root, "Reasonix.lnk")
+			migrationTestFile(t, filepath.Join(root, "deeper-launcher.exe"))
+			path := filepath.Join(root, "Deeper.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
 				target: target, id: id, workingDirectory: filepath.Dir(target), icon: target, showCmd: 1,
 			})
@@ -129,11 +129,11 @@ func TestRepairOwnedShortcutPreservesExplicitForeignIdentityInsideCurrentInstall
 }
 
 func TestRepairOwnedShortcutRejectsVersionJunctionEscapingCurrentInstall(t *testing.T) {
-	for _, executable := range []string{"reasonix-desktop.exe", filepath.Join("app", "Reasonix.exe")} {
+	for _, executable := range []string{"deeper-desktop.exe", filepath.Join("app", "Deeper.exe")} {
 		t.Run(executable, func(t *testing.T) {
 			migrationTestCOM(t)
 			root, externalRoot := t.TempDir(), t.TempDir()
-			migrationTestFile(t, filepath.Join(root, "reasonix-launcher.exe"))
+			migrationTestFile(t, filepath.Join(root, "deeper-launcher.exe"))
 			migrationTestFile(t, filepath.Join(externalRoot, executable))
 			versions := filepath.Join(root, "versions")
 			if err := os.MkdirAll(versions, 0o755); err != nil {
@@ -144,9 +144,9 @@ func TestRepairOwnedShortcutRejectsVersionJunctionEscapingCurrentInstall(t *test
 				t.Fatalf("create directory junction: %v: %s", err, output)
 			}
 			target := filepath.Join(junction, executable)
-			path := filepath.Join(root, "Reasonix.lnk")
+			path := filepath.Join(root, "Deeper.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
-				target: target, id: "Reasonix", workingDirectory: filepath.Dir(target), icon: target, showCmd: 1,
+				target: target, id: "Deeper", workingDirectory: filepath.Dir(target), icon: target, showCmd: 1,
 			})
 			migrationAssertUnchanged(t, path, root)
 		})
@@ -157,19 +157,19 @@ func TestRepairOwnedShortcutRepairsFlatElectronAndPartiallyMigratedLinks(t *test
 	for _, test := range []struct {
 		name, target, icon, id string
 	}{
-		{"flat Electron", filepath.Join("app", "Reasonix.exe"), filepath.Join("app", "Reasonix.exe"), "Reasonix"},
-		{"new identity with version target", filepath.Join("versions", "v1.20.0", "app", "Reasonix.exe"), "reasonix-launcher.exe", "io.reasonix.desktop"},
-		{"stable target with version icon", "reasonix-launcher.exe", filepath.Join("versions", "v1.20.0", "app", "Reasonix.exe"), "io.reasonix.desktop"},
+		{"flat Electron", filepath.Join("app", "Deeper.exe"), filepath.Join("app", "Deeper.exe"), "Deeper"},
+		{"new identity with version target", filepath.Join("versions", "v1.20.0", "app", "Deeper.exe"), "deeper-launcher.exe", "io.github.sivancola.deeper"},
+		{"stable target with version icon", "deeper-launcher.exe", filepath.Join("versions", "v1.20.0", "app", "Deeper.exe"), "io.github.sivancola.deeper"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			migrationTestCOM(t)
 			root := t.TempDir()
-			launcher := filepath.Join(root, "reasonix-launcher.exe")
+			launcher := filepath.Join(root, "deeper-launcher.exe")
 			target, icon := filepath.Join(root, test.target), filepath.Join(root, test.icon)
-			for _, path := range []string{launcher, target, icon, filepath.Join(root, "reasonix-desktop.exe")} {
+			for _, path := range []string{launcher, target, icon, filepath.Join(root, "deeper-desktop.exe")} {
 				migrationTestFile(t, path)
 			}
-			path := filepath.Join(root, "Reasonix.lnk")
+			path := filepath.Join(root, "Deeper.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
 				target: target, id: test.id, icon: icon,
 				workingDirectory: root, arguments: `--session "saved session"`, description: "Saved workspace", showCmd: 3,
@@ -179,7 +179,7 @@ func TestRepairOwnedShortcutRepairsFlatElectronAndPartiallyMigratedLinks(t *test
 				t.Fatalf("repair = (%v, %v), want (true, nil)", changed, err)
 			}
 			got := migrationReadShortcut(t, path)
-			if !migrationSamePath(got.target, launcher) || !migrationSamePath(got.icon, launcher) || got.id != "io.reasonix.desktop" {
+			if !migrationSamePath(got.target, launcher) || !migrationSamePath(got.icon, launcher) || got.id != "io.github.sivancola.deeper" {
 				t.Fatalf("shortcut was not fully migrated: %+v", got)
 			}
 			if got.arguments != `--session "saved session"` || got.description != "Saved workspace" || got.showCmd != 3 || !migrationSamePath(got.workingDirectory, root) {
@@ -340,13 +340,13 @@ func migrationSamePath(left, right string) bool {
 func TestRepairShortcutsLeavesReadOnlyShortcutByteIdentical(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	launcher := filepath.Join(root, "reasonix-launcher.exe")
-	target := filepath.Join(root, "versions", "v1.20.0", "app", "Reasonix.exe")
+	launcher := filepath.Join(root, "deeper-launcher.exe")
+	target := filepath.Join(root, "versions", "v1.20.0", "app", "Deeper.exe")
 	migrationTestFile(t, launcher)
 	migrationTestFile(t, target)
-	path := filepath.Join(root, "Reasonix.lnk")
+	path := filepath.Join(root, "Deeper.lnk")
 	migrationTestShortcut(t, path, migrationShortcutState{
-		target: target, id: "Reasonix", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
+		target: target, id: "Deeper", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
 	})
 	before := migrationReadBytes(t, path)
 	pathPtr, err := windows.UTF16PtrFromString(path)
@@ -377,13 +377,13 @@ func TestRepairShortcutsLeavesReadOnlyShortcutByteIdentical(t *testing.T) {
 func TestRepairShortcutsValidatesAllPathsBeforeWritingAnyShortcut(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	launcher := filepath.Join(root, "reasonix-launcher.exe")
-	target := filepath.Join(root, "versions", "v1.20.0", "app", "Reasonix.exe")
+	launcher := filepath.Join(root, "deeper-launcher.exe")
+	target := filepath.Join(root, "versions", "v1.20.0", "app", "Deeper.exe")
 	migrationTestFile(t, launcher)
 	migrationTestFile(t, target)
-	path := filepath.Join(root, "Reasonix.lnk")
+	path := filepath.Join(root, "Deeper.lnk")
 	migrationTestShortcut(t, path, migrationShortcutState{
-		target: target, id: "Reasonix", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
+		target: target, id: "Deeper", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
 	})
 	before := migrationReadBytes(t, path)
 	if err := RepairShortcuts(root, []string{path, "relative.lnk"}); err == nil {
@@ -399,13 +399,13 @@ func TestRepairShortcutsValidatesAllPathsBeforeWritingAnyShortcut(t *testing.T) 
 func TestCanonicalShortcutPreservesCustomLaunchContext(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	legacy, canonical := filepath.Join(root, "reasonix-launcher.exe"), filepath.Join(root, "Reasonix.exe")
+	legacy, canonical := filepath.Join(root, "deeper-launcher.exe"), filepath.Join(root, "Deeper.exe")
 	migrationTestFile(t, legacy)
 	migrationTestFile(t, canonical)
 	customDir := t.TempDir()
 	icon := filepath.Join(customDir, "custom.ico")
 	migrationTestFile(t, icon)
-	link := filepath.Join(root, "Reasonix custom.lnk")
+	link := filepath.Join(root, "Deeper custom.lnk")
 	before := migrationShortcutState{
 		target: legacy, id: AppUserModelID, arguments: `--session "work space"`,
 		description: "Custom workspace", workingDirectory: customDir,

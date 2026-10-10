@@ -8,12 +8,12 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func TestGoalDiagnosticExportReadsCompleteDurableV3Log(t *testing.T) {

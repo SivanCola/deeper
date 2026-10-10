@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/mcpinteraction"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/mcpinteraction"
+	"deeper/internal/provider"
 )
 
 // MCPAppCallTool executes one App-initiated tools/call. Security model:

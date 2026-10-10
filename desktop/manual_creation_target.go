@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func manualCreationTargetError(err error) error {

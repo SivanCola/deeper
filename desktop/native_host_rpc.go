@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"reasonix/desktop/internal/hostrpc"
+	"deeper/desktop/internal/hostrpc"
 )
 
 // rpcNativeHost implements nativeHost over host/* requests to the Electron

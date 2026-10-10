@@ -67,7 +67,7 @@ type ProviderMessage struct {
 }
 
 // ProviderToolCall is the public copy of provider.ToolCall: provider-visible
-// fields only, no Reasonix-local display metadata.
+// fields only, no Deeper-local display metadata.
 type ProviderToolCall struct {
 	ID               string `json:"id" validate:"nonempty"`
 	Name             string `json:"name" validate:"nonempty"`

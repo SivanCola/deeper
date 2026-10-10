@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/mcpdiag"
-	"reasonix/internal/secrets"
+	"deeper/internal/mcpdiag"
+	"deeper/internal/secrets"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 // Protocol sources: MCP Authorization (2025-11-25), RFC 9728 protected
 // resources, RFC 8414 server metadata, RFC 7591 DCR, and RFC 7636 PKCE.
 
-// mcpOAuthState is Reasonix-owned authorization state for one MCP server. It
+// mcpOAuthState is Deeper-owned authorization state for one MCP server. It
 // lives under Spec.StateDir, never in a project or another client's keychain.
 // Versioned JSON gives future readers an explicit migration boundary.
 type mcpOAuthState struct {
@@ -224,13 +224,13 @@ func validateHTTPMCPAuthorization(spec Spec, openURL func(string) error) error {
 	return nil
 }
 
-// ClearHTTPMCPOAuth removes Reasonix-owned OAuth client and token state for one
+// ClearHTTPMCPOAuth removes Deeper-owned OAuth client and token state for one
 // MCP server. It does not alter static headers or another application's data.
 func ClearHTTPMCPOAuth(spec Spec) (bool, error) {
 	return reconcileHTTPMCPOAuth(spec, "")
 }
 
-// ReconcileHTTPMCPOAuthAfterRemoval removes Reasonix-owned OAuth state after an
+// ReconcileHTTPMCPOAuthAfterRemoval removes Deeper-owned OAuth state after an
 // MCP declaration is removed, unless the remaining effective HTTP declaration
 // uses the same resource. Callers pass an empty remainingResource when no
 // eligible fallback remains.
@@ -366,7 +366,7 @@ func registerOAuthClient(ctx context.Context, client *http.Client, metadata auth
 	}
 	method := chooseTokenEndpointAuthMethod(metadata.TokenEndpointAuthMethodsSupported)
 	body, err := json.Marshal(map[string]any{
-		"client_name":                "Reasonix",
+		"client_name":                "Deeper",
 		"redirect_uris":              []string{redirectURI},
 		"grant_types":                []string{"authorization_code", "refresh_token"},
 		"response_types":             []string{"code"},
@@ -498,10 +498,10 @@ func oauthCallbackHandler(expectedState string, result chan<- oauthCallbackResul
 			callback.Code = query.Get("code")
 		}
 		if callback.Err != nil {
-			http.Error(w, "Reasonix could not complete MCP authorization. You can close this window.", http.StatusBadRequest)
+			http.Error(w, "Deeper could not complete MCP authorization. You can close this window.", http.StatusBadRequest)
 		} else {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			_, _ = io.WriteString(w, "<!doctype html><title>Reasonix MCP authorized</title><p>Authorization completed. You can close this window and return to Reasonix.</p>")
+			_, _ = io.WriteString(w, "<!doctype html><title>Deeper MCP authorized</title><p>Authorization completed. You can close this window and return to Deeper.</p>")
 		}
 		select {
 		case result <- callback:

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 // The registry has already merged an old workspace ID into its canonical

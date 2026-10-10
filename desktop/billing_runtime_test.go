@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/control"
+	"deeper/internal/billing"
+	"deeper/internal/control"
 )
 
 type billingRuntimeController struct {

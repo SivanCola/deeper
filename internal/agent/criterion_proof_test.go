@@ -1,10 +1,10 @@
 package agent
 
 import (
+	"deeper/internal/completion"
+	"deeper/internal/evidence"
+	"deeper/internal/plancontract"
 	"encoding/json"
-	"reasonix/internal/completion"
-	"reasonix/internal/evidence"
-	"reasonix/internal/plancontract"
 	"testing"
 )
 

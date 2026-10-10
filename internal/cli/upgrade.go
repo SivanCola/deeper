@@ -20,20 +20,20 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/i18n"
-	"reasonix/internal/netclient"
+	"deeper/internal/config"
+	"deeper/internal/i18n"
+	"deeper/internal/netclient"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/mod/semver"
 )
 
 const (
-	ghOwner                = "esengine"
-	ghRepo                 = "DeepSeek-Reasonix"
+	ghOwner                = "SivanCola"
+	ghRepo                 = "deeper"
 	ghAPIReleases          = "https://api.github.com/repos/" + ghOwner + "/" + ghRepo + "/releases?per_page=100"
 	ghDownloadBase         = "https://github.com/" + ghOwner + "/" + ghRepo + "/releases/download"
-	cliGatewayBase         = "https://crash.reasonix.io/v1/cli/releases"
+	cliGatewayBase         = "https://github.com/SivanCola/deeper/releases/latest/download"
 	upgradeTimeout         = 60 * time.Second
 	maxCLIReleaseAssetSize = int64(1 << 30)
 )
@@ -61,12 +61,12 @@ const (
 var (
 	stableCLITagPattern = regexp.MustCompile(`^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$`)
 	requiredCLIAssets   = [...]string{
-		"reasonix-darwin-amd64.tar.gz",
-		"reasonix-darwin-arm64.tar.gz",
-		"reasonix-linux-amd64.tar.gz",
-		"reasonix-linux-arm64.tar.gz",
-		"reasonix-windows-amd64.zip",
-		"reasonix-windows-arm64.zip",
+		"deeper-darwin-amd64.tar.gz",
+		"deeper-darwin-arm64.tar.gz",
+		"deeper-linux-amd64.tar.gz",
+		"deeper-linux-arm64.tar.gz",
+		"deeper-windows-amd64.zip",
+		"deeper-windows-arm64.zip",
 		"SHA256SUMS",
 	}
 )
@@ -76,7 +76,7 @@ func parseCLIReleaseChannel(value string) (cliReleaseChannel, error) {
 	case "", string(cliReleaseStable), "preview", "canary", "beta", "next":
 		return cliReleaseStable, nil
 	default:
-		return "", fmt.Errorf("release channel %q is unsupported; Reasonix now uses the official release", value)
+		return "", fmt.Errorf("release channel %q is unsupported; Deeper now uses the official release", value)
 	}
 }
 
@@ -176,7 +176,7 @@ var persistCLIReleaseChannel = func(channel cliReleaseChannel) error {
 
 var loadCLIUpgradeConfig = config.Load
 
-// upgradeCommand handles `reasonix upgrade` (and `reasonix update`).
+// upgradeCommand handles `deeper upgrade` (and `deeper update`).
 func upgradeCommand(args []string, version string) int {
 	syntax, err := parseCLIUpgradeSyntax(args)
 	if err != nil {
@@ -269,7 +269,7 @@ func upgradeCommand(args []string, version string) int {
 	}
 
 	// 5. Find the asset for the current platform.
-	base := fmt.Sprintf("reasonix-%s-%s", runtime.GOOS, runtime.GOARCH)
+	base := fmt.Sprintf("deeper-%s-%s", runtime.GOOS, runtime.GOARCH)
 	asset := findCLIPlatformAsset(rel, runtime.GOOS, runtime.GOARCH)
 	if asset == nil {
 		fmt.Fprintf(os.Stderr, "%s "+i18n.M.UpgradeNoAssetFmt+"\n", i18n.M.ErrorPrefix, base)
@@ -306,9 +306,9 @@ func upgradeCommand(args []string, version string) int {
 	}
 
 	// 9. Extract binary from archive.
-	binName := "reasonix"
+	binName := "deeper"
 	if runtime.GOOS == "windows" {
-		binName = "reasonix.exe"
+		binName = "deeper.exe"
 	}
 	binary, err := extractBinary(archiveData, asset.Name, binName)
 	if err != nil {
@@ -452,7 +452,7 @@ func cliPlatformAssetName(goos, goarch string) string {
 	if goos == "windows" {
 		suffix = ".zip"
 	}
-	return fmt.Sprintf("reasonix-%s-%s%s", goos, goarch, suffix)
+	return fmt.Sprintf("deeper-%s-%s%s", goos, goarch, suffix)
 }
 
 func findCLIPlatformAsset(rel *ghRelease, goos, goarch string) *ghAsset {
@@ -523,7 +523,7 @@ func githubRateLimitHint(resp *http.Response) string {
 // fetchLatestRelease queries the GitHub Releases API and returns the newest
 // strict CLI release in the selected public channel.
 func fetchLatestRelease(c *http.Client, channel cliReleaseChannel) (*ghRelease, error) {
-	pointerURL := fmt.Sprintf("%s/%s/latest.json", cliGatewayBase, channel)
+	pointerURL := cliGatewayBase + "/cli-latest.json"
 	pointerRelease, pointerErr := fetchCLIReleasePointer(c, pointerURL, channel)
 	if pointerErr == nil {
 		return pointerRelease, nil
@@ -534,7 +534,7 @@ func fetchLatestRelease(c *http.Client, channel cliReleaseChannel) (*ghRelease, 
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "reasonix-cli")
+	req.Header.Set("User-Agent", "deeper-cli")
 	if token := githubAPIToken(); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -565,7 +565,7 @@ func fetchCLIReleasePointer(c *http.Client, pointerURL string, channel cliReleas
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "reasonix-cli")
+	req.Header.Set("User-Agent", "deeper-cli")
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -633,7 +633,7 @@ func verifyChecksum(data []byte, fileName string, checksumFile []byte) error {
 	return fmt.Errorf(i18n.M.UpgradeChecksumNotFoundFmt, fileName)
 }
 
-// extractBinary pulls the "reasonix" binary from a .tar.gz or .zip archive.
+// extractBinary pulls the "deeper" binary from a .tar.gz or .zip archive.
 func extractBinary(data []byte, archiveName, binaryName string) ([]byte, error) {
 	if strings.HasSuffix(archiveName, ".zip") {
 		return extractFromZip(data, binaryName)
@@ -691,7 +691,7 @@ func extractFromZip(data []byte, name string) ([]byte, error) {
 //
 // On Unix this is a simple temp-file + rename. On Windows the running
 // executable is memory-mapped and cannot be overwritten directly, so we
-// rename it aside to .reasonix.old first, then place the new binary.
+// rename it aside to .deeper.old first, then place the new binary.
 // The .old file is cleaned up best-effort (Windows may still hold a lock
 // on it; we hide it in that case).
 func replaceBinary(newBin []byte) error {

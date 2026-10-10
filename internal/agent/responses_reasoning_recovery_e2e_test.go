@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/responses"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/provider/responses"
 )
 
 const responsesToolWithoutReasoningSSE = `data: {"type":"response.output_item.added","item":{"id":"fc_1","type":"function_call","call_id":"call_1","name":"echo"}}

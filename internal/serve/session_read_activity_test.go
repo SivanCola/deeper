@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func TestSessionsExposeVisibleResultSequence(t *testing.T) {

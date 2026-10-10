@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/pluginpkg"
 )
 
 func TestResolveRuntimeCommandContract(t *testing.T) {
@@ -39,7 +39,7 @@ func TestResolveRuntimeCommandContract(t *testing.T) {
 
 func TestResolveRuntimeCommandExpandsPluginRoot(t *testing.T) {
 	root := t.TempDir()
-	got, err := resolveRuntimeCommand(&pluginpkg.RuntimeSpec{Command: "${REASONIX_PLUGIN_ROOT}/bin/sidecar"}, root)
+	got, err := resolveRuntimeCommand(&pluginpkg.RuntimeSpec{Command: "${DEEPER_PLUGIN_ROOT}/bin/sidecar"}, root)
 	if err != nil {
 		t.Fatalf("resolveRuntimeCommand: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestStartupFailureRedactsCauseWithoutLosingIdentity(t *testing.T) {
 // inherits the unfiltered environment, manifest env layers over it, and the
 // plugin identity variables are always set.
 func TestRuntimeEnvFullTrustContract(t *testing.T) {
-	t.Setenv("REASONIX_TEST_INHERITED_MARKER", "present")
+	t.Setenv("DEEPER_TEST_INHERITED_MARKER", "present")
 	root := t.TempDir()
 	rt := &pluginpkg.RuntimeSpec{Command: "/bin/sidecar", Env: map[string]string{"MANIFEST_KEY": "manifest-value"}}
 	pkg := pluginpkg.Package{Root: root, Manifest: pluginpkg.Manifest{Name: "p", Version: "2.0.0", Runtime: rt}}
@@ -109,7 +109,7 @@ func TestRuntimeEnvFullTrustContract(t *testing.T) {
 		key, value, _ := strings.Cut(entry, "=")
 		values[key] = value
 	}
-	if values["REASONIX_TEST_INHERITED_MARKER"] != "present" {
+	if values["DEEPER_TEST_INHERITED_MARKER"] != "present" {
 		t.Fatal("inherited environment was filtered")
 	}
 	if values["MANIFEST_KEY"] != "manifest-value" {

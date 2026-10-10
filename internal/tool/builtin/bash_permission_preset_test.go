@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 func TestWorkspaceWriteRunsPipeInlineScriptAndCommandSubstitution(t *testing.T) {

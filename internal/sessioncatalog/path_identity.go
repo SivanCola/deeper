@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/pathidentity"
+	"deeper/internal/pathidentity"
 )
 
 // PathIdentityKey returns the stable comparison key for a catalog path while

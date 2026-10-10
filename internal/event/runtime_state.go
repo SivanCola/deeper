@@ -1,8 +1,8 @@
 package event
 
 import (
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/nilutil"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/nilutil"
 )
 
 // Todo is the v2 execution protocol's complete current-turn todo item. It is

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/internal/config"
-	filelock "reasonix/internal/identitylock"
+	"deeper/internal/config"
+	filelock "deeper/internal/identitylock"
 )
 
 // StartupState is the legacy startup-state.json shape written by v1.18-v1.19.

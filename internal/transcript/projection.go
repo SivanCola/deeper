@@ -9,9 +9,9 @@ import (
 	"sort"
 	"sync"
 
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/turnevent"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/turnevent"
 )
 
 const ProtocolVersion = 1

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 var errToolRecoveryRetired = fmt.Errorf("tool_recovery_retired: historical execution facts are read-only; invoke tools normally after checking external state")

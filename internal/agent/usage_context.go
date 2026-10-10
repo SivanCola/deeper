@@ -1,6 +1,6 @@
 package agent
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // applyLatestContextShape copies the latest single-request shape into Context*
 // fields for gauges and Desktop rebind telemetry.

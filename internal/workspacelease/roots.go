@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 type rootLockDomain struct {

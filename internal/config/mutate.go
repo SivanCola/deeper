@@ -15,12 +15,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	filelock "reasonix/internal/identitylock"
+	filelock "deeper/internal/identitylock"
 )
 
 // userEditMu serializes in-process read-modify-write cycles. The public lock
 // helpers also take a path-derived advisory file lock, so CLI, Desktop, bot, and
-// other Reasonix processes cannot save stale snapshots over one another.
+// other Deeper processes cannot save stale snapshots over one another.
 // Desktop's read-only config loads (tray/view/bot-runtime paths) never write:
 // they apply legacy migrations in memory only, and the migrated form reaches
 // disk through the first locked write path (loadDesktopUserConfigForEdit,
@@ -75,7 +75,7 @@ func LockUserConfigEdits() func() {
 }
 
 // LockConfigFileEdits serializes a configuration read-modify-write transaction
-// with both other goroutines and other Reasonix processes. The cross-process
+// with both other goroutines and other Deeper processes. The cross-process
 // lock lives in an OS-user registry rather than beside path, so project
 // repositories do not accumulate lock files.
 func LockConfigFileEdits(path string) (func(), error) {
@@ -98,7 +98,7 @@ func EditConfigFile(path string, edit func(*Config) error) error {
 }
 
 // EditConfigFileWithoutCredentials is EditConfigFile without loading the
-// Reasonix credential environment.
+// Deeper credential environment.
 func EditConfigFileWithoutCredentials(path string, edit func(*Config) error) error {
 	return editConfigFile(path, false, edit)
 }
@@ -124,7 +124,7 @@ func editConfigFile(path string, loadCredentials bool, edit func(*Config) error)
 
 // lockConfigFilesEdits acquires one in-process transaction lock plus every
 // distinct path-derived file lock in a stable order. Stable ordering prevents
-// two Reasonix processes editing overlapping config-source sets from deadlocking.
+// two Deeper processes editing overlapping config-source sets from deadlocking.
 func lockConfigFilesEdits(paths ...string) (func(), error) {
 	userEditMu.Lock()
 	targets := make([]configEditTarget, 0, len(paths))
@@ -293,13 +293,13 @@ func configEditLockRegistryDir() (string, error) {
 		// The OS-wide temporary root is invariant across process-specific TMPDIR
 		// overrides. The per-user directory is verified and forced to mode 0700
 		// before the advisory lock file is opened.
-		return filepath.Join(string(filepath.Separator), "tmp", fmt.Sprintf("reasonix-config-locks-%x", digest[:8])), nil
+		return filepath.Join(string(filepath.Separator), "tmp", fmt.Sprintf("deeper-config-locks-%x", digest[:8])), nil
 	}
 	home := strings.TrimSpace(current.HomeDir)
 	if home == "" {
 		return "", fmt.Errorf("lock config edits: OS user home unavailable")
 	}
-	return filepath.Join(filepath.Clean(home), ".reasonix", "locks", fmt.Sprintf("config-edits-%x", digest[:8])), nil
+	return filepath.Join(filepath.Clean(home), ".deeper", "locks", fmt.Sprintf("config-edits-%x", digest[:8])), nil
 }
 
 func configEditPathKey(path string) (string, error) {

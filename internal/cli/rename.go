@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/i18n"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/i18n"
+	"deeper/internal/session"
 )
 
 // sessionTitleWriter is the controller's canonical title owner for the

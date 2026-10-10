@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileops"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // Only display-relevant head state is retained. Message bodies and execution

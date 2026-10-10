@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"reasonix/desktop/internal/upgradefixture"
+	"deeper/desktop/internal/upgradefixture"
 )
 
 func main() {
 	mode := flag.String("mode", "", "create or verify")
-	home := flag.String("home", "", "isolated Reasonix home")
+	home := flag.String("home", "", "isolated Deeper home")
 	report := flag.String("report", "", "fixture report path")
 	phase := flag.String("phase", "", "verification phase")
 	flag.Parse()

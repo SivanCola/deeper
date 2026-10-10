@@ -66,12 +66,12 @@ if [ ! -f "$manifest" ]; then
 fi
 
 required_assets='[
-  "reasonix-darwin-amd64.tar.gz",
-  "reasonix-darwin-arm64.tar.gz",
-  "reasonix-linux-amd64.tar.gz",
-  "reasonix-linux-arm64.tar.gz",
-  "reasonix-windows-amd64.zip",
-  "reasonix-windows-arm64.zip",
+  "deeper-darwin-amd64.tar.gz",
+  "deeper-darwin-arm64.tar.gz",
+  "deeper-linux-amd64.tar.gz",
+  "deeper-linux-arm64.tar.gz",
+  "deeper-windows-amd64.zip",
+  "deeper-windows-arm64.zip",
   "SHA256SUMS"
 ]'
 
@@ -92,8 +92,8 @@ jq -e \
 	(.html_url == ("https://github.com/" + $repository + "/releases/tag/" + $tag)) and
 	(if $legacy
 		then (.release_notes_url == null or
-			.release_notes_url == ("https://reasonix.io/changelog/" + $notes_tag + "/"))
-		else (.release_notes_url == ("https://reasonix.io/changelog/" + $notes_tag + "/"))
+			.release_notes_url == ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_tag + "/"))
+		else (.release_notes_url == ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_tag + "/"))
 	end) and
 	(.assets | type == "array") and
 	(.assets | length == ($required | length)) and

@@ -55,19 +55,19 @@ export function unpaintedWindowCause(report: GrantReport | null, locale: string)
   const more = report.refused.length - SHOWN_PATHS;
   if (locale.toLowerCase().startsWith("zh")) {
     return {
-      title: "Reasonix 无法打开窗口",
+      title: "Deeper 无法打开窗口",
       detail:
-        "Reasonix 加载的文件上有授予某个 Windows 应用包（AppContainer）的访问项，Chromium 的沙箱进程加载这类文件时会退出。" +
-        "Reasonix 尝试移除它们，以下位置被拒绝：\n\n" + shown + (more > 0 ? `\n……另有 ${more} 处` : "") +
-        "\n\n以管理员身份运行一次 Reasonix，它会自行移除这些访问项。",
+        "Deeper 加载的文件上有授予某个 Windows 应用包（AppContainer）的访问项，Chromium 的沙箱进程加载这类文件时会退出。" +
+        "Deeper 尝试移除它们，以下位置被拒绝：\n\n" + shown + (more > 0 ? `\n……另有 ${more} 处` : "") +
+        "\n\n以管理员身份运行一次 Deeper，它会自行移除这些访问项。",
     };
   }
   return {
-    title: "Reasonix could not open its window",
+    title: "Deeper could not open its window",
     detail:
-      "Files Reasonix loads carry access entries granting a specific Windows app package (AppContainer), " +
-      "and Chromium's sandboxed processes exit while loading such a file. Reasonix tried to remove them and was refused for:\n\n" +
+      "Files Deeper loads carry access entries granting a specific Windows app package (AppContainer), " +
+      "and Chromium's sandboxed processes exit while loading such a file. Deeper tried to remove them and was refused for:\n\n" +
       shown + (more > 0 ? `\n…and ${more} more` : "") +
-      "\n\nRun Reasonix once as administrator and it will remove them itself.",
+      "\n\nRun Deeper once as administrator and it will remove them itself.",
   };
 }

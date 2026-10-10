@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/pluginpkg"
 )
 
 func TestLoadMergesInstalledPluginSkillRootsAndMCP(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	root := filepath.Join(home, "plugins", "superpowers")
 	writeConfigTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "superpowers",
   "version": "1.0.0",
   "skills": "skills",
@@ -25,7 +25,7 @@ func TestLoadMergesInstalledPluginSkillRootsAndMCP(t *testing.T) {
 		Name:         "superpowers",
 		Root:         "plugins/superpowers",
 		Version:      "1.0.0",
-		ManifestKind: "reasonix",
+		ManifestKind: "deeper",
 		Enabled:      true,
 	}); err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func TestLoadMergesInstalledPluginSkillRootsAndMCP(t *testing.T) {
 			if p.Command != filepath.Join(root, "bin", "helper") {
 				t.Fatalf("plugin command = %q", p.Command)
 			}
-			if p.Env["REASONIX_PLUGIN_NAME"] != "superpowers" {
+			if p.Env["DEEPER_PLUGIN_NAME"] != "superpowers" {
 				t.Fatalf("plugin env = %#v", p.Env)
 			}
 		}
@@ -64,7 +64,7 @@ func TestLoadMergesInstalledPluginSkillRootsAndMCP(t *testing.T) {
 
 func TestClaudePackageMCPExpandsRootAndDoesNotAutoStart(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	root := filepath.Join(home, "plugins", "claude-mcp")
 	writeConfigTestFile(t, filepath.Join(root, pluginpkg.ClaudeManifest), `{"name":"claude-mcp"}`)
 	writeConfigTestFile(t, filepath.Join(root, ".mcp.json"), `{
@@ -107,7 +107,7 @@ func TestClaudePackageMCPExpandsRootAndDoesNotAutoStart(t *testing.T) {
 
 func TestClaudePackageMCPDeduplicatesSameConnectionAcrossPackages(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	for i, name := range []string{"legal-one", "legal-two"} {
 		root := filepath.Join(home, "plugins", name)
 		writeConfigTestFile(t, filepath.Join(root, pluginpkg.ClaudeManifest), `{"name":"`+name+`"}`)
@@ -143,7 +143,7 @@ func writeConfigTestFile(t *testing.T, path, body string) {
 // package contributes nothing.
 func TestCommandDirsIncludePluginPackageCommands(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	root := filepath.Join(home, "plugins", "pwf")
 	writeConfigTestFile(t, filepath.Join(root, pluginpkg.ClaudeManifest), `{"name": "pwf"}`)
 	writeConfigTestFile(t, filepath.Join(root, "skills", "planner", "SKILL.md"), "---\ndescription: p\n---\nbody")
@@ -180,7 +180,7 @@ func TestCommandDirsIncludePluginPackageCommands(t *testing.T) {
 // TestCommandDirsWithoutPluginState keeps the no-plugin fast path intact.
 func TestCommandDirsWithoutPluginState(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if dirs := CommandDirsForRoot(t.TempDir()); len(dirs) == 0 {
 		t.Fatal("CommandDirsForRoot must still return the conventional dirs")
 	}

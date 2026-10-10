@@ -4,7 +4,7 @@
 修改用户真实会话，没有安装旧客户端到系统应用目录，也没有发布版本。
 
 代码基线为 `0d7a103fdd6f`；另在隔离 worktree 将回滚补丁叠加到已抓取的
-`origin/main-v2`（`f26283afb2f5`）验证。主工作区没有合并或重置到该分支。
+`origin/main`（`f26283afb2f5`）验证。主工作区没有合并或重置到该分支。
 [机器可读版本与 PR 清单](manual-session-compatibility-sources.json) 固定了 9 个发布标签
 及 115 条影响相关所有者的第一父链变更。清单用于定位测试边界，不代表逐个 PR 的所有功能均做了全平台验收。
 [已执行结果与最终包摘要](manual-session-compatibility-results.json) 记录通过的测试组、耗时、
@@ -29,9 +29,9 @@
 | 1.38.10 | 366e0eb6b86b | 旧历史 + revision 2 + Desktop header | 注册表 v3 / 无草稿库 |
 | 1.38.11 | 11f9705f0838 | 旧历史 + revision 3 + Desktop header | 注册表 v3 / 草稿 schema 4、snapshot 5 |
 
-版本依据标签的真实代码与编码器，不能把 main-v2 上的提交日期当作正式标签已经包含该功能。
+版本依据标签的真实代码与编码器，不能把 main 上的提交日期当作正式标签已经包含该功能。
 #10469 的合并提交 `e8762acc9` 和 #10572 的实现提交 `54826e46a` 另有独立草稿夹具，
-覆盖只使用过 main-v2 中间构建的用户；前者冻结 snapshot 4，后者为 snapshot 5。
+覆盖只使用过 main 中间构建的用户；前者冻结 snapshot 4，后者为 snapshot 5。
 schema 1–3 没有对应上述正式标签，使用按既有迁移定义构造的结构夹具，明确不冒充历史发布产物。
 
 ### 回退边界的实测修正
@@ -45,7 +45,7 @@ schema 1–3 没有对应上述正式标签，使用按既有迁移定义构造�
 | session-ui-v1.sqlite | 独立输入库 | 真实旧程序不改动文件 | 旧版继续聊天后，再升级必须核实过时输入 |
 | 未知未来 schema/revision | 明确错误，原文件保留 | 不写旧 schema 覆盖 | 不静默降级 |
 
-物理 revision 3 来自 [#10545](https://github.com/esengine/DeepSeek-Reasonix/pull/10545)
+物理 revision 3 来自 [#10545](https://github.com/SivanCola/deeper/pull/10545)
 中的 `e7a5b149e`，并非本次回滚引入。1.38.10 的负向测试要求返回真实
 `ErrUnsupportedVersion`，且会话权威文件和独立输入库均不改变；不能把拒绝读取计为可用降级。
 
@@ -72,7 +72,7 @@ schema 1–3 没有对应上述正式标签，使用按既有迁移定义构造�
 截断文件修复改变了已预留操作的源指纹时，旧操作仍报告生命周期冲突；测试明确要求保留这一证据，
 不能把旧预留操作强行认证为对修复后字节的成功执行。正常兄弟会话及新完成的导入内容继续可访问。
 
-## main-v2 的保留边界与回归组
+## main 的保留边界与回归组
 
 | PR 组 | 保护内容 | 验证入口 |
 | --- | --- | --- |
@@ -82,11 +82,11 @@ schema 1–3 没有对应上述正式标签，使用按既有迁移定义构造�
 | #10469、#10551、#10572 | 旧草稿冻结和恢复，欢迎页 | 三套真实草稿库、schema 迁移、恢复状态机、空页/导航测试 |
 | #10392、#10430、#10545、#10547、#10598、#10626、#10628 | 回执、压缩、附件闭包、导出、inbox、管理命令 | 131 个 root 定向 race 测试；真实旧写入器；Goal/shell/管理命令提交回归 |
 | #10550、#10590、#10603、#10613、#10619、#10621 | 消息身份、历史分页、只读快照、资源限制 | transcript suite、固定快照/索引回归、标签历史分页 |
-| 比回滚基线新增的 #10639、#10641、#10642、#10644 | 用户行与输出顺序、Dock 图标、压缩反馈、图形故障恢复 | 最新 main-v2 上三方干净应用回滚补丁；前端双类型检查、生命周期、transcript、输入恢复、38 项顺序/交接断言、Electron 测试和生产构建 |
+| 比回滚基线新增的 #10639、#10641、#10642、#10644 | 用户行与输出顺序、Dock 图标、压缩反馈、图形故障恢复 | 最新 main 上三方干净应用回滚补丁；前端双类型检查、生命周期、transcript、输入恢复、38 项顺序/交接断言、Electron 测试和生产构建 |
 
-main-v2 叠加验证还运行了 283 个 agent/control/transcript 定向测试，以及 13 个 Desktop
+main 叠加验证还运行了 283 个 agent/control/transcript 定向测试，以及 13 个 Desktop
 创建/输入/草稿/停用清理 race 测试。各组有交叉，不能相加作为不重复测试总数。
-生产构建使用 main-v2 自带的预算，没有为本次改动放宽预算；该叠加构建初始资源为
+生产构建使用 main 自带的预算，没有为本次改动放宽预算；该叠加构建初始资源为
 2053.6 KiB / 2053.8 KiB。
 
 ## 本次测试发现并修复
@@ -110,12 +110,12 @@ main-v2 叠加验证还运行了 283 个 agent/control/transcript 定向测试�
 **未覆盖的边界**：Windows/Linux 的实际打包运行仍需对应系统；没有安装九个完整旧版客户端逐一执行 UI 升级，
 旧版本证据来自其真实编码器/读取器和当前打包应用。没有穷举 9×9 所有客户端来回组合；数据迁移覆盖逐版直接升级、
 既有多代格式链、1.38.11 回退再升级及 1.38.10/1.38.9 的拒绝边界。真实 provider 联网执行不在这些合成测试范围内。
-不能用这些测试声称未来所有 main-v2 PR 或未来格式也兼容。
+不能用这些测试声称未来所有 main PR 或未来格式也兼容。
 
 ## 复现
 
 ```sh
-python3 scripts/generate-session-history-fixtures.py --writers-dir /tmp/reasonix-tagged-writers
+python3 scripts/generate-session-history-fixtures.py --writers-dir /tmp/deeper-tagged-writers
 python3 scripts/generate-manual-session-fixtures.py
 python3 scripts/session-compatibility-evidence.py
 
@@ -124,7 +124,7 @@ node ../scripts/desktop-windows-go-tests.mjs history-3-5
 node ../scripts/desktop-windows-go-tests.mjs history-6-7
 node ../scripts/desktop-windows-go-tests.mjs history-8-9 --race
 node ../scripts/desktop-windows-go-tests.mjs history-10-11
-REASONIX_TAGGED_WRITERS=/tmp/reasonix-tagged-writers go test . -run 'TestTagged(Formal|Previous|Draft|Damaged)' -count=1
+DEEPER_TAGGED_WRITERS=/tmp/deeper-tagged-writers go test . -run 'TestTagged(Formal|Previous|Draft|Damaged)' -count=1
 go test -race ./internal/workspacestate ./internal/draftstate ./internal/sessionui ./internal/legacycleanup ./internal/upgradefixture
 ```
 
@@ -133,7 +133,7 @@ go test -race ./internal/workspacestate ./internal/draftstate ./internal/session
 分组校验从当前平台 Go 测试清单验证每个测试恰好归属一个执行组，保留原生 ConPTY 的单独执行。
 27 项 CI/分组契约测试通过；没有通过跳过历史矩阵或扩大超时来解决聚合耗时。
 最终通过同一 CI 入口补跑 `history-8-9 --race`，Desktop 包耗时 176.148 秒。
-旧写入器往返是显式集成检查，需要先生成对应可执行文件并设置 `REASONIX_TAGGED_WRITERS`；
+旧写入器往返是显式集成检查，需要先生成对应可执行文件并设置 `DEEPER_TAGGED_WRITERS`；
 本次已实际执行并通过，普通 CI 不设置该变量时会报告跳过这一项。
 `tagged-history-smoke.mjs` 接收最终打包可执行文件路径，默认运行所有 9 个版本。
 

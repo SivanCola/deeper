@@ -8,9 +8,9 @@
 Go、生成协议、Electron、原生平台和打包输入。`desktop/AGENTS.md` 等明确的说明
 文档不会启动构建和长测；前端目录中会进入产品的 Markdown 仍属于构建输入。
 未知路径或无法获得可靠 diff 时保守失败。PR 使用 merge-base 差异，push 使用
-`before..sha`；保留纯 release-notes 例外后，普通 `main-v2` push 仍运行完整验证矩阵。
+`before..sha`；保留纯 release-notes 例外后，普通 `main` push 仍运行完整验证矩阵。
 
-桌面 race 检测（`desktop-go-race`，11 个分片）只在 `main-v2` push 和手动触发时运行，
+桌面 race 检测（`desktop-go-race`，11 个分片）只在 `main` push 和手动触发时运行，
 PR 上不运行。PR 仍以不带 `-race` 的方式运行同样的分片（`desktop-go` 与 Windows 分组），
 因此 PR 引入的数据竞争会在合并后的 push 运行中报告。
 
@@ -48,7 +48,7 @@ verbose 测试缓存；统一耗时报告直接从 Actions API 记录该步骤�
 协议 v4 会在 manifest、分片报告和汇总中记录筛查档位。普通前端 PR 使用
 `short`：一个进程执行 32 轮 full、32 轮 windowed、32 轮 safety 和 128 轮
 mixed 往返。涉及 App 生命周期、Transcript、导航、订阅所有权、内存夹具或
-CI 路由的 PR 使用 `full`。推送到 `main-v2`、每日定时任务及手动触发也使用
+CI 路由的 PR 使用 `full`。推送到 `main`、每日定时任务及手动触发也使用
 `full`：三个独立进程各执行 128 轮 full、128 轮 windowed、128 轮 safety 和
 512 轮 mixed 往返。
 

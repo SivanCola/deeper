@@ -4,6 +4,21 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"deeper/internal/agent"
+	"deeper/internal/billing"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/extension/providerext"
+	"deeper/internal/fileutil"
+	"deeper/internal/notify"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/sessiontitle"
+	"deeper/internal/store"
+	"deeper/internal/turnevent"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -12,21 +27,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"reasonix/internal/agent"
-	"reasonix/internal/billing"
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/extension/providerext"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/notify"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/sessiontitle"
-	"reasonix/internal/store"
-	"reasonix/internal/turnevent"
 	"slices"
 	"sort"
 	"strings"
@@ -2459,7 +2459,7 @@ func (a *App) openTopicTabWithHead(scope, workspaceRoot, topicID, sessionPath, h
 }
 
 // OpenGlobalTab opens a new global-scope tab (no project root). The global
-// workspace root is the reasonix user config directory.
+// workspace root is the deeper user config directory.
 func (a *App) OpenGlobalTab(topicID string) (TabMeta, error) {
 	return a.openGlobalTab(topicID)
 }
@@ -4755,7 +4755,7 @@ const legacyProjectSidebarRecoveryMarker = "desktop-projects-legacy-recovered"
 var desktopProjectsFileMu sync.Mutex
 
 func desktopConfigDir() string {
-	return config.ReasonixHomeDir()
+	return config.DeeperHomeDir()
 }
 
 func (a *App) saveTabsLocked() {

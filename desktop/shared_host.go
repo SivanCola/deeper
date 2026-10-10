@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
-	"reasonix/internal/proc"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
+	"deeper/internal/proc"
 )
 
 // bumpExtensionGeneration records that plugin/MCP configuration changed while
@@ -155,7 +155,7 @@ func (a *App) lookupSharedHost(root string) *plugin.Host {
 }
 
 // reapOrphanCodeGraph kills any codegraph MCP subprocess that is not a
-// direct child of the current Reasonix process. This cleans up orphaned
+// direct child of the current Deeper process. This cleans up orphaned
 // processes from a previous crash or from older versions that leaked them,
 // preventing accumulation across restarts.
 func (a *App) reapOrphanCodeGraph() {
@@ -187,7 +187,7 @@ func (a *App) reapOrphanCodeGraph() {
 		}
 		// Verify the process is truly orphaned before killing it:
 		// check its parent PID — if the parent is alive and isn't ours,
-		// this codegraph belongs to another active Reasonix session.
+		// this codegraph belongs to another active Deeper session.
 		ppidOut, err := proc.Command("ps", "-o", "ppid=", "-p", strconv.Itoa(pid)).Output()
 		if err != nil {
 			continue

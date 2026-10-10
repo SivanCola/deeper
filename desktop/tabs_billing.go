@@ -3,9 +3,9 @@ package main
 import (
 	"time"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 func (a *App) balanceRequestTarget(tabID string) (*WorkspaceTab, control.SessionAPI, uint64) {

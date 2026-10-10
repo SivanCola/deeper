@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/session"
 )
 
 func TestNewAppPinsDesktopV5SessionRootBeforeStartup(t *testing.T) {

@@ -20,8 +20,8 @@ import (
 	"syscall"
 	"unicode"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/nilutil"
+	"deeper/internal/attachment"
+	"deeper/internal/nilutil"
 )
 
 // Role is the role of a message.
@@ -35,11 +35,11 @@ const (
 )
 
 // LocalOnlyToolName/ID make display-only records safe when a newer transcriptis opened by an older
-// Reasonixbinary that does not know Message.LocalOnly.
+// Deeperbinary that does not know Message.LocalOnly.
 // Oldwirenormalizationtreatsthisunmatchedtoolresultasanorphananddropsitinsteadofreplayingpartialcontenttothemodel.
 const (
-	LocalOnlyToolName = "__reasonix_local_only__"
-	LocalOnlyToolID   = "__reasonix_local_only__"
+	LocalOnlyToolName = "__deeper_local_only__"
+	LocalOnlyToolID   = "__deeper_local_only__"
 )
 
 // Message is a single conversation message.
@@ -213,7 +213,7 @@ type ToolCall struct {
 	Diff             string `json:"diff,omitempty"`
 	Added            int    `json:"added,omitempty"`
 	Removed          int    `json:"removed,omitempty"`
-	// Resolved* fields are Reasonix-local display metadata for stable proxycalls such as use_capability.
+	// Resolved* fields are Deeper-local display metadata for stable proxycalls such as use_capability.
 	// Provider request builders deliberatelyserialize only provider-visible fields,
 	// sothesevaluesneveraltertheprovider-visible conversation orprompt-cache prefix.
 	ResolvedName     string `json:"resolved_name,omitempty"`
@@ -307,7 +307,7 @@ func SanitizeToolPairing(msgs []Message) []Message { return NormalizeMessages(ms
 // JSON (DeepSeek 400s on replayed half-streamed args, #3953).
 //
 // This is the wire-safe entry point for provider requests. Stored session loadsuse
-// NormalizeSessionMessagessotheycansharetheassistant-turnrepairswithoutdeletingstandalonetoolmessagesthatmustround-tripthroughreasonix
+// NormalizeSessionMessagessotheycansharetheassistant-turnrepairswithoutdeletingstandalonetoolmessagesthatmustround-tripthroughnix
 // --resume.
 //
 // A well-formed history — no unanswered calls, no orphan results, no empty tool-

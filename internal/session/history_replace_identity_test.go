@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestHistoryReplacementPreservesMessageVersions(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 func TestEmptyTrashDoesNotResurrectManualTopics(t *testing.T) {

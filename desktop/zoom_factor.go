@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
 )
 
 // DesktopZoomFactor persists the user's zoom factor preference across

@@ -2,13 +2,13 @@
 import { pageRegistry } from "./pageSemantic.js";
 
 export function pageCancelPicker(): void {
-  (window as unknown as { __reasonixCancelPicker?: () => void }).__reasonixCancelPicker?.();
+  (window as unknown as { __deeperCancelPicker?: () => void }).__deeperCancelPicker?.();
 }
 
 export async function pagePickElement(input: { key: string }): Promise<unknown> {
   const registry = pageRegistry(input.key);
-  const host = window as unknown as { __reasonixCancelPicker?: () => void };
-  host.__reasonixCancelPicker?.();
+  const host = window as unknown as { __deeperCancelPicker?: () => void };
+  host.__deeperCancelPicker?.();
   return new Promise(resolve => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #4d8dff;background:rgba(77,141,255,.12);box-sizing:border-box;display:none";
@@ -23,7 +23,7 @@ export async function pagePickElement(input: { key: string }): Promise<unknown> 
       window.removeEventListener("click", click, true);
       window.removeEventListener("keydown", key, true);
       for (const name of ["pointerdown", "mousedown", "mouseup"]) window.removeEventListener(name, block, true);
-      if (host.__reasonixCancelPicker === cancel) delete host.__reasonixCancelPicker;
+      if (host.__deeperCancelPicker === cancel) delete host.__deeperCancelPicker;
       resolve(result);
     };
     const cancel = () => finish(null);
@@ -46,7 +46,7 @@ export async function pagePickElement(input: { key: string }): Promise<unknown> 
     };
     const key = (event: KeyboardEvent) => { if (event.isTrusted && event.key === "Escape") { block(event); cancel(); } };
     const timer = setTimeout(cancel, 90_000);
-    host.__reasonixCancelPicker = cancel;
+    host.__deeperCancelPicker = cancel;
     window.addEventListener("pointermove", move, true);
     window.addEventListener("click", click, true);
     window.addEventListener("keydown", key, true);

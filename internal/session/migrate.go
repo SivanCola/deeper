@@ -16,11 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 type MigrationMapping struct {
@@ -532,7 +532,7 @@ type frozenArtifact struct {
 }
 
 func freezeLegacyArtifacts(ctx context.Context, sourcePath string) ([]frozenArtifact, Source, string, error) {
-	freezeDir, err := os.MkdirTemp("", "reasonix-legacy-freeze-")
+	freezeDir, err := os.MkdirTemp("", "deeper-legacy-freeze-")
 	if err != nil {
 		return nil, Source{}, "", err
 	}

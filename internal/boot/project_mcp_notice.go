@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/event"
 )
 
 // projectMCPNoticesShown keeps the notice to once per process for each
@@ -25,7 +25,7 @@ func emitProjectMCPDecisionNotice(sink event.Sink, cfg *config.Config, root stri
 		if !d.AwaitsUser() {
 			continue
 		}
-		key := strings.Join([]string{config.ReasonixHomeDir(), root, p.Name, d.Code(), config.MCPLaunchLine(p)}, "\x00")
+		key := strings.Join([]string{config.DeeperHomeDir(), root, p.Name, d.Code(), config.MCPLaunchLine(p)}, "\x00")
 		if _, seen := projectMCPNoticesShown.LoadOrStore(key, true); seen {
 			continue
 		}
@@ -38,6 +38,6 @@ func emitProjectMCPDecisionNotice(sink event.Sink, cfg *config.Config, root stri
 		Kind: event.Notice, Level: event.LevelWarn,
 		Text: "This project declares MCP servers that stay off until you enable them.",
 		Detail: strings.Join(lines, "\n") +
-			"\nReview each one (full declaration: `reasonix mcp get <name>`), then enable it with `reasonix mcp enable <name>`, /mcp connect, or the MCP panel.",
+			"\nReview each one (full declaration: `deeper mcp get <name>`), then enable it with `deeper mcp enable <name>`, /mcp connect, or the MCP panel.",
 	})
 }

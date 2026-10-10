@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/pathidentity"
+	"deeper/internal/pathidentity"
 )
 
 // WorkspaceIndex resolves every persisted workspace root once and reuses the

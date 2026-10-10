@@ -2,8 +2,8 @@ package boot
 
 import (
 	"context"
+	"deeper/internal/control"
 	"io"
-	"reasonix/internal/control"
 	"testing"
 )
 

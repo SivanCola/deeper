@@ -7,9 +7,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 type connectionSetupTestRunner struct{ calls int }

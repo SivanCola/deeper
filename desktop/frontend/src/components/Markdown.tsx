@@ -279,7 +279,7 @@ export function useRenderedMarkdownText(text: string, streaming: boolean, holdId
       cancelFinalizationRef.current = null;
       finalizingTextRef.current = null;
       if (finalizationStartedAtRef.current > 0) {
-        performance.measure("reasonix:markdown-finalize", {
+        performance.measure("deeper:markdown-finalize", {
           start: finalizationStartedAtRef.current,
           end: performance.now(),
           detail: { textLength: finalizationLengthRef.current },

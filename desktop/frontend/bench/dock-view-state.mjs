@@ -10,12 +10,12 @@ process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || 
   ? path.join(frontendDir, ".pw-browsers")
   : process.env.PLAYWRIGHT_BROWSERS_PATH;
 const { chromium } = await import("playwright");
-const preview = process.env.REASONIX_DOCK_URL ? null : await startPreviewServer(frontendDir, 4663);
-const url = process.env.REASONIX_DOCK_URL ?? "http://127.0.0.1:4663";
+const preview = process.env.DEEPER_DOCK_URL ? null : await startPreviewServer(frontendDir, 4663);
+const url = process.env.DEEPER_DOCK_URL ?? "http://127.0.0.1:4663";
 const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE });
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "en-US" });
-  await context.addInitScript(() => localStorage.setItem("reasonix-lang", "en"));
+  await context.addInitScript(() => localStorage.setItem("deeper-lang", "en"));
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -123,9 +123,9 @@ try {
   await page.locator(".dock-launcher").waitFor();
   await page.locator(".topicbar__chrome-btn--launcher").click();
   await page.locator(".dock-launcher").waitFor({ state: "detached" });
-  await page.screenshot({ path: path.join(tmpdir(), "reasonix-dock-views-desktop.png") });
+  await page.screenshot({ path: path.join(tmpdir(), "deeper-dock-views-desktop.png") });
   await page.setViewportSize({ width: 960, height: 720 });
-  await page.screenshot({ path: path.join(tmpdir(), "reasonix-dock-views-narrow.png") });
+  await page.screenshot({ path: path.join(tmpdir(), "deeper-dock-views-narrow.png") });
   assert.deepEqual(errors, []);
   console.log("PASS independent file views, close/reopen, restart, tab-only menu and management inert behavior");
 } finally {

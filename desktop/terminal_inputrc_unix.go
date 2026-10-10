@@ -39,7 +39,7 @@ func terminalInputEnvironment(spec terminalStartSpec) ([]string, func(), error) 
 	if strings.ContainsAny(source, "\r\n") {
 		return nil, noop, fmt.Errorf("terminal inputrc path contains a line break")
 	}
-	file, err := os.CreateTemp("", "reasonix-terminal-inputrc-*")
+	file, err := os.CreateTemp("", "deeper-terminal-inputrc-*")
 	if err != nil {
 		return nil, noop, err
 	}

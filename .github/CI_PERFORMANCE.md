@@ -9,10 +9,10 @@ It distinguishes frontend, Go, generated protocol, Electron, native and
 packaging inputs. Explicit documentation such as `desktop/AGENTS.md` skips
 build and soak work, while Markdown inside the frontend remains a build input.
 Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
-diffs; pushes use `before..sha`; normal `main-v2` pushes keep the complete
+diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-The desktop race sweep (`desktop-go-race`, eleven partitions) runs on `main-v2`
+The desktop race sweep (`desktop-go-race`, eleven partitions) runs on `main`
 pushes and manual dispatch, never on pull requests. Pull requests still run the
 same partitions without `-race` (`desktop-go` and the Windows groups), so a data
 race introduced by a pull request is reported by the push run after it merges.
@@ -60,7 +60,7 @@ Protocol v4 records the selected screening profile in every manifest, shard and
 aggregate. Ordinary frontend pull requests use the `short` profile: one process
 completes 32 full, 32 windowed, 32 safety and 128 mixed round trips. Pull requests
 that change App lifecycle, Transcript, navigation, subscription ownership, memory
-fixtures or CI routing use the `full` profile. Pushes to `main-v2`, the daily
+fixtures or CI routing use the `full` profile. Pushes to `main`, the daily
 scheduled run and manual dispatches also use `full`: three independent processes
 each complete 128 full, 128 windowed, 128 safety and 512 mixed round trips.
 

@@ -1,4 +1,4 @@
-const STORAGE_KEY = "reasonix-full-access-confirmed-projects-v1";
+const STORAGE_KEY = "deeper-full-access-confirmed-projects-v1";
 
 type ConfirmationStore = {
   version: 1;

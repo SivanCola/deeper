@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wait for successful push CI on one immutable main-v2 candidate.
+# Wait for successful push CI on one immutable main candidate.
 set -euo pipefail
 
 if [ "$#" -ne 1 ] || [[ ! "$1" =~ ^[0-9a-f]{40}$ ]]; then
@@ -8,7 +8,7 @@ if [ "$#" -ne 1 ] || [[ ! "$1" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 
 candidate="$1"
-repository="${RELEASE_REPOSITORY:-esengine/DeepSeek-Reasonix}"
+repository="${RELEASE_REPOSITORY:-SivanCola/deeper}"
 wait_seconds="${RELEASE_CI_WAIT_SECONDS:-1800}"
 poll_seconds="${RELEASE_CI_POLL_SECONDS:-10}"
 
@@ -43,7 +43,7 @@ wait_for_success() {
 			;;
 		esac
 		if [ "$SECONDS" -ge "$deadline" ]; then
-			echo "timed out waiting for successful main-v2 CI on $sha (last status: ${run_status:-missing})" >&2
+			echo "timed out waiting for successful main CI on $sha (last status: ${run_status:-missing})" >&2
 			return 1
 		fi
 		sleep "$poll_seconds"
@@ -73,9 +73,9 @@ while notes_only_commit "$sha"; do
 	sha="$(git rev-parse "$sha^")"
 	echo "$candidate changes only release-notes/; requiring push CI on ancestor $sha"
 	wait_for_success "$sha"
-	echo "successful main-v2 push CI verified for code ancestor: $sha"
+	echo "successful main push CI verified for code ancestor: $sha"
 done
 if [ "$sha" = "$candidate" ]; then
 	wait_for_success "$candidate"
-	echo "successful main-v2 push CI verified: $candidate"
+	echo "successful main push CI verified: $candidate"
 fi

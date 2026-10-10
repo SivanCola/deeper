@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
 )
 
 // reportRunFailure states why a run ended without a result. Text output — which

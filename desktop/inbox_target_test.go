@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/serve"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/serve"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func TestCanonicalInboxTargetEnqueuesAndConfirmsReceipt(t *testing.T) {

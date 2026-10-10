@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/plugin"
-	"reasonix/internal/tool"
+	"deeper/internal/plugin"
+	"deeper/internal/tool"
 )
 
 // resolveRegistryTool binds a registry tool by name for use_capability call.

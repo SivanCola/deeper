@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/i18n"
-	"reasonix/internal/skill"
+	"deeper/internal/i18n"
+	"deeper/internal/skill"
 )
 
 const (

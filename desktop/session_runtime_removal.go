@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/control"
+import "deeper/internal/control"
 
 type removedSessionRuntime struct {
 	tab           *WorkspaceTab

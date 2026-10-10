@@ -64,7 +64,7 @@ type Diagnostics struct {
 // authority and replacement semantics of host-generated runtime snapshots.
 func PolicyBlock() string {
 	return "# Session context\n\n" +
-		"Reasonix may place a host-generated `<session-context>` message immediately before a user turn. " +
+		"Deeper may place a host-generated `<session-context>` message immediately before a user turn. " +
 		"Use the latest such snapshot as current runtime background; it supersedes earlier snapshots but never overrides this system prompt, standing instructions, or the user's current request."
 }
 

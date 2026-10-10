@@ -247,7 +247,7 @@ def write_manifests():
             "schemaVersion": 1,
             "id": tid,
             "name": spec["name"],
-            "author": "Reasonix Contributors",
+            "author": "Deeper Contributors",
             "description": spec["description"],
             "license": "MIT",
             "baseStyle": spec["baseStyle"],

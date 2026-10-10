@@ -5,8 +5,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/agentpreset"
-	"reasonix/internal/i18n"
+	"deeper/internal/agentpreset"
+	"deeper/internal/i18n"
 )
 
 // /preset, /work-mode, and /profile remain as hidden compatibility commands.

@@ -13,7 +13,7 @@ import (
 
 func TestResolveInstallRootThroughDirectoryJunction(t *testing.T) {
 	root := t.TempDir()
-	launcher := filepath.Join(root, "reasonix-launcher.exe")
+	launcher := filepath.Join(root, "deeper-launcher.exe")
 	if err := os.WriteFile(launcher, []byte("launcher"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestResolveInstallRootThroughDirectoryJunction(t *testing.T) {
 		t.Fatalf("create directory junction: %v: %s", err, output)
 	}
 
-	got, err := resolveInstallRoot(filepath.Join(junction, "reasonix-launcher.exe"))
+	got, err := resolveInstallRoot(filepath.Join(junction, "deeper-launcher.exe"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +54,10 @@ func TestNormalizeFinalWindowsPath(t *testing.T) {
 		path string
 		want string
 	}{
-		{name: "drive", path: `\\?\C:\Apps\Reasonix`, want: `C:\Apps\Reasonix`},
-		{name: "UNC", path: `\\?\UNC\server\share\Reasonix`, want: `\\server\share\Reasonix`},
-		{name: "volume GUID", path: `\\?\Volume{abc}\Reasonix`, want: `\\?\Volume{abc}\Reasonix`},
-		{name: "ordinary", path: `C:\Apps\Reasonix`, want: `C:\Apps\Reasonix`},
+		{name: "drive", path: `\\?\C:\Apps\Deeper`, want: `C:\Apps\Deeper`},
+		{name: "UNC", path: `\\?\UNC\server\share\Deeper`, want: `\\server\share\Deeper`},
+		{name: "volume GUID", path: `\\?\Volume{abc}\Deeper`, want: `\\?\Volume{abc}\Deeper`},
+		{name: "ordinary", path: `C:\Apps\Deeper`, want: `C:\Apps\Deeper`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -77,13 +77,13 @@ func TestClassifyLaunchLocation(t *testing.T) {
 		wantErr   bool
 		wantQuery bool
 	}{
-		{name: "Parallels UNC", path: `\\psf\Home\Desktop\Reasonix`, want: launchLocationUNC},
-		{name: "ordinary UNC", path: `\\server\share\Reasonix`, want: launchLocationUNC},
-		{name: "mapped remote drive", path: `Z:\Reasonix`, driveType: windows.DRIVE_REMOTE, want: launchLocationRemoteDrive, wantQuery: true},
-		{name: "local fixed drive", path: `C:\Reasonix`, driveType: windows.DRIVE_FIXED, want: launchLocationLocal, wantQuery: true},
-		{name: "local removable drive", path: `E:\Reasonix`, driveType: windows.DRIVE_REMOVABLE, want: launchLocationLocal, wantQuery: true},
-		{name: "unknown drive", path: `Q:\Reasonix`, driveType: windows.DRIVE_UNKNOWN, wantErr: true, wantQuery: true},
-		{name: "missing volume", path: `Reasonix`, wantErr: true},
+		{name: "Parallels UNC", path: `\\psf\Home\Desktop\Deeper`, want: launchLocationUNC},
+		{name: "ordinary UNC", path: `\\server\share\Deeper`, want: launchLocationUNC},
+		{name: "mapped remote drive", path: `Z:\Deeper`, driveType: windows.DRIVE_REMOTE, want: launchLocationRemoteDrive, wantQuery: true},
+		{name: "local fixed drive", path: `C:\Deeper`, driveType: windows.DRIVE_FIXED, want: launchLocationLocal, wantQuery: true},
+		{name: "local removable drive", path: `E:\Deeper`, driveType: windows.DRIVE_REMOVABLE, want: launchLocationLocal, wantQuery: true},
+		{name: "unknown drive", path: `Q:\Deeper`, driveType: windows.DRIVE_UNKNOWN, wantErr: true, wantQuery: true},
+		{name: "missing volume", path: `Deeper`, wantErr: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

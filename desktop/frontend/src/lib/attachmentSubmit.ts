@@ -4,7 +4,7 @@ import type { ComposerTarget } from "../generated/desktopContract.generated";
 import type { WorkspaceReference } from "./composerDraftTypes";
 
 export async function restoreExternalFolderReferences(app: AppBindings, target: ComposerTarget, refs: WorkspaceReference[]) {
-  const external = refs.filter(ref => ref.isDir && ref.path.startsWith("__reasonix_external_folder/"));
+  const external = refs.filter(ref => ref.isDir && ref.path.startsWith("__deeper_external_folder/"));
   if (!external.length) return;
   const token = await captureAttachmentTarget(app, target, ["AttachDroppedForTarget"]);
   try {

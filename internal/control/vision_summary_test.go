@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 type visionSummaryTestProvider struct{}
@@ -41,7 +41,7 @@ func TestPrepareVisionTurnSummarizesTextOnlyInputAndKeepsRawPrompt(t *testing.T)
 	if err != nil {
 		t.Fatalf("prepareVisionTurn: %v", err)
 	}
-	if got == "请看这张图" || !contains(got, "<reasonix-image-context") || !contains(got, "Revenue 42") {
+	if got == "请看这张图" || !contains(got, "<deeper-image-context") || !contains(got, "Revenue 42") {
 		t.Fatalf("prepared input = %q", got)
 	}
 	if summary := agent.VisionSummaryFromContext(ctx); summary == nil || summary.ModelRef != "vision/vision-model" {

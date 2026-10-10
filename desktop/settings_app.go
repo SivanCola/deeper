@@ -21,23 +21,23 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/boot"
-	"reasonix/internal/bot"
-	"reasonix/internal/botruntime"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/boot"
+	"deeper/internal/bot"
+	"deeper/internal/botruntime"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 // settings_app.go is the desktop Settings panel's command surface: it reads the
 // resolved config and applies edits through internal/config/edit.go (the
 // purpose-built mutation API), then rebuilds the controller so the change takes
 // effect live — the same snapshot→reload→resume pattern as SetModel. Secrets are
-// the exception: they go to Reasonix's global .env (upsertDotEnv), since config
+// the exception: they go to Deeper's global .env (upsertDotEnv), since config
 // stores only the env-var name, not the key.
 
 // read
@@ -369,7 +369,7 @@ type SettingsView struct {
 	ExpandThinking    bool   `json:"expandThinking"`
 	ConversationWidth string `json:"conversationWidth,omitempty"`
 	ConfigPath        string `json:"configPath"`
-	// ShadowedByPath is the workspace reasonix.toml that outranks the file this
+	// ShadowedByPath is the workspace deeper.toml that outranks the file this
 	// panel writes, so an edit here can be overridden with nothing on screen to
 	// explain it (#4333). Empty when the panel's file is the one in effect.
 	ShadowedByPath string `json:"shadowedByPath,omitempty"`
@@ -387,7 +387,7 @@ type SettingsView struct {
 
 // shadowingConfigPath returns the config file that outranks writePath for the
 // workspace at root, or "" when writePath is the one in effect. A project
-// reasonix.toml beats the user config, so settings written here would otherwise
+// deeper.toml beats the user config, so settings written here would otherwise
 // look ignored (#4333).
 func shadowingConfigPath(writePath, root string) string {
 	effective := config.SourcePathForRoot(root)
@@ -990,7 +990,7 @@ func (a *App) DesktopStartupSettings() (view DesktopStartupSettingsView) {
 	if err != nil {
 		view = desktopStartupSettingsFromConfig(nil)
 		view.ConfigWarnings = []string{
-			"user configuration could not be loaded; using built-in defaults. Run: reasonix doctor repair",
+			"user configuration could not be loaded; using built-in defaults. Run: deeper doctor repair",
 		}
 		view.ConfigPath = config.UserConfigPath()
 		return view
@@ -1316,7 +1316,7 @@ func botDomainOrDefault(domain string) string {
 // applyConfigChange mutates the user-global config and rebuilds the controller so
 // the change takes effect this session. Desktop settings such as providers and
 // keys are account-level, not per-project: writing them to the global config
-// rather than the cwd's reasonix.toml is what lets them survive a workspace switch.
+// rather than the cwd's deeper.toml is what lets them survive a workspace switch.
 func (a *App) applyConfigChange(mutate func(*config.Config) error) error {
 	_, err := a.applyConfigChangeWithWarning("settings", mutate)
 	return err
@@ -1504,7 +1504,7 @@ func (a *App) loadDesktopUserConfigForEdit() (*config.Config, string, error) {
 }
 
 // loadDesktopUserConfigForEditForRoot reads the user config alone. A
-// workspace's reasonix.toml is never adopted into it: that file arrives with a
+// workspace's deeper.toml is never adopted into it: that file arrives with a
 // checkout, and copying it would turn its sandbox, permission and [bot] values
 // into the user's own.
 func (a *App) loadDesktopUserConfigForEditForRoot(_ string) (*config.Config, string, error) {
@@ -1527,7 +1527,7 @@ func (a *App) loadDesktopUserConfigForEditForRoot(_ string) (*config.Config, str
 // config.LockUserConfigEdits(). Legacy migrations (provider-access normalize,
 // legacy bot-config merge) are applied to the returned copy in memory only;
 // the on-disk file migrates the first time a locked write path runs
-// loadDesktopUserConfigForEdit. Credentials (Reasonix global .env) are not
+// loadDesktopUserConfigForEdit. Credentials (Deeper global .env) are not
 // loaded; callers that hand the config to a runtime resolving secrets from the
 // process env must use loadDesktopUserConfigForViewWithCredentials.
 func (a *App) loadDesktopUserConfigForView() (*config.Config, string, error) {
@@ -1539,7 +1539,7 @@ func (a *App) loadDesktopUserConfigForViewForRoot(root string) (*config.Config, 
 }
 
 // loadDesktopUserConfigForViewWithCredentials is loadDesktopUserConfigForView
-// plus credential resolution: like config.LoadForEdit it loads Reasonix's
+// plus credential resolution: like config.LoadForEdit it loads Deeper's
 // global .env into the process env. Use it for read-only loads whose result
 // feeds a runtime that resolves env-based secrets — the bot runtime
 // (app-secret/control-token envs) and MCP server connects. It still never
@@ -2427,7 +2427,7 @@ func (a *App) SaveProviderModelCatalogs(updates []ProviderModelCatalogUpdate) ([
 			return err
 		}
 		defer unlockCredentials()
-		// Re-read while holding the same lock as every Reasonix credential
+		// Re-read while holding the same lock as every Deeper credential
 		// writer, then keep that lock through the config commit. A rotation that
 		// won the race therefore invalidates the request fingerprint.
 		credentialsRevision := providerCredentialsRevision()
@@ -2564,7 +2564,7 @@ func providerDefaultNeedsReplacement(c *config.Config) bool {
 
 // ResetProviderPresetAccess intentionally overwrites same-name provider entries
 // with the curated preset template. It only mutates config; provider secrets stay
-// in Reasonix home .env under whichever api_key_env the resulting preset uses.
+// in Deeper home .env under whichever api_key_env the resulting preset uses.
 func (a *App) ResetProviderPresetAccess(id string) error {
 	return a.applyModelConfigChange(func(c *config.Config) error { return resetProviderPresetConfig(c, id) })
 }
@@ -2674,7 +2674,7 @@ func (a *App) FetchProviderModels(p ProviderView) ([]string, error) {
 }
 
 // networkProxySpecForRoot resolves the effective proxy policy chat requests use
-// for this workspace. The load includes project reasonix.toml and project .env
+// for this workspace. The load includes project deeper.toml and project .env
 // expansion but never pins provider credentials into the process environment.
 // A missing or unreadable config falls back to the default policy rather than
 // blocking model discovery.
@@ -2779,7 +2779,7 @@ func (a *App) FetchAllProviderModelCatalogs(providers []ProviderView) map[string
 	return results
 }
 
-// SetProviderKey writes a secret to Reasonix's global .env under the given
+// SetProviderKey writes a secret to Deeper's global .env under the given
 // env-var name (the one a provider's api_key_env points at) and rebuilds so it
 // resolves immediately.
 func (a *App) SetProviderKey(apiKeyEnv, value string) (string, error) {
@@ -2821,7 +2821,7 @@ func (a *App) SaveProviderKey(apiKeyEnv, value string) (string, error) {
 	return a.SetProviderKey(apiKeyEnv, value)
 }
 
-// ClearProviderKey removes a provider secret from Reasonix's global .env
+// ClearProviderKey removes a provider secret from Deeper's global .env
 // and rebuilds so the provider immediately becomes unauthenticated.
 func (a *App) ClearProviderKey(apiKeyEnv string) error {
 	_, err := a.SetProviderKey(apiKeyEnv, "")
@@ -3259,7 +3259,7 @@ func addProviderConnectionConfig(c *config.Config, presetID, sourceName, key, ba
 		if sourceName != "" {
 			entry.Headers = nil
 		} // Custom headers may contain credentials.
-		entry.APIKeyEnv = fmt.Sprintf("REASONIX_CONNECTION_%X_%X_KEY", connectionID, []byte(originalName))
+		entry.APIKeyEnv = fmt.Sprintf("DEEPER_CONNECTION_%X_%X_KEY", connectionID, []byte(originalName))
 		if err := c.UpsertProvider(entry); err != nil {
 			return err
 		}

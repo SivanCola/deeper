@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
+	"deeper/desktop/internal/instanceidentity"
 	"fyne.io/systray"
-	"reasonix/desktop/internal/instanceidentity"
 )
 
 var verifyTraySignatureFn = verifyTraySignature
@@ -23,7 +23,7 @@ func signedTrayIdentity(dev, exe, id string, verify func(string) error) string {
 func startDesktopTray(onReady, onExit func()) func() {
 	go runDesktopTrayLoop(func() {
 		exe, _ := os.Executable()
-		if id := signedTrayIdentity(os.Getenv("REASONIX_DEV"), exe, singleInstanceID(), verifyTraySignatureFn); id != "" {
+		if id := signedTrayIdentity(os.Getenv("DEEPER_DEV"), exe, singleInstanceID(), verifyTraySignatureFn); id != "" {
 			if err := systray.SetIconID(id); err != nil {
 				slog.Warn("desktop: configure tray identity", "err", err)
 			}

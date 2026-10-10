@@ -25,10 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	fileencoding "reasonix/internal/fileutil/encoding"
+	"deeper/internal/bot"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 const (
@@ -571,7 +571,7 @@ func (a *adapter) sendMessage(ctx context.Context, msg bot.OutboundMessage) (bot
 		"msg": map[string]any{
 			"from_user_id":  "",
 			"to_user_id":    msg.ChatID,
-			"client_id":     fmt.Sprintf("reasonix-%d", time.Now().UnixNano()),
+			"client_id":     fmt.Sprintf("deeper-%d", time.Now().UnixNano()),
 			"message_type":  weixinMsgTypeBot,
 			"message_state": weixinMsgStateDone,
 			"item_list": []map[string]any{

@@ -8,7 +8,7 @@ import { build } from "esbuild";
 
 const require = createRequire(import.meta.url);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const scratch = mkdtempSync(join(tmpdir(), "reasonix-window-geometry-"));
+const scratch = mkdtempSync(join(tmpdir(), "deeper-window-geometry-"));
 try {
   const entry = join(scratch, "main.cjs");
   await build({ entryPoints: [join(root, "src/main/windowGeometry.native.ts")], outfile: entry,

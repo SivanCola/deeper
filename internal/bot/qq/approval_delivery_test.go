@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/config"
+	"deeper/internal/bot"
+	"deeper/internal/config"
 )
 
 type keyboardSendRequest struct {

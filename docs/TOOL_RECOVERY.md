@@ -1,6 +1,6 @@
 # Tool interruption and recovery
 
-Reasonix records execution facts so every provider tool call has an honest result. These facts describe uncertainty; they do not grant or revoke access to later tools.
+Deeper records execution facts so every provider tool call has an honest result. These facts describe uncertainty; they do not grant or revoke access to later tools.
 
 ## Outcome model
 

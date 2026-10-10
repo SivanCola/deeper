@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 type takeoverReturnServers struct {

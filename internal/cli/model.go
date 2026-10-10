@@ -6,10 +6,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/config"
-	"reasonix/internal/extension/providerext"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/extension/providerext"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 // runModelSubcommand handles "/model": with no argument it opens the configured

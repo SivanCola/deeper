@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestRemoteRuntimeMissingSelectedSessionRequiresOwnConfirmation(t *testing.T) {

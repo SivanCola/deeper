@@ -1,6 +1,6 @@
 # DSH runtime alignment
 
-This document fixes the executable contracts for the Reasonix runtime
+This document fixes the executable contracts for the Deeper runtime
 alignment. It is normative for new sessions; legacy fields are display-only.
 
 ## Todo contract
@@ -93,8 +93,8 @@ view preference.
 ## v3 session boundary
 
 `internal/session` defines the ownership-cutover codec
-`reasonix.session.linear/v3.1`. The retired `reasonix.session.events/v3`
-prototype and `reasonix.session.linear/v3` preview cannot be opened for
+`deeper.session.linear/v3.1`. The retired `deeper.session.events/v3`
+prototype and `deeper.session.linear/v3` preview cannot be opened for
 execution and must pass through the restricted importer. Unknown required
 events, damaged complete records, and unexplained projection operations remain
 read-only and cannot resume execution. A session has one active write handle. Fork and edit-resend create an

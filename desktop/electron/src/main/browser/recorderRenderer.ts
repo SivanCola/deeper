@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 // This file is compiled independently, without Node integration or page code.
 window.addEventListener("message", event => {
-  if (event.source !== window || event.data !== "reasonix-recorder-port" || !event.ports[0]) return;
+  if (event.source !== window || event.data !== "deeper-recorder-port" || !event.ports[0]) return;
   const port = event.ports[0];
   let recorder: MediaRecorder | undefined;
   let stream: MediaStream | undefined;

@@ -10,8 +10,8 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
 )
 
 func rewriteHistoricalSourceIdentityForTest(t *testing.T, app *App, key string) string {

@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestProviderDraftProbesDoNotPersistCredentialsOrConfiguration(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	const keyEnv = "REASONIX_DRAFT_PROBE_TEST_KEY"
+	const keyEnv = "DEEPER_DRAFT_PROBE_TEST_KEY"
 	if _, err := config.SetCredential(keyEnv, "saved-key"); err != nil {
 		t.Fatal(err)
 	}

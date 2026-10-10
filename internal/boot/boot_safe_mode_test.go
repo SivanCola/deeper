@@ -9,19 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/plugin"
 )
 
-// v1.20+ removes product Safe Mode. REASONIX_SAFE_MODE no longer changes boot
+// v1.20+ removes product Safe Mode. DEEPER_SAFE_MODE no longer changes boot
 // behavior; these tests pin that the normal tool/plugin surface stays available.
 
 func TestBuildIgnoresSafeModeEnvForTools(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	t.Setenv("REASONIX_SAFE_MODE", "1")
+	t.Setenv("DEEPER_SAFE_MODE", "1")
 
 	ctrl, err := Build(context.Background(), Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
@@ -38,7 +38,7 @@ func TestBuildIgnoresSafeModeEnvForTools(t *testing.T) {
 	ctrl.Close()
 	for _, name := range []string{"install_source", "run_skill", "read_skill", "use_capability"} {
 		if !names[name] {
-			t.Fatalf("REASONIX_SAFE_MODE must not strip %s from the capability registry", name)
+			t.Fatalf("DEEPER_SAFE_MODE must not strip %s from the capability registry", name)
 		}
 	}
 }
@@ -46,7 +46,7 @@ func TestBuildIgnoresSafeModeEnvForTools(t *testing.T) {
 func TestBuildMemoryMigrationFailureWarnsAndContinues(t *testing.T) {
 	isolateConfigHome(t)
 	project := robustTempDir(t)
-	t.Setenv("REASONIX_SAFE_MODE", "")
+	t.Setenv("DEEPER_SAFE_MODE", "")
 	globalDir := filepath.Join(config.MemoryUserDir(), "memory", "global")
 	if err := os.MkdirAll(filepath.Dir(globalDir), 0o755); err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestBuildNormalModeKeepsSourceConnectorAndSkillTools(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	t.Setenv("REASONIX_SAFE_MODE", "")
+	t.Setenv("DEEPER_SAFE_MODE", "")
 
 	for _, tokenMode := range []string{TokenModeFull, TokenModeDelivery} {
 		ctrl, err := Build(context.Background(), Options{
@@ -123,8 +123,8 @@ func TestBuildStillSpawnsExtraPluginsWhenSafeModeEnvSet(t *testing.T) {
 	isolateConfigHome(t)
 	workspace := robustTempDir(t)
 	t.Chdir(workspace)
-	t.Setenv("REASONIX_SAFE_MODE", "1")
-	marker := filepath.Join(plugin.MCPStateDir(config.ReasonixHomeDir(), workspace, "acp-extra"), "started")
+	t.Setenv("DEEPER_SAFE_MODE", "1")
+	marker := filepath.Join(plugin.MCPStateDir(config.DeeperHomeDir(), workspace, "acp-extra"), "started")
 	ctrl, err := Build(context.Background(), Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
 		Sink:       event.Discard,
@@ -144,7 +144,7 @@ func TestBuildStillSpawnsExtraPluginsWhenSafeModeEnvSet(t *testing.T) {
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("host-supplied MCP server never spawned; REASONIX_SAFE_MODE must not drop ExtraPlugins")
+			t.Fatal("host-supplied MCP server never spawned; DEEPER_SAFE_MODE must not drop ExtraPlugins")
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

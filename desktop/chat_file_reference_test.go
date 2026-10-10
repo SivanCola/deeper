@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func newChatReferenceApp(t *testing.T, root string) *App {
@@ -320,7 +320,7 @@ func TestChatFileReferenceHonorsCurrentReadPolicy(t *testing.T) {
 	root := t.TempDir()
 	app := newChatReferenceApp(t, root)
 	writeChatReferenceFile(t, root, "secret/token.txt", "secret")
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[sandbox]\nforbid_read = [\"secret\"]\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[sandbox]\nforbid_read = [\"secret\"]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got := resolveOne(t, app, "secret/token.txt")

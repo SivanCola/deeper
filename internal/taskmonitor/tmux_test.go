@@ -67,7 +67,7 @@ func TestTmuxAdapterAttachIdempotent(t *testing.T) {
 	root := t.TempDir()
 	seedTmuxTask(t, s, root)
 	mock := &tmuxMock{}
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", mock)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", mock)
 	first := a.Attach(context.Background(), root, "t1", "demo")
 	if first.Error != nil || first.Mapping == nil {
 		t.Fatalf("attach failed: %+v", first)
@@ -86,7 +86,7 @@ func TestTmuxAdapterBoundsGeneratedSessionName(t *testing.T) {
 	root := t.TempDir()
 	taskID := strings.Repeat("a", 60)
 	seedTmuxTaskID(t, s, root, taskID)
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", &tmuxMock{})
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", &tmuxMock{})
 	r := a.Attach(context.Background(), root, taskID, "")
 	if r.Error != nil || r.Mapping == nil {
 		t.Fatalf("attach failed: %+v", r)
@@ -103,7 +103,7 @@ func TestTmuxAdapterUnavailableDoesNotChangeTask(t *testing.T) {
 	s := NewInMemoryStore()
 	root := t.TempDir()
 	seedTmuxTask(t, s, root)
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", nil)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", nil)
 	r := a.Attach(context.Background(), root, "t1", "")
 	if r.Error == nil || r.Error.Code != ErrTmuxUnavailable {
 		t.Fatalf("expected unavailable, got %+v", r)
@@ -117,7 +117,7 @@ func TestTmuxAdapterUnavailableDoesNotChangeTask(t *testing.T) {
 func TestTmuxAdapterRejectsUnsafeNames(t *testing.T) {
 	s := NewInMemoryStore()
 	seedTmuxTask(t, s, "/p")
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", &tmuxMock{})
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", &tmuxMock{})
 	for _, name := range []string{"bad/name", "semi;colon", "dollar$name", "has space"} {
 		r := a.Attach(context.Background(), "/p", "t1", name)
 		if r.Error == nil || r.Error.Code != ErrTmuxInvalidName {
@@ -131,7 +131,7 @@ func TestTmuxAdapterStaleAndDetach(t *testing.T) {
 	root := t.TempDir()
 	seedTmuxTask(t, s, root)
 	mock := &tmuxMock{}
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", mock)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", mock)
 	if r := a.Attach(context.Background(), root, "t1", "demo"); r.Error != nil {
 		t.Fatal(r.Error)
 	}
@@ -144,13 +144,13 @@ func TestTmuxAdapterStaleAndDetach(t *testing.T) {
 	if r := a.Detach(context.Background(), root, "t1"); r.Error != nil {
 		t.Fatal(r.Error)
 	}
-	if _, err := os.Stat(filepath.Join(root, ".reasonix/tasks/.tmux/t1.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, ".deeper/tasks/.tmux/t1.json")); !os.IsNotExist(err) {
 		t.Fatalf("mapping was not removed: %v", err)
 	}
 }
 
 func TestTmuxAdapterRejectsTaskPathTraversal(t *testing.T) {
-	a := NewTmuxAdapterWithRunner(NewInMemoryStore(), ".reasonix/tasks", &tmuxMock{})
+	a := NewTmuxAdapterWithRunner(NewInMemoryStore(), ".deeper/tasks", &tmuxMock{})
 	r := a.Status(context.Background(), t.TempDir(), "../secret")
 	if r.Error == nil {
 		t.Fatal("expected invalid task id error")
@@ -168,7 +168,7 @@ func TestTmuxAdapterAcceptsCleanableProjectDir(t *testing.T) {
 		}
 		s := NewInMemoryStore()
 		seedTmuxTask(t, s, projectDir)
-		a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", &tmuxMock{})
+		a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", &tmuxMock{})
 		if result := a.Attach(context.Background(), projectDir, "t1", "demo"); result.Error != nil {
 			t.Fatalf("Attach(%q): %+v", projectDir, result.Error)
 		}
@@ -178,7 +178,7 @@ func TestTmuxAdapterAcceptsCleanableProjectDir(t *testing.T) {
 func TestTmuxAdapterRejectsSymlinkMappingDirectory(t *testing.T) {
 	project := t.TempDir()
 	outside := t.TempDir()
-	root := filepath.Join(project, ".reasonix", "tasks")
+	root := filepath.Join(project, ".deeper", "tasks")
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestTmuxAdapterRejectsSymlinkMappingDirectory(t *testing.T) {
 	s := NewInMemoryStore()
 	seedTmuxTask(t, s, project)
 	attachRunner := &tmuxMock{}
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", attachRunner)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", attachRunner)
 	if result := a.Attach(context.Background(), project, "t1", "demo"); result.Error == nil || result.Error.Code != ErrTmuxMappingFailed {
 		t.Fatalf("expected mapping write rejection, got %+v", result)
 	}
@@ -203,7 +203,7 @@ func TestTmuxAdapterRejectsSymlinkMappingDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	readRunner := &tmuxMock{}
-	a = NewTmuxAdapterWithRunner(s, ".reasonix/tasks", readRunner)
+	a = NewTmuxAdapterWithRunner(s, ".deeper/tasks", readRunner)
 	for _, result := range []TmuxResult{
 		a.Status(context.Background(), project, "t1"),
 		a.Detach(context.Background(), project, "t1"),
@@ -225,13 +225,13 @@ func TestTmuxAdapterRejectsForgedMappingIdentityWithoutTmuxCalls(t *testing.T) {
 	s := NewInMemoryStore()
 	seedTmuxTask(t, s, project)
 	mock := &tmuxMock{}
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", mock)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", mock)
 	attached := a.Attach(context.Background(), project, "t1", "demo")
 	if attached.Error != nil || attached.Mapping == nil {
 		t.Fatalf("attach failed: %+v", attached)
 	}
 
-	path := filepath.Join(project, ".reasonix", "tasks", ".tmux", "t1.json")
+	path := filepath.Join(project, ".deeper", "tasks", ".tmux", "t1.json")
 	forged := *attached.Mapping
 	forged.TaskID = "different-task"
 	forged.ProjectDir = filepath.Join(project, "different-project")
@@ -268,7 +268,7 @@ func TestTmuxAdapterDoesNotKillSessionWithWrongOwnerToken(t *testing.T) {
 	s := NewInMemoryStore()
 	seedTmuxTask(t, s, project)
 	mock := &tmuxMock{}
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", mock)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", mock)
 	attached := a.Attach(context.Background(), project, "t1", "demo")
 	if attached.Error != nil || attached.Mapping == nil {
 		t.Fatalf("attach failed: %+v", attached)
@@ -292,7 +292,7 @@ func TestTmuxAdapterDetachUsesAtomicOwnedKill(t *testing.T) {
 	s := NewInMemoryStore()
 	seedTmuxTask(t, s, project)
 	mock := &tmuxMock{}
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", mock)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", mock)
 	attached := a.Attach(context.Background(), project, "t1", "demo")
 	if attached.Error != nil || attached.Mapping == nil {
 		t.Fatalf("attach failed: %+v", attached)
@@ -321,7 +321,7 @@ func TestTmuxAdapterReplacesLegacyMappingWithoutTrustingIt(t *testing.T) {
 	project := t.TempDir()
 	s := NewInMemoryStore()
 	seedTmuxTask(t, s, project)
-	path := filepath.Join(project, ".reasonix", "tasks", ".tmux", "t1.json")
+	path := filepath.Join(project, ".deeper", "tasks", ".tmux", "t1.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -333,7 +333,7 @@ func TestTmuxAdapterReplacesLegacyMappingWithoutTrustingIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	mock := &tmuxMock{}
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", mock)
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", mock)
 
 	result := a.Attach(context.Background(), project, "t1", "fresh")
 	if result.Error != nil || result.Mapping == nil || result.Mapping.OwnerToken == "" {
@@ -350,7 +350,7 @@ func TestTmuxAdapterWritesPrivateMappingFiles(t *testing.T) {
 	project := t.TempDir()
 	s := NewInMemoryStore()
 	seedTmuxTask(t, s, project)
-	a := NewTmuxAdapterWithRunner(s, ".reasonix/tasks", &tmuxMock{})
+	a := NewTmuxAdapterWithRunner(s, ".deeper/tasks", &tmuxMock{})
 	if result := a.Attach(context.Background(), project, "t1", "demo"); result.Error != nil {
 		t.Fatal(result.Error)
 	}
@@ -359,9 +359,9 @@ func TestTmuxAdapterWritesPrivateMappingFiles(t *testing.T) {
 	}
 
 	for path, want := range map[string]os.FileMode{
-		filepath.Join(project, ".reasonix", "tasks"):                     0o700,
-		filepath.Join(project, ".reasonix", "tasks", ".tmux"):            0o700,
-		filepath.Join(project, ".reasonix", "tasks", ".tmux", "t1.json"): 0o600,
+		filepath.Join(project, ".deeper", "tasks"):                     0o700,
+		filepath.Join(project, ".deeper", "tasks", ".tmux"):            0o700,
+		filepath.Join(project, ".deeper", "tasks", ".tmux", "t1.json"): 0o600,
 	} {
 		info, err := os.Stat(path)
 		if err != nil {

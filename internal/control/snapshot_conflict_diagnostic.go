@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/store"
 )
 
 type snapshotConflictDiagnostic struct {

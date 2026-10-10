@@ -3,7 +3,7 @@ package plugin
 import (
 	"fmt"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 // wrapConfinedCommand applies the OS command sandbox for a confined MCP

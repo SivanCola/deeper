@@ -9,7 +9,7 @@ const (
 	// ScopeBuiltin is compiled into the binary (built-in tools, shipped
 	// skills). It is the lowest tier: anything user-provided shadows it.
 	ScopeBuiltin Scope = "builtin"
-	// ScopeGlobal is user-level configuration under the Reasonix home dir.
+	// ScopeGlobal is user-level configuration under the Deeper home dir.
 	ScopeGlobal Scope = "global"
 	// ScopeProject is configuration rooted at the current project. It is the
 	// highest tier, matching the existing skill and command discovery where
@@ -22,7 +22,7 @@ const (
 	// ScopeClaudeCompat marks contributions imported from Claude conventions
 	// (.claude dirs, Claude-style settings). Compat tiers rank just below
 	// their native project counterpart so imported config never silently
-	// overrides native Reasonix config.
+	// overrides native Deeper config.
 	ScopeClaudeCompat Scope = "claude_compat"
 	// ScopeCodexCompat marks contributions imported from Codex conventions.
 	ScopeCodexCompat Scope = "codex_compat"

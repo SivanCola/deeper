@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 type pipeProcess struct {

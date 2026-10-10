@@ -2,9 +2,9 @@ package shellrun
 
 import (
 	"context"
+	"deeper/internal/proc"
 	"encoding/json"
 	"os/exec"
-	"reasonix/internal/proc"
 	"strings"
 	"sync"
 	"testing"

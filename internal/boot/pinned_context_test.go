@@ -8,9 +8,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 const bootPinnedContextProviderKind = "boot-pinned-context-test"
@@ -73,7 +73,7 @@ func TestBuildInjectsPinnedContextOnceWithStablePrefix(t *testing.T) {
 	registerBootPinnedContextProvider()
 	recorder := &bootPinnedContextProvider{}
 	useBootPinnedContextProvider(t, recorder)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

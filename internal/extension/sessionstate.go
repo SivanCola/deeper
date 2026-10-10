@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 // SessionExtensionsVersion is the on-disk version of the sidecar state file.

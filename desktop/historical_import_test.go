@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/identitylock"
+	"deeper/internal/config"
+	"deeper/internal/identitylock"
 )
 
 func TestHistoricalImportIsExplicitAndSourceBusyDoesNotTakeRuntimeGate(t *testing.T) {

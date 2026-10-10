@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/config"
+import "deeper/internal/config"
 
 func providerModelCapabilitiesForView(p config.ProviderEntry, models []string) []ProviderModelCapabilityView {
 	resolver := config.NewModelCapabilityResolver()

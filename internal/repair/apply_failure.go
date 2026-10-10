@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
 )
 
 // UpdateApplyFailure records that an update installer failed after the desktop
@@ -127,7 +127,7 @@ func MarkUpdateApplyFailedExact(tx *UpdateTransaction, reason string) error {
 func markUpdateApplyFailed(toVersion, updateCreatedAt, updateTransactionID, reason string) error {
 	path := updateApplyFailurePath()
 	if path == "" {
-		return fmt.Errorf("update apply failure: Reasonix state directory is unavailable")
+		return fmt.Errorf("update apply failure: Deeper state directory is unavailable")
 	}
 	failure := UpdateApplyFailure{
 		SchemaVersion:       1,

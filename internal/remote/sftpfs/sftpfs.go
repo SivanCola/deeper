@@ -1,7 +1,7 @@
 // Package sftpfs is the SFTP file layer for the remote module: directory
 // listing, stat, capped reads with text/binary detection, atomic writes, and
 // the usual mkdir/rename/remove. It quarantines the github.com/pkg/sftp
-// dependency — no other Reasonix package imports it directly. One *FS is shared
+// dependency — no other Deeper package imports it directly. One *FS is shared
 // per SSH connection; the underlying pkg/sftp client is safe for concurrent
 // use.
 package sftpfs
@@ -204,7 +204,7 @@ func (f *FS) UploadAtomic(ctx context.Context, p string, r io.Reader, perm fs.Fi
 func (f *FS) writeFileAtomic(ctx context.Context, p string, r io.Reader, perm fs.FileMode) (int64, error) {
 	return run(ctx, func() (int64, error) {
 		dir := path.Dir(p)
-		tmp := path.Join(dir, "."+path.Base(p)+".reasonix-tmp-"+randSuffix())
+		tmp := path.Join(dir, "."+path.Base(p)+".deeper-tmp-"+randSuffix())
 		fh, oerr := f.client.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 		if oerr != nil {
 			return 0, oerr

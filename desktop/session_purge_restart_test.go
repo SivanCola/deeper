@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestPurgeCommandCrashRestart(t *testing.T) {
@@ -31,7 +31,7 @@ func TestPurgeCommandCrashRestart(t *testing.T) {
 				ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 				defer cancel()
 				cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestPurgeCommandCrashHelper$")
-				cmd.Env = append(os.Environ(), "REASONIX_PURGE_APP_ROOT="+root, "REASONIX_PURGE_APP_REGISTRY="+registry, "REASONIX_PURGE_APP_REQUEST="+string(body), "REASONIX_PURGE_APP_POINT="+point)
+				cmd.Env = append(os.Environ(), "DEEPER_PURGE_APP_ROOT="+root, "DEEPER_PURGE_APP_REGISTRY="+registry, "DEEPER_PURGE_APP_REQUEST="+string(body), "DEEPER_PURGE_APP_POINT="+point)
 				output, err := cmd.CombinedOutput()
 				var exit *exec.ExitError
 				if crash {
@@ -88,21 +88,21 @@ func TestPurgeCommandCrashRestart(t *testing.T) {
 }
 
 func TestPurgeCommandCrashHelper(t *testing.T) {
-	root := os.Getenv("REASONIX_PURGE_APP_ROOT")
+	root := os.Getenv("DEEPER_PURGE_APP_ROOT")
 	if root == "" {
 		return
 	}
 	a := NewApp()
 	a.ctx = t.Context()
 	a.desktopSessions.root = root
-	a.desktopSessions.workspaceState = workspacestate.NewStore(os.Getenv("REASONIX_PURGE_APP_REGISTRY"))
+	a.desktopSessions.workspaceState = workspacestate.NewStore(os.Getenv("DEEPER_PURGE_APP_REGISTRY"))
 	installNoopRuntimeEvents(a)
 	defer a.closeSessionServices()
 	var req SessionLifecycleRequest
-	if err := json.Unmarshal([]byte(os.Getenv("REASONIX_PURGE_APP_REQUEST")), &req); err != nil {
+	if err := json.Unmarshal([]byte(os.Getenv("DEEPER_PURGE_APP_REQUEST")), &req); err != nil {
 		t.Fatal(err)
 	}
-	point := os.Getenv("REASONIX_PURGE_APP_POINT")
+	point := os.Getenv("DEEPER_PURGE_APP_POINT")
 	if point != "" {
 		a.lifecycleCheckpointHook = func(phase string) {
 			if phase == point {

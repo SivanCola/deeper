@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func TestRemoveWorkspaceBlocksNewProjectRuntimeAdmissionDuringSnapshot(t *testing.T) {

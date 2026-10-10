@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestWriteAccessApprovalChoicesPreserveScopes(t *testing.T) {

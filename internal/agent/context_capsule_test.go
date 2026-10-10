@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func capsuleForSpec(t *testing.T, spec SubagentSpec) ContextCapsule {

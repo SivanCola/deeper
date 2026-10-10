@@ -1,6 +1,6 @@
 # MCP 2026 capability surface
 
-Reasonix speaks the MCP `2026-07-28` protocol revision (multi-round-trip
+Deeper speaks the MCP `2026-07-28` protocol revision (multi-round-trip
 requests, form/URL elicitation) and the stable MCP Apps `2026-01-26`
 extension on Desktop. Users change nothing: servers keep their existing
 enable/disable switches, and every new capability rides the frontend's
@@ -65,7 +65,7 @@ catalog generation, and resource URI, then freezes the resource in the
 bounded live-instance registry. The SHA-256 digest is bound into the
 resource request and response, so content cannot change within that App
 instance. Reopening an older card creates a new validated snapshot of the
-server's current resource; Reasonix does not persist executable App HTML
+server's current resource; Deeper does not persist executable App HTML
 in the conversation.
 
 After `ui/notifications/initialized`, Desktop sends the original tool

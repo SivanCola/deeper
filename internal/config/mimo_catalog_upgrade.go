@@ -9,7 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 const mimoCatalogUpgradeVersion = 12

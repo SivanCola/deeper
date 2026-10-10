@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/diff"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/diff"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(deleteRange{}) }
@@ -63,7 +63,7 @@ func (d deleteRange) Execute(ctx context.Context, args json.RawMessage) (string,
 		return "", err
 	}
 	// preview ran the non-approving boundary check; the actual write needs the
-	// full one, which can gate a Reasonix-managed config target on user approval.
+	// full one, which can gate a Deeper-managed config target on user approval.
 	if err := confineWrite(ctx, effectiveWriteRoots(ctx, d.rootSet, d.roots), d.guard, d.managed, change.Path); err != nil {
 		return "", err
 	}

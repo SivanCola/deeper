@@ -3,7 +3,7 @@ package agent
 import (
 	"time"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 // SetSessionFileLockWaitForTest shortens the bounded cross-process save-lock

@@ -11,10 +11,10 @@ import (
 // RemoteConfig is the [remote] section: SSH hosts the remote module may
 // connect to, and their default forwards/workspaces. Like [secrets] it is a
 // user-global security control — LoadForRoot pins it back to the user config
-// after the project merge so a cloned repo's reasonix.toml can never inject
+// after the project merge so a cloned repo's deeper.toml can never inject
 // hosts, jump chains, or forwards.
 type RemoteConfig struct {
-	// ImportSSHConfig surfaces ~/.ssh/config aliases in `reasonix remote import`.
+	// ImportSSHConfig surfaces ~/.ssh/config aliases in `deeper remote import`.
 	ImportSSHConfig bool                 `toml:"import_ssh_config"`
 	Hosts           []RemoteHostEntry    `toml:"hosts"`
 	Projects        []RemoteProjectEntry `toml:"projects"`
@@ -22,8 +22,8 @@ type RemoteConfig struct {
 
 // RemoteHostEntry describes one SSH target. Secrets follow the provider
 // idiom: the entry names credential env vars (passphrase_env/password_env);
-// values live in Reasonix's global .env, never in TOML. identity_file is a
-// path — private key material itself is never stored by Reasonix.
+// values live in Deeper's global .env, never in TOML. identity_file is a
+// path — private key material itself is never stored by Deeper.
 type RemoteHostEntry struct {
 	Name           string               `toml:"name"`
 	Host           string               `toml:"host"`
@@ -62,7 +62,7 @@ var RemoteServeInstallModes = []string{"auto", "npm", "upload", "never"}
 // Clone returns a deep copy. The global-only pin in loadForRoot must capture
 // the pre-project-merge value, but TOML decoding mutates existing slice
 // backing arrays in place — a shallow struct copy would alias Hosts (and each
-// host's Forwards) and let a project reasonix.toml overwrite the "restored"
+// host's Forwards) and let a project deeper.toml overwrite the "restored"
 // global entries.
 func (r RemoteConfig) Clone() RemoteConfig {
 	out := r

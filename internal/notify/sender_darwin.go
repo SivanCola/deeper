@@ -3,8 +3,8 @@
 package notify
 
 import (
+	"deeper/internal/secrets"
 	"os/exec"
-	"reasonix/internal/secrets"
 	"strings"
 )
 

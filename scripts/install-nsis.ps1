@@ -8,7 +8,7 @@ $url = "https://sourceforge.net/projects/nsis/files/NSIS%203/$version/nsis-$vers
 $expectedSha256 = "56581f90db321581c5381193d796fffcf2d24b2f8fed2160a6c6a3baa67f2c4f"
 $tempRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
 $archive = Join-Path $tempRoot "nsis-$version.zip"
-$extractRoot = Join-Path $tempRoot "reasonix-nsis"
+$extractRoot = Join-Path $tempRoot "deeper-nsis"
 $nsisDir = Join-Path $extractRoot "nsis-$version"
 
 for ($attempt = 1; $attempt -le 3; $attempt++) {

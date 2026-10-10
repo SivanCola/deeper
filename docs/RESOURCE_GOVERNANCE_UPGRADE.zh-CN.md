@@ -1,6 +1,6 @@
 # 会话资源治理升级说明
 
-> 基线：`main-v2` @ `2553bb31c`（2026-09-15 合并点）
+> 基线：`main` @ `2553bb31c`（2026-09-15 合并点）
 > 范围：Desktop 会话历史、流式 Markdown、工具详情、正文读取、媒体释放与 skillwatch 诊断
 
 ## 为什么要改
@@ -78,7 +78,7 @@ Runtime Doctor 与 Desktop 诊断面板现在显示 skillwatch 的物理/逻辑 
 
 2026-09-15 在 macOS arm64 / Chromium 153 上实跑的浏览器 fixture 首次通过：240 turns 的初载 129.3 ms、深翻页 2040.7 ms、流式提交 1173.6 ms、输入 p95 24.1 ms、DOM 12,090；1000 turns 兼容压力场景的对应值为 147.6 ms、23175.6 ms、4987.7 ms、45.9 ms、DOM 47,834。会话切换 p95 44 ms，测试区间 JS heap 增长 349,380 bytes，anchor drift 0。1000 turns 的全页 DOM 数字也说明 12,000 预算目前按单个 Markdown 发布页执行，并非全会话全局硬上限。
 
-生产前端构建的全部 bundle 预算通过；`desktop/ go test ./...` 全绿（主包 335.895 s）。根 `go test ./...` 仅有 3 个 `cmd/reasonix-legacy-migrator` 既存失败，错误均为 `pending update belongs to a different installation: pending update bundle is not the current Guard installation`；资源治理涉及的其余根包通过。
+生产前端构建的全部 bundle 预算通过；`desktop/ go test ./...` 全绿（主包 335.895 s）。根 `go test ./...` 仅有 3 个 `cmd/deeper-legacy-migrator` 既存失败，错误均为 `pending update belongs to a different installation: pending update bundle is not the current Guard installation`；资源治理涉及的其余根包通过。
 
 ## 尚未被本地证据证明的事项
 

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/taskcontract"
+	"deeper/internal/taskcontract"
 )
 
 func TestSetQualityFloorNormalizesVocabulary(t *testing.T) {

@@ -16,9 +16,9 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/shellparse"
-	"reasonix/internal/shellsafe"
+	"deeper/internal/provider"
+	"deeper/internal/shellparse"
+	"deeper/internal/shellsafe"
 )
 
 // TodoItem mirrors the todo_write item shape the host needs for step matching.

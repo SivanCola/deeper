@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // Message ids are 128 bits in Crockford base32 (26 chars, ULID layout for new
@@ -18,7 +18,7 @@ import (
 const (
 	messageIDLen      = 26
 	messageIDAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
-	legacyMessageIDNS = "reasonix-legacy-entry-v1"
+	legacyMessageIDNS = "deeper-legacy-entry-v1"
 )
 
 // NewMessageID mints a time-prefixed random id: 48 bits of unix milliseconds

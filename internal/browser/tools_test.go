@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 const clickArgs = `{"operationId":"op-1","tabId":"t1","documentToken":"doc-1","ref":"e12"}`

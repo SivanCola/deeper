@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
 )
 
 // PurgeWithTombstone keeps directory ownership across writer-lock release and
@@ -35,7 +35,7 @@ func (p *FilesystemPersistence) purgeWithTombstone(ctx context.Context, id strin
 	defer releaseDirectory()
 	staged := filepath.Join(p.Root, ".purging", id)
 	receipt := staged + ".receipt"
-	proof := "reasonix-session-purge-v1\n" + id + "\n"
+	proof := "deeper-session-purge-v1\n" + id + "\n"
 	if err := validatePurgeDirectories(p.Root, source, staged, receipt, proof); err != nil {
 		return err
 	}

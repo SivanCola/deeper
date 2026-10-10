@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/sessioninbox"
 )
 
-const botInboxMessageExtraKey = "reasonix.bot.inbound.v1"
+const botInboxMessageExtraKey = "deeper.bot.inbound.v1"
 
 type durableBotMessage struct {
 	Platform       Platform `json:"platform"`

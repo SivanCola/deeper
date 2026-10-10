@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // slashCompletionCache memoizes the two expensive completion snapshots: the

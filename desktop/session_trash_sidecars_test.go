@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 func TestDeleteSessionFileMovesLegacyCleanupEvidenceSidecars(t *testing.T) {

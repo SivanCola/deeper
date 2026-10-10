@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/store"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/store"
 )
 
 // SessionHeadIndex is the schema-2 shape of <id>.event-index.json: a snapshot

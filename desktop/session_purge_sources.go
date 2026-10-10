@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 var errPurgeSourceRetained = errors.New("migrated source must be retained")

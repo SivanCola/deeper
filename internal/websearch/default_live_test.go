@@ -9,19 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
-	"reasonix/internal/websearch"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
+	"deeper/internal/websearch"
 )
 
 // Explicitly opt in to two bounded main-model calls and one independent search.
 // Only counts are logged; no credentials or conversation content are written.
 func TestLiveDefaultDeepSeekSearchRoundTrip(t *testing.T) {
-	if os.Getenv("REASONIX_LIVE_WEB_SEARCH") != "1" {
-		t.Skip("set REASONIX_LIVE_WEB_SEARCH=1")
+	if os.Getenv("DEEPER_LIVE_WEB_SEARCH") != "1" {
+		t.Skip("set DEEPER_LIVE_WEB_SEARCH=1")
 	}
 	cfg := config.Default()
 	entry, ok := cfg.ResolveModel(cfg.DefaultModel)

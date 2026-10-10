@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 var hostDefault = sync.OnceValue(discoverUTF8)

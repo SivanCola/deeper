@@ -1,6 +1,6 @@
 package agent
 
-import "reasonix/internal/fileops"
+import "deeper/internal/fileops"
 
 // InheritFileObservationsFrom is for an idle, same-session runtime rebuild.
 // Resume, fork and rewind intentionally use SetSession without this transfer.
@@ -22,7 +22,7 @@ func (a *Agent) Session() *Session {
 }
 
 // SetSession replaces the agent's conversation wholesale. Used by
-// `reasonix --resume` to load a saved JSONL transcript before the first turn,
+// `deeper --resume` to load a saved JSONL transcript before the first turn,
 // so the model picks up exactly where it left off. Callers serialise it against a
 // running turn (it only fires while idle); sessMu guards the pointer swap itself.
 func (a *Agent) SetSession(s *Session) {

@@ -3,9 +3,9 @@ package boot
 import (
 	"time"
 
-	"reasonix/internal/browser"
-	"reasonix/internal/browser/cdp"
-	"reasonix/internal/config"
+	"deeper/internal/browser"
+	"deeper/internal/browser/cdp"
+	"deeper/internal/config"
 )
 
 // browserLaunchTimeout bounds the first attach: a browser that has not shown a

@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 // commitLoadedResume moves an idle controller to a validated transcript while

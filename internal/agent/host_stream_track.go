@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"reasonix/internal/extension"
+	"deeper/internal/extension"
 )
 
 // trackPublishedHostStream binds cancel to the context's runtime owner so a

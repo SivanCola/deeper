@@ -3,7 +3,7 @@ package anthropic
 import (
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestSharedWindowOutputBudgetCapability(t *testing.T) {

@@ -2,7 +2,7 @@ name: Diagnostic overhead monitoring
 
 on:
   push:
-    branches: [main-v2]
+    branches: [main]
     paths:
       - desktop/electron/**
       - desktop/frontend/**

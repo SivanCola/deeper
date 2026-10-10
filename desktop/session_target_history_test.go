@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 func writeTargetHistoryFixture(t *testing.T, dir, name, marker string) string {

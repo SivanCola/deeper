@@ -1,6 +1,6 @@
 package agent
 
-import "reasonix/internal/tool"
+import "deeper/internal/tool"
 
 // blockedToolOutcome shapes a tool's own refusal into the standard blocked
 // outcome, with the not-run shell metadata a blocked bash card renders.

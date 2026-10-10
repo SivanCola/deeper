@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type acceptedDecision struct {

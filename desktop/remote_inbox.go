@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/servecontract"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/agent"
+	"deeper/internal/servecontract"
+	"deeper/internal/sessioninbox"
 )
 
 // remoteInboxSnapshot reads the selected durable queue using the same route

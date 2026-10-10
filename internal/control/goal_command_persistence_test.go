@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func TestGoalCommandDoesNotStartProviderAfterPersistenceFailure(t *testing.T) {

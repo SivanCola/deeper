@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 // samplingRequest is a once-prepared, frozen provider request for one model

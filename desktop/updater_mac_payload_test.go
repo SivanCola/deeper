@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"testing"
 
-	"reasonix/internal/repair"
+	"deeper/internal/repair"
 )
 
 func TestMacUpdateHandoffPublishesPayloadDigestAcrossModeChange(t *testing.T) {
@@ -28,9 +28,9 @@ func TestMacUpdateHandoffPublishesPayloadDigestAcrossModeChange(t *testing.T) {
 	requireDistinctPOSIXMode(t, probeA, probeB)
 
 	root := t.TempDir()
-	oldApp := filepath.Join(root, "Reasonix.app")
-	newApp := filepath.Join(root, "staging", "Reasonix.app")
-	backupApp := oldApp + ".reasonix-update-backup"
+	oldApp := filepath.Join(root, "Deeper.app")
+	newApp := filepath.Join(root, "staging", "Deeper.app")
+	backupApp := oldApp + ".deeper-update-backup"
 	pending := filepath.Join(root, "pending.json")
 	for _, dir := range []string{oldApp, newApp} {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -144,7 +144,7 @@ func TestMacUpdateRenameFallbackDoesNotReplaceExisting(t *testing.T) {
 	}
 	if err := macRenameNoReplace(func(string, string) error { return syscall.ENOTSUP }, source, destination); err == nil {
 		t.Fatal("fallback renamed over an existing destination")
-	} else if !errors.Is(err, os.ErrExist) || !strings.Contains(err.Error(), "best-effort under Reasonix mutation lock") {
+	} else if !errors.Is(err, os.ErrExist) || !strings.Contains(err.Error(), "best-effort under Deeper mutation lock") {
 		t.Fatalf("fallback err = %v, want ErrExist", err)
 	}
 	for path, want := range map[string]string{source: "source", destination: "destination"} {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 // promptStopReason maps a finished controller run onto ACP v1. Controlled

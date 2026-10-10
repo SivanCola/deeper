@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/boundedllm"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/boundedllm"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 const (

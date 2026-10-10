@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/localeenv"
-	"reasonix/internal/secrets"
+	"deeper/internal/config"
+	"deeper/internal/localeenv"
+	"deeper/internal/secrets"
 )
 
 const (

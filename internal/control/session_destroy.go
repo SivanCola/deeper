@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/jobs"
+	"deeper/internal/agent"
+	"deeper/internal/jobs"
 )
 
 // SessionDestroyHandle separates cancelled-job waiting from ending the destroy

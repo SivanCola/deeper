@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func TestBashPersistentStagingFailureDoesNotRetryOneShot(t *testing.T) {
@@ -17,7 +17,7 @@ func TestBashPersistentStagingFailureDoesNotRetryOneShot(t *testing.T) {
 	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shell.sh")
-	fixture := "#!/bin/sh\nprintf 'attempt\\n' >> attempts\nIFS= read -r setup\nprintf 'REASONIX_SHELL_READY\\n'\nIFS= read -r block\nexit 0\n"
+	fixture := "#!/bin/sh\nprintf 'attempt\\n' >> attempts\nIFS= read -r setup\nprintf 'DEEPER_SHELL_READY\\n'\nIFS= read -r block\nexit 0\n"
 	if err := os.WriteFile(path, []byte(fixture), 0o700); err != nil {
 		t.Fatal(err)
 	}

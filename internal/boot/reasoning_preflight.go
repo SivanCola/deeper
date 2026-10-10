@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/extension/providerext"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/extension/providerext"
+	"deeper/internal/provider"
 )
 
 // RoleReasoningError retains the adapter error for errors.As while giving every

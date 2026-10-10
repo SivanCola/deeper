@@ -1,5 +1,5 @@
 // Package worktree creates durable, Git-backed workspaces for parallel
-// Delivery sessions. Attached worktrees live under Reasonix-managed state,
+// Delivery sessions. Attached worktrees live under Deeper-managed state,
 // never inside the source repository, and are never deleted automatically;
 // an exact untouched allocation may be rolled back before it is attached.
 package worktree
@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 const (
@@ -46,7 +46,7 @@ func RollbackCreate(ctx context.Context, result Result) error {
 	if sourceRoot == "" || worktreeRoot == "" || branch == "" || head == "" {
 		return errors.New("rollback needs the complete created worktree identity")
 	}
-	if !strings.HasPrefix(branch, "reasonix/delivery-") {
+	if !strings.HasPrefix(branch, "deeper/delivery-") {
 		return fmt.Errorf("refuse to roll back unmanaged branch %q", branch)
 	}
 	source, created, err := result.repos(ctx)
@@ -185,10 +185,10 @@ func Create(ctx context.Context, repo gitcmd.Repo, managedRoot string) (Result, 
 	}
 	managedRoot = strings.TrimSpace(managedRoot)
 	if managedRoot == "" {
-		return Result{}, errors.New("Reasonix worktree storage is unavailable")
+		return Result{}, errors.New("Deeper worktree storage is unavailable")
 	}
 	if err := os.MkdirAll(managedRoot, 0o700); err != nil {
-		return Result{}, fmt.Errorf("create Reasonix worktree storage: %w", err)
+		return Result{}, fmt.Errorf("create Deeper worktree storage: %w", err)
 	}
 
 	repoSum := sha256.Sum256([]byte(info.repo.CommonDir))
@@ -203,7 +203,7 @@ func Create(ctx context.Context, repo gitcmd.Repo, managedRoot string) (Result, 
 		if randomErr != nil {
 			return Result{}, randomErr
 		}
-		branch := fmt.Sprintf("reasonix/delivery-%s-%s", time.Now().Format("20060102-150405"), id)
+		branch := fmt.Sprintf("deeper/delivery-%s-%s", time.Now().Format("20060102-150405"), id)
 		worktreeRoot := filepath.Join(managedRoot, repoKey, id, repoBase)
 		if _, statErr := os.Stat(worktreeRoot); statErr == nil {
 			continue
@@ -268,7 +268,7 @@ func Create(ctx context.Context, repo gitcmd.Repo, managedRoot string) (Result, 
 	return Result{}, errors.New("could not allocate a unique Delivery worktree")
 }
 
-// IsManagedPath reports whether path belongs to Reasonix's durable worktree
+// IsManagedPath reports whether path belongs to Deeper's durable worktree
 // storage. It is a lexical UI identity check, not an authorization boundary.
 func IsManagedPath(path, managedRoot string) bool {
 	path = strings.TrimSpace(path)

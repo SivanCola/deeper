@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestDefaultTopicTitleLocalizesAtAPIBoundary(t *testing.T) {

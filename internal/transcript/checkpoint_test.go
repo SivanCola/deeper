@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestRestoreCheckpointRepairsLegacyMissingRecordIdentities(t *testing.T) {

@@ -18,18 +18,18 @@ The source inventory and license are in
   while running. Expanded thinking does not duplicate its text in the header.
 - System and permission receipts are compact disclosures. Uninformative empty
   completion summaries are omitted. Markdown headings, tables and spacing use
-  the adapted Harness styles; Reasonix's parsing and security remain in place.
+  the adapted Harness styles; Deeper's parsing and security remain in place.
 - Copy, conversation fork, usage breakdown, duration and timestamps remain.
   Voting controls are omitted. Missing historical usage is not fabricated.
 - Settings no longer expose Standard/Deep conversation presentation. New
   sessions default to Workspace write. Persisted legacy fields are retained only
   for compatibility and do not select a second chat implementation.
 
-The port retains Reasonix theme/font settings, composer, approvals, host-safe
+The port retains Deeper theme/font settings, composer, approvals, host-safe
 links, Markdown workers, history APIs and backend ownership. It does not import
 Cordis or the Harness server. Tool result shapes that cannot be mapped reliably
 use the generic card. This is not a claim that the entire Harness application
-or every plugin-specific renderer is embedded in Reasonix.
+or every plugin-specific renderer is embedded in Deeper.
 
 ## Verification on macOS arm64
 
@@ -59,8 +59,8 @@ opened the user's existing weather turn and the settings screen in the final
 packaged app. Package identity and native smoke details are in
 [`design-qa.md`](../design-qa.md).
 
-The test build is installed at `~/Applications/Reasonix-Canary/Reasonix.app`
-with the isolated `Reasonix-Test-ChatRefactor` profile. Native WebView hosts on
+The test build is installed at `~/Applications/Deeper-Canary/Deeper.app`
+with the isolated `Deeper-Test-ChatRefactor` profile. Native WebView hosts on
 other platforms, exposed native scrollbar dragging, extended native IME soak
 and fully expanded 1,000-turn stress were not rerun for this presentation pass.
 No release was published or PR merged.

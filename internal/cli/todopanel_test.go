@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"deeper/internal/event"
 	"github.com/charmbracelet/x/ansi"
-	"reasonix/internal/event"
 )
 
 // TestRenderTodoPanelIsFlat proves retired hierarchy fields do not affect the

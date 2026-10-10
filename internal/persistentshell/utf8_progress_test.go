@@ -1,8 +1,8 @@
 package persistentshell
 
 import (
+	"deeper/internal/shellrun"
 	"encoding/json"
-	"reasonix/internal/shellrun"
 	"strings"
 	"testing"
 	"unicode/utf8"

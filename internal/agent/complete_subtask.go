@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/tool"
 )
 
 // CompleteSubtaskTool optionally records the child's own completion report.

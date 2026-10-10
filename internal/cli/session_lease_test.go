@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // holdSessionLease simulates another runtime owning path for the duration of
@@ -40,7 +40,7 @@ func TestRunResumeRefusedWhenSessionLeaseHeld(t *testing.T) {
 			t.Fatalf("run --resume held rc = %d, want 1", rc)
 		}
 	})
-	if !strings.Contains(errOut, "in use by another Reasonix") {
+	if !strings.Contains(errOut, "in use by another Deeper") {
 		t.Fatalf("run --resume held stderr = %q, want holder wording", errOut)
 	}
 	if !strings.Contains(errOut, "--copy") {
@@ -312,7 +312,7 @@ func TestChatResumeCommandRefusedWhenLeaseHeld(t *testing.T) {
 	m.runResumeCommand("/resume 1")
 
 	out := strings.Join(m.transcript, "\n")
-	if !strings.Contains(out, "in use by another Reasonix") {
+	if !strings.Contains(out, "in use by another Deeper") {
 		t.Fatalf("refusal notice missing from transcript:\n%s", out)
 	}
 	if got := m.ctrl.SessionPath(); got != active {

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
-	"reasonix/internal/secrets"
-	"reasonix/internal/turnevent"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
+	"deeper/internal/secrets"
+	"deeper/internal/turnevent"
 )
 
 // explainStreamFailure explains a failure of the response body itself, or

@@ -9,18 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/netclient"
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/secrets"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/tool"
+	"deeper/internal/netclient"
+	"deeper/internal/persistentshell"
+	"deeper/internal/sandbox"
+	"deeper/internal/secrets"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/tool"
 )
 
 // ConfineBash returns the bash built-in bound to an OS-sandbox spec, overriding
 // the unconfined instance registered at init. When the spec enforces, bash runs
 // each command through the sandbox (see package sandbox). guard appends a
-// warning to command output when the command references Reasonix's own session
+// warning to command output when the command references Deeper's own session
 // stores (see SessionDataGuard).
 //
 // Session-private temporary directories are bound separately via
@@ -105,7 +105,7 @@ func RebindBashWriteRoots(tl tool.Tool, roots []string) (tool.Tool, bool) {
 	return b, true
 }
 
-// ConfineWebFetch returns the web_fetch built-in bound to Reasonix proxy
+// ConfineWebFetch returns the web_fetch built-in bound to Deeper proxy
 // settings while preserving its SSRF-guarded dialer.
 func ConfineWebFetch(proxySpec netclient.ProxySpec) tool.Tool {
 	return webFetch{proxySpec: proxySpec}
@@ -117,9 +117,9 @@ func ConfineWebFetch(proxySpec netclient.ProxySpec) tool.Tool {
 // the unconfined instances registered at init time, so writes stay inside the
 // workspace by default. roots may be relative; they are resolved to absolute,
 // symlink-free paths once here. An empty roots slice yields unconfined writers.
-// guard additionally rejects writes into Reasonix's own session stores even
+// guard additionally rejects writes into Deeper's own session stores even
 // when the roots would allow them (see SessionDataGuard). managed names the
-// Reasonix-owned config files writable outside the roots after a fresh human
+// Deeper-owned config files writable outside the roots after a fresh human
 // approval (see ManagedConfigPaths).
 func ConfineWriters(roots []string, guard SessionDataGuard, managed ManagedConfigPaths) []tool.Tool {
 	rs := realRoots(roots)
@@ -151,7 +151,7 @@ func ConfineReaders(forbidRoots []string) []tool.Tool {
 }
 
 // confineRead reports whether target is inside any forbidRoot or, when the
-// user enabled [secrets] protect_sensitive_files, matches Reasonix's built-in
+// user enabled [secrets] protect_sensitive_files, matches Deeper's built-in
 // sensitive credential path denylist. An empty forbidRoots slice with the
 // denylist off is unconfined (returns false). Callers should return a result
 // that mimics the directory appearing empty, matching the tmpfs semantics the
@@ -238,15 +238,15 @@ func confine(roots []string, target string) error {
 		}
 	}
 	return fmt.Errorf("path %q is outside the writable roots (writes are confined to %s); "+
-		"write inside the workspace or a configured allow_write root, or widen [sandbox] workspace_root / allow_write in reasonix.toml",
+		"write inside the workspace or a configured allow_write root, or widen [sandbox] workspace_root / allow_write in deeper.toml",
 		target, strings.Join(roots, ", "))
 }
 
 // confineWrite is the write-tool boundary check: workspace confinement first,
 // then the session-data guard, so a write can be inside the roots (e.g. a
 // home-directory workspace covering the state root) and still be refused when
-// it targets Reasonix's own session stores. A target that matches a
-// Reasonix-managed config file (see ManagedConfigPaths) is always gated by a
+// it targets Deeper's own session stores. A target that matches a
+// Deeper-managed config file (see ManagedConfigPaths) is always gated by a
 // fresh per-write human approval carried on ctx, even when the roots already
 // cover it: those files configure providers, sandbox rules, and permissions
 // for future sessions, so no posture (YOLO included) and no widened root may

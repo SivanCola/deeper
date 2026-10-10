@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/projectiondb"
+	"deeper/internal/projectiondb"
 )
 
 func TestNativeIdentityMigrationRebuildsOnlyProjectionOnce(t *testing.T) {

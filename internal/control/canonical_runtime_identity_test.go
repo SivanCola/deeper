@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func canonicalIdentityController(t *testing.T, service *session.Service, id, legacy string, manager *jobs.Manager) *Controller {

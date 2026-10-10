@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/provider"
 )
 
 // BillingConfig controls host-side cost display. It never changes provider

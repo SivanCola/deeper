@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/plugin"
+	"deeper/internal/plugin"
 )
 
 func TestSharedHostMCPRegistrationLifecycle(t *testing.T) {

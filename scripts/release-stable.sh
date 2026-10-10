@@ -12,15 +12,15 @@ fi
 candidate_id="$1"
 operation="${2:-publish}"
 case "$operation" in publish | recover) ;; *) echo "operation must be publish or recover" >&2; exit 2 ;; esac
-repository="${RELEASE_REPOSITORY:-esengine/DeepSeek-Reasonix}"
+repository="${RELEASE_REPOSITORY:-SivanCola/deeper}"
 
 for command in gh jq; do
 	command -v "$command" >/dev/null || { echo "required command is unavailable: $command" >&2; exit 2; }
 done
 
-payload="$(jq -cn --arg ref main-v2 --arg candidate_id "$candidate_id" --arg operation "$operation" \
+payload="$(jq -cn --arg ref main --arg candidate_id "$candidate_id" --arg operation "$operation" \
 	'{ref: $ref, inputs: {candidate_id: $candidate_id, operation: $operation}}')"
 gh api -X POST "repos/$repository/actions/workflows/release-promote.yml/dispatches" --input - <<<"$payload"
 
-echo "Dispatched $operation for $candidate_id on protected main-v2."
+echo "Dispatched $operation for $candidate_id on protected main."
 echo "The workflow verifies the sealed candidate, then requests one release approval."

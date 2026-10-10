@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/memory"
+	"deeper/internal/memory"
 )
 
 func TestResolveRefsInjectsOnlyNewNestedInstructionsOnce(t *testing.T) {
@@ -166,9 +166,9 @@ func TestClassifyRef(t *testing.T) {
 	files := map[string]bool{
 		"src/main.go": true,
 		"README.md":   true,
-		".reasonix/attachments/clipboard-20260601-010203.000000.png": true,
-		".reasonix/attachments/clipboard-20260601-010203.000000.yml": true,
-		".reasonix/attachments/clipboard-20260601-010203.000000.zip": true,
+		".deeper/attachments/clipboard-20260601-010203.000000.png": true,
+		".deeper/attachments/clipboard-20260601-010203.000000.yml": true,
+		".deeper/attachments/clipboard-20260601-010203.000000.zip": true,
 	}
 	exists := func(p string) bool { return files[p] }
 
@@ -180,9 +180,9 @@ func TestClassifyRef(t *testing.T) {
 		{"docs:doc://style", true, refResource}, // known server + uri
 		{"src/main.go", true, refFile},          // existing file
 		{"README.md", true, refFile},            // existing file
-		{".reasonix/attachments/clipboard-20260601-010203.000000.png", true, refImage},
-		{".reasonix/attachments/clipboard-20260601-010203.000000.yml", true, refFile},
-		{".reasonix/attachments/clipboard-20260601-010203.000000.zip", true, refFile},
+		{".deeper/attachments/clipboard-20260601-010203.000000.png", true, refImage},
+		{".deeper/attachments/clipboard-20260601-010203.000000.yml", true, refFile},
+		{".deeper/attachments/clipboard-20260601-010203.000000.zip", true, refFile},
 		{"ghost:issue://1", false, 0}, // unknown server, no such file
 		{"missing.go", false, 0},      // nonexistent path → not a ref
 		{"docs:", false, 0},           // empty uri → not a resource, no file
@@ -798,7 +798,7 @@ func TestWorkspaceImageRefsAlsoAttachAsModelImages(t *testing.T) {
 	if err := os.WriteFile(diagram, []byte("\x89PNG\r\n\x1a\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	attachment := filepath.Join(workspace, ".reasonix", "attachments", "shot.png")
+	attachment := filepath.Join(workspace, ".deeper", "attachments", "shot.png")
 	if err := os.MkdirAll(filepath.Dir(attachment), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -815,7 +815,7 @@ func TestWorkspaceImageRefsAlsoAttachAsModelImages(t *testing.T) {
 	if refs[0].kind != refFile || refs[0].path != "docs/diagram.png" {
 		t.Fatalf("workspace png ref = %+v, want file ref", refs[0])
 	}
-	if refs[1].kind != refImage || refs[1].path != ".reasonix/attachments/shot.png" {
+	if refs[1].kind != refImage || refs[1].path != ".deeper/attachments/shot.png" {
 		t.Fatalf("attachment png ref = %+v, want image attachment ref", refs[1])
 	}
 

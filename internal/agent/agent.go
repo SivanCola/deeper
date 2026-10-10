@@ -10,29 +10,29 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/capability"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/diff"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/fileops"
-	"reasonix/internal/i18n"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/instruction"
-	"reasonix/internal/jobs"
-	"reasonix/internal/mcpinteraction"
-	"reasonix/internal/memory"
-	"reasonix/internal/nilutil"
-	"reasonix/internal/plancontract"
-	"reasonix/internal/planmode"
-	"reasonix/internal/provider"
-	"reasonix/internal/runtimepolicy"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/tool"
-	"reasonix/internal/workspacelease"
+	"deeper/internal/ablation"
+	"deeper/internal/capability"
+	"deeper/internal/checkpoint"
+	"deeper/internal/diff"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/fileops"
+	"deeper/internal/i18n"
+	"deeper/internal/imageinput"
+	"deeper/internal/instruction"
+	"deeper/internal/jobs"
+	"deeper/internal/mcpinteraction"
+	"deeper/internal/memory"
+	"deeper/internal/nilutil"
+	"deeper/internal/plancontract"
+	"deeper/internal/planmode"
+	"deeper/internal/provider"
+	"deeper/internal/runtimepolicy"
+	"deeper/internal/sandbox"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/tool"
+	"deeper/internal/workspacelease"
 )
 
 // maxToolOutputBytes bounds the stable provider-visible Content. RawContent
@@ -821,7 +821,7 @@ type Options struct {
 	// enforced OS sandbox fails. nil keeps fail-closed behavior.
 	SandboxEscapeApprover sandbox.EscapeApprover
 
-	// ConfigWriteApprover confirms file-tool writes to Reasonix-managed config
+	// ConfigWriteApprover confirms file-tool writes to Deeper-managed config
 	// files outside the workspace roots. nil keeps fail-closed behavior.
 	ConfigWriteApprover tool.ConfigWriteApprover
 

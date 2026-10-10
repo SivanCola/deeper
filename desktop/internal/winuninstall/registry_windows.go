@@ -14,7 +14,7 @@ import (
 
 const (
 	uninstallRegistryBase     = `Software\Microsoft\Windows\CurrentVersion\Uninstall\`
-	legacyProductRegistryPath = `Software\reasonix\Reasonix`
+	legacyProductRegistryPath = `Software\deeper\Deeper`
 )
 
 // Reconcile refreshes the current desktop per-user registration after a

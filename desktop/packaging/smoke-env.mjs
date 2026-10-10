@@ -5,12 +5,12 @@ import { join } from "node:path";
 export function packagedSmokeEnv(parent, home) {
   const env = { ...parent };
   for (const key of Object.keys(env)) {
-    if (/^REASONIX_/i.test(key) || /^(NODE_OPTIONS|ELECTRON_RUN_AS_NODE)$/i.test(key)) delete env[key];
+    if (/^DEEPER_/i.test(key) || /^(NODE_OPTIONS|ELECTRON_RUN_AS_NODE)$/i.test(key)) delete env[key];
   }
   return {
     ...env,
-    REASONIX_HOME: home,
-    REASONIX_STATE_HOME: home,
-    REASONIX_CACHE_HOME: join(home, "cache"),
+    DEEPER_HOME: home,
+    DEEPER_STATE_HOME: home,
+    DEEPER_CACHE_HOME: join(home, "cache"),
   };
 }

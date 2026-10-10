@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/sqliteuri"
+	"deeper/internal/sqliteuri"
 )
 
 // BackupExisting reads an existing database without running schema migrations.

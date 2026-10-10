@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // The CLI reads and records decisions for the workspace a session started in
@@ -21,7 +21,7 @@ func TestMCPListAndEnableUseTheSessionWorkspace(t *testing.T) {
 	if err := os.MkdirAll(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(repo, "reasonix.toml"), []byte("[[plugins]]\nname = \"repo-mcp\"\ncommand = \"repo-server\"\nargs = [\"--serve\"]\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, "deeper.toml"), []byte("[[plugins]]\nname = \"repo-mcp\"\ncommand = \"repo-server\"\nargs = [\"--serve\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	t.Chdir(sub)

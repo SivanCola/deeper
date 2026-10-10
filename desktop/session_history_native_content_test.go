@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 func TestCompatibilityColdContentUsesReadOnlyNativePreparation(t *testing.T) {

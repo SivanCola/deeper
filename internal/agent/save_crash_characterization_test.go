@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // crashAt installs a fileutil.CrashPoint that panics the first time op is

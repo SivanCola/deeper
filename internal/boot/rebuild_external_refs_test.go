@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 func TestFullRebuildPreservesExternalFolderAccess(t *testing.T) {
@@ -92,7 +92,7 @@ func assertExternalFolderAccess(t *testing.T, result *BuildResult, token, extern
 	if err != nil || !strings.Contains(content, "external content") {
 		t.Errorf("tool read root lost: %q, %v", content, err)
 	}
-	for _, path := range []string{token + "/../secret.txt", "__reasonix_external_folder/unregistered/secret.txt"} {
+	for _, path := range []string{token + "/../secret.txt", "__deeper_external_folder/unregistered/secret.txt"} {
 		if _, _, ok := ctrl.ExternalFolderRefLocalPath(path); ok {
 			t.Errorf("reference permits escape %q", path)
 		}

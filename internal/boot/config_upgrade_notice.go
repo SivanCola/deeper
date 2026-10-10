@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/event"
 )
 
 func emitUserConfigUpgradeNotice(sink event.Sink, cfg *config.Config, deepSeekProtocolMigrated bool, deepSeekProtocolMigErr error, endpointRepairs []config.ProviderEndpointRepair) {

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
   <title id="title">QQ bot approval interaction</title>
-  <desc id="desc">A synthetic QQ conversation showing a Reasonix approval prompt with inline keyboard buttons and text command fallback.</desc>
+  <desc id="desc">A synthetic QQ conversation showing a Deeper approval prompt with inline keyboard buttons and text command fallback.</desc>
   <defs>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#111827" flood-opacity="0.14"/>

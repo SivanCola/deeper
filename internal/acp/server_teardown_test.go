@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
 )
 
 type teardownFactory struct {

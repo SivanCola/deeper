@@ -71,7 +71,7 @@ interface UpdaterOperation {
 let updaterRequestSequence = 0;
 const updaterRequestPrefix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 export const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
-export const UPDATE_CHECK_STORAGE_KEY = "reasonix-updater-last-check-v1";
+export const UPDATE_CHECK_STORAGE_KEY = "deeper-updater-last-check-v1";
 let processLastUpdateCheckAttemptMs: number | null = null;
 
 function updateCheckStorage(): Storage | null {

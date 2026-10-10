@@ -6,11 +6,11 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/config"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/sidecar"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/sidecar"
+	"deeper/internal/provider"
 )
 
 // AuxiliaryProviderRequest describes a bounded provider-only operation that
@@ -80,7 +80,7 @@ func AcquireAuxiliaryProvider(ctx context.Context, request AuxiliaryProviderRequ
 	if pluginName == "" {
 		return nil, fmt.Errorf("auxiliary provider model %q is unavailable", modelRef)
 	}
-	manager, warnings, err := sidecar.StartPackagesByName(ctx, config.ReasonixHomeDir(), protocol.SessionContext{
+	manager, warnings, err := sidecar.StartPackagesByName(ctx, config.DeeperHomeDir(), protocol.SessionContext{
 		SessionID: sessionID, WorkspaceRoot: root, Generation: generation,
 	}, nil, pluginName)
 	for _, warning := range warnings {

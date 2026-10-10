@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func TestPublicDeleteArchivesLegacyWithoutMovingOriginal(t *testing.T) {

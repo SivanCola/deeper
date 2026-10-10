@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/i18n"
+	"deeper/internal/i18n"
 )
 
 func TestRefreshBackendNoticeLocale(t *testing.T) {

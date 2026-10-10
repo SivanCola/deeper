@@ -1,6 +1,6 @@
 package config
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 var (
 	opencodeGoAnthropicModels       = provider.OpenCodeGoModelIDs(provider.OpenCodeGoRouteAnthropic)

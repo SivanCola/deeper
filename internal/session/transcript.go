@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"slices"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/transcript"
-	"reasonix/internal/turnevent"
+	"deeper/internal/provider"
+	"deeper/internal/transcript"
+	"deeper/internal/turnevent"
 )
 
 // Transcript is owned by the runtime, not a replaceable controller. The

@@ -1,8 +1,8 @@
 # Harness-style execution migration
 
 This document defines the current execution behavior introduced from the
-`main-v2@986a6bc967` baseline, using the freshness and recovery principles from
-the DeepSeek Harness reference `master@c291e7961a`. Reasonix keeps its Go
+`main@986a6bc967` baseline, using the freshness and recovery principles from
+the DeepSeek Harness reference `master@c291e7961a`. Deeper keeps its Go
 runtime, permission model, sandbox, Goal, Plan, checkpoints, and multi-agent
 support. It does not adopt the Cordis plugin framework.
 

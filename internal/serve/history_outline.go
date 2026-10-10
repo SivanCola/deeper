@@ -1,9 +1,9 @@
 package serve
 
 import (
+	"deeper/internal/session"
 	"encoding/json"
 	"net/http"
-	"reasonix/internal/session"
 	"strconv"
 )
 

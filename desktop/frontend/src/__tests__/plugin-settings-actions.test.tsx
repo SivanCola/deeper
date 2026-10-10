@@ -16,12 +16,12 @@ function ok(value: unknown, message: string) {
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);
-  const meta: Meta = { label: "test", ready: true, eventChannel: "plugin-channel", cwd: "/tmp/reasonix-test", workspaceRoot: "/tmp/reasonix-test" };
+  const meta: Meta = { label: "test", ready: true, eventChannel: "plugin-channel", cwd: "/tmp/deeper-test", workspaceRoot: "/tmp/deeper-test" };
   const tabs: TabMeta[] = [{
     id: "tab-plugin",
     scope: "project",
-    workspaceRoot: "/tmp/reasonix-test",
-    workspaceName: "reasonix-test",
+    workspaceRoot: "/tmp/deeper-test",
+    workspaceName: "deeper-test",
     topicId: "topic-plugin",
     topicTitle: "Plugins",
     label: "Plugins",
@@ -30,7 +30,7 @@ function ok(value: unknown, message: string) {
     mode: "normal",
     toolApprovalMode: "auto",
     active: true,
-    cwd: "/tmp/reasonix-test",
+    cwd: "/tmp/deeper-test",
   }];
   let planCalls = 0;
   let installCalls = 0;
@@ -46,8 +46,8 @@ function ok(value: unknown, message: string) {
     version: "0.1.0",
     description: "Shared agent skills and hooks.",
     source: "git:github.com/obra/superpowers",
-    root: "~/.reasonix/plugins/superpowers",
-    manifestKind: "reasonix",
+    root: "~/.deeper/plugins/superpowers",
+    manifestKind: "deeper",
     enabled: true,
     skills: 2,
     hooks: 1,
@@ -82,8 +82,8 @@ function ok(value: unknown, message: string) {
             version: "0.1.1",
             description: "Shared agent skills and hooks.",
             source,
-            root: "~/.reasonix/plugins/superpowers",
-            manifestKind: "reasonix",
+            root: "~/.deeper/plugins/superpowers",
+            manifestKind: "deeper",
             enabled: true,
             skills: 3,
             commands: 2,

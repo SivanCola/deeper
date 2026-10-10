@@ -3,9 +3,9 @@ package main
 import (
 	"slices"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 func classifyLegacyCleanupPersistentOwner(state workspacestate.State, ref session.SessionRef, frozen legacycleanup.Candidate) (legacyCleanupDecision, bool) {

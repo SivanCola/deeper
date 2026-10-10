@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/sessioninbox"
 )
 
 func TestRebuildFromCompactRatioRefreshesActiveSession(t *testing.T) {
@@ -127,7 +127,7 @@ func TestRebuildFromCompactRatioPreservesProjectOverride(t *testing.T) {
 	t.Chdir(root)
 	writeRuntimeFixture(t, root)
 	writeCompactRatio(t, config.UserConfigPath(), .85)
-	writeCompactRatio(t, filepath.Join(root, "reasonix.toml"), .70)
+	writeCompactRatio(t, filepath.Join(root, "deeper.toml"), .70)
 	old, err := BuildRuntime(t.Context(), Options{WorkspaceRoot: root})
 	if err != nil {
 		t.Fatal(err)

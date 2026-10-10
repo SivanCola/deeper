@@ -1,8 +1,8 @@
 package boot
 
 import (
-	"reasonix/internal/config"
-	"reasonix/internal/lsp"
+	"deeper/internal/config"
+	"deeper/internal/lsp"
 )
 
 // LSPSpecs returns the language → server map: the built-in defaults overlaid

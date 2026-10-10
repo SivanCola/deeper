@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/config"
-	"reasonix/internal/event"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/config"
+	"deeper/internal/event"
 )
 
 func countingMCPStub(t *testing.T, name string) (*httptest.Server, *atomic.Int32) {
@@ -84,7 +84,7 @@ func TestEffectProjectDeclaredMCPDoesNotStartThroughRealBuild(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		stdioPlugin = "\n[[plugins]]\nname = \"repo-stdio\"\ncommand = \"sh\"\nargs = [\"-c\", \"echo started > " + marker + "\"]\n"
 	}
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -95,7 +95,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 
 [[plugins]]
 name = "repo-toml-http"
@@ -123,7 +123,7 @@ auto_start = true
 	}
 	time.Sleep(500 * time.Millisecond)
 	if n := tomlHits.Load(); n != 0 {
-		t.Fatalf("project reasonix.toml MCP server received %d requests with no user decision", n)
+		t.Fatalf("project deeper.toml MCP server received %d requests with no user decision", n)
 	}
 	if n := jsonHits.Load(); n != 0 {
 		t.Fatalf("project .mcp.json MCP server received %d requests with no user decision", n)
@@ -168,14 +168,14 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `
 	approved := filepath.Join(dir, "approved-ran")
 	rewritten := filepath.Join(dir, "rewritten-ran")
-	writeFile(t, dir, "reasonix.toml", base+"\n[[plugins]]\nname = \"repo-stdio\"\ncommand = \"sh\"\nargs = [\"-c\", \"echo ok > "+approved+"\"]\n")
+	writeFile(t, dir, "deeper.toml", base+"\n[[plugins]]\nname = \"repo-stdio\"\ncommand = \"sh\"\nargs = [\"-c\", \"echo ok > "+approved+"\"]\n")
 	approveWorkspace(t, dir)
 	enableProjectMCPForTest(t, dir)
-	writeFile(t, dir, "reasonix.toml", base+"\n[[plugins]]\nname = \"repo-stdio\"\ncommand = \"sh\"\nargs = [\"-c\", \"echo changed > "+rewritten+"\"]\n")
+	writeFile(t, dir, "deeper.toml", base+"\n[[plugins]]\nname = \"repo-stdio\"\ncommand = \"sh\"\nargs = [\"-c\", \"echo changed > "+rewritten+"\"]\n")
 	approveWorkspace(t, dir)
 
 	var notices []event.Event
@@ -217,7 +217,7 @@ func TestEffectModelSeesProjectMCPAwaitingUserDecision(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	srv, hits := countingMCPStub(t, "repo")
-	writeFile(t, dir, "reasonix.toml", mcpCapabilityTestProviderConfig+`
+	writeFile(t, dir, "deeper.toml", mcpCapabilityTestProviderConfig+`
 [[plugins]]
 name = "repo-http"
 type = "http"
@@ -240,7 +240,7 @@ func TestConnectingPendingProjectMCPRecordsTheDecision(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	srv, hits := countingMCPStub(t, "repo")
-	writeFile(t, dir, "reasonix.toml", mcpCapabilityTestProviderConfig+`
+	writeFile(t, dir, "deeper.toml", mcpCapabilityTestProviderConfig+`
 [[plugins]]
 name = "repo-http"
 type = "http"

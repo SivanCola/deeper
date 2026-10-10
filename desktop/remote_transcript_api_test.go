@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/servecontract"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncontent"
-	"reasonix/internal/transcript"
+	"deeper/internal/servecontract"
+	"deeper/internal/session"
+	"deeper/internal/sessioncontent"
+	"deeper/internal/transcript"
 )
 
 func remoteTranscriptFixture(server *httptest.Server) (*App, *remoteTab) {

@@ -6,7 +6,7 @@ import (
 	"context"
 	"os/exec"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 func windowsBatchCommand(ctx context.Context, command string) (*exec.Cmd, bool) {

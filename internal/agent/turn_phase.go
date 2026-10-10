@@ -3,7 +3,7 @@ package agent
 import (
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type phaseClock struct {

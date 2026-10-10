@@ -10,7 +10,7 @@ import (
 	"maps"
 	"strings"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 // agentInputWindow is how long after a marker trusted input still counts as

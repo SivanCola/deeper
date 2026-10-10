@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
-	"reasonix/internal/transcript"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
+	"deeper/internal/transcript"
 )
 
 // Session owns the live business state for one session identity: sequence

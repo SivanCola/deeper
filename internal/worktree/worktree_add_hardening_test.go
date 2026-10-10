@@ -20,7 +20,7 @@ func TestCreateWorktreeDoesNotRunConditionallyIncludedDrivers(t *testing.T) {
 		t.Skip("payload script is POSIX shell")
 	}
 	requireGit(t)
-	for _, cond := range []string{"gitdir:**/worktrees/**", "onbranch:reasonix/**"} {
+	for _, cond := range []string{"gitdir:**/worktrees/**", "onbranch:deeper/**"} {
 		t.Run(cond, func(t *testing.T) {
 			repo := t.TempDir()
 			git := func(args ...string) {
@@ -73,7 +73,7 @@ func TestCreateWorktreeDoesNotRunConditionallyIncludedDrivers(t *testing.T) {
 			} else if !os.IsNotExist(err) {
 				t.Fatalf("stat marker: %v", err)
 			}
-			if strings.HasPrefix(cond, "onbranch") && !strings.HasPrefix(result.Branch, "reasonix/") {
+			if strings.HasPrefix(cond, "onbranch") && !strings.HasPrefix(result.Branch, "deeper/") {
 				t.Fatalf("branch = %q, want the onbranch condition to have matched", result.Branch)
 			}
 		})
@@ -163,7 +163,7 @@ func TestCreateCleansUpBranchWhenPopulateFails(t *testing.T) {
 	if _, err := Create(context.Background(), opened(t, repo), t.TempDir()); err == nil {
 		t.Fatal("Create succeeded with a failing required filter, want an error")
 	}
-	if refs := strings.TrimSpace(git("for-each-ref", "--format=%(refname)", "refs/heads/reasonix/")); refs != "" {
+	if refs := strings.TrimSpace(git("for-each-ref", "--format=%(refname)", "refs/heads/deeper/")); refs != "" {
 		t.Fatalf("branches left behind: %s", refs)
 	}
 	if list := git("worktree", "list", "--porcelain"); strings.Count(list, "worktree ") != 1 {

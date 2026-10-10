@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 func TestSessionReportsProviderFailuresWithoutRetry(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/session"
 )
 
 // withTestSession models the production host boundary explicitly. Boot no

@@ -240,7 +240,7 @@ try {
     act(() => { f.owner.useSavedConflict(); });
     await act(async () => { task.resolve(); await tracked; });
     assert.equal(f.owner.surface!.pendingTasks, 0, "old generation still releases its task registration");
-    await act(async () => { await window.__reasonixFlushSessionDraft!(); });
+    await act(async () => { await window.__deeperFlushSessionDraft!(); });
     await f.close();
   }
   console.log("draft ownership: synchronous capture, target-bound discard and task settlement passed");

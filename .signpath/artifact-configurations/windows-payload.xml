@@ -6,25 +6,25 @@
      in a zip before SignPath receives it. -->
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
-    <pe-file path="reasonix-desktop.exe">
+    <pe-file path="deeper-desktop.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="reasonix-guard.exe">
+    <pe-file path="deeper-guard.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="reasonix-launcher.exe">
+    <pe-file path="deeper-launcher.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="reasonix-update-helper.exe">
+    <pe-file path="deeper-update-helper.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="reasonix-cli.exe">
+    <pe-file path="deeper-cli.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="reasonix-uninstall.exe">
+    <pe-file path="deeper-uninstall.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="app/Reasonix.exe">
+    <pe-file path="app/Deeper.exe">
       <authenticode-sign />
     </pe-file>
     <pe-file-set>

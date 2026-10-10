@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // TestStreamHTMLResponseDiagnostic reproduces #8781: a gateway that answers a

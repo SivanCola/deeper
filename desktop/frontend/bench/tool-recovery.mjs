@@ -25,7 +25,7 @@ try {
   await page.locator("details details > summary").click();
   check((await page.locator("pre").textContent()).includes("local receipt"), "inspect shows stored argument receipt");
   check(await page.locator(".transcript").evaluate(el => el.clientHeight) === viewportHeight, "recovery details do not resize the transcript viewport");
-  await page.screenshot({ path: path.join(os.tmpdir(), "reasonix-tool-recovery.png") });
+  await page.screenshot({ path: path.join(os.tmpdir(), "deeper-tool-recovery.png") });
   await buttons.nth(1).click();
   await page.waitForFunction(() => document.querySelectorAll("button").length === 1);
   await buttons.first().click();

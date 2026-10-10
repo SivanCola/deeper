@@ -11,8 +11,8 @@ test("a project surface hands over to its own workspace draft", () => {
 
 test("a global surface keeps its actual directory for UI preferences", () => {
   assert.deepEqual(
-    draftLandingTargetForTab({ scope: "global", workspaceRoot: "/home/user/.reasonix/global" }),
-    { scope: "global", workspaceRoot: "/home/user/.reasonix/global" },
+    draftLandingTargetForTab({ scope: "global", workspaceRoot: "/home/user/.deeper/global" }),
+    { scope: "global", workspaceRoot: "/home/user/.deeper/global" },
   );
 });
 

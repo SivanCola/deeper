@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
+	"deeper/internal/boot"
+	"deeper/internal/config"
 	"testing"
 )
 

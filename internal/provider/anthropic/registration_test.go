@@ -2,7 +2,7 @@ package anthropic
 
 import (
 	"context"
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 	"testing"
 )
 

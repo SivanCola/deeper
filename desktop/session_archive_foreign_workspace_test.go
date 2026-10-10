@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncatalog"
 )
 
 // A save event indexes a transcript under the global fallback scope when its

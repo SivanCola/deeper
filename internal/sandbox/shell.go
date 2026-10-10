@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/proc"
-	"reasonix/internal/secrets"
+	"deeper/internal/proc"
+	"deeper/internal/secrets"
 )
 
 // psUTF8Prologue makes captured output UTF-8 rather than the console code page

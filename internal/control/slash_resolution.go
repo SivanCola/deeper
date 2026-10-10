@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/command"
-	"reasonix/internal/skill"
+	"deeper/internal/command"
+	"deeper/internal/skill"
 )
 
 const (
-	DocsSlashName         = "docs"
-	ReasonixDocsSlashName = "reasonix:docs"
+	DocsSlashName       = "docs"
+	DeeperDocsSlashName = "deeper:docs"
 )
 
 // SlashCommandOwner identifies the runtime owner of a short slash name. Custom
@@ -45,7 +45,7 @@ func ResolveSlashCommandOwner(name string, commands []command.Command, skills []
 
 // ResolvedBuiltinSlashName returns the user-facing name for a built-in slash
 // command. Its short name remains the default; when a compatible custom command
-// or skill owns that short name, the built-in stays reachable through Reasonix's
+// or skill owns that short name, the built-in stays reachable through Deeper's
 // explicit namespace.
 func ResolvedBuiltinSlashName(name string, commands []command.Command, skills []skill.Skill) string {
 	name = strings.TrimPrefix(strings.TrimSpace(name), "/")
@@ -55,27 +55,27 @@ func ResolvedBuiltinSlashName(name string, commands []command.Command, skills []
 	return QualifiedBuiltinSlashName(name, commands, skills)
 }
 
-// QualifiedBuiltinSlashName returns a deterministic Reasonix-owned fallback
+// QualifiedBuiltinSlashName returns a deterministic Deeper-owned fallback
 // that does not displace any existing custom command or skill. The preferred
-// form is /reasonix:<name>; progressively more explicit names are used only if
+// form is /deeper:<name>; progressively more explicit names are used only if
 // a user already owns that spelling too.
 func QualifiedBuiltinSlashName(name string, commands []command.Command, skills []skill.Skill) string {
 	name = strings.TrimPrefix(strings.TrimSpace(name), "/")
-	candidates := []string{"reasonix:" + name, "reasonix:builtin:" + name}
+	candidates := []string{"deeper:" + name, "deeper:builtin:" + name}
 	for _, candidate := range candidates {
 		if ResolveSlashCommandOwner(candidate, commands, skills) == SlashOwnerBuiltin {
 			return candidate
 		}
 	}
 	for suffix := 2; ; suffix++ {
-		candidate := fmt.Sprintf("reasonix:builtin:%s:%d", name, suffix)
+		candidate := fmt.Sprintf("deeper:builtin:%s:%d", name, suffix)
 		if ResolveSlashCommandOwner(candidate, commands, skills) == SlashOwnerBuiltin {
 			return candidate
 		}
 	}
 }
 
-// IsBuiltinDocsSlash reports whether name should execute the embedded Reasonix
+// IsBuiltinDocsSlash reports whether name should execute the embedded Deeper
 // documentation command. The short name is built-in only when unoccupied; the
 // qualified fallback is selected without displacing an existing command or skill.
 func IsBuiltinDocsSlash(name string, commands []command.Command, skills []skill.Skill) bool {

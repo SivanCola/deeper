@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/secrets"
-	"reasonix/internal/session"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/secrets"
+	"deeper/internal/session"
 )
 
 // GoalDiagnosticMetadata is supplied by the host so a user-exported artifact

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestCatalogReducerRetractionRestoreAndAuthoredPreview(t *testing.T) {

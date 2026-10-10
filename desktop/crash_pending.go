@@ -13,10 +13,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 // crash_pending.go captures Go-side panics to disk and ships them on the next

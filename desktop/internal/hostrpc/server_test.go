@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/extension/rpcwire"
+	"deeper/internal/extension/rpcwire"
 )
 
 type harness struct {

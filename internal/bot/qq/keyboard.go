@@ -3,7 +3,7 @@ package qq
 import (
 	"strings"
 
-	"reasonix/internal/bot"
+	"deeper/internal/bot"
 )
 
 func qqKeyboardContent(keyboard *bot.InlineKeyboard, chatType bot.ChatType) map[string]any {

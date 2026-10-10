@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func TestGoalToolsExcludeObservationalWorkDuration(t *testing.T) {

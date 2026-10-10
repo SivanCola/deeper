@@ -2,7 +2,7 @@ package boot
 
 import (
 	"context"
-	"reasonix/internal/event"
+	"deeper/internal/event"
 	"testing"
 )
 
@@ -19,7 +19,7 @@ kind = "openai"
 base_url = "http://localhost:1"
 model = "x"
 `
-	writeFile(t, dir, "reasonix.toml", base)
+	writeFile(t, dir, "deeper.toml", base)
 	approveWorkspace(t, dir)
 	old, err := Build(context.Background(), Options{Sink: event.Discard})
 	if err != nil {
@@ -29,7 +29,7 @@ model = "x"
 	if !old.ImageInputEnabled() || old.ImageCapabilityChanged() {
 		t.Fatal("an undeclared model must pass images to its provider and the snapshot must be current")
 	}
-	writeFile(t, dir, "reasonix.toml", base+"[providers.model_overrides.x]\nvision = false\n")
+	writeFile(t, dir, "deeper.toml", base+"[providers.model_overrides.x]\nvision = false\n")
 	approveWorkspace(t, dir)
 	if !old.ImageInputEnabled() || !old.ImageCapabilityChanged() {
 		t.Fatal("saved setting must invalidate, not mutate old runtime")
@@ -42,7 +42,7 @@ model = "x"
 	if next.ImageInputEnabled() || next.ImageCapabilityChanged() {
 		t.Fatal("a model declared text-only must be blocked after rebuild")
 	}
-	writeFile(t, dir, "reasonix.toml", base+"[providers.model_overrides.x]\nvision = true\n")
+	writeFile(t, dir, "deeper.toml", base+"[providers.model_overrides.x]\nvision = true\n")
 	approveWorkspace(t, dir)
 	if next.ImageInputEnabled() || !next.ImageCapabilityChanged() {
 		t.Fatal("running snapshot switched before rebuild")

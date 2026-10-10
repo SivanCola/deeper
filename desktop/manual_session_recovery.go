@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // Selecting a persisted creation's own tab must not build another controller

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/plugin"
-	"reasonix/internal/tool"
+	"deeper/internal/capability"
+	"deeper/internal/plugin"
+	"deeper/internal/tool"
 )
 
 func twoToolMCPServer(t *testing.T) *httptest.Server {
@@ -58,7 +58,7 @@ func twoToolMCPServer(t *testing.T) *httptest.Server {
 // still surface the live tool so inspect on its mcp-tool id succeeds instead
 // of returning "unknown capability_id".
 func TestCatalogSurfacesLiveServerToolMissingFromRegistrySnapshot(t *testing.T) {
-	t.Setenv("REASONIX_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 type workspaceInfoReaderFunc func(context.Context, session.SessionRef) (session.SessionInfo, error)

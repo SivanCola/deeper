@@ -1,4 +1,4 @@
-// Package sessioncatalog maintains a disposable SQLite projection of Reasonix
+// Package sessioncatalog maintains a disposable SQLite projection of Deeper
 // session sidecars. Session JSONL/event/meta files remain authoritative; every
 // row in this package may be discarded and rebuilt.
 package sessioncatalog
@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/historywork"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/historywork"
 )
 
 const (

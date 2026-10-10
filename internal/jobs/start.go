@@ -2,10 +2,10 @@ package jobs
 
 import (
 	"context"
+	"deeper/internal/event"
+	"deeper/internal/nilutil"
 	"fmt"
 	"io"
-	"reasonix/internal/event"
-	"reasonix/internal/nilutil"
 	"strings"
 )
 

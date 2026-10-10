@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/store"
+	"deeper/internal/tool"
 )
 
 func TestBranchAndSwitch(t *testing.T) {

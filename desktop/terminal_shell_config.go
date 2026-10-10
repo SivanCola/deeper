@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 // terminalCommandFromConfig follows the shell tool's configured-path safety

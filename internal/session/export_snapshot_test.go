@@ -2,12 +2,12 @@ package session
 
 import (
 	"context"
+	"deeper/internal/provider"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
-	"reasonix/internal/provider"
 	"sync/atomic"
 	"testing"
 	"time"

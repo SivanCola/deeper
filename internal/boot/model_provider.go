@@ -1,10 +1,10 @@
 package boot
 
 import (
+	"deeper/internal/config"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
 	"net/http"
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
 )
 
 // NewProvider builds a provider.Provider from a configured entry. Exported so

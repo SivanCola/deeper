@@ -147,7 +147,7 @@ func platformExternalOpenerIconDataURL(spec externalOpenerSpec) string {
 	if iconPath == "" {
 		return ""
 	}
-	tempDir, err := os.MkdirTemp("", "reasonix-opener-icon-*")
+	tempDir, err := os.MkdirTemp("", "deeper-opener-icon-*")
 	if err != nil {
 		return ""
 	}

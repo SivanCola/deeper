@@ -6,18 +6,18 @@ import (
 	"io"
 	"os"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/hook"
-	"reasonix/internal/lsp"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
-	"reasonix/internal/workspacelease"
+	"deeper/internal/ablation"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/hook"
+	"deeper/internal/lsp"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
+	"deeper/internal/workspacelease"
 )
 
 func newSubagentSkillOptionsFactory(
@@ -116,7 +116,7 @@ func skillSubagentRegistry(
 
 func projectWriteAccessPersister(root string) control.PersistWriteAccessFunc {
 	return func(dirs []string, permRule string) error {
-		return config.PersistWorkspaceWriteAccess(config.ReasonixHomeDir(), root, dirs, permRule)
+		return config.PersistWorkspaceWriteAccess(config.DeeperHomeDir(), root, dirs, permRule)
 	}
 }
 
@@ -131,7 +131,7 @@ func projectHooksHeldEvent(p config.ProjectProgram) event.Event {
 		Kind:   event.Notice,
 		Level:  event.LevelWarn,
 		Text:   "This project's hooks are off until you approve them.",
-		Detail: fmt.Sprintf("%s declares: %s\nRun `reasonix trust` in this workspace to review and approve them; any later change needs approval again.", p.Name, p.Detail),
+		Detail: fmt.Sprintf("%s declares: %s\nRun `deeper trust` in this workspace to review and approve them; any later change needs approval again.", p.Name, p.Detail),
 	}
 }
 

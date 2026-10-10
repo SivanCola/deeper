@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/runtimepolicy"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/runtimepolicy"
+	"deeper/internal/tool"
 )
 
 // withInheritedHostConstraints re-applies the spawning turn's host constraints

@@ -175,7 +175,7 @@ func deliveryTaskIsAdvisory(input string) bool {
 	}
 
 	// A standalone refusal, inability, or constraint around a mutation verb is
-	// advisory rather than work Reasonix can perform. Affirmative mixed intent is
+	// advisory rather than work Deeper can perform. Affirmative mixed intent is
 	// handled by NeedsMutation before this function is consulted.
 	_, negatedMutation := deliveryTaskMutationIntent(normalized)
 	return negatedMutation

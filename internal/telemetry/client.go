@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/netclient"
+	"deeper/internal/fileutil"
+	"deeper/internal/netclient"
 )
 
-var endpoint = "https://crash.reasonix.io/v1"
+var endpoint = os.Getenv("DEEPER_TELEMETRY_ENDPOINT")
 
 var uploadSignals = map[string]bool{
 	"finish_reason": true, "empty_final": true, "provider_error": true,
@@ -116,6 +116,9 @@ func validInstallID(id string) bool {
 }
 
 func (c *Client) backgroundFlush() {
+	if endpoint == "" {
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_ = c.sendDailyPing(ctx)

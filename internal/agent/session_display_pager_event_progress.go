@@ -10,8 +10,8 @@ import (
 	"hash"
 	"os"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/store"
+	"deeper/internal/fileops"
+	"deeper/internal/store"
 )
 
 func restoreEventPagerScan(ctx context.Context, db *sql.DB, sourceKey string, size int64) (eventPagerScanProgress, error) {

@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 // LegacyDisplayTurn is read-only compatibility for pre-projection desktops.

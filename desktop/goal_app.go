@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func (a *App) SetGoal(goal string) error { return a.SetGoalForTab("", goal) }

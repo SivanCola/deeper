@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 )
 
 func TestHistoricalReceiptResolutionPreservesLiveOwners(t *testing.T) {
@@ -67,7 +67,7 @@ func TestHistoricalGlobalSourceIgnoresRemovedProjectMetadata(t *testing.T) {
 			t.Fatalf("stale project blocks global history: %+v %v", target, err)
 		}
 	}
-	local := recoverHistoricalRuntimeOwner(SessionTarget{Scope: "project", WorkspaceRoot: missing, Source: &SessionSourceRef{Path: filepath.Join(missing, ".reasonix", "sessions", "history.jsonl")}})
+	local := recoverHistoricalRuntimeOwner(SessionTarget{Scope: "project", WorkspaceRoot: missing, Source: &SessionSourceRef{Path: filepath.Join(missing, ".deeper", "sessions", "history.jsonl")}})
 	if local.Scope != "project" {
 		t.Fatal("project source silently moved to another workspace")
 	}

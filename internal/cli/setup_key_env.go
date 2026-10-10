@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 
-	"reasonix/internal/config"
-	"reasonix/internal/i18n"
+	"deeper/internal/config"
+	"deeper/internal/i18n"
 )
 
 func (s *providerSetupSession) addPrompted(in *bufio.Scanner, w io.Writer, result providerPromptResult) bool {

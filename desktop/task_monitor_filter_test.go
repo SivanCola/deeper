@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/taskmonitor"
+	"deeper/internal/taskmonitor"
 )
 
 func TestFilterTasksBySession(t *testing.T) {

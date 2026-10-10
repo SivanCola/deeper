@@ -39,7 +39,7 @@ func (c *Config) RotateModelCredentialLocked(providers []string, value string) (
 		return "", err
 	}
 	j := c.modelCredentialCommit
-	rotation := credentialRotation{Slot: key, Backup: fmt.Sprintf("REASONIX_ROTATION_%X_KEY", id), Digest: digest}
+	rotation := credentialRotation{Slot: key, Backup: fmt.Sprintf("DEEPER_ROTATION_%X_KEY", id), Digest: digest}
 	j.Rotations = append(j.Rotations, rotation)
 	j.Phase = "prepared"
 	if err := writeModelCredentialJournal(j); err != nil {

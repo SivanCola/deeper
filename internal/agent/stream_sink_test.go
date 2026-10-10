@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func sinkKinds(evs []event.Event) []event.Kind {

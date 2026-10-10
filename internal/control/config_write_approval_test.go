@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/permission"
+	"deeper/internal/permission"
 )
 
 // TestManagedConfigWriteApprovalIsFreshHuman pins the security contract of the
@@ -21,7 +21,7 @@ func TestManagedConfigWriteApprovalIsFreshHuman(t *testing.T) {
 	}
 
 	a := newApprovalManager(permission.Policy{}, ToolApprovalYolo, time.Minute)
-	subject := "write Reasonix config: /home/u/.reasonix/config.toml"
+	subject := "write Deeper config: /home/u/.deeper/config.toml"
 	if a.preApprovedForDecision(ManagedConfigWriteApprovalTool, subject, nil, true) {
 		t.Fatal("YOLO posture must not pre-approve a managed config write")
 	}
@@ -32,7 +32,7 @@ func TestManagedConfigWriteApprovalIsFreshHuman(t *testing.T) {
 	// Session grants for fresh decisions are tool-wide (mirroring
 	// sandbox_escape): one "allow for this session" covers the rest of the
 	// repair flow across the handful of managed config files.
-	if !a.preApprovedForDecision(ManagedConfigWriteApprovalTool, "write Reasonix config: /other/path", nil, true) {
+	if !a.preApprovedForDecision(ManagedConfigWriteApprovalTool, "write Deeper config: /other/path", nil, true) {
 		t.Fatal("session grant should cover the repair flow tool-wide")
 	}
 	// But it must never leak to a different fresh-decision tool.

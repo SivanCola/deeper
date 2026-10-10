@@ -2,13 +2,13 @@ package control
 
 import (
 	"context"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 	"encoding/json"
 	"path/filepath"
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
 	"strings"
 	"testing"
 	"time"

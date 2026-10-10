@@ -2,8 +2,8 @@ package agent
 
 import (
 	"context"
+	"deeper/internal/provider"
 	"net/http"
-	"reasonix/internal/provider"
 	"strings"
 	"testing"
 )

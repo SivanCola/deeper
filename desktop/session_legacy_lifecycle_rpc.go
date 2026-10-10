@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/internal/session"
 	"errors"
-	"reasonix/internal/session"
 	"strings"
 )
 

@@ -11,10 +11,10 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/historywork"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileops"
+	"deeper/internal/historywork"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // DAG projections retain graph edges and source locations on disk. Bodies are

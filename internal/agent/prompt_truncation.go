@@ -3,8 +3,8 @@ package agent
 import (
 	"fmt"
 
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
 )
 
 const (

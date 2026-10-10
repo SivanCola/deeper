@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/projectiondb"
+	"deeper/internal/projectiondb"
 )
 
 func TestObsoleteHistoryPreparesWithoutBlockingAndRefreshesAfterAppend(t *testing.T) {

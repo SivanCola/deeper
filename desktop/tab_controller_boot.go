@@ -5,9 +5,9 @@ import (
 	"errors"
 	"path/filepath"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/boot"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 // Historical directories share one owner per root, just like canonical

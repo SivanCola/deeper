@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/history"
-	"reasonix/internal/historycatalog"
-	"reasonix/internal/retrieval"
+	"deeper/internal/agent"
+	"deeper/internal/history"
+	"deeper/internal/historycatalog"
+	"deeper/internal/retrieval"
 )
 
 type historySearchSnapshotBuild struct {

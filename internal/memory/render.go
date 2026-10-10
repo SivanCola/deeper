@@ -76,7 +76,7 @@ func render(m Memory, name string) string {
 	return b.String()
 }
 
-// previousReleaseRoutingType keeps scope safe when an older Reasonix binary
+// previousReleaseRoutingType keeps scope safe when an older Deeper binary
 // shares the same state directory. Previous releases routed user/feedback to
 // GlobalDir and project/reference to Dir, so metadata.type remains a compatible
 // routing hint while metadata.fact_type preserves the independent new category.

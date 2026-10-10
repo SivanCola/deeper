@@ -258,7 +258,7 @@ func TestEnsureWorkspaceRejectsDifferentRootWithoutRewritingState(t *testing.T) 
 
 // Global is derived from the data directory, so a stored root elsewhere is
 // where that directory used to be. Refusing it left Global unloadable after a
-// portable build or REASONIX_HOME moved (#10638, #10659).
+// portable build or DEEPER_HOME moved (#10638, #10659).
 func TestEnsureWorkspaceResolvedRebindsGlobalAfterDataDirectoryMoves(t *testing.T) {
 	oldRoot := filepath.Join(t.TempDir(), "old-home", "global-workspace")
 	newRoot := filepath.Join(t.TempDir(), "new-home", "global-workspace")

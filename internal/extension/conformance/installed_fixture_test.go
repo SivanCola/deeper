@@ -7,10 +7,10 @@ import (
 	"runtime"
 	"testing"
 
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/sidecar"
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/sidecar"
+	"deeper/internal/pluginpkg"
 )
 
 func copyFixtureFile(t *testing.T, src, dst string, mode os.FileMode) {
@@ -78,7 +78,7 @@ func TestInstallableFixtureManifestCoversEveryRuntimeSurface(t *testing.T) {
 		t.Fatalf("manifest identity = %q/%q", pkg.Manifest.Name, pkg.Manifest.Version)
 	}
 	rt := pkg.Manifest.Runtime
-	if rt == nil || rt.Command != "${REASONIX_PLUGIN_ROOT}/bin/full-sidecar" {
+	if rt == nil || rt.Command != "${DEEPER_PLUGIN_ROOT}/bin/full-sidecar" {
 		t.Fatalf("runtime = %+v", rt)
 	}
 	wantIntercepts := map[string]bool{"input.receive": true, "tool.before": true, "system_prompt.build": true, "session.start": true}

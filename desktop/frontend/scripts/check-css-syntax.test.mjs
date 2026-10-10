@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkCssFile } from "./check-css-syntax.mjs";
 
-const fixture = mkdtempSync(join(tmpdir(), "reasonix-css-syntax-"));
+const fixture = mkdtempSync(join(tmpdir(), "deeper-css-syntax-"));
 const check = (source) => {
   const file = join(fixture, "fixture.css");
   writeFileSync(file, source);

@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestRetiredCleanupDoesNotResumeOrExpandHistoricalBatch(t *testing.T) {

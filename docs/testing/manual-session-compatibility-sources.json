@@ -249,7 +249,7 @@
     {
       "commit": "0055038b45cfb3bd11e1558f9292c2ab9a3b4773",
       "pr": 10130,
-      "title": "fix(desktop): isolate Windows taskbar identity from Studio / 隔离 Reasonix 与 Studio 的 Windows 任务栏身份 (#10130)",
+      "title": "fix(desktop): isolate Windows taskbar identity from Studio / 隔离 Deeper 与 Studio 的 Windows 任务栏身份 (#10130)",
       "areas": [
         "native-shell"
       ],
@@ -301,7 +301,7 @@
     {
       "commit": "ff27bdf3f4580219a74913b991fc6a312567d683",
       "pr": 10215,
-      "title": "fix(desktop): let a directly launched shell find its service beside app/ / 修复直接启动 Reasonix.exe 时找不到 service (#10215)",
+      "title": "fix(desktop): let a directly launched shell find its service beside app/ / 修复直接启动 Deeper.exe 时找不到 service (#10215)",
       "areas": [
         "native-shell"
       ],
@@ -1123,7 +1123,7 @@
         "history-and-transcript",
         "native-shell"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1133,7 +1133,7 @@
       "areas": [
         "workspace-and-lifecycle"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1143,7 +1143,7 @@
       "areas": [
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1153,7 +1153,7 @@
       "areas": [
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1166,7 +1166,7 @@
         "inbox-and-receipts",
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1178,7 +1178,7 @@
         "history-and-transcript",
         "native-shell"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1190,7 +1190,7 @@
         "workspace-and-lifecycle",
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1200,7 +1200,7 @@
       "areas": [
         "workspace-and-lifecycle"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1210,7 +1210,7 @@
       "areas": [
         "workspace-and-lifecycle"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1222,7 +1222,7 @@
         "workspace-and-lifecycle",
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1233,7 +1233,7 @@
         "drafts-and-input",
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1244,7 +1244,7 @@
         "drafts-and-input",
         "inbox-and-receipts"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1255,7 +1255,7 @@
         "workspace-and-lifecycle",
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1266,7 +1266,7 @@
         "workspace-and-lifecycle",
         "drafts-and-input"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1277,7 +1277,7 @@
         "workspace-and-lifecycle",
         "inbox-and-receipts"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1289,7 +1289,7 @@
         "drafts-and-input",
         "native-shell"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": true
     },
     {
@@ -1300,7 +1300,7 @@
         "drafts-and-input",
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": false
     },
     {
@@ -1310,7 +1310,7 @@
       "areas": [
         "native-shell"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": false
     },
     {
@@ -1322,7 +1322,7 @@
         "inbox-and-receipts",
         "history-and-transcript"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": false
     },
     {
@@ -1332,7 +1332,7 @@
       "areas": [
         "native-shell"
       ],
-      "firstRelease": "main-v2 after 1.38.11",
+      "firstRelease": "main after 1.38.11",
       "inRollbackBaseline": false
     }
   ]

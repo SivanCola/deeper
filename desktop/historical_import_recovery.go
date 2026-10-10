@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 func validateDesktopOperationSources(state workspacestate.State, op workspacestate.Operation) error {

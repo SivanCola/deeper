@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 type recordingBrokerExecutor struct {

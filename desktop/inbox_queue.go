@@ -6,9 +6,9 @@ import (
 	"io"
 	"net/http"
 
-	"reasonix/internal/control"
-	"reasonix/internal/servecontract"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/servecontract"
+	"deeper/internal/sessioninbox"
 )
 
 type InboxQueueResultView struct {

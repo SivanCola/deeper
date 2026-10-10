@@ -2,9 +2,9 @@ package serve
 
 import (
 	"context"
+	"deeper/internal/control"
+	"deeper/internal/session"
 	"log/slog"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
 )
 
 // sessionAPIRef reads the immutable v3 identity off any session API without

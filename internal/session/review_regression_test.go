@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/filelock"
-	"reasonix/internal/provider"
+	"deeper/internal/filelock"
+	"deeper/internal/provider"
 )
 
 // owner grants host authority for an exact instance. Tests use it wherever a

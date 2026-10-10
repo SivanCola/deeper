@@ -39,9 +39,9 @@ file row / markdown link / verified answer reference / file tree / preview contr
   the entry objects and the entry list identical, so the preview does not
   restart a read that is still valid.
 
-## Harness design → Reasonix implementation
+## Harness design → Deeper implementation
 
-| Harness design | Reasonix implementation |
+| Harness design | Deeper implementation |
 | --- | --- |
 | Command-driven navigation: opening is an event, rendering reads the result | `FileNavigationOwner` (`lib/fileNavigationOwner.ts`) commits records; `WorkspaceDockRegion` no longer builds a request during render; `useFileNavigationRecord` (`app-shell/useFileNavigation.ts`) only reads |
 | Stable resource identity: a canonical file coordinate, not an object reference | `FileResourceRef` / `FileAccessContext` / `ResolvedFileResource` (`lib/fileResource.ts`); backend-resolved `identityPath` collapses relative/absolute aliases, while access context separately keeps workspace, presented and verified-reference readers distinct |

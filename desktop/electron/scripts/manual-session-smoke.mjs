@@ -9,19 +9,19 @@ import { execFileSync } from "node:child_process";
 
 const executablePath = process.argv[2];
 if (!executablePath) throw new Error("usage: node manual-session-smoke.mjs <packaged executable>");
-const home = mkdtempSync(path.join(tmpdir(), "reasonix-manual-package-"));
-const evidence = process.env.REASONIX_MANUAL_EVIDENCE || "/tmp/reasonix-manual-package-evidence";
+const home = mkdtempSync(path.join(tmpdir(), "deeper-manual-package-"));
+const evidence = process.env.DEEPER_MANUAL_EVIDENCE || "/tmp/deeper-manual-package-evidence";
 mkdirSync(evidence, { recursive: true });
-const env = { ...process.env, REASONIX_HOME: home, REASONIX_STATE_HOME: home, REASONIX_CACHE_HOME: path.join(home,"cache") };
-delete env.REASONIX_DEV;
-delete env.REASONIX_DESKTOP_SERVICE;
+const env = { ...process.env, DEEPER_HOME: home, DEEPER_STATE_HOME: home, DEEPER_CACHE_HOME: path.join(home,"cache") };
+delete env.DEEPER_DEV;
+delete env.DEEPER_DESKTOP_SERVICE;
 let shell;
 const results = [];
 async function launch() {
   shell = await electron.launch({ executablePath, env, timeout: 60000 });
   const page = await shell.firstWindow();
-  await page.waitForURL("reasonix://app/index.html", { timeout: 60000 });
-  await page.waitForFunction(() => !!window.reasonixDesktop, null, { timeout: 30000 });
+  await page.waitForURL("deeper://app/index.html", { timeout: 60000 });
+  await page.waitForFunction(() => !!window.deeperDesktop, null, { timeout: 30000 });
   await page.waitForFunction(() => !document.querySelector(".boot-shell"), null, { timeout: 60000 });
   await page.locator(".app").waitFor({state:"visible",timeout:60000});
   // An isolated first launch opens provider setup. Leave it through its normal
@@ -32,7 +32,7 @@ async function launch() {
   await page.locator(".sidebar__quick-action:visible").first().click({trial:true,timeout:60000});
   return page;
 }
-const rpc = (page, command, ...args) => page.evaluate(({command,args}) => window.reasonixDesktop.invoke(command,args),{command,args});
+const rpc = (page, command, ...args) => page.evaluate(({command,args}) => window.deeperDesktop.invoke(command,args),{command,args});
 try {
   let page = await launch();
   results.push({version:await rpc(page,"Version"),platform:await rpc(page,"Platform")});
@@ -62,7 +62,7 @@ try {
   assert.equal((await rpc(page,"GetSessionComposerState",ref)).contentJson,contentJson);
   assert.match(await rpc(page,"AttachmentDataURLForComposerTarget",{kind:"session",session:ref},attachment),/^data:image\/png;base64,/);
   const shellProcess=shell.process();
-  const services=execFileSync("ps",["-axo","pid=,ppid=,comm="],{encoding:"utf8"}).split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>Number(parts[1])===shellProcess.pid && parts.slice(2).join(" ").includes("/Resources/service/reasonix-desktop")).map(parts=>Number(parts[0]));
+  const services=execFileSync("ps",["-axo","pid=,ppid=,comm="],{encoding:"utf8"}).split("\n").map(line=>line.trim().split(/\s+/)).filter(parts=>Number(parts[1])===shellProcess.pid && parts.slice(2).join(" ").includes("/Resources/service/deeper-desktop")).map(parts=>Number(parts[0]));
   assert.equal(services.length,1,"identify this isolated application's service before the crash");
   const exited=once(shellProcess,"exit");
   shellProcess.kill("SIGKILL"); await exited; shell=undefined;

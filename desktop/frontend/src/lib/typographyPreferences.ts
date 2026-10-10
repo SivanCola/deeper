@@ -25,8 +25,8 @@ export type RegionTypography = {
 
 export type TypographyPreferences = Record<TypographyRegion, RegionTypography>;
 
-export const TYPOGRAPHY_STORAGE_KEY = "reasonix-region-typography-v1";
-export const TYPOGRAPHY_CHANGE_EVENT = "reasonix:typography-change";
+export const TYPOGRAPHY_STORAGE_KEY = "deeper-region-typography-v1";
+export const TYPOGRAPHY_CHANGE_EVENT = "deeper:typography-change";
 
 const typographyListeners = new Set<() => void>();
 let lastAppliedTypographySignature = "";

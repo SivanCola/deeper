@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/filelock"
-	"reasonix/internal/pathidentity"
+	"deeper/internal/filelock"
+	"deeper/internal/pathidentity"
 )
 
 // LockSessionMetaPath serializes a branch-meta read-modify-write cycle across

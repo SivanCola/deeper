@@ -1,6 +1,6 @@
-# Reasonix
+# Deeper
 
-The project's standing instructions live in `REASONIX.md` — one file, read by
-both Reasonix and Claude Code. Add rules there, never here.
+The project's standing instructions live in `DEEPER.md` — one file, read by
+both Deeper and Claude Code. Add rules there, never here.
 
-@REASONIX.md
+@DEEPER.md

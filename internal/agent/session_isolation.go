@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/sessiontemp"
+	"deeper/internal/persistentshell"
+	"deeper/internal/sessiontemp"
 )
 
 // withSubagentSessionTemp installs a private temporary directory and persistent

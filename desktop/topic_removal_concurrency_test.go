@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 func awaitRemovalTest[T any](t *testing.T, ch <-chan T) T {

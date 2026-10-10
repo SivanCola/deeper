@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	toolpkg "reasonix/internal/tool"
+	toolpkg "deeper/internal/tool"
 )
 
 func TestPresentValidatesAllFilesBeforePublishing(t *testing.T) {

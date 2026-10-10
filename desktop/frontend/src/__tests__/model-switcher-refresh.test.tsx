@@ -106,7 +106,7 @@ await act(async () => {
 });
 
 await act(async () => {
-  window.dispatchEvent(new Event("reasonix:model-catalog-changed"));
+  window.dispatchEvent(new Event("deeper:model-catalog-changed"));
   fresh.resolve([{ ref: "glm-cn/glm-5.2", provider: "glm-cn", model: "glm-5.2", current: true }]);
   await fresh.promise;
 });
@@ -355,7 +355,7 @@ currentCatalog = [
   { ref: "a/shared", provider: "a", displayName: "Second connection", model: "shared", current: true },
 ];
 await act(async () => {
-  window.dispatchEvent(new Event("reasonix:model-catalog-changed"));
+  window.dispatchEvent(new Event("deeper:model-catalog-changed"));
   await new Promise(resolve => setTimeout(resolve, 0));
 });
 const connectionLabels = Array.from(document.querySelectorAll(".modelsw__meta"), el => el.textContent);
@@ -373,8 +373,8 @@ if (!firstFavorite) throw new Error("favorite control was not rendered");
 const pickedBeforeFavorite = picked.length;
 await act(async () => { firstFavorite.click(); });
 if (picked.length !== pickedBeforeFavorite) throw new Error("favorite action triggered a model switch");
-if (localStorage.getItem("reasonix-model-favorites-v1") !== JSON.stringify(["z/shared"])) {
-  throw new Error(`favorite ref was not persisted: ${localStorage.getItem("reasonix-model-favorites-v1")}`);
+if (localStorage.getItem("deeper-model-favorites-v1") !== JSON.stringify(["z/shared"])) {
+  throw new Error(`favorite ref was not persisted: ${localStorage.getItem("deeper-model-favorites-v1")}`);
 }
 const favoriteFilter = document.querySelector<HTMLButtonElement>('.modelsw__rail-item[aria-label="Favorites"]');
 if (!favoriteFilter) throw new Error("favorites rail filter was not rendered");
@@ -393,7 +393,7 @@ currentCatalog = [
   { ref: "moonshot/kimi-k2", provider: "moonshot", displayName: "Moonshot", model: "kimi-k2", current: false },
 ];
 await act(async () => {
-  window.dispatchEvent(new Event("reasonix:model-catalog-changed"));
+  window.dispatchEvent(new Event("deeper:model-catalog-changed"));
   await new Promise(resolve => setTimeout(resolve, 0));
 });
 const deepseekFilter = document.querySelector<HTMLButtonElement>('.modelsw__rail-item[aria-label="DeepSeek Official"]');
@@ -424,7 +424,7 @@ currentCatalog = [
 await act(async () => {
   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(catalogSearch, "");
   catalogSearch.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
-  window.dispatchEvent(new Event("reasonix:model-catalog-changed"));
+  window.dispatchEvent(new Event("deeper:model-catalog-changed"));
   await new Promise(resolve => setTimeout(resolve, 0));
 });
 

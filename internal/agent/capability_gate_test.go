@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/runtimepolicy"
+	"deeper/internal/evidence"
+	"deeper/internal/runtimepolicy"
 )
 
 // A closed-loop turn is a delivery-floor turn: the floor alone arms the

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // TestLegacyMirrorReclaimRoutesTakeoverByPath proves a reclaim of a legacy

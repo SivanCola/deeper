@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/command"
-	"reasonix/internal/control"
-	"reasonix/internal/plugin"
-	"reasonix/internal/skill"
+	"deeper/internal/command"
+	"deeper/internal/control"
+	"deeper/internal/plugin"
+	"deeper/internal/skill"
 )
 
 const helpMaxDynamicItems = 8

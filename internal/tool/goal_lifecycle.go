@@ -3,7 +3,7 @@ package tool
 import (
 	"context"
 
-	"reasonix/internal/goal"
+	"deeper/internal/goal"
 )
 
 type GoalSource string

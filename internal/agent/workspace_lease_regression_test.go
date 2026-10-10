@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool/builtin"
-	"reasonix/internal/workspacelease"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
+	"deeper/internal/provider"
+	"deeper/internal/tool/builtin"
+	"deeper/internal/workspacelease"
 )
 
 type workspaceWritingHooks struct {

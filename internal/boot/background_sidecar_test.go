@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/config"
+	"deeper/internal/extension/protocol"
 )
 
 func TestModelCandidateDiscardPreservesLiveExtensionManager(t *testing.T) {
@@ -14,7 +14,7 @@ func TestModelCandidateDiscardPreservesLiveExtensionManager(t *testing.T) {
 	root := robustTempDir(t)
 	t.Chdir(root)
 	writeRuntimeFixture(t, root)
-	installBootFakePlugin(t, config.ReasonixHomeDir(), "preserved", map[string]any{})
+	installBootFakePlugin(t, config.DeeperHomeDir(), "preserved", map[string]any{})
 	old, err := BuildRuntime(t.Context(), Options{})
 	if err != nil {
 		t.Fatal(err)

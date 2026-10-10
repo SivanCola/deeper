@@ -1,4 +1,4 @@
-module reasonix/desktop
+module deeper/desktop
 
 go 1.26.0
 
@@ -6,10 +6,10 @@ toolchain go1.26.6
 
 // The desktop service is a nested module so its CGO build never touches the
 // CLI's CGO_ENABLED=0 single-static-binary guarantee. The replace lets it import
-// the same reasonix/internal/* kernel (the import path stays under reasonix/, so
+// the same deeper/internal/* kernel (the import path stays under deeper/, so
 // the internal rule still permits it). `go mod tidy` here resolves its
 // transitive deps; the parent module's go build/test ./... skips this directory.
-require reasonix v0.0.0
+require deeper v0.0.0
 
 require (
 	aead.dev/minisign v0.3.0
@@ -80,7 +80,7 @@ require (
 	mvdan.cc/sh/v3 v3.14.1 // indirect
 )
 
-replace reasonix => ../
+replace deeper => ../
 
-// Reasonix keeps one signed Windows tray identity across versioned desktop paths.
+// Deeper keeps one signed Windows tray identity across versioned desktop paths.
 replace fyne.io/systray => ./third_party/systray

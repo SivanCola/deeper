@@ -1,4 +1,4 @@
-const SPLASH_FLAG = "reasonix.splash.shown";
+const SPLASH_FLAG = "deeper.splash.shown";
 
 export function shouldShowStartupSplash(): boolean {
   try {

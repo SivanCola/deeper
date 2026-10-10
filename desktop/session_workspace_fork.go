@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 	"errors"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
 	"slices"
 	"strings"
 )

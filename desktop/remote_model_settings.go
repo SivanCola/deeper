@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 type remoteModelSettingsStatus struct {

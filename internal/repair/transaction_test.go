@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestReadLastRepairAcceptsLegacyTransactionWithoutJournalFields(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	target := filepath.Join(home, "desktop-window.json")
-	previous := target + ".reasonix-rebuild-20260729T000000Z"
+	previous := target + ".deeper-rebuild-20260729T000000Z"
 	legacy := map[string]any{
 		"schemaVersion": 1,
 		"id":            "repair-legacy",
@@ -45,14 +45,14 @@ func TestReadLastRepairAcceptsLegacyTransactionWithoutJournalFields(t *testing.T
 
 func TestReadLastRepairRejectsPendingOnlyJournalFields(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	target := filepath.Join(home, "desktop-window.json")
 	tx := newRepairTransaction(time.Now())
 	tx.PreparedLastRepairStateID = strings.Repeat("a", 64)
 	tx.Changes = []RepairChange{{
 		Scope:           "derived:window",
 		TargetPath:      target,
-		PreviousPath:    target + ".reasonix-rebuild-20260729T000000Z",
+		PreviousPath:    target + ".deeper-rebuild-20260729T000000Z",
 		PreviousStateID: strings.Repeat("b", 64),
 		Prepared:        true,
 	}}
@@ -79,9 +79,9 @@ func TestReadLastRepairRejectsPendingOnlyJournalFields(t *testing.T) {
 // per-change progress is persisted.
 func TestUndoLastRepairKeepsBackupUntilProgressPersisted(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	windowPath := filepath.Join(home, "desktop-window.json")
-	quarantine := windowPath + ".reasonix-rebuild-20260714T000000Z"
+	quarantine := windowPath + ".deeper-rebuild-20260714T000000Z"
 	// Simulate a crash after the restore copy but before markUndone: the
 	// target already holds the restored bytes, the backup still exists, and
 	// the change is not marked undone.
@@ -115,11 +115,11 @@ func TestUndoLastRepairKeepsBackupUntilProgressPersisted(t *testing.T) {
 
 func TestUndoLastRepairRejectsTransactionReplacedWhileWaitingForLock(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	windowPath := filepath.Join(home, "desktop-window.json")
-	windowBackup := windowPath + ".reasonix-rebuild-20260729T000000Z"
+	windowBackup := windowPath + ".deeper-rebuild-20260729T000000Z"
 	tabsPath := filepath.Join(home, "desktop-tabs.json")
-	tabsBackup := tabsPath + ".reasonix-rebuild-20260729T000001Z"
+	tabsBackup := tabsPath + ".deeper-rebuild-20260729T000001Z"
 	for path, body := range map[string]string{
 		windowPath:   "current-window",
 		windowBackup: "previous-window",
@@ -172,9 +172,9 @@ func TestUndoLastRepairRejectsTransactionReplacedWhileWaitingForLock(t *testing.
 
 func TestUndoLastRepairRejectsLegacyBackupWithoutStateIdentity(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	windowPath := filepath.Join(home, "desktop-window.json")
-	backup := windowPath + ".reasonix-rebuild-20260729T000000Z"
+	backup := windowPath + ".deeper-rebuild-20260729T000000Z"
 	if err := os.WriteFile(windowPath, []byte("current-window"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -205,9 +205,9 @@ func TestUndoLastRepairRejectsLegacyBackupWithoutStateIdentity(t *testing.T) {
 
 func TestUndoLastRepairRejectsBytesDifferentFromVerifiedBackup(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	windowPath := filepath.Join(home, "desktop-window.json")
-	quarantine := windowPath + ".reasonix-rebuild-20260714T000000Z"
+	quarantine := windowPath + ".deeper-rebuild-20260714T000000Z"
 	if err := os.WriteFile(windowPath, []byte("current-window"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -247,13 +247,13 @@ func TestUndoLastRepairRejectsBytesDifferentFromVerifiedBackup(t *testing.T) {
 
 func TestUndoLastRepairRejectsLinkDifferentFromVerifiedBackup(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	configPath := config.UserConfigPath()
 	linkTarget := filepath.Join(t.TempDir(), "confirmed-config.toml")
 	if err := os.WriteFile(linkTarget, []byte("confirmed"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	quarantine := configPath + ".reasonix-quarantine-20260714T000000Z"
+	quarantine := configPath + ".deeper-quarantine-20260714T000000Z"
 	if err := os.Symlink(linkTarget, quarantine); err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestUndoLastRepairRejectsLinkDifferentFromVerifiedBackup(t *testing.T) {
 
 func TestReadLastRepairRejectsRestoreBackupParentSymlinkEscape(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	restoreRoot := filepath.Join(home, "repair", "restore-backups")
 	if err := os.MkdirAll(filepath.Dir(restoreRoot), 0o700); err != nil {
 		t.Fatal(err)
@@ -327,13 +327,13 @@ func TestReadLastRepairRejectsRestoreBackupParentSymlinkEscape(t *testing.T) {
 // materialize the followed content as a regular file.
 func TestUndoLastRepairRestoresSymlink(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	configPath := config.UserConfigPath()
 	linkTarget := filepath.Join(t.TempDir(), "dotfiles-config.toml")
 	if err := os.WriteFile(linkTarget, []byte("linked"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	quarantine := configPath + ".reasonix-quarantine-20260714T000000Z"
+	quarantine := configPath + ".deeper-quarantine-20260714T000000Z"
 	// The repair's os.Rename moves the link itself into quarantine.
 	if err := os.Symlink(linkTarget, quarantine); err != nil {
 		t.Fatal(err)
@@ -372,10 +372,10 @@ func TestUndoLastRepairRestoresSymlink(t *testing.T) {
 // restore must not follow the link when judging its presence.
 func TestUndoLastRepairRestoresDanglingSymlink(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	configPath := config.UserConfigPath()
 	linkTarget := filepath.Join(t.TempDir(), "missing-config.toml")
-	quarantine := configPath + ".reasonix-quarantine-20260714T000000Z"
+	quarantine := configPath + ".deeper-quarantine-20260714T000000Z"
 	if err := os.Symlink(linkTarget, quarantine); err != nil {
 		t.Fatal(err)
 	}
@@ -397,9 +397,9 @@ func TestUndoLastRepairRestoresDanglingSymlink(t *testing.T) {
 // separate redo copy per change instead of silently overwriting the first.
 func TestUndoLastRepairKeepsDistinctRedoCopiesForSharedTarget(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	configPath := config.UserConfigPath()
-	quarantine := configPath + ".reasonix-quarantine-20260714T000000Z"
+	quarantine := configPath + ".deeper-quarantine-20260714T000000Z"
 	restoreBackup := filepath.Join(home, "repair", "restore-backups", "repair-2.toml")
 	if err := os.MkdirAll(filepath.Dir(restoreBackup), 0o700); err != nil {
 		t.Fatal(err)
@@ -427,7 +427,7 @@ func TestUndoLastRepairKeepsDistinctRedoCopiesForSharedTarget(t *testing.T) {
 	if got, _ := os.ReadFile(configPath); string(got) != "original" {
 		t.Fatalf("config after undo = %q", got)
 	}
-	redos, err := filepath.Glob(configPath + ".reasonix-redo-*")
+	redos, err := filepath.Glob(configPath + ".deeper-redo-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,10 +442,10 @@ func TestUndoLastRepairKeepsDistinctRedoCopiesForSharedTarget(t *testing.T) {
 // preflight on the consumed backups of the changes already restored.
 func TestUndoLastRepairResumesAfterPartialFailure(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	configPath := config.UserConfigPath()
 	windowPath := filepath.Join(home, "desktop-window.json")
-	windowQuarantine := windowPath + ".reasonix-rebuild-20260714T000000Z"
+	windowQuarantine := windowPath + ".deeper-rebuild-20260714T000000Z"
 	restoreBackup := filepath.Join(home, "repair", "restore-backups", "repair-1.toml")
 	if err := os.MkdirAll(filepath.Dir(restoreBackup), 0o700); err != nil {
 		t.Fatal(err)

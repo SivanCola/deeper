@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"reasonix/internal/shellparse"
+	"deeper/internal/shellparse"
 )
 
 const maxExternalCommandDepth = 4

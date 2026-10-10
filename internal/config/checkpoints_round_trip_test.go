@@ -43,7 +43,7 @@ func TestCheckpointRetentionProjectSavePreservesInheritance(t *testing.T) {
 	if err := os.WriteFile(userPath, []byte("[checkpoints]\nretain_turns = 200\nblob_quota_bytes = 2147483648\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(root, "reasonix.toml")
+	path := filepath.Join(root, "deeper.toml")
 	cfg := Default()
 	cfg.Checkpoints.RetainTurns = 300
 	if err := cfg.SaveTo(path); err != nil {

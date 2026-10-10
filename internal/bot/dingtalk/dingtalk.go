@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/config"
+	"deeper/internal/bot"
+	"deeper/internal/config"
 
 	"github.com/gorilla/websocket"
 )
@@ -265,7 +265,7 @@ func (a *adapter) openConnection(ctx context.Context) (string, error) {
 	payload := map[string]any{
 		"clientId":     a.clientID(),
 		"clientSecret": a.clientSecret(),
-		"ua":           "reasonix",
+		"ua":           "deeper",
 		"subscriptions": []map[string]string{
 			{"type": "CALLBACK", "topic": robotMessagesTopic},
 		},
@@ -724,9 +724,9 @@ func (a *adapter) sendMessage(ctx context.Context, msg bot.OutboundMessage) (bot
 	if !a.validDingtalkWebhook(webhook) {
 		return bot.SendResult{}, fmt.Errorf("dingtalk send rejected: webhook %q is not a dingtalk endpoint", truncate(webhook, 64))
 	}
-	// 一律以 markdown 类型发送：Reasonix bot 回复是 markdown 文本，钉钉
+	// 一律以 markdown 类型发送：Deeper bot 回复是 markdown 文本，钉钉
 	// text 类型按纯文本显示、不渲染语法（与飞书 buildMarkdownCard 一致）。
-	title := "Reasonix"
+	title := "Deeper"
 	if msg.Card != nil && strings.TrimSpace(msg.Card.Header) != "" {
 		title = msg.Card.Header
 	}

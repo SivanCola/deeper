@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/transcript"
-	"reasonix/internal/turnevent"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/transcript"
+	"deeper/internal/turnevent"
 )
 
 func (c *Controller) restoreTranscriptProjection(sessionPath string, ledger *turnevent.Ledger) (*transcript.Projection, error) {

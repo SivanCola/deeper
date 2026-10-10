@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
+	"deeper/internal/agent"
+	"deeper/internal/config"
 )
 
 func TestLegacyRecoveryMigrationWaitsForParentRemoval(t *testing.T) {

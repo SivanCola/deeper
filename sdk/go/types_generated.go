@@ -10,7 +10,7 @@ import "encoding/json"
 
 // ProtocolID is the immutable identity string peers exchange during the
 // initialize handshake.
-const ProtocolID = "reasonix.extension.v2"
+const ProtocolID = "deeper.extension.v2"
 
 // ProtocolMajor is the frozen major version of this protocol build.
 const ProtocolMajor = 2

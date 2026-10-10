@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 const maxArgumentValidationMessageBytes = 4 << 10

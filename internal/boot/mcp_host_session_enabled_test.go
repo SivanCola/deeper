@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/plugin"
-	"reasonix/internal/provider"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/plugin"
+	"deeper/internal/provider"
 )
 
 // mcpHostSessionStub is a minimal Streamable-HTTP MCP server: enough to complete
@@ -134,7 +134,7 @@ func TestBuildEnablesHostSessionMCPForCapabilityDispatch(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", mcpCapabilityTestProviderConfig)
+	writeFile(t, dir, "deeper.toml", mcpCapabilityTestProviderConfig)
 	approveWorkspace(t, dir)
 
 	var calls atomic.Int32
@@ -172,7 +172,7 @@ func TestBuildLeavesDisabledConfigMCPUndispatchableAlongsideHostSession(t *testi
 	extraSrv := mcpHostSessionStub(t, "acp-extra", &extraCalls)
 	defer extraSrv.Close()
 
-	writeFile(t, dir, "reasonix.toml", mcpCapabilityTestProviderConfig+`
+	writeFile(t, dir, "deeper.toml", mcpCapabilityTestProviderConfig+`
 [[plugins]]
 name = "config-off"
 type = "http"
@@ -273,7 +273,7 @@ func TestBuildLeavesUnknownMCPServerUndispatchable(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", mcpCapabilityTestProviderConfig)
+	writeFile(t, dir, "deeper.toml", mcpCapabilityTestProviderConfig)
 	approveWorkspace(t, dir)
 
 	out := runUseCapabilityCalls(t, Options{Sink: event.Discard}, "mcp-tool:never-configured/ping")

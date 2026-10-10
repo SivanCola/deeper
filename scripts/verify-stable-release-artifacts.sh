@@ -44,10 +44,10 @@ if [ -n "${RELEASE_EXPECTED_SHA:-}" ] && [ "$cli_sha" != "$RELEASE_EXPECTED_SHA"
 	exit 1
 fi
 
-tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/reasonix-release-postflight.XXXXXX")"
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/deeper-release-postflight.XXXXXX")"
 cleanup() {
 	case "$tmp_dir" in
-	*/reasonix-release-postflight.*) rm -rf -- "$tmp_dir" ;;
+	*/deeper-release-postflight.*) rm -rf -- "$tmp_dir" ;;
 	*) echo "refusing to clean unexpected postflight directory: $tmp_dir" >&2 ;;
 	esac
 }
@@ -57,16 +57,16 @@ trap cleanup EXIT
 # contents API reads the tap's branch head; raw.githubusercontent.com is cached.
 verify_pointers() {
 	local manifest="$1"
-	local cask="$tmp_dir/reasonix.rb"
+	local cask="$tmp_dir/deeper.rb"
 	local homebrew_version=frozen
 	jq -e --arg version "v$version" '
 		.version == $version and
 		([.platforms[], (.native_packages // {})[], (.downloads // {})[]] |
-		 all(.url | type == "string" and startswith("https://dl.reasonix.io/desktop-" + $version + "/")))
+		 all(.url | type == "string" and startswith("https://github.com/SivanCola/deeper/releases/download/desktop-" + $version + "/")))
 	' "$manifest" >/dev/null
 	if [ "$frozen" != "true" ]; then
 		gh api -H 'Accept: application/vnd.github.raw' \
-			repos/esengine/homebrew-reasonix/contents/Casks/reasonix.rb >"$cask"
+			repos/SivanCola/homebrew-deeper/contents/Casks/deeper.rb >"$cask"
 		homebrew_version="$(sed -nE "s/^[[:space:]]*version ['\"]([^'\"]+)['\"].*/\1/p" "$cask" | head -n 1)"
 	fi
 	node "$script_dir/release-publication-ledger.mjs" pointers "$version" "$cli_sha" "$operation" \
@@ -77,9 +77,9 @@ gh release view "$cli_tag" --repo "$repository" --json isDraft,isPrerelease,asse
 jq -e '
   .isDraft == false and .isPrerelease == false and
   ([.assets[].name] as $names |
-    ["SHA256SUMS", "reasonix-darwin-amd64.tar.gz", "reasonix-darwin-arm64.tar.gz",
-     "reasonix-linux-amd64.tar.gz", "reasonix-linux-arm64.tar.gz",
-     "reasonix-windows-amd64.zip", "reasonix-windows-arm64.zip"] |
+    ["SHA256SUMS", "deeper-darwin-amd64.tar.gz", "deeper-darwin-arm64.tar.gz",
+     "deeper-linux-amd64.tar.gz", "deeper-linux-arm64.tar.gz",
+     "deeper-windows-amd64.zip", "deeper-windows-arm64.zip"] |
     all(. as $required | $names | index($required)))
 ' "$tmp_dir/cli.json" >/dev/null
 
@@ -88,11 +88,11 @@ jq -e '
   .isDraft == false and .isPrerelease == false and
   ([.assets[].name] as $names |
     ($names | index("latest.json")) and
-    (["Reasonix-darwin-arm64.dmg", "Reasonix-darwin-amd64.dmg",
-      "Reasonix-darwin-universal.dmg", "Reasonix-darwin-arm64.zip",
-      "Reasonix-darwin-amd64.zip", "Reasonix-linux-amd64.deb",
-      "Reasonix-linux-amd64.tar.gz", "Reasonix-windows-amd64-installer.exe",
-      "Reasonix-windows-amd64.zip", "Reasonix-windows-arm64-installer.exe"] |
+    (["Deeper-darwin-arm64.dmg", "Deeper-darwin-amd64.dmg",
+      "Deeper-darwin-universal.dmg", "Deeper-darwin-arm64.zip",
+      "Deeper-darwin-amd64.zip", "Deeper-linux-amd64.deb",
+      "Deeper-linux-amd64.tar.gz", "Deeper-windows-amd64-installer.exe",
+      "Deeper-windows-amd64.zip", "Deeper-windows-arm64-installer.exe"] |
      all(. as $required | ($names | index($required)) and ($names | index($required + ".minisig")))))
 ' "$tmp_dir/desktop.json" >/dev/null
 
@@ -112,13 +112,13 @@ if [ "${DESKTOP_MANUAL_ONLY:-false}" = "true" ]; then
 fi
 
 npm_names=(
-	"reasonix"
-	"@reasonix/cli-darwin-arm64"
-	"@reasonix/cli-darwin-x64"
-	"@reasonix/cli-linux-arm64"
-	"@reasonix/cli-linux-x64"
-	"@reasonix/cli-win32-arm64"
-	"@reasonix/cli-win32-x64"
+	"@sivancola/deeper"
+	"@sivancola/deeper-cli-darwin-arm64"
+	"@sivancola/deeper-cli-darwin-x64"
+	"@sivancola/deeper-cli-linux-arm64"
+	"@sivancola/deeper-cli-linux-x64"
+	"@sivancola/deeper-cli-win32-arm64"
+	"@sivancola/deeper-cli-win32-x64"
 )
 for attempt in $(seq 1 "$attempts"); do
 	rm -rf "$tmp_dir/npm"
@@ -127,7 +127,7 @@ for attempt in $(seq 1 "$attempts"); do
 	for index in "${!npm_names[@]}"; do
 		package="${npm_names[$index]}"
 		raw="$tmp_dir/npm/$index.raw.json"
-		if ! npm view "$package@$version" name version reasonixCandidateSha gitHead dist.integrity "dist-tags.$npm_tag" --json >"$raw" 2>/dev/null; then
+		if ! npm view "$package@$version" name version deeperCandidateSha gitHead dist.integrity "dist-tags.$npm_tag" --json >"$raw" 2>/dev/null; then
 			visible=false
 			continue
 		fi
@@ -136,16 +136,16 @@ for attempt in $(seq 1 "$attempts"); do
 			{
 				name: (.name // $name),
 				version,
-				reasonixCandidateSha,
+				deeperCandidateSha,
 				gitHead,
 				integrity: (."dist.integrity" // .dist.integrity)
 			} + (if $tag == "latest" then {latest: $tagged} else {distTag: $tag, distTagVersion: $tagged} end)
 		' "$raw" >"$tmp_dir/npm/$index.json"
 		jq -e --arg name "$package" --arg version "$version" --arg sha "$cli_sha" '
 			.name == $name and .version == $version and
-			((.reasonixCandidateSha == null or .reasonixCandidateSha == $sha) and
+			((.deeperCandidateSha == null or .deeperCandidateSha == $sha) and
 			 (.gitHead == null or .gitHead == $sha) and
-			 ((.reasonixCandidateSha // .gitHead) == $sha)) and
+			 ((.deeperCandidateSha // .gitHead) == $sha)) and
 			(.integrity | type == "string" and length > 0) and
 			((.latest // .distTagVersion) | type == "string" and length > 0)
 		' "$tmp_dir/npm/$index.json" >/dev/null || {

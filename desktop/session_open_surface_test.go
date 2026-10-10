@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // removeOpenFixtureTab leaves the app with no visible surface, the state after

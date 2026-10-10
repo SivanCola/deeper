@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func goalWorkController(t *testing.T) (*Controller, *session.Runtime) {

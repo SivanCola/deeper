@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 func TestPurgeMigratedSourcesProtectsOtherOwnersAndChangedContent(t *testing.T) {
@@ -199,7 +199,7 @@ func TestPurgeMigratedSourcesCrashRestart(t *testing.T) {
 			for _, checkpoint := range []string{phase, "", ""} {
 				ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 				cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestPurgeCommandCrashHelper$")
-				cmd.Env = append(os.Environ(), "REASONIX_PURGE_APP_ROOT="+app.desktopSessions.root, "REASONIX_PURGE_APP_REGISTRY="+app.workspaceRegistry().Path(), "REASONIX_PURGE_APP_REQUEST="+string(body), "REASONIX_PURGE_APP_POINT="+checkpoint)
+				cmd.Env = append(os.Environ(), "DEEPER_PURGE_APP_ROOT="+app.desktopSessions.root, "DEEPER_PURGE_APP_REGISTRY="+app.workspaceRegistry().Path(), "DEEPER_PURGE_APP_REQUEST="+string(body), "DEEPER_PURGE_APP_POINT="+checkpoint)
 				output, err := cmd.CombinedOutput()
 				cancel()
 				var exit *exec.ExitError

@@ -23,15 +23,15 @@ function fixture(
   version = "1.5.0-canary.42",
   { forbidCleanup = false, visibilityDelayReads = 0 } = {},
 ) {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-npm-publish-test-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-npm-publish-test-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
 
-  const packages = ["@reasonix/cli-linux-x64", "reasonix"].map((name, index) => {
+  const packages = ["@sivancola/deeper-cli-linux-x64", "@sivancola/deeper"].map((name, index) => {
     const dir = join(root, `package-${index}`);
     mkdirSync(dir);
     writeFileSync(
       join(dir, "package.json"),
-      `${JSON.stringify({ name, version, reasonixCandidateSha: candidateSha })}\n`,
+      `${JSON.stringify({ name, version, deeperCandidateSha: candidateSha })}\n`,
     );
     return { name, dir };
   });
@@ -76,8 +76,8 @@ function fixture(
       state.versions.set(pkg.version, {
         name: pkg.name,
         version: pkg.version,
-        reasonixCandidateSha: pkg.reasonixCandidateSha,
-        gitHead: pkg.reasonixCandidateSha,
+        deeperCandidateSha: pkg.deeperCandidateSha,
+        gitHead: pkg.deeperCandidateSha,
       });
       state.tags.set(args[args.indexOf("--tag") + 1], pkg.version);
       hiddenReads.set(`${pkg.name}@${pkg.version}`, visibilityDelayReads);
@@ -117,7 +117,7 @@ function fixture(
     packageState(name).versions.set(publishedVersion, {
       name,
       version: publishedVersion,
-      reasonixCandidateSha: sha,
+      deeperCandidateSha: sha,
       gitHead: sha,
     });
   }
@@ -160,7 +160,7 @@ test("fills a partially published package set before advancing canary", (t) => {
 
 test("publishes the exact prepared tarball instead of rebuilding a package directory", (t) => {
   const fx = fixture(t);
-  const tarball = join(fx.packages[0].dir, "reasonix-cli-linux-x64-1.5.0-canary.42.tgz");
+  const tarball = join(fx.packages[0].dir, "deeper-cli-linux-x64-1.5.0-canary.42.tgz");
   writeFileSync(tarball, "sealed tarball bytes");
   fx.packages[0].tarball = tarball;
 

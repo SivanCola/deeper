@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/provider"
-	"reasonix/internal/runtimepolicy"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/provider"
+	"deeper/internal/runtimepolicy"
+	"deeper/internal/tool"
 )
 
 func setTurnConstraints(a *Agent, raw string) {

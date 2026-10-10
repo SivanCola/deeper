@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 // TestGoalStateWritesAreConcurrencySafe hammers goal-state persistence from many

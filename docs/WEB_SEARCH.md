@@ -1,6 +1,6 @@
 # Independent web search
 
-Reasonix exposes `web_search` as an ordinary function tool. A search opens a
+Deeper exposes `web_search` as an ordinary function tool. A search opens a
 separate model request containing the query and the backend's native search
 tool. The main conversation receives a bounded JSON result with `summary`,
 `sources` (title and URL), and an optional `truncated` flag. Search reasoning,
@@ -22,7 +22,7 @@ optionally ending in `/v1`) use the same account and model on
 The main conversation keeps its protocol. Request URL overrides are not
 translated. Third-party Messages and Responses accounts must opt in with
 `web_search = true`; their configured endpoint and credentials remain unchanged.
-Reasonix never sends a relay's key to the official DeepSeek endpoint.
+Deeper never sends a relay's key to the official DeepSeek endpoint.
 
 The existing Desktop search switch applies to independent search too. No new
 configuration fields or session migration are required. If `[tools].enabled`
@@ -48,7 +48,7 @@ allowlist and connection access restrictions still apply. Third-party candidates
 indicate configured native-search eligibility, not live-verified model support.
 
 Desktop writes the global user setting and displays an effective project override
-when `reasonix.toml` owns the field. Selection is frozen when a runtime is built.
+when `deeper.toml` owns the field. Selection is frozen when a runtime is built.
 Saving in an idle session rebuilds its runtime; a running task cannot be forcibly
 rebuilt by this setting. Other runtimes adopt it on their next rebuild.
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"maps"
 
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
 )
 
 type ModelApplicationDetails = control.ModelApplicationDetails

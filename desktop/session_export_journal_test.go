@@ -9,7 +9,7 @@ import (
 
 func TestExportPublicationRecoveryPreservesReplacedFiles(t *testing.T) {
 	parent := t.TempDir()
-	dir, err := os.MkdirTemp(parent, ".reasonix-export-batch-")
+	dir, err := os.MkdirTemp(parent, ".deeper-export-batch-")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 func decodeTOMLFile(path string, v any) (toml.MetaData, error) {

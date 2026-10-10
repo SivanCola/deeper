@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestReconcileKeepsSidecarActivityWhenFileMtimeIsNewer(t *testing.T) {

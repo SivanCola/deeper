@@ -7,14 +7,14 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
-// ManagedConfigPaths is the set of Reasonix-owned configuration FILES a file
+// ManagedConfigPaths is the set of Deeper-owned configuration FILES a file
 // tool may write outside the workspace roots, each write gated by a fresh
 // human approval (see tool.ConfigWriteApprover). The zero value matches
 // nothing, preserving plain workspace confinement. Entries are individual
-// files, never directories: the Reasonix home also holds credentials (.env),
+// files, never directories: the Deeper home also holds credentials (.env),
 // global hooks (settings.json), skills, and session stores, which must not
 // become writable through this escape hatch.
 type ManagedConfigPaths struct {
@@ -59,8 +59,8 @@ func (m ManagedConfigPaths) Match(target string) bool {
 func (m ManagedConfigPaths) approve(ctx context.Context, target string) error {
 	approver, ok := tool.ConfigWriteApproverFrom(ctx)
 	if !ok {
-		return fmt.Errorf("path %q is a Reasonix-managed config file; writing it requires interactive user approval, which this session cannot provide. "+
-			"Ask the user to retry in an interactive session; widening [sandbox] allow_write does not authorize Reasonix config edits", target)
+		return fmt.Errorf("path %q is a Deeper-managed config file; writing it requires interactive user approval, which this session cannot provide. "+
+			"Ask the user to retry in an interactive session; widening [sandbox] allow_write does not authorize Deeper config edits", target)
 	}
 	req := tool.ConfigWriteRequest{Path: target}
 	if checker, ok := approver.(tool.ConfigWriteSessionChecker); ok && checker.ManagedConfigWriteSessionAllowed(ctx, req) {
@@ -72,7 +72,7 @@ func (m ManagedConfigPaths) approve(ctx context.Context, target string) error {
 	}
 	if !allow {
 		if strings.TrimSpace(reason) == "" {
-			reason = "the user declined this Reasonix config write — do not retry it; ask how they would like to proceed."
+			reason = "the user declined this Deeper config write — do not retry it; ask how they would like to proceed."
 		}
 		return errors.New(reason)
 	}

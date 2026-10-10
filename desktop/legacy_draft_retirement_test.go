@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
 )
 
 func corruptRetiredDraftDatabase(t *testing.T) {

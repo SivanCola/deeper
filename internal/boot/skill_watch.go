@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/skill"
-	"reasonix/internal/skill/skillwatch"
+	"deeper/internal/skill"
+	"deeper/internal/skill/skillwatch"
 )
 
 // watchSkillsEnabled reports whether production controllers own physical

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 // activePortFile is where Chrome records the port it actually bound, which is
@@ -108,7 +108,7 @@ func userDataDir(configured string) (string, bool, error) {
 		}
 		return dir, false, nil
 	}
-	dir, err := os.MkdirTemp("", "reasonix-chrome-")
+	dir, err := os.MkdirTemp("", "deeper-chrome-")
 	if err != nil {
 		return "", false, fmt.Errorf("cdp: temporary user data dir: %w", err)
 	}
@@ -148,7 +148,7 @@ func chromePath(configured string) (string, error) {
 		}
 		return p, nil
 	}
-	for _, env := range []string{"REASONIX_CHROME", "CHROME_PATH"} {
+	for _, env := range []string{"DEEPER_CHROME", "CHROME_PATH"} {
 		if p := strings.TrimSpace(os.Getenv(env)); p != "" {
 			if _, err := os.Stat(p); err == nil {
 				return p, nil
@@ -169,7 +169,7 @@ func chromePath(configured string) (string, error) {
 			return p, nil
 		}
 	}
-	return "", fmt.Errorf("cdp: no Chrome, Chromium, or Edge binary found; set browser.chrome_path or REASONIX_CHROME")
+	return "", fmt.Errorf("cdp: no Chrome, Chromium, or Edge binary found; set browser.chrome_path or DEEPER_CHROME")
 }
 
 func chromeCandidates() []string {

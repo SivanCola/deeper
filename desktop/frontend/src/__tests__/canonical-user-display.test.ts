@@ -51,7 +51,7 @@ assert.equal(visible({ role: "user", content: compiler }).content, "你是谁");
 for (const suffix of ["<execution-policy>policy</execution-policy>", "<memory-recall>memory</memory-recall>"]) {
   assert.equal(visible({ role: "user", content: `你是谁\n${suffix}` }).content, "你是谁");
 }
-assert.equal(visible({ role: "user", content: `# Reasonix executor handoff\n\nOriginal task:\n${wrapped}\n\nPlanner output:\nprivate plan` }).content, "你是谁");
+assert.equal(visible({ role: "user", content: `# Deeper executor handoff\n\nOriginal task:\n${wrapped}\n\nPlanner output:\nprivate plan` }).content, "你是谁");
 
 // Lazy full-body hydration must use the same projection as inline history.
 for (const [origin, expected] of [["host", ""], ["user", "你是谁"]]) {

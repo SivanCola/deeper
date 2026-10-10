@@ -8,9 +8,9 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // readThenMutateProvider reads a large file, then runs git commit, then lists
@@ -104,7 +104,7 @@ func TestEffectTruncatedReadDoesNotBlockCommitOrFinalThroughRealBuild(t *testing
 	// really run. An enforced sandbox fails closed wherever the host lacks a backend
 	// (coverage runners), which is the sandbox's own contract, not this one.
 	writeUserConfig(t, "[sandbox]\nbash = \"off\"\n")
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

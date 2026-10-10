@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/taskcontract"
+	"deeper/internal/taskcontract"
 )
 
 func errUnknownQualityFloor(raw string) error {

@@ -1,7 +1,7 @@
 package boot
 
 import (
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func handleConfigLoadWarnings(opts Options, cfg *config.Config) bool {

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestMetadataUnchangedDiscoveryOnlyUpdatesPresence(t *testing.T) {

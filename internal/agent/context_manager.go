@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // compactionProgress is how compaction is faring in this session: whether a

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func isolateCLIConfigHome(t *testing.T) string {
@@ -15,12 +15,12 @@ func isolateCLIConfigHome(t *testing.T) string {
 	t.Cleanup(closeTestSessionServices)
 	t.Setenv("HOME", home)
 	// Keep tests on the default-path code path while preventing a caller's
-	// higher-priority REASONIX_HOME from escaping this temporary home.
-	t.Setenv("REASONIX_HOME", "")
-	if err := os.Unsetenv("REASONIX_HOME"); err != nil {
-		t.Fatalf("unset REASONIX_HOME: %v", err)
+	// higher-priority DEEPER_HOME from escaping this temporary home.
+	t.Setenv("DEEPER_HOME", "")
+	if err := os.Unsetenv("DEEPER_HOME"); err != nil {
+		t.Fatalf("unset DEEPER_HOME: %v", err)
 	}
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))

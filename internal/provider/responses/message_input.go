@@ -1,7 +1,7 @@
 package responses
 
 import (
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func messagesToInput(messages []provider.Message, vision, replayWebSearchItems, summary bool) []map[string]any {

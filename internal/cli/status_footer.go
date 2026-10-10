@@ -6,10 +6,10 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 const (

@@ -6,17 +6,17 @@ import (
 )
 
 func TestExpandVars(t *testing.T) {
-	t.Setenv("REASONIX_TEST_TOKEN", "sk-123")
-	t.Setenv("REASONIX_TEST_EMPTY", "")
+	t.Setenv("DEEPER_TEST_TOKEN", "sk-123")
+	t.Setenv("DEEPER_TEST_EMPTY", "")
 
 	cases := []struct{ in, want string }{
-		{"Bearer ${REASONIX_TEST_TOKEN}", "Bearer sk-123"},
-		{"${REASONIX_TEST_MISSING}", ""},                                   // unset, no default → empty
-		{"${REASONIX_TEST_MISSING:-fallback}", "fallback"},                 // unset → default
-		{"${REASONIX_TEST_EMPTY:-fallback}", "fallback"},                   // set-but-empty → default
-		{"${REASONIX_TEST_TOKEN:-fallback}", "sk-123"},                     // set → value, default ignored
-		{"no vars here", "no vars here"},                                   // untouched
-		{"a${REASONIX_TEST_TOKEN}b${REASONIX_TEST_MISSING}c", "ask-123bc"}, // multiple refs
+		{"Bearer ${DEEPER_TEST_TOKEN}", "Bearer sk-123"},
+		{"${DEEPER_TEST_MISSING}", ""},                                 // unset, no default → empty
+		{"${DEEPER_TEST_MISSING:-fallback}", "fallback"},               // unset → default
+		{"${DEEPER_TEST_EMPTY:-fallback}", "fallback"},                 // set-but-empty → default
+		{"${DEEPER_TEST_TOKEN:-fallback}", "sk-123"},                   // set → value, default ignored
+		{"no vars here", "no vars here"},                               // untouched
+		{"a${DEEPER_TEST_TOKEN}b${DEEPER_TEST_MISSING}c", "ask-123bc"}, // multiple refs
 	}
 	for _, c := range cases {
 		if got := ExpandVars(c.in); got != c.want {
@@ -26,14 +26,14 @@ func TestExpandVars(t *testing.T) {
 }
 
 func TestExpandedPlugin(t *testing.T) {
-	t.Setenv("REASONIX_TEST_KEY", "secret")
+	t.Setenv("DEEPER_TEST_KEY", "secret")
 	e := PluginEntry{
 		Name:    "x",
 		Type:    "http",
-		URL:     "https://api/${REASONIX_TEST_MISSING:-v1}",
-		Args:    []string{"--token", "${REASONIX_TEST_KEY}"},
-		Env:     map[string]string{"K": "${REASONIX_TEST_KEY}"},
-		Headers: map[string]string{"Authorization": "Bearer ${REASONIX_TEST_KEY}"},
+		URL:     "https://api/${DEEPER_TEST_MISSING:-v1}",
+		Args:    []string{"--token", "${DEEPER_TEST_KEY}"},
+		Env:     map[string]string{"K": "${DEEPER_TEST_KEY}"},
+		Headers: map[string]string{"Authorization": "Bearer ${DEEPER_TEST_KEY}"},
 	}
 	out := e.ExpandedPlugin()
 	if out.URL != "https://api/v1" {
@@ -46,7 +46,7 @@ func TestExpandedPlugin(t *testing.T) {
 		t.Errorf("env/headers not expanded: %v %v", out.Env, out.Headers)
 	}
 	// The original entry must be untouched (we returned a copy).
-	if e.Headers["Authorization"] != "Bearer ${REASONIX_TEST_KEY}" {
+	if e.Headers["Authorization"] != "Bearer ${DEEPER_TEST_KEY}" {
 		t.Error("ExpandedPlugin mutated the original entry")
 	}
 }
@@ -55,10 +55,10 @@ func TestExpandedPlugin(t *testing.T) {
 func TestForbidReadRootsForRootResolvesRelativePathsIgnoringScopedEnv(t *testing.T) {
 	root := t.TempDir()
 	cfg := Default()
-	cfg.setExpansionEnv(map[string]string{"REASONIX_TEST_SECRET_DIR": "from-dotenv"})
+	cfg.setExpansionEnv(map[string]string{"DEEPER_TEST_SECRET_DIR": "from-dotenv"})
 	cfg.Sandbox.ForbidRead = []string{
 		"relative-secret",
-		"${REASONIX_TEST_SECRET_DIR}",
+		"${DEEPER_TEST_SECRET_DIR}",
 		filepath.Join(root, "absolute-secret"),
 	}
 

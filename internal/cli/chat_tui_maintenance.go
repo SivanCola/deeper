@@ -3,10 +3,10 @@ package cli
 import (
 	tea "charm.land/bubbletea/v2"
 	"context"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
 	"fmt"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
 	"strings"
 )
 

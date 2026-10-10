@@ -134,7 +134,7 @@
 }
 .composer-workspace-bar__clear,
 .composer-workspace-bar__choice {
-  --reasonix-draggable: no-drag;
+  --deeper-draggable: no-drag;
   appearance: none;
   border: 0;
   color: inherit;

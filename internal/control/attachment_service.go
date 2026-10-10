@@ -6,8 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/attachment"
+	"deeper/internal/sessioncontent"
 )
 
 var hostVariantCache = attachment.NewVariantCache(attachment.DefaultCacheBytes, attachment.DefaultTransforms)
@@ -84,7 +84,7 @@ func (c *Controller) sessionContentStore() *sessioncontent.Store {
 		return sessioncontent.New(filepath.Join(filepath.Dir(c.sessionPath), ".content-v1"))
 	}
 	if c.workspaceRoot != "" {
-		return sessioncontent.New(filepath.Join(c.workspaceRoot, ".reasonix", "content-v1"))
+		return sessioncontent.New(filepath.Join(c.workspaceRoot, ".deeper", "content-v1"))
 	}
 	return nil
 }

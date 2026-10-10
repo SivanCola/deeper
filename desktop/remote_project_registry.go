@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/store"
+	"deeper/internal/config"
+	"deeper/internal/store"
 )
 
 // ListRemoteProjects returns every pinned remote workspace in config order.

@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/tool"
+	"deeper/internal/fileops"
+	"deeper/internal/tool"
 )
 
 // Full/range reads may capture a bounded source for version-safe paging. A

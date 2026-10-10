@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/desktop/internal/sessionui"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/sessionui"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 type SessionComposerState struct {

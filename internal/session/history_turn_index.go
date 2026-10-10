@@ -2,8 +2,8 @@ package session
 
 import (
 	"context"
+	"deeper/internal/sessioncontent"
 	"encoding/json"
-	"reasonix/internal/sessioncontent"
 )
 
 func indexTurnEvent(ctx context.Context, content *sessioncontent.Store, state *historyBuildState, event Event) error {

@@ -2,8 +2,8 @@ package control
 
 import (
 	"context"
+	"deeper/internal/agent"
 	"log/slog"
-	"reasonix/internal/agent"
 )
 
 // CheckpointSession implements agent.SessionCheckpointer. The boundary is

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/hook"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/hook"
 )
 
 type HookConfigView struct {
@@ -109,7 +109,7 @@ func (a *App) TrustProjectHooks() error {
 
 // errHooksNotShown refuses approving hooks that carry fields this editor
 // cannot display: a person may only approve what they were shown.
-var errHooksNotShown = errors.New("these project hooks set env or contextFile, which this editor does not show; review and approve them with `reasonix trust`")
+var errHooksNotShown = errors.New("these project hooks set env or contextFile, which this editor does not show; review and approve them with `deeper trust`")
 
 // TrustProjectHooksForRoot approves root's project hooks as they stand now.
 func (a *App) TrustProjectHooksForRoot(root string) error {
@@ -134,7 +134,7 @@ func (a *App) TrustProjectHooksForRoot(root string) error {
 	if shown, _ := shownProjectHooks.Load(root); shown != program.Digest {
 		return errHooksChangedSinceShown
 	}
-	return config.NewProjectProgramStore(config.ReasonixHomeDir()).Approve(root, program)
+	return config.NewProjectProgramStore(config.DeeperHomeDir()).Approve(root, program)
 }
 
 // shownProjectHooks is the digest of the project hooks each root's settings

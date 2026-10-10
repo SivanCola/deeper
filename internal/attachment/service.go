@@ -9,7 +9,7 @@ import (
 	"maps"
 	"sync"
 
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/sessioncontent"
 )
 
 // Service validates images and publishes originals into a session content store.

@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"sync"
 
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/evidence"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/evidence"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/sessioninbox"
 )
 
 // Extension dispatch wiring (stage 6b1). Nil dispatcher is a no-op.

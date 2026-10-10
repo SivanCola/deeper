@@ -1,11 +1,11 @@
 package main
 
 import (
+	"deeper/desktop/internal/draftstate"
+	"deeper/internal/config"
+	"deeper/internal/control"
 	"encoding/json"
 	"path/filepath"
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
 	"testing"
 )
 

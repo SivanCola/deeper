@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/store"
+	"deeper/internal/fileutil"
+	"deeper/internal/store"
 )
 
 // sessionDAGTailRepairMinAge keeps tail repair from truncating a line another

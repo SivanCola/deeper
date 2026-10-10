@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func TestModelSettingsCredentialRefreshPersistsSelectedConnection(t *testing.T) {

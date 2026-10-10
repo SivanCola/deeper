@@ -4,8 +4,8 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/internal/browser"
-	"reasonix/internal/config"
+	"deeper/internal/browser"
+	"deeper/internal/config"
 )
 
 // A dead loopback port: the backend is lazy, so a build that never calls a
@@ -26,10 +26,10 @@ func TestConfiguredBrowserBackendStaysOffTheProviderSurface(t *testing.T) {
 	t.Chdir(dir)
 	registerBootTokenProfileTestProvider()
 
-	writeFile(t, dir, "reasonix.toml", browserBootConfig)
+	writeFile(t, dir, "deeper.toml", browserBootConfig)
 	approveWorkspace(t, dir)
 	without := captureBrowserSurface(t, nil)
-	writeFile(t, dir, "reasonix.toml", browserBootConfig+configuredBrowserSection)
+	writeFile(t, dir, "deeper.toml", browserBootConfig+configuredBrowserSection)
 	approveWorkspace(t, dir)
 	with := captureBrowserSurface(t, nil)
 

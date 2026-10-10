@@ -3,7 +3,7 @@ package anthropic
 import (
 	"encoding/json"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func encodeAnthTools(c *client, req provider.Request) []anthTool {

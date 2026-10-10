@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 // NewSession snapshots the current conversation and rotates to a fresh one.

@@ -3,8 +3,8 @@ package main
 import (
 	"strings"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func legacyCleanupArchivedSessions(state legacycleanup.State) map[string]legacycleanup.Candidate {

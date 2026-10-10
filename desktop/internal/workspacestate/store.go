@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
 )
 
 const (

@@ -12,11 +12,11 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/desktop/internal/draftstate"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 func TestDraftAdmissionErrorPreservesWrappedCodedError(t *testing.T) {
@@ -67,8 +67,8 @@ func newDraftTestApp(t *testing.T) *App {
 func TestDraftExternalFolderWithSpacesUsesStableRuntimeToken(t *testing.T) {
 	path := filepath.Join(string(filepath.Separator), "Users", "example", "Folder With Spaces")
 	input := "inspect @" + path + "/ and keep this visible"
-	got := rewriteDraftExternalFolderRef(input, path, "__reasonix_external_folder/abc/Folder-With-Spaces")
-	want := "inspect @__reasonix_external_folder/abc/Folder-With-Spaces/ and keep this visible"
+	got := rewriteDraftExternalFolderRef(input, path, "__deeper_external_folder/abc/Folder-With-Spaces")
+	want := "inspect @__deeper_external_folder/abc/Folder-With-Spaces/ and keep this visible"
 	if got != want {
 		t.Fatalf("rewritten input = %q, want %q", got, want)
 	}
@@ -127,11 +127,11 @@ default = "model-a"
 	}
 	a := newDraftTestApp(t)
 	rootA, rootB := t.TempDir(), t.TempDir()
-	if err := os.WriteFile(filepath.Join(rootA, "reasonix.toml"), []byte(`default_model = "local/model-a"`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(rootA, "deeper.toml"), []byte(`default_model = "local/model-a"`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, rootA)
-	if err := os.WriteFile(filepath.Join(rootB, "reasonix.toml"), []byte(`default_model = "local/model-b"`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(rootB, "deeper.toml"), []byte(`default_model = "local/model-b"`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, rootB)
@@ -293,13 +293,13 @@ func TestMissingDraftAttachmentFailsBeforeSessionReservation(t *testing.T) {
 	}
 	saved, err := a.SaveSessionDraft(SessionDraftSaveRequest{
 		DraftID: draft.ID, Revision: draft.Revision,
-		ContentJSON: `{"text":"inspect","attachments":[{"path":".reasonix/attachments/missing.txt"}]}`,
+		ContentJSON: `{"text":"inspect","attachments":[{"path":".deeper/attachments/missing.txt"}]}`,
 		Settings:    draft.Settings,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.BeginDraftSubmission(SessionDraftSubmissionRequest{DraftID: draft.ID, Revision: saved.Draft.Revision, Display: "inspect", Input: "inspect @.reasonix/attachments/missing.txt"}); err == nil {
+	if _, err := a.BeginDraftSubmission(SessionDraftSubmissionRequest{DraftID: draft.ID, Revision: saved.Draft.Revision, Display: "inspect", Input: "inspect @.deeper/attachments/missing.txt"}); err == nil {
 		t.Fatal("missing attachment should reject submission")
 	}
 	if operations, err := a.draftStore().PendingOperations(a.bootContext()); err != nil || len(operations) != 0 {
@@ -319,7 +319,7 @@ func TestMissingDraftImageReturnsStableErrorWithoutHostPath(t *testing.T) {
 	}
 	saved, err := a.SaveSessionDraft(SessionDraftSaveRequest{
 		DraftID: draft.ID, Revision: draft.Revision,
-		ContentJSON: `{"text":"inspect","attachments":[{"path":".reasonix/attachments/missing.png"}]}`,
+		ContentJSON: `{"text":"inspect","attachments":[{"path":".deeper/attachments/missing.png"}]}`,
 		Settings:    draft.Settings,
 	})
 	if err != nil {
@@ -327,9 +327,9 @@ func TestMissingDraftImageReturnsStableErrorWithoutHostPath(t *testing.T) {
 	}
 	_, err = a.BeginDraftSubmission(SessionDraftSubmissionRequest{
 		DraftID: draft.ID, Revision: saved.Draft.Revision,
-		Display: "inspect", Input: "inspect @.reasonix/attachments/missing.png",
+		Display: "inspect", Input: "inspect @.deeper/attachments/missing.png",
 	})
-	if err == nil || err.Error() != "reasonix_error:image_attachment_unreadable" {
+	if err == nil || err.Error() != "deeper_error:image_attachment_unreadable" {
 		t.Fatalf("BeginDraftSubmission() error = %v, want stable image failure", err)
 	}
 	if strings.Contains(err.Error(), root) {
@@ -399,7 +399,7 @@ func TestDraftContextProjectsConfiguredMCPWithoutController(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	a := newDraftTestApp(t)
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(`
 [[plugins]]
 name = "fixture"
 command = "fixture-mcp"

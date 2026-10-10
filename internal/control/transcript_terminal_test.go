@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
+	"deeper/internal/transcript"
 )
 
 func TestTranscriptRetainsProtocolRecoveryAfterProviderFailure(t *testing.T) {

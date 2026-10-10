@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/goal"
+	"deeper/internal/goal"
 )
 
 type lifecycleOwnerStub struct{}

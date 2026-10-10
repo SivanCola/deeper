@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 // ReportLeakedFileLocks summarizes leaked locks without failing the binary. Use

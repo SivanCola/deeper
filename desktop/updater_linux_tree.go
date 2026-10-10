@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/installlayout"
+	"deeper/internal/installlayout"
 )
 
 // stageLinuxShellRelease expands only the signed release unit. The bounded
@@ -54,7 +54,7 @@ func stageLinuxShellRelease(archive []byte, staging string) ([]installlayout.Mem
 			return nil, nil, err
 		}
 		switch name {
-		case "reasonix-desktop", "reasonix", "reasonix-launcher", "reasonix-guard":
+		case "deeper-desktop", "deeper", "deeper-launcher", "deeper-guard":
 		default:
 			if !strings.HasPrefix(name, "app/") {
 				return nil, nil, fmt.Errorf("unexpected release member %q", name)
@@ -86,7 +86,7 @@ func stageLinuxShellRelease(archive []byte, staging string) ([]installlayout.Mem
 			return nil, nil, err
 		}
 	}
-	for _, name := range []string{"reasonix-desktop", "reasonix", "reasonix-launcher"} {
+	for _, name := range []string{"deeper-desktop", "deeper", "deeper-launcher"} {
 		if !seen[name] {
 			return nil, nil, fmt.Errorf("release missing %s", name)
 		}
@@ -98,7 +98,7 @@ func stageLinuxShellRelease(archive []byte, staging string) ([]installlayout.Mem
 	if len(members) == 0 {
 		return nil, nil, fmt.Errorf("release missing Electron shell; install the complete package manually")
 	}
-	for _, name := range []string{"reasonix-desktop", "reasonix"} {
+	for _, name := range []string{"deeper-desktop", "deeper"} {
 		members = append(members, installlayout.Member{Name: name, Path: filepath.Join(staging, name), Mode: 0755})
 	}
 	names := make([]string, 0, len(members))
@@ -119,7 +119,7 @@ func activateLinuxShellRelease(archive []byte, targetVersion, root string) error
 	if err := installlayout.ValidateVersionName(targetVersion); err != nil {
 		return err
 	}
-	staging, err := os.MkdirTemp(root, ".reasonix-linux-update-*")
+	staging, err := os.MkdirTemp(root, ".deeper-linux-update-*")
 	if err != nil {
 		return err
 	}
@@ -130,8 +130,8 @@ func activateLinuxShellRelease(archive []byte, targetVersion, root string) error
 	}
 	err = installlayout.ActivateVersion(installlayout.ActivationRequest{
 		InstallRoot: root, Version: targetVersion, RequestID: "linux-" + targetVersion, Members: members, RequiredNames: names,
-		RootMembers:       []installlayout.Member{{Name: "reasonix-launcher", Path: filepath.Join(staging, "reasonix-launcher"), Mode: 0755}, {Name: "reasonix", Path: filepath.Join(staging, "reasonix"), Mode: 0755}},
-		RequiredRootNames: []string{"reasonix-launcher", "reasonix"},
+		RootMembers:       []installlayout.Member{{Name: "deeper-launcher", Path: filepath.Join(staging, "deeper-launcher"), Mode: 0755}, {Name: "deeper", Path: filepath.Join(staging, "deeper"), Mode: 0755}},
+		RequiredRootNames: []string{"deeper-launcher", "deeper"},
 	})
 	if err != nil {
 		return fmt.Errorf("activate Linux release: %w", err)

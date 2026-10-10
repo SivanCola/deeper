@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/historycatalog"
-	"reasonix/internal/provider"
+	"deeper/internal/historycatalog"
+	"deeper/internal/provider"
 )
 
 func TestHistorySurfacesExcludePinnedContextRevisions(t *testing.T) {

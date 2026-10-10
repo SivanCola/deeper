@@ -1,6 +1,6 @@
 package agent
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // observeSummaryOutcome feeds a cache-aligned summary request's real token
 // count back into prompt calibration. A provider overflow carries the exact

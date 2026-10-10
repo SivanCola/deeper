@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/attachment"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 type urlImageResolver struct{}

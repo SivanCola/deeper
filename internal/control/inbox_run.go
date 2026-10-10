@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/attachment"
+	"deeper/internal/sessioninbox"
 )
 
 // RunInboxTurn synchronously claims and executes one durable item. Bot and ACP

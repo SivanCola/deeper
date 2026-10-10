@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func TestScreenshotReturnsPNGImage(t *testing.T) {

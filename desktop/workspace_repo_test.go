@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/gitcmd"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/gitcmd"
 )
 
 // The changes panel reads a tab through the identity its session resolved when

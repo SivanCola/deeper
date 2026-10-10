@@ -1,8 +1,8 @@
 package serve
 
 import (
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 func historyWithoutPinnedContextRevisions(messages []provider.Message) []provider.Message {

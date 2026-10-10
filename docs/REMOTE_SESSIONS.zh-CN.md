@@ -6,7 +6,7 @@
 &nbsp;·&nbsp;
 <a href="./GUIDE.zh-CN.md">通用指南</a>
 
-远程模块（Remote SSH）让 Reasonix 在远端主机上运行，并通过你自己的 SSH
+远程模块（Remote SSH）让 Deeper 在远端主机上运行，并通过你自己的 SSH
 连接访问——VS Code Remote-SSH 式的体验。本文完整描述这套系统：组件分布、
 主机配置、CLI、远端 serve 进程、会话生命周期、桌面端、凭据模式与故障排查。
 
@@ -26,7 +26,7 @@
 
 ## 远程模块是什么
 
-Reasonix 在远端主机上引导一个常驻的 headless `reasonix serve`，把本地一个
+Deeper 在远端主机上引导一个常驻的 headless `deeper serve`，把本地一个
 回环端口经 SSH 隧道转发过去，再通过隧道打开 serve 的 Web 客户端或在桌面
 应用内打开远程会话标签页。agent、工具与文件全部原生运行在远端主机上，
 保真度 100%，不经过有损的文件代理。
@@ -42,11 +42,11 @@ Reasonix 在远端主机上引导一个常驻的 headless `reasonix serve`，把
 ```
 本地侧                                     远端主机
 ──────────                                ──────────
-reasonix remote … (CLI)                   ~/.reasonix/remote/
+deeper remote … (CLI)                   ~/.deeper/remote/
 桌面应用 / 独立 Web 窗口                    serve-<slug>.{json,token,port,pid,log}
         │                                          │
         ▼                                          ▼
-受监督的 SSH 连接 ──────── SSH 隧道 ──────── headless reasonix serve
+受监督的 SSH 连接 ──────── SSH 隧道 ──────── headless deeper serve
 （keepalive、指数退避重连、                    绑定远端 127.0.0.1:0，HTTP + SSE
  TOFU 主机密钥、SFTP）                         agent / 工具 / 文件全部在远端
         │
@@ -54,12 +54,12 @@ reasonix remote … (CLI)                   ~/.reasonix/remote/
 浏览器打开 serve Web UI，或桌面应用内远程会话标签页
 ```
 
-- **本地前端**：`reasonix remote …` CLI；桌面应用（Electron）；serve 自带的
+- **本地前端**：`deeper remote …` CLI；桌面应用（Electron）；serve 自带的
   Web 客户端（浏览器打开，或由独立的 Web 窗口子进程承载）。
 - **传输内核**：一条受监督的 SSH 连接——拨号、主机密钥校验、挂载端口
   转发、keepalive、断线退避重连。CLI 与桌面共用同一内核；需要交互的
   场景（TOFU 确认、密码/口令输入）通过回调交给前端呈现。
-- **远端**：headless `reasonix serve`，只绑定远端回环地址，端口、认证
+- **远端**：headless `deeper serve`，只绑定远端回环地址，端口、认证
   token、pid 经文件交接，不暴露给远端公网。
 - **数据面**：会话、工具执行、文件操作全部发生在远端主机上；本地只负责
   转发与呈现。远端文件浏览/编辑走 SFTP，不经 serve。
@@ -67,8 +67,8 @@ reasonix remote … (CLI)                   ~/.reasonix/remote/
 ## 主机与配置
 
 主机保存在用户级 `config.toml` 的 `[remote]` 段。与 `[secrets]` 一样，
-项目级 `reasonix.toml` 无法注入或覆盖远程主机——克隆的仓库永远无法左右
-Reasonix 向何处发起 SSH 连接。
+项目级 `deeper.toml` 无法注入或覆盖远程主机——克隆的仓库永远无法左右
+Deeper 向何处发起 SSH 连接。
 
 ```toml
 [remote]
@@ -94,7 +94,7 @@ target = "127.0.0.1:5432"
 | `name` | 主机名，CLI 子命令用它引用 |
 | `host` / `port` / `user` | 地址与登录用户；端口缺省 22，用户缺省当前用户 |
 | `identity_file` | 私钥路径。只存路径，从不存储私钥内容 |
-| `passphrase_env` / `password_env` | 存放口令/密码的环境变量名，值放在 Reasonix 全局 `.env` |
+| `passphrase_env` / `password_env` | 存放口令/密码的环境变量名，值放在 Deeper 全局 `.env` |
 | `proxy_jump` | 跳板链，OpenSSH `ProxyJump` 语法 |
 | `workspace` | 默认远端工作区 |
 | `serve_install` | 远端 CLI 安装策略：`auto` \| `npm` \| `upload` \| `never` |
@@ -110,9 +110,9 @@ target = "127.0.0.1:5432"
 
 ### 凭据槽位
 
-桌面主机表单实际收到明文密码或密钥口令时，Reasonix 才会在全局 `.env`
-中创建 `REASONIX_REMOTE_<哈希>_PASSWORD` /
-`REASONIX_REMOTE_<哈希>_KEY_PASSPHRASE` 槽位（原子写入，失败回滚），
+桌面主机表单实际收到明文密码或密钥口令时，Deeper 才会在全局 `.env`
+中创建 `DEEPER_REMOTE_<哈希>_PASSWORD` /
+`DEEPER_REMOTE_<哈希>_KEY_PASSPHRASE` 槽位（原子写入，失败回滚），
 并在 `config.toml` 中只记录槽位名。明文字段留空会保留现有引用，不会创建
 新槽位。删除主机或显式清除凭据时会回收不再使用的生成槽位；用户手工
 配置的环境变量永不删除。
@@ -125,7 +125,7 @@ target = "127.0.0.1:5432"
 3. 内置的 `~/.ssh/config` 解析器；
 4. 缺省值（端口 22、当前用户）。
 
-`reasonix remote import` 保存原始别名并置 `use_ssh_config = true`，不复制
+`deeper remote import` 保存原始别名并置 `use_ssh_config = true`，不复制
 一份容易过期的解析快照。
 
 ## 用 CLI 连接
@@ -133,11 +133,11 @@ target = "127.0.0.1:5432"
 ### 主机管理
 
 ```bash
-reasonix remote add gpu-box dev@203.0.113.7 --workspace '~/projects/app'
-reasonix remote import --all        # 从 ~/.ssh/config 导入别名
-reasonix remote test gpu-box        # 拨号 + 认证 + 主机密钥检查
-reasonix remote list                # 列出已配置主机
-reasonix remote remove gpu-box
+deeper remote add gpu-box dev@203.0.113.7 --workspace '~/projects/app'
+deeper remote import --all        # 从 ~/.ssh/config 导入别名
+deeper remote test gpu-box        # 拨号 + 认证 + 主机密钥检查
+deeper remote list                # 列出已配置主机
+deeper remote remove gpu-box
 ```
 
 ### connect：前台监督器
@@ -148,9 +148,9 @@ serve、把远端 serve 端口转发到本地回环，并挂载已配置的转�
 serve 继续运行，下次 `connect` 直接复用。
 
 ```bash
-reasonix remote connect gpu-box --open   # 引导 serve、建隧道、打开 URL
-reasonix remote open gpu-box             # 等价于 connect --open
-reasonix remote connect gpu-box --local-port 18787 --no-serve
+deeper remote connect gpu-box --open   # 引导 serve、建隧道、打开 URL
+deeper remote open gpu-box             # 等价于 connect --open
+deeper remote connect gpu-box --local-port 18787 --no-serve
 ```
 
 `--no-serve`（别名 `--forward-only`）只建立转发，不引导 serve。
@@ -162,10 +162,10 @@ CLI `remote connect` 不会建立桌面持有的反向凭据通道；仅需普�
 ### 远端 serve 运维
 
 ```bash
-reasonix remote serve start gpu-box
-reasonix remote serve status gpu-box
-reasonix remote serve logs gpu-box -n 100
-reasonix remote serve stop gpu-box
+deeper remote serve start gpu-box
+deeper remote serve status gpu-box
+deeper remote serve logs gpu-box -n 100
+deeper remote serve stop gpu-box
 ```
 
 `serve start` 拒绝 `credential_mode = local-proxy` 的主机。必须由桌面端引导
@@ -174,12 +174,12 @@ serve 并提供反向凭据通道。
 ### 端口转发与远端文件
 
 ```bash
-reasonix remote forward add gpu-box -L 127.0.0.1:5432:127.0.0.1:5432
-reasonix remote forward ls gpu-box
-reasonix remote forward rm gpu-box 127.0.0.1:5432
-reasonix remote fs ls gpu-box:'~/projects/app'
-reasonix remote fs get gpu-box:'~/projects/app/main.go' ./main.go
-reasonix remote fs put ./patch.diff gpu-box:'~/projects/app/patch.diff'
+deeper remote forward add gpu-box -L 127.0.0.1:5432:127.0.0.1:5432
+deeper remote forward ls gpu-box
+deeper remote forward rm gpu-box 127.0.0.1:5432
+deeper remote fs ls gpu-box:'~/projects/app'
+deeper remote fs get gpu-box:'~/projects/app/main.go' ./main.go
+deeper remote fs put ./patch.diff gpu-box:'~/projects/app/patch.diff'
 ```
 
 `fs` 子命令走 SFTP，不需要 serve 在运行。
@@ -194,22 +194,22 @@ reasonix remote fs put ./patch.diff gpu-box:'~/projects/app/patch.diff'
    复用误判；
 2. 探测远端平台与二进制（见安装阶梯）；
 3. 生成新的认证 token：先写 `.token.next` 再原子改名，避免读到半写状态；
-4. 以 `setsid`/`nohup` 分离启动 `reasonix serve`：绑定 `127.0.0.1:0`，
+4. 以 `setsid`/`nohup` 分离启动 `deeper serve`：绑定 `127.0.0.1:0`，
    token 经 `--token-file` 传入（不进 argv，不会出现在 `ps` 中），端口与
    pid 分别写入 `.port` / `.pid` 文件；
 5. 轮询端口文件就绪后，写状态 JSON 并建立本地转发。
 
 **二进制安装阶梯**（`serve_install = "auto"` 时按序尝试）：
 
-1. 远端已有的 Reasonix 二进制；
+1. 远端已有的 Deeper 二进制；
 2. `npm` 全局安装；
-3. 上传本机同平台的二进制到远端 `~/.reasonix/remote/bin/`；
+3. 上传本机同平台的二进制到远端 `~/.deeper/remote/bin/`；
 4. 从官方 release 下载。
 
 二进制是否可用由能力探测决定而非版本号：缺少所需 serve 能力的旧二进制
 会被当作缺失并升级。`serve_install = "never"` 禁止任何安装。
 
-**远端状态文件**（远端 `~/.reasonix/remote/`）：`serve-<slug>.json`（pid、
+**远端状态文件**（远端 `~/.deeper/remote/`）：`serve-<slug>.json`（pid、
 绑定的回环地址、工作区）、`serve-<slug>.token`（0600）、`serve-<slug>.port`、
 `serve-<slug>.pid`、`serve-<slug>.log`。
 
@@ -262,7 +262,7 @@ fragment 中，不会随请求进入服务器日志；旧版 serve 自动回退 
   原 id，只有子会话成功打开后才确认并删除，因此重启恢复不会重复创建，
   确认后的下一次主动点击仍可从同一回合创建另一个子会话。
 
-以下两张图展示接管的两个端点。首先，在远端主机本地运行的 Reasonix
+以下两张图展示接管的两个端点。首先，在远端主机本地运行的 Deeper
 窗口中确认接管一个当前空闲的会话：
 
 ![远端主机本地窗口确认接管空闲会话](./assets/remote-session-takeover-idle.png)
@@ -313,7 +313,7 @@ Transcript、Composer、模式选择、模型选择、状态栏与会话指标�
 
 | | `remote` | `local-proxy` |
 | --- | --- | --- |
-| API Key 存放 | 远端主机的 Reasonix 配置 | 桌面本机 |
+| API Key 存放 | 远端主机的 Deeper 配置 | 桌面本机 |
 | 模型调用路径 | 远端 serve → provider | 远端 serve → 反向隧道 → 桌面持钥代理 → provider |
 | 模型列表来源 | 远端 `/models` | 桌面配置目录（按 provider 类型过滤） |
 | CLI | 完整支持 | `remote serve start` 会拒绝；`remote connect` 无法提供桌面持有的凭据通道。请使用桌面端（普通转发仍可用 `--no-serve`） |
@@ -321,7 +321,7 @@ Transcript、Composer、模式选择、模型选择、状态栏与会话指标�
 `local-proxy` 模式的功能行为：
 
 - 桌面在远端 `config.toml` 注入一个托管的 `[[providers]]` 块，指向反向
-  隧道地址与作用域受限的 token；该块由 Reasonix 维护，不要手工编辑。
+  隧道地址与作用域受限的 token；该块由 Deeper 维护，不要手工编辑。
 - 凭据 watchdog 每 3 秒巡检反向隧道：转发缺失、探针失败或端口漂移都会
   触发全量修复并重载 provider。SSH 重连后隧道密钥必然轮换（即使端口
   未变），因此重连后总是无条件修复一次。
@@ -339,8 +339,8 @@ Transcript、Composer、模式选择、模型选择、状态栏与会话指标�
 - **终态故障**：认证失败与主机密钥错误不重试；桌面端把远程工作区标记为
   不可用，等待人工处理。短暂网络中断则保留界面，后台自动重连并重新
   挂载转发。
-- **主机密钥**：对照你的 OpenSSH `~/.ssh/known_hosts`（只读）与 Reasonix
-  托管的 `~/.reasonix/remote/known_hosts`。首次见到的密钥提示 TOFU 确认
+- **主机密钥**：对照你的 OpenSSH `~/.ssh/known_hosts`（只读）与 Deeper
+  托管的 `~/.deeper/remote/known_hosts`。首次见到的密钥提示 TOFU 确认
   并记入托管文件；与已记录密钥冲突的是硬错误，指明出错的文件与行号，
   绝不自动接受。
 - **认证顺序**：SSH agent → `identity_file` → 密码 / kbd-interactive。

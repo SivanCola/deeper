@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 func TestSandboxWriteDenialClassifierRejectsOrdinaryFailures(t *testing.T) {

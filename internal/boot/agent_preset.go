@@ -1,8 +1,8 @@
 package boot
 
 import (
-	"reasonix/internal/agentpreset"
-	"reasonix/internal/tool"
+	"deeper/internal/agentpreset"
+	"deeper/internal/tool"
 )
 
 // Role vocabulary re-exported for old frontends. Runtime constraints live in

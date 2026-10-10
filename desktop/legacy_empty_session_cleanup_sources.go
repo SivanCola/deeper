@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
-	"reasonix/internal/transcript"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/store"
+	"deeper/internal/transcript"
 )
 
 type legacyCleanupSourceTarget struct {

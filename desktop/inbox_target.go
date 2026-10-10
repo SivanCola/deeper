@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/sessioninbox"
 )
 
 // inboxTransientCode is the bridge code for a transient inbox-target fence;

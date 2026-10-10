@@ -1,6 +1,6 @@
 package event
 
-import "reasonix/internal/nilutil"
+import "deeper/internal/nilutil"
 
 // SubagentLifecycleInfo is content-free host telemetry for one child
 // transition. It intentionally excludes prompts, reasoning, tool output, and

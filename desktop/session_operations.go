@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 // SessionMutationResult is the stable response for an explicitly targeted

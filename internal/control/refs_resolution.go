@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/attachment"
+	"deeper/internal/attachment"
 )
 
 // ResolveRefs resolves the @references in a line into a single tagged context
@@ -43,7 +43,7 @@ type preparedImageReferences struct {
 type preparedImageReferencesContextKey struct{}
 
 func isAttachmentRef(token string) bool {
-	return strings.HasPrefix(filepath.ToSlash(token), ".reasonix/attachments/")
+	return strings.HasPrefix(filepath.ToSlash(token), ".deeper/attachments/")
 }
 
 func isImageAttachmentRef(token string) bool {
@@ -63,10 +63,10 @@ func statAttachmentImage(root, path string) error {
 		return err
 	}
 	joined := filepath.Join(absRoot, filepath.FromSlash(path))
-	confine := filepath.Join(absRoot, ".reasonix", "attachments")
+	confine := filepath.Join(absRoot, ".deeper", "attachments")
 	rel, err := filepath.Rel(confine, joined)
 	if err != nil || strings.HasPrefix(rel, "..") {
-		return fmt.Errorf("image path is outside .reasonix/attachments")
+		return fmt.Errorf("image path is outside .deeper/attachments")
 	}
 	info, err := os.Lstat(joined)
 	if err != nil {
@@ -118,7 +118,7 @@ func (c *Controller) explicitImageSources(line string) []attachment.Source {
 			continue
 		}
 		seen[key] = true
-		sources = append(sources, attachment.Source{DisplayName: filepath.Base(filepath.FromSlash(token)), Path: token, WorkspaceRoot: c.workspaceRoot, Confine: ".reasonix/attachments"})
+		sources = append(sources, attachment.Source{DisplayName: filepath.Base(filepath.FromSlash(token)), Path: token, WorkspaceRoot: c.workspaceRoot, Confine: ".deeper/attachments"})
 	}
 	return sources
 }
@@ -232,7 +232,7 @@ func imageReferenceFailure(path string, err error) ImageReferenceFailure {
 		code = ImageReferenceMissing
 	case errors.Is(err, os.ErrPermission):
 		code = ImageReferenceUnreadable
-	case strings.Contains(message, "outside .reasonix/attachments") || strings.Contains(message, "symlink") || strings.Contains(message, "must be relative"):
+	case strings.Contains(message, "outside .deeper/attachments") || strings.Contains(message, "symlink") || strings.Contains(message, "must be relative"):
 		code = ImageReferenceUnsafe
 	case strings.Contains(message, "between 1 byte") || strings.Contains(message, "too large"):
 		code = ImageReferenceTooLarge

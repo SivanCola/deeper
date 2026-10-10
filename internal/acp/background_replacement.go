@@ -2,7 +2,7 @@ package acp
 
 import (
 	"context"
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func modelOnlyConfigDeltas(deltas []sessionConfigDelta) bool {

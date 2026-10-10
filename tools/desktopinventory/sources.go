@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var artifactRe = regexp.MustCompile(`^#\s+(?:macOS|Windows|Linux)?:?\s*(Reasonix-[a-z]+-<arch>[^\s]*)\s+\((.*)\)`)
+var artifactRe = regexp.MustCompile(`^#\s+(?:macOS|Windows|Linux)?:?\s*(Deeper-[a-z]+-<arch>[^\s]*)\s+\((.*)\)`)
 
 var ciJobs = map[string]struct {
 	class class

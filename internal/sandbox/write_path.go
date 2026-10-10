@@ -229,7 +229,7 @@ func canonicalDir(path string) string {
 	return filepath.Clean(path)
 }
 
-// ProtectedWriteRoots returns the Reasonix state boundary that must stay
+// ProtectedWriteRoots returns the Deeper state boundary that must stay
 // read-only after a broad ancestor grant. Protecting the parent also covers
 // state files that do not exist when the sandbox starts.
 func ProtectedWriteRoots(stateRoot string) []string {
@@ -240,7 +240,7 @@ func ProtectedWriteRoots(stateRoot string) []string {
 	return []string{stateRoot}
 }
 
-// IsProtectedWritePath reports whether abs is a Reasonix session store,
+// IsProtectedWritePath reports whether abs is a Deeper session store,
 // runtime ledger, or security-boundary file.
 func IsProtectedWritePath(abs, stateRoot string) bool {
 	abs = canonicalDir(abs)
@@ -318,14 +318,14 @@ func NormalizeWriteDirs(raw []string, workDir, home, stateRoot string) (abs, dis
 	return abs, display, broadHome, nil
 }
 
-// ValidateWriteDir rejects filesystem roots and Reasonix-protected paths.
+// ValidateWriteDir rejects filesystem roots and Deeper-protected paths.
 // The user's home directory is allowed; callers should flag it as high risk.
 func ValidateWriteDir(abs, stateRoot string) error {
 	if IsFilesystemRoot(abs) {
 		return fmt.Errorf("write directory %q is a filesystem root and cannot be granted", abs)
 	}
 	if IsProtectedWritePath(abs, stateRoot) {
-		return fmt.Errorf("write directory %q is a Reasonix session or runtime-state path and cannot be granted", abs)
+		return fmt.Errorf("write directory %q is a Deeper session or runtime-state path and cannot be granted", abs)
 	}
 	return nil
 }

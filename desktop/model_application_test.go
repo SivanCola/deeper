@@ -3,14 +3,14 @@ package main
 import (
 	"bufio"
 	"context"
+	"deeper/internal/control"
+	"deeper/internal/proc"
+	"deeper/internal/provider"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reasonix/internal/control"
-	"reasonix/internal/proc"
-	"reasonix/internal/provider"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +31,7 @@ func (w modelObservedOutput) Write(p []byte) (int, error) {
 }
 
 func TestModelGatewayProcess(t *testing.T) {
-	if os.Getenv("REASONIX_TEST_GATEWAY_PROCESS") != "1" {
+	if os.Getenv("DEEPER_TEST_GATEWAY_PROCESS") != "1" {
 		return
 	}
 	scanner := bufio.NewScanner(os.Stdin)
@@ -81,7 +81,7 @@ func TestModelSettingsGatewaySurvivesReplacementAndFailure(t *testing.T) {
 	job, err := scope.Manager.TryStartSessionProcess(ref.SessionID, "bash", "gateway", func(ctx context.Context, out io.Writer) (string, error) {
 		defer close(exited)
 		cmd := proc.CommandContext(ctx, os.Args[0], "-test.run=^TestModelGatewayProcess$")
-		cmd.Env = append(os.Environ(), "REASONIX_TEST_GATEWAY_PROCESS=1")
+		cmd.Env = append(os.Environ(), "DEEPER_TEST_GATEWAY_PROCESS=1")
 		cmd.Stdout = modelObservedOutput{writer: out, wrote: wrote}
 		cmd.Stderr = out
 		input, err := cmd.StdinPipe()

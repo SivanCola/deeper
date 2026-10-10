@@ -5,7 +5,7 @@ import type { SnapshotOutput } from "./snapshotScript.js";
 import { FrameRuntime, runChildFrame } from "./frameRuntime.js";
 import { browserFailure } from "./errors.js";
 
-export const REGISTRY_KEY = "__reasonixBrowserRegistry";
+export const REGISTRY_KEY = "__deeperBrowserRegistry";
 export const ISOLATED_WORLD = 1;
 export const MAX_SNAPSHOT_NODES = 4000;
 

@@ -9,13 +9,13 @@ needed to authenticate signing, so access to these secrets is signing authority.
 Windows 发布使用 Certum SimplySign。配置以上三个 Secret；不要提交二维码或 TOTP
 配置。证书私钥保留在云端，但 CI 凭据能授权签名，应按签名权限保护。
 
-Run **Certum signing smoke test** on protected `main-v2`, approve the `release`
+Run **Certum signing smoke test** on protected `main`, approve the `release`
 environment, and require successful login, signing, trust, signer and timestamp
 verification. This test publishes nothing. The third-party login action is
 pinned to an audited commit; authentication screenshots are disabled. Review
 upstream code before updating the pin.
 
-先在 `main-v2` 手动运行签名测试并批准 `release` 环境。测试不发布产物，必须通过
+先在 `main` 手动运行签名测试并批准 `release` 环境。测试不发布产物，必须通过
 登录、实际签名、信任链、签名者及时间戳检查。第三方登录 Action 固定提交，更新前
 需要审查，登录截图默认关闭。
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // markRemoteTabSpectatorIfLocalOwned reconciles ownership when a mid-view

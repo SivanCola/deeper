@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 func (a *Agent) scratchRoots() []string {

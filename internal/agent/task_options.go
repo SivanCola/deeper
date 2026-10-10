@@ -3,12 +3,12 @@ package agent
 import (
 	"context"
 
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/event"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/provider"
-	"reasonix/internal/runtimepolicy"
-	"reasonix/internal/tool"
+	"deeper/internal/checkpoint"
+	"deeper/internal/event"
+	"deeper/internal/imageinput"
+	"deeper/internal/provider"
+	"deeper/internal/runtimepolicy"
+	"deeper/internal/tool"
 )
 
 // NewTaskToolWithOptions is the internal standard constructor for TaskTool.

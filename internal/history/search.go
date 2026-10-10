@@ -10,11 +10,11 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/agent"
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/provider"
-	"reasonix/internal/retrieval"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/provider"
+	"deeper/internal/retrieval"
+	"deeper/internal/store"
 )
 
 // Kind identifies the part of a saved message indexed for retrieval.

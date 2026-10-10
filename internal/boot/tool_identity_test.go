@@ -4,16 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/tool"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/tool"
 )
 
 func TestBootRegisteredToolsHaveDiagnosticIdentities(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 [[providers]]
 name = "test-model"

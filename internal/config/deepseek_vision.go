@@ -3,8 +3,8 @@ package config
 import (
 	"slices"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 // OfficialDeepSeekPinnedVisionModels returns the official vision SKU when it is

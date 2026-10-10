@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestPublishedRuntimeStateDoesNotWaitForSamplingLocks(t *testing.T) {

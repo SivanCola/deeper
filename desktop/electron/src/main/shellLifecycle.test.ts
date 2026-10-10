@@ -28,7 +28,7 @@ function hello(enabled: boolean): HelloResult {
 }
 
 test("shell lifecycle starts only after diagnostics-enabled hello and removes only its own record", () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-shell-lifecycle-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-shell-lifecycle-"));
   const disabled = new ShellLifecycle(root, {
     version: "v1.40.0",
     channel: "stable",

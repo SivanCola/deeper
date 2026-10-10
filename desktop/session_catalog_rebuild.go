@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 var (

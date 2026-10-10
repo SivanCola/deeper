@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/sessioncontent"
 )
 
 const mib = int64(1 << 20)
@@ -80,7 +80,7 @@ func main() {
 
 	rootWasTemporary := cfg.Root == ""
 	if rootWasTemporary {
-		temp, err := os.MkdirTemp("", "reasonix-session-capacity-*")
+		temp, err := os.MkdirTemp("", "deeper-session-capacity-*")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

@@ -1,4 +1,4 @@
-# Reasonix CLI 命令参考
+# Deeper CLI 命令参考
 
 <a href="../README.zh-CN.md">README</a>
 &nbsp;·&nbsp;
@@ -12,13 +12,13 @@
 ## 启动会话
 
 ```sh
-reasonix
-reasonix --model deepseek-pro
-reasonix --effort high
-reasonix --dir /path/to/project
+deeper
+deeper --model deepseek-pro
+deeper --effort high
+deeper --dir /path/to/project
 ```
 
-不带子命令运行 `reasonix` 会进入交互式终端界面。所选连接缺少凭据时，CLI 会打开
+不带子命令运行 `deeper` 会进入交互式终端界面。所选连接缺少凭据时，CLI 会打开
 本地连接选择器，不会发送模型请求；认证未就绪期间仍可查看历史并使用本地命令。
 
 | 参数 | 用途 |
@@ -40,25 +40,25 @@ reasonix --dir /path/to/project
 ## 更新原生 CLI
 
 ```sh
-reasonix upgrade                  # 安装最新正式版
-reasonix upgrade --check          # 只报告目标版本
-reasonix upgrade --force          # 重新安装当前正式版
+deeper upgrade                  # 安装最新正式版
+deeper upgrade --check          # 只报告目标版本
+deeper upgrade --force          # 重新安装当前正式版
 ```
 
 更新器只选择严格的 `vX.Y.Z` 非 prerelease GitHub Release。1.x 兼容期内，旧渠道
 位置参数与 `--channel` 仍可使用，但都会解析到同一正式版并打印废弃提示。历史
-`[cli].update_channel` 值不再影响更新，并会在 Reasonix 下次保存配置时移除。别名
-`reasonix update` 的行为完全相同。
+`[cli].update_channel` 值不再影响更新，并会在 Deeper 下次保存配置时移除。别名
+`deeper update` 的行为完全相同。
 
 ## 配置供应商
 
 ```sh
-reasonix setup                    # 管理用户全局配置
-reasonix setup --local            # 管理 ./reasonix.toml
-reasonix setup /path/to/config.toml
+deeper setup                    # 管理用户全局配置
+deeper setup --local            # 管理 ./deeper.toml
+deeper setup /path/to/config.toml
 ```
 
-在交互式终端中，`reasonix setup` 是一个暂存式供应商管理器。它会列出已配置的
+在交互式终端中，`deeper setup` 是一个暂存式供应商管理器。它会列出已配置的
 provider，并支持：
 
 - 添加 OpenAI-compatible 或 Anthropic-compatible provider；
@@ -72,7 +72,7 @@ provider，并支持：
 不会直接覆盖。
 
 Provider 定义只保存 `api_key_env` 变量名。即使使用 `--local`，Key 的真实值也始终保存
-在 CLI 与桌面端共用的 Reasonix 全局 `.env` 中。新增、替换或明确清空 Key 时，Reasonix
+在 CLI 与桌面端共用的 Deeper 全局 `.env` 中。新增、替换或明确清空 Key 时，Deeper
 会分配新的独立凭据槽位，并原子切换所选连接的引用；已有固定变量继续可读，只在用户编辑
 对应连接时迁移。
 
@@ -81,15 +81,15 @@ TUI 内可用 `/setup` 打开同一连接流程，`/auth` 是别名。Key 输入
 认证未就绪时，普通输入不会触发 provider 请求。
 
 ```sh
-reasonix doctor credentials
-reasonix doctor credentials --json
-reasonix doctor credentials --probe
-reasonix doctor credentials --repair --dry-run
-reasonix doctor credentials --repair
+deeper doctor credentials
+deeper doctor credentials --json
+deeper doctor credentials --probe
+deeper doctor credentials --repair --dry-run
+deeper doctor credentials --repair
 ```
 
 默认诊断只读。`--probe` 只测试临时创建和原子重命名，不替换 `.env`。修复仅限
-Reasonix home 内归当前用户所有的普通文件；不会接管所有权、删除 deny 规则、向
+Deeper home 内归当前用户所有的普通文件；不会接管所有权、删除 deny 规则、向
 `Everyone` 授权、跟随链接/reparse point，也不会终止占用文件的进程。
 
 ### 配置费用展示币种
@@ -97,15 +97,15 @@ Reasonix home 内归当前用户所有的普通文件；不会接管所有权、
 使用用户全局货币命令查看或选择费用展示币种：
 
 ```sh
-reasonix config currency             # 显示已保存值和最终解析结果
-reasonix config currency auto        # 钱包币种优先，否则原币价表币种
-reasonix config currency CNY
-reasonix config currency USD
+deeper config currency             # 显示已保存值和最终解析结果
+deeper config currency auto        # 钱包币种优先，否则原币价表币种
+deeper config currency CNY
+deeper config currency USD
 ```
 
 `auto` 在配置中保持未解析。只有一个有效钱包币种时，它才会成为当前运行时提示；否则
 CLI 使用原币或按 ISO 排序的币种桶。语言和主机 locale 不再选择价表。该偏好只保存在
-用户全局配置中，项目 `reasonix.toml` 无法覆盖，因此不支持 `--local`。自定义价格不会被修改。
+用户全局配置中，项目 `deeper.toml` 无法覆盖，因此不支持 `--local`。自定义价格不会被修改。
 
 在交互式会话中，`/currency` 显示已保存值和最终解析结果；
 `/currency auto|CNY|USD` 会修改偏好并刷新当前运行时，同时保留当前对话。
@@ -116,14 +116,14 @@ CLI 使用原币或按 ISO 排序的币种桶。语言和主机 locale 不再选
 或为当前项目添加覆盖：
 
 ```sh
-reasonix config compact-ratio              # 查看生效值及来源
-reasonix config compact-ratio 75           # 设置用户全局默认值
-reasonix config compact-ratio --local 75   # 写入 ./reasonix.toml 项目覆盖
+deeper config compact-ratio              # 查看生效值及来源
+deeper config compact-ratio 75           # 设置用户全局默认值
+deeper config compact-ratio --local 75   # 写入 ./deeper.toml 项目覆盖
 ```
 
 可设置范围为 30–85%，内置默认值为 80%。数值越低越早压缩，可能增加摘要调用和成本，
 也可能降低 prompt prefix 缓存复用率；数值越高则会在压缩前保留更多上下文。阈值以下完整工具结果可能增加普通请求成本；
-达到压力后会先持久剪枝，再运行 cache-aligned 摘要。项目 `reasonix.toml` 的优先级高于
+达到压力后会先持久剪枝，再运行 cache-aligned 摘要。项目 `deeper.toml` 的优先级高于
 用户全局配置。修改会应用于新启动的 CLI 会话；已经运行的会话继续使用启动时加载的阈值。
 
 ## 一次性运行与自动化
@@ -131,14 +131,14 @@ reasonix config compact-ratio --local 75   # 写入 ./reasonix.toml 项目覆盖
 脚本只需要最终回答时，使用 `-p` / `--print`：
 
 ```sh
-reasonix -p "总结这个仓库"
-reasonix -p "总结这个仓库" --output-format json
-reasonix run "实现 main.go 里的 TODO"
-reasonix run --auto "实现 main.go 里的 TODO"
-echo "解释这段代码" | reasonix run
+deeper -p "总结这个仓库"
+deeper -p "总结这个仓库" --output-format json
+deeper run "实现 main.go 里的 TODO"
+deeper run --auto "实现 main.go 里的 TODO"
+echo "解释这段代码" | deeper run
 ```
 
-未使用 `-p` 或结构化输出格式时，`reasonix run` 保持正常的终端流式展示。它也接受
+未使用 `-p` 或结构化输出格式时，`deeper run` 保持正常的终端流式展示。它也接受
 `--model`、`--max-steps`、`--effort`、`--dir`、
 `--add-dir`、`--continue`、`--resume QUERY`、`--copy`、`--allowed-tools` 和
 `--permission-mode`，以及作为 `--permission-mode workspace-write` 兼容别名的 `--auto` / `-y`。
@@ -151,10 +151,10 @@ echo "解释这段代码" | reasonix run
 `--metrics` 文件，因此记录下来的每次运行都能自证跑的是哪一组。
 
 ```sh
-reasonix run --ablate evidence,planner --metrics run.json "修复失败的测试"
+deeper run --ablate evidence,planner --metrics run.json "修复失败的测试"
 ```
 
-这是测量工具，不是调优开关：关掉某个子系统只会让 Reasonix 在它本来负责的工作上变差。
+这是测量工具，不是调优开关：关掉某个子系统只会让 Deeper 在它本来负责的工作上变差。
 
 ### 轨迹记录
 
@@ -167,7 +167,7 @@ JSONL 记录，便于离线回放并归因时间去向（工具执行 vs. 两次
 转录一样谨慎处理。
 
 ```sh
-reasonix run --metrics run.json --trajectory run.trajectory.jsonl "修复失败的测试"
+deeper run --metrics run.json --trajectory run.trajectory.jsonl "修复失败的测试"
 ```
 
 ### 回合阶段
@@ -203,9 +203,9 @@ reasonix run --metrics run.json --trajectory run.trajectory.jsonl "修复失败�
 | `stream-json` | 每行输出一个共用 `eventwire` JSON 对象，最后再输出最终结果对象。 |
 
 ```sh
-reasonix -p "列出有风险的改动" --output-format text
-reasonix -p "总结 diff" --output-format json
-reasonix run "运行测试" --output-format stream-json
+deeper -p "列出有风险的改动" --output-format text
+deeper -p "总结 diff" --output-format json
+deeper run "运行测试" --output-format stream-json
 ```
 
 最终结构化对象的格式如下：
@@ -250,7 +250,7 @@ reasonix run "运行测试" --output-format stream-json
 
 全局展示偏好为 `[billing].display_currency`（`auto|CNY|USD`）；旧
 `[desktop].currency` 仍会迁移。供应商原币价表由各条目冻结的 `billing_currency`
-决定，切换展示币种不会改写价表。可用 `reasonix doctor billing` 排查。
+决定，切换展示币种不会改写价表。可用 `deeper doctor billing` 排查。
 
 执行失败时使用 `subtype: "error_during_execution"` 和 `is_error: true`。
 结构化模式会把运行时错误保留在 JSON 中，不再额外重复输出一份人类可读错误。认证失败还会
@@ -262,7 +262,7 @@ reasonix run "运行测试" --output-format stream-json
 完成校验器已移除。模型正常结束且没有工具调用时，当前轮次直接结束；包含工具调用时，
 继续进入工具循环；真正的空响应会在 frozen request 边界重试。旧的
 `completion_validation`、`completion_evaluator_model` 和
-`REASONIX_COMPLETION_VALIDATION_MODE` 设置仍可读取，但会被忽略，配置渲染器也不再生成；
+`DEEPER_COMPLETION_VALIDATION_MODE` 设置仍可读取，但会被忽略，配置渲染器也不再生成；
 显式预算、工具安全边界和协议恢复边界仍然有效。Goal 完成是模型声明，不再执行宿主质量门禁或独立 evaluator。详见[迁移说明](EXECUTION_MODEL_SIMPLIFICATION.md)。
 
 ### 脱敏机器接口
@@ -271,7 +271,7 @@ reasonix run "运行测试" --output-format stream-json
 使用独立的事件参数：
 
 ```sh
-reasonix run --events-jsonl "运行 focused tests"
+deeper run --events-jsonl "运行 focused tests"
 ```
 
 每行都包含 `schema_version`、`sequence` 和 `kind`，最后一行为
@@ -281,32 +281,32 @@ reasonix run --events-jsonl "运行 focused tests"
 
 以下只读命令可以查询持久化状态，但不会输出 transcript、label、command、output、路径、
 PID 或 hostname。这里的“只读”是指不会修改 transcript、runtime、recovery 或被查询的
-状态；首次使用脱敏机器接口时，Reasonix 可能会在用户状态目录初始化一个私有身份密钥：
+状态；首次使用脱敏机器接口时，Deeper 可能会在用户状态目录初始化一个私有身份密钥：
 
 ```sh
-reasonix session list --json [--dir SESSION_DIR | --project-root PATH]
-reasonix session show <machine-session-id> --json [--dir SESSION_DIR | --project-root PATH]
-reasonix session status <machine-session-id> --json [--dir SESSION_DIR | --project-root PATH]
-reasonix session recovery [<machine-session-id>] --json [--dir SESSION_DIR | --project-root PATH]
-reasonix task list --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
-reasonix task show <task-id> --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
-reasonix task monitor list --json [--dir PROJECT_DIR]
-reasonix task monitor status <task-id> --json [--dir PROJECT_DIR]
-reasonix task monitor events <task-id> --json|--jsonl [--dir PROJECT_DIR] [--after N] [--follow]
-reasonix hook list --json [--project-root PATH] [--home-dir PATH]
-reasonix hook status --json [--project-root PATH] [--home-dir PATH]
+deeper session list --json [--dir SESSION_DIR | --project-root PATH]
+deeper session show <machine-session-id> --json [--dir SESSION_DIR | --project-root PATH]
+deeper session status <machine-session-id> --json [--dir SESSION_DIR | --project-root PATH]
+deeper session recovery [<machine-session-id>] --json [--dir SESSION_DIR | --project-root PATH]
+deeper task list --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
+deeper task show <task-id> --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
+deeper task monitor list --json [--dir PROJECT_DIR]
+deeper task monitor status <task-id> --json [--dir PROJECT_DIR]
+deeper task monitor events <task-id> --json|--jsonl [--dir PROJECT_DIR] [--after N] [--follow]
+deeper hook list --json [--project-root PATH] [--home-dir PATH]
+deeper hook status --json [--project-root PATH] [--home-dir PATH]
 ```
 
 对于 `session` 和 `task`，`--dir` 明确指定 session 存储目录，`--project-root`
-则解析指定项目的 session store；两者不能同时使用。都未指定时，Reasonix 选择当前
+则解析指定项目的 session store；两者不能同时使用。都未指定时，Deeper 选择当前
 项目的 session store。对于 `hook`，`--dir` 是 `--project-root` 的别名。
 `hook list` 的状态值为 `active` 或 `invalid`；`invalid` 表示配置的
 event 因事件名、命令/context 来源或工具事件 matcher 无效而无法执行。非工具事件
 会忽略 matcher。
 
-机器 session ID 是带密钥的 opaque hash，不是 transcript 文件名。在同一个 Reasonix
+机器 session ID 是带密钥的 opaque hash，不是 transcript 文件名。在同一个 Deeper
 用户状态目录中，同一 session 的 ID 保持稳定；不同安装密钥会生成互不关联的 ID，无法再
-根据时间戳或模型 label 离线猜测。迁移 Reasonix 状态目录时，如果自动化依赖已有 machine
+根据时间戳或模型 label 离线猜测。迁移 Deeper 状态目录时，如果自动化依赖已有 machine
 ID，需要一并保留该私有身份密钥。任务仍在运行时
 `finished_at` 为空；只有任务已经结束并且持久化产物存在时，才会输出
 `artifact_complete=true`。没有 live session lease 的 `running` 记录会显示为
@@ -323,11 +323,11 @@ Schema version 1 的兼容规则：
 ## 恢复会话
 
 ```sh
-reasonix --continue
-reasonix --resume
-reasonix --resume provider-config
-reasonix --resume <session-id>
-reasonix --resume provider-config --copy
+deeper --continue
+deeper --resume
+deeper --resume provider-config
+deeper --resume <session-id>
+deeper --resume provider-config --copy
 ```
 
 - `--continue` 立即恢复最新保存的会话。
@@ -336,26 +336,26 @@ reasonix --resume provider-config --copy
   子串。没有匹配或匹配不唯一时会返回明确错误。
 - 为保持兼容，仍接受 `--resume=true` 和 `--resume=false`。
 - `--copy` 不修改原 transcript，而是在新的可写会话中继续。原会话已被另一个
-  Reasonix 进程占用时可以使用它。
+  Deeper 进程占用时可以使用它。
 
-一次性运行可用 `reasonix run --resume QUERY "任务"`，支持 session 文件路径、
-session ID，或来自 `--events-jsonl` / `reasonix session show --json` 的不透明
+一次性运行可用 `deeper run --resume QUERY "任务"`，支持 session 文件路径、
+session ID，或来自 `--events-jsonl` / `deeper session show --json` 的不透明
 machine session ID。Session lease 会阻止桌面端和 CLI 同时写入同一个 transcript。
 
 ## 权限
 
 ```sh
-reasonix --permission-mode read-only
-reasonix --permission-mode workspace-write
-reasonix --permission-mode danger-full-access
-reasonix -p "运行指定测试" --allowed-tools "Bash(go test ./...)"
+deeper --permission-mode read-only
+deeper --permission-mode workspace-write
+deeper --permission-mode danger-full-access
+deeper -p "运行指定测试" --allowed-tools "Bash(go test ./...)"
 ```
 
 | 权限模式 | 行为 |
 | --- | --- |
 | `read-only` | 可读取工作区；写入和外部副作用需要范围明确的授权。 |
 | `workspace-write` | 可写工作区和会话私有临时目录；这是默认模式。 |
-| `danger-full-access` | 以当前系统账户运行，不使用 Reasonix 文件和网络沙箱；宿主仍在启动前执行显式 deny。 |
+| `danger-full-access` | 以当前系统账户运行，不使用 Deeper 文件和网络沙箱；宿主仍在启动前执行显式 deny。 |
 
 内联脚本、管道、命令替换和 shell `-c` 与普通命令使用同一权限及沙箱边界，不能仅因
 语法形式产生审批。
@@ -363,20 +363,20 @@ reasonix -p "运行指定测试" --allowed-tools "Bash(go test ./...)"
 `--allowed-tools` 是会话权限覆盖，不是 provider tool schema 过滤器。规则可以用逗号
 或空格分隔，也可重复传入参数。配置中的 deny 规则始终优先于命令行 allow 规则。
 
-非交互运行（`reasonix run` / `-p`）没有可应答的审批界面。`read-only` 对未获得窄范围
+非交互运行（`deeper run` / `-p`）没有可应答的审批界面。`read-only` 对未获得窄范围
 授权的写入和副作用失败关闭；`workspace-write` 在操作系统沙箱内直接运行日常构建、测试、
 管道与内联脚本；`danger-full-access` 必须显式选择，并且仍不能绕过 deny 规则。
 
 ## 附加目录
 
 ```sh
-reasonix --add-dir ../shared
-reasonix -p "同时更新两个项目" \
+deeper --add-dir ../shared
+deeper -p "同时更新两个项目" \
   --add-dir ../frontend \
   --add-dir ../backend
 ```
 
-相对路径从 workspace 根目录解析，并且必须是已存在的目录。Reasonix 会解析符号链接、
+相对路径从 workspace 根目录解析，并且必须是已存在的目录。Deeper 会解析符号链接、
 去重，并在当前会话中扩展文件写入工具和沙盒 Bash 的写入边界。这些目录只在运行时生效，
 不会写入配置。
 
@@ -408,10 +408,10 @@ reasonix -p "同时更新两个项目" \
 
 剪贴板操作按内容类型明确分开。本地 transcript 和输入框选区写入系统剪贴板，并且只有写入
 成功后才提示完成；SSH 会回退到明确标记的 OSC 52 请求。文本粘贴继续走终端的
-bracketed-paste 动作（macOS 通常为 `Cmd+V`，其它平台使用终端自身配置）。Reasonix 接管
+bracketed-paste 动作（macOS 通常为 `Cmd+V`，其它平台使用终端自身配置）。Deeper 接管
 本地会话的鼠标时，没有选区的右键会读取剪贴板文本并走同一粘贴路径，有选区时右键优先复制。
 SSH 下远端进程无法读取本机剪贴板，请使用终端粘贴快捷键；`/mouse` 可恢复终端原生右键菜单。
-图片粘贴由 Reasonix 接管：macOS/Linux 使用 `Ctrl+V`，Windows 使用 `Alt+V`，也可运行
+图片粘贴由 Deeper 接管：macOS/Linux 使用 `Ctrl+V`，Windows 使用 `Alt+V`，也可运行
 `/paste-image`；附件标记准备完成前，底栏会显示“正在粘贴图片…”。若终端把该快捷键转发给
 应用而不是自行粘贴，剪贴板中没有图片时会回退为文本粘贴，因此该按键不会吞掉纯文本。
 
@@ -438,7 +438,7 @@ SSH 下远端进程无法读取本机剪贴板，请使用终端粘贴快捷键�
 | `/sandbox` | 查看沙盒状态。 |
 | `/goal` | 启动、查看或清除长周期 Goal。 |
 | `/docs [问题]` | 显示内置语料身份，或先本地检索，再让当前配置的 AI 根据版本匹配证据回答。 |
-| `/reasonix:docs [问题]` | 当已有自定义命令或兼容插件/Skill 别名占用 `/docs` 时优先使用的内置后备入口；若这个名称也已被占用，菜单会选择下一个空闲的 `reasonix:` 限定名，不覆盖原命令。 |
+| `/deeper:docs [问题]` | 当已有自定义命令或兼容插件/Skill 别名占用 `/docs` 时优先使用的内置后备入口；若这个名称也已被占用，菜单会选择下一个空闲的 `deeper:` 限定名，不覆盖原命令。 |
 | `/mcp`、`/skills`、`/hooks` | 查看和管理扩展。 |
 | `/remember <note>` | 把常驻 note 追加到项目指令文档；`# <note>` 是快捷方式。 |
 | `/memory [subcommand]` | 查看指令、记忆 provenance、召回、revision 与恢复。 |
@@ -455,14 +455,14 @@ SSH 下远端进程无法读取本机剪贴板，请使用终端粘贴快捷键�
 提示该设置已退役，并保持标准执行；未知值仍会报错。
 
 用量统计使用独立的可丢弃 rollup 投影：
-reasonix catalogs reindex usage [--json]
+deeper catalogs reindex usage [--json]
 详见 [用量 Catalog](./USAGE_CATALOG.zh-CN.md)。
 
 可以独立检查或重建可丢弃的 Task 投影：
 
 ```sh
-reasonix doctor catalogs [--json]
-reasonix catalogs reindex tasks [--project PATH ...] [--json]
+deeper doctor catalogs [--json]
+deeper catalogs reindex tasks [--project PATH ...] [--json]
 ```
 
 权威 FileStore 边界、跨项目路由和重建行为见
@@ -483,7 +483,7 @@ reasonix catalogs reindex tasks [--project PATH ...] [--json]
 | `/memory archived` | 列出 archive facts 及其受管路径。 |
 | `/memory recover <archive-path>` | 不覆盖 active data，把 archive 恢复为新 revision。 |
 
-这些命令始终作用于当前 session controller。当会话位于远端主机上（`reasonix remote
+这些命令始终作用于当前 session controller。当会话位于远端主机上（`deeper remote
 connect` 或桌面的远程网页窗口）时，它们使用远程 memory catalog，绝不回退读取桌面本机
 记忆。权限、自动召回、写入确认和迁移行为见
 [Context Engine v2](./SESSION_MEMORY_RETRIEVAL.zh-CN.md)。
@@ -493,8 +493,8 @@ connect` 或桌面的远程网页窗口）时，它们使用远程 memory catalo
 用量统计使用独立的可丢弃 rollup 投影：
 
 ```sh
-reasonix doctor catalogs [--json]
-reasonix catalogs reindex usage [--json]
+deeper doctor catalogs [--json]
+deeper catalogs reindex usage [--json]
 ```
 
 ```

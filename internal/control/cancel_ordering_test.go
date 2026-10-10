@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
+	"deeper/internal/provider"
 )
 
 func TestCancelSessionTreatsIndependentBackgroundJobAsIdle(t *testing.T) {

@@ -37,10 +37,10 @@ func TestParseUname(t *testing.T) {
 
 func TestParseVersion(t *testing.T) {
 	cases := map[string]string{
-		"reasonix v1.9.0":        "1.9.0",
-		"1.9.0":                  "1.9.0",
-		"reasonix version 2.0.1": "2.0.1",
-		"v1.10.0-rc.1":           "1.10.0-rc.1",
+		"deeper v1.9.0":        "1.9.0",
+		"1.9.0":                "1.9.0",
+		"deeper version 2.0.1": "2.0.1",
+		"v1.10.0-rc.1":         "1.10.0-rc.1",
 	}
 	for in, want := range cases {
 		got, err := ParseVersion(in)
@@ -77,14 +77,14 @@ func TestCompareVersions(t *testing.T) {
 // cannot break out of the launch command.
 func TestLaunchCommandQuotesHostilePaths(t *testing.T) {
 	paths := StatePaths{
-		Dir:       "/home/dev/.reasonix/remote",
-		TokenFile: "/home/dev/.reasonix/remote/serve-x.token",
-		PortFile:  "/home/dev/.reasonix/remote/serve-x.port",
-		PidFile:   "/home/dev/.reasonix/remote/serve-x.pid",
-		LogFile:   "/home/dev/.reasonix/remote/serve-x.log",
+		Dir:       "/home/dev/.deeper/remote",
+		TokenFile: "/home/dev/.deeper/remote/serve-x.token",
+		PortFile:  "/home/dev/.deeper/remote/serve-x.port",
+		PidFile:   "/home/dev/.deeper/remote/serve-x.pid",
+		LogFile:   "/home/dev/.deeper/remote/serve-x.log",
 	}
 	hostile := "/tmp/'; rm -rf ~; echo '"
-	cmd := LaunchCommand("/usr/bin/reasonix", hostile, paths, nil, nil)
+	cmd := LaunchCommand("/usr/bin/deeper", hostile, paths, nil, nil)
 
 	// The hostile workspace must appear only inside a quoted operand, escaped.
 	if strings.Contains(cmd, "; rm -rf ~; echo") && !strings.Contains(cmd, `'\''; rm -rf ~; echo '\''`) {
@@ -125,9 +125,9 @@ func TestStopAndServeAliveCommands(t *testing.T) {
 		}
 	}
 	alive := ServeAliveCommand(99, paths)
-	// Must check liveness AND that the process is a reasonix serve (guards PID
+	// Must check liveness AND that the process is a deeper serve (guards PID
 	// reuse), not just kill -0.
-	for _, want := range []string{"kill -0 99", "ps -p 99", "*reasonix*serve*", paths.TokenFile, paths.PortFile} {
+	for _, want := range []string{"kill -0 99", "ps -p 99", "*deeper*serve*", paths.TokenFile, paths.PortFile} {
 		if !strings.Contains(alive, want) {
 			t.Errorf("ServeAliveCommand missing %q: %s", want, alive)
 		}
@@ -135,8 +135,8 @@ func TestStopAndServeAliveCommands(t *testing.T) {
 	if strings.Count(stop, "ours") < 3 {
 		t.Fatalf("StopCommand must revalidate ownership during TERM/KILL wait: %s", stop)
 	}
-	withModel := ServeAliveCommand(99, paths, "--model reasonix-desktop-proxy")
-	for _, want := range []string{`R0='--model reasonix-desktop-proxy'`, `"$R0"*`} {
+	withModel := ServeAliveCommand(99, paths, "--model deeper-desktop-proxy")
+	for _, want := range []string{`R0='--model deeper-desktop-proxy'`, `"$R0"*`} {
 		if !strings.Contains(withModel, want) {
 			t.Errorf("ServeAliveCommand(requireArgs) missing %q: %s", want, withModel)
 		}
@@ -147,7 +147,7 @@ func TestStopAndServeAliveCommands(t *testing.T) {
 }
 
 func TestLaunchCommandDetachAndLogHardening(t *testing.T) {
-	cmd := LaunchCommand("/usr/bin/reasonix", "/ws", StatePaths{
+	cmd := LaunchCommand("/usr/bin/deeper", "/ws", StatePaths{
 		Dir: "/d", TokenFile: "/d/t", PortFile: "/d/p", PidFile: "/d/i", LogFile: "/d/l",
 	}, nil, nil)
 	// setsid must be optional (macOS lacks it) and the log created 0600 so the
@@ -166,7 +166,7 @@ func TestLaunchCommandDetachAndLogHardening(t *testing.T) {
 }
 
 func TestLocateCommandProbesRequiredServeCapabilities(t *testing.T) {
-	cmd := LocateCommand("/home/x/.reasonix/remote/bin/reasonix")
+	cmd := LocateCommand("/home/x/.deeper/remote/bin/deeper")
 	for _, want := range []string{"serve --help", "port-file", "session-events", "detached-heal", ServeCapsToken, "portfile:yes", "sessionevents:yes", "detachedheal:yes", "caps:yes"} {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("LocateCommand missing %q:\n%s", want, cmd)
@@ -175,9 +175,9 @@ func TestLocateCommandProbesRequiredServeCapabilities(t *testing.T) {
 }
 
 func TestLocateUploadedCommandBypassesPathCandidates(t *testing.T) {
-	uploaded := "/home/x/.reasonix/remote/bin/reasonix"
+	uploaded := "/home/x/.deeper/remote/bin/deeper"
 	cmd := LocateUploadedCommand(uploaded)
-	if !strings.Contains(cmd, "BIN='"+uploaded+"'") || strings.Contains(cmd, "command -v reasonix") || strings.Contains(cmd, "npm prefix") {
+	if !strings.Contains(cmd, "BIN='"+uploaded+"'") || strings.Contains(cmd, "command -v deeper") || strings.Contains(cmd, "npm prefix") {
 		t.Fatalf("uploaded probe did not target only the managed binary:\n%s", cmd)
 	}
 }
@@ -185,8 +185,8 @@ func TestLocateUploadedCommandBypassesPathCandidates(t *testing.T) {
 func TestLocateNPMGlobalCommandBypassesPathCandidates(t *testing.T) {
 	cmd := LocateNPMGlobalCommand()
 	if !strings.Contains(cmd, `P="$(npm prefix -g 2>/dev/null)"`) ||
-		!strings.Contains(cmd, `BIN="$P/bin/reasonix"`) ||
-		strings.Contains(cmd, "command -v reasonix") {
+		!strings.Contains(cmd, `BIN="$P/bin/deeper"`) ||
+		strings.Contains(cmd, "command -v deeper") {
 		t.Fatalf("npm-global probe did not target only npm's installed binary:\n%s", cmd)
 	}
 }
@@ -236,23 +236,23 @@ func TestTomlAssignmentString(t *testing.T) {
 // comment, a later heal failed to find that block (exact-match parser) and
 // appended a duplicate, and the loader resolved the name to the stale first
 // block — leaving the serve dialing a dead tunnel port.
-const staleAlignedProxyConfig = `# Reasonix configuration.
+const staleAlignedProxyConfig = `# Deeper configuration.
 default_model = "deepseek/deepseek-v4-flash"
 
 [[providers]]
-name        = "reasonix-desktop-proxy-bc965691ed1e10b8"
+name        = "deeper-desktop-proxy-bc965691ed1e10b8"
 kind        = "openai"
 base_url    = "http://127.0.0.1:46407"
 model       = "deepseek-v4-pro"
-api_key_env = "REASONIX_PROXY_TOKEN_BC965691ED1E10B8"
+api_key_env = "DEEPER_PROXY_TOKEN_BC965691ED1E10B8"
 
 [[providers]]
-# managed by the Reasonix desktop credential proxy — safe to delete
-name = "reasonix-desktop-proxy-bc965691ed1e10b8"
+# managed by the Deeper desktop credential proxy — safe to delete
+name = "deeper-desktop-proxy-bc965691ed1e10b8"
 kind = "openai"
 base_url = "http://127.0.0.1:41333"
 model = "deepseek-v4-pro"
-api_key_env = "REASONIX_PROXY_TOKEN_BC965691ED1E10B8"
+api_key_env = "DEEPER_PROXY_TOKEN_BC965691ED1E10B8"
 
 [[providers]]
 name = "mine"
@@ -262,7 +262,7 @@ api_key_env = "MY_KEY"
 `
 
 func TestProviderBlockIndexFindsAlignedBlock(t *testing.T) {
-	if idx := providerBlockIndex(staleAlignedProxyConfig, "reasonix-desktop-proxy-bc965691ed1e10b8"); idx < 0 {
+	if idx := providerBlockIndex(staleAlignedProxyConfig, "deeper-desktop-proxy-bc965691ed1e10b8"); idx < 0 {
 		t.Fatal("aligned provider block not found")
 	}
 	if idx := providerBlockIndex(staleAlignedProxyConfig, "mine"); idx < 0 {
@@ -274,17 +274,17 @@ func TestProviderBlockIndexFindsAlignedBlock(t *testing.T) {
 }
 
 func TestDropDuplicateProviderBlocks(t *testing.T) {
-	deduped, changed := dropDuplicateProviderBlocks(staleAlignedProxyConfig, "reasonix-desktop-proxy-bc965691ed1e10b8")
+	deduped, changed := dropDuplicateProviderBlocks(staleAlignedProxyConfig, "deeper-desktop-proxy-bc965691ed1e10b8")
 	if !changed {
 		t.Fatal("duplicate blocks were not dropped")
 	}
-	if got := strings.Count(deduped, `"reasonix-desktop-proxy-bc965691ed1e10b8"`); got != 1 {
+	if got := strings.Count(deduped, `"deeper-desktop-proxy-bc965691ed1e10b8"`); got != 1 {
 		t.Fatalf("want exactly one provider block, got %d:\n%s", got, deduped)
 	}
 	if !strings.Contains(deduped, `name = "mine"`) {
 		t.Fatalf("unrelated provider block lost:\n%s", deduped)
 	}
-	if unchanged, changed := dropDuplicateProviderBlocks(deduped, "reasonix-desktop-proxy-bc965691ed1e10b8"); changed {
+	if unchanged, changed := dropDuplicateProviderBlocks(deduped, "deeper-desktop-proxy-bc965691ed1e10b8"); changed {
 		t.Fatalf("second dedup rewrote an already-clean config:\n%s", unchanged)
 	}
 }

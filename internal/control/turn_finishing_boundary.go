@@ -1,6 +1,6 @@
 package control
 
-import "reasonix/internal/session"
+import "deeper/internal/session"
 
 // turnFinishingBoundary exposes exact execution and TurnDone fan-out
 // transitions without making observers poll scheduler-dependent state.

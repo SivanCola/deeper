@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 type organizationReadCache struct {

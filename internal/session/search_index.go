@@ -11,9 +11,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontent"
 )
 
 const searchIndexVersion = 4

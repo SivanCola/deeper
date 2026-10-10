@@ -1,15 +1,15 @@
 package cli
 
 import (
+	"deeper/internal/pluginpkg"
 	"encoding/json"
 	"path/filepath"
-	"reasonix/internal/pluginpkg"
 	"strings"
 	"testing"
 )
 
 func TestPluginDryRunPreservesApprovalPlan(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	t.Chdir(t.TempDir())
 	source := filepath.Join(t.TempDir(), "demo")
 	writePluginTestFile(t, filepath.Join(source, pluginpkg.CodexManifest), `{"name":"demo","version":"1.0.0","description":"Demo","skills":"skills"}`)

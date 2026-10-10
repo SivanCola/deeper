@@ -6,10 +6,10 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func TestFactDrivenModesShareExecutorSchemaBytes(t *testing.T) {

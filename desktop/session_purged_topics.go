@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func (a *App) validatePlaceholderTopicOpen(topicID, sessionPath string) error {

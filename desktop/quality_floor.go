@@ -1,10 +1,10 @@
 package main
 
 import (
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/worktree"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/worktree"
 )
 
 // Retired quality-floor compatibility. Old callers and persisted values remain

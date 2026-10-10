@@ -39,9 +39,9 @@ mkdirSync(STAGE, { recursive: true });
 
 const subPackages = [];
 for (const t of TARGETS) {
-  const name = `@reasonix/cli-${t.node}`;
+  const name = `@sivancola/deeper-cli-${t.node}`;
   const dir = join(STAGE, `cli-${t.node}`);
-  const exe = t.goos === "windows" ? "reasonix.exe" : "reasonix";
+  const exe = t.goos === "windows" ? "deeper.exe" : "deeper";
   mkdirSync(join(dir, "bin"), { recursive: true });
 
   console.log(`build ${t.goos}/${t.goarch} -> ${name}`);
@@ -51,10 +51,10 @@ for (const t of TARGETS) {
       "build",
       "-trimpath",
       "-ldflags",
-      `-s -w -X main.version=${binaryVersion} -X main.gitCommit=${gitCommit} -X main.buildTimeUTC=${buildTimeUTC} -X reasonix/internal/productdocs.linkedVersion=${binaryVersion} -X reasonix/internal/productdocs.linkedRevision=${candidateSha}`,
+      `-s -w -X main.version=${binaryVersion} -X main.gitCommit=${gitCommit} -X main.buildTimeUTC=${buildTimeUTC} -X deeper/internal/productdocs.linkedVersion=${binaryVersion} -X deeper/internal/productdocs.linkedRevision=${candidateSha}`,
       "-o",
       join(dir, "bin", exe),
-      "./cmd/reasonix",
+      "./cmd/deeper",
     ],
     {
       cwd: ROOT,
@@ -69,45 +69,47 @@ for (const t of TARGETS) {
       {
         name,
         version,
-        description: `reasonix prebuilt binary for ${t.node}.`,
+        description: `deeper prebuilt binary for ${t.node}.`,
         os: [t.goos === "windows" ? "win32" : t.goos],
         cpu: [t.goarch === "amd64" ? "x64" : "arm64"],
-        files: ["bin/"],
+        files: ["bin/", "LICENSE", "NOTICE"],
         license: "MIT",
         repository: {
           type: "git",
-          url: "git+https://github.com/esengine/DeepSeek-Reasonix.git",
+          url: "git+https://github.com/SivanCola/deeper.git",
         },
-        reasonixCandidateSha: candidateSha,
+        deeperCandidateSha: candidateSha,
       },
       null,
       2,
     )}\n`,
   );
+  for (const file of ["LICENSE", "NOTICE"]) cpSync(join(ROOT, file), join(dir, file));
   subPackages.push({ name, dir });
 }
 
-const mainDir = join(STAGE, "reasonix");
+const mainDir = join(STAGE, "deeper");
 mkdirSync(mainDir, { recursive: true });
-cpSync(join(HERE, "reasonix", "bin"), join(mainDir, "bin"), { recursive: true });
+cpSync(join(HERE, "deeper", "bin"), join(mainDir, "bin"), { recursive: true });
 cpSync(join(ROOT, "README.md"), join(mainDir, "README.md"));
+for (const file of ["LICENSE", "NOTICE"]) cpSync(join(ROOT, file), join(mainDir, file));
 
 const mainPkg = JSON.parse(
-  readFileSync(join(HERE, "reasonix", "package.json"), "utf8"),
+  readFileSync(join(HERE, "deeper", "package.json"), "utf8"),
 );
 mainPkg.version = version;
-mainPkg.reasonixCandidateSha = candidateSha;
+mainPkg.deeperCandidateSha = candidateSha;
 for (const key of Object.keys(mainPkg.optionalDependencies)) {
   mainPkg.optionalDependencies[key] = version;
 }
 // Guard against drift between the platform packages we build and the
 // optionalDependencies the main package declares: a typo would otherwise ship
 // a main package referencing a binary package that was never built.
-const expectedNames = TARGETS.map((t) => `@reasonix/cli-${t.node}`);
+const expectedNames = TARGETS.map((t) => `@sivancola/deeper-cli-${t.node}`);
 const writtenNames = Object.keys(mainPkg.optionalDependencies);
 const missing = expectedNames.filter((name) => !writtenNames.includes(name));
 const unexpected = writtenNames.filter(
-  (key) => !/^@reasonix\/cli-/.test(key) || !expectedNames.includes(key),
+  (key) => !/^@sivancola\/deeper-cli-/.test(key) || !expectedNames.includes(key),
 );
 if (missing.length > 0 || unexpected.length > 0) {
   throw new Error(
@@ -132,7 +134,7 @@ if (!publish) {
 // reuses packages that already prove the same candidate SHA, fills only missing
 // packages, and never moves latest/next/canary back to an older version.
 publishPackages({
-  packages: [...subPackages, { name: "reasonix", dir: mainDir }],
+  packages: [...subPackages, { name: "@sivancola/deeper", dir: mainDir }],
   version,
   candidateSha,
   stableDistTag: stableDistTagFromEnv(),

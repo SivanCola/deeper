@@ -101,8 +101,8 @@ test("Desktop publication and the release orchestration do not depend on the swi
   assert.match(workflow("release-promote.yml"), /needs: \[preflight, cli, npm, desktop\]/);
 });
 
-const REQUIRED_CLI = ["SHA256SUMS", "reasonix-darwin-amd64.tar.gz", "reasonix-darwin-arm64.tar.gz", "reasonix-linux-amd64.tar.gz", "reasonix-linux-arm64.tar.gz", "reasonix-windows-amd64.zip", "reasonix-windows-arm64.zip"];
-const DESKTOP = ["Reasonix-darwin-arm64.dmg", "Reasonix-darwin-amd64.dmg", "Reasonix-darwin-universal.dmg", "Reasonix-darwin-arm64.zip", "Reasonix-darwin-amd64.zip", "Reasonix-linux-amd64.deb", "Reasonix-linux-amd64.tar.gz", "Reasonix-windows-amd64-installer.exe", "Reasonix-windows-amd64.zip", "Reasonix-windows-arm64-installer.exe"];
+const REQUIRED_CLI = ["SHA256SUMS", "deeper-darwin-amd64.tar.gz", "deeper-darwin-arm64.tar.gz", "deeper-linux-amd64.tar.gz", "deeper-linux-arm64.tar.gz", "deeper-windows-amd64.zip", "deeper-windows-arm64.zip"];
+const DESKTOP = ["Deeper-darwin-arm64.dmg", "Deeper-darwin-amd64.dmg", "Deeper-darwin-universal.dmg", "Deeper-darwin-arm64.zip", "Deeper-darwin-amd64.zip", "Deeper-linux-amd64.deb", "Deeper-linux-amd64.tar.gz", "Deeper-windows-amd64-installer.exe", "Deeper-windows-amd64.zip", "Deeper-windows-arm64-installer.exe"];
 const sha = "a".repeat(40);
 
 function verifier(t, { latest = "1.2.3", legacy = "1.2.3" } = {}) {
@@ -120,7 +120,7 @@ const fs=require('node:fs'), path=require('node:path');
 const args=process.argv.slice(2), root=process.env.FIXTURE, state=JSON.parse(fs.readFileSync(path.join(root,'state.json'),'utf8'));
 fs.appendFileSync(path.join(root,'calls'),JSON.stringify(['gh',...args])+'\\n');
 if(args[0]==='release'&&args[1]==='view') console.log(JSON.stringify(args[2].startsWith('desktop-')?state.desktop:state.cli));
-else if(args[0]==='api'&&args.join(' ').includes('homebrew-reasonix')) console.log('cask "reasonix" do\\n  version "1.2.3"\\nend');
+else if(args[0]==='api'&&args.join(' ').includes('homebrew-deeper')) console.log('cask "deeper" do\\n  version "1.2.3"\\nend');
 else process.exit(4);
 `, { mode: 0o755 });
   writeFileSync(path.join(bin, "npm"), `#!/usr/bin/env node
@@ -128,15 +128,15 @@ const fs=require('node:fs'), path=require('node:path');
 const args=process.argv.slice(2), root=process.env.FIXTURE, state=JSON.parse(fs.readFileSync(path.join(root,'state.json'),'utf8'));
 fs.appendFileSync(path.join(root,'calls'),JSON.stringify(['npm',...args])+'\\n');
 const [spec]=args.slice(1); const name=spec.slice(0,spec.lastIndexOf('@'));
-const out={name,version:'1.2.3',reasonixCandidateSha:'${sha}',gitHead:'${sha}','dist.integrity':'sha512-x'};
+const out={name,version:'1.2.3',deeperCandidateSha:'${sha}',gitHead:'${sha}','dist.integrity':'sha512-x'};
 for (const field of args) if (field.startsWith('dist-tags.')) { const tag=field.slice(10); const value=tag==='latest'?state.latest:tag==='legacy-v1'?state.legacy:undefined; if(value) out[field]=value; }
 console.log(JSON.stringify(out));
 `, { mode: 0o755 });
   writeFileSync(path.join(bin, "go"), `#!/usr/bin/env node
 const args=process.argv.slice(2);
-require('node:fs').writeFileSync(args[3], JSON.stringify({version:'v1.2.3',platforms:{'darwin-arm64':{url:'https://dl.reasonix.io/desktop-v1.2.3/x',sig:'s'}}}));
+require('node:fs').writeFileSync(args[3], JSON.stringify({version:'v1.2.3',platforms:{'darwin-arm64':{url:'https://github.com/SivanCola/deeper/releases/download/desktop-v1.2.3/x',sig:'s'}}}));
 `, { mode: 0o755 });
-  const env = { ...process.env, FIXTURE: root, PATH: `${bin}:${process.env.PATH}`, RELEASE_REPOSITORY: "esengine/DeepSeek-Reasonix", RELEASE_VERSION: "1.2.3", CLI_TAG: "v1.2.3", DESKTOP_TAG: "desktop-v1.2.3", RELEASE_EXPECTED_SHA: sha, RELEASE_OPERATION: "publish", VERIFY_PUBLIC_POINTERS: "true", VERIFY_ATTEMPTS: "1", VERIFY_DELAY_SECONDS: "0", RELEASE_LEDGER_OUTPUT: path.join(root, "ledger.json") };
+  const env = { ...process.env, FIXTURE: root, PATH: `${bin}:${process.env.PATH}`, RELEASE_REPOSITORY: "SivanCola/deeper", RELEASE_VERSION: "1.2.3", CLI_TAG: "v1.2.3", DESKTOP_TAG: "desktop-v1.2.3", RELEASE_EXPECTED_SHA: sha, RELEASE_OPERATION: "publish", VERIFY_PUBLIC_POINTERS: "true", VERIFY_ATTEMPTS: "1", VERIFY_DELAY_SECONDS: "0", RELEASE_LEDGER_OUTPUT: path.join(root, "ledger.json") };
   delete env[SWITCH];
   return {
     run: extra => spawnSync("bash", ["scripts/verify-stable-release-artifacts.sh"], { env: { ...env, ...extra }, encoding: "utf8" }),
@@ -150,7 +150,7 @@ test("postflight with the variable unset still requires npm latest and the Homeb
   assert.equal(result.status, 0, result.stderr);
   assert.match(f.calls(), /dist-tags\.latest/);
   assert.doesNotMatch(f.calls(), /legacy-v1/);
-  assert.match(f.calls(), /homebrew-reasonix/);
+  assert.match(f.calls(), /homebrew-deeper/);
   const ledger = f.ledger();
   assert.ok(ledger.surfaces.homebrew);
   assert.ok(ledger.surfaces.npm.packages.every(item => item.latest === "1.2.3" && item.distTag === undefined));
@@ -162,7 +162,7 @@ test("postflight with the variable empty or false behaves as unset", t => {
   for (const value of ["", "false"]) {
     const f = verifier(t), result = f.run({ [SWITCH]: value });
     assert.equal(result.status, 0, result.stderr);
-    assert.match(f.calls(), /homebrew-reasonix/);
+    assert.match(f.calls(), /homebrew-deeper/);
   }
 });
 
@@ -171,7 +171,7 @@ test("frozen postflight verifies legacy-v1, ignores latest and the cask, and sti
   assert.equal(result.status, 0, result.stderr);
   assert.match(f.calls(), /dist-tags\.legacy-v1/);
   assert.doesNotMatch(f.calls(), /dist-tags\.latest/);
-  assert.doesNotMatch(f.calls(), /homebrew-reasonix/);
+  assert.doesNotMatch(f.calls(), /homebrew-deeper/);
   assert.match(f.calls(), /desktop-v1\.2\.3/);
   const ledger = f.ledger();
   assert.equal(ledger.surfaces.homebrew, undefined);
@@ -190,7 +190,7 @@ test("the npm-v tag guard survives a freeze; only the latest poll is skipped", (
   assert.doesNotMatch(step.split("run:")[0], /\bif:/);
   const tagCheck = step.indexOf("git ls-remote --exit-code origin");
   const freeze = step.indexOf('"${CLI_PUBLISH_FROZEN:-}" = "true"');
-  const poll = step.indexOf("npm view reasonix dist-tags.latest");
+  const poll = step.indexOf("npm view deeper dist-tags.latest");
   assert.ok(tagCheck > 0 && tagCheck < freeze && freeze < poll);
 });
 
@@ -203,6 +203,6 @@ test("shell and workflow sides agree on every spelling of the variable", t => {
     assert.equal(shell === "true", workflowFrozen, JSON.stringify(raw));
     const f = verifier(t), result = f.run({ [SWITCH]: shell });
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(/homebrew-reasonix/.test(f.calls()), !workflowFrozen, JSON.stringify(raw));
+    assert.equal(/homebrew-deeper/.test(f.calls()), !workflowFrozen, JSON.stringify(raw));
   }
 });

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/ablation"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // withoutMessageIDs strips the per-session local ids so two independent runs
@@ -31,7 +31,7 @@ func TestEffectMessageIDsPersistThroughRealBuild(t *testing.T) {
 	provider.Register("boot-effect-message-ids", func(provider.Config) (provider.Provider, error) {
 		return rec, nil
 	})
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

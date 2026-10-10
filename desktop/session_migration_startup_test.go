@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 func TestStartupReservationReadinessPrecedesRestoredShell(t *testing.T) {

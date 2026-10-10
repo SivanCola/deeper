@@ -7,8 +7,8 @@ import (
     "os"
     "path/filepath"
     "strings"
-    "reasonix/internal/agent"
-    "reasonix/internal/provider"
+    "deeper/internal/agent"
+    "deeper/internal/provider"
     // CANONICAL_IMPORT
 )
 

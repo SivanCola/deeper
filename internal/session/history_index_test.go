@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
 )
 
 func searchHistoryReady(t *testing.T, query *Query, ref SessionRef, text, cursor string, limit int) SearchHistoryPage {

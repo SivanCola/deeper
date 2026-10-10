@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/taskcatalog"
+	"deeper/internal/taskcatalog"
 )
 
 func init() {

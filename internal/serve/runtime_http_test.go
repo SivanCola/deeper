@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
-	"reasonix/internal/session"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
+	"deeper/internal/session"
 )
 
 type rejectingGoalAPI struct {

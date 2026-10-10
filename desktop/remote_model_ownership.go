@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 type credentialProxyOwnership struct {

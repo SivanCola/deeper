@@ -1,8 +1,8 @@
 package main
 
 import (
+	"deeper/internal/provider"
 	"fmt"
-	"reasonix/internal/provider"
 	"sync"
 	"testing"
 )

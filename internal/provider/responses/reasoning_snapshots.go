@@ -2,8 +2,8 @@ package responses
 
 import (
 	"context"
+	"deeper/internal/provider"
 	"encoding/json"
-	"reasonix/internal/provider"
 )
 
 type responseReasoningSnapshots struct{ items []json.RawMessage }

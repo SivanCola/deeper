@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 func TestReversePathBatchesSerializeWithoutDeadlock(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 func TestKeepOnlyVisibleTabKeepsCanonicalRuntimeWhenRegistryCannotPersist(t *testing.T) {

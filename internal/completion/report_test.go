@@ -1,8 +1,8 @@
 package completion
 
 import (
+	"deeper/internal/evidence"
 	"path/filepath"
-	"reasonix/internal/evidence"
 	"reflect"
 	"runtime"
 	"strings"

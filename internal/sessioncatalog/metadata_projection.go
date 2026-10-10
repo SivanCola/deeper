@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/historywork"
+	"deeper/internal/historywork"
 )
 
 // Registry input is already a complete caller-owned observation. Applying it

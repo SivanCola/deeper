@@ -13,16 +13,16 @@ import (
 	"runtime"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
 )
 
 // telemetry_app.go is the anonymous launch ping: one POST per app start carrying a
 // random install id, version, and OS facts — never conversation, key, or file data.
 // Gated on config desktop.telemetry (default on) and skipped entirely in dev builds.
 
-var pingEndpoint = "https://crash.reasonix.io/v1/ping"
+var pingEndpoint = os.Getenv("DEEPER_PING_ENDPOINT")
 
 // desktopRendererEngine is the one renderer the desktop ships now: the
 // Electron shell's Chromium. Kept as a telemetry dimension so dashboards do
@@ -81,7 +81,7 @@ func installID() (string, error) {
 }
 
 func (a *App) sendStartupPing() {
-	if version == "dev" {
+	if version == "dev" || pingEndpoint == "" {
 		return
 	}
 	cfg, err := config.Load()

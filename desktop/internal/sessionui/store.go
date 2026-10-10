@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"sync"
 
-	"reasonix/internal/sqliteuri"
+	"deeper/internal/sqliteuri"
 
 	_ "modernc.org/sqlite"
 )

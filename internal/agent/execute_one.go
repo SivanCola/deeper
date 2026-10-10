@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/fileops"
-	"reasonix/internal/jobs"
-	"reasonix/internal/mcpinteraction"
-	"reasonix/internal/memory"
-	"reasonix/internal/planmode"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/checkpoint"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/fileops"
+	"deeper/internal/jobs"
+	"deeper/internal/mcpinteraction"
+	"deeper/internal/memory"
+	"deeper/internal/planmode"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 // executeOne runs a single tool call. It is pure with respect to the event sink

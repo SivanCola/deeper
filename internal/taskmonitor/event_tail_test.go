@@ -12,7 +12,7 @@ import (
 func TestReadEventTailKeepsIncompleteLineForRetry(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	store := NewFileStore(filepath.Join(".reasonix", "tasks"))
+	store := NewFileStore(filepath.Join(".deeper", "tasks"))
 	now := time.Now()
 	first := TaskEvent{Timestamp: now, EventType: "state_change", TaskID: "task", State: TaskStateRunning}
 	if err := store.AppendAuditEvent(context.Background(), root, first); err != nil {
@@ -25,7 +25,7 @@ func TestReadEventTailKeepsIncompleteLineForRetry(t *testing.T) {
 	checkpoint := tail.NextOffset
 	second := TaskEvent{Sequence: 2, Timestamp: now.Add(time.Second), EventType: "state_change", TaskID: "task", State: TaskStateSucceeded}
 	line, _ := json.Marshal(second)
-	path := filepath.Join(root, ".reasonix", "tasks", "task", "events.jsonl")
+	path := filepath.Join(root, ".deeper", "tasks", "task", "events.jsonl")
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		t.Fatal(err)

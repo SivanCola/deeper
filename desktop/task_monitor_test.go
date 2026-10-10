@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/taskcatalog"
-	"reasonix/internal/taskmonitor"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/taskcatalog"
+	"deeper/internal/taskmonitor"
 )
 
 type taskKillController struct {

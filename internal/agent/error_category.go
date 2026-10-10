@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 var exitCodePattern = regexp.MustCompile(`(?i)exit (status|code)[:= ]+(-?\d+)`)

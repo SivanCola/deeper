@@ -9,7 +9,7 @@ import { initialShellStatus, listenShellStatus, homeKey } from "./shellStatus.js
 
 test("status survives a dead service and is bounded to a read-only snapshot", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "shell-status-"));
-  const address = process.platform === "win32" ? `\\\\.\\pipe\\reasonix-test-${process.pid}` : join(dir, "status.sock");
+  const address = process.platform === "win32" ? `\\\\.\\pipe\\deeper-test-${process.pid}` : join(dir, "status.sock");
   const status = initialShellStatus("C:\\Users\\Test\\desktop-shell", "v1.38.7");
   status.lifecycle = "failed"; status.service = "exited";
   const server = listenShellStatus(() => status, { info() {}, warn() {}, error() {} }, address);

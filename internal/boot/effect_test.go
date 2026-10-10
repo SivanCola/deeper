@@ -2,7 +2,7 @@ package boot
 
 // Effect tests assert final-boundary behavior through the real Build stack:
 // a scripted provider records what actually reaches the provider boundary.
-// Component correctness is not system effectiveness (see REASONIX.md).
+// Component correctness is not system effectiveness (see DEEPER.md).
 
 import (
 	"context"
@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/ablation"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 type effectRecordingProvider struct {
@@ -68,7 +68,7 @@ func effectRun(t *testing.T, kind, tokenMode string, arm ablation.Set) []provide
 	provider.Register(kind, func(provider.Config) (provider.Provider, error) {
 		return rec, nil
 	})
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]
@@ -209,7 +209,7 @@ func TestEffectTaskBudgetLandsARunawayThroughRealBuild(t *testing.T) {
 	provider.Register("boot-budget-gate", func(provider.Config) (provider.Provider, error) {
 		return rec, nil
 	})
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

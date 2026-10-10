@@ -2,7 +2,7 @@
 
 [简体中文](DESKTOP_BROWSER.zh-CN.md)
 
-The desktop browser is a native Chromium surface inside the Reasonix window
+The desktop browser is a native Chromium surface inside the Deeper window
 that the user and the agent operate together. Websites render in Electron
 `WebContentsView`s owned by the shell; every agent capability goes through the
 Go desktop service so that local and remote agents, approvals, cancellation,
@@ -22,10 +22,10 @@ user input on the page ─▶ guest preload ─▶ shell: epoch++ ─▶ desktop
 
 - The application window is trusted. Website views are not: sandbox on,
   context isolation on, no Node integration, no application preload, no
-  `reasonix://` access. Their only preload observes trusted user input to
+  `deeper://` access. Their only preload observes trusted user input to
   request a take-over and exposes nothing to the page.
 - Partitions: `persist:browser` is the shared login partition for one
-  Reasonix data home; `temp:<id>` partitions are in-memory and discarded when
+  Deeper data home; `temp:<id>` partitions are in-memory and discarded when
   their last tab closes. Remote Serve windows and MCP App frames use their
   own partitions and never share the browser partition.
 - The `BrowserSurfaceManager` in the shell owns creation, visibility, bounds,
@@ -204,7 +204,7 @@ Events from the shell: `browser:tabs` (tab list changes), `browser:takeover`
 
 ## Remote agents
 
-A remote Reasonix agent reaches the local browser through the existing SSH
+A remote Deeper agent reaches the local browser through the existing SSH
 connection and forward manager as a restricted host RPC carrying the same
 `BrowserExecutor` contract. Grants are bound to the remote connection
 generation, session and task; disconnect, reconnect or session switch revokes
@@ -213,20 +213,20 @@ token. Older remote Serve builds negotiate capabilities and simply do not
 advertise the browser, keeping every existing remote feature.
 
 The wire shape is one loopback HTTP broker per desktop. The bootstrap of a
-fresh Serve injects `REASONIX_BROWSER_BROKER` / `REASONIX_BROWSER_TOKEN`
+fresh Serve injects `DEEPER_BROWSER_BROKER` / `DEEPER_BROWSER_TOKEN`
 (process environment only) pointing at the reverse-forwarded broker; a reused
 Serve is re-pointed through `POST /browser/broker` after the desktop rotates
 the route. The broker mints one random bearer token per host connection
 generation — registering a new generation replaces the host's old token — and
 authenticates before dispatching to `browser.Executor` over
-`/v1/browser/<method>`. Every request carries `X-Reasonix-Browser-Session`;
+`/v1/browser/<method>`. Every request carries `X-Deeper-Browser-Session`;
 the broker resolves it to the one desktop tab that shows that session and
 refuses anything else with `no_grant`. Screenshots and downloads the shell
 writes on the desktop are staged onto the remote host through the existing
 SFTP channel into a per-workspace scratch directory
-(`~/.reasonix/browser-relay/<workspace>/`), so the serve's tools only ever
+(`~/.deeper/browser-relay/<workspace>/`), so the serve's tools only ever
 read paths local to them. A Serve started with a broker advertises `browser`
-in the `X-Reasonix-Serve-Capabilities` header of the `/auth/token` handshake.
+in the `X-Deeper-Serve-Capabilities` header of the `/auth/token` handshake.
 
 ## Acceptance
 

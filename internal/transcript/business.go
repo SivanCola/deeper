@@ -3,8 +3,8 @@ package transcript
 import (
 	"slices"
 
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
 )
 
 func (p *Projection) PersistenceFailed() {

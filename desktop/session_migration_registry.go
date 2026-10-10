@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 func migrationCheckpointPath(cp desktopMigrationCheckpoint) (string, string) {

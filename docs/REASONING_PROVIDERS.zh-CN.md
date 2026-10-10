@@ -4,7 +4,7 @@
 &nbsp;·&nbsp;
 <a href="./REASONING_PROVIDERS.md">English</a>
 
-Reasonix 只暴露一个 `/effort` 开关（以及 provider 级的 `effort` / `thinking`
+Deeper 只暴露一个 `/effort` 开关（以及 provider 级的 `effort` / `thinking`
 配置字段），但 OpenAI-compatible 后端对*如何*在线上请求思维链（chain-of-thought）
 存在分歧。`openai` provider 会按后端调整请求形态；下表是参考依据，说明每个已知
 后端使用哪种协议、会采纳或忽略哪些参数。
@@ -25,7 +25,7 @@ Reasonix 只暴露一个 `/effort` 开关（以及 provider 级的 `effort` / `t
 
 | Provider/模型              | Base URL                                   | 推理控制                                      | `/effort` 档位                | 备注 |
 |----------------------------|--------------------------------------------|-----------------------------------------------|-------------------------------|-------|
-| Kimi CN/Global `kimi-k3`   | `api.moonshot.cn/v1`、`api.moonshot.ai/v1` | `reasoning_effort`                            | `low`、`high`、`max`          | 始终思考；默认 `max`。Reasonix 会回放完整的 assistant 消息、使用 `max_completion_tokens`，并省略 K3 固定的采样字段。 |
+| Kimi CN/Global `kimi-k3`   | `api.moonshot.cn/v1`、`api.moonshot.ai/v1` | `reasoning_effort`                            | `low`、`high`、`max`          | 始终思考；默认 `max`。Deeper 会回放完整的 assistant 消息、使用 `max_completion_tokens`，并省略 K3 固定的采样字段。 |
 | 自定义 Kimi K3 网关        | 任意 OpenAI-compatible K3 端点             | `reasoning_effort`                            | `low`、`high`、`max`          | 设置 `reasoning_protocol = "kimi-k3"`，显式启用 K3 的完整消息回放与请求形态。 |
 | OpenCode Go `kimi-k3`      | `opencode.ai/zen/go/v1`                    | `reasoning_effort`                            | `high`、`max`                 | 中转站专属档位；默认 `max`，并保留中转站标准的 OpenAI-compatible 请求形态。 |
 | Token Rhythm DeepSeek V4   | `tokenrhythm.studio/v1`                    | DeepSeek `thinking.type` + `reasoning_effort` | 模型专属的 DeepSeek 档位      | 通过预设的模型覆盖选择，与网关主机无关。 |
@@ -35,7 +35,7 @@ Reasonix 只暴露一个 `/effort` 开关（以及 provider 级的 `effort` / `t
 会自动选择官方的 GLM 请求形态，即使现有配置没有 `reasoning_protocol` 字段也
 如此。端点检查让不相关的混合模型网关保持向后兼容。对于别名和自定义模型 ID，
 仍可在一个 `model_overrides` 条目中显式设置 `reasoning_protocol = "glm"`。
-GLM 思考开启时，Reasonix 会按 GLM 交错与保留思考的要求，在后续历史中原样保留
+GLM 思考开启时，Deeper 会按 GLM 交错与保留思考的要求，在后续历史中原样保留
 并返回原始 `reasoning_content`。
 
 如果自定义网关提供 Kimi K3，可在 provider 编辑器的高级设置中将推理协议选择为
@@ -55,14 +55,14 @@ reasoning_protocol = "kimi-k3"
 保留 `reasoning_content`、使用 `max_completion_tokens`，并省略 K3 固定的采样字段。
 不要把它加到精选的 OpenCode Go 预设中：该中转站有自己的 `high`/`max` 档位，
 并且有意保持标准 OpenAI-compatible 请求形态。
-启用该协议后，Reasonix 固定展示 K3 的 `auto`/`low`/`high`/`max` 档位，协议默认值
+启用该协议后，Deeper 固定展示 K3 的 `auto`/`low`/`high`/`max` 档位，协议默认值
 为 `max`；已有的 `supported_efforts` 配置仍会保留，但不会覆盖 K3 协议档位。
 
 ## DeepSeek Anthropic-compatible 端点
 
 默认官方 DeepSeek provider 使用 `https://api.deepseek.com` 的 Chat Completions，
 并开启[独立 `web_search` 工具](WEB_SEARCH.zh-CN.md)。搜索单独使用 Messages。
-`deepseek-anthropic` 仍作为可选预设保留，主对话选择它时，Reasonix 会发送
+`deepseek-anthropic` 仍作为可选预设保留，主对话选择它时，Deeper 会发送
 `thinking.type=enabled|disabled` 与 `output_config.effort`，在请求携带 tools 时回放历史
 assistant 轮次中未签名的 DeepSeek 思考块，省略不支持的图片，并依赖 DeepSeek 的自动前缀缓存，
 而不是被忽略的 `cache_control` 标记。
@@ -74,7 +74,7 @@ assistant 轮次中未签名的 DeepSeek 思考块，省略不支持的图片，
 OpenAI-compatible 的 DeepSeek 路径采用相同的全轮回放规则：请求携带 tools 时，历史中
 每个保存了 `reasoning_content` 的 assistant 轮次都会原样序列化回请求，不论该轮是否
 调用过工具；不带 tools 时该字段会被 DeepSeek 忽略。如果旧会话仍因提供方特有的
-reasoning 回传 HTTP 400 失败，Reasonix 只重建旧历史的 provider-visible 消息投影并
+reasoning 回传 HTTP 400 失败，Deeper 只重建旧历史的 provider-visible 消息投影并
 重试一次；后续新增轮次继续走正常 reasoning/tool replay，而 canonical session history
 不会被修改。
 
@@ -90,7 +90,7 @@ Responses 允许缺省的 reasoning item；这些兼容路径直接继续，不�
 
 任何其他 OpenAI-compatible 后端都会回退到标准的 `reasoning_effort` 档位
 （`low`\|`medium`\|`high`）。解析出的 provider/模型条目可以显式声明不同的支持
-档位；在这种情况下，Reasonix 会保留这些声明的值，而不是套用通用上限。精选的
+档位；在这种情况下，Deeper 会保留这些声明的值，而不是套用通用上限。精选的
 逐模型能力元数据可以像上面展示的那样选用其他档位。
 
 以下主流提供商经调研无需**特殊处理**，因为它们已经遵循标准约定：
@@ -123,8 +123,8 @@ thinking    = "disabled"   # enabled | disabled — 发送 thinking.type
 3. 如果后端完全使用非 OpenAI 协议（例如百度文心），`openai` kind 无法驱动它
    的思考模式——那需要专门的 provider kind。
 
-区分“provider 忽略字段”与 Reasonix 自身的 bug 从这里入手：Reasonix 发出的
-请求形态按表格固定，因此表格与实际行为不一致时，问题在提供商而不是 Reasonix。
+区分“provider 忽略字段”与 Deeper 自身的 bug 从这里入手：Deeper 发出的
+请求形态按表格固定，因此表格与实际行为不一致时，问题在提供商而不是 Deeper。
 
 ## Reasoning 回放与中断恢复
 

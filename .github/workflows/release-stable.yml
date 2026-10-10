@@ -4,10 +4,10 @@ run-name: Legacy recovery ${{ inputs.tag || github.ref_name }}
 # Compatibility recovery for releases created before sealed candidates. New
 # releases use release-candidate.yml followed by release-promote.yml. This path
 # retains one GitHub environment gate and verifies all three existing tags.
-# Keeping the control-plane ref on main-v2 lets SignPath restrict
+# Keeping the control-plane ref on main lets SignPath restrict
 # production signing to that one protected origin instead of trusting wildcard
 # tag-like branch names. Manual recovery uses the same fixed control plane while
-# preserving an older tagged candidate on main-v2 history.
+# preserving an older tagged candidate on main history.
 on:
   workflow_dispatch:
     inputs:
@@ -26,12 +26,12 @@ on:
         default: true
         type: boolean
       publish_desktop:
-        description: "Recover the Desktop/R2 channel"
+        description: "Recover the Desktop/GitHub channel"
         required: false
         default: true
         type: boolean
       allow_recovery:
-        description: "Allow an existing stable tag on main-v2 history (manual recovery only)"
+        description: "Allow an existing stable tag on main history (manual recovery only)"
         required: false
         default: true
         type: boolean
@@ -41,7 +41,7 @@ on:
         default: false
         type: boolean
       reuse_manual_artifacts:
-        description: "Recover the verified v1.38.8 artifacts from run 34816299501 (v1.38.8 only)"
+        description: "Unsupported upstream recovery option; must remain false"
         required: false
         default: false
         type: boolean
@@ -78,7 +78,7 @@ jobs:
         with:
           fetch-depth: 0
           # A recovery dispatch uses the fixed workflow/scripts from protected
-          # main-v2. Publishers still check out the immutable approved tag SHA.
+          # main. Publishers still check out the immutable approved tag SHA.
           ref: ${{ github.sha }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
@@ -87,6 +87,11 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "22"
+      - name: Reject upstream recovery exceptions
+        if: ${{ inputs.reuse_manual_artifacts || inputs.desktop_manual_only }}
+        run: |
+          echo "::error::Upstream artifact reuse and unsigned release exceptions are unavailable in Deeper"
+          exit 1
       - name: Resolve stable release
         id: release
         env:
@@ -280,6 +285,13 @@ jobs:
           DESKTOP_MANUAL_ONLY: ${{ inputs.desktop_manual_only || false }}
           CLI_PUBLISH_FROZEN: ${{ vars.CLI_PUBLISH_FROZEN == 'true' }}
         run: bash scripts/verify-stable-release-artifacts.sh
+      - name: Publish GitHub update pointers
+        if: ${{ !inputs.desktop_manual_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.authorize.outputs.version }}
+          RELEASE_EXPECTED_SHA: ${{ needs.authorize.outputs.sha }}
+        run: node scripts/publish-github-update-pointer.mjs
       - name: Publish exact Stable release record
         env:
           GH_TOKEN: ${{ github.token }}

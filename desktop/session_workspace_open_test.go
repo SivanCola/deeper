@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/transcript"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/transcript"
 )
 
 func canonicalWorkspaceOpenFixture(t *testing.T) (*App, *WorkspaceTab, *session.Runtime, string, string) {

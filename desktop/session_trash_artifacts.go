@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 // sessionTrashArtifacts lists every file and directory a session owns, with

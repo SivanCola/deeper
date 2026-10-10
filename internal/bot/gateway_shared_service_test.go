@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func TestEmbeddedBotUsesHostSessionServiceWithoutClosingIt(t *testing.T) {

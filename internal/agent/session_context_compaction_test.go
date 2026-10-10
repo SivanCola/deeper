@@ -3,8 +3,8 @@ package agent
 import (
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontext"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontext"
 )
 
 func TestCompactionExcludesAllContextsFromSummaryAndKeepsLatestFoldSnapshot(t *testing.T) {

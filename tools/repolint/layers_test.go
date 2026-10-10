@@ -15,7 +15,7 @@ func TestLayeringContract(t *testing.T) {
 		{"frontend may use the controller", "internal/serve", "internal/control", false},
 		{"frontend may use another frontend", "internal/cli", "internal/serve", false},
 		{"frontend subpackage may use its parent", "internal/bot/qq", "internal/bot", false},
-		{"entrypoint may use a frontend", "cmd/reasonix", "internal/cli", false},
+		{"entrypoint may use a frontend", "cmd/deeper", "internal/cli", false},
 		{"desktop host may use the controller", "desktop", "internal/control", false},
 		{"controller may use the kernel", "internal/control", "internal/agent", false},
 		{"kernel may use a utility package", "internal/agent", "internal/fileutil", false},
@@ -29,7 +29,7 @@ func TestLayeringContract(t *testing.T) {
 }
 
 func TestLayeringReadsImportsFromSource(t *testing.T) {
-	src := "package agent\n\nimport (\n\t\"fmt\"\n\t\"reasonix/internal/cli\"\n)\n\nvar _ = fmt.Sprint\nvar _ = cli.Run\n"
+	src := "package agent\n\nimport (\n\t\"fmt\"\n\t\"deeper/internal/cli\"\n)\n\nvar _ = fmt.Sprint\nvar _ = cli.Run\n"
 	s := parseBytes("internal/agent/a.go", []byte(src))
 	found := checkLayering(map[string][]importRef{s.rel: s.importRefs()})
 	if len(found) != 1 || found[0].Rule != ruleLayering || found[0].Line != 5 {
@@ -38,7 +38,7 @@ func TestLayeringReadsImportsFromSource(t *testing.T) {
 }
 
 func TestLayeringIgnoresTestFiles(t *testing.T) {
-	src := "package agent\n\nimport \"reasonix/internal/cli\"\n\nvar _ = cli.Run\n"
+	src := "package agent\n\nimport \"deeper/internal/cli\"\n\nvar _ = cli.Run\n"
 	s := parseBytes("internal/agent/a_test.go", []byte(src))
 	if refs := s.importRefs(); len(refs) != 0 {
 		t.Fatalf("test file imports should not be layered: %v", refs)

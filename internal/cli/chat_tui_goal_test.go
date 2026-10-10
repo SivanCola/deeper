@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func TestGoalLegacyBudgetFlagNoticesExactlyOnce(t *testing.T) {
@@ -27,7 +27,7 @@ func TestMissingLegacyGoalCommandDoesNotStartTUITurn(t *testing.T) {
 	m.ctrl = newOwnedTestController(t, control.Options{WorkspaceRoot: t.TempDir()})
 	t.Cleanup(m.ctrl.Close)
 
-	if cmd := m.runGoalSubcommand("/goal resume .reasonix/autoresearch/missing-task/"); cmd != nil {
+	if cmd := m.runGoalSubcommand("/goal resume .deeper/autoresearch/missing-task/"); cmd != nil {
 		t.Fatal("missing legacy archive returned a provider turn command")
 	}
 	if got := m.ctrl.GoalStatus(); got != control.GoalStatusBlocked {

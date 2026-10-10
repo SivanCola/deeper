@@ -3,7 +3,7 @@ package openai
 import (
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func hasReasoningOrToolCall(m provider.Message) bool {

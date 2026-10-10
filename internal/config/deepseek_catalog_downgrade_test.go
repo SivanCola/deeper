@@ -12,9 +12,9 @@ import (
 // Point this at an isolated pre-v11 source checkout for actual cross-version
 // read/write acceptance. The overlay adds only a disposable test to that code.
 func TestDeepSeekCatalogPreviousReaderRoundTrip(t *testing.T) {
-	checkout := os.Getenv("REASONIX_DEEPSEEK_PREVIOUS_CHECKOUT")
+	checkout := os.Getenv("DEEPER_DEEPSEEK_PREVIOUS_CHECKOUT")
 	if checkout == "" {
-		t.Skip("set REASONIX_DEEPSEEK_PREVIOUS_CHECKOUT for previous-reader acceptance")
+		t.Skip("set DEEPER_DEEPSEEK_PREVIOUS_CHECKOUT for previous-reader acceptance")
 	}
 	var err error
 	checkout, err = filepath.EvalSymlinks(checkout)
@@ -26,7 +26,7 @@ func TestDeepSeekCatalogPreviousReaderRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	t.Setenv("REASONIX_HOME", dir)
+	t.Setenv("DEEPER_HOME", dir)
 	path := filepath.Join(dir, "config.toml")
 	const raw = `config_version = 10
 default_model = "deepseek/deepseek-v4-flash"
@@ -48,11 +48,11 @@ default = "deepseek-v4-flash"
 import ("os"; "slices"; "testing")
 func TestDeepSeekPreviousReaderProbe(t *testing.T) {
  if Default().ConfigVersion != 10 { t.Fatal("probe requires a schema-v10 reader") }
- path := os.Getenv("REASONIX_COMPAT_CONFIG")
+ path := os.Getenv("DEEPER_COMPAT_CONFIG")
  c := LoadForEdit(path)
  p,ok := c.Provider("deepseek")
  if !ok || p.DefaultModel() != "deepseek-v4-flash" || c.ConfigVersion != 11 { t.Fatal("old reader lost selection or marker") }
- if os.Getenv("REASONIX_COMPAT_DELETE_FLASH") == "1" {
+ if os.Getenv("DEEPER_COMPAT_DELETE_FLASH") == "1" {
   p.Models = slices.DeleteFunc(p.Models,func(m string) bool { return m == "deepseek-flash" })
  } else if !p.HasModel("deepseek-flash") { t.Fatal("old reader lost the new option") }
  p.DisplayName = "old-reader-edited"
@@ -72,7 +72,7 @@ func TestDeepSeekPreviousReaderProbe(t *testing.T) {
 	for _, deleted := range []string{"0", "1"} {
 		cmd := exec.Command("go", "test", "-overlay", overlay, "./internal/config", "-run", "^TestDeepSeekPreviousReaderProbe$", "-v", "-count=1")
 		cmd.Dir = checkout
-		cmd.Env = append(os.Environ(), "REASONIX_COMPAT_CONFIG="+path, "REASONIX_COMPAT_DELETE_FLASH="+deleted)
+		cmd.Env = append(os.Environ(), "DEEPER_COMPAT_CONFIG="+path, "DEEPER_COMPAT_DELETE_FLASH="+deleted)
 		output, err := cmd.CombinedOutput()
 		if err != nil || !strings.Contains(string(output), "--- PASS: TestDeepSeekPreviousReaderProbe") {
 			t.Fatalf("old reader: %v\n%s", err, output)

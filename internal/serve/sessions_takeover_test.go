@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestSessionsReportsForeignWriterAsTakenOver(t *testing.T) {

@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/sessioncatalog"
 	"path/filepath"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/sessioncatalog"
 	"sort"
 	"strings"
 	"time"

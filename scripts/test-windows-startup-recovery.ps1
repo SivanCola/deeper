@@ -7,7 +7,7 @@ param(
   [string]$DataHome = '',
   [string]$ExpectedVisibleText = '',
   [switch]$PrepareHistoricalSession,
-  [string]$EvidenceDirectory = (Join-Path $env:TEMP ('reasonix-recovery-' + [guid]::NewGuid().ToString('N')))
+  [string]$EvidenceDirectory = (Join-Path $env:TEMP ('deeper-recovery-' + [guid]::NewGuid().ToString('N')))
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'windows-acceptance-environment.ps1')
@@ -19,23 +19,23 @@ if ($PSCmdlet.ParameterSetName -eq 'Portable') {
   if (Test-Path $install) { throw 'Evidence install directory must be new; refusing to overwrite a running fixture.' }
   Expand-Archive -LiteralPath $PortableZip -DestinationPath $install
 } elseif (-not (Test-Path -LiteralPath $install -PathType Container)) {
-  throw "Installed Reasonix directory is missing: $install"
+  throw "Installed Deeper directory is missing: $install"
 }
 $current = Get-Content (Join-Path $install 'current.json') -Raw | ConvertFrom-Json
 if ($ExpectedVersion -and $current.activeVersion -ne $ExpectedVersion) {
   throw "Installed version mismatch: current.json=$($current.activeVersion), expected=$ExpectedVersion"
 }
-$shellPath = Join-Path $install ($current.activeDir + '\app\Reasonix.exe')
-$launcher = Join-Path $install 'Reasonix.exe'
+$shellPath = Join-Path $install ($current.activeDir + '\app\Deeper.exe')
+$launcher = Join-Path $install 'Deeper.exe'
 if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
-  $launcher = Join-Path $install 'reasonix-launcher.exe'
+  $launcher = Join-Path $install 'deeper-launcher.exe'
 }
 if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
-  throw 'Stable Reasonix launcher is missing from the package root.'
+  throw 'Stable Deeper launcher is missing from the package root.'
 }
 
 function Read-ShellStatus($process) {
-  $pipe = [IO.Pipes.NamedPipeClientStream]::new('.', ('reasonix-shell-v1-' + $process.Id), [IO.Pipes.PipeDirection]::In)
+  $pipe = [IO.Pipes.NamedPipeClientStream]::new('.', ('deeper-shell-v1-' + $process.Id), [IO.Pipes.PipeDirection]::In)
   try {
     $pipe.Connect(500)
     $reader = [IO.StreamReader]::new($pipe)
@@ -47,15 +47,15 @@ function Read-ShellStatus($process) {
 }
 
 function Assert-Ready {
-  foreach ($process in @(Get-Process Reasonix -ErrorAction SilentlyContinue)) {
+  foreach ($process in @(Get-Process Deeper -ErrorAction SilentlyContinue)) {
     if ($process.Path -ne $shellPath) { continue }
     $status = Read-ShellStatus $process
     if ($null -eq $status) { continue }
-    if ($status.schemaVersion -ne 1 -or $status.product -ne 'com.reasonix.desktop' -or $status.pid -ne $process.Id) { throw 'Status identity mismatch' }
+    if ($status.schemaVersion -ne 1 -or $status.product -ne 'io.github.sivancola.deeper' -or $status.pid -ne $process.Id) { throw 'Status identity mismatch' }
     if ($status.lifecycle -ne 'ready' -or $status.service -ne 'ready' -or -not $status.visible -or -not $status.healthy) { throw ('Not ready: ' + ($status | ConvertTo-Json -Compress)) }
     if ($status.version -ne $current.activeVersion -or $status.rendererVersion -ne $current.activeVersion) { throw 'Target renderer version mismatch' }
     $service = Get-Process -Id $status.servicePID
-    $expectedService = Join-Path $install ($current.activeDir + '\reasonix-desktop.exe')
+    $expectedService = Join-Path $install ($current.activeDir + '\deeper-desktop.exe')
     if ($service.Path -ne $expectedService) { throw 'Service is outside the active release' }
     return @{ Shell=$process; Service=$service; Status=$status }
   }
@@ -105,7 +105,7 @@ try {
   if ($ExpectedVisibleText) {
     Assert-VisibleContentAndCapture $first.Shell $ExpectedVisibleText (Join-Path $EvidenceDirectory 'upgraded-history.png')
   }
-  Start-Process $shellPath -ArgumentList '--reasonix-lifecycle-request=quit' | Out-Null
+  Start-Process $shellPath -ArgumentList '--deeper-lifecycle-request=quit' | Out-Null
   if (-not $first.Shell.WaitForExit(15000) -or -not $first.Service.WaitForExit(1000)) { throw 'Normal exit left a shell or service alive' }
   $shellLog = Get-Content (Join-Path $dataHome 'desktop-shell\logs\shell.log') -Raw
   if ($shellLog -match 'exit deadline exceeded|killing it|termination failed') { throw 'Forced cleanup is not a normal-exit pass' }

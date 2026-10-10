@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // TestSetModelForTabRemoteCredentialPostsServeModel: remote-credential hosts

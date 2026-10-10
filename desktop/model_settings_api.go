@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/secrets"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/secrets"
 )
 
 // ModelSettingsChange is a closed set of model operations, never a replacement

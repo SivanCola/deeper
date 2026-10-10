@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/sessioninbox"
 )
 
-const inboxBridgeErrorPrefix = "reasonix_error:"
+const inboxBridgeErrorPrefix = "deeper_error:"
 
 type inboxCodedError struct {
 	code  string

@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"reasonix/internal/pathidentity"
+	"deeper/internal/pathidentity"
 )
 
 var user32 = windows.NewLazySystemDLL("user32.dll")
@@ -132,7 +132,7 @@ func ordinaryProduct(image string) bool {
 		if windows.VerQueryValue(unsafe.Pointer(&data[0]), key, unsafe.Pointer(&value), &length) == nil && value != nil && length > 0 {
 			name := windows.UTF16ToString(unsafe.Slice(value, int(length)))
 			runtime.KeepAlive(data)
-			return name == "Reasonix"
+			return name == "Deeper"
 		}
 	}
 	return false
@@ -159,7 +159,7 @@ func (p *process) terminate() error {
 
 func readStatus(p *process) (Status, error) {
 	var zero Status
-	name, _ := windows.UTF16PtrFromString(fmt.Sprintf(`\\.\pipe\reasonix-shell-v1-%d`, p.pid))
+	name, _ := windows.UTF16PtrFromString(fmt.Sprintf(`\\.\pipe\deeper-shell-v1-%d`, p.pid))
 	pipe, err := windows.CreateFile(name, windows.GENERIC_READ, 0, nil, windows.OPEN_EXISTING, windows.FILE_FLAG_OVERLAPPED, 0)
 	connectDeadline := time.Now().Add(2 * time.Second)
 	for errors.Is(err, windows.ERROR_PIPE_BUSY) && time.Now().Before(connectDeadline) {
@@ -301,7 +301,7 @@ func lockInstall(root string) (func(), error) {
 		return nil, err
 	}
 	key := ProfileKey(root + "|" + token.User.Sid.String())
-	name, _ := windows.UTF16PtrFromString(`Local\Reasonix-Recovery-` + key)
+	name, _ := windows.UTF16PtrFromString(`Local\Deeper-Recovery-` + key)
 	h, err := windows.CreateMutex(nil, false, name)
 	if err != nil && !errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
 		return nil, err
@@ -326,18 +326,18 @@ func Notify(err error) {
 func notificationContent(err error) (string, string) {
 	var failure *Error
 	if errors.As(err, &failure) && failure.Code == UnsupportedPortableLocation {
-		return "Reasonix 无法从当前位置启动", unsupportedPortableLocationMessage
+		return "Deeper 无法从当前位置启动", unsupportedPortableLocationMessage
 	}
-	return "Reasonix 启动 / Startup", "Reasonix 未能完成启动或更新，请查看日志后重试。\nReasonix could not finish startup or update.\n\n" + err.Error()
+	return "Deeper 启动 / Startup", "Deeper 未能完成启动或更新，请查看日志后重试。\nDeeper could not finish startup or update.\n\n" + err.Error()
 }
 
 func confirmProcesses(list []*process) bool {
 	var text strings.Builder
-	text.WriteString("旧版 Reasonix 尚未退出。结束进程可能丢失未保存内容。\n\nEnd these old Reasonix processes and continue? Unsaved work may be lost.\n")
+	text.WriteString("旧版 Deeper 尚未退出。结束进程可能丢失未保存内容。\n\nEnd these old Deeper processes and continue? Unsaved work may be lost.\n")
 	for _, p := range list {
 		fmt.Fprintf(&text, "\nPID %d: %s", p.pid, p.image)
 	}
-	title, _ := windows.UTF16PtrFromString("Reasonix 恢复 / Recovery")
+	title, _ := windows.UTF16PtrFromString("Deeper 恢复 / Recovery")
 	body, _ := windows.UTF16PtrFromString(text.String())
 	// Label the standard dialog's buttons explicitly; the negative action is
 	// still IDNO and remains the default even on non-Chinese Windows systems.
@@ -376,7 +376,7 @@ func inspect(root, profile string, all bool) ([]*process, error) {
 	}
 	for _, e := range entries {
 		name := strings.ToLower(windows.UTF16ToString(e.ExeFile[:]))
-		if name != "reasonix.exe" && name != "reasonix-desktop.exe" {
+		if name != "deeper.exe" && name != "deeper-desktop.exe" {
 			continue
 		}
 		p, err := openProcess(e.ProcessID, e.ParentProcessID)
@@ -393,13 +393,13 @@ func inspect(root, profile string, all bool) ([]*process, error) {
 			p.close()
 			return fail(outcome(UnknownOwner, "product identity could not be verified for PID %d", e.ProcessID))
 		}
-		if name == "reasonix.exe" {
+		if name == "deeper.exe" {
 			status, statusErr := readStatus(p)
 			if statusErr == nil {
 				p.status = &status
 				if status.HomeKey == ProfileKey(profile) && role == "" {
 					p.close()
-					return fail(outcome(OtherInstallation, "another Reasonix installation owns this data home"))
+					return fail(outcome(OtherInstallation, "another Deeper installation owns this data home"))
 				}
 			} else {
 				if role != "" && !errors.Is(statusErr, windows.ERROR_FILE_NOT_FOUND) {
@@ -410,7 +410,7 @@ func inspect(root, profile string, all bool) ([]*process, error) {
 				if p.legacyProfile != "" {
 					if real, err := canonical(p.legacyProfile); err == nil && strings.EqualFold(real, profile) && role == "" {
 						p.close()
-						return fail(outcome(OtherInstallation, "another legacy Reasonix installation owns this data home"))
+						return fail(outcome(OtherInstallation, "another legacy Deeper installation owns this data home"))
 					}
 				}
 			}

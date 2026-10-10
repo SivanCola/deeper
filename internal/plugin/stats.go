@@ -1,4 +1,4 @@
-// Per-plugin startup latency tracking for MCP servers. Reasonix uses these
+// Per-plugin startup latency tracking for MCP servers. Deeper uses these
 // samples to decide whether a chronically slow plugin should be demoted from
 // "eager" to background loading for the rest of a session — see Recommend.
 //
@@ -19,8 +19,8 @@ import (
 	"slices"
 	"time"
 
-	"reasonix/internal/config"
-	fileencoding "reasonix/internal/fileutil/encoding"
+	"deeper/internal/config"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 const (

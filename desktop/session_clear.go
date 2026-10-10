@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 // SessionClearResult is the post-clear session identity the frontend must apply

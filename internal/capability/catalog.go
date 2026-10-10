@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 // Catalog is the unified capability inventory for one routing turn.

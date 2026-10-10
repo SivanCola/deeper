@@ -1,5 +1,5 @@
 // Adapted from zai-org/ZCode ConversationQueuePanel.tsx at 872ad960.
-// Apache-2.0; see licenses/ZCode.txt. Changed: Reasonix controls, keyboard
+// Apache-2.0; see licenses/ZCode.txt. Changed: Deeper controls, keyboard
 // sorting, explicit retry, and edit-in-place rather than withdrawal.
 import { useRef, useState, type ReactNode } from "react";
 import { AnchoredPopover } from "./AnchoredPopover";

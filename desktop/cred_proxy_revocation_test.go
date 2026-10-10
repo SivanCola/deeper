@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestClearProviderKeyPreservesOldRouteAndRejectsNewRoute(t *testing.T) {

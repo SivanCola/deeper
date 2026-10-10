@@ -3,7 +3,7 @@ package recovery
 import (
 	"testing"
 
-	"reasonix/internal/extension"
+	"deeper/internal/extension"
 )
 
 func TestAssessRuntimeResumeIrreversible(t *testing.T) {

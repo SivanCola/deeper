@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/filelock"
+	"deeper/internal/filelock"
 )
 
 func TestDarwinCaseAliasKeepsLegacyExactRootLock(t *testing.T) {

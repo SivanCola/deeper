@@ -3,8 +3,8 @@ package provider
 import (
 	"testing"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/attachment"
+	"deeper/internal/sessioncontent"
 )
 
 func TestMessageRejectsCombinedImageFields(t *testing.T) {

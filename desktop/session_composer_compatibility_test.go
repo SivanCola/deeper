@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"reasonix/desktop/internal/sessionui"
-	"reasonix/internal/provider"
+	"deeper/desktop/internal/sessionui"
+	"deeper/internal/provider"
 )
 
 func TestComposerReupgradeDetectsHistoryWithoutSubmissionReceipts(t *testing.T) {

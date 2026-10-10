@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 	"strings"
 )
 

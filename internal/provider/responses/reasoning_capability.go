@@ -1,6 +1,6 @@
 package responses
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 func ReasoningForConfig(cfg provider.Config) provider.ReasoningCapability {
 	cfg = provider.ApplyOpenCodeGoContract("responses", cfg)

@@ -6,23 +6,23 @@ import (
 	"testing"
 )
 
-func TestSingleInstanceIDScopesToReasonixHome(t *testing.T) {
+func TestSingleInstanceIDScopesToDeeperHome(t *testing.T) {
 	first := filepath.Join(t.TempDir(), "first")
 	second := filepath.Join(t.TempDir(), "second")
-	t.Setenv("REASONIX_HOME", first)
+	t.Setenv("DEEPER_HOME", first)
 	firstID := singleInstanceID()
-	t.Setenv("REASONIX_HOME", filepath.Join(first, "."))
+	t.Setenv("DEEPER_HOME", filepath.Join(first, "."))
 	if got := singleInstanceID(); got != firstID {
 		t.Fatalf("same data home produced different ids: %q != %q", got, firstID)
 	}
-	t.Setenv("REASONIX_HOME", second)
+	t.Setenv("DEEPER_HOME", second)
 	if got := singleInstanceID(); got == firstID {
 		t.Fatalf("different data homes produced the same id %q", got)
 	}
 }
 
 func TestSingleInstanceIDDoesNotSplitReleaseChannels(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	oldChannel := channel
 	t.Cleanup(func() { channel = oldChannel })
 	channel = "stable"
@@ -43,9 +43,9 @@ func TestSingleInstanceIDResolvesMissingHomeThroughSymlink(t *testing.T) {
 	if err := os.Symlink(realParent, aliasParent); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
-	t.Setenv("REASONIX_HOME", filepath.Join(realParent, "not-created", "home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(realParent, "not-created", "home"))
 	realID := singleInstanceID()
-	t.Setenv("REASONIX_HOME", filepath.Join(aliasParent, "not-created", "home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(aliasParent, "not-created", "home"))
 	if got := singleInstanceID(); got != realID {
 		t.Fatalf("aliased missing data home produced different ids: %q != %q", got, realID)
 	}

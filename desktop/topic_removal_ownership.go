@@ -3,7 +3,7 @@ package main
 import (
 	"slices"
 
-	"reasonix/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/legacycleanup"
 )
 
 // Tombstones are global to the topic ID. A replay must not remove indexes in

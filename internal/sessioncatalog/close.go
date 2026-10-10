@@ -3,7 +3,7 @@ package sessioncatalog
 import (
 	"context"
 
-	"reasonix/internal/projectiondb"
+	"deeper/internal/projectiondb"
 )
 
 func (c *Catalog) Close(ctx context.Context) error {

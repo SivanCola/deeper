@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 func TestWorkspaceGitCheckoutInvalidatesInFlightBranchProbe(t *testing.T) {

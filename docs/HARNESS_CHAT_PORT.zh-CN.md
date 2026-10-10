@@ -14,15 +14,15 @@
   把预览作为全文复制。
 - 思考运行时显示最新非空行，结束后显示首行；展开后标题不重复正文。
 - 系统与权限记录收起为紧凑摘要，无实质内容的空结果统计省略。Markdown 标题、
-  表格及间距接入移植后的 Harness 样式，解析与安全边界仍由 Reasonix 负责。
+  表格及间距接入移植后的 Harness 样式，解析与安全边界仍由 Deeper 负责。
 - 保留复制、普通会话分支、用量详情、用时与时间戳；不增加点赞和点踩。缺失的
   历史用量不编造数值。
 - 删除设置中的“标准／深入”聊天展示选项；新会话默认使用“工作区内修改”。
   旧持久化字段保留兼容，但不再选择第二套聊天展示。
 
 主题、字体设置、输入框、审批、安全链接、Markdown Worker、历史 API 与后端数据
-归属仍使用 Reasonix。没有导入 Cordis 或 Harness 服务端。无法可靠映射的工具结果
-使用通用卡片；这不等于将 Harness 整个应用和每种插件专用渲染器嵌入 Reasonix。
+归属仍使用 Deeper。没有导入 Cordis 或 Harness 服务端。无法可靠映射的工具结果
+使用通用卡片；这不等于将 Harness 整个应用和每种插件专用渲染器嵌入 Deeper。
 
 ## macOS arm64 验证
 
@@ -47,8 +47,8 @@
 天气数据是测试样例。另在实际打包应用中打开了用户已有天气记录及设置页，验证了
 新展示；包身份及原生启动检查见 [`design-qa.md`](../design-qa.md)。
 
-测试版安装于 `~/Applications/Reasonix-Canary/Reasonix.app`，使用独立的
-`Reasonix-Test-ChatRefactor` 数据目录。此次未重跑其他平台原生 WebView、可见系统
+测试版安装于 `~/Applications/Deeper-Canary/Deeper.app`，使用独立的
+`Deeper-Test-ChatRefactor` 数据目录。此次未重跑其他平台原生 WebView、可见系统
 滚动条拖动、长时间原生输入法以及 1,000 轮全部重内容展开测试；不将其标记为已验证。
 未发布正式版本、未合并 PR。
 - 右侧轮次刻度条替换顶部下拉导航，移植 Harness 的固定间距、当前轮次高亮、悬停／

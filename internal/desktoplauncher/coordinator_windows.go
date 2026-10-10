@@ -9,14 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"reasonix/internal/config"
-	"reasonix/internal/desktopinstance"
-	"reasonix/internal/installlayout"
-	"reasonix/internal/proc"
+	"deeper/internal/config"
+	"deeper/internal/desktopinstance"
+	"deeper/internal/installlayout"
+	"deeper/internal/proc"
 )
 
 func coordinatedLaunch(root string, args []string) (bool, int) {
-	interactive := os.Getenv("REASONIX_NONINTERACTIVE") != "1"
+	interactive := os.Getenv("DEEPER_NONINTERACTIVE") != "1"
 	return coordinatedLaunchWith(root, args, interactive, coordinatedLaunchDependencies{
 		classifyLocation: classifyLaunchLocation,
 		launchAndVerify:  desktopinstance.LaunchAndVerify,
@@ -40,7 +40,7 @@ func coordinatedLaunchWith(root string, args []string, interactive bool, deps co
 	if !installlayout.HasCurrent(root) || !installlayout.HasActiveShell(root) {
 		return false, 0
 	}
-	home := config.ReasonixHomeDir()
+	home := config.DeeperHomeDir()
 	if isPortableRoot(root) {
 		location, err := deps.classifyLocation(root)
 		if err != nil {

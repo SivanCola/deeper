@@ -3,7 +3,7 @@ package anthropic
 import (
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func (c *client) requiresReceivedReasoning(m provider.Message) bool {

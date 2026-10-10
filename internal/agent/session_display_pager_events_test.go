@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/historywork"
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/historywork"
+	"deeper/internal/projectiondb"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 type cancelEventRead struct {

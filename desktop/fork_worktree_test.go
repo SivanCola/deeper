@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/gitcmd"
-	"reasonix/internal/worktree"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/gitcmd"
+	"deeper/internal/worktree"
 )
 
 func TestForkWorktreeForTabCreatesIsolatedWorkspace(t *testing.T) {
@@ -39,7 +39,7 @@ func TestForkWorktreeForTabCreatesIsolatedWorkspace(t *testing.T) {
 			WorkspaceRoot: isolatedRoot,
 			WorktreeRoot:  filepath.Dir(isolatedRoot),
 			SourceRoot:    source,
-			Branch:        "reasonix/fork-test",
+			Branch:        "deeper/fork-test",
 		}, nil
 	}
 
@@ -176,7 +176,7 @@ func TestForkWorktreeForTabRollsBackUnusedCreation(t *testing.T) {
 		WorkspaceRoot: filepath.Join(t.TempDir(), "workspace"),
 		WorktreeRoot:  filepath.Join(t.TempDir(), "worktree"),
 		SourceRoot:    t.TempDir(),
-		Branch:        "reasonix/delivery-test",
+		Branch:        "deeper/delivery-test",
 		Head:          "deadbeef",
 	}
 	createDeliveryWorktree = func(context.Context, gitcmd.Repo, string) (worktree.Result, error) {
@@ -229,7 +229,7 @@ func TestForkWorktreeForTabPreservesReferencedWorkspaceWhenSourceCloses(t *testi
 		WorkspaceRoot: isolatedRoot,
 		WorktreeRoot:  worktreeRoot,
 		SourceRoot:    t.TempDir(),
-		Branch:        "reasonix/delivery-preserved",
+		Branch:        "deeper/delivery-preserved",
 		Head:          "deadbeef",
 	}
 	createDeliveryWorktree = func(context.Context, gitcmd.Repo, string) (worktree.Result, error) {

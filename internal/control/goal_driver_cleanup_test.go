@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func goalRuntimeRetired(c *Controller, service *session.Service, runtime *session.Runtime, settled bool) bool {

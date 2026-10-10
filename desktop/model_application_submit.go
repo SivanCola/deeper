@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 // StartTurnWithModelApplication is an additive host entry point. The choice is

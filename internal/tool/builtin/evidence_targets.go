@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
+	"deeper/internal/diff"
+	"deeper/internal/readcoord"
+	"deeper/internal/tool"
 	udiff "github.com/aymanbagabas/go-udiff"
-	"reasonix/internal/diff"
-	"reasonix/internal/readcoord"
-	"reasonix/internal/tool"
 )
 
 // Evidence is resolved by the same preview implementation that validates the

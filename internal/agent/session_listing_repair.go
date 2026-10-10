@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 type SessionListingRepairStatus string

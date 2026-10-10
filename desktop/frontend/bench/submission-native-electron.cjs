@@ -6,10 +6,10 @@ app.setPath("userData", path.join(__dirname, "electron-profile"));
 app.whenReady().then(async () => {
   const window = new BrowserWindow({
     show: true, frame: false, x: 0, y: 0, width: 1280, height: 900, useContentSize: true,
-    title: "Reasonix Handoff Native",
+    title: "Deeper Handoff Native",
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
   });
   window.on("page-title-updated", event => event.preventDefault());
-  await window.loadURL(process.env.REASONIX_LAYOUT_URL);
+  await window.loadURL(process.env.DEEPER_LAYOUT_URL);
 });
 app.on("window-all-closed", () => app.quit());

@@ -1,6 +1,6 @@
 package anthropic
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 func imageSourceFromRef(ref string) *imageSource {
 	switch provider.ClassifyImage(ref) {

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/turnevent"
+	"deeper/internal/billing"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/turnevent"
 )
 
 func TestProjectionAttachesCompletedTurnUsageAndTimingToFinalAnswer(t *testing.T) {

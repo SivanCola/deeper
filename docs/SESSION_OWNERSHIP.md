@@ -1,6 +1,6 @@
 # Session ownership, rewind, and worktree fallback
 
-How Reasonix decides who may write a session, how conflicts are saved, and
+How Deeper decides who may write a session, how conflicts are saved, and
 how rewind and workspace isolation interact.
 
 ## Session writers
@@ -36,12 +36,12 @@ the frontend acquires the target lease and binds the unpublished Session
 before the controller swaps paths. `fork`, `branch`, `switch`, and
 conversation rewind stay on the same path and move between heads instead.
 
-Sessions saved before Reasonix 1.39.0 use format 1: a whole-file transcript
+Sessions saved before Deeper 1.39.0 use format 1: a whole-file transcript
 plus a position-based event log. A 1.39.0 or newer binary upgrades such a
 session in place on its first save, once it can prove it is the only writer;
 until then the session keeps the format-1 rules below. A binary older than
 1.39.0 refuses to open a format-2 log and leaves the file untouched;
-`reasonix doctor session <id> --export-v1 PATH.jsonl` writes the current head
+`deeper doctor session <id> --export-v1 PATH.jsonl` writes the current head
 back out as a format-1 session when a rollback needs it.
 
 ## Conflicts
@@ -108,14 +108,14 @@ re-check existence, SHA-256, and mode before publish. A mismatch returns
 
 Forking from a message offers two workspace policies. **Conversation only
 (shared)** keeps the source workspace, including its current uncommitted files.
-**Isolated worktree** creates a durable `reasonix/delivery-*` branch from the
+**Isolated worktree** creates a durable `deeper/delivery-*` branch from the
 repository's committed `HEAD`, opens the fork as a registered project, and
 keeps the source checkout unchanged. Because Git worktrees do not copy local
-changes, Reasonix requires a clean source checkout for this combined fork. A
+changes, Deeper requires a clean source checkout for this combined fork. A
 dirty checkout is refused with guidance to commit/stash or use the shared fork.
 
 If the folder is not a Git project or worktree prerequisites are unavailable,
-Reasonix creates the conversation fork in the shared workspace and reports the
+Deeper creates the conversation fork in the shared workspace and reports the
 fallback. If conversation creation or tab attachment fails after a worktree was
 created, automatic cleanup removes it only while its branch, `HEAD`, and status
 still match the untouched creation result. Any detected change preserves the
@@ -123,7 +123,7 @@ worktree for recovery. A successfully attached worktree remains registered
 across tab close/restart. New allocations also store a mode-0600 v1
 `metadata.json` beside the checkout. It binds the original source checkout,
 target branch, creation `HEAD`, managed worktree root, and temporary branch.
-Older allocations without this metadata cannot use Merge-Back because Reasonix
+Older allocations without this metadata cannot use Merge-Back because Deeper
 will not guess a destination; the UI leaves them intact and shows manual merge
 guidance. Unknown metadata versions also fail closed.
 
@@ -142,7 +142,7 @@ transient, NUL-safe token to the real index entries and status as well as every
 dirty path's type, mode, bytes, or symlink target. Auto-commit seeds a private
 `0600` temporary index from the confirmed `HEAD` and runs `git add -A` only
 there. If the real index contains staged or index-only content that the full
-working tree does not represent, Reasonix stops with the real index and both
+working tree does not represent, Deeper stops with the real index and both
 versions untouched. Otherwise it creates a hook-free, single-parent
 `commit-tree`, compare-and-swaps only the confirmed worktree branch, and then
 installs the prepared index through Git's exclusive `index.lock` protocol only
@@ -150,13 +150,13 @@ if the real index bytes still match. Any failure after the branch CAS is marked
 recovery-required; conflict preflight runs again on the exact new commit. A
 target branch, `HEAD`, index, or content-token change refreshes the confirmation
 instead of continuing. The source merge uses
-`git merge --no-ff --no-commit --no-verify` with a Reasonix-scoped committer
+`git merge --no-ff --no-commit --no-verify` with a Deeper-scoped committer
 identity, so it neither depends on user Git identity nor invokes commit hooks.
 It binds the real index tree to a freshly computed merge tree. The worktree root, common repository,
 symbolic branch, branch ref, `HEAD`, Git operation, and content token are
 revalidated before preparation and before ref installation. Only while those
 identities, the target branch, original `HEAD`, exact `MERGE_HEAD`, and prepared
-tree still match does Reasonix create a hook-free `commit-tree` object with
+tree still match does Deeper create a hook-free `commit-tree` object with
 fixed parents and tree. A short source mutation fence holds the real index,
 `HEAD`, and `MERGE_HEAD` lockfiles and compares their exact snapshots. While
 those checkout-local locks remain held, Git uses a detached administrative view
@@ -166,7 +166,7 @@ worktree branch ref and compare-and-swaps the target ref against its original
 `HEAD`, so neither ref check can partially succeed. Post-commit verification
 rechecks both checkouts plus the commit tree, real index tree, parents, refs,
 clean state, and Git operations. After installation, `git merge --quit` removes
-only Git's auxiliary merge state; Reasonix does not update the `MERGE_HEAD`
+only Git's auxiliary merge state; Deeper does not update the `MERGE_HEAD`
 pseudoref directly or reset the prepared index. Owned preparation failures
 before the CAS are aborted only when the prepared state can still be proved;
 target-ref drift, post-CAS drift, or any state whose recovery cannot be proven
@@ -188,7 +188,7 @@ remain independent.
 
 Finalization runs only when the temporary commit is contained by the target,
 identities still match, and the full status including ignored files is empty.
-Before moving anything, Reasonix writes a mode-0600 v2 `cleanup-state.json`
+Before moving anything, Deeper writes a mode-0600 v2 `cleanup-state.json`
 journal with the original root, an unguessable recovery root under the reserved
 allocation, branch, `HEAD`, and a `planned` stage. It then uses ordinary
 `git worktree move` and rechecks the common Git directory, symbolic branch,
@@ -198,7 +198,7 @@ Git worktree registry and the exact journal identity; multiple or unknown
 candidates fail closed.
 
 The recovery checkout deliberately stays registered and keeps its
-`reasonix/delivery-*` branch checked out. Reasonix does not unregister the
+`deeper/delivery-*` branch checked out. Deeper does not unregister the
 worktree, delete its branch, unlink manifest entries, or recursively delete any
 path. An already-open file descriptor therefore follows the moved checkout and
 late writes remain recoverable; content recreated at the former public path is

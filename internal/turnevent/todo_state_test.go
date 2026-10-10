@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestTodoStateIsCommittedWithToolResultAndClearedByCommittedStart(t *testing.T) {

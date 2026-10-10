@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/permissionpreset"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/permissionpreset"
+	"deeper/internal/sandbox"
+	"deeper/internal/session"
 )
 
 // SessionGrantSummary is a transport-safe description of an in-memory grant.

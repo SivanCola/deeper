@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"os"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 // EnsureSessionPath pins a fresh auto-save file for this controller when none is

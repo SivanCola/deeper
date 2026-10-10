@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // readDelivery contains no source text. References always name an original

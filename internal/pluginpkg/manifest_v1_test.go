@@ -28,7 +28,7 @@ func writeV2Plugin(t *testing.T, root, manifest string) {
 // v2ExampleManifest is the canonical Manifest v2 example: contributes with
 // every path-list kind plus a full runtime declaration.
 const v2ExampleManifest = `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "example",
   "version": "1.0.0",
   "description": "Example v2 plugin",
@@ -37,10 +37,10 @@ const v2ExampleManifest = `{
     "agents": ["agents"],
     "commands": ["commands"],
     "prompts": ["prompts"],
-    "themes": ["themes/*.reasonix-theme"]
+    "themes": ["themes/*.deeper-theme"]
   },
   "runtime": {
-    "command": "${REASONIX_PLUGIN_ROOT}/bin/example",
+    "command": "${DEEPER_PLUGIN_ROOT}/bin/example",
     "args": ["--serve"],
     "env": {"MODE": "plugin"},
     "required": true,
@@ -58,7 +58,7 @@ func writeV2ExampleAssets(t *testing.T, root string) {
 	writeTestFile(t, filepath.Join(root, "agents", "reviewer.md"), "---\ndescription: reviews\n---\nReview")
 	writeTestFile(t, filepath.Join(root, "commands", "ship.md"), "---\ndescription: ship\n---\nShip $ARGUMENTS")
 	writeTestFile(t, filepath.Join(root, "prompts", "plan.md"), "---\ndescription: plan\n---\nPlan $ARGUMENTS")
-	writeTestFile(t, filepath.Join(root, "themes", "neon.reasonix-theme"), "theme pack bytes")
+	writeTestFile(t, filepath.Join(root, "themes", "neon.deeper-theme"), "theme pack bytes")
 	writeTestFile(t, filepath.Join(root, "bin", "example"), "#!/bin/sh\n")
 }
 
@@ -74,8 +74,8 @@ func TestManifestV2FullParse(t *testing.T) {
 	if len(warnings) != 0 {
 		t.Fatalf("unexpected warnings: %v", warnings)
 	}
-	if pkg.ManifestKind != "reasonix" {
-		t.Fatalf("ManifestKind = %q, want reasonix", pkg.ManifestKind)
+	if pkg.ManifestKind != "deeper" {
+		t.Fatalf("ManifestKind = %q, want deeper", pkg.ManifestKind)
 	}
 	m := pkg.Manifest
 	if m.Name != "example" || m.Version != "1.0.0" || m.Description != "Example v2 plugin" {
@@ -93,15 +93,15 @@ func TestManifestV2FullParse(t *testing.T) {
 	if !reflect.DeepEqual(m.Prompts, []string{"prompts"}) {
 		t.Fatalf("Prompts = %#v", m.Prompts)
 	}
-	if !reflect.DeepEqual(m.Themes, []string{"themes/*.reasonix-theme"}) {
+	if !reflect.DeepEqual(m.Themes, []string{"themes/*.deeper-theme"}) {
 		t.Fatalf("Themes = %#v", m.Themes)
 	}
 	rt := m.Runtime
 	if rt == nil {
 		t.Fatal("Runtime is nil, want the declared runtime spec")
 	}
-	if rt.Command != "${REASONIX_PLUGIN_ROOT}/bin/example" {
-		t.Fatalf("Runtime.Command = %q, want the unexpanded ${REASONIX_PLUGIN_ROOT} form", rt.Command)
+	if rt.Command != "${DEEPER_PLUGIN_ROOT}/bin/example" {
+		t.Fatalf("Runtime.Command = %q, want the unexpanded ${DEEPER_PLUGIN_ROOT} form", rt.Command)
 	}
 	if !reflect.DeepEqual(rt.Args, []string{"--serve"}) || rt.Env["MODE"] != "plugin" {
 		t.Fatalf("Runtime args/env: %+v", rt)
@@ -134,7 +134,7 @@ func TestManifestV2FullParse(t *testing.T) {
 
 func TestManifestV2RejectsUnknownFieldsWithPath(t *testing.T) {
 	base := `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "strict-demo",
   "contributes": {"skills": ["skills"]},
   "hooks": {"PreToolUse": [{"match": "Bash", "command": "./pre.sh"}]},
@@ -193,17 +193,17 @@ func TestManifestAPIVersionV2Gating(t *testing.T) {
 		apiVersion any
 		wantErr    string
 	}{
-		{"reasonix.io/plugin/v2", ""},
-		{"reasonix.io/plugin/v1", `unsupported apiVersion`},
-		{"reasonix.io/plugin/v0", `unsupported apiVersion`},
-		{"reasonix.io/plugin/v10.2", `unsupported apiVersion`},
+		{"deeper.io/plugin/v2", ""},
+		{"deeper.io/plugin/v1", `unsupported apiVersion`},
+		{"deeper.io/plugin/v0", `unsupported apiVersion`},
+		{"deeper.io/plugin/v10.2", `unsupported apiVersion`},
 		{"v1", `unsupported apiVersion`},
-		{"reasonix.io/plugin/vX", `unsupported apiVersion`},
+		{"deeper.io/plugin/vX", `unsupported apiVersion`},
 		{"foo", `unsupported apiVersion`},
 		{42, `apiVersion must be a string`},
 		// Exact v2 only — v2.x minor aliases are rejected by design.
-		{"reasonix.io/plugin/v2.1", `unsupported apiVersion`},
-		{"reasonix.io/plugin/v2.0", `unsupported apiVersion`},
+		{"deeper.io/plugin/v2.1", `unsupported apiVersion`},
+		{"deeper.io/plugin/v2.0", `unsupported apiVersion`},
 	}
 	for _, tc := range cases {
 		t.Run(strings.ReplaceAll(strings.TrimSpace(jsonText(tc.apiVersion)), `"`, ""), func(t *testing.T) {
@@ -227,7 +227,7 @@ func TestManifestAPIVersionV2Gating(t *testing.T) {
 func TestManifestV2LegacyFieldsMergeWithContributes(t *testing.T) {
 	root := t.TempDir()
 	writeV2Plugin(t, root, `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "merge-demo",
   "skills": ["legacy-skills", "shared"],
   "commands": "legacy-commands",
@@ -289,13 +289,13 @@ func TestManifestV2MergeConflictsFail(t *testing.T) {
 		wantErr  string
 	}{
 		{"hook redefined", `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "conflict-demo",
   "hooks": {"SessionStart": [{"command": "./start.sh", "timeout": 5000}]},
   "contributes": {"hooks": {"SessionStart": [{"command": "./start.sh", "timeout": 9000}]}}
 }`, `hook "./start.sh" (event SessionStart) is defined differently`},
 		{"mcp server redefined", `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "conflict-demo",
   "mcpServers": {"srv": {"type": "stdio", "command": "./a"}},
   "contributes": {"mcpServers": {"srv": {"type": "stdio", "command": "./b"}}}
@@ -316,7 +316,7 @@ func TestManifestV2MergeConflictsFail(t *testing.T) {
 func TestManifestV2PromptsAndCommandsStaySeparateSets(t *testing.T) {
 	root := t.TempDir()
 	writeV2Plugin(t, root, `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "dual-demo",
   "contributes": {
     "commands": ["shared"],
@@ -360,7 +360,7 @@ func TestManifestV2RuntimeValidation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
-			writeV2Plugin(t, root, `{"apiVersion": "reasonix.io/plugin/v2", "name": "rt-demo", "runtime": `+tc.runtime+`}`)
+			writeV2Plugin(t, root, `{"apiVersion": "deeper.io/plugin/v2", "name": "rt-demo", "runtime": `+tc.runtime+`}`)
 			_, _, err := ParseDir(root)
 			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 				t.Fatalf("error = %v, want it to contain %q", err, tc.wantErr)
@@ -372,7 +372,7 @@ func TestManifestV2RuntimeValidation(t *testing.T) {
 func TestManifestV2RuntimeAcceptsBoundaryValues(t *testing.T) {
 	root := t.TempDir()
 	writeV2Plugin(t, root, `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "rt-ok",
   "runtime": {
     "command": "plugin-runtime",
@@ -393,7 +393,7 @@ func TestManifestV2RuntimeAcceptsBoundaryValues(t *testing.T) {
 func TestManifestV2PathSafety(t *testing.T) {
 	t.Run("dot-dot escape rejected", func(t *testing.T) {
 		root := t.TempDir()
-		writeV2Plugin(t, root, `{"apiVersion": "reasonix.io/plugin/v2", "name": "esc", "contributes": {"skills": ["../outside"]}}`)
+		writeV2Plugin(t, root, `{"apiVersion": "deeper.io/plugin/v2", "name": "esc", "contributes": {"skills": ["../outside"]}}`)
 		if _, _, err := ParseDir(root); err == nil || !strings.Contains(err.Error(), "must be relative and stay inside the plugin root") {
 			t.Fatalf("error = %v, want the traversal refusal", err)
 		}
@@ -421,7 +421,7 @@ func TestManifestV2PathSafety(t *testing.T) {
 		outside := t.TempDir()
 		writeTestFile(t, filepath.Join(outside, "evil.md"), "evil")
 		root := t.TempDir()
-		writeV2Plugin(t, root, `{"apiVersion": "reasonix.io/plugin/v2", "name": "linkesc", "contributes": {"skills": ["skills-link"]}}`)
+		writeV2Plugin(t, root, `{"apiVersion": "deeper.io/plugin/v2", "name": "linkesc", "contributes": {"skills": ["skills-link"]}}`)
 		if err := os.Symlink(outside, filepath.Join(root, "skills-link")); err != nil {
 			t.Skipf("symlinks unavailable: %v", err)
 		}
@@ -431,7 +431,7 @@ func TestManifestV2PathSafety(t *testing.T) {
 	})
 	t.Run("in-root symlink accepted", func(t *testing.T) {
 		root := t.TempDir()
-		writeV2Plugin(t, root, `{"apiVersion": "reasonix.io/plugin/v2", "name": "linkok", "contributes": {"skills": ["skills-link"]}}`)
+		writeV2Plugin(t, root, `{"apiVersion": "deeper.io/plugin/v2", "name": "linkok", "contributes": {"skills": ["skills-link"]}}`)
 		writeTestFile(t, filepath.Join(root, "real-skills", "s", "SKILL.md"), "---\ndescription: s\n---\nS")
 		if err := os.Symlink(filepath.Join(root, "real-skills"), filepath.Join(root, "skills-link")); err != nil {
 			t.Skipf("symlinks unavailable: %v", err)
@@ -442,13 +442,13 @@ func TestManifestV2PathSafety(t *testing.T) {
 	})
 	t.Run("theme symlink escape rejected", func(t *testing.T) {
 		outside := t.TempDir()
-		writeTestFile(t, filepath.Join(outside, "evil.reasonix-theme"), "evil")
+		writeTestFile(t, filepath.Join(outside, "evil.deeper-theme"), "evil")
 		root := t.TempDir()
-		writeV2Plugin(t, root, `{"apiVersion": "reasonix.io/plugin/v2", "name": "themesc", "contributes": {"themes": ["themes/*.reasonix-theme"]}}`)
+		writeV2Plugin(t, root, `{"apiVersion": "deeper.io/plugin/v2", "name": "themesc", "contributes": {"themes": ["themes/*.deeper-theme"]}}`)
 		if err := os.MkdirAll(filepath.Join(root, "themes"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Symlink(filepath.Join(outside, "evil.reasonix-theme"), filepath.Join(root, "themes", "evil.reasonix-theme")); err != nil {
+		if err := os.Symlink(filepath.Join(outside, "evil.deeper-theme"), filepath.Join(root, "themes", "evil.deeper-theme")); err != nil {
 			t.Skipf("symlinks unavailable: %v", err)
 		}
 		if _, _, err := ParseDir(root); err == nil || !strings.Contains(err.Error(), "escapes the plugin root through a symlink") {
@@ -457,7 +457,7 @@ func TestManifestV2PathSafety(t *testing.T) {
 	})
 	t.Run("non-regular theme rejected", func(t *testing.T) {
 		root := t.TempDir()
-		writeV2Plugin(t, root, `{"apiVersion": "reasonix.io/plugin/v2", "name": "themedir", "contributes": {"themes": ["themes"]}}`)
+		writeV2Plugin(t, root, `{"apiVersion": "deeper.io/plugin/v2", "name": "themedir", "contributes": {"themes": ["themes"]}}`)
 		if err := os.MkdirAll(filepath.Join(root, "themes"), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -468,12 +468,12 @@ func TestManifestV2PathSafety(t *testing.T) {
 	t.Run("missing paths are warnings not failures", func(t *testing.T) {
 		root := t.TempDir()
 		writeV2Plugin(t, root, `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "missing-demo",
   "contributes": {
     "skills": ["no-such-skills"],
     "prompts": ["no-such-prompts"],
-    "themes": ["themes/*.reasonix-theme"]
+    "themes": ["themes/*.deeper-theme"]
   }
 }`)
 		pkg, warnings, err := ParseDir(root)
@@ -481,7 +481,7 @@ func TestManifestV2PathSafety(t *testing.T) {
 			t.Fatalf("ParseDir with missing paths: %v", err)
 		}
 		joined := strings.Join(warnings, "\n")
-		for _, want := range []string{`skills path "no-such-skills" does not exist`, `prompts path "no-such-prompts" does not exist`, `theme glob "themes/*.reasonix-theme" matched no files`} {
+		for _, want := range []string{`skills path "no-such-skills" does not exist`, `prompts path "no-such-prompts" does not exist`, `theme glob "themes/*.deeper-theme" matched no files`} {
 			if !strings.Contains(joined, want) {
 				t.Fatalf("warnings missing %q:\n%s", want, joined)
 			}
@@ -497,7 +497,7 @@ func TestManifestV2DescribeRendersPromptsThemesRuntime(t *testing.T) {
 	root := filepath.Join(home, "plugins", "example")
 	writeV2Plugin(t, root, v2ExampleManifest)
 	writeV2ExampleAssets(t, root)
-	if err := Upsert(home, InstalledPlugin{Name: "example", Root: "plugins/example", Version: "1.0.0", ManifestKind: "reasonix", Enabled: true}); err != nil {
+	if err := Upsert(home, InstalledPlugin{Name: "example", Root: "plugins/example", Version: "1.0.0", ManifestKind: "deeper", Enabled: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -508,7 +508,7 @@ func TestManifestV2DescribeRendersPromptsThemesRuntime(t *testing.T) {
 	for _, want := range []string{
 		"capabilities: 1 skills, 1 commands, 1 prompts, 0 hooks, 0 MCP servers, 1 themes",
 		"runtime: FULL TRUST",
-		"command: ${REASONIX_PLUGIN_ROOT}/bin/example --serve",
+		"command: ${DEEPER_PLUGIN_ROOT}/bin/example --serve",
 		"intercepts: input.receive, tool.before",
 		"replaces: system_prompt",
 		"capabilities: interceptors, strategies, providers, ui",
@@ -534,7 +534,7 @@ func TestManifestV2DescribeRendersPromptsThemesRuntime(t *testing.T) {
 
 func TestExpandRuntimeCommand(t *testing.T) {
 	root := filepath.Join(string(filepath.Separator), "plugins", "example")
-	if got := ExpandRuntimeCommand("${REASONIX_PLUGIN_ROOT}/bin/example", root); got != filepath.Join(root, "bin", "example") {
+	if got := ExpandRuntimeCommand("${DEEPER_PLUGIN_ROOT}/bin/example", root); got != filepath.Join(root, "bin", "example") {
 		t.Fatalf("ExpandRuntimeCommand = %q", got)
 	}
 	if got := ExpandRuntimeCommand("plugin-runtime", root); got != "plugin-runtime" {

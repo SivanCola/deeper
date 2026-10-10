@@ -10,11 +10,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // TestResumeDispatchOpensPicker proves bare "/resume" opens the interactive
@@ -531,7 +531,7 @@ func TestResumeEntriesIncludeOtherProjects(t *testing.T) {
 	}
 	// The process-wide test home is shared by every test in this binary; the
 	// saved project must not leak into later tests' cross-project resume rows.
-	projectsFile := filepath.Join(config.ReasonixHomeDir(), "desktop-projects.json")
+	projectsFile := filepath.Join(config.DeeperHomeDir(), "desktop-projects.json")
 	previousProjects, projectsReadErr := os.ReadFile(projectsFile)
 	t.Cleanup(func() {
 		if projectsReadErr != nil {

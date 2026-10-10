@@ -4,9 +4,9 @@
 package main
 
 import (
+	"deeper/internal/config"
 	"encoding/json"
 	"os"
-	"reasonix/internal/config"
 )
 
 func main() {

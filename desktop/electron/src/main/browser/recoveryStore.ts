@@ -9,7 +9,7 @@ export interface RecoveredTab { id: string; taskId: string; sessionId: string; u
 const prohibited = ["grant", "grantId", "webContentsId", "documentToken", "refs", "observationToken", "pendingOperation", "form", "password"];
 export function recoverableURL(value: string): boolean {
   if (value.length > 8192) return false;
-  try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password && !url.pathname.startsWith("/__reasonix_workspace_media/"); }
+  try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password && !url.pathname.startsWith("/__deeper_workspace_media/"); }
   catch { return false; }
 }
 export class BrowserRecoveryStore {

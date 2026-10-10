@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"reasonix/internal/shellparse"
+	"deeper/internal/shellparse"
 )
 
 // Constraints are explicit user or host limits. They never encode task

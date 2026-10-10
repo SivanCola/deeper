@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/session"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/tool"
 )
 
 func TestTargetGuidanceDoesNotSteerSuccessorTurn(t *testing.T) {

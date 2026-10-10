@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/tool"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/tool"
 )
 
 func TestUpdateGoalLifecycleActionsAcceptInactiveFields(t *testing.T) {

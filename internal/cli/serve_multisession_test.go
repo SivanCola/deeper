@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/remote/bootstrap"
+	"deeper/internal/remote/bootstrap"
 )
 
 func TestServeCapabilityHelpAdvertisesBootstrapProbeToken(t *testing.T) {

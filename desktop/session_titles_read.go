@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // loadSessionTitles reads the basename→title map (missing/corrupt → empty).

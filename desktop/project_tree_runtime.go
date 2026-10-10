@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 type projectTreeRuntimeState struct {

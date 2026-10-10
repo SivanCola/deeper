@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func TestShellTimeoutClampsBeforeDurationConversion(t *testing.T) {

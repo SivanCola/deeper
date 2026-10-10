@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
-	"reasonix/internal/turnevent"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
+	"deeper/internal/turnevent"
 )
 
 func TestExplainError(t *testing.T) {
@@ -120,7 +120,7 @@ func TestExplainError(t *testing.T) {
 		Provider:    "mimo",
 		Status:      400,
 		Body:        `{"error":{"message":"Tool 197 function has invalid 'parameters' schema"}}`,
-		ToolContext: `Provider tool 197 maps to Reasonix tool "mcp__files__search" (MCP server "files", tool "search").`,
+		ToolContext: `Provider tool 197 maps to Deeper tool "mcp__files__search" (MCP server "files", tool "search").`,
 	})
 	for _, want := range []string{"invalid 'parameters' schema", `MCP server "files"`} {
 		if !strings.Contains(toolSchema.Error(), want) {

@@ -42,7 +42,7 @@ func TestCredentialDiagnosticsRejectsDirectoryAndSymlink(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("REASONIX_HOME", t.TempDir())
+			t.Setenv("DEEPER_HOME", t.TempDir())
 			path := UserCredentialsPath()
 			tc.setup(t, path)
 			report, err := DiagnoseCredentials(CredentialDiagnosticOptions{Repair: true})
@@ -57,7 +57,7 @@ func TestCredentialDiagnosticsRejectsDirectoryAndSymlink(t *testing.T) {
 }
 
 func TestCredentialDiagnosticsProbeAndDryRunDoNotChangeCredential(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	path := UserCredentialsPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
@@ -96,7 +96,7 @@ func TestCredentialDiagnosticsProbeAndDryRunDoNotChangeCredential(t *testing.T) 
 }
 
 func TestCredentialDiagnosticsReportsPendingTransaction(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	path := UserConfigPath()
 	cfg := Default()
 	if err := cfg.SaveTo(path); err != nil {

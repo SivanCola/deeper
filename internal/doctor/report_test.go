@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestRedactHome(t *testing.T) {
@@ -34,7 +34,7 @@ func TestRedactHome(t *testing.T) {
 }
 
 func TestCollectReportRedactsSecrets(t *testing.T) {
-	t.Setenv("REASONIX_TEST_SECRET", "sk-live-secret")
+	t.Setenv("DEEPER_TEST_SECRET", "sk-live-secret")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "custom"
@@ -43,7 +43,7 @@ func TestCollectReportRedactsSecrets(t *testing.T) {
 		Kind:      "openai",
 		BaseURL:   "https://api.example.com/v1?token=secret-query",
 		Model:     "model-a",
-		APIKeyEnv: "REASONIX_TEST_SECRET",
+		APIKeyEnv: "DEEPER_TEST_SECRET",
 	}}
 	cfg.Plugins = []config.PluginEntry{{
 		Name:    "remote",
@@ -81,7 +81,7 @@ func TestCollectReportRedactsSecrets(t *testing.T) {
 }
 
 func TestCollectReportDoesNotRequireAPIKey(t *testing.T) {
-	t.Setenv("REASONIX_HOME", filepath.Join(t.TempDir(), "reasonix"))
+	t.Setenv("DEEPER_HOME", filepath.Join(t.TempDir(), "deeper"))
 	t.Setenv("DEEPSEEK_API_KEY", "")
 
 	cfg := config.Default()
@@ -97,7 +97,7 @@ func TestCollectReportDoesNotRequireAPIKey(t *testing.T) {
 	if report.Providers[0].KeyPresent {
 		t.Fatal("provider key should be reported missing when env is empty")
 	}
-	if !strings.Contains(text, "reasonix 1.2.3 doctor") {
+	if !strings.Contains(text, "deeper 1.2.3 doctor") {
 		t.Fatalf("text report missing header:\n%s", text)
 	}
 	if !strings.Contains(text, "missing") {
@@ -149,7 +149,7 @@ func TestCollectRecoveryLifecycleAggregatesWithoutLeakingSessionData(t *testing.
 }
 
 func TestRenderTextSurfacesWarningsUpTop(t *testing.T) {
-	text := RenderText(Report{Warnings: []string{"config reasonix.toml: parse boom"}})
+	text := RenderText(Report{Warnings: []string{"config deeper.toml: parse boom"}})
 	w := strings.Index(text, "parse boom")
 	if w < 0 {
 		t.Fatalf("warning missing from report:\n%s", text)
@@ -179,7 +179,7 @@ func TestRenderTextFlagsUnavailableSandboxAsFailClosed(t *testing.T) {
 // resolves to off (Windows), doctor must say so in both the warnings list and
 // the sandbox bash line instead of silently reporting "off".
 func TestCollectFlagsIgnoredEnforceConfig(t *testing.T) {
-	t.Setenv("REASONIX_HOME", filepath.Join(t.TempDir(), "reasonix"))
+	t.Setenv("DEEPER_HOME", filepath.Join(t.TempDir(), "deeper"))
 
 	cfg := config.Default()
 	cfg.Sandbox.Bash = "enforce"
@@ -206,7 +206,7 @@ func TestHomeIsolationWarningDetectsMismatch(t *testing.T) {
 	if err != nil || acct == nil || strings.TrimSpace(acct.HomeDir) == "" {
 		t.Skip("account home unavailable")
 	}
-	t.Setenv("REASONIX_HOME", "")
+	t.Setenv("DEEPER_HOME", "")
 	serviceHome := filepath.Join(t.TempDir(), "service-home")
 	t.Setenv("HOME", serviceHome)
 	t.Setenv("USERPROFILE", serviceHome)
@@ -214,15 +214,15 @@ func TestHomeIsolationWarningDetectsMismatch(t *testing.T) {
 	if got == "" {
 		t.Fatal("expected HOME mismatch warning")
 	}
-	if !strings.Contains(got, "REASONIX_HOME") {
-		t.Fatalf("warning = %q, want REASONIX_HOME guidance", got)
+	if !strings.Contains(got, "DEEPER_HOME") {
+		t.Fatalf("warning = %q, want DEEPER_HOME guidance", got)
 	}
 	// Shareable output must not embed either absolute home path.
 	if strings.Contains(got, serviceHome) || strings.Contains(got, acct.HomeDir) {
 		t.Fatalf("warning leaked a home path: %q", got)
 	}
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	if got := homeIsolationWarning(); got != "" {
-		t.Fatalf("REASONIX_HOME set should silence warning, got %q", got)
+		t.Fatalf("DEEPER_HOME set should silence warning, got %q", got)
 	}
 }

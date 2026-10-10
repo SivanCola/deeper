@@ -1,8 +1,8 @@
 package control
 
 import (
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
 )
 
 type controllerBackground struct {

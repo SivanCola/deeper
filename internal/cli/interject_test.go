@@ -5,9 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/sessioninbox"
 )
 
 type busyInboxController struct {

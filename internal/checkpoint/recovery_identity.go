@@ -1,6 +1,6 @@
 package checkpoint
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // RecoveryIdentity correlates the first writer's preimages with its durable
 // action record. It does not claim that the external effect committed.

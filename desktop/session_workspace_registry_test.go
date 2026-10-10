@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 type registrySessionCreator struct{ service *session.Service }
@@ -168,7 +168,7 @@ func TestWorkspaceRegistryRejectsSessionHeaderFromDifferentWorkspace(t *testing.
 	}
 }
 
-// A portable build or REASONIX_HOME move leaves Global's stored root and every
+// A portable build or DEEPER_HOME move leaves Global's stored root and every
 // global session's recorded CWD at the old data directory (#10638, #10659).
 func TestGlobalWorkspaceSurvivesMovedDataDirectory(t *testing.T) {
 	isolateDesktopUserDirs(t)

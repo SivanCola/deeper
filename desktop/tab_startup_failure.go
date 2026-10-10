@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 type startupFailureRestorePolicy uint8

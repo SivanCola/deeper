@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type countedRuntimeReader struct {

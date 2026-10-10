@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/filelock"
-	"reasonix/internal/pathidentity"
+	"deeper/internal/filelock"
+	"deeper/internal/pathidentity"
 )
 
 type Mode = filelock.Mode

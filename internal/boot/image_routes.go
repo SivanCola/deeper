@@ -2,12 +2,12 @@ package boot
 
 import (
 	"context"
+	"deeper/internal/attachment"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/imageinput"
+	"deeper/internal/provider"
 	"fmt"
-	"reasonix/internal/attachment"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/provider"
 )
 
 type childImageRouting struct {

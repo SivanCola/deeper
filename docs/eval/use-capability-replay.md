@@ -3,7 +3,7 @@
 This optional paired evaluation compares the cache-stable `use_capability`
 proxy with a baseline that expands MCP tools into the provider-visible schema.
 It is a diagnostic benchmark, not a Stable release gate. Live model runs are
-optional and must use disposable Reasonix homes.
+optional and must use disposable Deeper homes.
 
 ## What to measure
 
@@ -19,7 +19,7 @@ upload prompts, secrets, tool arguments, or workspace paths.
 
 ## Procedure
 
-1. Use disposable `REASONIX_HOME` and `REASONIX_CACHE_HOME` directories.
+1. Use disposable `DEEPER_HOME` and `DEEPER_CACHE_HOME` directories.
 2. Pick a representative task set that needs MCP discovery followed by a call.
 3. Run proxy and baseline for each task with the same model, effort, workspace,
    skills, agents, and MCP configuration.

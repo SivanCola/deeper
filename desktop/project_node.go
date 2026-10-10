@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/session"
+import "deeper/internal/session"
 
 // ProjectNode is one node in the sidebar project tree (a project folder or a
 // topic leaf).

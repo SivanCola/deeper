@@ -9,9 +9,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/ablation"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // Compaction is a low-frequency cache-reset point: the prompt grows append-only

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // TranscriptEntry is one simplified conversation entry for guardian review.

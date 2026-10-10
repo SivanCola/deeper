@@ -3,8 +3,8 @@ package anthropic
 import (
 	"bytes"
 	"context"
+	"deeper/internal/provider"
 	"encoding/json"
-	"reasonix/internal/provider"
 	"testing"
 )
 

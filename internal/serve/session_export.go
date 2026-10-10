@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
-	"reasonix/internal/sessionexport"
+	"deeper/internal/control"
+	"deeper/internal/session"
+	"deeper/internal/sessionexport"
 )
 
 // fixedSessionExportSource resolves one explicit export identity without
@@ -181,7 +181,7 @@ func (s *Server) sessionExportDocument(w http.ResponseWriter, r *http.Request) {
 		CapturedAt:        request.Snapshot.CapturedAt,
 		Title:             request.Snapshot.Title,
 	}
-	dir, err := os.MkdirTemp("", "reasonix-session-export-")
+	dir, err := os.MkdirTemp("", "deeper-session-export-")
 	if err != nil {
 		http.Error(w, "export staging failed", http.StatusInternalServerError)
 		return
@@ -206,7 +206,7 @@ func (s *Server) sessionExportDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "export unavailable", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("X-Reasonix-Export-Records", fmt.Sprint(doc.Records))
+	w.Header().Set("X-Deeper-Export-Records", fmt.Sprint(doc.Records))
 	w.Header().Set("Content-Length", fmt.Sprint(info.Size()))
 	_, _ = io.Copy(w, file)
 }
@@ -243,7 +243,7 @@ func (s *Server) sessionExportDiagnostic(w http.ResponseWriter, r *http.Request)
 	s.bindMu.Unlock()
 	// Stage before sending headers so a failed writer never becomes a valid-looking
 	// truncated JSON download. Flush failures remain evidence inside the document.
-	file, err := os.CreateTemp("", "reasonix-diagnostic-")
+	file, err := os.CreateTemp("", "deeper-diagnostic-")
 	if err != nil {
 		http.Error(w, "diagnostics unavailable", http.StatusInternalServerError)
 		return

@@ -45,13 +45,13 @@ func TestDocPathDefaultsToAgents(t *testing.T) {
 
 func TestDocPathPrefersExisting(t *testing.T) {
 	proj := t.TempDir()
-	// An existing REASONIX.md should keep receiving notes (no split to AGENTS.md).
-	if err := os.WriteFile(filepath.Join(proj, "REASONIX.md"), []byte("x"), 0o644); err != nil {
+	// An existing DEEPER.md should keep receiving notes (no split to AGENTS.md).
+	if err := os.WriteFile(filepath.Join(proj, "DEEPER.md"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	set := Load(Options{CWD: proj})
-	if got := set.DocPath(ScopeProject); filepath.Base(got) != "REASONIX.md" {
-		t.Errorf("should append to the existing REASONIX.md, got %s", got)
+	if got := set.DocPath(ScopeProject); filepath.Base(got) != "DEEPER.md" {
+		t.Errorf("should append to the existing DEEPER.md, got %s", got)
 	}
 
 	// With only a CLAUDE.md present, that's the target.

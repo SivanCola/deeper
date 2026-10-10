@@ -3,11 +3,11 @@ package boot
 import (
 	"context"
 
-	"reasonix/internal/extension"
-	"reasonix/internal/lsp"
-	"reasonix/internal/plugin"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/skill"
+	"deeper/internal/extension"
+	"deeper/internal/lsp"
+	"deeper/internal/plugin"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/skill"
 )
 
 func closeSkillStores(stores ...*skill.Store) {

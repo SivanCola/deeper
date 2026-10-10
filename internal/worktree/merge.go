@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/gitcmd"
+	"deeper/internal/gitcmd"
 )
 
 // MergeBlocker is a stable, structured reason why merge or cleanup cannot
@@ -203,7 +203,7 @@ func managedWorktreeRoot(workspaceRoot, managedRoot string) (string, error) {
 	rel, err := filepath.Rel(realManaged, realWorkspace)
 	parts := strings.Split(filepath.Clean(rel), string(filepath.Separator))
 	if err != nil || len(parts) < 3 || parts[0] == ".." {
-		return "", errors.New("workspace is not inside Reasonix-managed worktree storage")
+		return "", errors.New("workspace is not inside Deeper-managed worktree storage")
 	}
 	return filepath.Join(realManaged, parts[0], parts[1], parts[2]), nil
 }
@@ -338,7 +338,7 @@ func MergeBack(ctx context.Context, managedRoot string, request MergeRequest) (M
 			return mergeFailure(inspection, false, fmt.Errorf("re-inspect after auto-commit: %w", err))
 		}
 		if inspection.WorktreeHead != committedHead {
-			return mergeFailure(inspection, false, errors.New("worktree HEAD changed after Reasonix auto-commit; inspect again"))
+			return mergeFailure(inspection, false, errors.New("worktree HEAD changed after Deeper auto-commit; inspect again"))
 		}
 		request.ExpectedWorktreeHead = committedHead
 		request.ExpectedWorktreeStateToken = inspection.WorktreeStateToken

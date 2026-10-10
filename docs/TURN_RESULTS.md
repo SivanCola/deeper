@@ -14,7 +14,7 @@ and recorded check outcomes. A passing check is not an overall completion grade.
   outcomes, and expandable logs. **Checking…** only appears for a host-identified
   check that has actually entered execution.
 - **All current workspace changes** returns to the existing workspace view.
-  That view can include other turns and edits made outside Reasonix.
+  That view can include other turns and edits made outside Deeper.
 
 These controls inspect results. They do not run, retry, or schedule commands,
 and require no new setting.

@@ -4,10 +4,10 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
-	"reasonix/internal/extension"
-	"reasonix/internal/skill/skillwatch"
+	"deeper/internal/boot"
+	"deeper/internal/control"
+	"deeper/internal/extension"
+	"deeper/internal/skill/skillwatch"
 )
 
 func TestRuntimeDoctorEmptyApp(t *testing.T) {

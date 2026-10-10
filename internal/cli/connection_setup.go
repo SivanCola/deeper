@@ -11,8 +11,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
+	"deeper/internal/boot"
+	"deeper/internal/config"
 )
 
 type connectionSetup struct {

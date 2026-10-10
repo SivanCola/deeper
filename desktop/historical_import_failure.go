@@ -5,9 +5,9 @@ import (
 	"errors"
 	"unicode/utf8"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 )
 
 const historicalFailureDetailLimit = 2000

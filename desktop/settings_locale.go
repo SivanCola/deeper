@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/i18n"
+import "deeper/internal/i18n"
 
 // refreshBackendNoticeLocale keeps host-generated notices aligned with the
 // live desktop language without adding catalog state to each controller.

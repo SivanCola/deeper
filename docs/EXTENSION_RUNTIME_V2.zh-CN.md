@@ -1,13 +1,13 @@
 # Extension Runtime v2（时空可组合性）
 
-Reasonix 插件/运行时 v2 模型说明。英文版：[EXTENSION_RUNTIME_V2.md](./EXTENSION_RUNTIME_V2.md)。
+Deeper 插件/运行时 v2 模型说明。英文版：[EXTENSION_RUNTIME_V2.md](./EXTENSION_RUNTIME_V2.md)。
 
 ## 协议与 Manifest
 
-- 插件清单：仅接受 `apiVersion: reasonix.io/plugin/v2`（拒绝 v1 与无 apiVersion 的 native）。
+- 插件清单：仅接受 `apiVersion: deeper.io/plugin/v2`（拒绝 v1 与无 apiVersion 的 native）。
 - 兼容边界：不提供 v1 双读或自动迁移。扩展 Manifest v1 从未公开发布，
   因此 v2 是首个受支持的 Runtime Manifest。
-- 扩展线协议：`reasonix.extension.v2`（major 2）。
+- 扩展线协议：`deeper.extension.v2`（major 2）。
 - Handshake 的 `provides` 不得超过 manifest 的 provides 上限。
 
 ## 运行时模型
@@ -40,9 +40,9 @@ Controller = 已发布 generation 的消费者（admission 绑定 RuntimeOwner�
 ## 诊断
 
 ```bash
-reasonix doctor runtime
-reasonix doctor runtime --json
-reasonix plugin doctor <name>
+deeper doctor runtime
+deeper doctor runtime --json
+deeper plugin doctor <name>
 ```
 
 输出组件状态、计划、effect receipt、可恢复性、lifecycle metrics，以及进程内的

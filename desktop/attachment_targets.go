@@ -9,11 +9,11 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/attachment"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/session"
+	"deeper/internal/sessioninbox"
 )
 
 type ComposerTarget struct {

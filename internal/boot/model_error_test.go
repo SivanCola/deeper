@@ -8,26 +8,26 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
 
-	_ "reasonix/internal/provider/openai"
-	_ "reasonix/internal/tool/builtin"
+	_ "deeper/internal/provider/openai"
+	_ "deeper/internal/tool/builtin"
 )
 
 // TestBuildUnknownModelErrorIsActionable: a default_model that doesn't resolve
 // (e.g. a stale preset name after [[providers]] replaced the built-in presets) must
 // fail with a message that names the model, lists what IS configured, and hints
 // at the [[providers]] trap — not a silent empty model. This contract holds when
-// the project file is the only config, so isolate REASONIX_HOME: a user-global
+// the project file is the only config, so isolate DEEPER_HOME: a user-global
 // config with an explicit default_model would instead rescue the boot (#4218).
 func TestBuildUnknownModelErrorIsActionable(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	dir := robustTempDir(t)
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "legacy-missing"
 
 [[providers]]
@@ -35,7 +35,7 @@ name = "deepseek-flash"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "deepseek-v4-flash"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -53,7 +53,7 @@ api_key_env = "REASONIX_TEST_KEY_UNSET"
 
 func TestBuildNoticesProjectDefaultModelFallback(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	writeFile(t, home, "config.toml", `
 default_model = "deepseek-pro"
 
@@ -62,13 +62,13 @@ name = "deepseek-pro"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "deepseek-v4-pro"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 
 	dir := robustTempDir(t)
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "deepseek-flash"
 `)
 	approveWorkspace(t, dir)
@@ -101,7 +101,7 @@ func TestBuildMigratesLegacyBareMimoModelOverride(t *testing.T) {
 	dir := robustTempDir(t)
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "deepseek-flash"
 
 [[providers]]
@@ -109,7 +109,7 @@ name = "deepseek-flash"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "deepseek-v4-flash"
-api_key_env = "REASONIX_TEST_KEY_UNSET"
+api_key_env = "DEEPER_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -127,11 +127,11 @@ api_key_env = "REASONIX_TEST_KEY_UNSET"
 // builds fine (RequireKey is false so the UI stays reachable) but must emit a
 // notice naming the env var, instead of silently showing a dead/empty model.
 func TestBuildNoticesMissingAPIKey(t *testing.T) {
-	const keyEnv = "REASONIX_MISSING_KEY_FOR_TEST"
+	const keyEnv = "DEEPER_MISSING_KEY_FOR_TEST"
 	dir := robustTempDir(t)
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "x"
 
 [[providers]]
@@ -169,7 +169,7 @@ api_key_env = "`+keyEnv+`"
 
 func TestBuildClassifiesUnavailableCredentialStore(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.Mkdir(filepath.Join(home, ".env"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -204,12 +204,12 @@ api_key_env = "RELAY_TEST_KEY"
 }
 
 func TestBuildDoesNotNoticeMissingAPIKeyForNoAuthLoopback(t *testing.T) {
-	const keyEnv = "REASONIX_LOCAL_GATEWAY_KEY_FOR_TEST"
+	const keyEnv = "DEEPER_LOCAL_GATEWAY_KEY_FOR_TEST"
 	dir := robustTempDir(t)
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
 	t.Setenv(keyEnv, "")
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "local/model-a"
 
 [[providers]]
@@ -248,12 +248,12 @@ api_key_env = "`+keyEnv+`"
 // the caller did not pass an explicit Options.Model — explicit choices
 // still fail loudly so the user is not silently rerouted.
 func TestBuildKeylessDefaultFallsBackToConfiguredProvider(t *testing.T) {
-	const keylessEnv = "REASONIX_KEYLESS_DEFAULT_FALLBACK_KEYLESS"
-	const configuredEnv = "REASONIX_KEYLESS_DEFAULT_FALLBACK_CONFIGURED"
+	const keylessEnv = "DEEPER_KEYLESS_DEFAULT_FALLBACK_KEYLESS"
+	const configuredEnv = "DEEPER_KEYLESS_DEFAULT_FALLBACK_CONFIGURED"
 
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	if _, err := config.SetCredential(configuredEnv, "sk-test"); err != nil {
 		t.Fatalf("seed configured key: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestBuildKeylessDefaultFallsBackToConfiguredProvider(t *testing.T) {
 	dir := robustTempDir(t)
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "deepseek/deepseek-v4-flash"
 
 [[providers]]
@@ -302,12 +302,12 @@ api_key_env = "`+configuredEnv+`"
 // provider is configured and could be used as a fallback. The user asked
 // for that specific ref, so we must not silently reroute them.
 func TestBuildExplicitKeylessModelStillFails(t *testing.T) {
-	const keylessEnv = "REASONIX_EXPLICIT_KEYLESS_KEY"
-	const configuredEnv = "REASONIX_EXPLICIT_KEYLESS_CONFIGURED"
+	const keylessEnv = "DEEPER_EXPLICIT_KEYLESS_KEY"
+	const configuredEnv = "DEEPER_EXPLICIT_KEYLESS_CONFIGURED"
 
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	if _, err := config.SetCredential(configuredEnv, "sk-test"); err != nil {
 		t.Fatalf("seed configured key: %v", err)
 	}
@@ -315,7 +315,7 @@ func TestBuildExplicitKeylessModelStillFails(t *testing.T) {
 	dir := robustTempDir(t)
 	fenceBootTestHistoryCatalog(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "minimax/MiniMax-M3"
 
 [[providers]]

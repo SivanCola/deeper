@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/tool"
+	"deeper/internal/transcript"
 )
 
 func TestNativeResumePrefersCompletedCanonicalCutover(t *testing.T) {

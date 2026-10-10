@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestHistoricalRestoredTabActivationKeepsPreparationExplicit(t *testing.T) {

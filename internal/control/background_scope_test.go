@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
 )
 
 func TestModelReplacementFencesCandidateAndRetiredCallbacks(t *testing.T) {

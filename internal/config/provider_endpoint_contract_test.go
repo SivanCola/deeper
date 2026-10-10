@@ -161,9 +161,9 @@ func TestRepairProviderEndpointContractPreservesUnprovenRoutes(t *testing.T) {
 }
 
 func TestProjectProviderEndpointRepairIsRuntimeOnly(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	root := t.TempDir()
-	path := filepath.Join(root, "reasonix.toml")
+	path := filepath.Join(root, "deeper.toml")
 	raw := `[[providers]]
 name = "deepseek-anthropic"
 preset_id = "deepseek-anthropic"

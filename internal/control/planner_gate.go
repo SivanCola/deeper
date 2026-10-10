@@ -8,8 +8,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/runtimepolicy"
+	"deeper/internal/agent"
+	"deeper/internal/runtimepolicy"
 )
 
 const (

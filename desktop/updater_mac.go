@@ -18,12 +18,12 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"reasonix/internal/repair"
+	"deeper/internal/repair"
 )
 
 const (
-	macBundleID         = "com.wails.reasonix-desktop" // frozen bundle identity; renaming it would orphan installed apps
-	macUpdateHandoffArg = "--reasonix-mac-update-handoff"
+	macBundleID         = "io.github.sivancola.deeper"
+	macUpdateHandoffArg = "--deeper-mac-update-handoff"
 	macHandoffReadyFD   = 3
 	macHandoffProceedFD = 4
 	macHandoffReadyWait = 5 * time.Second
@@ -65,7 +65,7 @@ func applyMac(zipPath, targetVersion string, ownerPID int) error {
 	if err != nil {
 		return err
 	}
-	staging, err := os.MkdirTemp("", "reasonix-mac-update-*")
+	staging, err := os.MkdirTemp("", "deeper-mac-update-*")
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func applyMac(zipPath, targetVersion string, ownerPID int) error {
 	if err := verifyMacApp(nextApp); err != nil {
 		return err
 	}
-	backupApp := currentApp + ".reasonix-update-backup"
+	backupApp := currentApp + ".deeper-update-backup"
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -211,7 +211,7 @@ func writeMacHandoffReadyResponse(fd int, response macHandoffReadyResponse) erro
 	if fd == 0 {
 		return nil
 	}
-	ready := os.NewFile(uintptr(fd), "reasonix-update-ready")
+	ready := os.NewFile(uintptr(fd), "deeper-update-ready")
 	if ready == nil {
 		return fmt.Errorf("readiness pipe is unavailable")
 	}
@@ -254,7 +254,7 @@ type macUpdateHandoffConfig struct {
 }
 
 func parseMacUpdateHandoffArgs(args []string) (macUpdateHandoffConfig, error) {
-	fs := flag.NewFlagSet("reasonix-mac-update-handoff", flag.ContinueOnError)
+	fs := flag.NewFlagSet("deeper-mac-update-handoff", flag.ContinueOnError)
 	var cfg macUpdateHandoffConfig
 	fs.StringVar(&cfg.ToVersion, "to-version", "", "pending update target version")
 	fs.StringVar(&cfg.CreatedAt, "created-at", "", "pending update creation timestamp")
@@ -411,7 +411,7 @@ func runMacUpdateHandoff(cfg macUpdateHandoffConfig) int {
 		failedAppVerified := false
 		if publishedReplacement {
 			var retainErr error
-			failedApp, retainErr = retainMacHandoffNode(oldApp, "reasonix-update-failed")
+			failedApp, retainErr = retainMacHandoffNode(oldApp, "deeper-update-failed")
 			if retainErr != nil {
 				if !os.IsNotExist(retainErr) {
 					return fmt.Errorf("retain failed replacement bundle: %w", retainErr)
@@ -440,7 +440,7 @@ func runMacUpdateHandoff(cfg macUpdateHandoffConfig) int {
 			return fmt.Errorf("restore backup bundle: %w", err)
 		}
 		if err := repair.VerifyAppBundleUpdateHandoffOriginal(claimed); err != nil {
-			rejected, retainErr := retainMacHandoffNode(oldApp, "reasonix-update-rejected")
+			rejected, retainErr := retainMacHandoffNode(oldApp, "deeper-update-rejected")
 			if retainErr != nil {
 				return fmt.Errorf("restored backup bundle changed: %w (retain rejected bundle: %w)", err, retainErr)
 			}
@@ -487,7 +487,7 @@ func runMacUpdateHandoff(cfg macUpdateHandoffConfig) int {
 		return 1
 	}
 
-	installRoot, err := os.MkdirTemp(filepath.Dir(oldApp), ".reasonix-update-install-*")
+	installRoot, err := os.MkdirTemp(filepath.Dir(oldApp), ".deeper-update-install-*")
 	if err != nil {
 		logf("failed to create replacement staging directory: %v", err)
 		if rollbackErr := rollback(); rollbackErr != nil {
@@ -590,7 +590,7 @@ func completeMacHandoffHandshake(cfg macUpdateHandoffConfig) error {
 	if cfg.ReadyFD == 0 && cfg.ProceedFD == 0 {
 		return nil
 	}
-	proceed := os.NewFile(uintptr(cfg.ProceedFD), "reasonix-update-proceed")
+	proceed := os.NewFile(uintptr(cfg.ProceedFD), "deeper-update-proceed")
 	if proceed == nil {
 		return fmt.Errorf("handoff pipe is unavailable")
 	}
@@ -636,7 +636,7 @@ var macUpdateCleanupAfterRename = func(string, string) {}
 
 // macUpdateRenameNoReplace prefers RENAME_EXCL and falls back on volumes such
 // as exFAT to an existence check plus os.Rename. The fallback is best-effort:
-// callers hold Reasonix's mutation locks, and os.ErrExist only means the
+// callers hold Deeper's mutation locks, and os.ErrExist only means the
 // destination was observed; it is not an atomic no-replace guarantee.
 func macUpdateRenameNoReplace(oldPath, newPath string) error {
 	return macRenameNoReplace(macExclusiveRename, oldPath, newPath)
@@ -652,12 +652,12 @@ func macRenameNoReplace(exclusive func(string, string) error, oldPath, newPath s
 		return err
 	}
 	if _, statErr := os.Lstat(newPath); statErr == nil {
-		return fmt.Errorf("macOS update rename target already exists (best-effort under Reasonix mutation lock): %w", os.ErrExist)
+		return fmt.Errorf("macOS update rename target already exists (best-effort under Deeper mutation lock): %w", os.ErrExist)
 	} else if !os.IsNotExist(statErr) {
 		return statErr
 	}
 	if err := os.Rename(oldPath, newPath); err != nil {
-		return fmt.Errorf("macOS update rename (best-effort under Reasonix mutation lock): %w", err)
+		return fmt.Errorf("macOS update rename (best-effort under Deeper mutation lock): %w", err)
 	}
 	return nil
 }
@@ -667,7 +667,7 @@ func cleanupOwnedMacUpdateDirectory(path string, owner os.FileInfo) error {
 		return fmt.Errorf("macOS update cleanup identity is incomplete")
 	}
 	for attempt := range 16 {
-		cleanup := fmt.Sprintf("%s.reasonix-cleanup-%d-%d", path, time.Now().UTC().UnixNano(), attempt)
+		cleanup := fmt.Sprintf("%s.deeper-cleanup-%d-%d", path, time.Now().UTC().UnixNano(), attempt)
 		err := macUpdateRenameNoReplace(path, cleanup)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -736,7 +736,7 @@ func macProcessAlive(pid int) bool {
 }
 
 func findMacApp(root string) (string, error) {
-	direct := filepath.Join(root, "Reasonix.app")
+	direct := filepath.Join(root, "Deeper.app")
 	if _, err := os.Stat(filepath.Join(direct, "Contents", "Info.plist")); err == nil {
 		return direct, nil
 	}

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // forkRow is one continuation run from a frozen eligibility state: the pair
@@ -126,8 +126,8 @@ func runForkContinuation(cfg suiteConfig, t task, b *agent.ForkBundle, bdir, arm
 	cmd := exec.CommandContext(ctx, cfg.bin, args...)
 	cmd.Dir = work
 	cmd.Env = append(os.Environ(),
-		"REASONIX_EXPERIMENT_FORK_BUNDLE="+filepath.Join(bdir, "bundle.json"),
-		"REASONIX_EXPERIMENT_FORK_ARM="+forkEnvArm)
+		"DEEPER_EXPERIMENT_FORK_BUNDLE="+filepath.Join(bdir, "bundle.json"),
+		"DEEPER_EXPERIMENT_FORK_ARM="+forkEnvArm)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	cmd.WaitDelay = 10 * time.Second

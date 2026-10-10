@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
-	"reasonix/internal/topicstate"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/store"
+	"deeper/internal/topicstate"
 )
 
 func (a *App) processLegacyCleanupTopic(item legacycleanup.Candidate) {

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
 )
 
 const providerProbeTimeout = 20 * time.Second

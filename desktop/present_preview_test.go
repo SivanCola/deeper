@@ -137,7 +137,7 @@ func TestWorkspaceBrowserPreviewUsesRevocableLoopbackOrigin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(previewURL, "http://127.0.0.1:") || !strings.Contains(previewURL, "/__reasonix_workspace_media/") {
+	if !strings.HasPrefix(previewURL, "http://127.0.0.1:") || !strings.Contains(previewURL, "/__deeper_workspace_media/") {
 		t.Fatalf("browser preview URL = %q", previewURL)
 	}
 	response, err := http.Get(previewURL) //nolint:gosec -- loopback URL created by the test app

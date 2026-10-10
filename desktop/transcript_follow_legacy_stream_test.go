@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/transcript"
+	"deeper/internal/config"
+	"deeper/internal/transcript"
 )
 
 // rendererFollowCursor mirrors TranscriptFollowClient.validate in

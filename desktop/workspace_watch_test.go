@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"deeper/internal/event"
 	"github.com/fsnotify/fsnotify"
-	"reasonix/internal/event"
 )
 
 func contentWorkspaceMutation(paths []string, allPaths bool) event.WorkspaceMutation {

@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/permission"
-	"reasonix/internal/permissionpreset"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/permission"
+	"deeper/internal/permissionpreset"
 )
 
 // Approve answers a pending ApprovalRequest by ID. It remains the compatibility

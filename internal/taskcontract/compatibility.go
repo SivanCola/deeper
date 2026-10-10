@@ -1,6 +1,6 @@
 package taskcontract
 
-import "reasonix/internal/evidence"
+import "deeper/internal/evidence"
 
 // PolicyFloor preserves the retired public type. Historical receipt fields
 // remain readable, but never rebuild execution or acceptance obligations.

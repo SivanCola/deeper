@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/pathidentity"
+	"deeper/internal/config"
+	"deeper/internal/pathidentity"
 )
 
 const repairMutationLockTimeout = 5 * time.Second
@@ -101,7 +101,7 @@ func removeRepairNodeIfMatching(path, identityPath, expectedStateID string) erro
 
 func moveRepairNodeToUniqueCleanup(path string) (string, error) {
 	for attempt := range 16 {
-		cleanup := fmt.Sprintf("%s.reasonix-cleanup-%d-%d", path, time.Now().UTC().UnixNano(), attempt)
+		cleanup := fmt.Sprintf("%s.deeper-cleanup-%d-%d", path, time.Now().UTC().UnixNano(), attempt)
 		err := renameRepairNodeNoReplace(path, cleanup)
 		if err == nil {
 			return cleanup, nil
@@ -221,7 +221,7 @@ func repairPlanTargetIdentity(path string) string {
 }
 
 // lockRepairMutations serializes repair read-check-write cycles by canonical
-// target path. Lock files live in Reasonix state rather than beside project or
+// target path. Lock files live in Deeper state rather than beside project or
 // configuration files, and paths are sorted so multi-target actions cannot
 // deadlock each other.
 func lockRepairMutations(paths ...string) (func(), error) {

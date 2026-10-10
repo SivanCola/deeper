@@ -7,16 +7,16 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func TestSkillDiscoveryAndEmbeddedReferencesThroughBoot(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 [agent]
 system_prompt = "BASE"
@@ -41,9 +41,9 @@ model = "x"
 		testutil.Turn{ToolCalls: []provider.ToolCall{{ID: "load", Name: "use_capability",
 			Arguments: `{"action":"call","capability_id":"skill:zzz-rare-diagnostic","arguments":{}}`}}},
 		testutil.Turn{ToolCalls: []provider.ToolCall{{ID: "guide", Name: "use_capability",
-			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"reasonix-guide"}}`}}},
+			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deeper-guide"}}`}}},
 		testutil.Turn{ToolCalls: []provider.ToolCall{{ID: "page", Name: "use_capability",
-			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"reasonix-guide","reference":"references/hooks.md"}}`}}},
+			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deeper-guide","reference":"references/hooks.md"}}`}}},
 		testutil.Turn{Text: "done"},
 	)
 	setBootTokenProfileTestProvider(t, prov)

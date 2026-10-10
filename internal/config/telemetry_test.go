@@ -31,11 +31,11 @@ func TestCLITelemetryConfigDefaultsAndValidation(t *testing.T) {
 func TestCLITelemetryIsUserGlobalAndSafeModeForcesOff(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[telemetry]\ncli_metrics = \"on\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[telemetry]\ncli_metrics = \"off\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[telemetry]\ncli_metrics = \"off\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -45,14 +45,14 @@ func TestCLITelemetryIsUserGlobalAndSafeModeForcesOff(t *testing.T) {
 	if got := cfg.CLITelemetryMode(); got != "on" {
 		t.Fatalf("project overrode user telemetry: %q", got)
 	}
-	// v1.20+ ignores REASONIX_SAFE_MODE: user telemetry preference is preserved.
-	t.Setenv("REASONIX_SAFE_MODE", "1")
+	// v1.20+ ignores DEEPER_SAFE_MODE: user telemetry preference is preserved.
+	t.Setenv("DEEPER_SAFE_MODE", "1")
 	still, err := LoadForRootReadOnly(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := still.CLITelemetryMode(); got != "on" {
-		t.Fatalf("telemetry under REASONIX_SAFE_MODE = %q, want on", got)
+		t.Fatalf("telemetry under DEEPER_SAFE_MODE = %q, want on", got)
 	}
 }
 

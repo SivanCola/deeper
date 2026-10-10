@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/repair"
-	"reasonix/internal/stats"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/repair"
+	"deeper/internal/stats"
 )
 
 const (

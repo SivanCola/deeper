@@ -15,10 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/recovery"
-	"reasonix/internal/turnevent"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/recovery"
+	"deeper/internal/turnevent"
 )
 
 // metrics_app.go is the aggregate desktop-metrics flush: anonymous (signal,
@@ -27,7 +27,7 @@ import (
 // or base URLs; custom provider/model identifiers are normalized into bounded
 // buckets. Gated on config desktop.metrics (default on), dev-skipped.
 
-var metricsEndpoint = "https://crash.reasonix.io/v1/metrics"
+var metricsEndpoint = os.Getenv("DEEPER_METRICS_ENDPOINT")
 
 const metricsPendingFile = "metrics-pending.json"
 const metricsPostTimeout = 8 * time.Second
@@ -631,7 +631,7 @@ func flatten(c counters) []metricCounter {
 // clears it on success or folds it back to retry next launch. Runs at launch
 // (mirroring the ping) so the current session's counts ship next time.
 func (a *App) flushMetrics() {
-	if version == "dev" {
+	if version == "dev" || metricsEndpoint == "" {
 		return
 	}
 	cfg, err := config.Load()

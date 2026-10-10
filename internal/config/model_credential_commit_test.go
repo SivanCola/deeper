@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 func TestModelConfigRevisionUsesStableKeyedDigest(t *testing.T) {
@@ -44,7 +44,7 @@ func TestModelCredentialCommitRecoveryAtPersistenceBoundaries(t *testing.T) {
 	} {
 		t.Run(crash.name, func(t *testing.T) {
 			home := t.TempDir()
-			t.Setenv("REASONIX_HOME", home)
+			t.Setenv("DEEPER_HOME", home)
 			path := UserConfigPath()
 			cfg := Default()
 			cfg.Providers = []ProviderEntry{{Name: "one", Kind: "openai", BaseURL: "https://one.invalid/v1", Model: "chat", APIKeyEnv: "OLD_KEY"}}
@@ -147,7 +147,7 @@ func TestModelCredentialCommitRecoveryAtPersistenceBoundaries(t *testing.T) {
 
 func TestModelSettingsReceiptContainsNoCredential(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	j := &modelCredentialCommitJournal{
 		Schema: modelCredentialCommitSchema, RequestID: "receipt", RequestDigest: "digest",
 		ConfigPath: filepath.Join(home, "config.toml"), BeforeRevision: "before", AfterRevision: "after",
@@ -204,7 +204,7 @@ func TestCleanupStagedModelCredentialWithoutJournal(t *testing.T) {
 
 func TestRecoverModelCredentialCommitRetainsEvidenceAfterConcurrentConfigChange(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	cfg := Default()
 	cfg.Providers = []ProviderEntry{{Name: "one", Kind: "openai", BaseURL: "https://one.invalid/v1", Model: "chat", APIKeyEnv: "OLD_KEY"}}
@@ -272,7 +272,7 @@ func TestRecoverModelCredentialCommitRetainsEvidenceAfterConcurrentConfigChange(
 
 func TestCommittedModelCredentialSlotsAcceptExplicitEmptySlot(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	cfg := Default()
 	cfg.Providers = []ProviderEntry{{Name: "one", Kind: "openai", BaseURL: "https://one.invalid/v1", Model: "chat", APIKeyEnv: "EMPTY_SLOT"}}

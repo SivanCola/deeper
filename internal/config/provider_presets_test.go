@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 func TestAnthropicPresetsDoNotImplicitlyEnableServerTools(t *testing.T) {
@@ -849,8 +849,8 @@ func TestCuratedProviderPresetCapabilities(t *testing.T) {
 	if !ok {
 		t.Fatal("gmi provider missing")
 	}
-	if got := gmi.Headers["User-Agent"]; got != "Reasonix" {
-		t.Fatalf("gmi User-Agent header = %q, want Reasonix", got)
+	if got := gmi.Headers["User-Agent"]; got != "Deeper" {
+		t.Fatalf("gmi User-Agent header = %q, want Deeper", got)
 	}
 	vercel, ok := cfg.Provider("vercel-ai-gateway")
 	if !ok {

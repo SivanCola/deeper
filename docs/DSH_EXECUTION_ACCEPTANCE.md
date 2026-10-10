@@ -1,6 +1,6 @@
 # Harness migration acceptance report
 
-Acceptance baseline: Reasonix `main-v2@986a6bc967`; behavioral reference: DeepSeek Harness `master@c291e7961a`. Validation date: 2026-09-13.
+Acceptance baseline: Deeper `main@986a6bc967`; behavioral reference: DeepSeek Harness `master@c291e7961a`. Validation date: 2026-09-13.
 
 ## Result
 
@@ -54,10 +54,10 @@ Windows validation ran natively in the local Parallels Windows 11 VM rather than
 ## PR #10223 review corrections
 
 Initial review baseline: head `3f7350f6e`, then-current merge-base `104792af2`.
-The conflict integration was validated against `main-v2@4daa815be` (#10209).
+The conflict integration was validated against `main@4daa815be` (#10209).
 The implementation follows DSH `fs-observation-policy` (session-owned observations,
 presence-based write intent) and `fs-local/src/fsio.ts` (staging before no-overwrite
-publication). Reasonix retains its Go execution, encoding, and buffer adapters.
+publication). Deeper retains its Go execution, encoding, and buffer adapters.
 
 | Defect in the reviewed head | Correction and regression evidence |
 | --- | --- |

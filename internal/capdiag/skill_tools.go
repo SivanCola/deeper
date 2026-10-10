@@ -1,10 +1,10 @@
 package capdiag
 
 import (
-	"reasonix/internal/config"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
-	_ "reasonix/internal/tool/builtin" // Initialize compile-time tool identities.
+	"deeper/internal/config"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
+	_ "deeper/internal/tool/builtin" // Initialize compile-time tool identities.
 )
 
 func skillToolIssues(store *skill.Store, cfg *config.Config, mcp MCPReport, sanitize func(string) string) []Issue {

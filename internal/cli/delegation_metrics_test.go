@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 // The instrument must be able to say, from one run, whether delegation

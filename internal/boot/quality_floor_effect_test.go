@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/ablation"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // TestEffectQualityFloorDoesNotTouchProviderPrefix pins the cache contract:
@@ -92,7 +92,7 @@ func effectFloorController(t *testing.T, tokenMode string) *control.Controller {
 	provider.Register(kind, func(provider.Config) (provider.Provider, error) {
 		return &effectRecordingProvider{}, nil
 	})
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "floor-model"
 
 [[providers]]

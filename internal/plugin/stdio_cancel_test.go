@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"deeper/internal/tool"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
-	"reasonix/internal/tool"
 )
 
 func newInMemorySDKTransport(t *testing.T, serverFactory func() *mcpsdk.Server) *sdkSessionTransport {

@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 type localOpenCodeGoTransport struct {

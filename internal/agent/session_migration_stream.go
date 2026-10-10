@@ -9,8 +9,8 @@ import (
 	"io"
 	"os"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // MigrationMessageStream is the bounded legacy migration result. Messages is

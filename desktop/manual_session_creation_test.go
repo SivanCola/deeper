@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reasonix/desktop/internal/sessionui"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/sessionui"
+	"deeper/internal/session"
 )
 
 func newManualSessionTestApp(t *testing.T) *App {

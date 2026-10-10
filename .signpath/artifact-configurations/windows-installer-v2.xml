@@ -9,22 +9,22 @@
     <pe-file path="*installer*.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="reasonix-desktop.exe">
+    <pe-file path="deeper-desktop.exe">
       <authenticode-verify />
     </pe-file>
-    <pe-file path="reasonix-guard.exe">
+    <pe-file path="deeper-guard.exe">
       <authenticode-verify />
     </pe-file>
-    <pe-file path="reasonix-launcher.exe">
+    <pe-file path="deeper-launcher.exe">
       <authenticode-verify />
     </pe-file>
-    <pe-file path="reasonix-update-helper.exe">
+    <pe-file path="deeper-update-helper.exe">
       <authenticode-verify />
     </pe-file>
-    <pe-file path="reasonix-cli.exe">
+    <pe-file path="deeper-cli.exe">
       <authenticode-verify />
     </pe-file>
-    <pe-file path="reasonix-uninstall.exe">
+    <pe-file path="deeper-uninstall.exe">
       <authenticode-verify />
     </pe-file>
     <pe-file-set>

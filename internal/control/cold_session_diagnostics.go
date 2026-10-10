@@ -7,8 +7,8 @@ import (
 	"io"
 	"sort"
 
-	"reasonix/internal/secrets"
-	"reasonix/internal/session"
+	"deeper/internal/secrets"
+	"deeper/internal/session"
 )
 
 // WriteColdSessionDiagnostics serializes the durable evidence of a fixed

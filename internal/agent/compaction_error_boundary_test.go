@@ -10,13 +10,13 @@ import (
 	"testing/synctest"
 	"time"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/attachment"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 func TestCompactionFinishPreservesUnrelatedErrors(t *testing.T) {

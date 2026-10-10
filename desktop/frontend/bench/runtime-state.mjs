@@ -81,8 +81,8 @@ try {
   await input.press("Enter");
   await page.waitForFunction(() => window.__runtimeFixture.calls.length === 1);
   check(await input.inputValue() === "durable next turn", "failed enqueue preserves draft");
-  await fs.mkdir("/tmp/reasonix-runtime-evidence", { recursive: true });
-  await page.screenshot({ path: "/tmp/reasonix-runtime-evidence/pending-followup.png" });
+  await fs.mkdir("/tmp/deeper-runtime-evidence", { recursive: true });
+  await page.screenshot({ path: "/tmp/deeper-runtime-evidence/pending-followup.png" });
   await publish("idle");
   check(await page.locator(".composer__btn--send").getAttribute("aria-label") === "Check send result", "phase transition keeps receipt confirmation action");
   await page.evaluate(() => { window.__runtimeFixture.fail = false; });
@@ -121,8 +121,8 @@ try {
   await page.locator(".composer-run-strip").filter({ hasText: /sync|同步/i }).waitFor();
   check(await input.isDisabled(), "remote disconnect blocks send while preserving unknown state");
   check(await page.locator(".composer__btn--stop").count() === 0, "unknown remote state hides Stop");
-  await fs.mkdir("/tmp/reasonix-runtime-evidence", { recursive: true });
-  await page.screenshot({ path: "/tmp/reasonix-runtime-evidence/remote-unknown.png" });
+  await fs.mkdir("/tmp/deeper-runtime-evidence", { recursive: true });
+  await page.screenshot({ path: "/tmp/deeper-runtime-evidence/remote-unknown.png" });
   await publish("executing", {}, true);
   await page.locator(".composer__btn--stop").waitFor();
   check(!(await input.isDisabled()), "remote reconnect restores authoritative execution controls");

@@ -16,12 +16,12 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/atotto/clipboard"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
-	"reasonix/internal/secrets"
-	"reasonix/internal/shellparse"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
+	"deeper/internal/secrets"
+	"deeper/internal/shellparse"
 )
 
 // This file holds the chat TUI's paste & image-attachment input layer: folding

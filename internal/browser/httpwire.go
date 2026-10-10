@@ -17,7 +17,7 @@ const (
 
 	// SessionHeader carries the calling session's ID so a broker serving
 	// several sessions over one token can route each call to its own task.
-	SessionHeader = "X-Reasonix-Browser-Session"
+	SessionHeader = "X-Deeper-Browser-Session"
 
 	httpMaxRequestBytes  = 1 << 20
 	httpMaxResponseBytes = 32 << 20

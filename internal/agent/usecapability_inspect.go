@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/plugin"
-	"reasonix/internal/tool"
+	"deeper/internal/capability"
+	"deeper/internal/plugin"
+	"deeper/internal/tool"
 )
 
 const maxInspectBytes = 16 << 10

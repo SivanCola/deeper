@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 	"path/filepath"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
 )
 
 func (a *App) resolveHistoricalArchiveSource(ctx context.Context, state workspacestate.State, id string, source historicalSource, fingerprint string) (desktopMigrationSource, workspacestate.SourceMapping, bool, error) {

@@ -1,10 +1,10 @@
 package main
 
 import (
+	"deeper/internal/servecontract"
+	"deeper/internal/session"
 	"fmt"
 	"net/url"
-	"reasonix/internal/servecontract"
-	"reasonix/internal/session"
 )
 
 // RemoteSessionHistoryOutlineForTab never substitutes another host's history.

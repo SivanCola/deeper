@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/plugin"
+import "deeper/internal/plugin"
 
 func init() {
 	plugin.SetMCPClientVersion(version)

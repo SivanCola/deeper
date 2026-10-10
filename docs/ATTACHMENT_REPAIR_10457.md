@@ -4,9 +4,9 @@
 
 The attachment source is PR head
 `b582ebabe089fb75a6ee8ba23dddcb0a48a873ca`. It was semantically replayed on
-`main-v2` `93fb72870758f2ff60ae24386406b0e5f0782f0e`, which already contains the
+`main` `93fb72870758f2ff60ae24386406b0e5f0782f0e`, which already contains the
 durable-draft work from #10469 and the fixed-snapshot export implementation
-from #10471, then rebased onto `main-v2`
+from #10471, then rebased onto `main`
 `9b0cc56e5c0e60d92cb447b360ef8fa018c7c72b`. That base also includes #10500's
 model-scoped reasoning capability resolution. `git range-diff` against the prior
 `bd0733b9` replay changes only the generated Desktop contract digest, so the
@@ -109,16 +109,16 @@ the production build and bundle budgets, generated-contract freshness, inventory
 and repository lint. The final rebase preserves the attachment patch according
 to `range-diff` and reruns the affected model-routing, Desktop and frontend gates.
 Desktop Linux cross-lint still reports four unchanged tray stubs from the
-`main-v2` baseline; it is not an attachment regression.
+`main` baseline; it is not an attachment regression.
 
 The final-SHA package gate runs once before pushing. Build with
 `scripts/desktop-build.sh`, extract the **finished** ZIP into a new directory,
 and run:
 
 ```sh
-node desktop/packaging/smoke.mjs /isolated/Reasonix.app
+node desktop/packaging/smoke.mjs /isolated/Deeper.app
 node desktop/packaging/attachment-native-smoke.mjs \
-  /isolated/Reasonix.app /isolated/evidence
+  /isolated/Deeper.app /isolated/evidence
 ```
 
 The attachment fixture launches the production Electron shell and bundled

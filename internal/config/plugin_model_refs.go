@@ -3,7 +3,7 @@ package config
 import (
 	"strings"
 
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/extension/protocol"
 )
 
 // RemovePluginModelRefs moves every model ref owned by pluginID to the first

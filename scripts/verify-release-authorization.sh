@@ -46,8 +46,8 @@ case "$caller_event" in
 push)
 	expected_ref="refs/tags/$approved_cli_tag"
 	case "$actual_caller" in
-	*/.github/workflows/release-candidate.yml@refs/heads/main-v2)
-		expected_ref="refs/heads/main-v2"
+	*/.github/workflows/release-candidate.yml@refs/heads/main)
+		expected_ref="refs/heads/main"
 		;;
 	esac
 	if [ "$caller_workflow_sha" != "$approved_sha" ] || [ "$caller_sha" != "$approved_sha" ]; then
@@ -56,9 +56,9 @@ push)
 	fi
 	;;
 workflow_dispatch)
-	expected_ref="refs/heads/main-v2"
+	expected_ref="refs/heads/main"
 	if [ "$caller_workflow_sha" != "$caller_sha" ]; then
-		echo "::error::protected caller workflow SHA is $caller_workflow_sha, expected main-v2 SHA $caller_sha" >&2
+		echo "::error::protected caller workflow SHA is $caller_workflow_sha, expected main SHA $caller_sha" >&2
 		exit 1
 	fi
 	;;

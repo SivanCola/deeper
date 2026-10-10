@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // composerProfile applies every controller-facing composer axis in one request.

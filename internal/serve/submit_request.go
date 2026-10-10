@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // submit runs raw user input as a turn (slash commands and @-references

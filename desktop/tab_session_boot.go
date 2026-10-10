@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/plugin"
-	"reasonix/internal/session"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/plugin"
+	"deeper/internal/session"
 )
 
 type tabControllerBootResult struct {

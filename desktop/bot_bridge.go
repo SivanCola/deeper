@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/event"
+	"deeper/internal/bot"
+	"deeper/internal/event"
 )
 
 // errDriveBusy signals that a takeover drive could not start because the target

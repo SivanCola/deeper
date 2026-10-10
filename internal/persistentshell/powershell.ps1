@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Continue'
 $OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
-$__rx_pipe = [IO.Pipes.NamedPipeClientStream]::new('.', $env:REASONIX_PWSH_PIPE, [IO.Pipes.PipeDirection]::InOut)
+$__rx_pipe = [IO.Pipes.NamedPipeClientStream]::new('.', $env:DEEPER_PWSH_PIPE, [IO.Pipes.PipeDirection]::InOut)
 $__rx_pipe.Connect(10000)
 $__rx_reader = [IO.BinaryReader]::new($__rx_pipe)
 $__rx_writer = [IO.BinaryWriter]::new($__rx_pipe)

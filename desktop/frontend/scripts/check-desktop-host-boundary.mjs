@@ -4,7 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
-const HOST_GLOBALS = new Set(["go", "runtime", "reasonixDesktop"]);
+const HOST_GLOBALS = new Set(["go", "runtime", "deeperDesktop"]);
 const SHELL_MODULES = [/(?:^|\/)wailsjs(?:\/|$)/, /^@wailsapp(?:\/|$)/];
 const ALLOWED = new Set(["lib/desktopHost.ts"]);
 

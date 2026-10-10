@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
 )
 
 const modelApplicationCapability = "model-application-v1"

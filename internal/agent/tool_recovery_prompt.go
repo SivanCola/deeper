@@ -3,7 +3,7 @@ package agent
 import (
 	"slices"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func (a *Agent) SilentToolRecovery() bool {

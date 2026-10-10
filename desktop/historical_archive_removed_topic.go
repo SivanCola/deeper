@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/store"
 )
 
 // retireRemovedSourceTopic makes clearing a source whose session is already

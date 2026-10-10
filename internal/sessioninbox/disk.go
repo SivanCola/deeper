@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/store"
+	"deeper/internal/fileutil"
+	"deeper/internal/store"
 )
 
 func (s *Store) mutableLocked() error {

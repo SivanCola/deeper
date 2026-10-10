@@ -3,8 +3,8 @@ package config
 import (
 	"strings"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 func deepSeekV4EffortOverrides() map[string]ProviderModelOverride {

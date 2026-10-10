@@ -11,15 +11,15 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/internal/browser"
-	"reasonix/internal/control"
-	"reasonix/internal/servecontract"
+	"deeper/internal/browser"
+	"deeper/internal/control"
+	"deeper/internal/servecontract"
 )
 
 // Capability tokens advertised on the /auth/token handshake reply so a
 // desktop can tell what this serve supports without a second round trip.
 const (
-	capabilitiesHeader                = "X-Reasonix-Serve-Capabilities"
+	capabilitiesHeader                = "X-Deeper-Serve-Capabilities"
 	capabilityBrowser                 = "browser"
 	capabilityPermissionPresets       = "permission-presets-v1"
 	capabilityPresentFiles            = "present-files-v1"

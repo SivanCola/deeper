@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/remote"
+	"deeper/internal/remote"
 )
 
 // probeCounts tallies EnsureServe's remote exec traffic by category. The

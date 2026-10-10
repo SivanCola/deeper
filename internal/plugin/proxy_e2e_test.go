@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/capability"
-	"reasonix/internal/plugin"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/capability"
+	"deeper/internal/plugin"
+	"deeper/internal/tool"
 )
 
 // mockSpec mirrors helperSpec (lazy_test.go): the test binary re-runs itself

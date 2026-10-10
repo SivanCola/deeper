@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 func TestCanonicalPermissionPresetFollowsSessionIdentity(t *testing.T) {

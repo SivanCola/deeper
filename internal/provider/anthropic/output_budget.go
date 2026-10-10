@@ -1,6 +1,6 @@
 package anthropic
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // OutputBudget reports the mandatory max_tokens default used by this client.
 func (c *client) OutputBudget() int { return c.defaultMaxTokens }

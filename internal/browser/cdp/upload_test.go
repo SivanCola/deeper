@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/browser"
+	"deeper/internal/browser"
 )
 
 func uploadRequest(tab browser.Tab, token, op string, files ...string) browser.ActRequest {

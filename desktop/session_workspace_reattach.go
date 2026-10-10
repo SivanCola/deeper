@@ -1,9 +1,9 @@
 package main
 
 import (
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 // runtimeRebuildMu and the destination turnStartMu are held. Reuse the exact

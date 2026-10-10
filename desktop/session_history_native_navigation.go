@@ -9,9 +9,9 @@ import (
 	"strings"
 	"unicode"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
-	"reasonix/internal/textutil"
+	"deeper/internal/agent"
+	"deeper/internal/session"
+	"deeper/internal/textutil"
 )
 
 func nativeHistorySequence(p *agent.DisplayPager) uint64 {

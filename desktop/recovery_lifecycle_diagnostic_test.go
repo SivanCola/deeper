@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/store"
 )
 
 func recoveryLifecycleOutcomes(t *testing.T, sessionPaths ...string) []string {

@@ -13,11 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/store"
 )
 
 // sessions.go holds the desktop-only session-management state that the shared
@@ -124,7 +124,7 @@ func sessionTelemetryPath(sessionPath string) string {
 // errSessionBusyElsewhere is the sanitized error surfaced when a destructive
 // session operation is blocked by a live owner. It intentionally carries no
 // writer id, hostname, or path.
-var errSessionBusyElsewhere = errors.New("session is in use by another Reasonix window or process")
+var errSessionBusyElsewhere = errors.New("session is in use by another Deeper window or process")
 
 // acquireSessionRemovalGuard wraps agent.TryAcquireSessionRemovalGuard with
 // the sanitized busy error. The guard holds the session's save and lease

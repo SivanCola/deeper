@@ -4,7 +4,7 @@
 
 ## 问题与修复边界
 
-本地会话持续写入标题、结果时，Desktop 可能提示 `session_operation:stale_cursor:The session list changed. Reload it.`。原先的元数据双重检查要求写入在整个读取期间保持静止，导致首屏也可能失败。只删除双重检查仍不够：续页重新读取、排序实时数据，会让旧游标失效；前端首屏超过 200 行时，还可能漏掉内部第二次 RPC 的过期错误。这条错误本身不能证明 SSH、Git、Docker 或远程 Reasonix 发生故障。
+本地会话持续写入标题、结果时，Desktop 可能提示 `session_operation:stale_cursor:The session list changed. Reload it.`。原先的元数据双重检查要求写入在整个读取期间保持静止，导致首屏也可能失败。只删除双重检查仍不够：续页重新读取、排序实时数据，会让旧游标失效；前端首屏超过 200 行时，还可能漏掉内部第二次 RPC 的过期错误。这条错误本身不能证明 SSH、Git、Docker 或远程 Deeper 发生故障。
 
 修复由 `desktop/read_snapshot_store.go` 统一持有读取结果。续页按固定序号读取冻结结果，不再重新排序，也不比较全局索引版本。快照只提供读视图；写命令继续校验当前真实身份、归属和生命周期。
 

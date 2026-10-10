@@ -4,7 +4,7 @@ import (
 	"io"
 	"strings"
 
-	"reasonix/internal/shellrun"
+	"deeper/internal/shellrun"
 )
 
 // maxIncompleteEscape bounds the escape-sequence fragment carried between PTY

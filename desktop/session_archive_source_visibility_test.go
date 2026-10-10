@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func TestMigratedSingleHeadArchiveDoesNotResurrectLegacyRow(t *testing.T) {

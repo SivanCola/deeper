@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/store"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/store"
 )
 
 func TestRestoreBlockedIdentityPreservesPinsWithoutSidecars(t *testing.T) {

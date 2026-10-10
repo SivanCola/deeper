@@ -40,7 +40,7 @@ type FileOverlayIdentity interface {
 // envOverrides, when non-nil, is a small map of environment variables the host
 // terminal should set for the command (typically TMPDIR/TMP/TEMP for the
 // session-private temporary directory). Callers must not pass a full host
-// environment dump — only the overrides Reasonix owns.
+// environment dump — only the overrides Deeper owns.
 //
 // Prefer typed outcomes when possible:
 //   - TerminalExitError for a non-zero process exit (Code is the real exit code)

@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
 )
 
 // The remote-tab bridge exchanges its pre-shared token for an HttpOnly
@@ -919,7 +919,7 @@ func (a *App) requireRemotePermissionPresets(tabID string) error {
 		return fmt.Errorf("remote tab %q is not open", tabID)
 	}
 	if !supported {
-		return fmt.Errorf("this remote Reasonix Serve is read-only because it does not support permission-presets-v1; upgrade the remote service to run tools or change permissions")
+		return fmt.Errorf("this remote Deeper Serve is read-only because it does not support permission-presets-v1; upgrade the remote service to run tools or change permissions")
 	}
 	return nil
 }
@@ -936,7 +936,7 @@ func (a *App) requireRemoteExecutionProtocol(tabID string) error {
 		return fmt.Errorf("remote tab %q is not open", tabID)
 	}
 	if !supported {
-		return fmt.Errorf("this remote Reasonix Serve is read-only because it does not support %s, %s, %s, and %s; upgrade the remote service to execute or control a session", serveCapabilityExecutionV2, serveCapabilitySessions, serveCapabilitySessionIdentityV1, serveCapabilitySessionOwnershipV1)
+		return fmt.Errorf("this remote Deeper Serve is read-only because it does not support %s, %s, %s, and %s; upgrade the remote service to execute or control a session", serveCapabilityExecutionV2, serveCapabilitySessions, serveCapabilitySessionIdentityV1, serveCapabilitySessionOwnershipV1)
 	}
 	return nil
 }
@@ -967,7 +967,7 @@ func (a *App) requireRemoteGoalLifecycle(tabID string) error {
 		return fmt.Errorf("remote tab %q is not open", tabID)
 	}
 	if !supported {
-		return fmt.Errorf("this remote Reasonix Serve does not support %s; upgrade it before creating or controlling goals", serveCapabilityGoalLifecycleV2)
+		return fmt.Errorf("this remote Deeper Serve does not support %s; upgrade it before creating or controlling goals", serveCapabilityGoalLifecycleV2)
 	}
 	return nil
 }

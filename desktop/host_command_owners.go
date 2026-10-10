@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 
-	"reasonix/desktop/internal/hostrpc"
+	"deeper/desktop/internal/hostrpc"
 )
 
 const hostCommandOwnersFile = "host_command_owners.generated.json"

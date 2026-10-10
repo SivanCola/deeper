@@ -4,9 +4,9 @@ import (
 	"context"
 	"path/filepath"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/identitylock"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/identitylock"
+	"deeper/internal/session"
 )
 
 // Called only for an explicit version import, while the source's import and

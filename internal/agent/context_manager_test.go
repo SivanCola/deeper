@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 type failingSummaryProvider struct{ calls int }

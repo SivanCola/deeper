@@ -12,12 +12,12 @@ import (
 	"strings"
 	"sync"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 type desktopMigrationRecord struct {
@@ -441,7 +441,7 @@ func (a *App) migrateCanonicalSession(ctx context.Context, old *session.Service,
 		return err
 	}
 	if needsImport {
-		tmp, err := os.MkdirTemp("", "reasonix-session-v5-export-")
+		tmp, err := os.MkdirTemp("", "deeper-session-v5-export-")
 		if err != nil {
 			return err
 		}
@@ -549,7 +549,7 @@ func (a *App) migrateLegacyHead(ctx context.Context, path string, source desktop
 			source.pairedAdoption = record.PreviousCompletion
 		}
 	}
-	stageRoot, err := os.MkdirTemp("", "reasonix-legacy-import-")
+	stageRoot, err := os.MkdirTemp("", "deeper-legacy-import-")
 	if err != nil {
 		return err
 	}
@@ -628,7 +628,7 @@ func (a *App) publishStagedMigration(ctx context.Context, source desktopMigratio
 		return err
 	}
 	if needsImport {
-		tmp, err := os.MkdirTemp("", "reasonix-v5-bundle-")
+		tmp, err := os.MkdirTemp("", "deeper-v5-bundle-")
 		if err != nil {
 			return err
 		}

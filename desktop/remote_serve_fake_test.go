@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // fakeServe is a minimal Serve stand-in for bridge tests: token handshake,
@@ -100,14 +100,14 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			http.Error(w, "denied", http.StatusUnauthorized)
 			return
 		}
-		http.SetCookie(w, &http.Cookie{Name: "reasonix_token", Value: fs.token, Path: "/", HttpOnly: true})
+		http.SetCookie(w, &http.Cookie{Name: "deeper_token", Value: fs.token, Path: "/", HttpOnly: true})
 		w.Header().Set(serveCapabilitiesHeader, "permission-presets-v1,present-files-v1,execution-v2,session-history-v1,session-identity-v1,session-ownership-v1")
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /new", func(w http.ResponseWriter, r *http.Request) {
 		fs.mu.Lock()
 		fs.newCalled++
-		_, cookieErr := r.Cookie("reasonix_token")
+		_, cookieErr := r.Cookie("deeper_token")
 		fs.cookieOnNew = cookieErr == nil
 		fail := fs.failEnter
 		fs.failEnter = ""
@@ -141,7 +141,7 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			time.Sleep(enterDelay)
 		}
 		if newSessionPath != "" {
-			w.Header().Set("X-Reasonix-Session-Path", newSessionPath)
+			w.Header().Set("X-Deeper-Session-Path", newSessionPath)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
@@ -174,7 +174,7 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 		}
 		fs.mu.Unlock()
 		if body.SessionID != "" {
-			w.Header().Set("X-Reasonix-Session-ID", body.SessionID)
+			w.Header().Set("X-Deeper-Session-ID", body.SessionID)
 		}
 		if drop {
 			// Serve committed the switch; only the response is lost.
@@ -379,7 +379,7 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			mux.ServeHTTP(w, r)
 			return
 		}
-		if c, err := r.Cookie("reasonix_token"); err == nil && c.Value == fs.token {
+		if c, err := r.Cookie("deeper_token"); err == nil && c.Value == fs.token {
 			mux.ServeHTTP(w, r)
 			return
 		}
@@ -417,9 +417,9 @@ func TestRemoteHostFixtureIsolatesCanonicalWorkspaceRegistry(t *testing.T) {
 func seedBridgeTestHost(t *testing.T, hostID string) {
 	t.Helper()
 	// A new config home also needs its own canonical registry: global workspace
-	// identity contains that home, while REASONIX_STATE_HOME otherwise survives.
+	// identity contains that home, while DEEPER_STATE_HOME otherwise survives.
 	home := isolateDesktopUserDirs(t)
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := editUserConfig(func(c *config.Config) error {
 		return c.UpsertRemoteHost(config.RemoteHostEntry{Name: hostID, Host: "127.0.0.1", Port: 22, User: "dev"})
 	}); err != nil {

@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 )
 
 type crashAfterEffectTool struct{ path string }
@@ -40,7 +40,7 @@ func (t crashAfterEffectTool) Execute(context.Context, json.RawMessage) (string,
 }
 
 func TestToolRecoveryCrashAfterEffect(t *testing.T) {
-	if root := os.Getenv("REASONIX_RECOVERY_CRASH_FIXTURE"); root != "" {
+	if root := os.Getenv("DEEPER_RECOVERY_CRASH_FIXTURE"); root != "" {
 		reg := tool.NewRegistry()
 		reg.Add(crashAfterEffectTool{path: filepath.Join(root, "effects")})
 		p := &recordingProvider{streams: [][]provider.Chunk{{{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "crash", Name: "crash_after_effect", Arguments: `{}`}}, {Type: provider.ChunkDone}}}}
@@ -53,7 +53,7 @@ func TestToolRecoveryCrashAfterEffect(t *testing.T) {
 	}
 	root := t.TempDir()
 	cmd := exec.Command(os.Args[0], "-test.run=^TestToolRecoveryCrashAfterEffect$")
-	cmd.Env = append(os.Environ(), "REASONIX_RECOVERY_CRASH_FIXTURE="+root)
+	cmd.Env = append(os.Environ(), "DEEPER_RECOVERY_CRASH_FIXTURE="+root)
 	out, err := cmd.CombinedOutput()
 	var exit *exec.ExitError
 	if !errors.As(err, &exit) || exit.ExitCode() != 73 {

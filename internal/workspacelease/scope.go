@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/filelock"
-	"reasonix/internal/pathidentity"
+	"deeper/internal/filelock"
+	"deeper/internal/pathidentity"
 )
 
 // All workspaces share a fixed set of hashed path-lock files. Hash collisions

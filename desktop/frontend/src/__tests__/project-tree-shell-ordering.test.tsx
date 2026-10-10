@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mock } from "node:test";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
-import type { ReasonixDesktopHost } from "../lib/desktopHost";
+import type { DeeperDesktopHost } from "../lib/desktopHost";
 import type { ProjectNode, ProjectTreeSnapshot } from "../lib/types";
 
 const dom = new JSDOM('<html><body><div id="root"></div></body></html>', { url: "http://localhost/", pretendToBeVisual: true });
@@ -46,11 +46,11 @@ const bindings = {
   Platform: async () => "darwin",
   RemoteConnectionStatuses: async () => [],
 };
-window.reasonixDesktop = {
+window.deeperDesktop = {
   kind: "electron", contract: { commands: Object.keys(bindings) }, platform: { os: "darwin" }, native: {},
   invoke: (method: string, args: unknown[]) => (bindings as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>)[method](...args),
   on: () => () => {},
-} as unknown as ReasonixDesktopHost;
+} as unknown as DeeperDesktopHost;
 
 const project = (label: string): ProjectNode => ({ key: `project-${label}`, kind: "project", label, root: `/ordering-${label}`, children: [] });
 const a = project("A"), b = project("B");

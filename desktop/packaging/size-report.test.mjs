@@ -6,25 +6,25 @@ import test from "node:test";
 import { generateReport, inspectTree } from "./size-report.mjs";
 
 test("size report classifies files, duplicates and links without following links", () => {
-  const root = mkdtempSync(join(tmpdir(), "reasonix-size-report-"));
+  const root = mkdtempSync(join(tmpdir(), "deeper-size-report-"));
   mkdirSync(join(root, "bundle", "service"), { recursive: true });
-  writeFileSync(join(root, "bundle", "service", "reasonix-desktop"), "service");
-  writeFileSync(join(root, "bundle", "reasonix"), "same");
+  writeFileSync(join(root, "bundle", "service", "deeper-desktop"), "service");
+  writeFileSync(join(root, "bundle", "deeper"), "same");
   writeFileSync(join(root, "bundle", "copy"), "same");
-  symlinkSync("service/reasonix-desktop", join(root, "bundle", "service-link"));
+  symlinkSync("service/deeper-desktop", join(root, "bundle", "service-link"));
   mkdirSync(join(root, "dist"));
-  writeFileSync(join(root, "dist", "Reasonix-linux-amd64.tar.gz"), "archive");
+  writeFileSync(join(root, "dist", "Deeper-linux-amd64.tar.gz"), "archive");
 
   const tree = inspectTree(join(root, "bundle"));
   assert.equal(tree.fileCount, 3);
-  assert.equal(tree.symlinks[0].target, "service/reasonix-desktop");
+  assert.equal(tree.symlinks[0].target, "service/deeper-desktop");
   assert.equal(tree.duplicates.length, 1);
 
   const report = generateReport({
     platform: "linux/amd64", version: "v1.2.3", sourceSHA: "a".repeat(40),
     bundle: join(root, "bundle"), dist: join(root, "dist"), output: join(root, "out"),
   });
-  assert.equal(report.artifacts[0].name, "Reasonix-linux-amd64.tar.gz");
+  assert.equal(report.artifacts[0].name, "Deeper-linux-amd64.tar.gz");
   assert.match(readFileSync(join(root, "out", "size-report.md"), "utf8"), /Bundle categories/);
 
   const baseline = join(root, "baseline.json");

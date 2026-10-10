@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestAskRejectsMoreThanThreeQuestions(t *testing.T) {

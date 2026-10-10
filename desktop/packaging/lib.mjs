@@ -18,14 +18,12 @@ export function runBuildScript(directory, script, args = [], env = {}) {
 }
 
 export const PRODUCT = Object.freeze({
-  name: "Reasonix",
-  executable: "Reasonix",
-  // The Wails-era CFBundleIdentifier (com.wails.<wails.json name>). LaunchServices,
-  // saved-state and the macOS update swap key off it, so it survives the shell change.
-  bundleId: "com.wails.reasonix-desktop",
-  serviceExecutable: "reasonix-desktop",
-  cliExecutable: "reasonix",
-  windowsCliExecutable: "reasonix-cli",
+  name: "Deeper",
+  executable: "Deeper",
+  bundleId: "io.github.sivancola.deeper",
+  serviceExecutable: "deeper-desktop",
+  cliExecutable: "deeper",
+  windowsCliExecutable: "deeper-cli",
   category: "public.app-category.developer-tools",
 });
 
@@ -74,9 +72,9 @@ export function displayVersion(tag) {
 export function readProductIdentity() {
   return {
     projectName: PRODUCT.serviceExecutable,
-    companyName: "Reasonix",
+    companyName: "Deeper",
     productName: PRODUCT.name,
-    copyright: "Copyright © 2026 Reasonix Contributors",
+    copyright: "Copyright © 2026 Reasonix Contributors and Deeper Contributors",
   };
 }
 
@@ -151,9 +149,9 @@ export function nsisProjectDefines(identity, version) {
     `!define INFO_COMPANYNAME "${identity.companyName}"`,
     `!define INFO_PRODUCTNAME "${identity.productName}"`,
     `!define INFO_PRODUCTVERSION "${versions.resource}"`,
-    `!define REASONIX_DISPLAY_VERSION "${versions.display}"`,
+    `!define DEEPER_DISPLAY_VERSION "${versions.display}"`,
     `!define INFO_COPYRIGHT "${identity.copyright}"`,
-    `!define REASONIX_VERSION_TAG "${versions.canonical}"`,
+    `!define DEEPER_VERSION_TAG "${versions.canonical}"`,
   ];
   // makensis only decodes an include as UTF-8 when it carries a BOM; the copyright sign needs it.
   return "﻿" + lines.join("\r\n") + "\r\n";
@@ -186,12 +184,12 @@ export function parseSigningFileList(text) {
 }
 
 export const WINDOWS_FLAT_PAYLOAD = Object.freeze([
-  "reasonix-desktop.exe",
-  "reasonix-guard.exe",
-  "reasonix-launcher.exe",
-  "reasonix-update-helper.exe",
-  "reasonix-cli.exe",
-  "reasonix-uninstall.exe",
+  "deeper-desktop.exe",
+  "deeper-guard.exe",
+  "deeper-launcher.exe",
+  "deeper-update-helper.exe",
+  "deeper-cli.exe",
+  "deeper-uninstall.exe",
 ]);
 
 const APP_RESOURCES = ["resources/app.asar", "resources/app/index.html", "resources/build.json", "resources/icons/appicon.png", "resources/icons/trayTemplate.png", "resources/icons/trayTemplate@2x.png"];
@@ -204,8 +202,8 @@ function darwinBundleMembers() {
     `Contents/MacOS/${PRODUCT.serviceExecutable}`,
     `Contents/Resources/service/${PRODUCT.serviceExecutable}`,
     // The CLI sidecar lives in Resources/service/, never Contents/MacOS/: on
-    // case-insensitive APFS "reasonix" there collides with the Electron main
-    // executable "Reasonix" and cp would clobber it.
+    // case-insensitive APFS "deeper" there collides with the Electron main
+    // executable "Deeper" and cp would clobber it.
     `Contents/Resources/service/${PRODUCT.cliExecutable}`,
     "Contents/Resources/app.asar",
     "Contents/Resources/app/index.html",
@@ -223,10 +221,10 @@ const VERSION_DIR = "versions/v[^/]+";
 const PACKAGING_JUNK = /(^|\/)(?:[^/]+\.map|__tests__|testdata|\.cache|coverage|npm-debug\.log|pnpm-debug\.log|yarn-error\.log)(?:$|\/)/;
 
 const MEMBERS = {
-  "darwin-app-dir": { required: darwinBundleMembers(), forbidden: ["Contents/MacOS/reasonix-guard"] },
+  "darwin-app-dir": { required: darwinBundleMembers(), forbidden: ["Contents/MacOS/deeper-guard"] },
   "darwin-zip": {
     required: darwinBundleMembers().map((name) => `${PRODUCT.name}.app/${name}`),
-    forbidden: [`${PRODUCT.name}.app/Contents/MacOS/reasonix-guard`],
+    forbidden: [`${PRODUCT.name}.app/Contents/MacOS/deeper-guard`],
   },
   "windows-app-dir": {
     required: [`${PRODUCT.executable}.exe`, "ffmpeg.dll", "libEGL.dll", "libGLESv2.dll", "resources.pak", "icudtl.dat", "locales/en-US.pak", ...APP_RESOURCES],
@@ -237,38 +235,38 @@ const MEMBERS = {
       `${PRODUCT.executable}.exe`,
       `${PRODUCT.windowsCliExecutable}.exe`,
       "current.json",
-      new RegExp(`^${VERSION_DIR}/reasonix-desktop\\.exe$`),
-      new RegExp(`^${VERSION_DIR}/reasonix-update-helper\\.exe$`),
-      new RegExp(`^${VERSION_DIR}/reasonix-cli\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/deeper-desktop\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/deeper-update-helper\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/deeper-cli\\.exe$`),
       new RegExp(`^${VERSION_DIR}/app/${PRODUCT.executable}\\.exe$`),
-      new RegExp(`^${VERSION_DIR}/app/resources/bin/reasonix-cli-launcher\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/app/resources/bin/deeper-cli-launcher\\.exe$`),
       new RegExp(`^${VERSION_DIR}/app/resources/app\\.asar$`),
       new RegExp(`^${VERSION_DIR}/app/resources/app/index\\.html$`),
       new RegExp(`^${VERSION_DIR}/app/resources/build\\.json$`),
     ],
-    forbidden: ["reasonix-guard.exe", "reasonix-desktop.exe"],
+    forbidden: ["deeper-guard.exe", "deeper-desktop.exe"],
   },
   "linux-app-dir": {
     required: [PRODUCT.executable, "chrome-sandbox", "chrome_crashpad_handler", "libffmpeg.so", "resources.pak", "locales/en-US.pak", ...APP_RESOURCES],
     forbidden: [],
   },
   "linux-tar": {
-    required: ["reasonix-desktop", "reasonix-launcher", "reasonix-guard", "reasonix", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
+    required: ["deeper-desktop", "deeper-launcher", "deeper-guard", "deeper", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
     forbidden: [],
   },
   "linux-deb": {
     required: [
-      "usr/bin/reasonix-desktop",
-      "usr/bin/reasonix-launcher",
-      "usr/bin/reasonix",
-      "usr/lib/reasonix/reasonix-update-helper",
-      `usr/lib/reasonix/app/${PRODUCT.executable}`,
-      "usr/lib/reasonix/app/chrome-sandbox",
-      ...APP_RESOURCES.map((name) => `usr/lib/reasonix/app/${name}`),
-      "usr/share/polkit-1/actions/io.reasonix.desktop.update.policy",
-      "usr/share/applications/reasonix.desktop",
+      "usr/bin/deeper-desktop",
+      "usr/bin/deeper-launcher",
+      "usr/bin/deeper",
+      "usr/lib/deeper/deeper-update-helper",
+      `usr/lib/deeper/app/${PRODUCT.executable}`,
+      "usr/lib/deeper/app/chrome-sandbox",
+      ...APP_RESOURCES.map((name) => `usr/lib/deeper/app/${name}`),
+      "usr/share/polkit-1/actions/io.github.sivancola.deeper.update.policy",
+      "usr/share/applications/deeper.desktop",
     ],
-    forbidden: ["usr/bin/reasonix-guard"],
+    forbidden: ["usr/bin/deeper-guard"],
   },
 };
 
@@ -282,8 +280,8 @@ function memberSpec(kind, portableLayout) {
   if (!spec) throw new Error(`unknown artifact kind ${JSON.stringify(kind)}`);
   if (kind !== "windows-portable-zip") return spec;
   return portableLayout === "legacy-dual"
-    ? { required: [...spec.required, "reasonix-launcher.exe"], forbidden: spec.forbidden }
-    : { required: spec.required, forbidden: [...spec.forbidden, "reasonix-launcher.exe"] };
+    ? { required: [...spec.required, "deeper-launcher.exe"], forbidden: spec.forbidden }
+    : { required: spec.required, forbidden: [...spec.forbidden, "deeper-launcher.exe"] };
 }
 
 export function requiredMembers(kind, portableLayout = "canonical") {
@@ -296,7 +294,7 @@ export function checkMembers(entries, kind, portableLayout = "canonical") {
   const matches = (rule) => (rule instanceof RegExp ? [...names].some((name) => rule.test(name)) : names.has(rule));
   const forbidden = [...spec.forbidden, PACKAGING_JUNK].filter((rule) => matches(rule)).map(String);
   if (kind === "windows-portable-zip") {
-    const rootEntries = new Set(["Reasonix.exe", "reasonix-cli.exe", ...(portableLayout === "legacy-dual" ? ["reasonix-launcher.exe"] : [])]);
+    const rootEntries = new Set(["Deeper.exe", "deeper-cli.exe", ...(portableLayout === "legacy-dual" ? ["deeper-launcher.exe"] : [])]);
     for (const name of names) {
       if (!name.includes("/") && /\.(exe|dll)$/i.test(name) && !rootEntries.has(name) && !forbidden.includes(name)) forbidden.push(name);
     }
@@ -365,8 +363,8 @@ export function elfInterpreter(bytes) {
 }
 
 const LINUX_GO_MEMBERS = {
-  "linux-tar": ["reasonix-desktop", "reasonix-launcher", "reasonix-guard", "reasonix"],
-  "linux-deb": ["usr/bin/reasonix-desktop", "usr/bin/reasonix-launcher", "usr/bin/reasonix", "usr/lib/reasonix/reasonix-update-helper"],
+  "linux-tar": ["deeper-desktop", "deeper-launcher", "deeper-guard", "deeper"],
+  "linux-deb": ["usr/bin/deeper-desktop", "usr/bin/deeper-launcher", "usr/bin/deeper", "usr/lib/deeper/deeper-update-helper"],
 };
 
 export function checkStaticGoMembers(kind, readMember) {
@@ -416,8 +414,8 @@ export function inferArtifactKind(pathname, isDirectory, entries = []) {
     if (entries.includes("chrome-sandbox")) return "linux-app-dir";
     throw new Error(`cannot infer the artifact kind of directory ${pathname}`);
   }
-  if (/^Reasonix-darwin-.*\.zip$/.test(name)) return "darwin-zip";
-  if (/^Reasonix-windows-.*\.zip$/.test(name)) return "windows-portable-zip";
+  if (/^Deeper-darwin-.*\.zip$/.test(name)) return "darwin-zip";
+  if (/^Deeper-windows-.*\.zip$/.test(name)) return "windows-portable-zip";
   if (name.endsWith(".tar.gz")) return "linux-tar";
   if (name.endsWith(".deb")) return "linux-deb";
   throw new Error(`cannot infer the artifact kind of ${pathname}`);

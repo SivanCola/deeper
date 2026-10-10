@@ -1,6 +1,6 @@
 # Task Catalog
 
-Reasonix stores the cross-project task projection at
+Deeper stores the cross-project task projection at
 `<cache root>/task-catalog/v1.sqlite`. Task snapshots, event JSONL, idempotency
 files, file locks, version CAS, and leases remain authoritative. SQLite is never
 used to accept stop, cancel, requeue, or open-session commands.
@@ -18,8 +18,8 @@ snapshot. Current process jobs and controller state always overlay catalog data,
 and expired leases are reconciled at read time without rewriting snapshots.
 
 ```sh
-reasonix doctor catalogs [--json]
-reasonix catalogs reindex tasks [--project PATH ...] [--json]
+deeper doctor catalogs [--json]
+deeper catalogs reindex tasks [--project PATH ...] [--json]
 ```
 
 Catalog corruption or partial indexing does not disable task control. Reindexing

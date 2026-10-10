@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/pathidentity"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/pathidentity"
+	"deeper/internal/store"
 )
 
 // resolveSessionPath validates a client-supplied transcript against the

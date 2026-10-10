@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func TestEnvelopesCarryHeadReferenceAcrossCompaction(t *testing.T) {

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/botruntime"
-	"reasonix/internal/config"
+	"deeper/internal/bot"
+	"deeper/internal/botruntime"
+	"deeper/internal/config"
 )
 
 func TestDesktopBotRuntimePlanStartsSavedConnections(t *testing.T) {
@@ -148,7 +148,7 @@ func TestDesktopBotRuntimeConfigUsesUserBotSettings(t *testing.T) {
 	}
 
 	project := robustTempDir(t)
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
 [bot]
 enabled = false
 `), 0o644); err != nil {
@@ -276,7 +276,7 @@ func TestDesktopBotRuntimeIgnoresProjectBotSettings(t *testing.T) {
 			}
 		}
 		project := robustTempDir(t)
-		if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte(`
+		if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
 [bot]
 enabled = true
 
@@ -326,7 +326,7 @@ func TestDesktopBotRuntimeKeepsUserBotSettingsBesideAProjectBot(t *testing.T) {
 	}
 
 	project := robustTempDir(t)
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
 [bot]
 enabled = true
 

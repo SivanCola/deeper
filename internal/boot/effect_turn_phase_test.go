@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // slowPhaseProvider stalls before answering so the provider span clears
@@ -52,7 +52,7 @@ func TestEffectTurnPhaseBillsProviderWaitThroughRealBuild(t *testing.T) {
 	provider.Register("phase-effect", func(provider.Config) (provider.Provider, error) {
 		return prov, nil
 	})
-	writeFile(t, dir, "reasonix.toml", `
+	writeFile(t, dir, "deeper.toml", `
 default_model = "test-model"
 
 [agent]

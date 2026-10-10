@@ -105,7 +105,7 @@ test("cancelled CI releases workers, aggregates, and metrics without hiding live
 });
 
 test("packaging changes run native installer acceptance before merge", () => {
-  assert.match(job(ci, "desktop-prepare"), /REASONIX_COMMIT: \$\{\{ github.sha \}\}/,
+  assert.match(job(ci, "desktop-prepare"), /DEEPER_COMMIT: \$\{\{ github.sha \}\}/,
     "prepared frontend must budget the full source identity used by native packaging");
   const body = job(ci, "desktop-windows-package");
   assert.doesNotMatch(ci, /performance-benchmark\.mjs/);
@@ -131,7 +131,7 @@ test("packaging changes run native installer acceptance before merge", () => {
 });
 
 test("notes pushes preserve required ancestor CI while code pushes cancel obsolete runs", () => {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "reasonix-ci-cancel-"));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "deeper-ci-cancel-"));
   const git = (...args) => {
     const result = spawnSync("git", args, { cwd: dir, encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
@@ -186,7 +186,7 @@ test("Certum signing survives skipped ancestor gates but requires successful inp
   assert.match(body, /if:.*always\(\)/);
   const context = {
     needs: { resolve: { result: "success" }, "windows-build": { result: "success" }, "signing-contract": { result: "success" } },
-    github: { repository: "esengine/DeepSeek-Reasonix" },
+    github: { repository: "SivanCola/deeper" },
     inputs: { desktop_manual_only: false },
   };
   assert.equal(condition(body, context), true);
@@ -227,9 +227,9 @@ test("App memory workflow tiers pull requests and keeps full scheduled coverage"
   assert.match(appMemory, /schedule:\n    - cron: "17 3 \* \* \*"/);
   assert.match(appMemory, /\[ "\$EVENT_NAME" = workflow_dispatch \] \|\| \[ "\$EVENT_NAME" = schedule \]/);
   assert.match(appMemory, /matrix:\n        shard: \$\{\{ fromJSON\(needs\.changes\.outputs\.memory_shards\) \}\}/);
-  assert.match(appMemory, /REASONIX_APP_MEMORY_PROFILE: \$\{\{ needs\.changes\.outputs\.memory_profile \}\}/);
+  assert.match(appMemory, /DEEPER_APP_MEMORY_PROFILE: \$\{\{ needs\.changes\.outputs\.memory_profile \}\}/);
   const script = shellStep(job(appMemory, "changes"), "Select memory profile");
-  const root = mkdtempSync(path.join(os.tmpdir(), "reasonix-memory-workflow-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "deeper-memory-workflow-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   let index = 0;
   const run = env => {
@@ -254,9 +254,9 @@ test("App memory workflow tiers pull requests and keeps full scheduled coverage"
 test("macOS signing diagnostics require protected main and cannot publish", () => {
   const source = workflow("macos-signing-check");
   const verify = job(source, "verify");
-  const github = { repository: "esengine/DeepSeek-Reasonix", ref: "refs/heads/main-v2", ref_protected: true };
+  const github = { repository: "SivanCola/deeper", ref: "refs/heads/main", ref_protected: true };
   assert.equal(condition(verify, { github }), true);
-  for (const changed of [{ repository: "fork/Reasonix" }, { ref: "refs/tags/v1.0.0" }, { ref_protected: false }]) {
+  for (const changed of [{ repository: "fork/Deeper" }, { ref: "refs/tags/v1.0.0" }, { ref_protected: false }]) {
     assert.equal(condition(verify, { github: { ...github, ...changed } }), false);
   }
   assert.match(verify, /environment: release/);
@@ -448,7 +448,7 @@ test("Certum signing preserves native builds and gates publication and attestati
   assert.match(attestation, /uses: actions\/upload-artifact@[0-9a-f]{40} # v7\b/);
   assert.match(attestation, /verified-contract\.json/);
   assert.match(attestation, /gh variable set/);
-  const context = { github: { repository: "esengine/DeepSeek-Reasonix" }, inputs: { signing_preflight: true, orchestrated: false },
+  const context = { github: { repository: "SivanCola/deeper" }, inputs: { signing_preflight: true, orchestrated: false },
     needs: { "signing-contract": { result: "success" }, build: { result: "success" }, "windows-build": { result: "success" }, "windows-sign": { result: "success" }, "windows-runtime-acceptance": { result: "success" } } };
   assert.equal(condition(attestation, context), true);
   for (const key of ["windows-build", "windows-sign", "windows-runtime-acceptance"]) {
@@ -494,13 +494,13 @@ test("all desktop consumers verify the prepared build and reject a failed prepar
   }
   for (const name of ["desktop-windows", "desktop-windows-package"]) {
     const body = job(ci, name);
-    assert.match(body, /REASONIX_PACKAGE_REUSE_FRONTEND: "1"/);
-    assert.match(body, /REASONIX_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export REASONIX_FRONTEND_PNPM_VERSION/);
+    assert.match(body, /DEEPER_PACKAGE_REUSE_FRONTEND: "1"/);
+    assert.match(body, /DEEPER_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export DEEPER_FRONTEND_PNPM_VERSION/);
     assert.match(body, /canary_artifact_name/);
   }
-  assert.match(job(ci, "desktop-macos"), /REASONIX_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export REASONIX_FRONTEND_PNPM_VERSION/);
+  assert.match(job(ci, "desktop-macos"), /DEEPER_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export DEEPER_FRONTEND_PNPM_VERSION/);
   for (const name of ["desktop-macos", "desktop-windows", "desktop-windows-package"]) {
-    assert.ok(job(ci, name).includes("REASONIX_FRONTEND_PRODUCER_ATTEMPT: ${{ needs.desktop-prepare.outputs.producer_attempt }}"));
+    assert.ok(job(ci, name).includes("DEEPER_FRONTEND_PRODUCER_ATTEMPT: ${{ needs.desktop-prepare.outputs.producer_attempt }}"));
   }
   const prepare = job(ci, "desktop-prepare");
   assert.match(prepare, /producer_attempt: \$\{\{ steps\.artifact-identity\.outputs\.attempt \}\}/);
@@ -516,8 +516,8 @@ test("browser matrix preserves five entry points and fails closed through deskto
   assert.match(groups, /max-parallel: 2/);
   assert.match(groups, /fail-fast: false/);
   assert.match(groups, /group: \[app-settings-motion, transcript\]/);
-  assert.match(groups, /REASONIX_TRANSCRIPT_MODE=native-scrollbar REASONIX_LAYOUT_ARTIFACTS="\$evidence\/native-scrollbar"/);
-  assert.match(groups, /REASONIX_TRANSCRIPT_MODE=headless-reader REASONIX_LAYOUT_ARTIFACTS="\$evidence\/headless-reader"/);
+  assert.match(groups, /DEEPER_TRANSCRIPT_MODE=native-scrollbar DEEPER_LAYOUT_ARTIFACTS="\$evidence\/native-scrollbar"/);
+  assert.match(groups, /DEEPER_TRANSCRIPT_MODE=headless-reader DEEPER_LAYOUT_ARTIFACTS="\$evidence\/headless-reader"/);
   assert.doesNotMatch(groups, /group: \[app-settings, motion, transcript\]/);
   for (const command of ["test:app-browser", "test:settings-browser", "test:motion-browser", "test:transcript-browser", "test:transcript-reader-browser"])
     assert.equal(ci.match(new RegExp(`pnpm --dir frontend ${command}(?:\\s|$)`, "g"))?.length, 1, command);
@@ -568,9 +568,9 @@ test("installer evidence excludes running payloads and cache files on every publ
     const upload = body.match(/name: Upload (?:signed )?Windows installer acceptance evidence\n([\s\S]*?)(?=\n      - |$)/)?.[1];
     assert.ok(upload);
     for (const extension of ["json", "png", "log"])
-      assert.ok(upload.includes(`reasonix-installer-acceptance/**/*.${extension}`));
+      assert.ok(upload.includes(`deeper-installer-acceptance/**/*.${extension}`));
     for (const excluded of ["installed/**", "**/cache/**"])
-      assert.ok(upload.includes(`!\${{ runner.temp }}/reasonix-installer-acceptance/${excluded}`));
+      assert.ok(upload.includes(`!\${{ runner.temp }}/deeper-installer-acceptance/${excluded}`));
   }
 });
 

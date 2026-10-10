@@ -3,7 +3,7 @@ package event
 import (
 	"testing"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 // capabilityRecorder accepts every optional sink capability and names the ones

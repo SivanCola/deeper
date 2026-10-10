@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 func TestOpenAtSeparatesLocatorFromStorageWithoutChangingFormat(t *testing.T) {

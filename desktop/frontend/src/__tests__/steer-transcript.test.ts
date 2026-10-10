@@ -178,7 +178,7 @@ for (const remote of [false, true]) for (const ordering of ["record-first", "eve
       response.snapshot!.records = [{ id: wireRow.recordId, order: 0, message: wireRow, refs: [] }];
       response.history!.messages = [{ messageId: id, position: 0, version: 1, role: "tool", eventSequence: 5, visibleTurn: 1,
         inline: { id, role: "tool", content: `${prefix}\nSame guidance`, local_only: true,
-          tool_call_id: "__reasonix_local_only__", name: "__reasonix_local_only__" } }];
+          tool_call_id: "__deeper_local_only__", name: "__deeper_local_only__" } }];
       await follower.start();
       assert.deepEqual(state.items.map(item => item.id), ["he:m:queued"]);
     } finally { follower.stop(); getTranscriptStore().evictTab(tab); }

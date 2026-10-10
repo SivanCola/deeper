@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/store"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/session"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/store"
 )
 
 func TestArchivedSourceRecoversAfterHeadIndexPublication(t *testing.T) {

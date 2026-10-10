@@ -11,7 +11,7 @@ export interface BuildIdentity {
 // and prerelease suffix. The package manifest owns the RPC build identity.
 export function loadBuildIdentity(packaged: boolean, resourcesPath: string, env: NodeJS.ProcessEnv): BuildIdentity {
   if (!packaged) {
-    return { version: "dev", channel: env.REASONIX_CHANNEL || "dev", commit: env.REASONIX_COMMIT || "dev" };
+    return { version: "dev", channel: env.DEEPER_CHANNEL || "dev", commit: env.DEEPER_COMMIT || "dev" };
   }
   const value: unknown = JSON.parse(readFileSync(join(resourcesPath, "build.json"), "utf8"));
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid packaged build identity");

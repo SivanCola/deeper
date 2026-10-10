@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/stats"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/stats"
 )
 
 // TestResolveStatsRange covers the six branches of resolveStatsRange: the four
@@ -141,7 +141,7 @@ func TestResolveStatsRangeToIsEndOfDay(t *testing.T) {
 }
 
 func TestUsageStatsFlushesPendingRecorderWrites(t *testing.T) {
-	t.Setenv("REASONIX_STATE_HOME", t.TempDir())
+	t.Setenv("DEEPER_STATE_HOME", t.TempDir())
 	recorder := stats.NewRecorder(event.Discard, config.StatsDir(), "desktop")
 	recorder.Emit(event.Event{
 		Kind: event.Usage, ModelRef: "deepseek/model",

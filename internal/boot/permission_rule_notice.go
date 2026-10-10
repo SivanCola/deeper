@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/event"
-	"reasonix/internal/permission"
+	"deeper/internal/event"
+	"deeper/internal/permission"
 )
 
 // emitUnmatchableRuleNotice warns about permission rules that name a tool

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 // CancelModelApplicationBlockers is a fenced recovery operation, not a generic

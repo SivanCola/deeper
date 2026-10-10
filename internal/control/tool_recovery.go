@@ -3,12 +3,12 @@ package control
 import (
 	"context"
 	"crypto/sha256"
+	"deeper/internal/agent"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"reasonix/internal/agent"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 type ToolRecoverySnapshot struct {

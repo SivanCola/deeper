@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 func TestModelSettingsApplyFailureAndIdempotentReceipt(t *testing.T) {

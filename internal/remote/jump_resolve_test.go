@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestResolveJumpHostsUsesConfiguredAliasesAndSSHConfig(t *testing.T) {
@@ -37,6 +37,6 @@ func TestResolveJumpHostsUsesConfiguredAliasesAndSSHConfig(t *testing.T) {
 		t.Fatalf("ssh_config jump was not fully resolved: %+v", got)
 	}
 	if got := hops[1]; got.PasswordEnv != "SECOND_PASSWORD" || len(got.ProxyJump) != 0 {
-		t.Fatalf("Reasonix jump credentials/nested-chain handling wrong: %+v", got)
+		t.Fatalf("Deeper jump credentials/nested-chain handling wrong: %+v", got)
 	}
 }

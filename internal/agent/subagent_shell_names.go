@@ -1,6 +1,6 @@
 package agent
 
-import "reasonix/internal/tool"
+import "deeper/internal/tool"
 
 // normalizeSubagentShellNames keeps legacy skill/profile allowlists working
 // when Windows exposes only the canonical pwsh tool. The parent registry is

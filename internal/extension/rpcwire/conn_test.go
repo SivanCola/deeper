@@ -17,7 +17,7 @@ func TestStructuredHandlerError(t *testing.T) {
 	var out bytes.Buffer
 	conn := NewConn(in, &out, Options{MaxInboundBytes: 1024, MaxOutboundBytes: 1024})
 	conn.Handle("fail", func(context.Context, json.RawMessage) (any, error) {
-		return nil, &RPCError{Code: -32000, Message: "controlled", Data: map[string]any{"reasonixCode": "HOST_BUSY", "retryable": true}}
+		return nil, &RPCError{Code: -32000, Message: "controlled", Data: map[string]any{"deeperCode": "HOST_BUSY", "retryable": true}}
 	})
 	if err := conn.Serve(context.Background()); err != nil {
 		t.Fatal(err)
@@ -35,7 +35,7 @@ func TestStructuredHandlerError(t *testing.T) {
 	if err := json.Unmarshal(frame.Error.Data, &data); err != nil {
 		t.Fatal(err)
 	}
-	if data["reasonixCode"] != "HOST_BUSY" || data["retryable"] != true {
+	if data["deeperCode"] != "HOST_BUSY" || data["retryable"] != true {
 		t.Fatalf("data = %#v", data)
 	}
 }
@@ -228,7 +228,7 @@ func TestRequestReturnsStructuredPeerError(t *testing.T) {
 	client := NewConn(serverToClientR, clientToServerW, Options{})
 	server := NewConn(clientToServerR, serverToClientW, Options{})
 	server.Handle("fail", func(context.Context, json.RawMessage) (any, error) {
-		return nil, &RPCError{Code: -32000, Message: "busy", Data: map[string]any{"reasonixCode": "HOST_BUSY"}}
+		return nil, &RPCError{Code: -32000, Message: "busy", Data: map[string]any{"deeperCode": "HOST_BUSY"}}
 	})
 	ctx := t.Context()
 	go func() { _ = client.Serve(ctx) }()

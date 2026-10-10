@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestAddOfficialProviderAccessUsesDesktopLanguagePricing(t *testing.T) {

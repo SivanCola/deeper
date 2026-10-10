@@ -4,6 +4,10 @@ import { createHash } from "node:crypto";
 
 const token = process.env.CLOUDFLARE_API_TOKEN;
 if (!token) throw new Error("CLOUDFLARE_API_TOKEN is not configured");
+const zoneName = process.env.CLOUDFLARE_ZONE_NAME;
+const downloadHost = process.env.CLOUDFLARE_DOWNLOAD_HOST;
+const manifestURL = process.env.CLOUDFLARE_MANIFEST_URL;
+if (!zoneName || !downloadHost || !manifestURL) throw new Error("Configure your own CLOUDFLARE_ZONE_NAME, CLOUDFLARE_DOWNLOAD_HOST and CLOUDFLARE_MANIFEST_URL");
 const api = "https://api.cloudflare.com/client/v4";
 const report = (kind, data) => console.log(JSON.stringify({ kind, ...data }));
 
@@ -35,10 +39,10 @@ async function request(endpoint, body) {
 
 for (const [profile, userAgent] of [
   ["node-default", undefined],
-  ["desktop-updater-current", "Reasonix-Updater/v1.38.11 (linux/amd64; build=stable; update=stable)"],
-  ["desktop-updater-target", "Reasonix-Updater/v1.38.12 (linux/amd64; build=stable; update=stable)"],
+  ["desktop-updater-current", "Deeper-Updater/v1.38.11 (linux/amd64; build=stable; update=stable)"],
+  ["desktop-updater-target", "Deeper-Updater/v1.38.12 (linux/amd64; build=stable; update=stable)"],
 ]) {
-  const probe = await fetch("https://dl.reasonix.io/latest/latest.json", {
+  const probe = await fetch(manifestURL, {
     headers: userAgent ? { "User-Agent": userAgent } : undefined,
     signal: AbortSignal.timeout(30000), redirect: "error",
   });
@@ -52,13 +56,13 @@ for (const [profile, userAgent] of [
   await probe.body?.cancel();
 }
 
-const zones = await request("/zones?name=reasonix.io&status=active");
-const matches = zones?.result?.filter(zone => zone.name === "reasonix.io");
+const zones = await request(`/zones?name=${encodeURIComponent(zoneName)}&status=active`);
+const matches = zones?.result?.filter(zone => zone.name === zoneName);
 if (matches?.length !== 1) {
-  throw new Error("Cannot identify reasonix.io with this token; Zone Read permission is required");
+  throw new Error("Cannot identify the configured zone with this token; Zone Read permission is required");
 }
 const zoneID = matches[0].id;
-report("zone", { name: "reasonix.io", id: zoneID });
+report("zone", { name: zoneName, id: zoneID });
 
 for (const phase of ["http_config_settings", "http_request_firewall_custom", "http_request_firewall_managed", "http_request_sbfm"]) {
   const response = await request(`/zones/${zoneID}/rulesets/phases/${phase}/entrypoint`);
@@ -101,7 +105,7 @@ const events = await request("/graphql", {
 });
 if (events) {
   const entries = events.data?.viewer?.zones?.[0]?.firewallEventsAdaptive ?? [];
-  const matching = entries.filter(event => event.clientRequestHTTPHost === "dl.reasonix.io" && event.clientRequestPath === "/latest/latest.json");
+  const matching = entries.filter(event => event.clientRequestHTTPHost === downloadHost && event.clientRequestPath === "/latest/latest.json");
   report("manifest-security-events", { inspected: entries.length,
     events: matching.map(({ action, source, datetime }) => ({ action, source, datetime })) });
 }

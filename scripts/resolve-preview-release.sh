@@ -23,14 +23,14 @@ fi
 base_version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
 preview_number="${BASH_REMATCH[4]}"
 checkout_sha="$(git rev-parse HEAD^{commit})"
-main_sha="$(git ls-remote "$release_remote" refs/heads/main-v2 | awk 'NR == 1 { print $1 }')"
+main_sha="$(git ls-remote "$release_remote" refs/heads/main | awk 'NR == 1 { print $1 }')"
 tag_sha="$(
 	git ls-remote --tags "$release_remote" "refs/tags/$release_tag" "refs/tags/$release_tag^{}" |
 		awk '/\^\{\}$/ { print $1; found = 1; exit } NR == 1 { first = $1 } END { if (!found) print first }'
 )"
 
 if [ -z "$main_sha" ] || [ "$checkout_sha" != "$main_sha" ]; then
-	echo "::error::Preview control checkout must equal current $release_remote/main-v2 ($main_sha), got $checkout_sha" >&2
+	echo "::error::Preview control checkout must equal current $release_remote/main ($main_sha), got $checkout_sha" >&2
 	exit 1
 fi
 if [ -z "$tag_sha" ]; then
@@ -39,12 +39,12 @@ if [ -z "$tag_sha" ]; then
 fi
 if [ "$tag_sha" != "$main_sha" ]; then
 	if [ "$allow_recovery" != "true" ]; then
-		echo "::error::$release_tag must point to current $release_remote/main-v2 ($main_sha), got $tag_sha" >&2
+		echo "::error::$release_tag must point to current $release_remote/main ($main_sha), got $tag_sha" >&2
 		exit 1
 	fi
 	if ! git cat-file -e "$tag_sha^{commit}" 2>/dev/null ||
 		! git merge-base --is-ancestor "$tag_sha" "$main_sha"; then
-		echo "::error::Preview recovery tag $release_tag must remain on $release_remote/main-v2 history" >&2
+		echo "::error::Preview recovery tag $release_tag must remain on $release_remote/main history" >&2
 		exit 1
 	fi
 fi

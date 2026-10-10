@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/extension/protocol"
 )
 
 // recordedCall captures one intercept or event call a fake client received.

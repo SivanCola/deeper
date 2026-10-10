@@ -8,16 +8,16 @@ import (
 	"os"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	_ "reasonix/internal/provider/anthropic"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	_ "deeper/internal/provider/anthropic"
 )
 
 // Explicitly opt in: one bounded Flash search on the canonical official search wire.
 // Credentials remain in memory; only result counts and usage are logged.
 func TestLiveIndependentWebSearch(t *testing.T) {
-	if os.Getenv("REASONIX_LIVE_WEB_SEARCH") != "1" {
-		t.Skip("set REASONIX_LIVE_WEB_SEARCH=1 to run the bounded live probe")
+	if os.Getenv("DEEPER_LIVE_WEB_SEARCH") != "1" {
+		t.Skip("set DEEPER_LIVE_WEB_SEARCH=1 to run the bounded live probe")
 	}
 	key := os.Getenv("DEEPSEEK_API_KEY")
 	if key == "" {

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/memory"
+	"deeper/internal/memory"
 )
 
 // TestMemoryWriteReflectsInSnapshot verifies that a memory write lands on disk
@@ -206,7 +206,7 @@ func TestRestoreMemoryRefreshesBackgroundSnapshotWithoutLegacyUpdate(t *testing.
 	dir := t.TempDir()
 	c := newOwnedTestController(t, Options{Memory: memory.Load(memory.Options{CWD: dir, UserDir: t.TempDir()})})
 	store := c.Memory().Store
-	first, err := store.SaveWithOptions(memory.Memory{Name: "release-target", Description: "v1", Body: "main-v2"}, memory.SaveOptions{})
+	first, err := store.SaveWithOptions(memory.Memory{Name: "release-target", Description: "v1", Body: "main"}, memory.SaveOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestRestoreMemoryRefreshesBackgroundSnapshotWithoutLegacyUpdate(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if restored.Revision != 3 || restored.Body != "main-v2" {
+	if restored.Revision != 3 || restored.Body != "main" {
 		t.Fatalf("restored = %+v", restored)
 	}
 	if revisions := c.MemoryRevisions(first.Memory.ID); len(revisions) < 2 {

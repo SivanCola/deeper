@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
+	"deeper/internal/provider"
+	"deeper/internal/session"
 )
 
 func TestTaggedFormalSessionsKeepHeaderAndProviderHistory(t *testing.T) {

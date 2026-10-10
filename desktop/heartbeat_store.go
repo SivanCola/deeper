@@ -12,8 +12,8 @@ import (
 	"sort"
 	"time"
 
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
 )
 
 func (e *HeartbeatEngine) readConfigSnapshot() (heartbeatConfigSnapshot, error) {
@@ -33,7 +33,7 @@ func (e *HeartbeatEngine) readConfigSnapshot() (heartbeatConfigSnapshot, error) 
 	// execute tasks with scheduling or approval semantics this binary does not
 	// understand.
 	if cfg.SchemaVersion > heartbeatSchemaVersion {
-		return heartbeatConfigSnapshot{}, fmt.Errorf("heartbeat config schemaVersion %d is newer than this binary supports (%d); upgrade Reasonix", cfg.SchemaVersion, heartbeatSchemaVersion)
+		return heartbeatConfigSnapshot{}, fmt.Errorf("heartbeat config schemaVersion %d is newer than this binary supports (%d); upgrade Deeper", cfg.SchemaVersion, heartbeatSchemaVersion)
 	}
 	// Merge the run-history sidecar (execution journal kept outside the main
 	// config so an older binary cannot drop it on a full-table save). Union by
@@ -119,7 +119,7 @@ func (e *HeartbeatEngine) writeTasks(tasks []HeartbeatTask, expected heartbeatCo
 	// schemaVersion this binary does not understand. Refuse to overwrite it
 	// with a full-table save instead of silently downgrading the schema.
 	if current.exists && current.cfg.SchemaVersion > heartbeatSchemaVersion {
-		return fmt.Errorf("heartbeat config schemaVersion %d is newer than this binary supports (%d); upgrade Reasonix before editing", current.cfg.SchemaVersion, heartbeatSchemaVersion)
+		return fmt.Errorf("heartbeat config schemaVersion %d is newer than this binary supports (%d); upgrade Deeper before editing", current.cfg.SchemaVersion, heartbeatSchemaVersion)
 	}
 	if compare && (current.exists != expected.exists || current.digest != expected.digest || current.cfg.Revision != expected.cfg.Revision) {
 		return ErrHeartbeatConfigConflict
@@ -156,7 +156,7 @@ func (e *HeartbeatEngine) writeTasks(tasks []HeartbeatTask, expected heartbeatCo
 	if previousSidecarExists {
 		var persistedSidecar heartbeatRunHistorySidecar
 		if err := json.Unmarshal(previousSidecar, &persistedSidecar); err == nil && persistedSidecar.SchemaVersion > heartbeatRunHistorySchemaVersion {
-			return fmt.Errorf("heartbeat run-history sidecar schemaVersion %d is newer than this binary supports (%d); upgrade Reasonix before editing", persistedSidecar.SchemaVersion, heartbeatRunHistorySchemaVersion)
+			return fmt.Errorf("heartbeat run-history sidecar schemaVersion %d is newer than this binary supports (%d); upgrade Deeper before editing", persistedSidecar.SchemaVersion, heartbeatRunHistorySchemaVersion)
 		}
 	}
 	var previousGeneration *heartbeatRunHistoryGeneration

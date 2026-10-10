@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
 )
 
 type benchmarkClient struct{}

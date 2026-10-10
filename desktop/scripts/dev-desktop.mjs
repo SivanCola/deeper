@@ -7,14 +7,14 @@ import { fileURLToPath } from "node:url";
 const desktopRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const serviceName = process.platform === "win32"
-  ? "reasonix-desktop-service.exe"
-  : "reasonix-desktop-service";
+  ? "deeper-desktop-service.exe"
+  : "deeper-desktop-service";
 const servicePath = resolve(desktopRoot, "build/bin", serviceName);
-const port = process.env.REASONIX_DESKTOP_VITE_PORT || "5173";
-const devUrl = process.env.REASONIX_ELECTRON_DEV_URL || `http://127.0.0.1:${port}`;
+const port = process.env.DEEPER_DESKTOP_VITE_PORT || "5173";
+const devUrl = process.env.DEEPER_ELECTRON_DEV_URL || `http://127.0.0.1:${port}`;
 
 if (process.argv.includes("--help")) {
-  console.log("Build the Reasonix service, start Vite, and launch the Electron development shell.");
+  console.log("Build the Deeper service, start Vite, and launch the Electron development shell.");
   console.log("Usage: pnpm dev:desktop");
   process.exit(0);
 }
@@ -33,12 +33,12 @@ function waitForExit(child, label) {
   });
 }
 
-async function servesReasonix(url) {
+async function servesDeeper(url) {
   try {
     const response = await fetch(url);
     if (!response.ok) return false;
     const html = await response.text();
-    return /<title>\s*Reasonix\s*<\/title>/i.test(html);
+    return /<title>\s*Deeper\s*<\/title>/i.test(html);
   } catch {
     return false;
   }
@@ -50,7 +50,7 @@ async function waitForVite(frontend) {
     if (frontend.exitCode !== null || frontend.signalCode) {
       throw new Error(`Vite exited with ${frontend.exitCode ?? frontend.signalCode}`);
     }
-    if (await servesReasonix(devUrl)) return;
+    if (await servesDeeper(devUrl)) return;
     await new Promise(resolveWait => setTimeout(resolveWait, 150));
   }
   throw new Error(`Vite did not become ready at ${devUrl}`);
@@ -80,22 +80,22 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 
 try {
   await mkdir(dirname(servicePath), { recursive: true });
-  console.log("==> Building Reasonix desktop service");
+  console.log("==> Building Deeper desktop service");
   await waitForExit(start("go", ["build", "-o", servicePath, "."]), "Go build");
 
-  if (await servesReasonix(devUrl)) {
-    console.log(`==> Reusing Reasonix Vite server at ${devUrl}`);
+  if (await servesDeeper(devUrl)) {
+    console.log(`==> Reusing Deeper Vite server at ${devUrl}`);
   } else {
-    console.log(`==> Starting Reasonix Vite server at ${devUrl}`);
+    console.log(`==> Starting Deeper Vite server at ${devUrl}`);
     frontend = start(pnpm, ["--dir", "frontend", "dev", "--host", "127.0.0.1", "--port", port, "--strictPort"]);
     await waitForVite(frontend);
   }
 
-  console.log("==> Launching Reasonix Electron development shell");
+  console.log("==> Launching Deeper Electron development shell");
   electron = start(pnpm, ["--dir", "electron", "dev"], {
     ...process.env,
-    REASONIX_DESKTOP_SERVICE: servicePath,
-    REASONIX_ELECTRON_DEV_URL: devUrl,
+    DEEPER_DESKTOP_SERVICE: servicePath,
+    DEEPER_ELECTRON_DEV_URL: devUrl,
   });
   const electronExit = waitForExit(electron, "Electron");
   const frontendExit = frontend

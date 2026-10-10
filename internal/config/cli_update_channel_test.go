@@ -30,11 +30,11 @@ func TestCLIUpdateChannelDefaultsAndValidation(t *testing.T) {
 func TestCLIUpdateChannelIsUserGlobal(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[cli]\nupdate_channel = \"preview\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[cli]\nupdate_channel = \"stable\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[cli]\nupdate_channel = \"stable\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -49,11 +49,11 @@ func TestCLIUpdateChannelIsUserGlobal(t *testing.T) {
 func TestProjectCannotOptOldConfigIntoCLIPreview(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[ui]\ntheme = \"auto\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[cli]\nupdate_channel = \"preview\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[cli]\nupdate_channel = \"preview\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)

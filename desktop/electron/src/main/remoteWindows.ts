@@ -51,7 +51,7 @@ export class RemoteWindowHost {
       minWidth: 760,
       minHeight: 480,
       show: false,
-      title: input.title || "Reasonix",
+      title: input.title || "Deeper",
       backgroundColor: "#1a1a2e",
       autoHideMenuBar: true,
       icon: this.deps.icon,

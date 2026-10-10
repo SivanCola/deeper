@@ -29,13 +29,13 @@ async function setup() {
   const scripts: string[] = [];
   page.run = (source) => {
     scripts.push(source);
-    if (source.startsWith("/* reasonix:pageResolve */")) {
+    if (source.startsWith("/* deeper:pageResolve */")) {
       answers.beforeResolve();
       return answers.resolve;
     }
-    if (source.startsWith("/* reasonix:pageIdentity */")) return answers.identity;
-    if (source.startsWith("/* reasonix:pageSelect */")) return answers.select;
-    if (source.startsWith("/* reasonix:pageLocate */")) return answers.locate;
+    if (source.startsWith("/* deeper:pageIdentity */")) return answers.identity;
+    if (source.startsWith("/* deeper:pageSelect */")) return answers.select;
+    if (source.startsWith("/* deeper:pageLocate */")) return answers.locate;
     if (source.startsWith("({ width")) return { width: 800, height: 600 };
     return undefined;
   };
@@ -195,7 +195,7 @@ test("press sends chords, scroll sends inverted wheel deltas, select runs in the
   assert.equal((await s.actions.act(s.tab, s.request({ action: "scroll", ref: "", documentToken: "tok-3" }), s.verify)).reason, "scroll deltas are both zero");
 
   assert.deepEqual(await s.actions.act(s.tab, s.request({ action: "select", options: ["x"], documentToken: "tok-3" }), s.verify), { executed: true, documentToken: "tok-4" });
-  assert.ok(s.scripts.some((source) => source.startsWith("/* reasonix:pageSelect */") && source.includes('"options":["x"]')));
+  assert.ok(s.scripts.some((source) => source.startsWith("/* deeper:pageSelect */") && source.includes('"options":["x"]')));
   s.answers.select = { ok: false, reason: "stale" };
   await assert.rejects(s.actions.act(s.tab, s.request({ action: "select", documentToken: "tok-4" }), s.verify), code(BROWSER_ERR_STALE_REFERENCE));
 });
@@ -203,7 +203,7 @@ test("press sends chords, scroll sends inverted wheel deltas, select runs in the
 test("press focuses a non-editable ref before sending keys", async () => {
   const s = await setup();
   s.answers.resolve = { ok: true, x: 0, y: 0, width: 10, height: 10, tag: "button", type: "", disabled: false, editable: false, frameOffsetKnown: true };
-  s.page.run = (source) => source.startsWith("/* reasonix:pageFocus */") ? true : source.startsWith("/* reasonix:pageIdentity */") ? true : s.answers.resolve;
+  s.page.run = (source) => source.startsWith("/* deeper:pageFocus */") ? true : source.startsWith("/* deeper:pageIdentity */") ? true : s.answers.resolve;
   const result = await s.actions.act(s.tab, s.request({ action: "press", ref: "e1", keys: "Enter" }), s.verify);
   assert.equal(result.executed, true);
   assert.equal(s.page.inputs.filter((event) => event.type === "keyDown").length, 1);

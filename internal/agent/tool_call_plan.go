@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // toolCallPlan is the resolved, policy-checked state owned by one executeOne.

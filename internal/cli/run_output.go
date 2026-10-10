@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
+	"deeper/internal/billing"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
 )
 
 type runOutputFormat string

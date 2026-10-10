@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 func awaitNativeSearch(t *testing.T, a *App, id, text, cursor string, limit int) session.SearchHistoryPage {

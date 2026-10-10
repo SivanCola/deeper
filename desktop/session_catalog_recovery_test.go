@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestSessionMetaFromCatalogPropagatesRecoveryCopy(t *testing.T) {

@@ -14,14 +14,14 @@ import (
 // on the machine running the test.
 func TestResolveRefsAttachmentKinds(t *testing.T) {
 	temp := t.TempDir()
-	attachmentsDir := filepath.Join(temp, ".reasonix", "attachments")
+	attachmentsDir := filepath.Join(temp, ".deeper", "attachments")
 	if err := os.MkdirAll(attachmentsDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	ymlRef := filepath.ToSlash(".reasonix/attachments/config.yml")
-	zipRef := filepath.ToSlash(".reasonix/attachments/archive.zip")
-	pngRef := filepath.ToSlash(".reasonix/attachments/shot.png")
-	if err := os.WriteFile(filepath.Join(temp, filepath.FromSlash(ymlRef)), []byte("name: reasonix\n"), 0o644); err != nil {
+	ymlRef := filepath.ToSlash(".deeper/attachments/config.yml")
+	zipRef := filepath.ToSlash(".deeper/attachments/archive.zip")
+	pngRef := filepath.ToSlash(".deeper/attachments/shot.png")
+	if err := os.WriteFile(filepath.Join(temp, filepath.FromSlash(ymlRef)), []byte("name: deeper\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(temp, filepath.FromSlash(zipRef)), []byte{'P', 'K', 0x03, 0x04, 0x00}, 0o644); err != nil {
@@ -59,7 +59,7 @@ func TestResolveRefsAttachmentKinds(t *testing.T) {
 			if len(errs) != 0 {
 				t.Fatalf("ResolveRefs errors = %v", errs)
 			}
-			if !strings.Contains(block, `<file path="`+ymlRef+`">`) || !strings.Contains(block, "name: reasonix") {
+			if !strings.Contains(block, `<file path="`+ymlRef+`">`) || !strings.Contains(block, "name: deeper") {
 				t.Fatalf("expected yml attachment to resolve as file content, got: %s", block)
 			}
 			if !strings.Contains(block, `<file path="`+zipRef+`">`) || !strings.Contains(block, "[binary file "+zipRef) {

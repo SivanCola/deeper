@@ -3,16 +3,16 @@ import { extname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { errorText, type Logger } from "./log.js";
 
-export const APP_SCHEME = "reasonix";
-export const APP_ORIGIN = "reasonix://app";
-export const APP_INDEX_URL = "reasonix://app/index.html";
+export const APP_SCHEME = "deeper";
+export const APP_ORIGIN = "deeper://app";
+export const APP_INDEX_URL = "deeper://app/index.html";
 
 // Must match desktop/workspace_media.go, desktop/theme_assets.go and
 // desktop/remote_markdown_image.go; only these reach the resource origin.
 export const FORWARDED_PATHS = [
-  "/__reasonix_workspace_media/",
-  "/__reasonix_theme_asset/",
-  "/__reasonix_remote_markdown_image",
+  "/__deeper_workspace_media/",
+  "/__deeper_theme_asset/",
+  "/__deeper_remote_markdown_image",
 ] as const;
 
 export type AppRoute =
@@ -86,7 +86,7 @@ export function routeAppRequest(rawURL: string, distRoot: string, isFile: (path:
 }
 
 export function resolveDistRoot(input: { env: NodeJS.ProcessEnv; appPath: string; resourcesPath: string; packaged: boolean }): string {
-  const override = (input.env.REASONIX_FRONTEND_DIST ?? "").trim();
+  const override = (input.env.DEEPER_FRONTEND_DIST ?? "").trim();
   if (override !== "") return resolve(override);
   return input.packaged ? join(input.resourcesPath, "app") : resolve(input.appPath, "..", "frontend", "dist");
 }

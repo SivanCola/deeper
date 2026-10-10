@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 // FileStore is a Store backed by a JSON file tree under a project-local
@@ -20,12 +20,12 @@ import (
 // <dir>/<task-id>/events.jsonl.  It is read-only in TM-02; write support
 // is added in TM-04.
 type FileStore struct {
-	baseDir string // projectDir → task data root (e.g. ".reasonix/tasks")
+	baseDir string // projectDir → task data root (e.g. ".deeper/tasks")
 	sink    ProjectionSink
 }
 
 // NewFileStore returns a FileStore rooted at baseDir.  baseDir is typically
-// ".reasonix/tasks" relative to the project root.
+// ".deeper/tasks" relative to the project root.
 func NewFileStore(baseDir string) *FileStore {
 	return &FileStore{baseDir: baseDir}
 }

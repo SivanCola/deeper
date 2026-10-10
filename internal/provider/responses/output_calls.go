@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // finishFunctionCall completes call from a finished function_call item, sending

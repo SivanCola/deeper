@@ -1,9 +1,9 @@
 version: 1
-project_slug: DeepSeek-Reasonix
+project_slug: deeper
 signing_policy_slug: release-signing
-repository_url: https://github.com/esengine/DeepSeek-Reasonix.git
+repository_url: https://github.com/SivanCola/deeper.git
 allowed_branch_names:
-  - main-v2
+  - main
 allowed_build_definitions:
   - .github/workflows/certum-signing-smoke.yml
   - .github/workflows/release-candidate.yml

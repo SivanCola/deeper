@@ -18,7 +18,7 @@ import (
 	"runtime"
 	"syscall"
 
-	filelock "reasonix/internal/identitylock"
+	filelock "deeper/internal/identitylock"
 )
 
 const (

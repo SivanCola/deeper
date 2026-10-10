@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"reasonix/internal/mcplaunch"
+	"deeper/internal/mcplaunch"
 )
 
 // PluginSpecOptions carries host runtime policy into plugin specifications.

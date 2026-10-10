@@ -1,17 +1,17 @@
 # 权限模式
 
-Reasonix 的桌面端、CLI、Serve、ACP、机器人、自动任务和子代理共用同一套权限模式。协作方式（普通、计划、目标）决定任务如何推进；权限模式决定文件系统和进程的强制边界。
+Deeper 的桌面端、CLI、Serve、ACP、机器人、自动任务和子代理共用同一套权限模式。协作方式（普通、计划、目标）决定任务如何推进；权限模式决定文件系统和进程的强制边界。
 
 | 权限模式 | 文件系统边界 | 审批行为 |
 | --- | --- | --- |
 | **仅可查看**（`read-only`） | 工作区和会话文件只读。 | 读取直接执行；写入及未知外部副作用需要一次或本会话的精确授权。 |
 | **工作区内修改**（`workspace-write`） | 工作区及会话私有临时目录可写。 | 默认模式。命令位于边界内时，管道、命令替换、Python/Node 内联脚本、构建和测试不会仅因语法触发审批。 |
-| **完全权限**（`danger-full-access`） | 命令以当前系统账户走宿主正常执行路径，不使用 Reasonix 文件和网络沙箱。 | 跳过普通询问规则；宿主会在启动前执行显式 `deny`，但不再限制已启动进程。 |
+| **完全权限**（`danger-full-access`） | 命令以当前系统账户走宿主正常执行路径，不使用 Deeper 文件和网络沙箱。 | 跳过普通询问规则；宿主会在启动前执行显式 `deny`，但不再限制已启动进程。 |
 
-- **协作方式**（普通 / 计划 / 目标）决定 Reasonix 怎么推进任务。没有自动任务模式或可选质量底线；验证义务由真实工具动作、项目规则、任务风险和用户显式要求共同建立。
+- **协作方式**（普通 / 计划 / 目标）决定 Deeper 怎么推进任务。没有自动任务模式或可选质量底线；验证义务由真实工具动作、项目规则、任务风险和用户显式要求共同建立。
 - **权限预设**决定强制执行的文件系统与进程边界，以及何时请求精确授权。
 
-macOS 使用 Seatbelt，Linux 使用 bubblewrap；这两个平台上受限模式所需的沙箱无法启动时，Reasonix 会失败关闭，不会提示用户关闭沙箱后重试。Windows 没有 OS 级 Shell 沙箱：受限模式仍约束 Reasonix 文件工具并请求精确授权，但 Shell 命令以当前系统账户运行。
+macOS 使用 Seatbelt，Linux 使用 bubblewrap；这两个平台上受限模式所需的沙箱无法启动时，Deeper 会失败关闭，不会提示用户关闭沙箱后重试。Windows 没有 OS 级 Shell 沙箱：受限模式仍约束 Deeper 文件工具并请求精确授权，但 Shell 命令以当前系统账户运行。
 
 ## 授权范围
 
@@ -30,10 +30,10 @@ macOS 使用 Seatbelt，Linux 使用 bubblewrap；这两个平台上受限模式
 新会话默认使用工作区内修改：
 
 ```sh
-reasonix --permission-mode read-only
-reasonix --permission-mode workspace-write
-reasonix --permission-mode danger-full-access
-reasonix run --permission-mode workspace-write "运行测试"
+deeper --permission-mode read-only
+deeper --permission-mode workspace-write
+deeper --permission-mode danger-full-access
+deeper run --permission-mode workspace-write "运行测试"
 ```
 
 交互式 CLI 中，`Shift+Tab` 按“仅可查看 → 工作区内修改 → YOLO → 计划”循环，`Ctrl+Y` 可直接切换 YOLO。两个快捷键进入 YOLO 时都会设置规范权限值 `danger-full-access`。旧配置仍保守迁移：`ask` 映射为仅可查看，`auto` 和 `yolo` 映射为工作区内修改，旧值不会开启完全权限。

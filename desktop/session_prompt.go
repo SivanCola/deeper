@@ -6,10 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func systemPromptFrom(messages []provider.Message) string {

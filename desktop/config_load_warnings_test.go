@@ -60,7 +60,7 @@ func TestEmitConfigLoadWarningsRequiresContextAndOwnsPayload(t *testing.T) {
 }
 
 func TestConfigLoadWarningRevisionsFenceEventsStartedBeforeReload(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	app := &App{ctx: context.Background()}
 	type warningEvent struct {
 		warnings []string

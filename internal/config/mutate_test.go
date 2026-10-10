@@ -23,10 +23,10 @@ func TestLockUserConfigEditsSerializesRMW(t *testing.T) {
 	// Point the user config at a temp home: SaveTo renders bot connections only
 	// for user-scope paths (project configs save incrementally without them).
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	if path == "" {
-		t.Fatal("UserConfigPath is empty with REASONIX_HOME set")
+		t.Fatal("UserConfigPath is empty with DEEPER_HOME set")
 	}
 
 	const writers = 8
@@ -67,10 +67,10 @@ func TestLockUserConfigEditsSerializesRMW(t *testing.T) {
 // update lost".
 func TestConcurrentBotAndSettingsWritersKeepBothFields(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	if path == "" {
-		t.Fatal("UserConfigPath is empty with REASONIX_HOME set")
+		t.Fatal("UserConfigPath is empty with DEEPER_HOME set")
 	}
 
 	const rounds = 40
@@ -184,7 +184,7 @@ func assertUserConfigLockSerializesAcrossProcesses(t *testing.T, firstHome, seco
 		t.Fatal(err)
 	}
 	home := firstHome
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	if err := Default().SaveTo(path); err != nil {
 		t.Fatal(err)
@@ -201,13 +201,13 @@ func assertUserConfigLockSerializesAcrossProcesses(t *testing.T, firstHome, seco
 		t.Helper()
 		cmd := exec.Command(os.Args[0], "-test.run=^TestLockUserConfigEditsHelperProcess$")
 		cmd.Env = testEnvWithOverrides(map[string]string{
-			"TMPDIR":                        processTmp,
-			"REASONIX_HOME":                 processHome,
-			"REASONIX_CONFIG_LOCK_HELPER":   "1",
-			"REASONIX_CONFIG_LOCK_MODE":     mode,
-			"REASONIX_CONFIG_LOCK_STARTED":  started,
-			"REASONIX_CONFIG_LOCK_ACQUIRED": acquired,
-			"REASONIX_CONFIG_LOCK_RELEASE":  release,
+			"TMPDIR":                      processTmp,
+			"DEEPER_HOME":                 processHome,
+			"DEEPER_CONFIG_LOCK_HELPER":   "1",
+			"DEEPER_CONFIG_LOCK_MODE":     mode,
+			"DEEPER_CONFIG_LOCK_STARTED":  started,
+			"DEEPER_CONFIG_LOCK_ACQUIRED": acquired,
+			"DEEPER_CONFIG_LOCK_RELEASE":  release,
 		})
 		var output bytes.Buffer
 		cmd.Stdout = &output
@@ -284,7 +284,7 @@ func testEnvWithOverrides(overrides map[string]string) []string {
 
 func TestLockUserConfigEditsFailsClosedWhenFileLockTimesOut(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	path := UserConfigPath()
 	if err := Default().SaveTo(path); err != nil {
 		t.Fatal(err)
@@ -316,12 +316,12 @@ func TestLockUserConfigEditsFailsClosedWhenFileLockTimesOut(t *testing.T) {
 }
 
 func TestLockUserConfigEditsHelperProcess(t *testing.T) {
-	if os.Getenv("REASONIX_CONFIG_LOCK_HELPER") != "1" {
+	if os.Getenv("DEEPER_CONFIG_LOCK_HELPER") != "1" {
 		return
 	}
-	started := os.Getenv("REASONIX_CONFIG_LOCK_STARTED")
-	acquired := os.Getenv("REASONIX_CONFIG_LOCK_ACQUIRED")
-	release := os.Getenv("REASONIX_CONFIG_LOCK_RELEASE")
+	started := os.Getenv("DEEPER_CONFIG_LOCK_STARTED")
+	acquired := os.Getenv("DEEPER_CONFIG_LOCK_ACQUIRED")
+	release := os.Getenv("DEEPER_CONFIG_LOCK_RELEASE")
 	if err := os.WriteFile(started, []byte("started\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +356,7 @@ func TestLockUserConfigEditsHelperProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	switch os.Getenv("REASONIX_CONFIG_LOCK_MODE") {
+	switch os.Getenv("DEEPER_CONFIG_LOCK_MODE") {
 	case "bot":
 		cfg.Bot.Connections = []BotConnectionConfig{{
 			ID:       "cross-process",
@@ -379,7 +379,7 @@ func TestConfigEditLockCanonicalizesAliasesAndIgnoresCacheOverrides(t *testing.T
 	dir := t.TempDir()
 
 	target := filepath.Join(dir, "target.toml")
-	link := filepath.Join(dir, "reasonix.toml")
+	link := filepath.Join(dir, "deeper.toml")
 	if err := os.WriteFile(target, []byte("[agent]\ntemperature = 0.1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -399,12 +399,12 @@ func TestConfigEditLockCanonicalizesAliasesAndIgnoresCacheOverrides(t *testing.T
 		t.Fatalf("alias lock = %q, target lock = %q", aliasLock, targetLock)
 	}
 
-	t.Setenv("REASONIX_CACHE_HOME", filepath.Join(dir, "cache-a"))
+	t.Setenv("DEEPER_CACHE_HOME", filepath.Join(dir, "cache-a"))
 	first, err := configFileEditLockPath(link)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("REASONIX_CACHE_HOME", filepath.Join(dir, "cache-b"))
+	t.Setenv("DEEPER_CACHE_HOME", filepath.Join(dir, "cache-b"))
 	second, err := configFileEditLockPath(link)
 	if err != nil {
 		t.Fatal(err)
@@ -413,7 +413,7 @@ func TestConfigEditLockCanonicalizesAliasesAndIgnoresCacheOverrides(t *testing.T
 		t.Fatalf("cache override split config lock: %q != %q", first, second)
 	}
 	t.Setenv("HOME", filepath.Join(dir, "isolated-home"))
-	t.Setenv("REASONIX_HOME", filepath.Join(dir, "reasonix-home"))
+	t.Setenv("DEEPER_HOME", filepath.Join(dir, "deeper-home"))
 	t.Setenv("TMPDIR", filepath.Join(dir, "tmp-a"))
 	third, err := configFileEditLockPath(link)
 	if err != nil {
@@ -478,7 +478,7 @@ func TestConfigEditTransactionPinsSymlinkTarget(t *testing.T) {
 
 	first := filepath.Join(dir, "first.toml")
 	second := filepath.Join(dir, "second.toml")
-	link := filepath.Join(dir, "reasonix.toml")
+	link := filepath.Join(dir, "deeper.toml")
 	if err := os.WriteFile(first, []byte("[agent]\ntemperature = 0.1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -531,7 +531,7 @@ func TestConfigEditTransactionPinsSymlinkTarget(t *testing.T) {
 }
 
 func TestLoadForEditMalformedConfigCannotBeSaved(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "reasonix.toml")
+	path := filepath.Join(t.TempDir(), "deeper.toml")
 	const malformed = "[agent\ntemperature = 0.4\n"
 	if err := os.WriteFile(path, []byte(malformed), 0o644); err != nil {
 		t.Fatal(err)

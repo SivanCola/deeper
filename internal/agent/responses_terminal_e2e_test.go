@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider/responses"
+	"deeper/internal/provider/responses"
 )
 
 // Fixtures exercise the real Responses adapter and Agent without a live model.

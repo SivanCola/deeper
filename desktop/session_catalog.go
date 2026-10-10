@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/history"
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/stats"
-	"reasonix/internal/taskcatalog"
+	"deeper/internal/agent"
+	"deeper/internal/history"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/stats"
+	"deeper/internal/taskcatalog"
 )
 
 const sessionCatalogMetadataSyncTimeout = 30 * time.Second

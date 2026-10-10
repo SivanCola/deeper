@@ -3,8 +3,8 @@ package agent
 import (
 	"encoding/json"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/tool"
+	"deeper/internal/evidence"
+	"deeper/internal/tool"
 )
 
 // recordToolReceipts files the turn-scoped evidence for one executed call:

@@ -3,8 +3,8 @@ package main
 import (
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 const sessionOperationHistoricalSourcePending = "historical_source_pending"

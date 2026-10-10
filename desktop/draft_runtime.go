@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"strings"
 
-	"reasonix/desktop/internal/draftstate"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
+	"deeper/desktop/internal/draftstate"
+	"deeper/internal/config"
+	"deeper/internal/control"
 )
 
 type draftAdmissionProfile struct {

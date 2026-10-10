@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type extensionFormSubmitter interface {

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/bot"
-	"reasonix/internal/event"
+	"deeper/internal/bot"
+	"deeper/internal/event"
 )
 
 type desktopForwardTestAdapter struct {

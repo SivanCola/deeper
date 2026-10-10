@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	"reasonix/internal/jobs"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	"deeper/internal/jobs"
+	"deeper/internal/tool"
 )
 
 const (

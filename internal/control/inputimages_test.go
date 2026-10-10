@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/attachment"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/agent"
+	"deeper/internal/attachment"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/sessioninbox"
 )
 
 func writeVisionTestConfig(t *testing.T, root string) {
@@ -27,7 +27,7 @@ func writeVisionTestConfig(t *testing.T, root string) {
 		Models:       []string{"text-only", "vision-pro"},
 		VisionModels: []string{"vision-pro"},
 	}}
-	if err := cfg.SaveTo(filepath.Join(root, "reasonix.toml")); err != nil {
+	if err := cfg.SaveTo(filepath.Join(root, "deeper.toml")); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 	approveWorkspace(t, root)
@@ -59,8 +59,8 @@ func TestControllerInputImagesIgnoresNonAttachmentRefs(t *testing.T) {
 
 func TestDetectRefsOnlyKeepsMissingImageAttachments(t *testing.T) {
 	c := &Controller{workspaceRoot: t.TempDir()}
-	refs := c.detectRefs("inspect @.reasonix/attachments/missing.png and @.reasonix/attachments/missing.pdf")
-	if len(refs) != 1 || refs[0].kind != refImage || refs[0].path != ".reasonix/attachments/missing.png" {
+	refs := c.detectRefs("inspect @.deeper/attachments/missing.png and @.deeper/attachments/missing.pdf")
+	if len(refs) != 1 || refs[0].kind != refImage || refs[0].path != ".deeper/attachments/missing.png" {
 		t.Fatalf("refs = %+v, want only the missing image attachment", refs)
 	}
 }
@@ -106,7 +106,7 @@ func TestSubmitIdentifiedRejectsMissingExplicitImageBeforeRunner(t *testing.T) {
 	runner := &recordingSessionRunner{session: agent.NewSession("sys")}
 	c := newOwnedTestController(t, Options{WorkspaceRoot: workspace, Runner: runner})
 	_, err := c.SubmitIdentified(SubmissionRequest{
-		Input: "inspect @.reasonix/attachments/missing.png", Display: "inspect image",
+		Input: "inspect @.deeper/attachments/missing.png", Display: "inspect image",
 	})
 	var failures ImageReferenceFailures
 	if !errors.As(err, &failures) || len(failures) != 1 || failures[0].Code != ImageReferenceMissing {
@@ -118,7 +118,7 @@ func TestSubmitIdentifiedRejectsMissingExplicitImageBeforeRunner(t *testing.T) {
 }
 
 func TestDirectAndEditedSubmissionsRejectMissingExplicitImageBeforeRunner(t *testing.T) {
-	const input = "inspect @.reasonix/attachments/missing.png"
+	const input = "inspect @.deeper/attachments/missing.png"
 	for _, tc := range []struct {
 		name   string
 		submit func(*Controller)
@@ -200,7 +200,7 @@ func TestSubmitIdentifiedRejectsAllImagesWhenOneIsMissing(t *testing.T) {
 	}
 	runner := &recordingSessionRunner{session: agent.NewSession("sys")}
 	c := newOwnedTestController(t, Options{WorkspaceRoot: workspace, Runner: runner})
-	_, err = c.SubmitIdentified(SubmissionRequest{Input: "inspect @" + filepath.ToSlash(valid) + " @.reasonix/attachments/missing.png"})
+	_, err = c.SubmitIdentified(SubmissionRequest{Input: "inspect @" + filepath.ToSlash(valid) + " @.deeper/attachments/missing.png"})
 	var failures ImageReferenceFailures
 	if !errors.As(err, &failures) || len(failures) != 1 {
 		t.Fatalf("error = %#v, want partial-set rejection", err)
@@ -212,14 +212,14 @@ func TestSubmitIdentifiedRejectsAllImagesWhenOneIsMissing(t *testing.T) {
 
 func TestSubmitIdentifiedClassifiesExplicitImageFailuresBeforeRunner(t *testing.T) {
 	workspace := t.TempDir()
-	attachments := filepath.Join(workspace, ".reasonix", "attachments")
+	attachments := filepath.Join(workspace, ".deeper", "attachments")
 	if err := os.MkdirAll(attachments, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(attachments, "corrupt.png"), []byte("not an image"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(workspace, ".reasonix", "outside.png"), mustBase64(t, tinyPNG), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(workspace, ".deeper", "outside.png"), mustBase64(t, tinyPNG), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	tooLarge := filepath.Join(attachments, "too-large.png")
@@ -230,23 +230,23 @@ func TestSubmitIdentifiedClassifiesExplicitImageFailuresBeforeRunner(t *testing.
 		t.Fatal(err)
 	}
 	linkPath := filepath.Join(attachments, "link.png")
-	symlinkAvailable := os.Symlink(filepath.Join(workspace, ".reasonix", "outside.png"), linkPath) == nil
+	symlinkAvailable := os.Symlink(filepath.Join(workspace, ".deeper", "outside.png"), linkPath) == nil
 
 	cases := []struct {
 		name string
 		ref  string
 		code ImageReferenceFailureCode
 	}{
-		{name: "corrupt", ref: ".reasonix/attachments/corrupt.png", code: ImageReferenceUnsupported},
-		{name: "traversal", ref: ".reasonix/attachments/../outside.png", code: ImageReferenceUnsafe},
-		{name: "too large", ref: ".reasonix/attachments/too-large.png", code: ImageReferenceTooLarge},
+		{name: "corrupt", ref: ".deeper/attachments/corrupt.png", code: ImageReferenceUnsupported},
+		{name: "traversal", ref: ".deeper/attachments/../outside.png", code: ImageReferenceUnsafe},
+		{name: "too large", ref: ".deeper/attachments/too-large.png", code: ImageReferenceTooLarge},
 	}
 	if symlinkAvailable {
 		cases = append(cases, struct {
 			name string
 			ref  string
 			code ImageReferenceFailureCode
-		}{name: "symlink", ref: ".reasonix/attachments/link.png", code: ImageReferenceUnsafe})
+		}{name: "symlink", ref: ".deeper/attachments/link.png", code: ImageReferenceUnsafe})
 	}
 
 	for _, tc := range cases {
@@ -270,7 +270,7 @@ func TestSubmitIdentifiedRejectsInvocationImageBeforePreparingInvocation(t *test
 	runner := &recordingSessionRunner{session: agent.NewSession("sys")}
 	c := newOwnedTestController(t, Options{WorkspaceRoot: workspace, Runner: runner})
 	_, err := c.SubmitIdentified(SubmissionRequest{
-		Input:       "inspect @.reasonix/attachments/missing.png",
+		Input:       "inspect @.deeper/attachments/missing.png",
 		Invocations: []InvocationRequest{{Name: "missing-skill", Kind: "skill"}},
 	})
 	var failures ImageReferenceFailures
@@ -290,7 +290,7 @@ func TestEnqueueInboxRejectsMissingExplicitImageWithoutDurableItem(t *testing.T)
 		SessionDir:    dir,
 		SessionPath:   sessionPath,
 	})
-	_, err := c.EnqueueInbox(InboxRequest{Submit: "inspect @.reasonix/attachments/missing.png"})
+	_, err := c.EnqueueInbox(InboxRequest{Submit: "inspect @.deeper/attachments/missing.png"})
 	var failures ImageReferenceFailures
 	if !errors.As(err, &failures) || len(failures) != 1 || failures[0].Code != ImageReferenceMissing {
 		t.Fatalf("error = %#v, want missing image failure", err)
@@ -341,7 +341,7 @@ func TestControllerInputImagesSkipsModelImagesWhenSelectedModelIsTextOnly(t *tes
 		Models:       []string{"text-only", "vision-pro"},
 		VisionModels: []string{"vision-pro"},
 	}}
-	if err := cfg.SaveTo(filepath.Join(workspace, "reasonix.toml")); err != nil {
+	if err := cfg.SaveTo(filepath.Join(workspace, "deeper.toml")); err != nil {
 		t.Fatalf("save workspace config: %v", err)
 	}
 	approveWorkspace(t, workspace)
@@ -371,7 +371,7 @@ func TestControllerResolvesSubagentImageCandidatesForTextParent(t *testing.T) {
 		Models:       []string{"text-only", "vision-pro"},
 		VisionModels: []string{"vision-pro"},
 	}}
-	if err := cfg.SaveTo(filepath.Join(workspace, "reasonix.toml")); err != nil {
+	if err := cfg.SaveTo(filepath.Join(workspace, "deeper.toml")); err != nil {
 		t.Fatalf("save workspace config: %v", err)
 	}
 	approveWorkspace(t, workspace)
@@ -459,7 +459,7 @@ func TestResolveRefsVisionCapableImageDoesNotAskForOCR(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 	writeVisionTestConfig(t, dir)
-	const slashPath = ".reasonix/attachments/shot.png"
+	const slashPath = ".deeper/attachments/shot.png"
 	if err := os.MkdirAll(filepath.Dir(slashPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -487,7 +487,7 @@ func TestResolveRefsUnreadableImageDoesNotClaimAttached(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 	writeVisionTestConfig(t, dir)
-	const imagePath = ".reasonix/attachments/empty.png"
+	const imagePath = ".deeper/attachments/empty.png"
 	if err := os.MkdirAll(filepath.Dir(imagePath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -515,7 +515,7 @@ func TestFreezeInboxReferencesResolvesLargeImageOnce(t *testing.T) {
 		Models: []string{"deepseek-v4-flash-vision-exp"}, VisionModels: []string{"deepseek-v4-flash-vision-exp"},
 		APIKeyEnv: "DEEPSEEK_API_KEY",
 	}}
-	if err := cfg.SaveTo(filepath.Join(workspace, "reasonix.toml")); err != nil {
+	if err := cfg.SaveTo(filepath.Join(workspace, "deeper.toml")); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, workspace)
@@ -530,7 +530,7 @@ func TestFreezeInboxReferencesResolvesLargeImageOnce(t *testing.T) {
 	}
 	t.Cleanup(func() { uploadVisionFile = previousUpload })
 
-	imagePath := filepath.Join(workspace, ".reasonix", "attachments", "large.png")
+	imagePath := filepath.Join(workspace, ".deeper", "attachments", "large.png")
 	if err := os.MkdirAll(filepath.Dir(imagePath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -539,7 +539,7 @@ func TestFreezeInboxReferencesResolvesLargeImageOnce(t *testing.T) {
 	}
 	c := newOwnedTestController(t, Options{WorkspaceRoot: workspace})
 	c.selection.ref = cfg.DefaultModel
-	env := sessioninbox.PromptEnvelope{SubmitText: "look", ExplicitRefs: []string{filepath.ToSlash(filepath.Join(".reasonix", "attachments", "large.png"))}}
+	env := sessioninbox.PromptEnvelope{SubmitText: "look", ExplicitRefs: []string{filepath.ToSlash(filepath.Join(".deeper", "attachments", "large.png"))}}
 	if err := c.freezeInboxEnvelopeReferences(t.Context(), &env, env.SubmitText, env.ExplicitRefs); err != nil {
 		t.Fatal(err)
 	}
@@ -584,7 +584,7 @@ func TestControllerUploadsLargeOfficialDeepSeekImageViaFilesAPI(t *testing.T) {
 		VisionModels: []string{"deepseek-v4-flash-vision-exp"},
 		APIKeyEnv:    "DEEPSEEK_API_KEY",
 	}}
-	if err := cfg.SaveTo(filepath.Join(workspace, "reasonix.toml")); err != nil {
+	if err := cfg.SaveTo(filepath.Join(workspace, "deeper.toml")); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, workspace)
@@ -600,7 +600,7 @@ func TestControllerUploadsLargeOfficialDeepSeekImageViaFilesAPI(t *testing.T) {
 	}
 	t.Cleanup(func() { uploadVisionFile = prevUpload })
 
-	path := filepath.Join(workspace, ".reasonix", "attachments", "big.png")
+	path := filepath.Join(workspace, ".deeper", "attachments", "big.png")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -609,7 +609,7 @@ func TestControllerUploadsLargeOfficialDeepSeekImageViaFilesAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := &Controller{workspaceRoot: workspace, selection: modelSelection{ref: "deepseek/deepseek-v4-flash-vision-exp"}}
-	got := c.inputImages("look at @.reasonix/attachments/big.png")
+	got := c.inputImages("look at @.deeper/attachments/big.png")
 	if len(got) != 1 || got[0] != "file-api-uploaded0001" {
 		t.Fatalf("inputImages = %v, want uploaded file_id", got)
 	}

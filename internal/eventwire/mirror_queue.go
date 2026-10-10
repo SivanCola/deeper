@@ -3,7 +3,7 @@ package eventwire
 import (
 	"encoding/json"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 const (

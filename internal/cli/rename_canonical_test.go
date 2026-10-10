@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/i18n"
+	"deeper/internal/i18n"
 )
 
 func TestRenameCurrentCanonicalSessionWritesTitleEvent(t *testing.T) {

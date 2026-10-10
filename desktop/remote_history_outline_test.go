@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"reasonix/internal/servecontract"
-	"reasonix/internal/session"
+	"deeper/internal/servecontract"
+	"deeper/internal/session"
 )
 
 func TestRemoteHistoryOutlineCapabilityCutAndFailure(t *testing.T) {

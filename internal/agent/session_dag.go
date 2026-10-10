@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // Schema 2 of <id>.events.jsonl is an append-only DAG: every message entry

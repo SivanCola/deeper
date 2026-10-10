@@ -297,7 +297,7 @@ func serveUntilHello(conn *net.UnixConn, helloStarted chan<- struct{}) error {
 	if err := writeLine("OK 0123456789abcdef0123456789abcdef"); err != nil {
 		return err
 	}
-	if err := readLine("NEGOTIATE_UNIX_FD"); err != nil {
+	if err := readLine("NEGOTIATE_UDEEPER_FD"); err != nil {
 		return err
 	}
 	if err := writeLine("ERROR"); err != nil {

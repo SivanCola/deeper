@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/permissionpreset"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/permissionpreset"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 func (b bash) Schema() json.RawMessage {

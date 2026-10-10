@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readGrantReport, stripPackageGrants, unpaintedWindowCause } from "./packageGrants.js";
 
-const exe = String.raw`C:\Apps\Reasonix\versions\v1.39.1\app\Reasonix.exe`;
+const exe = String.raw`C:\Apps\Deeper\versions\v1.39.1\app\Deeper.exe`;
 const quiet = () => {};
 
 test("package grants are only stripped from a packaged Windows install", () => {
@@ -14,12 +14,12 @@ test("package grants are only stripped from a packaged Windows install", () => {
   let called: { binary: string; args: string[] } | undefined;
   const run = (binary: string, args: string[]) => {
     called = { binary, args };
-    return JSON.stringify({ stripped: [String.raw`C:\Apps\Reasonix`], refused: [{ path: String.raw`C:\Apps\Reasonix\ffmpeg.dll` }] }) + "\n";
+    return JSON.stringify({ stripped: [String.raw`C:\Apps\Deeper`], refused: [{ path: String.raw`C:\Apps\Deeper\ffmpeg.dll` }] }) + "\n";
   };
   const report = stripPackageGrants("svc", { platform: "win32", packaged: true, execPath: exe }, quiet, run);
   // The service is told which application, never which directory.
   assert.deepEqual(called, { binary: "svc", args: ["-strip-package-grants", "-app", exe] });
-  assert.deepEqual(report, { stripped: [String.raw`C:\Apps\Reasonix`], refused: [String.raw`C:\Apps\Reasonix\ffmpeg.dll`] });
+  assert.deepEqual(report, { stripped: [String.raw`C:\Apps\Deeper`], refused: [String.raw`C:\Apps\Deeper\ffmpeg.dll`] });
 });
 
 test("a grant report that does not parse is no report at all", () => {

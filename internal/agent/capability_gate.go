@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/skill"
+	"deeper/internal/capability"
+	"deeper/internal/skill"
 )
 
 // capabilityGateState is one user turn's gate memory, scoped to the same turn

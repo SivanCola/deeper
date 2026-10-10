@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/capability"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 func TestUseCapabilitySkillCallAcceptsStringArgumentsPayload(t *testing.T) {

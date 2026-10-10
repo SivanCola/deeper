@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func windowReady(t *testing.T, query *Query, ref SessionRef, req HistoryWindowRequest) HistoryWindowPage {

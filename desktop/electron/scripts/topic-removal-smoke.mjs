@@ -9,13 +9,13 @@ import { _electron } from "playwright";
 import { setTimeout as delay } from "node:timers/promises";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const home = mkdtempSync(join(tmpdir(), "reasonix-topic-removal-"));
+const home = mkdtempSync(join(tmpdir(), "deeper-topic-removal-"));
 const workspace = join(home, "workspace");
 mkdirSync(workspace);
 const report = { home, mode: "development shell and service; controlled native confirmation", checks: [], errors: [] };
 const check = name => { report.checks.push(name); console.log(`PASS ${name}`); };
 let shell, page;
-const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.reasonixDesktop.invoke(method, args), { method, args });
+const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
 async function poll(read, matches) {
   const deadline = Date.now() + 60000;
   for (;;) {
@@ -27,8 +27,8 @@ async function poll(read, matches) {
 }
 async function launch() {
   shell = await _electron.launch({ args: [root], env: { ...process.env,
-    REASONIX_HOME: home, REASONIX_STATE_HOME: home, REASONIX_CACHE_HOME: join(home, "cache"),
-    REASONIX_DEV: "1", REASONIX_DESKTOP_SERVICE: resolve(root, "../build/bin/reasonix-desktop-service"),
+    DEEPER_HOME: home, DEEPER_STATE_HOME: home, DEEPER_CACHE_HOME: join(home, "cache"),
+    DEEPER_DEV: "1", DEEPER_DESKTOP_SERVICE: resolve(root, "../build/bin/deeper-desktop-service"),
   }, timeout: 60000 });
   page = await shell.firstWindow();
   page.setDefaultTimeout(30000);
@@ -36,7 +36,7 @@ async function launch() {
   // Back button before operating the draft behind it; no provider is needed.
   await page.addLocatorHandler(page.locator(".settings-screen[data-app-overlay] .management-screen__back"), async back => { await back.click(); });
   page.on("pageerror", error => report.errors.push(error.message));
-  await page.waitForFunction(() => Boolean(window.reasonixDesktop) && !document.querySelector(".boot-shell"), null, { timeout: 60000 });
+  await page.waitForFunction(() => Boolean(window.deeperDesktop) && !document.querySelector(".boot-shell"), null, { timeout: 60000 });
   await shell.evaluate(({ dialog }) => {
     globalThis.__topicRemovalDialogs = [];
     globalThis.__topicRemovalAccept = false;
@@ -79,7 +79,7 @@ try {
   const draft = await openDraft("project", workspace);
   const composer = page.locator("textarea.composer__input:not([aria-hidden=true])");
   await composer.fill("Keep this draft until confirmed");
-  await page.evaluate(() => window.__reasonixFlushSessionDraft?.());
+  await page.evaluate(() => window.__deeperFlushSessionDraft?.());
   await page.locator(".sidebar__quick-action").click();
   const projectFolder = page.locator(".project-tree__folder--project").first();
   const projectCreate = projectFolder.locator(".project-tree__folder-action--create");

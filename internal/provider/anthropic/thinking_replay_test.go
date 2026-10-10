@@ -2,10 +2,10 @@ package anthropic
 
 import (
 	"context"
+	"deeper/internal/provider"
 	"encoding/json"
 	"io"
 	"net/http"
-	"reasonix/internal/provider"
 	"strings"
 	"testing"
 )

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/transcript"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/transcript"
 )
 
 // The shape reproduces the reported long tool-driven turn without any copied

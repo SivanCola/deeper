@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 func TestSingleSurfaceReopenUsesNewTabBindingForStableSession(t *testing.T) {

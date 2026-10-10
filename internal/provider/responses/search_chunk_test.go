@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestStreamEmitsTypedServerSearchFromWebSearchCall(t *testing.T) {

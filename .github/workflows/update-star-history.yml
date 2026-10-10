@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main-v2
+      - main
     paths:
       - '.github/workflows/update-star-history.yml'
       - 'scripts/update-star-history.mjs'
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   update:
-    if: github.repository == 'esengine/DeepSeek-Reasonix'
+    if: github.repository == 'SivanCola/deeper'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

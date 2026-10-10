@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/historywork"
+	"deeper/internal/session"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/historywork"
-	"reasonix/internal/session"
 	"strconv"
 	"strings"
 	"time"
@@ -621,7 +621,7 @@ func (a *App) CopySessionTarget(selector SessionSelector, operationID string) (S
 }
 
 func (a *App) copyLegacySessionTarget(target SessionTarget, child session.SessionRef, operationID, cwd string) error {
-	container, err := os.MkdirTemp("", "reasonix-legacy-copy-")
+	container, err := os.MkdirTemp("", "deeper-legacy-copy-")
 	if err != nil {
 		return err
 	}

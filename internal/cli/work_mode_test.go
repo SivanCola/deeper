@@ -8,11 +8,11 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/boot"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 func resetPresetDeprecationForTest() {

@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/historywork"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/historywork"
+	"deeper/internal/store"
 )
 
 // metadataRecord never opens the transcript, display index, or event log.

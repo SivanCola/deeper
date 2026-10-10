@@ -1,8 +1,8 @@
 # 历史搜索 Catalog
 
-Reasonix 将历史搜索投影保存到 `<cache root>/history-search/v1.sqlite`。
+Deeper 将历史搜索投影保存到 `<cache root>/history-search/v1.sqlite`。
 Session JSONL、event log、metadata、子 Agent transcript 和 archive 仍是唯一权威
-数据。删除或重建数据库不会删除会话，旧版 Reasonix 也继续读取原有权威文件。
+数据。删除或重建数据库不会删除会话，旧版 Deeper 也继续读取原有权威文件。
 
 Catalog 的 FTS5 只保存规范化检索 token，不保存完整消息正文。英文沿用现有小写与
 代码符号语义，CJK 沿用重叠 bigram。SQLite 选出最终候选后，snippet 和 `around`
@@ -28,8 +28,8 @@ Agent 的 `history` 工具与 Desktop 历史管理器共享该投影。搜索不
 诊断与安全重建命令：
 
 ```sh
-reasonix doctor catalogs [--json]
-reasonix catalogs reindex history [--dir PATH ...] [--json]
+deeper doctor catalogs [--json]
+deeper catalogs reindex history [--dir PATH ...] [--json]
 ```
 
 诊断不会输出 query、token、snippet、消息、tool arguments 或 provider 内容；reindex

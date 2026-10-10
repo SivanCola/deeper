@@ -1,8 +1,8 @@
-// Package bootstrap starts and manages a detached `reasonix serve` process on
+// Package bootstrap starts and manages a detached `deeper serve` process on
 // a remote host over an established SSH connection. It detects the remote
-// OS/arch, locates or installs reasonix, launches serve bound to a random
+// OS/arch, locates or installs deeper, launches serve bound to a random
 // loopback port with a file-based token (never in argv), and records the
-// result under the remote ~/.reasonix/remote so a later reconnect can reuse
+// result under the remote ~/.deeper/remote so a later reconnect can reuse
 // it. V1 targets Linux and macOS remotes.
 package bootstrap
 
@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/remote"
-	"reasonix/internal/remote/sftpfs"
+	"deeper/internal/remote"
+	"deeper/internal/remote/sftpfs"
 )
 
 // Conn is the subset of *remote.Client bootstrap needs. *remote.Client
@@ -49,7 +49,7 @@ const MinServeVersion = "flag:port-file"
 type Options struct {
 	Workspace      string                                                        // remote workspace path (may start with ~)
 	Install        string                                                        // auto|npm|upload|never
-	LocalBinary    string                                                        // path to the running reasonix binary, for same-platform upload
+	LocalBinary    string                                                        // path to the running deeper binary, for same-platform upload
 	LocalGOOS      string                                                        // GOOS of LocalBinary
 	LocalGOARCH    string                                                        // GOARCH of LocalBinary
 	ProductVersion string                                                        // exact local release used for a cross-platform official download
@@ -129,7 +129,7 @@ func EnsureServe(ctx context.Context, conn Conn, opts Options) (Result, error) {
 		return Result{}, err
 	}
 
-	// 3. Locate or install a usable reasonix.
+	// 3. Locate or install a usable deeper.
 	bin, version, err := ensureBinary(ctx, conn, fs, opts, home, goos, goarch, paths)
 	if err != nil {
 		return Result{}, err
@@ -188,7 +188,7 @@ func EnsureServe(ctx context.Context, conn Conn, opts Options) (Result, error) {
 	}
 	if pid <= 0 || !pidIsServe(ctx, conn, pid, paths) {
 		cleanupFailedLaunch(conn, fs, paths, pid)
-		return Result{}, errors.New("bootstrap: launched process did not become the expected reasonix serve")
+		return Result{}, errors.New("bootstrap: launched process did not become the expected deeper serve")
 	}
 
 	st := ServeState{
@@ -398,7 +398,7 @@ func supportsRequiredServeCapabilities(ctx context.Context, conn Conn, pid int) 
 	return err == nil && strings.TrimSpace(string(res.Stdout)) == "yes"
 }
 
-// pidIsServe reports whether pid is running AND is a reasonix serve process,
+// pidIsServe reports whether pid is running AND is a deeper serve process,
 // so PID reuse cannot make an unrelated process look like a live serve.
 func pidIsServe(ctx context.Context, conn Conn, pid int, paths StatePaths, requireArgs ...string) bool {
 	if pid <= 0 {

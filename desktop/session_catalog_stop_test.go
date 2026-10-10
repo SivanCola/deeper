@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/sessioncatalog"
-	"reasonix/internal/sqliteuri"
+	"deeper/internal/sessioncatalog"
+	"deeper/internal/sqliteuri"
 )
 
 func TestStopSessionCatalogWaitsForEarlierTimedOutClose(t *testing.T) {

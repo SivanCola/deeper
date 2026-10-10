@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/guardian"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/guardian"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // /clear must not leave the event log behind: it is the authoritative

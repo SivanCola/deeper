@@ -10,8 +10,8 @@ import (
 
 	"github.com/pkg/sftp"
 
-	"reasonix/internal/remote"
-	"reasonix/internal/remote/sftpfs"
+	"deeper/internal/remote"
+	"deeper/internal/remote/sftpfs"
 )
 
 type releaseRaceFS struct {

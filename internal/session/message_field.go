@@ -11,8 +11,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/projectiondb"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/projectiondb"
+	"deeper/internal/sessioncontent"
 )
 
 // Per-field message body reading (history-window-v1 companion): a client

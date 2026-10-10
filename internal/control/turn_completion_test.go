@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 type completionCountingSink struct {

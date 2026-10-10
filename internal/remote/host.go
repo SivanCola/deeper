@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 // ResolvedHost is a fully resolved dial target: explicit [remote] TOML fields
@@ -127,7 +127,7 @@ func ResolveHost(cfg *config.Config, nameOrTarget string, sshCfg *SSHConfigSourc
 	return r, nil
 }
 
-// ResolveJumpHosts resolves every ProxyJump token through the same Reasonix
+// ResolveJumpHosts resolves every ProxyJump token through the same Deeper
 // host table and ~/.ssh/config layers as the final target. A jump entry's own
 // ProxyJump is deliberately cleared: the caller-provided chain is already the
 // complete left-to-right route, and recursively expanding nested chains would

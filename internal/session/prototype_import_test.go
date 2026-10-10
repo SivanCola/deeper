@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/filelock"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/filelock"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
 )
 
 func writePrototypeStore(t *testing.T, dir string, events []Event, torn string) {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 func deepSeekV4FlashPriceCNY() *provider.Pricing {
@@ -562,7 +562,7 @@ func IsOfficialDeepSeekProvider(p *ProviderEntry) bool {
 	return officialProviderKind(p) == "deepseek"
 }
 
-// IsKnownDeepSeekOfficialPricing reports whether price is one of Reasonix's
+// IsKnownDeepSeekOfficialPricing reports whether price is one of Deeper's
 // built-in DeepSeek regional defaults for model.
 func IsKnownDeepSeekOfficialPricing(model string, price *provider.Pricing) bool {
 	return isKnownDeepSeekOfficialPricing(model, price)

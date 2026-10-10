@@ -7,8 +7,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 func (m *chatTUI) showBranchTree() {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	goaldomain "reasonix/internal/goal"
+	goaldomain "deeper/internal/goal"
 )
 
 // EditGoalDurable edits the current v3 Goal without replacing its identity or

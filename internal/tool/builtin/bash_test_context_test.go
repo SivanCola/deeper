@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 func requirePOSIXShellTest(t *testing.T) {

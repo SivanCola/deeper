@@ -3,7 +3,7 @@ package cli
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"reasonix/internal/memory"
+	"deeper/internal/memory"
 )
 
 // showContextReport prints the window, the thresholds derived from it, and how

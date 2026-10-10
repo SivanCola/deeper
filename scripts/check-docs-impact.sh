@@ -17,7 +17,7 @@ else
 	base="${DOCS_IMPACT_BASE_SHA:-${BASE_SHA:-}}"
 	head="${DOCS_IMPACT_HEAD_SHA:-${HEAD_SHA:-HEAD}}"
 	if [ -z "$base" ]; then
-		base="$(git merge-base origin/main-v2 "$head" 2>/dev/null || git merge-base main-v2 "$head")"
+		base="$(git merge-base origin/main "$head" 2>/dev/null || git merge-base main "$head")"
 	fi
 	diff_base="$base"
 	if merge_base="$(git merge-base "$base" "$head" 2>/dev/null)"; then
@@ -39,7 +39,7 @@ while IFS= read -r file; do
 			;;
 	esac
 	case "$file" in
-		cmd/reasonix/*|\
+		cmd/deeper/*|\
 		desktop/*|\
 		internal/agent/*|\
 		internal/boot/*|\

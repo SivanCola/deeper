@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/fileutil"
-	filelock "reasonix/internal/identitylock"
+	"deeper/internal/fileutil"
+	filelock "deeper/internal/identitylock"
 )
 
 type frozenPreview struct {
@@ -140,7 +140,7 @@ func freezePreviewCodec(ctx context.Context, sourceDir string, allowCurrent bool
 	if draftCodec {
 		logName = currentLogName
 	}
-	freezeDir, err := os.MkdirTemp("", "reasonix-preview-freeze-*")
+	freezeDir, err := os.MkdirTemp("", "deeper-preview-freeze-*")
 	if err != nil {
 		return frozenPreview{}, err
 	}

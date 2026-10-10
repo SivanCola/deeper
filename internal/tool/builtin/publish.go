@@ -8,8 +8,8 @@ import (
 	"io"
 	"os"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/tool"
+	"deeper/internal/fileops"
+	"deeper/internal/tool"
 )
 
 // ErrFileChanged is returned when a structured write tool re-reads the target

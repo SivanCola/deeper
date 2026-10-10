@@ -7,11 +7,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/config"
-	"reasonix/internal/diff"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/checkpoint"
+	"deeper/internal/config"
+	"deeper/internal/diff"
+	"deeper/internal/provider"
 )
 
 // checkpointManager owns the snapshot-based rewind bookkeeping: the per-session

@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"slices"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/fileutil"
+	"deeper/internal/session"
 )
 
 func desktopLegacySourceFiles(path, pairedRoot string) []string {

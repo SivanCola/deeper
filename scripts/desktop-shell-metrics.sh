@@ -16,7 +16,7 @@ label="${2:?label}"
 out="${3:?out.json}"
 idle="${4:-30}"
 
-home="$(mktemp -d "${TMPDIR:-/tmp}/reasonix-shell-metrics.XXXXXX")"
+home="$(mktemp -d "${TMPDIR:-/tmp}/deeper-shell-metrics.XXXXXX")"
 cleanup() {
 	if [ -n "${pid:-}" ] && kill -0 "$pid" 2>/dev/null; then
 		kill -TERM "$pid" 2>/dev/null || true
@@ -64,7 +64,7 @@ def descend(p):
             family.add(q); descend(q)
 if root in procs:
     family.add(root); descend(root)
-helpers = ("WebKit", "Reasonix Helper", "reasonix-desktop", "Electron Helper", "reasonix", "chrome_crashpad")
+helpers = ("WebKit", "Deeper Helper", "deeper-desktop", "Electron Helper", "deeper", "chrome_crashpad")
 for p, (pp, rss, epoch, comm) in procs.items():
     if p in family:
         continue
@@ -92,7 +92,7 @@ for path in sorted(paths, key=os.path.getmtime, reverse=True):
 PY
 }
 
-export REASONIX_HOME="$home" REASONIX_STATE_HOME="$home" REASONIX_CACHE_HOME="$home/cache" REASONIX_DEV=1
+export DEEPER_HOME="$home" DEEPER_STATE_HOME="$home" DEEPER_CACHE_HOME="$home/cache" DEEPER_DEV=1
 launch_epoch="$(python3 -c 'import time; print(time.time())')"
 t0="$(now_ms)"
 "$exe" >"$home/stdout.log" 2>"$home/stderr.log" &

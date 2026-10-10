@@ -11,8 +11,8 @@ import (
 	"image/png"
 	"sync"
 
+	"deeper/internal/sessioncontent"
 	xdraw "golang.org/x/image/draw"
-	"reasonix/internal/sessioncontent"
 )
 
 type variantKey struct {

@@ -9,10 +9,10 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/provider"
-	_ "reasonix/internal/provider/anthropic"
-	_ "reasonix/internal/provider/openai"
-	_ "reasonix/internal/provider/responses"
+	"deeper/internal/provider"
+	_ "deeper/internal/provider/anthropic"
+	_ "deeper/internal/provider/openai"
+	_ "deeper/internal/provider/responses"
 )
 
 func TestAdapterReasoningExactSelectionBeforeIO(t *testing.T) {

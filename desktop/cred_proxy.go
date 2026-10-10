@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
+	"deeper/internal/config"
+	"deeper/internal/netclient"
 )
 
 // Local-proxy mode tunnels model calls to this desktop, which swaps a scoped
@@ -30,7 +30,7 @@ import (
 
 // credentialProxyProviderName is the provider entry the bootstrap installs in
 // the remote config; the serve launches with --model <name>.
-const credentialProxyProviderName = "reasonix-desktop-proxy"
+const credentialProxyProviderName = "deeper-desktop-proxy"
 
 type credProxyRoute struct {
 	modelSnapshot *config.Config
@@ -329,7 +329,7 @@ func (a *App) credentialProxySecret() (string, error) {
 // controller. This is the cross-process half of failure-atomic model switches.
 func credentialProxyModelTokenFor(secret, hostID, workspace, modelRef string, revisions ...string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write([]byte("reasonix-credential-proxy-model:v3"))
+	_, _ = mac.Write([]byte("deeper-credential-proxy-model:v3"))
 	for _, field := range append([]string{hostID, workspace, modelRef}, revisions...) {
 		var size [8]byte
 		binary.BigEndian.PutUint64(size[:], uint64(len(field)))

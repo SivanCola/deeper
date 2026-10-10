@@ -5,7 +5,7 @@ import { beneath, internalRoots, listPackages, runGoTest } from "./go-test-group
 // Packages that carry darwin-tagged or _darwin sources — the only root-module
 // code whose behaviour a Linux leg cannot prove. Pull requests run this set so
 // the scarce macOS runners are not spent re-running the suite Linux already
-// covers; pushes to main-v2 keep the full ./... sweep as the safety net. The
+// covers; pushes to main keep the full ./... sweep as the safety net. The
 // list is enforced against the tree by macos-go-tests.test.mjs, so a new
 // darwin source cannot quietly fall outside the pull-request lane.
 export const darwinRoots = internalRoots(

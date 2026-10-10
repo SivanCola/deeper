@@ -1,9 +1,9 @@
 package serve
 
 import (
+	"deeper/internal/control"
+	"deeper/internal/provider"
 	"net/http"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
 	"strings"
 )
 

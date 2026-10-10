@@ -7,7 +7,7 @@
 
 **Goal:** Implement the host-managed AutoResearch runtime from the design spec, including durable state, controller integration, desktop API, and frontend visibility.
 
-**Architecture:** Add `internal/autoresearch` as the source of truth for task state under `.reasonix/autoresearch/<task-id>/`. Goal controller code creates, resumes, summarizes, heartbeats, and gates completion through that package. Desktop and frontend read compact status metadata for the active tab and fetch heavier details on demand.
+**Architecture:** Add `internal/autoresearch` as the source of truth for task state under `.deeper/autoresearch/<task-id>/`. Goal controller code creates, resumes, summarizes, heartbeats, and gates completion through that package. Desktop and frontend read compact status metadata for the active tab and fetch heavier details on demand.
 
 **Tech Stack:** Go standard library, existing `internal/control` goal FSM, desktop Wails bindings, React/TypeScript frontend, existing Go and frontend test runners.
 
@@ -23,7 +23,7 @@
 - Create: `internal/autoresearch/schema.go`
 - Create: `internal/autoresearch/store_test.go`
 
-- [ ] Write failing tests that prove `CreateTask` creates `.reasonix/autoresearch/<task-id>/state` and `logs`, writes `task_spec.json`, `progress.json`, empty JSONL files, and validates required fields.
+- [ ] Write failing tests that prove `CreateTask` creates `.deeper/autoresearch/<task-id>/state` and `logs`, writes `task_spec.json`, `progress.json`, empty JSONL files, and validates required fields.
 - [ ] Run: `go test ./internal/autoresearch -run 'TestCreateTask|TestValidateTask' -count=1`
 - [ ] Implement types, task id generation, atomic JSON writes, JSONL append validation, `CreateTask`, `LoadTask`, `ValidateTask`.
 - [ ] Run: `go test ./internal/autoresearch -count=1`

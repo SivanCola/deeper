@@ -12,11 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/rpcwire"
-	"reasonix/internal/pluginpkg"
-	"reasonix/internal/secrets"
+	"deeper/internal/extension"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/rpcwire"
+	"deeper/internal/pluginpkg"
+	"deeper/internal/secrets"
 )
 
 // Lifecycle budgets.

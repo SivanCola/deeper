@@ -2,10 +2,10 @@ package agent
 
 import (
 	"context"
-	"reasonix/internal/event"
-	"reasonix/internal/plancontract"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/plancontract"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 	"reflect"
 	"testing"
 )

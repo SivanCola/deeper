@@ -4,27 +4,27 @@ import test from "node:test";
 import { isolatedGroups, selectPackages, testArgs } from "./windows-go-tests.mjs";
 import { windowsPRContractArgs, windowsPRContractGroups } from "./windows-pr-contract-tests.mjs";
 
-const packages = ["reasonix/cmd/reasonix", "reasonix/internal/agent", "reasonix/internal/agent/testutil",
-  "reasonix/internal/acp", "reasonix/internal/agentpreset", "reasonix/internal/boot", "reasonix/internal/bot", "reasonix/internal/control",
-  "reasonix/internal/control/child", "reasonix/internal/extension/sidecar", "reasonix/internal/proc",
-  "reasonix/internal/serve", "reasonix/internal/session", "reasonix/internal/worktree",
-  "reasonix/internal/lsp", "reasonix/internal/fileops", "reasonix/internal/newpackage", "reasonix/internal/projectiondb",
-  "reasonix/internal/sessioncatalog", "reasonix/internal/sqliteuri", "reasonix/internal/topicstate",
-  "reasonix/internal/winaclresidue", "reasonix/tools/repolint"];
+const packages = ["deeper/cmd/deeper", "deeper/internal/agent", "deeper/internal/agent/testutil",
+  "deeper/internal/acp", "deeper/internal/agentpreset", "deeper/internal/boot", "deeper/internal/bot", "deeper/internal/control",
+  "deeper/internal/control/child", "deeper/internal/extension/sidecar", "deeper/internal/proc",
+  "deeper/internal/serve", "deeper/internal/session", "deeper/internal/worktree",
+  "deeper/internal/lsp", "deeper/internal/fileops", "deeper/internal/newpackage", "deeper/internal/projectiondb",
+  "deeper/internal/sessioncatalog", "deeper/internal/sqliteuri", "deeper/internal/topicstate",
+  "deeper/internal/winaclresidue", "deeper/tools/repolint"];
 
 test("the full Windows groups cover every package exactly once, including new packages", () => {
   const grouped = ["full", ...isolatedGroups].flatMap(group => selectPackages(packages, group));
   assert.deepEqual(grouped.toSorted(), packages.toSorted());
   assert.equal(new Set(grouped).size, grouped.length);
-  assert.ok(selectPackages(packages, "full").includes("reasonix/internal/agentpreset"));
+  assert.ok(selectPackages(packages, "full").includes("deeper/internal/agentpreset"));
 });
 
 test("PR smoke keeps platform coverage without duplicating isolated suites", () => {
   assert.deepEqual(selectPackages(packages, "smoke"), [
-    "reasonix/cmd/reasonix", "reasonix/internal/extension/sidecar", "reasonix/internal/proc", "reasonix/internal/lsp",
-    "reasonix/internal/fileops",
-    "reasonix/internal/projectiondb", "reasonix/internal/sessioncatalog", "reasonix/internal/sqliteuri",
-    "reasonix/internal/topicstate", "reasonix/internal/winaclresidue",
+    "deeper/cmd/deeper", "deeper/internal/extension/sidecar", "deeper/internal/proc", "deeper/internal/lsp",
+    "deeper/internal/fileops",
+    "deeper/internal/projectiondb", "deeper/internal/sessioncatalog", "deeper/internal/sqliteuri",
+    "deeper/internal/topicstate", "deeper/internal/winaclresidue",
   ]);
   for (const group of isolatedGroups) {
     assert.deepEqual(testArgs(packages, group).slice(0, 4), ["test", "-p", "1", "-timeout=8m"]);
@@ -80,6 +80,6 @@ test("Windows PR contract selector covers shell identity, lifecycle and cancella
 
 test("Windows PR smoke executes the native junction and lock owners", () => {
   const native = ["pathidentity", "identitylock", "workspacelease", "desktopinstance", "sessioncatalog"]
-    .map(name => `reasonix/internal/${name}`);
+    .map(name => `deeper/internal/${name}`);
   assert.deepEqual(selectPackages(native, "smoke"), native);
 });

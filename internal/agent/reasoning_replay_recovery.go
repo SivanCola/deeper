@@ -1,9 +1,9 @@
 package agent
 
 import (
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
+	"deeper/internal/provider"
 )
 
 // reasoningReplayRecoveryBudget bounds the thinking-400 catch-and-repair to one

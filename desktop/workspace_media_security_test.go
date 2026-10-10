@@ -148,7 +148,7 @@ func TestMarkdownMediaTokenBindsAuthorizedIdentity(t *testing.T) {
 		t.Error("fallback handler should not be called")
 	}))
 	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/__reasonix_workspace_media/"+token+"/shot.png", nil))
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/__deeper_workspace_media/"+token+"/shot.png", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("replacement identity response = %d, want 404", rec.Code)
 	}

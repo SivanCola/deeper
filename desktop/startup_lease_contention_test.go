@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
+	"deeper/internal/agent"
+	"deeper/internal/config"
 )
 
 // TestEnsureTabSessionLeaseForRebuildSurvivesTransientHolder reproduces the
-// startup "this session is already open in another Reasonix window" false
+// startup "this session is already open in another Deeper window" false
 // positive: a transient lease holder — CleanupStaleRunning probing a running
 // subagent's parent session during a concurrent controller build — holds the
 // session lease for a few milliseconds while the tab's own startup bind runs.

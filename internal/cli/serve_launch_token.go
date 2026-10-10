@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/fileutil"
+	"deeper/internal/config"
+	"deeper/internal/fileutil"
 )
 
 // writeLaunchTokenFile leaves the launch token a serve's clients need
@@ -17,7 +17,7 @@ import (
 // multiplexer's scrollback.
 func writeLaunchTokenFile(dir, token string) (string, error) {
 	if strings.TrimSpace(dir) == "" {
-		return "", errors.New("cannot store the launch token: Reasonix home is empty")
+		return "", errors.New("cannot store the launch token: Deeper home is empty")
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err

@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/session"
+import "deeper/internal/session"
 
 // Resolve the durable identity before publishing a readable topic surface.
 // Runtime ownership and controller startup belong to the existing tab build,

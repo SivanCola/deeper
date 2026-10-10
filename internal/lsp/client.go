@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/proc"
-	"reasonix/internal/secrets"
+	"deeper/internal/proc"
+	"deeper/internal/secrets"
 )
 
 // docState tracks what we last sent the server for a document, so ensureSynced

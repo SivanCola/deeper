@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { decideCaskUpdate } from "./publish-homebrew-cask.mjs";
 
-const cask = version => `cask "reasonix" do\n  version "${version}"\nend\n`;
+const cask = version => `cask "deeper" do\n  version "${version}"\nend\n`;
 
 test("reuses an identical cask", () => assert.equal(decideCaskUpdate(cask("1.2.3"), cask("1.2.3")), "reuse"));
 test("publishes a newer cask", () => assert.equal(decideCaskUpdate(cask("1.2.3"), cask("1.2.4")), "publish"));

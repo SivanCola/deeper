@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"deeper/internal/sessioncatalog"
 	"github.com/fsnotify/fsnotify"
-	"reasonix/internal/sessioncatalog"
 )
 
 type recoveringCatalogWatch struct {

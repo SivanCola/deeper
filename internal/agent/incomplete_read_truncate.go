@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"reasonix/internal/i18n"
+	"deeper/internal/i18n"
 )
 
 // truncateReadFileOutput returns a contiguous prefix on a complete rendered

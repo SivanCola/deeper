@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/identitylock"
+	"deeper/internal/identitylock"
 )
 
 func TestManualCreationWaitsForSupersededBuildActualExit(t *testing.T) {

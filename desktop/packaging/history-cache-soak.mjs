@@ -1,5 +1,5 @@
 // Real renderer navigation and cache accounting in an unchanged macOS bundle.
-// Usage: node desktop/packaging/history-cache-soak.mjs /path/Reasonix.app
+// Usage: node desktop/packaging/history-cache-soak.mjs /path/Deeper.app
 // The bench URL only enables the existing diagnostic hook; all data, RPCs,
 // writer fences, and shell/service identity checks remain production paths.
 import assert from "node:assert/strict";
@@ -18,7 +18,7 @@ assert.equal(platform(), "darwin");
 const bundle = resolve(process.argv[2]);
 const require = createRequire(new URL("../electron/package.json", import.meta.url));
 const { _electron } = require("playwright");
-const home = mkdtempSync(join(tmpdir(), "reasonix-history-cache-"));
+const home = mkdtempSync(join(tmpdir(), "deeper-history-cache-"));
 const resultPath = `${home}.results.json`;
 const dir = join(home, "sessions");
 mkdirSync(dir);
@@ -46,8 +46,8 @@ const report = { build: JSON.parse(readFileSync(join(bundle, "Contents/Resources
   machine: { platform: platform(), arch: arch() }, complete: false, samples: [],
   scope: "Real UI navigation, bidirectional paging, cache accounting, worker drain and SVG object URL release for checkpoint/schema-1 fixtures; not whole-process memory or idle-runtime qualification." };
 let application, page, lease;
-const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.reasonixDesktop.invoke(method, args), { method, args });
-const stats = () => page.evaluate(() => window.__reasonixPerf.stats());
+const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
+const stats = () => page.evaluate(() => window.__deeperPerf.stats());
 async function sample(id, phase) {
   await waitForSmokeCondition(async () => (await stats()).markdownWorker?.pending === 0);
   const value = await stats();
@@ -99,14 +99,14 @@ sys.stdin.read()
 `, ...fixtures.map(fixture => fixture.path + ".lease.lock")], { stdio: ["pipe", "pipe", "inherit"] });
   await Promise.race([once(lease.stdout, "data").then(([data]) => assert.match(String(data), /locked/)),
     once(lease, "exit").then(() => { throw new Error("fixture writer exited before locking"); })]);
-  application = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Reasonix"),
+  application = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Deeper"),
     env: { ...packagedSmokeEnv(process.env, home), HISTORY_FIXTURE_KEY: "local-fixture" } });
   await waitForSmokeCondition(async () => {
-    for (const candidate of application.windows()) if (await candidate.evaluate(() => Boolean(window.reasonixDesktop)).catch(() => false)) { page = candidate; return true; }
+    for (const candidate of application.windows()) if (await candidate.evaluate(() => Boolean(window.deeperDesktop)).catch(() => false)) { page = candidate; return true; }
     return false;
   });
   assert.equal(await invoke("Version"), report.build.version);
-  assert.equal(await application.evaluate(({ app }) => app.isPackaged && !process.env.REASONIX_DEV), true);
+  assert.equal(await application.evaluate(({ app }) => app.isPackaged && !process.env.DEEPER_DEV), true);
   const url = new URL(page.url());
   url.searchParams.set("bench", "1");
   // Observe native URL ownership without altering app/cache/RPC behavior.
@@ -130,7 +130,7 @@ sys.stdin.read()
     window.__historyObjectURLs = () => ({ kind: "image/svg+xml", created, revoked, active: active.size });
   });
   await page.goto(url.href);
-  await page.waitForFunction(() => Boolean(window.__reasonixPerf && window.reasonixDesktop));
+  await page.waitForFunction(() => Boolean(window.__deeperPerf && window.deeperDesktop));
   assert.equal(await invoke("Version"), report.build.version);
   const folder = page.locator(".project-tree__folder-main").first();
   await folder.waitFor();
@@ -158,7 +158,7 @@ sys.stdin.read()
   report.complete = true;
 } catch (error) {
   report.error = String(error);
-  if (page) writeFileSync(join(home, "failure.json"), JSON.stringify(await page.evaluate(() => ({ text: document.querySelector(".chat-column")?.innerText, stats: window.__reasonixPerf?.stats(), objectURLs: window.__historyObjectURLs?.() })).catch(error => ({ error: String(error) })), null, 2));
+  if (page) writeFileSync(join(home, "failure.json"), JSON.stringify(await page.evaluate(() => ({ text: document.querySelector(".chat-column")?.innerText, stats: window.__deeperPerf?.stats(), objectURLs: window.__historyObjectURLs?.() })).catch(error => ({ error: String(error) })), null, 2));
   await page?.screenshot({ path: join(home, "failure.png"), fullPage: true }).catch(() => {});
   throw error;
 } finally {

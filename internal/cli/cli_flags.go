@@ -8,10 +8,10 @@ import (
 	"strings"
 	"unicode"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
-const resumePickerSentinel = "__reasonix_resume_picker__"
+const resumePickerSentinel = "__deeper_resume_picker__"
 
 func splitAllowedToolRules(values []string) ([]string, error) {
 	var rules []string
@@ -75,9 +75,9 @@ func uniqueStrings(values []string) []string {
 }
 
 // hasLeadingPrintFlag reports whether a standalone -p/--print token appears in
-// the top-level flag run, i.e. before any "--" terminator. reasonix has no
+// the top-level flag run, i.e. before any "--" terminator. deeper has no
 // interactive -p, so its presence means the user wants one-shot print mode even
-// when it trails other flags (`reasonix --model X -p "task"`).
+// when it trails other flags (`deeper --model X -p "task"`).
 func hasLeadingPrintFlag(args []string) bool {
 	for _, arg := range args {
 		if arg == "--" {

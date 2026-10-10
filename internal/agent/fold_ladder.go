@@ -1,6 +1,6 @@
 package agent
 
-import "reasonix/internal/provider"
+import "deeper/internal/provider"
 
 // foldRequest is what one fold attempt asks of the summarizer. force shrinks
 // the verbatim tail, mustFree caps the summary input to the safe prefix, and

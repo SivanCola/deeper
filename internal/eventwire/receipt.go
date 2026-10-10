@@ -1,8 +1,8 @@
 package eventwire
 
 import (
-	"reasonix/internal/checkpoint"
-	"reasonix/internal/event"
+	"deeper/internal/checkpoint"
+	"deeper/internal/event"
 )
 
 // CompletionReceipt is the JSON form of event.CompletionReceipt: what the host

@@ -7,7 +7,7 @@ import { loadBuildIdentity } from "./buildIdentity.js";
 import { buildHelloParams } from "./handshake.js";
 
 function resources(t: TestContext, content?: unknown): string {
-  const dir = mkdtempSync(join(tmpdir(), "reasonix-identity-"));
+  const dir = mkdtempSync(join(tmpdir(), "deeper-identity-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   if (content !== undefined) writeFileSync(join(dir, "build.json"), JSON.stringify(content));
   return dir;
@@ -17,7 +17,7 @@ for (const version of ["v1.38.5", "v1.38.6-rc.1", "v0.0.0-ci"]) {
   test(`packaged hello preserves the complete ${version} identity without environment overrides`, (t) => {
     const build = { version, channel: "canary", commit: "abc123def456" };
     const dir = resources(t, { schemaVersion: 1, ...build, electron: "44.2.0", platform: "windows/amd64" });
-    const identity = loadBuildIdentity(true, dir, { REASONIX_CHANNEL: "wrong", REASONIX_COMMIT: "wrong" });
+    const identity = loadBuildIdentity(true, dir, { DEEPER_CHANNEL: "wrong", DEEPER_COMMIT: "wrong" });
     const hello = buildHelloParams({ ...identity, protocolVersion: 3, contractDigest: "sha256:fixture", hostVersion: "44.2.0", chromeVersion: "152", platform: "win32", arch: "x64", home: dir, dev: false });
     assert.deepEqual(hello.build, build);
     assert.equal(hello.instance.dev, false);
@@ -26,7 +26,7 @@ for (const version of ["v1.38.5", "v1.38.6-rc.1", "v0.0.0-ci"]) {
 
 test("unpackaged development needs no manifest", () => {
   assert.deepEqual(loadBuildIdentity(false, "unused", {}), { version: "dev", channel: "dev", commit: "dev" });
-  assert.deepEqual(loadBuildIdentity(false, "unused", { REASONIX_CHANNEL: "canary", REASONIX_COMMIT: "local" }), { version: "dev", channel: "canary", commit: "local" });
+  assert.deepEqual(loadBuildIdentity(false, "unused", { DEEPER_CHANNEL: "canary", DEEPER_COMMIT: "local" }), { version: "dev", channel: "canary", commit: "local" });
 });
 
 test("missing or invalid packaged metadata cannot silently fall back to dev", (t) => {

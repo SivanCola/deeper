@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestRestoreGlobalTopicSessionReindexesProjectTree(t *testing.T) {

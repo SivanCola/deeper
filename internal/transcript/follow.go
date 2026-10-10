@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"reasonix/internal/eventwire"
+	"deeper/internal/eventwire"
 )
 
 const FollowProtocolVersion = 2

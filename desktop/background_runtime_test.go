@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
-	"reasonix/internal/workspacelease"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
+	"deeper/internal/workspacelease"
 )
 
 type backgroundRuntimeController struct {

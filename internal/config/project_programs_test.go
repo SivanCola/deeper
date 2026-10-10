@@ -25,10 +25,10 @@ func reasonsFor(cfg *Config, key string) []IgnoredProjectReason {
 func TestProjectShellAndRipgrepWaitForApproval(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	shell := installedPath("sh")
 	project := "[tools.shell]\npath = " + tomlQuote(shell) + "\n[tools.search]\nrg_path = \"tools/rg\"\n"
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -65,7 +65,7 @@ func TestProjectShellAndRipgrepWaitForApproval(t *testing.T) {
 func TestProjectLanguageServerFilesAreCheckedAgainBeforeStart(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	server := filepath.Join(root, "bin", "pyls")
 	if err := os.MkdirAll(filepath.Dir(server), 0o700); err != nil {
 		t.Fatal(err)
@@ -73,7 +73,7 @@ func TestProjectLanguageServerFilesAreCheckedAgainBeforeStart(t *testing.T) {
 	if err := os.WriteFile(server, []byte("one"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[lsp.servers.python]\ncommand = \"./bin/pyls\"\nenv = { PYTHONPATH = \"x\" }\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[lsp.servers.python]\ncommand = \"./bin/pyls\"\nenv = { PYTHONPATH = \"x\" }\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	held, err := LoadForRootReadOnly(root)
@@ -99,14 +99,14 @@ func TestProjectLanguageServerFilesAreCheckedAgainBeforeStart(t *testing.T) {
 func TestProjectLanguageServerWaitsForApproval(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	user := "[lsp.servers.go]\ncommand = \"gopls\"\n"
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte(user), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	write := func(args string) {
 		project := "[lsp.servers.python]\ncommand = \"./bin/pyls\"\nargs = [" + args + "]\n"
-		if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -136,11 +136,11 @@ func TestProjectLanguageServerWaitsForApproval(t *testing.T) {
 func TestProjectProgramsFailClosedOnAnUnreadableRecord(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(home, projectProgramsFilename), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[tools.shell]\npath = "+tomlQuote(installedPath("evil"))+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[tools.shell]\npath = "+tomlQuote(installedPath("evil"))+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -163,7 +163,7 @@ func TestWorkspaceGrantsApplyToTheirWorkspaceOnly(t *testing.T) {
 	root := t.TempDir()
 	other := t.TempDir()
 	extra := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	store := NewProjectGrantStore(home)
 	if err := store.Update(root, func(g ProjectGrant) (ProjectGrant, error) {
 		g.Allow = append(g.Allow, "Bash(go test:*)")
@@ -197,10 +197,10 @@ func TestWorkspaceGrantsApplyToTheirWorkspaceOnly(t *testing.T) {
 func TestProjectBrowserLaunchWaitsForApproval(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	chrome := installedPath("evil-chrome")
 	project := "[browser]\nchrome_path = " + tomlQuote(chrome) + "\nchrome_args = [\"--x\"]\nendpoint = \"http://203.0.113.1:9222\"\nallow_remote_endpoint = true\n"
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -225,7 +225,7 @@ func approveWorkspacePrograms(t *testing.T, root string) *Config {
 		t.Fatalf("LoadForRoot: %v", err)
 	}
 	if pending := cfg.PendingProjectPrograms(); len(pending) > 0 {
-		if err := NewProjectProgramStore(reasonixHomeDir()).Approve(root, pending...); err != nil {
+		if err := NewProjectProgramStore(deeperHomeDir()).Approve(root, pending...); err != nil {
 			t.Fatal(err)
 		}
 		if cfg, err = LoadForRoot(root); err != nil {
@@ -236,7 +236,7 @@ func approveWorkspacePrograms(t *testing.T, root string) *Config {
 }
 
 // approveWorkspace approves what dir's configuration names, standing in for a
-// person who ran `reasonix trust` there. Tests of the gate itself never call it.
+// person who ran `deeper trust` there. Tests of the gate itself never call it.
 func approveWorkspace(t *testing.T, dir string) {
 	t.Helper()
 	_, _ = ApproveWorkspacePrograms(dir)
@@ -245,7 +245,7 @@ func approveWorkspace(t *testing.T, dir string) {
 // installedPath is where an installed program could live: outside the
 // workspace and outside anywhere the bash jail lets commands write.
 func installedPath(name string) string {
-	return filepath.Join(filepath.VolumeName(os.TempDir())+string(filepath.Separator), "opt", "reasonix-test", name)
+	return filepath.Join(filepath.VolumeName(os.TempDir())+string(filepath.Separator), "opt", "deeper-test", name)
 }
 
 func TestProjectProgramInATemporaryDirectoryIsRefused(t *testing.T) {
@@ -260,11 +260,11 @@ func TestProjectProgramInATemporaryDirectoryIsRefused(t *testing.T) {
 func TestProjectLanguageServerBareFileArgumentIsCovered(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(root, "server.js"), []byte("one"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[lsp.servers.js]\ncommand = \"node\"\nargs = [\"server.js\", \"--require=./boot.js\"]\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[lsp.servers.js]\ncommand = \"node\"\nargs = [\"server.js\", \"--require=./boot.js\"]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg := approveWorkspacePrograms(t, root)

@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncontent"
-	"reasonix/internal/transcript"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/session"
+	"deeper/internal/sessioncontent"
+	"deeper/internal/transcript"
 )
 
 func (s *Server) registerTranscriptRoutes(mux *http.ServeMux) {

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/config"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 var (

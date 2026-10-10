@@ -2,7 +2,7 @@
 
 ## 目标与来源
 
-当前聊天实现借鉴 DeepSeek Harness `c291e7961a515f6d7af9304e7fd1d257929aef26` 的内容分层、过程摘要、工具行、调用检查和文件产物交互，并适配 Reasonix 已有协议和工作台。生产路径只有一套实现：本地会话、远程会话和已有工作台都消费统一投影。
+当前聊天实现借鉴 DeepSeek Harness `c291e7961a515f6d7af9304e7fd1d257929aef26` 的内容分层、过程摘要、工具行、调用检查和文件产物交互，并适配 Deeper 已有协议和工作台。生产路径只有一套实现：本地会话、远程会话和已有工作台都消费统一投影。
 
 ```text
 controller / 历史 / LiveStream / 远程事件
@@ -14,7 +14,7 @@ controller / 历史 / LiveStream / 远程事件
 工具详情抽屉 / Workspace dock / 浏览器 / 交互宿主
 ```
 
-投影是可重建的视图数据，不是第二份持久化会话事实。Reasonix 没有引入 Cordis、另一套服务端事件日志或 Harness 的整个 Conversation 框架。
+投影是可重建的视图数据，不是第二份持久化会话事实。Deeper 没有引入 Cordis、另一套服务端事件日志或 Harness 的整个 Conversation 框架。
 
 ## 已交付的产品行为
 

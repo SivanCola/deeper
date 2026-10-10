@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/repair"
+	"deeper/internal/repair"
 )
 
 // Pending reports queued by the retired WebView2/WebKitGTK shell must still

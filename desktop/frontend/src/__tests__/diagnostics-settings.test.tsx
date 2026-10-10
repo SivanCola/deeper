@@ -78,8 +78,8 @@ function baseReport(runtime: boolean): CapabilityDiagnosticsReport {
     },
     instructions: { docs: [{ path: "<workspace>/AGENTS.md", scope: "project", directory: "<workspace>", depth: 0, order: 1 }] },
     skills: {
-      roots: [{ path: "<workspace>/.reasonix/skills", scope: "project", status: "ok" }],
-      entries: [{ name: "demo", path: "<workspace>/.reasonix/skills/demo/SKILL.md", status: "winner" }],
+      roots: [{ path: "<workspace>/.deeper/skills", scope: "project", status: "ok" }],
+      entries: [{ name: "demo", path: "<workspace>/.deeper/skills/demo/SKILL.md", status: "winner" }],
       winners: 1,
       shadowed: 0,
     },
@@ -125,7 +125,7 @@ console.log("diagnostics settings page");
   const navigations: SettingsTab[] = [];
   installDom();
   // Prefer English labels for stable button text assertions.
-  window.localStorage.setItem("reasonix-lang", "en");
+  window.localStorage.setItem("deeper-lang", "en");
 
   const desktopStub = installDesktopHostStub(({
     main: {
@@ -202,7 +202,7 @@ console.log("diagnostics settings page");
 
 {
   installDom();
-  window.localStorage.setItem("reasonix-lang", "en");
+  window.localStorage.setItem("deeper-lang", "en");
 
   const nullArrays = baseReport(false) as unknown as Record<string, unknown>;
   nullArrays.summary = {

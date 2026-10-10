@@ -8,7 +8,7 @@ func TestModelMessagesStripsVisionSummaryMetadataButKeepsSummaryContent(t *testi
 	for _, role := range []Role{RoleUser, RoleTool} {
 		stored := []Message{{
 			Role:    role,
-			Content: "question\n\n<reasonix-image-context>chart</reasonix-image-context>",
+			Content: "question\n\n<deeper-image-context>chart</deeper-image-context>",
 			VisionSummary: &VisionSummary{
 				Version: 1, PromptVersion: "image-summary-v1", ModelRef: "vision/model",
 				ImageDigests: []string{"digest"}, Summary: "chart",

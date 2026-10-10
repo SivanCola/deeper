@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // TaskBudget bounds one task on the axes its failures are reported in, and

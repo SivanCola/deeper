@@ -1,6 +1,6 @@
 # 独立网页搜索
 
-Reasonix 将 `web_search` 暴露为普通函数工具。每次搜索单独发送一个模型请求，
+Deeper 将 `web_search` 暴露为普通函数工具。每次搜索单独发送一个模型请求，
 其中只包含查询和搜索后端的原生搜索工具。主对话收到有大小限制的 JSON 结果：
 `summary`、`sources`（标题和 URL）以及可选的 `truncated` 标记。
 搜索产生的 reasoning、加密网页内容及 Responses 回放项不进入主对话历史。
@@ -39,7 +39,7 @@ web_search_model = "my-search-connection/deepseek-v4-flash"
 离线模式、工具白名单以及连接访问限制仍然生效。第三方候选仅表示配置允许采用原生
 搜索协议，不代表模型已通过实时联网验证。
 
-Desktop 保存用户全局设置；项目 `reasonix.toml` 覆盖此字段时，界面标明项目实际值。
+Desktop 保存用户全局设置；项目 `deeper.toml` 覆盖此字段时，界面标明项目实际值。
 搜索配置在运行时创建时固定。空闲会话保存设置后重建；进行中的任务禁止通过此设置
 强制重建，其他已有运行时在下次重建时使用新配置。
 

@@ -4,9 +4,9 @@ Windows Agent commands use PowerShell by default. Automatic selection prefers Po
 
 Windows Agent 命令默认使用 PowerShell；自动模式优先选择 PowerShell 7，再回退到 Windows PowerShell 5.1。要使用 Git Bash，可在“设置 → 沙箱 → Shell 解释器”选择 **Git Bash**，或配置 `[tools.shell] prefer = "bash"`。已有 Bash 偏好重新生效，兼容的自定义解释器路径会保留。远程执行根据远端主机操作系统选择解释器。
 
-The settings page reports Git Bash's detection status and executable path alongside PowerShell. If Git Bash is missing, install Git for Windows manually through the official download link, then select **Re-detect and reload session**. Reasonix does not run an installer. Missing or unusable explicit Bash preferences warn and fall back to automatic PowerShell selection; WSL launchers and the graphical `git-bash.exe` launcher are never executed as the shell. The latter is resolved to its console `bin/bash.exe` or `usr/bin/bash.exe`.
+The settings page reports Git Bash's detection status and executable path alongside PowerShell. If Git Bash is missing, install Git for Windows manually through the official download link, then select **Re-detect and reload session**. Deeper does not run an installer. Missing or unusable explicit Bash preferences warn and fall back to automatic PowerShell selection; WSL launchers and the graphical `git-bash.exe` launcher are never executed as the shell. The latter is resolved to its console `bin/bash.exe` or `usr/bin/bash.exe`.
 
-设置页与 PowerShell 一起展示 Git Bash 的检测状态和可执行文件路径。未安装时，通过官方链接手动安装 Git for Windows，再点击“重新检测并加载当前会话”；Reasonix 不会运行安装器。显式选择的 Bash 缺失或不可用时，会提示并回退到自动选择的 PowerShell。WSL 启动器和图形界面的 `git-bash.exe` 不会作为命令解释器执行；后者会解析到安装目录中的 `bin/bash.exe` 或 `usr/bin/bash.exe`。
+设置页与 PowerShell 一起展示 Git Bash 的检测状态和可执行文件路径。未安装时，通过官方链接手动安装 Git for Windows，再点击“重新检测并加载当前会话”；Deeper 不会运行安装器。显式选择的 Bash 缺失或不可用时，会提示并回退到自动选择的 PowerShell。WSL 启动器和图形界面的 `git-bash.exe` 不会作为命令解释器执行；后者会解析到安装目录中的 `bin/bash.exe` 或 `usr/bin/bash.exe`。
 
 When Git Bash is bound, the provider-visible tool is `bash` and commands use Bash syntax. With PowerShell bound, the tool remains `pwsh`. Settings show the current session's interpreter separately from the interpreter selected after reload. A deliberate interpreter switch changes the tool schema and can invalidate the prompt cache once; schemas remain stable while the interpreter stays unchanged. Both interpreters run as the current OS user on Windows, without an OS-level shell sandbox.
 
@@ -56,9 +56,9 @@ OpenMAIC 及其子进程可以使用任意 stdio 方式，包括 Node/libuv 的 
 捕获：Windows 命令以当前系统账户运行、没有受限令牌，因此不会出现沙箱层面的
 `EPERM`。运行期失败以真实退出码作为 `execution` 结果报告。
 
-Reasonix no longer runs a nested shell/child-process preflight before each Windows command, and it no longer launches commands through a restricted-token runner: the command starts directly as the current OS user. A process that fails to start is still reported as not run rather than as command output, so stdout/stderr cannot claim that execution never started; runtime failures remain `execution` with possible partial effects.
+Deeper no longer runs a nested shell/child-process preflight before each Windows command, and it no longer launches commands through a restricted-token runner: the command starts directly as the current OS user. A process that fails to start is still reported as not run rather than as command output, so stdout/stderr cannot claim that execution never started; runtime failures remain `execution` with possible partial effects.
 
-Reasonix 不再在每条 Windows 命令前运行嵌套 shell／子进程预检，也不再通过
+Deeper 不再在每条 Windows 命令前运行嵌套 shell／子进程预检，也不再通过
 restricted-token runner 启动命令：命令直接以当前系统账户运行。进程启动失败仍按
 “未执行”报告而不是混入命令输出，命令输出无法伪造“未执行”状态；运行期失败仍保持
 `execution` 和可能已部分修改的状态。

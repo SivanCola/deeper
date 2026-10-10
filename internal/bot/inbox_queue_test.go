@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/sessioninbox"
 )
 
 func TestCollectAppendDeduplicatesPlatformRedelivery(t *testing.T) {

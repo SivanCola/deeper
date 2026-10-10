@@ -1,11 +1,11 @@
 package control
 
 import (
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/session"
+	"deeper/internal/tool"
 	"path/filepath"
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
-	"reasonix/internal/tool"
 	"testing"
 )
 

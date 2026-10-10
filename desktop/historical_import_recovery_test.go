@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 func TestHistoricalImportRetrySettlesWorkspaceConflict(t *testing.T) {

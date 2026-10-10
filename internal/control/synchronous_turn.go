@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"reasonix/internal/event"
-	"reasonix/internal/session"
+	"deeper/internal/event"
+	"deeper/internal/session"
 )
 
 // runSynchronousTurn owns the blocking transport lifecycle. Durable steer

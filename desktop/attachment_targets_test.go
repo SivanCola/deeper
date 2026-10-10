@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func TestAttachmentTargetRejectsReplacementBeforeFileUpload(t *testing.T) {

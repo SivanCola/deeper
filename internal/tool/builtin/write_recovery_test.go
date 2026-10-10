@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	fileenc "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/tool"
+	fileenc "deeper/internal/fileutil/encoding"
+	"deeper/internal/tool"
 )
 
 func TestWriteIntentDurabilityBeforeMutation(t *testing.T) {

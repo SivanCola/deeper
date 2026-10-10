@@ -1,6 +1,6 @@
 package cli
 
-import "reasonix/internal/event"
+import "deeper/internal/event"
 
 func (s *metricsSink) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot) {
 	if s != nil {

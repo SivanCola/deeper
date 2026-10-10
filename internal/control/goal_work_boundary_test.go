@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/hook"
-	"reasonix/internal/session"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/hook"
+	"deeper/internal/session"
 )
 
 func TestGoalWorkPinsAppendDestinationAcrossBindingChange(t *testing.T) {

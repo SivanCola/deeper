@@ -1,8 +1,8 @@
 package boot
 
 import (
+	"deeper/internal/control"
 	"errors"
-	"reasonix/internal/control"
 )
 
 func (opts *Options) inheritSessionBinding(old *control.Controller) {

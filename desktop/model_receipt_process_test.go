@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestAuditDurableReceiptAcrossProcessRestart(t *testing.T) {
@@ -32,7 +32,7 @@ func TestAuditDurableReceiptAcrossProcessRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	cmd := exec.Command(exe, "-test.run=^TestAuditDurableReceiptChild$", "-test.count=1")
-	cmd.Env = append(os.Environ(), "REASONIX_AUDIT_REQUEST="+path, "REASONIX_AUDIT_HOME="+config.ReasonixHomeDir())
+	cmd.Env = append(os.Environ(), "DEEPER_AUDIT_REQUEST="+path, "DEEPER_AUDIT_HOME="+config.DeeperHomeDir())
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("same request after real restart failed: %v\n%s", err, output)
@@ -40,11 +40,11 @@ func TestAuditDurableReceiptAcrossProcessRestart(t *testing.T) {
 }
 
 func TestAuditDurableReceiptChild(t *testing.T) {
-	path := os.Getenv("REASONIX_AUDIT_REQUEST")
+	path := os.Getenv("DEEPER_AUDIT_REQUEST")
 	if path == "" {
 		t.Skip("child process only")
 	}
-	t.Setenv("REASONIX_HOME", os.Getenv("REASONIX_AUDIT_HOME"))
+	t.Setenv("DEEPER_HOME", os.Getenv("DEEPER_AUDIT_HOME"))
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)

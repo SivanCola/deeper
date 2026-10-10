@@ -4,13 +4,13 @@ User guidance: [English](WINDOWS_APP_IDENTITY.md) · [中文](WINDOWS_APP_IDENTI
 
 ## Installed layout / 安装布局
 
-`Reasonix.exe` is the canonical GUI entry; `reasonix-cli.exe` remains the CLI
+`Deeper.exe` is the canonical GUI entry; `deeper-cli.exe` remains the CLI
 forwarder. Fresh installers and newly extracted ZIPs omit the root
-`reasonix-launcher.exe`. A managed upgrade preserves and refreshes that entry
+`deeper-launcher.exe`. A managed upgrade preserves and refreshes that entry
 only when it already exists. There is no automatic retirement deadline.
 
-`Reasonix.exe` 是标准 GUI 入口，`reasonix-cli.exe` 仍为 CLI 转发入口。
-新安装、全新解压 ZIP 不包含根目录 `reasonix-launcher.exe`；受控升级仅在旧入口
+`Deeper.exe` 是标准 GUI 入口，`deeper-cli.exe` 仍为 CLI 转发入口。
+新安装、全新解压 ZIP 不包含根目录 `deeper-launcher.exe`；受控升级仅在旧入口
 已存在时保留并更新它，不设置自动删除期限。版本目录内的 Electron 程序不属于用户入口。
 
 ## Transaction and wire compatibility / 事务与协议兼容
@@ -35,17 +35,17 @@ interleaving test, not timing-based sleeps.
 | `current.json` schema 1 | Same strict fields / 相同严格字段 | None / 无 |
 | `versioned-v1` | Same version directory resolution / 相同版本目录解析 | None / 无 |
 | Windows payload schema 2 | Retains historical launcher member / 保留旧载荷启动器名称 | None / 无 |
-| `io.reasonix.desktop` | Same window and shortcut identity / 相同窗口及链接身份 | None / 无 |
+| `io.github.sivancola.deeper` | Same window and shortcut identity / 相同窗口及链接身份 | None / 无 |
 | User configuration and sessions / 用户配置与会话 | No migration or new writes / 无迁移或新增写入 | None / 无 |
 
-Signed payloads and NSIS staging continue to use `reasonix-launcher.exe`.
+Signed payloads and NSIS staging continue to use `deeper-launcher.exe`.
 Already installed update helpers cannot be changed by shipping a new helper;
 they must still accept and install the next payload. New activators map these
-verified bytes to `Reasonix.exe`, and to the old name when preservation applies.
+verified bytes to `Deeper.exe`, and to the old name when preservation applies.
 An old helper may continue publishing both names. This does not require a bridge
 release or a new pointer field. It does not reduce the signed payload inventory.
 
-签名载荷和 NSIS staging 继续使用 `reasonix-launcher.exe`。安装新版 helper 不会
+签名载荷和 NSIS staging 继续使用 `deeper-launcher.exe`。安装新版 helper 不会
 改变执行本次升级的旧 helper，所以必须保持旧载荷契约。新激活器将已验证字节映射
 到标准入口，必要时同时更新旧入口。旧 helper 可能仍发布两个名字；无需过渡版本、
 无需添加指针字段，也不减少签名载荷的程序清单。
@@ -64,11 +64,11 @@ without that declaration explicitly uses `legacy-dual`.
 
 ```sh
 # New ZIP; verify members and entry bytes without extracting.
-node desktop/packaging/verify.mjs dist/Reasonix-windows-amd64.zip
+node desktop/packaging/verify.mjs dist/Deeper-windows-amd64.zip
 # Historical ZIP; require both identical GUI entries.
 node desktop/packaging/verify.mjs OLD.zip --kind windows-portable-zip --portable-layout legacy-dual
 # Before packaging: also compare canonical entry with the payload source.
-scripts/verify-windows-portable.sh STAGING canonical PAYLOAD/reasonix-launcher.exe
+scripts/verify-windows-portable.sh STAGING canonical PAYLOAD/deeper-launcher.exe
 ```
 
 The Authenticode verifier additionally checks the exact EXE/DLL inventory and

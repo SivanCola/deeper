@@ -1,6 +1,6 @@
 # Harness 机制改造验收报告
 
-验收基线：Reasonix `main-v2@986a6bc967`；参考行为：DeepSeek Harness `master@c291e7961a`。验收日期：2026-09-13。
+验收基线：Deeper `main@986a6bc967`；参考行为：DeepSeek Harness `master@c291e7961a`。验收日期：2026-09-13。
 
 ## 结论
 
@@ -56,9 +56,9 @@ Windows 验证在本机 Parallels Windows 11 中原生执行，不以交叉编�
 ## PR #10223 评审修正
 
 初次评审基线：head `3f7350f6e`，当时的 merge-base 为 `104792af2`。
-本次冲突整合以 `main-v2@4daa815be`（#10209）为验证基线。
+本次冲突整合以 `main@4daa815be`（#10209）为验证基线。
 实现参考 DSH 的 `fs-observation-policy`（会话持有观察、按观察存在状态确定写入意图）
-和 `fs-local/src/fsio.ts`（先暂存、再不可覆盖发布），保留 Reasonix 的 Go、编码和缓冲区适配。
+和 `fs-local/src/fsio.ts`（先暂存、再不可覆盖发布），保留 Deeper 的 Go、编码和缓冲区适配。
 
 | 评审版本中的缺陷 | 修复与回归依据 |
 | --- | --- |

@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // ErrSessionDisplayReadModelDamaged means the authoritative event log has a

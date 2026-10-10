@@ -2,9 +2,9 @@
 # Validate one stable release tag set and emit the values shared by all release
 # workflows. Stable releases are deliberately all-or-nothing: the CLI, npm, and
 # desktop tags must resolve to one commit. Normal publication accepts the Notes
-# candidate after main-v2 advances beyond it; the protected workflow separately
+# candidate after main advances beyond it; the protected workflow separately
 # revalidates that candidate's Notes change and exact push CI. Recovery may also
-# target an older commit while the control plane stays on current main-v2.
+# target an older commit while the control plane stays on current main.
 set -euo pipefail
 
 release_tag="${RELEASE_TAG:?RELEASE_TAG is required}"
@@ -30,15 +30,15 @@ npm_tag="npm-v${version}"
 desktop_tag="desktop-v${version}"
 
 checkout_sha="$(git rev-parse HEAD^{commit})"
-main_sha="$(git ls-remote "$release_remote" refs/heads/main-v2 | awk 'NR == 1 { print $1 }')"
+main_sha="$(git ls-remote "$release_remote" refs/heads/main | awk 'NR == 1 { print $1 }')"
 if [ -z "$main_sha" ]; then
-	echo "::error::cannot resolve $release_remote/main-v2" >&2
+	echo "::error::cannot resolve $release_remote/main" >&2
 	exit 1
 fi
 
-git fetch --quiet --no-tags "$release_remote" refs/heads/main-v2
+git fetch --quiet --no-tags "$release_remote" refs/heads/main
 if ! git merge-base --is-ancestor "$checkout_sha" "$main_sha"; then
-	echo "::error::release control checkout $checkout_sha is not on $release_remote/main-v2 history ($main_sha)" >&2
+	echo "::error::release control checkout $checkout_sha is not on $release_remote/main history ($main_sha)" >&2
 	exit 1
 fi
 
@@ -52,13 +52,13 @@ if [ -z "$release_sha" ]; then
 fi
 git fetch --quiet --no-tags "$release_remote" "refs/tags/$cli_tag"
 if ! git merge-base --is-ancestor "$release_sha" "$main_sha"; then
-	echo "::error::stable tag $cli_tag points to $release_sha, which is not an ancestor of $release_remote/main-v2 ($main_sha)" >&2
+	echo "::error::stable tag $cli_tag points to $release_sha, which is not an ancestor of $release_remote/main ($main_sha)" >&2
 	exit 1
 fi
 if [ "$release_sha" != "$main_sha" ]; then
 	mode="candidate"
 	[ "$allow_recovery" = "true" ] && mode="recovery"
-	echo "stable $mode: $cli_tag remains on main-v2 history at $release_sha; current main-v2 is $main_sha"
+	echo "stable $mode: $cli_tag remains on main history at $release_sha; current main is $main_sha"
 fi
 
 for tag in "$cli_tag" "$npm_tag" "$desktop_tag"; do

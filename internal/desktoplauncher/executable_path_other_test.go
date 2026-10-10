@@ -10,12 +10,12 @@ import (
 
 func TestResolveInstallRootThroughSymlink(t *testing.T) {
 	root := t.TempDir()
-	launcher := filepath.Join(root, "reasonix-launcher")
+	launcher := filepath.Join(root, "deeper-launcher")
 	if err := os.WriteFile(launcher, []byte("launcher"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	link := filepath.Join(t.TempDir(), "reasonix-launcher")
+	link := filepath.Join(t.TempDir(), "deeper-launcher")
 	if err := os.Symlink(launcher, link); err != nil {
 		t.Fatal(err)
 	}

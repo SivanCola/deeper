@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/update"
-	"reasonix/internal/installlayout"
-	"reasonix/internal/repair"
+	"deeper/desktop/internal/update"
+	"deeper/internal/installlayout"
+	"deeper/internal/repair"
 )
 
 func TestNormalizeVersion(t *testing.T) {
@@ -260,15 +260,15 @@ func TestExpectedUpdateVersionRejectsAdvancedPointer(t *testing.T) {
 
 func TestUpdateSiblingNamesCoverEveryReplacedEntryPoint(t *testing.T) {
 	windows := strings.Join(updateSiblingNames("windows"), "\x00")
-	for _, want := range []string{"reasonix-guard.exe", "reasonix-launcher.exe", "reasonix-update-helper.exe", "reasonix-cli.exe", "Reasonix.exe"} {
+	for _, want := range []string{"deeper-guard.exe", "deeper-launcher.exe", "deeper-update-helper.exe", "deeper-cli.exe", "Deeper.exe"} {
 		if !strings.Contains(windows, want) {
 			t.Errorf("Windows release unit omits %q: %q", want, windows)
 		}
 	}
-	if strings.Contains(windows, "reasonix.exe") {
+	if strings.Contains(windows, "deeper.exe") {
 		t.Fatalf("Windows release unit reintroduces the case-only CLI/launcher collision: %q", windows)
 	}
-	if got := updateSiblingNames("linux"); len(got) != 2 || got[0] != "reasonix-guard" || got[1] != "reasonix" {
+	if got := updateSiblingNames("linux"); len(got) != 2 || got[0] != "deeper-guard" || got[1] != "deeper" {
 		t.Fatalf("Linux release unit = %q", got)
 	}
 	if got := updateSiblingNames("darwin"); got != nil {
@@ -378,18 +378,14 @@ func TestManualUpdateRequiredErrorPreservesReason(t *testing.T) {
 func TestLegacyChannelsSelectOfficialPointers(t *testing.T) {
 	stable := manifestEndpoints("stable")
 	preview := manifestEndpoints("preview")
-	want := []string{
-		r2Base + "/latest/latest.json",
-		releaseGatewayBase + "/stable/latest.json",
-		githubManifestFallback,
-	}
+	want := []string{githubManifestEndpoint}
 	if !reflect.DeepEqual(stable, want) || !reflect.DeepEqual(preview, want) {
 		t.Fatalf("manifest endpoints: stable=%q preview=%q want=%q", stable, preview, want)
 	}
-	if got := downloadPage("preview"); got != "https://reasonix.io/?download=desktop#start" {
+	if got := downloadPage("preview"); got != "https://github.com/SivanCola/deeper/releases" {
 		t.Errorf("legacy preview download page = %q", got)
 	}
-	if got := manifestDownloadPage("preview", "https://reasonix.io/?channel=preview&download=desktop#start"); got != "https://reasonix.io/?download=desktop#start" {
+	if got := manifestDownloadPage("preview", "https://github.com/SivanCola/deeper/?channel=preview&download=desktop#start"); got != "https://github.com/SivanCola/deeper/releases" {
 		t.Errorf("manifest official page = %q", got)
 	}
 	if got := manifestDownloadPage("preview", "https://example.com/releases"); got != "https://example.com/releases" {
@@ -397,8 +393,8 @@ func TestLegacyChannelsSelectOfficialPointers(t *testing.T) {
 	}
 	for _, unsafe := range []string{
 		"javascript:alert(1)",
-		"http://reasonix.io/#start",
-		"https://user@reasonix.io/#start",
+		"http://deeper.io/#start",
+		"https://user@deeper.io/#start",
 	} {
 		if got := manifestDownloadPage("preview", unsafe); got != downloadPage("stable") {
 			t.Errorf("unsafe manifest page %q = %q, want official fallback", unsafe, got)
@@ -447,7 +443,7 @@ func validDesktopManifest(t *testing.T, selected, manifestVersion string) update
 	requiredAssets := append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...)
 	requiredAssets = append(requiredAssets, requiredDesktopDownloadAssets...)
 	for _, required := range requiredAssets {
-		assetURL := fmt.Sprintf("%s/%s/%s", r2Base, tag, required.filename)
+		assetURL := fmt.Sprintf("%s/%s/%s", githubReleaseAssetBase, tag, required.filename)
 		asset := update.Asset{
 			URL:    assetURL,
 			Sig:    assetURL + ".minisig",
@@ -481,7 +477,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 			name: "wrong filename",
 			mutate: func(m *update.Manifest) {
 				asset := m.Platforms["darwin-arm64"]
-				asset.URL = strings.Replace(asset.URL, "Reasonix-", "Other-", 1)
+				asset.URL = strings.Replace(asset.URL, "Deeper-", "Other-", 1)
 				asset.Sig = asset.URL + ".minisig"
 				m.Platforms["darwin-arm64"] = asset
 			},
@@ -508,7 +504,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 			name: "wrong asset host",
 			mutate: func(m *update.Manifest) {
 				asset := m.Platforms["darwin-arm64"]
-				asset.URL = strings.Replace(asset.URL, "dl.reasonix.io", "example.com", 1)
+				asset.URL = strings.Replace(asset.URL, "github.com", "example.com", 1)
 				asset.Sig = asset.URL + ".minisig"
 				m.Platforms["darwin-arm64"] = asset
 			},
@@ -587,7 +583,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 		{
 			name: "wrong download page",
 			mutate: func(m *update.Manifest) {
-				m.DownloadPage = "https://reasonix.io/?channel=stable&download=desktop#start"
+				m.DownloadPage = "https://github.com/SivanCola/deeper/?channel=stable&download=desktop#start"
 			},
 		},
 	}
@@ -614,8 +610,8 @@ func TestDesktopManifestValidation(t *testing.T) {
 	})
 	t.Run("official manifest rejects legacy rolling asset base", func(t *testing.T) {
 		manifest := validDesktopManifest(t, "stable", "v1.19.0")
-		immutableBase := r2Base + "/desktop-v1.19.0/"
-		rollingBase := r2Base + "/desktop-preview/"
+		immutableBase := githubReleaseAssetBase + "/desktop-v1.19.0/"
+		rollingBase := githubReleaseAssetBase + "/desktop-preview/"
 		for key, asset := range manifest.Platforms {
 			asset.URL = strings.Replace(asset.URL, immutableBase, rollingBase, 1)
 			asset.Sig = asset.URL + ".minisig"
@@ -637,8 +633,8 @@ func TestDesktopManifestValidation(t *testing.T) {
 	})
 	t.Run("unified GitHub release base", func(t *testing.T) {
 		manifest := validDesktopManifest(t, "stable", "v1.19.0")
-		oldBase := r2Base + "/desktop-v1.19.0/"
-		newBase := "https://github.com/esengine/DeepSeek-Reasonix/releases/download/v1.19.0/"
+		oldBase := githubReleaseAssetBase + "/desktop-v1.19.0/"
+		newBase := "https://github.com/SivanCola/deeper/releases/download/v1.19.0/"
 		for key, asset := range manifest.Platforms {
 			asset.URL = strings.Replace(asset.URL, oldBase, newBase, 1)
 			asset.Sig = asset.URL + ".minisig"
@@ -683,8 +679,8 @@ func TestDesktopManifestValidation(t *testing.T) {
 		asset := manifest.Platforms["darwin-arm64"]
 		asset.URL = strings.Replace(
 			asset.URL,
-			r2Base+"/desktop-v1.18.0/",
-			"https://github.com/esengine/DeepSeek-Reasonix/releases/download/desktop-v1.18.0/",
+			githubReleaseAssetBase+"/desktop-v1.18.0/",
+			"https://github.com/SivanCola/deeper/releases/download/v1.18.0/",
 			1,
 		)
 		asset.Sig = asset.URL + ".minisig"
@@ -699,7 +695,7 @@ func ptr[T any](value T) *T {
 	return &value
 }
 
-func TestFetchManifestSkipsPrereleaseForLegacyPreviewSelection(t *testing.T) {
+func TestFetchManifestRejectsPrereleaseForLegacyPreviewSelection(t *testing.T) {
 	var calls []string
 	client := &http.Client{Transport: rtFunc(func(req *http.Request) (*http.Response, error) {
 		calls = append(calls, req.URL.String())
@@ -720,19 +716,15 @@ func TestFetchManifestSkipsPrereleaseForLegacyPreviewSelection(t *testing.T) {
 		}, nil
 	})}
 
-	manifest, err := fetchManifest(context.Background(), client, nil, "preview")
-	if err != nil {
-		t.Fatalf("fetchManifest: %v", err)
+	if _, err := fetchManifest(context.Background(), client, nil, "preview"); err == nil {
+		t.Fatal("prerelease manifest must not enter the stable channel")
 	}
-	if manifest.Version != "v1.18.0" {
-		t.Fatalf("version = %q, want official fallback manifest", manifest.Version)
-	}
-	if len(calls) != 2 || !strings.Contains(calls[0], "/latest/") || !strings.Contains(calls[1], "/stable/") {
-		t.Fatalf("endpoint calls = %q, want official latest then gateway fallback", calls)
+	if !reflect.DeepEqual(calls, []string{githubManifestEndpoint}) {
+		t.Fatalf("endpoint calls = %q, want only Deeper's GitHub pointer", calls)
 	}
 }
 
-func TestFetchManifestSkipsMalformedSuccessfulResponse(t *testing.T) {
+func TestFetchManifestRejectsMalformedSuccessfulResponse(t *testing.T) {
 	var calls []string
 	client := &http.Client{Transport: rtFunc(func(req *http.Request) (*http.Response, error) {
 		calls = append(calls, req.URL.String())
@@ -752,15 +744,11 @@ func TestFetchManifestSkipsMalformedSuccessfulResponse(t *testing.T) {
 		}, nil
 	})}
 
-	manifest, err := fetchManifest(context.Background(), client, nil, "preview")
-	if err != nil {
-		t.Fatalf("fetchManifest: %v", err)
+	if _, err := fetchManifest(context.Background(), client, nil, "preview"); err == nil {
+		t.Fatal("incomplete manifest must be rejected even after HTTP 200")
 	}
-	if manifest.Version != "v1.18.0" {
-		t.Fatalf("version = %q, want valid fallback manifest", manifest.Version)
-	}
-	if len(calls) != 2 || !strings.Contains(calls[0], "/latest/") || !strings.Contains(calls[1], "/stable/") {
-		t.Fatalf("endpoint calls = %q, want malformed 200 to fall through", calls)
+	if !reflect.DeepEqual(calls, []string{githubManifestEndpoint}) {
+		t.Fatalf("endpoint calls = %q, want only Deeper's GitHub pointer", calls)
 	}
 }
 
@@ -770,16 +758,16 @@ func TestValidateUpdateRedirect(t *testing.T) {
 		target    string
 		wantError bool
 	}{
-		{name: "Reasonix first-party redirect", target: "https://dl.reasonix.io/file"},
+		{name: "Deeper first-party redirect", target: "https://github.com/SivanCola/deeper/releases/download/file"},
 		{name: "GitHub redirect", target: "https://github.com/file"},
 		{name: "GitHub HTTPS asset redirect", target: "https://release-assets.githubusercontent.com/file"},
 		{name: "HTTPS downgrade", target: "http://release-assets.githubusercontent.com/file", wantError: true},
 		{name: "userinfo", target: "https://user@release-assets.githubusercontent.com/file", wantError: true},
 		{name: "missing hostname", target: "https:///file", wantError: true},
 		{name: "arbitrary HTTPS host", target: "https://example.com/file", wantError: true},
-		{name: "Reasonix suffix spoof", target: "https://dl.reasonix.io.evil.invalid/file", wantError: true},
+		{name: "Deeper suffix spoof", target: "https://github.com.evil.invalid/SivanCola/deeper/file", wantError: true},
 		{name: "GitHub suffix spoof", target: "https://release-assets.githubusercontent.com.evil.invalid/file", wantError: true},
-		{name: "explicit port", target: "https://dl.reasonix.io:443/file", wantError: true},
+		{name: "explicit port", target: "https://github.com:443/SivanCola/deeper/file", wantError: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -827,7 +815,7 @@ func TestSaveCachedUpdateMarksEvaluateDownloaded(t *testing.T) {
 
 	data := []byte("verified artifact")
 	asset := update.Asset{
-		URL:    "https://dl.reasonix.io/desktop-v9.9.9/Reasonix-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -859,7 +847,7 @@ func TestCachedUpdateRejectsTamperedArtifact(t *testing.T) {
 
 	data := []byte("verified artifact")
 	asset := update.Asset{
-		URL:    "https://dl.reasonix.io/desktop-v9.9.9/Reasonix-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -883,7 +871,7 @@ func TestCachedUpdateAcceptsLegacyChannelAlias(t *testing.T) {
 
 	data := []byte("verified artifact")
 	asset := update.Asset{
-		URL:    "https://dl.reasonix.io/desktop-v9.9.9/Reasonix-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -928,7 +916,7 @@ func TestDebCacheRequiresSignatureAndRejectsTarballReuse(t *testing.T) {
 
 	data := []byte("deb-bytes")
 	asset := update.Asset{
-		URL:    "https://dl.reasonix.io/desktop-v9.9.9/Reasonix-linux-amd64.deb",
+		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.deb",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -961,7 +949,7 @@ func TestDebCacheRequiresSignatureAndRejectsTarballReuse(t *testing.T) {
 	// Portable legacy cache (no artifactKind) remains valid for tarball.
 	tarball := []byte("tarball-bytes")
 	tAsset := update.Asset{
-		URL:    "https://dl.reasonix.io/desktop-v9.9.9/Reasonix-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
 		Size:   int64(len(tarball)),
 		SHA256: sha256Hex(tarball),
 	}
@@ -1012,11 +1000,11 @@ func TestCheckSHA256(t *testing.T) {
 }
 
 func TestExtractBinary(t *testing.T) {
-	want := []byte("#!/bin/sh\necho reasonix\n")
+	want := []byte("#!/bin/sh\necho deeper\n")
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
-	files := map[string][]byte{"README": []byte("ignore me"), "reasonix-desktop": want}
+	files := map[string][]byte{"README": []byte("ignore me"), "deeper-desktop": want}
 	for name, body := range files {
 		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
 			t.Fatal(err)
@@ -1028,7 +1016,7 @@ func TestExtractBinary(t *testing.T) {
 	tw.Close()
 	gz.Close()
 
-	got, err := extractBinary(buf.Bytes(), "reasonix-desktop")
+	got, err := extractBinary(buf.Bytes(), "deeper-desktop")
 	if err != nil {
 		t.Fatalf("extractBinary: %v", err)
 	}
@@ -1068,17 +1056,17 @@ func TestExtractLinuxReleaseUnitRejectsAmbiguousMembers(t *testing.T) {
 		return tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}
 	}
 	headers := []tar.Header{
-		base("reasonix-desktop", []byte("desktop")),
-		base("reasonix-guard", []byte("guard")),
-		base("reasonix", []byte("cli")),
+		base("deeper-desktop", []byte("desktop")),
+		base("deeper-guard", []byte("guard")),
+		base("deeper", []byte("cli")),
 	}
 	bodies := [][]byte{[]byte("desktop"), []byte("guard"), []byte("cli")}
 	if got, err := extractLinuxReleaseUnit(makeArchive(t, headers, bodies)); err != nil ||
-		string(got["reasonix-desktop"]) != "desktop" {
-		t.Fatalf("complete release extraction = %v, %q", err, got["reasonix-desktop"])
+		string(got["deeper-desktop"]) != "desktop" {
+		t.Fatalf("complete release extraction = %v, %q", err, got["deeper-desktop"])
 	}
 
-	duplicateHeaders := append(append([]tar.Header(nil), headers...), base("nested/reasonix", []byte("duplicate")))
+	duplicateHeaders := append(append([]tar.Header(nil), headers...), base("nested/deeper", []byte("duplicate")))
 	duplicateBodies := append(append([][]byte(nil), bodies...), []byte("duplicate"))
 	if _, err := extractLinuxReleaseUnit(makeArchive(t, duplicateHeaders, duplicateBodies)); err == nil ||
 		!strings.Contains(err.Error(), "appears more than once") {
@@ -1086,7 +1074,7 @@ func TestExtractLinuxReleaseUnitRejectsAmbiguousMembers(t *testing.T) {
 	}
 
 	nonRegular := append([]tar.Header(nil), headers...)
-	nonRegular[1] = tar.Header{Name: "reasonix-guard", Typeflag: tar.TypeSymlink, Linkname: "outside"}
+	nonRegular[1] = tar.Header{Name: "deeper-guard", Typeflag: tar.TypeSymlink, Linkname: "outside"}
 	nonRegularBodies := [][]byte{bodies[0], nil, bodies[2]}
 	if _, err := extractLinuxReleaseUnit(makeArchive(t, nonRegular, nonRegularBodies)); err == nil ||
 		!strings.Contains(err.Error(), "not a regular file") {
@@ -1098,7 +1086,7 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 	root := robustTempDir(t)
 	source := robustTempDir(t)
 	// This fixture describes a Linux release even when the test host is Windows.
-	for _, name := range []string{"reasonix-desktop", "reasonix"} {
+	for _, name := range []string{"deeper-desktop", "deeper"} {
 		if err := os.WriteFile(filepath.Join(source, name), []byte("old-"+name), 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -1108,10 +1096,10 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 		Version:     "v1.20.0",
 		RequestID:   "seed-linux",
 		Members: []installlayout.Member{
-			{Name: "reasonix-desktop", Path: filepath.Join(source, "reasonix-desktop")},
-			{Name: "reasonix", Path: filepath.Join(source, "reasonix")},
+			{Name: "deeper-desktop", Path: filepath.Join(source, "deeper-desktop")},
+			{Name: "deeper", Path: filepath.Join(source, "deeper")},
 		},
-		RequiredNames: []string{"reasonix-desktop", "reasonix"},
+		RequiredNames: []string{"deeper-desktop", "deeper"},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1128,14 +1116,14 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 	if err != nil || ptr.ActiveVersion != "v1.20.1" {
 		t.Fatalf("pointer=%+v err=%v", ptr, err)
 	}
-	activeDesktop := filepath.Join(root, filepath.FromSlash(ptr.ActiveDir), "reasonix-desktop")
+	activeDesktop := filepath.Join(root, filepath.FromSlash(ptr.ActiveDir), "deeper-desktop")
 	data, err := os.ReadFile(activeDesktop)
-	if err != nil || string(data) != "new-reasonix-desktop" {
+	if err != nil || string(data) != "new-deeper-desktop" {
 		t.Fatalf("active desktop=%q err=%v", data, err)
 	}
 	for _, guardPath := range []string{
-		filepath.Join(root, "reasonix-guard"),
-		filepath.Join(root, "versions", "v1.20.1", "reasonix-guard"),
+		filepath.Join(root, "deeper-guard"),
+		filepath.Join(root, "versions", "v1.20.1", "deeper-guard"),
 	} {
 		if _, err := os.Lstat(guardPath); !os.IsNotExist(err) {
 			t.Fatalf("Guard persisted at %s: %v", guardPath, err)
@@ -1145,8 +1133,8 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 
 func TestApplyLinuxHoldsReleaseUnitLockDuringReplace(t *testing.T) {
 	dir := robustTempDir(t)
-	t.Setenv("REASONIX_HOME", robustTempDir(t))
-	exe := filepath.Join(dir, "reasonix-desktop")
+	t.Setenv("DEEPER_HOME", robustTempDir(t))
+	exe := filepath.Join(dir, "deeper-desktop")
 	releasePaths := releaseUnitPathsFor(dir, "linux")
 	for _, path := range releasePaths {
 		if err := os.WriteFile(path, []byte("old"), 0o700); err != nil {
@@ -1179,7 +1167,7 @@ func TestApplyLinuxHoldsReleaseUnitLockDuringReplace(t *testing.T) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
-	for _, name := range []string{"reasonix-desktop", "reasonix-guard", "reasonix"} {
+	for _, name := range []string{"deeper-desktop", "deeper-guard", "deeper"} {
 		body := []byte(name)
 		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
 			t.Fatal(err)
@@ -1539,7 +1527,7 @@ func TestDownloadRejectsAssetSizeAboveMaximum(t *testing.T) {
 		context.Background(),
 		&http.Client{},
 		nil,
-		"https://dl.reasonix.io/file",
+		"https://github.com/SivanCola/deeper/releases/download/file",
 		maxDesktopReleaseAssetSize+1,
 		nil,
 	); err == nil {

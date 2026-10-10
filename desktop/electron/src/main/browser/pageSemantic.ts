@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { InjectedScript } from "reasonix-playwright-injected";
+import { InjectedScript } from "deeper-playwright-injected";
 import type { PageRegistry, SnapshotInput, SnapshotOutput } from "./snapshotScript.js";
 
 type Registry = PageRegistry & { kernel: InjectedScript };

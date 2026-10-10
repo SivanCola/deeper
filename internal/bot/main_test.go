@@ -3,7 +3,7 @@ package bot
 import (
 	"testing"
 
-	"reasonix/internal/testenv"
+	"deeper/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

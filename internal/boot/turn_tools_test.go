@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func TestInteractiveAgentToolsEndNaturallyWithoutFinish(t *testing.T) {

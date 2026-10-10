@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 type checkedRecordSink struct {

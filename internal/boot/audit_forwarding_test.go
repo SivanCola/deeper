@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/notify"
-	"reasonix/internal/stats"
-	"reasonix/internal/trajectory"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/notify"
+	"deeper/internal/stats"
+	"deeper/internal/trajectory"
 )
 
 // The shared forwarder is why a new capability no longer has to be repeated at

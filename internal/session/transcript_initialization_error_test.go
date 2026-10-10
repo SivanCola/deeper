@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/transcript"
+	"deeper/internal/provider"
+	"deeper/internal/transcript"
 )
 
 type unlockedRuntimeLogHandler struct {

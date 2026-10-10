@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/session"
+	"deeper/internal/store"
 )
 
 type sessionListEntry struct {

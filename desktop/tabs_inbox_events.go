@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/sessioninbox"
+import "deeper/internal/sessioninbox"
 
 // InboxChanged forwards Store revision notifications through the tab's
 // ordered, non-blocking runtime emitter. A late callback from an old session is

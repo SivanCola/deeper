@@ -8,7 +8,7 @@
 //
 // A session has exactly one writer at a time — the runtime holding its lease.
 // When the machine hosting Serve is also where the user now sits (the remote
-// desktop came "home"), the local Reasonix window can take a session over:
+// desktop came "home"), the local Deeper window can take a session over:
 // Serve releases the lease and the local window acquires it. Serve keeps no
 // controller authority for a mirrored session, but stays the rendezvous: the
 // remote tab's SSE stream keeps rendering because the local writer pushes its

@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/topicstate"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/topicstate"
 )
 
 // withExclusiveScope keeps the authoritative topic database and its legacy

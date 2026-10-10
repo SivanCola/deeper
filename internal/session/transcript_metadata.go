@@ -1,8 +1,8 @@
 package session
 
 import (
+	"deeper/internal/provider"
 	"encoding/json"
-	"reasonix/internal/provider"
 )
 
 // Transcript metadata retains only input identities and bounded previews, never

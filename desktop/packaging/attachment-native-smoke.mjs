@@ -1,5 +1,5 @@
 // Qualify an assembled app with a loopback provider and disposable data home.
-// Usage: node desktop/packaging/attachment-native-smoke.mjs <Reasonix.app> <evidence-dir>
+// Usage: node desktop/packaging/attachment-native-smoke.mjs <Deeper.app> <evidence-dir>
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
@@ -16,7 +16,7 @@ const require = createRequire(new URL("../electron/package.json", import.meta.ur
 const { _electron } = require("playwright");
 const bundle = resolve(process.argv[2]);
 const evidence = resolve(process.argv[3]);
-const home = mkdtempSync(join(tmpdir(), "reasonix-attachment-native-"));
+const home = mkdtempSync(join(tmpdir(), "deeper-attachment-native-"));
 const project = join(home, "project");
 mkdirSync(evidence, { recursive: true });
 mkdirSync(project, { recursive: true });
@@ -53,7 +53,7 @@ const provider = createServer(async (req, res) => {
 await new Promise(resolve => provider.listen(0, "127.0.0.1", resolve));
 writeFileSync(join(home, "config.toml"), `default_model = "fixture/vision"\n[desktop]\nprovider_access = ["fixture"]\n[[providers]]\nname = "fixture"\nkind = "openai"\nbase_url = "http://127.0.0.1:${provider.address().port}/v1"\nmodels = ["vision", "vision-alt"]\nvision_models = ["vision", "vision-alt"]\ndefault = "vision"\napi_key_env = "ATTACHMENT_FIXTURE_KEY"\n`);
 writeFileSync(join(project, "tool.png"), Buffer.from(png, "base64"));
-const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.reasonixDesktop.invoke(method, args), { method, args });
+const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
 const active = async () => (await invoke("ListTabs")).find(tab => tab.active);
 const settle = () => waitForSmokeCondition(async () => (await invoke("ListTabs")).every(tab => !tab.running));
 const composerTarget = tab => ({
@@ -98,13 +98,13 @@ async function submitImage(tab, label) {
   } finally { await invoke("ReleaseAttachmentTarget", [target.token]); }
 }
 try {
-  app = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Reasonix"), env: { ...packagedSmokeEnv(process.env, home), ATTACHMENT_FIXTURE_KEY: "loopback-only" }, timeout: 60_000 });
+  app = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Deeper"), env: { ...packagedSmokeEnv(process.env, home), ATTACHMENT_FIXTURE_KEY: "loopback-only" }, timeout: 60_000 });
   const manifest = JSON.parse(readFileSync(join(bundle, "Contents/Resources/build.json"), "utf8"));
   await waitForSmokeCondition(async () => {
     for (const candidate of app.windows()) {
       try {
-        if (await candidate.evaluate(() => Boolean(window.reasonixDesktop))) {
-          const version = await candidate.evaluate(() => window.reasonixDesktop.invoke("Version", []));
+        if (await candidate.evaluate(() => Boolean(window.deeperDesktop))) {
+          const version = await candidate.evaluate(() => window.deeperDesktop.invoke("Version", []));
           if (version === manifest.version) { page = candidate; return true; }
         }
       } catch { /* The splash window can be replaced during the handshake. */ }
@@ -154,10 +154,10 @@ try {
   await invoke("ReleaseAttachmentTarget", [rebuildTarget.token]);
   await invoke("ReleaseAttachmentTarget", [reboundTarget.token]);
   record("runtime rebuild renews a same-session draft without auto-send; user retry delivers original bytes");
-  mkdirSync(join(project, ".reasonix/attachments"), { recursive: true });
-  writeFileSync(join(project, ".reasonix/attachments/cli.png"), Buffer.from(png, "base64"));
+  mkdirSync(join(project, ".deeper/attachments"), { recursive: true });
+  writeFileSync(join(project, ".deeper/attachments/cli.png"), Buffer.from(png, "base64"));
   const beforeCLI = requests.length;
-  const cli = await promisify(execFile)(join(bundle, "Contents/Resources/service/reasonix"), ["run", "--dir", project, "--print", "inspect @.reasonix/attachments/cli.png"], {
+  const cli = await promisify(execFile)(join(bundle, "Contents/Resources/service/deeper"), ["run", "--dir", project, "--print", "inspect @.deeper/attachments/cli.png"], {
     env: { ...packagedSmokeEnv(process.env, home), ATTACHMENT_FIXTURE_KEY: "loopback-only" }, timeout: 60_000,
   });
   assert.match(cli.stdout, /ATTACHMENT_FIXTURE_OK/);
@@ -193,7 +193,7 @@ try {
   }, png);
   await page.locator(".composer-context__item").first().waitFor();
   const objects = globSync(`**/.content-v1/objects/**/${digest}`, { cwd: home });
-  const workspaceSources = globSync("**/.reasonix/attachments/*", { cwd: home }).filter(path => {
+  const workspaceSources = globSync("**/.deeper/attachments/*", { cwd: home }).filter(path => {
     const bytes = readFileSync(join(home, path));
     return createHash("sha256").update(bytes).digest("hex") === digest;
   });
@@ -215,18 +215,18 @@ try {
     assert.ok(compatibilityRef?.sessionId);
     await app.close();
     app = null;
-    const oldHome = mkdtempSync(join(tmpdir(), "reasonix-attachment-downgrade-"));
+    const oldHome = mkdtempSync(join(tmpdir(), "deeper-attachment-downgrade-"));
     cpSync(home, oldHome, { recursive: true });
     const sessionDir = join(oldHome, "desktop-sessions-v5/by-id", compatibilityRef.sessionId);
     const protectedFiles = globSync("**/*", { cwd: sessionDir }).filter(path => /manifest\.json$|events\.frames$/.test(path));
     const beforeFiles = protectedFiles.map(path => [path, readFileSync(join(sessionDir, path))]);
     assert.ok(beforeFiles.length >= 2);
     const previous = resolve(process.argv[4]);
-    app = await _electron.launch({ executablePath: join(previous, "Contents/MacOS/Reasonix"), env: { ...packagedSmokeEnv(process.env, oldHome), ATTACHMENT_FIXTURE_KEY: "loopback-only" }, timeout: 60_000 });
+    app = await _electron.launch({ executablePath: join(previous, "Contents/MacOS/Deeper"), env: { ...packagedSmokeEnv(process.env, oldHome), ATTACHMENT_FIXTURE_KEY: "loopback-only" }, timeout: 60_000 });
     await waitForSmokeCondition(async () => {
       for (const candidate of app.windows()) {
         try {
-          if (await candidate.evaluate(() => window.reasonixDesktop?.invoke("Version", []))) { page = candidate; return true; }
+          if (await candidate.evaluate(() => window.deeperDesktop?.invoke("Version", []))) { page = candidate; return true; }
         } catch { /* Wait for the production service. */ }
       }
       return false;

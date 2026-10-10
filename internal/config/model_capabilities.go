@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 type CapabilityState string
@@ -351,9 +351,9 @@ func (r *ModelCapabilityResolver) providerFingerprint(entry ProviderEntry) strin
 }
 
 func (r *ModelCapabilityResolver) providerFingerprintForCredentialRevision(entry ProviderEntry, credentialsRevision string) string {
-	h := hmac.New(sha256.New, []byte("reasonix-model-capabilities-cache-v2"))
+	h := hmac.New(sha256.New, []byte("deeper-model-capabilities-cache-v2"))
 	for _, value := range []string{
-		"reasonix-model-capabilities-v2", entry.Name, entry.Kind, entry.BaseURL, entry.ChatURL, entry.RequestURL,
+		"deeper-model-capabilities-v2", entry.Name, entry.Kind, entry.BaseURL, entry.ChatURL, entry.RequestURL,
 		entry.ModelsURL, entry.APIKeyEnv, fmt.Sprintf("%t", entry.AuthHeader), fmt.Sprintf("%t", entry.NoProxy),
 		credentialsRevision,
 	} {

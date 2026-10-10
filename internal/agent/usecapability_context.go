@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 
-	"reasonix/internal/capability"
-	"reasonix/internal/tool"
+	"deeper/internal/capability"
+	"deeper/internal/tool"
 )
 
 // contextualEntry overlays live availability on a copy. The cached catalog

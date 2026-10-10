@@ -81,7 +81,7 @@ func TestResolveWindowsCrossVolumeJunction(t *testing.T) {
 		}
 		t.Skip("no temporary directory on a second volume")
 	}
-	target, err := os.MkdirTemp(other, "reasonix-junction-*")
+	target, err := os.MkdirTemp(other, "deeper-junction-*")
 	if err != nil {
 		t.Fatal(err)
 	}

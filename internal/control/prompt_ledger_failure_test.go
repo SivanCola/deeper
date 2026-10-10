@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/mcpinteraction"
-	"reasonix/internal/turnevent"
+	"deeper/internal/event"
+	"deeper/internal/mcpinteraction"
+	"deeper/internal/turnevent"
 )
 
 func blockPromptTestLedger(t *testing.T, c *Controller, root string) {

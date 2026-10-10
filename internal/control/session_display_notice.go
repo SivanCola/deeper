@@ -1,10 +1,10 @@
 package control
 
 import (
+	"deeper/internal/event"
+	"deeper/internal/session"
+	"deeper/internal/transcript"
 	"encoding/json"
-	"reasonix/internal/event"
-	"reasonix/internal/session"
-	"reasonix/internal/transcript"
 )
 
 func mcpDisplayNoticeEvents(e event.Event) ([]session.Event, error) {

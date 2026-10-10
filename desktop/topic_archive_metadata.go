@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/fileutil"
+	"deeper/internal/agent"
+	"deeper/internal/fileutil"
 )
 
 const topicArchiveMetadataPendingDir = "desktop-topic-archive-pending"

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/desktop/internal/sessionui"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/sessionui"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 type ManualSessionCreationRequest struct {

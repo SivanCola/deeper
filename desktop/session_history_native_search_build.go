@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/provider"
 )
 
 func buildNativeSearch(ctx context.Context, db *sql.DB, p *nativeHistoryPreparation) error {

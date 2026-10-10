@@ -14,11 +14,11 @@ func loadScoped(t *testing.T, user, project string) (*Config, string) {
 	t.Helper()
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte(user), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -121,12 +121,12 @@ func TestProjectAllowWriteSymlinkOutOfWorkspaceIsRefused(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
 	outside := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.Symlink(outside, filepath.Join(root, "link")); err != nil {
 		t.Fatal(err)
 	}
 	project := "[sandbox]\nallow_write = [\"link/deeper\"]\nworkspace_root = \"link\"\n"
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -171,9 +171,9 @@ func TestProjectWorkspaceRootSharingANamePrefixIsOutside(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	project := "[sandbox]\nworkspace_root = " + tomlQuote(evil) + "\nallow_write = [" + tomlQuote(evil) + "]\n"
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -254,13 +254,13 @@ func tomlQuote(s string) string {
 func TestProjectPathsAreNotExpandedTwice(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	up := strings.Repeat("../", 12)
 	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("B="+up+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	project := "[sandbox]\nallow_write = [\"${REASONIX_TEST_UNSET_A:-$}{B}\"]\nworkspace_root = \"${REASONIX_TEST_UNSET_A:-$}{B}\"\n"
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(project), 0o600); err != nil {
+	project := "[sandbox]\nallow_write = [\"${DEEPER_TEST_UNSET_A:-$}{B}\"]\nworkspace_root = \"${DEEPER_TEST_UNSET_A:-$}{B}\"\n"
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := LoadForRootReadOnly(root)
@@ -283,7 +283,7 @@ func TestProjectPathsAreNotExpandedTwice(t *testing.T) {
 func TestUserSandboxPathsIgnoreTheWorkspaceEnv(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[sandbox]\nforbid_read = [\"${RX_TEST_UNSET_SECRETS_DIR:-/secrets}\"]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

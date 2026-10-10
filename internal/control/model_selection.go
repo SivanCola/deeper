@@ -1,6 +1,6 @@
 package control
 
-import "reasonix/internal/agent"
+import "deeper/internal/agent"
 
 // modelSelection is the connection this controller runs as one value: the ref
 // and the identity of the connection it was resolved against always change

@@ -10,15 +10,15 @@ import (
 
 func prepareTestFileUpdateClaim(t *testing.T) (*UpdateTransaction, string, []string) {
 	t.Helper()
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	paths := []string{
-		filepath.Join(dir, "reasonix-desktop"),
-		filepath.Join(dir, "reasonix-guard"),
-		filepath.Join(dir, "reasonix"),
+		filepath.Join(dir, "deeper-desktop"),
+		filepath.Join(dir, "deeper-guard"),
+		filepath.Join(dir, "deeper"),
 	}
 	for _, path := range paths {
 		if err := os.WriteFile(path, []byte(filepath.Base(path)), 0o700); err != nil {
@@ -121,14 +121,14 @@ func TestClaimPendingFileUpdateRejectsRollbackBackupDrift(t *testing.T) {
 }
 
 func TestClaimPendingFileUpdateRejectsPreparedMissingFileAppearing(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "reasonix-desktop")
-	guard := filepath.Join(dir, "reasonix-guard")
-	added := filepath.Join(dir, "reasonix-update-helper.exe")
+	target := filepath.Join(dir, "deeper-desktop")
+	guard := filepath.Join(dir, "deeper-guard")
+	added := filepath.Join(dir, "deeper-update-helper.exe")
 	for _, path := range []string{target, guard} {
 		if err := os.WriteFile(path, []byte(filepath.Base(path)), 0o700); err != nil {
 			t.Fatal(err)

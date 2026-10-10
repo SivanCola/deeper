@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/fileutil"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/fileutil"
+	"deeper/internal/provider"
 )
 
 // Rebuild authored previews, retracted input/turn metadata, title sequencing,

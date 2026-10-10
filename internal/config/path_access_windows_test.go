@@ -18,7 +18,7 @@ func TestConfigJunctionAccessAndLockNames(t *testing.T) {
 	if out, err := exec.Command("cmd", "/c", "mklink", "/J", alias, target).CombinedOutput(); err != nil {
 		t.Fatalf("create junction: %v: %s", err, out)
 	}
-	for _, name := range []string{"config.toml", ".env", "reasonix.toml"} {
+	for _, name := range []string{"config.toml", ".env", "deeper.toml"} {
 		for _, existing := range []bool{false, true} {
 			physical := filepath.Join(target, name)
 			if existing {

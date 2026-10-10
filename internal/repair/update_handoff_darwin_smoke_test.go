@@ -16,14 +16,14 @@ import (
 //
 // Run with:
 //
-//	REASONIX_MACOS_APPLICATIONS_SMOKE=1 go test ./internal/repair \
+//	DEEPER_MACOS_APPLICATIONS_SMOKE=1 go test ./internal/repair \
 //	  -run TestDarwinApplicationsOrphanBackupLifecycleSmoke -count=1
 func TestDarwinApplicationsOrphanBackupLifecycleSmoke(t *testing.T) {
-	if os.Getenv("REASONIX_MACOS_APPLICATIONS_SMOKE") != "1" {
-		t.Skip("set REASONIX_MACOS_APPLICATIONS_SMOKE=1 to probe /Applications")
+	if os.Getenv("DEEPER_MACOS_APPLICATIONS_SMOKE") != "1" {
+		t.Skip("set DEEPER_MACOS_APPLICATIONS_SMOKE=1 to probe /Applications")
 	}
 
-	smokeRoot, err := os.MkdirTemp("/Applications", ".reasonix-updater-smoke-")
+	smokeRoot, err := os.MkdirTemp("/Applications", ".deeper-updater-smoke-")
 	if err != nil {
 		t.Fatalf("create isolated /Applications smoke root (allow the terminal in App Management): %v", err)
 	}
@@ -45,16 +45,16 @@ func TestDarwinApplicationsOrphanBackupLifecycleSmoke(t *testing.T) {
 		}
 	})
 
-	t.Setenv("REASONIX_HOME", t.TempDir())
-	app := filepath.Join(smokeRoot, "Reasonix.app")
-	executable := filepath.Join(app, "Contents", "MacOS", "Reasonix")
-	backup := app + ".reasonix-update-backup"
-	staging, err := os.MkdirTemp("", "reasonix-mac-update-*")
+	t.Setenv("DEEPER_HOME", t.TempDir())
+	app := filepath.Join(smokeRoot, "Deeper.app")
+	executable := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	backup := app + ".deeper-update-backup"
+	staging, err := os.MkdirTemp("", "deeper-mac-update-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(staging) })
-	stagedApp := filepath.Join(staging, "Reasonix.app")
+	stagedApp := filepath.Join(staging, "Deeper.app")
 	for _, dir := range []string{filepath.Dir(executable), backup, stagedApp} {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			t.Fatal(err)

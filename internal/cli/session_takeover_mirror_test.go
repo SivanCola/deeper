@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 )
 
 // resumeEntryIndex returns the 1-based /resume index of the row matching the

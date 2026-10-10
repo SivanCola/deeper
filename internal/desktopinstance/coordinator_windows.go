@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/installlayout"
-	"reasonix/internal/proc"
+	"deeper/internal/installlayout"
+	"deeper/internal/proc"
 )
 
 const gracefulTimeout = 20 * time.Second
@@ -61,11 +61,11 @@ func withHome(env []string, home string) []string {
 	out := make([]string, 0, len(env)+1)
 	for _, e := range env {
 		key, _, _ := strings.Cut(e, "=")
-		if !strings.EqualFold(key, "REASONIX_HOME") && !strings.EqualFold(key, "REASONIX_DESKTOP_SERVICE") {
+		if !strings.EqualFold(key, "DEEPER_HOME") && !strings.EqualFold(key, "DEEPER_DESKTOP_SERVICE") {
 			out = append(out, e)
 		}
 	}
-	return append(out, "REASONIX_HOME="+home)
+	return append(out, "DEEPER_HOME="+home)
 }
 
 func recoverProcesses(root, profile, home string, list []*process, all, interactive bool) error {
@@ -86,7 +86,7 @@ func recoverProcesses(root, profile, home string, list []*process, all, interact
 		return requireVacant(root, profile, all)
 	}
 	if !interactive {
-		return outcome(ConfirmationRequired, "old Reasonix processes have not exited; interactive recovery is required")
+		return outcome(ConfirmationRequired, "old Deeper processes have not exited; interactive recovery is required")
 	}
 	fresh, err := inspect(root, profile, all)
 	if err != nil {
@@ -160,7 +160,7 @@ func recoverProcesses(root, profile, home string, list []*process, all, interact
 		}
 	}
 	if !waitProcesses(live, terminateTimeout) {
-		return outcome(ExitTimeout, "old Reasonix processes did not exit")
+		return outcome(ExitTimeout, "old Deeper processes did not exit")
 	}
 	return requireVacant(root, profile, all)
 }
@@ -218,7 +218,7 @@ func target(root string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	return filepath.Join(filepath.Dir(desktop), "app", "Reasonix.exe"), current.ActiveVersion, nil
+	return filepath.Join(filepath.Dir(desktop), "app", "Deeper.exe"), current.ActiveVersion, nil
 }
 
 func verify(root, profile, expected string) error {
@@ -250,8 +250,8 @@ func verify(root, profile, expected string) error {
 					if childErr == nil {
 						// A status response alone cannot prove that its advertised
 						// service is still alive or belongs to this release.
-						serviceImage := filepath.Join(filepath.Dir(p.image), "resources", "service", "reasonix-desktop.exe")
-						entryImage := filepath.Join(filepath.Dir(filepath.Dir(p.image)), "reasonix-desktop.exe")
+						serviceImage := filepath.Join(filepath.Dir(p.image), "resources", "service", "deeper-desktop.exe")
+						entryImage := filepath.Join(filepath.Dir(filepath.Dir(p.image)), "deeper-desktop.exe")
 						ready = ready || strings.EqualFold(child.image, serviceImage) || strings.EqualFold(child.image, entryImage)
 						child.close()
 					}
@@ -264,7 +264,7 @@ func verify(root, profile, expected string) error {
 			return nil
 		}
 		if failed {
-			return outcome(StartupFailed, "Reasonix startup failed; use the recovery window or desktop-shell/logs")
+			return outcome(StartupFailed, "Deeper startup failed; use the recovery window or desktop-shell/logs")
 		}
 		if time.Now().After(deadline) {
 			return outcome(StartupFailed, "startup was not verified within 30 seconds; inspect desktop-shell/logs")

@@ -1,4 +1,4 @@
-module reasonix
+module deeper
 
 go 1.26.0
 

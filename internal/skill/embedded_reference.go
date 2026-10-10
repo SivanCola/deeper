@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/skill/builtincontent"
+	"deeper/internal/skill/builtincontent"
 )
 
 func renderEmbeddedReference(sk Skill, reference string) (string, error) {

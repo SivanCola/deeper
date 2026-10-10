@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/winaclresidue"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/winaclresidue"
 )
 
 // Test seams for the writer-side recovery ladder.
@@ -21,7 +21,7 @@ var (
 )
 
 // readCredentialFile repairs a denied read of the global credential store
-// only when a retired-sandbox marker proves the deny came from Reasonix. The
+// only when a retired-sandbox marker proves the deny came from Deeper. The
 // original permission error stays the cause so callers keep their semantics.
 func readCredentialFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)

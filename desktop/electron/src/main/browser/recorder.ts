@@ -62,7 +62,7 @@ export class BrowserRecorder {
     let finishResolve!: (value: Recording) => void;
     const completion = new Promise<Recording>(resolve => { finishResolve = resolve; });
     const temporary = join(directory, `recording-${id}.webm.part`), target = join(directory, `recording-${id}.webm`), html = join(directory, `recorder-${id}.html`);
-    const captureSession = session.fromPartition(`reasonix-recorder-${id}`);
+    const captureSession = session.fromPartition(`deeper-recorder-${id}`);
     const { port1, port2 } = new MessageChannelMain();
     let stopTimer: ReturnType<typeof setTimeout> | undefined;
     let finalizationTimer: ReturnType<typeof setTimeout> | undefined;
@@ -174,7 +174,7 @@ export class BrowserRecorder {
       port1.start();
       await win.loadFile(html);
       controller.signal.throwIfAborted();
-      win.webContents.postMessage("reasonix-recorder-port", null, [port2]);
+      win.webContents.postMessage("deeper-recorder-port", null, [port2]);
       const timer = setTimeout(() => controller.abort(), 10_000);
       try { await abortable(started, controller.signal); } finally { clearTimeout(timer); }
       stopTimer = setTimeout(() => { void stop(); }, Math.max(0, seconds * 1000 - initialElapsed));

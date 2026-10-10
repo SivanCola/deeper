@@ -10,8 +10,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"reasonix/internal/fileutil"
-	fileencoding "reasonix/internal/fileutil/encoding"
+	"deeper/internal/fileutil"
+	fileencoding "deeper/internal/fileutil/encoding"
 )
 
 // repairProviderEndpointContractsFileLocked performs a narrow lexical edit for

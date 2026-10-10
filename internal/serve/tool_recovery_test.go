@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/tool"
 )
 
 func recoveryHTTPFixture(t *testing.T) (*httptest.Server, control.ToolRecoverySnapshot) {

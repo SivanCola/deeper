@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/i18n"
-	"reasonix/internal/memory"
+	"deeper/internal/i18n"
+	"deeper/internal/memory"
 )
 
 const memoryCommandUsage = "usage: /memory [recall|subjects|pin <id-or-name>|unpin <id-or-name>|verify <id-or-name>|revisions <id-or-name>|restore <id-or-name> <revision>|archived|recover <archive-path>|instructions]"

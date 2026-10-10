@@ -9,16 +9,16 @@ package main
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef struct reasonix_fsevents_subscription reasonix_fsevents_subscription;
+typedef struct deeper_fsevents_subscription deeper_fsevents_subscription;
 
-reasonix_fsevents_subscription *reasonix_fsevents_start(
+deeper_fsevents_subscription *deeper_fsevents_start(
 	const char *path,
 	uintptr_t token,
 	double latency,
 	int *error_code
 );
-void reasonix_fsevents_stop(reasonix_fsevents_subscription *subscription);
-void reasonix_fsevents_catch_up(reasonix_fsevents_subscription *subscription);
+void deeper_fsevents_stop(deeper_fsevents_subscription *subscription);
+void deeper_fsevents_catch_up(deeper_fsevents_subscription *subscription);
 */
 import "C"
 
@@ -72,7 +72,7 @@ type darwinWorkspaceSubscription struct {
 	watcher    *darwinWorkspaceWatcher
 	path       string
 	recursive  bool
-	native     *C.reasonix_fsevents_subscription
+	native     *C.deeper_fsevents_subscription
 	handle     cgo.Handle
 	stopOnce   sync.Once
 	stopNative func()
@@ -102,7 +102,7 @@ func (w *darwinWorkspaceWatcher) CatchUp() {
 		return
 	}
 	for _, sub := range w.watches {
-		C.reasonix_fsevents_catch_up(sub.native)
+		C.deeper_fsevents_catch_up(sub.native)
 	}
 }
 
@@ -126,7 +126,7 @@ func (w *darwinWorkspaceWatcher) Add(path string, recursive bool) error {
 	cPath := C.CString(path)
 	defer C.free(unsafe.Pointer(cPath))
 	var errorCode C.int
-	sub.native = C.reasonix_fsevents_start(cPath, C.uintptr_t(sub.handle), C.double(darwinWorkspaceLatency), &errorCode)
+	sub.native = C.deeper_fsevents_start(cPath, C.uintptr_t(sub.handle), C.double(darwinWorkspaceLatency), &errorCode)
 	if sub.native == nil {
 		sub.handle.Delete()
 		return fmt.Errorf("start FSEvents stream for %q: %s", path, darwinFSEventsStartError(int(errorCode)))
@@ -184,14 +184,14 @@ func (s *darwinWorkspaceSubscription) stop() {
 			s.stopNative()
 			return
 		}
-		C.reasonix_fsevents_stop(s.native)
+		C.deeper_fsevents_stop(s.native)
 		s.native = nil
 		s.handle.Delete()
 	})
 }
 
-//export reasonixFSEventsEvent
-func reasonixFSEventsEvent(token C.uintptr_t, eventPath *C.char, eventFlags C.uint32_t) {
+//export deeperFSEventsEvent
+func deeperFSEventsEvent(token C.uintptr_t, eventPath *C.char, eventFlags C.uint32_t) {
 	if eventPath == nil {
 		return
 	}

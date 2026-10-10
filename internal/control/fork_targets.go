@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/session"
+	"deeper/internal/session"
 )
 
 // ForkTargets reports the fork state of this controller's current session: the

@@ -9,9 +9,9 @@ import { chromium, _electron } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const electron = process.argv.includes("--electron");
-const evidence = process.env.REASONIX_OUTLINE_EVIDENCE ?? path.join(tmpdir(), "reasonix-turn-outline-evidence");
+const evidence = process.env.DEEPER_OUTLINE_EVIDENCE ?? path.join(tmpdir(), "deeper-turn-outline-evidence");
 await mkdir(evidence, { recursive: true });
-const host = await mkdtemp(path.join(tmpdir(), "reasonix-outline-host-"));
+const host = await mkdtemp(path.join(tmpdir(), "deeper-outline-host-"));
 const server = await createServer({ root, server: { host: "127.0.0.1", port: 0 }, clearScreen: false }); await server.listen();
 const url = new URL("bench/turn-outline.html", server.resolvedUrls.local[0]).href;
 let browser, app;
@@ -20,7 +20,7 @@ try {
   let page;
   if (electron) {
     await copyFile(path.join(root, "bench/transcript-layout-electron.cjs"), path.join(host, "main.cjs"));
-    app = await _electron.launch({ executablePath: createRequire(path.join(root, "../electron/package.json"))("electron"), args: [path.join(host, "main.cjs")], env: { ...process.env, REASONIX_LAYOUT_URL: url } });
+    app = await _electron.launch({ executablePath: createRequire(path.join(root, "../electron/package.json"))("electron"), args: [path.join(host, "main.cjs")], env: { ...process.env, DEEPER_LAYOUT_URL: url } });
     page = await app.firstWindow();
   } else { browser = await chromium.launch({ headless: true }); page = await browser.newPage({ viewport: { width: 1280, height: 900 } }); await page.goto(url); }
   page.on("pageerror", error => report.errors.push(error.message));

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/sandbox"
+	"deeper/internal/sandbox"
 )
 
 // TestWrapConfinedCommandFailsClosedWhenBackendUnavailable pins the fail-closed

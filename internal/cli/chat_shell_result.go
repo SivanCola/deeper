@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 func (m *chatTUI) collapseFinalToolOutput(tool event.Tool) {

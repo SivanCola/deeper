@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 const HistoricalChecksNoticeCode = "historical_checks"

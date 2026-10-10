@@ -3,8 +3,8 @@ package main
 import (
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/jobs"
+	"deeper/internal/control"
+	"deeper/internal/jobs"
 )
 
 // Interactive removal returns promptly; durable cleanup-pending markers let

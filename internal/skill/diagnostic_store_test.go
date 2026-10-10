@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/config"
+	"deeper/internal/pluginpkg"
 )
 
 func TestDiagnosticStorePreservesPluginOwnership(t *testing.T) {
 	rh, root := t.TempDir(), t.TempDir()
-	t.Setenv("REASONIX_HOME", rh)
+	t.Setenv("DEEPER_HOME", rh)
 	for _, owner := range []string{"owner-a", "owner-b"} {
 		base := filepath.Join(rh, "plugins", owner)
 		name := owner + "-probe"

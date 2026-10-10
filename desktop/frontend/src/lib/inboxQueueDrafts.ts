@@ -6,7 +6,7 @@ export type QueueDraftState = { edit?: QueueEditDraft; recovered: QueueEditDraft
 const empty: QueueDraftState = { recovered: [] };
 const states = new Map<string, QueueDraftState>();
 const listeners = new Set<() => void>();
-const storageKey = (scope: string) => `reasonix.inbox-edit.v1:${scope}`;
+const storageKey = (scope: string) => `deeper.inbox-edit.v1:${scope}`;
 
 // Separate from the main composer draft: switching tasks or closing the edit
 // view cannot overwrite either piece of user input. No requests are replayed.

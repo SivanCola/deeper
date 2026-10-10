@@ -55,7 +55,7 @@ export function MCPAppCard({
     let bridgeStarted = false;
     const bridge = new AppBridge(
       null,
-      { name: "reasonix", version: "desktop" },
+      { name: "deeper", version: "desktop" },
       { openLinks: {}, serverTools: {}, logging: {} },
     );
 

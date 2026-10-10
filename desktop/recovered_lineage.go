@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/store"
 )
 
 // recoveredLegacySiblings lists the other recovery snapshots of the lineage a

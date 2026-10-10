@@ -1,7 +1,7 @@
 package openai
 
 import (
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // ReasoningForConfig is pure: capability discovery never reads credentials or

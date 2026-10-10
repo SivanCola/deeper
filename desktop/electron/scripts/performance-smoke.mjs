@@ -43,7 +43,7 @@ try {
   await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { value: { writeText: async (text) => { window.fixtureCopiedText = text; } }, configurable: true }));
   await copy.click();
   await page.waitForFunction(() => window.fixtureCopiedText?.includes("CPU profile after trigger: captured"));
-  const result = await page.evaluate(() => window.reasonixDesktop.native.exportHeapSnapshot());
+  const result = await page.evaluate(() => window.deeperDesktop.native.exportHeapSnapshot());
   assert.equal(result.status, "saved");
   const heap = join(temp, "fixture.heapsnapshot");
   assert.ok(statSync(heap).size > 1000);

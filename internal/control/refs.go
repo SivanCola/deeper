@@ -17,10 +17,10 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/fileref"
-	"reasonix/internal/instruction"
-	"reasonix/internal/proc"
-	"reasonix/internal/secrets"
+	"deeper/internal/fileref"
+	"deeper/internal/instruction"
+	"deeper/internal/proc"
+	"deeper/internal/secrets"
 )
 
 // maxFileRefBytes caps how much of an @-referenced file is injected into a
@@ -45,7 +45,7 @@ type refKind int
 const (
 	refResource    refKind = iota // an MCP resource: @<server>:<uri>
 	refFile                       // a local file or directory: @<path>
-	refImage                      // a local image attachment: @.reasonix/attachments/<file>
+	refImage                      // a local image attachment: @.deeper/attachments/<file>
 	refRemoteImage                // an http(s) image URL
 	refFileID                     // a Files API file-api- id
 )
@@ -74,7 +74,7 @@ type ExternalFolderRefEntry struct {
 
 var pathLocationSuffixRe = regexp.MustCompile(`:\d+(?::\d+)?:?$`)
 
-const externalFolderRefPrefix = "__reasonix_external_folder"
+const externalFolderRefPrefix = "__deeper_external_folder"
 
 // parseRefTokens extracts the deduped, punctuation-trimmed tokens following '@'
 // in a line. A token is a run of non-whitespace bytes, except that a
@@ -615,7 +615,7 @@ func FileRefLine(line string) (string, bool) {
 }
 
 // SlashCodeCommentLine reports whether a slash-prefixed line is ordinary source
-// text rather than a Reasonix slash command.
+// text rather than a Deeper slash command.
 func SlashCodeCommentLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
 	return strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "/*")

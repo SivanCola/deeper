@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	"reasonix/internal/permission"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	"deeper/internal/permission"
+	"deeper/internal/sandbox"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 func TestSessionTempWriteDoesNotRequestScopeExpansion(t *testing.T) {
@@ -83,7 +83,7 @@ func TestSessionTempWriteDoesNotRequestScopeExpansion(t *testing.T) {
 			t.Fatalf("unowned directory %q = %+v, %v; want denied", dir, decision, err)
 		}
 	}
-	checkBlocked(filepath.Join(filepath.Dir(lease.Dir()), "reasonix-session-tmp-unowned"))
+	checkBlocked(filepath.Join(filepath.Dir(lease.Dir()), "deeper-session-tmp-unowned"))
 	if err := os.Symlink(t.TempDir(), filepath.Join(lease.Dir(), "escape")); err == nil {
 		checkBlocked(filepath.Join(lease.Dir(), "escape"))
 	}
@@ -332,7 +332,7 @@ func TestCheckWriteAccessHeadlessMissingDir(t *testing.T) {
 		Tool:       "write_file",
 		Expandable: true,
 		Declaration: tool.WriteAccessDeclaration{
-			Directories: []string{filepath.Join(os.TempDir(), "reasonix-write-access-outside")},
+			Directories: []string{filepath.Join(os.TempDir(), "deeper-write-access-outside")},
 		},
 	})
 	if err != nil {
@@ -355,7 +355,7 @@ func TestCheckWriteAccessSubagentCannotExpand(t *testing.T) {
 		Tool:       "write_file",
 		Expandable: false,
 		Declaration: tool.WriteAccessDeclaration{
-			Directories: []string{filepath.Join(os.TempDir(), "reasonix-write-access-child")},
+			Directories: []string{filepath.Join(os.TempDir(), "deeper-write-access-child")},
 		},
 	})
 	if err != nil {

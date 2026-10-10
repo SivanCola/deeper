@@ -10,7 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestLegacyReasoningDefaultsStaySeparateFromSavedOverrides(t *testing.T) {

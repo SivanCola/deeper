@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/skill"
-	"reasonix/internal/tool"
+	"deeper/internal/skill"
+	"deeper/internal/tool"
 )
 
 type capabilityRecordingRunner struct {

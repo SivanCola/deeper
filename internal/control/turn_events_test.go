@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/turnevent"
+	"deeper/internal/event"
+	"deeper/internal/turnevent"
 )
 
 type turnEventGateRunner struct {

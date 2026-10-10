@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // TopicFolded consults only an already-proved catalog relationship. It cannot

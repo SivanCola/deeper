@@ -2,22 +2,17 @@ package update
 
 import (
 	"crypto/rand"
-	"fmt"
 	"testing"
 
 	"aead.dev/minisign"
 )
 
-// TestEmbeddedPublicKeyParses guards the hard-coded publicKey constant: it must
-// parse and carry the expected key ID, so a copy-paste slip is caught here rather
-// than silently failing every signature check in the field.
-func TestEmbeddedPublicKeyParses(t *testing.T) {
-	var key minisign.PublicKey
-	if err := key.UnmarshalText([]byte(publicKey)); err != nil {
-		t.Fatalf("embedded public key does not parse: %v", err)
+func TestUnconfiguredBuildRejectsUpdates(t *testing.T) {
+	if publicKey != "" {
+		t.Fatal("development builds must not inherit an upstream signing key")
 	}
-	if got := fmt.Sprintf("%016X", key.ID()); got != "AF12CA46F4A9EBB0" {
-		t.Fatalf("embedded public key ID = %s, want AF12CA46F4A9EBB0", got)
+	if err := Verify([]byte("payload"), []byte("signature")); err == nil {
+		t.Fatal("unconfigured update verification must fail closed")
 	}
 }
 

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/plugin"
+	"deeper/internal/config"
+	"deeper/internal/plugin"
 )
 
 func TestMCPServerPolicyDefaultsToParallelExceptKnownStateful(t *testing.T) {

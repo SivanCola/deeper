@@ -1,7 +1,7 @@
 package taskcontract
 
 import (
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 	"testing"
 )
 

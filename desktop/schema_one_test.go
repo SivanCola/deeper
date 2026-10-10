@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // isolateDesktopUserDirsSchemaOne pins a test to the schema-1 session writer:

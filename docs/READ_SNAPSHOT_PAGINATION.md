@@ -4,7 +4,7 @@
 
 ## Problem and repair boundary
 
-A local Desktop session could report `session_operation:stale_cursor:The session list changed. Reload it.` while its owner was writing titles/results. A double metadata collect required every writer to remain idle. Removing that collect fixed first-page starvation but still allowed live re-sorting to invalidate subsequent pages. The frontend could miss the failure when its first logical window required multiple 200-row RPC calls. This error does not establish a failure of SSH, Git, Docker or remote Reasonix.
+A local Desktop session could report `session_operation:stale_cursor:The session list changed. Reload it.` while its owner was writing titles/results. A double metadata collect required every writer to remain idle. Removing that collect fixed first-page starvation but still allowed live re-sorting to invalidate subsequent pages. The frontend could miss the failure when its first logical window required multiple 200-row RPC calls. This error does not establish a failure of SSH, Git, Docker or remote Deeper.
 
 The read result is now owned by `desktop/read_snapshot_store.go`. Continuations read immutable rows by ordinal. They do not re-sort current data or compare global catalog revisions. This is a read contract; commands still resolve current authoritative ownership and lifecycle.
 

@@ -16,11 +16,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 // fakeAdapter 是一个内存中的假适配器，用于测试 BotGateway。
@@ -1543,7 +1543,7 @@ func TestGatewayProjectCommandsListAndUseProjectOverride(t *testing.T) {
 }
 
 func TestGatewaySessionsSearchAndAttachSessionOverride(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	projectRoot := filepath.Join(t.TempDir(), "attach-project")
 	if err := os.MkdirAll(projectRoot, 0o755); err != nil {
@@ -1843,7 +1843,7 @@ func TestGatewayDefaultQueueSteersMediaOnlyActiveTurn(t *testing.T) {
 	gw.handleMessage(context.Background(), AdapterBinding{ID: "feishu-feishu", Platform: PlatformFeishu, Adapter: adapter}, msg)
 
 	got := ctrl.steered()
-	if len(got) != 1 || !strings.Contains(got[0], "Attachments:") || !strings.Contains(got[0], "@.reasonix/attachments/") {
+	if len(got) != 1 || !strings.Contains(got[0], "Attachments:") || !strings.Contains(got[0], "@.deeper/attachments/") {
 		t.Fatalf("steers = %#v, want saved attachment reference", got)
 	}
 }
@@ -1932,7 +1932,7 @@ func TestGatewayQueueInterruptCancelsAndKeepsNewestMessage(t *testing.T) {
 }
 
 func TestGatewayUnknownDMGetsPairingCode(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
 		PairingEnabled: true,
@@ -1951,7 +1951,7 @@ func TestGatewayUnknownDMGetsPairingCode(t *testing.T) {
 	gw.handleMessage(context.Background(), AdapterBinding{ID: "feishu-feishu", Platform: PlatformFeishu, Adapter: adapter}, msg)
 
 	sent := adapter.sentMessages()
-	if len(sent) != 1 || !strings.Contains(sent[0].Text, "配对码") || !strings.Contains(sent[0].Text, "reasonix bot pairing approve") {
+	if len(sent) != 1 || !strings.Contains(sent[0].Text, "配对码") || !strings.Contains(sent[0].Text, "deeper bot pairing approve") {
 		t.Fatalf("sent = %#v, want pairing instructions", sent)
 	}
 	reqs, err := ListPairingRequests()
@@ -2147,7 +2147,7 @@ func TestGatewayControlServerStatusAndSend(t *testing.T) {
 	}
 	metricsBody, _ := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
-	if resp.StatusCode != http.StatusOK || !strings.Contains(string(metricsBody), "reasonix_bot_adapter_sends_total") {
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(metricsBody), "deeper_bot_adapter_sends_total") {
 		t.Fatalf("GET /metrics status=%d body=%q, want adapter metrics", resp.StatusCode, string(metricsBody))
 	}
 }

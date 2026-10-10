@@ -104,7 +104,7 @@ type pressureFlags struct {
 
 func registerPressureFlags() pressureFlags {
 	return pressureFlags{
-		meter:    flag.String("meter", "", "suite mode: route the benchmarked provider through the neutral measuring proxy, using this config.toml as the source (e.g. ~/.reasonix/config.toml). Spend is then counted at the request boundary instead of trusted from the harness"),
+		meter:    flag.String("meter", "", "suite mode: route the benchmarked provider through the neutral measuring proxy, using this config.toml as the source (e.g. ~/.deeper/config.toml). Spend is then counted at the request boundary instead of trusted from the harness"),
 		faults:   flag.String("faults", "", "suite mode: inject provider failures through the meter — absolute indices (3:429) and/or a cadence that scales with the run (every:5:500). Requires -meter; the report gains a fault-recovery readout"),
 		steer:    flag.String("steer", "", "suite mode: deliver a user turn at a leg boundary, e.g. \"also handle empty input@2\" (requires -segments >= that leg)"),
 		segments: flag.Int("segments", 1, "suite mode: split each task into N resumed legs (--continue between them), reaching reload and compaction pressure without waiting hours for it. The step budget is divided, never multiplied"),

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // AppInstance is one live MCP Apps surface: an unguessable token binding the

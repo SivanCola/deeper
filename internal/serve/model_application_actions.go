@@ -1,9 +1,9 @@
 package serve
 
 import (
+	"deeper/internal/control"
 	"encoding/json"
 	"net/http"
-	"reasonix/internal/control"
 )
 
 func (s *Server) cancelModelApplicationBlockers(w http.ResponseWriter, r *http.Request) {

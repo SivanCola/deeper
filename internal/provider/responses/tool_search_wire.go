@@ -3,7 +3,7 @@ package responses
 import (
 	"encoding/json"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func encodeResponsesTools(c *client, req provider.Request) []map[string]any {

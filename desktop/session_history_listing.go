@@ -1,8 +1,8 @@
 package main
 
 import (
-	"reasonix/internal/config"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/config"
+	"deeper/internal/sessioncatalog"
 	"sort"
 )
 

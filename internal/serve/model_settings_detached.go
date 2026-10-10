@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"reasonix/internal/control"
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/control"
+	"deeper/internal/sessioninbox"
 )
 
 // Background dispatch holds the same binding gate as foreground dispatch, then

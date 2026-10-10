@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/boot"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 func desktopLegacyImportOptions(workspaceRoot string) session.CreateOptions {

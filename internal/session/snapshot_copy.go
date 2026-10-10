@@ -3,7 +3,7 @@ package session
 import (
 	"reflect"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func detachMessages(messages []provider.Message) []provider.Message {

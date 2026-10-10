@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/pluginpkg"
 )
 
 // bigInputPayload builds an input.receive payload whose text is size bytes.

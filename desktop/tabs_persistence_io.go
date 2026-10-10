@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 var errTabsSnapshotChanged = errors.New("desktop tabs changed during startup reconciliation")

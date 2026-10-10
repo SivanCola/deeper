@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/topicstate"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/topicstate"
 )
 
 type TopicRemovalTarget struct {

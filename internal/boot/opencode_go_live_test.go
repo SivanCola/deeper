@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
-	"reasonix/internal/websearch"
+	"deeper/internal/config"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
+	"deeper/internal/websearch"
 )
 
 // Opt-in release acceptance: 11 logical requests, at most 512 output tokens
@@ -119,13 +119,13 @@ func TestLiveOpenCodeGoV10Acceptance(t *testing.T) {
 				effort = ""
 			}
 			p := newModel(t, test.kind, test.model, effort, false)
-			collect(t, p, provider.Request{Messages: []provider.Message{{Role: provider.RoleSystem, Content: "You are Reasonix, a coding assistant running a small protocol integration test."}, {Role: provider.RoleUser, Content: "Reply with just OK."}}, MaxTokens: 128})
+			collect(t, p, provider.Request{Messages: []provider.Message{{Role: provider.RoleSystem, Content: "You are Deeper, a coding assistant running a small protocol integration test."}, {Role: provider.RoleUser, Content: "Reply with just OK."}}, MaxTokens: 128})
 		})
 	}
 	t.Run("tool-replay", func(t *testing.T) {
 		p := newModel(t, "openai", "deepseek-v4-flash", "max", false)
 		tools := []provider.ToolSchema{{Name: "get_marker", Description: "Return the integration-test marker. Call this tool before answering.", Parameters: json.RawMessage(`{"type":"object","properties":{},"additionalProperties":false}`)}}
-		messages := []provider.Message{{Role: provider.RoleSystem, Content: "You are Reasonix, a coding assistant. Call get_marker once, then report its result."}, {Role: provider.RoleUser, Content: "Call get_marker now."}}
+		messages := []provider.Message{{Role: provider.RoleSystem, Content: "You are Deeper, a coding assistant. Call get_marker once, then report its result."}, {Role: provider.RoleUser, Content: "Call get_marker now."}}
 		first := collect(t, p, provider.Request{Messages: messages, Tools: tools, MaxTokens: 512})
 		if len(first.ToolCalls) == 0 || first.ReasoningContent == "" {
 			t.Fatal("missing tool call or reasoning to replay")

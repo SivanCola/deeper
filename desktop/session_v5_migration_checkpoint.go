@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 // Migration may add members to an existing workspace, but it does not own the

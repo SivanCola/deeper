@@ -1,16 +1,16 @@
 // Package protocol is the frozen Extension Protocol v2 wire contract between
-// the Reasonix host and out-of-process extension sidecars. It is a public
+// the Deeper host and out-of-process extension sidecars. It is a public
 // protocol: sidecars are written against this package's generated JSON Schema
-// and its compatibility hash, not against Reasonix internals.
+// and its compatibility hash, not against Deeper internals.
 //
 // Stability contract: within major version 2, only optional fields, new enum
 // values, and new methods may be added. Existing required fields, method
 // names, directions, limits, error reasons, and semantics never change. Any
 // such change requires a new major protocol version.
 //
-// The sidecar process is the "extension" peer; Reasonix is the "host" peer.
+// The sidecar process is the "extension" peer; Deeper is the "host" peer.
 // Directions are named from the host's point of view: host_to_extension_*
-// flows from Reasonix to the sidecar, extension_to_host_* flows back.
+// flows from Deeper to the sidecar, extension_to_host_* flows back.
 package protocol
 
 import (
@@ -20,7 +20,7 @@ import (
 
 // ProtocolID is the immutable identity string peers exchange during the
 // initialize handshake. It is also the generated schema document's $id.
-const ProtocolID = "reasonix.extension.v2"
+const ProtocolID = "deeper.extension.v2"
 
 // ProtocolMajor is the frozen major version of this protocol build.
 const ProtocolMajor = 2

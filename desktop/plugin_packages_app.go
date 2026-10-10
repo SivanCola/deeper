@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/command"
-	"reasonix/internal/config"
-	"reasonix/internal/hook"
-	"reasonix/internal/installsource"
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/command"
+	"deeper/internal/config"
+	"deeper/internal/hook"
+	"deeper/internal/installsource"
+	"deeper/internal/pluginpkg"
 )
 
 type PluginView struct {
@@ -92,7 +92,7 @@ type PluginMCPServerView struct {
 }
 
 func (a *App) Plugins() []PluginView {
-	st, err := pluginpkg.LoadState(config.ReasonixHomeDir())
+	st, err := pluginpkg.LoadState(config.DeeperHomeDir())
 	if err != nil {
 		return []PluginView{{Error: err.Error()}}
 	}
@@ -110,7 +110,7 @@ func (a *App) Plugins() []PluginView {
 			Version:      p.Version,
 			Description:  p.Description,
 			Source:       p.Source,
-			Root:         pluginpkg.ResolveRoot(config.ReasonixHomeDir(), p.Root),
+			Root:         pluginpkg.ResolveRoot(config.DeeperHomeDir(), p.Root),
 			ManifestKind: p.ManifestKind,
 			Enabled:      p.Enabled,
 		}
@@ -274,7 +274,7 @@ func (a *App) SetPluginEnabled(name string, enabled bool) error {
 	if err := a.ensureActiveTabRebuildAllowed("plugins"); err != nil {
 		return err
 	}
-	if err := pluginpkg.SetEnabled(config.ReasonixHomeDir(), strings.TrimSpace(name), enabled); err != nil {
+	if err := pluginpkg.SetEnabled(config.DeeperHomeDir(), strings.TrimSpace(name), enabled); err != nil {
 		return err
 	}
 	a.bumpExtensionGeneration()

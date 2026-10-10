@@ -8,7 +8,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // Sub-agent progress previews. A tracker per child run converts the child's

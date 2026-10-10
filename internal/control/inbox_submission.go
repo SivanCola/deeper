@@ -2,10 +2,10 @@ package control
 
 import (
 	"context"
+	"deeper/internal/agent"
+	"deeper/internal/sessioninbox"
 	"errors"
 	"maps"
-	"reasonix/internal/agent"
-	"reasonix/internal/sessioninbox"
 	"strings"
 )
 

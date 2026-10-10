@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestMetadataDiscoveryNeverRepairsOrClassifiesContent(t *testing.T) {

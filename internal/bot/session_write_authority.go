@@ -1,7 +1,7 @@
 package bot
 
 import (
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func bindBotSessionWriteAuthority(state *sessionState) error {

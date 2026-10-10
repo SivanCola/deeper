@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 // Both recovery and the sidebar resolve durable registry members. Legacy

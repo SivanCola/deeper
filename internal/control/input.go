@@ -6,13 +6,13 @@ import (
 	"strings"
 	"unicode"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/memory"
-	"reasonix/internal/planmode"
-	"reasonix/internal/skill"
+	"deeper/internal/ablation"
+	"deeper/internal/agent"
+	"deeper/internal/event"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/memory"
+	"deeper/internal/planmode"
+	"deeper/internal/skill"
 )
 
 // InvocationRequest is an explicit user-selected Skill or Subagent entity.

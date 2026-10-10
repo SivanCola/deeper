@@ -1,6 +1,6 @@
 // Package acp implements the Agent Client Protocol (https://agentclientprotocol.com)
 // transport: a stdio JSON-RPC 2.0 agent that editors and other host clients speak
-// to drive Reasonix. Many tools integrated with the v1 (main-branch) agent over
+// to drive Deeper. Many tools integrated with the v1 (main-branch) agent over
 // ACP, so v2 keeps the wire contract identical — the wire types in this file are a
 // faithful port of main's src/acp/protocol.ts (ACP protocol version 1).
 //
@@ -46,7 +46,7 @@ type InitializeParams struct {
 // ClientCapabilities is what the client offers the agent: filesystem proxy
 // methods (fs/read_text_file, fs/write_text_file) that see unsaved editor
 // buffers, and host-owned terminals (terminal/*). Meta carries vendor
-// capability blocks (e.g. _meta["reasonix.io"]) for tolerant parse — unknown
+// capability blocks (e.g. _meta["deeper.io"]) for tolerant parse — unknown
 // or malformed entries simply mean the vendor feature stays off.
 type ClientCapabilities struct {
 	FS       FSCapabilities `json:"fs,omitempty"`
@@ -104,12 +104,12 @@ type SessionReloadExtensionsCapability struct {
 }
 
 const (
-	// reasonixExtensionSurfaceSchemaVersion versions the extension-surface DTO
+	// deeperExtensionSurfaceSchemaVersion versions the extension-surface DTO
 	// carried by the vendor session/update variant.
-	reasonixExtensionSurfaceSchemaVersion = 1
+	deeperExtensionSurfaceSchemaVersion = 1
 	// extensionSurfaceUpdateKind discriminates the vendor session/update
 	// variant that carries a structured extension-UI surface.
-	extensionSurfaceUpdateKind = "_reasonix.io/extension_surface"
+	extensionSurfaceUpdateKind = "_deeper.io/extension_surface"
 )
 
 // ExtensionSurfaceCapability advertises that a participant renders structured
@@ -184,11 +184,11 @@ type MCPServerSpec struct {
 }
 
 // MCPEnv accepts ACP's official EnvVariable[] shape while still accepting the
-// older map shape that Reasonix v1 clients used.
+// older map shape that Deeper v1 clients used.
 type MCPEnv map[string]string
 
 // MCPHeaders accepts ACP's official HTTPHeader[] shape while still accepting
-// the older map shape that Reasonix v1 clients used. The official spec
+// the older map shape that Deeper v1 clients used. The official spec
 // (https://agentclientprotocol.com) ships HTTP/SSE MCP headers as an array of
 // {name,value} objects, even when empty.
 type MCPHeaders map[string]string
@@ -379,7 +379,7 @@ type SessionListParams struct {
 	Cursor string `json:"cursor,omitempty"`
 }
 
-// SessionListResult is the first and only page of sessions Reasonix currently
+// SessionListResult is the first and only page of sessions Deeper currently
 // returns. NextCursor is omitted because the in-process list is unpaged.
 type SessionListResult struct {
 	Sessions   []SessionInfo `json:"sessions"`
@@ -462,14 +462,14 @@ func FlattenPrompt(blocks []ContentBlock) string {
 type SessionPromptParams struct {
 	SessionID string         `json:"sessionId"`
 	Prompt    []ContentBlock `json:"prompt"`
-	// Action is an optional Reasonix extension. Empty preserves ACP's standard
+	// Action is an optional Deeper extension. Empty preserves ACP's standard
 	// prompt behavior; final_readiness_recovery explicitly resumes the newest
 	// paused host check without trusting ordinary prose as authorization.
 	Action     string `json:"action,omitempty"`
 	RecoveryID string `json:"recoveryId,omitempty"`
 }
 
-// SessionSteerParams is the Reasonix ACP v1 extension for injecting user
+// SessionSteerParams is the Deeper ACP v1 extension for injecting user
 // guidance into an active prompt without cancelling it.
 type SessionSteerParams struct {
 	SessionID string         `json:"sessionId"`
@@ -483,19 +483,19 @@ type SessionSteerResult struct {
 }
 
 // sessionSteerMethod follows ACP v1's reserved vendor-extension namespace.
-const sessionSteerMethod = "_reasonix.io/session/steer"
+const sessionSteerMethod = "_deeper.io/session/steer"
 
 const (
 	sessionInboxSchemaVersion = 1
-	sessionInboxEnqueueMethod = "_reasonix.io/session/inbox/enqueue"
-	sessionInboxListMethod    = "_reasonix.io/session/inbox/list"
-	sessionInboxGetMethod     = "_reasonix.io/session/inbox/get"
-	sessionInboxUpdateMethod  = "_reasonix.io/session/inbox/update"
-	sessionInboxDeleteMethod  = "_reasonix.io/session/inbox/delete"
-	sessionInboxMoveMethod    = "_reasonix.io/session/inbox/move"
-	sessionInboxPauseMethod   = "_reasonix.io/session/inbox/setPaused"
-	sessionInboxRetryMethod   = "_reasonix.io/session/inbox/retry"
-	sessionInboxRefreshMethod = "_reasonix.io/session/inbox/refresh"
+	sessionInboxEnqueueMethod = "_deeper.io/session/inbox/enqueue"
+	sessionInboxListMethod    = "_deeper.io/session/inbox/list"
+	sessionInboxGetMethod     = "_deeper.io/session/inbox/get"
+	sessionInboxUpdateMethod  = "_deeper.io/session/inbox/update"
+	sessionInboxDeleteMethod  = "_deeper.io/session/inbox/delete"
+	sessionInboxMoveMethod    = "_deeper.io/session/inbox/move"
+	sessionInboxPauseMethod   = "_deeper.io/session/inbox/setPaused"
+	sessionInboxRetryMethod   = "_deeper.io/session/inbox/retry"
+	sessionInboxRefreshMethod = "_deeper.io/session/inbox/refresh"
 )
 
 // SessionInboxEnqueueParams is the durable inbox enqueue request.
@@ -546,11 +546,11 @@ type SessionReloadExtensionsResult struct {
 
 // sessionReloadExtensionsMethod follows ACP v1's reserved vendor-extension
 // namespace, like sessionSteerMethod: only the "_<vendor>/" prefix is reserved
-// for vendor methods, so the bare "reasonix/session/reloadExtensions" form
+// for vendor methods, so the bare "deeper/session/reloadExtensions" form
 // could collide with a future official ACP method and must not be used.
-const sessionReloadExtensionsMethod = "_reasonix.io/session/reloadExtensions"
+const sessionReloadExtensionsMethod = "_deeper.io/session/reloadExtensions"
 
-// StopReason tells the client why a turn ended. Reasonix only emits values from
+// StopReason tells the client why a turn ended. Deeper only emits values from
 // the ACP v1 enum; failed turns are returned as JSON-RPC errors instead.
 type StopReason string
 
@@ -584,10 +584,10 @@ type messageChunk struct {
 
 // extensionSurfaceUpdate is the vendor session/update variant that carries one
 // structured extension-UI surface to clients that negotiated
-// reasonix.extensionSurface in initialize. ACP has no standard notification for
+// deeper.extensionSurface in initialize. ACP has no standard notification for
 // extension surfaces, so the DTO (the shared eventwire JSON contract) rides
-// _meta["reasonix.io"]["extensionSurface"], mirroring how the initialize
-// handshake namespaces vendor data under "reasonix.io". The sink always pairs
+// _meta["deeper.io"]["extensionSurface"], mirroring how the initialize
+// handshake namespaces vendor data under "deeper.io". The sink always pairs
 // it with a flattened agent_message_chunk text fallback (belt and suspenders):
 // a client that ignores the vendor variant still shows the content.
 type extensionSurfaceUpdate struct {
@@ -687,7 +687,7 @@ type currentModeUpdate struct {
 // fs/* (agent → client requests)
 
 // FSReadTextFileParams asks the client for a file's current text, including
-// unsaved editor state. Line (1-based) and Limit page the content; Reasonix
+// unsaved editor state. Line (1-based) and Limit page the content; Deeper
 // always reads whole files and pages locally, so it sends neither.
 type FSReadTextFileParams struct {
 	SessionID string `json:"sessionId"`
@@ -713,7 +713,7 @@ type FSWriteTextFileParams struct {
 
 // TerminalCreateParams starts a command in a client-owned terminal.
 // Env follows ACP v1's official EnvVariable[] shape (same as MCP env): only
-// the overrides Reasonix owns (typically TMPDIR/TMP/TEMP) are sent — never a
+// the overrides Deeper owns (typically TMPDIR/TMP/TEMP) are sent — never a
 // full host environment dump.
 type TerminalCreateParams struct {
 	SessionID       string        `json:"sessionId"`

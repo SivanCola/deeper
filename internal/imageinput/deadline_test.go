@@ -2,8 +2,8 @@ package imageinput
 
 import (
 	"context"
+	"deeper/internal/event"
 	"errors"
-	"reasonix/internal/event"
 	"testing"
 	"time"
 )

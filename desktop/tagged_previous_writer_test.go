@@ -8,16 +8,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/desktop/internal/sessionui"
-	"reasonix/internal/provider"
+	"deeper/desktop/internal/sessionui"
+	"deeper/internal/provider"
 )
 
 // Opt-in integration gate: executables come from the tagged fixture generator,
 // not from a current implementation pretending to be a previous reader.
 func TestTaggedPreviousWriterRoundtrip(t *testing.T) {
-	writers := os.Getenv("REASONIX_TAGGED_WRITERS")
+	writers := os.Getenv("DEEPER_TAGGED_WRITERS")
 	if writers == "" {
-		t.Skip("run generate-session-history-fixtures.py --writers-dir and set REASONIX_TAGGED_WRITERS")
+		t.Skip("run generate-session-history-fixtures.py --writers-dir and set DEEPER_TAGGED_WRITERS")
 	}
 	for _, version := range []string{"1.38.10", "1.38.11"} {
 		t.Run(version, func(t *testing.T) {

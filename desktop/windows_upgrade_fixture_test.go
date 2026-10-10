@@ -10,17 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/upgradefixture"
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
+	"deeper/desktop/internal/upgradefixture"
+	"deeper/internal/agent"
+	"deeper/internal/config"
 )
 
 func TestWindowsUpgradeFixtureImportsLegacyOnlyWhenPrepared(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	home := filepath.Join(t.TempDir(), "home # %20 中文")
-	t.Setenv("REASONIX_HOME", home)
-	t.Setenv("REASONIX_STATE_HOME", home)
-	t.Setenv("REASONIX_CACHE_HOME", filepath.Join(home, "cache"))
+	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPER_STATE_HOME", home)
+	t.Setenv("DEEPER_CACHE_HOME", filepath.Join(home, "cache"))
 	reportPath := filepath.Join(t.TempDir(), "fixture.json")
 	if err := upgradefixture.Run("create", home, reportPath, ""); err != nil {
 		t.Fatal(err)

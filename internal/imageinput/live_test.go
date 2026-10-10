@@ -16,16 +16,16 @@ import (
 	"testing"
 	"time"
 
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/imageinput"
+	"deeper/internal/provider"
+	"deeper/internal/provider/anthropic"
+	"deeper/internal/provider/openai"
+	"deeper/internal/provider/responses"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/anthropic"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/provider/responses"
 )
 
 func fixture(t *testing.T) (string, string) {
@@ -85,7 +85,7 @@ func collect(t *testing.T, p provider.Provider, r provider.Request) string {
 	}
 }
 func TestLiveToolImages(t *testing.T) {
-	if os.Getenv("REASONIX_LIVE_TOOL_IMAGES") != "1" {
+	if os.Getenv("DEEPER_LIVE_TOOL_IMAGES") != "1" {
 		t.Skip("live probe disabled")
 	}
 	cfg, err := config.LoadForRootReadOnly("../..")

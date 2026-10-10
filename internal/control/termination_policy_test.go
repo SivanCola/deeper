@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/anthropic"
-	"reasonix/internal/provider/openai"
-	"reasonix/internal/provider/responses"
-	"reasonix/internal/session"
+	"deeper/internal/provider"
+	"deeper/internal/provider/anthropic"
+	"deeper/internal/provider/openai"
+	"deeper/internal/provider/responses"
+	"deeper/internal/session"
 )
 
 func TestTerminationPolicyPreservesSemanticsAndProviderBytes(t *testing.T) {

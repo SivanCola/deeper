@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 // rememberTool lets the model persist a durable fact to the auto-memory store.
@@ -50,7 +50,7 @@ func (rememberTool) Description() string {
 		"Do NOT save what the repo already records (code structure, git history) or facts that only matter to the current conversation; " +
 		"if asked to remember one of those, save instead the non-obvious point behind it. " +
 		"Choose scope \"project\" for the current workspace (the safe default) or \"global\" only when the fact should affect every project. " +
-		"Standing rules that must always be followed belong in project or global REASONIX.md/AGENTS.md instructions, not background memory. " +
+		"Standing rules that must always be followed belong in project or global DEEPER.md/AGENTS.md instructions, not background memory. " +
 		"Before saving, check the loaded memory index for an entry that already covers this — reuse that name to update it rather than create a near-duplicate, and use `forget` to drop one that is now wrong. " +
 		"The saved index loads into context at the start of each session."
 }
@@ -66,7 +66,7 @@ func (rememberTool) Schema() json.RawMessage {
 			"description": {"type": "string", "description": "One-line hook shown in the index — the phrase a future session reads to decide whether to open this memory. Make it specific."},
 			"type": {"type": "string", "enum": ["user", "feedback", "project", "reference"], "description": "Category of the fact."},
 			"scope": {"type": "string", "enum": ["project", "global"], "description": "Where the fact applies. For a new fact, omit for the safe default, project. When updating an existing name, omit to preserve its current scope. Use global only when it should affect every workspace."},
-			"activation": {"type": "string", "enum": ["relevant", "pinned"], "description": "How the fact reaches the model: relevant (the default) is retrieval-only; pinned loads the body into every session's stable prefix. Use pinned ONLY when the user explicitly asks for an always-available fact — pinned space is budget-limited, and rules that must always hold belong in REASONIX.md/AGENTS.md instructions instead. Omit on update to preserve the current choice."},
+			"activation": {"type": "string", "enum": ["relevant", "pinned"], "description": "How the fact reaches the model: relevant (the default) is retrieval-only; pinned loads the body into every session's stable prefix. Use pinned ONLY when the user explicitly asks for an always-available fact — pinned space is budget-limited, and rules that must always hold belong in DEEPER.md/AGENTS.md instructions instead. Omit on update to preserve the current choice."},
 			"volatility": {"type": "string", "enum": ["evergreen", "stable", "volatile"], "description": "How fast the fact ages, independent of type: volatile for facts that die in days (a current release branch, this week's task), stable for slow-changing ones, evergreen for facts that never age (a README location, a fixed preference). Omit to use the type default, or on update to preserve the current choice."},
 			"subject_key": {"type": "string", "description": "Dotted key naming the question this fact answers, e.g. project.package_manager, project.release_branch, user.response_style. One active value per scope+subject: saving a new fact for a held subject is rejected with the holder's id — update that id so the change becomes a revision, not a contradiction. Search existing memories first and reuse their keys; omit for narrative facts that are not a single-valued answer."},
 			"expires_at": {"type": "string", "description": "Hard expiry as RFC3339 or YYYY-MM-DD. Past this moment the fact stops being auto-recalled entirely. Set it when the fact has a known end of life. Omit on update to preserve; \"never\" clears an existing expiry."},

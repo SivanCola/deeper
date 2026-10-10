@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"reasonix/internal/control"
-	"reasonix/internal/transcript"
+	"deeper/internal/control"
+	"deeper/internal/transcript"
 )
 
 // ResumeTranscriptSessionForTab adopts a session without materializing a legacy

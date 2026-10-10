@@ -34,27 +34,27 @@ import (
 
 	"aead.dev/minisign"
 
-	"reasonix/desktop/internal/update"
-	"reasonix/internal/installlayout"
+	"deeper/desktop/internal/update"
+	"deeper/internal/installlayout"
 )
 
 var websiteDownloads = map[string]struct{}{
-	"Reasonix-darwin-arm64.dmg":     {},
-	"Reasonix-darwin-amd64.dmg":     {},
-	"Reasonix-darwin-universal.dmg": {},
-	"Reasonix-windows-amd64.zip":    {},
+	"Deeper-darwin-arm64.dmg":     {},
+	"Deeper-darwin-amd64.dmg":     {},
+	"Deeper-darwin-universal.dmg": {},
+	"Deeper-windows-amd64.zip":    {},
 }
 
 var updaterArtifacts = map[string]struct {
 	key  string
 	kind string
 }{
-	"Reasonix-darwin-arm64.zip":            {key: "darwin-arm64", kind: artifactPortable},
-	"Reasonix-darwin-amd64.zip":            {key: "darwin-amd64", kind: artifactPortable},
-	"Reasonix-windows-amd64-installer.exe": {key: "windows-amd64", kind: artifactPortable},
-	"Reasonix-windows-arm64-installer.exe": {key: "windows-arm64", kind: artifactPortable},
-	"Reasonix-linux-amd64.tar.gz":          {key: "linux-amd64", kind: artifactPortable},
-	"Reasonix-linux-amd64.deb":             {key: "linux-amd64", kind: artifactNative},
+	"Deeper-darwin-arm64.zip":            {key: "darwin-arm64", kind: artifactPortable},
+	"Deeper-darwin-amd64.zip":            {key: "darwin-amd64", kind: artifactPortable},
+	"Deeper-windows-amd64-installer.exe": {key: "windows-amd64", kind: artifactPortable},
+	"Deeper-windows-arm64-installer.exe": {key: "windows-arm64", kind: artifactPortable},
+	"Deeper-linux-amd64.tar.gz":          {key: "linux-amd64", kind: artifactPortable},
+	"Deeper-linux-amd64.deb":             {key: "linux-amd64", kind: artifactNative},
 }
 
 func main() {
@@ -184,15 +184,22 @@ func verifyFile(path string) error {
 	if err != nil {
 		return err
 	}
-	if err := update.Verify(data, sig); err != nil {
-		return err
+	key := os.Getenv("MINISIGN_PUBLIC_KEY")
+	var verifyErr error
+	if key == "" {
+		verifyErr = update.Verify(data, sig)
+	} else {
+		verifyErr = update.VerifyWithKey(key, data, sig)
+	}
+	if verifyErr != nil {
+		return verifyErr
 	}
 	fmt.Printf("OK: %s verifies against the embedded public key\n", path)
 	return nil
 }
 
 // genKey generates a fresh minisign key pair, writing the encrypted private key
-// (reasonix.key) and the public key (reasonix.pub) into dir. The password comes
+// (deeper.key) and the public key (deeper.pub) into dir. The password comes
 // from $MINISIGN_PASSWORD. The public key is printed — it's safe to publish; embed
 // it in internal/update/verify.go. The private key never leaves dir.
 func genKey(dir string) error {
@@ -211,8 +218,8 @@ func genKey(dir string) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	keyPath := filepath.Join(dir, "reasonix.key")
-	pubPath := filepath.Join(dir, "reasonix.pub")
+	keyPath := filepath.Join(dir, "deeper.key")
+	pubPath := filepath.Join(dir, "deeper.pub")
 	if err := os.WriteFile(keyPath, enc, 0o600); err != nil {
 		return err
 	}
@@ -249,7 +256,12 @@ func signFiles(files []string) error {
 			return err
 		}
 		sig := minisign.SignWithComments(priv, data,
-			"file:"+filepath.Base(f), "Reasonix desktop release")
+			"file:"+filepath.Base(f), "Deeper desktop release")
+		if key := os.Getenv("MINISIGN_PUBLIC_KEY"); key != "" {
+			if err := update.VerifyWithKey(key, data, sig); err != nil {
+				return fmt.Errorf("sign: configured public key does not match the signing key: %w", err)
+			}
+		}
 		out := f + ".minisig"
 		if err := os.WriteFile(out, sig, 0o644); err != nil {
 			return err
@@ -268,8 +280,8 @@ func signFiles(files []string) error {
 // tarball under platforms["linux-amd64"].
 func genManifest(dir, version, tag string, notesVersions ...string) error {
 	repo := os.Getenv("GITHUB_REPOSITORY")
-	if repo == "" || repo == "esengine/reasonix" {
-		repo = "esengine/DeepSeek-Reasonix"
+	if repo == "" {
+		repo = "SivanCola/deeper"
 	}
 	notesVersion := version
 	if len(notesVersions) > 1 {
@@ -280,8 +292,8 @@ func genManifest(dir, version, tag string, notesVersions ...string) error {
 	}
 	m := update.Manifest{
 		Version:         version,
-		DownloadPage:    "https://reasonix.io/?download=desktop#start",
-		ReleaseNotesURL: "https://reasonix.io/changelog/" + notesVersion + "/",
+		DownloadPage:    "https://github.com/SivanCola/deeper/releases",
+		ReleaseNotesURL: "https://github.com/SivanCola/deeper/releases/tag/" + notesVersion + "/",
 		Platforms:       map[string]update.Asset{},
 		NativePackages:  map[string]update.Asset{},
 		Downloads:       map[string]update.Asset{},

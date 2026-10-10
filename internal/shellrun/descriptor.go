@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"strings"
 
-	"reasonix/internal/sandbox"
-	"reasonix/internal/tool"
+	"deeper/internal/sandbox"
+	"deeper/internal/tool"
 )
 
 // DescriptorFromShell builds a partial ShellExecution from a resolved sandbox

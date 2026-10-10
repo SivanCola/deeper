@@ -3,12 +3,12 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 
-const endpoint = "repos/esengine/DeepSeek-Reasonix/actions/runs/34816299501";
+const endpoint = "repos/SivanCola/deeper/actions/runs/34816299501";
 const read = suffix => JSON.parse(execFileSync("gh", ["api", endpoint + suffix], { encoding: "utf8" }));
 export function verifyProducer(run, jobs) {
-assert.equal(run.repository.full_name, "esengine/DeepSeek-Reasonix");
+assert.equal(run.repository.full_name, "SivanCola/deeper");
 assert.equal(run.head_sha, "09cdab3866d77c6ff0d007ee61b6aca3128ebe54");
-assert.equal(run.head_branch, "main-v2");
+assert.equal(run.head_branch, "main");
 assert.equal(run.event, "workflow_dispatch");
 assert.equal(run.path, ".github/workflows/release-stable.yml");
 assert.equal(run.run_attempt, 1);

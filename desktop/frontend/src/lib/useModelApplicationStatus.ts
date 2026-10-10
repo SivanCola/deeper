@@ -25,10 +25,10 @@ export function useModelApplicationStatus(tabId?: string) {
     const notify=()=>{void refresh();};
     const rebuilt=onRuntimeRebuilt(id=>{if(!id || id===tabId) notify();});
     const runtime=runtimeStateStore.subscribe(notify);
-    window.addEventListener("reasonix:model-catalog-changed",notify);
+    window.addEventListener("deeper:model-catalog-changed",notify);
     window.addEventListener("focus",notify);
     notify();
-    return ()=>{active=false;rebuilt();runtime();window.removeEventListener("reasonix:model-catalog-changed",notify);window.removeEventListener("focus",notify);};
+    return ()=>{active=false;rebuilt();runtime();window.removeEventListener("deeper:model-catalog-changed",notify);window.removeEventListener("focus",notify);};
   },[tabId]);
   return target;
 }

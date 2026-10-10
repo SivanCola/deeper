@@ -1,37 +1,37 @@
 # 配置路径
 
-从 **Reasonix v1.8.1** 开始，Reasonix 使用一个用户可见的全局目录存放配置和用户状态。CLI 与桌面端共用这个目录。
+从 **Deeper v1.8.1** 开始，Deeper 使用一个用户可见的全局目录存放配置和用户状态。CLI 与桌面端共用这个目录。
 
-## Reasonix Home
+## Deeper Home
 
-| 平台 | Reasonix home |
+| 平台 | Deeper home |
 | --- | --- |
-| macOS | `~/.reasonix` |
-| Linux | `~/.reasonix` |
-| Windows | `%APPDATA%\reasonix` |
+| macOS | `~/.deeper` |
+| Linux | `~/.deeper` |
+| Windows | `%APPDATA%\deeper` |
 
-可以设置 `REASONIX_HOME` 覆盖 Reasonix home，主要用于测试、CI 或便携安装。普通用户通常不需要设置。
+可以设置 `DEEPER_HOME` 覆盖 Deeper home，主要用于测试、CI 或便携安装。普通用户通常不需要设置。
 
-设置 `REASONIX_HOME` 后，运行时会变成完整自包含模式：配置、状态、缓存和数据都会位于该目录树下。
+设置 `DEEPER_HOME` 后，运行时会变成完整自包含模式：配置、状态、缓存和数据都会位于该目录树下。
 Legacy 迁移、OS home 约定目录扫描以及其他 fallback 路径都会跳过，避免从系统级正式安装带入或写回数据。
 
-高级测试或便携安装可以设置 `REASONIX_STATE_HOME` 来移动 sessions、archive、memory 等运行状态。
-它不会移动全局配置或 provider 凭据；这些仍然位于 `REASONIX_HOME` 下。如果旧版本曾把 provider key
-写到 `REASONIX_STATE_HOME/.env`，Reasonix 会在 `<Reasonix home>/.env` 缺少对应 key 时非破坏性导入。
+高级测试或便携安装可以设置 `DEEPER_STATE_HOME` 来移动 sessions、archive、memory 等运行状态。
+它不会移动全局配置或 provider 凭据；这些仍然位于 `DEEPER_HOME` 下。如果旧版本曾把 provider key
+写到 `DEEPER_STATE_HOME/.env`，Deeper 会在 `<Deeper home>/.env` 缺少对应 key 时非破坏性导入。
 
 ## 目录内容
 
 | 数据 | 路径 |
 | --- | --- |
-| 全局配置 | `<Reasonix home>/config.toml` |
-| 全局 provider 凭据 | `<Reasonix home>/.env` |
-| 进行中的模型凭据提交 | `<Reasonix home>/transactions/model-credentials/` |
-| 已完成的模型设置回执 | `<Reasonix home>/transactions/model-settings-receipts/` |
-| 旧 credentials 导入来源 | `<Reasonix home>/credentials` |
-| 全局斜杠命令 | `<Reasonix home>/commands/` |
-| 全局 skills | `<Reasonix home>/skills/` |
-| 全局 hooks | `<Reasonix home>/settings.json` |
-| 远程 SSH 托管 known_hosts | `<Reasonix home>/remote/known_hosts` |
+| 全局配置 | `<Deeper home>/config.toml` |
+| 全局 provider 凭据 | `<Deeper home>/.env` |
+| 进行中的模型凭据提交 | `<Deeper home>/transactions/model-credentials/` |
+| 已完成的模型设置回执 | `<Deeper home>/transactions/model-settings-receipts/` |
+| 旧 credentials 导入来源 | `<Deeper home>/credentials` |
+| 全局斜杠命令 | `<Deeper home>/commands/` |
+| 全局 skills | `<Deeper home>/skills/` |
+| 全局 hooks | `<Deeper home>/settings.json` |
+| 远程 SSH 托管 known_hosts | `<Deeper home>/remote/known_hosts` |
 | 会话 | `<state root>/sessions/` |
 | 归档 | `<state root>/archive/` |
 | 记忆 | `<state root>/memory/` 与 `<state root>/projects/` |
@@ -40,7 +40,7 @@ Legacy 迁移、OS home 约定目录扫描以及其他 fallback 路径都会跳�
 | 可丢弃的会话 Catalog | `<cache root>/session-catalog/v6.sqlite` |
 | 可丢弃的 Task Catalog | `<cache root>/task-catalog/v1.sqlite` |
 
-`<state root>` 默认等于 `<Reasonix home>`；只有设置 `REASONIX_STATE_HOME`
+`<state root>` 默认等于 `<Deeper home>`；只有设置 `DEEPER_STATE_HOME`
 时才会不同。
 
 Desktop 在将新项目写入 `desktop-projects.json` 时检测项目目录名冲突。只有另一个已登记
@@ -56,10 +56,10 @@ Studio 目前只解析 `<state root>/projects/<workspace slug>/`，不会读取 
 因此新分配目录的项目状态暂时不会与 Studio 共享，直到 Studio 支持此归属记录。
 
 Desktop Topic 的标题、标题来源、创建时间和自动标题状态以这些 SQLite 文件为权威存储。
-首次访问时，Desktop 会导入项目 `.reasonix/` 目录（或全局 Reasonix 目录）中的旧
+首次访问时，Desktop 会导入项目 `.deeper/` 目录（或全局 Deeper 目录）中的旧
 `desktop-topic-*.json`。检测到旧文件的 scope 会继续镜像旧格式以支持降级；全新 scope
 不会创建这些 JSON。旧文件不会被删除，项目本地 settings、skills、commands、attachments
-以及 `reasonix.toml` 均不受影响。
+以及 `deeper.toml` 均不受影响。
 
 会话 Catalog 是可重建的查询投影，不是用户数据；JSONL、event log、
 metadata sidecar 和 `desktop-projects.json` 仍是权威数据。详见
@@ -67,23 +67,23 @@ metadata sidecar 和 `desktop-projects.json` 仍是权威数据。详见
 event log 也仍是权威数据；可重建的跨项目投影见
 [Task Catalog](./TASK_CATALOG.zh-CN.md)。
 
-全局用户配置文件名是 `config.toml`。项目本地配置文件仍叫 `reasonix.toml`。
-如果有人说“全局 reasonix.toml”，通常指的是 `<Reasonix home>/config.toml`。
+全局用户配置文件名是 `config.toml`。项目本地配置文件仍叫 `deeper.toml`。
+如果有人说“全局 deeper.toml”，通常指的是 `<Deeper home>/config.toml`。
 
 ## 全局 `config.toml`
 
-`<Reasonix home>/config.toml` 存放 CLI 与桌面端共用的非密钥配置。它可以包含
-Reasonix 写入用户配置的 provider、plugin、UI、desktop、tool、skill、sandbox、
+`<Deeper home>/config.toml` 存放 CLI 与桌面端共用的非密钥配置。它可以包含
+Deeper 写入用户配置的 provider、plugin、UI、desktop、tool、skill、sandbox、
 bot 和 agent 设置。Provider 条目只保存 `api_key_env` 里的凭据变量名，不保存真实密钥值。
 
 已保存的 provider 与 bot 凭据变量不会进入任何由模型控制的子进程环境。在 macOS
-和 Linux 上，Reasonix 的文件读取工具、受沙盒保护的 shell 命令和 MCP server 也
+和 Linux 上，Deeper 的文件读取工具、受沙盒保护的 shell 命令和 MCP server 也
 无法读取全局凭据 `.env`；项目自身的普通 `.env` 可见性保持不变。Windows 没有 OS 级
 Shell 沙箱：Shell 命令和本地工具都以当前系统用户运行，可以主动读取该用户可读的文件，
 包括凭据存储；因此受限权限在 Windows 上应视为工具层写入边界，而不是凭据保险库。
 
 如果已退役的 Windows 沙箱（v1.38.8 至 v1.38.10）遗留的拒绝项锁住了凭据存储，
-Reasonix 会在该沙箱运行留下的标记能证明拒绝项来自 Reasonix 时自动移除它。即使没有
+Deeper 会在该沙箱运行留下的标记能证明拒绝项来自 Deeper 时自动移除它。即使没有
 这份证明，保存密钥也能成功：保存会在不读取现有 ACL 的情况下把文件 ACL 重置为当前
 用户；如果连这一步也被拒绝，则把被锁的文件改名为 `.env.locked-<时间戳>` 放在旁边，
 并写入新的凭据存储，因此重新填写密钥总能成功。普通读取绝不会改写 ACL，只会连同修复
@@ -130,8 +130,8 @@ CJK 双宽字符；如果偏好其它形状，可以设为 `block` 或 `underlin
 
 ### 自定义 provider 的 `api_key_env` 命名
 
-通过桌面端设置、TUI `/setup` 或 `reasonix setup` 新增、替换或明确清空 provider
-凭据时，Reasonix 会分配新的 `REASONIX_CONNECTION_*_KEY` 独立槽位，先写入槽位，再
+通过桌面端设置、TUI `/setup` 或 `deeper setup` 新增、替换或明确清空 provider
+凭据时，Deeper 会分配新的 `DEEPER_CONNECTION_*_KEY` 独立槽位，先写入槽位，再
 原子发布所选 provider 的新 `api_key_env` 引用。其他 provider 即使此前共享固定变量，也
 会保留原引用。已有固定名称继续可读，启动时不会批量迁移。
 
@@ -145,16 +145,16 @@ CLI 的自定义 provider 向导会先根据 base URL 生成 provider 名称，�
 变量名。在变量名提示处直接回车时，这个草稿名只在保存 key 之前使用；保存后连接会切换到
 新分配的独立槽位。
 
-在 `reasonix setup` 的这个提示处手动输入的变量名会被保留，方便脚本引用固定名称，前提是
+在 `deeper setup` 的这个提示处手动输入的变量名会被保留，方便脚本引用固定名称，前提是
 写入它不会改变其他读取方拿到的值：配置里没有其他 provider、机器人或远程主机设置读取它，
-全局 `.env` 里没有它的值（或清空标记），Reasonix 运行的环境变量里也没有设置它。否则向导
+全局 `.env` 里没有它的值（或清空标记），Deeper 运行的环境变量里也没有设置它。否则向导
 会说明是什么占用了它，并请你重新输入；直接回车则改用独立槽位。如果在提示之后、保存之前这个名字被占用，保存会被拒绝，
 不写入任何内容。
 
 之后再为用户配置里的 provider 保存新 key 时，如果这个 provider（或本次一起保存 key 的那组
 provider）在用户配置里是该变量唯一的读取方（编辑前后都是），且全局 `.env` 里已有它的值，
-Reasonix 会原地改写这个变量；读取同名变量的项目会像之前读到旧 key 一样读到新 key。项目
-`reasonix.toml` 里声明的 provider 始终改用独立槽位。配置发布之前，旧值以一个临时变量名保存在全局 `.env` 里：
+Deeper 会原地改写这个变量；读取同名变量的项目会像之前读到旧 key 一样读到新 key。项目
+`deeper.toml` 里声明的 provider 始终改用独立槽位。配置发布之前，旧值以一个临时变量名保存在全局 `.env` 里：
 保存失败或中断时会写回旧值，除非这期间有别的写入方改过这个变量。如果还有其他 provider
 或设置读取这个变量，新 key 仍写入独立槽位，共享变量保持不变。
 
@@ -165,17 +165,17 @@ Reasonix 会原地改写这个变量；读取同名变量的项目会像之前�
 ### 自定义 provider 的端点 URL
 
 桌面端自定义 provider 表单会把「API 地址」作为完整请求地址写入 `request_url`，
-Reasonix 不会追加或改写路径。已有 TOML 配置不会被重新解释：旧 `chat_url` 继续
+Deeper 不会追加或改写路径。已有 TOML 配置不会被重新解释：旧 `chat_url` 继续
 保持原来的 OpenAI 专用行为，Anthropic 和 Responses 仍会根据 `base_url` 推导请求
 路径；只有用户在新版桌面端明确保存该 provider 后，才会写入并启用 `request_url`。
 保存 OpenAI-compatible provider 时还会把完整地址同步到旧 `chat_url`，使旧版本
 继续使用同一请求目标。旧版本无法识别 Anthropic 或 Responses 的任意自定义请求路径。
-模型发现需要单独地址时可设置 `models_url`；否则 Reasonix 会继续从 `base_url`
+模型发现需要单独地址时可设置 `models_url`；否则 Deeper 会继续从 `base_url`
 推测模型发现地址。
 
 ## 全局 `.env`
 
-`<Reasonix home>/.env` 是 Reasonix 保存的 provider API key 的唯一运行时来源。
+`<Deeper home>/.env` 是 Deeper 保存的 provider API key 的唯一运行时来源。
 setup 向导、桌面端设置页、CLI 缺 key 提示以及删除 provider key 的操作，都会通过同一套凭据 helper 读写这个文件。
 
 结构：
@@ -184,7 +184,7 @@ setup 向导、桌面端设置页、CLI 缺 key 提示以及删除 provider key 
 DEEPSEEK_API_KEY=sk-...
 GEMINI_API_KEY=...
 ANTHROPIC_API_KEY=...
-# reasonix-cleared OLD_API_KEY
+# deeper-cleared OLD_API_KEY
 ```
 
 规则：
@@ -192,21 +192,21 @@ ANTHROPIC_API_KEY=...
 - 每行一个 `KEY=value`；
 - 空行和 `#` 注释会被忽略；
 - 读取时接受 `export KEY=value` 和带引号的值；
-- Reasonix 写入时会拒绝多行值；
+- Deeper 写入时会拒绝多行值；
 - key 必须是类似 `DEEPSEEK_API_KEY` 的 shell 风格变量名；
-- `# reasonix-cleared KEY` 是删除 key 后写入的非密钥标记，用来防止旧存储把它静默迁回；
-- 在操作系统支持的情况下，Reasonix 会用受限权限写入该文件。
+- `# deeper-cleared KEY` 是删除 key 后写入的非密钥标记，用来防止旧存储把它静默迁回；
+- 在操作系统支持的情况下，Deeper 会用受限权限写入该文件。
 
 Provider 请求只会从这个全局 `.env` 解析 key。项目 `.env`、home `.env`、继承的 shell
 环境变量、旧 `credentials` 文件和系统 keyring 都不再作为运行时 provider key fallback。项目 `.env`、home `.env` 和继承的 shell 环境变量不会自动导入到全局凭据文件。
 旧 `credentials` 文件和旧 keyring 条目只会在新全局 `.env` 缺少对应 key 时作为非破坏性迁移来源读取。
-项目 `.env` 仍会作为当前 workspace 范围内的非 provider 变量展开来源，例如 MCP/plugin 的 env、headers、URL、command 和 args 中的 `${VAR}`；这些值不会写入进程环境，`REASONIX_HOME`、`REASONIX_STATE_HOME`、`XDG_CONFIG_HOME` 等 Reasonix 控制变量也会被忽略。
+项目 `.env` 仍会作为当前 workspace 范围内的非 provider 变量展开来源，例如 MCP/plugin 的 env、headers、URL、command 和 args 中的 `${VAR}`；这些值不会写入进程环境，`DEEPER_HOME`、`DEEPER_STATE_HOME`、`XDG_CONFIG_HOME` 等 Deeper 控制变量也会被忽略。
 
-缓存仍放在系统缓存目录，例如 macOS 的 `~/Library/Caches/reasonix`、
-Linux 的 `$XDG_CACHE_HOME/reasonix` 或 `~/.cache/reasonix`、Windows 的
-`%LOCALAPPDATA%\reasonix\cache`。可以设置 `REASONIX_CACHE_HOME` 覆盖缓存根目录。
-设置 `REASONIX_HOME` 后，缓存会放在 `$REASONIX_HOME/cache`；如果同时设置
-`REASONIX_CACHE_HOME`，后者优先。
+缓存仍放在系统缓存目录，例如 macOS 的 `~/Library/Caches/deeper`、
+Linux 的 `$XDG_CACHE_HOME/deeper` 或 `~/.cache/deeper`、Windows 的
+`%LOCALAPPDATA%\deeper\cache`。可以设置 `DEEPER_CACHE_HOME` 覆盖缓存根目录。
+设置 `DEEPER_HOME` 后，缓存会放在 `$DEEPER_HOME/cache`；如果同时设置
+`DEEPER_CACHE_HOME`，后者优先。
 
 ## 配置优先级
 
@@ -214,8 +214,8 @@ Linux 的 `$XDG_CACHE_HOME/reasonix` 或 `~/.cache/reasonix`、Windows 的
 
 ```text
 命令行参数
-> 项目 ./reasonix.toml
-> 全局 <Reasonix home>/config.toml
+> 项目 ./deeper.toml
+> 全局 <Deeper home>/config.toml
 > 兼容读取的旧全局配置
 > 内置默认值
 ```
@@ -223,35 +223,35 @@ Linux 的 `$XDG_CACHE_HOME/reasonix` 或 `~/.cache/reasonix`、Windows 的
 写配置时始终写入新的全局路径：
 
 ```text
-macOS/Linux: ~/.reasonix/config.toml
-Windows:     %APPDATA%\reasonix\config.toml
+macOS/Linux: ~/.deeper/config.toml
+Windows:     %APPDATA%\deeper\config.toml
 ```
 
 ## 旧路径迁移
 
-从 **v1.8.1** 开始，Reasonix 启动时会在第一次加载配置前自动检查旧路径。迁移是同步、一次性、非破坏性的：旧文件会被复制或转换到 Reasonix home，原文件保留。
+从 **v1.8.1** 开始，Deeper 启动时会在第一次加载配置前自动检查旧路径。迁移是同步、一次性、非破坏性的：旧文件会被复制或转换到 Deeper home，原文件保留。
 
 旧配置来源包括：
 
 ```text
-~/Library/Application Support/reasonix/config.toml
-~/.config/reasonix/config.toml
-~/.reasonix/reasonix.toml
-~/.reasonix/config.json
+~/Library/Application Support/deeper/config.toml
+~/.config/deeper/config.toml
+~/.deeper/deeper.toml
+~/.deeper/config.json
 ```
 
-旧 credentials、memory 文件和 sessions 也会在新目标不存在时导入到 Reasonix home。
-旧 provider key 只会在 `<Reasonix home>/.env` 尚未包含同名 key 时复制进去。若新的全局配置已经存在，则新配置优先；旧配置只作为兼容 fallback 保留。
+旧 credentials、memory 文件和 sessions 也会在新目标不存在时导入到 Deeper home。
+旧 provider key 只会在 `<Deeper home>/.env` 尚未包含同名 key 时复制进去。若新的全局配置已经存在，则新配置优先；旧配置只作为兼容 fallback 保留。
 
-从 **v1.9.1** 开始，Reasonix 还会在升级时把已知旧路径、legacy `config.json`、
+从 **v1.9.1** 开始，Deeper 还会在升级时把已知旧路径、legacy `config.json`、
 桌面端已登记项目和恢复 tabs 对应项目里的 MCP 配置汇总补齐到全局
-`<Reasonix home>/config.toml`。已有的全局 `[[plugins]]` 按名称优先，不会被旧
+`<Deeper home>/config.toml`。已有的全局 `[[plugins]]` 按名称优先，不会被旧
 配置或项目配置覆盖；源文件会保留不变。该补齐会写入一次性 marker，避免用户之后
 主动删除某个全局 MCP 时又被旧项目配置反复恢复。
 
 ## 手动补救迁移
 
-如果 Reasonix 已经创建了新的 home 目录，但当时旧数据还不在可扫描路径里；或者先打开了桌面端，导致自动迁移没有把旧路径数据补齐，可以在任一前端运行补救命令：
+如果 Deeper 已经创建了新的 home 目录，但当时旧数据还不在可扫描路径里；或者先打开了桌面端，导致自动迁移没有把旧路径数据补齐，可以在任一前端运行补救命令：
 
 ```text
 /migrate
@@ -268,19 +268,19 @@ Windows:     %APPDATA%\reasonix\config.toml
 如果旧 v0.x sessions 不在上述已知旧路径里，例如 Windows v0.52 安装时选择了自定义安装/数据目录，可以显式指定旧目录：
 
 ```text
-/migrate --from "D:\OldReasonix"
+/migrate --from "D:\OldDeeper"
 ```
 
-显式形式只导入 sessions。这个路径可以是旧安装目录、`.reasonix`/数据目录，或者
-`sessions` 目录本身；Reasonix 会在该根目录下检查常见布局，并使用按来源目录区分的
+显式形式只导入 sessions。这个路径可以是旧安装目录、`.deeper`/数据目录，或者
+`sessions` 目录本身；Deeper 会在该根目录下检查常见布局，并使用按来源目录区分的
 marker，因此之前已经运行过普通 `/migrate` 也不会挡住这次后补导入。
 
 该补救命令仍然是非破坏性的。它不会覆盖已有的
-`<Reasonix home>/config.toml`；如果新配置已经存在，需要手动把旧配置里缺失的设置复制过去。旧 memory 文件只会在目标文件不存在时复制。它也会尊重 session 导入 marker，因此已经迁移过、之后又被用户删除的会话，不会在后续 `/migrate` 中被重新恢复。
+`<Deeper home>/config.toml`；如果新配置已经存在，需要手动把旧配置里缺失的设置复制过去。旧 memory 文件只会在目标文件不存在时复制。它也会尊重 session 导入 marker，因此已经迁移过、之后又被用户删除的会话，不会在后续 `/migrate` 中被重新恢复。
 
 版本限制：
 
 - 自动迁移从 **v1.8.1** 开始。
-- `/migrate` 只存在于包含该命令的 Go 版 Reasonix 构建中。如果 Reasonix 提示 `unknown command`，请先升级后再运行。
+- `/migrate` 只存在于包含该命令的 Go 版 Deeper 构建中。如果 Deeper 提示 `unknown command`，请先升级后再运行。
 - legacy `0.x` TypeScript 线没有这个命令。
 - 普通 `/migrate` 只会重新扫描上面列出的旧路径。只有确认某个目录是 v0.x session 来源时，才使用 `/migrate --from <path>`；它不是备份恢复工具或降级导入工具。

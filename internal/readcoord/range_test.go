@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func ranges(pairs ...int) []tool.ReadRange {

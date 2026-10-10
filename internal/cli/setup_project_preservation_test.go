@@ -1,16 +1,16 @@
 package cli
 
 import (
+	"deeper/internal/config"
 	"os"
 	"path/filepath"
-	"reasonix/internal/config"
 	"strings"
 	"testing"
 )
 
 func TestProjectShellSetupPreservesUnknownFields(t *testing.T) {
-	t.Setenv("REASONIX_HOME", t.TempDir())
-	path := filepath.Join(t.TempDir(), "reasonix.toml")
+	t.Setenv("DEEPER_HOME", t.TempDir())
+	path := filepath.Join(t.TempDir(), "deeper.toml")
 	body := "future_setting='keep-top'\n[[providers]]\nname='relay'\nkind='openai'\nbase_url='https://relay.invalid/v1'\nmodel='chat'\napi_key_env='OLD_KEY'\nfuture_option='keep-provider'\n[providers.future_table]\nvalue='keep-nested'\n"
 	if err := os.WriteFile(path, []byte(body), 0600); err != nil {
 		t.Fatal(err)

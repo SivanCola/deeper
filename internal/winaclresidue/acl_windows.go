@@ -15,7 +15,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"reasonix/internal/proc"
+	"deeper/internal/proc"
 )
 
 const (

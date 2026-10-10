@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // ErrInvalidFunctionCall identifies a malformed function call in completed output.

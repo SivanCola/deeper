@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/extension/rpcwire"
+	"deeper/internal/extension/rpcwire"
 )
 
 func TestBrowserControlHookReceivesEnabledFlag(t *testing.T) {

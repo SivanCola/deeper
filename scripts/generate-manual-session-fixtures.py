@@ -19,13 +19,13 @@ def git(*args):
 
 
 for version, tag in [(v, "desktop-v" + v) for v in ("1.38.9", "1.38.10", "1.38.11")] + [
-        ("main-v2-pr10469", "e8762acc9"), ("main-v2-pr10572", "54826e46a")]:
+        ("main-pr10469", "e8762acc9"), ("main-pr10572", "54826e46a")]:
     output = OUTPUT / version
     output.mkdir(parents=True, exist_ok=True)
     temporary = pathlib.Path(tempfile.mkdtemp(prefix="rollbackfixture", dir=DESKTOP / "internal"))
     try:
-        imports = ['"context"', '"os"', '"path/filepath"', 'currentstate "reasonix/desktop/internal/workspacestate"']
-        prefix = "reasonix/desktop/internal/" + temporary.name
+        imports = ['"context"', '"os"', '"path/filepath"', 'currentstate "deeper/desktop/internal/workspacestate"']
+        prefix = "deeper/desktop/internal/" + temporary.name
         for package in ("workspacestate", "draftstate"):
             source = "desktop/internal/" + package
             paths = git("ls-tree", "-r", "--name-only", tag, source).decode().splitlines()
@@ -45,7 +45,7 @@ must(registry.EnsureWorkspace(ctx,workspacestate.Workspace{ID:"global",Root:"/fi
 must(registry.AttachSession(ctx,"","global","existing-session",""))
 must(registry.BeginCreate(ctx,workspacestate.PendingCreate{OperationID:"interrupted-create",WorkspaceID:"global",SessionID:"reserved-session"}))
 // Upgrade a separate copy, then exercise the real tagged reader and writer.
-roundtrip,err:=os.MkdirTemp("","reasonix-registry-roundtrip-");must(err);defer os.RemoveAll(roundtrip)
+roundtrip,err:=os.MkdirTemp("","deeper-registry-roundtrip-");must(err);defer os.RemoveAll(roundtrip)
 source,err:=os.ReadFile(filepath.Join(output,"workspace-state.json"));must(err)
 checkPath:=filepath.Join(roundtrip,"workspace-state.json");must(os.WriteFile(checkPath,source,0600))
 current:=currentstate.NewStore(checkPath);must(current.AttachSession(ctx,"","global","new-version-session",""))

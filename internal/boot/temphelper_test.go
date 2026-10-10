@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // mainConversationRequests is retained as a test helper name for callers that
@@ -23,12 +23,12 @@ func mainConversationRequests(reqs []provider.Request) []provider.Request {
 // surfaces as "being used by another process"; on Linux a write racing RemoveAll
 // surfaces as "directory not empty". Plain t.TempDir turns that teardown race
 // into a red test even though every assertion passed (this is the recurring
-// main-v2 CI flake that #3371 only papered over). Retrying absorbs the race; a
+// main CI flake that #3371 only papered over). Retrying absorbs the race; a
 // dir that never frees is logged, not fatal, so a genuine leak stays visible
 // without reintroducing the flake.
 func robustTempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "reasonix-test-*")
+	dir, err := os.MkdirTemp("", "deeper-test-*")
 	if err != nil {
 		t.Fatalf("robustTempDir: %v", err)
 	}

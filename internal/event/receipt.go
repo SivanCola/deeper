@@ -1,6 +1,6 @@
 package event
 
-import "reasonix/internal/checkpoint"
+import "deeper/internal/checkpoint"
 
 // CompletionReceipt is the user-facing completion record on TurnDone: what the
 // host could verify about the turn's work, and — the part no prose reliably

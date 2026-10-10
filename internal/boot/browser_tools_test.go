@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/browser"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/browser"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // bootBrowserExecutor is the smallest Executor a boot can attach: it lists
@@ -99,7 +99,7 @@ func TestBrowserToolsStayOffTheProviderSurface(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", browserBootConfig)
+	writeFile(t, dir, "deeper.toml", browserBootConfig)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
 
@@ -129,7 +129,7 @@ func TestUseCapabilityListsAndCallsBrowserTools(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "reasonix.toml", browserBootConfig)
+	writeFile(t, dir, "deeper.toml", browserBootConfig)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
 	listArgs, _ := json.Marshal(map[string]any{"action": "list"})

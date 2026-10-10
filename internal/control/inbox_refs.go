@@ -2,10 +2,10 @@ package control
 
 import (
 	"context"
-	"reasonix/internal/attachment"
+	"deeper/internal/attachment"
 	"strings"
 
-	"reasonix/internal/sessioninbox"
+	"deeper/internal/sessioninbox"
 )
 
 func (c *Controller) freezeInboxReferences(ctx context.Context, submit string, explicit []string) (string, []string, []string, []ImageReferenceFailure) {

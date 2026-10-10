@@ -27,7 +27,7 @@ func TestSaveInboundMediaStoresWorkspaceImageAttachment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("saveOneInboundMedia: %v", err)
 	}
-	if !strings.HasPrefix(ref, ".reasonix/attachments/") || !strings.HasSuffix(ref, ".png") {
+	if !strings.HasPrefix(ref, ".deeper/attachments/") || !strings.HasSuffix(ref, ".png") {
 		t.Fatalf("ref = %q, want png attachment ref", ref)
 	}
 	if _, err := os.Stat(filepath.Join(workspace, filepath.FromSlash(ref))); err != nil {

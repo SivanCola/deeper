@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/history"
-	"reasonix/internal/historycatalog"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncatalog"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/history"
+	"deeper/internal/historycatalog"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncatalog"
 )
 
 func TestLegacyHistorySearchSnapshotSurvivesUnrelatedIndexWrites(t *testing.T) {

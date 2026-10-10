@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
+	"deeper/desktop/internal/workspacestate"
 )
 
 // Exercise the reported ordering on disposable state, including a retired

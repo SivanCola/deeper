@@ -3,8 +3,8 @@ package bot
 import (
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 func mustBindBotControllerAuthority(t *testing.T, leases *control.SessionLeaseKeeper, ctrl *control.Controller) {

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sort"
 
-	"reasonix/internal/tool"
+	"deeper/internal/tool"
 )
 
 func toolIdentity(reg *tool.Registry, ctx context.Context) ([]string, string) {

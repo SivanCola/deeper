@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/historywork"
-	"reasonix/internal/provider"
+	"deeper/internal/historywork"
+	"deeper/internal/provider"
 )
 
 // Each committed point is either a complete record or a complete element of

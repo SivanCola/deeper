@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/jobs"
-	"reasonix/internal/runtimepolicy"
-	"reasonix/internal/sessiontemp"
+	"deeper/internal/jobs"
+	"deeper/internal/runtimepolicy"
+	"deeper/internal/sessiontemp"
 )
 
 // CodeQL's generic context model propagates the raw input through any Value

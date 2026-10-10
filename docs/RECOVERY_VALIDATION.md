@@ -28,16 +28,16 @@ Pi runtime, and does not measure either product's production recovery rate.
 
 Pi 固定为上述提交；可执行对照使用其重试辅助函数，测试中等待设为零。
 这不是完整 Pi Agent 的端到端对照，也不是线上恢复率或费用基准。
-主会话持续等待是 Reasonix 的扩展，不是 Pi 的默认策略。
+主会话持续等待是 Deeper 的扩展，不是 Pi 的默认策略。
 
-| Fault / 故障 | Pi helper requests / 请求数 | Reasonix requests / 请求数 | Outcome / 结果 |
+| Fault / 故障 | Pi helper requests / 请求数 | Deeper requests / 请求数 | Outcome / 结果 |
 | --- | ---: | ---: | --- |
 | Two temporary service failures, then success / 两次临时服务故障后成功 | 3 | 3 | Automatically completes / 自动完成 |
 | Exhausted quota / 配额耗尽 | 1 | 1 | Stops immediately / 立即停止 |
 | Persistent interrupted stream / 持续断流 | 4 | 4 | Finite failure; no endless regeneration / 有限失败，不无限重生成 |
 
 For the recoverable fixture, additional requests are 2 and manual continuation
-is 0. Reasonix's scheduled quick backoff is 2 + 4 seconds; the persistent failure
+is 0. Deeper's scheduled quick backoff is 2 + 4 seconds; the persistent failure
 fixture schedules 2 + 4 + 8 seconds. Test clocks avoid actually waiting that long.
 Missing provider usage remains unknown: these fixtures do not establish token
 cost, real recovery latency, or a statistically meaningful recovery percentage.

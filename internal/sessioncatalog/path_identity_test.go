@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestPathIdentityKeyMatchesFilesystemCaseSemantics(t *testing.T) {

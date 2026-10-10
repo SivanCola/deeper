@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"reasonix/internal/taskmonitor"
+	"deeper/internal/taskmonitor"
 )
 
 type sharedManager struct {
@@ -232,5 +232,5 @@ func (m *sharedManager) catalogForNotification(projectRoot string) *Catalog {
 // is shared with the disposable catalog.
 func ObservedStore() taskmonitor.WriteStore {
 	ensureShared()
-	return taskmonitor.NewObservedFileStore(filepath.Join(".reasonix", "tasks"), sharedSink{})
+	return taskmonitor.NewObservedFileStore(filepath.Join(".deeper", "tasks"), sharedSink{})
 }

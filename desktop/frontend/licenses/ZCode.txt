@@ -1,7 +1,7 @@
 Portions adapted from zai-org/ZCode, commit 872ad960de7ec172591f7e1952f7849229f94521.
 Source: packages/ui/src/v4/ConversationQueuePanel.tsx
 Upstream: https://github.com/zai-org/ZCode
-Modified for Reasonix: styles, bindings, edit-in-place, keyboard sorting and conflict handling.
+Modified for Deeper: styles, bindings, edit-in-place, keyboard sorting and conflict handling.
 
 
                                  Apache License

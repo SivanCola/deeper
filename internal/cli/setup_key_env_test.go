@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 const opencodeBaseURL = "https://opencode.ai/zen/go/v1"
@@ -16,7 +16,7 @@ const opencodeBaseURL = "https://opencode.ai/zen/go/v1"
 func newKeyEnvTestSession(t *testing.T, fixture func(*config.Config)) (*providerSetupSession, string) {
 	t.Helper()
 	isolateUserConfig(t)
-	t.Setenv("REASONIX_HOME", t.TempDir())
+	t.Setenv("DEEPER_HOME", t.TempDir())
 	for _, key := range []string{"CUSTOM_OPENCODE_AI_API_KEY", "OPENCODE_KEY", "ORPHAN_KEY", "SHARED_RELAY_KEY"} {
 		t.Setenv(key, "") // registers the restore; saving pins the key into the process
 		_ = os.Unsetenv(key)
@@ -85,8 +85,8 @@ func TestSetupEnterForDefaultKeepsAPrivateSlot(t *testing.T) {
 	if _, err := commitProviderSetupSession(s, path); err != nil {
 		t.Fatal(err)
 	}
-	if got := savedKeyEnv(t, path, "custom-opencode-ai"); !strings.HasPrefix(got, "REASONIX_CONNECTION_") {
-		t.Fatalf("api_key_env = %q, want a private REASONIX_CONNECTION_ slot", got)
+	if got := savedKeyEnv(t, path, "custom-opencode-ai"); !strings.HasPrefix(got, "DEEPER_CONNECTION_") {
+		t.Fatalf("api_key_env = %q, want a private DEEPER_CONNECTION_ slot", got)
 	}
 }
 
@@ -103,7 +103,7 @@ func TestSetupRefusesATypedNameAnotherProviderHolds(t *testing.T) {
 	if _, err := commitProviderSetupSession(s, path); err != nil {
 		t.Fatal(err)
 	}
-	if got := savedKeyEnv(t, path, "custom-opencode-ai"); !strings.HasPrefix(got, "REASONIX_CONNECTION_") {
+	if got := savedKeyEnv(t, path, "custom-opencode-ai"); !strings.HasPrefix(got, "DEEPER_CONNECTION_") {
 		t.Fatalf("api_key_env = %q, want a private slot after Enter", got)
 	}
 	if config.CredentialStored("SHARED_RELAY_KEY") {

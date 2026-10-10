@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func duplicateReplacementPayload(t *testing.T, kind string) json.RawMessage {

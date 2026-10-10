@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/store"
+	"deeper/internal/agent"
+	"deeper/internal/store"
 )
 
 // A source proven by background discovery is a pending user choice, not a

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func (t *WorkspaceTab) sessionRuntimeLookupKeys() []string {

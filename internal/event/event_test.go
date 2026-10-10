@@ -4,8 +4,8 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/evidence"
-	"reasonix/internal/provider"
+	"deeper/internal/evidence"
+	"deeper/internal/provider"
 )
 
 // Kind constants

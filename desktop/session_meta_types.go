@@ -1,10 +1,10 @@
 package main
 
 import (
-	"reasonix/internal/event"
-	"reasonix/internal/evidence"
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
+	"deeper/internal/event"
+	"deeper/internal/evidence"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
 )
 
 // Meta describes the session for the frontend's header and status line.

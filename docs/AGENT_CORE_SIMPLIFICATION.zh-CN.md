@@ -35,7 +35,7 @@
 复用现有 usage 与 e2ebench 埋点,不新增专用 fallback telemetry。每个阶段
 前后对比使用:
 
-- `reasonix run --metrics <path>`:单次运行 `RunMetrics`:token/成本、
+- `deeper run --metrics <path>`:单次运行 `RunMetrics`:token/成本、
   `usage_by_source`(executor/planner/subagent/compaction/... 的请求调用数)、
   `retries`、`compactions`、`steps`。
 - `go run ./cmd/e2ebench -task <task> -json`:每任务请求数、

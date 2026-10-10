@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/skill"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/skill"
 )
 
 func TestNormalizeSkillPathDirectoryLayout(t *testing.T) {
@@ -32,7 +32,7 @@ func TestSkillRootsViewCountsProjectSkills(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	project := t.TempDir()
-	root := filepath.Join(project, ".reasonix", "skills")
+	root := filepath.Join(project, ".deeper", "skills")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestSkillRootsViewUsesActiveWorkspaceForRelativeProjectPaths(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(root, "relative.md"), []byte("---\ndescription: relative\n---\nbody"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte("[skills]\npaths = [\"relative-skills\"]\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte("[skills]\npaths = [\"relative-skills\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := config.LoadForRootReadOnly(project)
@@ -105,7 +105,7 @@ func TestSkillRootsViewShowsProjectExcludedPathAsDisabled(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "disabled.md"), []byte("---\ndescription: disabled\n---\nbody"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte("[skills]\nexcluded_paths = [\"project-skills\"]\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte("[skills]\nexcluded_paths = [\"project-skills\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := config.LoadForRootReadOnly(project)
@@ -136,7 +136,7 @@ func TestSkillSettingsEditProjectOwnedFields(t *testing.T) {
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	projectConfig := filepath.Join(project, "reasonix.toml")
+	projectConfig := filepath.Join(project, "deeper.toml")
 	if err := os.WriteFile(projectConfig, []byte("[skills]\npaths = [\"project-skills\"]\ndisable_implicit_invocation = true\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -212,12 +212,12 @@ func TestSkillRootsViewMarksEnvConfiguredCustomRoot(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "custom.md"), []byte("---\ndescription: custom\n---\nbody"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("REASONIX_TEST_SKILL_ROOT", root)
+	t.Setenv("DEEPER_TEST_SKILL_ROOT", root)
 	cfgPath := config.UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(cfgPath, []byte("[skills]\npaths = [\"${REASONIX_TEST_SKILL_ROOT}\"]\n"), 0o644); err != nil {
+	if err := os.WriteFile(cfgPath, []byte("[skills]\npaths = [\"${DEEPER_TEST_SKILL_ROOT}\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	wd, err := os.Getwd()
@@ -252,7 +252,7 @@ func TestSkillRootsViewDedupesConfiguredConventionRoot(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	project := t.TempDir()
-	root := filepath.Join(config.ReasonixHomeDir(), "skills")
+	root := filepath.Join(config.DeeperHomeDir(), "skills")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestSkillRootsViewDedupesConfiguredProjectConventionRoot(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	project := t.TempDir()
-	root := filepath.Join(project, ".reasonix", "skills")
+	root := filepath.Join(project, ".deeper", "skills")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +317,7 @@ func TestSkillRootsViewDedupesConfiguredProjectConventionRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root = filepath.Join(cwd, ".reasonix", "skills")
+	root = filepath.Join(cwd, ".deeper", "skills")
 	cfgPath := config.UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
 		t.Fatal(err)
@@ -511,7 +511,7 @@ func TestSkillsSettingsCarriesSkillSourceDir(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	project := t.TempDir()
-	root := filepath.Join(project, ".reasonix", "skills")
+	root := filepath.Join(project, ".deeper", "skills")
 	skillDir := filepath.Join(root, "owned")
 	skillPath := filepath.Join(skillDir, "SKILL.md")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
@@ -575,7 +575,7 @@ func TestSkillsSettingsRefreshInvalidatesSkillRootsCache(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	project := t.TempDir()
-	root := filepath.Join(project, ".reasonix", "skills")
+	root := filepath.Join(project, ".deeper", "skills")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}

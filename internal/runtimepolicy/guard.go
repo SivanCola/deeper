@@ -3,7 +3,7 @@ package runtimepolicy
 import (
 	"encoding/json"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 // GuardAction is one monotonic preflight verdict.

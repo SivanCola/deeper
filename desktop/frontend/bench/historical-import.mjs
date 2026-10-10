@@ -6,7 +6,7 @@ import { createServer } from "vite";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(root, ".pw-browsers");
 const { chromium } = await import("playwright");
-const port = Number(process.env.REASONIX_HISTORICAL_IMPORT_PORT ?? 4691);
+const port = Number(process.env.DEEPER_HISTORICAL_IMPORT_PORT ?? 4691);
 const server = await createServer({ root, logLevel: "error", server: { host: "127.0.0.1", port, strictPort: true, hmr: false, watch: { ignored: ["**"] } } });
 await server.listen();
 const browser = await chromium.launch({ headless: true });
@@ -39,6 +39,6 @@ try {
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Cancel import", exact: true }).click();
   assert.deepEqual(errors, []);
-  await page.screenshot({ path: process.env.REASONIX_HISTORICAL_IMPORT_EVIDENCE ?? path.join(root, "..", "..", "artifacts", "historical-import-browser.png") });
+  await page.screenshot({ path: process.env.DEEPER_HISTORICAL_IMPORT_EVIDENCE ?? path.join(root, "..", "..", "artifacts", "historical-import-browser.png") });
   console.log("PASS historical import browser: source update failure/retry/open, listing, blocked retry and batch controls");
 } finally { await browser.close(); await server.close(); }

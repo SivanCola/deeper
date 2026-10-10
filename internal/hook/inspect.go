@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	fileencoding "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/pluginpkg"
+	fileencoding "deeper/internal/fileutil/encoding"
+	"deeper/internal/pluginpkg"
 )
 
 // SourceStatus describes one hooks settings file for diagnostics.
@@ -73,11 +73,11 @@ func Inspect(opts LoadOptions) Inspection {
 	}
 
 	// Plugin hooks (enabled packages only — same as Load).
-	reasonixHomeDir := reasonixHomeForOptions(opts)
-	appendPluginInspect(&out, reasonixHomeDir, opts.ProjectRoot)
+	deeperHomeDir := deeperHomeForOptions(opts)
+	appendPluginInspect(&out, deeperHomeDir, opts.ProjectRoot)
 
-	g := filepath.Join(reasonixHomeDir, SettingsFilename)
-	if reasonixHomeDir == "" {
+	g := filepath.Join(deeperHomeDir, SettingsFilename)
+	if deeperHomeDir == "" {
 		g = GlobalSettingsPath(opts.HomeDir)
 	}
 	st := inspectSettingsFile(g, ScopeGlobal)
@@ -186,11 +186,11 @@ func appendInspectEntries(out *Inspection, s *Settings, scope Scope, source stri
 	}
 }
 
-func appendPluginInspect(out *Inspection, reasonixHomeDir, projectRoot string) {
-	if strings.TrimSpace(reasonixHomeDir) == "" {
+func appendPluginInspect(out *Inspection, deeperHomeDir, projectRoot string) {
+	if strings.TrimSpace(deeperHomeDir) == "" {
 		return
 	}
-	installed, _ := pluginpkg.LoadInstalled(reasonixHomeDir)
+	installed, _ := pluginpkg.LoadInstalled(deeperHomeDir)
 	for _, item := range installed {
 		pkg := item.Package
 		src := filepath.Join(pkg.Root, pluginpkg.ManifestPath(pkg.ManifestKind))

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"strings"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 var errSessionWorkspaceConflict = errors.New("session workspace identity is inconsistent; the session files were left unchanged")

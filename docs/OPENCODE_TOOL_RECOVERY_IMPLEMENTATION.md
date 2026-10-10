@@ -27,7 +27,7 @@ The candidate asks for actual permitted tool use, evidence-based completion and 
 
 ## Live Kimi comparison
 
-OpenCode Go `kimi-k3`, Chat protocol, low/max effort, three fixture operations, ten trials per profile in every cell: **120 completed trials**. Baseline uses the existing default/system policies; the candidate appends only the fixed instruction. Concurrency was four. Files and marker values were isolated and generated per trial. Verification launches only a fixed verifier with no provider credentials in its child environment. This runs Reasonix against Go; it is not an OpenCode executable benchmark.
+OpenCode Go `kimi-k3`, Chat protocol, low/max effort, three fixture operations, ten trials per profile in every cell: **120 completed trials**. Baseline uses the existing default/system policies; the candidate appends only the fixed instruction. Concurrency was four. Files and marker values were isolated and generated per trial. Verification launches only a fixed verifier with no provider credentials in its child environment. This runs Deeper against Go; it is not an OpenCode executable benchmark.
 
 | Effort / operation | Baseline completed | Candidate completed | Requests baseline / candidate | Prompt + output tokens baseline / candidate |
 |---|---:|---:|---:|---:|
@@ -75,7 +75,7 @@ PR analysis 1729619378 reported 20 `go/path-injection` alerts: 248, 250, 251, 25
 
 `TestRawInputCannotReplacePathOwningContextValues` exercises traversal/absolute-path payloads, both context layering orders, response format, policy strings, and missing owners. It verifies exact manager identity and unchanged session ownership. This evidence scopes false-positive triage to these existing alerts; it neither disables CodeQL nor exempts path injection elsewhere.
 
-Integration with main-v2 `e5cf58daa` preserves the rich-link menu and keyboard fixes. The combined build measures 466.905 KiB initial gzip, 2485.715 KiB raw, and 61.027/61.881 KiB locale chunks; the corresponding bounded ceilings are 467.0, 2485.9, and 61.1/62.0 KiB.
+Integration with main `e5cf58daa` preserves the rich-link menu and keyboard fixes. The combined build measures 466.905 KiB initial gzip, 2485.715 KiB raw, and 61.027/61.881 KiB locale chunks; the corresponding bounded ceilings are 467.0, 2485.9, and 61.1/62.0 KiB.
 
 Windows CI additionally exposed a topic-state timing bug: the mutation deadline started before cold SQLite open/reconciliation, which used a different context. The unchanged five-second mutation budget now starts after preparation. Deterministic regressions verify phase ordering, context cleanup and rejection of cancelled writes.
 

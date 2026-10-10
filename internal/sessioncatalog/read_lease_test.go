@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestReadLeaseAllowsWritesAndKeepsFlatPageSnapshot(t *testing.T) {

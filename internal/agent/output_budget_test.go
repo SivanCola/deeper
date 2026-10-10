@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 type sharedWindowTestProvider struct {
@@ -578,7 +578,7 @@ func TestCalibratedBudgetIgnoresEncryptedSearchRaw(t *testing.T) {
 }
 
 func TestForkCaptureProviderPreservesOutputBudgetCapabilities(t *testing.T) {
-	t.Setenv("REASONIX_EXPERIMENT_FORK_CAPTURE_DIR", t.TempDir())
+	t.Setenv("DEEPER_EXPERIMENT_FORK_CAPTURE_DIR", t.TempDir())
 	prov := &sharedWindowTestProvider{budget: 128 * 1024, shared: true,
 		policy: provider.SharedWindowInputPolicy{ReplaysOrdinaryReasoning: true, ReplaysResponsesItems: true}}
 	a := New(prov, tool.NewRegistry(), NewSession(""), Options{}, event.Discard)

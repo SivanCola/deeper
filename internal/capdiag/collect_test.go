@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/capdiag"
-	"reasonix/internal/pluginpkg"
+	"deeper/internal/capdiag"
+	"deeper/internal/pluginpkg"
 )
 
 func TestCollectStaticNoNetworkSideEffects(t *testing.T) {
@@ -17,32 +17,32 @@ func TestCollectStaticNoNetworkSideEffects(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, ".reasonix"))
+	t.Setenv("DEEPER_HOME", filepath.Join(home, ".deeper"))
 	// Shadowed skill + missing description + command override.
-	write(t, filepath.Join(root, ".reasonix", "skills", "demo", "SKILL.md"),
+	write(t, filepath.Join(root, ".deeper", "skills", "demo", "SKILL.md"),
 		"---\nname: demo\ndescription: project demo\n---\nbody\n")
-	write(t, filepath.Join(home, ".reasonix", "skills", "demo", "SKILL.md"),
+	write(t, filepath.Join(home, ".deeper", "skills", "demo", "SKILL.md"),
 		"---\nname: demo\ndescription: global demo\n---\nbody\n")
-	write(t, filepath.Join(root, ".reasonix", "skills", "nodesc", "SKILL.md"),
+	write(t, filepath.Join(root, ".deeper", "skills", "nodesc", "SKILL.md"),
 		"---\nname: nodesc\n---\nbody\n")
-	write(t, filepath.Join(root, ".reasonix", "commands", "hi.md"),
+	write(t, filepath.Join(root, ".deeper", "commands", "hi.md"),
 		"---\ndescription: project hi\n---\nP $ARGUMENTS\n")
-	write(t, filepath.Join(home, ".reasonix", "commands", "hi.md"),
+	write(t, filepath.Join(home, ".deeper", "commands", "hi.md"),
 		"---\ndescription: home hi\n---\nH $ARGUMENTS\n")
 
 	// Project hooks load automatically.
-	write(t, filepath.Join(root, ".reasonix", "settings.json"), `{
+	write(t, filepath.Join(root, ".deeper", "settings.json"), `{
   "hooks": {
     "PreToolUse": [{"match": "(", "command": "echo bad"}, {"match": ".*", "command": "echo ok"}]
   }
 }`)
 
 	// MCP with missing command.
-	write(t, filepath.Join(root, "reasonix.toml"), `
+	write(t, filepath.Join(root, "deeper.toml"), `
 [[plugins]]
 name = "broken"
 type = "stdio"
-command = "definitely-not-a-real-binary-xyzzy-reasonix"
+command = "definitely-not-a-real-binary-xyzzy-deeper"
 auto_start = false
 `)
 
@@ -50,10 +50,10 @@ auto_start = false
 	write(t, filepath.Join(root, "AGENTS.md"), "# Agents\nUse go test.\n@../secret.md\n")
 
 	r := capdiag.Collect(capdiag.Options{
-		Root:            root,
-		HomeDir:         home,
-		ReasonixHomeDir: filepath.Join(home, ".reasonix"),
-		Live:            false,
+		Root:          root,
+		HomeDir:       home,
+		DeeperHomeDir: filepath.Join(home, ".deeper"),
+		Live:          false,
 	})
 
 	if r.SchemaVersion != 1 {
@@ -66,7 +66,7 @@ auto_start = false
 		t.Fatalf("MCP servers = %+v, want one effective entry", r.MCP.Servers)
 	}
 	mcp := r.MCP.Servers[0]
-	if !mcp.Effective || mcp.Source != "project_config" || mcp.SourcePath != "<workspace>/reasonix.toml" {
+	if !mcp.Effective || mcp.Source != "project_config" || mcp.SourcePath != "<workspace>/deeper.toml" {
 		t.Fatalf("effective MCP provenance = %+v", mcp)
 	}
 	// Missing convention dirs should not produce warnings.
@@ -109,7 +109,7 @@ auto_start = false
 	// Deterministic JSON round.
 	j1, _ := capdiag.RenderJSON(r)
 	r2 := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: filepath.Join(home, ".reasonix"),
+		Root: root, HomeDir: home, DeeperHomeDir: filepath.Join(home, ".deeper"),
 	})
 	j2, _ := capdiag.RenderJSON(r2)
 	if j1 != j2 {
@@ -122,20 +122,20 @@ auto_start = false
 	}
 }
 
-func TestCollectUsesExactReasonixHomeForGlobalHooks(t *testing.T) {
+func TestCollectUsesExactDeeperHomeForGlobalHooks(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
-	reasonixHome := filepath.Join(home, "AppData", "Roaming", "reasonix")
-	write(t, filepath.Join(reasonixHome, "settings.json"), `{
+	deeperHome := filepath.Join(home, "AppData", "Roaming", "deeper")
+	write(t, filepath.Join(deeperHome, "settings.json"), `{
   "hooks": {
     "SessionStart": [{"command": "echo exact-home"}]
   }
 }`)
 
 	report := capdiag.Collect(capdiag.Options{
-		Root:            root,
-		HomeDir:         home,
-		ReasonixHomeDir: reasonixHome,
+		Root:          root,
+		HomeDir:       home,
+		DeeperHomeDir: deeperHome,
 	})
 	if report.Summary.Hooks != 1 || len(report.Hooks.Entries) != 1 {
 		t.Fatalf("hooks = %+v, summary = %+v", report.Hooks, report.Summary)
@@ -143,12 +143,12 @@ func TestCollectUsesExactReasonixHomeForGlobalHooks(t *testing.T) {
 	for _, source := range report.Hooks.Sources {
 		if source.Scope == "global" {
 			if source.Status != "ok" || source.HookCount != 1 {
-				t.Fatalf("global hook source = %+v, want exact Reasonix home settings", source)
+				t.Fatalf("global hook source = %+v, want exact Deeper home settings", source)
 			}
-			if source.Path != "<reasonix-home>/settings.json" && source.Path != "<reasonix-home>\\settings.json" {
+			if source.Path != "<deeper-home>/settings.json" && source.Path != "<deeper-home>\\settings.json" {
 				// displayPath uses ToSlash
-				if !strings.Contains(source.Path, "<reasonix-home>") {
-					t.Fatalf("global path = %q, want <reasonix-home> prefix", source.Path)
+				if !strings.Contains(source.Path, "<deeper-home>") {
+					t.Fatalf("global path = %q, want <deeper-home> prefix", source.Path)
 				}
 			}
 			return
@@ -161,9 +161,9 @@ func TestMissingConventionDirsNoWarning(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, ".reasonix"))
+	t.Setenv("DEEPER_HOME", filepath.Join(home, ".deeper"))
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: filepath.Join(home, ".reasonix"),
+		Root: root, HomeDir: home, DeeperHomeDir: filepath.Join(home, ".deeper"),
 	})
 	if r.Issues == nil {
 		t.Fatal("empty issues must be a non-nil slice for JSON consumers")
@@ -188,12 +188,12 @@ func TestProjectHooksEnabledByDefault(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, ".reasonix"))
-	write(t, filepath.Join(root, ".reasonix", "settings.json"), `{
+	t.Setenv("DEEPER_HOME", filepath.Join(home, ".deeper"))
+	write(t, filepath.Join(root, ".deeper", "settings.json"), `{
   "hooks": {"Stop": [{"command": "echo done"}]}
 }`)
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: filepath.Join(home, ".reasonix"),
+		Root: root, HomeDir: home, DeeperHomeDir: filepath.Join(home, ".deeper"),
 	})
 	if !r.Hooks.TrustedProject {
 		t.Fatal("compatibility field trusted_project should reflect default enablement")
@@ -219,8 +219,8 @@ func TestLoadForRootReadOnlyDoesNotRewriteTier(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, ".reasonix"))
-	userCfg := filepath.Join(home, ".reasonix", "config.toml")
+	t.Setenv("DEEPER_HOME", filepath.Join(home, ".deeper"))
+	userCfg := filepath.Join(home, ".deeper", "config.toml")
 	if err := os.MkdirAll(filepath.Dir(userCfg), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +229,7 @@ func TestLoadForRootReadOnlyDoesNotRewriteTier(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: filepath.Join(home, ".reasonix"),
+		Root: root, HomeDir: home, DeeperHomeDir: filepath.Join(home, ".deeper"),
 	})
 	raw, err := os.ReadFile(userCfg)
 	if err != nil {
@@ -244,14 +244,14 @@ func TestUnknownHookEventIsReported(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("REASONIX_HOME", filepath.Join(home, ".reasonix"))
-	write(t, filepath.Join(root, ".reasonix", "settings.json"), `{
+	t.Setenv("DEEPER_HOME", filepath.Join(home, ".deeper"))
+	write(t, filepath.Join(root, ".deeper", "settings.json"), `{
   "hooks": {
     "NotARealEvent": [{"command": "echo hi"}]
   }
 }`)
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: filepath.Join(home, ".reasonix"),
+		Root: root, HomeDir: home, DeeperHomeDir: filepath.Join(home, ".deeper"),
 	})
 	found := false
 	for _, is := range r.Issues {
@@ -268,17 +268,17 @@ func TestUnknownHookEventIsReported(t *testing.T) {
 func TestCollectIgnoresMatchersOnNonToolHookEvents(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
-	reasonixHome := filepath.Join(home, ".reasonix")
+	deeperHome := filepath.Join(home, ".deeper")
 	t.Setenv("HOME", home)
-	t.Setenv("REASONIX_HOME", reasonixHome)
-	write(t, filepath.Join(reasonixHome, "settings.json"), `{
+	t.Setenv("DEEPER_HOME", deeperHome)
+	write(t, filepath.Join(deeperHome, "settings.json"), `{
   "hooks": {
     "Stop": [{"match": "(", "command": "echo done"}]
   }
 }`)
 
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: reasonixHome,
+		Root: root, HomeDir: home, DeeperHomeDir: deeperHome,
 	})
 	if len(r.Hooks.Entries) != 1 {
 		t.Fatalf("hook entries = %+v, want one Stop hook", r.Hooks.Entries)
@@ -293,13 +293,13 @@ func TestCollectIgnoresMatchersOnNonToolHookEvents(t *testing.T) {
 func TestCollectRejectsNonRegularPluginContextFile(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
-	reasonixHome := filepath.Join(home, ".reasonix")
+	deeperHome := filepath.Join(home, ".deeper")
 	t.Setenv("HOME", home)
-	t.Setenv("REASONIX_HOME", reasonixHome)
+	t.Setenv("DEEPER_HOME", deeperHome)
 
-	pluginRoot := filepath.Join(reasonixHome, "plugins", "demo")
+	pluginRoot := filepath.Join(deeperHome, "plugins", "demo")
 	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{
-  "apiVersion": "reasonix.io/plugin/v2",
+  "apiVersion": "deeper.io/plugin/v2",
   "name": "demo",
   "hooks": {
     "SessionStart": [{"contextFile": "CLAUDE.md"}]
@@ -308,14 +308,14 @@ func TestCollectRejectsNonRegularPluginContextFile(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(pluginRoot, "CLAUDE.md"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := pluginpkg.Upsert(reasonixHome, pluginpkg.InstalledPlugin{
-		Name: "demo", Root: "plugins/demo", ManifestKind: "reasonix", Enabled: true,
+	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+		Name: "demo", Root: "plugins/demo", ManifestKind: "deeper", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: reasonixHome,
+		Root: root, HomeDir: home, DeeperHomeDir: deeperHome,
 	})
 	for _, issue := range r.Issues {
 		if issue.Code == "hook.missing_context_file" {
@@ -328,21 +328,21 @@ func TestCollectRejectsNonRegularPluginContextFile(t *testing.T) {
 func TestPluginPackageCommandsAreReported(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
-	reasonixHome := filepath.Join(home, ".reasonix")
+	deeperHome := filepath.Join(home, ".deeper")
 	t.Setenv("HOME", home)
-	t.Setenv("REASONIX_HOME", reasonixHome)
+	t.Setenv("DEEPER_HOME", deeperHome)
 
-	pluginRoot := filepath.Join(reasonixHome, "plugins", "demo")
-	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{"apiVersion":"reasonix.io/plugin/v2","name":"demo","commands":["commands"]}`)
+	pluginRoot := filepath.Join(deeperHome, "plugins", "demo")
+	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{"apiVersion":"deeper.io/plugin/v2","name":"demo","commands":["commands"]}`)
 	write(t, filepath.Join(pluginRoot, "commands", "ship.md"), "---\ndescription: ship it\n---\nShip $ARGUMENTS\n")
-	if err := pluginpkg.Upsert(reasonixHome, pluginpkg.InstalledPlugin{
-		Name: "demo", Root: "plugins/demo", ManifestKind: "reasonix", Enabled: true,
+	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+		Name: "demo", Root: "plugins/demo", ManifestKind: "deeper", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: reasonixHome,
+		Root: root, HomeDir: home, DeeperHomeDir: deeperHome,
 	})
 	if len(r.Plugins.Packages) != 1 {
 		t.Fatalf("plugin packages = %+v, want demo", r.Plugins.Packages)
@@ -364,7 +364,7 @@ func TestDisplayPathExternal(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
 	ext := filepath.Join(t.TempDir(), "secret-user-bin", "tool")
-	write(t, filepath.Join(root, "reasonix.toml"), `
+	write(t, filepath.Join(root, "deeper.toml"), `
 [[plugins]]
 name = "ext"
 type = "stdio"
@@ -376,7 +376,7 @@ command = "`+filepath.ToSlash(ext)+`"
 		_ = os.Chmod(ext, 0o755)
 	}
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, ReasonixHomeDir: filepath.Join(home, ".reasonix"),
+		Root: root, HomeDir: home, DeeperHomeDir: filepath.Join(home, ".deeper"),
 	})
 	raw, _ := json.Marshal(r)
 	if strings.Contains(string(raw), "secret-user-bin") {

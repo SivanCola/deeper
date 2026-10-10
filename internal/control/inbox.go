@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/sessioninbox"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/store"
+	"deeper/internal/event"
+	"deeper/internal/sessioninbox"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/store"
 )
 
 // TurnAdmission is the exported classification of TrySubmitInboxItem /

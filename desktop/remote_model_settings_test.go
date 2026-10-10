@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
-	"reasonix/internal/serve"
+	"deeper/internal/boot"
+	"deeper/internal/config"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
+	"deeper/internal/serve"
 )
 
 func TestRemoteModelOfferCapacityPreservesOwnedRoutes(t *testing.T) {
@@ -375,7 +375,7 @@ func TestRemoteModelSettingsLegacyServeHTMLIndexIsCapabilityRejection(t *testing
 		if r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("<!DOCTYPE html><html><body>Reasonix</body></html>"))
+			_, _ = w.Write([]byte("<!DOCTYPE html><html><body>Deeper</body></html>"))
 			return
 		}
 		mutations++

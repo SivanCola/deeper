@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 func TestRecoveryLaneRewriteAdvancesItsOwnLedgerAndDerivedIndexes(t *testing.T) {

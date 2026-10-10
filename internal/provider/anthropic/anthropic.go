@@ -31,9 +31,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/netclient"
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/netclient"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 // defaultStreamIdleTimeout caps how long a started SSE stream may go silent before

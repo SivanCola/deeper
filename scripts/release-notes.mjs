@@ -246,10 +246,10 @@ function localized(value, lang) {
   return value[lang] || value.en;
 }
 
-function refsSuffix(refs = [], credits) {
+function refsSuffix(refs = [], credits, repository) {
   if (!refs.length) return "";
   return ` (${refs
-    .map((ref) => `[#${ref}](https://github.com/esengine/DeepSeek-Reasonix/pull/${ref})${creditSuffix(credits.get(ref))}`)
+    .map((ref) => `[#${ref}](https://github.com/${repository}/pull/${ref})${creditSuffix(credits.get(ref))}`)
     .join(", ")})`;
 }
 
@@ -262,11 +262,11 @@ function targetsPrefix(item) {
   return `**[${item.targets.map(targetLabel).join(" · ")}]** `;
 }
 
-function renderItems(items, lang, credits) {
+function renderItems(items, lang, credits, repository) {
   return items
     .map(
       (item) =>
-        `- ${targetsPrefix(item)}**${localized(item.title, lang)}** — ${localized(item.body, lang)}${refsSuffix(item.refs, credits)}`,
+        `- ${targetsPrefix(item)}**${localized(item.title, lang)}** — ${localized(item.body, lang)}${refsSuffix(item.refs, credits, repository)}`,
     )
     .join("\n");
 }
@@ -279,7 +279,7 @@ function targetItemCount(release, target) {
   return releaseItems(release).filter((item) => hasTarget(item, target)).length;
 }
 
-function appendTargetSection(lines, release, target, lang, credits) {
+function appendTargetSection(lines, release, target, lang, credits, repository) {
   const isZh = lang === "zh";
   const title = target === "desktop"
     ? (isZh ? "桌面端更新" : "Desktop updates")
@@ -288,7 +288,7 @@ function appendTargetSection(lines, release, target, lang, credits) {
 
   const highlights = release.highlights.filter((item) => hasTarget(item, target));
   if (highlights.length) {
-    lines.push(`### ${isZh ? "重点内容" : "Highlights"}`, "", renderItems(highlights, lang, credits), "");
+    lines.push(`### ${isZh ? "重点内容" : "Highlights"}`, "", renderItems(highlights, lang, credits, repository), "");
   }
   const headings = {
     new: isZh ? "新增" : "New",
@@ -297,7 +297,7 @@ function appendTargetSection(lines, release, target, lang, credits) {
   };
   for (const kind of changeKinds) {
     const items = release.changes[kind].filter((item) => hasTarget(item, target));
-    if (items.length) lines.push(`### ${headings[kind]}`, "", renderItems(items, lang, credits), "");
+    if (items.length) lines.push(`### ${headings[kind]}`, "", renderItems(items, lang, credits, repository), "");
   }
 
   if (!highlights.length && !changeKinds.some((kind) => release.changes[kind].some((item) => hasTarget(item, target)))) {
@@ -311,7 +311,7 @@ function appendTargetSection(lines, release, target, lang, credits) {
   }
 }
 
-function appendOtherTargetSection(lines, release, lang, credits) {
+function appendOtherTargetSection(lines, release, lang, credits, repository) {
   const isZh = lang === "zh";
   const isOtherOnly = (item) => item.targets?.length && !hasTarget(item, "desktop") && !hasTarget(item, "cli");
   const highlights = release.highlights.filter(isOtherOnly);
@@ -319,9 +319,9 @@ function appendOtherTargetSection(lines, release, lang, credits) {
   if (!highlights.length && !changeKinds.some((kind) => changes[kind].length)) return;
 
   lines.push(`## ${isZh ? "其他项目更新" : "Other project updates"}`, "");
-  if (highlights.length) lines.push(renderItems(highlights, lang, credits), "");
+  if (highlights.length) lines.push(renderItems(highlights, lang, credits, repository), "");
   for (const kind of changeKinds) {
-    if (changes[kind].length) lines.push(renderItems(changes[kind], lang, credits), "");
+    if (changes[kind].length) lines.push(renderItems(changes[kind], lang, credits, repository), "");
   }
 }
 
@@ -329,9 +329,19 @@ export function releaseRefs(release) {
   return releaseItems(release).flatMap((item) => item.refs || []);
 }
 
+// Historical records keep their original PR and author attribution. New Deeper
+// records declare their own repository in links.github.
+export function releaseRepository(release) {
+  const match = /^https:\/\/github\.com\/([^/]+\/[^/]+)\/releases(?:\/|$)/.exec(release.links.github);
+  return match?.[1] ?? "SivanCola/deeper";
+}
+
 // credits maps a ref to its lookup result; a ref absent from it renders plain.
 export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
   const isZh = lang === "zh";
+  const repository = releaseRepository(release);
+  const product = repository === "esengine/DeepSeek-Reasonix" ? "Reasonix" : "Deeper";
+  const notesURL = release.links.github;
   const isPreview = release.channel === "prerelease";
   const channelLabel = isPreview ? (isZh ? "预览版" : "Preview") : (isZh ? "稳定版" : "Stable");
   const lines = [
@@ -340,8 +350,8 @@ export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
     `**${isZh ? "发布渠道" : "Release channel"}：${channelLabel} · v${release.version}**`,
     "",
     isZh
-      ? `[English →](https://reasonix.io/changelog/v${release.version}/?lang=en) · [网页版完整更新日志 →](https://reasonix.io/changelog/v${release.version}/)`
-      : `[中文 →](https://reasonix.io/changelog/v${release.version}/?lang=zh) · [Full release notes →](https://reasonix.io/changelog/v${release.version}/?lang=en)`,
+      ? `[English →](${notesURL}) · [网页版完整更新日志 →](${notesURL})`
+      : `[中文 →](${notesURL}) · [Full release notes →](${notesURL})`,
     "",
   ];
 
@@ -356,7 +366,7 @@ export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
   lines.push(
     `## ${isZh ? "概览" : "Overview"}`,
     "",
-    `**Reasonix v${release.version} — ${localized(release.title, lang)}**`,
+    `**${product} v${release.version} — ${localized(release.title, lang)}**`,
     "",
     localized(release.summary, lang),
     "",
@@ -369,11 +379,11 @@ export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
       `**Desktop ${targetItemCount(release, "desktop")} · CLI ${targetItemCount(release, "cli")}**`,
       "",
     );
-    appendTargetSection(lines, release, "desktop", lang, credits);
-    appendTargetSection(lines, release, "cli", lang, credits);
-    appendOtherTargetSection(lines, release, lang, credits);
+    appendTargetSection(lines, release, "desktop", lang, credits, repository);
+    appendTargetSection(lines, release, "cli", lang, credits, repository);
+    appendOtherTargetSection(lines, release, lang, credits, repository);
   } else {
-    lines.push(`## ${isZh ? "重点内容" : "Highlights"}`, "", renderItems(release.highlights, lang, credits), "");
+    lines.push(`## ${isZh ? "重点内容" : "Highlights"}`, "", renderItems(release.highlights, lang, credits, repository), "");
     const headings = {
       new: isZh ? "新功能" : "New",
       improved: isZh ? "改进" : "Improved",
@@ -382,17 +392,17 @@ export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
     for (const kind of changeKinds) {
       const items = release.changes[kind];
       if (!items.length) continue;
-      lines.push(`## ${headings[kind]}`, "", renderItems(items, lang, credits), "");
+      lines.push(`## ${headings[kind]}`, "", renderItems(items, lang, credits, repository), "");
     }
   }
 
   lines.push(`## ${isZh ? "升级提醒" : "Upgrade notes"}`, "");
-  if (release.upgrade.length) lines.push(renderItems(release.upgrade, lang, credits));
+  if (release.upgrade.length) lines.push(renderItems(release.upgrade, lang, credits, repository));
   else lines.push(isZh ? "本版本无需手动迁移。" : "No manual migration is required.");
   lines.push("");
 
   lines.push(`## ${isZh ? "风险提示" : "Risk notes"}`, "");
-  if (release.risks.length) lines.push(renderItems(release.risks, lang, credits));
+  if (release.risks.length) lines.push(renderItems(release.risks, lang, credits, repository));
   else lines.push(isZh ? "当前没有需要额外操作的已知风险。" : "There are no known risks requiring extra action.");
   lines.push("");
 
@@ -454,7 +464,7 @@ async function main() {
   invariant(args.version, "render requires --version");
   invariant(args.output, "render requires --output");
   const release = releaseForVersion(catalog, args.version);
-  const lookup = githubRefLookup({ token: tokenFromEnvironment() });
+  const lookup = githubRefLookup({ token: tokenFromEnvironment(), repository: releaseRepository(release) });
   const { credits, failures, warnings } = await resolveCredits(releaseRefs(release), lookup);
   reportWarnings(warnings);
   const output = resolve(args.output);

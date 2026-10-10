@@ -1,7 +1,7 @@
 package main
 
 import (
-	"reasonix/internal/control"
+	"deeper/internal/control"
 	"testing"
 )
 

@@ -1,5 +1,5 @@
 package completion
 
-import "reasonix/internal/evidence"
+import "deeper/internal/evidence"
 
 func Build(_ any, ledger *evidence.Ledger) Report { return BuildFacts(ledger, "", nil) }

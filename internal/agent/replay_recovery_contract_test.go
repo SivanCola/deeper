@@ -2,12 +2,12 @@ package agent
 
 import (
 	"context"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 	"errors"
 	"path/filepath"
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
 	"strings"
 	"sync/atomic"
 	"testing"

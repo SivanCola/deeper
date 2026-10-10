@@ -3,7 +3,7 @@ package runtimepolicy
 import (
 	"testing"
 
-	"reasonix/internal/evidence"
+	"deeper/internal/evidence"
 )
 
 func TestParseConstraintsNeverBansMutationFromProse(t *testing.T) {

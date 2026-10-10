@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/provider"
 )
 
 // QuoteContext supplies an explicit display request for the CostQuote

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 func TestColdCompatibilityReadersResolveOriginalGlobalDirectory(t *testing.T) {

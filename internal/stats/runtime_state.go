@@ -1,6 +1,6 @@
 package stats
 
-import "reasonix/internal/event"
+import "deeper/internal/event"
 
 func (r *Recorder) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot) {
 	if r != nil {

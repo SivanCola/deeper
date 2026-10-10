@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"reasonix/internal/permission"
-	"reasonix/internal/plugin"
-	"reasonix/internal/tool"
+	"deeper/internal/permission"
+	"deeper/internal/plugin"
+	"deeper/internal/tool"
 )
 
 func validateSavedPermissionRule(list, raw string, tools []tool.ContractEntry, servers []string) error {

@@ -1,6 +1,6 @@
 package plugin
 
-import "reasonix/internal/tool"
+import "deeper/internal/tool"
 
 func findToolByName(tools []tool.Tool, name string) tool.Tool {
 	for _, candidate := range tools {

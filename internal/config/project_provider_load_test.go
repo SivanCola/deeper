@@ -30,7 +30,7 @@ api_key_env = "USER_DEEPSEEK_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(`
 [[providers]]
 name = "deepseek-flash"
 kind = "openai"
@@ -80,7 +80,7 @@ api_key_env = "GLOBAL_SHARED_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(`
 [[providers]]
 name = "shared"
 kind = "openai"
@@ -121,7 +121,7 @@ func TestLoadForRootResolvesProviderCredentialsOverInheritedEnv(t *testing.T) {
 	key := "KEY_PROVIDER_GLOBAL_PRIORITY"
 
 	t.Setenv("HOME", cfgHome)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	t.Setenv("USERPROFILE", cfgHome)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(cfgHome, ".config"))
 	t.Setenv("AppData", filepath.Join(cfgHome, "AppData"))
@@ -137,7 +137,7 @@ func TestLoadForRootResolvesProviderCredentialsOverInheritedEnv(t *testing.T) {
 	if err := os.WriteFile(cred, []byte(key+"=from_credentials\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
 default_model = "custom/m"
 [[providers]]
 name = "custom"
@@ -172,7 +172,7 @@ func TestLoadForRootIgnoresProjectProviderEnvAndInheritedEnv(t *testing.T) {
 	key := "KEY_PROVIDER_PROJECT_PRIORITY"
 
 	t.Setenv("HOME", cfgHome)
-	t.Setenv("REASONIX_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
 	t.Setenv("USERPROFILE", cfgHome)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(cfgHome, ".config"))
 	t.Setenv("AppData", filepath.Join(cfgHome, "AppData"))
@@ -181,7 +181,7 @@ func TestLoadForRootIgnoresProjectProviderEnvAndInheritedEnv(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(project, ".env"), []byte(key+"=from_project\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, "reasonix.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
 default_model = "custom/m"
 [[providers]]
 name = "custom"

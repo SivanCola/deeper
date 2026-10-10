@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/fileops"
-	fileenc "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/tool"
+	"deeper/internal/fileops"
+	fileenc "deeper/internal/fileutil/encoding"
+	"deeper/internal/tool"
 )
 
 // editSource is the file state a read-modify-write tool works against, plus the

@@ -10,7 +10,7 @@ const config = JSON.parse(readFileSync(join(__dirname, "performance-config.json"
   benchmark: boolean; monitor: boolean; workerPath: string;
 };
 app.setPath("userData", join(__dirname, "profile"));
-protocol.registerSchemesAsPrivileged([{ scheme: "reasonix", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false, stream: true } }]);
+protocol.registerSchemesAsPrivileged([{ scheme: "deeper", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false, stream: true } }]);
 app.whenReady().then(async () => {
   const log = { info() {}, warn() {}, error() {} };
   let copied = "";
@@ -40,7 +40,7 @@ app.whenReady().then(async () => {
     processDiagnostics: () => diagnostics.snapshot(), performance: performanceHost, log,
   });
   app.once("will-quit", () => performanceHost.dispose());
-  const url = new URL("reasonix://app/index.html");
+  const url = new URL("deeper://app/index.html");
   url.searchParams.set("monitor", config.monitor ? "1" : "0");
   url.searchParams.set("benchmark", config.benchmark ? "1" : "0");
   await win.loadURL(url.href);

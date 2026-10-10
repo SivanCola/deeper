@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"reasonix/internal/event"
-	"reasonix/internal/i18n"
+	"deeper/internal/event"
+	"deeper/internal/i18n"
 )
 
 type mcpListObservation struct {

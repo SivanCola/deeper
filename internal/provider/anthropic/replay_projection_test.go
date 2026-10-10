@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestBuildRequestDeepSeekDropsUnreplayableToolActivity(t *testing.T) {

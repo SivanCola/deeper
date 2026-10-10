@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/event"
+	"deeper/internal/agent"
+	"deeper/internal/event"
 )
 
 func TestReadPauseKeepsItsTerminalOutcome(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/session"
+	"deeper/internal/agent"
+	"deeper/internal/session"
 )
 
 type SessionHistoryReadHandle struct {

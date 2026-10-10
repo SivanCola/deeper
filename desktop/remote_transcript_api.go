@@ -9,11 +9,11 @@ import (
 	"net/url"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/servecontract"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncontent"
-	"reasonix/internal/transcript"
+	"deeper/internal/control"
+	"deeper/internal/servecontract"
+	"deeper/internal/session"
+	"deeper/internal/sessioncontent"
+	"deeper/internal/transcript"
 )
 
 type RemoteTranscriptSnapshot struct {
@@ -283,7 +283,7 @@ func (a *App) RemoteSessionOpenForTab(tabID string) (session.SessionOpenView, er
 	supportedRead := tab != nil && tab.capabilities[serveCapabilitySessionReadV2]
 	a.remoteTabMu.Unlock()
 	if !supportedRead {
-		return session.SessionOpenView{}, fmt.Errorf("remote Reasonix Serve does not support %s; upgrade the remote service", serveCapabilitySessionReadV2)
+		return session.SessionOpenView{}, fmt.Errorf("remote Deeper Serve does not support %s; upgrade the remote service", serveCapabilitySessionReadV2)
 	}
 	var view session.SessionOpenView
 	supported, err := a.remoteSessionHistoryRead(tabID, "/session/open", nil, &view, session.HistoryPageMaxBytes+(64<<10))

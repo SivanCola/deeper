@@ -1,6 +1,6 @@
 package main
 
-import "reasonix/internal/plugin"
+import "deeper/internal/plugin"
 
 // MCPCapabilityView is one row of the four-layer MCP capability matrix shown
 // in the MCP panel: what this desktop declares and what live sessions

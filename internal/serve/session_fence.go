@@ -7,17 +7,17 @@ import (
 	"net/http"
 	"strings"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 const (
-	sessionPathHeader           = "X-Reasonix-Session-Path"
-	sessionIDHeader             = "X-Reasonix-Session-ID"
-	sessionTakenOverHeader      = "X-Reasonix-Taken-Over"
-	expectedSessionPathHeader   = "X-Reasonix-Expected-Session-Path"
-	expectedSessionIDHeader     = "X-Reasonix-Expected-Session-ID"
-	expectedModelSettingsHeader = "X-Reasonix-Expected-Model-Settings"
+	sessionPathHeader           = "X-Deeper-Session-Path"
+	sessionIDHeader             = "X-Deeper-Session-ID"
+	sessionTakenOverHeader      = "X-Deeper-Taken-Over"
+	expectedSessionPathHeader   = "X-Deeper-Expected-Session-Path"
+	expectedSessionIDHeader     = "X-Deeper-Expected-Session-ID"
+	expectedModelSettingsHeader = "X-Deeper-Expected-Model-Settings"
 	foregroundMutationMaxBody   = 8 << 20
 )
 

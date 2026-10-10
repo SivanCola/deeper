@@ -5,20 +5,20 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/desktop/internal/instanceidentity"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/provider"
+	"deeper/desktop/internal/instanceidentity"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/provider"
 )
 
 func TestGlobalWorkspaceSurvivesWindowsUpdateEnvironment(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	t.Setenv("REASONIX_HOME", "")
-	t.Setenv("REASONIX_STATE_HOME", "")
-	normalHome := config.ReasonixHomeDir()
+	t.Setenv("DEEPER_HOME", "")
+	t.Setenv("DEEPER_STATE_HOME", "")
+	normalHome := config.DeeperHomeDir()
 	updateHome := ""
 	for _, entry := range instanceidentity.UpdateEnvironment(os.Environ(), normalHome) {
-		if value, ok := strings.CutPrefix(entry, "REASONIX_HOME="); ok {
+		if value, ok := strings.CutPrefix(entry, "DEEPER_HOME="); ok {
 			updateHome = value
 		}
 	}
@@ -26,13 +26,13 @@ func TestGlobalWorkspaceSurvivesWindowsUpdateEnvironment(t *testing.T) {
 		t.Fatalf("updater rewrote the access spelling: %q -> %q", normalHome, updateHome)
 	}
 
-	// v1.38.10 wrote the lowercase comparison key into REASONIX_HOME. Seed that
+	// v1.38.10 wrote the lowercase comparison key into DEEPER_HOME. Seed that
 	// historical state, then verify the fixed ordinary launch can reuse it.
 	legacyUpdateHome := strings.ToLower(updateHome)
 	if legacyUpdateHome == normalHome || !strings.EqualFold(legacyUpdateHome, normalHome) {
 		t.Fatalf("fixture must exercise legacy update/normal casing: %q -> %q", normalHome, legacyUpdateHome)
 	}
-	t.Setenv("REASONIX_HOME", legacyUpdateHome)
+	t.Setenv("DEEPER_HOME", legacyUpdateHome)
 	first := NewApp()
 	t.Cleanup(first.closeSessionServices)
 	service := first.desktopSessionService("")
@@ -47,7 +47,7 @@ func TestGlobalWorkspaceSurvivesWindowsUpdateEnvironment(t *testing.T) {
 	appendSessionTestMessage(t, live, "saved-turn", provider.Message{ID: "saved-turn", Role: provider.RoleUser, Content: "history before ordinary relaunch"})
 	first.closeSessionServices()
 
-	t.Setenv("REASONIX_HOME", "")
+	t.Setenv("DEEPER_HOME", "")
 	second := NewApp()
 	t.Cleanup(second.closeSessionServices)
 	if id, err := second.attachDesktopSession(t.Context(), "global", "", ref); err != nil || id != workspaceID {

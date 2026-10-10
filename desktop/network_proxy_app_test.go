@@ -6,8 +6,8 @@ import (
 	"slices"
 	"testing"
 
-	"reasonix/internal/config"
-	"reasonix/internal/netclient"
+	"deeper/internal/config"
+	"deeper/internal/netclient"
 )
 
 // The proxy is the user's: a checkout's [network] is ignored.
@@ -23,7 +23,7 @@ func TestNetworkProxySpecForRootKeepsTheUsersProxy(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("PROJECT_PROXY_URL=http://127.0.0.1:9876\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reasonix.toml"), []byte("[network]\nproxy_mode = \"custom\"\nproxy_url = \"${PROJECT_PROXY_URL}\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[network]\nproxy_mode = \"custom\"\nproxy_url = \"${PROJECT_PROXY_URL}\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

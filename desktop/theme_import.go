@@ -10,14 +10,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/fileutil"
+	"deeper/internal/fileutil"
 )
 
 func themeReplaceFile(tmp, dest string) error {
 	return fileutil.ReplaceFile(tmp, dest)
 }
 
-// importThemePackZIP validates and extracts a .reasonix-theme ZIP into a staging dir.
+// importThemePackZIP validates and extracts a .deeper-theme ZIP into a staging dir.
 // The caller must publish with publishThemeDir.
 func importThemePackZIP(zipPath string) (manifest *ThemePackManifest, staging string, err error) {
 	info, err := os.Lstat(zipPath)
@@ -78,7 +78,7 @@ func extractThemeZip(zr *zip.Reader) (*ThemePackManifest, string, error) {
 	}
 	expectedImages := themeZipExpectedImages(m)
 
-	staging, err := os.MkdirTemp("", "reasonix-theme-import-*")
+	staging, err := os.MkdirTemp("", "deeper-theme-import-*")
 	if err != nil {
 		return nil, "", err
 	}
@@ -116,7 +116,7 @@ func extractThemeZip(zr *zip.Reader) (*ThemePackManifest, string, error) {
 	return m, staging, nil
 }
 
-// scanThemeZipEntries validates the container shape every .reasonix-theme ZIP
+// scanThemeZipEntries validates the container shape every .deeper-theme ZIP
 // must satisfy — root-level files only, no directories, no symlinks, no
 // case-insensitive duplicate names, bounded entry sizes — and returns the
 // manifest entry plus the scene images keyed by lowercase name. Import and

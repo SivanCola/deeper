@@ -14,20 +14,20 @@ export interface ServiceBinaryResolution {
   probed: string[];
 }
 
-const DEB_SHELL_DIR = "/usr/lib/reasonix";
+const DEB_SHELL_DIR = "/usr/lib/deeper";
 
 function isRegularFile(path: string): boolean {
   try { return statSync(path).isFile(); } catch { return false; }
 }
 
 // Inverse of the Go service's shellPathForExecutable (desktop/shell_bootstrap.go).
-// The service normally hands its own path over in REASONIX_DESKTOP_SERVICE; a
+// The service normally hands its own path over in DEEPER_DESKTOP_SERVICE; a
 // shell started directly (pinned taskbar icon, double-click) must find it.
 export function resolveServiceBinary({ env, platform, execPath, resourcesPath, isFile = isRegularFile }: ServiceBinaryLookup): ServiceBinaryResolution {
-  const configured = (env.REASONIX_DESKTOP_SERVICE ?? "").trim();
+  const configured = (env.DEEPER_DESKTOP_SERVICE ?? "").trim();
   if (configured !== "") return { binary: configured, probed: [] };
   const path = platform === "win32" ? win32 : posix;
-  const name = platform === "win32" ? "reasonix-desktop.exe" : "reasonix-desktop";
+  const name = platform === "win32" ? "deeper-desktop.exe" : "deeper-desktop";
   const bundled = path.join(resourcesPath, "service", name);
   const candidates: string[] = [];
   const appDir = path.dirname(execPath);

@@ -11,10 +11,10 @@ import (
 	"io"
 	"os"
 
-	"reasonix/internal/fileops"
-	"reasonix/internal/historywork"
-	"reasonix/internal/provider"
-	"reasonix/internal/store"
+	"deeper/internal/fileops"
+	"deeper/internal/historywork"
+	"deeper/internal/provider"
+	"deeper/internal/store"
 )
 
 // Schema-1 replace/append logs retain original message locations. A large

@@ -10,9 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/desktop/internal/update"
-	"reasonix/internal/installlayout"
-	"reasonix/internal/repair"
+	"deeper/desktop/internal/update"
+	"deeper/internal/installlayout"
+	"deeper/internal/repair"
 )
 
 // maxWindowsPayloadMetadataSize bounds the signed manifest read; a schema 2
@@ -28,8 +28,8 @@ type stagedFileUpdateMember struct {
 }
 
 // loadWindowsStagedReleaseUnit validates and reads the complete NSIS payload
-// before any live release-unit member is moved. An existing Reasonix.exe is the
-// portable alias of reasonix-launcher.exe and reuses those staged bytes; an
+// before any live release-unit member is moved. An existing Deeper.exe is the
+// portable alias of deeper-launcher.exe and reuses those staged bytes; an
 // installed package that did not have the alias remains unchanged.
 func loadWindowsStagedReleaseUnit(claimed *repair.UpdateTransaction, stagingDir string) ([]stagedFileUpdateMember, error) {
 	if claimed == nil || claimed.TargetKind != "file" || len(claimed.Files) == 0 {
@@ -67,7 +67,7 @@ func loadWindowsStagedReleaseUnit(claimed *repair.UpdateTransaction, stagingDir 
 			return nil, fmt.Errorf("load staged release unit: duplicate target %s", filepath.Base(targetPath))
 		}
 		seenTargets[targetKey] = struct{}{}
-		if strings.EqualFold(filepath.Base(targetPath), "Reasonix.exe") && file.MissingBefore {
+		if strings.EqualFold(filepath.Base(targetPath), "Deeper.exe") && file.MissingBefore {
 			continue
 		}
 
@@ -113,16 +113,16 @@ func loadWindowsStagedReleaseUnit(claimed *repair.UpdateTransaction, stagingDir 
 
 func validateWindowsClaimedReleaseUnit(claimed *repair.UpdateTransaction) error {
 	if claimed == nil ||
-		!strings.EqualFold(filepath.Base(claimed.TargetPath), "reasonix-desktop.exe") {
+		!strings.EqualFold(filepath.Base(claimed.TargetPath), "deeper-desktop.exe") {
 		return fmt.Errorf("claimed release unit primary executable is invalid")
 	}
 	required := map[string]bool{
-		"reasonix-desktop.exe":       false,
-		"reasonix-guard.exe":         false,
-		"reasonix-launcher.exe":      false,
-		"reasonix-update-helper.exe": false,
-		"reasonix-cli.exe":           false,
-		"reasonix.exe":               false,
+		"deeper-desktop.exe":       false,
+		"deeper-guard.exe":         false,
+		"deeper-launcher.exe":      false,
+		"deeper-update-helper.exe": false,
+		"deeper-cli.exe":           false,
+		"deeper.exe":               false,
 	}
 	installDir := filepath.Clean(filepath.Dir(claimed.TargetPath))
 	for _, file := range claimed.Files {
@@ -206,18 +206,18 @@ func readWindowsPayloadMetadata(path string) ([]byte, error) {
 
 func windowsStagedSourceName(targetBase string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(targetBase)) {
-	case "reasonix-desktop.exe":
-		return "reasonix-desktop.exe", nil
-	case "reasonix-guard.exe":
-		return "reasonix-guard.exe", nil
-	case "reasonix-launcher.exe":
-		return "reasonix-launcher.exe", nil
-	case "reasonix-update-helper.exe":
-		return "reasonix-update-helper.exe", nil
-	case "reasonix-cli.exe":
-		return "reasonix-cli.exe", nil
-	case "reasonix.exe":
-		return "reasonix-launcher.exe", nil
+	case "deeper-desktop.exe":
+		return "deeper-desktop.exe", nil
+	case "deeper-guard.exe":
+		return "deeper-guard.exe", nil
+	case "deeper-launcher.exe":
+		return "deeper-launcher.exe", nil
+	case "deeper-update-helper.exe":
+		return "deeper-update-helper.exe", nil
+	case "deeper-cli.exe":
+		return "deeper-cli.exe", nil
+	case "deeper.exe":
+		return "deeper-launcher.exe", nil
 	default:
 		return "", fmt.Errorf("load staged release unit: unsupported target %q", targetBase)
 	}

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/session"
-	"reasonix/internal/worktree"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/session"
+	"deeper/internal/worktree"
 )
 
 const rewindForkAttachError = "conversation fork was created but could not be opened; open the recovery branch from session history"

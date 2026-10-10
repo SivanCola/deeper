@@ -20,7 +20,7 @@ const desktopBuildScript = read("scripts/desktop-build.sh");
 const packageShell = desktopBuildScript.match(/^package_shell\(\) \{\n[\s\S]*?^\}/m)?.[0];
 assert.ok(packageShell, "desktop builds must define package_shell");
 const sourceSha = "a".repeat(40);
-const identityProbe = spawnSync("bash", ["-c", `${packageShell}\nnode() { printf '%s' "$REASONIX_COMMIT"; }\npackage_shell`], {
+const identityProbe = spawnSync("bash", ["-c", `${packageShell}\nnode() { printf '%s' "$DEEPER_COMMIT"; }\npackage_shell`], {
   encoding: "utf8",
   env: { ...process.env, ROOT: "/fixture", PLATFORM: "windows/amd64", VERSION: "v0.0.0-ci", CHANNEL: "canary",
     SOURCE_SHA: sourceSha, GIT_COMMIT: sourceSha.slice(0, 12), BUILD_TIME_UTC: "2026-01-01T00:00:00Z" },
@@ -105,7 +105,7 @@ const guardStart = desktopBuildScript.indexOf('echo "==> desktop host contract d
 const guardEnd = desktopBuildScript.indexOf("# The packaging script", guardStart);
 assert.ok(guardStart >= 0 && guardEnd > guardStart, "contract guard must precede packaging");
 const contractGuard = desktopBuildScript.slice(guardStart, guardEnd);
-const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "reasonix-contract-guard-"));
+const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "deeper-contract-guard-"));
 try {
   for (const mode of ["current", "changed", "added", "removed", "generator-failed"]) {
     const cwd = path.join(fixture, mode);
@@ -156,12 +156,12 @@ assert.match(
 const windowsJob = jobBody(ciWorkflow, "desktop-windows");
 assert.match(
   windowsJob,
-  /go build -trimpath -ldflags "-s -w -H windowsgui -X main\.version=v0\.0\.0-ci -X main\.channel=canary" -o build\/bin\/reasonix-desktop\.exe \./,
+  /go build -trimpath -ldflags "-s -w -H windowsgui -X main\.version=v0\.0\.0-ci -X main\.channel=canary" -o build\/bin\/deeper-desktop\.exe \./,
   "Windows native startup CI must build the service as a GUI-subsystem image",
 );
 assert.match(
   windowsJob,
-  /node \.\.\/scripts\/verify-windows-gui-subsystem\.mjs build\/bin\/reasonix-desktop\.exe/,
+  /node \.\.\/scripts\/verify-windows-gui-subsystem\.mjs build\/bin\/deeper-desktop\.exe/,
   "Windows native startup CI must verify the service PE subsystem",
 );
 // The shell is packaged through the Electron packaging script, never wails build.

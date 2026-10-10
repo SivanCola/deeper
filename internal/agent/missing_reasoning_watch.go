@@ -3,7 +3,7 @@ package agent
 import (
 	"time"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // missingReasoningWatch is this conversation's live view of one incident. Only

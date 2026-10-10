@@ -1,8 +1,8 @@
 package anthropic
 
 import (
-	"reasonix/internal/provider"
-	"reasonix/internal/provider/openai"
+	"deeper/internal/provider"
+	"deeper/internal/provider/openai"
 )
 
 func ReasoningForConfig(cfg provider.Config) provider.ReasoningCapability {

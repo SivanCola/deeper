@@ -3,8 +3,8 @@ package main
 import (
 	"log/slog"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 // archivedRuntimeCleanup owns post-commit joins. Keep removal/admission

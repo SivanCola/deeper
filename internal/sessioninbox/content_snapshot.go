@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/sessioncontent"
+	"deeper/internal/attachment"
+	"deeper/internal/sessioncontent"
 )
 
 // FrozenContentRefs reads only manifest-reachable blobs. The caller owns the

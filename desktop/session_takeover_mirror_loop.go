@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/eventwire"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/eventwire"
 )
 
 func (m *takeoverMirror) run(initialClient *http.Client, initialRecord takeoverServeRecord) {

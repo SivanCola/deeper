@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 type repairBatchGeneration struct {

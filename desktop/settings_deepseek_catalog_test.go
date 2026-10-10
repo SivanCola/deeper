@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestOfficialDeepSeekTemplateUsesCurrentCatalog(t *testing.T) {

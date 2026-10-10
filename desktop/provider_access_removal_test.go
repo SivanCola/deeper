@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 func TestRemoveProviderAccessesRemovesGroupedOfficialAliasesAtomically(t *testing.T) {
@@ -74,14 +74,14 @@ func TestRemoveProviderAccessesRemovesGroupedOfficialAliasesAtomically(t *testin
 
 func TestDeleteProviderSavesWithoutBuildingInvalidFallback(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "REASONIX_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-a/model-a"
 	cfg.Desktop.ProviderAccess = []string{"prov-a", "broken"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "REASONIX_TEST_KEY"},
-		{Name: "broken", Kind: "missing-provider-kind", BaseURL: "https://broken.example.invalid", Model: "model-b", APIKeyEnv: "REASONIX_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "broken", Kind: "missing-provider-kind", BaseURL: "https://broken.example.invalid", Model: "model-b", APIKeyEnv: "DEEPER_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -244,7 +244,7 @@ func TestDeleteProviderPreservesNonActiveWorkspaceAndProjectAuxiliaryReference(t
 	}
 	activeRoot := t.TempDir()
 	backgroundRoot := t.TempDir()
-	if err := os.WriteFile(filepath.Join(backgroundRoot, "reasonix.toml"), []byte("[agent]\nsubagent_model = \"removed/vision-model\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(backgroundRoot, "deeper.toml"), []byte("[agent]\nsubagent_model = \"removed/vision-model\"\n"), 0o600); err != nil {
 		t.Fatalf("write project config: %v", err)
 	}
 
@@ -281,7 +281,7 @@ func TestDeleteProviderPreservesNonActiveWorkspaceAndProjectAuxiliaryReference(t
 	if active.Ctrl != oldActive || background.Ctrl != oldBackground || oldActive.closeCount.Load() != 0 || oldBackground.closeCount.Load() != 0 {
 		t.Fatalf("saving provider removal replaced a workspace runtime: active=%T/%d background=%T/%d", active.Ctrl, oldActive.closeCount.Load(), background.Ctrl, oldBackground.closeCount.Load())
 	}
-	projectRaw, err := os.ReadFile(filepath.Join(backgroundRoot, "reasonix.toml"))
+	projectRaw, err := os.ReadFile(filepath.Join(backgroundRoot, "deeper.toml"))
 	if err != nil {
 		t.Fatalf("read project config: %v", err)
 	}
@@ -326,14 +326,14 @@ func TestDeleteProviderPreservesDetachedRuntimeUsingAuxiliaryProvider(t *testing
 
 func TestDeleteProviderPreservesLiveHistoryAndSharedHost(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "REASONIX_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-a/model-a"
 	cfg.Desktop.ProviderAccess = []string{"prov-a", "prov-b"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "REASONIX_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.invalid/v1", Model: "model-b", APIKeyEnv: "REASONIX_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.invalid/v1", Model: "model-b", APIKeyEnv: "DEEPER_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

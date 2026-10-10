@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"reasonix/internal/control"
+	"deeper/internal/control"
 )
 
 func TestSubmissionErrorPreservesUnknownDurabilityOutcome(t *testing.T) {

@@ -3,7 +3,7 @@ package acp
 import (
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // schemaOneTempDir pins a test to the schema-1 session writer: it exercises

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"reasonix/internal/attachment"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
+	"deeper/internal/attachment"
+	"deeper/internal/imageinput"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
 )
 
 type agentImageInput struct {

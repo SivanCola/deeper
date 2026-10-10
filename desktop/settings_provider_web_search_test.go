@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestSaveProviderPersistsWebSearchOffWithDisplayedRequestURL(t *testing.T) {

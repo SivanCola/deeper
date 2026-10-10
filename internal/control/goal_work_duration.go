@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	goaldomain "reasonix/internal/goal"
-	"reasonix/internal/session"
+	goaldomain "deeper/internal/goal"
+	"deeper/internal/session"
 )
 
 // goalWorkSpan belongs to one foreground Run, not to the lifetime of a goal.

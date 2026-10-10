@@ -6,7 +6,7 @@
 
 <a href="./TOOL_CONTRACT.md">English</a>
 
-本文记录 Reasonix 编译期内置工具合约。会话启动时固定 provider 工具面：POSIX
+本文记录 Deeper 编译期内置工具合约。会话启动时固定 provider 工具面：POSIX
 暴露 `bash`，Windows 暴露 `pwsh`。旧会话回放仍可执行兼容别名，但新 provider
 schema 不再暴露这些旧名。
 

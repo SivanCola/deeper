@@ -8,7 +8,7 @@ import (
 	"time"
 	"unicode"
 
-	"reasonix/internal/event"
+	"deeper/internal/event"
 )
 
 // messageEditor 是适配器的可选能力：原地编辑已发送的消息。实现它的适配器
@@ -18,7 +18,7 @@ type messageEditor interface {
 	EditMessage(ctx context.Context, messageID string, msg OutboundMessage) error
 }
 
-// renderSink 将 Reasonix 事件流渲染为平台消息。
+// renderSink 将 Deeper 事件流渲染为平台消息。
 type renderSink struct {
 	ctx        context.Context
 	adapter    Adapter

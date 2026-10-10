@@ -3,8 +3,8 @@ package skill
 import (
 	"testing"
 
-	"reasonix/internal/skill/skillwatch"
-	"reasonix/internal/testenv"
+	"deeper/internal/skill/skillwatch"
+	"deeper/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

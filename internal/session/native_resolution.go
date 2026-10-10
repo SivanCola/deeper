@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 // ExistingCanonicalForLegacy uses a header lookup for a completed cutover.

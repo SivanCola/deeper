@@ -4,9 +4,9 @@ package eventwire
 import (
 	"encoding/json"
 
-	"reasonix/internal/billing"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
+	"deeper/internal/billing"
+	"deeper/internal/event"
+	"deeper/internal/provider"
 )
 
 // CompletionSummary is the JSON form of event.CompletionSummaryInfo.

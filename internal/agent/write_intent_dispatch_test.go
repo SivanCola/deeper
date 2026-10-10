@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/agent/testutil"
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
+	"deeper/internal/agent/testutil"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
 )
 
 func TestPreparedToolContextPreservesDurableWriteIntentHook(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 )
 
 var windowsPayloadTreeNames = []string{
-	"app/Reasonix.exe",
+	"app/Deeper.exe",
 	"app/resources/app.asar",
 	"app/locales/en-US.pak",
 }
@@ -54,12 +54,12 @@ func TestWindowsPayloadManifestSchema2RoundTripsShellTree(t *testing.T) {
 		}
 	}
 	want := []string{
-		"app/Reasonix.exe",
+		"app/Deeper.exe",
 		"app/locales/en-US.pak",
 		"app/resources/app.asar",
-		"reasonix-cli.exe",
-		"reasonix-desktop.exe",
-		"reasonix-update-helper.exe",
+		"deeper-cli.exe",
+		"deeper-desktop.exe",
+		"deeper-update-helper.exe",
 	}
 	if got := WindowsPayloadVersionMembers(decoded); !slices.Equal(got, want) {
 		t.Fatalf("version members = %v, want %v", got, want)
@@ -79,10 +79,10 @@ func TestWindowsPayloadManifestAcceptsSchema1FlatList(t *testing.T) {
 	if len(hashes) != len(windowsPayloadFileNames) {
 		t.Fatalf("schema 1 members = %d, want %d", len(hashes), len(windowsPayloadFileNames))
 	}
-	if got := WindowsPayloadVersionMembers(hashes); !slices.Equal(got, []string{"reasonix-cli.exe", "reasonix-desktop.exe", "reasonix-update-helper.exe"}) {
+	if got := WindowsPayloadVersionMembers(hashes); !slices.Equal(got, []string{"deeper-cli.exe", "deeper-desktop.exe", "deeper-update-helper.exe"}) {
 		t.Fatalf("schema 1 version members = %v", got)
 	}
-	tree := strings.Replace(flat, `"files":[`, `"files":[{"name":"app/Reasonix.exe","sha256":"`+strings.Repeat("a", 64)+`"},`, 1)
+	tree := strings.Replace(flat, `"files":[`, `"files":[{"name":"app/Deeper.exe","sha256":"`+strings.Repeat("a", 64)+`"},`, 1)
 	if _, err := DecodeWindowsPayloadManifest([]byte(tree), "v1"); err == nil {
 		t.Fatal("schema 1 manifest with a tree member was accepted")
 	}
@@ -93,8 +93,8 @@ func TestWindowsPayloadManifestAcceptsSchema1FlatList(t *testing.T) {
 
 func TestWindowsPayloadManifestRejectsInvalidTreeNames(t *testing.T) {
 	for _, name := range []string{
-		"app/../reasonix-desktop.exe",
-		`app\Reasonix.exe`,
+		"app/../deeper-desktop.exe",
+		`app\Deeper.exe`,
 		"lib/x.dll",
 		"/app/x",
 		"app/",
@@ -117,7 +117,7 @@ func TestWindowsPayloadManifestRejectsInvalidTreeNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	escaped := strings.Replace(string(b), `"app/Reasonix.exe"`, `"app/../Reasonix.exe"`, 1)
+	escaped := strings.Replace(string(b), `"app/Deeper.exe"`, `"app/../Deeper.exe"`, 1)
 	if _, err := DecodeWindowsPayloadManifest([]byte(escaped), "v2"); err == nil {
 		t.Fatal("decode accepted a traversal tree name")
 	}
@@ -125,7 +125,7 @@ func TestWindowsPayloadManifestRejectsInvalidTreeNames(t *testing.T) {
 
 func TestWindowsPayloadManifestSchema2RequiresFlatReleaseUnit(t *testing.T) {
 	hashes := windowsPayloadTreeHashes()
-	delete(hashes, "reasonix-guard.exe")
+	delete(hashes, "deeper-guard.exe")
 	if _, err := EncodeWindowsPayloadManifest("v2", hashes); err == nil {
 		t.Fatal("manifest without the flat release unit was encoded")
 	}
@@ -133,7 +133,7 @@ func TestWindowsPayloadManifestSchema2RequiresFlatReleaseUnit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dropped := strings.Replace(string(b), `"name": "reasonix-guard.exe"`, `"name": "app/guard.exe"`, 1)
+	dropped := strings.Replace(string(b), `"name": "deeper-guard.exe"`, `"name": "app/guard.exe"`, 1)
 	if _, err := DecodeWindowsPayloadManifest([]byte(dropped), "v2"); err == nil {
 		t.Fatal("manifest missing a flat member was decoded")
 	}

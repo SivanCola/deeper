@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/config"
-	"reasonix/internal/topicstate"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/config"
+	"deeper/internal/topicstate"
 )
 
 func createUpgradeTopicFixture(t *testing.T, path, topicID, marker string) *sql.DB {

@@ -377,7 +377,7 @@ func TestControlService_StopBoundsLegacyLeaseLessRuntime(t *testing.T) {
 
 func TestControlService_FileStoreClaimsIdempotencyBeforeSideEffects(t *testing.T) {
 	project := t.TempDir()
-	store := NewFileStore(".reasonix/tasks")
+	store := NewFileStore(".deeper/tasks")
 	now := time.Now()
 	if err := store.SaveTask(context.Background(), project, TaskSnapshot{
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1", State: TaskStateRunning,
@@ -431,9 +431,9 @@ func TestInMemoryStore_IdempotencyClaimIsPendingUntilFinalized(t *testing.T) {
 
 func TestFileStore_IdempotencyClaimQuarantinesCorruptRecord(t *testing.T) {
 	root := t.TempDir()
-	store := NewFileStore(filepath.Join(".reasonix", "tasks"))
+	store := NewFileStore(filepath.Join(".deeper", "tasks"))
 	key := "broken-key"
-	idemDir := filepath.Join(root, ".reasonix", "tasks", ".idempotency")
+	idemDir := filepath.Join(root, ".deeper", "tasks", ".idempotency")
 	if err := os.MkdirAll(idemDir, 0o700); err != nil {
 		t.Fatal(err)
 	}

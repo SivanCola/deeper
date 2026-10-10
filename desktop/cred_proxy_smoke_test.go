@@ -28,10 +28,10 @@ func TestCredentialProxyRealHostSmoke(t *testing.T) {
 	}
 	// The desktop test binary's TestMain redirects HOME to a scratch dir; the
 	// smoke needs the real user config (hosts, provider, .env key). Point the
-	// config root back at the real ~/.reasonix for this test only.
+	// config root back at the real ~/.deeper for this test only.
 	if real, err := user.Current(); err == nil && real.HomeDir != "" {
 		t.Setenv("HOME", real.HomeDir)
-		t.Setenv("REASONIX_HOME", filepath.Join(real.HomeDir, ".reasonix"))
+		t.Setenv("DEEPER_HOME", filepath.Join(real.HomeDir, ".deeper"))
 	} else {
 		t.Fatal("cannot resolve the real home directory")
 	}

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	filelock "reasonix/internal/identitylock"
-	"reasonix/internal/store"
+	filelock "deeper/internal/identitylock"
+	"deeper/internal/store"
 )
 
 const (

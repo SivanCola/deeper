@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 const (

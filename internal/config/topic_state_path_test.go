@@ -7,7 +7,7 @@ import (
 
 func TestDesktopTopicStatePathUsesStateHome(t *testing.T) {
 	stateHome := t.TempDir()
-	t.Setenv("REASONIX_STATE_HOME", stateHome)
+	t.Setenv("DEEPER_STATE_HOME", stateHome)
 
 	if got, want := DesktopTopicStatePath(""), filepath.Join(stateHome, "desktop", "topic-state-v1.sqlite"); got != want {
 		t.Fatalf("global path = %q, want %q", got, want)

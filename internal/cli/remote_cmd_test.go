@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/config"
+	"deeper/internal/config"
 )
 
 func TestRemoteCommandUsageExit(t *testing.T) {
@@ -42,7 +42,7 @@ func TestRemovedRemoteWorkbenchCommandsFailWithMigrationHint(t *testing.T) {
 
 func TestRemoteAddListRemoveRoundTrip(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 
 	if got := remoteAddCLI([]string{"box", "dev@10.0.0.9:2222", "--workspace", "~/app"}); got != 0 {
@@ -74,7 +74,7 @@ func TestRemoteAddListRemoveRoundTrip(t *testing.T) {
 
 func TestRemoteRemoveCleansGeneratedCredentialsButKeepsUserManagedOnes(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	passwordKey := config.RemotePasswordCredentialEnvName("secure-box")
@@ -121,7 +121,7 @@ func TestRemoteRemoveCleansGeneratedCredentialsButKeepsUserManagedOnes(t *testin
 
 func TestRemoteAddReplacementCleansDroppedGeneratedCredentials(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	passwordKey := config.RemotePasswordCredentialEnvName("box")
@@ -142,9 +142,9 @@ func TestRemoteAddReplacementCleansDroppedGeneratedCredentials(t *testing.T) {
 	}
 }
 
-func TestRemoteImportPreservesReasonixSettings(t *testing.T) {
+func TestRemoteImportPreservesDeeperSettings(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	sshDir := filepath.Join(home, ".ssh")
@@ -181,7 +181,7 @@ func TestRemoteImportPreservesReasonixSettings(t *testing.T) {
 
 func TestRemoteForwardAddPersists(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("REASONIX_HOME", home)
+	t.Setenv("DEEPER_HOME", home)
 	t.Setenv("HOME", home)
 	if got := remoteAddCLI([]string{"box", "dev@10.0.0.9"}); got != 0 {
 		t.Fatalf("add exit = %d", got)

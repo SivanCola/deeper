@@ -5,7 +5,7 @@ import { join, dirname } from "node:path";
 import ts from "typescript";
 import { checkAppLayers, moduleEdges } from "./check-app-layers.mjs";
 
-const fixture = mkdtempSync(join(tmpdir(), "reasonix-app-layers-"));
+const fixture = mkdtempSync(join(tmpdir(), "deeper-app-layers-"));
 const options = { moduleResolution: ts.ModuleResolutionKind.Bundler, baseUrl: fixture, paths: { "@/*": ["*"] } };
 const write = (name, source) => {
   const file = join(fixture, name);

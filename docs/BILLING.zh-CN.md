@@ -1,6 +1,6 @@
 # 计费、展示币种与费用报价
 
-Reasonix 将三类事实分开：
+Deeper 将三类事实分开：
 
 1. `original`：按公开/自定义价表计算的原币估算，不是发票或实际扣款。
 2. `valuations`：调用发生时记录的 `identity`，以及可用时同模型另一官方区域的
@@ -50,7 +50,7 @@ billing_mode = "payg"       # payg | subscription_equivalent
 
 DeepSeek 官方 OpenAI、Responses 与 Anthropic 端点上的 Flash 与 V4 Pro 按请求发生时刻
 计价。北京时间 09:00–12:00、14:00–18:00 为高峰，区间左闭右开，其余为低峰。由于供应商
-不提供逐 token 计费时刻，Reasonix 使用取得 usage 的请求完成时刻，并继续把报价标记为估算。
+不提供逐 token 计费时刻，Deeper 使用取得 usage 的请求完成时刻，并继续把报价标记为估算。
 发给支持图片的模型的图片按供应商 usage 计入输入 token。
 
 目前记录了两期价目。北京时间 2026-08-17 00:00 起：V4 Flash、
@@ -72,8 +72,8 @@ V4.1 Flash 之前仍按自身价格计费。报价按发生时刻生效的那期
 或请求失败不会影响费用事实。
 
 ```sh
-reasonix doctor billing
-reasonix doctor billing --json
+deeper doctor billing
+deeper doctor billing --json
 ```
 
 兼容保留的 `fx` 对象固定为 `enabled=false`、无缓存；正文同时展示自动选择策略、价表

@@ -1,5 +1,5 @@
 // Package builtincontent holds shipped skill markdown that is embedded into the
-// Reasonix binary. Bodies stay out of the system prompt until the skill is
+// Deeper binary. Bodies stay out of the system prompt until the skill is
 // invoked; reference pages are read separately on demand.
 package builtincontent
 
@@ -10,10 +10,10 @@ import (
 	"path"
 	"strings"
 
-	"reasonix/internal/frontmatter"
+	"deeper/internal/frontmatter"
 )
 
-//go:embed reasonix-guide
+//go:embed deeper-guide
 var files embed.FS
 
 // SkillMarkdown is one embedded skill file after frontmatter split.
@@ -28,9 +28,9 @@ type SkillMarkdown struct {
 	Frontmatter map[string]string
 }
 
-// LoadReasonixGuide returns the shipped reasonix-guide skill markdown.
-func LoadReasonixGuide() (SkillMarkdown, error) {
-	return loadSkill("reasonix-guide/SKILL.md")
+// LoadDeeperGuide returns the shipped deeper-guide skill markdown.
+func LoadDeeperGuide() (SkillMarkdown, error) {
+	return loadSkill("deeper-guide/SKILL.md")
 }
 
 // All loads every embedded SKILL.md under this package (currently one).
@@ -71,7 +71,7 @@ func ParseSkillMarkdown(sourcePath, content string) (SkillMarkdown, error) {
 	fm, body := frontmatter.Split(content)
 	name := strings.TrimSpace(fm["name"])
 	if name == "" {
-		// Fall back to directory name: reasonix-guide/SKILL.md → reasonix-guide
+		// Fall back to directory name: deeper-guide/SKILL.md → deeper-guide
 		dir := path.Dir(sourcePath)
 		if dir != "" && dir != "." {
 			name = path.Base(dir)

@@ -3,7 +3,7 @@ package extensioncontract
 import "testing"
 
 func TestCapabilityKeyValidate(t *testing.T) {
-	if err := (CapabilityKey{Namespace: "reasonix", Kind: "provider", ID: "deepseek/v4"}).Validate(); err != nil {
+	if err := (CapabilityKey{Namespace: "deeper", Kind: "provider", ID: "deepseek/v4"}).Validate(); err != nil {
 		t.Fatal(err)
 	}
 	if err := (CapabilityKey{Namespace: "", Kind: "provider", ID: "x"}).Validate(); err == nil {
@@ -27,13 +27,13 @@ func TestCapabilityValidateSchemaHash(t *testing.T) {
 
 func TestRequirementSatisfiedBy(t *testing.T) {
 	provided := Capability{
-		Key:        CapabilityKey{Namespace: "reasonix", Kind: "provider", ID: "deepseek/v4"},
+		Key:        CapabilityKey{Namespace: "deeper", Kind: "provider", ID: "deepseek/v4"},
 		Version:    "1.2.0",
 		SchemaHash: "sha256:p",
 	}
 	req := Requirement{
 		Capability: Capability{
-			Key: CapabilityKey{Namespace: "reasonix", Kind: "provider", ID: "deepseek/v4"},
+			Key: CapabilityKey{Namespace: "deeper", Kind: "provider", ID: "deepseek/v4"},
 		},
 		VersionRange: ">=1.0.0,<2.0.0",
 	}

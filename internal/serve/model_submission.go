@@ -1,9 +1,9 @@
 package serve
 
 import (
+	"deeper/internal/control"
 	"errors"
 	"net/http"
-	"reasonix/internal/control"
 )
 
 func (s *Server) admitModelSubmissionLocked(w http.ResponseWriter, r *http.Request, choice *control.ModelApplicationChoice, input string, identity control.SubmissionRequest) bool {

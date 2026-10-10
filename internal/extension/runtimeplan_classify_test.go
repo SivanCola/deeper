@@ -3,12 +3,12 @@ package extension
 import (
 	"testing"
 
-	"reasonix/internal/extensioncontract"
+	"deeper/internal/extensioncontract"
 )
 
 func TestClassifySubgraphNone(t *testing.T) {
 	g, err := BuildDependencyGraph([]ComponentDescriptor{
-		{ID: "host", Provides: []extensioncontract.Capability{cap("reasonix", "provider", "p", "1.0.0", "sha256:p")}},
+		{ID: "host", Provides: []extensioncontract.Capability{cap("deeper", "provider", "p", "1.0.0", "sha256:p")}},
 	})
 	if err != nil {
 		t.Fatal(err)

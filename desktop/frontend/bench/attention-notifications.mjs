@@ -86,7 +86,7 @@ try {
   assert.equal(await input.evaluate(element => element === document.activeElement), true, "notification cannot steal focus");
   assert.equal(await page.evaluate(() => window.__attentionContexts.length), 1);
   assert.equal(await page.evaluate(() => window.__attentionContexts[0].state === "suspended"), false, "Web Audio must not wait for a tab switch");
-  const evidence = process.env.REASONIX_ATTENTION_EVIDENCE ?? "/tmp/reasonix-attention-evidence";
+  const evidence = process.env.DEEPER_ATTENTION_EVIDENCE ?? "/tmp/deeper-attention-evidence";
   await fs.mkdir(evidence, { recursive: true });
   await page.screenshot({ path: path.join(evidence, "background-ask.png") });
   await page.evaluate(() => window.__publishAttention());

@@ -19,8 +19,8 @@ import (
 	"time"
 	"unicode/utf16"
 
-	"reasonix/internal/proc"
-	"reasonix/internal/tool"
+	"deeper/internal/proc"
+	"deeper/internal/tool"
 )
 
 //go:embed powershell.ps1
@@ -123,7 +123,7 @@ func startPowerShell(req Request, fp string) (*session, error) {
 		return nil, err
 	}
 	cmd := proc.Command(req.Argv[0], req.Argv[1:]...)
-	cmd.Dir, cmd.Env = req.Dir, append(append([]string(nil), req.Env...), "REASONIX_PWSH_PIPE="+name)
+	cmd.Dir, cmd.Env = req.Dir, append(append([]string(nil), req.Env...), "DEEPER_PWSH_PIPE="+name)
 	cmd.Stdout, cmd.Stderr = writer, writer
 	job, err := startShellTracked(cmd)
 	_ = writer.Close()

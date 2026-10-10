@@ -64,7 +64,7 @@ console.log("\nbundle budgets");
 // then sat on the 423.5 KiB gate (Windows CI: 423.5 / 423.5); this 0.5 KiB
 // raise (0.12%) absorbs that leave-cancel / remasure-once code without
 // widening the original Virtuoso exception. The project-tree archive race
-// guards add 611 bytes gzip over main-v2's 423.988 KiB startup path after the
+// guards add 611 bytes gzip over main's 423.988 KiB startup path after the
 // blank-project flow landed; project-topic sort invalidation and request
 // ordering add another bounded 0.2 KiB. Retain both owner boundaries with a
 // narrowly rounded 1 KiB ratchet.
@@ -84,7 +84,7 @@ console.log("\nbundle budgets");
 // build from 427.2 to 427.7 KiB and test from 428.6 to 429.1 KiB. The unified
 // state-aware geometry contract, session diagnostics counters, and guarded
 // native-scroll probes add 2.4 KiB gzip to the initial path. The current
-// main-v2 merge adds another 0.3 KiB of deterministic shared startup code.
+// main merge adds another 0.3 KiB of deterministic shared startup code.
 // Keep the increase explicit and bounded instead of hiding it in a broad
 // percentage ratchet.
 // The retained-transcript surface adds a small, bounded navigation owner to
@@ -97,7 +97,7 @@ console.log("\nbundle budgets");
 // Remote onboarding [0.5/3] adds project-group and credential-chain wiring on
 // top of the lazy wizard. Exact-turn routing, the extracted event-gap
 // projector, checkpoint resets, and the navigation surface transaction bring
-// the current main-v2 path to 437.36 KiB gzip.
+// the current main path to 437.36 KiB gzip.
 // The full remote-session surface adds the lazy transcript bridge and tab
 // lifecycle on top of [0.5/3]. Keep the measured stack's narrow ratchet.
 // Remote approval hardening adds authoritative composer-profile hydration,
@@ -117,7 +117,7 @@ console.log("\nbundle budgets");
 // 439.74 KiB; retain 0.06 KiB of headroom with a 0.1 KiB ratchet.
 // The final remote-runtime parity pass adds remote run-strip telemetry,
 // explicit session verbs, and specialized plan decisions. The measured path
-// is 440.02 KiB. The current main-v2 turn-event, finish-protocol, and session
+// is 440.02 KiB. The current main turn-event, finish-protocol, and session
 // repair runtime then moves the combined path to 445.097 KiB; retain 0.103 KiB
 // of bounded build/toolchain headroom.
 // Atomic remote profile changes, exact approval draining, and generation-safe
@@ -134,7 +134,7 @@ console.log("\nbundle budgets");
 // ratchet rather than showing idle restored work as actively running. The
 // combined path measures 445.9 KiB; retain 0.1 KiB of toolchain headroom.
 // Transcript surface ownership and the token-fenced unloaded-question commit
-// move the exact main-v2 baseline from 445.865 to 447.587 KiB gzip (+0.39%).
+// move the exact main baseline from 445.865 to 447.587 KiB gzip (+0.39%).
 // The final 0.266 KiB retains jump ownership through paint-ready instead of
 // allowing a native scrollend to release it. Keep only 0.213 KiB headroom;
 // native validation hosts and test fixtures stay outside the production graph.
@@ -145,7 +145,7 @@ console.log("\nbundle budgets");
 // The reader transaction contract (geometry revisions, generation-fenced
 // writer requests, gesture travel proof, stabilized-shrink extent acceptance,
 // and the blank-rebound prepaint lane) adds a measured 3.978 KiB gzip on the
-// merged main-v2 baseline. MCP elicitation and the inline Apps lifecycle remain
+// merged main baseline. MCP elicitation and the inline Apps lifecycle remain
 // on that startup graph; the combined path measures 455.0 KiB. Retain 0.2 KiB
 // of bounded build/toolchain headroom.
 // Generic elicitation validation adds field-specific localized accessibility
@@ -197,14 +197,14 @@ console.log("\nbundle budgets");
 // upstream updater refresh measure 465.4 KiB gzip (base: 464.7 KiB).
 // Keep the next decimal ceiling and leave feature editors lazy.
 // Durable protocol recovery controls and search-source status add 1.2 KiB
-// over the same-environment main-v2 build (465.4 -> 466.6 KiB gzip).
+// over the same-environment main build (465.4 -> 466.6 KiB gzip).
 // Keep one decimal of cross-platform headroom for this measured shell change.
-// Integrating main-v2 rich-link menus measures 466.905 KiB combined.
+// Integrating main rich-link menus measures 466.905 KiB combined.
 // The AskCard session-draft wiring adds a bounded 30-byte gzip drift on the
 // initial route. The session-runtime ordering fence adds 56 bytes and
 // cross-platform zlib rounding reaches the same startup path; retain the
 // explicit budget rather than failing on a rounded 467.0 KiB display value.
-// The latest main-v2 session-runtime fence and exact prompt protocol measure
+// The latest main session-runtime fence and exact prompt protocol measure
 // 468.2 KiB here; retain a 0.1 KiB ceiling for platform zlib rounding.
 // Mainline provider/settings integration measures 469.230 KiB gzip.
 const initialJSBudgetKiB = 469.3;
@@ -230,7 +230,7 @@ if (initialCSS.length > 0) {
 // shared title-safe shell, and the shared harness decision surface measure
 // 116.9 KiB gzip while reusing existing layout primitives. Retain a bounded
 // 0.1 KiB headroom ratchet.
-// Workbench welcome and recovery styles measure 122869 B gzip on main-v2.
+// Workbench welcome and recovery styles measure 122869 B gzip on main.
 // Turn result styles add 388 B after removing obsolete metrics (123257 B).
 // The dock launcher, tab container and tab picker add ~0.6 KiB (the ported
 // card, branch switcher, tab strip, add menu, empty-state picker and the
@@ -298,11 +298,11 @@ for (const path of localeChunks) {
   // Session-log head versions (head kinds, current/covered wording, and the
   // three head notices) measure 61.7 / 62.4 KiB; keep the next one-decimal
   // ceiling for cross-platform CI.
-  // Search assignment copy adds 239 / 231 B over main-v2 (63147 / 63920 B).
+  // Search assignment copy adds 239 / 231 B over main (63147 / 63920 B).
   // Measured result: 63386 / 64151 B; retain bounded cross-platform headroom.
   // Saved/pending/apply-failure guidance adds 233 / 245 B: 63619 / 64396 B
   // with gzip level 9. Keep the next decimal ceiling for these four keys.
-  // Session recovery guidance adds 173 / 156 B over main-v2, measuring
+  // Session recovery guidance adds 173 / 156 B over main, measuring
   // 62.173 / 62.887 KiB. Keep only the next one-decimal ceiling.
   // Combined recovery and model-application copy measures 63791 / 64557 B.
   // Turn result copy adds 554 / 566 B to the latest-base chunks, measuring
@@ -329,13 +329,13 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // More menu, completion summary) makes the latest-base merge 2353.1 KiB in
 // production and test channels both measure 2357.92 KiB after project-group
 // wiring. Exact-turn routing, checkpoint resets, and failure-atomic navigation
-// bring the current main-v2 path to 2379.22 KiB. The remote approval
+// bring the current main path to 2379.22 KiB. The remote approval
 // fences, extracted ownership modules, and remote status-bar isolation bring
 // the measured initial payload to 2380.9 KiB; retain 0.1 KiB of bounded
 // raw/toolchain headroom. Scoped remote approvals, status reconciliation, and
 // runtime command dispatch bring the measured payload to 2382.9 KiB. The
 // remaining review fences measure 2383.2 KiB; retain 0.1 KiB of headroom.
-// Final remote-runtime parity measures 2384.4 KiB raw. The current main-v2
+// Final remote-runtime parity measures 2384.4 KiB raw. The current main
 // runtime additions bring the combined path to 2404.364 KiB. The final merged
 // restored-shell activation and disconnected-state revival path measures
 // 2404.898 KiB; retain 0.102 KiB of bounded headroom alongside the gzip
@@ -346,7 +346,7 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // The same transcript transaction measures 2413.012 KiB raw (+0.28%) against
 // the 2406.204 KiB baseline. Retain 0.188 KiB of bounded headroom.
 // The notification-volume control adds one persisted master gain, per-source
-// loudness trims, and its accessible Settings surface. Current main-v2 moves
+// loudness trims, and its accessible Settings surface. Current main moves
 // from 2413.183 to 2414.879 KiB raw (+1.696 KiB); retain 0.121 KiB of bounded
 // headroom.
 // Owner-lifecycle reasoning disclosure, pre-paint tail pinning, and the live
@@ -361,7 +361,7 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // scroll delivery can restore mounted coverage before the next visible frame.
 // Retain 0.096 KiB of headroom without widening gzip or chunk ceilings.
 // The reader transaction contract then adds a measured 15.317 KiB raw on the
-// merged main-v2 baseline (including its own prepaint port). MCP elicitation
+// merged main baseline (including its own prepaint port). MCP elicitation
 // and Apps add their bounded payload on the shared graph; the combined path
 // measures 2442.6 KiB. Retain 0.4 KiB of bounded build/toolchain headroom.
 // The browser MCP interaction preview adds 0.6 KiB of route wiring while its
@@ -407,7 +407,7 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // The outcome card and history hydration add 2.3 KiB raw on the initial path
 // (2474.0 KiB measured in CI). Keep this narrowly attributable ratchet rather
 // than removing persisted-result visibility or changing chunk ownership.
-// On the current main-v2 base, the combined measured path is 2474.6 KiB;
+// On the current main base, the combined measured path is 2474.6 KiB;
 // the model-capability helper and localized status copy add 0.9 KiB; retain
 // the smallest bounded cross-platform ceiling.
 // Retain the upstream updater ceiling and independent chunk gates.
@@ -428,14 +428,14 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // The head-version dialog copy and its covered-version cleanup control
 // measure 2399.2 KiB; retain the same bounded 0.2 KiB build headroom.
 // Search-assignment bridge and metadata add 1.0 KiB over the measured
-// main-v2 baseline (2399.3 KiB); result 2400.3 KiB plus 0.2 KiB headroom.
+// main baseline (2399.3 KiB); result 2400.3 KiB plus 0.2 KiB headroom.
 // Workbench welcome plus toolbar-refresh integration measures 2401.108 KiB
 // against the 2398.0 KiB base; retain only the next one-decimal ceiling.
 // Shared availability, visible recovery and retry controls measure 2407.215 KiB
 // (+6.107 KiB, 0.25% over the prior welcome head). Retain the next tenth.
 // Integrated model settings and bounded receipt mock measure 2468523 B
 // (2410.667 KiB); retain 0.2 KiB headroom on the combined startup payload.
-// Turn results add 12585 B (0.51%) over main-v2's 2464923 B: bounded receipt
+// Turn results add 12585 B (0.51%) over main's 2464923 B: bounded receipt
 // projection, status presentation and view bindings. Result: 2477508 B.
 // Combined turn-result and model-settings startup payload is 2481108 B
 // (2422.957 KiB), retaining the same bounded 0.2 KiB build headroom.
@@ -454,24 +454,24 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // History preparation and cancellation across startup and paging add 884 B
 // (0.035%) to the 2498286 B base. Measured 2499170 B; retain 0.1 KiB headroom.
 // Independent-session identity, organization CAS and unread/lifecycle guards
-// measure 2443.0 KiB against the same-toolchain main-v2 base of 2440.7 KiB
+// measure 2443.0 KiB against the same-toolchain main base of 2440.7 KiB
 // (+2.3 KiB, 0.095%). Retain one tenth; all other limits stay unchanged.
 // Complete export execution/rendering remains lazy; only bounded progress,
 // lifecycle observation, and cross-page tool-state hydration enter startup.
 // A full 40-character identity measures 2064513 B in the browser build and
-// 2064459 B in Electron, versus 2064077 B on current main-v2 (+436 B, 0.021%).
+// 2064459 B in Electron, versus 2064077 B on current main (+436 B, 0.021%).
 // Retain the smallest one-decimal ceiling; all other limits stay unchanged.
 // Reasoning capability recovery copy moves the same-toolchain local build from
 // 2064327 B to 2064614 B (+287 B, 0.014%). The stable build with a full source
 // identity measures 2064746 B; retain the next one-decimal ceiling.
 // The React error-family field adds 177 B to the same production build. The
 // measured 2064923 B payload keeps the existing gzip, CSS, and chunk limits.
-// Approval outcome recovery measures 2065149 B on current main-v2, versus the
+// Approval outcome recovery measures 2065149 B on current main, versus the
 // 2015.6 KiB base. Retain 0.15 KiB headroom; all other limits stay unchanged.
 // Live-default draft fencing and frozen-model recovery measure 2066040 B
 // (2017.617 KiB). Retain 0.183 KiB; gzip, chunk, CSS, and locale gates stay fixed.
 // Session-id migration and cross-client takeover measure 2073794 B merged onto
-// that main-v2 payload, 7754 B (0.375%) over it. The startup-path growth is
+// that main payload, 7754 B (0.375%) over it. The startup-path growth is
 // attributable to this branch's remote session identity work: the remote
 // telemetry and status modules become static imports of useRemoteSession (they
 // leave their lazily loaded surface chunk), plus the canonical session-id
@@ -500,7 +500,7 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // context measure 2075238 B locally (+1111 B, 0.054%). Preserve the same 186 B
 // Linux producer difference (2075424 B) and retain the next one-decimal ceiling;
 // gzip, chunk, CSS, and locale limits remain unchanged.
-// Integrating main-v2's HTML delivery and layout changes measures 2083186 B
+// Integrating main's HTML delivery and layout changes measures 2083186 B
 // locally (+264 B). Preserve the observed 186 B desktop Linux producer
 // difference (2083372 B) at the next decimal. Compressed, chunk, CSS, locale,
 // and resident-history budgets remain fixed.
@@ -516,11 +516,11 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // ceiling. Retain the next one-decimal ceiling (100 B headroom); all other
 // gates remain unchanged.
 // Combining maintenance with conflict-preserving tool projection measures
-// 2092520 B locally (+7684 B over main-v2, 0.37%). Preserve the established
+// 2092520 B locally (+7684 B over main, 0.37%). Preserve the established
 // 186 B Linux producer difference (2092706 B) at the next decimal; other
 // payload and resident-window budgets remain unchanged.
 // Resource-pressure reclamation and background update isolation add 1551 B
-// (0.074%) over the same-toolchain main-v2 build: 2094017 B versus 2092466 B.
+// (0.074%) over the same-toolchain main build: 2094017 B versus 2092466 B.
 // Preserve the measured 186 B Linux producer difference at the next decimal;
 // compressed, chunk, CSS, locale, and resident-history limits stay unchanged.
 // Localized sandbox runtime, status, and write-scope labels add 1873 B (0.089%)
@@ -532,12 +532,12 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // established 186 B producer difference (2098886 B) at the next decimal;
 // compressed, chunk, CSS, locale, and body-residency budgets stay unchanged.
 // Archive management copy and viewport-bounded confirmation add 387 B to the
-// local startup path: 2099087 B versus 2098700 B on main-v2. Preserve the
+// local startup path: 2099087 B versus 2098700 B on main. Preserve the
 // measured 186 B Linux producer difference (2099273 B) at the next one-decimal
 // ceiling; all other bundle budgets remain unchanged.
 // Immutable list snapshots and their extracted presentation/expansion owners
 // add 698 B (0.033%) on the preceding base. Typed compaction receipts and their
-// local notice path measure 2099980 B on main-v2 (+893 B / 0.043%). The combined
+// local notice path measure 2099980 B on main (+893 B / 0.043%). The combined
 // local Node 26 build measures 2100846 B. Preserve the established 186 B Linux
 // producer difference at the next decimal (2051.8 KiB); compressed, chunk, CSS,
 // locale, and resident-history gates stay fixed.
@@ -551,7 +551,7 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // same-toolchain base (2102940 B versus 2102836 B). The Linux producer measures
 // 2103126 B; retain the next one-decimal ceiling with all other gates fixed.
 // Eager-session recovery adds 88 B with the same dependencies and embedded
-// commit: 2103296 B versus 2103208 B on main-v2. The latter already exceeds
+// commit: 2103296 B versus 2103208 B on main. The latter already exceeds
 // the old gate by 15 B. Round to the next decimal; retain every other gate.
 // Source-bound history RPCs, synchronous navigation cancellation, and cold
 // startup hydration remain in the eager boundary while history conversion and

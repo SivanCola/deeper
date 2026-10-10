@@ -16,13 +16,13 @@ test("recovery bounds a wedged draft save, confirms loss, and shuts down before 
     confirmRecoveryDraftLoss: async () => { events.push("confirm"); return true; },
     onCloseAllowed: () => { events.push("closed"); },
   });
-  q.recoverRenderer(["--reasonix-graphics-recovery"]);
+  q.recoverRenderer(["--deeper-graphics-recovery"]);
   q.recoverRenderer(["duplicate"]);
   await new Promise(resolve => setTimeout(resolve, 30));
   assert.equal(q.currentPhase, "completed");
   assert.deepEqual(events, ["confirm", "shutdown", "closed"]);
   assert.equal(calls.filter(c => c.startsWith("relaunch:")).length, 1);
-  assert.ok(calls.includes("relaunch:--reasonix-graphics-recovery"));
+  assert.ok(calls.includes("relaunch:--deeper-graphics-recovery"));
 });
 
 test("cancelled recovery releases editing without leaving a stale relaunch armed", async () => {
@@ -37,7 +37,7 @@ test("cancelled recovery releases editing without leaving a stale relaunch armed
     onPrepareFailed: () => { assert.fail("recovery cancellation must not open another failure prompt"); },
     onCloseAllowed() {},
   });
-  q.recoverRenderer(["--reasonix-graphics-recovery"]);
+  q.recoverRenderer(["--deeper-graphics-recovery"]);
   await tick(); await tick();
   assert.equal(q.currentPhase, "idle"); assert.equal(shutdowns, 0);
   assert.equal(resumed, 1);
@@ -59,7 +59,7 @@ for (const lateFailure of [false, true]) {
       confirmRecoveryDraftLoss: async () => false,
       resumeRenderer: async () => {}, onCloseAllowed() {},
     });
-    q.recoverRenderer(["--reasonix-graphics-recovery"]);
+    q.recoverRenderer(["--deeper-graphics-recovery"]);
     t.mock.timers.tick(5); await tick();
     assert.equal(q.currentPhase, "idle");
     app.quit();
@@ -366,11 +366,11 @@ test("relaunch runs the shutdown and re-spawns with the requested args", async (
 
 test("relaunch waits for shutdown then starts the committed stable launcher", async () => {
   const { sequencer, calls, log } = build();
-  sequencer.relaunch(["--after-update"], "/opt/reasonix/reasonix-launcher");
+  sequencer.relaunch(["--after-update"], "/opt/deeper/deeper-launcher");
   assert.deepEqual(calls, ["quit"]);
   await tick();
   assert.deepEqual(log, ["flush", "shutdown", "closeAllowed"]);
-  assert.deepEqual(calls, ["quit", "relaunch:--after-update@/opt/reasonix/reasonix-launcher", "quit", "exit"]);
+  assert.deepEqual(calls, ["quit", "relaunch:--after-update@/opt/deeper/deeper-launcher", "quit", "exit"]);
 });
 
 test("the first exit trigger keeps ownership of the shutdown reason", async () => {

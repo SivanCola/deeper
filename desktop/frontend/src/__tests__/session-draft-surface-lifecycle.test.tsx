@@ -156,13 +156,13 @@ try {
     owner.updateContentFor(draftB.draft.id, draftB.generation, {
       ...edited,
       text: "run B",
-      attachments: [{ path: ".reasonix/attachments/late.txt", displayName: "late.txt" }],
+      attachments: [{ path: ".deeper/attachments/late.txt", displayName: "late.txt" }],
     });
   });
   act(() => { owner.trackTask(draftB.draft.id, draftB.generation, attachmentTask); });
   assert.equal(owner.surface?.pendingTasks, 1, "the captured attachment belongs to B before exit starts");
-  assert.ok(window.__reasonixFlushSessionDraft, "draft owner installs the Electron exit flush hook");
-  act(() => { exitFlush = window.__reasonixFlushSessionDraft!().then(() => { exitFlushFinished = true; }); });
+  assert.ok(window.__deeperFlushSessionDraft, "draft owner installs the Electron exit flush hook");
+  act(() => { exitFlush = window.__deeperFlushSessionDraft!().then(() => { exitFlushFinished = true; }); });
   await Promise.resolve();
   assert.equal(exitFlushFinished, false, "exit flush waits for the active CAS save acknowledgement");
   await act(async () => {
@@ -201,19 +201,19 @@ try {
 
   assert.equal(submissions.length, 1, "direct draft commands never reserve an operation");
   assert.ok(drafts.get("draft-b")?.settings.disabledMcp[server.name], "MCP selection persists in draft settings without a Controller");
-  assert.equal(JSON.parse(drafts.get("draft-b")!.contentJson).attachments[0]?.path, ".reasonix/attachments/late.txt",
+  assert.equal(JSON.parse(drafts.get("draft-b")!.contentJson).attachments[0]?.path, ".deeper/attachments/late.txt",
     "attachment completion during exit is saved before shutdown continues");
 
-  assert.ok(window.__reasonixResumeSessionDraftEditing, "draft owner installs the exit-veto recovery hook");
-  act(() => { window.__reasonixResumeSessionDraftEditing!(); });
+  assert.ok(window.__deeperResumeSessionDraftEditing, "draft owner installs the exit-veto recovery hook");
+  act(() => { window.__deeperResumeSessionDraftEditing!(); });
   act(() => owner.updateContent({ ...edited, text: "editing resumed after veto" }));
   await act(async () => { await owner.flush(); });
   assert.equal(JSON.parse(drafts.get("draft-b")!.contentJson).text, "editing resumed after veto",
     "a cancelled exit releases the renderer barrier and accepts new edits");
 
   await act(async () => { root.unmount(); });
-  assert.equal(window.__reasonixFlushSessionDraft, undefined, "unmount removes the renderer exit hook");
-  assert.equal(window.__reasonixResumeSessionDraftEditing, undefined, "unmount removes the exit-veto recovery hook");
+  assert.equal(window.__deeperFlushSessionDraft, undefined, "unmount removes the renderer exit hook");
+  assert.equal(window.__deeperResumeSessionDraftEditing, undefined, "unmount removes the exit-veto recovery hook");
   console.log("session draft surface: save coalescing, source submission and stale acceptance isolation passed");
 } finally {
   stub.uninstall();

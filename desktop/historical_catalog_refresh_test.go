@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/config"
-	"reasonix/internal/historywork"
+	"deeper/internal/config"
+	"deeper/internal/historywork"
 )
 
 func TestHistoricalCatalogPublishesBoundedDiscoveryBeforeCompletion(t *testing.T) {

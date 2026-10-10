@@ -3,9 +3,9 @@ package boot
 import (
 	"strings"
 
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/provider"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/provider"
 )
 
 func authenticationStateForModelEntry(entry *config.ProviderEntry, modelRef string) control.AuthenticationState {

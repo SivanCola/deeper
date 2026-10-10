@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"reasonix/desktop/internal/sessionui"
+	"deeper/desktop/internal/sessionui"
 )
 
 type manualCreationStore interface {

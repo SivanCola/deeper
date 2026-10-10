@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"slices"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
+	"deeper/internal/agent"
+	"deeper/internal/control"
 )
 
 type topicArchiveRemovalOwnership struct {

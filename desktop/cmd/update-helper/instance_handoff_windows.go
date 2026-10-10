@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"reasonix/desktop/internal/instanceidentity"
-	"reasonix/internal/desktopinstance"
-	"reasonix/internal/installlayout"
+	"deeper/desktop/internal/instanceidentity"
+	"deeper/internal/desktopinstance"
+	"deeper/internal/installlayout"
 )
 
 var (
@@ -26,7 +26,7 @@ const desktopHandoffTimeout = 30 * time.Second
 // verifyDesktopHandoff checks the single-instance owner, never all installed processes.
 func verifyDesktopHandoff(installDir string, started bool) error {
 	id := instanceidentity.UpdateID()
-	home := os.Getenv("REASONIX_HOME")
+	home := os.Getenv("DEEPER_HOME")
 	if !instanceidentity.Valid(id) || !filepath.IsAbs(home) || id != instanceidentity.ForHome(home) {
 		return fmt.Errorf("update instance identity is unavailable; automatic restart cannot be verified")
 	}

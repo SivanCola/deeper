@@ -6,11 +6,11 @@ import (
 
 	"golang.org/x/term"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/config"
-	"reasonix/internal/event"
-	"reasonix/internal/telemetry"
-	"reasonix/internal/trajectory"
+	"deeper/internal/agent"
+	"deeper/internal/config"
+	"deeper/internal/event"
+	"deeper/internal/telemetry"
+	"deeper/internal/trajectory"
 )
 
 // runSinkChain is the assembled event pipeline for one `run` invocation, with

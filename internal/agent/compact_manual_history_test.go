@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/event"
-	"reasonix/internal/provider"
-	"reasonix/internal/sessioncontext"
+	"deeper/internal/event"
+	"deeper/internal/provider"
+	"deeper/internal/sessioncontext"
 )
 
 func TestManualCompactFindsHistoryBehindFixedContext(t *testing.T) {

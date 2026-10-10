@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"reasonix/internal/control"
-	"reasonix/internal/session"
+	"deeper/internal/control"
+	"deeper/internal/session"
 )
 
 type forkTargetsController interface {

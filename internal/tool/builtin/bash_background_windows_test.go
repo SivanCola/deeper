@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"reasonix/internal/event"
-	"reasonix/internal/jobs"
-	"reasonix/internal/sandbox"
+	"deeper/internal/event"
+	"deeper/internal/jobs"
+	"deeper/internal/sandbox"
 )
 
 func TestWindowsWorkspaceWriteBackgroundHTTPJobLifecycle(t *testing.T) {

@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 func TestLegacyCleanupProtectsRegistryRecoveryOwners(t *testing.T) {

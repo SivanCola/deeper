@@ -11,7 +11,7 @@
 import { JSDOM } from "jsdom";
 import { installDesktopHostStub } from "./desktopHostStub";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "https://reasonix.local/" });
+const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "https://deeper.local/" });
 const { window } = dom;
 
 // Set globals BEFORE dynamically importing React DOM so the renderer sees a

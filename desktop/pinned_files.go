@@ -12,9 +12,9 @@ import (
 	"sync/atomic"
 	"unicode/utf8"
 
-	"reasonix/internal/agent"
-	"reasonix/internal/control"
-	"reasonix/internal/fileutil"
+	"deeper/internal/agent"
+	"deeper/internal/control"
+	"deeper/internal/fileutil"
 )
 
 const (

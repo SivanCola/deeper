@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"reasonix/internal/historywork"
+	"deeper/internal/historywork"
 )
 
 func TestMetadataIncrementalWaitingObservationCanCancel(t *testing.T) {

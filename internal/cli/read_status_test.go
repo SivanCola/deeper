@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"reasonix/internal/event"
+	"deeper/internal/event"
 	"strings"
 	"testing"
 )

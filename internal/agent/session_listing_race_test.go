@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 func TestSessionListingBackfillDoesNotOverwriteNewerCounts(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"reasonix/internal/agent"
+	"deeper/internal/agent"
 )
 
 func TestTerminalStartupFailureImmediatelyLeavesRestoreSnapshot(t *testing.T) {

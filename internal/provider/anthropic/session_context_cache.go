@@ -3,7 +3,7 @@ package anthropic
 import (
 	"slices"
 
-	"reasonix/internal/sessioncontext"
+	"deeper/internal/sessioncontext"
 )
 
 func sessionContextTextBlocks(content string) []contentBlock {
@@ -17,7 +17,7 @@ func sessionContextTextBlocks(content string) []contentBlock {
 
 // markPromptCacheBreakpoints marks stable system/tools, the latest valid
 // session context, and the request tail. Native Anthropic permits four cache
-// breakpoints; Reasonix uses at most three and keeps the default five-minute TTL.
+// breakpoints; Deeper uses at most three and keeps the default five-minute TTL.
 func markPromptCacheBreakpoints(system []textBlock, tools []anthTool, messages []anthMessage) {
 	if n := len(system); n > 0 {
 		system[n-1].CacheControl = ephemeral()

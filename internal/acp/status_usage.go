@@ -1,9 +1,9 @@
 package acp
 
-import "reasonix/internal/billing"
+import "deeper/internal/billing"
 
-// ReasonixUsage reports inclusive totals alongside cache and reasoning subsets.
-type ReasonixUsage struct {
+// DeeperUsage reports inclusive totals alongside cache and reasoning subsets.
+type DeeperUsage struct {
 	TotalTokens      int                `json:"totalTokens"`
 	PromptTokens     int                `json:"promptTokens"`
 	CompletionTokens int                `json:"completionTokens"`
@@ -23,7 +23,7 @@ type ReasonixUsage struct {
 	UsageSource      string             `json:"usageSource"`
 }
 
-type ReasonixStatusUsage struct {
-	Turn       ReasonixUsage `json:"turn"`
-	Cumulative ReasonixUsage `json:"cumulative"`
+type DeeperStatusUsage struct {
+	Turn       DeeperUsage `json:"turn"`
+	Cumulative DeeperUsage `json:"cumulative"`
 }

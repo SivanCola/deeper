@@ -137,7 +137,7 @@ function readLocalPackage(entry, version, candidateSha) {
       `local package identity mismatch: expected ${entry.name}@${version}, got ${pkg.name}@${pkg.version}`,
     );
   }
-  if (pkg.reasonixCandidateSha !== candidateSha) {
+  if (pkg.deeperCandidateSha !== candidateSha) {
     throw new Error(
       `${entry.name}@${version} does not record candidate ${candidateSha}`,
     );
@@ -152,7 +152,7 @@ function registryPackage(runner, name, version) {
       `${name}@${version}`,
       "name",
       "version",
-      "reasonixCandidateSha",
+      "deeperCandidateSha",
       "gitHead",
       "--json",
     ],
@@ -169,7 +169,7 @@ function verifyRegistryPackage(metadata, name, version, candidateSha) {
     );
   }
 
-  const recordedCandidate = metadata.reasonixCandidateSha;
+  const recordedCandidate = metadata.deeperCandidateSha;
   const gitHead = metadata.gitHead;
   if (recordedCandidate && recordedCandidate !== candidateSha) {
     throw new Error(

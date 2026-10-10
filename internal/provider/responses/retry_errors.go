@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 )
 
 // isCommandCodeTransientResponsesError recognizes Command Code's anonymous,

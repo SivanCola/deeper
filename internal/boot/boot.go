@@ -23,53 +23,53 @@ import (
 	"sync/atomic"
 	"time"
 
-	"reasonix/internal/ablation"
-	"reasonix/internal/agent"
-	"reasonix/internal/agentpreset"
-	"reasonix/internal/billing"
-	"reasonix/internal/browser"
-	"reasonix/internal/capability"
-	"reasonix/internal/command"
-	"reasonix/internal/config"
-	"reasonix/internal/control"
-	"reasonix/internal/environment"
-	"reasonix/internal/event"
-	"reasonix/internal/extension"
-	"reasonix/internal/extension/dispatch"
-	"reasonix/internal/extension/protocol"
-	"reasonix/internal/extension/providerext"
-	"reasonix/internal/extension/sidecar"
-	"reasonix/internal/extension/uihub"
-	"reasonix/internal/gitcmd"
-	"reasonix/internal/guardian"
-	"reasonix/internal/history"
-	"reasonix/internal/hook"
-	"reasonix/internal/imageinput"
-	"reasonix/internal/installsource"
-	"reasonix/internal/jobs"
-	"reasonix/internal/lsp"
-	"reasonix/internal/mcplaunch"
-	"reasonix/internal/memory"
-	"reasonix/internal/migration"
-	"reasonix/internal/netclient"
-	"reasonix/internal/outputstyle"
-	"reasonix/internal/permission"
-	"reasonix/internal/persistentshell"
-	"reasonix/internal/plugin"
-	"reasonix/internal/productdocs"
-	"reasonix/internal/provider"
-	"reasonix/internal/sandbox"
-	"reasonix/internal/secrets"
-	"reasonix/internal/session"
-	"reasonix/internal/sessioncontext"
-	"reasonix/internal/sessiontemp"
-	"reasonix/internal/skill"
-	"reasonix/internal/skill/skillwatch"
-	"reasonix/internal/stats"
-	"reasonix/internal/taskmonitor"
-	"reasonix/internal/tool"
-	"reasonix/internal/tool/builtin"
-	"reasonix/internal/tool/sessiontool"
+	"deeper/internal/ablation"
+	"deeper/internal/agent"
+	"deeper/internal/agentpreset"
+	"deeper/internal/billing"
+	"deeper/internal/browser"
+	"deeper/internal/capability"
+	"deeper/internal/command"
+	"deeper/internal/config"
+	"deeper/internal/control"
+	"deeper/internal/environment"
+	"deeper/internal/event"
+	"deeper/internal/extension"
+	"deeper/internal/extension/dispatch"
+	"deeper/internal/extension/protocol"
+	"deeper/internal/extension/providerext"
+	"deeper/internal/extension/sidecar"
+	"deeper/internal/extension/uihub"
+	"deeper/internal/gitcmd"
+	"deeper/internal/guardian"
+	"deeper/internal/history"
+	"deeper/internal/hook"
+	"deeper/internal/imageinput"
+	"deeper/internal/installsource"
+	"deeper/internal/jobs"
+	"deeper/internal/lsp"
+	"deeper/internal/mcplaunch"
+	"deeper/internal/memory"
+	"deeper/internal/migration"
+	"deeper/internal/netclient"
+	"deeper/internal/outputstyle"
+	"deeper/internal/permission"
+	"deeper/internal/persistentshell"
+	"deeper/internal/plugin"
+	"deeper/internal/productdocs"
+	"deeper/internal/provider"
+	"deeper/internal/sandbox"
+	"deeper/internal/secrets"
+	"deeper/internal/session"
+	"deeper/internal/sessioncontext"
+	"deeper/internal/sessiontemp"
+	"deeper/internal/skill"
+	"deeper/internal/skill/skillwatch"
+	"deeper/internal/stats"
+	"deeper/internal/taskmonitor"
+	"deeper/internal/tool"
+	"deeper/internal/tool/builtin"
+	"deeper/internal/tool/sessiontool"
 )
 
 // ErrUnknownModel is returned by Build when the configured model can't be
@@ -146,7 +146,7 @@ type Options struct {
 	OnConfigLoadWarnings func([]string) bool
 	// ExtraPlugins are session-scoped MCP servers supplied by a host transport
 	// (for example ACP session/new). They are connected eagerly for this
-	// controller but are not persisted to reasonix.toml.
+	// controller but are not persisted to deeper.toml.
 	ExtraPlugins []plugin.Spec
 	// AgentPreset and TokenMode are retired compatibility inputs. Recognized
 	// values use standard execution; unknown values keep the standard default.
@@ -229,7 +229,7 @@ type Options struct {
 	// everything.
 	Ablation ablation.Set
 	// SandboxNetworkOverride and WorkspaceOnly are process-local hard bounds for
-	// supervised ACP workers. Nil/false preserve normal Reasonix config.
+	// supervised ACP workers. Nil/false preserve normal Deeper config.
 	SandboxNetworkOverride *bool
 	SandboxBashOverride    string
 	WorkspaceOnly          bool
@@ -285,7 +285,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// Arm the credential-protection layers from the user-global [secrets]
 	// section before any tool, hook, or plugin subprocess can spawn. Package
 	// globals are correct here because [secrets] is user-global (project
-	// reasonix.toml cannot override it), so concurrent workspaces agree.
+	// deeper.toml cannot override it), so concurrent workspaces agree.
 	secrets.SetFilterSubprocessEnv(cfg.Secrets.FilterSubprocessEnv)
 	secrets.SetProtectSensitiveFiles(cfg.Secrets.ProtectSensitiveFiles)
 	secrets.RegisterCredentialEnvKeys(cfg.CredentialEnvNames())
@@ -393,7 +393,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			slog.Warn("boot: extension UI hub: "+msg, "root", root)
 		},
 	})
-	extensionMgr, err := preflightExtensionRuntimes(ctx, config.ReasonixHomeDir(), extensionBoot{
+	extensionMgr, err := preflightExtensionRuntimes(ctx, config.DeeperHomeDir(), extensionBoot{
 		session:   protocol.SessionContext{SessionID: sessionID, WorkspaceRoot: root, Generation: generation},
 		ui:        extUIHub,
 		onWarning: extWarn,
@@ -502,7 +502,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	}
 
 	if migErr != nil {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Config migration did not complete.", Detail: "config migration from ~/.reasonix failed: " + migErr.Error()})
+		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Config migration did not complete.", Detail: "config migration from ~/.deeper failed: " + migErr.Error()})
 	} else if migrated != nil {
 		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: migrated.Notice()})
 	}
@@ -510,7 +510,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	if stepLimitsMigrated || cfg.IgnoredLegacyAgentStepLimits() {
 		level := event.LevelInfo
 		text := "Deprecated agent step limits were removed."
-		detail := "[agent].max_steps and planner_max_steps are no longer used; Reasonix now manages interactive progress automatically. " +
+		detail := "[agent].max_steps and planner_max_steps are no longer used; Deeper now manages interactive progress automatically. " +
 			"Use the CLI --max-steps flag for a one-off run or [bot].max_steps for unattended bot sessions."
 		if stepLimitMigErr != nil {
 			level = event.LevelWarn
@@ -529,7 +529,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	if redactToolOutputMigrated || redactToolOutputMigErr != nil {
 		level := event.LevelInfo
 		text := "Deprecated redact_tool_output setting was removed."
-		detail := "[secrets].redact_tool_output no longer has any effect: ordinary model/tool content and local session/job artifacts now preserve their original text. Explicit diagnostics and reasonix doctor redact-sessions still redact credential values."
+		detail := "[secrets].redact_tool_output no longer has any effect: ordinary model/tool content and local session/job artifacts now preserve their original text. Explicit diagnostics and deeper doctor redact-sessions still redact credential values."
 		if redactToolOutputMigErr != nil {
 			level = event.LevelWarn
 			text = "Deprecated redact_tool_output setting was ignored."
@@ -540,7 +540,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	if memoryCompilerMigrated || memoryCompilerMigErr != nil {
 		level := event.LevelInfo
 		text := "Deprecated memory_compiler setting was removed."
-		detail := "The Memory v5 execution compiler has been removed from Reasonix: [agent].memory_compiler no longer has any effect, user turns are never replaced by compiled execution contracts, and no compiler state is written. Old transcripts containing compiled turns still display normally."
+		detail := "The Memory v5 execution compiler has been removed from Deeper: [agent].memory_compiler no longer has any effect, user turns are never replaced by compiled execution contracts, and no compiler state is written. Old transcripts containing compiled turns still display normally."
 		if memoryCompilerMigErr != nil {
 			level = event.LevelWarn
 			text = "Deprecated memory_compiler setting was ignored."
@@ -562,7 +562,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	migration.MigrateLegacyMemorySources(sink)
 	migration.MigrateLegacySessionSources(sink)
 	if ignored := cfg.IgnoredProjectDefaultModel(); ignored != "" {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Ignored the project config's default_model.", Detail: fmt.Sprintf("./reasonix.toml sets default_model = %q but no configured provider serves it; using %q from your user config instead. Edit or remove that default_model line to silence this notice.", ignored, cfg.DefaultModel)})
+		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Ignored the project config's default_model.", Detail: fmt.Sprintf("./deeper.toml sets default_model = %q but no configured provider serves it; using %q from your user config instead. Edit or remove that default_model line to silence this notice.", ignored, cfg.DefaultModel)})
 	}
 
 	// A resolvable model whose API key env is unset would otherwise build fine
@@ -570,7 +570,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// first request, showing as an empty/dead model. Surface the cause up front.
 	if !opts.RequireKey && !authentication.Ready() {
 		if authentication.Status == control.AuthenticationCredentialStoreUnavailable {
-			sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "The credential store is unavailable.", Detail: "Reasonix could not read its credential file; open credential diagnostics before retrying"})
+			sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "The credential store is unavailable.", Detail: "Deeper could not read its credential file; open credential diagnostics before retrying"})
 		} else {
 			sink.Emit(event.Event{Kind: event.Notice, Text: "Selected model is missing its API key.", Detail: fmt.Sprintf("model %q is selected but its API key %s is not set — requests will fail until you set it", modelName, entry.APIKeyEnv)})
 		}
@@ -630,7 +630,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		}
 		// A stale missing prompt file must not block startup: warn and fall back
 		// to the inline (or built-in default) system prompt. Other read failures
-		// stay fatal so Reasonix never runs without explicitly configured policy.
+		// stay fatal so Deeper never runs without explicitly configured policy.
 		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: err.Error() + "; falling back to inline/default system prompt"})
 		sysPrompt = cfg.InlineSystemPrompt()
 	}
@@ -663,7 +663,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	}
 	sessionContextStatic.Environment = appendOfflineEnvironmentNote(sessionContextStatic.Environment, cfg.Environment.Offline)
 
-	// Stable memory policy and REASONIX.md / AGENTS.md standing instructions
+	// Stable memory policy and DEEPER.md / AGENTS.md standing instructions
 	// enter the system prompt. Pinned facts and the background index remain in
 	// the controller-owned session-context snapshot.
 	if _, err := memory.StoreFor(config.MemoryUserDir(), root).MigrateV2(); err != nil {
@@ -726,15 +726,15 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		bashMode = override
 	}
 	forbidReadRoots := RuntimeForbidReadRoots(cfg, root)
-	// managedConfig names the Reasonix-owned config FILES (config.toml,
+	// managedConfig names the Deeper-owned config FILES (config.toml,
 	// compatibility TOMLs, legacy v0.x config.json) the file-writers gate behind
 	// a fresh per-write human approval wherever they sit, inside the roots too.
 	// The bash OS-sandbox write roots stay unwidened: config repair goes through
 	// the approval-gated file tools, not raw shell writes.
-	managedConfig := builtin.NewManagedConfigPaths(config.ReasonixManagedConfigPaths())
+	managedConfig := builtin.NewManagedConfigPaths(config.DeeperManagedConfigPaths())
 	bashSpec := sandbox.Spec{Mode: bashMode, WriteRoots: writeRoots, ForbidReadRoots: forbidReadRoots, Network: networkEnabled}
 	bashSpec.Shell = shell
-	// The session-data guard blocks agent writes into Reasonix's own session
+	// The session-data guard blocks agent writes into Deeper's own session
 	// stores (they race the app's saves and surface as conflict-copy loops);
 	// explicit allow_write entries stay a sanctioned escape hatch.
 	allowWriteRoots := cfg.AllowWriteRoots()
@@ -781,9 +781,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	pluginSpecOptions := PluginSpecOptions{
 		DefaultStartupTimeout: time.Duration(cfg.MCPStartupTimeoutSeconds()) * time.Second,
 		DefaultCallTimeout:    time.Duration(cfg.MCPCallTimeoutSeconds()) * time.Second,
-		LaunchManager:         mcplaunch.ForWorkspace(config.ReasonixHomeDir(), root),
+		LaunchManager:         mcplaunch.ForWorkspace(config.DeeperHomeDir(), root),
 		ConfigSource:          "workspace_config",
-		StateHome:             config.ReasonixHomeDir(),
+		StateHome:             config.DeeperHomeDir(),
 		WriterRoots:           writeRoots,
 		ForbidReadRoots:       forbidReadRoots,
 		Network:               networkEnabled,
@@ -1002,7 +1002,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// Permission policy gates every tool call. With no HeadlessApprovalMode
 	// (interactive bootstrap), the temporary gate preserves the legacy behavior
 	// until chat/desktop installs an interactive gate. A real headless caller
-	// such as `reasonix run` always supplies a mode: Ask fails closed, Auto
+	// such as `deeper run` always supplies a mode: Ask fails closed, Auto
 	// allows ordinary writer fallbacks, and DontAsk denies them (#6927).
 	// The selected contract is also applied to sub-agents, so they cannot be a
 	// weaker path around the parent gate.
@@ -1385,7 +1385,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		parentSession := agent.ParentSession(sctx)
 		var run *agent.SubagentRun
 		if subagentStore == nil || parentSession == "" {
-			// Headless runs (e.g. `reasonix run`) have no persistent session to
+			// Headless runs (e.g. `deeper run`) have no persistent session to
 			// own a transcript. Run the skill sub-agent ephemerally, as before
 			// persisted transcripts existed, instead of failing. Continuation needs
 			// a persisted owner, so it errors here.
@@ -2100,10 +2100,10 @@ func effectivePlannerModel(cfg *config.Config, opts Options) string {
 }
 
 // rememberPermissionRule files a workspace's "always" under the user's home:
-// the checkout's reasonix.toml cannot grant allow rules, since a clone could
+// the checkout's deeper.toml cannot grant allow rules, since a clone could
 // have written them.
 func rememberPermissionRule(workspaceRoot, rule string) control.RememberResult {
-	store := config.NewProjectGrantStore(config.ReasonixHomeDir())
+	store := config.NewProjectGrantStore(config.DeeperHomeDir())
 	result := control.RememberResult{Rule: strings.TrimSpace(rule), Path: store.Path()}
 	root := strings.TrimSpace(workspaceRoot)
 	if root == "" {
@@ -2127,11 +2127,11 @@ func rememberPermissionRule(workspaceRoot, rule string) control.RememberResult {
 func rememberPermissionConfigPath(workspaceRoot string) string {
 	workspaceRoot = strings.TrimSpace(workspaceRoot)
 	if workspaceRoot != "" {
-		return filepath.Join(workspaceRoot, "reasonix.toml")
+		return filepath.Join(workspaceRoot, "deeper.toml")
 	}
 	path := config.SourcePath()
 	if path == "" {
-		path = "reasonix.toml" // match Config.Save() fallback
+		path = "deeper.toml" // match Config.Save() fallback
 	}
 	return path
 }
@@ -2367,7 +2367,7 @@ func appendUniquePaths(base []string, extra ...string) []string {
 	return out
 }
 
-// RuntimeForbidReadRoots returns the configured deny roots plus Reasonix's
+// RuntimeForbidReadRoots returns the configured deny roots plus Deeper's
 // global credential file when the host can enforce that read boundary without
 // changing the caller's own ACL. It always registers the corresponding
 // credential environment names for subprocess filtering. Runtime tool
@@ -2521,9 +2521,9 @@ func subagentEffectiveIdentity(cfg *config.Config, resolver provider.Resolver, b
 // the listed directories.
 // When workDir is non-empty, tools resolve relative paths against it instead of
 // the process cwd, enabling concurrent multi-project sessions.
-// sessionGuard blocks writer-tool targets inside Reasonix's own session stores
+// sessionGuard blocks writer-tool targets inside Deeper's own session stores
 // and makes bash warn when a command references them. managedConfig names the
-// Reasonix-owned config files writable outside writeRoots after a fresh
+// Deeper-owned config files writable outside writeRoots after a fresh
 // per-write human approval.
 func addBuiltins(reg *tool.Registry, enabled, writeRoots []string, writeRootSet *sandbox.WritableRootSet, bashSpec sandbox.Spec, bashTimeout time.Duration, searchSpec builtin.SearchSpec, stderr io.Writer, workDir string, proxySpec netclient.ProxySpec, forbidReadRoots []string, readPathResolver *builtin.PathResolver, sessionGuard builtin.SessionDataGuard, managedConfig builtin.ManagedConfigPaths, overlay builtin.FileOverlay, terminal builtin.TerminalRunner, sessionTemp *sessiontemp.Manager, fileWriteReceipt func(path string, hadPrior bool, prior []byte)) {
 	// If a workspace directory is set, use workspace-bound tools that resolve
@@ -2678,7 +2678,7 @@ func skillMCPBindings(sk skill.Skill, reg *tool.Registry, specs []plugin.Spec, c
 	}
 	// A valid cached schema also supplies stable bindings for an on-demand
 	// package server before it is connected. The skill can then route through
-	// use_capability without inventing Reasonix's canonical name.
+	// use_capability without inventing Deeper's canonical name.
 	for _, spec := range specs {
 		if spec.Package != sk.Plugin || liveServers[spec.Name] || !cacheKeyOK[spec.Name] {
 			continue

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"reasonix/internal/fileutil"
-	"reasonix/internal/gitcmd"
+	"deeper/internal/fileutil"
+	"deeper/internal/gitcmd"
 )
 
 var gitNoOptionalLocks = []string{"GIT_OPTIONAL_LOCKS=0"}
@@ -72,7 +72,7 @@ func autoCommitDirtyWorktree(ctx context.Context, inspection MergeInspection) (s
 	}
 
 	committedHead, stderr, err := gitValue(ctx, inspection.worktree,
-		"-c", "user.name=Reasonix", "-c", "user.email=reasonix@local",
+		"-c", "user.name=Deeper", "-c", "user.email=deeper@local",
 		"commit-tree", stagedTree, "-p", inspection.WorktreeHead, "-m", "worktree: save changes before merge back")
 	if err != nil {
 		return "", false, fmt.Errorf("create exact worktree commit: %w%s", err, stderrSuffix(stderr))
@@ -116,7 +116,7 @@ func autoCommitDirtyWorktree(ctx context.Context, inspection MergeInspection) (s
 }
 
 func newTemporaryIndex(worktreeRoot string) (string, error) {
-	file, err := os.CreateTemp(filepath.Dir(worktreeRoot), ".reasonix-merge-index-*")
+	file, err := os.CreateTemp(filepath.Dir(worktreeRoot), ".deeper-merge-index-*")
 	if err != nil {
 		return "", fmt.Errorf("allocate temporary index: %w", err)
 	}

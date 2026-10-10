@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sort"
 
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/session"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/session"
 )
 
 // A receipt proves adoption of an exact source revision. The target may have

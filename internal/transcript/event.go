@@ -1,11 +1,11 @@
 package transcript
 
 import (
+	"deeper/internal/event"
+	"deeper/internal/eventwire"
+	"deeper/internal/provider"
+	"deeper/internal/turnevent"
 	"errors"
-	"reasonix/internal/event"
-	"reasonix/internal/eventwire"
-	"reasonix/internal/provider"
-	"reasonix/internal/turnevent"
 )
 
 func EventFromEnvelope(envelope turnevent.Envelope) (event.Event, bool) {

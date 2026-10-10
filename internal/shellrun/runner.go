@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	fileenc "reasonix/internal/fileutil/encoding"
-	"reasonix/internal/proc"
-	"reasonix/internal/tool"
+	fileenc "deeper/internal/fileutil/encoding"
+	"deeper/internal/proc"
+	"deeper/internal/tool"
 )
 
 // DefaultWaitDelay mirrors the shell tool's child-process wait grace.

@@ -1,6 +1,6 @@
 package eventwire
 
-import "reasonix/internal/event"
+import "deeper/internal/event"
 
 // Approval is the JSON form of an event.Approval.
 type Approval struct {

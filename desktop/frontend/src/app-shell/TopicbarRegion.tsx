@@ -35,7 +35,7 @@ export function TopicbarRegion({ view, commands, children }: {
   const { sidebar, title, subtitle } = view;
   return <header className="topicbar">
     {view.brand && <div className="topicbar__brand">
-      <span role="img" aria-label="Reasonix" className="topicbar__brand-logo" />
+      <span role="img" aria-label="Deeper" className="topicbar__brand-logo" />
     </div>}
     {view.automationReturn && <button className="btn btn--small" type="button" onClick={event => {
       event.currentTarget.focus({ preventScroll: true });

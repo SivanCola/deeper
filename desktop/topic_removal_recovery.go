@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	"reasonix/desktop/internal/legacycleanup"
-	"reasonix/desktop/internal/workspacestate"
-	"reasonix/internal/topicstate"
+	"deeper/desktop/internal/legacycleanup"
+	"deeper/desktop/internal/workspacestate"
+	"deeper/internal/topicstate"
 )
 
 func topicRemovalTrashEntries(state workspacestate.State, query string) []TrashEntry {

@@ -1,5 +1,5 @@
 // Adapted from DeepSeek Harness c291e7961a, ui-tool/components/ToolRow.tsx (MIT).
-// Reasonix provides authorized content and inspection through slots, without Cordis.
+// Deeper provides authorized content and inspection through slots, without Cordis.
 import { useState, type ReactNode } from "react";
 import { ScanSearch } from "lucide-react";
 import { useT } from "../../lib/i18n";

@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"reasonix/internal/boot"
-	"reasonix/internal/config"
+	"deeper/internal/boot"
+	"deeper/internal/config"
 )
 
 func mcpList() int {
@@ -32,7 +32,7 @@ func mcpList() int {
 		fmt.Println("no MCP servers configured")
 	}
 	if pending {
-		fmt.Println("project-declared servers stay off until you review them (`reasonix mcp get <name>`) and run `reasonix mcp enable <name>`")
+		fmt.Println("project-declared servers stay off until you review them (`deeper mcp get <name>`) and run `deeper mcp enable <name>`")
 	}
 	return 0
 }

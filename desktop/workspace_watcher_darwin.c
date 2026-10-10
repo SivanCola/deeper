@@ -5,14 +5,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-extern void reasonixFSEventsEvent(uintptr_t token, char *path, uint32_t flags);
+extern void deeperFSEventsEvent(uintptr_t token, char *path, uint32_t flags);
 
-typedef struct reasonix_fsevents_subscription {
+typedef struct deeper_fsevents_subscription {
     FSEventStreamRef stream;
     dispatch_queue_t queue;
-} reasonix_fsevents_subscription;
+} deeper_fsevents_subscription;
 
-static void reasonix_fsevents_callback(
+static void deeper_fsevents_callback(
     ConstFSEventStreamRef stream_ref,
     void *callback_info,
     size_t event_count,
@@ -26,16 +26,16 @@ static void reasonix_fsevents_callback(
     uintptr_t token = (uintptr_t)callback_info;
     for (size_t index = 0; index < event_count; index++) {
         if (paths[index] != NULL) {
-            reasonixFSEventsEvent(token, paths[index], (uint32_t)event_flags[index]);
+            deeperFSEventsEvent(token, paths[index], (uint32_t)event_flags[index]);
         }
     }
 }
 
-static void reasonix_fsevents_barrier(void *context) {
+static void deeper_fsevents_barrier(void *context) {
     (void)context;
 }
 
-reasonix_fsevents_subscription *reasonix_fsevents_start(
+deeper_fsevents_subscription *deeper_fsevents_start(
     const char *path,
     uintptr_t token,
     double latency,
@@ -51,7 +51,7 @@ reasonix_fsevents_subscription *reasonix_fsevents_start(
         return NULL;
     }
 
-    reasonix_fsevents_subscription *subscription = calloc(1, sizeof(*subscription));
+    deeper_fsevents_subscription *subscription = calloc(1, sizeof(*subscription));
     if (subscription == NULL) {
         if (error_code != NULL) {
             *error_code = 2;
@@ -78,7 +78,7 @@ reasonix_fsevents_subscription *reasonix_fsevents_start(
         return NULL;
     }
 
-    subscription->queue = dispatch_queue_create("com.reasonix.workspace-fsevents", DISPATCH_QUEUE_SERIAL);
+    subscription->queue = dispatch_queue_create("com.deeper.workspace-fsevents", DISPATCH_QUEUE_SERIAL);
     if (subscription->queue == NULL) {
         if (error_code != NULL) {
             *error_code = 3;
@@ -94,7 +94,7 @@ reasonix_fsevents_subscription *reasonix_fsevents_start(
         kFSEventStreamCreateFlagNoDefer;
     subscription->stream = FSEventStreamCreate(
         kCFAllocatorDefault,
-        reasonix_fsevents_callback,
+        deeper_fsevents_callback,
         &context,
         paths,
         kFSEventStreamEventIdSinceNow,
@@ -129,13 +129,13 @@ reasonix_fsevents_subscription *reasonix_fsevents_start(
     return subscription;
 }
 
-void reasonix_fsevents_stop(reasonix_fsevents_subscription *subscription) {
+void deeper_fsevents_stop(deeper_fsevents_subscription *subscription) {
     if (subscription == NULL) {
         return;
     }
     FSEventStreamStop(subscription->stream);
     FSEventStreamInvalidate(subscription->stream);
-    dispatch_sync_f(subscription->queue, NULL, reasonix_fsevents_barrier);
+    dispatch_sync_f(subscription->queue, NULL, deeper_fsevents_barrier);
     FSEventStreamRelease(subscription->stream);
 #if !OS_OBJECT_USE_OBJC
     dispatch_release(subscription->queue);
@@ -143,10 +143,10 @@ void reasonix_fsevents_stop(reasonix_fsevents_subscription *subscription) {
     free(subscription);
 }
 
-void reasonix_fsevents_catch_up(reasonix_fsevents_subscription *subscription) {
+void deeper_fsevents_catch_up(deeper_fsevents_subscription *subscription) {
     if (subscription == NULL) {
         return;
     }
     FSEventStreamFlushSync(subscription->stream);
-    dispatch_sync_f(subscription->queue, NULL, reasonix_fsevents_barrier);
+    dispatch_sync_f(subscription->queue, NULL, deeper_fsevents_barrier);
 }

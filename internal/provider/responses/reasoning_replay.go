@@ -1,7 +1,7 @@
 package responses
 
 import (
-	"reasonix/internal/provider"
+	"deeper/internal/provider"
 	"slices"
 	"strings"
 )

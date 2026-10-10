@@ -1,4 +1,4 @@
-export const MODEL_FAVORITES_STORAGE_KEY = "reasonix-model-favorites-v1";
+export const MODEL_FAVORITES_STORAGE_KEY = "deeper-model-favorites-v1";
 
 type ReadableStorage = Pick<Storage, "getItem">;
 type WritableStorage = Pick<Storage, "setItem">;

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"reasonix/internal/store"
+	"deeper/internal/store"
 )
 
 func TestSessionLocatorSeparatesCanonicalRoutesFromLegacyPaths(t *testing.T) {
