@@ -302,7 +302,7 @@ func TestHistoricalArchiveReceiptPreservesIndependentHeads(t *testing.T) {
 	root := config.SessionStoreDir()
 	dir := filepath.Join(root, "head-copy")
 	legacy := filepath.Join(config.SessionDir(), "heads.jsonl")
-	writeMigrationJSON(t, filepath.Join(dir, "manifest.json"), session.Manifest{Codec: session.Codec, SessionID: "head-copy", Source: &session.Source{Path: legacy, Version: "legacy", LegacyHeadID: "other"}})
+	writeMigrationJSON(t, filepath.Join(dir, "manifest.json"), session.Manifest{SchemaVersion: session.SchemaVersion, Codec: session.Codec, StorageRevision: session.StorageRevision, SessionID: "head-copy", Source: &session.Source{Path: legacy, Version: "legacy", LegacyHeadID: "other"}})
 	base := desktopLegacyMigrationKey(legacy)
 	if _, err := saveDesktopMigrationHeads(base, []string{"main", "other"}, "other", "revision", []desktopMigrationConversion{{Root: root, SessionID: "head-copy", HeadID: "other"}}); err != nil {
 		t.Fatal(err)
