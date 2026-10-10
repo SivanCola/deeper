@@ -34,7 +34,7 @@ jobs:
         run: node --test scripts/update-star-history.test.mjs
       - name: Generate chart assets
         env:
-          STAR_HISTORY_GITHUB_TOKEN: ${{ secrets.STAR_HISTORY_GITHUB_TOKEN }}
+          STAR_HISTORY_GITHUB_TOKEN: ${{ secrets.STAR_HISTORY_GITHUB_TOKEN || github.token }}
           STAR_HISTORY_OUTPUT_DIR: ${{ runner.temp }}/star-history
         run: node scripts/update-star-history.mjs
       - name: Publish chart assets

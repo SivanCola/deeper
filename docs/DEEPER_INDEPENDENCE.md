@@ -103,7 +103,8 @@ or overwrite a conflicting immutable manifest.
 
 `GITHUB_TOKEN` is provided by GitHub automatically. Optional maintenance secrets
 are `DEEPSEEK_API_KEY` (live E2E and AI issue labels), `ACKNOWLEDGMENTS_TOKEN`
-(acknowledgments PRs), and `STAR_HISTORY_GITHUB_TOKEN` (chart quota). They are not
+(acknowledgments PRs), and `STAR_HISTORY_GITHUB_TOKEN` (optional chart quota override;
+otherwise the chart uses GitHub's automatic token). They are not
 needed for ordinary compilation and tests.
 Optional mirror diagnostics require your own `CLOUDFLARE_API_TOKEN` and
 `CLOUDFLARE_ZONE_NAME`, `CLOUDFLARE_DOWNLOAD_HOST`, `CLOUDFLARE_MANIFEST_URL`
