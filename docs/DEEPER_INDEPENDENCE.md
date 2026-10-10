@@ -62,6 +62,15 @@ retain their provenance and digests, including historical `main-v2-pr…` names.
 
 ## CI and release setup / CI 和发布配置
 
+Windows controller tests run in two complementary `A-M` and `N-Z` partitions.
+Each partition retains the 8-minute Go timeout; CI verifies the native test,
+example and fuzz-seed inventory has exactly one execution owner before running.
+Both partitions must pass for the `root` gate.
+
+Windows 控制器测试分为互补的 `A-M` 与 `N-Z` 两组，每组保留 Go 的 8 分钟超时。
+CI 在执行前验证当前平台的测试、示例和 fuzz 种子清单，保证每项只属于一组；
+两组都通过后 `root` 检查才可通过。
+
 Push and PR CI runs against `main`. CI checks do not require publishing keys.
 Protect `main` and create a GitHub environment named `release` with required
 reviewers. The candidate/promotion workflows preserve protected-branch checks,
