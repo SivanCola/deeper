@@ -196,7 +196,7 @@ func inspectFrozenPreview(ctx context.Context, frozen frozenPreview) ([]provider
 	meaningful := false
 	var projectionErr error
 	knownKinds := ProjectionKinds
-	if frozen.manifest.Codec == PrototypeCodec {
+	if isPrototypeCodec(frozen.manifest.Codec) {
 		knownKinds = PrototypeProjectionKinds
 	}
 	file, err := os.Open(frozen.eventPath)
@@ -210,7 +210,7 @@ func inspectFrozenPreview(ctx context.Context, frozen frozenPreview) ([]provider
 		converted := cloneCommit(commit)
 		for i := range converted.Events {
 			kind := converted.Events[i].Kind
-			if frozen.manifest.Codec == PrototypeCodec && kind == "context/replace" {
+			if isPrototypeCodec(frozen.manifest.Codec) && kind == "context/replace" {
 				converted.Events[i].Kind = "history/replace"
 				kind = "history/replace"
 			}
@@ -226,7 +226,7 @@ func inspectFrozenPreview(ctx context.Context, frozen frozenPreview) ([]provider
 		}
 		return true
 	}
-	if frozen.manifest.Codec == Codec && frozen.manifest.StorageRevision == 0 {
+	if IsFramedCodec(frozen.manifest.Codec) && frozen.manifest.StorageRevision == 0 {
 		err = scanV4CommitFile(ctx, file, 0, 1, contentStoreForSessionDir(frozen.dir), knownKinds, visit)
 	} else {
 		err = scanCommitFileCodec(file, 0, 1, frozen.manifest.Codec, knownKinds, visit)

@@ -128,7 +128,7 @@ func readDesktopMigrationManifest(dir string) (session.Manifest, error) {
 	if err := json.Unmarshal(body, &manifest); err != nil {
 		return manifest, err
 	}
-	if manifest.Codec != session.Codec && manifest.Codec != session.PrototypeCodec && manifest.Codec != session.LegacyLinearCodec && manifest.Codec != session.FinalV31Codec {
+	if !manifest.Supported() {
 		return manifest, session.ErrUnsupportedVersion
 	}
 	return manifest, nil
@@ -234,7 +234,7 @@ func (a *App) migrateConversionLineage(ctx context.Context, path, headID string,
 			return err
 		}
 		var runtime *session.Runtime
-		if converted.Codec == session.Codec {
+		if session.IsFramedCodec(converted.Codec) {
 			runtime, _, err = stage.ContinueImportedSource(ctx, path, filepath.Join(converted.Root, converted.SessionID), headID)
 		} else {
 			runtime, _, err = stage.ContinuePrototype(ctx, filepath.Join(converted.Root, converted.SessionID))

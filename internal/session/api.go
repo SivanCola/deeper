@@ -38,7 +38,7 @@ func VisitCommits(ctx context.Context, dir string, visit func(Commit) error) err
 		}
 		return visitErr == nil
 	}
-	if manifest.Codec == Codec {
+	if IsFramedCodec(manifest.Codec) {
 		err = scanV4CommitFile(ctx, file, 0, 1, contentStoreForSessionDir(dir), nil, adapter)
 	} else {
 		err = scanCommitFileCodecBoundaries(ctx, file, 0, 1, manifest.Codec, nil, func(start, _ int64, commit Commit) bool { return adapter(start, commit) })
@@ -493,7 +493,7 @@ func readCommitPageWithCache(ctx context.Context, dir, cacheDir string, offset u
 		page.Next = commit.LastSequence()
 		return true
 	}
-	if manifest.Codec == Codec {
+	if IsFramedCodec(manifest.Codec) {
 		err = scanV4CommitFile(ctx, file, checkpoint.Offset, checkpoint.FirstSequence, contentStoreForSessionDir(dir), nil, visit)
 	} else {
 		err = scanCommitFileCodecBoundaries(ctx, file, checkpoint.Offset, checkpoint.FirstSequence, manifest.Codec, nil, func(start, _ int64, commit Commit) bool { return visit(start, commit) })

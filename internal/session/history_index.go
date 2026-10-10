@@ -150,7 +150,7 @@ func incrementHistoryIndex(ctx context.Context, dir, path, sessionID string, rev
 	}
 
 	manifest, err := readManifest(filepath.Join(dir, "manifest.json"))
-	if err != nil || manifest.Codec != Codec {
+	if err != nil || !IsFramedCodec(manifest.Codec) {
 		return false, nil
 	}
 	log, err := os.Open(logPathForManifest(dir, manifest))

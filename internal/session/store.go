@@ -401,6 +401,9 @@ func openExistingHandle(dir, sessionID string, opts OpenOptions) (*Store, error)
 		return fail(fmt.Errorf("%w: manifest schema or codec", ErrUnsupportedVersion))
 	}
 	eventsPath := logPathForManifest(dir, manifest)
+	if err := validateStoredLogCodec(ctx, eventsPath, manifest); err != nil {
+		return fail(err)
+	}
 	identity, err := ensureStorageIdentity(dir, manifest)
 	if err != nil {
 		return fail(err)
@@ -443,7 +446,7 @@ func openExistingHandle(dir, sessionID string, opts OpenOptions) (*Store, error)
 	}
 	// Keep the source codec stable. Legacy stored sessions are writable through
 	// their original line codec; explicit conversion is the only codec change.
-	if manifest.Codec == Codec && manifest.StorageRevision > 0 {
+	if IsFramedCodec(manifest.Codec) && manifest.StorageRevision > 0 {
 		manifest.StorageRevision = StorageRevision
 	}
 	manifest.WriterGeneration++
@@ -735,7 +738,7 @@ func contentStoreForSessionDir(dir string) *sessioncontent.Store {
 }
 
 func logPathForManifest(dir string, manifest Manifest) string {
-	if manifest.Codec == Codec {
+	if IsFramedCodec(manifest.Codec) {
 		return filepath.Join(dir, currentLogName)
 	}
 	return filepath.Join(dir, legacyLogName)
@@ -745,15 +748,14 @@ func supportedStoredManifest(manifest Manifest) bool {
 	if currentStoredManifest(manifest) {
 		return true
 	}
-	if manifest.SchemaVersion == SchemaVersion && manifest.Codec == Codec && manifest.StorageRevision == 0 {
+	if manifest.SchemaVersion == SchemaVersion && IsFramedCodec(manifest.Codec) && manifest.StorageRevision == 0 {
 		return true
 	}
-	return manifest.SchemaVersion == 3 &&
-		(manifest.Codec == FinalV31Codec || manifest.Codec == LegacyLinearCodec || manifest.Codec == PrototypeCodec)
+	return manifest.SchemaVersion == 3 && IsLegacyCodec(manifest.Codec)
 }
 
 func currentStoredManifest(manifest Manifest) bool {
-	return manifest.SchemaVersion == SchemaVersion && manifest.Codec == Codec &&
+	return manifest.SchemaVersion == SchemaVersion && IsFramedCodec(manifest.Codec) &&
 		manifest.StorageRevision >= 1 && manifest.StorageRevision <= StorageRevision
 }
 
@@ -792,10 +794,7 @@ func (s *Store) Append(ctx context.Context, commits []Commit) error {
 	s.indexMu.Lock()
 	next := s.index.LastSequence + 1
 	s.indexMu.Unlock()
-	wantSchema, wantCodec := SchemaVersion, Codec
-	if s.manifest.Codec != Codec {
-		wantSchema, wantCodec = 3, s.manifest.Codec
-	}
+	wantSchema, wantCodec := s.manifest.SchemaVersion, s.manifest.Codec
 	for i, commit := range commits {
 		if commit.SchemaVersion != wantSchema || commit.Codec != wantCodec || commit.RecordType != "commit" ||
 			commit.ID == "" || commit.OperationID == "" || commit.OperationHash == "" ||
@@ -828,7 +827,7 @@ func (s *Store) persist(ctx context.Context, file *os.File, commits []Commit) er
 		}
 	}()
 	var lengths []int64
-	if s.manifest.Codec == Codec {
+	if IsFramedCodec(s.manifest.Codec) {
 		lengths, err = encodeV4Commits(ctx, staged, s.content, commits)
 	} else {
 		lengths, err = encodeLegacyCommits(ctx, staged, commits)
@@ -876,7 +875,7 @@ func (s *Store) persist(ctx context.Context, file *os.File, commits []Commit) er
 func encodeLegacyCommits(ctx context.Context, dst io.Writer, commits []Commit) ([]int64, error) {
 	lengths := make([]int64, 0, len(commits))
 	for _, commit := range commits {
-		if commit.Codec == PrototypeCodec {
+		if isPrototypeCodec(commit.Codec) {
 			commit = cloneCommit(commit)
 			for i := range commit.Events {
 				if commit.Events[i].Kind == "history/replace" {
@@ -1026,7 +1025,7 @@ func scanDurableCommits(dir string, knownKinds map[string]bool, visit func(Commi
 		}
 		return visit(commit)
 	}
-	if manifest.Codec == Codec {
+	if IsFramedCodec(manifest.Codec) {
 		return scanV4CommitFile(context.Background(), file, 0, 1, contentStoreForSessionDir(dir), knownKinds, adapter)
 	}
 	return scanCommitFileCodec(file, 0, 1, manifest.Codec, knownKinds, adapter)

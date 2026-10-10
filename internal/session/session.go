@@ -224,7 +224,7 @@ func (s *Session) PrepareBatchContext(ctx context.Context, operationID string, b
 		return PreparedBatch{}, ErrReadOnly
 	}
 	storedEvents := cloneEvents(events)
-	if manifestCodec == Codec {
+	if IsFramedCodec(manifestCodec) {
 		content := s.contentStore()
 		for i := range storedEvents {
 			if len(storedEvents[i].Payload) <= v4InlinePayloadBytes {
@@ -262,9 +262,13 @@ func (s *Session) lookupOperation(operationID string) (operationRecord, bool, er
 		s.mu.Unlock()
 		return record, true, nil
 	}
-	recovery := s.recovery
+	recovery, manifest := s.recovery, s.manifest
 	s.mu.Unlock()
-	return recovery.lookupOperation(operationID)
+	record, found, err := recovery.lookupOperation(operationID)
+	if found {
+		record.commit.SchemaVersion, record.commit.Codec = manifest.SchemaVersion, manifest.Codec
+	}
+	return record, found, err
 }
 
 func (s *Session) contentStore() *sessioncontent.Store {
@@ -348,10 +352,7 @@ func (s *Session) commitPrepared(prepared PreparedBatch, expectedTitleSequence *
 		s.mu.Unlock()
 		return commit, nil
 	}
-	commitSchema, commitCodec := SchemaVersion, Codec
-	if s.manifest.Codec != Codec {
-		commitSchema, commitCodec = 3, s.manifest.Codec
-	}
+	commitSchema, commitCodec := s.manifest.SchemaVersion, s.manifest.Codec
 	commit := Commit{
 		SchemaVersion: commitSchema, Codec: commitCodec, RecordType: "commit", ID: randomID(),
 		OperationID: prepared.operationID, OperationHash: prepared.hash, FirstSequence: s.next,

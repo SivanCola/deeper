@@ -703,7 +703,7 @@ func writeManifest(path string, m Manifest) error {
 	if m.Codec == "" {
 		m.Codec = Codec
 	}
-	if m.Codec == Codec && m.SchemaVersion == SchemaVersion && m.StorageRevision == 0 {
+	if IsFramedCodec(m.Codec) && m.SchemaVersion == SchemaVersion && m.StorageRevision == 0 {
 		m.StorageRevision = StorageRevision
 	}
 	b, err := json.MarshalIndent(m, "", "  ")

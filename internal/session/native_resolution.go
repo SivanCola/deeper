@@ -44,7 +44,7 @@ func (s *Service) ExistingCanonicalForLegacy(path string, legacy *agent.Session)
 			return SessionRef{}, false, nil
 		}
 	}
-	if manifest.Codec != Codec {
+	if !IsFramedCodec(manifest.Codec) {
 		ref := SessionRef{HostID: s.HostID(), SessionID: id}
 		history, err := s.Query().History(context.Background(), ref)
 		if err != nil {

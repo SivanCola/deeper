@@ -34,6 +34,32 @@ Deeper namespace.
 Deeper 不自动读取 Reasonix 环境变量或搬迁其用户数据。两者可以分别安装。
 如需主动复制配置，应先备份并人工选择文件，不共享运行中的数据目录。
 
+### Historical session formats / 历史会话格式
+
+The session storage owner recognizes the exact supported `reasonix.session.*`
+and `deeper.session.*` codec identities. Codec compatibility does not scan or
+open Reasonix's home directory. Only data explicitly placed in Deeper's chosen
+directories or submitted to its existing import API is considered.
+
+会话存储层兼容两组已知格式标识，不扫描或自动打开 Reasonix 数据目录。
+只有用户主动复制到 Deeper 目录、或通过既有导入接口提供的数据才会被读取。
+
+| Format / 格式 | Deeper behavior / Deeper 行为 | Previous reader / 旧读取器 |
+| --- | --- | --- |
+| `reasonix.session.events/v3`, `linear/v3`, `linear/v3.1` | Read and append with the original codec; explicit import creates a separate Deeper store / 原格式读取和续写，明确导入才创建独立 Deeper 会话 | Original codec and event representation remain intact / 原标识和事件表达保留 |
+| `reasonix.session.linear/v4`, revisions 1–3 | Read checksummed frames and external content; append preserves the original codec / 校验帧和外部内容，续写保留原标识 | Uses the same supported v4 format; older revision limits still apply / 格式仍为原 v4，旧版本的修订上限仍适用 |
+| New `deeper.session.*` stores | Continue to use Deeper identities / 新会话继续使用 Deeper 标识 | Reasonix does not read Deeper's new namespace / Reasonix 不读取 Deeper 的新命名空间 |
+| Unknown codecs, mismatched schemas, future revisions | Reject without rewriting data / 拒绝并保留数据 | No downgrade conversion is implied / 不隐式进行降级转换 |
+
+Existing log bytes, transaction hashes, optional events, and content references
+are preserved. A writer rejects a manifest whose codec disagrees with its v4
+log; mixed identities in one log are also rejected. The original tagged fixtures
+retain their provenance and digests, including historical `main-v2-pr…` names.
+
+既有日志字节、事务哈希、可选事件和内容引用保留。写入器拒绝 manifest 与 v4
+日志标识不一致的数据，也拒绝同一日志混用标识。历史测试文件保留真实来源、校验值
+及 `main-v2-pr…` 等历史名称。
+
 ## CI and release setup / CI 和发布配置
 
 Push and PR CI runs against `main`. CI checks do not require publishing keys.

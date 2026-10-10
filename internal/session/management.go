@@ -245,7 +245,7 @@ func exportDirectory(ctx context.Context, source, destination string) error {
 }
 
 func copyExportContentClosure(ctx context.Context, source, target string, manifest Manifest) error {
-	if manifest.Codec != Codec {
+	if !IsFramedCodec(manifest.Codec) {
 		return nil
 	}
 	log, err := os.Open(logPathForManifest(target, manifest))

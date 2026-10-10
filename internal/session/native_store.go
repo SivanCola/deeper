@@ -14,7 +14,7 @@ import (
 )
 
 func loadStartupSessionStateForManifest(ctx context.Context, dir, eventsPath string, manifest Manifest, externalHistory bool, recovery *recoveryStore, identity storageIdentity) (*startupSessionState, int64, bool, RecoveryOpenStats, bool, error) {
-	if manifest.Codec == Codec {
+	if IsFramedCodec(manifest.Codec) {
 		return loadStartupSessionState(ctx, dir, eventsPath, externalHistory, recovery, identity)
 	}
 	file, err := os.Open(eventsPath)
@@ -76,7 +76,7 @@ func scanCommitFileCodec(file *os.File, startOffset int64, nextSequence uint64, 
 func scanCommitFileCodecBoundaries(ctx context.Context, file *os.File, startOffset int64, nextSequence uint64, codec string, knownKinds map[string]bool, visit func(int64, int64, Commit) bool) error {
 	if knownKinds == nil {
 		knownKinds = ProjectionKinds
-		if codec == PrototypeCodec {
+		if isPrototypeCodec(codec) {
 			knownKinds = PrototypeProjectionKinds
 		}
 	}
@@ -142,7 +142,7 @@ func (opts OpenOptions) openContext() context.Context {
 	return context.Background()
 }
 func normalizePrototypeHistory(commit *Commit, codec string) {
-	if codec != PrototypeCodec {
+	if !isPrototypeCodec(codec) {
 		return
 	}
 	for i := range commit.Events {
