@@ -1,13 +1,14 @@
 package update
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 
 	"aead.dev/minisign"
 )
 
-// Releases link Deeper's own public key; unconfigured builds reject updates.
+//go:embed deeper.pub
 var publicKey string
 
 // Verify reports whether sig (the contents of a .minisig file) is a valid minisign

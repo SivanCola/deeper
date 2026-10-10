@@ -7,12 +7,24 @@ import (
 	"aead.dev/minisign"
 )
 
-func TestUnconfiguredBuildRejectsUpdates(t *testing.T) {
-	if publicKey != "" {
-		t.Fatal("development builds must not inherit an upstream signing key")
-	}
-	if err := Verify([]byte("payload"), []byte("signature")); err == nil {
+func TestUnconfiguredKeyRejectsUpdates(t *testing.T) {
+	if err := verifyWith("", []byte("payload"), []byte("signature")); err == nil {
 		t.Fatal("unconfigured update verification must fail closed")
+	}
+}
+
+func TestEmbeddedDeeperKey(t *testing.T) {
+	var key minisign.PublicKey
+	if err := key.UnmarshalText([]byte(publicKey)); err != nil {
+		t.Fatalf("embedded Deeper key is not configured: %v", err)
+	}
+	_, otherPrivate, err := minisign.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := []byte("release from a different publisher")
+	if err := Verify(data, minisign.Sign(otherPrivate, data)); err == nil {
+		t.Fatal("embedded key must reject another publisher's signature")
 	}
 }
 

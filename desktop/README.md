@@ -209,14 +209,15 @@ the CLI release before advancing GitHub latest. Self-update behavior by platform
 
 ### Verifying a download
 
-Artifacts are signed with Deeper's own minisign key, configured via
+Artifacts are signed with Deeper's own [minisign public key](internal/update/deeper.pub),
+embedded in the application and update helpers. CI uses the matching
 `MINISIGN_PUBLIC_KEY`; see [release setup](../docs/DEEPER_INDEPENDENCE.md). The `.minisig`
 signature sits next to each artifact in the release; verify with the
 [minisign](https://jedisct1.github.io/minisign/) CLI:
 
 ```sh
 minisign -Vm Deeper-darwin-arm64.zip \
-  -P "$MINISIGN_PUBLIC_KEY"
+  -p desktop/internal/update/deeper.pub
 ```
 
 ## Editor seams and workspace file previews

@@ -131,21 +131,48 @@ tap 需要已有 `main` 分支。首次正式稳定发布会创建 `Casks/deeper
 Repository Variables / 仓库变量:
 
 - `MINISIGN_PUBLIC_KEY`: the single base64 key line from `deeper.pub`, matching the
-  private key above. It is public, not a secret. Packaged Desktop and privileged
-  update helpers embed it at build time. An unconfigured build rejects updates;
-  it never inherits the upstream public key.
+  private key above. It is public, not a secret. Desktop and privileged update
+  helpers share the committed [Deeper public key](../desktop/internal/update/deeper.pub).
+  Builds embed this key by default; `MINISIGN_PUBLIC_KEY` can override it at link
+  time. Empty or invalid keys reject updates; the upstream key is never used.
 - `RELEASE_TAG_ACTOR`: GitHub login for `RELEASE_TAG_TOKEN`.
 - `SIGNPATH_RELEASE_SIGNING_ATTESTATION`: optional fingerprint only after your
   standalone Windows signing check succeeds; orchestrated same-run checks can
   provide their own verified evidence.
 
-Generate your signing pair locally from `desktop/` with
-`go run ./cmd/sign genkey /a/private/directory`, setting `MINISIGN_PASSWORD` in
-the process environment. Keep `deeper.key` private. The public variable must
-contain only the base64 key line, without the comment or whitespace.
+### Update signing key / 更新签名密钥
 
-私钥只保存在安全位置和 GitHub Secrets。公钥变量填 `.pub` 文件中的单行 base64。
-构建时嵌入公钥，更新时保留签名、哈希、版本和来源校验。
+Deeper's update signing key ID is **`98F231C2F91824B7`**. Its public key is
+committed in `desktop/internal/update/deeper.pub` and embedded by the shared
+verification package, including local builds. Configure the same single base64
+key line as the repository variable `MINISIGN_PUBLIC_KEY`; the CI signer checks
+that its private key matches this public key before writing a signature.
+
+Deeper 更新签名密钥 ID 为 **`98F231C2F91824B7`**。公钥随项目提交，应用和更新助手
+默认使用共享校验模块中嵌入的公钥，本地构建也生效。Actions 的 `MINISIGN_PUBLIC_KEY`
+变量填同一把公钥的单行 base64；签名工具会先检查私钥与该公钥是否匹配。
+
+Save the complete encrypted `deeper.key` text as `MINISIGN_PRIVATE_KEY` and its
+password as `MINISIGN_PASSWORD` in this repository's Actions Secrets. Use a
+cryptographically random password. Keep a recovery copy of both outside Git in
+owner-only storage (directory mode `0700`, private files `0600`) and back them up
+in a secure password manager or offline store. GitHub does not return secret
+values after saving them. Never commit or print private material.
+
+将加密的 `deeper.key` 完整文本保存到 `MINISIGN_PRIVATE_KEY`，随机密码保存到
+`MINISIGN_PASSWORD`。恢复备份放在 Git 仓库外，仅允许当前用户读取；还应备份到
+安全密码管理器或离线介质。GitHub 保存后无法取回 Secret 原文，私钥和密码不提交、不输出。
+
+The repository's `desktop/cmd/sign` tool can generate a pair with
+`go run ./cmd/sign genkey /a/private/directory`, with `MINISIGN_PASSWORD` supplied
+only through the process environment. Do not generate a replacement for a
+released key without a migration plan: existing clients trust the key embedded
+in their installed version. MINISIGN authenticates update artifacts; Apple
+notarization and Windows code signing still require their separate credentials.
+
+可通过项目签名工具生成密钥，密码只经进程环境传入。首次发布后，不应随意重生成密钥：
+已安装客户端只信任其内嵌公钥，换钥需要更新迁移方案。MINISIGN 负责更新产物验签，
+macOS 公证与 Windows 代码签名仍需各自的凭据。
 
 品牌重命名会改变发送给模型的静态系统提示和工具说明，因此第一次请求可能需要
 重新建立缓存；新的静态前缀与 schema 已重录并通过稳定性测试，逐回合保持不变。
