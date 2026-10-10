@@ -67,6 +67,55 @@ repository and obtain publishing rights for the npm `@sivancola` user or organiz
 | `HOMEBREW_TAP_TOKEN` | Write access to your separate `homebrew-deeper` tap / 自有 tap 写入权限 |
 | `RELEASE_TAG_TOKEN` | Dedicated token allowed by your tag rules and allowed to read attestations / 发布标签身份 |
 
+### Release identity and protection rules / 发布身份和保护规则
+
+Use a dedicated fine-grained token owned by `SivanCola`, restricted to
+`SivanCola/deeper`, with **Contents: Read and write**, **Actions: Read-only**,
+**Attestations: Read-only**, and required **Metadata: Read-only**. Save it as
+`RELEASE_TAG_TOKEN`; set the repository variable `RELEASE_TAG_ACTOR` to `SivanCola`.
+No account, administration, secret-management, or workflow-write permission is
+granted. The current token expires on **2027-01-08**; replace it before expiry.
+Contents permission covers repository content as well as tags, so branch and tag
+rules remain essential. Never reuse a broadly scoped local GitHub credential.
+
+专用 fine-grained Token 仅授权 `SivanCola/deeper`：Contents 读写，Actions、
+Attestations 和 Metadata 只读。保存在 `RELEASE_TAG_TOKEN`，发布身份变量填
+`SivanCola`。不授予账号、管理设置、Secrets 或工作流写入权限；当前 Token
+于 **2027-01-08** 到期。Contents 权限也涵盖仓库内容，因此必须保留分支和标签规则。
+
+The `main` ruleset requires pull requests, resolved review conversations, and
+up-to-date CI checks from GitHub Actions: `lint`, `root`, `desktop`, `race`, and
+`test (ubuntu-latest)`, `test (macos-latest)`, `test (windows-latest)`. It blocks
+deletion and force pushes, with no bypass actors. The existing `desktop`
+aggregate gates its Go, frontend, browser, native, and packaging jobs; it must
+not be replaced by a fabricated or narrower check name. Single-maintainer mode
+requires zero external PR approvals; CI and conversation resolution still apply.
+
+`main` 必须通过 PR 合入，解决所有评审讨论，并通过绑定 GitHub Actions 的七项检查；
+合入前需与主分支同步。禁止删除、强推，没有绕过名单。桌面检查使用现有 `desktop`
+汇总项，覆盖它依赖的 Go、前端、浏览器、原生和打包任务。单人维护模式不强制他人
+批准 PR，但仍要求 CI 和讨论解决。
+
+Two active tag rulesets cover `v*`, `npm-v*`, and `desktop-v*`. The creation
+ruleset authorizes only the `SivanCola` user to create matching tags. A separate
+immutable ruleset blocks all updates and deletions with no bypass actors,
+including the publisher. This permits atomic first publication without granting
+permission to rewrite an existing release identity.
+
+发布标签使用两套规则：仅 `SivanCola` 可创建，另一套无绕过名单的规则禁止任何人
+修改或删除既有标签，包括发布身份本身；因此可原子创建，但不能改写已有发布身份。
+
+The `release` environment accepts only the `main` branch and requires approval
+by `SivanCola`. Single-maintainer mode permits the workflow initiator to approve
+their own run; it still pauses for explicit manual approval. Administrators
+cannot bypass the environment's configured approval. When a second maintainer
+joins, enable prevention of self-review and require an independent PR approval.
+Credential and policy setup does not publish tags, packages, or releases.
+
+`release` 仅允许 `main` 分支部署，由 `SivanCola` 人工审批。单人维护时允许批准
+自己发起的流程，但仍需明确手动批准；管理员不能跳过环境审批。增加第二位维护者后，
+可开启禁止自审和独立 PR 审批。配置凭据与规则本身不会创建发布标签或发布软件。
+
 ### npm account and token / npm 账号与 Token
 
 The npm user `sivancola` owns the personal scope `@sivancola`; a separate npm
