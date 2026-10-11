@@ -10,10 +10,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// WithoutWindowsPrivileges keeps file-access tests governed by the DACL even
+// WithoutWindowsBackupPrivileges keeps file-access tests governed by the DACL even
 // when the runner can bypass it with backup privileges. The process token stays
 // unchanged; the returned function must be deferred on the calling goroutine.
-func WithoutWindowsPrivileges(t testing.TB) func() {
+func WithoutWindowsBackupPrivileges(t testing.TB) func() {
 	t.Helper()
 	var process, token windows.Token
 	if err := windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_DUPLICATE|windows.TOKEN_QUERY, &process); err != nil {
@@ -24,9 +24,23 @@ func WithoutWindowsPrivileges(t testing.TB) func() {
 	if err := windows.DuplicateTokenEx(process, access, nil, windows.SecurityImpersonation, windows.TokenImpersonation, &token); err != nil {
 		t.Fatal(err)
 	}
-	if err := windows.AdjustTokenPrivileges(token, true, nil, 0, nil, nil); err != nil {
-		token.Close()
-		t.Fatal(err)
+	// Keep ordinary privileges such as SeChangeNotifyPrivilege: removing
+	// traversal bypass would make normal profile-path canonicalization fail.
+	for _, name := range []string{"SeBackupPrivilege", "SeRestorePrivilege"} {
+		ptr, err := windows.UTF16PtrFromString(name)
+		if err != nil {
+			token.Close()
+			t.Fatal(err)
+		}
+		state := windows.Tokenprivileges{PrivilegeCount: 1}
+		if err := windows.LookupPrivilegeValue(nil, ptr, &state.Privileges[0].Luid); err != nil {
+			token.Close()
+			t.Fatal(err)
+		}
+		if err := windows.AdjustTokenPrivileges(token, false, &state, 0, nil, nil); err != nil && !errors.Is(err, windows.ERROR_NOT_ALL_ASSIGNED) {
+			token.Close()
+			t.Fatal(err)
+		}
 	}
 	runtime.LockOSThread()
 	var previous windows.Token

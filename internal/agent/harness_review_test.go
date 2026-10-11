@@ -51,7 +51,7 @@ func TestRebuiltAgentKeepsLiveFileObservationsAndRealShellWorks(t *testing.T) {
 	b.InheritFileObservationsFrom(a)
 	run(b, []provider.ToolCall{
 		{ID: "edit", Name: "edit_file", Arguments: `{"path":"file","old_string":"old","new_string":"new"}`},
-		{ID: "shell", Name: shellName, Arguments: `{"command":"git --version"}`},
+		{ID: "shell", Name: shellName, Arguments: `{"command":"git --version","description":"Read the Git version"}`},
 		{ID: "edit-again", Name: "edit_file", Arguments: `{"path":"file","old_string":"new","new_string":"final"}`},
 	})
 }

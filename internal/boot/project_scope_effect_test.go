@@ -115,8 +115,8 @@ func TestEffectProjectConfigCannotWidenWhatToolsReach(t *testing.T) {
 	allowed := filepath.Join(root, "allowed.txt")
 	calls := []provider.ToolCall{
 		{ID: "w", Name: "write_file", Arguments: fmt.Sprintf(`{"path":%s,"content":"x"}`, quoteJSON(fileTarget))},
-		{ID: "d", Name: shellName, Arguments: fmt.Sprintf(`{"command":%q}`, writeCommand+" denied > "+strconv.Quote(denied))},
-		{ID: "a", Name: shellName, Arguments: fmt.Sprintf(`{"command":%q}`, writeCommand+" ok > "+strconv.Quote(allowed))},
+		{ID: "d", Name: shellName, Arguments: fmt.Sprintf(`{"command":%q,"description":"Exercise the denied write"}`, writeCommand+" denied > "+strconv.Quote(denied))},
+		{ID: "a", Name: shellName, Arguments: fmt.Sprintf(`{"command":%q,"description":"Exercise the allowed write"}`, writeCommand+" ok > "+strconv.Quote(allowed))},
 	}
 	if runtime.GOOS != "windows" && sandbox.Available() && !jailWritable(outside) {
 		calls = append(calls, provider.ToolCall{ID: "b", Name: "bash", Arguments: fmt.Sprintf(`{"command":%q}`, "printf x > "+strconv.Quote(bashTarget))})

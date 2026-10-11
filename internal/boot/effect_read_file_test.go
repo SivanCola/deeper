@@ -43,7 +43,7 @@ func (p *readThenMutateProvider) Stream(_ context.Context, req provider.Request)
 	case 2:
 		return streamChunks(
 			provider.Chunk{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{
-				ID: "commit-1", Name: p.shell, Arguments: `{"command":"git commit -m test-commit"}`,
+				ID: "commit-1", Name: p.shell, Arguments: `{"command":"git commit -m test-commit","description":"Commit tracked test changes"}`,
 			}},
 			provider.Chunk{Type: provider.ChunkDone},
 		), nil

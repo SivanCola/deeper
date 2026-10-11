@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/checkpoint"
@@ -417,28 +416,18 @@ func TestEditPromptPersistsOriginalPrompt(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.SubmitEditedDisplay("edited prompt", "edited prompt", "second prompt")
-	defer c.autosaveWG.Wait()
-
-	var loaded *agent.Session
-	deadline := time.Now().Add(time.Second)
-	for {
-		var err error
-		loaded, err = agent.LoadSession(c.SessionPath())
-		if err == nil {
-			msgs := loaded.Snapshot()
-			if len(msgs) >= 2 {
-				last := msgs[len(msgs)-2]
-				if last.Role == provider.RoleUser && agent.StripTransientUserBlocks(last.Content) == "edited prompt" {
-					break
-				}
-			}
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("edited prompt was not persisted before deadline")
-		}
-		time.Sleep(10 * time.Millisecond)
+	// Join the controller's completion and persistence owners before reading
+	// disk; a fixed polling deadline measures CI filesystem speed instead.
+	waitIdle(t, c)
+	c.autosaveWG.Wait()
+	loaded, err := agent.LoadSession(c.SessionPath())
+	if err != nil {
+		t.Fatalf("load completed edited turn: %v", err)
 	}
 	msgs := loaded.Snapshot()
+	if len(msgs) < 2 {
+		t.Fatalf("completed edited turn has too few messages: %+v", msgs)
+	}
 	last := msgs[len(msgs)-2]
 	if last.Role != provider.RoleUser || agent.StripTransientUserBlocks(last.Content) != "edited prompt" {
 		t.Fatalf("last user message = %+v, want edited prompt", last)

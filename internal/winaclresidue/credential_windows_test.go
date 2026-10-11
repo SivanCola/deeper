@@ -31,7 +31,7 @@ func installReadDeny(t *testing.T, path, userSID string) {
 }
 
 func TestResetCredentialDACLRestoresAccessWithoutReadingACL(t *testing.T) {
-	defer testenv.WithoutWindowsPrivileges(t)()
+	defer testenv.WithoutWindowsBackupPrivileges(t)()
 	path := filepath.Join(t.TempDir(), ".env")
 	if err := os.WriteFile(path, []byte("KEY=value\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -79,7 +79,7 @@ func TestResetCredentialDACLRestoresAccessWithoutReadingACL(t *testing.T) {
 }
 
 func TestRenameLockedFileMovesDeniedStore(t *testing.T) {
-	defer testenv.WithoutWindowsPrivileges(t)()
+	defer testenv.WithoutWindowsBackupPrivileges(t)()
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".env")
 	if err := os.WriteFile(path, []byte("KEY=value\n"), 0o600); err != nil {
