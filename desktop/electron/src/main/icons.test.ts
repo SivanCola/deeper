@@ -38,7 +38,7 @@ test("macOS tray resolves the dedicated template asset and never the full-canvas
 test("non-macOS platforms keep the color tray candidates", () => {
   for (const platform of ["win32", "linux"] as const) {
     const icons = iconCandidates({ platform, appPath, resourcesPath: "/unused", packaged: false });
-    assert.ok(icons.tray[0].endsWith(join("hicolor", "32x32", "apps", "deeper-desktop.png")), platform);
+    assert.ok(icons.tray[0].endsWith(join("hicolor", "32x32", "apps", "deepzora-desktop.png")), platform);
     assert.ok(!icons.tray.some((path) => path.includes("trayTemplate")), platform);
   }
 });

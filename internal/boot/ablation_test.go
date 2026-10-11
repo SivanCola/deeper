@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/ablation"
-	"deeper/internal/event"
+	"deepzora/internal/ablation"
+	"deepzora/internal/event"
 )
 
 func builtToolNames(t *testing.T, set ablation.Set) map[string]bool {

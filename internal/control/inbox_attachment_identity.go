@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 //nolint:unused // The reliability layer persists this stable attachment fingerprint.

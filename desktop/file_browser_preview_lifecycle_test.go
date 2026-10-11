@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 func filePreviewLifecycleFixture(t *testing.T) (*App, *WorkspaceTab, FileBrowserPreviewRequest) {

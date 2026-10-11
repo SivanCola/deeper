@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/netclient"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
 )
 
 const (
-	remoteMarkdownImagePath     = "/__deeper_remote_markdown_image"
+	remoteMarkdownImagePath     = "/__deepzora_remote_markdown_image"
 	remoteMarkdownImageMaxBytes = 10 * 1024 * 1024
 	remoteMarkdownImageTimeout  = 20 * time.Second
 )
@@ -176,7 +176,7 @@ func resolveRemoteMarkdownImageAddresses(ctx context.Context, host string, looku
 }
 
 // remoteMarkdownImageMiddleware keeps external images out of the desktop
-// network stack. The backend fetches them with Deeper's proxy configuration,
+// network stack. The backend fetches them with Deepzora's proxy configuration,
 // validates the response, sanitizes SVG, and serves only bounded image bytes
 // from the local desktop origin.
 func (a *App) remoteMarkdownImageMiddleware() func(http.Handler) http.Handler {
@@ -222,7 +222,7 @@ func serveRemoteMarkdownImage(
 		return
 	}
 	req.Header.Set("Accept", "image/webp,image/png,image/jpeg,image/gif,image/bmp,image/svg+xml;q=0.9,*/*;q=0.1")
-	req.Header.Set("User-Agent", "Deeper-Desktop/1.0")
+	req.Header.Set("User-Agent", "Deepzora-Desktop/1.0")
 
 	client, err := clientFactory(spec)
 	if err != nil {

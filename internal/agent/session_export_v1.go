@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // ExportSessionSchemaOne writes the selected head of a schema-2 session as a

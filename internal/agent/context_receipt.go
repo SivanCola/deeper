@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func (a *Agent) contextMaintenanceInputHash(visible []provider.Message) string {

@@ -9,7 +9,7 @@ import (
 	"maps"
 	"strings"
 
-	"deeper/internal/topicstate"
+	"deepzora/internal/topicstate"
 )
 
 func (m *topicStateManager) createTopic(workspaceRoot, topicID, title, source string, createdAt int64) error {
@@ -88,9 +88,9 @@ func topicStateReadable(workspaceRoot string) error {
 		logTopicStateReadFallback(workspaceRoot, err, legacyErr, legacy.exists)
 		var future *topicstate.FutureSchemaError
 		if errors.As(err, &future) {
-			return errors.New("topic metadata was written by a newer Deeper version; upgrade Deeper to open it safely")
+			return errors.New("topic metadata was written by a newer Deepzora version; upgrade Deepzora to open it safely")
 		}
-		return fmt.Errorf("topic metadata is unavailable (%s); retry or check the Deeper state directory permissions", topicStateErrorType(err))
+		return fmt.Errorf("topic metadata is unavailable (%s); retry or check the Deepzora state directory permissions", topicStateErrorType(err))
 	}
 	return nil
 }

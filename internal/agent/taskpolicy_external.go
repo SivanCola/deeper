@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 const maxExternalCommandDepth = 4

@@ -8,11 +8,11 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 func resetPresetDeprecationForTest() {

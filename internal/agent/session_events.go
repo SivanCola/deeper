@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 const (

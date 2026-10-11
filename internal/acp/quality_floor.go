@@ -1,6 +1,6 @@
 package acp
 
-import "deeper/internal/control"
+import "deepzora/internal/control"
 
 // withoutQualityFloorConfig normalizes the retired execution-profile surface
 // even when an older config provider still publishes it.

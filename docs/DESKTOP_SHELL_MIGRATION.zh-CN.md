@@ -11,7 +11,7 @@ Electron、Go 桌面服务和 React；Wails 入口及构建依赖已经移除。
 
 ## 决策
 
-Deeper Desktop 从 Wails v2（macOS WebKit、Windows WebView2、Linux WebKitGTK）迁移到
+Deepzora Desktop 从 Wails v2（macOS WebKit、Windows WebView2、Linux WebKitGTK）迁移到
 使用 Chromium 渲染的 Electron，原因是产品需要一个用户与 Agent 共同操作的原生浏览器，
 而没有任何系统 webview 能在四个发行目标上提供第二个隔离、可编程、引擎稳定的网页
 表面。Go 桌面层成为独立服务进程，通过一条私有 JSON-RPC 连接与壳相接。开发分支直接
@@ -47,7 +47,7 @@ React 界面 ──preload 类型化 IPC──▶ Electron 主进程 ──stdio
                                       ├─ WebContentsView（网站）        └─ control.Controller、会话、
                                       ├─ 远程 Serve 窗口                   工具、租约、恢复、计费
                                       └─ 菜单、托盘、对话框、剪贴板
-远程 Deeper Agent ◀── 经现有 SSH 通道的受限 Host RPC ──▶ Go 桌面服务
+远程 Deepzora Agent ◀── 经现有 SSH 通道的受限 Host RPC ──▶ Go 桌面服务
 ```
 
 | 层 | 负责 |
@@ -93,7 +93,7 @@ React 界面 ──preload 类型化 IPC──▶ Electron 主进程 ──stdio
 - `desktop/internal/hostrpc`：反射注册表、契约摘要、TypeScript 生成器、基于 `rpcwire`
   的严格 JSON-RPC 服务、事件封装、反向宿主请求：implemented，locally tested；注册表
   接受全部 575 个命令。
-- `deeper-desktop --host-rpc`：一个 Go 服务进程管理全部会话与标签；`-emit-contract`
+- `deepzora-desktop --host-rpc`：一个 Go 服务进程管理全部会话与标签；`-emit-contract`
   输出生成的 TypeScript 与 JSON；RPC 原生宿主、托盘与退出钩子经壳连接工作：
   implemented，locally tested。
 - `desktop/` 下统一的 pnpm workspace 管理前端与壳：implemented。
@@ -103,7 +103,7 @@ React 界面 ──preload 类型化 IPC──▶ Electron 主进程 ──stdio
 
 ### C. Electron 承载完整现有桌面
 
-主窗口、可信 preload、错误恢复页、服务监督器、带授权媒体转发的 `deeper://app`
+主窗口、可信 preload、错误恢复页、服务监督器、带授权媒体转发的 `deepzora://app`
 资源 scheme、窗口状态、主题、标题栏拖动、快捷键、文件拖放、剪贴板、对话框、远程
 Serve 窗口、菜单、托盘、后台关闭与恢复。TranscriptKernel、稳定消息身份和单一滚动
 写入者不动。
@@ -131,7 +131,7 @@ Agent 通过 SSH 承载的 Host RPC 使用同一执行器，授权绑定世代�
 （`desktop/electron/src/main/browser/`：WebContentsView 表面、快照/引用、可信
 输入动作、绑定世代的授权与 stale/taken-over/no-grant 错误码、下载、截图）
 单测 81/81 通过，壳冒烟真实打开 example.com 并端到端校验标签标题（15/15）；
-渲染端 API 固定在 `window.deeperDesktop.browser`。前端浏览器面板
+渲染端 API 固定在 `window.deepzoraDesktop.browser`。前端浏览器面板
 （`BrowserPanel`、dock 标签、地址栏、缩放、DevTools、下载、接管横幅、覆盖层
 门控）整体收进单个 lazy chunk，initial 预算按实测 ratchet（raw 2408.2 →
 2408.8 KiB，token 级 diff 证明 initial chunk 零泄漏）。远程 Agent 经
@@ -158,7 +158,7 @@ payload schema 2、shell bootstrap 与 macOS 交接均已合入分支，desktop 
 全绿、Windows/Linux 交叉编译通过。发布管线现已端到端打包 Electron 壳：
 `desktop/packaging/` 用 @electron/packager（macOS 走 universal）组装 `app/` 树；
 `scripts/desktop-build.sh` 先做契约漂移核对再驱动打包，不再调用 `wails build`；
-NSIS 以 `File /r` 安装 `app/` 树；deb 安装到 `/usr/lib/deeper/app` 并在
+NSIS 以 `File /r` 安装 `app/` 树；deb 安装到 `/usr/lib/deepzora/app` 并在
 postinstall 置 `chrome-sandbox` 为 root 4755；SignPath 配置覆盖树内 PE 集合，
 保留安装器二阶段签名；CI/release workflow 对打包产物运行
 `packaging/smoke.mjs`（`desktop-linux-webkit41` job 已删除；钉住旧流程的契约
@@ -172,14 +172,14 @@ configuration 指纹已变化），以及 Windows/Linux runner 验证。
 版本化安装布局（Windows 与 Linux）的设计说明：`installlayout` 激活器只允许
 `versions/<v>/` 内的扁平常规文件。Electron 载荷新增一个树成员 `app/` 承载 Electron
 包；Windows 载荷清单升级到 schema 2，列出 `app/` 下每个文件及其摘要，激活器在移动
-`current.json` 之前校验整棵树。`deeper-desktop(.exe)` 仍是瘦启动器启动的活动桌面
-可执行文件：不带 `--host-rpc` 时它引导 `app/Deeper(.exe)` 后退出，Electron 再以
+`current.json` 之前校验整棵树。`deepzora-desktop(.exe)` 仍是瘦启动器启动的活动桌面
+可执行文件：不带 `--host-rpc` 时它引导 `app/Deepzora(.exe)` 后退出，Electron 再以
 `--host-rpc` 启动同一二进制作为服务。因此启动器、`current.json`、单实例身份与重启
 逻辑保持现状。macOS 上 bundle 的主可执行文件是 Electron，Go 服务位于
 `Contents/MacOS/`；`.app` 替换路径不变。实现说明：`installlayout.Member` 的名字是
 版本目录下的正斜杠路径，要么是白名单内的文件名，要么是 `app/...`（不允许 `..`、绝对
 路径、反斜杠与符号链接）；清单读取端同时接受 schema 1（扁平列表）和 schema 2（扁平
-列表加 `app/`）；迁移期的 `DEEPER_DESKTOP_SHELL=wails` 进程内回退已随阶段 F 删除；
+列表加 `app/`）；迁移期的 `DEEPZORA_DESKTOP_SHELL=wails` 进程内回退已随阶段 F 删除；
 在 shell 下，macOS 交接子进程等待的是 Electron 进程（服务的父进程，
 通过 `-owner-pid` 传入），替换后用 `open -n` 重新打开 bundle，shell 本身只退出。
 
@@ -210,12 +210,12 @@ CI 切换到新构建、契约生成和原生测试入口；删除 Wails 入口�
 WebView2/WebKitGTK 恢复协调器、诊断观察者、原生冒烟工具（`cmd/transcript-native-smoke`、
 `cmd/transcript-selection-smoke`）、vendored go-webview2 分支、`webkit2_41` 构建标签和 CI
 的 WebKitGTK 工具链步骤。desktop 模块的 `go list -m all` 已无 Wails；前端只访问
-`window.deeperDesktop`（由 `check-desktop-host-boundary.mjs` 强制），测试桩改为
-Electron 宿主 stub。`DEEPER_DESKTOP_SHELL=wails` 已不存在：未安装壳时直接启动会以
+`window.deepzoraDesktop`（由 `check-desktop-host-boundary.mjs` 强制），测试桩改为
+Electron 宿主 stub。`DEEPZORA_DESKTOP_SHELL=wails` 已不存在：未安装壳时直接启动会以
 安装提示退出。原型的崩溃故障用例（派发前崩溃取消动作、派发后崩溃按已执行结算且不重放、
 恢复保留登录分区）已成为 `desktop/electron/src/main/browser/` 的正式测试。有意保留：
 `startNativeShellSupport` 下的 fyne systray 进程内回退（壳下不可达，但仍是裸服务路径）、
-旧崩溃报告解码字段、`io.github.sivancola.deeper` 包标识、更新助手的 `wails-app-`
+旧崩溃报告解码字段、`com.deepzora.desktop` 包标识、更新助手的 `wails-app-`
 单实例查找（用于从 Wails 版升级的检测）。待办：四平台验收矩阵、与 Wails 基线的交互
 p95 对比、Windows/Linux CI runner 验证。
 
@@ -229,7 +229,7 @@ p95 对比、Windows/Linux CI runner 验证。
 | 能力 | 现状（Wails） | 目标（Electron） | 分类 |
 | --- | --- | --- | --- |
 | 会话：发送、停止、模型/effort 切换、历史、恢复、租约 | `App` 方法经 Wails 绑定 | 同一方法经 `desktop/invoke` | keep-business |
-| 项目、工作树、文件预览、工作区监听 | Go＋资源中间件 | Go＋`deeper://app` 转发到资源源 | keep-business |
+| 项目、工作树、文件预览、工作区监听 | Go＋资源中间件 | Go＋`deepzora://app` 转发到资源源 | keep-business |
 | 终端 | Go PTY/ConPTY，事件 | 经 `desktop/event` 不变 | keep-business |
 | 设置、MCP、MCP Apps、技能、插件 | Go | 不变；MCP Apps 保留各自回环源 | keep-business |
 | 远程工作区与远程 Serve 窗口 | SSH 管理器＋每窗口一个 Wails 子进程 | SSH 管理器不变；每主机一个隔离分区的 `BrowserWindow` | migrate-host |

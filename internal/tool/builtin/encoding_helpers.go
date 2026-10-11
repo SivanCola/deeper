@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/fileutil"
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/tool"
+	"deepzora/internal/fileutil"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/tool"
 )
 
 // readFileEncoded reads a file and decodes its encoding to UTF-8.

@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/fileops"
-	"deeper/internal/jobs"
-	"deeper/internal/mcpinteraction"
-	"deeper/internal/memory"
-	"deeper/internal/planmode"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/fileops"
+	"deepzora/internal/jobs"
+	"deepzora/internal/mcpinteraction"
+	"deepzora/internal/memory"
+	"deepzora/internal/planmode"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 // executeOne runs a single tool call. It is pure with respect to the event sink

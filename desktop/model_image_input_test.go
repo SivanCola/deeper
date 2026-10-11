@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
 )
 
 // Exercises the public settings contract, persistent config, discovery cache,
@@ -313,7 +313,7 @@ func TestDiscoveryRejectsChangedCredentialsWhileWaiting(t *testing.T) {
 	}))
 	defer srv.Close()
 	app := NewApp()
-	view := ProviderView{Name: "relay", Kind: "openai", BaseURL: srv.URL, NoProxy: true, APIKeyEnv: "DEEPER_IMAGE_TEST_KEY"}
+	view := ProviderView{Name: "relay", Kind: "openai", BaseURL: srv.URL, NoProxy: true, APIKeyEnv: "DEEPZORA_IMAGE_TEST_KEY"}
 	view.Models = []string{"relay-model"}
 	if _, err := app.SaveProviderWithKey(view, "local-test-before"); err != nil {
 		t.Fatal(err)

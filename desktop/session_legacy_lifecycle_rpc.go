@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/internal/session"
+	"deepzora/internal/session"
 	"errors"
 	"strings"
 )

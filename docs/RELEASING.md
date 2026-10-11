@@ -1,9 +1,9 @@
-> Deeper is independently maintained at [SivanCola/deeper](https://github.com/SivanCola/deeper).
-> 独立应用身份、更新通道与发布凭据见 [Deeper independence](DEEPER_INDEPENDENCE.md)。原许可证和作者信息见 NOTICE。
+> Deepzora is independently maintained at [SivanCola/deepzora](https://github.com/SivanCola/deepzora).
+> 独立应用身份、更新通道与发布凭据见 [Deepzora independence](DEEPZORA_INDEPENDENCE.md)。原许可证和作者信息见 NOTICE。
 
-# Releasing Deeper
+# Releasing Deepzora
 
-Deeper prepares immutable, accepted release candidates before it creates any
+Deepzora prepares immutable, accepted release candidates before it creates any
 public tag. Publication consumes those exact files after one approval; recovery
 observes public state and fills only missing stages.
 
@@ -146,7 +146,7 @@ Desktop Stable manifest, but it no longer:
 - moves npm `latest`, `canary` or `next`, or waits for `latest`.
 
 npm packages are still published, under the `legacy-v1` dist-tag, so `npm i -g
-deeper@legacy-v1` (or `deeper@1`) resolves to this line. npm refuses `v1` as
+deepzora@legacy-v1` (or `deepzora@1`) resolves to this line. npm refuses `v1` as
 a tag name because it parses as a semver range. Postflight and **Verify
 release** check `legacy-v1` instead of `latest` and skip the Homebrew cask.
 

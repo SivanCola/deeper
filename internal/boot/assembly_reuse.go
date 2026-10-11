@@ -1,11 +1,11 @@
 package boot
 
 import (
-	"deeper/internal/command"
-	"deeper/internal/extension"
-	"deeper/internal/hook"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/command"
+	"deepzora/internal/extension"
+	"deepzora/internal/hook"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // ReusedAssembly holds rediscovery-free inputs for narrow/no-op rebuilds.

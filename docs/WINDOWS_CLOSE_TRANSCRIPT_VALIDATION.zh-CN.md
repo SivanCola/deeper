@@ -28,9 +28,9 @@
 generation；握手成功日志包含服务构建、PID 和 generation；退出日志包含 shutdown requestId、
 触发原因、草稿保存耗时、服务收尾耗时、总耗时和结果。
 
-`%APPDATA%\deeper\diagnostics\lifecycle\` 中的文件是临时生命周期证据。正常退出会删除
+`%APPDATA%\deepzora\diagnostics\lifecycle\` 中的文件是临时生命周期证据。正常退出会删除
 当前运行对应的文件；策略关闭诊断或使用开发构建时也可能不创建文件。因此正常退出后目录
-为空属于预期行为。退出后的调查应采集 `%APPDATA%\deeper\logs\shell.log` 和 `service.log`。
+为空属于预期行为。退出后的调查应采集 `%APPDATA%\deepzora\logs\shell.log` 和 `service.log`。
 
 ## 检查后修复验证
 
@@ -53,7 +53,7 @@ generation；握手成功日志包含服务构建、PID 和 generation；退出�
 
 ## Windows 正式包验收
 
-使用同一个最终安装包或便携包，隔离 `DEEPER_HOME`，仅使用包内服务，不启用开发握手绕过。
+使用同一个最终安装包或便携包，隔离 `DEEPZORA_HOME`，仅使用包内服务，不启用开发握手绕过。
 
 1. 确认严格 shell/service 握手成功，并完成真实 renderer `Version` 调用。
 2. 交叉执行连续标题栏关闭、Alt+F4、托盘退出、后台隐藏和重新打开；使用测试夹具暂停草稿

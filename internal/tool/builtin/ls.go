@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(listDir{}) }

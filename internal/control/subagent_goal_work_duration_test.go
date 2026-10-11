@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestSubagentSkillRecordsWorkDurationOnChildMessage(t *testing.T) {

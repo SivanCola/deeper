@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/provider"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/provider"
 )
 
 type toolCallReasoningRequiredProvider struct{ *testutil.MockProvider }

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestScreenshotReturnsPNGImage(t *testing.T) {

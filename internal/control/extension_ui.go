@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/extension/uihub"
+	"deepzora/internal/event"
+	"deepzora/internal/extension/uihub"
 )
 
 // Extension UI hub wiring (Extension Protocol v2, stage 8a). The hub is the

@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // ContextReport is a point-in-time view of context pressure: the declared
 // window, the thresholds derived from it, what the model currently sees, and how

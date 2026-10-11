@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/ablation"
+	"deepzora/internal/ablation"
 )
 
 // experimentAxes is the validated set of fixed axes one suite invocation runs

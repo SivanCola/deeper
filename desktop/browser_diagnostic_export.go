@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/desktop/internal/browserops"
-	"deeper/internal/config"
-	"deeper/internal/extension/rpcwire"
+	"deepzora/desktop/internal/browserops"
+	"deepzora/internal/config"
+	"deepzora/internal/extension/rpcwire"
 )
 
 func browserDiagnosticScope(hostID, sessionID string) string {

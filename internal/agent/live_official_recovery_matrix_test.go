@@ -17,12 +17,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	"deeper/internal/provider/responses"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/provider/responses"
+	"deepzora/internal/tool"
 )
 
 // Only synthetic echo is exposed: no shell, filesystem reader, MCP, or access
@@ -220,7 +220,7 @@ func (p *officialRecoveryProxy) ServeHTTP(w http.ResponseWriter, r *http.Request
 		}
 	}
 	if p.sessionHeader != "" {
-		req.Header.Set("User-Agent", "Deeper/live-validation")
+		req.Header.Set("User-Agent", "Deepzora/live-validation")
 		req.Header.Set("x-opencode-session", p.sessionHeader)
 	}
 	client := &http.Client{Timeout: 90 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}

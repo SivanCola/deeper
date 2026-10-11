@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/provider"
 )
 
 // RoleReasoningError retains the adapter error for errors.As while giving every

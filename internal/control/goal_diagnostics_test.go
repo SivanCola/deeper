@@ -8,12 +8,12 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestGoalDiagnosticExportReadsCompleteDurableV3Log(t *testing.T) {

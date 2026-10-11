@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 
 	"golang.org/x/sys/windows"
 )

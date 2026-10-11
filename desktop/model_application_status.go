@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"maps"
 
-	"deeper/internal/control"
-	"deeper/internal/jobs"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
 )
 
 type ModelApplicationDetails = control.ModelApplicationDetails

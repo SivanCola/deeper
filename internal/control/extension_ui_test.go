@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/uihub"
+	"deepzora/internal/event"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/uihub"
 )
 
 // fakeExtensionClient is the uihub.ActionClient double for the controller

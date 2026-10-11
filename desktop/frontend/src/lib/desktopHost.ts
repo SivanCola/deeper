@@ -1,5 +1,5 @@
 // desktopHost is the only module allowed to touch the shell global: Electron's
-// window.deeperDesktop (preload). scripts/check-desktop-host-boundary.mjs
+// window.deepzoraDesktop (preload). scripts/check-desktop-host-boundary.mjs
 // enforces that boundary.
 import type { AppBindings } from "./bridge";
 import type { DesktopBrowserHost } from "./browserHost";
@@ -57,7 +57,7 @@ export interface BrowserControlApi {
 }
 
 // Mirrors docs/DESKTOP_HOST_PROTOCOL.md "Renderer preload API".
-export interface DeeperDesktopHost {
+export interface DeepzoraDesktopHost {
   readonly kind: "electron";
   readonly contract: { protocolVersion: number; digest: string; commands: readonly string[] };
   readonly platform: { os: "darwin" | "windows" | "linux"; arch: string; versions: Record<string, string> };
@@ -91,7 +91,7 @@ export interface DeeperDesktopHost {
 
 declare global {
   interface Window {
-    deeperDesktop?: DeeperDesktopHost;
+    deepzoraDesktop?: DeepzoraDesktopHost;
   }
 }
 
@@ -177,7 +177,7 @@ const serverHost: DesktopHost = {
 };
 
 let electronHost: DesktopHost | undefined;
-let electronHostFor: DeeperDesktopHost | undefined;
+let electronHostFor: DeepzoraDesktopHost | undefined;
 const dropListeners = new Set<(paths: string[]) => void>();
 
 const insideDropTarget = (target: EventTarget | null) =>
@@ -198,7 +198,7 @@ const installElectronDropHandlers = () => {
     if (!insideDropTarget(e.target) && e.dataTransfer) e.dataTransfer.dropEffect = "none";
   });
   doc.addEventListener("drop", (e) => {
-    const host = win()?.deeperDesktop;
+    const host = win()?.deepzoraDesktop;
     if (!host || !dataTransferLooksLikeFileDrag(e.dataTransfer)) return;
     e.preventDefault();
     if (!insideDropTarget(e.target) || !e.dataTransfer) return;
@@ -207,7 +207,7 @@ const installElectronDropHandlers = () => {
   });
 };
 
-const electronHostFrom = (host: DeeperDesktopHost): DesktopHost => {
+const electronHostFrom = (host: DeepzoraDesktopHost): DesktopHost => {
   if (electronHost && electronHostFor === host) return electronHost;
   electronHostFor = host;
   const native = host.native;
@@ -263,11 +263,11 @@ const electronHostFrom = (host: DeeperDesktopHost): DesktopHost => {
 };
 
 // Resolved at call time, never cached by callers: the preload may install
-// window.deeperDesktop after this module first evaluates, and the browser
+// window.deepzoraDesktop after this module first evaluates, and the browser
 // dev mock must only win when no shell is present.
 export function desktopHost(): DesktopHost {
   if (typeof window === "undefined") return serverHost;
-  const electron = window.deeperDesktop;
+  const electron = window.deepzoraDesktop;
   if (electron) return electronHostFrom(electron);
   return serverHost;
 }

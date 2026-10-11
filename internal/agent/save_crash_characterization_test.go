@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // crashAt installs a fileutil.CrashPoint that panics the first time op is

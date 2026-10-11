@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // Recovery-branch garbage collection. Conflict recovery forks a copy of the
@@ -426,7 +426,7 @@ func trashCoveredRecoveryBranch(path, parentDir string, requireIdle bool) error 
 	if err != nil {
 		return err
 	}
-	// Keep the move invisible until every artifact is staged. Older Deeper
+	// Keep the move invisible until every artifact is staged. Older Deepzora
 	// versions ignore the non-session staging directory, while new versions can
 	// finish it from the durable in-directory marker after a crash. Publishing is
 	// one same-filesystem rename, so Desktop can never restore or purge a split

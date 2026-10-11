@@ -2,7 +2,7 @@ package boot
 
 import (
 	"context"
-	"deeper/internal/control"
+	"deepzora/internal/control"
 	"io"
 	"testing"
 )

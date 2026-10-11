@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 type previewTestExecutor struct {

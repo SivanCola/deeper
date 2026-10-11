@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // A remote project group's qualified root ("remote-project:<host>:<workspace>")

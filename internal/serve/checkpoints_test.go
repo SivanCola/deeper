@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/checkpoint"
+	"deepzora/internal/checkpoint"
 )
 
 func TestServeCheckpointMetasExposeRewindCapabilities(t *testing.T) {

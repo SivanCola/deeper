@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/topicstate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/topicstate"
 )
 
 func TestTopicIndexRepairDoesNotOverwriteConcurrentManualRename(t *testing.T) {
@@ -355,7 +355,7 @@ func TestFutureTopicSchemaWithoutLegacyReturnsVisibleReadError(t *testing.T) {
 		}
 	}
 	_, err = NewApp().ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: workspaceRoot})
-	if err == nil || !strings.Contains(err.Error(), "newer Deeper version") {
+	if err == nil || !strings.Contains(err.Error(), "newer Deepzora version") {
 		t.Fatalf("bridge read error = %v", err)
 	}
 	if strings.Contains(err.Error(), workspaceRoot) {

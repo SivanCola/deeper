@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncontent"
 )
 
 const mib = int64(1 << 20)
@@ -80,7 +80,7 @@ func main() {
 
 	rootWasTemporary := cfg.Root == ""
 	if rootWasTemporary {
-		temp, err := os.MkdirTemp("", "deeper-session-capacity-*")
+		temp, err := os.MkdirTemp("", "deepzora-session-capacity-*")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

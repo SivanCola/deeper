@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 var remotePrefsMu sync.Mutex
@@ -101,7 +101,7 @@ func remotePrefsSaveLocked(p remotePrefs) error {
 }
 
 // updateRemotePrefsLocked serializes the full read-modify-write transaction
-// with other Deeper processes. Callers already hold remotePrefsMu, which
+// with other Deepzora processes. Callers already hold remotePrefsMu, which
 // provides the equivalent process-local ordering.
 func updateRemotePrefsLocked(mutate func(*remotePrefs) (bool, error)) (remotePrefs, error) {
 	path := remotePrefsPath()

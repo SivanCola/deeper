@@ -70,7 +70,7 @@ The build-contract guard now tests unchanged, changed, added, removed and failed
 generation behavior instead of requiring a specific `git diff` spelling; an
 uncommitted but correctly generated local contract may be packaged.
 Current-head terminal checks and package receipts are recorded on
-[PR #10396](https://github.com/SivanCola/deeper/pull/10396), rather than
+[PR #10396](https://github.com/SivanCola/deepzora/pull/10396), rather than
 claiming that an older run qualifies a later commit.
 
 Windows smoke 已排除单独执行的 agent、boot 和 control 分组。本次涉及桥接和生命周期，

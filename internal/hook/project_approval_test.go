@@ -9,7 +9,7 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // A checkout's hooks run on the first event of the first session, so they wait

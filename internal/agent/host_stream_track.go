@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"deeper/internal/extension"
+	"deepzora/internal/extension"
 )
 
 // trackPublishedHostStream binds cancel to the context's runtime owner so a

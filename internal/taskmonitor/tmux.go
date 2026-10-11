@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 // TmuxRunner is the narrow command surface used by Adapter. Implementations
@@ -208,9 +208,9 @@ func (a *TmuxAdapter) Detach(ctx context.Context, projectDir, taskID string) Tmu
 }
 
 const (
-	tmuxOwnerOption       = "@deeper-owner"
+	tmuxOwnerOption       = "@deepzora-owner"
 	tmuxOwnerTokenBytes   = 16
-	defaultTmuxNamePrefix = "deeper-"
+	defaultTmuxNamePrefix = "deepzora-"
 
 	ErrTmuxUnavailable   = "tmux_unavailable"
 	ErrTmuxInvalidName   = "tmux_invalid_name"

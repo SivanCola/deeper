@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/fileutil"
+	"deepzora/internal/agent"
+	"deepzora/internal/fileutil"
 )
 
 const topicArchiveMetadataPendingDir = "desktop-topic-archive-pending"

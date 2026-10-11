@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestHistoricalRestoredTabActivationKeepsPreparationExplicit(t *testing.T) {

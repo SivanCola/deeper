@@ -10,7 +10,7 @@ import (
 // attaching means driving or launching a real Chrome; the desktop keeps its
 // own built-in browser and ignores this section. Endpoint attaches to a
 // running Chrome started with --remote-debugging-port, and an empty Endpoint
-// launches one Deeper owns and kills with the session. Either way the
+// launches one Deepzora owns and kills with the session. Either way the
 // browser is not touched until a browser tool is actually called.
 type BrowserConfig struct {
 	Enabled  bool   `toml:"enabled"`

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 )
 
 func TestRefreshBackendNoticeLocale(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"deeper/internal/transcript"
+	"deepzora/internal/transcript"
 )
 
 // TranscriptInitializationError crosses service and migration boundaries

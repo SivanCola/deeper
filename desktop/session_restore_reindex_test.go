@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRestoreGlobalTopicSessionReindexesProjectTree(t *testing.T) {

@@ -3,7 +3,7 @@ package cli
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/memory"
+	"deepzora/internal/memory"
 )
 
 // showContextReport prints the window, the thresholds derived from it, and how

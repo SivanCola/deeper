@@ -1,10 +1,10 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"os"
 	"path/filepath"
 	"strings"

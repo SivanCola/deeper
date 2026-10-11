@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"deeper/internal/boot"
-	"deeper/internal/config"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
 	"testing"
 )
 

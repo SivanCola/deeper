@@ -1,6 +1,6 @@
 package readcoord
 
-import "deeper/internal/tool"
+import "deepzora/internal/tool"
 
 // Associate runs after the reader captured its source. It reuses a requirement
 // on that exact source without reopening completed coverage or resetting budgets.

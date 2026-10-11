@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"slices"
 
-	"deeper/internal/agent"
-	"deeper/internal/attachment"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/attachment"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 // imageReadError distinguishes local attachment loss from upload/auth failures.

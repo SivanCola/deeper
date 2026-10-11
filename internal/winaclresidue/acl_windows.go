@@ -15,7 +15,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 const (

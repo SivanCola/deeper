@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/filelock"
+	"deepzora/internal/config"
+	"deepzora/internal/filelock"
 )
 
 func TestRepairMutationLockRejectsLeafRedirectBeforeWrite(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	root := t.TempDir()
 	first := filepath.Join(root, "first")
 	second := filepath.Join(root, "second")
@@ -51,7 +51,7 @@ func TestRepairMutationLockRejectsLeafRedirectBeforeWrite(t *testing.T) {
 }
 
 func TestRepairMutationLockAllowsPriorHolderRegularFileReplacement(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	target := filepath.Join(t.TempDir(), "state.json")
 	if err := os.WriteFile(target, []byte("before"), 0o600); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestRepairMutationRejectsRedirectEvenWithReusedNativeIdentity(t *testing.T)
 }
 
 func TestRepairMutationLockContendsWithLegacyLockBothDirections(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	target := filepath.Join(t.TempDir(), "state.json")
 	legacyKey := legacyCanonicalRepairPath(target)
 	digest := sha256.Sum256([]byte(legacyKey))

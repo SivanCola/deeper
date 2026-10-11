@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 var modelSettingsSourceClient = &http.Client{Transport: &http.Transport{Proxy: nil}, Timeout: 20 * time.Second}

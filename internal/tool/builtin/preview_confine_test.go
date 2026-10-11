@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Preview runs before the permission gate, so its read must be exactly as
@@ -74,7 +74,7 @@ func TestPreviewAllowsInWorkspacePaths(t *testing.T) {
 		case "write_file":
 			args = map[string]any{"path": target, "content": "new\n"}
 		case "edit_file":
-			args = map[string]any{"path": target, "old_string": "world", "new_string": "deeper"}
+			args = map[string]any{"path": target, "old_string": "world", "new_string": "deepzora"}
 		case "multi_edit":
 			args = map[string]any{"path": target, "edits": []map[string]any{{"old_string": "hello", "new_string": "hi"}}}
 		default:

@@ -155,7 +155,7 @@ test("takeSnapshot assembles the main frame and reachable child frames under one
     }
     return {};
   };
-  fake.run = (code, frame) => code.includes("deeper:pageFrameGeometry") ? { x: 5, y: 5, scaleX: 1, scaleY: 1 } : (frame === fake.mainFrame ? main.run(code) : broken.run(code));
+  fake.run = (code, frame) => code.includes("deepzora:pageFrameGeometry") ? { x: 5, y: 5, scaleX: 1, scaleY: 1 } : (frame === fake.mainFrame ? main.run(code) : broken.run(code));
   const documents = new DocumentRegistry(() => "tok-1");
   const result = await takeSnapshot(fake, "tab-1", 3, "", documents);
   assert.equal(result.documentToken, "tok-1");

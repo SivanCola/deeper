@@ -22,7 +22,7 @@ try {
   assert.equal(choice.expectedRuntimeIdentity, "runtime");
   await page.getByRole("button", { name: /blocking jobs/i }).click();
   await page.getByRole("checkbox").first().check();
-  await page.screenshot({ path: path.join(os.tmpdir(), "deeper-model-application.png") });
+  await page.screenshot({ path: path.join(os.tmpdir(), "deepzora-model-application.png") });
   await page.getByRole("button", { name: /stop selected/i }).click();
   await page.getByRole("alert").waitFor({ state: "detached" });
   const result = await page.evaluate(() => window.modelApplicationFixture);

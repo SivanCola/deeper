@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/permission"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/permission"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // These tests drive the full real stack — acp.Serve → control.Controller →
@@ -166,7 +166,7 @@ func assertE2ERunPause(t *testing.T, responses [][]provider.Chunk, options *agen
 	var warned, paused bool
 	for _, notification := range notifications {
 		if notification.Method == sessionStatusUpdateMethod {
-			var update DeeperStatusUpdate
+			var update DeepzoraStatusUpdate
 			if err := json.Unmarshal(notification.Params, &update); err != nil {
 				t.Fatalf("status update: %v", err)
 			}

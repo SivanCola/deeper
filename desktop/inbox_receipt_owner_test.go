@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
 )
 
 func TestInboxReceiptSurvivesLocalTabReopen(t *testing.T) {

@@ -2,8 +2,8 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
 )
 
 func fleetCallContext(ctx context.Context) (string, event.Sink) {

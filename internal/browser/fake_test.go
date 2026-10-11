@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // fakeExecutor records every call and answers from its fixed fields; err,

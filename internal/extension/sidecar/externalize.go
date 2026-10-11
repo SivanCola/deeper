@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 // Content-ref externalization for the intercept and event calls. The wire

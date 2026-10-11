@@ -14,60 +14,60 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/config"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/pluginpkg"
 )
 
 // Boot-level fake sidecar (re-exec helper-process pattern, mirroring the
 // sidecar package's own tests): the boot test binary re-executes itself with
-// DEEPER_BOOT_FAKE_SIDECAR=1 and speaks Extension Protocol v2 over
-// stdin/stdout. DEEPER_BOOT_FAKE_INIT_RESULT overrides the initialize
-// result; DEEPER_BOOT_FAKE_MODE=ignore_shutdown keeps the process alive
+// DEEPZORA_BOOT_FAKE_SIDECAR=1 and speaks Extension Protocol v2 over
+// stdin/stdout. DEEPZORA_BOOT_FAKE_INIT_RESULT overrides the initialize
+// result; DEEPZORA_BOOT_FAKE_MODE=ignore_shutdown keeps the process alive
 // through extension/shutdown. Intercept steering for the dispatch tests:
 //
-//	DEEPER_BOOT_FAKE_BLOCK_EVENT      answer block at this event
-//	DEEPER_BOOT_FAKE_INVALID_EVENT    answer a DTO-violating replace at this event
-//	DEEPER_BOOT_FAKE_REPLACE_PROMPT   answer system_prompt.build replace with this prompt
-//	DEEPER_BOOT_FAKE_REPLACE_INPUT    answer input.receive replace with this text
-//	DEEPER_BOOT_FAKE_EVENT_LOG        append one "event payload" line per extension/event
+//	DEEPZORA_BOOT_FAKE_BLOCK_EVENT      answer block at this event
+//	DEEPZORA_BOOT_FAKE_INVALID_EVENT    answer a DTO-violating replace at this event
+//	DEEPZORA_BOOT_FAKE_REPLACE_PROMPT   answer system_prompt.build replace with this prompt
+//	DEEPZORA_BOOT_FAKE_REPLACE_INPUT    answer input.receive replace with this text
+//	DEEPZORA_BOOT_FAKE_EVENT_LOG        append one "event payload" line per extension/event
 //
 // Provider steering for the stage 7 adapter tests:
 //
-//	DEEPER_BOOT_FAKE_PLUGIN_NAME      the installed plugin name (provider ref namespace)
-//	DEEPER_BOOT_FAKE_PROVIDER         when "1", declare plugin/<name>/fake/x and serve
+//	DEEPZORA_BOOT_FAKE_PLUGIN_NAME      the installed plugin name (provider ref namespace)
+//	DEEPZORA_BOOT_FAKE_PROVIDER         when "1", declare plugin/<name>/fake/x and serve
 //	                                    catalog/stream/open/stream/cancel with a fixed
 //	                                    two-chunk completion plus usage
 //
 // UI steering for the stage 8a hub tests:
 //
-//	DEEPER_BOOT_FAKE_UI_PUBLISH       when "1", publish one credential-bearing
+//	DEEPZORA_BOOT_FAKE_UI_PUBLISH       when "1", publish one credential-bearing
 //	                                    status surface through host/ui/publish after
 //	                                    the handshake completes
 //
 // Process-lifecycle steering for the failure-cleanup tests:
 //
-//	DEEPER_BOOT_FAKE_PID_FILE         write the sidecar PID to this file on start,
+//	DEEPZORA_BOOT_FAKE_PID_FILE         write the sidecar PID to this file on start,
 //	                                    so the parent can poll for a leaked process
-//	DEEPER_BOOT_FAKE_EXIT_IMMEDIATELY when "1", write the PID file (if set) and
+//	DEEPZORA_BOOT_FAKE_EXIT_IMMEDIATELY when "1", write the PID file (if set) and
 //	                                    exit 0 at once — a sidecar that dies before
 //	                                    answering the handshake
 const (
-	bootFakeEnvEnable          = "DEEPER_BOOT_FAKE_SIDECAR"
-	bootFakeEnvInitResult      = "DEEPER_BOOT_FAKE_INIT_RESULT"
-	bootFakeEnvMode            = "DEEPER_BOOT_FAKE_MODE"
-	bootFakeEnvBlockEvent      = "DEEPER_BOOT_FAKE_BLOCK_EVENT"
-	bootFakeEnvInvalidEvent    = "DEEPER_BOOT_FAKE_INVALID_EVENT"
-	bootFakeEnvReplacePrompt   = "DEEPER_BOOT_FAKE_REPLACE_PROMPT"
-	bootFakeEnvReplaceInput    = "DEEPER_BOOT_FAKE_REPLACE_INPUT"
-	bootFakeEnvEventLog        = "DEEPER_BOOT_FAKE_EVENT_LOG"
-	bootFakeEnvPluginName      = "DEEPER_BOOT_FAKE_PLUGIN_NAME"
-	bootFakeEnvProvider        = "DEEPER_BOOT_FAKE_PROVIDER"
-	bootFakeEnvUIPublish       = "DEEPER_BOOT_FAKE_UI_PUBLISH"
-	bootFakeEnvPIDFile         = "DEEPER_BOOT_FAKE_PID_FILE"
-	bootFakeEnvExitImmediately = "DEEPER_BOOT_FAKE_EXIT_IMMEDIATELY"
+	bootFakeEnvEnable          = "DEEPZORA_BOOT_FAKE_SIDECAR"
+	bootFakeEnvInitResult      = "DEEPZORA_BOOT_FAKE_INIT_RESULT"
+	bootFakeEnvMode            = "DEEPZORA_BOOT_FAKE_MODE"
+	bootFakeEnvBlockEvent      = "DEEPZORA_BOOT_FAKE_BLOCK_EVENT"
+	bootFakeEnvInvalidEvent    = "DEEPZORA_BOOT_FAKE_INVALID_EVENT"
+	bootFakeEnvReplacePrompt   = "DEEPZORA_BOOT_FAKE_REPLACE_PROMPT"
+	bootFakeEnvReplaceInput    = "DEEPZORA_BOOT_FAKE_REPLACE_INPUT"
+	bootFakeEnvEventLog        = "DEEPZORA_BOOT_FAKE_EVENT_LOG"
+	bootFakeEnvPluginName      = "DEEPZORA_BOOT_FAKE_PLUGIN_NAME"
+	bootFakeEnvProvider        = "DEEPZORA_BOOT_FAKE_PROVIDER"
+	bootFakeEnvUIPublish       = "DEEPZORA_BOOT_FAKE_UI_PUBLISH"
+	bootFakeEnvPIDFile         = "DEEPZORA_BOOT_FAKE_PID_FILE"
+	bootFakeEnvExitImmediately = "DEEPZORA_BOOT_FAKE_EXIT_IMMEDIATELY"
 )
 
 // TestExtensionFakeSidecarHelperProcess is the re-exec entry point; it skips
@@ -316,7 +316,7 @@ func bootWithFakePlugin(t *testing.T, name string, runtime map[string]any) *Buil
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.DeeperHomeDir(), name, runtime)
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), name, runtime)
 	res, err := BuildRuntime(context.Background(), Options{})
 	if err != nil {
 		t.Fatalf("BuildRuntime: %v", err)
@@ -335,7 +335,7 @@ func TestBootIsolatesIncompatibleExternalPlugin(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, pluginpkg.NativeManifest), []byte(`{"name":"irmia-devkit","version":"1.0.0"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	home := config.DeeperHomeDir()
+	home := config.DeepzoraHomeDir()
 	if err := pluginpkg.Upsert(home, pluginpkg.InstalledPlugin{Name: "irmia-devkit", Root: root, Enabled: true}); err != nil {
 		t.Fatal(err)
 	}
@@ -417,11 +417,11 @@ func TestBootFailsWhenTwoRuntimesClaimOneSlot(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	deeperHome := config.DeeperHomeDir()
-	installBootFakePlugin(t, deeperHome, "claim-one", map[string]any{
+	deepzoraHome := config.DeepzoraHomeDir()
+	installBootFakePlugin(t, deepzoraHome, "claim-one", map[string]any{
 		"replaces": []string{"system_prompt"},
 	})
-	installBootFakePlugin(t, deeperHome, "claim-two", map[string]any{
+	installBootFakePlugin(t, deepzoraHome, "claim-two", map[string]any{
 		"replaces": []string{"system_prompt"},
 	})
 	_, err := BuildRuntime(context.Background(), Options{})
@@ -439,7 +439,7 @@ func TestBootFailsWhenRequiredRuntimeFails(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.DeeperHomeDir(), "required-broken", map[string]any{
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "required-broken", map[string]any{
 		"required": true,
 		// Extension Protocol v1 is rejected by the v2 host.
 		"env": map[string]string{bootFakeEnvInitResult: `{"protocolVersion":"1","name":"x","version":"1","stateSchemaVersion":0}`},
@@ -475,7 +475,7 @@ func TestRebuildRetiresOldSidecars(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.DeeperHomeDir(), "rebuildplugin", map[string]any{})
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "rebuildplugin", map[string]any{})
 
 	oldRes, err := BuildRuntime(context.Background(), Options{})
 	if err != nil {
@@ -521,7 +521,7 @@ func TestExplicitReloadReplacesUnchangedSidecar(t *testing.T) {
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
 	pidFile := filepath.Join(dir, "linked-sidecar.pid")
-	installBootFakePlugin(t, config.DeeperHomeDir(), "linkedplugin", map[string]any{
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "linkedplugin", map[string]any{
 		"env": map[string]string{bootFakeEnvPIDFile: pidFile},
 	})
 
@@ -577,7 +577,7 @@ func TestExplicitReloadSidecarFailureKeepsOldProcess(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.DeeperHomeDir(), "stable-linked", map[string]any{
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "stable-linked", map[string]any{
 		"required": true,
 	})
 
@@ -594,7 +594,7 @@ func TestExplicitReloadSidecarFailureKeepsOldProcess(t *testing.T) {
 	// Keep the declared graph identical while making the linked program fail on
 	// its next launch. Without the explicit-restart instruction, RebuildFrom
 	// would adopt oldClient and incorrectly report success.
-	installBootFakePlugin(t, config.DeeperHomeDir(), "stable-linked", map[string]any{
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "stable-linked", map[string]any{
 		"required": true,
 		"env":      map[string]string{bootFakeEnvExitImmediately: "1"},
 	})

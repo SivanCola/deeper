@@ -3,8 +3,8 @@ package main
 import (
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/jobs"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
 )
 
 // Interactive removal returns promptly; durable cleanup-pending markers let

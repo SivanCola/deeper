@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 func TestCanonicalNavigationSameWorkspaceBlankRetainsHost(t *testing.T) {

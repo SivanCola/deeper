@@ -1,7 +1,7 @@
 package bot
 
 import (
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func bindBotSessionWriteAuthority(state *sessionState) error {

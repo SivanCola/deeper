@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/sandbox"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/sandbox"
 )
 
 // collectSink returns a Sink that collects events and a channel that receives

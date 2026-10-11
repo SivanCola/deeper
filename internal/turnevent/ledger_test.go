@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/store"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/store"
 )
 
 func testSessionPath(t *testing.T) string {

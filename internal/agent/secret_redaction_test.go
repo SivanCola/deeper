@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type secretOutputTool struct{}

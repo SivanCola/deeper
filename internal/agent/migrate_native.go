@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // moveFlatImport re-homes a session left in the global directory by a flat

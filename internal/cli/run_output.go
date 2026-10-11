@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
+	"deepzora/internal/billing"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
 )
 
 type runOutputFormat string

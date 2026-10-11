@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"deeper/internal/agent"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 type SessionHistoryReadHandle struct {

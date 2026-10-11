@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 func TestSessionLocatorSeparatesCanonicalRoutesFromLegacyPaths(t *testing.T) {

@@ -18,24 +18,24 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/checkpoint"
-	"deeper/internal/command"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/guardian"
-	"deeper/internal/hook"
-	"deeper/internal/i18n"
-	"deeper/internal/jobs"
-	"deeper/internal/memory"
-	"deeper/internal/permission"
-	"deeper/internal/plugin"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/skill"
-	"deeper/internal/store"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/command"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/guardian"
+	"deepzora/internal/hook"
+	"deepzora/internal/i18n"
+	"deepzora/internal/jobs"
+	"deepzora/internal/memory"
+	"deepzora/internal/permission"
+	"deepzora/internal/plugin"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/skill"
+	"deepzora/internal/store"
+	"deepzora/internal/tool"
 )
 
 type typedNilControllerSink struct{}
@@ -87,7 +87,7 @@ func isolateControlConfigHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
@@ -687,7 +687,7 @@ func TestSetGoalDurableNeverCreatesLegacyArchive(t *testing.T) {
 	if err := c.SetGoalDurable(goal); err == nil {
 		t.Fatal("SetGoalDurable succeeded despite an invalid sidecar parent")
 	}
-	if _, err := os.Stat(filepath.Join(root, ".deeper", "autoresearch")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, ".deepzora", "autoresearch")); !os.IsNotExist(err) {
 		t.Fatalf("durable Goal update created legacy archive: %v", err)
 	}
 	for _, notice := range sink.notices() {
@@ -766,25 +766,25 @@ func TestResumeRestoresRunningAutoResearchGoalFromSidecar(t *testing.T) {
 	}
 	path := filepath.Join(root, "session.jsonl")
 	taskID := "investigate-runtime-resume"
-	if err := os.MkdirAll(filepath.Join(root, ".deeper", "autoresearch", taskID, "state"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(root, ".deeper", "autoresearch", taskID, "logs"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora", "autoresearch", taskID, "logs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "autoresearch", taskID, "state", "task_spec.json"), []byte(`{"task_id":"investigate-runtime-resume","goal":"investigate runtime resume","allowed_operations":{"write":true},"success_criteria":[{"id":"criterion-1","description":"resume keeps Goal active","required":true}]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "task_spec.json"), []byte(`{"task_id":"investigate-runtime-resume","goal":"investigate runtime resume","allowed_operations":{"write":true},"success_criteria":[{"id":"criterion-1","description":"resume keeps Goal active","required":true}]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "autoresearch", taskID, "state", "progress.json"), []byte(`{"task_id":"investigate-runtime-resume","iteration":2,"current_direction":"verify resume","stale_count":1,"pivot_count":0,"updated_at":"2026-06-30T00:00:00Z"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "progress.json"), []byte(`{"task_id":"investigate-runtime-resume","iteration":2,"current_direction":"verify resume","stale_count":1,"pivot_count":0,"updated_at":"2026-06-30T00:00:00Z"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "autoresearch", taskID, "state", "directions_tried.json"), []byte(`{"task_id":"investigate-runtime-resume","directions":[]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "directions_tried.json"), []byte(`{"task_id":"investigate-runtime-resume","directions":[]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "autoresearch", taskID, "state", "findings.jsonl"), nil, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "findings.jsonl"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "autoresearch", taskID, "logs", "heartbeat.jsonl"), nil, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "logs", "heartbeat.jsonl"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(goalStatePath(path), []byte(`{"goal":"investigate runtime resume","status":"running","researchMode":1,"autoResearchTaskID":"investigate-runtime-resume"}`), 0o644); err != nil {
@@ -2665,7 +2665,7 @@ func TestTwoModelPlannerApprovalUsesHostGate(t *testing.T) {
 		t.Fatal("executor did not run after approval")
 	}
 	reqText := requestMessagesText(execProv.requests[0].Messages)
-	if !strings.Contains(reqText, "Deeper executor handoff") || !strings.Contains(reqText, "Edit main.go") {
+	if !strings.Contains(reqText, "Deepzora executor handoff") || !strings.Contains(reqText, "Edit main.go") {
 		t.Fatalf("approved executor request missing planner handoff:\n%s", reqText)
 	}
 }
@@ -2774,7 +2774,7 @@ func TestTwoModelShortChoiceReplySkipsPlanner(t *testing.T) {
 	if !strings.Contains(reqText, "1. Subagent-Driven") {
 		t.Fatalf("executor request lost the previous assistant options:\n%s", reqText)
 	}
-	if strings.Contains(reqText, "Deeper executor handoff") {
+	if strings.Contains(reqText, "Deepzora executor handoff") {
 		t.Fatalf("short choice reply should not be wrapped as a planner handoff:\n%s", reqText)
 	}
 	if got := agent.StripTransientUserBlocks(lastUserMessage(execProv.requests[0].Messages)); got != "1" {
@@ -2796,7 +2796,7 @@ func TestDisconnectMCPServerRemovesLazyPlaceholder(t *testing.T) {
 }
 
 func TestRegisterMCPServerOnDemandDefersConnectionUntilFirstUse(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	var requests atomic.Int32
 	var initializes atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2870,7 +2870,7 @@ func TestRegisterMCPServerOnDemandDefersConnectionUntilFirstUse(t *testing.T) {
 }
 
 func TestControllerMCPHotLifecycleUpdatesCapabilityRuntime(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	host := plugin.NewHost()
 	defer host.Close()
 	reg := tool.NewRegistry()
@@ -2930,7 +2930,7 @@ func TestAddMCPServerAuthorizesExplicitUserAddBeforeConnecting(t *testing.T) {
 func TestAddMCPServerWritesGlobalConfigWithoutShadowingProject(t *testing.T) {
 	isolateControlConfigHome(t)
 	workspace := t.TempDir()
-	projectPath := filepath.Join(workspace, "deeper.toml")
+	projectPath := filepath.Join(workspace, "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte(`
 [[plugins]]
 name = "project-only"
@@ -2993,7 +2993,7 @@ command = "project-only"
 func TestAddMCPServerRejectsProjectNameCollision(t *testing.T) {
 	isolateControlConfigHome(t)
 	workspace := t.TempDir()
-	if err := os.WriteFile(filepath.Join(workspace, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(workspace, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "shared"
 command = "project-shared"
@@ -3051,7 +3051,7 @@ func TestConnectConfiguredProjectMCPIsTrustedByDefault(t *testing.T) {
 		})
 	}))
 	defer server.Close()
-	if err := os.WriteFile(filepath.Join(workspace, "deeper.toml"), fmt.Appendf(nil, `
+	if err := os.WriteFile(filepath.Join(workspace, "deepzora.toml"), fmt.Appendf(nil, `
 [[plugins]]
 name = "project-docs"
 type = "http"
@@ -3228,7 +3228,7 @@ func TestRemoveMCPServerRemovesUnconnectedLazyPlaceholder(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData", "Roaming"))
 	t.Chdir(dir)
-	if err := os.WriteFile("deeper.toml", []byte(`
+	if err := os.WriteFile("deepzora.toml", []byte(`
 [[plugins]]
 name = "mock"
 command = "mock-mcp"
@@ -3271,7 +3271,7 @@ func TestConfiguredMCPNamesUseControllerWorkspaceInsteadOfProcessCWD(t *testing.
 	workspace := t.TempDir()
 	other := t.TempDir()
 	t.Chdir(other)
-	if err := os.WriteFile(filepath.Join(workspace, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(workspace, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "workspace-mcp"
 command = "workspace-mcp"
@@ -3306,20 +3306,20 @@ func TestRemoveMCPServerKeepsRuntimeOnlyToolsWhenPersistenceRemovalFails(t *test
 
 func TestRemoveMCPServerRejectsPluginManagedTools(t *testing.T) {
 	home := isolateControlConfigHome(t)
-	deeperHome := filepath.Join(home, ".deeper")
-	t.Setenv("DEEPER_HOME", deeperHome)
-	root := filepath.Join(deeperHome, "plugins", "superpowers")
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	t.Setenv("DEEPZORA_HOME", deepzoraHome)
+	root := filepath.Join(deepzoraHome, "plugins", "superpowers")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, pluginpkg.NativeManifest), []byte(`{"apiVersion":"deeper.io/plugin/v2","name":"superpowers","version":"1.0.0","mcpServers":{"helper":{"command":"bin/helper"}}}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, pluginpkg.NativeManifest), []byte(`{"apiVersion":"deepzora.com/plugin/v2","name":"superpowers","version":"1.0.0","mcpServers":{"helper":{"command":"bin/helper"}}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "superpowers",
 		Root:         "plugins/superpowers",
 		Version:      "1.0.0",
-		ManifestKind: "deeper",
+		ManifestKind: "deepzora",
 		Enabled:      true,
 	}); err != nil {
 		t.Fatal(err)
@@ -4148,7 +4148,7 @@ func TestApprovalSessionScopeDoesNotPersistRules(t *testing.T) {
 		}),
 		OnRemember: func(rule string) RememberResult {
 			remembered = true
-			return RememberResult{Rule: rule, Path: "deeper.toml", Saved: true}
+			return RememberResult{Rule: rule, Path: "deepzora.toml", Saved: true}
 		},
 	})
 	go func() {
@@ -4267,7 +4267,7 @@ func TestPlanModeReadOnlyTrustApprovalUsesChineseCatalog(t *testing.T) {
 	if !strings.Contains(approval.Subject, "在计划模式中信任") || !strings.Contains(approval.Subject, "gh issue view 5867") {
 		t.Fatalf("approval subject = %q, want Chinese plan-mode trust subject", approval.Subject)
 	}
-	if !strings.Contains(approval.Reason, "不在 Deeper 内置只读集合中") {
+	if !strings.Contains(approval.Reason, "不在 Deepzora 内置只读集合中") {
 		t.Fatalf("approval reason = %q, want Chinese plan-mode trust reason", approval.Reason)
 	}
 
@@ -4885,7 +4885,7 @@ func TestReloadCommandsFromFilesystem(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 
 	wsRoot := t.TempDir()
-	cmdDir := filepath.Join(wsRoot, ".deeper", "commands")
+	cmdDir := filepath.Join(wsRoot, ".deepzora", "commands")
 	writeCmdFile(t, cmdDir, "review", "Review code", "Review $1")
 	writeCmdFile(t, cmdDir, "test", "Run tests", "Test $1")
 
@@ -4983,7 +4983,7 @@ func TestReloadCommandsDeleteFile(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 
 	wsRoot := t.TempDir()
-	cmdDir := filepath.Join(wsRoot, ".deeper", "commands")
+	cmdDir := filepath.Join(wsRoot, ".deepzora", "commands")
 	writeCmdFile(t, cmdDir, "alpha", "Alpha cmd", "Alpha $1")
 	writeCmdFile(t, cmdDir, "beta", "Beta cmd", "Beta $1")
 
@@ -5038,7 +5038,7 @@ func TestReloadCommandsMalformedFile(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 
 	wsRoot := t.TempDir()
-	cmdDir := filepath.Join(wsRoot, ".deeper", "commands")
+	cmdDir := filepath.Join(wsRoot, ".deepzora", "commands")
 	writeCmdFile(t, cmdDir, "good", "Good cmd", "Good $1")
 
 	// Write a malformed file (no valid frontmatter)
@@ -5080,8 +5080,8 @@ func TestReloadCommandsMalformedFile(t *testing.T) {
 
 // TestReloadCommandsSameNameAcrossDirs verifies that when the same command
 // name exists in multiple convention directories, the later-scanned directory
-// (higher priority) wins. ConventionDirs = [".deeper", ".agents", ".agent",
-// ".claude"], scanned in reverse, so .deeper is highest priority.
+// (higher priority) wins. ConventionDirs = [".deepzora", ".agents", ".agent",
+// ".claude"], scanned in reverse, so .deepzora is highest priority.
 func TestReloadCommandsSameNameAcrossDirs(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -5095,9 +5095,9 @@ func TestReloadCommandsSameNameAcrossDirs(t *testing.T) {
 	claudeDir := filepath.Join(wsRoot, ".claude", "commands")
 	writeCmdFile(t, claudeDir, "greet", "Claude greet", "Hello from Claude: $1")
 
-	// Higher priority: .deeper/commands
-	deeperDir := filepath.Join(wsRoot, ".deeper", "commands")
-	writeCmdFile(t, deeperDir, "greet", "Deeper greet", "Hello from Deeper: $1")
+	// Higher priority: .deepzora/commands
+	deepzoraDir := filepath.Join(wsRoot, ".deepzora", "commands")
+	writeCmdFile(t, deepzoraDir, "greet", "Deepzora greet", "Hello from Deepzora: $1")
 
 	reg := tool.NewRegistry()
 	c := newOwnedTestController(t, Options{
@@ -5122,13 +5122,13 @@ func TestReloadCommandsSameNameAcrossDirs(t *testing.T) {
 		t.Fatalf("expected exactly 1 'greet' command, got %d", count)
 	}
 
-	// The winning version should be from .deeper (highest priority)
+	// The winning version should be from .deepzora (highest priority)
 	sent, ok := c.CustomCommand("/greet world")
 	if !ok {
 		t.Fatal("/greet should be found")
 	}
-	if !strings.Contains(sent, "Hello from Deeper") {
-		t.Errorf("expected .deeper version to win, got render: %q", sent)
+	if !strings.Contains(sent, "Hello from Deepzora") {
+		t.Errorf("expected .deepzora version to win, got render: %q", sent)
 	}
 }
 
@@ -5138,10 +5138,10 @@ func TestReloadCommandsUsesCanonicalPluginNameAlongsideProjectShortName(t *testi
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
-	deeperHome := filepath.Join(home, ".deeper")
-	t.Setenv("DEEPER_HOME", deeperHome)
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	t.Setenv("DEEPZORA_HOME", deepzoraHome)
 
-	pluginRoot := filepath.Join(deeperHome, "plugins", "pwf")
+	pluginRoot := filepath.Join(deepzoraHome, "plugins", "pwf")
 	if err := os.MkdirAll(filepath.Join(pluginRoot, ".claude-plugin"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -5150,12 +5150,12 @@ func TestReloadCommandsUsesCanonicalPluginNameAlongsideProjectShortName(t *testi
 	}
 	writeCmdFile(t, filepath.Join(pluginRoot, "commands"), "plan", "Plugin plan", "PLUGIN $1")
 	writeCmdFile(t, filepath.Join(pluginRoot, "commands"), "status", "Plugin status", "STATUS $1")
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{Name: "pwf", Root: "plugins/pwf", ManifestKind: "claude", Enabled: true}); err != nil {
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{Name: "pwf", Root: "plugins/pwf", ManifestKind: "claude", Enabled: true}); err != nil {
 		t.Fatal(err)
 	}
 
 	workspace := t.TempDir()
-	writeCmdFile(t, filepath.Join(workspace, ".deeper", "commands"), "plan", "Project plan", "PROJECT $1")
+	writeCmdFile(t, filepath.Join(workspace, ".deepzora", "commands"), "plan", "Project plan", "PROJECT $1")
 	c := newOwnedTestController(t, Options{Sink: &typedNilControllerSink{}, Registry: tool.NewRegistry(), WorkspaceRoot: workspace})
 	if err := c.ReloadCommands(context.Background()); err != nil {
 		t.Fatalf("ReloadCommands: %v", err)
@@ -5200,7 +5200,7 @@ func TestReloadCommandsEmptySet(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 
 	wsRoot := t.TempDir()
-	cmdDir := filepath.Join(wsRoot, ".deeper", "commands")
+	cmdDir := filepath.Join(wsRoot, ".deepzora", "commands")
 	writeCmdFile(t, cmdDir, "temp", "Temp cmd", "Temp $1")
 
 	sk := skill.Skill{
@@ -5263,7 +5263,7 @@ func TestReloadCommandsDesktopManagementNotice(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 
 	wsRoot := t.TempDir()
-	cmdDir := filepath.Join(wsRoot, ".deeper", "commands")
+	cmdDir := filepath.Join(wsRoot, ".deepzora", "commands")
 	writeCmdFile(t, cmdDir, "hello", "Greet", "Hello $1")
 	writeCmdFile(t, cmdDir, "review", "Review code", "Review $1")
 

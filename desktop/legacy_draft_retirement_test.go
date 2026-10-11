@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
 )
 
 func corruptRetiredDraftDatabase(t *testing.T) {

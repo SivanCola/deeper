@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // CommitRewindForTab executes prepare (if planID empty) then commit immediately.

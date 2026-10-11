@@ -15,7 +15,7 @@ const env = {
 const identity = releaseIdentity(env);
 
 test("Windows signing finalization works in a fresh checkout for both architectures", t => {
-  const root = mkdtempSync(path.join(tmpdir(), "deeper-signing-checkout-"));
+  const root = mkdtempSync(path.join(tmpdir(), "deepzora-signing-checkout-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const put = (name, content, mode) => {
     const target = path.join(root, name);
@@ -33,7 +33,7 @@ test("Windows signing finalization works in a fresh checkout for both architectu
   put("commands/go", `#!/usr/bin/env bash
 set -euo pipefail
 case "$3" in
-  windows-payload) printf '{}' > "$4/deeper-payload.json" ;;
+  windows-payload) printf '{}' > "$4/deepzora-payload.json" ;;
   sign) shift 3; for file in "$@"; do printf signature > "$file.minisig"; done ;;
   verify) test -s "$4.minisig" ;;
   *) exit 1 ;;
@@ -44,8 +44,8 @@ set -euo pipefail
 test -s project.nsi
 test -s ../icon.ico
 test -d ../../bin
-test -s deeper_project.nsh
-test -s deeper-payload.json.minisig
+test -s deepzora_project.nsh
+test -s deepzora-payload.json.minisig
 test -s app/resources/app.asar
 printf installer > ../../bin/fixture-installer.exe
 `, 0o755);
@@ -62,24 +62,24 @@ printf installer > ../../bin/fixture-installer.exe
     // consume the first architecture's generated installer or payload.
     rmSync(path.join(root, "desktop/build/bin"), { recursive: true, force: true });
     const payload = `payload-${arch}`;
-    for (const name of ["deeper-desktop.exe", "deeper-guard.exe", "deeper-launcher.exe",
-      "deeper-update-helper.exe", "deeper-cli.exe", "deeper-uninstall.exe",
-      "app/Deeper.exe", "app/resources/bin/deeper-cli-launcher.exe",
+    for (const name of ["deepzora-desktop.exe", "deepzora-guard.exe", "deepzora-launcher.exe",
+      "deepzora-update-helper.exe", "deepzora-cli.exe", "deepzora-uninstall.exe",
+      "app/Deepzora.exe", "app/resources/bin/deepzora-cli-launcher.exe",
       "app/resources/app.asar", "app/resources/build.json", "app/resources/app/index.html"]) {
       put(`${payload}/${name}`, `${arch}:${name}`);
     }
-    put(`signing-work-${arch}/desktop/build/windows/installer/deeper_project.nsh`, '!define DEEPER_VERSION_TAG "v1.2.3"\n');
+    put(`signing-work-${arch}/desktop/build/windows/installer/deepzora_project.nsh`, '!define DEEPZORA_VERSION_TAG "v1.2.3"\n');
     run(process.execPath, ["desktop/packaging/signing-files.mjs", payload]);
     run("bash", ["scripts/finalize-windows-signed-candidate.sh", arch, `signing-work-${arch}`,
       payload, `dist-${arch}`, `bundle-${arch}`, "v1.2.3"]);
     assert.equal(readFileSync(path.join(root, "desktop/build/windows/installer/project.nsi"), "utf8"),
       readFileSync(new URL("../desktop/build/windows/installer/project.nsi", import.meta.url), "utf8"));
-    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deeper-windows-${arch}.zip`)).length > 0);
-    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deeper-windows-${arch}-installer.exe.minisig`)).length > 0);
+    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}.zip`)).length > 0);
+    assert.ok(readFileSync(path.join(root, `dist-${arch}/Deepzora-windows-${arch}-installer.exe.minisig`)).length > 0);
   }
 });
 function fixture(t) {
-  const root = mkdtempSync(path.join(tmpdir(), "deeper-signed-handoff-"));
+  const root = mkdtempSync(path.join(tmpdir(), "deepzora-signed-handoff-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const bundles = path.join(root, "bundles");
   mkdirSync(bundles);

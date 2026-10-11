@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 // .NET maps named pipes to these Unix sockets. This also permits exercising

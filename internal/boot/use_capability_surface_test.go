@@ -7,17 +7,17 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestUnifiedSurfaceExposesUseCapabilityForAllRoleSettings(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]
@@ -84,7 +84,7 @@ func TestUseCapabilityCallDispatchesHiddenGrep(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeFile(t, dir, "a.go", "package a\n// needle_token\n")
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]
@@ -140,7 +140,7 @@ func TestUseCapabilitySetsOnlyTheCurrentSessionTitle(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	sessionDir := robustTempDir(t)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

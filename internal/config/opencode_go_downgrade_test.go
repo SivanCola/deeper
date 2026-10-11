@@ -10,11 +10,11 @@ import (
 )
 
 // The ordinary suite skips external checkout work. Release acceptance sets
-// DEEPER_V1382_CHECKOUT to an isolated checkout of the immutable v1.38.2 tag.
+// DEEPZORA_V1382_CHECKOUT to an isolated checkout of the immutable v1.38.2 tag.
 func TestOpenCodeGoV10OldReaderRoundTrip(t *testing.T) {
-	checkout := os.Getenv("DEEPER_V1382_CHECKOUT")
+	checkout := os.Getenv("DEEPZORA_V1382_CHECKOUT")
 	if checkout == "" {
-		t.Skip("set DEEPER_V1382_CHECKOUT for the actual old-reader acceptance gate")
+		t.Skip("set DEEPZORA_V1382_CHECKOUT for the actual old-reader acceptance gate")
 	}
 	var err error
 	checkout, err = filepath.EvalSymlinks(checkout)
@@ -39,11 +39,11 @@ func TestOpenCodeGoV10OldReaderRoundTrip(t *testing.T) {
 	const source = `package config
 import ("os"; "testing")
 func TestV1382OpenCodeRoundTripProbe(t *testing.T) {
- path := os.Getenv("DEEPER_COMPAT_CONFIG")
+ path := os.Getenv("DEEPZORA_COMPAT_CONFIG")
  c := LoadForEdit(path)
  if len(c.Providers) != 5 { t.Fatalf("old reader lost models: %d", len(c.Providers)) }
  p,ok := c.Provider("go"); if !ok { t.Fatal("missing source connection") }; p.DisplayName = "old-reader-edited"
- if os.Getenv("DEEPER_COMPAT_WRITE_V9") == "1" { c.ConfigVersion = 9 }
+ if os.Getenv("DEEPZORA_COMPAT_WRITE_V9") == "1" { c.ConfigVersion = 9 }
  if err := c.SaveToScope(path,RenderScopeFull); err != nil { t.Fatal(err) }
 }`
 	if err := os.WriteFile(probe, []byte(source), 0600); err != nil {
@@ -57,7 +57,7 @@ func TestV1382OpenCodeRoundTripProbe(t *testing.T) {
 	for _, version := range []string{"0", "1"} {
 		cmd := exec.Command("go", "test", "-overlay", overlay, "./internal/config", "-run", "^TestV1382OpenCodeRoundTripProbe$", "-v", "-count=1")
 		cmd.Dir = checkout
-		cmd.Env = append(os.Environ(), "DEEPER_COMPAT_CONFIG="+path, "DEEPER_COMPAT_WRITE_V9="+version)
+		cmd.Env = append(os.Environ(), "DEEPZORA_COMPAT_CONFIG="+path, "DEEPZORA_COMPAT_WRITE_V9="+version)
 		output, err := cmd.CombinedOutput()
 		if err != nil || !strings.Contains(string(output), "--- PASS: TestV1382OpenCodeRoundTripProbe") {
 			t.Fatalf("v1.38.2 reader/save did not pass its probe: %v\n%s", err, output)

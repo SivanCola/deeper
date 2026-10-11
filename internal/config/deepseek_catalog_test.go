@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestDeepSeekCurrentCatalogSurvivesSaveAndReload(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	for _, id := range []string{"deepseek-chat", "deepseek-anthropic", "deepseek-responses"} {
 		t.Run(id, func(t *testing.T) {
 			preset, _ := CuratedProviderPreset(id)
@@ -40,7 +40,7 @@ func TestDeepSeekCuratedCatalogSurvivesRuntimeAndEditLoad(t *testing.T) {
 	for _, models := range []string{`["deepseek-flash"]`, `["deepseek-v4-flash"]`, `["deepseek-v4-flash", "deepseek-v4-pro"]`, `["deepseek-flash", "Custom-Case-ID"]`} {
 		t.Run(models, func(t *testing.T) {
 			home := t.TempDir()
-			t.Setenv("DEEPER_HOME", home)
+			t.Setenv("DEEPZORA_HOME", home)
 			path := filepath.Join(home, "config.toml")
 			raw := "config_version = 10\n[[providers]]\nname = \"deepseek-responses\"\nkind = \"responses\"\nbase_url = \"https://api.deepseek.com\"\nmodels = " + models + "\nvision_models = []\nfuture_field = \"preserve\"\n"
 			if err := os.WriteFile(path, []byte(raw), 0600); err != nil {

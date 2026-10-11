@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/internal/projectiondb"
-	"deeper/internal/textutil"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/textutil"
 )
 
 func ensureHistoryOutlineIndexes(ctx context.Context, db *sql.DB) error {

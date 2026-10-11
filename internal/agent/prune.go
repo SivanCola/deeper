@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // Legacy snip helpers still support compatibility storage. Their public APIs

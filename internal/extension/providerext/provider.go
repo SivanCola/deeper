@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/providerconv"
-	"deeper/internal/provider"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/providerconv"
+	"deepzora/internal/provider"
 )
 
 // Provider is the host-side handle for one extension-hosted provider ref.

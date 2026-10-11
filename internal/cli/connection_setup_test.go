@@ -7,9 +7,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 type connectionSetupTestRunner struct{ calls int }

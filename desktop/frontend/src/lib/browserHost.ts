@@ -1,5 +1,5 @@
 // Renderer view of the shell's browser surface manager. Mirrors the
-// `window.deeperDesktop.browser` preload API (docs/DESKTOP_BROWSER.md).
+// `window.deepzoraDesktop.browser` preload API (docs/DESKTOP_BROWSER.md).
 export type BrowserTabMode = "agent" | "human";
 
 export interface BrowserTabView {

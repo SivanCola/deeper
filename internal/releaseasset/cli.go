@@ -1,6 +1,6 @@
-// Package releaseasset downloads and verifies immutable Deeper CLI release
+// Package releaseasset downloads and verifies immutable Deepzora CLI release
 // artifacts for a requested platform. It is used when a local Desktop or CLI
-// needs to provision the remote `deeper serve` binary without requiring
+// needs to provision the remote `deepzora serve` binary without requiring
 // Node/npm on the remote machine.
 package releaseasset
 
@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	cliReleaseBase       = "https://github.com/SivanCola/deeper/releases/download"
+	cliReleaseBase       = "https://github.com/SivanCola/deepzora/releases/download"
 	maxCLIArchiveBytes   = int64(256 << 20)
 	maxCLIChecksumBytes  = int64(1 << 20)
 	maxExtractedCLIBytes = int64(128 << 20)
@@ -51,7 +51,7 @@ func downloadCLIFromBase(ctx context.Context, client *http.Client, base, version
 	if client == nil {
 		return nil, errors.New("remote CLI download requires an HTTP client")
 	}
-	assetName := fmt.Sprintf("deeper-%s-%s.tar.gz", goos, goarch)
+	assetName := fmt.Sprintf("deepzora-%s-%s.tar.gz", goos, goarch)
 	releaseBase := strings.TrimRight(base, "/") + "/" + url.PathEscape(version) + "/"
 	archiveURL := releaseBase + assetName
 	checksumURL := releaseBase + "SHA256SUMS"
@@ -84,7 +84,7 @@ func fetchBounded(ctx context.Context, client *http.Client, rawURL string, limit
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/octet-stream")
-	req.Header.Set("User-Agent", "deeper-remote-bootstrap")
+	req.Header.Set("User-Agent", "deepzora-remote-bootstrap")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -147,25 +147,25 @@ func extractCLI(archive []byte) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if path.Base(path.Clean(header.Name)) != "deeper" {
+		if path.Base(path.Clean(header.Name)) != "deepzora" {
 			continue
 		}
 		if header.Typeflag != tar.TypeReg || header.Size <= 0 || header.Size > maxExtractedCLIBytes {
-			return nil, errors.New("deeper archive entry is not a bounded regular file")
+			return nil, errors.New("deepzora archive entry is not a bounded regular file")
 		}
 		if binary != nil {
-			return nil, errors.New("deeper archive contains duplicate binaries")
+			return nil, errors.New("deepzora archive contains duplicate binaries")
 		}
 		binary, err = io.ReadAll(io.LimitReader(tr, maxExtractedCLIBytes+1))
 		if err != nil {
 			return nil, err
 		}
 		if int64(len(binary)) != header.Size {
-			return nil, errors.New("deeper archive entry size mismatch")
+			return nil, errors.New("deepzora archive entry size mismatch")
 		}
 	}
 	if len(binary) == 0 {
-		return nil, errors.New("deeper binary not found in archive")
+		return nil, errors.New("deepzora binary not found in archive")
 	}
 	return binary, nil
 }

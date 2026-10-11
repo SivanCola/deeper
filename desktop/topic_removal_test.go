@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/topicstate"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/topicstate"
 )
 
 func topicRemovalFixture(t *testing.T, scope, title string) (*App, TopicMeta, string) {

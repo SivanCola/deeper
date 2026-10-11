@@ -3,7 +3,7 @@ package attachment
 import (
 	"encoding/json"
 
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 )
 
 // CollectJSONRefs extracts attachment objects from any JSON value that may

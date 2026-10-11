@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/sqliteuri"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/sqliteuri"
 )
 
 func TestStopSessionCatalogWaitsForEarlierTimedOutClose(t *testing.T) {

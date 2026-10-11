@@ -6,9 +6,9 @@ import (
 	"io"
 	"net/http"
 
-	"deeper/internal/control"
-	"deeper/internal/servecontract"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/sessioninbox"
 )
 
 type InboxQueueResultView struct {

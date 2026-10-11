@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 // persistMetricsEvent snapshots controller-owned recovery counters after
 // display persistence has acknowledged the final projection.

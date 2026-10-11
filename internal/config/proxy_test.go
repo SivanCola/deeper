@@ -42,9 +42,9 @@ func TestExplicitProxyOverridesProviderNoProxy(t *testing.T) {
 func TestLoadForRootWithoutCredentialsReadOnlyKeepsTheUsersProxy(t *testing.T) {
 	home := t.TempDir()
 	project := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
-	const key = "DEEPER_TEST_EFFECTIVE_PROXY_KEY"
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
+	const key = "DEEPZORA_TEST_EFFECTIVE_PROXY_KEY"
 	t.Setenv(key, "inherited-value")
 
 	if err := os.WriteFile(UserConfigPath(), []byte("[network]\nproxy_mode = \"off\"\n"), 0o600); err != nil {
@@ -53,7 +53,7 @@ func TestLoadForRootWithoutCredentialsReadOnlyKeepsTheUsersProxy(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(project, ".env"), []byte("PROJECT_PROXY_URL=http://127.0.0.1:9876\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 [network]
 proxy_mode = "custom"
 proxy_url = "${PROJECT_PROXY_URL}"

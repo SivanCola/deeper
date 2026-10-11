@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/store"
-	"deeper/internal/tool"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
+	"deepzora/internal/tool"
+	"deepzora/internal/transcript"
 )
 
 func TestTranscriptFollowSupportsLegacyProjection(t *testing.T) {

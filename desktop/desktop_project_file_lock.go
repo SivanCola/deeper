@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	filelock "deeper/internal/identitylock"
+	filelock "deepzora/internal/identitylock"
 )
 
 const desktopProjectsFileLockTimeout = 2 * time.Second

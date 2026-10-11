@@ -33,11 +33,11 @@ func TestHostUpdateHandoffQuitsWithoutSchedulingASecondRestart(t *testing.T) {
 func TestWindowsUpdateWaitsForTheShellInsteadOfItsService(t *testing.T) {
 	original := os.Args
 	t.Cleanup(func() { os.Args = original })
-	os.Args = []string{"deeper-desktop", "--host-rpc"}
+	os.Args = []string{"deepzora-desktop", "--host-rpc"}
 	if got := windowsUpdateOwnerPID(); got != os.Getppid() {
 		t.Fatalf("host PID=%d want %d", got, os.Getppid())
 	}
-	os.Args = []string{"deeper-desktop"}
+	os.Args = []string{"deepzora-desktop"}
 	if got := windowsUpdateOwnerPID(); got != os.Getpid() {
 		t.Fatalf("legacy PID=%d want %d", got, os.Getpid())
 	}

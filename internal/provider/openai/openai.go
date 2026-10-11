@@ -35,8 +35,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
 )
 
 // defaultStreamIdleTimeout caps how long a started SSE stream may go without any
@@ -1042,7 +1042,7 @@ func normaliseUsage(u *wireUsage) *provider.Usage {
 		(u.InputTokens != 0 || u.CacheCreationInputTokens != 0 || u.CacheReadInputTokens != 0)
 	if anthropicPrompt {
 		// Anthropic-style input_tokens excludes both cache reads and cache
-		// writes, while Deeper PromptTokens represents the complete input.
+		// writes, while Deepzora PromptTokens represents the complete input.
 		prompt = u.InputTokens + u.CacheCreationInputTokens + u.CacheReadInputTokens
 	}
 	completion := u.CompletionTokens
@@ -1065,7 +1065,7 @@ func normaliseUsage(u *wireUsage) *provider.Usage {
 	if miss == 0 {
 		switch {
 		case anthropicPrompt:
-			// Cache writes are still uncached input for Deeper pricing and
+			// Cache writes are still uncached input for Deepzora pricing and
 			// cache-ratio accounting.
 			miss = u.InputTokens + u.CacheCreationInputTokens
 		case hit > 0 && prompt > hit:

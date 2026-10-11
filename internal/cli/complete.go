@@ -8,11 +8,11 @@ import (
 	"charm.land/lipgloss/v2"
 	rw "github.com/mattn/go-runewidth"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/i18n"
-	"deeper/internal/plugin"
-	"deeper/internal/skill"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
+	"deepzora/internal/plugin"
+	"deepzora/internal/skill"
 )
 
 // compKind distinguishes the two completion menus.
@@ -26,7 +26,7 @@ const (
 
 // compItem is one menu row: label shown, insert applied on accept, hint dimmed.
 // descend marks a directory entry — accepting it fills the input and re-opens
-// the menu one level deeper instead of closing.
+// the menu one level deepzora instead of closing.
 type compItem struct {
 	label   string
 	insert  string
@@ -500,7 +500,7 @@ func (m *chatTUI) completionSelectedInsertPresent() bool {
 }
 
 // acceptCompletion applies the selected item to the input, then recomputes the
-// menu from the new value: it re-opens one level deeper (a descended directory
+// menu from the new value: it re-opens one level deepzora (a descended directory
 // or a freshly completed command's arguments) or closes when nothing applies.
 // Cursor moves to the end of the inserted token only on accept — ordinary
 // keystrokes never call this path, so mid-line typing keeps its caret.

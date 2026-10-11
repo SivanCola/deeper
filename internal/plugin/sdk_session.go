@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/mcpdiag"
-	"deeper/internal/mcpinteraction"
-	"deeper/internal/tool"
+	"deepzora/internal/mcpdiag"
+	"deepzora/internal/mcpinteraction"
+	"deepzora/internal/tool"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -78,7 +78,7 @@ type sessionBuild struct {
 // sdkSessionTransport is the single connection owner for one configured MCP
 // server. The official SDK owns JSON-RPC correlation, cancellation, protocol
 // negotiation, Streamable HTTP listening, and graceful protocol close.
-// Deeper owns product timeouts, process isolation, security policy, and
+// Deepzora owns product timeouts, process isolation, security policy, and
 // failure-atomic session replacement.
 type sdkSessionTransport struct {
 	name string
@@ -338,7 +338,7 @@ func (t *sdkSessionTransport) build(ctx context.Context, generation uint64) (*ma
 			"mimeTypes": []any{AppsMimeType},
 		})
 	}
-	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "deeper", Version: mcpClientVersion()}, &mcpsdk.ClientOptions{
+	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "deepzora", Version: mcpClientVersion()}, &mcpsdk.ClientOptions{
 		Capabilities:       capabilities,
 		ElicitationHandler: elicitationHandler,
 		ToolListChangedHandler: func(_ context.Context, req *mcpsdk.ToolListChangedRequest) {

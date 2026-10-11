@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/capability"
-	"deeper/internal/config"
-	"deeper/internal/plugin"
+	"deepzora/internal/agent"
+	"deepzora/internal/capability"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
 )
 
 type invokedSkillsKey struct{}

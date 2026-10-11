@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/capability"
-	"deeper/internal/skill"
+	"deepzora/internal/capability"
+	"deepzora/internal/skill"
 )
 
 // capabilityGateState is one user turn's gate memory, scoped to the same turn

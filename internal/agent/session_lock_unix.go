@@ -6,7 +6,7 @@ import (
 	"errors"
 	"os"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 
 	"golang.org/x/sys/unix"
 )

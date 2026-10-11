@@ -1,4 +1,4 @@
-# Deeper 会话存储 v4
+# Deepzora 会话存储 v4
 
 状态：`main` 的唯一生产写入格式。实现位于 `internal/session`，旧格式只作为迁移输入。
 
@@ -19,7 +19,7 @@
 唯一有效的最终 manifest 组合是：
 
 - `schemaVersion: 4`
-- `codec: deeper.session.linear/v4`
+- `codec: deepzora.session.linear/v4`
 - `storageRevision: 1`
 
 缺少 `storageRevision: 1` 的 v4 属于未发布草稿，只允许显式迁移适配器读取。Controller 和客户端使用带主机作用域的 `SessionRef`，业务接口不传路径，也不判断 codec 版本。

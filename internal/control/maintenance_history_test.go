@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontext"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontext"
 )
 
 func TestManualCompactHistoryReportsCompleted(t *testing.T) {

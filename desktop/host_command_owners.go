@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 
-	"deeper/desktop/internal/hostrpc"
+	"deepzora/desktop/internal/hostrpc"
 )
 
 const hostCommandOwnersFile = "host_command_owners.generated.json"

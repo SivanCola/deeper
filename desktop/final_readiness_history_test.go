@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestHistoryMessagesRestorePendingFinalReadinessAction(t *testing.T) {

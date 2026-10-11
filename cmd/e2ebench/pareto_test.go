@@ -8,12 +8,12 @@ import (
 func TestMarkDominatedFindsTheAlarm(t *testing.T) {
 	points := []paretoPoint{
 		{label: "fast-accurate", acc: 90, ttcsMs: 30_000, solved: 9, ran: 10},
-		{label: "deeper", acc: 70, ttcsMs: 100_000, solved: 7, ran: 10},
+		{label: "deepzora", acc: 70, ttcsMs: 100_000, solved: 7, ran: 10},
 		{label: "slow-accurate", acc: 95, ttcsMs: 150_000, solved: 19, ran: 20},
 	}
 	markDominated(points)
 	if points[1].dominatedBy != "fast-accurate" {
-		t.Errorf("deeper dominatedBy = %q, want fast-accurate (more accurate and faster)", points[1].dominatedBy)
+		t.Errorf("deepzora dominatedBy = %q, want fast-accurate (more accurate and faster)", points[1].dominatedBy)
 	}
 	if points[0].dominatedBy != "" || points[2].dominatedBy != "" {
 		t.Errorf("frontier points must not be dominated: %q / %q", points[0].dominatedBy, points[2].dominatedBy)

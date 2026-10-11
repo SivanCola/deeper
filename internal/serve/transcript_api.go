@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/session"
-	"deeper/internal/sessioncontent"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncontent"
+	"deepzora/internal/transcript"
 )
 
 func (s *Server) registerTranscriptRoutes(mux *http.ServeMux) {

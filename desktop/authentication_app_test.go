@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 type desktopAuthenticationRunner struct{ calls atomic.Int32 }

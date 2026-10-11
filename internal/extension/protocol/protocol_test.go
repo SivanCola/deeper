@@ -7,7 +7,7 @@ import (
 )
 
 func TestProtocolConstants(t *testing.T) {
-	if ProtocolID != "deeper.extension.v2" {
+	if ProtocolID != "deepzora.extension.v2" {
 		t.Fatalf("ProtocolID = %q", ProtocolID)
 	}
 	if ProtocolMajor != 2 || ProtocolVersion != "2" {
@@ -25,7 +25,7 @@ func TestCompareProtocolVersion(t *testing.T) {
 		version string
 		reason  ErrorReason
 	}{
-		{"wrong id", "deeper.extension.v1", "2", ErrUnsupportedVersion},
+		{"wrong id", "deepzora.extension.v1", "2", ErrUnsupportedVersion},
 		{"empty id", "", "2", ErrUnsupportedVersion},
 		{"wrong major", ProtocolID, "1", ErrUnsupportedVersion},
 		{"zero major", ProtocolID, "0", ErrUnsupportedVersion},

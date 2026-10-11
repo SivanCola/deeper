@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
 )
 
 func TestCompressOnUnifiedSurfaceForAllRoleSettings(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

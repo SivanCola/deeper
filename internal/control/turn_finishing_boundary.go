@@ -1,6 +1,6 @@
 package control
 
-import "deeper/internal/session"
+import "deepzora/internal/session"
 
 // turnFinishingBoundary exposes exact execution and TurnDone fan-out
 // transitions without making observers poll scheduler-dependent state.

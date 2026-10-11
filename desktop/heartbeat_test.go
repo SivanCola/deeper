@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	fileencoding "deeper/internal/fileutil/encoding"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
-func TestHeartbeatConfigPathUsesDeeperUserStateDir(t *testing.T) {
+func TestHeartbeatConfigPathUsesDeepzoraUserStateDir(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	engine := &HeartbeatEngine{}
 	want := filepath.Join(config.MemoryUserDir(), "heartbeat-tasks.json")

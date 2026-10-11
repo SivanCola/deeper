@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 // A review skill runs on the step budget its runner resolved from the parent;

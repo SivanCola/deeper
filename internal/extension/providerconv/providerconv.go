@@ -11,9 +11,9 @@ package providerconv
 import (
 	"errors"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
-	"deeper/internal/secrets"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
+	"deepzora/internal/secrets"
 )
 
 // MessagesToProtocol copies provider messages into their public wire form,

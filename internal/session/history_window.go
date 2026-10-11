@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"deeper/internal/projectiondb"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/sessioncontent"
 )
 
 // History window reading (capability history-window-v1) pages a bounded

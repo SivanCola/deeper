@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-func LoadInstalled(deeperHome string) ([]InstalledPackage, []string) {
+func LoadInstalled(deepzoraHome string) ([]InstalledPackage, []string) {
 	stateMu.Lock()
 	defer stateMu.Unlock()
-	st, err := LoadState(deeperHome)
+	st, err := LoadState(deepzoraHome)
 	if err != nil {
 		return nil, []string{err.Error()}
 	}
@@ -23,9 +23,9 @@ func LoadInstalled(deeperHome string) ([]InstalledPackage, []string) {
 		if !installed.Enabled {
 			continue
 		}
-		root := ResolveRoot(deeperHome, installed.Root)
+		root := ResolveRoot(deepzoraHome, installed.Root)
 		pkg, pkgWarnings, err := ParseDir(root)
-		if err != nil && strings.Contains(err.Error(), "missing apiVersion") && managedPluginRoot(deeperHome, installed, root) {
+		if err != nil && strings.Contains(err.Error(), "missing apiVersion") && managedPluginRoot(deepzoraHome, installed, root) {
 			legacy, _, migrateErr := ParseNativeForMigrate(root)
 			if migrateErr == nil {
 				var data []byte
@@ -52,7 +52,7 @@ func LoadInstalled(deeperHome string) ([]InstalledPackage, []string) {
 			}
 			remediation := "repair or reinstall the plugin"
 			if strings.Contains(reason, "missing apiVersion") {
-				remediation = fmt.Sprintf("deeper plugin migrate %s --to-v2", installed.Name)
+				remediation = fmt.Sprintf("deepzora plugin migrate %s --to-v2", installed.Name)
 			}
 			warnings = append(warnings, fmt.Sprintf("%s: %s: %v; remediation: %s", installed.Name, PluginStatusDisabledIncompatible, err, remediation))
 			continue
@@ -65,7 +65,7 @@ func LoadInstalled(deeperHome string) ([]InstalledPackage, []string) {
 		out = append(out, InstalledPackage{Installed: installed, Package: pkg, Warnings: pkgWarnings})
 	}
 	if stateChanged {
-		if err := SaveState(deeperHome, st); err != nil {
+		if err := SaveState(deepzoraHome, st); err != nil {
 			warnings = append(warnings, "persist plugin compatibility status: "+err.Error())
 		}
 	}
@@ -73,11 +73,11 @@ func LoadInstalled(deeperHome string) ([]InstalledPackage, []string) {
 	return out, warnings
 }
 
-func managedPluginRoot(deeperHome string, installed InstalledPlugin, root string) bool {
+func managedPluginRoot(deepzoraHome string, installed InstalledPlugin, root string) bool {
 	if filepath.IsAbs(strings.TrimSpace(installed.Root)) {
 		return false
 	}
-	managed := filepath.Clean(PluginsDir(deeperHome))
+	managed := filepath.Clean(PluginsDir(deepzoraHome))
 	rel, err := filepath.Rel(managed, filepath.Clean(root))
 	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return false

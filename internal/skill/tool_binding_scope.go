@@ -3,7 +3,7 @@ package skill
 import (
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // ToolBindingsForSkill applies the same ownership boundary to invocation and

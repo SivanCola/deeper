@@ -94,7 +94,7 @@ func TestLoadCCSwitchLegacyConfig(t *testing.T) {
 	}
 }
 
-func TestLoadCCSwitchLegacyConfigPrefersDeeperFlag(t *testing.T) {
+func TestLoadCCSwitchLegacyConfigPrefersDeepzoraFlag(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.json")
 	body := `{
@@ -105,15 +105,15 @@ func TestLoadCCSwitchLegacyConfigPrefersDeeperFlag(t *testing.T) {
 					"server": {"command": "node", "args": ["legacy.js"]},
 					"apps": {"codex": true}
 				},
-				"deeper-off": {
-					"name": "deeper-off",
+				"deepzora-off": {
+					"name": "deepzora-off",
 					"server": {"command": "node", "args": ["off.js"]},
-					"apps": {"codex": true, "deeper": false}
+					"apps": {"codex": true, "deepzora": false}
 				},
-				"deeper-on": {
-					"name": "deeper-on",
+				"deepzora-on": {
+					"name": "deepzora-on",
 					"server": {"command": "node", "args": ["on.js"]},
-					"apps": {"codex": false, "deeper": true}
+					"apps": {"codex": false, "deepzora": true}
 				}
 			}
 		}
@@ -125,12 +125,12 @@ func TestLoadCCSwitchLegacyConfigPrefersDeeperFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadCCSwitchLegacyConfig: %v", err)
 	}
-	if len(got) != 2 || got[0].Name != "deeper-on" || got[1].Name != "legacy" {
-		t.Fatalf("entries = %+v, want legacy fallback and explicit Deeper enablement", got)
+	if len(got) != 2 || got[0].Name != "deepzora-on" || got[1].Name != "legacy" {
+		t.Fatalf("entries = %+v, want legacy fallback and explicit Deepzora enablement", got)
 	}
 }
 
-func TestLoadCCSwitchMCPDBPrefersDeeperColumn(t *testing.T) {
+func TestLoadCCSwitchMCPDBPrefersDeepzoraColumn(t *testing.T) {
 	if _, err := exec.LookPath("sqlite3"); err != nil {
 		t.Skip("sqlite3 not available")
 	}
@@ -140,10 +140,10 @@ func TestLoadCCSwitchMCPDBPrefersDeeperColumn(t *testing.T) {
 		name TEXT NOT NULL,
 		server_config TEXT NOT NULL,
 		enabled_codex BOOLEAN NOT NULL DEFAULT 0,
-		enabled_deeper BOOLEAN NOT NULL DEFAULT 0
+		enabled_deepzora BOOLEAN NOT NULL DEFAULT 0
 	);
 	INSERT INTO mcp_servers VALUES ('codex-only', 'codex-only', '{"command":"node","args":["codex.js"]}', 1, 0);
-	INSERT INTO mcp_servers VALUES ('deeper-only', 'deeper-only', '{"command":"node","args":["deeper.js"]}', 0, 1);`
+	INSERT INTO mcp_servers VALUES ('deepzora-only', 'deepzora-only', '{"command":"node","args":["deepzora.js"]}', 0, 1);`
 	if out, err := exec.Command("sqlite3", dbPath, setup).CombinedOutput(); err != nil {
 		t.Fatalf("create sqlite db: %v\n%s", err, out)
 	}
@@ -151,12 +151,12 @@ func TestLoadCCSwitchMCPDBPrefersDeeperColumn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadCCSwitchMCPDB: %v", err)
 	}
-	if len(got) != 1 || got[0].Name != "deeper-only" {
-		t.Fatalf("entries = %+v, want only explicit Deeper enablement", got)
+	if len(got) != 1 || got[0].Name != "deepzora-only" {
+		t.Fatalf("entries = %+v, want only explicit Deepzora enablement", got)
 	}
 }
 
-func TestLoadCCSwitchMCPDBFallsBackToCodexWithoutDeeperColumn(t *testing.T) {
+func TestLoadCCSwitchMCPDBFallsBackToCodexWithoutDeepzoraColumn(t *testing.T) {
 	if _, err := exec.LookPath("sqlite3"); err != nil {
 		t.Skip("sqlite3 not available")
 	}

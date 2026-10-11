@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
+	"deepzora/internal/workspacelease"
 )
 
 type workspaceLeaseTestTool struct {

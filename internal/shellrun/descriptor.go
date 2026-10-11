@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"strings"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 // DescriptorFromShell builds a partial ShellExecution from a resolved sandbox

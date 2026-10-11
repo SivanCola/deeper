@@ -1,8 +1,8 @@
 package serve
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func historyWithoutPinnedContextRevisions(messages []provider.Message) []provider.Message {

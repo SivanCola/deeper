@@ -14,15 +14,15 @@ import (
 )
 
 func TestDownloadCLIFromBaseVerifiesAndExtracts(t *testing.T) {
-	binary := []byte("deeper-binary")
+	binary := []byte("deepzora-binary")
 	archive := testCLIArchive(t, binary)
 	digest := sha256.Sum256(archive)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/v1.2.3/deeper-linux-arm64.tar.gz":
+		case "/v1.2.3/deepzora-linux-arm64.tar.gz":
 			_, _ = w.Write(archive)
 		case "/v1.2.3/SHA256SUMS":
-			_, _ = fmt.Fprintf(w, "%s  deeper-linux-arm64.tar.gz\n", hex.EncodeToString(digest[:]))
+			_, _ = fmt.Fprintf(w, "%s  deepzora-linux-arm64.tar.gz\n", hex.EncodeToString(digest[:]))
 		default:
 			http.NotFound(w, r)
 		}
@@ -39,13 +39,13 @@ func TestDownloadCLIFromBaseVerifiesAndExtracts(t *testing.T) {
 }
 
 func TestDownloadCLIFromBaseRejectsChecksumMismatch(t *testing.T) {
-	archive := testCLIArchive(t, []byte("deeper-binary"))
+	archive := testCLIArchive(t, []byte("deepzora-binary"))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1.2.3/deeper-linux-amd64.tar.gz" {
+		if r.URL.Path == "/v1.2.3/deepzora-linux-amd64.tar.gz" {
 			_, _ = w.Write(archive)
 			return
 		}
-		_, _ = fmt.Fprintf(w, "%064d  deeper-linux-amd64.tar.gz\n", 0)
+		_, _ = fmt.Fprintf(w, "%064d  deepzora-linux-amd64.tar.gz\n", 0)
 	}))
 	defer server.Close()
 
@@ -71,7 +71,7 @@ func testCLIArchive(t *testing.T, binary []byte) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
-	if err := tw.WriteHeader(&tar.Header{Name: "deeper", Mode: 0o755, Size: int64(len(binary)), Typeflag: tar.TypeReg}); err != nil {
+	if err := tw.WriteHeader(&tar.Header{Name: "deepzora", Mode: 0o755, Size: int64(len(binary)), Typeflag: tar.TypeReg}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tw.Write(binary); err != nil {

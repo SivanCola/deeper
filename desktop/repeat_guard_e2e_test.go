@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	agenttest "deeper/internal/agent/testutil"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	agenttest "deepzora/internal/agent/testutil"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type desktopCountingTool struct {

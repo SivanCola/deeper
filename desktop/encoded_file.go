@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func readFileUTF8(path string) ([]byte, error) {

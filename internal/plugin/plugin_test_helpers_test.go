@@ -1,6 +1,6 @@
 package plugin
 
-import "deeper/internal/tool"
+import "deepzora/internal/tool"
 
 func findToolByName(tools []tool.Tool, name string) tool.Tool {
 	for _, candidate := range tools {

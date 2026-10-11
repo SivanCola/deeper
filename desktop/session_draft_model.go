@@ -7,9 +7,9 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/internal/config"
-	"deeper/internal/extension/providerext"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/internal/config"
+	"deepzora/internal/extension/providerext"
 )
 
 func draftSubmissionFingerprint(request SessionDraftSubmissionRequest) (string, string, error) {

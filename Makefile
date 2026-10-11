@@ -12,8 +12,8 @@ GOLANGCI_VERSION := $(shell cat .golangci-version)
 .PHONY: build vet fmt lint lint-go lint-install lint-cross lint-update test desktop-test desktop-test-short desktop-test-times sdk-test sdk-test-race hooks cross clean
 
 build:
-	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/deeper$(GOEXE) ./cmd/deeper
-	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/deeper-plugin-example$(GOEXE) ./cmd/deeper-plugin-example
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/deepzora$(GOEXE) ./cmd/deepzora
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/deepzora-plugin-example$(GOEXE) ./cmd/deepzora-plugin-example
 
 vet:
 	go vet ./...
@@ -78,7 +78,7 @@ cross:
 	@for p in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do \
 		os=$${p%/*}; arch=$${p#*/}; ext=; [ $$os = windows ] && ext=.exe; \
 		echo "build $$os/$$arch"; \
-		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o dist/deeper-$$os-$$arch$$ext ./cmd/deeper; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o dist/deepzora-$$os-$$arch$$ext ./cmd/deepzora; \
 	done
 
 clean:

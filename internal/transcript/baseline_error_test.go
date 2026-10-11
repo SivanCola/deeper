@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestBaselineFailureDiagnosticsPreserveCauseWithoutContent(t *testing.T) {

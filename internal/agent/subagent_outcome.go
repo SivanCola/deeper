@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
 )
 
 type SubagentOutcomeStatus string

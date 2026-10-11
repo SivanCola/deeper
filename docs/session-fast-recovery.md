@@ -1,6 +1,6 @@
 # Fast session recovery and independent history
 
-Deeper v4 event frames and ContentStore remain the only authoritative
+Deepzora v4 event frames and ContentStore remain the only authoritative
 session data. Normal open paths use bounded, rebuildable projections and do
 not validate or materialize the complete transcript.
 
@@ -70,7 +70,7 @@ checkpoint is retained for fallback. Full prefix verification is an explicit
 
 # 会话快速恢复与独立历史
 
-Deeper v4 事件帧与 ContentStore 仍是唯一权威的会话数据。普通打开路径使用
+Deepzora v4 事件帧与 ContentStore 仍是唯一权威的会话数据。普通打开路径使用
 有界、可重建的投影，不校验或物化完整会话记录。
 
 ## 持久化投影

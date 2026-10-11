@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRemoteOwnershipRejectsOvertakenReceipts(t *testing.T) {

@@ -17,7 +17,7 @@ import "strings"
 // Tool.DurationMs rides terminal status events, and progress lookup is keyed
 // by Tool.ID (the child task card ID).
 const (
-	SubagentProgressPrefix        = "deeper.subagent."
+	SubagentProgressPrefix        = "deepzora.subagent."
 	SubagentProgressStatusName    = SubagentProgressPrefix + "status"
 	SubagentProgressReasoningName = SubagentProgressPrefix + "reasoning"
 	SubagentProgressTextName      = SubagentProgressPrefix + "text"

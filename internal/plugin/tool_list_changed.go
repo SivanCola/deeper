@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 const (

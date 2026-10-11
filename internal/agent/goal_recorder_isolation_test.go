@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type childIsolationGoalOwner struct{ updates int }

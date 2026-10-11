@@ -3,7 +3,7 @@ package cli
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // An intent has not created a turn or run any submission hook. Its callback

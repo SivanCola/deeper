@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	"deeper/internal/identitylock"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/identitylock"
 )
 
 type historicalImportQueueSidecar struct {

@@ -7,9 +7,9 @@ import (
 	"os"
 	"reflect"
 
-	"deeper/internal/eventwire"
-	"deeper/internal/fileutil"
-	"deeper/internal/store"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/store"
 )
 
 // Checkpoint is the durable display state, separate from provider messages.

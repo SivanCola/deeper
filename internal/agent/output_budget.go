@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/nilutil"
-	"deeper/internal/provider"
+	"deepzora/internal/nilutil"
+	"deepzora/internal/provider"
 )
 
 const (

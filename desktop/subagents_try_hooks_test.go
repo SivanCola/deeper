@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/hook"
-	"deeper/internal/provider"
+	"deepzora/internal/hook"
+	"deepzora/internal/provider"
 )
 
 const tryHookProbeKind = "desktop-try-hook-probe"
@@ -32,7 +32,7 @@ func TestTrySubagentProfileRunsWorkspaceAndUserHooks(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "marker.txt"), []byte("try hook probe"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(`
 default_model = "tryer"
 
 [[providers]]

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
 )
 
 const inboxDispatchTestTimeout = 15 * time.Second

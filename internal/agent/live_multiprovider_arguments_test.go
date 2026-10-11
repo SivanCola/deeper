@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 const liveArgumentLabel = "中文🙂\nsecond line"

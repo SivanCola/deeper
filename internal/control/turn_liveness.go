@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // turnStallThreshold is the silence after which a running turn is reported as

@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/hook"
-	"deeper/internal/session"
+	"deepzora/internal/hook"
+	"deepzora/internal/session"
 )
 
 // TestCloseIsIdempotent guards the desktop tab-lifecycle contract: rebind,

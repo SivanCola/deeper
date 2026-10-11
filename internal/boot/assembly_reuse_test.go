@@ -3,7 +3,7 @@ package boot
 import (
 	"testing"
 
-	"deeper/internal/extension"
+	"deepzora/internal/extension"
 )
 
 func TestShouldReuseDiscoveryKinds(t *testing.T) {

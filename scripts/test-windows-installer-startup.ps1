@@ -3,22 +3,22 @@ param(
   [Parameter(Mandatory=$true)][string]$InstallerPath,
   [Parameter(Mandatory=$true)][string]$ExpectedVersion,
   [string]$FixtureBuilderPath = '',
-  [string]$EvidenceDirectory = (Join-Path $env:TEMP ('deeper-installer-' + [guid]::NewGuid().ToString('N'))),
+  [string]$EvidenceDirectory = (Join-Path $env:TEMP ('deepzora-installer-' + [guid]::NewGuid().ToString('N'))),
   [switch]$DisposableEnvironment
 )
 
 . (Join-Path $PSScriptRoot 'windows-acceptance-environment.ps1')
 
-function Get-DefaultDeeperDataHome {
-  return (Join-Path $env:APPDATA 'deeper')
+function Get-DefaultDeepzoraDataHome {
+  return (Join-Path $env:APPDATA 'deepzora')
 }
 
 function Get-InstallerIntegrationPaths {
-  (Join-Path ([Environment]::GetFolderPath('DesktopDirectory', 'DoNotVerify')) 'Deeper.lnk')
-  (Join-Path ([Environment]::GetFolderPath('Programs', 'DoNotVerify')) 'Deeper.lnk')
+  (Join-Path ([Environment]::GetFolderPath('DesktopDirectory', 'DoNotVerify')) 'Deepzora.lnk')
+  (Join-Path ([Environment]::GetFolderPath('Programs', 'DoNotVerify')) 'Deepzora.lnk')
   foreach ($hive in @('HKCU:', 'HKLM:')) {
     foreach ($software in @('Software', 'Software\WOW6432Node')) {
-      foreach ($product in @('DeeperDeeper', 'Deeper')) {
+      foreach ($product in @('DeepzoraDeepzora', 'Deepzora')) {
         "$hive\$software\Microsoft\Windows\CurrentVersion\Uninstall\$product"
       }
     }
@@ -36,21 +36,21 @@ function Assert-InstallerTestAccount {
   # /D isolates payload files only. NSIS still owns account-wide registration,
   # shortcuts and legacy WebView data, including during uninstall.
   $protectedPaths = @(Get-InstallerIntegrationPaths) + @(
-    (Join-Path $env:LOCALAPPDATA 'Programs\Deeper'),
-    (Join-Path $env:APPDATA 'deeper-desktop.exe'),
-    (Get-DefaultDeeperDataHome)
+    (Join-Path $env:LOCALAPPDATA 'Programs\Deepzora'),
+    (Join-Path $env:APPDATA 'deepzora-desktop.exe'),
+    (Get-DefaultDeepzoraDataHome)
   )
   foreach ($path in $protectedPaths) {
     if (Test-Path -LiteralPath $path) {
-      throw 'Existing Deeper installation, shortcut or legacy data detected; use a clean disposable Windows account.'
+      throw 'Existing Deepzora installation, shortcut or legacy data detected; use a clean disposable Windows account.'
     }
   }
-  if (@(Get-Process -Name Deeper,deeper-desktop,deeper-launcher -ErrorAction SilentlyContinue).Count -ne 0) {
-    throw 'Deeper is running; use a clean disposable Windows account.'
+  if (@(Get-Process -Name Deepzora,deepzora-desktop,deepzora-launcher -ErrorAction SilentlyContinue).Count -ne 0) {
+    throw 'Deepzora is running; use a clean disposable Windows account.'
   }
 }
 
-function Install-Deeper {
+function Install-Deepzora {
   param([string]$Installer, [string]$InstallRoot)
   $process = Start-Process -FilePath $Installer -ArgumentList @('/S', "/D=$InstallRoot") -PassThru -Wait
   if ($process.ExitCode -ne 0) { throw "Installer failed with exit code $($process.ExitCode)" }
@@ -73,7 +73,7 @@ function Assert-InstalledIdentity {
   if ($build.version -ne $ExpectedVersion) {
     throw "Packaged shell identity does not match installed identity: build.json=$($build.version), current.json=$($current.activeVersion)"
   }
-  $registration = Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeeperDeeper'
+  $registration = Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepzoraDeepzora'
   if ($registration.DisplayVersion -ne $ExpectedVersion.Substring(1) -or $registration.InstallLocation -ne $InstallRoot) {
     throw 'Uninstall registration does not match the tested version and installation.'
   }
@@ -89,8 +89,8 @@ function Assert-UninstalledState {
   param([string]$InstallRoot, [hashtable]$DataSnapshot)
   # The activation lock or user-owned files may legitimately keep the root
   # directory nonempty. Every program entry and version payload must be gone.
-  foreach ($name in @('versions', 'app', 'current.json', 'Deeper.exe', 'deeper-launcher.exe',
-      'deeper-desktop.exe', 'deeper-cli.exe', 'deeper-update-helper.exe', 'deeper-guard.exe', 'uninstall.exe')) {
+  foreach ($name in @('versions', 'app', 'current.json', 'Deepzora.exe', 'deepzora-launcher.exe',
+      'deepzora-desktop.exe', 'deepzora-cli.exe', 'deepzora-update-helper.exe', 'deepzora-guard.exe', 'uninstall.exe')) {
     if (Test-Path -LiteralPath (Join-Path $InstallRoot $name)) {
       throw "Uninstall left program files: $name"
     }
@@ -98,8 +98,8 @@ function Assert-UninstalledState {
   foreach ($path in Get-InstallerIntegrationPaths) {
     if (Test-Path -LiteralPath $path) { throw 'Uninstall left a shortcut or registration.' }
   }
-  if (@(Get-Process -Name Deeper,deeper-desktop,deeper-launcher -ErrorAction SilentlyContinue).Count -ne 0) {
-    throw 'Uninstall left Deeper processes running.'
+  if (@(Get-Process -Name Deepzora,deepzora-desktop,deepzora-launcher -ErrorAction SilentlyContinue).Count -ne 0) {
+    throw 'Uninstall left Deepzora processes running.'
   }
   foreach ($path in $DataSnapshot.Keys) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
@@ -113,7 +113,7 @@ function Invoke-WindowsInstallerAcceptance {
   param([string]$InstallerPath, [string]$ExpectedVersion, [string]$FixtureBuilderPath, [string]$EvidenceDirectory, [switch]$DisposableEnvironment)
   $ErrorActionPreference = 'Stop'
   if ($ExpectedVersion -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$') {
-    throw "ExpectedVersion is not a canonical Deeper version: $ExpectedVersion"
+    throw "ExpectedVersion is not a canonical Deepzora version: $ExpectedVersion"
   }
   # Reject before creating fixtures or launching any installer, even with the
   # explicit disposable-environment flag. Never back up/overwrite a real install.
@@ -132,12 +132,12 @@ function Invoke-WindowsInstallerAcceptance {
     # Include the default user-data location: NSIS may use $APPDATA directly
     # even while the app uses an explicit isolated home. Preflight above refuses
     # existing default data; this sentinel belongs only to the disposable account.
-    $defaultHome = Get-DefaultDeeperDataHome
+    $defaultHome = Get-DefaultDeepzoraDataHome
     New-Item -ItemType Directory -Path $defaultHome | Out-Null
     $defaultSentinel = Join-Path $defaultHome 'acceptance-retention.txt'
     [IO.File]::WriteAllText($defaultSentinel, [guid]::NewGuid().ToString('N'))
     $defaultHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $defaultSentinel).Hash
-    Install-Deeper -Installer $installer -InstallRoot $install
+    Install-Deepzora -Installer $installer -InstallRoot $install
     $identity = Assert-InstalledIdentity -InstallRoot $install -ExpectedVersion $ExpectedVersion
     Invoke-InstalledRuntimeAcceptance -InstallRoot $install -ExpectedVersion $ExpectedVersion -ArtifactPath $installer `
       -EvidenceDirectory (Join-Path $EvidenceDirectory 'fresh-install')
@@ -154,7 +154,7 @@ function Invoke-WindowsInstallerAcceptance {
         activeDir = "versions/$truncatedVersion"
       } | ConvertTo-Json
       [IO.File]::WriteAllText((Join-Path $install 'current.json'), $pointer, [Text.UTF8Encoding]::new($false))
-      Install-Deeper -Installer $installer -InstallRoot $install
+      Install-Deepzora -Installer $installer -InstallRoot $install
       $identity = Assert-InstalledIdentity -InstallRoot $install -ExpectedVersion $ExpectedVersion
       Invoke-InstalledRuntimeAcceptance -InstallRoot $install -ExpectedVersion $ExpectedVersion -ArtifactPath $installer `
         -EvidenceDirectory (Join-Path $EvidenceDirectory 'repaired-install')
@@ -164,7 +164,7 @@ function Invoke-WindowsInstallerAcceptance {
     $oldDataUpgrade = 'not requested'
     if ($FixtureBuilderPath) {
       & (Join-Path $PSScriptRoot 'test-windows-upgrade-startup.ps1') `
-        -ApplicationPath (Join-Path $install 'Deeper.exe') -FixtureBuilderPath $FixtureBuilderPath `
+        -ApplicationPath (Join-Path $install 'Deepzora.exe') -FixtureBuilderPath $FixtureBuilderPath `
         -ExpectedVersion $ExpectedVersion -EvidenceDirectory (Join-Path $EvidenceDirectory 'old-data-upgrade')
       if ($LASTEXITCODE -ne 0) { throw "Old-data upgrade acceptance failed with exit code $LASTEXITCODE" }
       $oldDataUpgrade = 'passed'
@@ -173,7 +173,7 @@ function Invoke-WindowsInstallerAcceptance {
     # Failure preserves the fixture/logs for diagnosis. Uninstall only after
     # every tested instance exited normally, never while a failed shell lives.
     $dataSnapshot = @{ $defaultSentinel = $defaultHash }
-    $homes = @($env:DEEPER_HOME, (Join-Path $EvidenceDirectory 'fresh-install\home'))
+    $homes = @($env:DEEPZORA_HOME, (Join-Path $EvidenceDirectory 'fresh-install\home'))
     if ($repair -eq 'passed') { $homes += (Join-Path $EvidenceDirectory 'repaired-install\home') }
     if ($oldDataUpgrade -eq 'passed') { $homes += (Join-Path $EvidenceDirectory 'old-data-upgrade\home # %20 中文') }
     foreach ($homePath in $homes) {

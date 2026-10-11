@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"deeper/internal/mcplaunch"
+	"deepzora/internal/mcplaunch"
 )
 
 // PluginSpecOptions carries host runtime policy into plugin specifications.

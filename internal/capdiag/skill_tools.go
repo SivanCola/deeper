@@ -1,10 +1,10 @@
 package capdiag
 
 import (
-	"deeper/internal/config"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
-	_ "deeper/internal/tool/builtin" // Initialize compile-time tool identities.
+	"deepzora/internal/config"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
+	_ "deepzora/internal/tool/builtin" // Initialize compile-time tool identities.
 )
 
 func skillToolIssues(store *skill.Store, cfg *config.Config, mcp MCPReport, sanitize func(string) string) []Issue {

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 // Constraints are explicit user or host limits. They never encode task

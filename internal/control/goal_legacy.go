@@ -3,7 +3,7 @@ package control
 import (
 	"strings"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 type legacyGoalRestore struct {

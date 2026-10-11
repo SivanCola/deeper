@@ -10,12 +10,12 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/permission"
-	"deeper/internal/permissionpreset"
+	"deepzora/internal/permission"
+	"deepzora/internal/permissionpreset"
 )
 
 // heldScope is what the user granted, held across the project merge. A
-// project deeper.toml arrives with a checkout, so it is untrusted input: it
+// project deepzora.toml arrives with a checkout, so it is untrusted input: it
 // may narrow these grants and never widen them. The slices are copies because
 // decoding the project file writes into the arrays the user's decode left.
 type heldScope struct {
@@ -77,7 +77,7 @@ var ignoredProjectReasonText = map[IgnoredProjectReason]string{
 	ProjectWidensUser:          "a project file may only narrow this setting; set it in your user config to change it",
 	ProjectOutsideWorkspace:    "the path resolves outside this workspace",
 	ProjectUserOnly:            "only your user config sets this",
-	ProjectAwaitingApproval:    "it runs only after you approve it; run `deeper trust` in this workspace",
+	ProjectAwaitingApproval:    "it runs only after you approve it; run `deepzora trust` in this workspace",
 	ProjectApprovalUnavailable: "the approval record could not be read, so it stays off",
 	ProjectProgramWritable:     "it names a file in this workspace or another place sandboxed commands can write; point it at an installed program",
 }
@@ -117,7 +117,7 @@ func (c *Config) ignoreProject(key, value string, reason IgnoredProjectReason) {
 func (h heldScope) narrow(c *Config, root string) {
 	ws := workspaceDir(root)
 	// A checkout can only reuse authority held by the user, not create it.
-	grants := NewProjectGrantStore(deeperHomeDir())
+	grants := NewProjectGrantStore(deepzoraHomeDir())
 	grant, err := grants.Grant(ws)
 	if err != nil {
 		c.addLoadWarning(fmt.Sprintf("project grants %s could not be read (%v); access may require approval", grants.Path(), err))
@@ -144,7 +144,7 @@ func (h heldScope) narrow(c *Config, root string) {
 		c.ignoreProject("bot", "", ProjectUserOnly)
 	}
 	c.Bot = h.bot
-	home := deeperHomeDir()
+	home := deepzoraHomeDir()
 	store := NewProjectProgramStore(home)
 	h.gatePrograms(c, store, ws)
 	h.endpoints.gateEndpoints(c, store, ws)

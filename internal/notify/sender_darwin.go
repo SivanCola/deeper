@@ -3,7 +3,7 @@
 package notify
 
 import (
-	"deeper/internal/secrets"
+	"deepzora/internal/secrets"
 	"os/exec"
 	"strings"
 )

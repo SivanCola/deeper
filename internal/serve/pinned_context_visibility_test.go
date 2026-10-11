@@ -3,7 +3,7 @@ package serve
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestHistoryMessagesHidePinnedContextRevisions(t *testing.T) {

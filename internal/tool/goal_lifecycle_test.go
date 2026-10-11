@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/goal"
+	"deepzora/internal/goal"
 )
 
 type lifecycleOwnerStub struct{}

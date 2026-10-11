@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"deeper/internal/control"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
 )
 
 // cliFailure reports err on stderr and yields the process exit code, so a

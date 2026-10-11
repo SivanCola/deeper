@@ -11,7 +11,7 @@ import (
 // ModelProxyOriginalURLHeader is private to the authenticated loopback hop.
 // The desktop validates it against the route's frozen provider origins and
 // strips it before sending the model request upstream.
-const ModelProxyOriginalURLHeader = "X-Deeper-Model-Proxy-URL"
+const ModelProxyOriginalURLHeader = "X-Deepzora-Model-Proxy-URL"
 
 type modelCredentialProxyTransport struct {
 	base     *http.Transport

@@ -16,7 +16,7 @@ asset_dir="${5%/}"
 repository="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 directory_verifier="$script_dir/verify-desktop-release-directory.sh"
-title="Deeper Desktop $version"
+title="Deepzora Desktop $version"
 
 case "$prerelease" in
 true | false) ;;
@@ -45,7 +45,7 @@ fi
 work_dir="$(mktemp -d)"
 cleanup() {
 	case "$work_dir" in
-	*/tmp.* | */deeper-desktop-release.*) rm -rf -- "$work_dir" ;;
+	*/tmp.* | */deepzora-desktop-release.*) rm -rf -- "$work_dir" ;;
 	*) echo "refusing to clean unexpected Desktop release temp directory: $work_dir" >&2 ;;
 	esac
 }

@@ -3,7 +3,7 @@ package anthropic
 import (
 	"encoding/json"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func (c *client) replayMessages(messages []provider.Message) []provider.Message {

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/tool"
 )
 
 func prepareRunningSubagent(t *testing.T, sessionDir string) string {

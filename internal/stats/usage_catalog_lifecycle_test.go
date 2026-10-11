@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/usagecatalog"
+	"deepzora/internal/usagecatalog"
 )
 
 func TestUsageManagerCloseFencesOpenAndAllowsRestart(t *testing.T) {

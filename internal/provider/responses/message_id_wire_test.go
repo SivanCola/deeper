@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // Message ids are local transcript identity. Both the request body and the

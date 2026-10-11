@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // Platform errnos for the blocked-file classes. Windows values follow the

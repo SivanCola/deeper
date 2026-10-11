@@ -1,9 +1,9 @@
 package session
 
 import (
-	"deeper/internal/sessioncontent"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/store"
+	"deepzora/internal/sessioncontent"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/store"
 )
 
 func collectInboxContentRefs(sessionDir string) []sessioncontent.Ref {

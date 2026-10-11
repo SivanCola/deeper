@@ -15,7 +15,7 @@ test("update publication rejects upstream assets and mismatched signatures", () 
   const make = () => ({
     version: "v1.2.3", download_page: `https://github.com/${repository}/releases`,
     platforms: Object.fromEntries(["darwin-arm64", "darwin-amd64", "linux-amd64", "windows-amd64", "windows-arm64"].map(platform => {
-      const url = `https://github.com/${repository}/releases/download/desktop-v1.2.3/Deeper-${platform}.zip`;
+      const url = `https://github.com/${repository}/releases/download/desktop-v1.2.3/Deepzora-${platform}.zip`;
       return [platform, { url, sig: `${url}.minisig`, size: 100, sha256: "a".repeat(64) }];
     })),
   });
@@ -32,7 +32,7 @@ test("update publication rejects upstream assets and mismatched signatures", () 
 test("CLI pointer remains immutable across downloads and later release records", () => {
   const release = { tag_name: "v1.2.3", prerelease: false, assets:
     ["SHA256SUMS", ...["darwin-amd64", "darwin-arm64", "linux-amd64", "linux-arm64", "windows-amd64", "windows-arm64"]
-      .map(target => `deeper-${target}.${target.startsWith("windows") ? "zip" : "tar.gz"}`)]
+      .map(target => `deepzora-${target}.${target.startsWith("windows") ? "zip" : "tar.gz"}`)]
       .map(name => ({ name, size: 100, download_count: 0,
         browser_download_url: `https://github.com/${repository}/releases/download/v1.2.3/${name}` })) };
   const before = cliPointer(release, "1.2.3");

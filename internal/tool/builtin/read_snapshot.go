@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/fileops"
-	"deeper/internal/tool"
+	"deepzora/internal/fileops"
+	"deepzora/internal/tool"
 )
 
 // Full/range reads may capture a bounded source for version-safe paging. A

@@ -16,13 +16,13 @@ func isolateUserConfigHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	for _, key := range []string{"DEEPER_HOME", "DEEPER_STATE_HOME", "DEEPER_CACHE_HOME"} {
+	for _, key := range []string{"DEEPZORA_HOME", "DEEPZORA_STATE_HOME", "DEEPZORA_CACHE_HOME"} {
 		t.Setenv(key, "")
 		if err := os.Unsetenv(key); err != nil {
 			t.Fatalf("unset %s: %v", key, err)
 		}
 	}
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("AppData", filepath.Join(home, "AppData", "Roaming"))
@@ -34,17 +34,17 @@ func isolateUserConfigHome(t *testing.T) string {
 // would otherwise race on the shared global.
 func setRuntimeGOOS(t *testing.T, goos string) {
 	t.Helper()
-	t.Setenv("DEEPER_TEST_GOOS", goos)
+	t.Setenv("DEEPZORA_TEST_GOOS", goos)
 	old := runtimeGOOS
 	runtimeGOOS = goos
 	t.Cleanup(func() { runtimeGOOS = old })
 }
 
-func expectedDefaultDeeperHome(home string) string {
+func expectedDefaultDeepzoraHome(home string) string {
 	if runtime.GOOS == "windows" {
-		return filepath.Join(home, "AppData", "Roaming", "deeper")
+		return filepath.Join(home, "AppData", "Roaming", "deepzora")
 	}
-	return filepath.Join(home, ".deeper")
+	return filepath.Join(home, ".deepzora")
 }
 
 func TestUserConfigDisplayPathCollapsesHome(t *testing.T) {
@@ -53,33 +53,33 @@ func TestUserConfigDisplayPathCollapsesHome(t *testing.T) {
 	if !strings.HasPrefix(got, "~/") {
 		t.Fatalf("display path = %q, want ~/ prefix", got)
 	}
-	if !strings.HasSuffix(got, "deeper/config.toml") {
-		t.Fatalf("display path = %q, want deeper/config.toml suffix", got)
+	if !strings.HasSuffix(got, "deepzora/config.toml") {
+		t.Fatalf("display path = %q, want deepzora/config.toml suffix", got)
 	}
 	if strings.Contains(got, home) {
 		t.Fatalf("display path %q must not embed the absolute home", got)
 	}
 }
 
-func TestUserConfigPathUsesDeeperHome(t *testing.T) {
+func TestUserConfigPathUsesDeepzoraHome(t *testing.T) {
 	home := isolateUserConfigHome(t)
-	want := filepath.Join(expectedDefaultDeeperHome(home), "config.toml")
+	want := filepath.Join(expectedDefaultDeepzoraHome(home), "config.toml")
 	if got := UserConfigPath(); filepath.Clean(got) != filepath.Clean(want) {
 		t.Fatalf("UserConfigPath() = %q, want %q", got, want)
 	}
 }
 
-func TestDeeperManagedConfigPathsAreConfigFilesOnly(t *testing.T) {
+func TestDeepzoraManagedConfigPathsAreConfigFilesOnly(t *testing.T) {
 	home := isolateUserConfigHome(t)
 	setRuntimeGOOS(t, "windows")
 	oldConfigDir := osUserConfigDir
 	osUserConfigDir = func() string { return filepath.Join(home, "AppData", "Roaming") }
 	t.Cleanup(func() { osUserConfigDir = oldConfigDir })
 
-	paths := DeeperManagedConfigPaths()
+	paths := DeepzoraManagedConfigPaths()
 	for _, want := range []string{
-		filepath.Join(home, "AppData", "Roaming", "deeper", "config.toml"),
-		filepath.Join(home, ".deeper", "config.json"),
+		filepath.Join(home, "AppData", "Roaming", "deepzora", "config.toml"),
+		filepath.Join(home, ".deepzora", "config.json"),
 	} {
 		found := false
 		for _, got := range paths {
@@ -93,7 +93,7 @@ func TestDeeperManagedConfigPathsAreConfigFilesOnly(t *testing.T) {
 		}
 	}
 	// The escape hatch is file-level by contract: no directories, and none of
-	// the sensitive Deeper-home siblings (credentials, hooks, skills,
+	// the sensitive Deepzora-home siblings (credentials, hooks, skills,
 	// sessions) may ride along.
 	for _, got := range paths {
 		if base := filepath.Base(got); base != "config.toml" && base != "config.json" {
@@ -101,11 +101,11 @@ func TestDeeperManagedConfigPathsAreConfigFilesOnly(t *testing.T) {
 		}
 		for _, forbidden := range []string{
 			home,
-			DeeperHomeDir(),
+			DeepzoraHomeDir(),
 			UserCredentialsPath(),
-			filepath.Join(DeeperHomeDir(), "settings.json"),
-			filepath.Join(DeeperHomeDir(), "skills"),
-			filepath.Join(DeeperHomeDir(), "sessions"),
+			filepath.Join(DeepzoraHomeDir(), "settings.json"),
+			filepath.Join(DeepzoraHomeDir(), "skills"),
+			filepath.Join(DeepzoraHomeDir(), "sessions"),
 		} {
 			if samePath(got, forbidden) {
 				t.Fatalf("managed config paths must not include %q: %v", forbidden, paths)
@@ -114,10 +114,10 @@ func TestDeeperManagedConfigPathsAreConfigFilesOnly(t *testing.T) {
 	}
 }
 
-func TestUserConfigPathHonorsDeeperHome(t *testing.T) {
+func TestUserConfigPathHonorsDeepzoraHome(t *testing.T) {
 	home := isolateUserConfigHome(t)
 	custom := filepath.Join(home, "custom-home")
-	t.Setenv("DEEPER_HOME", custom)
+	t.Setenv("DEEPZORA_HOME", custom)
 
 	want := filepath.Join(custom, "config.toml")
 	if got := UserConfigPath(); filepath.Clean(got) != filepath.Clean(want) {
@@ -141,9 +141,9 @@ func TestLoadForRootUsesWindowsHomeFallbackWhenConfigDirUnavailable(t *testing.T
 		osUserHomeDir = oldHomeDir
 	})
 
-	t.Setenv("DEEPER_HOME", "")
+	t.Setenv("DEEPZORA_HOME", "")
 
-	configPath := filepath.Join(home, "AppData", "Roaming", "deeper", "config.toml")
+	configPath := filepath.Join(home, "AppData", "Roaming", "deepzora", "config.toml")
 	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestRenderTOMLRoundTrips(t *testing.T) {
 			Server:   "127.0.0.1",
 			Port:     7890,
 			Username: "user",
-			Password: "${DEEPER_PROXY_PASSWORD}",
+			Password: "${DEEPZORA_PROXY_PASSWORD}",
 		},
 	}
 	orig.Environment.Enabled = boolPtr(false)
@@ -254,14 +254,14 @@ func TestRenderTOMLRoundTrips(t *testing.T) {
 	orig.Skills.MaxDepth = 2
 	orig.Bot.ToolApprovalMode = "auto"
 	orig.Bot.Control = BotControlConfig{Enabled: true, Addr: "127.0.0.1:39001", TokenEnv: "BOT_CONTROL_TOKEN"}
-	orig.Bot.Feishu.OutboundMediaRoots = []string{"/tmp/deeper-media", "/srv/shots"}
+	orig.Bot.Feishu.OutboundMediaRoots = []string{"/tmp/deepzora-media", "/srv/shots"}
 	orig.Bot.Routes = []BotRouteConfig{{
 		ConnectionID:     "feishu-lark",
 		ChatType:         "group",
 		ChatID:           "oc_group",
 		Model:            "deepseek-pro",
 		ToolApprovalMode: "ask",
-		WorkspaceRoot:    "/tmp/deeper-route",
+		WorkspaceRoot:    "/tmp/deepzora-route",
 	}}
 	orig.Bot.DesktopWatchers = []BotDesktopWatcherConfig{{
 		Platform:     "feishu",
@@ -279,13 +279,13 @@ func TestRenderTOMLRoundTrips(t *testing.T) {
 		Status:           "connected",
 		Model:            "deepseek-pro",
 		ToolApprovalMode: "yolo",
-		WorkspaceRoot:    "/tmp/deeper-bot",
+		WorkspaceRoot:    "/tmp/deepzora-bot",
 		Credential:       BotConnectionCredential{AppID: "cli_lark", AppSecretEnv: "LARK_BOT_APP_SECRET"},
 		SessionMappings: []BotConnectionSessionMapping{{
 			RemoteID:      "ou_123",
 			SessionID:     "topic:topic_bot",
 			Scope:         "project",
-			WorkspaceRoot: "/tmp/deeper-bot",
+			WorkspaceRoot: "/tmp/deepzora-bot",
 			UpdatedAt:     "2026-06-11T00:00:00Z",
 		}},
 	}}
@@ -303,7 +303,7 @@ func TestRenderTOMLRoundTrips(t *testing.T) {
 		},
 	}
 	orig.Plugins = []PluginEntry{
-		{Name: "example", Command: "deeper-plugin-example"},
+		{Name: "example", Command: "deepzora-plugin-example"},
 		{Name: "stripe", Type: "http", URL: "https://mcp.stripe.com", Headers: map[string]string{"Authorization": "Bearer x"}, AutoStart: boolPtr(false), Tier: "background"},
 	}
 	mm, _ := orig.Provider("mimo-pro")
@@ -396,7 +396,7 @@ func TestRenderTOMLRoundTrips(t *testing.T) {
 	if got.Agent.PlannerMaxSteps != orig.Agent.PlannerMaxSteps {
 		t.Errorf("planner_max_steps = %d, want %d", got.Agent.PlannerMaxSteps, orig.Agent.PlannerMaxSteps)
 	}
-	if len(got.Bot.Connections) != 1 || got.Bot.Connections[0].Model != "deepseek-pro" || got.Bot.Connections[0].WorkspaceRoot != "/tmp/deeper-bot" {
+	if len(got.Bot.Connections) != 1 || got.Bot.Connections[0].Model != "deepseek-pro" || got.Bot.Connections[0].WorkspaceRoot != "/tmp/deepzora-bot" {
 		t.Errorf("bot connection not preserved: %+v", got.Bot.Connections)
 	}
 	if got.Bot.ToolApprovalMode != "workspace-write" || got.Bot.Connections[0].ToolApprovalMode != "workspace-write" {
@@ -405,16 +405,16 @@ func TestRenderTOMLRoundTrips(t *testing.T) {
 	if !got.Bot.Control.Enabled || got.Bot.Control.Addr != "127.0.0.1:39001" || got.Bot.Control.TokenEnv != "BOT_CONTROL_TOKEN" {
 		t.Errorf("bot control not preserved: %+v", got.Bot.Control)
 	}
-	if len(got.Bot.Feishu.OutboundMediaRoots) != 2 || got.Bot.Feishu.OutboundMediaRoots[0] != "/tmp/deeper-media" {
+	if len(got.Bot.Feishu.OutboundMediaRoots) != 2 || got.Bot.Feishu.OutboundMediaRoots[0] != "/tmp/deepzora-media" {
 		t.Errorf("feishu outbound_media_roots not preserved: %+v", got.Bot.Feishu.OutboundMediaRoots)
 	}
-	if len(got.Bot.Routes) != 1 || got.Bot.Routes[0].WorkspaceRoot != "/tmp/deeper-route" || got.Bot.Routes[0].ChatID != "oc_group" {
+	if len(got.Bot.Routes) != 1 || got.Bot.Routes[0].WorkspaceRoot != "/tmp/deepzora-route" || got.Bot.Routes[0].ChatID != "oc_group" {
 		t.Errorf("bot routes not preserved: %+v", got.Bot.Routes)
 	}
 	if len(got.Bot.DesktopWatchers) != 1 || got.Bot.DesktopWatchers[0].ChatID != "oc_watcher" || got.Bot.DesktopWatchers[0].Platform != "feishu" || got.Bot.DesktopWatchers[0].Domain != "lark" {
 		t.Errorf("bot desktop watchers not preserved: %+v", got.Bot.DesktopWatchers)
 	}
-	if len(got.Bot.Connections[0].SessionMappings) != 1 || got.Bot.Connections[0].SessionMappings[0].Scope != "project" || got.Bot.Connections[0].SessionMappings[0].WorkspaceRoot != "/tmp/deeper-bot" {
+	if len(got.Bot.Connections[0].SessionMappings) != 1 || got.Bot.Connections[0].SessionMappings[0].Scope != "project" || got.Bot.Connections[0].SessionMappings[0].WorkspaceRoot != "/tmp/deepzora-bot" {
 		t.Errorf("bot session mapping scope not preserved: %+v", got.Bot.Connections[0].SessionMappings)
 	}
 	if got.Agent.Temperature != orig.Agent.Temperature {
@@ -1030,7 +1030,7 @@ func TestRenderTOMLRoundTripsProviderHeadersAndModelOverrides(t *testing.T) {
 		APIKeyEnv: "GATEWAY_API_KEY",
 		Headers: map[string]string{
 			"HTTP-Referer": "https://app.example",
-			"X-Title":      "Deeper",
+			"X-Title":      "Deepzora",
 		},
 		ExtraBody: map[string]any{
 			"enable_thinking": true,
@@ -1054,7 +1054,7 @@ func TestRenderTOMLRoundTripsProviderHeadersAndModelOverrides(t *testing.T) {
 	}}
 
 	rendered := RenderTOML(orig)
-	if !strings.Contains(rendered, `headers     = { HTTP-Referer = "https://app.example", X-Title = "Deeper" }`) {
+	if !strings.Contains(rendered, `headers     = { HTTP-Referer = "https://app.example", X-Title = "Deepzora" }`) {
 		t.Fatalf("rendered TOML missing headers:\n%s", rendered)
 	}
 	if !strings.Contains(rendered, `extra_body`) || !strings.Contains(rendered, `"enable_thinking" = true`) {
@@ -1075,7 +1075,7 @@ func TestRenderTOMLRoundTripsProviderHeadersAndModelOverrides(t *testing.T) {
 	if !ok {
 		t.Fatal("gateway provider missing after round trip")
 	}
-	if p.Headers["HTTP-Referer"] != "https://app.example" || p.Headers["X-Title"] != "Deeper" {
+	if p.Headers["HTTP-Referer"] != "https://app.example" || p.Headers["X-Title"] != "Deepzora" {
 		t.Fatalf("headers after round trip = %+v", p.Headers)
 	}
 	if p.ExtraBody["enable_thinking"] != true || p.ExtraBody["top_p"] != 0.8 {
@@ -1309,15 +1309,15 @@ func TestLoadForEditIgnoresAndDropsDeprecatedAgentStepLimitsOnSave(t *testing.T)
 }
 
 func TestIsolatedHomeDirEmptyByDefault(t *testing.T) {
-	t.Setenv("DEEPER_HOME", "")
+	t.Setenv("DEEPZORA_HOME", "")
 	if got := IsolatedHomeDir(); got != "" {
 		t.Fatalf("IsolatedHomeDir() = %q, want empty", got)
 	}
 }
 
 func TestIsolatedHomeDirReturnsCleanPath(t *testing.T) {
-	raw := filepath.Join(t.TempDir(), "isolated-deeper")
-	t.Setenv("DEEPER_HOME", raw)
+	raw := filepath.Join(t.TempDir(), "isolated-deepzora")
+	t.Setenv("DEEPZORA_HOME", raw)
 	got := IsolatedHomeDir()
 	if filepath.Clean(got) != filepath.Clean(raw) {
 		t.Fatalf("IsolatedHomeDir() = %q, want %q", got, raw)
@@ -1326,7 +1326,7 @@ func TestIsolatedHomeDirReturnsCleanPath(t *testing.T) {
 
 func TestLegacyOSSupportDirEmptyWhenIsolated(t *testing.T) {
 	isolateUserConfigHome(t)
-	t.Setenv("DEEPER_HOME", filepath.Join(t.TempDir(), "isolated-home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(t.TempDir(), "isolated-home"))
 	if got := legacyOSSupportDir(); got != "" {
 		t.Fatalf("legacyOSSupportDir() = %q, want empty when isolated", got)
 	}
@@ -1334,18 +1334,18 @@ func TestLegacyOSSupportDirEmptyWhenIsolated(t *testing.T) {
 
 func TestLegacyXDGConfigPathsEmptyWhenIsolated(t *testing.T) {
 	isolateUserConfigHome(t)
-	t.Setenv("DEEPER_HOME", filepath.Join(t.TempDir(), "isolated-home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(t.TempDir(), "isolated-home"))
 	if got := legacyXDGConfigPaths(); got != nil {
 		t.Fatalf("legacyXDGConfigPaths() = %v, want nil when isolated", got)
 	}
 }
 
-func TestCacheDirHonorsDeeperHome(t *testing.T) {
+func TestCacheDirHonorsDeepzoraHome(t *testing.T) {
 	home := t.TempDir()
 	isolated := filepath.Join(home, "isolated-home")
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("DEEPER_HOME", isolated)
+	t.Setenv("DEEPZORA_HOME", isolated)
 
 	got := CacheDir()
 	want := filepath.Join(isolated, "cache")
@@ -1354,28 +1354,28 @@ func TestCacheDirHonorsDeeperHome(t *testing.T) {
 	}
 }
 
-func TestCacheDirHonorsDeeperCacheHomeOverDeeperHome(t *testing.T) {
+func TestCacheDirHonorsDeepzoraCacheHomeOverDeepzoraHome(t *testing.T) {
 	home := t.TempDir()
 	cacheHome := filepath.Join(home, "custom-cache")
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("DEEPER_HOME", filepath.Join(home, "isolated-home"))
-	t.Setenv("DEEPER_CACHE_HOME", cacheHome)
+	t.Setenv("DEEPZORA_HOME", filepath.Join(home, "isolated-home"))
+	t.Setenv("DEEPZORA_CACHE_HOME", cacheHome)
 
 	got := CacheDir()
 	want := cacheHome
 	if filepath.Clean(got) != filepath.Clean(want) {
-		t.Fatalf("CacheDir() = %q, want %q (DEEPER_CACHE_HOME must win)", got, want)
+		t.Fatalf("CacheDir() = %q, want %q (DEEPZORA_CACHE_HOME must win)", got, want)
 	}
 }
 
 func TestUserConfigLoadPathNoLegacyFallbackWhenIsolated(t *testing.T) {
 	home := isolateUserConfigHome(t)
 	isolated := filepath.Join(home, "isolated-home")
-	t.Setenv("DEEPER_HOME", isolated)
+	t.Setenv("DEEPZORA_HOME", isolated)
 
 	// Create a legacy config at the OS production path — it must not be loaded.
-	productionHome := expectedDefaultDeeperHome(home)
+	productionHome := expectedDefaultDeepzoraHome(home)
 	if err := os.MkdirAll(productionHome, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -1393,7 +1393,7 @@ func TestUserConfigLoadPathNoLegacyFallbackWhenIsolated(t *testing.T) {
 
 func TestCredentialSourceCandidatesSkipHomeEnvWhenIsolated(t *testing.T) {
 	isolateUserConfigHome(t)
-	t.Setenv("DEEPER_HOME", filepath.Join(t.TempDir(), "isolated-home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(t.TempDir(), "isolated-home"))
 
 	// Write a key into the production home .env — it must not appear as a source.
 	if home, err := os.UserHomeDir(); err == nil {
@@ -1413,10 +1413,10 @@ func TestCredentialSourceCandidatesSkipHomeEnvWhenIsolated(t *testing.T) {
 func TestMigrateLegacyIfNeededSkipsWhenIsolated(t *testing.T) {
 	home := isolateUserConfigHome(t)
 	isolated := filepath.Join(home, "isolated-home")
-	t.Setenv("DEEPER_HOME", isolated)
+	t.Setenv("DEEPZORA_HOME", isolated)
 
 	// Create a legacy config.json in production home — migration must skip it.
-	legacyDir := filepath.Join(home, ".deeper")
+	legacyDir := filepath.Join(home, ".deepzora")
 	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -1434,11 +1434,11 @@ func TestMigrateLegacyIfNeededSkipsWhenIsolated(t *testing.T) {
 }
 
 // TestProjectConfigCannotOverrideSecrets pins [secrets] as a user-global
-// security control: a cloned repository's deeper.toml must not be able to
+// security control: a cloned repository's deepzora.toml must not be able to
 // opt the user into subprocess env stripping or sensitive-path hiding.
 func TestProjectConfigCannotOverrideSecrets(t *testing.T) {
 	isolateUserConfigHome(t)
-	t.Setenv("DEEPER_HOME", "")
+	t.Setenv("DEEPZORA_HOME", "")
 	globalDir := filepath.Dir(UserConfigPath())
 	if err := os.MkdirAll(globalDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -1450,7 +1450,7 @@ func TestProjectConfigCannotOverrideSecrets(t *testing.T) {
 
 	project := t.TempDir()
 	projectTOML := "[secrets]\nfilter_subprocess_env = true\nprotect_sensitive_files = true\n"
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(projectTOML), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(projectTOML), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1459,10 +1459,10 @@ func TestProjectConfigCannotOverrideSecrets(t *testing.T) {
 		t.Fatalf("LoadForRoot() error = %v", err)
 	}
 	if cfg.Secrets.FilterSubprocessEnv {
-		t.Error("project deeper.toml enabled filter_subprocess_env; [secrets] must stay user-global")
+		t.Error("project deepzora.toml enabled filter_subprocess_env; [secrets] must stay user-global")
 	}
 	if cfg.Secrets.ProtectSensitiveFiles {
-		t.Error("project deeper.toml enabled protect_sensitive_files; [secrets] must stay user-global")
+		t.Error("project deepzora.toml enabled protect_sensitive_files; [secrets] must stay user-global")
 	}
 }
 

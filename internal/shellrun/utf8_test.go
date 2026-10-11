@@ -2,7 +2,7 @@ package shellrun
 
 import (
 	"context"
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 	"encoding/json"
 	"os/exec"
 	"strings"

@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // sessionHeadState is what a Session knows about its schema-2 log position;

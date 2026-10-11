@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestCanonicalizeSchemaStable(t *testing.T) {

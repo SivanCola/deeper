@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/historycatalog"
+	"deepzora/internal/historycatalog"
 )
 
 // RebuildSharedCatalog closes the process-local reader, atomically replaces the

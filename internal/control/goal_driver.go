@@ -9,10 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/event"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 // waitForGoalTerminal is the CLI/ACP/bot observer. It owns no Activity and

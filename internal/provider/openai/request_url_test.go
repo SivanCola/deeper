@@ -3,7 +3,7 @@ package openai
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestNewPrefersExactRequestURLOverLegacyChatURL(t *testing.T) {

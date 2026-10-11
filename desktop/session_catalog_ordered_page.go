@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 	"fmt"
 	"sort"
 	"strconv"

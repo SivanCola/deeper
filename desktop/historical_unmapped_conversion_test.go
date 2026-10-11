@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // An old build may adopt only the JSONL receipt, leaving its converted store

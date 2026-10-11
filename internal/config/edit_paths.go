@@ -38,31 +38,31 @@ func isUserConfigPath(path string) bool {
 	return false
 }
 
-// IsUserConfigPath reports whether path is one of Deeper's current or legacy
+// IsUserConfigPath reports whether path is one of Deepzora's current or legacy
 // user-global config locations. Other paths use project-scoped rendering.
 func IsUserConfigPath(path string) bool {
 	return isUserConfigPath(path)
 }
 
 // Save writes the configuration back to the file it was loaded from
-// (SourcePath), or to ./deeper.toml when none exists yet — the conventional
+// (SourcePath), or to ./deepzora.toml when none exists yet — the conventional
 // project-local target a fresh GUI session would create.
 func (c *Config) Save() error {
 	path := SourcePath()
 	if path == "" {
-		path = "deeper.toml"
+		path = "deepzora.toml"
 	}
 	return c.SaveTo(path)
 }
 
 // SaveForRoot saves root's project config when it exists, falling back to the
-// user's global config when root has no deeper.toml. Existing project files
+// user's global config when root has no deepzora.toml. Existing project files
 // are edited from their own TOML only, never from a runtime user+project merge.
 func (c *Config) SaveForRoot(root string) error {
 	root = resolveRoot(root)
-	projectTOML := "deeper.toml"
+	projectTOML := "deepzora.toml"
 	if root != "." {
-		projectTOML = filepath.Join(root, "deeper.toml")
+		projectTOML = filepath.Join(root, "deepzora.toml")
 	}
 	if _, err := os.Stat(projectTOML); err == nil {
 		projectCfg := LoadForEditWithoutCredentials(projectTOML)

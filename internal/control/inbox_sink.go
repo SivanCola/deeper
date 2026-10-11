@@ -1,9 +1,9 @@
 package control
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/sessioninbox"
 )
 
 // inboxEventSink observes unapplied-steer events and forwards optional inbox

@@ -1,28 +1,13 @@
 name: Bug report
-description: Report a bug in deeper
+description: Report a bug in deepzora
 title: "[Bug]: "
 labels: ["bug"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for filing a bug. Pick which version line you're on below — it gets
-        labeled (`v2`/`v3`) automatically, no maintainer action needed.
-  - type: dropdown
-    id: version-line
-    attributes:
-      label: Version line
-      description: Which line are you running?
-      options:
-        - "v2 — Go rewrite (1.x), main (active development)"
-        - "v3 — Studio (2.x), studio"
-    validations:
-      required: true
   - type: input
     id: version
     attributes:
       label: Exact version
-      description: Output of `deeper --version`.
+      description: Output of `deepzora --version`.
       placeholder: e.g. 1.0.0
     validations:
       required: true

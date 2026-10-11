@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/proc"
-	"deeper/internal/secrets"
+	"deepzora/internal/proc"
+	"deepzora/internal/secrets"
 )
 
 // discoverGitCapability shares the shell inventory snapshot but remains a

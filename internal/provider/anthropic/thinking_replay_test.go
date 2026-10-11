@@ -2,7 +2,7 @@ package anthropic
 
 import (
 	"context"
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"io"
 	"net/http"

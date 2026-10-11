@@ -1,6 +1,6 @@
 package boot
 
-import "deeper/internal/config"
+import "deepzora/internal/config"
 
 func runtimeConfigHostClassification() []configTypeClassification {
 	return []configTypeClassification{

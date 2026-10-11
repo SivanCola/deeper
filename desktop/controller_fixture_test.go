@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // newFixtureController binds writable session ownership to the test lifetime.

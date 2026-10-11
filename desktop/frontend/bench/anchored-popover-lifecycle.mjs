@@ -14,7 +14,7 @@ process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || 
   : process.env.PLAYWRIGHT_BROWSERS_PATH;
 const { chromium, _electron } = await import("playwright");
 const electronEngine = process.argv.includes("--electron");
-const electronHome = electronEngine ? await mkdtemp(path.join(tmpdir(), "deeper-popover-electron-")) : "";
+const electronHome = electronEngine ? await mkdtemp(path.join(tmpdir(), "deepzora-popover-electron-")) : "";
 const server = await createServer({
   root: frontendDir,
   server: { host: "127.0.0.1", port: 0, hmr: false },
@@ -45,7 +45,7 @@ try {
     const electronRequire = createRequire(path.join(frontendDir, "../electron/package.json"));
     electronApp = await _electron.launch({
       executablePath: electronRequire("electron"), args: [main],
-      env: { ...process.env, DEEPER_LAYOUT_URL: url },
+      env: { ...process.env, DEEPZORA_LAYOUT_URL: url },
     });
     page = await electronApp.firstWindow();
   } else {
@@ -55,18 +55,18 @@ try {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
-  await page.addInitScript(() => localStorage.setItem("deeper-lang", "en"));
+  await page.addInitScript(() => localStorage.setItem("deepzora-lang", "en"));
   await page.goto(url);
   await page.locator("#composer-input").waitFor({ state: "visible" });
   await page.evaluate(() => {
-    window.__deeperPopoverCornerSamples = [];
+    window.__deepzoraPopoverCornerSamples = [];
     const sample = () => {
       const menu = document.querySelector(".modelsw__menu");
       if (menu instanceof HTMLElement && getComputedStyle(menu).visibility === "visible") {
         const rect = menu.getBoundingClientRect();
-        if (rect.left <= 8.5 && rect.top <= 8.5) window.__deeperPopoverCornerSamples.push({ left: rect.left, top: rect.top });
+        if (rect.left <= 8.5 && rect.top <= 8.5) window.__deepzoraPopoverCornerSamples.push({ left: rect.left, top: rect.top });
       }
-      window.__deeperPopoverFrame = requestAnimationFrame(sample);
+      window.__deepzoraPopoverFrame = requestAnimationFrame(sample);
     };
     sample();
   });
@@ -78,13 +78,13 @@ try {
   await input.press("Enter");
   await page.locator(".prompt-shelf--ask").waitFor({ state: "visible" });
   assert.equal(await page.locator(".modelsw__menu").count(), 0, "decision takeover removes the model menu");
-  assert.deepEqual(await page.evaluate(() => window.__deeperPopoverCornerSamples), [], "model menu never flashes in the top-left corner");
+  assert.deepEqual(await page.evaluate(() => window.__deepzoraPopoverCornerSamples), [], "model menu never flashes in the top-left corner");
 
   await page.getByRole("button", { name: "Stop task" }).click();
   await page.locator("#composer-input").waitFor({ state: "visible" });
   assert.equal(await page.locator(".modelsw__menu").count(), 0, "model menu stays closed after the composer returns");
   assert.equal(await page.locator(".modelsw__trigger").getAttribute("aria-expanded"), "false");
-  await page.evaluate(() => cancelAnimationFrame(window.__deeperPopoverFrame));
+  await page.evaluate(() => cancelAnimationFrame(window.__deepzoraPopoverFrame));
   assert.deepEqual(errors, []);
   console.log(`PASS ${electronEngine ? "Electron" : "Chromium"} decision takeover closes model popover without corner flash or reopen`);
 } finally {

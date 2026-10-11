@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/memory"
-	"deeper/internal/permission"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/memory"
+	"deepzora/internal/permission"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // runHeadlessWriteOnce drives one write_file tool call through a headless gate in

@@ -3,7 +3,7 @@ package serve
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestHistoryMessagesExposeOnlyPendingFinalReadinessRecovery(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 func TestNativeIdentityMigrationRebuildsOnlyProjectionOnce(t *testing.T) {

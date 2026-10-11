@@ -20,8 +20,8 @@ export { draftSubmissionLocksEditing } from "./draftModelInheritance";
 
 declare global {
   interface Window {
-    __deeperFlushSessionDraft?: () => Promise<void>;
-    __deeperResumeSessionDraftEditing?: () => void;
+    __deepzoraFlushSessionDraft?: () => Promise<void>;
+    __deepzoraResumeSessionDraftEditing?: () => void;
   }
 }
 
@@ -776,7 +776,7 @@ export function useSessionDraftSurface(options: DraftSurfaceOptions) {
       let operation: SessionDraftSubmissionView;
       try { operation = await app.BeginDraftSubmission(request); }
       catch (error) {
-        if (String(error).includes("draft submission not admitted:") || String(error).includes("deeper_error:")) throw error;
+        if (String(error).includes("draft submission not admitted:") || String(error).includes("deepzora_error:")) throw error;
         // A transport error does not prove that Begin failed. Keep the source
         // frozen while read-only reconciliation is unavailable.
         for (;;) {
@@ -796,7 +796,7 @@ export function useSessionDraftSurface(options: DraftSurfaceOptions) {
             // the exact request ID, whose backend lock serializes the decision.
             try { operation = await app.BeginDraftSubmission(request); }
             catch (retryError) {
-              if (String(retryError).includes("draft submission not admitted:") || String(retryError).includes("deeper_error:")) throw retryError;
+              if (String(retryError).includes("draft submission not admitted:") || String(retryError).includes("deepzora_error:")) throw retryError;
               source.error = "Verifying whether the submission was received. Reconnecting…";
               publish(draftId);
               await new Promise(resolve => window.setTimeout(resolve, 2000));
@@ -1008,11 +1008,11 @@ export function useSessionDraftSurface(options: DraftSurfaceOptions) {
       acceptingExit.current = false;
       void import("../lib/sessionComposerPersistence").then(module => module.resumeSessionComposerEditing());
     };
-    window.__deeperFlushSessionDraft = flushAll;
-    window.__deeperResumeSessionDraftEditing = resumeEditing;
+    window.__deepzoraFlushSessionDraft = flushAll;
+    window.__deepzoraResumeSessionDraftEditing = resumeEditing;
     return () => {
-      if (window.__deeperFlushSessionDraft === flushAll) delete window.__deeperFlushSessionDraft;
-      if (window.__deeperResumeSessionDraftEditing === resumeEditing) delete window.__deeperResumeSessionDraftEditing;
+      if (window.__deepzoraFlushSessionDraft === flushAll) delete window.__deepzoraFlushSessionDraft;
+      if (window.__deepzoraResumeSessionDraftEditing === resumeEditing) delete window.__deepzoraResumeSessionDraftEditing;
     };
   }, [flushDraft]);
 

@@ -7,9 +7,9 @@ import (
 	"slices"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func (s *Session) addWriteIntent(callID string, raw json.RawMessage) bool {

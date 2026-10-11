@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // ToolReferenceOptions separates known identities from a session snapshot.

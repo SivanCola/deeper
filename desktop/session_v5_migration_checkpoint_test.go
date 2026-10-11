@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 func TestMigrationRevisionIgnoresCatalogRebuildButTracksDurableSources(t *testing.T) {

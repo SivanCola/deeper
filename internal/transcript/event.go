@@ -1,10 +1,10 @@
 package transcript
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/provider"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/provider"
+	"deepzora/internal/turnevent"
 	"errors"
 )
 

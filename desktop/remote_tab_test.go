@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRegisterRemoteTabOpenReviveCarriesSelectedTitle(t *testing.T) {

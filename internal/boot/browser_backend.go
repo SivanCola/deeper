@@ -3,9 +3,9 @@ package boot
 import (
 	"time"
 
-	"deeper/internal/browser"
-	"deeper/internal/browser/cdp"
-	"deeper/internal/config"
+	"deepzora/internal/browser"
+	"deepzora/internal/browser/cdp"
+	"deepzora/internal/config"
 )
 
 // browserLaunchTimeout bounds the first attach: a browser that has not shown a

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestProviderViewFromEntryUsesOpenCodeGoDeepSeekWebSearch(t *testing.T) {

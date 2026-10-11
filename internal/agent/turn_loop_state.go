@@ -4,7 +4,7 @@ import (
 	"sort"
 	"sync"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // turnLoopState groups per-turn loop-guard maps so parallel tool goroutines

@@ -1,8 +1,8 @@
 package notify
 
 import (
-	"deeper/internal/config"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
 )
 
 // Message is the user-visible payload sent to the platform notifier.
@@ -55,17 +55,17 @@ func message(cfg config.NotificationsConfig, e event.Event) (Message, bool) {
 	case event.TurnDone:
 		if cfg.TurnDone {
 			if e.Err != nil {
-				return Message{Title: "Deeper", Body: "Turn failed"}, true
+				return Message{Title: "Deepzora", Body: "Turn failed"}, true
 			}
-			return Message{Title: "Deeper", Body: "Turn finished"}, true
+			return Message{Title: "Deepzora", Body: "Turn finished"}, true
 		}
 	case event.ApprovalRequest:
 		if cfg.ApprovalRequest {
-			return Message{Title: "Deeper", Body: "Approval needed"}, true
+			return Message{Title: "Deepzora", Body: "Approval needed"}, true
 		}
 	case event.AskRequest:
 		if cfg.AskRequest {
-			return Message{Title: "Deeper", Body: "Question needs your answer"}, true
+			return Message{Title: "Deepzora", Body: "Question needs your answer"}, true
 		}
 	}
 	return Message{}, false

@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/notify"
-	"deeper/internal/stats"
-	"deeper/internal/trajectory"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/notify"
+	"deepzora/internal/stats"
+	"deepzora/internal/trajectory"
 )
 
 // The shared forwarder is why a new capability no longer has to be repeated at

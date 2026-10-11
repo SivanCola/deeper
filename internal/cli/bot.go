@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/bot/weixin"
-	"deeper/internal/botruntime"
-	"deeper/internal/config"
+	"deepzora/internal/bot"
+	"deepzora/internal/bot/weixin"
+	"deepzora/internal/botruntime"
+	"deepzora/internal/config"
 )
 
 func botCommand(args []string, version string) int {
@@ -145,7 +145,7 @@ func botStart(args []string, version string) int {
 		cancel()
 	}()
 
-	fmt.Fprintf(os.Stderr, "deeper bot starting (model: %s, channels: %s)...\n", modelName, *channels)
+	fmt.Fprintf(os.Stderr, "deepzora bot starting (model: %s, channels: %s)...\n", modelName, *channels)
 	fmt.Fprintf(os.Stderr, "version: %s\n", version)
 
 	if err := gw.Start(ctx); err != nil {
@@ -316,7 +316,7 @@ func botDoctor(args []string) int {
 		} else if weixin.HasSavedAccount(bc.Weixin.AccountID) {
 			addCheck("bot.weixin.token", "ok", "saved iLink account is available")
 		} else {
-			addCheck("bot.weixin.token", "missing", bc.Weixin.TokenEnv+" is not set; run `deeper bot weixin-login` to save an iLink account")
+			addCheck("bot.weixin.token", "missing", bc.Weixin.TokenEnv+" is not set; run `deepzora bot weixin-login` to save an iLink account")
 		}
 	} else {
 		addCheck("bot.weixin", "disabled", "")
@@ -451,12 +451,12 @@ func botPairing(args []string) int {
 }
 
 func botPairingUsage() {
-	fmt.Print(`deeper bot pairing — approve pending bot DM pairings
+	fmt.Print(`deepzora bot pairing — approve pending bot DM pairings
 
 Usage:
-  deeper bot pairing list
-  deeper bot pairing approve CODE
-  deeper bot pairing reject CODE
+  deepzora bot pairing list
+  deepzora bot pairing approve CODE
+  deepzora bot pairing reject CODE
 `)
 }
 
@@ -486,7 +486,7 @@ func botWeixinLogin(args []string) int {
 		return 1
 	}
 	fmt.Printf("\n微信登录成功: account_id=%s user_id=%s base_url=%s\n", result.AccountID, result.UserID, result.BaseURL)
-	fmt.Println("凭据已保存到 Deeper 用户配置目录；也可以把 [bot.weixin] account_id 设置为该 account_id。")
+	fmt.Println("凭据已保存到 Deepzora 用户配置目录；也可以把 [bot.weixin] account_id 设置为该 account_id。")
 
 	return 0
 }
@@ -531,13 +531,13 @@ func botConfigIsUserOwned(bc config.BotConfig) bool {
 }
 
 func botUsage() {
-	fmt.Print(`deeper bot — multi-channel IM bot gateway (QQ / Feishu / WeChat)
+	fmt.Print(`deepzora bot — multi-channel IM bot gateway (QQ / Feishu / WeChat)
 
 Usage:
-  deeper bot start   [--channels qq,feishu,lark,weixin] [--dir PATH] [--model NAME]
-  deeper bot doctor  [--json] [--deep]
-  deeper bot pairing list|approve|reject
-  deeper bot weixin-login [--timeout SECONDS]
+  deepzora bot start   [--channels qq,feishu,lark,weixin] [--dir PATH] [--model NAME]
+  deepzora bot doctor  [--json] [--deep]
+  deepzora bot pairing list|approve|reject
+  deepzora bot weixin-login [--timeout SECONDS]
 
 Subcommands:
   start         启动 bot 网关
@@ -546,12 +546,12 @@ Subcommands:
   weixin-login  微信 iLink 二维码登录
 
 Examples:
-  deeper bot start --channels qq,feishu
-  deeper bot start --dir /path/to/project --model deepseek-pro
-  deeper bot doctor --json
+  deepzora bot start --channels qq,feishu
+  deepzora bot start --dir /path/to/project --model deepseek-pro
+  deepzora bot doctor --json
 
 Configuration:
-  Edit deeper.toml:
+  Edit deepzora.toml:
     [bot]           enabled / model / max_steps
     [bot]           queue_mode / queue_cap / queue_drop
     [bot.pairing]   enabled / request_ttl_minutes / max_pending_per_platform

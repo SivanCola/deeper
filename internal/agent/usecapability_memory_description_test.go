@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/memory"
-	"deeper/internal/tool"
+	"deepzora/internal/memory"
+	"deepzora/internal/tool"
 )
 
 func TestUseCapabilityMemoryDescriptionNamesRoutableTools(t *testing.T) {

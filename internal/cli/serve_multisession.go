@@ -5,11 +5,11 @@ import (
 	"flag"
 	"os"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/remote/bootstrap"
-	"deeper/internal/serve"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/remote/bootstrap"
+	"deepzora/internal/serve"
 )
 
 func registerServeCapabilityFlags(fs *flag.FlagSet) {

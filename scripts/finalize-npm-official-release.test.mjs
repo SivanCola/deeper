@@ -16,7 +16,7 @@ function run(
   staleReads = 0,
   { staging = false, forbidRemoval = false } = {},
 ) {
-  const directory = mkdtempSync(join(tmpdir(), "deeper-npm-alias-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "deepzora-npm-alias-test-"));
   const npm = join(directory, "npm");
   const state = join(directory, "state");
   const writes = join(directory, "writes");
@@ -25,7 +25,7 @@ const fs = require("node:fs");
 const args = process.argv.slice(2);
 if (args[0] === "view" && args[1].includes("@1.19.2") && args.at(-1) === "--json") {
   const name = args[1].slice(0, -"@1.19.2".length);
-  console.log(JSON.stringify({ name, version: "1.19.2", gitHead: ${JSON.stringify(publishedSha)}, deeperCandidateSha: ${JSON.stringify(publishedSha)} }));
+  console.log(JSON.stringify({ name, version: "1.19.2", gitHead: ${JSON.stringify(publishedSha)}, deepzoraCandidateSha: ${JSON.stringify(publishedSha)} }));
 } else if (args[0] === "view" && args[2] === "dist-tags") {
   const statePath = process.env.NPM_FAKE_STATE;
   const reads = fs.existsSync(statePath) ? Number(fs.readFileSync(statePath, "utf8")) : 0;

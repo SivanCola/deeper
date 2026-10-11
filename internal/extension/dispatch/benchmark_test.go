@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
 )
 
 type benchmarkClient struct{}

@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"os"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // EnsureSessionPath pins a fresh auto-save file for this controller when none is

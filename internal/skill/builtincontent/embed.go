@@ -1,5 +1,5 @@
 // Package builtincontent holds shipped skill markdown that is embedded into the
-// Deeper binary. Bodies stay out of the system prompt until the skill is
+// Deepzora binary. Bodies stay out of the system prompt until the skill is
 // invoked; reference pages are read separately on demand.
 package builtincontent
 
@@ -10,10 +10,10 @@ import (
 	"path"
 	"strings"
 
-	"deeper/internal/frontmatter"
+	"deepzora/internal/frontmatter"
 )
 
-//go:embed deeper-guide
+//go:embed deepzora-guide
 var files embed.FS
 
 // SkillMarkdown is one embedded skill file after frontmatter split.
@@ -28,9 +28,9 @@ type SkillMarkdown struct {
 	Frontmatter map[string]string
 }
 
-// LoadDeeperGuide returns the shipped deeper-guide skill markdown.
-func LoadDeeperGuide() (SkillMarkdown, error) {
-	return loadSkill("deeper-guide/SKILL.md")
+// LoadDeepzoraGuide returns the shipped deepzora-guide skill markdown.
+func LoadDeepzoraGuide() (SkillMarkdown, error) {
+	return loadSkill("deepzora-guide/SKILL.md")
 }
 
 // All loads every embedded SKILL.md under this package (currently one).
@@ -71,7 +71,7 @@ func ParseSkillMarkdown(sourcePath, content string) (SkillMarkdown, error) {
 	fm, body := frontmatter.Split(content)
 	name := strings.TrimSpace(fm["name"])
 	if name == "" {
-		// Fall back to directory name: deeper-guide/SKILL.md → deeper-guide
+		// Fall back to directory name: deepzora-guide/SKILL.md → deepzora-guide
 		dir := path.Dir(sourcePath)
 		if dir != "" && dir != "." {
 			name = path.Base(dir)

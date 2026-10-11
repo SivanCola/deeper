@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 func TestPurgeOwnershipAndFailureAtomicity(t *testing.T) {

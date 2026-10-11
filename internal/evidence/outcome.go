@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/shellsafe"
+	"deepzora/internal/shellsafe"
 )
 
 // OutcomeSample decomposes one tool round's receipts by outcome: information

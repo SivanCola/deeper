@@ -13,11 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/store"
 )
 
 // sessions.go holds the desktop-only session-management state that the shared
@@ -124,7 +124,7 @@ func sessionTelemetryPath(sessionPath string) string {
 // errSessionBusyElsewhere is the sanitized error surfaced when a destructive
 // session operation is blocked by a live owner. It intentionally carries no
 // writer id, hostname, or path.
-var errSessionBusyElsewhere = errors.New("session is in use by another Deeper window or process")
+var errSessionBusyElsewhere = errors.New("session is in use by another Deepzora window or process")
 
 // acquireSessionRemovalGuard wraps agent.TryAcquireSessionRemovalGuard with
 // the sanitized busy error. The guard holds the session's save and lease

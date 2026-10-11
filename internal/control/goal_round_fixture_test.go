@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // Round-count semantics must not depend on hundreds of host fsync latencies.

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/remote/bootstrap"
-	"deeper/internal/serve"
+	"deepzora/internal/remote/bootstrap"
+	"deepzora/internal/serve"
 )
 
 // serveBrowserBrokerFromEnv builds the desktop browser broker client from the
-// environment a desktop bootstrap injected (DEEPER_BROWSER_BROKER /
-// DEEPER_BROWSER_TOKEN). Both empty means no broker; exactly one set is a
+// environment a desktop bootstrap injected (DEEPZORA_BROWSER_BROKER /
+// DEEPZORA_BROWSER_TOKEN). Both empty means no broker; exactly one set is a
 // broken injection and fails startup loudly instead of half-configuring.
 func serveBrowserBrokerFromEnv(getenv func(string) string) (*serve.BrowserBroker, error) {
 	if getenv == nil {

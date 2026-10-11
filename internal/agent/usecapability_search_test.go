@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/capability"
-	"deeper/internal/plugin"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/plugin"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestSearchCapabilitiesRanksDeterministicallyAndStaysLocal(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	spec := plugin.Spec{Name: "teamcity", Type: "stdio", Command: "tc", Authorized: true}
 	cached := make([]plugin.CachedTool, 100)
 	var schemaBytes int
@@ -89,7 +89,7 @@ func TestSearchCapabilitiesRanksDeterministicallyAndStaysLocal(t *testing.T) {
 }
 
 func TestNewSessionSearchDoesNotRelistSharedHost(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	var calls atomic.Int32
 	server := readonlyMCPServer(t, "shared", &calls)
 	defer server.Close()

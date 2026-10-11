@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"deeper/internal/agent"
-	"deeper/internal/imageinput"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/provider"
 )
 
 // prepareVisionTurn shares the same per-session processor as tool results.

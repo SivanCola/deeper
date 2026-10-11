@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/agent"
+import "deepzora/internal/agent"
 
 // SessionMeta summarises one saved session for the history panel.
 type SessionMeta struct {

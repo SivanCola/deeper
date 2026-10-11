@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // CheckMCPRequirements keeps dependency readiness separate from tool identity.

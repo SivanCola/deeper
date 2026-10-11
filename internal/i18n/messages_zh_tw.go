@@ -7,16 +7,16 @@ var ChineseTraditional = Messages{
 	WelcomeTitleFmt: "歡迎使用 %s",
 	NoConfigYet:     "還沒有設定 — 現在來設定一下吧。",
 
-	InitHint: "專案記憶（AGENTS.md）在會話內由模型生成：執行 `deeper`，然後 `/init` —— 模型會分析程式碼庫並寫入。設定請用 `deeper setup`。",
+	InitHint: "專案記憶（AGENTS.md）在會話內由模型生成：執行 `deepzora`，然後 `/init` —— 模型會分析程式碼庫並寫入。設定請用 `deepzora setup`。",
 
 	ChatTip:                          "對話上下文將跨輪保留。輸入 'exit' 或按 Ctrl-D 退出。",
 	TurnCancelled:                    "已取消 — 回到提示符",
 	InterruptedRecovery:              "本輪已中斷。部分輸出會永久保留供查看；只有完整工具呼叫及結果和有界恢復摘要會進入模型下一輪。繼續或回復前請先檢查目前工作區。",
 	FinalReadinessRecovery:           "剩餘任務或收尾檢查已暫停。執行 /continue-checks 可保留已完成證據並繼續剩餘工作。",
-	ReadinessContinuing:              "Deeper 正在自動完成剩餘任務或檢查。",
-	RecoveryPaused:                   "已暫停自動重試。Deeper 已停止重複嘗試，並保留已完成的工作。傳送「繼續」即可開始新一輪，也可以補充要求來調整方向。",
+	ReadinessContinuing:              "Deepzora 正在自動完成剩餘任務或檢查。",
+	RecoveryPaused:                   "已暫停自動重試。Deepzora 已停止重複嘗試，並保留已完成的工作。傳送「繼續」即可開始新一輪，也可以補充要求來調整方向。",
 	CompletionUncertain:              "完成狀態未確認。目前結果與已完成工作均已保留。傳送「繼續」可接著完成，也可以補充說明需要調整的內容。",
-	ReasoningReplayRepair:            "模型服務拒絕了本會話歷史中的 thinking 區塊。Deeper 已從傳送給模型的歷史中移除這些內容，並重試了一次。",
+	ReasoningReplayRepair:            "模型服務拒絕了本會話歷史中的 thinking 區塊。Deepzora 已從傳送給模型的歷史中移除這些內容，並重試了一次。",
 	ImageRequestRecovery:             "這張圖片未能傳送給模型。請重新加入圖片後傳送；如果仍然失敗，請檢查圖片模型設定。聊天記錄已保留",
 	ExtensionRequestRecovery:         "擴充功能未能提供可用的模型請求。請在設定中檢查最近啟用的擴充功能後重試，聊天記錄已保留",
 	ExtensionBlockRecovery:           "請根據擴充功能給出的原因檢查其設定後重試。重複傳送同一則訊息不能解除此攔截。",
@@ -41,14 +41,14 @@ var ChineseTraditional = Messages{
 	StreamInterruptedPrematureEOF:    "模型串流回應在完成前結束；供應商閘道或網路代理斷開了連線",
 	StreamInterruptedConnectionReset: "模型連線被重設；請檢查供應商閘道或網路代理",
 	ToolOutputTruncatedFmt:           "工具輸出已截斷：省略 %d 位元組（共 %d 位元組）",
-	IncompleteReadFinishBlocked:      "一個檔案讀取仍有未讀內容，Deeper 已拒絕結束本輪。",
-	ReadContinuationRequired:         "Deeper 正在繼續或收窄一次未完成的檔案讀取，完成後才允許改動或收尾。",
-	IncompleteReadDetected:           "Deeper 偵測到一次不完整的檔案讀取，已準備自動續讀。",
-	ReadStrategyRequired:             "完整檔案放不進動態上下文預算，Deeper 已進入受限搜尋/讀取模式。",
-	ReadStrategyProgress:             "Deeper 已記錄受限讀取策略中的有效進展。",
-	ReadStrategyResolved:             "Deeper 已驗證收窄後的讀取策略回執。",
-	ReadLocalSafetyPaged:             "Deeper 已將一條較大的本地 read_file 結果安全分頁。",
-	ReadCompleted:                    "Deeper 已恢復該檔案的完整讀取。",
+	IncompleteReadFinishBlocked:      "一個檔案讀取仍有未讀內容，Deepzora 已拒絕結束本輪。",
+	ReadContinuationRequired:         "Deepzora 正在繼續或收窄一次未完成的檔案讀取，完成後才允許改動或收尾。",
+	IncompleteReadDetected:           "Deepzora 偵測到一次不完整的檔案讀取，已準備自動續讀。",
+	ReadStrategyRequired:             "完整檔案放不進動態上下文預算，Deepzora 已進入受限搜尋/讀取模式。",
+	ReadStrategyProgress:             "Deepzora 已記錄受限讀取策略中的有效進展。",
+	ReadStrategyResolved:             "Deepzora 已驗證收窄後的讀取策略回執。",
+	ReadLocalSafetyPaged:             "Deepzora 已將一條較大的本地 read_file 結果安全分頁。",
+	ReadCompleted:                    "Deepzora 已恢復該檔案的完整讀取。",
 	ReadRestrictedStrategyFmt:        "read_file 已切換為受限策略：estimated_tokens=%d budget_tokens=%d",
 	ContextRecoveryAdjustBudget:      "已調整輸出預算以適配共享上下文視窗。",
 	PromptTruncatedByServerNotice:    "服務端接受了該請求，但靜默丟棄了部分提示詞，模型沒有收到完整的指令或工具定義。請調大服務端自身的上下文長度（Ollama：OLLAMA_CONTEXT_LENGTH 或 Modelfile 的 num_ctx），再把 context_window 設為相同的值。",
@@ -73,7 +73,7 @@ var ChineseTraditional = Messages{
 		"unreviewed_change":   "改動後再沒看過",
 		"declared_unverified": "自己申報未驗證",
 	},
-	NoSessionToResume:   "沒有可恢復的會話 — 用 `deeper` 開一個新的",
+	NoSessionToResume:   "沒有可恢復的會話 — 用 `deepzora` 開一個新的",
 	ResumeRequiresTTY:   "--resume 需要互動式終端；用 --continue 直接恢復最近一次",
 	AmbiguousResumeHint: "用上面任一 id 重新執行 `--resume <id>`",
 	PickSessionLabel:    "恢復哪個會話？",
@@ -182,22 +182,22 @@ var ChineseTraditional = Messages{
 	MemoryApprovalBodyLabel:                "正文",
 	MemoryApprovalArchiveFmt:               "封存記憶 %q",
 	PlanModeBashTrustSubjectFmt:            "在計劃模式中信任 %q 為唯讀命令前綴\n命令：%s",
-	PlanModeBashTrustReason:                "這條 bash 命令不在 Deeper 內建唯讀集合中。只有在確認這個精確前綴用於計劃和研究時是唯讀的，才應核准。權限預設不能代替這次信任確認。",
+	PlanModeBashTrustReason:                "這條 bash 命令不在 Deepzora 內建唯讀集合中。只有在確認這個精確前綴用於計劃和研究時是唯讀的，才應核准。權限預設不能代替這次信任確認。",
 	PlanModeBashTrustDeclined:              "使用者拒絕將這條 bash 命令信任為計劃模式唯讀命令；不要重試它，請繼續使用其他已信任的唯讀工具，或詢問使用者希望如何繼續。",
 	SandboxEscapeSubjectFallback:           "僅本次不進沙箱執行 shell 命令",
 	SandboxEscapeSubjectPrefix:             "僅本次不進沙箱執行：",
 	SandboxEscapeWrapReason:                "Windows 不提供這條命令所需的 OS 級 Bash 沙箱。是否僅本次不受限執行？這只會對此命令繞過 OS 隔離。",
 	SandboxEscapeRuntimeReason:             "OS 沙箱無法啟動這條命令。是否僅本次不受限執行？這只會對此命令繞過 OS 隔離。",
 	SandboxEscapeDeclined:                  "使用者拒絕在沒有 OS 沙箱的情況下執行這條命令；不要不進沙箱重試，請詢問使用者希望如何繼續。",
-	ApprovalToolLabelConfigWrite:           "Deeper 設定寫入核准",
-	ConfigWriteSubjectPrefix:               "寫入 Deeper 設定：",
-	ConfigWriteReason:                      "這次寫入的目標是工作區之外的 Deeper 託管設定檔。它可以改變後續工作階段的模型供應商、沙箱規則、權限和 MCP 伺服器，因此需要你的明確核准。",
-	ConfigWriteDeclined:                    "使用者拒絕了這次 Deeper 設定寫入；不要重試，請詢問使用者希望如何繼續。",
+	ApprovalToolLabelConfigWrite:           "Deepzora 設定寫入核准",
+	ConfigWriteSubjectPrefix:               "寫入 Deepzora 設定：",
+	ConfigWriteReason:                      "這次寫入的目標是工作區之外的 Deepzora 託管設定檔。它可以改變後續工作階段的模型供應商、沙箱規則、權限和 MCP 伺服器，因此需要你的明確核准。",
+	ConfigWriteDeclined:                    "使用者拒絕了這次 Deepzora 設定寫入；不要重試，請詢問使用者希望如何繼續。",
 	ConfigWriteApprovalChoices:             "1. 允許一次\n2. 本工作階段允許\n3. 拒絕\n選擇 [1/2/3]（相容 y/a/n）",
 	WriteAccessApprovalChoices:             "1. 僅本次允許\n2. 本工作階段允許此範圍\n3. 拒絕\n選擇 [1/2/3]（相容 y/a/n）",
-	WriteAccessHomeWarning:                 "這將授權寫入整個使用者家目錄。Deeper 工作階段與執行時狀態檔案仍受保護。",
+	WriteAccessHomeWarning:                 "這將授權寫入整個使用者家目錄。Deepzora 工作階段與執行時狀態檔案仍受保護。",
 	WriteAccessMergedPermissionHint:        "此選擇也會授權目前匹配的工具操作。",
-	WriteAccessProjectHint:                 "加入專案會把 [sandbox].allow_write（以及需要時的權限規則）寫入目前工作區的 deeper.toml。",
+	WriteAccessProjectHint:                 "加入專案會把 [sandbox].allow_write（以及需要時的權限規則）寫入目前工作區的 deepzora.toml。",
 	PermissionSavedFmt:                     "授權已儲存到 %s：%s",
 	PermissionAlreadyAllowedFmt:            "授權已由 %s 中的規則覆蓋：%s",
 	PermissionSaveFailedFmt:                "儲存授權 %s 失敗：%v",
@@ -286,7 +286,7 @@ var ChineseTraditional = Messages{
 	SkillPickerStatusNotDir:      "非目錄",
 	SkillPickerStatusUnreadable:  "無權限",
 	SlashPromptEmpty:             "該 MCP prompt 沒有返回可傳送的內容",
-	SlashMCPNone:                 "沒有設定 MCP 伺服器 — 在 deeper.toml 加一個 [[plugins]] 條目",
+	SlashMCPNone:                 "沒有設定 MCP 伺服器 — 在 deepzora.toml 加一個 [[plugins]] 條目",
 	CtrlCQuitHint:                "再按一次 Ctrl+C 退出",
 	CompHintSlash:                "↑/↓ 移動 · Tab/Enter 選中 · Esc 關閉",
 	CompHintFile:                 "↑/↓ 移動 · Tab/Enter 進入資料夾或選中檔案 · Esc 關閉",
@@ -370,7 +370,7 @@ var ChineseTraditional = Messages{
 	ArgPresetStandard:   "自適應默認檔",
 	ArgPresetDelivery:   "交付級完成門檻",
 	ArgThemeCurrent:     "當前",
-	ArgLanguageAuto:     "從 DEEPER_LANG / 系統 locale 自動偵測",
+	ArgLanguageAuto:     "從 DEEPZORA_LANG / 系統 locale 自動偵測",
 	ArgLanguageEn:       "English",
 	ArgLanguageZh:       "中文",
 
@@ -380,9 +380,9 @@ var ChineseTraditional = Messages{
 	ListSkillsHeaderFmt: "skills（%d 個）",
 	ListSkillsNone:      "暫無 skill — 呼叫內建的（如 /init），或用 install_skill 建立一個",
 	ListHooksHeaderFmt:  "hooks（生效 %d 個）",
-	ListHooksNone:       "無生效 hooks — 在 .deeper/settings.json（專案）或 <Deeper home>/settings.json（全域）設定",
+	ListHooksNone:       "無生效 hooks — 在 .deepzora/settings.json（專案）或 <Deepzora home>/settings.json（全域）設定",
 	ListMcpHeader:       "MCP 伺服器",
-	ListMcpNone:         "未連線 MCP 伺服器 — 在 deeper.toml（[[plugins]]）或專案 .mcp.json 中新增",
+	ListMcpNone:         "未連線 MCP 伺服器 — 在 deepzora.toml（[[plugins]]）或專案 .mcp.json 中新增",
 
 	MemoryEditHint:               "可直接編輯記憶文件，或輸入 “/remember 內容” 快速記錄；文件變動會在下次會話生效",
 	ForgetUsage:                  "用法：/forget <name> — name 是 /memory 中顯示的條目標識",
@@ -424,7 +424,7 @@ var ChineseTraditional = Messages{
 	SetupComplete:            "設定完成。",
 	SetupCancelled:           "設定已取消。",
 	TryHintFmt:               "試試: %s",
-	NextHint:                 "下一步：設定 API key（執行 `deeper setup` 或 export DEEPSEEK_API_KEY=...），然後執行 `deeper run \"你的任務\"`。",
+	NextHint:                 "下一步：設定 API key（執行 `deepzora setup` 或 export DEEPSEEK_API_KEY=...），然後執行 `deepzora run \"你的任務\"`。",
 	ConfirmReconfigureFmt:    "%s 已存在。重新設定並覆蓋？",
 	NotOverwritingFmt:        "%s 已存在，不覆蓋",
 	SetupManagerTitle:        "供應商設定",
@@ -451,8 +451,8 @@ var ChineseTraditional = Messages{
 	SetupKeyEnvTakenFmt:      "%s 已被 provider %s 使用；把這個 key 存進去會取代那個 provider 的 key。",
 	SetupKeyEnvStoredFmt:     "%s 已經儲存了一項憑據；把這個 key 存進去會覆寫原本的值。",
 	SetupKeyEnvSettingFmt:    "%s 已被機器人或遠端主機設定讀取；把這個 key 存進去會讓那項設定拿到你的 key。",
-	SetupKeyEnvShellFmt:      "%s 已在 Deeper 執行的環境變數中設定；把這個 key 存進去會覆寫那個值。",
-	SetupKeyEnvRetry:         "請換一個變數名稱，或直接按 Enter 由 Deeper 分配獨立變數。",
+	SetupKeyEnvShellFmt:      "%s 已在 Deepzora 執行的環境變數中設定；把這個 key 存進去會覆寫那個值。",
+	SetupKeyEnvRetry:         "請換一個變數名稱，或直接按 Enter 由 Deepzora 分配獨立變數。",
 	SetupPromptAPIKeyFmt:     "輸入 %s 的新值",
 	SetupSelectDefaultModel:  "選擇預設模型",
 	SetupConfirmRemoveFmt:    "確認刪除供應商 %s？",
@@ -486,7 +486,7 @@ var ChineseTraditional = Messages{
 	CustomMethodURL:      "從 URL 取得模型列表",
 	CustomPromptModel:    "請輸入模型名稱",
 	CustomPromptBaseURL:  "請輸入 Base URL",
-	CustomPromptKeyEnv:   "API Key 變數名稱（直接按 Enter 由 Deeper 自動分配，不是模型名稱）",
+	CustomPromptKeyEnv:   "API Key 變數名稱（直接按 Enter 由 Deepzora 自動分配，不是模型名稱）",
 	CustomPromptAPIKey:   "請輸入 API Key",
 	CustomPromptWindow:   "上下文視窗(tokens,填得比模型真實視窗小會導致過早壓縮)",
 	CustomAddedFmt:       "已新增自訂模型: %s",
@@ -498,7 +498,7 @@ var ChineseTraditional = Messages{
 	AnthropicMethodURL:             "從 URL 取得模型列表",
 	AnthropicPromptModel:           "請輸入模型名稱",
 	AnthropicPromptBaseURL:         "請輸入 Base URL",
-	AnthropicPromptKeyEnv:          "API Key 變數名稱（直接按 Enter 由 Deeper 自動分配，不是模型名稱）",
+	AnthropicPromptKeyEnv:          "API Key 變數名稱（直接按 Enter 由 Deepzora 自動分配，不是模型名稱）",
 	AnthropicPromptAPIKey:          "請輸入 API Key",
 	AnthropicAddedFmt:              "已新增 Anthropic 相容模型: %s",
 	AnthropicFetchingModelsFmt:     "正在取得 %s 的模型列表...",
@@ -516,10 +516,10 @@ var ChineseTraditional = Messages{
 	RemotePassphrasePromptFmt: "%s 的金鑰通關密語：",
 	RemotePasswordPromptFmt:   "%s 的登入密碼：",
 	RemoteBootstrapStepFmt:    "遠端 serve：%s %s",
-	RemoteNoHostsHint:         "尚未設定遠端主機；用 `deeper remote add <名稱> [user@]host` 新增",
+	RemoteNoHostsHint:         "尚未設定遠端主機；用 `deepzora remote add <名稱> [user@]host` 新增",
 
 	UnknownCommandFmt:         "未知命令 %q",
-	UsageRunHint:              "用法：deeper -p [--model NAME] <task>",
+	UsageRunHint:              "用法：deepzora -p [--model NAME] <task>",
 	ErrorPrefix:               "錯誤：",
 	ReconfigureOnUnknownModel: "設定的模型已不可用 —— 重新執行引導設定。",
 	WriteConfigErr:            "寫入設定失敗：",
@@ -527,7 +527,7 @@ var ChineseTraditional = Messages{
 
 	ProviderErrBadRequest:           "請求格式錯誤 (HTTP 400)：請求體被拒絕，通常是程式缺陷。若持續出現請回報。",
 	ProviderErrContextOverflowFmt:   "請求超出共用上下文視窗：prompt %d + 輸出 %d = %d tokens，視窗只有 %d。請壓縮、用更小的輸出上限重試、分叉或回溯後再發送。",
-	ProviderErrAuth:                 "認證失敗 (HTTP 401)：未讀到 API key（缺失或未設定）。請在 .env 中設定金鑰，或執行 `deeper setup`。",
+	ProviderErrAuth:                 "認證失敗 (HTTP 401)：未讀到 API key（缺失或未設定）。請在 .env 中設定金鑰，或執行 `deepzora setup`。",
 	ProviderErrModelFormatMismatch:  "模型/API 格式不相容：服務端不支援目前模型使用所選 provider 線路。這不是 API key 失效；請選擇支援該模型的 provider 線路。",
 	ProviderErrOpenCodeGoGrokRoute:  "OpenCode Go 的 `grok-4.5` 請使用 OpenCode Go Responses 預設。",
 	ProviderErrQuotaExhaustedFmt:    "%s：供應商餘額或方案額度不足（HTTP %d）。請檢查帳戶額度後繼續。",
@@ -546,7 +546,7 @@ var ChineseTraditional = Messages{
 	ProviderErrRateLimited:          "請求速率達到上限 (HTTP 429)：請求過於頻繁 (TPM/RPM)。請放慢速率或稍後再試。",
 	ProviderErrServer:               "伺服器故障 (HTTP 500)：服務端內部錯誤。請稍後再試。",
 	ProviderErrServerBusy:           "伺服器繁忙 (HTTP 503)：服務端負載過高。請稍後再試。",
-	ProviderErrWaitExhaustedFmt:     "已等待 %s，供應商始終無法連線，Deeper 已停止等待。請檢查網路、代理或供應商狀態頁，然後重新傳送。",
+	ProviderErrWaitExhaustedFmt:     "已等待 %s，供應商始終無法連線，Deepzora 已停止等待。請檢查網路、代理或供應商狀態頁，然後重新傳送。",
 
 	SelectOneHint:  "(↑/↓ · Enter · q 取消)",
 	SelectManyHint: "(↑/↓ · Space · Enter · q)",
@@ -554,8 +554,8 @@ var ChineseTraditional = Messages{
 	ReportNoPending:           "沒有待處理的 CLI 當機報告。",
 	ReportHeaderFmt:           "CLI 當機報告 %s",
 	ReportCapturedFmt:         "擷取時間：%s",
-	ReportPreviewOnlyFmt:      "目前僅預覽。執行 `deeper report send %s` 可傳送這份報告。",
-	ReportSendPrompt:          "將這份已脫敏報告傳送到已設定的 Deeper 報告服務？",
+	ReportPreviewOnlyFmt:      "目前僅預覽。執行 `deepzora report send %s` 可傳送這份報告。",
+	ReportSendPrompt:          "將這份已脫敏報告傳送到已設定的 Deepzora 報告服務？",
 	ReportKept:                "報告已保留在本機。",
 	ReportDeletedFmt:          "已刪除 CLI 當機報告 %s。",
 	ReportSentFmt:             "已傳送 CLI 當機報告 %s。",
@@ -563,68 +563,68 @@ var ChineseTraditional = Messages{
 	ReportUploadFailedFmt:     "報告上傳失敗；本機報告已保留：%v",
 	ReportSentDeleteFailedFmt: "報告已傳送，但無法刪除本機副本：%v",
 	ReportUsageBody: `用法：
-  deeper report                 預覽最新本機報告並確認是否傳送
-  deeper report list            列出本機 CLI 當機報告
-  deeper report show [ID]       預覽報告（省略 ID 時使用最新一份）
-  deeper report send [ID]       傳送已審閱報告，成功後刪除本機副本
-  deeper report delete [ID]     不傳送，直接刪除本機報告`,
+  deepzora report                 預覽最新本機報告並確認是否傳送
+  deepzora report list            列出本機 CLI 當機報告
+  deepzora report show [ID]       預覽報告（省略 ID 時使用最新一份）
+  deepzora report send [ID]       傳送已審閱報告，成功後刪除本機副本
+  deepzora report delete [ID]     不傳送，直接刪除本機報告`,
 
-	CLITelemetryConsentNotice:           "Deeper 可以向已設定的 Deeper 報告服務傳送匿名、完全不含內容的 CLI 使用統計：隨機安裝 ID、版本、作業系統和固定品質分桶。絕不會傳送 prompt、回答、程式碼、路徑、模型或工具內容、環境變數。之後可執行 `deeper config telemetry off` 關閉。",
+	CLITelemetryConsentNotice:           "Deepzora 可以向已設定的 Deepzora 報告服務傳送匿名、完全不含內容的 CLI 使用統計：隨機安裝 ID、版本、作業系統和固定品質分桶。絕不會傳送 prompt、回答、程式碼、路徑、模型或工具內容、環境變數。之後可執行 `deepzora config telemetry off` 關閉。",
 	CLITelemetryConsentPrompt:           "允許傳送匿名 CLI 使用統計嗎？",
 	CLITelemetryConsentInvalid:          "請輸入 y 或 n。",
 	CLITelemetryConsentSaveFailedFmt:    "由於無法儲存偏好設定，CLI 使用統計仍維持關閉：%v",
 	CLITelemetryConsentCleanupFailedFmt: "CLI 使用統計已關閉，但無法刪除待傳送統計：%v",
 
-	UsageBody: `deeper — 由設定和插件驅動的 coding agent（多模型）
+	UsageBody: `deepzora — 由設定和插件驅動的 coding agent（多模型）
 
 用法：
-  deeper [--model NAME] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   互動式會話
-  deeper -p|--print [--model NAME] [--output-format text|json|stream-json] [--allowed-tools RULES] [--add-dir PATH] <task>
-  deeper run [--model NAME] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
-  deeper run --events-jsonl [--model NAME] <task>      輸出脫敏結構化事件 JSONL
-  deeper review [--base BRANCH] [--commit SHA] [--model NAME]  AI 程式碼審查（基於本機 diff）
-  deeper web [--model NAME] [--addr HOST:PORT] [--no-open]  啟動本機 Web UI 並用預設瀏覽器開啟
-  deeper serve [--model NAME] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  透過 HTTP+SSE 提供服務（支援可選認證）
-  deeper acp [--model NAME]                           透過 stdio 提供 Agent Client Protocol（也可用：deeper --acp）
-  deeper setup [path]                                 互動式設定精靈；生成 deeper.toml（及 .env）
-  deeper config reasoning-language [auto|zh|en]        設定可見思考語言
-  deeper config compact-ratio [--local] [30..85]       設定自動壓縮閾值
-  deeper config telemetry [auto|on|off]                設定不含內容的 CLI 使用統計
-  deeper report [list|show|send|delete] [ID]           審閱並明確傳送本機 CLI 當機報告
-  deeper mcp <add|remove|list|import>                 管理 deeper.toml 裡的 MCP 伺服器
-  deeper subagent <list|create|edit|delete|try|run>   管理和執行隔離子智慧體 profile
-  deeper init                                         查看如何產生專案記憶（AGENTS.md）
-  deeper doctor [--json]                              輸出脫敏的本機診斷資訊
-  deeper doctor session <branch-id> [--zip] [--out PATH]  匯出會話衝突診斷 zip
-  deeper session list --json [--dir PATH]             為機器客戶列出脫敏會話
-  deeper session show|status <machine-session-id> --json [--dir PATH]  查詢單一脫敏會話
-  deeper session recovery [<machine-session-id>] --json [--dir PATH]  查詢脫敏復原狀態
-  deeper hook list|status --json [--dir PATH]         檢視脫敏 Hook 狀態
-  deeper trust [--dir PATH] [--yes|--revoke]          審閱並核准本專案要執行的程式
-  deeper task list|show|status|events|stop|cancel|monitor|tmux --json [--dir PATH]
+  deepzora [--model NAME] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   互動式會話
+  deepzora -p|--print [--model NAME] [--output-format text|json|stream-json] [--allowed-tools RULES] [--add-dir PATH] <task>
+  deepzora run [--model NAME] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
+  deepzora run --events-jsonl [--model NAME] <task>      輸出脫敏結構化事件 JSONL
+  deepzora review [--base BRANCH] [--commit SHA] [--model NAME]  AI 程式碼審查（基於本機 diff）
+  deepzora web [--model NAME] [--addr HOST:PORT] [--no-open]  啟動本機 Web UI 並用預設瀏覽器開啟
+  deepzora serve [--model NAME] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  透過 HTTP+SSE 提供服務（支援可選認證）
+  deepzora acp [--model NAME]                           透過 stdio 提供 Agent Client Protocol（也可用：deepzora --acp）
+  deepzora setup [path]                                 互動式設定精靈；生成 deepzora.toml（及 .env）
+  deepzora config reasoning-language [auto|zh|en]        設定可見思考語言
+  deepzora config compact-ratio [--local] [30..85]       設定自動壓縮閾值
+  deepzora config telemetry [auto|on|off]                設定不含內容的 CLI 使用統計
+  deepzora report [list|show|send|delete] [ID]           審閱並明確傳送本機 CLI 當機報告
+  deepzora mcp <add|remove|list|import>                 管理 deepzora.toml 裡的 MCP 伺服器
+  deepzora subagent <list|create|edit|delete|try|run>   管理和執行隔離子智慧體 profile
+  deepzora init                                         查看如何產生專案記憶（AGENTS.md）
+  deepzora doctor [--json]                              輸出脫敏的本機診斷資訊
+  deepzora doctor session <branch-id> [--zip] [--out PATH]  匯出會話衝突診斷 zip
+  deepzora session list --json [--dir PATH]             為機器客戶列出脫敏會話
+  deepzora session show|status <machine-session-id> --json [--dir PATH]  查詢單一脫敏會話
+  deepzora session recovery [<machine-session-id>] --json [--dir PATH]  查詢脫敏復原狀態
+  deepzora hook list|status --json [--dir PATH]         檢視脫敏 Hook 狀態
+  deepzora trust [--dir PATH] [--yes|--revoke]          審閱並核准本專案要執行的程式
+  deepzora task list|show|status|events|stop|cancel|monitor|tmux --json [--dir PATH]
                                                          檢視或控制脫敏 Task
-  deeper bot start|doctor|weixin-login                多管道 IM bot 閘道
-  deeper upgrade [--check] [--force]                   更新到最新正式版（別名：deeper update）
-  deeper completion bash|zsh|fish                     列印 shell 補全腳本到 stdout
-  deeper version [--verbose|--json]                   列印版本（單行）或建置元資訊
-  deeper --version | -v                               單行版本（腳本安全）
-  deeper help
+  deepzora bot start|doctor|weixin-login                多管道 IM bot 閘道
+  deepzora upgrade [--check] [--force]                   更新到最新正式版（別名：deepzora update）
+  deepzora completion bash|zsh|fish                     列印 shell 補全腳本到 stdout
+  deepzora version [--verbose|--json]                   列印版本（單行）或建置元資訊
+  deepzora --version | -v                               單行版本（腳本安全）
+  deepzora help
 
 範例：
-  deeper
-  deeper --continue
-  deeper --resume provider-config
-  deeper web
-  deeper run "把 main.go 裡的 TODO 實現掉"
-  deeper run --model mimo-pro "給這個函式補單元測試"
-  deeper -p "總結這個倉庫" --output-format json
-  deeper subagent run review "審查目前變更"
-  echo "解釋這段程式碼" | deeper run
+  deepzora
+  deepzora --continue
+  deepzora --resume provider-config
+  deepzora web
+  deepzora run "把 main.go 裡的 TODO 實現掉"
+  deepzora run --model mimo-pro "給這個函式補單元測試"
+  deepzora -p "總結這個倉庫" --output-format json
+  deepzora subagent run review "審查目前變更"
+  echo "解釋這段程式碼" | deepzora run
 
 設定：
-  優先順序：flag > ./deeper.toml > <Deeper home>/config.toml > 內建預設值
+  優先順序：flag > ./deepzora.toml > <Deepzora home>/config.toml > 內建預設值
   金鑰透過 api_key_env 從環境變數注入（如 DEEPSEEK_API_KEY）。
-  執行 'deeper setup' 生成設定；詳見 docs/SPEC.md。
+  執行 'deepzora setup' 生成設定；詳見 docs/SPEC.md。
 `,
 	RenameUsage:                "用法：/rename <新名稱>  或  /rename <序號> <新名稱>",
 	RenameNoSession:            "當前沒有活躍會話可重新命名",
@@ -652,7 +652,7 @@ var ChineseTraditional = Messages{
 	GoalPausedFmt:              "目標已暫停（%s）— 使用 /goal resume 繼續",
 	GoalRuntimeFmt:             "執行狀態：輪次 %d · 請求 %d · token %d · 工作時間 %s",
 	GoalRuntimeLastReason:      "最近原因",
-	ProviderErrAuthRejected:    "認證失敗 (HTTP 401)：服務端拒絕了你的 API key。可能是 key 錯誤或已過期，也可能是服務端出現瞬時鑑權/額度問題。請稍後再試，或檢查 .env 中的金鑰 / 執行 `deeper setup`。",
+	ProviderErrAuthRejected:    "認證失敗 (HTTP 401)：服務端拒絕了你的 API key。可能是 key 錯誤或已過期，也可能是服務端出現瞬時鑑權/額度問題。請稍後再試，或檢查 .env 中的金鑰 / 執行 `deepzora setup`。",
 	SelectMoreAboveFmt:         "  ↑ 上方還有 %d 個",
 	SelectMoreBelowFmt:         "  ↓ 下方還有 %d 個",
 	SelectSearchHint:           "/ 搜尋 · 輸入關鍵詞過濾 · Esc 取消搜尋",

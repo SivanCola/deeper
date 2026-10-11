@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/desktop/internal/draftstate"
+	"deepzora/desktop/internal/draftstate"
 )
 
 func TestTaggedDraftRestartReconcilesWithoutReplay(t *testing.T) {

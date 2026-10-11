@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/attachment"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/attachment"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type userInputCaptureProvider struct {

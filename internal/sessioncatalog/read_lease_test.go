@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestReadLeaseAllowsWritesAndKeepsFlatPageSnapshot(t *testing.T) {

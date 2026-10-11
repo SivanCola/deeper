@@ -1,9 +1,9 @@
 package control
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/session"
-	"deeper/internal/transcript"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
+	"deepzora/internal/transcript"
 	"encoding/json"
 )
 

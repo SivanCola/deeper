@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { localizedNoticeText, quietTranscriptNoticeKey } from "../lib/controllerNotices";
 
 const cases: Array<[string, string, string]> = [
-  ["session_concurrent_writer", "another writer appended to this session log", "Another Deeper window or process added to this conversation. Its content is kept as a separate version; use View versions to switch."],
+  ["session_concurrent_writer", "another writer appended to this session log", "Another Deepzora window or process added to this conversation. Its content is kept as a separate version; use View versions to switch."],
   ["session_head_switched", "opened head 01HEAD (newest activity)", "Opened the newest version of this conversation. Other saved versions are available in View versions."],
   ["session_head_selected", "selected head 01HEAD", "This version is now the current version of the conversation."],
 ];

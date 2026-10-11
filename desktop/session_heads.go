@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioncatalog"
 )
 
 // sessionHeadLineageState is the lineage view state for a schema-2 session:

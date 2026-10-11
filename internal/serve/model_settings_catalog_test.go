@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 func TestModelSettingsRejectsUnlistedModelBeforeRebuild(t *testing.T) {

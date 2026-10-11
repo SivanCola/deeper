@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/filelock"
-	"deeper/internal/pathidentity"
+	"deepzora/internal/filelock"
+	"deepzora/internal/pathidentity"
 )
 
 // All workspaces share a fixed set of hashed path-lock files. Hash collisions

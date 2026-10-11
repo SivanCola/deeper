@@ -3,9 +3,9 @@ package agent
 import (
 	"context"
 	"database/sql"
-	"deeper/internal/fileops"
-	"deeper/internal/projectiondb"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/store"
 	"encoding/json"
 	"errors"
 	"fmt"

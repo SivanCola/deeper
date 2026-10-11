@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 type cliCompletionValueKind uint8
@@ -95,7 +95,7 @@ func cliCompletionRootSpec() cliCompletionSpec {
 		completionFlag("--ablate", cliCompletionStaticValue, "none", "all", "evidence", "planner", "subagent", "retrieval", "compaction"),
 		help,
 	}
-	root := cliCompletionSpec{name: "deeper", flags: append([]cliCompletionFlag{
+	root := cliCompletionSpec{name: "deepzora", flags: append([]cliCompletionFlag{
 		model,
 		completionFlag("--max-steps", cliCompletionStaticValue),
 		completionFlag("--print -p", cliCompletionNoValue),
@@ -443,9 +443,9 @@ func completionCommand(args []string) int {
 
 func completionUsage(w *os.File) {
 	fmt.Fprintln(w, `Usage:
-  deeper completion bash
-  deeper completion zsh
-  deeper completion fish
+  deepzora completion bash
+  deepzora completion zsh
+  deepzora completion fish
 
 The command prints a completion script to stdout. Source it directly or save it
 in your shell's completion directory.`)
@@ -652,35 +652,35 @@ func stableUniqueCompletionValues(values []string) []string {
 	return out
 }
 
-const bashCompletionScript = `# bash completion for deeper
-_deeper_completion() {
+const bashCompletionScript = `# bash completion for deepzora
+_deepzora_completion() {
   local line
   COMPREPLY=()
   while IFS= read -r line; do
     COMPREPLY+=("$line")
-  done < <(command deeper completion __complete "$COMP_CWORD" "${COMP_WORDS[@]}" 2>/dev/null)
+  done < <(command deepzora completion __complete "$COMP_CWORD" "${COMP_WORDS[@]}" 2>/dev/null)
 }
-complete -o default -F _deeper_completion deeper
+complete -o default -F _deepzora_completion deepzora
 `
 
-const zshCompletionScript = `#compdef deeper
-_deeper_completion() {
+const zshCompletionScript = `#compdef deepzora
+_deepzora_completion() {
   local -a candidates
-  candidates=("${(@f)$(command deeper completion __complete "$((CURRENT - 1))" "${words[@]}" 2>/dev/null)}")
+  candidates=("${(@f)$(command deepzora completion __complete "$((CURRENT - 1))" "${words[@]}" 2>/dev/null)}")
   if (( ${#candidates[@]} )); then
     compadd -- "${candidates[@]}"
   else
     _default
   fi
 }
-compdef _deeper_completion deeper
+compdef _deepzora_completion deepzora
 `
 
-const fishCompletionScript = `function __deeper_completion
+const fishCompletionScript = `function __deepzora_completion
     set -l tokens (commandline -opc)
     set -a tokens (commandline -ct)
     set -l current_index (math (count $tokens) - 1)
-    command deeper completion __complete $current_index $tokens 2>/dev/null
+    command deepzora completion __complete $current_index $tokens 2>/dev/null
 end
-complete -c deeper -a '(__deeper_completion)'
+complete -c deepzora -a '(__deepzora_completion)'
 `

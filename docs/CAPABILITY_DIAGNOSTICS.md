@@ -6,9 +6,9 @@
 &nbsp;·&nbsp;
 <a href="./PLUGIN_PACKAGES.md">Plugin packages</a>
 
-Deeper ships a read-only capability diagnostics model shared by the CLI and
+Deepzora ships a read-only capability diagnostics model shared by the CLI and
 desktop **Settings → Diagnostics**. It reports Skills, Commands, Hooks, plugin
-packages, MCP servers, and instruction docs (`AGENTS.md` / `DEEPER.md` /
+packages, MCP servers, and instruction docs (`AGENTS.md` / `DEEPZORA.md` /
 `CLAUDE.md`).
 
 **Write policy**
@@ -22,11 +22,11 @@ packages, MCP servers, and instruction docs (`AGENTS.md` / `DEEPER.md` /
 
 | Goal | What to run |
 | --- | --- |
-| Check this workspace’s skills / hooks / MCP / plugins | `deeper doctor capabilities` |
-| Machine-readable report (CI / support) | `deeper doctor capabilities --json` |
-| Another project root | `deeper doctor capabilities --root /path/to/project` |
-| Probe MCP startup for real (starts third-party servers) | `deeper doctor capabilities --live --timeout 5s` |
-| Ask the agent to walk through config / fix guidance | `/deeper-guide` in chat, or ask naturally |
+| Check this workspace’s skills / hooks / MCP / plugins | `deepzora doctor capabilities` |
+| Machine-readable report (CI / support) | `deepzora doctor capabilities --json` |
+| Another project root | `deepzora doctor capabilities --root /path/to/project` |
+| Probe MCP startup for real (starts third-party servers) | `deepzora doctor capabilities --live --timeout 5s` |
+| Ask the agent to walk through config / fix guidance | `/deepzora-guide` in chat, or ask naturally |
 | GUI health view | Desktop **Settings → Diagnostics** |
 
 **Default is static and safe:** no network, no MCP child processes. Use `--live`
@@ -35,9 +35,9 @@ only when you explicitly want to start automatic MCP servers.
 Related doctor commands:
 
 ```bash
-deeper doctor                  # env / providers / sandbox snapshot
-deeper doctor session <id>     # support session bundle
-deeper doctor redact-sessions  # redact secrets in session files
+deepzora doctor                  # env / providers / sandbox snapshot
+deepzora doctor session <id>     # support session bundle
+deepzora doctor redact-sessions  # redact secrets in session files
 ```
 
 ## Skill tool references
@@ -77,7 +77,7 @@ names, including configured prefix stripping.
 ### 1. “Skill / command is missing or wrong”
 
 ```bash
-deeper doctor capabilities --json | jq '.skills.entries, .commands.entries, .issues'
+deepzora doctor capabilities --json | jq '.skills.entries, .commands.entries, .issues'
 ```
 
 Look for:
@@ -87,17 +87,17 @@ Look for:
 - `skill.missing_description` — skill loads but index quality is weak
 - `command.read_failed` — unreadable or broken markdown
 
-Then open **Settings → Skills** (or fix the file under `.deeper/skills` /
-`.deeper/commands`).
+Then open **Settings → Skills** (or fix the file under `.deepzora/skills` /
+`.deepzora/commands`).
 
 ### 2. “Project hooks never fire”
 
 ```bash
-deeper doctor capabilities | sed -n '/Hooks/,/Plugins/p'
+deepzora doctor capabilities | sed -n '/Hooks/,/Plugins/p'
 ```
 
-Project hooks load automatically from `.deeper/settings.json`. If they do not
-fire, confirm the active workspace and restart Deeper after saving. Matchers
+Project hooks load automatically from `.deepzora/settings.json`. If they do not
+fire, confirm the active workspace and restart Deepzora after saving. Matchers
 are **anchored** regexes: `file` does not match `read_file`.
 
 ### 3. “MCP tools don’t show up”
@@ -105,13 +105,13 @@ are **anchored** regexes: `file` does not match `read_file`.
 1. Static first (no side effects):
 
    ```bash
-   deeper doctor capabilities --json | jq '.mcp.servers, .issues[] | select(.subsystem=="mcp")'
+   deepzora doctor capabilities --json | jq '.mcp.servers, .issues[] | select(.subsystem=="mcp")'
    ```
 
 2. Only if you accept starting third-party servers:
 
    ```bash
-   deeper doctor capabilities --live --timeout 10s --json
+   deepzora doctor capabilities --live --timeout 10s --json
    ```
 
 Common codes: `mcp.command_not_found`, `mcp.invalid_transport`,
@@ -126,12 +126,12 @@ Each MCP entry identifies the exact winning configuration with `source`,
 distinguishes duplicate/shadowed registration from a genuinely slow or broken
 handshake without exposing full process output.
 
-### 4. Ask the agent (`deeper-guide`)
+### 4. Ask the agent (`deepzora-guide`)
 
 In an interactive session:
 
 ```text
-/deeper-guide
+/deepzora-guide
 ```
 
 or:
@@ -143,12 +143,12 @@ My MCP server X is configured but the model never sees its tools — diagnose.
 The built-in skill is **inline** (`runAs: inline`). It tells the model to prefer:
 
 ```bash
-deeper doctor capabilities --json
+deepzora doctor capabilities --json
 ```
 
 and to use `--live` only after you explicitly allow external MCP. Project or
-global skills named `deeper-guide` override the builtin; you can also hide it
-with `[skills].disabled_skills = ["deeper-guide"]`.
+global skills named `deepzora-guide` override the builtin; you can also hide it
+with `[skills].disabled_skills = ["deepzora-guide"]`.
 
 The guide loads a short router first. Skills, commands, hooks, MCP, plugins,
 and instruction resolution have separate pages embedded in the binary. Read only
@@ -156,7 +156,7 @@ the relevant page with `read_skill`; for a tool hidden behind the capability
 dispatcher, use:
 
 ```json
-{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deeper-guide","reference":"references/hooks.md"}}
+{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deepzora-guide","reference":"references/hooks.md"}}
 ```
 
 Omit `reference` to retain the existing full skill-body read. Reference reads
@@ -175,7 +175,7 @@ mandatory invocation on weak keyword matches.
 ## CLI reference
 
 ```bash
-deeper doctor capabilities [--root PATH] [--json] [--live] [--timeout 5s]
+deepzora doctor capabilities [--root PATH] [--json] [--live] [--timeout 5s]
 ```
 
 | Flag | Meaning |
@@ -207,17 +207,17 @@ Examples:
 
 ```bash
 # Human-readable, current directory
-deeper doctor capabilities
+deepzora doctor capabilities
 
 # Fail CI only on hard errors
-deeper doctor capabilities --json
+deepzora doctor capabilities --json
 # shell: exit code 1 if summary.errors > 0
 
 # Live probe with a longer timeout
-deeper doctor capabilities --live --timeout 15s --json 2>live-warn.txt
+deepzora doctor capabilities --live --timeout 15s --json 2>live-warn.txt
 ```
 
-Existing `deeper doctor`, `doctor session`, and `doctor redact-sessions`
+Existing `deepzora doctor`, `doctor session`, and `doctor redact-sessions`
 commands keep their own JSON schemas — capability fields are **not** mixed into
 those reports.
 
@@ -262,7 +262,7 @@ Issue shape:
   "code": "skill.shadowed",
   "subsystem": "skills",
   "name": "demo",
-  "source": "<workspace>/.deeper/skills/demo/SKILL.md",
+  "source": "<workspace>/.deepzora/skills/demo/SKILL.md",
   "message": "...",
   "remediation": "...",
   "settings_tab": "skills"
@@ -309,14 +309,14 @@ config files.
 
 | Need | Use instead |
 | --- | --- |
-| Provider keys, proxy, sandbox OS support | `deeper doctor` |
-| Full session transcript for support | `deeper doctor session <id>` |
-| One plugin package only | `deeper plugin doctor <name>` |
+| Provider keys, proxy, sandbox OS support | `deepzora doctor` |
+| Full session transcript for support | `deepzora doctor session <id>` |
+| One plugin package only | `deepzora plugin doctor <name>` |
 | Interactive MCP list in a chat session | `/mcp` |
 
 ## Cache impact
 
-Adding the built-in `deeper-guide` skill appends one line to the next changed
+Adding the built-in `deepzora-guide` skill appends one line to the next changed
 `session-context` Skills catalog. The skill body is loaded only on invocation.
 Diagnostics itself is not part of the provider prompt.
 

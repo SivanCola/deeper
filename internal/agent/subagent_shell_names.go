@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/tool"
+import "deepzora/internal/tool"
 
 // normalizeSubagentShellNames keeps legacy skill/profile allowlists working
 // when Windows exposes only the canonical pwsh tool. The parent registry is

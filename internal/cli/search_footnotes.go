@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"strings"
 )

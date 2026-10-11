@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/netclient"
-	"deeper/internal/releaseasset"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
+	"deepzora/internal/releaseasset"
 )
 
 const remoteCLIDownloadTimeout = 2 * time.Minute

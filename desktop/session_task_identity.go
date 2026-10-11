@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // controllerTaskSessionID never derives a canonical identity from its empty

@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/extension"
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/extension"
+	"deepzora/internal/skill/skillwatch"
 )
 
 // RuntimeDoctorReport is the structured runtime diagnostics document for
-// `deeper doctor runtime` and desktop status panels.
+// `deepzora doctor runtime` and desktop status panels.
 type RuntimeDoctorReport struct {
 	Status                *extension.RuntimeStatus           `json:"status,omitempty"`
 	Metrics               extension.LifecycleMetricsSnapshot `json:"metrics"`

@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/command"
-	"deeper/internal/config"
-	"deeper/internal/hook"
-	"deeper/internal/memory"
-	"deeper/internal/plugin"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/secrets"
-	"deeper/internal/skill"
+	"deepzora/internal/command"
+	"deepzora/internal/config"
+	"deepzora/internal/hook"
+	"deepzora/internal/memory"
+	"deepzora/internal/plugin"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/secrets"
+	"deepzora/internal/skill"
 )
 
 // Collect builds a capability diagnostics report. It never writes config,
@@ -38,12 +38,12 @@ func Collect(opts Options) Report {
 			home = h
 		}
 	}
-	deeperHome := opts.DeeperHomeDir
-	if deeperHome == "" {
+	deepzoraHome := opts.DeepzoraHomeDir
+	if deepzoraHome == "" {
 		if opts.HomeDir != "" {
-			deeperHome = filepath.Join(home, ".deeper")
+			deepzoraHome = filepath.Join(home, ".deepzora")
 		} else {
-			deeperHome = config.DeeperHomeDir()
+			deepzoraHome = config.DeepzoraHomeDir()
 		}
 	}
 
@@ -57,19 +57,19 @@ func Collect(opts Options) Report {
 	if cfgErr != nil {
 		issues = append(issues, Issue{
 			Severity: "error", Code: "config.load_failed", Subsystem: "config",
-			Message:     "failed to load configuration: " + sanitizeErrTextWithPaths(cfgErr.Error(), root, home, deeperHome),
-			Remediation: "Fix deeper.toml / config.toml syntax, then re-run doctor capabilities",
+			Message:     "failed to load configuration: " + sanitizeErrTextWithPaths(cfgErr.Error(), root, home, deepzoraHome),
+			Remediation: "Fix deepzora.toml / config.toml syntax, then re-run doctor capabilities",
 		})
 	}
 
-	disp := func(p string) string { return displayPath(p, root, home, deeperHome) }
+	disp := func(p string) string { return displayPath(p, root, home, deepzoraHome) }
 
 	instr, instructionIssues := collectInstructions(root, home, disp)
-	skillsR, skillIssues, skillStore := collectSkills(root, home, deeperHome, cfg, disp)
+	skillsR, skillIssues, skillStore := collectSkills(root, home, deepzoraHome, cfg, disp)
 	cmdsR, cmdIssues := collectCommands(root, disp)
-	hooksR, hookIssues := collectHooks(root, home, deeperHome, cfg, disp)
-	pluginsR, pluginIssues := collectPlugins(deeperHome, disp)
-	mcpR, mcpIssues := collectMCP(cfg, root, home, deeperHome, disp)
+	hooksR, hookIssues := collectHooks(root, home, deepzoraHome, cfg, disp)
+	pluginsR, pluginIssues := collectPlugins(deepzoraHome, disp)
+	mcpR, mcpIssues := collectMCP(cfg, root, home, deepzoraHome, disp)
 
 	issues = append(issues, instructionIssues...)
 	issues = append(issues, skillIssues...)
@@ -80,14 +80,14 @@ func Collect(opts Options) Report {
 
 	// Runtime host merge (desktop) or live probe (CLI).
 	if opts.Live {
-		liveIssues := probeLiveMCP(&mcpR, cfg, root, home, deeperHome, opts.LiveTimeout)
+		liveIssues := probeLiveMCP(&mcpR, cfg, root, home, deepzoraHome, opts.LiveTimeout)
 		issues = append(issues, liveIssues...)
 	} else if opts.RuntimeHost != nil {
-		mergeRuntimeHost(&mcpR, opts.RuntimeHost, root, home, deeperHome, &issues)
+		mergeRuntimeHost(&mcpR, opts.RuntimeHost, root, home, deepzoraHome, &issues)
 	}
 
 	issues = append(issues, skillToolIssues(skillStore, cfg, mcpR, func(message string) string {
-		return sanitizeErrTextWithPaths(message, root, home, deeperHome)
+		return sanitizeErrTextWithPaths(message, root, home, deepzoraHome)
 	})...)
 	sortIssues(issues)
 	report := Report{
@@ -148,8 +148,8 @@ func buildSummary(r Report) Summary {
 func collectInstructions(root, home string, disp func(string) string) (InstructionsReport, []Issue) {
 	userDir := config.MemoryUserDir()
 	if home != "" && (userDir == "" || strings.Contains(userDir, home)) {
-		// Prefer explicit test home when Deeper home is under it.
-		if custom := filepath.Join(home, ".deeper"); custom != "" {
+		// Prefer explicit test home when Deepzora home is under it.
+		if custom := filepath.Join(home, ".deepzora"); custom != "" {
 			if userDir == "" {
 				userDir = custom
 			}
@@ -182,9 +182,9 @@ func collectInstructions(root, home string, disp func(string) string) (Instructi
 	return out, issues
 }
 
-func collectSkills(root, home, deeperHome string, cfg *config.Config, disp func(string) string) (AssetReport, []Issue, *skill.Store) {
+func collectSkills(root, home, deepzoraHome string, cfg *config.Config, disp func(string) string) (AssetReport, []Issue, *skill.Store) {
 	var issues []Issue
-	store := skill.DiagnosticStore(root, home, deeperHome, cfg)
+	store := skill.DiagnosticStore(root, home, deepzoraHome, cfg)
 	insp := store.Inspect()
 	rep := AssetReport{Roots: []RootInfo{}, Entries: []AssetEntry{}}
 	for _, r := range insp.Roots {
@@ -279,12 +279,12 @@ func collectCommands(root string, disp func(string) string) (AssetReport, []Issu
 	return rep, issues
 }
 
-func collectHooks(root, home, deeperHome string, cfg *config.Config, disp func(string) string) (HookReport, []Issue) {
+func collectHooks(root, home, deepzoraHome string, cfg *config.Config, disp func(string) string) (HookReport, []Issue) {
 	var issues []Issue
 	insp := hook.Inspect(hook.LoadOptions{
-		ProjectRoot:   root,
-		HomeDir:       home,
-		DeeperHomeDir: deeperHome,
+		ProjectRoot:     root,
+		HomeDir:         home,
+		DeepzoraHomeDir: deepzoraHome,
 	})
 	runtimeOptions := hook.RuntimeOptions{}
 	if cfg != nil {
@@ -315,7 +315,7 @@ func collectHooks(root, home, deeperHome string, cfg *config.Config, disp func(s
 	}
 	for _, e := range insp.Entries {
 		rep.Entries = append(rep.Entries, HookEntry{
-			Event: string(e.Event), Match: e.Match, Command: redactCommandDisplay(e.Command, root, home, deeperHome),
+			Event: string(e.Event), Match: e.Match, Command: redactCommandDisplay(e.Command, root, home, deepzoraHome),
 			ContextFile: disp(e.ContextFile), Description: e.Description, TimeoutMS: e.Timeout,
 			Scope: string(e.Scope), Source: disp(e.Source), Blocking: hook.IsBlocking(e.Event),
 		})
@@ -377,19 +377,19 @@ func hookRuntimeIssue(entry hook.Entry, err error, disp func(string) string) (Is
 	}, true
 }
 
-func collectPlugins(deeperHome string, disp func(string) string) (PluginPackageReport, []Issue) {
+func collectPlugins(deepzoraHome string, disp func(string) string) (PluginPackageReport, []Issue) {
 	var issues []Issue
 	rep := PluginPackageReport{
-		StatePath: disp(filepath.Join(deeperHome, pluginpkg.StateFilename)),
+		StatePath: disp(filepath.Join(deepzoraHome, pluginpkg.StateFilename)),
 		Packages:  []PluginPackageInfo{},
 	}
-	st, err := pluginpkg.LoadState(deeperHome)
+	st, err := pluginpkg.LoadState(deepzoraHome)
 	if err != nil {
 		issues = append(issues, Issue{
 			Severity: "error", Code: "plugin.state_read_failed", Subsystem: "plugins",
 			Source:      rep.StatePath,
 			Message:     "failed to read plugin-packages state",
-			Remediation: "Ensure Deeper home is readable or reinstall packages",
+			Remediation: "Ensure Deepzora home is readable or reinstall packages",
 			SettingsTab: "plugins",
 		})
 		return rep, issues
@@ -401,10 +401,10 @@ func collectPlugins(deeperHome string, disp func(string) string) (PluginPackageR
 	for _, p := range st.Plugins {
 		info := PluginPackageInfo{
 			Name: p.Name, Enabled: p.Enabled, Version: p.Version,
-			Root:         disp(pluginpkg.ResolveRoot(deeperHome, p.Root)),
+			Root:         disp(pluginpkg.ResolveRoot(deepzoraHome, p.Root)),
 			ManifestKind: p.ManifestKind, Status: "ok",
 		}
-		root := pluginpkg.ResolveRoot(deeperHome, p.Root)
+		root := pluginpkg.ResolveRoot(deepzoraHome, p.Root)
 		if fi, err := os.Stat(root); err != nil || !fi.IsDir() {
 			info.Status = "missing_root"
 			issues = append(issues, Issue{
@@ -424,7 +424,7 @@ func collectPlugins(deeperHome string, disp func(string) string) (PluginPackageR
 				Severity: "error", Code: "plugin.invalid_manifest", Subsystem: "plugins",
 				Name: p.Name, Source: disp(root),
 				Message:     "plugin package manifest is invalid: " + sanitizeErr(perr),
-				Remediation: "Fix deeper-plugin.json / Codex / Claude plugin manifest",
+				Remediation: "Fix deepzora-plugin.json / Codex / Claude plugin manifest",
 				SettingsTab: "plugins",
 			})
 			rep.Packages = append(rep.Packages, info)
@@ -455,13 +455,13 @@ func collectPlugins(deeperHome string, disp func(string) string) (PluginPackageR
 	return rep, issues
 }
 
-func collectMCP(cfg *config.Config, root, home, deeperHome string, disp func(string) string) (MCPReport, []Issue) {
+func collectMCP(cfg *config.Config, root, home, deepzoraHome string, disp func(string) string) (MCPReport, []Issue) {
 	var issues []Issue
 	rep := MCPReport{Servers: []MCPServerInfo{}}
 	if cfg == nil {
 		return rep, issues
 	}
-	enabled := enabledMCPNames(cfg, root, deeperHome)
+	enabled := enabledMCPNames(cfg, root, deepzoraHome)
 	// Stable order by name.
 	entries := append([]config.PluginEntry(nil), cfg.Plugins...)
 	sort.SliceStable(entries, func(i, j int) bool {
@@ -489,7 +489,7 @@ func collectMCP(cfg *config.Config, root, home, deeperHome string, disp func(str
 			}
 		}
 		if info.Transport == "stdio" {
-			info.Command = redactCommandDisplay(p.Command, root, home, deeperHome)
+			info.Command = redactCommandDisplay(p.Command, root, home, deepzoraHome)
 		} else {
 			info.URLHost = urlHostOnly(p.URL)
 		}
@@ -569,7 +569,7 @@ func commandExists(cmd string) bool {
 	return false
 }
 
-func mergeRuntimeHost(rep *MCPReport, host *plugin.Host, root, home, deeperHome string, issues *[]Issue) {
+func mergeRuntimeHost(rep *MCPReport, host *plugin.Host, root, home, deepzoraHome string, issues *[]Issue) {
 	if host == nil {
 		return
 	}
@@ -604,13 +604,13 @@ func mergeRuntimeHost(rep *MCPReport, host *plugin.Host, root, home, deeperHome 
 		}
 	}
 	for _, f := range host.Failures() {
-		errText := sanitizeErrTextWithPaths(f.Error, root, home, deeperHome)
+		errText := sanitizeErrTextWithPaths(f.Error, root, home, deepzoraHome)
 		if i, ok := byName[f.Name]; ok {
 			rep.Servers[i].RuntimeStatus = "failed"
 			rep.Servers[i].Error = errText
 			rep.Servers[i].StartupStage = f.Stage
 			rep.Servers[i].StartupElapsedMS = f.Elapsed.Milliseconds()
-			rep.Servers[i].Stderr = sanitizeErrTextWithPaths(f.Stderr, root, home, deeperHome)
+			rep.Servers[i].Stderr = sanitizeErrTextWithPaths(f.Stderr, root, home, deepzoraHome)
 		}
 		*issues = append(*issues, Issue{
 			Severity: "error", Code: "mcp.start_failed", Subsystem: "mcp",
@@ -661,7 +661,7 @@ func sanitizeErrText(s string) string {
 	return sanitizeErrTextWithPaths(s, "", "", "")
 }
 
-func sanitizeErrTextWithPaths(s, workspace, home, deeperHome string) string {
+func sanitizeErrTextWithPaths(s, workspace, home, deepzoraHome string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return s
@@ -694,7 +694,7 @@ func sanitizeErrTextWithPaths(s, workspace, home, deeperHome string) string {
 	s = redactBearer(s)
 
 	// Absolute paths: rewrite with displayPath when possible.
-	s = redactAbsolutePaths(s, workspace, home, deeperHome)
+	s = redactAbsolutePaths(s, workspace, home, deepzoraHome)
 
 	// Cap length after redaction.
 	const max = 400
@@ -746,7 +746,7 @@ func redactBearer(s string) string {
 	}
 }
 
-func redactAbsolutePaths(s, workspace, home, deeperHome string) string {
+func redactAbsolutePaths(s, workspace, home, deepzoraHome string) string {
 	// Walk for POSIX and Windows absolute path-like tokens.
 	var b strings.Builder
 	i := 0
@@ -774,7 +774,7 @@ func redactAbsolutePaths(s, workspace, home, deeperHome string) string {
 		token := s[start:j]
 		// Only rewrite if it looks like a path with a directory separator beyond root.
 		if strings.ContainsAny(token, `/\`) && len(token) > 1 {
-			b.WriteString(displayPath(token, workspace, home, deeperHome))
+			b.WriteString(displayPath(token, workspace, home, deepzoraHome))
 		} else {
 			b.WriteString(token)
 		}
@@ -783,7 +783,7 @@ func redactAbsolutePaths(s, workspace, home, deeperHome string) string {
 	return b.String()
 }
 
-func redactCommandDisplay(cmd, root, home, deeperHome string) string {
+func redactCommandDisplay(cmd, root, home, deepzoraHome string) string {
 	cmd = strings.TrimSpace(cmd)
 	if cmd == "" {
 		return ""
@@ -793,7 +793,7 @@ func redactCommandDisplay(cmd, root, home, deeperHome string) string {
 	if len(fields) == 0 {
 		return ""
 	}
-	return displayPath(fields[0], root, home, deeperHome)
+	return displayPath(fields[0], root, home, deepzoraHome)
 }
 
 // DefaultLiveTimeout is used when --live is set without --timeout.

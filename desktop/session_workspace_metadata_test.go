@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 type workspaceInfoProbe struct{ ids []string }

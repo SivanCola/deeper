@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/remote/sshtest"
 )
 
 func dialFS(t *testing.T, root string) *FS {
@@ -141,7 +141,7 @@ func TestSFTPWriteAtomicAndMkdirRenameRemove(t *testing.T) {
 	// No temp file left behind.
 	entries, _ := os.ReadDir(root)
 	for _, e := range entries {
-		if strings.Contains(e.Name(), "deeper-tmp") {
+		if strings.Contains(e.Name(), "deepzora-tmp") {
 			t.Fatalf("temp file left behind: %s", e.Name())
 		}
 	}

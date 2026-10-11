@@ -41,15 +41,15 @@ func TestDetectLinuxInstallProfilePortableWritable(t *testing.T) {
 	}
 }
 
-func TestIsDpkgOwnedDeeperRejectsEmpty(t *testing.T) {
-	if isDpkgOwnedDeeper("") {
+func TestIsDpkgOwnedDeepzoraRejectsEmpty(t *testing.T) {
+	if isDpkgOwnedDeepzora("") {
 		t.Fatal("empty path must not be dpkg-owned")
 	}
-	if isDpkgOwnedDeeper("relative/path") {
+	if isDpkgOwnedDeepzora("relative/path") {
 		t.Fatal("relative path must not be dpkg-owned")
 	}
 	// A random absolute path that is not packaged.
-	if isDpkgOwnedDeeper(filepath.Join(t.TempDir(), "deeper-desktop")) {
+	if isDpkgOwnedDeepzora(filepath.Join(t.TempDir(), "deepzora-desktop")) {
 		t.Fatal("unpackaged path must not be dpkg-owned")
 	}
 }

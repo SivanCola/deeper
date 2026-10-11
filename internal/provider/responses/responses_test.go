@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func boolPtr(value bool) *bool { return &value }

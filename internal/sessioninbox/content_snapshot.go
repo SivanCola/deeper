@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/attachment"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/attachment"
+	"deepzora/internal/sessioncontent"
 )
 
 // FrozenContentRefs reads only manifest-reachable blobs. The caller owns the

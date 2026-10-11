@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/serve"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/serve"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestCanonicalInboxTargetEnqueuesAndConfirmsReceipt(t *testing.T) {

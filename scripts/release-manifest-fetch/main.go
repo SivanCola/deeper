@@ -12,14 +12,14 @@ import (
 	"time"
 )
 
-const manifestURL = "https://github.com/SivanCola/deeper/releases/latest/download/latest.json"
+const manifestURL = "https://github.com/SivanCola/deepzora/releases/latest/download/latest.json"
 const maxManifestBytes = 1 << 20
 
 var stableVersion = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 var stableManifestVersion = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 
 func updaterUserAgent(version string) string {
-	return fmt.Sprintf("Deeper-Updater/v%s (%s/%s; build=stable; update=stable)", version, runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("Deepzora-Updater/v%s (%s/%s; build=stable; update=stable)", version, runtime.GOOS, runtime.GOARCH)
 }
 
 func fetchManifest(client *http.Client, endpoint, version string) ([]byte, error) {

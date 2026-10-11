@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/command"
+	"deepzora/internal/command"
 )
 
 var (
@@ -41,27 +41,27 @@ func userConfigPath() string {
 }
 
 func userConfigDir() string {
-	return deeperHomeDir()
+	return deepzoraHomeDir()
 }
 
-func deeperHomeDir() string {
-	if dir := cleanEnvDir("DEEPER_HOME"); dir != "" {
+func deepzoraHomeDir() string {
+	if dir := cleanEnvDir("DEEPZORA_HOME"); dir != "" {
 		return dir
 	}
 	if runtimeGOOS == "windows" {
 		if dir := osUserConfigDir(); dir != "" {
-			return filepath.Join(dir, "deeper")
+			return filepath.Join(dir, "deepzora")
 		}
 		if home, err := osUserHomeDir(); err == nil && home != "" {
-			return filepath.Join(home, "AppData", "Roaming", "deeper")
+			return filepath.Join(home, "AppData", "Roaming", "deepzora")
 		}
 		return ""
 	}
 	if home, err := osUserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, ".deeper")
+		return filepath.Join(home, ".deepzora")
 	}
 	if dir := osUserConfigDir(); dir != "" {
-		return filepath.Join(dir, "deeper")
+		return filepath.Join(dir, "deepzora")
 	}
 	return ""
 }
@@ -135,19 +135,19 @@ func legacyXDGConfigPaths() []string {
 		paths = append(paths, path)
 	}
 	if dir := cleanEnvDir("XDG_CONFIG_HOME"); dir != "" {
-		add(filepath.Join(dir, "deeper", "config.toml"))
+		add(filepath.Join(dir, "deepzora", "config.toml"))
 	}
 	if home, err := osUserHomeDir(); err == nil && home != "" {
-		add(filepath.Join(home, ".config", "deeper", "config.toml"))
+		add(filepath.Join(home, ".config", "deepzora", "config.toml"))
 	}
 	return paths
 }
 
 func userSupportDir() string {
-	if dir := cleanEnvDir("DEEPER_STATE_HOME"); dir != "" {
+	if dir := cleanEnvDir("DEEPZORA_STATE_HOME"); dir != "" {
 		return dir
 	}
-	return deeperHomeDir()
+	return deepzoraHomeDir()
 }
 
 func legacyOSSupportDir() string {
@@ -158,25 +158,25 @@ func legacyOSSupportDir() string {
 	if dir == "" {
 		return ""
 	}
-	path := filepath.Join(dir, "deeper")
-	if current := deeperHomeDir(); current != "" && samePath(path, current) {
+	path := filepath.Join(dir, "deepzora")
+	if current := deepzoraHomeDir(); current != "" && samePath(path, current) {
 		return ""
 	}
 	return path
 }
 
 func userCacheDir() string {
-	if dir := cleanEnvDir("DEEPER_CACHE_HOME"); dir != "" {
+	if dir := cleanEnvDir("DEEPZORA_CACHE_HOME"); dir != "" {
 		return dir
 	}
-	if dir := cleanEnvDir("DEEPER_HOME"); dir != "" {
+	if dir := cleanEnvDir("DEEPZORA_HOME"); dir != "" {
 		return filepath.Join(dir, "cache")
 	}
 	dir := osUserCacheDir()
 	if dir == "" {
 		return ""
 	}
-	return filepath.Join(dir, "deeper")
+	return filepath.Join(dir, "deepzora")
 }
 
 func cleanEnvDir(name string) string {
@@ -217,21 +217,21 @@ func samePath(a, b string) bool {
 	return filepath.Clean(a) == filepath.Clean(b)
 }
 
-// IsolatedHomeDir returns the DEEPER_HOME directory when it has been
+// IsolatedHomeDir returns the DEEPZORA_HOME directory when it has been
 // explicitly set via the environment variable. A non-empty return signals a
 // self-contained runtime that must not fall back to legacy OS-default data
 // paths or import data from the system-wide production install.
 func IsolatedHomeDir() string {
-	return cleanEnvDir("DEEPER_HOME")
+	return cleanEnvDir("DEEPZORA_HOME")
 }
 
 // userConfigDisplayPath is userConfigPath collapsed to a ~-relative form for
 // comments rendered into the user's own config.toml, so Windows users see the
-// real location instead of a hardcoded ~/.deeper path.
+// real location instead of a hardcoded ~/.deepzora path.
 func userConfigDisplayPath() string {
 	p := userConfigPath()
 	if p == "" {
-		return "<os-config-dir>/deeper/config.toml"
+		return "<os-config-dir>/deepzora/config.toml"
 	}
 	if home, err := osUserHomeDir(); err == nil && home != "" {
 		if rel, err := filepath.Rel(home, p); err == nil && !strings.HasPrefix(rel, "..") {
@@ -241,10 +241,10 @@ func userConfigDisplayPath() string {
 	return p
 }
 
-// UserConfigPath is the user-global config.toml. It lives under Deeper home:
-// DEEPER_HOME/config.toml, then ~/.deeper/config.toml on Unix-like systems,
-// or %AppData%/deeper/config.toml on Windows. If %AppData% is unavailable on
-// Windows, it falls back to %USERPROFILE%/AppData/Roaming/deeper/config.toml.
+// UserConfigPath is the user-global config.toml. It lives under Deepzora home:
+// DEEPZORA_HOME/config.toml, then ~/.deepzora/config.toml on Unix-like systems,
+// or %AppData%/deepzora/config.toml on Windows. If %AppData% is unavailable on
+// Windows, it falls back to %USERPROFILE%/AppData/Roaming/deepzora/config.toml.
 // "" when the user config dir can't be resolved.
 func UserConfigPath() string { return userConfigPath() }
 
@@ -254,7 +254,7 @@ func UserConfigPath() string { return userConfigPath() }
 func LegacyUserConfigPath() string { return legacyUserConfigPath() }
 
 // LegacyUserConfigPaths returns every known legacy user config path that differs
-// from the current v1.8.1 Deeper-home config path.
+// from the current v1.8.1 Deepzora-home config path.
 func LegacyUserConfigPaths() []string {
 	primary := userConfigPath()
 	var out []string
@@ -276,14 +276,14 @@ func LegacyUserConfigPaths() []string {
 	return out
 }
 
-// DeeperManagedConfigPaths returns the Deeper-owned user configuration
+// DeepzoraManagedConfigPaths returns the Deepzora-owned user configuration
 // FILES that model-driven tools may repair on the user's request, each gated
 // by a fresh per-write human approval: the current config.toml, compatibility
-// TOML locations, and the legacy v0.x ~/.deeper/config.json. Individual
-// files, never directories — the Deeper home also holds credentials (.env),
+// TOML locations, and the legacy v0.x ~/.deepzora/config.json. Individual
+// files, never directories — the Deepzora home also holds credentials (.env),
 // global hooks (settings.json), skills, and session stores, and none of those
 // may ride along on a config repair.
-func DeeperManagedConfigPaths() []string {
+func DeepzoraManagedConfigPaths() []string {
 	var out []string
 	out = appendUniquePath(out, UserConfigPath())
 	for _, path := range LegacyUserConfigPaths() {
@@ -307,24 +307,24 @@ func appendUniquePath(paths []string, path string) []string {
 	return append(paths, clean)
 }
 
-// DeeperHomeDir is the current Deeper home directory. It honors
-// DEEPER_HOME, then uses ~/.deeper on macOS/Linux or %APPDATA%/deeper on
+// DeepzoraHomeDir is the current Deepzora home directory. It honors
+// DEEPZORA_HOME, then uses ~/.deepzora on macOS/Linux or %APPDATA%/deepzora on
 // Windows, with a %USERPROFILE%/AppData/Roaming fallback when %APPDATA% is
 // unavailable.
-func DeeperHomeDir() string { return deeperHomeDir() }
+func DeepzoraHomeDir() string { return deepzoraHomeDir() }
 
 // RemoteStateDir is local state for the remote-SSH module (the managed
-// known_hosts file, cached host metadata): <Deeper home>/remote. Routed
-// through the home resolver so DEEPER_HOME isolation holds.
+// known_hosts file, cached host metadata): <Deepzora home>/remote. Routed
+// through the home resolver so DEEPZORA_HOME isolation holds.
 func RemoteStateDir() string {
-	home := deeperHomeDir()
+	home := deepzoraHomeDir()
 	if strings.TrimSpace(home) == "" {
 		return ""
 	}
 	return filepath.Join(home, "remote")
 }
 
-// RemoteKnownHostsPath is the Deeper-managed known_hosts file (OpenSSH
+// RemoteKnownHostsPath is the Deepzora-managed known_hosts file (OpenSSH
 // format) that records TOFU-accepted host keys. The user's own
 // ~/.ssh/known_hosts is only ever read, never written.
 func RemoteKnownHostsPath() string {
@@ -336,11 +336,11 @@ func RemoteKnownHostsPath() string {
 }
 
 // MissingReasoningWarnStateDir is the shared directory for the rate-limited
-// missing tool-call thinking recovery gate (#7059): <Deeper home>/state. The
+// missing tool-call thinking recovery gate (#7059): <Deepzora home>/state. The
 // legacy name preserves callers and the existing state-file contract. Routed
-// through the home resolver so DEEPER_HOME isolation holds.
+// through the home resolver so DEEPZORA_HOME isolation holds.
 func MissingReasoningWarnStateDir() string {
-	home := deeperHomeDir()
+	home := deepzoraHomeDir()
 	if strings.TrimSpace(home) == "" {
 		return ""
 	}
@@ -351,44 +351,44 @@ func MissingReasoningWarnStateDir() string {
 // workspaces. It intentionally follows the cache root rather than project or
 // session state: taking a lease must never dirty the repository it protects.
 func WorkspaceLeaseDir() string {
-	// Deliberately ignore DEEPER_HOME/DEEPER_CACHE_HOME here. Two app
+	// Deliberately ignore DEEPZORA_HOME/DEEPZORA_CACHE_HOME here. Two app
 	// instances with different state profiles can still open the same user
 	// workspace, so their safety lock must converge on one OS-user cache root.
 	dir := osUserCacheDir()
 	if strings.TrimSpace(dir) == "" {
 		return ""
 	}
-	return filepath.Join(dir, "deeper", "workspace-leases")
+	return filepath.Join(dir, "deepzora", "workspace-leases")
 }
 
 // RepairMutationLockDir stores target-path repair locks in the OS-user cache.
-// It deliberately ignores Deeper home/cache overrides: isolated instances
-// can still repair the same project deeper.toml, so their locks must converge.
+// It deliberately ignores Deepzora home/cache overrides: isolated instances
+// can still repair the same project deepzora.toml, so their locks must converge.
 func RepairMutationLockDir() string {
 	dir := osUserCacheDir()
 	if strings.TrimSpace(dir) == "" {
 		return ""
 	}
-	return filepath.Join(dir, "deeper", "repair-mutation-locks")
+	return filepath.Join(dir, "deepzora", "repair-mutation-locks")
 }
 
 // DeliveryWorktreeDir is durable storage for user-visible isolated Delivery
 // workspaces. Explicit state/home overrides remain authoritative. Windows uses
 // LocalAppData by default so large Git worktrees do not roam with the user's
-// profile; other platforms keep using Deeper state storage.
+// profile; other platforms keep using Deepzora state storage.
 func DeliveryWorktreeDir() string {
-	if dir := cleanEnvDir("DEEPER_STATE_HOME"); dir != "" {
+	if dir := cleanEnvDir("DEEPZORA_STATE_HOME"); dir != "" {
 		return filepath.Join(dir, "worktrees")
 	}
-	if dir := cleanEnvDir("DEEPER_HOME"); dir != "" {
+	if dir := cleanEnvDir("DEEPZORA_HOME"); dir != "" {
 		return filepath.Join(dir, "worktrees")
 	}
 	if runtimeGOOS == "windows" {
 		if dir := osUserCacheDir(); dir != "" {
-			return filepath.Join(dir, "deeper", "worktrees")
+			return filepath.Join(dir, "deepzora", "worktrees")
 		}
 		if home, err := osUserHomeDir(); err == nil && home != "" {
-			return filepath.Join(home, "AppData", "Local", "deeper", "worktrees")
+			return filepath.Join(home, "AppData", "Local", "deepzora", "worktrees")
 		}
 		return ""
 	}
@@ -399,13 +399,13 @@ func DeliveryWorktreeDir() string {
 	return filepath.Join(dir, "worktrees")
 }
 
-// UserCredentialsPath is the deeper-owned global .env file under Deeper
-// home. It is the single source for provider credentials saved by Deeper, so
+// UserCredentialsPath is the deepzora-owned global .env file under Deepzora
+// home. It is the single source for provider credentials saved by Deepzora, so
 // stale shell, Windows, project, or home env vars cannot silently override keys
-// the user saved through setup or settings. "" when Deeper home can't be
+// the user saved through setup or settings. "" when Deepzora home can't be
 // resolved.
 func UserCredentialsPath() string {
-	dir := deeperHomeDir()
+	dir := deepzoraHomeDir()
 	if dir == "" {
 		return ""
 	}
@@ -424,7 +424,7 @@ func ArchiveDir() string {
 }
 
 // SessionDir is where chat sessions are persisted (one .jsonl per session).
-// Used by `deeper --continue` / `--resume` to find the recent ones. Empty
+// Used by `deepzora --continue` / `--resume` to find the recent ones. Empty
 // if the user state dir can't be resolved — sessions then aren't saved.
 func SessionDir() string {
 	dir := userSupportDir()
@@ -616,24 +616,24 @@ func CacheDir() string {
 	return dir
 }
 
-// MemoryUserDir returns the deeper user state root (…/deeper), under which
-// the user-global DEEPER.md and the per-project auto-memory store live. Empty
+// MemoryUserDir returns the deepzora user state root (…/deepzora), under which
+// the user-global DEEPZORA.md and the per-project auto-memory store live. Empty
 // when the user state dir can't be resolved, which disables user-scoped memory.
 func MemoryUserDir() string {
 	return userSupportDir()
 }
 
 // ConventionDirs are the parent directories scanned for agent assets (skills,
-// commands), in canonical-first order. .deeper is ours; .agents / .agent /
+// commands), in canonical-first order. .deepzora is ours; .agents / .agent /
 // .claude let users drop in assets authored for other agent tools without moving
 // files. Shared so skills (internal/skill) and commands (CommandDirs) discover
 // the same set. Note: hooks are NOT scanned across these — a .claude/settings.json
 // uses a different hook schema that can't be parsed as ours, so hooks stay in
-// .deeper/settings.json (see internal/hook).
-var ConventionDirs = []string{".deeper", ".agents", ".agent", ".claude"}
+// .deepzora/settings.json (see internal/hook).
+var ConventionDirs = []string{".deepzora", ".agents", ".agent", ".claude"}
 
 // conventionSubdirsAsc joins sub under each ConventionDir of base, in ascending
-// priority (reverse of ConventionDirs) so the canonical .deeper ends up the
+// priority (reverse of ConventionDirs) so the canonical .deepzora ends up the
 // highest-priority entry — command.Load lets a later directory win on a clash.
 func conventionSubdirsAsc(base, sub string) []string {
 	out := make([]string, 0, len(ConventionDirs))
@@ -646,9 +646,9 @@ func conventionSubdirsAsc(base, sub string) []string {
 // CommandDirs returns the directories scanned for custom slash commands, lowest
 // priority first, so a later (more specific) directory overrides an earlier one
 // on a name clash. Order: home-dir convention dirs (~/.claude/commands …
-// ~/.deeper/commands), the Deeper home commands dir, the legacy OS
+// ~/.deepzora/commands), the Deepzora home commands dir, the legacy OS
 // app-support dir if different, then the project's
-// convention dirs (.claude/commands … .deeper/commands). Scanning the .claude /
+// convention dirs (.claude/commands … .deepzora/commands). Scanning the .claude /
 // .agents / .agent dirs lets commands authored for other agent tools (same .md +
 // frontmatter format) work here unchanged.
 func CommandDirs() []string {
@@ -721,9 +721,9 @@ func SourcePath() string {
 // root, or "" if none. Equivalent to SourcePath() when root is ".".
 func SourcePathForRoot(root string) string {
 	root = resolveRoot(root)
-	projectTOML := "deeper.toml"
+	projectTOML := "deepzora.toml"
 	if root != "." {
-		projectTOML = filepath.Join(root, "deeper.toml")
+		projectTOML = filepath.Join(root, "deepzora.toml")
 	}
 	if _, err := os.Stat(projectTOML); err == nil {
 		return projectTOML

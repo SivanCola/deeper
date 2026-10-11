@@ -90,7 +90,7 @@ jobs:
       - name: Reject upstream recovery exceptions
         if: ${{ inputs.reuse_manual_artifacts || inputs.desktop_manual_only }}
         run: |
-          echo "::error::Upstream artifact reuse and unsigned release exceptions are unavailable in Deeper"
+          echo "::error::Upstream artifact reuse and unsigned release exceptions are unavailable in Deepzora"
           exit 1
       - name: Resolve stable release
         id: release

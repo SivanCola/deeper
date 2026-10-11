@@ -571,13 +571,13 @@ export class TranscriptStore {
       // The reclaimed page's own older cursor is now the window's head, so the
       // reader can page straight back into the range that was just dropped.
       const anchor = [...session.records].reverse().find(record => dropped.has(record.entryId) && record.message.messageId);
-      session.nextCursor = session.pages[0]?.olderCursor || (anchor ? `deeper:message:${encodeURIComponent(anchor.message.messageId!)}:${session.latestSequence ?? session.revision}:${encodeURIComponent(session.digest)}:older` : page.olderCursor);
+      session.nextCursor = session.pages[0]?.olderCursor || (anchor ? `deepzora:message:${encodeURIComponent(anchor.message.messageId!)}:${session.latestSequence ?? session.revision}:${encodeURIComponent(session.digest)}:older` : page.olderCursor);
       session.hasOlder = true;
       session.reclaimedOlder += 1;
     } else {
       session.pages.pop();
       const anchor = session.records.find(record => dropped.has(record.entryId) && record.message.messageId);
-      session.newerCursor = session.pages[session.pages.length - 1]?.newerCursor || (anchor ? `deeper:message:${encodeURIComponent(anchor.message.messageId!)}:${session.latestSequence ?? session.revision}:${encodeURIComponent(session.digest)}:newer` : page.newerCursor);
+      session.newerCursor = session.pages[session.pages.length - 1]?.newerCursor || (anchor ? `deepzora:message:${encodeURIComponent(anchor.message.messageId!)}:${session.latestSequence ?? session.revision}:${encodeURIComponent(session.digest)}:newer` : page.newerCursor);
       session.hasNewer = true;
       session.reclaimedNewer += 1;
     }
@@ -783,7 +783,7 @@ export class TranscriptStore {
       if (!session.hasNewer && (session.latestSequence ?? 0) > slice.revision && pageEntries.length) {
         const last = pageEntries[pageEntries.length - 1];
         if (last.message.messageId) {
-          session.newerCursor = `deeper:message:${encodeURIComponent(last.message.messageId)}:${session.latestSequence}:${encodeURIComponent(session.digest)}:newer`;
+          session.newerCursor = `deepzora:message:${encodeURIComponent(last.message.messageId)}:${session.latestSequence}:${encodeURIComponent(session.digest)}:newer`;
           session.hasNewer = true;
         }
       }

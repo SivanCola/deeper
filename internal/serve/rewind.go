@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // rewind rewinds the session to a checkpoint.

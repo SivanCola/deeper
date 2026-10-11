@@ -10,8 +10,8 @@ import (
 	"hash"
 	"os"
 
-	"deeper/internal/fileops"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/store"
 )
 
 func restoreEventPagerScan(ctx context.Context, db *sql.DB, sourceKey string, size int64) (eventPagerScanProgress, error) {

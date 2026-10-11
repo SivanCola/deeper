@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type remoteRuntimeSync struct {

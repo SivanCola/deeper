@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/store"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/store"
 )
 
 const (

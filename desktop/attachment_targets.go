@@ -9,11 +9,11 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/attachment"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/session"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/attachment"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioninbox"
 )
 
 type ComposerTarget struct {

@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/tool"
+import "deepzora/internal/tool"
 
 // contextUsage memoises the projected prompt size. The estimate walks every
 // visible message, and status gauges redraw far more often than the view moves,

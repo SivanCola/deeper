@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 // PurgeCanonicalSession permanently removes only archived sessions. Adoption

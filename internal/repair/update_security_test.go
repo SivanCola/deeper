@@ -11,10 +11,10 @@ import (
 
 func TestPendingUpdateRejectsTargetOutsideGuardInstall(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	guardDir := t.TempDir()
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
-	backup := filepath.Join(home, "repair", "updates", "deeper-desktop.previous")
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
+	backup := filepath.Join(home, "repair", "updates", "deepzora-desktop.previous")
 	if err := os.MkdirAll(filepath.Dir(backup), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestPendingUpdateRejectsTargetOutsideGuardInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(guardDir, "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(guardDir, "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if _, err := ReadPendingUpdate(); err == nil {
 		t.Fatal("pending update outside Guard install was accepted")
@@ -46,10 +46,10 @@ func TestInstalledUpdateStateRejectsSymlinkedParentEscape(t *testing.T) {
 		t.Skip("creating symlinks requires elevated privileges on Windows CI")
 	}
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -98,10 +98,10 @@ func TestInstalledUpdateStateRejectsSymlinkedParentEscape(t *testing.T) {
 
 func TestPendingUpdateRejectsUnexpectedReleaseFile(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	backup := filepath.Join(home, "repair", "updates", "deeper-desktop.previous")
+	target := filepath.Join(dir, "deepzora-desktop")
+	backup := filepath.Join(home, "repair", "updates", "deepzora-desktop.previous")
 	if err := os.MkdirAll(filepath.Dir(backup), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -109,15 +109,15 @@ func TestPendingUpdateRejectsUnexpectedReleaseFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(dir, "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(dir, "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	const hash = "deadbeef"
 	bad := []UpdateTransactionFile{
 		{TargetPath: filepath.Join(dir, "evil.exe"), BackupPath: backup, SHA256: hash},
-		{TargetPath: filepath.Join(t.TempDir(), "deeper-guard"), BackupPath: backup, SHA256: hash},
-		{TargetPath: filepath.Join(dir, "deeper-guard"), BackupPath: filepath.Join(t.TempDir(), "loose.previous"), SHA256: hash},
-		{TargetPath: filepath.Join(dir, "deeper-guard"), BackupPath: backup}, // missing hash
-		{TargetPath: filepath.Join(dir, "deeper-guard"), BackupPath: backup, SHA256: hash, MissingBefore: true},
+		{TargetPath: filepath.Join(t.TempDir(), "deepzora-guard"), BackupPath: backup, SHA256: hash},
+		{TargetPath: filepath.Join(dir, "deepzora-guard"), BackupPath: filepath.Join(t.TempDir(), "loose.previous"), SHA256: hash},
+		{TargetPath: filepath.Join(dir, "deepzora-guard"), BackupPath: backup}, // missing hash
+		{TargetPath: filepath.Join(dir, "deepzora-guard"), BackupPath: backup, SHA256: hash, MissingBefore: true},
 		{TargetPath: target, MissingBefore: true},
 	}
 	for _, file := range bad {
@@ -146,13 +146,13 @@ func TestPendingUpdateRejectsBackupSymlinkEscape(t *testing.T) {
 		t.Skip("creating symlinks requires elevated privileges on Windows CI")
 	}
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -171,7 +171,7 @@ func TestPendingUpdateRejectsBackupSymlinkEscape(t *testing.T) {
 	if _, err := PrepareFileUpdate("v1", "v2", target); err == nil {
 		t.Fatal("prepare update wrote a backup through a symlink outside the repair directory")
 	}
-	backup := filepath.Join(repairDir, "updates", "deeper-desktop.previous")
+	backup := filepath.Join(repairDir, "updates", "deepzora-desktop.previous")
 	if err := os.WriteFile(backup, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestPrepareFileUpdateRejectsSymlinkReleaseFile(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("creating symlinks requires elevated privileges on Windows CI")
 	}
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -206,7 +206,7 @@ func TestPrepareFileUpdateRejectsSymlinkReleaseFile(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("outside"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
+	target := filepath.Join(dir, "deepzora-desktop")
 	if err := os.Symlink(outside, target); err != nil {
 		t.Fatal(err)
 	}
@@ -265,13 +265,13 @@ func TestRenameRepairNodeNoReplacePreservesDestination(t *testing.T) {
 
 func TestPendingUpdateAcceptsMissingReleaseSibling(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	backup := filepath.Join(home, "repair", "updates", "deeper-desktop.previous")
+	target := filepath.Join(dir, "deepzora-desktop")
+	backup := filepath.Join(home, "repair", "updates", "deepzora-desktop.previous")
 	if err := os.MkdirAll(filepath.Dir(backup), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +279,7 @@ func TestPendingUpdateAcceptsMissingReleaseSibling(t *testing.T) {
 		t.Fatal(err)
 	}
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(dir, "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(dir, "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	tx := &UpdateTransaction{
 		SchemaVersion: 1,
@@ -291,7 +291,7 @@ func TestPendingUpdateAcceptsMissingReleaseSibling(t *testing.T) {
 		BackupSHA256:  "deadbeef",
 		Files: []UpdateTransactionFile{
 			{TargetPath: target, BackupPath: backup, SHA256: "deadbeef"},
-			{TargetPath: filepath.Join(dir, "Deeper.exe"), MissingBefore: true},
+			{TargetPath: filepath.Join(dir, "Deepzora.exe"), MissingBefore: true},
 		},
 		CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
 	}
@@ -305,22 +305,22 @@ func TestPendingUpdateAcceptsMissingReleaseSibling(t *testing.T) {
 
 func TestPendingUpdateAcceptsWindowsReleaseUnit(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(dir, "deeper-launcher.exe"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(dir, "deepzora-launcher.exe"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
 	names := []string{
-		"deeper-desktop.exe",
-		"deeper-guard.exe",
-		"deeper-launcher.exe",
-		"deeper-update-helper.exe",
-		"deeper-cli.exe",
-		"Deeper.exe",
+		"deepzora-desktop.exe",
+		"deepzora-guard.exe",
+		"deepzora-launcher.exe",
+		"deepzora-update-helper.exe",
+		"deepzora-cli.exe",
+		"Deepzora.exe",
 	}
 	paths := make([]string, 0, len(names))
 	for _, name := range names {
@@ -349,16 +349,16 @@ func TestPendingUpdateAcceptsWindowsReleaseUnit(t *testing.T) {
 
 func TestPendingUpdateAcceptsLinuxReleaseUnit(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(dir, "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(dir, "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	names := []string{"deeper-desktop", "deeper-guard", "deeper"}
+	names := []string{"deepzora-desktop", "deepzora-guard", "deepzora"}
 	paths := make([]string, 0, len(names))
 	for _, name := range names {
 		path := filepath.Join(dir, name)
@@ -381,13 +381,13 @@ func TestPendingUpdateAcceptsLinuxReleaseUnit(t *testing.T) {
 
 func TestPendingUpdateRejectsHashlessOrPrimaryLessTransactions(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	backup := filepath.Join(home, "repair", "updates", "deeper-desktop.previous")
+	target := filepath.Join(dir, "deepzora-desktop")
+	backup := filepath.Join(home, "repair", "updates", "deepzora-desktop.previous")
 	if err := os.MkdirAll(filepath.Dir(backup), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -395,9 +395,9 @@ func TestPendingUpdateRejectsHashlessOrPrimaryLessTransactions(t *testing.T) {
 		t.Fatal(err)
 	}
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(dir, "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(dir, "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
-	guardBackup := filepath.Join(home, "repair", "updates", "deeper-guard.previous")
+	guardBackup := filepath.Join(home, "repair", "updates", "deepzora-guard.previous")
 	txs := map[string]*UpdateTransaction{
 		"missing primary hash": {
 			SchemaVersion: 1, ToVersion: "v2", TargetKind: "file",
@@ -407,7 +407,7 @@ func TestPendingUpdateRejectsHashlessOrPrimaryLessTransactions(t *testing.T) {
 		"release unit omits primary executable": {
 			SchemaVersion: 1, ToVersion: "v2", TargetKind: "file",
 			TargetPath: target, BackupPath: backup, BackupSHA256: "deadbeef",
-			Files:    []UpdateTransactionFile{{TargetPath: filepath.Join(dir, "deeper-guard"), BackupPath: guardBackup, SHA256: "deadbeef"}},
+			Files:    []UpdateTransactionFile{{TargetPath: filepath.Join(dir, "deepzora-guard"), BackupPath: guardBackup, SHA256: "deadbeef"}},
 			Platform: runtime.GOOS + "/" + runtime.GOARCH, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		},
 	}
@@ -423,11 +423,11 @@ func TestPendingUpdateRejectsHashlessOrPrimaryLessTransactions(t *testing.T) {
 
 func TestPendingUpdateRejectsPortableAliasAsPrimaryTarget(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "Deeper.exe")
-	guard := filepath.Join(dir, "deeper-guard.exe")
-	backup := filepath.Join(home, "repair", "updates", "Deeper.exe.previous")
+	target := filepath.Join(dir, "Deepzora.exe")
+	guard := filepath.Join(dir, "deepzora-guard.exe")
+	backup := filepath.Join(home, "repair", "updates", "Deepzora.exe.previous")
 	if err := os.MkdirAll(filepath.Dir(backup), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -456,7 +456,7 @@ func TestPendingUpdateRejectsPortableAliasAsPrimaryTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := ReadPendingUpdate(); err == nil ||
-		!strings.Contains(err.Error(), "not a Deeper executable") {
+		!strings.Contains(err.Error(), "not a Deepzora executable") {
 		t.Fatalf("portable alias was accepted as primary target: %v", err)
 	}
 }
@@ -504,13 +504,13 @@ func TestPendingUpdateRejectsIncompleteOrInconsistentIdentity(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("DEEPER_HOME", t.TempDir())
+			t.Setenv("DEEPZORA_HOME", t.TempDir())
 			dir, err := filepath.EvalSymlinks(t.TempDir())
 			if err != nil {
 				t.Fatal(err)
 			}
-			target := filepath.Join(dir, "deeper-desktop")
-			guard := filepath.Join(dir, "deeper-guard")
+			target := filepath.Join(dir, "deepzora-desktop")
+			guard := filepath.Join(dir, "deepzora-guard")
 			originalExecutable := repairExecutable
 			repairExecutable = func() (string, error) { return guard, nil }
 			t.Cleanup(func() { repairExecutable = originalExecutable })

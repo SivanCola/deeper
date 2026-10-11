@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/tool"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/tool"
 )
 
 func TestWriteIntentDurabilityBeforeMutation(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/sftp"
 
-	"deeper/internal/remote/sftpfs"
+	"deepzora/internal/remote/sftpfs"
 )
 
 type serveLockFS interface {

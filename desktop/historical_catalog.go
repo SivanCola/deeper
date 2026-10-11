@@ -10,9 +10,9 @@ import (
 	"sort"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/historywork"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/historywork"
+	"deepzora/internal/session"
 )
 
 type historicalCatalogEntry struct {

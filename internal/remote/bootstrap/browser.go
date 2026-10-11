@@ -10,8 +10,8 @@ import (
 // Both travel in the process environment only: the token rotates with every
 // SSH connection generation, so nothing on disk may outlive it.
 const (
-	BrowserBrokerEnv = "DEEPER_BROWSER_BROKER"
-	BrowserTokenEnv  = "DEEPER_BROWSER_TOKEN"
+	BrowserBrokerEnv = "DEEPZORA_BROWSER_BROKER"
+	BrowserTokenEnv  = "DEEPZORA_BROWSER_TOKEN"
 )
 
 // ServeBrowserBrokerMarker is the `serve --help` flag name that advertises a

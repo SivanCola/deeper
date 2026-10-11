@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	readyToken = "DEEPER_SHELL_READY"
+	readyToken = "DEEPZORA_SHELL_READY"
 	// markerOverlap is how much already-scanned output is re-examined with the
 	// next PTY read so a marker split across two reads is still found. It must
 	// exceed the longest marker plus its status digits and terminator.

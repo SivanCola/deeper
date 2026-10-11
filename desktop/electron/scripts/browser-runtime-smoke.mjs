@@ -11,7 +11,7 @@ import { buildBrowserPage } from "./build-browser-page.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const prepare = process.argv[2] === "--prepare-only" ? process.argv[3] : undefined;
 if (process.argv.length > 2 && (!prepare || process.argv.length !== 4)) throw new Error("usage: browser-runtime-smoke.mjs [--prepare-only <directory>]");
-const scratch = mkdtempSync(join(tmpdir(), "deeper-browser-smoke-"));
+const scratch = mkdtempSync(join(tmpdir(), "deepzora-browser-smoke-"));
 try {
   await buildBrowserPage();
   for (const name of ["browser-page.js", "browser-page.json", "browser-recorder.js", "recorder-preload.cjs"]) copyFileSync(join(root, "dist", name), join(scratch, name));
@@ -34,10 +34,10 @@ try {
     // Electron #51488: AppKit may reopen a crash-state modal despite an isolated
     // Chromium profile. Apply the official workaround to this process only.
     const platformArgs = process.platform === "darwin" ? ["-ApplePersistenceIgnoreState", "YES"] : [];
-    const recordingSeconds = Number(process.env.DEEPER_BROWSER_RECORD_SECONDS ?? 1);
+    const recordingSeconds = Number(process.env.DEEPZORA_BROWSER_RECORD_SECONDS ?? 1);
     if (!Number.isInteger(recordingSeconds) || recordingSeconds < 1 || recordingSeconds > 90) throw new Error("recording test duration must be 1–90 seconds");
-    const timeout = Math.max(process.env.DEEPER_BROWSER_CYCLES === "100" ? 180_000 : 60_000, recordingSeconds === 1 ? 0 : (recordingSeconds + 60) * 1000);
-    const evidence = process.env.DEEPER_BROWSER_EVIDENCE_PATH || join(root, "artifacts/browser-runtime", process.platform);
+    const timeout = Math.max(process.env.DEEPZORA_BROWSER_CYCLES === "100" ? 180_000 : 60_000, recordingSeconds === 1 ? 0 : (recordingSeconds + 60) * 1000);
+    const evidence = process.env.DEEPZORA_BROWSER_EVIDENCE_PATH || join(root, "artifacts/browser-runtime", process.platform);
     mkdirSync(evidence, { recursive: true });
     // A failed attempt must not leave a previous run's success as its status.
     writeFileSync(join(evidence, "result.json"), JSON.stringify({ completed: false, status: "running", platform: process.platform }));

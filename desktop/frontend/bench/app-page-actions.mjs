@@ -10,7 +10,7 @@ export function sessionButton(page, label) {
   return page.locator(".project-tree__topic-main").filter({ hasText: label }).first();
 }
 
-export async function revealSession(page, label, projectLabel = "deeper") {
+export async function revealSession(page, label, projectLabel = "deepzora") {
   // Composer readiness and sidebar data readiness are independent. Wait for
   // the first projected row before deciding whether the target is truncated.
   await page.locator(".project-tree__topic-main").first().waitFor({ state: "visible" });

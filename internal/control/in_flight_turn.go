@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func (c *Controller) markInFlightTurn(startMessageIndex int, preserveUser bool) agent.InFlightTurnMeta {
@@ -356,7 +356,7 @@ func (c *Controller) emitHeadEvents() {
 		switch ev.Kind {
 		case agent.HeadEventForkedConcurrent:
 			c.sink.Emit(sessionRecoveryNotice(event.NoticeCodeSessionConcurrentWriter,
-				"another Deeper window or process added to this conversation; its content is kept as a separate version"))
+				"another Deepzora window or process added to this conversation; its content is kept as a separate version"))
 		case agent.HeadEventMultipleRecentHeads:
 			c.sink.Emit(sessionRecoveryNotice(event.NoticeCodeSessionHeadSwitched,
 				"opened the newest version of this conversation; other saved versions are available in View versions"))

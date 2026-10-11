@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/command"
-	"deeper/internal/control"
-	"deeper/internal/plugin"
-	"deeper/internal/skill"
+	"deepzora/internal/command"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
+	"deepzora/internal/skill"
 )
 
 const helpMaxDynamicItems = 8

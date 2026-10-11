@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/identitylock"
+	"deepzora/internal/identitylock"
 )
 
 func TestManualCreationWaitsForSupersededBuildActualExit(t *testing.T) {

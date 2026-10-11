@@ -27,7 +27,7 @@ func needsResearchBudget(goal string) bool {
 		return false
 	}
 	lower := strings.ToLower(trimmed)
-	if strings.Contains(lower, ".deeper/autoresearch/") {
+	if strings.Contains(lower, ".deepzora/autoresearch/") {
 		return true
 	}
 	for _, kw := range researchBudgetStrongKeywords {

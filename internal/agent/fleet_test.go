@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestBackgroundFleetRegistersEveryWriterUntilCompletion(t *testing.T) {

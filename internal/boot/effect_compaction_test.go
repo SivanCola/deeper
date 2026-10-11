@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 const deepSeekOverflowBody = `{"error":{"message":"This model's maximum context length is %d tokens. However, you requested %d tokens (%d in the messages, %d in the completion). Please reduce the length of the messages or completion.","type":"invalid_request_error","param":null,"code":"invalid_request_error"}}`
@@ -133,7 +133,7 @@ func TestEffectSummaryOverflowShrinksNextSummaryThroughRealBuild(t *testing.T) {
 		}
 		writeFile(t, dir, fmt.Sprintf("file-%d.txt", i), body.String())
 	}
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

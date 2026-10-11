@@ -66,12 +66,12 @@ if [ ! -f "$manifest" ]; then
 fi
 
 required_assets='[
-  "deeper-darwin-amd64.tar.gz",
-  "deeper-darwin-arm64.tar.gz",
-  "deeper-linux-amd64.tar.gz",
-  "deeper-linux-arm64.tar.gz",
-  "deeper-windows-amd64.zip",
-  "deeper-windows-arm64.zip",
+  "deepzora-darwin-amd64.tar.gz",
+  "deepzora-darwin-arm64.tar.gz",
+  "deepzora-linux-amd64.tar.gz",
+  "deepzora-linux-arm64.tar.gz",
+  "deepzora-windows-amd64.zip",
+  "deepzora-windows-arm64.zip",
   "SHA256SUMS"
 ]'
 
@@ -92,8 +92,8 @@ jq -e \
 	(.html_url == ("https://github.com/" + $repository + "/releases/tag/" + $tag)) and
 	(if $legacy
 		then (.release_notes_url == null or
-			.release_notes_url == ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_tag + "/"))
-		else (.release_notes_url == ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_tag + "/"))
+			.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_tag + "/"))
+		else (.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_tag + "/"))
 	end) and
 	(.assets | type == "array") and
 	(.assets | length == ($required | length)) and

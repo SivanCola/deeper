@@ -13,16 +13,16 @@ import (
 	"runtime"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
 )
 
 // telemetry_app.go is the anonymous launch ping: one POST per app start carrying a
 // random install id, version, and OS facts — never conversation, key, or file data.
 // Gated on config desktop.telemetry (default on) and skipped entirely in dev builds.
 
-var pingEndpoint = os.Getenv("DEEPER_PING_ENDPOINT")
+var pingEndpoint = os.Getenv("DEEPZORA_PING_ENDPOINT")
 
 // desktopRendererEngine is the one renderer the desktop ships now: the
 // Electron shell's Chromium. Kept as a telemetry dimension so dashboards do

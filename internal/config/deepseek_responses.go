@@ -3,8 +3,8 @@ package config
 import (
 	"strings"
 
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 func deepSeekV4EffortOverrides() map[string]ProviderModelOverride {

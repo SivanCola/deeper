@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { InjectedScript } from "deeper-playwright-injected";
+import { InjectedScript } from "deepzora-playwright-injected";
 import type { PageRegistry, SnapshotInput, SnapshotOutput } from "./snapshotScript.js";
 
 type Registry = PageRegistry & { kernel: InjectedScript };

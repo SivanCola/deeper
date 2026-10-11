@@ -8,11 +8,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/session"
-	"deeper/internal/turnevent"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/session"
+	"deepzora/internal/turnevent"
 )
 
 // RuntimeStateReader is optional so older embedders of SessionAPI keep working.

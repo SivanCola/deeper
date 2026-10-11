@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 func TestAuditRepairVerificationPreservesConcurrentSave(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	path := UserCredentialsPath()
 	if err := os.WriteFile(path, []byte("OLD=one\n"), 0600); err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ func TestAuditRepairVerificationPreservesConcurrentSave(t *testing.T) {
 
 func auditCommitFixture(t *testing.T) (*Config, string) {
 	t.Helper()
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	path := UserConfigPath()
 	c := Default()
 	c.Providers = []ProviderEntry{{Name: "one", Kind: "openai", BaseURL: "https://one.invalid/v1", Model: "chat", APIKeyEnv: "OLD_KEY"}}
@@ -144,7 +144,7 @@ func TestAuditRepairRefusesLinkedHome(t *testing.T) {
 	if err := os.Symlink(outside, linked); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("DEEPER_HOME", linked)
+	t.Setenv("DEEPZORA_HOME", linked)
 	report, err := DiagnoseCredentials(CredentialDiagnosticOptions{Repair: true})
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +165,7 @@ func TestAuditRepairRefusesLinkedHome(t *testing.T) {
 }
 
 func TestRepairPreservesCredentialContentsAndFileIdentity(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	path := UserCredentialsPath()
 	body := []byte("# unrelated content\nEXISTING_KEY=unchanged\n")
 	if err := os.WriteFile(path, body, 0400); err != nil {
@@ -190,7 +190,7 @@ func TestRepairPreservesCredentialContentsAndFileIdentity(t *testing.T) {
 }
 
 func TestReceiptQueryRecoversPublishedPreferenceBeforeMark(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	path := UserConfigPath()
 	c := Default()
 	if err := c.SaveTo(path); err != nil {
@@ -219,9 +219,9 @@ func TestReceiptQueryRecoversPublishedPreferenceBeforeMark(t *testing.T) {
 }
 
 func TestProviderEditPathRespectsProjectOverrideOfBuiltins(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	root := t.TempDir()
-	path := filepath.Join(root, "deeper.toml")
+	path := filepath.Join(root, "deepzora.toml")
 	if err := os.WriteFile(path, []byte("[[providers]]\nname='deepseek'\nkind='openai'\nmodel='project-chat'\nbase_url='https://project.invalid/v1'\n"), 0600); err != nil {
 		t.Fatal(err)
 	}

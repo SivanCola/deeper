@@ -3,7 +3,7 @@ package bot
 import (
 	"context"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // finishSessionTeardown retires the last sessions and then releases the

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/guardian"
+	"deepzora/internal/agent"
+	"deepzora/internal/guardian"
 )
 
 // SessionTransitionInfo describes an intentional controller path change. The

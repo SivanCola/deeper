@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func TestPresentedFileDeclaredRequiresExactTrustedMetadata(t *testing.T) {
@@ -49,7 +49,7 @@ func TestPresentedReadPolicyRechecksCurrentForbidRead(t *testing.T) {
 	if err := os.WriteFile(secret, []byte("secret"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[sandbox]\nforbid_read = [\"secret\"]\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte("[sandbox]\nforbid_read = [\"secret\"]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if readPolicyAllowsPath(root, secret) {

@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/servecontract"
-	"deeper/internal/session"
-	"deeper/internal/sessioncontent"
-	"deeper/internal/transcript"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncontent"
+	"deepzora/internal/transcript"
 )
 
 func remoteTranscriptFixture(server *httptest.Server) (*App, *remoteTab) {

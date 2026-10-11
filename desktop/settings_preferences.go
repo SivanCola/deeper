@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/internal/config"
+	"deepzora/internal/config"
 	"strings"
 )
 

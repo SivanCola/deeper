@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestWireEventTabPreservesSharedRetryingFields(t *testing.T) {

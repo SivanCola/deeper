@@ -45,7 +45,7 @@ schema 1–3 没有对应上述正式标签，使用按既有迁移定义构造�
 | session-ui-v1.sqlite | 独立输入库 | 真实旧程序不改动文件 | 旧版继续聊天后，再升级必须核实过时输入 |
 | 未知未来 schema/revision | 明确错误，原文件保留 | 不写旧 schema 覆盖 | 不静默降级 |
 
-物理 revision 3 来自 [#10545](https://github.com/SivanCola/deeper/pull/10545)
+物理 revision 3 来自 [#10545](https://github.com/SivanCola/deepzora/pull/10545)
 中的 `e7a5b149e`，并非本次回滚引入。1.38.10 的负向测试要求返回真实
 `ErrUnsupportedVersion`，且会话权威文件和独立输入库均不改变；不能把拒绝读取计为可用降级。
 
@@ -115,7 +115,7 @@ main 叠加验证还运行了 283 个 agent/control/transcript 定向测试，�
 ## 复现
 
 ```sh
-python3 scripts/generate-session-history-fixtures.py --writers-dir /tmp/deeper-tagged-writers
+python3 scripts/generate-session-history-fixtures.py --writers-dir /tmp/deepzora-tagged-writers
 python3 scripts/generate-manual-session-fixtures.py
 python3 scripts/session-compatibility-evidence.py
 
@@ -124,7 +124,7 @@ node ../scripts/desktop-windows-go-tests.mjs history-3-5
 node ../scripts/desktop-windows-go-tests.mjs history-6-7
 node ../scripts/desktop-windows-go-tests.mjs history-8-9 --race
 node ../scripts/desktop-windows-go-tests.mjs history-10-11
-DEEPER_TAGGED_WRITERS=/tmp/deeper-tagged-writers go test . -run 'TestTagged(Formal|Previous|Draft|Damaged)' -count=1
+DEEPZORA_TAGGED_WRITERS=/tmp/deepzora-tagged-writers go test . -run 'TestTagged(Formal|Previous|Draft|Damaged)' -count=1
 go test -race ./internal/workspacestate ./internal/draftstate ./internal/sessionui ./internal/legacycleanup ./internal/upgradefixture
 ```
 
@@ -133,7 +133,7 @@ go test -race ./internal/workspacestate ./internal/draftstate ./internal/session
 分组校验从当前平台 Go 测试清单验证每个测试恰好归属一个执行组，保留原生 ConPTY 的单独执行。
 27 项 CI/分组契约测试通过；没有通过跳过历史矩阵或扩大超时来解决聚合耗时。
 最终通过同一 CI 入口补跑 `history-8-9 --race`，Desktop 包耗时 176.148 秒。
-旧写入器往返是显式集成检查，需要先生成对应可执行文件并设置 `DEEPER_TAGGED_WRITERS`；
+旧写入器往返是显式集成检查，需要先生成对应可执行文件并设置 `DEEPZORA_TAGGED_WRITERS`；
 本次已实际执行并通过，普通 CI 不设置该变量时会报告跳过这一项。
 `tagged-history-smoke.mjs` 接收最终打包可执行文件路径，默认运行所有 9 个版本。
 

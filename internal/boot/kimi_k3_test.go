@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func TestNewProviderAppliesExplicitKimiK3RequestContractToCustomGateway(t *testing.T) {

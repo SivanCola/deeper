@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // kickHistoryIndexRebuild single-flight schedules a background display-index

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func TestShellTimeoutClampsBeforeDurationConversion(t *testing.T) {

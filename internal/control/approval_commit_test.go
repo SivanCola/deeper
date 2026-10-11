@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/permission"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
 )
 
 type failingPromptAnswerSink struct{ err error }

@@ -20,8 +20,8 @@ func TestDoctorRepairSkipsConfigStartupMutation(t *testing.T) {
 func TestDoctorRepairDryRunDoesNotMigrateConfig(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	path := filepath.Join(root, "deeper.toml")
+	t.Setenv("DEEPZORA_HOME", home)
+	path := filepath.Join(root, "deepzora.toml")
 	body := []byte("[[plugins]]\nname = \"legacy\"\ncommand = \"legacy\"\ntier = \"lazy\"\n")
 	if err := os.WriteFile(path, body, 0o600); err != nil {
 		t.Fatal(err)

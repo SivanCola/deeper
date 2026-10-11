@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // knownDirectChildRunners are the entry points that still construct a child
@@ -20,7 +20,7 @@ import (
 var knownDirectChildRunners = map[string]string{
 	"internal/agent/task.go":   "defines the runners and is the unified path itself",
 	"internal/boot/boot.go":    "skill try + run_skill runners",
-	"internal/cli/review.go":   "deeper review",
+	"internal/cli/review.go":   "deepzora review",
 	"desktop/subagents_app.go": "desktop profile preview",
 }
 

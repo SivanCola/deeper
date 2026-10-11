@@ -16,10 +16,10 @@
     "cmd/e2ebench/main.go": {
       "essay": 1
     },
-    "cmd/deeper-legacy-migrator/main.go": {
+    "cmd/deepzora-legacy-migrator/main.go": {
       "essay": 1
     },
-    "cmd/deeper-plugin-example/main.go": {
+    "cmd/deepzora-plugin-example/main.go": {
       "essay": 19
     },
     "desktop/app.go": {

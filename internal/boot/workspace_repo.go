@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 // workspaceRepoTimeout bounds the one git call a session open makes.

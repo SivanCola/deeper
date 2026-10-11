@@ -19,7 +19,7 @@ func TestSaveImageDataURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveImageDataURL: %v", err)
 	}
-	if !strings.HasPrefix(got, ".deeper/attachments/clipboard-") || !strings.HasSuffix(got, ".png") {
+	if !strings.HasPrefix(got, ".deepzora/attachments/clipboard-") || !strings.HasSuffix(got, ".png") {
 		t.Fatalf("path = %q, want attachment png path", got)
 	}
 }
@@ -99,7 +99,7 @@ func TestSaveImageFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveImageFile: %v", err)
 	}
-	if !strings.HasPrefix(got, ".deeper/attachments/clipboard-") || !strings.HasSuffix(got, ".png") {
+	if !strings.HasPrefix(got, ".deepzora/attachments/clipboard-") || !strings.HasSuffix(got, ".png") {
 		t.Fatalf("path = %q, want attachment png path", got)
 	}
 }
@@ -113,7 +113,7 @@ func TestSaveAttachmentFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveAttachmentFile: %v", err)
 	}
-	if !strings.HasPrefix(got, ".deeper/attachments/clipboard-") || !strings.HasSuffix(got, ".pdf") {
+	if !strings.HasPrefix(got, ".deepzora/attachments/clipboard-") || !strings.HasSuffix(got, ".pdf") {
 		t.Fatalf("path = %q, want attachment pdf path", got)
 	}
 	if data, err := os.ReadFile(got); err != nil || string(data) != "%PDF-1.4 body" {
@@ -185,7 +185,7 @@ func TestImageDataURLRejectsOutsideAttachmentDir(t *testing.T) {
 	if _, err := ImageDataURL("x.png"); err == nil {
 		t.Fatal("outside attachment dir should fail")
 	}
-	if _, err := ImageDataURL("../.deeper/attachments/x.png"); err == nil {
+	if _, err := ImageDataURL("../.deepzora/attachments/x.png"); err == nil {
 		t.Fatal("traversal path should fail")
 	}
 }
@@ -205,32 +205,32 @@ func TestImageDataURLInRootIgnoresProcessWorkingDirectory(t *testing.T) {
 	if !strings.HasPrefix(got, "data:image/png;base64,") {
 		t.Fatalf("data URL = %q, want png", got)
 	}
-	if _, err := os.Stat(filepath.Join(processDir, ".deeper")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(processDir, ".deepzora")); !os.IsNotExist(err) {
 		t.Fatalf("read created process-local attachment state: %v", err)
 	}
 }
 
 func TestAttachmentRootAPIsRejectManagedDirectorySymlinks(t *testing.T) {
-	for _, component := range []string{".deeper", "attachments"} {
+	for _, component := range []string{".deepzora", "attachments"} {
 		t.Run(component, func(t *testing.T) {
 			workspace := t.TempDir()
 			outside := t.TempDir()
 			var link string
-			if component == ".deeper" {
+			if component == ".deepzora" {
 				if err := os.MkdirAll(filepath.Join(outside, "attachments"), 0o755); err != nil {
 					t.Fatal(err)
 				}
-				link = filepath.Join(workspace, ".deeper")
+				link = filepath.Join(workspace, ".deepzora")
 			} else {
-				if err := os.MkdirAll(filepath.Join(workspace, ".deeper"), 0o755); err != nil {
+				if err := os.MkdirAll(filepath.Join(workspace, ".deepzora"), 0o755); err != nil {
 					t.Fatal(err)
 				}
-				link = filepath.Join(workspace, ".deeper", "attachments")
+				link = filepath.Join(workspace, ".deepzora", "attachments")
 			}
 			if err := os.Symlink(outside, link); err != nil {
 				t.Skipf("symlink unsupported: %v", err)
 			}
-			if _, err := ImageDataURLInRoot(workspace, ".deeper/attachments/image.png"); err == nil || !strings.Contains(err.Error(), "symlink") {
+			if _, err := ImageDataURLInRoot(workspace, ".deepzora/attachments/image.png"); err == nil || !strings.Contains(err.Error(), "symlink") {
 				t.Fatalf("read through managed directory symlink = %v, want symlink rejection", err)
 			}
 			if _, err := SaveImageBytesInRoot(workspace, "image/png", mustBase64(t, tinyPNG)); err == nil || !strings.Contains(err.Error(), "symlink") {
@@ -243,7 +243,7 @@ func TestAttachmentRootAPIsRejectManagedDirectorySymlinks(t *testing.T) {
 func TestImageDataURLInRootKeepsSameRelativeNameIsolated(t *testing.T) {
 	firstRoot := t.TempDir()
 	secondRoot := t.TempDir()
-	rel := filepath.Join(".deeper", "attachments", "same.png")
+	rel := filepath.Join(".deepzora", "attachments", "same.png")
 	for _, root := range []string{firstRoot, secondRoot} {
 		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(rel)), 0o755); err != nil {
 			t.Fatal(err)
@@ -273,11 +273,11 @@ func TestImageDataURLInRootKeepsSameRelativeNameIsolated(t *testing.T) {
 
 func TestImageDataURLInRootDoesNotCreateMissingAttachmentDirectory(t *testing.T) {
 	workspace := t.TempDir()
-	_, err := ImageDataURLInRoot(workspace, ".deeper/attachments/missing.png")
+	_, err := ImageDataURLInRoot(workspace, ".deepzora/attachments/missing.png")
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("error = %v, want not exist", err)
 	}
-	if _, err := os.Stat(filepath.Join(workspace, ".deeper")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(workspace, ".deepzora")); !os.IsNotExist(err) {
 		t.Fatalf("read created attachment directory: %v", err)
 	}
 }
@@ -290,7 +290,7 @@ func TestImageDataURLRejectsSymlinkFile(t *testing.T) {
 	if err := os.WriteFile("secret.png", []byte("secret"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(".deeper", "attachments", "link.png")
+	link := filepath.Join(".deepzora", "attachments", "link.png")
 	if err := os.Symlink(filepath.Join("..", "..", "secret.png"), link); err != nil {
 		t.Skipf("symlink unsupported: %v", err)
 	}
@@ -301,16 +301,16 @@ func TestImageDataURLRejectsSymlinkFile(t *testing.T) {
 
 func TestImageDataURLRejectsSymlinkAttachmentDir(t *testing.T) {
 	t.Chdir(t.TempDir())
-	if err := os.Mkdir(".deeper", 0o755); err != nil {
+	if err := os.Mkdir(".deepzora", 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir("elsewhere", 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("../elsewhere", filepath.Join(".deeper", "attachments")); err != nil {
+	if err := os.Symlink("../elsewhere", filepath.Join(".deepzora", "attachments")); err != nil {
 		t.Skipf("symlink unsupported: %v", err)
 	}
-	if _, err := ImageDataURL(".deeper/attachments/x.png"); err == nil {
+	if _, err := ImageDataURL(".deepzora/attachments/x.png"); err == nil {
 		t.Fatal("symlink attachment directory should fail")
 	}
 }
@@ -326,7 +326,7 @@ func TestImageDataURLRejectsSymlinkSubdirectory(t *testing.T) {
 	if err := os.WriteFile(filepath.Join("outside", "x.png"), mustBase64(t, tinyPNG), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(".deeper", "attachments", "link")
+	link := filepath.Join(".deepzora", "attachments", "link")
 	if err := os.Symlink(filepath.Join("..", "..", "outside"), link); err != nil {
 		t.Skipf("symlink unsupported: %v", err)
 	}
@@ -354,11 +354,11 @@ func TestValidateAttachmentInRootRejectsMissingAndSymlink(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("outside"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(root, ".deeper", "attachments", "link.txt")
+	link := filepath.Join(root, ".deepzora", "attachments", "link.txt")
 	if err := os.Symlink(outside, link); err != nil {
 		t.Skipf("symlink unsupported: %v", err)
 	}
-	if err := ValidateAttachmentInRoot(root, filepath.ToSlash(filepath.Join(".deeper", "attachments", "link.txt"))); err == nil {
+	if err := ValidateAttachmentInRoot(root, filepath.ToSlash(filepath.Join(".deepzora", "attachments", "link.txt"))); err == nil {
 		t.Fatal("symlink attachment should fail validation")
 	}
 }

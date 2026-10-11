@@ -3,8 +3,8 @@ package serve
 import (
 	"net/http"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
 )
 
 // pendingPrompts returns the controller's current approval/ask frames directly.

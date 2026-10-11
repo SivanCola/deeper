@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 )
 
 func TestSnapshotConflictDiagnosticCountsLogicalTopicWithoutLeakingIdentity(t *testing.T) {

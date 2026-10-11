@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 // The instrument must be able to say, from one run, whether delegation

@@ -8,11 +8,11 @@ import (
 )
 
 func TestTopicRemovalRejectsAnotherProcessRename(t *testing.T) {
-	if id := os.Getenv("DEEPER_TOPIC_REMOVAL_RENAME"); id != "" {
+	if id := os.Getenv("DEEPZORA_TOPIC_REMOVAL_RENAME"); id != "" {
 		// TestMain deliberately isolates each process. Rebind only this child's
 		// test profile to the parent's disposable fixture after that isolation.
 		var environment map[string]string
-		if err := json.Unmarshal([]byte(os.Getenv("DEEPER_TOPIC_REMOVAL_ENV")), &environment); err != nil {
+		if err := json.Unmarshal([]byte(os.Getenv("DEEPZORA_TOPIC_REMOVAL_ENV")), &environment); err != nil {
 			t.Fatal(err)
 		}
 		for key, value := range environment {
@@ -31,14 +31,14 @@ func TestTopicRemovalRejectsAnotherProcessRename(t *testing.T) {
 	request := inspectedTopicRemoval(t, a, topic.ID)
 	child := exec.Command(os.Args[0], "-test.run=^TestTopicRemovalRejectsAnotherProcessRename$")
 	environment := map[string]string{}
-	for _, key := range []string{"HOME", "USERPROFILE", "XDG_CONFIG_HOME", "DEEPER_STATE_HOME", "DEEPER_CACHE_HOME", "AppData"} {
+	for _, key := range []string{"HOME", "USERPROFILE", "XDG_CONFIG_HOME", "DEEPZORA_STATE_HOME", "DEEPZORA_CACHE_HOME", "AppData"} {
 		environment[key] = os.Getenv(key)
 	}
 	body, err := json.Marshal(environment)
 	if err != nil {
 		t.Fatal(err)
 	}
-	child.Env = append(os.Environ(), "DEEPER_TOPIC_REMOVAL_RENAME="+topic.ID, "DEEPER_TOPIC_REMOVAL_ENV="+string(body))
+	child.Env = append(os.Environ(), "DEEPZORA_TOPIC_REMOVAL_RENAME="+topic.ID, "DEEPZORA_TOPIC_REMOVAL_ENV="+string(body))
 	if output, err := child.CombinedOutput(); err != nil {
 		t.Fatalf("rename process: %v %s", err, output)
 	}

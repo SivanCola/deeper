@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/desktop/internal/draftstate"
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 	"encoding/json"
 	"path/filepath"
 	"testing"

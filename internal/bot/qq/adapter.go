@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/config"
+	"deepzora/internal/bot"
+	"deepzora/internal/config"
 
 	"golang.org/x/net/websocket"
 )

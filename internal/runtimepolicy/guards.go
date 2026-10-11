@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 // PlanGuard hard-blocks writes while Plan mode is active, including YOLO.

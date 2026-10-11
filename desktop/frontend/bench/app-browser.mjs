@@ -12,7 +12,7 @@ process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || 
 // Playwright reads PLAYWRIGHT_BROWSERS_PATH at module evaluation; import it
 // only after the path normalization above.
 const { chromium } = await import("playwright");
-const port = Number(process.env.DEEPER_APP_BROWSER_PORT ?? 4657);
+const port = Number(process.env.DEEPZORA_APP_BROWSER_PORT ?? 4657);
 const preview = await startPreviewServer(frontendDir, port);
 const browser = await chromium.launch({ headless: true });
 
@@ -61,7 +61,7 @@ try {
   await nextModel.click();
   await page.waitForFunction(name => document.querySelector('.modelsw__label')?.textContent?.includes(name), nextModelName);
   await page.waitForFunction(() => document.querySelector('textarea.composer__input:not([aria-hidden=true])')?.disabled === false
-    && window.__deeperAppLifecycle?.snapshot().activeOperations === 0);
+    && window.__deepzoraAppLifecycle?.snapshot().activeOperations === 0);
   const transcriptAfterModel = await page.evaluate(transcriptIdentity);
   const draftAfterModel = await composer.inputValue();
   assert(draftAfterModel === 'layout-owned draft' && JSON.stringify(transcriptAfterModel) === JSON.stringify(transcriptBeforeModel),
@@ -120,8 +120,8 @@ try {
     workspaceTree: window.__appBrowserIdentity.workspaceTree === document.querySelector('.workspace-tree'),
     preview: window.__appBrowserIdentity.preview === document.querySelector('.workspace-preview__body'),
     selectedFile: document.querySelector('.workspace-tree__row--active')?.getAttribute('data-workspace-path'),
-    subscriptions: window.__deeperAppLifecycle?.snapshot().activeSubscriptions,
-    operations: window.__deeperAppLifecycle?.snapshot().activeOperations,
+    subscriptions: window.__deepzoraAppLifecycle?.snapshot().activeSubscriptions,
+    operations: window.__deepzoraAppLifecycle?.snapshot().activeOperations,
   }));
   assert(afterSwitch.workspace && afterSwitch.workspaceTree && afterSwitch.preview && afterSwitch.selectedFile === 'README.md',
     'same-project session switching preserves actual WorkspacePanel, tree, preview DOM and selected file');
@@ -141,14 +141,14 @@ try {
     // is validated above; including its simulated 1.5s body fetch here would
     // benchmark deferred expansion rather than first readable paint.
     const marker = geometry ? "Geometry contract fixture complete." : "Asynchronously hydrated verification appendix";
-    const previousIntent = await page.evaluate(() => window.__deeperPerf?.stats().navigation?.intent ?? -1);
+    const previousIntent = await page.evaluate(() => window.__deepzoraPerf?.stats().navigation?.intent ?? -1);
     await selectSession(page, label);
     await page.waitForFunction((text) => document.querySelector(".transcript")?.textContent?.includes(text), marker);
     await page.waitForFunction((intent) => {
-      const navigation = window.__deeperPerf?.stats().navigation;
+      const navigation = window.__deepzoraPerf?.stats().navigation;
       return navigation?.intent !== intent && navigation?.clickToFirstPaintMs !== undefined;
     }, previousIntent);
-    switchSamples.push(await page.evaluate(() => window.__deeperPerf.stats().navigation.clickToFirstPaintMs));
+    switchSamples.push(await page.evaluate(() => window.__deepzoraPerf.stats().navigation.clickToFirstPaintMs));
   }
   switchSamples.sort((a, b) => a - b);
   const localSwitchP95 = switchSamples[Math.ceil(switchSamples.length * 0.95) - 1];

@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/plugin"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // Catalog is the unified capability inventory for one routing turn.

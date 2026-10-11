@@ -5,10 +5,10 @@ Source: local DeepSeek Harness checkout, commit
 `LICENSE`. This directory contains adapted source, not a runtime dependency on
 the other checkout.
 
-来源为本机 DeepSeek Harness 上述提交。本目录保留 MIT 许可证，组件源码随 Deeper
+来源为本机 DeepSeek Harness 上述提交。本目录保留 MIT 许可证，组件源码随 Deepzora
 构建，不依赖用户电脑上的 Harness 目录。
 
-| Source component | Deeper integration / 接入方式 |
+| Source component | Deepzora integration / 接入方式 |
 | --- | --- |
 | ui-primitives DisclosureRow | Original compact disclosure layout, hover chevron and keyboard toggle / 原紧凑行、悬停箭头、键盘展开 |
 | ui-chat ReasoningRow | First/latest nonempty line, no duplicated expanded heading / 首行与最新行摘要，展开不重复标题 |
@@ -18,20 +18,20 @@ the other checkout.
 | ui-tool ToolRow | Status icon, description, inline body and inspection action / 工具状态、描述、原位展开与详情入口 |
 | ui-primitives TerminalBlock, StateDot, Pill, FoldToggle, ANSI helpers | Original command/output card, states, line cap and copy / 终端输出、状态、行数折叠与复制 |
 | ui-primitives DiffBlock | Original added/deleted lines and totals, adapted tool arguments / 文件差异行与统计 |
-| ui-primitives WebBlock | Source list with Deeper safe-link host and Markdown / 搜索来源列表，沿用安全链接与 Markdown 宿主 |
+| ui-primitives WebBlock | Source list with Deepzora safe-link host and Markdown / 搜索来源列表，沿用安全链接与 Markdown 宿主 |
 | ChatView, MessageItem and MarkdownText styles | Scoped flow rhythm, bubbles, typography, headings and tables / 独立作用域下的间距、气泡、标题与表格 |
 
 CSS module class names are expanded to stable `dsh-*` names. Design tokens map
-to Deeper theme and conversation typography. Expanded tool styles and bodies
+to Deepzora theme and conversation typography. Expanded tool styles and bodies
 load together; they do not increase render-blocking CSS beyond the existing
-budget. Localized labels use Deeper's locale provider. Clipboard, safe links,
+budget. Localized labels use Deepzora's locale provider. Clipboard, safe links,
 history/full-content access, fork commands, Markdown workers and lifecycle stay
-with the existing Deeper owners. Unsupported tool payloads use the generic
+with the existing Deepzora owners. Unsupported tool payloads use the generic
 IN/OUT card rather than guessing a Harness typed result.
 
-CSS 类名使用 `dsh-*` 前缀，设计变量接入 Deeper 主题与会话字体。工具详情及其样式
+CSS 类名使用 `dsh-*` 前缀，设计变量接入 Deepzora 主题与会话字体。工具详情及其样式
 按需加载。剪贴板、安全链接、历史与全文 API、分支命令、Markdown Worker 及会话生命
-周期沿用 Deeper。无法可靠映射的工具结果使用通用输入／输出卡片。
+周期沿用 Deepzora。无法可靠映射的工具结果使用通用输入／输出卡片。
 
 Recovered tool errors do not prevent folding a completed turn with a final
 answer; their count remains in the collapsed summary. Interrupted turns and

@@ -15,8 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/plugin"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
 )
 
 // mcpAppsSandbox serves MCP Apps resources from per-server loopback origins:

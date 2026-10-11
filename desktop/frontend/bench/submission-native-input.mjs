@@ -8,7 +8,7 @@ export async function verifyNativeReaderInput(page, evidence = {}) {
   assert.equal(process.platform, "linux");
   assert.ok(process.env.DISPLAY, "native input requires an isolated Xvfb display");
   const xdo = (...args) => execFileSync("xdotool", args.map(String), { encoding: "utf8", timeout: 10_000 }).trim();
-  const windows = xdo("search", "--onlyvisible", "--name", "^Deeper Handoff Native$").split("\n");
+  const windows = xdo("search", "--onlyvisible", "--name", "^Deepzora Handoff Native$").split("\n");
   assert.equal(windows.length, 1, "exactly one disposable native window is required");
   const windowId = windows[0];
   xdo("windowfocus", "--sync", windowId);

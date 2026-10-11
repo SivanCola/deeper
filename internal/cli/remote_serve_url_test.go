@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/serve"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/serve"
 )
 
 func TestRemoteServeBrowserURLUsesFragmentForCurrentServe(t *testing.T) {
@@ -36,7 +36,7 @@ func TestRemoteServeBrowserURLFallsBackForReusedV1214ServeContract(t *testing.T)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		http.SetCookie(w, &http.Cookie{Name: "deeper_token", Value: token, Path: "/", HttpOnly: true})
+		http.SetCookie(w, &http.Cookie{Name: "deepzora_token", Value: token, Path: "/", HttpOnly: true})
 		http.Redirect(w, r, "/", http.StatusFound)
 	}))
 	t.Cleanup(legacy.Close)
@@ -58,7 +58,7 @@ func TestRemoteServeBrowserURLFallsBackForReusedV1214ServeContract(t *testing.T)
 		t.Fatalf("legacy bootstrap status = %d, want %d", resp.StatusCode, http.StatusFound)
 	}
 	cookies := resp.Cookies()
-	if len(cookies) != 1 || cookies[0].Name != "deeper_token" || !cookies[0].HttpOnly {
-		t.Fatalf("legacy bootstrap cookies = %#v, want HttpOnly deeper_token", cookies)
+	if len(cookies) != 1 || cookies[0].Name != "deepzora_token" || !cookies[0].HttpOnly {
+		t.Fatalf("legacy bootstrap cookies = %#v, want HttpOnly deepzora_token", cookies)
 	}
 }

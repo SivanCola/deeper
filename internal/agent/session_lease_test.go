@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // leaseTestPath returns a session path in "user shape" — mixed case, exactly

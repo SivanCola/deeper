@@ -3,8 +3,8 @@ package event
 import (
 	"sync"
 
-	"deeper/internal/evidence"
-	"deeper/internal/nilutil"
+	"deepzora/internal/evidence"
+	"deepzora/internal/nilutil"
 )
 
 // Sync wraps a Sink so concurrent Emit calls are serialized. The base Sink

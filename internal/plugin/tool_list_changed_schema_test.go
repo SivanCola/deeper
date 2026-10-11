@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 type schemaShiftTransport struct {

@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // applyLatestContextShape copies the latest single-request shape into Context*
 // fields for gauges and Desktop rebind telemetry.

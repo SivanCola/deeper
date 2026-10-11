@@ -10,29 +10,29 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/ablation"
-	"deeper/internal/capability"
-	"deeper/internal/checkpoint"
-	"deeper/internal/diff"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/fileops"
-	"deeper/internal/i18n"
-	"deeper/internal/imageinput"
-	"deeper/internal/instruction"
-	"deeper/internal/jobs"
-	"deeper/internal/mcpinteraction"
-	"deeper/internal/memory"
-	"deeper/internal/nilutil"
-	"deeper/internal/plancontract"
-	"deeper/internal/planmode"
-	"deeper/internal/provider"
-	"deeper/internal/runtimepolicy"
-	"deeper/internal/sandbox"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/tool"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/ablation"
+	"deepzora/internal/capability"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/diff"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/fileops"
+	"deepzora/internal/i18n"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/instruction"
+	"deepzora/internal/jobs"
+	"deepzora/internal/mcpinteraction"
+	"deepzora/internal/memory"
+	"deepzora/internal/nilutil"
+	"deepzora/internal/plancontract"
+	"deepzora/internal/planmode"
+	"deepzora/internal/provider"
+	"deepzora/internal/runtimepolicy"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/tool"
+	"deepzora/internal/workspacelease"
 )
 
 // maxToolOutputBytes bounds the stable provider-visible Content. RawContent
@@ -821,7 +821,7 @@ type Options struct {
 	// enforced OS sandbox fails. nil keeps fail-closed behavior.
 	SandboxEscapeApprover sandbox.EscapeApprover
 
-	// ConfigWriteApprover confirms file-tool writes to Deeper-managed config
+	// ConfigWriteApprover confirms file-tool writes to Deepzora-managed config
 	// files outside the workspace roots. nil keeps fail-closed behavior.
 	ConfigWriteApprover tool.ConfigWriteApprover
 

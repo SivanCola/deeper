@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // admissionGatedDelegations are the delegation tools expensive enough to need

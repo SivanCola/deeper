@@ -3,7 +3,7 @@ package config
 import (
 	"strings"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 // RemovePluginModelRefs moves every model ref owned by pluginID to the first

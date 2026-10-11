@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ModelApplicationRecovery } from "../src/components/ModelApplicationRecovery";
 import { LocaleProvider } from "../src/lib/i18n";
 import type { ModelApplicationDetails } from "../src/lib/modelApplication";
-import type { DeeperDesktopHost } from "../src/lib/desktopHost";
+import type { DeepzoraDesktopHost } from "../src/lib/desktopHost";
 import "../src/styles.css";
 
 const initial: ModelApplicationDetails = { code: "model_settings_pending", runtimeIdentity: "runtime", appliedRevision: "old", desiredRevision: "new", model: "fixture/model", connectionTarget: "http://localhost:9999", blockingJobs: [{ id: "task-1", kind: "task", label: "Dependent task", status: "running" }, { id: "task-2", kind: "task", label: "Another task", status: "running" }], canUseApplied: true };
@@ -15,7 +15,7 @@ const commands: Record<string, (...args: unknown[]) => unknown> = {
   CancelModelApplicationBlockers: (...args) => { fixture.calls.push(args); },
   StartTurnWithModelApplication: () => {},
 };
-window.deeperDesktop = { kind: "electron", contract: { commands: Object.keys(commands) }, native: { window: {} }, on: () => () => {}, invoke: async (method, args) => commands[method](...args) } as unknown as DeeperDesktopHost;
+window.deepzoraDesktop = { kind: "electron", contract: { commands: Object.keys(commands) }, native: { window: {} }, on: () => () => {}, invoke: async (method, args) => commands[method](...args) } as unknown as DeepzoraDesktopHost;
 Object.assign(window, { modelApplicationFixture: fixture });
 
 function Fixture() {

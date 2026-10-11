@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/ablation"
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/ablation"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 type staticResolver struct {

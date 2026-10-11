@@ -8,11 +8,11 @@ import (
 )
 
 // TestProjectConfigCannotOverrideRemote pins [remote] as a user-global
-// security control: a cloned repository's deeper.toml must not be able to
+// security control: a cloned repository's deepzora.toml must not be able to
 // inject SSH hosts, jump chains, or port forwards.
 func TestProjectConfigCannotOverrideRemote(t *testing.T) {
 	isolateUserConfigHome(t)
-	t.Setenv("DEEPER_HOME", "")
+	t.Setenv("DEEPZORA_HOME", "")
 	globalDir := filepath.Dir(UserConfigPath())
 	if err := os.MkdirAll(globalDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -24,7 +24,7 @@ func TestProjectConfigCannotOverrideRemote(t *testing.T) {
 
 	project := t.TempDir()
 	projectTOML := "[remote]\n[[remote.hosts]]\nname = \"evil\"\nhost = \"attacker.example\"\nproxy_jump = \"attacker-jump\"\n[[remote.projects]]\nhost_id = \"evil\"\nworkspace = \"~/payload\"\n"
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(projectTOML), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(projectTOML), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -36,7 +36,7 @@ func TestProjectConfigCannotOverrideRemote(t *testing.T) {
 		t.Fatalf("remote hosts = %+v, want only the user-global \"trusted\" host", cfg.Remote.Hosts)
 	}
 	if _, ok := cfg.RemoteHost("evil"); ok {
-		t.Error("project deeper.toml injected a remote host; [remote] must stay user-global")
+		t.Error("project deepzora.toml injected a remote host; [remote] must stay user-global")
 	}
 	if len(cfg.Remote.Projects) != 1 || cfg.Remote.Projects[0].HostID != "trusted" {
 		t.Fatalf("remote projects = %+v, want only the user-global trusted project", cfg.Remote.Projects)
@@ -46,7 +46,7 @@ func TestProjectConfigCannotOverrideRemote(t *testing.T) {
 func TestRemoteConfigDecodeAndDefaults(t *testing.T) {
 	isolateUserConfigHome(t)
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	toml := `
 [remote]
 import_ssh_config = true
@@ -57,7 +57,7 @@ host = "203.0.113.7"
 port = 2222
 user = "dev"
 identity_file = "~/.ssh/id_ed25519"
-passphrase_env = "DEEPER_REMOTE_GPUBOX_PASSPHRASE"
+passphrase_env = "DEEPZORA_REMOTE_GPUBOX_PASSPHRASE"
 proxy_jump = "bastion.corp"
 workspace = "~/projects/app"
 serve_install = "npm"
@@ -114,7 +114,7 @@ host = "10.0.0.1"
 func TestUpsertRemoteHostRoundTripsThroughSave(t *testing.T) {
 	isolateUserConfigHome(t)
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	if err := os.WriteFile(path, []byte("default_model = \"deepseek\"\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -129,7 +129,7 @@ func TestUpsertRemoteHostRoundTripsThroughSave(t *testing.T) {
 		Host:          "198.51.100.4",
 		Port:          22,
 		User:          "dev",
-		PassphraseEnv: "DEEPER_REMOTE_BOX_PASSPHRASE",
+		PassphraseEnv: "DEEPZORA_REMOTE_BOX_PASSPHRASE",
 		Forwards:      []RemoteForwardEntry{{Type: "local", Bind: "127.0.0.1:8080", Target: "127.0.0.1:80"}},
 	}
 	if err := cfg.UpsertRemoteHost(host); err != nil {
@@ -221,7 +221,7 @@ func TestRemoteCredentialEnvNamesCollected(t *testing.T) {
 
 func TestRemotePathHelpers(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	if got := RemoteStateDir(); got != filepath.Join(home, "remote") {
 		t.Fatalf("RemoteStateDir = %q", got)
 	}
@@ -235,7 +235,7 @@ func TestRemotePathHelpers(t *testing.T) {
 func TestRemoteProjectLifecycle(t *testing.T) {
 	isolateUserConfigHome(t)
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	if err := os.WriteFile(path, []byte("default_model = \"deepseek\"\n"), 0o644); err != nil {
 		t.Fatal(err)

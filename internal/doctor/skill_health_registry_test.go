@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 type registryProbeTool struct{}
@@ -23,7 +23,7 @@ func (registryProbeTool) Execute(context.Context, json.RawMessage) (string, erro
 // Adapted from PR #9686: isolate registration so repeated and parallel suite
 // runs cannot mutate the parent process's compile-time registry.
 func TestAllowedToolsAcceptsAnyRegisteredBuiltin(t *testing.T) {
-	const marker = "DEEPER_DOCTOR_REGISTRY_PROBE"
+	const marker = "DEEPZORA_DOCTOR_REGISTRY_PROBE"
 	if os.Getenv(marker) != "1" {
 		exe, err := os.Executable()
 		if err != nil {

@@ -30,7 +30,7 @@ func envOptOut() bool {
 	if strings.TrimSpace(os.Getenv("DO_NOT_TRACK")) != "" {
 		return true
 	}
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("DEEPER_TELEMETRY"))) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("DEEPZORA_TELEMETRY"))) {
 	case "0", "false", "off", "no":
 		return true
 	default:

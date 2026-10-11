@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 // SessionClearResult is the post-clear session identity the frontend must apply

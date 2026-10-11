@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestCanonicalPermissionPresetFollowsSessionIdentity(t *testing.T) {

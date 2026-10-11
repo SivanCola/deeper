@@ -1,6 +1,6 @@
 # Local Session Draft Lifecycle
 
-Deeper Desktop treats a manually opened local conversation as an editor draft
+Deepzora Desktop treats a manually opened local conversation as an editor draft
 until the first execution is durably accepted. Opening a draft does not create a
 Session, Topic, Controller, session lease, MCP runtime, or session-list row. Once
 the first submission creates the formal Session, a temporarily untitled row uses
@@ -13,7 +13,7 @@ The visible conversation surface is either a draft target (`workspaceId`,
 `draftId`) or a formal Session target (`SessionRef`, `tabId`). Drafts never use a
 fake tab or Topic ID.
 
-Draft state is stored in `desktop/drafts-v1.sqlite` under the Deeper user state
+Draft state is stored in `desktop/drafts-v1.sqlite` under the Deepzora user state
 directory. Schema version 4 contains active drafts, versioned frozen submission operations,
 conflict copies, and the last restorable draft surface. There is one active draft
 per local Workspace, including one independent global Workspace draft.

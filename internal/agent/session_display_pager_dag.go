@@ -11,10 +11,10 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/fileops"
-	"deeper/internal/historywork"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/historywork"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // DAG projections retain graph edges and source locations on disk. Bodies are

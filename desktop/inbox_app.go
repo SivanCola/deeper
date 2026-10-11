@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioninbox"
 )
 
-const inboxBridgeErrorPrefix = "deeper_error:"
+const inboxBridgeErrorPrefix = "deepzora_error:"
 
 type inboxCodedError struct {
 	code  string

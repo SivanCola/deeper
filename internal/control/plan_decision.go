@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
 )
 
 // ResolvePlanDecision answers the Plan card without collapsing revise and exit.

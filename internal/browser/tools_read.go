@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 const screenshotMaxBytes = 8 << 20

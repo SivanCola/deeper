@@ -11,7 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type transcriptSourceKind uint8
@@ -177,7 +177,7 @@ func renderAssistantMarkdown(raw string, contentWidth int) string {
 		rendered = raw
 	}
 	body := strings.TrimRight(rendered, "\n")
-	header := indent + accent("◆") + " " + bold("Deeper")
+	header := indent + accent("◆") + " " + bold("Deepzora")
 	if body == "" {
 		return header
 	}
@@ -199,7 +199,7 @@ func renderAssistantMarkdownCopy(raw string, contentWidth int, prefix string) st
 		rendered = raw
 	}
 	body := strings.TrimRight(rendered, "\n")
-	header := indent + accent("◆") + " " + bold("Deeper")
+	header := indent + accent("◆") + " " + bold("Deepzora")
 	if body == "" {
 		return header
 	}

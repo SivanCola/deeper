@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 var (

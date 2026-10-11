@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 func (s *Store) EnsureWorkspace(ctx context.Context, workspace Workspace) error {
@@ -287,6 +287,6 @@ func rebindGlobalRoot(state *State, root string, now time.Time) {
 }
 
 func versionedWorkspaceID(identityKey string) string {
-	sum := sha256.Sum256([]byte("deeper-workspace-pathidentity-v2\x00" + identityKey))
+	sum := sha256.Sum256([]byte("deepzora-workspace-pathidentity-v2\x00" + identityKey))
 	return "project-v2-" + hex.EncodeToString(sum[:12])
 }

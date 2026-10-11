@@ -15,8 +15,8 @@ From this directory on macOS or Linux:
 ```sh
 go build -o bin/starter-extension.exe .
 plugin_root="$(pwd -P)"
-deeper plugin install "$plugin_root" --dry-run
-deeper plugin install "$plugin_root" --link --replace --yes
+deepzora plugin install "$plugin_root" --dry-run
+deepzora plugin install "$plugin_root" --link --replace --yes
 ```
 
 From PowerShell on Windows:
@@ -24,13 +24,13 @@ From PowerShell on Windows:
 ```powershell
 go build -o bin/starter-extension.exe .
 $pluginRoot = (Resolve-Path .).Path
-deeper plugin install $pluginRoot --dry-run
-deeper plugin install $pluginRoot --link --replace --yes
+deepzora plugin install $pluginRoot --dry-run
+deepzora plugin install $pluginRoot --link --replace --yes
 ```
 
 Review the `FULL TRUST` block in the dry-run output before installing. The
 linked package trusts future changes in this directory and runs outside the
-Deeper sandbox.
+Deepzora sandbox.
 
 Start a new session, or run `/reload` while the current session is idle. Send:
 
@@ -39,7 +39,7 @@ starter: explain what an Extension Protocol sidecar does
 ```
 
 The model receives the rewritten text. Edit `main.go`, rebuild the binary, run
-`/reload`, and try again. Use `deeper plugin doctor starter-extension` when
+`/reload`, and try again. Use `deepzora plugin doctor starter-extension` when
 the manifest or binary fails validation.
 
 ## Next steps

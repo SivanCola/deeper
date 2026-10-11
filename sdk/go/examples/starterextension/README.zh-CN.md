@@ -14,8 +14,8 @@ Manifest。Unix 可以正常执行该文件，Windows 则需要可执行文件�
 ```sh
 go build -o bin/starter-extension.exe .
 plugin_root="$(pwd -P)"
-deeper plugin install "$plugin_root" --dry-run
-deeper plugin install "$plugin_root" --link --replace --yes
+deepzora plugin install "$plugin_root" --dry-run
+deepzora plugin install "$plugin_root" --link --replace --yes
 ```
 
 Windows PowerShell：
@@ -23,12 +23,12 @@ Windows PowerShell：
 ```powershell
 go build -o bin/starter-extension.exe .
 $pluginRoot = (Resolve-Path .).Path
-deeper plugin install $pluginRoot --dry-run
-deeper plugin install $pluginRoot --link --replace --yes
+deepzora plugin install $pluginRoot --dry-run
+deepzora plugin install $pluginRoot --link --replace --yes
 ```
 
 安装前请检查 dry-run 输出中的 `FULL TRUST` 区块。链接安装会持续信任本目录
-后续的内容变化，而且代码型 Runtime 运行在 Deeper Sandbox 之外。
+后续的内容变化，而且代码型 Runtime 运行在 Deepzora Sandbox 之外。
 
 启动新会话，或在当前会话空闲时运行 `/reload`，然后发送：
 
@@ -38,7 +38,7 @@ starter: 解释 Extension Protocol Sidecar 的作用
 
 模型会收到改写后的文本。修改 `main.go`、重新构建、执行 `/reload` 后即可
 再次验证。Manifest 或二进制校验失败时，运行
-`deeper plugin doctor starter-extension`。
+`deepzora plugin doctor starter-extension`。
 
 ## 下一步
 

@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/bot/dingtalk"
-	"deeper/internal/bot/feishu"
-	"deeper/internal/bot/qq"
-	"deeper/internal/bot/weixin"
-	"deeper/internal/config"
-	"deeper/internal/permissionpreset"
+	"deepzora/internal/bot"
+	"deepzora/internal/bot/dingtalk"
+	"deepzora/internal/bot/feishu"
+	"deepzora/internal/bot/qq"
+	"deepzora/internal/bot/weixin"
+	"deepzora/internal/config"
+	"deepzora/internal/permissionpreset"
 )
 
 // EnabledPlatforms resolves the requested channel list against the saved config.

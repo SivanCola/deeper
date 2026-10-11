@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
 )
 
 func TestSaveTabSessionMetaFoldsDeliveryFloorToStandard(t *testing.T) {

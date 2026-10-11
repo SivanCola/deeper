@@ -2,13 +2,13 @@ package control
 
 import (
 	"context"
-	"deeper/internal/session"
+	"deepzora/internal/session"
 	"encoding/json"
 	"errors"
 	"time"
 
-	"deeper/internal/transcript"
-	"deeper/internal/turnevent"
+	"deepzora/internal/transcript"
+	"deepzora/internal/turnevent"
 )
 
 var ErrTranscriptProjectionUnavailable = errors.New("transcript projection is unavailable")

@@ -89,10 +89,10 @@ func TestStartTaskMeterPointsTheChildAtTheProxy(t *testing.T) {
 		t.Fatalf("startTaskMeter: %v", err)
 	}
 	defer stop()
-	if m == nil || len(env) != 1 || !strings.HasPrefix(env[0], "DEEPER_HOME=") {
-		t.Fatalf("env = %v, want a redirected DEEPER_HOME", env)
+	if m == nil || len(env) != 1 || !strings.HasPrefix(env[0], "DEEPZORA_HOME=") {
+		t.Fatalf("env = %v, want a redirected DEEPZORA_HOME", env)
 	}
-	home := strings.TrimPrefix(env[0], "DEEPER_HOME=")
+	home := strings.TrimPrefix(env[0], "DEEPZORA_HOME=")
 	providers := readProviders(t, home)
 	for _, p := range providers {
 		if name, _ := p["name"].(string); name == "kimi" {

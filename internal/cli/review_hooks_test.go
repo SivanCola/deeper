@@ -12,9 +12,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/hook"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/hook"
+	"deepzora/internal/provider"
 )
 
 const reviewHookProbeKind = "cli-review-hook-probe"
@@ -75,7 +75,7 @@ func TestReviewCommandRunsOnlyUserHooks(t *testing.T) {
 	}
 }
 
-// The reviewed checkout's deeper.toml must not choose the interpreter hooks
+// The reviewed checkout's deepzora.toml must not choose the interpreter hooks
 // run under: on Windows resolving a configured bash probes it, then spawns
 // every bash hook with it, outside the sandbox.
 func TestReviewHookRunnerTakesShellFromUserConfigOnly(t *testing.T) {
@@ -184,7 +184,7 @@ func setupReviewCheckout(t *testing.T, extraTOML func(dir string) string) string
 	if extraTOML != nil {
 		extra = extraTOML(dir)
 	}
-	writeReviewTestFile(t, dir, "deeper.toml", `
+	writeReviewTestFile(t, dir, "deepzora.toml", `
 default_model = "reviewer"
 
 [[providers]]

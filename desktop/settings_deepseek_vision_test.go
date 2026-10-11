@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/config"
+	"deepzora/internal/provider/openai"
 )
 
 func TestProviderViewKeepsOfficialDeepSeekVisionSelection(t *testing.T) {

@@ -1,6 +1,6 @@
 package event
 
-import "deeper/internal/nilutil"
+import "deepzora/internal/nilutil"
 
 // SubagentLifecycleInfo is content-free host telemetry for one child
 // transition. It intentionally excludes prompts, reasoning, tool output, and

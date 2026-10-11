@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 const configSnapshotRetention = 5
@@ -253,7 +253,7 @@ func restoreConfigSnapshotBoundUnlocked(
 	}
 	backup := filepath.Join(config.MemoryUserDir(), "repair", "restore-backups", tx.ID+".toml")
 	if expectedStates != nil {
-		backup = dest + ".deeper-restore-" + tx.ID
+		backup = dest + ".deepzora-restore-" + tx.ID
 	}
 	moved := false
 	if _, err := os.Lstat(dest); err == nil {
@@ -284,7 +284,7 @@ func restoreConfigSnapshotBoundUnlocked(
 			if err := clearPreparedRepairTransaction(&prepared); err != nil {
 				return nil, fmt.Errorf("clear cross-device snapshot restore intent: %w", err)
 			}
-			backup = dest + ".deeper-restore-" + tx.ID
+			backup = dest + ".deepzora-restore-" + tx.ID
 			tx.Changes[changeIndex].PreviousPath = backup
 			if err := persistPreparedRepairTransaction(tx); err != nil {
 				return nil, fmt.Errorf("prepare sibling snapshot restore: %w", err)

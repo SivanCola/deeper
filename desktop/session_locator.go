@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"strings"
 
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 type sessionLocatorKind uint8

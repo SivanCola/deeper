@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(todoWrite{}) }

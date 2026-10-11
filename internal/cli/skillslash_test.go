@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"deeper/internal/skill"
+	"deepzora/internal/skill"
 )
 
 // TestSlashItemsIncludesSkills proves every loaded skill is offered in the slash

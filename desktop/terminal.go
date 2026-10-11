@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/localeenv"
-	"deeper/internal/secrets"
+	"deepzora/internal/config"
+	"deepzora/internal/localeenv"
+	"deepzora/internal/secrets"
 )
 
 const (

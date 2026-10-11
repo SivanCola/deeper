@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/repair"
+	"deepzora/internal/repair"
 )
 
 // Pending reports queued by the retired WebView2/WebKitGTK shell must still

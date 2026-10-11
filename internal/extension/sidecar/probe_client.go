@@ -1,7 +1,7 @@
 package sidecar
 
 import (
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 // NewProbeClient is a host-test seam: non-process Client with declared

@@ -1,7 +1,7 @@
 package persistentshell
 
 import (
-	"deeper/internal/shellrun"
+	"deepzora/internal/shellrun"
 	"encoding/json"
 	"strings"
 	"testing"

@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/plancontract"
+import "deepzora/internal/plancontract"
 
 // SetPlanContract records the approved plan this turn executes, or clears it
 // when the turn runs without one. The coordinator sets it before every executor

@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 type SessionOrganizationWorkspace struct {

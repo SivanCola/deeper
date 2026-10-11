@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/memory"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/memory"
+	"deepzora/internal/provider"
 )
 
 func TestMemorySuggestionsReturnsNonNilArraysBeforeStartup(t *testing.T) {
@@ -134,11 +134,11 @@ func TestMemorySuggestionsForTabUsesSelectedTab(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AcceptSkillSuggestionForTab: %v", err)
 	}
-	wantSkillPath := filepath.Join(selectedCwd, ".deeper", "skills", "selected-workflow", "SKILL.md")
+	wantSkillPath := filepath.Join(selectedCwd, ".deepzora", "skills", "selected-workflow", "SKILL.md")
 	if skillPath != wantSkillPath {
 		t.Fatalf("skill path = %q, want %q", skillPath, wantSkillPath)
 	}
-	if _, err := os.Stat(filepath.Join(activeCwd, ".deeper", "skills", "selected-workflow", "SKILL.md")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(activeCwd, ".deepzora", "skills", "selected-workflow", "SKILL.md")); !os.IsNotExist(err) {
 		t.Fatalf("active workspace should not receive selected skill, stat err = %v", err)
 	}
 	body, err := os.ReadFile(skillPath)
@@ -175,19 +175,19 @@ func TestMemorySuggestionsAcceptSkillCandidate(t *testing.T) {
 	view := app.MemorySuggestions()
 	var candidate SkillSuggestion
 	for _, item := range view.Skills {
-		if item.Name == "deeper-pr-followup" {
+		if item.Name == "deepzora-pr-followup" {
 			candidate = item
 			break
 		}
 	}
 	if candidate.Name == "" {
-		t.Fatalf("MemorySuggestions() skills = %+v, want deeper-pr-followup", view.Skills)
+		t.Fatalf("MemorySuggestions() skills = %+v, want deepzora-pr-followup", view.Skills)
 	}
 	path, err := app.AcceptSkillSuggestion(candidate)
 	if err != nil {
 		t.Fatalf("AcceptSkillSuggestion: %v", err)
 	}
-	wantSuffix := filepath.Join(".deeper", "skills", "deeper-pr-followup", "SKILL.md")
+	wantSuffix := filepath.Join(".deepzora", "skills", "deepzora-pr-followup", "SKILL.md")
 	if !strings.HasSuffix(path, wantSuffix) {
 		t.Fatalf("skill path = %q, want suffix %q", path, wantSuffix)
 	}
@@ -195,7 +195,7 @@ func TestMemorySuggestionsAcceptSkillCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read skill: %v", err)
 	}
-	if !strings.Contains(string(body), "Review or update a Deeper GitHub PR") {
+	if !strings.Contains(string(body), "Review or update a Deepzora GitHub PR") {
 		t.Fatalf("skill body missing description: %s", body)
 	}
 }

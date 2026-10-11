@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/retrieval"
-	"deeper/internal/tool"
+	"deepzora/internal/retrieval"
+	"deepzora/internal/tool"
 )
 
 const (

@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/store"
 )
 
 func TestRestoreBlockedIdentityPreservesPinsWithoutSidecars(t *testing.T) {

@@ -19,7 +19,7 @@ const receipt: WorktreeMergeResult = {
   targetBranch: "main",
   mergedCommit: "merge-head",
   worktreeRoot: "/worktree",
-  worktreeBranch: "deeper/delivery-test",
+  worktreeBranch: "deepzora/delivery-test",
   worktreeHead: "worktree-head",
 };
 

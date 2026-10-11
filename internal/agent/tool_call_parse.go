@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 // parseToolCall resolves the canonical tool and rejects ambiguity/unknown tools.

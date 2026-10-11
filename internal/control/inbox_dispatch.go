@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 const maxInboxDispatchRetryAttempts = 3

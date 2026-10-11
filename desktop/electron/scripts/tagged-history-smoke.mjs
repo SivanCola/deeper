@@ -12,26 +12,26 @@ assert(executablePath, "usage: node tagged-history-smoke.mjs <packaged executabl
 const versions = process.argv.slice(3);
 if (!versions.length) for (let n = 3; n <= 11; n++) versions.push(`1.38.${n}`);
 const fixtures = fileURLToPath(new URL("../../testdata/session-history-upgrade/", import.meta.url));
-const evidence = process.env.DEEPER_HISTORY_EVIDENCE || "/tmp/deeper-tagged-package-evidence";
+const evidence = process.env.DEEPZORA_HISTORY_EVIDENCE || "/tmp/deepzora-tagged-package-evidence";
 mkdirSync(evidence, { recursive: true });
 const results = [];
-const rpc = (page, command, ...args) => page.evaluate(({ command, args }) => window.deeperDesktop.invoke(command, args), { command, args });
+const rpc = (page, command, ...args) => page.evaluate(({ command, args }) => window.deepzoraDesktop.invoke(command, args), { command, args });
 const pause = () => new Promise(resolve => setTimeout(resolve, 100));
 
 for (const version of versions) {
   const fixture = path.join(fixtures, version);
   const source = JSON.parse(readFileSync(path.join(fixture, "SOURCE.json"), "utf8"));
-  const home = mkdtempSync(path.join(tmpdir(), `deeper-tagged-${version}-`));
+  const home = mkdtempSync(path.join(tmpdir(), `deepzora-tagged-${version}-`));
   cpSync(path.join(fixture, "legacy"), path.join(home, "sessions"), { recursive: true });
   if (existsSync(path.join(fixture, "canonical"))) cpSync(path.join(fixture, "canonical"), path.join(home, "sessions-v4"), { recursive: true });
-  const env = { ...process.env, DEEPER_HOME: home, DEEPER_STATE_HOME: home, DEEPER_CACHE_HOME: path.join(home, "cache") };
-  delete env.DEEPER_DEV;
-  delete env.DEEPER_DESKTOP_SERVICE;
+  const env = { ...process.env, DEEPZORA_HOME: home, DEEPZORA_STATE_HOME: home, DEEPZORA_CACHE_HOME: path.join(home, "cache") };
+  delete env.DEEPZORA_DEV;
+  delete env.DEEPZORA_DESKTOP_SERVICE;
   let shell;
   async function launch() {
     shell = await electron.launch({ executablePath, env, timeout: 60000 });
     const page = await shell.firstWindow();
-    await page.waitForURL("deeper://app/index.html", { timeout: 60000 });
+    await page.waitForURL("deepzora://app/index.html", { timeout: 60000 });
     await page.locator(".app").waitFor({ state: "visible", timeout: 60000 });
     await page.addLocatorHandler(page.locator(".management-screen__back:visible"), async button => button.click());
     await page.locator(".sidebar__quick-action:visible").first().click({ trial: true, timeout: 60000 });

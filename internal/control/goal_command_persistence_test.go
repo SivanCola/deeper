@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestGoalCommandDoesNotStartProviderAfterPersistenceFailure(t *testing.T) {

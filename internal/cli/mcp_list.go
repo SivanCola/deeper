@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
 )
 
 func mcpList() int {
@@ -32,7 +32,7 @@ func mcpList() int {
 		fmt.Println("no MCP servers configured")
 	}
 	if pending {
-		fmt.Println("project-declared servers stay off until you review them (`deeper mcp get <name>`) and run `deeper mcp enable <name>`")
+		fmt.Println("project-declared servers stay off until you review them (`deepzora mcp get <name>`) and run `deepzora mcp enable <name>`")
 	}
 	return 0
 }

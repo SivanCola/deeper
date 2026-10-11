@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ErrMigratedModelUnavailable marks a saved selection whose migrated OpenCode

@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
-	"deeper/internal/sessioncatalog"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestMetadataTopicTextFilterUsesLazyUnicodeSnapshot(t *testing.T) {

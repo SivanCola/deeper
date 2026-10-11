@@ -13,11 +13,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/mcpdiag"
-	"deeper/internal/plugin"
-	"deeper/internal/shellparse"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/mcpdiag"
+	"deepzora/internal/plugin"
+	"deepzora/internal/shellparse"
 )
 
 func (m chatTUI) applyMCPAction(v mcpServerView, action mcpAction) (tea.Model, tea.Cmd) {
@@ -327,7 +327,7 @@ func (m chatTUI) clearMCPAuthentication(v mcpServerView) (tea.Model, tea.Cmd) {
 	workspace := m.mcpWorkspaceRoot()
 	if _, err := plugin.ClearHTTPMCPOAuth(plugin.Spec{
 		Name:     v.Name,
-		StateDir: plugin.MCPStateDir(config.DeeperHomeDir(), workspace, v.Name),
+		StateDir: plugin.MCPStateDir(config.DeepzoraHomeDir(), workspace, v.Name),
 	}); err != nil {
 		m.notice("clear authentication: " + err.Error())
 		return m, nil

@@ -3,7 +3,7 @@ package control
 import (
 	"testing"
 
-	"deeper/internal/skill"
+	"deepzora/internal/skill"
 )
 
 func TestSlashArgItemsLazyResolvesOnlyDynamicStructuredCommands(t *testing.T) {

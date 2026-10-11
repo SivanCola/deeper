@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/filelock"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/filelock"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestStoredManifestRequiresExactFormatBoundary(t *testing.T) {
@@ -128,7 +128,7 @@ func testNativeLinearStore(t *testing.T, codec string) {
 }
 
 func TestNativePrototypeHistoryRewriteRoundTrip(t *testing.T) {
-	for _, codec := range []string{PrototypeCodec, "reasonix.session.events/v3"} {
+	for _, codec := range []string{PrototypeCodec, "deeper.session.events/v3", "reasonix.session.events/v3"} {
 		t.Run(codec, func(t *testing.T) { testNativePrototypeHistoryRewriteRoundTrip(t, codec) })
 	}
 }
@@ -577,8 +577,8 @@ func TestMigrateLegacyIsIdempotentAndUsesFrozenArtifacts(t *testing.T) {
 }
 
 func TestMigrateLegacyBeyondFormer128MiBReplayLimit(t *testing.T) {
-	if os.Getenv("DEEPER_LARGE_SESSION_TEST") != "1" {
-		t.Skip("set DEEPER_LARGE_SESSION_TEST=1 to run the exact 134,308,416-byte regression")
+	if os.Getenv("DEEPZORA_LARGE_SESSION_TEST") != "1" {
+		t.Skip("set DEEPZORA_LARGE_SESSION_TEST=1 to run the exact 134,308,416-byte regression")
 	}
 	const (
 		totalBytes = int64(134_308_416)

@@ -11,7 +11,7 @@ import (
 // dispatch goroutines used to load-modify-save pairing.json without a lock and
 // overwrite each other's requests. Run with -race.
 func TestCreateOrRefreshPairingRequestConcurrent(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	cfg := PairingConfig{Enabled: true, RequestTTL: time.Hour, MaxPendingPerPlatform: 64}
 
 	const workers = 8

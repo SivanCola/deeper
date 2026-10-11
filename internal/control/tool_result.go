@@ -3,8 +3,8 @@ package control
 import (
 	"slices"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // Bind stable local message IDs before publishing a result. Provider call IDs

@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 type pipeProcess struct {

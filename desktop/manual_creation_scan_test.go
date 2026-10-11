@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/sessionui"
+	"deepzora/desktop/internal/sessionui"
 )
 
 type manualCreationScanStore struct {

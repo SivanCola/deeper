@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // ForkAvailability names why one source turn can or cannot start a child

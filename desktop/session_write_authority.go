@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // bindTabWriteAuthority issues a generation-bound write authority from the

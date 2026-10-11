@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/mcplaunch"
-	"deeper/internal/tool"
+	"deepzora/internal/mcplaunch"
+	"deepzora/internal/tool"
 )
 
 type destructiveLazyTarget struct {
@@ -780,7 +780,7 @@ func TestLazyConcurrentExecuteOnlyOneSpawn(t *testing.T) {
 func TestLazyHandshakeFailureSurfaced(t *testing.T) {
 	redirectCache(t)
 	// Bogus command: process exec will fail outright.
-	spec := Spec{Name: "missing", Command: "deeper-nonexistent-binary-for-lazy-test"}
+	spec := Spec{Name: "missing", Command: "deepzora-nonexistent-binary-for-lazy-test"}
 
 	// Hand-craft a cache so the cache-HIT branch runs (synchronous spawn,
 	// failure surfaces directly to the first caller rather than via a retry

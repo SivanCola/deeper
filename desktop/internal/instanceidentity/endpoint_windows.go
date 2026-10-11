@@ -16,7 +16,7 @@ func endpointName(id string) (*uint16, error) {
 	if !Valid(id) {
 		return nil, fmt.Errorf("invalid desktop instance identity")
 	}
-	return windows.UTF16PtrFromString(`\\.\pipe\deeper-desktop-` + id)
+	return windows.UTF16PtrFromString(`\\.\pipe\deepzora-desktop-` + id)
 }
 
 // ListenEndpoint exposes a kernel-owned service PID to the updater. No PID file

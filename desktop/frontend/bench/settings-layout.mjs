@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || process.env.PLAYWRIGHT_BROWSERS_PATH === ".pw-browsers"
   ? path.join(root, ".pw-browsers") : process.env.PLAYWRIGHT_BROWSERS_PATH;
 const engines = await import("playwright");
-const port = Number(process.env.DEEPER_SETTINGS_PORT ?? 4679);
+const port = Number(process.env.DEEPZORA_SETTINGS_PORT ?? 4679);
 const preview = await startPreviewServer(root, port);
 const themes = ["graphite", "aurora", "slate", "carbon", "nocturne", "amber"];
 const sizes = [1600, 1100, 900, 700, 400];
@@ -143,7 +143,7 @@ function geometry() {
 }
 
 try {
-  const targets = (process.env.DEEPER_SETTINGS_BROWSERS ?? "chromium").split(",")
+  const targets = (process.env.DEEPZORA_SETTINGS_BROWSERS ?? "chromium").split(",")
     .flatMap(engine => ["windows", "darwin", "linux"].map(platform => [engine, platform]));
   for (const [engineName, platform] of targets) {
     const browser = await engines[engineName].launch({ headless: true });

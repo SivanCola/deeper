@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 // recordedCall captures one intercept or event call a fake client received.

@@ -3,8 +3,8 @@ package cli
 import (
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/memory"
+	"deepzora/internal/control"
+	"deepzora/internal/memory"
 )
 
 func renderMemory(width int, set *memory.Set) string {

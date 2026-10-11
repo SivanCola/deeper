@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestLegacySubmissionReportsSynchronousAdmission(t *testing.T) {

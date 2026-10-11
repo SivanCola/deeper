@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestMCPInteractionRequiresVersionedOptIn(t *testing.T) {
@@ -15,10 +15,10 @@ func TestMCPInteractionRequiresVersionedOptIn(t *testing.T) {
 		want bool
 	}{
 		{`{}`, false},
-		{`{"_meta":{"deeper.io":{"mcpInteraction":true}}}`, false},
-		{`{"_meta":{"deeper.io":{"mcpInteraction":{"supported":true}}}}`, false},
-		{`{"_meta":{"deeper.io":{"mcpInteraction":{"supported":true,"schemaVersion":2}}}}`, false},
-		{`{"_meta":{"deeper.io":{"mcpInteraction":{"supported":true,"schemaVersion":1}}}}`, true},
+		{`{"_meta":{"deepzora.com":{"mcpInteraction":true}}}`, false},
+		{`{"_meta":{"deepzora.com":{"mcpInteraction":{"supported":true}}}}`, false},
+		{`{"_meta":{"deepzora.com":{"mcpInteraction":{"supported":true,"schemaVersion":2}}}}`, false},
+		{`{"_meta":{"deepzora.com":{"mcpInteraction":{"supported":true,"schemaVersion":1}}}}`, true},
 	} {
 		var caps ClientCapabilities
 		if err := json.Unmarshal([]byte(tc.raw), &caps); err != nil {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 // tailBuffer keeps the last limit bytes written, for truncating a process's

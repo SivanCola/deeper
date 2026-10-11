@@ -1,6 +1,6 @@
 # Harness 风格执行机制迁移
 
-本文定义从 `main@986a6bc967` 改造后的现行行为，文件新鲜度和恢复语义参考 DeepSeek Harness `master@c291e7961a`。Deeper 保留 Go 运行时、权限、沙箱、Goal、Plan、检查点和多代理，不引入 Cordis 插件框架。
+本文定义从 `main@986a6bc967` 改造后的现行行为，文件新鲜度和恢复语义参考 DeepSeek Harness `master@c291e7961a`。Deepzora 保留 Go 运行时、权限、沙箱、Goal、Plan、检查点和多代理，不引入 Cordis 插件框架。
 
 ## 现行行为
 

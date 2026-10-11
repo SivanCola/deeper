@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/command"
-	"deeper/internal/control"
+	"deepzora/internal/command"
+	"deepzora/internal/control"
 )
 
 // reloadFactory wraps configurableFactory with the SessionRebuilder seam the

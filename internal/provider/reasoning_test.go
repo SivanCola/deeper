@@ -9,10 +9,10 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/provider"
-	_ "deeper/internal/provider/anthropic"
-	_ "deeper/internal/provider/openai"
-	_ "deeper/internal/provider/responses"
+	"deepzora/internal/provider"
+	_ "deepzora/internal/provider/anthropic"
+	_ "deepzora/internal/provider/openai"
+	_ "deepzora/internal/provider/responses"
 )
 
 func TestAdapterReasoningExactSelectionBeforeIO(t *testing.T) {

@@ -1,7 +1,7 @@
 package boot
 
 import (
-	"deeper/internal/control"
+	"deepzora/internal/control"
 	"errors"
 )
 

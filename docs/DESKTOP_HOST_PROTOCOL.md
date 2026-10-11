@@ -42,7 +42,7 @@ session storage schema are unchanged by this RPC addition.
 
 - Framing: newline-delimited JSON-RPC 2.0 (`rpcwire` strict mode). One frame
   per line, UTF-8, no batch arrays.
-- The Go service is started as `deeper-desktop --host-rpc`. Its stdout carries
+- The Go service is started as `deepzora-desktop --host-rpc`. Its stdout carries
   only protocol frames; stderr carries logs. The shell closes stdin only after
   `desktop/shutdown` has reported `completed`; closing stdin without that result
   is treated as `connection_lost` and runs bounded cleanup.
@@ -66,7 +66,7 @@ fails with `-32002 not_ready`.
   "contractDigest": "sha256:…",       // digest embedded in the shell bundle
   "build": {"version":"v1.30.0","channel":"stable","commit":"abc123"},
   "host": {"name":"electron","version":"44.2.0","chrome":"152.0.0","platform":"darwin","arch":"arm64"},
-  "instance": {"home":"/Users/…/.deeper","dev":false}
+  "instance": {"home":"/Users/…/.deepzora","dev":false}
 }}
 // service → shell
 {"result":{
@@ -74,7 +74,7 @@ fails with `-32002 not_ready`.
   "contractDigest": "sha256:…",
   "service": {"version":"v1.30.0","channel":"stable","commit":"abc123","pid":4242},
   "runtimeGeneration": "g-01J…",       // new for every service process
-  "instance": {"identityVersion":3,"identityDigest":"sha256:…","legacyId":"io.github.sivancola.deeper.…"},
+  "instance": {"identityVersion":3,"identityDigest":"sha256:…","legacyId":"com.deepzora.desktop.…"},
   "runId": "…", "incidentId": "…", "diagnosticsEnabled": true,
   "resources": {"origin":"http://127.0.0.1:51234","token":"…"},
   "window": {"width":1280,"height":820,"minWidth":760,"minHeight":480,"frameless":false,"zoomFactor":1}
@@ -201,7 +201,7 @@ continue to use their existing owners and semantics.
 
 `args` preserves the variadic payload of the previous event bridge; most
 events carry one element. The shell forwards the frame to the renderer on the
-`deeper:event` channel; the preload API `on(name, cb)` filters by `name` and
+`deepzora:event` channel; the preload API `on(name, cb)` filters by `name` and
 calls `cb(...args)`. Sequence numbers are strictly increasing per generation
 so a renderer that re-attaches can detect a gap and re-snapshot instead of
 trusting stale state.
@@ -284,19 +284,19 @@ authorises through the existing workspace and media checks.
 ## Resource origin
 
 The service listens on a loopback port for the existing authorised asset
-handlers (`/__deeper_workspace_media/…`, `/__deeper_theme_asset/…`, the
+handlers (`/__deepzora_workspace_media/…`, `/__deepzora_theme_asset/…`, the
 remote markdown image proxy). The shell serves the packaged UI from the
-privileged `deeper://app/` scheme and forwards only those prefixes to the
+privileged `deepzora://app/` scheme and forwards only those prefixes to the
 resource origin, adding `Authorization: Bearer <token>` in the main process.
 The token never reaches the renderer, a website view, a remote window or an
 MCP App frame. Go keeps every file-identity and TTL check it has today.
 
 ## Renderer preload API
 
-The trusted preload exposes exactly one object, `window.deeperDesktop`:
+The trusted preload exposes exactly one object, `window.deepzoraDesktop`:
 
 ```ts
-interface DeeperDesktopHost {
+interface DeepzoraDesktopHost {
   readonly kind: "electron";
   readonly contract: { protocolVersion: number; digest: string; commands: readonly string[] };
   readonly platform: { os: "darwin" | "windows" | "linux"; arch: string; versions: Record<string, string> };
@@ -424,9 +424,9 @@ must still cover startup, extended use, foreground return and closing tabs.
 ## Security boundaries
 
 - The application window: sandbox on, context isolation on, Node integration
-  off, `deeper://app` only, preload above.
+  off, `deepzora://app` only, preload above.
 - Website views, remote Serve windows and MCP App frames: separate sessions,
-  no preload from the application, no `deeper://` access, no `host/*` reach.
+  no preload from the application, no `deepzora://` access, no `host/*` reach.
 - IPC handlers accept requests only from the application window's
   `webContents`. Any other sender is rejected and logged.
 - `desktop/invoke` names outside the embedded contract fail before reaching Go.

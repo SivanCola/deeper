@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncontent"
 )
 
 const sessionHistoryContentChunkBytes = 1 << 20

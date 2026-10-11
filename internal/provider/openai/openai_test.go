@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // TestStreamWaitsForExplicitRetry proves direct adapter callers also fail fast.
@@ -570,7 +570,7 @@ func TestStreamSendsCustomHeaders(t *testing.T) {
 			http.Error(w, "authorization was not preserved", http.StatusUnauthorized)
 			return
 		}
-		if r.Header.Get("HTTP-Referer") != "https://app.example" || r.Header.Get("X-Title") != "Deeper" {
+		if r.Header.Get("HTTP-Referer") != "https://app.example" || r.Header.Get("X-Title") != "Deepzora" {
 			http.Error(w, "custom headers missing", http.StatusForbidden)
 			return
 		}
@@ -592,7 +592,7 @@ func TestStreamSendsCustomHeaders(t *testing.T) {
 			"Authorization": "Bearer wrong",
 			"Accept":        "application/json",
 			"HTTP-Referer":  "https://app.example",
-			"X-Title":       "Deeper",
+			"X-Title":       "Deepzora",
 		}},
 	})
 	if err != nil {

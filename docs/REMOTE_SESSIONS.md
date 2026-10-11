@@ -6,7 +6,7 @@
 &nbsp;·&nbsp;
 <a href="./GUIDE.md">General guide</a>
 
-The remote module (Remote SSH) runs Deeper on a remote host and reaches it
+The remote module (Remote SSH) runs Deepzora on a remote host and reaches it
 over your own SSH connection — VS Code Remote-SSH style. This document
 describes the whole system: what runs where, host configuration, the CLI, the
 remote serve process, the session lifecycle, the desktop surface, credential
@@ -31,7 +31,7 @@ controls and states are the same in other locales.
 
 ## What the remote module does
 
-Deeper bootstraps a persistent headless `deeper serve` on the remote host,
+Deepzora bootstraps a persistent headless `deepzora serve` on the remote host,
 forwards a local loopback port to it over the SSH tunnel, and then opens the
 serve web client or an in-app remote session tab through that tunnel. The
 agent, its tools, and its files all live on the remote host at full fidelity;
@@ -50,11 +50,11 @@ nothing runs through a lossy file proxy.
 ```
 Local side                                Remote host
 ──────────                                ──────────
-deeper remote … (CLI)                   ~/.deeper/remote/
+deepzora remote … (CLI)                   ~/.deepzora/remote/
 desktop app / separate web window         serve-<slug>.{json,token,port,pid,log}
         │                                          │
         ▼                                          ▼
-supervised SSH connection ─── SSH tunnel ─── headless deeper serve
+supervised SSH connection ─── SSH tunnel ─── headless deepzora serve
 (keepalive, backoff reconnect,              binds remote 127.0.0.1:0, HTTP + SSE
  TOFU host keys, SFTP)                      agent / tools / files all remote
         │
@@ -62,7 +62,7 @@ supervised SSH connection ─── SSH tunnel ─── headless deeper serve
 serve web UI in a browser, or the in-app remote session tab
 ```
 
-- **Local frontends**: the `deeper remote …` CLI; the desktop app (Electron);
+- **Local frontends**: the `deepzora remote …` CLI; the desktop app (Electron);
   and serve's own web client (opened in a browser or hosted by the separate
   web-window child process).
 - **Transport kernel**: one supervised SSH connection — dial, host-key
@@ -70,7 +70,7 @@ serve web UI in a browser, or the in-app remote session tab
   after a drop. The CLI and the desktop share the same kernel; interactive
   moments (TOFU confirmation, password/passphrase prompts) surface through
   callbacks to whichever frontend is driving.
-- **Remote side**: a headless `deeper serve` bound only to the remote
+- **Remote side**: a headless `deepzora serve` bound only to the remote
   loopback address; port, auth token, and pid are handed over through files,
   never exposed on the remote network.
 - **Data plane**: sessions, tool execution, and file operations all happen on
@@ -80,8 +80,8 @@ serve web UI in a browser, or the in-app remote session tab
 ## Hosts and configuration
 
 Hosts live in the user-global `[remote]` section of `config.toml`. Like
-`[secrets]`, a project `deeper.toml` cannot inject or override remote hosts
-— a cloned repo can never steer where Deeper opens SSH connections.
+`[secrets]`, a project `deepzora.toml` cannot inject or override remote hosts
+— a cloned repo can never steer where Deepzora opens SSH connections.
 
 ```toml
 [remote]
@@ -107,7 +107,7 @@ target = "127.0.0.1:5432"
 | `name` | Host name; CLI subcommands refer to it |
 | `host` / `port` / `user` | Address and login user; port defaults to 22, user to the current user |
 | `identity_file` | Path to a private key. Only the path is stored; key material is never stored |
-| `passphrase_env` / `password_env` | Env var names holding the passphrase/password; values live in Deeper's global `.env` |
+| `passphrase_env` / `password_env` | Env var names holding the passphrase/password; values live in Deepzora's global `.env` |
 | `proxy_jump` | Jump chain, OpenSSH `ProxyJump` syntax |
 | `workspace` | Default remote workspace |
 | `serve_install` | Remote CLI install strategy: `auto` \| `npm` \| `upload` \| `never` |
@@ -125,8 +125,8 @@ remote host and `target` is dialed locally.
 ### Credential slots
 
 When the desktop host form receives a plaintext password or key passphrase,
-Deeper stores it in a generated `DEEPER_REMOTE_<hash>_PASSWORD` /
-`DEEPER_REMOTE_<hash>_KEY_PASSPHRASE` slot in the global `.env` (atomic
+Deepzora stores it in a generated `DEEPZORA_REMOTE_<hash>_PASSWORD` /
+`DEEPZORA_REMOTE_<hash>_KEY_PASSPHRASE` slot in the global `.env` (atomic
 write with rollback on failure) and writes only the slot name to
 `config.toml`. Leaving the plaintext field empty preserves the current
 reference and does not create a slot. Deleting or clearing the host
@@ -142,7 +142,7 @@ yourself are never deleted.
 3. the built-in `~/.ssh/config` parser;
 4. defaults (port 22, current user).
 
-`deeper remote import` stores the original alias with
+`deepzora remote import` stores the original alias with
 `use_ssh_config = true` instead of copying a snapshot that goes stale.
 
 ## Connecting from the CLI
@@ -150,11 +150,11 @@ yourself are never deleted.
 ### Host management
 
 ```bash
-deeper remote add gpu-box dev@203.0.113.7 --workspace '~/projects/app'
-deeper remote import --all        # import aliases from ~/.ssh/config
-deeper remote test gpu-box        # dial + auth + host-key check
-deeper remote list                # list configured hosts
-deeper remote remove gpu-box
+deepzora remote add gpu-box dev@203.0.113.7 --workspace '~/projects/app'
+deepzora remote import --all        # import aliases from ~/.ssh/config
+deepzora remote test gpu-box        # dial + auth + host-key check
+deepzora remote list                # list configured hosts
+deepzora remote remove gpu-box
 ```
 
 ### connect: the foreground supervisor
@@ -167,9 +167,9 @@ forwards. Ctrl-C disconnects the local side only — the remote serve keeps
 running, and the next `connect` reuses it.
 
 ```bash
-deeper remote connect gpu-box --open   # bootstrap serve, tunnel, open the URL
-deeper remote open gpu-box             # same as connect --open
-deeper remote connect gpu-box --local-port 18787 --no-serve
+deepzora remote connect gpu-box --open   # bootstrap serve, tunnel, open the URL
+deepzora remote open gpu-box             # same as connect --open
+deepzora remote connect gpu-box --local-port 18787 --no-serve
 ```
 
 `--no-serve` (alias `--forward-only`) establishes forwards only and does not
@@ -183,10 +183,10 @@ the configured forwards without a remote session.
 ### Remote serve operations
 
 ```bash
-deeper remote serve start gpu-box
-deeper remote serve status gpu-box
-deeper remote serve logs gpu-box -n 100
-deeper remote serve stop gpu-box
+deepzora remote serve start gpu-box
+deepzora remote serve status gpu-box
+deepzora remote serve logs gpu-box -n 100
+deepzora remote serve stop gpu-box
 ```
 
 `serve start` refuses hosts with `credential_mode = local-proxy`. The desktop
@@ -195,12 +195,12 @@ is required to bootstrap the serve and provide its reverse credential channel.
 ### Port forwards and remote files
 
 ```bash
-deeper remote forward add gpu-box -L 127.0.0.1:5432:127.0.0.1:5432
-deeper remote forward ls gpu-box
-deeper remote forward rm gpu-box 127.0.0.1:5432
-deeper remote fs ls gpu-box:'~/projects/app'
-deeper remote fs get gpu-box:'~/projects/app/main.go' ./main.go
-deeper remote fs put ./patch.diff gpu-box:'~/projects/app/patch.diff'
+deepzora remote forward add gpu-box -L 127.0.0.1:5432:127.0.0.1:5432
+deepzora remote forward ls gpu-box
+deepzora remote forward rm gpu-box 127.0.0.1:5432
+deepzora remote fs ls gpu-box:'~/projects/app'
+deepzora remote fs get gpu-box:'~/projects/app/main.go' ./main.go
+deepzora remote fs put ./patch.diff gpu-box:'~/projects/app/patch.diff'
 ```
 
 The `fs` subcommands go over SFTP and do not need serve to be running.
@@ -218,7 +218,7 @@ a remote project):
 2. Probe the remote platform and binary (see the install ladder).
 3. Generate a fresh auth token: written to `.token.next` first, then renamed
    atomically, so no reader ever sees a half-written token.
-4. Launch `deeper serve` detached via `setsid`/`nohup`: bound to
+4. Launch `deepzora serve` detached via `setsid`/`nohup`: bound to
    `127.0.0.1:0`, token passed through `--token-file` (never in argv, never
    visible in `ps`), port and pid written to `.port` / `.pid` files.
 5. Poll the port file, then write the state JSON and establish the local
@@ -227,17 +227,17 @@ a remote project):
 **Binary install ladder** (tried in order when
 `serve_install = "auto"`):
 
-1. an existing Deeper binary on the remote host;
+1. an existing Deepzora binary on the remote host;
 2. `npm` global install;
 3. uploading the local same-platform binary to the remote
-   `~/.deeper/remote/bin/`;
+   `~/.deepzora/remote/bin/`;
 4. downloading from the official release.
 
 Whether a binary is usable is decided by a capability probe, not a version
 number: an older binary missing any required serve capability is treated as
 missing and upgraded. `serve_install = "never"` forbids all installation.
 
-**Remote state files** (remote `~/.deeper/remote/`): `serve-<slug>.json`
+**Remote state files** (remote `~/.deepzora/remote/`): `serve-<slug>.json`
 (pid, bound loopback address, workspace), `serve-<slug>.token` (0600),
 `serve-<slug>.port`, `serve-<slug>.pid`, `serve-<slug>.log`.
 
@@ -298,7 +298,7 @@ seconds of inactivity.
   the atomic commit's `boundarySequence`, and a required `operationId`.
   Refusals use structured `code`, `reason`, and `message` JSON fields.
 
-The following screenshots show both ends of a handoff. First, the Deeper
+The following screenshots show both ends of a handoff. First, the Deepzora
 window running locally on the remote host confirms taking over an idle
 session:
 
@@ -361,7 +361,7 @@ status bar, and session metrics:
 
 | | `remote` | `local-proxy` |
 | --- | --- | --- |
-| API key location | the remote host's Deeper config | the desktop machine |
+| API key location | the remote host's Deepzora config | the desktop machine |
 | Model-call path | remote serve → provider | remote serve → reverse tunnel → desktop key holder → provider |
 | Model list source | remote `/models` | desktop-configured catalog (filtered by provider kind) |
 | CLI | fully supported | `remote serve start` refuses; `remote connect` cannot provide the desktop-owned credential channel. Use the desktop (`--no-serve` remains valid for ordinary forwards) |
@@ -370,7 +370,7 @@ Functional behavior of `local-proxy` mode:
 
 - The desktop injects a managed `[[providers]]` block into the remote
   `config.toml`, pointing at the reverse tunnel address with a scoped token;
-  Deeper maintains that block — do not edit it by hand.
+  Deepzora maintains that block — do not edit it by hand.
 - The credential watchdog polls the reverse tunnel every 3 seconds: a missing
   forward, a failed probe, or port drift triggers a full heal plus a provider
   reload. The tunnel secret necessarily rotates after every SSH reconnect
@@ -394,7 +394,7 @@ never re-prompt; a desktop restart requires entering them again.
   intervenes. A brief network outage keeps the UI available while the desktop
   reconnects and re-attaches its forwards in the background.
 - **Host keys**: verified against your OpenSSH `~/.ssh/known_hosts`
-  (read-only) plus the Deeper-managed `~/.deeper/remote/known_hosts`. A
+  (read-only) plus the Deepzora-managed `~/.deepzora/remote/known_hosts`. A
   first-seen key prompts for trust-on-first-use and is recorded in the
   managed file; a key that contradicts a recorded one is a hard error naming
   the offending file and line, never auto-accepted.

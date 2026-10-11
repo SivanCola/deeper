@@ -3,7 +3,7 @@ package agent
 import (
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // SetSessionFileLockWaitForTest shortens the bounded cross-process save-lock

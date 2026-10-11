@@ -6,10 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // TestCompactRefusedWhileRunning locks in the same guard Rewind/Branch have:

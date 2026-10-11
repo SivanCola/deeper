@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func buildNativeSearch(ctx context.Context, db *sql.DB, p *nativeHistoryPreparation) error {

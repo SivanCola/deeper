@@ -12,8 +12,8 @@ import { build, preview, loadConfigFromFile } from "vite";
 // worktree-local path.
 const { chromium } = await import("playwright");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const outDir = await mkdtemp(path.join(tmpdir(), "deeper-fork-build-"));
-const evidence = process.env.DEEPER_FORK_EVIDENCE ?? path.join(tmpdir(), "deeper-fork-evidence");
+const outDir = await mkdtemp(path.join(tmpdir(), "deepzora-fork-build-"));
+const evidence = process.env.DEEPZORA_FORK_EVIDENCE ?? path.join(tmpdir(), "deepzora-fork-evidence");
 await mkdir(evidence, { recursive: true });
 const loaded = await loadConfigFromFile({ command: "build", mode: "production" }, path.join(root, "vite.config.ts"));
 const config = loaded.config;

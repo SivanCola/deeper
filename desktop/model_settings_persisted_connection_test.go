@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func TestModelSettingsCredentialRefreshPersistsSelectedConnection(t *testing.T) {

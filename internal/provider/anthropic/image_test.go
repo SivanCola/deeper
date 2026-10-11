@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 func TestBuildRequestEmbedsImageBlockForVisionModel(t *testing.T) {

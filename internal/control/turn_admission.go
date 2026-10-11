@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func (c *Controller) prepareTurnAdmission(body func(context.Context) error) func(context.Context) error {

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 // PathIdentityKey returns the stable comparison key for a catalog path while

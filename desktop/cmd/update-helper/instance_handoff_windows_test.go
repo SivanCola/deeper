@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/instanceidentity"
+	"deepzora/desktop/internal/instanceidentity"
 )
 
 func stubDesktopHandoff(t *testing.T) {
@@ -23,15 +23,15 @@ func stubDesktopHandoff(t *testing.T) {
 }
 func TestDesktopHandoffConfirmsOnlyTargetInstance(t *testing.T) {
 	root, home := t.TempDir(), t.TempDir()
-	target := filepath.Join(root, "deeper-desktop.exe")
-	old := filepath.Join(t.TempDir(), "deeper-desktop.exe")
+	target := filepath.Join(root, "deepzora-desktop.exe")
+	old := filepath.Join(t.TempDir(), "deepzora-desktop.exe")
 	for _, p := range []string{target, old} {
 		if err := os.WriteFile(p, []byte("fixture"), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
 	id := instanceidentity.ForHome(home)
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv(instanceidentity.UpdateEnvironmentKey, id)
 	original, now, sleep := desktopEndpointImageFn, handoffNowFn, handoffSleepFn
 	t.Cleanup(func() { desktopEndpointImageFn = original; handoffNowFn = now; handoffSleepFn = sleep })
@@ -78,7 +78,7 @@ func TestDesktopHandoffConfirmsOnlyTargetInstance(t *testing.T) {
 }
 func TestDesktopHandoffRejectsUnboundIdentity(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	for _, id := range []string{"", instanceidentity.ForHome(t.TempDir())} {
 		t.Setenv(instanceidentity.UpdateEnvironmentKey, id)
 		if err := verifyDesktopHandoff(t.TempDir(), false); err == nil {
@@ -92,7 +92,7 @@ func TestPublishedRelaunchDoesNotReportSuccessWhenOldOwnerWins(t *testing.T) {
 	originalStart := startRelaunchFn
 	t.Cleanup(func() { startRelaunchFn = originalStart })
 	root := t.TempDir()
-	target := filepath.Join(root, "deeper-desktop.exe")
+	target := filepath.Join(root, "deepzora-desktop.exe")
 	if err := os.WriteFile(target, []byte("target"), 0700); err != nil {
 		t.Fatal(err)
 	}

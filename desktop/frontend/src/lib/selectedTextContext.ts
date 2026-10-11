@@ -34,8 +34,8 @@ export interface SelectedTextContextParts {
 
 export const SELECTED_TEXT_MAX_CHARS = 12_000;
 const SELECTED_TEXT_TRUNCATION_MARKER = "\n\n[Selection truncated]";
-const SELECTED_TEXT_CONTEXT_OPEN = "<deeper-selected-chat-context>";
-const SELECTED_TEXT_CONTEXT_CLOSE = "</deeper-selected-chat-context>";
+const SELECTED_TEXT_CONTEXT_OPEN = "<deepzora-selected-chat-context>";
+const SELECTED_TEXT_CONTEXT_CLOSE = "</deepzora-selected-chat-context>";
 
 export function normalizeSelectedText(value: string): { text: string; truncated: boolean } {
   const text = value.trim();

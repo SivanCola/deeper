@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 func projectTopicLess(left, right ProjectNode, sortMode string, manualOrder bool) bool {

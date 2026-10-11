@@ -7,9 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestPinnedContextNeverChangesBasePrompt(t *testing.T) {

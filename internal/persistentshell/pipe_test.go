@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 // Run the Windows byte-stream transport on every host with Bash installed.
@@ -76,7 +76,7 @@ func TestBashPipeUnicodeCompletionAndState(t *testing.T) {
 	long := strings.Repeat("中文😀", 2000)
 	run("printf '%s' "+posixQuote(long), long)
 	run("printf '前'; printf '错误' >&2; printf '后'", "前错误后")
-	run("cd sub; export DEEPER_PIPE_STATE='变量😀'; rx_pipe_fn() { printf '%s' \"$DEEPER_PIPE_STATE\"; }", "")
+	run("cd sub; export DEEPZORA_PIPE_STATE='变量😀'; rx_pipe_fn() { printf '%s' \"$DEEPZORA_PIPE_STATE\"; }", "")
 	run("printf '%s:' \"${PWD##*/}\"; rx_pipe_fn", "sub:变量😀")
 	req.Command = "printf '失败中文' >&2; false"
 	failed := m.Run(t.Context(), req)

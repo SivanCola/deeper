@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 // CommandMatches reports whether a cited verification command is proven by a

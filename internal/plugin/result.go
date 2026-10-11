@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // parseToolResultWithSchema keeps output-schema validation advisory. Third-party
-// servers sometimes publish a stale or incompatible output schema; Deeper
+// servers sometimes publish a stale or incompatible output schema; Deepzora
 // records that mismatch without discarding an otherwise usable tool result.
 func parseToolResultWithSchema(res, outputSchema json.RawMessage) (string, []string, error) {
 	var envelope struct {

@@ -3,10 +3,10 @@ package control
 import (
 	"encoding/json"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/secrets"
-	"deeper/internal/session"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/secrets"
+	"deepzora/internal/session"
 )
 
 // One bounded, optional record shares the terminal commit. Cold exports can

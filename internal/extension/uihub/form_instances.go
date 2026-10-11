@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 type activeForm struct {

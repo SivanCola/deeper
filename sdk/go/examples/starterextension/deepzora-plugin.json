@@ -1,0 +1,25 @@
+{
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "starter-extension",
+  "version": "0.1.0",
+  "description": "Minimal Deepzora Extension Protocol sidecar",
+  "provides": [
+    {
+      "namespace": "plugin/starter-extension",
+      "kind": "interceptors",
+      "id": "default",
+      "version": "1.0.0"
+    }
+  ],
+  "contributes": {},
+  "runtime": {
+    "command": "${DEEPZORA_PLUGIN_ROOT}/bin/starter-extension.exe",
+    "args": [],
+    "env": {},
+    "required": false,
+    "priority": 0,
+    "intercepts": ["input.receive"],
+    "replaces": [],
+    "capabilities": ["interceptors"]
+  }
+}

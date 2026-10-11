@@ -1,7 +1,7 @@
 package cli
 
 // Discovery side of CLI takeover: find the resident serve processes recorded
-// under <Deeper home>/remote, ask one of them for the session through POST
+// under <Deepzora home>/remote, ask one of them for the session through POST
 // /handoff, and prompt before taking a held session over.
 
 import (
@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/remote/bootstrap"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/remote/bootstrap"
+	"deepzora/internal/store"
 )
 
 // cliTakeoverTimeout bounds the drain window of a wait-mode takeover.
@@ -48,7 +48,7 @@ type cliTakeoverGrant struct {
 var cliServeProcessAlive = webInstanceProcessAlive
 
 // discoverCLIServes enumerates resident serve processes recorded under
-// <Deeper home>/remote. This machine is the SSH target in the takeover
+// <Deepzora home>/remote. This machine is the SSH target in the takeover
 // scenario, so the bootstrap's SFTP-written state files are local files here.
 // Records whose PID no longer exists are skipped: a restarted desktop
 // respawns the serve on a new port, and dialing the stale address only

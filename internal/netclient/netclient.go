@@ -1,4 +1,4 @@
-// Package netclient builds HTTP clients and proxy resolvers that share Deeper's
+// Package netclient builds HTTP clients and proxy resolvers that share Deepzora's
 // user-facing proxy settings. web_fetch reuses the resolver while keeping its own
 // dial-time SSRF guard.
 package netclient
@@ -15,7 +15,7 @@ import (
 
 	"golang.org/x/net/http/httpproxy"
 
-	"deeper/internal/sysproxy"
+	"deepzora/internal/sysproxy"
 )
 
 const (
@@ -79,7 +79,7 @@ func ProxyFunc(spec ProxySpec) (func(*http.Request) (*url.URL, error), error) {
 	return proxyFunc(spec)
 }
 
-// NewHTTPClient returns an HTTP client with Deeper proxy settings applied.
+// NewHTTPClient returns an HTTP client with Deepzora proxy settings applied.
 func NewHTTPClient(spec ProxySpec, opts TransportOptions) (*http.Client, error) {
 	tr, err := NewTransport(spec, opts)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestRepairBackoffPersistsAndSourceChangesResetIt(t *testing.T) {

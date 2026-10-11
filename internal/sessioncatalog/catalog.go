@@ -3,7 +3,7 @@ package sessioncatalog
 import (
 	"context"
 	"database/sql"
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -133,7 +133,7 @@ func Open(ctx context.Context, opts Options) (*Catalog, error) {
 		opts.InMemory = true
 	}
 	if !opts.InMemory {
-		if env := strings.TrimSpace(os.Getenv("DEEPER_SESSION_CATALOG_MEMORY")); env == "1" {
+		if env := strings.TrimSpace(os.Getenv("DEEPZORA_SESSION_CATALOG_MEMORY")); env == "1" {
 			opts.InMemory = true
 		}
 	}

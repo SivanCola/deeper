@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/extension"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
 )
 
 // LocalProviderResolver preserves the historical config-backed provider path.
@@ -208,7 +208,7 @@ func resolveModelEntry(resolver provider.Resolver, cfg *config.Config, modelName
 		}
 		available += strings.Join(pluginRefs, "/")
 	}
-	return nil, "", fmt.Errorf("%w %q (configured: %s); note: defining [[providers]] replaces the built-in presets, so add a [[providers]] entry for it or use a configured name, or run `deeper setup` to reconfigure", ErrUnknownModel, modelName, available)
+	return nil, "", fmt.Errorf("%w %q (configured: %s); note: defining [[providers]] replaces the built-in presets, so add a [[providers]] entry for it or use a configured name, or run `deepzora setup` to reconfigure", ErrUnknownModel, modelName, available)
 }
 
 // extensionCatalogRefs returns the plugin-namespaced refs a resolver's catalog

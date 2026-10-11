@@ -1,7 +1,7 @@
 package openai
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ReasoningForConfig is pure: capability discovery never reads credentials or

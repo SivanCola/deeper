@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestPublishedRuntimeStateDoesNotWaitForSamplingLocks(t *testing.T) {

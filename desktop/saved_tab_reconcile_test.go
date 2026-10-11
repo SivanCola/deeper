@@ -11,14 +11,14 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 func newSavedTabReconcileTestApp(t *testing.T) *App {

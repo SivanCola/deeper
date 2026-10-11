@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // mainConversationRequests is retained as a test helper name for callers that
@@ -28,7 +28,7 @@ func mainConversationRequests(reqs []provider.Request) []provider.Request {
 // without reintroducing the flake.
 func robustTempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "deeper-test-*")
+	dir, err := os.MkdirTemp("", "deepzora-test-*")
 	if err != nil {
 		t.Fatalf("robustTempDir: %v", err)
 	}

@@ -1,11 +1,11 @@
 package control
 
 import (
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 	"errors"
 
-	"deeper/internal/transcript"
-	"deeper/internal/turnevent"
+	"deepzora/internal/transcript"
+	"deepzora/internal/turnevent"
 )
 
 func (c *Controller) captureTranscriptCheckpoint(ledger *turnevent.Ledger, digest string) {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/pluginpkg"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/pluginpkg"
 )
 
 // SourceStatus describes one hooks settings file for diagnostics.
@@ -73,11 +73,11 @@ func Inspect(opts LoadOptions) Inspection {
 	}
 
 	// Plugin hooks (enabled packages only — same as Load).
-	deeperHomeDir := deeperHomeForOptions(opts)
-	appendPluginInspect(&out, deeperHomeDir, opts.ProjectRoot)
+	deepzoraHomeDir := deepzoraHomeForOptions(opts)
+	appendPluginInspect(&out, deepzoraHomeDir, opts.ProjectRoot)
 
-	g := filepath.Join(deeperHomeDir, SettingsFilename)
-	if deeperHomeDir == "" {
+	g := filepath.Join(deepzoraHomeDir, SettingsFilename)
+	if deepzoraHomeDir == "" {
 		g = GlobalSettingsPath(opts.HomeDir)
 	}
 	st := inspectSettingsFile(g, ScopeGlobal)
@@ -186,11 +186,11 @@ func appendInspectEntries(out *Inspection, s *Settings, scope Scope, source stri
 	}
 }
 
-func appendPluginInspect(out *Inspection, deeperHomeDir, projectRoot string) {
-	if strings.TrimSpace(deeperHomeDir) == "" {
+func appendPluginInspect(out *Inspection, deepzoraHomeDir, projectRoot string) {
+	if strings.TrimSpace(deepzoraHomeDir) == "" {
 		return
 	}
-	installed, _ := pluginpkg.LoadInstalled(deeperHomeDir)
+	installed, _ := pluginpkg.LoadInstalled(deepzoraHomeDir)
 	for _, item := range installed {
 		pkg := item.Package
 		src := filepath.Join(pkg.Root, pluginpkg.ManifestPath(pkg.ManifestKind))

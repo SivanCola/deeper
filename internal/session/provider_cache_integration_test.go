@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	"deeper/internal/provider/responses"
-	"deeper/internal/session"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/provider/responses"
+	"deepzora/internal/session"
 )
 
 func TestProviderRequestBytesSurviveSessionV4RoundTrip(t *testing.T) {

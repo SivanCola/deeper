@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 type notificationToolsTransport struct {

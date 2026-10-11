@@ -17,7 +17,7 @@ function fence(label: string, value: string): string {
 }
 
 export function sessionItemsToMarkdown(title: string, items: Item[], live?: LiveStream): string {
-  const lines: string[] = [`# ${title.trim() || "Deeper session"}`, ""];
+  const lines: string[] = [`# ${title.trim() || "Deepzora session"}`, ""];
   for (const item of materializeLiveItems(items, live)) {
     switch (item.kind) {
       case "user":

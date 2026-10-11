@@ -36,7 +36,7 @@ Positions refer to transcript records, not global message offsets.
 Legacy migration also emits
 `desktop session migration transcript initialization failed` with the same
 diagnostic, `stage=legacy_import`, and `source_key`. Match `source_key` to the
-existing `sourceKey` in `desktop/session-migration-v5.json` under the Deeper
+existing `sourceKey` in `desktop/session-migration-v5.json` under the Deepzora
 configuration directory. It identifies the same source across retries even
 when a new attempt creates a different target session ID. Each failed attempt
 emits one runtime diagnostic and, for this migration path, one migration
@@ -51,7 +51,7 @@ collect logs from a build containing this change after reproducing the failure.
 The same handled migration failure is queued as an `exception` report with
 `source=desktop.session_migration`, `label=transcript.initialization`, and a
 content-free classification in its fingerprint hint. It is delivered to
-the operator-configured `DEEPER_REPORT_ENDPOINT` (disabled by default) under
+the operator-configured `DEEPZORA_REPORT_ENDPOINT` (disabled by default) under
 the existing Desktop telemetry consent, retry, and per-version deduplication
 rules. Session/source fingerprints and record identity fingerprints remain
 local-only. Unrecovered panics from older builds continue through the existing

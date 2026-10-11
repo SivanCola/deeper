@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 // writeJSONAtomic marshals v and publishes it via AtomicWriteFileStrict.

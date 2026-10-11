@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
 )
 
 func TestInboxQueueFullBodySavePreservesEnvelopeAndSession(t *testing.T) {

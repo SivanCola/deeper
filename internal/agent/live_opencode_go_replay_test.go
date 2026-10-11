@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	"deeper/internal/provider/responses"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/provider/responses"
+	"deepzora/internal/tool"
 )
 
 // TestLiveOpenCodeGoDeepSeekAgentToolLoops repeatedly exercises the production

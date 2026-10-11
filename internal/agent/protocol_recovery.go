@@ -11,8 +11,8 @@ import (
 	"maps"
 	"slices"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 var ErrProtocolRecoveryUnavailable = errors.New("protocol recovery is unavailable or stale")

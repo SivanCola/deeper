@@ -313,7 +313,7 @@ func (a *App) ensureMediaTokenStore() *mediaTokenStore {
 func (a *App) workspaceMediaMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			const prefix = "/__deeper_workspace_media/"
+			const prefix = "/__deepzora_workspace_media/"
 			if !strings.HasPrefix(r.URL.Path, prefix) {
 				next.ServeHTTP(w, r)
 				return

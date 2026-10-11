@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/permission"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/permission"
+	"deepzora/internal/provider"
 )
 
 func leaseTestFactory(dir string) *e2eFactory {
@@ -48,7 +48,7 @@ func TestSessionLoadRefusedWhenLeaseHeld(t *testing.T) {
 	if resp.Error == nil {
 		t.Fatalf("session/load of a held session succeeded, want protocol error")
 	}
-	if !strings.Contains(resp.Error.Message, "in use by another Deeper") {
+	if !strings.Contains(resp.Error.Message, "in use by another Deepzora") {
 		t.Fatalf("session/load error = %q, want holder wording", resp.Error.Message)
 	}
 	if strings.Contains(resp.Error.Message, path) {

@@ -7,8 +7,8 @@ import (
     "os"
     "path/filepath"
     "strings"
-    "deeper/internal/agent"
-    "deeper/internal/provider"
+    "deepzora/internal/agent"
+    "deepzora/internal/provider"
     // CANONICAL_IMPORT
 )
 

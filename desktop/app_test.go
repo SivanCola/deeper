@@ -21,28 +21,28 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/boot"
-	"deeper/internal/bot"
-	"deeper/internal/command"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/history"
-	"deeper/internal/instruction"
-	"deeper/internal/jobs"
-	"deeper/internal/mcplaunch"
-	"deeper/internal/memory"
-	"deeper/internal/plugin"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/skill"
-	"deeper/internal/stats"
-	"deeper/internal/taskcatalog"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/boot"
+	"deepzora/internal/bot"
+	"deepzora/internal/command"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/history"
+	"deepzora/internal/instruction"
+	"deepzora/internal/jobs"
+	"deepzora/internal/mcplaunch"
+	"deepzora/internal/memory"
+	"deepzora/internal/plugin"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/skill"
+	"deepzora/internal/stats"
+	"deepzora/internal/taskcatalog"
+	"deepzora/internal/tool"
 )
 
 type todoMetaController struct {
@@ -230,11 +230,11 @@ func isolateDesktopUserDirs(t *testing.T) string {
 		}
 	}
 	t.Setenv("HOME", home)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", xdg)
-	t.Setenv("DEEPER_STATE_HOME", filepath.Join(home, "state"))
-	t.Setenv("DEEPER_CACHE_HOME", filepath.Join(home, "cache"))
+	t.Setenv("DEEPZORA_STATE_HOME", filepath.Join(home, "state"))
+	t.Setenv("DEEPZORA_CACHE_HOME", filepath.Join(home, "cache"))
 	t.Setenv("AppData", appData)
 	// Close process-local SQLite handles before TempDir cleanup for Windows.
 	t.Cleanup(func() {
@@ -261,7 +261,7 @@ func TestNeedsOnboardingIgnoresInheritedEnv(t *testing.T) {
 
 	app := NewApp()
 	if !app.NeedsOnboarding() {
-		t.Fatal("NeedsOnboarding should require a key saved in Deeper global .env")
+		t.Fatal("NeedsOnboarding should require a key saved in Deepzora global .env")
 	}
 	setDesktopTestCredential(t, onboardingKeyEnv, "saved-key")
 	if app.NeedsOnboarding() {
@@ -419,7 +419,7 @@ func TestCommandsDocsShowsOnlyRuntimeWinner(t *testing.T) {
 			if len(docs) != 1 || docs[0].Kind != tt.wantKind {
 				t.Fatalf("docs commands = %+v, want one %s entry", docs, tt.wantKind)
 			}
-			if fallback, ok := commandInfoByName(app.Commands(), control.DeeperDocsSlashName); !ok || fallback.Kind != "builtin" {
+			if fallback, ok := commandInfoByName(app.Commands(), control.DeepzoraDocsSlashName); !ok || fallback.Kind != "builtin" {
 				t.Fatalf("qualified docs fallback = %+v, %v; want built-in", fallback, ok)
 			}
 		})
@@ -467,7 +467,7 @@ func TestCommandsDocsAccountsForHiddenCompatibilityAliases(t *testing.T) {
 			if _, ok := commandInfoByName(commands, "docs"); ok {
 				t.Fatalf("hidden runtime owner left a misleading docs entry: %+v", commands)
 			}
-			for _, want := range []string{control.DeeperDocsSlashName, tt.wantCanonical} {
+			for _, want := range []string{control.DeepzoraDocsSlashName, tt.wantCanonical} {
 				if _, ok := commandInfoByName(commands, want); !ok {
 					t.Fatalf("commands missing %q: %+v", want, commands)
 				}
@@ -479,8 +479,8 @@ func TestCommandsDocsAccountsForHiddenCompatibilityAliases(t *testing.T) {
 func TestCommandsDocsDoesNotDisplaceQualifiedCustomCommands(t *testing.T) {
 	ctrl := control.New(control.Options{Commands: []command.Command{
 		{Name: "docs", Description: "custom docs"},
-		{Name: "deeper:docs", Description: "qualified custom docs"},
-		{Name: "deeper:builtin:docs", Description: "second qualified custom docs"},
+		{Name: "deepzora:docs", Description: "qualified custom docs"},
+		{Name: "deepzora:builtin:docs", Description: "second qualified custom docs"},
 	}})
 	defer ctrl.Close()
 	app := NewApp()
@@ -491,9 +491,9 @@ func TestCommandsDocsDoesNotDisplaceQualifiedCustomCommands(t *testing.T) {
 		kind string
 	}{
 		{name: "docs", kind: "custom"},
-		{name: "deeper:docs", kind: "custom"},
-		{name: "deeper:builtin:docs", kind: "custom"},
-		{name: "deeper:builtin:docs:2", kind: "builtin"},
+		{name: "deepzora:docs", kind: "custom"},
+		{name: "deepzora:builtin:docs", kind: "custom"},
+		{name: "deepzora:builtin:docs:2", kind: "builtin"},
 	} {
 		if command, ok := commandInfoByName(commands, want.name); !ok || command.Kind != want.kind {
 			t.Fatalf("command %q = %+v, %v; want kind %q", want.name, command, ok, want.kind)
@@ -1091,7 +1091,7 @@ func TestSettingsUsesUserDesktopPreferencesNotProjectConfig(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	project := robustTempDir(t)
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 [desktop]
 language = "zh"
 layout_style = "workbench"
@@ -1211,11 +1211,11 @@ func BenchmarkDesktopSettingsPayloads(b *testing.B) {
 		}
 	}
 	b.Setenv("HOME", home)
-	b.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	b.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	b.Setenv("USERPROFILE", home)
 	b.Setenv("XDG_CONFIG_HOME", xdg)
-	b.Setenv("DEEPER_STATE_HOME", filepath.Join(home, "state"))
-	b.Setenv("DEEPER_CACHE_HOME", filepath.Join(home, "cache"))
+	b.Setenv("DEEPZORA_STATE_HOME", filepath.Join(home, "state"))
+	b.Setenv("DEEPZORA_CACHE_HOME", filepath.Join(home, "cache"))
 	b.Setenv("AppData", appData)
 	b.Setenv("SHARED_PROVIDER_KEY", "sk-test")
 
@@ -1335,8 +1335,8 @@ func TestSettingsShowsGlobalCredentialWithoutMutatingWorkspaceEnv(t *testing.T) 
 		if p.Name != "settings-provider" {
 			continue
 		}
-		if !p.KeySet || !strings.Contains(p.KeySource, "Deeper credentials") {
-			t.Fatalf("settings-provider key = set:%v source:%q, want Deeper credentials: %+v", p.KeySet, p.KeySource, p)
+		if !p.KeySet || !strings.Contains(p.KeySource, "Deepzora credentials") {
+			t.Fatalf("settings-provider key = set:%v source:%q, want Deepzora credentials: %+v", p.KeySet, p.KeySource, p)
 		}
 		if env := os.Getenv("SHARED_SETTINGS_KEY"); env != "from-project" {
 			t.Fatalf("Settings mutated SHARED_SETTINGS_KEY = %q, want existing project env", env)
@@ -1347,11 +1347,11 @@ func TestSettingsShowsGlobalCredentialWithoutMutatingWorkspaceEnv(t *testing.T) 
 }
 
 // With no user config yet, Settings start from the defaults, not from the
-// checkout's deeper.toml, and the first edit writes only the user's choice.
+// checkout's deepzora.toml, and the first edit writes only the user's choice.
 func TestSettingsNeverSeedTheUserConfigFromTheProjectFile(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	project := robustTempDir(t)
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte("[desktop]\ntheme = \"light\"\n\n[permissions]\nmode = \"allow\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte("[desktop]\ntheme = \"light\"\n\n[permissions]\nmode = \"allow\"\n"), 0o644); err != nil {
 		t.Fatalf("write project config: %v", err)
 	}
 	approveWorkspace(t, project)
@@ -3197,7 +3197,7 @@ base_url = "https://api.deepseek.com"
 model = "deepseek-v4-flash"
 api_key_env = "DEEPSEEK_API_KEY"
 `
-	if err := os.WriteFile(filepath.Join(projectRoot, "deeper.toml"), []byte(projectConfig), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectRoot, "deepzora.toml"), []byte(projectConfig), 0o644); err != nil {
 		t.Fatalf("write project config: %v", err)
 	}
 	approveWorkspace(t, projectRoot)
@@ -3895,8 +3895,8 @@ func (c *blockingSnapshotCtrl) Close() {
 }
 
 func TestDescribeSessionBindingWorkspaceKeepsWindowsPathReadable(t *testing.T) {
-	path := `C:\Users\Jane Doe\Deeper`
-	want := `project workspace "C:\Users\Jane Doe\Deeper"`
+	path := `C:\Users\Jane Doe\Deepzora`
+	want := `project workspace "C:\Users\Jane Doe\Deepzora"`
 	if got := describeSessionBindingWorkspace("project", path); got != want {
 		t.Fatalf("describeSessionBindingWorkspace = %q, want %q", got, want)
 	}
@@ -3925,7 +3925,7 @@ api_key_env = "OWNER_MODEL_KEY"
 supported_efforts = ["max"]
 default_effort = "max"
 `
-	if err := os.WriteFile(filepath.Join(projectA, "deeper.toml"), []byte(ownerConfig), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectA, "deepzora.toml"), []byte(ownerConfig), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, projectA)
@@ -3938,7 +3938,7 @@ model = "stale-model"
 api_key_env = "STALE_MODEL_KEY"
 reasoning_protocol = "none"
 `
-	if err := os.WriteFile(filepath.Join(projectB, "deeper.toml"), []byte(staleConfig), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectB, "deepzora.toml"), []byte(staleConfig), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, projectB)
@@ -4147,13 +4147,13 @@ func TestSaveProviderPersistsReasoningProtocol(t *testing.T) {
 
 func TestDeleteProviderMigratesConfigAndPreservesOpenTabs(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-a/model-a2"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", Models: []string{"model-a1", "model-a2"}, APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", Models: []string{"model-a1", "model-a2"}, APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	cfg.Agent.PlannerModel = "prov-a"
 	cfg.Desktop.ProviderAccess = []string{"prov-a", "prov-b"}
@@ -4214,13 +4214,13 @@ func assertTabBuildSuperseded(t *testing.T, app *App, tab *WorkspaceTab, generat
 
 func TestDeleteProviderLeavesStartupPublicationToVersionFence(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-b/model-b1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	cfg.Desktop.ProviderAccess = []string{"prov-a", "prov-b"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
@@ -4253,13 +4253,13 @@ func TestDeleteProviderLeavesStartupPublicationToVersionFence(t *testing.T) {
 
 func TestRemoveBuiltInProviderAccessLeavesStartupPublicationToVersionFence(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-b/model-b1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "deepseek", Kind: "openai", BaseURL: "https://api.deepseek.com", Model: "deepseek-chat", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "deepseek", Kind: "openai", BaseURL: "https://api.deepseek.com", Model: "deepseek-chat", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	cfg.Desktop.ProviderAccess = []string{"deepseek", "prov-b"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
@@ -4421,13 +4421,13 @@ func TestClearActiveSessionRuntimeReleasesResourcesWhenTabReplaced(t *testing.T)
 
 func TestDeleteProviderPreservesRunningAffectedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-a/model-a1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -4455,12 +4455,12 @@ func TestDeleteProviderPreservesRunningAffectedTab(t *testing.T) {
 
 func TestDeleteProviderDoesNotWaitForRuntimeReconstruction(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-a/model-a1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -4497,12 +4497,12 @@ func TestDeleteProviderDoesNotWaitForRuntimeReconstruction(t *testing.T) {
 
 func TestDeleteProviderPreservesAffectedTabSharedHostReference(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-a/model-a1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -4538,12 +4538,12 @@ func TestDeleteProviderPreservesAffectedTabSharedHostReference(t *testing.T) {
 
 func TestRemoveBuiltInProviderAccessPreservesAffectedTabSharedHostReference(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 	cfg := config.Default()
 	cfg.DefaultModel = "deepseek/deepseek-chat"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "deepseek", Kind: "openai", BaseURL: "https://api.deepseek.com", Model: "deepseek-chat", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "deepseek", Kind: "openai", BaseURL: "https://api.deepseek.com", Model: "deepseek-chat", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	cfg.Desktop.ProviderAccess = []string{"deepseek", "prov-b"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
@@ -4580,13 +4580,13 @@ func TestRemoveBuiltInProviderAccessPreservesAffectedTabSharedHostReference(t *t
 
 func TestDeleteProviderPreservesAffectedBackgroundJobs(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-a/model-a1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -4618,13 +4618,13 @@ func TestDeleteProviderPreservesAffectedBackgroundJobs(t *testing.T) {
 
 func TestDeleteProviderPreservesUnaffectedBackgroundJobsWhenSavingConfig(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-b/model-b1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.com", Model: "model-a1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.com", Model: "model-b1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -6887,8 +6887,8 @@ func (r *appendingDesktopRunner) Run(_ context.Context, input string) error {
 
 func TestCapabilitiesIncludesInstalledPlugins(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	deeperHome := config.DeeperHomeDir()
-	root := filepath.Join(deeperHome, "plugins", "superpowers")
+	deepzoraHome := config.DeepzoraHomeDir()
+	root := filepath.Join(deepzoraHome, "plugins", "superpowers")
 	if err := os.MkdirAll(filepath.Join(root, "skills"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -6909,7 +6909,7 @@ func TestCapabilitiesIncludesInstalledPlugins(t *testing.T) {
 }`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "superpowers",
 		Root:         "plugins/superpowers",
 		Version:      "6.1.0",
@@ -6941,7 +6941,7 @@ func TestDesktopSharedHostProjectMCPConnectsWithoutLaunchApproval(t *testing.T) 
 
 	srv := desktopMCPHTTPServer(t)
 	defer srv.Close()
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), fmt.Appendf(nil, `
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), fmt.Appendf(nil, `
 [[plugins]]
 name = "h"
 type = "http"
@@ -7012,8 +7012,8 @@ func TestProjectMCPViewIsTrustedAndKeepsProjectSource(t *testing.T) {
 	if blocked.RequiresLaunchApproval {
 		t.Fatalf("project MCP exposed obsolete launch approval action: %+v", blocked)
 	}
-	if blocked.Source != "project" || blocked.ConfigSource != "deeper.toml" {
-		t.Fatalf("blocked project MCP source = %q/%q, want project/deeper.toml", blocked.Source, blocked.ConfigSource)
+	if blocked.Source != "project" || blocked.ConfigSource != "deepzora.toml" {
+		t.Fatalf("blocked project MCP source = %q/%q, want project/deepzora.toml", blocked.Source, blocked.ConfigSource)
 	}
 
 	user := withPluginConfig(ServerView{Name: "user", Status: "connected"},
@@ -7030,7 +7030,7 @@ func TestMCPServersMatchesCapabilitiesServerProjection(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "playwright"
 command = "npx"
@@ -7053,7 +7053,7 @@ func TestConfiguredMCPWithFormerBuiltInNameIsUserServer(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "time"
 command = "custom-time"
@@ -7100,10 +7100,10 @@ tier = "lazy"
 
 func TestSetMCPServerEnabledRestoresOnDemandWithoutConnecting(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "offline"
 type = "http"
@@ -7142,7 +7142,7 @@ func TestSetMCPServerEnabledSharedHostPreservesSiblingTabs(t *testing.T) {
 
 	srv := desktopMCPHTTPServer(t)
 	defer srv.Close()
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), fmt.Appendf(nil, `
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), fmt.Appendf(nil, `
 [[plugins]]
 name = "h"
 type = "http"
@@ -7293,7 +7293,7 @@ func TestReconnectMCPServerUsesEffectiveProjectConfigWhenUserNameIsShadowed(t *t
 	if err := userCfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), fmt.Appendf(nil, `
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), fmt.Appendf(nil, `
 [[plugins]]
 name = "h"
 type = "http"
@@ -7440,7 +7440,7 @@ func newGatedDesktopMCPLaunchFixture(t *testing.T, startGateAddr string) gatedDe
 		gateConfig = fmt.Sprintf("DESKTOP_MCP_START_GATE_ADDR = %q\n", startGateAddr)
 	}
 	helperArgs := []string{"-test.run=TestDesktopMCPHelperProcess", "--"}
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), fmt.Appendf(nil, `
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), fmt.Appendf(nil, `
 [[plugins]]
 name = "h"
 command = %q
@@ -7473,9 +7473,9 @@ network = true
 	}
 	runtimeSpecs := boot.PluginSpecsForRootWithOptions([]config.PluginEntry{entry}, dir, boot.PluginSpecOptions{
 		DefaultCallTimeout: time.Duration(cfg.MCPCallTimeoutSeconds()) * time.Second,
-		LaunchManager:      mcplaunch.ForWorkspace(config.DeeperHomeDir(), dir),
+		LaunchManager:      mcplaunch.ForWorkspace(config.DeepzoraHomeDir(), dir),
 		ConfigSource:       "workspace_config",
-		StateHome:          config.DeeperHomeDir(),
+		StateHome:          config.DeepzoraHomeDir(),
 		WriterRoots:        cfg.WriteRootsForRoot(dir),
 		ForbidReadRoots:    cfg.ForbidReadRootsForRoot(dir),
 		Network:            cfg.Sandbox.Network,
@@ -7686,12 +7686,12 @@ func TestRemovePluginSerializesWithMCPAuthorization(t *testing.T) {
 // the real uninstall and MCP disconnect flow. Returns the plugin root.
 func installGatedTestPluginPackage(t *testing.T, mcpServerName string) string {
 	t.Helper()
-	deeperHome := config.DeeperHomeDir()
-	root := filepath.Join(deeperHome, "plugins", "review-helper")
+	deepzoraHome := config.DeepzoraHomeDir()
+	root := filepath.Join(deepzoraHome, "plugins", "review-helper")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, pluginpkg.NativeManifest), fmt.Appendf(nil, `{"apiVersion": "deeper.io/plugin/v2",
+	if err := os.WriteFile(filepath.Join(root, pluginpkg.NativeManifest), fmt.Appendf(nil, `{"apiVersion": "deepzora.com/plugin/v2",
   "name": "review-helper",
   "version": "1.0.0",
   "mcpServers": {
@@ -7700,11 +7700,11 @@ func installGatedTestPluginPackage(t *testing.T, mcpServerName string) string {
 }`, mcpServerName), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "review-helper",
 		Root:         "plugins/review-helper",
 		Version:      "1.0.0",
-		ManifestKind: "deeper",
+		ManifestKind: "deepzora",
 		Enabled:      true,
 	}); err != nil {
 		t.Fatal(err)
@@ -7714,7 +7714,7 @@ func installGatedTestPluginPackage(t *testing.T, mcpServerName string) string {
 
 func installedPluginNamed(t *testing.T, name string) bool {
 	t.Helper()
-	st, err := pluginpkg.LoadState(config.DeeperHomeDir())
+	st, err := pluginpkg.LoadState(config.DeepzoraHomeDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -8266,7 +8266,7 @@ func TestEditAndRemoveConfiguredMCPWithBuiltInName(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "time"
 command = "custom-time"
@@ -8319,7 +8319,7 @@ func TestRemoveProjectMCPRevealsAndRegistersGlobalFallback(t *testing.T) {
 	if err := userCfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	projectPath := filepath.Join(dir, "deeper.toml")
+	projectPath := filepath.Join(dir, "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte(`
 [[plugins]]
 name = "docs"
@@ -8379,10 +8379,10 @@ func TestRemoveMCPServerClearsRecordedStartupFailure(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "broken"
-command = "deeper-missing-mcp-binary"
+command = "deepzora-missing-mcp-binary"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -8394,7 +8394,7 @@ command = "deeper-missing-mcp-binary"
 	defer app.activeCtrl().Close()
 	recordMCPFailure(app.activeCtrl(), config.PluginEntry{
 		Name:    "broken",
-		Command: "deeper-missing-mcp-binary",
+		Command: "deepzora-missing-mcp-binary",
 	}, errors.New("connect: missing binary"))
 
 	view := app.Capabilities()
@@ -8455,12 +8455,12 @@ func TestRemoveMCPServerRejectsPluginManagedServerWithoutDisconnecting(t *testin
 
 	srv := desktopMCPHTTPServer(t)
 	defer srv.Close()
-	deeperHome := config.DeeperHomeDir()
-	root := filepath.Join(deeperHome, "plugins", "superpowers")
+	deepzoraHome := config.DeepzoraHomeDir()
+	root := filepath.Join(deepzoraHome, "plugins", "superpowers")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, pluginpkg.NativeManifest), fmt.Appendf(nil, `{"apiVersion": "deeper.io/plugin/v2",
+	if err := os.WriteFile(filepath.Join(root, pluginpkg.NativeManifest), fmt.Appendf(nil, `{"apiVersion": "deepzora.com/plugin/v2",
   "name": "superpowers",
   "version": "1.0.0",
   "mcpServers": {
@@ -8469,11 +8469,11 @@ func TestRemoveMCPServerRejectsPluginManagedServerWithoutDisconnecting(t *testin
 }`, srv.URL), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "superpowers",
 		Root:         "plugins/superpowers",
 		Version:      "1.0.0",
-		ManifestKind: "deeper",
+		ManifestKind: "deepzora",
 		Enabled:      true,
 	}); err != nil {
 		t.Fatal(err)
@@ -8572,7 +8572,7 @@ func TestUpdateMCPServerEditsProjectMCPJSONEntry(t *testing.T) {
 	if err := app.UpdateMCPServer("codegraph", MCPServerInput{
 		Name:      "codegraph",
 		Transport: "stdio",
-		Command:   "deeper-missing-mcp-binary",
+		Command:   "deepzora-missing-mcp-binary",
 		Args:      []string{"serve", "--mcp"},
 		Env:       map[string]string{"CODEGRAPH_LOG": "debug"},
 	}); err != nil {
@@ -8594,7 +8594,7 @@ func TestUpdateMCPServerEditsProjectMCPJSONEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := doc.MCPServers["codegraph"]
-	if got.Command != "deeper-missing-mcp-binary" || !reflect.DeepEqual(got.Args, []string{"serve", "--mcp"}) || got.Env["CODEGRAPH_LOG"] != "debug" {
+	if got.Command != "deepzora-missing-mcp-binary" || !reflect.DeepEqual(got.Args, []string{"serve", "--mcp"}) || got.Env["CODEGRAPH_LOG"] != "debug" {
 		t.Fatalf(".mcp.json codegraph = %+v, want updated command/args/env", got)
 	}
 	if _, ok := findPluginEntry(config.LoadForEdit(config.UserConfigPath()).Plugins, "codegraph"); ok {
@@ -8611,7 +8611,7 @@ func TestUpdateMCPServerPreservesProjectTOMLSourceAndGlobalShadow(t *testing.T) 
 	if err := userCfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
-	projectPath := filepath.Join(dir, "deeper.toml")
+	projectPath := filepath.Join(dir, "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte(`
 [[plugins]]
 name = "docs"
@@ -8636,7 +8636,7 @@ command = "project-docs"
 	if err := app.UpdateMCPServer("docs", MCPServerInput{
 		Name: "docs", Transport: "stdio", Command: "project-docs-updated",
 	}); err != nil {
-		t.Fatalf("UpdateMCPServer(project deeper.toml docs): %v", err)
+		t.Fatalf("UpdateMCPServer(project deepzora.toml docs): %v", err)
 	}
 
 	projectCfg := config.LoadForEdit(projectPath)
@@ -8720,7 +8720,7 @@ func TestInstallMCPServerHandshakeFailureDoesNotPersist(t *testing.T) {
 	defer app.activeCtrl().Close()
 
 	result, err := app.InstallMCPServer(MCPServerInput{
-		Name: "broken", Transport: "stdio", Command: "deeper-missing-mcp-binary",
+		Name: "broken", Transport: "stdio", Command: "deepzora-missing-mcp-binary",
 	})
 	if err != nil {
 		t.Fatalf("InstallMCPServer returned transport error instead of structured issue: %v", err)
@@ -8884,7 +8884,7 @@ func TestUpdateMCPServerFailedCandidateRollsBackConfigAndConnection(t *testing.T
 	}
 
 	err := app.UpdateMCPServer("stable", MCPServerInput{
-		Name: "stable", Transport: "stdio", Command: "deeper-missing-mcp-binary",
+		Name: "stable", Transport: "stdio", Command: "deepzora-missing-mcp-binary",
 	})
 	if err == nil {
 		t.Fatal("broken update candidate should fail")
@@ -8906,7 +8906,7 @@ func TestCapabilitiesMarksBackgroundRemoteMCPAuthPossible(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "dida"
 type = "http"
@@ -8938,7 +8938,7 @@ func TestCapabilitiesDoesNotMarkRemoteMCPWithAuthHeaderPossible(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "stripe"
 type = "http"
@@ -8970,7 +8970,7 @@ func TestCapabilitiesMarksAuthFailureRequired(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "figma"
 type = "http"
@@ -9004,7 +9004,7 @@ func TestClearMCPServerAuthenticationClearsConfigAndFailure(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "figma"
 type = "http"
@@ -9066,7 +9066,7 @@ func TestUpdateMCPServerMigratesLegacyTierInProjectSource(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "playwright"
 command = "npx"
@@ -9116,7 +9116,7 @@ tier = "lazy"
 	if _, ok := findPluginEntry(userCfg.Plugins, "playwright"); ok {
 		t.Fatalf("project plugin should not be copied to user config: %+v", userCfg.Plugins)
 	}
-	projectCfg := config.LoadForEdit(filepath.Join(dir, "deeper.toml"))
+	projectCfg := config.LoadForEdit(filepath.Join(dir, "deepzora.toml"))
 	projectPlugin, ok := findPluginEntry(projectCfg.Plugins, "playwright")
 	if !ok {
 		t.Fatalf("playwright should remain in project config: %+v", projectCfg.Plugins)
@@ -9146,7 +9146,7 @@ func TestUpdateMCPServerSplitsPastedCommandLine(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := t.TempDir()
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "playwright"
 command = "npx"
@@ -9185,10 +9185,10 @@ func TestUpdateMCPServerRejectsReconnectFailureWithoutPersisting(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "broken"
-command = "deeper-old-missing-mcp-binary"
+command = "deepzora-old-missing-mcp-binary"
 tier = "background"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -9203,7 +9203,7 @@ tier = "background"
 	if err := app.UpdateMCPServer("broken", MCPServerInput{
 		Name:      "broken",
 		Transport: "stdio",
-		Command:   "deeper-missing-mcp-binary",
+		Command:   "deepzora-missing-mcp-binary",
 	}); err == nil {
 		t.Fatal("UpdateMCPServer should reject an unusable candidate")
 	}
@@ -9211,7 +9211,7 @@ tier = "background"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := cfg.Plugins[0].Command; got != "deeper-old-missing-mcp-binary" {
+	if got := cfg.Plugins[0].Command; got != "deepzora-old-missing-mcp-binary" {
 		t.Fatalf("failed update command = %q, want original command", got)
 	}
 	if got := cfg.Plugins[0].Tier; got != "" {
@@ -9226,7 +9226,7 @@ tier = "background"
 			if s.Status != "failed" {
 				t.Fatalf("server status = %q, want failed; server = %+v", s.Status, s)
 			}
-			if s.Command != "deeper-old-missing-mcp-binary" || s.Tier != "background" {
+			if s.Command != "deepzora-old-missing-mcp-binary" || s.Tier != "background" {
 				t.Fatalf("failed candidate leaked into server config: %+v", s)
 			}
 			return
@@ -9239,7 +9239,7 @@ func TestReconnectMCPServerClearsInitializingPlaceholderAndRecordsFailure(t *tes
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "codegraph"
 `), 0o644); err != nil {
@@ -9297,10 +9297,10 @@ func TestSetMCPServerTierPreservesProjectSourceAndRecordsConnectFailure(t *testi
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "broken"
-command = "deeper-missing-mcp-binary"
+command = "deepzora-missing-mcp-binary"
 tier = "lazy"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -9330,7 +9330,7 @@ tier = "lazy"
 	if _, ok := findPluginEntry(userCfg.Plugins, "broken"); ok {
 		t.Fatalf("project plugin should not be copied to user config: %+v", userCfg.Plugins)
 	}
-	projectCfg := config.LoadForEdit(filepath.Join(dir, "deeper.toml"))
+	projectCfg := config.LoadForEdit(filepath.Join(dir, "deepzora.toml"))
 	projectPlugin, ok := findPluginEntry(projectCfg.Plugins, "broken")
 	if !ok {
 		t.Fatalf("broken should remain in project config: %+v", projectCfg.Plugins)
@@ -9366,7 +9366,7 @@ func TestSetMCPServerTierRejectsBackgroundJobsBeforeSavingConfig(t *testing.T) {
 	if err := os.WriteFile(config.UserConfigPath(), []byte(`
 [[plugins]]
 name = "broken"
-command = "deeper-missing-mcp-binary"
+command = "deepzora-missing-mcp-binary"
 tier = "lazy"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -9392,10 +9392,10 @@ func TestCapabilitiesMigratesFailedMCPConfiguredTierAfterRestart(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "broken"
-command = "deeper-missing-mcp-binary"
+command = "deepzora-missing-mcp-binary"
 tier = "eager"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -9408,7 +9408,7 @@ tier = "eager"
 	defer app.activeCtrl().Close()
 	recordMCPFailure(app.activeCtrl(), config.PluginEntry{
 		Name:    "broken",
-		Command: "deeper-missing-mcp-binary",
+		Command: "deepzora-missing-mcp-binary",
 		Tier:    "eager",
 	}, errors.New("connect: missing binary"))
 

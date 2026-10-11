@@ -28,7 +28,7 @@ import { emptyContract, loadContract, type LoadedContract } from "./contract.js"
 import { DialogHost } from "./dialogs.js";
 import { renderFailurePage, type ShellAction } from "./failurePage.js";
 import { buildHelloParams, describeHandshakeFailure, validateHelloResult, type HelloResult, type HandshakeFailure } from "./handshake.js";
-import { deeperHome } from "./home.js";
+import { deepzoraHome } from "./home.js";
 import { buildHostCallTable, dispatchHostCall, type ScreenInfo } from "./hostCalls.js";
 import { firstExisting, iconCandidates } from "./icons.js";
 import { registerRendererIpc } from "./ipc.js";
@@ -63,14 +63,14 @@ function safeDirName(value: string): string {
   return name === "" ? "user" : name;
 }
 
-app.setName("Deeper");
+app.setName("Deepzora");
 // Must precede the first BrowserWindow: the taskbar reads the identity once.
 applyAppUserModelId(app, process.platform);
 registerTaskbarRelaunch(app, process.platform, process.execPath, app.isPackaged);
-const dev = (process.env.DEEPER_DEV ?? "").trim() !== "";
-const home = deeperHome({ env: process.env, platform: process.platform, homedir, cwd: () => process.cwd(), });
+const dev = (process.env.DEEPZORA_DEV ?? "").trim() !== "";
+const home = deepzoraHome({ env: process.env, platform: process.platform, homedir, cwd: () => process.cwd(), });
 if (home === "") {
-  console.error("deeper-desktop-shell: cannot resolve the Deeper data home (set DEEPER_HOME)");
+  console.error("deepzora-desktop-shell: cannot resolve the Deepzora data home (set DEEPZORA_HOME)");
   app.exit(1);
 } else if (!claimShellInstance(app, home, dev)) {
   app.quit();
@@ -107,7 +107,7 @@ function bootstrap(dataHome: string): void {
   }
   const status = initialShellStatus(app.getPath("userData"), buildVersion);
   let firstHeartbeat = 0;
-  const startingPage = { code: null, name: "starting", title: "Deeper is starting / 正在启动", detail: "Please wait. / 请稍候。" };
+  const startingPage = { code: null, name: "starting", title: "Deepzora is starting / 正在启动", detail: "Please wait. / 请稍候。" };
   let lastFailure: HandshakeFailure = startingPage;
   let startupTimer: ReturnType<typeof setTimeout> | undefined;
   const startupDelay = new StartupDelay();
@@ -127,7 +127,7 @@ function bootstrap(dataHome: string): void {
     contract = emptyContract();
   }
   const distRoot = resolveDistRoot({ env: process.env, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, packaged: app.isPackaged });
-  const devURL = (process.env.DEEPER_ELECTRON_DEV_URL ?? "").trim();
+  const devURL = (process.env.DEEPZORA_ELECTRON_DEV_URL ?? "").trim();
   const appURL = devURL !== "" ? devURL : APP_INDEX_URL;
   const zoomStore = new AppZoomStore(join(dataHome, "electron-app-zoom.json"), join(dataHome, "desktop-zoom.json"));
   const icons = iconCandidates({ platform: process.platform, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, packaged: app.isPackaged });
@@ -322,7 +322,7 @@ function bootstrap(dataHome: string): void {
       quit: () => app.quit(),
       exit: (code) => app.exit(code),
       relaunch: (args: string[], execPath?: string) => {
-        if (execPath) delete process.env.DEEPER_DESKTOP_SERVICE;
+        if (execPath) delete process.env.DEEPZORA_DESKTOP_SERVICE;
         app.relaunch({ args, ...(execPath ? { execPath } : {}) });
       },
     },
@@ -335,7 +335,7 @@ function bootstrap(dataHome: string): void {
       const options = {
         type: "error" as const,
         title: "Close paused / 关闭已暂停",
-        message: "Deeper could not save the current draft. / Deeper 无法保存当前草稿。",
+        message: "Deepzora could not save the current draft. / Deepzora 无法保存当前草稿。",
         detail: `${message}\n\nThe window will remain open so you can retry. / 窗口将保持打开，你可以重试。`,
         buttons: ["OK / 确定"],
         noLink: true,
@@ -347,7 +347,7 @@ function bootstrap(dataHome: string): void {
       const options = {
         type: "error" as const,
         title: "Exit incomplete / 退出未完成",
-        message: "Deeper could not safely finish saving and closing. / Deeper 未能安全完成保存与收尾。",
+        message: "Deepzora could not safely finish saving and closing. / Deepzora 未能安全完成保存与收尾。",
         detail: `${message}\n\nYou can retry the remaining steps or keep this window open. / 你可以重试未完成的步骤，或保留当前窗口。`,
         buttons: ["Retry exit / 重试退出", "Keep open / 保留窗口"],
         defaultId: 0,
@@ -444,7 +444,7 @@ function bootstrap(dataHome: string): void {
           contract.protocolVersion,
         ),
       onRequest: (method, params) => {
-        if (lifecycle.isQuitting) return Promise.reject(new Error("Deeper is shutting down"));
+        if (lifecycle.isQuitting) return Promise.reject(new Error("Deepzora is shutting down"));
         return dispatchHostCall(hostCalls, method, params);
       },
       onEvent: (frame) => {
@@ -475,7 +475,7 @@ function bootstrap(dataHome: string): void {
               code: null,
               name: "startup_timeout",
               title: "Startup incomplete / 启动未完成",
-              detail: "Deeper did not become ready within 30 seconds. Open logs or retry. / 30 秒内未完成启动，请打开日志或重试。",
+              detail: "Deepzora did not become ready within 30 seconds. Open logs or retry. / 30 秒内未完成启动，请打开日志或重试。",
             };
             status.lifecycle = "failed";
             startupDelay.cancel();
@@ -662,7 +662,7 @@ function bootstrap(dataHome: string): void {
               clearTimeout(startupTimer);
             }
             if (status.rendererVersion === "")
-              void mainWindow.browserWindow?.webContents.executeJavaScript('window.deeperDesktop.invoke("Version", [])').catch(() => undefined);
+              void mainWindow.browserWindow?.webContents.executeJavaScript('window.deepzoraDesktop.invoke("Version", [])').catch(() => undefined);
           }
           return result;
         },

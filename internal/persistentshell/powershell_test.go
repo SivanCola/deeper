@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func TestPowerShellControlFrames(t *testing.T) {
@@ -31,7 +31,7 @@ func TestPowerShellControlFrames(t *testing.T) {
 }
 
 func TestPowerShellPersistentLive(t *testing.T) {
-	path := os.Getenv("DEEPER_TEST_PWSH")
+	path := os.Getenv("DEEPZORA_TEST_PWSH")
 	if path == "" {
 		path, _ = exec.LookPath("pwsh")
 	}
@@ -78,7 +78,7 @@ func TestPowerShellPersistentLive(t *testing.T) {
 	if got := run("[Console]::Write('" + large + "')"); got.Err != nil || got.Output != large {
 		t.Fatalf("long output: bytes=%d err=%v", len(got.Output), got.Err)
 	}
-	if got := run("[Console]::Write('DEEPER_END_fake:0'); [Console]::Error.Write('stderr')"); got.Err != nil || !strings.Contains(got.Output, "DEEPER_END_fake:0") || !strings.Contains(got.Output, "stderr") {
+	if got := run("[Console]::Write('DEEPZORA_END_fake:0'); [Console]::Error.Write('stderr')"); got.Err != nil || !strings.Contains(got.Output, "DEEPZORA_END_fake:0") || !strings.Contains(got.Output, "stderr") {
 		t.Fatalf("raw output: %+v", got)
 	}
 	if got := run("exit 3"); !got.Reset || got.ExitCodeKnown || got.Err == nil {

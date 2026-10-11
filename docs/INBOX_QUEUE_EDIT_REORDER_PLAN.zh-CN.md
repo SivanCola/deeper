@@ -8,8 +8,8 @@
 
 | 项目 | 本次检查的版本 | 范围 |
 | --- | --- | --- |
-| Deeper 工作区 | `5c4b343a4ab08a91de649c49542291db056e7875` | 实施前的调研基线 |
-| Deeper 远端 main | `61cc393b2027391bc70742b1ce50531c3efd0b02` | 本次已 fetch；本文引用的队列组件、Controller、Store、队列适配器在两个提交间没有变化 |
+| Deepzora 工作区 | `5c4b343a4ab08a91de649c49542291db056e7875` | 实施前的调研基线 |
+| Deepzora 远端 main | `61cc393b2027391bc70742b1ce50531c3efd0b02` | 本次已 fetch；本文引用的队列组件、Controller、Store、队列适配器在两个提交间没有变化 |
 | deepseek-harness 本地检出 | `ddefc45fbc7f8e46dd73185e68295696d1297887` | 读取本地实际实现，不声称是上游最新版本 |
 | ZCode 本地检出 | `872ad960de7ec172591f7e1952f7849229f94521` | 读取本地实际实现，并执行了其工作区 freshness 检查 |
 
@@ -17,12 +17,12 @@
 
 历史关联：
 
-- [Issue #8274](https://github.com/SivanCola/deeper/issues/8274)：要求队列支持编辑；由已合并的 [PR #8701](https://github.com/SivanCola/deeper/pull/8701) 实现。
-- [Issue #8276](https://github.com/SivanCola/deeper/issues/8276)：同一状态错误、引导条目卡死；[PR #8270](https://github.com/SivanCola/deeper/pull/8270) 修复的是失去运行时所有者的中间态恢复问题。Issue 原文关于拒绝路径未回滚的推断被 PR 说明纠正，不能作为当前根因。
-- [PR #8954](https://github.com/SivanCola/deeper/pull/8954)：修复已执行消息残留、按条目 ID 对账、队列状态事件与取消回执。
-- [Issue #8850](https://github.com/SivanCola/deeper/issues/8850)：仍开放，涉及“加入队列”文案与立即引导行为不一致，以及切换会话时操作状态残留。
+- [Issue #8274](https://github.com/SivanCola/deepzora/issues/8274)：要求队列支持编辑；由已合并的 [PR #8701](https://github.com/SivanCola/deepzora/pull/8701) 实现。
+- [Issue #8276](https://github.com/SivanCola/deepzora/issues/8276)：同一状态错误、引导条目卡死；[PR #8270](https://github.com/SivanCola/deepzora/pull/8270) 修复的是失去运行时所有者的中间态恢复问题。Issue 原文关于拒绝路径未回滚的推断被 PR 说明纠正，不能作为当前根因。
+- [PR #8954](https://github.com/SivanCola/deepzora/pull/8954)：修复已执行消息残留、按条目 ID 对账、队列状态事件与取消回执。
+- [Issue #8850](https://github.com/SivanCola/deepzora/issues/8850)：仍开放，涉及“加入队列”文案与立即引导行为不一致，以及切换会话时操作状态残留。
 
-## 2. Deeper 当前实现的具体问题
+## 2. Deepzora 当前实现的具体问题
 
 ### 2.1 已确认的代码缺口
 
@@ -51,21 +51,21 @@ F1 的触发受收据、快照与消费事件的先后顺序影响；源码确�
 
 ## 3. 两个参考项目的取舍
 
-| 设计点 | deepseek-harness 实际实现 | ZCode 实际实现 | Deeper 采用方式 |
+| 设计点 | deepseek-harness 实际实现 | ZCode 实际实现 | Deepzora 采用方式 |
 | --- | --- | --- | --- |
 | 排队与引导 | Inbox 分 `next-turn` / `next-step`；QueueDock 展示 `next-turn` | queue item 带 delivery、steer、dispatch 信息 | UI 明确区分“下一轮消息”和“已提交到当前轮的引导”，不把二者混成可编辑队列 |
-| 权威状态 | `agent/inbox/spliced` 持久化事件生成投影 | CLI/runtime + CommandInbox 负责接纳，Renderer 维护临时操作覆盖层 | 复用 Deeper Controller + 持久化 Store，不再引入另一套事件日志或第二个调度器 |
-| 编辑 | 从完整 content 读取，按同一 ID 替换；仅允许纯文本编辑 | 当前 GUI 的编辑是“后端删除确认后撤回 composer”；另有原地编辑协议和 runtime 方法 | 保留 Deeper 原地编辑、原 ID 和原位置；吸收 ZCode 的确认后生效、会话归属保护 |
+| 权威状态 | `agent/inbox/spliced` 持久化事件生成投影 | CLI/runtime + CommandInbox 负责接纳，Renderer 维护临时操作覆盖层 | 复用 Deepzora Controller + 持久化 Store，不再引入另一套事件日志或第二个调度器 |
+| 编辑 | 从完整 content 读取，按同一 ID 替换；仅允许纯文本编辑 | 当前 GUI 的编辑是“后端删除确认后撤回 composer”；另有原地编辑协议和 runtime 方法 | 保留 Deepzora 原地编辑、原 ID 和原位置；吸收 ZCode 的确认后生效、会话归属保护 |
 | 排序 | 检查到的 `QueueAction` 只有 edit/remove/steer，没有排序入口 | 拖拽发送 `queueItemId + beforeQueueItemId`，null 表示队尾 | 采用 ID 锚点排序，并加上移、下移、置顶、置底及键盘操作 |
 | 并发防护 | 精确定位仍待处理的消息，消费后不再可变更 | 命令串行接纳、revision 检查、reserved/promoting 行锁定 | 使用 Store 条件写入和 Controller admission 边界；不把 JSX 中的禁用当成最终裁决 |
 | 失败处理 | 失败通知；条目离开队列会退出编辑 | ACK 区分 stale/noop 等，草稿恢复只作用于原会话 | 错误带当前状态和版本，保留编辑草稿，主动对账 |
 
 不能直接照搬的细节：
 
-- deepseek-harness 在条目消失时清掉编辑态，Deeper 应保留未保存文字作为该会话的编辑草稿。
+- deepseek-harness 在条目消失时清掉编辑态，Deepzora 应保留未保存文字作为该会话的编辑草稿。
 - ZCode 当前 GUI 撤回后再编辑会改变“仍在队列中”的事实；若照搬，会引入重新入队、原位置恢复及主输入框草稿冲突。本次选择原地编辑。
-- ZCode 的排序在锚点消失时可退到队尾；Deeper 应明确返回顺序冲突，避免把用户的“移到 B 前”悄悄改成“放到最后”。
-- ZCode 使用整个会话 revision 做部分命令 CAS。Deeper 排序使用 **Inbox revision**，编辑使用 **正文版本**，避免流式输出或其他条目改动让编辑频繁失效。
+- ZCode 的排序在锚点消失时可退到队尾；Deepzora 应明确返回顺序冲突，避免把用户的“移到 B 前”悄悄改成“放到最后”。
+- ZCode 使用整个会话 revision 做部分命令 CAS。Deepzora 排序使用 **Inbox revision**，编辑使用 **正文版本**，避免流式输出或其他条目改动让编辑频繁失效。
 - 参考项目均不构成本次安装包行为或竞态安全性的测试证据。
 
 ## 4. 产品规则与交互
@@ -249,7 +249,7 @@ sequenceDiagram
 | `components/InboxQueueItem.tsx`、`InboxQueueEditor.tsx` | 行操作、多行编辑和明确的冲突提示 |
 | `lib/inboxQueueOrder.ts` | 从拖拽/按钮得到 ID 锚点的纯函数，测试上下移动与首尾边界 |
 
-Deeper 当前 frontend 没有安装 ZCode 使用的 dnd-kit。实施拖拽时采用维护中的排序库并验证 React 19、键盘和触控支持；放在队列的 lazy chunk 内，记录依赖及打包体积。具体版本在实现时核验，不按另一个项目的 lockfile 直接搬运。
+Deepzora 当前 frontend 没有安装 ZCode 使用的 dnd-kit。实施拖拽时采用维护中的排序库并验证 React 19、键盘和触控支持；放在队列的 lazy chunk 内，记录依赖及打包体积。具体版本在实现时核验，不按另一个项目的 lockfile 直接搬运。
 
 提交回执按真实 disposition 对账：`steer_accepted` 是处理中，`queued_followup` 才能成为普通待处理条目；未知 disposition 保留确认中状态并刷新。发送、保存、删除、拖拽不再共享一个可能跨会话残留的全局 busy 标识。
 
@@ -328,7 +328,7 @@ P1/P2 可以拆为相邻的小 PR，但编辑 UI 与排序 UI 都必须建立在
 
 ## 11. 参考源码入口
 
-以下参考路径指向本次调研的本地检出，便于实施时核对；参考项目不需要跟随 Deeper 改动。
+以下参考路径指向本次调研的本地检出，便于实施时核对；参考项目不需要跟随 Deepzora 改动。
 
 - deepseek-harness `packages/client/ui-conversation/src/client/queue/QueueDock.tsx`：next-turn 投影、完整文本、发送中回显、编辑生命周期。
 - deepseek-harness `packages/api/session-controller/src/types.ts` 中的 `QueueAction` 与 `commands.ts` 中的 `updateQueue`：明确动作契约、精确条目定位。

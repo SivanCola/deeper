@@ -5,7 +5,7 @@ package builtin
 import (
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 // Restricted presets must not demand an OS sandbox on Windows: the platform

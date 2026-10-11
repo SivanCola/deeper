@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 type statusFactory struct {
@@ -129,13 +129,13 @@ func openStatusSession(t *testing.T, client *rpcClient, cwd string) string {
 	return opened.SessionID
 }
 
-func getStatus(t *testing.T, client *rpcClient, sessionID string) DeeperSessionStatus {
+func getStatus(t *testing.T, client *rpcClient, sessionID string) DeepzoraSessionStatus {
 	t.Helper()
 	resp := client.call(t, sessionStatusMethod, SessionStatusParams{SessionID: sessionID})
 	if resp.Error != nil {
 		t.Fatalf("session/status: %+v", resp.Error)
 	}
-	var status DeeperSessionStatus
+	var status DeepzoraSessionStatus
 	if err := json.Unmarshal(resp.Result, &status); err != nil {
 		t.Fatalf("session/status result: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestStatusExtensionTracksMultipleSessionsAndUsage(t *testing.T) {
 		if notification.Method != sessionStatusUpdateMethod {
 			continue
 		}
-		var update DeeperStatusUpdate
+		var update DeepzoraStatusUpdate
 		if err := json.Unmarshal(notification.Params, &update); err != nil {
 			t.Fatalf("status update: %v", err)
 		}
@@ -259,7 +259,7 @@ func TestStatusNormalizesPhaseAndRedactsPublicText(t *testing.T) {
 func TestRestoreStatusNormalizesLegacyPresentationPhase(t *testing.T) {
 	restored := restoreStatusTelemetry(&persistedStatusTelemetry{
 		Phase:          "executor · implementing local patch",
-		FinalReadiness: DeeperFinalReadiness{},
+		FinalReadiness: DeepzoraFinalReadiness{},
 	})
 	if got := restored.snapshot().phase; got != "implementing" {
 		t.Fatalf("restored phase = %q, want implementing", got)
@@ -270,7 +270,7 @@ func TestRestoreStatusStronglyRedactsLegacyTurnOutcome(t *testing.T) {
 	const opaqueSecret = "readinessSecretAbc123"
 	const bearerSecret = "bearerSecretAbc123"
 	restored := restoreStatusTelemetry(&persistedStatusTelemetry{
-		TurnOutcome: DeeperTurnOutcome{
+		TurnOutcome: DeepzoraTurnOutcome{
 			Kind:   "error",
 			Reason: "credential " + opaqueSecret + " Authorization: Bearer " + bearerSecret,
 		},
@@ -293,8 +293,8 @@ func TestRestoreStatusMarksInterruptedTurnPaused(t *testing.T) {
 		Sequence:    7,
 		State:       "running",
 		Phase:       "implementing",
-		TurnOutcome: DeeperTurnOutcome{Kind: "none"},
-		FinalReadiness: DeeperFinalReadiness{
+		TurnOutcome: DeepzoraTurnOutcome{Kind: "none"},
+		FinalReadiness: DeepzoraFinalReadiness{
 			ReadyForReview: true,
 			Risks:          []string{},
 		},

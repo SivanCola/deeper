@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestStartTopicActivationKeepsExplicitRepresentativeSeparateFromLiveSibling(t *testing.T) {

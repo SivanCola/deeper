@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestPluginSpecsCarryOAuthHTTPClient(t *testing.T) {

@@ -30,7 +30,7 @@ async function send() {
   await act(async () => { (document.querySelector(".composer__btn--send") as HTMLButtonElement).click(); await flush(); });
 }
 function transientError() {
-  return Object.assign(new Error(`deeper_error:${TRANSIENT_INBOX_TARGET_CODE}`), { code: "business", data: { transient: true } });
+  return Object.assign(new Error(`deepzora_error:${TRANSIENT_INBOX_TARGET_CODE}`), { code: "business", data: { transient: true } });
 }
 function state(scenario: number, phase: "idle" | "executing" | "finishing", revision: number): RuntimeProjection {
   return { epoch: `transient-test-${scenario}`, revision, topics: [], sessions: [{
@@ -45,7 +45,7 @@ const receipt = { itemId: "item-1", disposition: "queued_followup", position: 0,
 
 // The classifier and the copy table must recognize the bridge's transient mark.
 {
-  assert.equal(formatInboxError(new Error(`deeper_error:${TRANSIENT_INBOX_TARGET_CODE}`), "en").includes("switching"), true);
+  assert.equal(formatInboxError(new Error(`deepzora_error:${TRANSIENT_INBOX_TARGET_CODE}`), "en").includes("switching"), true);
 }
 
 // 1. A capture-phase fence is waited out: the send completes normally.
@@ -117,7 +117,7 @@ const receipt = { itemId: "item-1", disposition: "queued_followup", position: 0,
   installDom();
   installBridgeApp({
     CaptureInboxTarget: async () => target,
-    EnqueueInboxFollowupForTarget: async () => { throw new Error("deeper_error:inbox_item_too_large"); },
+    EnqueueInboxFollowupForTarget: async () => { throw new Error("deepzora_error:inbox_item_too_large"); },
     InboxSnapshot: async () => ({ revision: 1, paused: false, recovered: false, items: [], itemsCount: 0, bytes: 0, maxItems: 64, maxBytes: 1024 }),
   });
   const SCENARIO = 4;

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // TestStreamHTMLResponseDiagnostic reproduces #8781: a gateway that answers a

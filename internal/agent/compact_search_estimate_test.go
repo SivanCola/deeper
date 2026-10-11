@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestEstimateMessagesTokensOmitsEncryptedSearchRaw(t *testing.T) {

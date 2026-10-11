@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 type busyShutdownExecution struct{}

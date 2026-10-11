@@ -7,8 +7,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/internal/config"
-	"deeper/internal/usagecatalog"
+	"deepzora/internal/config"
+	"deepzora/internal/usagecatalog"
 )
 
 type usageManager struct {
@@ -110,7 +110,7 @@ func (m *usageManager) close(ctx context.Context) error {
 	return closeErr
 }
 
-// The single usage catalog projects the single authoritative Deeper stats
+// The single usage catalog projects the single authoritative Deepzora stats
 // directory. Test/custom writers retain the exact JSONL implementation rather
 // than accidentally sharing rollups with the production cache database.
 func sameUsageDirectory(left, right string) bool {

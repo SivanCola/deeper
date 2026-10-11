@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/config"
+	"deepzora/internal/pluginpkg"
 )
 
 func TestDiagnosticStorePreservesPluginOwnership(t *testing.T) {
 	rh, root := t.TempDir(), t.TempDir()
-	t.Setenv("DEEPER_HOME", rh)
+	t.Setenv("DEEPZORA_HOME", rh)
 	for _, owner := range []string{"owner-a", "owner-b"} {
 		base := filepath.Join(rh, "plugins", owner)
 		name := owner + "-probe"

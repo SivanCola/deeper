@@ -17,7 +17,7 @@ import (
 )
 
 func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *testing.T) {
-	for _, id := range []string{"Deeper", ""} {
+	for _, id := range []string{"Deepzora", ""} {
 		for _, customIcon := range []bool{false, true} {
 			name := id
 			if name == "" {
@@ -29,9 +29,9 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 			t.Run(name, func(t *testing.T) {
 				migrationTestCOM(t)
 				root := t.TempDir()
-				launcher := filepath.Join(root, "deeper-launcher.exe")
+				launcher := filepath.Join(root, "deepzora-launcher.exe")
 				versionDir := filepath.Join(root, "versions", "v1.20.0")
-				target := filepath.Join(versionDir, "app", "Deeper.exe")
+				target := filepath.Join(versionDir, "app", "Deepzora.exe")
 				migrationTestFile(t, launcher)
 				migrationTestFile(t, target)
 				icon, iconIndex := target, int32(0)
@@ -40,10 +40,10 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 					iconIndex = 2
 					migrationTestFile(t, icon)
 				}
-				path := filepath.Join(t.TempDir(), "Deeper.lnk")
+				path := filepath.Join(t.TempDir(), "Deepzora.lnk")
 				before := migrationShortcutState{
 					target: target, id: id, arguments: `--session "work space"`,
-					description: "My Deeper workspace", workingDirectory: filepath.Dir(target),
+					description: "My Deepzora workspace", workingDirectory: filepath.Dir(target),
 					icon: icon, iconIndex: iconIndex, showCmd: 3,
 				}
 				migrationTestShortcut(t, path, before)
@@ -53,8 +53,8 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 					t.Fatalf("repair = (%v, %v), want (true, nil)", changed, err)
 				}
 				got := migrationReadShortcut(t, path)
-				if !migrationSamePath(got.target, launcher) || got.id != "io.github.sivancola.deeper" {
-					t.Fatalf("migrated target/id = %q/%q, want %q/io.github.sivancola.deeper", got.target, got.id, launcher)
+				if !migrationSamePath(got.target, launcher) || got.id != "com.deepzora.desktop" {
+					t.Fatalf("migrated target/id = %q/%q, want %q/com.deepzora.desktop", got.target, got.id, launcher)
 				}
 				if got.arguments != before.arguments || got.description != before.description || got.showCmd != before.showCmd {
 					t.Fatalf("repair changed unrelated properties: got %+v, before %+v", got, before)
@@ -92,16 +92,16 @@ func TestRepairOwnedShortcutMigratesVersionedElectronAndPreservesProperties(t *t
 
 func TestRepairOwnedShortcutLeavesSeparateStudioInstallationsByteIdentical(t *testing.T) {
 	for _, test := range []struct{ name, executable, id string }{
-		{"legacy_studio", "deeper-studio.exe", "Deeper"},
-		{"electron_studio", "Deeper Studio.exe", "io.github.sivancola.deeper.studio"},
+		{"legacy_studio", "deepzora-studio.exe", "Deepzora"},
+		{"electron_studio", "Deepzora Studio.exe", "com.deepzora.desktop.studio"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			migrationTestCOM(t)
 			root, studioRoot := t.TempDir(), t.TempDir()
-			migrationTestFile(t, filepath.Join(root, "deeper-launcher.exe"))
+			migrationTestFile(t, filepath.Join(root, "deepzora-launcher.exe"))
 			target := filepath.Join(studioRoot, test.executable)
 			migrationTestFile(t, target)
-			path := filepath.Join(t.TempDir(), "Deeper Studio.lnk")
+			path := filepath.Join(t.TempDir(), "Deepzora Studio.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
 				target: target, id: test.id, arguments: "--workspace studio",
 				description: "Studio", workingDirectory: studioRoot, icon: target, showCmd: 1,
@@ -112,14 +112,14 @@ func TestRepairOwnedShortcutLeavesSeparateStudioInstallationsByteIdentical(t *te
 }
 
 func TestRepairOwnedShortcutPreservesExplicitForeignIdentityInsideCurrentInstall(t *testing.T) {
-	for _, id := range []string{"io.github.sivancola.deeper.studio", "io.github.sivancola.deeper.dev", "com.example.custom"} {
+	for _, id := range []string{"com.deepzora.desktop.studio", "com.deepzora.desktop.dev", "com.example.custom"} {
 		t.Run(id, func(t *testing.T) {
 			migrationTestCOM(t)
 			root := t.TempDir()
-			target := filepath.Join(root, "versions", "v1.20.0", "app", "Deeper.exe")
+			target := filepath.Join(root, "versions", "v1.20.0", "app", "Deepzora.exe")
 			migrationTestFile(t, target)
-			migrationTestFile(t, filepath.Join(root, "deeper-launcher.exe"))
-			path := filepath.Join(root, "Deeper.lnk")
+			migrationTestFile(t, filepath.Join(root, "deepzora-launcher.exe"))
+			path := filepath.Join(root, "Deepzora.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
 				target: target, id: id, workingDirectory: filepath.Dir(target), icon: target, showCmd: 1,
 			})
@@ -129,11 +129,11 @@ func TestRepairOwnedShortcutPreservesExplicitForeignIdentityInsideCurrentInstall
 }
 
 func TestRepairOwnedShortcutRejectsVersionJunctionEscapingCurrentInstall(t *testing.T) {
-	for _, executable := range []string{"deeper-desktop.exe", filepath.Join("app", "Deeper.exe")} {
+	for _, executable := range []string{"deepzora-desktop.exe", filepath.Join("app", "Deepzora.exe")} {
 		t.Run(executable, func(t *testing.T) {
 			migrationTestCOM(t)
 			root, externalRoot := t.TempDir(), t.TempDir()
-			migrationTestFile(t, filepath.Join(root, "deeper-launcher.exe"))
+			migrationTestFile(t, filepath.Join(root, "deepzora-launcher.exe"))
 			migrationTestFile(t, filepath.Join(externalRoot, executable))
 			versions := filepath.Join(root, "versions")
 			if err := os.MkdirAll(versions, 0o755); err != nil {
@@ -144,9 +144,9 @@ func TestRepairOwnedShortcutRejectsVersionJunctionEscapingCurrentInstall(t *test
 				t.Fatalf("create directory junction: %v: %s", err, output)
 			}
 			target := filepath.Join(junction, executable)
-			path := filepath.Join(root, "Deeper.lnk")
+			path := filepath.Join(root, "Deepzora.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
-				target: target, id: "Deeper", workingDirectory: filepath.Dir(target), icon: target, showCmd: 1,
+				target: target, id: "Deepzora", workingDirectory: filepath.Dir(target), icon: target, showCmd: 1,
 			})
 			migrationAssertUnchanged(t, path, root)
 		})
@@ -157,19 +157,19 @@ func TestRepairOwnedShortcutRepairsFlatElectronAndPartiallyMigratedLinks(t *test
 	for _, test := range []struct {
 		name, target, icon, id string
 	}{
-		{"flat Electron", filepath.Join("app", "Deeper.exe"), filepath.Join("app", "Deeper.exe"), "Deeper"},
-		{"new identity with version target", filepath.Join("versions", "v1.20.0", "app", "Deeper.exe"), "deeper-launcher.exe", "io.github.sivancola.deeper"},
-		{"stable target with version icon", "deeper-launcher.exe", filepath.Join("versions", "v1.20.0", "app", "Deeper.exe"), "io.github.sivancola.deeper"},
+		{"flat Electron", filepath.Join("app", "Deepzora.exe"), filepath.Join("app", "Deepzora.exe"), "Deepzora"},
+		{"new identity with version target", filepath.Join("versions", "v1.20.0", "app", "Deepzora.exe"), "deepzora-launcher.exe", "com.deepzora.desktop"},
+		{"stable target with version icon", "deepzora-launcher.exe", filepath.Join("versions", "v1.20.0", "app", "Deepzora.exe"), "com.deepzora.desktop"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			migrationTestCOM(t)
 			root := t.TempDir()
-			launcher := filepath.Join(root, "deeper-launcher.exe")
+			launcher := filepath.Join(root, "deepzora-launcher.exe")
 			target, icon := filepath.Join(root, test.target), filepath.Join(root, test.icon)
-			for _, path := range []string{launcher, target, icon, filepath.Join(root, "deeper-desktop.exe")} {
+			for _, path := range []string{launcher, target, icon, filepath.Join(root, "deepzora-desktop.exe")} {
 				migrationTestFile(t, path)
 			}
-			path := filepath.Join(root, "Deeper.lnk")
+			path := filepath.Join(root, "Deepzora.lnk")
 			migrationTestShortcut(t, path, migrationShortcutState{
 				target: target, id: test.id, icon: icon,
 				workingDirectory: root, arguments: `--session "saved session"`, description: "Saved workspace", showCmd: 3,
@@ -179,7 +179,7 @@ func TestRepairOwnedShortcutRepairsFlatElectronAndPartiallyMigratedLinks(t *test
 				t.Fatalf("repair = (%v, %v), want (true, nil)", changed, err)
 			}
 			got := migrationReadShortcut(t, path)
-			if !migrationSamePath(got.target, launcher) || !migrationSamePath(got.icon, launcher) || got.id != "io.github.sivancola.deeper" {
+			if !migrationSamePath(got.target, launcher) || !migrationSamePath(got.icon, launcher) || got.id != "com.deepzora.desktop" {
 				t.Fatalf("shortcut was not fully migrated: %+v", got)
 			}
 			if got.arguments != `--session "saved session"` || got.description != "Saved workspace" || got.showCmd != 3 || !migrationSamePath(got.workingDirectory, root) {
@@ -340,13 +340,13 @@ func migrationSamePath(left, right string) bool {
 func TestRepairShortcutsLeavesReadOnlyShortcutByteIdentical(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	launcher := filepath.Join(root, "deeper-launcher.exe")
-	target := filepath.Join(root, "versions", "v1.20.0", "app", "Deeper.exe")
+	launcher := filepath.Join(root, "deepzora-launcher.exe")
+	target := filepath.Join(root, "versions", "v1.20.0", "app", "Deepzora.exe")
 	migrationTestFile(t, launcher)
 	migrationTestFile(t, target)
-	path := filepath.Join(root, "Deeper.lnk")
+	path := filepath.Join(root, "Deepzora.lnk")
 	migrationTestShortcut(t, path, migrationShortcutState{
-		target: target, id: "Deeper", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
+		target: target, id: "Deepzora", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
 	})
 	before := migrationReadBytes(t, path)
 	pathPtr, err := windows.UTF16PtrFromString(path)
@@ -377,13 +377,13 @@ func TestRepairShortcutsLeavesReadOnlyShortcutByteIdentical(t *testing.T) {
 func TestRepairShortcutsValidatesAllPathsBeforeWritingAnyShortcut(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	launcher := filepath.Join(root, "deeper-launcher.exe")
-	target := filepath.Join(root, "versions", "v1.20.0", "app", "Deeper.exe")
+	launcher := filepath.Join(root, "deepzora-launcher.exe")
+	target := filepath.Join(root, "versions", "v1.20.0", "app", "Deepzora.exe")
 	migrationTestFile(t, launcher)
 	migrationTestFile(t, target)
-	path := filepath.Join(root, "Deeper.lnk")
+	path := filepath.Join(root, "Deepzora.lnk")
 	migrationTestShortcut(t, path, migrationShortcutState{
-		target: target, id: "Deeper", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
+		target: target, id: "Deepzora", icon: target, workingDirectory: filepath.Dir(target), showCmd: 1,
 	})
 	before := migrationReadBytes(t, path)
 	if err := RepairShortcuts(root, []string{path, "relative.lnk"}); err == nil {
@@ -399,13 +399,13 @@ func TestRepairShortcutsValidatesAllPathsBeforeWritingAnyShortcut(t *testing.T) 
 func TestCanonicalShortcutPreservesCustomLaunchContext(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	legacy, canonical := filepath.Join(root, "deeper-launcher.exe"), filepath.Join(root, "Deeper.exe")
+	legacy, canonical := filepath.Join(root, "deepzora-launcher.exe"), filepath.Join(root, "Deepzora.exe")
 	migrationTestFile(t, legacy)
 	migrationTestFile(t, canonical)
 	customDir := t.TempDir()
 	icon := filepath.Join(customDir, "custom.ico")
 	migrationTestFile(t, icon)
-	link := filepath.Join(root, "Deeper custom.lnk")
+	link := filepath.Join(root, "Deepzora custom.lnk")
 	before := migrationShortcutState{
 		target: legacy, id: AppUserModelID, arguments: `--session "work space"`,
 		description: "Custom workspace", workingDirectory: customDir,

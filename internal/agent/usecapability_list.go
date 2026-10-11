@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/capability"
-	"deeper/internal/plugin"
+	"deepzora/internal/capability"
+	"deepzora/internal/plugin"
 )
 
 // listServerInfo is one configured MCP server entry returned by action=list.

@@ -1,6 +1,6 @@
 # Context Engine v2：指令、记忆与检索
 
-Context Engine v2 为 Deeper 提供两个权限不同的持久上下文层：
+Context Engine v2 为 Deepzora 提供两个权限不同的持久上下文层：
 
 - **常驻指令**定义智能体必须怎样工作。
 - **背景记忆**保存未来可能有用、但也可能过时的事实。
@@ -12,7 +12,7 @@ Context Engine v2 为 Deeper 提供两个权限不同的持久上下文层：
 
 | 放在哪里 | 适合存放 | 示例 |
 | --- | --- | --- |
-| `AGENTS.md`、`DEEPER.md` 或 `CLAUDE.md` | 每个相关回合都必须存在的规则 | 必跑测试、仓库边界、评审约定 |
+| `AGENTS.md`、`DEEPZORA.md` 或 `CLAUDE.md` | 每个相关回合都必须存在的规则 | 必跑测试、仓库边界、评审约定 |
 | 项目记忆 | 只适用于当前 workspace 的持久事实 | 发布分支、代码中看不出的服务约束、项目工单 URL |
 | 全局记忆 | 明确需要在所有 workspace 可用的事实 | 用户显式选择为全局的偏好 |
 | 会话历史 | 原始措辞、工具输出，或尚未沉淀为稳定事实的决定 | 昨天的报错、已放弃的方案 |
@@ -35,8 +35,8 @@ Context Engine v2 为 Deeper 提供两个权限不同的持久上下文层：
 
 ## 指令解析
 
-Deeper 识别 `DEEPER.md`、`AGENTS.md`、`CLAUDE.md`，以及对应的 `.local.md`
-变体。它先加载 Deeper home 下的用户全局指令，再从 workspace root 逐级走到目标路径；
+Deepzora 识别 `DEEPZORA.md`、`AGENTS.md`、`CLAUDE.md`，以及对应的 `.local.md`
+变体。它先加载 Deepzora home 下的用户全局指令，再从 workspace root 逐级走到目标路径；
 在每个目录内，先加载普通文件，再加载该目录的 `.local.md`。
 
 更深目录高于更浅目录；同一目录内 local 变体高于普通文件，因此越靠后的条目冲突时优先。
@@ -101,7 +101,7 @@ subject key 是知识冲突模型：同一 scope 内每个 subject 至多一个 
 第三个维度 `activation` 与前两者正交：`relevant`（默认）表示事实只走检索；`pinned`
 表示正文在下一真实用户回合前快照进低优先级 `session-context`。pin 必须是用户显式选择（`/memory pin
 <id-or-name>`，或明确要求助手），且 pinned 正文总量上限 1,500 字符——在 pin 时强制
-执行，超限会提示把"永远必须遵守的规则"移入 DEEPER.md/AGENTS.md instructions。
+执行，超限会提示把"永远必须遵守的规则"移入 DEEPZORA.md/AGENTS.md instructions。
 一个事实要么 pinned（在 `session-context` 里）、要么 relevant（可被召回）：不会两者皆是，也不会
 两者皆非。
 
@@ -111,7 +111,7 @@ subject key 是知识冲突模型：同一 scope 内每个 subject 至多一个 
 
 ## 自动召回
 
-每个真实用户回合开始前，Deeper 会用原始用户消息搜索 active facts。宿主追加给 provider
+每个真实用户回合开始前，Deepzora 会用原始用户消息搜索 active facts。宿主追加给 provider
 的上下文不会反过来污染查询。选中的事实作为有预算、低权限的后缀追加到本轮 user turn，
 不会修改 system prompt 或工具 schema。
 
@@ -160,7 +160,7 @@ omitted 数量和 suppressed 原因。
 
 ## 安全写入与确认
 
-普通路径零配置。只有同时满足以下条件时，Deeper 才可以自动创建一条新记忆：
+普通路径零配置。只有同时满足以下条件时，Deepzora 才可以自动创建一条新记忆：
 
 - 当前父 controller 拥有本项目 memory store（可以是交互式，也可以是顶层 headless，但不能是子智能体）；
 - type 被显式标为 `project` 或 `reference`；
@@ -223,7 +223,7 @@ archive entry，拒绝符号链接和路径逃逸，拒绝 ID/name 冲突，也�
 
 扫描使用原始用户内容，并与两个 scope 的 facts 和已加载指令正文去重；扫描本身绝不写入。
 每个候选都展示 evidence，必须由用户显式接受。远程 workspace 会 fail closed：远端不提供
-能力时，Deeper 不会回退读取桌面机器的本地 session 或 memory。
+能力时，Deepzora 不会回退读取桌面机器的本地 session 或 memory。
 
 ## 管理界面
 

@@ -5,20 +5,20 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/desktop/internal/instanceidentity"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/desktop/internal/instanceidentity"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func TestGlobalWorkspaceSurvivesWindowsUpdateEnvironment(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	t.Setenv("DEEPER_HOME", "")
-	t.Setenv("DEEPER_STATE_HOME", "")
-	normalHome := config.DeeperHomeDir()
+	t.Setenv("DEEPZORA_HOME", "")
+	t.Setenv("DEEPZORA_STATE_HOME", "")
+	normalHome := config.DeepzoraHomeDir()
 	updateHome := ""
 	for _, entry := range instanceidentity.UpdateEnvironment(os.Environ(), normalHome) {
-		if value, ok := strings.CutPrefix(entry, "DEEPER_HOME="); ok {
+		if value, ok := strings.CutPrefix(entry, "DEEPZORA_HOME="); ok {
 			updateHome = value
 		}
 	}
@@ -26,13 +26,13 @@ func TestGlobalWorkspaceSurvivesWindowsUpdateEnvironment(t *testing.T) {
 		t.Fatalf("updater rewrote the access spelling: %q -> %q", normalHome, updateHome)
 	}
 
-	// v1.38.10 wrote the lowercase comparison key into DEEPER_HOME. Seed that
+	// v1.38.10 wrote the lowercase comparison key into DEEPZORA_HOME. Seed that
 	// historical state, then verify the fixed ordinary launch can reuse it.
 	legacyUpdateHome := strings.ToLower(updateHome)
 	if legacyUpdateHome == normalHome || !strings.EqualFold(legacyUpdateHome, normalHome) {
 		t.Fatalf("fixture must exercise legacy update/normal casing: %q -> %q", normalHome, legacyUpdateHome)
 	}
-	t.Setenv("DEEPER_HOME", legacyUpdateHome)
+	t.Setenv("DEEPZORA_HOME", legacyUpdateHome)
 	first := NewApp()
 	t.Cleanup(first.closeSessionServices)
 	service := first.desktopSessionService("")
@@ -47,7 +47,7 @@ func TestGlobalWorkspaceSurvivesWindowsUpdateEnvironment(t *testing.T) {
 	appendSessionTestMessage(t, live, "saved-turn", provider.Message{ID: "saved-turn", Role: provider.RoleUser, Content: "history before ordinary relaunch"})
 	first.closeSessionServices()
 
-	t.Setenv("DEEPER_HOME", "")
+	t.Setenv("DEEPZORA_HOME", "")
 	second := NewApp()
 	t.Cleanup(second.closeSessionServices)
 	if id, err := second.attachDesktopSession(t.Context(), "global", "", ref); err != nil || id != workspaceID {

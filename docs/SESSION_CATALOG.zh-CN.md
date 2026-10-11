@@ -1,6 +1,6 @@
 # 会话索引与桌面启动
 
-Deeper 始终以会话 transcript、event log、metadata sidecar 和
+Deepzora 始终以会话 transcript、event log、metadata sidecar 和
 `desktop-projects.json` 作为唯一权威数据。桌面项目树读取位于
 `<缓存根目录>/session-catalog/v8.sqlite` 的一次性 SQLite 查询投影；删除该数据库
 不会删除或修改任何会话。早期的 `v1.sqlite` 至 `v5.sqlite` 缓存会保留，避免与仍在
@@ -37,7 +37,7 @@ Deeper 始终以会话 transcript、event log、metadata sidecar 和
 缓存目录不可用或明确位于远程文件系统时，会降级为内存 catalog，避免存储故障
 阻塞应用。
 
-打开数据库时，Deeper 会执行完整性检查。损坏或无法迁移的数据库会被重命名，
+打开数据库时，Deepzora 会执行完整性检查。损坏或无法迁移的数据库会被重命名，
 附加 `.corrupt-<时间戳>` 后缀并由新数据库替代；随后在后台根据 sidecar 和
 transcript 重建。隔离和重建都不会删除权威文件。
 
@@ -74,15 +74,15 @@ topic 分页使用 `(pinned, last_activity_at, topic_id)` keyset cursor。默认
 只读检查 catalog，不创建或修改它：
 
 ```sh
-deeper sessions diagnose
-deeper sessions diagnose --json
+deepzora sessions diagnose
+deepzora sessions diagnose --json
 ```
 
 只替换一次性查询投影，并索引所有已保存的桌面项目：
 
 ```sh
-deeper sessions reindex
-deeper sessions reindex --json
+deepzora sessions reindex
+deepzora sessions reindex --json
 ```
 
 可重复传入 `--dir PATH`，从指定目录集合重建；显式目录按 global scope 处理。
@@ -95,7 +95,7 @@ recovery-only 会话在普通树中显示为一个“可恢复”逻辑行；被
 ## 插件隔离
 
 manifest 校验和插件握手与 catalog、项目树互相独立。不兼容插件会报告为
-`disabled_incompatible`，核心 controller 仍可使用。Deeper 管理目录中的旧版
+`disabled_incompatible`，核心 controller 仍可使用。Deepzora 管理目录中的旧版
 manifest 会在生成备份后原子升级；开发目录、外部绝对路径和软链接源码不会被自动
 改写，而会给出手动迁移提示。
 

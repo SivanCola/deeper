@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/desktop/internal/instanceidentity"
+	"deepzora/desktop/internal/instanceidentity"
 )
 
 func TestTrayIdentityRequiresVerifiedSignature(t *testing.T) {

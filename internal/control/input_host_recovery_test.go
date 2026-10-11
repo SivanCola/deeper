@@ -3,7 +3,7 @@ package control
 import (
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestIsSyntheticUserMessageHostRecovery(t *testing.T) {

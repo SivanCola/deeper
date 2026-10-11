@@ -11,7 +11,7 @@ export function supersededLauncher(shellPath: string, version: string): string |
     const current = JSON.parse(readFileSync(join(root, "current.json"), "utf8"));
     if (current.schemaVersion !== 1 || typeof current.activeVersion !== "string" || current.activeVersion === version) return undefined;
     if (!/^v[0-9A-Za-z][0-9A-Za-z._+-]*$/.test(current.activeVersion) || current.activeVersion.includes("..") || current.activeDir !== `versions/${current.activeVersion}`) return undefined;
-    for (const name of ["Deeper.exe", "deeper-launcher.exe"]) {
+    for (const name of ["Deepzora.exe", "deepzora-launcher.exe"]) {
       const launcher = join(root, name);
       try { if (lstatSync(launcher).isFile()) return launcher; } catch { /* Try the compatible entry. */ }
     }

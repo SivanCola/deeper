@@ -7,7 +7,7 @@ import (
 	"os"
 	"runtime"
 
-	"deeper/desktop/internal/instanceidentity"
+	"deepzora/desktop/internal/instanceidentity"
 	"fyne.io/systray"
 )
 
@@ -23,7 +23,7 @@ func signedTrayIdentity(dev, exe, id string, verify func(string) error) string {
 func startDesktopTray(onReady, onExit func()) func() {
 	go runDesktopTrayLoop(func() {
 		exe, _ := os.Executable()
-		if id := signedTrayIdentity(os.Getenv("DEEPER_DEV"), exe, singleInstanceID(), verifyTraySignatureFn); id != "" {
+		if id := signedTrayIdentity(os.Getenv("DEEPZORA_DEV"), exe, singleInstanceID(), verifyTraySignatureFn); id != "" {
 			if err := systray.SetIconID(id); err != nil {
 				slog.Warn("desktop: configure tray identity", "err", err)
 			}

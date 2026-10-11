@@ -16,9 +16,9 @@ import (
 
 const (
 	contractPath = ".signpath/contracts/release-signing.yml"
-	projectSlug  = "deeper"
+	projectSlug  = "deepzora"
 	policySlug   = "release-signing"
-	repository   = "https://github.com/SivanCola/deeper.git"
+	repository   = "https://github.com/SivanCola/deepzora.git"
 )
 
 var expectedBranches = []string{"main"}
@@ -367,7 +367,7 @@ func contractFingerprint(root string, contract releaseSigningContract) ([sha256.
 	names := append([]string{contractPath}, contract.FingerprintFiles...)
 	sort.Strings(names)
 	hash := sha256.New()
-	_, _ = io.WriteString(hash, "deeper-signpath-release-contract-v1\x00")
+	_, _ = io.WriteString(hash, "deepzora-signpath-release-contract-v1\x00")
 	for _, name := range names {
 		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
 		if err != nil {

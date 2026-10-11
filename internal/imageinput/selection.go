@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ErrNoModel means no image understanding model can be chosen for a model that

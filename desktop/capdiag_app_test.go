@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/plugin"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
 )
 
 func TestCapabilityDiagnosticsStaticUsesWorkspaceRoot(t *testing.T) {

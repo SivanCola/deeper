@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 // openTab opens one tab and returns it with a fresh snapshot's token.

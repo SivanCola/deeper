@@ -2,7 +2,7 @@ package serve
 
 import (
 	"context"
-	"deeper/internal/config"
+	"deepzora/internal/config"
 	"fmt"
 )
 

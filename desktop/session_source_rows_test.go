@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 	"os"
 	"path/filepath"
 	"testing"

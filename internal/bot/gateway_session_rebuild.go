@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/secrets"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/secrets"
+	"deepzora/internal/session"
 )
 
 type builtBotSession struct {

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // AddOfficialProviderAccess adds one curated desktop provider template to the

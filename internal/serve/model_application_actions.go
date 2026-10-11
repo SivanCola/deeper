@@ -1,7 +1,7 @@
 package serve
 
 import (
-	"deeper/internal/control"
+	"deepzora/internal/control"
 	"encoding/json"
 	"net/http"
 )

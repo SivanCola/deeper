@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"slices"
 
-	"deeper/internal/agent"
-	"deeper/internal/fileutil"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/session"
 )
 
 func desktopLegacySourceFiles(path, pairedRoot string) []string {

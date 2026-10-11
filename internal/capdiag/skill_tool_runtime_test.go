@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestSkillToolIssuesUseObservedMCPBindings(t *testing.T) {
 	root := t.TempDir()
-	file := filepath.Join(root, ".deeper", "skills", "mcp-example", "SKILL.md")
+	file := filepath.Join(root, ".deepzora", "skills", "mcp-example", "SKILL.md")
 	if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
 		t.Fatal(err)
 	}

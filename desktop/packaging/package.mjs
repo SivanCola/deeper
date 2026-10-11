@@ -38,8 +38,8 @@ const target = parseTarget(spec);
 versionTag(version);
 const identity = readProductIdentity();
 const electronVersion = JSON.parse(readFileSync(join(desktop, "electron", "node_modules", "electron", "package.json"), "utf8")).version;
-const commit = (process.env.DEEPER_COMMIT ?? "").trim() || gitCommit();
-const buildTime = (process.env.DEEPER_BUILD_TIME ?? "").trim() || new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+const commit = (process.env.DEEPZORA_COMMIT ?? "").trim() || gitCommit();
+const buildTime = (process.env.DEEPZORA_BUILD_TIME ?? "").trim() || new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
 function gitCommit() {
   try {
@@ -58,13 +58,13 @@ function require(path, what) {
 }
 
 const frontendDist = join(desktop, "frontend", "dist");
-if (process.env.DEEPER_PACKAGE_REUSE_FRONTEND === "1") {
-  const pnpmVersion = (process.env.DEEPER_FRONTEND_PNPM_VERSION ?? "").trim();
-  if (!pnpmVersion) throw new Error("DEEPER_FRONTEND_PNPM_VERSION is required when reusing a frontend artifact");
+if (process.env.DEEPZORA_PACKAGE_REUSE_FRONTEND === "1") {
+  const pnpmVersion = (process.env.DEEPZORA_FRONTEND_PNPM_VERSION ?? "").trim();
+  if (!pnpmVersion) throw new Error("DEEPZORA_FRONTEND_PNPM_VERSION is required when reusing a frontend artifact");
   verifyFrontendArtifact({
     root: repo,
     dist: frontendDist,
-    manifest: process.env.DEEPER_FRONTEND_ARTIFACT_MANIFEST || join(desktop, "frontend", ".deeper-frontend-artifact.json"),
+    manifest: process.env.DEEPZORA_FRONTEND_ARTIFACT_MANIFEST || join(desktop, "frontend", ".deepzora-frontend-artifact.json"),
     shell: "electron",
     channel,
     sourceSHA: process.env.GITHUB_SHA || undefined,
@@ -75,7 +75,7 @@ if (process.env.DEEPER_PACKAGE_REUSE_FRONTEND === "1") {
   console.log(`==> reusing ${frontendDist}`);
 } else {
   console.log(`==> frontend build:electron (channel ${channel})`);
-  runBuildScript(join(desktop, "frontend"), "build-for-shell.mjs", ["electron"], { DEEPER_CHANNEL: channel, DEEPER_COMMIT: commit });
+  runBuildScript(join(desktop, "frontend"), "build-for-shell.mjs", ["electron"], { DEEPZORA_CHANNEL: channel, DEEPZORA_COMMIT: commit });
 }
 require(join(frontendDist, "index.html"), "frontend dist");
 
@@ -83,7 +83,7 @@ console.log("==> shell build");
 runBuildScript(join(desktop, "electron"), "build.mjs");
 const shellDist = join(desktop, "electron", "dist");
 for (const name of ["main.cjs", "preload.cjs", "browser-page.js", "browser-page.json", "browser-playwright-LICENSE", "browser-playwright-NOTICE", "browser-recorder.js", "recorder-preload.cjs"]) require(join(shellDist, name), "shell bundle");
-if (!existsSync(join(shellDist, "desktopContract.json")) && process.env.DEEPER_ELECTRON_ALLOW_MISSING_CONTRACT !== "1") {
+if (!existsSync(join(shellDist, "desktopContract.json")) && process.env.DEEPZORA_ELECTRON_ALLOW_MISSING_CONTRACT !== "1") {
   throw new Error(`desktop contract is missing from ${shellDist}; run: cd desktop && go run . -emit-contract frontend/src/generated`);
 }
 
@@ -159,7 +159,7 @@ writeFileSync(
   ) + "\n",
 );
 
-const staging = mkdtempSync(join(tmpdir(), "deeper-package-"));
+const staging = mkdtempSync(join(tmpdir(), "deepzora-package-"));
 const outDir = join(desktop, "build", "electron", target.key);
 try {
   cpSync(frontendDist, join(staging, "app"), {
@@ -202,7 +202,7 @@ try {
   if (target.os === "windows") {
     const installer = join(desktop, "build", "windows", "installer");
     mkdirSync(installer, { recursive: true });
-    writeFileSync(join(installer, "deeper_project.nsh"), nsisProjectDefines(identity, version));
+    writeFileSync(join(installer, "deepzora_project.nsh"), nsisProjectDefines(identity, version));
     const signing = signingFileList(walkFiles(bundle).map((name) => `app/${name}`));
     writeFileSync(join(outDir, "signing-files.txt"), signing.join("\n") + "\n");
     console.log(`==> ${signing.length} Electron PE files need Authenticode (${join(outDir, "signing-files.txt")})`);

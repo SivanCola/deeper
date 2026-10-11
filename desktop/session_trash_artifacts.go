@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // sessionTrashArtifacts lists every file and directory a session owns, with

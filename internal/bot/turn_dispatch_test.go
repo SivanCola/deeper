@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/sandbox"
+	"deepzora/internal/control"
+	"deepzora/internal/sandbox"
 )
 
 // approvalBlockingController is a botController whose RunTurn blocks the way a

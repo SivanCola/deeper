@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestReconcileRepairsPersistedReadyDirectoryMissingCatalogRows(t *testing.T) {

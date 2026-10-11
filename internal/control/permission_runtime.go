@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"deeper/internal/agent"
-	"deeper/internal/permissionpreset"
-	"deeper/internal/sandbox"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/permissionpreset"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/session"
 )
 
 // SessionGrantSummary is a transport-safe description of an in-memory grant.

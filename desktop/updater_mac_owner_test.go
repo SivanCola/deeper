@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/repair"
+	"deepzora/internal/repair"
 )
 
 func TestMacUpdateHandoffParserRequiresOwnerPID(t *testing.T) {
@@ -28,8 +28,8 @@ func TestMacUpdateHandoffParserRequiresOwnerPID(t *testing.T) {
 
 func TestMacUpdateHandoffRejectsOwnerPIDMismatchBeforeTouchingBundle(t *testing.T) {
 	root := t.TempDir()
-	oldApp := filepath.Join(root, "Deeper.app")
-	newApp := filepath.Join(root, "staging", "Deeper.app")
+	oldApp := filepath.Join(root, "Deepzora.app")
+	newApp := filepath.Join(root, "staging", "Deepzora.app")
 	pending := filepath.Join(root, "pending.json")
 	logPath := filepath.Join(root, "update.log")
 	for _, dir := range []string{oldApp, newApp} {
@@ -48,7 +48,7 @@ func TestMacUpdateHandoffRejectsOwnerPIDMismatchBeforeTouchingBundle(t *testing.
 		CreatedAt:          "2026-07-28T00:00:00Z",
 		TargetKind:         "app-bundle",
 		TargetPath:         oldApp,
-		BackupPath:         oldApp + ".deeper-update-backup",
+		BackupPath:         oldApp + ".deepzora-update-backup",
 		HandoffAppPath:     newApp,
 		HandoffStagingPath: filepath.Dir(newApp),
 		HandoffOwnerPID:    99999999,

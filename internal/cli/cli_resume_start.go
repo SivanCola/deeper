@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/i18n"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
+	"deepzora/internal/session"
 )
 
 // headlessResumeTarget resolves --resume/--continue for the non-interactive

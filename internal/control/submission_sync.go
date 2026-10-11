@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/jobs"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/jobs"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // RunTurn executes one foreground turn synchronously through the same lifecycle
@@ -42,7 +42,7 @@ func (c *Controller) RunTurnWithRaw(ctx context.Context, input, raw, invokedSkil
 // returns only its final answer. It is the headless CLI counterpart to explicit
 // slash invocation: the child keeps an isolated session, while the caller owns
 // stdout rendering and exit status. readOnly selects the preview-safe runner
-// used by `deeper subagent try`.
+// used by `deepzora subagent try`.
 func (c *Controller) RunSubagentProfile(ctx context.Context, name, task string, readOnly bool) (string, error) {
 	ctx = c.withAuthentication(ctx)
 	if err := c.authentication.admissionError(); err != nil {

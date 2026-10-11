@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
 )
 
 // Lineage migration carries a legacy head into the receipt for its converted

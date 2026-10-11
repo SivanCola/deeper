@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 type cleanupRetention struct {
@@ -97,7 +97,7 @@ func beginRetainedCleanup(ctx context.Context, metadata mergeMetadata, expectedH
 		}
 		return retention, err
 	}
-	cleanupDir := filepath.Join(filepath.Dir(metadata.WorktreeRoot), ".deeper-cleanup")
+	cleanupDir := filepath.Join(filepath.Dir(metadata.WorktreeRoot), ".deepzora-cleanup")
 	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
 		return emptyCleanupRetention(), err
 	}

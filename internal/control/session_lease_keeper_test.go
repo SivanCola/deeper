@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/store"
 )
 
 func TestSessionLeaseKeeperRebindMovesLease(t *testing.T) {
@@ -482,7 +482,7 @@ func TestSessionInUseMessageNamesHolder(t *testing.T) {
 		},
 	}
 	msg := SessionInUseMessage(err)
-	if !strings.Contains(msg, "another Deeper process") {
+	if !strings.Contains(msg, "another Deepzora process") {
 		t.Fatalf("message %q missing holder wording", msg)
 	}
 	if !strings.Contains(msg, "pid 12345") || !strings.Contains(msg, "on devbox") {
@@ -506,7 +506,7 @@ func TestSessionInUseMessageFallsBackWithoutInfo(t *testing.T) {
 		"zero pid":   &agent.SessionLeaseError{Info: &agent.SessionLeaseInfo{PID: 0}},
 	} {
 		msg := SessionInUseMessage(err)
-		if msg != "this session is in use by another Deeper window or process" {
+		if msg != "this session is in use by another Deepzora window or process" {
 			t.Fatalf("%s: message = %q, want generic fallback", name, msg)
 		}
 		if strings.Contains(msg, "pid "+strconv.Itoa(os.Getpid())) {

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
 )
 
 const canonicalTelemetryDir = "session-telemetry"

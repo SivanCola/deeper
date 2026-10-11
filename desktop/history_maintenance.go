@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"slices"
 )

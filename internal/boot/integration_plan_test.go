@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/extension"
-	"deeper/internal/extensioncontract"
+	"deepzora/internal/extension"
+	"deepzora/internal/extensioncontract"
 )
 
 func TestRebuildFromNoOpPreservesCacheHash(t *testing.T) {

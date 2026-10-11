@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 const HistoricalChecksNoticeCode = "historical_checks"

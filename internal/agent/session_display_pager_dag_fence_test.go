@@ -8,9 +8,9 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/historywork"
-	"deeper/internal/projectiondb"
-	"deeper/internal/store"
+	"deepzora/internal/historywork"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/store"
 )
 
 func TestDAGPagerResumeFencesSourceAndBranchChanges(t *testing.T) {

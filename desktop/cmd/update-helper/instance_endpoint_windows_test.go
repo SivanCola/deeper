@@ -15,12 +15,12 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/desktop/internal/instanceidentity"
+	"deepzora/desktop/internal/instanceidentity"
 )
 
 // This worker uses the real message-only window and mutex contract from Wails.
 func TestInstanceEndpointWorker(t *testing.T) {
-	id := os.Getenv("DEEPER_TEST_ENDPOINT")
+	id := os.Getenv("DEEPZORA_TEST_ENDPOINT")
 	if id == "" {
 		t.Skip("subprocess fixture")
 	}
@@ -57,7 +57,7 @@ func TestInstanceEndpointWorker(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer handoffUser32.NewProc("DestroyWindow").Call(hwnd)
-	marker := os.Getenv("DEEPER_TEST_MARKER")
+	marker := os.Getenv("DEEPZORA_TEST_MARKER")
 	if err := os.WriteFile(marker, []byte("ready"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -81,8 +81,8 @@ func TestNativeEndpointIsolationAndHandoff(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(root, "deeper-desktop.exe")
-	old := filepath.Join(root, "versions", "old", "deeper-desktop.exe")
+	target := filepath.Join(root, "deepzora-desktop.exe")
+	old := filepath.Join(root, "versions", "old", "deepzora-desktop.exe")
 	if err := os.MkdirAll(filepath.Dir(old), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -91,12 +91,12 @@ func TestNativeEndpointIsolationAndHandoff(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	t.Setenv("DEEPER_HOME", homeA)
+	t.Setenv("DEEPZORA_HOME", homeA)
 	t.Setenv(instanceidentity.UpdateEnvironmentKey, instanceidentity.ForHome(homeA))
 	start := func(path, home string) func() {
 		marker := filepath.Join(t.TempDir(), "ready")
 		cmd := exec.Command(path, "-test.run=^TestInstanceEndpointWorker$")
-		cmd.Env = append(os.Environ(), "DEEPER_TEST_ENDPOINT="+instanceidentity.ForHome(home), "DEEPER_TEST_MARKER="+marker)
+		cmd.Env = append(os.Environ(), "DEEPZORA_TEST_ENDPOINT="+instanceidentity.ForHome(home), "DEEPZORA_TEST_MARKER="+marker)
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	filelock "deeper/internal/identitylock"
+	filelock "deepzora/internal/identitylock"
 )
 
 // The sibling staging files remain inode witnesses until publication is marked
@@ -34,7 +34,7 @@ func recoverExportPublications(parent string) error {
 		return err
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), ".deeper-export-batch-") {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), ".deepzora-export-batch-") {
 			continue
 		}
 		dir := filepath.Join(parent, entry.Name())
@@ -84,7 +84,7 @@ func recoverExportPublications(parent string) error {
 }
 func publishJournaledImages(ctx context.Context, source string, targets []string) (err error) {
 	parent := filepath.Dir(targets[0])
-	release, err := filelock.Acquire(ctx, filepath.Join(parent, ".deeper-export-publication.lock"))
+	release, err := filelock.Acquire(ctx, filepath.Join(parent, ".deepzora-export-publication.lock"))
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func publishJournaledImages(ctx context.Context, source string, targets []string
 			return e
 		}
 	}
-	dir, err := os.MkdirTemp(parent, ".deeper-export-batch-")
+	dir, err := os.MkdirTemp(parent, ".deepzora-export-batch-")
 	if err != nil {
 		return err
 	}

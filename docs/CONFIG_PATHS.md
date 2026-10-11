@@ -1,44 +1,44 @@
 # Configuration Paths
 
-Starting with **Deeper v1.8.1**, Deeper uses one user-facing home directory
+Starting with **Deepzora v1.8.1**, Deepzora uses one user-facing home directory
 for global configuration and user-owned state. CLI and desktop share this
 location.
 
-## Deeper Home
+## Deepzora Home
 
-| Platform | Deeper home |
+| Platform | Deepzora home |
 | --- | --- |
-| macOS | `~/.deeper` |
-| Linux | `~/.deeper` |
-| Windows | `%APPDATA%\deeper` |
+| macOS | `~/.deepzora` |
+| Linux | `~/.deepzora` |
+| Windows | `%APPDATA%\deepzora` |
 
-Set `DEEPER_HOME` to override Deeper home for tests, CI, or portable
+Set `DEEPZORA_HOME` to override Deepzora home for tests, CI, or portable
 installations. Normal users should not need it.
 
-When `DEEPER_HOME` is set, the runtime is fully self-contained: all
+When `DEEPZORA_HOME` is set, the runtime is fully self-contained: all
 configuration, state, cache, and data live under that directory tree. Legacy
 migration, OS-home convention directory scanning, and all other fallback paths
 are skipped so no data leaks in from a system-wide production install.
 
-Advanced test and portable setups may set `DEEPER_STATE_HOME` to move runtime
+Advanced test and portable setups may set `DEEPZORA_STATE_HOME` to move runtime
 state such as sessions, archives, and memory. It does not move global config or
-provider credentials: those remain under `DEEPER_HOME`. If an older build wrote
-provider keys to `DEEPER_STATE_HOME/.env`, Deeper imports those keys
-non-destructively when `<Deeper home>/.env` is missing them.
+provider credentials: those remain under `DEEPZORA_HOME`. If an older build wrote
+provider keys to `DEEPZORA_STATE_HOME/.env`, Deepzora imports those keys
+non-destructively when `<Deepzora home>/.env` is missing them.
 
 ## What Lives There
 
 | Data | Path |
 | --- | --- |
-| Global config | `<Deeper home>/config.toml` |
-| Global provider credentials | `<Deeper home>/.env` |
-| In-progress model credential commits | `<Deeper home>/transactions/model-credentials/` |
-| Completed model settings receipts | `<Deeper home>/transactions/model-settings-receipts/` |
-| Legacy credentials import source | `<Deeper home>/credentials` |
-| Global slash commands | `<Deeper home>/commands/` |
-| Global skills | `<Deeper home>/skills/` |
-| Global hooks | `<Deeper home>/settings.json` |
-| Remote-SSH managed known_hosts | `<Deeper home>/remote/known_hosts` |
+| Global config | `<Deepzora home>/config.toml` |
+| Global provider credentials | `<Deepzora home>/.env` |
+| In-progress model credential commits | `<Deepzora home>/transactions/model-credentials/` |
+| Completed model settings receipts | `<Deepzora home>/transactions/model-settings-receipts/` |
+| Legacy credentials import source | `<Deepzora home>/credentials` |
+| Global slash commands | `<Deepzora home>/commands/` |
+| Global skills | `<Deepzora home>/skills/` |
+| Global hooks | `<Deepzora home>/settings.json` |
+| Remote-SSH managed known_hosts | `<Deepzora home>/remote/known_hosts` |
 | Sessions | `<state root>/sessions/` |
 | Archives | `<state root>/archive/` |
 | Memory | `<state root>/memory/` and `<state root>/projects/` |
@@ -49,8 +49,8 @@ non-destructively when `<Deeper home>/.env` is missing them.
 | Disposable usage catalog | `<cache root>/usage-catalog/v1.sqlite` |
 | Disposable task catalog | `<cache root>/task-catalog/v1.sqlite` |
 
-`<state root>` defaults to `<Deeper home>`. It only differs when
-`DEEPER_STATE_HOME` is set.
+`<state root>` defaults to `<Deepzora home>`. It only differs when
+`DEEPZORA_STATE_HOME` is set.
 
 Desktop detects a project-directory name collision when it saves a newly added
 project in `desktop-projects.json`. A new assignment is made only when another
@@ -71,11 +71,11 @@ shared with Studio until Studio supports these assignments.
 
 Desktop topic titles, title sources, creation times, and automatic-title state
 are authoritative in these SQLite files. On first access, Desktop imports the
-legacy `desktop-topic-*.json` files from a project's `.deeper/` directory (or
-the global Deeper directory). A scope with legacy files continues mirroring
+legacy `desktop-topic-*.json` files from a project's `.deepzora/` directory (or
+the global Deepzora directory). A scope with legacy files continues mirroring
 them for downgrade compatibility; a fresh scope does not create them. Legacy
 files are retained, and project-local settings, skills, commands, attachments,
-and `deeper.toml` are unaffected.
+and `deepzora.toml` are unaffected.
 
 The session catalog is a rebuildable query projection, not user data. Session
 JSONL, event logs, metadata sidecars, and `desktop-projects.json` remain
@@ -87,20 +87,20 @@ Task snapshots and event logs likewise remain authoritative; the rebuildable
 cross-project projection is documented in [Task Catalog](./TASK_CATALOG.md).
 
 The global user config is named `config.toml`. Project-local config files keep
-the name `deeper.toml`. If someone says "global deeper.toml", they usually
-mean `<Deeper home>/config.toml`.
+the name `deepzora.toml`. If someone says "global deepzora.toml", they usually
+mean `<Deepzora home>/config.toml`.
 
 ## Global `config.toml`
 
-`<Deeper home>/config.toml` stores non-secret configuration shared by the CLI
+`<Deepzora home>/config.toml` stores non-secret configuration shared by the CLI
 and desktop app. It may contain the same provider, plugin, UI, desktop, tool,
-skill, sandbox, bot, and agent settings that Deeper renders into user config.
+skill, sandbox, bot, and agent settings that Deepzora renders into user config.
 Provider entries store the name of the credential variable in `api_key_env`, not
 the secret value.
 
 Saved provider and bot credential variables are removed from every
 model-controlled child-process environment. On macOS and Linux, the global
-credential `.env` is also hidden from Deeper's file readers, sandboxed shell
+credential `.env` is also hidden from Deepzora's file readers, sandboxed shell
 commands, and MCP servers; this does not change the visibility of a project's
 ordinary `.env`. Windows has no OS-level shell sandbox: shell commands and
 local tools run as the same OS user and can deliberately read user-readable
@@ -108,8 +108,8 @@ files, including the credential store, so treat restricted permissions there
 as a tool-layer write boundary rather than a credential vault.
 
 If a deny entry left behind by the retired Windows sandbox (v1.38.8 to
-v1.38.10) blocks the credential store, Deeper removes it automatically when
-a marker from that sandbox run proves the entry came from Deeper. Saving a
+v1.38.10) blocks the credential store, Deepzora removes it automatically when
+a marker from that sandbox run proves the entry came from Deepzora. Saving a
 key works even without that proof: the save resets the file's ACL to the
 current user without reading it, and if that is also denied it moves the
 locked file aside as `.env.locked-<timestamp>` (a read deny does not block
@@ -161,8 +161,8 @@ remain active. The default is `true`.
 ### Custom provider `api_key_env` names
 
 When a provider credential is added, replaced, or explicitly cleared from
-desktop settings, TUI `/setup`, or `deeper setup`, Deeper allocates a fresh
-`DEEPER_CONNECTION_*_KEY` slot. It writes that slot first and atomically
+desktop settings, TUI `/setup`, or `deepzora setup`, Deepzora allocates a fresh
+`DEEPZORA_CONNECTION_*_KEY` slot. It writes that slot first and atomically
 publishes the selected provider's new `api_key_env` reference second. Other
 providers keep their current references, even when they previously shared a
 fixed variable. Existing fixed names remain readable and are not migrated at
@@ -183,11 +183,11 @@ The CLI custom-provider wizard uses this rule for its draft name. For example
 prompt keeps that draft only until the key is saved; the saved connection then
 uses a newly allocated private slot.
 
-A variable name you type at that prompt in `deeper setup` is kept, so scripts
+A variable name you type at that prompt in `deepzora setup` is kept, so scripts
 can refer to a stable name, as long as saving under it changes nothing another
 connection reads: no other provider, bot or remote-host setting in the config
 reads it, the global `.env` holds no value (or cleared marker) for it, and the
-environment Deeper runs in does not already set it. Otherwise the wizard says
+environment Deepzora runs in does not already set it. Otherwise the wizard says
 what holds the name and asks again; Enter falls back to a
 private slot. If the name is claimed between the prompt and saving, the save is
 refused and nothing is written.
@@ -197,7 +197,7 @@ variable in place when that provider (or the set of providers the key is saved
 for) is the only reader of it in the user config, both before and after the
 edit, and the global `.env` already holds its value. A project that reads the
 same name sees the new key, as it saw the old one. Providers declared in a
-project `deeper.toml` always get a private slot. The previous value is kept in the global `.env` under
+project `deepzora.toml` always get a private slot. The previous value is kept in the global `.env` under
 a temporary variable until the config is published: a save that fails or is
 interrupted puts it back, unless something else has written the variable since.
 When another provider or setting also reads the variable, the new key goes to a
@@ -211,14 +211,14 @@ again to rotate that connection to a private slot.
 ### Custom provider endpoint URLs
 
 The desktop custom-provider form treats its **API address** as the exact request
-URL and stores it in `request_url`; Deeper does not append or rewrite its path.
+URL and stores it in `request_url`; Deepzora does not append or rewrite its path.
 Existing TOML entries are not reinterpreted: legacy `chat_url` keeps its former
 OpenAI-only behavior, while Anthropic and Responses continue deriving their path
 from `base_url` until the provider is explicitly saved in the current desktop UI.
 Saving an OpenAI-compatible provider mirrors the exact address into legacy
 `chat_url`, so previous releases continue using the same target. Previous
 releases cannot honor arbitrary Anthropic or Responses request paths.
-If model discovery needs a separate address, set `models_url`; otherwise Deeper
+If model discovery needs a separate address, set `models_url`; otherwise Deepzora
 probes candidates derived from `base_url`.
 
 If a gateway requires vendor-specific top-level request body fields, set
@@ -228,8 +228,8 @@ core fields such as `model`, `messages`, `tools`, or `stream` to be overridden.
 
 ## Global `.env`
 
-`<Deeper home>/.env` is the single runtime source for provider API keys saved
-by Deeper. The setup wizard, desktop settings, CLI missing-key prompts, and
+`<Deepzora home>/.env` is the single runtime source for provider API keys saved
+by Deepzora. The setup wizard, desktop settings, CLI missing-key prompts, and
 provider-key delete actions all read or write this file through the same
 credential helpers.
 
@@ -239,7 +239,7 @@ Structure:
 DEEPSEEK_API_KEY=sk-...
 GEMINI_API_KEY=...
 ANTHROPIC_API_KEY=...
-# deeper-cleared OLD_API_KEY
+# deepzora-cleared OLD_API_KEY
 ```
 
 Rules:
@@ -247,14 +247,14 @@ Rules:
 - one `KEY=value` assignment per line;
 - blank lines and `#` comments are ignored;
 - `export KEY=value` and quoted values are accepted when reading;
-- multiline values are rejected by Deeper writes;
+- multiline values are rejected by Deepzora writes;
 - keys must use shell-style names such as `DEEPSEEK_API_KEY`;
-- `# deeper-cleared KEY` comments are non-secret tombstones written after a key
+- `# deepzora-cleared KEY` comments are non-secret tombstones written after a key
   is deleted so legacy stores do not silently re-import it;
-- Deeper writes this file with restricted permissions where the OS supports
+- Deepzora writes this file with restricted permissions where the OS supports
   them.
 
-For provider requests, Deeper resolves only this global `.env`. Project `.env`
+For provider requests, Deepzora resolves only this global `.env`. Project `.env`
 files, home `.env` files, inherited shell environment variables, the old
 `credentials` file, and the OS keyring do not act as runtime provider-key
 fallbacks. Project `.env`, home `.env`, and inherited shell environment values
@@ -263,15 +263,15 @@ and old keyring entries are read only as non-destructive migration sources when
 the new global `.env` is missing a key. Project `.env` files are still read as
 workspace-scoped, non-provider expansion sources for `${VAR}` references in
 MCP/plugin env, headers, URLs, commands, and args; those values are not written
-into the process environment, and Deeper control variables such as
-`DEEPER_HOME`, `DEEPER_STATE_HOME`, and `XDG_CONFIG_HOME` are ignored there.
+into the process environment, and Deepzora control variables such as
+`DEEPZORA_HOME`, `DEEPZORA_STATE_HOME`, and `XDG_CONFIG_HOME` are ignored there.
 
 Caches remain in the OS cache directory, for example
-`~/Library/Caches/deeper` on macOS, `$XDG_CACHE_HOME/deeper` or
-`~/.cache/deeper` on Linux, and `%LOCALAPPDATA%\deeper\cache` on Windows.
-Set `DEEPER_CACHE_HOME` to override the cache root. When `DEEPER_HOME` is
-set, the cache is placed under `$DEEPER_HOME/cache` (unless
-`DEEPER_CACHE_HOME` is also set, which takes precedence).
+`~/Library/Caches/deepzora` on macOS, `$XDG_CACHE_HOME/deepzora` or
+`~/.cache/deepzora` on Linux, and `%LOCALAPPDATA%\deepzora\cache` on Windows.
+Set `DEEPZORA_CACHE_HOME` to override the cache root. When `DEEPZORA_HOME` is
+set, the cache is placed under `$DEEPZORA_HOME/cache` (unless
+`DEEPZORA_CACHE_HOME` is also set, which takes precedence).
 
 ## Config Priority
 
@@ -279,8 +279,8 @@ Runtime configuration is resolved in this order:
 
 ```text
 command-line flags
-> project ./deeper.toml
-> global <Deeper home>/config.toml
+> project ./deepzora.toml
+> global <Deepzora home>/config.toml
 > compatible legacy global config
 > built-in defaults
 ```
@@ -288,35 +288,35 @@ command-line flags
 Writes always target the new global path:
 
 ```text
-macOS/Linux: ~/.deeper/config.toml
-Windows:     %APPDATA%\deeper\config.toml
+macOS/Linux: ~/.deepzora/config.toml
+Windows:     %APPDATA%\deepzora\config.toml
 ```
 
 ## Legacy Migration
 
-Starting with **v1.8.1**, Deeper automatically checks legacy locations on
+Starting with **v1.8.1**, Deepzora automatically checks legacy locations on
 startup before the first config load. Migration is synchronous, one-time, and
-non-destructive: old files are copied or converted to Deeper home and left
+non-destructive: old files are copied or converted to Deepzora home and left
 untouched.
 
 Legacy config sources include:
 
 ```text
-~/Library/Application Support/deeper/config.toml
-~/.config/deeper/config.toml
-~/.deeper/deeper.toml
-~/.deeper/config.json
+~/Library/Application Support/deepzora/config.toml
+~/.config/deepzora/config.toml
+~/.deepzora/deepzora.toml
+~/.deepzora/config.json
 ```
 
-Legacy credentials, memory files, and sessions are also imported into Deeper
+Legacy credentials, memory files, and sessions are also imported into Deepzora
 home when the new destination does not already exist. Legacy provider keys are
-copied into `<Deeper home>/.env` only when that file does not already contain
+copied into `<Deepzora home>/.env` only when that file does not already contain
 the same key. If the new global config already exists, it wins and legacy config
 files are only kept as compatibility fallbacks.
 
-Starting in **v1.9.1**, Deeper also backfills MCP servers from known legacy
+Starting in **v1.9.1**, Deepzora also backfills MCP servers from known legacy
 paths, legacy `config.json`, desktop-registered projects, and restored tab
-projects into the global `<Deeper home>/config.toml`. Existing global
+projects into the global `<Deepzora home>/config.toml`. Existing global
 `[[plugins]]` entries win by name, so project or legacy entries never overwrite a
 server the user already configured globally. Source files are left untouched, and
 the backfill writes a one-time marker so a user-deleted global MCP server is not
@@ -324,7 +324,7 @@ recreated repeatedly from an old project config.
 
 ## Manual Migration Rescue
 
-If Deeper has already created the new home directory but some legacy data was
+If Deepzora has already created the new home directory but some legacy data was
 not present yet, or if the desktop app was opened before the old paths were
 available, run the migration rescue command from either frontend:
 
@@ -346,16 +346,16 @@ Windows v0.52 install/data directory chosen during setup — pass that directory
 explicitly:
 
 ```text
-/migrate --from "D:\OldDeeper"
+/migrate --from "D:\OldDeepzora"
 ```
 
 The explicit form imports sessions only. The path may be the old install
-directory, a `.deeper`/data directory, or the `sessions` directory itself;
-Deeper checks the common layouts below that root and uses a source-specific
+directory, a `.deepzora`/data directory, or the `sessions` directory itself;
+Deepzora checks the common layouts below that root and uses a source-specific
 marker, so a previous plain `/migrate` run does not hide the later import.
 
 The rescue command is intentionally non-destructive. It does not overwrite an
-existing `<Deeper home>/config.toml`; if the new config already exists, copy
+existing `<Deepzora home>/config.toml`; if the new config already exists, copy
 any missing legacy settings across by hand. It copies legacy memory files only
 when the destination file is absent. It also respects session import markers, so
 sessions that were already imported and later deleted by the user will not be
@@ -364,8 +364,8 @@ restored on a later `/migrate` run.
 Version limits:
 
 - Automatic migration starts in **v1.8.1**.
-- `/migrate` is available only in Go-based Deeper builds that include the
-  command. If Deeper reports `unknown command`, upgrade first and rerun it.
+- `/migrate` is available only in Go-based Deepzora builds that include the
+  command. If Deepzora reports `unknown command`, upgrade first and rerun it.
 - The command is not available in the legacy `0.x` TypeScript line.
 - Plain `/migrate` rescans the legacy locations listed above. Use
   `/migrate --from <path>` only for a known v0.x session source; it is not a

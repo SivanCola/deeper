@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestRepairSessionListingProjectionDoesNotWaitForMetaLock(t *testing.T) {

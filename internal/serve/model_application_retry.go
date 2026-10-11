@@ -2,8 +2,8 @@ package serve
 
 import (
 	"context"
-	"deeper/internal/control"
-	"deeper/internal/secrets"
+	"deepzora/internal/control"
+	"deepzora/internal/secrets"
 	"errors"
 	"log/slog"
 	"sync"

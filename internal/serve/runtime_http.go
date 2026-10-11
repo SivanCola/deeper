@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 func (s *Server) modelSwitch(w http.ResponseWriter, r *http.Request) {

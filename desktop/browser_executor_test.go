@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/desktop/internal/browserops"
-	"deeper/internal/browser"
-	"deeper/internal/extension/rpcwire"
+	"deepzora/desktop/internal/browserops"
+	"deepzora/internal/browser"
+	"deepzora/internal/extension/rpcwire"
 )
 
 type fakeBrowserHost struct {

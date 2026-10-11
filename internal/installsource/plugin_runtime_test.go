@@ -11,16 +11,16 @@ import (
 // declaration plus prompt and theme contributions.
 func writeRuntimePlugin(t *testing.T, root string) {
 	t.Helper()
-	writeFile(t, filepath.Join(root, "deeper-plugin.json"), `{
-  "apiVersion": "deeper.io/plugin/v2",
+	writeFile(t, filepath.Join(root, "deepzora-plugin.json"), `{
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "rtsync",
   "version": "1.0.0",
   "contributes": {
     "prompts": ["prompts"],
-    "themes": ["themes/*.deeper-theme"]
+    "themes": ["themes/*.deepzora-theme"]
   },
   "runtime": {
-    "command": "${DEEPER_PLUGIN_ROOT}/bin/rtsync",
+    "command": "${DEEPZORA_PLUGIN_ROOT}/bin/rtsync",
     "args": ["--serve"],
     "required": true,
     "intercepts": ["input.receive", "tool.before"],
@@ -29,7 +29,7 @@ func writeRuntimePlugin(t *testing.T, root string) {
   }
 }`)
 	writeFile(t, filepath.Join(root, "prompts", "plan.md"), "---\ndescription: plan\n---\nPlan $ARGUMENTS")
-	writeFile(t, filepath.Join(root, "themes", "neon.deeper-theme"), "theme bytes")
+	writeFile(t, filepath.Join(root, "themes", "neon.deepzora-theme"), "theme bytes")
 	writeFile(t, filepath.Join(root, "bin", "rtsync"), "#!/bin/sh\n")
 }
 
@@ -57,7 +57,7 @@ func TestPluginRuntimePlanCarriesFullTrust(t *testing.T) {
 	for _, reason := range act.RiskReasons {
 		if strings.HasPrefix(reason, "FULL TRUST:") {
 			fullTrust = true
-			if !strings.Contains(reason, "${DEEPER_PLUGIN_ROOT}/bin/rtsync --serve") {
+			if !strings.Contains(reason, "${DEEPZORA_PLUGIN_ROOT}/bin/rtsync --serve") {
 				t.Fatalf("FULL TRUST reason should describe the runtime command line: %q", reason)
 			}
 		}
@@ -69,7 +69,7 @@ func TestPluginRuntimePlanCarriesFullTrust(t *testing.T) {
 	if rt == nil {
 		t.Fatal("action.Runtime is nil, want the runtime plan info")
 	}
-	if rt.Command != "${DEEPER_PLUGIN_ROOT}/bin/rtsync" || !rt.FullTrust {
+	if rt.Command != "${DEEPZORA_PLUGIN_ROOT}/bin/rtsync" || !rt.FullTrust {
 		t.Fatalf("Runtime = %+v", rt)
 	}
 	if len(rt.Args) != 1 || rt.Args[0] != "--serve" {
@@ -95,7 +95,7 @@ func TestPluginRuntimePlanCarriesFullTrust(t *testing.T) {
 	if !ok {
 		t.Fatalf("plan JSON missing runtime block: %s", raw)
 	}
-	if rtJSON["fullTrust"] != true || rtJSON["command"] != "${DEEPER_PLUGIN_ROOT}/bin/rtsync" {
+	if rtJSON["fullTrust"] != true || rtJSON["command"] != "${DEEPZORA_PLUGIN_ROOT}/bin/rtsync" {
 		t.Fatalf("runtime JSON = %v", rtJSON)
 	}
 }
@@ -103,7 +103,7 @@ func TestPluginRuntimePlanCarriesFullTrust(t *testing.T) {
 func TestPluginLegacyPlanOmitsRuntimeFields(t *testing.T) {
 	src := t.TempDir()
 	// v2 without runtime: skills-only package has no Runtime plan fields.
-	writeFile(t, filepath.Join(src, "deeper-plugin.json"), `{"apiVersion":"deeper.io/plugin/v2","name":"legacy","skills":["skills"]}`)
+	writeFile(t, filepath.Join(src, "deepzora-plugin.json"), `{"apiVersion":"deepzora.com/plugin/v2","name":"legacy","skills":["skills"]}`)
 	writeFile(t, filepath.Join(src, "skills", "s", "SKILL.md"), "---\ndescription: s\n---\nS")
 
 	project := t.TempDir()

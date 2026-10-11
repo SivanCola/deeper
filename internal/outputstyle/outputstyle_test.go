@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func TestResolveBuiltin(t *testing.T) {

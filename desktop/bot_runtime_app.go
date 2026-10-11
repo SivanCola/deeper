@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/botruntime"
-	"deeper/internal/config"
-	"deeper/internal/session"
+	"deepzora/internal/bot"
+	"deepzora/internal/botruntime"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
 )
 
 type BotRuntimeStatusView struct {

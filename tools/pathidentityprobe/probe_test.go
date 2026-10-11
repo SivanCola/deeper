@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 func TestInspectDoesNotReadContentOrCreateMissingTail(t *testing.T) {

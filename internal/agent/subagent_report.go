@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 // hostReceiptsMaxItems bounds each rendered line so a long child run cannot

@@ -1,6 +1,6 @@
 # 内置浏览器运行时升级：实现与验收记录
 
-日期：2026-09-21。Deeper 分析基线 `61cc393b2027391bc70742b1ce50531c3efd0b02`，
+日期：2026-09-21。Deepzora 分析基线 `61cc393b2027391bc70742b1ce50531c3efd0b02`，
 分支 `codex/browser-runtime-upgrade`。ZCode `872ad960de7e` 仅作为设计参考，未复制其
 webview/CSS 截图宿主，也未实际运行完整 ZCode 应用。
 
@@ -35,7 +35,7 @@ Electron 校验 PNG 签名、尺寸、解码与像素预算，Go 在进入模型
 | 项目 | 实现位置与行为 |
 | --- | --- |
 | 固定版本语义内核 | `desktop/electron/scripts/playwright-page-resource.mjs` 验证 Playwright 1.62.1 注入源码及构造/方法契约，构建期绑定资源和许可证。升级不兼容时构建失败；不在运行时搜索私有路径。 |
-| 页面引用 | `pageSemantic.ts`、`snapshot.ts`、`frameRuntime.ts`、`refResolver.ts`：隔离世界、Deeper refs、文档 token、跨域/OOPIF 会话与父框架坐标映射，释放自行建立的 CDP 会话。 |
+| 页面引用 | `pageSemantic.ts`、`snapshot.ts`、`frameRuntime.ts`、`refResolver.ts`：隔离世界、Deepzora refs、文档 token、跨域/OOPIF 会话与父框架坐标映射，释放自行建立的 CDP 会话。 |
 | 身份与取消 | `hostCalls.ts` 绑定 grant、任务、会话、页面、epoch、视口 revision、requestId/deadline，返回前复核；取消传播到等待和租约。导航已派发后的取消维持 unknown，不回滚或重放导航。 |
 | 错误 | `page_not_ready`、`script_runtime_error`、`surface_unavailable`、`invalid_image`、`stale_document`、`taken_over`、`capability_unsupported` 等分类及 RPC data 保留。 |
 | 观察元数据 | 快照/截图可选返回 URL、时间、文档代际、视口版本、CSS 尺寸；截图保留实际 PNG 尺寸与坐标观察 token。旧结果字段保留。 |
@@ -138,7 +138,7 @@ Electron 类型检查及 256 项测试通过。首次 macOS 原生运行验证�
 已撤销该未证实的修复；没有增加 deadline 或添加自动重试。失败退出还曾触及测试 runner
 60 秒进程上限，强制退出不算验收成功。成功的早期结果不能覆盖这些后续失败。
 
-可用 `DEEPER_BROWSER_TRACE_RPC=1 node electron/scripts/browser-runtime-smoke.mjs`
+可用 `DEEPZORA_BROWSER_TRACE_RPC=1 node electron/scripts/browser-runtime-smoke.mjs`
 （工作目录 `desktop`）输出仅命令名和耗时的诊断。
 
 ### CDP 生命周期修复与复验（2026-09-21）
@@ -158,7 +158,7 @@ Electron 类型检查及 256 项测试通过。首次 macOS 原生运行验证�
   根连接复用后的上传仍恢复自己拥有的 Runtime 域状态，防止下次上传漏收 context 事件。
 
 本机对照确认：保持根连接时此前失败的跨域观察/解析路径可以完成；按操作立即拆建
-连接的旧路径出现 `Page.createIsolatedWorld` 超时。修复的是 Deeper 的连接生命周期
+连接的旧路径出现 `Page.createIsolatedWorld` 超时。修复的是 Deepzora 的连接生命周期
 边界，不据此宣称已定位 Chromium 内部实现缺陷。清理回归另外暴露了对象释放与 detach
 并发会留下在途命令，现已用确定性屏障测试及顺序清理消除该路径。
 
@@ -264,7 +264,7 @@ production build。原生复验产物位于 `artifacts/browser-runtime/darwin-di
 合并流程，缺省不设置该变量时该测试使用宿主协议 fixture：
 
 ```sh
-DEEPER_BROWSER_DIAGNOSTIC_FIXTURE=electron/artifacts/browser-runtime/darwin-diagnostic-fixes/browser-diagnostics.json go test . -run '^TestBrowserDiagnosticHostEvidenceFinalJSON$' -count=1
+DEEPZORA_BROWSER_DIAGNOSTIC_FIXTURE=electron/artifacts/browser-runtime/darwin-diagnostic-fixes/browser-diagnostics.json go test . -run '^TestBrowserDiagnosticHostEvidenceFinalJSON$' -count=1
 ```
 
 原生验证限制：首次运行在进入诊断用例前发生 OOPIF `DOM.enable` deadline 超时；
@@ -331,8 +331,8 @@ Native runners explicitly mark failed attempts instead of retaining prior succes
 证据目录相对 `desktop/electron/artifacts/browser-runtime/`：
 `darwin-packaged-provider/`、`darwin-fit-100/`、`darwin-90-second-recording/`、
 `windows-native/`、`linux-native/`、`follow-up-checks/`。
-完整包为 `desktop/build/candidate/darwin-arm64/Deeper.app` 及
-`dist/Deeper-darwin-arm64.zip`，仅本地 ad-hoc 签名，未公证、未发布。
+完整包为 `desktop/build/candidate/darwin-arm64/Deepzora.app` 及
+`dist/Deepzora-darwin-arm64.zip`，仅本地 ad-hoc 签名，未公证、未发布。
 
 **仍未通过的门槛 / Remaining gates：**
 

@@ -22,10 +22,10 @@ parent="$(git rev-parse "$candidate^1" 2>/dev/null)" || {
 	exit 1
 }
 
-work_dir="$(mktemp -d "${TMPDIR:-/tmp}/deeper-stable-candidate.XXXXXX")"
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-stable-candidate.XXXXXX")"
 cleanup() {
 	case "$work_dir" in
-	*/deeper-stable-candidate.*) rm -rf -- "$work_dir" ;;
+	*/deepzora-stable-candidate.*) rm -rf -- "$work_dir" ;;
 	*) echo "refusing to clean unexpected candidate directory: $work_dir" >&2 ;;
 	esac
 }

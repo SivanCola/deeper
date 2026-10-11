@@ -46,8 +46,8 @@ func TestLookupLegacyKeyringBatchInProcessFourState(t *testing.T) {
 
 func TestLegacyKeyringErrorDoesNotWriteMarker(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 
 	oldLookup := legacyKeyringProbeLookup
 	t.Cleanup(func() { legacyKeyringProbeLookup = oldLookup })
@@ -105,8 +105,8 @@ func TestLookupLegacyKeyringBatchSharedContextTimeout(t *testing.T) {
 // (probe returns found), then the user writes a new value before store-if-absent.
 func TestLookupLegacyKeyringBatchDoesNotClobberUserWrite(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 
 	oldLookup := legacyKeyringProbeLookup
 	t.Cleanup(func() { legacyKeyringProbeLookup = oldLookup })
@@ -156,8 +156,8 @@ func TestLookupLegacyKeyringBatchDoesNotClobberUserWrite(t *testing.T) {
 // probe→store window against a cleared tombstone written after the probe starts.
 func TestLookupLegacyKeyringBatchDoesNotReviveTombstone(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 
 	// Start empty: no value and no tombstone so the batch will probe.
 	oldLookup := legacyKeyringProbeLookup
@@ -216,7 +216,7 @@ func TestLookupLegacyKeyringBatchDoesNotReviveTombstone(t *testing.T) {
 
 func TestLegacyKeyringMarkerUsesRawURLBase64(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	key := "A/B+C="
 	path := legacyKeyringMigrationMarkerPath(key)
 	wantName := base64.RawURLEncoding.EncodeToString([]byte(key))

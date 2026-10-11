@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/pluginpkg"
-	"deeper/internal/sandbox"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/sandbox"
 )
 
 func TestDefaultSpawnerRunsQuotedPluginBatchHook(t *testing.T) {
@@ -91,8 +91,8 @@ func TestExtensionlessSessionStartHookUsesAutoResolvedBash(t *testing.T) {
 	}
 
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
-	root := filepath.Join(deeperHome, "plugins", "superpowers")
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	root := filepath.Join(deepzoraHome, "plugins", "superpowers")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.CodexManifest), `{
   "name": "superpowers",
   "version": "6.1.1"
@@ -101,7 +101,7 @@ func TestExtensionlessSessionStartHookUsesAutoResolvedBash(t *testing.T) {
 input=$(cat)
 printf 'session-start:%s' "$input"
 `)
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "superpowers",
 		Root:         "plugins/superpowers",
 		Version:      "6.1.1",
@@ -156,9 +156,9 @@ func TestProjectAndGlobalExtensionlessHooksUseAutoResolvedBash(t *testing.T) {
 	} {
 		writeHookTestFile(t, item.path, "#!/usr/bin/env bash\ninput=$(cat)\nprintf '"+item.prefix+":%s' \"$input\"\n")
 	}
-	writeHookTestFile(t, filepath.Join(workspace, ".deeper", "settings.json"), `{"hooks":{"SessionStart":[{"command":"hooks/project-start"}]}}`)
-	deeperHome := filepath.Join(home, ".deeper")
-	writeHookTestFile(t, filepath.Join(deeperHome, "settings.json"), `{"hooks":{"SessionStart":[{"command":"hooks/global-start"}]}}`)
+	writeHookTestFile(t, filepath.Join(workspace, ".deepzora", "settings.json"), `{"hooks":{"SessionStart":[{"command":"hooks/project-start"}]}}`)
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	writeHookTestFile(t, filepath.Join(deepzoraHome, "settings.json"), `{"hooks":{"SessionStart":[{"command":"hooks/global-start"}]}}`)
 
 	hooks := Load(LoadOptions{HomeDir: home, ProjectRoot: workspace})
 	if len(hooks) != 2 {

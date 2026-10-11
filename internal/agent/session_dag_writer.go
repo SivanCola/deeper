@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/store"
 )
 
 // sessionDAGTailRepairMinAge keeps tail repair from truncating a line another

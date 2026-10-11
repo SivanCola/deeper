@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/desktop/internal/sessionui"
-	"deeper/internal/identitylock"
+	"deepzora/desktop/internal/sessionui"
+	"deepzora/internal/identitylock"
 )
 
 var errManualCreationIdentity = errors.New("invalid manual creation identity or state")

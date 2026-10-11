@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
 )
 
 // runProviderCommand handles "/provider": with no argument it opens the provider

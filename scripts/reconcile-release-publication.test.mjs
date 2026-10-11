@@ -46,7 +46,7 @@ else if(args[0]==='release' && args[1]==='download') {
   if(path.basename(args.at(-1))!=='release-event.json') process.exit(3);
 } else process.exit(4);
 `, { mode: 0o755 });
-  const env = { ...process.env, FIXTURE: root, PATH: `${bin}:${process.env.PATH}`, GITHUB_ACTIONS: "true", GITHUB_REPOSITORY: "SivanCola/deeper", GITHUB_REF: "refs/heads/main", GITHUB_REF_PROTECTED: "true", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2", RELEASE_REPOSITORY: "SivanCola/deeper", RELEASE_VERSION: "1.2.3", RELEASE_OPERATION: "recover", RELEASE_EXPECTED_SHA: sha, RELEASE_LEDGER_OUTPUT: path.join(root, "ledger.json") };
+  const env = { ...process.env, FIXTURE: root, PATH: `${bin}:${process.env.PATH}`, GITHUB_ACTIONS: "true", GITHUB_REPOSITORY: "SivanCola/deepzora", GITHUB_REF: "refs/heads/main", GITHUB_REF_PROTECTED: "true", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2", RELEASE_REPOSITORY: "SivanCola/deepzora", RELEASE_VERSION: "1.2.3", RELEASE_OPERATION: "recover", RELEASE_EXPECTED_SHA: sha, RELEASE_LEDGER_OUTPUT: path.join(root, "ledger.json") };
   return { root, scripts, env,
     run: extra => spawnSync("bash", [path.join(scripts, "reconcile-release-publication.sh")], { env: { ...env, ...extra }, encoding: "utf8" }),
     ledger: () => JSON.parse(readFileSync(env.RELEASE_LEDGER_OUTPUT, "utf8")),
@@ -119,6 +119,6 @@ test("the 1.x release control plane neither deploys nor verifies the website", (
     "scripts/reconcile-release-publication.sh", "scripts/verify-stable-release-artifacts.sh",
   ]) {
     const text = readFileSync(file, "utf8");
-    assert.doesNotMatch(text, /pages\.yml|--ref website|deeper\.io\/changelog\/v\$|--dump-dom/, file);
+    assert.doesNotMatch(text, /pages\.yml|--ref website|deepzora\.com\/changelog\/v\$|--dump-dom/, file);
   }
 });

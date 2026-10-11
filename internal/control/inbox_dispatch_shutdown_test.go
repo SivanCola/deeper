@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 func TestControllerShutdownJoinsInboxScanBeforeReturning(t *testing.T) {

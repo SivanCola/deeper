@@ -11,7 +11,7 @@ import (
 	dbus "github.com/godbus/dbus/v5"
 )
 
-// Secret Service constants (same service Deeper historically used via
+// Secret Service constants (same service Deepzora historically used via
 // zalando/go-keyring). Every D-Bus call uses the shared migration context so a
 // stuck bus cannot hang CLI startup past the batch deadline.
 const (

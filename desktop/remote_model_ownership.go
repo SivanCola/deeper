@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 type credentialProxyOwnership struct {

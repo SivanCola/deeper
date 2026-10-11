@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // stubSessionAPI supplies port defaults for the test controllers that only

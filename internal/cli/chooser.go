@@ -7,8 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 // chooser is the in-chat multiple-choice prompt the `ask` tool raises — the CLI's

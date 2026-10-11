@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/topicstate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/topicstate"
 )
 
 type TopicRemovalTarget struct {

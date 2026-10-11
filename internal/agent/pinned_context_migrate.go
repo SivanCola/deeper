@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/store"
 )
 
 func migratePinnedContextSidecar(oldPath, newPath, newID string) error {

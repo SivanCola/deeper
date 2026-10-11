@@ -11,7 +11,7 @@ import (
 // output is forced on for SSH sessions (where bubbletea skips its capability
 // query) and stays off locally unless the terminal itself reports support.
 func TestForceSyncOutputOnlyOverSSH(t *testing.T) {
-	for _, k := range []string{"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY", "DEEPER_DISABLE_SYNC_OUTPUT"} {
+	for _, k := range []string{"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY", "DEEPZORA_DISABLE_SYNC_OUTPUT"} {
 		t.Setenv(k, "")
 	}
 	if cmd := forceSyncOutputCmd(); cmd != nil {
@@ -27,8 +27,8 @@ func TestForceSyncOutputOnlyOverSSH(t *testing.T) {
 	if !ok || report.Mode != ansi.ModeSynchronizedOutput || report.Value != ansi.ModeReset {
 		t.Fatalf("forceSyncOutputCmd() = %#v, want a 2026 mode report with reset value", msg)
 	}
-	t.Setenv("DEEPER_DISABLE_SYNC_OUTPUT", "1")
+	t.Setenv("DEEPZORA_DISABLE_SYNC_OUTPUT", "1")
 	if cmd := forceSyncOutputCmd(); cmd != nil {
-		t.Fatal("DEEPER_DISABLE_SYNC_OUTPUT=1 must opt out")
+		t.Fatal("DEEPZORA_DISABLE_SYNC_OUTPUT=1 must opt out")
 	}
 }

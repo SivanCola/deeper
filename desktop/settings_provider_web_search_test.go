@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestSaveProviderPersistsWebSearchOffWithDisplayedRequestURL(t *testing.T) {

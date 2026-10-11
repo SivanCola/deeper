@@ -38,16 +38,16 @@ func TestIdentityPreservesExistingFormatAndAliases(t *testing.T) {
 	}
 }
 func TestUpdateEnvironmentFreezesHome(t *testing.T) {
-	env := UpdateEnvironment([]string{"PATH=keep", "deeper_home=old", "DEEPER_UPDATE_INSTANCE_ID=stale"}, "relative-home")
+	env := UpdateEnvironment([]string{"PATH=keep", "deepzora_home=old", "DEEPZORA_UPDATE_INSTANCE_ID=stale"}, "relative-home")
 	values := map[string]string{}
 	for _, e := range env {
 		k, v, _ := strings.Cut(e, "=")
 		values[k] = v
 	}
-	if len(env) != 3 || values["PATH"] != "keep" || !filepath.IsAbs(values["DEEPER_HOME"]) {
+	if len(env) != 3 || values["PATH"] != "keep" || !filepath.IsAbs(values["DEEPZORA_HOME"]) {
 		t.Fatalf("bad environment: %v", env)
 	}
-	if id := values[UpdateEnvironmentKey]; !Valid(id) || id != ForHome(values["DEEPER_HOME"]) {
+	if id := values[UpdateEnvironmentKey]; !Valid(id) || id != ForHome(values["DEEPZORA_HOME"]) {
 		t.Fatalf("bad identity %q", id)
 	}
 	for _, id := range []string{"", Prefix, Prefix + ".../../x", Prefix + ".0123456789ABCDEf"} {
@@ -60,7 +60,7 @@ func TestUpdateEnvironmentFreezesHome(t *testing.T) {
 func TestUpdateEnvironmentPreservesAccessSpelling(t *testing.T) {
 	home := filepath.Join(t.TempDir(), "MixedCaseHome")
 	env := UpdateEnvironment(nil, home)
-	if len(env) != 2 || env[0] != "DEEPER_HOME="+home {
+	if len(env) != 2 || env[0] != "DEEPZORA_HOME="+home {
 		t.Fatalf("environment = %v", env)
 	}
 	if got := strings.TrimPrefix(env[1], UpdateEnvironmentKey+"="); got != ForHome(home) {

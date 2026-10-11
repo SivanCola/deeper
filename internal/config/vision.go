@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider/openai"
 )
 
 var mimoVisionModels = map[string]bool{

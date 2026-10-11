@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/config"
-	fileencoding "deeper/internal/fileutil/encoding"
+	"deepzora/internal/config"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 // mcpEntryAction assembles the DTO for a single MCP server install. The

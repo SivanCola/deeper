@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"deeper/desktop/internal/sessionui"
+	"deepzora/desktop/internal/sessionui"
 )
 
 // ManualCreationProgress is local observational state, never a lease or a

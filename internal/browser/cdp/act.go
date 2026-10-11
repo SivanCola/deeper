@@ -10,7 +10,7 @@ import (
 	"maps"
 	"strings"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 // agentInputWindow is how long after a marker trusted input still counts as

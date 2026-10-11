@@ -1,6 +1,6 @@
 import type { HandshakeFailure } from "./handshake.js";
 
-export const SHELL_ACTION_PREFIX = "deeper://app/__shell/";
+export const SHELL_ACTION_PREFIX = "deepzora://app/__shell/";
 
 export type ShellAction = "open-logs" | "restart" | "quit";
 
@@ -21,7 +21,7 @@ export function renderFailurePage(failure: HandshakeFailure, logsPath: string): 
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
-<title>${failure.name === "starting" ? "Deeper is starting" : "Deeper cannot start"}</title>
+<title>${failure.name === "starting" ? "Deepzora is starting" : "Deepzora cannot start"}</title>
 <style>
   html, body { margin: 0; height: 100%; background: #1a1a2e; color: #f4f4f3; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   main { max-width: 640px; margin: 0 auto; padding: 64px 32px; }
@@ -40,7 +40,7 @@ export function renderFailurePage(failure: HandshakeFailure, logsPath: string): 
   <div class="code">${escapeHTML(code)}</div>
   <pre>${escapeHTML(failure.detail)}</pre>
   <div class="actions">
-    ${failure.name === "starting" ? "" : failure.name === "build_mismatch" || failure.name === "contract_mismatch" ? '<p>Install the full Deeper package to repair this installation. / 请安装完整包恢复启动，无需清理会话。</p>' : `<a class="primary" href="${SHELL_ACTION_PREFIX}restart">Retry / 重试</a>`}
+    ${failure.name === "starting" ? "" : failure.name === "build_mismatch" || failure.name === "contract_mismatch" ? '<p>Install the full Deepzora package to repair this installation. / 请安装完整包恢复启动，无需清理会话。</p>' : `<a class="primary" href="${SHELL_ACTION_PREFIX}restart">Retry / 重试</a>`}
     <a href="${SHELL_ACTION_PREFIX}open-logs">Open logs folder</a>
     <a href="${SHELL_ACTION_PREFIX}quit">Quit</a>
   </div>

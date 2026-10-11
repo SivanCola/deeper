@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/sessioncatalog"
 	"sort"
 	"strings"
 )

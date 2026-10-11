@@ -35,21 +35,21 @@ console.log("\nworkspace dock-open legacy key migration (CLAIM.PERSIST.014)");
 
 {
   // 场景 1：项目 key 缺失 + 旧全局 key = 关闭("0") → 首次打开项目应保持关闭
-  installLocalStorage({ "deeper.workspacePanel.open": "0" });
+  installLocalStorage({ "deepzora.workspacePanel.open": "0" });
   const { loadWorkspacePanelOpen } = await loadModule();
   ok(loadWorkspacePanelOpen("project-a") === false, "project key missing + legacy global closed => stays closed");
 }
 
 {
   // 场景 2：项目 key 缺失 + 旧全局 key = 打开("1") → 首次打开项目应打开
-  installLocalStorage({ "deeper.workspacePanel.open": "1" });
+  installLocalStorage({ "deepzora.workspacePanel.open": "1" });
   const { loadWorkspacePanelOpen } = await loadModule();
   ok(loadWorkspacePanelOpen("project-b") === true, "project key missing + legacy global open => stays open");
 }
 
 {
   // 场景 3：项目 key 存在（优先于旧全局 key）
-  installLocalStorage({ "deeper.workspacePanel.open": "0", "deeper.workspacePanel.open.project-c": "1" });
+  installLocalStorage({ "deepzora.workspacePanel.open": "0", "deepzora.workspacePanel.open.project-c": "1" });
   const { loadWorkspacePanelOpen } = await loadModule();
   ok(loadWorkspacePanelOpen("project-c") === true, "project key present wins over legacy global");
 }

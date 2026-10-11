@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sqliteuri"
+	"deepzora/internal/sqliteuri"
 
 	_ "modernc.org/sqlite"
 )

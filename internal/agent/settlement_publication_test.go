@@ -6,9 +6,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // This recorder models the acceptance boundary, independently of the display

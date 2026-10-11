@@ -3,7 +3,7 @@ package anthropic
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // resolveEndpoints returns the API root and the URL requests POST to. The root

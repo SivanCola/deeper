@@ -52,19 +52,19 @@ func pendingModelCredentialTransactionCount() (int, error) {
 
 // DiagnoseCredentials provides the shared Desktop/CLI credential report.
 func DiagnoseCredentials(opts CredentialDiagnosticOptions) (CredentialDiagnosticReport, error) {
-	home, path := DeeperHomeDir(), UserCredentialsPath()
+	home, path := DeepzoraHomeDir(), UserCredentialsPath()
 	report := CredentialDiagnosticReport{Home: home, CredentialPath: path, Checks: []CredentialDiagnosticCheck{}, Actions: []string{}}
 	if strings.TrimSpace(home) == "" || strings.TrimSpace(path) == "" {
-		report.add("location", "failed", path, "Deeper home could not be resolved")
+		report.add("location", "failed", path, "Deepzora home could not be resolved")
 		return report, nil
 	}
 	homeAbs, homeErr := filepath.Abs(home)
 	pathAbs, pathErr := filepath.Abs(path)
 	if homeErr != nil || pathErr != nil || !pathWithinRoot(homeAbs, pathAbs) {
-		report.add("location", "failed", path, "credential path is outside Deeper home")
+		report.add("location", "failed", path, "credential path is outside Deepzora home")
 		return report, nil
 	}
-	report.add("location", "passed", path, "credential path is inside Deeper home")
+	report.add("location", "passed", path, "credential path is inside Deepzora home")
 
 	info, err := os.Lstat(path)
 	exists := err == nil
@@ -139,7 +139,7 @@ func DiagnoseCredentials(opts CredentialDiagnosticOptions) (CredentialDiagnostic
 		if repairPathErr != nil {
 			report.add("repair", "failed", path, repairPathErr.Error())
 		} else if !exists || info == nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || reparse || !ownerCurrent {
-			report.add("repair", "failed", path, "repair requires a current-user-owned regular file inside Deeper home")
+			report.add("repair", "failed", path, "repair requires a current-user-owned regular file inside Deepzora home")
 		} else if opts.DryRun {
 			report.Actions = append(report.Actions, "would clear read-only state and add current-user read/write/replace access where required")
 			report.add("repair", "passed", path, "repair preview only")
@@ -162,7 +162,7 @@ func probeCredentialDirectory(report *CredentialDiagnosticReport, path string) {
 		report.add("directory_replace_probe", "failed", dir, classifyCredentialAccessError(err))
 		return
 	}
-	tmp, err := os.CreateTemp(dir, ".deeper-credential-probe-*")
+	tmp, err := os.CreateTemp(dir, ".deepzora-credential-probe-*")
 	if err != nil {
 		report.add("directory_replace_probe", "failed", dir, classifyCredentialAccessError(err))
 		return
@@ -199,7 +199,7 @@ func validateCredentialRepairPath(home, path string, expected os.FileInfo) error
 		return err
 	}
 	if !pathWithinRoot(home, path) {
-		return fmt.Errorf("credential path is outside Deeper home")
+		return fmt.Errorf("credential path is outside Deepzora home")
 	}
 	// Include the home itself: Lstat on .env alone misses linked directories.
 	for current := path; ; current = filepath.Dir(current) {

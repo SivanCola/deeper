@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/pluginpkg"
 )
 
 // bigInputPayload builds an input.receive payload whose text is size bytes.

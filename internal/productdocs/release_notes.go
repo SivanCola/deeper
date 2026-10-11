@@ -116,7 +116,7 @@ func renderReleaseMarkdown(release releaseRecord, locale string) string {
 		return en
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Deeper v%s — %s\n\n", release.Version, localize(release.Title))
+	fmt.Fprintf(&b, "# Deepzora v%s — %s\n\n", release.Version, localize(release.Title))
 	if zh {
 		fmt.Fprintf(&b, "发布日期：%s\n\n发布渠道：%s\n\n状态：%s\n", release.Date, release.Channel, release.Status)
 	} else {

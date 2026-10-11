@@ -7,18 +7,18 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/desktop/internal/update"
-	"deeper/internal/repair"
+	"deepzora/desktop/internal/update"
+	"deepzora/internal/repair"
 )
 
 func TestLoadWindowsStagedReleaseUnitPreflightsAllMembersAndPublishesDesktopLast(t *testing.T) {
 	staging := t.TempDir()
 	for name, content := range map[string]string{
-		"deeper-desktop.exe":       "desktop-v2",
-		"deeper-guard.exe":         "guard-v2",
-		"deeper-launcher.exe":      "launcher-v2",
-		"deeper-update-helper.exe": "helper-v2",
-		"deeper-cli.exe":           "cli-v2",
+		"deepzora-desktop.exe":       "desktop-v2",
+		"deepzora-guard.exe":         "guard-v2",
+		"deepzora-launcher.exe":      "launcher-v2",
+		"deepzora-update-helper.exe": "helper-v2",
+		"deepzora-cli.exe":           "cli-v2",
 	} {
 		if err := os.WriteFile(filepath.Join(staging, name), []byte(content), 0o700); err != nil {
 			t.Fatal(err)
@@ -30,14 +30,14 @@ func TestLoadWindowsStagedReleaseUnitPreflightsAllMembersAndPublishesDesktopLast
 		SchemaVersion: 1,
 		ToVersion:     "v2",
 		TargetKind:    "file",
-		TargetPath:    filepath.Join(installDir, "deeper-desktop.exe"),
+		TargetPath:    filepath.Join(installDir, "deepzora-desktop.exe"),
 		Files: []repair.UpdateTransactionFile{
-			{TargetPath: filepath.Join(installDir, "deeper-desktop.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-guard.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-launcher.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-update-helper.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-cli.exe")},
-			{TargetPath: filepath.Join(installDir, "Deeper.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-desktop.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-guard.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-launcher.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-update-helper.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-cli.exe")},
+			{TargetPath: filepath.Join(installDir, "Deepzora.exe")},
 		},
 	}
 
@@ -45,7 +45,7 @@ func TestLoadWindowsStagedReleaseUnitPreflightsAllMembersAndPublishesDesktopLast
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := filepath.Base(members[len(members)-1].targetPath); !strings.EqualFold(got, "deeper-desktop.exe") {
+	if got := filepath.Base(members[len(members)-1].targetPath); !strings.EqualFold(got, "deepzora-desktop.exe") {
 		t.Fatalf("last published member = %q, want desktop", got)
 	}
 	var published []string
@@ -59,17 +59,17 @@ func TestLoadWindowsStagedReleaseUnitPreflightsAllMembersAndPublishesDesktopLast
 	if len(receipts) != len(members) {
 		t.Fatalf("publish receipts = %d, want %d", len(receipts), len(members))
 	}
-	if got := strings.Join(published, ","); !strings.Contains(got, "Deeper.exe=launcher-v2") {
+	if got := strings.Join(published, ","); !strings.Contains(got, "Deepzora.exe=launcher-v2") {
 		t.Fatalf("portable alias did not reuse launcher payload: %s", got)
 	}
-	if !strings.HasPrefix(published[len(published)-1], "deeper-desktop.exe=") {
+	if !strings.HasPrefix(published[len(published)-1], "deepzora-desktop.exe=") {
 		t.Fatalf("publish order = %v", published)
 	}
 }
 
 func TestLoadWindowsStagedReleaseUnitRejectsIncompletePayloadBeforePublish(t *testing.T) {
 	staging := t.TempDir()
-	if err := os.WriteFile(filepath.Join(staging, "deeper-desktop.exe"), []byte("desktop-v2"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(staging, "deepzora-desktop.exe"), []byte("desktop-v2"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	useTestWindowsPayloadManifest(t, staging, "v2")
@@ -78,10 +78,10 @@ func TestLoadWindowsStagedReleaseUnitRejectsIncompletePayloadBeforePublish(t *te
 		SchemaVersion: 1,
 		ToVersion:     "v2",
 		TargetKind:    "file",
-		TargetPath:    filepath.Join(installDir, "deeper-desktop.exe"),
+		TargetPath:    filepath.Join(installDir, "deepzora-desktop.exe"),
 		Files: []repair.UpdateTransactionFile{
-			{TargetPath: filepath.Join(installDir, "deeper-desktop.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-guard.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-desktop.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-guard.exe")},
 		},
 	}
 	if _, err := loadWindowsStagedReleaseUnit(claimed, staging); err == nil {
@@ -130,7 +130,7 @@ func TestValidateWindowsClaimedReleaseUnitRequiresExactTargets(t *testing.T) {
 	})
 	t.Run("primary", func(t *testing.T) {
 		claimed := *complete
-		claimed.TargetPath = filepath.Join(filepath.Dir(complete.TargetPath), "deeper-guard.exe")
+		claimed.TargetPath = filepath.Join(filepath.Dir(complete.TargetPath), "deepzora-guard.exe")
 		if err := validateWindowsClaimedReleaseUnit(&claimed); err == nil ||
 			!strings.Contains(err.Error(), "primary") {
 			t.Fatalf("primary target error = %v", err)
@@ -152,14 +152,14 @@ func TestLoadWindowsStagedReleaseUnitDoesNotCreateMissingPortableAlias(t *testin
 		SchemaVersion: 1,
 		ToVersion:     "v2",
 		TargetKind:    "file",
-		TargetPath:    filepath.Join(installDir, "deeper-desktop.exe"),
+		TargetPath:    filepath.Join(installDir, "deepzora-desktop.exe"),
 		Files: []repair.UpdateTransactionFile{
-			{TargetPath: filepath.Join(installDir, "deeper-desktop.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-guard.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-launcher.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-update-helper.exe")},
-			{TargetPath: filepath.Join(installDir, "deeper-cli.exe")},
-			{TargetPath: filepath.Join(installDir, "Deeper.exe"), MissingBefore: true},
+			{TargetPath: filepath.Join(installDir, "deepzora-desktop.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-guard.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-launcher.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-update-helper.exe")},
+			{TargetPath: filepath.Join(installDir, "deepzora-cli.exe")},
+			{TargetPath: filepath.Join(installDir, "Deepzora.exe"), MissingBefore: true},
 		},
 	}
 
@@ -168,7 +168,7 @@ func TestLoadWindowsStagedReleaseUnitDoesNotCreateMissingPortableAlias(t *testin
 		t.Fatal(err)
 	}
 	for _, member := range members {
-		if strings.EqualFold(filepath.Base(member.targetPath), "Deeper.exe") {
+		if strings.EqualFold(filepath.Base(member.targetPath), "Deepzora.exe") {
 			t.Fatalf("missing portable alias was added to publish set: %+v", members)
 		}
 	}
@@ -199,11 +199,11 @@ func TestPublishLoadedFileUpdateReleaseUnitStopsOnFirstFailedCompareAndPublish(t
 func TestLoadWindowsStagedReleaseUnitRejectsUnverifiedPayloadBeforePublish(t *testing.T) {
 	staging := t.TempDir()
 	for _, name := range []string{
-		"deeper-desktop.exe",
-		"deeper-guard.exe",
-		"deeper-launcher.exe",
-		"deeper-update-helper.exe",
-		"deeper-cli.exe",
+		"deepzora-desktop.exe",
+		"deepzora-guard.exe",
+		"deepzora-launcher.exe",
+		"deepzora-update-helper.exe",
+		"deepzora-cli.exe",
 	} {
 		if err := os.WriteFile(filepath.Join(staging, name), []byte(name), 0o700); err != nil {
 			t.Fatal(err)
@@ -226,11 +226,11 @@ func TestLoadWindowsStagedReleaseUnitRejectsUnverifiedPayloadBeforePublish(t *te
 func TestLoadWindowsStagedReleaseUnitReadsEachSourceThroughVerifier(t *testing.T) {
 	staging := t.TempDir()
 	for name, content := range map[string]string{
-		"deeper-desktop.exe":       "desktop-v2",
-		"deeper-guard.exe":         "guard-v2",
-		"deeper-launcher.exe":      "launcher-v2",
-		"deeper-update-helper.exe": "helper-v2",
-		"deeper-cli.exe":           "cli-v2",
+		"deepzora-desktop.exe":       "desktop-v2",
+		"deepzora-guard.exe":         "guard-v2",
+		"deepzora-launcher.exe":      "launcher-v2",
+		"deepzora-update-helper.exe": "helper-v2",
+		"deepzora-cli.exe":           "cli-v2",
 	} {
 		if err := os.WriteFile(filepath.Join(staging, name), []byte(content), 0o700); err != nil {
 			t.Fatal(err)
@@ -290,7 +290,7 @@ func TestLoadWindowsStagedReleaseUnitRejectsManifestMemberHashDrift(t *testing.T
 	writeWindowsPayloadManifestForTest(t, staging, "v2")
 	acceptWindowsPayloadManifestForTest(t)
 	useUnverifiedPayloadReaderForTest(t)
-	if err := os.WriteFile(filepath.Join(staging, "deeper-guard.exe"), []byte("tampered"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(staging, "deepzora-guard.exe"), []byte("tampered"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := loadWindowsStagedReleaseUnit(claimed, staging); err == nil ||
@@ -313,14 +313,14 @@ func completeWindowsStagedReleaseUnitForTest(t *testing.T, version string) (stri
 		files = append(files, repair.UpdateTransactionFile{TargetPath: filepath.Join(installDir, name)})
 	}
 	files = append(files, repair.UpdateTransactionFile{
-		TargetPath:    filepath.Join(installDir, "Deeper.exe"),
+		TargetPath:    filepath.Join(installDir, "Deepzora.exe"),
 		MissingBefore: true,
 	})
 	return staging, &repair.UpdateTransaction{
 		SchemaVersion: 1,
 		ToVersion:     version,
 		TargetKind:    "file",
-		TargetPath:    filepath.Join(installDir, "deeper-desktop.exe"),
+		TargetPath:    filepath.Join(installDir, "deepzora-desktop.exe"),
 		Files:         files,
 	}
 }

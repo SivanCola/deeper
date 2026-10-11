@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func TestLoadForEdit(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "deeper.toml")
+	path := filepath.Join(dir, "deepzora.toml")
 	custom := `default_model = "custom"
 [[providers]]
 name = "custom"
@@ -63,7 +63,7 @@ func TestMergeTOMLProviderAccessIgnoresProjectOnlyList(t *testing.T) {
 	if err := os.WriteFile(userPath, []byte("default_model = \"deepseek/deepseek-v4-flash\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	projectPath := filepath.Join(t.TempDir(), "deeper.toml")
+	projectPath := filepath.Join(t.TempDir(), "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte("[desktop]\nprovider_access = [\"deepseek\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestMergeTOMLProviderAccessIgnoresProjectOnlyList(t *testing.T) {
 
 func TestMergeTOMLProviderAccessUnionsWhenUserDeclares(t *testing.T) {
 	userPath := writeUserProviderAccess(t, "[desktop]\nprovider_access = [\"deepseek\"]\n")
-	projectPath := filepath.Join(t.TempDir(), "deeper.toml")
+	projectPath := filepath.Join(t.TempDir(), "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte("[desktop]\nprovider_access = [\"project-b\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ api_key_env = "LOCAL_KEY"
 
 func TestLoadForEditNormalizesLegacyMCPTiersWithoutWriting(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "deeper.toml")
+	path := filepath.Join(dir, "deepzora.toml")
 	body := `
 [[plugins]]
 name = "playwright"
@@ -164,7 +164,7 @@ model = "m"
 }
 
 func TestLoadForEditReadOnlyStrictDoesNotMigrateDisk(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "deeper.toml")
+	path := filepath.Join(t.TempDir(), "deepzora.toml")
 	body := []byte(`
 [[plugins]]
 name = "playwright"
@@ -194,7 +194,7 @@ func TestLoadForEditIgnoresProjectDotEnvForProviderCredentials(t *testing.T) {
 	project := t.TempDir()
 	launch := t.TempDir()
 	home := t.TempDir()
-	path := filepath.Join(project, "deeper.toml")
+	path := filepath.Join(project, "deepzora.toml")
 	body := `default_model = "custom/m"
 [[providers]]
 name = "custom"

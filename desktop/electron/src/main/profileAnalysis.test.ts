@@ -7,7 +7,7 @@ test("profiles produce bounded app-only self-time summaries without source paths
   const profile: CpuProfile = {
     startTime: 0, endTime: 30_000,
     nodes: [
-      { id: 1, callFrame: { functionName: "render", url: "deeper://app/assets/main-abc.js", lineNumber: 12 } },
+      { id: 1, callFrame: { functionName: "render", url: "deepzora://app/assets/main-abc.js", lineNumber: 12 } },
       { id: 2, callFrame: { functionName: "secret", url: "file:///private/user.js", lineNumber: 0 } },
       { id: 3, callFrame: { functionName: "remote", url: "https://example.com/app.js", lineNumber: 0 } },
     ], samples: [1, 2, 1, 3], timeDeltas: [5000, 10000, 5000, 10000],

@@ -10,10 +10,10 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/config"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/frontmatter"
-	"deeper/internal/skill"
+	"deepzora/internal/config"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/frontmatter"
+	"deepzora/internal/skill"
 )
 
 const (
@@ -99,12 +99,12 @@ func (t *installSourceTool) skillRootAction(req request, path string, names []st
 
 func (t *installSourceTool) skillInstallRoot(scope string) (string, error) {
 	if scope == "global" {
-		if t.deeperHome == "" {
-			return "", newErr(ErrSourceUnreadable, "global skill install requires a Deeper home directory")
+		if t.deepzoraHome == "" {
+			return "", newErr(ErrSourceUnreadable, "global skill install requires a Deepzora home directory")
 		}
-		return filepath.Join(t.deeperHome, skill.SkillsDirname), nil
+		return filepath.Join(t.deepzoraHome, skill.SkillsDirname), nil
 	}
-	return filepath.Join(t.root, ".deeper", skill.SkillsDirname), nil
+	return filepath.Join(t.root, ".deepzora", skill.SkillsDirname), nil
 }
 
 // skillCanonicalPath computes the canonical install destination:
@@ -126,14 +126,14 @@ func (t *installSourceTool) skillCanonicalPath(name, scope string) (string, erro
 func (t *installSourceTool) verifySkill(scope, name string, act *action) error {
 	custom := []string(nil)
 	if scope == "project" {
-		cfg := config.LoadForEdit(filepath.Join(t.root, "deeper.toml"))
+		cfg := config.LoadForEdit(filepath.Join(t.root, "deepzora.toml"))
 		custom = cfg.SkillCustomPaths()
 	} else {
 		cfg := config.LoadForEdit(t.configPath(scope))
 		custom = cfg.SkillCustomPaths()
 	}
 	var stderr bytes.Buffer
-	store := skill.New(skill.Options{HomeDir: t.home, DeeperHomeDir: t.deeperHome, ProjectRoot: t.root, CustomPaths: custom, DisableBuiltins: true, Stderr: &stderr})
+	store := skill.New(skill.Options{HomeDir: t.home, DeepzoraHomeDir: t.deepzoraHome, ProjectRoot: t.root, CustomPaths: custom, DisableBuiltins: true, Stderr: &stderr})
 	sk, ok := store.Read(name)
 	if !ok {
 		return newErr(ErrSourceUnreadable, "skill %q is installed but not discoverable", name)

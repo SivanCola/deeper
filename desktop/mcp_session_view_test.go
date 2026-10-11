@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/plugin"
+	"deepzora/internal/plugin"
 )
 
 func TestMCPServerViewSessionDiagnosticsRemainOptional(t *testing.T) {

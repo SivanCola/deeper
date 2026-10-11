@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/remote"
-	"deeper/internal/remote/bootstrap"
-	"deeper/internal/remote/forward"
-	"deeper/internal/remote/sftpfs"
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/config"
+	"deepzora/internal/remote"
+	"deepzora/internal/remote/bootstrap"
+	"deepzora/internal/remote/forward"
+	"deepzora/internal/remote/sftpfs"
+	"deepzora/internal/remote/sshtest"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -135,7 +135,7 @@ func (c *lifecycleSSHClient) SFTP() (*sftpfs.FS, error) { return nil, errors.New
 func seedLifecycleHost(t *testing.T, hostID string) {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	if err := editUserConfig(func(c *config.Config) error {
 		return c.UpsertRemoteHost(config.RemoteHostEntry{Name: hostID, Host: "127.0.0.1", Port: 22, User: "tester"})
@@ -325,13 +325,13 @@ func TestDesktopCLIBinaryPathFallsBackToPATH(t *testing.T) {
 
 func TestDesktopCLIBinaryNamesAvoidWindowsPortableEntryCollision(t *testing.T) {
 	packaged, command := desktopCLIBinaryNames("windows")
-	if packaged != "deeper-cli.exe" || command != "deeper.exe" {
+	if packaged != "deepzora-cli.exe" || command != "deepzora.exe" {
 		t.Fatalf("Windows CLI names = (%q, %q)", packaged, command)
 	}
-	if strings.EqualFold(packaged, "Deeper.exe") {
+	if strings.EqualFold(packaged, "Deepzora.exe") {
 		t.Fatalf("packaged CLI %q collides with the desktop entry point", packaged)
 	}
-	if packaged, command := desktopCLIBinaryNames("linux"); packaged != "deeper" || command != "deeper" {
+	if packaged, command := desktopCLIBinaryNames("linux"); packaged != "deepzora" || command != "deepzora" {
 		t.Fatalf("Linux CLI names = (%q, %q)", packaged, command)
 	}
 }

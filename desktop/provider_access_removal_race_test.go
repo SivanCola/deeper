@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 func TestRemoveProviderAccessRejectsCustomProviderThatBecameOfficialBeforeCommit(t *testing.T) {

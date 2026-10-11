@@ -8,7 +8,7 @@ import (
 	"os"
 	"unsafe"
 
-	"deeper/desktop/internal/instanceidentity"
+	"deepzora/desktop/internal/instanceidentity"
 	"golang.org/x/sys/windows"
 )
 
@@ -80,15 +80,15 @@ func desktopEndpointImage(id string) (string, error) {
 func notifyHandoffBlocked(installed bool) {
 	// Background/silent update execution has no interactive recovery owner.
 	// Its caller records the installed-versus-started result in the update log.
-	if os.Getenv("DEEPER_INTERACTIVE_RECOVERY") != "1" {
+	if os.Getenv("DEEPZORA_INTERACTIVE_RECOVERY") != "1" {
 		return
 	}
-	message := "Deeper could not finish the update restart. Choose Quit in the old Deeper window, then open Deeper again. Your running instance was preserved."
+	message := "Deepzora could not finish the update restart. Choose Quit in the old Deepzora window, then open Deepzora again. Your running instance was preserved."
 	if installed {
-		message = "The new version is installed, but restart is incomplete. Choose Quit in the old Deeper window, then open Deeper again. Your running instance was preserved."
+		message = "The new version is installed, but restart is incomplete. Choose Quit in the old Deepzora window, then open Deepzora again. Your running instance was preserved."
 	}
-	message += "\n\n请在旧 Deeper 窗口中选择退出，再重新打开 Deeper。现有实例已保留。"
-	title, _ := windows.UTF16PtrFromString("Deeper update / 更新")
+	message += "\n\n请在旧 Deepzora 窗口中选择退出，再重新打开 Deepzora。现有实例已保留。"
+	title, _ := windows.UTF16PtrFromString("Deepzora update / 更新")
 	body, _ := windows.UTF16PtrFromString(message)
 	// The helper runs after the desktop has exited; log-only failures are invisible.
 	handoffUser32.NewProc("MessageBoxW").Call(0, uintptr(unsafe.Pointer(body)), uintptr(unsafe.Pointer(title)), 0x00000030|0x00010000)

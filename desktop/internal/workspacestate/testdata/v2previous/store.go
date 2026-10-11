@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/filelock"
-	"deeper/internal/fileutil"
+	"deepzora/internal/filelock"
+	"deepzora/internal/fileutil"
 )
 
 const (

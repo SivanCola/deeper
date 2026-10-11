@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/tool"
 )
 
 func TestAttachmentEndpointsDeliverFrozenBytes(t *testing.T) {

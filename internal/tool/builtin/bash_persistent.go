@@ -9,11 +9,11 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"deeper/internal/persistentshell"
-	"deeper/internal/sandbox"
-	"deeper/internal/shellparse"
-	"deeper/internal/shellrun"
-	"deeper/internal/tool"
+	"deepzora/internal/persistentshell"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/shellparse"
+	"deepzora/internal/shellrun"
+	"deepzora/internal/tool"
 )
 
 // shellResetNotice tells the model that session shell state is gone. Without it

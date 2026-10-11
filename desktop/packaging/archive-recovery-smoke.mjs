@@ -11,7 +11,7 @@ import { waitForSmokeCondition } from "./smoke-poll.mjs";
 
 const require = createRequire(new URL("../electron/package.json", import.meta.url));
 const { _electron } = require("playwright");
-const home = mkdtempSync(join(tmpdir(), "deeper-archive-recovery-"));
+const home = mkdtempSync(join(tmpdir(), "deepzora-archive-recovery-"));
 const artifacts = resolve(process.argv[3] || "desktop/electron/artifacts/archive-recovery");
 mkdirSync(artifacts, { recursive: true });
 const server = createServer(async (req, res) => {
@@ -25,16 +25,16 @@ writeFileSync(join(home, "config.toml"), `default_model = "fixture/model"\n[desk
 let application, page;
 const errors = [];
 const launch = async () => {
-  application = await _electron.launch({ executablePath: join(process.argv[2], "Contents/MacOS/Deeper"),
+  application = await _electron.launch({ executablePath: join(process.argv[2], "Contents/MacOS/Deepzora"),
     env: { ...packagedSmokeEnv(process.env, home), ARCHIVE_FIXTURE_KEY: "loopback-only" } });
   page = await application.firstWindow();
   page.setDefaultTimeout(30000);
   page.on("pageerror", error => errors.push(error.message));
-  await page.waitForFunction(() => Boolean(window.deeperDesktop));
+  await page.waitForFunction(() => Boolean(window.deepzoraDesktop));
   await page.waitForFunction(() => !document.querySelector(".boot-shell"));
-  assert.equal(await page.evaluate(() => window.deeperDesktop.contract.protocolVersion), 10);
+  assert.equal(await page.evaluate(() => window.deepzoraDesktop.contract.protocolVersion), 10);
 };
-const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
+const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deepzoraDesktop.invoke(method, args), { method, args });
 const close = async () => { await application.close(); application = null; };
 const recordRegistry = name => writeFileSync(join(artifacts, `${name}.json`), readFileSync(join(home, "desktop/workspace-state-v1.json")));
 const active = async () => (await invoke("ListTabs")).find(tab => tab.active);

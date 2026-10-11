@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func TestRemoveWorkspaceDropsVisibleTabsAndPersistedEntries(t *testing.T) {

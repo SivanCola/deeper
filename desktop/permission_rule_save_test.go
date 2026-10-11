@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	"deepzora/internal/tool"
 )
 
 func TestAddPermissionRuleRejectsBareShellCommandBeforeSaving(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	if err := (&App{}).AddPermissionRule("deny", "rm"); err == nil || !strings.Contains(err.Error(), "Bash(rm:*)") {
 		t.Fatalf("AddPermissionRule(deny, rm) = %v, want a Bash rule suggestion", err)
 	}
@@ -61,7 +61,7 @@ func TestValidateSavedPermissionRuleUsesRegisteredTools(t *testing.T) {
 }
 
 func TestAddPermissionRuleAcceptsConfiguredDisconnectedMCPServer(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	cfg := config.Default()
 	cfg.Plugins = []config.PluginEntry{{Name: "github", Type: "http", URL: "https://example.invalid/mcp"}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {

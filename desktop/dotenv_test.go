@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestLegacyHomeEnvProviderKeyIsNotPromoted(t *testing.T) {

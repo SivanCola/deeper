@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func writeFileT(t *testing.T, path, body string) {

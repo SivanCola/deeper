@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/stats"
+	"deepzora/internal/config"
+	"deepzora/internal/stats"
 )
 
 // UsageStatsRequest asks for the usage statistics panel aggregate.

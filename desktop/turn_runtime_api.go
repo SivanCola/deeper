@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/turnevent"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/turnevent"
 )
 
 // TurnStartView is the synchronous admission receipt for the new Wails turn

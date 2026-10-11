@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/gitcmd"
-	"deeper/internal/worktree"
+	"deepzora/internal/config"
+	"deepzora/internal/gitcmd"
+	"deepzora/internal/worktree"
 )
 
 func TestDeliveryWorktreeAvailabilityDelegatesWithoutRequiringGit(t *testing.T) {
@@ -26,9 +26,9 @@ func TestDeliveryWorktreeAvailabilityDelegatesWithoutRequiringGit(t *testing.T) 
 
 func TestCreateDeliveryWorktreeRegistersAndOpensManagedProject(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_STATE_HOME", home)
-	t.Setenv("DEEPER_CACHE_HOME", filepath.Join(home, "cache"))
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_STATE_HOME", home)
+	t.Setenv("DEEPZORA_CACHE_HOME", filepath.Join(home, "cache"))
 	managed := config.DeliveryWorktreeDir()
 	isolatedRoot := filepath.Join(managed, "repo", "id", "project")
 	if err := os.MkdirAll(isolatedRoot, 0o755); err != nil {
@@ -49,7 +49,7 @@ func TestCreateDeliveryWorktreeRegistersAndOpensManagedProject(t *testing.T) {
 			WorkspaceRoot: isolatedRoot,
 			WorktreeRoot:  filepath.Dir(isolatedRoot),
 			SourceRoot:    "source-project",
-			Branch:        "deeper/delivery-test",
+			Branch:        "deepzora/delivery-test",
 			SourceDirty:   true,
 		}, nil
 	}
@@ -60,7 +60,7 @@ func TestCreateDeliveryWorktreeRegistersAndOpensManagedProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.WorkspaceRoot != isolatedRoot || result.Branch != "deeper/delivery-test" || !result.SourceDirty {
+	if result.WorkspaceRoot != isolatedRoot || result.Branch != "deepzora/delivery-test" || !result.SourceDirty {
 		t.Fatalf("result = %+v", result)
 	}
 	if result.Tab.WorkspaceRoot != isolatedRoot || !result.Tab.IsolatedWorktree || !result.Tab.Active {

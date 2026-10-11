@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // extensionUIController fakes the extension-UI slice of control.SessionAPI:

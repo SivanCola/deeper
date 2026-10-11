@@ -1,8 +1,8 @@
 package event
 
 import (
-	"deeper/internal/evidence"
-	"deeper/internal/nilutil"
+	"deepzora/internal/evidence"
+	"deepzora/internal/nilutil"
 )
 
 // AuditForwarder forwards every optional sink capability to Inner. Embed it in

@@ -63,8 +63,8 @@ todo schema 和能力分页形成一次明确的稳定前缀升级。同版本�
 
 ## v3 会话边界
 
-`internal/session` 定义所有权切换后的 codec `deeper.session.linear/v3.1`。
-旧原型 `deeper.session.events/v3` 和预览格式 `deeper.session.linear/v3` 不能直接用于
+`internal/session` 定义所有权切换后的 codec `deepzora.session.linear/v3.1`。
+旧原型 `deepzora.session.events/v3` 和预览格式 `deepzora.session.linear/v3` 不能直接用于
 执行，只能通过受限导入器转换；
 未知必需事件、完整损坏记录或无法解释的历史替换都会保留原件并拒绝继续执行。
 一个会话只有一个活动写句柄；分叉和编辑重发创建独立子会话，不在同一日志维护多

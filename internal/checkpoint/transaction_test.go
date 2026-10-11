@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/diff"
+	"deepzora/internal/diff"
 )
 
 type recordingConversationApplier struct {
@@ -73,7 +73,7 @@ func TestRestoreCodeAllOrNothingOnMidPublishFailure(t *testing.T) {
 	if got := read(t, b); got != "b1" {
 		t.Fatalf("b = %q, want b1 (compensated)", got)
 	}
-	if leftovers, err := filepath.Glob(filepath.Join(root, ".*.deeper-*")); err != nil || len(leftovers) != 0 {
+	if leftovers, err := filepath.Glob(filepath.Join(root, ".*.deepzora-*")); err != nil || len(leftovers) != 0 {
 		t.Fatalf("transaction artifacts remain after compensation: %v err=%v", leftovers, err)
 	}
 }
@@ -257,7 +257,7 @@ func TestBackgroundWriterStartingAfterPreviewBlocksCommit(t *testing.T) {
 
 func TestCaptureScratchPathIsNotOutsideWorkspace(t *testing.T) {
 	root := t.TempDir()
-	scratchPath := filepath.Join(os.TempDir(), "deeper-capture-probe.py")
+	scratchPath := filepath.Join(os.TempDir(), "deepzora-capture-probe.py")
 	_, gap, err := CapturePath(scratchPath, CaptureOptions{WorkspaceRoot: root, ReadContent: true})
 	if err != nil || gap == nil || gap.Reason != GapScratch {
 		t.Fatalf("scratch capture: gap=%+v err=%v", gap, err)

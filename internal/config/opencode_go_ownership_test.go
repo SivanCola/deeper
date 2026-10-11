@@ -11,8 +11,8 @@ import (
 // disk and for project references that are only resolved in memory.
 func TestOpenCodeGoV10SplitKeepsBareModelOwnership(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	t.Setenv("ACCOUNT_A_KEY", "test-account-a")
 	t.Setenv("ACCOUNT_B_KEY", "test-account-b")
 	path := filepath.Join(home, "config.toml")
@@ -46,7 +46,7 @@ func TestOpenCodeGoV10SplitKeepsBareModelOwnership(t *testing.T) {
 [agent]
 planner_model = "go/deepseek-v4-flash"
 `
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	merged, err := LoadForRoot(root)

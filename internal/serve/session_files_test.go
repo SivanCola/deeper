@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestRemoveSessionFilesSweepsEventLogAndSidecars(t *testing.T) {

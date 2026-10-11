@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/session"
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/store"
 )
 
 func TestArchivedSourceRecoversAfterHeadIndexPublication(t *testing.T) {

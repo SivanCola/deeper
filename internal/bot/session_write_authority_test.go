@@ -3,8 +3,8 @@ package bot
 import (
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 func mustBindBotControllerAuthority(t *testing.T, leases *control.SessionLeaseKeeper, ctrl *control.Controller) {

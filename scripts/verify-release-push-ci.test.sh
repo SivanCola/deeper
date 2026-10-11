@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-test_root="$(mktemp -d "${TMPDIR:-/tmp}/deeper-push-ci-test.XXXXXX")"
+test_root="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-push-ci-test.XXXXXX")"
 trap 'rm -rf -- "$test_root"' EXIT
 
 git -C "$test_root" init -q

@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/history"
-	"deeper/internal/historycatalog"
-	"deeper/internal/retrieval"
+	"deepzora/internal/agent"
+	"deepzora/internal/history"
+	"deepzora/internal/historycatalog"
+	"deepzora/internal/retrieval"
 )
 
 type historySearchSnapshotBuild struct {

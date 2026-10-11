@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 // installedPowerShells returns every real PowerShell on this host, 5.1 first.

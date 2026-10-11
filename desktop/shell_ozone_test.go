@@ -21,9 +21,9 @@ func TestBootstrapShellChoosesOzonePlatformFromSession(t *testing.T) {
 		{"wayland with xwayland defaults to x11", []string{"XDG_SESSION_TYPE=wayland", "WAYLAND_DISPLAY=wayland-0", "DISPLAY=:0"}, []string{"--flag"}, []string{x11, "--flag"}},
 		{"wayland display alone counts as wayland", []string{"WAYLAND_DISPLAY=wayland-0", "DISPLAY=:0"}, nil, []string{x11}},
 		{"pure wayland stays native", []string{"XDG_SESSION_TYPE=wayland", "WAYLAND_DISPLAY=wayland-0"}, []string{"--flag"}, []string{"--flag"}},
-		{"override wayland stays native", []string{"XDG_SESSION_TYPE=wayland", "DISPLAY=:0", "DEEPER_OZONE_PLATFORM=wayland"}, nil, nil},
-		{"override x11 forces x11", []string{"XDG_SESSION_TYPE=x11", "DISPLAY=:0", "DEEPER_OZONE_PLATFORM=x11"}, nil, []string{x11}},
-		{"override auto keeps the default", []string{"XDG_SESSION_TYPE=wayland", "DISPLAY=:0", "DEEPER_OZONE_PLATFORM=auto"}, nil, []string{x11}},
+		{"override wayland stays native", []string{"XDG_SESSION_TYPE=wayland", "DISPLAY=:0", "DEEPZORA_OZONE_PLATFORM=wayland"}, nil, nil},
+		{"override x11 forces x11", []string{"XDG_SESSION_TYPE=x11", "DISPLAY=:0", "DEEPZORA_OZONE_PLATFORM=x11"}, nil, []string{x11}},
+		{"override auto keeps the default", []string{"XDG_SESSION_TYPE=wayland", "DISPLAY=:0", "DEEPZORA_OZONE_PLATFORM=auto"}, nil, []string{x11}},
 		{"explicit flag wins", []string{"XDG_SESSION_TYPE=wayland", "DISPLAY=:0"}, []string{"--ozone-platform=wayland"}, []string{"--ozone-platform=wayland"}},
 		{"explicit hint wins", []string{"XDG_SESSION_TYPE=wayland", "DISPLAY=:0"}, []string{"--ozone-platform-hint=wayland"}, []string{"--ozone-platform-hint=wayland"}},
 		{"x11 session unchanged", []string{"XDG_SESSION_TYPE=x11", "DISPLAY=:0"}, []string{"--flag"}, []string{"--flag"}},
@@ -32,14 +32,14 @@ func TestBootstrapShellChoosesOzonePlatformFromSession(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			exe, shell := writeShellBootstrapFixture(t, "linux")
 			out := filepath.Join(t.TempDir(), "shell.out")
-			script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$DEEPER_TEST_SHELL_OUT.tmp\" && mv \"$DEEPER_TEST_SHELL_OUT.tmp\" \"$DEEPER_TEST_SHELL_OUT\"\n"
+			script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$DEEPZORA_TEST_SHELL_OUT.tmp\" && mv \"$DEEPZORA_TEST_SHELL_OUT.tmp\" \"$DEEPZORA_TEST_SHELL_OUT\"\n"
 			if err := os.MkdirAll(filepath.Dir(shell), 0o755); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.WriteFile(shell, []byte(script), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			env := append([]string{"PATH=" + os.Getenv("PATH"), "DEEPER_TEST_SHELL_OUT=" + out}, tc.env...)
+			env := append([]string{"PATH=" + os.Getenv("PATH"), "DEEPZORA_TEST_SHELL_OUT=" + out}, tc.env...)
 			if handled, code := bootstrapShell(exe, "linux", tc.args, env); !handled || code != 0 {
 				t.Fatalf("bootstrap handled=%v code=%d", handled, code)
 			}

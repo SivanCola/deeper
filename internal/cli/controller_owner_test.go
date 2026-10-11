@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"deeper/internal/control"
+	"deepzora/internal/control"
 	"testing"
 )
 

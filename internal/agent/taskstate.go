@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/evidence"
+import "deepzora/internal/evidence"
 
 // taskRuntime is the host state shared by every Agent.Run continuing one
 // delivery scope: one ledger, one bill, one set of failure budgets. Its

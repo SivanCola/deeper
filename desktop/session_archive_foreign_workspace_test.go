@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 )
 
 // A save event indexes a transcript under the global fallback scope when its

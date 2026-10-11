@@ -27,10 +27,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/nilutil"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/nilutil"
+	"deepzora/internal/tool"
 )
 
 var renamePath = os.Rename
@@ -261,7 +261,7 @@ func NewManager(sink event.Sink, opts ...Option) *Manager {
 		sink = event.Discard
 	}
 	root, cancel := context.WithCancel(context.Background())
-	tempRoot, _ := os.MkdirTemp("", "deeper-jobs-*")
+	tempRoot, _ := os.MkdirTemp("", "deepzora-jobs-*")
 	m := &Manager{
 		sink:          sink,
 		root:          root,
@@ -1434,7 +1434,7 @@ func (m *Manager) loadSessionArtifacts(parentSession, sessionPath, dir string) {
 			maxSeq = seq
 		}
 		// A persisted Running record may belong to another manager in this
-		// process or to another Deeper process entirely. Only the runtime that
+		// process or to another Deepzora process entirely. Only the runtime that
 		// owns the session lease may repair an abandoned record as Interrupted.
 		// Observers without proof of ownership defer the artifact and leave the
 		// session reloadable for a later owned bind.

@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/providerconv"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/provider"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/providerconv"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/provider"
 )
 
 // ProviderClient is the slice of a live sidecar connection the adapter needs.

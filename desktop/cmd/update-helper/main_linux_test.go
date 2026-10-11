@@ -245,7 +245,7 @@ func baseFakeDeps(p *installProbe) installDeps {
 			return ""
 		},
 		mkTempDir: func() (string, error) {
-			return os.MkdirTemp("", "deeper-helper-test-*")
+			return os.MkdirTemp("", "deepzora-helper-test-*")
 		},
 		removeAll: os.RemoveAll,
 		copyOwnedRegular: func(src, dst string, mode os.FileMode, ownerUID int, maxBytes int64) error {
@@ -287,8 +287,8 @@ func baseFakeDeps(p *installProbe) installDeps {
 func writeInstallInputs(t *testing.T) (pkg, sig string) {
 	t.Helper()
 	dir := t.TempDir()
-	pkg = filepath.Join(dir, "Deeper.deb")
-	sig = filepath.Join(dir, "Deeper.deb.minisig")
+	pkg = filepath.Join(dir, "Deepzora.deb")
+	sig = filepath.Join(dir, "Deepzora.deb.minisig")
 	if err := os.WriteFile(pkg, []byte("deb-payload"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -519,7 +519,7 @@ func TestRunInstallCleansTempDirOnFailure(t *testing.T) {
 	d := baseFakeDeps(&probe)
 	var created, removed string
 	d.mkTempDir = func() (string, error) {
-		dir, err := os.MkdirTemp("", "deeper-helper-test-*")
+		dir, err := os.MkdirTemp("", "deepzora-helper-test-*")
 		created = dir
 		return dir, err
 	}

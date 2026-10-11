@@ -1,6 +1,6 @@
 package acp
 
-// ACP v1 stop reasons emitted by Deeper.
+// ACP v1 stop reasons emitted by Deepzora.
 const (
 	StopEndTurn         StopReason = "end_turn"
 	StopCancelled       StopReason = "cancelled"

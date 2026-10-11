@@ -3,7 +3,7 @@ package openai
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // canonicalKnownVendorChatURL rewrites official-vendor bases whose documented

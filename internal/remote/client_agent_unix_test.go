@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/remote/sshtest"
 )
 
 func TestClientFallsBackFromEmptyAgentToIdentityFile(t *testing.T) {
@@ -30,7 +30,7 @@ func TestClientFallsBackFromEmptyAgentToIdentityFile(t *testing.T) {
 	// A running but empty agent reproduces the desktop failure: the first
 	// publickey source has no signers, so the explicit identity must be tried
 	// as a second publickey attempt.
-	agentDir, err := os.MkdirTemp("", "deeper-agent-")
+	agentDir, err := os.MkdirTemp("", "deepzora-agent-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestIdentitiesOnlyUsesOnlyConfiguredAgentIdentity(t *testing.T) {
 		}
 	}
 
-	agentDir, err := os.MkdirTemp("", "deeper-identities-only-")
+	agentDir, err := os.MkdirTemp("", "deepzora-identities-only-")
 	if err != nil {
 		t.Fatal(err)
 	}

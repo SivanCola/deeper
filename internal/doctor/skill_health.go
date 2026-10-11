@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
-	_ "deeper/internal/tool/builtin" // Initialize compile-time tool identities.
+	"deepzora/internal/config"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
+	_ "deepzora/internal/tool/builtin" // Initialize compile-time tool identities.
 )
 
 // SkillHealthOptions configures skill/MCP capability diagnostics for doctor.

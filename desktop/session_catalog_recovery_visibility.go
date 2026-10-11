@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 func recoveryOnlyHasContent(sessions []sessioncatalog.SessionRecord) bool {

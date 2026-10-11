@@ -1,10 +1,10 @@
 {
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "example",
   "version": "2.0.0",
   "requires": [
     {
-      "namespace": "deeper",
+      "namespace": "deepzora",
       "kind": "provider",
       "id": "provider/v4",
       "versionRange": ">=1.0.0",
@@ -21,7 +21,7 @@
     }
   ],
   "runtime": {
-    "command": "${DEEPER_PLUGIN_ROOT}/bin/example",
+    "command": "${DEEPZORA_PLUGIN_ROOT}/bin/example",
     "intercepts": ["input.receive"],
     "replaces": [],
     "capabilities": ["providers"]

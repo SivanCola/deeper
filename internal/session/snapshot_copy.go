@@ -3,7 +3,7 @@ package session
 import (
 	"reflect"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func detachMessages(messages []provider.Message) []provider.Message {

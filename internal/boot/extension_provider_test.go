@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/provider"
 )
 
 // Stage 7 end-to-end coverage: a fake sidecar declares and streams an
@@ -125,13 +125,13 @@ name = "plugin"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "%s/fake/x"
-api_key_env = "DEEPER_TEST_KEY_UNSET"
+api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `, name))
 }
 
 func appendRuntimeFixture(t *testing.T, dir, extra string) {
 	t.Helper()
-	path := dir + "/deeper.toml"
+	path := dir + "/deepzora.toml"
 	existing, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
@@ -148,7 +148,7 @@ func TestBootFailsOnUnclaimedExtensionProviderConflict(t *testing.T) {
 	t.Chdir(dir)
 	name := "conflicter"
 	writeRuntimeFixtureWithConflictingProvider(t, dir, name)
-	installBootFakePlugin(t, config.DeeperHomeDir(), name, map[string]any{
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), name, map[string]any{
 		"capabilities": []string{"providers"},
 		"env": map[string]string{
 			bootFakeEnvPluginName: name,

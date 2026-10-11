@@ -3,8 +3,8 @@ package boot
 import (
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func TestRemoteResolverMetadataOverridesHostProviderWithSameRef(t *testing.T) {

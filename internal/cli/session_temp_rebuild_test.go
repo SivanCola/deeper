@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 // TestCLIHotRebuildPathsKeepSessionTemp covers the CLI commands that replace a

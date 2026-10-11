@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func (gw *BotGateway) normalizeApprovalShortcut(key, text string) (string, bool) {

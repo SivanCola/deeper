@@ -8,11 +8,11 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/doctor"
-	"deeper/internal/repair"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/doctor"
+	"deepzora/internal/repair"
+	"deepzora/internal/sessioncatalog"
 )
 
 func doctorBillingCommand(args []string) int {
@@ -102,7 +102,7 @@ func doctorCredentialsCommand(args []string) int {
 		return code
 	}
 	if fs.NArg() != 0 || (*dryRun && !*repairCredentials) {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor credentials [--json] [--probe] [--repair [--dry-run]]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor credentials [--json] [--probe] [--repair [--dry-run]]")
 		return 2
 	}
 	report, err := config.DiagnoseCredentials(config.CredentialDiagnosticOptions{Probe: *probe, Repair: *repairCredentials, DryRun: *dryRun})
@@ -118,7 +118,7 @@ func doctorCredentialsCommand(args []string) int {
 			return 1
 		}
 	} else {
-		fmt.Println("Deeper credential diagnostics")
+		fmt.Println("Deepzora credential diagnostics")
 		fmt.Println("  path:", report.CredentialPath)
 		for _, check := range report.Checks {
 			fmt.Printf("  %-24s %-11s %s\n", check.ID, check.Status, check.Message)
@@ -142,7 +142,7 @@ func doctorSessionsCommand(args []string) int {
 		return code
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor sessions [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor sessions [--json]")
 		return 2
 	}
 	status, err := sessioncatalog.Inspect(context.Background(), sessioncatalog.DefaultPath())
@@ -162,7 +162,7 @@ func doctorSessionsCommand(args []string) int {
 		}
 		return 0
 	}
-	fmt.Println("Deeper session catalog")
+	fmt.Println("Deepzora session catalog")
 	fmt.Printf("  state: %s\n", status.State)
 	fmt.Printf("  mode: %s\n", status.Mode)
 	fmt.Printf("  revision: %d\n", status.Revision)
@@ -193,13 +193,13 @@ func doctorRepairCommand(args []string) int {
 	fs := flag.NewFlagSet("doctor repair", flag.ContinueOnError)
 	root := fs.String("root", ".", "project root to inspect")
 	apply := fs.Bool("apply", false, "quarantine invalid config and restore the last-known-good global snapshot")
-	includeProject := fs.Bool("project", false, "allow --apply to quarantine an invalid project deeper.toml")
+	includeProject := fs.Bool("project", false, "allow --apply to quarantine an invalid project deepzora.toml")
 	jsonOut := fs.Bool("json", false, "print result as JSON")
 	if code, ok := parseCommandFlags(fs, args); !ok {
 		return code
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor repair [--root PATH] [--apply] [--project] [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor repair [--root PATH] [--apply] [--project] [--json]")
 		return 2
 	}
 	report, err := repair.InspectAndRepairConfig(repair.ConfigOptions{
@@ -219,7 +219,7 @@ func doctorRepairCommand(args []string) int {
 			return 1
 		}
 	} else {
-		fmt.Println("Deeper repair report")
+		fmt.Println("Deepzora repair report")
 		for _, check := range report.Checks {
 			status := "ok"
 			if !check.Exists {
@@ -250,21 +250,21 @@ func doctorQualityCommand(args []string, version string) int {
 	for _, arg := range args {
 		switch arg {
 		case "-h", "--help":
-			fmt.Fprintln(os.Stdout, "usage: deeper doctor quality <branch-id-or-path> [--json]")
+			fmt.Fprintln(os.Stdout, "usage: deepzora doctor quality <branch-id-or-path> [--json]")
 			fmt.Fprintln(os.Stdout, "Prints a public-safe, content-free coding-quality summary for one session.")
 			return 0
 		case "--json":
 			jsonOut = true
 		default:
 			if strings.HasPrefix(arg, "-") || ref != "" {
-				fmt.Fprintln(os.Stderr, "usage: deeper doctor quality <branch-id-or-path> [--json]")
+				fmt.Fprintln(os.Stderr, "usage: deepzora doctor quality <branch-id-or-path> [--json]")
 				return 2
 			}
 			ref = arg
 		}
 	}
 	if ref == "" {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor quality <branch-id-or-path> [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor quality <branch-id-or-path> [--json]")
 		return 2
 	}
 	report, err := doctor.CollectQuality(doctor.QualityOptions{Version: version, SessionRef: ref})
@@ -313,7 +313,7 @@ func doctorRedactSessionsCommand(args []string) int {
 		return code
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor redact-sessions [--dry-run] [--json] [--dir PATH]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor redact-sessions [--dry-run] [--json] [--dir PATH]")
 		return 2
 	}
 	res := doctor.RedactSessions(doctor.RedactSessionsOptions{
@@ -355,10 +355,10 @@ func doctorSessionCommand(args []string, version string) int {
 		arg := args[i]
 		switch arg {
 		case "-h", "--help":
-			fmt.Fprintln(os.Stdout, "usage: deeper doctor session <branch-id-or-path> [--zip] [--out PATH] [--export-v1 PATH.jsonl]")
+			fmt.Fprintln(os.Stdout, "usage: deepzora doctor session <branch-id-or-path> [--zip] [--out PATH] [--export-v1 PATH.jsonl]")
 			fmt.Fprintln(os.Stdout, "")
 			fmt.Fprintln(os.Stdout, "Bundles the session transcript, persistence sidecars, conflict diagnostics,")
-			fmt.Fprintln(os.Stdout, "and the recovery parent chain into a zip for support. Unlike `deeper doctor`,")
+			fmt.Fprintln(os.Stdout, "and the recovery parent chain into a zip for support. Unlike `deepzora doctor`,")
 			fmt.Fprintln(os.Stdout, "bundled transcripts are NOT redacted; share only with a trusted support channel.")
 			fmt.Fprintln(os.Stdout, "--export-v1 instead writes the session's current version as a schema-1 session")
 			fmt.Fprintln(os.Stdout, "that releases before v1.39.0 can open.")
@@ -395,14 +395,14 @@ func doctorSessionCommand(args []string, version string) int {
 				return 2
 			}
 			if ref != "" {
-				fmt.Fprintln(os.Stderr, "usage: deeper doctor session <branch-id-or-path> [--zip] [--out PATH]")
+				fmt.Fprintln(os.Stderr, "usage: deepzora doctor session <branch-id-or-path> [--zip] [--out PATH]")
 				return 2
 			}
 			ref = arg
 		}
 	}
 	if ref == "" {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor session <branch-id-or-path> [--zip] [--out PATH] [--export-v1 PATH.jsonl]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor session <branch-id-or-path> [--zip] [--out PATH] [--export-v1 PATH.jsonl]")
 		return 2
 	}
 	if exportPath != "" {

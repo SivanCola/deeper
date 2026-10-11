@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 )
 
 func completePluginHookExecutionConfig(h pluginpkg.Hook, root, goos string, mode ExecutionMode) HookConfig {

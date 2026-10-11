@@ -2,7 +2,7 @@ package acp
 
 import (
 	"context"
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func modelOnlyConfigDeltas(deltas []sessionConfigDelta) bool {

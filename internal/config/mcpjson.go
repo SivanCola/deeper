@@ -9,20 +9,20 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/mcpdiag"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/mcpdiag"
 )
 
-// mcpJSONFile is the project-root file Claude Code calls .mcp.json. Deeper reads
+// mcpJSONFile is the project-root file Claude Code calls .mcp.json. Deepzora reads
 // it so an MCP server already configured for Claude works here unchanged — the
 // server specs map field-for-field onto PluginEntry.
 const mcpJSONFile = ".mcp.json"
 
 // mcpServerSpec mirrors one entry of Claude Code's "mcpServers" map. The field
 // names and semantics match PluginEntry: command/args/env describe a local
-// stdio server; type/url/headers describe a remote one. Deeper also accepts
-// startup and call timeout fields as Deeper policy extensions.
+// stdio server; type/url/headers describe a remote one. Deepzora also accepts
+// startup and call timeout fields as Deepzora policy extensions.
 type mcpServerSpec struct {
 	Type                  string            `json:"type"`
 	Command               string            `json:"command"`
@@ -95,7 +95,7 @@ func specsToEntries(specs map[string]mcpServerSpec, skip map[string]bool) []Plug
 	return entries
 }
 
-// legacyConfigPath is the v0.x (TypeScript line) config file, ~/.deeper/config.json.
+// legacyConfigPath is the v0.x (TypeScript line) config file, ~/.deepzora/config.json.
 func legacyConfigPath() string {
 	if IsolatedHomeDir() != "" {
 		return ""
@@ -104,10 +104,10 @@ func legacyConfigPath() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".deeper", "config.json")
+	return filepath.Join(home, ".deepzora", "config.json")
 }
 
-// loadLegacyMCP reads the v0.x ~/.deeper/config.json and returns its enabled
+// loadLegacyMCP reads the v0.x ~/.deepzora/config.json and returns its enabled
 // MCP servers as PluginEntry values — both the canonical mcpServers map and the
 // older `mcp` string list (mcpServers wins on a name collision, matching v0.x;
 // servers listed in mcpDisabled are skipped) — so upgrading from v0.x keeps MCP
@@ -220,8 +220,8 @@ func pluginEntryFromMCPSpec(name string, s mcpServerSpec) PluginEntry {
 }
 
 // mergeMCPJSON appends servers from .mcp.json that the TOML config did not
-// already declare. deeper.toml's [[plugins]] win on a name collision: it is the
-// Deeper-specific, more explicit of the two, so it overrides the shared,
+// already declare. deepzora.toml's [[plugins]] win on a name collision: it is the
+// Deepzora-specific, more explicit of the two, so it overrides the shared,
 // checked-in .mcp.json rather than the other way round.
 func (c *Config) mergeMCPJSON(entries []PluginEntry) {
 	index := make(map[string]int, len(c.Plugins))
@@ -231,7 +231,7 @@ func (c *Config) mergeMCPJSON(entries []PluginEntry) {
 	for _, e := range entries {
 		if i, exists := index[e.Name]; exists {
 			// Project configuration always wins over user-global configuration.
-			// Within one project, deeper.toml remains more specific than the
+			// Within one project, deepzora.toml remains more specific than the
 			// Claude-compatible .mcp.json file.
 			if e.Source == MCPSourceProjectMCPJSON && !c.Plugins[i].Source.ProjectScoped() {
 				c.Plugins[i] = e
@@ -367,7 +367,7 @@ func removeMCPJSONApprovalModes(server map[string]json.RawMessage) error {
 		}
 	}
 
-	// Remove Deeper's retired approval_mode while preserving tool fields owned
+	// Remove Deepzora's retired approval_mode while preserving tool fields owned
 	// by other MCP clients.
 	for name, raw := range tools {
 		var fields map[string]json.RawMessage

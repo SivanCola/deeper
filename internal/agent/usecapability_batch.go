@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // ClassifyCall resolves only local metadata. Execution still rechecks the live

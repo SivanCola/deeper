@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/filelock"
-	"deeper/internal/fileutil"
-	"deeper/internal/permission"
-	"deeper/internal/workspaceid"
+	"deepzora/internal/filelock"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/permission"
+	"deepzora/internal/workspaceid"
 )
 
 // ProjectGrant is what the user granted one workspace folder: allow rules
@@ -40,7 +40,7 @@ const (
 // ErrProjectGrantsUnavailable is a record that could not be read or written.
 var ErrProjectGrantsUnavailable = errors.New("workspace grants unavailable")
 
-// ProjectGrantStore persists grants in <Deeper home>/project-grants.json.
+// ProjectGrantStore persists grants in <Deepzora home>/project-grants.json.
 type ProjectGrantStore struct {
 	path string
 }
@@ -69,7 +69,7 @@ func (s *ProjectGrantStore) Grant(root string) (ProjectGrant, error) {
 func (s *ProjectGrantStore) Update(root string, edit func(ProjectGrant) (ProjectGrant, error)) error {
 	ws := workspaceid.PathFingerprint(root)
 	if s.path == "" || ws == "" {
-		return fmt.Errorf("%w: no Deeper home or workspace", ErrProjectGrantsUnavailable)
+		return fmt.Errorf("%w: no Deepzora home or workspace", ErrProjectGrantsUnavailable)
 	}
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
 		return fmt.Errorf("%w: %w", ErrProjectGrantsUnavailable, err)

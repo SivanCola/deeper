@@ -36,7 +36,7 @@ export function SidebarRegion(props: SidebarRegionProps) {
       <aside className={props.className} aria-label={t("sidebar.navigation")}>
         <div className="sidebar__head" aria-hidden={props.collapsed}>
           <div className="sidebar__brand sidebar__brand--workbench">
-            <img src={logoWordmark} alt="Deeper" className="sidebar__brand-logo sidebar__brand-logo--workbench" draggable={false} />
+            <img src={logoWordmark} alt="Deepzora" className="sidebar__brand-logo sidebar__brand-logo--workbench" draggable={false} />
           </div>
         </div>
         <div className="sidebar__quick-actions">

@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 type queuedTurnKind int

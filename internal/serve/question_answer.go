@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // answer responds to an ask_request only after its transition is durable.

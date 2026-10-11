@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/usagecatalog"
+	"deepzora/internal/usagecatalog"
 )
 
 // DailyTokens is one day's token usage and turn count in a trend series.

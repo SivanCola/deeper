@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 )
 
 // historyLogProgress couples coverage to the end of the same validated batch.

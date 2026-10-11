@@ -184,12 +184,12 @@ export function mockTopicHistory(t0: number, topicId: string): HistoryMessage[] 
         {
           role: "user",
           content: [
-            "[[deeper-im]]",
+            "[[deepzora-im]]",
             "provider=lark",
             "label=Feishu / Lark",
             "sender=ou_mock_user_001",
             "chat=p2p 会话",
-            "[[/deeper-im]]",
+            "[[/deepzora-im]]",
             "你可以做什么",
           ].join("\n"),
         },
@@ -203,12 +203,12 @@ export function mockTopicHistory(t0: number, topicId: string): HistoryMessage[] 
         {
           role: "user",
           content: [
-            "[[deeper-im]]",
+            "[[deepzora-im]]",
             "provider=weixin",
             "label=微信",
             "sender=wxid_mock_user_001",
             "chat=单聊",
-            "[[/deeper-im]]",
+            "[[/deepzora-im]]",
             "帮我整理一下今天要做的事",
           ].join("\n"),
         },

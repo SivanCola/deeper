@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
-	"deeper/internal/secrets"
-	"deeper/internal/turnevent"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
+	"deepzora/internal/secrets"
+	"deepzora/internal/turnevent"
 )
 
 // explainStreamFailure explains a failure of the response body itself, or

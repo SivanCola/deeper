@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/filelock"
-	"deeper/internal/provider"
+	"deepzora/internal/filelock"
+	"deepzora/internal/provider"
 )
 
 // owner grants host authority for an exact instance. Tests use it wherever a

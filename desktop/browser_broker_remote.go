@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/remote/bootstrap"
+	"deepzora/internal/remote/bootstrap"
 )
 
 // serveCapabilityBrowser is the token a serve advertises on its token

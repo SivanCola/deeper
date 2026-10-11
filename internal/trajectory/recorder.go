@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/evidence"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/evidence"
 )
 
 // SchemaVersion identifies the record layout; bump on breaking changes.

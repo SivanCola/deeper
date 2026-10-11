@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type summaryProjectionCommit struct {

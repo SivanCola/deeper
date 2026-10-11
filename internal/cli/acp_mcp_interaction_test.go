@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"deeper/internal/acp"
-	"deeper/internal/plugin"
+	"deepzora/internal/acp"
+	"deepzora/internal/plugin"
 	"testing"
 )
 

@@ -25,7 +25,7 @@ export class FrameRuntime {
   private readonly borrowed = new Map<string, FrameSessionLease>();
   private readonly contexts = new Map<string, Promise<Context>>();
   private readonly objectSessions = new Set<string | undefined>();
-  private readonly group = `deeper-frame-owner-${randomUUID()}`;
+  private readonly group = `deepzora-frame-owner-${randomUUID()}`;
   private root?: Promise<Context>;
   private closed = false;
   private failed = false;
@@ -63,7 +63,7 @@ export class FrameRuntime {
     const key = `${sessionId ?? "root"}:${frameId}`;
     let existing = this.contexts.get(key);
     if (!existing) {
-      existing = this.send("Page.createIsolatedWorld", { frameId, worldName: "deeper-browser-v1", grantUniveralAccess: false }, sessionId).then(world => {
+      existing = this.send("Page.createIsolatedWorld", { frameId, worldName: "deepzora-browser-v1", grantUniveralAccess: false }, sessionId).then(world => {
         const { executionContextId } = world as { executionContextId: number };
         if (!Number.isInteger(executionContextId)) throw browserFailure("script_runtime_error", "isolated world returned no context");
         return { frameId, sessionId, executionContextId, sessionFrame };

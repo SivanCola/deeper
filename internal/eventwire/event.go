@@ -1,8 +1,8 @@
 package eventwire
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // Event is the JSON-friendly form shared by event frontends.

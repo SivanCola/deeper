@@ -7,11 +7,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/checkpoint"
-	"deeper/internal/config"
-	"deeper/internal/diff"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/config"
+	"deepzora/internal/diff"
+	"deepzora/internal/provider"
 )
 
 // checkpointManager owns the snapshot-based rewind bookkeeping: the per-session

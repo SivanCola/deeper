@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // TestLegacyMirrorReclaimRoutesTakeoverByPath proves a reclaim of a legacy

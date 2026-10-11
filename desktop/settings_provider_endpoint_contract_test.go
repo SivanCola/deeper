@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestProviderViewCarriesHiddenCatalogIdentity(t *testing.T) {

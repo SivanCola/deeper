@@ -34,8 +34,8 @@ async function publish(file) {
   const token = process.env.HOMEBREW_TAP_TOKEN;
   if (!token) throw new Error("HOMEBREW_TAP_TOKEN is required");
   const candidate = readFileSync(file, "utf8");
-  const repository = "https://api.github.com/repos/SivanCola/homebrew-deeper";
-  const api = `${repository}/contents/Casks/deeper.rb`;
+  const repository = "https://api.github.com/repos/SivanCola/homebrew-deepzora";
+  const api = `${repository}/contents/Casks/deepzora.rb`;
   const current = await request(`${api}?ref=main`, token, { allowMissing: true });
   if (!current) await request(`${repository}/branches/main`, token);
   const existing = current ? Buffer.from(current.content, "base64").toString("utf8") : "";
@@ -43,7 +43,7 @@ async function publish(file) {
   await request(api, token, {
     method: "PUT",
     body: JSON.stringify({
-      message: `chore: update Deeper to ${candidate.match(VERSION_RE).slice(1).join(".")}`,
+      message: `chore: update Deepzora to ${candidate.match(VERSION_RE).slice(1).join(".")}`,
       content: Buffer.from(candidate).toString("base64"),
       ...(current ? { sha: current.sha } : {}),
       branch: "main",

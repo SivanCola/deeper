@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func testTaskContext() context.Context {
@@ -327,7 +327,7 @@ func TestTaskToolRequiresTranscriptStore(t *testing.T) {
 	}
 }
 
-// TestTaskToolRunsEphemerallyWithoutParentSession mirrors headless `deeper run`:
+// TestTaskToolRunsEphemerallyWithoutParentSession mirrors headless `deepzora run`:
 // the store is wired but the context carries no parent session, so the sub-agent
 // must run without persistence and return its plain answer (no transcript ref).
 func TestTaskToolRunsEphemerallyWithoutParentSession(t *testing.T) {

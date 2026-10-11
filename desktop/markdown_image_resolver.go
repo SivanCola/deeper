@@ -95,7 +95,7 @@ func (a *App) ResolveMarkdownImageForTab(tabID, source string) MarkdownImageView
 	}
 	token := a.ensureMediaTokenStore().createMarkdownImage(path, info.Name(), mimeType, opened)
 	return MarkdownImageView{
-		URL:      "/__deeper_workspace_media/" + token + "/" + url.PathEscape(info.Name()),
+		URL:      "/__deepzora_workspace_media/" + token + "/" + url.PathEscape(info.Name()),
 		Filename: info.Name(),
 		Mime:     mimeType,
 		Size:     opened.Size(),

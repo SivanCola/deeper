@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/taskcontract"
+	"deepzora/internal/taskcontract"
 )
 
 func errUnknownQualityFloor(raw string) error {

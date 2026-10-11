@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/eventwire"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/provider"
 )
 
 // withForeignWriterLease models the local writer as a separate process. The
@@ -215,7 +215,7 @@ func TestHandoffReleasesLeaseAndGatesMutations(t *testing.T) {
 	}
 
 	status, body = f.post(t, "/submit", map[string]string{"input": "hello"})
-	if status != http.StatusConflict || !strings.Contains(body, "taken over by a local Deeper") {
+	if status != http.StatusConflict || !strings.Contains(body, "taken over by a local Deepzora") {
 		t.Fatalf("mirrored submit = %d %q, want 409 takeover refusal", status, body)
 	}
 
@@ -850,13 +850,13 @@ func TestResumeSpectatorMountOnMirroredSession(t *testing.T) {
 	payload, _ := json.Marshal(map[string]string{"input": "hello"})
 	req, _ := http.NewRequest(http.MethodPost, f.srv.URL+"/submit", strings.NewReader(string(payload)))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Deeper-Expected-Session-Path", agent.CanonicalSessionPath(other))
+	req.Header.Set("X-Deepzora-Expected-Session-Path", agent.CanonicalSessionPath(other))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	body, _ = readAll(resp)
-	if resp.StatusCode != http.StatusConflict || !strings.Contains(body, "taken over by a local Deeper") {
+	if resp.StatusCode != http.StatusConflict || !strings.Contains(body, "taken over by a local Deepzora") {
 		t.Fatalf("spectator submit = %d %q, want 409 takeover refusal", resp.StatusCode, body)
 	}
 }
@@ -886,7 +886,7 @@ func TestSpectatorSwitchCommandsPassTheFence(t *testing.T) {
 	payload, _ := json.Marshal(map[string]any{})
 	req, _ := http.NewRequest(http.MethodPost, f.srv.URL+"/new", strings.NewReader(string(payload)))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Deeper-Expected-Session-Path", agent.CanonicalSessionPath(other))
+	req.Header.Set("X-Deepzora-Expected-Session-Path", agent.CanonicalSessionPath(other))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)

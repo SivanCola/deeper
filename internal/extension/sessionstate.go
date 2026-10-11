@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 // SessionExtensionsVersion is the on-disk version of the sidecar state file.

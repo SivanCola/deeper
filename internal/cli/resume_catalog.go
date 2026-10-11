@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 // canonicalResumeScanCap bounds how many final-format catalog rows one resume

@@ -9,10 +9,10 @@ import (
 
 // displayPath rewrites absolute paths for safe reports:
 //   - under workspace → <workspace>/...
-//   - under Deeper home → <deeper-home>/...
+//   - under Deepzora home → <deepzora-home>/...
 //   - under OS home → ~/...
 //   - elsewhere → <external>/basename (no full external path, no username)
-func displayPath(p, workspace, home, deeperHome string) string {
+func displayPath(p, workspace, home, deepzoraHome string) string {
 	p = strings.TrimSpace(p)
 	if p == "" {
 		return ""
@@ -37,16 +37,16 @@ func displayPath(p, workspace, home, deeperHome string) string {
 			return "<workspace>/" + filepath.ToSlash(rel)
 		}
 	}
-	if rh := strings.TrimSpace(deeperHome); rh != "" {
+	if rh := strings.TrimSpace(deepzoraHome); rh != "" {
 		if abs, err := filepath.Abs(rh); err == nil {
 			rh = abs
 		}
 		rh = filepath.Clean(rh)
 		if clean == rh {
-			return "<deeper-home>"
+			return "<deepzora-home>"
 		}
 		if rel, err := filepath.Rel(rh, clean); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			return "<deeper-home>/" + filepath.ToSlash(rel)
+			return "<deepzora-home>/" + filepath.ToSlash(rel)
 		}
 	}
 	if home == "" {

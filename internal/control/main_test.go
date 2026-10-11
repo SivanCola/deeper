@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/testenv"
+	"deepzora/internal/testenv"
 
 	"go.uber.org/goleak"
 )
@@ -15,8 +15,8 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	if os.Getenv("DEEPER_CREDENTIALS_STORE") == "" {
-		_ = os.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	if os.Getenv("DEEPZORA_CREDENTIALS_STORE") == "" {
+		_ = os.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	}
 	goleak.VerifyTestMain(m, goleak.Cleanup(func(exitCode int) {
 		// A controller test that never closes its session service keeps the

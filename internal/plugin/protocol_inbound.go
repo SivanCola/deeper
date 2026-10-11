@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // progressTransport is optional so lightweight transports used by embedders and

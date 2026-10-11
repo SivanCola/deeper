@@ -201,9 +201,9 @@ test("managed Preview records bind every surface to one exact ordinal", () => {
     risks: [],
     contributors: [],
     links: {
-      github: "https://github.com/SivanCola/deeper/releases/tag/v1.19.0-preview.3",
-      compare: "https://github.com/SivanCola/deeper/compare/v1.19.0-preview.2...v1.19.0-preview.3",
-      download: "https://github.com/SivanCola/deeper/?download=desktop&channel=preview#start",
+      github: "https://github.com/SivanCola/deepzora/releases/tag/v1.19.0-preview.3",
+      compare: "https://github.com/SivanCola/deepzora/compare/v1.19.0-preview.2...v1.19.0-preview.3",
+      download: "https://github.com/SivanCola/deepzora/?download=desktop&channel=preview#start",
     },
   };
 
@@ -234,7 +234,7 @@ test("publication marker is bound to reviewed version, channel, SHA, and builds"
     channel: "preview",
     candidateSha: release.candidateSha,
     publishedAt: "2026-07-31T00:00:00.000Z",
-    releaseNotesUrl: "https://github.com/SivanCola/deeper/releases/tag/v1.19.0-preview.3/",
+    releaseNotesUrl: "https://github.com/SivanCola/deepzora/releases/tag/v1.19.0-preview.3/",
     builds: release.builds,
   };
 

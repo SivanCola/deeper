@@ -44,7 +44,7 @@ export async function enqueueComposerGuidance(binding: AppBindings, request: Pen
   // Structured invocations and image submissions require their own turn.
   if (queueOnly || structured) {
     if (target && !structured?.attachments?.length) {
-      if (!binding.EnqueueInboxFollowupForTarget) throw new Error("deeper_error:inbox_not_submitted — target submission unavailable");
+      if (!binding.EnqueueInboxFollowupForTarget) throw new Error("deepzora_error:inbox_not_submitted — target submission unavailable");
       return binding.EnqueueInboxFollowupForTarget(target, display, submit, structured?.invocations ?? [], key);
     }
     return enqueueInboxGuidance(binding, tabId, display, submit, structured, { idempotency: key });
@@ -53,7 +53,7 @@ export async function enqueueComposerGuidance(binding: AppBindings, request: Pen
     // Discovery is read-only. If no turn can be established, preserve the input
     // as a follow-up using the original session target and idempotency key.
     const followup = () => {
-      if (!binding.EnqueueInboxFollowupForTarget) throw new Error("deeper_error:inbox_not_submitted — target submission unavailable");
+      if (!binding.EnqueueInboxFollowupForTarget) throw new Error("deepzora_error:inbox_not_submitted — target submission unavailable");
       return binding.EnqueueInboxFollowupForTarget(target, display, submit, [], key);
     };
     const activeTurnId = await resolveActiveTurnId(binding, tabId, turnId).catch(() => undefined);

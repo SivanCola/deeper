@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/secrets"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
 )
 
 // fakeOverlay serves a fixed path→content map and records writes.

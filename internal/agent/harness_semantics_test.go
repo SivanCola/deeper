@@ -10,12 +10,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/fileops"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/event"
+	"deepzora/internal/fileops"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 func TestSameBatchReadEditBashEditUsesExecutionOrder(t *testing.T) {

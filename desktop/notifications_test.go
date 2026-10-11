@@ -3,9 +3,9 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/notify"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/notify"
 )
 
 type desktopRecordSink struct {

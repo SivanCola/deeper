@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/historywork"
+	"deepzora/internal/historywork"
 )
 
 type sessionMetadataRead struct {

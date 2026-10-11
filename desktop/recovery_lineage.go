@@ -4,9 +4,9 @@ import (
 	"errors"
 	"path/filepath"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioncatalog"
 )
 
 type RecoveryLineageMember struct {

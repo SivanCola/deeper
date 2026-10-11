@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 const interruptedRecoveryTag = "interrupted-turn-recovery"

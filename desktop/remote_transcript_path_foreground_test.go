@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/serve"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/serve"
+	"deepzora/internal/transcript"
 )
 
 // A Serve whose foreground is a path-backed session (the controller POST

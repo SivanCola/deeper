@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"slices"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 // CommitHistoricalVersion adopts a validated, unregistered content_ready target

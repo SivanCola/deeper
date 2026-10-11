@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // bindACPWriteAuthority issues a generation-bound write authority when ctrl is

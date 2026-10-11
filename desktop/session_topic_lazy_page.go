@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 	"encoding/json"
 )
 

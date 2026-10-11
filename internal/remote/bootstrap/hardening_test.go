@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/remote"
+	"deepzora/internal/remote"
 )
 
 func TestEnsureServeRejectsStalePortFile(t *testing.T) {
@@ -26,8 +26,8 @@ func TestEnsureServeRejectsStalePortFile(t *testing.T) {
 		switch {
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v deeper"):
-			return ok("/usr/bin/deeper\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+		case strings.Contains(cmd, "command -v deepzora"):
+			return ok("/usr/bin/deepzora\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
 		case strings.Contains(cmd, "nohup"):
 			if strings.Contains(cmd, "rm -f "+shellQuote(paths.PortFile)) {
 				_ = os.Remove(paths.PortFile) // model the generated launch command
@@ -53,8 +53,8 @@ func TestEnsureServeSerializesConcurrentClients(t *testing.T) {
 		switch {
 		case strings.Contains(cmd, "uname"):
 			return ok("Linux x86_64\n")
-		case strings.Contains(cmd, "command -v deeper"):
-			return ok("/usr/bin/deeper\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
+		case strings.Contains(cmd, "command -v deepzora"):
+			return ok("/usr/bin/deepzora\nnix v9.9.0\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
 		case strings.Contains(cmd, "nohup"):
 			launches.Add(1)
 			_ = os.WriteFile(paths.PortFile, []byte("127.0.0.1:45123\n"), 0o600)
@@ -101,9 +101,9 @@ func TestAutoInstallPreservesNPMFailureWhenNoUploadBinaryExists(t *testing.T) {
 	root := t.TempDir()
 	conn := newFakeConn(t, root, func(cmd string) (remote.ExecResult, error) {
 		switch {
-		case strings.Contains(cmd, "command -v deeper"):
+		case strings.Contains(cmd, "command -v deepzora"):
 			return ok("\n")
-		case strings.Contains(cmd, "npm i -g deeper"):
+		case strings.Contains(cmd, "npm i -g deepzora"):
 			return remote.ExecResult{Stdout: []byte("permission denied"), ExitCode: 1}, nil
 		default:
 			return ok("")
@@ -114,7 +114,7 @@ func TestAutoInstallPreservesNPMFailureWhenNoUploadBinaryExists(t *testing.T) {
 		t.Fatal("auto install unexpectedly succeeded")
 	}
 	message := err.Error()
-	if !strings.Contains(message, "npm install failed: permission denied") || !strings.Contains(message, "no local Deeper CLI") {
+	if !strings.Contains(message, "npm install failed: permission denied") || !strings.Contains(message, "no local Deepzora CLI") {
 		t.Fatalf("auto install hid the actionable failures: %v", err)
 	}
 }
@@ -125,11 +125,11 @@ func TestAutoInstallDownloadsVerifiedCrossPlatformBinaryAfterNPMFailure(t *testi
 	uploaded := uploadedBinPath(root)
 	conn := newFakeConn(t, root, func(cmd string) (remote.ExecResult, error) {
 		switch {
-		case strings.Contains(cmd, "npm i -g deeper"):
+		case strings.Contains(cmd, "npm i -g deepzora"):
 			return remote.ExecResult{Stdout: []byte("npm: command not found"), ExitCode: 127}, nil
 		case strings.Contains(cmd, "BIN=; if [ -x "+shellQuote(uploaded)):
 			return ok(uploaded + "\nnix v1.2.3\nportfile:yes\nsessionevents:yes\ndetachedheal:yes\ncaps:yes\n")
-		case strings.Contains(cmd, "command -v deeper"):
+		case strings.Contains(cmd, "command -v deepzora"):
 			return ok("\n")
 		default:
 			return ok("")
@@ -137,7 +137,7 @@ func TestAutoInstallDownloadsVerifiedCrossPlatformBinaryAfterNPMFailure(t *testi
 	})
 	fetched := false
 	bin, _, err := ensureBinary(context.Background(), conn, conn.fs, Options{
-		Install: InstallAuto, LocalBinary: "/local/deeper", LocalGOOS: "darwin", LocalGOARCH: "arm64",
+		Install: InstallAuto, LocalBinary: "/local/deepzora", LocalGOOS: "darwin", LocalGOARCH: "arm64",
 		ProductVersion: "v1.2.3",
 		FetchBinary: func(_ context.Context, version, goos, goarch string) ([]byte, error) {
 			fetched = true
@@ -159,15 +159,15 @@ func TestUploadInstallProbesFreshBinaryBeforeStalePathCandidate(t *testing.T) {
 	skipOnWindows(t)
 	root := t.TempDir()
 	uploaded := uploadedBinPath(root)
-	local := filepath.Join(root, "local-deeper")
+	local := filepath.Join(root, "local-deepzora")
 	if err := os.WriteFile(local, []byte("fresh-cli"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	probedUpload := false
 	conn := newFakeConn(t, root, func(cmd string) (remote.ExecResult, error) {
 		switch {
-		case strings.Contains(cmd, "command -v deeper"):
-			return ok("/usr/bin/deeper\nnix v1.0.0\nportfile:yes\nsessionevents:no\ndetachedheal:no\ncaps:no\n")
+		case strings.Contains(cmd, "command -v deepzora"):
+			return ok("/usr/bin/deepzora\nnix v1.0.0\nportfile:yes\nsessionevents:no\ndetachedheal:no\ncaps:no\n")
 		case strings.Contains(cmd, "BIN=; if [ -x "+shellQuote(uploaded)):
 			probedUpload = true
 			if _, err := os.Stat(uploaded); err != nil {
@@ -192,13 +192,13 @@ func TestUploadInstallProbesFreshBinaryBeforeStalePathCandidate(t *testing.T) {
 func TestNPMInstallProbesFreshGlobalBinaryBeforeStalePathCandidate(t *testing.T) {
 	skipOnWindows(t)
 	root := t.TempDir()
-	const installed = "/opt/npm/bin/deeper"
+	const installed = "/opt/npm/bin/deepzora"
 	probedGlobal := false
 	conn := newFakeConn(t, root, func(cmd string) (remote.ExecResult, error) {
 		switch {
-		case strings.Contains(cmd, "command -v deeper"):
-			return ok("/usr/bin/deeper\nnix v1.0.0\nportfile:yes\nsessionevents:no\ndetachedheal:no\ncaps:no\n")
-		case strings.Contains(cmd, "npm i -g deeper"):
+		case strings.Contains(cmd, "command -v deepzora"):
+			return ok("/usr/bin/deepzora\nnix v1.0.0\nportfile:yes\nsessionevents:no\ndetachedheal:no\ncaps:no\n")
+		case strings.Contains(cmd, "npm i -g deepzora"):
 			return ok("installed\n")
 		case strings.Contains(cmd, `BIN=; P="$(npm prefix -g 2>/dev/null)"`):
 			probedGlobal = true

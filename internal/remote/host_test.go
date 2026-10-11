@@ -3,7 +3,7 @@ package remote
 import (
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestParseTarget(t *testing.T) {

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioninbox"
 )
 
-const botInboxMessageExtraKey = "deeper.bot.inbound.v1"
+const botInboxMessageExtraKey = "deepzora.bot.inbound.v1"
 
 type durableBotMessage struct {
 	Platform       Platform `json:"platform"`

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func TestArchiveRetiresCachedCanonicalRuntime(t *testing.T) {

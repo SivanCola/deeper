@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // toolCallPlan is the resolved, policy-checked state owned by one executeOne.

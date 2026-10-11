@@ -2,11 +2,11 @@ package boot
 
 import (
 	"context"
-	"deeper/internal/attachment"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/imageinput"
-	"deeper/internal/provider"
+	"deepzora/internal/attachment"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/provider"
 	"fmt"
 )
 

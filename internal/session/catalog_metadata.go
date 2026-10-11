@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
 )
 
 // Rebuild authored previews, retracted input/turn metadata, title sequencing,

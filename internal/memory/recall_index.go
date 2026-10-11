@@ -7,7 +7,7 @@ package memory
 import (
 	"strings"
 
-	"deeper/internal/retrieval"
+	"deepzora/internal/retrieval"
 )
 
 // RecallIndex is the prebuilt retrieval state for one immutable Set snapshot.

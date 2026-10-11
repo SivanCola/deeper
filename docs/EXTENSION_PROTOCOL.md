@@ -1,12 +1,12 @@
-# Deeper Extension Protocol v2
+# Deepzora Extension Protocol v2
 
-The Extension Protocol is the stable wire contract between Deeper (the
+The Extension Protocol is the stable wire contract between Deepzora (the
 **host**) and code extensions running as out-of-process **sidecars**. It is
 how an installed plugin with a `runtime` block intercepts runtime events,
 owns replacement strategies, contributes streaming model providers, and
 publishes structured UI — without ever linking into the host binary.
 
-- Protocol ID: `deeper.extension.v2`
+- Protocol ID: `deepzora.extension.v2`
 - Machine-readable schema: `internal/extension/protocol/schema.generated.json`
 - Method/event/limit/error index: `docs/EXTENSION_PROTOCOL.generated.md`
   (generated, drift-checked in CI)
@@ -143,7 +143,7 @@ including an accidental semantic change — fails the build.
 
 ## Security model
 
-A code extension is **full trust**: it runs outside the Deeper sandbox
+A code extension is **full trust**: it runs outside the Deepzora sandbox
 with the unfiltered inherited environment, can read the full session and
 environment, can bypass permissions, and can operate the machine directly.
 Installing, updating, replacing, or `--link`ing a plugin with a `runtime`

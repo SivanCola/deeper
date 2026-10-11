@@ -55,7 +55,7 @@ type Checkpoint struct {
   `files/NNNN.before`。新捕获不再把同一份 pre-image 重复写入内容寻址 blob。
   升级后仍可读取 v1/v2 JSON 和 blob；事务 / undo 载荷仍可使用 blob。每个 v3
   回合还会写入一个不含文件载荷的 v2 兼容标记（`turn-<turn>.json`）。降级到旧版
-  Deeper 后，旧版可以据此保持 turn 编号单调递增，但不能恢复该标记对应的 v3
+  Deepzora 后，旧版可以据此保持 turn 编号单调递增，但不能恢复该标记对应的 v3
   文件快照。该 marker 同时是 v3 回合的存活标记：旧版截断 marker 后，后续升级会
   忽略遗留目录，而不会把未来回合重新加载出来。
 - **保留策略**：默认保留最近 100 个 v3 回合目录，并对原始 v3 pre-image 使用
@@ -110,7 +110,7 @@ func (c *Controller) UndoRewind(transactionID string) (RewindResult, error)
 
 - **Bash / 外部副作用**：`rm`、`mv`、数据库写入、部署等不会被跟踪，也无法通过 rewind 撤销，这与 Claude Code 一致。
 - **回合之间的外部编辑**：恢复前会比较当前文件的存在性、SHA-256 和 mode 与
-  Deeper 最后一次 after-image；不匹配时报告冲突，不会覆盖。
+  Deepzora 最后一次 after-image；不匹配时报告冲突，不会覆盖。
 - **删除**：编辑工具执行的删除可以恢复，因为快照保存了原内容；`bash rm` 无法恢复。
 - **大文件**：保存完整快照，但单文件捕获上限为 32 MiB。回合数和软字节上限共同
   限制历史占用；当前回合或事务保护中的回合可以暂时超过字节上限。

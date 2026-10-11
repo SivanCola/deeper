@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // probeResult captures the cache-relevant numbers from one real completion.
@@ -22,7 +22,7 @@ type probeResult struct {
 
 // TestRealDeepSeekCacheProbe is a build-tagged, env-gated end-to-end probe
 // against the live DeepSeek API. It answers, with real numbers:
-//  1. does DeepSeek's auto cache actually serve deeper's request shape, and how
+//  1. does DeepSeek's auto cache actually serve deepzora's request shape, and how
 //     much does a repeated prefix hit;
 //  2. does deepseek-v4-flash even return reasoning_content (i.e. is the round-trip
 //     amplifier real for this model);
@@ -150,7 +150,7 @@ func TestRealDeepSeekCacheProbe(t *testing.T) {
 	// DeepSeek thinking mode requires provider-issued reasoning_content to be
 	// replayed on assistant tool_calls turns. These histories intentionally
 	// produce different wire requests: withR carries the reasoning text, while
-	// noR exercises Deeper's empty-key recovery fallback. Warm each prefix once,
+	// noR exercises Deepzora's empty-key recovery fallback. Warm each prefix once,
 	// then measure the second (cache-eligible) call.
 	if _, err := send(withR); err != nil {
 		t.Fatalf("probe2 required reasoning replay: %v", err)

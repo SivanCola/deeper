@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 // CompleteSubtaskTool optionally records the child's own completion report.

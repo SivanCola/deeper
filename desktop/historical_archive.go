@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 // Explicit source archives stage content as archived from the beginning. They

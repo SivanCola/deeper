@@ -26,7 +26,7 @@ func TestPurgeFilesystemCrashRestart(t *testing.T) {
 				ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 				defer cancel()
 				cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestPurgeFilesystemCrashHelper$")
-				cmd.Env = append(os.Environ(), "DEEPER_PURGE_TEST_ROOT="+root, "DEEPER_PURGE_TEST_POINT="+point)
+				cmd.Env = append(os.Environ(), "DEEPZORA_PURGE_TEST_ROOT="+root, "DEEPZORA_PURGE_TEST_POINT="+point)
 				output, err := cmd.CombinedOutput()
 				var exit *exec.ExitError
 				if wantCrash {
@@ -61,11 +61,11 @@ func TestPurgeFilesystemCrashRestart(t *testing.T) {
 }
 
 func TestPurgeFilesystemCrashHelper(t *testing.T) {
-	root := os.Getenv("DEEPER_PURGE_TEST_ROOT")
+	root := os.Getenv("DEEPZORA_PURGE_TEST_ROOT")
 	if root == "" {
 		return
 	}
-	point := os.Getenv("DEEPER_PURGE_TEST_POINT")
+	point := os.Getenv("DEEPZORA_PURGE_TEST_POINT")
 	err := NewFilesystemPersistence(root).purgeWithTombstone(t.Context(), "victim", func() error {
 		return os.WriteFile(filepath.Join(root, "tombstone"), []byte("deleted"), 0600)
 	}, func(phase string) {

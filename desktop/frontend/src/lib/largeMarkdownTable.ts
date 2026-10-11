@@ -60,10 +60,10 @@ function fenceEnd(line: string, fence: { marker: string; length: number }): bool
 
 function unusedMarkerPrefix(text: string): string {
   let suffix = 0;
-  let prefix = "DEEPERLARGETABLE";
+  let prefix = "DEEPZORALARGETABLE";
   while (text.includes(prefix)) {
     suffix += 1;
-    prefix = `DEEPERLARGETABLE${suffix}`;
+    prefix = `DEEPZORALARGETABLE${suffix}`;
   }
   return prefix;
 }

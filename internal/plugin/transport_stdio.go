@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/proc"
-	"deeper/internal/sandbox"
-	"deeper/internal/secrets"
+	"deepzora/internal/proc"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 	gracefulCloseWaitBudget = 750 * time.Millisecond
 )
 
-// stdioTransport owns the Deeper-specific subprocess lifecycle. MCP framing,
+// stdioTransport owns the Deepzora-specific subprocess lifecycle. MCP framing,
 // concurrent request correlation, cancellation, and server requests are owned
 // by the official SDK's IOTransport.
 type stdioTransport struct {
@@ -159,7 +159,7 @@ func prepareMCPPrivateStateForOS(s Spec, processSandbox sandbox.Spec, env []stri
 		}
 	}
 	// Windows stdio processes are currently unsandboxed and must keep the host's
-	// short temporary directory. Nesting TEMP below Deeper's workspace-scoped
+	// short temporary directory. Nesting TEMP below Deepzora's workspace-scoped
 	// state path can exceed the 108-byte Unix-domain-socket limit used by MCP
 	// servers such as MATLAB before their initialize response is written.
 	for key, value := range privateEnv {
@@ -281,7 +281,7 @@ func stdioWorkingDir(s Spec) string {
 // enrichStdioShellPATH probes the user's interactive login shell for its PATH
 // and prepends those directories to the current environment. The result is the
 // subprocess environment with a PATH that matches what the user sees in their
-// terminal, even when Deeper was launched from the Finder / Dock / open(1).
+// terminal, even when Deepzora was launched from the Finder / Dock / open(1).
 func enrichStdioShellPATH(ctx context.Context, env []string) []string {
 	currentPath, _ := envValue(env, "PATH")
 	if shellPath := strings.TrimSpace(stdioShellPATH(ctx)); shellPath != "" {
@@ -406,7 +406,7 @@ func defaultStdioShellPATH(ctx context.Context) string {
 	if shell == "" {
 		return ""
 	}
-	const marker = "__DEEPER_PATH__="
+	const marker = "__DEEPZORA_PATH__="
 	script := "printf '\\n" + marker + "%s\\n' \"$PATH\""
 	for _, args := range [][]string{
 		{"-l", "-i", "-c", script},

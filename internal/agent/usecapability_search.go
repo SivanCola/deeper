@@ -7,9 +7,9 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/capability"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 type capabilitySearchResult struct {

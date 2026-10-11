@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/topicstate"
+	"deepzora/internal/config"
+	"deepzora/internal/topicstate"
 )
 
 func seedLegacyTopicBridge(t *testing.T, workspaceRoot string) {

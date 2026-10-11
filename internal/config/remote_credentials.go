@@ -26,13 +26,13 @@ type remoteCredentialSnapshot struct {
 	set   bool
 }
 
-// RemotePasswordCredentialEnvName returns the Deeper-owned credential slot
+// RemotePasswordCredentialEnvName returns the Deepzora-owned credential slot
 // for a remote host password without exposing the user-supplied label.
 func RemotePasswordCredentialEnvName(hostID string) string {
 	return remoteCredentialEnvName(hostID, remotePasswordCredentialKind)
 }
 
-// RemotePassphraseCredentialEnvName returns the Deeper-owned credential slot
+// RemotePassphraseCredentialEnvName returns the Deepzora-owned credential slot
 // for a remote host private-key passphrase.
 func RemotePassphraseCredentialEnvName(hostID string) string {
 	return remoteCredentialEnvName(hostID, remotePassphraseCredentialKind)
@@ -40,10 +40,10 @@ func RemotePassphraseCredentialEnvName(hostID string) string {
 
 func remoteCredentialEnvName(hostID, kind string) string {
 	sum := sha256.Sum256([]byte(strings.TrimSpace(hostID)))
-	return fmt.Sprintf("DEEPER_REMOTE_%X_%s", sum[:8], kind)
+	return fmt.Sprintf("DEEPZORA_REMOTE_%X_%s", sum[:8], kind)
 }
 
-// IsGeneratedRemoteCredential reports whether key is a Deeper-owned slot
+// IsGeneratedRemoteCredential reports whether key is a Deepzora-owned slot
 // for this host. User-managed/shared environment variables are never deleted.
 func IsGeneratedRemoteCredential(hostID, key string) bool {
 	key = strings.TrimSpace(key)
@@ -75,7 +75,7 @@ func UnusedGeneratedRemoteCredentialChanges(c *Config, candidates []string) []Cr
 	return changes
 }
 
-// EditUserConfigWithCredentials updates config and its Deeper-owned secret
+// EditUserConfigWithCredentials updates config and its Deepzora-owned secret
 // slots as one recoverable operation. Credential writes happen before SaveTo;
 // any later failure restores every touched slot, keeping plaintext out of TOML.
 func EditUserConfigWithCredentials(mutate func(*Config) ([]CredentialChange, error)) error {

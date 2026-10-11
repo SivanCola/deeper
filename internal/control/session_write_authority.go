@@ -6,9 +6,9 @@ import (
 	"errors"
 	"reflect"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 // BindSessionWriteAuthority issues a generation-bound write authority from

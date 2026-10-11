@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/mcpinteraction"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/mcpinteraction"
 )
 
-const mcpInteractionMethod = "_deeper.io/mcp/request_interaction"
+const mcpInteractionMethod = "_deepzora.com/mcp/request_interaction"
 
 func (s *updateSink) bindControllerPrompts(ctrl *control.Controller, interactions bool) {
 	s.bindApprove(ctrl.Approve)
@@ -56,7 +56,7 @@ type MCPInteractionResult struct {
 }
 
 func clientMCPInteractionSupported(caps ClientCapabilities) bool {
-	vendor, ok := caps.Meta["deeper.io"].(map[string]any)
+	vendor, ok := caps.Meta["deepzora.com"].(map[string]any)
 	if !ok {
 		return false
 	}

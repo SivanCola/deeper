@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"deeper/internal/ablation"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/ablation"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // gateSubagentArm refuses skills that would spawn a child while the subagent

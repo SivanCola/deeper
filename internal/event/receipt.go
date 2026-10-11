@@ -1,6 +1,6 @@
 package event
 
-import "deeper/internal/checkpoint"
+import "deepzora/internal/checkpoint"
 
 // CompletionReceipt is the user-facing completion record on TurnDone: what the
 // host could verify about the turn's work, and — the part no prose reliably

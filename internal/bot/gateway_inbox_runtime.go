@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 func (gw *BotGateway) dispatchQueueResult(ctx context.Context, adapter Adapter, key string, msg InboundMessage, cleanup func(), result QueueResult) {

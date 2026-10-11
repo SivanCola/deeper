@@ -8,16 +8,16 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/capability"
-	"deeper/internal/event"
-	"deeper/internal/imageinput"
-	"deeper/internal/plugin"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/event"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/plugin"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestPlannerFirstOnDemandMCPCallPreservesImages(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	payload := base64.StdEncoding.EncodeToString([]byte("png-bytes"))
 	var toolCalls atomic.Int32
 	server := imageMCPServer(t, &toolCalls, payload)

@@ -1,15 +1,15 @@
 # Recovery and diagnostics (v1.20+)
 
-Deeper no longer ships a product `deeper-guard` recovery shell. Crash
+Deepzora no longer ships a product `deepzora-guard` recovery shell. Crash
 records, pending-update state, and configuration problems do not change the
 next launch into a global Safe Mode.
 
 ## Prefer these tools
 
 ```text
-deeper doctor
-deeper doctor repair
-deeper crash report   # when available in your build
+deepzora doctor
+deepzora doctor repair
+deepzora crash report   # when available in your build
 ```
 
 - **doctor** inspects configuration, derived desktop state, and common install
@@ -50,14 +50,14 @@ Windows and Linux use a versioned install root:
 
 ```text
 InstallRoot/
-  deeper-launcher[.exe]
-  Deeper.exe                 # Windows portable / Start Menu alias
-  deeper[-cli.exe]
+  deepzora-launcher[.exe]
+  Deepzora.exe                 # Windows portable / Start Menu alias
+  deepzora[-cli.exe]
   current.json
   versions/<version>/
-    deeper-desktop[.exe]
-    deeper-cli[.exe]
-    deeper-update-helper[.exe]
+    deepzora-desktop[.exe]
+    deepzora-cli[.exe]
+    deepzora-update-helper[.exe]
 ```
 
 The thin launcher only reads `current.json` and starts the active desktop. It
@@ -69,12 +69,12 @@ If an older client is stuck on a pending update or Safe Mode loop:
 
 1. Download the latest signed installer / package from the official download page.
 2. Install it directly over the current copy (Windows: double-click; macOS:
-   replace `Deeper.app`). Do not uninstall first: keeping the existing install
+   replace `Deepzora.app`). Do not uninstall first: keeping the existing install
    root lets the compatibility migrator prove which stale transaction it owns.
-3. Start Deeper once and confirm **Settings > Updates** shows the installed
+3. Start Deepzora once and confirm **Settings > Updates** shows the installed
    version before trying another in-app update.
 4. Compatibility payloads may still include a one-shot binary named
-   `deeper-guard` that only migrates the flat layout into `current.json` and
+   `deepzora-guard` that only migrates the flat layout into `current.json` and
    then deletes itself. That binary is not the old Guard product.
 
 Do not manually delete `pending-update.json`, locks, or AppData as the recovery
@@ -87,19 +87,19 @@ not finished (`pending update already exists`, `awaiting startup health`, or
 `handoff backup` errors):
 
 1. Click **Discard previous update** in the banner or Settings, then **Retry**.
-2. If that button is missing or fails, quit Deeper fully and start it once so
+2. If that button is missing or fails, quit Deepzora fully and start it once so
    startup can commit or retire the probationary transaction, then retry the
    in-app update.
 3. If in-app update still fails, download the latest signed installer from the
    official download page and install it **over** the current copy without
    uninstalling first.
-4. On macOS, also allow Deeper under System Settings → Privacy & Security →
+4. On macOS, also allow Deepzora under System Settings → Privacy & Security →
    App Management when the dialog appears; a leftover
-   `Deeper.app.deeper-update-backup` that TCC will not let the app remove
+   `Deepzora.app.deepzora-update-backup` that TCC will not let the app remove
    may still require the official installer path.
 
-If the Windows installer reports `Deeper layout activation failed`, expand
-the installer details and copy the lines under `Deeper layout activator
+If the Windows installer reports `Deepzora layout activation failed`, expand
+the installer details and copy the lines under `Deepzora layout activator
 output:`. Current installers preserve the activator's concrete error instead of
 showing only exit code 1.
 
@@ -108,7 +108,7 @@ showing only exit code 1.
 macOS keeps LaunchServices launching the desktop app bundle directly. Updates
 replace the signed `.app` atomically; there is no Guard process.
 
-After the replacement window becomes visible, Deeper commits only the exact
+After the replacement window becomes visible, Deepzora commits only the exact
 pending transaction captured before launch. Legacy transactions that lack a
 backup digest, or whose backup is already gone, are retired automatically only
 after the running executable is proven to belong to that target bundle. Any

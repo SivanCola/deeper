@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/remote/bootstrap"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/remote/bootstrap"
 )
 
 func TestTakeoverOwnershipEncodesOpaqueSessionPath(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestBuiltinContractSchemasDeclareRequiredArray(t *testing.T) {

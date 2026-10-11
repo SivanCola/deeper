@@ -3,9 +3,9 @@ package boot
 import (
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func authenticationStateForModelEntry(entry *config.ProviderEntry, modelRef string) control.AuthenticationState {

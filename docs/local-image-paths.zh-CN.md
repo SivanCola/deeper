@@ -6,7 +6,7 @@
 
 ## Composer 附件
 
-粘贴或拖入的文件先保存在发起操作的标签页工作区中的 `.deeper/attachments`，再作为不可变原图写入会话内容存储。保存、预览和原生视觉读取在异步操作期间始终绑定同一个标签页及工作区；切换标签页不会把结果写入新激活的草稿。目标绑定操作会在浏览器读取文件或计算摘要前协商 `attachments-v2`；旧标签页 API 保留 `attachments-v1` 能力名，两条路径都不信任客户端自报摘要。历史 `@.deeper/attachments/...` 引用无需改写即可继续读取。已接纳图片的历史卡片只带 digest；桌面通过 `ReadSessionAttachmentForTab` 在会话内容图授权后再加载原图。远程 Serve 不声明这两项本地暂存能力。
+粘贴或拖入的文件先保存在发起操作的标签页工作区中的 `.deepzora/attachments`，再作为不可变原图写入会话内容存储。保存、预览和原生视觉读取在异步操作期间始终绑定同一个标签页及工作区；切换标签页不会把结果写入新激活的草稿。目标绑定操作会在浏览器读取文件或计算摘要前协商 `attachments-v2`；旧标签页 API 保留 `attachments-v1` 能力名，两条路径都不信任客户端自报摘要。历史 `@.deepzora/attachments/...` 引用无需改写即可继续读取。已接纳图片的历史卡片只带 digest；桌面通过 `ReadSessionAttachmentForTab` 在会话内容图授权后再加载原图。远程 Serve 不声明这两项本地暂存能力。
 
 显式图片附件会在轮次被接纳及草稿被清空之前完成读取、完整解码和持久化。图片缺失、不可读、路径不安全、格式不支持、损坏、超限、取消或读取期间发生变化时，整轮会在模型和工具启动前被拒绝。Composer 保留文字和附件，用户可恢复文件或重新添加后重试。普通非图片引用保持原有行为。接纳之后，原工作区文件被修改或删除不会改变已持久化的原图。
 
@@ -24,7 +24,7 @@ OpenAI Chat 和受支持的 Anthropic 适配器已有工具图片转发。Respon
 | --- | --- | --- | --- |
 | 旧 `images []string`（data URL / HTTP / Files ID） | 写入 | 原样读取，不批量改写 | 原样读取 |
 | 新 `image_inputs` 附件引用 | 不写入 | StorageRevision 3 后写入新消息 | 拒绝会话（`ErrUnsupportedVersion`） |
-| 工作区 `.deeper/attachments/...` 文件 | 写入 | 仍是 Composer/CLI 入口；接纳后的对象在 `.content-v1` | 按文件读取 |
+| 工作区 `.deepzora/attachments/...` 文件 | 写入 | 仍是 Composer/CLI 入口；接纳后的对象在 `.content-v1` | 按文件读取 |
 | 队列 schema 2 | 写入 | 写打开时升到 3 | 可读可写 |
 | 带 `imageInputs` 的队列 schema 3 | 不写入 | 写入 | 只读暂停 |
 
@@ -37,7 +37,7 @@ OpenAI Chat 和受支持的 Anthropic 适配器已有工具图片转发。Respon
 显式开启的实测使用随机短码和彩色色块生成图片，读取已配置的官方 DeepSeek 凭据但不打印凭据，验证三种原生协议及显式、自动摘要服务路线，并更换图片检查新内容：
 
 ```sh
-DEEPER_LIVE_TOOL_IMAGES=1 go test -tags live ./internal/imageinput -run TestLiveToolImages -v -count=1
+DEEPZORA_LIVE_TOOL_IMAGES=1 go test -tags live ./internal/imageinput -run TestLiveToolImages -v -count=1
 ```
 
 实测的 `auto` 用例注入同服务商选择器以验证服务路线；真实配置目录的选择由 Boot 负责。实测会产生 API 用量。请求成功不等于读图成功，必须通过图片内容断言。OCR 仍可能误认相似字符，摘要不能替代逐像素的视觉输入。

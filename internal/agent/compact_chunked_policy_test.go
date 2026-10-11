@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 func TestPressureCompactionDoesNotCallChunkedFold(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension/rpcwire"
+	"deepzora/internal/extension/rpcwire"
 )
 
 type harness struct {

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestOfficialDeepSeekTemplateUsesCurrentCatalog(t *testing.T) {

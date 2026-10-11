@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 )
 
 func TestPluginsSlashShowsInstalledPluginDetails(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	root := filepath.Join(home, "plugins", "superpowers")
 	writePluginTestFile(t, filepath.Join(root, pluginpkg.CodexManifest), `{
 	  "name": "superpowers",

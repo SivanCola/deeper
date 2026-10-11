@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/diff"
-	fileenc "deeper/internal/fileutil/encoding"
+	"deepzora/internal/diff"
+	fileenc "deepzora/internal/fileutil/encoding"
 )
 
 func write(t *testing.T, p, s string) {

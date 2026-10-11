@@ -3,7 +3,7 @@ package session
 import (
 	"context"
 	"database/sql"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 )
 
 // ToolObservation separates execution evidence from resident result bodies.

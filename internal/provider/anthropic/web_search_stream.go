@@ -3,7 +3,7 @@ package anthropic
 import (
 	"encoding/json"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type searchBlock struct {

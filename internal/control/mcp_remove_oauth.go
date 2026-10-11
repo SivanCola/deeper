@@ -3,9 +3,9 @@ package control
 import (
 	"fmt"
 
-	"deeper/internal/config"
-	"deeper/internal/mcpdiag"
-	"deeper/internal/plugin"
+	"deepzora/internal/config"
+	"deepzora/internal/mcpdiag"
+	"deepzora/internal/plugin"
 )
 
 type removedMCPState struct {
@@ -32,7 +32,7 @@ func reconcileRemovedMCPState(workspace, name string) removedMCPState {
 		remainingResource = mcpdiag.HTTPMCPOAuthResource(state.fallback.Type, state.fallback.URL, mcpdiag.HasAuthConfig(state.fallback.Headers, state.fallback.Env, state.fallback.URL))
 	}
 	if _, err := plugin.ReconcileHTTPMCPOAuthAfterRemoval(plugin.Spec{
-		Name: name, StateDir: plugin.MCPStateDir(config.DeeperHomeDir(), workspace, name),
+		Name: name, StateDir: plugin.MCPStateDir(config.DeepzoraHomeDir(), workspace, name),
 	}, remainingResource); err != nil {
 		state.cleanupErr = fmt.Errorf("reconcile OAuth state after removing MCP server %q: %w", name, err)
 	}

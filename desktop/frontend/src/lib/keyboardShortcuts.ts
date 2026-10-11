@@ -58,8 +58,8 @@ export type ShortcutDefinition = {
   allowedKeys?: readonly string[];
 };
 
-const SHORTCUTS_STORAGE_KEY = "deeper.customShortcuts";
-const SHORTCUTS_CHANGED_EVENT = "deeper:shortcuts-changed";
+const SHORTCUTS_STORAGE_KEY = "deepzora.customShortcuts";
+const SHORTCUTS_CHANGED_EVENT = "deepzora:shortcuts-changed";
 
 export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
   {
@@ -97,7 +97,7 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
   },
   // Composer-owned shortcuts are handled inside its keydown path rather than
   // useGlobalShortcut. Undo/redo stay locked to the platform editing standard
-  // so native textarea history and Deeper transactions share one chord.
+  // so native textarea history and Deepzora transactions share one chord.
   {
     action: "composer.send",
     section: "session",

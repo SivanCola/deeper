@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestCurrentMessageOriginIsAuthoritativeAcrossDesktopHistory(t *testing.T) {

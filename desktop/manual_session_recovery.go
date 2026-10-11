@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // Selecting a persisted creation's own tab must not build another controller

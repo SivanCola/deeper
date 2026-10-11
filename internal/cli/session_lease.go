@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 func persistCLIModelSelection(ctrl control.SessionAPI) error {
@@ -41,13 +41,13 @@ func cliControllerHasActiveRuntimeWork(ctrl control.SessionAPI) bool {
 	return status.Running || status.PendingPrompt || status.BackgroundJobs > 0
 }
 
-// sessionLeaseResumeRefusal is the startup-time refusal for `deeper
-// [--resume|--continue]` and `deeper run --resume/--continue`: it names the
+// sessionLeaseResumeRefusal is the startup-time refusal for `deepzora
+// [--resume|--continue]` and `deepzora run --resume/--continue`: it names the
 // holder and offers the two ways out (close the holder, or continue in a
 // duplicated session via --copy).
 func sessionLeaseResumeRefusal(err error) string {
 	return control.SessionInUseMessage(err) +
-		"; close the other Deeper window or process, or rerun with --copy to continue in a duplicated session"
+		"; close the other Deepzora window or process, or rerun with --copy to continue in a duplicated session"
 }
 
 // sessionLeaseHeldNotice is the in-TUI refusal for /resume and /switch, where

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/packagegrant"
+	"deepzora/internal/packagegrant"
 )
 
 const (

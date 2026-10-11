@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/historywork"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/historywork"
+	"deepzora/internal/session"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -621,7 +621,7 @@ func (a *App) CopySessionTarget(selector SessionSelector, operationID string) (S
 }
 
 func (a *App) copyLegacySessionTarget(target SessionTarget, child session.SessionRef, operationID, cwd string) error {
-	container, err := os.MkdirTemp("", "deeper-legacy-copy-")
+	container, err := os.MkdirTemp("", "deepzora-legacy-copy-")
 	if err != nil {
 		return err
 	}

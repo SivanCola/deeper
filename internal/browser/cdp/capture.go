@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 // downloadPollInterval is how often a waiting browser_download re-reads the

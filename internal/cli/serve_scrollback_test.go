@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/sandbox"
-	"deeper/internal/serve"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/serve"
 )
 
 // The line serve prints goes into a tmux pane, and a sandboxed command (network
@@ -26,7 +26,7 @@ func TestSandboxCannotReadServeTokenFromScrollback(t *testing.T) {
 	if err != nil {
 		t.Skip("no tmux")
 	}
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	for _, mode := range []string{"none", "token"} {
 		ctrl := newOwnedTestController(t, control.Options{SessionDir: t.TempDir()})
 		srv := serve.New(ctrl, serve.NewBroadcaster(), config.ServeConfig{AuthMode: mode})

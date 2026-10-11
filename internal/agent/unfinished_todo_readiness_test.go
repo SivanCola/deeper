@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // TestOpenTurnMayEndWithIncompleteTodosAfterWrite proves an ordinary session

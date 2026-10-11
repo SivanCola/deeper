@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	fileenc "deeper/internal/fileutil/encoding"
+	fileenc "deepzora/internal/fileutil/encoding"
 )
 
 // load arbitrates legacy metadata, expired metadata, and v3 turn directories

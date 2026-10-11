@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 // pathBoundWriter wraps a built-in write tool so each Execute stays inside a

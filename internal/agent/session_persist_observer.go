@@ -3,7 +3,7 @@ package agent
 import (
 	"os"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // SessionPersistEvent is emitted only after the authoritative transcript,

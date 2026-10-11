@@ -9,14 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"deeper/internal/config"
-	"deeper/internal/desktopinstance"
-	"deeper/internal/installlayout"
-	"deeper/internal/proc"
+	"deepzora/internal/config"
+	"deepzora/internal/desktopinstance"
+	"deepzora/internal/installlayout"
+	"deepzora/internal/proc"
 )
 
 func coordinatedLaunch(root string, args []string) (bool, int) {
-	interactive := os.Getenv("DEEPER_NONINTERACTIVE") != "1"
+	interactive := os.Getenv("DEEPZORA_NONINTERACTIVE") != "1"
 	return coordinatedLaunchWith(root, args, interactive, coordinatedLaunchDependencies{
 		classifyLocation: classifyLaunchLocation,
 		launchAndVerify:  desktopinstance.LaunchAndVerify,
@@ -40,7 +40,7 @@ func coordinatedLaunchWith(root string, args []string, interactive bool, deps co
 	if !installlayout.HasCurrent(root) || !installlayout.HasActiveShell(root) {
 		return false, 0
 	}
-	home := config.DeeperHomeDir()
+	home := config.DeepzoraHomeDir()
 	if isPortableRoot(root) {
 		location, err := deps.classifyLocation(root)
 		if err != nil {

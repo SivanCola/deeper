@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"deeper/internal/config"
-	"deeper/internal/usagecatalog"
+	"deepzora/internal/config"
+	"deepzora/internal/usagecatalog"
 )
 
 func init() {

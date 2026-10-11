@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestUpdateSessionListingProjectionIfCurrentRejectsAdvancedGeneration(t *testing.T) {

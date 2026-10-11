@@ -8,10 +8,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/imageinput"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type summaryProvider struct {

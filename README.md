@@ -1,8 +1,8 @@
-> Deeper is independently maintained at [SivanCola/deeper](https://github.com/SivanCola/deeper).
-> 独立应用身份、更新通道与发布凭据见 [Deeper independence](docs/DEEPER_INDEPENDENCE.md)。原许可证和作者信息见 NOTICE。
+> Deepzora is independently maintained at [SivanCola/deepzora](https://github.com/SivanCola/deepzora).
+> 独立应用身份、更新通道与发布凭据见 [Deepzora independence](docs/DEEPZORA_INDEPENDENCE.md)。原许可证和作者信息见 NOTICE。
 
 <p align="center">
-  <img src="docs/logo-ghost-wave-effect.svg" alt="Deeper" width="360"/>
+  <img src="docs/logo-ghost-wave-effect.svg" alt="Deepzora" width="360"/>
 </p>
 
 <p align="center">
@@ -18,26 +18,26 @@
   &nbsp;·&nbsp;
   <a href="./docs/SPEC.md">Spec</a>
   &nbsp;·&nbsp;
-  <a href="https://sivancola.github.io/deeper/">Website</a>
+  <a href="https://sivancola.github.io/deepzora/">Website</a>
   &nbsp;·&nbsp;
   <strong><a href="https://discord.gg/XF78rEME2D">Discord</a></strong>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/deeper"><img src="https://img.shields.io/npm/v/deeper.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
-  <a href="https://github.com/SivanCola/deeper/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SivanCola/deeper/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/deeper.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
-  <a href="https://www.npmjs.com/package/deeper"><img src="https://img.shields.io/npm/dm/deeper.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
-  <a href="https://github.com/SivanCola/deeper/stargazers"><img src="https://img.shields.io/github/stars/SivanCola/deeper.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
-  <a href="https://atomgit.com/SivanCola/deeper"><img src="https://atomgit.com/SivanCola/deeper/star/badge.svg" alt="AtomGit stars"/></a>
-  <a href="https://github.com/SivanCola/deeper/graphs/contributors"><img src="https://img.shields.io/github/contributors/SivanCola/deeper.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
-  <a href="https://github.com/SivanCola/deeper/discussions"><img src="https://img.shields.io/github/discussions/SivanCola/deeper.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
+  <a href="https://www.npmjs.com/package/deepzora"><img src="https://img.shields.io/npm/v/deepzora.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
+  <a href="https://github.com/SivanCola/deepzora/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SivanCola/deepzora/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/deepzora.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
+  <a href="https://www.npmjs.com/package/deepzora"><img src="https://img.shields.io/npm/dm/deepzora.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
+  <a href="https://github.com/SivanCola/deepzora/stargazers"><img src="https://img.shields.io/github/stars/SivanCola/deepzora.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
+  <a href="https://atomgit.com/SivanCola/deepzora"><img src="https://atomgit.com/SivanCola/deepzora/star/badge.svg" alt="AtomGit stars"/></a>
+  <a href="https://github.com/SivanCola/deepzora/graphs/contributors"><img src="https://img.shields.io/github/contributors/SivanCola/deepzora.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
+  <a href="https://github.com/SivanCola/deepzora/discussions"><img src="https://img.shields.io/github/discussions/SivanCola/deepzora.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
   <a href="https://discord.gg/XF78rEME2D"><img src="https://img.shields.io/badge/discord-join-5865F2.svg?style=flat-square&labelColor=161b22&logo=discord&logoColor=white" alt="Discord"/></a>
 </p>
 
 <p align="center">
-  <a href="https://trendshift.io/repositories/27020?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/27020/monthly?language=Go" alt="SivanCola/deeper | Trendshift" width="250" height="55"/></a>
-  <a href="https://trendshift.io/repositories/27020?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/27020" alt="SivanCola/deeper | Trendshift" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/27020?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/27020/monthly?language=Go" alt="SivanCola/deepzora | Trendshift" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/27020?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/27020" alt="SivanCola/deepzora | Trendshift" width="250" height="55"/></a>
 </p>
 
 <br/>
@@ -60,7 +60,7 @@
 ## Features
 
 - **Config-driven.** Providers, the agent, enabled tools, and plugins are all
-  declared in `deeper.toml`. No hardcoded models.
+  declared in `deepzora.toml`. No hardcoded models.
 - **Multi-model & composable.** DeepSeek ships as a preset; any
   OpenAI-compatible endpoint is a config entry, not new code. Optionally run
   two models together (executor + planner) in separate, cache-stable sessions.
@@ -76,8 +76,8 @@
 
 ## Install
 
-Choose the path that matches how you want to use Deeper. The CLI/TUI,
-desktop app, and VS Code extension all use the same local Deeper engine.
+Choose the path that matches how you want to use Deepzora. The CLI/TUI,
+desktop app, and VS Code extension all use the same local Deepzora engine.
 
 ### Path A: CLI / TUI
 
@@ -85,16 +85,16 @@ Install the native binary through npm on any supported platform, or use
 Homebrew on macOS:
 
 ```sh
-npm i -g deeper                  # any OS; pulls the prebuilt native binary
-brew install SivanCola/deeper/deeper   # macOS
+npm i -g deepzora                  # any OS; pulls the prebuilt native binary
+brew install SivanCola/deepzora/deepzora   # macOS
 ```
 
 Prebuilt archives (`darwin|linux|windows × amd64|arm64`) and `SHA256SUMS` are on
-every [GitHub release](https://github.com/SivanCola/deeper/releases).
+every [GitHub release](https://github.com/SivanCola/deepzora/releases).
 
 ### Path B: Desktop app
 
-Use the [official download page](https://github.com/SivanCola/deeper/releases)
+Use the [official download page](https://github.com/SivanCola/deepzora/releases)
 for the latest desktop build.
 
 | Platform | Package | Architecture |
@@ -108,20 +108,20 @@ Windows installers are code-signed with a Certum code-signing certificate.
 ### Path C: VS Code extension
 
 Complete Path A first. The extension does not bundle the CLI; it starts your
-local `deeper acp` backend and adds native chat, editor context, tool-call
+local `deepzora acp` backend and adds native chat, editor context, tool-call
 approvals, model selection, and workspace sessions.
 
-- **VS Code:** [install from Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=SivanLiu.deeper-agent)
-- **VSCodium / Eclipse Theia:** [install from Open VSX Registry](https://open-vsx.org/extension/SivanLiu/deeper-agent)
-- **Extension ID:** `SivanLiu.deeper-agent` · [source and usage guide](https://github.com/SivanCola/deeper-vscode)
+- **VS Code:** [install from Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=SivanLiu.deepzora-agent)
+- **VSCodium / Eclipse Theia:** [install from Open VSX Registry](https://open-vsx.org/extension/SivanLiu/deepzora-agent)
+- **Extension ID:** `SivanLiu.deepzora-agent` · [source and usage guide](https://github.com/SivanCola/deepzora-vscode)
 
 ### Path D: Build from source
 
 Clone the repository first:
 
 ```sh
-git clone https://github.com/SivanCola/deeper.git
-cd deeper
+git clone https://github.com/SivanCola/deepzora.git
+cd deepzora
 ```
 
 #### CLI
@@ -130,7 +130,7 @@ The CLI build requires **Go 1.26+**. The module pins a `toolchain` directive;
 keep `GOTOOLCHAIN=auto` so Go downloads the pinned toolchain, or install it.
 
 ```sh
-make build      # -> bin/deeper(.exe)
+make build      # -> bin/deepzora(.exe)
 make cross      # -> dist/ (darwin|linux|windows × amd64|arm64)
 ```
 
@@ -153,19 +153,19 @@ Chromium. See the [desktop build guide](desktop/README.md#prerequisites).
 These commands are for the CLI/TUI installed through Path A:
 
 ```sh
-deeper setup                      # configure a provider and model
-deeper                            # start an interactive session
-deeper run "implement the TODOs in main.go"
+deepzora setup                      # configure a provider and model
+deepzora                            # start an interactive session
+deepzora run "implement the TODOs in main.go"
 ```
 
-In an interactive session, run `/init` when you want Deeper to create project
+In an interactive session, run `/init` when you want Deepzora to create project
 instructions.
 
 ### Desktop app
 
 Download the installer for your platform from the
-[official download page](https://github.com/SivanCola/deeper/releases), install
-and launch Deeper, then configure a provider and model in the app. The CLI
+[official download page](https://github.com/SivanCola/deepzora/releases), install
+and launch Deepzora, then configure a provider and model in the app. The CLI
 commands above are not required for the desktop app.
 
 For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.md)**,
@@ -192,11 +192,11 @@ For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.m
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=SivanCola%2Fdeeper&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=SivanCola%2Fdeepzora&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/SivanCola/deeper/star-history/assets/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/SivanCola/deeper/star-history/assets/star-history/star-history-light.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/SivanCola/deeper/star-history/assets/star-history/star-history-light.svg" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/SivanCola/deepzora/star-history/assets/star-history/star-history-dark.svg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/SivanCola/deepzora/star-history/assets/star-history/star-history-light.svg" />
+   <img alt="Star History Chart" src="https://raw.githubusercontent.com/SivanCola/deepzora/star-history/assets/star-history/star-history-light.svg" />
  </picture>
 </a>
 
@@ -204,11 +204,11 @@ For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.m
 
 ## Acknowledgments
 
-A small list of folks whose work has shaped Deeper the most — the current top
+A small list of folks whose work has shaped Deepzora the most — the current top
 20 contributors by commit count. The full contributor graph is on
-[GitHub](https://github.com/SivanCola/deeper/graphs/contributors?all=1).
+[GitHub](https://github.com/SivanCola/deepzora/graphs/contributors?all=1).
 
-<!-- deeper-top-contributors:start -->
+<!-- deepzora-top-contributors:start -->
 | Contributor | Contributor | Contributor | Contributor |
 | --- | --- | --- | --- |
 | [**SivanCola**](https://github.com/SivanCola) | [**esengine**](https://github.com/esengine) | [**ttmouse**](https://github.com/ttmouse) | [**lifu963**](https://github.com/lifu963) |
@@ -216,13 +216,13 @@ A small list of folks whose work has shaped Deeper the most — the current top
 | [**Li-Charles-One**](https://github.com/Li-Charles-One) | **merge-order-check** | [**light-front-theory**](https://github.com/light-front-theory) | **Yan Li** |
 | [**eghrhegpe**](https://github.com/eghrhegpe) | **wufengfan** | [**Bernardxu123**](https://github.com/Bernardxu123) | [**HaoyueQin**](https://github.com/HaoyueQin) |
 | [**CVEngineer66**](https://github.com/CVEngineer66) | [**JesonChou**](https://github.com/JesonChou) | [**SuMuxi66**](https://github.com/SuMuxi66) | [**lanshi17**](https://github.com/lanshi17) |
-<!-- deeper-top-contributors:end -->
+<!-- deepzora-top-contributors:end -->
 
 Special thanks to [**Bernardxu123**](https://github.com/Bernardxu123) for designing the project logo and intro video.
 
 <p align="center">
-  <a href="https://github.com/SivanCola/deeper/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=SivanCola/deeper&max=100&columns=12" alt="Contributors to SivanCola/deeper" width="860"/>
+  <a href="https://github.com/SivanCola/deepzora/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=SivanCola/deepzora&max=100&columns=12" alt="Contributors to SivanCola/deepzora" width="860"/>
   </a>
 </p>
 
@@ -233,14 +233,14 @@ Special thanks to [**Bernardxu123**](https://github.com/Bernardxu123) for design
 <p align="center">
   <sub>MIT — see <a href="./LICENSE">LICENSE</a></sub>
   <br/>
-  <sub>Built by the community at <a href="https://github.com/SivanCola/deeper/graphs/contributors">SivanCola/deeper</a></sub>
+  <sub>Built by the community at <a href="https://github.com/SivanCola/deepzora/graphs/contributors">SivanCola/deepzora</a></sub>
 </p>
 
 ---
 
 <p align="center"><sub><strong>Support this project</strong></sub></p>
 
-If Deeper has been useful and you'd like to say thanks, you can. It stays a
+If Deepzora has been useful and you'd like to say thanks, you can. It stays a
 coffee, not a contract — donations don't buy feature priority or change how
 issues get triaged.
 

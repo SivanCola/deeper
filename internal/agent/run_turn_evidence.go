@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"deeper/internal/jobs"
+	"deepzora/internal/jobs"
 )
 
 // leasePendingBackgroundEvidence re-leases this session's uncommitted job

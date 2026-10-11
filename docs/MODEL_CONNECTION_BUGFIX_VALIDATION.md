@@ -39,7 +39,7 @@ TOML and credential files remain readable. Legacy unkeyed credential receipts
 return `unknown_result` rather than replaying a write whose content cannot be
 verified; new receipts use the existing durable HMAC protocol.
 
-The following findings were reproduced with disposable Deeper homes and
+The following findings were reproduced with disposable Deepzora homes and
 local fixtures. No production credentials or model requests are used.
 
 | Finding | Repair | Regression evidence |
@@ -78,4 +78,4 @@ typecheck, Composer and app-lifecycle suites, and the browser scenario above
 passed. The actual Electron smoke passed the service handshake, renderer RPC,
 native window query, website view, child-service ownership, and clean exit.
 The smoke service used its standard binary name because the process assertion
-matches `deeper-desktop` in the executable name.
+matches `deepzora-desktop` in the executable name.

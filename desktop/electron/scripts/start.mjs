@@ -9,16 +9,16 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const dev = process.argv.includes("--dev");
 const env = { ...process.env };
 
-if (!env.DEEPER_DESKTOP_SERVICE) {
-  env.DEEPER_DESKTOP_SERVICE = resolve(root, "../build/bin", process.platform === "win32" ? "deeper-desktop-service.exe" : "deeper-desktop-service");
+if (!env.DEEPZORA_DESKTOP_SERVICE) {
+  env.DEEPZORA_DESKTOP_SERVICE = resolve(root, "../build/bin", process.platform === "win32" ? "deepzora-desktop-service.exe" : "deepzora-desktop-service");
 }
-if (!existsSync(env.DEEPER_DESKTOP_SERVICE)) {
-  console.error("desktop service binary not found; check DEEPER_DESKTOP_SERVICE or build it with: cd desktop && go build -o build/bin/deeper-desktop-service .");
+if (!existsSync(env.DEEPZORA_DESKTOP_SERVICE)) {
+  console.error("desktop service binary not found; check DEEPZORA_DESKTOP_SERVICE or build it with: cd desktop && go build -o build/bin/deepzora-desktop-service .");
   process.exit(1);
 }
 if (dev) {
-  env.DEEPER_DEV ??= "1";
-  env.DEEPER_ELECTRON_DEV_URL ??= `http://127.0.0.1:${env.DEEPER_DESKTOP_VITE_PORT || "5173"}`;
+  env.DEEPZORA_DEV ??= "1";
+  env.DEEPZORA_ELECTRON_DEV_URL ??= `http://127.0.0.1:${env.DEEPZORA_DESKTOP_VITE_PORT || "5173"}`;
 }
 
 const electron = createRequire(import.meta.url)("electron");

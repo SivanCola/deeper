@@ -12,10 +12,10 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // Fork branches the conversation at the start of turn into a NEW session file,

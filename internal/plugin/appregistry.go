@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // AppInstance is one live MCP Apps surface: an unguessable token binding the

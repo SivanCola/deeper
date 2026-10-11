@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
 )
 
 type failureAtomicBotController struct {

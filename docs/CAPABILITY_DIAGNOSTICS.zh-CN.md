@@ -6,9 +6,9 @@
 &nbsp;·&nbsp;
 <a href="./PLUGIN_PACKAGES.zh-CN.md">插件包</a>
 
-Deeper 提供 CLI 与桌面端 **设置 → 诊断** 共用的只读能力诊断模型，覆盖 Skills、
+Deepzora 提供 CLI 与桌面端 **设置 → 诊断** 共用的只读能力诊断模型，覆盖 Skills、
 Commands、Hooks、插件包、MCP 服务器，以及指令文件（`AGENTS.md` /
-`DEEPER.md` / `CLAUDE.md`）。
+`DEEPZORA.md` / `CLAUDE.md`）。
 
 ## 技能工具引用
 
@@ -49,11 +49,11 @@ MCP 服务器或调用模型供应商。
 
 | 目标 | 命令 / 入口 |
 | --- | --- |
-| 检查当前工作区的 skills / hooks / MCP / 插件 | `deeper doctor capabilities` |
-| 机器可读报告（CI / 报障） | `deeper doctor capabilities --json` |
-| 指定项目根目录 | `deeper doctor capabilities --root /path/to/project` |
-| 真实探测 MCP 启动（会启动第三方服务器） | `deeper doctor capabilities --live --timeout 5s` |
-| 让 Agent 按手册排障 | 会话中 `/deeper-guide`，或自然语言描述症状 |
+| 检查当前工作区的 skills / hooks / MCP / 插件 | `deepzora doctor capabilities` |
+| 机器可读报告（CI / 报障） | `deepzora doctor capabilities --json` |
+| 指定项目根目录 | `deepzora doctor capabilities --root /path/to/project` |
+| 真实探测 MCP 启动（会启动第三方服务器） | `deepzora doctor capabilities --live --timeout 5s` |
+| 让 Agent 按手册排障 | 会话中 `/deepzora-guide`，或自然语言描述症状 |
 | GUI 健康视图 | 桌面端 **设置 → 诊断** |
 
 **默认是静态且安全的**：无网络、不启动 MCP 子进程。只有你明确需要启动
@@ -62,9 +62,9 @@ automatic MCP 时才用 `--live`。
 其它既有 doctor 命令（行为不变）：
 
 ```bash
-deeper doctor                  # 环境 / provider / 沙箱快照
-deeper doctor session <id>     # 支持用会话包
-deeper doctor redact-sessions  # 脱敏会话中的密钥
+deepzora doctor                  # 环境 / provider / 沙箱快照
+deepzora doctor session <id>     # 支持用会话包
+deepzora doctor redact-sessions  # 脱敏会话中的密钥
 ```
 
 ## 日常工作流
@@ -72,7 +72,7 @@ deeper doctor redact-sessions  # 脱敏会话中的密钥
 ### 1. 「Skill / 命令找不到或内容不对」
 
 ```bash
-deeper doctor capabilities --json | jq '.skills.entries, .commands.entries, .issues'
+deepzora doctor capabilities --json | jq '.skills.entries, .commands.entries, .issues'
 ```
 
 关注：
@@ -82,29 +82,29 @@ deeper doctor capabilities --json | jq '.skills.entries, .commands.entries, .iss
 - `skill.missing_description` — 能加载但索引描述很弱
 - `command.read_failed` — 文件读失败或解析失败
 
-然后到 **设置 → 技能**，或直接改 `.deeper/skills` / `.deeper/commands` 下的文件。
+然后到 **设置 → 技能**，或直接改 `.deepzora/skills` / `.deepzora/commands` 下的文件。
 
 ### 2. 「项目 Hooks 不触发」
 
 ```bash
-deeper doctor capabilities | sed -n '/Hooks/,/Plugins/p'
+deepzora doctor capabilities | sed -n '/Hooks/,/Plugins/p'
 ```
 
-项目 Hooks 会从 `.deeper/settings.json` 自动加载。若没有触发，请确认当前工作区，
-保存后重启 Deeper。`match` 是**锚定**正则：`file` **不会**匹配 `read_file`。
+项目 Hooks 会从 `.deepzora/settings.json` 自动加载。若没有触发，请确认当前工作区，
+保存后重启 Deepzora。`match` 是**锚定**正则：`file` **不会**匹配 `read_file`。
 
 ### 3. 「配置了 MCP 但模型看不到工具」
 
 1. 先做静态检查（无副作用）：
 
    ```bash
-   deeper doctor capabilities --json | jq '.mcp.servers, .issues[] | select(.subsystem=="mcp")'
+   deepzora doctor capabilities --json | jq '.mcp.servers, .issues[] | select(.subsystem=="mcp")'
    ```
 
 2. 仅在接受启动第三方服务器时：
 
    ```bash
-   deeper doctor capabilities --live --timeout 10s --json
+   deepzora doctor capabilities --live --timeout 10s --json
    ```
 
 常见 code：`mcp.command_not_found`、`mcp.invalid_transport`、
@@ -116,12 +116,12 @@ deeper doctor capabilities | sed -n '/Hooks/,/Plugins/p'
 `tools/list`）、`startup_elapsed_ms`，以及有长度上限且已做凭据脱敏的 `stderr` 尾部。
 这可以区分重复/被覆盖的注册与真正缓慢或失败的握手，同时不会暴露完整进程输出。
 
-### 4. 让 Agent 按手册排查（`deeper-guide`）
+### 4. 让 Agent 按手册排查（`deepzora-guide`）
 
 交互式会话中：
 
 ```text
-/deeper-guide
+/deepzora-guide
 ```
 
 或：
@@ -133,19 +133,19 @@ deeper doctor capabilities | sed -n '/Hooks/,/Plugins/p'
 该内置 Skill 是 **inline**（`runAs: inline`）。它会优先要求模型运行：
 
 ```bash
-deeper doctor capabilities --json
+deepzora doctor capabilities --json
 ```
 
 只有你明确允许启动外部 MCP 时才建议 `--live`。项目或全局同名
-`deeper-guide` 会覆盖内置版；也可用
-`[skills].disabled_skills = ["deeper-guide"]` 隐藏。
+`deepzora-guide` 会覆盖内置版；也可用
+`[skills].disabled_skills = ["deepzora-guide"]` 隐藏。
 
 指南首先加载简短入口，Skills、Commands、Hooks、MCP、Plugins 和指令解析
 分别位于二进制内置的引用页中。通过 `read_skill` 按需读取；
 工具未直接暴露时，使用能力代理：
 
 ```json
-{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deeper-guide","reference":"references/hooks.md"}}
+{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deepzora-guide","reference":"references/hooks.md"}}
 ```
 
 省略 `reference` 保持原有的技能正文读取方式。引用只能来自所选内置技能包的
@@ -160,7 +160,7 @@ deeper doctor capabilities --json
 ## CLI 参考
 
 ```bash
-deeper doctor capabilities [--root PATH] [--json] [--live] [--timeout 5s]
+deepzora doctor capabilities [--root PATH] [--json] [--live] [--timeout 5s]
 ```
 
 | 参数 | 含义 |
@@ -192,16 +192,16 @@ deeper doctor capabilities [--root PATH] [--json] [--live] [--timeout 5s]
 
 ```bash
 # 当前目录、人类可读
-deeper doctor capabilities
+deepzora doctor capabilities
 
 # CI：仅有 error 时非零退出
-deeper doctor capabilities --json
+deepzora doctor capabilities --json
 
 # live 探测，超时 15 秒
-deeper doctor capabilities --live --timeout 15s --json 2>live-warn.txt
+deepzora doctor capabilities --live --timeout 15s --json 2>live-warn.txt
 ```
 
-既有 `deeper doctor` / `doctor session` / `doctor redact-sessions` 的 JSON
+既有 `deepzora doctor` / `doctor session` / `doctor redact-sessions` 的 JSON
 schema **不会**混入新字段。
 
 ## 桌面端
@@ -263,14 +263,14 @@ MCP 仅列出 env/header 的 **key**。可能携带 HTTP 响应体或 MCP stderr
 
 | 需求 | 改用 |
 | --- | --- |
-| Provider 密钥、代理、沙箱 OS 支持 | `deeper doctor` |
-| 给支持用的完整会话包 | `deeper doctor session <id>` |
-| 单个插件包 | `deeper plugin doctor <name>` |
+| Provider 密钥、代理、沙箱 OS 支持 | `deepzora doctor` |
+| 给支持用的完整会话包 | `deepzora doctor session <id>` |
+| 单个插件包 | `deepzora plugin doctor <name>` |
 | 会话内 MCP 列表 | `/mcp` |
 
 ## 缓存影响
 
-内置 `deeper-guide` 在下次变化的 `session-context` Skills 目录中增加一行；
+内置 `deepzora-guide` 在下次变化的 `session-context` Skills 目录中增加一行；
 正文按需加载。诊断本身不属于 provider 提示词。
 
 修改静态调用策略或工具描述/schema，会改变新组装会话的缓存前缀，可能需要重新

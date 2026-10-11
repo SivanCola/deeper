@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/extension"
+	"deepzora/internal/control"
+	"deepzora/internal/extension"
 )
 
 func TestIndependentBuildRuntimeOwnersRemainActive(t *testing.T) {

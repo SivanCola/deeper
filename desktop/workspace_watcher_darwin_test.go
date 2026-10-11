@@ -14,14 +14,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/sys/unix"
 )
 
-const darwinLowNoFileChild = "DEEPER_DARWIN_LOW_NOFILE_CHILD"
+const darwinLowNoFileChild = "DEEPZORA_DARWIN_LOW_NOFILE_CHILD"
 
 func TestDarwinWorkspaceWatcherReportsDeepFileOperations(t *testing.T) {
 	root := canonicalWorkspaceRoot(t.TempDir())
@@ -422,7 +422,7 @@ func runDarwinLowNoFileChild(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	projectConfig := filepath.Join(root, "deeper.toml")
+	projectConfig := filepath.Join(root, "deepzora.toml")
 	if err := os.WriteFile(projectConfig, []byte("[agent]\nmemory_compiler = { enabled = true, verbosity = \"compact\" }\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

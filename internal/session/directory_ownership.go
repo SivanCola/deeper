@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	filelock "deeper/internal/identitylock"
+	filelock "deepzora/internal/identitylock"
 )
 
 func directoryOwnershipPath(dir string) string {

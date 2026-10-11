@@ -7,8 +7,8 @@ import (
 	"maps"
 	"strings"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // Activator binds live resources (MCP sidecars, watchers) to a freshly

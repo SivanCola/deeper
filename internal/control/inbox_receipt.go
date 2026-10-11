@@ -1,7 +1,7 @@
 package control
 
 import (
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 	"errors"
 )
 

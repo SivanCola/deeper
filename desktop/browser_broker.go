@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/browser"
-	"deeper/internal/remote/forward"
+	"deepzora/internal/browser"
+	"deepzora/internal/remote/forward"
 )
 
 func (s *brokerSessionExecutor) BrowserCapability(ctx context.Context, name string, args json.RawMessage) (json.RawMessage, error) {
@@ -62,7 +62,7 @@ func (s *brokerSessionExecutor) BrowserCapability(ctx context.Context, name stri
 // tokens that a reconnect revokes at once.
 
 // browserBrokerForwardName prefixes the per-host reverse forward the remote
-// serve's DEEPER_BROWSER_BROKER endpoint points at.
+// serve's DEEPZORA_BROWSER_BROKER endpoint points at.
 const browserBrokerForwardName = "browser-broker:"
 
 // browserBrokerRoute binds one token to one host connection generation.
@@ -209,7 +209,7 @@ func (b *browserBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route := b.routes[token]
 	b.mu.Unlock()
 	if token == "" || route == nil || (b.current != nil && !b.current(route.hostID, route.gen)) {
-		w.Header().Set("WWW-Authenticate", `Bearer realm="deeper-browser-broker"`)
+		w.Header().Set("WWW-Authenticate", `Bearer realm="deepzora-browser-broker"`)
 		http.Error(w, "invalid or stale browser broker token", http.StatusUnauthorized)
 		return
 	}

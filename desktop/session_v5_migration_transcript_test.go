@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestLegacyMigrationTranscriptFailurePreservesSourceAndContinues(t *testing.T) {

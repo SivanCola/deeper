@@ -3,7 +3,7 @@ package sidecar
 import (
 	"testing"
 
-	"deeper/internal/extension"
+	"deepzora/internal/extension"
 )
 
 func TestPluginComponentIDRoundTrip(t *testing.T) {

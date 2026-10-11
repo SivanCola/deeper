@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func TestMergeDecisionsIsMonotonic(t *testing.T) {

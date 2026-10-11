@@ -11,7 +11,7 @@ import (
 
 func writeMacBundleFixture(t *testing.T, root, identifier string) string {
 	t.Helper()
-	contents := filepath.Join(root, "Deeper.app", "Contents")
+	contents := filepath.Join(root, "Deepzora.app", "Contents")
 	if err := os.MkdirAll(filepath.Join(contents, "Resources", "service"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func writeMacBundleFixture(t *testing.T, root, identifier string) string {
 func TestMacAppBundleForExecutableSupportsPackagedLayouts(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "parent.app cache", "中文目录")
 	contents := writeMacBundleFixture(t, root, macBundleID)
-	for _, relative := range []string{"MacOS/deeper-desktop", "Resources/service/deeper-desktop"} {
+	for _, relative := range []string{"MacOS/deepzora-desktop", "Resources/service/deepzora-desktop"} {
 		exe := filepath.Join(contents, filepath.FromSlash(relative))
 		if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
 			t.Fatal(err)
@@ -43,15 +43,15 @@ func TestMacAppBundleForExecutableSupportsPackagedLayouts(t *testing.T) {
 
 func TestMacAppBundleForExecutableResolvesCompatibilitySymlink(t *testing.T) {
 	contents := writeMacBundleFixture(t, t.TempDir(), macBundleID)
-	target := filepath.Join(contents, "Resources", "service", "deeper-desktop")
+	target := filepath.Join(contents, "Resources", "service", "deepzora-desktop")
 	if err := os.WriteFile(target, []byte("service"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(contents, "MacOS", "deeper-desktop")
+	link := filepath.Join(contents, "MacOS", "deepzora-desktop")
 	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(filepath.Join("..", "Resources", "service", "deeper-desktop"), link); err != nil {
+	if err := os.Symlink(filepath.Join("..", "Resources", "service", "deepzora-desktop"), link); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := macAppBundleForExecutable(link); err != nil || got != filepath.Dir(contents) {
@@ -60,7 +60,7 @@ func TestMacAppBundleForExecutableResolvesCompatibilitySymlink(t *testing.T) {
 }
 
 func TestMacAppBundleForExecutableRejectsInvalidInputs(t *testing.T) {
-	outside := filepath.Join(t.TempDir(), "deeper-desktop")
+	outside := filepath.Join(t.TempDir(), "deepzora-desktop")
 	if err := os.WriteFile(outside, []byte("service"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestMacAppBundleForExecutableRejectsInvalidInputs(t *testing.T) {
 	}
 
 	contents := writeMacBundleFixture(t, t.TempDir(), "example.invalid")
-	exe := filepath.Join(contents, "Resources", "service", "deeper-desktop")
+	exe := filepath.Join(contents, "Resources", "service", "deepzora-desktop")
 	if err := os.WriteFile(exe, []byte("service"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestMacAppBundleForExecutableRejectsInvalidInputs(t *testing.T) {
 	}
 
 	malformedContents := writeMacBundleFixture(t, t.TempDir(), macBundleID)
-	malformedExe := filepath.Join(malformedContents, "Resources", "service", "deeper-desktop")
+	malformedExe := filepath.Join(malformedContents, "Resources", "service", "deepzora-desktop")
 	if err := os.WriteFile(malformedExe, []byte("service"), 0o755); err != nil {
 		t.Fatal(err)
 	}

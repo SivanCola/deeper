@@ -3,7 +3,7 @@ package agent
 import (
 	"fmt"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // summaryPlanMarginRatio is the planning headroom left under the window for

@@ -2,8 +2,8 @@ package providerext
 
 import (
 	"context"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
 	"testing"
 	"time"
 )

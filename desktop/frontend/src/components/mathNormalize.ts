@@ -27,13 +27,13 @@ import { expandYoungDiagrams } from "./youngDiagrams";
 // rather than split at stray $ signs inside \text{}.
 const TEXT_MODE_PAIR = /\$\s*(\\[A-Za-z]+\{(?:[^{}]|\{[^{}]*\})*\}[^$]*?)\s*\$/g;
 
-const DM = "__DEEPER_MATH_DISPLAY__";
-const IM = "__DEEPER_MATH_INLINE__";
-const LB = "__DEEPER_LATEX_LINEBREAK__";
-const ED_BASE = "DEEPERESCAPEDDOLLAR";
-const INLINE_SOURCE_PREFIX = "\\deeperInternalSourceV1{";
-const INLINE_RENDER_SOURCE_PREFIX = "\\deeperInternalRenderV1";
-const INLINE_RENDER_SOURCE_RE = /\\deeperInternalRenderV1\{([^}]*)\}\{([^}]*)\}/g;
+const DM = "__DEEPZORA_MATH_DISPLAY__";
+const IM = "__DEEPZORA_MATH_INLINE__";
+const LB = "__DEEPZORA_LATEX_LINEBREAK__";
+const ED_BASE = "DEEPZORAESCAPEDDOLLAR";
+const INLINE_SOURCE_PREFIX = "\\deepzoraInternalSourceV1{";
+const INLINE_RENDER_SOURCE_PREFIX = "\\deepzoraInternalRenderV1";
+const INLINE_RENDER_SOURCE_RE = /\\deepzoraInternalRenderV1\{([^}]*)\}\{([^}]*)\}/g;
 
 export function normalizeMath(s: string): string {
   const protectedCode = protectMarkdownCode(s);
@@ -314,11 +314,11 @@ function protectMarkdownCode(s: string): { text: string; prefix: string; segment
 }
 
 function unusedPlaceholderPrefix(s: string): string {
-  let prefix = "__DEEPER_PROTECTED_CODE__";
+  let prefix = "__DEEPZORA_PROTECTED_CODE__";
   let n = 0;
   while (s.includes(prefix)) {
     n += 1;
-    prefix = `__DEEPER_PROTECTED_CODE_${n}__`;
+    prefix = `__DEEPZORA_PROTECTED_CODE_${n}__`;
   }
   return prefix;
 }

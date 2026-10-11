@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 // AskTool lets the model put a structured multiple-choice question (or a few) to

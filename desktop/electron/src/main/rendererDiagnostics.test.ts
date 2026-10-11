@@ -4,7 +4,7 @@ import test, { type TestContext } from 'node:test';
 import { RendererDiagnostics } from './rendererDiagnostics.js';
 
 const profile = {
-  nodes: [{ id: 1, callFrame: { functionName: 'render', url: 'deeper://app/main.js', lineNumber: 12 } }],
+  nodes: [{ id: 1, callFrame: { functionName: 'render', url: 'deepzora://app/main.js', lineNumber: 12 } }],
   samples: [1, 1], timeDeltas: [10_000, 10_000], startTime: 0, endTime: 20_000,
 };
 const frames = [{ label: 'render', samples: 2, selfMs: 20 }];

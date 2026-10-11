@@ -9,19 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
-	"deeper/internal/websearch"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
+	"deepzora/internal/websearch"
 )
 
 // Explicitly opt in to two bounded main-model calls and one independent search.
 // Only counts are logged; no credentials or conversation content are written.
 func TestLiveDefaultDeepSeekSearchRoundTrip(t *testing.T) {
-	if os.Getenv("DEEPER_LIVE_WEB_SEARCH") != "1" {
-		t.Skip("set DEEPER_LIVE_WEB_SEARCH=1")
+	if os.Getenv("DEEPZORA_LIVE_WEB_SEARCH") != "1" {
+		t.Skip("set DEEPZORA_LIVE_WEB_SEARCH=1")
 	}
 	cfg := config.Default()
 	entry, ok := cfg.ResolveModel(cfg.DefaultModel)

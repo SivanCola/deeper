@@ -1,7 +1,7 @@
 package config
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -67,7 +67,7 @@ func TestCapabilityOfficialHardLimitAndExplicitOff(t *testing.T) {
 }
 
 func TestCapabilityV2IgnoresV1AndPersistsUnknown(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	v1 := filepath.Join(CacheDir(), "model-capabilities-v1.json")
 	old := []byte(`{"version":1,"entries":[]}`)
 	if err := os.WriteFile(v1, old, 0600); err != nil {
@@ -101,7 +101,7 @@ func TestCapabilityV2IgnoresV1AndPersistsUnknown(t *testing.T) {
 }
 
 func TestCapabilityCacheNewestSuccessWinsAcrossResolvers(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	e := ProviderEntry{Name: "relay", Kind: "openai", BaseURL: "https://relay.test", Model: "x"}
 	old, newer := NewModelCapabilityResolver(), NewModelCapabilityResolver()
 	now := time.Now()
@@ -137,7 +137,7 @@ func TestCapabilityCacheRouteIdentity(t *testing.T) {
 }
 
 func TestCapabilityCacheMergeValidatesDiskModalities(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	r := NewModelCapabilityResolver()
 	e := ProviderEntry{Name: "relay", Kind: "openai", BaseURL: "https://relay.test", Model: "malformed"}
 	file := ModelCapabilityCacheFile{Version: 2, Entries: []ModelCapabilityCacheEntry{{ProviderFingerprint: r.providerFingerprint(e), ModelID: e.Model, InputModalities: []provider.ModelModality{provider.ModalityImage, "invalid"}, FetchedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}}}

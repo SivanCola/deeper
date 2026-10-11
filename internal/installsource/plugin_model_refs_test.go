@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 )
 
 const testPluginConfig = `default_model = "plugin/commandcode/commandcode/deepseek-v4-flash"
@@ -16,33 +16,33 @@ name = "deepseek-flash"
 kind = "openai"
 base_url = "https://api.deepseek.com/v1"
 model = "deepseek-v4-flash"
-api_key_env = "DEEPER_TEST_KEY"
+api_key_env = "DEEPZORA_TEST_KEY"
 `
 
 // removePluginPackageFixture installs one plugin package into an isolated
-// DEEPER_HOME and writes cfg as the user config. It returns the tool under
+// DEEPZORA_HOME and writes cfg as the user config. It returns the tool under
 // test and the config path.
 func removePluginPackageFixture(t *testing.T, cfg string) (*installSourceTool, string) {
 	t.Helper()
 
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
-	if err := os.MkdirAll(filepath.Join(deeperHome, "plugins", "commandcode"), 0o755); err != nil {
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	if err := os.MkdirAll(filepath.Join(deepzoraHome, "plugins", "commandcode"), 0o755); err != nil {
 		t.Fatalf("mkdir plugin root: %v", err)
 	}
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("DEEPER_HOME", deeperHome)
-	// Provider entries resolve keys only from Deeper's global .env, so the
+	t.Setenv("DEEPZORA_HOME", deepzoraHome)
+	// Provider entries resolve keys only from Deepzora's global .env, so the
 	// fallback provider counts as configured only when the key lives there.
-	if err := os.WriteFile(filepath.Join(deeperHome, ".env"), []byte("DEEPER_TEST_KEY=sk-test\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(deepzoraHome, ".env"), []byte("DEEPZORA_TEST_KEY=sk-test\n"), 0o600); err != nil {
 		t.Fatalf("write credentials: %v", err)
 	}
 	oldUserHomeDir := userHomeDir
 	userHomeDir = func() (string, error) { return home, nil }
 	t.Cleanup(func() { userHomeDir = oldUserHomeDir })
 
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:    "commandcode",
 		Root:    filepath.Join("plugins", "commandcode"),
 		Version: "0.1.0",
@@ -51,7 +51,7 @@ func removePluginPackageFixture(t *testing.T, cfg string) (*installSourceTool, s
 		t.Fatalf("upsert plugin: %v", err)
 	}
 
-	path := filepath.Join(deeperHome, "config.toml")
+	path := filepath.Join(deepzoraHome, "config.toml")
 	if err := os.WriteFile(path, []byte(cfg), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestRemovePluginPackageKeepsMalformedConfig(t *testing.T) {
 	if string(got) != broken {
 		t.Fatalf("a malformed config must be left for the user to recover:\n%s", got)
 	}
-	if _, ok, _ := pluginpkg.FindInstalled(tl.deeperHome, "commandcode"); ok {
+	if _, ok, _ := pluginpkg.FindInstalled(tl.deepzoraHome, "commandcode"); ok {
 		t.Fatal("plugin should still be removed when the config cannot be repaired")
 	}
 }

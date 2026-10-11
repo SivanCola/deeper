@@ -5,9 +5,9 @@ package agent
 import (
 	"bytes"
 	"context"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 	"encoding/base64"
 	"encoding/json"
 	"image"
@@ -23,7 +23,7 @@ import (
 )
 
 func TestLiveMultiProviderNativeSearch(t *testing.T) {
-	if os.Getenv("DEEPER_LIVE_WEB_SEARCH") != "1" {
+	if os.Getenv("DEEPZORA_LIVE_WEB_SEARCH") != "1" {
 		t.Skip("live search not enabled")
 	}
 	for _, tc := range multiProviderCases() {

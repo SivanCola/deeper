@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // Keepalives prevent quiet turns from being closed by common 30–60 s proxies.

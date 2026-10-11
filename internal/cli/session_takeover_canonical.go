@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/i18n"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
+	"deepzora/internal/session"
 )
 
 // cliCanonicalRoutePrefix marks a takeover/resume target as a final-format
@@ -33,7 +33,7 @@ func cliCanonicalRoute(sessionID string) string {
 // sessionWriterHeldNotice is the friendly refusal for a final-format session
 // whose writer another runtime owns.
 func sessionWriterHeldNotice() string {
-	return "this session is written by another Deeper runtime on this machine; run /takeover to take it over"
+	return "this session is written by another Deepzora runtime on this machine; run /takeover to take it over"
 }
 
 // cliServeUnreachableError marks a takeover attempt that never obtained a

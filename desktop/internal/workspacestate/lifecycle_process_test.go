@@ -28,10 +28,10 @@ func startLifecycleProcess(t *testing.T, path, action string, expected uint64) *
 	t.Cleanup(cancel)
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestWorkspaceLifecycleProcessHelper$")
 	cmd.Env = append(os.Environ(),
-		"DEEPER_WORKSPACE_PROCESS_HELPER=1",
-		"DEEPER_WORKSPACE_PROCESS_PATH="+path,
-		"DEEPER_WORKSPACE_PROCESS_ACTION="+action,
-		"DEEPER_WORKSPACE_PROCESS_EXPECTED="+strconv.FormatUint(expected, 10),
+		"DEEPZORA_WORKSPACE_PROCESS_HELPER=1",
+		"DEEPZORA_WORKSPACE_PROCESS_PATH="+path,
+		"DEEPZORA_WORKSPACE_PROCESS_ACTION="+action,
+		"DEEPZORA_WORKSPACE_PROCESS_EXPECTED="+strconv.FormatUint(expected, 10),
 	)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -134,12 +134,12 @@ func TestWorkspaceLifecycleCommitOrderAcrossProcesses(t *testing.T) {
 }
 
 func TestWorkspaceLifecycleProcessHelper(t *testing.T) {
-	if os.Getenv("DEEPER_WORKSPACE_PROCESS_HELPER") != "1" {
+	if os.Getenv("DEEPZORA_WORKSPACE_PROCESS_HELPER") != "1" {
 		return
 	}
-	path := os.Getenv("DEEPER_WORKSPACE_PROCESS_PATH")
-	action := os.Getenv("DEEPER_WORKSPACE_PROCESS_ACTION")
-	expected, err := strconv.ParseUint(os.Getenv("DEEPER_WORKSPACE_PROCESS_EXPECTED"), 10, 64)
+	path := os.Getenv("DEEPZORA_WORKSPACE_PROCESS_PATH")
+	action := os.Getenv("DEEPZORA_WORKSPACE_PROCESS_ACTION")
+	expected, err := strconv.ParseUint(os.Getenv("DEEPZORA_WORKSPACE_PROCESS_EXPECTED"), 10, 64)
 	if err != nil {
 		t.Fatal(err)
 	}

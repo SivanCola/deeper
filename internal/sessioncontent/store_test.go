@@ -17,7 +17,7 @@ func TestStorePutOpenAndDeduplicate(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	store := New(root)
-	body := bytes.Repeat([]byte("deeper-content\n"), 10000)
+	body := bytes.Repeat([]byte("deepzora-content\n"), 10000)
 	sum := sha256.Sum256(body)
 	wantDigest := hex.EncodeToString(sum[:])
 

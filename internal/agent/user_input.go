@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 
-	"deeper/internal/attachment"
-	"deeper/internal/provider"
+	"deepzora/internal/attachment"
+	"deepzora/internal/provider"
 )
 
 type rawUserInputKey struct{}

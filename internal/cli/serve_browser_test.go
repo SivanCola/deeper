@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"deeper/internal/remote/bootstrap"
+	"deepzora/internal/remote/bootstrap"
 )
 
 func TestServeBrowserBrokerFromEnv(t *testing.T) {

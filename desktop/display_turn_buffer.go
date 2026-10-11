@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/transcript"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/transcript"
+	"deepzora/internal/turnevent"
 )
 
 type displayTurnBuffer struct{ transcript.Buffer }

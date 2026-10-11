@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/sessioncatalog"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestOrganizationAdmissionRejectsAdoptionAfterResolution(t *testing.T) {

@@ -1,4 +1,4 @@
-module deeper/desktop
+module deepzora/desktop
 
 go 1.26.0
 
@@ -6,10 +6,10 @@ toolchain go1.26.9
 
 // The desktop service is a nested module so its CGO build never touches the
 // CLI's CGO_ENABLED=0 single-static-binary guarantee. The replace lets it import
-// the same deeper/internal/* kernel (the import path stays under deeper/, so
+// the same deepzora/internal/* kernel (the import path stays under deepzora/, so
 // the internal rule still permits it). `go mod tidy` here resolves its
 // transitive deps; the parent module's go build/test ./... skips this directory.
-require deeper v0.0.0
+require deepzora v0.0.0
 
 require (
 	aead.dev/minisign v0.3.0
@@ -50,7 +50,7 @@ require (
 	github.com/larksuite/oapi-sdk-go/v3 v3.12.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-pointer v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.30 // indirect
+	github.com/mattn/go-runewidth v0.0.31 // indirect
 	github.com/modelcontextprotocol/go-sdk v1.8.0 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
@@ -80,7 +80,7 @@ require (
 	mvdan.cc/sh/v3 v3.14.1 // indirect
 )
 
-replace deeper => ../
+replace deepzora => ../
 
-// Deeper keeps one signed Windows tray identity across versioned desktop paths.
+// Deepzora keeps one signed Windows tray identity across versioned desktop paths.
 replace fyne.io/systray => ./third_party/systray

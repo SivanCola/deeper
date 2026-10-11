@@ -1,12 +1,12 @@
 # 本地新会话草稿生命周期
 
-Deeper Desktop 将本地手动新建的会话作为编辑草稿，直到第一次执行被持久化接收。打开草稿不会创建 Session、Topic、Controller、会话租约、MCP 运行时或左侧会话列表条目。首次提交创建正式 Session 后，尚未生成标题的过渡条目使用本地化的“新建会话”（之后进入正常的预览/标题投影）；`session-id:...` 这类内部 canonical route 永远不能作为展示名称。
+Deepzora Desktop 将本地手动新建的会话作为编辑草稿，直到第一次执行被持久化接收。打开草稿不会创建 Session、Topic、Controller、会话租约、MCP 运行时或左侧会话列表条目。首次提交创建正式 Session 后，尚未生成标题的过渡条目使用本地化的“新建会话”（之后进入正常的预览/标题投影）；`session-id:...` 这类内部 canonical route 永远不能作为展示名称。
 
 ## 身份与存储
 
 当前会话页面要么是草稿目标（`workspaceId`、`draftId`），要么是正式 Session 目标（`SessionRef`、`tabId`）。草稿不会伪装成 tab，也不会借用 TopicID。
 
-草稿保存在 Deeper 用户状态目录下的 `desktop/drafts-v1.sqlite`。schema v4 包含活动草稿、带版本的冻结提交操作、冲突副本和上次可恢复的草稿页面。每个本地 Workspace 只有一个活动草稿；全局 Workspace 另有一个独立草稿。
+草稿保存在 Deepzora 用户状态目录下的 `desktop/drafts-v1.sqlite`。schema v4 包含活动草稿、带版本的冻结提交操作、冲突副本和上次可恢复的草稿页面。每个本地 Workspace 只有一个活动草稿；全局 Workspace 另有一个独立草稿。
 
 持久化内容包括输入文字、结构化 invocation、附件与工作区引用、粘贴块、选中文本引用、历史 Session 引用、模型来源及兼容镜像、effort、模式、审批、质量下限、Goal 及 MCP 选择。Controller、凭据、预览 URL、待处理粘贴和提交中 UI 状态不写入草稿库。
 

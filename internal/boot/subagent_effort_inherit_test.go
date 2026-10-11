@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
 )
 
 func undeclaredEffortConfig() *config.Config {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 type initialGoalSubmitRecorder struct {
@@ -60,12 +60,12 @@ func TestSubmitInitialGoalRejectsMissingImageBeforeGoalMutation(t *testing.T) {
 		tab.ID,
 		"inspect the image",
 		"inspect missing.png",
-		"inspect @.deeper/attachments/missing.png",
+		"inspect @.deepzora/attachments/missing.png",
 		nil,
 		"normal",
 		"ask",
 	)
-	if err == nil || err.Error() != "deeper_error:image_attachment_unreadable" {
+	if err == nil || err.Error() != "deepzora_error:image_attachment_unreadable" {
 		t.Fatalf("error = %v, want stable image failure", err)
 	}
 	if tab.goal != "" || ctrl.Goal() != "" {
@@ -74,7 +74,7 @@ func TestSubmitInitialGoalRejectsMissingImageBeforeGoalMutation(t *testing.T) {
 	if ctrl.Running() {
 		t.Fatal("rejected image started a turn")
 	}
-	if _, statErr := os.Stat(filepath.Join(workspace, ".deeper", "attachments")); !os.IsNotExist(statErr) {
+	if _, statErr := os.Stat(filepath.Join(workspace, ".deepzora", "attachments")); !os.IsNotExist(statErr) {
 		t.Fatalf("failed image read created attachment directory: %v", statErr)
 	}
 }

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
 )
 
 // legacyMigrationMu serializes the lockless load-modify-save of the projects /

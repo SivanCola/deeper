@@ -5,7 +5,7 @@ import (
 	"path"
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // ServeState is the JSON record a bootstrapped serve leaves on the remote host
@@ -36,9 +36,9 @@ func UnmarshalState(data []byte) (ServeState, error) {
 	return s, nil
 }
 
-// remoteDir is the ~/.deeper/remote directory given the resolved remote home.
+// remoteDir is the ~/.deepzora/remote directory given the resolved remote home.
 func remoteDir(home string) string {
-	return path.Join(home, ".deeper", store.RemoteDirName)
+	return path.Join(home, ".deepzora", store.RemoteDirName)
 }
 
 // pathsFor derives every per-workspace state path from the resolved remote
@@ -58,9 +58,9 @@ func pathsFor(home, workspace string) StatePaths {
 	}
 }
 
-// uploadedBinPath is the fallback location for an uploaded deeper binary.
+// uploadedBinPath is the fallback location for an uploaded deepzora binary.
 func uploadedBinPath(home string) string {
-	return path.Join(remoteDir(home), store.RemoteBinDirName, "deeper")
+	return path.Join(remoteDir(home), store.RemoteBinDirName, "deepzora")
 }
 
 func nowUnix(clock func() time.Time) int64 {

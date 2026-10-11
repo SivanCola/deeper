@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"os"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/store"
 )
 
 // PathFor returns the recovery state sidecar for a main session path.

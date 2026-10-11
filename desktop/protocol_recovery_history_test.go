@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"strings"
 	"testing"

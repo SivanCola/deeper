@@ -1,7 +1,7 @@
 version: 1
-project_slug: deeper
+project_slug: deepzora
 signing_policy_slug: release-signing
-repository_url: https://github.com/SivanCola/deeper.git
+repository_url: https://github.com/SivanCola/deepzora.git
 allowed_branch_names:
   - main
 allowed_build_definitions:

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/secrets"
+	"deepzora/internal/secrets"
 )
 
 // defaultStartupTimeout bounds the real initialize + tools/list handshake.

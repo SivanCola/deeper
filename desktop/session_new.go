@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 // NewSession snapshots the current conversation and rotates to a fresh one.

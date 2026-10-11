@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 )
 
 // recoveredLegacySiblings lists the other recovery snapshots of the lineage a

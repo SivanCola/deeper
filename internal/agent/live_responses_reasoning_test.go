@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider/responses"
+	"deepzora/internal/provider/responses"
 )
 
 // TestLiveDeepSeekResponsesAgentToolLoops verifies the official stateless

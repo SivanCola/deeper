@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 type sessionListEntry struct {

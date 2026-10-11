@@ -6,14 +6,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const repository = "SivanCola/deeper";
+export const repository = "SivanCola/deepzora";
 const stable = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
 
 export function shouldAdvance(version, currentTag) {
   assert.match(version, stable);
   if (!currentTag) return true;
   const current = currentTag.replace(/^(desktop-)?v/, "");
-  assert.match(current, stable, "GitHub latest must identify a stable Deeper release");
+  assert.match(current, stable, "GitHub latest must identify a stable Deepzora release");
   const wanted = version.split(".").map(Number);
   const actual = current.split(".").map(Number);
   for (let index = 0; index < 3; index++) {
@@ -40,7 +40,7 @@ export function cliPointer(release, version) {
   assert.equal(release.tag_name, `v${version}`);
   assert.equal(release.prerelease, false);
   const names = ["SHA256SUMS", ...["darwin-amd64", "darwin-arm64", "linux-amd64", "linux-arm64",
-    "windows-amd64", "windows-arm64"].map(target => `deeper-${target}.${target.startsWith("windows") ? "zip" : "tar.gz"}`)];
+    "windows-amd64", "windows-arm64"].map(target => `deepzora-${target}.${target.startsWith("windows") ? "zip" : "tar.gz"}`)];
   const assets = names.sort().map(name => {
     const matches = release.assets.filter(asset => asset.name === name);
     assert.equal(matches.length, 1, `missing or duplicate CLI asset: ${name}`);
@@ -101,7 +101,7 @@ export function publish(version, sourceSHA) {
     assert.equal(release.draft, false);
     assert.equal(release.prerelease, false);
   }
-  const directory = mkdtempSync(path.join(tmpdir(), "deeper-update-pointer-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "deepzora-update-pointer-"));
   try {
     const manifestPath = path.join(directory, "latest.json");
     gh("release", "download", desktopTag, "--repo", repository, "--pattern", "latest.json", "--output", manifestPath);

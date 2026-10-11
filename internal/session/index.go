@@ -11,11 +11,11 @@ import (
 	"path/filepath"
 	"sort"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 const (
-	sparseIndexCodec    = "deeper.session.offset-index/v1"
+	sparseIndexCodec    = "deepzora.session.offset-index/v1"
 	sparseIndexInterval = 256
 	sparseIdentityBytes = 4096
 )

@@ -54,7 +54,7 @@ func TestWindowsPayloadManifestRejectsDuplicateAndTrailingData(t *testing.T) {
 	duplicate := strings.Replace(
 		string(b),
 		`"files": [`,
-		`"files": [{"name":"deeper-desktop.exe","sha256":"`+strings.Repeat("a", 64)+`"},`,
+		`"files": [{"name":"deepzora-desktop.exe","sha256":"`+strings.Repeat("a", 64)+`"},`,
 		1,
 	)
 	if _, err := DecodeWindowsPayloadManifest([]byte(duplicate), "v2"); err == nil {
@@ -76,7 +76,7 @@ func TestWindowsPayloadManifestRejectsNonCanonicalIdentity(t *testing.T) {
 	}
 	for _, changed := range [][]byte{
 		[]byte(strings.Replace(string(b), `"version": "v2"`, `"version": " v2 "`, 1)),
-		[]byte(strings.Replace(string(b), `"name": "deeper-desktop.exe"`, `"name": "Deeper-Desktop.exe"`, 1)),
+		[]byte(strings.Replace(string(b), `"name": "deepzora-desktop.exe"`, `"name": "Deepzora-Desktop.exe"`, 1)),
 		[]byte(strings.Replace(string(b), strings.Repeat("a", 64), strings.Repeat("A", 64), 1)),
 	} {
 		if _, err := DecodeWindowsPayloadManifest(changed, "v2"); err == nil {

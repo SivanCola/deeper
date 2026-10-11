@@ -6,9 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/control"
-	"deeper/internal/i18n"
-	"deeper/internal/skill"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
+	"deepzora/internal/skill"
 )
 
 // runUnrecognizedSlash resolves slash input that is not a built-in command, in

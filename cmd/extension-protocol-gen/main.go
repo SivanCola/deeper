@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"deeper/internal/extension/protocolgen"
+	"deepzora/internal/extension/protocolgen"
 )
 
 func main() {

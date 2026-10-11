@@ -1,8 +1,8 @@
-// --deeper-draggable marks OS drag regions. Electron rewrites chrome
+// --deepzora-draggable marks OS drag regions. Electron rewrites chrome
 // drag/no-drag to -webkit-app-region. Transcript content must not become
 // native no-drag or Chromium punches a hole in the titlebar (#10105).
 
-const DRAG_VALUE = /--deeper-draggable(\s*:\s*)(drag|no-drag)/g;
+const DRAG_VALUE = /--deepzora-draggable(\s*:\s*)(drag|no-drag)/g;
 const APP_REGION_DECL = /\s*-webkit-app-region\s*:\s*(?:no-)?drag;?/g;
 const CHROME_NO_DRAG_SELECTOR =
   /(^|[,{\s])\.(?:topicbar(?:__|--)[\w-]*|topbar(?:__|--)[\w-]*|topicbar|topbar|sidebar[\w-]*|windows-window-control[\w-]*|management-screen[\w-]*|heartbeat[\w-]*|app-chrome[\w-]*|tabbar[\w-]*|chip|modal-close-button|[\w-]*backdrop|theme-gallery__editor-overlay|toast)\b/i;
@@ -10,10 +10,10 @@ const CONTENT_APP_REGION_SELECTOR =
   /(^|[,{\s])\.(?:msg|transcript|reasoning|tool|process-card|composer|compaction|turn-collapse)(?:__|-|[\s,{.#:]|$)/i;
 
 export function shellFromEnv(env = process.env) {
-  const shell = (env.DEEPER_SHELL ?? "").trim().toLowerCase();
+  const shell = (env.DEEPZORA_SHELL ?? "").trim().toLowerCase();
   if (shell === "") return "browser";
   if (shell === "electron") return "electron";
-  throw new Error(`DEEPER_SHELL must be "electron" or unset, got ${JSON.stringify(shell)}`);
+  throw new Error(`DEEPZORA_SHELL must be "electron" or unset, got ${JSON.stringify(shell)}`);
 }
 
 function enclosingSelector(css, offset) {

@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 // bindExecutorProjection rebinds the agent's projection sidecar to path.

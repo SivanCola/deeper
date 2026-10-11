@@ -177,7 +177,7 @@ func TestFinalizeMergeResumesPlannedRecoveryMove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deeper-cleanup")
+	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-cleanup")
 	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func TestFinalizeMergeMigratesRegisteredLegacyJournal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deeper-cleanup")
+	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-cleanup")
 	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestFinalizeMergeRestoresPreparedLegacyDetachedCheckout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deeper-cleanup")
+	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-cleanup")
 	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +279,7 @@ func TestFinalizeMergePreservesUnregisteredLegacyDetachedCheckout(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deeper-cleanup")
+	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-cleanup")
 	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
 		t.Fatal(err)
 	}

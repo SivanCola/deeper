@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/jobs"
+	"deepzora/internal/jobs"
 )
 
 func newRecorderForTest(t *testing.T, projectDir string) (*TaskRecorder, *FileStore) {
 	t.Helper()
-	store := NewFileStore(".deeper/tasks")
+	store := NewFileStore(".deepzora/tasks")
 	r := NewTaskRecorder(store, projectDir, func() string { return "sess-1" })
 	return r, store
 }
@@ -303,7 +303,7 @@ func TestTaskRecorder_UnknownTaskDoneIsNoop(t *testing.T) {
 
 func TestTaskRecorder_EmptySessionIDAllowed(t *testing.T) {
 	dir := t.TempDir()
-	store := NewFileStore(".deeper/tasks")
+	store := NewFileStore(".deepzora/tasks")
 	r := NewTaskRecorder(store, dir, func() string { return "" })
 	ctx := context.Background()
 
@@ -323,7 +323,7 @@ func TestTaskRecorder_EmptySessionIDAllowed(t *testing.T) {
 }
 
 func TestTaskRecorder_SameJobIDAcrossSessionsUsesDistinctMonitorIDs(t *testing.T) {
-	store := NewFileStore(".deeper/tasks")
+	store := NewFileStore(".deepzora/tasks")
 	projectDir := t.TempDir()
 	r1 := NewTaskRecorder(store, projectDir, func() string { return "session-a" })
 	r2 := NewTaskRecorder(store, projectDir, func() string { return "session-b" })

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 type exactPromptController struct {

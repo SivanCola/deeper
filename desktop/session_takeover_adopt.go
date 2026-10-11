@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
 )
 
 // takeoverAfterAdoptGrantHookForTest pauses a direct local-session adoption

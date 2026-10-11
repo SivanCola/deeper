@@ -2,14 +2,14 @@ package main
 
 import (
 	"context"
-	"deeper/internal/config"
+	"deepzora/internal/config"
 	"os"
 	"testing"
 )
 
 func TestSavedCredentialAllowsAdmissionThroughPendingMetadata(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	if err := os.MkdirAll(config.DeeperHomeDir(), 0700); err != nil {
+	if err := os.MkdirAll(config.DeepzoraHomeDir(), 0700); err != nil {
 		t.Fatal(err)
 	}
 	body := "default_model='relay/chat'\n[[providers]]\nname='relay'\nkind='openai'\nbase_url='https://relay.invalid/v1'\nmodel='chat'\napi_key_env='MISSING_REVIEW_KEY'\n[desktop]\nprovider_access=['relay']\n"

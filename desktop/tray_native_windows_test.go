@@ -12,20 +12,20 @@ import (
 	"fyne.io/systray"
 	"golang.org/x/sys/windows"
 
-	"deeper/desktop/internal/instanceidentity"
+	"deepzora/desktop/internal/instanceidentity"
 )
 
 // Opt-in subprocess acceptance: production signature selection and tray loop,
 // checked against Explorer, including independently signed or moved fixtures.
 func TestNativeTrayAcceptanceWorker(t *testing.T) {
-	marker := os.Getenv("DEEPER_TEST_TRAY_MARKER")
+	marker := os.Getenv("DEEPZORA_TEST_TRAY_MARKER")
 	if marker == "" {
 		t.Skip("native acceptance subprocess only")
 	}
 	ready := make(chan struct{})
 	quit := startDesktopTray(func() {
 		systray.SetIcon(trayIconBytes)
-		systray.SetTooltip("Deeper isolated acceptance")
+		systray.SetTooltip("Deepzora isolated acceptance")
 		systray.AddMenuItem("Open", "Acceptance menu")
 		close(ready)
 	}, func() {})

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"testing"
 )
 

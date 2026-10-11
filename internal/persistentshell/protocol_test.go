@@ -8,8 +8,8 @@ import (
 )
 
 func TestExtractOutputIgnoresEchoedScript(t *testing.T) {
-	start := "DEEPER_START_abc"
-	end := "DEEPER_END_abc:"
+	start := "DEEPZORA_START_abc"
+	end := "DEEPZORA_END_abc:"
 	raw := posixCommandScript("pwd", start, end) +
 		start + "\n" +
 		"/tmp/work\n" +
@@ -62,8 +62,8 @@ func TestAnsiCQuoteASCIIByteRoundTrip(t *testing.T) {
 // The echoed wrapper source contains both markers. Completion must require the
 // status digits that only the executed printf can produce.
 func TestEchoedScriptAloneIsNotCompletion(t *testing.T) {
-	start := "DEEPER_START_abc"
-	end := "DEEPER_END_abc:"
+	start := "DEEPZORA_START_abc"
+	end := "DEEPZORA_END_abc:"
 	if _, _, ok := extractOutput(posixCommandScript("pwd", start, end), start, end); ok {
 		t.Fatal("echoed wrapper source must not complete a command")
 	}
@@ -73,8 +73,8 @@ func TestEchoedScriptAloneIsNotCompletion(t *testing.T) {
 }
 
 func TestExtractOutputCRLF(t *testing.T) {
-	start := "DEEPER_START_x"
-	end := "DEEPER_END_x:"
+	start := "DEEPZORA_START_x"
+	end := "DEEPZORA_END_x:"
 	raw := start + "\r\nhello\r\n" + end + "7\r\n"
 	body, code, ok := extractOutput(raw, start, end)
 	if !ok || code != 7 || body != "hello" {
@@ -86,8 +86,8 @@ func TestExtractOutputCRLF(t *testing.T) {
 // mid-line. Requiring a line start there hung every such command until its
 // deadline (printf without \n, echo -n, cat of a file with no final newline).
 func TestExtractOutputWithoutTrailingNewline(t *testing.T) {
-	start := "DEEPER_START_y"
-	end := "DEEPER_END_y:"
+	start := "DEEPZORA_START_y"
+	end := "DEEPZORA_END_y:"
 	raw := start + "\nhi" + end + "0\n"
 	body, code, ok := extractOutput(raw, start, end)
 	if !ok || code != 0 || body != "hi" {

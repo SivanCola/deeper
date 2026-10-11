@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/transcript"
 )
 
 // SessionRef is the only execution identity used by the linear session
@@ -410,7 +410,7 @@ func (s *Service) ContinueImportedSource(ctx context.Context, sourcePath, source
 	}
 	sourceRoot := filepath.Dir(sourceDir)
 	if result.Kind == "final" && filepath.Clean(sourceRoot) != filepath.Clean(filesystem.Root) {
-		tmp, err := os.MkdirTemp("", "deeper-canonical-stage-")
+		tmp, err := os.MkdirTemp("", "deepzora-canonical-stage-")
 		if err != nil {
 			return nil, result, err
 		}

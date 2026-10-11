@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 // pastedPathCandidates returns literal filesystem paths without executing a

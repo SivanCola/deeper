@@ -1,6 +1,6 @@
 package config
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // ResolvedReasoningView is additive UI metadata, resolved by the same adapter
 // contract as boot validation. Empty Effective means the server chooses.

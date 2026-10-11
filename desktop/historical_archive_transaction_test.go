@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 func historicalArchiveFixture(t *testing.T) (*App, SessionSelector, *session.Service) {

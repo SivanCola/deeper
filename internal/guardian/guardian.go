@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/nilutil"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/nilutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // PolicyPrompt returns the guardian safety policy as a string. The policy is

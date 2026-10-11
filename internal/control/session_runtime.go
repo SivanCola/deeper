@@ -3,7 +3,7 @@ package control
 import (
 	"context"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func (c *Controller) appendSessionBatch(ctx context.Context, store *session.Session, batch session.Batch) (session.Commit, error) {

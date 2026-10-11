@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 // Verdict is the report's headline. Partial is terminal: the work is proven

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/recovery"
+	"deepzora/internal/event"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/recovery"
 )
 
 type Options struct {

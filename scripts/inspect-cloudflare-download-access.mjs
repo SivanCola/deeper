@@ -39,8 +39,8 @@ async function request(endpoint, body) {
 
 for (const [profile, userAgent] of [
   ["node-default", undefined],
-  ["desktop-updater-current", "Deeper-Updater/v1.38.11 (linux/amd64; build=stable; update=stable)"],
-  ["desktop-updater-target", "Deeper-Updater/v1.38.12 (linux/amd64; build=stable; update=stable)"],
+  ["desktop-updater-current", "Deepzora-Updater/v1.38.11 (linux/amd64; build=stable; update=stable)"],
+  ["desktop-updater-target", "Deepzora-Updater/v1.38.12 (linux/amd64; build=stable; update=stable)"],
 ]) {
   const probe = await fetch(manifestURL, {
     headers: userAgent ? { "User-Agent": userAgent } : undefined,

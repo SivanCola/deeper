@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/sessionui"
+	"deepzora/desktop/internal/sessionui"
 )
 
 func TestManualCreationManagerProcess(t *testing.T) {
-	path := os.Getenv("DEEPER_TEST_CREATION_STORE")
+	path := os.Getenv("DEEPZORA_TEST_CREATION_STORE")
 	if path == "" {
 		return
 	}
@@ -40,7 +40,7 @@ func TestManualCreationTwoManagersRespectCommittedResult(t *testing.T) {
 	a := newManualSessionTestApp(t)
 	v, _ := seedManualCreation(t, a, "two-process-creation", "starting")
 	cmd := exec.Command(os.Args[0], "-test.run=^TestManualCreationManagerProcess$")
-	cmd.Env = append(os.Environ(), "DEEPER_TEST_CREATION_STORE="+a.sessionUIStore().Path())
+	cmd.Env = append(os.Environ(), "DEEPZORA_TEST_CREATION_STORE="+a.sessionUIStore().Path())
 	output, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)

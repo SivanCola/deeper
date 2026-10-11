@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestProtocolRecoveryACPRejectsMissingAndUnsupportedToken(t *testing.T) {

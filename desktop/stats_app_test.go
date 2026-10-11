@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/stats"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/stats"
 )
 
 // TestResolveStatsRange covers the six branches of resolveStatsRange: the four
@@ -141,7 +141,7 @@ func TestResolveStatsRangeToIsEndOfDay(t *testing.T) {
 }
 
 func TestUsageStatsFlushesPendingRecorderWrites(t *testing.T) {
-	t.Setenv("DEEPER_STATE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_STATE_HOME", t.TempDir())
 	recorder := stats.NewRecorder(event.Discard, config.StatsDir(), "desktop")
 	recorder.Emit(event.Event{
 		Kind: event.Usage, ModelRef: "deepseek/model",

@@ -78,8 +78,8 @@ func TestWebSearchModelCredentialsAndProtocol(t *testing.T) {
 	c := searchAssignmentConfig()
 	c.Agent.WebSearchModel = "first/m"
 	c.Providers[0].BaseURL = "https://search.example"
-	c.Providers[0].APIKeyEnv = "DEEPER_SEARCH_TEST_MISSING_KEY"
-	t.Setenv("DEEPER_SEARCH_TEST_MISSING_KEY", "")
+	c.Providers[0].APIKeyEnv = "DEEPZORA_SEARCH_TEST_MISSING_KEY"
+	t.Setenv("DEEPZORA_SEARCH_TEST_MISSING_KEY", "")
 	if c.ResolveWebSearch(nil).Status != "invalid" {
 		t.Fatal("missing credentials accepted")
 	}

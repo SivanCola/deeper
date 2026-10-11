@@ -13,10 +13,10 @@ func TestUnconfiguredKeyRejectsUpdates(t *testing.T) {
 	}
 }
 
-func TestEmbeddedDeeperKey(t *testing.T) {
+func TestEmbeddedDeepzoraKey(t *testing.T) {
 	var key minisign.PublicKey
 	if err := key.UnmarshalText([]byte(publicKey)); err != nil {
-		t.Fatalf("embedded Deeper key is not configured: %v", err)
+		t.Fatalf("embedded Deepzora key is not configured: %v", err)
 	}
 	_, otherPrivate, err := minisign.GenerateKey(rand.Reader)
 	if err != nil {

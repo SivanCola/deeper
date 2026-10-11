@@ -8,9 +8,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func dagSavedSession(t *testing.T, path string, contents ...string) *Session {

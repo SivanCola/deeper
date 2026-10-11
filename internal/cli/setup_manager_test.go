@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func setupTestConfig() *config.Config {
@@ -238,7 +238,7 @@ func TestProviderSetupSessionAddAccessSeedsUndeclaredLegacyProviders(t *testing.
 
 func TestLocalProviderSetupAccessOnlySeedsProjectProviders(t *testing.T) {
 	isolateUserConfig(t)
-	path := filepath.Join(t.TempDir(), "deeper.toml")
+	path := filepath.Join(t.TempDir(), "deepzora.toml")
 	if err := os.WriteFile(path, []byte(`
 [[providers]]
 name = "project-relay"
@@ -654,7 +654,7 @@ func TestProviderSetupOperationReplayRejectsConcurrentAccessDeclaration(t *testi
 
 func TestProviderSetupOperationReplayMaterializesLatestProjectProviders(t *testing.T) {
 	isolateUserConfig(t)
-	path := filepath.Join(t.TempDir(), "deeper.toml")
+	path := filepath.Join(t.TempDir(), "deepzora.toml")
 	initialBody := `
 [[providers]]
 name = "initial-project"
@@ -729,7 +729,7 @@ func TestProviderSetupCommitDoesNotOverwriteMalformedConcurrentConfig(t *testing
 
 func TestResolveSetupTargetsLocalKeepsGlobalCredentialTarget(t *testing.T) {
 	targets := resolveSetupTargets([]string{"--local"})
-	if targets.config != "deeper.toml" {
+	if targets.config != "deepzora.toml" {
 		t.Fatalf("local config target = %q", targets.config)
 	}
 	if targets.env != config.CredentialsTargetDescription() {
@@ -740,7 +740,7 @@ func TestResolveSetupTargetsLocalKeepsGlobalCredentialTarget(t *testing.T) {
 func TestLocalSetupPersistsWorkspaceProviderAccess(t *testing.T) {
 	cfg := setupTestConfig()
 	cfg.Desktop.ProviderAccess = []string{"grok-relay"}
-	path := filepath.Join(t.TempDir(), "deeper.toml")
+	path := filepath.Join(t.TempDir(), "deepzora.toml")
 	if err := cfg.SaveTo(path); err != nil {
 		t.Fatal(err)
 	}

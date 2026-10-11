@@ -7,7 +7,7 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 // Certainty reports whether the host could statically prove a command's

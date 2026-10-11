@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/projectiondb"
-	"deeper/internal/sqliteuri"
+	"deepzora/internal/agent"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/sqliteuri"
 )
 
 func (c *Catalog) ReconcileDirectory(ctx context.Context, target DirectoryTarget) error {
@@ -660,7 +660,7 @@ func setCatalogRevisionFloor(ctx context.Context, db *sql.DB, revisionFloor uint
 }
 
 // Inspect is read-only. It never migrates, repairs, quarantines, or rewrites a
-// catalog, making it suitable for `deeper doctor sessions`.
+// catalog, making it suitable for `deepzora doctor sessions`.
 func Inspect(ctx context.Context, path string) (Status, error) {
 	if strings.TrimSpace(path) == "" {
 		path = DefaultPath()

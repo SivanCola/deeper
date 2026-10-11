@@ -2,7 +2,7 @@ package responses
 
 import (
 	"bytes"
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"testing"
 )

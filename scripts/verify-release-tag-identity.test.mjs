@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { verifyIdentity } from "./verify-release-tag-identity.mjs";
 
 const rule = { id: 1, target: "tag", enforcement: "active", current_user_can_bypass: "always", conditions: { ref_name: { include: ["refs/tags/v*", "refs/tags/npm-v*", "refs/tags/desktop-v*"], exclude: [] } }, rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }] };
-const fixture = () => ({ actor: { login: "publisher", id: 42, type: "User" }, repo: { full_name: "SivanCola/deeper", permissions: { push: true } }, rulesets: [structuredClone(rule)], expectedActor: "publisher", version: "1.2.3" });
+const fixture = () => ({ actor: { login: "publisher", id: 42, type: "User" }, repo: { full_name: "SivanCola/deepzora", permissions: { push: true } }, rulesets: [structuredClone(rule)], expectedActor: "publisher", version: "1.2.3" });
 
 test("authorized identity, unrelated rules, and immutable-only restrictions", () => {
   assert.equal(verifyIdentity(fixture()).actorID, "42");
@@ -36,7 +36,7 @@ test("missing credentials, mismatched actor, token rotation, and repository perm
   for (const change of [
     { expectedActor: "" }, { expectedActor: "someone-else" }, { expectedID: "99" },
     { actor: { login: "publisher", id: 42, type: "Bot" } },
-    { repo: { full_name: "SivanCola/deeper", permissions: { push: false } } },
+    { repo: { full_name: "SivanCola/deepzora", permissions: { push: false } } },
   ]) assert.throws(() => verifyIdentity({ ...fixture(), ...change }));
 });
 
@@ -47,13 +47,13 @@ test("CLI uses credential-scoped paginated observations and exports the bound ac
     const input = fixture();
     writeFileSync(gh, `#!/usr/bin/env node
 const args = process.argv.slice(2);
-const responses = ${JSON.stringify({ user: input.actor, "repos/SivanCola/deeper": input.repo, "repos/SivanCola/deeper/rulesets?includes_parents=true&per_page=100": [[rule]], "repos/SivanCola/deeper/rulesets/1?includes_parents=true": rule })};
+const responses = ${JSON.stringify({ user: input.actor, "repos/SivanCola/deepzora": input.repo, "repos/SivanCola/deepzora/rulesets?includes_parents=true&per_page=100": [[rule]], "repos/SivanCola/deepzora/rulesets/1?includes_parents=true": rule })};
 if (process.env.GH_TOKEN !== 'test-credential') process.exit(2);
 if (args.at(-1).includes('per_page') && (!args.includes('--paginate') || !args.includes('--slurp'))) process.exit(3);
 if (!(args.at(-1) in responses)) process.exit(4);
 console.log(JSON.stringify(responses[args.at(-1)]));
 `, { mode: 0o755 });
-    const env = { ...process.env, PATH: `${root}:${process.env.PATH}`, GH_TOKEN: "test-credential", RELEASE_TAG_ACTOR: "publisher", RELEASE_TAG_ACTOR_ID: "", GITHUB_ACTIONS: "true", GITHUB_REF: "refs/heads/main", GITHUB_REF_PROTECTED: "true", GITHUB_REPOSITORY: "SivanCola/deeper", GITHUB_OUTPUT: path.join(root, "output") };
+    const env = { ...process.env, PATH: `${root}:${process.env.PATH}`, GH_TOKEN: "test-credential", RELEASE_TAG_ACTOR: "publisher", RELEASE_TAG_ACTOR_ID: "", GITHUB_ACTIONS: "true", GITHUB_REF: "refs/heads/main", GITHUB_REF_PROTECTED: "true", GITHUB_REPOSITORY: "SivanCola/deepzora", GITHUB_OUTPUT: path.join(root, "output") };
     const run = extra => spawnSync(process.execPath, ["scripts/verify-release-tag-identity.mjs", "1.2.3"], { env: { ...env, ...extra }, encoding: "utf8" });
     const result = run({});
     assert.equal(result.status, 0, result.stderr);

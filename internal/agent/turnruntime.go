@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"deeper/internal/completion"
-	"deeper/internal/runtimepolicy"
+	"deepzora/internal/completion"
+	"deepzora/internal/runtimepolicy"
 )
 
 // turnRuntime is the host state for exactly one Agent.Run. beginRunTurn builds

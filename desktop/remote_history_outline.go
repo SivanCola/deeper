@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/servecontract"
-	"deeper/internal/session"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
 	"fmt"
 	"net/url"
 )

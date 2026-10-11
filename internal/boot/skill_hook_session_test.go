@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/hook"
+	"deepzora/internal/event"
+	"deepzora/internal/hook"
 )
 
 func TestBuildResumedSkillKeepsHookSessionID(t *testing.T) {
@@ -19,7 +19,7 @@ func TestBuildResumedSkillKeepsHookSessionID(t *testing.T) {
 	registerBootSubagentTestProvider()
 	prov := &bootSubagentTestProvider{hookSessionProbe: true}
 	setBootSubagentTestProvider(t, prov)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [[providers]]
@@ -29,7 +29,7 @@ model = "x"
 `)
 	approveWorkspace(t, dir)
 	writeFile(t, dir, "marker.txt", "hook probe")
-	writeFile(t, dir, ".deeper/skills/hook-probe.md", "---\ndescription: inspect a marker\nrunAs: subagent\nallowed-tools: read_file\n---\nRead the requested file.")
+	writeFile(t, dir, ".deepzora/skills/hook-probe.md", "---\ndescription: inspect a marker\nrunAs: subagent\nallowed-tools: read_file\n---\nRead the requested file.")
 	logPath := filepath.Join(dir, "hook.log")
 	script := filepath.Join(dir, "log-read.sh")
 	writeFile(t, dir, "log-read.sh", "#!/bin/sh\ncat >> "+shellQuoteForTest(logPath)+"\n")
@@ -40,7 +40,7 @@ model = "x"
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, dir, ".deeper/settings.json", string(settings))
+	writeFile(t, dir, ".deepzora/settings.json", string(settings))
 	if err := hook.ApproveProjectHooks(hook.LoadOptions{ProjectRoot: dir}); err != nil {
 		t.Fatal(err)
 	}

@@ -16,7 +16,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 )
 
 func TestPrepareAndCommitRoundTrip(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/desktop/internal/sessionui"
+	"deepzora/desktop/internal/sessionui"
 )
 
 type manualCreationStore interface {

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 var hostDefault = sync.OnceValue(discoverUTF8)

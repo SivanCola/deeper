@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func reopenLifecycleFixture(t *testing.T, a *App, ref session.SessionRef) (*session.Runtime, func()) {

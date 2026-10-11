@@ -8,8 +8,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"deeper/internal/agent"
-	"deeper/internal/runtimepolicy"
+	"deepzora/internal/agent"
+	"deepzora/internal/runtimepolicy"
 )
 
 const (

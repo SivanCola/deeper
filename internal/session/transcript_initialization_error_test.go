@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/transcript"
+	"deepzora/internal/provider"
+	"deepzora/internal/transcript"
 )
 
 type unlockedRuntimeLogHandler struct {

@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/secrets"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/secrets"
 )
 
 // ModelSettingsChange is a closed set of model operations, never a replacement

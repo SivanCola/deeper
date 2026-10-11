@@ -247,7 +247,7 @@ def write_manifests():
             "schemaVersion": 1,
             "id": tid,
             "name": spec["name"],
-            "author": "Deeper Contributors",
+            "author": "Deepzora Contributors",
             "description": spec["description"],
             "license": "MIT",
             "baseStyle": spec["baseStyle"],

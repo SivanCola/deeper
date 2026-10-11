@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
 )
 
 func TestCustomAnthropicCompatibilityToolLoop(t *testing.T) {

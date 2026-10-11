@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/historywork"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/historywork"
+	"deepzora/internal/store"
 )
 
 // metadataRecord never opens the transcript, display index, or event log.

@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/config"
+	"deepzora/internal/bot"
+	"deepzora/internal/config"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
 	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
@@ -739,7 +739,7 @@ func (a *adapter) sdkClient() (*lark.Client, error) {
 	opts := []lark.ClientOptionFunc{
 		lark.WithLogLevel(larkcore.LogLevelError),
 		lark.WithReqTimeout(15 * time.Second),
-		lark.WithSource("deeper"),
+		lark.WithSource("deepzora"),
 	}
 	if feishuDomain(a.cfg.Domain) == "lark" {
 		opts = append(opts, lark.WithOpenBaseUrl(lark.LarkBaseUrl), lark.WithOAuthBaseUrl(lark.OAuthBaseUrlLark))

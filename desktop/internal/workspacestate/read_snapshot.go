@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 // ReadSnapshot is an immutable, coherent view of verified registry bytes. It

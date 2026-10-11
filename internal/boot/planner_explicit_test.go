@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
 )
 
 func TestBuildOmitsCoordinatorWithoutPlannerModel(t *testing.T) {
@@ -16,7 +16,7 @@ func TestBuildOmitsCoordinatorWithoutPlannerModel(t *testing.T) {
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, testutil.NewMock("executor-only"))
 
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "executor"
 
 [[providers]]
@@ -43,7 +43,7 @@ func TestBuildConstructsCoordinatorWhenPlannerModelConfigured(t *testing.T) {
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, testutil.NewMock("dual"))
 
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "executor"
 
 [agent]
@@ -78,7 +78,7 @@ func TestBuildConstructsCoordinatorWhenPlannerModelMatchesExecutor(t *testing.T)
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, testutil.NewMock("same-model"))
 
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "executor"
 
 [agent]

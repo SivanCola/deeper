@@ -1,6 +1,6 @@
-// Package extension is the Go SDK for Deeper extension sidecars speaking
+// Package extension is the Go SDK for Deepzora extension sidecars speaking
 // Extension Protocol v2 over stdio. An extension is a separate process: the
-// Deeper host launches it, sends extension/initialize first, drives
+// Deepzora host launches it, sends extension/initialize first, drives
 // intercepts, events, provider streams, and UI calls, and finally asks it to
 // stop with extension/shutdown.
 //
@@ -16,7 +16,7 @@
 // should exit with code 0; the host reaps it by that exit status.
 //
 // Protocol reference: docs/EXTENSION_PROTOCOL.generated.md and
-// internal/extension/protocol/schema.generated.json in the Deeper
+// internal/extension/protocol/schema.generated.json in the Deepzora
 // repository.
 package extension
 
@@ -277,7 +277,7 @@ func Serve(ctx context.Context, h Handler, opts Options) error {
 	}
 	logger := opts.Logger
 	if logger == nil {
-		logger = log.New(os.Stderr, "deeper-extension: ", log.LstdFlags)
+		logger = log.New(os.Stderr, "deepzora-extension: ", log.LstdFlags)
 	}
 	s := &server{
 		handler: h,

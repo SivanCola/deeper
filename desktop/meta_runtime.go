@@ -4,13 +4,13 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
 )
 
 func (a *App) metaForTab(tabID string) Meta {

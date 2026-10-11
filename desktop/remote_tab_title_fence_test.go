@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRemoteTabTitleRefreshRejectsDifferentServeCurrent(t *testing.T) {

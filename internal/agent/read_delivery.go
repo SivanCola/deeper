@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // readDelivery contains no source text. References always name an original

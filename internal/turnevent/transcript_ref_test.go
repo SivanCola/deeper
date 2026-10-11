@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestEnvelopesCarryHeadReferenceAcrossCompaction(t *testing.T) {

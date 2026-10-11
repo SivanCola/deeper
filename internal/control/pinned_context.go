@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 type controllerPromptState struct {

@@ -1,8 +1,8 @@
 package anthropic
 
 import (
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 func ReasoningForConfig(cfg provider.Config) provider.ReasoningCapability {

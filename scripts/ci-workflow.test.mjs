@@ -90,13 +90,13 @@ test("release tag mutation follows approval with an explicit identity and read-o
   assert.doesNotMatch(job(promote, "preflight"), /release-candidate-tags.sh activate|git push/);
 });
 
-test("cancelled CI releases workers, aggregates, and metrics without hiding live failures", () => {
+test("cancelled CI releases workers and aggregates without hiding live failures", () => {
   for (const name of ["test", "windows-control", "windows-isolated", "race", "sdk", "desktop-prepare",
     "desktop-frontend", "desktop-browser-group", "desktop-go", "desktop-go-race", "desktop-macos",
-    "desktop-windows", "desktop-windows-go-group", "desktop-windows-package", "lint-code", "coverage", "prune-go-cache"]) {
+    "desktop-windows", "desktop-windows-go-group", "desktop-windows-package", "lint-code", "prune-go-cache"]) {
     assert.equal(condition(job(ci, name), { cancelled: () => true }), false, name);
   }
-  for (const name of ["root", "lint", "desktop", "desktop-browser", "desktop-windows-go", "ci-metrics"]) {
+  for (const name of ["root", "lint", "desktop", "desktop-browser", "desktop-windows-go"]) {
     assert.equal(condition(job(ci, name), { cancelled: () => true }), false, name);
     // A failed dependency must still reach the fail-closed shell assertions.
     assert.equal(condition(job(ci, name), { cancelled: () => false, success: () => false,
@@ -105,15 +105,13 @@ test("cancelled CI releases workers, aggregates, and metrics without hiding live
 });
 
 test("packaging changes run native installer acceptance before merge", () => {
-  assert.match(job(ci, "desktop-prepare"), /DEEPER_COMMIT: \$\{\{ github.sha \}\}/,
+  assert.match(job(ci, "desktop-prepare"), /DEEPZORA_COMMIT: \$\{\{ github.sha \}\}/,
     "prepared frontend must budget the full source identity used by native packaging");
   const body = job(ci, "desktop-windows-package");
   assert.doesNotMatch(ci, /performance-benchmark\.mjs/);
   const diagnostic = workflow("diagnostic-overhead");
-  assert.match(diagnostic, /schedule:/);
+  assert.doesNotMatch(diagnostic, /schedule:|pull_request:|push:/);
   assert.match(diagnostic, /workflow_dispatch:/);
-  assert.match(diagnostic, /desktop\/electron\/\*\*/);
-  assert.match(diagnostic, /desktop\/frontend\/\*\*/);
   assert.match(diagnostic, /run: pnpm install --frozen-lockfile/);
   assert.match(diagnostic, /run: node electron\/scripts\/performance-benchmark\.mjs/);
   assert.match(diagnostic, /if-no-files-found: error/);
@@ -131,7 +129,7 @@ test("packaging changes run native installer acceptance before merge", () => {
 });
 
 test("notes pushes preserve required ancestor CI while code pushes cancel obsolete runs", () => {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "deeper-ci-cancel-"));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "deepzora-ci-cancel-"));
   const git = (...args) => {
     const result = spawnSync("git", args, { cwd: dir, encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
@@ -186,7 +184,7 @@ test("Certum signing survives skipped ancestor gates but requires successful inp
   assert.match(body, /if:.*always\(\)/);
   const context = {
     needs: { resolve: { result: "success" }, "windows-build": { result: "success" }, "signing-contract": { result: "success" } },
-    github: { repository: "SivanCola/deeper" },
+    github: { repository: "SivanCola/deepzora" },
     inputs: { desktop_manual_only: false },
   };
   assert.equal(condition(body, context), true);
@@ -223,40 +221,21 @@ test("Windows full runs use the partitioned suite without a duplicate module swe
   assert.match(job(ci, "windows-control"), /run: node scripts\/windows-go-tests\.mjs control/);
 });
 
-test("App memory workflow tiers pull requests and keeps full scheduled coverage", t => {
-  assert.match(appMemory, /schedule:\n    - cron: "17 3 \* \* \*"/);
-  assert.match(appMemory, /\[ "\$EVENT_NAME" = workflow_dispatch \] \|\| \[ "\$EVENT_NAME" = schedule \]/);
-  assert.match(appMemory, /matrix:\n        shard: \$\{\{ fromJSON\(needs\.changes\.outputs\.memory_shards\) \}\}/);
-  assert.match(appMemory, /DEEPER_APP_MEMORY_PROFILE: \$\{\{ needs\.changes\.outputs\.memory_profile \}\}/);
-  const script = shellStep(job(appMemory, "changes"), "Select memory profile");
-  const root = mkdtempSync(path.join(os.tmpdir(), "deeper-memory-workflow-"));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  let index = 0;
-  const run = env => {
-    const output = path.join(root, `output-${index++}`);
-    const result = spawnSync("bash", ["-e", "-c", script], {
-      env: { ...process.env, GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: path.join(root, "summary"), ...env }, encoding: "utf8",
-    });
-    return { ...result, workflowOutput: result.status === 0 ? readFileSync(output, "utf8") : "" };
-  };
-  for (const [env, expected] of [
-    [{ EVENT_NAME: "pull_request", MEMORY: "true", MEMORY_FULL: "false" }, "profile=short\nshards=[1]\n"],
-    [{ EVENT_NAME: "pull_request", MEMORY: "true", MEMORY_FULL: "true" }, "profile=full\nshards=[1,2,3]\n"],
-    [{ EVENT_NAME: "push", MEMORY: "true", MEMORY_FULL: "false" }, "profile=full\nshards=[1,2,3]\n"],
-    [{ EVENT_NAME: "pull_request", MEMORY: "false", MEMORY_FULL: "false" }, "profile=off\nshards=[1]\n"],
-  ]) {
-    const result = run(env);
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.workflowOutput, expected);
-  }
+test("manual App memory screening retains full protocol and rejects missing evidence", () => {
+  assert.match(appMemory, /workflow_dispatch:/);
+  assert.doesNotMatch(appMemory, /schedule:|pull_request:|push:/);
+  assert.match(appMemory, /echo 'profile=full'/);
+  assert.match(appMemory, /echo 'shards=\[1,2,3\]'/);
+  assert.match(appMemory, /if-no-files-found: error/);
+  assert.doesNotMatch(appMemory, /continue-on-error/);
 });
 
 test("macOS signing diagnostics require protected main and cannot publish", () => {
   const source = workflow("macos-signing-check");
   const verify = job(source, "verify");
-  const github = { repository: "SivanCola/deeper", ref: "refs/heads/main", ref_protected: true };
+  const github = { repository: "SivanCola/deepzora", ref: "refs/heads/main", ref_protected: true };
   assert.equal(condition(verify, { github }), true);
-  for (const changed of [{ repository: "fork/Deeper" }, { ref: "refs/tags/v1.0.0" }, { ref_protected: false }]) {
+  for (const changed of [{ repository: "fork/Deepzora" }, { ref: "refs/tags/v1.0.0" }, { ref_protected: false }]) {
     assert.equal(condition(verify, { github: { ...github, ...changed } }), false);
   }
   assert.match(verify, /environment: release/);
@@ -321,19 +300,17 @@ test("required lint aggregates code lint and the deduplicated frontend suite", (
 test("required root aggregate covers the jobs the per-OS test legs do not", () => {
   const body = job(ci, "root");
   const script = shellStep(body, "Verify root validation jobs");
-  const success = { CHANGES_RESULT: "success", CODE_REQUIRED: "true", COVERAGE_REQUIRED: "true",
-    CONTROL_RESULT: "success", ISOLATED_RESULT: "success", SDK_RESULT: "success", COVERAGE_RESULT: "success" };
+  const success = { CHANGES_RESULT: "success", CODE_REQUIRED: "true",
+    CONTROL_RESULT: "success", ISOLATED_RESULT: "success", SDK_RESULT: "success" };
   const run = env => spawnSync("bash", ["-e", "-c", script], { env: { ...process.env, ...env } }).status;
   assert.equal(run(success), 0);
-  for (const key of ["CHANGES_RESULT", "CONTROL_RESULT", "ISOLATED_RESULT", "SDK_RESULT", "COVERAGE_RESULT"])
+  for (const key of ["CHANGES_RESULT", "CONTROL_RESULT", "ISOLATED_RESULT", "SDK_RESULT"])
     for (const value of ["failure", "cancelled", "skipped", ""]) assert.notEqual(run({ ...success, [key]: value }), 0, `${key}=${value}`);
   // A pull request unrelated to code: the internally-gated jobs still
   // report success, the skippable ones must actually be skipped.
-  assert.equal(run({ ...success, CODE_REQUIRED: "false", COVERAGE_REQUIRED: "false",
-    ISOLATED_RESULT: "skipped", COVERAGE_RESULT: "skipped" }), 0);
-  // Coverage is push-only; a pull request that ran it is a routing defect.
-  assert.notEqual(run({ ...success, COVERAGE_REQUIRED: "false", COVERAGE_RESULT: "success" }), 0);
-  assert.match(body, /needs: \[changes, windows-control, windows-isolated, sdk, coverage\]/);
+  assert.equal(run({ ...success, CODE_REQUIRED: "false", ISOLATED_RESULT: "skipped" }), 0);
+  assert.match(body, /needs: \[changes, windows-control, windows-isolated, sdk\]/);
+  assert.doesNotMatch(ci, /^  coverage:|^  ci-metrics:/m);
   // govulncheck sets continue-on-error, so needs.*.result is success even when
   // it fails; aggregating it would be a tautology that reads like coverage.
   assert.match(job(ci, "govulncheck"), /continue-on-error: true/);
@@ -347,7 +324,6 @@ test("every ci job is reachable from a required aggregate", () => {
   const required = ["test", "race", "lint", "desktop", "root"];
   const advisory = {
     changes: "asserted by line one of every aggregate",
-    "ci-metrics": "reports queue and stage timing; failure must not block merges",
     "prune-go-cache": "push-only cache housekeeping; cannot report on a pull request",
     govulncheck: "continue-on-error by design — stdlib advisories precede Go patch releases",
   };
@@ -448,7 +424,7 @@ test("Certum signing preserves native builds and gates publication and attestati
   assert.match(attestation, /uses: actions\/upload-artifact@[0-9a-f]{40} # v7\b/);
   assert.match(attestation, /verified-contract\.json/);
   assert.match(attestation, /gh variable set/);
-  const context = { github: { repository: "SivanCola/deeper" }, inputs: { signing_preflight: true, orchestrated: false },
+  const context = { github: { repository: "SivanCola/deepzora" }, inputs: { signing_preflight: true, orchestrated: false },
     needs: { "signing-contract": { result: "success" }, build: { result: "success" }, "windows-build": { result: "success" }, "windows-sign": { result: "success" }, "windows-runtime-acceptance": { result: "success" } } };
   assert.equal(condition(attestation, context), true);
   for (const key of ["windows-build", "windows-sign", "windows-runtime-acceptance"]) {
@@ -494,13 +470,13 @@ test("all desktop consumers verify the prepared build and reject a failed prepar
   }
   for (const name of ["desktop-windows", "desktop-windows-package"]) {
     const body = job(ci, name);
-    assert.match(body, /DEEPER_PACKAGE_REUSE_FRONTEND: "1"/);
-    assert.match(body, /DEEPER_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export DEEPER_FRONTEND_PNPM_VERSION/);
+    assert.match(body, /DEEPZORA_PACKAGE_REUSE_FRONTEND: "1"/);
+    assert.match(body, /DEEPZORA_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export DEEPZORA_FRONTEND_PNPM_VERSION/);
     assert.match(body, /canary_artifact_name/);
   }
-  assert.match(job(ci, "desktop-macos"), /DEEPER_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export DEEPER_FRONTEND_PNPM_VERSION/);
+  assert.match(job(ci, "desktop-macos"), /DEEPZORA_FRONTEND_PNPM_VERSION="\$\(pnpm --version\)"\n\s+export DEEPZORA_FRONTEND_PNPM_VERSION/);
   for (const name of ["desktop-macos", "desktop-windows", "desktop-windows-package"]) {
-    assert.ok(job(ci, name).includes("DEEPER_FRONTEND_PRODUCER_ATTEMPT: ${{ needs.desktop-prepare.outputs.producer_attempt }}"));
+    assert.ok(job(ci, name).includes("DEEPZORA_FRONTEND_PRODUCER_ATTEMPT: ${{ needs.desktop-prepare.outputs.producer_attempt }}"));
   }
   const prepare = job(ci, "desktop-prepare");
   assert.match(prepare, /producer_attempt: \$\{\{ steps\.artifact-identity\.outputs\.attempt \}\}/);
@@ -516,8 +492,8 @@ test("browser matrix preserves five entry points and fails closed through deskto
   assert.match(groups, /max-parallel: 2/);
   assert.match(groups, /fail-fast: false/);
   assert.match(groups, /group: \[app-settings-motion, transcript\]/);
-  assert.match(groups, /DEEPER_TRANSCRIPT_MODE=native-scrollbar DEEPER_LAYOUT_ARTIFACTS="\$evidence\/native-scrollbar"/);
-  assert.match(groups, /DEEPER_TRANSCRIPT_MODE=headless-reader DEEPER_LAYOUT_ARTIFACTS="\$evidence\/headless-reader"/);
+  assert.match(groups, /DEEPZORA_TRANSCRIPT_MODE=native-scrollbar DEEPZORA_LAYOUT_ARTIFACTS="\$evidence\/native-scrollbar"/);
+  assert.match(groups, /DEEPZORA_TRANSCRIPT_MODE=headless-reader DEEPZORA_LAYOUT_ARTIFACTS="\$evidence\/headless-reader"/);
   assert.doesNotMatch(groups, /group: \[app-settings, motion, transcript\]/);
   for (const command of ["test:app-browser", "test:settings-browser", "test:motion-browser", "test:transcript-browser", "test:transcript-reader-browser"])
     assert.equal(ci.match(new RegExp(`pnpm --dir frontend ${command}(?:\\s|$)`, "g"))?.length, 1, command);
@@ -568,9 +544,9 @@ test("installer evidence excludes running payloads and cache files on every publ
     const upload = body.match(/name: Upload (?:signed )?Windows installer acceptance evidence\n([\s\S]*?)(?=\n      - |$)/)?.[1];
     assert.ok(upload);
     for (const extension of ["json", "png", "log"])
-      assert.ok(upload.includes(`deeper-installer-acceptance/**/*.${extension}`));
+      assert.ok(upload.includes(`deepzora-installer-acceptance/**/*.${extension}`));
     for (const excluded of ["installed/**", "**/cache/**"])
-      assert.ok(upload.includes(`!\${{ runner.temp }}/deeper-installer-acceptance/${excluded}`));
+      assert.ok(upload.includes(`!\${{ runner.temp }}/deepzora-installer-acceptance/${excluded}`));
   }
 });
 

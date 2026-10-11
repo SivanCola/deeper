@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/proc"
-	"deeper/internal/secrets"
+	"deepzora/internal/agent"
+	"deepzora/internal/proc"
+	"deepzora/internal/secrets"
 )
 
 const (

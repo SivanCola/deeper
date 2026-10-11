@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 const ProtocolRecoveryAction = "protocol_recovery"

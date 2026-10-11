@@ -19,7 +19,7 @@ func requireShellStub(t *testing.T) {
 	}
 }
 
-// fakeAgent stands in for the deeper binary: it records every invocation's
+// fakeAgent stands in for the deepzora binary: it records every invocation's
 // argv and writes the metrics file it was told to, making segment accounting
 // verifiable without a provider. The failure it guards — a later leg replacing
 // an earlier leg's numbers — is invisible in any single run.

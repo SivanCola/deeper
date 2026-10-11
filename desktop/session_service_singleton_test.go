@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
 )
 
 func TestNewAppPinsDesktopV5SessionRootBeforeStartup(t *testing.T) {

@@ -6,16 +6,16 @@ var English = Messages{
 	WelcomeTitleFmt: "Welcome to %s",
 	NoConfigYet:     "No configuration found yet — let's set it up.",
 
-	InitHint: "Project memory (AGENTS.md) is generated in-session: run `deeper`, then `/init` — the model analyzes the codebase and writes it. For configuration, use `deeper setup`.",
+	InitHint: "Project memory (AGENTS.md) is generated in-session: run `deepzora`, then `/init` — the model analyzes the codebase and writes it. For configuration, use `deepzora setup`.",
 
 	ChatTip:                          "Context is kept across turns. Type 'exit' or Ctrl-D to quit.",
 	TurnCancelled:                    "cancelled — back to prompt",
 	InterruptedRecovery:              "This turn was interrupted. Partial output is kept for reference; only completed tool pairs and a bounded recovery summary enter the next model turn. Inspect the workspace before continuing or reverting changes.",
 	FinalReadinessRecovery:           "Task work or completion checks are paused. Run /continue-checks to preserve completed evidence and finish the remaining work.",
-	ReadinessContinuing:              "Deeper is finishing the remaining task work or checks automatically.",
-	RecoveryPaused:                   "Automatic retries paused. Deeper stopped repeated attempts and kept completed work. Send “Continue” to start a fresh attempt, or add instructions to change direction.",
+	ReadinessContinuing:              "Deepzora is finishing the remaining task work or checks automatically.",
+	RecoveryPaused:                   "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send “Continue” to start a fresh attempt, or add instructions to change direction.",
 	CompletionUncertain:              "Completion could not be confirmed. The current result and completed work are kept. Send \"continue\" to resume, or restate what should change.",
-	ReasoningReplayRepair:            "The model provider rejected this conversation's stored thinking blocks. Deeper removed them from the provider-visible history and retried once.",
+	ReasoningReplayRepair:            "The model provider rejected this conversation's stored thinking blocks. Deepzora removed them from the provider-visible history and retried once.",
 	ImageRequestRecovery:             "This image could not be included. Attach it again and resend; if it still fails, check the image model settings. Your conversation is kept",
 	ExtensionRequestRecovery:         "An extension could not prepare a usable model request. Review the recently enabled extensions in settings and retry; your conversation is kept",
 	ExtensionBlockRecovery:           "Review the extension's reason and settings before retrying. Repeatedly resending the same message will not resolve this block.",
@@ -40,14 +40,14 @@ var English = Messages{
 	StreamInterruptedPrematureEOF:    "model stream ended before completion; the provider gateway or network proxy dropped the connection",
 	StreamInterruptedConnectionReset: "model connection was reset; check the provider gateway or network proxy",
 	ToolOutputTruncatedFmt:           "tool output truncated: %d of %d bytes elided",
-	IncompleteReadFinishBlocked:      "Deeper refused to finish because a file read still has unread content.",
-	ReadContinuationRequired:         "Deeper is continuing or narrowing an incomplete file read before allowing changes or completion.",
-	IncompleteReadDetected:           "Deeper detected an incomplete file read and armed a host continuation.",
-	ReadStrategyRequired:             "The complete file did not fit the dynamic context budget; Deeper entered restricted search/read mode.",
-	ReadStrategyProgress:             "Deeper recorded valid progress in a restricted read strategy.",
-	ReadStrategyResolved:             "Deeper validated a narrowed read strategy receipt.",
-	ReadLocalSafetyPaged:             "Deeper safely paged a large local read_file result.",
-	ReadCompleted:                    "Deeper finished recovering the complete file read.",
+	IncompleteReadFinishBlocked:      "Deepzora refused to finish because a file read still has unread content.",
+	ReadContinuationRequired:         "Deepzora is continuing or narrowing an incomplete file read before allowing changes or completion.",
+	IncompleteReadDetected:           "Deepzora detected an incomplete file read and armed a host continuation.",
+	ReadStrategyRequired:             "The complete file did not fit the dynamic context budget; Deepzora entered restricted search/read mode.",
+	ReadStrategyProgress:             "Deepzora recorded valid progress in a restricted read strategy.",
+	ReadStrategyResolved:             "Deepzora validated a narrowed read strategy receipt.",
+	ReadLocalSafetyPaged:             "Deepzora safely paged a large local read_file result.",
+	ReadCompleted:                    "Deepzora finished recovering the complete file read.",
 	ReadRestrictedStrategyFmt:        "read_file switched to restricted strategy: estimated_tokens=%d budget_tokens=%d",
 	ContextRecoveryAdjustBudget:      "Adjusted the output budget to fit the shared context window.",
 	PromptTruncatedByServerNotice:    "The provider accepted this request but silently dropped part of the prompt, so the model did not receive the full instructions or tool definitions. Raise the server's own context length (for Ollama: OLLAMA_CONTEXT_LENGTH, or a Modelfile num_ctx), then set context_window to match.",
@@ -72,7 +72,7 @@ var English = Messages{
 		"unreviewed_change":   "changed, never looked at again",
 		"declared_unverified": "declared unverified",
 	},
-	NoSessionToResume:   "no saved session to resume — start a new one with `deeper`",
+	NoSessionToResume:   "no saved session to resume — start a new one with `deepzora`",
 	ResumeRequiresTTY:   "--resume needs an interactive terminal; pass --continue for the most recent session",
 	AmbiguousResumeHint: "run again with `--resume <id>` using one of the ids above",
 	PickSessionLabel:    "Resume which session?",
@@ -185,22 +185,22 @@ var English = Messages{
 	MemoryApprovalBodyLabel:                "body",
 	MemoryApprovalArchiveFmt:               "Archive memory %q",
 	PlanModeBashTrustSubjectFmt:            "Trust %q as a read-only command prefix while planning\nCommand: %s",
-	PlanModeBashTrustReason:                "This bash command is not in Deeper's built-in read-only set. Confirm only if this exact prefix is read-only for planning and research. Permission presets cannot answer this trust prompt.",
+	PlanModeBashTrustReason:                "This bash command is not in Deepzora's built-in read-only set. Confirm only if this exact prefix is read-only for planning and research. Permission presets cannot answer this trust prompt.",
 	PlanModeBashTrustDeclined:              "the user declined to trust this bash command as read-only for plan mode - do not retry it; continue with other trusted read-only tools or ask how to proceed.",
 	SandboxEscapeSubjectFallback:           "run shell command unconfined once",
 	SandboxEscapeSubjectPrefix:             "run unconfined once: ",
 	SandboxEscapeWrapReason:                "Windows does not provide an OS-level Bash sandbox for this command. Run it unconfined one time? This bypasses OS isolation for this command only.",
 	SandboxEscapeRuntimeReason:             "The OS sandbox could not start this command. Run it unconfined one time? This bypasses OS isolation for this command only.",
 	SandboxEscapeDeclined:                  "the user declined to run this command without the OS sandbox - do not retry it unconfined; ask how they would like to proceed.",
-	ApprovalToolLabelConfigWrite:           "Deeper config write",
-	ConfigWriteSubjectPrefix:               "write Deeper config: ",
-	ConfigWriteReason:                      "This write targets a Deeper-managed configuration file outside the workspace. It can change providers, sandbox rules, permissions, and MCP servers for future sessions, so it needs your explicit approval.",
-	ConfigWriteDeclined:                    "the user declined this Deeper config write - do not retry it; ask how they would like to proceed.",
+	ApprovalToolLabelConfigWrite:           "Deepzora config write",
+	ConfigWriteSubjectPrefix:               "write Deepzora config: ",
+	ConfigWriteReason:                      "This write targets a Deepzora-managed configuration file outside the workspace. It can change providers, sandbox rules, permissions, and MCP servers for future sessions, so it needs your explicit approval.",
+	ConfigWriteDeclined:                    "the user declined this Deepzora config write - do not retry it; ask how they would like to proceed.",
 	ConfigWriteApprovalChoices:             "1. Allow once\n2. Allow for this session\n3. Deny\nChoose [1/2/3] (y/a/n also work)",
 	WriteAccessApprovalChoices:             "1. Allow once\n2. Allow this scope for the session\n3. Deny\nChoose [1/2/3] (y/a/n also work)",
-	WriteAccessHomeWarning:                 "This grants write access to your entire home directory. Deeper session and runtime-state files stay protected.",
+	WriteAccessHomeWarning:                 "This grants write access to your entire home directory. Deepzora session and runtime-state files stay protected.",
 	WriteAccessMergedPermissionHint:        "This choice also authorizes the current matching tool operation.",
-	WriteAccessProjectHint:                 "Adding to the project writes [sandbox].allow_write (and the matching permission rule if needed) in this workspace's deeper.toml.",
+	WriteAccessProjectHint:                 "Adding to the project writes [sandbox].allow_write (and the matching permission rule if needed) in this workspace's deepzora.toml.",
 	PermissionSavedFmt:                     "permission saved to %s: %s",
 	PermissionAlreadyAllowedFmt:            "permission already covered in %s: %s",
 	PermissionSaveFailedFmt:                "permission save failed for %s: %v",
@@ -295,7 +295,7 @@ var English = Messages{
 	SkillPickerStatusNotDir:      "not-directory",
 	SkillPickerStatusUnreadable:  "unreadable",
 	SlashPromptEmpty:             "the MCP prompt returned no content to send",
-	SlashMCPNone:                 "no MCP servers configured — add a [[plugins]] entry in deeper.toml",
+	SlashMCPNone:                 "no MCP servers configured — add a [[plugins]] entry in deepzora.toml",
 	CtrlCQuitHint:                "press Ctrl+C again to quit",
 	CompHintSlash:                "↑/↓ move · Tab/Enter select · Esc close",
 	CompHintFile:                 "↑/↓ move · Tab/Enter open folder or pick file · Esc close",
@@ -377,13 +377,13 @@ var English = Messages{
 	ArgEffortAuto:       "use the model default",
 	ArgEffortLow:        "lighter reasoning",
 	ArgEffortMedium:     "balanced reasoning",
-	ArgEffortHigh:       "deeper reasoning",
+	ArgEffortHigh:       "deepzora reasoning",
 	ArgEffortXHigh:      "extra deep reasoning",
 	ArgEffortMax:        "maximum reasoning",
 	ArgPresetStandard:   "adaptive default posture",
 	ArgPresetDelivery:   "delivery completion gates",
 	ArgThemeCurrent:     "current",
-	ArgLanguageAuto:     "auto-detect from DEEPER_LANG / locale",
+	ArgLanguageAuto:     "auto-detect from DEEPZORA_LANG / locale",
 	ArgLanguageEn:       "English",
 	ArgLanguageZh:       "中文",
 
@@ -395,9 +395,9 @@ var English = Messages{
 	ListSkillsHeaderFmt: "skills (%d)",
 	ListSkillsNone:      "skills: none defined — invoke a built-in like /init, or author one with install_skill",
 	ListHooksHeaderFmt:  "hooks (%d active)",
-	ListHooksNone:       "hooks: none active — configure in .deeper/settings.json (project) or <Deeper home>/settings.json (global)",
+	ListHooksNone:       "hooks: none active — configure in .deepzora/settings.json (project) or <Deepzora home>/settings.json (global)",
 	ListMcpHeader:       "mcp servers",
-	ListMcpNone:         "mcp: no servers connected — add one in deeper.toml ([[plugins]]) or a project .mcp.json",
+	ListMcpNone:         "mcp: no servers connected — add one in deepzora.toml ([[plugins]]) or a project .mcp.json",
 
 	MemoryEditHint:               "edit doc files or use “/remember <note>”; doc edits apply next session",
 	ForgetUsage:                  "usage: /forget <name> — the slug shown under “saved memories” in /memory",
@@ -450,7 +450,7 @@ var English = Messages{
 	SetupComplete:            "Setup complete.",
 	SetupCancelled:           "setup cancelled.",
 	TryHintFmt:               "Try: %s",
-	NextHint:                 "Next: set your API key (run `deeper setup` or export DEEPSEEK_API_KEY=...), then run `deeper run \"your task\"`.",
+	NextHint:                 "Next: set your API key (run `deepzora setup` or export DEEPSEEK_API_KEY=...), then run `deepzora run \"your task\"`.",
 	ConfirmReconfigureFmt:    "%s already exists. Reconfigure and overwrite?",
 	NotOverwritingFmt:        "%s already exists; not overwriting",
 	SetupManagerTitle:        "Provider configuration",
@@ -477,8 +477,8 @@ var English = Messages{
 	SetupKeyEnvTakenFmt:      "%s is already used by provider %s; saving this key under it would replace that provider's key.",
 	SetupKeyEnvStoredFmt:     "%s already holds a saved credential; saving this key under it would overwrite that value.",
 	SetupKeyEnvSettingFmt:    "%s is read by a bot or remote-host setting; saving this key under it would hand that setting your key.",
-	SetupKeyEnvShellFmt:      "%s is already set in the environment Deeper runs in; saving this key under it would override that value.",
-	SetupKeyEnvRetry:         "Enter another name, or press Enter to let Deeper choose a private variable.",
+	SetupKeyEnvShellFmt:      "%s is already set in the environment Deepzora runs in; saving this key under it would override that value.",
+	SetupKeyEnvRetry:         "Enter another name, or press Enter to let Deepzora choose a private variable.",
 	SetupPromptAPIKeyFmt:     "Enter new value for %s",
 	SetupSelectDefaultModel:  "Select default model",
 	SetupConfirmRemoveFmt:    "Remove provider %s?",
@@ -512,7 +512,7 @@ var English = Messages{
 	CustomMethodURL:      "Fetch models from URL",
 	CustomPromptModel:    "Enter model name",
 	CustomPromptBaseURL:  "Enter Base URL",
-	CustomPromptKeyEnv:   "API Key variable name (press Enter to let Deeper choose; not the model name)",
+	CustomPromptKeyEnv:   "API Key variable name (press Enter to let Deepzora choose; not the model name)",
 	CustomPromptAPIKey:   "Enter API Key",
 	CustomPromptWindow:   "Context window in tokens (a value below the model's real window makes compaction fire early)",
 	CustomAddedFmt:       "Added custom model: %s",
@@ -524,7 +524,7 @@ var English = Messages{
 	AnthropicMethodURL:             "Fetch models from URL",
 	AnthropicPromptModel:           "Enter model name",
 	AnthropicPromptBaseURL:         "Enter Base URL",
-	AnthropicPromptKeyEnv:          "API Key variable name (press Enter to let Deeper choose; not the model name)",
+	AnthropicPromptKeyEnv:          "API Key variable name (press Enter to let Deepzora choose; not the model name)",
 	AnthropicPromptAPIKey:          "Enter API Key",
 	AnthropicAddedFmt:              "Added Anthropic compatible model: %s",
 	AnthropicFetchingModelsFmt:     "Fetching models for %s...",
@@ -542,10 +542,10 @@ var English = Messages{
 	RemotePassphrasePromptFmt: "passphrase for %s:",
 	RemotePasswordPromptFmt:   "password for %s:",
 	RemoteBootstrapStepFmt:    "remote serve: %s %s",
-	RemoteNoHostsHint:         "no remote hosts configured; add one with `deeper remote add <name> [user@]host`",
+	RemoteNoHostsHint:         "no remote hosts configured; add one with `deepzora remote add <name> [user@]host`",
 
 	UnknownCommandFmt:         "unknown command %q",
-	UsageRunHint:              "usage: deeper -p [--model NAME] <task>",
+	UsageRunHint:              "usage: deepzora -p [--model NAME] <task>",
 	ErrorPrefix:               "error:",
 	ReconfigureOnUnknownModel: "Configured model is no longer available — re-running setup.",
 	WriteConfigErr:            "write config:",
@@ -553,8 +553,8 @@ var English = Messages{
 
 	ProviderErrBadRequest:           "Malformed request (HTTP 400): the request body was rejected. This is likely a bug — please report it if it persists.",
 	ProviderErrContextOverflowFmt:   "This request exceeds the shared context window: prompt %d + completion %d = %d tokens, but the window is %d. Compact, retry with a smaller output cap, fork, or rewind, then send again.",
-	ProviderErrAuth:                 "Authentication failed (HTTP 401): your API key is missing or unset. Add it to .env or run `deeper setup`.",
-	ProviderErrAuthRejected:         "Authentication failed (HTTP 401): the server rejected your API key. It may be wrong or expired, or the provider hit a transient auth/quota issue. Try again shortly, or check the key in .env / run `deeper setup`.",
+	ProviderErrAuth:                 "Authentication failed (HTTP 401): your API key is missing or unset. Add it to .env or run `deepzora setup`.",
+	ProviderErrAuthRejected:         "Authentication failed (HTTP 401): the server rejected your API key. It may be wrong or expired, or the provider hit a transient auth/quota issue. Try again shortly, or check the key in .env / run `deepzora setup`.",
 	ProviderErrModelFormatMismatch:  "Model/API format mismatch: the server does not support this model on the selected provider route. This is not an invalid API key; choose a provider route that supports the model.",
 	ProviderErrOpenCodeGoGrokRoute:  "For OpenCode Go, use the OpenCode Go Responses preset with `grok-4.5`.",
 	ProviderErrQuotaExhaustedFmt:    "%s: provider credits or subscription quota exhausted (HTTP %d). Check your account allowance before continuing.",
@@ -573,7 +573,7 @@ var English = Messages{
 	ProviderErrRateLimited:          "Rate limit reached (HTTP 429): too many requests (TPM/RPM). Slow down or try again shortly.",
 	ProviderErrServer:               "Server error (HTTP 500): the provider hit an internal fault. Please try again later.",
 	ProviderErrServerBusy:           "Server busy (HTTP 503): the provider is overloaded. Please try again shortly.",
-	ProviderErrWaitExhaustedFmt:     "Deeper stopped waiting after %s: the provider stayed unreachable through every retry. Check your network, proxy, or the provider's status page, then send the message again.",
+	ProviderErrWaitExhaustedFmt:     "Deepzora stopped waiting after %s: the provider stayed unreachable through every retry. Check your network, proxy, or the provider's status page, then send the message again.",
 
 	SelectOneHint:  "(↑/↓ · Enter · q to cancel; / to search)",
 	SelectManyHint: "(↑/↓ · Space · Enter · q; / to search)",
@@ -613,8 +613,8 @@ var English = Messages{
 	ReportNoPending:           "No pending CLI crash reports.",
 	ReportHeaderFmt:           "CLI crash report %s",
 	ReportCapturedFmt:         "Captured: %s",
-	ReportPreviewOnlyFmt:      "Preview only. Run `deeper report send %s` to send this report.",
-	ReportSendPrompt:          "Send this sanitized report to the configured Deeper reporting service?",
+	ReportPreviewOnlyFmt:      "Preview only. Run `deepzora report send %s` to send this report.",
+	ReportSendPrompt:          "Send this sanitized report to the configured Deepzora reporting service?",
 	ReportKept:                "Report kept locally.",
 	ReportDeletedFmt:          "Deleted CLI crash report %s.",
 	ReportSentFmt:             "Sent CLI crash report %s.",
@@ -622,67 +622,67 @@ var English = Messages{
 	ReportUploadFailedFmt:     "report upload failed; the local report was kept: %v",
 	ReportSentDeleteFailedFmt: "report was sent but the local copy could not be deleted: %v",
 	ReportUsageBody: `Usage:
-  deeper report                 preview the newest local report and confirm sending
-  deeper report list            list local CLI crash reports
-  deeper report show [ID]       preview a report (newest when ID is omitted)
-  deeper report send [ID]       send a reviewed report and delete it after success
-  deeper report delete [ID]     delete a local report without sending`,
+  deepzora report                 preview the newest local report and confirm sending
+  deepzora report list            list local CLI crash reports
+  deepzora report show [ID]       preview a report (newest when ID is omitted)
+  deepzora report send [ID]       send a reviewed report and delete it after success
+  deepzora report delete [ID]     delete a local report without sending`,
 
-	CLITelemetryConsentNotice:           "Deeper can send anonymous, content-free CLI usage statistics to the configured Deeper reporting service: a random install ID, version, OS, and fixed quality buckets. It never sends prompts, answers, code, paths, model or tool content, or environment variables. You can disable this later with `deeper config telemetry off`.",
+	CLITelemetryConsentNotice:           "Deepzora can send anonymous, content-free CLI usage statistics to the configured Deepzora reporting service: a random install ID, version, OS, and fixed quality buckets. It never sends prompts, answers, code, paths, model or tool content, or environment variables. You can disable this later with `deepzora config telemetry off`.",
 	CLITelemetryConsentPrompt:           "Allow anonymous CLI usage statistics?",
 	CLITelemetryConsentInvalid:          "Please answer y or n.",
 	CLITelemetryConsentSaveFailedFmt:    "CLI telemetry remains disabled because the preference could not be saved: %v",
 	CLITelemetryConsentCleanupFailedFmt: "CLI telemetry is disabled, but pending statistics could not be deleted: %v",
 
-	UsageBody: `deeper — a config- and plugin-driven coding agent (multi-model)
+	UsageBody: `deepzora — a config- and plugin-driven coding agent (multi-model)
 
 Usage:
-  deeper [--model NAME] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   interactive session
-  deeper -p|--print [--model NAME] [--output-format text|json|stream-json] [--allowed-tools RULES] [--add-dir PATH] <task>
-  deeper run [--model NAME] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
-  deeper run --events-jsonl [--model NAME] <task>      emit redacted structured events as JSONL
-  deeper review [--base BRANCH] [--commit SHA] [--model NAME]  AI-powered code review on local diffs
-  deeper web [--model NAME] [--addr HOST:PORT] [--no-open]  start the local Web UI and open it in the default browser
-  deeper serve [--model NAME] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  serve over HTTP+SSE (with optional auth)
-  deeper acp [--model NAME]                           serve Agent Client Protocol over stdio (also: deeper --acp)
-  deeper setup [path]                                 interactive config wizard; writes deeper.toml (+ .env)
-  deeper config reasoning-language [auto|zh|en]        configure visible reasoning language
-  deeper config compact-ratio [--local] [30..85]       configure automatic compaction threshold
-  deeper config telemetry [auto|on|off]                configure content-free CLI usage metrics
-  deeper report [list|show|send|delete] [ID]           review and explicitly send local CLI crash reports
-  deeper mcp <add|remove|list|import>                 manage MCP servers in deeper.toml
-  deeper subagent <list|create|edit|delete|try|run>   manage and run isolated subagent profiles
-  deeper init                                         show how to generate project memory (AGENTS.md)
-  deeper doctor [--json]                              print redacted local diagnostics
-  deeper doctor session <branch-id> [--zip] [--out PATH]  export a session conflict diagnostic zip
-  deeper session list --json [--dir PATH]             list redacted sessions for machine clients
-  deeper session show|status <machine-session-id> --json [--dir PATH]  query one redacted session
-  deeper session recovery [<machine-session-id>] --json [--dir PATH]  query redacted recovery state
-  deeper hook list|status --json [--dir PATH]         inspect redacted hook state
-  deeper trust [--dir PATH] [--yes|--revoke]          review and approve programs this project runs
-  deeper task list|show|status|events|stop|cancel|monitor|tmux --json [--dir PATH]
+  deepzora [--model NAME] [-c|--continue] [-r|--resume [QUERY]] [--permission-mode MODE] [--effort LEVEL] [--add-dir PATH]   interactive session
+  deepzora -p|--print [--model NAME] [--output-format text|json|stream-json] [--allowed-tools RULES] [--add-dir PATH] <task>
+  deepzora run [--model NAME] [--max-steps N] [-c|--continue] [--resume PATH] [--copy] [--output-format FORMAT] <task>
+  deepzora run --events-jsonl [--model NAME] <task>      emit redacted structured events as JSONL
+  deepzora review [--base BRANCH] [--commit SHA] [--model NAME]  AI-powered code review on local diffs
+  deepzora web [--model NAME] [--addr HOST:PORT] [--no-open]  start the local Web UI and open it in the default browser
+  deepzora serve [--model NAME] [--addr HOST:PORT] [--auth none|token|password] [--token STR] [--password STR] [--hash-password]  serve over HTTP+SSE (with optional auth)
+  deepzora acp [--model NAME]                           serve Agent Client Protocol over stdio (also: deepzora --acp)
+  deepzora setup [path]                                 interactive config wizard; writes deepzora.toml (+ .env)
+  deepzora config reasoning-language [auto|zh|en]        configure visible reasoning language
+  deepzora config compact-ratio [--local] [30..85]       configure automatic compaction threshold
+  deepzora config telemetry [auto|on|off]                configure content-free CLI usage metrics
+  deepzora report [list|show|send|delete] [ID]           review and explicitly send local CLI crash reports
+  deepzora mcp <add|remove|list|import>                 manage MCP servers in deepzora.toml
+  deepzora subagent <list|create|edit|delete|try|run>   manage and run isolated subagent profiles
+  deepzora init                                         show how to generate project memory (AGENTS.md)
+  deepzora doctor [--json]                              print redacted local diagnostics
+  deepzora doctor session <branch-id> [--zip] [--out PATH]  export a session conflict diagnostic zip
+  deepzora session list --json [--dir PATH]             list redacted sessions for machine clients
+  deepzora session show|status <machine-session-id> --json [--dir PATH]  query one redacted session
+  deepzora session recovery [<machine-session-id>] --json [--dir PATH]  query redacted recovery state
+  deepzora hook list|status --json [--dir PATH]         inspect redacted hook state
+  deepzora trust [--dir PATH] [--yes|--revoke]          review and approve programs this project runs
+  deepzora task list|show|status|events|stop|cancel|monitor|tmux --json [--dir PATH]
                                                          inspect or control redacted tasks
-  deeper bot start|doctor|weixin-login                multi-channel IM bot gateway
-  deeper upgrade [--check] [--force]                   update to the latest official release (also: deeper update)
-  deeper completion bash|zsh|fish                     print a shell completion script to stdout
-  deeper version [--verbose|--json]                   print version (single line) or build metadata
-  deeper --version | -v                               single-line version (script-safe)
-  deeper help
+  deepzora bot start|doctor|weixin-login                multi-channel IM bot gateway
+  deepzora upgrade [--check] [--force]                   update to the latest official release (also: deepzora update)
+  deepzora completion bash|zsh|fish                     print a shell completion script to stdout
+  deepzora version [--verbose|--json]                   print version (single line) or build metadata
+  deepzora --version | -v                               single-line version (script-safe)
+  deepzora help
 
 Examples:
-  deeper
-  deeper --continue
-  deeper --resume provider-config
-  deeper web
-  deeper run "implement the TODOs in main.go"
-  deeper run --model mimo-pro "add unit tests for this function"
-  deeper -p "summarize this repository" --output-format json
-  deeper subagent run review "review the current changes"
-  echo "explain this code" | deeper run
+  deepzora
+  deepzora --continue
+  deepzora --resume provider-config
+  deepzora web
+  deepzora run "implement the TODOs in main.go"
+  deepzora run --model mimo-pro "add unit tests for this function"
+  deepzora -p "summarize this repository" --output-format json
+  deepzora subagent run review "review the current changes"
+  echo "explain this code" | deepzora run
 
 Configuration:
-  Resolution: flag > ./deeper.toml > <Deeper home>/config.toml > built-in defaults
+  Resolution: flag > ./deepzora.toml > <Deepzora home>/config.toml > built-in defaults
   Secrets come from the environment via api_key_env (e.g. DEEPSEEK_API_KEY).
-  Run 'deeper setup' to scaffold a config; see docs/SPEC.md.
+  Run 'deepzora setup' to scaffold a config; see docs/SPEC.md.
 `,
 }

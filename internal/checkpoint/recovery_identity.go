@@ -1,6 +1,6 @@
 package checkpoint
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // RecoveryIdentity correlates the first writer's preimages with its durable
 // action record. It does not claim that the external effect committed.

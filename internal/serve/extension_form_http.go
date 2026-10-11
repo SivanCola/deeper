@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type extensionFormSubmitter interface {

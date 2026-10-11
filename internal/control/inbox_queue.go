@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 // InboxQueueRequest is the additive, session-fenced queue editing protocol.

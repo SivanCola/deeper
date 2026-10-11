@@ -241,7 +241,7 @@ func TestSeatbeltCoversSubmoduleGitDirsByPattern(t *testing.T) {
 	}
 	spec := Spec{Mode: "enforce", WriteRoots: []string{ws}}
 	for _, command := range []string{
-		"mkdir -p .git/modules/new/deeper && printf '[core]\\n' > .git/modules/new/deeper/config",
+		"mkdir -p .git/modules/new/deepzora && printf '[core]\\n' > .git/modules/new/deepzora/config",
 		"mkdir -p .git/modules/new && printf '#!/bin/sh\\n' > .git/modules/new/hooks",
 		"printf '#!/bin/sh\\n' > .git/modules/old/hooks/post-checkout",
 		"mv .git/modules/old .git/modules/moved",
@@ -341,7 +341,7 @@ func TestSandboxProtectsHostLinkedWorktreeCommondir(t *testing.T) {
 	base := realTempDir(t)
 	ws := filepath.Join(base, "ws")
 	newRepo(t, ws)
-	for i, linked := range []string{filepath.Join(base, "managed", "cand"), filepath.Join(ws, ".deeper", "wt", "cand2")} {
+	for i, linked := range []string{filepath.Join(base, "managed", "cand"), filepath.Join(ws, ".deepzora", "wt", "cand2")} {
 		gitIn(t, ws, "worktree", "add", "-q", "--detach", linked)
 		id := filepath.Base(linked)
 		evil := filepath.Join(ws, fmt.Sprintf("evil%d", i))

@@ -102,7 +102,7 @@ function installBridgeApp(methods: Record<string, unknown>) {
 		ReleaseAttachmentTarget: async () => {},
 		StageImageForTarget: async (token: string, _operationID: string, displayName: string, mime: string, dataURL: string) => ({
 			draftId: "",
-			path: legacySave ? await legacySave(token, dataURL) : ".deeper/attachments/mock.png",
+			path: legacySave ? await legacySave(token, dataURL) : ".deepzora/attachments/mock.png",
 			displayName,
 			mime,
 			width: 1,
@@ -236,7 +236,7 @@ for (const [name, type, bytes] of [
     value: { randomUUID: () => "id", subtle: { digest: async () => { digests += 1; return new ArrayBuffer(32); } } },
   });
   installBridgeApp({
-    SavePastedFileForTarget: async () => { saves += 1; return ".deeper/attachments/x.bin"; },
+    SavePastedFileForTarget: async () => { saves += 1; return ".deepzora/attachments/x.bin"; },
     StageImageForTarget: async () => { saves += 1; throw new Error("must not stage"); },
   });
   const { root } = await renderComposer({ imageInputEnabled: true });
@@ -264,7 +264,7 @@ for (const [name, type, bytes] of [
 {
   const dom = installDom();
   let saves = 0;
-  installBridgeApp({ SavePastedFileForTarget: async () => { saves += 1; return ".deeper/attachments/x.bin"; } });
+  installBridgeApp({ SavePastedFileForTarget: async () => { saves += 1; return ".deepzora/attachments/x.bin"; } });
   const { root } = await renderComposer({ imageInputEnabled: true });
   await act(async () => {
     textarea().dispatchEvent(pasteEvent(new File(["pk"], "small.zip", { type: "application/zip", lastModified: 2 })));

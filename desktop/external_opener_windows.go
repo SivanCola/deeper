@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 const (

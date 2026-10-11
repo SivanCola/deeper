@@ -10,11 +10,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // TestResumeDispatchOpensPicker proves bare "/resume" opens the interactive
@@ -531,7 +531,7 @@ func TestResumeEntriesIncludeOtherProjects(t *testing.T) {
 	}
 	// The process-wide test home is shared by every test in this binary; the
 	// saved project must not leak into later tests' cross-project resume rows.
-	projectsFile := filepath.Join(config.DeeperHomeDir(), "desktop-projects.json")
+	projectsFile := filepath.Join(config.DeepzoraHomeDir(), "desktop-projects.json")
 	previousProjects, projectsReadErr := os.ReadFile(projectsFile)
 	t.Cleanup(func() {
 		if projectsReadErr != nil {

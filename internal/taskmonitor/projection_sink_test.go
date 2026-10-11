@@ -38,7 +38,7 @@ func TestProjectionSinkRunsAfterTaskLockRelease(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	sink := &reentrantProjectionSink{done: make(chan error, 1)}
-	sink.store = NewObservedFileStore(filepath.Join(".deeper", "tasks"), sink)
+	sink.store = NewObservedFileStore(filepath.Join(".deepzora", "tasks"), sink)
 	now := time.Now()
 	err := sink.store.SaveTask(context.Background(), root, TaskSnapshot{SchemaVersion: 1, TaskID: "task", State: TaskStateQueued,
 		Version: 1, CreatedAt: now, UpdatedAt: now})

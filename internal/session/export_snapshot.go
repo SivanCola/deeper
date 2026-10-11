@@ -2,7 +2,7 @@ package session
 
 import (
 	"context"
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 	"encoding/json"
 	"errors"
 	"fmt"

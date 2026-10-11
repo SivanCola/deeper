@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/permission"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestPlanApprovedMessageStatesAutoSemantics(t *testing.T) {

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"deeper/internal/identitylock"
+	"deepzora/internal/identitylock"
 	"os"
 	"path/filepath"
 )

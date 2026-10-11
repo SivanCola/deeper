@@ -1,6 +1,6 @@
-# Deeper 扩展
+# Deepzora 扩展
 
-扩展让插件包在运行时改变 Deeper 的行为——改写输入、拦截工具调用、
+扩展让插件包在运行时改变 Deepzora 的行为——改写输入、拦截工具调用、
 替换系统提示词、提供流式模型 Provider、发布结构化 UI，以及分发
 prompts 和主题——全部基于稳定、带版本号的契约。
 
@@ -17,10 +17,10 @@ prompts 和主题——全部基于稳定、带版本号的契约。
 扩展的安装方式与普通插件包完全一致：
 
 ```bash
-deeper plugin install git:github.com/owner/extension --dry-run   # 预览
-deeper plugin install git:github.com/owner/extension --yes       # 安装
-deeper plugin show <name>                                        # 详情
-deeper plugin doctor <name>                                      # 校验
+deepzora plugin install git:github.com/owner/extension --dry-run   # 预览
+deepzora plugin install git:github.com/owner/extension --yes       # 安装
+deepzora plugin show <name>                                        # 详情
+deepzora plugin doctor <name>                                      # 校验
 ```
 
 带有 `runtime` 块的插件，其预览与 `show` 输出会包含 **FULL TRUST**
@@ -57,7 +57,7 @@ deeper plugin doctor <name>                                      # 校验
 修改正在运行的回合。所有交互前端都提供失败原子的重载入口——CLI
 `/reload`、Desktop `/reload`（输入框斜杠菜单）或「重载运行时」（命令面板）、
 Serve `/reload`、ACP
-vendor method `_deeper.io/session/reloadExtensions`：
+vendor method `_deepzora.com/session/reloadExtensions`：
 
 1. 回合或后台任务运行中，CLI/Desktop/ACP 只排队一次；Serve 会拒绝本次
    请求，由浏览器在空闲后重试。
@@ -74,7 +74,7 @@ generation——扩展变更从下一个回合生效；no-op 重载后 Provider 
 ## 性能与提示词缓存
 
 未安装代码型 Runtime 时，Agent 仍走原有 nil-dispatcher 路径：不会启动
-Sidecar，也不会发生 JSON 编码、RPC 或事件排队。安装 Runtime 后，Deeper
+Sidecar，也不会发生 JSON 编码、RPC 或事件排队。安装 Runtime 后，Deepzora
 在同一个 generation 的 30 秒总启动预算内最多并行初始化 4 个 Sidecar；
 卡住的可选 Runtime 不会再按已安装包数量成倍拉长启动或 reload。未能在
 预算内启动的包按其 `runtime.required` 设置降级或令构建失败。启用后的
@@ -99,8 +99,8 @@ go test ./internal/extension/... -run '^$' -bench 'Extension|Dispatch' -benchmem
 开始。它把 Manifest、Sidecar 源码、跨平台构建命令、链接安装和第一个可观察
 拦截效果放在同一目录。标准开发流程是：
 
-1. 在 `deeper-plugin.json` 中加入
-   `apiVersion: "deeper.io/plugin/v2"`，声明 `contributes` 与
+1. 在 `deepzora-plugin.json` 中加入
+   `apiVersion: "deepzora.com/plugin/v2"`，声明 `contributes` 与
    （可选的）`runtime`——见
    [插件包文档](./PLUGIN_PACKAGES.zh-CN.md#manifest-v2扩展)。
 2. 实现 Sidecar。[Go SDK](../sdk/go/README.md)（仅依赖标准库）已经处理传输、
@@ -108,9 +108,9 @@ go test ./internal/extension/... -run '^$' -bench 'Extension|Dispatch' -benchmem
    [线协议](./EXTENSION_PROTOCOL.zh-CN.md)和
    [生成方法索引](./EXTENSION_PROTOCOL.generated.md)。
 3. 构建 Runtime 二进制，先用
-   `deeper plugin install /path/to/plugin --dry-run` 检查信任与能力，再用
+   `deepzora plugin install /path/to/plugin --dry-run` 检查信任与能力，再用
    `--link --yes` 安装。
-4. 用 `deeper plugin doctor <name>` 校验，在空闲时运行 `/reload`，然后验证
+4. 用 `deepzora plugin doctor <name>` 校验，在空闲时运行 `/reload`，然后验证
    插件贡献的拦截器、Provider、UI action 或资源。
 
 SDK 使用不可变的 `sdk/go/vX.Y.Z` 标签发布，首个公开版本为
@@ -119,20 +119,20 @@ SDK 使用不可变的 `sdk/go/vX.Y.Z` 标签发布，首个公开版本为
 
 ## 兼容性
 
-- 原生 `deeper-plugin.json` 必须声明精确版本
-  `deeper.io/plugin/v2`。扩展 Manifest v1 从未公开发布，因此不提供
+- 原生 `deepzora-plugin.json` 必须声明精确版本
+  `deepzora.com/plugin/v2`。扩展 Manifest v1 从未公开发布，因此不提供
   v1 双读或自动迁移路径。
-- 旧版本 Deeper 会忽略扩展专有状态：会话级
+- 旧版本 Deepzora 会忽略扩展专有状态：会话级
   `<session>.extensions.json` sidecar 文件、`plugin/...` 模型 ref
   （仅报告模型不可用），以及 `extension_surface`/`extension_status`
-  事件类型（旧前端丢弃未知类型；未声明 `deeper.extensionSurface`
+  事件类型（旧前端丢弃未知类型；未声明 `deepzora.extensionSurface`
   的 ACP 客户端收到文本 fallback）。
 - `plugin-packages.json` 保持现有 schema；已启用的已安装 Runtime 即
   为信任记录。
 
 ## 安全模型
 
-代码型扩展运行在 Deeper Sandbox 之外，继承未过滤的完整环境：可以
+代码型扩展运行在 Deepzora Sandbox 之外，继承未过滤的完整环境：可以
 读取完整会话与环境、绕过权限与工作区限制、直接操作本机；它在
 `permission.decision` 上的 "allow" 可覆盖宿主 deny。作为约束，宿主
 保证：
@@ -144,5 +144,5 @@ SDK 使用不可变的 `sdk/go/vX.Y.Z` 标签发布，首个公开版本为
 - Sidecar 的诊断输出、结构化 UI、拦截器原因和 Provider 错误在进入 UI、
   日志或错误界面前由宿主进行凭据脱敏；普通 Provider/模型内容作为产品
   数据保持原样；
-- Sidecar 崩溃只令其自身操作明确失败——Deeper 绝不静默回退到
+- Sidecar 崩溃只令其自身操作明确失败——Deepzora 绝不静默回退到
   其他模型或策略。

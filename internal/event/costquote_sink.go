@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/provider"
 )
 
 // QuoteContext supplies an explicit display request for the CostQuote

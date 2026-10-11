@@ -7,7 +7,7 @@ import (
 )
 
 func TestManagedModelSnapshotPreservesProjectProviderAndAssignments(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	t.Setenv("PROJECT_MODEL_KEY", "project-secret")
 	if _, err := SetCredential("PROJECT_MODEL_KEY", "project-secret"); err != nil {
 		t.Fatal(err)
@@ -26,7 +26,7 @@ base_url = "https://project.invalid/v1"
 model = "m"
 api_key_env = "PROJECT_MODEL_KEY"
 `
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0600); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, root)

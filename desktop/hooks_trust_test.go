@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/hook"
+	"deepzora/internal/hook"
 )
 
 // Hooks a checkout ships are shown as waiting, and load once approved.
 func TestTrustProjectHooksApprovesTheCheckoutsHooks(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	project := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(project, ".deeper"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(project, ".deepzora"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, ".deeper", "settings.json"), []byte(`{"hooks":{"Stop":[{"command":"echo done"}]}}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, ".deepzora", "settings.json"), []byte(`{"hooks":{"Stop":[{"command":"echo done"}]}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	app := NewApp()
@@ -48,10 +48,10 @@ func TestTrustProjectHooksApprovesTheCheckoutsHooks(t *testing.T) {
 func TestTrustProjectHooksRefusesFieldsTheEditorCannotShow(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	project := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(project, ".deeper"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(project, ".deepzora"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, ".deeper", "settings.json"), []byte(`{"hooks":{"Stop":[{"command":"echo done","env":{"NODE_OPTIONS":"--require ./x.js"}}]}}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, ".deepzora", "settings.json"), []byte(`{"hooks":{"Stop":[{"command":"echo done","env":{"NODE_OPTIONS":"--require ./x.js"}}]}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := NewApp().TrustProjectHooksForRoot(project); !errors.Is(err, errHooksNotShown) {
@@ -66,7 +66,7 @@ func TestTrustProjectHooksRefusesFieldsTheEditorCannotShow(t *testing.T) {
 func TestTrustProjectHooksRefusesHooksChangedSinceShown(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	project := t.TempDir()
-	settings := filepath.Join(project, ".deeper", "settings.json")
+	settings := filepath.Join(project, ".deepzora", "settings.json")
 	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
 		t.Fatal(err)
 	}

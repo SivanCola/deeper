@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 type recordingBrokerExecutor struct {

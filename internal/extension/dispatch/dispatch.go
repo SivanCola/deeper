@@ -27,9 +27,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/secrets"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/secrets"
 )
 
 // Client is the subset of sidecar.Client the dispatcher needs, abstracted for

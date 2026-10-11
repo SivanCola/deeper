@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/sandbox"
+	"deepzora/internal/config"
+	"deepzora/internal/sandbox"
 )
 
 // assertConfigUntouched proves the repair API contract on every branch: the

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 type fakeSandboxEscapeApprover struct {

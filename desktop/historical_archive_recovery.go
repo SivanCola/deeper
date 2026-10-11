@@ -4,7 +4,7 @@ import (
 	"context"
 	"slices"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 // Recovery takes source guards in the same order as initial archive staging,

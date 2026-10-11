@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 	"errors"
 	"slices"
 	"strings"

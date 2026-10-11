@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
 )
 
 type desktopTabEntry struct {

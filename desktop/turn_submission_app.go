@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 	"errors"
 	"strings"
 )

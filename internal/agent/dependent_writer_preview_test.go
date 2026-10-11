@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 type mutateThenFailTool struct{ path string }

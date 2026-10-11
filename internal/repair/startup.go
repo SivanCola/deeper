@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/config"
-	filelock "deeper/internal/identitylock"
+	"deepzora/internal/config"
+	filelock "deepzora/internal/identitylock"
 )
 
 // StartupState is the legacy startup-state.json shape written by v1.18-v1.19.

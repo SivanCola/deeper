@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 func uploadRequest(tab browser.Tab, token, op string, files ...string) browser.ActRequest {

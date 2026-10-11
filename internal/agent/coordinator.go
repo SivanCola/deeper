@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/nilutil"
-	"deeper/internal/plancontract"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/nilutil"
+	"deepzora/internal/plancontract"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 // Runner carries out one task turn. Both Agent (single model) and Coordinator
@@ -75,7 +75,7 @@ servers, then inspect or call a non-destructive capability. If a capability is
 destructive, do not treat that as missing configuration or an unavailable MCP:
 write the operation into the plan for the executor instead.`
 
-const executorHandoffMarker = "Deeper executor handoff"
+const executorHandoffMarker = "Deepzora executor handoff"
 
 // plannerProtocolError is the structured failure returned when the planner
 // ends a turn without the submitted plan the contract requires.
@@ -87,7 +87,7 @@ func plannerProtocolFailure() error {
 }
 
 // PlannerPromptWithContext appends cache-stable standing context, such as loaded
-// DEEPER.md / AGENTS.md memory, to the planner's smaller system prompt.
+// DEEPZORA.md / AGENTS.md memory, to the planner's smaller system prompt.
 func PlannerPromptWithContext(context string) string {
 	context = strings.TrimSpace(context)
 	if context == "" {
@@ -302,7 +302,7 @@ func (c *Coordinator) SetSandboxEscapeApprover(g sandbox.EscapeApprover) {
 	}
 }
 
-// SetConfigWriteApprover propagates Deeper-managed config write approvals to
+// SetConfigWriteApprover propagates Deepzora-managed config write approvals to
 // both tool-using agents in two-model mode.
 func (c *Coordinator) SetConfigWriteApprover(g tool.ConfigWriteApprover) {
 	if c == nil {

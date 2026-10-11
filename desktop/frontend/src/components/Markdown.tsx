@@ -279,7 +279,7 @@ export function useRenderedMarkdownText(text: string, streaming: boolean, holdId
       cancelFinalizationRef.current = null;
       finalizingTextRef.current = null;
       if (finalizationStartedAtRef.current > 0) {
-        performance.measure("deeper:markdown-finalize", {
+        performance.measure("deepzora:markdown-finalize", {
           start: finalizationStartedAtRef.current,
           end: performance.now(),
           detail: { textLength: finalizationLengthRef.current },

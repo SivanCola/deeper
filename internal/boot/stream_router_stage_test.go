@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/provider"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/provider"
 )
 
 type baseResolver struct{}

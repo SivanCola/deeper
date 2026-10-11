@@ -43,11 +43,11 @@ func TestLoadTaskRejectsSymlinkAndUnsafeIDs(t *testing.T) {
 		root = resolved
 	}
 	outside := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".deeper", "autoresearch"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora", "autoresearch"), 0o755); err != nil {
 		t.Fatalf("create autoresearch root: %v", err)
 	}
 	taskID := "symlink-task"
-	if err := os.Symlink(outside, filepath.Join(root, ".deeper", "autoresearch", taskID)); err != nil {
+	if err := os.Symlink(outside, filepath.Join(root, ".deepzora", "autoresearch", taskID)); err != nil {
 		t.Fatalf("symlink: %v", err)
 	}
 	store := NewStore(root)
@@ -73,11 +73,11 @@ func TestLoadTaskRejectsSymlinkedArchiveRoot(t *testing.T) {
 	}
 	const taskID = "outside-task"
 	writeArchiveFixture(t, outside, taskID, "outside workspace goal", nil)
-	if err := os.MkdirAll(filepath.Join(root, ".deeper"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	outsideRoot := filepath.Join(outside, ".deeper", "autoresearch")
-	if err := os.Symlink(outsideRoot, filepath.Join(root, ".deeper", "autoresearch")); err != nil {
+	outsideRoot := filepath.Join(outside, ".deepzora", "autoresearch")
+	if err := os.Symlink(outsideRoot, filepath.Join(root, ".deepzora", "autoresearch")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -244,7 +244,7 @@ func TestResumeFromGoalTextLoadsExplicitTaskPath(t *testing.T) {
 	taskID := "20260630-resume-path"
 	writeArchiveFixture(t, root, taskID, "Resume explicit path", nil)
 	store := NewStore(root)
-	resumed, ok, err := store.ResumeFromGoalText("继续 .deeper/autoresearch/" + taskID + "/ 这个任务")
+	resumed, ok, err := store.ResumeFromGoalText("继续 .deepzora/autoresearch/" + taskID + "/ 这个任务")
 	if err != nil || !ok {
 		t.Fatalf("ResumeFromGoalText: ok=%v err=%v", ok, err)
 	}
@@ -254,15 +254,15 @@ func TestResumeFromGoalTextLoadsExplicitTaskPath(t *testing.T) {
 	if _, ok, err := store.ResumeFromGoalText("ordinary goal text"); err != nil || ok {
 		t.Fatalf("ordinary text matched archive: ok=%v err=%v", ok, err)
 	}
-	if _, ok, err := store.ResumeFromGoalText("resume .deeper/autoresearch/missing-task/"); !ok || err == nil {
+	if _, ok, err := store.ResumeFromGoalText("resume .deepzora/autoresearch/missing-task/"); !ok || err == nil {
 		t.Fatalf("missing task should fail closed: ok=%v err=%v", ok, err)
 	}
 	for _, input := range []string{
-		"resume .deeper/autoresearch/../escape",
-		"resume .deeper/autoresearch/" + taskID + "/../../escape",
-		"resume .deeper/autoresearch/" + taskID + "/extra",
-		"resume .deeper/autoresearch/" + taskID + `\extra`,
-		"resume .deeper/autoresearch/",
+		"resume .deepzora/autoresearch/../escape",
+		"resume .deepzora/autoresearch/" + taskID + "/../../escape",
+		"resume .deepzora/autoresearch/" + taskID + "/extra",
+		"resume .deepzora/autoresearch/" + taskID + `\extra`,
+		"resume .deepzora/autoresearch/",
 	} {
 		if _, ok, err := store.ResumeFromGoalText(input); !ok || err == nil {
 			t.Errorf("unsafe explicit path %q did not fail closed: ok=%v err=%v", input, ok, err)
@@ -289,8 +289,8 @@ func TestListSummariesAndSummaryAreReadOnly(t *testing.T) {
 		Iteration: 3,
 		CreatedAt: time.Date(2026, 6, 30, 11, 0, 0, 0, time.UTC),
 	})
-	before := hashTree(t, filepath.Join(root, ".deeper", "autoresearch"))
-	beforeModTimes := modTimes(t, filepath.Join(root, ".deeper", "autoresearch"))
+	before := hashTree(t, filepath.Join(root, ".deepzora", "autoresearch"))
+	beforeModTimes := modTimes(t, filepath.Join(root, ".deepzora", "autoresearch"))
 	store := NewStore(root)
 	list, err := store.ListSummaries()
 	if err != nil {
@@ -306,7 +306,7 @@ func TestListSummariesAndSummaryAreReadOnly(t *testing.T) {
 	if summary.Iteration != 3 || !summary.PivotRequired || summary.NextRequiredAction == "" {
 		t.Fatalf("summary = %+v", summary)
 	}
-	after := hashTree(t, filepath.Join(root, ".deeper", "autoresearch"))
+	after := hashTree(t, filepath.Join(root, ".deepzora", "autoresearch"))
 	if len(before) != len(after) {
 		t.Fatalf("archive file count changed: before=%d after=%d", len(before), len(after))
 	}
@@ -315,7 +315,7 @@ func TestListSummariesAndSummaryAreReadOnly(t *testing.T) {
 			t.Fatalf("archive mutated at %s", path)
 		}
 	}
-	afterModTimes := modTimes(t, filepath.Join(root, ".deeper", "autoresearch"))
+	afterModTimes := modTimes(t, filepath.Join(root, ".deepzora", "autoresearch"))
 	for path, modTime := range beforeModTimes {
 		if !afterModTimes[path].Equal(modTime) {
 			t.Fatalf("archive modification time changed at %s", path)

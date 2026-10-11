@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/evidence"
-	"deeper/internal/runtimepolicy"
+	"deepzora/internal/evidence"
+	"deepzora/internal/runtimepolicy"
 )
 
 // A closed-loop turn is a delivery-floor turn: the floor alone arms the

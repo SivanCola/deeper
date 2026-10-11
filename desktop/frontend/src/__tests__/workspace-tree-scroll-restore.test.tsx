@@ -139,7 +139,7 @@ resetWorkspaceTreeMemoryForTests();
 const dom = installDom();
 dom.window.localStorage.clear();
 const RESTORED_SCROLL_TOP = 200;
-dom.window.localStorage.setItem("deeper.workspaceState.v2", JSON.stringify({
+dom.window.localStorage.setItem("deepzora.workspaceState.v2", JSON.stringify({
   version: 2,
   projects: [{
     key: MEMORY_KEY,
@@ -188,9 +188,9 @@ await waitFor("persisted tree offset restore", () => treeEl.scrollTop === RESTOR
 ok(treeEl.scrollTop === RESTORED_SCROLL_TOP, "initial mount restores the persisted DOM scroll offset");
 
 // Scroll position should have been persisted to the upstream per-project
-// workspace state envelope (deeper.workspaceState.v2).
+// workspace state envelope (deepzora.workspaceState.v2).
 function persistedScrollTop(): number | null {
-  const raw = dom.window.localStorage.getItem("deeper.workspaceState.v2");
+  const raw = dom.window.localStorage.getItem("deepzora.workspaceState.v2");
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as { projects?: Array<{ key: string; state: { scrollTop?: number } }> };

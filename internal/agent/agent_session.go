@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/fileops"
+import "deepzora/internal/fileops"
 
 // InheritFileObservationsFrom is for an idle, same-session runtime rebuild.
 // Resume, fork and rewind intentionally use SetSession without this transfer.
@@ -22,7 +22,7 @@ func (a *Agent) Session() *Session {
 }
 
 // SetSession replaces the agent's conversation wholesale. Used by
-// `deeper --resume` to load a saved JSONL transcript before the first turn,
+// `deepzora --resume` to load a saved JSONL transcript before the first turn,
 // so the model picks up exactly where it left off. Callers serialise it against a
 // running turn (it only fires while idle); sessMu guards the pointer swap itself.
 func (a *Agent) SetSession(s *Session) {

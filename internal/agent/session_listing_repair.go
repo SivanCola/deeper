@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 type SessionListingRepairStatus string

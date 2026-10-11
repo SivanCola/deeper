@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestRecoveryIdentityPersistsOnlyFirstWriter(t *testing.T) {

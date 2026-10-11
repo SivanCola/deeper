@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/capability"
-	"deeper/internal/config"
-	"deeper/internal/plugin"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestPartitionToolCallsParallelisesCapabilityDiscovery(t *testing.T) {
@@ -79,7 +79,7 @@ func TestClassifyCallSearchIsReadOnlyParallel(t *testing.T) {
 }
 
 func TestPartitionIndependentReadOnlyMCPCallsAreParallel(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	var calls atomic.Int32
 	alpha := readonlyMCPServer(t, "alpha", &calls)
 	beta := readonlyMCPServer(t, "beta", &calls)
@@ -133,7 +133,7 @@ func TestPartitionStatefulBrowserMCPStaysSerial(t *testing.T) {
 }
 
 func TestOnDemandConnectEmitsOneSessionRemoteToolsListObservation(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	var toolCalls atomic.Int32
 	server := readonlyMCPServer(t, "observed", &toolCalls)
 	defer server.Close()

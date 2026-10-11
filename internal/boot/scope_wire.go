@@ -3,11 +3,11 @@ package boot
 import (
 	"context"
 
-	"deeper/internal/extension"
-	"deeper/internal/lsp"
-	"deeper/internal/plugin"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/skill"
+	"deepzora/internal/extension"
+	"deepzora/internal/lsp"
+	"deepzora/internal/plugin"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/skill"
 )
 
 func closeSkillStores(stores ...*skill.Store) {

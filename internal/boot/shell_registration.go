@@ -1,9 +1,9 @@
 package boot
 
 import (
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 func canonicalBuiltinName(name string) string {

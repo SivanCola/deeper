@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/historywork"
+	"deepzora/internal/historywork"
 )
 
 func TestMetadataQueueSupersedesInvalidScanBeforeReadingItsRemainder(t *testing.T) {

@@ -74,6 +74,6 @@ effort from the same model. Boot accepts an optional runtime-only `EffortModel`
 origin for inherited overrides. CLI, Desktop, ACP and serve paths preserve this
 boundary; `auto` remains available to clear an override with unknown metadata.
 
-The design is independently implemented for Deeper, informed by
+The design is independently implemented for Deepzora, informed by
 [DeepSeek Harness's adapter-owned reasoning contract](https://github.com/deepseek-ai/deepseek-harness/blob/d347e703908d0406b7a7ef80e3a0e594d86b2215/.agents/notes/implemented/architecture/2026-07-24-adapter-owned-reasoning-effort-capabilities.md).
 No upstream implementation was copied.

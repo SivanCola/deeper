@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 func TestClearSessionRefusesWhileTurnRuns(t *testing.T) {

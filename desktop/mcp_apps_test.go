@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/plugin"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
 )
 
 func TestMCPAppBindingSurvivesActiveTabSwitchAndClosesOriginalHost(t *testing.T) {

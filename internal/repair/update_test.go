@@ -34,10 +34,10 @@ func fileUpdateInstallReceiptsForTest(t *testing.T, tx *UpdateTransaction) []Fil
 
 func TestFileUpdateRollbackRestoresPreviousBinary(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", home)
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -65,10 +65,10 @@ func TestFileUpdateRollbackRestoresPreviousBinary(t *testing.T) {
 }
 
 func TestReconcilePendingFileUpdateCancelsPreparedReleaseUnit(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -106,10 +106,10 @@ func TestReconcilePendingFileUpdateCancelsPreparedReleaseUnit(t *testing.T) {
 // same way preparation does, without touching the target or rollback material
 // (#7391, #7416).
 func TestReconcilePendingFileUpdateQuarantinesForeignTarget(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestReconcilePendingFileUpdateQuarantinesForeignTarget(t *testing.T) {
 
 	// The install layout moved: the current launcher now lives in a different
 	// directory from the transaction target.
-	repairExecutable = func() (string, error) { return filepath.Join(t.TempDir(), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(t.TempDir(), "deepzora-guard"), nil }
 
 	result, err := ReconcilePendingUpdate("v2")
 	if err != nil {
@@ -154,10 +154,10 @@ func TestReconcilePendingFileUpdateQuarantinesForeignTarget(t *testing.T) {
 // for this installation, so callers that skip reconciliation (or reach prepare
 // first) do not dead-end forever on the marker (#7391, #7416).
 func TestPrepareFileUpdateQuarantinesForeignTarget(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -169,8 +169,8 @@ func TestPrepareFileUpdateQuarantinesForeignTarget(t *testing.T) {
 	// The install layout moved: the launcher now lives in a different
 	// directory from the first transaction's target.
 	newLauncherDir := t.TempDir()
-	repairExecutable = func() (string, error) { return filepath.Join(newLauncherDir, "deeper-guard"), nil }
-	newTarget := filepath.Join(newLauncherDir, "deeper-desktop")
+	repairExecutable = func() (string, error) { return filepath.Join(newLauncherDir, "deepzora-guard"), nil }
+	newTarget := filepath.Join(newLauncherDir, "deepzora-desktop")
 	if err := os.WriteFile(newTarget, []byte("old2"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -184,10 +184,10 @@ func TestPrepareFileUpdateQuarantinesForeignTarget(t *testing.T) {
 }
 
 func TestReconcileForeignQuarantineRejectsMarkerReplacement(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -195,7 +195,7 @@ func TestReconcileForeignQuarantineRejectsMarkerReplacement(t *testing.T) {
 	if _, err := PrepareFileUpdate("v1", "v2", target); err != nil {
 		t.Fatal(err)
 	}
-	repairExecutable = func() (string, error) { return filepath.Join(t.TempDir(), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(t.TempDir(), "deepzora-guard"), nil }
 	digest, err := pendingUpdateMarkerDigest(PendingUpdatePath())
 	if err != nil {
 		t.Fatal(err)
@@ -224,10 +224,10 @@ func TestReconcileForeignQuarantineRejectsMarkerReplacement(t *testing.T) {
 }
 
 func TestSelfDescribingInvalidTransactionRemainsBlocked(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -255,10 +255,10 @@ func TestSelfDescribingInvalidTransactionRemainsBlocked(t *testing.T) {
 }
 
 func TestReconcilePendingFileUpdateLeavesBoundProbationaryReleaseUnit(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -306,10 +306,10 @@ func TestUpdateVersionsEqualNormalizesLeadingV(t *testing.T) {
 }
 
 func TestReconcilePendingFileUpdateCommitsStaleProbationaryReleaseUnit(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	// Do not rewrite CreatedAt: it is part of the transaction identity that
 	// install-evidence binding requires. Force the stale decision instead.
@@ -348,10 +348,10 @@ func TestReconcilePendingFileUpdateCommitsStaleProbationaryReleaseUnit(t *testin
 }
 
 func TestAbandonPendingUpdateCommitsProbationaryReleaseUnit(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -384,10 +384,10 @@ func TestAbandonPendingUpdateCommitsProbationaryReleaseUnit(t *testing.T) {
 }
 
 func TestAbandonPendingUpdateForceRetiresWhenBackupDigestBroken(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -434,10 +434,10 @@ func TestAbandonPendingUpdateForceRetiresWhenBackupDigestBroken(t *testing.T) {
 }
 
 func TestReconcilePendingFileUpdateRollsBackPublishedReleaseUnit(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -466,13 +466,13 @@ func TestReconcilePendingFileUpdateRollsBackPublishedReleaseUnit(t *testing.T) {
 
 func TestAppBundleRollbackRestoresWhenLiveBundleIsMissing(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -483,7 +483,7 @@ func TestAppBundleRollbackRestoresWhenLiveBundleIsMissing(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	if _, err := PrepareAppBundleUpdate("v1", "v2", app, backup); err != nil {
 		t.Fatal(err)
 	}
@@ -511,13 +511,13 @@ func TestAppBundleRollbackRestoresWhenLiveBundleIsMissing(t *testing.T) {
 
 func TestAppBundleRollbackRecognizesAlreadyRestoredBundle(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -528,7 +528,7 @@ func TestAppBundleRollbackRecognizesAlreadyRestoredBundle(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	if _, err := PrepareAppBundleUpdate("v1", "v2", app, backup); err != nil {
 		t.Fatal(err)
 	}
@@ -549,13 +549,13 @@ func TestAppBundleRollbackRecognizesAlreadyRestoredBundle(t *testing.T) {
 
 func TestMarkUpdateHealthyRejectsAppBundleDrift(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -566,14 +566,14 @@ func TestMarkUpdateHealthyRejectsAppBundleDrift(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
-	staging, err := os.MkdirTemp("", "deeper-mac-update-*")
+	backup := app + ".deepzora-update-backup"
+	staging, err := os.MkdirTemp("", "deepzora-mac-update-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(staging) })
-	stagedApp := filepath.Join(staging, "Deeper.app")
-	stagedExe := filepath.Join(stagedApp, "Contents", "MacOS", "Deeper")
+	stagedApp := filepath.Join(staging, "Deepzora.app")
+	stagedExe := filepath.Join(stagedApp, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(stagedExe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -613,13 +613,13 @@ func TestMarkUpdateHealthyRejectsAppBundleDrift(t *testing.T) {
 
 func TestMarkUpdateHealthyRejectsLegacyAppBundleWithoutInstalledDigest(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -630,7 +630,7 @@ func TestMarkUpdateHealthyRejectsLegacyAppBundleWithoutInstalledDigest(t *testin
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	tx, err := PrepareAppBundleUpdate("v1", "v2", app, backup)
 	if err != nil {
 		t.Fatal(err)
@@ -662,13 +662,13 @@ func TestMarkUpdateHealthyRejectsLegacyAppBundleWithoutInstalledDigest(t *testin
 
 func TestAppBundleRollbackRejectsChangedBackupTree(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -679,14 +679,14 @@ func TestAppBundleRollbackRejectsChangedBackupTree(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	if _, err := PrepareAppBundleUpdate("v1", "v2", app, backup); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Rename(app, backup); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(backup, "Contents", "MacOS", "Deeper"), []byte("tampered"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(backup, "Contents", "MacOS", "Deepzora"), []byte("tampered"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := RollbackPendingUpdate(); err == nil || !strings.Contains(err.Error(), "digest mismatch") {
@@ -702,13 +702,13 @@ func TestAppBundleRollbackRejectsChangedBackupTree(t *testing.T) {
 
 func TestAppBundleRollbackCompensatesBackupChangedDuringPublish(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -719,7 +719,7 @@ func TestAppBundleRollbackCompensatesBackupChangedDuringPublish(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	if _, err := PrepareAppBundleUpdate("v1", "v2", app, backup); err != nil {
 		t.Fatal(err)
 	}
@@ -739,7 +739,7 @@ func TestAppBundleRollbackCompensatesBackupChangedDuringPublish(t *testing.T) {
 			return err
 		}
 		if oldPath == backup && newPath == app {
-			return os.WriteFile(filepath.Join(app, "Contents", "MacOS", "Deeper"), []byte("tampered-during-publish"), 0o700)
+			return os.WriteFile(filepath.Join(app, "Contents", "MacOS", "Deepzora"), []byte("tampered-during-publish"), 0o700)
 		}
 		return nil
 	}
@@ -755,11 +755,11 @@ func TestAppBundleRollbackCompensatesBackupChangedDuringPublish(t *testing.T) {
 	if got, err := os.ReadFile(exe); err != nil || string(got) != "new" {
 		t.Fatalf("prior live bundle was not restored: %q, %v", got, err)
 	}
-	rejected, err := filepath.Glob(app + ".deeper-cleanup-*")
+	rejected, err := filepath.Glob(app + ".deepzora-cleanup-*")
 	if err != nil || len(rejected) != 1 {
 		t.Fatalf("rejected backup bundle = %v, %v", rejected, err)
 	}
-	rejectedExe := filepath.Join(rejected[0], "Contents", "MacOS", "Deeper")
+	rejectedExe := filepath.Join(rejected[0], "Contents", "MacOS", "Deepzora")
 	if got, err := os.ReadFile(rejectedExe); err != nil || string(got) != "tampered-during-publish" {
 		t.Fatalf("rejected bundle was not preserved: %q, %v", got, err)
 	}
@@ -770,13 +770,13 @@ func TestAppBundleRollbackCompensatesBackupChangedDuringPublish(t *testing.T) {
 
 func TestLegacyAppBundleRollbackWithoutTreeDigest(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -787,7 +787,7 @@ func TestLegacyAppBundleRollbackWithoutTreeDigest(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	tx, err := PrepareAppBundleUpdate("v1", "v2", app, backup)
 	if err != nil {
 		t.Fatal(err)
@@ -807,7 +807,7 @@ func TestLegacyAppBundleRollbackWithoutTreeDigest(t *testing.T) {
 	if _, err := os.Lstat(app); !os.IsNotExist(err) {
 		t.Fatalf("legacy rollback recreated target without authorization: %v", err)
 	}
-	backupExe := filepath.Join(backup, "Contents", "MacOS", "Deeper")
+	backupExe := filepath.Join(backup, "Contents", "MacOS", "Deepzora")
 	if got, err := os.ReadFile(backupExe); err != nil || string(got) != "old" {
 		t.Fatalf("legacy rollback changed backup bundle = %q, %v", got, err)
 	}
@@ -818,13 +818,13 @@ func TestLegacyAppBundleRollbackWithoutTreeDigest(t *testing.T) {
 
 func TestRepairPlanCanConfirmLegacyAppBundleRollbackWithoutTreeDigest(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -835,7 +835,7 @@ func TestRepairPlanCanConfirmLegacyAppBundleRollbackWithoutTreeDigest(t *testing
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	tx, err := PrepareAppBundleUpdate("v1", "v2", app, backup)
 	if err != nil {
 		t.Fatal(err)
@@ -880,13 +880,13 @@ func TestRepairPlanCanConfirmLegacyAppBundleRollbackWithoutTreeDigest(t *testing
 }
 
 func TestRepairPlanRejectsLegacyAppBundleSymlinkBackupBeforeMutation(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -897,7 +897,7 @@ func TestRepairPlanRejectsLegacyAppBundleSymlinkBackupBeforeMutation(t *testing.
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	tx, err := PrepareAppBundleUpdate("v1", "v2", app, backup)
 	if err != nil {
 		t.Fatal(err)
@@ -937,7 +937,7 @@ func TestRepairPlanRejectsLegacyAppBundleSymlinkBackupBeforeMutation(t *testing.
 	if _, err := os.Lstat(app); !os.IsNotExist(err) {
 		t.Fatalf("live app path changed before rejection: %v", err)
 	}
-	if got, err := os.ReadFile(filepath.Join(external, "Contents", "MacOS", "Deeper")); err != nil || string(got) != "old" {
+	if got, err := os.ReadFile(filepath.Join(external, "Contents", "MacOS", "Deepzora")); err != nil || string(got) != "old" {
 		t.Fatalf("external backup changed: %q, %v", got, err)
 	}
 	if !HasPendingUpdate() {
@@ -947,14 +947,14 @@ func TestRepairPlanRejectsLegacyAppBundleSymlinkBackupBeforeMutation(t *testing.
 
 func TestRollbackPendingUpdateRejectsUnexpectedVersion(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
+	target := filepath.Join(dir, "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(dir, "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(dir, "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("v1"), 0o700); err != nil {
 		t.Fatal(err)
@@ -980,13 +980,13 @@ func TestRollbackPendingUpdateRejectsUnexpectedVersion(t *testing.T) {
 
 func TestRollbackPendingUpdateFailsClosedWhenStateLockIsUnavailable(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1020,15 +1020,15 @@ func TestRollbackPendingUpdateFailsClosedWhenStateLockIsUnavailable(t *testing.T
 
 func TestFileUpdateRollbackRestoresReleaseUnit(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	// Resolve symlinks up front (macOS /var -> /private/var) so the recorded
 	// target dir matches the resolved launcher dir in validation.
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1038,7 +1038,7 @@ func TestFileUpdateRollbackRestoresReleaseUnit(t *testing.T) {
 	if err := os.WriteFile(guard, []byte("old-guard"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	missingSibling := filepath.Join(dir, "deeper-update-helper.exe")
+	missingSibling := filepath.Join(dir, "deepzora-update-helper.exe")
 	tx, err := PrepareFileUpdate("v1", "v2", target, guard, missingSibling)
 	if err != nil {
 		t.Fatal(err)
@@ -1078,13 +1078,13 @@ func TestFileUpdateRollbackRestoresReleaseUnit(t *testing.T) {
 
 func TestCancelPendingUpdateRemovesReleaseUnitBackups(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1112,13 +1112,13 @@ func TestCancelPendingUpdateRemovesReleaseUnitBackups(t *testing.T) {
 
 func TestPrepareFileUpdatePreservesExistingPendingTransaction(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1164,13 +1164,13 @@ func TestPrepareFileUpdatePreservesExistingPendingTransaction(t *testing.T) {
 func TestExactUpdateTransitionsIgnoreLaterSameVersionTransaction(t *testing.T) {
 	t.Run("cancel", func(t *testing.T) {
 		home := t.TempDir()
-		t.Setenv("DEEPER_HOME", home)
+		t.Setenv("DEEPZORA_HOME", home)
 		dir, err := filepath.EvalSymlinks(t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1197,13 +1197,13 @@ func TestExactUpdateTransitionsIgnoreLaterSameVersionTransaction(t *testing.T) {
 
 	t.Run("healthy", func(t *testing.T) {
 		home := t.TempDir()
-		t.Setenv("DEEPER_HOME", home)
+		t.Setenv("DEEPZORA_HOME", home)
 		dir, err := filepath.EvalSymlinks(t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1239,13 +1239,13 @@ func TestExactUpdateTransitionsIgnoreLaterSameVersionTransaction(t *testing.T) {
 
 	t.Run("rollback", func(t *testing.T) {
 		home := t.TempDir()
-		t.Setenv("DEEPER_HOME", home)
+		t.Setenv("DEEPZORA_HOME", home)
 		dir, err := filepath.EvalSymlinks(t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1281,13 +1281,13 @@ func TestExactUpdateTransitionsIgnoreLaterSameVersionTransaction(t *testing.T) {
 func TestUpdateTransitionsRecheckPendingAfterTargetLock(t *testing.T) {
 	t.Run("rollback", func(t *testing.T) {
 		home := t.TempDir()
-		t.Setenv("DEEPER_HOME", home)
+		t.Setenv("DEEPZORA_HOME", home)
 		dir, err := filepath.EvalSymlinks(t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1329,13 +1329,13 @@ func TestUpdateTransitionsRecheckPendingAfterTargetLock(t *testing.T) {
 
 	t.Run("healthy", func(t *testing.T) {
 		home := t.TempDir()
-		t.Setenv("DEEPER_HOME", home)
+		t.Setenv("DEEPZORA_HOME", home)
 		dir, err := filepath.EvalSymlinks(t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1377,10 +1377,10 @@ func TestUpdateTransitionsRecheckPendingAfterTargetLock(t *testing.T) {
 
 func TestGenericUpdateTransitionsBindPendingBeforeWaitingForLock(t *testing.T) {
 	t.Run("rollback", func(t *testing.T) {
-		t.Setenv("DEEPER_HOME", t.TempDir())
+		t.Setenv("DEEPZORA_HOME", t.TempDir())
 		dir := t.TempDir()
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1416,10 +1416,10 @@ func TestGenericUpdateTransitionsBindPendingBeforeWaitingForLock(t *testing.T) {
 	})
 
 	t.Run("healthy", func(t *testing.T) {
-		t.Setenv("DEEPER_HOME", t.TempDir())
+		t.Setenv("DEEPZORA_HOME", t.TempDir())
 		dir := t.TempDir()
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1457,10 +1457,10 @@ func TestGenericUpdateTransitionsBindPendingBeforeWaitingForLock(t *testing.T) {
 	})
 
 	t.Run("cancel", func(t *testing.T) {
-		t.Setenv("DEEPER_HOME", t.TempDir())
+		t.Setenv("DEEPZORA_HOME", t.TempDir())
 		dir := t.TempDir()
-		target := filepath.Join(dir, "deeper-desktop")
-		guard := filepath.Join(dir, "deeper-guard")
+		target := filepath.Join(dir, "deepzora-desktop")
+		guard := filepath.Join(dir, "deepzora-guard")
 		originalExecutable := repairExecutable
 		repairExecutable = func() (string, error) { return guard, nil }
 		t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1494,13 +1494,13 @@ func TestGenericUpdateTransitionsBindPendingBeforeWaitingForLock(t *testing.T) {
 
 func TestCancelPendingFileUpdateRejectsLiveDrift(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1531,13 +1531,13 @@ func TestCancelPendingFileUpdateRejectsLiveDrift(t *testing.T) {
 
 func TestRecoverFailedInstallRejectsStaleSameVersionIdentity(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1581,13 +1581,13 @@ func TestRecoverFailedInstallRejectsStaleSameVersionIdentity(t *testing.T) {
 }
 
 func TestMarkUpdateHealthyExactRejectsRewrittenTransaction(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1618,13 +1618,13 @@ func TestMarkUpdateHealthyExactRejectsRewrittenTransaction(t *testing.T) {
 }
 
 func TestRecoverFailedInstallRejectsRewrittenExactTransaction(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1664,13 +1664,13 @@ func TestRecoverFailedInstallRejectsRewrittenExactTransaction(t *testing.T) {
 }
 
 func TestClearUpdateApplyFailureExactPreservesDifferentTransactionMarker(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	first := &UpdateTransaction{
 		SchemaVersion: 1,
 		ToVersion:     "v2",
 		Platform:      "windows/amd64",
 		TargetKind:    "file",
-		TargetPath:    filepath.Join(t.TempDir(), "deeper-desktop"),
+		TargetPath:    filepath.Join(t.TempDir(), "deepzora-desktop"),
 		CreatedAt:     "2026-07-29T00:00:00Z",
 	}
 	second := *first
@@ -1699,13 +1699,13 @@ func TestClearUpdateApplyFailureExactPreservesDifferentTransactionMarker(t *test
 // and the pending transaction.
 func TestRecoverFailedInstallRollsBackAndClearsMarker(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1750,13 +1750,13 @@ func TestRecoverFailedInstallRollsBackAndClearsMarker(t *testing.T) {
 }
 
 func TestRecoverFailedInstallAfterInstalledSidecarCommit(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1820,7 +1820,7 @@ func TestRecoverFailedInstallAfterInstalledSidecarCommit(t *testing.T) {
 // forever.
 func TestRecoverFailedInstallClearsStaleMarker(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	if err := MarkUpdateApplyFailed("v2", "installer exited with 1"); err != nil {
 		t.Fatal(err)
 	}
@@ -1834,7 +1834,7 @@ func TestRecoverFailedInstallClearsStaleMarker(t *testing.T) {
 }
 
 func TestRecoverFailedInstallPreservesMarkerRecreatedDuringCleanup(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	if err := MarkUpdateApplyFailed("v2", "old failure"); err != nil {
 		t.Fatal(err)
 	}
@@ -1861,13 +1861,13 @@ func TestRecoverFailedInstallPreservesMarkerRecreatedDuringCleanup(t *testing.T)
 
 func TestRecoverFailedInstallIgnoresMarkerForAnotherVersion(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1900,10 +1900,10 @@ func TestRecoverFailedInstallIgnoresMarkerForAnotherVersion(t *testing.T) {
 }
 
 func TestMarkUpdateApplyFailedPreservesNewMarkerAfterPendingReplacement(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -1961,13 +1961,13 @@ func TestRecoverFailedInstallRejectsLegacyMarkerRegardlessVersionAndTime(t *test
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			home := t.TempDir()
-			t.Setenv("DEEPER_HOME", home)
+			t.Setenv("DEEPZORA_HOME", home)
 			dir, err := filepath.EvalSymlinks(t.TempDir())
 			if err != nil {
 				t.Fatal(err)
 			}
-			target := filepath.Join(dir, "deeper-desktop")
-			guard := filepath.Join(dir, "deeper-guard")
+			target := filepath.Join(dir, "deepzora-desktop")
+			guard := filepath.Join(dir, "deepzora-guard")
 			originalExecutable := repairExecutable
 			repairExecutable = func() (string, error) { return guard, nil }
 			t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2018,10 +2018,10 @@ func TestRecoverFailedInstallRejectsLegacyMarkerRegardlessVersionAndTime(t *test
 
 func TestHealthyUpdateRemovesBackup(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", home)
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -2051,10 +2051,10 @@ func TestHealthyUpdateRemovesBackup(t *testing.T) {
 }
 
 func TestMarkUpdateHealthyRejectsFileTransactionWithoutInstalledBinding(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2083,13 +2083,13 @@ func TestMarkUpdateHealthyRejectsFileTransactionWithoutInstalledBinding(t *testi
 
 func TestRecordClaimedFileUpdateInstalledBindsCompleteReleaseUnit(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2160,14 +2160,14 @@ func TestRecordClaimedFileUpdateInstalledBindsCompleteReleaseUnit(t *testing.T) 
 }
 
 func TestRecordClaimedFileUpdateInstalledBindsOptionalMissingSibling(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
-	optionalCLI := filepath.Join(dir, "deeper")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
+	optionalCLI := filepath.Join(dir, "deepzora")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2203,13 +2203,13 @@ func TestRecordClaimedFileUpdateInstalledBindsOptionalMissingSibling(t *testing.
 }
 
 func TestReadPendingUpdateRejectsPartialInstalledReleaseUnitState(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2234,10 +2234,10 @@ func TestReadPendingUpdateRejectsPartialInstalledReleaseUnitState(t *testing.T) 
 
 func TestHealthyFileUpdateRejectsBackupDrift(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	target := filepath.Join(t.TempDir(), "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", home)
+	target := filepath.Join(t.TempDir(), "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(filepath.Dir(target), "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -2269,13 +2269,13 @@ func TestHealthyFileUpdateRejectsBackupDrift(t *testing.T) {
 
 func TestHealthyAppUpdateRejectsBackupDrift(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -2286,7 +2286,7 @@ func TestHealthyAppUpdateRejectsBackupDrift(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	tx, err := PrepareAppBundleUpdate("v1", "v2", app, backup)
 	if err != nil {
 		t.Fatal(err)
@@ -2300,7 +2300,7 @@ func TestHealthyAppUpdateRejectsBackupDrift(t *testing.T) {
 	if err := os.WriteFile(exe, []byte("new"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(backup, "Contents", "MacOS", "Deeper"), []byte("unrelated"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(backup, "Contents", "MacOS", "Deepzora"), []byte("unrelated"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2310,19 +2310,19 @@ func TestHealthyAppUpdateRejectsBackupDrift(t *testing.T) {
 	if _, err := ReadPendingUpdate(); err != nil {
 		t.Fatalf("rejected healthy commit removed pending transaction: %v", err)
 	}
-	if got, err := os.ReadFile(filepath.Join(backup, "Contents", "MacOS", "Deeper")); err != nil || string(got) != "unrelated" {
+	if got, err := os.ReadFile(filepath.Join(backup, "Contents", "MacOS", "Deepzora")); err != nil || string(got) != "unrelated" {
 		t.Fatalf("changed app backup was removed: %q, %v", got, err)
 	}
 }
 
 func TestMarkUpdateHealthyPreservesPendingRecreatedDuringCleanup(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2361,13 +2361,13 @@ func TestMarkUpdateHealthyPreservesPendingRecreatedDuringCleanup(t *testing.T) {
 }
 
 func TestMarkUpdateHealthyPreservesBackupRecreatedDuringCleanup(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2408,14 +2408,14 @@ func TestMarkUpdateHealthyPreservesBackupRecreatedDuringCleanup(t *testing.T) {
 // the pending transaction survives, and a later rollback attempt succeeds.
 func TestFileUpdateRollbackCompensatesOnPartialFailure(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
-	added := filepath.Join(dir, "deeper-update-helper.exe")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
+	added := filepath.Join(dir, "deepzora-update-helper.exe")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2435,7 +2435,7 @@ func TestFileUpdateRollbackCompensatesOnPartialFailure(t *testing.T) {
 
 	originalPublish := rollbackPublishStage
 	rollbackPublishStage = func(oldpath, newpath string) error {
-		if strings.HasPrefix(oldpath, guard+".deeper-rollback-stage-") && newpath == guard {
+		if strings.HasPrefix(oldpath, guard+".deepzora-rollback-stage-") && newpath == guard {
 			return errors.New("injected rename failure")
 		}
 		return renameRepairNodeNoReplace(oldpath, newpath)
@@ -2461,7 +2461,7 @@ func TestFileUpdateRollbackCompensatesOnPartialFailure(t *testing.T) {
 			t.Fatalf("compensated %s = %q, want %q", filepath.Base(path), got, want)
 		}
 	}
-	leftovers, err := filepath.Glob(filepath.Join(dir, "*.deeper-rollback-*"))
+	leftovers, err := filepath.Glob(filepath.Join(dir, "*.deepzora-rollback-*"))
 	if err != nil || len(leftovers) != 0 {
 		t.Fatalf("rollback left staging files behind: %v (err=%v)", leftovers, err)
 	}
@@ -2492,13 +2492,13 @@ func TestFileUpdateRollbackCompensatesOnPartialFailure(t *testing.T) {
 }
 
 func TestFileUpdateRollbackRejectsStageChangedDuringPublish(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2534,13 +2534,13 @@ func TestFileUpdateRollbackRejectsStageChangedDuringPublish(t *testing.T) {
 }
 
 func TestFileUpdateRollbackPreservesAsideReplacedBeforeCleanup(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2559,7 +2559,7 @@ func TestFileUpdateRollbackPreservesAsideReplacedBeforeCleanup(t *testing.T) {
 		if err := renameRepairNodeNoReplace(oldpath, newpath); err != nil {
 			return err
 		}
-		return os.WriteFile(newpath+".deeper-rollback-aside", []byte("concurrent-aside"), 0o700)
+		return os.WriteFile(newpath+".deepzora-rollback-aside", []byte("concurrent-aside"), 0o700)
 	}
 	t.Cleanup(func() { rollbackPublishStage = originalPublish })
 
@@ -2570,20 +2570,20 @@ func TestFileUpdateRollbackPreservesAsideReplacedBeforeCleanup(t *testing.T) {
 	if got, err := os.ReadFile(target); err != nil || string(got) != "old" {
 		t.Fatalf("restored target = %q, %v", got, err)
 	}
-	aside := target + ".deeper-rollback-aside"
+	aside := target + ".deepzora-rollback-aside"
 	if got, err := os.ReadFile(aside); err != nil || string(got) != "concurrent-aside" {
 		t.Fatalf("concurrent aside = %q, %v", got, err)
 	}
 }
 
 func TestFileUpdateRollbackCompensationPreservesRecreatedTarget(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2620,7 +2620,7 @@ func TestFileUpdateRollbackCompensationPreservesRecreatedTarget(t *testing.T) {
 	if got, err := os.ReadFile(target); err != nil || string(got) != "concurrent" {
 		t.Fatalf("concurrent target = %q, %v", got, err)
 	}
-	aside := target + ".deeper-rollback-aside"
+	aside := target + ".deepzora-rollback-aside"
 	if got, err := os.ReadFile(aside); err != nil || string(got) != "new-desktop" {
 		t.Fatalf("retained pre-rollback target = %q, %v", got, err)
 	}
@@ -2631,13 +2631,13 @@ func TestFileUpdateRollbackCompensationPreservesRecreatedTarget(t *testing.T) {
 
 func TestFileUpdateRollbackRetryPreservesRetainedNewBinary(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2658,7 +2658,7 @@ func TestFileUpdateRollbackRetryPreservesRetainedNewBinary(t *testing.T) {
 
 	// Simulate a process crash after the first old binary was installed but
 	// before its retained new-version aside was removed.
-	targetAside := target + ".deeper-rollback-aside"
+	targetAside := target + ".deepzora-rollback-aside"
 	if err := os.Rename(target, targetAside); err != nil {
 		t.Fatal(err)
 	}
@@ -2668,7 +2668,7 @@ func TestFileUpdateRollbackRetryPreservesRetainedNewBinary(t *testing.T) {
 
 	originalPublish := rollbackPublishStage
 	rollbackPublishStage = func(oldpath, newpath string) error {
-		if strings.HasPrefix(oldpath, guard+".deeper-rollback-stage-") && newpath == guard {
+		if strings.HasPrefix(oldpath, guard+".deepzora-rollback-stage-") && newpath == guard {
 			return errors.New("injected rename failure")
 		}
 		return renameRepairNodeNoReplace(oldpath, newpath)
@@ -2707,13 +2707,13 @@ func TestFileUpdateRollbackRetryPreservesRetainedNewBinary(t *testing.T) {
 
 func TestFileUpdateRollbackRechecksWholeReleaseUnitBeforeCommit(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2734,7 +2734,7 @@ func TestFileUpdateRollbackRechecksWholeReleaseUnitBeforeCommit(t *testing.T) {
 	originalSwap := rollbackSwapRename
 	injected := false
 	rollbackSwapRename = func(oldPath, newPath string) error {
-		if !injected && oldPath == guard && newPath == guard+".deeper-rollback-aside" {
+		if !injected && oldPath == guard && newPath == guard+".deepzora-rollback-aside" {
 			injected = true
 			if err := os.WriteFile(target, []byte("uncooperative-after-first-publish"), 0o700); err != nil {
 				return err
@@ -2760,7 +2760,7 @@ func TestFileUpdateRollbackRechecksWholeReleaseUnitBeforeCommit(t *testing.T) {
 	if got, err := os.ReadFile(guard); err != nil || string(got) != "new-guard" {
 		t.Fatalf("cooperative sibling was not compensated: %q, %v", got, err)
 	}
-	if got, err := os.ReadFile(target + ".deeper-rollback-aside"); err != nil || string(got) != "new-desktop" {
+	if got, err := os.ReadFile(target + ".deepzora-rollback-aside"); err != nil || string(got) != "new-desktop" {
 		t.Fatalf("prior target recovery material was not preserved: %q, %v", got, err)
 	}
 	if !HasPendingUpdate() {
@@ -2770,13 +2770,13 @@ func TestFileUpdateRollbackRechecksWholeReleaseUnitBeforeCommit(t *testing.T) {
 
 func TestRollbackPendingUpdateStateRechecksLiveUnitAfterStaging(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2818,13 +2818,13 @@ func TestRollbackPendingUpdateStateRechecksLiveUnitAfterStaging(t *testing.T) {
 
 func TestRollbackPendingUpdateStateRejectsDriftInsideRetainRename(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2843,7 +2843,7 @@ func TestRollbackPendingUpdateStateRejectsDriftInsideRetainRename(t *testing.T) 
 	originalRename := rollbackSwapRename
 	injected := false
 	rollbackSwapRename = func(oldpath, newpath string) error {
-		if !injected && oldpath == target && newpath == target+".deeper-rollback-aside" {
+		if !injected && oldpath == target && newpath == target+".deepzora-rollback-aside" {
 			injected = true
 			if err := os.WriteFile(target, []byte("concurrent-new"), 0o700); err != nil {
 				return err
@@ -2867,13 +2867,13 @@ func TestRollbackPendingUpdateStateRejectsDriftInsideRetainRename(t *testing.T) 
 
 func TestRollbackPendingUpdateStatePreservesRecreateBeforeStagePublish(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -2909,7 +2909,7 @@ func TestRollbackPendingUpdateStatePreservesRecreateBeforeStagePublish(t *testin
 	if got, err := os.ReadFile(target); err != nil || string(got) != "concurrent-new" {
 		t.Fatalf("rollback overwrote concurrent recreation: %q, %v", got, err)
 	}
-	aside := target + ".deeper-rollback-aside"
+	aside := target + ".deepzora-rollback-aside"
 	if got, err := os.ReadFile(aside); err != nil || string(got) != "confirmed-new" {
 		t.Fatalf("rollback lost confirmed live target: %q, %v", got, err)
 	}
@@ -2920,13 +2920,13 @@ func TestRollbackPendingUpdateStatePreservesRecreateBeforeStagePublish(t *testin
 
 func TestRollbackPendingAppBundleStateRejectsDriftInsideRetainRename(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -2937,7 +2937,7 @@ func TestRollbackPendingAppBundleStateRejectsDriftInsideRetainRename(t *testing.
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	tx, err := PrepareAppBundleUpdate("v1", "v2", app, backup)
 	if err != nil {
 		t.Fatal(err)
@@ -2956,7 +2956,7 @@ func TestRollbackPendingAppBundleStateRejectsDriftInsideRetainRename(t *testing.
 	originalRename := rollbackSwapRename
 	injected := false
 	rollbackSwapRename = func(oldpath, newpath string) error {
-		if !injected && oldpath == app && strings.Contains(newpath, ".deeper-failed-") {
+		if !injected && oldpath == app && strings.Contains(newpath, ".deepzora-failed-") {
 			injected = true
 			if err := os.WriteFile(exe, []byte("concurrent-new"), 0o700); err != nil {
 				return err
@@ -2983,13 +2983,13 @@ func TestRollbackPendingAppBundleStateRejectsDriftInsideRetainRename(t *testing.
 
 func TestRollbackReportsPendingCleanupFailureAndRemainsRetryable(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3032,13 +3032,13 @@ func TestRollbackReportsPendingCleanupFailureAndRemainsRetryable(t *testing.T) {
 // exactly as it was.
 func TestFileUpdateRollbackStageFailureLeavesInstallUntouched(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3058,7 +3058,7 @@ func TestFileUpdateRollbackStageFailureLeavesInstallUntouched(t *testing.T) {
 
 	originalCopy := rollbackStageCopy
 	rollbackStageCopy = func(src, dst string, mode os.FileMode) (string, error) {
-		if strings.HasPrefix(dst, guard+".deeper-rollback-stage-") {
+		if strings.HasPrefix(dst, guard+".deepzora-rollback-stage-") {
 			return "", errors.New("injected copy failure")
 		}
 		return copyFileWithHashCreate(src, dst, mode)
@@ -3081,7 +3081,7 @@ func TestFileUpdateRollbackStageFailureLeavesInstallUntouched(t *testing.T) {
 			t.Fatalf("%s = %q, want untouched %q", filepath.Base(path), got, want)
 		}
 	}
-	leftovers, err := filepath.Glob(filepath.Join(dir, "*.deeper-rollback-*"))
+	leftovers, err := filepath.Glob(filepath.Join(dir, "*.deepzora-rollback-*"))
 	if err != nil || len(leftovers) != 0 {
 		t.Fatalf("stage failure left staging files behind: %v (err=%v)", leftovers, err)
 	}
@@ -3089,10 +3089,10 @@ func TestFileUpdateRollbackStageFailureLeavesInstallUntouched(t *testing.T) {
 
 func TestPrepareFileUpdateDoesNotOverwriteLegacyBackupName(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3103,7 +3103,7 @@ func TestPrepareFileUpdateDoesNotOverwriteLegacyBackupName(t *testing.T) {
 	if err := os.MkdirAll(backupDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	legacyBackup := filepath.Join(backupDir, "deeper-desktop.previous")
+	legacyBackup := filepath.Join(backupDir, "deepzora-desktop.previous")
 	if err := os.WriteFile(legacyBackup, []byte("unowned"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -3125,10 +3125,10 @@ func TestPrepareFileUpdateDoesNotOverwriteLegacyBackupName(t *testing.T) {
 
 func TestFileUpdateRollbackBypassesAndPreservesCrashedStage(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3141,7 +3141,7 @@ func TestFileUpdateRollbackBypassesAndPreservesCrashedStage(t *testing.T) {
 	if err := os.WriteFile(target, []byte("new"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	stage := target + ".deeper-rollback-stage-crashed"
+	stage := target + ".deepzora-rollback-stage-crashed"
 	if err := os.WriteFile(stage, []byte("unowned-stage"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -3163,10 +3163,10 @@ func TestFileUpdateRollbackBypassesAndPreservesCrashedStage(t *testing.T) {
 
 func TestRecordClaimedFileUpdateInstalledKeepsPendingPublicDuringSidecarCommit(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3216,10 +3216,10 @@ func TestRecordClaimedFileUpdateInstalledKeepsPendingPublicDuringSidecarCommit(t
 
 func TestMarkUpdateHealthyRechecksReleaseUnitAfterPendingDisplacement(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3268,10 +3268,10 @@ func TestMarkUpdateHealthyRechecksReleaseUnitAfterPendingDisplacement(t *testing
 }
 
 func TestMarkUpdateHealthyFailsClosedWhenPendingDisappearsBeforeCommit(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3307,10 +3307,10 @@ func TestMarkUpdateHealthyFailsClosedWhenPendingDisappearsBeforeCommit(t *testin
 
 func TestFileUpdateRollbackRechecksReleaseUnitAfterPendingDisplacement(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3348,10 +3348,10 @@ func TestFileUpdateRollbackRechecksReleaseUnitAfterPendingDisplacement(t *testin
 }
 
 func TestRollbackPendingUpdateDirectRejectsDriftWhileWaitingForTargetLock(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3409,7 +3409,7 @@ func TestRollbackPendingUpdateDirectRejectsDriftWhileWaitingForTargetLock(t *tes
 }
 
 func TestRetainUpdateRollbackNodeRetriesNameCollision(t *testing.T) {
-	target := filepath.Join(t.TempDir(), "Deeper.app")
+	target := filepath.Join(t.TempDir(), "Deepzora.app")
 	if err := os.Mkdir(target, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -3424,11 +3424,11 @@ func TestRetainUpdateRollbackNodeRetriesNameCollision(t *testing.T) {
 	}
 	t.Cleanup(func() { rollbackSwapRename = originalRename })
 
-	retained, err := retainUpdateRollbackNode(target, "deeper-failed")
+	retained, err := retainUpdateRollbackNode(target, "deepzora-failed")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if calls != 2 || !strings.Contains(retained, ".deeper-failed-") {
+	if calls != 2 || !strings.Contains(retained, ".deepzora-failed-") {
 		t.Fatalf("retain calls=%d path=%q", calls, retained)
 	}
 	if _, err := os.Stat(retained); err != nil {
@@ -3438,10 +3438,10 @@ func TestRetainUpdateRollbackNodeRetriesNameCollision(t *testing.T) {
 
 func TestFileUpdateRollbackPreservesLiveNodeWithoutInstalledOwnership(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3462,7 +3462,7 @@ func TestFileUpdateRollbackPreservesLiveNodeWithoutInstalledOwnership(t *testing
 	if got, err := os.ReadFile(target); err != nil || string(got) != "old" {
 		t.Fatalf("restored target = %q, %v", got, err)
 	}
-	aside := target + ".deeper-rollback-aside"
+	aside := target + ".deepzora-rollback-aside"
 	if got, err := os.ReadFile(aside); err != nil || string(got) != "unbound-live" {
 		t.Fatalf("unbound live node was not preserved: %q, %v", got, err)
 	}
@@ -3470,10 +3470,10 @@ func TestFileUpdateRollbackPreservesLiveNodeWithoutInstalledOwnership(t *testing
 
 func TestPublishClaimedFileUpdateMemberUsesCompareAndPublish(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3491,7 +3491,7 @@ func TestPublishClaimedFileUpdateMemberUsesCompareAndPublish(t *testing.T) {
 	if got, err := os.ReadFile(target); err != nil || string(got) != "new" {
 		t.Fatalf("published target = %q, %v", got, err)
 	}
-	aside := target + ".deeper-update-aside-" + UpdateTransactionID(claimed)[:16]
+	aside := target + ".deepzora-update-aside-" + UpdateTransactionID(claimed)[:16]
 	if _, err := os.Stat(aside); !os.IsNotExist(err) {
 		t.Fatalf("verified prior target survived successful publish: %v", err)
 	}
@@ -3506,10 +3506,10 @@ func TestPublishClaimedFileUpdateMemberUsesCompareAndPublish(t *testing.T) {
 
 func TestRecordClaimedFileUpdateInstalledRejectsDriftAfterPublish(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3542,10 +3542,10 @@ func TestRecordClaimedFileUpdateInstalledRejectsDriftAfterPublish(t *testing.T) 
 
 func TestRecordClaimedFileUpdateInstalledRequiresCompletePublishReceipts(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3579,10 +3579,10 @@ func TestRecordClaimedFileUpdateInstalledRequiresCompletePublishReceipts(t *test
 
 func TestPublishClaimedFileUpdateMemberPreservesConcurrentRecreate(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3609,7 +3609,7 @@ func TestPublishClaimedFileUpdateMemberPreservesConcurrentRecreate(t *testing.T)
 	if got, err := os.ReadFile(target); err != nil || string(got) != "concurrent" {
 		t.Fatalf("concurrent target = %q, %v", got, err)
 	}
-	aside := target + ".deeper-update-aside-" + UpdateTransactionID(claimed)[:16]
+	aside := target + ".deepzora-update-aside-" + UpdateTransactionID(claimed)[:16]
 	if got, err := os.ReadFile(aside); err != nil || string(got) != "old" {
 		t.Fatalf("verified prior target recovery material = %q, %v", got, err)
 	}
@@ -3620,10 +3620,10 @@ func TestPublishClaimedFileUpdateMemberPreservesConcurrentRecreate(t *testing.T)
 
 func TestPublishClaimedFileUpdateMemberRestoresPreparedFileWhenStageSwapped(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3638,7 +3638,7 @@ func TestPublishClaimedFileUpdateMemberRestoresPreparedFileWhenStageSwapped(t *t
 	originalHook := fileUpdateAfterRetain
 	var hookErr error
 	fileUpdateAfterRetain = func(_, _ string) {
-		stages, err := filepath.Glob(filepath.Join(dir, ".deeper-desktop.deeper-update-stage-*"))
+		stages, err := filepath.Glob(filepath.Join(dir, ".deepzora-desktop.deepzora-update-stage-*"))
 		if err != nil {
 			hookErr = err
 			return
@@ -3656,7 +3656,7 @@ func TestPublishClaimedFileUpdateMemberRestoresPreparedFileWhenStageSwapped(t *t
 	t.Cleanup(func() { fileUpdateAfterRetain = originalHook })
 
 	err = PublishClaimedFileUpdateMember(claimed, target, []byte("new"), 0o700)
-	if err == nil || !strings.Contains(err.Error(), "installed deeper-desktop changed") {
+	if err == nil || !strings.Contains(err.Error(), "installed deepzora-desktop changed") {
 		t.Fatalf("stage-swapped member publish = %v", err)
 	}
 	if hookErr != nil {
@@ -3665,7 +3665,7 @@ func TestPublishClaimedFileUpdateMemberRestoresPreparedFileWhenStageSwapped(t *t
 	if got, err := os.ReadFile(target); err != nil || string(got) != "old" {
 		t.Fatalf("restored target = %q, %v", got, err)
 	}
-	rejected, err := filepath.Glob(target + ".deeper-cleanup-*")
+	rejected, err := filepath.Glob(target + ".deepzora-cleanup-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3675,7 +3675,7 @@ func TestPublishClaimedFileUpdateMemberRestoresPreparedFileWhenStageSwapped(t *t
 	if got, err := os.ReadFile(rejected[0]); err != nil || string(got) != "tampered-stage" {
 		t.Fatalf("retained rejected file = %q, %v", got, err)
 	}
-	aside := target + ".deeper-update-aside-" + UpdateTransactionID(claimed)[:16]
+	aside := target + ".deepzora-update-aside-" + UpdateTransactionID(claimed)[:16]
 	if _, err := os.Lstat(aside); !os.IsNotExist(err) {
 		t.Fatalf("restored prior target remained aside: %v", err)
 	}
@@ -3686,10 +3686,10 @@ func TestPublishClaimedFileUpdateMemberRestoresPreparedFileWhenStageSwapped(t *t
 
 func TestPublishClaimedFileUpdateMemberRejectsSameContentStageSymlink(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3708,7 +3708,7 @@ func TestPublishClaimedFileUpdateMemberRejectsSameContentStageSymlink(t *testing
 	originalHook := fileUpdateAfterRetain
 	var hookErr error
 	fileUpdateAfterRetain = func(_, _ string) {
-		stages, err := filepath.Glob(filepath.Join(dir, ".deeper-desktop.deeper-update-stage-*"))
+		stages, err := filepath.Glob(filepath.Join(dir, ".deepzora-desktop.deepzora-update-stage-*"))
 		if err != nil {
 			hookErr = err
 			return
@@ -3729,13 +3729,13 @@ func TestPublishClaimedFileUpdateMemberRejectsSameContentStageSymlink(t *testing
 	if hookErr != nil {
 		t.Skipf("replace staged update with symlink: %v", hookErr)
 	}
-	if err == nil || !strings.Contains(err.Error(), "installed deeper-desktop changed") {
+	if err == nil || !strings.Contains(err.Error(), "installed deepzora-desktop changed") {
 		t.Fatalf("symlink-swapped member publish = %v", err)
 	}
 	if got, err := os.ReadFile(target); err != nil || string(got) != "old" {
 		t.Fatalf("restored target = %q, %v", got, err)
 	}
-	rejected, err := filepath.Glob(target + ".deeper-cleanup-*")
+	rejected, err := filepath.Glob(target + ".deepzora-cleanup-*")
 	if err != nil || len(rejected) != 1 {
 		t.Fatalf("retained rejected symlinks = %v, %v", rejected, err)
 	}
@@ -3752,10 +3752,10 @@ func TestPublishClaimedFileUpdateMemberRejectsSameContentStageSymlink(t *testing
 
 func TestFileUpdateRollbackCleansInstalledNodeBoundToTransaction(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
-	guard := filepath.Join(dir, "deeper-guard")
+	target := filepath.Join(dir, "deepzora-desktop")
+	guard := filepath.Join(dir, "deepzora-guard")
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return guard, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -3780,20 +3780,20 @@ func TestFileUpdateRollbackCleansInstalledNodeBoundToTransaction(t *testing.T) {
 	if got, err := os.ReadFile(target); err != nil || string(got) != "old" {
 		t.Fatalf("restored target = %q, %v", got, err)
 	}
-	if _, err := os.Stat(target + ".deeper-rollback-aside"); !os.IsNotExist(err) {
+	if _, err := os.Stat(target + ".deepzora-rollback-aside"); !os.IsNotExist(err) {
 		t.Fatalf("transaction-owned installed node survived cleanup: %v", err)
 	}
 }
 
 func TestAppBundleRollbackPreservesLiveBundleWithoutReplacementOwnership(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -3803,7 +3803,7 @@ func TestAppBundleRollbackPreservesLiveBundleWithoutReplacementOwnership(t *test
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	if _, err := PrepareAppBundleUpdate("v1", "v2", app, backup); err != nil {
 		t.Fatal(err)
 	}
@@ -3824,24 +3824,24 @@ func TestAppBundleRollbackPreservesLiveBundleWithoutReplacementOwnership(t *test
 	if got, err := os.ReadFile(exe); err != nil || string(got) != "old" {
 		t.Fatalf("restored bundle = %q, %v", got, err)
 	}
-	failed, err := filepath.Glob(app + ".deeper-failed-*")
+	failed, err := filepath.Glob(app + ".deepzora-failed-*")
 	if err != nil || len(failed) != 1 {
 		t.Fatalf("retained unbound bundle = %v, %v", failed, err)
 	}
-	if got, err := os.ReadFile(filepath.Join(failed[0], "Contents", "MacOS", "Deeper")); err != nil || string(got) != "unbound-live" {
+	if got, err := os.ReadFile(filepath.Join(failed[0], "Contents", "MacOS", "Deepzora")); err != nil || string(got) != "unbound-live" {
 		t.Fatalf("unbound bundle was not preserved: %q, %v", got, err)
 	}
 }
 
 func TestAppBundleRollbackCleansReplacementBoundToStagingTree(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -3851,20 +3851,20 @@ func TestAppBundleRollbackCleansReplacementBoundToStagingTree(t *testing.T) {
 	originalExecutable := repairExecutable
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
-	staging, err := os.MkdirTemp("", "deeper-mac-update-*")
+	staging, err := os.MkdirTemp("", "deepzora-mac-update-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(staging) })
-	stagedApp := filepath.Join(staging, "Deeper.app")
-	stagedExe := filepath.Join(stagedApp, "Contents", "MacOS", "Deeper")
+	stagedApp := filepath.Join(staging, "Deepzora.app")
+	stagedExe := filepath.Join(stagedApp, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(stagedExe), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(stagedExe, []byte("installed"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	if _, err := PrepareAppBundleUpdateHandoff("v1", "v2", app, backup, stagedApp, staging, os.Getpid()); err != nil {
 		t.Fatal(err)
 	}
@@ -3885,7 +3885,7 @@ func TestAppBundleRollbackCleansReplacementBoundToStagingTree(t *testing.T) {
 	if got, err := os.ReadFile(exe); err != nil || string(got) != "old" {
 		t.Fatalf("restored bundle = %q, %v", got, err)
 	}
-	failed, err := filepath.Glob(app + ".deeper-failed-*")
+	failed, err := filepath.Glob(app + ".deepzora-failed-*")
 	if err != nil || len(failed) != 0 {
 		t.Fatalf("transaction-owned replacement survived cleanup: %v, %v", failed, err)
 	}

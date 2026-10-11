@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/store"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/store"
 )
 
 // SessionHeadIndex is the schema-2 shape of <id>.event-index.json: a snapshot

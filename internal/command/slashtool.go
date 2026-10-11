@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // SlashEntry is one invocable slash command exposed to the model through the

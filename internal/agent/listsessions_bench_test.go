@@ -10,18 +10,18 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // TestListSessionsScalingManual reproduces the sidebar "project list loads
 // slowly" report by timing ListSessions against a synthetically large session
-// directory. It is gated behind DEEPER_BENCH=1 so it never runs (or writes
+// directory. It is gated behind DEEPZORA_BENCH=1 so it never runs (or writes
 // hundreds of MB) during a normal `go test`.
 //
-//	DEEPER_BENCH=1 go test ./internal/agent -run TestListSessionsScalingManual -v
+//	DEEPZORA_BENCH=1 go test ./internal/agent -run TestListSessionsScalingManual -v
 func TestListSessionsScalingManual(t *testing.T) {
-	if os.Getenv("DEEPER_BENCH") != "1" {
-		t.Skip("set DEEPER_BENCH=1 to run the scaling benchmark")
+	if os.Getenv("DEEPZORA_BENCH") != "1" {
+		t.Skip("set DEEPZORA_BENCH=1 to run the scaling benchmark")
 	}
 
 	type shape struct {
@@ -124,10 +124,10 @@ func writeSyntheticSessions(t *testing.T, dir string, n, turns int) int64 {
 // is to confirm the disk cache is now redundant — sidecar-only listing of the
 // whole tree is already in the low-millisecond range on cold start.
 //
-//	DEEPER_BENCH=1 go test ./internal/agent -run TestColdStartProjectTreeManual -v
+//	DEEPZORA_BENCH=1 go test ./internal/agent -run TestColdStartProjectTreeManual -v
 func TestColdStartProjectTreeManual(t *testing.T) {
-	if os.Getenv("DEEPER_BENCH") != "1" {
-		t.Skip("set DEEPER_BENCH=1 to run the cold-start benchmark")
+	if os.Getenv("DEEPZORA_BENCH") != "1" {
+		t.Skip("set DEEPZORA_BENCH=1 to run the cold-start benchmark")
 	}
 
 	const (

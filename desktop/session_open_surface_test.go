@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // removeOpenFixtureTab leaves the app with no visible surface, the state after

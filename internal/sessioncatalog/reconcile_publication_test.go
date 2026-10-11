@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestReconcilePublishesOnlyCompletedDirectorySnapshot(t *testing.T) {

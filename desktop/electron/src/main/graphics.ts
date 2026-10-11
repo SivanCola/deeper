@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 
 export type GraphicsOverride = "none" | "environment" | "command-line";
 // Removed from process.argv after bootstrap so update/restart flows cannot inherit it.
-export const GRAPHICS_RECOVERY_ARG = "--deeper-graphics-recovery";
+export const GRAPHICS_RECOVERY_ARG = "--deepzora-graphics-recovery";
 export function consumeGraphicsRecoveryArg(argv: string[]): boolean {
   const temporary = argv.includes(GRAPHICS_RECOVERY_ARG);
   for (let i = argv.length - 1; i >= 0; i--) if (argv[i] === GRAPHICS_RECOVERY_ARG) argv.splice(i, 1);
@@ -44,7 +44,7 @@ export function loadGraphicsBootstrap(dataHome: string, env: NodeJS.ProcessEnv, 
   const configPath = join(dataHome, "graphics.json");
   const parsed = parseStored(configPath);
   const hardwareAcceleration = parsed.value?.hardwareAcceleration ?? true;
-  const environmentOverride = env.DEEPER_DISABLE_GPU === "1";
+  const environmentOverride = env.DEEPZORA_DISABLE_GPU === "1";
   const commandLineOverride = argv.includes("--disable-gpu");
   const override: GraphicsOverride = environmentOverride ? "environment" : commandLineOverride ? "command-line" : "none";
   const startupEnabled = override === "none" && !argv.includes(GRAPHICS_RECOVERY_ARG) ? hardwareAcceleration : false;

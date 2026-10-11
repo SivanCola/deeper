@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 )
 
 func TestRenameCurrentCanonicalSessionWritesTitleEvent(t *testing.T) {

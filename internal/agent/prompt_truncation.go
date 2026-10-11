@@ -3,8 +3,8 @@ package agent
 import (
 	"fmt"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 const (

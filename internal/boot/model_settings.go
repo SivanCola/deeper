@@ -1,8 +1,8 @@
 package boot
 
 import (
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 	"fmt"
 )
 

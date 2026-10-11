@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // Deterministic coverage for gateExtensionUIRequest: a sidecar's startup

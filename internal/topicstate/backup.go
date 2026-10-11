@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/sqliteuri"
+	"deepzora/internal/sqliteuri"
 )
 
 // BackupExisting reads an existing database without running schema migrations.

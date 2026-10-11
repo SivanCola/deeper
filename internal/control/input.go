@@ -6,13 +6,13 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/ablation"
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/memory"
-	"deeper/internal/planmode"
-	"deeper/internal/skill"
+	"deepzora/internal/ablation"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/memory"
+	"deepzora/internal/planmode"
+	"deepzora/internal/skill"
 )
 
 // InvocationRequest is an explicit user-selected Skill or Subagent entity.

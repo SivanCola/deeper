@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"deeper/internal/skill/builtincontent"
+	"deepzora/internal/skill/builtincontent"
 )
 
 var (

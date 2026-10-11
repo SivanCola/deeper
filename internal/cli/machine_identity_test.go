@@ -14,8 +14,8 @@ import (
 func installMachineTestIdentity(t *testing.T) []byte {
 	t.Helper()
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", root)
-	t.Setenv("DEEPER_STATE_HOME", "")
+	t.Setenv("DEEPZORA_HOME", root)
+	t.Setenv("DEEPZORA_STATE_HOME", "")
 	key := bytes.Repeat([]byte{0x5a}, machineIdentityKeyBytes)
 	if err := os.WriteFile(filepath.Join(root, machineIdentityKeyFile), key, 0o600); err != nil {
 		t.Fatalf("write machine identity key: %v", err)
@@ -25,8 +25,8 @@ func installMachineTestIdentity(t *testing.T) []byte {
 
 func TestMachineIdentityKeyInitializesOnceAcrossConcurrentReaders(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", root)
-	t.Setenv("DEEPER_STATE_HOME", "")
+	t.Setenv("DEEPZORA_HOME", root)
+	t.Setenv("DEEPZORA_STATE_HOME", "")
 
 	type result struct {
 		key []byte
@@ -71,8 +71,8 @@ func TestMachineIdentityKeyInitializesOnceAcrossConcurrentReaders(t *testing.T) 
 
 func TestMachineIdentityKeyCorruptionFailsClosed(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", root)
-	t.Setenv("DEEPER_STATE_HOME", "")
+	t.Setenv("DEEPZORA_HOME", root)
+	t.Setenv("DEEPZORA_STATE_HOME", "")
 	path := filepath.Join(root, machineIdentityKeyFile)
 	if err := os.WriteFile(path, []byte("corrupt"), 0o600); err != nil {
 		t.Fatal(err)
@@ -103,8 +103,8 @@ func TestMachineIdentityKeyCorruptionFailsClosed(t *testing.T) {
 
 func TestEventsJSONLRejectsCorruptIdentityBeforeRuntimeSetup(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", root)
-	t.Setenv("DEEPER_STATE_HOME", "")
+	t.Setenv("DEEPZORA_HOME", root)
+	t.Setenv("DEEPZORA_STATE_HOME", "")
 	if err := os.WriteFile(filepath.Join(root, machineIdentityKeyFile), []byte("corrupt"), 0o600); err != nil {
 		t.Fatal(err)
 	}

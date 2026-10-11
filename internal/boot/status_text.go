@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/extension"
+	"deepzora/internal/extension"
 )
 
 // FormatRuntimeStatus renders a doctor-facing explanation of component

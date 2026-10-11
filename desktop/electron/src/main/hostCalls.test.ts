@@ -45,7 +45,7 @@ test("every documented host/* method is dispatched with parsed params", async ()
   assert.deepEqual(await dispatchHostCall(table, "host/shell.openExternal", { url: "https://e" }), {});
   assert.deepEqual(await dispatchHostCall(table, "host/app.quit", undefined), {});
   assert.deepEqual(calls, [
-    'show("tray")', "setPosition(10.4,0)", "tray(打开,退出,Deeper)", "remoteOpen(h1)", 'relaunch(["--x"])', "open(https://e/)", "approve()",
+    'show("tray")', "setPosition(10.4,0)", "tray(打开,退出,Deepzora)", "remoteOpen(h1)", 'relaunch(["--x"])', "open(https://e/)", "approve()",
   ]);
   for (const method of ["host/window.hide", "host/window.maximise", "host/window.center", "host/devtools.toggle", "host/tray.destroy", "host/app.hide"]) {
     assert.deepEqual(await dispatchHostCall(table, method, {}), {});
@@ -54,8 +54,8 @@ test("every documented host/* method is dispatched with parsed params", async ()
 
 test("update relaunch preserves the stable launcher path", async () => {
   const { table, calls } = deps();
-  await dispatchHostCall(table, "host/app.relaunch", { args: ["--after-update"], execPath: "/opt/deeper/deeper-launcher" });
-  assert.deepEqual(calls, ['relaunch(["--after-update"],"/opt/deeper/deeper-launcher")']);
+  await dispatchHostCall(table, "host/app.relaunch", { args: ["--after-update"], execPath: "/opt/deepzora/deepzora-launcher" });
+  assert.deepEqual(calls, ['relaunch(["--after-update"],"/opt/deepzora/deepzora-launcher")']);
 });
 
 test("host external links reject non-user-facing protocols", async () => {
@@ -100,19 +100,19 @@ test("unknown host methods fail with -32601 and never hit Object.prototype", asy
   }
 });
 
-test("failure page actions ride the deeper://app/__shell/ prefix and the page escapes text", () => {
-  assert.equal(shellActionFromURL("deeper://app/__shell/open-logs"), "open-logs");
-  assert.equal(shellActionFromURL("deeper://app/__shell/restart?x=1"), "restart");
-  assert.equal(shellActionFromURL("deeper://app/__shell/quit"), "quit");
-  assert.equal(shellActionFromURL("deeper://app/__shell/rm-rf"), null);
-  assert.equal(shellActionFromURL("deeper://app/index.html"), null);
+test("failure page actions ride the deepzora://app/__shell/ prefix and the page escapes text", () => {
+  assert.equal(shellActionFromURL("deepzora://app/__shell/open-logs"), "open-logs");
+  assert.equal(shellActionFromURL("deepzora://app/__shell/restart?x=1"), "restart");
+  assert.equal(shellActionFromURL("deepzora://app/__shell/quit"), "quit");
+  assert.equal(shellActionFromURL("deepzora://app/__shell/rm-rf"), null);
+  assert.equal(shellActionFromURL("deepzora://app/index.html"), null);
   const html = renderFailurePage({ code: -32003, name: "contract_mismatch", title: "Mixed <install>", detail: "digest \"a\" != 'b'" }, "/logs");
   assert.match(html, /Mixed &lt;install&gt;/);
   assert.match(html, /digest &quot;a&quot; != &#39;b&#39;/);
   assert.match(html, /contract_mismatch \(-32003\)/);
-  assert.doesNotMatch(html, /deeper:\/\/app\/__shell\/restart/);
+  assert.doesNotMatch(html, /deepzora:\/\/app\/__shell\/restart/);
   for (const name of ["build_mismatch", "contract_mismatch"]) {
-    assert.doesNotMatch(renderFailurePage({ code: -32003, name, title: "Mismatch", detail: "Install the complete package" }, "/logs"), /deeper:\/\/app\/__shell\/restart/);
+    assert.doesNotMatch(renderFailurePage({ code: -32003, name, title: "Mismatch", detail: "Install the complete package" }, "/logs"), /deepzora:\/\/app\/__shell\/restart/);
   }
-  assert.match(renderFailurePage({ code: -1, name: "service_failed", title: "Failed", detail: "Retry" }, "/logs"), /deeper:\/\/app\/__shell\/restart/);
+  assert.match(renderFailurePage({ code: -1, name: "service_failed", title: "Failed", detail: "Retry" }, "/logs"), /deepzora:\/\/app\/__shell\/restart/);
 });

@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/jobs"
-	"deeper/internal/proc"
-	"deeper/internal/sandbox"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/shellrun"
-	"deeper/internal/tool"
+	"deepzora/internal/jobs"
+	"deepzora/internal/proc"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/shellrun"
+	"deepzora/internal/tool"
 )
 
 func (b bash) startBackground(ctx context.Context, p bashParams, sh sandbox.Shell, argv []string, wrapped bool, cmdEnv []string, lease *sessiontemp.Lease, releaseLease *bool, start time.Time, ex *tool.ShellExecution) (tool.DetailedResult, error) {

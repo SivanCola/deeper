@@ -9,12 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 // worldName labels the isolated world in DevTools; page script can neither
 // enumerate nor reach it.
-const worldName = "deeper-browser"
+const worldName = "deepzora-browser"
 
 // snapshotBudget caps the nodes one snapshot may emit so a large document
 // cannot flood the model's context.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 // NormalizePluginCommandLine repairs the common MCP copy/paste mistake where a

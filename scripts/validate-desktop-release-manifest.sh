@@ -52,9 +52,9 @@ if [[ ! "$notes_version" =~ $release_version_pattern ]]; then
 fi
 
 expected_tag="desktop-${version}"
-github_base="https://github.com/SivanCola/deeper/releases/download/${expected_tag}/"
-r2_base="https://github.com/SivanCola/deeper/releases/download/${expected_tag}/"
-legacy_preview_base="https://github.com/SivanCola/deeper/releases/download/desktop-preview/"
+github_base="https://github.com/SivanCola/deepzora/releases/download/${expected_tag}/"
+r2_base="https://github.com/SivanCola/deepzora/releases/download/${expected_tag}/"
+legacy_preview_base="https://github.com/SivanCola/deepzora/releases/download/desktop-preview/"
 if [ "$channel" = "legacy-preview" ] && [ "$asset_base" = "$legacy_preview_base" ]; then
 	:
 elif [ "$asset_base" != "$github_base" ] && [ "$asset_base" != "$r2_base" ]; then
@@ -82,10 +82,10 @@ jq -e \
 
 	(type == "object") and
 	(.version == $version) and
-	(.download_page == "https://github.com/SivanCola/deeper/releases") and
+	(.download_page == "https://github.com/SivanCola/deepzora/releases") and
 	(if $legacy
-		then (.release_notes_url == null or .release_notes_url == ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_version + "/"))
-		else (.release_notes_url == ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_version + "/"))
+		then (.release_notes_url == null or .release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_version + "/"))
+		else (.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_version + "/"))
 	end) and
 	(.platforms | exact_keys([
 		"darwin-arm64",
@@ -94,32 +94,32 @@ jq -e \
 		"windows-arm64",
 		"linux-amd64"
 	])) and
-	(.platforms["darwin-arm64"] | valid_asset("Deeper-darwin-arm64.zip")) and
-	(.platforms["darwin-amd64"] | valid_asset("Deeper-darwin-amd64.zip")) and
-	(.platforms["windows-amd64"] | valid_asset("Deeper-windows-amd64-installer.exe")) and
-	(.platforms["windows-arm64"] | valid_asset("Deeper-windows-arm64-installer.exe")) and
-	(.platforms["linux-amd64"] | valid_asset("Deeper-linux-amd64.tar.gz")) and
+	(.platforms["darwin-arm64"] | valid_asset("Deepzora-darwin-arm64.zip")) and
+	(.platforms["darwin-amd64"] | valid_asset("Deepzora-darwin-amd64.zip")) and
+	(.platforms["windows-amd64"] | valid_asset("Deepzora-windows-amd64-installer.exe")) and
+	(.platforms["windows-arm64"] | valid_asset("Deepzora-windows-arm64-installer.exe")) and
+	(.platforms["linux-amd64"] | valid_asset("Deepzora-linux-amd64.tar.gz")) and
 	(.native_packages | exact_keys(["linux-amd64"])) and
-	(.native_packages["linux-amd64"] | valid_asset("Deeper-linux-amd64.deb")) and
+	(.native_packages["linux-amd64"] | valid_asset("Deepzora-linux-amd64.deb")) and
 	(if $legacy and (.downloads == null)
 		then true
 		else
 			((.downloads | exact_keys([
-				"Deeper-darwin-arm64.dmg",
-				"Deeper-darwin-amd64.dmg",
-				"Deeper-darwin-universal.dmg",
-				"Deeper-windows-amd64.zip"
+				"Deepzora-darwin-arm64.dmg",
+				"Deepzora-darwin-amd64.dmg",
+				"Deepzora-darwin-universal.dmg",
+				"Deepzora-windows-amd64.zip"
 			])) or ($legacy and (.downloads | exact_keys([
-				"Deeper-darwin-universal.dmg",
-				"Deeper-windows-amd64.zip"
+				"Deepzora-darwin-universal.dmg",
+				"Deepzora-windows-amd64.zip"
 			])))) and
-			(.downloads["Deeper-darwin-universal.dmg"] | valid_asset("Deeper-darwin-universal.dmg")) and
-			(.downloads["Deeper-windows-amd64.zip"] | valid_asset("Deeper-windows-amd64.zip")) and
-			(if .downloads["Deeper-darwin-arm64.dmg"] == null
+			(.downloads["Deepzora-darwin-universal.dmg"] | valid_asset("Deepzora-darwin-universal.dmg")) and
+			(.downloads["Deepzora-windows-amd64.zip"] | valid_asset("Deepzora-windows-amd64.zip")) and
+			(if .downloads["Deepzora-darwin-arm64.dmg"] == null
 				then $legacy
 				else
-					(.downloads["Deeper-darwin-arm64.dmg"] | valid_asset("Deeper-darwin-arm64.dmg")) and
-					(.downloads["Deeper-darwin-amd64.dmg"] | valid_asset("Deeper-darwin-amd64.dmg"))
+					(.downloads["Deepzora-darwin-arm64.dmg"] | valid_asset("Deepzora-darwin-arm64.dmg")) and
+					(.downloads["Deepzora-darwin-amd64.dmg"] | valid_asset("Deepzora-darwin-amd64.dmg"))
 			end)
 	end)
 ' "$manifest" >/dev/null

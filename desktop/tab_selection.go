@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // activeOrSingleLocalTab resolves the workspace tab a local command should

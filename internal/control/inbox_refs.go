@@ -2,10 +2,10 @@ package control
 
 import (
 	"context"
-	"deeper/internal/attachment"
+	"deepzora/internal/attachment"
 	"strings"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 func (c *Controller) freezeInboxReferences(ctx context.Context, submit string, explicit []string) (string, []string, []string, []ImageReferenceFailure) {

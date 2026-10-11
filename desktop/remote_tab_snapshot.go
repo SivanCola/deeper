@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 // errRemoteTabStatusSuperseded marks the benign lost race where a /status

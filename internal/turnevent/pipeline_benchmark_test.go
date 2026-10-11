@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/turnevent"
 )
 
 type benchmarkLedgerSink struct {

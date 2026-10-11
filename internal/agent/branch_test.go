@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestBranchMetaCrossProcessReadModifyWrite(t *testing.T) {
-	if os.Getenv("DEEPER_META_LOCK_HELPER") == "1" {
-		path := os.Getenv("DEEPER_META_LOCK_PATH")
+	if os.Getenv("DEEPZORA_META_LOCK_HELPER") == "1" {
+		path := os.Getenv("DEEPZORA_META_LOCK_PATH")
 		unlock, err := LockSessionMetaPath(path)
 		if err != nil {
 			t.Fatal(err)
@@ -28,12 +28,12 @@ func TestBranchMetaCrossProcessReadModifyWrite(t *testing.T) {
 			unlock()
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(os.Getenv("DEEPER_META_READY"), []byte("ready"), 0o600); err != nil {
+		if err := os.WriteFile(os.Getenv("DEEPZORA_META_READY"), []byte("ready"), 0o600); err != nil {
 			unlock()
 			t.Fatal(err)
 		}
 		for {
-			if _, err := os.Stat(os.Getenv("DEEPER_META_RELEASE")); err == nil {
+			if _, err := os.Stat(os.Getenv("DEEPZORA_META_RELEASE")); err == nil {
 				break
 			}
 			time.Sleep(5 * time.Millisecond)
@@ -51,10 +51,10 @@ func TestBranchMetaCrossProcessReadModifyWrite(t *testing.T) {
 	release := filepath.Join(dir, "release")
 	cmd := exec.Command(os.Args[0], "-test.run", "^TestBranchMetaCrossProcessReadModifyWrite$")
 	cmd.Env = append(os.Environ(),
-		"DEEPER_META_LOCK_HELPER=1",
-		"DEEPER_META_LOCK_PATH="+path,
-		"DEEPER_META_READY="+ready,
-		"DEEPER_META_RELEASE="+release,
+		"DEEPZORA_META_LOCK_HELPER=1",
+		"DEEPZORA_META_LOCK_PATH="+path,
+		"DEEPZORA_META_READY="+ready,
+		"DEEPZORA_META_RELEASE="+release,
 	)
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/taskcatalog"
+	"deepzora/internal/taskcatalog"
 )
 
 func TestExtensionGenerationBumpsOnMCPMutationSites(t *testing.T) {

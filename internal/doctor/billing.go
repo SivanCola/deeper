@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/config"
+	"deepzora/internal/billing"
+	"deepzora/internal/config"
 )
 
-// BillingReport is the structured output of `deeper doctor billing`.
+// BillingReport is the structured output of `deepzora doctor billing`.
 type BillingReport struct {
 	DisplayCurrencyPref string                `json:"display_currency_pref"`
 	DisplayCurrency     string                `json:"display_currency"`
@@ -126,7 +126,7 @@ func officialKindForBilling(p *config.ProviderEntry) string {
 // RenderBillingText formats a human-readable billing doctor report.
 func RenderBillingText(r BillingReport) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "deeper doctor billing\n")
+	fmt.Fprintf(&b, "deepzora doctor billing\n")
 	fmt.Fprintf(&b, "  display preference: %s\n", r.DisplayCurrencyPref)
 	fmt.Fprintf(&b, "  display resolved:   %s\n", r.DisplayCurrency)
 	fmt.Fprintf(&b, "  fx source:          %s\n", r.FX.Source)

@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/netclient"
+	"deepzora/internal/netclient"
 )
 
 // deadUpstreamTunnel forwards bytes to a TLS backend. Connections accepted up

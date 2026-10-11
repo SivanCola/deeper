@@ -1,6 +1,6 @@
 package control
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 // PublishedRuntimeStateReader is the observation boundary for UI projections.
 // It never refreshes owners or waits for a controller, session, or tool lock.

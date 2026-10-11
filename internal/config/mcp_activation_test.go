@@ -113,7 +113,7 @@ func TestMCPActivationStoreConcurrentIndependentWriters(t *testing.T) {
 
 func TestEnabledPluginsHonorsActivation(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	store := NewMCPActivationStore(home)
 	if err := store.SetEnabled(MCPActivationOverride{
 		Scope:   MCPActivationGlobal,

@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 func migrationCheckpointPath(cp desktopMigrationCheckpoint) (string, string) {

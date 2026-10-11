@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/historycatalog"
-	"deeper/internal/tool"
+	"deepzora/internal/historycatalog"
+	"deepzora/internal/tool"
 )
 
 type historyTool struct {

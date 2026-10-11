@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 // samplingRequest is a once-prepared, frozen provider request for one model

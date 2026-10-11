@@ -379,10 +379,10 @@ console.log("\ncomposer run strip");
   const { root, calls } = await renderComposer({ running: true, turnStartAt: Date.now() });
 
   const strip = document.querySelector(".composer-card .composer-run-strip");
-  eq(strip?.querySelector(".composer-run-strip__text")?.textContent, "Deeper is working",
+  eq(strip?.querySelector(".composer-run-strip__text")?.textContent, "Deepzora is working",
     "ordinary running state shows the run strip");
   const live = document.querySelector(".composer-card .sr-only[role=\"status\"]");
-  eq(live?.textContent, "Deeper is working", "live region announces the stable state text only");
+  eq(live?.textContent, "Deepzora is working", "live region announces the stable state text only");
   ok(document.querySelector(".composer-card--running") !== null, "running card keeps its running modifier");
   eq(document.querySelector(".composer-glowring")?.getAttribute("aria-hidden"), "true", "active work mounts a decorative perimeter trace");
 
@@ -434,7 +434,7 @@ console.log("\ncomposer run strip");
   const resolved = document.querySelector(".composer-run-strip");
   eq(resolved?.classList.contains("composer-run-strip--waiting"), false,
     "resolving the prompt removes the attention strip");
-  eq(resolved?.querySelector(".composer-run-strip__text")?.textContent, "Deeper is working",
+  eq(resolved?.querySelector(".composer-run-strip__text")?.textContent, "Deepzora is working",
     "the resolved prompt falls back to the ordinary work strip");
 
   await act(async () => {

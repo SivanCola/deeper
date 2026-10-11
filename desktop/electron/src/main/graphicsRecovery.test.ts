@@ -108,7 +108,7 @@ test("a healthy interval rearms recovery for a later independent failure", async
 });
 
 test("acknowledging an old dialog preserves a GPU fault recorded while it was open", t => {
-  const root = mkdtempSync(join(tmpdir(), "deeper-gpu-ack-"));
+  const root = mkdtempSync(join(tmpdir(), "deepzora-gpu-ack-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const path = join(root, "fault.json");
   const record = new GraphicsFaultRecord(path, "v1", () => 100);
@@ -144,7 +144,7 @@ test("a stall that recovers while another notice is open does not leave a stale 
 });
 
 test("pending record survives crash, expires, preserves unknown fields and rejects future schemas", t => {
-  const root = mkdtempSync(join(tmpdir(), "deeper-gpu-record-"));
+  const root = mkdtempSync(join(tmpdir(), "deepzora-gpu-record-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const path = join(root, "fault.json"); let now = 100;
   const open = (build = "v1") => new GraphicsFaultRecord(path, build, () => now);

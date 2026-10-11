@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/sessioncatalog"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestLegacyTopicArchiveVisibility(t *testing.T) {

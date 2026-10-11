@@ -10,12 +10,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/agent"
-	"deeper/internal/command"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
+	"deepzora/internal/agent"
+	"deepzora/internal/command"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
 )
 
 // writeAt creates dir/rel (with parents) holding content, for fs-backed tests.
@@ -113,7 +113,7 @@ func TestSlashCompletionDocsShowsOnlyRuntimeWinner(t *testing.T) {
 			if len(docs) != 1 || docs[0].hint != tt.wantHint {
 				t.Fatalf("/docs completion entries = %+v, want one entry with hint %q", docs, tt.wantHint)
 			}
-			if !hasLabel(m.slashItems(), "/deeper:docs") {
+			if !hasLabel(m.slashItems(), "/deepzora:docs") {
 				t.Fatalf("shadowed built-in docs fallback missing: %v", labels(m.slashItems()))
 			}
 		})
@@ -151,7 +151,7 @@ func TestSlashCompletionDocsAccountsForHiddenCompatibilityAliases(t *testing.T) 
 			if hasLabel(items, "/docs") {
 				t.Fatalf("hidden runtime owner left a misleading /docs entry: %v", labels(items))
 			}
-			for _, want := range []string{"/deeper:docs", tt.wantCanonical} {
+			for _, want := range []string{"/deepzora:docs", tt.wantCanonical} {
 				if !hasLabel(items, want) {
 					t.Fatalf("completion missing %q: %v", want, labels(items))
 				}
@@ -164,11 +164,11 @@ func TestSlashCompletionDocsDoesNotDisplaceQualifiedCustomCommands(t *testing.T)
 	m := newTestChatTUI()
 	m.commands = []command.Command{
 		{Name: "docs", Description: "custom docs"},
-		{Name: "deeper:docs", Description: "qualified custom docs"},
-		{Name: "deeper:builtin:docs", Description: "second qualified custom docs"},
+		{Name: "deepzora:docs", Description: "qualified custom docs"},
+		{Name: "deepzora:builtin:docs", Description: "second qualified custom docs"},
 	}
 	items := m.slashItems()
-	for _, want := range []string{"/docs", "/deeper:docs", "/deeper:builtin:docs", "/deeper:builtin:docs:2"} {
+	for _, want := range []string{"/docs", "/deepzora:docs", "/deepzora:builtin:docs", "/deepzora:builtin:docs:2"} {
 		if !hasLabel(items, want) {
 			t.Fatalf("completion displaced %q: %v", want, labels(items))
 		}
@@ -265,9 +265,9 @@ func TestFileItemsEscapedSpaces(t *testing.T) {
 		t.Fatalf("inserts should escape spaces, want %q and %q in %v", wantFile, wantDir, labels(items))
 	}
 
-	deeper := m.fileItems(dir + `/my\ dir/`)
-	if !hasLabel(deeper, "inner.md") {
-		t.Fatalf("descending through an escaped dir should list its entries, got %v", labels(deeper))
+	deepzora := m.fileItems(dir + `/my\ dir/`)
+	if !hasLabel(deepzora, "inner.md") {
+		t.Fatalf("descending through an escaped dir should list its entries, got %v", labels(deepzora))
 	}
 }
 

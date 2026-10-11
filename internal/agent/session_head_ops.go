@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // ErrSessionHeadUnknown reports a head id that the log does not contain.

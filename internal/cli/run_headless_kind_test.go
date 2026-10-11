@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // A one-shot run persists a resumable store; its manifest must say it is one,
@@ -21,12 +21,12 @@ func TestRunPrintRecordsHeadlessRunKind(t *testing.T) {
 		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n"))
 	}))
 	defer srv.Close()
-	t.Setenv("DEEPER_TEST_RUN_KEY", "test-key")
+	t.Setenv("DEEPZORA_TEST_RUN_KEY", "test-key")
 	path := config.UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	body := "default_model = \"fake/model-a\"\n\n[[providers]]\nname = \"fake\"\nkind = \"openai\"\nbase_url = \"" + srv.URL + "/v1\"\nmodels = [\"model-a\"]\ndefault = \"model-a\"\napi_key_env = \"DEEPER_TEST_RUN_KEY\"\n"
+	body := "default_model = \"fake/model-a\"\n\n[[providers]]\nname = \"fake\"\nkind = \"openai\"\nbase_url = \"" + srv.URL + "/v1\"\nmodels = [\"model-a\"]\ndefault = \"model-a\"\napi_key_env = \"DEEPZORA_TEST_RUN_KEY\"\n"
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}

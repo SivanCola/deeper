@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"database/sql"
-	"deeper/desktop/internal/draftstate"
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/desktop/internal/workspacestate"
 	"encoding/json"
 	"os"
 	"path/filepath"

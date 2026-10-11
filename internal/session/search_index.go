@@ -11,9 +11,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
 )
 
 const searchIndexVersion = 4

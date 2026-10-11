@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ErrCompactionRequired is returned when the prompt exceeds the provider limit

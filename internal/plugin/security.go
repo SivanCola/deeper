@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/mcplaunch"
-	"deeper/internal/secrets"
-	"deeper/internal/tool"
+	"deepzora/internal/mcplaunch"
+	"deepzora/internal/secrets"
+	"deepzora/internal/tool"
 )
 
 // projectLaunchIdentityDigest resolves a secret-free identity before a project
@@ -68,8 +68,8 @@ func buildProjectLaunchIdentity(ctx context.Context, s Spec) (mcplaunch.ProjectL
 
 // MCPStateDir returns a stable, server-scoped host directory outside the
 // workspace for state that must survive across calls and sessions.
-func MCPStateDir(deeperHome, workspace, server string) string {
-	if strings.TrimSpace(deeperHome) == "" {
+func MCPStateDir(deepzoraHome, workspace, server string) string {
+	if strings.TrimSpace(deepzoraHome) == "" {
 		return ""
 	}
 	workspaceID := mcplaunch.WorkspaceFingerprint(workspace)
@@ -79,7 +79,7 @@ func MCPStateDir(deeperHome, workspace, server string) string {
 	if workspaceID == "" {
 		workspaceID = "global"
 	}
-	return filepath.Join(deeperHome, "mcp-state", workspaceID, slug(server))
+	return filepath.Join(deepzoraHome, "mcp-state", workspaceID, slug(server))
 }
 
 // identityURLRedacted replaces credential material inside identity and cache
@@ -253,10 +253,10 @@ func ReconcileCachedToolSafety(server, rawName string, cached CachedToolSafety, 
 		return live, nil
 	}
 	if cached.ReadOnly && !live.ReadOnly {
-		return live, fmt.Errorf("MCP server %q no longer marks tool %q as read-only; the current call was blocked before execution — retry so Deeper can apply the current Plan/read-only safety boundary", server, rawName)
+		return live, fmt.Errorf("MCP server %q no longer marks tool %q as read-only; the current call was blocked before execution — retry so Deepzora can apply the current Plan/read-only safety boundary", server, rawName)
 	}
 	if !cached.Destructive && live.Destructive {
-		return live, fmt.Errorf("MCP server %q now marks tool %q as destructive; retry so Deeper can apply the current Plan/read-only safety boundary before execution", server, rawName)
+		return live, fmt.Errorf("MCP server %q now marks tool %q as destructive; retry so Deepzora can apply the current Plan/read-only safety boundary before execution", server, rawName)
 	}
 	return live, nil
 }

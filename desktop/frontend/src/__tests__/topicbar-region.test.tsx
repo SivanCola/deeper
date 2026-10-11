@@ -37,7 +37,7 @@ try {
     "the Windows bar leads with the app mark");
   const logo = document.querySelector(".topicbar__brand-logo")!;
   assert.equal(logo.getAttribute("role"), "img", "the leading mark is the app logo");
-  assert.equal(logo.getAttribute("aria-label"), "Deeper");
+  assert.equal(logo.getAttribute("aria-label"), "Deepzora");
   await paint();
   const action = document.querySelector(".topicbar__actions button");
   assert.equal(document.querySelectorAll(".topicbar__subtitle .worktree-badge").length, 1);

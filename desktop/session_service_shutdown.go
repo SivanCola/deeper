@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // Run after controllers and lifecycle barriers release their bindings.

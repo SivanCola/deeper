@@ -3,7 +3,7 @@ package cli
 import (
 	"sync"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // cliSessionServices is the process host registry shared by chat, run, serve,

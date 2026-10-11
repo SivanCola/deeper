@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/providerconv"
-	"deeper/internal/provider"
-	"deeper/internal/secrets"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/providerconv"
+	"deepzora/internal/provider"
+	"deepzora/internal/secrets"
 )
 
 // extensionStream is one in-flight sidecar provider stream. Its fields are

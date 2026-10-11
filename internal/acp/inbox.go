@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioninbox"
 )
 
 func (s *service) sessionAPI(sess *acpSession) (control.SessionAPI, error) {

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/evidence"
-	"deeper/internal/nilutil"
+	"deepzora/internal/evidence"
+	"deepzora/internal/nilutil"
 )
 
 // coalesceMaxBytes bounds a merged delta so one event never carries an

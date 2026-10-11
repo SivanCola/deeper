@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"deeper/internal/evidence"
-	"deeper/internal/runtimepolicy"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/runtimepolicy"
+	"deepzora/internal/tool"
 )
 
 // withInheritedHostConstraints re-applies the spawning turn's host constraints

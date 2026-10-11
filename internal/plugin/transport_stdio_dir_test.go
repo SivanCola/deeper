@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/internal/mcplaunch"
+	"deepzora/internal/mcplaunch"
 )
 
 // TestNewStdioTransportDirExplicit verifies that explicit Spec.Dir takes

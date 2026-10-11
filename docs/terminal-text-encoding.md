@@ -2,19 +2,19 @@
 
 ## Child-process locale / 子进程 locale
 
-When LANG, LC_ALL and LC_CTYPE are all empty or absent, Deeper selects an
+When LANG, LC_ALL and LC_CTYPE are all empty or absent, Deepzora selects an
 installed UTF-8 locale for child processes. It prefers C.UTF-8, then en_US.UTF-8,
 then another installed UTF-8 locale. Discovery is bounded and cached per process.
 If discovery fails or no UTF-8 locale is installed, the environment is retained.
 Windows continues to use its existing encoding-specific process handling.
 
-当 LANG、LC_ALL、LC_CTYPE 均为空或未设置时，Deeper 为子进程选择已安装的 UTF-8
+当 LANG、LC_ALL、LC_CTYPE 均为空或未设置时，Deepzora 为子进程选择已安装的 UTF-8
 locale，优先 C.UTF-8，其次 en_US.UTF-8，再选择其他已安装的 UTF-8 locale。
 探测有时间限制，并在进程内缓存。探测失败或没有可用 UTF-8 locale 时，保留原环境。
 Windows 继续使用既有的编码处理。
 
 Explicit values, including C/POSIX and category overrides, remain unchanged.
-Deeper does not change the parent process environment or force LC_ALL. Thus an
+Deepzora does not change the parent process environment or force LC_ALL. Thus an
 explicit LC_ALL=C still requests byte-oriented sed/grep/sort semantics.
 
 用户显式设置的值（包括 C/POSIX 和各分类覆盖）保持不变；不会修改父进程环境或强制

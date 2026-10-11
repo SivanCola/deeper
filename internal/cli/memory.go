@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
 )
 
 // showMemory reports what memory is loaded and where it lives — the TUI analog

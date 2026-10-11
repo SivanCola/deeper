@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/control"
+	"deepzora/internal/workspacelease"
 )
 
 // ActiveWorkView is the structured Desktop contract for work that prevents a
@@ -345,7 +345,7 @@ func (a *App) WorkspaceConflictForTab(tabID string) WorkspaceConflictView {
 func (a *App) RevealWorkspaceWriterForTab(tabID string) (TabMeta, error) {
 	conflict := a.WorkspaceConflictForTab(tabID)
 	if conflict.State != "local" || conflict.OwnerTabID == "" {
-		return TabMeta{}, fmt.Errorf("the workspace writer is not available in this Deeper window")
+		return TabMeta{}, fmt.Errorf("the workspace writer is not available in this Deepzora window")
 	}
 	return a.RevealBackgroundRuntime(conflict.OwnerTabID)
 }

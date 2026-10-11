@@ -6,17 +6,17 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
-	"deeper/internal/migration"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/skill"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
+	"deepzora/internal/migration"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/skill"
 )
 
 // SlashItem is one slash-completion suggestion. Insert is the token text placed
 // at the current argument position (callers replace from the token's start, see
 // SlashArgItems' returned offset); Descend hints the menu to re-open one level
-// deeper after accepting (e.g. "/mcp " → "/mcp add ").
+// deepzora after accepting (e.g. "/mcp " → "/mcp add ").
 type SlashItem struct {
 	Label   string `json:"label"`
 	Insert  string `json:"insert"`
@@ -468,7 +468,7 @@ func (c *Controller) managementNotice(trimmed string) bool {
 		}
 		switch sub {
 		case "", "list", "ls":
-			text, err := pluginpkg.InstalledListText(config.DeeperHomeDir())
+			text, err := pluginpkg.InstalledListText(config.DeepzoraHomeDir())
 			if err != nil {
 				c.notice("plugins: " + err.Error())
 			} else {
@@ -479,7 +479,7 @@ func (c *Controller) managementNotice(trimmed string) bool {
 				c.notice("usage: /plugins show <name>")
 				return true
 			}
-			text, err := pluginpkg.InstalledShowText(config.DeeperHomeDir(), fields[2])
+			text, err := pluginpkg.InstalledShowText(config.DeepzoraHomeDir(), fields[2])
 			if err != nil {
 				c.notice("plugins: " + err.Error())
 			} else {

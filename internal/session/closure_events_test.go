@@ -2,7 +2,7 @@ package session
 
 import (
 	"bytes"
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"reflect"
 	"testing"

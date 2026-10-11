@@ -10,8 +10,8 @@ import (
 	"runtime"
 	"strings"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/gitcmd"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/gitcmd"
 )
 
 const (
@@ -276,7 +276,7 @@ func decodeMergeMetadata(path string) (mergeMetadata, error) {
 		strings.TrimSpace(metadata.WorktreeRoot) == "" || strings.TrimSpace(metadata.WorktreeBranch) == "" {
 		return mergeMetadata{}, errors.New("worktree metadata is incomplete")
 	}
-	if !strings.HasPrefix(metadata.WorktreeBranch, "deeper/delivery-") {
+	if !strings.HasPrefix(metadata.WorktreeBranch, "deepzora/delivery-") {
 		return mergeMetadata{}, errors.New("worktree metadata names an unmanaged branch")
 	}
 	if err := readMergeIdentity(path, &metadata); err != nil {
@@ -309,7 +309,7 @@ func validateManagedWorktreePath(worktreeRoot, managedRoot string) (string, erro
 	}
 	realRel, err := filepath.Rel(filepath.Clean(realManaged), filepath.Clean(realRoot))
 	if err != nil || realRel == "." || realRel == "" || realRel == ".." || strings.HasPrefix(realRel, ".."+string(filepath.Separator)) {
-		return "", errors.New("worktree resolves outside Deeper-managed storage")
+		return "", errors.New("worktree resolves outside Deepzora-managed storage")
 	}
 	parts := strings.Split(filepath.Clean(realRel), string(filepath.Separator))
 	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {

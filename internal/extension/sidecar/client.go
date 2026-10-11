@@ -12,11 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/rpcwire"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/secrets"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/rpcwire"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/secrets"
 )
 
 // Lifecycle budgets.
@@ -143,6 +143,7 @@ const (
 // Client is one live sidecar connection: the rpcwire transport, the handshake
 // state, the content store, and the process handle.
 type Client struct {
+	legacyIdentity   bool
 	pluginID         string
 	version          string
 	rt               *pluginpkg.RuntimeSpec
@@ -227,6 +228,7 @@ func newClient(p *process, opts ClientOptions) *Client {
 		version = strings.TrimSpace(opts.Package.Manifest.Version)
 	}
 	c := &Client{
+		legacyIdentity:   opts.Package.Manifest.LegacyIdentity,
 		pluginID:         p.pluginID,
 		version:          version,
 		rt:               opts.Package.Manifest.Runtime,

@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
 )
 
 func (s *providerSetupSession) addPrompted(in *bufio.Scanner, w io.Writer, result providerPromptResult) bool {

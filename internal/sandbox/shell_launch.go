@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/proc"
-	"deeper/internal/secrets"
+	"deepzora/internal/proc"
+	"deepzora/internal/secrets"
 )
 
 // powerShellLaunches reports whether a found PowerShell can start. A Store

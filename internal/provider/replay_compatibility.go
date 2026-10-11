@@ -1,6 +1,6 @@
 package provider
 
-import "deeper/internal/nilutil"
+import "deepzora/internal/nilutil"
 
 // ReasoningReplayConverter is an adapter-owned, loss-aware request-view
 // conversion. It must not mutate the input or fabricate provider proof. A true

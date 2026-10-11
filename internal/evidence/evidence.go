@@ -16,9 +16,9 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"deeper/internal/provider"
-	"deeper/internal/shellparse"
-	"deeper/internal/shellsafe"
+	"deepzora/internal/provider"
+	"deepzora/internal/shellparse"
+	"deepzora/internal/shellsafe"
 )
 
 // TodoItem mirrors the todo_write item shape the host needs for step matching.

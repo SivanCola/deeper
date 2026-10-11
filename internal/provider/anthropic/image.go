@@ -1,6 +1,6 @@
 package anthropic
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 func imageSourceFromRef(ref string) *imageSource {
 	switch provider.ClassifyImage(ref) {

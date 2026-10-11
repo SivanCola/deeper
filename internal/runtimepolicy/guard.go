@@ -3,7 +3,7 @@ package runtimepolicy
 import (
 	"encoding/json"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 // GuardAction is one monotonic preflight verdict.

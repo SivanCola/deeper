@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/plancontract"
-	"deeper/internal/tool"
+	"deepzora/internal/plancontract"
+	"deepzora/internal/tool"
 )
 
 // SubmitPlanTool is the planner's structured exit: it hands the host a plan as

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func isDesktopStoredPreview(path string) (bool, error) {
@@ -22,7 +22,7 @@ func isDesktopStoredPreview(path string) (bool, error) {
 }
 
 func stageDesktopStoredPreview(ctx context.Context, path string) (*session.Service, session.SessionRef, func(), error) {
-	tmp, err := os.MkdirTemp("", "deeper-preview-upgrade-")
+	tmp, err := os.MkdirTemp("", "deepzora-preview-upgrade-")
 	if err != nil {
 		return nil, session.SessionRef{}, nil, err
 	}

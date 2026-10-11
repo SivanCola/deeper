@@ -1,6 +1,6 @@
 package control
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 func (s *inboxEventSink) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot) {
 	if s != nil {

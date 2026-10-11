@@ -1,6 +1,6 @@
 # Model capability metadata
 
-Deeper resolves input capabilities per model through the provider adapter.
+Deepzora resolves input capabilities per model through the provider adapter.
 Adapters return `inputModalities` for the exact model, following the
 `deepseek-harness` model contract:
 
@@ -10,7 +10,7 @@ Adapters return `inputModalities` for the exact model, following the
   setting.
 
 OpenAI-compatible `/models` responses may use the canonical
-`input_modalities` field. Deeper also accepts `modalities.input`,
+`input_modalities` field. Deepzora also accepts `modalities.input`,
 `capabilities.input_modalities`, `capabilities.vision`, `supports_vision`, and
 `vision` as compatibility aliases. Missing, malformed or conflicting declarations
 remain **unknown** (`nil` internally; `[]` in the Desktop view). A valid text-only
@@ -21,7 +21,7 @@ erase valid facts, and contradictory facts remain unknown. Model names are never
 used to guess image support.
 
 Dynamic metadata is stored in the disposable
-`model-capabilities-v2.json` cache under the Deeper cache directory. It is
+`model-capabilities-v2.json` cache under the Deepzora cache directory. It is
 not written to `config.toml`. Existing `vision` and `vision_models` entries
 remain readable for backwards compatibility and take precedence over dynamic
 metadata. V2 neither reads nor changes V1: the old cache cannot distinguish
@@ -73,7 +73,7 @@ image capability can change the projection of image-bearing history, so cache hi
 for such conversations are not guaranteed across a rebuild.
 
 The broader provider/model catalog is sourced from the MIT-licensed
-`github.com/sky-valley/pi/ai` Go port of Pi. Deeper uses its embedded model
+`github.com/sky-valley/pi/ai` Go port of Pi. Deepzora uses its embedded model
 data only (`GetModels`/`Model.Input` and related facts), not its Agent or
 Provider runtime. The dependency is pinned in `go.mod`; catalog updates must
 be reviewed as data and license changes.

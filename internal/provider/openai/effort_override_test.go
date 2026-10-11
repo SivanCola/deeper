@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func newTestClient(t *testing.T, model string, extra map[string]any) *client {

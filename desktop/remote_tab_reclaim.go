@@ -87,7 +87,7 @@ func (a *App) observeRemoteTabForReclaim(tabID string, client *http.Client) (rem
 // session is owned by a local runtime on the serve host. The tab then
 // attaches as a read-only spectator instead of dying with the 409. All three
 // refusal shapes match: the explicit takeover wording (mirrored session), the
-// plain lease wording ("in use by another Deeper process" — the holder is a
+// plain lease wording ("in use by another Deepzora process" — the holder is a
 // local window/CLI whose transcript the file-backed /history serves anyway,
 // and whose lease /reclaim can take back), and the final-format writer
 // wording ("session writer is owned by another runtime" — the identity's
@@ -97,11 +97,11 @@ func remoteSessionTakenOver(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	if strings.Contains(msg, "taken over by a local Deeper") {
+	if strings.Contains(msg, "taken over by a local Deepzora") {
 		return true
 	}
 	if strings.Contains(msg, "writer is owned by another runtime") {
 		return true
 	}
-	return strings.Contains(msg, "in use by another Deeper process")
+	return strings.Contains(msg, "in use by another Deepzora process")
 }

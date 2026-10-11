@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func TestEmbeddedBotUsesHostSessionServiceWithoutClosingIt(t *testing.T) {

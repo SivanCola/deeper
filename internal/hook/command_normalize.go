@@ -3,7 +3,7 @@ package hook
 import (
 	"strings"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 // NormalizeCommand repairs narrow classes of copied JSON-escaped hook commands.

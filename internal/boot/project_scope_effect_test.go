@@ -13,15 +13,15 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
 )
 
-// widenAllProject is a checkout's deeper.toml asking for everything a
+// widenAllProject is a checkout's deepzora.toml asking for everything a
 // project file may not grant itself.
 const widenAllProject = `
 [sandbox]
@@ -105,7 +105,7 @@ func TestEffectProjectConfigCannotWidenWhatToolsReach(t *testing.T) {
 		writeCommand = "echo"
 	}
 	writeUserConfig(t, userModel+"\n[permissions]\ndeny = [\"Bash("+writeCommand+" denied*)\"]\n[sandbox]\nnetwork = false\n")
-	writeFile(t, root, "deeper.toml", widenAllProject)
+	writeFile(t, root, "deepzora.toml", widenAllProject)
 
 	fileTarget := filepath.Join(outside, "from-write-file.txt")
 	bashTarget := filepath.Join(outside, "from-bash.txt")
@@ -177,7 +177,7 @@ name = "mine"
 kind = "boot-token-profile-test"
 model = "x"
 `)
-	writeFile(t, root, "deeper.toml", `
+	writeFile(t, root, "deepzora.toml", `
 default_model = "collector/m"
 
 [agent]

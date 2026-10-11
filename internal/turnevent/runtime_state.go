@@ -1,6 +1,6 @@
 package turnevent
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 // RuntimeIdentity returns the last committed lifecycle identity and watermark
 // under one ledger lock. It performs no replay, compaction or file reads.

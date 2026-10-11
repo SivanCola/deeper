@@ -1,6 +1,6 @@
 # Task Catalog
 
-Deeper 将跨项目任务投影保存到 `<cache root>/task-catalog/v1.sqlite`。任务 snapshot、
+Deepzora 将跨项目任务投影保存到 `<cache root>/task-catalog/v1.sqlite`。任务 snapshot、
 event JSONL、idempotency 文件、文件锁、version CAS 和 lease 继续作为权威数据。SQLite
 绝不参与 stop、cancel、requeue 或 open-session 的接受判断。
 
@@ -14,8 +14,8 @@ snapshot。当前进程的 jobs/controller 状态始终覆盖 catalog；过期 l
 不回写 snapshot。
 
 ```sh
-deeper doctor catalogs [--json]
-deeper catalogs reindex tasks [--project PATH ...] [--json]
+deepzora doctor catalogs [--json]
+deepzora catalogs reindex tasks [--project PATH ...] [--json]
 ```
 
 Catalog 损坏或未完成索引不会禁用任务控制；reindex 只替换可丢弃投影。

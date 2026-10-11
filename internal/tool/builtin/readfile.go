@@ -1,4 +1,4 @@
-// Package builtin provides Deeper's compile-time built-in tools. Each tool
+// Package builtin provides Deepzora's compile-time built-in tools. Each tool
 // self-registers via init(); main blank-imports this package to wire them in.
 package builtin
 
@@ -17,8 +17,8 @@ import (
 
 	"golang.org/x/text/transform"
 
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/tool"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/tool"
 )
 
 const (

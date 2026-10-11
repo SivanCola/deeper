@@ -1,8 +1,8 @@
 package eventwire
 
 import (
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
 )
 
 // CompletionReceipt is the JSON form of event.CompletionReceipt: what the host

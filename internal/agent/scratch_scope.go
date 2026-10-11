@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func (a *Agent) scratchRoots() []string {

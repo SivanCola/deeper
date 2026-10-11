@@ -5,7 +5,7 @@ import (
 	"os"
 	"sort"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 type catalogWorkspaceAvailability struct {

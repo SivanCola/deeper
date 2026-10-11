@@ -3,8 +3,8 @@ package main
 import (
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/billing"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
 )
 
 // ContextInfo is the prompt-vs-window gauge payload plus session totals. Used

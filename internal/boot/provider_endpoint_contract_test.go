@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/netclient"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
 )
 
 func TestRuntimeRejectsProtocolEndpointMismatch(t *testing.T) {
@@ -33,7 +33,7 @@ func TestRuntimeRepairsExactCatalogProtocolMismatch(t *testing.T) {
 	}
 	typ := reflect.TypeOf(p)
 	if p == nil || typ == nil || typ.Kind() != reflect.Pointer ||
-		typ.Elem().PkgPath() != "deeper/internal/provider/anthropic" {
+		typ.Elem().PkgPath() != "deepzora/internal/provider/anthropic" {
 		t.Fatalf("runtime provider was not repaired: provider=%T", p)
 	}
 	if entry.Kind != "responses" || entry.BaseURL != "https://api.deepseek.com" ||

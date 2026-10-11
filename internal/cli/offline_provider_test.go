@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // pinProviderOffline points the isolated home at a provider that can never be
@@ -26,10 +26,10 @@ func pinProviderOffline(t *testing.T) {
 [[providers]]
 name = "offline-test"
 kind = "openai"
-base_url = "https://deeper-tests.invalid/v1"
+base_url = "https://deepzora-tests.invalid/v1"
 models = ["model-a"]
 default = "model-a"
-api_key_env = "DEEPER_TEST_ABSENT_KEY"
+api_key_env = "DEEPZORA_TEST_ABSENT_KEY"
 `
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)

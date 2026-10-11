@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
-	"deeper/internal/netclient"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
+	"deepzora/internal/netclient"
 )
 
 type providerSetupSession struct {

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/history"
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/stats"
-	"deeper/internal/taskcatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/history"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/stats"
+	"deepzora/internal/taskcatalog"
 )
 
 const sessionCatalogMetadataSyncTimeout = 30 * time.Second

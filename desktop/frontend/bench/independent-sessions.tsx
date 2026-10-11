@@ -24,7 +24,7 @@ import type { ProjectNode, SessionMeta } from "../src/lib/types";
 import "../src/styles.css";
 import { rememberProjectTreeWindowLimit, projectTreeListKey } from "../src/lib/projectTreeWindow";
 
-localStorage.setItem("deeper-lang", "en");
+localStorage.setItem("deepzora-lang", "en");
 const root = "/fixture/independent";
 const topicId = "same-topic";
 const paginationScenario = new URLSearchParams(location.search).has("pagination");

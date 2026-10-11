@@ -8,7 +8,7 @@ import { build, preview, loadConfigFromFile } from "vite";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.env.PLAYWRIGHT_BROWSERS_PATH ||= path.join(root, ".pw-browsers");
 const { chromium } = await import("playwright");
-const outDir = await mkdtemp(path.join(tmpdir(), "deeper-code-theme-"));
+const outDir = await mkdtemp(path.join(tmpdir(), "deepzora-code-theme-"));
 const { config } = await loadConfigFromFile({ command: "build", mode: "production" }, path.join(root, "vite.config.ts"));
 let server, browser;
 try {

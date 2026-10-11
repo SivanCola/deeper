@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestMetadataDiscoveryNeverRepairsOrClassifiesContent(t *testing.T) {

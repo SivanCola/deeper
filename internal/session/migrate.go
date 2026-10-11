@@ -16,11 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 type MigrationMapping struct {
@@ -532,7 +532,7 @@ type frozenArtifact struct {
 }
 
 func freezeLegacyArtifacts(ctx context.Context, sourcePath string) ([]frozenArtifact, Source, string, error) {
-	freezeDir, err := os.MkdirTemp("", "deeper-legacy-freeze-")
+	freezeDir, err := os.MkdirTemp("", "deepzora-legacy-freeze-")
 	if err != nil {
 		return nil, Source{}, "", err
 	}

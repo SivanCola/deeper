@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
 )
 
 // ForkBundle freezes the full turn state at a policy's first eligibility so a
@@ -40,10 +40,10 @@ const forkBundleVersion = 1
 // forkCapturePolicy selects which policy's trigger owns bundle capture;
 // unset defaults to the EBM trigger for compatibility with existing runs.
 func forkCapturePolicy() string {
-	if os.Getenv("DEEPER_EXPERIMENT_FORK_CAPTURE_DIR") == "" {
+	if os.Getenv("DEEPZORA_EXPERIMENT_FORK_CAPTURE_DIR") == "" {
 		return ""
 	}
-	if p := os.Getenv("DEEPER_EXPERIMENT_FORK_POLICY"); p != "" {
+	if p := os.Getenv("DEEPZORA_EXPERIMENT_FORK_POLICY"); p != "" {
 		return p
 	}
 	return "ebm"
@@ -100,7 +100,7 @@ func (p *forkCaptureProvider) Stream(ctx context.Context, req provider.Request) 
 			RunwayIdle: seed.RunwayIdle, RunwayObserved: seed.RunwayObserved,
 			Messages: messages,
 		}
-		if err := writeForkBundle(os.Getenv("DEEPER_EXPERIMENT_FORK_CAPTURE_DIR"), b); err != nil {
+		if err := writeForkBundle(os.Getenv("DEEPZORA_EXPERIMENT_FORK_CAPTURE_DIR"), b); err != nil {
 			fmt.Fprintln(os.Stderr, "fork capture:", err)
 		}
 	}
@@ -242,7 +242,7 @@ func applyForkTreatment(messages []provider.Message, nudge string) {
 // maybeWrapForkCaptureProvider interposes the capture wrapper when the
 // experiment env asks for bundles; inert otherwise.
 func (a *Agent) maybeWrapForkCaptureProvider() {
-	if os.Getenv("DEEPER_EXPERIMENT_FORK_CAPTURE_DIR") != "" && a.svc.prov != nil {
+	if os.Getenv("DEEPZORA_EXPERIMENT_FORK_CAPTURE_DIR") != "" && a.svc.prov != nil {
 		a.svc.prov = &forkCaptureProvider{inner: a.svc.prov, a: a}
 	}
 }
@@ -250,7 +250,7 @@ func (a *Agent) maybeWrapForkCaptureProvider() {
 // maybeArmForkFromEnv wires the experiment from the environment so the bench
 // can fork without new public plumbing. Control is the default arm.
 func (a *Agent) maybeArmForkFromEnv() {
-	path := os.Getenv("DEEPER_EXPERIMENT_FORK_BUNDLE")
+	path := os.Getenv("DEEPZORA_EXPERIMENT_FORK_BUNDLE")
 	if path == "" {
 		return
 	}
@@ -260,7 +260,7 @@ func (a *Agent) maybeArmForkFromEnv() {
 		return
 	}
 	nudge := ""
-	switch os.Getenv("DEEPER_EXPERIMENT_FORK_ARM") {
+	switch os.Getenv("DEEPZORA_EXPERIMENT_FORK_ARM") {
 	case "actfirst":
 		nudge = actFirstNudge
 	}

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/rpcwire"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/rpcwire"
+	"deepzora/internal/pluginpkg"
 )
 
 func TestHandshakeSuccess(t *testing.T) {
@@ -40,7 +40,7 @@ func TestInitializeParamsCarryManifestV2DependencyIdentity(t *testing.T) {
 			Capabilities: []string{"interceptors", "strategies", "providers", "ui"},
 		},
 		requires: []pluginpkg.CapabilityRef{{
-			Namespace: "deeper", Kind: "provider", ID: "base", VersionRange: ">=1.0.0", Optional: true,
+			Namespace: "deepzora", Kind: "provider", ID: "base", VersionRange: ">=1.0.0", Optional: true,
 		}},
 		provides: []pluginpkg.CapabilityRef{
 			{Namespace: "plugin/example", Kind: "provider", ID: "fake/echo", Version: "1.0.0", SchemaHash: "sha256:provider"},

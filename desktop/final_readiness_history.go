@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 	"fmt"
 	"strings"
 )

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/tool/builtin"
 )
 
 // requester is the slice of Conn that clientIO drives: agent → client requests.

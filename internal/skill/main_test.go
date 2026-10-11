@@ -3,8 +3,8 @@ package skill
 import (
 	"testing"
 
-	"deeper/internal/skill/skillwatch"
-	"deeper/internal/testenv"
+	"deepzora/internal/skill/skillwatch"
+	"deepzora/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

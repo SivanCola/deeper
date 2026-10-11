@@ -13,9 +13,9 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // These files were emitted by the actual tagged writers, including their event

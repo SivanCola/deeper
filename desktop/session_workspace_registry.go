@@ -13,10 +13,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 type freshSessionCreator interface {

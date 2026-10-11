@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/serve"
-	"deeper/internal/servecontract"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/serve"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/sessioninbox"
 )
 
 func TestRemoteInboxQueueCapabilitiesAndIdentity(t *testing.T) {

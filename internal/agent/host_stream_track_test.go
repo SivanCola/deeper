@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/extension"
+	"deepzora/internal/extension"
 )
 
 func TestTrackPublishedHostStreamUsesContextOwner(t *testing.T) {

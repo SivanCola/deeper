@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestSessionMetaFromCatalogPropagatesRecoveryCopy(t *testing.T) {

@@ -3,7 +3,7 @@ package permission
 import (
 	"strings"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 type bashApprovalClass uint8

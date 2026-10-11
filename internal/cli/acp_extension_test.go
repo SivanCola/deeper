@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/acp"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/provider"
+	"deepzora/internal/acp"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/provider"
 )
 
 // ACP-level coverage for extension-hosted providers: a plugin/... model in
@@ -26,8 +26,8 @@ import (
 // mid-session switch (RebuildSession) moves to a config model and back.
 
 const (
-	acpFakeEnvEnable     = "DEEPER_ACP_FAKE_SIDECAR"
-	acpFakeEnvPluginName = "DEEPER_ACP_FAKE_PLUGIN_NAME"
+	acpFakeEnvEnable     = "DEEPZORA_ACP_FAKE_SIDECAR"
+	acpFakeEnvPluginName = "DEEPZORA_ACP_FAKE_PLUGIN_NAME"
 )
 
 // TestACPFakeSidecarHelperProcess is the re-exec entry point for the ACP fake
@@ -149,7 +149,7 @@ func installACPFakeProviderPlugin(t *testing.T, home, name string) {
 
 func writeACPFixture(t *testing.T, dir string) {
 	t.Helper()
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 default_model = "local/fake-model"
 
 [agent]
@@ -163,7 +163,7 @@ name = "local"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
 model = "fake-model"
-api_key_env = "DEEPER_TEST_KEY"
+api_key_env = "DEEPZORA_TEST_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -197,14 +197,14 @@ func runACPTurnAssistant(t *testing.T, ctrl interface {
 // model and back to the plugin ref.
 func TestACPSessionWithPluginModelStreamsAndSwitches(t *testing.T) {
 	isolateCLIConfigHome(t)
-	if _, err := config.SetCredential("DEEPER_TEST_KEY", "test-key"); err != nil {
+	if _, err := config.SetCredential("DEEPZORA_TEST_KEY", "test-key"); err != nil {
 		t.Fatalf("SetCredential: %v", err)
 	}
 	project := t.TempDir()
 	writeACPFixture(t, project)
 	name := "acpdemo"
 	ref := "plugin/" + name + "/fake/x"
-	installACPFakeProviderPlugin(t, config.DeeperHomeDir(), name)
+	installACPFakeProviderPlugin(t, config.DeepzoraHomeDir(), name)
 
 	factory := &acpFactory{}
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func manualCreationTargetError(err error) error {

@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 func desktopLegacyImportOptions(workspaceRoot string) session.CreateOptions {

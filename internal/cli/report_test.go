@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/crashreport"
-	"deeper/internal/i18n"
-	"deeper/internal/netclient"
+	"deepzora/internal/crashreport"
+	"deepzora/internal/i18n"
+	"deepzora/internal/netclient"
 )
 
 func isolateCLIReports(t *testing.T) string {
@@ -17,15 +17,15 @@ func isolateCLIReports(t *testing.T) string {
 	i18n.DetectLanguage("en")
 	t.Cleanup(func() { i18n.DetectLanguage("en") })
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_SAFE_MODE", "")
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_SAFE_MODE", "")
 	t.Chdir(t.TempDir())
 	return home
 }
 
 func captureCLIReport(t *testing.T, home string) crashreport.Pending {
 	t.Helper()
-	if err := crashreport.CapturePanic(home, "v1.20.0", "private panic value", []byte("goroutine 1 [running]:\nnix.run()\n\t/Users/alice/deeper/main.go:12")); err != nil {
+	if err := crashreport.CapturePanic(home, "v1.20.0", "private panic value", []byte("goroutine 1 [running]:\nnix.run()\n\t/Users/alice/deepzora/main.go:12")); err != nil {
 		t.Fatal(err)
 	}
 	pending, err := crashreport.Load(home, "")
@@ -107,7 +107,7 @@ func TestReportCommandFailedSendKeepsReport(t *testing.T) {
 func TestLegacySafeModeEnvDoesNotBlockReportSendOrDelete(t *testing.T) {
 	home := isolateCLIReports(t)
 	pending := captureCLIReport(t, home)
-	t.Setenv("DEEPER_SAFE_MODE", "1")
+	t.Setenv("DEEPZORA_SAFE_MODE", "1")
 	previous := sendCLIReport
 	t.Cleanup(func() { sendCLIReport = previous })
 	calls := 0

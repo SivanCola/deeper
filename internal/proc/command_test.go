@@ -6,11 +6,11 @@ import (
 )
 
 func TestCommandConstructorsPreserveArguments(t *testing.T) {
-	background := Command("deeper-helper", "--probe", "a b")
+	background := Command("deepzora-helper", "--probe", "a b")
 	if len(background.Args) != 3 || background.Args[1] != "--probe" || background.Args[2] != "a b" {
 		t.Fatalf("background args = %#v", background.Args)
 	}
-	visible := VisibleCommandContext(context.Background(), "deeper-ui", "--open")
+	visible := VisibleCommandContext(context.Background(), "deepzora-ui", "--open")
 	if len(visible.Args) != 2 || visible.Args[1] != "--open" {
 		t.Fatalf("visible args = %#v", visible.Args)
 	}

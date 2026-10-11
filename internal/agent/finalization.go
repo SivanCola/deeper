@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // landCause is why a turn was told to finalize. kind selects the pause the Run

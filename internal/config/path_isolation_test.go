@@ -19,7 +19,7 @@ func TestProcessTestEnvironmentContainsAllUserStatePaths(t *testing.T) {
 	home := os.Getenv("HOME")
 	paths := map[string]string{
 		"operating system cache": osUserCacheDir(),
-		"Deeper cache":           CacheDir(),
+		"Deepzora cache":         CacheDir(),
 		"workspace leases":       WorkspaceLeaseDir(),
 		"delivery worktrees":     DeliveryWorktreeDir(),
 	}
@@ -31,18 +31,18 @@ func TestProcessTestEnvironmentContainsAllUserStatePaths(t *testing.T) {
 }
 
 // TestStatsDirResolution pins the stats data root: <state home>/stats, where
-// the state home is DEEPER_STATE_HOME when set and DEEPER_HOME otherwise.
+// the state home is DEEPZORA_STATE_HOME when set and DEEPZORA_HOME otherwise.
 // Usage records live under the state root — not the install directory, which
 // is replaced on upgrade — so a wrong resolution would silently lose stats.
 func TestStatsDirResolution(t *testing.T) {
 	home := t.TempDir()
 	state := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	if got := StatsDir(); got != filepath.Join(home, "stats") {
-		t.Fatalf("DEEPER_HOME stats dir: want %q, got %q", filepath.Join(home, "stats"), got)
+		t.Fatalf("DEEPZORA_HOME stats dir: want %q, got %q", filepath.Join(home, "stats"), got)
 	}
-	t.Setenv("DEEPER_STATE_HOME", state)
+	t.Setenv("DEEPZORA_STATE_HOME", state)
 	if got := StatsDir(); got != filepath.Join(state, "stats") {
-		t.Fatalf("DEEPER_STATE_HOME stats dir: want %q, got %q", filepath.Join(state, "stats"), got)
+		t.Fatalf("DEEPZORA_STATE_HOME stats dir: want %q, got %q", filepath.Join(state, "stats"), got)
 	}
 }

@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/control"
+import "deepzora/internal/control"
 
 // tabRuntimeSnapshot is a consistent under-a.mu copy of the per-tab fields
 // that bound methods and rebuild paths need after releasing the lock.

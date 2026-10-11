@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/testenv"
+	"deepzora/internal/testenv"
 
 	"go.uber.org/goleak"
 )

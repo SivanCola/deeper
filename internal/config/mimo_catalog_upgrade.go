@@ -9,7 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 const mimoCatalogUpgradeVersion = 12

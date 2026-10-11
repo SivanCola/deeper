@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/skill"
+	"deepzora/internal/skill"
 )
 
 func TestSubmitInvocationDisplayKeepsSharedTextAcrossSeveralInlineSkills(t *testing.T) {

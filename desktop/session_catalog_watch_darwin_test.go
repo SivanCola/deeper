@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 	"golang.org/x/sys/unix"
 )
 
 func TestCatalogWatchLargeRootUsesBoundedDescriptors(t *testing.T) {
-	const child = "DEEPER_CATALOG_NOFILE_CHILD"
+	const child = "DEEPZORA_CATALOG_NOFILE_CHILD"
 	if os.Getenv(child) != "1" {
 		cmd := exec.Command(os.Args[0], "-test.run=^TestCatalogWatchLargeRootUsesBoundedDescriptors$", "-test.count=1", "-test.v")
 		cmd.Env = append(os.Environ(), child+"=1")

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"path/filepath"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 // Historical directories share one owner per root, just like canonical

@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/tool"
 )
 
 // cacheableToolsOf extracts the persistable subset of remote tools so Start()

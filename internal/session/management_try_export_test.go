@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/identitylock"
-	"deeper/internal/provider"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/provider"
 )
 
 func TestTryExportColdRetainsSourceAndDoesNotWaitForOwner(t *testing.T) {
@@ -133,7 +133,7 @@ func TestTryExportColdRetainsSourceAndDoesNotWaitForOwner(t *testing.T) {
 // The child holds an actual operating-system lock, exercising LockFileEx on
 // Windows rather than only identitylock's process-local coordination.
 func TestTryExportColdLockHelper(t *testing.T) {
-	path := os.Getenv("DEEPER_TEST_TRY_EXPORT_LOCK")
+	path := os.Getenv("DEEPZORA_TEST_TRY_EXPORT_LOCK")
 	if path == "" {
 		return
 	}
@@ -151,7 +151,7 @@ func holdTryExportLockInChild(t *testing.T, path string) func() {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	t.Cleanup(cancel)
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestTryExportColdLockHelper$")
-	cmd.Env = append(os.Environ(), "DEEPER_TEST_TRY_EXPORT_LOCK="+path)
+	cmd.Env = append(os.Environ(), "DEEPZORA_TEST_TRY_EXPORT_LOCK="+path)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	stdin, err := cmd.StdinPipe()

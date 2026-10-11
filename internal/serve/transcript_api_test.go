@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/servecontract"
-	canonical "deeper/internal/session"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/servecontract"
+	canonical "deepzora/internal/session"
+	"deepzora/internal/transcript"
 )
 
 func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {

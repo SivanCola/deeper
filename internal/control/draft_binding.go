@@ -3,7 +3,7 @@ package control
 import (
 	"context"
 
-	"deeper/internal/attachment"
+	"deepzora/internal/attachment"
 )
 
 func (c *Controller) RebindDraftImage(ctx context.Context, id string) (attachment.DraftCredential, error) {

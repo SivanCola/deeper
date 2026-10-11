@@ -23,11 +23,11 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/secrets"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/secrets"
 )
 
 // UIHandler is the sidecar package's Extension → Host UI call surface,

@@ -7,17 +7,17 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 const (
-	sessionPathHeader           = "X-Deeper-Session-Path"
-	sessionIDHeader             = "X-Deeper-Session-ID"
-	sessionTakenOverHeader      = "X-Deeper-Taken-Over"
-	expectedSessionPathHeader   = "X-Deeper-Expected-Session-Path"
-	expectedSessionIDHeader     = "X-Deeper-Expected-Session-ID"
-	expectedModelSettingsHeader = "X-Deeper-Expected-Model-Settings"
+	sessionPathHeader           = "X-Deepzora-Session-Path"
+	sessionIDHeader             = "X-Deepzora-Session-ID"
+	sessionTakenOverHeader      = "X-Deepzora-Taken-Over"
+	expectedSessionPathHeader   = "X-Deepzora-Expected-Session-Path"
+	expectedSessionIDHeader     = "X-Deepzora-Expected-Session-ID"
+	expectedModelSettingsHeader = "X-Deepzora-Expected-Model-Settings"
 	foregroundMutationMaxBody   = 8 << 20
 )
 

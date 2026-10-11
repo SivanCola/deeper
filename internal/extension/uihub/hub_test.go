@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/event"
+	"deepzora/internal/extension/protocol"
 )
 
 const testCredential = "api_key=sk-abcdef1234567890SECRETKEY"

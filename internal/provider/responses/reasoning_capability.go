@@ -1,6 +1,6 @@
 package responses
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 func ReasoningForConfig(cfg provider.Config) provider.ReasoningCapability {
 	cfg = provider.ApplyOpenCodeGoContract("responses", cfg)

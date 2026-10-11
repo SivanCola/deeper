@@ -230,7 +230,7 @@ func (r *mdRenderer) renderHeading(buf *strings.Builder, n *ast.Heading, src []b
 	buf.WriteString(strings.Repeat(" ", indent))
 	buf.WriteString(bold(accent(inline)))
 	buf.WriteString("\n")
-	// Level-1 headings get an accent underline; deeper levels rely on
+	// Level-1 headings get an accent underline; deepzora levels rely on
 	// bold+colour alone so the hierarchy reads at a glance without piling
 	// on visual weight on every "###" in a long response.
 	if n.Level == 1 {

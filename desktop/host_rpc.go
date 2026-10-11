@@ -22,10 +22,10 @@ import (
 	"syscall"
 	"time"
 
-	"deeper/desktop/internal/hostrpc"
-	"deeper/desktop/internal/instanceidentity"
-	"deeper/internal/config"
-	"deeper/internal/extension/rpcwire"
+	"deepzora/desktop/internal/hostrpc"
+	"deepzora/desktop/internal/instanceidentity"
+	"deepzora/internal/config"
+	"deepzora/internal/extension/rpcwire"
 )
 
 const (
@@ -297,7 +297,7 @@ func hostIdentity() hostrpc.Identity {
 		Version: version,
 		Channel: channel,
 		Commit:  buildCommit(),
-		Home:    instanceidentity.AccessHome(config.DeeperHomeDir()),
+		Home:    instanceidentity.AccessHome(config.DeepzoraHomeDir()),
 	}
 }
 

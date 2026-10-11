@@ -3,8 +3,8 @@ package transcript
 import (
 	"slices"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
 )
 
 func (p *Projection) PersistenceFailed() {

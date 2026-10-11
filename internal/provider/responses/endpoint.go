@@ -3,7 +3,7 @@ package responses
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // resolveEndpoints returns the trimmed base URL and the URL requests POST to.

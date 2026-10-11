@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 // TestGoalStateWritesAreConcurrencySafe hammers goal-state persistence from many

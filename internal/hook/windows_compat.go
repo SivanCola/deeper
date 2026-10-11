@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/sandbox"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/sandbox"
 )
 
 var windowsHookBash struct {

@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/command"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/session"
-	"deeper/internal/skill"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/command"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
+	"deepzora/internal/skill"
 )
 
 type SessionDraftSettings struct {

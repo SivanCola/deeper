@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/attachment"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/attachment"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/sessioncontent"
 )
 
 // SetTitle updates mutable session metadata through the canonical event log.

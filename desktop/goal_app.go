@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func (a *App) SetGoal(goal string) error { return a.SetGoalForTab("", goal) }

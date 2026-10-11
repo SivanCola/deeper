@@ -3,7 +3,7 @@ package skill
 import (
 	"strings"
 
-	"deeper/internal/textutil"
+	"deepzora/internal/textutil"
 )
 
 // IndexMaxChars caps the session-context skills catalog; bodies never enter it.

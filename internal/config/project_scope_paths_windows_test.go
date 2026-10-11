@@ -28,11 +28,11 @@ func TestProjectWindowsJunctionAndUNC(t *testing.T) {
 		t.Fatal("external grant did not cover junction target")
 	}
 	t.Run("UNC", func(t *testing.T) {
-		unc := os.Getenv("DEEPER_TEST_UNC_ROOT")
+		unc := os.Getenv("DEEPZORA_TEST_UNC_ROOT")
 		if unc == "" {
-			t.Skip("set DEEPER_TEST_UNC_ROOT to a writable Windows share for native UNC evidence")
+			t.Skip("set DEEPZORA_TEST_UNC_ROOT to a writable Windows share for native UNC evidence")
 		}
-		share, err := os.MkdirTemp(unc, "deeper-diagnostics-")
+		share, err := os.MkdirTemp(unc, "deepzora-diagnostics-")
 		if err != nil {
 			t.Fatal(err)
 		}

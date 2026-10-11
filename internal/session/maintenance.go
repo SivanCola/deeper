@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
 )
 
 // PurgeWithTombstone keeps directory ownership across writer-lock release and
@@ -35,7 +36,7 @@ func (p *FilesystemPersistence) purgeWithTombstone(ctx context.Context, id strin
 	defer releaseDirectory()
 	staged := filepath.Join(p.Root, ".purging", id)
 	receipt := staged + ".receipt"
-	proof := "deeper-session-purge-v1\n" + id + "\n"
+	proof := "deepzora-session-purge-v1\n" + id + "\n"
 	if err := validatePurgeDirectories(p.Root, source, staged, receipt, proof); err != nil {
 		return err
 	}
@@ -126,7 +127,10 @@ func validatePurgeDirectories(root, source, staged, receipt, proof string) error
 			return errors.New("unsafe session purge receipt")
 		}
 		body, err := os.ReadFile(receipt)
-		if err != nil || string(body) != proof {
+		// Only the former brand prefix is interchangeable; the session ID and
+		// complete receipt must still match before deleting staged content.
+		legacyProof := "deeper-session-purge-v1\n" + strings.TrimPrefix(proof, "deepzora-session-purge-v1\n")
+		if err != nil || (string(body) != proof && string(body) != legacyProof) {
 			return errors.New("session purge receipt mismatch")
 		}
 	} else if !os.IsNotExist(err) {

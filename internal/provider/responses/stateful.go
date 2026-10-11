@@ -1,6 +1,6 @@
 package responses
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 func (c *client) canUseStatefulContinuation(messages []provider.Message, previousID, expectedDigest string) bool {
 	if c.mode != "stateful" || previousID == "" || len(messages) == 0 {

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // Config is frozen by boot and shared by independent per-session services.

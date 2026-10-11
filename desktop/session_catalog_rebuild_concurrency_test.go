@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/config"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestConcurrentRebuildSessionCatalogCallersShareFailure(t *testing.T) {

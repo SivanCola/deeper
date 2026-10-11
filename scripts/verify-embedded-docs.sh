@@ -27,27 +27,27 @@ if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/deeper-docs-verify.XXXXXX")"
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-docs-verify.XXXXXX")"
 cleanup() {
 	case "$tmp_dir" in
-	*/deeper-docs-verify.*) rm -rf -- "$tmp_dir" ;;
+	*/deepzora-docs-verify.*) rm -rf -- "$tmp_dir" ;;
 	*) echo "refusing to clean unexpected docs verification directory: $tmp_dir" >&2 ;;
 	esac
 }
 trap cleanup EXIT
 
-binary="$tmp_dir/deeper"
+binary="$tmp_dir/deepzora"
 build_time_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 git_commit="$(printf '%s' "$revision" | cut -c1-12)"
-ldflags="-s -w -X main.version=$version -X main.gitCommit=$git_commit -X main.buildTimeUTC=$build_time_utc -X deeper/internal/productdocs.linkedVersion=$version -X deeper/internal/productdocs.linkedRevision=$revision"
+ldflags="-s -w -X main.version=$version -X main.gitCommit=$git_commit -X main.buildTimeUTC=$build_time_utc -X deepzora/internal/productdocs.linkedVersion=$version -X deepzora/internal/productdocs.linkedRevision=$revision"
 (
 	cd "$repo_root"
-	CGO_ENABLED=0 go build -trimpath -ldflags="$ldflags" -o "$binary" ./cmd/deeper
+	CGO_ENABLED=0 go build -trimpath -ldflags="$ldflags" -o "$binary" ./cmd/deepzora
 )
 
-mkdir -p "$tmp_dir/deeper-home"
+mkdir -p "$tmp_dir/deepzora-home"
 manifest="$(
-	DEEPER_HOME="$tmp_dir/deeper-home" "$binary" docs-manifest \
+	DEEPZORA_HOME="$tmp_dir/deepzora-home" "$binary" docs-manifest \
 		--verify-source "$repo_root" \
 		--expect-version "$version" \
 		--expect-revision "$revision"

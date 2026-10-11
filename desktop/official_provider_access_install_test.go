@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestAddOfficialProviderAccessUsesDesktopLanguagePricing(t *testing.T) {

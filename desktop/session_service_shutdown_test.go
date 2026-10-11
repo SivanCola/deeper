@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func TestShutdownReleasesCachedSessionOwner(t *testing.T) {

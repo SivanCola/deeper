@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 // TestWrapConfinedCommandFailsClosedWhenBackendUnavailable pins the fail-closed

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/capability"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 const maxInspectBytes = 16 << 10

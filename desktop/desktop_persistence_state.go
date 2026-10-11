@@ -5,10 +5,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/sessionui"
-	"deeper/internal/config"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/sessionui"
+	"deepzora/internal/config"
 )
 
 // desktopPersistenceState groups process-lifetime stores and their recovery

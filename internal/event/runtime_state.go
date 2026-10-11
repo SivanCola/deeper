@@ -1,8 +1,8 @@
 package event
 
 import (
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/nilutil"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/nilutil"
 )
 
 // Todo is the v2 execution protocol's complete current-turn todo item. It is

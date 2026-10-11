@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/internal/installlayout"
+	"deepzora/internal/installlayout"
 )
 
 const (
@@ -225,7 +225,7 @@ func shortcutCandidates(installRoot string) ([]string, error) {
 		seen[key] = struct{}{}
 		paths = append(paths, path)
 	}
-	addDeeperLinks := func(dir string) error {
+	addDeepzoraLinks := func(dir string) error {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -234,16 +234,16 @@ func shortcutCandidates(installRoot string) ([]string, error) {
 			return err
 		}
 		for _, entry := range entries {
-			if !entry.IsDir() && deeperShortcutName(entry.Name()) {
+			if !entry.IsDir() && deepzoraShortcutName(entry.Name()) {
 				add(filepath.Join(dir, entry.Name()))
 			}
 		}
 		return nil
 	}
 
-	add(filepath.Join(installRoot, "Deeper.lnk"))
+	add(filepath.Join(installRoot, "Deepzora.lnk"))
 	var resultErr error
-	resultErr = errors.Join(resultErr, addDeeperLinks(installRoot))
+	resultErr = errors.Join(resultErr, addDeepzoraLinks(installRoot))
 	for _, folderID := range []*windows.KNOWNFOLDERID{
 		windows.FOLDERID_Desktop, windows.FOLDERID_Programs,
 		windows.FOLDERID_PublicDesktop, windows.FOLDERID_CommonPrograms,
@@ -253,9 +253,9 @@ func shortcutCandidates(installRoot string) ([]string, error) {
 			resultErr = errors.Join(resultErr, err)
 			continue
 		}
-		resultErr = errors.Join(resultErr, addDeeperLinks(folder))
+		resultErr = errors.Join(resultErr, addDeepzoraLinks(folder))
 		if folderID == windows.FOLDERID_Programs || folderID == windows.FOLDERID_CommonPrograms {
-			resultErr = errors.Join(resultErr, addDeeperLinks(filepath.Join(folder, "Deeper")))
+			resultErr = errors.Join(resultErr, addDeepzoraLinks(filepath.Join(folder, "Deepzora")))
 		}
 	}
 	roaming, err := knownFolderPath(windows.FOLDERID_RoamingAppData, windows.KF_FLAG_DEFAULT)
@@ -263,15 +263,15 @@ func shortcutCandidates(installRoot string) ([]string, error) {
 		resultErr = errors.Join(resultErr, err)
 	} else {
 		pinned := filepath.Join(roaming, "Microsoft", "Internet Explorer", "Quick Launch", "User Pinned", "TaskBar")
-		resultErr = errors.Join(resultErr, addDeeperLinks(pinned))
+		resultErr = errors.Join(resultErr, addDeepzoraLinks(pinned))
 	}
 	return paths, resultErr
 }
 
-func deeperShortcutName(path string) bool {
+func deepzoraShortcutName(path string) bool {
 	name := filepath.Base(strings.TrimSpace(path))
 	return strings.EqualFold(filepath.Ext(name), ".lnk") &&
-		strings.HasPrefix(strings.ToLower(strings.TrimSuffix(name, filepath.Ext(name))), "deeper")
+		strings.HasPrefix(strings.ToLower(strings.TrimSuffix(name, filepath.Ext(name))), "deepzora")
 }
 
 func repairOwnedShortcut(path, installRoot string) (bool, error) {

@@ -1,8 +1,8 @@
 package control
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 	"strings"
 	"time"
 )

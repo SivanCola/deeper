@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func TestParseCodexSuperpowersManifest(t *testing.T) {
@@ -49,7 +49,7 @@ func TestParseCodexSuperpowersManifest(t *testing.T) {
 
 func TestParseDirDecodesGB18030Manifest(t *testing.T) {
 	root := t.TempDir()
-	manifest := `{"apiVersion":"deeper.io/plugin/v2","name":"cn-plugin","version":"1.0.0","description":"中文插件"}`
+	manifest := `{"apiVersion":"deepzora.com/plugin/v2","name":"cn-plugin","version":"1.0.0","description":"中文插件"}`
 	path := filepath.Join(root, NativeManifest)
 	if err := os.WriteFile(path, fileencoding.MustEncode(manifest, fileencoding.GB18030), 0o644); err != nil {
 		t.Fatal(err)
@@ -175,7 +175,7 @@ func TestParseCodexWithoutSessionStartHookDoesNotWarn(t *testing.T) {
 func TestRejectsEscapingSkillPath(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, filepath.Join(root, NativeManifest), `{
-	  "apiVersion": "deeper.io/plugin/v2",
+	  "apiVersion": "deepzora.com/plugin/v2",
 	  "name": "bad",
 	  "skills": "../skills"
 	}`)
@@ -587,7 +587,7 @@ func TestParseClaudeHooksDoesNotWarnOnMatchersThatCanFire(t *testing.T) {
 			hooksJSON: `{"hooks":{"PreToolUse":[{"matcher":"WebSearch.*","hooks":[{"type":"command","command":"bin/guard"}]}]}}`,
 		},
 		{
-			// A previously-unmapped Deeper tool the fix now supports.
+			// A previously-unmapped Deepzora tool the fix now supports.
 			name:      "run-skill-now-mapped",
 			hooksJSON: `{"hooks":{"PreToolUse":[{"matcher":"Skill","hooks":[{"type":"command","command":"bin/guard"}]}]}}`,
 		},
@@ -740,10 +740,10 @@ func TestParseClaudePluginMapsCommandsDir(t *testing.T) {
 }
 
 // TestNativeManifestCommandsField pins the explicit "commands" declaration in
-// deeper-plugin.json, including path validation.
+// deepzora-plugin.json, including path validation.
 func TestNativeManifestCommandsField(t *testing.T) {
 	root := t.TempDir()
-	writeTestFile(t, filepath.Join(root, NativeManifest), `{"apiVersion":"deeper.io/plugin/v2","name": "native-pack", "commands": ["cmds"]}`)
+	writeTestFile(t, filepath.Join(root, NativeManifest), `{"apiVersion":"deepzora.com/plugin/v2","name": "native-pack", "commands": ["cmds"]}`)
 	writeTestFile(t, filepath.Join(root, "cmds", "ship.md"), "---\ndescription: ship it\n---\nShip $1")
 
 	pkg, _, err := ParseDir(root)
@@ -759,7 +759,7 @@ func TestNativeManifestCommandsField(t *testing.T) {
 	}
 
 	rootBad := t.TempDir()
-	writeTestFile(t, filepath.Join(rootBad, NativeManifest), `{"apiVersion":"deeper.io/plugin/v2","name": "bad-pack", "commands": ["../escape"]}`)
+	writeTestFile(t, filepath.Join(rootBad, NativeManifest), `{"apiVersion":"deepzora.com/plugin/v2","name": "bad-pack", "commands": ["../escape"]}`)
 	if _, _, err := ParseDir(rootBad); err == nil {
 		t.Fatal("ParseDir must reject a commands path escaping the plugin root")
 	}

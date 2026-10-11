@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestModelSettingsChildCreatedAfterSaveInheritsAcceptedRunSnapshot(t *testing.T) {

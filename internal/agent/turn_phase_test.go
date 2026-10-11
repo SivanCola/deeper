@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/capability"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type phaseSink struct {

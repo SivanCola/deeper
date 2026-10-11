@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/evidence"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/store"
+	"deepzora/internal/evidence"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/store"
 )
 
 const (

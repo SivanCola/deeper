@@ -8,17 +8,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/extensioncontract"
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
+	"deepzora/internal/extensioncontract"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
-// ManifestAPIVersionV2 is the only native plugin manifest apiVersion Deeper
+// ManifestAPIVersionV2 is the only native plugin manifest apiVersion Deepzora
 // accepts for install, doctor, and boot. v1 and legacy (no apiVersion) native
 // manifests are rejected by the parser. Legacy pre-extension manifests can be
-// upgraded explicitly, or automatically when they live in Deeper's managed
+// upgraded explicitly, or automatically when they live in Deepzora's managed
 // plugin directory where an atomic backup is safe.
-const ManifestAPIVersionV2 = "deeper.io/plugin/v2"
+const ManifestAPIVersionV2 = "deepzora.com/plugin/v2"
 
 // CapabilityRef is the wire form of a capability in a v2 manifest.
 type CapabilityRef struct {
@@ -61,10 +61,10 @@ func (c CapabilityRef) ToRequirement() extensioncontract.Requirement {
 	}
 }
 
-// checkAPIVersionV2 gates the v2 parser. Only the exact frozen string
-// deeper.io/plugin/v2 is accepted (no v2.0 / v2.1 aliases).
+// checkAPIVersionV2 accepts the current namespace and the exact pre-rename v2
+// identity. Schema versions and path/capability validation remain unchanged.
 func checkAPIVersionV2(v string) error {
-	if v == ManifestAPIVersionV2 {
+	if v == ManifestAPIVersionV2 || v == "deeper.io/plugin/v2" {
 		return nil
 	}
 	return fmt.Errorf("%s: unsupported apiVersion %q: want exact %s", NativeManifest, v, ManifestAPIVersionV2)
@@ -177,22 +177,23 @@ func parseNativeV2(b []byte, root, apiVersion string) (Package, []string, error)
 	}
 
 	manifest := Manifest{
-		APIVersion:  ManifestAPIVersionV2,
-		Name:        strings.TrimSpace(raw.Name),
-		Version:     strings.TrimSpace(raw.Version),
-		Description: strings.TrimSpace(raw.Description),
-		Homepage:    strings.TrimSpace(raw.Homepage),
-		Repository:  strings.TrimSpace(raw.Repository),
-		Skills:      unionPathLists(legacySkills, contribSkills),
-		Commands:    unionPathLists(legacyCommands, contribCommands),
-		Agents:      contribAgents,
-		Prompts:     contribPrompts,
-		Themes:      contribThemes,
-		Hooks:       hooks,
-		MCPServers:  mcpServers,
-		Runtime:     runtime,
-		Requires:    requires,
-		Provides:    provides,
+		LegacyIdentity: apiVersion == "deeper.io/plugin/v2",
+		APIVersion:     ManifestAPIVersionV2,
+		Name:           strings.TrimSpace(raw.Name),
+		Version:        strings.TrimSpace(raw.Version),
+		Description:    strings.TrimSpace(raw.Description),
+		Homepage:       strings.TrimSpace(raw.Homepage),
+		Repository:     strings.TrimSpace(raw.Repository),
+		Skills:         unionPathLists(legacySkills, contribSkills),
+		Commands:       unionPathLists(legacyCommands, contribCommands),
+		Agents:         contribAgents,
+		Prompts:        contribPrompts,
+		Themes:         contribThemes,
+		Hooks:          hooks,
+		MCPServers:     mcpServers,
+		Runtime:        runtime,
+		Requires:       requires,
+		Provides:       provides,
 	}
 	if err := validateManifest(root, &manifest); err != nil {
 		return Package{}, nil, err
@@ -206,7 +207,7 @@ func parseNativeV2(b []byte, root, apiVersion string) (Package, []string, error)
 	if err != nil {
 		return Package{}, warnings, err
 	}
-	pkg := Package{Root: root, ManifestKind: "deeper", Manifest: manifest}
+	pkg := Package{Root: root, ManifestKind: "deepzora", Manifest: manifest}
 	pkg.Compatibility = compatibilityFor(pkg, nil)
 	return pkg, warnings, nil
 }
@@ -279,8 +280,8 @@ func (p Package) ProvidesCapabilities() []extensioncontract.Capability {
 // manifest document. Dependencies that cannot be inferred are returned as
 // errors rather than invented.
 func MigrateManifestToV2(pkg Package) ([]byte, error) {
-	if pkg.ManifestKind != "deeper" && pkg.ManifestKind != "" {
-		return nil, fmt.Errorf("migrate: only native deeper manifests can be migrated (got %s)", pkg.ManifestKind)
+	if pkg.ManifestKind != "deepzora" && pkg.ManifestKind != "" {
+		return nil, fmt.Errorf("migrate: only native deepzora manifests can be migrated (got %s)", pkg.ManifestKind)
 	}
 	if apiVersion := strings.TrimSpace(pkg.Manifest.APIVersion); apiVersion != "" {
 		return nil, fmt.Errorf("migrate: only pre-extension manifests without apiVersion can be migrated (got %s)", apiVersion)
@@ -366,7 +367,7 @@ func MigrateManifestToV2(pkg Package) ([]byte, error) {
 }
 
 // WriteMigratedManifestV2 writes a v2 manifest, keeping a .bak backup of the
-// previous deeper-plugin.json when present.
+// previous deepzora-plugin.json when present.
 func WriteMigratedManifestV2(root string, data []byte) error {
 	root = filepath.Clean(root)
 	path := filepath.Join(root, NativeManifest)
@@ -398,7 +399,7 @@ func ParseNativeForMigrate(root string) (Package, []string, error) {
 	if apiVersion == "" {
 		return parseNativeLegacy(b, root)
 	}
-	if apiVersion == ManifestAPIVersionV2 {
+	if apiVersion == ManifestAPIVersionV2 || apiVersion == "deeper.io/plugin/v2" {
 		return Package{}, nil, fmt.Errorf("%s: already uses %s; migration only supports pre-extension manifests without apiVersion", NativeManifest, ManifestAPIVersionV2)
 	}
 	return Package{}, nil, rejectNonV2Native(apiVersion)
@@ -413,8 +414,11 @@ func parseNative(path, root string) (Package, []string, error) {
 	if err != nil {
 		return Package{}, nil, err
 	}
-	if apiVersion != ManifestAPIVersionV2 {
+	if apiVersion == "" {
 		return Package{}, nil, rejectNonV2Native(apiVersion)
+	}
+	if err := checkAPIVersionV2(apiVersion); err != nil {
+		return Package{}, nil, err
 	}
 	return parseNativeV2(b, root, apiVersion)
 }

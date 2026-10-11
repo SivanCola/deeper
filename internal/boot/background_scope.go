@@ -1,12 +1,12 @@
 package boot
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/workspacelease"
 	"fmt"
 	"time"
 )

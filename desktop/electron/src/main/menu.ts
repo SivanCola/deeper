@@ -20,9 +20,9 @@ export function applicationMenuTemplate(deps: MenuDeps): MenuItemConstructorOpti
       submenu: [
         { label: "Settings", accelerator: "CmdOrCtrl+,", click: () => deps.openSettings() },
         { label: "Toggle Developer Tools", accelerator: "CmdOrCtrl+I", click: () => deps.toggleDevTools() },
-        { label: "Show Deeper", click: () => deps.showWindow() },
+        { label: "Show Deepzora", click: () => deps.showWindow() },
         { type: "separator" },
-        { label: "Quit Deeper", accelerator: "CmdOrCtrl+Q", click: () => deps.quit() },
+        { label: "Quit Deepzora", accelerator: "CmdOrCtrl+Q", click: () => deps.quit() },
       ],
     },
     { role: "editMenu" },

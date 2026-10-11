@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 const (
@@ -498,7 +498,7 @@ func artifactDir(configured string) (string, bool, error) {
 		}
 		return dir, false, nil
 	}
-	dir, err := os.MkdirTemp("", "deeper-browser-")
+	dir, err := os.MkdirTemp("", "deepzora-browser-")
 	if err != nil {
 		return "", false, fmt.Errorf("cdp: artifact dir: %w", err)
 	}

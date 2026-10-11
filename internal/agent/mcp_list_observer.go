@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 type mcpListObservation struct {

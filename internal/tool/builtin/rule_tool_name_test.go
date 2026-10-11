@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unicode"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // TestNoBuiltinToolNameHasWhitespace pins the invariant that lets

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/store"
 )
 
 func TestRestoreTrashedSessionFileRejectsActiveInboxConflict(t *testing.T) {

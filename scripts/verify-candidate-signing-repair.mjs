@@ -50,7 +50,7 @@ export function verifyCandidateSigningRepair(candidateSHA, expectedFingerprint) 
     throw new Error("Desktop build or publication changed after candidate sealing");
   }
 
-  const temporary = mkdtempSync(path.join(tmpdir(), "deeper-signing-candidate-"));
+  const temporary = mkdtempSync(path.join(tmpdir(), "deepzora-signing-candidate-"));
   const checkout = path.join(temporary, "candidate");
   try {
     run("git", ["worktree", "add", "--detach", checkout, candidateSHA]);

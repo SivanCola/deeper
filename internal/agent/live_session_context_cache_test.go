@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	"deeper/internal/sessioncontext"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/sessioncontext"
+	"deepzora/internal/tool"
 )
 
 type liveSessionContextProvider struct {
@@ -30,8 +30,8 @@ type liveSessionContextResult struct {
 }
 
 func TestLiveSessionContextFirstTurnMatrix(t *testing.T) {
-	if os.Getenv("DEEPER_LIVE_SESSION_CONTEXT_MATRIX") == "" {
-		t.Skip("set DEEPER_LIVE_SESSION_CONTEXT_MATRIX=1 to run the paid live matrix")
+	if os.Getenv("DEEPZORA_LIVE_SESSION_CONTEXT_MATRIX") == "" {
+		t.Skip("set DEEPZORA_LIVE_SESSION_CONTEXT_MATRIX=1 to run the paid live matrix")
 	}
 	providers := []liveSessionContextProvider{
 		{name: "deepseek", keyEnv: "DEEPSEEK_API_KEY", kind: "anthropic", baseURL: "https://api.deepseek.com/anthropic", model: "deepseek-v4-flash", extra: map[string]any{"thinking": "disabled", "effort": "disabled"}},

@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/control"
+import "deepzora/internal/control"
 
 type removedSessionRuntime struct {
 	tab           *WorkspaceTab

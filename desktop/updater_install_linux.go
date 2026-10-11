@@ -19,7 +19,7 @@ func dirIsWritable(dir string) bool {
 	if err != nil || !info.IsDir() {
 		return false
 	}
-	f, err := os.CreateTemp(dir, ".deeper-write-test-*")
+	f, err := os.CreateTemp(dir, ".deepzora-write-test-*")
 	if err != nil {
 		return false
 	}
@@ -43,7 +43,7 @@ func resolveExecutablePath() string {
 
 // detectLinuxInstallProfile classifies the running Linux install.
 //
-//	deb      — dpkg owns the absolute executable path as deeper-desktop, and the
+//	deb      — dpkg owns the absolute executable path as deepzora-desktop, and the
 //	           Polkit helper + pkexec are present for authorized upgrades.
 //	portable — not dpkg-managed, install directory is writable (tarball flow).
 //	manual   — system directory not writable, package ownership unclear, or
@@ -58,7 +58,7 @@ func detectLinuxInstallProfile() installProfile {
 		}
 	}
 
-	if isDpkgOwnedDeeper(exe) {
+	if isDpkgOwnedDeepzora(exe) {
 		if linuxDebHelperReady() {
 			return installProfile{
 				Mode:          installModeDeb,
@@ -86,13 +86,13 @@ func detectLinuxInstallProfile() installProfile {
 	return installProfile{
 		Mode:          installModeManual,
 		CanSelfUpdate: false,
-		ManualReason:  "this install is not writable and is not managed by the deeper-desktop package; download the package from the download page",
+		ManualReason:  "this install is not writable and is not managed by the deepzora-desktop package; download the package from the download page",
 	}
 }
 
-// isDpkgOwnedDeeper reports whether absolute path belongs to the deeper-desktop
+// isDpkgOwnedDeepzora reports whether absolute path belongs to the deepzora-desktop
 // package. Uses absolute dpkg-query and requires both package name and path match.
-func isDpkgOwnedDeeper(absPath string) bool {
+func isDpkgOwnedDeepzora(absPath string) bool {
 	if absPath == "" || !filepath.IsAbs(absPath) {
 		return false
 	}
@@ -106,7 +106,7 @@ func isDpkgOwnedDeeper(absPath string) bool {
 	if err := cmd.Run(); err != nil {
 		return false
 	}
-	// Output shape: "deeper-desktop: /usr/bin/deeper-desktop"
+	// Output shape: "deepzora-desktop: /usr/bin/deepzora-desktop"
 	line := strings.TrimSpace(stdout.String())
 	if line == "" {
 		return false

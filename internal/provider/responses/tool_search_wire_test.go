@@ -3,7 +3,7 @@ package responses
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestNativeToolSearchRequiresFirstPartyResponsesAndKnownModel(t *testing.T) {

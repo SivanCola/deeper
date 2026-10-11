@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // hashTestSnapshot builds a snapshot with two tools, an interceptor, and a

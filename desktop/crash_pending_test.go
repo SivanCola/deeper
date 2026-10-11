@@ -202,8 +202,8 @@ func TestFlushPendingCrashDevGuard(t *testing.T) {
 }
 
 func TestFlushPendingCrashIgnoresSafeModeEnv(t *testing.T) {
-	// v1.20+: DEEPER_SAFE_MODE no longer blocks crash flush.
-	t.Setenv("DEEPER_SAFE_MODE", "1")
+	// v1.20+: DEEPZORA_SAFE_MODE no longer blocks crash flush.
+	t.Setenv("DEEPZORA_SAFE_MODE", "1")
 	oldVersion, oldEndpoint := version, crashEndpoint
 	t.Cleanup(func() {
 		version = oldVersion

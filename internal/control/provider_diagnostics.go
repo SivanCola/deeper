@@ -3,7 +3,7 @@ package control
 import (
 	"sync"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type providerDiagnostic struct {

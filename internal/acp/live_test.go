@@ -18,11 +18,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	_ "deeper/internal/provider/openai" // registers the "openai" provider kind
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	_ "deepzora/internal/provider/openai" // registers the "openai" provider kind
+	"deepzora/internal/tool"
 )
 
 type liveFactory struct{ prov provider.Provider }

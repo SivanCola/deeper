@@ -1,9 +1,9 @@
-// Command deeper-desktop is the Deeper desktop service: the Go-side
+// Command deepzora-desktop is the Deepzora desktop service: the Go-side
 // control.Controller and platform integrations, driven by the Electron shell
 // over the desktop host protocol (--host-rpc on stdin/stdout). A plain launch
 // bootstraps the Electron shell installed beside this binary (app/) and exits;
 // the shell then restarts this binary as its --host-rpc service. It lives in a
-// nested module (deeper/desktop) so the desktop build never touches the
+// nested module (deepzora/desktop) so the desktop build never touches the
 // CLI's CGO_ENABLED=0 single-static-binary guarantee, while still importing
 // the same internal/* kernel.
 package main
@@ -13,19 +13,19 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/skill/skillwatch"
-	"deeper/internal/winaclresidue"
+	"deepzora/internal/skill/skillwatch"
+	"deepzora/internal/winaclresidue"
 
 	// Blank imports wire compile-time built-ins into their registries, exactly as
-	// cmd/deeper does — boot.Build resolves providers/tools from these registries.
-	_ "deeper/internal/provider/anthropic"
-	_ "deeper/internal/provider/openai"
-	_ "deeper/internal/provider/responses"
-	_ "deeper/internal/tool/builtin"
+	// cmd/deepzora does — boot.Build resolves providers/tools from these registries.
+	_ "deepzora/internal/provider/anthropic"
+	_ "deepzora/internal/provider/openai"
+	_ "deepzora/internal/provider/responses"
+	_ "deepzora/internal/tool/builtin"
 )
 
 // version is injected at build time via `-ldflags "-X main.version=..."`,
-// mirroring cmd/deeper/main.go. The auto-updater reads it (App.Version) to compare
+// mirroring cmd/deepzora/main.go. The auto-updater reads it (App.Version) to compare
 // against the published manifest; an un-injected dev build stays "dev" and never
 // prompts to update.
 var version = "dev"
@@ -51,12 +51,12 @@ func macSelfUpdateAllowed() bool {
 
 func main() {
 	// Contract generation is a build-time operation. Dispatch it before crash
-	// capture so packaging cannot create files in the operator's Deeper home.
+	// capture so packaging cannot create files in the operator's Deepzora home.
 	if dir, ok := emitContractDir(os.Args[1:]); ok {
 		os.Exit(runEmitContract(dir))
 	}
 	// The shell asks for this before Chromium starts a child; it touches no
-	// Deeper state, so it runs ahead of crash capture and every other mode.
+	// Deepzora state, so it runs ahead of crash capture and every other mode.
 	if app, ok := stripPackageGrantsRequest(os.Args[1:]); ok {
 		os.Exit(stripPackageGrants(os.Stdout, os.Stderr, app))
 	}
@@ -81,6 +81,6 @@ func main() {
 	}
 	exitIfShellBootstrapped(os.Args[1:])
 
-	fmt.Fprintln(os.Stderr, "deeper-desktop: no Electron desktop shell (app/) is installed beside this binary; reinstall Deeper or run the packaged desktop app")
+	fmt.Fprintln(os.Stderr, "deepzora-desktop: no Electron desktop shell (app/) is installed beside this binary; reinstall Deepzora or run the packaged desktop app")
 	os.Exit(1)
 }

@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
-	"deeper/internal/sessioncatalog"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestProjectTreeSnapshotIsReadOnlyAcrossManyUnmigratedWorkspaces(t *testing.T) {

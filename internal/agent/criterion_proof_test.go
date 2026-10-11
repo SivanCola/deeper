@@ -1,9 +1,9 @@
 package agent
 
 import (
-	"deeper/internal/completion"
-	"deeper/internal/evidence"
-	"deeper/internal/plancontract"
+	"deepzora/internal/completion"
+	"deepzora/internal/evidence"
+	"deepzora/internal/plancontract"
 	"encoding/json"
 	"testing"
 )

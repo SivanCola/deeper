@@ -1,8 +1,8 @@
 package control
 
 import (
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
 )
 
 // InheritLifecycleFrom carries same-session lifecycle state across controller

@@ -38,10 +38,10 @@ const LEGACY_STYLE_MAP: Record<string, ThemeStyle> = {
 const DEFAULT_THEME_STYLE: ThemeStyle = "graphite";
 const DEFAULT_THEME: Theme = "auto";
 
-const THEME_KEY = "deeper-theme";
-const STYLE_KEY = "deeper-theme-style";
+const THEME_KEY = "deepzora-theme";
+const STYLE_KEY = "deepzora-theme-style";
 const AUTO_THEME_MEDIA_QUERY = "(prefers-color-scheme: light)";
-const BASE_CODE_READABILITY_STYLE_ID = "deeper-base-code-readability";
+const BASE_CODE_READABILITY_STYLE_ID = "deepzora-base-code-readability";
 let currentTheme: Theme = DEFAULT_THEME;
 let currentThemeStyle: ThemeStyle = DEFAULT_THEME_STYLE;
 let autoThemeMediaQuery: MediaQueryList | null = null;

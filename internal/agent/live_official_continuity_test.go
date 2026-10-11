@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 // Six consecutive user turns reuse real reasoning and tool history. A save/load

@@ -10,14 +10,14 @@ import (
 )
 
 // BuildInfo is the machine- and human-readable build identity for
-// `deeper version` / `deeper --version`. Release builds may only fill
+// `deepzora version` / `deepzora --version`. Release builds may only fill
 // Version; source and CI builds inject the rest via -ldflags so the binary is
 // traceable without shelling out to git.
 //
 // Plan contract (Integration D/E):
-//   - `deeper --version` / `-v` stay single-line: "deeper <version>"
-//   - `deeper version --verbose` prints structured fields
-//   - `deeper version --json` prints a JSON object
+//   - `deepzora --version` / `-v` stay single-line: "deepzora <version>"
+//   - `deepzora version --verbose` prints structured fields
+//   - `deepzora version --json` prints a JSON object
 //   - Fields are limited to version, commit, build time, target (and go runtime);
 //     no config paths and no fixed CST conversion.
 type BuildInfo struct {
@@ -27,7 +27,7 @@ type BuildInfo struct {
 	BuildTarget  string
 }
 
-// versionCommand handles `deeper version [flags]`. When allowFlags is false
+// versionCommand handles `deepzora version [flags]`. When allowFlags is false
 // (top-level --version / -v), output is always the single-line form.
 func versionCommand(args []string, info BuildInfo, allowFlags bool) int {
 	info = info.withDefaults()
@@ -75,18 +75,18 @@ func versionCommand(args []string, info BuildInfo, allowFlags bool) int {
 
 func versionUsage(w *os.File) {
 	fmt.Fprintln(w, `Usage:
-  deeper version
-  deeper version --verbose
-  deeper version --json
-  deeper --version
-  deeper -v
+  deepzora version
+  deepzora version --verbose
+  deepzora version --json
+  deepzora --version
+  deepzora -v
 
---version / -v always print a single line (deeper <version>).
+--version / -v always print a single line (deepzora <version>).
 version --verbose prints build metadata; version --json prints the same as JSON.`)
 }
 
 func (b BuildInfo) singleLine() string {
-	return "deeper " + strings.TrimSpace(b.withDefaults().Version)
+	return "deepzora " + strings.TrimSpace(b.withDefaults().Version)
 }
 
 func (b BuildInfo) verboseText() string {

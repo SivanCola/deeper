@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider/responses"
+	"deepzora/internal/provider/responses"
 )
 
 // Fixtures exercise the real Responses adapter and Agent without a live model.

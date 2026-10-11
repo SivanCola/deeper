@@ -1,4 +1,4 @@
-# Deeper 聊天区一次性重构：交付与验收
+# Deepzora 聊天区一次性重构：交付与验收
 
 [English](CHAT_REFACTOR_ACCEPTANCE.md) · [架构与功能取舍](TRANSCRIPT_ARCHITECTURE.zh-CN.md) · [原始环境](evidence/chat-refactor/environment.json)
 

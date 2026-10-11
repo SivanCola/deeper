@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type policyWindowProvider struct {
@@ -169,7 +169,7 @@ func TestZeroConfigWindowUsesLearned(t *testing.T) {
 }
 
 func TestForkCaptureForwardsContextBudgetPolicy(t *testing.T) {
-	t.Setenv("DEEPER_EXPERIMENT_FORK_CAPTURE_DIR", t.TempDir())
+	t.Setenv("DEEPZORA_EXPERIMENT_FORK_CAPTURE_DIR", t.TempDir())
 	inner := &policyWindowProvider{policy: provider.ContextBudgetPolicy{
 		WindowMode: provider.ContextWindowShared, AutoOutputTokens: 384_000, LimitMode: provider.OutputLimitOmitWhenSafe,
 	}}

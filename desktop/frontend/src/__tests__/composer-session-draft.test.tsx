@@ -266,7 +266,7 @@ console.log("\ncomposer session draft");
     scope: "project",
     workspaceRoot: "/repo",
     topicId: "topic-a",
-    sessionPath: "/repo/.deeper/sessions/topic-a.jsonl",
+    sessionPath: "/repo/.deepzora/sessions/topic-a.jsonl",
   }, "tab-a");
   eq(withPath, withoutPath, "topic draft key stays stable when session path appears");
 }
@@ -981,7 +981,7 @@ console.log("\ncomposer session draft");
   });
   eq(sent.join(","), "session B stays writable", "session B can submit while session A attachment is pending");
   await act(async () => {
-    savePastedFile.resolve("/tmp/deeper/draft.txt");
+    savePastedFile.resolve("/tmp/deepzora/draft.txt");
     await flushTimers();
   });
   eq(contextItemCount(), 0, "async attachment does not land in the switched-to session");
@@ -1280,7 +1280,7 @@ console.log("\ncomposer session draft");
   });
   // Selection labels show a snippet of the selected text
   ok(sent[0]?.display.includes("[Chat:") && sent[0]?.display.includes("[Code: util.ts →") && sent[0]?.display.includes("[Terminal:"), "display includes typed selection labels with text snippets");
-  ok(sent[0]?.submit.includes("<deeper-selected-chat-context>") === true, "submit appends the selected text context block");
+  ok(sent[0]?.submit.includes("<deepzora-selected-chat-context>") === true, "submit appends the selected text context block");
   ok(sent[0]?.submit.includes("\"source\":\"terminal\"") === true, "submit marks terminal selections in the JSON context");
   eq(sent[0]?.submit.includes("--- Begin [Chat:"), false, "submit does not duplicate selected text in display-only marker blocks");
   eq(sent[0]?.submit.split("selected assistant response").length - 1, 1, "selected chat text appears once in provider-visible submit bytes");

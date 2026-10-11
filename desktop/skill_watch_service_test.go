@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/skill/skillwatch"
 )
 
 // The host owns one watcher for its whole lifetime: a second service would be a

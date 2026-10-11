@@ -3,9 +3,9 @@ package control
 import (
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioninbox"
 )
 
 // goalUsageTee wraps the controller's event sink and attributes billable usage

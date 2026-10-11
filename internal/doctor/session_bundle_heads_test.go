@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestWriteSessionBundleListsSessionLogHeads(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := filepath.Join(home, "projects", "workspace", "sessions")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func TestWriteSessionBundleListsSessionLogHeads(t *testing.T) {
 		t.Fatalf("manifest JSON: %v", err)
 	}
 	if strings.Contains(string(files["manifest.json"]), home) {
-		t.Fatalf("manifest leaked DEEPER_HOME path:\n%s", files["manifest.json"])
+		t.Fatalf("manifest leaked DEEPZORA_HOME path:\n%s", files["manifest.json"])
 	}
 	if len(manifest.Sessions) != 1 {
 		t.Fatalf("manifest sessions = %+v, want the log alone: heads are not chain members", manifest.Sessions)

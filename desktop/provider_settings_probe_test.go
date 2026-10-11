@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestProviderDraftProbesDoNotPersistCredentialsOrConfiguration(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	const keyEnv = "DEEPER_DRAFT_PROBE_TEST_KEY"
+	const keyEnv = "DEEPZORA_DRAFT_PROBE_TEST_KEY"
 	if _, err := config.SetCredential(keyEnv, "saved-key"); err != nil {
 		t.Fatal(err)
 	}

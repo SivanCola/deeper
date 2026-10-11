@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // The approved-plan execution turn runs in the planning turn's context, which

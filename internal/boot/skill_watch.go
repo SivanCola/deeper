@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/skill"
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/skill"
+	"deepzora/internal/skill/skillwatch"
 )
 
 // watchSkillsEnabled reports whether production controllers own physical

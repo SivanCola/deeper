@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/extensioncontract"
+	"deepzora/internal/extensioncontract"
 )
 
 func cap(ns, kind, id, ver, hash string) extensioncontract.Capability {
@@ -26,8 +26,8 @@ func req(ns, kind, id, rangeExpr string, optional bool) extensioncontract.Requir
 
 func TestDependencyGraphExactAndRange(t *testing.T) {
 	g, err := BuildDependencyGraph([]ComponentDescriptor{
-		{ID: "host", Provides: []extensioncontract.Capability{cap("deeper", "provider", "deepseek/v4", "1.2.0", "sha256:p")}},
-		{ID: "plug", Requires: []extensioncontract.Requirement{req("deeper", "provider", "deepseek/v4", ">=1.0.0", false)},
+		{ID: "host", Provides: []extensioncontract.Capability{cap("deepzora", "provider", "deepseek/v4", "1.2.0", "sha256:p")}},
+		{ID: "plug", Requires: []extensioncontract.Requirement{req("deepzora", "provider", "deepseek/v4", ">=1.0.0", false)},
 			Provides: []extensioncontract.Capability{cap("plugin/ex", "tool", "t", "1.0.0", "sha256:t")}},
 	})
 	if err != nil {
@@ -45,10 +45,10 @@ func TestDependencyGraphExactAndRange(t *testing.T) {
 
 func TestDependencyGraphSchemaMismatch(t *testing.T) {
 	_, err := BuildDependencyGraph([]ComponentDescriptor{
-		{ID: "host", Provides: []extensioncontract.Capability{cap("deeper", "provider", "p", "1.0.0", "sha256:a")}},
+		{ID: "host", Provides: []extensioncontract.Capability{cap("deepzora", "provider", "p", "1.0.0", "sha256:a")}},
 		{ID: "plug", Requires: []extensioncontract.Requirement{{
 			Capability: extensioncontract.Capability{
-				Key:        extensioncontract.CapabilityKey{Namespace: "deeper", Kind: "provider", ID: "p"},
+				Key:        extensioncontract.CapabilityKey{Namespace: "deepzora", Kind: "provider", ID: "p"},
 				SchemaHash: "sha256:b",
 			},
 			VersionRange: ">=1.0.0",
@@ -61,7 +61,7 @@ func TestDependencyGraphSchemaMismatch(t *testing.T) {
 
 func TestDependencyGraphOptionalMissing(t *testing.T) {
 	g, err := BuildDependencyGraph([]ComponentDescriptor{
-		{ID: "plug", Requires: []extensioncontract.Requirement{req("deeper", "provider", "missing", ">=1.0.0", true)}},
+		{ID: "plug", Requires: []extensioncontract.Requirement{req("deepzora", "provider", "missing", ">=1.0.0", true)}},
 	})
 	if err != nil {
 		t.Fatal(err)

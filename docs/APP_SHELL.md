@@ -20,6 +20,6 @@ remain unchanged.
 
 Use `pnpm check:app-layers`, `pnpm test:all`, `pnpm test:app-lifecycle` and
 `pnpm test:app-browser` to verify these contracts. The independent App memory
-workflow and native Transcript gates remain required qualification. See
+workflow is a manual diagnostic; native Transcript gates remain part of CI. See
 [session ownership](APP_SESSION_OWNERSHIP.md) for the screening protocol and
 the separate pending heap-retainer/control attribution duty.

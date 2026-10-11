@@ -1,7 +1,7 @@
 # Goal 模式：统一运行时生命周期与空闲续轮
 
 Goal 模式按三个职责边界实现：版本化目标状态、模型目标工具、运行时空闲驱动器。它复用
-`deeper.session.linear/v3`、Session Service、Runtime、Activity 和统一顶层回合接纳；没有第二个
+`deepzora.session.linear/v3`、Session Service、Runtime、Activity 和统一顶层回合接纳；没有第二个
 执行循环，也不再用每轮 `continue` 报告维持运行。
 
 ## 状态模型

@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 func TestReleasedJobHandleIsNeverClosedAgain(t *testing.T) {

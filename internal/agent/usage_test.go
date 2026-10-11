@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // renderUsage drives a Usage event through a fresh TextSink (no renderer) and

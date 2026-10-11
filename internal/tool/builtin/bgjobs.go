@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/evidence"
-	"deeper/internal/jobs"
-	"deeper/internal/planmode"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/jobs"
+	"deepzora/internal/planmode"
+	"deepzora/internal/tool"
 )
 
 // job_output / job_kill operate background jobs registered by shell and task

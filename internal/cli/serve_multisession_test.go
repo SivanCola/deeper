@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/remote/bootstrap"
+	"deepzora/internal/remote/bootstrap"
 )
 
 func TestServeCapabilityHelpAdvertisesBootstrapProbeToken(t *testing.T) {

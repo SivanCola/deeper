@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sort"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 // A receipt proves adoption of an exact source revision. The target may have

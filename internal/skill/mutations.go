@@ -9,7 +9,7 @@ import (
 
 	"strings"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 func (s *Store) Create(name string, scope Scope) (string, error) {
@@ -29,7 +29,7 @@ func (s *Store) CreateWithContent(name string, scope Scope, content string) (str
 		if s.projectRoot == "" {
 			return "", fmt.Errorf("project scope requires a workspace — run from a project directory, or use global scope")
 		}
-		root = filepath.Join(s.projectRoot, ".deeper", SkillsDirname)
+		root = filepath.Join(s.projectRoot, ".deepzora", SkillsDirname)
 	default:
 		root = s.globalSkillsRoot()
 	}
@@ -183,10 +183,10 @@ func (s *Store) Delete(name string, scope Scope) error {
 }
 
 func (s *Store) globalSkillsRoot() string {
-	if s.deeperHomeDir != "" {
-		return filepath.Join(s.deeperHomeDir, SkillsDirname)
+	if s.deepzoraHomeDir != "" {
+		return filepath.Join(s.deepzoraHomeDir, SkillsDirname)
 	}
-	return filepath.Join(s.homeDir, ".deeper", SkillsDirname)
+	return filepath.Join(s.homeDir, ".deepzora", SkillsDirname)
 }
 
 // loadBodyWithReferences appends a directory-layout skill's sibling

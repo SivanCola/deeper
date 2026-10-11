@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func (m *chatTUI) runReasoningLanguageCommand(input string) {

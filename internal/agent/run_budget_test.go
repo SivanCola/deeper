@@ -6,10 +6,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestRunBudgetUsesTheCanonicalOccurrenceTimeQuote(t *testing.T) {

@@ -31,6 +31,6 @@ func (e *AuthError) Error() string {
 	if e.KeySource != "" {
 		key += " from " + e.KeySource
 	}
-	return fmt.Sprintf("authentication failed for provider %q (HTTP %d): %s is invalid or expired — update it (in .env or your environment) and retry, or run `deeper setup`",
+	return fmt.Sprintf("authentication failed for provider %q (HTTP %d): %s is invalid or expired — update it (in .env or your environment) and retry, or run `deepzora setup`",
 		ProviderDisplayLabel(e.Provider, e.ProviderDisplayName, e.Protocol), e.Status, key)
 }

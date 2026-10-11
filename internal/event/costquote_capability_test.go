@@ -3,7 +3,7 @@ package event
 import (
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 // capabilityRecorder accepts every optional sink capability and names the ones

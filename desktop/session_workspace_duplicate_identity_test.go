@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
 )
 
 // The repair removes the losing record, while a saved tab can still name it.

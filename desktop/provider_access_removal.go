@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 type providerRemovalPlan struct {

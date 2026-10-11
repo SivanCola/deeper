@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/identitylock"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestHistoricalSourceVersionResumesPublishedBranch(t *testing.T) {

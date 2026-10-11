@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func TestRetiredCleanupDoesNotResumeOrExpandHistoricalBatch(t *testing.T) {

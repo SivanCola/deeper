@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	_ "deeper/internal/provider/responses"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	_ "deepzora/internal/provider/responses"
+	"deepzora/internal/tool"
 )
 
 func TestIndependentSearchWireAndMainReplay(t *testing.T) {
@@ -154,7 +154,7 @@ func TestBuildExposesIndependentSearch(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "deeper.toml", `default_model = "local/m"
+	writeFile(t, dir, "deepzora.toml", `default_model = "local/m"
 [[providers]]
 name = "local"
 kind = "anthropic"

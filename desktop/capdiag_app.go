@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/capdiag"
-	"deeper/internal/plugin"
+	"deepzora/internal/capdiag"
+	"deepzora/internal/plugin"
 )
 
 // CapabilityDiagnostics returns a read-only capability report for the active

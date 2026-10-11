@@ -111,7 +111,7 @@ pnpm exec tsx src/__tests__/topic-removal-controller.test.tsx
 pnpm exec tsx src/__tests__/topic-removal-mock.test.ts
 pnpm exec tsx src/__tests__/session-draft-ownership.test.tsx
 
-# 先构建 frontend/dist、desktop/build/bin/deeper-desktop-service 和 Electron shell
+# 先构建 frontend/dist、desktop/build/bin/deepzora-desktop-service 和 Electron shell
 # desktop/electron
 node scripts/topic-removal-smoke.mjs
 ```
@@ -146,12 +146,12 @@ golangci-lint、repolint 和生成契约一致性检查通过。此次复查未�
 
 PR preflight now covers both generated RPC contracts and the root Desktop
 inventory. Production payload validation uses the Electron shell and a full
-40-character `DEEPER_COMMIT`, matching CI rather than the local short-SHA
+40-character `DEEPZORA_COMMIT`, matching CI rather than the local short-SHA
 default. Topic-removal mock commands share the lazy lifecycle module, keeping
 their implementation off the startup path without changing the budget.
 
 PR 预检同时覆盖 RPC 契约和根模块 Desktop inventory。生产资源验证使用
-Electron shell 和完整 40 位 `DEEPER_COMMIT`，与 CI 输入一致。
+Electron shell 和完整 40 位 `DEEPZORA_COMMIT`，与 CI 输入一致。
 主题移除 mock 接口复用按需加载的生命周期模块，未提高本 PR 的资源预算。
 
 - 已确认源码／集成层旧空主题删除问题，并完成 macOS 开发版原生 UI 回归。

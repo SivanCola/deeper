@@ -1,8 +1,8 @@
 {
-  "name": "deeper-desktop-shell",
+  "name": "deepzora-desktop-shell",
   "private": true,
   "version": "0.0.0",
-  "description": "Electron shell hosting the Deeper Desktop UI over the desktop host protocol",
+  "description": "Electron shell hosting the Deepzora Desktop UI over the desktop host protocol",
   "type": "module",
   "main": "dist/main.cjs",
   "packageManager": "pnpm@10.34.5",

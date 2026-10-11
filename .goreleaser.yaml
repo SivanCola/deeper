@@ -1,29 +1,29 @@
 version: 2
-project_name: deeper
+project_name: deepzora
 
 before:
   hooks:
     - go mod download
 
 builds:
-  - id: deeper
-    main: ./cmd/deeper
-    binary: deeper
+  - id: deepzora
+    main: ./cmd/deepzora
+    binary: deepzora
     env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
     ldflags:
-      # Inject version identity for `deeper version --verbose/--json` (Integration D/E).
+      # Inject version identity for `deepzora version --verbose/--json` (Integration D/E).
       # buildTimeUTC is the goreleaser run time (UTC), not vcs.time.
-      - -s -w -X main.version={{ .Tag }} -X main.gitCommit={{ .ShortCommit }} -X main.buildTimeUTC={{ .Date }} -X deeper/internal/productdocs.linkedVersion={{ .Tag }} -X deeper/internal/productdocs.linkedRevision={{ .Commit }}
+      - -s -w -X main.version={{ .Tag }} -X main.gitCommit={{ .ShortCommit }} -X main.buildTimeUTC={{ .Date }} -X deepzora/internal/productdocs.linkedVersion={{ .Tag }} -X deepzora/internal/productdocs.linkedRevision={{ .Commit }}
     goos: [darwin, linux, windows]
     goarch: [amd64, arm64]
 
 archives:
-  - id: deeper
-    ids: [deeper]
-    name_template: "deeper-{{ .Os }}-{{ .Arch }}"
+  - id: deepzora
+    ids: [deepzora]
+    name_template: "deepzora-{{ .Os }}-{{ .Arch }}"
     formats: [tar.gz]
     format_overrides:
       - goos: windows
@@ -34,8 +34,8 @@ checksum:
   algorithm: sha256
 
 homebrew_casks:
-  - name: deeper
-    ids: [deeper]
+  - name: deepzora
+    ids: [deepzora]
     # Prereleases (including v*-preview.* and v*-rc*) must not update the stable
     # tap; brew has no separate prerelease channel, so uploading either cask
     # would make it the default `brew install`.
@@ -44,13 +44,13 @@ homebrew_casks:
     skip_upload: "auto"
     repository:
       owner: SivanCola
-      name: homebrew-deeper
+      name: homebrew-deepzora
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    homepage: "https://github.com/SivanCola/deeper"
+    homepage: "https://github.com/SivanCola/deepzora"
     description: "Cache-first DeepSeek coding agent for the terminal."
     commit_author:
-      name: deeper
+      name: deepzora
       email: 32437197+SivanCola@users.noreply.github.com
     # The CLI archive is not notarized, so the cask still strips quarantine.
     # GoReleaser's hooks field renders the deprecated `postflight do` stanza;
@@ -58,11 +58,11 @@ homebrew_casks:
     custom_block: |
       postflight_steps do
         if OS.mac?
-          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/deeper"]
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/deepzora"]
         end
       end
 
 release:
   prerelease: auto
   make_latest: false
-  name_template: "Deeper CLI {{ .Tag }}"
+  name_template: "Deepzora CLI {{ .Tag }}"

@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/jobs"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 var deleteSessionBeforeOwnershipLockHookForTest func()
@@ -118,7 +118,7 @@ func (s *Server) legacyTranscriptDeleteRefusalLocked(abs string) (string, int) {
 	if s.sessionMirrored(abs) {
 		// A local runtime is writing this transcript; deleting it here would
 		// pull the file out from under the writer.
-		return "session is taken over by a local Deeper window", http.StatusConflict
+		return "session is taken over by a local Deepzora window", http.StatusConflict
 	}
 	return "", 0
 }

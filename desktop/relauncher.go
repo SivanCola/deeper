@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/installlayout"
-	"deeper/internal/proc"
+	"deepzora/internal/installlayout"
+	"deepzora/internal/proc"
 )
 
 // relaunchThroughLauncher starts the permanent thin launcher (or the active

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func TestWorkspacePlaceholderRuntimeIdentity(t *testing.T) {

@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/fileops"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // Only display-relevant head state is retained. Message bodies and execution

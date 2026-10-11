@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // Ensures older clients still see cost/currency aliases while new clients get costQuote.

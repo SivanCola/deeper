@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func TestSessionMachineListIsStableAndRedacted(t *testing.T) {

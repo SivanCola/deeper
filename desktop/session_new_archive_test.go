@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func TestNewBlankSessionCanBeArchived(t *testing.T) {

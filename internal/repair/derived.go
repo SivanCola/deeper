@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func RebuildDerivedState(target string) ([]string, error) {
@@ -78,7 +78,7 @@ func rebuildDerivedStateBoundUnlocked(
 		if err := verifyRepairPlanFileState(path, expectedStates); err != nil {
 			return applied, err
 		}
-		quarantine := path + ".deeper-rebuild-" + stamp
+		quarantine := path + ".deepzora-rebuild-" + stamp
 		changeIndex := len(tx.Changes)
 		tx.Changes = append(tx.Changes, preparedRepairChangeForPrevious("derived:"+name, path, quarantine))
 		if err := persistPreparedRepairTransaction(tx); err != nil {
@@ -150,7 +150,7 @@ func derivedStateTargetPaths(target string) ([]string, error) {
 
 func derivedStatePaths() map[string]string {
 	paths := map[string]string{}
-	if root := config.DeeperHomeDir(); root != "" {
+	if root := config.DeepzoraHomeDir(); root != "" {
 		paths["tabs"] = filepath.Join(root, "desktop-tabs.json")
 		paths["projects"] = filepath.Join(root, "desktop-projects.json")
 	}

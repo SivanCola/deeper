@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/sandbox"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/sandbox"
 )
 
 func TestWindowsWorkspaceWriteBackgroundHTTPJobLifecycle(t *testing.T) {

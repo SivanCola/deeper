@@ -3,7 +3,7 @@ package evidence
 import (
 	"encoding/json"
 
-	"deeper/internal/shellsafe"
+	"deepzora/internal/shellsafe"
 )
 
 // ToolEffects projects shell effects onto policy and evidence boundaries.

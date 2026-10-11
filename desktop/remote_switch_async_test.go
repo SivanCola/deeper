@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // OpenRemoteProjectTab adopts the clicked identity immediately; the Serve

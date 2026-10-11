@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func TestResolveIn(t *testing.T) {
@@ -181,7 +181,7 @@ func TestWorkspaceToolSchemasStableAcrossRoots(t *testing.T) {
 	}
 
 	resolver := NewPathResolver()
-	resolver.RegisterReadRoot("__deeper_external_folder/schema/root", t.TempDir())
+	resolver.RegisterReadRoot("__deepzora_external_folder/schema/root", t.TempDir())
 	withResolver := workspaceSchemasJSONWithResolver(t, firstRoot, resolver)
 	if first != withResolver {
 		t.Fatalf("workspace tool schemas should not depend on external read roots:\nfirst=%s\nwith=%s", first, withResolver)
@@ -213,7 +213,7 @@ func TestWorkspaceReadToolsResolveExternalReadRoots(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	token := "__deeper_external_folder/abc123/External"
+	token := "__deepzora_external_folder/abc123/External"
 	resolver := NewPathResolver()
 	resolver.RegisterReadRoot(token, external)
 	tools := byName(Workspace{Dir: workspace, ReadPaths: resolver}.Tools("read_file", "ls", "grep", "glob"))

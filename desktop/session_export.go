@@ -18,10 +18,10 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/control"
-	"deeper/internal/servecontract"
-	"deeper/internal/session"
-	"deeper/internal/sessionexport"
+	"deepzora/internal/control"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
+	"deepzora/internal/sessionexport"
 )
 
 type SessionExportHandle struct {
@@ -132,7 +132,7 @@ func (a *App) BeginSessionExportForTarget(selector SessionSelector, tabID, forma
 			job.path += extension
 		}
 	}
-	job.dir, err = os.MkdirTemp("", "deeper-desktop-export-")
+	job.dir, err = os.MkdirTemp("", "deepzora-desktop-export-")
 	if err != nil {
 		return SessionExportHandle{}, err
 	}
@@ -175,7 +175,7 @@ func (a *App) prepareSessionExport(job *sessionExportJob) error {
 		if resp.StatusCode != http.StatusOK {
 			return errors.New("remote export failed or source changed; upgrade the remote service if the session was switched or taken over")
 		}
-		job.records, err = strconv.Atoi(resp.Header.Get("X-Deeper-Export-Records"))
+		job.records, err = strconv.Atoi(resp.Header.Get("X-Deepzora-Export-Records"))
 		if err != nil || job.records < 0 {
 			return errors.New("remote export record count is invalid")
 		}

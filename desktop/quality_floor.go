@@ -1,10 +1,10 @@
 package main
 
 import (
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/worktree"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/worktree"
 )
 
 // Retired quality-floor compatibility. Old callers and persisted values remain

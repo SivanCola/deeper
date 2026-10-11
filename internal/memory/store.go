@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/frontmatter"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/frontmatter"
 )
 
 // Store is the scoped auto-memory store: project and global directories of
@@ -27,8 +27,8 @@ import (
 // current project or every project, while Type only classifies its contents.
 // List() and Index() merge both directories so every session sees the full set.
 type Store struct {
-	Dir       string // ...deeper/projects/<project directory>/memory
-	GlobalDir string // ...deeper/memory/global (shared across projects)
+	Dir       string // ...deepzora/projects/<project directory>/memory
+	GlobalDir string // ...deepzora/memory/global (shared across projects)
 }
 
 // Type classifies a memory, mirroring the auto-memory taxonomy.
@@ -103,7 +103,7 @@ type ArchivedMemory struct {
 }
 
 // StoreFor resolves the auto-memory directory for a project working dir under
-// Deeper home, e.g. ~/.deeper/projects/-Users-me-proj/memory.
+// Deepzora home, e.g. ~/.deepzora/projects/-Users-me-proj/memory.
 // A "" userDir (config dir unresolvable) yields a zero Store, which all methods
 // treat as a disabled no-op.
 func StoreFor(userDir, cwd string) Store {
@@ -540,7 +540,7 @@ func (s Store) ListAll() []Memory {
 }
 
 // PinnedGuidanceBudgetChars caps the total pinned-body runes session-context
-// carries. Guidance that must always hold belongs in DEEPER.md/AGENTS.md
+// carries. Guidance that must always hold belongs in DEEPZORA.md/AGENTS.md
 // instructions; pinned memory is the bounded middle tier between instructions
 // and retrieval-only facts, and the cap is enforced at write time so the
 // snapshot always equals exactly what the user curated.

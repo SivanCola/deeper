@@ -94,8 +94,8 @@ export function ModelSwitcher({
 
   useEffect(() => {
     const refresh = () => void loadModels();
-    window.addEventListener("deeper:model-catalog-changed", refresh);
-    return () => window.removeEventListener("deeper:model-catalog-changed", refresh);
+    window.addEventListener("deepzora:model-catalog-changed", refresh);
+    return () => window.removeEventListener("deepzora:model-catalog-changed", refresh);
   }, [loadModels]);
 
   useEffect(() => {

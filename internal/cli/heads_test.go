@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func newSchemaTwoChatTUI(t *testing.T) (chatTUI, *control.Controller, *agent.Session, string) {
@@ -59,7 +59,7 @@ func TestBranchAndSwitchCommandsUseIndependentSessions(t *testing.T) {
 }
 
 func TestSessionsDiagnoseCountsSessionLogHeadsAndCleanupLeavesThem(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	dir := t.TempDir()
 	path := filepath.Join(dir, "log.jsonl")
 	s := agent.NewSession("system")

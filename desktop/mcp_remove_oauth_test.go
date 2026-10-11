@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/plugin"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
 )
 
 func TestRemoveMCPServerReconcilesOAuthState(t *testing.T) {
@@ -26,10 +26,10 @@ func TestRemoveMCPServerReconcilesOAuthState(t *testing.T) {
 				}
 			}
 			project := fmt.Sprintf("[[plugins]]\nname = %q\ntype = \"http\"\nurl = %q\n", name, resource)
-			if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			stateDir := plugin.MCPStateDir(config.DeeperHomeDir(), root, name)
+			stateDir := plugin.MCPStateDir(config.DeepzoraHomeDir(), root, name)
 			if err := os.MkdirAll(stateDir, 0o700); err != nil {
 				t.Fatal(err)
 			}
@@ -59,11 +59,11 @@ func TestRemoveMCPServerReconcilesOAuthStateAcrossWorkspaceRuntimes(t *testing.T
 	name, resource := "shared", "https://mcp.example.test/mcp"
 	t.Chdir(activeRoot)
 	project := fmt.Sprintf("[[plugins]]\nname = %q\ntype = \"http\"\nurl = %q\n", name, resource)
-	if err := os.WriteFile(filepath.Join(activeRoot, "deeper.toml"), []byte(project), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(activeRoot, "deepzora.toml"), []byte(project), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for _, root := range []string{activeRoot, otherRoot} {
-		stateDir := plugin.MCPStateDir(config.DeeperHomeDir(), root, name)
+		stateDir := plugin.MCPStateDir(config.DeepzoraHomeDir(), root, name)
 		if err := os.MkdirAll(stateDir, 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -83,7 +83,7 @@ func TestRemoveMCPServerReconcilesOAuthStateAcrossWorkspaceRuntimes(t *testing.T
 		t.Fatal(err)
 	}
 	for _, root := range []string{activeRoot, otherRoot} {
-		statePath := filepath.Join(plugin.MCPStateDir(config.DeeperHomeDir(), root, name), "oauth.json")
+		statePath := filepath.Join(plugin.MCPStateDir(config.DeepzoraHomeDir(), root, name), "oauth.json")
 		if _, err := os.Stat(statePath); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("OAuth state for workspace %q still exists: %v", root, err)
 		}

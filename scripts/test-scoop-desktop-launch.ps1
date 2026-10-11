@@ -7,18 +7,18 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $scoopVersion = "v0.5.3"
-$appName = "deeper-desktop"
+$appName = "deepzora-desktop"
 $appVersion = "0.0.0-ci"
 $activeVersion = "v$appVersion"
-$shortcutName = "Deeper Desktop"
+$shortcutName = "Deepzora Desktop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$workRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("deeper-scoop-launch-" + [guid]::NewGuid().ToString("N"))
+$workRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("deepzora-scoop-launch-" + [guid]::NewGuid().ToString("N"))
 $fixtureRoot = Join-Path $workRoot "fixture"
 $packageRoot = Join-Path $fixtureRoot "package"
 $scoopRoot = Join-Path $workRoot "scoop-root"
 $scoopHome = Join-Path $scoopRoot "apps\scoop\current"
 $manifestPath = Join-Path $fixtureRoot "$appName.json"
-$archivePath = Join-Path $fixtureRoot "deeper-windows-portable.zip"
+$archivePath = Join-Path $fixtureRoot "deepzora-windows-portable.zip"
 $markerPath = Join-Path $workRoot "desktop-launched.json"
 $shortcutPath = Join-Path ([Environment]::GetFolderPath("StartMenu")) "Programs\Scoop Apps\$shortcutName.lnk"
 $server = $null
@@ -62,19 +62,19 @@ try {
     New-Item -ItemType Directory -Force -Path (Join-Path $packageRoot "versions\$activeVersion") | Out-Null
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $scoopHome) | Out-Null
 
-    $launcherPath = Join-Path $packageRoot "deeper-launcher.exe"
+    $launcherPath = Join-Path $packageRoot "deepzora-launcher.exe"
     Push-Location $repoRoot
     try {
         Invoke-Native -FilePath "go" -ArgumentList @(
             "build", "-trimpath", "-ldflags", "-s -w -H windowsgui -X main.version=$appVersion",
-            "-o", $launcherPath, "./cmd/deeper-launcher"
+            "-o", $launcherPath, "./cmd/deepzora-launcher"
         )
     } finally {
         Pop-Location
     }
 
     $fixtureSource = Join-Path $fixtureRoot "desktop-fixture.go"
-    $desktopPath = Join-Path $packageRoot "versions\$activeVersion\deeper-desktop.exe"
+    $desktopPath = Join-Path $packageRoot "versions\$activeVersion\deepzora-desktop.exe"
     Write-Utf8NoBom -Path $fixtureSource -Content @'
 package main
 
@@ -84,7 +84,7 @@ import (
 )
 
 func main() {
-	marker := os.Getenv("DEEPER_SCOOP_MARKER")
+	marker := os.Getenv("DEEPZORA_SCOOP_MARKER")
 	executable, _ := os.Executable()
 	workingDirectory, _ := os.Getwd()
 	payload, _ := json.Marshal(map[string]any{
@@ -144,13 +144,13 @@ func main() {
     Write-Utf8NoBom -Path $manifestPath -Content @"
 {
   "version": "$appVersion",
-  "description": "Deeper Scoop integration fixture",
-  "homepage": "https://github.com/SivanCola/deeper",
+  "description": "Deepzora Scoop integration fixture",
+  "homepage": "https://github.com/SivanCola/deepzora",
   "license": "Apache-2.0",
   "url": "$archiveUrl",
   "hash": "$archiveHash",
   "shortcuts": [
-    ["deeper-launcher.exe", "$shortcutName", "launch --detach"]
+    ["deepzora-launcher.exe", "$shortcutName", "launch --detach"]
   ]
 }
 "@
@@ -160,7 +160,7 @@ func main() {
     )
     $env:SCOOP = $scoopRoot
     $env:SCOOP_CACHE = Join-Path $workRoot "scoop-cache"
-    $env:DEEPER_SCOOP_MARKER = $markerPath
+    $env:DEEPZORA_SCOOP_MARKER = $markerPath
     $scoopCommand = Join-Path $scoopHome "bin\scoop.ps1"
     Invoke-Native -FilePath "powershell.exe" -ArgumentList @(
         "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $scoopCommand,
@@ -178,7 +178,7 @@ func main() {
     }
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($shortcutPath)
-    $expectedTarget = Join-Path $currentPath "deeper-launcher.exe"
+    $expectedTarget = Join-Path $currentPath "deepzora-launcher.exe"
     if (![string]::Equals($shortcut.TargetPath, $expectedTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Unexpected shortcut target. Expected '$expectedTarget', got '$($shortcut.TargetPath)'."
     }
@@ -197,7 +197,7 @@ func main() {
 
     $launch = Get-Content -LiteralPath $markerPath -Raw | ConvertFrom-Json
     $versionPath = Join-Path $scoopRoot "apps\$appName\$appVersion"
-    $expectedDesktop = Join-Path $versionPath "versions\$activeVersion\deeper-desktop.exe"
+    $expectedDesktop = Join-Path $versionPath "versions\$activeVersion\deepzora-desktop.exe"
     if (![string]::Equals($launch.executable, $expectedDesktop, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Unexpected desktop executable. Expected '$expectedDesktop', got '$($launch.executable)'."
     }

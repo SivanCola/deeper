@@ -1,6 +1,6 @@
 package eventwire
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 // ReadStatus is the JSON form of event.ReadStatusPayload.
 type ReadStatus struct {

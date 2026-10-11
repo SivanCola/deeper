@@ -25,7 +25,7 @@ interface PersistedWorkspaceEnvelope {
   projects: Array<{ key: string; state: PersistedWorkspaceState }>;
 }
 
-const STORAGE_KEY = "deeper.workspaceState.v2";
+const STORAGE_KEY = "deepzora.workspaceState.v2";
 const MAX_PERSISTED_PROJECTS = 50;
 const MAX_RECENT_PATHS = 10;
 const workspaceTreeMemory = new Map<string, WorkspaceTreeMemorySnapshot>();

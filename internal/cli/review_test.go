@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestBuildReviewTask(t *testing.T) {
@@ -107,7 +107,7 @@ func TestBuildReviewSubagentRegistryConfinesReaders(t *testing.T) {
 }
 
 // TestBuildReviewSubagentRegistryEnforcesReadOnlySkill pins the CLI path of the
-// review read-only contract: `deeper review` runs the same builtin skill as
+// review read-only contract: `deepzora review` runs the same builtin skill as
 // the in-session review tool, so its bash must enforce the read-only
 // policy instead of trusting the prompt's "stay read-only" promise.
 func TestBuildReviewSubagentRegistryEnforcesReadOnlySkill(t *testing.T) {

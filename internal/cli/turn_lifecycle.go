@@ -3,8 +3,8 @@ package cli
 import (
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 
 	tea "charm.land/bubbletea/v2"
 )

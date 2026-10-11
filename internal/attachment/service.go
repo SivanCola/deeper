@@ -9,7 +9,7 @@ import (
 	"maps"
 	"sync"
 
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 )
 
 // Service validates images and publishes originals into a session content store.

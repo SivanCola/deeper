@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
 )
 
 func TestDoctorCommandPrintsJSON(t *testing.T) {
@@ -35,14 +35,14 @@ func TestRunDispatchesDoctor(t *testing.T) {
 			t.Fatalf("Run doctor rc = %d, want 0", rc)
 		}
 	})
-	if !strings.Contains(out, "deeper dispatch-version doctor") {
+	if !strings.Contains(out, "deepzora dispatch-version doctor") {
 		t.Fatalf("doctor output missing header:\n%s", out)
 	}
 }
 
 func TestDoctorUsesConfiguredLanguage(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Chdir(t.TempDir())
 	previous := i18n.CurrentLanguage()
 	t.Cleanup(func() { i18n.DetectLanguage(previous) })
@@ -61,7 +61,7 @@ func TestDoctorUsesConfiguredLanguage(t *testing.T) {
 
 func TestDoctorSessionsIsReadOnly(t *testing.T) {
 	cache := t.TempDir()
-	t.Setenv("DEEPER_CACHE_HOME", cache)
+	t.Setenv("DEEPZORA_CACHE_HOME", cache)
 	out := captureStdout(t, func() {
 		if rc := doctorCommand([]string{"sessions", "--json"}, "test-version"); rc != 1 {
 			t.Fatalf("doctor sessions rc = %d, want 1 for missing catalog", rc)
@@ -80,8 +80,8 @@ func TestSessionsReindexRebuildsOnlyCatalog(t *testing.T) {
 	cache := t.TempDir()
 	home := t.TempDir()
 	sessions := filepath.Join(home, "sessions")
-	t.Setenv("DEEPER_CACHE_HOME", cache)
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_CACHE_HOME", cache)
+	t.Setenv("DEEPZORA_HOME", home)
 	if err := os.MkdirAll(sessions, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func TestSessionsReindexRebuildsOnlyCatalog(t *testing.T) {
 
 func TestDefaultSessionCatalogTargetsIncludeDesktopProjects(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	projectRoot := filepath.Join(t.TempDir(), "project")
 	projects := `{"projects":[{"root":` + strconv.Quote(projectRoot) + `}]}`
 	if err := os.WriteFile(filepath.Join(home, "desktop-projects.json"), []byte(projects), 0o600); err != nil {
@@ -133,7 +133,7 @@ func TestDefaultSessionCatalogTargetsIncludeDesktopProjects(t *testing.T) {
 
 func TestDoctorSessionCommandWritesBundle(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	sessionDir := filepath.Join(home, "sessions")
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func TestDoctorSessionCommandWritesBundle(t *testing.T) {
 
 func TestDoctorQualityCommandPrintsPublicSafeJSON(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	sessionDir := filepath.Join(home, "sessions")
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -207,7 +207,7 @@ func captureStdout(t *testing.T, fn func()) string {
 
 func TestDoctorSessionCommandOutEqualsForm(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	sessionDir := filepath.Join(home, "sessions")
 	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
 		t.Fatal(err)

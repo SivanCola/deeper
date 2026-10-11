@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRemotePrefsFailedSaveDoesNotPublishCache(t *testing.T) {
@@ -16,7 +16,7 @@ func TestRemotePrefsFailedSaveDoesNotPublishCache(t *testing.T) {
 	if err := os.WriteFile(blocked, []byte("blocked"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("DEEPER_STATE_HOME", blocked)
+	t.Setenv("DEEPZORA_STATE_HOME", blocked)
 
 	if err := setRemoteSessionTitleOverride("box", "~/app", "session", "unsaved"); err == nil {
 		t.Fatal("setRemoteSessionTitleOverride unexpectedly succeeded")
@@ -28,7 +28,7 @@ func TestRemotePrefsFailedSaveDoesNotPublishCache(t *testing.T) {
 
 func TestRemotePrefsMutationPreservesExternalWrites(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("DEEPER_STATE_HOME", root)
+	t.Setenv("DEEPZORA_STATE_HOME", root)
 	if err := setRemoteSessionTitleOverride("box", "~/app", "session-a", "Local title"); err != nil {
 		t.Fatal(err)
 	}

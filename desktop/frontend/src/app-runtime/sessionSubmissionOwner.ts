@@ -58,7 +58,7 @@ async function applyGoal(input: SubmissionInput, goal: string, authority: Sessio
 async function send(input: SubmissionInput, content: Submission, authority: SessionOperationAuthority) {
   authority.checkpoint();
   const source = input.read(input.target);
-  if (!source.ready || source.unavailable) throw Error("deeper_error:inbox_not_submitted " + source.unavailable);
+  if (!source.ready || source.unavailable) throw Error("deepzora_error:inbox_not_submitted " + source.unavailable);
   input.ports.clearUndo(input.target.tabId);
   if (content.submissionId) await input.ports.send(input.target.tabId, content.display, content.submit, content.structured, content.initialGoal, content.submissionId);
   else await input.ports.send(input.target.tabId, content.display, content.submit, content.structured, content.initialGoal);
@@ -84,7 +84,7 @@ export async function executeSubmission(input: SubmissionInput, authority: Sessi
     if (input.read(input.target).ready) await send(input, { ...content, display, submit: submit.trim() }, authority);
     return;
   }
-  if (!source.ready) throw new Error("deeper_error:workspace_starting");
+  if (!source.ready) throw new Error("deepzora_error:workspace_starting");
   if (source.goalDraft) {
 	await send(input, buildInitialGoalSubmission(
 	  { ...content, display, submit }, source.collaboration, source.approval,
@@ -93,7 +93,7 @@ export async function executeSubmission(input: SubmissionInput, authority: Sessi
     input.ports.patchGoal(input.target.tabId, display);
     return;
   }
-  if (!await input.ports.profile(input.target.tabId, false)) throw new Error("deeper_error:inbox_not_submitted — session settings could not be applied");
+  if (!await input.ports.profile(input.target.tabId, false)) throw new Error("deepzora_error:inbox_not_submitted — session settings could not be applied");
   authority.checkpoint();
   await send(input, { ...content, display, submit: submit.trim() }, authority);
 }

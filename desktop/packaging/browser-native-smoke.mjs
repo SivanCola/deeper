@@ -1,6 +1,6 @@
 // Exercise packaged Go -> Electron browser tools -> provider image delivery.
 // The loopback provider is deterministic; this does not test model perception.
-// Usage: node desktop/packaging/browser-native-smoke.mjs <Deeper.app> <evidence-dir>
+// Usage: node desktop/packaging/browser-native-smoke.mjs <Deepzora.app> <evidence-dir>
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
@@ -14,7 +14,7 @@ import { closeAndVerify } from "./smoke-lifecycle.mjs";
 const require = createRequire(new URL("../electron/package.json", import.meta.url));
 const { _electron } = require("playwright");
 const bundle = resolve(process.argv[2]), evidence = resolve(process.argv[3]);
-const home = mkdtempSync(join(tmpdir(), "deeper-browser-packaged-"));
+const home = mkdtempSync(join(tmpdir(), "deepzora-browser-packaged-"));
 const project = join(home, "project");
 mkdirSync(project); mkdirSync(evidence, { recursive: true });
 writeFileSync(join(evidence, "result.json"), JSON.stringify({ completed: false, status: "running" }));
@@ -107,16 +107,16 @@ const server = createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 writeFileSync(join(home, "config.toml"), `default_model = "fixture/vision"\n[desktop]\nprovider_access = ["fixture"]\n[[providers]]\nname = "fixture"\nkind = "openai"\nbase_url = "http://127.0.0.1:${server.address().port}/v1"\nmodels = ["vision"]\nvision_models = ["vision"]\ndefault = "vision"\napi_key_env = "BROWSER_FIXTURE_KEY"\n`);
 try {
-  application = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Deeper"), env: { ...packagedSmokeEnv(process.env, home), BROWSER_FIXTURE_KEY: "loopback-only" }, timeout: 60_000 });
+  application = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Deepzora"), env: { ...packagedSmokeEnv(process.env, home), BROWSER_FIXTURE_KEY: "loopback-only" }, timeout: 60_000 });
   const manifest = JSON.parse(readFileSync(join(bundle, "Contents/Resources/build.json"), "utf8"));
   await waitForSmokeCondition(async () => {
     for (const candidate of application.windows()) {
-      try { if (await candidate.evaluate(() => window.deeperDesktop?.invoke("Version", [])) === manifest.version) { page = candidate; return true; } } catch { /* Splash replacement. */ }
+      try { if (await candidate.evaluate(() => window.deepzoraDesktop?.invoke("Version", [])) === manifest.version) { page = candidate; return true; } } catch { /* Splash replacement. */ }
     }
     return false;
   }, { timeout: 60_000 });
   assert.equal(await application.evaluate(({ app }) => app.isPackaged), true);
-  const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
+  const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deepzoraDesktop.invoke(method, args), { method, args });
   const tab = await invoke("EnsureBlankSurface", ["project", project]);
   await invoke("SetActiveTab", [tab.id]);
   await invoke("SetToolApprovalModeForTab", [tab.id, "yolo"]);

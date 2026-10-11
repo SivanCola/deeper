@@ -37,15 +37,15 @@ const smokeRoots = internalRoots(
   "persistentshell", "proc",
   "lsp", "pathidentity", "projectiondb", "remote", "repair", "sandbox", "sessioncatalog", "sqliteuri", "sysproxy",
   "topicstate", "winaclresidue", "workspacelease",
-).concat("deeper/cmd");
+).concat("deepzora/cmd");
 
 export function selectPackages(packages, group) {
   if (!["full", "smoke", ...isolatedGroups].includes(group)) {
     throw new Error(`Unknown Windows test group: ${group}`);
   }
-  const isolated = pkg => isolatedGroups.some(name => beneath(pkg, `deeper/internal/${name}`));
+  const isolated = pkg => isolatedGroups.some(name => beneath(pkg, `deepzora/internal/${name}`));
   return packages.filter(pkg => {
-    if (isolatedGroups.includes(group)) return beneath(pkg, `deeper/internal/${group}`);
+    if (isolatedGroups.includes(group)) return beneath(pkg, `deepzora/internal/${group}`);
     return !isolated(pkg) && (group === "full" || smokeRoots.some(root => beneath(pkg, root)));
   });
 }

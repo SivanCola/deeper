@@ -9,11 +9,11 @@ import (
 	"net/url"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/servecontract"
-	"deeper/internal/session"
-	"deeper/internal/sessioncontent"
-	"deeper/internal/transcript"
+	"deepzora/internal/control"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncontent"
+	"deepzora/internal/transcript"
 )
 
 type RemoteTranscriptSnapshot struct {
@@ -283,7 +283,7 @@ func (a *App) RemoteSessionOpenForTab(tabID string) (session.SessionOpenView, er
 	supportedRead := tab != nil && tab.capabilities[serveCapabilitySessionReadV2]
 	a.remoteTabMu.Unlock()
 	if !supportedRead {
-		return session.SessionOpenView{}, fmt.Errorf("remote Deeper Serve does not support %s; upgrade the remote service", serveCapabilitySessionReadV2)
+		return session.SessionOpenView{}, fmt.Errorf("remote Deepzora Serve does not support %s; upgrade the remote service", serveCapabilitySessionReadV2)
 	}
 	var view session.SessionOpenView
 	supported, err := a.remoteSessionHistoryRead(tabID, "/session/open", nil, &view, session.HistoryPageMaxBytes+(64<<10))

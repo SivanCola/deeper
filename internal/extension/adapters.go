@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/command"
-	"deeper/internal/hook"
-	"deeper/internal/plugin"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/command"
+	"deepzora/internal/hook"
+	"deepzora/internal/plugin"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // The adapters wrap existing discovery in the Contributor interface. They do

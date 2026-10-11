@@ -1,6 +1,6 @@
 package bot
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 func (s *renderSink) emitApproval(approval event.Approval) {
 	if s.onApproval != nil {

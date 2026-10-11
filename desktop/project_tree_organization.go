@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 	"fmt"
 	"strings"
 	"unicode/utf8"

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 func (r *MCPCapabilityRuntime) syncRegistryInventory(previous, next map[string]mcpRuntimeServer) {

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/packagegrant"
+	"deepzora/internal/packagegrant"
 )
 
 func TestStripPackageGrantsOnlyAnswersForAnApplication(t *testing.T) {
@@ -27,7 +27,7 @@ func TestStripPackageGrantsOnlyAnswersForAnApplication(t *testing.T) {
 // The shell reads this line as structure, so both lists are present even when
 // empty: a null would be a third answer it has to guess about.
 func TestStripPackageGrantsReportsOneLineOfJSON(t *testing.T) {
-	app := filepath.Join(t.TempDir(), "Deeper.exe")
+	app := filepath.Join(t.TempDir(), "Deepzora.exe")
 	if err := os.WriteFile(app, []byte("x"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -51,11 +51,11 @@ func TestStripPackageGrantsReportsOneLineOfJSON(t *testing.T) {
 
 func TestStripPackageGrantsRequestReadsBothSpellings(t *testing.T) {
 	for _, args := range [][]string{
-		{"--strip-package-grants", "--app", `C:\R\app\Deeper.exe`},
-		{"-strip-package-grants", "-app=C:\\R\\app\\Deeper.exe"},
+		{"--strip-package-grants", "--app", `C:\R\app\Deepzora.exe`},
+		{"-strip-package-grants", "-app=C:\\R\\app\\Deepzora.exe"},
 	} {
 		app, ok := stripPackageGrantsRequest(args)
-		if !ok || app != `C:\R\app\Deeper.exe` {
+		if !ok || app != `C:\R\app\Deepzora.exe` {
 			t.Fatalf("%q: app=%q ok=%v", args, app, ok)
 		}
 	}

@@ -17,7 +17,7 @@ import (
 // is logged, not fatal, so a genuine leak stays visible without the flake.
 func robustTempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "deeper-test-*")
+	dir, err := os.MkdirTemp("", "deepzora-test-*")
 	if err != nil {
 		t.Fatalf("robustTempDir: %v", err)
 	}

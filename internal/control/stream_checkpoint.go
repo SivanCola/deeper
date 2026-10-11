@@ -6,10 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // openStreamOutput accumulates the deltas of the stream whose message has not

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/plugin"
+	"deepzora/internal/plugin"
 )
 
 func TestSharedHostMCPRegistrationLifecycle(t *testing.T) {

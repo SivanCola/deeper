@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 // RecordSubagentLifecycle consumes content-free child lifecycle telemetry.
 // ToolResult already carries the live card metadata; this side channel only

@@ -13,7 +13,7 @@ var (
 	runtimeUseRe   = regexp.MustCompile(`\b(?:window\.runtime|runtime|rt)[!?]?\.(EventsOn|EventsOff|BrowserOpenURL|WindowSet[A-Za-z]+|WindowGet[A-Za-z]+|WindowIsMaximised|Clipboard[A-Za-z]+|OnFileDrop[A-Za-z]*)\b`)
 	goBindingRe    = regexp.MustCompile(`window\.go\??\.main\??\.App`)
 	eventsOnRe     = regexp.MustCompile(`(?:EventsOn|events\.on)\(\s*("([^"]+)"|` + "`([^`]+)`" + `)`)
-	draggableRe    = regexp.MustCompile(`--deeper-draggable`)
+	draggableRe    = regexp.MustCompile(`--deepzora-draggable`)
 	dropTargetRe   = regexp.MustCompile(`data-native-drop-target`)
 	frontendGlobRe = regexp.MustCompile(`\.(ts|tsx|css|html)$`)
 )
@@ -90,7 +90,7 @@ func scanFrontend(root string, inv *inventory) error {
 			}
 		}
 		if draggableRe.MatchString(text) {
-			inv.add(entry{Kind: kindCSSMarker, Name: "--deeper-draggable", Location: rel, Class: classKeepBusiness, Owner: "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"})
+			inv.add(entry{Kind: kindCSSMarker, Name: "--deepzora-draggable", Location: rel, Class: classKeepBusiness, Owner: "rewritten to -webkit-app-region by scripts/shell-css.mjs for the Electron bundle"})
 		}
 		if dropTargetRe.MatchString(text) {
 			inv.add(entry{Kind: kindCSSMarker, Name: "data-native-drop-target", Location: rel, Class: classKeepBusiness, Owner: "native.onFilesDropped (HTML5 drop + getPathForFile)"})

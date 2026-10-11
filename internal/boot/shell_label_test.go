@@ -3,7 +3,7 @@ package boot
 import (
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func TestResolvedShellLabelUsesBoundInterpreter(t *testing.T) {

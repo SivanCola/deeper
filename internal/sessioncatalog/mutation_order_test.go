@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestNewerRemovalGenerationSurvivesOlderRecreation(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"net"
 	"os/exec"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/sys/windows"
 )

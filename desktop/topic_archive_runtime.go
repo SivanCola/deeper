@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func (a *App) captureTopicRuntimeBindings(topicID string) []removedSessionRuntime {

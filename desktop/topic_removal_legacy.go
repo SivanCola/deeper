@@ -4,8 +4,8 @@ import (
 	"os"
 	"slices"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 // Old installations may have chat files but no indexed topic metadata. Their

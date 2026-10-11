@@ -1,6 +1,6 @@
 # File observation lifecycle
 
-Deeper protects structured file mutations with one live, host-owned observation of the current source version. It does not measure how much of a file the model read and it does not use receipts, `source_token`, or a whole-file reading debt.
+Deepzora protects structured file mutations with one live, host-owned observation of the current source version. It does not measure how much of a file the model read and it does not use receipts, `source_token`, or a whole-file reading debt.
 
 ## State and lifetime
 
@@ -14,7 +14,7 @@ An edit of an unseen target returns `FS_NOT_OBSERVED`. Creating an unseen or con
 
 Locks are shared by file tools in one host process. Multiple targets are locked in stable order. Symlinks, hard links, and case aliases use normalized path and native identity information. Disk versions include host file identity, size, nanosecond timestamps, change metadata, mode, and other available native fields. A bounded read uses one file handle and compares metadata before and after the window; it does not scan the rest of a large file to compute a hash.
 
-Disk and unsaved-buffer versions are separate. Buffer commits never silently fall back to disk. ACP routes retain source digest rechecks and same-route submission because their current protocol has no atomic conditional write. Local publication checks cannot provide a universal filesystem CAS against an external process that ignores Deeper locks after the final check.
+Disk and unsaved-buffer versions are separate. Buffer commits never silently fall back to disk. ACP routes retain source digest rechecks and same-route submission because their current protocol has no atomic conditional write. Local publication checks cannot provide a universal filesystem CAS against an external process that ignores Deepzora locks after the final check.
 
 `read_file`, `write_file`, `edit_file`, `multi_edit`, `notebook_edit`, `delete_symbol`, `delete_range`, and `move_file` use this contract. A `multi_edit` computes every edit against one original version and advances the observation once. A successful move marks the source absent and observes the destination. Bash, MCP, and external programs neither grant nor consume file observation; their changes are detected by the next structured mutation.
 

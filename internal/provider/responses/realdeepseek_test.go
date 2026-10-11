@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
-// TestRealOpenCodeGoDeepSeekResponsesWebSearch exercises Deeper's stateless
+// TestRealOpenCodeGoDeepSeekResponsesWebSearch exercises Deepzora's stateless
 // Responses request, server-side web search, and replay-item capture against the
 // OpenCode Go DeepSeek Flash route.
 func TestRealOpenCodeGoDeepSeekResponsesWebSearch(t *testing.T) {

@@ -3,7 +3,7 @@ package jobs
 import (
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func TestTaskMutationEvidencePreservesPathsWithoutRisk(t *testing.T) {

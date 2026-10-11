@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/plugin"
+import "deepzora/internal/plugin"
 
 // MCPCapabilityView is one row of the four-layer MCP capability matrix shown
 // in the MCP panel: what this desktop declares and what live sessions

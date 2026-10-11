@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/bot"
+	"deepzora/internal/bot"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 )

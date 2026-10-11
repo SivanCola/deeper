@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 const modelCredentialCommitSchema = 1
@@ -51,7 +51,7 @@ type ModelSettingsReceipt struct {
 }
 
 func modelCredentialTransactionDir() string {
-	home := DeeperHomeDir()
+	home := DeepzoraHomeDir()
 	if strings.TrimSpace(home) == "" {
 		return ""
 	}
@@ -59,7 +59,7 @@ func modelCredentialTransactionDir() string {
 }
 
 func modelSettingsReceiptDir() string {
-	home := DeeperHomeDir()
+	home := DeepzoraHomeDir()
 	if strings.TrimSpace(home) == "" {
 		return ""
 	}
@@ -232,7 +232,7 @@ func (c *Config) StageModelCredentialLocked(value string) (string, error) {
 	if _, err := rand.Read(id[:]); err != nil {
 		return "", err
 	}
-	return c.stageModelCredentialLocked(fmt.Sprintf("DEEPER_CONNECTION_%X_KEY", id), value)
+	return c.stageModelCredentialLocked(fmt.Sprintf("DEEPZORA_CONNECTION_%X_KEY", id), value)
 }
 
 func (c *Config) stageModelCredentialLocked(key, value string) (string, error) {

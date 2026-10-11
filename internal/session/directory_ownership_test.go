@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	filelock "deeper/internal/identitylock"
+	filelock "deepzora/internal/identitylock"
 )
 
 func writerProbeFixture(t *testing.T) string {

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 const (

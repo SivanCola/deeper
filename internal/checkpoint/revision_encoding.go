@@ -1,6 +1,6 @@
 package checkpoint
 
-import fileenc "deeper/internal/fileutil/encoding"
+import fileenc "deepzora/internal/fileutil/encoding"
 
 // encodeRevisionContent re-encodes a v1 text capture for restore, in the
 // encoding it was captured in or else the one the file holds now.

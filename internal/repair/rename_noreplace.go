@@ -1,6 +1,6 @@
 package repair
 
-import "deeper/internal/fileutil"
+import "deepzora/internal/fileutil"
 
 func renameRepairNodeNoReplace(oldPath, newPath string) error {
 	return fileutil.RenameNoReplace(oldPath, newPath)

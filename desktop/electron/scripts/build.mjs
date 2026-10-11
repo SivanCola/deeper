@@ -54,9 +54,9 @@ if (existsSync(contractSource)) {
   }
   writeFileSync(contractTarget, JSON.stringify({ ...contract, digest }) + "\n");
   console.log(`embedded contract ${digest} (${contract.commands.length} commands) -> ${contractTarget}`);
-} else if (process.env.DEEPER_ELECTRON_ALLOW_MISSING_CONTRACT === "1") {
+} else if (process.env.DEEPZORA_ELECTRON_ALLOW_MISSING_CONTRACT === "1") {
   rmSync(contractTarget, { force: true });
-  console.warn(`contract missing at ${contractSource}; continuing without one (DEEPER_ELECTRON_ALLOW_MISSING_CONTRACT=1)`);
+  console.warn(`contract missing at ${contractSource}; continuing without one (DEEPZORA_ELECTRON_ALLOW_MISSING_CONTRACT=1)`);
 } else {
   console.error(`contract missing at ${contractSource}\nrun: cd desktop && go run . -emit-contract frontend/src/generated`);
   process.exit(1);

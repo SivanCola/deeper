@@ -10,7 +10,7 @@ import (
 
 	"github.com/creack/pty"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 type unixPTY struct {

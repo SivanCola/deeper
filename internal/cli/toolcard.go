@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/shellrun"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/shellrun"
+	"deepzora/internal/tool"
 )
 
 // connector is the Claude-style "⎿" gutter that ties a continuation block (tool

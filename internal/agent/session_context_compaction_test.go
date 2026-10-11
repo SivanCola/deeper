@@ -3,8 +3,8 @@ package agent
 import (
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontext"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontext"
 )
 
 func TestCompactionExcludesAllContextsFromSummaryAndKeepsLatestFoldSnapshot(t *testing.T) {

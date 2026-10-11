@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func reconcileDesktopTrashSessionArtifacts(dir, sessionPath, key string) error {

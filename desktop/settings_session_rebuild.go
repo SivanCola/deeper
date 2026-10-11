@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func (a *App) buildLegacySettingReplacement(

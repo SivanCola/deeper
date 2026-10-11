@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
 )
 
 func TestBroadcasterFiltersSessions(t *testing.T) {

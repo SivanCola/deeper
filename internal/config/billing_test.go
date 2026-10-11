@@ -3,8 +3,8 @@ package config
 import (
 	"testing"
 
-	"deeper/internal/billing"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/provider"
 )
 
 func TestDisplayCurrencyIndependentOfListPrices(t *testing.T) {

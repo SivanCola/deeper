@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/netclient"
+	"deepzora/internal/netclient"
 )
 
 func startCONNECTProxy(t *testing.T) string {

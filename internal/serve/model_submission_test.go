@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func TestSubmissionErrorPreservesUnknownDurabilityOutcome(t *testing.T) {

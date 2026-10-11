@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/historycatalog"
-	"deeper/internal/provider"
+	"deepzora/internal/historycatalog"
+	"deepzora/internal/provider"
 )
 
 func TestHistorySurfacesExcludePinnedContextRevisions(t *testing.T) {

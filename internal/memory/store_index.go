@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 // readIndexIn treats a missing index as empty, but does not hide other read errors.

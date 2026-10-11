@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 type ConfigCheck struct {
@@ -87,9 +87,9 @@ func inspectAndRepairConfigUnlocked(opts ConfigOptions) (ConfigReport, error) {
 		opts.Now = time.Now
 	}
 	global := config.UserConfigPath()
-	project := filepath.Join(opts.Root, "deeper.toml")
+	project := filepath.Join(opts.Root, "deepzora.toml")
 	if opts.Root == "" || opts.Root == "." {
-		project = "deeper.toml"
+		project = "deepzora.toml"
 	}
 	paths := []struct{ scope, path string }{{"global", global}, {"project", project}}
 	report := ConfigReport{Checks: make([]ConfigCheck, 0, len(paths)), Applied: []string{}}
@@ -123,7 +123,7 @@ func inspectAndRepairConfigUnlocked(opts ConfigOptions) (ConfigReport, error) {
 				return report, err
 			}
 		}
-		quarantine := item.path + ".deeper-quarantine-" + opts.Now().UTC().Format("20060102T150405Z")
+		quarantine := item.path + ".deepzora-quarantine-" + opts.Now().UTC().Format("20060102T150405Z")
 		changeIndex := len(tx.Changes)
 		tx.Changes = append(tx.Changes, preparedRepairChangeForPrevious(item.scope, item.path, quarantine))
 		if err := persistPreparedRepairTransaction(tx); err != nil {
@@ -198,9 +198,9 @@ func configRepairTargetPaths(opts ConfigOptions) ([]string, error) {
 		}
 		return paths
 	}
-	project := filepath.Join(opts.Root, "deeper.toml")
+	project := filepath.Join(opts.Root, "deepzora.toml")
 	if opts.Root == "" || opts.Root == "." {
-		project = "deeper.toml"
+		project = "deepzora.toml"
 	}
 	switch opts.OnlyScope {
 	case "global":

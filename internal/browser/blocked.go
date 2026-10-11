@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 const (

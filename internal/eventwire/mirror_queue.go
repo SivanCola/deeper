@@ -3,7 +3,7 @@ package eventwire
 import (
 	"encoding/json"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 const (

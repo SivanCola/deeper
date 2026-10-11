@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 // TestControllerAccessorIsRaceSafe guards the switchModel concurrency contract:

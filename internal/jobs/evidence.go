@@ -3,7 +3,7 @@ package jobs
 import (
 	"strings"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func mergePublishedEvidence(dst *evidence.ChildEvidenceSummary, summary evidence.ChildEvidenceSummary) {

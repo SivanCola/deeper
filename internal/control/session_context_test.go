@@ -8,19 +8,19 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/memory"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontext"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/memory"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontext"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestTurnContextUsesLiveSkillCatalogAcrossAddEditDelete(t *testing.T) {
 	project := t.TempDir()
 	home := t.TempDir()
-	writeControlSkill(t, project, ".deeper/skills/alpha/SKILL.md", "---\ndescription: alpha one\n---\nbody")
+	writeControlSkill(t, project, ".deepzora/skills/alpha/SKILL.md", "---\ndescription: alpha one\n---\nbody")
 	store := skill.New(skill.Options{HomeDir: home, ProjectRoot: project, DisableBuiltins: true})
 	sess := agent.NewSession("stable system")
 	executor := agent.New(nil, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
@@ -47,14 +47,14 @@ func TestTurnContextUsesLiveSkillCatalogAcrossAddEditDelete(t *testing.T) {
 	if !strings.Contains(first.Sections.SkillsCatalog, "alpha one") {
 		t.Fatalf("first catalog = %q", first.Sections.SkillsCatalog)
 	}
-	betaPath := filepath.Join(project, ".deeper", "skills", "beta", "SKILL.md")
-	writeControlSkill(t, project, ".deeper/skills/beta/SKILL.md", "---\ndescription: beta one\n---\nbody")
+	betaPath := filepath.Join(project, ".deepzora", "skills", "beta", "SKILL.md")
+	writeControlSkill(t, project, ".deepzora/skills/beta/SKILL.md", "---\ndescription: beta one\n---\nbody")
 	store.Invalidate("test skill added")
 	second := appendCurrent()
 	if second.Digest == first.Digest || !strings.Contains(second.Sections.SkillsCatalog, "beta one") {
 		t.Fatalf("added-skill snapshot = %+v", second)
 	}
-	writeControlSkill(t, project, ".deeper/skills/beta/SKILL.md", "---\ndescription: beta edited\n---\nbody")
+	writeControlSkill(t, project, ".deepzora/skills/beta/SKILL.md", "---\ndescription: beta edited\n---\nbody")
 	store.Invalidate("test skill edited")
 	third := appendCurrent()
 	if third.Digest == second.Digest || !strings.Contains(third.Sections.SkillsCatalog, "beta edited") {

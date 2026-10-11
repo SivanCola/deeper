@@ -75,23 +75,15 @@ interleavings with retirement, reconnect, host suspension and close.
 
 ## Independent memory screening
 
-The App memory workflow builds the requested clean commit once. Ordinary frontend
-pull requests run one short process with 32 full, 32 windowed, 32 safety, and 128
-mixed round trips. App lifecycle, Transcript, navigation, subscription ownership,
-memory fixture and CI-routing changes run the full three-process protocol. Pushes
-to `main`, daily schedules and manual dispatches also run the full protocol:
-each process executes 128 full, 128 windowed, 128 safety, and 512 mixed trips.
+The App memory workflow is a manual diagnostic. It builds the selected commit
+once and runs the full three-process protocol: each process executes 128 full,
+128 windowed, 128 safety, and 512 mixed trips. Ordinary PR and main CI keep
+functional App lifecycle and Transcript regressions without repeating the soak.
 
-The aggregate requires every checkpoint and heap snapshot, distinct shard
+The aggregate still requires every checkpoint and heap snapshot, distinct shard
 identities, the same workflow attempt, source/build hashes, Node/platform/
 architecture, fixture configuration, browser version and declared profile.
-Missing, cancelled, mismatched, or failing shards cannot produce a passing final
-check. The result records `screeningLevel` so a short pass is not full qualification.
-
-The workflow runs for frontend changes and unknown paths. Known independent
-backend and documentation paths may skip this mock-frontend soak; existing
-platform CI continues to cover those paths. The stable `app-memory` job checks
-that any skip was explicitly selected and its prerequisite states agree.
+Missing, cancelled, mismatched, or failing shards cannot produce a passing result.
 
 A `SHARD_PASS` is only one complete process. Aggregate `PASS` is automated
 screening, not a whole-App memory-leak proof: heap-retainer analysis and a

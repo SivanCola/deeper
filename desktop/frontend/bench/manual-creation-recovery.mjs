@@ -29,7 +29,7 @@ try {
   await page.getByText("Details", { exact: true }).click();
   await page.getByRole("button", { name: "Export creation diagnostics" }).click();
   assert.equal((await page.evaluate(() => window.creationFixture.counts())).exports, 1);
-  const evidence = process.env.DEEPER_CREATION_EVIDENCE ?? path.join(tmpdir(), "deeper-creation-evidence");
+  const evidence = process.env.DEEPZORA_CREATION_EVIDENCE ?? path.join(tmpdir(), "deepzora-creation-evidence");
   await mkdir(evidence, { recursive: true });
   await page.screenshot({ path: path.join(evidence, "recovery.png") });
   await retry.click();

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 func canonicalTopicHistoryReady(t *testing.T, app *App, tabID string) session.HistoryWindowPage {

@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 type strictNoWarningReasoningProvider struct{ *testutil.MockProvider }

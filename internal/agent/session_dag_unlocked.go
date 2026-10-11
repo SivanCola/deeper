@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 const (

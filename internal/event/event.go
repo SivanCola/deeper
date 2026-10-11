@@ -14,10 +14,10 @@ package event
 import (
 	"encoding/json"
 
-	"deeper/internal/billing"
-	"deeper/internal/evidence"
-	"deeper/internal/nilutil"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/evidence"
+	"deepzora/internal/nilutil"
+	"deepzora/internal/provider"
 )
 
 // Kind tags an Event. Read the field(s) documented for that kind.

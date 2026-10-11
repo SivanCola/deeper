@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/memory"
+	"deepzora/internal/memory"
 )
 
 // TestMemoryWriteReflectsInSnapshot verifies that a memory write lands on disk

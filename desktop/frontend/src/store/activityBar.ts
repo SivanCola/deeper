@@ -31,7 +31,7 @@ export interface ClosedTabRecord {
 
 const CLOSED_TAB_LIMIT = 10;
 
-const STORAGE_KEY = "deeper.dock.tabs";
+const STORAGE_KEY = "deepzora.dock.tabs";
 
 // Tabs are scoped per project (workspace root), so switching projects shows
 // each one's own open tabs. A root of "" falls back to the legacy global key.

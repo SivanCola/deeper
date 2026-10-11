@@ -16,9 +16,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/projectiondb"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/store"
 )
 
 const defaultMissingGrace = 30 * time.Second

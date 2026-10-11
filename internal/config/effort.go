@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/provider"
-	_ "deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	_ "deeper/internal/provider/responses"
+	"deepzora/internal/provider"
+	_ "deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	_ "deepzora/internal/provider/responses"
 )
 
 const (

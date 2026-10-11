@@ -10,7 +10,7 @@
 import { JSDOM } from "jsdom";
 import { installDesktopHostStub } from "./desktopHostStub";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "https://deeper.local/" });
+const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "https://deepzora.local/" });
 const { window } = dom;
 
 // Set globals BEFORE dynamically importing React DOM so the renderer sees a
@@ -102,7 +102,7 @@ console.log("\nrich link context menu");
 
 // 1. Bare GitHub pull request URL: open, copy link, copy owner/repo reference.
 {
-  const href = "https://github.com/SivanCola/deeper/pull/6976";
+  const href = "https://github.com/SivanCola/deepzora/pull/6976";
   const { anchor } = await renderLink(href);
   await openContextMenu(anchor);
   const menu = window.document.querySelector('[role="menu"]');
@@ -113,7 +113,7 @@ console.log("\nrich link context menu");
   ok(labels.some((text) => text.includes("Copy link")), "pull request menu can copy the link");
   ok(labels.some((text) => text.includes("Copy reference")), "pull request menu can copy a reference");
   await clickMenuItem("Copy reference");
-  ok(clipboardWrites[0] === "SivanCola/deeper#6976",
+  ok(clipboardWrites[0] === "SivanCola/deepzora#6976",
     `copy reference writes the owner/repo#number form (${clipboardWrites[0]})`);
   ok(window.document.querySelector(".toast--info")?.textContent?.includes("Copied") === true,
     "a success toast confirms the copy");
@@ -122,11 +122,11 @@ console.log("\nrich link context menu");
 
 // 2. GitHub commit URL: the reference uses the short SHA form.
 {
-  const href = "https://github.com/SivanCola/deeper/commit/ca03d4c2ec47d7fc9726affbbda04d8616f6351b";
+  const href = "https://github.com/SivanCola/deepzora/commit/ca03d4c2ec47d7fc9726affbbda04d8616f6351b";
   const { anchor } = await renderLink(href);
   await openContextMenu(anchor);
   await clickMenuItem("Copy reference");
-  ok(clipboardWrites[1] === "SivanCola/deeper@ca03d4c",
+  ok(clipboardWrites[1] === "SivanCola/deepzora@ca03d4c",
     `commit reference writes owner/repo@shortsha (${clipboardWrites[1]})`);
   await closeWithEscape();
 }
@@ -184,7 +184,7 @@ clipboardWrites.splice(4);
 
 // 5. Keyboard gesture: ContextMenu key and Shift+F10 open the menu, Escape closes.
 {
-  const href = "https://github.com/SivanCola/deeper/issues/6856";
+  const href = "https://github.com/SivanCola/deepzora/issues/6856";
   const { anchor } = await renderLink(href);
   anchor.focus();
   await act(async () => {
@@ -205,7 +205,7 @@ clipboardWrites.splice(4);
 // 6. Explicit Markdown labels are irrelevant to the menu: the copy actions
 // still write the original URL and the owner/repo reference.
 {
-  const href = "https://github.com/SivanCola/deeper/issues/6856";
+  const href = "https://github.com/SivanCola/deepzora/issues/6856";
   const { anchor } = await renderLink(href, "Readable issue title");
   await openContextMenu(anchor);
   await clickMenuItem("Copy link");

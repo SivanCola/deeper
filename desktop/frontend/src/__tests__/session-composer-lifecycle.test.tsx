@@ -42,14 +42,14 @@ try {
   target.trackTask!(target.draftId, target.generation, pending.then(() => patch("attachment finished")));
   let finished = false;
   let flushing!: Promise<void>;
-  act(() => { flushing = window.__deeperFlushSessionDraft!().then(() => { finished = true; }); });
+  act(() => { flushing = window.__deepzoraFlushSessionDraft!().then(() => { finished = true; }); });
   assert.equal(finished, false);
   await act(async () => { release(); await flushing; });
   assert.equal(JSON.parse((await backend.GetSessionComposerState(ref)).contentJson).text, "attachment finished");
-  await act(async () => { window.__deeperResumeSessionDraftEditing!(); });
+  await act(async () => { window.__deepzoraResumeSessionDraftEditing!(); });
   failSave = true;
   await act(async () => patch("keep on failure"));
-  await act(async () => { await assert.rejects(window.__deeperFlushSessionDraft!(), /formal input save failed/); });
+  await act(async () => { await assert.rejects(window.__deepzoraFlushSessionDraft!(), /formal input save failed/); });
   failSave = false;
   await act(async () => { await editor.retry(); });
   assert.equal(editor.blocked, false, "failed exit resumes formal editing");
@@ -63,8 +63,8 @@ try {
   const view = readFileSync(new URL("../app-shell/AppRuntimeView.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(view, /draft\.surface|PreviousInputRecovery|DraftTopicbarActions/);
   await act(async () => root.unmount());
-  assert.equal(window.__deeperFlushSessionDraft, undefined);
-  assert.equal(window.__deeperResumeSessionDraftEditing, undefined);
+  assert.equal(window.__deepzoraFlushSessionDraft, undefined);
+  assert.equal(window.__deepzoraResumeSessionDraftEditing, undefined);
   console.log("PASS formal input lifecycle: exit attachment barrier, save failure, unmount, no legacy reads");
 } finally {
   stub.uninstall();

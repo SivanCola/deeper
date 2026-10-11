@@ -17,7 +17,7 @@ import {
 } from "./release-candidate.mjs";
 
 function fixture(t) {
-  const root = mkdtempSync(path.join(tmpdir(), "deeper-candidate-"));
+  const root = mkdtempSync(path.join(tmpdir(), "deepzora-candidate-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   for (const platform of desktopPlatforms) {
     const dir = path.join(root, "desktop", platform, "files");
@@ -40,7 +40,7 @@ function fixture(t) {
   }
   const cli = path.join(root, "cli");
   mkdirSync(cli);
-  for (const name of ["deeper-darwin-amd64.tar.gz", "deeper-darwin-arm64.tar.gz", "deeper-linux-amd64.tar.gz", "deeper-linux-arm64.tar.gz", "deeper-windows-amd64.zip", "deeper-windows-arm64.zip", "SHA256SUMS", "deeper.rb"]) {
+  for (const name of ["deepzora-darwin-amd64.tar.gz", "deepzora-darwin-arm64.tar.gz", "deepzora-linux-amd64.tar.gz", "deepzora-linux-arm64.tar.gz", "deepzora-windows-amd64.zip", "deepzora-windows-arm64.zip", "SHA256SUMS", "deepzora.rb"]) {
     writeFileSync(path.join(cli, name), name);
   }
   const npm = path.join(root, "npm");
@@ -68,7 +68,7 @@ const metadata = {
   version: "1.2.3", sourceSHA: "a".repeat(40), buildControlSHA: "b".repeat(40),
   acceptanceControlSHA: "c".repeat(40), notesSourceSHA: "a".repeat(40),
   catalogSha256: "d".repeat(64), renderedNotesSha256: createHash("sha256").update("notes by @alice\n").digest("hex"),
-  repository: "SivanCola/deeper", workflow: ".github/workflows/release-candidate.yml",
+  repository: "SivanCola/deepzora", workflow: ".github/workflows/release-candidate.yml",
   runId: "123", runAttempt: "1", desktopPrefix: "desktop-123-1-preflight",
   payloadArtifactId: "456", payloadArtifactName: `release-candidate-payload-${candidateId("1.2.3", "a".repeat(40), "d".repeat(64))}`,
   evidenceArtifactId: "457", evidenceArtifactName: `release-candidate-evidence-${candidateId("1.2.3", "a".repeat(40), "d".repeat(64))}`,
@@ -130,7 +130,7 @@ for (const mutation of ["payload", "expired", "revoked", "wrong-source", "missin
     if (mutation === "payload") writeFileSync(path.join(root, "cli", "SHA256SUMS"), "changed");
     if (mutation === "expired") record.validity.expiresAt = "2025-01-01T00:00:00.000Z";
     if (mutation === "revoked") record.validity.revoked = true;
-    if (mutation === "wrong-source") record.source.repository = "fork/Deeper";
+    if (mutation === "wrong-source") record.source.repository = "fork/Deepzora";
     if (mutation === "missing-acceptance") record.acceptance.pop();
     assert.throws(() => verifyCandidate(root, record, new Date("2026-01-02T00:00:00Z")));
   });

@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"deeper/desktop/internal/update"
+	"deepzora/desktop/internal/update"
 )
 
 // Install modes reported to the frontend and used to pick the update asset.
@@ -18,9 +18,9 @@ const (
 	artifactKindTarball = "tarball"
 	artifactKindDeb     = "deb"
 
-	linuxUpdateHelperPath = "/usr/lib/deeper/deeper-update-helper"
+	linuxUpdateHelperPath = "/usr/lib/deepzora/deepzora-update-helper"
 	linuxPkexecPath       = "/usr/bin/pkexec"
-	linuxDebPackageName   = "deeper-desktop"
+	linuxDebPackageName   = "deepzora-desktop"
 )
 
 // installProfile is the runtime install classification used by evaluate and install.
@@ -88,7 +88,7 @@ func profileForManifest(base installProfile, m *update.Manifest) installProfile 
 			base.CanSelfUpdate = false
 			base.RequiresElev = false
 			base.ArtifactKind = ""
-			base.ManualReason = "system update helper is unavailable; install with: sudo apt install ./Deeper-linux-amd64.deb"
+			base.ManualReason = "system update helper is unavailable; install with: sudo apt install ./Deepzora-linux-amd64.deb"
 			return base
 		}
 		base.ArtifactKind = artifactKindDeb
@@ -139,7 +139,7 @@ func linuxDebHelperReady() bool {
 }
 
 func manualDebInstallHint() string {
-	return "Install manually with: sudo apt install ./Deeper-linux-amd64.deb"
+	return "Install manually with: sudo apt install ./Deepzora-linux-amd64.deb"
 }
 
 func artifactKindFromMeta(kind string) string {

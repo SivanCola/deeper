@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // SessionDisplayIndexSchemaVersion is the on-disk schema of the display index

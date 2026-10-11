@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // Crash-consistency model suite: a crash is injected at every durable

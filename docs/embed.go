@@ -1,4 +1,4 @@
-// Package docs exposes the product documentation bundled with each Deeper
+// Package docs exposes the product documentation bundled with each Deepzora
 // build. Runtime consumers should retrieve focused sections instead of adding
 // the full corpus to the provider-visible prompt.
 package docs

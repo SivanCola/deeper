@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 )
 
 // retireRemovedSourceTopic makes clearing a source whose session is already

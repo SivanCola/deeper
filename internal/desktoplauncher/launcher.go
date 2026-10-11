@@ -1,4 +1,4 @@
-// Package desktoplauncher implements the permanent Deeper desktop entry
+// Package desktoplauncher implements the permanent Deepzora desktop entry
 // point. It deliberately owns no crash-loop, rollback, or safe-mode policy.
 package desktoplauncher
 
@@ -11,9 +11,9 @@ import (
 	"runtime"
 	"strings"
 
-	"deeper/internal/appidentity"
-	"deeper/internal/installlayout"
-	"deeper/internal/proc"
+	"deepzora/internal/appidentity"
+	"deepzora/internal/installlayout"
+	"deepzora/internal/proc"
 )
 
 // Run resolves the active desktop, performs the one-time legacy handoff when
@@ -29,7 +29,7 @@ func Run(args []string, buildVersion string) int {
 	if len(args) == 1 {
 		switch args[0] {
 		case "version", "--version", "-v":
-			fmt.Println("deeper-launcher", buildVersion)
+			fmt.Println("deepzora-launcher", buildVersion)
 			return 0
 		case "help", "--help", "-h":
 			usage()
@@ -115,7 +115,7 @@ func ResolveDesktopPath(installRoot string) (string, error) {
 	if path := siblingDesktop(installRoot); path != "" {
 		return path, nil
 	}
-	return "", fmt.Errorf("cannot locate deeper-desktop under %s (missing current.json)", installRoot)
+	return "", fmt.Errorf("cannot locate deepzora-desktop under %s (missing current.json)", installRoot)
 }
 
 func runLegacyMigratorIfNeeded(installRoot string) error {
@@ -126,7 +126,7 @@ func runLegacyMigratorIfNeeded(installRoot string) error {
 		return fmt.Errorf("inspect current.json before migration: %w", err)
 	}
 
-	migratorName := "deeper-guard"
+	migratorName := "deepzora-guard"
 	if runtime.GOOS == "windows" {
 		migratorName += ".exe"
 	}
@@ -207,12 +207,12 @@ func DetachByDefault() bool {
 		return false
 	}
 	name := strings.ToLower(filepath.Base(exe))
-	return name == "deeper-launcher.exe" || name == "deeper.exe"
+	return name == "deepzora-launcher.exe" || name == "deepzora.exe"
 }
 
 func usage() {
-	fmt.Println("usage: deeper-launcher [args...]")
-	fmt.Println("  Starts the active Deeper desktop from current.json.")
+	fmt.Println("usage: deepzora-launcher [args...]")
+	fmt.Println("  Starts the active Deepzora desktop from current.json.")
 	fmt.Println("  Legacy --safe-mode / launch --detach tokens are ignored.")
 	fmt.Println("  --repair-shortcuts <absolute.lnk...> repairs owned installer shortcuts without launching.")
 }

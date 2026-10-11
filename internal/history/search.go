@@ -10,11 +10,11 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/provider"
-	"deeper/internal/retrieval"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/provider"
+	"deepzora/internal/retrieval"
+	"deepzora/internal/store"
 )
 
 // Kind identifies the part of a saved message indexed for retrieval.

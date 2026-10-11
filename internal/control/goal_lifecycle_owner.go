@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/event"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 const defaultBlockedAfterRounds uint64 = 3

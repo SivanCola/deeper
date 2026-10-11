@@ -5,15 +5,15 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/sessioncatalog"
 )
 
 // startRecoveryGC is intentionally a no-op for physical moves.
 //
 // Catalog v4 folds recovery lineages into one ordinary list row. Automatic
 // startup/upgrade/timer GC must not move JSONL/meta into trash — only explicit
-// CleanRecoveryLineage (UI, with preview) and `deeper sessions cleanup
+// CleanRecoveryLineage (UI, with preview) and `deepzora sessions cleanup
 // --apply` may reclaim covered copies. reclaimRecoveryBranchesIn remains for
 // those explicit entry points and focused tests.
 func (a *App) startRecoveryGC() {}

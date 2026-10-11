@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/textutil"
+	"deepzora/internal/bot"
+	"deepzora/internal/textutil"
 
 	"golang.org/x/net/websocket"
 )
@@ -264,8 +264,8 @@ func (a *adapter) connectGateway(ctx context.Context, token string, intents int)
 		Shard:   [2]int{0, 1},
 		Properties: properties{
 			OS:      "linux",
-			Browser: "deeper",
-			Device:  "deeper-bot",
+			Browser: "deepzora",
+			Device:  "deepzora-bot",
 		},
 	}
 	identifyJSON, _ := json.Marshal(identify)

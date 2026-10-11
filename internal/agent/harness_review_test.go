@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 func TestRebuiltAgentKeepsLiveFileObservationsAndRealShellWorks(t *testing.T) {

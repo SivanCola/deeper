@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 const desktopTinyPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
@@ -110,7 +110,7 @@ func TestLegacyAttachmentRPCRejectsMissingTarget(t *testing.T) {
 	if _, err := app.SavePastedImage("data:image/png;base64," + desktopTinyPNG); err == nil {
 		t.Fatal("legacy attachment RPC fell back to the process working directory")
 	}
-	if _, err := os.Stat(filepath.Join(".deeper", "attachments")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(".deepzora", "attachments")); !os.IsNotExist(err) {
 		t.Fatalf("missing target created a process-relative attachment directory: %v", err)
 	}
 }
@@ -179,7 +179,7 @@ func TestSavePastedImageForTabKeepsCapturedWorkspaceAcrossActiveSwitch(t *testin
 func TestAttachmentDataURLForTabIsolatesSameRelativePath(t *testing.T) {
 	projectA := t.TempDir()
 	projectB := t.TempDir()
-	rel := ".deeper/attachments/shared.png"
+	rel := ".deepzora/attachments/shared.png"
 	rawA, err := base64.StdEncoding.DecodeString(desktopTinyPNG)
 	if err != nil {
 		t.Fatal(err)
@@ -229,7 +229,7 @@ func TestSavePastedImageForTabRejectsClosedTargetAndRemovesWrite(t *testing.T) {
 	if _, err := app.SavePastedImageForTab("a", "data:image/png;base64,"+desktopTinyPNG); err == nil {
 		t.Fatal("closed attachment target was accepted")
 	}
-	entries, err := os.ReadDir(filepath.Join(projectRoot, ".deeper", "attachments"))
+	entries, err := os.ReadDir(filepath.Join(projectRoot, ".deepzora", "attachments"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -448,7 +448,7 @@ func TestAttachDroppedOutsideWorkspaceCopiesToAttachments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AttachDropped: %v", err)
 	}
-	if got.Kind != "attachment" || !strings.HasPrefix(got.Path, ".deeper/attachments/") || !strings.HasSuffix(got.Path, ".pdf") {
+	if got.Kind != "attachment" || !strings.HasPrefix(got.Path, ".deepzora/attachments/") || !strings.HasSuffix(got.Path, ".pdf") {
 		t.Fatalf("got %+v, want copied pdf attachment", got)
 	}
 }
@@ -519,7 +519,7 @@ func TestAttachDroppedOutsideWorkspaceDirRegistersWorkspaceRef(t *testing.T) {
 	if got.Kind != "workspace" || !got.IsDir {
 		t.Fatalf("got %+v, want workspace directory ref", got)
 	}
-	if !strings.HasPrefix(got.Path, "__deeper_external_folder/") || strings.ContainsAny(got.Path, " \t\r\n") {
+	if !strings.HasPrefix(got.Path, "__deepzora_external_folder/") || strings.ContainsAny(got.Path, " \t\r\n") {
 		t.Fatalf("external folder path token = %q, want whitespace-free external token", got.Path)
 	}
 	if got.DisplayPath != expectedDisplayPath {

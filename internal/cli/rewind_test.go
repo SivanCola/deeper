@@ -7,11 +7,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/agent"
-	"deeper/internal/checkpoint"
-	"deeper/internal/control"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 type rewindConfirmationController struct {

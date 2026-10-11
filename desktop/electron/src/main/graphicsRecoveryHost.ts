@@ -41,11 +41,11 @@ export function installGraphicsRecovery(options: {
       do {
         const shownFault = record.checkpoint();
         const result = await dialog.showMessageBox({
-          type: "warning", title: "Deeper recovery / Deeper 恢复",
+          type: "warning", title: "Deepzora recovery / Deepzora 恢复",
           message: gpu
             ? "A graphics process failed. Try restarting without hardware acceleration. / 图形进程发生异常，可尝试关闭硬件加速后重启。"
             : "The interface failed or stopped responding. / 界面发生异常或持续无响应。",
-          detail: "Restarting interrupts running tasks. Deeper will try to save your draft first. / 重启会中断正在执行的任务，Deeper 会先尝试保存草稿。",
+          detail: "Restarting interrupts running tasks. Deepzora will try to save your draft first. / 重启会中断正在执行的任务，Deepzora 会先尝试保存草稿。",
           buttons: [gpu ? "Restart in compatibility mode / 以兼容模式重启" : "Restart / 重启", "Open diagnostics / 查看诊断", "Not now / 暂不重启"],
           defaultId: 2, cancelId: 2, noLink: true,
         });
@@ -87,7 +87,7 @@ export function installGraphicsRecovery(options: {
         const shownFault = record.checkpoint();
         const result = await dialog.showMessageBox({
           type: "info", title: "Compatibility mode / 兼容模式",
-          message: "Deeper started with hardware acceleration disabled. / Deeper 已关闭硬件加速并成功启动。",
+          message: "Deepzora started with hardware acceleration disabled. / Deepzora 已关闭硬件加速并成功启动。",
           detail: "You can keep it disabled for future launches and change it later in Settings. This does not establish the cause of the failure. / 可将关闭状态用于后续启动，之后可在设置中修改。成功启动不代表已经确认故障原因。",
           buttons: ["Keep disabled / 保持关闭", "This launch only / 仅本次关闭"], defaultId: 1, cancelId: 1, noLink: true,
         });

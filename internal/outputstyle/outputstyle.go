@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/frontmatter"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/frontmatter"
 )
 
 // OutputStyle is one selectable persona. Body is appended to the system prompt
@@ -62,10 +62,10 @@ var builtins = []OutputStyle{
 
 // Dirs returns the output-style search directories in load order (later wins),
 // mirroring command/skill discovery: home convention dirs, then project ones.
-// Home convention dirs are skipped when DEEPER_HOME is set (isolated runtime).
+// Home convention dirs are skipped when DEEPZORA_HOME is set (isolated runtime).
 func Dirs() []string {
 	var dirs []string
-	if os.Getenv("DEEPER_HOME") == "" {
+	if os.Getenv("DEEPZORA_HOME") == "" {
 		if home, err := os.UserHomeDir(); err == nil {
 			for _, v := range slices.Backward(conventionDirs) {
 				dirs = append(dirs, filepath.Join(home, v, "output-styles"))
@@ -80,7 +80,7 @@ func Dirs() []string {
 
 // conventionDirs mirrors config.ConventionDirs (kept local to avoid an import
 // cycle; config imports nothing from here, but this package stays dependency-light).
-var conventionDirs = []string{".deeper", ".agents", ".agent", ".claude"}
+var conventionDirs = []string{".deepzora", ".agents", ".agent", ".claude"}
 
 // List returns every available style — built-ins plus the markdown files under
 // dirs — deduped by lowercased name, with custom files overriding built-ins.

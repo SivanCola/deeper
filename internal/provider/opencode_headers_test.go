@@ -18,7 +18,7 @@ func TestOpenCodeGoHeadersScopedStableAndPrivate(t *testing.T) {
 			if id == "" || strings.Contains(id, "private") || i > 0 && id != previous {
 				t.Fatalf("unstable/private session ID: %q", id)
 			}
-			if req.Header.Get("User-Agent") != "Deeper" {
+			if req.Header.Get("User-Agent") != "Deepzora" {
 				t.Fatal("missing client identity")
 			}
 			previous = id
@@ -37,10 +37,10 @@ func TestOpenCodeGoHeadersScopedStableAndPrivate(t *testing.T) {
 		}
 	}
 	req, _ := http.NewRequest(http.MethodPost, "https://opencode.ai/zen/go/v1/responses", nil)
-	req.Header.Set("User-Agent", "Deeper/custom")
+	req.Header.Set("User-Agent", "Deepzora/custom")
 	req.Header.Set("x-opencode-session", "explicit-session")
 	ApplyOpenCodeGoHeaders(req, "https://opencode.ai/zen/go/v1", NewClientIdentityHeaders())
-	if req.Header.Get("User-Agent") != "Deeper/custom" || req.Header.Get("x-opencode-session") != "explicit-session" {
+	if req.Header.Get("User-Agent") != "Deepzora/custom" || req.Header.Get("x-opencode-session") != "explicit-session" {
 		t.Fatal("overwrote explicit client header")
 	}
 }

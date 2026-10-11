@@ -47,7 +47,7 @@ def main():
 
     en = []
     en.append("# Official Theme Asset Provenance\n")
-    en.append("All eight official Deeper themes ship with **original** artwork generated procedurally")
+    en.append("All eight official Deepzora themes ship with **original** artwork generated procedurally")
     en.append("from scratch with the scripts in `scripts/official-theme-art/` (numpy + Pillow, fixed seeds,")
     en.append("fully reproducible). The visual *direction* was inspired by the MIT-licensed")
     en.append("[Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin) concept gallery, but:\n")
@@ -59,8 +59,8 @@ def main():
     en.append("  and a gentleman (Noir Gold). Crimson Horizon contains no people.")
     en.append("- Backgrounds contain no windows, sidebars, cards, buttons, inputs or readable text, and are")
     en.append("  stripped of EXIF/author metadata.\n")
-    en.append("Assets are released under the MIT License as part of the Deeper repository,")
-    en.append("© Deeper Contributors. Human review: Deeper Contributors (release PR review).\n")
+    en.append("Assets are released under the MIT License as part of the Deepzora repository,")
+    en.append("© Deepzora Contributors. Human review: Deepzora Contributors (release PR review).\n")
     en.append(f"Generation date: {today}\n")
     en.append("| Theme | Generator (final prompt equivalent) | background.webp SHA-256 | preview.webp SHA-256 |")
     en.append("| --- | --- | --- | --- |")
@@ -70,7 +70,7 @@ def main():
 
     zh = []
     zh.append("# 官方主题素材来源与许可记录\n")
-    zh.append("八款 Deeper 官方主题的全部图片均为**原创**，由 `scripts/official-theme-art/` 中的脚本")
+    zh.append("八款 Deepzora 官方主题的全部图片均为**原创**，由 `scripts/official-theme-art/` 中的脚本")
     zh.append("从零程序化生成（numpy + Pillow，固定随机种子，可完全复现）。视觉*方向*参考了 MIT 许可的")
     zh.append("[Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin) 概念图库，但是：\n")
     zh.append("- **未复制参考项目或任何第三方素材的任何像素**、布局、界面元素、文字、标志或水印；")
@@ -79,7 +79,7 @@ def main():
     zh.append("  读者（鼠尾草清风）、动漫人物（灵感手账）、剪影女性（紫曜星夜）、数字表演者（青岚舞台）、")
     zh.append("  绅士（黑金序曲）。赤曜新城不含人物。")
     zh.append("- 背景中不含窗口、侧栏、卡片、按钮、输入框或可读文字，并已去除 EXIF 等元数据。\n")
-    zh.append("素材随 Deeper 仓库以 MIT 许可发布，© Deeper Contributors。人工审核：Deeper Contributors（发布 PR 审核）。\n")
+    zh.append("素材随 Deepzora 仓库以 MIT 许可发布，© Deepzora Contributors。人工审核：Deepzora Contributors（发布 PR 审核）。\n")
     zh.append(f"生成日期：{today}\n")
     zh.append("| 主题 | 生成器（最终提示词等价物） | background.webp SHA-256 | preview.webp SHA-256 |")
     zh.append("| --- | --- | --- | --- |")

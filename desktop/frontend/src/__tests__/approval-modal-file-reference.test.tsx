@@ -305,7 +305,7 @@ console.log("\napproval modal file references");
       id: "plan-mode-read-only-command-zh",
       tool: "plan_mode_read_only_command",
       subject: "Trust \"gh issue view\" as a read-only command prefix while planning\nCommand: gh issue view 5867 --json title",
-      reason: "This bash command is not in Deeper's built-in read-only set. Confirm only if this exact prefix is read-only for planning and research. Permission presets cannot answer this trust prompt.",
+      reason: "This bash command is not in Deepzora's built-in read-only set. Confirm only if this exact prefix is read-only for planning and research. Permission presets cannot answer this trust prompt.",
     },
   });
 

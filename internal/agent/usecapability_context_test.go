@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/capability"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/tool"
 )
 
 type capabilityContextKey struct{}

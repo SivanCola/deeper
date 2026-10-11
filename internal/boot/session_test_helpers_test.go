@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
 )
 
 // withTestSession models the production host boundary explicitly. Boot no

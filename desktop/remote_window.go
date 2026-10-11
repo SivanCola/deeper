@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"unicode"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // remoteWindowLaunch is one open-or-repoint request for a host's remote Serve
@@ -100,17 +100,17 @@ func remoteWindowTitle(hostID string) string {
 	if hostID == "" {
 		hostID = "Remote"
 	}
-	return "Deeper [SSH: " + hostID + "]"
+	return "Deepzora [SSH: " + hostID + "]"
 }
 
 // remoteWindowHostKey derives the non-secret per-host identity that keys the
-// shell's BrowserWindow. It is scoped to the Deeper home (so two isolated
+// shell's BrowserWindow. It is scoped to the Deepzora home (so two isolated
 // data homes can each open a window for the same host label) and contains no
 // URL, token, or user data — only a digest.
 func remoteWindowHostKey(hostID string) string {
 	h := sha256.New()
 	_, _ = io.WriteString(h, singleInstanceIDPrefix+"|")
-	_, _ = io.WriteString(h, strings.TrimSpace(config.DeeperHomeDir())+"|")
+	_, _ = io.WriteString(h, strings.TrimSpace(config.DeepzoraHomeDir())+"|")
 	_, _ = io.WriteString(h, hostID)
 	return hex.EncodeToString(h.Sum(nil)[:16])
 }

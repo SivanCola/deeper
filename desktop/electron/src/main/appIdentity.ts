@@ -5,7 +5,7 @@ import type { AppDetailsOptions, BrowserWindow } from "electron";
 // Share the launcher's identity without grouping with old or current Studio.
 // internal/appidentity/electron_identity_test.go guards the Go/JS contract.
 
-export const APP_USER_MODEL_ID = "io.github.sivancola.deeper";
+export const APP_USER_MODEL_ID = "com.deepzora.desktop";
 
 // Applied at module load: the ID must be in place before the first window
 // exists, and Windows ignores the call on other platforms.
@@ -29,14 +29,14 @@ export function windowsTaskbarDetails(executable: string, isFile = isRegularFile
   const versioned = win32.basename(win32.dirname(releaseDir)).toLowerCase() === "versions"
     && /^v[0-9]+(?:\.[0-9]+){1,3}(?:-[0-9A-Za-z.-]+)?$/.test(win32.basename(releaseDir));
   const root = versioned ? win32.dirname(win32.dirname(releaseDir)) : releaseDir;
-  const launcher = ["Deeper.exe", "deeper-launcher.exe"].map(name => win32.join(root, name)).find(isFile);
+  const launcher = ["Deepzora.exe", "deepzora-launcher.exe"].map(name => win32.join(root, name)).find(isFile);
   if (!launcher) return undefined;
   return {
     appId: APP_USER_MODEL_ID,
     appIconPath: launcher,
     appIconIndex: 0,
     relaunchCommand: `"${launcher}"`,
-    relaunchDisplayName: "Deeper",
+    relaunchDisplayName: "Deepzora",
   };
 }
 

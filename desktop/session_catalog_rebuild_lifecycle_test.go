@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/sessioncatalog"
 )
 
 func waitForSessionCatalogForTest(t *testing.T, app *App, previous *sessioncatalog.Catalog) *sessioncatalog.Catalog {

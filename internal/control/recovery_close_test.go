@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func TestRecoveryCloseWaitsForTerminalFanout(t *testing.T) {

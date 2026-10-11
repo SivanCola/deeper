@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestRenameTopicCatalogOnlyProjectTopic(t *testing.T) {

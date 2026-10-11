@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // isolateDesktopUserDirsSchemaOne pins a test to the schema-1 session writer:

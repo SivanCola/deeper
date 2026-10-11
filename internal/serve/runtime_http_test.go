@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/jobs"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
+	"deepzora/internal/session"
 )
 
 type rejectingGoalAPI struct {

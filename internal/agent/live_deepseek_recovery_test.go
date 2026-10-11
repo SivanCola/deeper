@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/tool"
 )
 
 // TestLiveDeepSeekFlashMissingReasoningRecovery exercises the production agent

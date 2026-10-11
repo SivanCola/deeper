@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/planmode"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/planmode"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type planSafeTool struct {

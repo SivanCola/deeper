@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 type rejectingGoalSession struct {

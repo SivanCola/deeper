@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { claimShellInstance } from "./singleInstance.js";
 
 test("single-instance lock uses the selected canonical data home before acquisition", () => {
-  const root = mkdtempSync(join(tmpdir(), "deeper-instance-"));
+  const root = mkdtempSync(join(tmpdir(), "deepzora-instance-"));
   try {
     const profiles = new Set<string>();
     const host = () => {

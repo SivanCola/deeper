@@ -3,7 +3,7 @@ package imageinput
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func clone(v *provider.VisionSummary) *provider.VisionSummary {

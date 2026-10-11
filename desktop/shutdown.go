@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/repair"
-	"deeper/internal/stats"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/repair"
+	"deepzora/internal/stats"
 )
 
 const (

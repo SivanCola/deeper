@@ -27,8 +27,8 @@ test("reads the subsystem from PE32 and PE32+ optional headers", () => {
 });
 
 test("rejects a console-subsystem executable", () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deeper-pe-subsystem-"));
-  const executable = path.join(directory, "deeper-desktop.exe");
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "deepzora-pe-subsystem-"));
+  const executable = path.join(directory, "deepzora-desktop.exe");
   try {
     fs.writeFileSync(executable, peImage(3));
     assert.throws(

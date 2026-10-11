@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func TestWorkspaceWriteRunsPipeInlineScriptAndCommandSubstitution(t *testing.T) {

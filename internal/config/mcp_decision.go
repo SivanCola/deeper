@@ -45,7 +45,7 @@ func (d MCPDecision) AwaitsUser() bool {
 }
 
 // RepositoryDeclared reports an entry whose file arrives with the workspace:
-// project deeper.toml, .mcp.json, or unknown provenance.
+// project deepzora.toml, .mcp.json, or unknown provenance.
 func RepositoryDeclared(entry PluginEntry) bool {
 	scope, _, _, _ := activationIdentity(entry, "")
 	return scope == MCPActivationWorkspace
@@ -123,7 +123,7 @@ func RecordExplicitStart(entry PluginEntry, workspace string) error {
 
 // MCPLaunchLine renders what a server would run, for a person deciding on it.
 // Every env key is named; values show for launchEnvShown, whose keys change
-// which code a process loads. The full declaration is `deeper mcp get`.
+// which code a process loads. The full declaration is `deepzora mcp get`.
 func MCPLaunchLine(entry PluginEntry) string {
 	var parts []string
 	for _, k := range sortedKeys(entry.Env) {
@@ -300,7 +300,7 @@ func UpsertPluginKeepingDecision(root string, entry PluginEntry) (string, error)
 	return path, err
 }
 
-// KeepMCPDecisionAcross runs an edit Deeper makes to server name's
+// KeepMCPDecisionAcross runs an edit Deepzora makes to server name's
 // declaration at the user's request; write returns the declaration it wrote.
 // A server the user had enabled stays enabled only if the file now holds that
 // declaration and every workspace input it draws on reads as it did in the

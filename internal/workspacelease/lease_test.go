@@ -13,12 +13,12 @@ import (
 )
 
 func TestWorkspaceLeaseHelperProcess(t *testing.T) {
-	if os.Getenv("DEEPER_WORKSPACE_LEASE_HELPER") != "1" {
+	if os.Getenv("DEEPZORA_WORKSPACE_LEASE_HELPER") != "1" {
 		return
 	}
-	root := os.Getenv("DEEPER_WORKSPACE_LEASE_ROOT")
-	locks := os.Getenv("DEEPER_WORKSPACE_LEASE_DIR")
-	ready := os.Getenv("DEEPER_WORKSPACE_LEASE_READY")
+	root := os.Getenv("DEEPZORA_WORKSPACE_LEASE_ROOT")
+	locks := os.Getenv("DEEPZORA_WORKSPACE_LEASE_DIR")
+	ready := os.Getenv("DEEPZORA_WORKSPACE_LEASE_READY")
 	o, err := New(root, locks, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -649,10 +649,10 @@ func TestCrossProcessLeaseBlocksAndCrashReleases(t *testing.T) {
 	ready := filepath.Join(t.TempDir(), "ready")
 	cmd := exec.Command(os.Args[0], "-test.run=^TestWorkspaceLeaseHelperProcess$")
 	cmd.Env = append(os.Environ(),
-		"DEEPER_WORKSPACE_LEASE_HELPER=1",
-		"DEEPER_WORKSPACE_LEASE_ROOT="+root,
-		"DEEPER_WORKSPACE_LEASE_DIR="+locks,
-		"DEEPER_WORKSPACE_LEASE_READY="+ready,
+		"DEEPZORA_WORKSPACE_LEASE_HELPER=1",
+		"DEEPZORA_WORKSPACE_LEASE_ROOT="+root,
+		"DEEPZORA_WORKSPACE_LEASE_DIR="+locks,
+		"DEEPZORA_WORKSPACE_LEASE_READY="+ready,
 	)
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)

@@ -4,8 +4,8 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func cliHistoryWithoutPinnedContextRevisions(messages []provider.Message) []provider.Message {

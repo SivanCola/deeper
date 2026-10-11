@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ownsWritableBaseline reports whether this session may rewrite path at the

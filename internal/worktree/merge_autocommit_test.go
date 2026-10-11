@@ -88,7 +88,7 @@ func TestMergeBackAutoCommitUsesExactTreeWithoutHooks(t *testing.T) {
 		if step != "after_worktree_add" {
 			return
 		}
-		matches, globErr := filepath.Glob(filepath.Join(filepath.Dir(created.WorktreeRoot), ".deeper-merge-index-*"))
+		matches, globErr := filepath.Glob(filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-merge-index-*"))
 		if globErr != nil || len(matches) != 1 {
 			t.Fatalf("temporary index matches = %v, %v", matches, globErr)
 		}

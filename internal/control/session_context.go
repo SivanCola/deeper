@@ -3,9 +3,9 @@ package control
 import (
 	"context"
 
-	"deeper/internal/agent"
-	"deeper/internal/sessioncontext"
-	"deeper/internal/skill"
+	"deepzora/internal/agent"
+	"deepzora/internal/sessioncontext"
+	"deepzora/internal/skill"
 )
 
 // withTurnContext attaches current role-specific snapshots to a host turn.

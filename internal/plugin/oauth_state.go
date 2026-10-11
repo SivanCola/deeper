@@ -10,12 +10,12 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
 )
 
 // oauthRefreshGates prevent duplicate refresh requests from transports in the
-// same Deeper process. The file lock below remains the cross-process source
+// same Deepzora process. The file lock below remains the cross-process source
 // of truth, but it must not be held across the token endpoint network request.
 var oauthRefreshGates sync.Map // map[string]chan struct{}
 

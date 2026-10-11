@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/extension/providerext"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/extension/providerext"
 )
 
 var errModelSettingsSuperseded = errors.New("model settings changed while building the session")

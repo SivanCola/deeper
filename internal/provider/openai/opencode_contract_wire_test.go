@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type localOpenCodeGoTransport struct {

@@ -3,8 +3,8 @@ package control
 import (
 	"context"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func withTurnInputOrigin(ctx context.Context, synthetic bool) context.Context {

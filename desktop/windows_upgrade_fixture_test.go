@@ -10,17 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/upgradefixture"
-	"deeper/internal/agent"
-	"deeper/internal/config"
+	"deepzora/desktop/internal/upgradefixture"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
 )
 
 func TestWindowsUpgradeFixtureImportsLegacyOnlyWhenPrepared(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	home := filepath.Join(t.TempDir(), "home # %20 中文")
-	t.Setenv("DEEPER_HOME", home)
-	t.Setenv("DEEPER_STATE_HOME", home)
-	t.Setenv("DEEPER_CACHE_HOME", filepath.Join(home, "cache"))
+	t.Setenv("DEEPZORA_HOME", home)
+	t.Setenv("DEEPZORA_STATE_HOME", home)
+	t.Setenv("DEEPZORA_CACHE_HOME", filepath.Join(home, "cache"))
 	reportPath := filepath.Join(t.TempDir(), "fixture.json")
 	if err := upgradefixture.Run("create", home, reportPath, ""); err != nil {
 		t.Fatal(err)

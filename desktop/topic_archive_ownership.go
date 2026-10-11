@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"slices"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 type topicArchiveRemovalOwnership struct {

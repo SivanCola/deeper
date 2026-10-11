@@ -89,7 +89,7 @@ func TestPowerShellCmdletDenyPrefixIsCaseInsensitive(t *testing.T) {
 }
 
 func TestPolicyDynamicBashFollowsPresetAndExplicitRules(t *testing.T) {
-	const command = "git status $(touch /tmp/deeper-permission-bypass)"
+	const command = "git status $(touch /tmp/deepzora-permission-bypass)"
 
 	tests := []struct {
 		name string

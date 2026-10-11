@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/sessiontemp"
+	"deepzora/internal/sessiontemp"
 )
 
 func TestWithSubagentSessionTempIsIndependent(t *testing.T) {

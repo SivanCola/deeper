@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 type liveOutputFieldCacheResult struct {

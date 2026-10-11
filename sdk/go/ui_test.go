@@ -80,7 +80,7 @@ func TestHostUIPublishFormGolden(t *testing.T) {
 			Title:   "Configure",
 			Message: "Pick values",
 			Fields: []UIFormField{
-				{Key: "name", Label: "Name", Kind: UIFieldInput, Default: "deeper", Required: true},
+				{Key: "name", Label: "Name", Kind: UIFieldInput, Default: "deepzora", Required: true},
 				{Key: "level", Label: "Level", Kind: UIFieldSelect, Options: []string{"low", "high"}},
 			},
 		})
@@ -111,7 +111,7 @@ func TestHostUIPublishFormGolden(t *testing.T) {
 		t.Fatalf("form doc = %+v", doc)
 	}
 	name := doc.Payload.Fields[0]
-	if name.Key != "name" || name.Kind != "input" || name.Default != "deeper" || !name.Required {
+	if name.Key != "name" || name.Kind != "input" || name.Default != "deepzora" || !name.Required {
 		t.Fatalf("field 0 = %+v", name)
 	}
 	level := doc.Payload.Fields[1]

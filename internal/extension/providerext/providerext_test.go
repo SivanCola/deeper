@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
 )
 
 // fakeClient implements ProviderClient with programmable behavior; streams are

@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/capability"
-	"deeper/internal/config"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 func dynamicToolsMCPServer(t *testing.T, loaded *atomic.Bool, dynamicCalls *atomic.Int32) *httptest.Server {
@@ -91,7 +91,7 @@ func dynamicToolsMCPServer(t *testing.T, loaded *atomic.Bool, dynamicCalls *atom
 }
 
 func TestMCPCapabilityRuntimeRefreshesDynamicToolsInSession(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -156,7 +156,7 @@ func TestMCPCapabilityRuntimeRefreshesDynamicToolsInSession(t *testing.T) {
 }
 
 func TestMCPCapabilityRuntimeReplaysCatalogChangedBeforeSubscription(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -222,7 +222,7 @@ func TestMCPCapabilityRuntimeReplaysCatalogChangedBeforeSubscription(t *testing.
 }
 
 func TestConfiguredDisabledSessionDropsSharedHostReplayAndGenericAlias(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -282,7 +282,7 @@ func TestConfiguredDisabledSessionDropsSharedHostReplayAndGenericAlias(t *testin
 }
 
 func TestMCPResolveReleasesDispatchLockBeforeCatalogCallback(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

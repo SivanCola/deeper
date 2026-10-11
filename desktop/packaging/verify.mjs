@@ -46,10 +46,10 @@ const { missing, forbidden } = checkMembers(entries, kind, portableLayout);
 const layoutErrors = kind === "darwin-app-dir" ? validateMacServiceLink(artifact) : [];
 if (kind === "windows-portable-zip" && missing.length === 0 && forbidden.length === 0) {
   const readMember = name => directory ? readFileSync(join(artifact, name)) : readZipMember(artifact, name);
-  const gui = readMember("Deeper.exe");
-  if (gui.equals(readMember("deeper-cli.exe"))) layoutErrors.push("GUI entry contains CLI bytes");
-  if (portableLayout === "legacy-dual" && !gui.equals(readMember("deeper-launcher.exe"))) {
-    layoutErrors.push("legacy GUI entry differs from Deeper.exe");
+  const gui = readMember("Deepzora.exe");
+  if (gui.equals(readMember("deepzora-cli.exe"))) layoutErrors.push("GUI entry contains CLI bytes");
+  if (portableLayout === "legacy-dual" && !gui.equals(readMember("deepzora-launcher.exe"))) {
+    layoutErrors.push("legacy GUI entry differs from Deepzora.exe");
   }
 }
 const modeErrors = checkEntryModes(rows, kind);

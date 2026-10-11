@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/sessiontemp"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/sessiontemp"
 )
 
 func TestBashSharesSessionTempAcrossCalls(t *testing.T) {
@@ -52,7 +52,7 @@ func TestBashSharesSessionTempAcrossCalls(t *testing.T) {
 			// PowerShell (Git Bash is preferred when present).
 			b.shell = b.resolved()
 
-			marker := "deeper-session-temp-share"
+			marker := "deepzora-session-temp-share"
 			writeCmd := `test "$TMPDIR" = "$TMP" && test "$TMPDIR" = "$TEMP" && printf '%s' shared > "${TMPDIR:?}/` + marker + `"`
 			readCmd := `cat "${TMPDIR:?}/` + marker + `"`
 			if b.shell.Kind == sandbox.ShellPowerShell {

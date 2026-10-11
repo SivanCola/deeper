@@ -1,7 +1,7 @@
 // Heartbeat task engine — scheduled AI prompts that create or update topics.
 //
 // Each task is a prompt submitted to a dedicated topic on a schedule.
-// The config file under the Deeper user state directory is human- and
+// The config file under the Deepzora user state directory is human- and
 // AI-editable; the engine runs the schedule in a background goroutine and
 // exposes Wails bindings on App for the frontend panel.
 //
@@ -21,12 +21,12 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/permissionpreset"
-	"deeper/internal/secrets"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/permissionpreset"
+	"deepzora/internal/secrets"
 )
 
 // ── Data model ──────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ func (e *HeartbeatEngine) executeTaskWithLease(t HeartbeatTask, prepare func(Hea
 	return updated
 }
 
-// tryAcquireTaskLease extends the in-process reservation to other Deeper
+// tryAcquireTaskLease extends the in-process reservation to other Deepzora
 // processes. The lease is held from before topic creation through prompt
 // submission, and the OS releases it automatically if the process is killed.
 func (e *HeartbeatEngine) tryAcquireTaskLease(taskID string) (func(), error) {

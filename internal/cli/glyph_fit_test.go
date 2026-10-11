@@ -7,9 +7,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 // conhostCJKCells is what a legacy conhost window with the default Chinese

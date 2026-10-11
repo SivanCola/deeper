@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 func deepSeekV4FlashPriceCNY() *provider.Pricing {
@@ -562,7 +562,7 @@ func IsOfficialDeepSeekProvider(p *ProviderEntry) bool {
 	return officialProviderKind(p) == "deepseek"
 }
 
-// IsKnownDeepSeekOfficialPricing reports whether price is one of Deeper's
+// IsKnownDeepSeekOfficialPricing reports whether price is one of Deepzora's
 // built-in DeepSeek regional defaults for model.
 func IsKnownDeepSeekOfficialPricing(model string, price *provider.Pricing) bool {
 	return isKnownDeepSeekOfficialPricing(model, price)

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestTruncateToolText(t *testing.T) {

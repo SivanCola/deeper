@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 type goalDiagnosticExporter interface {
@@ -18,7 +18,7 @@ type goalDiagnosticStreamExporter interface {
 
 // goalDiagnostics exports the authoritative, fully flushed v3 event stream.
 // It is session-fenced but read-only and therefore remains available to a
-// spectator inspecting a session owned by another Deeper surface.
+// spectator inspecting a session owned by another Deepzora surface.
 func (s *Server) goalDiagnostics(w http.ResponseWriter, r *http.Request) {
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
@@ -33,7 +33,7 @@ func (s *Server) goalDiagnostics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Disposition", `attachment; filename="deeper-goal-diagnostics.json"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="deepzora-goal-diagnostics.json"`)
 	metadata := control.GoalDiagnosticMetadata{Capabilities: s.capabilities()}
 	if streamOK {
 		if err := streamer.WriteGoalDiagnostics(r.Context(), w, metadata); err != nil {

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/sandbox"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/sandbox"
 )
 
 func writeSettings(t *testing.T, dir, json string) {
@@ -227,18 +227,18 @@ func TestNormalizeCommandRepairsOnlyPowerShellFileEscapedQuotes(t *testing.T) {
 	}{
 		{
 			name:    "powershell file path copied with json escaped quotes",
-			command: `powershell -File \"C:\Users\Example\.deeper\hooks\archive-attachments.ps1\"`,
-			want:    `powershell -File "C:\Users\Example\.deeper\hooks\archive-attachments.ps1"`,
+			command: `powershell -File \"C:\Users\Example\.deepzora\hooks\archive-attachments.ps1\"`,
+			want:    `powershell -File "C:\Users\Example\.deepzora\hooks\archive-attachments.ps1"`,
 		},
 		{
 			name:    "pwsh file path with spaces",
-			command: `pwsh.exe -NoProfile -NonInteractive -File \"C:\Program Files\Deeper Hooks\archive attachments.ps1\"`,
-			want:    `pwsh.exe -NoProfile -NonInteractive -File "C:\Program Files\Deeper Hooks\archive attachments.ps1"`,
+			command: `pwsh.exe -NoProfile -NonInteractive -File \"C:\Program Files\Deepzora Hooks\archive attachments.ps1\"`,
+			want:    `pwsh.exe -NoProfile -NonInteractive -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`,
 		},
 		{
 			name:    "doubly escaped copied quotes",
-			command: `pwsh -File \\\"C:\Program Files\Deeper Hooks\archive attachments.ps1\\\" \"arg with spaces\"`,
-			want:    `pwsh -File "C:\Program Files\Deeper Hooks\archive attachments.ps1" "arg with spaces"`,
+			command: `pwsh -File \\\"C:\Program Files\Deepzora Hooks\archive attachments.ps1\\\" \"arg with spaces\"`,
+			want:    `pwsh -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1" "arg with spaces"`,
 		},
 		{
 			name:    "powershell executable path copied with escaped quotes",
@@ -247,8 +247,8 @@ func TestNormalizeCommandRepairsOnlyPowerShellFileEscapedQuotes(t *testing.T) {
 		},
 		{
 			name:    "well formed file command stays unchanged",
-			command: `powershell -NoProfile -File "C:\Program Files\Deeper Hooks\archive attachments.ps1"`,
-			want:    `powershell -NoProfile -File "C:\Program Files\Deeper Hooks\archive attachments.ps1"`,
+			command: `powershell -NoProfile -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`,
+			want:    `powershell -NoProfile -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`,
 		},
 		{
 			name:    "command mode may intentionally contain escaped quotes",
@@ -297,8 +297,8 @@ func TestNormalizeCommandRepairsOnlyPowerShellFileEscapedQuotes(t *testing.T) {
 
 func TestLoadNormalizesPowerShellFileEscapedQuotes(t *testing.T) {
 	home := t.TempDir()
-	bad := `powershell -File \"C:\Program Files\Deeper Hooks\archive attachments.ps1\"`
-	want := `powershell -File "C:\Program Files\Deeper Hooks\archive attachments.ps1"`
+	bad := `powershell -File \"C:\Program Files\Deepzora Hooks\archive attachments.ps1\"`
+	want := `powershell -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`
 	writeSettings(t, home, hookSettingsWithCommand(t, SessionStart, bad))
 
 	hooks := Load(LoadOptions{HomeDir: home})
@@ -311,7 +311,7 @@ func TestLoadNormalizesPowerShellFileEscapedQuotes(t *testing.T) {
 }
 
 func TestRepairablePowerShellFileArgs(t *testing.T) {
-	command := `powershell -NoProfile -NonInteractive -File \"C:\Program Files\Deeper Hooks\archive attachments.ps1\" -Mode \"startup\"`
+	command := `powershell -NoProfile -NonInteractive -File \"C:\Program Files\Deepzora Hooks\archive attachments.ps1\" -Mode \"startup\"`
 	name, args, ok := repairablePowerShellFileArgs(command)
 	if !ok {
 		t.Fatalf("repairablePowerShellFileArgs(%q) ok = false, want true", command)
@@ -319,7 +319,7 @@ func TestRepairablePowerShellFileArgs(t *testing.T) {
 	if name != "powershell" {
 		t.Fatalf("name = %q, want powershell", name)
 	}
-	wantArgs := []string{"-NoProfile", "-NonInteractive", "-File", `C:\Program Files\Deeper Hooks\archive attachments.ps1`, "-Mode", "startup"}
+	wantArgs := []string{"-NoProfile", "-NonInteractive", "-File", `C:\Program Files\Deepzora Hooks\archive attachments.ps1`, "-Mode", "startup"}
 	if strings.Join(args, "\x00") != strings.Join(wantArgs, "\x00") {
 		t.Fatalf("args = %#v, want %#v", args, wantArgs)
 	}
@@ -343,8 +343,8 @@ func TestRepairablePowerShellFileArgs(t *testing.T) {
 // use.
 func installSuperpowersV611HookFixture(t *testing.T, home string) string {
 	t.Helper()
-	deeperHome := filepath.Join(home, ".deeper")
-	root := filepath.Join(deeperHome, "plugins", "superpowers fixture")
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	root := filepath.Join(deepzoraHome, "plugins", "superpowers fixture")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.CodexManifest), `{
   "name": "superpowers",
   "description": "Core skills library for Claude Code",
@@ -368,7 +368,7 @@ func installSuperpowersV611HookFixture(t *testing.T, home string) string {
 }`)
 	writeHookTestFile(t, filepath.Join(root, "hooks", "run-hook.cmd"),
 		"@echo off\r\nset /p hook_input=\r\necho %1:%hook_input%\r\n")
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "superpowers",
 		Root:         "plugins/superpowers fixture",
 		Version:      "6.1.1",
@@ -420,7 +420,7 @@ func TestLoadSuperpowersV611SessionStartExecutionContract(t *testing.T) {
 
 func TestLoadSuperpowersV620PreservesExplicitBashRequirement(t *testing.T) {
 	home := t.TempDir()
-	root := filepath.Join(home, ".deeper", "plugins", "superpowers")
+	root := filepath.Join(home, ".deepzora", "plugins", "superpowers")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.CodexManifest), `{
   "name": "superpowers",
   "version": "6.2.0",
@@ -440,7 +440,7 @@ func TestLoadSuperpowersV620PreservesExplicitBashRequirement(t *testing.T) {
   }
 }`)
 	writeHookTestFile(t, filepath.Join(root, "hooks", "run-hook.cmd"), "@echo off\r\n")
-	if err := pluginpkg.Upsert(filepath.Join(home, ".deeper"), pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(filepath.Join(home, ".deepzora"), pluginpkg.InstalledPlugin{
 		Name:         "superpowers",
 		Root:         "plugins/superpowers",
 		Version:      "6.2.0",
@@ -468,13 +468,13 @@ func TestLoadSuperpowersV620PreservesExplicitBashRequirement(t *testing.T) {
 }
 
 func TestPluginExplicitBashCommandUsesPOSIXCompatibleRoot(t *testing.T) {
-	root := `C:\Users\Test User\AppData\Roaming\deeper\plugins\superpowers`
+	root := `C:\Users\Test User\AppData\Roaming\deepzora\plugins\superpowers`
 	config := pluginHookExecutionConfigForPlatform(pluginpkg.Hook{
 		Command:      `"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start`,
 		ShellCommand: true,
 		Shell:        "bash",
 	}, root, "windows")
-	want := `"C:/Users/Test User/AppData/Roaming/deeper/plugins/superpowers/hooks/run-hook.cmd" session-start`
+	want := `"C:/Users/Test User/AppData/Roaming/deepzora/plugins/superpowers/hooks/run-hook.cmd" session-start`
 	if config.Command != want {
 		t.Fatalf("explicit Bash command = %q, want POSIX-compatible root %q", config.Command, want)
 	}
@@ -515,8 +515,8 @@ func TestExplicitBashRuntimeReportsMissingDependency(t *testing.T) {
 
 func TestLoadIncludesPluginSessionStartHook(t *testing.T) {
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
-	root := filepath.Join(deeperHome, "plugins", "superpowers")
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	root := filepath.Join(deepzoraHome, "plugins", "superpowers")
 	writeSettings(t, home, `{"hooks":{"PostToolUse":[{"command":"echo global"}]}}`)
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.CodexManifest), `{
   "name": "superpowers",
@@ -524,7 +524,7 @@ func TestLoadIncludesPluginSessionStartHook(t *testing.T) {
   "skills": "./skills/"
 }`)
 	writeHookTestFile(t, filepath.Join(root, "hooks", "session-start-codex"), "#!/usr/bin/env bash\necho ok\n")
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "superpowers",
 		Root:         "plugins/superpowers",
 		Version:      "6.1.0",
@@ -541,7 +541,7 @@ func TestLoadIncludesPluginSessionStartHook(t *testing.T) {
 	if got[0].Scope != ScopePlugin || got[0].Event != SessionStart {
 		t.Fatalf("first hook = %+v, want plugin SessionStart", got[0])
 	}
-	if got[0].Env["DEEPER_PLUGIN_NAME"] != "superpowers" || got[0].Env["DEEPER_WORKSPACE_ROOT"] != "/workspace" {
+	if got[0].Env["DEEPZORA_PLUGIN_NAME"] != "superpowers" || got[0].Env["DEEPZORA_WORKSPACE_ROOT"] != "/workspace" {
 		t.Fatalf("plugin env = %#v", got[0].Env)
 	}
 	if got[1].Scope != ScopeGlobal {
@@ -550,15 +550,15 @@ func TestLoadIncludesPluginSessionStartHook(t *testing.T) {
 }
 
 // TestInspectNoHomeDirResolvesPluginRootFromPlatformHome: with HomeDir empty
-// (the hook-machine default after #7420) and an isolated DEEPER_HOME, the
-// plugin probe and global settings resolve from the platform Deeper home —
-// <home>/plugins and <home>/settings.json — not a doubled .deeper segment.
+// (the hook-machine default after #7420) and an isolated DEEPZORA_HOME, the
+// plugin probe and global settings resolve from the platform Deepzora home —
+// <home>/plugins and <home>/settings.json — not a doubled .deepzora segment.
 func TestInspectNoHomeDirResolvesPluginRootFromPlatformHome(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	root := filepath.Join(home, "plugins", "superpowers")
-	// Global settings live directly under the platform Deeper home
-	// (writeSettings would add .deeper, the OS-home convention #7420 fixes).
+	// Global settings live directly under the platform Deepzora home
+	// (writeSettings would add .deepzora, the OS-home convention #7420 fixes).
 	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -584,7 +584,7 @@ func TestInspectNoHomeDirResolvesPluginRootFromPlatformHome(t *testing.T) {
 	insp := Inspect(LoadOptions{ProjectRoot: "/workspace"})
 	// Inspect reports project + plugin + global sources; assertions focus on
 	// the two that #7420 broke: plugin and global must resolve from the
-	// platform Deeper home, not a doubled .deeper segment.
+	// platform Deepzora home, not a doubled .deepzora segment.
 	var pluginOK, globalOK bool
 	for _, s := range insp.Sources {
 		switch s.Scope {
@@ -604,8 +604,8 @@ func TestInspectNoHomeDirResolvesPluginRootFromPlatformHome(t *testing.T) {
 
 func TestLoadIncludesPluginClaudeCompatibilityHooks(t *testing.T) {
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
-	root := filepath.Join(deeperHome, "plugins", "claude-pack")
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	root := filepath.Join(deepzoraHome, "plugins", "claude-pack")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.CodexManifest), `{
   "name": "claude-pack",
   "version": "1.0.0",
@@ -631,7 +631,7 @@ func TestLoadIncludesPluginClaudeCompatibilityHooks(t *testing.T) {
     ]
   }
 }`)
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "claude-pack",
 		Root:         "plugins/claude-pack",
 		Version:      "1.0.0",
@@ -661,7 +661,7 @@ func TestLoadIncludesPluginClaudeCompatibilityHooks(t *testing.T) {
 	if h := byEvent[UserPromptSubmit]; h.Command != "node hooks/prompt.js" || h.Cwd != root {
 		t.Fatalf("UserPromptSubmit hook = %+v", h)
 	}
-	if h := byEvent[PostToolUse]; h.Env["CLAUDE_PROJECT_DIR"] != "/workspace" || h.Env["DEEPER_PLUGIN_NAME"] != "claude-pack" {
+	if h := byEvent[PostToolUse]; h.Env["CLAUDE_PROJECT_DIR"] != "/workspace" || h.Env["DEEPZORA_PLUGIN_NAME"] != "claude-pack" {
 		t.Fatalf("plugin env = %#v", h.Env)
 	}
 	if h := byEvent[PostToolUse]; h.PayloadFormat != "claude" || h.Env["CLAUDE_PLUGIN_ROOT"] != root {
@@ -671,10 +671,10 @@ func TestLoadIncludesPluginClaudeCompatibilityHooks(t *testing.T) {
 
 func TestLoadPluginHooksPreservesExecutionContract(t *testing.T) {
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
-	root := filepath.Join(deeperHome, "plugins", "hook-contract")
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	root := filepath.Join(deepzoraHome, "plugins", "hook-contract")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "deeper.io/plugin/v2", "name": "hook-contract",
+  "apiVersion": "deepzora.com/plugin/v2", "name": "hook-contract",
   "hooks": {
     "SessionStart": [
       {"command":"bin/check","args":[],"shellCommand":true},
@@ -682,7 +682,7 @@ func TestLoadPluginHooksPreservesExecutionContract(t *testing.T) {
     ]
   }
 }`)
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "hook-contract",
 		Root:         "plugins/hook-contract",
 		ManifestKind: "native",
@@ -707,25 +707,25 @@ func TestLoadPluginHooksPreservesExecutionContract(t *testing.T) {
 	}
 }
 
-func TestLoadExpandsDeeperPluginRootBeforeShellLaunch(t *testing.T) {
+func TestLoadExpandsDeepzoraPluginRootBeforeShellLaunch(t *testing.T) {
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
-	root := filepath.Join(deeperHome, "plugins", "impeccable")
+	deepzoraHome := filepath.Join(home, ".deepzora")
+	root := filepath.Join(deepzoraHome, "plugins", "impeccable")
 	projectRoot := filepath.Join(home, "$CLAUDE_PLUGIN_ROOT-project")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "deeper.io/plugin/v2", "name": "impeccable",
+  "apiVersion": "deepzora.com/plugin/v2", "name": "impeccable",
   "version": "3.9.1",
   "hooks": {
     "PostToolUse": [{
       "match": "edit",
-      "command": "node \"${DEEPER_PLUGIN_ROOT}/skills/impeccable/scripts/hook.mjs\"",
+      "command": "node \"${DEEPZORA_PLUGIN_ROOT}/skills/impeccable/scripts/hook.mjs\"",
       "shellCommand": true,
-      "cwd": "${DEEPER_PLUGIN_ROOT}/work",
-      "env": {"IMPECCABLE_CACHE": "%DEEPER_PLUGIN_ROOT%/cache"}
+      "cwd": "${DEEPZORA_PLUGIN_ROOT}/work",
+      "env": {"IMPECCABLE_CACHE": "%DEEPZORA_PLUGIN_ROOT%/cache"}
     }]
   }
 }`)
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name:         "impeccable",
 		Root:         "plugins/impeccable",
 		Version:      "3.9.1",
@@ -749,16 +749,16 @@ func TestLoadExpandsDeeperPluginRootBeforeShellLaunch(t *testing.T) {
 	if got[0].Cwd != filepath.Join(root, "work") || got[0].Env["IMPECCABLE_CACHE"] != root+"/cache" {
 		t.Fatalf("expanded plugin cwd/env = cwd %q env %#v", got[0].Cwd, got[0].Env)
 	}
-	if got[0].Env["CLAUDE_PROJECT_DIR"] != projectRoot || got[0].Env["DEEPER_WORKSPACE_ROOT"] != projectRoot {
+	if got[0].Env["CLAUDE_PROJECT_DIR"] != projectRoot || got[0].Env["DEEPZORA_WORKSPACE_ROOT"] != projectRoot {
 		t.Fatalf("host-provided workspace paths were expanded: %#v", got[0].Env)
 	}
 }
 
-func TestExpandPluginRootSupportsClaudeDeeperAndCmdAliases(t *testing.T) {
-	root := `C:\Program Files\Deeper\plugins\impeccable`
+func TestExpandPluginRootSupportsClaudeDeepzoraAndCmdAliases(t *testing.T) {
+	root := `C:\Program Files\Deepzora\plugins\impeccable`
 	for _, token := range []string{
 		"${CLAUDE_PLUGIN_ROOT}", "$CLAUDE_PLUGIN_ROOT", "%CLAUDE_PLUGIN_ROOT%",
-		"${DEEPER_PLUGIN_ROOT}", "$DEEPER_PLUGIN_ROOT", "%DEEPER_PLUGIN_ROOT%",
+		"${DEEPZORA_PLUGIN_ROOT}", "$DEEPZORA_PLUGIN_ROOT", "%DEEPZORA_PLUGIN_ROOT%",
 	} {
 		t.Run(token, func(t *testing.T) {
 			command := `node "` + token + `/skills/impeccable/scripts/hook.mjs"`
@@ -776,7 +776,7 @@ func TestExpandPluginRootSupportsClaudeDeeperAndCmdAliases(t *testing.T) {
 	}
 	for _, longerName := range []string{
 		"$CLAUDE_PLUGIN_ROOT_SUFFIX",
-		"$DEEPER_PLUGIN_ROOT_OLD",
+		"$DEEPZORA_PLUGIN_ROOT_OLD",
 		"$CLAUDE_PLUGIN_ROOT2",
 	} {
 		if got := expandPluginRoot(longerName, root); got != longerName {
@@ -786,14 +786,14 @@ func TestExpandPluginRootSupportsClaudeDeeperAndCmdAliases(t *testing.T) {
 	if got, want := expandPluginRoot(`$CLAUDE_PLUGIN_ROOT-child`, root), root+"-child"; got != want {
 		t.Fatalf("delimited unbraced variable = %q, want %q", got, want)
 	}
-	if got, want := expandPluginRoot(`$CLAUDE_PLUGIN_ROOT/$DEEPER_PLUGIN_ROOT`, root), root+"/"+root; got != want {
+	if got, want := expandPluginRoot(`$CLAUDE_PLUGIN_ROOT/$DEEPZORA_PLUGIN_ROOT`, root), root+"/"+root; got != want {
 		t.Fatalf("both root aliases = %q, want %q", got, want)
 	}
 }
 
 func TestExpandPluginRootDoesNotReprocessResolvedRoot(t *testing.T) {
-	root := `/tmp/$DEEPER_PLUGIN_ROOT/%CLAUDE_PLUGIN_ROOT%/${CLAUDE_PLUGIN_ROOT}`
-	value := `${CLAUDE_PLUGIN_ROOT}|$DEEPER_PLUGIN_ROOT|%CLAUDE_PLUGIN_ROOT%`
+	root := `/tmp/$DEEPZORA_PLUGIN_ROOT/%CLAUDE_PLUGIN_ROOT%/${CLAUDE_PLUGIN_ROOT}`
+	value := `${CLAUDE_PLUGIN_ROOT}|$DEEPZORA_PLUGIN_ROOT|%CLAUDE_PLUGIN_ROOT%`
 	want := root + "|" + root + "|" + root
 	if got := expandPluginRoot(value, root); got != want {
 		t.Fatalf("resolved root was expanded again: got %q, want %q", got, want)
@@ -847,12 +847,12 @@ func TestWindowsPOSIXShellExecFormUsesDiscoveredBash(t *testing.T) {
 }
 
 func TestWindowsBatchCommandLinePreservesQuotedPluginPath(t *testing.T) {
-	command := `"C:\Users\Test User\AppData\Roaming\deeper\plugins\superpowers/hooks/run-hook.cmd" session-start`
+	command := `"C:\Users\Test User\AppData\Roaming\deepzora\plugins\superpowers/hooks/run-hook.cmd" session-start`
 	got, ok := windowsBatchCommandLine(command)
 	if !ok {
 		t.Fatal("quoted plugin batch command was not recognized")
 	}
-	want := `cmd.exe /d /s /c ""C:\Users\Test User\AppData\Roaming\deeper\plugins\superpowers\hooks\run-hook.cmd" session-start"`
+	want := `cmd.exe /d /s /c ""C:\Users\Test User\AppData\Roaming\deepzora\plugins\superpowers\hooks\run-hook.cmd" session-start"`
 	if got != want {
 		t.Fatalf("batch command line = %q, want %q", got, want)
 	}
@@ -872,13 +872,13 @@ func TestWindowsBatchCommandLinePreservesArgumentText(t *testing.T) {
 
 func TestWindowsBatchArgvCommandLineSupportsNativePluginHooks(t *testing.T) {
 	got, ok := windowsBatchArgvCommandLine(
-		`C:\Program Files\Deeper\plugins\example/hooks/run-hook.cmd`,
+		`C:\Program Files\Deepzora\plugins\example/hooks/run-hook.cmd`,
 		[]string{"session-start", "argument with spaces"},
 	)
 	if !ok {
 		t.Fatal("native plugin batch command was not recognized")
 	}
-	want := `cmd.exe /d /s /c ""C:\Program Files\Deeper\plugins\example\hooks\run-hook.cmd" session-start "argument with spaces""`
+	want := `cmd.exe /d /s /c ""C:\Program Files\Deepzora\plugins\example\hooks\run-hook.cmd" session-start "argument with spaces""`
 	if got != want {
 		t.Fatalf("batch argv command line = %q, want %q", got, want)
 	}
@@ -988,57 +988,57 @@ func TestDecodeHookOutputPreservesTruncatedUTF8Prefix(t *testing.T) {
 	}
 }
 
-func TestDeeperHomeOverridesGlobalHookPaths(t *testing.T) {
+func TestDeepzoraHomeOverridesGlobalHookPaths(t *testing.T) {
 	home := t.TempDir()
-	deeperHome := filepath.Join(t.TempDir(), "rx-home")
+	deepzoraHome := filepath.Join(t.TempDir(), "rx-home")
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("DEEPER_HOME", deeperHome)
-	if err := os.MkdirAll(deeperHome, 0o755); err != nil {
+	t.Setenv("DEEPZORA_HOME", deepzoraHome)
+	if err := os.MkdirAll(deepzoraHome, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(deeperHome, SettingsFilename), []byte(`{"hooks":{"PostToolUse":[{"command":"echo rx"}]}}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(deepzoraHome, SettingsFilename), []byte(`{"hooks":{"PostToolUse":[{"command":"echo rx"}]}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	writeSettings(t, home, `{"hooks":{"PostToolUse":[{"command":"echo old"}]}}`)
 
-	if got := GlobalSettingsPath(""); got != filepath.Join(deeperHome, SettingsFilename) {
-		t.Fatalf("GlobalSettingsPath = %q, want Deeper home", got)
+	if got := GlobalSettingsPath(""); got != filepath.Join(deepzoraHome, SettingsFilename) {
+		t.Fatalf("GlobalSettingsPath = %q, want Deepzora home", got)
 	}
 	hooks := Load(LoadOptions{})
 	if len(hooks) != 1 || hooks[0].Command != "echo rx" {
-		t.Fatalf("Load hooks = %+v, want Deeper home hook only", hooks)
+		t.Fatalf("Load hooks = %+v, want Deepzora home hook only", hooks)
 	}
 }
 
-func TestLoadOptionsDeeperHomeDirUsesExactGlobalHookPath(t *testing.T) {
+func TestLoadOptionsDeepzoraHomeDirUsesExactGlobalHookPath(t *testing.T) {
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, "AppData", "Roaming", "deeper")
-	settingsPath := filepath.Join(deeperHome, SettingsFilename)
-	if err := os.MkdirAll(deeperHome, 0o755); err != nil {
+	deepzoraHome := filepath.Join(home, "AppData", "Roaming", "deepzora")
+	settingsPath := filepath.Join(deepzoraHome, SettingsFilename)
+	if err := os.MkdirAll(deepzoraHome, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(settingsPath, []byte(`{"hooks":{"Stop":[{"command":"echo exact"}]}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	hooks := Load(LoadOptions{HomeDir: home, DeeperHomeDir: deeperHome})
+	hooks := Load(LoadOptions{HomeDir: home, DeepzoraHomeDir: deepzoraHome})
 	if len(hooks) != 1 || hooks[0].Command != "echo exact" || hooks[0].Source != settingsPath {
-		t.Fatalf("Load hooks = %+v, want exact Deeper home hook", hooks)
+		t.Fatalf("Load hooks = %+v, want exact Deepzora home hook", hooks)
 	}
 }
 
-func TestDeeperHomeDoesNotFallBackToLegacyWhenIsolated(t *testing.T) {
+func TestDeepzoraHomeDoesNotFallBackToLegacyWhenIsolated(t *testing.T) {
 	home := t.TempDir()
-	deeperHome := filepath.Join(t.TempDir(), "rx-home")
+	deepzoraHome := filepath.Join(t.TempDir(), "rx-home")
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("DEEPER_HOME", deeperHome)
+	t.Setenv("DEEPZORA_HOME", deepzoraHome)
 	writeSettings(t, home, `{"hooks":{"PostToolUse":[{"command":"echo old"}]}}`)
 
 	hooks := Load(LoadOptions{})
 	if len(hooks) != 0 {
-		t.Fatalf("Load hooks = %+v, want empty (isolated DEEPER_HOME must not load legacy hooks)", hooks)
+		t.Fatalf("Load hooks = %+v, want empty (isolated DEEPZORA_HOME must not load legacy hooks)", hooks)
 	}
 
 }
@@ -1105,40 +1105,40 @@ func TestMatchesToolTranslatesClaudeToolNames(t *testing.T) {
 		return ResolvedHook{HookConfig: HookConfig{Match: match, PayloadFormat: "claude"}, Event: PreToolUse}
 	}
 	if !MatchesTool(claude("Bash"), "bash") {
-		t.Error(`Claude matcher "Bash" should match Deeper tool "bash"`)
+		t.Error(`Claude matcher "Bash" should match Deepzora tool "bash"`)
 	}
 	if !MatchesTool(claude("Write|Edit"), "write_file") {
-		t.Error(`Claude matcher "Write|Edit" should match Deeper tool "write_file"`)
+		t.Error(`Claude matcher "Write|Edit" should match Deepzora tool "write_file"`)
 	}
 	if !MatchesTool(claude("Write|Edit"), "edit_file") {
-		t.Error(`Claude matcher "Write|Edit" should match Deeper tool "edit_file"`)
+		t.Error(`Claude matcher "Write|Edit" should match Deepzora tool "edit_file"`)
 	}
 	if MatchesTool(claude("Bash"), "write_file") {
-		t.Error(`Claude matcher "Bash" must not match Deeper tool "write_file"`)
+		t.Error(`Claude matcher "Bash" must not match Deepzora tool "write_file"`)
 	}
-	// A native (non-Claude) hook's matcher stays in Deeper's own vocabulary.
+	// A native (non-Claude) hook's matcher stays in Deepzora's own vocabulary.
 	native := ResolvedHook{HookConfig: HookConfig{Match: "bash"}, Event: PreToolUse}
 	if MatchesTool(native, "Bash") {
 		t.Error("native hook matcher must not be interpreted against Claude tool names")
 	}
 	// The subagent tool was renamed "Task" -> "Agent" by Claude; a matcher
-	// using either name must still fire against Deeper's "task" tool.
+	// using either name must still fire against Deepzora's "task" tool.
 	if !MatchesTool(claude("Agent"), "task") {
-		t.Error(`Claude matcher "Agent" (current name) should match Deeper tool "task"`)
+		t.Error(`Claude matcher "Agent" (current name) should match Deepzora tool "task"`)
 	}
 	if !MatchesTool(claude("Task"), "task") {
-		t.Error(`Claude matcher "Task" (legacy alias) should still match Deeper tool "task"`)
+		t.Error(`Claude matcher "Task" (legacy alias) should still match Deepzora tool "task"`)
 	}
 	if !MatchesTool(claude("AskUserQuestion"), "ask") {
-		t.Error(`Claude matcher "AskUserQuestion" should match Deeper tool "ask"`)
+		t.Error(`Claude matcher "AskUserQuestion" should match Deepzora tool "ask"`)
 	}
 	for _, name := range []string{"bash_output", "wait"} {
 		if !MatchesTool(claude("TaskOutput"), name) || !MatchesTool(claude("BashOutput"), name) {
-			t.Errorf(`current "TaskOutput" and legacy "BashOutput" matchers should match Deeper tool %q`, name)
+			t.Errorf(`current "TaskOutput" and legacy "BashOutput" matchers should match Deepzora tool %q`, name)
 		}
 	}
 	if !MatchesTool(claude("TaskStop"), "kill_shell") || !MatchesTool(claude("KillShell"), "kill_shell") {
-		t.Error(`current "TaskStop" and legacy "KillShell" matchers should match Deeper tool "kill_shell"`)
+		t.Error(`current "TaskStop" and legacy "KillShell" matchers should match Deepzora tool "kill_shell"`)
 	}
 }
 
@@ -1173,11 +1173,11 @@ func TestClaudeFacingToolNameUsesCurrentNames(t *testing.T) {
 		}
 		claude := ResolvedHook{HookConfig: HookConfig{Match: "Agent", PayloadFormat: "claude"}, Event: PreToolUse}
 		if !MatchesTool(claude, name) {
-			t.Errorf(`Claude matcher "Agent" should match Deeper tool %q`, name)
+			t.Errorf(`Claude matcher "Agent" should match Deepzora tool %q`, name)
 		}
 		legacy := ResolvedHook{HookConfig: HookConfig{Match: "Task", PayloadFormat: "claude"}, Event: PreToolUse}
 		if !MatchesTool(legacy, name) {
-			t.Errorf(`legacy Claude matcher "Task" should still match Deeper tool %q`, name)
+			t.Errorf(`legacy Claude matcher "Task" should still match Deepzora tool %q`, name)
 		}
 	}
 }
@@ -1233,7 +1233,7 @@ func TestClaudeFacingToolInputAdaptsMappedTools(t *testing.T) {
 }
 
 // TestClaudeFacingToolInputResolvesAbsolutePaths checks the Claude file-tool
-// contract ("file_path must be absolute"): a relative Deeper path resolves
+// contract ("file_path must be absolute"): a relative Deepzora path resolves
 // against the payload cwd — the same root the tool itself resolves against —
 // so a prefix-matching guard sees the path the tool actually accesses.
 func TestClaudeFacingToolInputResolvesAbsolutePaths(t *testing.T) {
@@ -1330,7 +1330,7 @@ func TestDecideOutcome(t *testing.T) {
 		{"timeout-nonblocking", Stop, "", SpawnResult{TimedOut: true}, DecisionWarn},
 		{"spawn-error", PreToolUse, "", SpawnResult{SpawnErr: os.ErrNotExist}, DecisionError},
 		// Claude's own PermissionRequest contract blocks on exit 2/timeout the
-		// same way PreToolUse does; native Deeper PermissionRequest hooks
+		// same way PreToolUse does; native Deepzora PermissionRequest hooks
 		// (format == "") stay advisory-only, verified above.
 		{"claude-permission-exit2-blocks", PermissionRequest, "claude", SpawnResult{ExitCode: 2}, DecisionBlock},
 		{"claude-permission-timeout-blocks", PermissionRequest, "claude", SpawnResult{TimedOut: true}, DecisionBlock},
@@ -1593,7 +1593,7 @@ func TestRunClaudePayloadAndDirectArgs(t *testing.T) {
 		t.Fatalf("Claude payload = %#v", payload)
 	}
 	if payload["tool_name"] != "Bash" {
-		t.Fatalf("Claude payload tool_name = %v, want the Claude vocabulary name Bash for Deeper tool bash", payload["tool_name"])
+		t.Fatalf("Claude payload tool_name = %v, want the Claude vocabulary name Bash for Deepzora tool bash", payload["tool_name"])
 	}
 	response, ok := payload["tool_response"].(map[string]any)
 	if !ok || response["stdout"] != "remote: denied" || response["stderr"] != "exit 1" || response["interrupted"] != false {
@@ -1607,7 +1607,7 @@ func TestRunClaudePayloadAndDirectArgs(t *testing.T) {
 // TestRunClaudeWriteFileGuardFiresAndSeesFilePath is an end-to-end check that
 // a Claude plugin's "block writes to secrets" style PreToolUse guard —
 // matcher "Write", reading .tool_input.file_path — actually fires against a
-// Deeper write_file call and sees the absolute target path Claude's
+// Deepzora write_file call and sees the absolute target path Claude's
 // file-tool contract specifies.
 func TestRunClaudeWriteFileGuardFiresAndSeesFilePath(t *testing.T) {
 	cwd := t.TempDir()
@@ -1621,7 +1621,7 @@ func TestRunClaudeWriteFileGuardFiresAndSeesFilePath(t *testing.T) {
 		ToolArgs: json.RawMessage(`{"path":"secrets/.env","content":"KEY=1"}`),
 	}, hooks, func(_ context.Context, in SpawnInput) SpawnResult { input = in; return SpawnResult{ExitCode: 0} })
 	if input.Command == "" {
-		t.Fatal(`matcher "Write" did not fire for Deeper tool "write_file"`)
+		t.Fatal(`matcher "Write" did not fire for Deepzora tool "write_file"`)
 	}
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(input.Stdin), &payload); err != nil {
@@ -1635,12 +1635,12 @@ func TestRunClaudeWriteFileGuardFiresAndSeesFilePath(t *testing.T) {
 		t.Fatalf(`tool_input.file_path = %v, want absolute %q (a prefix-matching guard must see the path the tool accesses)`, toolInput["file_path"], want)
 	}
 	if _, hasPath := toolInput["path"]; hasPath {
-		t.Fatalf("tool_input still has Deeper's \"path\" key: %#v", toolInput)
+		t.Fatalf("tool_input still has Deepzora's \"path\" key: %#v", toolInput)
 	}
 }
 
 // TestRunClaudeAgentGuardFiresAndSeesRequiredFields covers the full matcher to
-// stdin path for a dedicated Deeper subagent wrapper. Claude Agent requires
+// stdin path for a dedicated Deepzora subagent wrapper. Claude Agent requires
 // both prompt and description even though the wrapper only accepts task.
 func TestRunClaudeAgentGuardFiresAndSeesRequiredFields(t *testing.T) {
 	hooks := []ResolvedHook{{
@@ -1653,7 +1653,7 @@ func TestRunClaudeAgentGuardFiresAndSeesRequiredFields(t *testing.T) {
 		ToolArgs: json.RawMessage(`{"task":"audit the auth changes"}`),
 	}, hooks, func(_ context.Context, in SpawnInput) SpawnResult { input = in; return SpawnResult{ExitCode: 0} })
 	if input.Command == "" {
-		t.Fatal(`matcher "Agent" did not fire for Deeper tool "security_review"`)
+		t.Fatal(`matcher "Agent" did not fire for Deepzora tool "security_review"`)
 	}
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(input.Stdin), &payload); err != nil {

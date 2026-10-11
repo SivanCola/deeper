@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
 )
 
 func TestCompletedJobPersistsOutputAndReleasesMemory(t *testing.T) {

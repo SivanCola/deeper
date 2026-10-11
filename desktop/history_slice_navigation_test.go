@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestColdHistoryPagesRemainReachableInBothDirections(t *testing.T) {

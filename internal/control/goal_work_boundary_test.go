@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/hook"
-	"deeper/internal/session"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/hook"
+	"deepzora/internal/session"
 )
 
 func TestGoalWorkPinsAppendDestinationAcrossBindingChange(t *testing.T) {

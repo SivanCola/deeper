@@ -7,14 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/acp"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/acp"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 
-	_ "deeper/internal/tool/builtin"
+	_ "deepzora/internal/tool/builtin"
 )
 
 const acpTestProviderKind = "acp-test-provider"
@@ -69,7 +69,7 @@ func TestACPInitializesWithoutAPIKey(t *testing.T) {
 			t.Fatalf("Run --acp initialize rc = %d, want 0", rc)
 		}
 	})
-	if !strings.Contains(out, `"protocolVersion":1`) || !strings.Contains(out, `"name":"deeper"`) {
+	if !strings.Contains(out, `"protocolVersion":1`) || !strings.Contains(out, `"name":"deepzora"`) {
 		t.Fatalf("initialize output = %s", out)
 	}
 }
@@ -89,7 +89,7 @@ func TestACPRejectsInvalidSupervisorFlags(t *testing.T) {
 func TestACPSupervisorRuntimeStateUsesHardOverrides(t *testing.T) {
 	isolateCLIConfigHome(t)
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 [agent]
 planner_model = "configured-planner"
 
@@ -123,7 +123,7 @@ allow_write = ["../outside"]
 func TestACPSupervisorRuntimeStateDegradesWhenSandboxIsUnavailable(t *testing.T) {
 	isolateCLIConfigHome(t)
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte("[sandbox]\nbash = \"enforce\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte("[sandbox]\nbash = \"enforce\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, project)
@@ -172,11 +172,11 @@ func TestEffectiveACPPlannerModeIsIndependentOfExecutionMode(t *testing.T) {
 
 func TestACPFactoryLoadsSessionCwdProjectConfig(t *testing.T) {
 	home := isolateCLIConfigHome(t)
-	if _, err := config.SetCredential("DEEPER_TEST_KEY", "test-key"); err != nil {
+	if _, err := config.SetCredential("DEEPZORA_TEST_KEY", "test-key"); err != nil {
 		t.Fatalf("SetCredential: %v", err)
 	}
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 default_model = "local"
 
 [[providers]]
@@ -184,12 +184,12 @@ name = "local"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
 model = "fake-model"
-api_key_env = "DEEPER_TEST_KEY"
+api_key_env = "DEEPZORA_TEST_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, project)
-	cmdDir := filepath.Join(project, ".deeper", "commands")
+	cmdDir := filepath.Join(project, ".deepzora", "commands")
 	if err := os.MkdirAll(cmdDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -216,11 +216,11 @@ api_key_env = "DEEPER_TEST_KEY"
 
 func TestACPFactoryRejectsExplicitEffortForUnsupportedModel(t *testing.T) {
 	isolateCLIConfigHome(t)
-	if _, err := config.SetCredential("DEEPER_TEST_KEY", "test-key"); err != nil {
+	if _, err := config.SetCredential("DEEPZORA_TEST_KEY", "test-key"); err != nil {
 		t.Fatalf("SetCredential: %v", err)
 	}
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 default_model = "reasoner/reasoning-model"
 
 [[providers]]
@@ -228,7 +228,7 @@ name = "reasoner"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
 model = "reasoning-model"
-api_key_env = "DEEPER_TEST_KEY"
+api_key_env = "DEEPZORA_TEST_KEY"
 supported_efforts = ["low", "high"]
 
 [[providers]]
@@ -236,7 +236,7 @@ name = "plain"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
 model = "plain-model"
-api_key_env = "DEEPER_TEST_KEY"
+api_key_env = "DEEPZORA_TEST_KEY"
 effort = "high"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -268,11 +268,11 @@ effort = "high"
 
 func TestACPFactoryPinsRuntimeProfileAndOmitsWorkMode(t *testing.T) {
 	isolateCLIConfigHome(t)
-	if _, err := config.SetCredential("DEEPER_TEST_KEY", "test-key"); err != nil {
+	if _, err := config.SetCredential("DEEPZORA_TEST_KEY", "test-key"); err != nil {
 		t.Fatalf("SetCredential: %v", err)
 	}
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 default_model = "local"
 
 [[providers]]
@@ -280,7 +280,7 @@ name = "local"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
 model = "fake-model"
-api_key_env = "DEEPER_TEST_KEY"
+api_key_env = "DEEPZORA_TEST_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}

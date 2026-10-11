@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	filelock "deeper/internal/identitylock"
+	filelock "deepzora/internal/identitylock"
 )
 
-const activationLockName = ".deeper-activate.lock"
+const activationLockName = ".deepzora-activate.lock"
 
 // Member is one file to publish into a version directory.
 type Member struct {
@@ -272,11 +272,11 @@ func resolveWindowsRootEntries(req *ActivationRequest, installRoot string) error
 
 func windowsRootMembers(root string, sources WindowsRootEntrySources) ([]Member, []string, error) {
 	members := []Member{
-		{Name: "Deeper.exe", Path: sources.LauncherPath},
-		{Name: "deeper-cli.exe", Path: sources.CLIEntryPath},
+		{Name: "Deepzora.exe", Path: sources.LauncherPath},
+		{Name: "deepzora-cli.exe", Path: sources.CLIEntryPath},
 	}
-	names := []string{"Deeper.exe", "deeper-cli.exe"}
-	const legacy = "deeper-launcher.exe"
+	names := []string{"Deepzora.exe", "deepzora-cli.exe"}
+	const legacy = "deepzora-launcher.exe"
 	info, err := os.Lstat(filepath.Join(root, legacy))
 	if err == nil {
 		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {

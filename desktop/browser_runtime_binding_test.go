@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 func TestBrowserExecutorFollowsRuntimeDetachAndReattach(t *testing.T) {

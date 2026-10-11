@@ -62,12 +62,12 @@ func newForkServe(t *testing.T, forkCapable bool) *forkServe {
 			http.Error(w, "denied", http.StatusUnauthorized)
 			return
 		}
-		http.SetCookie(w, &http.Cookie{Name: "deeper_token", Value: fs.token, Path: "/", HttpOnly: true})
+		http.SetCookie(w, &http.Cookie{Name: "deepzora_token", Value: fs.token, Path: "/", HttpOnly: true})
 		w.Header().Set(serveCapabilitiesHeader, fs.caps)
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /new", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("X-Deeper-Session-ID", forkTestSessionID)
+		w.Header().Set("X-Deepzora-Session-ID", forkTestSessionID)
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("GET /sessions", func(w http.ResponseWriter, _ *http.Request) {
@@ -129,7 +129,7 @@ func newForkServe(t *testing.T, forkCapable bool) *forkServe {
 			mux.ServeHTTP(w, r)
 			return
 		}
-		if c, err := r.Cookie("deeper_token"); err == nil && c.Value == fs.token {
+		if c, err := r.Cookie("deepzora_token"); err == nil && c.Value == fs.token {
 			mux.ServeHTTP(w, r)
 			return
 		}

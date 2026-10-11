@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	previous "deeper/desktop/internal/workspacestate/testdata/v2previous"
+	previous "deepzora/desktop/internal/workspacestate/testdata/v2previous"
 )
 
 func TestTopicAdoptionProjectionSurvivesPurgeAndReopen(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"sync"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 // storeMaxEntries bounds the per-client content store; the oldest object is

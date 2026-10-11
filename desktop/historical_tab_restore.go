@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 )
 
 // A source proven by background discovery is a pending user choice, not a

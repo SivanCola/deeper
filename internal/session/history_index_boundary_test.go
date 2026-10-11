@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 func historyBoundaryFixture(t *testing.T) (*Service, *Runtime, string, string) {

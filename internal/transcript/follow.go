@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"deeper/internal/eventwire"
+	"deepzora/internal/eventwire"
 )
 
 const FollowProtocolVersion = 2

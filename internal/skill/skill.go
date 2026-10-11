@@ -4,7 +4,7 @@
 // a tool result, a "subagent" skill runs in an isolated child loop and returns
 // only its final answer. Project scope wins over global; only names+descriptions
 // enter the cache-stable system-prompt index (see index.go) — bodies load on
-// demand. Discovery scans several conventions (.deeper / .agents / .agent /
+// demand. Discovery scans several conventions (.deepzora / .agents / .agent /
 // .claude under the project root and the home dir — see config.ConventionDirs) so
 // skills authored for other agent tools migrate in unchanged. Directory skills
 // use <name>/SKILL.md; flat <name>.md files from Claude and plugin-package
@@ -27,10 +27,10 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"deeper/internal/config"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/frontmatter"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/frontmatter"
+	"deepzora/internal/tool"
 )
 
 // ErrInvocationUnavailable marks a profile/dependency gate that can become
@@ -134,11 +134,11 @@ func IsValidName(name string) bool { return config.IsValidSkillName(name) }
 
 // Options configure a Store. ProjectRoot "" reads only the global + custom
 // scopes. HomeDir "" resolves to the OS home dir (tests point it at a tmpdir).
-// DeeperHomeDir overrides the canonical Deeper home; empty uses
-// config.DeeperHomeDir(), or HomeDir/.deeper when HomeDir is explicitly set.
+// DeepzoraHomeDir overrides the canonical Deepzora home; empty uses
+// config.DeepzoraHomeDir(), or HomeDir/.deepzora when HomeDir is explicitly set.
 type Options struct {
 	HomeDir          string
-	DeeperHomeDir    string
+	DeepzoraHomeDir  string
 	ProjectRoot      string
 	CustomPaths      []string
 	PluginPaths      map[string][]string // canonical custom root -> installed plugin package names
@@ -164,7 +164,7 @@ type Options struct {
 // Store resolves skills across the configured roots.
 type Store struct {
 	homeDir           string
-	deeperHomeDir     string
+	deepzoraHomeDir   string
 	projectRoot       string
 	customPaths       []string
 	pluginPaths       map[string][]string
@@ -228,12 +228,12 @@ func New(opts Options) *Store {
 			home = h
 		}
 	}
-	deeperHome := opts.DeeperHomeDir
-	if deeperHome == "" {
+	deepzoraHome := opts.DeepzoraHomeDir
+	if deepzoraHome == "" {
 		if opts.HomeDir != "" {
-			deeperHome = filepath.Join(home, ".deeper")
+			deepzoraHome = filepath.Join(home, ".deepzora")
 		} else {
-			deeperHome = config.DeeperHomeDir()
+			deepzoraHome = config.DeepzoraHomeDir()
 		}
 	}
 	root := opts.ProjectRoot
@@ -261,7 +261,7 @@ func New(opts Options) *Store {
 	}
 	return &Store{
 		homeDir:          home,
-		deeperHomeDir:    deeperHome,
+		deepzoraHomeDir:  deepzoraHome,
 		projectRoot:      root,
 		customPaths:      custom,
 		pluginPaths:      pluginPaths,
@@ -368,7 +368,7 @@ func bindAllowedTools(refs []string, bindings []tool.MCPBinding) []string {
 		if isPattern {
 			// Preserve the original pattern so an existing broad allowlist such as
 			// "*" keeps all of its prior tools. Add only canonical MCP names the
-			// upstream/Claude pattern itself cannot match in Deeper.
+			// upstream/Claude pattern itself cannot match in Deepzora.
 			appendOne(ref)
 			names := make([]string, 0, len(matches))
 			for name := range matches {
@@ -494,8 +494,8 @@ type discoveryRoot struct {
 }
 
 // roots returns the discovery directories, highest priority first: the
-// convention dirs (config.ConventionDirs: .deeper / .agents / .agent / .claude)
-// under the project root → custom paths → the Deeper home skills dir → other
+// convention dirs (config.ConventionDirs: .deepzora / .agents / .agent / .claude)
+// under the project root → custom paths → the Deepzora home skills dir → other
 // home-dir convention dirs. A later root never overrides an earlier one.
 func (s *Store) roots() []discoveryRoot {
 	if s == nil || s.disableDiscovery {
@@ -515,13 +515,13 @@ func (s *Store) roots() []discoveryRoot {
 	for _, d := range s.customPaths {
 		dirs = append(dirs, de{d, ScopeCustom, false})
 	}
-	if s.deeperHomeDir != "" {
-		dirs = append(dirs, de{filepath.Join(s.deeperHomeDir, SkillsDirname), ScopeGlobal, false})
+	if s.deepzoraHomeDir != "" {
+		dirs = append(dirs, de{filepath.Join(s.deepzoraHomeDir, SkillsDirname), ScopeGlobal, false})
 	}
 	if config.IsolatedHomeDir() == "" {
 		for _, c := range config.ConventionDirs {
 			dir := filepath.Join(s.homeDir, c, SkillsDirname)
-			if s.deeperHomeDir != "" && config.CanonicalSkillPath(filepath.Dir(dir)) == config.CanonicalSkillPath(s.deeperHomeDir) {
+			if s.deepzoraHomeDir != "" && config.CanonicalSkillPath(filepath.Dir(dir)) == config.CanonicalSkillPath(s.deepzoraHomeDir) {
 				continue
 			}
 			dirs = append(dirs, de{dir, ScopeGlobal, c == ".claude"})

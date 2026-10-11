@@ -21,11 +21,11 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/desktop/internal/instanceidentity"
-	"deeper/internal/config"
-	"deeper/internal/installlayout"
-	"deeper/internal/proc"
-	"deeper/internal/repair"
+	"deepzora/desktop/internal/instanceidentity"
+	"deepzora/internal/config"
+	"deepzora/internal/installlayout"
+	"deepzora/internal/proc"
+	"deepzora/internal/repair"
 )
 
 // resolveWindowsUpdateHelperSource finds the on-disk helper for the running
@@ -37,7 +37,7 @@ func resolveWindowsUpdateHelperSource(installDir string) string {
 	return filepath.Join(installDir, windowsUpdateHelperFileName)
 }
 
-const windowsUpdateHelperFileName = "deeper-update-helper.exe"
+const windowsUpdateHelperFileName = "deepzora-update-helper.exe"
 
 var claimWindowsUpdateHelperExecutionFn = claimVerifiedWindowsUpdateHelperExecution
 
@@ -78,7 +78,7 @@ func startWindowsVersionedUpdateHandoff(installerPath, installerSHA256, installD
 		cmd := proc.Command(helperPath, windowsVersionedUpdateHandoffArgs(
 			windowsUpdateOwnerPID(), installerPath, installerSHA256, installDir, relaunchPath, targetVersion,
 		)...)
-		cmd.Env = instanceidentity.UpdateEnvironment(os.Environ(), config.DeeperHomeDir())
+		cmd.Env = instanceidentity.UpdateEnvironment(os.Environ(), config.DeepzoraHomeDir())
 		return cmd.Start()
 	})
 	if err != nil {
@@ -115,7 +115,7 @@ func startWindowsUpdateHelper(installerPath, installerSHA256, installDir, relaun
 			prepared.CreatedAt,
 			repair.UpdateTransactionID(prepared),
 		)...)
-		cmd.Env = instanceidentity.UpdateEnvironment(os.Environ(), config.DeeperHomeDir())
+		cmd.Env = instanceidentity.UpdateEnvironment(os.Environ(), config.DeepzoraHomeDir())
 		return cmd.Start()
 	})
 	if err != nil {
@@ -198,7 +198,7 @@ func prepareVersionedWindowsUpdateHelper(installDir string) (string, [sha256.Siz
 }
 
 func stageWindowsUpdateHelperCopy(dir string, data []byte) (string, error) {
-	staged, err := os.CreateTemp(dir, "deeper-update-helper-*.exe")
+	staged, err := os.CreateTemp(dir, "deepzora-update-helper-*.exe")
 	if err != nil {
 		return "", err
 	}

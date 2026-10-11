@@ -4,21 +4,21 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/fileutil"
-	"deeper/internal/notify"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/sessiontitle"
-	"deeper/internal/store"
-	"deeper/internal/turnevent"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/notify"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/sessiontitle"
+	"deepzora/internal/store"
+	"deepzora/internal/turnevent"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -2459,7 +2459,7 @@ func (a *App) openTopicTabWithHead(scope, workspaceRoot, topicID, sessionPath, h
 }
 
 // OpenGlobalTab opens a new global-scope tab (no project root). The global
-// workspace root is the deeper user config directory.
+// workspace root is the deepzora user config directory.
 func (a *App) OpenGlobalTab(topicID string) (TabMeta, error) {
 	return a.openGlobalTab(topicID)
 }
@@ -4755,7 +4755,7 @@ const legacyProjectSidebarRecoveryMarker = "desktop-projects-legacy-recovered"
 var desktopProjectsFileMu sync.Mutex
 
 func desktopConfigDir() string {
-	return config.DeeperHomeDir()
+	return config.DeepzoraHomeDir()
 }
 
 func (a *App) saveTabsLocked() {

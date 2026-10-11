@@ -1,8 +1,8 @@
 package boot
 
 import (
-	"deeper/internal/agentpreset"
-	"deeper/internal/tool"
+	"deepzora/internal/agentpreset"
+	"deepzora/internal/tool"
 )
 
 // Role vocabulary re-exported for old frontends. Runtime constraints live in

@@ -11,7 +11,7 @@ import (
 // This subprocess deliberately fails admission. Its fixture must still stop
 // the resource owner; registering cleanup after the waiter cannot do that.
 func TestCatalogFixtureAdmissionFailureProcess(t *testing.T) {
-	marker := os.Getenv("DEEPER_TEST_CATALOG_CLEANUP")
+	marker := os.Getenv("DEEPZORA_TEST_CATALOG_CLEANUP")
 	if marker == "" {
 		return
 	}
@@ -30,7 +30,7 @@ func TestCatalogFixtureAdmissionFailureProcess(t *testing.T) {
 func TestCatalogFixtureAdmissionFailureStillStopsOwner(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "closed")
 	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^TestCatalogFixtureAdmissionFailureProcess$")
-	cmd.Env = append(os.Environ(), "DEEPER_TEST_CATALOG_CLEANUP="+marker)
+	cmd.Env = append(os.Environ(), "DEEPZORA_TEST_CATALOG_CLEANUP="+marker)
 	output, err := cmd.CombinedOutput()
 	if err == nil || !strings.Contains(string(output), "session catalog exited before publication") {
 		t.Fatalf("expected admission failure, got %v: %s", err, output)

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
 )
 
 type modelFetchStatusError struct {

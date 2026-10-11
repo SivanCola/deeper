@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	toolpkg "deeper/internal/tool"
+	toolpkg "deepzora/internal/tool"
 )
 
 func TestPresentValidatesAllFilesBeforePublishing(t *testing.T) {

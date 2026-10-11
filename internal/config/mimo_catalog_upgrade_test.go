@@ -10,7 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 func TestMimoCatalogUpgradePreservesSelectionsAndDeletion(t *testing.T) {

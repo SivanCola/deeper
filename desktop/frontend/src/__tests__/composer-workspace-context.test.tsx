@@ -22,7 +22,7 @@ installBridgeApp({
     return {
       revision: calls.snapshots,
       projects: [
-        { key: "project:/repo", kind: "project", label: "Deeper", root: "/repo" },
+        { key: "project:/repo", kind: "project", label: "Deepzora", root: "/repo" },
         { key: "project:/other", kind: "project", label: "Other", root: "/other" },
         { key: "project_remote_box", kind: "project", label: "SSH Box", root: "remote-project:box:/srv/app", remote: { hostId: "box", workspace: "/srv/app" } },
       ],
@@ -44,7 +44,7 @@ installBridgeApp({
 const baseContext: ComposerWorkspaceContext = {
   scope: "project",
   workspaceRoot: "/repo",
-  workspaceName: "Deeper",
+  workspaceName: "Deepzora",
   gitBranch: "feature/current",
   tabId: "tab-a",
   scopeKey: "project:/repo",
@@ -131,20 +131,20 @@ const click = async (element: Element | null) => {
 };
 await render();
 assert(document.querySelector('[role="toolbar"][aria-label="Current work context"]'));
-assert(document.querySelector('button[aria-label="Project: Deeper"]'));
+assert(document.querySelector('button[aria-label="Project: Deepzora"]'));
 assert(document.querySelector('button[aria-label="Current Git branch: feature/current"]'));
 
-await click(document.querySelector('button[aria-label="Project: Deeper"]'));
+await click(document.querySelector('button[aria-label="Project: Deepzora"]'));
 assert.equal(calls.snapshots, 1);
 assert(document.querySelector('input[aria-label="Search workspaces"]'));
 const projectItems = [...document.querySelectorAll('.composer-workspace-menu--projects [role="menuitem"]')];
-assert(projectItems.some((item) => item.textContent?.includes("Deeper")));
+assert(projectItems.some((item) => item.textContent?.includes("Deepzora")));
 assert(projectItems.some((item) => item.textContent?.includes("Other")));
 assert(!projectItems.some((item) => item.textContent?.includes("SSH Box")), "remote projects never appear among local folders to switch to");
-await click(projectItems.find((item) => item.textContent?.includes("Deeper")) ?? null);
+await click(projectItems.find((item) => item.textContent?.includes("Deepzora")) ?? null);
 assert.deepEqual(calls.switches, [], "selecting the current workspace only closes the menu");
 
-await click(document.querySelector('button[aria-label="Project: Deeper"]'));
+await click(document.querySelector('button[aria-label="Project: Deepzora"]'));
 await click([...document.querySelectorAll('.composer-workspace-menu--projects [role="menuitem"]')].find((item) => item.textContent?.includes("Other")) ?? null);
 assert.deepEqual(calls.switches, ["/other"]);
 

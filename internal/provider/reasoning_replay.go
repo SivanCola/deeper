@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/nilutil"
+	"deepzora/internal/nilutil"
 )
 
 // AssistantReasoningReplayPolicy is optionally implemented by providers whose

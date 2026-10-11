@@ -1,6 +1,6 @@
 package config
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 var (
 	opencodeGoAnthropicModels       = provider.OpenCodeGoModelIDs(provider.OpenCodeGoRouteAnthropic)

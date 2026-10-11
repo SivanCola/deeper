@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/gitcmd"
+	"deepzora/internal/control"
+	"deepzora/internal/gitcmd"
 )
 
 const workspaceRepoOpenLimit = 3 * time.Second

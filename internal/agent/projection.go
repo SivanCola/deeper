@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/attachment"
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/attachment"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // Context-projection schema versions. Readers accept any known version;

@@ -11,23 +11,23 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 const (
-	deeperStatusSchemaVersion = 1
-	sessionStatusMethod       = "_deeper.io/session/status"
-	sessionStatusUpdateMethod = "_deeper.io/session/status_update"
+	deepzoraStatusSchemaVersion = 1
+	sessionStatusMethod         = "_deepzora.com/session/status"
+	sessionStatusUpdateMethod   = "_deepzora.com/session/status_update"
 )
 
-// DeeperSchemaCapability advertises one versioned vendor extension in
+// DeepzoraSchemaCapability advertises one versioned vendor extension in
 // agentCapabilities._meta. The method name is the map key so clients can fail
 // closed before opening a session.
-type DeeperSchemaCapability struct {
+type DeepzoraSchemaCapability struct {
 	SchemaVersion int `json:"schemaVersion"`
 }
 
@@ -64,20 +64,20 @@ type SessionRuntimeStateParams struct {
 }
 
 // SessionRuntimeStateProvider exposes effective process/session policy without
-// coupling the ACP adapter to Deeper configuration internals.
+// coupling the ACP adapter to Deepzora configuration internals.
 type SessionRuntimeStateProvider interface {
 	SessionRuntimeState(ctx context.Context, p SessionRuntimeStateParams) (SessionRuntimeState, error)
 }
 
-type DeeperStatusGoal struct {
+type DeepzoraStatusGoal struct {
 	Status    string `json:"status"`
 	Objective string `json:"objective,omitempty"`
 	// Runtime is the optional Goal usage/runtime summary; absent for old
 	// hosts or when no goal is active.
-	Runtime *DeeperGoalRuntime `json:"runtime,omitempty"`
+	Runtime *DeepzoraGoalRuntime `json:"runtime,omitempty"`
 }
 
-type DeeperGoalRuntime struct {
+type DeepzoraGoalRuntime struct {
 	TurnsUsed        int    `json:"turnsUsed"`
 	TurnsLimit       int    `json:"turnsLimit"` // Deprecated: always 0.
 	TokensUsed       int    `json:"tokensUsed"`
@@ -91,21 +91,21 @@ type DeeperGoalRuntime struct {
 	BudgetExtensions int    `json:"budgetExtensions"` // Deprecated: always 0.
 }
 
-type DeeperTurnOutcome struct {
+type DeepzoraTurnOutcome struct {
 	Diagnostic *provider.FailureDiagnostic `json:"diagnostic,omitempty"`
 	Kind       string                      `json:"kind"`
 	Reason     string                      `json:"reason,omitempty"`
 }
 
-type DeeperFinalReadiness struct {
+type DeepzoraFinalReadiness struct {
 	ReadyForReview bool     `json:"readyForReview"`
 	Summary        string   `json:"summary"`
 	Risks          []string `json:"risks"`
 }
 
-// DeeperSessionStatus is the stable schemaVersion=1 recovery snapshot.
+// DeepzoraSessionStatus is the stable schemaVersion=1 recovery snapshot.
 // Reasoning text and unbounded terminal output are intentionally absent.
-type DeeperSessionStatus struct {
+type DeepzoraSessionStatus struct {
 	ProtocolRecovery *provider.ProtocolRecoveryAction `json:"protocolRecovery,omitempty"`
 	SchemaVersion    int                              `json:"schemaVersion"`
 	Sequence         uint64                           `json:"sequence"`
@@ -116,20 +116,20 @@ type DeeperSessionStatus struct {
 	Mode             string                           `json:"mode"`
 	WorkMode         string                           `json:"workMode"`
 	PlannerMode      string                           `json:"plannerMode"`
-	Goal             DeeperStatusGoal                 `json:"goal"`
+	Goal             DeepzoraStatusGoal               `json:"goal"`
 	Phase            string                           `json:"phase"`
-	TurnOutcome      DeeperTurnOutcome                `json:"turnOutcome"`
-	FinalReadiness   DeeperFinalReadiness             `json:"finalReadiness"`
+	TurnOutcome      DeepzoraTurnOutcome              `json:"turnOutcome"`
+	FinalReadiness   DeepzoraFinalReadiness           `json:"finalReadiness"`
 	Sandbox          SessionSandboxState              `json:"sandbox"`
-	Usage            DeeperStatusUsage                `json:"usage"`
+	Usage            DeepzoraStatusUsage              `json:"usage"`
 }
 
-type DeeperStatusUpdate struct {
-	SchemaVersion int                 `json:"schemaVersion"`
-	Sequence      uint64              `json:"sequence"`
-	SessionID     string              `json:"sessionId"`
-	Event         string              `json:"event"`
-	Status        DeeperSessionStatus `json:"status"`
+type DeepzoraStatusUpdate struct {
+	SchemaVersion int                   `json:"schemaVersion"`
+	Sequence      uint64                `json:"sequence"`
+	SessionID     string                `json:"sessionId"`
+	Event         string                `json:"event"`
+	Status        DeepzoraSessionStatus `json:"status"`
 }
 
 type usageAccumulator struct {
@@ -213,8 +213,8 @@ func (a *usageAccumulator) addQuoted(u *provider.Usage, pricing *provider.Pricin
 	}
 }
 
-func (a usageAccumulator) wire() DeeperUsage {
-	usage := DeeperUsage{
+func (a usageAccumulator) wire() DeepzoraUsage {
+	usage := DeepzoraUsage{
 		TotalTokens:      a.promptTokens + a.completionTokens,
 		PromptTokens:     a.promptTokens,
 		CompletionTokens: a.completionTokens,
@@ -265,8 +265,8 @@ type statusTelemetry struct {
 	sequence       uint64
 	state          string
 	phase          string
-	turnOutcome    DeeperTurnOutcome
-	finalReadiness DeeperFinalReadiness
+	turnOutcome    DeepzoraTurnOutcome
+	finalReadiness DeepzoraFinalReadiness
 	turnUsage      usageAccumulator
 	cumulative     usageAccumulator
 	goalOverride   string
@@ -276,8 +276,8 @@ func newStatusTelemetry() *statusTelemetry {
 	return &statusTelemetry{
 		state:       "idle",
 		phase:       "idle",
-		turnOutcome: DeeperTurnOutcome{Kind: "none"},
-		finalReadiness: DeeperFinalReadiness{
+		turnOutcome: DeepzoraTurnOutcome{Kind: "none"},
+		finalReadiness: DeepzoraFinalReadiness{
 			Risks: []string{},
 		},
 	}
@@ -295,8 +295,8 @@ func (t *statusTelemetry) beginTurn() {
 	t.mutate(func(t *statusTelemetry) {
 		t.state = "running"
 		t.phase = "starting"
-		t.turnOutcome = DeeperTurnOutcome{Kind: "none"}
-		t.finalReadiness = DeeperFinalReadiness{Risks: []string{}}
+		t.turnOutcome = DeepzoraTurnOutcome{Kind: "none"}
+		t.finalReadiness = DeepzoraFinalReadiness{Risks: []string{}}
 		t.turnUsage = usageAccumulator{}
 		t.goalOverride = ""
 	})
@@ -342,20 +342,20 @@ func (t *statusTelemetry) finishTurn(runErr error, cancelled bool, goalStatus, s
 		switch {
 		case cancelled:
 			t.phase = "cancelled"
-			t.turnOutcome = DeeperTurnOutcome{Kind: "cancelled"}
+			t.turnOutcome = DeepzoraTurnOutcome{Kind: "cancelled"}
 			t.goalOverride = "cancelled"
 			eventName = "completion"
 		case runErr == nil && goalStatus == control.GoalStatusComplete:
 			t.phase = "review_ready"
-			t.turnOutcome = DeeperTurnOutcome{Kind: "completed"}
+			t.turnOutcome = DeepzoraTurnOutcome{Kind: "completed"}
 			t.finalReadiness.ReadyForReview = true
 		case runErr == nil && (goalStatus == "" || goalStatus == control.GoalStatusStopped):
 			t.phase = "completed"
-			t.turnOutcome = DeeperTurnOutcome{Kind: "completed"}
+			t.turnOutcome = DeepzoraTurnOutcome{Kind: "completed"}
 			t.finalReadiness.ReadyForReview = true
 		case goalStatus == control.GoalStatusBlocked:
 			t.phase = "paused"
-			t.turnOutcome = DeeperTurnOutcome{Kind: "paused", Reason: "goal blocked"}
+			t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: "goal blocked"}
 			eventName = "pause"
 		default:
 			var readinessErr *agent.FinalReadinessError
@@ -365,29 +365,29 @@ func (t *statusTelemetry) finishTurn(runErr error, cancelled bool, goalStatus, s
 			switch {
 			case errors.As(runErr, &readinessErr):
 				t.phase = "readiness_paused"
-				t.turnOutcome = DeeperTurnOutcome{Kind: "paused", Reason: clipStatusError(readinessErr, 2_048)}
+				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusError(readinessErr, 2_048)}
 				t.finalReadiness.Risks = redactStatusTexts(readinessErr.Missing, 2_048)
 				eventName = "pause"
 			case errors.As(runErr, &recoveryPause):
 				t.phase = "recovery_paused"
-				t.turnOutcome = DeeperTurnOutcome{Kind: "paused", Reason: clipStatusText(recoveryPause.Error(), 2_048)}
+				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusText(recoveryPause.Error(), 2_048)}
 				eventName = "pause"
 			case errors.As(runErr, &completionPause):
 				t.phase = "completion_uncertain"
-				t.turnOutcome = DeeperTurnOutcome{Kind: "paused", Reason: clipStatusText(completionPause.Error(), 2_048)}
+				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusText(completionPause.Error(), 2_048)}
 				eventName = "pause"
 			case runPause:
 				t.phase = "paused"
-				t.turnOutcome = DeeperTurnOutcome{Kind: "paused", Reason: clipStatusError(runErr, 2_048)}
+				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusError(runErr, 2_048)}
 				eventName = "pause"
 			case runErr != nil:
 				t.phase = "error"
-				t.turnOutcome = DeeperTurnOutcome{Kind: "error", Reason: clipStatusError(runErr, 2_048), Diagnostic: provider.DiagnoseFailure(runErr)}
+				t.turnOutcome = DeepzoraTurnOutcome{Kind: "error", Reason: clipStatusError(runErr, 2_048), Diagnostic: provider.DiagnoseFailure(runErr)}
 				t.goalOverride = "failed"
 				eventName = "error"
 			default:
 				t.phase = "paused"
-				t.turnOutcome = DeeperTurnOutcome{Kind: "paused", Reason: "goal is not complete"}
+				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: "goal is not complete"}
 				eventName = "pause"
 			}
 		}
@@ -399,10 +399,10 @@ type statusTelemetrySnapshot struct {
 	sequence       uint64
 	state          string
 	phase          string
-	turnOutcome    DeeperTurnOutcome
-	finalReadiness DeeperFinalReadiness
-	turnUsage      DeeperUsage
-	cumulative     DeeperUsage
+	turnOutcome    DeepzoraTurnOutcome
+	finalReadiness DeepzoraFinalReadiness
+	turnUsage      DeepzoraUsage
+	cumulative     DeepzoraUsage
 	goalOverride   string
 }
 
@@ -425,8 +425,8 @@ type persistedStatusTelemetry struct {
 	Sequence       uint64                    `json:"sequence"`
 	State          string                    `json:"state"`
 	Phase          string                    `json:"phase"`
-	TurnOutcome    DeeperTurnOutcome         `json:"turnOutcome"`
-	FinalReadiness DeeperFinalReadiness      `json:"finalReadiness"`
+	TurnOutcome    DeepzoraTurnOutcome       `json:"turnOutcome"`
+	FinalReadiness DeepzoraFinalReadiness    `json:"finalReadiness"`
 	TurnUsage      persistedUsageAccumulator `json:"turnUsage"`
 	Cumulative     persistedUsageAccumulator `json:"cumulative"`
 	GoalOverride   string                    `json:"goalOverride,omitempty"`
@@ -470,7 +470,7 @@ func (t *statusTelemetry) persisted() *persistedStatusTelemetry {
 	return &persistedStatusTelemetry{
 		Sequence: t.sequence, State: t.state, Phase: t.phase,
 		TurnOutcome: redactTurnOutcome(t.turnOutcome),
-		FinalReadiness: DeeperFinalReadiness{
+		FinalReadiness: DeepzoraFinalReadiness{
 			ReadyForReview: t.finalReadiness.ReadyForReview,
 			Summary:        clipStatusText(t.finalReadiness.Summary, 16_384),
 			Risks:          redactStatusTexts(t.finalReadiness.Risks, 2_048),
@@ -496,7 +496,7 @@ func restoreStatusTelemetry(saved *persistedStatusTelemetry) *statusTelemetry {
 	if t.turnOutcome.Kind == "" {
 		t.turnOutcome.Kind = "none"
 	}
-	t.finalReadiness = DeeperFinalReadiness{
+	t.finalReadiness = DeepzoraFinalReadiness{
 		ReadyForReview: saved.FinalReadiness.ReadyForReview,
 		Summary:        clipStatusText(saved.FinalReadiness.Summary, 16_384),
 		Risks:          redactStatusTexts(saved.FinalReadiness.Risks, 2_048),
@@ -507,7 +507,7 @@ func restoreStatusTelemetry(saved *persistedStatusTelemetry) *statusTelemetry {
 	if interrupted {
 		t.sequence++
 		t.phase = "recovery_paused"
-		t.turnOutcome = DeeperTurnOutcome{Kind: "paused", Reason: "previous turn interrupted"}
+		t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: "previous turn interrupted"}
 		t.finalReadiness.ReadyForReview = false
 	}
 	return t
@@ -520,10 +520,10 @@ func (t *statusTelemetry) snapshot() statusTelemetrySnapshot {
 		sequence: t.sequence,
 		state:    t.state,
 		phase:    t.phase,
-		turnOutcome: DeeperTurnOutcome{
+		turnOutcome: DeepzoraTurnOutcome{
 			Kind: t.turnOutcome.Kind, Reason: clipStatusCredentialText(t.turnOutcome.Reason, 2_048), Diagnostic: t.turnOutcome.Diagnostic,
 		},
-		finalReadiness: DeeperFinalReadiness{
+		finalReadiness: DeepzoraFinalReadiness{
 			ReadyForReview: t.finalReadiness.ReadyForReview,
 			Summary:        clipStatusText(t.finalReadiness.Summary, 16_384),
 			Risks:          redactStatusTexts(t.finalReadiness.Risks, 2_048),
@@ -534,7 +534,7 @@ func (t *statusTelemetry) snapshot() statusTelemetrySnapshot {
 	}
 }
 
-func redactTurnOutcome(outcome DeeperTurnOutcome) DeeperTurnOutcome {
+func redactTurnOutcome(outcome DeepzoraTurnOutcome) DeepzoraTurnOutcome {
 	outcome.Reason = clipStatusCredentialText(outcome.Reason, 2_048)
 	return outcome
 }
@@ -660,8 +660,8 @@ func (s *service) publishStatus(sess *acpSession, eventName string) {
 		return
 	}
 	status := sess.statusSnapshot()
-	_ = s.conn.Notify(sessionStatusUpdateMethod, DeeperStatusUpdate{
-		SchemaVersion: deeperStatusSchemaVersion,
+	_ = s.conn.Notify(sessionStatusUpdateMethod, DeepzoraStatusUpdate{
+		SchemaVersion: deepzoraStatusSchemaVersion,
 		Sequence:      status.Sequence,
 		SessionID:     status.SessionID,
 		Event:         eventName,
@@ -669,7 +669,7 @@ func (s *service) publishStatus(sess *acpSession, eventName string) {
 	})
 }
 
-func (s *acpSession) statusSnapshot() DeeperSessionStatus {
+func (s *acpSession) statusSnapshot() DeepzoraSessionStatus {
 	s.mu.Lock()
 	id := s.id
 	ctrl := s.ctrl
@@ -686,13 +686,13 @@ func (s *acpSession) statusSnapshot() DeeperSessionStatus {
 	t := telemetry.snapshot()
 	goalStatus := "none"
 	goalObjective := ""
-	var goalRuntime *DeeperGoalRuntime
+	var goalRuntime *DeepzoraGoalRuntime
 	if ctrl != nil {
 		goalStatus = normalizeGoalStatus(ctrl.GoalStatus())
 		goalObjective = clipStatusText(ctrl.Goal(), 16_384)
 		if strings.TrimSpace(goalObjective) != "" {
 			rt := ctrl.GoalRuntime()
-			goalRuntime = &DeeperGoalRuntime{
+			goalRuntime = &DeepzoraGoalRuntime{
 				TurnsUsed:        rt.TurnsUsed,
 				TurnsLimit:       rt.TurnsLimit,
 				TokensUsed:       rt.TokensUsed,
@@ -734,9 +734,9 @@ func (s *acpSession) statusSnapshot() DeeperSessionStatus {
 	}); ok {
 		protocolRecovery = pending.PendingProtocolRecovery()
 	}
-	return DeeperSessionStatus{
+	return DeepzoraSessionStatus{
 		ProtocolRecovery: protocolRecovery,
-		SchemaVersion:    deeperStatusSchemaVersion,
+		SchemaVersion:    deepzoraStatusSchemaVersion,
 		Sequence:         t.sequence,
 		SessionID:        id,
 		State:            state,
@@ -745,7 +745,7 @@ func (s *acpSession) statusSnapshot() DeeperSessionStatus {
 		Mode:             mode,
 		WorkMode:         workMode,
 		PlannerMode:      runtimeState.PlannerMode,
-		Goal: DeeperStatusGoal{
+		Goal: DeepzoraStatusGoal{
 			Status:    goalStatus,
 			Objective: goalObjective,
 			Runtime:   goalRuntime,
@@ -754,7 +754,7 @@ func (s *acpSession) statusSnapshot() DeeperSessionStatus {
 		TurnOutcome:    t.turnOutcome,
 		FinalReadiness: t.finalReadiness,
 		Sandbox:        runtimeState.Sandbox,
-		Usage: DeeperStatusUsage{
+		Usage: DeepzoraStatusUsage{
 			Turn:       t.turnUsage,
 			Cumulative: t.cumulative,
 		},

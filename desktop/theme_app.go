@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // themeMu serializes theme library mutations (import/save/delete/activate).
@@ -662,9 +662,9 @@ func (a *App) ImportThemePack(sourcePath string, replace bool) (ThemeImportResul
 			return ThemeImportResult{}, fmt.Errorf("no theme package selected")
 		}
 		picked, err := a.nativeHost().OpenFileDialog(a.ctx, nativeDialogOptions{
-			Title: "Import Deeper Theme",
+			Title: "Import Deepzora Theme",
 			Filters: []nativeFileFilter{
-				{DisplayName: "Deeper Theme (*.deeper-theme)", Pattern: "*.deeper-theme"},
+				{DisplayName: "Deepzora Theme (*.deepzora-theme)", Pattern: "*.deepzora-theme"},
 				{DisplayName: "ZIP (*.zip)", Pattern: "*.zip"},
 			},
 		})
@@ -725,10 +725,10 @@ func (a *App) ExportThemePack(id, destPath string) (string, error) {
 		}
 		defaultName := id + themePackExt
 		picked, err := a.nativeHost().SaveFileDialog(a.ctx, nativeDialogOptions{
-			Title:           "Export Deeper Theme",
+			Title:           "Export Deepzora Theme",
 			DefaultFilename: defaultName,
 			Filters: []nativeFileFilter{
-				{DisplayName: "Deeper Theme (*.deeper-theme)", Pattern: "*.deeper-theme"},
+				{DisplayName: "Deepzora Theme (*.deepzora-theme)", Pattern: "*.deepzora-theme"},
 			},
 		})
 		if err != nil {

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/event"
+	"deepzora/internal/bot"
+	"deepzora/internal/event"
 )
 
 type desktopForwardTestAdapter struct {

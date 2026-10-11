@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // CancelModelApplicationBlockers is a fenced recovery operation, not a generic

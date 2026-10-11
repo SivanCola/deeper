@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/permissionpreset"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/permissionpreset"
+	"deepzora/internal/provider"
 )
 
 type Projection struct {

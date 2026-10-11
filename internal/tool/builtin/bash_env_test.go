@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/secrets"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
 )
 
 func TestBashMergesLoginShellPath(t *testing.T) {
@@ -23,7 +23,7 @@ func TestBashMergesLoginShellPath(t *testing.T) {
 	if err := os.Mkdir(bin, 0o755); err != nil {
 		t.Fatalf("mkdir bin: %v", err)
 	}
-	probe := filepath.Join(bin, "deeper-path-probe")
+	probe := filepath.Join(bin, "deepzora-path-probe")
 	if err := os.WriteFile(probe, []byte("#!/bin/sh\nprintf 'shell-path-ok\\n'\n"), 0o755); err != nil {
 		t.Fatalf("write probe: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestBashMergesLoginShellPath(t *testing.T) {
 	t.Setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
 
 	b := bash{shell: sandbox.Shell{Kind: sandbox.ShellBash, Path: "/bin/sh"}}
-	args, _ := json.Marshal(map[string]string{"command": "deeper-path-probe"})
+	args, _ := json.Marshal(map[string]string{"command": "deepzora-path-probe"})
 
 	ctx := sandbox.WithPermissionPreset(context.Background(), "danger-full-access")
 	out, err := b.Execute(ctx, args)
@@ -59,7 +59,7 @@ func TestBashCommandEnvFiltersSensitiveKeysWhenEnabled(t *testing.T) {
 	t.Cleanup(func() { secrets.SetFilterSubprocessEnv(false) })
 	t.Setenv("DEEPSEEK_API_KEY", "sk-real-secret-value-123456")
 	t.Setenv("GH_TOKEN", "ghp_abcdefghijklmnopqrstuvwxyz")
-	t.Setenv("DEEPER_TEST_VISIBLE", "ok")
+	t.Setenv("DEEPZORA_TEST_VISIBLE", "ok")
 	// PWD is the POSIX working-directory variable, not a password: the name
 	// filter must never strip it or every subprocess loses its cwd context.
 	t.Setenv("PWD", "/tmp/somewhere")
@@ -68,7 +68,7 @@ func TestBashCommandEnvFiltersSensitiveKeysWhenEnabled(t *testing.T) {
 	if strings.Contains(env, "DEEPSEEK_API_KEY") || strings.Contains(env, "GH_TOKEN") {
 		t.Fatalf("bash env leaked sensitive keys:\n%s", env)
 	}
-	if !strings.Contains(env, "DEEPER_TEST_VISIBLE=ok") {
+	if !strings.Contains(env, "DEEPZORA_TEST_VISIBLE=ok") {
 		t.Fatalf("bash env dropped non-sensitive key:\n%s", env)
 	}
 	if !strings.Contains(env, "PWD=/tmp/somewhere") {
@@ -86,7 +86,7 @@ func TestBashCommandEnvKeepsTokensByDefault(t *testing.T) {
 }
 
 func TestParseShellPATH(t *testing.T) {
-	const marker = "__DEEPER_BASH_PATH__="
+	const marker = "__DEEPZORA_BASH_PATH__="
 	cases := []struct {
 		name string
 		out  string
@@ -136,9 +136,9 @@ func TestRunShellPATHCommandFiltersEnvWhenEnabled(t *testing.T) {
 	}
 	secrets.SetFilterSubprocessEnv(true)
 	t.Cleanup(func() { secrets.SetFilterSubprocessEnv(false) })
-	t.Setenv("DEEPER_TEST_SECRET_TOKEN", "ghp_abcdefghijklmnopqrstuvwxyz")
+	t.Setenv("DEEPZORA_TEST_SECRET_TOKEN", "ghp_abcdefghijklmnopqrstuvwxyz")
 
-	out := runShellPATHCommand(context.Background(), "/bin/sh", []string{"-c", `printf 'tok=%s' "${DEEPER_TEST_SECRET_TOKEN:-none}"`})
+	out := runShellPATHCommand(context.Background(), "/bin/sh", []string{"-c", `printf 'tok=%s' "${DEEPZORA_TEST_SECRET_TOKEN:-none}"`})
 	if !strings.Contains(string(out), "tok=none") {
 		t.Fatalf("login-shell PATH probe leaked filtered env: %q", out)
 	}

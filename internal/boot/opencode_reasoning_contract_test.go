@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func TestOpenCodeGoDeepSeekReasoningContract(t *testing.T) {

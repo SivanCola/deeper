@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"deeper/internal/remote/forward"
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/remote/forward"
+	"deepzora/internal/remote/sshtest"
 )
 
 // TestCredentialProxyReverseForwardEndToEnd drives the real SSH forwarding

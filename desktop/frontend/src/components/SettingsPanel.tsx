@@ -288,7 +288,7 @@ export function SettingsPanel({
       const next = await reload();
       if (seq !== settingsApplySeq.current) return isModelSettingsResult(result) ? result.persisted : true;
       onChanged(next);
-      window.dispatchEvent(new Event("deeper:model-catalog-changed"));
+      window.dispatchEvent(new Event("deepzora:model-catalog-changed"));
       if (isModelSettingsResult(result)) {
         if (!result.persisted) throw new Error(result.issues.map(issue => issue.message).join("\n"));
       }
@@ -306,7 +306,7 @@ export function SettingsPanel({
         const next = await reload();
         if (seq !== settingsApplySeq.current) return false;
         onChanged(next);
-        window.dispatchEvent(new Event("deeper:model-catalog-changed"));
+        window.dispatchEvent(new Event("deepzora:model-catalog-changed"));
       } catch {
         // Keep the original mutation error; it is the actionable failure.
       }
@@ -328,7 +328,7 @@ export function SettingsPanel({
       const next = await reload();
       if (seq !== settingsApplySeq.current) return;
       onChanged(next);
-      window.dispatchEvent(new Event("deeper:model-catalog-changed"));
+      window.dispatchEvent(new Event("deepzora:model-catalog-changed"));
     } catch (e) {
       if (seq !== settingsApplySeq.current) return;
       setErr(formatSettingsError(e, t));
@@ -1141,7 +1141,7 @@ function defaultBotSettings(): BotSettingsView {
     control: {
       enabled: false,
       addr: "127.0.0.1:37913",
-      tokenEnv: "DEEPER_BOT_CONTROL_TOKEN",
+      tokenEnv: "DEEPZORA_BOT_CONTROL_TOKEN",
     },
     pairing: {
       enabled: true,
@@ -4928,10 +4928,10 @@ export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, fo
   const saveProvider = async (provider: ProviderView, key: string, create = false) => {
     if (create || !s.providers.some(p => p.name === provider.name)) {
       const id = crypto.randomUUID().replaceAll("-", "");
-      provider = {...provider, displayName: provider.displayName || provider.name, name: `${provider.name}-${id}`, apiKeyEnv: `DEEPER_CONNECTION_${id.toUpperCase()}_KEY`};
+      provider = {...provider, displayName: provider.displayName || provider.name, name: `${provider.name}-${id}`, apiKeyEnv: `DEEPZORA_CONNECTION_${id.toUpperCase()}_KEY`};
     }
     if (key) {
-      provider = {...provider, apiKeyEnv: `DEEPER_CONNECTION_${crypto.randomUUID().replaceAll("-", "").toUpperCase()}_KEY`};
+      provider = {...provider, apiKeyEnv: `DEEPZORA_CONNECTION_${crypto.randomUUID().replaceAll("-", "").toUpperCase()}_KEY`};
       const warning = await saveModelSettings(s, {kind: "provider_save", provider, key});
       invalidateProviderCacheByAPIKeyEnv(provider.apiKeyEnv);
       return warning;
@@ -7161,7 +7161,7 @@ function AboutSection({
         label={t("changelog.title")}
         hint={t("changelog.subtitle")}
       >
-        <button className="btn btn--small" onClick={() => void openExternal("https://github.com/SivanCola/deeper/releases/tag/")}>
+        <button className="btn btn--small" onClick={() => void openExternal("https://github.com/SivanCola/deepzora/releases/tag/")}>
           {t("changelog.openWeb")}
           <ExternalLink size={14} aria-hidden="true" />
         </button>
@@ -7174,14 +7174,14 @@ function AboutSection({
         <div className="settings-inline-controls">
           <button
             className="btn btn--small"
-            onClick={() => void openExternal("https://github.com/SivanCola/deeper/issues/new/choose")}
+            onClick={() => void openExternal("https://github.com/SivanCola/deepzora/issues/new/choose")}
           >
             {t("feedback.submitIssue")}
             <ExternalLink size={14} aria-hidden="true" />
           </button>
           <button
             className="btn btn--small"
-            onClick={() => void openExternal("https://github.com/SivanCola/deeper/issues")}
+            onClick={() => void openExternal("https://github.com/SivanCola/deepzora/issues")}
           >
             {t("feedback.viewIssues")}
             <ExternalLink size={14} aria-hidden="true" />

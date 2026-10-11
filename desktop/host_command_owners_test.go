@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/desktop/internal/hostrpc"
+	"deepzora/desktop/internal/hostrpc"
 )
 
 func TestHostCommandOwnersMatchSource(t *testing.T) {

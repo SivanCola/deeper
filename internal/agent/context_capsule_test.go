@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func capsuleForSpec(t *testing.T, spec SubagentSpec) ContextCapsule {

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/permission"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/permission"
+	"deepzora/internal/tool"
 )
 
 type approvalChoice struct {

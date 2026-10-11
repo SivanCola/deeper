@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/installlayout"
+	"deepzora/internal/installlayout"
 )
 
 func seedDesktopVersionedLayout(t *testing.T, root, version, payload string) string {
@@ -94,9 +94,9 @@ func TestSupersededDesktopNeedsRelaunch(t *testing.T) {
 	if !supersededDesktopNeedsRelaunch(oldDesktop) {
 		t.Fatal("retained previous desktop must relaunch through the launcher")
 	}
-	t.Setenv("DEEPER_DEV", "1")
+	t.Setenv("DEEPZORA_DEV", "1")
 	if supersededDesktopNeedsRelaunch(oldDesktop) {
-		t.Fatal("DEEPER_DEV must skip superseded relaunch")
+		t.Fatal("DEEPZORA_DEV must skip superseded relaunch")
 	}
 }
 

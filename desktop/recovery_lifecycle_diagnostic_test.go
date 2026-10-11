@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/store"
 )
 
 func recoveryLifecycleOutcomes(t *testing.T, sessionPaths ...string) []string {

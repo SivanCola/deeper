@@ -4,8 +4,8 @@ import (
 	"crypto/sha256"
 	"os"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // classifySnapshotWrite decides the write shape for a save. Writer-bound

@@ -18,17 +18,17 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/agent"
-	"deeper/internal/checkpoint"
-	"deeper/internal/command"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
-	"deeper/internal/secrets"
-	"deeper/internal/skill"
-	"deeper/internal/testenv"
+	"deepzora/internal/agent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/command"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
+	"deepzora/internal/secrets"
+	"deepzora/internal/skill"
+	"deepzora/internal/testenv"
 )
 
 type blockingTurnRunner struct{ started chan struct{} }
@@ -41,9 +41,9 @@ type stubbornTurnRunner struct {
 const tinyPNGBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
 const (
-	middleClickPasteHelperFlag = "GO_WANT_DEEPER_MIDDLE_CLICK_PASTE_HELPER"
-	middleClickPasteHelperMode = "DEEPER_MIDDLE_CLICK_PASTE_HELPER_MODE"
-	middleClickPasteTestValue  = "DEEPER_MIDDLE_CLICK_TEST_VALUE"
+	middleClickPasteHelperFlag = "GO_WANT_DEEPZORA_MIDDLE_CLICK_PASTE_HELPER"
+	middleClickPasteHelperMode = "DEEPZORA_MIDDLE_CLICK_PASTE_HELPER_MODE"
+	middleClickPasteTestValue  = "DEEPZORA_MIDDLE_CLICK_TEST_VALUE"
 )
 
 func TestMiddleClickPasteCommandHelper(t *testing.T) {
@@ -75,7 +75,7 @@ func TestMain(m *testing.M) {
 
 	// Pin the UI language for the whole cli test binary. Production code
 	// (cli.Run) calls i18n.DetectLanguage("") which resolves the host locale from
-	// the environment (DEEPER_LANG/LC_ALL/LC_MESSAGES/LANG) and installs it as
+	// the environment (DEEPZORA_LANG/LC_ALL/LC_MESSAGES/LANG) and installs it as
 	// the global i18n.M. On a non-English dev machine that flips M to e.g.
 	// Chinese, and tests that exercise the CLI entry point (acp_test.go,
 	// cli_test.go) don't restore it — so later tests asserting English UI strings
@@ -83,7 +83,7 @@ func TestMain(m *testing.M) {
 	// deterministic English environment keeps the suite independent of the host
 	// locale (matching CI). Tests that need another language still set it
 	// explicitly via i18n.DetectLanguage(lang) with their own cleanup.
-	os.Unsetenv("DEEPER_LANG")
+	os.Unsetenv("DEEPZORA_LANG")
 	os.Unsetenv("LC_ALL")
 	os.Unsetenv("LC_MESSAGES")
 	os.Setenv("LANG", "en_US.UTF-8")
@@ -142,7 +142,7 @@ func writeTUIImageCapabilityConfig(t *testing.T, root string) {
 		Models:       []string{"text-only", "vision-pro"},
 		VisionModels: []string{"vision-pro"},
 	}}
-	if err := cfg.SaveTo(filepath.Join(root, "deeper.toml")); err != nil {
+	if err := cfg.SaveTo(filepath.Join(root, "deepzora.toml")); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 	approveWorkspace(t, root)
@@ -901,14 +901,14 @@ func TestMainManagerFollowsTranscriptWithoutTopPadding(t *testing.T) {
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
 	m0, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 20})
 	m = m0.(chatTUI)
-	m.wrappedLines = []string{"deeper", "› /mcp"}
+	m.wrappedLines = []string{"deepzora", "› /mcp"}
 
 	out := ansi.Strip(m.renderTranscriptWithMainManager("Manage MCP servers\n1 servers"))
 	lines := strings.Split(out, "\n")
 	if len(lines) < 4 {
 		t.Fatalf("rendered manager area too short:\n%s", out)
 	}
-	if !strings.Contains(lines[0], "deeper") || !strings.Contains(lines[1], "/mcp") {
+	if !strings.Contains(lines[0], "deepzora") || !strings.Contains(lines[1], "/mcp") {
 		t.Fatalf("transcript lines should stay above manager:\n%s", out)
 	}
 	if strings.TrimSpace(lines[2]) != "" {
@@ -1502,22 +1502,22 @@ func TestUnsendDiscardsBufferedEvents(t *testing.T) {
 
 func TestRecoveryPauseTurnDoneIsInformational(t *testing.T) {
 	t.Cleanup(func() { i18n.DetectLanguage("en") })
-	const backendFallback = "Automatic retries paused. Deeper stopped repeated attempts and kept completed work. Send \"continue\" to start a fresh attempt, or add instructions to change direction."
+	const backendFallback = "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send \"continue\" to start a fresh attempt, or add instructions to change direction."
 	tests := []struct {
 		lang string
 		want string
 	}{
 		{
 			lang: "en",
-			want: "Automatic retries paused. Deeper stopped repeated attempts and kept completed work. Send “Continue” to start a fresh attempt, or add instructions to change direction.",
+			want: "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send “Continue” to start a fresh attempt, or add instructions to change direction.",
 		},
 		{
 			lang: "zh",
-			want: "已暂停自动重试。Deeper 已停止重复尝试，并保留已完成的工作。发送“继续”即可开始新一轮，也可以补充要求来调整方向。",
+			want: "已暂停自动重试。Deepzora 已停止重复尝试，并保留已完成的工作。发送“继续”即可开始新一轮，也可以补充要求来调整方向。",
 		},
 		{
 			lang: "zh-TW",
-			want: "已暫停自動重試。Deeper 已停止重複嘗試，並保留已完成的工作。傳送「繼續」即可開始新一輪，也可以補充要求來調整方向。",
+			want: "已暫停自動重試。Deepzora 已停止重複嘗試，並保留已完成的工作。傳送「繼續」即可開始新一輪，也可以補充要求來調整方向。",
 		},
 	}
 	for _, tt := range tests {
@@ -2404,7 +2404,7 @@ func isolateUserConfig(t *testing.T) {
 	t.Helper()
 	root := t.TempDir()
 	t.Setenv("HOME", root)
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(root, "config"))
 	t.Setenv("AppData", filepath.Join(root, "AppData")) // os.UserConfigDir reads AppData on Windows
 	t.Chdir(root)
@@ -2506,7 +2506,7 @@ func TestReasoningLanguageCommandPersistsAndUpdatesController(t *testing.T) {
 
 func TestReasoningLanguageCommandWritesUserConfigNotProjectConfig(t *testing.T) {
 	isolateUserConfig(t)
-	projectPath := filepath.Join(mustGetwd(t), "deeper.toml")
+	projectPath := filepath.Join(mustGetwd(t), "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte("[agent]\nreasoning_language = \"en\"\n"), 0o644); err != nil {
 		t.Fatalf("write project config: %v", err)
 	}
@@ -2665,7 +2665,7 @@ func TestLanguageCommandAutoClearsPinnedLanguage(t *testing.T) {
 
 func TestLanguageCommandAutoClearsLowerPriorityUserOverride(t *testing.T) {
 	isolateUserConfig(t)
-	t.Setenv("DEEPER_LANG", "")
+	t.Setenv("DEEPZORA_LANG", "")
 	t.Setenv("LC_ALL", "")
 	t.Setenv("LC_MESSAGES", "")
 	t.Setenv("LANG", "")
@@ -2681,7 +2681,7 @@ func TestLanguageCommandAutoClearsLowerPriorityUserOverride(t *testing.T) {
 		t.Fatalf("save user config: %v", err)
 	}
 	projectCfg := config.Default()
-	if err := projectCfg.SaveTo("deeper.toml"); err != nil {
+	if err := projectCfg.SaveTo("deepzora.toml"); err != nil {
 		t.Fatalf("save project config: %v", err)
 	}
 
@@ -3555,14 +3555,14 @@ func TestQualifiedSlashDocsBypassesConflictingCustomCommand(t *testing.T) {
 	m.ctrl = ctrl
 	m.commands = commands
 
-	if cmd := m.runSlashCommand("/deeper:docs"); cmd != nil {
-		t.Fatal("bare /deeper:docs should complete locally")
+	if cmd := m.runSlashCommand("/deepzora:docs"); cmd != nil {
+		t.Fatal("bare /deepzora:docs should complete locally")
 	}
 	if len(r.inputs) != 0 {
-		t.Fatalf("bare /deeper:docs should not start a model turn, inputs=%q", r.inputs)
+		t.Fatalf("bare /deepzora:docs should not start a model turn, inputs=%q", r.inputs)
 	}
 	transcript := strings.Join(m.transcript, "\n")
-	if !strings.Contains(transcript, "digest=sha256:") || !strings.Contains(transcript, "Usage: /deeper:docs <question>") || strings.Contains(transcript, "legacy docs") {
+	if !strings.Contains(transcript, "digest=sha256:") || !strings.Contains(transcript, "Usage: /deepzora:docs <question>") || strings.Contains(transcript, "legacy docs") {
 		t.Fatalf("qualified built-in docs was shadowed:\n%s", transcript)
 	}
 }
@@ -3686,7 +3686,7 @@ func TestDynamicMCPFreshApprovalHidesRememberedChoices(t *testing.T) {
 }
 
 func TestDynamicBashApprovalChoicesUseExactLiteralRules(t *testing.T) {
-	const command = "git status $(touch /tmp/deeper-dynamic-approval)"
+	const command = "git status $(touch /tmp/deepzora-dynamic-approval)"
 	approval := &event.Approval{Tool: "bash", Subject: command}
 	choices := approvalChoices(approval)
 	if len(choices) != 3 {
@@ -3768,7 +3768,7 @@ func TestSlashMigrateShowsProgress(t *testing.T) {
 
 func TestSlashMigrateFromImportsExplicitSessions(t *testing.T) {
 	home := isolateCLIConfigHome(t)
-	legacySessions := filepath.Join(home, "Old Deeper", "sessions")
+	legacySessions := filepath.Join(home, "Old Deepzora", "sessions")
 	if err := os.MkdirAll(legacySessions, 0o755); err != nil {
 		t.Fatal(err)
 	}

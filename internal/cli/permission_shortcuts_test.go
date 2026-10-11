@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func TestShiftTabCyclesReadWorkspaceYoloPlan(t *testing.T) {

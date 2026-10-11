@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
 	"os"
 	"path/filepath"
 	"slices"

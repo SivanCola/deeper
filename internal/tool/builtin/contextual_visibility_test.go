@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/jobs"
-	"deeper/internal/tool"
+	"deepzora/internal/jobs"
+	"deepzora/internal/tool"
 )
 
 func TestContextualBuiltinVisibilityFollowsOwningContext(t *testing.T) {

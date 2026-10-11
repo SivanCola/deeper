@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/secrets"
+	"deepzora/internal/secrets"
 )
 
 func TestFormatSectionSortsAndRedacts(t *testing.T) {
@@ -43,7 +43,7 @@ func TestFormatSectionSortsAndRedacts(t *testing.T) {
 }
 
 func TestRunProbesReportsMissingCommand(t *testing.T) {
-	results := RunProbes(context.Background(), []string{"__deeper_missing_probe__ --version"})
+	results := RunProbes(context.Background(), []string{"__deepzora_missing_probe__ --version"})
 	if len(results) != 1 {
 		t.Fatalf("results len = %d, want 1", len(results))
 	}
@@ -93,7 +93,7 @@ func TestRunProbesAllowsStaticEnvAssignment(t *testing.T) {
 	toolPath := filepath.Join(dir, "envtool")
 	toolPath = writeEnvProbeTool(t, toolPath)
 
-	results := RunProbesWithOverrides(context.Background(), []string{`DEEPER_PROBE_ENV=ok envtool --version`}, map[string]string{"envtool": toolPath})
+	results := RunProbesWithOverrides(context.Background(), []string{`DEEPZORA_PROBE_ENV=ok envtool --version`}, map[string]string{"envtool": toolPath})
 	if len(results) != 1 {
 		t.Fatalf("results len = %d, want 1", len(results))
 	}
@@ -178,7 +178,7 @@ func TestRunProbesReportsTimeout(t *testing.T) {
 }
 
 func TestPrepareProbeCommandSetsCancellationBudget(t *testing.T) {
-	cmd := exec.Command("deeper-test-probe")
+	cmd := exec.Command("deepzora-test-probe")
 	prepareProbeCommand(cmd)
 	if cmd.Cancel == nil {
 		t.Fatal("probe command must install a cancellation hook")
@@ -290,12 +290,12 @@ func writeProbeTool(t *testing.T, path, output string) string {
 func writeEnvProbeTool(t *testing.T, path string) string {
 	t.Helper()
 	setProbeTimeoutForTest(t, 10*time.Second)
-	body := "#!/bin/sh\nprintf '%s\\n' \"$DEEPER_PROBE_ENV\"\n"
+	body := "#!/bin/sh\nprintf '%s\\n' \"$DEEPZORA_PROBE_ENV\"\n"
 	if runtime.GOOS == "windows" {
 		if !strings.HasSuffix(path, ".bat") {
 			path += ".bat"
 		}
-		body = "@echo %DEEPER_PROBE_ENV%\r\n"
+		body = "@echo %DEEPZORA_PROBE_ENV%\r\n"
 	}
 	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
 		t.Fatalf("write env tool: %v", err)
@@ -363,11 +363,11 @@ func TestRunProbesFilterSubprocessEnv(t *testing.T) {
 	setProbeTimeoutForTest(t, 10*time.Second)
 	dir := t.TempDir()
 	toolPath := filepath.Join(dir, "envtool")
-	body := "#!/bin/sh\nprintf 'tok=%s' \"${DEEPER_TEST_SECRET_TOKEN:-none}\"\n"
+	body := "#!/bin/sh\nprintf 'tok=%s' \"${DEEPZORA_TEST_SECRET_TOKEN:-none}\"\n"
 	if err := os.WriteFile(toolPath, []byte(body), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("DEEPER_TEST_SECRET_TOKEN", "ghp_abcdefghijklmnopqrstuvwxyz")
+	t.Setenv("DEEPZORA_TEST_SECRET_TOKEN", "ghp_abcdefghijklmnopqrstuvwxyz")
 	secrets.SetFilterSubprocessEnv(true)
 	t.Cleanup(func() { secrets.SetFilterSubprocessEnv(false) })
 

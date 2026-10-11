@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const serveMissingKeyHelperEnv = "DEEPER_TEST_SERVE_MISSING_KEY_HELPER"
+const serveMissingKeyHelperEnv = "DEEPZORA_TEST_SERVE_MISSING_KEY_HELPER"
 
 // TestServeStartsWithMissingProviderKey exercises the real runServe lifecycle:
 // the listener and port file must become available before a Provider key exists,
@@ -23,13 +23,13 @@ func TestServeStartsWithMissingProviderKey(t *testing.T) {
 	if os.Getenv(serveMissingKeyHelperEnv) == "1" {
 		// The package TestMain clears path overrides before dispatching tests, so
 		// restore this helper's isolated home after that process-wide guard runs.
-		if err := os.Setenv("DEEPER_HOME", os.Getenv("DEEPER_TEST_SERVE_HOME")); err != nil {
+		if err := os.Setenv("DEEPZORA_HOME", os.Getenv("DEEPZORA_TEST_SERVE_HOME")); err != nil {
 			os.Exit(2)
 		}
 		code := runServe([]string{
 			"--model", "remote-demo/model-a",
 			"--addr", "127.0.0.1:0",
-			"--port-file", os.Getenv("DEEPER_TEST_SERVE_PORT_FILE"),
+			"--port-file", os.Getenv("DEEPZORA_TEST_SERVE_PORT_FILE"),
 			"--auth", "token",
 			"--token", "serve-setup-test-token",
 		})
@@ -61,7 +61,7 @@ base_url = "https://example.invalid/v1"
 balance_url = "` + balanceServer.URL + `"
 models = ["model-a"]
 default = "model-a"
-api_key_env = "DEEPER_TEST_REMOTE_MISSING_KEY"
+api_key_env = "DEEPZORA_TEST_REMOTE_MISSING_KEY"
 `
 	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
 		t.Fatal(err)
@@ -70,11 +70,11 @@ api_key_env = "DEEPER_TEST_REMOTE_MISSING_KEY"
 	cmd := exec.Command(os.Args[0], "-test.run=^TestServeStartsWithMissingProviderKey$")
 	cmd.Env = replaceServeTestEnv(os.Environ(),
 		serveMissingKeyHelperEnv+"=1",
-		"DEEPER_HOME="+home,
-		"DEEPER_TEST_SERVE_HOME="+home,
-		"DEEPER_CREDENTIALS_STORE=file",
-		"DEEPER_TEST_REMOTE_MISSING_KEY=",
-		"DEEPER_TEST_SERVE_PORT_FILE="+portFile,
+		"DEEPZORA_HOME="+home,
+		"DEEPZORA_TEST_SERVE_HOME="+home,
+		"DEEPZORA_CREDENTIALS_STORE=file",
+		"DEEPZORA_TEST_REMOTE_MISSING_KEY=",
+		"DEEPZORA_TEST_SERVE_PORT_FILE="+portFile,
 	)
 	var output bytes.Buffer
 	cmd.Stdout = &output
@@ -130,7 +130,7 @@ api_key_env = "DEEPER_TEST_REMOTE_MISSING_KEY"
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("missing-key Serve status = %d, want 200: %s\n%s", resp.StatusCode, body, output.String())
 	}
-	if !bytes.Contains(body, []byte("Deeper Provider Setup")) {
+	if !bytes.Contains(body, []byte("Deepzora Provider Setup")) {
 		t.Fatalf("missing-key Serve did not show setup page:\n%s", body)
 	}
 }

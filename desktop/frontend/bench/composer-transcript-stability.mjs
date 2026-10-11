@@ -11,7 +11,7 @@ process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || 
   ? path.join(frontendDir, ".pw-browsers")
   : process.env.PLAYWRIGHT_BROWSERS_PATH;
 const { chromium } = await import("playwright");
-const port = Number(process.env.DEEPER_COMPOSER_SCROLL_PORT ?? 4622);
+const port = Number(process.env.DEEPZORA_COMPOSER_SCROLL_PORT ?? 4622);
 const url = `http://127.0.0.1:${port}/?mock=bench&bench=1&platform=windows`;
 
 function assert(condition, message) {
@@ -87,7 +87,7 @@ async function resetScrollProbe(page) {
     const transcript = document.querySelector(".transcript");
     if (!(transcript instanceof HTMLElement)) throw new Error("transcript is unavailable");
     window.__composerScrollProbe = { samples: [], writes: [] };
-    window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__ = (write) => window.__composerScrollProbe.writes.push(write);
+    window.__DEEPZORA_TRANSCRIPT_SCROLL_WRITE__ = (write) => window.__composerScrollProbe.writes.push(write);
     const record = (source) => window.__composerScrollProbe.samples.push({
       source,
       top: transcript.scrollTop,
@@ -110,7 +110,7 @@ async function readScrollProbe(page) {
   return page.evaluate(() => {
     const transcript = document.querySelector(".transcript");
     const probe = window.__composerScrollProbe;
-    window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__ = undefined;
+    window.__DEEPZORA_TRANSCRIPT_SCROLL_WRITE__ = undefined;
     if (!(transcript instanceof HTMLElement) || !probe) throw new Error("composer scroll probe is unavailable");
     return {
       samples: probe.samples,

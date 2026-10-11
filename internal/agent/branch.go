@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 	"crypto/rand"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/store"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/store"
 	"encoding/hex"
 	"errors"
 	"fmt"

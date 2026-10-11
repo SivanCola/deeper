@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestDefaultTopicTitleLocalizesAtAPIBoundary(t *testing.T) {

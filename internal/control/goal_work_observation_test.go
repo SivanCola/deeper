@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/skill"
+	"deepzora/internal/event"
+	"deepzora/internal/skill"
 )
 
 type goalWorkCallbackRunner struct{ run func() error }

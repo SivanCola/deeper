@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
 )
 
 const providerProbeTimeout = 20 * time.Second

@@ -5,8 +5,8 @@ package main
 import (
 	"os"
 
-	"deeper/internal/appidentity"
-	"deeper/internal/installlayout"
+	"deepzora/internal/appidentity"
+	"deepzora/internal/installlayout"
 )
 
 func repairDesktopIconIntegration() error {

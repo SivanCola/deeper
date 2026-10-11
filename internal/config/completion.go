@@ -12,7 +12,7 @@ const (
 // CompletionValidationModeEnv is retained so older config readers and process
 // launchers continue to recognize the historical setting. It no longer
 // changes runtime behavior.
-const CompletionValidationModeEnv = "DEEPER_COMPLETION_VALIDATION_MODE"
+const CompletionValidationModeEnv = "DEEPZORA_COMPLETION_VALIDATION_MODE"
 
 // CompletionValidationMode returns off because the completion validator was
 // removed. The method remains as a compatibility shim for old callers.

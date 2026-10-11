@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 const (
@@ -55,7 +55,7 @@ type LauncherLock struct {
 }
 
 // LaunchGrant is durable consent to start one exact project-provided MCP.
-// Scope remains in the JSON solely so previous Deeper versions can read new
+// Scope remains in the JSON solely so previous Deepzora versions can read new
 // writes; new code only creates workspace-scoped grants.
 type LaunchGrant struct {
 	Scope                string    `json:"scope"`
@@ -86,21 +86,21 @@ var managerRegistry struct {
 	items map[string]*Manager
 }
 
-func StatePath(deeperHome string) string {
-	if strings.TrimSpace(deeperHome) == "" {
+func StatePath(deepzoraHome string) string {
+	if strings.TrimSpace(deepzoraHome) == "" {
 		return ""
 	}
-	return filepath.Join(deeperHome, StateFilename)
+	return filepath.Join(deepzoraHome, StateFilename)
 }
 
 func NewManager(path, workspace string) *Manager {
 	return &Manager{path: path, workspaceFingerprint: WorkspaceFingerprint(workspace)}
 }
 
-// ForWorkspace returns the process-shared manager for one Deeper home and
+// ForWorkspace returns the process-shared manager for one Deepzora home and
 // workspace so sibling tabs observe one launch authorization state.
-func ForWorkspace(deeperHome, workspace string) *Manager {
-	path := StatePath(deeperHome)
+func ForWorkspace(deepzoraHome, workspace string) *Manager {
+	path := StatePath(deepzoraHome)
 	workspaceFP := WorkspaceFingerprint(workspace)
 	key := path + "\x00" + workspaceFP
 	managerRegistry.Lock()

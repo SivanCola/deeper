@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 type projectTreeRuntimeState struct {

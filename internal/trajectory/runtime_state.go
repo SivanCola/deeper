@@ -1,6 +1,6 @@
 package trajectory
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 func (r *Recorder) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot) {
 	if r != nil {

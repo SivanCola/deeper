@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestHistoricalPreparationFailureCarriesItsCause(t *testing.T) {

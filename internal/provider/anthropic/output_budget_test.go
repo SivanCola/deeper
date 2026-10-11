@@ -3,7 +3,7 @@ package anthropic
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestSharedWindowOutputBudgetCapability(t *testing.T) {

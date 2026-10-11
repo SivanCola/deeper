@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // streamScanEndError classifies why the SSE scanner stopped. A clean close

@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/fileops"
-	"deeper/internal/historywork"
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/historywork"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestDisplayPagerImportResumesCommittedEntries(t *testing.T) {

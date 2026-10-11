@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 // resumeEntryIndex returns the 1-based /resume index of the row matching the

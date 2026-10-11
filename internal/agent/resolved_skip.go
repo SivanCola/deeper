@@ -3,8 +3,8 @@ package agent
 import (
 	"encoding/json"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 // resolvedSkipOutcome completes proxy actions that resolve locally, without a

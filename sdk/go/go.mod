@@ -1,3 +1,3 @@
-module github.com/SivanCola/deeper/sdk/go
+module github.com/SivanCola/deepzora/sdk/go
 
 go 1.23

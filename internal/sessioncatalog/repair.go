@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 const repairWakeKey = "session-catalog-repair-wake"

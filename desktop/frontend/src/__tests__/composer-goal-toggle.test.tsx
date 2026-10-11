@@ -11,6 +11,7 @@ import type { AppBindings } from "../lib/bridge";
 import type { ComposerInvocation, StructuredInvocationSubmit } from "../lib/invocationDisplay";
 import type { CollaborationMode, CommandInfo, DirEntry, ToolApprovalMode } from "../lib/types";
 import { dispatchNativeFileDrop, installDesktopHostStub, type DesktopHostStubOptions } from "./desktopHostStub";
+import { waitForComposerReadiness as waitFor } from "./composerReadiness";
 
 let passed = 0;
 let failed = 0;
@@ -211,16 +212,6 @@ function nativeFileDropEvent(): Event {
   return drop;
 }
 
-async function waitFor(label: string, predicate: () => boolean) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    await act(async () => {
-      await flushTimers();
-    });
-    if (predicate()) return;
-  }
-  throw new Error(`timed out waiting for ${label}`);
-}
-
 type RenderedComposer = Awaited<ReturnType<typeof renderComposer>>;
 
 function fileEntry(name: string): DirEntry {
@@ -395,7 +386,7 @@ console.log("\ncomposer goal toggle");
   // Attachment-only first Goal: no text, no skill — attachment refs are valid task context.
   const dom = installDom();
   mockApp({
-    SavePastedFileForTarget: async () => ".deeper/attachments/notes.txt",
+    SavePastedFileForTarget: async () => ".deepzora/attachments/notes.txt",
   });
   const { root, calls } = await renderComposer({ collaborationMode: "goal", goal: "" });
   const textarea = document.querySelector("textarea") as HTMLTextAreaElement | null;
@@ -414,7 +405,7 @@ console.log("\ncomposer goal toggle");
   });
   eq(calls.send.length, 1, "attachment-only input can become the initial Goal");
   ok(
-    calls.submit[0]?.includes("@.deeper/attachments/notes.txt") === true,
+    calls.submit[0]?.includes("@.deepzora/attachments/notes.txt") === true,
     "attachment-only initial Goal submits the attachment ref",
   );
   eq(calls.structured[0], undefined, "attachment-only initial Goal is not a structured skill submit");
@@ -783,7 +774,7 @@ console.log("\ncomposer goal toggle");
 {
   const dom = installDom();
   mockApp({
-    SavePastedFileForTarget: async () => ".deeper/attachments/notes.txt",
+    SavePastedFileForTarget: async () => ".deepzora/attachments/notes.txt",
   });
   const { root } = await renderComposer();
 
@@ -843,7 +834,7 @@ console.log("\ncomposer goal toggle");
   mockApp({
     AttachDroppedForTarget: async () => ({
       kind: "attachment",
-      path: ".deeper/attachments/report.pdf",
+      path: ".deepzora/attachments/report.pdf",
     }),
   });
   const { root } = await renderComposer();
@@ -869,7 +860,7 @@ console.log("\ncomposer goal toggle");
   mockApp({
     AttachDroppedForTarget: async () => ({
       kind: "workspace",
-      path: "__deeper_external_folder/mock/Folder-With-Spaces",
+      path: "__deepzora_external_folder/mock/Folder-With-Spaces",
       isDir: true,
       displayPath: "/Users/example/Folder With Spaces",
     }),
@@ -895,7 +886,7 @@ console.log("\ncomposer goal toggle");
   });
 
   eq(calls.send.join(","), "inspect @/Users/example/Folder With Spaces/", "external folder display text uses the real folder path");
-  eq(calls.submit.join(","), "inspect @__deeper_external_folder/mock/Folder-With-Spaces/", "external folder submit text uses the session ref token");
+  eq(calls.submit.join(","), "inspect @__deepzora_external_folder/mock/Folder-With-Spaces/", "external folder submit text uses the session ref token");
 
   await act(async () => {
     root.unmount();
@@ -904,7 +895,7 @@ console.log("\ncomposer goal toggle");
 }
 
 {
-  const externalToken = "__deeper_external_folder/mock/Folder-With-Spaces/src/outside.txt";
+  const externalToken = "__deepzora_external_folder/mock/Folder-With-Spaces/src/outside.txt";
   const externalDisplayPath = "/Users/example/Folder With Spaces/src/outside.txt";
   const picked = composerPickFileEntry("ask @outside", "outside", "", {
     name: "src/outside.txt",
@@ -2070,13 +2061,13 @@ console.log("\ncomposer goal toggle");
         <UserMessage
           id="h3"
           text={"Compare these commands\n/other-command"}
-          submitText={"/deeper-develop Compare these commands\n/other-command"}
+          submitText={"/deepzora-develop Compare these commands\n/other-command"}
         />
       </LocaleProvider>,
     );
     await flushTimers();
   });
-  ok(document.querySelector(".invocation-display--message")?.textContent?.includes("Deeper Develop") === true, "history recovery ignores slash-prefixed lines inside the task body");
+  ok(document.querySelector(".invocation-display--message")?.textContent?.includes("Deepzora Develop") === true, "history recovery ignores slash-prefixed lines inside the task body");
 
   await act(async () => {
     root.render(
@@ -2106,7 +2097,7 @@ console.log("\ncomposer goal toggle");
     ListSessions: async () => [{ path: "/sessions/recent.jsonl", title: "Recent session", current: false }],
     SavePastedFileForTarget: async () => {
       savedFiles += 1;
-      return ".deeper/attachments/notes.txt";
+      return ".deepzora/attachments/notes.txt";
     },
   });
   const { root, rerender } = await renderComposer();

@@ -7,9 +7,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/config"
-	"deeper/internal/mcpdiag"
-	"deeper/internal/plugin"
+	"deepzora/internal/config"
+	"deepzora/internal/mcpdiag"
+	"deepzora/internal/plugin"
 )
 
 const (

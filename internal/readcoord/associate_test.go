@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestAssociateExpandsOnlyMissingCoverageWithoutResettingBudget(t *testing.T) {

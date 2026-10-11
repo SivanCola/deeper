@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // CapabilityExecutor is optional. CDP and older remote implementations retain

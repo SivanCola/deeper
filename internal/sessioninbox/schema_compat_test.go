@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 func TestPreviousInboxReaderPausesSchemaThree(t *testing.T) {

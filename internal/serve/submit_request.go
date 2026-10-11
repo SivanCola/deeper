@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // submit runs raw user input as a turn (slash commands and @-references

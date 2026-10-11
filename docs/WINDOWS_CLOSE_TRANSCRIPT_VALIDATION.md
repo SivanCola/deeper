@@ -40,10 +40,10 @@ service-ready lines include the service build, PID, and generation; exit lines
 include the shutdown request ID, reason, draft-save time, service time, total
 time, and result.
 
-Files under `%APPDATA%\deeper\diagnostics\lifecycle\` are temporary lifecycle
+Files under `%APPDATA%\deepzora\diagnostics\lifecycle\` are temporary lifecycle
 evidence. A successful exit removes the current run's file, and diagnostics can
 also be disabled by policy or a development build. An empty directory after a
-normal exit is therefore expected. Collect `%APPDATA%\deeper\logs\shell.log`
+normal exit is therefore expected. Collect `%APPDATA%\deepzora\logs\shell.log`
 and `service.log` for post-exit investigation.
 
 ## Follow-up review verification
@@ -69,7 +69,7 @@ No Go sources changed. Native Windows package qualification remains unexecuted.
 
 ## Windows package qualification
 
-Use one final installer or portable build with an isolated `DEEPER_HOME` and
+Use one final installer or portable build with an isolated `DEEPZORA_HOME` and
 the bundled service. Do not use the development handshake bypass.
 
 1. Confirm strict shell/service handshake and a renderer `Version` call.

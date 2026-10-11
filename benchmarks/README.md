@@ -1,4 +1,4 @@
-# Deeper Benchmarks
+# Deepzora Benchmarks
 
 Three harnesses live under `benchmarks/`; `cmd/e2ebench` also exposes a
 SWE-bench Verified mode:
@@ -164,17 +164,17 @@ cannot outweigh one that swept forty.
 ## Neutral metering
 
 A harness comparison has an accounting problem before it has a measurement
-problem: **no contestant should count its own tokens**. Deeper writes
+problem: **no contestant should count its own tokens**. Deepzora writes
 `.run-metrics.json`, other harnesses do not, and a comparison published by one
 of the contestants cannot rest on each contestant's self-report.
 
 `-meter` moves the measurement onto the request boundary. The bench starts a
 loopback proxy, writes a temp config whose *benchmarked provider* points at it,
-and hands the child `DEEPER_HOME`; prompt, completion and cache-split tokens
+and hands the child `DEEPZORA_HOME`; prompt, completion and cache-split tokens
 are then counted identically for anything that speaks the endpoint.
 
 ```sh
-go run ./cmd/e2ebench -meter ~/.deeper/config.toml -trajectories t/
+go run ./cmd/e2ebench -meter ~/.deepzora/config.toml -trajectories t/
 ```
 
 - **Credentials are never touched.** The config names an `api_key_env`, so the
@@ -196,7 +196,7 @@ drifted from it:
 **self-report divergence** +0.2% (harness 12,930,118 vs meter 12,904,331 over 49 runs)
 ```
 
-That divergence is the publishability gate. Deeper is the first harness
+That divergence is the publishability gate. Deepzora is the first harness
 metered this way precisely because it *does* self-report: if the proxy and
 `.run-metrics.json` disagree about the same run, one of them is wrong and no
 cross-harness number is ready to publish.
@@ -215,7 +215,7 @@ An absolute index wins over the cadence, so a targeted failure stays where it
 was asked for.
 
 ```sh
-go run ./cmd/e2ebench -meter ~/.deeper/config.toml -faults every:5:500 -trajectories t/
+go run ./cmd/e2ebench -meter ~/.deepzora/config.toml -faults every:5:500 -trajectories t/
 ```
 
 The readout separates two things that are easy to conflate:
@@ -279,7 +279,7 @@ decoder. The task ID is the directory name; tasks run in sorted ID order.
 | --- | --- | --- | --- |
 | `prompt` | string | yes | The task instruction handed to the agent. |
 | `class` | string | no | Task class label (e.g. `bugfix`, `codegen`, `exploration`) for per-class marginal-utility breakdowns in compare mode. |
-| `max_steps` | int | yes | Agent tool-call cap; passed through as `--max-steps` to `deeper run`. |
+| `max_steps` | int | yes | Agent tool-call cap; passed through as `--max-steps` to `deepzora run`. |
 | `no_solution` | bool | no | Ground truth: no reachable solution exists. The task leaves every accuracy denominator, its `verify.sh` grades the inverse contract, and it is scored on honesty instead. See [Completion Integrity](#completion-integrity). |
 | `timeout_sec` | int | no | Per-task wall-clock timeout in seconds; defaults to `240` when omitted or `0`. |
 | `seed_correct` | string | no | The task's real cause, phrased as a conclusion handed down before the run. Used by `-anchor correct`. See [Anchor resistance](#anchor-resistance). |
@@ -318,9 +318,9 @@ bytecode while tracebacks display the new source.
 
 ## Running the e2e suite
 
-Prerequisites: a `deeper` binary (or `go run ./cmd/deeper` …) with a
+Prerequisites: a `deepzora` binary (or `go run ./cmd/deepzora` …) with a
 configured provider. The harness invokes the agent as
-`deeper run --auto --metrics <path> [--model NAME] [--max-steps N] [--profile delivery] [--ablate ARM] <prompt>`
+`deepzora run --auto --metrics <path> [--model NAME] [--max-steps N] [--profile delivery] [--ablate ARM] <prompt>`
 inside a temp copy of the task's `workdir/`; the `--auto` flag is deliberate so
 unattended fixture writes are allowed.
 
@@ -351,13 +351,13 @@ own outcome).
 | `-suite` | `benchmarks/e2e` | Suite root (must contain `tasks/<id>/`). |
 | `-task` | *(all)* | Suite mode: run only these comma-separated task IDs (e.g. `-task fix-add-bug`); unknown IDs fail with the available list. |
 | `-attempts` | `1` | Suite and diff modes: retry a task until an attempt passes, up to N; enables the `Pass@≤N` KPI, and TTCS charges a retried solve with its failed attempts' wall. |
-| `-bin` | `deeper` | Path to the deeper binary. |
+| `-bin` | `deepzora` | Path to the deepzora binary. |
 | `-model` | *(config default)* | Provider/model name. |
 | `-profile` | `baseline` | Tool-surface/runtime tier: `baseline` \| `economy` \| `balanced` \| `delivery`. All but `baseline` append `--profile <tier>` to the agent invocation; `baseline` passes no flag (byte-identical legacy control, behaviorally `balanced`). Economy starts with the core tool set and pays `connect_tool_source` rounds plus prefix resets to grow it — the report's Tool surface line prices that trade. |
 | `-ablate` | *(none)* | Ablation arm: comma-separated subsystems to switch off — `evidence`, `planner`, `subagent`, `retrieval`, `compaction`; `none` \| `all`. |
 | `-out` | *(stdout)* | Write the markdown report here. |
 | `-json` | *(none)* | Write the JSON report here (optional). |
-| `-trajectories` | *(none)* | Suite mode: write one `<task-id>.trajectory.jsonl` per task into this directory (the agent's full event stream with timestamps — see `deeper run --trajectory`). The report gains a time-attribution line (tools vs. model) and each JSON result a `trajectory` digest. |
+| `-trajectories` | *(none)* | Suite mode: write one `<task-id>.trajectory.jsonl` per task into this directory (the agent's full event stream with timestamps — see `deepzora run --trajectory`). The report gains a time-attribution line (tools vs. model) and each JSON result a `trajectory` digest. |
 | `-force-planner` | `false` | Suite mode: prefix each prompt with a plan-first directive so the two-model turn engages regardless of the planner gate. Use for the "with planner" arm of an A/B; results carry `plan_forced` so arms are only comparable with equal forcing. |
 | `-anchor` | `blind` | Suite mode: which hypothesis the agent holds before it looks at anything — `blind` (none, the control) \| `correct` \| `wrong`. The seeded arms prefix each prompt with the task's authored seed and **skip** tasks that have none, so an unseeded control run never lands in a seeded denominator. Results carry `anchor`. See [Anchor resistance](#anchor-resistance). |
 | `-cache` | `cold` | Suite mode: `cold` runs each task as a fresh session (the fair cross-agent comparison arm); `warm` primes the provider prefix cache with a one-step run in the same workdir first, measuring the long-lived-session steady state. Never mix arms in one report — compare them with `-mode compare cold.json warm.json`. |
@@ -415,7 +415,7 @@ images and hand the resulting patches to the official grader:
 # network/proxy setup that prevents the agent from reading upstream fixes.
 go run ./cmd/e2ebench -mode swebench \
   -subset benchmarks/swebench/subset.json \
-  -network deeper-eval -proxy http://127.0.0.1:8080
+  -network deepzora-eval -proxy http://127.0.0.1:8080
 ```
 
 SWE-bench mode accepts the `-model`, `-profile`, `-ablate`, `-permission`,
@@ -471,7 +471,7 @@ go run ./benchmarks/context-maintenance-e2e comprehension
 
 ## See also
 
-- [`docs/CLI.md`](../docs/CLI.md) — the `deeper run` flags the e2e harness
+- [`docs/CLI.md`](../docs/CLI.md) — the `deepzora run` flags the e2e harness
   passes through (`--auto`, `--metrics`, `--model`, `--max-steps`,
   `--profile`, `--ablate`).
 - [`cmd/e2ebench/main.go`](../cmd/e2ebench/main.go) — suite runner and report

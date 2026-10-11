@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // appendForkTurn commits one turn into a live exclusive session. A completed
@@ -222,7 +222,7 @@ func TestForkSessionRouteCreatesChildWithoutSwitchingParent(t *testing.T) {
 		t.Fatalf("created child = %+v", created)
 	}
 	// The response never moves the serve session: the parent keeps its identity
-	// and its path, and the X-Deeper-Session-ID header still names the parent.
+	// and its path, and the X-Deepzora-Session-ID header still names the parent.
 	if after, ok := ctrl.SessionRef(); !ok || after != ref || ctrl.SessionPath() != parentPath {
 		t.Fatalf("parent identity = %+v (ok=%v path=%q)", after, ok, ctrl.SessionPath())
 	}

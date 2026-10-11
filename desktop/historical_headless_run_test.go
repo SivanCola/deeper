@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func headlessRunFixture(t *testing.T, root, id string) {

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type authenticationTestRunner struct {

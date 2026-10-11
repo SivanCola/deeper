@@ -1,6 +1,6 @@
 package event
 
-import "deeper/internal/nilutil"
+import "deepzora/internal/nilutil"
 
 // RunBudgetTotals is one scope's accumulated spend: counts and money, never
 // content. Priced is false when no price table covered it, so a reader can

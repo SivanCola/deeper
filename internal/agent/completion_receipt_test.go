@@ -3,8 +3,8 @@ package agent
 import (
 	"testing"
 
-	"deeper/internal/completion"
-	"deeper/internal/evidence"
+	"deepzora/internal/completion"
+	"deepzora/internal/evidence"
 )
 
 func TestReceiptCarriesWhatProseDoesNot(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 // SessionCheckpointBoundary identifies a semantic durability barrier. A

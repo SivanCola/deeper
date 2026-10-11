@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func (c *Controller) stampToolRecoveryEvent(e event.Event) error {

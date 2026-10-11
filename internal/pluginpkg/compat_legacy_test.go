@@ -38,7 +38,7 @@ func TestLegacyNativeManifestRejected(t *testing.T) {
 func TestV1NativeManifestRejected(t *testing.T) {
 	root := t.TempDir()
 	manifest := `{
-  "apiVersion": "deeper.io/plugin/v1",
+  "apiVersion": "deepzora.com/plugin/v1",
   "name": "old",
   "version": "1.0.0"
 }`

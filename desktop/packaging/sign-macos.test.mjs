@@ -13,11 +13,11 @@ test("signing requires an explicit app and identity", async () => {
 test("signs both architectures of resource sidecars and framework binaries before sealing", {
   skip: process.platform !== "darwin",
 }, async () => {
-  const root = mkdtempSync(join(tmpdir(), "deeper-signing-test-"));
+  const root = mkdtempSync(join(tmpdir(), "deepzora-signing-test-"));
   try {
-    const app = join(root, "Deeper.app");
+    const app = join(root, "Deepzora.app");
     const plist = (executable, type) => `<?xml version="1.0"?><plist version="1.0"><dict>
-      <key>CFBundleIdentifier</key><string>io.deeper.fixture.${executable}</string>
+      <key>CFBundleIdentifier</key><string>io.deepzora.fixture.${executable}</string>
       <key>CFBundleExecutable</key><string>${executable}</string>
       <key>CFBundlePackageType</key><string>${type}</string>
       <key>CFBundleVersion</key><string>1</string></dict></plist>`;
@@ -25,13 +25,13 @@ test("signs both architectures of resource sidecars and framework binaries befor
       mkdirSync(dirname(join(app, name)), { recursive: true });
       writeFileSync(join(app, name), contents);
     };
-    put("Contents/Info.plist", plist("Deeper", "APPL"));
+    put("Contents/Info.plist", plist("Deepzora", "APPL"));
     put("Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist", plist("Electron Framework", "FMWK"));
     put("Contents/Frameworks/Squirrel.framework/Versions/A/Resources/Info.plist", plist("Squirrel", "FMWK"));
     const binaries = [
-      "Contents/MacOS/Deeper",
-      "Contents/Resources/service/deeper",
-      "Contents/Resources/service/deeper-desktop",
+      "Contents/MacOS/Deepzora",
+      "Contents/Resources/service/deepzora",
+      "Contents/Resources/service/deepzora-desktop",
       "Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
       "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libffmpeg.dylib",
       "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libvk_swiftshader.dylib",
@@ -48,7 +48,7 @@ test("signs both architectures of resource sidecars and framework binaries befor
       execFileSync("codesign", ["--remove-signature", file]);
       if (relative.endsWith(".dylib")) chmodSync(file, 0o644);
     }
-    symlinkSync("../Resources/service/deeper-desktop", join(app, "Contents/MacOS/deeper-desktop"));
+    symlinkSync("../Resources/service/deepzora-desktop", join(app, "Contents/MacOS/deepzora-desktop"));
     // Valid versioned framework symlinks are essential to exercise real seals.
     for (const name of ["Electron Framework", "Squirrel"]) {
       const framework = join(app, "Contents/Frameworks", `${name}.framework`);
@@ -69,7 +69,7 @@ test("signs both architectures of resource sidecars and framework binaries befor
     }
 
     await signMacOS(app, "-");
-    assert.equal(readlinkSync(join(app, "Contents/MacOS/deeper-desktop")), "../Resources/service/deeper-desktop");
+    assert.equal(readlinkSync(join(app, "Contents/MacOS/deepzora-desktop")), "../Resources/service/deepzora-desktop");
     for (const relative of binaries) {
       for (const arch of ["arm64", "x86_64"]) {
         const result = spawnSync("codesign", ["--display", "--verbose=4", "--arch", arch, join(app, relative)], { encoding: "utf8" });

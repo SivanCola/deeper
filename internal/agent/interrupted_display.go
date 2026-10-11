@@ -2,8 +2,8 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 	"errors"
 	"strings"
 )

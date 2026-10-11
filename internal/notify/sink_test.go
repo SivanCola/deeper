@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
 )
 
 var errTestFailure = errors.New("failed")

@@ -3,8 +3,8 @@ package installsource
 import (
 	"encoding/json"
 
-	"deeper/internal/config"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/config"
+	"deepzora/internal/pluginpkg"
 )
 
 // request mirrors the public schema. Fields stay exported because Execute
@@ -130,7 +130,7 @@ type action struct {
 }
 
 // RuntimePlanInfo describes a plugin package's declared runtime process in
-// the install plan. A runtime executes inside Deeper with the user's full
+// the install plan. A runtime executes inside Deepzora with the user's full
 // trust — it can read the session and environment, bypass permissions, and
 // operate the machine directly — so FullTrust is always true when present
 // and the plan action also carries RiskHigh with a FULL TRUST reason.

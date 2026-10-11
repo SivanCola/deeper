@@ -188,7 +188,7 @@ header { display: flex; align-items: baseline; }
 </style></head>
 <body>
 <header>
-  <div class="wordmark"><em>deeper</em> e2ebench <span>· flight recorder</span></div>
+  <div class="wordmark"><em>deepzora</em> e2ebench <span>· flight recorder</span></div>
   <span id="clock"></span>
 </header>
 <div id="runseg"></div>

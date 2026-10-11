@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   sign:
-    if: github.repository == 'SivanCola/deeper' && github.ref == 'refs/heads/main' && github.ref_protected
+    if: github.repository == 'SivanCola/deepzora' && github.ref == 'refs/heads/main' && github.ref_protected
     runs-on: windows-2022
     environment: release
     timeout-minutes: 20
@@ -43,7 +43,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           # This minimal probe is covered by the repository's MIT license.
           New-Item -ItemType Directory payload | Out-Null
-          'package main; func main() { println("Deeper Certum signing probe") }' | Set-Content probe.go
+          'package main; func main() { println("Deepzora Certum signing probe") }' | Set-Content probe.go
           $env:GOOS = 'windows'
           $env:CGO_ENABLED = '0'
           foreach ($arch in @('amd64', 'arm64')) {

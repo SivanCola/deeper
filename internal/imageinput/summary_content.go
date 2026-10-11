@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func ImageDigest(ref string) string {
@@ -29,7 +29,7 @@ func visionSummaryContext(summary *provider.VisionSummary) string {
 	if summary == nil || strings.TrimSpace(summary.Summary) == "" {
 		return ""
 	}
-	return fmt.Sprintf("<deeper-image-context version=\"%d\" untrusted=\"true\">\n%s\n</deeper-image-context>", summary.Version, "Image understanding summary from "+summary.ModelRef+":\n"+strings.TrimSpace(summary.Summary))
+	return fmt.Sprintf("<deepzora-image-context version=\"%d\" untrusted=\"true\">\n%s\n</deepzora-image-context>", summary.Version, "Image understanding summary from "+summary.ModelRef+":\n"+strings.TrimSpace(summary.Summary))
 }
 
 func AppendSummary(input string, summary *provider.VisionSummary) string {

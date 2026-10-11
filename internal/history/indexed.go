@@ -7,10 +7,10 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/agent"
-	"deeper/internal/historycatalog"
-	"deeper/internal/provider"
-	"deeper/internal/retrieval"
+	"deepzora/internal/agent"
+	"deepzora/internal/historycatalog"
+	"deepzora/internal/provider"
+	"deepzora/internal/retrieval"
 )
 
 type indexedCatalogManager struct {

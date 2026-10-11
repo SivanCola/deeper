@@ -38,7 +38,7 @@ func DiagnoseAuth(transport, status, errText, url string, authConfigured bool) A
 	}
 }
 
-// CanUseHTTPMCPOAuth reports whether Deeper's native authorization-code flow
+// CanUseHTTPMCPOAuth reports whether Deepzora's native authorization-code flow
 // can own authentication for this server. Legacy SSE, stdio, malformed URLs,
 // and configurations with explicit credentials must keep their normal retry
 // or credential-management path.

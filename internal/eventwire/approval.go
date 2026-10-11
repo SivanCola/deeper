@@ -1,6 +1,6 @@
 package eventwire
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 // Approval is the JSON form of an event.Approval.
 type Approval struct {

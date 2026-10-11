@@ -3,8 +3,8 @@ package acp
 import (
 	"strings"
 
-	"deeper/internal/extension/providerext"
-	"deeper/internal/provider"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/provider"
 )
 
 // enrichStateWithExtensionModels folds a live controller's merged provider

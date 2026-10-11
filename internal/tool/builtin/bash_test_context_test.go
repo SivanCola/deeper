@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func requirePOSIXShellTest(t *testing.T) {

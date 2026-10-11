@@ -7,8 +7,8 @@ import (
 	"io"
 	"sort"
 
-	"deeper/internal/secrets"
-	"deeper/internal/session"
+	"deepzora/internal/secrets"
+	"deepzora/internal/session"
 )
 
 // WriteColdSessionDiagnostics serializes the durable evidence of a fixed

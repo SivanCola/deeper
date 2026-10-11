@@ -3,7 +3,7 @@ package bot
 import (
 	"testing"
 
-	"deeper/internal/testenv"
+	"deepzora/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

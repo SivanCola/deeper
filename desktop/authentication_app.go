@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // RetryAuthenticationForTab authorizes one explicit request attempt for a

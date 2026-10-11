@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 func TestAnthropicPresetsDoNotImplicitlyEnableServerTools(t *testing.T) {
@@ -849,8 +849,8 @@ func TestCuratedProviderPresetCapabilities(t *testing.T) {
 	if !ok {
 		t.Fatal("gmi provider missing")
 	}
-	if got := gmi.Headers["User-Agent"]; got != "Deeper" {
-		t.Fatalf("gmi User-Agent header = %q, want Deeper", got)
+	if got := gmi.Headers["User-Agent"]; got != "Deepzora" {
+		t.Fatalf("gmi User-Agent header = %q, want Deepzora", got)
 	}
 	vercel, ok := cfg.Provider("vercel-ai-gateway")
 	if !ok {

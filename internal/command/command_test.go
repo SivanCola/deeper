@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func TestRender(t *testing.T) {

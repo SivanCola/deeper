@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	goaldomain "deeper/internal/goal"
+	goaldomain "deepzora/internal/goal"
 )
 
 // EditGoalDurable edits the current v3 Goal without replacing its identity or

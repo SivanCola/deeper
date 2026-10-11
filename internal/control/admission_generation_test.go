@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/extension"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
 )
 
 func TestAdmitGuardedTurnRejectsDrainingGeneration(t *testing.T) {

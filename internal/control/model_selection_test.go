@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestControllerModelSelectionPersistsAndBranches(t *testing.T) {

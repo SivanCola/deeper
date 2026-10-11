@@ -1,9 +1,9 @@
 package control
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/turnevent"
 	"time"
 )
 

@@ -9,7 +9,7 @@ import { startPreviewServer } from "./vite-preview-server.mjs";
 
 const frontendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { chromium } = await import("playwright");
-const port = Number(process.env.DEEPER_FORK_APP_PORT ?? 4659);
+const port = Number(process.env.DEEPZORA_FORK_APP_PORT ?? 4659);
 const server = await startPreviewServer(frontendDir, port);
 const browser = await chromium.launch({ headless: true });
 const base = `http://127.0.0.1:${port}/`;
@@ -78,7 +78,7 @@ try {
   assert.ok(second?.includes(first?.match(/mock-fork-\S+/)?.[0] ?? "child"), "the repeated fork names the same child, never a second one");
   report.recovery = { first, second };
 
-  await page.screenshot({ path: path.join(process.env.DEEPER_FORK_EVIDENCE ?? "/tmp", "fork-targets-app.png") });
+  await page.screenshot({ path: path.join(process.env.DEEPZORA_FORK_EVIDENCE ?? "/tmp", "fork-targets-app.png") });
   assert.deepEqual(errors, []);
   console.log(JSON.stringify(report, null, 2));
 } finally {

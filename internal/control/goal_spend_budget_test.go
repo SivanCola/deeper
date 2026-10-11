@@ -3,7 +3,7 @@ package control
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func billedGoalTurn() []provider.Chunk {

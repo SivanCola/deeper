@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/ablation"
-	"deeper/internal/skill"
+	"deepzora/internal/ablation"
+	"deepzora/internal/skill"
 )
 
 // The arm is only a control if it removes delegation whichever tool reaches it.

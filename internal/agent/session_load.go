@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // sessionLoadResult is one transcript read from disk: the messages of the

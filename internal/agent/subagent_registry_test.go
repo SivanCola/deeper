@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/capability"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 type subagentRegistryTool struct {

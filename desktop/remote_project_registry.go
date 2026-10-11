@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/store"
+	"deepzora/internal/config"
+	"deepzora/internal/store"
 )
 
 // ListRemoteProjects returns every pinned remote workspace in config order.

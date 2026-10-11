@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/permission"
-	"deeper/internal/permissionpreset"
-	"deeper/internal/sandbox"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
+	"deepzora/internal/permissionpreset"
+	"deepzora/internal/sandbox"
 )
 
 func TestPermissionPresetChangeWaitsForApprovalCommit(t *testing.T) {
@@ -182,7 +182,7 @@ func TestPermissionSnapshotAndExactGrantRevocation(t *testing.T) {
 func TestWindowsPermissionCapabilitiesKeepPresetsWithoutBackend(t *testing.T) {
 	// The Windows backend is retired: regardless of what the host reports,
 	// no isolation is advertised, yet every preset remains selectable because
-	// the presets are enforced by Deeper's own tools there.
+	// the presets are enforced by Deepzora's own tools there.
 	for _, available := range []bool{true, false} {
 		got := permissionCapabilitiesForPlatform("windows", available, "no OS sandbox")
 		if got.Backend != "none" || got.Enforcement != "unavailable" || got.UnavailableReason != "no OS sandbox" {

@@ -2,7 +2,7 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"net/http"
 	"strings"
 	"testing"

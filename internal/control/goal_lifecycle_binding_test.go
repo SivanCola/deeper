@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestGoalLifecycleProjectionRestoreIsDisarmed(t *testing.T) {
