@@ -32,7 +32,7 @@ jobs:
         with:
           ref: ${{ env.EXPECTED_SOURCE_SHA }}
           fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
       - id: paths
@@ -88,7 +88,7 @@ jobs:
         with:
           version: 10
           run_install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -99,7 +99,7 @@ jobs:
       - name: Build memory frontend
         run: pnpm build
       - run: node bench/app-memory-prepare.mjs "$RUNNER_TEMP/app-memory-build"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: app-memory-build-${{ github.run_id }}
           path: ${{ runner.temp }}/app-memory-build
@@ -129,7 +129,7 @@ jobs:
         with:
           version: 10
           run_install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -138,7 +138,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Install browser runtimes
         run: pnpm exec playwright install --with-deps chromium
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: app-memory-build-${{ github.run_id }}
           path: ${{ runner.temp }}/app-memory-build
@@ -150,7 +150,7 @@ jobs:
           DEEPER_APP_MEMORY_ARTIFACTS: ${{ runner.temp }}/app-memory-results
           PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
         run: node bench/app-memory.mjs
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: app-memory-shard-${{ matrix.shard }}-${{ github.run_id }}
@@ -187,16 +187,16 @@ jobs:
         if: needs.changes.outputs.memory == 'true'
         with:
           ref: ${{ env.EXPECTED_SOURCE_SHA }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         if: needs.changes.outputs.memory == 'true'
         with:
           node-version-file: .node-version
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: needs.changes.outputs.memory == 'true'
         with:
           pattern: app-memory-shard-*-${{ github.run_id }}
           path: ${{ runner.temp }}/app-memory-reports
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: needs.changes.outputs.memory == 'true'
         with:
           name: app-memory-build-${{ github.run_id }}
@@ -207,7 +207,7 @@ jobs:
           node desktop/frontend/bench/app-memory-aggregate.mjs \
             "$RUNNER_TEMP/app-memory-reports" "$RUNNER_TEMP/app-memory-build/identity.json" \
             "$RUNNER_TEMP/app-memory-report.json" "$EXPECTED_SOURCE_SHA"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: success() && needs.changes.outputs.memory == 'true'
         with:
           name: app-memory-aggregate-${{ github.run_id }}-${{ github.run_attempt }}

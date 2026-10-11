@@ -49,7 +49,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
       - id: filter
@@ -110,7 +110,7 @@ jobs:
 
       # Both non-Linux legs drive their package selection through a Node script.
       - if: env.RUN_STEPS == 'true' && runner.os != 'Linux'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
 
@@ -275,7 +275,7 @@ jobs:
 
       # Only main pushes save, one job per OS and module, so the cache
       # stays a few pushes deep instead of churning on every pull request.
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always() && env.RUN_STEPS == 'true' && runner.os != 'Windows' && github.event_name == 'push' && steps.gocache.outputs.key != ''
         with:
           path: ${{ steps.gocache.outputs.paths }}
@@ -302,7 +302,7 @@ jobs:
           cache: true
 
       - if: env.RUN_STEPS == 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
 
@@ -347,7 +347,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
 
@@ -436,7 +436,7 @@ jobs:
 
       # Only main pushes save, one job per OS and module, so the cache
       # stays a few pushes deep instead of churning on every pull request.
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always() && github.event_name == 'push' && steps.gocache.outputs.key != ''
         with:
           path: ${{ steps.gocache.outputs.paths }}
@@ -580,14 +580,14 @@ jobs:
         with:
           version: 10
           run_install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: desktop/pnpm-lock.yaml
       - name: Install frontend dependencies
         run: pnpm --dir frontend install --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.stable_artifact_name }}
           path: desktop/frontend
@@ -629,14 +629,14 @@ jobs:
         with:
           version: 10
           run_install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: desktop/pnpm-lock.yaml
       - name: Install frontend dependencies
         run: pnpm --dir frontend install --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.stable_artifact_name }}
           path: desktop/frontend
@@ -660,7 +660,7 @@ jobs:
         run: xvfb-run -a node electron/scripts/browser-runtime-smoke.mjs
       - name: Upload Linux browser runtime evidence
         if: always() && matrix.group == 'transcript'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: browser-runtime-linux
           path: desktop/electron/artifacts/browser-runtime/
@@ -707,7 +707,7 @@ jobs:
 
       - name: Upload browser group evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: desktop-browser-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/desktop-browser/${{ matrix.group }}
@@ -768,7 +768,7 @@ jobs:
           version: 10
           run_install: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -818,7 +818,7 @@ jobs:
             --attempt "$GITHUB_RUN_ATTEMPT" \
             --pnpm-version "$(pnpm --version)"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: desktop-frontend-stable-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -847,7 +847,7 @@ jobs:
             --attempt "$GITHUB_RUN_ATTEMPT" \
             --pnpm-version "$(pnpm --version)"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: desktop-frontend-canary-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -883,13 +883,13 @@ jobs:
           version: 10
           run_install: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: desktop/pnpm-lock.yaml
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.stable_artifact_name }}
           path: desktop/frontend
@@ -922,7 +922,7 @@ jobs:
 
       # Only main pushes save, one job per OS and module, so the cache
       # stays a few pushes deep instead of churning on every pull request.
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always() && github.event_name == 'push' && steps.gocache.outputs.key != ''
         with:
           path: ${{ steps.gocache.outputs.paths }}
@@ -962,13 +962,13 @@ jobs:
           version: 10
           run_install: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: desktop/pnpm-lock.yaml
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.stable_artifact_name }}
           path: desktop/frontend
@@ -989,7 +989,7 @@ jobs:
         run: node ../scripts/desktop-windows-go-tests.mjs ${{ matrix.group }} --race
 
       # One shard saves the shared compiler cache; all shards restore it.
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: ${{ !cancelled() && github.event_name == 'push' && matrix.group == 'A-B' && steps.gocache.outputs.key != '' }}
         with:
           path: ${{ steps.gocache.outputs.paths }}
@@ -1022,7 +1022,7 @@ jobs:
           version: 10
           run_install: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -1030,7 +1030,7 @@ jobs:
 
       - name: Install frontend dependencies
         run: pnpm --dir frontend install --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.stable_artifact_name }}
           path: desktop/frontend
@@ -1060,7 +1060,7 @@ jobs:
 
       - name: Upload macOS browser runtime evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: browser-runtime-macos
           path: desktop/electron/artifacts/browser-runtime/
@@ -1116,7 +1116,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: rm -rf frontend/dist frontend/.deeper-frontend-artifact.json
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: github.event_name != 'pull_request'
         with:
           name: ${{ needs.desktop-prepare.outputs.canary_artifact_name }}
@@ -1156,7 +1156,7 @@ jobs:
 
       # Only main pushes save, one job per OS and module, so the cache
       # stays a few pushes deep instead of churning on every pull request.
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always() && github.event_name == 'push' && steps.gocache.outputs.key != ''
         with:
           path: ${{ steps.gocache.outputs.paths }}
@@ -1193,7 +1193,7 @@ jobs:
           version: 10
           run_install: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -1218,7 +1218,7 @@ jobs:
             }
           }
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.canary_artifact_name }}
           path: desktop/frontend
@@ -1269,7 +1269,7 @@ jobs:
 
       - name: Upload Windows browser runtime evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: browser-runtime-windows
           path: desktop/electron/artifacts/browser-runtime/
@@ -1283,7 +1283,7 @@ jobs:
 
       - name: Upload native transcript layout evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: transcript-layout-electron-windows
           if-no-files-found: ignore
@@ -1330,7 +1330,7 @@ jobs:
           version: 10
           run_install: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
 
@@ -1350,7 +1350,7 @@ jobs:
             }
           }
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.stable_artifact_name }}
           path: desktop/frontend
@@ -1442,7 +1442,7 @@ jobs:
           version: 10
           run_install: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -1464,7 +1464,7 @@ jobs:
             }
           }
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ needs.desktop-prepare.outputs.canary_artifact_name }}
           path: desktop/frontend
@@ -1509,7 +1509,7 @@ jobs:
 
       - name: Upload Windows installer acceptance evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: windows-installer-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -1634,7 +1634,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .node-version
       - name: Validate release workflows and executable contracts
@@ -1793,7 +1793,7 @@ jobs:
         run: go test -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: upload coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-report
           path: coverage.out
