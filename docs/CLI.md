@@ -52,12 +52,7 @@ deepzora upgrade --check          # report the target without installing
 deepzora upgrade --force          # reinstall the current official release
 ```
 
-The updater selects only strict `vX.Y.Z` non-prerelease GitHub Releases. During
-the 1.x compatibility period, old channel arguments and `--channel` are still
-accepted, but resolve to the same official release and print a deprecation
-notice. Legacy `[cli].update_channel` values are ignored and removed the next
-time Deepzora saves the configuration. The `deepzora update` alias behaves the
-same way.
+The updater selects only strict `vX.Y.Z` non-prerelease GitHub Releases. Historical channels and retired flags are unsupported.
 
 ## Configure providers
 
@@ -162,8 +157,7 @@ echo "explain this code" | deepzora run
 `deepzora run` keeps the normal streamed terminal presentation unless `-p` or a
 structured output format is selected. It also accepts `--model`,
 `--max-steps`, `--effort`, `--dir`, `--add-dir`,
-`--continue`, `--resume QUERY`, `--copy`, `--allowed-tools`, `--permission-mode`,
-and `--auto` / `-y` (legacy aliases for `--permission-mode workspace-write`).
+`--continue`, `--resume QUERY`, `--copy`, `--allowed-tools`, and `--permission-mode`.
 
 ### Benchmark arms
 
@@ -282,7 +276,7 @@ and does **not** imply USD. Mixed original currencies no longer fail the run:
 totals so clients never invent a cross-currency sum.
 
 Global display preference is `[billing].display_currency` (`auto|CNY|USD`);
-legacy `[desktop].currency` still migrates. Provider list prices use each
+Provider list prices use each
 entry's frozen `billing_currency` and are never rewritten by display switches.
 Diagnose with `deepzora doctor billing`.
 
@@ -298,9 +292,7 @@ request is made.
 The completion validator has been removed. A clean model stop without tool
 calls ends the turn directly; a response with tools continues through the tool
 loop, and a truly empty response is retried at the frozen-request boundary.
-Legacy `completion_validation`, `completion_evaluator_model`, and
-`DEEPZORA_COMPLETION_VALIDATION_MODE` settings remain readable but are ignored
-and are no longer emitted by the config renderer. Explicit budgets, tool-safety and protocol recovery boundaries remain active.
+Explicit budgets, tool-safety and protocol recovery boundaries remain active.
 Goal completion is a model declaration; no host quality gate or independent
 Goal evaluator runs. See [migration details](EXECUTION_MODEL_SIMPLIFICATION.md).
 
@@ -520,10 +512,6 @@ active conversation, session-scoped permission overrides, additional directory
 access, and session ownership. `/reload` uses the same fail-atomic rebuild.
 Execution modes no longer exist: planning, verification, and review strength
 follow task risk per turn.
-
-`/preset`, `/work-mode`, and `/profile` remain hidden compatibility commands.
-Recognized legacy values are accepted, report that the setting is retired, and
-leave the session on standard execution; unknown values still return an error.
 
 ## Session catalog diagnostics
 

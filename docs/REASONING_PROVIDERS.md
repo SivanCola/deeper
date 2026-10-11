@@ -237,6 +237,6 @@ recovery changes that prefix; healthy schema and history stay stable.
 
 File-write intent persistence runs on the actual prepared dispatch context,
 before the effect. Missing terminal usage remains unknown through estimation
-and aggregation. See [the validation report](RECOVERY_VALIDATION.md) for real
+and aggregation. See [Current contract](TOOL_RECOVERY.md) for real
 endpoint results, observed model variability, and the distinction between API
 acceptance and fault-injected Agent tests.

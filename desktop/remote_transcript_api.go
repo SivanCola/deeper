@@ -92,8 +92,6 @@ func (a *App) remoteTranscriptReadAttempt(tabID, route string, request, destinat
 		return false, fmt.Errorf("remote transcript response belongs to a replaced session")
 	}
 	switch response.StatusCode {
-	case http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusNotImplemented:
-		return false, nil
 	case http.StatusConflict:
 		if refreshOnConflict {
 			if _, refreshErr := a.RemoteTabStatus(tabID); refreshErr == nil {
@@ -105,8 +103,7 @@ func (a *App) remoteTranscriptReadAttempt(tabID, route string, request, destinat
 	default:
 		return false, fmt.Errorf("remote transcript read failed (HTTP %d)", response.StatusCode)
 	}
-	// Old Serve builds may route an unknown GET to their HTML index. Only
-	// explicit protocol data enables the new projection; versions are not guessed.
+	// The negotiated baseline requires a valid projection response.
 	var header struct {
 		ProtocolVersion int  `json:"protocolVersion"`
 		Stale           bool `json:"stale"`
@@ -117,7 +114,7 @@ func (a *App) remoteTranscriptReadAttempt(tabID, route string, request, destinat
 			expected = transcript.FollowProtocolVersion
 		}
 		if json.Unmarshal(body, &header) != nil || header.ProtocolVersion != expected {
-			return false, nil
+			return false, fmt.Errorf("invalid remote transcript protocol response")
 		}
 	}
 	if err := json.Unmarshal(body, destination); err != nil {
@@ -263,8 +260,6 @@ func (a *App) remoteSessionHistoryRead(tabID, route string, query url.Values, de
 		return false, fmt.Errorf("remote session history response belongs to a replaced session")
 	}
 	switch response.StatusCode {
-	case http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusNotImplemented:
-		return false, nil
 	case http.StatusOK:
 	default:
 		return false, fmt.Errorf("remote session history read failed (HTTP %d): %s", response.StatusCode, strings.TrimSpace(string(body)))

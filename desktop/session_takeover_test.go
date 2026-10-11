@@ -20,6 +20,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
 	"deepzora/internal/remote/bootstrap"
+	"deepzora/internal/servecontract"
 )
 
 func TestTakeoverOwnershipEncodesOpaqueSessionPath(t *testing.T) {
@@ -150,6 +151,7 @@ func TestDirectAdoptGrantCannotAttachAfterTabRuntimeChanges(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/auth/token":
+			w.Header().Set("X-Deepzora-Serve-Capabilities", servecontract.BaselineV1)
 			w.WriteHeader(http.StatusNoContent)
 		case "/ownership":
 			_ = json.NewEncoder(w).Encode(SessionTakeoverView{Holder: "free"})
@@ -352,6 +354,7 @@ func TestTakeoverMirrorReadoptsAfterServeMoves(t *testing.T) {
 	newServe := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/auth/token":
+			w.Header().Set("X-Deepzora-Serve-Capabilities", servecontract.BaselineV1)
 			w.WriteHeader(http.StatusNoContent)
 		case "/adopt":
 			_ = json.NewEncoder(w).Encode(takeoverGrant{
@@ -423,6 +426,7 @@ func TestTakeoverMirrorDemotionReturnsRefreshedGeneration(t *testing.T) {
 	newServe := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/auth/token":
+			w.Header().Set("X-Deepzora-Serve-Capabilities", servecontract.BaselineV1)
 			w.WriteHeader(http.StatusNoContent)
 		case "/adopt":
 			_ = json.NewEncoder(w).Encode(takeoverGrant{

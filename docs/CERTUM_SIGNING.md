@@ -30,15 +30,9 @@ Any signing failure blocks publication and signing attestation.
 先签内部 PE 文件，再绑定清单、重打包、签安装器并验证便携包哈希，最后生成发布包。
 任何签名失败都会阻止发布和签名证明。
 
-The legacy `signpath-contract` command, `.signpath/contracts` location and
-`SIGNPATH_RELEASE_SIGNING_ATTESTATION` variable remain as compatibility names for
-existing release recovery. Their fingerprint now covers the Certum setup and
-signer scripts; old attestations do not authorize this new signing path. No
-SignPath API request is made by the release workflow. Historical receipt helpers
-remain for investigating old runs.
+The current signing contract lives in `.github/release-signing.yml` and is verified by `cmd/release-signing-contract`. `RELEASE_SIGNING_ATTESTATION` records an explicitly verified current fingerprint for standalone recovery. Candidate publications use their sealed evidence. No SignPath request or historical receipt format is supported.
 
-旧契约命令、目录和证明变量名为恢复兼容而保留，但指纹已覆盖 Certum 实现，旧证明
-不能授权新流程。发布不再调用 SignPath；旧回执工具仅供历史运行排查。
+当前签名契约位于 `.github/release-signing.yml`，由 `cmd/release-signing-contract` 验证。独立恢复使用 `RELEASE_SIGNING_ATTESTATION` 登记已验证的当前指纹；候选发布使用封存证明。不支持 SignPath 请求及历史回执格式。
 
 A successful standalone preflight uploads `verified-signing-contract-*` evidence
 and prints the maintainer command for promoting its fingerprint to the recovery

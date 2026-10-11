@@ -4530,60 +4530,6 @@ export function useController() {
     return meta;
   }, [beginActiveNavigation, confirmBackendActiveTab, dispatchRuntimeStatusForTab, dispatchTo, loadSessionDataForTab, monitorNavigationHydration, navigationCompletionCurrent, reassertVisibleTabAfterStaleNavigation, reconcileTabRuntime, requireRegisteredNavigationIntent, snapshotNavigationSourceTab]);
 
-  const openGlobalTab = useCallback(async (topicId: string, navigationIntentSeq?: number): Promise<TabMeta> => {
-    const navigationSeq = navigationIntentSeq ?? beginActiveNavigation();
-    await requireRegisteredNavigationIntent(navigationSeq);
-    snapshotNavigationSourceTab(navigationSeq);
-    const snapshotAt = promptEventClock();
-    const meta = await app.OpenGlobalTab(topicId);
-    if (!navigationCompletionCurrent(navigationSeq, "tab.open-global", meta.id)) {
-      await reassertVisibleTabAfterStaleNavigation("tab.open-global", meta.id);
-      return meta;
-    }
-    const prevState = statesRef.current.get(meta.id);
-    const isNewTab = !prevState;
-    const sameSession = sameSessionHydrateIdentity(meta, prevState?.meta);
-    const preserveCachedHistory = sameSession && hasReusableCachedTranscript(prevState, meta, meta.sessionRevision, meta.sessionDigest);
-    setActiveTabId(meta.id);
-    activeTabIdRef.current = meta.id;
-    confirmBackendActiveTab(meta.id);
-    dispatchTo(meta.id, { type: "optimistic_meta", meta: metaFromTab(meta, statesRef.current.get(meta.id)?.meta) });
-    dispatchRuntimeStatusForTab(meta.id, meta, snapshotAt);
-    const load = loadSessionDataForTab(meta.id, !sameSession, "open-topic", {
-      placeholderItems: sameSessionPlaceholderItems(meta, prevState), surfacePolicy: sameSession ? "preserve-current" : "replace-surface", preserveCachedHistory,
-      ...sessionIdentityFields(meta), sessionRevision: meta.sessionRevision, sessionDigest: meta.sessionDigest,
-    });
-    monitorNavigationHydration(navigationSeq, meta.id, load, isNewTab ? () => reconcileTabRuntime(meta.id, RUNTIME_STATUS_ONLY) : undefined);
-    return meta;
-  }, [beginActiveNavigation, confirmBackendActiveTab, dispatchRuntimeStatusForTab, dispatchTo, loadSessionDataForTab, monitorNavigationHydration, navigationCompletionCurrent, reassertVisibleTabAfterStaleNavigation, reconcileTabRuntime, requireRegisteredNavigationIntent, snapshotNavigationSourceTab]);
-
-  const openTopicSession = useCallback(async (scope: string, workspaceRoot: string, topicId: string, sessionPath: string, navigationIntentSeq?: number): Promise<TabMeta> => {
-    const navigationSeq = navigationIntentSeq ?? beginActiveNavigation();
-    await requireRegisteredNavigationIntent(navigationSeq);
-    snapshotNavigationSourceTab(navigationSeq);
-    const snapshotAt = promptEventClock();
-    const meta = await app.OpenTopicSession(scope, workspaceRoot, topicId, sessionPath);
-    if (!navigationCompletionCurrent(navigationSeq, "tab.open-session", meta.id)) {
-      await reassertVisibleTabAfterStaleNavigation("tab.open-session", meta.id);
-      return meta;
-    }
-    const prevState = statesRef.current.get(meta.id);
-    const isNewTab = !prevState;
-    const sameSession = sameSessionHydrateIdentity(meta, prevState?.meta);
-    const preserveCachedHistory = sameSession && hasReusableCachedTranscript(prevState, meta, meta.sessionRevision, meta.sessionDigest);
-    setActiveTabId(meta.id);
-    activeTabIdRef.current = meta.id;
-    confirmBackendActiveTab(meta.id);
-    dispatchTo(meta.id, { type: "optimistic_meta", meta: metaFromTab(meta, statesRef.current.get(meta.id)?.meta) });
-    dispatchRuntimeStatusForTab(meta.id, meta, snapshotAt);
-    const load = loadSessionDataForTab(meta.id, !sameSession, "open-topic", {
-      placeholderItems: sameSessionPlaceholderItems(meta, prevState), surfacePolicy: sameSession ? "preserve-current" : "replace-surface", preserveCachedHistory,
-      ...sessionIdentityFields(meta), sessionRevision: meta.sessionRevision, sessionDigest: meta.sessionDigest,
-    });
-    monitorNavigationHydration(navigationSeq, meta.id, load, isNewTab ? () => reconcileTabRuntime(meta.id, RUNTIME_STATUS_ONLY) : undefined);
-    return meta;
-  }, [beginActiveNavigation, confirmBackendActiveTab, dispatchRuntimeStatusForTab, dispatchTo, loadSessionDataForTab, monitorNavigationHydration, navigationCompletionCurrent, reassertVisibleTabAfterStaleNavigation, reconcileTabRuntime, requireRegisteredNavigationIntent, snapshotNavigationSourceTab]);
-
   const activateTopic = useCallback(async (scope: string, workspaceRoot: string, topicId: string, sessionPath = "", navigationIntentSeq?: number): Promise<TabMeta> => {
     const navigationSeq = navigationIntentSeq ?? beginActiveNavigation();
     await requireRegisteredNavigationIntent(navigationSeq);
@@ -4662,33 +4608,6 @@ export function useController() {
 
   // Ensure a blank tab exists for the given scope — reuses an existing one
   // or creates a new tab, then loads its session data.
-  const ensureBlankTab = useCallback(async (scope: string, workspaceRoot: string, navigationIntentSeq?: number): Promise<TabMeta> => {
-    const navigationSeq = navigationIntentSeq ?? beginActiveNavigation();
-    await requireRegisteredNavigationIntent(navigationSeq);
-    snapshotNavigationSourceTab(navigationSeq);
-    const snapshotAt = promptEventClock();
-    const meta = await app.EnsureBlankTab(scope, workspaceRoot);
-    if (!navigationCompletionCurrent(navigationSeq, "tab.ensure-blank", meta.id)) {
-      await reassertVisibleTabAfterStaleNavigation("tab.ensure-blank", meta.id);
-      return meta;
-    }
-    // EnsureBlankTab may return a tab id already present in local state.
-    // Invalidate its old hydration and force a fresh history read, otherwise a
-    // late request can restore orphaned tool cards from the prior session.
-    invalidateCheckpoints(meta.id);
-    const isNewTab = !statesRef.current.has(meta.id);
-    setActiveTabId(meta.id);
-    activeTabIdRef.current = meta.id;
-    confirmBackendActiveTab(meta.id);
-    dispatchTo(meta.id, { type: "optimistic_meta", meta: metaFromTab(meta, statesRef.current.get(meta.id)?.meta) });
-    dispatchRuntimeStatusForTab(meta.id, meta, snapshotAt);
-    const load = loadSessionDataForTab(meta.id, true, "new-session", {
-      surfacePolicy: "replace-surface", ...sessionIdentityFields(meta),
-    });
-    monitorNavigationHydration(navigationSeq, meta.id, load, isNewTab ? () => reconcileTabRuntime(meta.id, RUNTIME_STATUS_ONLY) : undefined);
-    return meta;
-  }, [beginActiveNavigation, invalidateCheckpoints, confirmBackendActiveTab, dispatchRuntimeStatusForTab, dispatchTo, loadSessionDataForTab, monitorNavigationHydration, navigationCompletionCurrent, reassertVisibleTabAfterStaleNavigation, reconcileTabRuntime, requireRegisteredNavigationIntent, snapshotNavigationSourceTab]);
-
   const ensureBlankSurface = useCallback(async (scope: string, workspaceRoot: string, navigationIntentSeq?: number): Promise<TabMeta> => {
     const navigationSeq = navigationIntentSeq ?? beginActiveNavigation();
     await requireRegisteredNavigationIntent(navigationSeq);
@@ -4805,7 +4724,7 @@ export function useController() {
     requestHistoryFullContent,
     refreshMeta, pickWorkspace, switchWorkspace, compact, rewind, rewindForTab, rewindForTabDetailed, undoRewindForTab, forkTurnForTab, setModel, setModelForTab, setEffort, setEffortForTab, cancelJob,
     fetchMemory, remember, forget, saveDoc,
-    switchTab, switchRemoteTab, openProjectTab, openGlobalTab, openTopicSession, ensureBlankTab, activateTopic, ensureBlankSurface, createIsolatedWorktree, commitSingleSurfaceNavigation, closeTab, reorderTabs,
+    switchTab, switchRemoteTab, openProjectTab, activateTopic, ensureBlankSurface, createIsolatedWorktree, commitSingleSurfaceNavigation, closeTab, reorderTabs,
     // The App queue advances this at enqueue time, before an older activation
     // can finish and prune the surface selected by the newer click.
     noteNavigationIntent: beginActiveNavigation,

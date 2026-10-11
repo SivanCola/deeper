@@ -79,19 +79,11 @@ type Checkpoint struct {
   rewind works after a restart (Claude Code parity).
 - **Schema v3 layout**: each turn is a directory:
   `turns/<turn>/meta.json` plus raw `files/NNNN.before` payloads. New captures do
-  not duplicate preimages in the content-addressed blob store. v1/v2 JSON and
-  blobs remain readable for upgrade compatibility; transaction/undo payloads
-  may still use blobs. Each v3 turn also writes a payload-free v2 compatibility
-  marker (`turn-<turn>.json`). A previous Deepzora version can therefore keep
-  turn numbering monotonic after a downgrade, but cannot restore the v3 file
-  payload represented by that marker. The marker is also the v3 turn's liveness
-  record: if an older reader truncates the marker, a later upgrade ignores the
-  leftover directory instead of resurrecting the future turn.
+  not duplicate preimages in the content-addressed blob store. Only the current v3 layout is supported; transaction/undo payloads may use the content-addressed store.
 - **Retention**: keep the newest 100 v3 turn directories by default and remove
   an expired turn as one directory. Raw v3 preimages also have a soft 1 GiB
   budget; the current or transaction-protected turn may temporarily exceed it,
-  and older whole turns are removed once they are unprotected. Legacy blobs use
-  the same budget value in their separate compatibility store. Both limits are
+  and older whole turns are removed once they are unprotected. Both limits are
   configurable via `[checkpoints]` (`retain_turns`, `blob_quota_bytes`); an
   omitted or non-positive value keeps the default, so `retain_turns = 0` does
   not disable retention. Session cleanup removes the whole sidecar.

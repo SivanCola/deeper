@@ -94,4 +94,4 @@ node bench/run.mjs
 
 Point `PLAYWRIGHT_BROWSERS_PATH` at the installed browser cache when needed. Chat replay uses the real Transcript, Markdown and Composer in a production fixture. The whole-app benchmark additionally uses actual application composition with the existing mock transport. Neither substitutes for a live backend/native-IME soak.
 
-Gates remain input P95 ≤200 ms, switch P95 ≤300 ms, longest task ≤500 ms and released heap growth ≤20 MiB. See [measured acceptance evidence](CHAT_REFACTOR_ACCEPTANCE.md), including unverified platforms.
+Gates remain input P95 ≤200 ms, switch P95 ≤300 ms, longest task ≤500 ms and released heap growth ≤20 MiB. See [Current contract](TRANSCRIPT_SCROLL_CONTRACT.md), including unverified platforms.

@@ -48,8 +48,7 @@ or model not in a local catalog stays unknown unless another valid source applie
 Both the provider editor and refreshed model picker offer **Auto / On / Off**.
 On is your declaration of support, not a paid client probe. Off prevents native
 image input even for catalogued visual models. Auto removes only the model's
-`vision` override; context/output/reasoning settings remain intact. Auto can say
-“Using legacy configuration” when an older `vision`/`vision_models` value applies.
+`vision` override; context/output/reasoning settings remain intact.
 
 ```toml
 [providers.model_overrides.example-model]
@@ -57,7 +56,7 @@ vision = true # false disables; remove this field for Auto
 ```
 
 Final priority is official protocol restriction → per-model override → existing
-automatic chain (curated preset, legacy config, exact local catalog, valid online
+automatic chain (curated preset, exact local catalog, valid online
 cache) → unknown. Official DeepSeek text models remain blocked; its visual model
 can be explicitly disabled. Capability changes preserve catalog context, output,
 API and reasoning metadata. Discovery never saves UI-provided capabilities as facts.

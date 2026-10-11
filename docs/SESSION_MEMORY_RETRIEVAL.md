@@ -30,7 +30,7 @@ A minimal project file is usually enough:
 
 - Run `go test ./...` before reporting completion.
 - Do not edit generated files under `desktop/frontend/src/generated/`.
-- Keep public API changes backward compatible.
+- Use the current versioned fact and session contracts.
 ```
 
 In the CLI, `/remember <note>` and `# <note>` directly append a note to the
@@ -121,12 +121,6 @@ and total pinned bodies are capped at 1,500 characters — enforced when
 pinning, with overflow directed to DEEPZORA.md/AGENTS.md instructions, where
 always-binding rules belong. A fact is either pinned (in `session-context`) or
 relevant (recallable): never both, never neither.
-
-For compatibility, legacy globally scoped `user` and `feedback` facts that
-predate the field stay pinned until explicitly unpinned. When an equivalent
-project fact exists, it suppresses pinned global guidance before the background
-snapshot is built, so project-over-global precedence does not depend on a later
-recall match.
 
 ## Automatic recall
 
@@ -283,24 +277,6 @@ available in CLI, desktop, and remote workspaces.
 
 Context Center provides the same model visually, including conflicts and
 project-over-global explanations.
-
-## Upgrade compatibility
-
-Context Engine v2 upgrades existing stores without requiring setup:
-
-- legacy facts without IDs receive deterministic `legacy-*` identities;
-- missing revisions start at revision 1;
-- missing scope is inferred from the containing project/global directory;
-- migration is idempotent and writes the new metadata only once;
-- compatibility routing fields keep older clients from moving facts to the
-  wrong directory when versions share a state root;
-- old `MEMORY.md` indexes are treated as derived data and rebuilt from fact
-  files;
-- legacy Memory v5 `<memory-compiler-execution>` transcript blocks remain
-  readable, while the retired `[agent].memory_compiler` setting is removed.
-
-No vector database, embedding service, setup wizard, or re-index command is
-required.
 
 ## Cache and privacy contract
 

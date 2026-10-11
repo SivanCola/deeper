@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ciUnitScripts } from "./ci-test-plan.mjs";
+import { ciUnitScripts, testManifest } from "./ci-test-plan.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,7 +75,7 @@ for (const retiredPath of [
   }
 }
 
-const motionScript = packageJSON.scripts?.["test:motion"] ?? "";
+const motionScript = testManifest.groups.motion.map(args => args.join(" ")).join("\n");
 for (const required of [
   "check-waapi-contract.mjs --self-test",
   "native-motion.test.tsx",
@@ -99,7 +99,7 @@ if (!packageJSON.scripts?.["test:motion-browser"]?.includes("approval-animation.
   throw new Error("motion-ci-contract: test:motion-browser must exercise the approval animation in real Chromium");
 }
 
-const transcriptScript = packageJSON.scripts?.["test:transcript"] ?? "";
+const transcriptScript = JSON.stringify(testManifest.groups.transcript);
 for (const required of [
   "chat-view-source.test.ts", "chat-scroll-controller.test.ts", "chat-natural-flow.test.tsx",
   "chat-content-loader.test.ts", "markdown-natural-flow.test.tsx",

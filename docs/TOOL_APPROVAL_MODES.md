@@ -53,12 +53,8 @@ deepzora run --permission-mode workspace-write "run the tests"
 
 In the interactive CLI, `Shift+Tab` cycles Read only → Workspace write →
 YOLO → Plan, and `Ctrl+Y` toggles YOLO directly. Both shortcuts
-apply the canonical `danger-full-access` preset when they enter YOLO. Legacy saved values are migrated
-conservatively: `ask` becomes read only, and `auto` or `yolo` becomes workspace
-write. Legacy values never enable full access.
+apply the canonical `danger-full-access` preset when they enter YOLO. Only current canonical permission values are accepted.
 
-## Remote compatibility
+## Remote execution
 
-Serve advertises `permission-presets-v1` and its real enforcement capability.
-An older remote without that capability remains available for history viewing,
-but execution and permission changes are disabled until the remote is upgraded.
+Desktop and Serve require the current protocol baseline. Execution also checks `permission-presets-v1` and the controller's real enforcement capability. Missing capability never grants additional execution authority.

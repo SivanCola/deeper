@@ -1,258 +1,43 @@
-> Deepzora is independently maintained at [SivanCola/deepzora](https://github.com/SivanCola/deepzora).
-> 独立应用身份、更新通道与发布凭据见 [Deepzora independence](docs/DEEPZORA_INDEPENDENCE.md)。原许可证和作者信息见 NOTICE。
+# Deepzora
 
-<p align="center">
-  <img src="docs/logo-ghost-wave-effect.svg" alt="Deepzora" width="360"/>
-</p>
+Deepzora is an AI coding assistant with a CLI, an Electron desktop app, a remote Serve service, ACP integration, bots, and an SDK. It is derived from DeepSeek-Reasonix; upstream authorship and licensing are recorded in [NOTICE](NOTICE) and [LICENSE](LICENSE).
 
-<p align="center">
-  <strong>English</strong>
-  &nbsp;·&nbsp;
-  <a href="./README.zh-CN.md">简体中文</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/GUIDE.md">Guide</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/ACP.md">ACP</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/EXTENSIONS.md">Extensions</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/SPEC.md">Spec</a>
-  &nbsp;·&nbsp;
-  <a href="https://sivancola.github.io/deepzora/">Website</a>
-  &nbsp;·&nbsp;
-  <strong><a href="https://discord.gg/XF78rEME2D">Discord</a></strong>
-</p>
+Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成、机器人和 SDK。项目源自 DeepSeek-Reasonix，上游作者与许可信息保留在 [NOTICE](NOTICE) 和 [LICENSE](LICENSE)。
 
-<p align="center">
-  <a href="https://www.npmjs.com/package/deepzora"><img src="https://img.shields.io/npm/v/deepzora.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
-  <a href="https://github.com/SivanCola/deepzora/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SivanCola/deepzora/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/deepzora.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
-  <a href="https://www.npmjs.com/package/deepzora"><img src="https://img.shields.io/npm/dm/deepzora.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
-  <a href="https://github.com/SivanCola/deepzora/stargazers"><img src="https://img.shields.io/github/stars/SivanCola/deepzora.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
-  <a href="https://atomgit.com/SivanCola/deepzora"><img src="https://atomgit.com/SivanCola/deepzora/star/badge.svg" alt="AtomGit stars"/></a>
-  <a href="https://github.com/SivanCola/deepzora/graphs/contributors"><img src="https://img.shields.io/github/contributors/SivanCola/deepzora.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
-  <a href="https://github.com/SivanCola/deepzora/discussions"><img src="https://img.shields.io/github/discussions/SivanCola/deepzora.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
-  <a href="https://discord.gg/XF78rEME2D"><img src="https://img.shields.io/badge/discord-join-5865F2.svg?style=flat-square&labelColor=161b22&logo=discord&logoColor=white" alt="Discord"/></a>
-</p>
+This repository treats the current implementation as its first-version baseline. Historical Reasonix data formats, old desktop interfaces, and migration paths are unsupported. The first Deepzora release is being prepared; see [Releases](https://github.com/SivanCola/deepzora/releases) for published artifacts.
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/27020?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/27020/monthly?language=Go" alt="SivanCola/deepzora | Trendshift" width="250" height="55"/></a>
-  <a href="https://trendshift.io/repositories/27020?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-27020" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/27020" alt="SivanCola/deepzora | Trendshift" width="250" height="55"/></a>
-</p>
+本仓库以当前实现作为首版基线，不支持 Reasonix 历史数据格式、旧桌面接口及迁移路径。Deepzora 首版正在准备中，实际发布产物以 [Releases](https://github.com/SivanCola/deepzora/releases) 为准。
 
-<br/>
+## Build / 构建
 
-<p align="center"><strong>Open source · MIT · a single Go binary</strong></p>
-<h3 align="center">A coding agent you can leave running.</h3>
-<p align="center">One local engine, four ways in — terminal, desktop app, browser, or your editor over ACP. Plan mode, permissions, a workspace sandbox and per-turn checkpoints keep a long autonomous run something you can still read and undo.</p>
+Use the Go version in [go.mod](go.mod), the Node version in [.node-version](.node-version), and the pnpm version in [desktop/frontend/package.json](desktop/frontend/package.json).
 
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/ab2f3878-e224-4931-8254-060e7695cfb9" controls preload="metadata" width="560"></video>
-</div>
-
-<br/>
-
-> [!IMPORTANT]
-> **Community · 加入社区** — bilingual Discord for setup help (`#help` / `#求助`), workflow showcases, and feature ideas. → **<https://discord.gg/XF78rEME2D>**
-
-<br/>
-
-## Features
-
-- **Config-driven.** Providers, the agent, enabled tools, and plugins are all
-  declared in `deepzora.toml`. No hardcoded models.
-- **Multi-model & composable.** DeepSeek ships as a preset; any
-  OpenAI-compatible endpoint is a config entry, not new code. Optionally run
-  two models together (executor + planner) in separate, cache-stable sessions.
-- **Plugin-driven.** MCP servers contribute tools, prompts, and resources;
-  Extension Protocol v1 sidecars can also intercept runtime events, contribute
-  Providers and structured UI, and ship versioned plugin packages.
-- **Cache-aware context maintenance.** Startup injects a small stable environment
-  summary, stale tool output is snipped/pruned before summary compaction, and the
-  built-in tool schema contract is documented for regression review.
-- **Zero-friction distribution.** `CGO_ENABLED=0` single binary; cross-compile
-  to six targets with one command. The result is a fully self-contained static
-  binary — nothing to install on the target machine beyond the binary itself.
-
-## Supported baseline
-
-This version is the first supported Deepzora baseline. Historical Reasonix
-formats, migration paths, and older client fallbacks are retired. Start with
-current configuration and session formats; see [the baseline contract](docs/current-version-baseline.md).
-
-## Install
-
-Choose the path that matches how you want to use Deepzora. The CLI/TUI,
-desktop app, and VS Code extension all use the same local Deepzora engine.
-
-### Path A: CLI / TUI
-
-Install the native binary through npm on any supported platform, or use
-Homebrew on macOS:
+使用 [go.mod](go.mod) 指定的 Go、[.node-version](.node-version) 指定的 Node，以及 [desktop/frontend/package.json](desktop/frontend/package.json) 指定的 pnpm 版本。
 
 ```sh
-npm i -g deepzora                  # any OS; pulls the prebuilt native binary
-brew install SivanCola/deepzora/deepzora   # macOS
+npm install -g pnpm@10.34.5
+go build -o deepzora ./cmd/deepzora
+cd desktop
+pnpm install --frozen-lockfile
+pnpm --dir frontend build:electron
+go run . -emit-contract frontend/src/generated
+go build -o build/bin/deepzora-desktop-service .
+pnpm --dir electron build
 ```
 
-Prebuilt archives (`darwin|linux|windows × amd64|arm64`) and `SHA256SUMS` are on
-every [GitHub release](https://github.com/SivanCola/deepzora/releases).
+The npm package name is `@sivancola/deepzora`. Install it only after a corresponding release is available.
 
-### Path B: Desktop app
+npm 包名为 `@sivancola/deepzora`，请在对应版本实际发布后再安装。
 
-Use the [official download page](https://github.com/SivanCola/deepzora/releases)
-for the latest desktop build.
+## Documentation / 文档
 
-| Platform | Package | Architecture |
-| --- | --- | --- |
-| macOS | Universal `.dmg` or `.zip` | Apple Silicon / Intel |
-| Windows | Installer `.exe` or portable `.zip` | x64 / ARM64 |
-| Linux | `.deb` or `.tar.gz` | x64 |
+- [English guide](docs/GUIDE.md) · [中文指南](docs/GUIDE.zh-CN.md)
+- [CLI](docs/CLI.md) · [CLI 中文](docs/CLI.zh-CN.md)
+- [Remote sessions](docs/REMOTE_SESSIONS.md) · [远程会话](docs/REMOTE_SESSIONS.zh-CN.md)
+- [Current baseline / 当前基线](docs/current-version-baseline.md)
+- [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+- [Release candidates](docs/RELEASE_CANDIDATES.md) · [发布候选](docs/RELEASE_CANDIDATES.zh-CN.md)
 
-Windows installers are code-signed with a Certum code-signing certificate.
+Run `go test ./...` at the root and in `desktop`, and `pnpm --dir desktop/frontend test:all` for frontend checks. Research and browser benchmarks remain available as explicit development commands.
 
-### Path C: VS Code extension
-
-Complete Path A first. The extension does not bundle the CLI; it starts your
-local `deepzora acp` backend and adds native chat, editor context, tool-call
-approvals, model selection, and workspace sessions.
-
-- **VS Code:** [install from Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=SivanLiu.deepzora-agent)
-- **VSCodium / Eclipse Theia:** [install from Open VSX Registry](https://open-vsx.org/extension/SivanLiu/deepzora-agent)
-- **Extension ID:** `SivanLiu.deepzora-agent` · [source and usage guide](https://github.com/SivanCola/deepzora-vscode)
-
-### Path D: Build from source
-
-Clone the repository first:
-
-```sh
-git clone https://github.com/SivanCola/deepzora.git
-cd deepzora
-```
-
-#### CLI
-
-The CLI build requires **Go 1.26+**. The module pins a `toolchain` directive;
-keep `GOTOOLCHAIN=auto` so Go downloads the pinned toolchain, or install it.
-
-```sh
-make build      # -> bin/deepzora(.exe)
-make cross      # -> dist/ (darwin|linux|windows × amd64|arm64)
-```
-
-#### Desktop
-
-The desktop build additionally requires **Node 24+ and pnpm 10**
-(`npm install -g pnpm@10`) for the frontend and the Electron shell:
-
-```sh
-scripts/desktop-build.sh darwin/arm64 v0.0.0-dev   # one platform per run
-```
-
-No platform webview dependencies are needed — the shell ships its own
-Chromium. See the [desktop build guide](desktop/README.md#prerequisites).
-
-## Quick start
-
-### CLI / TUI
-
-These commands are for the CLI/TUI installed through Path A:
-
-```sh
-deepzora setup                      # configure a provider and model
-deepzora                            # start an interactive session
-deepzora run "implement the TODOs in main.go"
-```
-
-In an interactive session, run `/init` when you want Deepzora to create project
-instructions.
-
-### Desktop app
-
-Download the installer for your platform from the
-[official download page](https://github.com/SivanCola/deepzora/releases), install
-and launch Deepzora, then configure a provider and model in the app. The CLI
-commands above are not required for the desktop app.
-
-For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.md)**,
-**[Guide](./docs/GUIDE.md)**, and
-**[configuration paths](./docs/CONFIG_PATHS.md)**.
-
-## Documentation
-
-- **Getting started:** [Guide](./docs/GUIDE.md) · [CLI reference](./docs/CLI.md) ·
-  [Configuration paths](./docs/CONFIG_PATHS.md) · [ACP editor integration](./docs/ACP.md)
-- **Features & troubleshooting:** [Subagent profiles](./docs/SUBAGENT_PROFILES.md) ·
-  [Context Engine v2](./docs/SESSION_MEMORY_RETRIEVAL.md) ·
-  [File deliverables and the `present` tool](./docs/PRESENT_TOOL.md) ·
-  [Capability diagnostics](./docs/CAPABILITY_DIAGNOSTICS.md) ·
-  [Recovery and updates](./docs/RECOVERY.md) · [Bot guide](./docs/BOT_GUIDE.md) ·
-  [Checkpoints & rewind](./docs/CHECKPOINTS.md)
-- **Engineering & migration:** [Spec](./docs/SPEC.md) ·
-  [Task contracts & pause policy](./docs/TASK_CONTRACT.md) ·
-  [Tool contract](./docs/TOOL_CONTRACT.md) · [Migrating from 0.x](./docs/MIGRATING.md)
-- **Extension development:** [Extensions](./docs/EXTENSIONS.md) ·
-  [Plugin packages and Manifest v1](./docs/PLUGIN_PACKAGES.md) ·
-  [Extension Protocol](./docs/EXTENSION_PROTOCOL.md) ·
-  [Go SDK and starter](./sdk/go/README.md)
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=SivanCola%2Fdeepzora&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/SivanCola/deepzora/star-history/assets/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/SivanCola/deepzora/star-history/assets/star-history/star-history-light.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/SivanCola/deepzora/star-history/assets/star-history/star-history-light.svg" />
- </picture>
-</a>
-
-<br/>
-
-## Acknowledgments
-
-A small list of folks whose work has shaped Deepzora the most — the current top
-20 contributors by commit count. The full contributor graph is on
-[GitHub](https://github.com/SivanCola/deepzora/graphs/contributors?all=1).
-
-<!-- deepzora-top-contributors:start -->
-| Contributor | Contributor | Contributor | Contributor |
-| --- | --- | --- | --- |
-| [**SivanCola**](https://github.com/SivanCola) | [**esengine**](https://github.com/esengine) | [**ttmouse**](https://github.com/ttmouse) | [**lifu963**](https://github.com/lifu963) |
-| **reasonix** | [**HUQIANTAO**](https://github.com/HUQIANTAO) | [**GTC2080**](https://github.com/GTC2080) | [**mchenziyi**](https://github.com/mchenziyi) |
-| [**Li-Charles-One**](https://github.com/Li-Charles-One) | **merge-order-check** | [**light-front-theory**](https://github.com/light-front-theory) | **Yan Li** |
-| [**eghrhegpe**](https://github.com/eghrhegpe) | **wufengfan** | [**Bernardxu123**](https://github.com/Bernardxu123) | [**HaoyueQin**](https://github.com/HaoyueQin) |
-| [**CVEngineer66**](https://github.com/CVEngineer66) | [**JesonChou**](https://github.com/JesonChou) | [**SuMuxi66**](https://github.com/SuMuxi66) | [**lanshi17**](https://github.com/lanshi17) |
-<!-- deepzora-top-contributors:end -->
-
-Special thanks to [**Bernardxu123**](https://github.com/Bernardxu123) for designing the project logo and intro video.
-
-<p align="center">
-  <a href="https://github.com/SivanCola/deepzora/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=SivanCola/deepzora&max=100&columns=12" alt="Contributors to SivanCola/deepzora" width="860"/>
-  </a>
-</p>
-
-<br/>
-
----
-
-<p align="center">
-  <sub>MIT — see <a href="./LICENSE">LICENSE</a></sub>
-  <br/>
-  <sub>Built by the community at <a href="https://github.com/SivanCola/deepzora/graphs/contributors">SivanCola/deepzora</a></sub>
-</p>
-
----
-
-<p align="center"><sub><strong>Support this project</strong></sub></p>
-
-If Deepzora has been useful and you'd like to say thanks, you can. It stays a
-coffee, not a contract — donations don't buy feature priority or change how
-issues get triaged.
-
-- **International** — PayPal: [paypal.me/yuhuahui](https://paypal.me/yuhuahui)
-- **国内** — 微信支付（扫码）
-
-<p align="center">
-  <img src=".github/sponsor/wechat-pay.jpg" alt="WeChat Pay QR code" width="180"/>
-</p>
+在根目录与 `desktop` 内运行 `go test ./...`，前端运行 `pnpm --dir desktop/frontend test:all`。研究工具和浏览器基准通过显式开发命令运行。

@@ -2,7 +2,7 @@ import { useCommittedCommand } from "../lib/useCommittedCommand";
 import { asArray } from "../lib/array";
 import { resolveTaskMonitorSession } from "../lib/taskMonitorNavigation";
 import { taskSessionIDFromPath, type SidebarImConnection } from "./sidebarImProjection";
-import { draftLandingTargetForTab } from "./draftLandingTarget";
+import { sessionCreationTargetForTab } from "./sessionCreationTarget";
 import type { useDesktopNavigation } from "./useDesktopNavigation";
 import type { WorkspaceNavigationPorts } from "./navigationOwner";
 import type { ControlResult, SessionMeta, TabMeta } from "../lib/types";
@@ -44,9 +44,9 @@ export type SessionNavigationCommandsInput = {
  */
 export function useSessionNavigationCommands(input: SessionNavigationCommandsInput) {
   const { activeTab, showToast, navigation, ports } = input;
-  const lastLocalTarget = useRef(draftLandingTargetForTab(activeTab));
+  const lastLocalTarget = useRef(sessionCreationTargetForTab(activeTab));
   const [creation, setCreation] = useState<(ManualCreationObservation & { seq: number }) | null>(null);
-  if (activeTab && !activeTab.remote) lastLocalTarget.current = draftLandingTargetForTab(activeTab);
+  if (activeTab && !activeTab.remote) lastLocalTarget.current = sessionCreationTargetForTab(activeTab);
 
   const blankSessionTarget = useCommittedCommand(() => lastLocalTarget.current);
 

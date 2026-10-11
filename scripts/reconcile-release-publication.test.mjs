@@ -109,12 +109,11 @@ test("real public verifier rejects tag drift before inspecting any packages", t 
 
 test("the 1.x release control plane neither deploys nor verifies the website", () => {
   const promote = readFileSync(".github/workflows/release-promote.yml", "utf8");
-  assert.match(readFileSync(".github/workflows/release-stable.yml", "utf8"), /group: stable-release-publication/);
   assert.match(promote, /group: stable-release-publication/);
   assert.match(promote, /bash scripts\/reconcile-release-publication.sh/);
   assert.match(promote, /retention-days: 90/);
   for (const file of [
-    ".github/workflows/release-promote.yml", ".github/workflows/release-stable.yml",
+    ".github/workflows/release-promote.yml",
     ".github/workflows/release-desktop.yml", ".github/workflows/release-verify.yml",
     "scripts/reconcile-release-publication.sh", "scripts/verify-stable-release-artifacts.sh",
   ]) {

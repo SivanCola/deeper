@@ -413,7 +413,7 @@ func TestRemoteStatusAdoptionWaitsForFramePublication(t *testing.T) {
 	}
 	statusDone := make(chan bool, 1)
 	go func() {
-		statusDone <- a.recordRemoteTabSessionStatus(tab.id, client, tab.gen, 11, json.RawMessage(`{"sessionPath":"session-id:later"}`))
+		statusDone <- a.recordRemoteTabSessionStatus(tab.id, client, tab.gen, 11, json.RawMessage(currentFakeStatus(`{"sessionPath":"session-id:later"}`, 1)))
 	}()
 	select {
 	case <-statusDone:

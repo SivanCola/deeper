@@ -53,14 +53,10 @@ type Checkpoint struct {
 - **跨进程保留**：恢复会话时会重新加载 checkpoint，重启后仍可 rewind，与 Claude Code 保持一致。
 - **Schema v3 布局**：每轮一个目录，包含 `turns/<turn>/meta.json` 和原始字节
   `files/NNNN.before`。新捕获不再把同一份 pre-image 重复写入内容寻址 blob。
-  升级后仍可读取 v1/v2 JSON 和 blob；事务 / undo 载荷仍可使用 blob。每个 v3
-  回合还会写入一个不含文件载荷的 v2 兼容标记（`turn-<turn>.json`）。降级到旧版
-  Deepzora 后，旧版可以据此保持 turn 编号单调递增，但不能恢复该标记对应的 v3
-  文件快照。该 marker 同时是 v3 回合的存活标记：旧版截断 marker 后，后续升级会
-  忽略遗留目录，而不会把未来回合重新加载出来。
+  只支持当前 v3 布局，事务 / undo 可以使用内容寻址存储，不写旧格式兼容标记。
 - **保留策略**：默认保留最近 100 个 v3 回合目录，并对原始 v3 pre-image 使用
   1 GiB 软上限。当前回合或事务保护中的回合可以暂时超过上限；解除保护后，从最旧
-  的完整回合目录开始清理。旧版 blob 在独立的兼容存储中使用相同的上限值。删除
+  的完整回合目录开始清理。删除
   会话时会清理整个 checkpoint sidecar。
 
 ## Controller API：两个前端共用的统一入口

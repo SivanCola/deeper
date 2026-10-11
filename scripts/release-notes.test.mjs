@@ -1,246 +1,42 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
-import { loadCatalog, releaseForVersion, releaseRefs, renderGitHubRelease, validateCatalog } from "./release-notes.mjs";
+import test from "node:test";
+import { loadCatalog, releaseForVersion, renderGitHubRelease, validateCatalog } from "./release-notes.mjs";
 import { validateReleaseEvent } from "./release-event.mjs";
 
-test("the committed release catalog is valid and newest first", async () => {
+test("first release is a reviewed baseline, resolved across tag namespaces", async () => {
   const catalog = await loadCatalog();
-  assert.equal(catalog.schemaVersion, 1);
-  assert.equal(new Set(catalog.releases.map((release) => release.version)).size, catalog.releases.length);
-});
-
-test("tag namespaces resolve to the same product release", async () => {
-  const catalog = await loadCatalog();
-  assert.equal(releaseForVersion(catalog, "v1.17.13").version, "1.17.13");
-  assert.equal(releaseForVersion(catalog, "desktop-v1.17.13").version, "1.17.13");
-  assert.equal(releaseForVersion(catalog, "npm-v1.17.13").version, "1.17.13");
-});
-
-test("GitHub rendering keeps product sections and source PR links", async () => {
-  const catalog = await loadCatalog();
-  const markdown = renderGitHubRelease(releaseForVersion(catalog, "1.17.13"), "zh");
-  assert.match(markdown, /## 使用攻略/);
-  assert.match(markdown, /## 重点内容/);
-  assert.match(markdown, /## 升级提醒/);
-  assert.match(markdown, /## 风险提示/);
-  assert.match(markdown, /\/pull\/6460/);
-  assert.match(markdown, /github\.com\/esengine\/DeepSeek-Reasonix\/releases\/tag\/desktop-v1\.17\.13/);
-});
-
-test("rendering credits authors and fixers and lists them once, in order", async () => {
-  const catalog = await loadCatalog();
-  const release = structuredClone(releaseForVersion(catalog, "1.39.1"));
-  release.contributors = ["late-comer"];
-  const refs = releaseRefs(release);
-  const special = {
-    10853: { kind: "pull", login: "github-actions[bot]", bot: true },
-    10858: { kind: "issue", fixes: [{ number: 20000, login: "fixer", bot: false }] },
-    10495: { kind: "issue", fixes: [] },
-  };
-  const credits = new Map(
-    refs.map((ref) => [ref, special[ref] || { kind: "pull", login: ref % 2 ? "KHG420" : "esengine", bot: false }]),
-  );
-  const zh = renderGitHubRelease(release, "zh", credits);
-  assert.match(zh, /\[#10763\]\([^)]+\/pull\/10763\) by @KHG420/);
-  assert.match(zh, /\[#10858\]\([^)]+\/pull\/10858\) fixed in #20000 by @fixer, /);
-  assert.match(zh, /\[#10495\]\([^)]+\/pull\/10495\), /);
-  assert.doesNotMatch(zh, /by @github-actions/);
-  assert.match(zh, /## 贡献者\n\n感谢本版本的贡献者：@KHG420、@fixer、@esengine\n$/);
-  const en = renderGitHubRelease(release, "en", credits);
-  assert.match(en, /## Contributors\n\nThanks to the contributors in this release: @KHG420, @fixer, @esengine\n$/);
-  assert.doesNotMatch(en, /late-comer/);
-});
-
-test("an unresolved ref renders as the plain link it always was", async () => {
-  const catalog = await loadCatalog();
-  const release = releaseForVersion(catalog, "1.39.0");
-  const markdown = renderGitHubRelease(release, "zh", new Map());
-  assert.doesNotMatch(markdown, / by @/);
-  assert.match(markdown, /\(\[#10731\]\(https:\/\/github\.com\/esengine\/DeepSeek-Reasonix\/pull\/10731\)\)/);
-  assert.doesNotMatch(markdown, /## 贡献者/);
-});
-
-test("targeted releases render Desktop and CLI sections from one shared item", async () => {
-  const catalog = await loadCatalog();
-  const markdown = renderGitHubRelease(releaseForVersion(catalog, "1.31.4"), "zh");
-  assert.match(markdown, /## 桌面端更新/);
-  assert.match(markdown, /## CLI 端更新/);
-  assert.match(markdown, /## 其他项目更新/);
-  assert.match(markdown, /\*\*\[Service\]\*\* \*\*降低数据库读取成本\*\*/);
-  assert.equal(markdown.match(/更好的数学渲染/g)?.length, 2);
-});
-
-test("targeted release validation requires canonical item targets and matching surfaces", () => {
-  const release = {
-    version: "2.0.0",
-    targetingVersion: 1,
-    date: "2026-01-01",
-    channel: "stable",
-    title: { en: "Targeted", zh: "分类版本" },
-    summary: { en: "Summary", zh: "摘要" },
-    surfaces: ["desktop", "cli"],
-    guides: [],
-    highlights: [{
-      kind: "fixed",
-      targets: ["desktop", "cli"],
-      title: { en: "Shared fix", zh: "共享修复" },
-      body: { en: "A shared fix.", zh: "一项共享修复。" },
-      refs: [1],
-    }],
-    changes: { new: [], improved: [], fixed: [] },
-    upgrade: [],
-    risks: [],
-    contributors: [],
-    links: {
-      github: "https://example.com/release",
-      compare: "https://example.com/compare",
-      download: "https://example.com/download",
-    },
-  };
-  assert.doesNotThrow(() => validateCatalog({ schemaVersion: 1, releases: [release] }));
-  assert.throws(
-    () => validateCatalog({
-      schemaVersion: 1,
-      releases: [{ ...release, highlights: [{ ...release.highlights[0], targets: undefined }] }],
-    }),
-    /targets must be a non-empty array/,
-  );
-  assert.throws(
-    () => validateCatalog({ schemaVersion: 1, releases: [{ ...release, surfaces: ["desktop"] }] }),
-    /surfaces must equal the canonical union/,
-  );
-  assert.throws(
-    () => validateCatalog({
-      schemaVersion: 1,
-      releases: [{ ...release, highlights: [{ ...release.highlights[0], targets: ["cli", "desktop"] }] }],
-    }),
-    /targets must use canonical order/,
-  );
-});
-
-test("targeting adoption boundary preserves historical releases and rejects future legacy records", () => {
-  const release = {
-    version: "1.31.3",
-    date: "2026-01-01",
-    channel: "stable",
-    title: { en: "Legacy", zh: "旧版" },
-    summary: { en: "Summary", zh: "摘要" },
-    surfaces: ["desktop"],
-    guides: [],
-    highlights: [{
-      kind: "fixed",
-      title: { en: "Legacy fix", zh: "旧版修复" },
-      body: { en: "A historical fix.", zh: "一项历史修复。" },
-      refs: [1],
-    }],
-    changes: { new: [], improved: [], fixed: [] },
-    upgrade: [],
-    risks: [],
-    contributors: [],
-    links: {
-      github: "https://example.com/release",
-      compare: "https://example.com/compare",
-      download: "https://example.com/download",
-    },
-  };
-
-  assert.doesNotThrow(() => validateCatalog({ schemaVersion: 1, releases: [release] }));
-  for (const version of ["1.31.4", "1.32.0", "2.0.0-preview.1"]) {
-    assert.throws(
-      () => validateCatalog({ schemaVersion: 1, releases: [{ ...release, version }] }),
-      /targetingVersion must be 1 for v1\.31\.4 and newer/,
-    );
+  assert.equal(catalog.releases.length, 1);
+  for (const prefix of ["v", "desktop-v", "npm-v"]) assert.equal(releaseForVersion(catalog, `${prefix}1.0.0`).status, "reviewed");
+  assert.equal(catalog.releases[0].previousRelease, undefined);
+  for (const lang of ["en", "zh"]) {
+    const text = renderGitHubRelease(catalog.releases[0], lang);
+    assert.match(text, /Deepzora/);
+    assert.doesNotMatch(text, /esengine|Reasonix/);
   }
 });
 
-test("validation rejects bilingual drift", () => {
-  assert.throws(
-    () =>
-      validateCatalog({
-        schemaVersion: 1,
-        releases: [
-          {
-            version: "1.0.0",
-            date: "2026-01-01",
-            channel: "stable",
-            title: { en: "Title", zh: "" },
-            summary: { en: "Summary", zh: "摘要" },
-          },
-        ],
-      }),
-    /title\.zh/,
-  );
+test("validation enforces bilingual notes, targets and current build identities", async () => {
+  const catalog = await loadCatalog();
+  for (const [change, expected] of [
+    [r => { r.title.zh = ""; }, /title.zh/],
+    [r => { delete r.targetingVersion; }, /targetingVersion/],
+    [r => { r.highlights[0].targets = ["cli", "desktop"]; }, /canonical order/],
+    [r => { r.builds.npm = "1.0.1"; }, /builds.npm/],
+    [r => { r.channel = "prerelease"; }, /channel/],
+  ]) {
+    const next = structuredClone(catalog); change(next.releases[0]);
+    assert.throws(() => validateCatalog(next), expected);
+  }
+  const next = structuredClone(catalog.releases[0]);
+  Object.assign(next, { version: "1.0.1", releaseId: "1.0.1", baseVersion: "1.0.1", builds: {cli:"v1.0.1", desktop:"v1.0.1", npm:"1.0.1"} });
+  assert.throws(() => validateCatalog({schemaVersion:1,releases:[next, catalog.releases[0]]}), /previousRelease/);
+  next.previousRelease = "1.0.0";
+  assert.doesNotThrow(() => validateCatalog({schemaVersion:1,releases:[next, catalog.releases[0]]}));
 });
 
-test("managed Preview records bind every surface to one exact ordinal", () => {
-  const release = {
-    version: "1.19.0-preview.3",
-    releaseId: "1.19.0-preview.3",
-    baseVersion: "1.19.0",
-    date: "2026-07-31",
-    channel: "prerelease",
-    status: "reviewed",
-    previousRelease: "1.19.0-preview.2",
-    builds: {
-      cli: "v1.19.0-preview.3",
-      desktop: "v1.19.0-preview.3",
-      npm: "1.19.0-canary.3",
-    },
-    title: { en: "Preview", zh: "预览版" },
-    summary: { en: "Preview summary", zh: "预览版摘要" },
-    surfaces: ["cli"],
-    guides: [],
-    highlights: [{
-      kind: "fixed",
-      title: { en: "Fix", zh: "修复" },
-      body: { en: "A fix.", zh: "一项修复。" },
-      refs: [1],
-    }],
-    changes: { new: [], improved: [], fixed: [] },
-    upgrade: [],
-    risks: [],
-    contributors: [],
-    links: {
-      github: "https://github.com/SivanCola/deepzora/releases/tag/v1.19.0-preview.3",
-      compare: "https://github.com/SivanCola/deepzora/compare/v1.19.0-preview.2...v1.19.0-preview.3",
-      download: "https://github.com/SivanCola/deepzora/?download=desktop&channel=preview#start",
-    },
-  };
-
-  assert.doesNotThrow(() => validateCatalog({ schemaVersion: 1, releases: [release] }));
-  assert.throws(
-    () => validateCatalog({
-      schemaVersion: 1,
-      releases: [{ ...release, builds: { ...release.builds, npm: "1.19.0-canary.4" } }],
-    }),
-    /builds\.npm/,
-  );
-});
-
-test("publication marker is bound to reviewed version, channel, SHA, and builds", () => {
-  const release = {
-    version: "1.19.0-preview.3",
-    channel: "prerelease",
-    candidateSha: "a".repeat(40),
-    builds: {
-      cli: "v1.19.0-preview.3",
-      desktop: "v1.19.0-preview.3",
-      npm: "1.19.0-canary.3",
-    },
-  };
-  const event = {
-    schemaVersion: 1,
-    releaseId: release.version,
-    channel: "preview",
-    candidateSha: release.candidateSha,
-    publishedAt: "2026-07-31T00:00:00.000Z",
-    releaseNotesUrl: "https://github.com/SivanCola/deepzora/releases/tag/v1.19.0-preview.3/",
-    builds: release.builds,
-  };
-
+test("publication evidence binds the reviewed version and candidate", async () => {
+  const release = { ...(await loadCatalog()).releases[0], candidateSha: "a".repeat(40) };
+  const event = {schemaVersion:1,releaseId:"1.0.0",channel:"stable",candidateSha:release.candidateSha,publishedAt:"2026-10-12T00:00:00Z",releaseNotesUrl:"https://github.com/SivanCola/deepzora/releases/tag/v1.0.0/",builds:release.builds};
   assert.doesNotThrow(() => validateReleaseEvent(event, release));
-  assert.throws(
-    () => validateReleaseEvent({ ...event, candidateSha: "b".repeat(40) }, release),
-    /candidateSha/,
-  );
+  assert.throws(() => validateReleaseEvent({...event,candidateSha:"b".repeat(40)},release), /candidateSha/);
 });

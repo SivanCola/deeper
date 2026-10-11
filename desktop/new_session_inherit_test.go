@@ -64,7 +64,7 @@ func TestEnsureBlankTabInheritsActiveTabLocalSettings(t *testing.T) {
 	app.tabOrder = []string{"src"}
 	app.activeTabID = "src"
 
-	meta, err := app.EnsureBlankTab("project", workspace)
+	meta, err := app.ensureBlankTab("project", workspace)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestEnsureBlankTabUsesGlobalSessionDefaultsForModelAndToolApproval(t *testi
 	app.tabOrder = []string{"src"}
 	app.activeTabID = "src"
 
-	meta, err := app.EnsureBlankTab("project", workspace)
+	meta, err := app.ensureBlankTab("project", workspace)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestEnsureBlankTabRetargetsReusedSameNameModelToDefaultProvider(t *testing.
 		tab.releaseSessionLease()
 	})
 
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestEnsureBlankTabRepairsStaleStoredProviderWhenRuntimeAlreadyDefault(t *te
 		t.Fatalf("seed stale stored model: %v", err)
 	}
 
-	if _, err := app.EnsureBlankTab("global", ""); err != nil {
+	if _, err := app.ensureBlankTab("global", ""); err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
 	if tab.model != defaultRef || tab.Ctrl.ModelRef() != defaultRef {
@@ -304,7 +304,7 @@ func TestEnsureBlankTabConcurrentModelSwitchKeepsLastSelection(t *testing.T) {
 
 	ensureDone := make(chan error, 1)
 	go func() {
-		_, err := app.EnsureBlankTab("global", "")
+		_, err := app.ensureBlankTab("global", "")
 		ensureDone <- err
 	}()
 
@@ -376,7 +376,7 @@ func TestEnsureBlankTabRestartsStartingBlankWithDefaultProvider(t *testing.T) {
 		tab.releaseSessionLease()
 	})
 
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -521,7 +521,7 @@ func TestDesktopNewSessionDefaultsRejectsNonChatDefaultWithoutFallback(t *testin
 	}
 
 	app := NewApp()
-	_, err := app.EnsureBlankTab("global", "")
+	_, err := app.ensureBlankTab("global", "")
 	if err == nil || !strings.Contains(err.Error(), "chat-capable provider") {
 		t.Fatalf("EnsureBlankTab error = %v, want actionable no-chat-model error", err)
 	}
@@ -555,7 +555,7 @@ func TestDesktopNewSessionDefaultsHonorExplicitEmptyProviderAccess(t *testing.T)
 	}
 
 	app := NewApp()
-	_, err := app.EnsureBlankTab("global", "")
+	_, err := app.ensureBlankTab("global", "")
 	if err == nil || !strings.Contains(err.Error(), "chat-capable provider") {
 		t.Fatalf("EnsureBlankTab error = %v, want actionable no-provider error", err)
 	}
@@ -597,7 +597,7 @@ func TestDesktopNewSessionDefaultsUsesProjectDefaultAndSkipsItsKeylessProvider(t
 	}
 
 	app := NewApp()
-	meta, err := app.EnsureBlankTab("project", workspace)
+	meta, err := app.ensureBlankTab("project", workspace)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -696,7 +696,7 @@ func TestNewSessionForTabAlignsBlankTabToDefault(t *testing.T) {
 	}
 	app := NewApp()
 	app.ctx = context.Background()
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatal(err)
 	}

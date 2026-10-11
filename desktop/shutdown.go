@@ -312,11 +312,6 @@ func (a *App) shutdownBody(c *desktopShutdownCoordinator, items []desktopShutdow
 			return &shutdownStepError{code: "session_ui_close_failed", err: err}
 		}
 	}
-	if a.desktopDrafts != nil {
-		if err := c.runErrorStep("desktop-drafts", a.desktopDrafts.Close); err != nil {
-			return &shutdownStepError{code: "draft_close_failed", err: err}
-		}
-	}
 	c.runStep("workspace-preview", a.stopWorkspacePreviewOrigin)
 	if a.desktopShell.coordinator != nil {
 		c.runStep("shell-coordinator", a.desktopShell.coordinator.stop)

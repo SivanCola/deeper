@@ -1,7 +1,7 @@
 # 执行与完成声明 / Execution and completion reports
 
 现行文件观察、调度和中断恢复语义见
-[Harness 风格执行机制迁移](DSH_EXECUTION_MIGRATION.zh-CN.md)。
+[Current contract](current-version-baseline.md)。
 
 Deepzora 将任务判断、执行控制和运行记录分开。模型负责规划、执行用户要求的检查并判断任务是否完成。宿主负责权限、可靠执行、持久化、取消、显式预算和已激活 Goal 的续跑。结果面板陈述观察到的事实，不认证代码质量。
 

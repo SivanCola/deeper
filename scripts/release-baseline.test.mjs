@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 
 const workflow = name => readFileSync(`.github/workflows/${name}`, "utf8");
 test("release workflows only publish the current product line", () => {
- for (const file of ["release.yml","release-npm.yml","release-stable.yml","release-promote.yml","release-verify.yml"]) {
+ for (const file of ["release.yml","release-npm.yml","release-promote.yml","release-verify.yml"]) {
   assert.doesNotMatch(workflow(file), /CLI_PUBLISH_FROZEN|legacy-v1/);
  }
  assert.match(workflow("release-npm.yml"), /Finalize official npm publication/);

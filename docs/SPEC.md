@@ -5,7 +5,7 @@
 > contract — code follows it. Change the contract first, then the code.
 
 The current file-operation, scheduling, and interruption contract is specified
-in [Harness-style execution migration](DSH_EXECUTION_MIGRATION.md).
+in [Current contract](current-version-baseline.md).
 
 ## 1. Design Principles
 

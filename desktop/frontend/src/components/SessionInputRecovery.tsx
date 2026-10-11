@@ -6,7 +6,7 @@ type InputState = ReturnType<typeof useSessionComposerPersistence>;
 export function SessionInputRecovery({ input }: { input: InputState }) {
   const t = useT();
   if (!input.error && !input.attention && !input.recovering) return null;
-  return <div role="alert" className="session-draft-surface__error">
+  return <div role="alert" className="session-input-recovery">
       <span>{t(input.recovering ? "composer.inputRecovering" : input.attention ? "composer.inputUnconfirmed" : "composer.inputRetry")}</span>
       {!input.recovering && <button type="button" onClick={() => void input.retry().catch(() => {})}>{t("common.retry")}</button>}
     </div>;

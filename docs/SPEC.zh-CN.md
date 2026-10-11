@@ -4,7 +4,7 @@
 
 > Deepzora 是一个 coding agent：由极薄的 harness 驱动多个模型，所有能力都由配置和插件提供。本文是工程契约，代码应遵循它；需要改变行为时，应先更新契约，再修改代码。
 
-现行文件操作、调度与中断恢复契约见 [Harness 风格执行机制迁移](DSH_EXECUTION_MIGRATION.zh-CN.md)。
+现行文件操作、调度与中断恢复契约见 [当前契约](current-version-baseline.md)。
 
 英文原文是规范性版本；本文按相同章节提供中文说明，代码标识符、配置键和协议名保持原样。
 

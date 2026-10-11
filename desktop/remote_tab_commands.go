@@ -289,10 +289,7 @@ func (a *App) DeleteRemoteProjectSession(hostID, workspace, name string) error {
 	defer done()
 	ctx, cancel := commandContext(a)
 	defer cancel()
-	// Keep the legacy basename for older Serve builds, but also send the
-	// immutable identity. Canonical sessions live under sessions-v4/<id>/ and
-	// cannot be removed by the old name.jsonl-only endpoint.
-	body, _ := json.Marshal(map[string]string{"name": name, "sessionId": strings.TrimSpace(name)})
+	body, _ := json.Marshal(map[string]string{"sessionId": strings.TrimSpace(name)})
 	return servePost(ctx, client, serveURL(base, "/delete-session"), body)
 }
 

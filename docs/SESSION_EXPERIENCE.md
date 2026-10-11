@@ -16,7 +16,7 @@ Overrides are keyed by session and stable process-segment identity in a bounded 
 
 Warnings, approvals, readiness states, extension cards, and other items that require user action remain outside the completed work-process fold, so standard execution never makes an action unreachable.
 
-## Configuration and compatibility
+## Configuration
 
 The canonical desktop configuration is:
 
@@ -25,18 +25,4 @@ The canonical desktop configuration is:
 session_experience = "standard"
 ```
 
-The only valid values are `standard` and `deep`; missing or invalid values use `standard`. The Go Settings and startup snapshots are authoritative. The TypeScript field remains optional for one release so older backends and historical fixtures fall back to Standard; local storage is never allowed to override a backend snapshot.
-
-Older setters and fields remain compatibility mirrors for one complete release cycle:
-
-| Legacy write | Canonical result |
-| --- | --- |
-| `SetDisplayMode(*)` | Standard |
-| `SetReasoningDisplayMode("expanded")` | Deep |
-| any other reasoning value | Standard |
-| `SetExpandThinking(*)` | Standard |
-| process fold `expanded` / `auto` | Deep / Standard |
-
-Every canonical write mirrors `display=standard` and `reasoning=auto|expanded` for rollback compatibility. These fields, setters, events, and local-storage mirrors may be removed only after the next complete release has shipped and downgrade support is no longer required.
-
-Older binaries can discard unknown fields when rewriting configuration. Compatibility mirrors support old readers; concurrent old/new writers do not guarantee preservation of the new preference.
+The valid values are `standard` and `deep`; missing or invalid values use `standard`. Go Settings and startup snapshots are authoritative. Local storage cannot override them. Retired display fields and setters are unsupported.

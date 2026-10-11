@@ -171,8 +171,7 @@ The headless gateway uses the same config records as the desktop app:
   or approval postures.
 - `access` can also be set per connection with `enabled`, `allow_all`,
   `pairing_enabled`, `users`, `groups`, `admins`, and `approvers`. When a
-  connection has active access settings, they are checked before the legacy
-  global `[bot.allowlist]`.
+  connection has active access settings, they govern admission for that connection.
 - `[[bot.routes]]` adds finer routing by connection, platform, chat type, chat
   ID, user ID, or thread ID. Empty match fields are wildcards; the first matching
   route wins and can override `workspace_root`, `model`, and
@@ -189,16 +188,14 @@ The headless gateway uses the same config records as the desktop app:
 
 Access control is still mandatory. New desktop-created bots should normally set
 access inside that bot's own detail panel, which saves to `[[bot.connections]]`
-or `[bot.qq].access`. The legacy global `[bot.allowlist]` remains a fallback for
-older configs and for connections without active per-bot access. You can
+or `[bot.qq].access`. You can
 deliberately set `allow_all = true`, or enable `pairing_enabled` for a single
 bot / `[bot.pairing]` globally so an unknown DM sender receives a one-time
 pairing code. That code must be approved locally with
 `deepzora bot pairing approve <code>` before the sender can drive the bot; when
 the request is tied to a connection, approval adds the sender to that
-connection's access list. Users listed in `admins` / `approvers` or the legacy
-`*_admins` / `*_approvers` also receive base bot admission, so they do not need
-to be duplicated in `users` / `*_users`. Group chats are not opened by DM
+connection's access list. Users listed in `admins` / `approvers` also receive base bot admission, so they do not need
+to be duplicated in `users`. Group chats are not opened by DM
 pairing or role admission; group IDs remain an additional narrowing layer.
 Use these commands to manage pending requests:
 
@@ -208,56 +205,17 @@ deepzora bot pairing approve CODE
 deepzora bot pairing reject CODE
 ```
 
-If `qq_admins`, `feishu_admins`, `weixin_admins`, or the matching
-`*_approvers` lists are configured, `/mode` is admin-only while
-`/projects`, `/use project`, `/sessions`, `/attach session`, and `/search all`
-are also admin-only. `/approve` and `/deny` require an approver or admin. When
-no role lists are set, existing allowlisted users keep the previous command
-behavior for compatibility. Remote users go through the same controller,
-permission policy, tool approval mode, and sandbox rules as local desktop or CLI
-turns.
+Connection `admins` control administration, and `approvers` or `admins` approve tool requests. Remote users share the controller, permission policy, tool approval mode and sandbox boundaries used by local sessions.
 
 ```toml
-[bot.allowlist]
+[[bot.connections]]
+id = "team"
+provider = "feishu"
+[bot.connections.access]
 enabled = true
-feishu_users = ["ou_member"]
-feishu_admins = ["ou_admin"]
-feishu_approvers = ["ou_approver"]
-```
-
-`ignore_self_messages = true` is enabled by default. The gateway remembers the
-platform `message_id` values it just sent and ignores matching echo events. If a
-platform does not echo the same message ID reliably, configure the bot's own user
-IDs under `[bot.self_user_ids]` as a second layer of loop protection. `/status`
-also includes the current queue mode and adapter health, such as
-`feishu-lark=running` or `weixin-weixin=degraded`.
-
-The optional `[bot.control]` section exposes a local loopback HTTP API and is
-disabled by default. When enabled, `token_env` must point to an environment
-variable and every request must include `Authorization: Bearer <token>`. The
-server only binds to `localhost`, `127.0.0.1`, or `::1`. Current endpoints are
-`GET /status` for session and adapter health snapshots, `GET /metrics` for
-Prometheus text metrics, and `POST /send` for sending text or media through a
-configured connection.
-
-Example:
-
-```sh
-export DEEPZORA_BOT_CONTROL_TOKEN="change-me"
-
-curl -H "Authorization: Bearer $DEEPZORA_BOT_CONTROL_TOKEN" \
-  http://127.0.0.1:37913/status
-
-curl -X POST http://127.0.0.1:37913/send \
-  -H "Authorization: Bearer $DEEPZORA_BOT_CONTROL_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "connection_id": "feishu-lark",
-    "domain": "lark",
-    "chat_id": "oc_xxx",
-    "chat_type": "dm",
-    "text": "hello from local control API"
-  }'
+users = ["ou_member"]
+admins = ["ou_admin"]
+approvers = ["ou_approver"]
 ```
 
 ## Usage flow

@@ -151,7 +151,7 @@ shutdown and shutdown-status requests retain the existing service session.
 Clean exit removes the current temporary file under
 `diagnostics/lifecycle`; an empty lifecycle directory after exit is expected.
 Rotating `logs/shell.log` is the durable post-exit record. See
-[Windows close and transcript diagnostics validation](WINDOWS_CLOSE_TRANSCRIPT_VALIDATION.md).
+[Current contract](DESKTOP_HOST_PROTOCOL.md).
 
 ## Business commands
 

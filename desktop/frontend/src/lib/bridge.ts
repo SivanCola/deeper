@@ -1,4 +1,3 @@
-import { makeLazyPreviousDraftMock } from "./previousDraftBindings";
 import { makeMockSessionExportBindings, type SessionExportBindings } from "./sessionExportBridge";
 import type { AttachmentBindings } from "./attachmentBindings";
 import { makeMockSessionLifecycleBindings, type SessionLifecycleBindings } from "./sessionLifecycleBindings";
@@ -22,13 +21,6 @@ import type {
   SearchHistoryPage,
   SessionArchitectureDiagnostics,
   SessionCreationResult,
-  SessionDraftContextView,
-  SessionDraftSaveRequest,
-  SessionDraftSaveResult,
-  SessionDraftSubmissionRequest,
-  SessionDraftSubmissionView,
-  SessionDraftSummary,
-  SessionDraftView,
   SessionHistoryContentChunk,
   SessionMutationResult,
   SessionRef,
@@ -240,21 +232,6 @@ export interface AppBindings extends SessionUIBindings {}
 // AppBindings is the hand-written React-to-Go contract. _CheckGeneratedBindings
 // catches generated methods missing here; update this interface and typecheck.
 export interface AppBindings extends AttachmentBindings, SessionExportBindings, SessionLifecycleBindings, ForkTargetsBindings, ToolRecoveryBindings, ModelSettingsBindings, SessionCatalogBindings, ProjectTreeOrganizationBindings, HistoryCatalogBindings, TaskCatalogBindings, BlankProjectBindings, SessionTitleBindings, ScrollDiagnosticBindings, RemoteProjectBindings, MCPAppBindings, PinnedContextBindings, FollowupBindings, InboxQueueBindings, TranscriptProtocolBindings, SessionReaderBindings, ExactInteractionBindings {
-  OpenSessionDraft(workspaceId: string): Promise<SessionDraftView>;
-  OpenSessionDraftForTarget(scope: string, workspaceRoot: string): Promise<SessionDraftView>;
-  RestoreSessionDraft(): Promise<SessionDraftView | null>;
-  SaveSessionDraft(request: SessionDraftSaveRequest): Promise<SessionDraftSaveResult>;
-  ListSessionDraftSummaries(): Promise<SessionDraftSummary[]>;
-  DiscardSessionDraft(draftId: string, revision: number): Promise<void>;
-  DismissSessionDraft(draftId: string): Promise<void>;
-  SetSessionDraftRestoreTarget(draftId: string): Promise<void>;
-  GetSessionDraft(draftId: string): Promise<SessionDraftView>;
-  GetSessionDraftState(draftId: string): Promise<import("../generated/desktopContract.generated").SessionDraftState>;
-  ResumeDraftSubmission(operationId: string, revision: number): Promise<SessionDraftSubmissionView>;
-  GetDraftContext(draftId: string): Promise<SessionDraftContextView>;
-  BeginDraftSubmission(request: SessionDraftSubmissionRequest): Promise<SessionDraftSubmissionView>;
-  GetDraftSubmission(operationId: string): Promise<SessionDraftSubmissionView>;
-  CancelDraftSubmission(operationId: string): Promise<SessionDraftSubmissionView>;
   SavePastedImageForComposerTarget(target: ComposerTarget, dataUrl: string): Promise<string>;
   SavePastedFileForComposerTarget(target: ComposerTarget, name: string, dataUrl: string): Promise<string>;
   SaveClipboardImageForComposerTarget(target: ComposerTarget): Promise<string>;
@@ -368,11 +345,10 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   InboxHasItems(tabID: string): Promise<boolean>;
   Cancel(): Promise<void>;
   CancelTab(tabID: string): Promise<void>;
-  CancelSessionForTab?(tabID: string): Promise<CancelReceipt>;
-  CancelTabWithInboxItems(tabID: string, itemIDs: string[]): Promise<void>;
-  CancelTabWithInboxItemsResult?(tabID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
-  InterruptTurnForTab?(tabID: string, turnID: string): Promise<void>;
-  InterruptTurnWithInboxItemsForTab?(tabID: string, turnID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
+  CancelSessionForTab(tabID: string): Promise<CancelReceipt>;
+  CancelTabWithInboxItemsResult(tabID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
+  InterruptTurnForTab(tabID: string, turnID: string): Promise<void>;
+  InterruptTurnWithInboxItemsForTab(tabID: string, turnID: string, itemIDs: string[]): Promise<{ discardedItemIds: string[]; warning?: string }>;
   TurnEventsForTab?(tabID: string, afterSeq: number): Promise<TurnEventReplayView>;
   Approve(id: string, allow: boolean, session: boolean, persist: boolean): Promise<void>;
   ApproveTab(tabID: string, id: string, allow: boolean, session: boolean, persist: boolean): Promise<void>;
@@ -630,7 +606,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   Models(): Promise<ModelInfo[]>;
   SetModel(name: string): Promise<void>;
   ModelsForTab(tabID: string): Promise<ModelInfo[]>;
-  ModelsForDraft(draftID: string): Promise<ModelInfo[]>;
   SetModelForTab(tabID: string, name: string): Promise<void>;
   Effort(): Promise<EffortInfo>;
   SetEffort(level: string): Promise<void>;
@@ -779,12 +754,7 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   RegisterNavigationIntent(token: string): Promise<void>;
   CloseMergedWorktreeTab(request: CloseMergedWorktreeTabRequest): Promise<CloseMergedWorktreeTabResult>;
   FinalizeWorktreeMerge(request: WorktreeCleanupRequest): Promise<WorktreeCleanupResult>;
-  // Deprecated one-version aliases kept bound for older desktop clients.
-  OpenGlobalTab(topicID: string): Promise<TabMeta>;
-  OpenTopicSession(scope: string, workspaceRoot: string, topicID: string, sessionPath: string): Promise<TabMeta>;
-  EnsureBlankTab(scope: string, workspaceRoot: string): Promise<TabMeta>;
-  ActivateTopic(scope: string, workspaceRoot: string, topicID: string, sessionPath: string): Promise<TabMeta>;
-  // Two-phase ticketed topic activation (supersedes ActivateTopic for topic
+  // Two-phase ticketed topic activation for topic
   // navigation): returns a ticket after the surface switch; completion lands
   // on the "topic:activation" channel.
   StartTopicActivation(req: TopicActivationRequest): Promise<TopicActivationTicket>;
@@ -1071,7 +1041,7 @@ function bridgeBreadcrumb(method: string): string {
     return `turn ${method}`;
   if (/^(SetModel|SetEffort|SetDefaultModel|SetPlannerModel|SetVisionModel|SetWebSearchModel|SetSubagentModel|SetSubagentEffort|SetMaxSubagentDepth|SetMaxSubagentConcurrency|SetMaxParallelWriters)/.test(method))
     return `model ${method}`;
-  if (/^(SetDesktop|SetCloseBehavior|SetDisplayMode|SetStatusBar|SetReasoningDisplayMode|SetExpandThinking|SetAutoPlan|SetDefaultToolApprovalMode|SetCompactRatio|SetReasoningLanguage)/.test(method))
+  if (/^(SetDesktop|SetCloseBehavior|SetStatusBar|SetDefaultToolApprovalMode|SetCompactRatio|SetReasoningLanguage)/.test(method))
     return `settings ${method}`;
   if (/^(SetConnectionKey|AddProviderConnection|RenameProviderConnections|SaveProvider|SetProviderWebSearch|SaveProviderModelCatalogs|AddOfficialProviderAccess|AddProviderPresetAccess|ResetProviderPresetAccess|RemoveProviderAccess|RemoveProviderAccesses|DeleteProvider|SaveProviderKey|SetProviderKey|ClearProviderKey|TestProviderModel|FetchProviderModelCatalog|FetchAllProviderModelCatalogs|ConnectKey)/.test(method))
     return `provider ${method}`;
@@ -1081,7 +1051,7 @@ function bridgeBreadcrumb(method: string): string {
   if (/^(AddSkillPath|RemoveSkillPath|SetSkillPathEnabled|RefreshSkills|SetSkillEnabled|SetSkillImplicitInvocation|AcceptSkillSuggestion|AvailableSubagentTools|CreateSubagentProfile|UpdateSubagentProfile|DeleteSubagentProfile|SetSubagentProfileModel|SetSubagentProfileEffort|TrySubagentProfile|CancelTrySubagentProfile)/.test(method))
     return `skill ${method}`;
   if (/^(MinimiseMainWindow|ToggleMaximiseMainWindow|IsMainWindowMaximised|CloseMainWindow)$/.test(method)) return `window ${method}`;
-  if (/^(OpenProjectTab|OpenGlobalTab|OpenTopicSession|EnsureBlankTab|ActivateTopic|StartTopicActivation|EnsureBlankSurface|SetActiveTab|CloseTab|RegisterNavigationIntent|CloseMergedWorktreeTab|ReorderTabs|CreateTopic|RenameTopic|DeleteTopic|TrashTopic|RenameProject|RemoveWorkspace|SwitchWorkspace|PickWorkspace|IsolatedWorktreeAvailability|CreateIsolatedWorktree|InspectWorktreeMerge|GetWorktreeStatus|PrepareWorktreeMerge|ReconcileRecoveryVersions|MergeWorktreeBack|FinalizeWorktreeMerge|DeliveryWorktreeAvailability|CreateDeliveryWorktree)/.test(method))
+  if (/^(OpenProjectTab|StartTopicActivation|EnsureBlankSurface|SetActiveTab|CloseTab|RegisterNavigationIntent|CloseMergedWorktreeTab|ReorderTabs|CreateTopic|RenameTopic|DeleteTopic|TrashTopic|RenameProject|RemoveWorkspace|SwitchWorkspace|PickWorkspace|IsolatedWorktreeAvailability|CreateIsolatedWorktree|InspectWorktreeMerge|GetWorktreeStatus|PrepareWorktreeMerge|ReconcileRecoveryVersions|MergeWorktreeBack|FinalizeWorktreeMerge|DeliveryWorktreeAvailability|CreateDeliveryWorktree)/.test(method))
     return `nav ${method}`;
   return "";
 }
@@ -2286,7 +2256,61 @@ function makeMockApp(): MockAppBindings {
     })),
     archivedSessionIds: [...mockArchivedSessionIDs], pendingCreates: [],
   });
-  return { ...({} as AttachmentBindings),
+  const navigation = {
+    async openGlobalSession(_topicID: string) {
+      const existing = mockTabs.find((tab) => tab.scope === "global" && tab.topicId === _topicID);
+      if (existing) {
+        setMockActiveTab(existing.id);
+        return { ...existing, active: true };
+      }
+      const defaultToolApprovalMode = normalizeToolApprovalMode(settings.defaultToolApprovalMode);
+      const tab: TabMeta = {
+        id: "tab_" + Date.now(),
+        scope: "global",
+        workspaceRoot: globalWorkspaceRoot,
+        workspaceName: "Global",
+        workspacePath: globalWorkspaceRoot,
+        topicId: _topicID,
+        topicTitle: topicLabel(_topicID, "Global"),
+        sessionPath: `/mock/sessions/${_topicID}.jsonl`,
+        label: mockModelLabel(settings.defaultModel),
+        ready: true,
+        running: false,
+        mode: normalizeMode("normal"),
+        collaborationMode: "normal",
+        toolApprovalMode: defaultToolApprovalMode,
+        active: true,
+        cwd: globalWorkspaceRoot,
+      };
+      mockTabs = [...mockTabs.map((item) => ({ ...item, active: false })), tab];
+      return { ...tab };
+    },
+    async openTopicSession(scope: string, workspaceRoot: string, topicID: string, sessionPath: string) {
+      const tab = scope === "project"
+        ? await mockApi.OpenProjectTab(workspaceRoot, topicID)
+        : await this.openGlobalSession(topicID);
+      const active = { ...tab, sessionPath };
+      mockTabs = mockTabs.map((item) => (item.id === tab.id ? active : item));
+      return { ...active };
+    },
+    async ensureBlankSession(scope: string, workspaceRoot: string) {
+      const targetScope = scope === "project" && workspaceRoot ? "project" : "global";
+      const targetRoot = targetScope === "project" ? workspaceRoot : "";
+      const existing = mockTabs.find((tab) =>
+        tab.scope === targetScope &&
+        (targetScope === "global" || tab.workspaceRoot === targetRoot) &&
+        !tab.running &&
+        mockTopicIsBlank(tab.topicId)
+      );
+      if (existing) {
+        setMockActiveTab(existing.id);
+        return { ...existing, active: true };
+      }
+      const topic = await mockApi.CreateTopic(targetScope, targetRoot, "");
+      return targetScope === "global" ? this.openGlobalSession(topic.id) : mockApi.OpenProjectTab(targetRoot, topic.id);
+    },
+  };
+  const mockApi: MockAppBindings = { ...({} as AttachmentBindings),
     ...makeLazySessionUIMock(async (scope, root, id) => {
       const tab = { ...mockTabs[0], id: `tab-${id}`, topicId: id, scope, workspaceRoot: root,
         sessionId: id, session: { hostId: "local", sessionId: id }, ready: true, active: false, running: false,
@@ -2297,7 +2321,6 @@ function makeMockApp(): MockAppBindings {
       parent.children = [...(parent.children || []), { key:`session_${id}`,kind:"session",root,session:{hostId:"local",sessionId:id},topicId:id,label:"New conversation",sessionPath:`session-id:${id}`,open:true,turns:0 }];
       notifyMockProjectTreeChanged();
     }),
-    ...makeLazyPreviousDraftMock(),
 		...makeMockSessionExportBindings(),
     ...makeMockSessionCatalogBindings(cloneProjectTree),
     ...makeMockBlankProjectBindings(),
@@ -2962,10 +2985,9 @@ function makeMockApp(): MockAppBindings {
           await withMockTabScope(_tabID, () => this.Cancel());
           return { sessionRef: "", headId: "", runtimeEpoch: "mock", accepted: true, alreadyIdle: false, recoveryRequired: false };
         },
-        async CancelTabWithInboxItems(_tabID, _itemIDs) {
-          await withMockTabScope(_tabID, () => this.Cancel());
-        },
         async CancelTabWithInboxItemsResult(_tabID, itemIDs) { await withMockTabScope(_tabID, () => this.Cancel()); return { discardedItemIds: [...itemIDs] }; },
+        async InterruptTurnForTab(tabID, _turnID) { await withMockTabScope(tabID, () => this.Cancel()); },
+        async InterruptTurnWithInboxItemsForTab(tabID, _turnID, itemIDs) { return this.CancelTabWithInboxItemsResult(tabID, itemIDs); },
         async Approve(_id, allow, session, persist) {
           if (!pendingApprovalPreview) return;
           pendingApprovalPreview = false;
@@ -4229,10 +4251,6 @@ function makeMockApp(): MockAppBindings {
           const current = mockTabModelRef(tab);
           return mockModelCatalog.map((model) => ({ ...model, current: model.ref === current }));
         },
-        async ModelsForDraft(draftID) {
-          const current = (await this.GetSessionDraft(draftID)).settings.model;
-          return mockModelCatalog.map((model) => ({ ...model, current: model.ref === current }));
-        },
         async SetModel(name) {
           setMockTabModel(undefined, name);
         },
@@ -5135,74 +5153,13 @@ function makeMockApp(): MockAppBindings {
       };
     },
     ...makeMockWorktreeMergeBindings(() => mockTabs, (next) => { mockTabs = next; }),
-    async OpenGlobalTab(_topicID: string) {
-      const existing = mockTabs.find((tab) => tab.scope === "global" && tab.topicId === _topicID);
-      if (existing) {
-        setMockActiveTab(existing.id);
-        return { ...existing, active: true };
-      }
-      const defaultToolApprovalMode = normalizeToolApprovalMode(settings.defaultToolApprovalMode);
-      const tab: TabMeta = {
-        id: "tab_" + Date.now(),
-        scope: "global",
-        workspaceRoot: globalWorkspaceRoot,
-        workspaceName: "Global",
-        workspacePath: globalWorkspaceRoot,
-        topicId: _topicID,
-        topicTitle: topicLabel(_topicID, "Global"),
-        sessionPath: `/mock/sessions/${_topicID}.jsonl`,
-        label: mockModelLabel(settings.defaultModel),
-        ready: true,
-        running: false,
-        mode: normalizeMode("normal"),
-        collaborationMode: "normal",
-        toolApprovalMode: defaultToolApprovalMode,
-        active: true,
-        cwd: globalWorkspaceRoot,
-      };
-      mockTabs = [...mockTabs.map((item) => ({ ...item, active: false })), tab];
-      return { ...tab };
-    },
-    async OpenTopicSession(scope: string, workspaceRoot: string, topicID: string, sessionPath: string) {
-      const tab = scope === "project"
-        ? await this.OpenProjectTab(workspaceRoot, topicID)
-        : await this.OpenGlobalTab(topicID);
-      const active = { ...tab, sessionPath };
-      mockTabs = mockTabs.map((item) => (item.id === tab.id ? active : item));
-      return { ...active };
-    },
-    async EnsureBlankTab(scope: string, workspaceRoot: string) {
-      const targetScope = scope === "project" && workspaceRoot ? "project" : "global";
-      const targetRoot = targetScope === "project" ? workspaceRoot : "";
-      const existing = mockTabs.find((tab) =>
-        tab.scope === targetScope &&
-        (targetScope === "global" || tab.workspaceRoot === targetRoot) &&
-        !tab.running &&
-        mockTopicIsBlank(tab.topicId)
-      );
-      if (existing) {
-        setMockActiveTab(existing.id);
-        return { ...existing, active: true };
-      }
-      const topic = await this.CreateTopic(targetScope, targetRoot, "");
-      return targetScope === "global" ? this.OpenGlobalTab(topic.id) : this.OpenProjectTab(targetRoot, topic.id);
-    },
-    async ActivateTopic(scope: string, workspaceRoot: string, topicID: string, sessionPath: string) {
-      const tab = sessionPath
-        ? await this.OpenTopicSession(scope, workspaceRoot, topicID, sessionPath)
-        : scope === "project"
-          ? await this.OpenProjectTab(workspaceRoot, topicID)
-          : await this.OpenGlobalTab(topicID);
-      pruneMockTabsTo(tab.id);
-      return { ...mockTabs[0] };
-    },
     async StartTopicActivation(req: TopicActivationRequest): Promise<TopicActivationTicket> {
       // Publish identity first; terminal runtime events arrive asynchronously.
       const tab = req.sessionPath
-        ? await this.OpenTopicSession(req.scope, req.workspaceRoot, req.topicId, req.sessionPath)
+        ? await navigation.openTopicSession(req.scope, req.workspaceRoot, req.topicId, req.sessionPath)
         : req.scope === "project"
           ? await this.OpenProjectTab(req.workspaceRoot, req.topicId)
-          : await this.OpenGlobalTab(req.topicId);
+          : await navigation.openGlobalSession(req.topicId);
       pruneMockTabsTo(tab.id);
       const requestId = req.requestId?.trim() || `mock-act-${++mockTopicActivationCounter}`;
       const previous = mockPendingTopicActivation;
@@ -5220,7 +5177,7 @@ function makeMockApp(): MockAppBindings {
       return { requestId, tabId: tab.id, meta };
     },
     async EnsureBlankSurface(scope: string, workspaceRoot: string) {
-      const tab = await this.EnsureBlankTab(scope, workspaceRoot);
+      const tab = await navigation.ensureBlankSession(scope, workspaceRoot);
       pruneMockTabsTo(tab.id);
       return { ...mockTabs[0] };
     },
@@ -5635,6 +5592,7 @@ function makeMockApp(): MockAppBindings {
     async SubmitExtensionFormExact() {}, async ResolveRemoteTabPromptExact() {}, async SubmitRemoteTabExtensionFormExact() {},
     ...remoteProjects.bindings,
   };
+  return mockApi;
 }
 let mockRemoteHosts: RemoteHostView[] = [
   { id: "demo", label: "demo", host: "192.168.1.10", port: 22, user: "dev", identityFile: "", proxyJump: "", defaultWorkspace: "~/app", serveInstall: "auto", credentialMode: "remote", useSSHConfig: false },

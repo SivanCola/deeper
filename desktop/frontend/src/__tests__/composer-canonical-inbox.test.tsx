@@ -101,13 +101,13 @@ for (const phase of ["executing", "finishing"] as const) {
     await compose("recover a lost queue receipt");
     lost = true;
     await click(".composer__btn--send");
-    await waitFor(() => input().disabled && !!document.querySelector(".session-draft-surface__error"));
+    await waitFor(() => input().disabled && !!document.querySelector(".session-input-recovery"));
     const before = queues;
     await click(".composer__btn--send");
     await waitFor(() => lookups === 1 && input().value === "" && !input().disabled);
     assert.equal(queues, before, "receipt recovery must not post the instruction twice");
     assert.equal((await backend.GetSessionComposerState(ref)).submissionId, undefined);
-    assert.equal(document.querySelector(".session-draft-surface__error"), null);
+    assert.equal(document.querySelector(".session-input-recovery"), null);
   } finally {
     await act(async () => view.root.unmount());
     dom.window.close();

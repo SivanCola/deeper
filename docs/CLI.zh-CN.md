@@ -45,10 +45,7 @@ deepzora upgrade --check          # 只报告目标版本
 deepzora upgrade --force          # 重新安装当前正式版
 ```
 
-更新器只选择严格的 `vX.Y.Z` 非 prerelease GitHub Release。1.x 兼容期内，旧渠道
-位置参数与 `--channel` 仍可使用，但都会解析到同一正式版并打印废弃提示。历史
-`[cli].update_channel` 值不再影响更新，并会在 Deepzora 下次保存配置时移除。别名
-`deepzora update` 的行为完全相同。
+更新器只选择严格的 `vX.Y.Z` 非 prerelease GitHub Release；不支持历史更新渠道与旧参数。
 
 ## 配置供应商
 
@@ -450,9 +447,6 @@ SSH 下远端进程无法读取本机剪贴板，请使用终端粘贴快捷键�
 访问权限和 session ownership。`/reload` 使用同一套失败原子重建语义。
 普通请求一律进入 executor，没有自动任务模式或可选质量底线，统一采用标准执行行为。
 独立 Planner 只响应显式 Plan、批准边界和 Goal 启动。
-
-`/preset`、`/work-mode` 与 `/profile` 仅作为隐藏兼容命令保留。已知旧值会被接受，
-提示该设置已退役，并保持标准执行；未知值仍会报错。
 
 用量统计使用独立的可丢弃 rollup 投影：
 deepzora catalogs reindex usage [--json]

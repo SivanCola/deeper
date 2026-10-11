@@ -18,7 +18,6 @@ import (
 
 type ComposerTarget struct {
 	Kind       string              `json:"kind"`
-	DraftID    string              `json:"draftId,omitempty"`
 	TabID      string              `json:"tabId,omitempty"`
 	Session    *session.SessionRef `json:"session,omitempty"`
 	Generation uint64              `json:"generation,omitempty"`
@@ -38,23 +37,6 @@ type attachmentStageOperation struct {
 	done        chan struct{}
 	view        DraftImageView
 	err         error
-}
-
-func (a *App) releaseAttachmentStageOperations(ownerPrefix string) {
-	a.attachmentTargetsMu.Lock()
-	defer a.attachmentTargetsMu.Unlock()
-	for key, op := range a.attachmentStageOps {
-		if strings.HasPrefix(key, ownerPrefix) {
-			// In-flight operations retain their result until completion so existing
-			// waiters can observe the owner cancellation. Completed receipts can be
-			// dropped immediately with their credential family.
-			select {
-			case <-op.done:
-				delete(a.attachmentStageOps, key)
-			default:
-			}
-		}
-	}
 }
 
 type AttachmentTargetView struct {
@@ -84,10 +66,8 @@ func (a *App) CaptureAttachmentTarget(composer ComposerTarget) (AttachmentTarget
 	if err != nil {
 		return empty, err
 	}
-	if target.draftID == "" {
-		if _, ok := target.ctrl.(*control.Controller); !ok {
-			return empty, fmt.Errorf("unsupported: attachments-v2")
-		}
+	if _, ok := target.ctrl.(*control.Controller); !ok {
+		return empty, fmt.Errorf("unsupported: attachments-v2")
 	}
 	var id [24]byte
 	if _, err := rand.Read(id[:]); err != nil {
@@ -187,15 +167,7 @@ func (a *App) StageImageForTarget(token, operationID, displayName, mime, dataURL
 	a.attachmentStageOps[key] = op
 	a.attachmentTargetsMu.Unlock()
 
-	if target.draftID != "" {
-		rel, stageErr := control.SaveImageDataURLInRoot(target.root, dataURL)
-		if stageErr == nil {
-			op.view = DraftImageView{Path: rel, DisplayName: attachment.NormalizeDisplayName(displayName), MIME: strings.ToLower(strings.TrimSpace(mime))}
-		}
-		op.err = stageErr
-	} else {
-		op.view, op.err = a.stageImageForTarget(target, displayName, mime, dataURL)
-	}
+	op.view, op.err = a.stageImageForTarget(target, displayName, mime, dataURL)
 	invalidReason := a.attachmentTargetInvalidReason(target)
 	ownerCurrent := invalidReason == ""
 	if op.err == nil && !ownerCurrent {
@@ -234,9 +206,6 @@ func (a *App) ReadDraftImageForTarget(token, draftID string) (string, error) {
 	target, err := a.attachmentTargetToken(token)
 	if err != nil {
 		return "", err
-	}
-	if target.draftID != "" {
-		return control.ImageDataURLInRoot(target.root, draftID)
 	}
 	return a.readDraftImageForTarget(target, draftID)
 }

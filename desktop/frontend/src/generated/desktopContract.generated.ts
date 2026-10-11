@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:930e8f1b1f63e61a8e2bcd21d056db0baaeb55531d0a6f032e571ed0433995a6";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:a6151216a28857f522c28d19af806b949f53c9da7938553fb04d55d1acc91543";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -18,7 +18,6 @@ export const DESKTOP_COMMANDS = [
   "AcknowledgeForkOperation",
   "ActivateBaseStyle",
   "ActivateThemePack",
-  "ActivateTopic",
   "ActiveWorkForTab",
   "AddMCPServer",
   "AddOfficialProviderAccess",
@@ -61,14 +60,12 @@ export const DESKTOP_COMMANDS = [
   "BackgroundRuntimes",
   "Balance",
   "BalanceForTab",
-  "BeginDraftSubmission",
   "BeginManualSessionCreation",
   "BeginSessionComposerSubmission",
   "BeginSessionExportForTarget",
   "BeginSessionHistoryReadForTab",
   "BotRuntimeStatus",
   "Cancel",
-  "CancelDraftSubmission",
   "CancelJob",
   "CancelJobForTab",
   "CancelJobsForTab",
@@ -79,7 +76,6 @@ export const DESKTOP_COMMANDS = [
   "CancelSessionForTab",
   "CancelShellInstall",
   "CancelTab",
-  "CancelTabWithInboxItems",
   "CancelTabWithInboxItemsResult",
   "CancelTask",
   "CancelTaskByKey",
@@ -147,9 +143,7 @@ export const DESKTOP_COMMANDS = [
   "DesktopStartupSettings",
   "DiagnoseBotConnection",
   "DisableThemePack",
-  "DiscardSessionDraft",
   "DisconnectRemoteHost",
-  "DismissSessionDraft",
   "EditGoalForTab",
   "EditRemoteTabGoal",
   "Effort",
@@ -161,7 +155,6 @@ export const DESKTOP_COMMANDS = [
   "EnqueueInboxSteer",
   "EnqueueInboxSteerForTurn",
   "EnsureBlankSurface",
-  "EnsureBlankTab",
   "EnsureRemoteProjectSessions",
   "ExportGoalDiagnostics",
   "ExportManualCreationDiagnostics",
@@ -189,8 +182,6 @@ export const DESKTOP_COMMANDS = [
   "GetActiveThemePack",
   "GetDesktopShellStatus",
   "GetDesktopZoomFactor",
-  "GetDraftContext",
-  "GetDraftSubmission",
   "GetHistoryIndexStatus",
   "GetHistorySearchContext",
   "GetManualSessionCreation",
@@ -206,8 +197,6 @@ export const DESKTOP_COMMANDS = [
   "GetSessionArchitectureDiagnostics",
   "GetSessionCatalogStatus",
   "GetSessionComposerState",
-  "GetSessionDraft",
-  "GetSessionDraftState",
   "GetSessionOrganization",
   "GetSessionVersionState",
   "GetTask",
@@ -266,7 +255,6 @@ export const DESKTOP_COMMANDS = [
   "ListRemoteDir",
   "ListRemoteProjects",
   "ListSessionComposerConflicts",
-  "ListSessionDraftSummaries",
   "ListSessions",
   "ListSessionsForTab",
   "ListTabs",
@@ -306,7 +294,6 @@ export const DESKTOP_COMMANDS = [
   "MinimiseMainWindow",
   "MkdirRemote",
   "Models",
-  "ModelsForDraft",
   "ModelsForTab",
   "MoveInboxItem",
   "MoveSessionTarget",
@@ -320,7 +307,6 @@ export const DESKTOP_COMMANDS = [
   "OpenChannelTranscriptSessionForTab",
   "OpenDownloadPage",
   "OpenFileBrowserPreviewForTab",
-  "OpenGlobalTab",
   "OpenLocalPath",
   "OpenLocalPathInExternalOpener",
   "OpenPresentedPathForTab",
@@ -329,11 +315,8 @@ export const DESKTOP_COMMANDS = [
   "OpenRemoteProjectTab",
   "OpenRemoteWorkspace",
   "OpenSession",
-  "OpenSessionDraft",
-  "OpenSessionDraftForTarget",
   "OpenTaskSessionByKey",
   "OpenTaskSessionForTab",
-  "OpenTopicSession",
   "OpenUserConfigPath",
   "OpenWorkspaceInExternalOpenerForTab",
   "OpenWorkspacePathForTab",
@@ -483,9 +466,7 @@ export const DESKTOP_COMMANDS = [
   "RestoreGraphiteAppearance",
   "RestoreMemoryRevision",
   "RestoreMemoryRevisionForTab",
-  "RestoreSessionDraft",
   "RestoreSessionTarget",
-  "ResumeDraftSubmission",
   "ResumeGoalForTab",
   "ResumeRemoteTabGoal",
   "ResumeSession",
@@ -540,7 +521,6 @@ export const DESKTOP_COMMANDS = [
   "SaveRemoteFileAs",
   "SaveRemotePresentedFileAs",
   "SaveSessionComposerState",
-  "SaveSessionDraft",
   "SaveSessionGroups",
   "SaveSessionGroupsVersioned",
   "SaveSessionMarkdownForTab",
@@ -623,7 +603,6 @@ export const DESKTOP_COMMANDS = [
   "SetRemoteTabPlanMode",
   "SetRemoteTabToolApprovalMode",
   "SetSandbox",
-  "SetSessionDraftRestoreTarget",
   "SetSessionExperience",
   "SetSessionPinned",
   "SetShellPreference",
@@ -2081,7 +2060,6 @@ export interface CommandInfo {
 
 export interface ComposerTarget {
   kind: string;
-  draftId?: string;
   tabId?: string;
   session?: SessionRef | null;
   generation?: number;
@@ -2254,12 +2232,6 @@ export interface DraftImageView {
   width: number;
   height: number;
   bytes: number;
-}
-
-export interface DraftWorkspaceRef {
-  path: string;
-  isDir?: boolean;
-  displayPath?: string;
 }
 
 export interface DroppedItem {
@@ -2840,7 +2812,7 @@ export interface ManualSessionCreationView {
   topicId: string;
   phase: string;
   error?: string;
-  settings: SessionDraftSettings;
+  settings: SessionCreationSettings;
   progress?: ManualCreationProgress | null;
   surfaceReady?: boolean;
 }
@@ -3923,29 +3895,7 @@ export interface SessionCreationResult {
   projectionPending?: boolean;
 }
 
-export interface SessionDraftContextView {
-  operation?: SessionDraftSubmissionView | null;
-  draft: SessionDraftView;
-  commands: CommandInfo[];
-  servers: ServerView[];
-  models?: ModelInfo[];
-}
-
-export interface SessionDraftSaveRequest {
-  draftId: string;
-  revision: number;
-  contentJson: string;
-  settings: SessionDraftSettings;
-  force?: boolean;
-}
-
-export interface SessionDraftSaveResult {
-  draft: SessionDraftView;
-  conflict: boolean;
-  outcome: string;
-}
-
-export interface SessionDraftSettings {
+export interface SessionCreationSettings {
   model: string;
   modelSource?: string;
   effort?: string;
@@ -3955,70 +3905,6 @@ export interface SessionDraftSettings {
   goal?: string;
   disabledMcp: Record<string, ServerView>;
   mcpOrder: string[];
-}
-
-export interface SessionDraftState {
-  draft: SessionDraftView;
-  operation?: SessionDraftSubmissionView | null;
-}
-
-export interface SessionDraftSubmissionRequest {
-  sourceContentJson?: string;
-  requestId?: string;
-  sourceDigest?: string;
-  snapshotVersion?: number;
-  draftId: string;
-  revision: number;
-  kind?: string;
-  display: string;
-  input: string;
-  invocations: main_InvocationRequest[];
-  goal?: string;
-  collaborationMode?: string;
-  toolApprovalMode?: string;
-  workspaceRefs: DraftWorkspaceRef[];
-  settings: SessionDraftSettings;
-}
-
-export interface SessionDraftSubmissionView {
-  requestId?: string;
-  revision: number;
-  canResume: boolean;
-  canEdit: boolean;
-  canCancel: boolean;
-  canDiscard: boolean;
-  operationId: string;
-  draftId: string;
-  phase: string;
-  error?: string;
-  session?: SessionRef | null;
-  submissionId: string;
-  tab?: TabMeta | null;
-  updatedAt: number;
-}
-
-export interface SessionDraftSummary {
-  id: string;
-  workspaceId: string;
-  scope: string;
-  workspaceRoot: string;
-  revision: number;
-  hasContent: boolean;
-  state?: string;
-  updatedAt: number;
-}
-
-export interface SessionDraftView {
-  snapshotDigest?: string;
-  id: string;
-  workspaceId: string;
-  scope: string;
-  workspaceRoot: string;
-  revision: number;
-  contentJson: string;
-  settings: SessionDraftSettings;
-  status: string;
-  updatedAt: number;
 }
 
 export interface SessionExportChunk {
@@ -5679,7 +5565,6 @@ export interface GeneratedDesktopCommands {
   AcknowledgeForkOperation(arg0: string, arg1: string): Promise<void>;
   ActivateBaseStyle(arg0: string): Promise<void>;
   ActivateThemePack(arg0: string): Promise<void>;
-  ActivateTopic(arg0: string, arg1: string, arg2: string, arg3: string): Promise<TabMeta>;
   ActiveWorkForTab(arg0: string): Promise<ActiveWorkView>;
   AddMCPServer(arg0: MCPServerInput): Promise<number>;
   AddOfficialProviderAccess(arg0: string, arg1: string): Promise<string>;
@@ -5722,14 +5607,12 @@ export interface GeneratedDesktopCommands {
   BackgroundRuntimes(): Promise<BackgroundRuntimeView[]>;
   Balance(): Promise<BalanceInfo>;
   BalanceForTab(arg0: string): Promise<BalanceInfo>;
-  BeginDraftSubmission(arg0: SessionDraftSubmissionRequest): Promise<SessionDraftSubmissionView>;
   BeginManualSessionCreation(arg0: ManualSessionCreationRequest): Promise<ManualSessionCreationView>;
   BeginSessionComposerSubmission(arg0: SessionRef, arg1: string, arg2: string, arg3: string): Promise<SessionComposerState>;
   BeginSessionExportForTarget(arg0: SessionSelector, arg1: string, arg2: string, arg3: string, arg4: string): Promise<SessionExportHandle>;
   BeginSessionHistoryReadForTab(arg0: string): Promise<SessionHistoryReadHandle>;
   BotRuntimeStatus(): Promise<BotRuntimeStatusView>;
   Cancel(): Promise<void>;
-  CancelDraftSubmission(arg0: string): Promise<SessionDraftSubmissionView>;
   CancelJob(arg0: string): Promise<boolean>;
   CancelJobForTab(arg0: string, arg1: string): Promise<boolean>;
   CancelJobsForTab(arg0: string, arg1: string[]): Promise<JobCancelBatchView>;
@@ -5740,7 +5623,6 @@ export interface GeneratedDesktopCommands {
   CancelSessionForTab(arg0: string): Promise<CancelReceipt>;
   CancelShellInstall(): Promise<void>;
   CancelTab(arg0: string): Promise<void>;
-  CancelTabWithInboxItems(arg0: string, arg1: string[]): Promise<void>;
   CancelTabWithInboxItemsResult(arg0: string, arg1: string[]): Promise<InboxCancelResultView>;
   CancelTask(arg0: string, arg1: number, arg2: string, arg3: string): Promise<ControlResult>;
   CancelTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
@@ -5808,9 +5690,7 @@ export interface GeneratedDesktopCommands {
   DesktopStartupSettings(): Promise<DesktopStartupSettingsView>;
   DiagnoseBotConnection(arg0: string): Promise<BotConnectionDiagnostic>;
   DisableThemePack(): Promise<void>;
-  DiscardSessionDraft(arg0: string, arg1: number): Promise<void>;
   DisconnectRemoteHost(arg0: string): Promise<void>;
-  DismissSessionDraft(arg0: string): Promise<void>;
   EditGoalForTab(arg0: string, arg1: string, arg2: number | null): Promise<void>;
   EditRemoteTabGoal(arg0: string, arg1: string, arg2: number | null): Promise<void>;
   Effort(): Promise<EffortInfo>;
@@ -5822,7 +5702,6 @@ export interface GeneratedDesktopCommands {
   EnqueueInboxSteer(arg0: string, arg1: string, arg2: string, arg3: string): Promise<InboxReceiptView>;
   EnqueueInboxSteerForTurn(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<InboxReceiptView>;
   EnsureBlankSurface(arg0: string, arg1: string): Promise<TabMeta>;
-  EnsureBlankTab(arg0: string, arg1: string): Promise<TabMeta>;
   EnsureRemoteProjectSessions(arg0: string, arg1: string): Promise<RemoteSessionView[]>;
   ExportGoalDiagnostics(): Promise<string>;
   ExportManualCreationDiagnostics(): Promise<string>;
@@ -5850,8 +5729,6 @@ export interface GeneratedDesktopCommands {
   GetActiveThemePack(): Promise<ThemeActiveView>;
   GetDesktopShellStatus(): Promise<DesktopShellStatusView>;
   GetDesktopZoomFactor(): Promise<number>;
-  GetDraftContext(arg0: string): Promise<SessionDraftContextView>;
-  GetDraftSubmission(arg0: string): Promise<SessionDraftSubmissionView>;
   GetHistoryIndexStatus(): Promise<historycatalog_Status>;
   GetHistorySearchContext(arg0: HistorySearchContextRequest): Promise<HistorySearchContextLine[]>;
   GetManualSessionCreation(arg0: string): Promise<ManualSessionCreationView>;
@@ -5867,8 +5744,6 @@ export interface GeneratedDesktopCommands {
   GetSessionArchitectureDiagnostics(): Promise<SessionArchitectureDiagnostics>;
   GetSessionCatalogStatus(): Promise<SessionCatalogStatus>;
   GetSessionComposerState(arg0: SessionRef): Promise<SessionComposerState>;
-  GetSessionDraft(arg0: string): Promise<SessionDraftView>;
-  GetSessionDraftState(arg0: string): Promise<SessionDraftState>;
   GetSessionOrganization(arg0: SessionOrganizationWorkspace): Promise<SessionOrganizationSnapshot>;
   GetSessionVersionState(arg0: ProjectTopicKey): Promise<SessionVersionStateView>;
   GetTask(arg0: string): Promise<TaskSnapshot | null>;
@@ -5927,7 +5802,6 @@ export interface GeneratedDesktopCommands {
   ListRemoteDir(arg0: string, arg1: string): Promise<RemoteDirEntry[]>;
   ListRemoteProjects(): Promise<RemoteProjectView[]>;
   ListSessionComposerConflicts(arg0: SessionRef): Promise<string[]>;
-  ListSessionDraftSummaries(): Promise<SessionDraftSummary[]>;
   ListSessions(): Promise<SessionMeta[]>;
   ListSessionsForTab(arg0: string): Promise<SessionMeta[]>;
   ListTabs(): Promise<TabMeta[]>;
@@ -5967,7 +5841,6 @@ export interface GeneratedDesktopCommands {
   MinimiseMainWindow(): Promise<void>;
   MkdirRemote(arg0: string, arg1: string): Promise<void>;
   Models(): Promise<ModelInfo[]>;
-  ModelsForDraft(arg0: string): Promise<ModelInfo[]>;
   ModelsForTab(arg0: string): Promise<ModelInfo[]>;
   MoveInboxItem(arg0: string, arg1: string, arg2: number): Promise<void>;
   MoveSessionTarget(arg0: SessionSelector, arg1: string, arg2: string): Promise<SessionMutationResult>;
@@ -5981,7 +5854,6 @@ export interface GeneratedDesktopCommands {
   OpenChannelTranscriptSessionForTab(arg0: string, arg1: string): Promise<HistorySwitchPhases>;
   OpenDownloadPage(): Promise<void>;
   OpenFileBrowserPreviewForTab(arg0: string, arg1: FileBrowserPreviewRequest): Promise<FileBrowserPreviewResult>;
-  OpenGlobalTab(arg0: string): Promise<TabMeta>;
   OpenLocalPath(arg0: string): Promise<void>;
   OpenLocalPathInExternalOpener(arg0: string, arg1: string): Promise<void>;
   OpenPresentedPathForTab(arg0: string, arg1: string, arg2: string): Promise<void>;
@@ -5990,11 +5862,8 @@ export interface GeneratedDesktopCommands {
   OpenRemoteProjectTab(arg0: string, arg1: string, arg2: RemoteTabOpenOptions): Promise<TabMeta>;
   OpenRemoteWorkspace(arg0: string, arg1: string): Promise<void>;
   OpenSession(arg0: SessionRef): Promise<HistoryPage>;
-  OpenSessionDraft(arg0: string): Promise<SessionDraftView>;
-  OpenSessionDraftForTarget(arg0: string, arg1: string): Promise<SessionDraftView>;
   OpenTaskSessionByKey(arg0: TaskOpenRequest): Promise<ControlResult>;
   OpenTaskSessionForTab(arg0: string, arg1: string): Promise<ControlResult>;
-  OpenTopicSession(arg0: string, arg1: string, arg2: string, arg3: string): Promise<TabMeta>;
   OpenUserConfigPath(): Promise<void>;
   OpenWorkspaceInExternalOpenerForTab(arg0: string, arg1: string): Promise<void>;
   OpenWorkspacePathForTab(arg0: string, arg1: string): Promise<void>;
@@ -6144,9 +6013,7 @@ export interface GeneratedDesktopCommands {
   RestoreGraphiteAppearance(): Promise<void>;
   RestoreMemoryRevision(arg0: string, arg1: number): Promise<MemoryFact>;
   RestoreMemoryRevisionForTab(arg0: string, arg1: string, arg2: number): Promise<MemoryFact>;
-  RestoreSessionDraft(): Promise<SessionDraftView | null>;
   RestoreSessionTarget(arg0: SessionSelector): Promise<SessionMutationResult>;
-  ResumeDraftSubmission(arg0: string, arg1: number): Promise<SessionDraftSubmissionView>;
   ResumeGoalForTab(arg0: string): Promise<boolean>;
   ResumeRemoteTabGoal(arg0: string): Promise<void>;
   ResumeSession(arg0: string): Promise<Message[]>;
@@ -6201,7 +6068,6 @@ export interface GeneratedDesktopCommands {
   SaveRemoteFileAs(arg0: string, arg1: string): Promise<string>;
   SaveRemotePresentedFileAs(arg0: string, arg1: string, arg2: string, arg3: string): Promise<string>;
   SaveSessionComposerState(arg0: SessionComposerSaveRequest): Promise<SessionComposerState>;
-  SaveSessionDraft(arg0: SessionDraftSaveRequest): Promise<SessionDraftSaveResult>;
   SaveSessionGroups(arg0: string, arg1: string, arg2: desktopGroup[]): Promise<void>;
   SaveSessionGroupsVersioned(arg0: string, arg1: string, arg2: number, arg3: desktopGroup[]): Promise<ProjectGroupsSnapshot>;
   SaveSessionMarkdownForTab(arg0: string, arg1: string, arg2: string): Promise<void>;
@@ -6284,7 +6150,6 @@ export interface GeneratedDesktopCommands {
   SetRemoteTabPlanMode(arg0: string, arg1: boolean): Promise<void>;
   SetRemoteTabToolApprovalMode(arg0: string, arg1: string): Promise<void>;
   SetSandbox(arg0: string, arg1: boolean, arg2: string, arg3: string[], arg4: string): Promise<void>;
-  SetSessionDraftRestoreTarget(arg0: string): Promise<void>;
   SetSessionExperience(arg0: string): Promise<void>;
   SetSessionPinned(arg0: SessionSelector, arg1: boolean): Promise<void>;
   SetShellPreference(arg0: string): Promise<void>;

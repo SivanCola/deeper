@@ -4,15 +4,12 @@
 
 # Keep the provider-side signing policy and its GitHub control plane under the
 # same explicit review boundary as the machine-readable contract.
-/.signpath/ @SivanCola
-/.github/workflows/release-stable.yml @SivanCola
+/.github/release-signing.yml @SivanCola
 /.github/workflows/release-candidate.yml @SivanCola
 /.github/workflows/release-candidate-verify.yml @SivanCola
 /.github/workflows/release-promote.yml @SivanCola
 /.github/workflows/release-verify.yml @SivanCola
 /.github/workflows/release-desktop.yml @SivanCola
-/scripts/complete-signpath-request.ps1 @SivanCola
-/scripts/signpath-checkpoint.mjs @SivanCola
 /scripts/package-windows-desktop.sh @SivanCola
 /scripts/verify-windows-authenticode.ps1 @SivanCola
 /scripts/finalize-windows-signed-candidate.sh @SivanCola
@@ -23,4 +20,4 @@
 /scripts/resolve-release-candidate.mjs @SivanCola
 /scripts/validate-release-control-plane.sh @SivanCola
 /scripts/verify-stable-release-artifacts.sh @SivanCola
-/cmd/signpath-contract/ @SivanCola
+/cmd/release-signing-contract/ @SivanCola

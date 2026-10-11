@@ -104,7 +104,7 @@ func scanFrontend(root string, inv *inventory) error {
 				owner = "desktopHost().native (unmapped)"
 			}
 		}
-		inv.add(entry{Kind: kindFrontendNative, Name: name, Location: loc, Class: classMigrateHost, Owner: owner})
+		inv.add(entry{Kind: kindFrontendNative, Name: name, Location: loc, Class: classHostManaged, Owner: owner})
 	}
 	for name, loc := range events {
 		inv.add(entry{Kind: kindFrontendEvent, Name: name, Location: loc, Class: classKeepBusiness, Owner: "desktopHost().events.on, same payload"})

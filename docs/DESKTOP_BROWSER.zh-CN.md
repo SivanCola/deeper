@@ -39,7 +39,7 @@ Agent 工具调用 ─▶ Go BrowserExecutor ─▶ ledger.reserve ─▶ host/b
 持久化旧 token URL。现有操作日志保持不变。每窗口最多 32 个逻辑标签，不自动驱逐。
 
 本轮运行时升级、验证证据和发布限制见
-[浏览器升级验收记录](BROWSER_RUNTIME_UPGRADE_ACCEPTANCE.md)。
+[当前契约](DESKTOP_BROWSER.zh-CN.md)。
 
 本地 `.html` / `.htm` 文件默认在该面板运行。聊天文件链接、成果卡片、文件树与 Agent
 按需预览共用一条链路：按文件来源重新授权，生成带随机令牌的 loopback HTTP URL，并
@@ -181,5 +181,5 @@ broker；被复用的 Serve 在桌面轮换路由后通过 `POST /browser/broker
 
 iframe、动态 DOM、受控输入、弹窗、上传与下载、导航历史、临时分区、共享与隔离登录；
 审批前接管、审批后派发前接管、执行后回执丢失、崩溃后重启、重复 operation ID；远程
-SSH 断连、世代变化、过期授权、跨会话误路由。[迁移记录](DESKTOP_SHELL_MIGRATION.zh-CN.md#验收门槛)
+SSH 断连、世代变化、过期授权、跨会话误路由。[架构契约](DESKTOP_ARCHITECTURE.zh-CN.md#验证)
 中的真实任务关闭本阶段。

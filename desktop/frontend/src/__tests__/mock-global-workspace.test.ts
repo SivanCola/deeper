@@ -8,7 +8,7 @@ try {
   const globalRoot = (await app.GetProjectTreeSnapshot()).projects.find(node => node.kind === "global_folder")?.root;
   assert.ok(globalRoot, "the global folder exposes its actual directory");
   const initial = (await app.ListTabs()).find(tab => tab.scope === "global");
-  const opened = await app.OpenGlobalTab("fixture-global");
+  const opened = (await app.StartTopicActivation({scope:"global", workspaceRoot:"", topicId:"fixture-global", sessionPath:"", requestId:"fixture-activation"})).meta;
   const blank = await app.EnsureBlankSurface("global", "");
   for (const tab of [initial, opened, blank]) {
     assert.equal(tab?.workspaceRoot, globalRoot, "mock global tabs match the native directory identity");

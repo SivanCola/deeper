@@ -232,7 +232,7 @@ between providers or headers are not an A/B causal benchmark.
 
 ## Evidence and boundaries / 证据与边界
 
-See [the preceding official DeepSeek report](RECOVERY_VALIDATION.md) for its
+See [Current contract](TOOL_RECOVERY.md) for its
 74 raw replay-contract probes, 54-case recovery matrix, independent search,
 cache and write-recovery results. Those observations remain distinct from this
 multi-provider extension. Native Claude, arbitrary relays, natural outages,

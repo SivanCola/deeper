@@ -17,7 +17,7 @@ func (a *App) composerGuidanceAccepted(view SessionComposerState) (bool, error) 
 	if request.Kind != "guidance" {
 		return false, nil
 	}
-	meta := a.metaForDraftSession(view.Ref.SessionID)
+	meta := a.metaForSession(view.Ref.SessionID)
 	if meta == nil {
 		return false, nil
 	}

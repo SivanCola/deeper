@@ -18,7 +18,7 @@ const wailsRuntimeImport = "github.com/wailsapp/wails/v2/pkg/runtime"
 
 // shellFilePatterns name desktop Go files that existed only because of the
 // retired Wails, WebView2 or WebKitGTK shell. The delete-shell rules are gone
-// from the tree with the old shell; the migrate-host rules keep classifying the
+// from the tree with the old shell; the host-managed rules keep classifying the
 // survivors, and any reintroduced file matching a retired name is flagged
 // delete-shell again.
 var shellFilePatterns = map[string]struct {
@@ -36,20 +36,20 @@ var shellFilePatterns = map[string]struct {
 	`^icon_repair_.*\.go$`:               {classDeleteShell, "icons are packaged by the Electron bundle"},
 	`^window_icon_.*\.go$`:               {classDeleteShell, "icons are packaged by the Electron bundle"},
 	`^main\.go$`:                         {classKeepBusiness, "--host-rpc service entry + shell bootstrap"},
-	`^single_instance\.go$`:              {classMigrateHost, "Electron requestSingleInstanceLock keyed by canonical home"},
-	`^menu\.go$`:                         {classMigrateHost, "Electron application menu"},
-	`^tray.*\.go$`:                       {classMigrateHost, "Electron Tray through host/tray.*"},
-	`^desktop_shell.*\.go$`:              {classMigrateHost, "coordinator keeps ordering; presentation via host/window.*"},
-	`^window_controls\.go$`:              {classMigrateHost, "renderer window controls through the preload"},
-	`^window_state\.go$`:                 {classMigrateHost, "geometry persisted by Go, applied through host/window.*"},
-	`^zoom_factor\.go$`:                  {classMigrateHost, "zoomFactor in the hello window geometry"},
-	`^system_quit.*\.go$`:                {classMigrateHost, "Electron before-quit → desktop/beforeClose"},
-	`^relauncher\.go$`:                   {classMigrateHost, "host/app.relaunch"},
-	`^superseded_relaunch\.go$`:          {classMigrateHost, "host/app.relaunch"},
-	`^app_identity_windows\.go$`:         {classMigrateHost, "Electron app.setAppUserModelId"},
-	`^external_opener.*\.go$`:            {classMigrateHost, "openers stay in Go; dialogs via host/dialog.*"},
-	`^native_host.*\.go$`:                {classMigrateHost, "nativeHost boundary"},
-	`^host_.*\.go$`:                      {classMigrateHost, "hostrpc service mode"},
+	`^single_instance\.go$`:              {classHostManaged, "Electron requestSingleInstanceLock keyed by canonical home"},
+	`^menu\.go$`:                         {classHostManaged, "Electron application menu"},
+	`^tray.*\.go$`:                       {classHostManaged, "Electron Tray through host/tray.*"},
+	`^desktop_shell.*\.go$`:              {classHostManaged, "coordinator keeps ordering; presentation via host/window.*"},
+	`^window_controls\.go$`:              {classHostManaged, "renderer window controls through the preload"},
+	`^window_state\.go$`:                 {classHostManaged, "geometry persisted by Go, applied through host/window.*"},
+	`^zoom_factor\.go$`:                  {classHostManaged, "zoomFactor in the hello window geometry"},
+	`^system_quit.*\.go$`:                {classHostManaged, "Electron before-quit → desktop/beforeClose"},
+	`^relauncher\.go$`:                   {classHostManaged, "host/app.relaunch"},
+	`^superseded_relaunch\.go$`:          {classHostManaged, "host/app.relaunch"},
+	`^app_identity_windows\.go$`:         {classHostManaged, "Electron app.setAppUserModelId"},
+	`^external_opener.*\.go$`:            {classHostManaged, "openers stay in Go; dialogs via host/dialog.*"},
+	`^native_host.*\.go$`:                {classHostManaged, "nativeHost boundary"},
+	`^host_.*\.go$`:                      {classHostManaged, "hostrpc service mode"},
 }
 
 var persistenceLiteralRe = regexp.MustCompile(`\.(json|jsonl|toml|db|lock|sqlite|log|txt)$`)
@@ -158,7 +158,7 @@ func (s *goScan) commandEntry(fn *ast.FuncDecl, alias, rel string, shellClass cl
 	case isShell && shellClass == classDeleteShell:
 		e.Class, e.Owner = classDeleteShell, shellOwner
 	case (alias != "" && usesSelector(fn.Body, alias)) || usesNativeHost(fn.Body):
-		e.Class, e.Owner = classMigrateHost, "business in Go; native step through nativeHost host/*"
+		e.Class, e.Owner = classHostManaged, "business in Go; native step through nativeHost host/*"
 	}
 	return e
 }
@@ -252,7 +252,7 @@ func (s *goScan) collectNativeCalls(fn *ast.FuncDecl, alias, rel string, shellCl
 			Name:     "runtime." + sel.Sel.Name,
 			Detail:   "in " + fn.Name.Name,
 			Location: fmt.Sprintf("%s:%d", rel, s.fset.Position(call.Pos()).Line),
-			Class:    classMigrateHost,
+			Class:    classHostManaged,
 			Owner:    "nativeHost → " + hostMethodFor(sel.Sel.Name),
 		}
 		if isShell && shellClass == classDeleteShell {

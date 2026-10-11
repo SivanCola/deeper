@@ -43,7 +43,7 @@ export function makeMockAttachmentBindings(): AttachmentBindings & Partial<AppBi
       return image;
     },
     async CaptureAttachmentTarget(target: ComposerTarget) {
-      return { token: target.tabId || target.draftId || "mock-attachment-target", capabilities: ["attachments-v2"] };
+      return { token: target.tabId || target.session?.sessionId || "mock-attachment-target", capabilities: ["attachments-v2"] };
     },
     async ReleaseAttachmentTarget(_token: string) {},
     async StageImageForTarget(_token: string, _operation: string, displayName: string, mime: string, dataURL: string) {

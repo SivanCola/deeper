@@ -323,17 +323,6 @@ func DesktopWorkspaceStatePath() string {
 	return filepath.Join(dir, "desktop", "workspace-state-v1.json")
 }
 
-// DesktopDraftStatePath is the local-only session draft database. Drafts are
-// deliberately separate from the Workspace -> Session registry: a draft is an
-// editor surface and must not become a session until its first execution.
-func DesktopDraftStatePath() string {
-	dir := userSupportDir()
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, "desktop", "drafts-v1.sqlite")
-}
-
 // DesktopSessionUIStatePath stores local composer input independently of history.
 func DesktopSessionUIStatePath() string {
 	dir := userSupportDir()

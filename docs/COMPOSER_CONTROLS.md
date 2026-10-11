@@ -62,10 +62,4 @@ also appears only while the model is emitting, so a rate frozen by a wait is
 never shown as a current speed. The strip's live region still announces the
 stable state text alone. Approval, answer, and retry notices remain visible.
 
-The bottom status bar combines workspace and branch into one item: it shows
-the branch name, with both workspace path and branch in the tooltip. Non-Git
-workspaces show the workspace name. Older item lists are deduplicated. For a
-model-only legacy configuration, migration retains only workspace and branch. On the
-first upgrade, status labels default to icons; subsequent manual text/icon
-choices are preserved. An older binary that rewrites preferences can remove
-the upgrade marker, causing the icon default to apply again on re-upgrade.
+The bottom status bar shows the branch for Git workspaces and the workspace name otherwise. Its tooltip includes the workspace path and branch. User text/icon preferences are preserved.

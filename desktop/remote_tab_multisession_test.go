@@ -198,7 +198,7 @@ func TestNamedAttachPublishesResolvedRouteBeforeResume(t *testing.T) {
 	waitForTabState(t, a, meta.ID, "ready")
 }
 
-func TestForegroundRecoveryPathIsReconciledBeforeRoutingFrame(t *testing.T) {
+func TestForegroundRecoveryPathUsesFrameMarker(t *testing.T) {
 	const oldPath = "session-id:current"
 	const recoveryPath = "session-id:current-recovery"
 	feed := make(chan string, 1)
@@ -220,7 +220,7 @@ func TestForegroundRecoveryPathIsReconciledBeforeRoutingFrame(t *testing.T) {
 	fs.mu.Lock()
 	fs.statusPayload = `{"running":false,"sessionName":"current-recovery","sessionPath":"session-id:current-recovery"}`
 	fs.mu.Unlock()
-	feed <- `{"kind":"notice","text":"continued on recovery","sessionPath":"session-id:current-recovery"}`
+	feed <- `{"kind":"notice","text":"continued on recovery","sessionPath":"session-id:current-recovery","sessionCurrent":true}`
 	deadline := time.Now().Add(2 * time.Second)
 	for {
 		events := log.recorded()
@@ -230,7 +230,7 @@ func TestForegroundRecoveryPathIsReconciledBeforeRoutingFrame(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("recovery frame was not routed after status reconciliation: %v", events)
+			t.Fatalf("recovery frame was not routed after foreground marker: %v", events)
 		}
 		time.Sleep(time.Millisecond)
 	}
@@ -242,7 +242,7 @@ func TestForegroundRecoveryPathIsReconciledBeforeRoutingFrame(t *testing.T) {
 	}
 }
 
-func TestUnknownBackgroundPathReconcilesStatusOnlyOnce(t *testing.T) {
+func TestUnmarkedBackgroundPathNeverProbesOrAdoptsForeground(t *testing.T) {
 	const currentPath = "session-id:current"
 	const backgroundPath = "session-id:background"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: currentPath, Current: true}})
@@ -272,18 +272,18 @@ func TestUnknownBackgroundPathReconcilesStatusOnlyOnce(t *testing.T) {
 	}
 	before := countStatusRequests()
 	beforeRefreshes := log.count("remote-tab:updated")
-	if a.routeRemoteTabFrameReconciled(meta.ID, gen, backgroundPath, "notice") {
+	if a.routeRemoteTabWireFrame(meta.ID, gen, backgroundPath, "approval_request", false, false) {
 		t.Fatal("unknown background frame was routed to the foreground")
 	}
-	if a.routeRemoteTabFrameReconciled(meta.ID, gen, backgroundPath, "turn_done") {
+	if a.routeRemoteTabWireFrame(meta.ID, gen, backgroundPath, "turn_done", false, false) {
 		t.Fatal("known background frame was routed to the foreground")
 	}
 	after := countStatusRequests()
-	if after-before != 1 {
-		t.Fatalf("unknown background path triggered %d status requests, want 1", after-before)
+	if after-before != 0 {
+		t.Fatalf("unknown background path triggered %d status requests, want 0", after-before)
 	}
-	if got := log.count("remote-tab:updated") - beforeRefreshes; got != 2 {
-		t.Fatalf("unknown background notice and terminal frame emitted %d row refreshes, want 2", got)
+	if got := log.count("remote-tab:updated") - beforeRefreshes; got != 1 {
+		t.Fatalf("unknown background notice and terminal frame emitted %d row refreshes, want 1", got)
 	}
 }
 
@@ -302,7 +302,7 @@ func TestKnownBackgroundPathAdoptsFrameForegroundMarker(t *testing.T) {
 		},
 	}}
 	a.adoptRemoteTabFrameCurrent("remote-1", 7, resumedPath, false)
-	if !a.routeRemoteTabFrameReconciled("remote-1", 7, resumedPath, "text") {
+	if !a.routeRemoteTabFrame("remote-1", 7, resumedPath, "text") {
 		t.Fatal("publication-time foreground marker did not reclassify a cached background path")
 	}
 	a.remoteTabMu.Lock()
@@ -344,37 +344,6 @@ func TestForegroundMarkerPublishesRehydrateBeforeForwardedFrame(t *testing.T) {
 	}
 	if stateIndex < 0 || frameIndex < 0 || stateIndex >= frameIndex {
 		t.Fatalf("session rehydrate was not published before the frame: %v", events)
-	}
-}
-
-func TestKnownBackgroundPromptReconcilesLegacyServeStatus(t *testing.T) {
-	const currentPath = "session-id:current"
-	const resumedPath = "session-id:background"
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: currentPath, Current: true}})
-	fs.mu.Lock()
-	fs.statusPayload = `{"running":true,"sessionName":"background","sessionPath":"session-id:background"}`
-	fs.mu.Unlock()
-	kernel := &fakeRemoteKernel{
-		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
-		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
-	}
-	seedBridgeTestHost(t, "box")
-	a := &App{remoteRuntime: kernel}
-	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionPath: currentPath})
-	a.remoteTabMu.Lock()
-	tab := a.remoteTabs[meta.ID]
-	tab.routing.running[resumedPath] = true
-	gen := tab.gen
-	a.remoteTabMu.Unlock()
-	if !a.routeRemoteTabFrameReconciled(meta.ID, gen, resumedPath, "approval_request") {
-		t.Fatal("legacy foreground prompt from a cached background path was discarded")
-	}
-	a.remoteTabMu.Lock()
-	got := tab.routing.currentPath
-	a.remoteTabMu.Unlock()
-	if got != resumedPath {
-		t.Fatalf("legacy status reconciliation route = %q, want %q", got, resumedPath)
 	}
 }
 

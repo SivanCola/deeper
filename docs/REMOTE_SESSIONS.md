@@ -1,5 +1,7 @@
 # Remote sessions
 
+Desktop and Serve must negotiate `deepzora-baseline-v1`. Older services are rejected during authentication; install the matching Deepzora service before attaching. Current runtime envelopes, session tags and receipt-based commands are required.
+
 <a href="../README.md">README</a>
 &nbsp;·&nbsp;
 <a href="./REMOTE_SESSIONS.zh-CN.md">简体中文</a>

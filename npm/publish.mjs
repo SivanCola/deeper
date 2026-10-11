@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 
 const CANDIDATE_SHA_RE = /^[0-9a-f]{40}$/;
 const STABLE_RE = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
-const CANARY_RE = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-canary\.(0|[1-9][0-9]*)$/;
 const SEMVER_RE = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 
 function compareNumeric(a, b) {
@@ -67,21 +66,10 @@ export function stableDistTagFromEnv(env = process.env) {
 
 function requireVersionForDistTag(distTag, version) {
   if (STABLE_DIST_TAGS.has(distTag) && STABLE_RE.test(version)) return;
-  if (distTag === "canary" && CANARY_RE.test(version)) return;
-  if (
-    distTag === "next" &&
-    SEMVER_RE.test(version) &&
-    version.includes("-") &&
-    !CANARY_RE.test(version)
-  ) {
-    return;
-  }
   throw new Error(`version ${version} does not belong to npm dist-tag ${distTag}`);
 }
 
 export function distTagForVersion(version, stableDistTag = "latest") {
-  if (CANARY_RE.test(version)) return "canary";
-  if (SEMVER_RE.test(version) && version.includes("-")) return "next";
   if (STABLE_RE.test(version)) {
     if (!STABLE_DIST_TAGS.has(stableDistTag)) throw new Error(`invalid stable npm dist-tag: ${stableDistTag}`);
     return stableDistTag;
@@ -302,7 +290,7 @@ export function publishPackages({
   runner = defaultRunner,
   sleep = defaultSleep,
   // npm's public registry can lag a successful immutable publish by several
-  // minutes (v1.38.6 exceeded the old five-minute window). Submit the whole
+  // minutes. Submit the whole
   // set first, then poll pending packages together for up to twenty minutes
   // of scheduled waits, plus registry request time. Never republish on E404.
   attempts = 121,

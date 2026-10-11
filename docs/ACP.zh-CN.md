@@ -131,14 +131,7 @@ Deepzora 把互不相关的选择拆成独立控制轴，而不是混在一个 m
 切换模型或推理强度时会重建会话 Controller，同时保留历史和其他控制轴；
 权限模式只更新统一权限运行时，不重建 Controller。
 
-执行模式已移除。兼容期内，仍发送 `configId` 为 `agent_preset` 或 `work_mode`
-（含旧别名 `profile`、`runtime_profile`、`token_mode`）的
-`session/set_config_option` 请求会得到成功的空操作：不切换、不重建，返回值中的
-`deprecatedNotice` 会说明自适应标准执行。
-
-旧客户端仍可使用 `session/set_model`。旧权限值只在协议兼容边界迁移：`ask` 映射为
-`read-only`，`auto` 与 `yolo` 映射为 `workspace-write`；未知值失败关闭。新客户端应
-使用上面的独立 selector，`danger-full-access` 只能由用户主动选择。
+配置使用当前独立 selector；退役的执行 profile、quality floor 和权限别名返回 `InvalidParams`。`session/set_model` 和 `session/set_mode` 仍是当前 ACP 方法，只接受当前公布的模型与模式值。
 
 ## Prompt、更新与审批
 
@@ -155,26 +148,9 @@ Deepzora 把互不相关的选择拆成独立控制轴，而不是混在一个 m
 Host 应让 `session/prompt` 请求保持打开，直到 Deepzora 返回停止原因；期间仍需同时处理
 双向 request 和 notification。
 
-Deepzora 只会返回 ACP v1 规定的停止原因。工作已完成但仍需 final-readiness 检查时，
-agent 会发送带 `[warning]` 的消息 chunk 并返回 `end_turn`；厂商状态仍保持
-`readiness_paused`，便于 host 提供恢复入口。客户端取消始终返回 `cancelled`，即使被中断
-的 runner 没有返回 error。显式模型轮数上限（`max_steps`）会发送 `[warning]`、返回
-`max_turn_requests`，并记录 paused 厂商状态；host 的任务时间、token 或成本预算也会发送
-`[warning]` 并记录 paused 状态，但因 ACP v1 没有任务预算专用停止原因而返回 `end_turn`。
-完成校验器已移除。模型正常结束且没有工具调用时返回 `end_turn`；包含工具调用时继续进入
-Agent 循环；真正的空响应会在 frozen request 边界重试。旧的
-`completion_validation`、`completion_evaluator_model` 和
-`DEEPZORA_COMPLETION_VALIDATION_MODE` 设置仍可读取，但会被忽略且不再由配置渲染器生成。
-主机侧的就绪检查、预算、工具安全边界和恢复边界仍然有效。
-其他 provider、工具或运行时失败会返回 JSON-RPC
-`-32603 InternalError`，消息携带长度受限且已脱敏的原因；不会再用协议外的
-`stopReason` 构造成功结果。
+Deepzora 只返回 ACP v1 规定的停止原因。正常模型结束返回 `end_turn`，包含工具调用则继续 Agent 循环；真正空响应在 frozen request 边界重试。客户端取消返回 `cancelled`。显式模型轮数上限返回 `max_turn_requests`，任务预算暂停使用 `end_turn` 并保留厂商状态。工具安全、预算与协议恢复边界仍有效，不运行宿主完成校验器或独立质量评估器。
 
-状态 phase 为 `readiness_paused` 时，可发送新的 `session/prompt`，并把可选 `action`
-设为 `"final_readiness_recovery"`，以继续这一次检查。只发送 `/continue-checks` 文本 block
-是兼容写法。两种方式都会消费一次持久化的 host checkpoint；普通 prompt 不会继承该
-证据，出现更新的用户消息后再提交旧 action 会以 JSON-RPC `-32600 InvalidRequest` 被拒绝，
-且不会发布或持久化虚假的状态回合。
+其他 Provider、工具或运行时失败返回 JSON-RPC `-32603 InternalError`，携带长度受限且脱敏的原因，不将失败包装为成功的协议外 `stopReason`。
 
 ## 回合中引导扩展
 

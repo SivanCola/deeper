@@ -14,9 +14,9 @@ export async function restoreNavigationBackend(sourceTabId: string, targetTabId:
   }
   if (!sourceTab?.topicId) return null;
   try {
-    const restoredMeta = sourceTab.sessionPath
-      ? await app.OpenTopicSession(sourceTab.scope, sourceTab.workspaceRoot, sourceTab.topicId, sourceTab.sessionPath)
-      : await app.ActivateTopic(sourceTab.scope, sourceTab.workspaceRoot, sourceTab.topicId, "");
+    const ticket = await app.StartTopicActivation({ scope: sourceTab.scope, workspaceRoot: sourceTab.workspaceRoot,
+      topicId: sourceTab.topicId, sessionPath: sourceTab.sessionPath || "", requestId: `restore-${crypto.randomUUID()}` });
+    const restoredMeta = ticket.meta;
     return { restoredTabId: restoredMeta.id, restoredMeta };
   } catch {
     return null;

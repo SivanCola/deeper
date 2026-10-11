@@ -5,7 +5,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const workflowPath = ".github/workflows/release-desktop.yml";
-const contractPath = ".signpath/contracts/release-signing.yml";
+const contractPath = ".github/release-signing.yml";
 
 function run(command, args) {
   const result = spawnSync(command, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
@@ -54,7 +54,7 @@ export function verifyCandidateSigningRepair(candidateSHA, expectedFingerprint) 
   const checkout = path.join(temporary, "candidate");
   try {
     run("git", ["worktree", "add", "--detach", checkout, candidateSHA]);
-    const actual = run("go", ["run", "./cmd/signpath-contract", "fingerprint", checkout]);
+    const actual = run("go", ["run", "./cmd/release-signing-contract", "fingerprint", checkout]);
     if (actual !== expectedFingerprint) throw new Error("sealed candidate signing fingerprint differs from its protected control commit");
     return actual;
   } finally {

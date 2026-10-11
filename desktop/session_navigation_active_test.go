@@ -134,7 +134,7 @@ func TestActivateTopicReattachesDetachedRunningSession(t *testing.T) {
 	if _, err := app.EnsureBlankSurface("project", rootB); err != nil {
 		t.Fatal(err)
 	}
-	meta, err := app.ActivateTopic("project", rootA, "topic-a", "")
+	meta, err := app.activateTopic("project", rootA, "topic-a", "")
 	if err != nil {
 		t.Fatal(err)
 	}

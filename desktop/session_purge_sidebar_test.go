@@ -52,7 +52,7 @@ func TestPurgeSharedTopicKeepsSurvivingSession(t *testing.T) {
 			t.Fatalf("last purged session left a placeholder: %+v", page)
 		}
 	}
-	if _, err := a.ActivateTopic("project", root, topic.ID, ""); err == nil {
+	if _, err := a.activateTopic("project", root, topic.ID, ""); err == nil {
 		t.Fatal("purged non-manual topic revived")
 	}
 }
@@ -128,7 +128,7 @@ func checkEmptyTrashDoesNotResurrectManualTopics(t *testing.T, scope string) {
 	assertEmpty(a, "purged")
 	for range 2 {
 		for _, topic := range topics {
-			if _, err := a.ActivateTopic(scope, root, topic, ""); err == nil {
+			if _, err := a.activateTopic(scope, root, topic, ""); err == nil {
 				t.Fatal("stale deleted topic click created a replacement session")
 			}
 		}
@@ -167,10 +167,10 @@ func checkEmptyTrashDoesNotResurrectManualTopics(t *testing.T, scope string) {
 	t.Cleanup(func() {
 		reopened.closeSessionServices()
 		_ = reopened.sessionUI.Close()
-		_ = reopened.desktopDrafts.Close()
+
 	})
 	assertEmpty(reopened, "restart with previous-writer tombstones")
-	if _, err := reopened.ActivateTopic(scope, root, topics[0], ""); err == nil {
+	if _, err := reopened.activateTopic(scope, root, topics[0], ""); err == nil {
 		t.Fatal("previous-writer stale topic revived after restart")
 	}
 	placeholder, err := reopened.CreateTopic(scope, root, "Untouched empty topic")

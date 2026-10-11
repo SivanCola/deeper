@@ -128,7 +128,7 @@ func TestEmbeddedBotSessionOpensReadOnlyFromSidebar(t *testing.T) {
 		t.Fatal(err)
 	}
 	appendSessionTestMessage(t, runtime, "bot-message", provider.Message{ID: "bot-message", Role: provider.RoleAssistant, Content: "reply from bot"})
-	meta, err := app.OpenTopicSession("project", root, "", embeddedBotSessionPrefix+runtime.Ref().SessionID)
+	meta, err := app.openTopicSession("project", root, "", embeddedBotSessionPrefix+runtime.Ref().SessionID)
 	if err != nil {
 		t.Fatalf("open project bot session from Bots sidebar: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestEmbeddedBotSessionOpenRejectsAnotherWorkspace(t *testing.T) {
 	if _, err := bot.Create(t.Context(), session.CreateOptions{SessionID: "wrong-workspace", CWD: tab.WorkspaceRoot, Origin: session.SessionOriginNew}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.OpenTopicSession("project", root, "", embeddedBotSessionPrefix+"wrong-workspace"); !errors.Is(err, errSessionWorkspaceConflict) {
+	if _, err := app.openTopicSession("project", root, "", embeddedBotSessionPrefix+"wrong-workspace"); !errors.Is(err, errSessionWorkspaceConflict) {
 		t.Fatalf("cross-workspace bot session was accepted: %v", err)
 	}
 }
@@ -189,7 +189,7 @@ func TestEmbeddedGlobalBotSessionOpensFromSidebar(t *testing.T) {
 		t.Fatal(err)
 	}
 	appendSessionTestMessage(t, runtime, "global-bot-message", provider.Message{ID: "global-bot-message", Role: provider.RoleAssistant, Content: "global bot reply"})
-	meta, err := app.OpenTopicSession("global", "", "", embeddedBotSessionPrefix+runtime.Ref().SessionID)
+	meta, err := app.openTopicSession("global", "", "", embeddedBotSessionPrefix+runtime.Ref().SessionID)
 	if err != nil {
 		t.Fatal(err)
 	}

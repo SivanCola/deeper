@@ -75,4 +75,4 @@ Worker 由挂载会话租用，最后释放时结束待处理任务；累计诊�
 
 聊天回放在生产构建中使用真实 Transcript、Markdown、Composer；工作台基准使用真实应用装配与现有 mock transport。它们不代替真实后端或原生输入法长时测试。门槛仍为输入 P95 ≤200 ms、切换 P95 ≤300 ms、长任务 ≤500 ms、释放后堆增长 ≤20 MiB。
 
-实测数据、截图及未验证平台见[改造验收记录](CHAT_REFACTOR_ACCEPTANCE.zh-CN.md)。
+实测数据、截图及未验证平台见[当前契约](TRANSCRIPT_SCROLL_CONTRACT.zh-CN.md)。

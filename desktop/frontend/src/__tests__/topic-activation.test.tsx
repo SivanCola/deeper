@@ -208,7 +208,11 @@ const desktopStub = installDesktopHostStub(({
       },
       HistoryCheckpointTurnsForTab: async () => [],
       StartTopicActivation: async (req: TopicActivationRequest) => {
-        const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === req.workspaceRoot && tab.topicId === req.topicId) ?? tabA;
+        let target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === req.workspaceRoot && tab.topicId === req.topicId) ?? tabA;
+        if (req.sessionPath && target.id === failSetActiveTabId) {
+          target = tabMeta(`${target.id}-restored-${++restoredTabSeq}`, { ...target, id:`${target.id}-restored-${restoredTabSeq}`,active:true });
+          tabsById.set(target.id,target);
+        }
         backendActiveId = target.id;
         const requestId = req.requestId || `mock-activation-${target.id}`;
         requestIdByTab.set(target.id, requestId);
@@ -222,17 +226,6 @@ const desktopStub = installDesktopHostStub(({
       SetActiveTab: async (tabID: string) => {
         if (tabID === failSetActiveTabId) throw new Error("source tab was already pruned");
         backendActiveId = tabID;
-      },
-      OpenTopicSession: async (_scope: string, _workspaceRoot: string, _topicID: string, sessionPath: string) => {
-        const source = Array.from(tabsById.values()).find((tab) => tab.sessionPath === sessionPath) ?? tabA;
-        const restored = tabMeta(`${source.id}-restored-${++restoredTabSeq}`, {
-          ...source,
-          id: `${source.id}-restored-${restoredTabSeq}`,
-          active: true,
-        });
-        tabsById.set(restored.id, restored);
-        backendActiveId = restored.id;
-        return restored;
       },
       ReplayPendingPrompts: async () => {},
     } as Partial<AppBindings> as AppBindings,

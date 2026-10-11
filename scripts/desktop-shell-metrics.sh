@@ -3,8 +3,7 @@
 # the Go lifecycle diagnostics to reach "healthy", then sample the full process
 # tree (shell, renderer/GPU helpers and the Go service) at fixed offsets.
 # Output is one JSON document; compare runs of this script only, never against
-# a differently sampled figure. The retired Wails shell's baseline runs live in
-# docs/desktop-migration/baseline/.
+# a differently sampled figure.
 #
 # Usage: scripts/desktop-shell-metrics.sh <executable> <label> <out.json> [idle_seconds]
 #   executable: the packaged app's main executable

@@ -10,7 +10,6 @@ func TestGlobalFolderAfterProjectCreatedFollowsGlobalConversations(t *testing.T)
 	}{
 		{name: "untouched", openGlobal: func(*App) error { return nil }},
 		{name: "draft target without a conversation", openGlobal: func(a *App) error {
-			_, _ = a.OpenSessionDraftForTarget("global", "")
 			return nil
 		}},
 		{name: "blank conversation", wantGlobal: true, openGlobal: func(a *App) error {

@@ -169,11 +169,11 @@ func CommandOverviewFor(language, commandName string) (string, error) {
 	stats := fmt.Sprintf("documents=%d sections=%d releases=%d", m.Documents, m.Sections, m.ReleaseNotes)
 	switch strings.ToLower(strings.TrimSpace(language)) {
 	case "zh", "zh-cn":
-		return fmt.Sprintf("内置 Deepzora 文档\n%s\n%s\n\n用法：%s <问题>\n示例：%s 1.19.5 更新日志\n\n搜索在本地完成，命中的版本匹配资料会交给当前配置的 AI 组织答案。", identity, stats, commandName, commandName), nil
+		return fmt.Sprintf("内置 Deepzora 文档\n%s\n%s\n\n用法：%s <问题>\n示例：%s 1.0.0 更新日志\n\n搜索在本地完成，命中的版本匹配资料会交给当前配置的 AI 组织答案。", identity, stats, commandName, commandName), nil
 	case "zh-tw":
-		return fmt.Sprintf("內建 Deepzora 文件\n%s\n%s\n\n用法：%s <問題>\n範例：%s 1.19.5 更新日誌\n\n搜尋在本機完成，命中的版本匹配資料會交給目前設定的 AI 組織答案。", identity, stats, commandName, commandName), nil
+		return fmt.Sprintf("內建 Deepzora 文件\n%s\n%s\n\n用法：%s <問題>\n範例：%s 1.0.0 更新日誌\n\n搜尋在本機完成，命中的版本匹配資料會交給目前設定的 AI 組織答案。", identity, stats, commandName, commandName), nil
 	default:
-		return fmt.Sprintf("Embedded Deepzora documentation\n%s\n%s\n\nUsage: %s <question>\nExample: %s 1.19.5 changelog\n\nSearch runs locally, then the version-matched evidence is passed to the configured AI to compose the answer.", identity, stats, commandName, commandName), nil
+		return fmt.Sprintf("Embedded Deepzora documentation\n%s\n%s\n\nUsage: %s <question>\nExample: %s 1.0.0 changelog\n\nSearch runs locally, then the version-matched evidence is passed to the configured AI to compose the answer.", identity, stats, commandName, commandName), nil
 	}
 }
 

@@ -185,7 +185,7 @@ func commitRemoteTabAttachRoute(tab *remoteTab, path string, reset bool) {
 }
 
 // routeRemoteTabFrame tracks background runtime without leaking its frames
-// into the foreground reducer. Untagged frames remain legacy-compatible.
+// into the foreground reducer. Controller-level frames may be unbound.
 func (a *App) routeRemoteTabFrame(tabID string, gen uint64, sessionPath, kind string) bool {
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[tabID]
@@ -332,77 +332,9 @@ func adoptRemoteTabSessionPathLocked(tab *remoteTab, sessionPath string) bool {
 
 // remoteTabFramePathUnknown distinguishes a possible foreground recovery or
 // slash-command rotation from a path already observed as background work.
-func (a *App) remoteTabFramePathUnknown(tabID string, gen uint64, sessionPath, kind string) bool {
-	if sessionPath == "" {
-		return false
-	}
-	a.remoteTabMu.Lock()
-	defer a.remoteTabMu.Unlock()
-	tab := a.remoteTabs[tabID]
-	if tab == nil || tab.gen != gen || sessionPath == tab.routing.currentPath {
-		return false
-	}
-	_, knownBackground := tab.routing.running[sessionPath]
-	if !knownBackground {
-		return true
-	}
-	// Transitional frames are sparse and must remain compatible with a Serve
-	// that did not attach sessionCurrent. Revalidate them after a background
-	// cache hit; ordinary output is covered by the per-frame marker above.
-	switch kind {
-	case "turn_started", "approval_request", "ask_request":
-		return true
-	default:
-		return false
-	}
-}
-
-func (a *App) reconcileRemoteTabFramePath(tabID string, gen uint64, sessionPath string) bool {
-	if _, err := a.RemoteTabStatus(tabID); err != nil {
-		return false
-	}
-	a.remoteTabMu.Lock()
-	tab := a.remoteTabs[tabID]
-	if tab == nil || tab.gen != gen {
-		a.remoteTabMu.Unlock()
-		return false
-	}
-	if tab.routing.currentPath == sessionPath {
-		a.remoteTabMu.Unlock()
-		return true
-	}
-	// The authoritative status confirmed another foreground path. Remember
-	// this tag as background so a lossy detached stream does not synchronously
-	// fetch /status for every later token or notice from the same session.
-	if tab.routing.running == nil {
-		tab.routing.running = map[string]bool{}
-	}
-	var refresh *TabMeta
-	if _, known := tab.routing.running[sessionPath]; !known {
-		tab.routing.running[sessionPath] = false
-		tab.routing.revision++
-		meta := remoteTabMetaLocked(tab)
-		refresh = &meta
-	}
-	a.remoteTabMu.Unlock()
-	if refresh != nil {
-		a.emitRemoteEvent("remote-tab:updated", *refresh)
-	}
-	return false
-}
-
-func (a *App) routeRemoteTabFrameReconciled(tabID string, gen uint64, sessionPath, kind string) bool {
-	pathUnknown := a.remoteTabFramePathUnknown(tabID, gen, sessionPath, kind)
-	if a.routeRemoteTabFrame(tabID, gen, sessionPath, kind) {
-		return true
-	}
-	return pathUnknown && a.reconcileRemoteTabFramePath(tabID, gen, sessionPath) &&
-		a.routeRemoteTabFrame(tabID, gen, sessionPath, kind)
-}
-
 func (a *App) routeRemoteTabWireFrame(tabID string, gen uint64, sessionPath, kind string, current, reset bool) bool {
 	if current {
 		a.adoptRemoteTabFrameCurrent(tabID, gen, sessionPath, reset)
 	}
-	return a.routeRemoteTabFrameReconciled(tabID, gen, sessionPath, kind)
+	return a.routeRemoteTabFrame(tabID, gen, sessionPath, kind)
 }

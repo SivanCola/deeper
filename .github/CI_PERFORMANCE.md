@@ -80,7 +80,7 @@ qualification. A green gate still does not prove offline heap-retainer attributi
 
 ## Signed release artifacts
 
-The successful stable SignPath preflight hands its full native matrix to the
+The successful candidate signing preflight hands its full native matrix to the
 desktop publisher. The publisher revalidates authorization, candidate identity,
 signing contract and cache/docs guards, then verifies and publishes the same
 signed bytes without rebuilding or signing them again. CLI and npm publication

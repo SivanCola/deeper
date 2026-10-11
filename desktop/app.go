@@ -2908,7 +2908,7 @@ func (a *App) openFallbackRuntime(target fallbackRuntimeTarget) error {
 	if target.scope == "global" {
 		root = ""
 	}
-	_, err := a.ActivateTopic(target.scope, root, topicID, "")
+	_, err := a.activateTopic(target.scope, root, topicID, "")
 	return err
 }
 

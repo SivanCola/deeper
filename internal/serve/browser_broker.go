@@ -238,6 +238,7 @@ func (s *Server) browserBroker() *BrowserBroker {
 // capabilities lists what the handshake advertises to the desktop.
 func (s *Server) capabilities() []string {
 	caps := []string{
+		servecontract.BaselineV1,
 		capabilityPermissionPresets,
 		capabilityPresentFiles,
 		capabilityExecutionV2,

@@ -338,7 +338,7 @@ func TestActivateTopicSupersedesPendingTicketedActivation(t *testing.T) {
 	}
 	legacyDone := make(chan legacyResult, 1)
 	go func() {
-		meta, err := app.ActivateTopic("global", "", "topic-b", "")
+		meta, err := app.activateTopic("global", "", "topic-b", "")
 		legacyDone <- legacyResult{meta: meta, err: err}
 	}()
 	if got := events.next(t); got != (TopicActivationEvent{RequestID: "req-a", TabID: ticketA.TabID, Phase: "cancelled"}) {
@@ -397,7 +397,7 @@ func TestSetActiveTabSupersedesPendingPublication(t *testing.T) {
 	t.Cleanup(func() { app.shutdown(context.Background()) })
 
 	// Establish a settled visible tab through the legacy path (ungated).
-	metaB, err := app.ActivateTopic("global", "", "topic-b", "")
+	metaB, err := app.activateTopic("global", "", "topic-b", "")
 	if err != nil {
 		t.Fatalf("ActivateTopic B: %v", err)
 	}

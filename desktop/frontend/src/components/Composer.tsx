@@ -681,11 +681,9 @@ export function Composer({
     if (savedInput.goalDraft === true && !savedInput.blocked && !goal?.trim() && collaborationMode !== "goal") setCollaborationMode("goal");
   }, [formalSessionRef?.sessionId, savedInput.goalDraft, savedInput.blocked]);
   const draftKey = sessionKey || tabId || DEFAULT_COMPOSER_DRAFT_KEY;
-	const bridgeTarget = useMemo(() => composerTarget?.kind === "draft"
-		? { kind: "draft", draftId: composerTarget.draftId, tabId: "", generation: persistentDraft?.generation ?? composerTarget.generation ?? 0 }
-		: { kind: "session", draftId: "", tabId: composerTarget?.tabId ?? tabId ?? "", session: formalSessionRef },
-	[composerTarget?.kind, composerTarget?.kind === "draft" ? composerTarget.draftId : composerTarget?.tabId, persistentDraft?.generation, tabId, formalSessionRef?.hostId, formalSessionRef?.sessionId]);
-	const bridgeTargetKey = `${bridgeTarget.kind}:${bridgeTarget.draftId}:${bridgeTarget.tabId}:${bridgeTarget.generation ?? 0}`;
+	const bridgeTarget = useMemo(() => ({ kind: "session", tabId: composerTarget?.tabId ?? tabId ?? "", session: formalSessionRef }),
+    [composerTarget?.tabId, tabId, formalSessionRef?.hostId, formalSessionRef?.sessionId]);
+  const bridgeTargetKey = `session:${bridgeTarget.tabId}:${formalSessionRef?.sessionId ?? ""}`;
   const runtimeState = useRuntimeSession(tabId, sessionIdentity ?? inboxSessionPath);
   const finishing = runtimeState.finishing;
   const maintenanceActive = Boolean(runtimeState.state?.maintenance);
@@ -4828,7 +4826,7 @@ export function Composer({
                   balance={balance} dismissSignal={transientDismissSignal}
                 />
               )}
-              <Suspense fallback={<span className="modelsw__label">{modelLabel}</span>}><ModelSwitcher composerMenu label={modelLabel} tabId={tabId} draftId={bridgeTarget.kind === "draft" ? bridgeTarget.draftId : undefined} ready={ready} sessionKey={sessionKey} disabled={disabled || suspendedByDecision} dismissSignal={transientDismissSignal} onPick={onSwitchModel} onManage={() => {
+              <Suspense fallback={<span className="modelsw__label">{modelLabel}</span>}><ModelSwitcher composerMenu label={modelLabel} tabId={tabId} ready={ready} sessionKey={sessionKey} disabled={disabled || suspendedByDecision} dismissSignal={transientDismissSignal} onPick={onSwitchModel} onManage={() => {
                 useAppNavigationStore.getState().setSettingsFocus({ target: "model-access" });
                 useAppNavigationStore.getState().setSettingsTarget("models");
               }} /></Suspense>

@@ -36,12 +36,11 @@ Provider 模型能力元数据见
 
 ## 配置
 
-优先级：**flag > `./deepzora.toml` > 用户配置文件 > 内置默认值**。从
-**Deepzora v1.8.1** 开始，用户配置位于 macOS/Linux 的
-`~/.deepzora/config.toml`，Windows 为 `%AppData%\deepzora\config.toml`；迁移和相关数据路径见
+优先级：**flag > `./deepzora.toml` > 用户配置文件 > 内置默认值**。用户配置位于 macOS/Linux 的
+`~/.deepzora/config.toml`，Windows 为 `%AppData%\deepzora\config.toml`；相关数据路径见
 [配置路径](./CONFIG_PATHS.zh-CN.md)。标注为“仅用户/全局”的字段（包括 agent 轮数上限）不会被 `./deepzora.toml` 覆盖。
 Provider 通过 `api_key_env` 命名密钥，真实密钥值保存在 CLI 与桌面端共用的
-Deepzora 全局 `<Deepzora home>/.env`。项目 `.env`、home `.env`、继承的 shell 环境变量、旧 credentials 和系统 keyring 都不再作为 provider key 的运行时 fallback；旧凭据只作为迁移来源读取。项目 `.env` 仍会作为当前 workspace 范围内的 MCP/plugin 非 provider `${VAR}` 展开来源，但不会导入 provider key 或 Deepzora 控制变量。全局 `config.toml` 和 `.env` 的完整结构见
+Deepzora 全局 `<Deepzora home>/.env`。项目 `.env`、home `.env`、继承的 shell 环境变量和系统 keyring 不作为 Provider 密钥来源。项目 `.env` 仍会作为当前 workspace 范围内的 MCP/plugin 非 provider `${VAR}` 展开来源，但不会导入 provider key 或 Deepzora 控制变量。全局 `config.toml` 和 `.env` 的完整结构见
 [配置路径](./CONFIG_PATHS.zh-CN.md)。
 
 桌面端和 CLI 端的可见思考语言设置，见 [思考语言](./REASONING_LANGUAGE.zh-CN.md)。
@@ -54,13 +53,11 @@ default_model = "deepseek-flash"   # 执行器；设 [agent].planner_model 可�
 # language    = "zh"               # 界面语言；为空则按 $LANG / $DEEPZORA_LANG 自动检测
 
 [ui]
-# shortcut_layout = "desktop"      # classic|desktop；兼容旧配置
 # cursor_shape = "bar"             # block|underline|bar；CLI/TUI 输入光标
 show_turn_usage = false             # 隐藏 TUI 每轮 token/费用回执；默认 true
 
 [agent]
 reasoning_language = "auto"      # 可见思考过程语言：auto|zh|en
-# plan_mode_read_only_commands = ["gh issue view"]   # 仅兼容旧配置；Plan bash 现由 Permissions 决定
 # planner_model = "deepseek-pro"      # 可选的低频规划器
 # vision_model = "auto"                # 可选；文本模型先用同服务商视觉模型生成隐藏图片摘要
 # subagent_model = "deepseek-pro"     # runAs=subagent skill 的默认模型
@@ -131,8 +128,7 @@ tool_timeout_seconds = { "generate_video" = 1800 }   # 可选：raw MCP tool 名
 非 destructive 工具，即使 server 没有声明 `readOnlyHint`；严格只读 subagent 仍要求
 `readOnlyHint: true` 且无 `destructiveHint`。
 
-`[agent].plan_mode_read_only_commands` 也继续参与配置 round-trip，但主 Plan 工作流不再维护独立的
-bash allowlist 或信任提示。Plan 与常规模式使用相同的 Permissions 规则做 bash 分类和审批；Sandbox
+主 Plan 工作流使用统一的 bash 分类与审批规则。Plan 与常规模式使用相同的 Permissions 规则做 bash 分类和审批；Sandbox
 仍是文件系统、进程和网络的强制边界。独立 planner 和显式只读 subagent runner 继续使用自己的严格
 只读工具 registry 与前台命令分类器。
 
@@ -219,7 +215,7 @@ deepzora web
 按 Ctrl-C 停止。
 
 显式传入 `deepzora web --auth none` 可以关闭默认 Token，只应在监听地址确定可信时使用。
-`deepzora serve` 则保持向后兼容：默认监听 `127.0.0.1:8787`，认证模式仍由配置决定，空配置为
+`deepzora serve` 的默认监听 `127.0.0.1:8787`，认证模式仍由配置决定，空配置为
 `auth_mode = "none"`。
 
 未开启认证时读取接口保持开放，但所有会改变状态的请求（包括审批）都需要本次启动的令牌：
@@ -293,13 +289,7 @@ Remote-SSH 式的体验。它在远端主机上引导一个常驻的 headless `d
 
 常用服务优先使用 **添加模型服务 -> 推荐预设**。新建的官方 DeepSeek provider 默认使用
 Chat Completions，并开启独立 `web_search`；各协议复用同一个
-`DEEPSEEK_API_KEY`。启动时，Deepzora 会自动升级仍使用官方端点、标准密钥和标准模型设置且
-未修改过的旧 `deepseek-flash` / `deepseek-pro` 条目。修改过的官方 Chat Completions 配置保留
-协议选择，设置页会提供 **升级到推荐协议** 操作。代理地址、自定义 Headers 和能力覆盖
-不会触发协议迁移。另有配置版本 11 的模型目录迁移：已有官方模型列表会一次性追加
-`deepseek-flash`，保留当前与默认模型；用户之后删除该选项也不会再次补回。已有单独命名的
-`deepseek-anthropic` 条目继续兼容，但新增
-接入不再展示这个重复预设。Deepzora 还可以预填以下可编辑的自定义 provider：
+`DEEPSEEK_API_KEY`。协议、模型目录、自定义端点、Headers 和能力覆盖使用当前明确配置，不导入旧 preset 版本。Deepzora 还可以预填以下可编辑的自定义 provider：
 Kimi CN、Kimi Global、Kimi Coding Plan、MiMo API、MiMo Anthropic、MiMo Token Plan
 CN/SGP/AMS 及其 Anthropic-compatible 变体、MiniMax CN/Global API、MiniMax
 CN/Global Anthropic、GLM CN、Z.AI Global、GLM/Z.AI Coding Plan 的
@@ -436,7 +426,6 @@ Thinking 覆盖选项：
 这里按使用端来写，因为用户通常是先知道“我现在在桌面端/CLI”，再找对应按键。
 桌面端的 `Shift+Tab` 只切换 Plan，权限预设仍在输入框菜单中选择。CLI 中，`Shift+Tab` 按“仅可查看 → 工作区内修改 → YOLO → Plan”循环，`Ctrl+Y` 直接切换 YOLO；YOLO 是规范权限值 `danger-full-access` 的可见名称。桌面端粘贴继续走系统快捷键；CLI 则把终端原生文本粘贴和应用接管的图片粘贴拆成不同快捷键。
 
-`[ui].shortcut_layout` 仍被接受以兼容旧配置，但下面的快捷键行为已经跨布局统一。
 
 CLI/TUI 文本输入可通过 `[ui].cursor_shape` 设置光标形状，支持 `underline`、`block`
 和 `bar`。默认值是 `bar`：位置清晰，同时不会在中英混排输入时覆盖 CJK 双宽字符。
@@ -540,7 +529,6 @@ CLI/TUI 文本输入可通过 `[ui].cursor_shape` 设置光标形状，支持 `u
 | `Ctrl+O` | 切换详细 reasoning 显示 | 也可通过 `/verbose` 使用。 |
 | `Ctrl+B` | 展开或收起较长 shell 输出 | 较长 shell 输出的提示行也可点击；全屏 TUI 开启鼠标接管时，文本选区由应用内处理。 |
 | `/goal <目标>`、`/goal status`、`/goal pause`、`/goal resume`、`/goal clear` | 启动、查看、暂停、恢复或清除 Goal | Goal 默认持续执行；只有用户显式预算会按数字暂停。 |
-| `/migrate`、`/migrate --from <旧目录>` | 重试旧数据迁移，或从指定 v0.x 来源导入 sessions | Windows v0.52 自定义安装/数据目录用 `--from`；该形式只导入 sessions。详见[配置路径](./CONFIG_PATHS.zh-CN.md)。 |
 
 选择器与审批：
 
@@ -922,10 +910,6 @@ Context Engine v2 把上下文分成两个用途不同的层：
 打开 Suggestions tab 会自动扫描近期本地用户回合；候选会与两个 scope 的记忆和指令正文去重，
 但只有用户接受后才会保存。远程 workspace 绝不回退读取桌面机器的本地 memory 或 session。
 
-旧事实会原地获得确定性 ID 和 revision 1；缺失 scope 时根据所在目录推导。Migration 幂等，
-旧客户端仍能安全路由，旧 Memory v5 transcript 也继续可读。完整行为、隐私与 cache 契约见
-[`Context Engine v2`](SESSION_MEMORY_RETRIEVAL.zh-CN.md)。
-
 ```markdown
 ---
 description: Review the staged diff
@@ -939,10 +923,10 @@ Review the staged diff. Focus on $ARGUMENTS, list bugs with file:line.
 
 ## 内置文档检索
 
-Deepzora 会把 `docs/` 中的 Markdown 文档和已审查的 `release-notes/releases.json` 更新日志
+Deepzora 会把 `docs/` 中明确列出的当前产品 Markdown 文档和已审查的 `release-notes/releases.json` 更新日志
 目录随 CLI 和桌面端一起编译发布。只读 `docs` 工具通过本地 BM25 检索这份与当前安装版本
 完全一致的离线语料，并可按命中的 `section_id` 读取完整章节及来源。每个版本都会生成
-`changelog/v1.19.5.md`、`changelog/v1.19.5.zh-CN.md` 这类中英文虚拟文档，因此可以离线
+`changelog/v1.0.0.md`、`changelog/v1.0.0.zh-CN.md` 这类中英文虚拟文档，因此可以离线
 查询指定版本的新增功能、升级说明、修复和已知风险。涉及 Deepzora 配置、CLI/桌面端行为、
 版本历史、权限、MCP、记忆、恢复、Provider 或维护流程的问题，Agent 应先查询这里，再考虑
 联网搜索或凭经验回答。

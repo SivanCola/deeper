@@ -13,22 +13,23 @@ import (
 )
 
 type attachmentTarget struct {
-	tab             *WorkspaceTab
-	tabID           string
-	draftID         string
-	draftGeneration uint64
-	root            string
-	generation      uint64
-	ctrl            control.SessionAPI
-	ctx             context.Context
-	cancel          context.CancelFunc
-	ownerIdentity   string
-	ownerBound      bool
-	runtimeEpoch    string
+	tab           *WorkspaceTab
+	tabID         string
+	root          string
+	generation    uint64
+	ctrl          control.SessionAPI
+	ctx           context.Context
+	cancel        context.CancelFunc
+	ownerIdentity string
+	ownerBound    bool
+	runtimeEpoch  string
 }
 
 func (a *App) attachmentTargetForComposerTarget(composer ComposerTarget) (attachmentTarget, error) {
-	if composer.Kind != "draft" {
+	if composer.Kind != "session" {
+		return attachmentTarget{}, fmt.Errorf("unsupported composer target")
+	}
+	{
 		target, err := a.attachmentTargetForTab(composer.TabID)
 		if err != nil || composer.Session == nil {
 			return target, err
@@ -44,22 +45,6 @@ func (a *App) attachmentTargetForComposerTarget(composer ComposerTarget) (attach
 		}
 		return target, nil
 	}
-	record, err := a.draftStore().Get(a.bootContext(), strings.TrimSpace(composer.DraftID))
-	if err != nil {
-		return attachmentTarget{}, err
-	}
-	root := record.WorkspaceRoot
-	if record.Scope != "project" {
-		root = globalWorkspaceRoot()
-	}
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return attachmentTarget{}, err
-	}
-	return attachmentTarget{
-		draftID: record.ID, draftGeneration: composer.Generation, root: absRoot,
-		ownerIdentity: fmt.Sprintf("draft:%s:%d", record.ID, composer.Generation),
-	}, nil
 }
 
 func attachmentWorkspaceRoot(tab *WorkspaceTab) (string, error) {
@@ -112,22 +97,7 @@ func (a *App) attachmentTargetCurrent(target attachmentTarget) bool {
 
 func (a *App) attachmentTargetInvalidReason(target attachmentTarget) string {
 	if target.tab == nil {
-		if target.draftID == "" {
-			return "missing owner"
-		}
-		record, err := a.draftStore().Get(a.bootContext(), target.draftID)
-		if err != nil || record.Status != "active" {
-			return "draft is no longer active"
-		}
-		root := record.WorkspaceRoot
-		if record.Scope != "project" {
-			root = globalWorkspaceRoot()
-		}
-		absRoot, err := filepath.Abs(root)
-		if err != nil || !sameProjectRoot(absRoot, target.root) {
-			return "workspace changed"
-		}
-		return ""
+		return "missing owner"
 	}
 	a.mu.RLock()
 	defer a.mu.RUnlock()

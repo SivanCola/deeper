@@ -926,8 +926,8 @@ func (a *App) requireRemotePermissionPresets(tabID string) error {
 }
 
 // requireRemoteExecutionProtocol fences every state-changing command at the
-// authenticated Serve capability boundary. A legacy Serve remains usable for
-// history reads, but Desktop never emulates the v3 runtime over older RPCs.
+// authenticated Serve capability boundary. Current controllers expose their
+// actual execution capabilities after the baseline handshake.
 func (a *App) requireRemoteExecutionProtocol(tabID string) error {
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[tabID]

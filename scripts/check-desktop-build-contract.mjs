@@ -22,7 +22,7 @@ assert.ok(packageShell, "desktop builds must define package_shell");
 const sourceSha = "a".repeat(40);
 const identityProbe = spawnSync("bash", ["-c", `${packageShell}\nnode() { printf '%s' "$DEEPZORA_COMMIT"; }\npackage_shell`], {
   encoding: "utf8",
-  env: { ...process.env, ROOT: "/fixture", PLATFORM: "windows/amd64", VERSION: "v0.0.0-ci", CHANNEL: "canary",
+  env: { ...process.env, ROOT: "/fixture", PLATFORM: "windows/amd64", VERSION: "v1.0.0", CHANNEL: "stable",
     SOURCE_SHA: sourceSha, GIT_COMMIT: sourceSha.slice(0, 12), BUILD_TIME_UTC: "2026-01-01T00:00:00Z" },
 });
 assert.ifError(identityProbe.error);
@@ -89,8 +89,8 @@ for (const [name, content] of [
   );
 }
 
-assert.match(readme, /#### CLI/);
-assert.match(readme, /#### Desktop/);
+assert.match(readme, /go build -o deepzora \.\/cmd\/deepzora/);
+assert.match(readme, /go build -o build\/bin\/deepzora-desktop-service \./);
 
 // The desktop build is the Electron packaging entrypoint: it must regenerate
 // the shell/service contract and fail on drift before compiling anything.
@@ -186,7 +186,7 @@ assert.match(
   /lipo -create "\$service_tmp\/amd64" "\$service_tmp\/arm64" -output "\$service_out"/,
   "darwin universal builds must lipo the desktop service",
 );
-// Windows keeps one canonical SignPath payload: signing-files.txt enumerates
+// Windows keeps one canonical Windows signing payload: signing-files.txt enumerates
 // every PE file, then package-windows-desktop.sh rebuilds from the payload.
 assert.match(
   desktopBuildScript,

@@ -1,8 +1,8 @@
 // Command desktopinventory enumerates every desktop shell entry point the
-// Electron migration must account for and assigns each one a migration class.
+// Electron host exposes and assigns each one a owner class.
 // It reads the desktop Go package, the frontend sources, the packaging script
-// and the CI workflows, then writes docs/desktop-migration/{INVENTORY.md,
-// inventory.json}. -check fails when migration entries drift or remain
+// and the CI workflows, then writes docs/desktop-contract/{INVENTORY.md,
+// inventory.json}. -check fails when contract entries drift or remain
 // unclassified; navigation-only source line changes do not block qualification.
 package main
 
@@ -17,7 +17,7 @@ import (
 
 func main() {
 	root := flag.String("root", ".", "repository root")
-	out := flag.String("out", "docs/desktop-migration", "output directory (relative to root)")
+	out := flag.String("out", "docs/desktop-contract", "output directory (relative to root)")
 	check := flag.Bool("check", false, "verify the checked-in inventory is current instead of writing it")
 	flag.Parse()
 

@@ -227,8 +227,6 @@ jobs:
           if-no-files-found: error
           overwrite: true
           retention-days: 1
-      - name: Verify frontend test inventory
-        run: node --test frontend/scripts/ci-test-plan.test.mjs
       - name: Test frontend once per suite
         run: node frontend/scripts/run-ci-tests.mjs
       - name: Test and build Electron

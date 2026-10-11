@@ -27,7 +27,7 @@ const packages = [
   "@sivancola/deepzora-cli-win32-arm64", "@sivancola/deepzora-cli-win32-x64",
 ];
 
-const OFFICIAL_ALIASES = ["latest", "canary", "next"];
+const OFFICIAL_ALIASES = ["latest"];
 
 // The publisher stages a stable release under "<dist-tag>-staging" and removes
 // it once the official aliases land (npm/publish.mjs). This cleanup used to name

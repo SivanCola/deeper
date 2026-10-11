@@ -351,13 +351,10 @@ func applyRemoteTabStatusPayload(tab *remoteTab, payload remoteTabStatusPayload)
 	if payload.RuntimeState != nil && validRuntimeState(*payload.RuntimeState) {
 		acceptRemoteRuntimeStateLocked(tab, payloadRoute, *payload.RuntimeState, true)
 		payload.Running, payload.PendingPrompt, payload.BackgroundJobs, payload.CancelRequested, payload.Cancellable = nil, nil, nil, nil, nil
-	} else if payload.RuntimeState == nil && payload.Running != nil {
-		// An actual legacy status confirms only its selected session. Never
-		// leave a previous schema-1 observation shadowing these legacy facts.
-		delete(tab.runtimeStates, tab.routing.currentPath)
-		delete(tab.runtimeUnknown, tab.routing.currentPath)
-		tab.runtime.snapshot = event.RuntimeStateSnapshot{}
-		tab.runtime.syncFailed = false
+	} else {
+		markRemoteRuntimeUnknownLocked(tab, tab.routing.currentPath)
+		tab.runtime.syncFailed = true
+		payload.Running, payload.PendingPrompt, payload.BackgroundJobs, payload.CancelRequested, payload.Cancellable = nil, nil, nil, nil, nil
 	}
 	if name := strings.TrimSpace(payload.SessionName); name != "" {
 		tab.session.name = name

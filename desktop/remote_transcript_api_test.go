@@ -47,7 +47,7 @@ func TestRemoteFollowRequiresV2WithoutLegacyProbe(t *testing.T) {
 	}
 }
 
-func TestRemoteTranscriptNegotiatesOldServeWithoutMutation(t *testing.T) {
+func TestRemoteTranscriptRejectsInvalidProtocolWithoutMutation(t *testing.T) {
 	for _, status := range []int{http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusNotImplemented, http.StatusOK} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func TestRemoteTranscriptNegotiatesOldServeWithoutMutation(t *testing.T) {
 			defer server.Close()
 			app, tab := remoteTranscriptFixture(server)
 			result, err := app.RemoteTranscriptSnapshotForTab(tab.id, transcript.PageRequest{})
-			if err != nil || result.Supported || result.Snapshot != nil {
+			if err == nil || result.Supported || result.Snapshot != nil {
 				t.Fatalf("negotiation = %+v, %v", result, err)
 			}
 			if tab.state != "ready" || tab.gen != 1 {
@@ -170,7 +170,7 @@ func TestRemoteTranscriptRefreshesIdentityAfterConflict(t *testing.T) {
 			}
 			_ = json.NewEncoder(w).Encode(transcript.Snapshot{Boundary: transcript.Boundary{ProtocolVersion: transcript.ProtocolVersion, SnapshotID: "current"}})
 		case "/status":
-			_ = json.NewEncoder(w).Encode(map[string]any{"sessionPath": "", "sessionId": "current", "running": false})
+			_, _ = w.Write([]byte(currentFakeStatus(`{"sessionPath":"","sessionId":"current","running":false}`, 1)))
 		default:
 			http.NotFound(w, r)
 		}

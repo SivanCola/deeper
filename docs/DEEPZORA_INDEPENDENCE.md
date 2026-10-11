@@ -52,7 +52,7 @@ MIT 许可证、NOTICE 或上游作者信息。当前 Claude/Codex/MCP、供应�
 接管和安装事务恢复同样属于当前功能，不能当成历史兼容代码删除。
 
 For the removal scope and maintenance rule, see
-[the baseline inventory](REASONIX_LEGACY_COMPATIBILITY_INVENTORY.zh-CN.md).
+[Current contract](current-version-baseline.md).
 
 ## CI and release setup / CI 和发布配置
 
@@ -233,7 +233,7 @@ Repository Variables / 仓库变量:
   Builds embed this key by default; `MINISIGN_PUBLIC_KEY` can override it at link
   time. Empty or invalid keys reject updates; the upstream key is never used.
 - `RELEASE_TAG_ACTOR`: GitHub login for `RELEASE_TAG_TOKEN`.
-- `SIGNPATH_RELEASE_SIGNING_ATTESTATION`: optional fingerprint only after your
+- `RELEASE_SIGNING_ATTESTATION`: optional fingerprint only after your
   standalone Windows signing check succeeds; orchestrated same-run checks can
   provide their own verified evidence.
 

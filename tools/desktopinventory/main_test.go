@@ -29,7 +29,7 @@ func TestInventoryIsClassifiedAndCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, want := range map[string][]byte{"INVENTORY.md": md, "inventory.json": js} {
-		have, err := os.ReadFile(filepath.Join(root, "docs", "desktop-migration", name))
+		have, err := os.ReadFile(filepath.Join(root, "docs", "desktop-contract", name))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -42,7 +42,7 @@ func TestInventoryIsClassifiedAndCurrent(t *testing.T) {
 func TestShellFileRules(t *testing.T) {
 	cases := map[string]class{
 		"webview2_recovery_windows.go": classDeleteShell,
-		"tray_loop_windows.go":         classMigrateHost,
+		"tray_loop_windows.go":         classHostManaged,
 		"main.go":                      classKeepBusiness,
 		"sessions.go":                  "",
 	}

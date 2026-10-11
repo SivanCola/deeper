@@ -134,7 +134,7 @@ func (a *App) getSessionComposerState(ref session.SessionRef) (SessionComposerSt
 		}
 		view.SubmissionPhase = "unknown"
 	}
-	view.HistoryChanged = view.Revision != "0" && view.Baseline != "" && view.Baseline != baseline && draftHasContent(view.ContentJSON)
+	view.HistoryChanged = view.Revision != "0" && view.Baseline != "" && view.Baseline != baseline && sessionInputHasContent(view.ContentJSON)
 	if view.Revision == "0" {
 		view.Baseline = baseline
 	}
@@ -196,7 +196,7 @@ func (a *App) SaveSessionComposerState(req SessionComposerSaveRequest) (result S
 	if err != nil {
 		return view, err
 	}
-	if view.Revision != "0" && view.Baseline != baseline && draftHasContent(view.ContentJSON) && !req.AcknowledgeHistory {
+	if view.Revision != "0" && view.Baseline != baseline && sessionInputHasContent(view.ContentJSON) && !req.AcknowledgeHistory {
 		view.HistoryChanged = true
 		return view, nil
 	}

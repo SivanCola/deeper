@@ -94,9 +94,7 @@ export function readFileAsDataURL(file: File): Promise<string> {
 }
 
 export async function captureImageTarget(app: AppBindings, target: ComposerTarget): Promise<string> {
-  return captureAttachmentTarget(app, target, target.kind === "draft"
-    ? ["StageImageForTarget", "AttachmentDataURLForTarget"]
-    : ["StageImageForTarget", "ReadDraftImageForTarget"]);
+  return captureAttachmentTarget(app, target, ["StageImageForTarget", "ReadDraftImageForTarget"]);
 }
 
 export async function captureAttachmentTarget(

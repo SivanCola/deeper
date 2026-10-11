@@ -170,20 +170,7 @@ Model and effort changes rebuild the session controller while preserving its
 history and the other axes. Tool-approval changes update the gate in place
 without rebuilding the controller.
 
-Execution modes are gone. For one compatibility version, clients that still
-send `session/set_config_option` with `configId` `agent_preset` or `work_mode`
-(including legacy aliases `profile`, `runtime_profile`, `token_mode`) receive a
-successful no-op: nothing switches, nothing rebuilds, and the result carries a
-`deprecatedNotice` explaining the adaptive standard execution.
-The returned `configOptions` list does not advertise these retired selectors or
-`quality_floor`. A known legacy `quality_floor` value is accepted as the same
-no-op, while unknown values still return `InvalidParams`.
-
-For older clients, `session/set_model` remains available. The legacy
-`session/set_mode` values `default` and `auto` are also accepted as Normal +
-Read only and Normal + Workspace access respectively; new clients should use
-the independent selectors above. Legacy permission values are accepted only as
-input migration aliases and are never advertised in `configOptions`.
+Configuration uses the current independent selectors. Retired execution profiles, quality floors, and permission aliases return `InvalidParams`. `session/set_model` and `session/set_mode` remain current ACP methods for the advertised model and mode values.
 
 ## Prompts, updates, and approvals
 
@@ -210,17 +197,7 @@ but returns `end_turn` because ACP v1 has no task-budget-specific stop reason.
 The completion validator has been removed. A clean model stop without tool
 calls returns `end_turn`; a response with tool calls continues through the
 agent loop, and a truly empty response is retried at the frozen-request
-boundary. Legacy `completion_validation`, `completion_evaluator_model`, and
-`DEEPZORA_COMPLETION_VALIDATION_MODE` settings remain readable but are ignored
-and are no longer emitted. Host-owned readiness, budget, tool-safety, and
-recovery boundaries remain active.
-Client cancellation returns `cancelled`, even when the interrupted runner exits
-without an error. Other provider, tool, or runtime failures return a JSON-RPC
-`-32603 InternalError` whose message contains a bounded, credential-redacted
-cause; they do not return a successful prompt result with a non-standard
-`stopReason`.
-
-When the status phase is `readiness_paused`, resume that exact check with a
+boundary. When the status phase is `readiness_paused`, resume that exact check with a
 `session/prompt` request whose optional `action` is
 `"final_readiness_recovery"`. Sending `/continue-checks` as the sole text block
 is the compatibility form. Both forms consume a one-shot, persisted host

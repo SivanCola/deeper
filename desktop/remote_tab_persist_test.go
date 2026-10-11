@@ -526,7 +526,7 @@ func TestRemoteStatusRefreshPublishesInactiveRuntimeMeta(t *testing.T) {
 		remoteTabLayout: remoteTabLayoutState{activeID: "remote-2"},
 	}
 	statusSeq := a.reserveRemoteTabStatusSequence("remote-1", client, 4)
-	a.recordRemoteTabSessionStatus("remote-1", client, 4, statusSeq, json.RawMessage(`{"running":true,"pendingPrompt":true,"backgroundJobs":3,"cancelRequested":true,"cancellable":true}`))
+	a.recordRemoteTabSessionStatus("remote-1", client, 4, statusSeq, json.RawMessage(currentFakeStatus(`{"running":true,"pendingPrompt":true,"backgroundJobs":3,"cancelRequested":true,"cancellable":true}`, 1)))
 	metas, _, _ := a.remoteTabMetas(nil)
 	var got TabMeta
 	for _, meta := range metas {
@@ -549,8 +549,10 @@ func TestRemoteStatusRefreshRejectsOutOfOrderSnapshot(t *testing.T) {
 	}}
 	older := a.reserveRemoteTabStatusSequence("remote-1", client, 4)
 	newer := a.reserveRemoteTabStatusSequence("remote-1", client, 4)
-	a.recordRemoteTabSessionStatus("remote-1", client, 4, newer, json.RawMessage(`{"running":false,"pendingPrompt":false}`))
-	a.recordRemoteTabSessionStatus("remote-1", client, 4, older, json.RawMessage(`{"running":true,"pendingPrompt":true}`))
+	if !a.recordRemoteTabSessionStatus("remote-1", client, 4, newer, json.RawMessage(currentFakeStatus(`{"running":false,"pendingPrompt":false}`, 2))) {
+		t.Fatal("current baseline status was rejected")
+	}
+	a.recordRemoteTabSessionStatus("remote-1", client, 4, older, json.RawMessage(currentFakeStatus(`{"running":true,"pendingPrompt":true}`, 1)))
 	a.remoteTabMu.Lock()
 	runtime := a.remoteTabs["remote-1"].runtime
 	a.remoteTabMu.Unlock()
@@ -600,7 +602,7 @@ func TestRemoteStatusRefreshRejectsSnapshotOlderThanTurnDone(t *testing.T) {
 	}}
 	stale := a.reserveRemoteTabStatusSequence("remote-1", client, 4)
 	a.completeRemoteTabTurn("remote-1", 4)
-	a.recordRemoteTabSessionStatus("remote-1", client, 4, stale, json.RawMessage(`{"running":true,"pendingPrompt":true}`))
+	a.recordRemoteTabSessionStatus("remote-1", client, 4, stale, json.RawMessage(currentFakeStatus(`{"running":true,"pendingPrompt":true}`, 1)))
 	a.remoteTabMu.Lock()
 	runtime := a.remoteTabs["remote-1"].runtime
 	a.remoteTabMu.Unlock()

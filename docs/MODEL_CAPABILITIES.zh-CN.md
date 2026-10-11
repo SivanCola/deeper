@@ -16,10 +16,7 @@ OpenAI-compatible `/models` 响应优先使用标准字段 `input_modalities`，
 相互矛盾的有效声明最终保持未知。不会根据模型名称猜测视觉能力。
 
 动态元数据保存在 Deepzora 缓存目录下独立的
-`model-capabilities-v2.json` 文件中，不会写入 `config.toml`。已有的
-`vision` 和 `vision_models` 配置仍可读取，并优先于动态元数据。V2 不读取、
-迁移或修改 V1，因为旧缓存无法区分缺字段与明确否定。只依赖 V1 正面缓存
-的自定义模型需要刷新一次模型列表，也可以手动开启。缓存仍保留 24 小时
+`model-capabilities-v2.json` 文件中，不会写入 `config.toml`。只使用当前 per-model override 与 V2 缓存；旧缓存不导入。缓存仍保留 24 小时
 TTL；请求失败不覆盖成功结果，成功返回 ID-only 时会记录未知事实。
 路由与凭据变化隔离缓存，晚到的旧请求不能覆盖较新的成功发现。
 

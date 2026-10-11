@@ -166,23 +166,6 @@
       ]
     }
   },
-  "ActivateTopic": {
-    "domain": "desktop/tabs.go",
-    "owner": "App.ActivateTopic",
-    "sources": [
-      "desktop/tabs.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ActivateTopic",
-      "inputs": [
-        "scope",
-        "workspaceRoot",
-        "topicID",
-        "sessionPath"
-      ]
-    }
-  },
   "ActiveWorkForTab": {
     "domain": "desktop/background_runtime.go",
     "owner": "App.ActiveWorkForTab",
@@ -638,10 +621,10 @@
     }
   },
   "AttachDroppedForComposerTarget": {
-    "domain": "desktop/session_draft.go",
+    "domain": "desktop/composer_target.go",
     "owner": "App.AttachDroppedForComposerTarget",
     "sources": [
-      "desktop/session_draft.go"
+      "desktop/composer_target.go"
     ],
     "scope": {
       "kind": "owner-inputs",
@@ -697,10 +680,10 @@
     }
   },
   "AttachmentDataURLForComposerTarget": {
-    "domain": "desktop/session_draft.go",
+    "domain": "desktop/composer_target.go",
     "owner": "App.AttachmentDataURLForComposerTarget",
     "sources": [
-      "desktop/session_draft.go"
+      "desktop/composer_target.go"
     ],
     "scope": {
       "kind": "owner-inputs",
@@ -819,20 +802,6 @@
       ]
     }
   },
-  "BeginDraftSubmission": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.BeginDraftSubmission",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.BeginDraftSubmission",
-      "inputs": [
-        "request"
-      ]
-    }
-  },
   "BeginManualSessionCreation": {
     "domain": "desktop/manual_session_creation.go",
     "owner": "App.BeginManualSessionCreation",
@@ -918,20 +887,6 @@
       "kind": "owner-state",
       "resolver": "App.Cancel",
       "inputs": []
-    }
-  },
-  "CancelDraftSubmission": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.CancelDraftSubmission",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CancelDraftSubmission",
-      "inputs": [
-        "operationID"
-      ]
     }
   },
   "CancelJob": {
@@ -1074,21 +1029,6 @@
       "resolver": "App.CancelTab",
       "inputs": [
         "tabID"
-      ]
-    }
-  },
-  "CancelTabWithInboxItems": {
-    "domain": "desktop/inbox_app.go",
-    "owner": "App.CancelTabWithInboxItems",
-    "sources": [
-      "desktop/inbox_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CancelTabWithInboxItems",
-      "inputs": [
-        "tabID",
-        "itemIDs"
       ]
     }
   },
@@ -2052,21 +1992,6 @@
       "inputs": []
     }
   },
-  "DiscardSessionDraft": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.DiscardSessionDraft",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.DiscardSessionDraft",
-      "inputs": [
-        "draftID",
-        "revision"
-      ]
-    }
-  },
   "DisconnectRemoteHost": {
     "domain": "desktop/remote_app.go",
     "owner": "App.DisconnectRemoteHost",
@@ -2078,20 +2003,6 @@
       "resolver": "App.DisconnectRemoteHost",
       "inputs": [
         "id"
-      ]
-    }
-  },
-  "DismissSessionDraft": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.DismissSessionDraft",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.DismissSessionDraft",
-      "inputs": [
-        "draftID"
       ]
     }
   },
@@ -2269,21 +2180,6 @@
     "scope": {
       "kind": "owner-inputs",
       "resolver": "App.EnsureBlankSurface",
-      "inputs": [
-        "scope",
-        "workspaceRoot"
-      ]
-    }
-  },
-  "EnsureBlankTab": {
-    "domain": "desktop/tabs.go",
-    "owner": "App.EnsureBlankTab",
-    "sources": [
-      "desktop/tabs.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.EnsureBlankTab",
       "inputs": [
         "scope",
         "workspaceRoot"
@@ -2667,34 +2563,6 @@
       "inputs": []
     }
   },
-  "GetDraftContext": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.GetDraftContext",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetDraftContext",
-      "inputs": [
-        "draftID"
-      ]
-    }
-  },
-  "GetDraftSubmission": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.GetDraftSubmission",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetDraftSubmission",
-      "inputs": [
-        "operationID"
-      ]
-    }
-  },
   "GetHistoryIndexStatus": {
     "domain": "desktop/history_catalog.go",
     "owner": "App.GetHistoryIndexStatus",
@@ -2889,34 +2757,6 @@
       "resolver": "App.GetSessionComposerState",
       "inputs": [
         "ref"
-      ]
-    }
-  },
-  "GetSessionDraft": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.GetSessionDraft",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetSessionDraft",
-      "inputs": [
-        "draftID"
-      ]
-    }
-  },
-  "GetSessionDraftState": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.GetSessionDraftState",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetSessionDraftState",
-      "inputs": [
-        "draftID"
       ]
     }
   },
@@ -3622,10 +3462,10 @@
     }
   },
   "ListDirForTarget": {
-    "domain": "desktop/session_draft.go",
+    "domain": "desktop/composer_target.go",
     "owner": "App.ListDirForTarget",
     "sources": [
-      "desktop/session_draft.go"
+      "desktop/composer_target.go"
     ],
     "scope": {
       "kind": "owner-inputs",
@@ -3730,18 +3570,6 @@
       "inputs": [
         "ref"
       ]
-    }
-  },
-  "ListSessionDraftSummaries": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.ListSessionDraftSummaries",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ListSessionDraftSummaries",
-      "inputs": []
     }
   },
   "ListSessions": {
@@ -4295,20 +4123,6 @@
       "inputs": []
     }
   },
-  "ModelsForDraft": {
-    "domain": "desktop/model_catalog.go",
-    "owner": "App.ModelsForDraft",
-    "sources": [
-      "desktop/model_catalog.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ModelsForDraft",
-      "inputs": [
-        "draftID"
-      ]
-    }
-  },
   "ModelsForTab": {
     "domain": "desktop/model_catalog.go",
     "owner": "App.ModelsForTab",
@@ -4497,20 +4311,6 @@
       ]
     }
   },
-  "OpenGlobalTab": {
-    "domain": "desktop/tabs.go",
-    "owner": "App.OpenGlobalTab",
-    "sources": [
-      "desktop/tabs.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.OpenGlobalTab",
-      "inputs": [
-        "topicID"
-      ]
-    }
-  },
   "OpenLocalPath": {
     "domain": "desktop/open_local_path.go",
     "owner": "App.OpenLocalPath",
@@ -4631,35 +4431,6 @@
       ]
     }
   },
-  "OpenSessionDraft": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.OpenSessionDraft",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.OpenSessionDraft",
-      "inputs": [
-        "workspaceID"
-      ]
-    }
-  },
-  "OpenSessionDraftForTarget": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.OpenSessionDraftForTarget",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.OpenSessionDraftForTarget",
-      "inputs": [
-        "scope",
-        "workspaceRoot"
-      ]
-    }
-  },
   "OpenTaskSessionByKey": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.OpenTaskSessionByKey",
@@ -4686,23 +4457,6 @@
       "inputs": [
         "tabID",
         "taskID"
-      ]
-    }
-  },
-  "OpenTopicSession": {
-    "domain": "desktop/tabs.go",
-    "owner": "App.OpenTopicSession",
-    "sources": [
-      "desktop/tabs.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.OpenTopicSession",
-      "inputs": [
-        "scope",
-        "workspaceRoot",
-        "topicID",
-        "sessionPath"
       ]
     }
   },
@@ -6876,18 +6630,6 @@
       ]
     }
   },
-  "RestoreSessionDraft": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.RestoreSessionDraft",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.RestoreSessionDraft",
-      "inputs": []
-    }
-  },
   "RestoreSessionTarget": {
     "domain": "desktop/session_operations.go",
     "owner": "App.RestoreSessionTarget",
@@ -6899,21 +6641,6 @@
       "resolver": "App.RestoreSessionTarget",
       "inputs": [
         "selector"
-      ]
-    }
-  },
-  "ResumeDraftSubmission": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.ResumeDraftSubmission",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResumeDraftSubmission",
-      "inputs": [
-        "operationID",
-        "expectedRevision"
       ]
     }
   },
@@ -7325,10 +7052,10 @@
     }
   },
   "SaveClipboardImageForComposerTarget": {
-    "domain": "desktop/session_draft.go",
+    "domain": "desktop/composer_target.go",
     "owner": "App.SaveClipboardImageForComposerTarget",
     "sources": [
-      "desktop/session_draft.go"
+      "desktop/composer_target.go"
     ],
     "scope": {
       "kind": "owner-inputs",
@@ -7489,10 +7216,10 @@
     }
   },
   "SavePastedFileForComposerTarget": {
-    "domain": "desktop/session_draft.go",
+    "domain": "desktop/composer_target.go",
     "owner": "App.SavePastedFileForComposerTarget",
     "sources": [
-      "desktop/session_draft.go"
+      "desktop/composer_target.go"
     ],
     "scope": {
       "kind": "owner-inputs",
@@ -7551,10 +7278,10 @@
     }
   },
   "SavePastedImageForComposerTarget": {
-    "domain": "desktop/session_draft.go",
+    "domain": "desktop/composer_target.go",
     "owner": "App.SavePastedImageForComposerTarget",
     "sources": [
-      "desktop/session_draft.go"
+      "desktop/composer_target.go"
     ],
     "scope": {
       "kind": "owner-inputs",
@@ -7715,20 +7442,6 @@
       ]
     }
   },
-  "SaveSessionDraft": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.SaveSessionDraft",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SaveSessionDraft",
-      "inputs": [
-        "request"
-      ]
-    }
-  },
   "SaveSessionGroups": {
     "domain": "desktop/project_tree_organization.go",
     "owner": "App.SaveSessionGroups",
@@ -7877,10 +7590,10 @@
     }
   },
   "SearchFileRefsForTarget": {
-    "domain": "desktop/session_draft.go",
+    "domain": "desktop/composer_target.go",
     "owner": "App.SearchFileRefsForTarget",
     "sources": [
-      "desktop/session_draft.go"
+      "desktop/composer_target.go"
     ],
     "scope": {
       "kind": "owner-inputs",
@@ -8952,20 +8665,6 @@
         "workspaceRoot",
         "allowWrite",
         "shell"
-      ]
-    }
-  },
-  "SetSessionDraftRestoreTarget": {
-    "domain": "desktop/session_draft.go",
-    "owner": "App.SetSessionDraftRestoreTarget",
-    "sources": [
-      "desktop/session_draft.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetSessionDraftRestoreTarget",
-      "inputs": [
-        "draftID"
       ]
     }
   },
