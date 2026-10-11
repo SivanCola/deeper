@@ -401,7 +401,7 @@ func openExistingHandle(dir, sessionID string, opts OpenOptions) (*Store, error)
 		return fail(fmt.Errorf("%w: manifest schema or codec", ErrUnsupportedVersion))
 	}
 	eventsPath := logPathForManifest(dir, manifest)
-	if err := validateStoredLogCodec(ctx, eventsPath, manifest); err != nil {
+	if err := validateStoredLogCodec(ctx, dir, manifest); err != nil {
 		return fail(err)
 	}
 	identity, err := ensureStorageIdentity(dir, manifest)

@@ -60,6 +60,15 @@ retain their provenance and digests, including historical `main-v2-pr…` names.
 日志标识不一致的数据，也拒绝同一日志混用标识。历史测试文件保留真实来源、校验值
 及 `main-v2-pr…` 等历史名称。
 
+Before opening a v4 writer, codec validation opens only the fixed log leaf
+inside the selected session directory through Go's rooted filesystem API.
+Relative log symlinks staying inside that directory remain supported; links
+escaping it, including dangling outside targets, fail before manifest mutation.
+
+打开 v4 写入器前，格式校验通过 Go 的目录约束 API 读取会话目录内的固定日志文件。
+仍支持指向本目录内部的相对日志链接；指向目录外的链接（包括不存在的外部目标）
+会在修改 manifest 前被拒绝。
+
 ## CI and release setup / CI 和发布配置
 
 Windows controller tests run in two complementary `A-M` and `N-Z` partitions.

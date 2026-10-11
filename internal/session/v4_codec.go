@@ -197,11 +197,13 @@ func scanV4CommitFileRefs(ctx context.Context, file io.ReadSeeker, startOffset i
 	return scanV4CommitFileMode(ctx, file, startOffset, nextSequence, content, knownKinds, false, visit)
 }
 
-func validateStoredLogCodec(ctx context.Context, path string, manifest Manifest) error {
+func validateStoredLogCodec(ctx context.Context, dir string, manifest Manifest) error {
 	if !IsFramedCodec(manifest.Codec) {
 		return nil
 	}
-	file, err := os.Open(path)
+	// Keep the fixed log leaf inside the caller's confined session directory,
+	// including when a stored log is a symlink. Cleaning a full path is not a fence.
+	file, err := os.OpenInRoot(dir, currentLogName)
 	if os.IsNotExist(err) {
 		return nil
 	}
