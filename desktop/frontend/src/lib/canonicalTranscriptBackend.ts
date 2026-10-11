@@ -196,8 +196,8 @@ function requireReadyWindow(window: HistoryWindowPageView): HistorySlice | undef
 export async function canonicalHistorySlice(tabId: string, req: HistorySliceRequest): Promise<HistorySlice> {
   const cursor = req.cursor ?? "";
   const limit = Math.min(100, Math.max(1, req.entries ?? 32));
-  if (cursor.startsWith("deeper:message:")) {
-    const [id, sequence, generation] = cursor.slice("deeper:message:".length).split(":");
+  if (cursor.startsWith("deepzora:message:")) {
+    const [id, sequence, generation] = cursor.slice("deepzora:message:".length).split(":");
     const messageId = decodeURIComponent(id);
     const snapshotSequence = Number(sequence);
     if (!Number.isSafeInteger(snapshotSequence) || snapshotSequence < 0 || generation === undefined) return staleSlice();

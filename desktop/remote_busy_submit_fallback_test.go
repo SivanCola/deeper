@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/serve"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/serve"
 )
 
 // A foreground submit that lands while the previous turn is still running must

@@ -111,7 +111,7 @@ test("release notes and full events are deterministic", () => {
 });
 
 test("push and merge-base diffs retain deletions and renames", t => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "deeper-ci-paths-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "deepzora-ci-paths-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   mkdirSync(path.join(root, "desktop/frontend/src"), { recursive: true });
   writeFileSync(path.join(root, "desktop/frontend/src/old.ts"), "old");
@@ -140,7 +140,7 @@ test("invalid diff identities fail instead of producing a skip", () => {
 });
 
 test("CLI entry runs from paths with URL-significant characters", t => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "deeper-ci-entry-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "deepzora-ci-entry-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const expectedNames = ["code", "desktop", "desktop_go", "frontend", "browser", "memory", "memory_full", "electron", "native", "packaging", "site", "sdk", "windows_builtin", "release_control", "notes_only"];
   for (const directory of ["ordinary", "with space", "中文", "hash#directory", "literal%20directory"]) {
@@ -155,7 +155,7 @@ test("CLI entry runs from paths with URL-significant characters", t => {
 });
 
 test("CLI writes GitHub output and module import stays side-effect free", t => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "deeper-ci-output-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "deepzora-ci-output-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const target = path.join(root, "hash#literal%20", "ci-paths.mjs");
   const outputPath = path.join(root, "GitHub output.txt");

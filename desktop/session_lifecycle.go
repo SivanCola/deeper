@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 func (a *App) archiveSessionRefsWithOperation(refs []session.SessionRef, operationID string, dependencies ...string) error {

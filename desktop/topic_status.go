@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 // topicStatusAwaitingDelivery is a delivery-check pause, not a recovery pause.
 const topicStatusAwaitingDelivery = "awaiting_delivery"

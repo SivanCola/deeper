@@ -16,7 +16,7 @@ test("the capture track is not frame-rate limited", async () => {
   const navigator = { mediaDevices: { getDisplayMedia: async (constraints: MediaStreamConstraints) => { requested.push(constraints); throw new Error("capture denied"); } } };
   new Function("window", "navigator", bundle.outputFiles[0].text)(window, navigator);
   const port = { onmessage: null as null | ((event: { data: unknown }) => Promise<void>), postMessage: (message: { type: string }) => { posted.push(message); } };
-  onMessage({ source: window, data: "deeper-recorder-port", ports: [port] });
+  onMessage({ source: window, data: "deepzora-recorder-port", ports: [port] });
   await port.onmessage!({ data: { type: "start", width: 1280, height: 720, cropWidth: 1, cropHeight: 1 } });
   assert.equal(requested.length, 1);
   assert.equal(requested[0].audio, false);

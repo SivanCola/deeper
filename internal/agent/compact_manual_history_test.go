@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontext"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontext"
 )
 
 func TestManualCompactFindsHistoryBehindFixedContext(t *testing.T) {

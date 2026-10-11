@@ -249,7 +249,7 @@
     {
       "commit": "0055038b45cfb3bd11e1558f9292c2ab9a3b4773",
       "pr": 10130,
-      "title": "fix(desktop): isolate Windows taskbar identity from Studio / 隔离 Deeper 与 Studio 的 Windows 任务栏身份 (#10130)",
+      "title": "fix(desktop): isolate Windows taskbar identity from Studio / 隔离 Deepzora 与 Studio 的 Windows 任务栏身份 (#10130)",
       "areas": [
         "native-shell"
       ],
@@ -301,7 +301,7 @@
     {
       "commit": "ff27bdf3f4580219a74913b991fc6a312567d683",
       "pr": 10215,
-      "title": "fix(desktop): let a directly launched shell find its service beside app/ / 修复直接启动 Deeper.exe 时找不到 service (#10215)",
+      "title": "fix(desktop): let a directly launched shell find its service beside app/ / 修复直接启动 Deepzora.exe 时找不到 service (#10215)",
       "areas": [
         "native-shell"
       ],

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 func windowsEntryRequest(t *testing.T, root, version, body string) ActivationRequest {
@@ -36,26 +36,26 @@ func TestWindowsEntriesFreshRepairAndUpgrade(t *testing.T) {
 	for _, legacy := range []bool{false, true} {
 		for _, canonical := range []bool{false, true} {
 			t.Run(map[bool]string{false: "fresh", true: "legacy"}[legacy]+map[bool]string{false: "", true: "-canonical"}[canonical], func(t *testing.T) {
-				root := filepath.Join(t.TempDir(), "Deeper 测试")
+				root := filepath.Join(t.TempDir(), "Deepzora 测试")
 				if err := os.Mkdir(root, 0o755); err != nil {
 					t.Fatal(err)
 				}
 				if legacy {
-					writeTempMember(t, root, "deeper-launcher.exe", "old")
+					writeTempMember(t, root, "deepzora-launcher.exe", "old")
 				}
 				if canonical {
-					writeTempMember(t, root, "Deeper.exe", "old")
+					writeTempMember(t, root, "Deepzora.exe", "old")
 				}
 				for i, version := range []string{"v1.38.9", "v1.38.9", "v1.39.0"} {
 					body := []string{"install", "repair", "upgrade"}[i]
 					if err := ActivateVersion(windowsEntryRequest(t, root, version, body)); err != nil {
 						t.Fatal(err)
 					}
-					assertEntryBytes(t, root, "Deeper.exe", body+"-gui")
-					assertEntryBytes(t, root, "deeper-cli.exe", body+"-cli")
+					assertEntryBytes(t, root, "Deepzora.exe", body+"-gui")
+					assertEntryBytes(t, root, "deepzora-cli.exe", body+"-cli")
 					if legacy {
-						assertEntryBytes(t, root, "deeper-launcher.exe", body+"-gui")
-					} else if _, err := os.Lstat(filepath.Join(root, "deeper-launcher.exe")); !os.IsNotExist(err) {
+						assertEntryBytes(t, root, "deepzora-launcher.exe", body+"-gui")
+					} else if _, err := os.Lstat(filepath.Join(root, "deepzora-launcher.exe")); !os.IsNotExist(err) {
 						t.Fatalf("created legacy entry: %v", err)
 					}
 					ptr, err := ReadCurrent(root)
@@ -74,24 +74,24 @@ func TestWindowsEntriesInspectLegacyAfterLockAcquisition(t *testing.T) {
 	// Simulate the previous writer publishing the legacy entry while this
 	// activation waits to acquire its lock. No sleeps or global test hooks.
 	err := activateVersion(req, func(ctx context.Context, path string) (func(), error) {
-		writeTempMember(t, root, "deeper-launcher.exe", "previous-writer")
+		writeTempMember(t, root, "deepzora-launcher.exe", "previous-writer")
 		return filelock.Acquire(ctx, path)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertEntryBytes(t, root, "deeper-launcher.exe", "new-gui")
+	assertEntryBytes(t, root, "deepzora-launcher.exe", "new-gui")
 }
 
 func TestConcurrentOldAndNewActivationPreservesCommittedLegacyEntry(t *testing.T) {
 	root := t.TempDir()
 	first := windowsEntryRequest(t, root, "v1.38.9", "old")
 	first.RootMembers = []Member{
-		{Name: "Deeper.exe", Path: first.WindowsRootEntries.LauncherPath},
-		{Name: "deeper-launcher.exe", Path: first.WindowsRootEntries.LauncherPath},
-		{Name: "deeper-cli.exe", Path: first.WindowsRootEntries.CLIEntryPath},
+		{Name: "Deepzora.exe", Path: first.WindowsRootEntries.LauncherPath},
+		{Name: "deepzora-launcher.exe", Path: first.WindowsRootEntries.LauncherPath},
+		{Name: "deepzora-cli.exe", Path: first.WindowsRootEntries.CLIEntryPath},
 	}
-	first.RequiredRootNames = []string{"Deeper.exe", "deeper-launcher.exe", "deeper-cli.exe"}
+	first.RequiredRootNames = []string{"Deepzora.exe", "deepzora-launcher.exe", "deepzora-cli.exe"}
 	first.WindowsRootEntries = nil // Model the old writer's explicit entry list.
 	second := windowsEntryRequest(t, root, "v1.39.0", "new")
 	firstLocked, releaseFirst, secondAcquiring := make(chan struct{}), make(chan struct{}), make(chan struct{})
@@ -131,9 +131,9 @@ func TestConcurrentOldAndNewActivationPreservesCommittedLegacyEntry(t *testing.T
 	if err := <-secondDone; err != nil {
 		t.Fatal(err)
 	}
-	assertEntryBytes(t, root, "Deeper.exe", "new-gui")
-	assertEntryBytes(t, root, "deeper-launcher.exe", "new-gui")
-	assertEntryBytes(t, root, "deeper-cli.exe", "new-cli")
+	assertEntryBytes(t, root, "Deepzora.exe", "new-gui")
+	assertEntryBytes(t, root, "deepzora-launcher.exe", "new-gui")
+	assertEntryBytes(t, root, "deepzora-cli.exe", "new-cli")
 	ptr, err := ReadCurrent(root)
 	if err != nil || ptr.ActiveVersion != "v1.39.0" {
 		t.Fatalf("pointer=%+v err=%v", ptr, err)
@@ -144,7 +144,7 @@ func TestWindowsEntriesRollbackAllSelectedEntries(t *testing.T) {
 	for _, failure := range []string{"process", "pointer", "root"} {
 		t.Run(failure, func(t *testing.T) {
 			root := t.TempDir()
-			writeTempMember(t, root, "deeper-launcher.exe", "original")
+			writeTempMember(t, root, "deepzora-launcher.exe", "original")
 			if err := ActivateVersion(windowsEntryRequest(t, root, "v1.38.9", "old")); err != nil {
 				t.Fatal(err)
 			}
@@ -167,20 +167,20 @@ func TestWindowsEntriesRollbackAllSelectedEntries(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "root":
-				if err := os.Remove(filepath.Join(root, "deeper-cli.exe")); err != nil {
+				if err := os.Remove(filepath.Join(root, "deepzora-cli.exe")); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.Mkdir(filepath.Join(root, "deeper-cli.exe"), 0o755); err != nil {
+				if err := os.Mkdir(filepath.Join(root, "deepzora-cli.exe"), 0o755); err != nil {
 					t.Fatal(err)
 				}
 			}
 			if err := ActivateVersion(req); err == nil {
 				t.Fatal("activation should fail")
 			}
-			assertEntryBytes(t, root, "Deeper.exe", "old-gui")
-			assertEntryBytes(t, root, "deeper-launcher.exe", "old-gui")
+			assertEntryBytes(t, root, "Deepzora.exe", "old-gui")
+			assertEntryBytes(t, root, "deepzora-launcher.exe", "old-gui")
 			if failure != "root" {
-				assertEntryBytes(t, root, "deeper-cli.exe", "old-cli")
+				assertEntryBytes(t, root, "deepzora-cli.exe", "old-cli")
 			}
 			if failure != "pointer" {
 				ptr, err := ReadCurrent(root)
@@ -200,7 +200,7 @@ func TestWindowsEntriesRejectInvalidLegacyAndMixedInputs(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			root := t.TempDir()
 			req := windowsEntryRequest(t, root, "v1.39.0", "new")
-			legacy := filepath.Join(root, "deeper-launcher.exe")
+			legacy := filepath.Join(root, "deepzora-launcher.exe")
 			switch kind {
 			case "directory":
 				if err := os.Mkdir(legacy, 0o755); err != nil {
@@ -219,7 +219,7 @@ func TestWindowsEntriesRejectInvalidLegacyAndMixedInputs(t *testing.T) {
 			if HasCurrent(root) {
 				t.Fatal("invalid activation committed")
 			}
-			if _, err := os.Lstat(filepath.Join(root, "Deeper.exe")); !os.IsNotExist(err) {
+			if _, err := os.Lstat(filepath.Join(root, "Deepzora.exe")); !os.IsNotExist(err) {
 				t.Fatalf("published root entry: %v", err)
 			}
 		})

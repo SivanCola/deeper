@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestIndependentForkResumesPublicationWithSameOperationWithoutResettingChoices(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 // Exercise the complete foreground tool path with an explicitly selected Git

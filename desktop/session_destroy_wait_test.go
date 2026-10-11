@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/jobs"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
 )
 
 func TestWaitDestroyHandlesPrefersBoundedWait(t *testing.T) {

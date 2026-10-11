@@ -6,10 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func systemPromptFrom(messages []provider.Message) string {

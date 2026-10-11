@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestDAGConcurrentAppendersKeepBothHeads(t *testing.T) {

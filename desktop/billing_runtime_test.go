@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/control"
+	"deepzora/internal/billing"
+	"deepzora/internal/control"
 )
 
 type billingRuntimeController struct {

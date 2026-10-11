@@ -3,12 +3,12 @@ package control
 import (
 	"context"
 	"crypto/sha256"
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type ToolRecoverySnapshot struct {

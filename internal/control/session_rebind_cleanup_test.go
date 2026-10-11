@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func TestFailedSessionRebindReleasesPreviousWriter(t *testing.T) {

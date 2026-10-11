@@ -1,6 +1,6 @@
-# Deeper Extensions
+# Deepzora Extensions
 
-Extensions let a plugin package change what Deeper does at runtime —
+Extensions let a plugin package change what Deepzora does at runtime —
 rewrite input, intercept tool calls, replace the system prompt, contribute
 streaming model providers, publish structured UI, and ship prompts and
 themes — using a stable, versioned contract.
@@ -19,10 +19,10 @@ Two kinds of plugin capabilities exist:
 Extensions install exactly like any plugin package:
 
 ```bash
-deeper plugin install git:github.com/owner/extension --dry-run   # preview
-deeper plugin install git:github.com/owner/extension --yes       # install
-deeper plugin show <name>                                        # details
-deeper plugin doctor <name>                                      # validate
+deepzora plugin install git:github.com/owner/extension --dry-run   # preview
+deepzora plugin install git:github.com/owner/extension --yes       # install
+deepzora plugin show <name>                                        # details
+deepzora plugin doctor <name>                                      # validate
 ```
 
 For a plugin with a `runtime` block, the preview and `show` output include a
@@ -64,11 +64,11 @@ Changing an installed extension (install, update, enable/disable, or
 fail-atomic operation through every interactive frontend — CLI `/reload`,
 Desktop `/reload` (composer slash menu) or **Reload Runtime** (command palette),
 Serve `/reload`, and the ACP
-vendor method `_deeper.io/session/reloadExtensions`:
+vendor method `_deepzora.com/session/reloadExtensions`:
 
 1. If a turn or background work is running, CLI/Desktop/ACP queue exactly one
    reload; Serve rejects the request so the browser can retry once idle.
-2. When idle, Deeper starts new sidecars and builds a new runtime
+2. When idle, Deepzora starts new sidecars and builds a new runtime
    snapshot.
 3. On full success it swaps atomically, carrying over the session path,
    transcript, approval grants, and goal/recovery state.
@@ -83,7 +83,7 @@ leaves the provider prompt-cache prefix byte-identical.
 
 With no code runtime installed, the Agent takes the existing nil-dispatcher
 path: no sidecar process, JSON encoding, RPC, or event queue is involved.
-When runtimes are installed, Deeper initializes at most four sidecars at once
+When runtimes are installed, Deepzora initializes at most four sidecars at once
 inside one shared 30-second generation startup budget. A stalled optional
 runtime therefore cannot multiply boot or reload time by the number of installed
 packages. Packages that do not start inside that budget degrade or fail according
@@ -114,7 +114,7 @@ It keeps the manifest, Sidecar source, cross-platform build commands, linked
 installation, and first observable intercept in one directory. The normal
 development loop is:
 
-1. Add `apiVersion: "deeper.io/plugin/v2"` to `deeper-plugin.json` and
+1. Add `apiVersion: "deepzora.com/plugin/v2"` to `deepzora-plugin.json` and
    declare `contributes` and (optionally) `runtime` — see
    [Plugin Packages](./PLUGIN_PACKAGES.md#manifest-v2-extensions).
 2. Implement the Sidecar. The [Go SDK](../sdk/go/README.md) (standard library
@@ -123,9 +123,9 @@ development loop is:
    [generated method index](./EXTENSION_PROTOCOL.generated.md) are the
    language-neutral references.
 3. Build the runtime binary, preview its trust and capabilities with
-   `deeper plugin install /path/to/plugin --dry-run`, then install it with
+   `deepzora plugin install /path/to/plugin --dry-run`, then install it with
    `--link --yes`.
-4. Validate with `deeper plugin doctor <name>`, run `/reload` while idle,
+4. Validate with `deepzora plugin doctor <name>`, run `/reload` while idle,
    and exercise the contributed intercept, Provider, UI action, or resource.
 
 SDK releases use immutable `sdk/go/vX.Y.Z` tags. The first public version is
@@ -134,20 +134,20 @@ instead of relying on an unversioned module.
 
 ## Compatibility
 
-- Native `deeper-plugin.json` manifests must declare the exact
-  `deeper.io/plugin/v2` API version. There is no v1 dual-read or automatic
+- Native `deepzora-plugin.json` manifests must declare the exact
+  `deepzora.com/plugin/v2` API version. There is no v1 dual-read or automatic
   migration path because extension manifests were not publicly released on v1.
-- Older Deeper versions ignore extension-only state: the per-session
+- Older Deepzora versions ignore extension-only state: the per-session
   `<session>.extensions.json` sidecar file, `plugin/...` model refs (they
   simply resolve as unavailable models), and the `extension_surface` /
   `extension_status` event kinds (older frontends drop unknown kinds; ACP
-  clients without `deeper.extensionSurface` get text fallbacks).
+  clients without `deepzora.extensionSurface` get text fallbacks).
 - `plugin-packages.json` keeps its existing schema; an enabled installed
   runtime *is* the trust record.
 
 ## Security model
 
-A code extension runs outside the Deeper sandbox with the unfiltered
+A code extension runs outside the Deepzora sandbox with the unfiltered
 inherited environment. It can read the full session and environment, bypass
 permissions and workspace restrictions, and operate the machine directly;
 its `permission.decision` "allow" overrides a host deny. In return the host
@@ -160,5 +160,5 @@ enforces:
 - sidecar diagnostics, structured UI, interceptor reasons, and provider errors
   are credential-redacted by the host before they reach the UI, logs, or error
   surfaces; ordinary provider/model content is preserved as product data;
-- a crashed sidecar fails its own operations explicitly — Deeper never
+- a crashed sidecar fails its own operations explicitly — Deepzora never
   silently falls back to another model or strategy.

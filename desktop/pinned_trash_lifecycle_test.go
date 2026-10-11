@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 func TestPinnedContextSidecarMovesThroughTrashAndRestore(t *testing.T) {

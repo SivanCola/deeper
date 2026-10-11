@@ -2,8 +2,8 @@ package session
 
 import (
 	"context"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
 	"encoding/json"
 	"errors"
 )

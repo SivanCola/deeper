@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 )
 
 // Recovery copies are durable safety artifacts, not ordinary conversations.

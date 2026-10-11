@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 )
 
 const (

@@ -9,12 +9,12 @@ function Assert-Throws([scriptblock]$action, [string]$message) {
   Assert-True $caught $message
 }
 
-$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('deeper-upgrade-contract-' + [guid]::NewGuid().ToString('N'))
+$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('deepzora-upgrade-contract-' + [guid]::NewGuid().ToString('N'))
 $savedHome = $HOME
 try {
   $release = Join-Path $testRoot 'install/releases/test/app/resources'
   New-Item -ItemType Directory -Path $release -Force | Out-Null
-  $application = Join-Path $testRoot 'install/Deeper.exe'
+  $application = Join-Path $testRoot 'install/Deepzora.exe'
   $builder = Join-Path $testRoot 'fixture.exe'
   Set-Content -LiteralPath $application -Value 'mock launcher'
   Set-Content -LiteralPath $builder -Value 'mock builder'
@@ -81,7 +81,7 @@ try {
   $marker = 'assistant-only marker'
   $script:clicked = 0
   function Invoke-UpgradeUIButton($element) { $script:clicked++ }
-  $pending = New-UIElement 'Import and open' 'deeper-prepare-restored-session'
+  $pending = New-UIElement 'Import and open' 'deepzora-prepare-restored-session'
   $pendingRoot = New-UIElement '' '' $false @($pending)
   $pending.Current.IsOffscreen = $true
   Assert-True (-not (Invoke-PendingHistoricalSession $pendingRoot)) 'Hidden preparation actions must not be clicked.'
@@ -89,7 +89,7 @@ try {
   Assert-True (Invoke-PendingHistoricalSession $pendingRoot) 'Explicit preparation must invoke the actual pending-session action.'
   Assert-True ($script:clicked -eq 1) 'Invoke only the visible action.'
   $body = New-UIElement $marker
-  $transcript = New-UIElement '' 'deeper-chat-transcript-upgrade-tab' $false @($body)
+  $transcript = New-UIElement '' 'deepzora-chat-transcript-upgrade-tab' $false @($body)
   $sidebar = New-UIElement $marker 'sidebar-topic'
   $root = New-UIElement '' '' $false @($sidebar)
   Assert-True (-not (Test-VisibleUpgradeHistory $root $marker)) 'A matching sidebar title must not pass.'
@@ -105,7 +105,7 @@ try {
   $transcript.Children = @($body, $failure)
   Assert-True (-not (Test-VisibleUpgradeHistory $root $marker)) 'Visible history with an obsolete failure notice must not pass.'
   $transcript.Children = @($body)
-  $recovery = New-UIElement 'Loading history' 'deeper-session-recovery-test'
+  $recovery = New-UIElement 'Loading history' 'deepzora-session-recovery-test'
   $root.Children = @($sidebar, $transcript, $recovery)
   Assert-True (-not (Test-VisibleUpgradeHistory $root $marker)) 'History behind an unresolved recovery banner must not pass.'
   $recovery.Current.IsOffscreen = $true

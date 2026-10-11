@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 // newIdentityBusyServe wires an exclusive-session serve whose replacement

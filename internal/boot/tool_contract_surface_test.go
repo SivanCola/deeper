@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestBootToolContractMatchesProviderVisibleSurface(t *testing.T) {
@@ -21,7 +21,7 @@ func TestBootToolContractMatchesProviderVisibleSurface(t *testing.T) {
 			isolateConfigHome(t)
 			dir := robustTempDir(t)
 			t.Chdir(dir)
-			writeFile(t, dir, "deeper.toml", `
+			writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

@@ -13,7 +13,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func gbkBytes(t *testing.T, s string) []byte {

@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestAssistantMarkdownHasIdentityAndIndentedBody(t *testing.T) {
@@ -24,8 +24,8 @@ func TestAssistantMarkdownHasIdentityAndIndentedBody(t *testing.T) {
 	if len(lines) < 4 {
 		t.Fatalf("assistant block should contain a header, gap, and wrapped body:\n%s", rendered)
 	}
-	if lines[0] != "  ◆ Deeper" {
-		t.Fatalf("assistant header = %q, want %q", lines[0], "  ◆ Deeper")
+	if lines[0] != "  ◆ Deepzora" {
+		t.Fatalf("assistant header = %q, want %q", lines[0], "  ◆ Deepzora")
 	}
 	if lines[1] != "" {
 		t.Fatalf("assistant header/body separator = %q, want blank row", lines[1])
@@ -56,7 +56,7 @@ func TestReplaySectionsKeepAssistantIdentity(t *testing.T) {
 	if plain := ansi.Strip(strings.Join(sections, "")); strings.Contains(plain, "private pinned body") {
 		t.Fatalf("replay exposed a pinned revision: %q", plain)
 	}
-	if plain := ansi.Strip(sections[1]); !strings.HasPrefix(plain, "  ◆ Deeper\n\n  Version 1.2.3") {
+	if plain := ansi.Strip(sections[1]); !strings.HasPrefix(plain, "  ◆ Deepzora\n\n  Version 1.2.3") {
 		t.Fatalf("replayed assistant answer lost its identity: %q", plain)
 	}
 }

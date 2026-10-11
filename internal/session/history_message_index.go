@@ -7,10 +7,10 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/attachment"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/agent"
+	"deepzora/internal/attachment"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
 )
 
 func indexOneMessage(ctx context.Context, content *sessioncontent.Store, state *historyBuildState, message provider.Message, sequence uint64, upsert bool) error {

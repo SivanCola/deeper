@@ -6,7 +6,7 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 )
 
 // NormalizeBashSafeRedirectsForMatch returns a copy of subject with redirect

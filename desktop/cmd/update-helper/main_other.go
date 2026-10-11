@@ -8,6 +8,6 @@ import (
 )
 
 func main() {
-	fmt.Fprintln(os.Stderr, "deeper-update-helper is only used by Windows and Linux desktop builds")
+	fmt.Fprintln(os.Stderr, "deepzora-update-helper is only used by Windows and Linux desktop builds")
 	os.Exit(2)
 }

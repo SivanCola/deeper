@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 // DesktopWindowState captures the window geometry to restore across launches.

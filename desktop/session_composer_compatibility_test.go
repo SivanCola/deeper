@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"deeper/desktop/internal/sessionui"
-	"deeper/internal/provider"
+	"deepzora/desktop/internal/sessionui"
+	"deepzora/internal/provider"
 )
 
 func TestComposerReupgradeDetectsHistoryWithoutSubmissionReceipts(t *testing.T) {

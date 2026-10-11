@@ -4,17 +4,17 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/hook"
+	"deepzora/internal/hook"
 )
 
 func TestHookRuntimeIssueIsActionableAndScoped(t *testing.T) {
 	entry := hook.Entry{
 		Event:  hook.SessionStart,
 		Scope:  hook.ScopePlugin,
-		Source: `C:\Users\Test\AppData\Roaming\deeper\plugins\superpowers\.codex-plugin\plugin.json`,
+		Source: `C:\Users\Test\AppData\Roaming\deepzora\plugins\superpowers\.codex-plugin\plugin.json`,
 	}
 	issue, ok := hookRuntimeIssue(entry, errors.New("hook requires a POSIX shell on Windows, but no usable Git Bash was found"), func(string) string {
-		return "<deeper-home>/plugins/superpowers/.codex-plugin/plugin.json"
+		return "<deepzora-home>/plugins/superpowers/.codex-plugin/plugin.json"
 	})
 	if !ok {
 		t.Fatal("missing runtime dependency should produce a diagnostic issue")
@@ -25,7 +25,7 @@ func TestHookRuntimeIssueIsActionableAndScoped(t *testing.T) {
 	if issue.Name != string(hook.SessionStart) || issue.SettingsTab != "hooks" {
 		t.Fatalf("issue scope = %+v", issue)
 	}
-	if issue.Source != "<deeper-home>/plugins/superpowers/.codex-plugin/plugin.json" {
+	if issue.Source != "<deepzora-home>/plugins/superpowers/.codex-plugin/plugin.json" {
 		t.Fatalf("issue source = %q", issue.Source)
 	}
 	if issue.Remediation == "" {

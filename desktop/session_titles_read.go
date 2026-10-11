@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // loadSessionTitles reads the basename→title map (missing/corrupt → empty).

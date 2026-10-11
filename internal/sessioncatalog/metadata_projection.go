@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/historywork"
+	"deepzora/internal/historywork"
 )
 
 // Registry input is already a complete caller-owned observation. Applying it

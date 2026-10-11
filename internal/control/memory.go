@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/memory"
+	"deepzora/internal/event"
+	"deepzora/internal/memory"
 )
 
 // memoryManager owns the session's loaded memory snapshot, the queue of pending
@@ -166,7 +166,7 @@ func (m *memoryManager) applyBackgroundWrite(mem *memory.Set) {
 }
 
 // quickAdd appends a one-line note to the doc-memory file for scope (project
-// DEEPER.md by default) — the write side of "#<note>". Returns the file written.
+// DEEPZORA.md by default) — the write side of "#<note>". Returns the file written.
 func (m *memoryManager) quickAdd(scope memory.Scope, note string) (string, error) {
 	m.writeMu.Lock()
 	defer m.writeMu.Unlock()

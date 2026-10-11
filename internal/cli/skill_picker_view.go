@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/i18n"
-	"deeper/internal/skill"
+	"deepzora/internal/i18n"
+	"deepzora/internal/skill"
 )
 
 const (

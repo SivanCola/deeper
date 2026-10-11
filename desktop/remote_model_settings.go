@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 type remoteModelSettingsStatus struct {

@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/ablation"
-	"deeper/internal/shellparse"
+	"deepzora/internal/ablation"
+	"deepzora/internal/shellparse"
 )
 
 type diffOpts struct {
@@ -39,7 +39,7 @@ type pinResult struct {
 func runDiff(o diffOpts) string {
 	srcFiles := changedGoFiles(o.repo, o.base, false)
 	if len(srcFiles) == 0 {
-		return "## 🤖 Deeper e2e — diff test-gen\n\nNo Go source changes in this PR (excluding `_test.go`); nothing to generate tests for.\n"
+		return "## 🤖 Deepzora e2e — diff test-gen\n\nNo Go source changes in this PR (excluding `_test.go`); nothing to generate tests for.\n"
 	}
 	pkgs := packagesOf(srcFiles)
 	prompt := buildDiffPrompt(srcFiles, pkgs, truncate(gitOut(o.repo, "diff", o.base+"...HEAD", "--")))
@@ -150,7 +150,7 @@ func ratio(n, d int) float64 {
 // attempt's generated tests but keeping the provider config the workflow wrote.
 func resetTree(repo string) {
 	_ = exec.Command("git", "-C", repo, "checkout", "--", ".").Run()
-	_ = exec.Command("git", "-C", repo, "clean", "-fd", "-e", "deeper.toml").Run()
+	_ = exec.Command("git", "-C", repo, "clean", "-fd", "-e", "deepzora.toml").Run()
 }
 
 func goBuildAll(repo string) (bool, string) {
@@ -205,7 +205,7 @@ func renderDiff(r diffReport) string {
 	if r.passed {
 		result = "✅ pass"
 	}
-	fmt.Fprint(&b, "## 🤖 Deeper e2e — diff test-gen\n\n")
+	fmt.Fprint(&b, "## 🤖 Deepzora e2e — diff test-gen\n\n")
 	fmt.Fprintf(&b, "**Result:** %s · **%d** changed source file(s) across **%d** package(s)\n\n", result, len(r.srcFiles), len(r.pkgs))
 
 	pinned, byAssert := countPins(r.pins), countAssertionPins(r.pins)
@@ -412,11 +412,11 @@ func parseCoverProfile(repo, path string) map[string][]coverBlock {
 	return out
 }
 
-// repoRelFromModulePath turns "deeper/internal/agent/foo.go" into
+// repoRelFromModulePath turns "deepzora/internal/agent/foo.go" into
 // "internal/agent/foo.go" by dropping the first path element (the module root).
 func repoRelFromModulePath(p string) string {
 	// Strip the full module prefix; a generic first-segment cut mis-strips a multi-segment module path.
-	prefix := "deeper/"
+	prefix := "deepzora/"
 	if strings.HasPrefix(p, prefix) {
 		return p[len(prefix):]
 	}

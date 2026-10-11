@@ -6,13 +6,13 @@ package main
 #cgo LDFLAGS: -framework Foundation
 #include <stdlib.h>
 
-int deeper_repair_alias(const char *alias_path, const char *current_app_path,
+int deepzora_repair_alias(const char *alias_path, const char *current_app_path,
                           int allow_broken, char **error_message);
-int deeper_write_alias(const char *target_path, const char *alias_path,
+int deepzora_write_alias(const char *target_path, const char *alias_path,
                          char **error_message);
-int deeper_resolve_alias(const char *alias_path, char **target_path,
+int deepzora_resolve_alias(const char *alias_path, char **target_path,
                            char **error_message);
-int deeper_is_deeper_bundle_url_string(const char *url_string,
+int deepzora_is_deepzora_bundle_url_string(const char *url_string,
                                            char **error_message);
 */
 import "C"
@@ -53,7 +53,7 @@ func repairMacDesktopAliases(desktopDir, currentApp string) error {
 			continue
 		}
 		path := filepath.Join(desktopDir, entry.Name())
-		allowBroken := deeperExactAliasName(entry.Name())
+		allowBroken := deepzoraExactAliasName(entry.Name())
 		repaired, err := repairMacAlias(path, currentApp, allowBroken)
 		if err != nil {
 			repairErr = errors.Join(repairErr, fmt.Errorf("%s: %w", entry.Name(), err))
@@ -64,9 +64,9 @@ func repairMacDesktopAliases(desktopDir, currentApp string) error {
 	return repairErr
 }
 
-func deeperExactAliasName(name string) bool {
+func deepzoraExactAliasName(name string) bool {
 	name = strings.TrimSpace(name)
-	return strings.EqualFold(name, "Deeper") || strings.EqualFold(name, "Deeper.app")
+	return strings.EqualFold(name, "Deepzora") || strings.EqualFold(name, "Deepzora.app")
 }
 
 func repairMacAlias(aliasPath, currentApp string, allowBroken bool) (bool, error) {
@@ -79,7 +79,7 @@ func repairMacAlias(aliasPath, currentApp string, allowBroken bool) (bool, error
 	if allowBroken {
 		allow = 1
 	}
-	result := C.deeper_repair_alias(aliasCString, appCString, allow, &nativeErr)
+	result := C.deepzora_repair_alias(aliasCString, appCString, allow, &nativeErr)
 	if nativeErr != nil {
 		defer C.free(unsafe.Pointer(nativeErr))
 	}
@@ -98,7 +98,7 @@ func writeMacAlias(targetPath, aliasPath string) error {
 	defer C.free(unsafe.Pointer(targetCString))
 	defer C.free(unsafe.Pointer(aliasCString))
 	var nativeErr *C.char
-	result := C.deeper_write_alias(targetCString, aliasCString, &nativeErr)
+	result := C.deepzora_write_alias(targetCString, aliasCString, &nativeErr)
 	if nativeErr != nil {
 		defer C.free(unsafe.Pointer(nativeErr))
 	}
@@ -115,7 +115,7 @@ func resolveMacAlias(aliasPath string) (string, error) {
 	aliasCString := C.CString(aliasPath)
 	defer C.free(unsafe.Pointer(aliasCString))
 	var target, nativeErr *C.char
-	result := C.deeper_resolve_alias(aliasCString, &target, &nativeErr)
+	result := C.deepzora_resolve_alias(aliasCString, &target, &nativeErr)
 	if target != nil {
 		defer C.free(unsafe.Pointer(target))
 	}
@@ -131,11 +131,11 @@ func resolveMacAlias(aliasPath string) (string, error) {
 	return C.GoString(target), nil
 }
 
-func macURLReferencesDeeperBundle(rawURL string) (bool, error) {
+func macURLReferencesDeepzoraBundle(rawURL string) (bool, error) {
 	urlCString := C.CString(rawURL)
 	defer C.free(unsafe.Pointer(urlCString))
 	var nativeErr *C.char
-	result := C.deeper_is_deeper_bundle_url_string(urlCString, &nativeErr)
+	result := C.deepzora_is_deepzora_bundle_url_string(urlCString, &nativeErr)
 	if nativeErr != nil {
 		defer C.free(unsafe.Pointer(nativeErr))
 	}

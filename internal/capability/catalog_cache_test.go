@@ -4,15 +4,15 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 func boolPtr(b bool) *bool { return &b }
 
 func TestLoadCachedToolsForSpecsHonorsSchemaCacheKey(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	fresh := plugin.Spec{Name: "gh", Type: "stdio", Command: "gh-mcp"}
 	if err := plugin.SaveCachedSchema("gh", plugin.CachedSchema{
 		CacheKey: plugin.SchemaCacheKey(fresh),

@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/gitcmd"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/gitcmd"
 )
 
 // The changes panel reads a tab through the identity its session resolved when

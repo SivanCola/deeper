@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestPublicDeleteArchivesLegacyWithoutMovingOriginal(t *testing.T) {

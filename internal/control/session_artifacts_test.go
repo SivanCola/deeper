@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/guardian"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/guardian"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // /clear must not leave the event log behind: it is the authoritative

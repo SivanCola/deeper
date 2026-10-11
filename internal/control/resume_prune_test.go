@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func coldResumeFixture(t *testing.T, threshold time.Duration) (*agent.Session, string, *Controller) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"deeper/internal/boot"
+	"deepzora/internal/boot"
 )
 
 func doctorRuntimeCommand(args []string) int {

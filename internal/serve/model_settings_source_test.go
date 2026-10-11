@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 // The injected build is the deterministic interleaving boundary: a second save

@@ -1,8 +1,8 @@
 package serve
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 	"encoding/json"
 	"net/http"
 )

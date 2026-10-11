@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/taskmonitor"
+	"deepzora/internal/taskmonitor"
 )
 
 func TestFilterTasksBySession(t *testing.T) {

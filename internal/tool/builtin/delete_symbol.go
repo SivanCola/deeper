@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/diff"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/diff"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(deleteSymbol{}) }

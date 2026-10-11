@@ -3,8 +3,8 @@ package boot
 import (
 	"testing"
 
-	"deeper/internal/ablation"
-	"deeper/internal/config"
+	"deepzora/internal/ablation"
+	"deepzora/internal/config"
 )
 
 func TestPlannerOffHasHighestPrecedence(t *testing.T) {

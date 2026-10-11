@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioncatalog"
 )
 
 type desktopSessionTitleProvider struct {

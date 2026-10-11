@@ -10,12 +10,12 @@ import (
 func TestManifestV2RequiresProvides(t *testing.T) {
 	root := t.TempDir()
 	writeV2Plugin(t, root, `{
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "deps",
   "version": "2.0.0",
   "requires": [
     {
-      "namespace": "deeper",
+      "namespace": "deepzora",
       "kind": "provider",
       "id": "deepseek/v4",
       "versionRange": ">=1.0.0",
@@ -47,7 +47,7 @@ func TestManifestV2RequiresProvides(t *testing.T) {
 func TestManifestV2ProviderRequiresSchemaHash(t *testing.T) {
 	root := t.TempDir()
 	writeV2Plugin(t, root, `{
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "bad",
   "provides": [
     {"namespace": "plugin/bad", "kind": "provider", "id": "x", "version": "1.0.0"}
@@ -62,7 +62,7 @@ func TestManifestV2ProviderRequiresSchemaHash(t *testing.T) {
 func TestManifestV2LoadsOnlyExplicitlyDeclaredResources(t *testing.T) {
 	root := t.TempDir()
 	writeV2Plugin(t, root, `{
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "explicit-only",
   "contributes": {
     "skills": ["skills"],
@@ -137,7 +137,7 @@ func TestMigrateLegacyManifestToV2(t *testing.T) {
 }
 
 func TestMigrateProvidersRequiresExplicitProvides(t *testing.T) {
-	pkg := Package{ManifestKind: "deeper", Manifest: Manifest{
+	pkg := Package{ManifestKind: "deepzora", Manifest: Manifest{
 		Name: "p", Version: "1.0.0",
 		Runtime: &RuntimeSpec{Command: "./x", Capabilities: []string{"providers"}},
 	}}
@@ -149,14 +149,14 @@ func TestMigrateProvidersRequiresExplicitProvides(t *testing.T) {
 func TestMigrateRejectsVersionedManifest(t *testing.T) {
 	root := t.TempDir()
 	writeV2Plugin(t, root, `{
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "already-v2"
 }`)
-	if _, _, err := ParseNativeForMigrate(root); err == nil || !strings.Contains(err.Error(), "already uses deeper.io/plugin/v2") {
+	if _, _, err := ParseNativeForMigrate(root); err == nil || !strings.Contains(err.Error(), "already uses deepzora.com/plugin/v2") {
 		t.Fatalf("ParseNativeForMigrate v2 = %v, want already-v2 rejection", err)
 	}
 
-	pkg := Package{ManifestKind: "deeper", Manifest: Manifest{
+	pkg := Package{ManifestKind: "deepzora", Manifest: Manifest{
 		APIVersion: ManifestAPIVersionV2,
 		Name:       "already-v2",
 	}}

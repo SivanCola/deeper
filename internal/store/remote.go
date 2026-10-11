@@ -9,18 +9,18 @@ import (
 
 // Remote-SSH module naming: the canonical file names for the state a
 // bootstrapped remote serve leaves under the remote host's
-// ~/.deeper/remote/. Only name derivation lives here (this package is the
+// ~/.deepzora/remote/. Only name derivation lives here (this package is the
 // path authority and does no I/O); reads and writes happen over SFTP in
 // internal/remote. Local-side absolute paths (managed known_hosts) are
-// derived in internal/config/paths.go, which owns DEEPER_HOME resolution.
+// derived in internal/config/paths.go, which owns DEEPZORA_HOME resolution.
 
-// RemoteDirName is the directory under the remote ~/.deeper that holds all
-// remote-module state, and under the local Deeper home that holds the
+// RemoteDirName is the directory under the remote ~/.deepzora that holds all
+// remote-module state, and under the local Deepzora home that holds the
 // managed known_hosts file.
 const RemoteDirName = "remote"
 
-// RemoteBinDirName holds an uploaded deeper binary on the remote host:
-// ~/.deeper/remote/bin/deeper.
+// RemoteBinDirName holds an uploaded deepzora binary on the remote host:
+// ~/.deepzora/remote/bin/deepzora.
 const RemoteBinDirName = "bin"
 
 // RemoteWorkspaceSlug flattens a remote (POSIX) workspace path into a

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
 )
 
 const missingReasoningToolSSE = `data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}

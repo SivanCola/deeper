@@ -3,7 +3,7 @@ package recovery
 import (
 	"testing"
 
-	"deeper/internal/extension"
+	"deepzora/internal/extension"
 )
 
 func TestAssessRuntimeResumeIrreversible(t *testing.T) {

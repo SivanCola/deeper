@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/history"
-	"deeper/internal/historycatalog"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/history"
+	"deepzora/internal/historycatalog"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestLegacyHistorySearchSnapshotSurvivesUnrelatedIndexWrites(t *testing.T) {

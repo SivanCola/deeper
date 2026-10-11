@@ -3,7 +3,7 @@ package openai
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // A third-party endpoint can serve a DeepSeek model under its own effort scale.

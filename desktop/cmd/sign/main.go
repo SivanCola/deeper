@@ -34,27 +34,27 @@ import (
 
 	"aead.dev/minisign"
 
-	"deeper/desktop/internal/update"
-	"deeper/internal/installlayout"
+	"deepzora/desktop/internal/update"
+	"deepzora/internal/installlayout"
 )
 
 var websiteDownloads = map[string]struct{}{
-	"Deeper-darwin-arm64.dmg":     {},
-	"Deeper-darwin-amd64.dmg":     {},
-	"Deeper-darwin-universal.dmg": {},
-	"Deeper-windows-amd64.zip":    {},
+	"Deepzora-darwin-arm64.dmg":     {},
+	"Deepzora-darwin-amd64.dmg":     {},
+	"Deepzora-darwin-universal.dmg": {},
+	"Deepzora-windows-amd64.zip":    {},
 }
 
 var updaterArtifacts = map[string]struct {
 	key  string
 	kind string
 }{
-	"Deeper-darwin-arm64.zip":            {key: "darwin-arm64", kind: artifactPortable},
-	"Deeper-darwin-amd64.zip":            {key: "darwin-amd64", kind: artifactPortable},
-	"Deeper-windows-amd64-installer.exe": {key: "windows-amd64", kind: artifactPortable},
-	"Deeper-windows-arm64-installer.exe": {key: "windows-arm64", kind: artifactPortable},
-	"Deeper-linux-amd64.tar.gz":          {key: "linux-amd64", kind: artifactPortable},
-	"Deeper-linux-amd64.deb":             {key: "linux-amd64", kind: artifactNative},
+	"Deepzora-darwin-arm64.zip":            {key: "darwin-arm64", kind: artifactPortable},
+	"Deepzora-darwin-amd64.zip":            {key: "darwin-amd64", kind: artifactPortable},
+	"Deepzora-windows-amd64-installer.exe": {key: "windows-amd64", kind: artifactPortable},
+	"Deepzora-windows-arm64-installer.exe": {key: "windows-arm64", kind: artifactPortable},
+	"Deepzora-linux-amd64.tar.gz":          {key: "linux-amd64", kind: artifactPortable},
+	"Deepzora-linux-amd64.deb":             {key: "linux-amd64", kind: artifactNative},
 }
 
 func main() {
@@ -199,9 +199,9 @@ func verifyFile(path string) error {
 }
 
 // genKey generates a fresh minisign key pair, writing the encrypted private key
-// (deeper.key) and the public key (deeper.pub) into dir. The password comes
+// (deepzora.key) and the public key (deepzora.pub) into dir. The password comes
 // from $MINISIGN_PASSWORD. The public key is printed — it's safe to publish; embed
-// it in internal/update/deeper.pub. The private key never leaves dir.
+// it in internal/update/deepzora.pub. The private key never leaves dir.
 func genKey(dir string) error {
 	pw := os.Getenv("MINISIGN_PASSWORD")
 	if strings.TrimSpace(pw) == "" {
@@ -218,8 +218,8 @@ func genKey(dir string) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	keyPath := filepath.Join(dir, "deeper.key")
-	pubPath := filepath.Join(dir, "deeper.pub")
+	keyPath := filepath.Join(dir, "deepzora.key")
+	pubPath := filepath.Join(dir, "deepzora.pub")
 	if err := os.WriteFile(keyPath, enc, 0o600); err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func genKey(dir string) error {
 	}
 	fmt.Printf("private key -> %s (keep secret; this is the MINISIGN_PRIVATE_KEY value)\n", keyPath)
 	fmt.Printf("public key  -> %s\n\n", pubPath)
-	fmt.Printf("public key (save to internal/update/deeper.pub, key ID %016X):\n%s\n", pub.ID(), pubText)
+	fmt.Printf("public key (save to internal/update/deepzora.pub, key ID %016X):\n%s\n", pub.ID(), pubText)
 	return nil
 }
 
@@ -256,7 +256,7 @@ func signFiles(files []string) error {
 			return err
 		}
 		sig := minisign.SignWithComments(priv, data,
-			"file:"+filepath.Base(f), "Deeper desktop release")
+			"file:"+filepath.Base(f), "Deepzora desktop release")
 		if key := os.Getenv("MINISIGN_PUBLIC_KEY"); key != "" {
 			if err := update.VerifyWithKey(key, data, sig); err != nil {
 				return fmt.Errorf("sign: configured public key does not match the signing key: %w", err)
@@ -281,7 +281,7 @@ func signFiles(files []string) error {
 func genManifest(dir, version, tag string, notesVersions ...string) error {
 	repo := os.Getenv("GITHUB_REPOSITORY")
 	if repo == "" {
-		repo = "SivanCola/deeper"
+		repo = "SivanCola/deepzora"
 	}
 	notesVersion := version
 	if len(notesVersions) > 1 {
@@ -292,8 +292,8 @@ func genManifest(dir, version, tag string, notesVersions ...string) error {
 	}
 	m := update.Manifest{
 		Version:         version,
-		DownloadPage:    "https://github.com/SivanCola/deeper/releases",
-		ReleaseNotesURL: "https://github.com/SivanCola/deeper/releases/tag/" + notesVersion + "/",
+		DownloadPage:    "https://github.com/SivanCola/deepzora/releases",
+		ReleaseNotesURL: "https://github.com/SivanCola/deepzora/releases/tag/" + notesVersion + "/",
 		Platforms:       map[string]update.Asset{},
 		NativePackages:  map[string]update.Asset{},
 		Downloads:       map[string]update.Asset{},

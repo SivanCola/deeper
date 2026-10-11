@@ -1,6 +1,6 @@
-# Contributing to Deeper
+# Contributing to Deepzora
 
-Thank you for your interest in contributing to Deeper! This guide covers
+Thank you for your interest in contributing to Deepzora! This guide covers
 everything you need to get started.
 
 ## Prerequisites
@@ -13,9 +13,9 @@ everything you need to get started.
 ## Getting started
 
 ```bash
-git clone https://github.com/SivanCola/deeper.git
-cd deeper
-go build ./cmd/deeper    # builds the CLI binary
+git clone https://github.com/SivanCola/deepzora.git
+cd deepzora
+go build ./cmd/deepzora    # builds the CLI binary
 go test ./...              # runs the full test suite
 ```
 
@@ -23,7 +23,7 @@ go test ./...              # runs the full test suite
 
 | Directory | Purpose |
 |-----------|---------|
-| `cmd/deeper` | CLI entry point |
+| `cmd/deepzora` | CLI entry point |
 | `internal/agent` | Agent loop, session, coordinator |
 | `internal/cli` | TUI, subcommands, setup wizard |
 | `internal/control` | Transport-agnostic controller |
@@ -34,7 +34,7 @@ go test ./...              # runs the full test suite
 | `internal/plugin` | MCP client (stdio + HTTP) |
 | `internal/event` | Typed event stream |
 | `internal/hook` | Shell hooks (PreToolUse, …) |
-| `internal/memory` | DEEPER.md hierarchy + auto-memory |
+| `internal/memory` | DEEPZORA.md hierarchy + auto-memory |
 | `internal/skill` | Skill discovery from Markdown |
 | `internal/sandbox` | OS-level sandboxing |
 | `internal/serve` | HTTP/SSE server frontend |
@@ -67,16 +67,16 @@ make cross          # cross-compile for all 6 targets
 ### Isolated development environment
 
 A source-built binary shares no on-disk state with a stable release when launched
-with `DEEPER_HOME` set. This gives each build its own self-contained directory
+with `DEEPZORA_HOME` set. This gives each build its own self-contained directory
 tree — config, credentials, sessions, cache, skills, commands, hooks, and
 desktop tab state — so the two builds never interfere:
 
 **CLI**
 
 ```bash
-DEEPER_HOME=/tmp/deeper-dev go run ./cmd/deeper
+DEEPZORA_HOME=/tmp/deepzora-dev go run ./cmd/deepzora
 # or after building:
-#   DEEPER_HOME=/tmp/deeper-dev ./bin/deeper
+#   DEEPZORA_HOME=/tmp/deepzora-dev ./bin/deepzora
 ```
 
 **Desktop**
@@ -85,18 +85,18 @@ DEEPER_HOME=/tmp/deeper-dev go run ./cmd/deeper
 scripts/desktop-build.sh darwin/arm64 v0.0.0-dev   # one platform per run
 ```
 
-On Windows, use `$env:DEEPER_HOME` in PowerShell or `set DEEPER_HOME=` in
+On Windows, use `$env:DEEPZORA_HOME` in PowerShell or `set DEEPZORA_HOME=` in
 Command Prompt; the binary extension is `.exe`.
 
 The directory is empty on first launch; the app behaves exactly like a fresh
 install. Every subsequent write — config saves, credential storage, session
-logs — stays under `DEEPER_HOME`. Legacy migration, OS-home convention
+logs — stays under `DEEPZORA_HOME`. Legacy migration, OS-home convention
 directory scanning, and all other fallback paths are skipped so no production
 data leaks in or out.
 
 ### Cache-first review gate
 
-Deeper treats high prompt-cache hit rate as product behavior. Changes that
+Deepzora treats high prompt-cache hit rate as product behavior. Changes that
 touch provider-visible system prompt construction, memory prefix, output styles,
 skill index behavior, default tool surfaces, tool schemas, provider request
 serialization, compaction, or MCP/tool registration need explicit cache review.
@@ -187,34 +187,9 @@ Use ordinary follow-up commits and fast-forward pushes. Amend or force-push only
 when explicitly authorized, after verifying the remote head. Keep unrelated
 changes out of the PR.
 
-Two CI guards read the PR body. The scripts are the source of truth and both
-run locally: `scripts/check-cache-impact.sh`, `scripts/check-docs-impact.sh`.
-Separators must be an ASCII `-` or `:` — an em dash fails the docs guard.
-
-Cache-sensitive diffs (`internal/tool/`, `internal/provider/`,
-`internal/boot/`, `internal/agent/agent.go`, and the rest of the list in the
-script) require:
-
-```
-Cache-impact: <none|low|medium|high> - <reason>
-Cache-guard: <focused guard test/command or existing guard rationale>
-```
-
-`none` is a legitimate impact when the provider-visible prefix stays
-byte-identical; only an empty value, `todo`, or `tbd` is rejected. If the diff
-also touches `internal/config/`, `internal/memory/`, `internal/outputstyle/`,
-`internal/skill/`, or `internal/boot/`, add `System-prompt-review: <note>` —
-that field additionally rejects `none` and `n/a`, so it must name the explicit
-prompt reviewer or approval.
-
-User-visible diffs (`cmd/deeper/`, `desktop/`, `npm/`, and most of
-`internal/`; tests and lockfiles are exempt) require one of these, chosen by
-whether the same PR edited `docs/*.md`:
-
-```
-Documentation-impact: updated - <what changed>            # docs/*.md edited
-Documentation-impact: none - <why the docs stay correct>  # not edited
-```
+Describe user-visible behavior, documentation changes, and any provider-visible
+cache or prompt impact in ordinary prose. Include focused verification for the
+changed contracts. PR body formatting is not an automated merge gate.
 
 ## Adding a new built-in tool
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func TestBashHereDocIssue5624CommandsReturnPromptly(t *testing.T) {

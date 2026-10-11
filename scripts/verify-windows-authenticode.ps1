@@ -19,12 +19,12 @@ param(
 $ErrorActionPreference = "Stop"
 
 $expectedPayload = @(
-    "deeper-desktop.exe",
-    "deeper-guard.exe",
-    "deeper-launcher.exe",
-    "deeper-update-helper.exe",
-    "deeper-cli.exe",
-    "deeper-uninstall.exe"
+    "deepzora-desktop.exe",
+    "deepzora-guard.exe",
+    "deepzora-launcher.exe",
+    "deepzora-update-helper.exe",
+    "deepzora-cli.exe",
+    "deepzora-uninstall.exe"
 )
 
 function Assert-AuthenticodeSignature {
@@ -70,11 +70,11 @@ foreach ($name in $expectedPayload) {
         throw "Payload signing list does not cover $name"
     }
 }
-if ($signingFiles -notcontains "app/Deeper.exe") {
-    throw "Payload signing list does not cover the Electron shell app/Deeper.exe"
+if ($signingFiles -notcontains "app/Deepzora.exe") {
+    throw "Payload signing list does not cover the Electron shell app/Deepzora.exe"
 }
-if ($signingFiles -notcontains "app/resources/bin/deeper-cli-launcher.exe") {
-    throw "Payload signing list does not cover the CLI entry app/resources/bin/deeper-cli-launcher.exe"
+if ($signingFiles -notcontains "app/resources/bin/deepzora-cli-launcher.exe") {
+    throw "Payload signing list does not cover the CLI entry app/resources/bin/deepzora-cli-launcher.exe"
 }
 
 $payloadFiles = @(Get-ChildItem -LiteralPath $PayloadDirectory -File -Filter "*.exe")
@@ -86,7 +86,7 @@ foreach ($entry in $signingFiles) {
 }
 Assert-AuthenticodeSignature -Path $InstallerPath
 
-$extractRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("deeper-authenticode-" + [guid]::NewGuid().ToString("N"))
+$extractRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("deepzora-authenticode-" + [guid]::NewGuid().ToString("N"))
 try {
     Expand-Archive -LiteralPath $PortableArchivePath -DestinationPath $extractRoot
 
@@ -121,14 +121,14 @@ try {
     # Root/versioned executables mapped back to their payload source; every PE
     # file under the versioned app/ tree is verified from signing-files.txt.
     $portableSources = @(
-        [pscustomobject]@{ Portable = "Deeper.exe"; Payload = "deeper-launcher.exe" },
-        [pscustomobject]@{ Portable = "deeper-cli.exe"; Payload = "app/resources/bin/deeper-cli-launcher.exe" },
-        [pscustomobject]@{ Portable = (Join-Path $activeDir "deeper-desktop.exe"); Payload = "deeper-desktop.exe" },
-        [pscustomobject]@{ Portable = (Join-Path $activeDir "deeper-update-helper.exe"); Payload = "deeper-update-helper.exe" },
-        [pscustomobject]@{ Portable = (Join-Path $activeDir "deeper-cli.exe"); Payload = "deeper-cli.exe" }
+        [pscustomobject]@{ Portable = "Deepzora.exe"; Payload = "deepzora-launcher.exe" },
+        [pscustomobject]@{ Portable = "deepzora-cli.exe"; Payload = "app/resources/bin/deepzora-cli-launcher.exe" },
+        [pscustomobject]@{ Portable = (Join-Path $activeDir "deepzora-desktop.exe"); Payload = "deepzora-desktop.exe" },
+        [pscustomobject]@{ Portable = (Join-Path $activeDir "deepzora-update-helper.exe"); Payload = "deepzora-update-helper.exe" },
+        [pscustomobject]@{ Portable = (Join-Path $activeDir "deepzora-cli.exe"); Payload = "deepzora-cli.exe" }
     )
     if ($PortableLayout -eq "legacy-dual") {
-        $portableSources += [pscustomobject]@{ Portable = "deeper-launcher.exe"; Payload = "deeper-launcher.exe" }
+        $portableSources += [pscustomobject]@{ Portable = "deepzora-launcher.exe"; Payload = "deepzora-launcher.exe" }
     }
     foreach ($entry in ($signingFiles | Where-Object { $_ -like "app/*" })) {
         $portableSources += [pscustomobject]@{

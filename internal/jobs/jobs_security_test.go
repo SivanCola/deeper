@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/store"
+	"deepzora/internal/event"
+	"deepzora/internal/store"
 )
 
 // TestValidatePathSegment exhaustively covers the segment validator that guards

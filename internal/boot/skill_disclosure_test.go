@@ -7,16 +7,16 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestSkillDiscoveryAndEmbeddedReferencesThroughBoot(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 [agent]
 system_prompt = "BASE"
@@ -41,9 +41,9 @@ model = "x"
 		testutil.Turn{ToolCalls: []provider.ToolCall{{ID: "load", Name: "use_capability",
 			Arguments: `{"action":"call","capability_id":"skill:zzz-rare-diagnostic","arguments":{}}`}}},
 		testutil.Turn{ToolCalls: []provider.ToolCall{{ID: "guide", Name: "use_capability",
-			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deeper-guide"}}`}}},
+			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deepzora-guide"}}`}}},
 		testutil.Turn{ToolCalls: []provider.ToolCall{{ID: "page", Name: "use_capability",
-			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deeper-guide","reference":"references/hooks.md"}}`}}},
+			Arguments: `{"action":"call","capability_id":"tool:read_skill","arguments":{"name":"deepzora-guide","reference":"references/hooks.md"}}`}}},
 		testutil.Turn{Text: "done"},
 	)
 	setBootTokenProfileTestProvider(t, prov)

@@ -3,7 +3,7 @@ package plugin
 import (
 	"fmt"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 // wrapConfinedCommand applies the OS command sandbox for a confined MCP

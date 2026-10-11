@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 func TestBuildOfficialDeepSeekV4ProPrependsPersona(t *testing.T) {
@@ -54,7 +54,7 @@ func TestBuildThirdPartyDeepSeekV4ProDoesNotPrependPersona(t *testing.T) {
 	}
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "novita/deepseek-v4-pro"
 
 [agent]
@@ -90,7 +90,7 @@ func buildOfficialDeepSeekModel(t *testing.T, model string) *control.Controller 
 	}
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "deepseek/`+model+`"
 
 [agent]

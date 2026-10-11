@@ -55,7 +55,7 @@ export function MCPAppCard({
     let bridgeStarted = false;
     const bridge = new AppBridge(
       null,
-      { name: "deeper", version: "desktop" },
+      { name: "deepzora", version: "desktop" },
       { openLinks: {}, serverTools: {}, logging: {} },
     );
 

@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/sessioncatalog"
 )
 
 func sessionOrSessionsCommand(command string, args []string) int {
@@ -24,7 +24,7 @@ func sessionOrSessionsCommand(command string, args []string) int {
 
 func sessionsCommand(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper sessions <reindex|diagnose|cleanup> [--dir PATH] [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora sessions <reindex|diagnose|cleanup> [--dir PATH] [--json]")
 		return 2
 	}
 	switch args[0] {
@@ -34,7 +34,7 @@ func sessionsCommand(args []string) int {
 		return sessionsRecoveryCommand(args[1:], true)
 	case "reindex":
 	default:
-		fmt.Fprintln(os.Stderr, "usage: deeper sessions <reindex|diagnose|cleanup> [--dir PATH] [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora sessions <reindex|diagnose|cleanup> [--dir PATH] [--json]")
 		return 2
 	}
 	fs := flag.NewFlagSet("sessions reindex", flag.ContinueOnError)
@@ -45,7 +45,7 @@ func sessionsCommand(args []string) int {
 		return code
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper sessions reindex [--dir PATH] [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora sessions reindex [--dir PATH] [--json]")
 		return 2
 	}
 	if len(dirs) == 0 {
@@ -104,7 +104,7 @@ func sessionsRecoveryCommand(args []string, cleanup bool) int {
 		return code
 	}
 	if fs.NArg() != 0 || (!cleanup && *apply) {
-		fmt.Fprintf(os.Stderr, "usage: deeper %s [--dir PATH] [--json]", name)
+		fmt.Fprintf(os.Stderr, "usage: deepzora %s [--dir PATH] [--json]", name)
 		if cleanup {
 			fmt.Fprint(os.Stderr, " [--apply]")
 		}
@@ -292,7 +292,7 @@ func defaultSessionCatalogTargets() []sessioncatalog.DirectoryTarget {
 	type projectFile struct {
 		Projects []project `json:"projects"`
 	}
-	home := config.DeeperHomeDir()
+	home := config.DeepzoraHomeDir()
 	var saved projectFile
 	if data, err := os.ReadFile(filepath.Join(home, "desktop-projects.json")); err == nil {
 		_ = json.Unmarshal(data, &saved)

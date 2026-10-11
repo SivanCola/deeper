@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestRestoreCheckpointRepairsLegacyMissingRecordIdentities(t *testing.T) {

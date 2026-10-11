@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
-// TestRealOpenCodeGoDeepSeekAnthropicWebSearch exercises Deeper's complete
+// TestRealOpenCodeGoDeepSeekAnthropicWebSearch exercises Deepzora's complete
 // Messages serialization and server-side web search parser against the OpenCode
 // Go DeepSeek Flash route. The key stays process-local; ordinary CI never runs it.
 func TestRealOpenCodeGoDeepSeekAnthropicWebSearch(t *testing.T) {

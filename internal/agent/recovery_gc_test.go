@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // forkRecoveryBranch builds a real conflict-recovery branch: a diverged disk

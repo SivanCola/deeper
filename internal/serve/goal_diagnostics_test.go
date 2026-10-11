@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestGoalDiagnosticsHTTPExportsAuthoritativeSession(t *testing.T) {

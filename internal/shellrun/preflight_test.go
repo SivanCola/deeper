@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/internal/proc"
-	"deeper/internal/tool"
+	"deepzora/internal/proc"
+	"deepzora/internal/tool"
 )
 
 func TestRunForegroundExecutesRequestedCommandOnce(t *testing.T) {

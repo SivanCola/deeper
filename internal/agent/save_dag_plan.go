@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // dagWritePlan is the batch a save appends for one head: at most one fork or

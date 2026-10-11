@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 type RepairChange struct {
@@ -418,7 +418,7 @@ func validateRepairChange(change RepairChange) error {
 			return fmt.Errorf("repair transaction global target is invalid")
 		}
 	case change.Scope == "project":
-		if filepath.Base(target) != "deeper.toml" {
+		if filepath.Base(target) != "deepzora.toml" {
 			return fmt.Errorf("repair transaction project target is invalid")
 		}
 	case strings.HasPrefix(change.Scope, "derived:"):
@@ -447,7 +447,7 @@ func validateRepairChange(change RepairChange) error {
 		return fmt.Errorf("repair transaction prepared state is invalid")
 	}
 	previous := filepath.Clean(change.PreviousPath)
-	if filepath.Dir(previous) == filepath.Dir(target) && strings.HasPrefix(filepath.Base(previous), filepath.Base(target)+".deeper-") {
+	if filepath.Dir(previous) == filepath.Dir(target) && strings.HasPrefix(filepath.Base(previous), filepath.Base(target)+".deepzora-") {
 		return nil
 	}
 	if config.MemoryUserDir() == "" {
@@ -606,7 +606,7 @@ func UndoLastRepair() (*RepairTransaction, error) {
 			// Index suffix keeps redo names unique when one undo touches the
 			// same target twice (e.g. quarantine + snapshot restore): a shared
 			// name would silently overwrite the earlier redo copy.
-			redo = fmt.Sprintf("%s.deeper-redo-%s-%d", change.TargetPath, now.Format("20060102T150405.000000000Z"), i)
+			redo = fmt.Sprintf("%s.deepzora-redo-%s-%d", change.TargetPath, now.Format("20060102T150405.000000000Z"), i)
 			if err := renameRepairNodeNoReplace(change.TargetPath, redo); err != nil {
 				return nil, fmt.Errorf("undo repair: retain current file: %w", err)
 			}

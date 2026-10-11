@@ -1337,7 +1337,7 @@ const mockProviderPresetTemplates: MockProviderPresetTemplate[] = [
   mockPreset("stepfun-api", "StepFun API Pay-as-you-go", "StepFun pay-as-you-go OpenAI-compatible API with vision on step-3.7-flash.", "STEPFUN_API_KEY", mockProviderTemplate({ name: "stepfun-api", kind: "openai", baseUrl: "https://api.stepfun.com/v1", models: mockStepFunModels, visionModels: ["step-3.7-flash"], default: "step-3.7-flash", apiKeyEnv: "STEPFUN_API_KEY", supportedEfforts: ["low", "medium", "high"], defaultEffort: "medium" })),
   mockPreset("stepfun-api-anthropic", "StepFun API Anthropic Pay-as-you-go", "StepFun pay-as-you-go Anthropic-compatible Messages API with automatic prefix caching.", "STEPFUN_API_KEY", mockProviderTemplate({ name: "stepfun-api-anthropic", kind: "anthropic", baseUrl: "https://api.stepfun.com", models: mockStepFunModels, default: "step-3.7-flash", apiKeyEnv: "STEPFUN_API_KEY", thinking: "adaptive", supportedEfforts: ["low", "medium", "high"], defaultEffort: "medium" })),
   mockPreset("novita", "NovitaAI", "NovitaAI OpenAI-compatible multi-model gateway.", "NOVITA_API_KEY", mockProviderTemplate({ name: "novita", kind: "openai", baseUrl: "https://api.novita.ai/openai/v1", models: mockNovitaModels, default: "zai-org/glm-5.2", apiKeyEnv: "NOVITA_API_KEY" })),
-  mockPreset("gmi", "GMI Cloud", "GMI Cloud direct multi-model OpenAI-compatible gateway.", "GMI_API_KEY", mockProviderTemplate({ name: "gmi", kind: "openai", baseUrl: "https://api.gmi-serving.com/v1", models: mockGMIModels, default: "zai-org/GLM-5.2-FP8", apiKeyEnv: "GMI_API_KEY", headers: { "User-Agent": "Deeper" } })),
+  mockPreset("gmi", "GMI Cloud", "GMI Cloud direct multi-model OpenAI-compatible gateway.", "GMI_API_KEY", mockProviderTemplate({ name: "gmi", kind: "openai", baseUrl: "https://api.gmi-serving.com/v1", models: mockGMIModels, default: "zai-org/GLM-5.2-FP8", apiKeyEnv: "GMI_API_KEY", headers: { "User-Agent": "Deepzora" } })),
   mockPreset("vercel-ai-gateway", "Vercel AI Gateway", "Vercel AI Gateway via Anthropic-compatible Messages API.", "AI_GATEWAY_API_KEY", mockProviderTemplate({ name: "vercel-ai-gateway", kind: "anthropic", baseUrl: "https://ai-gateway.vercel.sh", models: mockVercelModels, visionModels: ["anthropic/claude-sonnet-4.6", "anthropic/claude-opus-4.8", "openai/gpt-5.4", "openai/gpt-5.4-pro", "moonshotai/kimi-k2.7-code"], default: "anthropic/claude-sonnet-4.6", apiKeyEnv: "AI_GATEWAY_API_KEY", authHeader: true, contextWindow: 1000000 })),
   mockPreset("huggingface", "HuggingFace Router", "HuggingFace Inference Router OpenAI-compatible endpoint.", "HF_TOKEN", mockProviderTemplate({ name: "huggingface", kind: "openai", baseUrl: "https://router.huggingface.co/v1", models: ["zai-org/GLM-5.2", "deepseek-ai/DeepSeek-V3.2", "Qwen/Qwen3.5-72B-Instruct"], default: "zai-org/GLM-5.2", apiKeyEnv: "HF_TOKEN" })),
   mockPreset("nvidia", "NVIDIA NIM", "NVIDIA NIM OpenAI-compatible accelerated inference endpoint.", "NVIDIA_API_KEY", mockProviderTemplate({ name: "nvidia", kind: "openai", baseUrl: "https://integrate.api.nvidia.com/v1", models: ["nvidia/nemotron-3-nano-30b-a3b", "nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3-ultra-550b-a55b", "deepseek-ai/deepseek-v4-pro", "qwen/qwen3.5-397b-a17b"], default: "nvidia/nemotron-3-nano-30b-a3b", apiKeyEnv: "NVIDIA_API_KEY" })),
@@ -1413,8 +1413,8 @@ function mockExternalOpenerIconDataURL(color: string, label: string): string {
 }
 function makeMockApp(): MockAppBindings {
   const credentialDiagnostics = (actions: string[] = []): CredentialDiagnosticReport => ({
-    home: "/mock/.deeper",
-    credentialPath: "/mock/.deeper/.env",
+    home: "/mock/.deepzora",
+    credentialPath: "/mock/.deepzora/.env",
     pendingTransactions: 0,
     checks: [],
     actions,
@@ -1452,9 +1452,9 @@ function makeMockApp(): MockAppBindings {
   // backend drain contract: only non-fresh tools auto-allow; plan/sandbox
   // escape prompts stay pending and visible.
   let pendingApprovalPreviewPrompt: { id: string; tool: string } | undefined;
-  const globalWorkspaceRoot = "~/Library/Application Support/deeper/global-workspace";
+  const globalWorkspaceRoot = "~/Library/Application Support/deepzora/global-workspace";
   let cwd = freshMock ? globalWorkspaceRoot : browserPlatformOverride() === "windows" ? "C:\\Projects\\joyquant-db" : "~/projects/joyquant-db"; // mutable so PickWorkspace is visible in dev
-  let workspaces = freshMock ? [] : ["~/projects/joyquant-db", "~/projects/joyquant-sys", "~/projects/deeper", "~/projects/blade"];
+  let workspaces = freshMock ? [] : ["~/projects/joyquant-db", "~/projects/joyquant-sys", "~/projects/deepzora", "~/projects/blade"];
   let mockEffort = "auto";
   let mockDesktopZoomFactor = 1.0;
   let mockActiveThemeId = "";
@@ -1501,20 +1501,20 @@ function makeMockApp(): MockAppBindings {
   } as const;
   registerTrustedThemeBackgroundURLs(Object.values(mockOfficialThemeAssets).map((asset) => asset.backgroundUrl));
   let mockThemePacks: import("./themePack").ThemePackView[] = [
-    { id: "graphite", name: "Graphite", author: "Deeper", baseStyle: "graphite", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
-    { id: "aurora", name: "Aurora", author: "Deeper", baseStyle: "aurora", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
-    { id: "slate", name: "Slate", author: "Deeper", baseStyle: "slate", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
-    { id: "carbon", name: "Carbon", author: "Deeper", baseStyle: "carbon", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
-    { id: "nocturne", name: "Nocturne", author: "Deeper", baseStyle: "nocturne", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
-    { id: "amber", name: "Amber", author: "Deeper", baseStyle: "amber", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
-    { ...mockOfficialThemeAssets["official-rose-dawn"], id: "official-rose-dawn", name: "Rose Dawn", author: "Deeper Contributors", license: "MIT", baseStyle: "graphite", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-rose-dawn.name", descriptionKey: "settings.themes.official.official-rose-dawn.description", tokens: { light: { bg: "#FFF7F8", fg: "#3A252C", accent: "#B43F65" }, dark: { bg: "#1E1419", fg: "#FFF3F6", accent: "#E26D91" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.72, focusY: 0.43, safeArea: "left", homeOpacity: 1, taskOpacity: 0.2, overlayStrength: 0.68, paneOpacity: 0.50 } },
-    { ...mockOfficialThemeAssets["official-fortune-forge"], id: "official-fortune-forge", name: "Fortune Forge", author: "Deeper Contributors", license: "MIT", baseStyle: "amber", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-fortune-forge.name", descriptionKey: "settings.themes.official.official-fortune-forge.description", tokens: { light: { bg: "#FFF8E8", fg: "#382116", accent: "#A92D22" }, dark: { bg: "#1D140D", fg: "#FFF2D1", accent: "#E8AD38" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.74, focusY: 0.44, safeArea: "left", homeOpacity: 1, taskOpacity: 0.2, overlayStrength: 0.7, paneOpacity: 0.50 } },
-    { ...mockOfficialThemeAssets["official-crimson-horizon"], id: "official-crimson-horizon", name: "Crimson Horizon", author: "Deeper Contributors", license: "MIT", baseStyle: "graphite", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-crimson-horizon.name", descriptionKey: "settings.themes.official.official-crimson-horizon.description", tokens: { light: { bg: "#FFF8F7", fg: "#301D1D", accent: "#B92B38" }, dark: { bg: "#190D11", fg: "#FFF1F2", accent: "#FF6772" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.75, focusY: 0.45, safeArea: "left", homeOpacity: 0.98, taskOpacity: 0.22, overlayStrength: 0.66, paneOpacity: 0.50 } },
-    { ...mockOfficialThemeAssets["official-sage-breeze"], id: "official-sage-breeze", name: "Sage Breeze", author: "Deeper Contributors", license: "MIT", baseStyle: "slate", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-sage-breeze.name", descriptionKey: "settings.themes.official.official-sage-breeze.description", tokens: { light: { bg: "#F7F7EF", fg: "#26332D", accent: "#47735F" }, dark: { bg: "#101814", fg: "#EEF6F0", accent: "#84CBA7" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.73, focusY: 0.44, safeArea: "left", homeOpacity: 1, taskOpacity: 0.2, overlayStrength: 0.68, paneOpacity: 0.50 } },
-    { ...mockOfficialThemeAssets["official-spark-notebook"], id: "official-spark-notebook", name: "Spark Notebook", author: "Deeper Contributors", license: "MIT", baseStyle: "aurora", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-spark-notebook.name", descriptionKey: "settings.themes.official.official-spark-notebook.description", tokens: { light: { bg: "#FFF9ED", fg: "#2B2F35", accent: "#007B78" }, dark: { bg: "#14171A", fg: "#F8F5E9", accent: "#42D1C6" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.74, focusY: 0.46, safeArea: "left", homeOpacity: 0.98, taskOpacity: 0.2, overlayStrength: 0.68, paneOpacity: 0.50 } },
-    { ...mockOfficialThemeAssets["official-violet-starlight"], id: "official-violet-starlight", name: "Violet Starlight", author: "Deeper Contributors", license: "MIT", baseStyle: "nocturne", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-violet-starlight.name", descriptionKey: "settings.themes.official.official-violet-starlight.description", tokens: { light: { bg: "#F7F4FF", fg: "#251F3C", accent: "#6242C7" }, dark: { bg: "#0C1022", fg: "#F4F2FF", accent: "#9B86FF" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.73, focusY: 0.44, safeArea: "left", homeOpacity: 0.96, taskOpacity: 0.18, overlayStrength: 0.72, paneOpacity: 0.50 } },
-    { ...mockOfficialThemeAssets["official-cyan-stage"], id: "official-cyan-stage", name: "Cyan Stage", author: "Deeper Contributors", license: "MIT", baseStyle: "carbon", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-cyan-stage.name", descriptionKey: "settings.themes.official.official-cyan-stage.description", tokens: { light: { bg: "#F1FCFD", fg: "#173238", accent: "#007C92" }, dark: { bg: "#07181D", fg: "#E9FCFF", accent: "#37D7E4" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.74, focusY: 0.45, safeArea: "left", homeOpacity: 0.96, taskOpacity: 0.18, overlayStrength: 0.72, paneOpacity: 0.50 } },
-    { ...mockOfficialThemeAssets["official-noir-gold"], id: "official-noir-gold", name: "Noir Gold", author: "Deeper Contributors", license: "MIT", baseStyle: "carbon", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-noir-gold.name", descriptionKey: "settings.themes.official.official-noir-gold.description", tokens: { light: { bg: "#FCF8EE", fg: "#2A241B", accent: "#7A5A16" }, dark: { bg: "#0D0B09", fg: "#F8F1DF", accent: "#D9B45B" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.73, focusY: 0.43, safeArea: "left", homeOpacity: 0.94, taskOpacity: 0.18, overlayStrength: 0.74, paneOpacity: 0.50 } },
+    { id: "graphite", name: "Graphite", author: "Deepzora", baseStyle: "graphite", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
+    { id: "aurora", name: "Aurora", author: "Deepzora", baseStyle: "aurora", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
+    { id: "slate", name: "Slate", author: "Deepzora", baseStyle: "slate", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
+    { id: "carbon", name: "Carbon", author: "Deepzora", baseStyle: "carbon", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
+    { id: "nocturne", name: "Nocturne", author: "Deepzora", baseStyle: "nocturne", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
+    { id: "amber", name: "Amber", author: "Deepzora", baseStyle: "amber", builtin: true, kind: "base", active: false, hasBackground: false, tokens: {}, recipes: { density: "comfortable", corners: "soft" } },
+    { ...mockOfficialThemeAssets["official-rose-dawn"], id: "official-rose-dawn", name: "Rose Dawn", author: "Deepzora Contributors", license: "MIT", baseStyle: "graphite", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-rose-dawn.name", descriptionKey: "settings.themes.official.official-rose-dawn.description", tokens: { light: { bg: "#FFF7F8", fg: "#3A252C", accent: "#B43F65" }, dark: { bg: "#1E1419", fg: "#FFF3F6", accent: "#E26D91" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.72, focusY: 0.43, safeArea: "left", homeOpacity: 1, taskOpacity: 0.2, overlayStrength: 0.68, paneOpacity: 0.50 } },
+    { ...mockOfficialThemeAssets["official-fortune-forge"], id: "official-fortune-forge", name: "Fortune Forge", author: "Deepzora Contributors", license: "MIT", baseStyle: "amber", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-fortune-forge.name", descriptionKey: "settings.themes.official.official-fortune-forge.description", tokens: { light: { bg: "#FFF8E8", fg: "#382116", accent: "#A92D22" }, dark: { bg: "#1D140D", fg: "#FFF2D1", accent: "#E8AD38" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.74, focusY: 0.44, safeArea: "left", homeOpacity: 1, taskOpacity: 0.2, overlayStrength: 0.7, paneOpacity: 0.50 } },
+    { ...mockOfficialThemeAssets["official-crimson-horizon"], id: "official-crimson-horizon", name: "Crimson Horizon", author: "Deepzora Contributors", license: "MIT", baseStyle: "graphite", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-crimson-horizon.name", descriptionKey: "settings.themes.official.official-crimson-horizon.description", tokens: { light: { bg: "#FFF8F7", fg: "#301D1D", accent: "#B92B38" }, dark: { bg: "#190D11", fg: "#FFF1F2", accent: "#FF6772" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.75, focusY: 0.45, safeArea: "left", homeOpacity: 0.98, taskOpacity: 0.22, overlayStrength: 0.66, paneOpacity: 0.50 } },
+    { ...mockOfficialThemeAssets["official-sage-breeze"], id: "official-sage-breeze", name: "Sage Breeze", author: "Deepzora Contributors", license: "MIT", baseStyle: "slate", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-sage-breeze.name", descriptionKey: "settings.themes.official.official-sage-breeze.description", tokens: { light: { bg: "#F7F7EF", fg: "#26332D", accent: "#47735F" }, dark: { bg: "#101814", fg: "#EEF6F0", accent: "#84CBA7" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.73, focusY: 0.44, safeArea: "left", homeOpacity: 1, taskOpacity: 0.2, overlayStrength: 0.68, paneOpacity: 0.50 } },
+    { ...mockOfficialThemeAssets["official-spark-notebook"], id: "official-spark-notebook", name: "Spark Notebook", author: "Deepzora Contributors", license: "MIT", baseStyle: "aurora", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-spark-notebook.name", descriptionKey: "settings.themes.official.official-spark-notebook.description", tokens: { light: { bg: "#FFF9ED", fg: "#2B2F35", accent: "#007B78" }, dark: { bg: "#14171A", fg: "#F8F5E9", accent: "#42D1C6" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.74, focusY: 0.46, safeArea: "left", homeOpacity: 0.98, taskOpacity: 0.2, overlayStrength: 0.68, paneOpacity: 0.50 } },
+    { ...mockOfficialThemeAssets["official-violet-starlight"], id: "official-violet-starlight", name: "Violet Starlight", author: "Deepzora Contributors", license: "MIT", baseStyle: "nocturne", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-violet-starlight.name", descriptionKey: "settings.themes.official.official-violet-starlight.description", tokens: { light: { bg: "#F7F4FF", fg: "#251F3C", accent: "#6242C7" }, dark: { bg: "#0C1022", fg: "#F4F2FF", accent: "#9B86FF" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.73, focusY: 0.44, safeArea: "left", homeOpacity: 0.96, taskOpacity: 0.18, overlayStrength: 0.72, paneOpacity: 0.50 } },
+    { ...mockOfficialThemeAssets["official-cyan-stage"], id: "official-cyan-stage", name: "Cyan Stage", author: "Deepzora Contributors", license: "MIT", baseStyle: "carbon", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-cyan-stage.name", descriptionKey: "settings.themes.official.official-cyan-stage.description", tokens: { light: { bg: "#F1FCFD", fg: "#173238", accent: "#007C92" }, dark: { bg: "#07181D", fg: "#E9FCFF", accent: "#37D7E4" } }, recipes: { density: "comfortable", corners: "round" }, background: { focusX: 0.74, focusY: 0.45, safeArea: "left", homeOpacity: 0.96, taskOpacity: 0.18, overlayStrength: 0.72, paneOpacity: 0.50 } },
+    { ...mockOfficialThemeAssets["official-noir-gold"], id: "official-noir-gold", name: "Noir Gold", author: "Deepzora Contributors", license: "MIT", baseStyle: "carbon", builtin: true, kind: "official", active: false, hasBackground: true, nameKey: "settings.themes.official.official-noir-gold.name", descriptionKey: "settings.themes.official.official-noir-gold.description", tokens: { light: { bg: "#FCF8EE", fg: "#2A241B", accent: "#7A5A16" }, dark: { bg: "#0D0B09", fg: "#F8F1DF", accent: "#D9B45B" } }, recipes: { density: "comfortable", corners: "soft" }, background: { focusX: 0.73, focusY: 0.43, safeArea: "left", homeOpacity: 0.94, taskOpacity: 0.18, overlayStrength: 0.74, paneOpacity: 0.50 } },
   ];
   const day = 86_400_000;
   const t0 = Date.now();
@@ -1528,7 +1528,7 @@ function makeMockApp(): MockAppBindings {
       autoStart: true,
       tier: "background",
       source: "project",
-      configSource: "deeper.toml",
+      configSource: "deepzora.toml",
       url: "https://mcp.example.test/project",
       tools: 3,
       prompts: 0,
@@ -1591,16 +1591,16 @@ function makeMockApp(): MockAppBindings {
       configuredModel: "deepseek/deepseek-v4-pro", configuredEffort: "high",
     },
     { name: "research", description: "Combine web_fetch + code reading in an isolated subagent", scope: "builtin", runAs: "subagent", enabled: true, allowedTools: ["read_file", "ls", "glob", "grep", "code_index", "web_fetch"], invocation: "/research", invocationMode: "auto" },
-    { name: "review", description: "Review the staged diff", scope: "project", sourceDir: "~/projects/deeper/.deeper/skills", runAs: "inline", enabled: false, invocation: "/review" },
-    { name: "init", description: "Scaffold a DEEPER.md for this repo", scope: "builtin", runAs: "inline", enabled: true, invocation: "/init" },
+    { name: "review", description: "Review the staged diff", scope: "project", sourceDir: "~/projects/deepzora/.deepzora/skills", runAs: "inline", enabled: false, invocation: "/review" },
+    { name: "init", description: "Scaffold a DEEPZORA.md for this repo", scope: "builtin", runAs: "inline", enabled: true, invocation: "/init" },
     {
-      name: "my-formatter", description: "Formats code the way I like it", scope: "global", sourceDir: "~/.deeper/skills", runAs: "subagent", enabled: true,
+      name: "my-formatter", description: "Formats code the way I like it", scope: "global", sourceDir: "~/.deepzora/skills", runAs: "subagent", enabled: true,
       model: "deepseek-pro", effort: "high", allowedTools: ["read_file", "edit_file"], color: "amber", invocation: "/my-formatter", invocationMode: "manual",
       body: "You are a code formatting assistant. Reformat the given file to match project style without changing behavior.",
     },
   ];
   let capSkillRoots: SkillRootView[] = [
-    { dir: "~/projects/deeper/.deeper/skills", scope: "project", priority: 1, status: "missing", enabled: true, configured: false, removable: true, skills: 0 },
+    { dir: "~/projects/deepzora/.deepzora/skills", scope: "project", priority: 1, status: "missing", enabled: true, configured: false, removable: true, skills: 0 },
     {
       dir: "~/my-skills",
       scope: "custom",
@@ -1613,7 +1613,7 @@ function makeMockApp(): MockAppBindings {
       skillItems: [{ name: "review", description: "Review the staged diff", scope: "custom", runAs: "inline" }],
     },
     {
-      dir: "~/.deeper/skills",
+      dir: "~/.deepzora/skills",
       scope: "global",
       priority: 6,
       status: "ok",
@@ -1623,7 +1623,7 @@ function makeMockApp(): MockAppBindings {
       skills: 2,
       skillItems: [
         { name: "explore", description: "Investigate the codebase in an isolated subagent", scope: "global", runAs: "subagent" },
-        { name: "init", description: "Scaffold a DEEPER.md for this repo", scope: "global", runAs: "inline" },
+        { name: "init", description: "Scaffold a DEEPZORA.md for this repo", scope: "global", runAs: "inline" },
       ],
     },
   ];
@@ -1731,7 +1731,7 @@ function makeMockApp(): MockAppBindings {
       noProxy: "",
       proxy: { type: "socks5", server: "127.0.0.1", port: 7890, username: "", password: "" },
     },
-    agent: { temperature: 0.2, maxSteps: 0, plannerMaxSteps: 0, maxSubagentDepth: 2, maxSubagentConcurrency: 6, maxParallelWriters: 3, systemPrompt: "You are Deeper, a coding agent.", reasoningLanguage: "auto", compactRatio: 0.8 },
+    agent: { temperature: 0.2, maxSteps: 0, plannerMaxSteps: 0, maxSubagentDepth: 2, maxSubagentConcurrency: 6, maxParallelWriters: 3, systemPrompt: "You are Deepzora, a coding agent.", reasoningLanguage: "auto", compactRatio: 0.8 },
     bot: {
       enabled: !freshMock,
       model: "",
@@ -1751,7 +1751,7 @@ function makeMockApp(): MockAppBindings {
       control: {
         enabled: false,
         addr: "127.0.0.1:37913",
-        tokenEnv: "DEEPER_BOT_CONTROL_TOKEN",
+        tokenEnv: "DEEPZORA_BOT_CONTROL_TOKEN",
       },
       pairing: {
         enabled: true,
@@ -1899,8 +1899,8 @@ function makeMockApp(): MockAppBindings {
     updateChannel: "stable",
     telemetry: true,
     metrics: true,
-    configPath: "~/.deeper/config.toml",
-    shadowedByPath: "~/projects/deeper/deeper.toml",
+    configPath: "~/.deepzora/config.toml",
+    shadowedByPath: "~/projects/deepzora/deepzora.toml",
     providerKinds: ["openai", "anthropic", "responses"],
     autoApproveTools: false,
     bypass: false,
@@ -1909,7 +1909,7 @@ function makeMockApp(): MockAppBindings {
   const hookSettings: Record<string, HooksSettingsView> = {
     global: {
       scope: "global",
-      path: "~/.deeper/settings.json",
+      path: "~/.deepzora/settings.json",
       projectRoot: "",
       trusted: true,
       events: hookEvents,
@@ -1919,7 +1919,7 @@ function makeMockApp(): MockAppBindings {
     },
     project: {
       scope: "project",
-      path: "./.deeper/settings.json",
+      path: "./.deepzora/settings.json",
       projectRoot: "/mock/project",
       trusted: false,
       events: hookEvents,
@@ -1930,27 +1930,27 @@ function makeMockApp(): MockAppBindings {
     provider.apiKeyEnv === "DEEPSEEK_API_KEY" ? { ...provider, keySet: !freshMock } : provider,
   );
   if (freshMock) {
-    settings.configPath = "~/.deeper/config.toml";
+    settings.configPath = "~/.deepzora/config.toml";
     settings.shadowedByPath = "";
   }
   const mockNow = Date.now();
   const mockProjectTree: ProjectNode[] = freshMock ? [] : benchMock ? [
     {
-      key: "project_~/projects/deeper",
+      key: "project_~/projects/deepzora",
       kind: "project",
-      label: "deeper",
-      root: "~/projects/deeper",
+      label: "deepzora",
+      root: "~/projects/deepzora",
       projectColor: "purple",
       children: [
-        { key: "topic_bench_markdown", kind: "topic", label: "● bench:markdown-46t", root: "~/projects/deeper", topicId: "topic_bench_markdown", projectColor: "purple", turns: 46, lastActivityAt: mockNow - 60_000, open: true },
-        { key: "topic_bench_tools", kind: "topic", label: "● bench:tools-38t", root: "~/projects/deeper", topicId: "topic_bench_tools", projectColor: "blue", turns: 38, lastActivityAt: mockNow - 120_000, open: true },
-        { key: "topic_bench_small", kind: "topic", label: "bench:small-6t", root: "~/projects/deeper", topicId: "topic_bench_small", projectColor: "green", turns: 6, lastActivityAt: mockNow - 180_000 },
-        { key: "topic_bench_giant_turn", kind: "topic", label: "bench:giant-turn", root: "~/projects/deeper", topicId: "topic_bench_giant_turn", projectColor: "amber", turns: 1, lastActivityAt: mockNow - 240_000 },
-        { key: "topic_bench_windowed", kind: "topic", label: "bench:windowed-1000t", root: "~/projects/deeper", topicId: "topic_bench_windowed", projectColor: "blue", turns: 1000, lastActivityAt: mockNow - 270_000 },
-        { key: "topic_bench_reported_long_turn", kind: "topic", label: "bench:reported-long-turn", root: "~/projects/deeper", topicId: "topic_bench_reported_long_turn", projectColor: "amber", turns: 1, lastActivityAt: mockNow - 300_000 },
-        { key: "topic_bench_geometry_contract", kind: "topic", label: "bench:geometry-blocks", root: "~/projects/deeper", topicId: "topic_bench_geometry_contract", projectColor: "amber", turns: 1, lastActivityAt: mockNow - 330_000 },
-        { key: "topic_bench_storm", kind: "topic", label: "bench:storm-40t", root: "~/projects/deeper", topicId: "topic_bench_storm", projectColor: "red", turns: 40, lastActivityAt: mockNow - 360_000 },
-        { key: "topic_bench_selection_table", kind: "topic", label: "bench:selection-table", root: "~/projects/deeper", topicId: "topic_bench_selection_table" },
+        { key: "topic_bench_markdown", kind: "topic", label: "● bench:markdown-46t", root: "~/projects/deepzora", topicId: "topic_bench_markdown", projectColor: "purple", turns: 46, lastActivityAt: mockNow - 60_000, open: true },
+        { key: "topic_bench_tools", kind: "topic", label: "● bench:tools-38t", root: "~/projects/deepzora", topicId: "topic_bench_tools", projectColor: "blue", turns: 38, lastActivityAt: mockNow - 120_000, open: true },
+        { key: "topic_bench_small", kind: "topic", label: "bench:small-6t", root: "~/projects/deepzora", topicId: "topic_bench_small", projectColor: "green", turns: 6, lastActivityAt: mockNow - 180_000 },
+        { key: "topic_bench_giant_turn", kind: "topic", label: "bench:giant-turn", root: "~/projects/deepzora", topicId: "topic_bench_giant_turn", projectColor: "amber", turns: 1, lastActivityAt: mockNow - 240_000 },
+        { key: "topic_bench_windowed", kind: "topic", label: "bench:windowed-1000t", root: "~/projects/deepzora", topicId: "topic_bench_windowed", projectColor: "blue", turns: 1000, lastActivityAt: mockNow - 270_000 },
+        { key: "topic_bench_reported_long_turn", kind: "topic", label: "bench:reported-long-turn", root: "~/projects/deepzora", topicId: "topic_bench_reported_long_turn", projectColor: "amber", turns: 1, lastActivityAt: mockNow - 300_000 },
+        { key: "topic_bench_geometry_contract", kind: "topic", label: "bench:geometry-blocks", root: "~/projects/deepzora", topicId: "topic_bench_geometry_contract", projectColor: "amber", turns: 1, lastActivityAt: mockNow - 330_000 },
+        { key: "topic_bench_storm", kind: "topic", label: "bench:storm-40t", root: "~/projects/deepzora", topicId: "topic_bench_storm", projectColor: "red", turns: 40, lastActivityAt: mockNow - 360_000 },
+        { key: "topic_bench_selection_table", kind: "topic", label: "bench:selection-table", root: "~/projects/deepzora", topicId: "topic_bench_selection_table" },
       ],
     },
   ] : [
@@ -2179,9 +2179,9 @@ function makeMockApp(): MockAppBindings {
     {
       id: "tab_bench_markdown",
       scope: "project",
-      workspaceRoot: "~/projects/deeper",
-      workspaceName: "deeper",
-      workspacePath: "~/projects/deeper",
+      workspaceRoot: "~/projects/deepzora",
+      workspaceName: "deepzora",
+      workspacePath: "~/projects/deepzora",
       gitBranch: "bench",
       topicId: "topic_bench_markdown",
       topicTitle: "bench:markdown-46t",
@@ -2194,14 +2194,14 @@ function makeMockApp(): MockAppBindings {
       toolApprovalMode: "ask",
       tokenMode: "full",
       active: true,
-      cwd: "~/projects/deeper",
+      cwd: "~/projects/deepzora",
     },
     {
       id: "tab_bench_tools",
       scope: "project",
-      workspaceRoot: "~/projects/deeper",
-      workspaceName: "deeper",
-      workspacePath: "~/projects/deeper",
+      workspaceRoot: "~/projects/deepzora",
+      workspaceName: "deepzora",
+      workspacePath: "~/projects/deepzora",
       gitBranch: "bench",
       topicId: "topic_bench_tools",
       topicTitle: "bench:tools-38t",
@@ -2214,15 +2214,15 @@ function makeMockApp(): MockAppBindings {
       toolApprovalMode: "ask",
       tokenMode: "full",
       active: false,
-      cwd: "~/projects/deeper",
+      cwd: "~/projects/deepzora",
     },
   ] : noticePreviewMock ? [
     {
       id: "tab_notice_preview",
       scope: "project",
-      workspaceRoot: "~/projects/deeper",
-      workspaceName: "deeper",
-      workspacePath: "~/projects/deeper",
+      workspaceRoot: "~/projects/deepzora",
+      workspaceName: "deepzora",
+      workspacePath: "~/projects/deepzora",
       gitBranch: "codex/compact-chat-notices-i18n",
       topicId: "topic_notice_preview",
       topicTitle: "Compact notice preview",
@@ -2235,7 +2235,7 @@ function makeMockApp(): MockAppBindings {
       toolApprovalMode: "ask",
       tokenMode: "full",
       active: true,
-      cwd: "~/projects/deeper",
+      cwd: "~/projects/deepzora",
     },
   ] : freshMock ? [
     {
@@ -2873,9 +2873,9 @@ function makeMockApp(): MockAppBindings {
           tool: {
             id: parentId,
             name: "explore",
-            args: JSON.stringify({ task: "在 Deeper 前端中检查工具调用图标和嵌套调用展示" }),
+            args: JSON.stringify({ task: "在 Deepzora 前端中检查工具调用图标和嵌套调用展示" }),
             readOnly: true,
-            profile: { model: "mock-deeper", effort: "high" },
+            profile: { model: "mock-deepzora", effort: "high" },
           },
         });
         for (let i = 1; i <= 30; i += 1) {
@@ -3270,7 +3270,7 @@ function makeMockApp(): MockAppBindings {
         },
         async SetPermissionPresetForTab(tabID, expectedSessionID, preset, expectedRevision) {
           const current = await this.PermissionSnapshotForTab(tabID);
-          if (current.sessionId !== expectedSessionID) throw new Error("deeper_error:permission_session_changed");
+          if (current.sessionId !== expectedSessionID) throw new Error("deepzora_error:permission_session_changed");
           if (current.revision !== expectedRevision) throw new Error("permission revision changed");
           await this.SetToolApprovalModeForTab(tabID, preset);
           mockTabs = mockTabs.map((tab) => tab.id === tabID ? { ...tab, permissionRevision: current.revision + 1 } as TabMeta : tab);
@@ -3566,7 +3566,7 @@ function makeMockApp(): MockAppBindings {
     async PickWorkspace() {
       // Browser dev has no native dialog; simulate picking a folder and re-root so
       // the topbar folder chip visibly changes.
-      return mockSwitchWorkspace(cwd.endsWith("another-project") ? "~/projects/deeper" : "~/projects/another-project");
+      return mockSwitchWorkspace(cwd.endsWith("another-project") ? "~/projects/deepzora" : "~/projects/another-project");
     },
     async SwitchWorkspace(path: string) {
       return mockSwitchWorkspace(path);
@@ -3818,7 +3818,7 @@ function makeMockApp(): MockAppBindings {
         },
         instructions: { docs: [{ path: "<workspace>/AGENTS.md", scope: "project", directory: "<workspace>", depth: 0, order: 1 }] },
         skills: {
-          roots: [{ path: "<workspace>/.deeper/skills", scope: "project", status: "ok" }],
+          roots: [{ path: "<workspace>/.deepzora/skills", scope: "project", status: "ok" }],
           entries: capSkills.map((s) => ({
             name: s.name,
             description: s.description,
@@ -3908,8 +3908,8 @@ function makeMockApp(): MockAppBindings {
         version: "dev",
         description: "Mock plugin",
         source,
-        root: `~/.deeper/plugins/${name}`,
-        manifestKind: "deeper",
+        root: `~/.deepzora/plugins/${name}`,
+        manifestKind: "deepzora",
         enabled: true,
         skills: 1,
         hooks: 0,
@@ -4100,7 +4100,7 @@ function makeMockApp(): MockAppBindings {
         runAs: "subagent", enabled: true, model: input.model, effort: input.effort,
         allowedTools: input.allowedTools, color: input.color, invocation: `/${name}`, invocationMode: "manual",
       });
-      return `~/.deeper/skills/${name}/SKILL.md`;
+      return `~/.deepzora/skills/${name}/SKILL.md`;
     },
     async UpdateSubagentProfile(name: string, scope: string, input: SubagentProfileInput) {
       const skill = capSkills.find((s) => s.name === name && s.scope === scope);
@@ -4176,7 +4176,7 @@ function makeMockApp(): MockAppBindings {
         ],
         "/effort": [
           { label: "auto", insert: "auto", hint: "use the model default" },
-          { label: "high", insert: "high", hint: "deeper reasoning" },
+          { label: "high", insert: "high", hint: "deepzora reasoning" },
           { label: "max", insert: "max", hint: "maximum reasoning" },
         ],
       };
@@ -4229,7 +4229,7 @@ function makeMockApp(): MockAppBindings {
       return this.ReadFile(rel);
     },
     async CreateWorkspaceBrowserPreviewForTab(_tabID: string, rel: string) {
-      return `http://127.0.0.1:0/__deeper_workspace_media/mock/${encodeURIComponent(rel)}`;
+      return `http://127.0.0.1:0/__deepzora_workspace_media/mock/${encodeURIComponent(rel)}`;
     },
     async ReadPresentedFileForTab(tabID: string, _toolCallID: string, path: string) {
       return this.ReadFileForTab(tabID, path);
@@ -4400,7 +4400,7 @@ function makeMockApp(): MockAppBindings {
       return "goal-diagnostics.json";
     },
     async ExportManualCreationDiagnostics() {
-      return "deeper-creation-diagnostics.json";
+      return "deepzora-creation-diagnostics.json";
     },
     async SaveExportFile(path: string, payload: string, base64Encoded: boolean) {
       const a = document.createElement("a");
@@ -4418,7 +4418,7 @@ function makeMockApp(): MockAppBindings {
       if (!base64Encoded) URL.revokeObjectURL(url);
     },
     async SaveSessionMarkdownForTab(_tabID: string, path: string, title: string) {
-      await this.SaveExportFile(path, `# ${title || "Deeper session"}\n`, false);
+      await this.SaveExportFile(path, `# ${title || "Deepzora session"}\n`, false);
     },
     async SaveExportImageFiles(path: string, payloads: string[]) {
       if (payloads.length === 0) throw new Error("No image payloads to export");
@@ -4470,21 +4470,21 @@ function makeMockApp(): MockAppBindings {
     async Memory() {
       return {
         available: true,
-        storeDir: "~/.deeper/projects/-mock/memory",
-        storeGlobalDir: "~/.deeper/memory/global",
+        storeDir: "~/.deepzora/projects/-mock/memory",
+        storeGlobalDir: "~/.deepzora/memory/global",
         docs: [
           {
-            path: "DEEPER.md",
+            path: "DEEPZORA.md",
             scope: "project",
             directory: ".",
-            body: "# Deeper project memory\n\nMock doc shown in the browser dev seam.\n\n## Notes\n\n- prefers concise replies",
+            body: "# Deepzora project memory\n\nMock doc shown in the browser dev seam.\n\n## Notes\n\n- prefers concise replies",
             imports: [],
             depth: 0,
             order: 0,
             precedence: 0,
           },
           {
-            path: "~/.deeper/DEEPER.md",
+            path: "~/.deepzora/DEEPZORA.md",
             scope: "user",
             body: t("mock.memoryBody"),
             imports: [],
@@ -4511,15 +4511,15 @@ function makeMockApp(): MockAppBindings {
             type: "project",
             scope: "project",
             body: "This plan was archived after the implementation changed.",
-            path: "~/.deeper/projects/-mock/memory/.archive/20260612-021500.000-old-plan.md",
+            path: "~/.deepzora/projects/-mock/memory/.archive/20260612-021500.000-old-plan.md",
             archivedAt: "2026-06-12T02:15:00Z",
             freshness: "current",
           },
         ],
         scopes: [
-          { scope: "user", path: "~/.deeper/DEEPER.md" },
-          { scope: "project", path: "DEEPER.md" },
-          { scope: "local", path: "DEEPER.local.md" },
+          { scope: "user", path: "~/.deepzora/DEEPZORA.md" },
+          { scope: "project", path: "DEEPZORA.md" },
+          { scope: "local", path: "DEEPZORA.local.md" },
         ],
         conflicts: [],
         lastRecall: {
@@ -4549,11 +4549,11 @@ function makeMockApp(): MockAppBindings {
         ],
         skills: [
           {
-            id: "skill-deeper-pr-followup",
-            name: "deeper-pr-followup",
-            description: "Review or update a Deeper GitHub PR, address feedback, verify, and publish safely.",
+            id: "skill-deepzora-pr-followup",
+            name: "deepzora-pr-followup",
+            description: "Review or update a Deepzora GitHub PR, address feedback, verify, and publish safely.",
             scope: "project",
-            body: "# Deeper PR Followup\n\nUse this skill for repeated Deeper PR work.\n\n## Workflow\n\n1. Confirm branch and PR state.\n2. Inspect the diff.\n3. Fix actionable feedback.\n4. Verify and update the PR.\n",
+            body: "# Deepzora PR Followup\n\nUse this skill for repeated Deepzora PR work.\n\n## Workflow\n\n1. Confirm branch and PR state.\n2. Inspect the diff.\n3. Fix actionable feedback.\n4. Verify and update the PR.\n",
             reason: "recent history repeatedly touched PR workflows",
             evidence: ["mock-pr-session: 提交到pr，并更新内容", "mock-review-session: 解决该pr下机器人提出来的问题"],
           },
@@ -4569,7 +4569,7 @@ function makeMockApp(): MockAppBindings {
     },
     async AcceptSkillSuggestion(suggestion: SkillSuggestion) {
       emit({ kind: "notice", level: "info", text: `created suggested skill → ${suggestion.name}` });
-      return `.deeper/skills/${suggestion.name}/SKILL.md`;
+      return `.deepzora/skills/${suggestion.name}/SKILL.md`;
     },
     async MemorySuggestionsForTab(_tabID: string) {
       return this.MemorySuggestions();
@@ -4607,7 +4607,7 @@ function makeMockApp(): MockAppBindings {
     },
     async Remember(_scope: string, _note: string) {
       emit({ kind: "notice", level: "info", text: `remembered → ${_scope}` });
-      return `${_scope} DEEPER.md (mock): ${_note}`;
+      return `${_scope} DEEPZORA.md (mock): ${_note}`;
     },
     async RememberForTab(_tabID: string, scope: string, note: string) {
       return this.Remember(scope, note);
@@ -4658,7 +4658,7 @@ function makeMockApp(): MockAppBindings {
       })) as DesktopStartupSettingsView;
     },
     ...makeMockModelSettingsBindings(settings, loadMockProviderCatalog, mockProviderPresetViews),
-    async StorageSettings() { return { defaultWorkspace: cwd, statePath: `${cwd}/.deeper`, cachePath: `${cwd}/.deeper/cache`, extensionsPath: `${cwd}/.deeper/plugins` }; },
+    async StorageSettings() { return { defaultWorkspace: cwd, statePath: `${cwd}/.deepzora`, cachePath: `${cwd}/.deepzora/cache`, extensionsPath: `${cwd}/.deepzora/plugins` }; },
     async HooksSettings(scope: string) {
       const key = scope === "project" ? "project" : "global";
       return JSON.parse(JSON.stringify(hookSettings[key])) as HooksSettingsView;
@@ -4725,26 +4725,26 @@ function makeMockApp(): MockAppBindings {
     async SetConnectionKey(name: string, value: string) {
       const p = settings.providers.find(p => p.name === name);
       if (!p) throw new Error("Connection not found");
-      p.apiKeyEnv = `DEEPER_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`;
+      p.apiKeyEnv = `DEEPZORA_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`;
       p.keySet = Boolean(value.trim());
       return "";
     },
     async AddProviderConnectionWithOptions(_presetID: string, sourceName: string, key: string, baseURL: string, kind: string) {
       const source = settings.providers.find(p => p.name === sourceName);
       if (!source) throw new Error("Connection template unavailable in preview");
-      settings.providers.push({...source, kind:kind || source.kind, baseUrl:baseURL || source.baseUrl, requestUrl:"", chatUrl:"", modelsUrl:"", name:`${source.name}-${crypto.randomUUID()}`, builtIn:false, added:true, apiKeyEnv:`DEEPER_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`, keySet:Boolean(key.trim())});
+      settings.providers.push({...source, kind:kind || source.kind, baseUrl:baseURL || source.baseUrl, requestUrl:"", chatUrl:"", modelsUrl:"", name:`${source.name}-${crypto.randomUUID()}`, builtIn:false, added:true, apiKeyEnv:`DEEPZORA_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`, keySet:Boolean(key.trim())});
       return "";
     },
     async AddProviderConnectionWithURL(_presetID: string, sourceName: string, key: string, baseURL: string) {
       const source = settings.providers.find(p => p.name === sourceName);
       if (!source) throw new Error("Connection template unavailable in preview");
-      settings.providers.push({...source, baseUrl:baseURL, requestUrl:"", chatUrl:"", modelsUrl:"", name:`${source.name}-${crypto.randomUUID()}`, builtIn:false, added:true, apiKeyEnv:`DEEPER_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`, keySet:Boolean(key.trim())});
+      settings.providers.push({...source, baseUrl:baseURL, requestUrl:"", chatUrl:"", modelsUrl:"", name:`${source.name}-${crypto.randomUUID()}`, builtIn:false, added:true, apiKeyEnv:`DEEPZORA_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`, keySet:Boolean(key.trim())});
       return "";
     },
     async AddProviderConnection(_presetID: string, sourceName: string, key: string) {
       const source = settings.providers.find(p => p.name === sourceName);
       if (!source) throw new Error("Connection template unavailable in preview");
-      settings.providers.push({...source, name:`${source.name}-${crypto.randomUUID()}`, builtIn:false, added:true, apiKeyEnv:`DEEPER_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`, keySet:Boolean(key.trim())});
+      settings.providers.push({...source, name:`${source.name}-${crypto.randomUUID()}`, builtIn:false, added:true, apiKeyEnv:`DEEPZORA_CONNECTION_${crypto.randomUUID().replaceAll("-", "")}_KEY`, keySet:Boolean(key.trim())});
       return "";
     },
     async RenameProviderConnections(names: string[], displayName: string) {
@@ -5030,7 +5030,7 @@ function makeMockApp(): MockAppBindings {
             provider: normalizedProvider,
             domain: normalizedDomain,
             installId: `mock-${normalizedProvider}-${normalizedDomain}`,
-            url: "https://example.com/deeper-bot-qr",
+            url: "https://example.com/deepzora-bot-qr",
             deviceCode: "MOCKDEVICE",
             userCode: normalizedProvider === "weixin" ? "" : "MOCK-CODE",
             interval: 3,
@@ -5316,7 +5316,7 @@ function makeMockApp(): MockAppBindings {
     async AbandonPendingUpdate() {},
     async OpenDownloadPage() {
       if (typeof window !== "undefined") {
-        window.open("https://github.com/SivanCola/deeper/releases", "_blank", "noopener");
+        window.open("https://github.com/SivanCola/deepzora/releases", "_blank", "noopener");
       }
     },
     async OpenUserConfigPath() {},
@@ -5397,11 +5397,11 @@ function makeMockApp(): MockAppBindings {
     async CreateIsolatedWorktree(workspaceRoot: string) {
       if (!workspaceRoot) throw new Error("project folder is required");
       const suffix = Date.now().toString(36);
-      const isolatedRoot = `/mock/deeper-worktrees/${suffix}/${workspaceRoot.split("/").filter(Boolean).pop() ?? "project"}`;
+      const isolatedRoot = `/mock/deepzora-worktrees/${suffix}/${workspaceRoot.split("/").filter(Boolean).pop() ?? "project"}`;
       const topicID = `topic_worktree_${suffix}`;
       const tab = await this.OpenProjectTab(isolatedRoot, topicID);
       tab.isolatedWorktree = true;
-      tab.gitBranch = `deeper/isolated-${suffix}`;
+      tab.gitBranch = `deepzora/isolated-${suffix}`;
       mockTabs = mockTabs.map((candidate) => candidate.id === tab.id ? { ...tab } : candidate);
       return {
         workspaceRoot: isolatedRoot,
@@ -5565,9 +5565,9 @@ function makeMockApp(): MockAppBindings {
         running: true,
       };
       mockTerminalSessions = [...mockTerminalSessions, session];
-      mockTerminalOutput.set(id, "Deeper terminal ready\r\n");
+      mockTerminalOutput.set(id, "Deepzora terminal ready\r\n");
       mockTerminalTabIDs.set(id, tabID);
-      window.setTimeout(() => __emitMockTerminalOutput({ id, data: mockTerminalBytes("Deeper terminal ready\r\n") }), 0);
+      window.setTimeout(() => __emitMockTerminalOutput({ id, data: mockTerminalBytes("Deepzora terminal ready\r\n") }), 0);
       return { ...session };
     },
     async WriteTerminalForTab(_tabID: string, sessionID: string, data: string) {

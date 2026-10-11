@@ -101,7 +101,7 @@ const weather: Item[] = [
   { kind: "user", id: "weather-user", text: "weather", checkpointTurn: 4 },
   { kind: "tool", id: "failed-fetch", name: "web_fetch", args: "{}", readOnly: true, status: "error", error: "DNS refused" },
   { kind: "assistant", id: "retry-message", text: "Trying another source", reasoning: "Need current data", streaming: false },
-  { kind: "notice", id: "permission", level: "info", title: "Permission saved", text: "permission saved to /tmp/deeper.toml: long command" },
+  { kind: "notice", id: "permission", level: "info", title: "Permission saved", text: "permission saved to /tmp/deepzora.toml: long command" },
   { kind: "tool", id: "successful-fetch", name: "bash", args: "{}", readOnly: true, status: "done", output: "25 degrees" },
   { kind: "assistant", id: "weather-answer", text: "Sunny, 25 degrees", reasoning: "Sources agree", streaming: false },
 ];

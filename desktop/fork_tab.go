@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/session"
-	"deeper/internal/worktree"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
+	"deepzora/internal/worktree"
 )
 
 const rewindForkAttachError = "conversation fork was created but could not be opened; open the recovery branch from session history"

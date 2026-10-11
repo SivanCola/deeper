@@ -1,5 +1,5 @@
 // Real-package startup measurements with a fixed active session and project.
-// Usage: node desktop/packaging/history-startup-scale.mjs /path/Deeper.app [--runs=30] [--sizes=100,10000,100000]
+// Usage: node desktop/packaging/history-startup-scale.mjs /path/Deepzora.app [--runs=30] [--sizes=100,10000,100000]
 // Measures warm catalog startup; this does not certify all formats, platforms,
 // body-read counts, memory budgets, or the absence of every background scan.
 import assert from "node:assert/strict";
@@ -21,7 +21,7 @@ assert.ok(Number.isSafeInteger(runs) && runs > 0 && runs <= 100);
 assert.ok(sizes.length > 0 && sizes.every((n, i) => Number.isSafeInteger(n) && n >= 50 && n <= 100000 && (i === 0 || n > sizes[i - 1])));
 const require = createRequire(new URL("../electron/package.json", import.meta.url));
 const { _electron } = require("playwright");
-const home = await mkdtemp(join(tmpdir(), "deeper-history-scale-"));
+const home = await mkdtemp(join(tmpdir(), "deepzora-history-scale-"));
 const resultPath = `${home}.results.json`;
 const records = [];
 const warmups = [];
@@ -36,14 +36,14 @@ const server = createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 await writeFile(join(home, "config.toml"), `default_model = "fixture/model"\n[desktop]\nprovider_access = ["fixture"]\n[[providers]]\nname = "fixture"\nkind = "openai"\nbase_url = "http://127.0.0.1:${server.address().port}/v1"\nmodels = ["model"]\ndefault = "model"\napi_key_env = "HISTORY_SCALE_FIXTURE_KEY"\n`);
 const environment = { ...packagedSmokeEnv(process.env, home), HISTORY_SCALE_FIXTURE_KEY: "local-fixture" };
-const invoke = (page, method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
+const invoke = (page, method, args = []) => page.evaluate(({ method, args }) => window.deepzoraDesktop.invoke(method, args), { method, args });
 const now = () => performance.now();
 async function launch() {
   const started = now();
-  application = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Deeper"), env: environment });
+  application = await _electron.launch({ executablePath: join(bundle, "Contents/MacOS/Deepzora"), env: environment });
   const page = await application.firstWindow();
   page.setDefaultTimeout(30000);
-  await page.waitForFunction(() => Boolean(window.deeperDesktop));
+  await page.waitForFunction(() => Boolean(window.deepzoraDesktop));
   await invoke(page, "Version");
   return { page, started };
 }

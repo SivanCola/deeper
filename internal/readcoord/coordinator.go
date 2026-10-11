@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Advice is a non-blocking steering signal for a stalled read.

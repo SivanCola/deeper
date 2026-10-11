@@ -2,8 +2,8 @@ package control
 
 import (
 	"context"
-	"deeper/internal/agent"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/agent"
+	"deepzora/internal/sessioninbox"
 	"errors"
 	"maps"
 	"strings"

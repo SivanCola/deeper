@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ReasoningReplayFailure classifies why an assistant turn could not safely be
@@ -28,12 +28,12 @@ type ReasoningReplayError struct {
 
 func (e *ReasoningReplayError) Error() string {
 	if e != nil && e.Kind == ReasoningReplayIncomplete {
-		return "The provider ended the response with unfinished reasoning. Deeper kept existing work and did not run the requested tools; retry to continue safely."
+		return "The provider ended the response with unfinished reasoning. Deepzora kept existing work and did not run the requested tools; retry to continue safely."
 	}
 	if e != nil && e.Kind == ReasoningReplayOverflow {
-		return "The provider reasoning exceeded the client safety limit, so Deeper did not run the requested tools. Existing work was kept; retry to continue safely."
+		return "The provider reasoning exceeded the client safety limit, so Deepzora did not run the requested tools. Existing work was kept; retry to continue safely."
 	}
-	return "The provider repeatedly omitted reasoning required to replay this tool turn. Deeper exhausted its safe automatic recovery and did not run the requested tools. Existing work was kept; switch provider or protocol if this continues."
+	return "The provider repeatedly omitted reasoning required to replay this tool turn. Deepzora exhausted its safe automatic recovery and did not run the requested tools. Existing work was kept; switch provider or protocol if this continues."
 }
 
 // PauseClass names the guard that deliberately ended a run, so a host can
@@ -188,7 +188,7 @@ func (e *RecoveryPauseError) Error() string {
 	if strings.TrimSpace(e.Message) != "" {
 		return e.Message
 	}
-	return "Automatic retries paused. Deeper stopped repeated attempts and kept completed work. Send \"continue\" to start a fresh attempt, or add instructions to change direction."
+	return "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send \"continue\" to start a fresh attempt, or add instructions to change direction."
 }
 
 // CompletionUncertainContextTool is the retained host-safety cause for a
@@ -215,5 +215,5 @@ func (e *CompletionUncertainError) Error() string {
 	if strings.TrimSpace(e.Message) != "" {
 		return e.Message
 	}
-	return "Completion could not be confirmed. Deeper kept the current result and all completed work. Send \"continue\" to resume, or restate what should change."
+	return "Completion could not be confirmed. Deepzora kept the current result and all completed work. Send \"continue\" to resume, or restate what should change."
 }

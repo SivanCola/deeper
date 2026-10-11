@@ -191,7 +191,7 @@ for (const capability of ["absent", "throws", "rejects"] as const) {
         return Promise.reject(new Error("diagnostic write failed"));
       },
     };
-    Object.defineProperty(globalThis, "window", { configurable: true, value: { deeperDesktop: { native } } });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: { deepzoraDesktop: { native } } });
     const io = transport(); const view = consumer();
     try {
       const starting = io.client.start(view);

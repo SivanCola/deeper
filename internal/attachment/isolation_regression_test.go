@@ -10,16 +10,16 @@ import (
 
 func TestAttachmentParentSymlinkCannotEscape(t *testing.T) {
 	root, outside := t.TempDir(), t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".deeper"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(outside, "secret.png"), opaquePNG(t, 8, 8), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, filepath.Join(root, ".deeper", "attachments")); err != nil {
+	if err := os.Symlink(outside, filepath.Join(root, ".deepzora", "attachments")); err != nil {
 		t.Fatal(err)
 	}
-	_, err := testService(t).PrepareBatch(t.Context(), []Source{{WorkspaceRoot: root, Path: ".deeper/attachments/secret.png", Confine: ".deeper/attachments"}})
+	_, err := testService(t).PrepareBatch(t.Context(), []Source{{WorkspaceRoot: root, Path: ".deepzora/attachments/secret.png", Confine: ".deepzora/attachments"}})
 	if err == nil {
 		t.Fatal("accepted image outside workspace through parent symlink")
 	}

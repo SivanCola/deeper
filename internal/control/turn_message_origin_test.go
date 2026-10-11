@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestTurnOrchestratorUserTextMatchingLegacySyntheticPrefixKeepsUserOrigin(t *testing.T) {

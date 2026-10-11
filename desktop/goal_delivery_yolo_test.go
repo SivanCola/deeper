@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/store"
 )
 
 func newGoalDeliveryYoloTestApp(t *testing.T, goalStatus string) (*App, *WorkspaceTab, control.SessionAPI, string) {

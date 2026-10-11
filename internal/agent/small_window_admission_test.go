@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 type largeSchemaTool struct {

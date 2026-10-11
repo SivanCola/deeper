@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/identitylock"
+	"deepzora/internal/config"
+	"deepzora/internal/identitylock"
 )
 
 func TestHistoricalImportIsExplicitAndSourceBusyDoesNotTakeRuntimeGate(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 var errSessionNavigationSuperseded = errors.New("session navigation was superseded")

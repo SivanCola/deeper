@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 // TestOpenChannelSessionGlobalBotAcrossDirs 回归：bot/channel 会话可能位于

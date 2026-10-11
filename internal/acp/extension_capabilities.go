@@ -1,8 +1,8 @@
 package acp
 
-// DeeperExtensionCapabilities advertises Deeper-specific ACP extensions.
+// DeepzoraExtensionCapabilities advertises Deepzora-specific ACP extensions.
 // ACP v1 reserves agentCapabilities._meta for vendor capability discovery.
-type DeeperExtensionCapabilities struct {
+type DeepzoraExtensionCapabilities struct {
 	// MCPInteraction advertises the opt-in reverse request for MCP elicitation.
 	MCPInteraction *MCPInteractionCapability `json:"mcpInteraction,omitempty"`
 	SessionSteer   *SessionSteerCapability   `json:"sessionSteer,omitempty"`

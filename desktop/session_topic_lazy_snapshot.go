@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/sessioncatalog"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/sessioncatalog"
 )
 
 type topicPagePosition struct {

@@ -6,7 +6,7 @@
 &nbsp;·&nbsp;
 <a href="./SPEC.md">规格</a>
 
-Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩上下文等节点执行本地 shell 命令。桌面端在“设置 -> Hooks”里提供图形化编辑入口，本质上读写同一份 `settings.json`。
+Hooks 让 Deepzora 在会话、用户输入、工具调用、模型返回、压缩上下文等节点执行本地 shell 命令。桌面端在“设置 -> Hooks”里提供图形化编辑入口，本质上读写同一份 `settings.json`。
 
 > Hook 命令会在本机执行 shell。全局和项目 hooks 都会从各自配置位置自动加载。
 
@@ -14,8 +14,8 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
 
 1. 打开桌面端“设置 -> Hooks”。
 2. 选择范围：
-   - “全局”：保存到 `<Deeper home>/settings.json`，始终加载；Windows 默认是 `%APPDATA%\deeper\settings.json`，macOS/Linux 默认是 `~/.deeper/settings.json`。
-   - “项目”：保存到当前工作区的 `.deeper/settings.json`，打开项目时自动加载。
+   - “全局”：保存到 `<Deepzora home>/settings.json`，始终加载；Windows 默认是 `%APPDATA%\deepzora\settings.json`，macOS/Linux 默认是 `~/.deepzora/settings.json`。
+   - “项目”：保存到当前工作区的 `.deepzora/settings.json`，打开项目时自动加载。
 3. 在 JSON 配置框里编辑 `hooks`。
 4. 保存后，重启桌面端，让新配置进入会话。`/new` 只开启新对话，不会重新读取 hooks 配置。
 
@@ -27,14 +27,14 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
     "PreToolUse": [
       {
         "match": "bash",
-        "command": "node .deeper/hooks/check-bash.js",
+        "command": "node .deepzora/hooks/check-bash.js",
         "description": "Block dangerous shell commands",
         "timeout": 5000
       }
     ],
     "Stop": [
       {
-        "command": "echo Deeper turn finished"
+        "command": "echo Deepzora turn finished"
       }
     ]
   }
@@ -45,8 +45,8 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
 
 | 范围 | 文件 | 加载方式 | 加载顺序 |
 | --- | --- | --- | --- |
-| 全局 | `<Deeper home>/settings.json` | 自动 | 项目 hooks 之后 |
-| 项目 | `<workspace>/.deeper/settings.json` | 自动 | 全局 hooks 之前 |
+| 全局 | `<Deepzora home>/settings.json` | 自动 | 项目 hooks 之后 |
+| 项目 | `<workspace>/.deepzora/settings.json` | 自动 | 全局 hooks 之前 |
 
 同一个事件下，项目 hooks 先运行，全局 hooks 后运行；同一范围内按数组顺序运行。阻塞型事件遇到第一个阻塞 hook 后，会停止继续执行后面的 hook。
 
@@ -58,10 +58,10 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
 {
   "hooks": {
     "PreToolUse": [
-      { "match": "bash", "command": "node .deeper/hooks/pre-tool.js" }
+      { "match": "bash", "command": "node .deepzora/hooks/pre-tool.js" }
     ],
     "UserPromptSubmit": [
-      { "command": "node ~/.deeper/hooks/check-prompt.js" }
+      { "command": "node ~/.deepzora/hooks/check-prompt.js" }
     ],
     "Stop": [
       { "command": "echo Turn done" }
@@ -70,14 +70,14 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
 }
 ```
 
-> ⚠️ `command` 通过平台 shell 执行（macOS/Linux 用 `sh -c`，Windows 用 `cmd /c`）。上面示例用跨平台的 `echo`，不会依赖任何平台专用命令。若你只想在 macOS 上弹桌面通知，可改成 `osascript -e 'display notification "Turn done" with title "Deeper"'`；Windows 上没有 `osascript`，请勿照抄该写法，可用 PowerShell：`powershell -NoProfile -Command "Write-Host 'Turn done'"` 或干脆省略该 Stop hook，否则每次会话结束都会报"命令不存在"。
+> ⚠️ `command` 通过平台 shell 执行（macOS/Linux 用 `sh -c`，Windows 用 `cmd /c`）。上面示例用跨平台的 `echo`，不会依赖任何平台专用命令。若你只想在 macOS 上弹桌面通知，可改成 `osascript -e 'display notification "Turn done" with title "Deepzora"'`；Windows 上没有 `osascript`，请勿照抄该写法，可用 PowerShell：`powershell -NoProfile -Command "Write-Host 'Turn done'"` 或干脆省略该 Stop hook，否则每次会话结束都会报"命令不存在"。
 
 桌面端 JSON 编辑器也接受两种便捷输入，保存前会格式化回 `{"hooks": ...}`：
 
 ```json
 {
   "PreToolUse": [
-    { "match": "bash", "command": "node .deeper/hooks/pre-tool.js" }
+    { "match": "bash", "command": "node .deepzora/hooks/pre-tool.js" }
   ],
   "Stop": [
     { "command": "echo done" }
@@ -87,7 +87,7 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
 
 ```json
 [
-  { "event": "PreToolUse", "match": "bash", "command": "node .deeper/hooks/pre-tool.js" },
+  { "event": "PreToolUse", "match": "bash", "command": "node .deepzora/hooks/pre-tool.js" },
   { "event": "Stop", "command": "echo done" }
 ]
 ```
@@ -105,12 +105,12 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
 `match` 是锚定正则：`"file"` 不会匹配 `read_file`，需要写成 `".*file"`。正则非法时该 hook 不会触发。
 
 `command` 默认通过平台 shell 执行：macOS/Linux 使用 `sh -c`，Windows 使用
-`cmd /c`。Windows 上如果命令本身指向带 POSIX shell shebang 的脚本文件，Deeper
-会自动改用 Git Bash；如果 Windows hook 自己显式写了裸命令 `sh -c` 或 `bash -c`，Deeper
+`cmd /c`。Windows 上如果命令本身指向带 POSIX shell shebang 的脚本文件，Deepzora
+会自动改用 Git Bash；如果 Windows hook 自己显式写了裸命令 `sh -c` 或 `bash -c`，Deepzora
 会查找 Git for Windows 自带的 Bash 并直接使用它；带目录的显式解释器路径保持不变。
 通过 `[tools.shell]` 配置的自定义 Bash 路径同样会被 Hook 复用；找不到 Git Bash 时，
 插件 Doctor 和能力诊断会提前显示可操作的依赖提示。Hook stdout/stderr 中的 Windows 旧代码页
-文本会转换为 UTF-8，避免中文错误信息显示成乱码。stdin 是 Deeper 写入的一行 JSON，
+文本会转换为 UTF-8，避免中文错误信息显示成乱码。stdin 是 Deepzora 写入的一行 JSON，
 见下面的 payload 表。
 
 ## 配置里的事件 key
@@ -134,7 +134,7 @@ Hooks 让 Deeper 在会话、用户输入、工具调用、模型返回、压缩
 
 ## Hook 命令收到的 payload
 
-Deeper 会把一行 JSON 写入 hook 命令的 stdin。所有 payload 都至少有：
+Deepzora 会把一行 JSON 写入 hook 命令的 stdin。所有 payload 都至少有：
 
 | key | 类型 | 说明 |
 | --- | --- | --- |
@@ -172,7 +172,7 @@ stdout 和 stderr 会被捕获、去掉首尾空白，并限制单路输出最�
 
 特殊 stdout 行为：
 
-- `PostLLMCall`：exit 0 且 stdout 非空时，stdout 会替换用户看到的 reasoning。若 provider 的 reasoning 带签名，Deeper 会保留原始 signed reasoning 用于后续请求，同时仍展示 hook 转换后的文本。
+- `PostLLMCall`：exit 0 且 stdout 非空时，stdout 会替换用户看到的 reasoning。若 provider 的 reasoning 带签名，Deepzora 会保留原始 signed reasoning 用于后续请求，同时仍展示 hook 转换后的文本。
 - `SessionStart`：exit 0 且 stdout 非空时，stdout 会作为一次性 `<hook-context event="SessionStart">` 注入下一轮真实用户输入。纯文本 stdout 会原样作为上下文；也可以输出 Claude Code / Codex 兼容 JSON：
 
   ```json
@@ -202,11 +202,11 @@ stdout 和 stderr 会被捕获、去掉首尾空白，并限制单路输出最�
 }
 ```
 
-这适合把插件或工作流的 bootstrap 说明带入会话。比如 Superpowers 不需要内置到 Deeper；可以让它自己的 `hooks/session-start-codex` 在 `SessionStart` 输出 `additionalContext`，或让插件根目录 `CLAUDE.md` 被插件包兼容层直接作为 `SessionStart` 上下文读取，Deeper 会在下一轮把这段说明注入模型上下文。插件包兼容层也会读取 `.claude/settings.json` 里的 command hooks，并按同名事件映射到 Deeper hooks。Deeper 默认允许 `max_subagent_depth = 2`，因此 Superpowers 的父会话或第一层 workflow subagent 可以再派发 reviewer/implementer subagent；第二层不会继续获得递归委派工具。若要恢复旧的单层边界，设 `agent.max_subagent_depth = 1`。这会改变子代理可见工具面，可能影响子代理请求的 prompt cache，但不会把 Superpowers 写进 Deeper 的稳定 system prompt。
+这适合把插件或工作流的 bootstrap 说明带入会话。比如 Superpowers 不需要内置到 Deepzora；可以让它自己的 `hooks/session-start-codex` 在 `SessionStart` 输出 `additionalContext`，或让插件根目录 `CLAUDE.md` 被插件包兼容层直接作为 `SessionStart` 上下文读取，Deepzora 会在下一轮把这段说明注入模型上下文。插件包兼容层也会读取 `.claude/settings.json` 里的 command hooks，并按同名事件映射到 Deepzora hooks。Deepzora 默认允许 `max_subagent_depth = 2`，因此 Superpowers 的父会话或第一层 workflow subagent 可以再派发 reviewer/implementer subagent；第二层不会继续获得递归委派工具。若要恢复旧的单层边界，设 `agent.max_subagent_depth = 1`。这会改变子代理可见工具面，可能影响子代理请求的 prompt cache，但不会把 Superpowers 写进 Deepzora 的稳定 system prompt。
 
 ## 示例：阻止危险 bash 命令
 
-`.deeper/settings.json`：
+`.deepzora/settings.json`：
 
 ```json
 {
@@ -214,7 +214,7 @@ stdout 和 stderr 会被捕获、去掉首尾空白，并限制单路输出最�
     "PreToolUse": [
       {
         "match": "bash",
-        "command": "node .deeper/hooks/block-dangerous-bash.js",
+        "command": "node .deepzora/hooks/block-dangerous-bash.js",
         "description": "Block risky bash commands",
         "timeout": 3000
       }
@@ -223,7 +223,7 @@ stdout 和 stderr 会被捕获、去掉首尾空白，并限制单路输出最�
 }
 ```
 
-`.deeper/hooks/block-dangerous-bash.js`：
+`.deepzora/hooks/block-dangerous-bash.js`：
 
 ```js
 const fs = require("fs");
@@ -258,7 +258,7 @@ if (/\brm\s+-rf\b/.test(command) || /\bgit\s+push\b/.test(command)) {
 ## 排障
 
 - 保存后当前会话没有变化：Hooks 在会话构建时加载。重启桌面端后才会重新读取配置；`/new` 只开启新对话，不会重新加载 hooks。
-- 项目 hooks 不执行：确认当前是项目工作区、配置保存在 `.deeper/settings.json`，并重启 Deeper 重新加载。也可用只读诊断：`deeper doctor capabilities` 或桌面端 **设置 → 诊断**（见 [能力诊断](./CAPABILITY_DIAGNOSTICS.zh-CN.md)），关注 `hook.invalid_matcher` / `hook.malformed_settings`。
+- 项目 hooks 不执行：确认当前是项目工作区、配置保存在 `.deepzora/settings.json`，并重启 Deepzora 重新加载。也可用只读诊断：`deepzora doctor capabilities` 或桌面端 **设置 → 诊断**（见 [能力诊断](./CAPABILITY_DIAGNOSTICS.zh-CN.md)），关注 `hook.invalid_matcher` / `hook.malformed_settings`。
 - `match` 没生效：它只对 `PreToolUse` 和 `PostToolUse` 生效，并且是锚定正则。
 - JSON 报 unknown hook event：事件 key 必须完全等于上表的大小写。
 - hook 输出太长：每路 stdout/stderr 最多捕获 256KB，超出会截断并显示截断提示。

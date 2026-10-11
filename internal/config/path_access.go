@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 // resolveConfigAccessPath resolves a config file symlink before any content is
 // read or written. User config links are an explicit user choice and may target
 // any valid file. Project links are repository-controlled, so their final target
-// must stay within the project root (the directory containing deeper.toml).
+// must stay within the project root (the directory containing deepzora.toml).
 func resolveConfigAccessPath(path string, userConfig bool) (string, error) {
 	if resolved, ok := pinnedConfigEditPath(path); ok {
 		return resolved, nil

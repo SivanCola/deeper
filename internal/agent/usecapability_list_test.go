@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/capability"
-	"deeper/internal/config"
-	"deeper/internal/plugin"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestUseCapabilityListSummarizesMCPWithoutExpandingCachedDirectories(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	specs := []plugin.Spec{
 		{Name: "disabled", Type: "stdio", Command: "disabled-mcp", Authorized: true},
 		{Name: "enabled", Type: "stdio", Command: "enabled-mcp", Authorized: true},

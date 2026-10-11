@@ -3,9 +3,9 @@ package main
 import (
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func (a *App) balanceRequestTarget(tabID string) (*WorkspaceTab, control.SessionAPI, uint64) {

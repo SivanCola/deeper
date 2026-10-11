@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 var exitCodePattern = regexp.MustCompile(`(?i)exit (status|code)[:= ]+(-?\d+)`)

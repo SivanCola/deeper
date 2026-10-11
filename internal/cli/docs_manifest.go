@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/productdocs"
+	"deepzora/internal/productdocs"
 )
 
 // docsManifestCommand is an intentionally undocumented release/diagnostic
@@ -17,7 +17,7 @@ import (
 func docsManifestCommand(args []string, cliVersion string) int {
 	flags := flag.NewFlagSet("docs-manifest", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
-	verifySource := flags.String("verify-source", "", "compare the embedded corpus with a Deeper source root")
+	verifySource := flags.String("verify-source", "", "compare the embedded corpus with a Deepzora source root")
 	expectVersion := flags.String("expect-version", "", "require this embedded product version")
 	expectRevision := flags.String("expect-revision", "", "require this embedded source revision")
 	if err := flags.Parse(args); err != nil {

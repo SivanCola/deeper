@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type auditProbe2 struct {

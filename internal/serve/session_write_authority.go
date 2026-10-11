@@ -3,8 +3,8 @@ package serve
 import (
 	"fmt"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // SetSessionLeases hands the server the session-lease keeper that guards its

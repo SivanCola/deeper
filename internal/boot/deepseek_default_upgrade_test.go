@@ -2,8 +2,8 @@ package boot
 
 import (
 	"context"
-	"deeper/internal/config"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +12,7 @@ import (
 
 func TestBuildRestoresDeepSeekChatDefaultWithOneNotice(t *testing.T) {
 	home := isolateConfigHome(t)
-	t.Setenv("DEEPER_HOME", filepath.Join(home, "deeper-home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(home, "deepzora-home"))
 	userPath := config.UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(userPath), 0o700); err != nil {
 		t.Fatal(err)

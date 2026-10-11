@@ -1,5 +1,5 @@
 // installDesktopHostStub installs a fake Electron preload host on
-// window.deeperDesktop so tests exercise the real desktopHost() path instead
+// window.deepzoraDesktop so tests exercise the real desktopHost() path instead
 // of the browser mock. Commands is a plain method table: the stub routes
 // host.invoke through it, and mutating the table between calls is observed
 // immediately (mirroring how the retired window.go seam behaved).
@@ -7,7 +7,7 @@ import type { AppBindings } from "../lib/bridge";
 import { makeMockSessionReaderBindings, publishMockTranscriptEvent, setMockTranscriptMetadata } from "../lib/sessionReaderBridge";
 import type { NativePerformanceActions, ProcessDiagnosticsSnapshot } from "../lib/processDiagnostics";
 import type { DesktopBrowserHost } from "../lib/browserHost";
-import type { BrowserControlApi, BrowserControlState, ChromeImportOutcome, DeeperDesktopHost, ServiceState } from "../lib/desktopHost";
+import type { BrowserControlApi, BrowserControlState, ChromeImportOutcome, DeepzoraDesktopHost, ServiceState } from "../lib/desktopHost";
 
 export interface DesktopHostStubOptions {
   performance?: NativePerformanceActions;
@@ -28,7 +28,7 @@ export interface DesktopHostStubOptions {
   /** Outcome of the Chrome sign-in-state import. */
   chromeImportOutcome?: ChromeImportOutcome;
   /** Overrides native window calls owned by the Electron shell. */
-  window?: Partial<DeeperDesktopHost["native"]["window"]>;
+  window?: Partial<DeepzoraDesktopHost["native"]["window"]>;
 }
 
 function browserControlStub(options: DesktopHostStubOptions): BrowserControlApi {
@@ -84,7 +84,7 @@ export function installDesktopHostStub(commands: object, options: DesktopHostStu
   const events = new Map<string, Set<(...data: unknown[]) => void>>();
   let serviceState: ServiceState = { phase: "ready", generation: "test-service" };
   const serviceListeners = new Set<(state: ServiceState) => void>();
-  const host: DeeperDesktopHost = {
+  const host: DeepzoraDesktopHost = {
     kind: "electron",
     contract: {
       protocolVersion: 1,
@@ -167,8 +167,8 @@ export function installDesktopHostStub(commands: object, options: DesktopHostStu
     },
     browser: undefined as unknown as DesktopBrowserHost,
   };
-  const previous = window.deeperDesktop;
-  window.deeperDesktop = host;
+  const previous = window.deepzoraDesktop;
+  window.deepzoraDesktop = host;
   return {
     get commands() {
       return ref.current;
@@ -192,7 +192,7 @@ export function installDesktopHostStub(commands: object, options: DesktopHostStu
       ref.current = next as Record<string, unknown>;
     },
     uninstall() {
-      window.deeperDesktop = previous;
+      window.deepzoraDesktop = previous;
     },
   };
 }

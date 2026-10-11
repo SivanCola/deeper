@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestBatchToolResultCorrespondencePreservesOrderAndCallIDs(t *testing.T) {

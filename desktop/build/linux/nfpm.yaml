@@ -8,7 +8,7 @@
 # Debian version ordering: stable X.Y.Z, prereleases as X.Y.Z~rc.N / X.Y.Z~canary.N
 # so they sort below the matching stable package. DEB_ARCH is the Go arch name,
 # which already matches Debian's (amd64, arm64).
-name: "deeper-desktop"
+name: "deepzora-desktop"
 arch: "${DEB_ARCH}"
 platform: "linux"
 version: "${DEB_VERSION}"
@@ -16,9 +16,9 @@ section: "utils"
 priority: "optional"
 maintainer: "SivanCola <32437197+SivanCola@users.noreply.github.com>"
 description: |
-  Deeper desktop — an Electron shell around the Go kernel.
-vendor: "Deeper Contributors"
-homepage: "https://github.com/SivanCola/deeper"
+  Deepzora desktop — an Electron shell around the Go kernel.
+vendor: "Deepzora Contributors"
+homepage: "https://github.com/SivanCola/deepzora"
 license: "MIT"
 deb:
   compression: xz
@@ -34,76 +34,76 @@ depends:
   - libasound2
   - pkexec
 contents:
-  - src: ./build/bin/deeper-desktop
-    dst: /usr/bin/deeper-desktop
+  - src: ./build/bin/deepzora-desktop
+    dst: /usr/bin/deepzora-desktop
     file_info:
       mode: 0755
-  - src: ./build/bin/deeper-launcher
-    dst: /usr/bin/deeper-launcher
+  - src: ./build/bin/deepzora-launcher
+    dst: /usr/bin/deepzora-launcher
     file_info:
       mode: 0755
-  - src: ./build/bin/deeper
-    dst: /usr/bin/deeper
+  - src: ./build/bin/deepzora
+    dst: /usr/bin/deepzora
     file_info:
       mode: 0755
-  - src: ./build/bin/deeper-update-helper
-    dst: /usr/lib/deeper/deeper-update-helper
+  - src: ./build/bin/deepzora-update-helper
+    dst: /usr/lib/deepzora/deepzora-update-helper
     file_info:
       mode: 0755
-  # The Electron bundle (Deeper executable, chrome-sandbox, resources),
+  # The Electron bundle (Deepzora executable, chrome-sandbox, resources),
   # staged at build/bin/app by desktop-build.sh. The service bootstrap starts
-  # app/Deeper from here; postinstall.sh sets the chrome-sandbox helper
+  # app/Deepzora from here; postinstall.sh sets the chrome-sandbox helper
   # setuid-root (4755) so the renderer sandbox works without --no-sandbox.
   - src: ./build/bin/app
-    dst: /usr/lib/deeper/app
+    dst: /usr/lib/deepzora/app
     type: tree
-  - src: ./build/linux/io.github.sivancola.deeper.update.policy
-    dst: /usr/share/polkit-1/actions/io.github.sivancola.deeper.update.policy
+  - src: ./build/linux/com.deepzora.desktop.update.policy
+    dst: /usr/share/polkit-1/actions/com.deepzora.desktop.update.policy
     file_info:
       mode: 0644
-  - src: ./build/linux/deeper.desktop
-    dst: /usr/share/applications/deeper.desktop
+  - src: ./build/linux/deepzora.desktop
+    dst: /usr/share/applications/deepzora.desktop
     file_info:
       mode: 0644
   # appicon.png is 1024x1024 — not a standard hicolor size dir, so install it under
-  # the size-agnostic pixmaps path that the .desktop's `Icon=deeper-desktop` finds.
+  # the size-agnostic pixmaps path that the .desktop's `Icon=deepzora-desktop` finds.
   - src: ./build/appicon.png
-    dst: /usr/share/pixmaps/deeper-desktop.png
+    dst: /usr/share/pixmaps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/16x16/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/16x16/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/16x16/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/16x16/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/24x24/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/24x24/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/24x24/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/24x24/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/32x32/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/32x32/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/32x32/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/32x32/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/48x48/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/48x48/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/48x48/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/48x48/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/64x64/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/64x64/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/64x64/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/64x64/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/128x128/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/128x128/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/128x128/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/128x128/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/256x256/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/256x256/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/256x256/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/256x256/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/512x512/apps/deeper-desktop.png
-    dst: /usr/share/icons/hicolor/512x512/apps/deeper-desktop.png
+  - src: ./build/linux/icons/hicolor/512x512/apps/deepzora-desktop.png
+    dst: /usr/share/icons/hicolor/512x512/apps/deepzora-desktop.png
     file_info:
       mode: 0644
-  - src: ./build/linux/icons/hicolor/scalable/apps/deeper-desktop.svg
-    dst: /usr/share/icons/hicolor/scalable/apps/deeper-desktop.svg
+  - src: ./build/linux/icons/hicolor/scalable/apps/deepzora-desktop.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/deepzora-desktop.svg
     file_info:
       mode: 0644

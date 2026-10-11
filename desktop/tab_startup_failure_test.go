@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestTerminalStartupFailureImmediatelyLeavesRestoreSnapshot(t *testing.T) {

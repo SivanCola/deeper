@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func TestResolveWorkspacePathForTab(t *testing.T) {

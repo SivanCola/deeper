@@ -11,7 +11,7 @@ process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || 
   : process.env.PLAYWRIGHT_BROWSERS_PATH;
 const { chromium, _electron } = await import("playwright");
 const electronEngine = process.argv.includes("--electron");
-const electronHome = electronEngine ? await mkdtemp(path.join(tmpdir(), "deeper-dock-electron-")) : "";
+const electronHome = electronEngine ? await mkdtemp(path.join(tmpdir(), "deepzora-dock-electron-")) : "";
 
 const server = await createServer({ root: frontendDir, server: { host: "127.0.0.1", port: 0, hmr: false }, logLevel: "error", plugins: [{
   name: "dock-navigation-fixture",
@@ -35,14 +35,14 @@ try {
     electronApp = await _electron.launch({
       executablePath: electronRequire("electron"),
       args: [main],
-      env: { ...process.env, DEEPER_LAYOUT_URL: url },
+      env: { ...process.env, DEEPZORA_LAYOUT_URL: url },
     });
     page = await electronApp.firstWindow();
   } else {
     browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE });
     page = await browser.newPage();
   }
-  await page.addInitScript(() => localStorage.setItem("deeper-lang", "en"));
+  await page.addInitScript(() => localStorage.setItem("deepzora-lang", "en"));
   const errors = [];
   page.on("pageerror", error => { errors.push(error.message); console.error(error.message); });
   page.on("console", message => { if (message.type() === "error") { errors.push(message.text()); console.error(message.text()); } });

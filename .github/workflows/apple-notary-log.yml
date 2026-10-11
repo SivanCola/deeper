@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   fetch-log:
-    if: github.repository == 'SivanCola/deeper' && github.ref == 'refs/heads/main' && github.ref_protected
+    if: github.repository == 'SivanCola/deepzora' && github.ref == 'refs/heads/main' && github.ref_protected
     runs-on: macos-latest
     environment: release
     timeout-minutes: 10

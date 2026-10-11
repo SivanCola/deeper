@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestWriteAccessApprovalChoicesPreserveScopes(t *testing.T) {

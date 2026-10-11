@@ -5,7 +5,7 @@ package notify
 import (
 	"os/exec"
 
-	"deeper/internal/secrets"
+	"deepzora/internal/secrets"
 )
 
 // PlatformSender delivers notifications through the host OS.

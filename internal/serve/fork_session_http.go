@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 // forkSessionBodyMax bounds the /fork-session body: turn id, title, and
@@ -26,7 +26,7 @@ type forkTargetsResponse struct {
 
 // forkSessionResponse identifies the child POST /fork-session created. The
 // parent keeps its own identity, so this child id is not the serve session id
-// the X-Deeper-Session-ID response header reports and is never echoed there.
+// the X-Deepzora-Session-ID response header reports and is never echoed there.
 type forkSessionResponse struct {
 	HostID     string `json:"hostId,omitempty"`
 	SessionID  string `json:"sessionId"`

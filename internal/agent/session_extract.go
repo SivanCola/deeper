@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // Chunked session recovery summarizes an over-length transcript in

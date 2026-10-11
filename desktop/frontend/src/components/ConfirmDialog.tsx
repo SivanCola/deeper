@@ -55,22 +55,22 @@ function ConfirmDialog({ request, onResolve }: { request: ConfirmDialogRequest; 
   return createPortal(
     <div
       data-app-overlay=""
-      className="modal-backdrop deeper-confirm-backdrop"
+      className="modal-backdrop deepzora-confirm-backdrop"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onResolve(false);
       }}
     >
       <div
-        className="modal deeper-confirm-dialog"
+        className="modal deepzora-confirm-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
       >
-        <div className="modal__title deeper-confirm-dialog__title" id={titleId}>{request.title}</div>
-        <div className="deeper-confirm-dialog__message" id={messageId}>{request.message}</div>
-        <div className="modal__actions deeper-confirm-dialog__actions">
+        <div className="modal__title deepzora-confirm-dialog__title" id={titleId}>{request.title}</div>
+        <div className="deepzora-confirm-dialog__message" id={messageId}>{request.message}</div>
+        <div className="modal__actions deepzora-confirm-dialog__actions">
           <button ref={cancelRef} className="btn btn--small" type="button" onClick={() => onResolve(false)}>
             {request.cancelLabel}
           </button>

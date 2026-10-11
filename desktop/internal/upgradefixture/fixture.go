@@ -16,12 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/sqliteuri"
-	"deeper/internal/topicstate"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/sqliteuri"
+	"deepzora/internal/topicstate"
 )
 
 const (
@@ -57,7 +57,7 @@ func Run(mode, home, reportPath, phase string) error {
 		return err
 	}
 	for key, value := range map[string]string{
-		"DEEPER_HOME": absHome, "DEEPER_STATE_HOME": absHome, "DEEPER_CACHE_HOME": filepath.Join(absHome, "cache"),
+		"DEEPZORA_HOME": absHome, "DEEPZORA_STATE_HOME": absHome, "DEEPZORA_CACHE_HOME": filepath.Join(absHome, "cache"),
 	} {
 		previous, existed := os.LookupEnv(key)
 		if err := os.Setenv(key, value); err != nil {
@@ -133,7 +133,7 @@ func createFixture(ctx context.Context, home, reportPath string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(config.DeeperHomeDir(), "desktop-projects.json"), projectsBody, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(config.DeepzoraHomeDir(), "desktop-projects.json"), projectsBody, 0o600); err != nil {
 		return err
 	}
 	if err := createTopicDatabase(ctx, config.DesktopTopicStatePath(""), fixtureTopicID, "global"); err != nil {
@@ -150,7 +150,7 @@ func createFixture(ctx context.Context, home, reportPath string) error {
 		"workspaces": map[string]any{
 			"global": map[string]any{
 				"id":              "global",
-				"root":            filepath.Join(config.DeeperHomeDir(), "global-workspace"),
+				"root":            filepath.Join(config.DeepzoraHomeDir(), "global-workspace"),
 				"title":           "Global",
 				"visible":         true,
 				"sessionIds":      []string{},
@@ -179,7 +179,7 @@ func createFixture(ctx context.Context, home, reportPath string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(config.DeeperHomeDir(), "desktop-tabs.json"), tabsBody, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(config.DeepzoraHomeDir(), "desktop-tabs.json"), tabsBody, 0o600); err != nil {
 		return err
 	}
 	digest := sha256.Sum256(registry)
@@ -357,7 +357,7 @@ func verifyPreparedTab(report fixtureReport, sessionID string) error {
 			SessionID string `json:"sessionId"`
 		} `json:"tabs"`
 	}
-	if err := readJSON(filepath.Join(config.DeeperHomeDir(), "desktop-tabs.json"), &saved); err != nil {
+	if err := readJSON(filepath.Join(config.DeepzoraHomeDir(), "desktop-tabs.json"), &saved); err != nil {
 		return err
 	}
 	for _, tab := range saved.Tabs {
@@ -397,7 +397,7 @@ func verifyRestoredLegacyTab(report fixtureReport) error {
 			SessionPath string `json:"sessionPath"`
 		} `json:"tabs"`
 	}
-	if err := readJSON(filepath.Join(config.DeeperHomeDir(), "desktop-tabs.json"), &saved); err != nil {
+	if err := readJSON(filepath.Join(config.DeepzoraHomeDir(), "desktop-tabs.json"), &saved); err != nil {
 		return err
 	}
 	for _, tab := range saved.Tabs {
@@ -409,7 +409,7 @@ func verifyRestoredLegacyTab(report fixtureReport) error {
 }
 
 func verifyBackups(ctx context.Context, report fixtureReport) error {
-	backupRoot := filepath.Join(config.DeeperHomeDir(), "desktop", "upgrade-backups")
+	backupRoot := filepath.Join(config.DeepzoraHomeDir(), "desktop", "upgrade-backups")
 	topicBackups, err := filepath.Glob(filepath.Join(backupRoot, "topics-*.sqlite"))
 	if err != nil {
 		return fmt.Errorf("list topic backups: %w", err)

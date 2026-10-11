@@ -1,4 +1,4 @@
-// perfDebug — the window.__deeperPerf introspection hook used by the
+// perfDebug — the window.__deepzoraPerf introspection hook used by the
 // real-DOM benchmark harness (desktop/frontend/bench). It is installed only
 // when the page URL carries `?bench=1`, so production WebView sessions never
 // see it. Everything exposed is the same content-free diagnostic state the
@@ -13,7 +13,7 @@ import {
   type SessionPipelineDiagnostics,
 } from "./sessionDiagnostics";
 
-export interface DeeperPerfHook {
+export interface DeepzoraPerfHook {
   /** Aggregate point-in-time diagnostics snapshot. */
   stats(): SessionPipelineDiagnostics;
   /** Recent activation records (oldest first), for per-switch timings. */
@@ -24,14 +24,14 @@ export interface DeeperPerfHook {
 
 declare global {
   interface Window {
-    __deeperPerf?: DeeperPerfHook;
+    __deepzoraPerf?: DeepzoraPerfHook;
   }
 }
 
 export function installPerfDebugHook(): void {
   if (typeof window === "undefined") return;
   if (!new URLSearchParams(window.location.search).has("bench")) return;
-  window.__deeperPerf = {
+  window.__deepzoraPerf = {
     stats: () => sessionPipelineDiagnostics(),
     activations: () => activationLog(),
     reset: () => resetSessionDiagnostics(),

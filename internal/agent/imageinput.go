@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"deeper/internal/attachment"
-	"deeper/internal/imageinput"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/attachment"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type agentImageInput struct {

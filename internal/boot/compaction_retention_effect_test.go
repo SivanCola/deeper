@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // compactionEffectProvider answers ordinary turns with enough text to drive the
@@ -62,7 +62,7 @@ func TestOldConstraintIsSummaryOwnedAfterCompactionThroughRealBuild(t *testing.T
 		return rec, nil
 	})
 	// 32000 leaves enough history outside the fixed 16% retained tail to fold.
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

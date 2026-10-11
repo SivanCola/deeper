@@ -3,7 +3,7 @@ package main
 import (
 	goruntime "runtime"
 
-	"deeper/desktop/internal/hostrpc"
+	"deepzora/desktop/internal/hostrpc"
 )
 
 const (

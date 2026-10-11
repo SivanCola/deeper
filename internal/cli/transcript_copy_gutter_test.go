@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func transcriptSelectionModel(source transcriptSource) chatTUI {

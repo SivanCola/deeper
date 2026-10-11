@@ -237,7 +237,7 @@ func TestRemoteNewBusyKeepsCurrentSessionReady(t *testing.T) {
 func TestRemoteResumeLeaseConflictFailsAttach(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
 	fs.mu.Lock()
-	fs.failEnter = "this session is in use by another Deeper window or process"
+	fs.failEnter = "this session is in use by another Deepzora window or process"
 	fs.mu.Unlock()
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},

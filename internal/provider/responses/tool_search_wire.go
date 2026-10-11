@@ -3,7 +3,7 @@ package responses
 import (
 	"encoding/json"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func encodeResponsesTools(c *client, req provider.Request) []map[string]any {

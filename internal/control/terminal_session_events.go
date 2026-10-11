@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 func (c *Controller) terminalSessionEvents(e event.Event, projection session.Projection) ([]session.Event, error) {

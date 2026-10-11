@@ -6,10 +6,10 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 type legacyCleanupBatchBuilder struct {

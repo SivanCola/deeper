@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"os"
 
-	"deeper/desktop/internal/hostrpc"
-	"deeper/internal/control"
-	"deeper/internal/secrets"
-	"deeper/internal/servecontract"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/hostrpc"
+	"deepzora/internal/control"
+	"deepzora/internal/secrets"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
 )
 
 func (a *App) writeSessionDiagnosticExport(job *sessionExportJob) error {

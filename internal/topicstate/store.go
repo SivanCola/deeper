@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/sqliteuri"
+	"deepzora/internal/sqliteuri"
 
 	moderncsqlite "modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
@@ -25,7 +25,7 @@ import (
 
 const schemaVersion = 1
 
-// FutureSchemaError means a newer Deeper version owns this database. Callers
+// FutureSchemaError means a newer Deepzora version owns this database. Callers
 // must leave the file untouched and may only use an explicitly compatible
 // legacy read path.
 type FutureSchemaError struct {

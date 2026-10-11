@@ -3,9 +3,9 @@ package serve
 import (
 	"net/http"
 
-	"deeper/internal/control"
-	"deeper/internal/i18n"
-	"deeper/internal/skill"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
+	"deepzora/internal/skill"
 )
 
 type commandCatalogEntry struct {

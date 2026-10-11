@@ -9,7 +9,7 @@ process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || 
   ? path.join(frontendDir, ".pw-browsers")
   : process.env.PLAYWRIGHT_BROWSERS_PATH;
 const { chromium } = await import("playwright");
-const port = Number(process.env.DEEPER_APPROVAL_BROWSER_PORT ?? 4620);
+const port = Number(process.env.DEEPZORA_APPROVAL_BROWSER_PORT ?? 4620);
 const url = `http://127.0.0.1:${port}/`;
 
 function assert(condition, message) {
@@ -26,11 +26,11 @@ try {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(String(error)));
   await page.addInitScript(() => {
-    window.__deeperApprovalAnimationCalls = [];
+    window.__deepzoraApprovalAnimationCalls = [];
     const original = Element.prototype.animate;
     Element.prototype.animate = function (frames, options) {
       if (this instanceof HTMLElement && this.querySelector(".prompt-shelf")) {
-        window.__deeperApprovalAnimationCalls.push({
+        window.__deepzoraApprovalAnimationCalls.push({
           easing: typeof options === "object" && options ? String(options.easing ?? "") : "",
         });
       }
@@ -66,7 +66,7 @@ try {
     throw new Error(`approval card did not resolve: ${JSON.stringify(diagnostics)}`, { cause: error });
   }
 
-  const calls = await page.evaluate(() => window.__deeperApprovalAnimationCalls ?? []);
+  const calls = await page.evaluate(() => window.__deepzoraApprovalAnimationCalls ?? []);
   assert(calls.length === 1, `approval invokes one native Web Animation (${JSON.stringify(calls)})`);
   assert(calls[0]?.easing === "cubic-bezier(0.8, 0, 0.8, 0.28)", `approval uses the CSS easing contract (${calls[0]?.easing})`);
   assert(pageErrors.length === 0, `approval interaction completes without page errors (${JSON.stringify(pageErrors)})`);

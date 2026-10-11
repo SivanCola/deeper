@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/extension"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/extension"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // RebuildFrom is Rebuild using previous BuildResult for incremental sidecars
@@ -117,7 +117,7 @@ func rebuildWithPrevious(ctx context.Context, old *control.Controller, previous 
 		opts.WorkspaceRepo = old.WorkspaceRepo()
 	}
 
-	home := config.DeeperHomeDir()
+	home := config.DeepzoraHomeDir()
 	// fromGraph must be the PREVIOUS generation's graph when available.
 	// Building "current disk" for both from and to collapses every plan to no-op.
 	var fromGraph *extension.DependencyGraph

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 func TestObsoleteHistoryPreparesWithoutBlockingAndRefreshesAfterAppend(t *testing.T) {

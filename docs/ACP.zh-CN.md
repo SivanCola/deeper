@@ -8,7 +8,7 @@
 &nbsp;·&nbsp;
 <a href="https://agentclientprotocol.com/">ACP 规范</a>
 
-Deeper 实现了 Agent Client Protocol（ACP）v1，通过标准输入输出提供 NDJSON
+Deepzora 实现了 Agent Client Protocol（ACP）v1，通过标准输入输出提供 NDJSON
 JSON-RPC 2.0 agent。编辑器和其他 ACP host 负责启动进程、打开一个或多个工作区会话，
 并接收流式消息、工具活动、计划、权限请求和配置更新。
 
@@ -22,21 +22,21 @@ JSON-RPC 2.0 agent。编辑器和其他 ACP host 负责启动进程、打开一�
 ACP host 应启动以下命令之一：
 
 ```sh
-deeper acp
-deeper acp --model deepseek-pro
+deepzora acp
+deepzora acp --model deepseek-pro
 ```
 
 客户端未覆盖模型时，`--model` 用于选择启动模型。普通请求一律进入 executor，
 没有自动任务模式或可选质量底线；验证义务由真实工具动作、项目规则、任务风险和用户显式要求共同建立。
 ACP 不再发布 `quality_floor` 选择项；已知旧值仍可提交但只返回退役说明，未知值仍报错。
 
-标准输出专用于 ACP 消息，Deeper 会把诊断写入标准错误，因此 host 不应合并这两个
-流。尚未配置 provider 时先运行 `deeper setup`；initialize 响应也会声明一个启动
-`deeper setup` 的 terminal authentication method。
+标准输出专用于 ACP 消息，Deepzora 会把诊断写入标准错误，因此 host 不应合并这两个
+流。尚未配置 provider 时先运行 `deepzora setup`；initialize 响应也会声明一个启动
+`deepzora setup` 的 terminal authentication method。
 
 ## 初始化与能力协商
 
-客户端应在打开会话前调用 `initialize`。Deeper 会声明以下能力结构（省略无关字段）：
+客户端应在打开会话前调用 `initialize`。Deepzora 会声明以下能力结构（省略无关字段）：
 
 ```json
 {
@@ -59,9 +59,9 @@ ACP 不再发布 `quality_floor` 选择项；已知旧值仍可提交但只返�
       "sse": false
     },
     "_meta": {
-      "deeper.io": {
+      "deepzora.com": {
         "sessionSteer": {
-          "method": "_deeper.io/session/steer"
+          "method": "_deepzora.com/session/steer"
         }
       }
     }
@@ -69,16 +69,16 @@ ACP 不再发布 `quality_floor` 选择项；已知旧值仍可提交但只返�
 }
 ```
 
-客户端声明 `fs.readTextFile`、`fs.writeTextFile` 或 `terminal` 后，Deeper 会让
+客户端声明 `fs.readTextFile`、`fs.writeTextFile` 或 `terminal` 后，Deepzora 会让
 适用的文件操作经过编辑器的未保存 buffer，并让适用的前台命令在客户端持有的 terminal
 中运行。读取、编辑、写入等全部文件工具都参与其中，因此一次编辑作用于编辑器当前显示
 的内容，而不是磁盘上最后保存的副本。非 UTF-8 文件不适用：ACP 的文件方法只处理文本，
 这类文件会留在本地的编码保持路径上，原有字符集不变。客户端没有声明这些能力时，常规
-工作区工具会在 Deeper 进程内本地运行。
+工作区工具会在 Deepzora 进程内本地运行。
 
 ## 会话生命周期
 
-每个 ACP 会话都拥有独立的 Deeper Controller、工作区根目录、模型、协作
+每个 ACP 会话都拥有独立的 Deepzora Controller、工作区根目录、模型、协作
 模式、审批模式、MCP 集合和持久化 transcript，会话之间不会泄漏状态。
 
 | 方法 | 行为 |
@@ -93,13 +93,13 @@ ACP 不再发布 `quality_floor` 选择项；已知旧值仍可提交但只返�
 | `session/delete` | 停止会话并删除其持久化 ACP 历史。 |
 
 `session/new`、`session/load` 和 `session/resume` 可以携带 `mcpServers`。
-Deeper 支持 stdio、Streamable HTTP 和 legacy SSE server。
+Deepzora 支持 stdio、Streamable HTTP 和 legacy SSE server。
 stdio `env` 和 HTTP `headers` 支持 ACP 官方的
 `[{"name":"...","value":"..."}]` 结构，同时继续接受旧版 object-map 结构。
 
 ## 会话控制
 
-Deeper 把互不相关的选择拆成独立控制轴，而不是混在一个 mode selector 中：
+Deepzora 把互不相关的选择拆成独立控制轴，而不是混在一个 mode selector 中：
 
 | 控制项 | 可选值 | 协议入口 |
 | --- | --- | --- |
@@ -143,7 +143,7 @@ Deeper 把互不相关的选择拆成独立控制轴，而不是混在一个 mod
 ## Prompt、更新与审批
 
 `session/prompt` 支持文本 block 和内嵌文本 resource，不声明图片或音频能力。执行回合
-期间，Deeper 可能发送：
+期间，Deepzora 可能发送：
 
 - agent 消息和思考内容 chunk；
 - pending 和 completed 工具调用更新；
@@ -152,10 +152,10 @@ Deeper 把互不相关的选择拆成独立控制轴，而不是混在一个 mod
 - 当前 mode 和配置项更新；
 - 针对受权限控制工具及用户问题的 `session/request_permission` 请求。
 
-Host 应让 `session/prompt` 请求保持打开，直到 Deeper 返回停止原因；期间仍需同时处理
+Host 应让 `session/prompt` 请求保持打开，直到 Deepzora 返回停止原因；期间仍需同时处理
 双向 request 和 notification。
 
-Deeper 只会返回 ACP v1 规定的停止原因。工作已完成但仍需 final-readiness 检查时，
+Deepzora 只会返回 ACP v1 规定的停止原因。工作已完成但仍需 final-readiness 检查时，
 agent 会发送带 `[warning]` 的消息 chunk 并返回 `end_turn`；厂商状态仍保持
 `readiness_paused`，便于 host 提供恢复入口。客户端取消始终返回 `cancelled`，即使被中断
 的 runner 没有返回 error。显式模型轮数上限（`max_steps`）会发送 `[warning]`、返回
@@ -164,7 +164,7 @@ agent 会发送带 `[warning]` 的消息 chunk 并返回 `end_turn`；厂商状�
 完成校验器已移除。模型正常结束且没有工具调用时返回 `end_turn`；包含工具调用时继续进入
 Agent 循环；真正的空响应会在 frozen request 边界重试。旧的
 `completion_validation`、`completion_evaluator_model` 和
-`DEEPER_COMPLETION_VALIDATION_MODE` 设置仍可读取，但会被忽略且不再由配置渲染器生成。
+`DEEPZORA_COMPLETION_VALIDATION_MODE` 设置仍可读取，但会被忽略且不再由配置渲染器生成。
 主机侧的就绪检查、预算、工具安全边界和恢复边界仍然有效。
 其他 provider、工具或运行时失败会返回 JSON-RPC
 `-32603 InternalError`，消息携带长度受限且已脱敏的原因；不会再用协议外的
@@ -178,7 +178,7 @@ Agent 循环；真正的空响应会在 frozen request 边界重试。旧的
 
 ## 回合中引导扩展
 
-Deeper 通过 ACP v1 厂商扩展提供回合中引导。它不是 ACP 核心方法，也不是仍未发布的
+Deepzora 通过 ACP v1 厂商扩展提供回合中引导。它不是 ACP 核心方法，也不是仍未发布的
 ACP v2 `session/inject` 提案。
 
 ### 发现能力
@@ -186,7 +186,7 @@ ACP v2 `session/inject` 提案。
 从以下位置读取方法名：
 
 ```text
-agentCapabilities._meta["deeper.io"].sessionSteer.method
+agentCapabilities._meta["deepzora.com"].sessionSteer.method
 ```
 
 不要假设该扩展一定存在，也不要调用无命名空间的 `session/steer`。ACP 为核心协议保留
@@ -200,7 +200,7 @@ agentCapabilities._meta["deeper.io"].sessionSteer.method
 {
   "jsonrpc": "2.0",
   "id": 2,
-  "method": "_deeper.io/session/steer",
+  "method": "_deepzora.com/session/steer",
   "params": {
     "sessionId": "session-id",
     "prompt": [
@@ -216,7 +216,7 @@ agentCapabilities._meta["deeper.io"].sessionSteer.method
 {"itemId":"inbox-item-id","disposition":"steer_accepted"}
 ```
 
-Deeper 会先完成持久化再返回。`steer_accepted` 表示活动回合已接受；
+Deepzora 会先完成持久化再返回。`steer_accepted` 表示活动回合已接受；
 `queued_followup` 表示 admission 竞争失败或当前没有活动回合，同一条持久化消息会保留为
 后续回合。无路径兼容会话可能不返回 `itemId`，但仍返回 `steer_accepted`。已应用的消息
 会进入正常历史；回放 transcript 时显示用户原文，不显示内部 steer marker。
@@ -233,7 +233,7 @@ Deeper 会先完成持久化再返回。`steer_accepted` 表示活动回合已�
 
 ## 持久化 Session Inbox 扩展
 
-从 `agentCapabilities._meta["deeper.io"].sessionInbox` 发现带版本的队列。
+从 `agentCapabilities._meta["deepzora.com"].sessionInbox` 发现带版本的队列。
 Schema v1 在 `methods` map 中声明方法名；客户端应使用这里声明的名字，不要自行拼接
 vendor method。
 
@@ -253,17 +253,17 @@ List 只返回预览和字节数，不返回正文。恢复出的 Inbox 默认�
 
 ## 运行时重载与扩展表面
 
-Deeper 还在 `agentCapabilities._meta["deeper.io"]` 中通告两个扩展点：
+Deepzora 还在 `agentCapabilities._meta["deepzora.com"]` 中通告两个扩展点：
 
 - `sessionReloadExtensions`——vendor method
-  `_deeper.io/session/reloadExtensions`。调用后按与 CLI `/reload`
+  `_deepzora.com/session/reloadExtensions`。调用后按与 CLI `/reload`
   相同的失败原子语义重载该会话的 agent 运行时（扩展、工具、skills、
   commands、hooks、providers）：回合或重建进行中只排队一次
   （`{"queued": true}`），空闲后执行；否则原子重建并交换，重建失败时
-  保留旧运行时。重载成功后 Deeper 会推送新的
+  保留旧运行时。重载成功后 Deepzora 会推送新的
   `available_commands_update`。
 - `extensionSurface`——结构化扩展 UI 能力。在 initialize `_meta` 中
-  同样声明了 `deeper.io.extensionSurface` 的客户端会收到结构化的
+  同样声明了 `deepzora.com.extensionSurface` 的客户端会收到结构化的
   扩展表面载荷；未声明的客户端收到等价文本 fallback（card/status 退
   化为 `agent_message_chunk`，扩展表单退化为权限请求），因此客户端
   不做任何处理也能保持兼容。
@@ -276,11 +276,11 @@ Deeper 还在 `agentCapabilities._meta["deeper.io"]` 中通告两个扩展点：
 支持 MCP elicitation 的宿主在 `initialize.clientCapabilities` 中显式声明：
 
 ```json
-{"_meta":{"deeper.io":{"mcpInteraction":{"supported":true,"schemaVersion":1}}}}
+{"_meta":{"deepzora.com":{"mcpInteraction":{"supported":true,"schemaVersion":1}}}}
 ```
 
-Deeper 在 `agentCapabilities._meta.deeper.io.mcpInteraction` 返回对应能力，
-方法为 `_deeper.io/mcp/request_interaction`。协商成功的会话使用 interactive MCP
+Deepzora 在 `agentCapabilities._meta.deepzora.com.mcpInteraction` 返回对应能力，
+方法为 `_deepzora.com/mcp/request_interaction`。协商成功的会话使用 interactive MCP
 host profile；未声明或版本不匹配的客户端继续使用 core profile，不接收新增反向请求。
 新建、加载与重建会话均遵循这一协商结果。
 
@@ -297,7 +297,7 @@ host profile；未声明或版本不匹配的客户端继续使用 core profile�
 
 ## 兼容性与缓存行为
 
-| 表面 | 旧版或非 Deeper 客户端的行为 | 结论 |
+| 表面 | 旧版或非 Deepzora 客户端的行为 | 结论 |
 | --- | --- | --- |
 | 现有 ACP v1 方法 | 方法名和响应结构不变。 | 兼容 |
 | Capability `_meta` | 可以忽略未知 metadata。 | 兼容 |
@@ -310,11 +310,11 @@ Steer 只会把用户请求的消息追加到正常会话历史，不改变 syst
 
 ## 客户端接入检查清单
 
-1. 启动 `deeper acp`，分离 stdin、stdout 和 stderr。
+1. 启动 `deepzora acp`，分离 stdin、stdout 和 stderr。
 2. 调用 `initialize`，同时遵守标准 capability 和 `_meta` capability。
 3. 使用绝对工作区路径打开会话，并隔离保存各 session id。
 4. Prompt 运行期间继续处理 agent 发往客户端的文件、terminal 和权限请求。
-5. 只有在 Deeper 声明 capability 且 prompt 活动时才显示 steer UI。
+5. 只有在 Deepzora 声明 capability 且 prompt 活动时才显示 steer UI。
 6. 按 steer `disposition` 分支；两种结果都已持久化，但只有 `steer_accepted`
    能影响活动回合。
 7. 用 `session/close` 释放资源；只有用户明确要删除持久化历史时才调用

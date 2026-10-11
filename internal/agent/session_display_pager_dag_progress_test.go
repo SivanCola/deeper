@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/fileops"
-	"deeper/internal/historywork"
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/historywork"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func dagResumeOptions(t *testing.T, source, cache, head string) (projectiondb.OpenOptions, string, int64) {
@@ -101,7 +101,7 @@ func checkDAGPagerResume(t *testing.T, phase, mode string) {
 			t.Fatal(err)
 		}
 		child := exec.CommandContext(t.Context(), executable, "-test.run=^TestDAGPagerCrashHelper$")
-		child.Env = append(os.Environ(), "DEEPER_DAG_CRASH_SOURCE="+source, "DEEPER_DAG_CRASH_CACHE="+cache, "DEEPER_DAG_CRASH_PHASE="+phase)
+		child.Env = append(os.Environ(), "DEEPZORA_DAG_CRASH_SOURCE="+source, "DEEPZORA_DAG_CRASH_CACHE="+cache, "DEEPZORA_DAG_CRASH_PHASE="+phase)
 		if output, err := child.CombinedOutput(); err != nil {
 			t.Fatalf("child failed: %v\n%s", err, output)
 		}
@@ -176,7 +176,7 @@ func assertDAGPagerReplay(t *testing.T, pager *DisplayPager, source, head string
 }
 
 func TestDAGPagerCrashHelper(t *testing.T) {
-	source, cache, phase := os.Getenv("DEEPER_DAG_CRASH_SOURCE"), os.Getenv("DEEPER_DAG_CRASH_CACHE"), os.Getenv("DEEPER_DAG_CRASH_PHASE")
+	source, cache, phase := os.Getenv("DEEPZORA_DAG_CRASH_SOURCE"), os.Getenv("DEEPZORA_DAG_CRASH_CACHE"), os.Getenv("DEEPZORA_DAG_CRASH_PHASE")
 	if source == "" || cache == "" {
 		return
 	}

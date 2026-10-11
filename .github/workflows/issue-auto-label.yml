@@ -4,7 +4,6 @@ name: Auto-label issues
 # API (the project's own model). The model is constrained to a fixed label set —
 # anything it returns outside the set is dropped — so it can't invent labels.
 # Issues it can't place into any area get `needs-triage` for a human to look at.
-# Version (v1/v2) labels are handled separately by issue-version-label.yml.
 on:
   issues:
     types: [opened, reopened]
@@ -35,7 +34,7 @@ jobs:
             const body = (issue.body || '').slice(0, 4000);
 
             const system = [
-              'You categorize GitHub issues for Deeper, a Go-based AI coding agent with an Electron desktop app and a terminal UI.',
+              'You categorize GitHub issues for Deepzora, a Go-based AI coding agent with an Electron desktop app and a terminal UI.',
               'Pick labels ONLY from these fixed sets. Never invent labels.',
               'area (0-2, the affected subsystem):',
               '  agent: core agent loop / tool-calling / reasoning',

@@ -8,7 +8,7 @@ import (
 	"aead.dev/minisign"
 )
 
-//go:embed deeper.pub
+//go:embed deepzora.pub
 var publicKey string
 
 // Verify reports whether sig (the contents of a .minisig file) is a valid minisign

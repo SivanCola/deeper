@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/mcpinteraction"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/mcpinteraction"
+	"deepzora/internal/turnevent"
 )
 
 func blockPromptTestLedger(t *testing.T, c *Controller, root string) {

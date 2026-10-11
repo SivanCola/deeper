@@ -1,4 +1,4 @@
-# Deeper Desktop shell (Electron)
+# Deepzora Desktop shell (Electron)
 
 The Electron process that hosts the React UI and supervises the Go desktop
 service. The wire contract between the two is
@@ -7,7 +7,7 @@ package implements the shell side of it and nothing else. Business logic stays
 in Go, the UI stays in `../frontend`.
 
 ```text
-renderer (deeper://app) ──preload (window.deeperDesktop)──▶ main process ──NDJSON JSON-RPC over stdio──▶ deeper-desktop --host-rpc
+renderer (deepzora://app) ──preload (window.deepzoraDesktop)──▶ main process ──NDJSON JSON-RPC over stdio──▶ deepzora-desktop --host-rpc
 ```
 
 ## Layout
@@ -19,13 +19,13 @@ renderer (deeper://app) ──preload (window.deeperDesktop)──▶ main proce
 | `src/main/rpc.ts` | NDJSON JSON-RPC 2.0 client (64 MiB frames, timeouts, reverse requests) |
 | `src/main/handshake.ts` | `desktop/hello` params, result validation, failure descriptions |
 | `src/main/window.ts` | main `BrowserWindow`, `host/window.*`, close and crash handling |
-| `src/main/protocol.ts` | `deeper://app` file serving and resource-origin forwarding |
+| `src/main/protocol.ts` | `deepzora://app` file serving and resource-origin forwarding |
 | `src/main/ipc.ts` | renderer IPC: sender check, contract allowlist, native calls |
 | `src/main/hostCalls.ts` | `host/*` dispatch table |
 | `src/main/lifecycle.ts` | quit sequencing (`beforeClose` → `shutdown` → stdin close → exit) |
 | `src/main/menu.ts`, `tray.ts`, `dialogs.ts`, `remoteWindows.ts` | native surfaces |
 | `src/main/browser/` | in-app browser: website views, snapshots, actions, downloads, grants |
-| `src/preload/index.ts` | the single `window.deeperDesktop` object |
+| `src/preload/index.ts` | the single `window.deepzoraDesktop` object |
 | `src/shared/ipc.ts` | channel names and types shared by main and preload |
 
 ## Browser surface
@@ -35,7 +35,7 @@ renderer (deeper://app) ──preload (window.deeperDesktop)──▶ main proce
 The desktop UI exposes **Settings → General → System → Hardware acceleration**.
 The preference is stored in the Electron shell profile and only takes effect
 after a full application restart. If rendering fails before Settings can open,
-fully quit Deeper and start it once with `DEEPER_DISABLE_GPU=1`; this is a
+fully quit Deepzora and start it once with `DEEPZORA_DISABLE_GPU=1`; this is a
 temporary override and does not change the saved preference. The override is
 supported on Windows, macOS, and Linux.
 
@@ -83,7 +83,7 @@ responses; GPU child-process events are injected, not a real driver crash.
 The shell can host real websites next to the app UI (contract:
 [`docs/DESKTOP_BROWSER.md`](../../docs/DESKTOP_BROWSER.md)). Every tab is a
 sandboxed `WebContentsView` managed by `browser/surfaceManager.ts`; the React
-panel drives it through `deeperDesktop.browser.*` (user surface, no grant),
+panel drives it through `deepzoraDesktop.browser.*` (user surface, no grant),
 and Go drives it through the `host/browser.*` host calls
 (`browser/hostCalls.ts`), which require a per-task grant that dies with the
 service generation.
@@ -107,7 +107,7 @@ it back. Agent-dispatched input is marked so its echo is not a take-over.
 Downloads land in the task's scratch directory when one is registered by a
 `browser.act`/`browser.screenshot` call, otherwise in
 `userData/downloads/<taskId>`; the renderer hears about them through
-`deeperDesktop.browser.onDownload`.
+`deepzoraDesktop.browser.onDownload`.
 
 ## Build
 
@@ -126,10 +126,10 @@ Build the Go service and the UI, then the shell:
 
 ```sh
 cd desktop
-go build -o build/bin/deeper-desktop-service .     # accepts --host-rpc
+go build -o build/bin/deepzora-desktop-service .     # accepts --host-rpc
 go run . -emit-contract frontend/src/generated       # desktopContract.generated.{ts,json}
-pnpm --filter deeper-desktop-frontend build        # frontend/dist
-pnpm --filter deeper-desktop-shell build           # electron/dist/{main,preload}.cjs + desktopContract.json
+pnpm --filter deepzora-desktop-frontend build        # frontend/dist
+pnpm --filter deepzora-desktop-shell build           # electron/dist/{main,preload}.cjs + desktopContract.json
 ```
 
 The shell build reads `frontend/src/generated/desktopContract.generated.json`,
@@ -137,7 +137,7 @@ recomputes its digest the way `hostrpc.Contract.Canonical` defines it
 (sorted keys, compact, no HTML escaping), checks it against the
 `DESKTOP_CONTRACT_DIGEST` the generator emitted, and writes the contract plus
 `digest` to `dist/desktopContract.json`. A missing contract fails the build;
-set `DEEPER_ELECTRON_ALLOW_MISSING_CONTRACT=1` to build without it (every
+set `DEEPZORA_ELECTRON_ALLOW_MISSING_CONTRACT=1` to build without it (every
 `desktop/invoke` is then rejected and the hello digest is empty).
 
 Packaged shells read the full version tag, channel and commit from
@@ -151,27 +151,27 @@ used by CI must also be linked with the same non-development version.
 
 ```sh
 cd desktop/electron
-pnpm start                     # electron . against ../build/bin/deeper-desktop-service
-DEEPER_DESKTOP_SERVICE=/path/to/binary pnpm start
+pnpm start                     # electron . against ../build/bin/deepzora-desktop-service
+DEEPZORA_DESKTOP_SERVICE=/path/to/binary pnpm start
 ```
 
 Development against the Vite dev server instead of the packaged UI:
 
 ```sh
 cd desktop/frontend && pnpm dev                      # http://127.0.0.1:5173
-cd desktop/electron && pnpm dev                      # DEEPER_DEV=1, loads DEEPER_ELECTRON_DEV_URL
+cd desktop/electron && pnpm dev                      # DEEPZORA_DEV=1, loads DEEPZORA_ELECTRON_DEV_URL
 ```
 
 Environment:
 
 | Variable | Effect |
 | --- | --- |
-| `DEEPER_DESKTOP_SERVICE` | path of the Go service binary (packaged default: `resources/service/deeper-desktop[.exe]`) |
-| `DEEPER_HOME` | data home, resolved exactly like `internal/config.DeeperHomeDir` and sent in `hello.instance.home` |
-| `DEEPER_DEV` | skips the single-instance lock and marks the instance as `dev` |
-| `DEEPER_ELECTRON_DEV_URL` | loads this URL instead of `deeper://app/index.html` |
-| `DEEPER_FRONTEND_DIST` | overrides the directory served under `deeper://app/` |
-| `DEEPER_CHANNEL`, `DEEPER_COMMIT` | build identity in `hello.build` (default `dev`) |
+| `DEEPZORA_DESKTOP_SERVICE` | path of the Go service binary (packaged default: `resources/service/deepzora-desktop[.exe]`) |
+| `DEEPZORA_HOME` | data home, resolved exactly like `internal/config.DeepzoraHomeDir` and sent in `hello.instance.home` |
+| `DEEPZORA_DEV` | skips the single-instance lock and marks the instance as `dev` |
+| `DEEPZORA_ELECTRON_DEV_URL` | loads this URL instead of `deepzora://app/index.html` |
+| `DEEPZORA_FRONTEND_DIST` | overrides the directory served under `deepzora://app/` |
+| `DEEPZORA_CHANNEL`, `DEEPZORA_COMMIT` | build identity in `hello.build` (default `dev`) |
 
 Logs live under `<home>/desktop-shell/logs/`: `shell.log` (main process) and
 `service.log` (the Go service's stderr), each rotating at 5 MB. In dev both
@@ -187,11 +187,11 @@ pnpm test          # node --test; pure modules only, Electron is injected throug
 ## Security boundaries
 
 - The application window runs with `sandbox: true`, `contextIsolation: true`,
-  `nodeIntegration: false`, no spellcheck, and loads only `deeper://app`.
+  `nodeIntegration: false`, no spellcheck, and loads only `deepzora://app`.
   Every navigation away from the app origin is blocked; popups are denied;
   `<webview>` is refused.
-- The preload exposes exactly one object, `window.deeperDesktop`, shaped as
-  the protocol document's `DeeperDesktopHost`. IPC replies are envelopes, so
+- The preload exposes exactly one object, `window.deepzoraDesktop`, shaped as
+  the protocol document's `DeepzoraDesktopHost`. IPC replies are envelopes, so
   a Go error reaches the renderer as `Error(<Go message>)` with no Electron
   prefix.
 - `ipcMain` handlers accept calls only from the main window's top frame
@@ -199,7 +199,7 @@ pnpm test          # node --test; pure modules only, Electron is injected throug
   is rejected and logged.
 - `desktop/invoke` names are validated against the embedded contract before
   they reach Go; unknown names fail with a `-32601` error.
-- `deeper://app` serves files strictly under the frontend dist (no `..`,
+- `deepzora://app` serves files strictly under the frontend dist (no `..`,
   no absolute escapes, no directory index fallback except `/`). Only the
   three resource prefixes are forwarded to the loopback origin, and the bearer
   token is attached in the main process; it never reaches any renderer.

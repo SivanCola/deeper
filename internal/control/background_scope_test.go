@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/jobs"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
 )
 
 func TestModelReplacementFencesCandidateAndRetiredCallbacks(t *testing.T) {

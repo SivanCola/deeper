@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/imageinput"
-	"deeper/internal/session"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/session"
 )
 
 // PreparedSubmission is a host-only immutable admission candidate. Its fields

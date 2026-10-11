@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 // FileStore is a Store backed by a JSON file tree under a project-local
@@ -20,12 +20,12 @@ import (
 // <dir>/<task-id>/events.jsonl.  It is read-only in TM-02; write support
 // is added in TM-04.
 type FileStore struct {
-	baseDir string // projectDir → task data root (e.g. ".deeper/tasks")
+	baseDir string // projectDir → task data root (e.g. ".deepzora/tasks")
 	sink    ProjectionSink
 }
 
 // NewFileStore returns a FileStore rooted at baseDir.  baseDir is typically
-// ".deeper/tasks" relative to the project root.
+// ".deepzora/tasks" relative to the project root.
 func NewFileStore(baseDir string) *FileStore {
 	return &FileStore{baseDir: baseDir}
 }

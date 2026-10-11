@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"io"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/providerconv"
-	"deeper/internal/provider"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/providerconv"
+	"deepzora/internal/provider"
 )
 
 // Host payload DTOs: one struct per intercept point. These are the host-side

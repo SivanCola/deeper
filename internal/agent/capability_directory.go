@@ -2,7 +2,7 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/plugin"
+	"deepzora/internal/plugin"
 	"fmt"
 )
 

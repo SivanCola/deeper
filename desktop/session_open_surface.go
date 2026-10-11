@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 // surfaceForCanonicalSession returns the tab OpenSession installs ref into.

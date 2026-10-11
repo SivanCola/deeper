@@ -1,7 +1,7 @@
 package openai
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"testing"
 )
 

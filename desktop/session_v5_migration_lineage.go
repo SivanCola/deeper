@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 // A conversion is linked by persisted provenance, never by title or a coincident
@@ -182,7 +182,7 @@ type desktopMigrationStagedNode struct {
 // histories survive; equal/prefix ancestors get receipts for the same target.
 // Incomparable continuations remain separate conversations.
 func (a *App) migrateConversionLineage(ctx context.Context, path, headID string, source desktopMigrationSource, cp *desktopMigrationCheckpoint, workspaceID string) (retErr error) {
-	tmp, err := os.MkdirTemp("", "deeper-lineage-")
+	tmp, err := os.MkdirTemp("", "deepzora-lineage-")
 	if err != nil {
 		return err
 	}

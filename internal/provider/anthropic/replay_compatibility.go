@@ -3,7 +3,7 @@ package anthropic
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func (c *client) requiresReceivedReasoning(m provider.Message) bool {

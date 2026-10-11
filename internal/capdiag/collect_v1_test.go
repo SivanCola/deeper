@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/capdiag"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/capdiag"
+	"deepzora/internal/pluginpkg"
 )
 
 // TestPluginPackageV2FieldsAreReported pins the Manifest v2 additions to the
@@ -16,31 +16,31 @@ import (
 func TestPluginPackageV2FieldsAreReported(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
+	deepzoraHome := filepath.Join(home, ".deepzora")
 	t.Setenv("HOME", home)
-	t.Setenv("DEEPER_HOME", deeperHome)
+	t.Setenv("DEEPZORA_HOME", deepzoraHome)
 
-	pluginRoot := filepath.Join(deeperHome, "plugins", "demo")
+	pluginRoot := filepath.Join(deepzoraHome, "plugins", "demo")
 	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "demo",
   "contributes": {
     "prompts": ["prompts"],
-    "themes": ["themes/*.deeper-theme"]
+    "themes": ["themes/*.deepzora-theme"]
   },
-  "runtime": {"command": "${DEEPER_PLUGIN_ROOT}/bin/demo", "intercepts": ["input.receive"]}
+  "runtime": {"command": "${DEEPZORA_PLUGIN_ROOT}/bin/demo", "intercepts": ["input.receive"]}
 }`)
 	write(t, filepath.Join(pluginRoot, "prompts", "plan.md"), "---\ndescription: plan\n---\nPlan $ARGUMENTS\n")
-	write(t, filepath.Join(pluginRoot, "themes", "neon.deeper-theme"), "theme bytes")
+	write(t, filepath.Join(pluginRoot, "themes", "neon.deepzora-theme"), "theme bytes")
 	write(t, filepath.Join(pluginRoot, "bin", "demo"), "#!/bin/sh\n")
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
-		Name: "demo", Root: "plugins/demo", ManifestKind: "deeper", Enabled: true,
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
+		Name: "demo", Root: "plugins/demo", ManifestKind: "deepzora", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, DeeperHomeDir: deeperHome,
+		Root: root, HomeDir: home, DeepzoraHomeDir: deepzoraHome,
 	})
 	if len(r.Plugins.Packages) != 1 {
 		t.Fatalf("plugin packages = %+v, want demo", r.Plugins.Packages)
@@ -75,21 +75,21 @@ func TestPluginPackageV2FieldsAreReported(t *testing.T) {
 func TestPluginPackageLegacyOmitsV1Fields(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
-	deeperHome := filepath.Join(home, ".deeper")
+	deepzoraHome := filepath.Join(home, ".deepzora")
 	t.Setenv("HOME", home)
-	t.Setenv("DEEPER_HOME", deeperHome)
+	t.Setenv("DEEPZORA_HOME", deepzoraHome)
 
-	pluginRoot := filepath.Join(deeperHome, "plugins", "legacy")
-	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{"apiVersion":"deeper.io/plugin/v2","name":"legacy","skills":["skills"]}`)
+	pluginRoot := filepath.Join(deepzoraHome, "plugins", "legacy")
+	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{"apiVersion":"deepzora.com/plugin/v2","name":"legacy","skills":["skills"]}`)
 	write(t, filepath.Join(pluginRoot, "skills", "s", "SKILL.md"), "---\ndescription: s\n---\nS\n")
-	if err := pluginpkg.Upsert(deeperHome, pluginpkg.InstalledPlugin{
-		Name: "legacy", Root: "plugins/legacy", ManifestKind: "deeper", Enabled: true,
+	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
+		Name: "legacy", Root: "plugins/legacy", ManifestKind: "deepzora", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	r := capdiag.Collect(capdiag.Options{
-		Root: root, HomeDir: home, DeeperHomeDir: deeperHome,
+		Root: root, HomeDir: home, DeepzoraHomeDir: deepzoraHome,
 	})
 	if len(r.Plugins.Packages) != 1 {
 		t.Fatalf("plugin packages = %+v, want legacy", r.Plugins.Packages)

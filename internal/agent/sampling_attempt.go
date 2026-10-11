@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // runSamplingAttempt records the exact HTTP-attempt delta for one replay of a

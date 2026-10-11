@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"deeper/internal/event"
-	"deeper/internal/mcpinteraction"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/mcpinteraction"
+	"deepzora/internal/provider"
 )
 
 // pendingMCPInteraction is one server-initiated elicitation awaiting the user's

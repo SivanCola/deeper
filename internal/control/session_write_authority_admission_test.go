@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 func TestStaleWriteAuthorityBlocksAsyncAdmission(t *testing.T) {

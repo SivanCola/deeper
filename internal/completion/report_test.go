@@ -1,7 +1,7 @@
 package completion
 
 import (
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 	"path/filepath"
 	"reflect"
 	"runtime"

@@ -12,11 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/rpcwire"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/secrets"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/rpcwire"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/secrets"
 )
 
 // Lifecycle budgets.

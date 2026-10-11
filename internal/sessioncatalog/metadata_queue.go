@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/historywork"
+	"deepzora/internal/historywork"
 )
 
 type metadataQueueJob struct {

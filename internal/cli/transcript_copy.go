@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	copySpanStartPrefix = "\x1b]1337;deeper-copy-span="
-	copySpanEndPrefix   = "\x1b]1337;deeper-copy-span-end="
+	copySpanStartPrefix = "\x1b]1337;deepzora-copy-span="
+	copySpanEndPrefix   = "\x1b]1337;deepzora-copy-span-end="
 	copySpanTerminator  = "\x07"
 	copyOmitSpanID      = "gutter"
 )

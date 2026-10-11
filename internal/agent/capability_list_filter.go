@@ -5,7 +5,7 @@ import (
 	"maps"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func (t *restrictedCapabilityProxy) bindToolResultSession(session func() *Session) {

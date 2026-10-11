@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/sqliteuri"
+	"deepzora/internal/sqliteuri"
 )
 
 type readViewKey struct{}

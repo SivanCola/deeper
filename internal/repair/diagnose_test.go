@@ -9,7 +9,7 @@ import (
 
 func TestDiagnoseFindsProviderPluginAndPermissionProblems(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	configText := `default_model = "custom/missing"
 
 [[providers]]
@@ -21,7 +21,7 @@ api_key_env = "CUSTOM_KEY"
 
 [[plugins]]
 name = "missing-command"
-command = "deeper-command-that-does-not-exist"
+command = "deepzora-command-that-does-not-exist"
 
 [permissions]
 allow = ["bash"]
@@ -47,7 +47,7 @@ deny = ["bash"]
 
 func TestDiagnoseDoesNotRewriteLegacyMCPTierConfig(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	configText := "[[plugins]]\nname = \"srv\"\ncommand = \"echo\"\ntier = \"eager\"\n"
 	path := filepath.Join(home, "config.toml")
 	if err := os.WriteFile(path, []byte(configText), 0o600); err != nil {
@@ -67,7 +67,7 @@ func TestDiagnoseDoesNotRewriteLegacyMCPTierConfig(t *testing.T) {
 
 func TestRebuildDerivedStateQuarantinesWithoutDeleting(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "desktop-tabs.json")
 	if err := os.WriteFile(path, []byte("bad"), 0o600); err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func TestRebuildDerivedStateQuarantinesWithoutDeleting(t *testing.T) {
 
 func TestRebuildDerivedStateCommitsWhenAuditLogFails(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "desktop-tabs.json")
 	original := []byte("bad")
 	if err := os.WriteFile(path, original, 0o600); err != nil {

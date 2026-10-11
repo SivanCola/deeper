@@ -1,8 +1,8 @@
 package control
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/jobs"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
 )
 
 type controllerBackground struct {

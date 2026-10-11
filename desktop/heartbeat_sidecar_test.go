@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 func TestHeartbeatRunHistoryLegacySidecarReadable(t *testing.T) {

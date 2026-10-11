@@ -9,9 +9,9 @@ func renderRemoteConfig(b *strings.Builder, c *Config, scope RenderScope) {
 	if scope == RenderScopeProject || (!c.Remote.ImportSSHConfig && len(c.Remote.Hosts) == 0 && len(c.Remote.Projects) == 0) {
 		return
 	}
-	b.WriteString("[remote]   # SSH remote hosts; user/global only, ./deeper.toml cannot override\n")
+	b.WriteString("[remote]   # SSH remote hosts; user/global only, ./deepzora.toml cannot override\n")
 	if c.Remote.ImportSSHConfig {
-		b.WriteString("import_ssh_config = true   # surface ~/.ssh/config aliases in `deeper remote import`\n")
+		b.WriteString("import_ssh_config = true   # surface ~/.ssh/config aliases in `deepzora remote import`\n")
 	}
 	for _, host := range c.Remote.Hosts {
 		renderRemoteHost(b, host)
@@ -41,13 +41,13 @@ func renderRemoteHost(b *strings.Builder, host RemoteHostEntry) {
 		fmt.Fprintf(b, "user = %q\n", host.User)
 	}
 	if host.IdentityFile != "" {
-		fmt.Fprintf(b, "identity_file = %q   # key file path; Deeper never stores key material\n", host.IdentityFile)
+		fmt.Fprintf(b, "identity_file = %q   # key file path; Deepzora never stores key material\n", host.IdentityFile)
 	}
 	if host.PassphraseEnv != "" {
-		fmt.Fprintf(b, "passphrase_env = %q   # env var name; value lives in Deeper's global .env\n", host.PassphraseEnv)
+		fmt.Fprintf(b, "passphrase_env = %q   # env var name; value lives in Deepzora's global .env\n", host.PassphraseEnv)
 	}
 	if host.PasswordEnv != "" {
-		fmt.Fprintf(b, "password_env = %q   # env var name; value lives in Deeper's global .env\n", host.PasswordEnv)
+		fmt.Fprintf(b, "password_env = %q   # env var name; value lives in Deepzora's global .env\n", host.PasswordEnv)
 	}
 	if host.ProxyJump != "" {
 		fmt.Fprintf(b, "proxy_jump = %q   # OpenSSH ProxyJump chain\n", host.ProxyJump)

@@ -7,14 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/remote"
+	"deepzora/internal/remote"
 )
 
 func credProxyOpts(baseURL string) *CredentialProxyOptions {
 	return &CredentialProxyOptions{
 		BaseURL:  baseURL,
 		Token:    "virtual-token-123",
-		Provider: "deeper-desktop-proxy",
+		Provider: "deepzora-desktop-proxy",
 		Model:    "deepseek-v4-flash",
 	}
 }
@@ -33,15 +33,15 @@ func TestEnsureCredentialProviderAppendsAndIsIdempotent(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, credProxyOpts("http://127.0.0.1:18999")); err != nil {
 		t.Fatalf("first install: %v", err)
 	}
-	first, rerr := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	first, rerr := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if rerr != nil {
 		t.Fatal(rerr)
 	}
 	for _, want := range []string{
 		`[[providers]]`,
-		`name = "deeper-desktop-proxy"`,
+		`name = "deepzora-desktop-proxy"`,
 		`base_url = "http://127.0.0.1:18999"`,
-		`api_key_env = "DEEPER_PROXY_TOKEN"`,
+		`api_key_env = "DEEPZORA_PROXY_TOKEN"`,
 		`model = "deepseek-v4-flash"`,
 	} {
 		if !strings.Contains(string(first), want) {
@@ -53,7 +53,7 @@ func TestEnsureCredentialProviderAppendsAndIsIdempotent(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, credProxyOpts("http://127.0.0.1:18999")); err != nil {
 		t.Fatalf("second install: %v", err)
 	}
-	second, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	second, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if string(first) != string(second) {
 		t.Fatalf("idempotent run rewrote the config:\n%s\n---\n%s", first, second)
 	}
@@ -62,7 +62,7 @@ func TestEnsureCredentialProviderAppendsAndIsIdempotent(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, credProxyOpts("http://127.0.0.1:19000")); err != nil {
 		t.Fatalf("port change: %v", err)
 	}
-	third, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	third, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if !strings.Contains(string(third), `base_url = "http://127.0.0.1:19000"`) {
 		t.Fatalf("port change not applied:\n%s", third)
 	}
@@ -70,20 +70,20 @@ func TestEnsureCredentialProviderAppendsAndIsIdempotent(t *testing.T) {
 		t.Fatalf("port change duplicated the block:\n%s", third)
 	}
 	other := credProxyOpts("http://127.0.0.1:19000")
-	other.Provider, other.TokenEnv, other.Token = "deeper-desktop-proxy-other", "DEEPER_PROXY_TOKEN_OTHER", "other-token"
+	other.Provider, other.TokenEnv, other.Token = "deepzora-desktop-proxy-other", "DEEPZORA_PROXY_TOKEN_OTHER", "other-token"
 	if _, err := ensureCredentialProvider(ctx, fs, root, other); err != nil {
 		t.Fatalf("second workspace: %v", err)
 	}
-	cfg, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
-	env, _ := os.ReadFile(filepath.Join(root, ".deeper", ".env"))
-	if !strings.Contains(string(cfg), `name = "deeper-desktop-proxy-other"`) || !strings.Contains(string(env), "DEEPER_PROXY_TOKEN=virtual-token-123") || !strings.Contains(string(env), "DEEPER_PROXY_TOKEN_OTHER=other-token") {
+	cfg, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
+	env, _ := os.ReadFile(filepath.Join(root, ".deepzora", ".env"))
+	if !strings.Contains(string(cfg), `name = "deepzora-desktop-proxy-other"`) || !strings.Contains(string(env), "DEEPZORA_PROXY_TOKEN=virtual-token-123") || !strings.Contains(string(env), "DEEPZORA_PROXY_TOKEN_OTHER=other-token") {
 		t.Fatalf("workspace credentials collided:\nconfig=%s\nenv=%s", cfg, env)
 	}
 	healed := credProxyOpts("http://127.0.0.1:20000")
 	if _, err := ensureCredentialProvider(ctx, fs, root, healed); err != nil {
 		t.Fatalf("multi-workspace port heal: %v", err)
 	}
-	cfg, _ = os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	cfg, _ = os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if got := strings.Count(string(cfg), `base_url = "http://127.0.0.1:20000"`); got != 2 {
 		t.Fatalf("managed workspace providers did not heal together (got %d):\n%s", got, cfg)
 	}
@@ -93,11 +93,11 @@ func TestEnsureCredentialProviderAppendsAndIsIdempotent(t *testing.T) {
 func TestEnsureCredentialProviderPreservesUserConfig(t *testing.T) {
 	skipOnWindows(t)
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".deeper"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	existing := "default_model = \"deepseek/deepseek-v4-flash\"\n\n[[providers]]\nname = \"mine\"\nkind = \"openai\"\nbase_url = \"https://api.deepseek.com\"\napi_key_env = \"MY_KEY\"\n"
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "config.toml"), []byte(existing), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "config.toml"), []byte(existing), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	conn := newFakeConn(t, root, func(string) (remote.ExecResult, error) { return ok("") })
@@ -108,7 +108,7 @@ func TestEnsureCredentialProviderPreservesUserConfig(t *testing.T) {
 	if _, err := ensureCredentialProvider(context.Background(), fs, root, credProxyOpts("http://127.0.0.1:18999")); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	got, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if !strings.HasPrefix(string(got), existing) {
 		t.Fatalf("user config prefix disturbed:\n%s", got)
 	}
@@ -123,12 +123,12 @@ func TestEnsureCredentialProviderPreservesUserConfig(t *testing.T) {
 // TestLaunchCommandCredentialInjection keeps tokens out of the shell command.
 func TestLaunchCommandCredentialInjection(t *testing.T) {
 	paths := StatePaths{Dir: "/d", TokenFile: "/d/t", PortFile: "/d/p", PidFile: "/d/i", LogFile: "/d/l"}
-	cmd := LaunchCommand("/usr/bin/deeper", "/ws", paths, &CredentialProxyOptions{
-		BaseURL: "http://127.0.0.1:18999", Token: "to'ken $x", Provider: "deeper-desktop-proxy", Model: "m",
+	cmd := LaunchCommand("/usr/bin/deepzora", "/ws", paths, &CredentialProxyOptions{
+		BaseURL: "http://127.0.0.1:18999", Token: "to'ken $x", Provider: "deepzora-desktop-proxy", Model: "m",
 	}, nil)
 	for _, want := range []string{
-		`--model 'deeper-desktop-proxy'`,
-		`nohup '/usr/bin/deeper' serve`,
+		`--model 'deepzora-desktop-proxy'`,
+		`nohup '/usr/bin/deepzora' serve`,
 	} {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("LaunchCommand missing %q:\n%s", want, cmd)
@@ -143,11 +143,11 @@ func TestLaunchCommandCredentialInjection(t *testing.T) {
 func TestEnsureCredentialProviderMaterializesBuiltinDefault(t *testing.T) {
 	skipOnWindows(t)
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".deeper"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	cfg := "config_version = 6\n\ndefault_model = \"deepseek-flash\"   # user's choice stays\n\n[ui]\ntheme = \"dark\"\n"
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "config.toml"), []byte(cfg), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "config.toml"), []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	conn := newFakeConn(t, root, func(string) (remote.ExecResult, error) { return ok("") })
@@ -159,13 +159,13 @@ func TestEnsureCredentialProviderMaterializesBuiltinDefault(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, credProxyOpts("http://127.0.0.1:18999")); err != nil {
 		t.Fatal(err)
 	}
-	first, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	first, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	got := string(first)
 	for _, want := range []string{
 		`default_model = "deepseek-flash"   # user's choice stays`,
 		`name = "deepseek-flash"`,
 		`api_key_env = "DEEPSEEK_API_KEY"`,
-		`name = "deeper-desktop-proxy"`,
+		`name = "deepzora-desktop-proxy"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("config missing %q:\n%s", want, got)
@@ -176,7 +176,7 @@ func TestEnsureCredentialProviderMaterializesBuiltinDefault(t *testing.T) {
 	}
 	// The materialized entry must come BEFORE ours so file order reads
 	// user-default then desktop-proxy.
-	if strings.Index(got, `name = "deepseek-flash"`) > strings.Index(got, `name = "deeper-desktop-proxy"`) {
+	if strings.Index(got, `name = "deepseek-flash"`) > strings.Index(got, `name = "deepzora-desktop-proxy"`) {
 		t.Fatalf("materialized entry should precede ours:\n%s", got)
 	}
 
@@ -184,7 +184,7 @@ func TestEnsureCredentialProviderMaterializesBuiltinDefault(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, credProxyOpts("http://127.0.0.1:18999")); err != nil {
 		t.Fatal(err)
 	}
-	second, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	second, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if string(first) != string(second) {
 		t.Fatalf("second run rewrote the config:\n%s\n---\n%s", first, second)
 	}
@@ -219,7 +219,7 @@ func TestEnsureCredentialProviderRewritesKindDrift(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, credProxyOpts("http://127.0.0.1:18999")); err != nil {
 		t.Fatal(err)
 	}
-	installed, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	installed, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if !strings.Contains(string(installed), "kind = \"openai\"") {
 		t.Fatalf("default install missing the openai kind:\n%s", installed)
 	}
@@ -229,7 +229,7 @@ func TestEnsureCredentialProviderRewritesKindDrift(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, switched); err != nil {
 		t.Fatal(err)
 	}
-	rewritten, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	rewritten, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if !strings.Contains(string(rewritten), "kind = \"anthropic\"") || strings.Contains(string(rewritten), "kind = \"openai\"") {
 		t.Fatalf("kind drift not rewritten:\n%s", rewritten)
 	}
@@ -241,7 +241,7 @@ func TestEnsureCredentialProviderRewritesKindDrift(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, switched); err != nil {
 		t.Fatal(err)
 	}
-	again, _ := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	again, _ := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if string(again) != string(rewritten) {
 		t.Fatalf("matching re-run rewrote the config:\n%s\n---\n%s", rewritten, again)
 	}
@@ -250,7 +250,7 @@ func TestEnsureCredentialProviderRewritesKindDrift(t *testing.T) {
 func TestEnsureCredentialProviderPersistsLateBuiltinMaterialization(t *testing.T) {
 	skipOnWindows(t)
 	root := t.TempDir()
-	configDir := filepath.Join(root, ".deeper")
+	configDir := filepath.Join(root, ".deepzora")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestEnsureCredentialProviderRewritesModelDrift(t *testing.T) {
 	if _, err := ensureCredentialProvider(ctx, fs, root, switched); err != nil {
 		t.Fatal(err)
 	}
-	got, err := os.ReadFile(filepath.Join(root, ".deeper", "config.toml"))
+	got, err := os.ReadFile(filepath.Join(root, ".deepzora", "config.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}

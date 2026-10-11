@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"sync"
 
-	"deeper/internal/sqliteuri"
+	"deepzora/internal/sqliteuri"
 
 	_ "modernc.org/sqlite"
 )

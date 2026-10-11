@@ -27,7 +27,7 @@ function check(value: boolean, message: string): void {
 
 console.log("\nsession experience");
 localStorage.clear();
-localStorage.setItem("deeper-session-experience", "deep");
+localStorage.setItem("deepzora-session-experience", "deep");
 check(getSessionExperience() === "standard", "startup ignores stale localStorage before the backend snapshot");
 hydrateSessionExperience("invalid");
 check(getSessionExperience() === "standard", "invalid startup values normalize to standard");
@@ -37,14 +37,14 @@ check(resolveWorkProcessPresentation("deep").keepExpandedAfterCompletion === tru
 
 applySessionExperience("deep");
 check(getSessionExperience() === "deep", "apply persists deep");
-check(localStorage.getItem("deeper-session-experience") === "deep", "canonical localStorage key stores deep");
-check(localStorage.getItem("deeper-display-mode") === "standard", "compatibility density mirror stays standard");
-check(localStorage.getItem("deeper-process-fold") === "expanded", "deep mirrors the old expanded fold value");
+check(localStorage.getItem("deepzora-session-experience") === "deep", "canonical localStorage key stores deep");
+check(localStorage.getItem("deepzora-display-mode") === "standard", "compatibility density mirror stays standard");
+check(localStorage.getItem("deepzora-process-fold") === "expanded", "deep mirrors the old expanded fold value");
 
 // An authoritative startup snapshot must win over a stale local optimistic value.
 hydrateSessionExperience("standard");
 check(getSessionExperience() === "standard", "authoritative hydrate wins over stale localStorage");
-check(localStorage.getItem("deeper-session-experience") === "standard", "hydrate rewrites the canonical localStorage value");
+check(localStorage.getItem("deepzora-session-experience") === "standard", "hydrate rewrites the canonical localStorage value");
 
 if (failed > 0) {
   throw new Error(`${failed} session experience checks failed`);

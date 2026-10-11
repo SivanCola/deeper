@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func newClient(t *testing.T, baseURL, effort string) *client {

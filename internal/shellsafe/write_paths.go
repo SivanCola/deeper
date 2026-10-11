@@ -1,7 +1,7 @@
 package shellsafe
 
 import (
-	"deeper/internal/shellparse"
+	"deepzora/internal/shellparse"
 	"mvdan.cc/sh/v3/syntax"
 	"strings"
 )

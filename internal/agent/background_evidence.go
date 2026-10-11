@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"deeper/internal/evidence"
-	"deeper/internal/jobs"
+	"deepzora/internal/evidence"
+	"deepzora/internal/jobs"
 )
 
 // publishBackgroundEvidence retains host-only workspace context so persisted

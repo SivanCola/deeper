@@ -15,11 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/topicstate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/topicstate"
 )
 
 const (

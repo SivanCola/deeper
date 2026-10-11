@@ -13,9 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/workspacelease"
-	"deeper/internal/worktree"
+	"deepzora/internal/config"
+	"deepzora/internal/workspacelease"
+	"deepzora/internal/worktree"
 )
 
 var (
@@ -25,7 +25,7 @@ var (
 )
 
 // IsolatedWorktreeOpenResult is returned after an isolated Git workspace has
-// been created and opened as a normal Deeper project.
+// been created and opened as a normal Deepzora project.
 type IsolatedWorktreeOpenResult struct {
 	WorkspaceRoot  string  `json:"workspaceRoot"`
 	WorktreeRoot   string  `json:"worktreeRoot"`
@@ -77,7 +77,7 @@ func (a *App) CreateIsolatedWorktree(workspaceRoot string) (IsolatedWorktreeOpen
 
 	tab, err := a.ensureBlankSurface("project", created.WorkspaceRoot)
 	if err != nil {
-		return IsolatedWorktreeOpenResult{}, fmt.Errorf("isolated worktree was created at %s but Deeper could not open it: %w", created.WorktreeRoot, err)
+		return IsolatedWorktreeOpenResult{}, fmt.Errorf("isolated worktree was created at %s but Deepzora could not open it: %w", created.WorktreeRoot, err)
 	}
 	return IsolatedWorktreeOpenResult{
 		WorkspaceRoot:  created.WorkspaceRoot,

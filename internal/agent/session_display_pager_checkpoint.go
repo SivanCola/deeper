@@ -12,9 +12,9 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/fileops"
-	"deeper/internal/historywork"
-	"deeper/internal/provider"
+	"deepzora/internal/fileops"
+	"deepzora/internal/historywork"
+	"deepzora/internal/provider"
 )
 
 // Build an offset-only projection for a checkpoint without publishing or

@@ -30,7 +30,7 @@ func planShortcutRepair(target, icon, id, root string, versioned bool) shortcutR
 		plan.identity = AppUserModelID
 	}
 	launcher := ""
-	for _, name := range []string{"Deeper.exe", "deeper-launcher.exe"} {
+	for _, name := range []string{"Deepzora.exe", "deepzora-launcher.exe"} {
 		candidate := filepath.Join(root, name)
 		info, err := os.Lstat(candidate)
 		if err == nil && info.Mode().IsRegular() && classifyShortcutTarget(candidate, root) == stableShortcutTarget {
@@ -41,14 +41,14 @@ func planShortcutRepair(target, icon, id, root string, versioned bool) shortcutR
 	if launcher == "" {
 		return plan
 	}
-	canonical := strings.EqualFold(filepath.Base(launcher), "Deeper.exe")
+	canonical := strings.EqualFold(filepath.Base(launcher), "Deepzora.exe")
 	needsRepair := func(path string, kind shortcutTargetKind) bool {
 		if staleShortcutEntry(path, kind, versioned) {
 			return true
 		}
 		if canonical && kind == stableShortcutTarget {
 			resolved, err := resolveShortcutTarget(path)
-			return err == nil && strings.EqualFold(filepath.Base(resolved), "deeper-launcher.exe")
+			return err == nil && strings.EqualFold(filepath.Base(resolved), "deepzora-launcher.exe")
 		}
 		return false
 	}
@@ -117,20 +117,20 @@ func classifyShortcutTarget(target, root string) shortcutTargetKind {
 	parts := strings.Split(strings.ToLower(rel), string(filepath.Separator))
 	if len(parts) == 1 {
 		switch parts[0] {
-		case "deeper-launcher.exe", "deeper.exe":
+		case "deepzora-launcher.exe", "deepzora.exe":
 			return stableShortcutTarget
-		case "deeper-desktop.exe":
+		case "deepzora-desktop.exe":
 			return flatShortcutTarget
 		}
 	}
-	if len(parts) == 2 && parts[0] == "app" && parts[1] == "deeper.exe" {
+	if len(parts) == 2 && parts[0] == "app" && parts[1] == "deepzora.exe" {
 		return flatShellShortcutTarget
 	}
 	if len(parts) >= 3 && parts[0] == "versions" {
-		if len(parts) == 3 && parts[2] == "deeper-desktop.exe" {
+		if len(parts) == 3 && parts[2] == "deepzora-desktop.exe" {
 			return versionedShortcutTarget
 		}
-		if len(parts) == 4 && parts[2] == "app" && parts[3] == "deeper.exe" {
+		if len(parts) == 4 && parts[2] == "app" && parts[3] == "deepzora.exe" {
 			return versionedShortcutTarget
 		}
 	}

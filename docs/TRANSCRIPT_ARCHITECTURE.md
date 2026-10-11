@@ -1,6 +1,6 @@
 # Natural-flow chat transcript
 
-This is the sole production chat renderer, replacing TranscriptKernel, the window adapter and the measurement ledger. Rendering reference: local DeepSeek Harness `c291e7961a`. Deeper keeps its controller, storage, composer, approvals and workbench; current synchronization and history behavior follow [Transcript v2](TRANSCRIPT_V2.md) and the [scroll and history contract](TRANSCRIPT_SCROLL_CONTRACT.md). The complete turn rail uses durable indexed summaries and direct history-window positioning.
+This is the sole production chat renderer, replacing TranscriptKernel, the window adapter and the measurement ledger. Rendering reference: local DeepSeek Harness `c291e7961a`. Deepzora keeps its controller, storage, composer, approvals and workbench; current synchronization and history behavior follow [Transcript v2](TRANSCRIPT_V2.md) and the [scroll and history contract](TRANSCRIPT_SCROLL_CONTRACT.md). The complete turn rail uses durable indexed summaries and direct history-window positioning.
 
 ## Ownership
 

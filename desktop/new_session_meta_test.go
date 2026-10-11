@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func listSessionsAfterPinnedOwnerReconcile(t *testing.T, app *App, dir, workspaceRoot string) []SessionMeta {

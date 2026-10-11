@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 // inboxTransientCode is the bridge code for a transient inbox-target fence;

@@ -527,7 +527,7 @@ function OfficialThemeCard({
         </div>
         {desc ? <div className="theme-lib-card__desc">{desc}</div> : null}
         <div className="theme-lib-card__sub">
-          {pack.license || "MIT"} · {pack.author || "Deeper Contributors"}
+          {pack.license || "MIT"} · {pack.author || "Deepzora Contributors"}
         </div>
       </div>
       <div className="theme-lib-card__swatches" aria-hidden="true">

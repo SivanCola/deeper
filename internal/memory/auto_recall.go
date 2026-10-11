@@ -10,7 +10,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"deeper/internal/retrieval"
+	"deepzora/internal/retrieval"
 )
 
 const (

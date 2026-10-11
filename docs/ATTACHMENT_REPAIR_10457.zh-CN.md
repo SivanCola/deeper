@@ -9,7 +9,7 @@
 能力解析。相对上一版 `bd0733b9` 的 `git range-diff` 仅变化了生成的 Desktop
 契约摘要，附件补丁与后续主线行为均保留，也未整合 #10346。
 借鉴 harness `ddefc45fbc7f8e46dd73185e68295696d1297887` 的批次接纳、
-会话授权和独立取消机制，保留 Deeper 原图字节、内容库与现有请求策略。
+会话授权和独立取消机制，保留 Deepzora 原图字节、内容库与现有请求策略。
 
 ## 用户可见行为
 
@@ -85,9 +85,9 @@ lint。最终变基通过 `range-diff` 保留附件语义，并重跑受影响�
 解压到全新目录；不要运行尚未组装 CLI/service 的中间 Electron 壳。随后执行：
 
 ```sh
-node desktop/packaging/smoke.mjs /isolated/Deeper.app
+node desktop/packaging/smoke.mjs /isolated/Deepzora.app
 node desktop/packaging/attachment-native-smoke.mjs \
-  /isolated/Deeper.app /isolated/evidence
+  /isolated/Deepzora.app /isolated/evidence
 ```
 
 自动验收启动正式打包的壳和 service，使用独立数据目录与本机 loopback provider，检查

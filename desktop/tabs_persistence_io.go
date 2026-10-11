@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 var errTabsSnapshotChanged = errors.New("desktop tabs changed during startup reconciliation")

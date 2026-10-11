@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/shellparse"
-	"deeper/internal/shellsafe"
+	"deepzora/internal/shellparse"
+	"deepzora/internal/shellsafe"
 )
 
 // IsFullVerificationCommand reports whether a recognized verifier clearly

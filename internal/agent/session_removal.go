@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"deeper/internal/pathidentity"
-	"deeper/internal/store"
+	"deepzora/internal/pathidentity"
+	"deepzora/internal/store"
 )
 
 // SessionRemovalGuard holds a session's save lock and lease lock for the

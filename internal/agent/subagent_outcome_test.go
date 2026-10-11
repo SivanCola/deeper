@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestSubagentRunErrorPreservesPartialAnswerAndReference(t *testing.T) {

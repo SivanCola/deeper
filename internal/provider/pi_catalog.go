@@ -8,7 +8,7 @@ import (
 	piAI "github.com/sky-valley/pi/ai"
 )
 
-// PiCatalogModelInfo adapts the embedded sky-valley/pi catalog to Deeper's
+// PiCatalogModelInfo adapts the embedded sky-valley/pi catalog to Deepzora's
 // provider-neutral model metadata. Only an exact provider/model and matching
 // official route are accepted; custom endpoints never inherit catalog facts.
 func PiCatalogModelInfo(kind, baseURL, model string) (ModelInfo, bool) {

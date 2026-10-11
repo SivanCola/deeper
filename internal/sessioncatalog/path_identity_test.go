@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestPathIdentityKeyMatchesFilesystemCaseSemantics(t *testing.T) {

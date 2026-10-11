@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 	"golang.org/x/net/http2"
 )
 

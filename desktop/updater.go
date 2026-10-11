@@ -24,11 +24,11 @@ import (
 
 	"golang.org/x/mod/semver"
 
-	"deeper/desktop/internal/update"
-	"deeper/internal/config"
-	"deeper/internal/installlayout"
-	"deeper/internal/netclient"
-	"deeper/internal/repair"
+	"deepzora/desktop/internal/update"
+	"deepzora/internal/config"
+	"deepzora/internal/installlayout"
+	"deepzora/internal/netclient"
+	"deepzora/internal/repair"
 )
 
 // updater.go is the transport-free core of the desktop auto-updater: manifest
@@ -36,11 +36,11 @@ import (
 // has no shell dependency so the logic is unit-tested directly; updater_app.go is
 // the thin bridge binding that wires these into App methods and progress events.
 
-// Deeper updates use the manifest attached to the latest stable CLI release.
+// Deepzora updates use the manifest attached to the latest stable CLI release.
 const (
-	githubReleaseAssetBase     = "https://github.com/SivanCola/deeper/releases/download"
-	downloadPageURL            = "https://github.com/SivanCola/deeper/releases"
-	manifestDownloadPageURL    = "https://github.com/SivanCola/deeper/releases"
+	githubReleaseAssetBase     = "https://github.com/SivanCola/deepzora/releases/download"
+	downloadPageURL            = "https://github.com/SivanCola/deepzora/releases"
+	manifestDownloadPageURL    = "https://github.com/SivanCola/deepzora/releases"
 	httpTimeout                = 15 * time.Second
 	manifestEndpointTimeout    = 5 * time.Second
 	maxDesktopReleaseAssetSize = int64(1 << 30)
@@ -56,7 +56,7 @@ var (
 )
 
 // GitHub latest is advanced only after CLI and Desktop artifacts are verified.
-const githubManifestEndpoint = "https://github.com/SivanCola/deeper/releases/latest/download/latest.json"
+const githubManifestEndpoint = "https://github.com/SivanCola/deepzora/releases/latest/download/latest.json"
 
 func normalizeUpdateChannel(ch string) string {
 	return config.NormalizeDesktopUpdateChannel(ch)
@@ -91,7 +91,7 @@ func manifestEndpoints(selected string) []string {
 // lets the release edge allowlist updater requests and makes them attributable
 // in server logs.
 func updaterUserAgent(selected string) string {
-	return fmt.Sprintf("Deeper-Updater/%s (%s/%s; build=%s; update=%s)", version, runtime.GOOS, runtime.GOARCH, channel, normalizeUpdateChannel(selected))
+	return fmt.Sprintf("Deepzora-Updater/%s (%s/%s; build=%s; update=%s)", version, runtime.GOOS, runtime.GOARCH, channel, normalizeUpdateChannel(selected))
 }
 
 // downloadPage is the human-facing releases page shown when self-update is
@@ -114,7 +114,7 @@ func manifestDownloadPage(selected, manifestPage string) string {
 		u.User != nil {
 		return downloadPage(selected)
 	}
-	if strings.EqualFold(u.Hostname(), "github.com") && strings.HasPrefix(u.Path, "/SivanCola/deeper") {
+	if strings.EqualFold(u.Hostname(), "github.com") && strings.HasPrefix(u.Path, "/SivanCola/deepzora") {
 		return downloadPage(selected)
 	}
 	if u.Hostname() != "github.com" {
@@ -267,7 +267,7 @@ func desktopAssetBases(selected, version string, allowLegacyPreview bool) []stri
 	tag := desktopReleaseTag(selected, version)
 	return []string{
 		fmt.Sprintf("%s/%s/", githubReleaseAssetBase, tag),
-		fmt.Sprintf("https://github.com/SivanCola/deeper/releases/download/%s/", version),
+		fmt.Sprintf("https://github.com/SivanCola/deepzora/releases/download/%s/", version),
 	}
 }
 
@@ -325,9 +325,9 @@ func validateDesktopManifest(selected string, m *update.Manifest) error {
 	requiredAssets := append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...)
 	if !legacyManifest {
 		downloadAssets := legacyDesktopDownloadAssets
-		if _, arm := m.Downloads["Deeper-darwin-arm64.dmg"]; arm {
+		if _, arm := m.Downloads["Deepzora-darwin-arm64.dmg"]; arm {
 			downloadAssets = requiredDesktopDownloadAssets
-		} else if _, intel := m.Downloads["Deeper-darwin-amd64.dmg"]; intel {
+		} else if _, intel := m.Downloads["Deepzora-darwin-amd64.dmg"]; intel {
 			downloadAssets = requiredDesktopDownloadAssets
 		}
 		requiredAssets = append(requiredAssets, downloadAssets...)
@@ -498,7 +498,7 @@ func defaultUpdateCacheBaseDir() (string, error) {
 	if err != nil {
 		base = os.TempDir()
 	}
-	return filepath.Join(base, "Deeper", "updates"), nil
+	return filepath.Join(base, "Deepzora", "updates"), nil
 }
 
 func updateCacheDir() (string, error) {
@@ -527,7 +527,7 @@ func assetFileName(asset update.Asset, version string) string {
 		}
 	}
 	clean := strings.NewReplacer("/", "-", "\\", "-", ":", "-", " ", "-").Replace(version)
-	return "Deeper-" + clean + "-" + update.CurrentPlatform() + ".update"
+	return "Deepzora-" + clean + "-" + update.CurrentPlatform() + ".update"
 }
 
 func writeAtomic(path string, data []byte, mode os.FileMode) error {
@@ -996,9 +996,9 @@ func extractBinary(targz []byte, name string) ([]byte, error) {
 
 func extractLinuxReleaseUnit(targz []byte) (map[string][]byte, error) {
 	const (
-		desktop = "deeper-desktop"
-		guard   = "deeper-guard"
-		cli     = "deeper"
+		desktop = "deepzora-desktop"
+		guard   = "deepzora-guard"
+		cli     = "deepzora"
 	)
 	want := map[string]struct{}{desktop: {}, guard: {}, cli: {}}
 	found := make(map[string][]byte, len(want))
@@ -1049,9 +1049,9 @@ func applyLinux(targz []byte, prepared *repair.UpdateTransaction) error {
 	if err != nil {
 		return err
 	}
-	bin := release["deeper-desktop"]
-	guard := release["deeper-guard"]
-	cli := release["deeper"]
+	bin := release["deepzora-desktop"]
+	guard := release["deepzora-guard"]
+	cli := release["deepzora"]
 	exe := currentExecutablePathForLinux()
 	if exe == "" {
 		return fmt.Errorf("update: current executable path is unavailable")
@@ -1091,7 +1091,7 @@ func applyLinux(targz []byte, prepared *repair.UpdateTransaction) error {
 
 // applyLinuxVersioned publishes a verified compatibility tarball into a new
 // version directory and swaps current.json last. The tar still contains the
-// one-shot deeper-guard member for v1.18-v1.19 updaters, but v1.20+ ignores
+// one-shot deepzora-guard member for v1.18-v1.19 updaters, but v1.20+ ignores
 // that member and never persists it again.
 func applyLinuxVersioned(targz []byte, targetVersion string) error {
 	return activateLinuxShellRelease(targz, targetVersion, currentInstallDirForLinuxUpdate())
@@ -1106,12 +1106,12 @@ var applyLinuxReleaseUnit = func(
 	bin, guard, cli []byte,
 ) ([]repair.FileUpdateInstallReceipt, error) {
 	receipts := make([]repair.FileUpdateInstallReceipt, 0, 3)
-	receipt, err := repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deeper"), cli, 0o700)
+	receipt, err := repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deepzora"), cli, 0o700)
 	if err != nil {
 		return receipts, fmt.Errorf("update CLI sidecar: %w", err)
 	}
 	receipts = append(receipts, receipt)
-	receipt, err = repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deeper-guard"), guard, 0o700)
+	receipt, err = repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deepzora-guard"), guard, 0o700)
 	if err != nil {
 		return receipts, fmt.Errorf("update Guard: %w", err)
 	}
@@ -1255,7 +1255,7 @@ func releaseUnitPathsFor(dir, goos string) []string {
 		if desktop, err := installlayout.ActiveDesktopPath(dir); err == nil {
 			paths = append(paths, desktop)
 		} else {
-			paths = append(paths, filepath.Join(dir, "deeper-desktop.exe"))
+			paths = append(paths, filepath.Join(dir, "deepzora-desktop.exe"))
 		}
 		if helper, err := installlayout.ActiveUpdateHelperPath(dir); err == nil {
 			paths = append(paths, helper)
@@ -1263,7 +1263,7 @@ func releaseUnitPathsFor(dir, goos string) []string {
 		if cli, err := installlayout.ActiveCLIPath(dir); err == nil {
 			paths = append(paths, cli)
 		}
-		for _, name := range []string{"deeper-launcher.exe", "deeper-cli.exe", "Deeper.exe"} {
+		for _, name := range []string{"deepzora-launcher.exe", "deepzora-cli.exe", "Deepzora.exe"} {
 			paths = append(paths, filepath.Join(dir, name))
 		}
 		return paths
@@ -1272,9 +1272,9 @@ func releaseUnitPathsFor(dir, goos string) []string {
 	paths := make([]string, 0, len(names)+1)
 	switch goos {
 	case "linux":
-		paths = append(paths, filepath.Join(dir, "deeper-desktop"))
+		paths = append(paths, filepath.Join(dir, "deepzora-desktop"))
 	case "windows":
-		paths = append(paths, filepath.Join(dir, "deeper-desktop.exe"))
+		paths = append(paths, filepath.Join(dir, "deepzora-desktop.exe"))
 	}
 	if len(names) == 0 {
 		return paths
@@ -1288,11 +1288,11 @@ func releaseUnitPathsFor(dir, goos string) []string {
 func updateSiblingNames(goos string) []string {
 	switch goos {
 	case "windows":
-		// Legacy flat release unit. deeper-guard.exe may still exist on disk
+		// Legacy flat release unit. deepzora-guard.exe may still exist on disk
 		// during migration from 1.18–1.19.1; the new layout omits it.
-		return []string{"deeper-guard.exe", "deeper-launcher.exe", "deeper-update-helper.exe", "deeper-cli.exe", "Deeper.exe"}
+		return []string{"deepzora-guard.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "Deepzora.exe"}
 	case "linux":
-		return []string{"deeper-guard", "deeper"}
+		return []string{"deepzora-guard", "deepzora"}
 	default:
 		return nil
 	}

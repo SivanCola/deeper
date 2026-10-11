@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestTaggedFormalSessionsKeepHeaderAndProviderHistory(t *testing.T) {

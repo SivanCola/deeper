@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 var ErrImportConflict = errors.New("legacy transcript and session event source conflict")

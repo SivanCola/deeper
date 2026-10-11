@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/remote/sshtest"
 )
 
 // dialSSHClient connects to the sshtest server as a real ssh client.

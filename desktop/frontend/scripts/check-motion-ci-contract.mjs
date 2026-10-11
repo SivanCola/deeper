@@ -36,7 +36,7 @@ const windowsJob = jobBody("desktop-windows", "lint");
 for (const required of [
   "node packaging/package.mjs windows/amd64 v0.0.0-ci canary",
   "Smoke-test Electron native startup",
-  "node packaging/smoke.mjs build/electron/windows-amd64/app --service build/bin/deeper-desktop.exe",
+  "node packaging/smoke.mjs build/electron/windows-amd64/app --service build/bin/deepzora-desktop.exe",
 ]) {
   if (!windowsJob.includes(required)) {
     throw new Error(`motion-ci-contract: desktop-windows must include ${required}`);
@@ -62,11 +62,11 @@ for (const [path, source] of [
   ["desktop/frontend/src/lib/bridge.ts", bridgeSource],
 ]) {
   for (const forbidden of [
-    "DEEPER_WEBVIEW2_APPROVAL_SMOKE",
-    "__DEEPER_WEBVIEW2_APPROVAL_SMOKE__",
+    "DEEPZORA_WEBVIEW2_APPROVAL_SMOKE",
+    "__DEEPZORA_WEBVIEW2_APPROVAL_SMOKE__",
     "WebView2ApprovalSmokeBridge",
-    "__deeperSelectionSmoke",
-    "deeper_transcript_smoke",
+    "__deepzoraSelectionSmoke",
+    "deepzora_transcript_smoke",
   ]) {
     if (source.includes(forbidden)) {
       throw new Error(`motion-ci-contract: ${path} must not embed test-only WebView2 instrumentation (${forbidden})`);

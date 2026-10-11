@@ -1,7 +1,7 @@
 package boot
 
 import (
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func handleConfigLoadWarnings(opts Options, cfg *config.Config) bool {

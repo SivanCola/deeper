@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // contextRead binds every field in an overview response to one runtime. Reads

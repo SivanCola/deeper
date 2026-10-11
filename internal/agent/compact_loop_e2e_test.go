@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 // fatTool returns a fixed-size blob, standing in for a real read_file / bash

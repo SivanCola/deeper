@@ -11,10 +11,10 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
 )
 
 type RecoveryEntryView struct {

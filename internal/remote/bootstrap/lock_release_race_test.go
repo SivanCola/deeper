@@ -10,8 +10,8 @@ import (
 
 	"github.com/pkg/sftp"
 
-	"deeper/internal/remote"
-	"deeper/internal/remote/sftpfs"
+	"deepzora/internal/remote"
+	"deepzora/internal/remote/sftpfs"
 )
 
 type releaseRaceFS struct {

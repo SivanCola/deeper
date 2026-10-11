@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 const deepSeekOverflowBody = `{"error":{"message":"This model's maximum context length is %d tokens. However, you requested %d tokens (%d in the messages, %d in the completion). Please reduce the length of the messages or completion.","type":"invalid_request_error","param":null,"code":"invalid_request_error"}}`

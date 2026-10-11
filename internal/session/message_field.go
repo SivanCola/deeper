@@ -11,8 +11,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/projectiondb"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/sessioncontent"
 )
 
 // Per-field message body reading (history-window-v1 companion): a client

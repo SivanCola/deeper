@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/netclient"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/netclient"
 )
 
-var endpoint = os.Getenv("DEEPER_TELEMETRY_ENDPOINT")
+var endpoint = os.Getenv("DEEPZORA_TELEMETRY_ENDPOINT")
 
 var uploadSignals = map[string]bool{
 	"finish_reason": true, "empty_final": true, "provider_error": true,

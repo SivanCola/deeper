@@ -161,13 +161,13 @@ export {
 export type ToolStatus = "running" | "done" | "error" | "stopped" | "unknown";
 // Reserved ToolProgress channel names for sub-agent progress previews (the Go
 // tracker emits these; ordinary tool progress must never use them).
-export const SUBAGENT_PROGRESS_STATUS = "deeper.subagent.status";
-export const SUBAGENT_PROGRESS_REASONING = "deeper.subagent.reasoning";
-export const SUBAGENT_PROGRESS_TEXT = "deeper.subagent.text";
-export const SUBAGENT_PROGRESS_NOTICE = "deeper.subagent.notice";
+export const SUBAGENT_PROGRESS_STATUS = "deepzora.subagent.status";
+export const SUBAGENT_PROGRESS_REASONING = "deepzora.subagent.reasoning";
+export const SUBAGENT_PROGRESS_TEXT = "deepzora.subagent.text";
+export const SUBAGENT_PROGRESS_NOTICE = "deepzora.subagent.notice";
 // Reserved names are matched by prefix so a future channel never falls back
 // to ordinary tool output on older frontends.
-const SUBAGENT_PROGRESS_PREFIX = "deeper.subagent.";
+const SUBAGENT_PROGRESS_PREFIX = "deepzora.subagent.";
 const SUBAGENT_PROGRESS_PHASES = new Set(["queued", "running", "reasoning", "responding", "tool", "retrying", "completed", "partial", "failed", "cancelled"]);
 // Tool names that initialize a sub-agent progress card. parallel_tasks/fleet
 // are group cards: they settle when their whole child progress tree is
@@ -3595,18 +3595,18 @@ export function useController() {
     },
     composerSubmissionId?: string,
   ) => {
-    if (!tabId) throw new Error("deeper_error:workspace_starting");
+    if (!tabId) throw new Error("deepzora_error:workspace_starting");
     let currentState = getOrCreateState(statesRef.current, tabId);
     if (currentState.transcriptProtocol !== 2 && !followers.current.has(tabId)) {
       await startTranscriptFollow(tabId, currentState.meta?.sessionPath ?? "");
       currentState = getOrCreateState(statesRef.current, tabId);
     }
     if (currentState.transcriptProtocol !== 2 || currentState.transcriptConnection !== "connected") {
-      throw new Error("deeper_error:inbox_not_submitted");
+      throw new Error("deepzora_error:inbox_not_submitted");
     }
     const runtime = currentState.meta?.runtime;
     if (currentState.meta && !runtimeReadyForSubmit(currentState.meta)) {
-      throw new Error("deeper_error:inbox_not_submitted");
+      throw new Error("deepzora_error:inbox_not_submitted");
     }
     const seq = currentState.seq;
     const submissionId = structured?.attachmentSubmissionId ?? composerSubmissionId ?? createTurnSubmissionId(tabId, currentState.sessionGen, seq, runtimeEpochByTabRef.current.get(tabId) ?? runtime?.epoch);

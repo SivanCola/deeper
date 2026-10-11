@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extensioncontract"
+	"deepzora/internal/extensioncontract"
 )
 
 // BenchmarkExtensionKernelStartup measures the immutable snapshot assembly

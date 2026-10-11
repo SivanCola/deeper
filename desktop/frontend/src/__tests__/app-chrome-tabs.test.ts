@@ -246,7 +246,7 @@ ok(
   /const WORKSPACE_PANEL_DEFAULT_OPEN = true;/.test(layoutStoreSource) &&
     /workspacePanelOpen:\s*loadWorkspacePanelOpen\(""\)/.test(layoutStoreSource) &&
     /export function saveWorkspacePanelOpen\(open: boolean, workspaceRoot = ""\)/.test(layoutStoreSource) &&
-    /deeper\.workspacePanel\.open/.test(layoutStoreSource),
+    /deepzora\.workspacePanel\.open/.test(layoutStoreSource),
   "right dock open state is restored from per-project localStorage with expanded first-launch default",
 );
 
@@ -368,21 +368,21 @@ ok(
 
 
 ok(
-  finalDeclaration(".sidebar", "--deeper-draggable") === "drag" &&
-    finalDeclaration(".app--windows .sidebar", "--deeper-draggable") === "no-drag" &&
-    finalDeclaration(".sidebar-resizer", "--deeper-draggable") === "no-drag",
+  finalDeclaration(".sidebar", "--deepzora-draggable") === "drag" &&
+    finalDeclaration(".app--windows .sidebar", "--deepzora-draggable") === "no-drag" &&
+    finalDeclaration(".sidebar-resizer", "--deepzora-draggable") === "no-drag",
   "Windows sidebar avoids native window drag without changing other platforms",
 );
 
 ok(
-  finalDeclaration(".topicbar", "--deeper-draggable") === "drag" &&
-    finalDeclaration(".topicbar button", "--deeper-draggable") === "no-drag" &&
-    finalDeclaration(".topicbar__actions", "--deeper-draggable") === "no-drag",
+  finalDeclaration(".topicbar", "--deepzora-draggable") === "drag" &&
+    finalDeclaration(".topicbar button", "--deepzora-draggable") === "no-drag" &&
+    finalDeclaration(".topicbar__actions", "--deepzora-draggable") === "no-drag",
   "the shell bar is the window drag surface and opts its controls out",
 );
 
 ok(
-  finalDeclaration(".msg", "--deeper-draggable") === undefined &&
+  finalDeclaration(".msg", "--deepzora-draggable") === undefined &&
     finalDeclaration(".msg", "-webkit-app-region") === undefined &&
     finalDeclaration(".reasoning__head", "-webkit-app-region") === undefined &&
     finalDeclaration(".tool__head", "-webkit-app-region") === undefined &&
@@ -432,10 +432,10 @@ ok(
 // strip was also draggable, any control that did not opt out individually —
 // the leading overview chevron did not — never received a click.
 ok(
-  finalDeclaration(".workbench-dock__tools", "--deeper-draggable") === "no-drag" &&
-    finalDeclaration(".workbench-dock__tabs", "--deeper-draggable") === "no-drag" &&
-    finalDeclaration(".workbench-dock__tab", "--deeper-draggable") === "no-drag" &&
-    finalDeclaration(".workbench-dock__tab-overview", "--deeper-draggable") !== "drag",
+  finalDeclaration(".workbench-dock__tools", "--deepzora-draggable") === "no-drag" &&
+    finalDeclaration(".workbench-dock__tabs", "--deepzora-draggable") === "no-drag" &&
+    finalDeclaration(".workbench-dock__tab", "--deepzora-draggable") === "no-drag" &&
+    finalDeclaration(".workbench-dock__tab-overview", "--deepzora-draggable") !== "drag",
   "the dock's control strip is not a window drag region, so every control stays clickable",
 );
 

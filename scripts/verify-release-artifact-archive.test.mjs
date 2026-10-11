@@ -7,7 +7,7 @@ import test from "node:test";
 import { verifyArchive } from "./verify-release-artifact-archive.mjs";
 
 test("verifies the exact downloaded archive against GitHub artifact metadata", async t => {
-  const dir = mkdtempSync(path.join(tmpdir(), "deeper-artifact-digest-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "deepzora-artifact-digest-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const archive = path.join(dir, "payload.zip");
   writeFileSync(archive, "archive bytes");

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 // A checkpoint opens with the composed turn, so its stored prompt carries the

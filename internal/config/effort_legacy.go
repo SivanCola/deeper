@@ -1,6 +1,6 @@
 package config
 
-import "deeper/internal/provider/openai"
+import "deepzora/internal/provider/openai"
 
 // migrateStoredDeepSeekEffort preserves the wire value of saved pre-contract
 // aliases. New user selections still go through strict NormalizeEffort validation.

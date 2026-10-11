@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/recovery"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/recovery"
 )
 
 type recoveryMetricsDeltaStub struct {

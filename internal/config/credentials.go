@@ -12,7 +12,7 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 const (
@@ -20,8 +20,8 @@ const (
 	CredentialsStoreKeyring = "keyring"
 	CredentialsStoreFile    = "file"
 
-	credentialsKeyringService = "deeper"
-	credentialClearedPrefix   = "# deeper-cleared "
+	credentialsKeyringService = "deepzora"
+	credentialClearedPrefix   = "# deepzora-cleared "
 )
 
 const (
@@ -56,7 +56,7 @@ var credentialSourceTracker = struct {
 	byKey map[string]trackedCredentialSource
 }{byKey: map[string]trackedCredentialSource{}}
 
-// userCredentialEditMu serializes Deeper-owned credential-store writes.
+// userCredentialEditMu serializes Deepzora-owned credential-store writes.
 // LockUserCredentialEdits also takes a path-derived advisory file lock so a
 // Desktop window, CLI process, or background catalog save can share one
 // compare-and-apply boundary with credential rotation.
@@ -86,7 +86,7 @@ func NewCredentialResolverForRoot(root string) *CredentialResolver {
 	return &CredentialResolver{root: resolveRoot(root)}
 }
 
-// ResolveGlobalFirst resolves key from Deeper's global .env only. Repeated
+// ResolveGlobalFirst resolves key from Deepzora's global .env only. Repeated
 // calls for the same key reuse the first result so UI views with multiple
 // provider entries sharing api_key_env stay consistent.
 func (r *CredentialResolver) ResolveGlobalFirst(key string) CredentialResolution {
@@ -130,7 +130,7 @@ func normalizeCredentialsStore(mode string) string {
 }
 
 func credentialsStoreMode() string {
-	if mode := strings.TrimSpace(os.Getenv("DEEPER_CREDENTIALS_STORE")); mode != "" {
+	if mode := strings.TrimSpace(os.Getenv("DEEPZORA_CREDENTIALS_STORE")); mode != "" {
 		return normalizeCredentialsStore(mode)
 	}
 	var partial struct {
@@ -146,9 +146,9 @@ func credentialEnvNamesForRoot(root string) []string {
 	root = resolveRoot(root)
 	cfg := Default()
 
-	projectTOML := "deeper.toml"
+	projectTOML := "deepzora.toml"
 	if root != "." {
-		projectTOML = filepath.Join(root, "deeper.toml")
+		projectTOML = filepath.Join(root, "deepzora.toml")
 	}
 	if uc := userConfigLoadPath(); uc != "" {
 		_ = mergeFile(cfg, uc)
@@ -196,7 +196,7 @@ func credentialEnvNamesFromConfig(cfg *Config) []string {
 }
 
 // CredentialEnvNames returns every environment-variable name whose value can
-// be loaded from Deeper's global credential store. This includes configured
+// be loaded from Deepzora's global credential store. This includes configured
 // provider/bot keys and stored keys that are no longer referenced by the
 // current config: loadCredentialStoreForRoot loads the whole credential file,
 // so stale entries must remain outside child-process environments too.
@@ -263,11 +263,11 @@ func loadCredentialStoreForRoot(root string) {
 		return
 	}
 	if p := UserCredentialsPath(); p != "" {
-		loadDotEnvFileAs(p, CredentialSource{Kind: CredentialSourceCredentials, Path: p, Label: "Deeper credentials (.env)"})
+		loadDotEnvFileAs(p, CredentialSource{Kind: CredentialSourceCredentials, Path: p, Label: "Deepzora credentials (.env)"})
 	}
 }
 
-// StoreCredentialLines stores KEY=value assignments in Deeper's global .env
+// StoreCredentialLines stores KEY=value assignments in Deepzora's global .env
 // and pins them into the current process environment.
 func StoreCredentialLines(lines []string) (string, error) {
 	assignments := parseCredentialLines(lines)
@@ -332,7 +332,7 @@ func SetCredential(key, value string) (string, error) {
 // SetCredentialIfRevision stores one credential only when the global
 // credential file still has expectedRevision. The comparison and write share
 // the same process and advisory file lock, preventing a stale setup page in one
-// Deeper process from overwriting a credential saved by another process.
+// Deepzora process from overwriting a credential saved by another process.
 func SetCredentialIfRevision(key, value, expectedRevision string) (string, bool, error) {
 	key = strings.TrimSpace(key)
 	if !isCredentialKey(key) {
@@ -361,7 +361,7 @@ func SetCredentialIfRevision(key, value, expectedRevision string) (string, bool,
 	return path, true, nil
 }
 
-// IsValidCredentialKey reports whether key can be stored in Deeper's dotenv
+// IsValidCredentialKey reports whether key can be stored in Deepzora's dotenv
 // credential file and exposed as an environment variable.
 func IsValidCredentialKey(key string) bool {
 	return isCredentialKey(strings.TrimSpace(key))
@@ -386,7 +386,7 @@ func RemoveCredential(key string) error {
 }
 
 // LockUserCredentialEdits serializes credential-store compare/write
-// transactions in this process and across Deeper processes. When both the
+// transactions in this process and across Deepzora processes. When both the
 // user config and credential store are needed, acquire LockUserConfigEdits
 // first, then this lock.
 func LockUserCredentialEdits() (func(), error) {
@@ -411,7 +411,7 @@ func LockUserCredentialEdits() (func(), error) {
 }
 
 // CredentialStoreRevision returns a content-derived revision for the current
-// Deeper credential store. Callers performing compare-and-apply must hold
+// Deepzora credential store. Callers performing compare-and-apply must hold
 // LockUserCredentialEdits from this read through their commit.
 func CredentialStoreRevision() string {
 	path := UserCredentialsPath()
@@ -489,7 +489,7 @@ func parseCredentialLines(lines []string) map[string]string {
 func pinCredentialAssignments(assignments map[string]string) {
 	for key, value := range assignments {
 		_ = os.Setenv(key, value)
-		recordCredentialSource(key, value, CredentialSource{Kind: CredentialSourceCredentials, Path: UserCredentialsPath(), Label: "Deeper credentials (.env)"})
+		recordCredentialSource(key, value, CredentialSource{Kind: CredentialSourceCredentials, Path: UserCredentialsPath(), Label: "Deepzora credentials (.env)"})
 	}
 }
 
@@ -542,11 +542,11 @@ func credentialSourceLabel(source CredentialSource) string {
 	case CredentialSourceProjectEnv:
 		return "project .env"
 	case CredentialSourceCredentials:
-		return "Deeper credentials"
+		return "Deepzora credentials"
 	case CredentialSourceHomeEnv:
 		return "home .env"
 	case CredentialSourceLegacy:
-		return "legacy Deeper credentials"
+		return "legacy Deepzora credentials"
 	case CredentialSourceEnvironment:
 		return "environment variable"
 	default:
@@ -607,7 +607,7 @@ func resolveCredentialForRootGlobalFirst(root, key string) CredentialResolution 
 func storedCredentialValue(key string) (string, CredentialSource, bool) {
 	if p := UserCredentialsPath(); p != "" {
 		if value, ok := envFileValue(p, key); ok && value != "" {
-			return value, CredentialSource{Kind: CredentialSourceCredentials, Path: p, Label: "Deeper credentials (.env)"}, true
+			return value, CredentialSource{Kind: CredentialSourceCredentials, Path: p, Label: "Deepzora credentials (.env)"}, true
 		}
 	}
 	return "", CredentialSource{}, false

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/remote/sshtest"
 )
 
 // managedOnlyPolicy points the host-key policy at an isolated managed file and

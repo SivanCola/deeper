@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // toProviderMCPApp lifts the collected Apps presentation onto the outcome.

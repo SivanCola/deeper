@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func createCanonicalTestSession(t *testing.T, v4root, id, prompt string) {
@@ -370,7 +370,7 @@ func TestOtherProjectResumeRowsUseMigrationMapWithoutForeignService(t *testing.T
 	if err := os.MkdirAll(otherDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	projectsFile := filepath.Join(config.DeeperHomeDir(), "desktop-projects.json")
+	projectsFile := filepath.Join(config.DeepzoraHomeDir(), "desktop-projects.json")
 	previous, readErr := os.ReadFile(projectsFile)
 	t.Cleanup(func() {
 		if readErr != nil {

@@ -13,14 +13,14 @@ import (
 
 func prepareTestAppBundleHandoff(t *testing.T) (*UpdateTransaction, string) {
 	t.Helper()
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 
 	installRoot, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(installRoot, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(installRoot, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -31,12 +31,12 @@ func prepareTestAppBundleHandoff(t *testing.T) (*UpdateTransaction, string) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	staging, err := os.MkdirTemp("", "deeper-mac-update-*")
+	staging, err := os.MkdirTemp("", "deepzora-mac-update-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(staging) })
-	stagedApp := filepath.Join(staging, "Deeper.app")
+	stagedApp := filepath.Join(staging, "Deepzora.app")
 	if err := os.MkdirAll(stagedApp, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func prepareTestAppBundleHandoff(t *testing.T) (*UpdateTransaction, string) {
 		"v1",
 		"v2",
 		app,
-		app+".deeper-update-backup",
+		app+".deepzora-update-backup",
 		stagedApp,
 		staging,
 		os.Getpid(),
@@ -240,20 +240,20 @@ type existingAppBundleBackupFixture struct {
 
 func newExistingAppBundleBackupFixture(t *testing.T) existingAppBundleBackupFixture {
 	t.Helper()
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	installRoot, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(installRoot, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
-	backup := app + ".deeper-update-backup"
-	staging, err := os.MkdirTemp("", "deeper-mac-update-*")
+	app := filepath.Join(installRoot, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
+	backup := app + ".deepzora-update-backup"
+	staging, err := os.MkdirTemp("", "deepzora-mac-update-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(staging) })
-	stagedApp := filepath.Join(staging, "Deeper.app")
+	stagedApp := filepath.Join(staging, "Deepzora.app")
 	for _, dir := range []string{filepath.Dir(exe), backup, stagedApp} {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			t.Fatal(err)
@@ -288,7 +288,7 @@ func TestPrepareAppBundleUpdateHandoffQuarantinesExistingBackup(t *testing.T) {
 	if _, err := os.Lstat(fixture.backup); !os.IsNotExist(err) {
 		t.Fatalf("existing backup still blocks prepare: %v", err)
 	}
-	quarantines, err := filepath.Glob(fixture.backup + ".deeper-orphaned-*")
+	quarantines, err := filepath.Glob(fixture.backup + ".deepzora-orphaned-*")
 	if err != nil || len(quarantines) != 1 {
 		t.Fatalf("quarantined backups = %v, %v", quarantines, err)
 	}
@@ -318,7 +318,7 @@ func TestCancelAppBundleUpdateHandoffCleansOwnedQuarantine(t *testing.T) {
 	if _, err := os.Lstat(tx.OrphanedBackupPath); !os.IsNotExist(err) {
 		t.Fatalf("terminal transaction retained owned quarantine: %v", err)
 	}
-	if matches, _ := filepath.Glob(tx.OrphanedBackupPath + ".deeper-cleanup-*"); len(matches) != 0 {
+	if matches, _ := filepath.Glob(tx.OrphanedBackupPath + ".deepzora-cleanup-*"); len(matches) != 0 {
 		t.Fatalf("terminal cleanup retained temporary paths: %v", matches)
 	}
 	if _, err := os.Lstat(PendingUpdatePath()); !os.IsNotExist(err) {
@@ -384,7 +384,7 @@ func TestCancelAppBundleUpdateHandoffPreservesConcurrentQuarantineRecreate(t *te
 
 func TestAppBundleUpdateRejectsForgedOrphanedBackupMetadata(t *testing.T) {
 	tx, _ := prepareTestAppBundleHandoff(t)
-	tx.OrphanedBackupPath = filepath.Join(filepath.Dir(tx.TargetPath), "unrelated.deeper-orphaned-1-0")
+	tx.OrphanedBackupPath = filepath.Join(filepath.Dir(tx.TargetPath), "unrelated.deepzora-orphaned-1-0")
 	tx.OrphanedBackupTreeID = strings.Repeat("0", 64)
 	if err := validateUpdateTransaction(tx); err == nil || !strings.Contains(err.Error(), "unexpected name") {
 		t.Fatalf("validation error = %v, want forged quarantine rejection", err)
@@ -430,7 +430,7 @@ func TestPrepareAppBundleUpdateHandoffPreservesConcurrentBackupRecreate(t *testi
 	if got, err := os.ReadFile(filepath.Join(fixture.backup, "concurrent")); err != nil || string(got) != "keep" {
 		t.Fatalf("concurrent backup = %q, %v", got, err)
 	}
-	quarantines, globErr := filepath.Glob(fixture.backup + ".deeper-orphaned-*")
+	quarantines, globErr := filepath.Glob(fixture.backup + ".deepzora-orphaned-*")
 	if globErr != nil || len(quarantines) != 1 {
 		t.Fatalf("preserved quarantines = %v, %v", quarantines, globErr)
 	}
@@ -461,7 +461,7 @@ func TestPrepareAppBundleUpdateHandoffRestoresBackupChangedDuringQuarantine(t *t
 	if got, err := os.ReadFile(filepath.Join(fixture.backup, "changed")); err != nil || string(got) != "keep" {
 		t.Fatalf("changed backup was not restored = %q, %v", got, err)
 	}
-	if matches, _ := filepath.Glob(fixture.backup + ".deeper-orphaned-*"); len(matches) != 0 {
+	if matches, _ := filepath.Glob(fixture.backup + ".deepzora-orphaned-*"); len(matches) != 0 {
 		t.Fatalf("restored backup left a quarantine: %v", matches)
 	}
 	if _, err := os.Stat(PendingUpdatePath()); !os.IsNotExist(err) {
@@ -471,7 +471,7 @@ func TestPrepareAppBundleUpdateHandoffRestoresBackupChangedDuringQuarantine(t *t
 
 func TestPrepareAppBundleUpdateHandoffRejectsUnboundExistingBackup(t *testing.T) {
 	fixture := newExistingAppBundleBackupFixture(t)
-	outside := filepath.Join(t.TempDir(), "Deeper")
+	outside := filepath.Join(t.TempDir(), "Deepzora")
 	if err := os.WriteFile(outside, []byte("outside"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -480,13 +480,13 @@ func TestPrepareAppBundleUpdateHandoffRejectsUnboundExistingBackup(t *testing.T)
 	_, err := PrepareAppBundleUpdateHandoff(
 		"v1", "v2", fixture.app, fixture.backup, fixture.stagedApp, fixture.staging, os.Getpid(),
 	)
-	if err == nil || !strings.Contains(err.Error(), "outside the current Deeper installation") {
+	if err == nil || !strings.Contains(err.Error(), "outside the current Deepzora installation") {
 		t.Fatalf("prepare error = %v, want current-installation rejection", err)
 	}
 	if got, err := os.ReadFile(filepath.Join(fixture.backup, "marker")); err != nil || string(got) != "preserve" {
 		t.Fatalf("unbound backup changed = %q, %v", got, err)
 	}
-	if matches, _ := filepath.Glob(fixture.backup + ".deeper-orphaned-*"); len(matches) != 0 {
+	if matches, _ := filepath.Glob(fixture.backup + ".deepzora-orphaned-*"); len(matches) != 0 {
 		t.Fatalf("unbound backup was quarantined: %v", matches)
 	}
 }
@@ -548,7 +548,7 @@ func TestClaimPendingAppBundleUpdateHandoffRejectsUnboundTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx.TargetPath = arbitrary
-	tx.BackupPath = arbitrary + ".deeper-update-backup"
+	tx.BackupPath = arbitrary + ".deepzora-update-backup"
 	tx.HandoffAppPath = filepath.Join(staging, "Other.app")
 	if err := overwritePendingUpdateForTest(tx); err != nil {
 		t.Fatal(err)

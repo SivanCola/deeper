@@ -1,19 +1,19 @@
-# 迁移到 Deeper 1.0（Go 重写版）
+# 迁移到 Deepzora 1.0（Go 重写版）
 
 <a href="./MIGRATING.md">English</a>
 
-Deeper 1.0 是一次从零开始的 **Go 重写**。它使用全新的代码库，并不是 `0.x` TypeScript 版本的增量升级。本文说明两个版本的差异以及迁移方法。
+Deepzora 1.0 是一次从零开始的 **Go 重写**。它使用全新的代码库，并不是 `0.x` TypeScript 版本的增量升级。本文说明两个版本的差异以及迁移方法。
 
 现行文件观察、工具调度和中断恢复行为见 [Harness 风格执行机制迁移](DSH_EXECUTION_MIGRATION.zh-CN.md)。
 
 ## 摘要
 
-| | 旧版（v1） | Deeper 1.0+（v2） |
+| | 旧版（v1） | Deepzora 1.0+（v2） |
 | --- | --- | --- |
 | 语言 | TypeScript / Node.js | Go |
-| 分支 | [`v1`](https://github.com/SivanCola/deeper/tree/v1)（仅维护） | `main`（默认、活跃开发） |
+| 分支 | [`v1`](https://github.com/SivanCola/deepzora/tree/v1)（仅维护） | `main`（默认、活跃开发） |
 | 版本 | `0.x`（最高 v0.54.x） | `1.0.0`+ |
-| 安装 | `npm i -g deeper@0.53.2`（固定到某个 `0.x` 版本） | `npm i -g deeper`；也可使用 release 归档或源码构建 |
+| 安装 | `npm i -g deepzora@0.53.2`（固定到某个 `0.x` 版本） | `npm i -g deepzora`；也可使用 release 归档或源码构建 |
 | 代码智能 | embedding 语义搜索 + tree-sitter 符号索引 | LSP 辅助代码读取，以及 grep/read_file/glob；语义索引尚未移植 |
 
 “v1”和“v2”表示代码库代际，而不是 semver 主版本：v1 从未发布 1.0，因此 Go 重写版使用 `1.x` 版本号。
@@ -33,39 +33,39 @@ provider 请求会因为工具 schema 前缀变化产生一次预期内的提示
 
 `npm` 仍是主要安装渠道。npm 包会下载预编译的 Go 二进制文件，方式与 esbuild/biome 类似；二进制本身是独立的 Go 可执行文件，npm 不是运行时依赖。
 
-**`npm i -g deeper` 会安装当前正式的 `1.x` 版本。** npm 的 `latest` 标签已从 `1.17.5` 起切换到 Go 版本。以后不再公开发布候选版本；旧 `next` 与 `canary` 标签仅作为兼容别名，始终指向同一个正式版本。旧版 `0.x` 仍可通过固定版本安装：
+**`npm i -g deepzora` 会安装当前正式的 `1.x` 版本。** npm 的 `latest` 标签已从 `1.17.5` 起切换到 Go 版本。以后不再公开发布候选版本；旧 `next` 与 `canary` 标签仅作为兼容别名，始终指向同一个正式版本。旧版 `0.x` 仍可通过固定版本安装：
 
 ```sh
-npm i -g deeper          # 当前正式的 1.x
-npm i -g deeper@0.53.2   # 固定到旧版 TypeScript 构建
+npm i -g deepzora          # 当前正式的 1.x
+npm i -g deepzora@0.53.2   # 固定到旧版 TypeScript 构建
 ```
 
-每个 GitHub release 都附带预编译归档（`deeper-<os>-<arch>.tar.gz` / `.zip`）和桌面安装包。它们与 npm 是不同的安装渠道：桌面安装包不会改动通过 `npm i -g` 安装的 CLI，因此 shell 中的 npm `0.53` 与 `1.x` 桌面应用可以共存，并不冲突。
+每个 GitHub release 都附带预编译归档（`deepzora-<os>-<arch>.tar.gz` / `.zip`）和桌面安装包。它们与 npm 是不同的安装渠道：桌面安装包不会改动通过 `npm i -g` 安装的 CLI，因此 shell 中的 npm `0.53` 与 `1.x` 桌面应用可以共存，并不冲突。
 
 也可以从源码构建：
 
 ```sh
-git clone https://github.com/SivanCola/deeper   # 默认分支 main（Go）
-cd deeper && make build                        # -> bin/deeper(.exe)
+git clone https://github.com/SivanCola/deepzora   # 默认分支 main（Go）
+cd deepzora && make build                        # -> bin/deepzora(.exe)
 ```
 
 ## 配置
 
-| 旧版 | Deeper 1.0 |
+| 旧版 | Deepzora 1.0 |
 | --- | --- |
-| TypeScript 配置文件 | 项目使用 `deeper.toml`；从 v1.8.1 起，全局配置为 Deeper home 下的 `config.toml`（macOS/Linux：`~/.deeper/`；Windows：`%AppData%\deeper\`）。参见 `deeper.example.toml` 和[配置路径](./CONFIG_PATHS.zh-CN.md) |
-| 环境变量 / API key | provider 配置保留 `api_key_env`；保存的 key 位于 Deeper home 的 `.env`（`DEEPSEEK_API_KEY`、`MIMO_API_KEY` 等） |
-| 项目记忆 | `DEEPER.md`（含自动记忆），兼容 Claude Code |
-| MCP server | 在 `deeper.toml` 中使用 `[[plugins]]`，或直接读取 Claude Code 的 `.mcp.json` |
+| TypeScript 配置文件 | 项目使用 `deepzora.toml`；从 v1.8.1 起，全局配置为 Deepzora home 下的 `config.toml`（macOS/Linux：`~/.deepzora/`；Windows：`%AppData%\deepzora\`）。参见 `deepzora.example.toml` 和[配置路径](./CONFIG_PATHS.zh-CN.md) |
+| 环境变量 / API key | provider 配置保留 `api_key_env`；保存的 key 位于 Deepzora home 的 `.env`（`DEEPSEEK_API_KEY`、`MIMO_API_KEY` 等） |
+| 项目记忆 | `DEEPZORA.md`（含自动记忆），兼容 Claude Code |
+| MCP server | 在 `deepzora.toml` 中使用 `[[plugins]]`，或直接读取 Claude Code 的 `.mcp.json` |
 
 首次启动时，v1.8.1+ 会执行一次非破坏性导入。它会读取以下旧配置：
 
-- `~/Library/Application Support/deeper/config.toml`
-- `~/.config/deeper/config.toml`
-- `~/.deeper/deeper.toml`
-- v0.x 的 `~/.deeper/config.json`
+- `~/Library/Application Support/deepzora/config.toml`
+- `~/.config/deepzora/config.toml`
+- `~/.deepzora/deepzora.toml`
+- v0.x 的 `~/.deepzora/config.json`
 
-导入内容包括 API key、base URL、语言和 MCP server；缺失的旧凭据会迁移到 `<Deeper home>/.env`，旧会话也会从历史目录导入。原文件不会被修改，Deeper 会在导入后显示启动提示。
+导入内容包括 API key、base URL、语言和 MCP server；缺失的旧凭据会迁移到 `<Deepzora home>/.env`，旧会话也会从历史目录导入。原文件不会被修改，Deepzora 会在导入后显示启动提示。
 
 会话会根据 v0.x sidecar 元数据回到原工作区，并沿用旧摘要作为标题；工作区已不存在的会话会进入全局会话目录。可通过 `--resume` 或历史面板恢复这些会话。自动配置导入仅在尚未存在 v1.8.1+ 配置时运行；若新配置已经生成，请手动补入缺失值。
 
@@ -74,18 +74,18 @@ cd deeper && make build                        # -> bin/deeper(.exe)
 若旧 v0.x 会话位于自定义 Windows 目录，可指定来源：
 
 ```text
-/migrate --from "D:\OldDeeper"
+/migrate --from "D:\OldDeepzora"
 ```
 
 完整路径和限制见[配置路径](./CONFIG_PATHS.zh-CN.md)。
 
 ### Desktop Topic 元数据
 
-Desktop 会自动把四个旧 `desktop-topic-*.json` 索引迁移到 Deeper 状态根目录下按
+Desktop 会自动把四个旧 `desktop-topic-*.json` 索引迁移到 Deepzora 状态根目录下按
 scope 隔离的权威 SQLite 数据库。已存在旧文件的 scope 会继续同步 JSON，因此正常降级到
 前一版本 Desktop 时仍能读取标题和时间；全新 scope 只写 SQLite，旧版 Desktop 无法直接
 读取这部分状态：现有 session metadata 可能恢复标题，但不保证创建时间和自动标题阶段完整。
-迁移不会删除旧文件，也不会修改项目拥有的 `.deeper` 资产。不支持新旧 Desktop 同时写
+迁移不会删除旧文件，也不会修改项目拥有的 `.deepzora` 资产。不支持新旧 Desktop 同时写
 同一个工作区。
 
 ## Context Engine v2 升级
@@ -94,7 +94,7 @@ scope 隔离的权威 SQLite 数据库。已存在旧文件的 scope 会继续�
 
 | 现有数据 | 升级行为 |
 | --- | --- |
-| `DEEPER.md`、`AGENTS.md`、`CLAUDE.md` | 作为常驻指令加载，并附带来源、目录、precedence、imports 和 diagnostics；原文件名继续有效。 |
+| `DEEPZORA.md`、`AGENTS.md`、`CLAUDE.md` | 作为常驻指令加载，并附带来源、目录、precedence、imports 和 diagnostics；原文件名继续有效。 |
 | 嵌套指令文件 | 从 workspace root 解析到当前目标路径；同一目录内 `.local.md` 优先，更深目录仍高于更浅目录。 |
 | 没有 `id` / `revision` 的旧事实 | 获得确定性的 scope-aware `legacy-*` ID，并从 revision 1 开始；migration 幂等。 |
 | 没有 `metadata.scope` 的旧事实 | 根据原本拥有该文件的 project/global 目录推导 scope。 |
@@ -134,20 +134,20 @@ agent 核心延续了原有能力：循环、读写编辑与 glob/grep/bash 等�
 - **Plan 模式**保留执行前审批边界；`complete_step` 已退役，模型直接用
   `todo_write` 更新任务状态。
 - **MCP 项目身份与 schema 缓存 URL 感知凭据**：userinfo 和 token/api_key/password 等查询值不会进入项目运行身份摘要或 schema 缓存键，因此轮换凭据不会改变项目运行时/缓存身份。用户安装的 server 不计算项目身份摘要；已配置 MCP 不再需要旧的启动或逐工具授权回执。
-- **MCP 添加后即可使用**：用户通过桌面端、CLI、全局配置、旧配置导入或主动安装插件包添加的 server 默认可信，全局安装统一写入 `config.toml`。仓库内 `deeper.toml` / `.mcp.json` 声明保留在项目中，同样无需额外启动确认。同名时项目覆盖全局，项目内部 `deeper.toml` 高于 `.mcp.json`。打开陌生仓库等同于接受其中可执行的项目配置；启动 Deeper 前应检查 `.deeper/settings.json`、`deeper.toml` 和 `.mcp.json`。如果仓库引发异常的 MCP 或 Hooks 行为，可用安全模式重新启动，在恢复期间禁用这些外部集成。
+- **MCP 添加后即可使用**：用户通过桌面端、CLI、全局配置、旧配置导入或主动安装插件包添加的 server 默认可信，全局安装统一写入 `config.toml`。仓库内 `deepzora.toml` / `.mcp.json` 声明保留在项目中，同样无需额外启动确认。同名时项目覆盖全局，项目内部 `deepzora.toml` 高于 `.mcp.json`。打开陌生仓库等同于接受其中可执行的项目配置；启动 Deepzora 前应检查 `.deepzora/settings.json`、`deepzora.toml` 和 `.mcp.json`。如果仓库引发异常的 MCP 或 Hooks 行为，可用安全模式重新启动，在恢复期间禁用这些外部集成。
 - **stdio MCP 连接持久化**：writer 调用不再创建新进程，浏览器或会话类 server 的状态可以保留。
 - **Plan 与权限策略相互独立**：普通内置工具和 Bash 使用当前“仅可查看／工作区内修改／完全权限”预设及其 OS 沙箱；已安装或代理解析的 MCP 写入/破坏性工具，以及来自未授权 server 的读取工具，在整个规划阶段保持阻止。
 - `plan_mode_read_only_commands` 仍可解析和保存，以兼容旧配置，但不再决定主 Plan 流程能否调用工具。安装或通过项目配置声明 MCP server 后，其非破坏性的 `readOnlyHint` 工具会自动进入 planner 与只读子智能体，不需要逐工具信任配置。
 - 使用 `read_only_task` / `read_only_skill` 创建技术上只读的子智能体；普通 `task` / `run_skill` 仍可写入，并受权限与 Sandbox 控制。未声明 `readOnlyHint` 的 MCP 工具仍按 writer 处理。
 - `default_tools_approval_mode`、`tools.<raw>.approval_mode` 和 `approvals_reviewer` 已停用，加载时忽略并在下次保存时移除；安装或通过项目配置声明 server 后，其所有工具直接可用。
 - **Web Dashboard 仍然可用，桌面端更推荐**：需要浏览器访问时，可运行
-  `deeper serve` 启动本地 Web UI；日常可视化使用优先选择 Electron 桌面端，
+  `deepzora serve` 启动本地 Web UI；日常可视化使用优先选择 Electron 桌面端，
   终端工作流继续使用 CLI/TUI。
 - 一些细粒度 v1 工具被合并，例如文件管理操作改由 `bash` 完成；少数工具尚未移植，进度在 Discussions 中跟踪。
 
 ## 文件编码
 
-Deeper 1.0 支持读取和编辑 UTF-8、UTF-8 BOM、UTF-16 LE/BE 与 GB18030（GBK 的超集），与 v1 行为一致。
+Deepzora 1.0 支持读取和编辑 UTF-8、UTF-8 BOM、UTF-16 LE/BE 与 GB18030（GBK 的超集），与 v1 行为一致。
 
 - `read_file` 会把受支持编码解码为 UTF-8 后提供给模型。
 - `edit_file` 和 `multi_edit` 会保留文件原编码；编辑 GB18030 文件后仍以 GB18030 保存。
@@ -158,4 +158,4 @@ Deeper 1.0 支持读取和编辑 UTF-8、UTF-8 BOM、UTF-16 LE/BE 与 GB18030（
 
 Issue 和 PR 按代码线标记：**`v2`** 表示 Go 版（`main`），**`v3`** 表示 Studio（`studio`）。请按实际使用版本提交报告。
 
-如有问题，请发起 [Discussion](https://github.com/SivanCola/deeper/discussions)。
+如有问题，请发起 [Discussion](https://github.com/SivanCola/deepzora/discussions)。

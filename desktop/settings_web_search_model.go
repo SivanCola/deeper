@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // SetWebSearchModel uses the same admission, locking and rebuild lifecycle as

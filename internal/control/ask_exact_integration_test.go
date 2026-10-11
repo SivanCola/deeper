@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestAskExactResolutionDeliversOnceAfterReplay(t *testing.T) {

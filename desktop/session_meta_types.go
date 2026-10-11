@@ -1,10 +1,10 @@
 package main
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
 )
 
 // Meta describes the session for the frontend's header and status line.

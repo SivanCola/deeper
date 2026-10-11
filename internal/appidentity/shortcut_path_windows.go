@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 func existingShortcutPath(path string) (string, error) {

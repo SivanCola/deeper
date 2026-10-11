@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/evidence"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/evidence"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/sessioninbox"
 )
 
 // Extension dispatch wiring (stage 6b1). Nil dispatcher is a no-op.

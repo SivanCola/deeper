@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
 )
 
 func TestMetricsSinkForwardsEachEventOnce(t *testing.T) {

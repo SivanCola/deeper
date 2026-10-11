@@ -20,9 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
-	"deeper/internal/netclient"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
+	"deepzora/internal/netclient"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/mod/semver"
@@ -30,10 +30,10 @@ import (
 
 const (
 	ghOwner                = "SivanCola"
-	ghRepo                 = "deeper"
+	ghRepo                 = "deepzora"
 	ghAPIReleases          = "https://api.github.com/repos/" + ghOwner + "/" + ghRepo + "/releases?per_page=100"
 	ghDownloadBase         = "https://github.com/" + ghOwner + "/" + ghRepo + "/releases/download"
-	cliGatewayBase         = "https://github.com/SivanCola/deeper/releases/latest/download"
+	cliGatewayBase         = "https://github.com/SivanCola/deepzora/releases/latest/download"
 	upgradeTimeout         = 60 * time.Second
 	maxCLIReleaseAssetSize = int64(1 << 30)
 )
@@ -61,12 +61,12 @@ const (
 var (
 	stableCLITagPattern = regexp.MustCompile(`^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$`)
 	requiredCLIAssets   = [...]string{
-		"deeper-darwin-amd64.tar.gz",
-		"deeper-darwin-arm64.tar.gz",
-		"deeper-linux-amd64.tar.gz",
-		"deeper-linux-arm64.tar.gz",
-		"deeper-windows-amd64.zip",
-		"deeper-windows-arm64.zip",
+		"deepzora-darwin-amd64.tar.gz",
+		"deepzora-darwin-arm64.tar.gz",
+		"deepzora-linux-amd64.tar.gz",
+		"deepzora-linux-arm64.tar.gz",
+		"deepzora-windows-amd64.zip",
+		"deepzora-windows-arm64.zip",
 		"SHA256SUMS",
 	}
 )
@@ -76,7 +76,7 @@ func parseCLIReleaseChannel(value string) (cliReleaseChannel, error) {
 	case "", string(cliReleaseStable), "preview", "canary", "beta", "next":
 		return cliReleaseStable, nil
 	default:
-		return "", fmt.Errorf("release channel %q is unsupported; Deeper now uses the official release", value)
+		return "", fmt.Errorf("release channel %q is unsupported; Deepzora now uses the official release", value)
 	}
 }
 
@@ -176,7 +176,7 @@ var persistCLIReleaseChannel = func(channel cliReleaseChannel) error {
 
 var loadCLIUpgradeConfig = config.Load
 
-// upgradeCommand handles `deeper upgrade` (and `deeper update`).
+// upgradeCommand handles `deepzora upgrade` (and `deepzora update`).
 func upgradeCommand(args []string, version string) int {
 	syntax, err := parseCLIUpgradeSyntax(args)
 	if err != nil {
@@ -269,7 +269,7 @@ func upgradeCommand(args []string, version string) int {
 	}
 
 	// 5. Find the asset for the current platform.
-	base := fmt.Sprintf("deeper-%s-%s", runtime.GOOS, runtime.GOARCH)
+	base := fmt.Sprintf("deepzora-%s-%s", runtime.GOOS, runtime.GOARCH)
 	asset := findCLIPlatformAsset(rel, runtime.GOOS, runtime.GOARCH)
 	if asset == nil {
 		fmt.Fprintf(os.Stderr, "%s "+i18n.M.UpgradeNoAssetFmt+"\n", i18n.M.ErrorPrefix, base)
@@ -306,9 +306,9 @@ func upgradeCommand(args []string, version string) int {
 	}
 
 	// 9. Extract binary from archive.
-	binName := "deeper"
+	binName := "deepzora"
 	if runtime.GOOS == "windows" {
-		binName = "deeper.exe"
+		binName = "deepzora.exe"
 	}
 	binary, err := extractBinary(archiveData, asset.Name, binName)
 	if err != nil {
@@ -452,7 +452,7 @@ func cliPlatformAssetName(goos, goarch string) string {
 	if goos == "windows" {
 		suffix = ".zip"
 	}
-	return fmt.Sprintf("deeper-%s-%s%s", goos, goarch, suffix)
+	return fmt.Sprintf("deepzora-%s-%s%s", goos, goarch, suffix)
 }
 
 func findCLIPlatformAsset(rel *ghRelease, goos, goarch string) *ghAsset {
@@ -534,7 +534,7 @@ func fetchLatestRelease(c *http.Client, channel cliReleaseChannel) (*ghRelease, 
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "deeper-cli")
+	req.Header.Set("User-Agent", "deepzora-cli")
 	if token := githubAPIToken(); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -565,7 +565,7 @@ func fetchCLIReleasePointer(c *http.Client, pointerURL string, channel cliReleas
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "deeper-cli")
+	req.Header.Set("User-Agent", "deepzora-cli")
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -633,7 +633,7 @@ func verifyChecksum(data []byte, fileName string, checksumFile []byte) error {
 	return fmt.Errorf(i18n.M.UpgradeChecksumNotFoundFmt, fileName)
 }
 
-// extractBinary pulls the "deeper" binary from a .tar.gz or .zip archive.
+// extractBinary pulls the "deepzora" binary from a .tar.gz or .zip archive.
 func extractBinary(data []byte, archiveName, binaryName string) ([]byte, error) {
 	if strings.HasSuffix(archiveName, ".zip") {
 		return extractFromZip(data, binaryName)
@@ -691,7 +691,7 @@ func extractFromZip(data []byte, name string) ([]byte, error) {
 //
 // On Unix this is a simple temp-file + rename. On Windows the running
 // executable is memory-mapped and cannot be overwritten directly, so we
-// rename it aside to .deeper.old first, then place the new binary.
+// rename it aside to .deepzora.old first, then place the new binary.
 // The .old file is cleaned up best-effort (Windows may still hold a lock
 // on it; we hide it in that case).
 func replaceBinary(newBin []byte) error {

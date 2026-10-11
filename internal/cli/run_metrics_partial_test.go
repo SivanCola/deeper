@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func usageEvent(source string, prompt, completion int) event.Event {

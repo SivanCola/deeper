@@ -12,8 +12,8 @@ func TestServeStateRoundTrip(t *testing.T) {
 		Workspace: "/home/dev/app",
 		Version:   "1.9.0",
 		ServeCaps: ServeCapsToken,
-		TokenFile: "/home/dev/.deeper/remote/serve-x.token",
-		LogFile:   "/home/dev/.deeper/remote/serve-x.log",
+		TokenFile: "/home/dev/.deepzora/remote/serve-x.token",
+		LogFile:   "/home/dev/.deepzora/remote/serve-x.log",
 		StartedAt: 1_700_000_000,
 	}
 	data, err := MarshalState(st)
@@ -44,7 +44,7 @@ func TestServeStateBackwardCompat(t *testing.T) {
 
 func TestPathsFor(t *testing.T) {
 	paths := pathsFor("/home/dev", "/home/dev/projects/app")
-	if paths.Dir != "/home/dev/.deeper/remote" {
+	if paths.Dir != "/home/dev/.deepzora/remote" {
 		t.Fatalf("Dir = %q", paths.Dir)
 	}
 	if !strings.HasPrefix(paths.StateJSON, paths.Dir+"/serve-") || !strings.HasSuffix(paths.StateJSON, ".json") {

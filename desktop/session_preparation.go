@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 // SessionPreparationView is the revisioned snapshot shared by navigation and

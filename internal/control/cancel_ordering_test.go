@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
 )
 
 func TestCancelSessionTreatsIndependentBackgroundJobAsIdle(t *testing.T) {

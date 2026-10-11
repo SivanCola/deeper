@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/tool"
 )
 
 type recordSink struct {

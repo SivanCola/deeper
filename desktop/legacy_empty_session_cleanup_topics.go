@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/store"
-	"deeper/internal/topicstate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
+	"deepzora/internal/topicstate"
 )
 
 func (a *App) processLegacyCleanupTopic(item legacycleanup.Candidate) {

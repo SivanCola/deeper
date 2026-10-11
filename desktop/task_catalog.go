@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/taskcatalog"
-	"deeper/internal/taskmonitor"
+	"deepzora/internal/control"
+	"deepzora/internal/taskcatalog"
+	"deepzora/internal/taskmonitor"
 )
 
 type TaskPageRequest struct {

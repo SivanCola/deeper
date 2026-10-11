@@ -1,4 +1,4 @@
-# Deeper session storage v4
+# Deepzora session storage v4
 
 Status: production write format for `main`. The implementation lives in
 `internal/session`; older formats are migration inputs only.
@@ -20,7 +20,7 @@ Status: production write format for `main`. The implementation lives in
 The accepted manifest tuple is:
 
 - `schemaVersion: 4`
-- `codec: deeper.session.linear/v4`
+- `codec: deepzora.session.linear/v4`
 - `storageRevision: 1`
 
 A v4 manifest without `storageRevision: 1` is an unpublished draft and is

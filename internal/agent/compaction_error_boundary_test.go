@@ -10,13 +10,13 @@ import (
 	"testing/synctest"
 	"time"
 
-	"deeper/internal/attachment"
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/attachment"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestCompactionFinishPreservesUnrelatedErrors(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 func TestOpenAtSeparatesLocatorFromStorageWithoutChangingFormat(t *testing.T) {

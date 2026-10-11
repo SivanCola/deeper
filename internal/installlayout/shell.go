@@ -19,11 +19,11 @@ func ShellExecutableName() string { return ShellExecutableNameFor(runtime.GOOS) 
 func ShellExecutableNameFor(goos string) string {
 	switch goos {
 	case "windows":
-		return "Deeper.exe"
+		return "Deepzora.exe"
 	case "darwin":
-		return "Deeper"
+		return "Deepzora"
 	default:
-		return "Deeper"
+		return "Deepzora"
 	}
 }
 

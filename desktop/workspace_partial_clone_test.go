@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 // partialClone returns a blob-filtered clone of a three-commit repository, so

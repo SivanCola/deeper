@@ -2,7 +2,7 @@
 
 <a href="./SESSION_OWNERSHIP.md">English</a>
 
-Deeper 如何决定谁可以写会话、冲突如何落盘，以及回溯和工作区隔离如何配合。
+Deepzora 如何决定谁可以写会话、冲突如何落盘，以及回溯和工作区隔离如何配合。
 
 ## 会话写者
 
@@ -29,11 +29,11 @@ Deeper 如何决定谁可以写会话、冲突如何落盘，以及回溯和工�
 lease 并给尚未发布的 Session 绑定写权限，Controller 才替换路径。`fork`、
 `branch`、`switch` 和对话回溯则停留在同一路径上，只在 head 之间移动。
 
-Deeper 1.39.0 之前保存的会话使用格式 1：整文件 transcript 加基于位置的事件
+Deepzora 1.39.0 之前保存的会话使用格式 1：整文件 transcript 加基于位置的事件
 日志。1.39.0 及更新版本在首次保存时、且能证明自己是唯一写者的前提下，就地把
 它升级为格式 2；在此之前该会话沿用下文的格式 1 规则。早于 1.39.0 的版本会拒绝
 打开格式 2 日志，且一字节不改；需要回滚时，
-`deeper doctor session <id> --export-v1 PATH.jsonl` 会把当前 head 导出为
+`deepzora doctor session <id> --export-v1 PATH.jsonl` 会把当前 head 导出为
 格式 1 会话。
 
 ## 冲突
@@ -87,18 +87,18 @@ v2 兼容 marker 同时也是 v3 turn 的存活标记。旧版本截断 `turn-N.
 
 从消息分叉时可以选择两种工作区策略。**仅分叉对话（共享工作区）**继续使用源工作区，
 因此会保留并继续看到当前未提交文件。**隔离 worktree** 则从仓库已提交的 `HEAD`
-创建持久的 `deeper/delivery-*` 分支，把新分叉注册为独立项目，并保持源 checkout
+创建持久的 `deepzora/delivery-*` 分支，把新分叉注册为独立项目，并保持源 checkout
 不变。Git worktree 不会复制本地改动，所以组合分叉要求源 checkout 干净；检测到
-未提交或未跟踪文件时，Deeper 会拒绝创建，并提示先 commit/stash，或改用共享分叉。
+未提交或未跟踪文件时，Deepzora 会拒绝创建，并提示先 commit/stash，或改用共享分叉。
 
-如果当前目录不是 Git 项目，或环境不满足 worktree 前提，Deeper 会在共享工作区中
+如果当前目录不是 Git 项目，或环境不满足 worktree 前提，Deepzora 会在共享工作区中
 完成会话分叉并明确提示已回退。如果 worktree 创建后，会话创建或标签页挂载失败，
 自动清理只会删除分支、`HEAD` 和状态仍与创建结果完全一致的未使用 worktree；一旦
 检测到任何变化，就会保留现场以便恢复。成功挂载的 worktree 会作为项目持久注册，
 关闭标签页或重启后仍可发现。新建 allocation 还会在 checkout 旁以 `0600` 权限写入
 v1 `metadata.json`，绑定原始 source checkout、目标分支、创建时 `HEAD`、受管
 worktree 根和临时分支。旧版本创建且没有该元数据的 worktree 无法使用 Merge-Back，
-因为 Deeper 不会猜测目标分支；界面会保留现场并给出手动合并指引。未知元数据版本
+因为 Deepzora 不会猜测目标分支；界面会保留现场并给出手动合并指引。未知元数据版本
 同样按失败关闭处理。
 
 Merge-Back 是“合并、清理分离”的失败原子流程。预检会验证受管路径和仓库身份、精确
@@ -112,11 +112,11 @@ worktree 有未提交改动时默认禁止合并；只有用户显式开启自�
 提交上重新做冲突预检。确认 token 使用 NUL-safe 状态，同时绑定真实 index entries、
 每个脏路径的类型、mode、文件内容或 symlink 目标。自动提交从确认的 `HEAD` 创建 `0600`
 临时 index，`git add -A` 只作用于该副本。若真实 index 含有当前完整工作区未表示的
-staged/index-only 内容，Deeper 会停止，真实 index 和两个版本都保持原样。否则通过无
+staged/index-only 内容，Deepzora 会停止，真实 index 和两个版本都保持原样。否则通过无
 hook、单父提交的 `commit-tree` 创建精确提交，对确认的 worktree branch 做 compare-and-swap，
 并仅在真实 index 字节仍一致时通过独占 `index.lock` 安装准备好的 index。branch CAS 后的
 任何失败都返回 recovery-required；目标分支、`HEAD`、index 或内容发生漂移时不会继续。
-source 合并使用带 Deeper 命令级提交身份的
+source 合并使用带 Deepzora 命令级提交身份的
 `git merge --no-ff --no-commit --no-verify`，不依赖用户 Git identity，也不运行 commit hook，
 并把实际 index tree 与重新计算的 merge-tree 精确绑定；准备前及安装 ref 前都会重新验证
 worktree root、Git common-dir、symbolic branch、branch ref、`HEAD`、Git operation 和内容
@@ -133,7 +133,7 @@ prepared index。CAS 前只有仍能证明 prepared state 完整的失败才会 
 CAS 后漂移或无法证明恢复成功的状态返回 recovery-required，同时保留所有 worktree 资源和
 外部状态。
 
-合并成功后，Deeper 先通过正常 Desktop 生命周期切换到记录的 source checkout。每次
+合并成功后，Deepzora 先通过正常 Desktop 生命周期切换到记录的 source checkout。每次
 前端导航都会向后端登记 opaque intent token；关闭请求在快照前和实际移除 Tab 的线性化
 点都必须仍持有该 token。因此更新导航会停止关闭和清理并保留资源；稳定时后端也只会在
 精确 source Tab 仍 active、精确 worktree Tab 仍 idle 时关闭页面和终端。
@@ -142,13 +142,13 @@ CAS 后漂移或无法证明恢复成功的状态返回 recovery-required，同�
 allocation，并扫描可见及 detached runtime；项目 runtime 创建、恢复、删除/归档 fallback
 和重定向都经过同一 admission gate。symlink 与子目录受保护，allocation 外的 prefix
 sibling 和其他 allocation 不受影响。只有临时提交已包含在目标分支、身份一致且包含 ignored 文件的
-完整 status 为空时，Deeper 才会先以 `0600` 原子写入 v2 `cleanup-state.json`，记录原路径、
+完整 status 为空时，Deepzora 才会先以 `0600` 原子写入 v2 `cleanup-state.json`，记录原路径、
 allocation 内随机 recovery 路径、branch、`HEAD` 和 `planned` 阶段。随后使用普通
 `git worktree move`，再次验证 common-dir、symbolic branch、branch ref、`HEAD`、Git operation、
 完整 status 和注册路径，再把 journal 推进到 `retained`。任一阶段崩溃都按 journal 与 Git
 worktree 注册表的精确身份重试；多候选或未知状态失败关闭。
 
-recovery checkout 会继续保持 registered，并继续检出其 `deeper/delivery-*` 分支。Deeper
+recovery checkout 会继续保持 registered，并继续检出其 `deepzora/delivery-*` 分支。Deepzora
 不会注销 worktree、删除临时分支、逐文件 unlink 或递归删除任何路径。因此移动前已经打开的文件
 描述符会跟随 checkout，晚到写入仍可恢复；原公开路径重新出现的内容也会原样保留并报告。恢复回执
 持久化后，Desktop 只移除原 managed worktree 的陈旧项目注册，保持 source project active，且

@@ -10,6 +10,6 @@ export function isFirstRelease(releases) {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const pages = JSON.parse(execFileSync("gh", ["api", "--paginate", "--slurp",
-    "repos/SivanCola/deeper/releases?per_page=100"], { encoding: "utf8" }));
+    "repos/SivanCola/deepzora/releases?per_page=100"], { encoding: "utf8" }));
   console.log(isFirstRelease(pages.flat()) ? "empty" : "ready");
 }

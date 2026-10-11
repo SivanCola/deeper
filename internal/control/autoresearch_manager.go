@@ -1,14 +1,14 @@
 package control
 
 // legacyResearchArchive is a read-only compatibility boundary for Goal
-// sidecars and prompts that still reference an old .deeper/autoresearch
+// sidecars and prompts that still reference an old .deepzora/autoresearch
 // task. New Goal runs never create, update, list, or expose those archives.
 
 import (
 	"log/slog"
 	"strings"
 
-	"deeper/internal/autoresearch"
+	"deepzora/internal/autoresearch"
 )
 
 type legacyResearchSetup struct {

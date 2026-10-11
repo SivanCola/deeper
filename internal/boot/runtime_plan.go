@@ -3,11 +3,11 @@ package boot
 import (
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/extensioncontract"
+	"deepzora/internal/config"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/extensioncontract"
 )
 
 // RuntimeReload is previous-generation state for incremental sidecar adoption
@@ -166,7 +166,7 @@ func planForPreflight(opts Options, toGen uint64) *extension.RuntimePlan {
 	if opts.Extensions == nil && opts.Graph == nil {
 		return nil
 	}
-	toGraph, err := buildRuntimeGraph(config.DeeperHomeDir(), nil)
+	toGraph, err := buildRuntimeGraph(config.DeepzoraHomeDir(), nil)
 	if err != nil {
 		return nil
 	}
@@ -186,7 +186,7 @@ func finalizeBuildResult(res *BuildResult, publish bool) *BuildResult {
 	if res == nil {
 		return nil
 	}
-	if graph, err := buildRuntimeGraph(config.DeeperHomeDir(), nil); err == nil {
+	if graph, err := buildRuntimeGraph(config.DeepzoraHomeDir(), nil); err == nil {
 		attachPlanAndStatus(res, nil, graph, 0, nil)
 	}
 	if publish {

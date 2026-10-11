@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRemoteInstallDistinguishesRejectionFromLostAcknowledgement(t *testing.T) {

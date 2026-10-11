@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 // ReportLeakedFileLocks summarizes leaked locks without failing the binary. Use

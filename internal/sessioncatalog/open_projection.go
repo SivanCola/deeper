@@ -2,7 +2,7 @@ package sessioncatalog
 
 import (
 	"context"
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 func openCatalogProjection(ctx context.Context, opts Options) (*projectiondb.Handle, error) {

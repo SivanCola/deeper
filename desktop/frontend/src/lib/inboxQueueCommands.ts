@@ -23,7 +23,7 @@ export function queuePending(state?: string): boolean {
 }
 
 // Adapted from zai-org/ZCode ConversationQueuePanel (Apache-2.0),
-// 872ad960. Deeper uses the same ID anchor for pointer and keyboard moves.
+// 872ad960. Deepzora uses the same ID anchor for pointer and keyboard moves.
 export function queueMoveAnchor(ids: readonly string[], active: string, over: string): string | null | undefined {
   if (active === over) return undefined;
   const from = ids.indexOf(active), to = ids.indexOf(over);

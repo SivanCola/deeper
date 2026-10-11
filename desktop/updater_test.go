@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/update"
-	"deeper/internal/installlayout"
-	"deeper/internal/repair"
+	"deepzora/desktop/internal/update"
+	"deepzora/internal/installlayout"
+	"deepzora/internal/repair"
 )
 
 func TestNormalizeVersion(t *testing.T) {
@@ -260,15 +260,15 @@ func TestExpectedUpdateVersionRejectsAdvancedPointer(t *testing.T) {
 
 func TestUpdateSiblingNamesCoverEveryReplacedEntryPoint(t *testing.T) {
 	windows := strings.Join(updateSiblingNames("windows"), "\x00")
-	for _, want := range []string{"deeper-guard.exe", "deeper-launcher.exe", "deeper-update-helper.exe", "deeper-cli.exe", "Deeper.exe"} {
+	for _, want := range []string{"deepzora-guard.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "Deepzora.exe"} {
 		if !strings.Contains(windows, want) {
 			t.Errorf("Windows release unit omits %q: %q", want, windows)
 		}
 	}
-	if strings.Contains(windows, "deeper.exe") {
+	if strings.Contains(windows, "deepzora.exe") {
 		t.Fatalf("Windows release unit reintroduces the case-only CLI/launcher collision: %q", windows)
 	}
-	if got := updateSiblingNames("linux"); len(got) != 2 || got[0] != "deeper-guard" || got[1] != "deeper" {
+	if got := updateSiblingNames("linux"); len(got) != 2 || got[0] != "deepzora-guard" || got[1] != "deepzora" {
 		t.Fatalf("Linux release unit = %q", got)
 	}
 	if got := updateSiblingNames("darwin"); got != nil {
@@ -382,10 +382,10 @@ func TestLegacyChannelsSelectOfficialPointers(t *testing.T) {
 	if !reflect.DeepEqual(stable, want) || !reflect.DeepEqual(preview, want) {
 		t.Fatalf("manifest endpoints: stable=%q preview=%q want=%q", stable, preview, want)
 	}
-	if got := downloadPage("preview"); got != "https://github.com/SivanCola/deeper/releases" {
+	if got := downloadPage("preview"); got != "https://github.com/SivanCola/deepzora/releases" {
 		t.Errorf("legacy preview download page = %q", got)
 	}
-	if got := manifestDownloadPage("preview", "https://github.com/SivanCola/deeper/?channel=preview&download=desktop#start"); got != "https://github.com/SivanCola/deeper/releases" {
+	if got := manifestDownloadPage("preview", "https://github.com/SivanCola/deepzora/?channel=preview&download=desktop#start"); got != "https://github.com/SivanCola/deepzora/releases" {
 		t.Errorf("manifest official page = %q", got)
 	}
 	if got := manifestDownloadPage("preview", "https://example.com/releases"); got != "https://example.com/releases" {
@@ -393,8 +393,8 @@ func TestLegacyChannelsSelectOfficialPointers(t *testing.T) {
 	}
 	for _, unsafe := range []string{
 		"javascript:alert(1)",
-		"http://deeper.io/#start",
-		"https://user@deeper.io/#start",
+		"http://deepzora.com/#start",
+		"https://user@deepzora.com/#start",
 	} {
 		if got := manifestDownloadPage("preview", unsafe); got != downloadPage("stable") {
 			t.Errorf("unsafe manifest page %q = %q, want official fallback", unsafe, got)
@@ -477,7 +477,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 			name: "wrong filename",
 			mutate: func(m *update.Manifest) {
 				asset := m.Platforms["darwin-arm64"]
-				asset.URL = strings.Replace(asset.URL, "Deeper-", "Other-", 1)
+				asset.URL = strings.Replace(asset.URL, "Deepzora-", "Other-", 1)
 				asset.Sig = asset.URL + ".minisig"
 				m.Platforms["darwin-arm64"] = asset
 			},
@@ -583,7 +583,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 		{
 			name: "wrong download page",
 			mutate: func(m *update.Manifest) {
-				m.DownloadPage = "https://github.com/SivanCola/deeper/?channel=stable&download=desktop#start"
+				m.DownloadPage = "https://github.com/SivanCola/deepzora/?channel=stable&download=desktop#start"
 			},
 		},
 	}
@@ -634,7 +634,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 	t.Run("unified GitHub release base", func(t *testing.T) {
 		manifest := validDesktopManifest(t, "stable", "v1.19.0")
 		oldBase := githubReleaseAssetBase + "/desktop-v1.19.0/"
-		newBase := "https://github.com/SivanCola/deeper/releases/download/v1.19.0/"
+		newBase := "https://github.com/SivanCola/deepzora/releases/download/v1.19.0/"
 		for key, asset := range manifest.Platforms {
 			asset.URL = strings.Replace(asset.URL, oldBase, newBase, 1)
 			asset.Sig = asset.URL + ".minisig"
@@ -680,7 +680,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 		asset.URL = strings.Replace(
 			asset.URL,
 			githubReleaseAssetBase+"/desktop-v1.18.0/",
-			"https://github.com/SivanCola/deeper/releases/download/v1.18.0/",
+			"https://github.com/SivanCola/deepzora/releases/download/v1.18.0/",
 			1,
 		)
 		asset.Sig = asset.URL + ".minisig"
@@ -720,7 +720,7 @@ func TestFetchManifestRejectsPrereleaseForLegacyPreviewSelection(t *testing.T) {
 		t.Fatal("prerelease manifest must not enter the stable channel")
 	}
 	if !reflect.DeepEqual(calls, []string{githubManifestEndpoint}) {
-		t.Fatalf("endpoint calls = %q, want only Deeper's GitHub pointer", calls)
+		t.Fatalf("endpoint calls = %q, want only Deepzora's GitHub pointer", calls)
 	}
 }
 
@@ -748,7 +748,7 @@ func TestFetchManifestRejectsMalformedSuccessfulResponse(t *testing.T) {
 		t.Fatal("incomplete manifest must be rejected even after HTTP 200")
 	}
 	if !reflect.DeepEqual(calls, []string{githubManifestEndpoint}) {
-		t.Fatalf("endpoint calls = %q, want only Deeper's GitHub pointer", calls)
+		t.Fatalf("endpoint calls = %q, want only Deepzora's GitHub pointer", calls)
 	}
 }
 
@@ -758,16 +758,16 @@ func TestValidateUpdateRedirect(t *testing.T) {
 		target    string
 		wantError bool
 	}{
-		{name: "Deeper first-party redirect", target: "https://github.com/SivanCola/deeper/releases/download/file"},
+		{name: "Deepzora first-party redirect", target: "https://github.com/SivanCola/deepzora/releases/download/file"},
 		{name: "GitHub redirect", target: "https://github.com/file"},
 		{name: "GitHub HTTPS asset redirect", target: "https://release-assets.githubusercontent.com/file"},
 		{name: "HTTPS downgrade", target: "http://release-assets.githubusercontent.com/file", wantError: true},
 		{name: "userinfo", target: "https://user@release-assets.githubusercontent.com/file", wantError: true},
 		{name: "missing hostname", target: "https:///file", wantError: true},
 		{name: "arbitrary HTTPS host", target: "https://example.com/file", wantError: true},
-		{name: "Deeper suffix spoof", target: "https://github.com.evil.invalid/SivanCola/deeper/file", wantError: true},
+		{name: "Deepzora suffix spoof", target: "https://github.com.evil.invalid/SivanCola/deepzora/file", wantError: true},
 		{name: "GitHub suffix spoof", target: "https://release-assets.githubusercontent.com.evil.invalid/file", wantError: true},
-		{name: "explicit port", target: "https://github.com:443/SivanCola/deeper/file", wantError: true},
+		{name: "explicit port", target: "https://github.com:443/SivanCola/deepzora/file", wantError: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -815,7 +815,7 @@ func TestSaveCachedUpdateMarksEvaluateDownloaded(t *testing.T) {
 
 	data := []byte("verified artifact")
 	asset := update.Asset{
-		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deepzora/releases/download/desktop-v9.9.9/Deepzora-linux-amd64.tar.gz",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -847,7 +847,7 @@ func TestCachedUpdateRejectsTamperedArtifact(t *testing.T) {
 
 	data := []byte("verified artifact")
 	asset := update.Asset{
-		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deepzora/releases/download/desktop-v9.9.9/Deepzora-linux-amd64.tar.gz",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -871,7 +871,7 @@ func TestCachedUpdateAcceptsLegacyChannelAlias(t *testing.T) {
 
 	data := []byte("verified artifact")
 	asset := update.Asset{
-		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deepzora/releases/download/desktop-v9.9.9/Deepzora-linux-amd64.tar.gz",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -916,7 +916,7 @@ func TestDebCacheRequiresSignatureAndRejectsTarballReuse(t *testing.T) {
 
 	data := []byte("deb-bytes")
 	asset := update.Asset{
-		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.deb",
+		URL:    "https://github.com/SivanCola/deepzora/releases/download/desktop-v9.9.9/Deepzora-linux-amd64.deb",
 		Size:   int64(len(data)),
 		SHA256: sha256Hex(data),
 	}
@@ -949,7 +949,7 @@ func TestDebCacheRequiresSignatureAndRejectsTarballReuse(t *testing.T) {
 	// Portable legacy cache (no artifactKind) remains valid for tarball.
 	tarball := []byte("tarball-bytes")
 	tAsset := update.Asset{
-		URL:    "https://github.com/SivanCola/deeper/releases/download/desktop-v9.9.9/Deeper-linux-amd64.tar.gz",
+		URL:    "https://github.com/SivanCola/deepzora/releases/download/desktop-v9.9.9/Deepzora-linux-amd64.tar.gz",
 		Size:   int64(len(tarball)),
 		SHA256: sha256Hex(tarball),
 	}
@@ -1000,11 +1000,11 @@ func TestCheckSHA256(t *testing.T) {
 }
 
 func TestExtractBinary(t *testing.T) {
-	want := []byte("#!/bin/sh\necho deeper\n")
+	want := []byte("#!/bin/sh\necho deepzora\n")
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
-	files := map[string][]byte{"README": []byte("ignore me"), "deeper-desktop": want}
+	files := map[string][]byte{"README": []byte("ignore me"), "deepzora-desktop": want}
 	for name, body := range files {
 		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
 			t.Fatal(err)
@@ -1016,7 +1016,7 @@ func TestExtractBinary(t *testing.T) {
 	tw.Close()
 	gz.Close()
 
-	got, err := extractBinary(buf.Bytes(), "deeper-desktop")
+	got, err := extractBinary(buf.Bytes(), "deepzora-desktop")
 	if err != nil {
 		t.Fatalf("extractBinary: %v", err)
 	}
@@ -1056,17 +1056,17 @@ func TestExtractLinuxReleaseUnitRejectsAmbiguousMembers(t *testing.T) {
 		return tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}
 	}
 	headers := []tar.Header{
-		base("deeper-desktop", []byte("desktop")),
-		base("deeper-guard", []byte("guard")),
-		base("deeper", []byte("cli")),
+		base("deepzora-desktop", []byte("desktop")),
+		base("deepzora-guard", []byte("guard")),
+		base("deepzora", []byte("cli")),
 	}
 	bodies := [][]byte{[]byte("desktop"), []byte("guard"), []byte("cli")}
 	if got, err := extractLinuxReleaseUnit(makeArchive(t, headers, bodies)); err != nil ||
-		string(got["deeper-desktop"]) != "desktop" {
-		t.Fatalf("complete release extraction = %v, %q", err, got["deeper-desktop"])
+		string(got["deepzora-desktop"]) != "desktop" {
+		t.Fatalf("complete release extraction = %v, %q", err, got["deepzora-desktop"])
 	}
 
-	duplicateHeaders := append(append([]tar.Header(nil), headers...), base("nested/deeper", []byte("duplicate")))
+	duplicateHeaders := append(append([]tar.Header(nil), headers...), base("nested/deepzora", []byte("duplicate")))
 	duplicateBodies := append(append([][]byte(nil), bodies...), []byte("duplicate"))
 	if _, err := extractLinuxReleaseUnit(makeArchive(t, duplicateHeaders, duplicateBodies)); err == nil ||
 		!strings.Contains(err.Error(), "appears more than once") {
@@ -1074,7 +1074,7 @@ func TestExtractLinuxReleaseUnitRejectsAmbiguousMembers(t *testing.T) {
 	}
 
 	nonRegular := append([]tar.Header(nil), headers...)
-	nonRegular[1] = tar.Header{Name: "deeper-guard", Typeflag: tar.TypeSymlink, Linkname: "outside"}
+	nonRegular[1] = tar.Header{Name: "deepzora-guard", Typeflag: tar.TypeSymlink, Linkname: "outside"}
 	nonRegularBodies := [][]byte{bodies[0], nil, bodies[2]}
 	if _, err := extractLinuxReleaseUnit(makeArchive(t, nonRegular, nonRegularBodies)); err == nil ||
 		!strings.Contains(err.Error(), "not a regular file") {
@@ -1086,7 +1086,7 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 	root := robustTempDir(t)
 	source := robustTempDir(t)
 	// This fixture describes a Linux release even when the test host is Windows.
-	for _, name := range []string{"deeper-desktop", "deeper"} {
+	for _, name := range []string{"deepzora-desktop", "deepzora"} {
 		if err := os.WriteFile(filepath.Join(source, name), []byte("old-"+name), 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -1096,10 +1096,10 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 		Version:     "v1.20.0",
 		RequestID:   "seed-linux",
 		Members: []installlayout.Member{
-			{Name: "deeper-desktop", Path: filepath.Join(source, "deeper-desktop")},
-			{Name: "deeper", Path: filepath.Join(source, "deeper")},
+			{Name: "deepzora-desktop", Path: filepath.Join(source, "deepzora-desktop")},
+			{Name: "deepzora", Path: filepath.Join(source, "deepzora")},
 		},
-		RequiredNames: []string{"deeper-desktop", "deeper"},
+		RequiredNames: []string{"deepzora-desktop", "deepzora"},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1116,14 +1116,14 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 	if err != nil || ptr.ActiveVersion != "v1.20.1" {
 		t.Fatalf("pointer=%+v err=%v", ptr, err)
 	}
-	activeDesktop := filepath.Join(root, filepath.FromSlash(ptr.ActiveDir), "deeper-desktop")
+	activeDesktop := filepath.Join(root, filepath.FromSlash(ptr.ActiveDir), "deepzora-desktop")
 	data, err := os.ReadFile(activeDesktop)
-	if err != nil || string(data) != "new-deeper-desktop" {
+	if err != nil || string(data) != "new-deepzora-desktop" {
 		t.Fatalf("active desktop=%q err=%v", data, err)
 	}
 	for _, guardPath := range []string{
-		filepath.Join(root, "deeper-guard"),
-		filepath.Join(root, "versions", "v1.20.1", "deeper-guard"),
+		filepath.Join(root, "deepzora-guard"),
+		filepath.Join(root, "versions", "v1.20.1", "deepzora-guard"),
 	} {
 		if _, err := os.Lstat(guardPath); !os.IsNotExist(err) {
 			t.Fatalf("Guard persisted at %s: %v", guardPath, err)
@@ -1133,8 +1133,8 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 
 func TestApplyLinuxHoldsReleaseUnitLockDuringReplace(t *testing.T) {
 	dir := robustTempDir(t)
-	t.Setenv("DEEPER_HOME", robustTempDir(t))
-	exe := filepath.Join(dir, "deeper-desktop")
+	t.Setenv("DEEPZORA_HOME", robustTempDir(t))
+	exe := filepath.Join(dir, "deepzora-desktop")
 	releasePaths := releaseUnitPathsFor(dir, "linux")
 	for _, path := range releasePaths {
 		if err := os.WriteFile(path, []byte("old"), 0o700); err != nil {
@@ -1167,7 +1167,7 @@ func TestApplyLinuxHoldsReleaseUnitLockDuringReplace(t *testing.T) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
-	for _, name := range []string{"deeper-desktop", "deeper-guard", "deeper"} {
+	for _, name := range []string{"deepzora-desktop", "deepzora-guard", "deepzora"} {
 		body := []byte(name)
 		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
 			t.Fatal(err)
@@ -1527,7 +1527,7 @@ func TestDownloadRejectsAssetSizeAboveMaximum(t *testing.T) {
 		context.Background(),
 		&http.Client{},
 		nil,
-		"https://github.com/SivanCola/deeper/releases/download/file",
+		"https://github.com/SivanCola/deepzora/releases/download/file",
 		maxDesktopReleaseAssetSize+1,
 		nil,
 	); err == nil {

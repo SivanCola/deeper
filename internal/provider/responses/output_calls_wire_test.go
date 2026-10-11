@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func chunksOf(t *testing.T, events ...string) []provider.Chunk {

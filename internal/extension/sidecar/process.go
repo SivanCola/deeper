@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/pluginpkg"
-	"deeper/internal/proc"
-	"deeper/internal/secrets"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/proc"
+	"deepzora/internal/secrets"
 )
 
 // Bounded-close budgets, mirrored from internal/plugin's stdio transport: a
@@ -29,9 +29,9 @@ const (
 
 // pluginEnvVarPrefix is the well-known environment block every sidecar sees.
 const (
-	envPluginRoot    = "DEEPER_PLUGIN_ROOT"
-	envPluginName    = "DEEPER_PLUGIN_NAME"
-	envPluginVersion = "DEEPER_PLUGIN_VERSION"
+	envPluginRoot    = "DEEPZORA_PLUGIN_ROOT"
+	envPluginName    = "DEEPZORA_PLUGIN_NAME"
+	envPluginVersion = "DEEPZORA_PLUGIN_VERSION"
 )
 
 // shellExecutables are interpreter names a runtime command may not resolve
@@ -141,7 +141,7 @@ type process struct {
 	jobOnce  sync.Once
 }
 
-// resolveRuntimeCommand expands ${DEEPER_PLUGIN_ROOT} and enforces the exec
+// resolveRuntimeCommand expands ${DEEPZORA_PLUGIN_ROOT} and enforces the exec
 // contract: the resolved command must be an absolute path to the extension
 // executable itself, never a relative name (no PATH lookup — the package must
 // know exactly what it runs) and never a shell.

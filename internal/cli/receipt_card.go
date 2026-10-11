@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 // maxReceiptGapLines bounds the card. A receipt long enough to scroll is a

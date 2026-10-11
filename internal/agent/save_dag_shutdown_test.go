@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // holdLockAndShortenWait makes the next save time out on the file lock the

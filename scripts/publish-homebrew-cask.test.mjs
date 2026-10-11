@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { decideCaskUpdate } from "./publish-homebrew-cask.mjs";
 
-const cask = version => `cask "deeper" do\n  version "${version}"\nend\n`;
+const cask = version => `cask "deepzora" do\n  version "${version}"\nend\n`;
 
 test("reuses an identical cask", () => assert.equal(decideCaskUpdate(cask("1.2.3"), cask("1.2.3")), "reuse"));
 test("publishes a newer cask", () => assert.equal(decideCaskUpdate(cask("1.2.3"), cask("1.2.4")), "publish"));
@@ -17,11 +17,11 @@ test("rejects downgrade and same-version conflict", () => {
 });
 
 function runPublisher(t, scenario, candidate = cask("1.2.4")) {
-  const directory = mkdtempSync(path.join(tmpdir(), "deeper-homebrew-test-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "deepzora-homebrew-test-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const trace = path.join(directory, "requests.json");
   const mock = path.join(directory, "fetch.mjs");
-  const file = path.join(directory, "deeper.rb");
+  const file = path.join(directory, "deepzora.rb");
   writeFileSync(file, candidate);
   writeFileSync(mock, `
     import { writeFileSync } from "node:fs";

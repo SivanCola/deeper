@@ -7,7 +7,7 @@ issue closure is implied. / 当前本地开发版本，未提交、发布或关�
 
 The user authorized live requests against LongCat, official DeepSeek, Zhipu
 Coding Plan CN, and OpenCode Go. Each process receives only its selected
-provider's credential, with disposable HOME/DEEPER_HOME directories. Keys
+provider's credential, with disposable HOME/DEEPZORA_HOME directories. Keys
 are never stored in the checkout or report. Model-facing tools consist only of
 fixed markers, read-only argument/error fixtures, or a built-in writer confined
 to a disposable directory. There is no shell, MCP or credential-reading tool.
@@ -58,7 +58,7 @@ LongCat-2.0 的通过不能替代官方接口验证。
 OpenCode Go initially returned CreditsError/HTTP 401. After the user renewed
 the subscription, three correctly authenticated direct protocol probes returned
 200 and the funded model matrix passed. No billing settings were changed by
-Deeper or by these tests. / 用户重新订阅后，三种正确鉴权的原始请求均返回
+Deepzora or by these tests. / 用户重新订阅后，三种正确鉴权的原始请求均返回
 200，后续模型矩阵通过；测试没有修改账户计费设置。
 
 ## Initial matrices / 首轮矩阵
@@ -149,7 +149,7 @@ At max effort, three baseline and three cut/retry samples all completed: 15 HTTP
 requests, six physical tool calls and three retries. The original max control
 completed five of six. This small sequential sample is promising, not a
 statistically established improvement or an OpenCode runtime comparison. The
-experiment does not change Deeper's production prompt or thinking settings.
+experiment does not change Deepzora's production prompt or thinking settings.
 
 借鉴 OpenCode 行动提示的短提示实验在 max 档位六例全完成；原提示对照为五例。
 这是小样本顺序实验，不能据此声称稳定收益，生产提示未改。另一个 Kimi 带参数
@@ -179,7 +179,7 @@ Responses 搜索缺少来源是原始终态响应可见的事实；最终测试�
 
 The OpenCode source comparison and recommended changes are documented in
 [OpenCode recovery comparison](OPENCODE_RECOVERY_COMPARISON.md). These are source
-findings and Deeper experiments, not an executed OpenCode-vs-Deeper benchmark.
+findings and Deepzora experiments, not an executed OpenCode-vs-Deepzora benchmark.
 
 ## Confirmed fixes / 已确认修复
 
@@ -256,8 +256,8 @@ stop latency. The generated two-color image proves only this basic image-input f
 根模块、Desktop 独立模块、lint、涉及请求头/会话身份/额度/恢复的 race 回归均
 通过。没有新增界面功能的原生 UI 验证结论，也没有执行提交、推送或发布。
 
-Raw sanitized local logs are in `/tmp/deeper-live-multiprovider/`; preceding
-DeepSeek logs are in `/tmp/deeper-live-official/`. They are ephemeral local
+Raw sanitized local logs are in `/tmp/deepzora-live-multiprovider/`; preceding
+DeepSeek logs are in `/tmp/deepzora-live-official/`. They are ephemeral local
 evidence, not published artifacts. No request/response reasoning bodies or
 credentials are included in this report.
 

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 var (

@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"deeper/internal/netclient"
+	"deepzora/internal/netclient"
 )
 
 // dialConfig carries everything a single dial (or one hop of a jump chain)

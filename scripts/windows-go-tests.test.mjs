@@ -4,27 +4,27 @@ import test from "node:test";
 import { controlShards, isolatedGroups, selectPackages, testArgs, verifyControlInventory } from "./windows-go-tests.mjs";
 import { windowsPRContractArgs, windowsPRContractGroups } from "./windows-pr-contract-tests.mjs";
 
-const packages = ["deeper/cmd/deeper", "deeper/internal/agent", "deeper/internal/agent/testutil",
-  "deeper/internal/acp", "deeper/internal/agentpreset", "deeper/internal/boot", "deeper/internal/bot", "deeper/internal/control",
-  "deeper/internal/control/child", "deeper/internal/extension/sidecar", "deeper/internal/proc",
-  "deeper/internal/serve", "deeper/internal/session", "deeper/internal/worktree",
-  "deeper/internal/lsp", "deeper/internal/fileops", "deeper/internal/newpackage", "deeper/internal/projectiondb",
-  "deeper/internal/sessioncatalog", "deeper/internal/sqliteuri", "deeper/internal/topicstate",
-  "deeper/internal/winaclresidue", "deeper/tools/repolint"];
+const packages = ["deepzora/cmd/deepzora", "deepzora/internal/agent", "deepzora/internal/agent/testutil",
+  "deepzora/internal/acp", "deepzora/internal/agentpreset", "deepzora/internal/boot", "deepzora/internal/bot", "deepzora/internal/control",
+  "deepzora/internal/control/child", "deepzora/internal/extension/sidecar", "deepzora/internal/proc",
+  "deepzora/internal/serve", "deepzora/internal/session", "deepzora/internal/worktree",
+  "deepzora/internal/lsp", "deepzora/internal/fileops", "deepzora/internal/newpackage", "deepzora/internal/projectiondb",
+  "deepzora/internal/sessioncatalog", "deepzora/internal/sqliteuri", "deepzora/internal/topicstate",
+  "deepzora/internal/winaclresidue", "deepzora/tools/repolint"];
 
 test("the full Windows groups cover every package exactly once, including new packages", () => {
   const grouped = ["full", ...isolatedGroups].flatMap(group => selectPackages(packages, group));
   assert.deepEqual(grouped.toSorted(), packages.toSorted());
   assert.equal(new Set(grouped).size, grouped.length);
-  assert.ok(selectPackages(packages, "full").includes("deeper/internal/agentpreset"));
+  assert.ok(selectPackages(packages, "full").includes("deepzora/internal/agentpreset"));
 });
 
 test("PR smoke keeps platform coverage without duplicating isolated suites", () => {
   assert.deepEqual(selectPackages(packages, "smoke"), [
-    "deeper/cmd/deeper", "deeper/internal/extension/sidecar", "deeper/internal/proc", "deeper/internal/lsp",
-    "deeper/internal/fileops",
-    "deeper/internal/projectiondb", "deeper/internal/sessioncatalog", "deeper/internal/sqliteuri",
-    "deeper/internal/topicstate", "deeper/internal/winaclresidue",
+    "deepzora/cmd/deepzora", "deepzora/internal/extension/sidecar", "deepzora/internal/proc", "deepzora/internal/lsp",
+    "deepzora/internal/fileops",
+    "deepzora/internal/projectiondb", "deepzora/internal/sessioncatalog", "deepzora/internal/sqliteuri",
+    "deepzora/internal/topicstate", "deepzora/internal/winaclresidue",
   ]);
   for (const group of isolatedGroups) {
     assert.deepEqual(testArgs(packages, group).slice(0, 4), ["test", "-p", "1", "-timeout=8m"]);
@@ -60,7 +60,7 @@ test("CI invokes every isolated group and both residual entrypoints", () => {
 test("control partitions preserve every test, example and fuzz seed exactly once", () => {
   const names = ["TestAutosave", "TestMidTurnAutosave", "TestRunShell", "TestWindows", "Test_future",
     "Example", "ExampleController", "ExampleWindows", "FuzzAppend", "FuzzRecovery"];
-  const inventory = names.join("\r\n") + "\r\nok deeper/internal/control 0.1s\r\n";
+  const inventory = names.join("\r\n") + "\r\nok deepzora/internal/control 0.1s\r\n";
   const counts = verifyControlInventory(inventory);
   assert.equal(Object.values(counts).reduce((sum, count) => sum + count, 0), names.length);
   for (const shard of Object.keys(controlShards)) {
@@ -68,7 +68,7 @@ test("control partitions preserve every test, example and fuzz seed exactly once
     assert.deepEqual(args.slice(0, 5), ["test", "-p", "1", "-timeout=8m", "-json"]);
     assert.deepEqual(args.slice(-2), selectPackages(packages, "control"));
   }
-  assert.throws(() => verifyControlInventory("ok deeper/internal/control"), /inventory/);
+  assert.throws(() => verifyControlInventory("ok deepzora/internal/control"), /inventory/);
   assert.throws(() => verifyControlInventory("TestAutosave"), /Empty/);
   assert.throws(() => testArgs(packages, "control", "typo"), /Unknown/);
   assert.throws(() => testArgs(packages, "agent", "A-M"), /control/);
@@ -103,6 +103,6 @@ test("Windows PR contract selector covers shell identity, lifecycle and cancella
 
 test("Windows PR smoke executes the native junction and lock owners", () => {
   const native = ["pathidentity", "identitylock", "workspacelease", "desktopinstance", "sessioncatalog"]
-    .map(name => `deeper/internal/${name}`);
+    .map(name => `deepzora/internal/${name}`);
   assert.deepEqual(selectPackages(native, "smoke"), native);
 });

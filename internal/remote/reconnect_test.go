@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/remote/sshtest"
 )
 
 func deterministicRand() *rand.Rand { return rand.New(rand.NewSource(1)) }

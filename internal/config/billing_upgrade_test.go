@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/provider"
 )
 
 // A config still holding the August Flash anchor must be quoted at the

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 const (

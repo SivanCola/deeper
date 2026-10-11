@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // NormalizeSession runs the persisted-history-safe repairs on a loaded
 // conversation and is the agent-side entry point for making old, partially

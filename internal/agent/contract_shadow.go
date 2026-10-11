@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"deeper/internal/completion"
-	"deeper/internal/event"
+	"deepzora/internal/completion"
+	"deepzora/internal/event"
 )
 
 // emitTurnShadows records end-of-turn facts without a quality decision.

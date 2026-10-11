@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 var pastedLabel = regexp.MustCompile(`^\[(?:已粘贴文本|已貼上文字|Pasted text) #[0-9]+ · [0-9]+ (?:行|lines)\]$`)

@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 const modelSettingsProtocolVersion = 1

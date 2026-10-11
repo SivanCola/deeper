@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/projectiondb"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/sessioncatalog"
 )
 
 type catalogInspection struct {
@@ -45,7 +45,7 @@ func doctorCatalogsCommand(args []string) int {
 		return code
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor catalogs [--json]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor catalogs [--json]")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -65,7 +65,7 @@ func doctorCatalogsCommand(args []string) int {
 		}
 		return 0
 	}
-	fmt.Println("Deeper disposable catalogs")
+	fmt.Println("Deepzora disposable catalogs")
 	for _, item := range items {
 		state := "missing"
 		if item.Info.Exists && item.Info.Error == "" {
@@ -80,7 +80,7 @@ func doctorCatalogsCommand(args []string) int {
 
 func catalogsCommand(args []string) int {
 	if len(args) < 2 || args[0] != "reindex" {
-		fmt.Fprintln(os.Stderr, "usage: deeper catalogs reindex <catalog> [options]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora catalogs reindex <catalog> [options]")
 		return 2
 	}
 	for _, command := range catalogCommands {

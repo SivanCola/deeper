@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/config"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
 	"fmt"
 	"strings"
 )

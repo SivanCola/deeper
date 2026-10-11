@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 // The SDK types artifact (SDKTypesArtifactPath in generate.go) is produced

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/plugin"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
 )
 
 // enableProjectMCPForTest records the user's enable decision for each server
@@ -48,7 +48,7 @@ func TestDesktopSharedHostProjectMCPWaitsForTheUser(t *testing.T) {
 
 	srv := desktopMCPHTTPServer(t)
 	defer srv.Close()
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), fmt.Appendf(nil, `
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), fmt.Appendf(nil, `
 [[plugins]]
 name = "h"
 type = "http"
@@ -82,7 +82,7 @@ func TestCapabilitiesShowsDefaultMCPAsAutomaticIdleNotDisabled(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(dir, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "playwright"
 command = "npx"

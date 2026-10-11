@@ -3,7 +3,7 @@
 // TaskSnapshot, TaskEvent, TaskState, RuntimeState and a Store abstraction.
 //
 // The package does not read private session files, does not parse internal
-// Deeper state files, and does not implement a second state machine — it
+// Deepzora state files, and does not implement a second state machine — it
 // is a pure observation layer that reuses the existing jobs.Manager as its
 // source of truth.
 package taskmonitor

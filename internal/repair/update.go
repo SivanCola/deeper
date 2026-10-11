@@ -18,9 +18,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
 )
 
 const updateTransactionVersion = 1
@@ -202,7 +202,7 @@ func PendingUpdatePath() string {
 func lockPendingUpdateStrict() (func(), error) {
 	path := PendingUpdatePath()
 	if path == "" {
-		return nil, fmt.Errorf("pending update: Deeper state directory is unavailable")
+		return nil, fmt.Errorf("pending update: Deepzora state directory is unavailable")
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, err
@@ -230,7 +230,7 @@ func PrepareFileUpdate(fromVersion, toVersion, targetPath string, siblingPaths .
 	}
 	root := config.MemoryUserDir()
 	if root == "" {
-		return nil, fmt.Errorf("prepare update: Deeper state directory is unavailable")
+		return nil, fmt.Errorf("prepare update: Deepzora state directory is unavailable")
 	}
 	unlock, err := acquirePendingUpdateLock()
 	if err != nil {
@@ -406,7 +406,7 @@ func PrepareAppBundleUpdateHandoff(fromVersion, toVersion, appPath, backupPath, 
 	}
 	tx.OrphanedBackupPath = orphanedBackup
 	tx.OrphanedBackupTreeID = orphanedTreeID
-	// An uncooperative writer is not covered by Deeper's mutation lock. Recheck
+	// An uncooperative writer is not covered by Deepzora's mutation lock. Recheck
 	// the public path after quarantine so a recreated node is never adopted as the
 	// rollback backup of the new transaction.
 	if err := verifyAppBundleUpdateHandoffBackupAbsent(tx); err != nil {
@@ -433,7 +433,7 @@ func newAppBundleUpdateTransaction(fromVersion, toVersion, appPath, backupPath s
 		CreatedAt:     time.Now().UTC().Format(time.RFC3339Nano),
 	}
 	if !strings.HasSuffix(strings.ToLower(tx.TargetPath), ".app") ||
-		tx.BackupPath != tx.TargetPath+".deeper-update-backup" {
+		tx.BackupPath != tx.TargetPath+".deepzora-update-backup" {
 		return nil, fmt.Errorf("prepare update: invalid macOS bundle paths")
 	}
 	return tx, nil
@@ -808,7 +808,7 @@ func PublishClaimedFileUpdateMemberExact(
 		if len(transactionID) < 16 {
 			return FileUpdateInstallReceipt{}, fmt.Errorf("publish file update: transaction identity is incomplete")
 		}
-		retained = member.TargetPath + ".deeper-update-aside-" + transactionID[:16]
+		retained = member.TargetPath + ".deepzora-update-aside-" + transactionID[:16]
 		if err := renameRepairNodeNoReplace(member.TargetPath, retained); err != nil {
 			return FileUpdateInstallReceipt{}, fmt.Errorf("publish file update: retain %s: %w", filepath.Base(member.TargetPath), err)
 		}
@@ -907,7 +907,7 @@ func verifyRegularFileHash(path, expected string) error {
 }
 
 func stageFileUpdateContent(targetPath string, content []byte, mode os.FileMode) (string, string, string, error) {
-	tmp, err := os.CreateTemp(filepath.Dir(targetPath), "."+filepath.Base(targetPath)+".deeper-update-stage-*")
+	tmp, err := os.CreateTemp(filepath.Dir(targetPath), "."+filepath.Base(targetPath)+".deepzora-update-stage-*")
 	if err != nil {
 		return "", "", "", err
 	}
@@ -1474,7 +1474,7 @@ func verifyAppBundleUpdateHandoffBackupAbsent(tx *UpdateTransaction) error {
 // similarly named bundle beside an unrelated application.
 func quarantineExistingAppBundleUpdateBackup(tx *UpdateTransaction) (string, string, error) {
 	if tx == nil || tx.TargetKind != "app-bundle" ||
-		tx.BackupPath != tx.TargetPath+".deeper-update-backup" {
+		tx.BackupPath != tx.TargetPath+".deepzora-update-backup" {
 		return "", "", fmt.Errorf("handoff backup transaction is invalid")
 	}
 	info, err := os.Lstat(tx.BackupPath)
@@ -1490,7 +1490,7 @@ func quarantineExistingAppBundleUpdateBackup(tx *UpdateTransaction) (string, str
 
 	launcher, err := repairExecutable()
 	if err != nil {
-		return "", "", fmt.Errorf("resolve current Deeper executable: %w", err)
+		return "", "", fmt.Errorf("resolve current Deepzora executable: %w", err)
 	}
 	resolvedTarget, err := filepath.EvalSymlinks(tx.TargetPath)
 	if err != nil {
@@ -1498,11 +1498,11 @@ func quarantineExistingAppBundleUpdateBackup(tx *UpdateTransaction) (string, str
 	}
 	resolvedLauncher, err := filepath.EvalSymlinks(launcher)
 	if err != nil {
-		return "", "", fmt.Errorf("resolve current Deeper executable: %w", err)
+		return "", "", fmt.Errorf("resolve current Deepzora executable: %w", err)
 	}
 	rel, err := filepath.Rel(resolvedTarget, resolvedLauncher)
 	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", "", fmt.Errorf("existing handoff backup is outside the current Deeper installation")
+		return "", "", fmt.Errorf("existing handoff backup is outside the current Deepzora installation")
 	}
 
 	expectedTreeID, err := repairPlanTreeContentStateID(tx.BackupPath)
@@ -1511,7 +1511,7 @@ func quarantineExistingAppBundleUpdateBackup(tx *UpdateTransaction) (string, str
 	}
 	for attempt := range 16 {
 		quarantine := fmt.Sprintf(
-			"%s.deeper-orphaned-%d-%d",
+			"%s.deepzora-orphaned-%d-%d",
 			tx.BackupPath,
 			time.Now().UTC().UnixNano(),
 			attempt,
@@ -1556,7 +1556,7 @@ func quarantineExistingAppBundleUpdateBackup(tx *UpdateTransaction) (string, str
 // cleanupOrphanedAppBundleUpdateBackup retires only the quarantine recorded by
 // a terminal transaction. The no-replace move and digest check keep a changed
 // or concurrently replaced directory intact for diagnosis instead of deleting
-// a path merely because its name resembles a Deeper quarantine.
+// a path merely because its name resembles a Deepzora quarantine.
 func cleanupOrphanedAppBundleUpdateBackup(tx *UpdateTransaction) {
 	if validateOrphanedAppBundleBackupMetadata(tx) != nil ||
 		strings.TrimSpace(tx.OrphanedBackupPath) == "" {
@@ -1672,7 +1672,7 @@ func writePendingUpdate(tx *UpdateTransaction, createOnly bool) error {
 	}
 	path := PendingUpdatePath()
 	if path == "" {
-		return fmt.Errorf("pending update: Deeper state directory is unavailable")
+		return fmt.Errorf("pending update: Deepzora state directory is unavailable")
 	}
 	b, err := json.MarshalIndent(tx, "", "  ")
 	if err != nil {
@@ -1798,7 +1798,7 @@ const (
 func classifyPendingUpdate() (pendingUpdateDisposition, *UpdateTransaction, error) {
 	path := PendingUpdatePath()
 	if path == "" {
-		return pendingUpdateNone, nil, fmt.Errorf("Deeper state directory is unavailable")
+		return pendingUpdateNone, nil, fmt.Errorf("Deepzora state directory is unavailable")
 	}
 	if _, err := os.Lstat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -1840,7 +1840,7 @@ func isPendingUpdateContentError(err error) bool {
 }
 
 // pendingUpdateSelfDescribing reports whether tx carries the identity any
-// recovery needs regardless of where Deeper is installed: which release it
+// recovery needs regardless of where Deepzora is installed: which release it
 // targets, for which platform, and when it was opened.
 func pendingUpdateSelfDescribing(tx *UpdateTransaction) bool {
 	if tx == nil || tx.SchemaVersion != updateTransactionVersion || strings.TrimSpace(tx.ToVersion) == "" {
@@ -1860,7 +1860,7 @@ func pendingUpdateSelfDescribing(tx *UpdateTransaction) bool {
 func quarantinePendingUpdate(reason string) (string, error) {
 	path := PendingUpdatePath()
 	if path == "" {
-		return "", fmt.Errorf("Deeper state directory is unavailable")
+		return "", fmt.Errorf("Deepzora state directory is unavailable")
 	}
 	base := path + ".unusable-" + time.Now().UTC().Format("20060102T150405Z")
 	aside := base
@@ -2761,7 +2761,7 @@ func rollbackPendingUpdateMatchingLocked(
 		expectedStateID, expectedStates = pendingUpdateBoundPreview(tx)
 	}
 	// Share release-unit target locks with other repair mutations so two
-	// DEEPER_HOME profiles cannot quarantine or restore the same binaries
+	// DEEPZORA_HOME profiles cannot quarantine or restore the same binaries
 	// through different pending-update locks.
 	unlockTargets, lockErr := lockRepairMutations(pendingUpdateTargetPaths(tx)...)
 	if lockErr != nil {
@@ -2887,7 +2887,7 @@ func rollbackPendingUpdateMatchingLocked(
 		if _, statErr := os.Lstat(tx.TargetPath); statErr == nil {
 			retainedFailedState = repairPlanReleaseNodeState(tx.TargetPath)
 			var retainErr error
-			failed, retainErr = retainUpdateRollbackNode(tx.TargetPath, "deeper-failed")
+			failed, retainErr = retainUpdateRollbackNode(tx.TargetPath, "deepzora-failed")
 			if retainErr != nil {
 				return result, fmt.Errorf("rollback update: move failed bundle: %w", retainErr)
 			}
@@ -3120,7 +3120,7 @@ func restoreReleaseUnit(
 	alreadyRestored := make([]bool, len(files))
 	preexistingAside := make([]bool, len(files))
 	for i, f := range files {
-		aside := f.TargetPath + ".deeper-rollback-aside"
+		aside := f.TargetPath + ".deepzora-rollback-aside"
 		asideInfo, err := os.Lstat(aside)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -3157,7 +3157,7 @@ func restoreReleaseUnit(
 	failedIndex := -1
 	var swapErr error
 	for i, f := range files {
-		aside := f.TargetPath + ".deeper-rollback-aside"
+		aside := f.TargetPath + ".deepzora-rollback-aside"
 		if alreadyRestored[i] {
 			asides[i] = aside
 			processed[i] = true
@@ -3291,7 +3291,7 @@ func restoreReleaseUnit(
 		for i, f := range files {
 			// Best-effort: on Windows the running executable's aside may linger
 			// until the process exits, but it is no longer a live entry point.
-			aside := f.TargetPath + ".deeper-rollback-aside"
+			aside := f.TargetPath + ".deepzora-rollback-aside"
 			if !preexistingAside[i] && retainedStates[i] != "" && ownedRetained[i] {
 				_ = removeUpdateNodeMatching(aside, func(moved string) error {
 					return verifyRepairPlanReleaseNodeStateFor(moved, f.TargetPath, retainedStates[i])
@@ -3362,7 +3362,7 @@ func stageUpdateRollbackBackup(
 ) (string, string, error) {
 	for attempt := range 16 {
 		stage := fmt.Sprintf(
-			"%s.deeper-rollback-stage-%d-%d",
+			"%s.deepzora-rollback-stage-%d-%d",
 			file.TargetPath,
 			time.Now().UTC().UnixNano(),
 			attempt,
@@ -3384,11 +3384,11 @@ func stageUpdateRollbackBackup(
 // primary target; Guard/launcher artifacts only as release-unit siblings.
 func allowedUpdateTargetBase(base string, primary bool) bool {
 	switch strings.ToLower(base) {
-	case "deeper-desktop", "deeper-desktop.exe":
+	case "deepzora-desktop", "deepzora-desktop.exe":
 		return primary
-	case "deeper.exe":
+	case "deepzora.exe":
 		return !primary
-	case "deeper", "deeper-guard", "deeper-guard.exe", "deeper-launcher.exe", "deeper-update-helper.exe", "deeper-cli.exe":
+	case "deepzora", "deepzora-guard", "deepzora-guard.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe":
 		return !primary
 	default:
 		return false
@@ -3429,7 +3429,7 @@ func validateUpdateTransactionForLauncher(tx *UpdateTransaction, launcher string
 	switch tx.TargetKind {
 	case "file":
 		if !allowedUpdateTargetBase(filepath.Base(tx.TargetPath), true) {
-			return fmt.Errorf("pending update target is not a Deeper executable")
+			return fmt.Errorf("pending update target is not a Deepzora executable")
 		}
 		launcherKey := canonicalRepairPath(launcher)
 		targetKey := canonicalRepairPath(tx.TargetPath)
@@ -3518,7 +3518,7 @@ func validateUpdateTransactionForLauncher(tx *UpdateTransaction, launcher string
 			return fmt.Errorf("pending update release unit omits the primary executable")
 		}
 	case "app-bundle":
-		if !strings.HasSuffix(strings.ToLower(tx.TargetPath), ".app") || tx.BackupPath != tx.TargetPath+".deeper-update-backup" {
+		if !strings.HasSuffix(strings.ToLower(tx.TargetPath), ".app") || tx.BackupPath != tx.TargetPath+".deepzora-update-backup" {
 			return fmt.Errorf("pending update bundle paths are invalid")
 		}
 		inside := tx.TargetPath + string(filepath.Separator)
@@ -3593,7 +3593,7 @@ func validateAppBundleHandoffMetadata(tx *UpdateTransaction) error {
 		return fmt.Errorf("handoff staging directory is outside the system temporary directory")
 	}
 	stagingBase := strings.Split(stagingRel, string(filepath.Separator))[0]
-	if !strings.HasPrefix(stagingBase, "deeper-mac-update-") {
+	if !strings.HasPrefix(stagingBase, "deepzora-mac-update-") {
 		return fmt.Errorf("handoff staging directory has an unexpected name")
 	}
 	return nil
@@ -3615,7 +3615,7 @@ func validateOrphanedAppBundleBackupMetadata(tx *UpdateTransaction) error {
 	if !filepath.IsAbs(path) || filepath.Dir(path) != filepath.Dir(tx.BackupPath) {
 		return fmt.Errorf("orphaned backup path is outside the app installation directory")
 	}
-	prefix := filepath.Base(tx.BackupPath) + ".deeper-orphaned-"
+	prefix := filepath.Base(tx.BackupPath) + ".deepzora-orphaned-"
 	suffix, ok := strings.CutPrefix(filepath.Base(path), prefix)
 	if !ok {
 		return fmt.Errorf("orphaned backup path has an unexpected name")

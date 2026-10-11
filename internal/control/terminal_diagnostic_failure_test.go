@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestTerminalEventsSurviveProviderDiagnosticFailure(t *testing.T) {

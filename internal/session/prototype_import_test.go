@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/filelock"
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/filelock"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
 )
 
 func writePrototypeStore(t *testing.T, dir string, events []Event, torn string) {

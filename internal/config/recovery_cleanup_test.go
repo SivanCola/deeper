@@ -21,7 +21,7 @@ func TestRecoveryCopyAutoCleanupEnabled(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			home := t.TempDir()
-			t.Setenv("DEEPER_HOME", home)
+			t.Setenv("DEEPZORA_HOME", home)
 			if tc.content != "" {
 				if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte(tc.content), 0o600); err != nil {
 					t.Fatal(err)

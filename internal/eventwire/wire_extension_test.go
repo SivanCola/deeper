@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // TestToWireExtensionSurfacePayloads covers the stage-8a extension surface

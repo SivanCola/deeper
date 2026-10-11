@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
 )
 
 // goalWorkSpan belongs to one foreground Run, not to the lifetime of a goal.

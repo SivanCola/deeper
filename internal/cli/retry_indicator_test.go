@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 // TestRetryIndicatorShowsAndClears proves a Retrying event sets the transient

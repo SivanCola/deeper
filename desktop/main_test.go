@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/skill/skillwatch"
-	"deeper/internal/testenv"
+	"deepzora/internal/skill/skillwatch"
+	"deepzora/internal/testenv"
 )
 
 // TestLifecycleDiagnosticsUsePreShellOwnershipGate pins the ordering that keeps
@@ -43,23 +43,23 @@ func TestLifecycleDiagnosticsUsePreShellOwnershipGate(t *testing.T) {
 
 // TestMain isolates user config/state/cache dirs for the whole package. Without
 // this, tests that persist desktop state, sessions, cache, or CLI-style config
-// can leak into the developer's real Deeper directories.
+// can leak into the developer's real Deepzora directories.
 func TestMain(m *testing.M) {
 	// The watcher helper re-executes os.Executable(), which here is this test
 	// binary: serve the pipe instead of re-running the suite.
 	if skillwatch.MaybeRunHelper() {
 		return
 	}
-	dir, err := os.MkdirTemp("", "deeper-desktop-test")
+	dir, err := os.MkdirTemp("", "deepzora-desktop-test")
 	if err != nil {
 		os.Exit(1)
 	}
 	os.Setenv("HOME", dir)
-	os.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	os.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	os.Setenv("USERPROFILE", dir)
 	os.Setenv("XDG_CONFIG_HOME", dir+"/config")
-	os.Setenv("DEEPER_STATE_HOME", dir+"/state")
-	os.Setenv("DEEPER_CACHE_HOME", dir+"/cache")
+	os.Setenv("DEEPZORA_STATE_HOME", dir+"/state")
+	os.Setenv("DEEPZORA_CACHE_HOME", dir+"/cache")
 	os.Setenv("AppData", dir)
 	// Tests fail closed for telemetry. Any test that expects a request must
 	// replace the relevant endpoint with an httptest.Server explicitly.
@@ -88,7 +88,7 @@ func TestDesktopTestTelemetryEndpointsAreFailClosed(t *testing.T) {
 		"ping":    pingEndpoint,
 		"metrics": metricsEndpoint,
 	} {
-		if strings.Contains(endpoint, "crash.deeper.io") {
+		if strings.Contains(endpoint, "crash.deepzora.com") {
 			t.Fatalf("%s test endpoint targets production: %s", name, endpoint)
 		}
 	}

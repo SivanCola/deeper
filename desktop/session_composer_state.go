@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/desktop/internal/sessionui"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/sessionui"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 type SessionComposerState struct {

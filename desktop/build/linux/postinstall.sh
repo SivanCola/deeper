@@ -5,9 +5,9 @@
 
 # Chromium's SUID sandbox helper must be root:root 4755 so the renderer sandbox
 # works without launching the shell with --no-sandbox.
-if [ -f /usr/lib/deeper/app/chrome-sandbox ]; then
-	chown root:root /usr/lib/deeper/app/chrome-sandbox || true
-	chmod 4755 /usr/lib/deeper/app/chrome-sandbox || true
+if [ -f /usr/lib/deepzora/app/chrome-sandbox ]; then
+	chown root:root /usr/lib/deepzora/app/chrome-sandbox || true
+	chmod 4755 /usr/lib/deepzora/app/chrome-sandbox || true
 fi
 
 if [ -x /usr/bin/gtk-update-icon-cache ]; then

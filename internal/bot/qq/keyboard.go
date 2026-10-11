@@ -3,7 +3,7 @@ package qq
 import (
 	"strings"
 
-	"deeper/internal/bot"
+	"deepzora/internal/bot"
 )
 
 func qqKeyboardContent(keyboard *bot.InlineKeyboard, chatType bot.ChatType) map[string]any {

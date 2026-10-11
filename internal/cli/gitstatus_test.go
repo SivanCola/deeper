@@ -12,7 +12,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 func TestParseGitNumstat(t *testing.T) {
@@ -49,10 +49,10 @@ func TestGitStatusRenderRepoUsesSuppliedRepoStyle(t *testing.T) {
 }
 
 func TestGitStatusRenderWithinCompactsRepoBeforeBranch(t *testing.T) {
-	status := gitStatus{Repo: "VeryLongDeepSeekDeeperWorkspace", Branch: "codex/cli-tui-status-row"}
+	status := gitStatus{Repo: "VeryLongDeepSeekDeepzoraWorkspace", Branch: "codex/cli-tui-status-row"}
 
 	full := ansi.Strip(status.RenderWithin(80, statusAutoColor))
-	if full != "VeryLongDeepSeekDeeperWorkspace@codex/cli-tui-status-row" {
+	if full != "VeryLongDeepSeekDeepzoraWorkspace@codex/cli-tui-status-row" {
 		t.Fatalf("wide RenderWithin = %q", full)
 	}
 
@@ -70,7 +70,7 @@ func TestGitStatusRenderWithinCompactsRepoBeforeBranch(t *testing.T) {
 
 func TestGitStatusRenderWithinKeepsDirtySuffix(t *testing.T) {
 	status := gitStatus{
-		Repo:      "VeryLongDeepSeekDeeperWorkspace",
+		Repo:      "VeryLongDeepSeekDeepzoraWorkspace",
 		Branch:    "codex/cli-tui-status-row",
 		Added:     12,
 		Removed:   3,
@@ -96,8 +96,8 @@ func TestLoadGitStatus(t *testing.T) {
 
 	root := t.TempDir()
 	runGitForTest(t, root, "init")
-	runGitForTest(t, root, "config", "user.email", "deeper@example.invalid")
-	runGitForTest(t, root, "config", "user.name", "Deeper Test")
+	runGitForTest(t, root, "config", "user.email", "deepzora@example.invalid")
+	runGitForTest(t, root, "config", "user.name", "Deepzora Test")
 	writeFileForTest(t, filepath.Join(root, "tracked.txt"), "one\ntwo\n")
 	runGitForTest(t, root, "add", "tracked.txt")
 	runGitForTest(t, root, "commit", "-m", "initial")

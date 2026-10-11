@@ -65,7 +65,7 @@ export function useExtensionSurface(input: {
     setBusyFormKey(requestKey);
     try {
       if (!app.SubmitExtensionFormExact || !pending.formInstanceExact || !target.sessionId || !hasSessionGeneration(input.sessionGeneration) || !target.pluginGeneration || !target.formInstanceId) {
-        throw new Error("Exact extension form submission is unavailable; refresh or upgrade Deeper.");
+        throw new Error("Exact extension form submission is unavailable; refresh or upgrade Deepzora.");
       }
       await app.SubmitExtensionFormExact(target, values);
       dismissForm(target.tabId, identity);

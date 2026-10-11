@@ -2,10 +2,10 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/event"
-	"deeper/internal/plancontract"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/plancontract"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 	"reflect"
 	"testing"
 )

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
 )
 
 func TestCollectAppendDeduplicatesPlatformRedelivery(t *testing.T) {

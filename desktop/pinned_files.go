@@ -12,9 +12,9 @@ import (
 	"sync/atomic"
 	"unicode/utf8"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/fileutil"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/fileutil"
 )
 
 const (

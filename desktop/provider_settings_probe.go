@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
 )
 
 // TestProviderModel sends a bounded, tool-free probe through the configured

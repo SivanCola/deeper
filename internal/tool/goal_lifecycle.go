@@ -3,7 +3,7 @@ package tool
 import (
 	"context"
 
-	"deeper/internal/goal"
+	"deepzora/internal/goal"
 )
 
 type GoalSource string

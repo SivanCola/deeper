@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 type exactPromptResolver interface {

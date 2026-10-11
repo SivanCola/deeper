@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/historywork"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/historywork"
+	"deepzora/internal/session"
 )
 
 // Repair adoption before publishing ordinary rows. Discovery owns this work;
@@ -183,7 +183,7 @@ func (a *App) restoreHistoricalTargetBundle(ctx context.Context, old *session.Se
 	}
 	// This temporary export also validates every referenced blob before any
 	// registry reservation or native target is published.
-	tmp, err := os.MkdirTemp("", "deeper-history-repair-")
+	tmp, err := os.MkdirTemp("", "deepzora-history-repair-")
 	if err != nil {
 		return err
 	}

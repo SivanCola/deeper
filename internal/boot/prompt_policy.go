@@ -1,6 +1,6 @@
 package boot
 
-import "deeper/internal/config"
+import "deepzora/internal/config"
 
 func appendCorePolicies(prompt string) string {
 	for _, policy := range []string{config.UserDecisionPolicy, config.WorkPracticePolicy, config.LanguagePolicy} {

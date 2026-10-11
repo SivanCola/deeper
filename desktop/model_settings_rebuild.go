@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/control"
+import "deepzora/internal/control"
 
 // snapshotSettingsRebuildSource secures the outgoing runtime before migrating
 // it. Callers hold runtimeRebuildMu and the tab's turn admission gate.

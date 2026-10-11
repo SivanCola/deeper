@@ -3,7 +3,7 @@ package agent
 import (
 	"slices"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // activeTurnKeepRounds is how many of the active turn's newest assistant

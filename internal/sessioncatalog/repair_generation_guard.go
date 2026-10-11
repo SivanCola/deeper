@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 type repairBatchGeneration struct {

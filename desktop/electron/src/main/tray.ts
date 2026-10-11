@@ -62,7 +62,7 @@ export class TrayHost {
         tray.on("click", () => deps.onOpen());
         this.tray = tray;
       }
-      this.tray.setToolTip(labels.tooltip || "Deeper");
+      this.tray.setToolTip(labels.tooltip || "Deepzora");
       this.tray.setContextMenu(Menu.buildFromTemplate([
         { label: labels.openTitle, toolTip: labels.openTooltip, click: () => deps.onOpen() },
         { label: labels.quitTitle, toolTip: labels.quitTooltip, click: () => deps.onQuit() },

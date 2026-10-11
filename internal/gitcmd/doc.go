@@ -1,4 +1,4 @@
-// Package gitcmd builds every git invocation Deeper runs on its own behalf:
+// Package gitcmd builds every git invocation Deepzora runs on its own behalf:
 // the status readout, workspace change listings and diffs, worktree
 // management, and plugin source checkouts.
 //

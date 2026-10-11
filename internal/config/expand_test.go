@@ -6,17 +6,17 @@ import (
 )
 
 func TestExpandVars(t *testing.T) {
-	t.Setenv("DEEPER_TEST_TOKEN", "sk-123")
-	t.Setenv("DEEPER_TEST_EMPTY", "")
+	t.Setenv("DEEPZORA_TEST_TOKEN", "sk-123")
+	t.Setenv("DEEPZORA_TEST_EMPTY", "")
 
 	cases := []struct{ in, want string }{
-		{"Bearer ${DEEPER_TEST_TOKEN}", "Bearer sk-123"},
-		{"${DEEPER_TEST_MISSING}", ""},                                 // unset, no default → empty
-		{"${DEEPER_TEST_MISSING:-fallback}", "fallback"},               // unset → default
-		{"${DEEPER_TEST_EMPTY:-fallback}", "fallback"},                 // set-but-empty → default
-		{"${DEEPER_TEST_TOKEN:-fallback}", "sk-123"},                   // set → value, default ignored
+		{"Bearer ${DEEPZORA_TEST_TOKEN}", "Bearer sk-123"},
+		{"${DEEPZORA_TEST_MISSING}", ""},                                 // unset, no default → empty
+		{"${DEEPZORA_TEST_MISSING:-fallback}", "fallback"},               // unset → default
+		{"${DEEPZORA_TEST_EMPTY:-fallback}", "fallback"},                 // set-but-empty → default
+		{"${DEEPZORA_TEST_TOKEN:-fallback}", "sk-123"},                   // set → value, default ignored
 		{"no vars here", "no vars here"},                               // untouched
-		{"a${DEEPER_TEST_TOKEN}b${DEEPER_TEST_MISSING}c", "ask-123bc"}, // multiple refs
+		{"a${DEEPZORA_TEST_TOKEN}b${DEEPZORA_TEST_MISSING}c", "ask-123bc"}, // multiple refs
 	}
 	for _, c := range cases {
 		if got := ExpandVars(c.in); got != c.want {
@@ -26,14 +26,14 @@ func TestExpandVars(t *testing.T) {
 }
 
 func TestExpandedPlugin(t *testing.T) {
-	t.Setenv("DEEPER_TEST_KEY", "secret")
+	t.Setenv("DEEPZORA_TEST_KEY", "secret")
 	e := PluginEntry{
 		Name:    "x",
 		Type:    "http",
-		URL:     "https://api/${DEEPER_TEST_MISSING:-v1}",
-		Args:    []string{"--token", "${DEEPER_TEST_KEY}"},
-		Env:     map[string]string{"K": "${DEEPER_TEST_KEY}"},
-		Headers: map[string]string{"Authorization": "Bearer ${DEEPER_TEST_KEY}"},
+		URL:     "https://api/${DEEPZORA_TEST_MISSING:-v1}",
+		Args:    []string{"--token", "${DEEPZORA_TEST_KEY}"},
+		Env:     map[string]string{"K": "${DEEPZORA_TEST_KEY}"},
+		Headers: map[string]string{"Authorization": "Bearer ${DEEPZORA_TEST_KEY}"},
 	}
 	out := e.ExpandedPlugin()
 	if out.URL != "https://api/v1" {
@@ -46,7 +46,7 @@ func TestExpandedPlugin(t *testing.T) {
 		t.Errorf("env/headers not expanded: %v %v", out.Env, out.Headers)
 	}
 	// The original entry must be untouched (we returned a copy).
-	if e.Headers["Authorization"] != "Bearer ${DEEPER_TEST_KEY}" {
+	if e.Headers["Authorization"] != "Bearer ${DEEPZORA_TEST_KEY}" {
 		t.Error("ExpandedPlugin mutated the original entry")
 	}
 }
@@ -55,10 +55,10 @@ func TestExpandedPlugin(t *testing.T) {
 func TestForbidReadRootsForRootResolvesRelativePathsIgnoringScopedEnv(t *testing.T) {
 	root := t.TempDir()
 	cfg := Default()
-	cfg.setExpansionEnv(map[string]string{"DEEPER_TEST_SECRET_DIR": "from-dotenv"})
+	cfg.setExpansionEnv(map[string]string{"DEEPZORA_TEST_SECRET_DIR": "from-dotenv"})
 	cfg.Sandbox.ForbidRead = []string{
 		"relative-secret",
-		"${DEEPER_TEST_SECRET_DIR}",
+		"${DEEPZORA_TEST_SECRET_DIR}",
 		filepath.Join(root, "absolute-secret"),
 	}
 

@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/plugin"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
 )
 
 // MCPAppInstanceView describes one live App surface for the frontend.

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
 )
 
 func searchHistoryReady(t *testing.T, query *Query, ref SessionRef, text, cursor string, limit int) SearchHistoryPage {

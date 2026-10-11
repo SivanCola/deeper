@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // AppendForShutdownWithoutLock persists the unsaved tail of a schema-2

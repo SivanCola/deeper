@@ -10,8 +10,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func powershellPath(t *testing.T) string {
@@ -46,12 +46,12 @@ func TestBashPowerShellRunsNativeCommand(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("powershell e2e is windows-only")
 	}
-	out, err := runPS(t, "Write-Output deeper-ok")
+	out, err := runPS(t, "Write-Output deepzora-ok")
 	if err != nil {
 		t.Fatalf("powershell command failed: %v (out=%q)", err, out)
 	}
-	if !strings.Contains(out, "deeper-ok") {
-		t.Fatalf("output = %q, want it to contain deeper-ok", out)
+	if !strings.Contains(out, "deepzora-ok") {
+		t.Fatalf("output = %q, want it to contain deepzora-ok", out)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestBashPowerShellExecuteDetailedContract(t *testing.T) {
 func assertPowerShellDetailedContract(t *testing.T, psPath string) {
 	t.Helper()
 	// Chinese directory name — native Windows CI must keep path + UTF-8 intact.
-	work := filepath.Join(t.TempDir(), "中文目录-deeper")
+	work := filepath.Join(t.TempDir(), "中文目录-deepzora")
 	if err := os.MkdirAll(work, 0o755); err != nil {
 		t.Fatal(err)
 	}

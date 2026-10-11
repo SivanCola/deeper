@@ -37,7 +37,7 @@ def redact_writer_hosts(output):
 def generate(version, writers_dir, build_only=False):
     tag = "desktop-v" + version
     commit = subprocess.check_output(["git", "rev-parse", tag + "^{commit}"], cwd=ROOT, text=True).strip()
-    with tempfile.TemporaryDirectory(prefix="deeper-tagged-history-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="deepzora-tagged-history-") as temporary:
         checkout = pathlib.Path(temporary) / "source"
         checkout.mkdir()
         archive = pathlib.Path(temporary) / "source.tar"
@@ -52,7 +52,7 @@ def generate(version, writers_dir, build_only=False):
         program.mkdir(parents=True)
         source = TEMPLATE.read_text()
         canonical = int(version.rsplit(".", 1)[1]) >= 8
-        source = source.replace("// CANONICAL_IMPORT", '"context"; "errors"; "deeper/internal/session"' if canonical else "")
+        source = source.replace("// CANONICAL_IMPORT", '"context"; "errors"; "deepzora/internal/session"' if canonical else "")
         start, end = source.index("// CANONICAL_START"), source.index("// CANONICAL_END")
         if not canonical:
             source = source[:start] + source[end:]
@@ -70,7 +70,7 @@ def generate(version, writers_dir, build_only=False):
         output = OUTPUT / version
         # Old writers can consult config paths. Keep every such path disposable.
         isolated_home = pathlib.Path(temporary) / "home"
-        env = dict(os.environ, DEEPER_HOME=str(isolated_home), DEEPER_STATE_HOME=str(isolated_home), DEEPER_CACHE_HOME=str(isolated_home / "cache"))
+        env = dict(os.environ, DEEPZORA_HOME=str(isolated_home), DEEPZORA_STATE_HOME=str(isolated_home), DEEPZORA_CACHE_HOME=str(isolated_home / "cache"))
         executable = pathlib.Path(writers_dir).resolve() / version if writers_dir else pathlib.Path(temporary) / "writer"
         executable.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["go", "build", "-o", str(executable), "./cmd/rollback-history-fixture"], cwd=checkout, env=env, check=True)

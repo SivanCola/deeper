@@ -1,11 +1,11 @@
-# Deeper 插件包
+# Deepzora 插件包
 
-Deeper 插件包把 skills、hooks、MCP servers、prompts、主题和代码型扩展组织成一个可安装单元。
+Deepzora 插件包把 skills、hooks、MCP servers、prompts、主题和代码型扩展组织成一个可安装单元。
 
 ## CLI 模式
 
-在终端里使用 `deeper plugin` 安装和管理插件包。插件包当前按全局范围安装，
-写入 Deeper home 目录。
+在终端里使用 `deepzora plugin` 安装和管理插件包。插件包当前按全局范围安装，
+写入 Deepzora home 目录。
 
 ### 通过 CLI 安装
 
@@ -15,31 +15,31 @@ Deeper 插件包把 skills、hooks、MCP servers、prompts、主题和代码型�
   `https://github.com/obra/superpowers`。
 - GitHub 分支或子目录 URL，例如
   `https://github.com/owner/repo/tree/main/path/to/plugin`。
-- 本地目录，目录内需要包含 `deeper-plugin.json`、
+- 本地目录，目录内需要包含 `deepzora-plugin.json`、
   `.codex-plugin/plugin.json` 或 `.claude-plugin/plugin.json`。
 
 只预览安装计划，不写文件：
 
 ```bash
-deeper plugin install git:github.com/obra/superpowers --dry-run
+deepzora plugin install git:github.com/obra/superpowers --dry-run
 ```
 
 确认计划后安装：
 
 ```bash
-deeper plugin install git:github.com/obra/superpowers --yes
+deepzora plugin install git:github.com/obra/superpowers --yes
 ```
 
 指定安装名称，或覆盖已安装的同名插件：
 
 ```bash
-deeper plugin install git:github.com/obra/superpowers --name superpowers --replace --yes
+deepzora plugin install git:github.com/obra/superpowers --name superpowers --replace --yes
 ```
 
 以开发模式使用本地目录：
 
 ```bash
-deeper plugin install /path/to/plugin --link --replace --yes
+deepzora plugin install /path/to/plugin --link --replace --yes
 ```
 
 CLI 安装参数：
@@ -49,18 +49,18 @@ CLI 安装参数：
 - `--replace` 允许当前来源替换已安装的同名插件。
 - `--name <name>` 或 `--name=<name>` 覆盖插件 manifest 里的名称，
   作为本次安装名称。
-- `--link` 链接本地插件目录，而不是复制到 Deeper 的插件存储目录。
+- `--link` 链接本地插件目录，而不是复制到 Deepzora 的插件存储目录。
   移动或删除该目录会导致这个链接插件失效。
 
-如果运行 `deeper plugin install <source>` 时既没有 `--dry-run`，
+如果运行 `deepzora plugin install <source>` 时既没有 `--dry-run`，
 也没有 `--yes`，CLI 会拒绝写文件，并提示使用其中一个参数重新运行。
 安装和移除命令会输出结构化 JSON，来源于桌面端同一套 install-source 后端。
 
 插件状态和内容写入：
 
 ```text
-~/.deeper/plugin-packages.json
-~/.deeper/plugins/<name>/
+~/.deepzora/plugin-packages.json
+~/.deepzora/plugins/<name>/
 ```
 
 ### 通过 CLI 管理
@@ -68,13 +68,13 @@ CLI 安装参数：
 列出已安装插件：
 
 ```bash
-deeper plugin list
+deepzora plugin list
 ```
 
 查看某个插件的元数据、根目录、来源以及导出的能力数量：
 
 ```bash
-deeper plugin show superpowers
+deepzora plugin show superpowers
 ```
 
 如果能读取到能力明细，`show` 也会输出具体清单：
@@ -87,29 +87,29 @@ deeper plugin show superpowers
 检查 manifest 和 skill roots 是否可读：
 
 ```bash
-deeper plugin doctor superpowers
+deepzora plugin doctor superpowers
 ```
 
 工作区级能力总览（skills / hooks / MCP 合并 / 包根目录）见
 [能力诊断](./CAPABILITY_DIAGNOSTICS.zh-CN.md)：
 
 ```bash
-deeper doctor capabilities --json
+deepzora doctor capabilities --json
 # 桌面端：设置 → 诊断
-# Agent：  /deeper-guide
+# Agent：  /deepzora-guide
 ```
 
 在不卸载的情况下启用或禁用插件：
 
 ```bash
-deeper plugin disable superpowers
-deeper plugin enable superpowers
+deepzora plugin disable superpowers
+deepzora plugin enable superpowers
 ```
 
 移除插件：
 
 ```bash
-deeper plugin remove superpowers --yes
+deepzora plugin remove superpowers --yes
 ```
 
 `remove` 也可以写成 `uninstall`。它需要 `--yes`，
@@ -118,7 +118,7 @@ deeper plugin remove superpowers --yes
 
 ### 在 CLI 中使用已安装插件
 
-已安装插件不会打开一个独立聊天界面。插件启用后，Deeper 会把它的能力加载到普通交互会话里：
+已安装插件不会打开一个独立聊天界面。插件启用后，Deepzora 会把它的能力加载到普通交互会话里：
 
 - 在交互会话里运行 `/plugins` 可以列出已安装插件包。
   运行 `/plugins show <name>` 可以在不离开聊天的情况下查看该插件导出的
@@ -128,9 +128,9 @@ deeper plugin remove superpowers --yes
 - **Hooks** 会在配置的生命周期事件里自动运行，例如 `SessionStart`、
   `UserPromptSubmit`、`PreToolUse` 或 `PostToolUse`。
 - **MCP servers** 会进入正常 MCP/工具流程。用户只需要描述任务，
-  Deeper 会在相关时调用插件提供的工具。
+  Deepzora 会在相关时调用插件提供的工具。
 
-如果是在另一个终端里安装、启用、禁用或更新插件，而当前已有 `deeper` 会话正在运行，
+如果是在另一个终端里安装、启用、禁用或更新插件，而当前已有 `deepzora` 会话正在运行，
 建议开启新会话，或重新打开 `/skills` 确认当前会话能看到预期技能。
 
 ## 桌面端设置
@@ -190,7 +190,7 @@ deeper plugin remove superpowers --yes
 
 ## 原生 Manifest
 
-Deeper 原生插件在根目录声明 `deeper-plugin.json`：
+Deepzora 原生插件在根目录声明 `deepzora-plugin.json`：
 
 ```json
 {
@@ -220,7 +220,7 @@ Deeper 原生插件在根目录声明 `deeper-plugin.json`：
 }
 ```
 
-相对路径都按插件根目录解析。Deeper 安装插件时不会执行第三方安装脚本。
+相对路径都按插件根目录解析。Deepzora 安装插件时不会执行第三方安装脚本。
 
 插件 Hook 的执行形态是显式的：
 
@@ -229,16 +229,16 @@ Deeper 原生插件在根目录声明 `deeper-plugin.json`：
 - 未提供 `args` 且提供 `shell` 时，使用 **shell form**。完整 `command`
   会原样交给 `bash`、`powershell`/`pwsh`、`cmd`（仅 Windows）或 `auto`。
   Windows 上 `auto` 优先选择 Git Bash，找不到时回退 PowerShell。
-- 既未声明 `args` 也未声明 `shell` 的已有原生 Hook 继续使用 Deeper
+- 既未声明 `args` 也未声明 `shell` 的已有原生 Hook 继续使用 Deepzora
   历史 Shell 命令行为；`shellCommand: true` 仍作为 shell form 的旧写法兼容。
 
 ## Manifest v2（扩展）
 
-Deeper 原生扩展使用精确的 v2 `apiVersion`：
+Deepzora 原生扩展使用精确的 v2 `apiVersion`：
 
 ```json
 {
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "example",
   "version": "1.0.0",
   "description": "Example extension",
@@ -258,10 +258,10 @@ Deeper 原生扩展使用精确的 v2 `apiVersion`：
     "prompts": ["prompts"],
     "hooks": {},
     "mcpServers": {},
-    "themes": ["themes/*.deeper-theme"]
+    "themes": ["themes/*.deepzora-theme"]
   },
   "runtime": {
-    "command": "${DEEPER_PLUGIN_ROOT}/bin/example",
+    "command": "${DEEPZORA_PLUGIN_ROOT}/bin/example",
     "args": [],
     "env": {},
     "required": true,
@@ -275,15 +275,15 @@ Deeper 原生扩展使用精确的 v2 `apiVersion`：
 
 解析规则：
 
-- 原生 `deeper-plugin.json` 必须声明精确值 `deeper.io/plugin/v2`。
+- 原生 `deepzora-plugin.json` 必须声明精确值 `deepzora.com/plugin/v2`。
   v1 与缺失版本都会被拒绝；不提供 v1 双读或自动迁移路径。
 - v2 是严格的：根对象或 `contributes`/`runtime` 下的任何未知字段都会
   报错并指明字段路径，避免拼写错误静默失效。
-- v2 的资源发现是显式的。Deeper 只加载原生 manifest 中声明的 skills、
+- v2 的资源发现是显式的。Deepzora 只加载原生 manifest 中声明的 skills、
   agents、commands、prompts、hooks、MCP servers、themes 与 runtime；不会隐式
   导入根目录 `CLAUDE.md`、`hooks/hooks.json`、`.claude/settings.json` 或
   `.mcp.json` 等宿主专用 sidecar。
-- minor 别名（如 `deeper.io/plugin/v2.0`、`v2.1`）及未知 major version
+- minor 别名（如 `deepzora.com/plugin/v2.0`、`v2.1`）及未知 major version
   都会被拒绝。
 - `requires` 与 `provides` 声明依赖约束和能力上限；Sidecar handshake
   不能超出该上限。
@@ -298,18 +298,18 @@ Deeper 原生扩展使用精确的 v2 `apiVersion`：
 
 - `prompts` 使用与 commands 相同的模板语义和参数替换，公开名为
   `/<plugin>:<name>`；`commands` 保持兼容别名。
-- `themes` 是 `.deeper-theme` 文件，在 Desktop 设置中以只读插件主题
+- `themes` 是 `.deepzora-theme` 文件，在 Desktop 设置中以只读插件主题
   展示（ID 为 `plugin:<plugin>:<theme>`），不会复制进用户主题库。插件
   被禁用或卸载时，若当前使用的是它的主题，界面回退到基础样式但保留该
   ID，重新安装同一插件后自动恢复。
 
-`runtime` 块声明的是代码型扩展——由 Deeper 启动并通过 Extension
+`runtime` 块声明的是代码型扩展——由 Deepzora 启动并通过 Extension
 Protocol（基于 stdio 的 JSON-RPC 2.0，方法索引见
 `docs/EXTENSION_PROTOCOL.generated.md`，Go SDK 见 `sdk/go/README.md`）
 驱动的 Sidecar 进程：
 
 - `command`/`args`/`env` 仅支持 **exec form**：command 即可执行文件，
-  绝不经过 Shell 解释；`${DEEPER_PLUGIN_ROOT}` 展开为插件安装根目录。
+  绝不经过 Shell 解释；`${DEEPZORA_PLUGIN_ROOT}` 展开为插件安装根目录。
 - `intercepts` 声明要拦截的事件（如 `input.receive`、`tool.before`、
   `permission.decision`）；`replaces` 声明可以持有的替换槽
   （`system_prompt`、`context`、`provider_request`、`provider_response`、
@@ -327,7 +327,7 @@ Protocol（基于 stdio 的 JSON-RPC 2.0，方法索引见
 `permission.decision` 上的 "allow" 可以覆盖宿主的 deny。安装、更新、
 替换或 `--link` 一个带有 `runtime` 块的插件**即代表授权**——不会有二次
 确认，`--link` 模式在内容变化后自动保持信任。因此安装预览、
-`deeper plugin show`、能力诊断和 Desktop 安装界面都会显著展示
+`deepzora plugin show`、能力诊断和 Desktop 安装界面都会显著展示
 `FULL TRUST` 区块，列出 Runtime 命令、Interceptors、替换槽和
 Provider/UI 能力。安装前请确认该区块内容，只安装你完全信任的运行时。
 只有通过插件安装流程写入插件状态的 Runtime 才能启动；项目配置无法
@@ -335,11 +335,11 @@ Provider/UI 能力。安装前请确认该区块内容，只安装你完全信�
 
 ## Codex 与 Claude 兼容
 
-Deeper 也会读取 `.codex-plugin/plugin.json` 和 `.claude-plugin/plugin.json`。
+Deepzora 也会读取 `.codex-plugin/plugin.json` 和 `.claude-plugin/plugin.json`。
 安装预检会结构化显示“完全兼容 / 部分兼容 / 不兼容”、已映射能力和每个被跳过
 的条目。非原生插件如果没有任何可映射能力，会直接阻止安装，不再留下“安装成功
 但不可用”的记录。“完全兼容”指清单里声明的每个能力都成功解析并映射到了
-Deeper 的对应实现，并不代表导入 Hook 的每一种运行时决策都被遵守。
+Deepzora 的对应实现，并不代表导入 Hook 的每一种运行时决策都被遵守。
 `PreToolUse`/`PermissionRequest` 的“拒绝”与 `PermissionRequest` 的“批准”已经
 实现；但 Hook 的 `updatedInput`，以及 `PreToolUse` 的 `ask`/`defer` 决策，是
 脚本在实际运行时通过 stdout 决定的，并非清单里的静态字段，因此安装阶段无法
@@ -350,43 +350,43 @@ Deeper 的对应实现，并不代表导入 Hook 的每一种运行时决策都�
 中的同名插件。对象来源仅接受 GitHub 仓库 URL 加完整 commit SHA；未固定版本的
 外部字符串、npm、`strict: false` 以及其他高级 marketplace 协议在整库安装时会
 跳过，按名称选中时则直接报错。
-对于 Superpowers 和 Claude 风格 skill 包，Deeper 会映射以下兼容约定。
+对于 Superpowers 和 Claude 风格 skill 包，Deepzora 会映射以下兼容约定。
 原生 v2 manifest 只使用显式声明，不应用这些回退规则：
 
-- `skills` 到 Deeper skill root。Claude 清单若未声明 `skills` 字段，会回退到
+- `skills` 到 Deepzora skill root。Claude 清单若未声明 `skills` 字段，会回退到
   约定目录 `skills/`（或 `.claude/skills/`），与 Claude 自身的自动发现一致。
   插件 skill 统一以 `/<插件名>:<技能名>` 展示和调用。无歧义的 `/<技能名>`
   仍作为隐藏兼容别名接受输入；项目和用户 skill 保留短名称，多个插件导出的
   同名 skill 则只能通过各自的限定名称独立调用。这一用户侧命名空间不会改变
   模型 skill 索引或 `run_skill` 工具使用的内部短标识。
-- `commands/`（以及 `.claude/commands/`）映射为 Deeper 自定义斜杠命令：每个
+- `commands/`（以及 `.claude/commands/`）映射为 Deepzora 自定义斜杠命令：每个
   `<name>.md` 提示词模板统一以 `/<插件名>:<命令名>` 展示和调用，frontmatter 的
   `description` / `argument-hint` 以及 `$ARGUMENTS` / `$1..$N` 替换均生效。
   当短名称没有歧义时，`/<命令名>` 仍作为隐藏兼容别名接受输入，但不会出现在
   补全、帮助、桌面菜单、ACP 命令发现或提供给模型的命令清单中。用户和项目命令
   始终占有自己的短名称；多个插件导出同名命令时不会生成短名称别名。显式自定义
   命令也可以占用限定名称，Desktop 插件详情会报告该冲突。原生
-  `deeper-plugin.json` 清单也可以通过 `"commands"` 路径列表显式声明。
+  `deepzora-plugin.json` 清单也可以通过 `"commands"` 路径列表显式声明。
 - `agents/*.md` 映射为插件所属、需要手动调用的子代理配置。Claude 模型别名会继承
-  当前 Deeper 模型；内联 `tools` 列表会转换为 Deeper 工具名，并支持
+  当前 Deepzora 模型；内联 `tools` 列表会转换为 Deepzora 工具名，并支持
   `mcp__*__search` 这类 MCP 通配符。Agent 使用独立的
   `/<插件>:agent:<名称>` 命名空间，因此上游 Agent 与 Skill 同名时不会互相遮蔽。
-- 如果存在 `hooks/session-start-codex`，映射为 Deeper `SessionStart` hook。
+- 如果存在 `hooks/session-start-codex`，映射为 Deepzora `SessionStart` hook。
 - 对 Codex 兼容包，插件根目录的 `CLAUDE.md` 会映射为内置的 `SessionStart`
-  上下文 hook，Deeper 会直接读取该文件，不通过 shell 命令。Claude 插件
+  上下文 hook，Deepzora 会直接读取该文件，不通过 shell 命令。Claude 插件
   manifest 会忽略该文件，与 Claude Code 的插件契约保持一致。
 - `.claude/settings.json` 和 `hooks/hooks.json` 里的 command hooks 会按同名事件映射。
   `matcher`、`args`、`shell`、`async`、`env` 和 timeout 均会保留。Claude 的执行契约
   也会完整保留：只要出现 `args`（即使是空数组）就按 exec form 执行，并逐项原样传参；
   省略 `args` 才按 shell form 执行，将原始命令交给声明的 Bash 或 PowerShell。
   `matcher` 以及 Hook 脚本看到的
-  `tool_name` 会在 Deeper 与 Claude 的工具名之间互译（`bash` ↔ `Bash`、
-  `write_file` ↔ `Write` 等），因此 `"Bash"` 这类 matcher 能正确触发；Deeper 里所有会
+  `tool_name` 会在 Deepzora 与 Claude 的工具名之间互译（`bash` ↔ `Bash`、
+  `write_file` ↔ `Write` 等），因此 `"Bash"` 这类 matcher 能正确触发；Deepzora 里所有会
   启动子代理的工具（`task`、`read_only_task`、`parallel_tasks`，以及专用的
   `explore`/`research`/`review`/`security_review` 包装工具）都会映射到 Claude 唯一的
   `Agent` 工具，matcher 里旧名 `Task` 依然可用。`tool_input` 里字段名不同的键也会改名——
   每个映射后的 `Agent` 载荷都会包含 Claude 必填的 `prompt` 和 `description`；若
-  Deeper 调用省略了可选描述，会补一个稳定的操作标签。
+  Deepzora 调用省略了可选描述，会补一个稳定的操作标签。
   `Read`/`Write`/`Edit`/`MultiEdit` 的 `path` 改成 `file_path`，`NotebookEdit` 的
   `path` 改成 `notebook_path`，`Skill` 的 `name`/`arguments` 改成 `skill`/`args`，
   当前 `TaskOutput`/`TaskStop` 的 `job_id` 改成 `task_id`，专用子代理包装
@@ -398,17 +398,17 @@ Deeper 的对应实现，并不代表导入 Hook 的每一种运行时决策都�
   映射为 `TaskOutput`，单任务等待时包含 `task_id`，无限等待时省略可选的
   `timeout`，而不是谎报 0 毫秒预算。`AskUserQuestion` 会补省略的
   `multiSelect:false` 和空选项描述；`TodoWrite` 只接受扁平的 `content`、`status`，旧 `activeForm` 会被严格校验拒绝；
-  `NotebookEdit` 则会从 Deeper 接受的别名补 `new_source`，删除或空单元格操作补空串。
+  `NotebookEdit` 则会从 Deepzora 接受的别名补 `new_source`，删除或空单元格操作补空串。
   相对的 `file_path`/`notebook_path` 会按载荷 `cwd` 解析为绝对路径，
   与 Claude 文件工具契约一致，前缀匹配的防护 Hook 检查的就是工具实际访问的路径。
   `Bash` 的 `tool_response` 按 Claude 的 `{stdout, stderr, interrupted}` 形态下发
-  （Deeper 的合并输出放在 `stdout`，失败错误文本作为 `stderr`），官方
+  （Deepzora 的合并输出放在 `stdout`，失败错误文本作为 `stderr`），官方
   security-guidance 插件的 commit/push 检查读取的正是这些字段；其他工具的结果仍按
   原样透传。导入 Hook 的
   stdin 使用 Claude 兼容的 snake_case 载荷（包括 `hook_event_name`）。宿主会在启动
-  进程前展开 `${CLAUDE_PLUGIN_ROOT}` 和 `${DEEPER_PLUGIN_ROOT}`，也兼容不带花括号的
+  进程前展开 `${CLAUDE_PLUGIN_ROOT}` 和 `${DEEPZORA_PLUGIN_ROOT}`，也兼容不带花括号的
   `$NAME` 与 Windows `%NAME%` 写法，因此插件相对路径不再依赖目标 shell 的环境变量
-  语法。Windows 上未显式指定 Shell 的 shell-form Hook 会和 Deeper Shell 工具一样，
+  语法。Windows 上未显式指定 Shell 的 shell-form Hook 会和 Deepzora Shell 工具一样，
   优先选择 Git Bash，找不到时回退 PowerShell；指向带 POSIX shebang 的脚本文件时，
   宿主会把 Windows 路径转换为 Bash 可用形式。显式 Bash Hook 以及旧式裸
   `sh -c`/`bash -c` Hook 会复用 Git for Windows Bash 探测，即使 Bash 不在
@@ -416,7 +416,7 @@ Deeper 的对应实现，并不代表导入 Hook 的每一种运行时决策都�
   不变。如果机器确实没有可用 Bash，hook 会返回清晰的依赖提示，而不是本地化的
   “无法识别 sh”乱码。通过 `[tools.shell] prefer = "bash"` 和
   `path = ".../bash.exe"` 配置的非标准目录或便携版 Bash 也会被显式 Bash Hook 复用。
-  `deeper plugin doctor <名称>` 和 `deeper doctor capabilities` 会在 Hook 首次触发前
+  `deepzora plugin doctor <名称>` 和 `deepzora doctor capabilities` 会在 Hook 首次触发前
   报告缺失的 Shell 依赖。旧代码页输出也会在进入界面前转换为 UTF-8。`PreToolUse` 和
   `UserPromptSubmit` hook 仍可
   通过退出码 2 或退出码 0 时的 JSON 拒绝形态拒绝该次调用（`PreToolUse` 用
@@ -425,25 +425,25 @@ Deeper 的对应实现，并不代表导入 Hook 的每一种运行时决策都�
   （拒绝或自动批准，而不只是发通知），通过退出码 2 或
   `hookSpecificOutput.decision.behavior` 实现，与 Claude 官方语义保持一致。
   `updatedInput` 暂未应用到实际工具调用参数；Hook 的 `if` 条件和 `asyncRewake`
-  字段也不会被求值。声明其中之一、声明 `Stop`/`SubagentStop` hook（Deeper 中
+  字段也不会被求值。声明其中之一、声明 `Stop`/`SubagentStop` hook（Deepzora 中
   不能阻止本轮结束），或 matcher 覆盖三种无法无损表达的输入时，插件都会报告
-  部分兼容并附具体警告：`WebFetch.prompt`、Deeper 以 `cell_number` 调用时的
-  `NotebookEdit.cell_id`，以及 Deeper `wait` 同时覆盖多个/全部任务时的
+  部分兼容并附具体警告：`WebFetch.prompt`、Deepzora 以 `cell_number` 调用时的
+  `NotebookEdit.cell_id`，以及 Deepzora `wait` 同时覆盖多个/全部任务时的
   `TaskOutput.task_id`。每类结构性缺口在每个 hooks 文件里只报告一次，
   通配 matcher 的插件每类缺口只会看到一条警告，而不是每个 hook 一条。
 - 插件根目录 `.mcp.json` 会映射为已安装 MCP。Claude 的 `local` 会转换为 stdio；
   中文等显示名称会生成稳定内部 ID；重复声明会去重。导入服务器默认
   `auto_start=false`，由用户按需连接，避免启动时改变提供给模型的工具 schema。
 
-不支持的 Claude hook item type 会跳过并产生 warning。Deeper 不会执行第三方安装脚本。
+不支持的 Claude hook item type 会跳过并产生 warning。Deepzora 不会执行第三方安装脚本。
 
 插件 hook 会收到这些环境变量：
 
-- `DEEPER_PLUGIN_ROOT`
-- `DEEPER_PLUGIN_NAME`
-- `DEEPER_PLUGIN_VERSION`
-- `DEEPER_HOME`
-- `DEEPER_WORKSPACE_ROOT`
+- `DEEPZORA_PLUGIN_ROOT`
+- `DEEPZORA_PLUGIN_NAME`
+- `DEEPZORA_PLUGIN_VERSION`
+- `DEEPZORA_HOME`
+- `DEEPZORA_WORKSPACE_ROOT`
 - `CLAUDE_PROJECT_DIR`
 - `CLAUDE_PLUGIN_ROOT`
 

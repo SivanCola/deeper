@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 func TestDetachedAskPublishesGlobalPendingInteraction(t *testing.T) {

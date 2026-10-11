@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/attachment"
-	"deeper/internal/tool"
+	"deepzora/internal/attachment"
+	"deepzora/internal/tool"
 )
 
 // Bound encoded payload size consistently with MCP image results.

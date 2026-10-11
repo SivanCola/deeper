@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/browser"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/servecontract"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/browser"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
 )
 
 // brokerTestExecutor records the session header each call arrived with.

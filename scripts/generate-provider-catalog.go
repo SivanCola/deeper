@@ -4,7 +4,7 @@
 package main
 
 import (
-	"deeper/internal/config"
+	"deepzora/internal/config"
 	"encoding/json"
 	"os"
 )

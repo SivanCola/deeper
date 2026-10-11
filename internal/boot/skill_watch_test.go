@@ -5,11 +5,11 @@ import (
 	"io"
 	"testing"
 
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/skill/skillwatch"
 )
 
 // A package test binary must never spawn a watcher helper: one per test would
-// leave stray deeper-desktop.exe processes behind. The host constructor is
+// leave stray deepzora-desktop.exe processes behind. The host constructor is
 // what the desktop calls, so it has to apply the same gate as Build.
 func TestHostSkillWatchServiceIsDisabledInTestBinaries(t *testing.T) {
 	if !watchSkillsEnabled() {

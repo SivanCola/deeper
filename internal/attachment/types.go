@@ -1,6 +1,6 @@
 package attachment
 
-import "deeper/internal/sessioncontent"
+import "deepzora/internal/sessioncontent"
 
 const (
 	RefVersion = 1

@@ -18,12 +18,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/netclient"
-	"deeper/internal/remote"
-	"deeper/internal/remote/bootstrap"
-	"deeper/internal/remote/forward"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
+	"deepzora/internal/remote"
+	"deepzora/internal/remote/bootstrap"
+	"deepzora/internal/remote/forward"
 )
 
 // ── View structs mirrored in frontend/src/lib/types.ts ──
@@ -586,7 +586,7 @@ func (a *App) requireRemotePresentedFiles(tabID, hostID string) (remotePresented
 		return remotePresentedFilesFence{}, err
 	}
 	if !fence.tab.capabilities["present-files-v1"] {
-		return remotePresentedFilesFence{}, fmt.Errorf("this remote Deeper Serve does not support present-files-v1")
+		return remotePresentedFilesFence{}, fmt.Errorf("this remote Deepzora Serve does not support present-files-v1")
 	}
 	return fence, nil
 }
@@ -715,7 +715,7 @@ func (a *App) saveRemoteFileAs(hostID, remotePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(target), ".deeper-remote-download-*")
+	tmp, err := os.CreateTemp(filepath.Dir(target), ".deepzora-remote-download-*")
 	if err != nil {
 		return "", err
 	}
@@ -1723,9 +1723,9 @@ func desktopCLIBinaryPath() string {
 
 func desktopCLIBinaryNames(goos string) (packaged, command string) {
 	if goos == "windows" {
-		return "deeper-cli.exe", "deeper.exe"
+		return "deepzora-cli.exe", "deepzora.exe"
 	}
-	return "deeper", "deeper"
+	return "deepzora", "deepzora"
 }
 
 func desktopNormalizeBind(bind string) string {
@@ -1745,7 +1745,7 @@ func preserveRemoteHostHiddenFields(entry *config.RemoteHostEntry, existing conf
 }
 
 // Importing an already-managed SSH alias refreshes only its OpenSSH lookup
-// fields. Deeper-specific workspace and bootstrap policy remain user-owned.
+// fields. Deepzora-specific workspace and bootstrap policy remain user-owned.
 func preserveRemoteHostImportSettings(entry *config.RemoteHostEntry, existing config.RemoteHostEntry) {
 	entry.Workspace = existing.Workspace
 	entry.ServeInstall = existing.ServeInstall
@@ -1753,7 +1753,7 @@ func preserveRemoteHostImportSettings(entry *config.RemoteHostEntry, existing co
 }
 
 // applyRemoteCredentialInput maps plaintext received from the one-shot Wails
-// call into Deeper-owned credential slots. Blank fields preserve the current
+// call into Deepzora-owned credential slots. Blank fields preserve the current
 // reference; explicit clear flags remove only slots that this desktop created.
 func applyRemoteCredentialInput(entry *config.RemoteHostEntry, in RemoteHostInput) (changes []config.CredentialChange, removalCandidates []string) {
 	if in.ClearPassword {

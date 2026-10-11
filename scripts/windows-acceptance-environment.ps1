@@ -1,9 +1,9 @@
-# Match the production package smoke environment: inherited Deeper overrides
+# Match the production package smoke environment: inherited Deepzora overrides
 # must not redirect state/cache writes or enable a development-only launch.
 function Get-WindowsAcceptanceEnvironment {
   $snapshot = @{}
   foreach ($entry in Get-ChildItem Env:) {
-    if ($entry.Name -match '^DEEPER_|^(NODE_OPTIONS|ELECTRON_RUN_AS_NODE)$') {
+    if ($entry.Name -match '^DEEPZORA_|^(NODE_OPTIONS|ELECTRON_RUN_AS_NODE)$') {
       $snapshot[$entry.Name] = $entry.Value
     }
   }
@@ -27,10 +27,10 @@ function Enter-WindowsAcceptanceEnvironment {
     foreach ($key in $snapshot.Keys) {
       [Environment]::SetEnvironmentVariable($key, $null, 'Process')
     }
-    $env:DEEPER_HOME = [IO.Path]::GetFullPath($DataHome)
-    $env:DEEPER_STATE_HOME = $env:DEEPER_HOME
-    $env:DEEPER_CACHE_HOME = Join-Path $env:DEEPER_HOME 'cache'
-    $env:DEEPER_NONINTERACTIVE = '1'
+    $env:DEEPZORA_HOME = [IO.Path]::GetFullPath($DataHome)
+    $env:DEEPZORA_STATE_HOME = $env:DEEPZORA_HOME
+    $env:DEEPZORA_CACHE_HOME = Join-Path $env:DEEPZORA_HOME 'cache'
+    $env:DEEPZORA_NONINTERACTIVE = '1'
     return $snapshot
   } catch {
     Restore-WindowsAcceptanceEnvironment -Snapshot $snapshot

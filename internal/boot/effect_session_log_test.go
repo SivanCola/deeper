@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/ablation"
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/ablation"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // TestEffectSessionLogUpgradeKeepsModelMessagesThroughRealBuild freezes the
@@ -26,7 +26,7 @@ func TestEffectSessionLogUpgradeKeepsModelMessagesThroughRealBuild(t *testing.T)
 
 	rec := &effectRecordingProvider{}
 	provider.Register("boot-effect-session-log", func(provider.Config) (provider.Provider, error) { return rec, nil })
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

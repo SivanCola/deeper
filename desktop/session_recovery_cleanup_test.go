@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func saveSnapshotTurns(t *testing.T, path string, turns int) *agent.Session {

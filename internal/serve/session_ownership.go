@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // This file answers who owns a session and renders the read-only views a
@@ -59,7 +59,7 @@ var leaseHeldByForeignRuntime = agent.SessionLeaseHeldByOtherRuntime
 // errSessionTakenOver is the stable refusal every mutating endpoint returns
 // while the foreground session is mirrored to a local writer. Clients match
 // the leading sentence to surface the read-only state.
-const errSessionTakenOver = "session is taken over by a local Deeper window and is read-only here; use POST /reclaim to take it back"
+const errSessionTakenOver = "session is taken over by a local Deepzora window and is read-only here; use POST /reclaim to take it back"
 
 // mirroredSession is Serve's bookkeeping for a session whose lease a local
 // runtime now holds. Serve answers reads from the transcript file and mirrors
@@ -637,8 +637,8 @@ func (s *Server) adopt(w http.ResponseWriter, r *http.Request) {
 			Kind:        event.Notice,
 			Level:       event.LevelWarn,
 			Code:        event.NoticeCodeSessionTakenOver,
-			Text:        "This session was taken over by a local Deeper window and is read-only here.",
-			Detail:      "A Deeper window on this machine opened this session; it keeps streaming here. Use \"take back\" to reclaim it.",
+			Text:        "This session was taken over by a local Deepzora window and is read-only here.",
+			Detail:      "A Deepzora window on this machine opened this session; it keeps streaming here. Use \"take back\" to reclaim it.",
 			SessionPath: m.path,
 		})
 		writeJSON(w, m.grant("adopted"))
@@ -674,8 +674,8 @@ func (s *Server) adopt(w http.ResponseWriter, r *http.Request) {
 		Kind:        event.Notice,
 		Level:       event.LevelWarn,
 		Code:        event.NoticeCodeSessionTakenOver,
-		Text:        "This session was taken over by a local Deeper window and is read-only here.",
-		Detail:      "A Deeper window on this machine opened this session; it keeps streaming here. Use \"take back\" to reclaim it.",
+		Text:        "This session was taken over by a local Deepzora window and is read-only here.",
+		Detail:      "A Deepzora window on this machine opened this session; it keeps streaming here. Use \"take back\" to reclaim it.",
 		SessionPath: agent.CanonicalSessionPath(realPath),
 	})
 	writeJSON(w, m.grant("adopted"))

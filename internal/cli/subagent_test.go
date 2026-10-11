@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/skill"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/skill"
 )
 
 func TestSubagentProfileCLIManageRoundTrip(t *testing.T) {
@@ -88,7 +88,7 @@ func TestSubagentProfileCLIManageRoundTrip(t *testing.T) {
 
 func TestSubagentListIncludesQualifiedPluginAgents(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	project := t.TempDir()
 	t.Chdir(project)
 	root := filepath.Join(home, "plugins", "commercial-legal")
@@ -141,7 +141,7 @@ func TestSubagentProfileCLIRejectsBuiltinCollisionAndRichSkillEdit(t *testing.T)
 		t.Fatalf("builtin collision output = %q", errOut)
 	}
 
-	path := filepath.Join(project, ".deeper", "skills", "rich", skill.SkillFile)
+	path := filepath.Join(project, ".deepzora", "skills", "rich", skill.SkillFile)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestSubagentProfileCLIRejectsBuiltinCollisionAndRichSkillEdit(t *testing.T)
 		t.Fatalf("rich edit output = %q", errOut)
 	}
 	// Positive: managed read-only frontmatter is editable and round-trips.
-	roPath := filepath.Join(project, ".deeper", "skills", "readonly-agent", skill.SkillFile)
+	roPath := filepath.Join(project, ".deepzora", "skills", "readonly-agent", skill.SkillFile)
 	if err := os.MkdirAll(filepath.Dir(roPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestSubagentProfileCLIRejectsReservedAndCustomCommandNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chdir(original) })
-	commandPath := filepath.Join(project, ".deeper", "commands", "formatter.md")
+	commandPath := filepath.Join(project, ".deepzora", "commands", "formatter.md")
 	if err := os.MkdirAll(filepath.Dir(commandPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestSubagentProfileCLIEditBuiltinModelOverride(t *testing.T) {
 		Kind:             "openai",
 		BaseURL:          "https://offline.example.com",
 		Model:            "chat",
-		APIKeyEnv:        "DEEPER_SUBAGENT_OFFLINE_KEY",
+		APIKeyEnv:        "DEEPZORA_SUBAGENT_OFFLINE_KEY",
 		SupportedEfforts: []string{"low", "high"},
 		DefaultEffort:    "low",
 	}}
@@ -368,7 +368,7 @@ func TestRootHelpListsSubagentCommand(t *testing.T) {
 			t.Fatalf("help rc = %d", rc)
 		}
 	})
-	if !strings.Contains(out, "deeper subagent <list|create|edit|delete|try|run>") {
+	if !strings.Contains(out, "deepzora subagent <list|create|edit|delete|try|run>") {
 		t.Fatalf("help output missing subagent command:\n%s", out)
 	}
 }

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/mcpinteraction"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/mcpinteraction"
+	"deepzora/internal/provider"
 )
 
 // MCPAppCallTool executes one App-initiated tools/call. Security model:

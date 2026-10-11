@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 // quickAddHeading marks the section quick-added notes accumulate under, so

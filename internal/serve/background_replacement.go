@@ -2,8 +2,8 @@ package serve
 
 import (
 	"context"
-	"deeper/internal/boot"
-	"deeper/internal/control"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
 )
 
 func (s *Server) buildModelCandidate(ctx context.Context, ref string, opts boot.Options, inherit bool) (*control.Controller, error) {

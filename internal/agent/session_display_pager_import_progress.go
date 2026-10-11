@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/fileops"
-	"deeper/internal/historywork"
+	"deepzora/internal/fileops"
+	"deepzora/internal/historywork"
 )
 
 type displayImportCheckpoint struct {

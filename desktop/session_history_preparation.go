@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/fileops"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/fileops"
+	"deepzora/internal/store"
 )
 
 // One preparation owns a source/head generation. Readers own references,

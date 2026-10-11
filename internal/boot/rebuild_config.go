@@ -7,9 +7,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/netclient"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/netclient"
 )
 
 // Config can contain proxy passwords, headers, and service tokens. Keep its

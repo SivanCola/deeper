@@ -3,7 +3,7 @@ package cli
 import (
 	"os"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 
 	tea "charm.land/bubbletea/v2"
 )

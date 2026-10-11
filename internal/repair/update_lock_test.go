@@ -15,11 +15,11 @@ import (
 // same exclusion two processes would see.
 func TestPendingUpdateRollbackExcludesConcurrentCommit(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir := t.TempDir()
-	target := filepath.Join(dir, "deeper-desktop")
+	target := filepath.Join(dir, "deepzora-desktop")
 	originalExecutable := repairExecutable
-	repairExecutable = func() (string, error) { return filepath.Join(dir, "deeper-guard"), nil }
+	repairExecutable = func() (string, error) { return filepath.Join(dir, "deepzora-guard"), nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 	if err := os.WriteFile(target, []byte("old"), 0o700); err != nil {
 		t.Fatal(err)
@@ -78,13 +78,13 @@ func TestPendingUpdateRollbackExcludesConcurrentCommit(t *testing.T) {
 
 func TestAppBundleRollbackLocksBackupPath(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := filepath.Join(dir, "Deeper.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "Deeper")
+	app := filepath.Join(dir, "Deepzora.app")
+	exe := filepath.Join(app, "Contents", "MacOS", "Deepzora")
 	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestAppBundleRollbackLocksBackupPath(t *testing.T) {
 	repairExecutable = func() (string, error) { return exe, nil }
 	t.Cleanup(func() { repairExecutable = originalExecutable })
 
-	backup := app + ".deeper-update-backup"
+	backup := app + ".deepzora-update-backup"
 	if _, err := PrepareAppBundleUpdate("v1", "v2", app, backup); err != nil {
 		t.Fatal(err)
 	}

@@ -3,7 +3,7 @@ package session
 import (
 	"encoding/json"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // StreamCheckpointKind carries the output a still-open stream has produced,

@@ -1,6 +1,6 @@
 import { desktopHost } from "./desktopHost";
 
-export const REMOTE_MARKDOWN_IMAGE_PATH = "/__deeper_remote_markdown_image";
+export const REMOTE_MARKDOWN_IMAGE_PATH = "/__deepzora_remote_markdown_image";
 
 export interface MarkdownImageView {
   url: string;

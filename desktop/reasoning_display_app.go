@@ -3,10 +3,10 @@ package main
 import (
 	"runtime"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
 )
 
 func desktopStartupSettingsFromConfig(cfg *config.Config) DesktopStartupSettingsView {

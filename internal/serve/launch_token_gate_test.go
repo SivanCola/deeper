@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 func gateDo(t *testing.T, h http.Handler, method, target, body string, hdr map[string]string) *httptest.ResponseRecorder {

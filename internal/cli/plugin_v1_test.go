@@ -6,24 +6,24 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 )
 
 // installV2RuntimePlugin writes a Manifest v2 package with a runtime into
-// the test Deeper home and registers it in plugin state.
+// the test Deepzora home and registers it in plugin state.
 func installV2RuntimePlugin(t *testing.T, home string) string {
 	t.Helper()
 	root := filepath.Join(home, "plugins", "example")
 	writePluginTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "example",
   "version": "1.0.0",
   "contributes": {
     "prompts": ["prompts"],
-    "themes": ["themes/*.deeper-theme"]
+    "themes": ["themes/*.deepzora-theme"]
   },
   "runtime": {
-    "command": "${DEEPER_PLUGIN_ROOT}/bin/example",
+    "command": "${DEEPZORA_PLUGIN_ROOT}/bin/example",
     "args": ["--serve"],
     "required": true,
     "intercepts": ["input.receive", "tool.before"],
@@ -32,10 +32,10 @@ func installV2RuntimePlugin(t *testing.T, home string) string {
   }
 }`)
 	writePluginTestFile(t, filepath.Join(root, "prompts", "plan.md"), "---\ndescription: plan\n---\nPlan $ARGUMENTS")
-	writePluginTestFile(t, filepath.Join(root, "themes", "neon.deeper-theme"), "theme bytes")
+	writePluginTestFile(t, filepath.Join(root, "themes", "neon.deepzora-theme"), "theme bytes")
 	writePluginTestFile(t, filepath.Join(root, "bin", "example"), "#!/bin/sh\n")
 	if err := pluginpkg.Upsert(home, pluginpkg.InstalledPlugin{
-		Name: "example", Root: "plugins/example", Version: "1.0.0", ManifestKind: "deeper", Enabled: true,
+		Name: "example", Root: "plugins/example", Version: "1.0.0", ManifestKind: "deepzora", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func installV2RuntimePlugin(t *testing.T, home string) string {
 
 func TestPluginShowRendersRuntimeFullTrust(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	installV2RuntimePlugin(t, home)
 
 	out := captureStdout(t, func() {
@@ -56,7 +56,7 @@ func TestPluginShowRendersRuntimeFullTrust(t *testing.T) {
 		"prompts: 1",
 		"themes: 1",
 		"runtime: FULL TRUST",
-		"command: ${DEEPER_PLUGIN_ROOT}/bin/example --serve",
+		"command: ${DEEPZORA_PLUGIN_ROOT}/bin/example --serve",
 		"intercepts: input.receive, tool.before",
 		"replaces: system_prompt",
 		"capabilities: interceptors, ui",
@@ -72,7 +72,7 @@ func TestPluginShowRendersRuntimeFullTrust(t *testing.T) {
 
 func TestPluginDoctorValidatesV2Runtime(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	installV2RuntimePlugin(t, home)
 
 	out := captureStdout(t, func() {
@@ -87,7 +87,7 @@ func TestPluginDoctorValidatesV2Runtime(t *testing.T) {
 
 func TestPluginDoctorFailsForMissingRuntimeCommand(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	root := installV2RuntimePlugin(t, home)
 	// Remove the runtime binary so the command no longer resolves.
 	if err := os.Remove(filepath.Join(root, "bin", "example")); err != nil {
@@ -106,17 +106,17 @@ func TestPluginDoctorFailsForMissingRuntimeCommand(t *testing.T) {
 
 func TestPluginDoctorReportsMissingV2PathsAsWarnings(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	root := filepath.Join(home, "plugins", "gap")
 	writePluginTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "gap",
   "contributes": {
-    "themes": ["themes/*.deeper-theme"]
+    "themes": ["themes/*.deepzora-theme"]
   }
 }`)
 	if err := pluginpkg.Upsert(home, pluginpkg.InstalledPlugin{
-		Name: "gap", Root: "plugins/gap", ManifestKind: "deeper", Enabled: true,
+		Name: "gap", Root: "plugins/gap", ManifestKind: "deepzora", Enabled: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestPluginDoctorReportsMissingV2PathsAsWarnings(t *testing.T) {
 			t.Fatalf("plugin doctor rc = %d, want 0 (missing themes are warnings, not failures)", rc)
 		}
 	})
-	if !strings.Contains(out, `theme glob "themes/*.deeper-theme" matched no files`) {
+	if !strings.Contains(out, `theme glob "themes/*.deepzora-theme" matched no files`) {
 		t.Fatalf("doctor output missing the glob warning:\n%s", out)
 	}
 }

@@ -2,7 +2,7 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/fileops"
+	"deepzora/internal/fileops"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestDisplayPagerDistinguishesAncientEventsFromDamagedCheckpoint(t *testing.T) {

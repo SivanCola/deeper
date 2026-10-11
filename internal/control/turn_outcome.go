@@ -3,8 +3,8 @@ package control
 import (
 	"errors"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 // turnOutcome maps a finished run's typed pause onto the TurnDone outcome

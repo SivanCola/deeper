@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/permission"
-	"deeper/internal/permissionpreset"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/permission"
+	"deepzora/internal/permissionpreset"
 )
 
 // Approve answers a pending ApprovalRequest by ID. It remains the compatibility

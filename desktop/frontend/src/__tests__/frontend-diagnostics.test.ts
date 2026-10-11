@@ -15,7 +15,7 @@ const diagnostics = createFrontendDiagnostics({
     buildCommit: "test-commit",
     buildChannel: "canary",
     platform: "windows",
-    userAgent: "Deeper test",
+    userAgent: "Deepzora test",
     devicePixelRatio: 1.25,
     viewportWidth: 1440,
     viewportHeight: 900,

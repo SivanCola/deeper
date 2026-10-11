@@ -349,20 +349,20 @@ jobs:
           TAG: ${{ needs.resolve.outputs.tag }}
         run: |
           gh release create "$TAG" \
-            "$RUNNER_TEMP/release-candidate/cli/deeper-darwin-amd64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/deeper-darwin-arm64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/deeper-linux-amd64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/deeper-linux-arm64.tar.gz" \
-            "$RUNNER_TEMP/release-candidate/cli/deeper-windows-amd64.zip" \
-            "$RUNNER_TEMP/release-candidate/cli/deeper-windows-arm64.zip" \
+            "$RUNNER_TEMP/release-candidate/cli/deepzora-darwin-amd64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deepzora-darwin-arm64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deepzora-linux-amd64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deepzora-linux-arm64.tar.gz" \
+            "$RUNNER_TEMP/release-candidate/cli/deepzora-windows-amd64.zip" \
+            "$RUNNER_TEMP/release-candidate/cli/deepzora-windows-arm64.zip" \
             "$RUNNER_TEMP/release-candidate/cli/SHA256SUMS" \
-            --title "Deeper CLI $TAG" --notes-file /tmp/release-notes.md --latest=false
+            --title "Deepzora CLI $TAG" --notes-file /tmp/release-notes.md --latest=false
 
       - name: Publish prepared Homebrew cask
         if: ${{ inputs.candidate_artifact_name != '' && needs.resolve.outputs.channel == 'stable' && vars.CLI_PUBLISH_FROZEN != 'true' }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: node release-control/scripts/publish-homebrew-cask.mjs "$RUNNER_TEMP/release-candidate/cli/deeper.rb"
+        run: node release-control/scripts/publish-homebrew-cask.mjs "$RUNNER_TEMP/release-candidate/cli/deepzora.rb"
 
       - name: Publish product release notes
         env:
@@ -399,12 +399,12 @@ jobs:
           fi
 
           required_assets='[
-            "deeper-darwin-amd64.tar.gz",
-            "deeper-darwin-arm64.tar.gz",
-            "deeper-linux-amd64.tar.gz",
-            "deeper-linux-arm64.tar.gz",
-            "deeper-windows-amd64.zip",
-            "deeper-windows-arm64.zip",
+            "deepzora-darwin-amd64.tar.gz",
+            "deepzora-darwin-arm64.tar.gz",
+            "deepzora-linux-amd64.tar.gz",
+            "deepzora-linux-arm64.tar.gz",
+            "deepzora-windows-amd64.zip",
+            "deepzora-windows-arm64.zip",
             "SHA256SUMS"
           ]'
           gh api "repos/${{ github.repository }}/releases/tags/$TAG" > /tmp/cli-release.raw.json
@@ -418,7 +418,7 @@ jobs:
               tag_name: $release.tag_name,
               prerelease: $release.prerelease,
               html_url: $release.html_url,
-              release_notes_url: ("https://github.com/SivanCola/deeper/releases/tag/" + $notes_tag + "/"),
+              release_notes_url: ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_tag + "/"),
               assets: [
                 $required[] as $name |
                 $assets[$name] |
@@ -552,10 +552,10 @@ jobs:
           aws configure set region auto
           aws s3 cp "s3://${R2_BUCKET}/latest/latest.json" latest.raw.json \
             --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          jq '.download_page = "https://github.com/SivanCola/deeper/releases"' latest.raw.json > latest.json
+          jq '.download_page = "https://github.com/SivanCola/deepzora/releases"' latest.raw.json > latest.json
           jq -e '
             ([.platforms[] | (.url, .sig)] |
-              all(type == "string" and startswith("https://github.com/SivanCola/deeper/releases/download/") and (contains("/releases/latest/") | not)))
+              all(type == "string" and startswith("https://github.com/SivanCola/deepzora/releases/download/") and (contains("/releases/latest/") | not)))
           ' latest.json >/dev/null
           gh release upload "$TAG" latest.json --clobber
 
@@ -627,7 +627,7 @@ jobs:
           esac
           version="${TAG#v}"
           if ! git ls-remote --exit-code origin "refs/tags/npm-v$version" >/dev/null; then
-            echo "::error::the npm-v$version tag was never pushed — the npm channel is being left behind and 'npm update -g' users will be downgraded to the old 'latest'. Push it: git tag npm-v$version ${TAG} && git push origin npm-v$version (or 'npm dist-tag add deeper@$version latest' for an already-published version)."
+            echo "::error::the npm-v$version tag was never pushed — the npm channel is being left behind and 'npm update -g' users will be downgraded to the old 'latest'. Push it: git tag npm-v$version ${TAG} && git push origin npm-v$version (or 'npm dist-tag add deepzora@$version latest' for an already-published version)."
             exit 1
           fi
           if [ "${CLI_PUBLISH_FROZEN:-}" = "true" ]; then
@@ -635,7 +635,7 @@ jobs:
             exit 0
           fi
           for attempt in 1 2 3 4 5 6; do
-            got="$(npm view deeper dist-tags.latest 2>/dev/null || true)"
+            got="$(npm view deepzora dist-tags.latest 2>/dev/null || true)"
             if [ -n "$got" ]; then
               newest="$(printf '%s\n%s\n' "$got" "$version" | sort -V | tail -1)"
               if [ "$newest" = "$got" ]; then

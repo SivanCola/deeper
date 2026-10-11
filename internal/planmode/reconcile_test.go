@@ -3,10 +3,10 @@ package planmode_test
 import (
 	"testing"
 
-	"deeper/internal/planmode"
-	"deeper/internal/tool"
+	"deepzora/internal/planmode"
+	"deepzora/internal/tool"
 
-	_ "deeper/internal/tool/builtin"
+	_ "deepzora/internal/tool/builtin"
 )
 
 func TestBuiltinPhaseClassifiersMatchPolicy(t *testing.T) {

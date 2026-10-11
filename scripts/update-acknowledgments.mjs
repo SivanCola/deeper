@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
 
-const repo = 'SivanCola/deeper';
+const repo = 'SivanCola/deepzora';
 const api = `https://api.github.com/repos/${repo}/contributors?per_page=30&anon=1`;
-const startMarker = '<!-- deeper-top-contributors:start -->';
-const endMarker = '<!-- deeper-top-contributors:end -->';
+const startMarker = '<!-- deepzora-top-contributors:start -->';
+const endMarker = '<!-- deepzora-top-contributors:end -->';
 
 const headers = {
   Accept: 'application/vnd.github+json',
-  'User-Agent': 'deeper-acknowledgments-updater',
+  'User-Agent': 'deepzora-acknowledgments-updater',
 };
 if (process.env.GITHUB_TOKEN) {
   headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;

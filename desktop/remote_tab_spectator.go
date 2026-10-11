@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // markRemoteTabSpectatorIfLocalOwned reconciles ownership when a mid-view

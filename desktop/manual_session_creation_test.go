@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/desktop/internal/sessionui"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/sessionui"
+	"deepzora/internal/session"
 )
 
 func newManualSessionTestApp(t *testing.T) *App {

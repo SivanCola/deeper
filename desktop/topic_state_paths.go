@@ -7,35 +7,35 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/topicstate"
+	"deepzora/internal/topicstate"
 )
 
 func topicTitlesPath(workspaceRoot string) string {
 	if workspaceRoot == "" {
 		return filepath.Join(desktopConfigDir(), "global", topicTitlesFile)
 	}
-	return filepath.Join(workspaceRoot, ".deeper", topicTitlesFile)
+	return filepath.Join(workspaceRoot, ".deepzora", topicTitlesFile)
 }
 
 func topicTitleSourcesPath(workspaceRoot string) string {
 	if workspaceRoot == "" {
 		return filepath.Join(desktopConfigDir(), "global", topicTitleSourcesFile)
 	}
-	return filepath.Join(workspaceRoot, ".deeper", topicTitleSourcesFile)
+	return filepath.Join(workspaceRoot, ".deepzora", topicTitleSourcesFile)
 }
 
 func topicCreatedAtsPath(workspaceRoot string) string {
 	if workspaceRoot == "" {
 		return filepath.Join(desktopConfigDir(), "global", topicCreatedAtsFile)
 	}
-	return filepath.Join(workspaceRoot, ".deeper", topicCreatedAtsFile)
+	return filepath.Join(workspaceRoot, ".deepzora", topicCreatedAtsFile)
 }
 
 func topicAutoTitleMetaPath(workspaceRoot string) string {
 	if workspaceRoot == "" {
 		return filepath.Join(desktopConfigDir(), "global", topicAutoTitlesFile)
 	}
-	return filepath.Join(workspaceRoot, ".deeper", topicAutoTitlesFile)
+	return filepath.Join(workspaceRoot, ".deepzora", topicAutoTitlesFile)
 }
 
 func legacyTopicPaths(workspaceRoot string) [4]string {

@@ -12,11 +12,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
-	_ "deeper/internal/tool/builtin"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
+	_ "deepzora/internal/tool/builtin"
 )
 
 // TestTruncateToolOutputUnderCap leaves small payloads alone — the cap should

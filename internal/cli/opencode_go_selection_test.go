@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 func TestOpenCodeGoCLIResumeAndExplicitSelection(t *testing.T) {

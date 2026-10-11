@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 	"encoding/json"
 )
 

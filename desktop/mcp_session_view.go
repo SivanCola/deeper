@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/plugin"
+import "deepzora/internal/plugin"
 
 func pluginServerToView(server plugin.ServerStatus) ServerView {
 	return ServerView{

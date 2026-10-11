@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type completionCountingSink struct {

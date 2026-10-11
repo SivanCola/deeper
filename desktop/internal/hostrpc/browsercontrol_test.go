@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/extension/rpcwire"
+	"deepzora/internal/extension/rpcwire"
 )
 
 func TestBrowserControlHookReceivesEnabledFlag(t *testing.T) {

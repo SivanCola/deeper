@@ -20,7 +20,7 @@ func TestEndpointOverrideRepeatsBase(t *testing.T) {
 		{"query", base + "?token=1", []string{base}, false},
 		{"empty query", base + "?", []string{base}, false},
 		{"fragment", base + "#debug", []string{base}, false},
-		{"deeper path", base + "/chat/completions", []string{base}, false},
+		{"deepzora path", base + "/chat/completions", []string{base}, false},
 		{"other host", "http://127.0.0.2:8000/v1", []string{base}, false},
 		{"other port", "http://127.0.0.1:8001/v1", []string{base}, false},
 		{"other scheme", "https://127.0.0.1:8000/v1", []string{base}, false},

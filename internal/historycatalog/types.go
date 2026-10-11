@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/projectiondb"
+	"deepzora/internal/config"
+	"deepzora/internal/projectiondb"
 )
 
 const (

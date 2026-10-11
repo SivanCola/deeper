@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 type organizationReadCache struct {

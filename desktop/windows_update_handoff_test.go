@@ -7,15 +7,15 @@ import (
 )
 
 func TestInstallerCommandLineUsesVisibleUpdateModeAndKeepsDFlagLast(t *testing.T) {
-	got := installerCommandLine(`C:\Temp\Deeper Installer.exe`, `D:\Tools\Deeper App`)
-	want := `"C:\Temp\Deeper Installer.exe" /DEEPERUPDATE=1 /DEEPERSTAGE=1 /D=D:\Tools\Deeper App`
+	got := installerCommandLine(`C:\Temp\Deepzora Installer.exe`, `D:\Tools\Deepzora App`)
+	want := `"C:\Temp\Deepzora Installer.exe" /DEEPZORAUPDATE=1 /DEEPZORASTAGE=1 /D=D:\Tools\Deepzora App`
 	if got != want {
 		t.Fatalf("installerCommandLine = %q, want %q", got, want)
 	}
 	if strings.Contains(got, " /S") {
 		t.Fatalf("auto-update must expose progress instead of using silent mode, got %q", got)
 	}
-	if !strings.HasSuffix(got, `/D=D:\Tools\Deeper App`) {
+	if !strings.HasSuffix(got, `/D=D:\Tools\Deepzora App`) {
 		t.Fatalf("/D= must be the final unquoted NSIS token, got %q", got)
 	}
 }
@@ -23,23 +23,23 @@ func TestInstallerCommandLineUsesVisibleUpdateModeAndKeepsDFlagLast(t *testing.T
 func TestWindowsUpdateHandoffArgsCarryParentInstallAndRelaunch(t *testing.T) {
 	got := windowsUpdateHandoffArgs(
 		4242,
-		`C:\Users\Jane Doe\AppData\Local\Deeper\updates\Deeper-windows-amd64-installer.exe`,
+		`C:\Users\Jane Doe\AppData\Local\Deepzora\updates\Deepzora-windows-amd64-installer.exe`,
 		strings.Repeat("a", 64),
-		`D:\Tools\Deeper App`,
-		`D:\Tools\Deeper App\deeper-desktop.exe`,
+		`D:\Tools\Deepzora App`,
+		`D:\Tools\Deepzora App\deepzora-desktop.exe`,
 		"v1.6.0",
 		"2026-07-29T00:00:00Z",
 		"transaction-1",
 	)
 	want := []string{
 		"--parent-pid", "4242",
-		"--installer", `C:\Users\Jane Doe\AppData\Local\Deeper\updates\Deeper-windows-amd64-installer.exe`,
+		"--installer", `C:\Users\Jane Doe\AppData\Local\Deepzora\updates\Deepzora-windows-amd64-installer.exe`,
 		"--installer-sha256", strings.Repeat("a", 64),
 		"--to-version", "v1.6.0",
 		"--created-at", "2026-07-29T00:00:00Z",
 		"--transaction-id", "transaction-1",
-		"--install-dir", `D:\Tools\Deeper App`,
-		"--relaunch", `D:\Tools\Deeper App\deeper-desktop.exe`,
+		"--install-dir", `D:\Tools\Deepzora App`,
+		"--relaunch", `D:\Tools\Deepzora App\deepzora-desktop.exe`,
 	}
 	if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
 		t.Fatalf("args = %#v, want %#v", got, want)
@@ -49,20 +49,20 @@ func TestWindowsUpdateHandoffArgsCarryParentInstallAndRelaunch(t *testing.T) {
 func TestWindowsVersionedUpdateHandoffArgsDoNotRequireLegacyPendingIdentity(t *testing.T) {
 	got := windowsVersionedUpdateHandoffArgs(
 		4242,
-		`C:\Temp\Deeper-installer.exe`,
+		`C:\Temp\Deepzora-installer.exe`,
 		strings.Repeat("b", 64),
-		`D:\Tools\Deeper`,
-		`D:\Tools\Deeper\deeper-launcher.exe`,
+		`D:\Tools\Deepzora`,
+		`D:\Tools\Deepzora\deepzora-launcher.exe`,
 		"v1.20.0",
 	)
 	want := []string{
 		"--parent-pid", "4242",
-		"--installer", `C:\Temp\Deeper-installer.exe`,
+		"--installer", `C:\Temp\Deepzora-installer.exe`,
 		"--installer-sha256", strings.Repeat("b", 64),
 		"--to-version", "v1.20.0",
 		"--install-layout", "versioned-v1",
-		"--install-dir", `D:\Tools\Deeper`,
-		"--relaunch", `D:\Tools\Deeper\deeper-launcher.exe`,
+		"--install-dir", `D:\Tools\Deepzora`,
+		"--relaunch", `D:\Tools\Deepzora\deepzora-launcher.exe`,
 	}
 	if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
 		t.Fatalf("args = %#v, want %#v", got, want)
@@ -81,111 +81,111 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 	}
 	script := string(data)
 	for _, want := range []string{
-		`!define DEEPER_LEGACY_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Deeper"`,
-		`!define DEEPER_LEGACY_PRODUCT_KEY "Software\deeper\Deeper"`,
-		`!define DEEPER_UPDATE_HELPER "deeper-update-helper.exe"`,
-		`!define DEEPER_GUARD "deeper-guard.exe"`,
-		`!define DEEPER_LAUNCHER "deeper-launcher.exe"`,
-		`!define DEEPER_CLI "deeper-cli.exe"`,
-		`!define DEEPER_PORTABLE_ENTRY "Deeper.exe"`,
-		`!define DEEPER_LAYOUT_INSTALLER "deeper-layout-installer.exe"`,
-		`!define DEEPER_PAYLOAD_MANIFEST "deeper-payload.json"`,
-		`!define DEEPER_PAYLOAD_SIGNATURE "deeper-payload.json.minisig"`,
-		"Var DeeperUpdateMode",
-		"Var DeeperStageMode",
-		`${GetOptions} $R0 "/DEEPERUPDATE=" $R1`,
-		`${GetOptions} $R0 "/DEEPERSTAGE=" $R2`,
-		"Function deeper.skipSetupPageForUpdate",
-		"Function deeper.showUpdateProgress",
-		`!define MUI_PAGE_CUSTOMFUNCTION_PRE deeper.skipFinishPageForUpdate`,
-		"Function deeper.skipFinishPageForUpdate",
-		`StrCmp $DeeperUpdateMode "1" 0 deeper_show_finish_page`,
+		`!define DEEPZORA_LEGACY_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Deepzora"`,
+		`!define DEEPZORA_LEGACY_PRODUCT_KEY "Software\deepzora\Deepzora"`,
+		`!define DEEPZORA_UPDATE_HELPER "deepzora-update-helper.exe"`,
+		`!define DEEPZORA_GUARD "deepzora-guard.exe"`,
+		`!define DEEPZORA_LAUNCHER "deepzora-launcher.exe"`,
+		`!define DEEPZORA_CLI "deepzora-cli.exe"`,
+		`!define DEEPZORA_PORTABLE_ENTRY "Deepzora.exe"`,
+		`!define DEEPZORA_LAYOUT_INSTALLER "deepzora-layout-installer.exe"`,
+		`!define DEEPZORA_PAYLOAD_MANIFEST "deepzora-payload.json"`,
+		`!define DEEPZORA_PAYLOAD_SIGNATURE "deepzora-payload.json.minisig"`,
+		"Var DeepzoraUpdateMode",
+		"Var DeepzoraStageMode",
+		`${GetOptions} $R0 "/DEEPZORAUPDATE=" $R1`,
+		`${GetOptions} $R0 "/DEEPZORASTAGE=" $R2`,
+		"Function deepzora.skipSetupPageForUpdate",
+		"Function deepzora.showUpdateProgress",
+		`!define MUI_PAGE_CUSTOMFUNCTION_PRE deepzora.skipFinishPageForUpdate`,
+		"Function deepzora.skipFinishPageForUpdate",
+		`StrCmp $DeepzoraUpdateMode "1" 0 deepzora_show_finish_page`,
 		"SetAutoClose true",
 		"BringToFront",
-		`LangString deeperUpdateTitle ${LANG_ENGLISH} "Updating Deeper"`,
-		`LangString deeperUpdateTitle ${LANG_SIMPCHINESE} "正在更新 Deeper"`,
-		`LangString deeperUpdateTitle ${LANG_TRADCHINESE} "正在更新 Deeper"`,
-		`LangString deeperUpdateSubtitle ${LANG_ENGLISH} "Installing the verified update. Deeper will restart automatically."`,
-		`LangString deeperUpdateSubtitle ${LANG_SIMPCHINESE} "正在安装已验证的更新，完成后 Deeper 将自动重启。"`,
-		`LangString deeperUpdateSubtitle ${LANG_TRADCHINESE} "正在安裝已驗證的更新，完成後 Deeper 將自動重新啟動。"`,
-		"Function deeper.waitForExecutableUnlock",
+		`LangString deepzoraUpdateTitle ${LANG_ENGLISH} "Updating Deepzora"`,
+		`LangString deepzoraUpdateTitle ${LANG_SIMPCHINESE} "正在更新 Deepzora"`,
+		`LangString deepzoraUpdateTitle ${LANG_TRADCHINESE} "正在更新 Deepzora"`,
+		`LangString deepzoraUpdateSubtitle ${LANG_ENGLISH} "Installing the verified update. Deepzora will restart automatically."`,
+		`LangString deepzoraUpdateSubtitle ${LANG_SIMPCHINESE} "正在安装已验证的更新，完成后 Deepzora 将自动重启。"`,
+		`LangString deepzoraUpdateSubtitle ${LANG_TRADCHINESE} "正在安裝已驗證的更新，完成後 Deepzora 將自動重新啟動。"`,
+		"Function deepzora.waitForExecutableUnlock",
 		`FileOpen $1 "$INSTDIR\${PRODUCT_EXECUTABLE}" a`,
-		`FileOpen $1 "$INSTDIR\versions\${DEEPER_VERSION_TAG}\${PRODUCT_EXECUTABLE}" a`,
-		`FileOpen $1 "$INSTDIR\${DEEPER_GUARD}" a`,
-		`FileOpen $1 "$INSTDIR\${DEEPER_LAUNCHER}" a`,
-		`FileOpen $1 "$INSTDIR\${DEEPER_CLI}" a`,
-		`FileOpen $1 "$INSTDIR\${DEEPER_PORTABLE_ENTRY}" a`,
+		`FileOpen $1 "$INSTDIR\versions\${DEEPZORA_VERSION_TAG}\${PRODUCT_EXECUTABLE}" a`,
+		`FileOpen $1 "$INSTDIR\${DEEPZORA_GUARD}" a`,
+		`FileOpen $1 "$INSTDIR\${DEEPZORA_LAUNCHER}" a`,
+		`FileOpen $1 "$INSTDIR\${DEEPZORA_CLI}" a`,
+		`FileOpen $1 "$INSTDIR\${DEEPZORA_PORTABLE_ENTRY}" a`,
 		"SetErrorLevel 1618",
-		"Call deeper.waitForExecutableUnlock",
-		`File "/oname=${DEEPER_UPDATE_HELPER}" "${DEEPER_UPDATE_HELPER}"`,
-		`File "/oname=${DEEPER_CLI}" "${DEEPER_CLI}"`,
-		`File "/oname=${DEEPER_LAYOUT_INSTALLER}" "${DEEPER_GUARD}"`,
+		"Call deepzora.waitForExecutableUnlock",
+		`File "/oname=${DEEPZORA_UPDATE_HELPER}" "${DEEPZORA_UPDATE_HELPER}"`,
+		`File "/oname=${DEEPZORA_CLI}" "${DEEPZORA_CLI}"`,
+		`File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_GUARD}"`,
 		`nsExec::ExecToLog /OEM`,
-		`Deeper layout activator output:`,
+		`Deepzora layout activator output:`,
 		`--activate-staging "$R9" --no-relaunch`,
-		`LangString deeperActivateBusy ${LANG_ENGLISH}`,
-		`LangString deeperActivateBusy ${LANG_SIMPCHINESE}`,
-		`LangString deeperActivateBusy ${LANG_TRADCHINESE}`,
-		`LangString deeperActivateLocked ${LANG_ENGLISH}`,
-		`LangString deeperActivateLocked ${LANG_SIMPCHINESE}`,
-		`LangString deeperActivateLocked ${LANG_TRADCHINESE}`,
-		`MessageBox MB_ICONEXCLAMATION|MB_RETRYCANCEL "$(deeperActivateBusy)" IDRETRY deeper_layout_activate`,
-		`MessageBox MB_ICONEXCLAMATION|MB_RETRYCANCEL "$(deeperActivateLocked)" IDRETRY deeper_layout_activate`,
-		`File "/oname=${DEEPER_PAYLOAD_MANIFEST}" "${DEEPER_PAYLOAD_MANIFEST}"`,
-		`File "/oname=${DEEPER_PAYLOAD_SIGNATURE}" "${DEEPER_PAYLOAD_SIGNATURE}"`,
-		`Delete "$INSTDIR\${DEEPER_UPDATE_HELPER}"`,
-		`Delete "$INSTDIR\${DEEPER_CLI}"`,
-		`DeleteRegValue HKCU "${DEEPER_LEGACY_PRODUCT_KEY}" ""`,
-		`!insertmacro deeper.deleteLegacyInstallerStateIfOwned`,
+		`LangString deepzoraActivateBusy ${LANG_ENGLISH}`,
+		`LangString deepzoraActivateBusy ${LANG_SIMPCHINESE}`,
+		`LangString deepzoraActivateBusy ${LANG_TRADCHINESE}`,
+		`LangString deepzoraActivateLocked ${LANG_ENGLISH}`,
+		`LangString deepzoraActivateLocked ${LANG_SIMPCHINESE}`,
+		`LangString deepzoraActivateLocked ${LANG_TRADCHINESE}`,
+		`MessageBox MB_ICONEXCLAMATION|MB_RETRYCANCEL "$(deepzoraActivateBusy)" IDRETRY deepzora_layout_activate`,
+		`MessageBox MB_ICONEXCLAMATION|MB_RETRYCANCEL "$(deepzoraActivateLocked)" IDRETRY deepzora_layout_activate`,
+		`File "/oname=${DEEPZORA_PAYLOAD_MANIFEST}" "${DEEPZORA_PAYLOAD_MANIFEST}"`,
+		`File "/oname=${DEEPZORA_PAYLOAD_SIGNATURE}" "${DEEPZORA_PAYLOAD_SIGNATURE}"`,
+		`Delete "$INSTDIR\${DEEPZORA_UPDATE_HELPER}"`,
+		`Delete "$INSTDIR\${DEEPZORA_CLI}"`,
+		`DeleteRegValue HKCU "${DEEPZORA_LEGACY_PRODUCT_KEY}" ""`,
+		`!insertmacro deepzora.deleteLegacyInstallerStateIfOwned`,
 	} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("project.nsi missing %q", want)
 		}
 	}
-	finishPageHook := strings.Index(script, "!define MUI_PAGE_CUSTOMFUNCTION_PRE deeper.skipFinishPageForUpdate")
+	finishPageHook := strings.Index(script, "!define MUI_PAGE_CUSTOMFUNCTION_PRE deepzora.skipFinishPageForUpdate")
 	finishPage := strings.Index(script, "!insertmacro MUI_PAGE_FINISH")
 	if finishPageHook < 0 || finishPage < 0 || finishPageHook > finishPage {
 		t.Fatalf("update-only finish page hook must be attached to MUI_PAGE_FINISH (hook=%d page=%d)", finishPageHook, finishPage)
 	}
-	activation := script[strings.Index(script, "Deeper layout activator output:"):]
-	retryPrompt := strings.Index(activation, `IDRETRY deeper_layout_activate`)
+	activation := script[strings.Index(script, "Deepzora layout activator output:"):]
+	retryPrompt := strings.Index(activation, `IDRETRY deepzora_layout_activate`)
 	discardStaging := strings.Index(activation, `RMDir /r "$R9"`)
-	silentAbort := strings.Index(activation, "IfSilent deeper_activation_failed 0")
+	silentAbort := strings.Index(activation, "IfSilent deepzora_activation_failed 0")
 	if retryPrompt < 0 || discardStaging < 0 || retryPrompt > discardStaging || silentAbort < 0 || silentAbort > retryPrompt {
 		t.Fatalf("activation failure must offer Retry before discarding the staged files, and silent installs must skip the prompt (retry=%d discard=%d silent=%d)", retryPrompt, discardStaging, silentAbort)
 	}
 	if levelBeforePrompt := strings.Index(activation, "SetErrorLevel"); levelBeforePrompt < retryPrompt {
 		t.Fatalf("SetErrorLevel must follow the Retry prompt so a successful retry exits 0 (level=%d retry=%d)", levelBeforePrompt, retryPrompt)
 	}
-	wait := strings.Index(script, "Call deeper.waitForExecutableUnlock")
-	copyFiles := strings.Index(script, "deeper_normal_install:")
+	wait := strings.Index(script, "Call deepzora.waitForExecutableUnlock")
+	copyFiles := strings.Index(script, "deepzora_normal_install:")
 	if wait < 0 || copyFiles < 0 || wait > copyFiles {
 		t.Fatalf("installer must wait for the running exe to unlock before the normal-install payload extraction (wait=%d copy=%d)", wait, copyFiles)
 	}
-	stageBranch := strings.Index(script, "StrCmp $DeeperStageMode \"1\" deeper_stage_payload")
+	stageBranch := strings.Index(script, "StrCmp $DeepzoraStageMode \"1\" deepzora_stage_payload")
 	if stageBranch < 0 || stageBranch > copyFiles {
 		t.Fatalf("staging mode must bypass live executable unlock before payload extraction (branch=%d copy=%d)", stageBranch, copyFiles)
 	}
-	if !strings.Contains(script, "Goto deeper_section_done") {
+	if !strings.Contains(script, "Goto deepzora_section_done") {
 		t.Fatal("staging mode must skip registry, shortcuts, associations, and uninstaller")
 	}
 	if strings.Contains(script, `FileOpen $0 "$INSTDIR\current.json" w`) {
 		t.Fatal("normal installer must delegate the current.json commit to the atomic Go activator")
 	}
-	writeCurrent := strings.Index(script, `!insertmacro deeper.writeUninstaller`)
-	deleteLegacy := strings.Index(script, `!insertmacro deeper.deleteLegacyInstallerStateIfOwned`)
+	writeCurrent := strings.Index(script, `!insertmacro deepzora.writeUninstaller`)
+	deleteLegacy := strings.Index(script, `!insertmacro deepzora.deleteLegacyInstallerStateIfOwned`)
 	if writeCurrent < 0 || deleteLegacy < 0 || writeCurrent > deleteLegacy {
 		t.Fatalf("installer must write the current uninstall entry before reconciling owned legacy state (write=%d delete=%d)", writeCurrent, deleteLegacy)
 	}
-	legacyMacro := script[strings.Index(script, `!macro deeper.deleteLegacyInstallerStateIfOwned`):strings.Index(script, `!macro deeper.deleteUninstaller`)]
-	deleteLegacyLocation := strings.Index(legacyMacro, `DeleteRegValue HKCU "${DEEPER_LEGACY_PRODUCT_KEY}" ""`)
-	deleteLegacyAlias := strings.Index(legacyMacro, `DeleteRegKey HKCU "${DEEPER_LEGACY_UNINST_KEY}"`)
+	legacyMacro := script[strings.Index(script, `!macro deepzora.deleteLegacyInstallerStateIfOwned`):strings.Index(script, `!macro deepzora.deleteUninstaller`)]
+	deleteLegacyLocation := strings.Index(legacyMacro, `DeleteRegValue HKCU "${DEEPZORA_LEGACY_PRODUCT_KEY}" ""`)
+	deleteLegacyAlias := strings.Index(legacyMacro, `DeleteRegKey HKCU "${DEEPZORA_LEGACY_UNINST_KEY}"`)
 	if deleteLegacyLocation < 0 || deleteLegacyAlias < 0 || deleteLegacyLocation > deleteLegacyAlias {
 		t.Fatalf("installer must clear the same-root Tauri install-location breadcrumb before deleting its uninstall alias (location=%d alias=%d)", deleteLegacyLocation, deleteLegacyAlias)
 	}
-	metadataBranch := strings.Index(script, `deeper_stage_payload:`)
-	metadataFile := strings.Index(script, `File "/oname=${DEEPER_PAYLOAD_MANIFEST}"`)
-	normalInstall := strings.Index(script, `deeper_normal_install:`)
+	metadataBranch := strings.Index(script, `deepzora_stage_payload:`)
+	metadataFile := strings.Index(script, `File "/oname=${DEEPZORA_PAYLOAD_MANIFEST}"`)
+	normalInstall := strings.Index(script, `deepzora_normal_install:`)
 	if metadataBranch < 0 || metadataFile < 0 || normalInstall < 0 || metadataBranch > metadataFile || metadataFile > normalInstall {
 		t.Fatalf("payload manifest must be extracted only in staging mode (branch=%d file=%d)", metadataBranch, metadataFile)
 	}
@@ -199,22 +199,22 @@ func TestWindowsInstallerUsesPreviousDirectoryAsManualInstallDefault(t *testing.
 	script := string(data)
 	for _, want := range []string{
 		`InstallDirRegKey HKCU "${UNINST_KEY}" "InstallLocation"`,
-		`InstallDir "${DEEPER_DEFAULT_INSTALLDIR}"`,
+		`InstallDir "${DEEPZORA_DEFAULT_INSTALLDIR}"`,
 		`!insertmacro MUI_PAGE_DIRECTORY`,
-		`!define MUI_PAGE_CUSTOMFUNCTION_PRE deeper.skipSetupPageForUpdate`,
-		`StrCmp $DeeperUpdateMode "1" 0 deeper_show_setup_page`,
+		`!define MUI_PAGE_CUSTOMFUNCTION_PRE deepzora.skipSetupPageForUpdate`,
+		`StrCmp $DeepzoraUpdateMode "1" 0 deepzora_show_setup_page`,
 	} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("project.nsi missing manual-install path contract %q", want)
 		}
 	}
 	page := strings.Index(script, "!insertmacro MUI_PAGE_DIRECTORY")
-	pageHook := strings.Index(script, "!define MUI_PAGE_CUSTOMFUNCTION_PRE deeper.skipSetupPageForUpdate\n!insertmacro MUI_PAGE_DIRECTORY")
+	pageHook := strings.Index(script, "!define MUI_PAGE_CUSTOMFUNCTION_PRE deepzora.skipSetupPageForUpdate\n!insertmacro MUI_PAGE_DIRECTORY")
 	if page < 0 || pageHook < 0 || pageHook > page {
 		t.Fatal("directory selection page must remain available for manual installs")
 	}
-	if strings.Contains(script, `StrCpy $DeeperUpdateMode "1"
-	Goto deeper_show_setup_page`) {
+	if strings.Contains(script, `StrCpy $DeepzoraUpdateMode "1"
+	Goto deepzora_show_setup_page`) {
 		t.Fatal("automatic updates must not reopen the manual directory selection page")
 	}
 }
@@ -226,13 +226,13 @@ func TestDesktopBuildScriptCompilesAndPackagesWindowsUpdateHelper(t *testing.T) 
 	}
 	script := string(data)
 	for _, want := range []string{
-		`UPDATE_HELPER="deeper-update-helper.exe"`,
+		`UPDATE_HELPER="deepzora-update-helper.exe"`,
 		`go build -trimpath -o "$windows_resource_tool" ./cmd/windows-resource`,
 		`GOOS=windows GOARCH="$arch" go build`,
 		`./cmd/update-helper`,
 		`"$installer_dir/$UPDATE_HELPER"`,
-		`stamp_windows_executable "$installer_dir/$UPDATE_HELPER" "Deeper Update Helper"`,
-		`for name in "$BINNAME.exe" "$GUARDNAME.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deeper-uninstall.exe"; do`,
+		`stamp_windows_executable "$installer_dir/$UPDATE_HELPER" "Deepzora Update Helper"`,
+		`for name in "$BINNAME.exe" "$GUARDNAME.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deepzora-uninstall.exe"; do`,
 		`cp "$installer_dir/$name" "$payload_dir/$name"`,
 	} {
 		if !strings.Contains(script, want) {

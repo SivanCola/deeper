@@ -1,8 +1,8 @@
 import type { FilePreview } from "./types";
 
 const WORKSPACE_FILE_SAMPLES: Record<string, string> = {
-  "README.md": "# Deeper\n\nBrowser-dev workspace preview.\n\n- Chat in the center\n- Browse files on the right\n- Keep sessions on the left\n",
-  "go.mod": "module deeper\n\ngo 1.23\n",
+  "README.md": "# Deepzora\n\nBrowser-dev workspace preview.\n\n- Chat in the center\n- Browse files on the right\n- Keep sessions on the left\n",
+  "go.mod": "module deepzora\n\ngo 1.23\n",
   "desktop/file.go": "package desktop\n\nfunc main() {\n\tprintln(\"workspace preview\")\n}\n",
   "internal/event.go": "package internal\n\n// mock file used by the browser dev seam\n",
 };

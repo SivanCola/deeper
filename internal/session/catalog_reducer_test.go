@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestCatalogReducerMatchesCanonicalProjection(t *testing.T) {

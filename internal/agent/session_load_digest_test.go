@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // legacyDigestSessionMessages is the pre-fusion reference implementation: a

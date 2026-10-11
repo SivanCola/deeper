@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func writeSessionFile(t *testing.T, path string, msgs []provider.Message) {

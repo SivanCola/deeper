@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
 )
 
 func TestTaskMachineListUsesContentFreePersistedMetadata(t *testing.T) {

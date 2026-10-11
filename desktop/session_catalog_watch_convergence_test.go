@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 	"github.com/fsnotify/fsnotify"
 )
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/secrets"
+	"deepzora/internal/secrets"
 )
 
 const maxAutoRememberBodyRunes = 6000

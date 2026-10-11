@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/internal/control"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/internal/control"
 )
 
 func draftAdmissionError(err error) error {

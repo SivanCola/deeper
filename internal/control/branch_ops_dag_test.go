@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func newSchemaTwoBranchController(t *testing.T) (*Controller, *agent.Session, string) {

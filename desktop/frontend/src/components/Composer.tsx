@@ -2127,11 +2127,11 @@ export function Composer({
       submissionCapture = onCaptureSubmit?.(persistentSnapshot(snapshotComposerDraft()));
       if (onCaptureSubmit && !submissionCapture) return;
       await onPrepareSubmit?.(submissionCapture);
-      if (bridgeTarget.kind === "session" && currentWorkspaceRefs.some(ref => ref.isDir && ref.path.startsWith("__deeper_external_folder/"))) {
+      if (bridgeTarget.kind === "session" && currentWorkspaceRefs.some(ref => ref.isDir && ref.path.startsWith("__deepzora_external_folder/"))) {
         const { restoreExternalFolderReferences } = await loadAttachmentSubmit();
         await restoreExternalFolderReferences(app, bridgeTarget, currentWorkspaceRefs);
       }
-      if (queueOnly && !submitPendingKey) throw new Error("deeper_error:inbox_not_submitted");
+      if (queueOnly && !submitPendingKey) throw new Error("deepzora_error:inbox_not_submitted");
       const target = running ? await captureStableInboxTarget(app, submitTabId || "", inboxSessionPath || "") : undefined;
       const orderedAttachments = sortComposerAttachments(currentAttachments);
       const refs = [

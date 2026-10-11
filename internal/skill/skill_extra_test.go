@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // IsValidName
@@ -292,7 +292,7 @@ func TestCreateProjectScopeRequiresRoot(t *testing.T) {
 
 func TestCreateDirectoryLayoutSkill(t *testing.T) {
 	home := t.TempDir()
-	skillsRoot := filepath.Join(home, ".deeper", "skills", "existing", "SKILL.md")
+	skillsRoot := filepath.Join(home, ".deepzora", "skills", "existing", "SKILL.md")
 	os.MkdirAll(filepath.Dir(skillsRoot), 0o755)
 	os.WriteFile(skillsRoot, []byte("---\ndescription: exists\n---\nbody"), 0o644)
 	st := New(Options{HomeDir: home, DisableBuiltins: true})
@@ -356,7 +356,7 @@ func TestUpdateContentRefusesSymlinkedFlatSkill(t *testing.T) {
 	if err := os.WriteFile(outside, []byte(original), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	root := filepath.Join(home, ".deeper", SkillsDirname)
+	root := filepath.Join(home, ".deepzora", SkillsDirname)
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +384,7 @@ func TestUpdateContentRefusesSymlinkedDirectorySkill(t *testing.T) {
 	if err := os.WriteFile(outside, []byte(original), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	root := filepath.Join(home, ".deeper", SkillsDirname)
+	root := filepath.Join(home, ".deepzora", SkillsDirname)
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -406,7 +406,7 @@ func TestUpdateContentRefusesSymlinkedDirectorySkill(t *testing.T) {
 
 func TestDeleteSymlinkedSkillsRemovesLinksNotTargets(t *testing.T) {
 	home := t.TempDir()
-	root := filepath.Join(home, ".deeper", SkillsDirname)
+	root := filepath.Join(home, ".deepzora", SkillsDirname)
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}

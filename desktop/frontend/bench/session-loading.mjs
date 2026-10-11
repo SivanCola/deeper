@@ -7,7 +7,7 @@ import { createServer } from "vite";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(root, ".pw-browsers");
 const { chromium } = await import("playwright");
-const evidence = process.env.DEEPER_LOADING_EVIDENCE ?? "/tmp/deeper-session-loading-evidence";
+const evidence = process.env.DEEPZORA_LOADING_EVIDENCE ?? "/tmp/deepzora-session-loading-evidence";
 const server = await createServer({ root, logLevel: "error", server: { host: "127.0.0.1", port: 0 } });
 await server.listen();
 let browser;

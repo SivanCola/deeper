@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://deeper.dev/schemas/theme-pack-v2.json",
-  "title": "Deeper Theme Pack V2",
+  "$id": "https://deepzora.dev/schemas/theme-pack-v2.json",
+  "title": "Deepzora Theme Pack V2",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "name", "baseStyle"],

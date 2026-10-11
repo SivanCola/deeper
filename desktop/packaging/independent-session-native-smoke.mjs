@@ -1,5 +1,5 @@
 // Real Electron shell + full App + current Go service, with a disposable home.
-// Build first: cd desktop && go build -o build/bin/deeper-desktop-service .
+// Build first: cd desktop && go build -o build/bin/deepzora-desktop-service .
 // Then: cd electron && pnpm build
 // Also build the renderer: cd desktop/frontend && pnpm build
 // Run: node desktop/packaging/independent-session-native-smoke.mjs [service] [evidence]
@@ -18,9 +18,9 @@ const requireShell = createRequire(join(desktop, "electron/package.json"));
 const requireFrontend = createRequire(join(desktop, "frontend/package.json"));
 const { _electron } = requireShell("playwright");
 const { preview } = await import(requireFrontend.resolve("vite"));
-const service = resolve(process.argv[2] || join(desktop, "build/bin/deeper-desktop-service"));
-const evidence = resolve(process.argv[3] || join(tmpdir(), "deeper-independent-native"));
-const home = mkdtempSync(join(tmpdir(), "deeper-independent-native-home-"));
+const service = resolve(process.argv[2] || join(desktop, "build/bin/deepzora-desktop-service"));
+const evidence = resolve(process.argv[3] || join(tmpdir(), "deepzora-independent-native"));
+const home = mkdtempSync(join(tmpdir(), "deepzora-independent-native-home-"));
 mkdirSync(evidence, { recursive: true });
 const checks = [];
 const errors = [];
@@ -45,7 +45,7 @@ writeFileSync(join(home, "config.toml"), `default_model = "fixture/model"\n[desk
 assert.ok(existsSync(join(desktop, "frontend/dist/index.html")), "build the renderer before native qualification");
 const vite = await preview({ root: join(desktop, "frontend"), logLevel: "error", preview: { host: "127.0.0.1", port: 0 } });
 let application, page;
-const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deeperDesktop.invoke(method, args), { method, args });
+const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deepzoraDesktop.invoke(method, args), { method, args });
 const active = async () => {
   const tabs = await invoke("ListTabs");
   return tabs.find(tab => tab.active) ?? (tabs.length === 1 ? tabs[0] : undefined);
@@ -67,17 +67,17 @@ const row = title => page.locator(".project-tree__topic-main").filter({ has: pag
 const settle = () => waitForSmokeCondition(async () => (await invoke("ListTabs")).every(tab => !tab.running));
 async function launch() {
   application = await _electron.launch({ args: [join(desktop, "electron")], env: {
-    ...packagedSmokeEnv(process.env, home), DEEPER_DEV: "1", DEEPER_DESKTOP_SERVICE: service,
-    DEEPER_ELECTRON_DEV_URL: `http://127.0.0.1:${vite.httpServer.address().port}`,
+    ...packagedSmokeEnv(process.env, home), DEEPZORA_DEV: "1", DEEPZORA_DESKTOP_SERVICE: service,
+    DEEPZORA_ELECTRON_DEV_URL: `http://127.0.0.1:${vite.httpServer.address().port}`,
     INDEPENDENT_FIXTURE_KEY: "loopback-only",
   }, timeout: 60_000 });
   page = await application.firstWindow();
   page.setDefaultTimeout(30000);
   page.on("pageerror", error => errors.push(error.message));
-  await page.waitForFunction(() => Boolean(window.deeperDesktop));
+  await page.waitForFunction(() => Boolean(window.deepzoraDesktop));
   await page.evaluate(() => new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("native service readiness timed out")), 30000);
-    const off = window.deeperDesktop.native.onServiceState(state => {
+    const off = window.deepzoraDesktop.native.onServiceState(state => {
       if (state.phase === "ready") queueMicrotask(() => { clearTimeout(timeout); off(); resolve(); });
       else if (["failed", "exited"].includes(state.phase)) queueMicrotask(() => { clearTimeout(timeout); off(); reject(new Error(JSON.stringify(state))); });
     });

@@ -2,7 +2,7 @@ package main
 
 import "strings"
 
-const ozonePlatformEnv = "DEEPER_OZONE_PLATFORM"
+const ozonePlatformEnv = "DEEPZORA_OZONE_PLATFORM"
 
 // shellOzoneArgs prefixes --ozone-platform=x11 under a Wayland session that
 // also offers XWayland: Electron picks Wayland by itself there, and on drivers

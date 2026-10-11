@@ -5,8 +5,8 @@ import (
 	"errors"
 	"os"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 func existingTranscript(path string) bool {

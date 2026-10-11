@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/taskcontract"
+	"deepzora/internal/taskcontract"
 )
 
 func TestSetQualityFloorNormalizesVocabulary(t *testing.T) {

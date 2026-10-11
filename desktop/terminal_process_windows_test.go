@@ -41,7 +41,7 @@ func TestWindowsTerminalProcessConPTYSmoke(t *testing.T) {
 		t.Fatalf("resize ConPTY: %v", err)
 	}
 
-	const marker = "deeper-conpty-smoke"
+	const marker = "deepzora-conpty-smoke"
 	readResult := make(chan error, 1)
 	markerSeen := make(chan struct{})
 	go func() {

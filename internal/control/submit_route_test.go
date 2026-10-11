@@ -3,7 +3,7 @@ package control
 import (
 	"testing"
 
-	"deeper/internal/command"
+	"deepzora/internal/command"
 )
 
 func TestClassifySubmitRouteSeparatesManagementFromTurns(t *testing.T) {

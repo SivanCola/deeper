@@ -14,20 +14,20 @@ const { chromium, _electron } = await import("playwright");
 const electron = process.argv.includes("--electron");
 const nativeInput = process.argv.includes("--native-input");
 assert.ok(!nativeInput || electron, "native input requires Electron");
-const evidence = process.env.DEEPER_HANDOFF_EVIDENCE ?? path.join(tmpdir(), "deeper-handoff-evidence");
+const evidence = process.env.DEEPZORA_HANDOFF_EVIDENCE ?? path.join(tmpdir(), "deepzora-handoff-evidence");
 await mkdir(evidence, { recursive: true });
 const server = await createServer({ root, server: { host: "127.0.0.1", port: 0 } });
 await server.listen();
 const url = `http://127.0.0.1:${server.httpServer.address().port}/bench/submission-handoff.html`;
 console.log(url);
-const host = await mkdtemp(path.join(tmpdir(), "deeper-handoff-host-"));
+const host = await mkdtemp(path.join(tmpdir(), "deepzora-handoff-host-"));
 let browser, app;
 const report = { host: electron ? "electron" : "chromium", actions: [], rounds: [], errors: [], nativeInput: "not_run", complete: false };
 try {
   let page;
   if (electron) {
     await copyFile(path.join(root, nativeInput ? "bench/submission-native-electron.cjs" : "bench/transcript-layout-electron.cjs"), path.join(host, "main.cjs"));
-    app = await _electron.launch({ executablePath: createRequire(path.join(root, "../electron/package.json"))("electron"), args: [path.join(host, "main.cjs")], env: { ...process.env, DEEPER_LAYOUT_URL: url } });
+    app = await _electron.launch({ executablePath: createRequire(path.join(root, "../electron/package.json"))("electron"), args: [path.join(host, "main.cjs")], env: { ...process.env, DEEPZORA_LAYOUT_URL: url } });
     page = await app.firstWindow();
   } else {
     browser = await chromium.launch({ headless: true });
@@ -35,7 +35,7 @@ try {
   }
   page.on("pageerror", error => report.errors.push(error.message));
   page.on("console", message => { if (message.type() === "error" && /same key|unique.*key|Maximum update|Uncaught/i.test(message.text())) report.errors.push(message.text()); });
-  await page.addInitScript(() => { window.handoffWrites = []; window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__ = write => window.handoffWrites.push(write); });
+  await page.addInitScript(() => { window.handoffWrites = []; window.__DEEPZORA_TRANSCRIPT_SCROLL_WRITE__ = write => window.handoffWrites.push(write); });
   await page.goto(url);
   await page.waitForFunction(() => Boolean(window.handoff));
   const frame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));

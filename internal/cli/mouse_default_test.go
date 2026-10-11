@@ -6,7 +6,7 @@ import "testing"
 // (which blocks the terminal's native selection over SSH) starts off in a
 // remote session unless the user forces it back on.
 func TestMouseCaptureDefaultsOffOverSSH(t *testing.T) {
-	for _, k := range []string{"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY", "DEEPER_DISABLE_MOUSE"} {
+	for _, k := range []string{"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY", "DEEPZORA_DISABLE_MOUSE"} {
 		t.Setenv(k, "")
 	}
 	if mouseCaptureOffByDefault() {
@@ -16,13 +16,13 @@ func TestMouseCaptureDefaultsOffOverSSH(t *testing.T) {
 	if !mouseCaptureOffByDefault() {
 		t.Fatal("SSH sessions must start with native mouse (capture off)")
 	}
-	t.Setenv("DEEPER_DISABLE_MOUSE", "0")
+	t.Setenv("DEEPZORA_DISABLE_MOUSE", "0")
 	if mouseCaptureOffByDefault() {
-		t.Fatal("DEEPER_DISABLE_MOUSE=0 must force capture on even over SSH")
+		t.Fatal("DEEPZORA_DISABLE_MOUSE=0 must force capture on even over SSH")
 	}
-	t.Setenv("DEEPER_DISABLE_MOUSE", "1")
+	t.Setenv("DEEPZORA_DISABLE_MOUSE", "1")
 	t.Setenv("SSH_TTY", "")
 	if !mouseCaptureOffByDefault() {
-		t.Fatal("DEEPER_DISABLE_MOUSE=1 keeps capture off locally")
+		t.Fatal("DEEPZORA_DISABLE_MOUSE=1 keeps capture off locally")
 	}
 }

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 // Close the host rather than its initial controller: resume and model changes

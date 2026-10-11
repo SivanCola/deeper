@@ -5,10 +5,10 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 var errSessionWorkspaceConflict = errors.New("session workspace identity is inconsistent; the session files were left unchanged")

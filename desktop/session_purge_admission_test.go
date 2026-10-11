@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 func TestPurgeCommandUnrelatedSessionMustNotBlockPurge(t *testing.T) {

@@ -15,7 +15,7 @@ func (p ProjectProgram) Verify() error {
 	if len(p.Files) == 0 || p.currentDigest() == p.Digest {
 		return nil
 	}
-	return fmt.Errorf("%w: %s %q; approve it again with `deeper trust`", ErrProjectProgramChanged, p.Kind, p.Name)
+	return fmt.Errorf("%w: %s %q; approve it again with `deepzora trust`", ErrProjectProgramChanged, p.Kind, p.Name)
 }
 
 // ProjectProgramVerifier returns the check an executor runs before starting the

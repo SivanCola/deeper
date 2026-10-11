@@ -1,6 +1,6 @@
 package recovery
 
-import "deeper/internal/extension"
+import "deepzora/internal/extension"
 
 // AssessRuntimeResume returns whether checkpoint/session resume can claim a
 // clean rollback for the published (or given) runtime generation.

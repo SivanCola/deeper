@@ -20,12 +20,12 @@ func TestOwnedShortcutTargetCoversStableAndVersionedEntries(t *testing.T) {
 		target string
 		want   bool
 	}{
-		{filepath.Join(root, "deeper-launcher.exe"), true},
-		{filepath.Join(root, "Deeper.exe"), true},
-		{filepath.Join(root, "deeper-desktop.exe"), true},
-		{filepath.Join(root, "versions", "v1.20.0", "deeper-desktop.exe"), true},
-		{filepath.Join(root, "versions", "v1.20.0", "deeper-cli.exe"), false},
-		{filepath.Join(`D:\Apps`, "Deeper", "deeper-launcher.exe"), false},
+		{filepath.Join(root, "deepzora-launcher.exe"), true},
+		{filepath.Join(root, "Deepzora.exe"), true},
+		{filepath.Join(root, "deepzora-desktop.exe"), true},
+		{filepath.Join(root, "versions", "v1.20.0", "deepzora-desktop.exe"), true},
+		{filepath.Join(root, "versions", "v1.20.0", "deepzora-cli.exe"), false},
+		{filepath.Join(`D:\Apps`, "Deepzora", "deepzora-launcher.exe"), false},
 	}
 	for _, test := range tests {
 		if got := ownedShortcutTarget(test.target, root); got != test.want {
@@ -34,20 +34,20 @@ func TestOwnedShortcutTargetCoversStableAndVersionedEntries(t *testing.T) {
 	}
 }
 
-func TestDeeperShortcutName(t *testing.T) {
+func TestDeepzoraShortcutName(t *testing.T) {
 	tests := []struct {
 		name string
 		want bool
 	}{
-		{"Deeper.lnk", true},
-		{"deeper launcher.LNK", true},
-		{"Deeper (2).lnk", true},
+		{"Deepzora.lnk", true},
+		{"deepzora launcher.LNK", true},
+		{"Deepzora (2).lnk", true},
 		{"Other.lnk", false},
-		{"Deeper.exe", false},
+		{"Deepzora.exe", false},
 	}
 	for _, test := range tests {
-		if got := deeperShortcutName(test.name); got != test.want {
-			t.Errorf("deeperShortcutName(%q) = %v, want %v", test.name, got, test.want)
+		if got := deepzoraShortcutName(test.name); got != test.want {
+			t.Errorf("deepzoraShortcutName(%q) = %v, want %v", test.name, got, test.want)
 		}
 	}
 }
@@ -58,14 +58,14 @@ func TestOwnedShortcutTargetAcceptsVersionedDesktopThroughJunction(t *testing.T)
 	if err := os.MkdirAll(versionDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(versionDir, "deeper-desktop.exe"), []byte("desktop"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(versionDir, "deepzora-desktop.exe"), []byte("desktop"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	junction := filepath.Join(t.TempDir(), "current")
 	if output, err := exec.Command("cmd", "/c", "mklink", "/J", junction, root).CombinedOutput(); err != nil {
 		t.Fatalf("create directory junction: %v: %s", err, output)
 	}
-	target := filepath.Join(junction, "versions", "v1.20.0", "deeper-desktop.exe")
+	target := filepath.Join(junction, "versions", "v1.20.0", "deepzora-desktop.exe")
 	if !ownedShortcutTarget(target, root) {
 		resolvedRoot, rootErr := existingShortcutPath(root)
 		resolvedTarget, targetErr := resolveShortcutTarget(target)
@@ -78,11 +78,11 @@ func TestOwnedShortcutTargetAcceptsVersionedDesktopThroughJunction(t *testing.T)
 
 func TestRepairOwnedShortcutPersistsAppUserModelID(t *testing.T) {
 	root := t.TempDir()
-	target := filepath.Join(root, "Deeper.exe")
+	target := filepath.Join(root, "Deepzora.exe")
 	if err := os.WriteFile(target, []byte("launcher"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	shortcutPath := filepath.Join(root, "Deeper.lnk")
+	shortcutPath := filepath.Join(root, "Deepzora.lnk")
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -121,14 +121,14 @@ func TestRepairOwnedShortcutPersistsAppUserModelID(t *testing.T) {
 	}
 }
 
-func TestRepairOwnedShortcutLeavesSeparateDeeper053InstallUntouched(t *testing.T) {
+func TestRepairOwnedShortcutLeavesSeparateDeepzora053InstallUntouched(t *testing.T) {
 	currentRoot := t.TempDir()
 	legacyRoot := t.TempDir()
-	legacyTarget := filepath.Join(legacyRoot, "deeper-desktop.exe")
+	legacyTarget := filepath.Join(legacyRoot, "deepzora-desktop.exe")
 	if err := os.WriteFile(legacyTarget, []byte("legacy tauri desktop"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	shortcutPath := filepath.Join(t.TempDir(), "Deeper.lnk")
+	shortcutPath := filepath.Join(t.TempDir(), "Deepzora.lnk")
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -154,7 +154,7 @@ func TestRepairOwnedShortcutLeavesSeparateDeeper053InstallUntouched(t *testing.T
 		t.Fatal(err)
 	}
 	if changed {
-		t.Fatal("current install rewrote a shortcut owned by a separate Deeper 0.53 installation")
+		t.Fatal("current install rewrote a shortcut owned by a separate Deepzora 0.53 installation")
 	}
 
 	shortcut, err = loadShortcut(shortcutPath, stgmReadWrite)

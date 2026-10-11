@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func sinkKinds(evs []event.Event) []event.Kind {

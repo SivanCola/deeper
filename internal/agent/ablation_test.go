@@ -3,8 +3,8 @@ package agent
 import (
 	"testing"
 
-	"deeper/internal/ablation"
-	"deeper/internal/evidence"
+	"deepzora/internal/ablation"
+	"deepzora/internal/evidence"
 )
 
 func TestEvidenceAblationStandsDownTheReadinessGate(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestRecoveryGCStartupWaitIsCancellationAware(t *testing.T) {
@@ -171,9 +171,9 @@ func TestRecoveryGCFirstSweepWaitsForTabRestore(t *testing.T) {
 }
 
 func TestRecoveryGCRunsDespiteSafeModeEnv(t *testing.T) {
-	// v1.20+: GC is no longer suppressed by DEEPER_SAFE_MODE.
+	// v1.20+: GC is no longer suppressed by DEEPZORA_SAFE_MODE.
 	isolateDesktopUserDirs(t)
-	t.Setenv("DEEPER_SAFE_MODE", "1")
+	t.Setenv("DEEPZORA_SAFE_MODE", "1")
 	root := globalTabWorkspaceRoot()
 	dir := desktopSessionDir(root)
 	if err := os.MkdirAll(dir, 0o755); err != nil {

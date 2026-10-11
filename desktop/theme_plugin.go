@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/config"
+	"deepzora/internal/pluginpkg"
 )
 
-// Plugin themes are .deeper-theme packs contributed by ENABLED installed
+// Plugin themes are .deepzora-theme packs contributed by ENABLED installed
 // plugins (Manifest v1 contributes.themes globs). They are read-only: they are
 // never copied into the user theme library, never staged, and never mutated —
 // every read goes straight to the ZIP inside the plugin root. The external id
@@ -61,7 +61,7 @@ type pluginTheme struct {
 	id         string // plugin:<pluginName>:<themeID>
 	pluginName string // installed plugin name (for view badging)
 	themeID    string // the pack manifest's own id
-	path       string // absolute path of the .deeper-theme ZIP
+	path       string // absolute path of the .deepzora-theme ZIP
 	manifest   *ThemePackManifest
 	digests    map[string]string // lowercase scene image name -> content digest
 	warnings   []string          // non-fatal discovery issues of the same plugin
@@ -74,7 +74,7 @@ type pluginTheme struct {
 // Disabled plugins are skipped by pluginpkg.LoadInstalled; uninstalling a
 // plugin simply makes its themes disappear from the result.
 func discoverPluginThemes() ([]pluginTheme, []string) {
-	pkgs, warnings := pluginpkg.LoadInstalled(config.DeeperHomeDir())
+	pkgs, warnings := pluginpkg.LoadInstalled(config.DeepzoraHomeDir())
 	var out []pluginTheme
 	seen := map[string]bool{}
 	for i := range pkgs {

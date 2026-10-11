@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/extensioncontract"
-	"deeper/internal/provider"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/extensioncontract"
+	"deepzora/internal/provider"
 )
 
 func TestRebuildPlanNoOpCacheGuard(t *testing.T) {

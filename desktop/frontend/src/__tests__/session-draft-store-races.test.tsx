@@ -170,7 +170,7 @@ try {
   const attachmentFinished = deferred<void>();
   const attachmentTask = attachmentFinished.promise.then(() => owner.updateContentFor(sourceDraftId, sourceGeneration, {
     ...content("acknowledgement recovered"),
-    attachments: [{ path: ".deeper/attachments/background.txt", name: "background.txt", mime: "text/plain" }],
+    attachments: [{ path: ".deepzora/attachments/background.txt", name: "background.txt", mime: "text/plain" }],
   }));
   act(() => { owner.trackTask(sourceDraftId, sourceGeneration, attachmentTask); });
   await act(async () => { await owner.open("project", "/workspace/b"); });
@@ -179,7 +179,7 @@ try {
     await attachmentTask;
   });
   await act(async () => { await owner.flushDraft(sourceDraftId); });
-  assert.equal(JSON.parse(drafts.get("draft-a")!.contentJson).attachments[0]?.path, ".deeper/attachments/background.txt",
+  assert.equal(JSON.parse(drafts.get("draft-a")!.contentJson).attachments[0]?.path, ".deepzora/attachments/background.txt",
     "an attachment completed in the background is persisted to its captured draft");
 
   await act(async () => { await owner.open("project", "/workspace/a"); });
@@ -210,7 +210,7 @@ try {
     settings: { ...inherited.settings, model: "fixture/default-next", modelSource: "default" },
   });
   await act(async () => {
-    window.dispatchEvent(new dom.window.Event("deeper:model-catalog-changed"));
+    window.dispatchEvent(new dom.window.Event("deepzora:model-catalog-changed"));
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
   assert.equal(owner.surface?.settings.model, "fixture/default-next",
@@ -224,8 +224,8 @@ try {
   await act(async () => { await owner.flush(); await owner.open("project", "/workspace/a"); });
   contextResponses.push(olderRefresh.promise, newerRefresh.promise);
   act(() => {
-    window.dispatchEvent(new dom.window.Event("deeper:model-catalog-changed"));
-    window.dispatchEvent(new dom.window.Event("deeper:model-catalog-changed"));
+    window.dispatchEvent(new dom.window.Event("deepzora:model-catalog-changed"));
+    window.dispatchEvent(new dom.window.Event("deepzora:model-catalog-changed"));
   });
   const refreshed = structuredClone(drafts.get("draft-a")!);
   await act(async () => {
@@ -238,7 +238,7 @@ try {
 
   const delayedRefresh = deferred<SessionDraftView>();
   contextResponses.push(delayedRefresh.promise);
-  act(() => window.dispatchEvent(new dom.window.Event("deeper:model-catalog-changed")));
+  act(() => window.dispatchEvent(new dom.window.Event("deepzora:model-catalog-changed")));
   const reopened = { ...refreshed, settings: { ...refreshed.settings, model: "fixture/reopened" } };
   drafts.set("draft-a", reopened);
   await act(async () => { await owner.open("project", "/workspace/a"); });
@@ -264,7 +264,7 @@ try {
   await act(async () => { await owner.open("project", "/workspace/a"); });
   act(() => owner.updateSettings({ model: "fixture/pinned", modelSource: "explicit" }));
   await act(async () => {
-    window.dispatchEvent(new dom.window.Event("deeper:model-catalog-changed"));
+    window.dispatchEvent(new dom.window.Event("deepzora:model-catalog-changed"));
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
   assert.equal(owner.surface?.settings.model, "fixture/pinned",

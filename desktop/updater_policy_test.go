@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func setDesktopBuildIdentityForTest(t *testing.T, buildVersion, buildChannel string) {

@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 // TestGatewayNewSessionPinsRotatedPathAgainstFallback: /new 旋转出新会话后，

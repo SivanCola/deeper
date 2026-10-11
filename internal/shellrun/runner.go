@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/proc"
-	"deeper/internal/tool"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/proc"
+	"deepzora/internal/tool"
 )
 
 // DefaultWaitDelay mirrors the shell tool's child-process wait grace.

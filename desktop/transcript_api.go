@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"deeper/internal/control"
-	"deeper/internal/transcript"
+	"deepzora/internal/control"
+	"deepzora/internal/transcript"
 )
 
 // ResumeTranscriptSessionForTab adopts a session without materializing a legacy

@@ -11,10 +11,10 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/fileops"
-	"deeper/internal/historywork"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/historywork"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // Schema-1 replace/append logs retain original message locations. A large

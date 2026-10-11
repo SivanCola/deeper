@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // Decode before converting to value fields: missing false/zero facts are not

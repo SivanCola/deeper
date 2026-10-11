@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/pluginpkg"
 )
 
 // installFakePlugin writes a v1 manifest for a fake sidecar package and

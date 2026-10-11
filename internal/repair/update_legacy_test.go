@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/installlayout"
+	"deepzora/internal/installlayout"
 )
 
 type supersededUpdateFixture struct {
@@ -34,14 +34,14 @@ type supersededAppUpdateFixture struct {
 func prepareSupersededAppUpdateFixture(t *testing.T, withBackup, withBackupIdentity bool) supersededAppUpdateFixture {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	root := t.TempDir()
 	if resolved, err := filepath.EvalSymlinks(root); err == nil {
 		root = resolved
 	}
-	target := filepath.Join(root, "Deeper.app")
+	target := filepath.Join(root, "Deepzora.app")
 	marker := filepath.Join(target, "Contents", "Resources", "release.txt")
-	executable := filepath.Join(target, "Contents", "MacOS", "deeper-desktop")
+	executable := filepath.Join(target, "Contents", "MacOS", "deepzora-desktop")
 	for _, path := range []string{marker, executable} {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
@@ -50,7 +50,7 @@ func prepareSupersededAppUpdateFixture(t *testing.T, withBackup, withBackupIdent
 			t.Fatal(err)
 		}
 	}
-	backup := target + ".deeper-update-backup"
+	backup := target + ".deepzora-update-backup"
 	if withBackup {
 		backupMarker := filepath.Join(backup, "Contents", "Resources", "release.txt")
 		if err := os.MkdirAll(filepath.Dir(backupMarker), 0o755); err != nil {
@@ -105,7 +105,7 @@ func TestArchiveSupersededPendingAppBundleUpdatePreservesLegacyBackup(t *testing
 	if _, err := os.Lstat(fixture.backup); !os.IsNotExist(err) {
 		t.Fatalf("public rollback path survived: %v", err)
 	}
-	backups, err := filepath.Glob(fixture.backup + ".deeper-retired-*")
+	backups, err := filepath.Glob(fixture.backup + ".deepzora-retired-*")
 	if err != nil || len(backups) != 1 {
 		t.Fatalf("archived backups=%v err=%v", backups, err)
 	}
@@ -141,8 +141,8 @@ func TestArchiveSupersededPendingAppBundleUpdateHealsMissingBackup(t *testing.T)
 func recordHandoff(t *testing.T, tx *UpdateTransaction, ownerPID int, appTreeID string) {
 	t.Helper()
 	tx.HandoffOwnerPID = ownerPID
-	tx.HandoffStagingPath = filepath.Join(os.TempDir(), "deeper-mac-update-legacy-test")
-	tx.HandoffAppPath = filepath.Join(tx.HandoffStagingPath, "Deeper.app")
+	tx.HandoffStagingPath = filepath.Join(os.TempDir(), "deepzora-mac-update-legacy-test")
+	tx.HandoffAppPath = filepath.Join(tx.HandoffStagingPath, "Deepzora.app")
 	tx.HandoffAppTreeID = appTreeID
 	tx.HandoffStagingTreeID = strings.Repeat("c", 64)
 	if err := overwritePendingUpdateForTest(tx); err != nil {
@@ -211,7 +211,7 @@ func TestArchiveSupersededPendingAppBundleUpdateRetiresUnverifiableBackupAtTarge
 	if _, err := os.Lstat(PendingUpdatePath()); !os.IsNotExist(err) {
 		t.Fatalf("pending transaction survived: %v", err)
 	}
-	backups, err := filepath.Glob(fixture.backup + ".deeper-retired-*")
+	backups, err := filepath.Glob(fixture.backup + ".deepzora-retired-*")
 	if err != nil || len(backups) != 1 {
 		t.Fatalf("archived backups=%v err=%v", backups, err)
 	}
@@ -285,7 +285,7 @@ func TestArchiveSupersededPendingAppBundleUpdatePreservesRecreatedBackupPath(t *
 	if body, err := os.ReadFile(filepath.Join(fixture.backup, "Contents", "Resources", "release.txt")); err != nil || string(body) != "concurrently recreated backup" {
 		t.Fatalf("recreated public backup changed=%q err=%v", body, err)
 	}
-	backups, err := filepath.Glob(fixture.backup + ".deeper-retired-*")
+	backups, err := filepath.Glob(fixture.backup + ".deepzora-retired-*")
 	if err != nil || len(backups) != 1 {
 		t.Fatalf("preserved archived backups=%v err=%v", backups, err)
 	}
@@ -297,7 +297,7 @@ func TestArchiveSupersededPendingAppBundleUpdatePreservesRecreatedBackupPath(t *
 func prepareSupersededUpdateFixture(t *testing.T, pendingVersion, runningVersion string) supersededUpdateFixture {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	root := t.TempDir()
 	originalExecutable := repairExecutable
 	t.Cleanup(func() { repairExecutable = originalExecutable })
@@ -306,7 +306,7 @@ func prepareSupersededUpdateFixture(t *testing.T, pendingVersion, runningVersion
 	if err := os.WriteFile(target, []byte("old desktop"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	guardName := "deeper-guard"
+	guardName := "deepzora-guard"
 	if runtime.GOOS == "windows" {
 		guardName += ".exe"
 	}
@@ -563,7 +563,7 @@ func TestArchiveSupersededPendingFileUpdateSerializesConcurrentRecovery(t *testi
 }
 
 func TestArchiveSupersededPendingFileUpdateRejectsMalformedTransaction(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	body := `{"schemaVersion":1,"toVersion":`
 	writePendingUpdateRaw(t, body)
 	if archived, err := ArchiveSupersededPendingFileUpdate("v1.20.0", t.TempDir()); err == nil || archived {

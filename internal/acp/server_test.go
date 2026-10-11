@@ -12,16 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/agent/testutil"
-	"deeper/internal/command"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/hook"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/command"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/hook"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // fakes: a Factory wrapping a behavior-driven runner in a real Controller
@@ -389,7 +389,7 @@ func startServer(t *testing.T, factory Factory) (*rpcClient, func()) {
 	outR, outW := io.Pipe()
 	done := make(chan struct{})
 	go func() {
-		_ = Serve(context.Background(), inR, outW, factory, AgentInfo{Name: "deeper-test", Version: "0"})
+		_ = Serve(context.Background(), inR, outW, factory, AgentInfo{Name: "deepzora-test", Version: "0"})
 		close(done)
 	}()
 	client := newRPCClient(inW, outR)
@@ -450,7 +450,7 @@ func startOrderedServer(t *testing.T, factory Factory) (*orderedRPCClient, func(
 	outR, outW := io.Pipe()
 	done := make(chan struct{})
 	go func() {
-		_ = Serve(context.Background(), inR, outW, factory, AgentInfo{Name: "deeper-test", Version: "0"})
+		_ = Serve(context.Background(), inR, outW, factory, AgentInfo{Name: "deepzora-test", Version: "0"})
 		close(done)
 	}()
 	client := newOrderedRPCClient(inW, outR)
@@ -617,30 +617,30 @@ func TestServeLifecycle(t *testing.T) {
 	}
 	var extensions struct {
 		AgentCapabilities struct {
-			Meta map[string]DeeperExtensionCapabilities `json:"_meta"`
+			Meta map[string]DeepzoraExtensionCapabilities `json:"_meta"`
 		} `json:"agentCapabilities"`
 	}
 	if err := json.Unmarshal(initResp.Result, &extensions); err != nil {
 		t.Fatalf("initialize extensions: %v", err)
 	}
-	steer := extensions.AgentCapabilities.Meta["deeper.io"].SessionSteer
+	steer := extensions.AgentCapabilities.Meta["deepzora.com"].SessionSteer
 	if steer == nil || steer.Method != sessionSteerMethod {
 		t.Errorf("sessionSteer capability = %+v, want method %q", steer, sessionSteerMethod)
 	}
 	for _, method := range []string{sessionStatusMethod, sessionStatusUpdateMethod} {
 		capability, ok := ir.AgentCapabilities.Meta[method].(map[string]any)
-		if !ok || capability["schemaVersion"] != float64(deeperStatusSchemaVersion) {
-			t.Errorf("%s capability = %#v, want schemaVersion %d", method, ir.AgentCapabilities.Meta[method], deeperStatusSchemaVersion)
+		if !ok || capability["schemaVersion"] != float64(deepzoraStatusSchemaVersion) {
+			t.Errorf("%s capability = %#v, want schemaVersion %d", method, ir.AgentCapabilities.Meta[method], deepzoraStatusSchemaVersion)
 		}
 	}
-	if len(ir.AuthMethods) != 1 || ir.AuthMethods[0].ID != "deeper-setup" || ir.AuthMethods[0].Type != "terminal" {
-		t.Fatalf("authMethods = %+v, want terminal deeper setup", ir.AuthMethods)
+	if len(ir.AuthMethods) != 1 || ir.AuthMethods[0].ID != "deepzora-setup" || ir.AuthMethods[0].Type != "terminal" {
+		t.Fatalf("authMethods = %+v, want terminal deepzora setup", ir.AuthMethods)
 	}
 	if len(ir.AuthMethods[0].Args) != 1 || ir.AuthMethods[0].Args[0] != "setup" {
 		t.Fatalf("auth args = %+v, want [setup]", ir.AuthMethods[0].Args)
 	}
 
-	authResp := client.call(t, "authenticate", AuthenticateParams{MethodID: "deeper-setup"})
+	authResp := client.call(t, "authenticate", AuthenticateParams{MethodID: "deepzora-setup"})
 	if authResp.Error != nil {
 		t.Fatalf("authenticate errored: %+v", authResp.Error)
 	}

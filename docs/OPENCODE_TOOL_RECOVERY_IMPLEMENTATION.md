@@ -27,7 +27,7 @@ The candidate asks for actual permitted tool use, evidence-based completion and 
 
 ## Live Kimi comparison
 
-OpenCode Go `kimi-k3`, Chat protocol, low/max effort, three fixture operations, ten trials per profile in every cell: **120 completed trials**. Baseline uses the existing default/system policies; the candidate appends only the fixed instruction. Concurrency was four. Files and marker values were isolated and generated per trial. Verification launches only a fixed verifier with no provider credentials in its child environment. This runs Deeper against Go; it is not an OpenCode executable benchmark.
+OpenCode Go `kimi-k3`, Chat protocol, low/max effort, three fixture operations, ten trials per profile in every cell: **120 completed trials**. Baseline uses the existing default/system policies; the candidate appends only the fixed instruction. Concurrency was four. Files and marker values were isolated and generated per trial. Verification launches only a fixed verifier with no provider credentials in its child environment. This runs Deepzora against Go; it is not an OpenCode executable benchmark.
 
 | Effort / operation | Baseline completed | Candidate completed | Requests baseline / candidate | Prompt + output tokens baseline / candidate |
 |---|---:|---:|---:|---:|

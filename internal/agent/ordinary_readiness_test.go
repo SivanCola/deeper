@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/instruction"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/instruction"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestTargetedTurnReturnsIncompleteReceiptInsteadOfReadinessRecovery(t *testing.T) {

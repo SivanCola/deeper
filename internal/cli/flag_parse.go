@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 
 	"github.com/spf13/pflag"
 )

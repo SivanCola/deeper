@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 	"encoding/json"
 	"path/filepath"
 	"strings"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestPluginDryRunPreservesApprovalPlan(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	t.Chdir(t.TempDir())
 	source := filepath.Join(t.TempDir(), "demo")
 	writePluginTestFile(t, filepath.Join(source, pluginpkg.CodexManifest), `{"name":"demo","version":"1.0.0","description":"Demo","skills":"skills"}`)

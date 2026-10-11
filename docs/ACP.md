@@ -8,7 +8,7 @@
 &nbsp;·&nbsp;
 <a href="https://agentclientprotocol.com/">ACP specification</a>
 
-Deeper implements Agent Client Protocol (ACP) v1 as an NDJSON JSON-RPC 2.0
+Deepzora implements Agent Client Protocol (ACP) v1 as an NDJSON JSON-RPC 2.0
 agent over standard input and output. Editors and other ACP hosts launch the
 process, open one or more workspace-scoped sessions, and receive streamed
 messages, tool activity, plans, permission requests, and configuration updates.
@@ -24,23 +24,23 @@ See [Billing](./BILLING.md).
 An ACP host should launch one of these commands:
 
 ```sh
-deeper acp
-deeper acp --model deepseek-pro
-deeper acp
+deepzora acp
+deepzora acp --model deepseek-pro
+deepzora acp
 ```
 
 `--model` selects the startup model when the client does not override it.
 Ordinary requests always enter the executor. There is no automatic simple /
 light / full task mode. Verification obligations come from real tool actions.
 
-Standard output is reserved for ACP messages. Deeper sends diagnostics to
-standard error, so hosts must not merge the two streams. Run `deeper setup`
+Standard output is reserved for ACP messages. Deepzora sends diagnostics to
+standard error, so hosts must not merge the two streams. Run `deepzora setup`
 beforehand when no provider is configured; the initialize response also
-advertises a terminal authentication method that launches `deeper setup`.
+advertises a terminal authentication method that launches `deepzora setup`.
 
 ## Initialize and negotiate capabilities
 
-Clients should call `initialize` before opening a session. Deeper advertises
+Clients should call `initialize` before opening a session. Deepzora advertises
 the following capability shape (irrelevant fields omitted):
 
 ```json
@@ -64,9 +64,9 @@ the following capability shape (irrelevant fields omitted):
       "sse": false
     },
     "_meta": {
-      "deeper.io": {
+      "deepzora.com": {
         "sessionSteer": {
-          "method": "_deeper.io/session/steer"
+          "method": "_deepzora.com/session/steer"
         }
       }
     }
@@ -75,26 +75,26 @@ the following capability shape (irrelevant fields omitted):
 ```
 
 When the client advertises `fs.readTextFile`, `fs.writeTextFile`, or
-`terminal`, Deeper routes eligible file operations through the editor's
+`terminal`, Deepzora routes eligible file operations through the editor's
 unsaved buffers and eligible foreground commands through a client-owned
 terminal. Every file tool takes part — reads, edits and writes alike — so an
 edit applies to what the editor currently shows instead of to the last saved
 copy on disk. A non-UTF-8 file is not eligible: the ACP file methods are
 text-only, so it stays on the local encoding-preserving path and keeps its
 original charset. Without those client capabilities, the normal workspace
-tools run locally inside the Deeper process.
+tools run locally inside the Deepzora process.
 
 ## Opt-in MCP interaction extension
 
 Hosts supporting MCP elicitation advertise this in `initialize.clientCapabilities`:
 
 ```json
-{"_meta":{"deeper.io":{"mcpInteraction":{"supported":true,"schemaVersion":1}}}}
+{"_meta":{"deepzora.com":{"mcpInteraction":{"supported":true,"schemaVersion":1}}}}
 ```
 
-Deeper advertises the matching capability under
-`agentCapabilities._meta.deeper.io.mcpInteraction`, including the method
-`_deeper.io/mcp/request_interaction`. Negotiated sessions use the interactive
+Deepzora advertises the matching capability under
+`agentCapabilities._meta.deepzora.com.mcpInteraction`, including the method
+`_deepzora.com/mcp/request_interaction`. Negotiated sessions use the interactive
 MCP host profile. Clients without this exact opt-in keep the core profile and
 receive no new reverse requests. This applies to new, loaded and rebuilt sessions.
 
@@ -107,14 +107,14 @@ Hosts that cannot render a requested interaction should cancel it.
 
 Replies belong to the originating controller and turn. Cancellation, malformed
 replies and rejected URLs cancel the interaction; content is ignored unless the
-action is `accept`. Deeper persists the decision through the controller before
+action is `accept`. Deepzora persists the decision through the controller before
 releasing its MCP waiter. This does not replace standard
 `session/request_permission` or change tool permission policy. The negotiated
 host profile affects MCP capability/cache identity; transcript schema is unchanged.
 
 ## Session lifecycle
 
-Each ACP session owns an independent Deeper controller, workspace root, model,
+Each ACP session owns an independent Deepzora controller, workspace root, model,
 collaboration mode, approval mode, MCP set, and persisted transcript. State does
 not leak between sessions.
 
@@ -130,13 +130,13 @@ not leak between sessions.
 | `session/delete` | Stops the session and removes its persisted ACP history. |
 
 `session/new`, `session/load`, and `session/resume` may include `mcpServers`.
-Deeper accepts stdio, Streamable HTTP, and legacy SSE servers. ACP's official `[{"name":"...","value":"..."}]`
+Deepzora accepts stdio, Streamable HTTP, and legacy SSE servers. ACP's official `[{"name":"...","value":"..."}]`
 shape is supported for stdio `env` and HTTP `headers`; the older object-map
 shape remains accepted for compatibility.
 
 ## Session controls
 
-Deeper exposes independent controls instead of combining unrelated choices in
+Deepzora exposes independent controls instead of combining unrelated choices in
 one mode selector:
 
 | Control | Values | Wire surface |
@@ -188,7 +188,7 @@ input migration aliases and are never advertised in `configOptions`.
 ## Prompts, updates, and approvals
 
 `session/prompt` accepts text blocks and embedded text resources. Images and
-audio are not advertised. During a turn, Deeper may send:
+audio are not advertised. During a turn, Deepzora may send:
 
 - agent message and thought chunks;
 - pending and completed tool-call updates;
@@ -198,11 +198,11 @@ audio are not advertised. During a turn, Deeper may send:
 - `session/request_permission` requests for permission-gated tools and user
   questions.
 
-Hosts should keep the `session/prompt` request open until Deeper returns its
+Hosts should keep the `session/prompt` request open until Deepzora returns its
 stop reason, while continuing to process requests and notifications in both
 directions.
 
-Deeper emits only ACP v1 stop reasons. Model completion ends the ordinary
+Deepzora emits only ACP v1 stop reasons. Model completion ends the ordinary
 turn without a host readiness check or recovery action. An explicit model-round limit (`max_steps`) sends a `[warning]`, returns
 `max_turn_requests`, and records a paused vendor outcome. A host task-time,
 token, or cost budget also sends a `[warning]` and records a paused outcome,
@@ -211,7 +211,7 @@ The completion validator has been removed. A clean model stop without tool
 calls returns `end_turn`; a response with tool calls continues through the
 agent loop, and a truly empty response is retried at the frozen-request
 boundary. Legacy `completion_validation`, `completion_evaluator_model`, and
-`DEEPER_COMPLETION_VALIDATION_MODE` settings remain readable but are ignored
+`DEEPZORA_COMPLETION_VALIDATION_MODE` settings remain readable but are ignored
 and are no longer emitted. Host-owned readiness, budget, tool-safety, and
 recovery boundaries remain active.
 Client cancellation returns `cancelled`, even when the interrupted runner exits
@@ -230,7 +230,7 @@ publishing or persisting a synthetic status turn.
 
 ## Mid-turn steering extension
 
-Deeper exposes mid-turn guidance as an ACP v1 vendor extension. It is not a
+Deepzora exposes mid-turn guidance as an ACP v1 vendor extension. It is not a
 core ACP method, and it is not the still-unreleased ACP v2 `session/inject`
 proposal.
 
@@ -239,7 +239,7 @@ proposal.
 Read the method name from:
 
 ```text
-agentCapabilities._meta["deeper.io"].sessionSteer.method
+agentCapabilities._meta["deepzora.com"].sessionSteer.method
 ```
 
 Do not assume the extension exists, and do not call the unnamespaced
@@ -254,7 +254,7 @@ Call the advertised method while `session/prompt` is active:
 {
   "jsonrpc": "2.0",
   "id": 2,
-  "method": "_deeper.io/session/steer",
+  "method": "_deepzora.com/session/steer",
   "params": {
     "sessionId": "session-id",
     "prompt": [
@@ -270,12 +270,12 @@ A persistent session returns an item id and disposition:
 {"itemId":"inbox-item-id","disposition":"steer_accepted"}
 ```
 
-Deeper durably commits the guidance before returning. `steer_accepted` means
+Deepzora durably commits the guidance before returning. `steer_accepted` means
 the active turn accepted it; `queued_followup` means that admission lost a race
 or no turn was active, so the same item remains queued for a later turn. A
 pathless compatibility session may omit `itemId` and still returns
 `steer_accepted`. Applied guidance is persisted in normal history; transcript
-replay shows the original user text, not Deeper's internal steer marker.
+replay shows the original user text, not Deepzora's internal steer marker.
 
 | Condition | JSON-RPC result |
 | --- | --- |
@@ -290,7 +290,7 @@ On `InvalidRequest`, the compatibility session did not queue the guidance.
 ## Durable session inbox extension
 
 Discover the versioned queue at
-`agentCapabilities._meta["deeper.io"].sessionInbox`. Schema version 1
+`agentCapabilities._meta["deepzora.com"].sessionInbox`. Schema version 1
 advertises method names in its `methods` map; clients must use those advertised
 names rather than constructing vendor method strings.
 
@@ -311,19 +311,19 @@ calling `setPaused` with `false`.
 
 ## Runtime reload and extension surface
 
-Deeper advertises two more extension points in
-`agentCapabilities._meta["deeper.io"]`:
+Deepzora advertises two more extension points in
+`agentCapabilities._meta["deepzora.com"]`:
 
 - `sessionReloadExtensions` — the vendor method
-  `_deeper.io/session/reloadExtensions`. Calling it reloads the session's
+  `_deepzora.com/session/reloadExtensions`. Calling it reloads the session's
   agent runtime (extensions, tools, skills, commands, hooks, providers) with
   the same fail-atomic semantics as the CLI `/reload` command: while a turn
   or rebuild is active exactly one reload is queued (`{"queued": true}`) and
   runs when the session goes idle; otherwise the runtime is rebuilt and
   swapped atomically, and a failed rebuild keeps the previous runtime. After
-  a successful reload Deeper pushes a fresh `available_commands_update`.
+  a successful reload Deepzora pushes a fresh `available_commands_update`.
 - `extensionSurface` — structured extension UI support. Clients that also
-  advertise `deeper.io.extensionSurface` in their initialize `_meta`
+  advertise `deepzora.com.extensionSurface` in their initialize `_meta`
   receive structured extension surface payloads; clients without it receive
   equivalent text fallbacks (`agent_message_chunk` for cards and statuses,
   permission requests for extension forms), so no client-side handling is
@@ -335,7 +335,7 @@ any other slash command.
 
 ## Compatibility and cache behavior
 
-| Surface | Older or non-Deeper clients | Conclusion |
+| Surface | Older or non-Deepzora clients | Conclusion |
 | --- | --- | --- |
 | Existing ACP v1 methods | Their names and response shapes are unchanged. | Compatible |
 | Capability `_meta` | Unknown metadata may be ignored. | Compatible |
@@ -350,12 +350,12 @@ earlier prefix remains reusable.
 
 ## Client integration checklist
 
-1. Launch `deeper acp` with separate stdin, stdout, and stderr streams.
+1. Launch `deepzora acp` with separate stdin, stdout, and stderr streams.
 2. Call `initialize` and honor both standard and `_meta` capabilities.
 3. Open sessions with absolute workspace paths and keep their ids isolated.
 4. Process agent-to-client filesystem, terminal, and permission requests while
    a prompt is running.
-5. Show steer UI only when the Deeper capability is advertised and a prompt
+5. Show steer UI only when the Deepzora capability is advertised and a prompt
    is active.
 6. Branch on the steer `disposition`; both accepted steer and queued follow-up
    are durable, but only the former can affect the active turn.

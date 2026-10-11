@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/event"
+	"deepzora/internal/bot"
+	"deepzora/internal/event"
 )
 
 // errDriveBusy signals that a takeover drive could not start because the target

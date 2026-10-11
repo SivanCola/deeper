@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/mcpinteraction"
+	"deepzora/internal/mcpinteraction"
 	mcpjsonrpc "github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )

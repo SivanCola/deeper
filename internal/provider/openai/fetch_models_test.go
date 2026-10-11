@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
 )
 
 func TestFetchModels(t *testing.T) {
@@ -156,7 +156,7 @@ func TestFetchModelCatalogCanonicalFieldWinsOverAlias(t *testing.T) {
 
 func TestFetchModelsSendsCustomHeaders(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("HTTP-Referer") != "https://app.example" || r.Header.Get("X-Title") != "Deeper" {
+		if r.Header.Get("HTTP-Referer") != "https://app.example" || r.Header.Get("X-Title") != "Deepzora" {
 			http.Error(w, `{"error":"missing headers"}`, http.StatusForbidden)
 			return
 		}
@@ -168,7 +168,7 @@ func TestFetchModelsSendsCustomHeaders(t *testing.T) {
 
 	models, err := FetchModels(context.Background(), srv.URL, "key", map[string]string{
 		"HTTP-Referer": "https://app.example",
-		"X-Title":      "Deeper",
+		"X-Title":      "Deepzora",
 	})
 	if err != nil {
 		t.Fatalf("FetchModels: %v", err)
@@ -284,7 +284,7 @@ func TestFetchModelsResponseTooLarge(t *testing.T) {
 // gateway host only resolves through the proxy, so success proves the proxy
 // transport was used; the plain spec must fail to reach it directly.
 func TestFetchModelsRoutesThroughConfiguredProxy(t *testing.T) {
-	const gateway = "http://deeper-fetch-probe.invalid/v1"
+	const gateway = "http://deepzora-fetch-probe.invalid/v1"
 	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.String(), gateway) {
 			http.Error(w, "unexpected proxied target "+r.URL.String(), http.StatusBadRequest)

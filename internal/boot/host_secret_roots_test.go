@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/sandbox"
+	"deepzora/internal/config"
+	"deepzora/internal/sandbox"
 )
 
 func TestRuntimeForbidReadRootsCoverServeLaunchTokens(t *testing.T) {
-	t.Setenv("DEEPER_HOME", filepath.Join(isolateConfigHome(t), "deeper-home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(isolateConfigHome(t), "deepzora-home"))
 	tokenFile := filepath.Join(t.TempDir(), "serve.token")
 	config.RegisterHostSecretPath(tokenFile)
 
@@ -36,7 +36,7 @@ func TestSandboxedShellCannotReadServeLaunchTokens(t *testing.T) {
 	// Every file sits inside the write root: Linux masks /tmp with a tmpfs, so a
 	// file anywhere else under it would read as missing whether denied or not.
 	work := robustTempDir(t)
-	t.Setenv("DEEPER_HOME", filepath.Join(work, "deeper-home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(work, "deepzora-home"))
 	remoteDir := config.RemoteStateDir()
 	if err := os.MkdirAll(remoteDir, 0o700); err != nil {
 		t.Fatal(err)

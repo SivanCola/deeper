@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func openTool(exec Executor) tool.Tool {

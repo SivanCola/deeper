@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"deeper/internal/event"
+	"deepzora/internal/event"
 	"fmt"
 	"time"
 )

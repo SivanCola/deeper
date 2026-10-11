@@ -15,10 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/recovery"
-	"deeper/internal/turnevent"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/recovery"
+	"deepzora/internal/turnevent"
 )
 
 // metrics_app.go is the aggregate desktop-metrics flush: anonymous (signal,
@@ -27,7 +27,7 @@ import (
 // or base URLs; custom provider/model identifiers are normalized into bounded
 // buckets. Gated on config desktop.metrics (default on), dev-skipped.
 
-var metricsEndpoint = os.Getenv("DEEPER_METRICS_ENDPOINT")
+var metricsEndpoint = os.Getenv("DEEPZORA_METRICS_ENDPOINT")
 
 const metricsPendingFile = "metrics-pending.json"
 const metricsPostTimeout = 8 * time.Second

@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/pathidentity"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/pathidentity"
+	"deepzora/internal/store"
 )
 
 // resolveSessionPath validates a client-supplied transcript against the

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // handoffSessionLease acquires path and publishes it on the tab without

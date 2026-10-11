@@ -3,7 +3,7 @@ package cli
 import (
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // reclaimCLIRecoveryBranches performs the same conservative recovery-copy

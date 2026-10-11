@@ -12,13 +12,13 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
 )
 
 func chatTUIWithRunningBackgroundJob(t *testing.T) chatTUI {

@@ -12,11 +12,11 @@ export async function buildBrowserPage() {
   const playwright = await playwrightPageResource(resolve(root, "dist"));
   const result = await build({
     entryPoints: [resolve(root, "src/main/browser/pageRuntimeEntry.ts")],
-    bundle: true, platform: "browser", format: "iife", globalName: "DeeperPageRuntime",
+    bundle: true, platform: "browser", format: "iife", globalName: "DeepzoraPageRuntime",
     target: "es2022", keepNames: false, minify: true, write: false,
     plugins: [{ name: "qualified-playwright-injection", setup(build) {
-      build.onResolve({ filter: /^deeper-playwright-injected$/ }, () => ({ path: "injected", namespace: "deeper-injected" }));
-      build.onLoad({ filter: /.*/, namespace: "deeper-injected" }, () => ({ contents: playwright.source, loader: "js" }));
+      build.onResolve({ filter: /^deepzora-playwright-injected$/ }, () => ({ path: "injected", namespace: "deepzora-injected" }));
+      build.onLoad({ filter: /.*/, namespace: "deepzora-injected" }, () => ({ contents: playwright.source, loader: "js" }));
     } }],
   });
   const source = result.outputFiles[0].text;

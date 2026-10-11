@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 export const FRONTEND_ARTIFACT_SCHEMA = 1;
 
 export function frontendProducerAttempt(env = process.env) {
-  return env.DEEPER_FRONTEND_PRODUCER_ATTEMPT || env.GITHUB_RUN_ATTEMPT || undefined;
+  return env.DEEPZORA_FRONTEND_PRODUCER_ATTEMPT || env.GITHUB_RUN_ATTEMPT || undefined;
 }
 
 function sha256(parts) {
@@ -156,7 +156,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     const options = {
       root,
       dist: path.resolve(args.dist ?? path.join(root, "desktop/frontend/dist")),
-      manifest: path.resolve(args.manifest ?? path.join(root, "desktop/frontend/.deeper-frontend-artifact.json")),
+      manifest: path.resolve(args.manifest ?? path.join(root, "desktop/frontend/.deepzora-frontend-artifact.json")),
       shell: args.shell,
       channel: args.channel,
       sourceSHA: args.source_sha,

@@ -9,10 +9,10 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 type savedTabReconcileOutcome string

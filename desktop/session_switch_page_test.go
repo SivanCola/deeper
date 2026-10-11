@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/transcript"
 )
 
 // appendHistoryTestSessionTurn writes one more turn to a session's durable log

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 // subagentModelSelection resolves a child's model override to the entry that

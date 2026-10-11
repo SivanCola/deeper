@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/attachment"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/attachment"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
 )
 
 func TestHistoryMessagesIncludeSessionAttachments(t *testing.T) {

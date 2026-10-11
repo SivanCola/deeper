@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-const modulePrefix = "deeper/"
+const modulePrefix = "deepzora/"
 
 // Transport-agnostic control.Controller sits behind every frontend; nothing
-// below it may reach up. See DEEPER.md.
+// below it may reach up. See DEEPZORA.md.
 var frontends = []string{
 	"internal/acp",
 	"internal/boot",

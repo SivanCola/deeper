@@ -4,9 +4,9 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 "$repo_root/scripts/validate-release-control-plane.sh" "$repo_root"
 
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/deeper-release-control-test.XXXXXX")"
+fixture="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-release-control-test.XXXXXX")"
 cleanup() {
-	case "$fixture" in */deeper-release-control-test.*) rm -rf -- "$fixture" ;; *) exit 1 ;; esac
+	case "$fixture" in */deepzora-release-control-test.*) rm -rf -- "$fixture" ;; *) exit 1 ;; esac
 }
 trap cleanup EXIT
 

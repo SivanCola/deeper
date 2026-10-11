@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/jobs"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
 )
 
 func modelApplicationServer(t *testing.T) (*Server, *jobs.SessionBackgroundScope, *atomic.Int32) {

@@ -6,7 +6,7 @@ package readcoord
 import (
 	"slices"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Normalize drops empty ranges and merges overlaps and adjacency into the

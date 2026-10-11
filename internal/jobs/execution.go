@@ -3,7 +3,7 @@ package jobs
 import (
 	"context"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // HasTimedOut reports whether teardown returned before every job had unwound.

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func recoverySessionWithCall(id string, r *provider.ToolCallRecord) *Session {

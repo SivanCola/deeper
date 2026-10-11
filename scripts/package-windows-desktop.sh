@@ -24,15 +24,15 @@ DESKTOP="$ROOT/desktop"
 INSTALLER_DIR="$DESKTOP/build/windows/installer"
 BIN_DIR="$DESKTOP/build/bin"
 DIST="$ROOT/dist"
-APPNAME="Deeper"
-BINNAME="deeper-desktop"
-GUARDNAME="deeper-guard"
-LAUNCHERNAME="deeper-launcher"
-UPDATE_HELPER="deeper-update-helper.exe"
-WINDOWS_CLINAME="deeper-cli"
-WINDOWS_CLI_ENTRY="deeper-cli-launcher.exe"
+APPNAME="Deepzora"
+BINNAME="deepzora-desktop"
+GUARDNAME="deepzora-guard"
+LAUNCHERNAME="deepzora-launcher"
+UPDATE_HELPER="deepzora-update-helper.exe"
+WINDOWS_CLINAME="deepzora-cli"
+WINDOWS_CLI_ENTRY="deepzora-cli-launcher.exe"
 SIGNING_LIST="signing-files.txt"
-PAYLOAD_MANIFEST="deeper-payload.json"
+PAYLOAD_MANIFEST="deepzora-payload.json"
 PAYLOAD_SIGNATURE="$PAYLOAD_MANIFEST.minisig"
 
 [ -d "$payload_input" ] || { echo "Windows payload directory is missing: $payload_input" >&2; exit 1; }
@@ -44,7 +44,7 @@ required_payload=(
 	"$LAUNCHERNAME.exe"
 	"$UPDATE_HELPER"
 	"$WINDOWS_CLINAME.exe"
-	"deeper-uninstall.exe"
+	"deepzora-uninstall.exe"
 )
 for name in "${required_payload[@]}"; do
 	[ -s "$PAYLOAD/$name" ] || { echo "Windows payload file is missing or empty: $name" >&2; exit 1; }
@@ -70,7 +70,7 @@ if [ "$manifest_present" != "$signature_present" ]; then
 	echo "Windows payload manifest and signature must be provided together" >&2
 	exit 1
 fi
-if [ "${DEEPER_REQUIRE_PAYLOAD_MANIFEST:-0}" = "1" ] && [ "$manifest_present" != "1" ]; then
+if [ "${DEEPZORA_REQUIRE_PAYLOAD_MANIFEST:-0}" = "1" ] && [ "$manifest_present" != "1" ]; then
 	echo "signed Windows packaging requires $PAYLOAD_MANIFEST and $PAYLOAD_SIGNATURE" >&2
 	exit 1
 fi
@@ -90,8 +90,8 @@ if [ "$manifest_present" = "1" ]; then
 	cp "$PAYLOAD/$PAYLOAD_SIGNATURE" "$INSTALLER_DIR/$PAYLOAD_SIGNATURE"
 fi
 
-[ -s "$INSTALLER_DIR/deeper_project.nsh" ] || {
-	echo "deeper_project.nsh is missing; run desktop/packaging/package.mjs first" >&2
+[ -s "$INSTALLER_DIR/deepzora_project.nsh" ] || {
+	echo "deepzora_project.nsh is missing; run desktop/packaging/package.mjs first" >&2
 	exit 1
 }
 
@@ -99,10 +99,10 @@ fi
 # mistaken for the rebuilt payload-signed installer.
 mkdir -p "$BIN_DIR"
 find "$BIN_DIR" -maxdepth 1 -type f -name '*installer*.exe' -delete
-binary_define="ARG_DEEPER_AMD64_BINARY"
-[ "$arch" = arm64 ] && binary_define="ARG_DEEPER_ARM64_BINARY"
+binary_define="ARG_DEEPZORA_AMD64_BINARY"
+[ "$arch" = arm64 ] && binary_define="ARG_DEEPZORA_ARM64_BINARY"
 binary_path="$INSTALLER_DIR/$BINNAME.exe"
-uninstaller_path="$PAYLOAD/deeper-uninstall.exe"
+uninstaller_path="$PAYLOAD/deepzora-uninstall.exe"
 if command -v cygpath >/dev/null 2>&1; then
 	binary_path="$(cygpath -w "$binary_path")"
 	uninstaller_path="$(cygpath -w "$uninstaller_path")"
@@ -111,7 +111,7 @@ fi
 	cd "$INSTALLER_DIR"
 	makensis \
 		"-D${binary_define}=${binary_path}" \
-		"-DARG_DEEPER_SIGNED_UNINSTALLER=${uninstaller_path}" \
+		"-DARG_DEEPZORA_SIGNED_UNINSTALLER=${uninstaller_path}" \
 		project.nsi
 )
 
@@ -137,8 +137,8 @@ trap cleanup EXIT
 # versioned-v1 portable layout (no Guard, no flat desktop at InstallRoot); the
 # Electron bundle is the app/ tree member of the active version directory.
 version_label="${VERSION:-}"
-if [ -z "$version_label" ] && [ -f "$INSTALLER_DIR/deeper_project.nsh" ]; then
-	version_label=$(sed -n 's/^!define DEEPER_VERSION_TAG "\(.*\)"$/\1/p' "$INSTALLER_DIR/deeper_project.nsh" | tr -d '\r' | head -n 1)
+if [ -z "$version_label" ] && [ -f "$INSTALLER_DIR/deepzora_project.nsh" ]; then
+	version_label=$(sed -n 's/^!define DEEPZORA_VERSION_TAG "\(.*\)"$/\1/p' "$INSTALLER_DIR/deepzora_project.nsh" | tr -d '\r' | head -n 1)
 fi
 version_label="${version_label:-0.0.0}"
 case "$version_label" in

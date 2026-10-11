@@ -11,12 +11,12 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func TestMigrateLegacyDeepSeekProtocolUserConfigPreservesTOMLAndIsIdempotent(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	raw := `# keep this user comment
 config_version = 4
@@ -123,7 +123,7 @@ future_provider_field = "untouched"
 
 func TestAutomaticDeepSeekProtocolMigrationReportsMalformedConfigWithoutRewriting(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	raw := `[[providers]]
 name = "deepseek-flash"
@@ -134,7 +134,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 
 [[plugins]]
 name = "windows-mcp"
-command = "C:\Users\deeper\mcp.exe"
+command = "C:\Users\deepzora\mcp.exe"
 `
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
 		t.Fatal(err)
@@ -220,7 +220,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 
 func TestMigrateLegacyDeepSeekProtocolUserConfigSerializesConcurrentUpgrades(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	raw := `[[providers]]
 name = "deepseek-flash"
@@ -268,7 +268,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 
 func TestDeepSeekProtocolUpgradeAvailabilityUsesUserConfigSource(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	if err := os.WriteFile(path, []byte("# unrelated user settings\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -297,7 +297,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 
 func TestMigrateLegacyDeepSeekProtocolPreservesConfigEncoding(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
 	raw := `# preserve UTF-16 configuration
 [[providers]]

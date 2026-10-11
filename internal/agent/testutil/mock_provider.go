@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"sync"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // Turn describes one expected Stream call: the text, optional reasoning,

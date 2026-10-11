@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/cli"
+	"deepzora/internal/cli"
 )
 
 // jsonTags collects a struct's JSON field names, descending into embedded and

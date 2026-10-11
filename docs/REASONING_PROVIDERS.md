@@ -1,6 +1,6 @@
 # Reasoning controls by provider
 
-Deeper exposes a single `/effort` knob (and the per-provider `effort` /
+Deepzora exposes a single `/effort` knob (and the per-provider `effort` /
 `thinking` config fields), but OpenAI-compatible backends disagree on *how*
 chain-of-thought is requested on the wire. The `openai` provider adapts the
 request shape per backend; this table is the reference for which protocol each
@@ -22,7 +22,7 @@ get a tailored request shape automatically — no extra config needed.
 
 | Provider/model | Base URL | Reasoning control | `/effort` levels | Notes |
 |----------------|----------|-------------------|------------------|-------|
-| Kimi CN/Global `kimi-k3` | `api.moonshot.cn/v1`, `api.moonshot.ai/v1` | `reasoning_effort` | `low`, `high`, `max` | Always thinks; defaults to `max`. Deeper replays the complete assistant message, uses `max_completion_tokens`, and omits K3's fixed sampling fields. |
+| Kimi CN/Global `kimi-k3` | `api.moonshot.cn/v1`, `api.moonshot.ai/v1` | `reasoning_effort` | `low`, `high`, `max` | Always thinks; defaults to `max`. Deepzora replays the complete assistant message, uses `max_completion_tokens`, and omits K3's fixed sampling fields. |
 | Custom Kimi K3 gateway | Any OpenAI-compatible K3 endpoint | `reasoning_effort` | `low`, `high`, `max` | Select `reasoning_protocol = "kimi-k3"` to opt into K3's complete-message replay and request shape. |
 | OpenCode Go `kimi-k3` | `opencode.ai/zen/go/v1` | `reasoning_effort` | `high`, `max` | Relay-specific scale; defaults to `max` and keeps the relay's standard OpenAI-compatible request shape. |
 | Token Rhythm DeepSeek V4 | `tokenrhythm.studio/v1` | DeepSeek `thinking.type` + `reasoning_effort` | Model-specific DeepSeek scale | Selected through the preset's model override, independent of the gateway host. |
@@ -33,7 +33,7 @@ On the Token Rhythm endpoint, exact GLM model IDs (`glm-5`, `glm-5.1`, and
 existing configuration has no `reasoning_protocol` field. The endpoint check
 keeps unrelated mixed-model gateways backward-compatible. A `model_overrides`
 entry with explicit `reasoning_protocol = "glm"` remains available for aliases
-and custom model IDs. While GLM thinking is enabled, Deeper retains and
+and custom model IDs. While GLM thinking is enabled, Deepzora retains and
 returns the original `reasoning_content` unchanged in later history, as required
 by GLM interleaved and preserved thinking.
 
@@ -55,7 +55,7 @@ auto-detected. It preserves `reasoning_content` in later assistant history,
 uses `max_completion_tokens`, and omits K3's fixed sampling fields. Do not add
 it to the curated OpenCode Go preset: that relay intentionally keeps its
 standard OpenAI-compatible request shape and its own `high`/`max` scale.
-While this protocol is selected, Deeper always exposes K3's fixed
+While this protocol is selected, Deepzora always exposes K3's fixed
 `auto`/`low`/`high`/`max` effort menu with `max` as the protocol default;
 persisted `supported_efforts` metadata is retained but does not override it.
 
@@ -64,7 +64,7 @@ persisted `supported_efforts` metadata is retained but does not override it.
 The default official DeepSeek provider uses Chat Completions at
 `https://api.deepseek.com`, with the independent [`web_search` tool](WEB_SEARCH.md)
 using Messages for search. The optional `deepseek-anthropic` preset remains
-available. When selected for the main conversation, Deeper emits
+available. When selected for the main conversation, Deepzora emits
 `thinking.type=enabled|disabled` with `output_config.effort`, replays unsigned
 DeepSeek thinking blocks from every historical assistant turn that carries
 reasoning when the request declares tools (tool-call turn or not), omits unsupported
@@ -81,7 +81,7 @@ declares tools: every historical assistant turn with stored `reasoning_content`
 is serialized back verbatim, whether or not that turn called a tool. Without
 tools, DeepSeek ignores this field and does not concatenate it into context. If
 an old session still fails with the provider's specific reasoning pass-back HTTP
-400, Deeper rebuilds only the provider-visible projection of the old history,
+400, Deepzora rebuilds only the provider-visible projection of the old history,
 retries once, and leaves later turns on the normal replay path; canonical
 session history remains unchanged.
 
@@ -100,7 +100,7 @@ with an empty field.
 Any other OpenAI-compatible backend falls through to the standard
 `reasoning_effort` scale (`low`\|`medium`\|`high`). A resolved provider/model
 entry may explicitly advertise a different supported scale; in that case
-Deeper preserves those declared values instead of applying the generic
+Deepzora preserves those declared values instead of applying the generic
 ceiling. Curated per-model capability metadata can opt into another scale as
 shown above.
 
@@ -136,9 +136,9 @@ If a model keeps thinking when you asked it not to (or vice versa):
    `openai` kind cannot drive its thinking mode — that needs a dedicated
    provider kind.
 
-Distinguishing "provider ignores the field" from a Deeper bug starts here:
-the request shape Deeper emits is fixed per the table, so a mismatch between
-the table and observed behaviour is the provider's, not Deeper's.
+Distinguishing "provider ignores the field" from a Deepzora bug starts here:
+the request shape Deepzora emits is fixed per the table, so a mismatch between
+the table and observed behaviour is the provider's, not Deepzora's.
 
 ## Reasoning replay and interrupted execution
 

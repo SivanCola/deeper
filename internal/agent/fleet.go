@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/jobs"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/jobs"
+	"deepzora/internal/tool"
 )
 
 const (

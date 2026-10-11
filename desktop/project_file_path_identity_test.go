@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 // Every sidebar read loads the projects file, and on Windows one resolution

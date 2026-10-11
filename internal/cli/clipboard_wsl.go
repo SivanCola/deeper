@@ -11,7 +11,7 @@ import (
 
 	"github.com/atotto/clipboard"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 // wslClipboardWriteScript reads stdin as UTF-8 and lets Windows PowerShell

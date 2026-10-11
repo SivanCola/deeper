@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestGenerateToken(t *testing.T) {

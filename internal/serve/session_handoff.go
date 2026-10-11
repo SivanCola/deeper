@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 type handoffRequest struct {
@@ -272,8 +272,8 @@ func (s *Server) handoffIdentityLocked(ctx context.Context, route string, ref se
 		Kind:        event.Notice,
 		Level:       event.LevelWarn,
 		Code:        event.NoticeCodeSessionTakenOver,
-		Text:        "This session was taken over by a local Deeper window and is read-only here.",
-		Detail:      "A Deeper window on this machine took over the conversation. It keeps streaming here; use \"take back\" to reclaim it.",
+		Text:        "This session was taken over by a local Deepzora window and is read-only here.",
+		Detail:      "A Deepzora window on this machine took over the conversation. It keeps streaming here; use \"take back\" to reclaim it.",
 		SessionPath: route,
 	})
 	return m, nil
@@ -408,8 +408,8 @@ func (s *Server) handoffLocked(realPath, targetWriterID string) (mirroredSession
 		Kind:        event.Notice,
 		Level:       event.LevelWarn,
 		Code:        event.NoticeCodeSessionTakenOver,
-		Text:        "This session was taken over by a local Deeper window and is read-only here.",
-		Detail:      "A Deeper window on this machine took over the conversation. It keeps streaming here; use \"take back\" to reclaim it.",
+		Text:        "This session was taken over by a local Deepzora window and is read-only here.",
+		Detail:      "A Deepzora window on this machine took over the conversation. It keeps streaming here; use \"take back\" to reclaim it.",
 		SessionPath: canonical,
 	})
 	return m, nil

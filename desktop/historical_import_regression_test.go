@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 func TestHistoricalRegressionContentReadySurvivesSourceMove(t *testing.T) {

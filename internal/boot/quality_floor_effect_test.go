@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/ablation"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/ablation"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // TestEffectQualityFloorDoesNotTouchProviderPrefix pins the cache contract:
@@ -92,7 +92,7 @@ func effectFloorController(t *testing.T, tokenMode string) *control.Controller {
 	provider.Register(kind, func(provider.Config) (provider.Provider, error) {
 		return &effectRecordingProvider{}, nil
 	})
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "floor-model"
 
 [[providers]]

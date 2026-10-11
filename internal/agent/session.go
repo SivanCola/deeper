@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // Session holds the conversation history for one task. The run loop (one turn at

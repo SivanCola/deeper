@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/secrets"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/secrets"
 )
 
 const (

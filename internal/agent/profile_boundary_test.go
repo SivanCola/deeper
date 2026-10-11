@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/skill"
+	"deepzora/internal/skill"
 )
 
 // The criterion these guards enforce. It is repeated in every failure message

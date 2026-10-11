@@ -6,7 +6,7 @@ Base: `main` at `744c2e94ec77b577fbe3f1c93c769b1c3388bd21`
 ## Delivered behavior
 
 - `internal/session` is the single production session service. New and resumed
-  writes use `deeper.session.linear/v4` with `storageRevision: 1`; older
+  writes use `deepzora.session.linear/v4` with `storageRevision: 1`; older
   checkpoints, DAG logs, preview logs, linear v3/v3.1 logs, and the unpublished
   v4 draft are migration inputs only.
 - Large fields are published to the SHA-256 content store before their event

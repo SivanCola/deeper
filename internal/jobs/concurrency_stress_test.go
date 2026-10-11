@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // TestManagerConcurrentAccess hammers every public Manager method from many

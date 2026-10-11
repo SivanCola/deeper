@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/jobs"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
 )
 
 type blockingRequestBody struct {

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 // StartTurnWithModelApplication is an additive host entry point. The choice is

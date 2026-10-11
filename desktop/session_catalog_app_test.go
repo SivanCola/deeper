@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/history"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/history"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 	"os"
 	"path/filepath"
 	"strings"

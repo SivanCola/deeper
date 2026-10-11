@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 func TestTUIDiagnosticsKeepProcessAndPluginLogsOffTerminal(t *testing.T) {

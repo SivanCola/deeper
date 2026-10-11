@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/diff"
-	fileenc "deeper/internal/fileutil/encoding"
+	"deepzora/internal/diff"
+	fileenc "deepzora/internal/fileutil/encoding"
 )
 
 // TurnChangesBudget bounds retained patches and the content processed per turn.

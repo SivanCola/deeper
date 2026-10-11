@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/browser"
+	"deepzora/internal/browser"
 )
 
 func browserControlTab() *WorkspaceTab {

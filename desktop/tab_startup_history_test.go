@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestTerminalStartupFailureRemainsInProjectHistoryAfterRestart(t *testing.T) {

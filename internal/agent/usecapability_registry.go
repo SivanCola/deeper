@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 // resolveRegistryTool binds a registry tool by name for use_capability call.

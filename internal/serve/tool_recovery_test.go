@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/tool"
 )
 
 func recoveryHTTPFixture(t *testing.T) (*httptest.Server, control.ToolRecoverySnapshot) {

@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestObservedFileChangePromotesRepositoryOnlyReceiptToContentMutation(t *testing.T) {

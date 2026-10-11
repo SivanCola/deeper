@@ -132,7 +132,7 @@ console.log("\ncomposer inbox recovery");
   };
   installBridgeApp({
     InboxSnapshot: async () => snapshot,
-    SteerInboxItem: async () => { throw new Error("deeper_error:inbox_paused"); },
+    SteerInboxItem: async () => { throw new Error("deepzora_error:inbox_paused"); },
   });
   const { root } = await renderComposer({ running: true });
 

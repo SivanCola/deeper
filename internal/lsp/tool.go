@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Tools adapts the manager's read-only queries to the tool.Tool interface. They

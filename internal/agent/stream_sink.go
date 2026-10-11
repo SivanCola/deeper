@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // deferredStreamSink keeps selected stream events local until the caller

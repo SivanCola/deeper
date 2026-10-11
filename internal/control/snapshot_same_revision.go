@@ -3,7 +3,7 @@ package control
 import (
 	"errors"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // persistSessionSnapshot writes path with snapshot semantics, escalating to an

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/pluginpkg"
 )
 
 func (c *Client) initializeParams() protocol.InitializeParams {

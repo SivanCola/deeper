@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func awaitRemovalTest[T any](t *testing.T, ch <-chan T) T {

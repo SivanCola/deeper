@@ -34,7 +34,7 @@ for (let trial = 0; trial < 3; trial++) {
       const started = performance.now();
       const [work, profile] = await Promise.all([
         page.evaluate(() => window.diagnosticFixture.run(16_000)),
-        mode === "capture" ? page.evaluate(() => window.deeperDesktop.native.captureRendererProfile()) : Promise.resolve(null),
+        mode === "capture" ? page.evaluate(() => window.deepzoraDesktop.native.captureRendererProfile()) : Promise.resolve(null),
       ]);
       const elapsedMs = performance.now() - started;
       const after = await metricSnapshot(app);

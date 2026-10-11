@@ -9,8 +9,8 @@ import (
 
 // InstalledNames returns installed plugin package names sorted for completion
 // menus and lightweight management views.
-func InstalledNames(deeperHome string) ([]string, error) {
-	st, err := LoadState(deeperHome)
+func InstalledNames(deepzoraHome string) ([]string, error) {
+	st, err := LoadState(deepzoraHome)
 	if err != nil {
 		return nil, err
 	}
@@ -23,13 +23,13 @@ func InstalledNames(deeperHome string) ([]string, error) {
 }
 
 // InstalledListText returns a compact session-facing view of installed plugins.
-func InstalledListText(deeperHome string) (string, error) {
-	st, err := LoadState(deeperHome)
+func InstalledListText(deepzoraHome string) (string, error) {
+	st, err := LoadState(deepzoraHome)
 	if err != nil {
 		return "", err
 	}
 	if len(st.Plugins) == 0 {
-		return "plugins: none installed\ninstall: deeper plugin install <source> --yes, or use Settings -> Plugins", nil
+		return "plugins: none installed\ninstall: deepzora plugin install <source> --yes, or use Settings -> Plugins", nil
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "plugins (%d):\n", len(st.Plugins))
@@ -39,7 +39,7 @@ func InstalledListText(deeperHome string) (string, error) {
 			state = "enabled"
 		}
 		summary := p.Description
-		counts := pluginCapabilityText(deeperHome, p)
+		counts := pluginCapabilityText(deepzoraHome, p)
 		if summary != "" && counts != "" {
 			summary = counts + " - " + oneLine(summary)
 		} else if counts != "" {
@@ -58,15 +58,15 @@ func InstalledListText(deeperHome string) (string, error) {
 }
 
 // InstalledShowText returns the usage-oriented details for one installed plugin.
-func InstalledShowText(deeperHome, name string) (string, error) {
-	p, ok, err := FindInstalled(deeperHome, name)
+func InstalledShowText(deepzoraHome, name string) (string, error) {
+	p, ok, err := FindInstalled(deepzoraHome, name)
 	if err != nil {
 		return "", err
 	}
 	if !ok {
 		return fmt.Sprintf("plugin %q is not installed", name), nil
 	}
-	root := ResolveRoot(deeperHome, p.Root)
+	root := ResolveRoot(deepzoraHome, p.Root)
 	pkg, warnings, err := ParseDir(root)
 	if err != nil {
 		return "", err
@@ -98,8 +98,8 @@ func InstalledShowText(deeperHome, name string) (string, error) {
 	return strings.TrimRight(b.String(), "\n"), nil
 }
 
-func FindInstalled(deeperHome, name string) (InstalledPlugin, bool, error) {
-	st, err := LoadState(deeperHome)
+func FindInstalled(deepzoraHome, name string) (InstalledPlugin, bool, error) {
+	st, err := LoadState(deepzoraHome)
 	if err != nil {
 		return InstalledPlugin{}, false, err
 	}
@@ -111,8 +111,8 @@ func FindInstalled(deeperHome, name string) (InstalledPlugin, bool, error) {
 	return InstalledPlugin{}, false, nil
 }
 
-func pluginCapabilityText(deeperHome string, p InstalledPlugin) string {
-	root := ResolveRoot(deeperHome, p.Root)
+func pluginCapabilityText(deepzoraHome string, p InstalledPlugin) string {
+	root := ResolveRoot(deepzoraHome, p.Root)
 	pkg, _, err := ParseDir(root)
 	if err != nil {
 		return "invalid: " + err.Error()
@@ -165,7 +165,7 @@ func RuntimeTrustText(rt *RuntimeSpec) string {
 	if len(rt.Capabilities) > 0 {
 		fmt.Fprintf(&b, "  capabilities: %s\n", strings.Join(rt.Capabilities, ", "))
 	}
-	b.WriteString("  risk: the runtime process runs inside Deeper — it can read the full session and environment, bypass permissions, and operate this machine directly.\n")
+	b.WriteString("  risk: the runtime process runs inside Deepzora — it can read the full session and environment, bypass permissions, and operate this machine directly.\n")
 	return b.String()
 }
 

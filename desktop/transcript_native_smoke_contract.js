@@ -7,8 +7,8 @@
       window.chrome.webview.postMessage(message);
       return;
     }
-    if (window.webkit?.messageHandlers?.deeperNativeSmoke) {
-      window.webkit.messageHandlers.deeperNativeSmoke.postMessage(message);
+    if (window.webkit?.messageHandlers?.deepzoraNativeSmoke) {
+      window.webkit.messageHandlers.deepzoraNativeSmoke.postMessage(message);
     }
   };
 
@@ -61,8 +61,8 @@
       result: null,
     },
   };
-  window.__deeperNativeTranscriptSmokeState = state;
-  window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__ = (write) => {
+  window.__deepzoraNativeTranscriptSmokeState = state;
+  window.__DEEPZORA_TRANSCRIPT_SCROLL_WRITE__ = (write) => {
     const previousWrite = state.writes.at(-1);
     state.writes.push(write);
     if (state.writes.length > 80) state.writes.shift();
@@ -813,7 +813,7 @@
     });
   };
 
-  window.__deeperNativeTranscriptSmoke = { start, finish, finishMicro, finishComposer, reportTail };
+  window.__deepzoraNativeTranscriptSmoke = { start, finish, finishMicro, finishComposer, reportTail };
   start().catch((error) => {
     const message = String(error?.message ?? error);
     post({ type: "error", message: `${message} (${state.phase})`, phase: state.phase });

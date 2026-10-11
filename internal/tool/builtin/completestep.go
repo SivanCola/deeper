@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Keep a hidden tombstone so stale model requests receive an actionable error

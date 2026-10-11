@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/transcript"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/transcript"
 )
 
 func canonicalWorkspaceOpenFixture(t *testing.T) (*App, *WorkspaceTab, *session.Runtime, string, string) {

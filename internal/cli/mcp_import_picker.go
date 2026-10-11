@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 type mcpImportPicker struct {

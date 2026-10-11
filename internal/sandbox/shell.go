@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/proc"
-	"deeper/internal/secrets"
+	"deepzora/internal/proc"
+	"deepzora/internal/secrets"
 )
 
 // psUTF8Prologue makes captured output UTF-8 rather than the console code page

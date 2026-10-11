@@ -9,10 +9,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func newTestChatTUIWithMessages(t *testing.T, workspaceRoot string, msgs ...provider.Message) chatTUI {
@@ -143,7 +143,7 @@ func TestSlashExportFiltersInternalAndReferencedContext(t *testing.T) {
 	}
 	got := string(data)
 	for _, want := range []string{
-		"# deeper session",
+		"# deepzora session",
 		"## User",
 		"please explain @auth_private.go",
 		"## Assistant",

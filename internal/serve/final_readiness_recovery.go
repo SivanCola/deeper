@@ -3,8 +3,8 @@ package serve
 import (
 	"errors"
 
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func validateSubmitAction(format, action string) error {

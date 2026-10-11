@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 func publishTestForm(t *testing.T, h *Hub, handler UIHandler, surfaceID string) string {

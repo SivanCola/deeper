@@ -9,8 +9,8 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // MigrationMessageStream is the bounded legacy migration result. Messages is

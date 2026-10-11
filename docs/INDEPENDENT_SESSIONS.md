@@ -81,7 +81,7 @@ git diff --check
 (cd desktop/frontend && pnpm exec tsx --test src/__tests__/project-tree*.test.ts src/__tests__/session-identity*.test.ts src/__tests__/independent-session*.test.* src/__tests__/session-read-activity.test.ts src/__tests__/session-lifecycle-fences.test.ts)
 (cd desktop/frontend && node bench/independent-sessions.mjs)
 python3 desktop/packaging/registry-previous-writer-smoke.py
-(cd desktop && go build -o build/bin/deeper-desktop-service .)
+(cd desktop && go build -o build/bin/deepzora-desktop-service .)
 (cd desktop/electron && pnpm build)
 node desktop/packaging/independent-session-native-smoke.mjs
 ```
@@ -92,15 +92,15 @@ The Desktop module's complete suite takes several minutes; the explicit 20-minut
 
 | Layer | Local evidence |
 | --- | --- |
-| Root Go | Full suite passed; `deeper-independent-root-final.log` |
-| Desktop Go | Final full suite passed; main package took 301.282 seconds. `deeper-independent-desktop-final.log` |
-| Race | Registry, targeted navigation/AI-title/fork lifecycle, and in-flight blank creation reuse tests passed; `deeper-independent-registry-race.log`, `deeper-independent-lifecycle-race.log`, `deeper-independent-blank-race.log` |
-| Frontend | 50 focused session tests passed; notification/sound regressions passed; production/test typechecks and build passed. `pnpm test` pretest passed, then the discovery runner initially found an old organization-CAS fixture. After migrating it to the semantic API, all 394 discovery suites passed (`deeper-frontend-discovery-final.log`). Build includes hooks, app layers, CSS and unchanged workspace bundle limits |
-| Contract/inventory | Regenerated from current source; inventory freshness passed (`deeper-independent-inventory-check.log`); `git diff --check` passed |
-| Chromium | Actual ProjectTree, top bar, HistoryPanel, prompt card, command owners; stub only RPC boundary. Covers keyboard, drag/order/groups, approval/stop, archive races, stale pagination and unread. Evidence: `deeper-independent-browser/result.json`, all four workbench/creation light/dark screenshots and `pagination-recovered.png` |
-| Electron | Actual development shell, built production App renderer, real Go service and disposable loopback provider. Seven scenarios passed, including startup identity reuse, background completion and two restarts. `deeper-independent-native/result.json`; `phase-*.json` records canonical identity/pending-create checkpoints |
-| Previous writer | Actual baseline v3 rejection and byte preservation passed. `deeper-independent-registry-compatibility.json` |
-| Remote/workspace | Protocol/owner isolation fixtures and frontend `pnpm test:remote` / `pnpm test:workspace` passed; `deeper-independent-remote-front.log`, `deeper-independent-workspace-front.log`. No real SSH host disconnect/reconnect acceptance was performed |
+| Root Go | Full suite passed; `deepzora-independent-root-final.log` |
+| Desktop Go | Final full suite passed; main package took 301.282 seconds. `deepzora-independent-desktop-final.log` |
+| Race | Registry, targeted navigation/AI-title/fork lifecycle, and in-flight blank creation reuse tests passed; `deepzora-independent-registry-race.log`, `deepzora-independent-lifecycle-race.log`, `deepzora-independent-blank-race.log` |
+| Frontend | 50 focused session tests passed; notification/sound regressions passed; production/test typechecks and build passed. `pnpm test` pretest passed, then the discovery runner initially found an old organization-CAS fixture. After migrating it to the semantic API, all 394 discovery suites passed (`deepzora-frontend-discovery-final.log`). Build includes hooks, app layers, CSS and unchanged workspace bundle limits |
+| Contract/inventory | Regenerated from current source; inventory freshness passed (`deepzora-independent-inventory-check.log`); `git diff --check` passed |
+| Chromium | Actual ProjectTree, top bar, HistoryPanel, prompt card, command owners; stub only RPC boundary. Covers keyboard, drag/order/groups, approval/stop, archive races, stale pagination and unread. Evidence: `deepzora-independent-browser/result.json`, all four workbench/creation light/dark screenshots and `pagination-recovered.png` |
+| Electron | Actual development shell, built production App renderer, real Go service and disposable loopback provider. Seven scenarios passed, including startup identity reuse, background completion and two restarts. `deepzora-independent-native/result.json`; `phase-*.json` records canonical identity/pending-create checkpoints |
+| Previous writer | Actual baseline v3 rejection and byte preservation passed. `deepzora-independent-registry-compatibility.json` |
+| Remote/workspace | Protocol/owner isolation fixtures and frontend `pnpm test:remote` / `pnpm test:workspace` passed; `deepzora-independent-remote-front.log`, `deepzora-independent-workspace-front.log`. No real SSH host disconnect/reconnect acceptance was performed |
 | CI / packages | Not run. This is not cross-platform CI or signed production-package qualification |
 
 Named evidence files are local run artifacts, not fixtures required by production. The scripts regenerate them. Native test data uses a disposable home and no external provider credentials. The native fixture creates a real fork, then seeds only the temporary registry's historical shared TopicID while the app is closed; it does not replace either transcript or SessionID.

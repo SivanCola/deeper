@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/attachment"
+	"deepzora/internal/attachment"
 )
 
 const (

@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type usageProvider struct {

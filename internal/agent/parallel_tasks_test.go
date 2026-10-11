@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/runtimepolicy"
-	"deeper/internal/tool"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/runtimepolicy"
+	"deepzora/internal/tool"
+	"deepzora/internal/workspacelease"
 )
 
 func TestParallelTasksToolIsReadOnly(t *testing.T) {

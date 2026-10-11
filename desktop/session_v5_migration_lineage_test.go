@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // Re-encode a real conversion in the retired JSONL codec, retaining Source and

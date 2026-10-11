@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 const defaultReviewOutputTokens = 2048

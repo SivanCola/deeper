@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/sessionui"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/sessionui"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 func seedManualCreation(t *testing.T, a *App, id, phase string) (ManualSessionCreationView, sessionui.Record) {
@@ -44,7 +44,7 @@ func seedManualCreation(t *testing.T, a *App, id, phase string) (ManualSessionCr
 
 // A real second process is required: zero-byte file existence is not ownership.
 func TestManualCreationLockProcess(t *testing.T) {
-	path := os.Getenv("DEEPER_TEST_CREATION_LOCK")
+	path := os.Getenv("DEEPZORA_TEST_CREATION_LOCK")
 	if path == "" {
 		return
 	}
@@ -64,7 +64,7 @@ func holdManualCreationInProcess(t *testing.T, a *App, v ManualSessionCreationVi
 		t.Fatal(err)
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestManualCreationLockProcess$")
-	cmd.Env = append(os.Environ(), "DEEPER_TEST_CREATION_LOCK="+filepath.Join(dir, v.Ref.SessionID+".lock"))
+	cmd.Env = append(os.Environ(), "DEEPZORA_TEST_CREATION_LOCK="+filepath.Join(dir, v.Ref.SessionID+".lock"))
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)

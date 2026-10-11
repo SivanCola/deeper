@@ -40,23 +40,23 @@ if ! run_phase package && ! run_phase seal; then
 	exit 0
 fi
 
-installer="$dist/Deeper-windows-$arch-installer.exe"
-portable="$dist/Deeper-windows-$arch.zip"
+installer="$dist/Deepzora-windows-$arch-installer.exe"
+portable="$dist/Deepzora-windows-$arch.zip"
 if run_phase package; then
 	# Keep the immutable checkout's NSIS template and icon. The signing handoff
 	# carries generated identity and payload files, not these committed inputs.
 	rm -rf "$dist" "$bundle"
 	mkdir -p "$product_root/desktop/build/windows/installer"
-	cp "$signing_work/desktop/build/windows/installer/deeper_project.nsh" \
+	cp "$signing_work/desktop/build/windows/installer/deepzora_project.nsh" \
 		"$product_root/desktop/build/windows/installer/"
 	(
 		cd "$product_root/desktop"
 		go run ./cmd/sign windows-payload "$signed_payload" "$version"
-		go run ./cmd/sign sign "$signed_payload/deeper-payload.json"
-		go run ./cmd/sign verify "$signed_payload/deeper-payload.json"
+		go run ./cmd/sign sign "$signed_payload/deepzora-payload.json"
+		go run ./cmd/sign verify "$signed_payload/deepzora-payload.json"
 	)
 
-	DEEPER_REQUIRE_PAYLOAD_MANIFEST=1 \
+	DEEPZORA_REQUIRE_PAYLOAD_MANIFEST=1 \
 		"$product_root/scripts/package-windows-desktop.sh" "$arch" "$signed_payload"
 	mv "$product_root/dist" "$dist"
 fi

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/ablation"
+	"deepzora/internal/ablation"
 )
 
 func TestBuildRunTaskArgsEnablesUnattendedWorkspaceWrites(t *testing.T) {

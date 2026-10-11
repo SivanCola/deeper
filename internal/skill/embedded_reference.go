@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/skill/builtincontent"
+	"deepzora/internal/skill/builtincontent"
 )
 
 func renderEmbeddedReference(sk Skill, reference string) (string, error) {

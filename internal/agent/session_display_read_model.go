@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // ErrSessionDisplayReadModelDamaged means the authoritative event log has a

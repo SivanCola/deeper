@@ -3,7 +3,7 @@ package agent
 import (
 	"slices"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func (a *Agent) SilentToolRecovery() bool {

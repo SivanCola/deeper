@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // ContextReport renders the current context state as a one-line summary plus

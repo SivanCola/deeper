@@ -15,7 +15,7 @@ func TestScrubUserPaths(t *testing.T) {
 	cases := map[string]string{
 		`at C:\Users\yuhua\proj\app.ts:12:3`:      `at C:\Users\_\proj\app.ts:12:3`,
 		`at c:\users\someone\x.go`:                `at c:\users\_\x.go`,
-		`/home/bob/.deeper/config.toml`:           `/home/_/.deeper/config.toml`,
+		`/home/bob/.deepzora/config.toml`:           `/home/_/.deepzora/config.toml`,
 		`/Users/alice/Library/Logs`:               `/Users/_/Library/Logs`,
 		`Error: ENOENT open '/home/bob/secret'`:   `Error: ENOENT open '/home/_/secret'`,
 		`no user path here: /usr/lib/node`:        `no user path here: /usr/lib/node`,
@@ -113,7 +113,7 @@ func TestCrashReportFromStructuredDetail(t *testing.T) {
 		ErrorMessage:    "invalid argument at /Users/alice/project/app.ts api_key=" + apiKey,
 		Stack:           "TypeError: invalid argument\n    at run (/Users/alice/project/app.ts:12:3)\nsecret=" + secretHex,
 		TopFrame:        "at run (/Users/alice/project/app.ts:12:3)",
-		FingerprintHint: "build:01234567|view:app://deeper/|cats:startup>tabs",
+		FingerprintHint: "build:01234567|view:app://deepzora/|cats:startup>tabs",
 		BuildCommit:     buildCommit,
 		Channel:         "canary",
 		Language:        "zh-CN",

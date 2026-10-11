@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"deeper/internal/mcpinteraction"
+	"deepzora/internal/mcpinteraction"
 )
 
 type legacyElicitationCall struct {

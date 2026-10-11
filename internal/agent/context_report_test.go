@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // A retry aggregate is billable tokens, not context shape. Reporting it would

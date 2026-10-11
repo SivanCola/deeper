@@ -12,7 +12,7 @@ func (a *App) ResolveRemoteTabPromptExact(target RemotePromptTarget, answer Prom
 	current := tab != nil && tab.ref.HostID == target.HostID && tab.session.sessionID == target.SessionID && tab.gen == target.SessionGeneration
 	a.remoteTabMu.Unlock()
 	if !supported {
-		return fmt.Errorf("this remote Deeper Serve does not support %s; upgrade it to answer this card safely", serveCapabilityInteractionTargetV1)
+		return fmt.Errorf("this remote Deepzora Serve does not support %s; upgrade it to answer this card safely", serveCapabilityInteractionTargetV1)
 	}
 	if !current {
 		return fmt.Errorf("remote prompt session binding is stale")
@@ -37,7 +37,7 @@ func (a *App) SubmitRemoteTabExtensionFormExact(target ExtensionFormTarget, valu
 	current := tab != nil && tab.ref.HostID == target.HostID && tab.session.sessionID == target.SessionID && tab.gen == target.SessionGeneration
 	a.remoteTabMu.Unlock()
 	if !supported {
-		return fmt.Errorf("this remote Deeper Serve does not support %s; upgrade it to submit this extension form safely", serveCapabilityExtensionFormInstanceV1)
+		return fmt.Errorf("this remote Deepzora Serve does not support %s; upgrade it to submit this extension form safely", serveCapabilityExtensionFormInstanceV1)
 	}
 	if !current {
 		return fmt.Errorf("remote extension form binding is stale")

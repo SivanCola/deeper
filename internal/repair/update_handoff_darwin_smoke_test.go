@@ -16,14 +16,14 @@ import (
 //
 // Run with:
 //
-//	DEEPER_MACOS_APPLICATIONS_SMOKE=1 go test ./internal/repair \
+//	DEEPZORA_MACOS_APPLICATIONS_SMOKE=1 go test ./internal/repair \
 //	  -run TestDarwinApplicationsOrphanBackupLifecycleSmoke -count=1
 func TestDarwinApplicationsOrphanBackupLifecycleSmoke(t *testing.T) {
-	if os.Getenv("DEEPER_MACOS_APPLICATIONS_SMOKE") != "1" {
-		t.Skip("set DEEPER_MACOS_APPLICATIONS_SMOKE=1 to probe /Applications")
+	if os.Getenv("DEEPZORA_MACOS_APPLICATIONS_SMOKE") != "1" {
+		t.Skip("set DEEPZORA_MACOS_APPLICATIONS_SMOKE=1 to probe /Applications")
 	}
 
-	smokeRoot, err := os.MkdirTemp("/Applications", ".deeper-updater-smoke-")
+	smokeRoot, err := os.MkdirTemp("/Applications", ".deepzora-updater-smoke-")
 	if err != nil {
 		t.Fatalf("create isolated /Applications smoke root (allow the terminal in App Management): %v", err)
 	}
@@ -45,16 +45,16 @@ func TestDarwinApplicationsOrphanBackupLifecycleSmoke(t *testing.T) {
 		}
 	})
 
-	t.Setenv("DEEPER_HOME", t.TempDir())
-	app := filepath.Join(smokeRoot, "Deeper.app")
-	executable := filepath.Join(app, "Contents", "MacOS", "Deeper")
-	backup := app + ".deeper-update-backup"
-	staging, err := os.MkdirTemp("", "deeper-mac-update-*")
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	app := filepath.Join(smokeRoot, "Deepzora.app")
+	executable := filepath.Join(app, "Contents", "MacOS", "Deepzora")
+	backup := app + ".deepzora-update-backup"
+	staging, err := os.MkdirTemp("", "deepzora-mac-update-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(staging) })
-	stagedApp := filepath.Join(staging, "Deeper.app")
+	stagedApp := filepath.Join(staging, "Deepzora.app")
 	for _, dir := range []string{filepath.Dir(executable), backup, stagedApp} {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			t.Fatal(err)

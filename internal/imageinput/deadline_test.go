@@ -2,7 +2,7 @@ package imageinput
 
 import (
 	"context"
-	"deeper/internal/event"
+	"deepzora/internal/event"
 	"errors"
 	"testing"
 	"time"

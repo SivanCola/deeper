@@ -318,7 +318,7 @@ func (s *readSnapshotStore) append(ctx context.Context, snap *readSnapshot, valu
 		s.disk += readSnapshotMax
 		snap.disk = readSnapshotMax
 		s.mu.Unlock()
-		snap.dir, err = os.MkdirTemp("", "deeper-read-")
+		snap.dir, err = os.MkdirTemp("", "deepzora-read-")
 		if err != nil {
 			return err
 		}

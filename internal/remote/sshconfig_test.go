@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 const sampleSSHConfig = `

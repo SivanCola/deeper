@@ -1,9 +1,9 @@
-# Deeper systray patches
+# Deepzora systray patches
 
 This directory is copied from `fyne.io/systray` version
 `v1.12.3-0.20260814134402-f60f01be81c6`.
 
-Deeper adds `SetIconID` on Windows and registers the notification icon with
+Deepzora adds `SetIconID` on Windows and registers the notification icon with
 `NIF_GUID`. Signed builds pass a deterministic data-home GUID before `Run`, which lets Windows
 keep the user's notification-area visibility preference when the signed desktop
 executable moves between `versions/<version>/` directories.

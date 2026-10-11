@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestLegacyMigrationKeepsUnknownOriginForFallback(t *testing.T) {

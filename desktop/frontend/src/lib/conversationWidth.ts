@@ -1,6 +1,6 @@
 export type ConversationWidth = "standard" | "full";
 
-export const CONVERSATION_WIDTH_STORAGE_KEY = "deeper-conv-width";
+export const CONVERSATION_WIDTH_STORAGE_KEY = "deepzora-conv-width";
 export const STANDARD_CONVERSATION_MAX_WIDTH = "960px";
 export const FULL_CONVERSATION_MAX_WIDTH = "max(960px, 90%)";
 

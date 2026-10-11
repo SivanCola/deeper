@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 const maxBotMediaBytes = 25 * 1024 * 1024

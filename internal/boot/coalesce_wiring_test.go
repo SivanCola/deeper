@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 type coalesceWiringProvider struct{ deltas int }
@@ -57,7 +57,7 @@ func TestBuildCoalescesAgentStreamDeltas(t *testing.T) {
 	provider.Register("boot-coalesce-test", func(provider.Config) (provider.Provider, error) {
 		return &coalesceWiringProvider{deltas: deltas}, nil
 	})
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

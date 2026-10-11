@@ -56,8 +56,8 @@
 | 新目录 Electron 回归 | `node bench/turn-outline.mjs --electron` |
 
 浏览器命令需将 `PLAYWRIGHT_BROWSERS_PATH` 指向本机已安装的 Playwright 浏览器缓存。
-可设置 `DEEPER_OUTLINE_EVIDENCE` 指定 JSON 与截图输出目录，默认位于系统临时目录下
-的 `deeper-turn-outline-evidence`。
+可设置 `DEEPZORA_OUTLINE_EVIDENCE` 指定 JSON 与截图输出目录，默认位于系统临时目录下
+的 `deepzora-turn-outline-evidence`。
 
 持久化测试覆盖首末页、追加后的固定切面、摘要编辑、撤回后的重新编号与空目录、
 索引查询计划及旧 schema 兼容。远程测试覆盖独立能力协商、规范会话身份、切面参数

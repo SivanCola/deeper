@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestDoctorPreservesProjectSandboxHintAndDeclarationValues(t *testing.T) {
 	home, root := t.TempDir(), t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Chdir(root)
 	project := "[sandbox]\nnetwork=false\n[permissions]\nallow=['Bash=echo synthetic-rule']\n"
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(project), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := config.LoadForRootReadOnly(root)
@@ -33,10 +33,10 @@ func TestDoctorPreservesProjectSandboxHintAndDeclarationValues(t *testing.T) {
 }
 
 func TestDoctorPreservesUnknownPresetKeyValueAndProjectOrigin(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	root := t.TempDir()
 	t.Chdir(root)
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[desktop]\ndefault_tool_approval_mode='unknown-project-preset'\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte("[desktop]\ndefault_tool_approval_mode='unknown-project-preset'\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := config.LoadForRootReadOnly(root)

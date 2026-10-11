@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"deeper/internal/agent"
-	"deeper/internal/servecontract"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/agent"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/sessioninbox"
 )
 
 // remoteInboxSnapshot reads the selected durable queue using the same route

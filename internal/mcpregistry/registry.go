@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 const DefaultBaseURL = "https://registry.modelcontextprotocol.io"
@@ -46,7 +46,7 @@ func New(cachePath string) *Client {
 	}
 }
 
-// Entry is one registry server reduced to the configuration Deeper can
+// Entry is one registry server reduced to the configuration Deepzora can
 // install without prompting for missing secrets or server-specific arguments.
 type Entry struct {
 	Name              string   `json:"name"`
@@ -218,7 +218,7 @@ func (c *Client) fetch(ctx context.Context, query string, limit int) ([]Entry, e
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "deeper-mcp-registry/dev")
+	req.Header.Set("User-Agent", "deepzora-mcp-registry/dev")
 	client := c.HTTP
 	if client == nil {
 		client = &http.Client{Timeout: 15 * time.Second}
@@ -337,7 +337,7 @@ func pythonPackageVersion(identifier, version string) string {
 
 type cacheFile struct {
 	// FetchedAt is retained as a read-only fallback for caches written by older
-	// Deeper versions. New writes timestamp each query independently so a
+	// Deepzora versions. New writes timestamp each query independently so a
 	// successful lookup cannot keep unrelated stale results alive.
 	FetchedAt      time.Time            `json:"fetchedAt,omitempty"`
 	QueryFetchedAt map[string]time.Time `json:"queryFetchedAt,omitempty"`

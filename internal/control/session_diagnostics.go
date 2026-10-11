@@ -1,7 +1,7 @@
 package control
 
 import (
-	"deeper/internal/event"
+	"deepzora/internal/event"
 	"sync"
 	"time"
 )

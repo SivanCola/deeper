@@ -1,4 +1,4 @@
-// Package store is the single authority for deeper's on-disk persistence
+// Package store is the single authority for deepzora's on-disk persistence
 // layout. Nothing else should construct a persistence path by hand.
 //
 // This first slice owns the session-artifact sidecars — the files and
@@ -11,7 +11,7 @@
 //
 // store is a leaf: it imports only the standard library, so any package may
 // depend on it without risking an import cycle. Root/directory resolution (the
-// ~/.deeper tree) and the desktop root unification land in later slices.
+// ~/.deepzora tree) and the desktop root unification land in later slices.
 package store
 
 import "strings"
@@ -34,7 +34,7 @@ func IsSessionTranscriptName(name string) bool {
 }
 
 // sessionJSONLSidecars end in .jsonl beside a transcript without being one.
-// The last three are written by Deeper 2.x, which shares this directory.
+// The last three are written by Deepzora 2.x, which shares this directory.
 var sessionJSONLSidecars = []string{
 	".events.jsonl", ".turns.jsonl", ".conflicts.jsonl", ".guardian.jsonl",
 	".wire.jsonl", ".adjudication.jsonl", ".execution.jsonl",

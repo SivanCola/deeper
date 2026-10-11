@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"syscall"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // Sanitized errors surfaced when a destructive or restore session operation

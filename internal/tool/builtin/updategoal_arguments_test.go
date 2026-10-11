@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/tool"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/tool"
 )
 
 func TestUpdateGoalLifecycleActionsAcceptInactiveFields(t *testing.T) {

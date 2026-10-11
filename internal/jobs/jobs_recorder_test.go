@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // recordingRecorder captures lifecycle calls for assertions.

@@ -78,9 +78,9 @@ are separate issues.
 
 Configuration remains TOML, credentials remain in `.env`, and conversation history keeps its existing format. A key change writes a fresh credential reference before committing the configuration that names it. A failure before the configuration commit leaves the old connection usable; it may leave an unreferenced new credential. Cleanup only considers references created by that failed edit. It does not scan or delete user-defined credential variables.
 
-After a lost save response, the page reads the request receipt and current settings before offering another save. Completed receipts survive restart and contain request identity and revisions, never a key. If no durable evidence exists, the result is `unknown_result`; review the saved values first. Deeper does not automatically repeat an uncertain write.
+After a lost save response, the page reads the request receipt and current settings before offering another save. Completed receipts survive restart and contain request identity and revisions, never a key. If no durable evidence exists, the result is `unknown_result`; review the saved values first. Deepzora does not automatically repeat an uncertain write.
 
-In-progress records live in a private transaction directory under Deeper
+In-progress records live in a private transaction directory under Deepzora
 home. Recovery removes only a new slot named by that record and only while the
 old configuration revision is still authoritative. Before publication, the
 record stores the exact candidate configuration revision. Recovery completes
@@ -123,6 +123,6 @@ Windows settings keeps the minimize, maximize/restore, and close-window buttons 
 
 - Reference: ZCode for Windows.
 - Installed application code confirms native Windows caption buttons, a transparent title-bar overlay with a 48px baseline updated with UI zoom, a full-page settings component, separate return and window-close actions, and configurable close-to-tray behavior.
-- Deeper applies the same shared caption geometry and colors to settings through the Electron shell's window controls.
-- Deeper's Windows browser preview was checked for caption geometry, colors, and Workbench/Creation transitions. Settings navigation and child-dialog tests also passed.
+- Deepzora applies the same shared caption geometry and colors to settings through the Electron shell's window controls.
+- Deepzora's Windows browser preview was checked for caption geometry, colors, and Workbench/Creation transitions. Settings navigation and child-dialog tests also passed.
 - Native Windows dragging, system scaling, maximize, and tray acceptance checks remain unverified. Installed-code inspection does not replace those checks.

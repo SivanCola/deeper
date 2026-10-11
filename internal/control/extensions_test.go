@@ -11,14 +11,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // Stage 6b1 control wiring tests. The dispatcher under test is real; only its

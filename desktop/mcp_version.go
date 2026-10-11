@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/plugin"
+import "deepzora/internal/plugin"
 
 func init() {
 	plugin.SetMCPClientVersion(version)

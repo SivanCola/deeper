@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/plugin"
-	"deeper/internal/session"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
+	"deepzora/internal/session"
 )
 
 type tabControllerBootResult struct {

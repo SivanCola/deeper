@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // composerProfile applies every controller-facing composer axis in one request.

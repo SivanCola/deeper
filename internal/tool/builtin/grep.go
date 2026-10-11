@@ -17,12 +17,12 @@ import (
 
 	"golang.org/x/text/transform"
 
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/proc"
-	"deeper/internal/sandbox"
-	"deeper/internal/secrets"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/tool"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/proc"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/tool"
 )
 
 const (

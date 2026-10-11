@@ -19,12 +19,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/ablation"
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	_ "deeper/internal/provider/openai"
-	"deeper/internal/tool"
+	"deepzora/internal/ablation"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	_ "deepzora/internal/provider/openai"
+	"deepzora/internal/tool"
 )
 
 const (

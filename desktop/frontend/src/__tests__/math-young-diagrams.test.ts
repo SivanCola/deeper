@@ -5,7 +5,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ReactMarkdown from "react-markdown";
-import { deeperRehypePlugins, deeperRemarkPlugins } from "../components/markdownRemarkPlugins";
+import { deepzoraRehypePlugins, deepzoraRemarkPlugins } from "../components/markdownRemarkPlugins";
 import { normalizeMath, resolveProtectedInlineMathSource } from "../components/mathNormalize";
 import { expandYoungDiagrams } from "../components/youngDiagrams";
 
@@ -27,8 +27,8 @@ function check(label: string, fn: () => boolean) {
 function renderHtml(src: string): string {
   return renderToStaticMarkup(
     createElement(ReactMarkdown, {
-      remarkPlugins: deeperRemarkPlugins,
-      rehypePlugins: deeperRehypePlugins,
+      remarkPlugins: deepzoraRemarkPlugins,
+      rehypePlugins: deepzoraRehypePlugins,
       children: normalizeMath(src),
     }),
   );
@@ -55,7 +55,7 @@ check("\\yng(2,1) in prose (no $ delimiters) gets wrapped and rendered", () => {
   const html = renderHtml("The partition \\yng(2,1) is symmetric.");
   return html.includes("katex")
     && !html.includes("katex-error")
-    && !html.includes("deeperInternal")
+    && !html.includes("deepzoraInternal")
     && html.includes('data-latex-source="\\yng(2,1)"');
 });
 check("\\yng inside \\(...\\) does not get double-wrapped", () => {
@@ -106,7 +106,7 @@ check("\\yng (2,1) with a space before parens gets wrapped and rendered", () => 
   const html = renderHtml("The partition \\yng (2,1) is symmetric.");
   return html.includes("katex")
     && !html.includes("katex-error")
-    && !html.includes("deeperInternal")
+    && !html.includes("deepzoraInternal")
     && html.includes('data-latex-source="\\yng (2,1)"');
 });
 check("\\yng(3,2,1) renders as (3,2,1) Young diagram", () => {
@@ -125,7 +125,7 @@ check("\\young(ab,c) labelled youngtab syntax renders labels", () => {
   const html = renderHtml("$$\\young(ab,c)$$");
   return html.includes("katex-display")
     && !html.includes("katex-error")
-    && !html.includes("deeperInternal")
+    && !html.includes("deepzoraInternal")
     && html.includes('data-latex-source="\\young(ab,c)"')
     && ["a", "b", "c"].every((label) => html.includes(label));
 });

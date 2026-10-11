@@ -3,30 +3,30 @@
 package main
 
 import (
-	"deeper/internal/config"
-	"deeper/internal/desktopinstance"
+	"deepzora/internal/config"
+	"deepzora/internal/desktopinstance"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"deeper/desktop/internal/update"
-	"deeper/internal/installlayout"
-	"deeper/internal/repair"
+	"deepzora/desktop/internal/update"
+	"deepzora/internal/installlayout"
+	"deepzora/internal/repair"
 )
 
 // activateVersionedWindowsFromStaging publishes the versioned-v1 layout from a
 // staged NSIS payload whose signed manifest names every member:
 //
 //	InstallRoot/
-//	  Deeper.exe              (canonical GUI entry)
-//	  deeper-launcher.exe     (only when preserving an existing entry)
-//	  deeper-cli.exe          (small CLI entry)
+//	  Deepzora.exe              (canonical GUI entry)
+//	  deepzora-launcher.exe     (only when preserving an existing entry)
+//	  deepzora-cli.exe          (small CLI entry)
 //	  current.json
 //	  versions/<version>/
-//	    deeper-desktop.exe
-//	    deeper-cli.exe
-//	    deeper-update-helper.exe
+//	    deepzora-desktop.exe
+//	    deepzora-cli.exe
+//	    deepzora-update-helper.exe
 //	    app/...                 (Electron shell tree, schema 2 manifests)
 //
 // Any failure before the current.json pointer swap keeps the previous version active; the helper never rolls back.
@@ -60,13 +60,13 @@ func activateVersionedWindowsFromStaging(claimed *repair.UpdateTransaction, stag
 	if err != nil {
 		return fmt.Errorf("versioned activate: %w", err)
 	}
-	rootFiles, err := stagedWindowsPayloadMembers(stagingDir, hashes, []string{"deeper-launcher.exe"})
+	rootFiles, err := stagedWindowsPayloadMembers(stagingDir, hashes, []string{"deepzora-launcher.exe"})
 	if err != nil {
 		return fmt.Errorf("versioned activate: %w", err)
 	}
 	launcherSrc := rootFiles[0].Path
-	cliSrc := filepath.Join(stagingDir, "deeper-cli.exe")
-	const cliEntry = "app/resources/bin/deeper-cli-launcher.exe"
+	cliSrc := filepath.Join(stagingDir, "deepzora-cli.exe")
+	const cliEntry = "app/resources/bin/deepzora-cli-launcher.exe"
 	if _, ok := hashes[cliEntry]; ok {
 		entry, entryErr := stagedWindowsPayloadMembers(stagingDir, hashes, []string{cliEntry})
 		if entryErr != nil {
@@ -79,7 +79,7 @@ func activateVersionedWindowsFromStaging(claimed *repair.UpdateTransaction, stag
 	if requestID == "" {
 		requestID = "helper-" + version
 	}
-	release, err := desktopinstance.PrepareInstall(installRoot, config.DeeperHomeDir(), false)
+	release, err := desktopinstance.PrepareInstall(installRoot, config.DeepzoraHomeDir(), false)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func activateVersionedWindowsFromStaging(claimed *repair.UpdateTransaction, stag
 		InstallRoot:    installRoot,
 		Version:        version,
 		RequestID:      requestID,
-		CheckProcesses: func() error { return desktopinstance.CheckInstallVacant(installRoot, config.DeeperHomeDir()) },
+		CheckProcesses: func() error { return desktopinstance.CheckInstallVacant(installRoot, config.DeepzoraHomeDir()) },
 		Members:        members,
 		RequiredNames:  versionNames,
 		WindowsRootEntries: &installlayout.WindowsRootEntrySources{
@@ -102,9 +102,9 @@ func activateVersionedWindowsFromStaging(claimed *repair.UpdateTransaction, stag
 	// Remove flat release-unit leftovers so the install root is the thin layout.
 	// Do not remove the launcher/CLI/alias we just wrote.
 	for _, name := range []string{
-		"deeper-desktop.exe",
-		"deeper-guard.exe",
-		"deeper-update-helper.exe", // helper lives only under versions/
+		"deepzora-desktop.exe",
+		"deepzora-guard.exe",
+		"deepzora-update-helper.exe", // helper lives only under versions/
 	} {
 		_ = os.Remove(filepath.Join(installRoot, name))
 	}
@@ -117,10 +117,10 @@ func activateVersionedWindowsFromStaging(claimed *repair.UpdateTransaction, stag
 // complete enough for versioned-v1 activation.
 func preferVersionedWindowsActivation(stagingDir string) bool {
 	for _, name := range []string{
-		"deeper-desktop.exe",
-		"deeper-cli.exe",
-		"deeper-update-helper.exe",
-		"deeper-launcher.exe",
+		"deepzora-desktop.exe",
+		"deepzora-cli.exe",
+		"deepzora-update-helper.exe",
+		"deepzora-launcher.exe",
 	} {
 		info, err := os.Lstat(filepath.Join(stagingDir, name))
 		if err != nil || !info.Mode().IsRegular() {

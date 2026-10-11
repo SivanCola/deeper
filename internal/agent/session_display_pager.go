@@ -9,11 +9,11 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/fileops"
-	"deeper/internal/historywork"
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileops"
+	"deepzora/internal/historywork"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // DisplayPager is a disposable disk projection of exact legacy byte offsets.

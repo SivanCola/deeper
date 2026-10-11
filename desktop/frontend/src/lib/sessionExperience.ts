@@ -8,8 +8,8 @@ export type WorkProcessPresentation = {
   keepExpandedAfterCompletion: boolean;
 };
 
-const SESSION_EXPERIENCE_KEY = "deeper-session-experience";
-const SESSION_EXPERIENCE_EVENT = "deeper:session-experience";
+const SESSION_EXPERIENCE_KEY = "deepzora-session-experience";
+const SESSION_EXPERIENCE_EVENT = "deepzora:session-experience";
 
 let current: SessionExperience = "standard";
 let hydrated = false;
@@ -29,10 +29,10 @@ function emit(): void {
 
 function emitCompatibilitySignals(next: SessionExperience): void {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("deeper:process-fold", {
+    window.dispatchEvent(new CustomEvent("deepzora:process-fold", {
       detail: next === "deep" ? "expanded" : "auto",
     }));
-    window.dispatchEvent(new CustomEvent("deeper:reasoning-display-mode", {
+    window.dispatchEvent(new CustomEvent("deepzora:reasoning-display-mode", {
       detail: next === "deep" ? "expanded" : "auto",
     }));
   }
@@ -41,11 +41,11 @@ function emitCompatibilitySignals(next: SessionExperience): void {
 function writeCompatibilityMirrors(next: SessionExperience): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(SESSION_EXPERIENCE_KEY, next);
-  localStorage.setItem("deeper-display-mode", "standard");
-  localStorage.setItem("deeper-process-fold", next === "deep" ? "expanded" : "auto");
+  localStorage.setItem("deepzora-display-mode", "standard");
+  localStorage.setItem("deepzora-process-fold", next === "deep" ? "expanded" : "auto");
   // The oldest boolean summary key cannot represent Deep. Let the mirrored
   // backend reasoning field win instead of reviving a contradictory value.
-  localStorage.removeItem("deeper-reasoning-summary");
+  localStorage.removeItem("deepzora-reasoning-summary");
 }
 
 export function getSessionExperience(): SessionExperience {

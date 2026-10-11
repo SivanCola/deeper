@@ -3,7 +3,7 @@ package control
 import (
 	"strings"
 
-	"deeper/internal/skill"
+	"deepzora/internal/skill"
 )
 
 var managementNoticeCommands = map[string]struct{}{

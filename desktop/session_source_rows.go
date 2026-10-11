@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 	"os"
 	"sync"
 )

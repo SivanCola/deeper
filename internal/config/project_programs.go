@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/filelock"
-	"deeper/internal/fileutil"
-	"deeper/internal/workspaceid"
+	"deepzora/internal/filelock"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/workspaceid"
 )
 
 // A project file can name programs the host runs: hooks, language servers,
@@ -151,7 +151,7 @@ type programApprovalFile struct {
 	Approvals []programApproval `json:"approvals"`
 }
 
-// ProjectProgramStore persists approvals in <Deeper home>/project-programs.json.
+// ProjectProgramStore persists approvals in <Deepzora home>/project-programs.json.
 type ProjectProgramStore struct {
 	path string
 	mu   sync.Mutex
@@ -203,7 +203,7 @@ func (s *ProjectProgramStore) Revoke(root string) error {
 
 func (s *ProjectProgramStore) load() (programApprovalFile, error) {
 	if s == nil || s.path == "" {
-		return programApprovalFile{}, fmt.Errorf("%w: no Deeper home", ErrProjectProgramsUnavailable)
+		return programApprovalFile{}, fmt.Errorf("%w: no Deepzora home", ErrProjectProgramsUnavailable)
 	}
 	data, err := os.ReadFile(s.path)
 	if os.IsNotExist(err) {
@@ -221,7 +221,7 @@ func (s *ProjectProgramStore) load() (programApprovalFile, error) {
 
 func (s *ProjectProgramStore) update(mutate func(*programApprovalFile)) error {
 	if s == nil || s.path == "" {
-		return fmt.Errorf("%w: no Deeper home", ErrProjectProgramsUnavailable)
+		return fmt.Errorf("%w: no Deepzora home", ErrProjectProgramsUnavailable)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -343,7 +343,7 @@ func ApproveWorkspacePrograms(root string) ([]ProjectProgram, error) {
 	if len(pending) == 0 {
 		return nil, nil
 	}
-	return pending, NewProjectProgramStore(deeperHomeDir()).Approve(root, pending...)
+	return pending, NewProjectProgramStore(deepzoraHomeDir()).Approve(root, pending...)
 }
 
 // EnvSummary renders env for a person approving it, in a stable order.

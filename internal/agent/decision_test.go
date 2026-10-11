@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestAskRejectsMoreThanThreeQuestions(t *testing.T) {

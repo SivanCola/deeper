@@ -54,7 +54,7 @@ func TestStampExecutableSupportsWindowsReleaseArchitectures(t *testing.T) {
 			if err := os.WriteFile(source, []byte("package main\nfunc main() {}\n"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			executable := filepath.Join(dir, "deeper-launcher.exe")
+			executable := filepath.Join(dir, "deepzora-launcher.exe")
 			cmd := exec.Command("go", "build", "-trimpath", "-o", executable, source)
 			cmd.Env = append(os.Environ(), "GOOS=windows", "GOARCH="+test.arch, "CGO_ENABLED=0")
 			if output, err := cmd.CombinedOutput(); err != nil {
@@ -65,9 +65,9 @@ func TestStampExecutableSupportsWindowsReleaseArchitectures(t *testing.T) {
 				executable:      executable,
 				icon:            icon,
 				numericVersion:  "1.17.13",
-				fileDescription: "Deeper Launcher",
-				internalName:    "deeper-launcher",
-				originalName:    "deeper-launcher.exe",
+				fileDescription: "Deepzora Launcher",
+				internalName:    "deepzora-launcher",
+				originalName:    "deepzora-launcher.exe",
 			}
 			if err := stampExecutable(opts); err != nil {
 				t.Fatal(err)
@@ -97,7 +97,7 @@ func TestStampExecutableSupportsWindowsReleaseArchitectures(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := (*info.Table()[version.LangDefault])[version.OriginalFilename]; got != "deeper-launcher.exe" {
+			if got := (*info.Table()[version.LangDefault])[version.OriginalFilename]; got != "deepzora-launcher.exe" {
 				t.Errorf("OriginalFilename = %q", got)
 			}
 			manifest := rs.Get(winres.RT_MANIFEST, winres.ID(1), winres.LCIDDefault)

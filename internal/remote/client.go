@@ -12,9 +12,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"deeper/internal/netclient"
-	"deeper/internal/remote/forward"
-	"deeper/internal/remote/sftpfs"
+	"deepzora/internal/netclient"
+	"deepzora/internal/remote/forward"
+	"deepzora/internal/remote/sftpfs"
 )
 
 // Options configures a Client. Host, Auth, and HostKeys are required; the rest

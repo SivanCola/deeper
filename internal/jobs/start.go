@@ -2,8 +2,8 @@ package jobs
 
 import (
 	"context"
-	"deeper/internal/event"
-	"deeper/internal/nilutil"
+	"deepzora/internal/event"
+	"deepzora/internal/nilutil"
 	"fmt"
 	"io"
 	"strings"

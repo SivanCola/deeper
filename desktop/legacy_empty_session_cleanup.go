@@ -15,12 +15,12 @@ import (
 	"sync"
 	"time"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/filelock"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/filelock"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 const legacyEmptySessionCleanupEvent = "legacy-empty-session-cleanup:changed"

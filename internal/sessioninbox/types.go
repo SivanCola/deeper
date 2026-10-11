@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"deeper/internal/attachment"
+	"deepzora/internal/attachment"
 )
 
 // SchemaVersion is the on-disk format version. Unknown higher versions load

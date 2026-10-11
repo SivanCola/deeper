@@ -15,12 +15,12 @@ import (
 // reads as flicker while typing (local Windows Terminal into a remote pwsh7,
 // #8405). Reporting the mode the way a supporting terminal would flips the
 // renderer on; terminals without 2026 ignore the per-frame sequences by spec.
-// DEEPER_DISABLE_SYNC_OUTPUT=1 opts out.
+// DEEPZORA_DISABLE_SYNC_OUTPUT=1 opts out.
 func forceSyncOutputCmd() tea.Cmd {
 	if !remoteClipboardSession() {
 		return nil
 	}
-	if v := strings.TrimSpace(os.Getenv("DEEPER_DISABLE_SYNC_OUTPUT")); v != "" && v != "0" {
+	if v := strings.TrimSpace(os.Getenv("DEEPZORA_DISABLE_SYNC_OUTPUT")); v != "" && v != "0" {
 		return nil
 	}
 	return func() tea.Msg {

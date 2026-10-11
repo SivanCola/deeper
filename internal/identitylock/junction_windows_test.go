@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 func TestJunctionLocksExcludeLegacyAndCurrentWriters(t *testing.T) {

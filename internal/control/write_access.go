@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/permission"
-	"deeper/internal/sandbox"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
+	"deepzora/internal/sandbox"
 )
 
 const writeAccessKind = event.ApprovalKindWriteAccess
@@ -165,9 +165,9 @@ func bashCommandForPermissionRetry(args []byte) string {
 func agentHeadlessWriteHint(display []string) string {
 	needed := strings.Join(display, ", ")
 	if needed == "" {
-		return "this directory is outside the writable roots. Restart with --add-dir /abs/path, add it to [sandbox].allow_write in deeper.toml, or use an interactive session to approve the directory."
+		return "this directory is outside the writable roots. Restart with --add-dir /abs/path, add it to [sandbox].allow_write in deepzora.toml, or use an interactive session to approve the directory."
 	}
-	return "this directory is outside the writable roots (" + needed + "). Restart with --add-dir " + needed + ", add it to [sandbox].allow_write in deeper.toml, or use an interactive session to approve the directory."
+	return "this directory is outside the writable roots (" + needed + "). Restart with --add-dir " + needed + ", add it to [sandbox].allow_write in deepzora.toml, or use an interactive session to approve the directory."
 }
 
 func displayForAbs(abs, display, missing []string) []string {

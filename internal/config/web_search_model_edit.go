@@ -1,7 +1,7 @@
 package config
 
 import (
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 	"fmt"
 	"os"
 )

@@ -12,8 +12,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
 )
 
 type cliColor struct {
@@ -124,7 +124,7 @@ func configureCLITheme(mode string) {
 }
 
 func configureCLIThemeWithStyle(mode, style string) {
-	if env := strings.TrimSpace(os.Getenv("DEEPER_THEME")); env != "" {
+	if env := strings.TrimSpace(os.Getenv("DEEPZORA_THEME")); env != "" {
 		if st, ok := cliThemeStyleByName(env); ok {
 			mode = st.mode
 			style = st.name
@@ -132,7 +132,7 @@ func configureCLIThemeWithStyle(mode, style string) {
 			mode = env
 		}
 	}
-	if env := strings.TrimSpace(os.Getenv("DEEPER_THEME_STYLE")); env != "" {
+	if env := strings.TrimSpace(os.Getenv("DEEPZORA_THEME_STYLE")); env != "" {
 		style = env
 	}
 	activeCLITheme = resolveCLIThemeWithStyle(mode, style)

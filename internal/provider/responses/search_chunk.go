@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func emitSearchReplay(ctx context.Context, out chan<- provider.Chunk, raw json.RawMessage) bool {

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // TestSnapshotIncludesRemoteProjectGroups pins that pinned remote workspaces
@@ -14,7 +14,7 @@ import (
 // "no remote groups" instead of failing the whole snapshot.
 func TestSnapshotIncludesRemoteProjectGroups(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	if err := editUserConfig(func(c *config.Config) error {
 		if err := c.UpsertRemoteHost(config.RemoteHostEntry{Name: "gpu-box", Host: "192.168.1.10", User: "dev"}); err != nil {
@@ -55,7 +55,7 @@ func TestSnapshotIncludesRemoteProjectGroups(t *testing.T) {
 
 func TestRemoteProjectNodeKeysDoNotCollide(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	if err := editUserConfig(func(c *config.Config) error {
 		for _, host := range []string{"a_b", "a"} {
@@ -81,7 +81,7 @@ func TestRemoteProjectNodeKeysDoNotCollide(t *testing.T) {
 
 func TestRemoteProjectTreeIdentityIncludesHost(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	if err := editUserConfig(func(c *config.Config) error {
 		for _, host := range []string{"host-a", "host-b"} {

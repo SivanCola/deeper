@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/repair"
+	"deepzora/internal/control"
+	"deepzora/internal/repair"
 )
 
 type shutdownSnapshotController struct {
@@ -318,8 +318,8 @@ func TestCaptureAndCommitPendingUpdateHealthUsesExactStartupIdentity(t *testing.
 		CreatedAt:     "2026-08-05T00:00:00Z",
 		Platform:      "darwin/arm64",
 		TargetKind:    "app-bundle",
-		TargetPath:    "/Applications/Deeper.app",
-		BackupPath:    "/Applications/Deeper.app.deeper-update-backup",
+		TargetPath:    "/Applications/Deepzora.app",
+		BackupPath:    "/Applications/Deepzora.app.deepzora-update-backup",
 	}
 	readPendingUpdateForHealth = func() (*repair.UpdateTransaction, error) { return tx, nil }
 	app := NewApp()

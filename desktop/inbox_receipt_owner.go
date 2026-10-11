@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // A receipt belongs to a durable session, not the UI tab which originally

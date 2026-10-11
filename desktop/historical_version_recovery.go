@@ -4,9 +4,9 @@ import (
 	"context"
 	"path/filepath"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 // Called only for an explicit version import, while the source's import and

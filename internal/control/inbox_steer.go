@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/agent"
+	"deepzora/internal/sessioninbox"
 )
 
 func steerAlreadyAdmitted(state sessioninbox.InboxState) bool {

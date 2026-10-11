@@ -17,7 +17,7 @@ import (
 func lockedCredentialStore(t *testing.T) string {
 	t.Helper()
 	setRuntimeGOOS(t, "windows")
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	t.Setenv("RECOVERED_KEY", "")
 	path := UserCredentialsPath()
 	if err := os.WriteFile(path, []byte("EXISTING_KEY=old\n"), 0o600); err != nil {

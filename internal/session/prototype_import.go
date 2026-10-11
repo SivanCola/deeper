@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
 )
 
 type frozenPreview struct {
@@ -140,7 +140,7 @@ func freezePreviewCodec(ctx context.Context, sourceDir string, allowCurrent bool
 	if draftCodec {
 		logName = currentLogName
 	}
-	freezeDir, err := os.MkdirTemp("", "deeper-preview-freeze-*")
+	freezeDir, err := os.MkdirTemp("", "deepzora-preview-freeze-*")
 	if err != nil {
 		return frozenPreview{}, err
 	}

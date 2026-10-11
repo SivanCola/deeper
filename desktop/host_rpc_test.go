@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/hostrpc"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/extension/rpcwire"
+	"deepzora/desktop/internal/hostrpc"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/extension/rpcwire"
 )
 
 // hostRPCShell runs runHostRPC over pipes and returns the fake shell, the
@@ -63,7 +63,7 @@ func hostRPCHello(t *testing.T) hostrpc.HelloParams {
 		ContractDigest:  hostrpc.Build(registry, hostEventNames).Digest(),
 		Build:           hostrpc.BuildInfo{Version: version, Channel: channel},
 		Host:            hostrpc.HostInfo{Name: "electron", Platform: goruntime.GOOS},
-		Instance:        hostrpc.HelloInstance{Home: config.DeeperHomeDir()},
+		Instance:        hostrpc.HelloInstance{Home: config.DeepzoraHomeDir()},
 	}
 }
 

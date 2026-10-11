@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 type snapshotErrorSessionController struct {
@@ -105,8 +105,8 @@ func TestTrashTopicForeignLeaseFailsBeforeCleanupCommit(t *testing.T) {
 
 	cmd := exec.Command(os.Args[0], "-test.run=^TestTrashTopicForeignLeaseHelper$")
 	cmd.Env = append(os.Environ(),
-		"DEEPER_TOPIC_ARCHIVE_LEASE_HELPER=1",
-		"DEEPER_TOPIC_ARCHIVE_LEASE_PATH="+sessionPath,
+		"DEEPZORA_TOPIC_ARCHIVE_LEASE_HELPER=1",
+		"DEEPZORA_TOPIC_ARCHIVE_LEASE_PATH="+sessionPath,
 	)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -165,10 +165,10 @@ func TestTrashTopicForeignLeaseFailsBeforeCleanupCommit(t *testing.T) {
 }
 
 func TestTrashTopicForeignLeaseHelper(t *testing.T) {
-	if os.Getenv("DEEPER_TOPIC_ARCHIVE_LEASE_HELPER") != "1" {
+	if os.Getenv("DEEPZORA_TOPIC_ARCHIVE_LEASE_HELPER") != "1" {
 		return
 	}
-	lease, err := agent.TryAcquireSessionLease(os.Getenv("DEEPER_TOPIC_ARCHIVE_LEASE_PATH"))
+	lease, err := agent.TryAcquireSessionLease(os.Getenv("DEEPZORA_TOPIC_ARCHIVE_LEASE_PATH"))
 	if err != nil {
 		t.Fatalf("TryAcquireSessionLease: %v", err)
 	}

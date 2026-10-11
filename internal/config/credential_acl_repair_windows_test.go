@@ -30,11 +30,11 @@ func TestCredentialAccessRepairsLegacyDenyThroughLinkedHome(t *testing.T) {
 	t.Setenv("TMP", tmp)
 	t.Setenv("TEMP", tmp)
 	realHome := t.TempDir()
-	linkedHome := filepath.Join(t.TempDir(), "deeper-home")
+	linkedHome := filepath.Join(t.TempDir(), "deepzora-home")
 	if err := os.Symlink(realHome, linkedHome); err != nil {
 		t.Skipf("directory symlinks unavailable: %v", err)
 	}
-	t.Setenv("DEEPER_HOME", linkedHome)
+	t.Setenv("DEEPZORA_HOME", linkedHome)
 	path := UserCredentialsPath()
 	if err := os.WriteFile(path, []byte("EXISTING_KEY=old\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -78,7 +78,7 @@ func testCredentialAccessRepairsLegacyDeny(t *testing.T, operation string) {
 	t.Setenv("TMP", tmp)
 	t.Setenv("TEMP", tmp)
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("ACL_REPAIR_INTEGRATION_KEY", "")
 	path := UserCredentialsPath()
 	if err := os.WriteFile(path, []byte("EXISTING_KEY=old\n"), 0o600); err != nil {
@@ -144,7 +144,7 @@ func testCredentialAccessRepairsLegacyDeny(t *testing.T, operation string) {
 
 func TestReadableCredentialsDoNotWaitForSandboxLock(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	path := UserCredentialsPath()
 	if err := os.WriteFile(path, []byte("KEY=value\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -188,14 +188,14 @@ func TestReadableCredentialsDoNotWaitForSandboxLock(t *testing.T) {
 	}
 }
 
-// A deny with no sandbox record cannot be attributed to Deeper, so the
+// A deny with no sandbox record cannot be attributed to Deepzora, so the
 // provenance-checked repair refuses; an explicit save must still succeed by
 // resetting the ACL without reading it and keeping the stored values.
 func TestCredentialSaveResetsDenyWithoutSandboxRecord(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("TMP", tmp)
 	t.Setenv("TEMP", tmp)
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	t.Setenv("ACL_RESET_INTEGRATION_KEY", "")
 	path := UserCredentialsPath()
 	if err := os.WriteFile(path, []byte("EXISTING_KEY=old\n"), 0o600); err != nil {

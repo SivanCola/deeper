@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/memory"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/memory"
 )
 
 func TestSubmitToTabHistoryDisplaysRawInputAfterStandingMemoryCompose(t *testing.T) {

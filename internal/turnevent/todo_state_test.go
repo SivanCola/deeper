@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestTodoStateIsCommittedWithToolResultAndClearedByCommittedStart(t *testing.T) {

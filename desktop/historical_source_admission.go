@@ -3,8 +3,8 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 const sessionOperationHistoricalSourcePending = "historical_source_pending"

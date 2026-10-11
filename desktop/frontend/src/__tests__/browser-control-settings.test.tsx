@@ -84,7 +84,7 @@ console.log("browser control settings page");
   const calls: string[] = [];
   installDom();
   // English labels keep the button-text assertions stable.
-  window.localStorage.setItem("deeper-lang", "en");
+  window.localStorage.setItem("deepzora-lang", "en");
   const { root, rootEl } = await renderPage({ browserControlCalls: calls });
   await waitFor("controls", () => rootEl.querySelectorAll('input[type="checkbox"]').length === 2);
 
@@ -126,7 +126,7 @@ console.log("browser control settings page");
 
 {
   installDom();
-  window.localStorage.setItem("deeper-lang", "en");
+  window.localStorage.setItem("deepzora-lang", "en");
   const { root, rootEl } = await renderPage({ chromeImportOutcome: { ok: false, reason: "safe-storage-denied" } });
   await waitFor("import button", () => rootEl.querySelectorAll("button").length > 0);
   await click(buttonFor(rootEl, "Import browser data"));
@@ -139,7 +139,7 @@ console.log("browser control settings page");
 
 {
   installDom();
-  window.localStorage.setItem("deeper-lang", "en");
+  window.localStorage.setItem("deepzora-lang", "en");
   const rootEl = document.getElementById("root");
   if (!rootEl) throw new Error("missing root");
   const root = createRoot(rootEl);

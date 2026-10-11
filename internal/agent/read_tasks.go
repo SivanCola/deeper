@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"sync"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // readState groups the run-scoped read registry with its generation.

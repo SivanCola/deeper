@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func seedRepairFenceRow(t *testing.T, catalog *Catalog, path string) {

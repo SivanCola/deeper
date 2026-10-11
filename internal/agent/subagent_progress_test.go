@@ -10,10 +10,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // fakeProgressClock drives the merger's pacing deterministically: tests advance

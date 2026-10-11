@@ -14,16 +14,16 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"deeper/internal/repair"
+	"deepzora/internal/repair"
 )
 
 func TestInstallerCommandShowsUpdateProgressAndPassesUnquotedDFlagLast(t *testing.T) {
-	cmd := installerCommand(`C:\Temp\deeper-update-1.exe`, `D:\Tools\Deeper App`)
+	cmd := installerCommand(`C:\Temp\deepzora-update-1.exe`, `D:\Tools\Deepzora App`)
 	if cmd.SysProcAttr == nil {
 		t.Fatal("expected a raw command line forcing the install dir")
 	}
 	got := cmd.SysProcAttr.CmdLine
-	want := `"C:\Temp\deeper-update-1.exe" /DEEPERUPDATE=1 /DEEPERSTAGE=1 /D=D:\Tools\Deeper App`
+	want := `"C:\Temp\deepzora-update-1.exe" /DEEPZORAUPDATE=1 /DEEPZORASTAGE=1 /D=D:\Tools\Deepzora App`
 	if got != want {
 		t.Fatalf("CmdLine = %q, want %q", got, want)
 	}
@@ -33,12 +33,12 @@ func TestInstallerCommandShowsUpdateProgressAndPassesUnquotedDFlagLast(t *testin
 }
 
 func TestInstallerCommandWithoutDirSkipsDFlag(t *testing.T) {
-	cmd := installerCommand(`C:\Temp\deeper-update-1.exe`, "")
+	cmd := installerCommand(`C:\Temp\deepzora-update-1.exe`, "")
 	if cmd.SysProcAttr == nil {
 		t.Fatal("expected a raw command line for visible updater installs")
 	}
 	got := cmd.SysProcAttr.CmdLine
-	want := `"C:\Temp\deeper-update-1.exe" /DEEPERUPDATE=1 /DEEPERSTAGE=1`
+	want := `"C:\Temp\deepzora-update-1.exe" /DEEPZORAUPDATE=1 /DEEPZORASTAGE=1`
 	if got != want {
 		t.Fatalf("CmdLine = %q, want %q", got, want)
 	}
@@ -94,7 +94,7 @@ func TestWindowsPEMachineMatchesSupportedArchitectures(t *testing.T) {
 }
 
 func TestClaimVerifiedWindowsUpdateHelperExecutionFreezesPath(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "deeper-update-helper.exe")
+	path := filepath.Join(t.TempDir(), "deepzora-update-helper.exe")
 	content := []byte("verified-helper")
 	if err := os.WriteFile(path, content, 0o700); err != nil {
 		t.Fatal(err)
@@ -120,7 +120,7 @@ func TestClaimVerifiedWindowsUpdateHelperExecutionFreezesPath(t *testing.T) {
 }
 
 func TestClaimVerifiedWindowsUpdateHelperExecutionRejectsHashDrift(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "deeper-update-helper.exe")
+	path := filepath.Join(t.TempDir(), "deepzora-update-helper.exe")
 	if err := os.WriteFile(path, []byte("tampered"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestPreparedWindowsUpdateHelperSHA256BindsReleaseUnitMember(t *testing.T) {
 	prepared := &repair.UpdateTransaction{
 		SchemaVersion: 1,
 		TargetKind:    "file",
-		TargetPath:    filepath.Join(installDir, "deeper-desktop.exe"),
+		TargetPath:    filepath.Join(installDir, "deepzora-desktop.exe"),
 		ToVersion:     "v2",
 		Platform:      "windows/amd64",
 		CreatedAt:     "2026-07-29T00:00:00Z",

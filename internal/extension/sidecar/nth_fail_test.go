@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 )
 
 // TestNthRequiredFailureClosesEarlierSuccesses: Nth required fail → nil manager.

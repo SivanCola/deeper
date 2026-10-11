@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // ask is deliberately absent: a planner that needs a user-owned decision asks

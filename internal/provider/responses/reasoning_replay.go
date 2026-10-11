@@ -1,7 +1,7 @@
 package responses
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"slices"
 	"strings"
 )

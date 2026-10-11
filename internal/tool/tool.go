@@ -13,8 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/internal/diff"
-	"deeper/internal/provider"
+	"deepzora/internal/diff"
+	"deepzora/internal/provider"
 )
 
 // Tool is a capability the model can invoke.

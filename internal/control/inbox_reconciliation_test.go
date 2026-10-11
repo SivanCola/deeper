@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/tool"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/tool"
+	"deepzora/internal/transcript"
 )
 
 func TestSteerEventFollowsDurableConsumedTransition(t *testing.T) {

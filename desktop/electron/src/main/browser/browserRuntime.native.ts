@@ -27,15 +27,15 @@ const server = createServer((req, res) => {
 await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
 const address = server.address();
 assert.ok(address && typeof address === "object");
-const directory = await mkdtemp(join(tmpdir(), "deeper-native-browser-"));
+const directory = await mkdtemp(join(tmpdir(), "deepzora-native-browser-"));
 const win = new BrowserWindow({ show: false, width: 800, height: 600 });
 const background = process.platform === "darwin";
-const recordingSeconds = Number(process.env.DEEPER_BROWSER_RECORD_SECONDS ?? 1);
+const recordingSeconds = Number(process.env.DEEPZORA_BROWSER_RECORD_SECONDS ?? 1);
 assert.ok(Number.isInteger(recordingSeconds) && recordingSeconds >= 1 && recordingSeconds <= 90);
 if (!background) win.showInactive();
 const factory = new ElectronGuestViewFactory({ window: () => win, preloadPath: join(__dirname, "guest-preload.cjs"), log: { warn: console.warn } as Logger });
 const protocolTrace: unknown[] = [];
-if (process.env.DEEPER_BROWSER_TRACE_RPC === "1") {
+if (process.env.DEEPZORA_BROWSER_TRACE_RPC === "1") {
   const create = factory.create.bind(factory);
   let request = 0;
   factory.create = (...args) => {
@@ -99,7 +99,7 @@ try {
   for (const frame of view.page.mainFrame.framesInSubtree) await frame.executeJavaScript(`window.fixtureEvents = []; for (const type of ['mousedown', 'mouseup', 'click']) document.addEventListener(type, e => window.fixtureEvents.push({type, x:e.clientX, y:e.clientY, tag:e.target.tagName}));`);
   // Holds the page moving until the first input is refused, as a slow runner
   // leaves it unsettled after iframe load; the retry must then land on the target.
-  const unsettled = process.env.DEEPER_BROWSER_UNSETTLED_INPUT === "1";
+  const unsettled = process.env.DEEPZORA_BROWSER_UNSETTLED_INPUT === "1";
   if (unsettled) await view.page.mainFrame.executeJavaScript(`(() => { let offset = 0; window.fixtureUnsettled = setInterval(() => { document.body.style.paddingTop = \`\${++offset % 40}px\`; }, 4); return true; })()`);
   let observedFrom = 0;
   const { point, located } = await clickObserved(async attempt => {
@@ -281,7 +281,7 @@ try {
   await writeFile(join(__dirname, "browser-diagnostics.json"), JSON.stringify(diagnosticResult, null, 2));
   diagnosticExport.dispose();
   console.log("browser diagnostics: native page errors, CDP attribution, closed-tab retention and redaction passed");
-  const cycles = Number(process.env.DEEPER_BROWSER_CYCLES ?? 1);
+  const cycles = Number(process.env.DEEPZORA_BROWSER_CYCLES ?? 1);
   assert.ok(Number.isInteger(cycles) && cycles >= 1 && cycles <= 100);
   for (let cycle = 0; cycle < cycles; cycle++) {
     const page = factory.create("native-cycle");
@@ -316,4 +316,4 @@ try {
   // Buffer protocol traces to avoid per-command terminal IO perturbing races.
   if (protocolTrace.length) console.log(protocolTrace.map(row => JSON.stringify(row)).join("\n"));
 }
-await writeFile(join(__dirname, "result.json"), JSON.stringify({ completed: true, platform: process.platform, electron: process.versions.electron, chrome: process.versions.chrome, cycles: Number(process.env.DEEPER_BROWSER_CYCLES ?? 1), backgroundCapture: background, isolatedCrossOriginSnapshot: true, crossOriginClick: true, crossOriginUpload: true, crossOriginLifecycleCycles: true, idleReconnect: true, responsive: { width: 393, height: 852, dpr: 1 }, recording: { mime: "video/webm", width: 1280, height: 720, requestedSeconds: recordingSeconds, takeover: "interrupted", userInput: "continued", userStop: "completed" }, remainingWebContents: 0 }));
+await writeFile(join(__dirname, "result.json"), JSON.stringify({ completed: true, platform: process.platform, electron: process.versions.electron, chrome: process.versions.chrome, cycles: Number(process.env.DEEPZORA_BROWSER_CYCLES ?? 1), backgroundCapture: background, isolatedCrossOriginSnapshot: true, crossOriginClick: true, crossOriginUpload: true, crossOriginLifecycleCycles: true, idleReconnect: true, responsive: { width: 393, height: 852, dpr: 1 }, recording: { mime: "video/webm", width: 1280, height: 720, requestedSeconds: recordingSeconds, takeover: "interrupted", userInput: "continued", userStop: "completed" }, remainingWebContents: 0 }));

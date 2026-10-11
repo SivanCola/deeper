@@ -2,7 +2,7 @@
 
 这个可选配对评测用于比较缓存稳定的 `use_capability` 代理，以及把 MCP 工具展开进
 provider 可见 schema 的基线。它是性能诊断工具，不是 Stable 发布门禁。真实模型
-运行可选，且必须使用一次性 Deeper home。
+运行可选，且必须使用一次性 Deepzora home。
 
 ## 测什么
 
@@ -16,7 +16,7 @@ provider 可见 schema 的基线。它是性能诊断工具，不是 Stable 发�
 
 ## 步骤
 
-1. 使用一次性 `DEEPER_HOME` 和 `DEEPER_CACHE_HOME`。
+1. 使用一次性 `DEEPZORA_HOME` 和 `DEEPZORA_CACHE_HOME`。
 2. 选择一组需要先发现再调用 MCP 的代表性任务。
 3. 每道任务分别运行代理和基线，并保持模型、effort、工作区、技能、Agent 与 MCP
    配置一致。

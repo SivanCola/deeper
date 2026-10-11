@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestDeletedLegacyTopicStaysHiddenAfterCatalogRebuild(t *testing.T) {

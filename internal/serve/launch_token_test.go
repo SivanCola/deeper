@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 var mutationRoutes = []string{

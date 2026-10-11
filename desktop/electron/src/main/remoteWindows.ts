@@ -51,7 +51,7 @@ export class RemoteWindowHost {
       minWidth: 760,
       minHeight: 480,
       show: false,
-      title: input.title || "Deeper",
+      title: input.title || "Deepzora",
       backgroundColor: "#1a1a2e",
       autoHideMenuBar: true,
       icon: this.deps.icon,

@@ -3,7 +3,7 @@ package openai
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func hasReasoningOrToolCall(m provider.Message) bool {

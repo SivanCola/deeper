@@ -2,7 +2,7 @@ package control
 
 import (
 	"context"
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 	"log/slog"
 )
 

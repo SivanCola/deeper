@@ -287,7 +287,7 @@ func TestStaleCleanup(t *testing.T) {
 	}
 
 	// Unrelated directory — skip.
-	other := filepath.Join(root, "not-deeper")
+	other := filepath.Join(root, "not-deepzora")
 	if err := os.Mkdir(other, 0o700); err != nil {
 		t.Fatal(err)
 	}

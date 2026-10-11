@@ -23,10 +23,10 @@ provider-visible tool names:
 
 | Name | Payload |
 |---|---|
-| `deeper.subagent.status` | exactly one of `queued`, `running`, `reasoning`, `responding`, `tool`, `retrying`, `completed`, `failed`, `cancelled` |
-| `deeper.subagent.reasoning` | bounded UTF-8 text delta (the child's thinking) |
-| `deeper.subagent.text` | bounded UTF-8 text delta (the child's response preview) |
-| `deeper.subagent.notice` | bounded UTF-8 text delta (the child's notices) |
+| `deepzora.subagent.status` | exactly one of `queued`, `running`, `reasoning`, `responding`, `tool`, `retrying`, `completed`, `failed`, `cancelled` |
+| `deepzora.subagent.reasoning` | bounded UTF-8 text delta (the child's thinking) |
+| `deepzora.subagent.text` | bounded UTF-8 text delta (the child's response preview) |
+| `deepzora.subagent.notice` | bounded UTF-8 text delta (the child's notices) |
 
 Field conventions:
 
@@ -129,6 +129,6 @@ What is **not** done:
 
 ## Contract stability
 
-Frontends match the reserved names by the `deeper.subagent.` prefix, so a
+Frontends match the reserved names by the `deepzora.subagent.` prefix, so a
 future channel added by a newer agent is ignored (never appended to ordinary
 tool output) by older frontends.

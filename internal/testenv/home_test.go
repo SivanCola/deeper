@@ -17,9 +17,9 @@ func TestIsolateUserStateRedirectsAndRestoresCallerEnvironment(t *testing.T) {
 		"XDG_STATE_HOME":    filepath.Join(callerHome, "caller-xdg-state"),
 		"AppData":           filepath.Join(callerHome, "caller-appdata"),
 		"LocalAppData":      filepath.Join(callerHome, "caller-local-appdata"),
-		"DEEPER_HOME":       filepath.Join(callerHome, "explicit-deeper-home"),
-		"DEEPER_STATE_HOME": filepath.Join(callerHome, "caller-state"),
-		"DEEPER_CACHE_HOME": filepath.Join(callerHome, "caller-cache"),
+		"DEEPZORA_HOME":       filepath.Join(callerHome, "explicit-deepzora-home"),
+		"DEEPZORA_STATE_HOME": filepath.Join(callerHome, "caller-state"),
+		"DEEPZORA_CACHE_HOME": filepath.Join(callerHome, "caller-cache"),
 	}
 	for key, value := range callerEnvironment {
 		t.Setenv(key, value)
@@ -51,7 +51,7 @@ func TestIsolateUserStateRedirectsAndRestoresCallerEnvironment(t *testing.T) {
 			t.Errorf("%s inside isolated test process = %q, want %q", key, got, want)
 		}
 	}
-	for _, key := range []string{"DEEPER_HOME", "DEEPER_STATE_HOME", "DEEPER_CACHE_HOME"} {
+	for _, key := range []string{"DEEPZORA_HOME", "DEEPZORA_STATE_HOME", "DEEPZORA_CACHE_HOME"} {
 		if _, ok := os.LookupEnv(key); ok {
 			t.Fatalf("%s remained set inside isolated test process", key)
 		}

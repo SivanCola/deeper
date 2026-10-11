@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"deeper/internal/config"
-	"deeper/internal/mcpdiag"
-	"deeper/internal/plugin"
+	"deepzora/internal/config"
+	"deepzora/internal/mcpdiag"
+	"deepzora/internal/plugin"
 )
 
 func reconcileRemovedMCPOAuth(workspace, name string) error {
@@ -20,7 +20,7 @@ func reconcileRemovedMCPOAuth(workspace, name string) error {
 		break
 	}
 	_, err = plugin.ReconcileHTTPMCPOAuthAfterRemoval(plugin.Spec{
-		Name: name, StateDir: plugin.MCPStateDir(config.DeeperHomeDir(), workspace, name),
+		Name: name, StateDir: plugin.MCPStateDir(config.DeepzoraHomeDir(), workspace, name),
 	}, remainingResource)
 	return err
 }

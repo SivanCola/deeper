@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/runtimepolicy"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/runtimepolicy"
 )
 
 // streamedTurn is one provider completion collected by stream. Keeping the

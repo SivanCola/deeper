@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	"deeper/internal/repair"
+	"deepzora/internal/repair"
 )
 
 func (a *App) recordPreviousRunDiagnostics() {
@@ -43,7 +43,7 @@ func previousRunReport(previous repair.PreviousRunObservation) crashReport {
 	}
 	message := fmt.Sprintf(`[desktop.legacy_abnormal_exit]
 
-Deeper consumed a legacy v1.18-v1.19 startup record whose owner was no longer running.
+Deepzora consumed a legacy v1.18-v1.19 startup record whose owner was no longer running.
 
 --- lifecycle context ---
 phase: %s
@@ -87,7 +87,7 @@ func desktopLifecycleReport(previous desktopLifecycleObservation) crashReport {
 	}
 	message := fmt.Sprintf(`[desktop.abnormal_exit.v2]
 
-Deeper found a per-process lifecycle record whose desktop process was no longer running.
+Deepzora found a per-process lifecycle record whose desktop process was no longer running.
 
 --- lifecycle context ---
 phase: %s

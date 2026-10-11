@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/skill/skillwatch"
 )
 
 // WatchService is the host-lifetime shared physical watcher.

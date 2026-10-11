@@ -11,14 +11,14 @@ implementation; see [the current contract](AGENT_CORE_SIMPLIFICATION.md).
 
 Date / 日期: 2026-09-05. Source baseline / 源码基线:
 [`bbd72fb8b0bb6de580d2041a0150016227c63ac0`](https://github.com/anomalyco/opencode/tree/bbd72fb8b0bb6de580d2041a0150016227c63ac0).
-This is a source comparison with Deeper live experiments, not a same-account
+This is a source comparison with Deepzora live experiments, not a same-account
 end-to-end benchmark of the OpenCode executable. / 本文结合 OpenCode 固定源码与
-Deeper 实测；没有宣称运行 OpenCode 完整客户端作同账户对照。
+Deepzora 实测；没有宣称运行 OpenCode 完整客户端作同账户对照。
 
 ## 1. Normal text completion without the requested tool / 正常结束却没有执行工具
 
 Kimi K3 returned HTTP 200 and `stop` with no tool-call fields on the original
-wire. It sometimes invented an echo result. Deeper did not drop a received
+wire. It sometimes invented an echo result. Deepzora did not drop a received
 call: the call was absent before parsing. Both low and max effort reproduced
 this behavior with the minimal no-argument echo fixture.
 
@@ -63,9 +63,9 @@ Recommended change / 建议：
   must prevent action replay. Ordinary conversation should retain normal stops.
   / 仅在宿主已有确定的未完成动作状态时考虑一次提醒，共享预算；不得凭文字
   猜任务，也不得重放已完成写入、拒绝权限或结果未知的操作。
-- This reminder would be a Deeper extension, not behavior proven in OpenCode.
+- This reminder would be a Deepzora extension, not behavior proven in OpenCode.
   Any system-prompt change changes the cache prefix once; do not inject changing
-  reminders into healthy turns. / 自动提醒属于 Deeper 的额外设计。固定提示
+  reminders into healthy turns. / 自动提醒属于 Deepzora 的额外设计。固定提示
   修改会使对应缓存前缀变化一次，不应向正常轮次持续注入动态提示。
 
 ## 2. Opaque HTTP 400 on custom DeepSeek Messages / 自定义 Messages 的不透明 400
@@ -127,7 +127,7 @@ search permission. It does not establish that native Responses must supply
 
 Recommended change / 建议：
 
-- Reuse Deeper's existing independent `web_search` owner. Keep the main model,
+- Reuse Deepzora's existing independent `web_search` owner. Keep the main model,
   protocol and thinking settings unchanged. / 复用已实现的独立搜索，不再建平行系统。
 - Distinguish search execution, raw item replay, and structured source availability
   in tests and presentation. Missing sources are not a transport retry signal.
@@ -143,18 +143,18 @@ Recommended change / 建议：
 OpenCode [normalizes interleaved Chat reasoning, including empty values](https://github.com/anomalyco/opencode/blob/bbd72fb8b0bb6de580d2041a0150016227c63ac0/packages/opencode/src/provider/transform.ts#L322).
 Its [Anthropic normalization preserves signed empty blocks](https://github.com/anomalyco/opencode/blob/bbd72fb8b0bb6de580d2041a0150016227c63ac0/packages/opencode/src/provider/transform.ts#L168).
 These transformations should not be copied as a universal empty-reasoning rule.
-Deeper should retain its protocol contracts: Chat empty-field compatibility;
+Deepzora should retain its protocol contracts: Chat empty-field compatibility;
 actual unsigned thinking for DeepSeek Messages; original proofs for native
 Claude; complete raw items for Responses. / 不应跨协议照搬补空值。此前实现的
 能力判定与原始回放资料仍应保留。
 
 OpenCode [disables SDK retries by default and repairs malformed tool calls at the tool boundary](https://github.com/anomalyco/opencode/blob/bbd72fb8b0bb6de580d2041a0150016227c63ac0/packages/opencode/src/session/llm.ts#L296).
 The pinned [session retry policy](https://github.com/anomalyco/opencode/blob/bbd72fb8b0bb6de580d2041a0150016227c63ac0/packages/opencode/src/session/retry.ts#L26)
-uses five retries, exponential delay and jitter. Deeper already has centralized
+uses five retries, exponential delay and jitter. Deepzora already has centralized
 request ownership; retain its agreed Pi-style three fast retries and explicitly
 selected main-session waiting semantics. Do not silently replace them with this
 OpenCode version's constants. / 借鉴重试归属与错误分类，不照抄次数，也不声称
-Deeper 的主会话持续等待是 OpenCode 的默认行为。
+Deepzora 的主会话持续等待是 OpenCode 的默认行为。
 
 ## Delivery and next priority / 交付与下一步优先级
 

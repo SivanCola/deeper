@@ -1,10 +1,10 @@
 package main
 
 import (
-	"deeper/internal/control"
-	"deeper/internal/gitcmd"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/gitcmd"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
 )
 
 // TabMeta is the frontend-facing shape of one tab.

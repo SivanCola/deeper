@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type fakeDesktopBridge struct {

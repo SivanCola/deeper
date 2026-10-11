@@ -2,10 +2,10 @@ package boot
 
 import (
 	"context"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/plugin"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/plugin"
+	"deepzora/internal/provider"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -28,7 +28,7 @@ func TestBuildDeepSeekTextParentCanUseImageReturningMCPAndVisionSubagent(t *test
 	if _, err := config.SetCredential("BOOT_DEEPSEEK_TEST_KEY", "test-key"); err != nil {
 		t.Fatalf("store test DeepSeek credential: %v", err)
 	}
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "parent"
 
 [agent]
@@ -55,10 +55,10 @@ vision = true
 	if err != nil {
 		t.Fatalf("decode test png: %v", err)
 	}
-	if err := os.MkdirAll(filepath.Join(dir, ".deeper", "attachments"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".deepzora", "attachments"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".deeper", "attachments", "shot.png"), png, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".deepzora", "attachments", "shot.png"), png, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	mcpImage := base64.StdEncoding.EncodeToString(png)
@@ -129,7 +129,7 @@ vision = true
 		resolved, _ := loaded.ResolveModel(ctrl.ModelRef())
 		t.Fatalf("official DeepSeek parent unexpectedly enables direct images: ref=%q entry=%+v load_err=%v", ctrl.ModelRef(), resolved, loadErr)
 	}
-	if err := ctrl.Run(context.Background(), "review @.deeper/attachments/shot.png"); err != nil {
+	if err := ctrl.Run(context.Background(), "review @.deepzora/attachments/shot.png"); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	reqs := prov.requestsSnapshot()
@@ -150,7 +150,7 @@ vision = true
 	if !registered["review"] && !registered["run_skill"] {
 		t.Fatalf("capability registry missing review/run_skill: %v", registered)
 	}
-	if got := bootLastUser(reqs[0]); !strings.Contains(got, "@.deeper/attachments/shot.png") {
+	if got := bootLastUser(reqs[0]); !strings.Contains(got, "@.deepzora/attachments/shot.png") {
 		t.Fatalf("text-only parent lost the attachment reference needed by MCP: %q", got)
 	}
 	// The text parent receives summaries; native images remain available to

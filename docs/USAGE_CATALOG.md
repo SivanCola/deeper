@@ -1,6 +1,6 @@
 # Usage Catalog
 
-Deeper stores disposable usage rollups at `<cache root>/usage-catalog/v1.sqlite`.
+Deepzora stores disposable usage rollups at `<cache root>/usage-catalog/v1.sqlite`.
 Daily statistics JSONL remains authoritative and byte-compatible with older
 versions. The catalog records file offsets and line hashes for cross-process
 idempotency, then derives daily source/model/provider rollups.
@@ -18,8 +18,8 @@ background index catches up. Catalog failures never block provider events,
 turn completion, controller startup, or shutdown.
 
 ```sh
-deeper doctor catalogs [--json]
-deeper catalogs reindex usage [--json]
+deepzora doctor catalogs [--json]
+deepzora catalogs reindex usage [--json]
 ```
 
 Diagnostics expose schema, integrity, lag, counts, and failures without model

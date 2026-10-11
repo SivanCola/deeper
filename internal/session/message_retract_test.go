@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestMessageRetractStrictSchema(t *testing.T) {

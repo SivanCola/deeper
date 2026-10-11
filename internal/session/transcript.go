@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"slices"
 
-	"deeper/internal/provider"
-	"deeper/internal/transcript"
-	"deeper/internal/turnevent"
+	"deepzora/internal/provider"
+	"deepzora/internal/transcript"
+	"deepzora/internal/turnevent"
 )
 
 // Transcript is owned by the runtime, not a replaceable controller. The

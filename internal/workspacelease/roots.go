@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 type rootLockDomain struct {

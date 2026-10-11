@@ -1,8 +1,8 @@
 package boot
 
 import (
-	"deeper/internal/config"
-	"deeper/internal/lsp"
+	"deepzora/internal/config"
+	"deepzora/internal/lsp"
 )
 
 // LSPSpecs returns the language → server map: the built-in defaults overlaid

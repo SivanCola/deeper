@@ -16,12 +16,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	"deeper/internal/provider/responses"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/provider/responses"
+	"deepzora/internal/tool"
 )
 
 type multiProviderCase struct{ vendor, keyEnv, model, protocol, base, thinking, effort, reasoning string }
@@ -69,7 +69,7 @@ func (tc multiProviderCase) upstream() string {
 func (tc multiProviderCase) new(t *testing.T, url, scenario string) provider.Provider {
 	t.Helper()
 	key := os.Getenv(tc.keyEnv)
-	if effort := os.Getenv("DEEPER_LIVE_EFFORT"); effort != "" {
+	if effort := os.Getenv("DEEPZORA_LIVE_EFFORT"); effort != "" {
 		tc.effort = effort
 	}
 	extra := map[string]any{"api_key_env": tc.keyEnv, "request_url": url, "reject_redirects": true}
@@ -119,7 +119,7 @@ func (tc multiProviderCase) new(t *testing.T, url, scenario string) provider.Pro
 }
 
 func TestLiveMultiProviderMatrix(t *testing.T) {
-	scenarios := strings.Split(os.Getenv("DEEPER_LIVE_SCENARIOS"), ",")
+	scenarios := strings.Split(os.Getenv("DEEPZORA_LIVE_SCENARIOS"), ",")
 	if len(scenarios) == 1 && scenarios[0] == "" {
 		scenarios = []string{"baseline"}
 	}
@@ -152,9 +152,9 @@ func runMultiProviderCase(t *testing.T, tc multiProviderCase, scenario string, b
 	reg.Add(liveRecoveryEchoTool{executions: &executions})
 	sink := &recordSink{}
 	system := "Call echo exactly once for each new user request, then report its fixed marker. Do not repeat completed work. Be concise."
-	if os.Getenv("DEEPER_LIVE_PROMPT_PROFILE") == "action-evidence" {
+	if os.Getenv("DEEPZORA_LIVE_PROMPT_PROFILE") == "action-evidence" {
 		// A prompt-only experiment inspired by OpenCode's Kimi-specific action
-		// instructions. This does not run OpenCode or change Deeper defaults.
+		// instructions. This does not run OpenCode or change Deepzora defaults.
 		system += " When the user requests a tool action, perform it using the provided tool instead of describing or simulating it. You cannot know this tool's result before executing it. Report only the actual returned result, and never invent a successful execution."
 	}
 	sess := NewSession(system)

@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/pluginpkg"
-	"deeper/internal/secrets"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/pluginpkg"
+	"deepzora/internal/secrets"
 )
 
 // PluginComponentID returns the dependency-graph component ID for an installed

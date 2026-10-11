@@ -9,7 +9,7 @@ import { JSDOM } from "jsdom";
 
 // The store reads localStorage at module load, so install a jsdom global
 // before importing it (mirrors how browser-only tests bootstrap the DOM).
-const dom = new JSDOM("", { url: "https://deeper.local/" });
+const dom = new JSDOM("", { url: "https://deepzora.local/" });
 globalThis.window = dom.window as unknown as Window & typeof globalThis;
 globalThis.document = dom.window.document;
 globalThis.localStorage = dom.window.localStorage;
@@ -38,8 +38,8 @@ function resetStore(): void {
 
 // --- persistence contract: store reads/writes localStorage under one key ---
 check(
-  "store persists under deeper.dock.tabs",
-  /STORAGE_KEY\s*=\s*"deeper\.dock\.tabs"/.test(storeSource),
+  "store persists under deepzora.dock.tabs",
+  /STORAGE_KEY\s*=\s*"deepzora\.dock\.tabs"/.test(storeSource),
   "STORAGE_KEY literal not found",
 );
 
@@ -79,7 +79,7 @@ check("closing the last tab collapses the container", useActivityBarStore.getSta
 resetStore();
 useActivityBarStore.getState().openEntry("file", "Files");
 useActivityBarStore.getState().openEntry("browser", "Browser");
-const persisted = JSON.parse(localStorage.getItem("deeper.dock.tabs") ?? "{}");
+const persisted = JSON.parse(localStorage.getItem("deepzora.dock.tabs") ?? "{}");
 check("persistence writes tabs", Array.isArray(persisted.tabs) && persisted.tabs.length === 2, "expected 2 persisted tabs");
 check("persistence writes activeTabId", typeof persisted.activeTabId === "string", "activeTabId not persisted");
 
@@ -121,7 +121,7 @@ const orderBefore = useActivityBarStore.getState().tabs.map((tab) => tab.id);
 useActivityBarStore.getState().moveTab(orderBefore[2], orderBefore[0], "left");
 const afterLeft = useActivityBarStore.getState().tabs.map((tab) => tab.id);
 check("moveTab left places the tab before the target", afterLeft[0] === orderBefore[2] && afterLeft[1] === orderBefore[0], `order=${afterLeft.join(",")}`);
-check("moveTab persists", JSON.parse(localStorage.getItem("deeper.dock.tabs") ?? "{}").tabs.map((t: { id: string }) => t.id).join(",") === afterLeft.join(","), "order not persisted");
+check("moveTab persists", JSON.parse(localStorage.getItem("deepzora.dock.tabs") ?? "{}").tabs.map((t: { id: string }) => t.id).join(",") === afterLeft.join(","), "order not persisted");
 // Move a to the right of c → [c, a, b] stays? a is at index 1, target c at 0, right → [c, a, b]? move a right of c inserts after c → [c, a, b] (already). Pick a different move: b right of c → [c, b, a]
 useActivityBarStore.getState().moveTab(afterLeft[2], afterLeft[0], "right");
 const afterRight = useActivityBarStore.getState().tabs.map((tab) => tab.id);
@@ -146,7 +146,7 @@ useActivityBarStore.getState().reopenTab(closedId);
 check("reopenTab restores the tab", useActivityBarStore.getState().tabs.some((tab) => tab.id === closedId), "not restored");
 check("reopenTab activates it", useActivityBarStore.getState().activeTabId === closedId, "not active");
 check("reopenTab drops it from the closed list", useActivityBarStore.getState().recentlyClosed.length === 0, "still listed");
-check("reopenTab persists the restored tab", JSON.parse(localStorage.getItem("deeper.dock.tabs") ?? "{}").tabs.some((t: { id: string }) => t.id === closedId), "not persisted");
+check("reopenTab persists the restored tab", JSON.parse(localStorage.getItem("deepzora.dock.tabs") ?? "{}").tabs.some((t: { id: string }) => t.id === closedId), "not persisted");
 // Closing several tabs keeps newest first and is bounded.
 for (let index = 0; index < 12; index += 1) {
   useActivityBarStore.getState().addTab("file", `f${index}`);

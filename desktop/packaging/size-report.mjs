@@ -15,9 +15,9 @@ function toolVersion(command, args) {
 
 function category(name) {
   const path = name.toLowerCase();
-  if (/(^|\/)(deeper-desktop)(\.exe)?$/.test(path)) return "service";
-  if (/electron framework|\/macos\/deeper$|(^|\/)deeper\.exe$/.test(path)) return "electron";
-  if (/(^|\/)(deeper|deeper-cli)(\.exe)?$/.test(path)) return "cli";
+  if (/(^|\/)(deepzora-desktop)(\.exe)?$/.test(path)) return "service";
+  if (/electron framework|\/macos\/deepzora$|(^|\/)deepzora\.exe$/.test(path)) return "electron";
+  if (/(^|\/)(deepzora|deepzora-cli)(\.exe)?$/.test(path)) return "cli";
   if (/helper|launcher|migrator|guard|uninstall/.test(path)) return "helper";
   if (/app\.asar|\/app\/|index\.html|\.cjs$/.test(path)) return "frontend";
   return "resources";
@@ -42,7 +42,7 @@ function bundledBuildInfo(root) {
       const value = JSON.parse(readFileSync(path, "utf8"));
       if (value && typeof value === "object" && value.schemaVersion === 1) return value;
     } catch {
-      // A non-Deeper build.json remains visible in the file report.
+      // A non-Deepzora build.json remains visible in the file report.
     }
   }
   return null;
@@ -113,7 +113,7 @@ function markdown(report) {
     "",
   ] : [];
   const lines = [
-    `# Deeper package size report: ${report.platform}`,
+    `# Deepzora package size report: ${report.platform}`,
     "",
     `- Version: \`${report.version}\``,
     `- Source: \`${report.sourceSHA}\``,
@@ -158,7 +158,7 @@ export function generateReport(options) {
   const distEntries = readdirSync(options.dist, { withFileTypes: true });
   const platformName = options.platform.replace("/", "-");
   const artifacts = distEntries
-    .filter((entry) => entry.isFile() && !entry.name.endsWith(".minisig") && entry.name.startsWith(`Deeper-${platformName}`))
+    .filter((entry) => entry.isFile() && !entry.name.endsWith(".minisig") && entry.name.startsWith(`Deepzora-${platformName}`))
     .map((entry) => {
       const path = join(options.dist, entry.name);
       return { name: entry.name, bytes: lstatSync(path).size, sha256: sha256(path) };
@@ -220,11 +220,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     bundle: resolve(args.bundle),
     dist: resolve(args.dist),
     output: resolve(args.output),
-    sourceSHA: process.env.DEEPER_COMMIT,
-    buildSeconds: process.env.DEEPER_BUILD_SECONDS,
-    installSeconds: process.env.DEEPER_INSTALL_SECONDS,
-    temporaryPeakBytes: process.env.DEEPER_TEMPORARY_PEAK_BYTES,
-    baseline: args.baseline || process.env.DEEPER_SIZE_BASELINE_REPORT,
-    baselineLabel: args["baseline-label"] || process.env.DEEPER_SIZE_BASELINE_LABEL,
+    sourceSHA: process.env.DEEPZORA_COMMIT,
+    buildSeconds: process.env.DEEPZORA_BUILD_SECONDS,
+    installSeconds: process.env.DEEPZORA_INSTALL_SECONDS,
+    temporaryPeakBytes: process.env.DEEPZORA_TEMPORARY_PEAK_BYTES,
+    baseline: args.baseline || process.env.DEEPZORA_SIZE_BASELINE_REPORT,
+    baselineLabel: args["baseline-label"] || process.env.DEEPZORA_SIZE_BASELINE_LABEL,
   });
 }

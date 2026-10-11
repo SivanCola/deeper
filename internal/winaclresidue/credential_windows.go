@@ -168,7 +168,7 @@ func currentUserDenyACECounts(path, userSID string) (legacy, other int, err erro
 // protected entry that grants only the current user full control. It opens
 // the file for WRITE_DAC alone and never reads the existing descriptor, so it
 // works when READ_CONTROL is denied and the caller is not the owner. Callers
-// reserve it for an explicit save of Deeper's own credential file after the
+// reserve it for an explicit save of Deepzora's own credential file after the
 // provenance-checked repair could not run.
 func ResetCredentialDACL(path string) error {
 	ptr, err := windows.UTF16PtrFromString(path)

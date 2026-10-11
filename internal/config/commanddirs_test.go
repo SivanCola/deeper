@@ -8,7 +8,7 @@ import (
 
 // TestCommandDirsIncludeConventions verifies command discovery covers the
 // cross-tool convention dirs (so .claude/commands etc. migrate in) and that the
-// canonical .deeper project dir is highest priority (last, since command.Load
+// canonical .deepzora project dir is highest priority (last, since command.Load
 // lets a later dir win on a name clash).
 func TestCommandDirsIncludeConventions(t *testing.T) {
 	dirs := CommandDirs()
@@ -17,14 +17,14 @@ func TestCommandDirsIncludeConventions(t *testing.T) {
 		filepath.Join(".claude", "commands"),
 		filepath.Join(".agents", "commands"),
 		filepath.Join(".agent", "commands"),
-		filepath.Join(".deeper", "commands"),
+		filepath.Join(".deepzora", "commands"),
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("CommandDirs missing %q\ngot:\n%s", want, joined)
 		}
 	}
-	// The project's .deeper/commands must be the highest-priority (last) entry.
-	if last := dirs[len(dirs)-1]; last != filepath.Join(".deeper", "commands") {
-		t.Errorf("project .deeper/commands should be highest priority (last), got %q", last)
+	// The project's .deepzora/commands must be the highest-priority (last) entry.
+	if last := dirs[len(dirs)-1]; last != filepath.Join(".deepzora", "commands") {
+		t.Errorf("project .deepzora/commands should be highest priority (last), got %q", last)
 	}
 }

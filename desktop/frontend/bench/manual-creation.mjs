@@ -79,7 +79,7 @@ try {
   const noticeBox = await notice.boundingBox();
   const inputBox = await input.boundingBox();
   assert.ok(noticeBox.y + noticeBox.height <= inputBox.y, "preparation explanation is adjacent to and above the composer");
-  const evidence = process.env.DEEPER_CREATION_EVIDENCE ?? path.join(tmpdir(), "deeper-manual-creation-evidence");
+  const evidence = process.env.DEEPZORA_CREATION_EVIDENCE ?? path.join(tmpdir(), "deepzora-manual-creation-evidence");
   await mkdir(evidence, { recursive: true });
   await page.screenshot({ path: path.join(evidence, "starting-editable.png") });
 

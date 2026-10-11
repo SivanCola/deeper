@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRunMigratesLegacyConfigBeforeConfigOnlyCommands(t *testing.T) {
 	isolateCLIConfigHome(t)
-	legacyPath := filepath.Join(filepath.Dir(config.UserConfigPath()), "deeper.toml")
+	legacyPath := filepath.Join(filepath.Dir(config.UserConfigPath()), "deepzora.toml")
 	if err := os.MkdirAll(filepath.Dir(legacyPath), 0o755); err != nil {
 		t.Fatal(err)
 	}

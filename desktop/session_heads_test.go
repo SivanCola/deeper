@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/checkpoint"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/store"
 )
 
 // schemaTwoTabFixture opens tab "test" on a five-message schema-2 session with
@@ -37,7 +37,7 @@ func newSchemaTwoTabFixture(t *testing.T) schemaTwoTabFixture {
 		t.Fatal(err)
 	}
 	root := robustTempDir(t)
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(""), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(""), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	path := agent.NewSessionPath(dir, "heads")

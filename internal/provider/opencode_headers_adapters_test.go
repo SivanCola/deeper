@@ -2,10 +2,10 @@ package provider_test
 
 import (
 	"context"
-	"deeper/internal/provider"
-	"deeper/internal/provider/anthropic"
-	"deeper/internal/provider/openai"
-	"deeper/internal/provider/responses"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/anthropic"
+	"deepzora/internal/provider/openai"
+	"deepzora/internal/provider/responses"
 	"net/http"
 	"net/http/httptest"
 	"testing"

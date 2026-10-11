@@ -8,10 +8,10 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // Removing a project can select a surviving historical JSONL tab. Opening a

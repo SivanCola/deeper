@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestRedactSessionsScrubsHistoricalSessionArtifacts(t *testing.T) {

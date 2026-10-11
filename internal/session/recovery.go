@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sort"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // RecoverInterrupted closes persisted runtime authority that cannot survive a

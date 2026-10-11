@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 // The probe must not spawn a background daemon that opens a console of its own
@@ -156,7 +156,7 @@ func TestWorkspaceGitBranchForMetaDoesNotBlockOnColdProbe(t *testing.T) {
 		workspaceGitBranchForMetaProbe = origProbe
 	}()
 
-	if got := workspaceGitBranchForMeta("/tmp/deeper-cold-probe", gitcmd.Repo{}); got != "" {
+	if got := workspaceGitBranchForMeta("/tmp/deepzora-cold-probe", gitcmd.Repo{}); got != "" {
 		t.Fatalf("cold branch = %q, want empty while async refresh runs", got)
 	}
 	// The probe is still blocked here, so returning is the deterministic proof
@@ -168,13 +168,13 @@ func TestWorkspaceGitBranchForMetaDoesNotBlockOnColdProbe(t *testing.T) {
 	}
 
 	releaseProbe()
-	eventuallyBranchForMeta(t, "/tmp/deeper-cold-probe", "feature/async")
+	eventuallyBranchForMeta(t, "/tmp/deepzora-cold-probe", "feature/async")
 }
 
 func TestWorkspaceGitBranchForMetaReturnsStaleDuringRefresh(t *testing.T) {
 	resetWorkspaceGitBranchMetaCacheForTest(t)
 	workspaceGitBranchCache.Lock()
-	workspaceGitBranchCache.entries[filepath.Clean("/tmp/deeper-stale-probe")] = workspaceGitBranchCacheEntry{
+	workspaceGitBranchCache.entries[filepath.Clean("/tmp/deepzora-stale-probe")] = workspaceGitBranchCacheEntry{
 		branch:  "feature/stale",
 		expires: time.Now().Add(-time.Second),
 	}
@@ -195,7 +195,7 @@ func TestWorkspaceGitBranchForMetaReturnsStaleDuringRefresh(t *testing.T) {
 		workspaceGitBranchForMetaProbe = origProbe
 	}()
 
-	if got := workspaceGitBranchForMeta("/tmp/deeper-stale-probe", gitcmd.Repo{}); got != "feature/stale" {
+	if got := workspaceGitBranchForMeta("/tmp/deepzora-stale-probe", gitcmd.Repo{}); got != "feature/stale" {
 		t.Fatalf("stale branch = %q, want feature/stale", got)
 	}
 	// The probe is still blocked here, so returning the stale value proves that
@@ -207,7 +207,7 @@ func TestWorkspaceGitBranchForMetaReturnsStaleDuringRefresh(t *testing.T) {
 	}
 
 	releaseProbe()
-	eventuallyBranchForMeta(t, "/tmp/deeper-stale-probe", "feature/fresh")
+	eventuallyBranchForMeta(t, "/tmp/deepzora-stale-probe", "feature/fresh")
 }
 
 func resetWorkspaceGitBranchMetaCacheForTest(t *testing.T) {

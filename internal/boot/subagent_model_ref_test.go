@@ -3,7 +3,7 @@ package boot
 import (
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestSubagentBareModelStaysOnParentProvider(t *testing.T) {

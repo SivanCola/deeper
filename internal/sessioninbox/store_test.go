@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/store"
 )
 
 func TestEnqueueSnapshotAndRead(t *testing.T) {

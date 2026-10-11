@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // reentrantSnapshotSink re-enters ContextMaintenanceSnapshot on every emit,

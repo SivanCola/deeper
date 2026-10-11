@@ -6,9 +6,9 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // probeAnswerContract rides with every probe question. A context full of tool

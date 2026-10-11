@@ -3,7 +3,7 @@ package anthropic
 import (
 	"bytes"
 	"context"
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"testing"
 )

@@ -3,8 +3,8 @@ package boot
 import (
 	"testing"
 
-	"deeper/internal/extension"
-	"deeper/internal/extensioncontract"
+	"deepzora/internal/extension"
+	"deepzora/internal/extensioncontract"
 )
 
 func TestRebuildFromGraphUsesPreviousAsFrom(t *testing.T) {

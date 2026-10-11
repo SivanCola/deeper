@@ -9,12 +9,12 @@ import (
 	"reflect"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/extension/providerconv"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/extension/providerconv"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 // Extension Protocol v2 agent-side wiring. The agent consults the

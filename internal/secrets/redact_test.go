@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestRedactMasksCommonSecretShapes(t *testing.T) {
@@ -274,31 +274,31 @@ func TestFilterEnvDropsSensitiveKeys(t *testing.T) {
 }
 
 func TestProcessEnvUnfilteredByDefault(t *testing.T) {
-	t.Setenv("DEEPER_TEST_SECRET_TOKEN", "ghp_abcdefghijklmnopqrstuvwxyz")
+	t.Setenv("DEEPZORA_TEST_SECRET_TOKEN", "ghp_abcdefghijklmnopqrstuvwxyz")
 	joined := strings.Join(ProcessEnv(), "\n")
-	if !strings.Contains(joined, "DEEPER_TEST_SECRET_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz") {
+	if !strings.Contains(joined, "DEEPZORA_TEST_SECRET_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz") {
 		t.Fatalf("ProcessEnv filtered by default; filter_subprocess_env must be opt-in:\n%s", joined)
 	}
 
 	SetFilterSubprocessEnv(true)
 	t.Cleanup(func() { SetFilterSubprocessEnv(false) })
 	joined = strings.Join(ProcessEnv(), "\n")
-	if strings.Contains(joined, "DEEPER_TEST_SECRET_TOKEN") {
+	if strings.Contains(joined, "DEEPZORA_TEST_SECRET_TOKEN") {
 		t.Fatalf("ProcessEnv leaked sensitive key with filtering enabled:\n%s", joined)
 	}
 }
 
 func TestProcessEnvAlwaysFiltersRegisteredCredentialKeys(t *testing.T) {
-	const key = "DEEPER_TEST_CUSTOM_PROVIDER_CREDENTIAL"
+	const key = "DEEPZORA_TEST_CUSTOM_PROVIDER_CREDENTIAL"
 	t.Setenv(key, "opaque-provider-value")
-	t.Setenv("DEEPER_TEST_BENIGN_ENV", "visible")
+	t.Setenv("DEEPZORA_TEST_BENIGN_ENV", "visible")
 	RegisterCredentialEnvKeys([]string{key})
 
 	joined := strings.Join(ProcessEnv(), "\n")
 	if strings.Contains(joined, key+"=") || strings.Contains(joined, "opaque-provider-value") {
 		t.Fatalf("registered provider credential survived in subprocess env:\n%s", joined)
 	}
-	if !strings.Contains(joined, "DEEPER_TEST_BENIGN_ENV=visible") {
+	if !strings.Contains(joined, "DEEPZORA_TEST_BENIGN_ENV=visible") {
 		t.Fatalf("ordinary env was removed with opt-in filtering off:\n%s", joined)
 	}
 }

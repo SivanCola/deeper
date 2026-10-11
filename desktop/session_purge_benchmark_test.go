@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 // Measures the existing runtime-lock scope as well as elapsed deletion time.

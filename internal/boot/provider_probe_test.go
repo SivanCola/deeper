@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/netclient"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
 )
 
 func TestProbeProviderConnectionUsesRequestLocalCredentialAndNoTools(t *testing.T) {

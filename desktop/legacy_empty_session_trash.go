@@ -3,8 +3,8 @@ package main
 import (
 	"strings"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func legacyCleanupArchivedSessions(state legacycleanup.State) map[string]legacycleanup.Candidate {

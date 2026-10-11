@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // shrinkMetaReadBackoffs keeps corrupt-sidecar tests fast. Only the pacing of

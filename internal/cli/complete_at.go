@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/fileref"
+	"deepzora/internal/control"
+	"deepzora/internal/fileref"
 )
 
 // activeAtToken finds the @-reference token under the cursor. cursor is a byte

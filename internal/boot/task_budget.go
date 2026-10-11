@@ -3,8 +3,8 @@ package boot
 import (
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
 )
 
 // taskBudgetFromConfig maps the configured spend gate onto the agent budget.

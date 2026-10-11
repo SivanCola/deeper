@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestNativeHistoryPromptBoundsPreview(t *testing.T) {

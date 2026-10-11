@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/transcript"
+	"deepzora/internal/transcript"
 )
 
 func TestWriteSessionMarkdownStreamsCompleteRecords(t *testing.T) {

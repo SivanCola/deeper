@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
 )
 
 func TestTopicMigrationMarkerDetectsSameSizeRewriteWithRestoredMtime(t *testing.T) {

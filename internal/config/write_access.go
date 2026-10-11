@@ -5,16 +5,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/permission"
-	"deeper/internal/sandbox"
+	"deepzora/internal/permission"
+	"deepzora/internal/sandbox"
 )
 
 // PersistWorkspaceWriteAccess records extra writable directories and an
-// optional allow rule for workspace root under the user's Deeper home, in
+// optional allow rule for workspace root under the user's Deepzora home, in
 // one locked update. permRule may be empty when permission is already allowed.
-func PersistWorkspaceWriteAccess(deeperHome, root string, dirs []string, permRule string) error {
+func PersistWorkspaceWriteAccess(deepzoraHome, root string, dirs []string, permRule string) error {
 	home, _ := os.UserHomeDir()
-	return NewProjectGrantStore(deeperHome).Update(root, func(g ProjectGrant) (ProjectGrant, error) {
+	return NewProjectGrantStore(deepzoraHome).Update(root, func(g ProjectGrant) (ProjectGrant, error) {
 		for _, dir := range dirs {
 			formatted := sandbox.FormatConfigWritePath(dir, home)
 			if formatted != "" && !writeRootCovered(g.AllowWrite, formatted, home) {

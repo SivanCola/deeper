@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestSessionActivityBaselineColdPendingMetadataIsNotComplete(t *testing.T) {

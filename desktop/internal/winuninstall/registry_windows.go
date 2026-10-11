@@ -14,7 +14,7 @@ import (
 
 const (
 	uninstallRegistryBase     = `Software\Microsoft\Windows\CurrentVersion\Uninstall\`
-	legacyProductRegistryPath = `Software\deeper\Deeper`
+	legacyProductRegistryPath = `Software\deepzora\Deepzora`
 )
 
 // Reconcile refreshes the current desktop per-user registration after a

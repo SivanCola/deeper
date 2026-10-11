@@ -1,5 +1,5 @@
-// Package config loads Deeper's runtime configuration from TOML. Resolution order:
-// flag > project ./deeper.toml > user config.toml (in the OS user-config dir) > built-in defaults.
+// Package config loads Deepzora's runtime configuration from TOML. Resolution order:
+// flag > project ./deepzora.toml > user config.toml (in the OS user-config dir) > built-in defaults.
 // Secrets come from the environment via api_key_env and are never stored in
 // config files.
 package config
@@ -18,10 +18,10 @@ import (
 	"slices"
 	"strings"
 
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/netclient"
-	"deeper/internal/permissionpreset"
-	"deeper/internal/provider"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/netclient"
+	"deepzora/internal/permissionpreset"
+	"deepzora/internal/provider"
 )
 
 var validSkillName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$`)
@@ -41,11 +41,11 @@ func SkillNameKey(name string) string {
 	return name
 }
 
-// Config is Deeper's runtime configuration.
+// Config is Deepzora's runtime configuration.
 type Config struct {
 	ConfigVersion    int                 `toml:"config_version"`
 	DefaultModel     string              `toml:"default_model"`
-	Language         string              `toml:"language"` // ui/model language tag (e.g. "zh"); empty = auto-detect from $LANG / $DEEPER_LANG
+	Language         string              `toml:"language"` // ui/model language tag (e.g. "zh"); empty = auto-detect from $LANG / $DEEPZORA_LANG
 	CredentialsStore string              `toml:"credentials_store"`
 	UI               UIConfig            `toml:"ui"`
 	CLI              CLIConfig           `toml:"cli"`
@@ -155,7 +155,7 @@ func IsMissingSystemPromptFile(err error) bool {
 }
 
 // TelemetryConfig controls content-free CLI usage metrics. It is user-global:
-// project deeper.toml values are ignored so a cloned repository cannot opt a
+// project deepzora.toml values are ignored so a cloned repository cannot opt a
 // user into reporting.
 type TelemetryConfig struct {
 	CLIMetrics string `toml:"cli_metrics"` // auto|on|off; empty means consent has not been requested
@@ -226,7 +226,7 @@ func (c *Config) IgnoredLegacyAgentStepLimits() bool {
 	return c != nil && c.ignoredLegacyStepLimits
 }
 
-// IgnoredProjectDefaultModel returns the project deeper.toml default_model
+// IgnoredProjectDefaultModel returns the project deepzora.toml default_model
 // that LoadForRoot ignored because no configured provider serves it (see
 // restoreUnresolvableProjectDefaultModel), or "" when none was ignored.
 func (c *Config) IgnoredProjectDefaultModel() string {
@@ -237,7 +237,7 @@ func (c *Config) IgnoredProjectDefaultModel() string {
 }
 
 // SecretsConfig controls the credential protection layers. It is a user-global
-// setting: project deeper.toml values are ignored (see LoadForRoot), so a
+// setting: project deepzora.toml values are ignored (see LoadForRoot), so a
 // cloned repository cannot silently opt the user into workflow-breaking
 // protections.
 type SecretsConfig struct {
@@ -925,7 +925,7 @@ type ServeConfig struct {
 	// cryptographically random token is generated at startup and printed.
 	Token string `toml:"token"`
 	// PasswordHash is a bcrypt hash of the password for auth_mode = "password".
-	// Generate one with: deeper serve --hash-password --password '...'
+	// Generate one with: deepzora serve --hash-password --password '...'
 	PasswordHash string `toml:"password_hash"`
 	// BehindProxy indicates the server sits behind a trusted reverse proxy
 	// (nginx, Caddy, Cloudflare, etc.) that sets X-Forwarded-For and
@@ -1018,7 +1018,7 @@ func (c *Config) NetworkProxyMode() string {
 
 // SkillsConfig configures skill discovery. Paths adds extra "custom"-scope skill
 // roots — each a directory of SKILL.md / <name>.md playbooks — scanned between
-// the project roots (.deeper/.agents/.agent/.claude under the workspace) and
+// the project roots (.deepzora/.agents/.agent/.claude under the workspace) and
 // the global roots. ExcludedPaths hides matching discovery roots without deleting
 // folders. ~, relative paths, and ${VAR} expansion are supported. DisabledSkills
 // hides named skills from the agent prompt, slash invocation, and skill tools
@@ -1292,7 +1292,7 @@ type AgentConfig struct {
 	MaxParallelWriters int `toml:"max_parallel_writers"`
 	// OutputStyle selects a persona/tone block folded into the system prompt at
 	// startup (a built-in like "explanatory"/"learning"/"concise", or a custom
-	// .deeper/output-styles/<name>.md). Empty = the unmodified prompt.
+	// .deepzora/output-styles/<name>.md). Empty = the unmodified prompt.
 	OutputStyle string `toml:"output_style"`
 	// Deprecated compatibility field. Automatic plan mode was retired in config
 	// version 5; old TOML remains readable, but loading normalizes it to "off"
@@ -1792,7 +1792,7 @@ func (c *Config) EnabledPlugins(workspace string, activation *MCPActivationStore
 }
 
 // DefaultSystemPrompt is used when config provides none.
-const DefaultSystemPrompt = `You are Deeper, a coding agent.
+const DefaultSystemPrompt = `You are Deepzora, a coding agent.
 Use the available tools when they help you complete the user's request.
 Keep changes focused and responses concise.`
 
@@ -1860,7 +1860,7 @@ func Default() *Config {
 			QueueCap:           20,
 			QueueDrop:          "summarize",
 			IgnoreSelfMessages: true,
-			Control:            BotControlConfig{Addr: "127.0.0.1:37913", TokenEnv: "DEEPER_BOT_CONTROL_TOKEN"},
+			Control:            BotControlConfig{Addr: "127.0.0.1:37913", TokenEnv: "DEEPZORA_BOT_CONTROL_TOKEN"},
 			Pairing:            BotPairingConfig{Enabled: true, RequestTTLMinutes: 60, MaxPendingPerPlatform: 3},
 			Allowlist:          BotAllowlist{Enabled: true},
 			QQ:                 QQBotConfig{AppSecretEnv: "QQ_BOT_APP_SECRET"},
@@ -2109,7 +2109,7 @@ func (e *ProviderEntry) APIKey() string {
 
 // ResolveAPIKeyFromProcessEnvForProbe pins a setup-time, user-entered key onto
 // this entry for an immediate connectivity probe. Normal runtime resolution does
-// not call this; loaded provider entries still resolve only from Deeper's
+// not call this; loaded provider entries still resolve only from Deepzora's
 // global .env.
 func (e *ProviderEntry) ResolveAPIKeyFromProcessEnvForProbe() {
 	if e == nil {
@@ -2192,7 +2192,7 @@ func (c *Config) ResolveSystemPrompt() (string, error) {
 // ResolveSystemPromptForRoot is like ResolveSystemPrompt but resolves a relative
 // system_prompt_file against root. Desktop tabs pass their workspace root here so
 // prompt files are project-scoped even when the process cwd is elsewhere. A path
-// inherited from user config may fall back to Deeper home, while a path chosen
+// inherited from user config may fall back to Deepzora home, while a path chosen
 // by project config is confined to the workspace and never probes user files.
 func (c *Config) ResolveSystemPromptForRoot(root string) (string, error) {
 	path := c.Agent.SystemPromptFile
@@ -2221,7 +2221,7 @@ func (c *Config) ResolveSystemPromptForRoot(root string) (string, error) {
 	}
 
 	candidates := []string{filepath.Join(resolveRoot(root), path)}
-	if home := DeeperHomeDir(); home != "" {
+	if home := DeepzoraHomeDir(); home != "" {
 		homeCandidate := filepath.Join(home, path)
 		if filepath.Clean(homeCandidate) != filepath.Clean(candidates[0]) {
 			candidates = append(candidates, homeCandidate)

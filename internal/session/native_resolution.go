@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // ExistingCanonicalForLegacy uses a header lookup for a completed cutover.

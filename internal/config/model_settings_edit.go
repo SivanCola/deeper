@@ -6,7 +6,7 @@ import (
 	"os"
 	"reflect"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 	"github.com/BurntSushi/toml"
 )
 

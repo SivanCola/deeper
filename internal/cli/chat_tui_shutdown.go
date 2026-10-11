@@ -8,7 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 )
 
 const (

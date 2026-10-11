@@ -3,12 +3,12 @@ package agent
 import (
 	"context"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
-	"deeper/internal/imageinput"
-	"deeper/internal/provider"
-	"deeper/internal/runtimepolicy"
-	"deeper/internal/tool"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/provider"
+	"deepzora/internal/runtimepolicy"
+	"deepzora/internal/tool"
 )
 
 // NewTaskToolWithOptions is the internal standard constructor for TaskTool.

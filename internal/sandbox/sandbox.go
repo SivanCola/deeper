@@ -47,7 +47,7 @@ type Spec struct {
 	// keeps the platform default (ephemeral tmpfs on Linux bwrap, host temp
 	// elsewhere). MCP and other independent sandboxes leave this empty.
 	SessionTemp string
-	// ProtectedWriteRoots are Deeper session/state paths that stay read-only
+	// ProtectedWriteRoots are Deepzora session/state paths that stay read-only
 	// even when a broader WriteRoot such as the user's home directory would
 	// otherwise cover them.
 	ProtectedWriteRoots []string
@@ -78,7 +78,7 @@ func UnavailableRemediation() string {
 	case "darwin":
 		return "Ensure `sandbox-exec` is installed and usable (the host must allow `sandbox_apply`), or explicitly select Full access for an unconfined session."
 	case "windows":
-		return "Windows has no OS-level shell sandbox. Permission presets are enforced by Deeper file tools and shell commands run as the current OS user; select Full access only when ordinary approval prompts should also be skipped."
+		return "Windows has no OS-level shell sandbox. Permission presets are enforced by Deepzora file tools and shell commands run as the current OS user; select Full access only when ordinary approval prompts should also be skipped."
 	default:
 		return "Restricted permission presets are unavailable on this platform; explicitly select Full access only when unconfined execution is intended."
 	}
@@ -93,8 +93,8 @@ func BackendUnavailableReason() string {
 	case "darwin":
 		return "sandbox-exec is missing from PATH or unusable (sandbox_apply is restricted)"
 	case "windows":
-		return "Deeper does not ship an OS-level sandbox on Windows"
+		return "Deepzora does not ship an OS-level sandbox on Windows"
 	default:
-		return "this platform has no supported Deeper sandbox backend"
+		return "this platform has no supported Deepzora sandbox backend"
 	}
 }

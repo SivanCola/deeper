@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/secrets"
-	"deeper/internal/session"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/secrets"
+	"deepzora/internal/session"
 )
 
 // GoalDiagnosticMetadata is supplied by the host so a user-exported artifact

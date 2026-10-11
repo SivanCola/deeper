@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/mcplaunch"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/mcplaunch"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 // redirectCache points config.CacheDir() at a fresh temp dir for the duration
@@ -20,7 +20,7 @@ import (
 func redirectCache(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("DEEPER_CACHE_HOME", dir)
+	t.Setenv("DEEPZORA_CACHE_HOME", dir)
 	return dir
 }
 

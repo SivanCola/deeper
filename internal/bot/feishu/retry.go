@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"deeper/internal/bot"
+	"deepzora/internal/bot"
 )
 
 // newIdempotencyKey returns a random key for the Feishu create/reply `uuid`

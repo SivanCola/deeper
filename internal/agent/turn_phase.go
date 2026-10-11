@@ -3,7 +3,7 @@ package agent
 import (
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type phaseClock struct {

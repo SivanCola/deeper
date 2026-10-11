@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify:
-    if: github.repository == 'SivanCola/deeper' && github.ref == 'refs/heads/main' && github.ref_protected
+    if: github.repository == 'SivanCola/deepzora' && github.ref == 'refs/heads/main' && github.ref_protected
     runs-on: macos-14
     environment: release
     timeout-minutes: 35
@@ -72,9 +72,9 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" "${existing_keychains[@]}"
           printf '%s' "$APPLE_API_KEY_P8" | base64 --decode > "$APPLE_API_KEY_PATH"
           scripts/desktop-build.sh darwin/universal v0.0.0-signing-check stable
-          node desktop/packaging/verify.mjs desktop/build/candidate/darwin-universal/Deeper.app --kind darwin-app-dir
-          codesign --verify --deep --strict desktop/build/candidate/darwin-universal/Deeper.app
-          test -s dist/Deeper-darwin-universal.dmg
+          node desktop/packaging/verify.mjs desktop/build/candidate/darwin-universal/Deepzora.app --kind darwin-app-dir
+          codesign --verify --deep --strict desktop/build/candidate/darwin-universal/Deepzora.app
+          test -s dist/Deepzora-darwin-universal.dmg
       - name: Upload Apple notarization diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

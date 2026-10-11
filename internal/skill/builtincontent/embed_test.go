@@ -4,15 +4,15 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/skill/builtincontent"
+	"deepzora/internal/skill/builtincontent"
 )
 
-func TestLoadDeeperGuide(t *testing.T) {
-	sk, err := builtincontent.LoadDeeperGuide()
+func TestLoadDeepzoraGuide(t *testing.T) {
+	sk, err := builtincontent.LoadDeepzoraGuide()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sk.Name != "deeper-guide" {
+	if sk.Name != "deepzora-guide" {
 		t.Fatalf("name = %q", sk.Name)
 	}
 	if sk.Description == "" {
@@ -21,7 +21,7 @@ func TestLoadDeeperGuide(t *testing.T) {
 	if sk.RunAs != "inline" {
 		t.Fatalf("runAs = %q, want inline", sk.RunAs)
 	}
-	if !strings.Contains(sk.Body, "deeper doctor capabilities") {
+	if !strings.Contains(sk.Body, "deepzora doctor capabilities") {
 		t.Fatal("body should recommend doctor capabilities")
 	}
 	if strings.Contains(strings.ToLower(sk.Frontmatter["auto-use"]), "require") {

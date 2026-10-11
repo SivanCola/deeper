@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
 	"encoding/json"
 	"fmt"
 	"slices"

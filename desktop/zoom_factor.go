@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 // DesktopZoomFactor persists the user's zoom factor preference across

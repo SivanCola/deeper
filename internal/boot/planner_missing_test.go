@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
 )
 
 func TestBuildFailsWhenPlannerModelIsUnresolvable(t *testing.T) {
@@ -16,7 +16,7 @@ func TestBuildFailsWhenPlannerModelIsUnresolvable(t *testing.T) {
 	registerBootTokenProfileTestProvider()
 	setBootTokenProfileTestProvider(t, testutil.NewMock("planner-missing"))
 
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "executor"
 
 [agent]

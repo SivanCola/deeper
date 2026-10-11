@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 // BlobStore is a content-addressed store for checkpoint file payloads.

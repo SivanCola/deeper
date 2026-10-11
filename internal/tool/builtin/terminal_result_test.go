@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestApplyTerminalResultTypedOutcomes(t *testing.T) {

@@ -16,8 +16,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/sqliteuri"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/sqliteuri"
 
 	moderncsqlite "modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
@@ -215,7 +215,7 @@ func open(ctx context.Context, opts OpenOptions, mode Mode, checkIntegrity bool)
 		// time.Now has coarse resolution on some platforms, notably Windows.
 		// A process-local sequence prevents concurrently opened projections with
 		// the same logical name from sharing one SQLite memory database by accident.
-		dsn = fmt.Sprintf("file:deeper-%s-%d-%d?mode=memory&cache=shared", url.PathEscape(opts.MemoryName),
+		dsn = fmt.Sprintf("file:deepzora-%s-%d-%d?mode=memory&cache=shared", url.PathEscape(opts.MemoryName),
 			opts.Now().UnixNano(), memoryDatabaseSequence.Add(1))
 	} else {
 		var err error

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 // sessionDisplayTitle is the one name projection every local surface uses for

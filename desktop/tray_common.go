@@ -27,15 +27,15 @@ func trayMenuLabels(locale string) trayLabels {
 	if locale == "zh" {
 		return trayLabels{
 			openTitle:   "打开",
-			openTooltip: "打开 Deeper 窗口",
+			openTooltip: "打开 Deepzora 窗口",
 			quitTitle:   "退出",
-			quitTooltip: "退出 Deeper",
+			quitTooltip: "退出 Deepzora",
 		}
 	}
 	return trayLabels{
 		openTitle:   "Open",
-		openTooltip: "Open the Deeper window",
+		openTooltip: "Open the Deepzora window",
 		quitTitle:   "Quit",
-		quitTooltip: "Quit Deeper",
+		quitTooltip: "Quit Deepzora",
 	}
 }

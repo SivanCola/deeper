@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 // titleCache persists generated session titles to <dir>/.session-titles.json.

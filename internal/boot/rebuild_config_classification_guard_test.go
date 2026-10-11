@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestConfigClassificationRejectsInvalidLedger(t *testing.T) {

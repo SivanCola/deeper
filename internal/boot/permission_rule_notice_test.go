@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type captureSink struct{ events []event.Event }

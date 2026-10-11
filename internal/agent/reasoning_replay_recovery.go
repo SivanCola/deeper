@@ -1,9 +1,9 @@
 package agent
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 // reasoningReplayRecoveryBudget bounds the thinking-400 catch-and-repair to one

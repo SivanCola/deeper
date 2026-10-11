@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioncatalog"
 	"path/filepath"
 	"sort"
 	"strings"

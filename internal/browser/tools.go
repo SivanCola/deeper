@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Names lists the tool names in the order Tools returns them.

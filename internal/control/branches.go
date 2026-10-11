@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // ParseBranchTarget parses the arguments after "/branch". A leading positive

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // recoverShutdownSave answers a save lock that stayed held for the whole

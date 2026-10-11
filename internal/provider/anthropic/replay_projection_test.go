@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestBuildRequestDeepSeekDropsUnreplayableToolActivity(t *testing.T) {

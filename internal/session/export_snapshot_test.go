@@ -2,7 +2,7 @@ package session
 
 import (
 	"context"
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"encoding/json"
 	"errors"
 	"fmt"

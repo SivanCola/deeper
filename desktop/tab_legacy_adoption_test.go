@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestBootLegacyTabReusesMigratedIdentityAfterMetadataRefresh(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // compactionProgress is how compaction is faring in this session: whether a

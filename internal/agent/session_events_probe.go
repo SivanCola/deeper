@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // sessionEventLogProbe classifies whatever sits at the session's event-log

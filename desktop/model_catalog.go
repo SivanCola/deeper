@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func (a *App) recordModelSwitchTiming(tabID string, timing *modelSwitchTiming, started time.Time, result *error) {

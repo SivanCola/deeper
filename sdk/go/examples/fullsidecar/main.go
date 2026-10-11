@@ -1,4 +1,4 @@
-// Command fullsidecar is the reference Deeper extension sidecar: one small
+// Command fullsidecar is the reference Deepzora extension sidecar: one small
 // program that exercises every Extension Protocol v2 contribution kind —
 // input rewriting, tool interception, system-prompt strategy replacement, an
 // extension-hosted streaming provider, structured UI surfaces and prompts,
@@ -18,7 +18,7 @@
 //
 // Environment:
 //
-//	DEEPER_PLUGIN_NAME   plugin ID, set by the host at launch (provider
+//	DEEPZORA_PLUGIN_NAME   plugin ID, set by the host at launch (provider
 //	                       refs must live in the plugin/<id>/ namespace);
 //	                       defaults to "fullsidecar" when run standalone
 //	FULLSIDECAR_STREAM_INTERVAL_MS
@@ -45,7 +45,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	extension "github.com/SivanCola/deeper/sdk/go"
+	extension "github.com/SivanCola/deepzora/sdk/go"
 )
 
 const (
@@ -68,7 +68,7 @@ type plugin struct {
 
 func main() {
 	logger := log.New(os.Stderr, "fullsidecar: ", log.LstdFlags)
-	id := strings.TrimSpace(os.Getenv("DEEPER_PLUGIN_NAME"))
+	id := strings.TrimSpace(os.Getenv("DEEPZORA_PLUGIN_NAME"))
 	if id == "" {
 		id = defaultPluginID
 	}
@@ -198,7 +198,7 @@ func (p *plugin) interceptSystemPrompt(_ context.Context, payload json.RawMessag
 	if err := json.Unmarshal(payload, &in); err != nil {
 		return nil, err
 	}
-	owned := "You are Deeper running under the fullsidecar demo strategy.\n\n" +
+	owned := "You are Deepzora running under the fullsidecar demo strategy.\n\n" +
 		"Workspace: " + in.WorkspaceRoot + "\n\nBase prompt:\n" + in.Prompt
 	return extension.Replace(map[string]string{"prompt": owned, "workspaceRoot": in.WorkspaceRoot})
 }
@@ -326,7 +326,7 @@ func (p *fakeProvider) Stream(ctx context.Context, req extension.StreamRequest) 
 			extension.TextChunk("fake-hello "),
 			extension.TextChunk("fake-world"),
 			{Type: extension.ChunkToolCall, ToolCall: &extension.ProviderToolCall{
-				ID: "call-1", Name: "lookup", Arguments: `{"query":"deeper"}`,
+				ID: "call-1", Name: "lookup", Arguments: `{"query":"deepzora"}`,
 			}},
 			extension.UsageChunk(extension.ProviderUsage{
 				PromptTokens: 5, CompletionTokens: 7, TotalTokens: 12,

@@ -3,8 +3,8 @@ package transcript
 import (
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 // A cancelled attempt persists its partial output through

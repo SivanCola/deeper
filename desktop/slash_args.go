@@ -3,9 +3,9 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/pluginpkg"
 )
 
 // SlashArgItem is one sub-command / argument suggestion for the composer's slash
@@ -53,7 +53,7 @@ func (a *App) SlashArgs(input string) SlashArgsResult {
 			data.EffortLevels = append([]string(nil), effort.Levels...)
 		}
 	}
-	if names, err := pluginpkg.InstalledNames(config.DeeperHomeDir()); err == nil {
+	if names, err := pluginpkg.InstalledNames(config.DeepzoraHomeDir()); err == nil {
 		data.PluginNames = names
 	}
 	seen := map[string]bool{}

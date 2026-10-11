@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestRetargetOpenTabsUsesUniqueLinearCompactedLeaf(t *testing.T) {

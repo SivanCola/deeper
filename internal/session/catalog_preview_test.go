@@ -10,7 +10,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestCatalogPreviewUsesAuthoredTextBeforeTruncation(t *testing.T) {

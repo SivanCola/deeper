@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/permission"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
+	"deepzora/internal/provider"
 )
 
 // scriptedRequester answers agent → client requests from a per-method script

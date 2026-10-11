@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 // preferLiveSessionPath chooses which session a topic row should open.

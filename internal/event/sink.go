@@ -1,6 +1,6 @@
 package event
 
-import "deeper/internal/nilutil"
+import "deepzora/internal/nilutil"
 
 // Sink consumes a turn's events. The agent calls Emit serially from its run
 // loop (tool execution may fan out across goroutines, but emission does not),

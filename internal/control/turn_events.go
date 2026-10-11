@@ -9,13 +9,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/session"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/transcript"
-	"deeper/internal/turnevent"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/transcript"
+	"deepzora/internal/turnevent"
 )
 
 // turnEventSink persists lifecycle envelopes before frontend publication.

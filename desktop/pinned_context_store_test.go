@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 )
 
 func TestPinnedContextSidecarRoundTripAndCopy(t *testing.T) {

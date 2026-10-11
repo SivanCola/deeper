@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/agentpreset"
+	"deepzora/internal/agentpreset"
 )
 
 var deprecatedModeNoticeOnce sync.Once

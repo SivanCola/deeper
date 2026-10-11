@@ -3,7 +3,7 @@ package readcoord
 import (
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Scope identifies the file a read requirement targets.

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/turnevent"
 )
 
 func TestRuntimeRebindResetsIdleFollowerAndRejectsStaleFrames(t *testing.T) {

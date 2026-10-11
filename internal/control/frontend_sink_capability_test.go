@@ -3,8 +3,8 @@ package control
 import (
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
 )
 
 // Enabling extensions must never sever the audit channels: every capability

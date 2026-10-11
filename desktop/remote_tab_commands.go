@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func (a *App) RenameRemoteProjectSession(hostID, workspace, name, title string) error {

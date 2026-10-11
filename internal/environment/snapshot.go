@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 // Probe snapshots persist across process restarts so the environment section —

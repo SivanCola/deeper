@@ -3,8 +3,8 @@ package transcript
 import (
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/turnevent"
 )
 
 // PendingDisplayMessages is the legacy migration path. Modern recovery uses

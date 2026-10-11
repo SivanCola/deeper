@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 func validateDesktopOperationSources(state workspacestate.State, op workspacestate.Operation) error {

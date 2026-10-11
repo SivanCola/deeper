@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestEnrichStateWithExtensionModels(t *testing.T) {

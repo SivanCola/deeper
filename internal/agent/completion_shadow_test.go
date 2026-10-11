@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"deeper/internal/completion"
-	"deeper/internal/evidence"
+	"deepzora/internal/completion"
+	"deepzora/internal/evidence"
 	"testing"
 )
 

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/secrets"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/secrets"
 )
 
 // The session queue owns this new turn. Approval replies and child work never

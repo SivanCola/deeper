@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func claimed(status string, completion string) evidence.Receipt {

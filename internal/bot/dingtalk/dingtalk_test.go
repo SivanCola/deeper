@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/bot"
-	"deeper/internal/config"
+	"deepzora/internal/bot"
+	"deepzora/internal/config"
 )
 
 func newTestHTTPClient() *http.Client {

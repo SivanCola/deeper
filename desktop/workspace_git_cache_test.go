@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 func TestWorkspaceGitCheckoutInvalidatesInFlightBranchProbe(t *testing.T) {

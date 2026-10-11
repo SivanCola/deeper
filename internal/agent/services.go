@@ -4,18 +4,18 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/diff"
-	"deeper/internal/event"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/jobs"
-	"deeper/internal/mcpinteraction"
-	"deeper/internal/memory"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/tool"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/diff"
+	"deepzora/internal/event"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/jobs"
+	"deepzora/internal/mcpinteraction"
+	"deepzora/internal/memory"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/tool"
+	"deepzora/internal/workspacelease"
 )
 
 // agentServices are the collaborators an Agent talks to, separated from the
@@ -54,7 +54,7 @@ type agentServices struct {
 	// call. Keeping it host-only avoids tool-schema and prompt-prefix churn.
 	permissionPreset func() string
 	// configWrite can ask the user whether a file tool may write a
-	// Deeper-managed config file outside the workspace roots.
+	// Deepzora-managed config file outside the workspace roots.
 	configWrite tool.ConfigWriteApprover
 	// writeRoots is the session-scoped writable directory manager.
 	writeRoots *sandbox.WritableRootSet

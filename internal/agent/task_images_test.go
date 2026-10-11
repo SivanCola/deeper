@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/attachment"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/attachment"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 type urlImageResolver struct{}

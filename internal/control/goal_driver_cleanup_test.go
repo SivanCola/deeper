@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func goalRuntimeRetired(c *Controller, service *session.Service, runtime *session.Runtime, settled bool) bool {

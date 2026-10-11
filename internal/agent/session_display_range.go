@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // LoadSessionPreviewFromDisplayIndex reads only the first authored user-message

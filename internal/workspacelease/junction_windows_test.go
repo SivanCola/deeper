@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 func TestJunctionWorkspaceRetainsOldAliasLock(t *testing.T) {

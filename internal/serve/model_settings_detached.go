@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioninbox"
 )
 
 // Background dispatch holds the same binding gate as foreground dispatch, then

@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // finishFunctionCall completes call from a finished function_call item, sending

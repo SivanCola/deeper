@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/remote"
+	"deepzora/internal/remote"
 )
 
 // probeCounts tallies EnsureServe's remote exec traffic by category. The

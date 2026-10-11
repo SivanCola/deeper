@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // 3 parallel Bash(ls) in one turn, ids "call_<n>" (no "shell-" prefix), each

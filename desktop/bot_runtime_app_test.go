@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/bot"
-	"deeper/internal/botruntime"
-	"deeper/internal/config"
+	"deepzora/internal/bot"
+	"deepzora/internal/botruntime"
+	"deepzora/internal/config"
 )
 
 func TestDesktopBotRuntimePlanStartsSavedConnections(t *testing.T) {
@@ -148,7 +148,7 @@ func TestDesktopBotRuntimeConfigUsesUserBotSettings(t *testing.T) {
 	}
 
 	project := robustTempDir(t)
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 [bot]
 enabled = false
 `), 0o644); err != nil {
@@ -276,7 +276,7 @@ func TestDesktopBotRuntimeIgnoresProjectBotSettings(t *testing.T) {
 			}
 		}
 		project := robustTempDir(t)
-		if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+		if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 [bot]
 enabled = true
 
@@ -326,7 +326,7 @@ func TestDesktopBotRuntimeKeepsUserBotSettingsBesideAProjectBot(t *testing.T) {
 	}
 
 	project := robustTempDir(t)
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 [bot]
 enabled = true
 

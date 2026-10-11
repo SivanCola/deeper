@@ -3,8 +3,8 @@ package agent
 import (
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestDelegationAdmissionVerdicts(t *testing.T) {

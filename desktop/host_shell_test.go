@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/hostrpc"
-	"deeper/internal/extension/rpcwire"
+	"deepzora/desktop/internal/hostrpc"
+	"deepzora/internal/extension/rpcwire"
 )
 
 // fakeShell answers host/* requests from the Go side and records them.

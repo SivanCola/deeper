@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/control"
+import "deepzora/internal/control"
 
 // abort releases admission before entering the serialized rebuild transaction.
 func (a *App) applyTurnModelSettings(tab *WorkspaceTab, ctrl control.SessionAPI, usingApplied bool, abort func()) (bool, error) {

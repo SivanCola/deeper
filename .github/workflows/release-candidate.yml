@@ -102,12 +102,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Verify release control helpers and signing configuration
         env:
-          OFFICIAL_REPOSITORY: ${{ github.repository == 'SivanCola/deeper' }}
+          OFFICIAL_REPOSITORY: ${{ github.repository == 'SivanCola/deepzora' }}
           HAS_APPLE_SIGNING: ${{ secrets.APPLE_CERT_P12 != '' && secrets.APPLE_CERT_PASSWORD != '' && secrets.APPLE_API_KEY_P8 != '' && secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER_ID != '' }}
           HAS_CERTUM_SIGNING: ${{ secrets.CERTUM_USERNAME != '' && secrets.CERTUM_OTP_URI != '' && secrets.CERTUM_KEY_ID != '' }}
           HAS_MINISIGN: ${{ secrets.MINISIGN_PRIVATE_KEY != '' && secrets.MINISIGN_PASSWORD != '' && vars.MINISIGN_PUBLIC_KEY != '' }}
           GH_TOKEN: ${{ github.token }}
-          DEEPER_RELEASE_BOOTSTRAP_CHECK: "true"
+          DEEPZORA_RELEASE_BOOTSTRAP_CHECK: "true"
         run: |
           bash scripts/validate-release-control-plane.sh
           bash scripts/check-release-public-access.sh "${{ steps.candidate.outputs.version }}"
@@ -353,7 +353,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          worktree="$(mktemp -d "$RUNNER_TEMP/deeper-notes.XXXXXX")"
+          worktree="$(mktemp -d "$RUNNER_TEMP/deepzora-notes.XXXXXX")"
           git worktree add --detach "$worktree" "${{ github.sha }}"
           node "$worktree/scripts/release-notes.mjs" render --version "v${{ needs.resolve.outputs.version }}" --output payload/evidence/release-notes.md
           git worktree remove "$worktree"

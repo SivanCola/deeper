@@ -1,6 +1,6 @@
 // Package acp implements the Agent Client Protocol (https://agentclientprotocol.com)
 // transport: a stdio JSON-RPC 2.0 agent that editors and other host clients speak
-// to drive Deeper. Many tools integrated with the v1 (main-branch) agent over
+// to drive Deepzora. Many tools integrated with the v1 (main-branch) agent over
 // ACP, so v2 keeps the wire contract identical — the wire types in this file are a
 // faithful port of main's src/acp/protocol.ts (ACP protocol version 1).
 //
@@ -46,7 +46,7 @@ type InitializeParams struct {
 // ClientCapabilities is what the client offers the agent: filesystem proxy
 // methods (fs/read_text_file, fs/write_text_file) that see unsaved editor
 // buffers, and host-owned terminals (terminal/*). Meta carries vendor
-// capability blocks (e.g. _meta["deeper.io"]) for tolerant parse — unknown
+// capability blocks (e.g. _meta["deepzora.com"]) for tolerant parse — unknown
 // or malformed entries simply mean the vendor feature stays off.
 type ClientCapabilities struct {
 	FS       FSCapabilities `json:"fs,omitempty"`
@@ -104,12 +104,12 @@ type SessionReloadExtensionsCapability struct {
 }
 
 const (
-	// deeperExtensionSurfaceSchemaVersion versions the extension-surface DTO
+	// deepzoraExtensionSurfaceSchemaVersion versions the extension-surface DTO
 	// carried by the vendor session/update variant.
-	deeperExtensionSurfaceSchemaVersion = 1
+	deepzoraExtensionSurfaceSchemaVersion = 1
 	// extensionSurfaceUpdateKind discriminates the vendor session/update
 	// variant that carries a structured extension-UI surface.
-	extensionSurfaceUpdateKind = "_deeper.io/extension_surface"
+	extensionSurfaceUpdateKind = "_deepzora.com/extension_surface"
 )
 
 // ExtensionSurfaceCapability advertises that a participant renders structured
@@ -184,11 +184,11 @@ type MCPServerSpec struct {
 }
 
 // MCPEnv accepts ACP's official EnvVariable[] shape while still accepting the
-// older map shape that Deeper v1 clients used.
+// older map shape that Deepzora v1 clients used.
 type MCPEnv map[string]string
 
 // MCPHeaders accepts ACP's official HTTPHeader[] shape while still accepting
-// the older map shape that Deeper v1 clients used. The official spec
+// the older map shape that Deepzora v1 clients used. The official spec
 // (https://agentclientprotocol.com) ships HTTP/SSE MCP headers as an array of
 // {name,value} objects, even when empty.
 type MCPHeaders map[string]string
@@ -379,7 +379,7 @@ type SessionListParams struct {
 	Cursor string `json:"cursor,omitempty"`
 }
 
-// SessionListResult is the first and only page of sessions Deeper currently
+// SessionListResult is the first and only page of sessions Deepzora currently
 // returns. NextCursor is omitted because the in-process list is unpaged.
 type SessionListResult struct {
 	Sessions   []SessionInfo `json:"sessions"`
@@ -462,14 +462,14 @@ func FlattenPrompt(blocks []ContentBlock) string {
 type SessionPromptParams struct {
 	SessionID string         `json:"sessionId"`
 	Prompt    []ContentBlock `json:"prompt"`
-	// Action is an optional Deeper extension. Empty preserves ACP's standard
+	// Action is an optional Deepzora extension. Empty preserves ACP's standard
 	// prompt behavior; final_readiness_recovery explicitly resumes the newest
 	// paused host check without trusting ordinary prose as authorization.
 	Action     string `json:"action,omitempty"`
 	RecoveryID string `json:"recoveryId,omitempty"`
 }
 
-// SessionSteerParams is the Deeper ACP v1 extension for injecting user
+// SessionSteerParams is the Deepzora ACP v1 extension for injecting user
 // guidance into an active prompt without cancelling it.
 type SessionSteerParams struct {
 	SessionID string         `json:"sessionId"`
@@ -483,19 +483,19 @@ type SessionSteerResult struct {
 }
 
 // sessionSteerMethod follows ACP v1's reserved vendor-extension namespace.
-const sessionSteerMethod = "_deeper.io/session/steer"
+const sessionSteerMethod = "_deepzora.com/session/steer"
 
 const (
 	sessionInboxSchemaVersion = 1
-	sessionInboxEnqueueMethod = "_deeper.io/session/inbox/enqueue"
-	sessionInboxListMethod    = "_deeper.io/session/inbox/list"
-	sessionInboxGetMethod     = "_deeper.io/session/inbox/get"
-	sessionInboxUpdateMethod  = "_deeper.io/session/inbox/update"
-	sessionInboxDeleteMethod  = "_deeper.io/session/inbox/delete"
-	sessionInboxMoveMethod    = "_deeper.io/session/inbox/move"
-	sessionInboxPauseMethod   = "_deeper.io/session/inbox/setPaused"
-	sessionInboxRetryMethod   = "_deeper.io/session/inbox/retry"
-	sessionInboxRefreshMethod = "_deeper.io/session/inbox/refresh"
+	sessionInboxEnqueueMethod = "_deepzora.com/session/inbox/enqueue"
+	sessionInboxListMethod    = "_deepzora.com/session/inbox/list"
+	sessionInboxGetMethod     = "_deepzora.com/session/inbox/get"
+	sessionInboxUpdateMethod  = "_deepzora.com/session/inbox/update"
+	sessionInboxDeleteMethod  = "_deepzora.com/session/inbox/delete"
+	sessionInboxMoveMethod    = "_deepzora.com/session/inbox/move"
+	sessionInboxPauseMethod   = "_deepzora.com/session/inbox/setPaused"
+	sessionInboxRetryMethod   = "_deepzora.com/session/inbox/retry"
+	sessionInboxRefreshMethod = "_deepzora.com/session/inbox/refresh"
 )
 
 // SessionInboxEnqueueParams is the durable inbox enqueue request.
@@ -546,11 +546,11 @@ type SessionReloadExtensionsResult struct {
 
 // sessionReloadExtensionsMethod follows ACP v1's reserved vendor-extension
 // namespace, like sessionSteerMethod: only the "_<vendor>/" prefix is reserved
-// for vendor methods, so the bare "deeper/session/reloadExtensions" form
+// for vendor methods, so the bare "deepzora/session/reloadExtensions" form
 // could collide with a future official ACP method and must not be used.
-const sessionReloadExtensionsMethod = "_deeper.io/session/reloadExtensions"
+const sessionReloadExtensionsMethod = "_deepzora.com/session/reloadExtensions"
 
-// StopReason tells the client why a turn ended. Deeper only emits values from
+// StopReason tells the client why a turn ended. Deepzora only emits values from
 // the ACP v1 enum; failed turns are returned as JSON-RPC errors instead.
 type StopReason string
 
@@ -584,10 +584,10 @@ type messageChunk struct {
 
 // extensionSurfaceUpdate is the vendor session/update variant that carries one
 // structured extension-UI surface to clients that negotiated
-// deeper.extensionSurface in initialize. ACP has no standard notification for
+// deepzora.extensionSurface in initialize. ACP has no standard notification for
 // extension surfaces, so the DTO (the shared eventwire JSON contract) rides
-// _meta["deeper.io"]["extensionSurface"], mirroring how the initialize
-// handshake namespaces vendor data under "deeper.io". The sink always pairs
+// _meta["deepzora.com"]["extensionSurface"], mirroring how the initialize
+// handshake namespaces vendor data under "deepzora.com". The sink always pairs
 // it with a flattened agent_message_chunk text fallback (belt and suspenders):
 // a client that ignores the vendor variant still shows the content.
 type extensionSurfaceUpdate struct {
@@ -687,7 +687,7 @@ type currentModeUpdate struct {
 // fs/* (agent → client requests)
 
 // FSReadTextFileParams asks the client for a file's current text, including
-// unsaved editor state. Line (1-based) and Limit page the content; Deeper
+// unsaved editor state. Line (1-based) and Limit page the content; Deepzora
 // always reads whole files and pages locally, so it sends neither.
 type FSReadTextFileParams struct {
 	SessionID string `json:"sessionId"`
@@ -713,7 +713,7 @@ type FSWriteTextFileParams struct {
 
 // TerminalCreateParams starts a command in a client-owned terminal.
 // Env follows ACP v1's official EnvVariable[] shape (same as MCP env): only
-// the overrides Deeper owns (typically TMPDIR/TMP/TEMP) are sent — never a
+// the overrides Deepzora owns (typically TMPDIR/TMP/TEMP) are sent — never a
 // full host environment dump.
 type TerminalCreateParams struct {
 	SessionID       string        `json:"sessionId"`

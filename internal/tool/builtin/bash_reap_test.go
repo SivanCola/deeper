@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/proc"
-	"deeper/internal/sandbox"
+	"deepzora/internal/proc"
+	"deepzora/internal/sandbox"
 )
 
 // TestReapTreeKillsGroupStragglers covers #3702: a foreground command that

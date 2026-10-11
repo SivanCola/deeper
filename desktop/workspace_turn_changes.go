@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/checkpoint"
-	"deeper/internal/provider"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/provider"
 	"unicode/utf8"
 )
 

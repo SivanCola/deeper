@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/extension/protocol"
 )
 
 func TestCompactionPrepareCannotExpandAutomaticSummaryPastWindow(t *testing.T) {

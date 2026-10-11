@@ -41,7 +41,7 @@ build request
 Reuse the existing usage and e2ebench instrumentation; no new fallback
 telemetry is added. Capture before/after per phase with:
 
-- `deeper run --metrics <path>` — per-run `RunMetrics`: token/cost totals,
+- `deepzora run --metrics <path>` — per-run `RunMetrics`: token/cost totals,
   `usage_by_source` (executor/planner/subagent/compaction/... request calls),
   `retries`, `compactions`, `steps`.
 - `go run ./cmd/e2ebench -task <task> -json` — per-task request counts,

@@ -1,6 +1,6 @@
 package main
 
-import "deeper/desktop/internal/workspacestate"
+import "deepzora/desktop/internal/workspacestate"
 
 // A completed chat-file catalog cannot represent metadata-only placeholders.
 // Keep those explicit indexed objects visible, but never resurrect a hidden

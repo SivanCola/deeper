@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/skill/skillwatch"
 )
 
 func rebuildTabRuntime(a *App, tab *WorkspaceTab, old *control.Controller, opts boot.Options) (*boot.BuildResult, error) {
@@ -67,7 +67,7 @@ type RuntimeDoctorReport struct {
 }
 
 // RuntimeDoctor returns process-wide + active-tab extension runtime diagnostics
-// for the settings/status panel (mirrors `deeper doctor runtime`).
+// for the settings/status panel (mirrors `deepzora doctor runtime`).
 func (a *App) RuntimeDoctor() RuntimeDoctorReport {
 	var res *boot.BuildResult
 	if a != nil {

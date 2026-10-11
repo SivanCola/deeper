@@ -18,7 +18,7 @@ import (
 	"runtime"
 	"syscall"
 
-	filelock "deeper/internal/identitylock"
+	filelock "deepzora/internal/identitylock"
 )
 
 const (

@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/desktop/internal/hostrpc"
-	"deeper/internal/control"
-	"deeper/internal/fileutil"
-	"deeper/internal/servecontract"
+	"deepzora/desktop/internal/hostrpc"
+	"deepzora/internal/control"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/servecontract"
 )
 
 // ExportGoalDiagnostics lets the user save the authoritative event stream,
@@ -112,7 +112,7 @@ func writeGoalDiagnosticsFile(path string, write func(io.Writer) error) error {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".deeper-goal-diagnostics-*")
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".deepzora-goal-diagnostics-*")
 	if err != nil {
 		return exportOperationError("save goal diagnostics", path, err)
 	}

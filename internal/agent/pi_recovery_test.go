@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestCompatibleMissingReasoningDoesNotRegenerate(t *testing.T) {

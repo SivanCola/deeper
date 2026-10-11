@@ -1,6 +1,6 @@
 package openai
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 func encodeChatTools(req provider.Request, mimo bool) []chatTool {
 	var tools []chatTool

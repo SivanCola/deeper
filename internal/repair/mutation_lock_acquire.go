@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/filelock"
-	"deeper/internal/pathidentity"
+	"deepzora/internal/filelock"
+	"deepzora/internal/pathidentity"
 )
 
 type repairMutationTarget struct {

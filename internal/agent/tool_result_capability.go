@@ -10,8 +10,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 const (

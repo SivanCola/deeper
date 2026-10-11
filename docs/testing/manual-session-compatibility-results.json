@@ -11,7 +11,7 @@
       "testAndSubtestResults": 146,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 353.185
         }
       ],
@@ -24,23 +24,23 @@
       "testAndSubtestResults": 165,
       "packages": [
         {
-          "package": "deeper/internal/topicstate",
+          "package": "deepzora/internal/topicstate",
           "seconds": 2.418
         },
         {
-          "package": "deeper/internal/sessioninbox",
+          "package": "deepzora/internal/sessioninbox",
           "seconds": 3.301
         },
         {
-          "package": "deeper/internal/transcript",
+          "package": "deepzora/internal/transcript",
           "seconds": 14.129
         },
         {
-          "package": "deeper/internal/sessioncatalog",
+          "package": "deepzora/internal/sessioncatalog",
           "seconds": 38.288
         },
         {
-          "package": "deeper/internal/session",
+          "package": "deepzora/internal/session",
           "seconds": 287.73
         }
       ],
@@ -53,7 +53,7 @@
       "testAndSubtestResults": 7,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 203.337
         }
       ],
@@ -66,7 +66,7 @@
       "testAndSubtestResults": 5,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 133.952
         }
       ],
@@ -79,7 +79,7 @@
       "testAndSubtestResults": 3,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 174.357
         }
       ],
@@ -92,7 +92,7 @@
       "testAndSubtestResults": 5,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 204.632
         }
       ],
@@ -105,7 +105,7 @@
       "testAndSubtestResults": 15,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 1.69
         }
       ],
@@ -118,7 +118,7 @@
       "testAndSubtestResults": 3,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 5.736
         }
       ],
@@ -131,7 +131,7 @@
       "testAndSubtestResults": 9,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 39.216
         }
       ],
@@ -144,15 +144,15 @@
       "testAndSubtestResults": 333,
       "packages": [
         {
-          "package": "deeper/internal/transcript",
+          "package": "deepzora/internal/transcript",
           "seconds": 0.44
         },
         {
-          "package": "deeper/internal/agent",
+          "package": "deepzora/internal/agent",
           "seconds": 13.988
         },
         {
-          "package": "deeper/internal/control",
+          "package": "deepzora/internal/control",
           "seconds": 163.982
         }
       ],
@@ -165,7 +165,7 @@
       "testAndSubtestResults": 26,
       "packages": [
         {
-          "package": "deeper/desktop",
+          "package": "deepzora/desktop",
           "seconds": 14.108
         }
       ],
@@ -176,8 +176,8 @@
     "platform": "darwin-arm64",
     "version": "v1.38.12-preview.1",
     "artifactsSHA256": {
-      "MacOS/Deeper": "fe5611f724912bfb042b96b1004b4fd58ca8709fa47359b1c95b204adac279d5",
-      "Resources/service/deeper-desktop": "fb7cdcab394fe5bcc519df8d5a4536ea71b9b809d312dc716818fa093a54971d",
+      "MacOS/Deepzora": "fe5611f724912bfb042b96b1004b4fd58ca8709fa47359b1c95b204adac279d5",
+      "Resources/service/deepzora-desktop": "fb7cdcab394fe5bcc519df8d5a4536ea71b9b809d312dc716818fa093a54971d",
       "Resources/app.asar": "33e1dcca8c4fb4128110c5fcb28a585c7edbfc8f33c68538df2881f63654709f"
     },
     "historicalVersions": [
@@ -288,8 +288,8 @@
     "repositoryLint": "passed",
     "nativePlatform": "darwin-arm64",
     "artifactsSHA256": {
-      "MacOS/Deeper": "0ac2b2779e5ae8e29b42f3b4ff4f8417c5e2b9e4d4f398d6cd9d714e9e166a35",
-      "Resources/service/deeper-desktop": "498e49aecf3c9566773bfcdf7d573276600a3ab65591aa28c7926abe870d414c",
+      "MacOS/Deepzora": "0ac2b2779e5ae8e29b42f3b4ff4f8417c5e2b9e4d4f398d6cd9d714e9e166a35",
+      "Resources/service/deepzora-desktop": "498e49aecf3c9566773bfcdf7d573276600a3ab65591aa28c7926abe870d414c",
       "Resources/app.asar": "33e1dcca8c4fb4128110c5fcb28a585c7edbfc8f33c68538df2881f63654709f"
     },
     "nativeScenarios": [

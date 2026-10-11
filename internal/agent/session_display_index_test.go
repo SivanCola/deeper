@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // displayIndexTestMessages builds a multi-turn transcript exercising every

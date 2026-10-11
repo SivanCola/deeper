@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/instruction"
+	"deepzora/internal/instruction"
 )
 
 // Set is everything memory loaded for one session: hierarchical standing docs,
@@ -15,7 +15,7 @@ import (
 // background snapshot for session-context. CWD and UserDir are retained so
 // quick-add targets can be resolved without re-deriving discovery context.
 type Set struct {
-	Docs                   []Source // DEEPER.md / AGENTS.md, ascending precedence
+	Docs                   []Source // DEEPZORA.md / AGENTS.md, ascending precedence
 	PinnedGuidance         []Memory // snapshot of pinned fact bodies (incl. legacy global user/feedback)
 	Store                  Store    // auto-memory store (may be a zero/disabled Store)
 	Index                  string   // MEMORY.md contents at load time
@@ -48,7 +48,7 @@ func Load(opts Options) *Set {
 	// MemoryBench's counterfactual arm: hide the store, index, pinned
 	// guidance, and recall so paired runs measure memory's contribution.
 	// Instruction docs stay — standing instructions are not under test.
-	if os.Getenv("DEEPER_EXPERIMENT_NO_MEMORY") == "1" {
+	if os.Getenv("DEEPZORA_EXPERIMENT_NO_MEMORY") == "1" {
 		return &Set{Docs: resolved.Documents, CWD: cwd, UserDir: opts.UserDir,
 			InstructionDiagnostics: resolved.Diagnostics}
 	}
@@ -67,7 +67,7 @@ func Load(opts Options) *Set {
 
 // DocPath returns the doc-memory file a given scope writes to. To avoid splitting
 // a project's memory across conventions, it prefers a file that already exists
-// (DEEPER.md / AGENTS.md / CLAUDE.md, in that order); when none exists it
+// (DEEPZORA.md / AGENTS.md / CLAUDE.md, in that order); when none exists it
 // creates the universal default (AGENTS.md / AGENTS.local.md). ScopeUser →
 // <userDir>, ScopeLocal → <cwd> with the *.local.md names, anything else → <cwd>.
 // Returns "" for ScopeUser when no user dir is configured.

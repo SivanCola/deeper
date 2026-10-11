@@ -13,14 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/provider"
 )
 
 // First-boot coverage for extension-hosted providers (stage 7 follow-up):
@@ -32,7 +32,7 @@ import (
 // default_model pointed at a plugin-namespaced ref.
 func writePluginDefaultFixture(t *testing.T, dir, pluginRef string) {
 	t.Helper()
-	writeFile(t, dir, "deeper.toml", fmt.Sprintf(`
+	writeFile(t, dir, "deepzora.toml", fmt.Sprintf(`
 default_model = %q
 
 [agent]
@@ -46,7 +46,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "DEEPER_TEST_KEY_UNSET"
+api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `, pluginRef))
 	approveWorkspace(t, dir)
 }
@@ -90,7 +90,7 @@ func TestBootFirstBootPluginDefaultModelStreams(t *testing.T) {
 	name := "firstboot"
 	ref := "plugin/" + name + "/fake/x"
 	writePluginDefaultFixture(t, dir, ref)
-	installProviderFake(t, config.DeeperHomeDir(), name, nil)
+	installProviderFake(t, config.DeepzoraHomeDir(), name, nil)
 
 	res, err := BuildRuntime(context.Background(), Options{})
 	if err != nil {
@@ -118,7 +118,7 @@ func TestBootUnknownPluginRefListsAvailableRefs(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writePluginDefaultFixture(t, dir, "plugin/nope/x/y")
-	installProviderFake(t, config.DeeperHomeDir(), "providerdemo", nil)
+	installProviderFake(t, config.DeepzoraHomeDir(), "providerdemo", nil)
 
 	_, err := BuildRuntime(context.Background(), Options{})
 	if err == nil {
@@ -146,7 +146,7 @@ func TestBootSwitchToPluginModelStreams(t *testing.T) {
 	writeRuntimeFixture(t, dir)
 	name := "switchdemo"
 	ref := "plugin/" + name + "/fake/x"
-	installProviderFake(t, config.DeeperHomeDir(), name, nil)
+	installProviderFake(t, config.DeepzoraHomeDir(), name, nil)
 
 	oldRes, err := BuildRuntime(context.Background(), Options{})
 	if err != nil {
@@ -200,7 +200,7 @@ func TestBootStartsExtensionPackagesOncePerBuild(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.DeeperHomeDir(), "counted", map[string]any{})
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "counted", map[string]any{})
 
 	calls := 0
 	orig := startExtensionPackages
@@ -229,7 +229,7 @@ func TestBootRedactsExtensionStartupWarnings(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.DeeperHomeDir(), "warning-source", map[string]any{})
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "warning-source", map[string]any{})
 
 	orig := startExtensionPackages
 	startExtensionPackages = func(ctx context.Context, home string, sessionCtx protocol.SessionContext, ui sidecar.UIHandler, previous *sidecar.Manager, plan *extension.RuntimePlan) (*sidecar.Manager, []string, error) {
@@ -281,7 +281,7 @@ func TestBootRequiredExitLeavesNoSidecarProcess(t *testing.T) {
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
 	pidFile := filepath.Join(dir, "sidecar.pid")
-	installBootFakePlugin(t, config.DeeperHomeDir(), "required-dies", map[string]any{
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "required-dies", map[string]any{
 		"required": true,
 		"env": map[string]string{
 			bootFakeEnvPIDFile:         pidFile,
@@ -311,7 +311,7 @@ func TestBootProviderConflictLeavesNoSidecarProcess(t *testing.T) {
 	name := "conflicter"
 	writeRuntimeFixtureWithConflictingProvider(t, dir, name)
 	pidFile := filepath.Join(dir, "sidecar.pid")
-	installProviderFake(t, config.DeeperHomeDir(), name, map[string]string{
+	installProviderFake(t, config.DeepzoraHomeDir(), name, map[string]string{
 		bootFakeEnvPIDFile: pidFile,
 	})
 
@@ -336,7 +336,7 @@ func TestRebuildPluginPreflightFailureKeepsOldRuntime(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	installBootFakePlugin(t, config.DeeperHomeDir(), "stable", map[string]any{})
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "stable", map[string]any{})
 
 	oldRes, err := BuildRuntime(context.Background(), Options{})
 	if err != nil {
@@ -350,7 +350,7 @@ func TestRebuildPluginPreflightFailureKeepsOldRuntime(t *testing.T) {
 
 	// A newly installed required plugin dies immediately: the replacement
 	// build's preflight must fail before touching the old generation.
-	installBootFakePlugin(t, config.DeeperHomeDir(), "required-dies", map[string]any{
+	installBootFakePlugin(t, config.DeepzoraHomeDir(), "required-dies", map[string]any{
 		"required": true,
 		"env":      map[string]string{bootFakeEnvExitImmediately: "1"},
 	})

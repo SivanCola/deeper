@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 )
 
 func TestWindowsExtensionlessPOSIXPluginHookUsesBash(t *testing.T) {

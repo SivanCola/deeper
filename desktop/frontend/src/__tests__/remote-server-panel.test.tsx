@@ -101,8 +101,8 @@ await act(async () => {
 
 ok(document.body.textContent?.includes("Open Remote Web") === true, "server tab shows the unified Open Remote Web entry");
 ok(
-  document.body.textContent?.includes("Models, API keys, and sessions are managed by the Deeper configuration on the remote server.") === true,
-  "server tab states that providers, API keys, and sessions are managed by the remote Deeper configuration",
+  document.body.textContent?.includes("Models, API keys, and sessions are managed by the Deepzora configuration on the remote server.") === true,
+  "server tab states that providers, API keys, and sessions are managed by the remote Deepzora configuration",
 );
 
 // Serve progress: remote:server events drive the busy state and label.

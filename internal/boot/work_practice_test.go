@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/config"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/config"
 )
 
 func TestBuildAppendsWorkPracticePolicyToCustomSystemPrompt(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]
@@ -23,7 +23,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "DEEPER_TEST_KEY_UNSET"
+api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 
@@ -61,7 +61,7 @@ func TestBuildInjectsOfflineNoteOnlyWhenEnvironmentDeclaresIt(t *testing.T) {
 		registerBootTokenProfileTestProvider()
 		prov := testutil.NewMock("offline-context", testutil.Turn{Text: "done"})
 		setBootTokenProfileTestProvider(t, prov)
-		writeFile(t, dir, "deeper.toml", `
+		writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	bolt "go.etcd.io/bbolt"
 )
 

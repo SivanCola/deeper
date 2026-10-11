@@ -4,8 +4,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"deeper/internal/agent"
-	"deeper/internal/botruntime"
+	"deepzora/internal/agent"
+	"deepzora/internal/botruntime"
 )
 
 func (a *App) deleteRecoveryCopy(path string) error {

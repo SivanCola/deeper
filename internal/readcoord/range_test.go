@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func ranges(pairs ...int) []tool.ReadRange {

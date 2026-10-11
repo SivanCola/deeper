@@ -1518,7 +1518,7 @@ export interface SlashArgItem {
   label: string;
   insert: string; // token to place at the current position
   hint: string;
-  descend: boolean; // re-open the menu one level deeper after accepting
+  descend: boolean; // re-open the menu one level deepzora after accepting
 }
 export interface SlashArgsResult {
   items: SlashArgItem[];

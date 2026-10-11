@@ -7,7 +7,7 @@ import { memoryProtocol, verifyIdentity } from "./app-memory-shards.mjs";
 const frontend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const target = process.argv[2];
 const executionId = `${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT}`;
-const protocol = memoryProtocol(process.env.DEEPER_APP_MEMORY_PROFILE ?? "full");
+const protocol = memoryProtocol(process.env.DEEPZORA_APP_MEMORY_PROFILE ?? "full");
 if (!target || !process.env.GITHUB_RUN_ID || !process.env.GITHUB_RUN_ATTEMPT) throw new Error("prepare requires an output directory and workflow identity");
 // Vite removes this tracked placeholder; restore it before hashing the clean build.
 const prefix = execFileSync("git", ["rev-parse", "--show-prefix"], { cwd: frontend, encoding: "utf8" }).trim();

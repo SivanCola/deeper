@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/recovery"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/recovery"
+	"deepzora/internal/store"
 )
 
 const (
@@ -324,7 +324,7 @@ func machineTime(value time.Time) string {
 func loadMachineIdentityKey() ([]byte, error) {
 	root := strings.TrimSpace(config.MemoryUserDir())
 	if root == "" {
-		return nil, fmt.Errorf("machine identity: Deeper state directory is unavailable")
+		return nil, fmt.Errorf("machine identity: Deepzora state directory is unavailable")
 	}
 	path := filepath.Join(root, machineIdentityKeyFile)
 	key, err := readMachineIdentityKey(path)
@@ -382,7 +382,7 @@ func machineSessionIDWithKey(branchID string, identityKey []byte) string {
 		return ""
 	}
 	digest := hmac.New(sha256.New, identityKey)
-	_, _ = digest.Write([]byte("deeper-machine-session-v1\x00"))
+	_, _ = digest.Write([]byte("deepzora-machine-session-v1\x00"))
 	_, _ = digest.Write([]byte(branchID))
 	return "session_" + hex.EncodeToString(digest.Sum(nil)[:16])
 }

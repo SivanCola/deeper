@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // A real controller delivers TurnDone while its admission gate is still held.

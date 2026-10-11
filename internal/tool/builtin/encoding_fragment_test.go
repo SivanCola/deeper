@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/tool"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/tool"
 )
 
 // longGBKLine is a GB18030 file whose first line outruns any detection window

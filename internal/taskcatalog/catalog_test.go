@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/taskmonitor"
+	"deepzora/internal/taskmonitor"
 )
 
 func snapshot(id, session string, version uint64, updated time.Time) taskmonitor.TaskSnapshot {

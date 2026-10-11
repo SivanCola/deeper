@@ -8,9 +8,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/control"
-	"deeper/internal/i18n"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
 )
 
 // rewindPicker is the in-chat overlay for Esc-Esc / "/rewind". Stage 0 lists the

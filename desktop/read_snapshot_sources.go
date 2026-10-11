@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 // Source fences track identity/lifecycle, not file length, mtime, title or index

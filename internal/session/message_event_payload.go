@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type messageRetractPayload struct {

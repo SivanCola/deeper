@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // foldRequest is what one fold attempt asks of the summarizer. force shrinks
 // the verbatim tail, mustFree caps the summary input to the safe prefix, and

@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/textutil"
+	"deepzora/internal/textutil"
 )
 
 const (

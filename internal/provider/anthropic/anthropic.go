@@ -31,9 +31,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 // defaultStreamIdleTimeout caps how long a started SSE stream may go silent before

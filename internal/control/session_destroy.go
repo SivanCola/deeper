@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/jobs"
+	"deepzora/internal/agent"
+	"deepzora/internal/jobs"
 )
 
 // SessionDestroyHandle separates cancelled-job waiting from ending the destroy

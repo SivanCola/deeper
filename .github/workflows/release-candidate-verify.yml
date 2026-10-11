@@ -33,7 +33,7 @@ jobs:
           RELEASE_REVOKED_CANDIDATES: ${{ vars.RELEASE_REVOKED_CANDIDATES }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REPOSITORY" = SivanCola/deeper
+          test "$GITHUB_REPOSITORY" = SivanCola/deepzora
           test "$GITHUB_REF" = refs/heads/main
           test "$GITHUB_REF_PROTECTED" = true
           node scripts/resolve-release-candidate.mjs resolve-rehearsal "${{ inputs.candidate_id }}"

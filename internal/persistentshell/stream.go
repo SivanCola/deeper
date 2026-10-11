@@ -4,7 +4,7 @@ import (
 	"io"
 	"strings"
 
-	"deeper/internal/shellrun"
+	"deepzora/internal/shellrun"
 )
 
 // maxIncompleteEscape bounds the escape-sequence fragment carried between PTY

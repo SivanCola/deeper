@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 // Rebuild replaces only the disposable usage projection after replaying the

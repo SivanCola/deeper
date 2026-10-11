@@ -1,9 +1,9 @@
 package main
 
 import (
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 // runtimeRebuildMu and the destination turnStartMu are held. Reuse the exact

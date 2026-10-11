@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 func (a *App) gitWorkspaceRepoForTab(tabID, expectedRoot string) (gitcmd.Repo, error) {

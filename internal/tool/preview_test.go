@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/diff"
+	"deepzora/internal/diff"
 )
 
 type fakeWriter struct {

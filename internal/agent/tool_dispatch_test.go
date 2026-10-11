@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 type transientOnceTool struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 // runSynchronousTurn owns the blocking transport lifecycle. Durable steer

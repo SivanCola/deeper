@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/attachment"
-	"deeper/internal/transcript"
+	"deepzora/internal/attachment"
+	"deepzora/internal/transcript"
 )
 
 func historyDisplayAttachments(inputs []attachment.ImageInput) []transcript.Attachment {

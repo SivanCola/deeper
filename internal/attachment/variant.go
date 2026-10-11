@@ -11,7 +11,7 @@ import (
 	"image/png"
 	"sync"
 
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 	xdraw "golang.org/x/image/draw"
 )
 

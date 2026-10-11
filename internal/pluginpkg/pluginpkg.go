@@ -1,4 +1,4 @@
-// Package pluginpkg handles installed Deeper plugin packages.
+// Package pluginpkg handles installed Deepzora plugin packages.
 //
 // Plugin packages are higher-level bundles that can contribute skills, hooks,
 // and MCP servers. They are intentionally parsed into package-local structs so
@@ -17,17 +17,18 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/command"
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/frontmatter"
+	"deepzora/internal/command"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/frontmatter"
 )
 
 const (
-	NativeManifest = "deeper-plugin.json"
-	CodexManifest  = ".codex-plugin/plugin.json"
-	ClaudeManifest = ".claude-plugin/plugin.json"
-	StateFilename  = "plugin-packages.json"
+	NativeManifest       = "deepzora-plugin.json"
+	LegacyNativeManifest = "deeper-plugin.json"
+	CodexManifest        = ".codex-plugin/plugin.json"
+	ClaudeManifest       = ".claude-plugin/plugin.json"
+	StateFilename        = "plugin-packages.json"
 
 	PluginStatusDisabledIncompatible = "disabled_incompatible"
 
@@ -106,7 +107,7 @@ type PromptRef struct {
 	Path        string
 }
 
-// ThemeRef is one theme file (*.deeper-theme) a plugin contributes,
+// ThemeRef is one theme file (*.deepzora-theme) a plugin contributes,
 // resolved from the manifest's themes list (plain paths and globs).
 type ThemeRef struct {
 	Name string
@@ -131,9 +132,9 @@ type MCPServerRef struct {
 	AutoStart   bool
 }
 
-// Manifest is the normalized manifest shape used by Deeper.
+// Manifest is the normalized manifest shape used by Deepzora.
 type Manifest struct {
-	// APIVersion is deeper.io/plugin/v2 for native packages; empty for Claude/Codex.
+	// APIVersion is deepzora.com/plugin/v2 for native packages; empty for Claude/Codex.
 	APIVersion  string
 	Name        string
 	Version     string
@@ -142,7 +143,7 @@ type Manifest struct {
 	Repository  string
 	Skills      []string
 	// Agents are directories of Claude-style flat agent Markdown files. They are
-	// loaded as plugin-owned, manually invoked Deeper subagent profiles.
+	// loaded as plugin-owned, manually invoked Deepzora subagent profiles.
 	Agents []string
 	// Commands are directories of flat <name>.md slash-command prompt templates
 	// (rendered with $ARGUMENTS/$1..$N on /<name>). Declared explicitly in a
@@ -154,8 +155,8 @@ type Manifest struct {
 	// separate semantic sets: commands become slash commands, prompts become
 	// kernel KindPrompt contributions. A path listed under both stays in both.
 	Prompts []string
-	// Themes are *.deeper-theme file paths or per-segment glob patterns
-	// (e.g. "themes/*.deeper-theme"), all lexically inside the plugin root.
+	// Themes are *.deepzora-theme file paths or per-segment glob patterns
+	// (e.g. "themes/*.deepzora-theme"), all lexically inside the plugin root.
 	Themes []string
 	// Runtime declares a plugin-owned runtime process (native v2).
 	// nil for Claude and Codex packages.
@@ -242,7 +243,7 @@ type MCPServer struct {
 	Imported    bool              `json:"imported,omitempty"`
 }
 
-// State is persisted at <Deeper home>/plugin-packages.json.
+// State is persisted at <Deepzora home>/plugin-packages.json.
 type State struct {
 	Version int               `json:"version"`
 	Plugins []InstalledPlugin `json:"plugins"`
@@ -269,21 +270,21 @@ type InstalledPackage struct {
 
 func IsValidName(name string) bool { return validName.MatchString(strings.TrimSpace(name)) }
 
-func StatePath(deeperHome string) string {
-	return filepath.Join(deeperHome, StateFilename)
+func StatePath(deepzoraHome string) string {
+	return filepath.Join(deepzoraHome, StateFilename)
 }
 
-func PluginsDir(deeperHome string) string {
-	return filepath.Join(deeperHome, "plugins")
+func PluginsDir(deepzoraHome string) string {
+	return filepath.Join(deepzoraHome, "plugins")
 }
 
-func InstallRoot(deeperHome, name string) string {
-	return filepath.Join(PluginsDir(deeperHome), name)
+func InstallRoot(deepzoraHome, name string) string {
+	return filepath.Join(PluginsDir(deepzoraHome), name)
 }
 
-func LoadState(deeperHome string) (State, error) {
+func LoadState(deepzoraHome string) (State, error) {
 	var st State
-	b, err := fileencoding.ReadFileUTF8(StatePath(deeperHome))
+	b, err := fileencoding.ReadFileUTF8(StatePath(deepzoraHome))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return State{Version: 1}, nil
@@ -300,7 +301,7 @@ func LoadState(deeperHome string) (State, error) {
 	return st, nil
 }
 
-func SaveState(deeperHome string, st State) error {
+func SaveState(deepzoraHome string, st State) error {
 	if st.Version == 0 {
 		st.Version = 1
 	}
@@ -310,40 +311,40 @@ func SaveState(deeperHome string, st State) error {
 		return err
 	}
 	b = append(b, '\n')
-	return fileutil.AtomicWriteFile(StatePath(deeperHome), b, 0o644)
+	return fileutil.AtomicWriteFile(StatePath(deepzoraHome), b, 0o644)
 }
 
 // stateMu serialises the read-modify-write of the state file within this
 // process. SaveState writes atomically (tmpfile + rename), so concurrent
 // callers never see a half-written file; this lock additionally prevents two
 // in-process load-modify-save cycles from clobbering each other's edit. It is
-// not a cross-process lock — concurrent Deeper processes can still race.
+// not a cross-process lock — concurrent Deepzora processes can still race.
 var stateMu sync.Mutex
 
-func Upsert(deeperHome string, p InstalledPlugin) error {
+func Upsert(deepzoraHome string, p InstalledPlugin) error {
 	if !IsValidName(p.Name) {
 		return fmt.Errorf("invalid plugin name %q", p.Name)
 	}
 	stateMu.Lock()
 	defer stateMu.Unlock()
-	st, err := LoadState(deeperHome)
+	st, err := LoadState(deepzoraHome)
 	if err != nil {
 		return err
 	}
 	for i := range st.Plugins {
 		if st.Plugins[i].Name == p.Name {
 			st.Plugins[i] = p
-			return SaveState(deeperHome, st)
+			return SaveState(deepzoraHome, st)
 		}
 	}
 	st.Plugins = append(st.Plugins, p)
-	return SaveState(deeperHome, st)
+	return SaveState(deepzoraHome, st)
 }
 
-func Remove(deeperHome, name string) (InstalledPlugin, bool, error) {
+func Remove(deepzoraHome, name string) (InstalledPlugin, bool, error) {
 	stateMu.Lock()
 	defer stateMu.Unlock()
-	st, err := LoadState(deeperHome)
+	st, err := LoadState(deepzoraHome)
 	if err != nil {
 		return InstalledPlugin{}, false, err
 	}
@@ -352,36 +353,36 @@ func Remove(deeperHome, name string) (InstalledPlugin, bool, error) {
 			continue
 		}
 		st.Plugins = append(st.Plugins[:i], st.Plugins[i+1:]...)
-		return p, true, SaveState(deeperHome, st)
+		return p, true, SaveState(deepzoraHome, st)
 	}
 	return InstalledPlugin{}, false, nil
 }
 
-func SetEnabled(deeperHome, name string, enabled bool) error {
+func SetEnabled(deepzoraHome, name string, enabled bool) error {
 	stateMu.Lock()
 	defer stateMu.Unlock()
-	st, err := LoadState(deeperHome)
+	st, err := LoadState(deepzoraHome)
 	if err != nil {
 		return err
 	}
 	for i := range st.Plugins {
 		if st.Plugins[i].Name == name {
 			st.Plugins[i].Enabled = enabled
-			return SaveState(deeperHome, st)
+			return SaveState(deepzoraHome, st)
 		}
 	}
 	return fmt.Errorf("plugin %q is not installed", name)
 }
 
-func ResolveRoot(deeperHome, root string) string {
+func ResolveRoot(deepzoraHome, root string) string {
 	if filepath.IsAbs(root) {
 		return filepath.Clean(root)
 	}
-	return filepath.Join(deeperHome, filepath.Clean(root))
+	return filepath.Join(deepzoraHome, filepath.Clean(root))
 }
 
-func RelativeRoot(deeperHome, root string) string {
-	if rel, err := filepath.Rel(deeperHome, root); err == nil && rel != "." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".." {
+func RelativeRoot(deepzoraHome, root string) string {
+	if rel, err := filepath.Rel(deepzoraHome, root); err == nil && rel != "." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".." {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.Clean(root)
@@ -392,10 +393,12 @@ func ParseDir(root string) (Package, []string, error) {
 	// A manifest that EXISTS but fails to parse fails loudly with the real
 	// error (a v1 typo names its field path); only a missing file falls
 	// through to the next manifest kind.
-	if pkg, warnings, err := parseNative(filepath.Join(root, NativeManifest), root); err == nil {
-		return pkg, warnings, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return Package{}, nil, err
+	for _, name := range []string{NativeManifest, LegacyNativeManifest} {
+		if pkg, warnings, err := parseNative(filepath.Join(root, name), root); err == nil {
+			return pkg, warnings, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return Package{}, nil, err
+		}
 	}
 	if pkg, warnings, err := parseCodex(filepath.Join(root, CodexManifest), root); err == nil {
 		return pkg, warnings, nil
@@ -454,7 +457,7 @@ func parseNativeLegacy(b []byte, root string) (Package, []string, error) {
 	if err := validateManifest(root, &manifest); err != nil {
 		return Package{}, warnings, err
 	}
-	pkg := Package{Root: root, ManifestKind: "deeper", Manifest: manifest}
+	pkg := Package{Root: root, ManifestKind: "deepzora", Manifest: manifest}
 	pkg.Compatibility = compatibilityFor(pkg, issues)
 	return pkg, warnings, nil
 }
@@ -542,7 +545,7 @@ var claudeConventionSkillDirs = []string{"skills", ".claude/skills"}
 
 // claudeConventionCommandDirs are the directories a Claude plugin loads slash
 // commands from by convention. A command is a flat <name>.md prompt template
-// the user invokes as /<name> — exactly Deeper's custom-command shape
+// the user invokes as /<name> — exactly Deepzora's custom-command shape
 // (internal/command) — so these directories map onto Manifest.Commands and
 // join command discovery at the lowest priority. Unlike skill dirs they are
 // adopted even when the manifest declares skills explicitly, because
@@ -554,7 +557,7 @@ var claudeConventionAgentDirs = []string{"agents"}
 // applyClaudeConventionDirs fills manifest.Skills from the conventional skill
 // directories when the manifest declares none (the standard Claude plugin
 // shape), adopts conventional command directories into manifest.Commands, and
-// reports the conventional capabilities Deeper cannot map.
+// reports the conventional capabilities Deepzora cannot map.
 func applyClaudeConventionDirs(root string, manifest *Manifest) []string {
 	var warnings []string
 	if len(manifest.Skills) == 0 {
@@ -617,23 +620,6 @@ func dirContainsSkill(dir string) bool {
 func dirContainsCommandMd(dir string) bool {
 	cmds, _ := command.Load(dir) // best-effort: a missing dir or malformed files load nothing
 	return len(cmds) > 0
-}
-
-func ManifestPath(kind string) string {
-	switch kind {
-	case "deeper":
-		return NativeManifest
-	case "codex":
-		return CodexManifest
-	case "claude":
-		return ClaudeManifest
-	default:
-		return NativeManifest
-	}
-}
-
-func ManifestPaths() []string {
-	return []string{NativeManifest, CodexManifest, ClaudeManifest}
 }
 
 func claudeTimeoutMillis(seconds int) int {

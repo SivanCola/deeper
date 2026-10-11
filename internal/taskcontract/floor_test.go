@@ -1,7 +1,7 @@
 package taskcontract
 
 import (
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 	"testing"
 )
 

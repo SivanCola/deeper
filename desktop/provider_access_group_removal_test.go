@@ -4,17 +4,17 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	fallback := config.ProviderEntry{
 		Name: "mimo-pro", Kind: "openai", BaseURL: "https://mimo.example/v1",
-		Model: "mimo-v2.5-pro", APIKeyEnv: "DEEPER_TEST_KEY",
+		Model: "mimo-v2.5-pro", APIKeyEnv: "DEEPZORA_TEST_KEY",
 	}
 	cfg.DefaultModel = "opencode-go/glm-5.3"
 	cfg.Agent.PlannerModel = "opencode-go-anthropic/qwen3.7-plus"
@@ -37,19 +37,19 @@ func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testi
 	cfg.Providers = []config.ProviderEntry{
 		{
 			Name: "opencode-go", Kind: "openai", BaseURL: "https://opencode.ai/zen/go/v1",
-			Model: "glm-5.3", APIKeyEnv: "DEEPER_TEST_KEY", PresetID: "opencode-go",
+			Model: "glm-5.3", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go",
 		},
 		{
 			Name: "opencode-go-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go",
-			Model: "qwen3.7-plus", APIKeyEnv: "DEEPER_TEST_KEY", PresetID: "opencode-go-anthropic",
+			Model: "qwen3.7-plus", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go-anthropic",
 		},
 		{
 			Name: "opencode-go-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1",
-			Model: "grok-4.5", APIKeyEnv: "DEEPER_TEST_KEY", PresetID: "opencode-go-responses",
+			Model: "grok-4.5", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go-responses",
 		},
 		{
 			Name: "opencode-go-deepseek-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1",
-			Model: "deepseek-v4-flash", APIKeyEnv: "DEEPER_TEST_KEY", PresetID: "opencode-go-deepseek-responses",
+			Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go-deepseek-responses",
 		},
 		fallback,
 	}
@@ -135,7 +135,7 @@ func TestProviderRemovalStateFingerprintCoversAuxiliaryModelReferences(t *testin
 
 func TestRemoveProviderAccessesKeepsCoreRoutesWhenRemovingOpenCodeGoSearchSubset(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	coreNames := []string{"opencode-go", "opencode-go-anthropic", "opencode-go-responses"}
 	searchNames := []string{"opencode-go-deepseek-anthropic", "opencode-go-deepseek-responses"}
@@ -143,12 +143,12 @@ func TestRemoveProviderAccessesKeepsCoreRoutesWhenRemovingOpenCodeGoSearchSubset
 	cfg.DefaultModel = "opencode-go/glm-5.3"
 	cfg.Desktop.ProviderAccess = append(append(append([]string(nil), coreNames...), searchNames...), "fallback")
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "opencode-go", Kind: "openai", BaseURL: "https://opencode.ai/zen/go/v1", Model: "glm-5.3", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "opencode-go-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "qwen3.7-plus", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "opencode-go-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "grok-4.5", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "opencode-go-deepseek-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "opencode-go-deepseek-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "fallback", Kind: "openai", BaseURL: "https://fallback.example/v1", Model: "fallback-model", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "opencode-go", Kind: "openai", BaseURL: "https://opencode.ai/zen/go/v1", Model: "glm-5.3", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "opencode-go-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "qwen3.7-plus", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "opencode-go-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "grok-4.5", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "opencode-go-deepseek-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "opencode-go-deepseek-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "fallback", Kind: "openai", BaseURL: "https://fallback.example/v1", Model: "fallback-model", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -176,13 +176,13 @@ func TestRemoveProviderAccessesKeepsCoreRoutesWhenRemovingOpenCodeGoSearchSubset
 
 func TestRemoveProviderAccessesStillRejectsUnrelatedCustomBatch(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPER_TEST_KEY", "sk-test")
+	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
 	cfg.Desktop.ProviderAccess = []string{"custom-a", "custom-b"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "custom-a", Kind: "openai", BaseURL: "https://a.example/v1", Model: "a", APIKeyEnv: "DEEPER_TEST_KEY"},
-		{Name: "custom-b", Kind: "openai", BaseURL: "https://b.example/v1", Model: "b", APIKeyEnv: "DEEPER_TEST_KEY"},
+		{Name: "custom-a", Kind: "openai", BaseURL: "https://a.example/v1", Model: "a", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Name: "custom-b", Kind: "openai", BaseURL: "https://b.example/v1", Model: "b", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

@@ -3,7 +3,7 @@ package builtin
 import (
 	"bytes"
 	"context"
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 	"encoding/base64"
 	"errors"
 	"image"
@@ -47,7 +47,7 @@ func TestViewImageWorkspaceAndConfinement(t *testing.T) {
 func TestViewImageAttachmentUsesWorkspaceInsteadOfProcessCWD(t *testing.T) {
 	workspace := t.TempDir()
 	processDir := t.TempDir()
-	rel := filepath.Join(".deeper", "attachments", "shared.png")
+	rel := filepath.Join(".deepzora", "attachments", "shared.png")
 	for root, bounds := range map[string]image.Rectangle{
 		workspace:  image.Rect(0, 0, 2, 3),
 		processDir: image.Rect(0, 0, 7, 9),
@@ -107,7 +107,7 @@ func TestViewImageExternalAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	resolver := NewPathResolver()
-	token := "__deeper_external_folder/test/Images"
+	token := "__deepzora_external_folder/test/Images"
 	resolver.RegisterReadRoot(token, external)
 	ts := (Workspace{Dir: t.TempDir(), ReadPaths: resolver}).Tools("view_image")
 	for _, name := range []string{"x.png", "missing.png"} {

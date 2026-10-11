@@ -10,9 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/fileutil"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/store"
 )
 
 const (

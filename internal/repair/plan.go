@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	textdiff "deeper/internal/diff"
+	"deepzora/internal/config"
+	textdiff "deepzora/internal/diff"
 )
 
 const RepairPlanSchemaVersion = 1
@@ -418,7 +418,7 @@ func PreviewRepairPlan(plan RepairPlan, opts ApplyPlanOptions) ([]RepairPlanPrev
 			if err != nil {
 				return nil, fmt.Errorf("action %d: no rollback-ready update: %w", i+1, err)
 			}
-			preview.Description = fmt.Sprintf("Restore Deeper %s over probationary %s", tx.FromVersion, tx.ToVersion)
+			preview.Description = fmt.Sprintf("Restore Deepzora %s over probationary %s", tx.FromVersion, tx.ToVersion)
 			preview.StateID, preview.fileStates = pendingUpdateBoundPreview(tx)
 		}
 		previews = append(previews, preview)
@@ -828,7 +828,7 @@ func configSnapshotByID(id string) (ConfigSnapshot, error) {
 func projectConfigPath(root string) string {
 	root = strings.TrimSpace(root)
 	if root == "" || root == "." {
-		return "deeper.toml"
+		return "deepzora.toml"
 	}
-	return filepath.Join(root, "deeper.toml")
+	return filepath.Join(root, "deepzora.toml")
 }

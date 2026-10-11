@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sort"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func toolIdentity(reg *tool.Registry, ctx context.Context) ([]string, string) {

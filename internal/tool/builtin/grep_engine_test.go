@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/sandbox"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/sandbox"
 )
 
 func TestGrepTimeoutClamp(t *testing.T) {

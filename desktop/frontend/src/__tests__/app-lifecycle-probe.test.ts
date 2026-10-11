@@ -8,19 +8,19 @@ const retained = Array.from({ length: 4096 }, () => createAppRenderToken()!);
 try {
   // Keeping this cohort alive is deliberate: the probe must report the leak.
   for (const token of retained) commitAppRenderToken(token);
-  const first = window.__deeperAppLifecycle!.snapshot();
+  const first = window.__deepzoraAppLifecycle!.snapshot();
   assert.equal(first.liveRenderTokens, retained.length, "the oldest live references must not be evicted");
   commitAppRenderToken(retained[0]);
-  assert.equal(window.__deeperAppLifecycle!.snapshot().liveRenderTokens, retained.length,
+  assert.equal(window.__deepzoraAppLifecycle!.snapshot().liveRenderTokens, retained.length,
     "StrictMode commit replay must not duplicate a presentation identity");
   trackAppOperation(1);
   trackAppOperation(-1);
   trackAppOperation(-1);
-  assert.equal(window.__deeperAppLifecycle!.snapshot().activeOperations, -1, "double cleanup must remain observable");
+  assert.equal(window.__deepzoraAppLifecycle!.snapshot().activeOperations, -1, "double cleanup must remain observable");
   trackAppSubscription(1);
   trackAppSubscription(-1);
   trackAppSubscription(-1);
-  assert.equal(window.__deeperAppLifecycle!.snapshot().activeSubscriptions, -1);
+  assert.equal(window.__deepzoraAppLifecycle!.snapshot().activeSubscriptions, -1);
   console.log("PASS lifecycle probe exposes retained cohorts and duplicate cleanup");
 } finally {
   dom.window.close();

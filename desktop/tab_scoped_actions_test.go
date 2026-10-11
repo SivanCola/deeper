@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 type tabScopedActionController struct {

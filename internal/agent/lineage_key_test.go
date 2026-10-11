@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestLineageKeyCompatibleNativeSuffix(t *testing.T) {

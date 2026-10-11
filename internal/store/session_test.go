@@ -3,7 +3,7 @@ package store
 import "testing"
 
 func TestSessionSidecarLayout(t *testing.T) {
-	const p = "/home/u/.deeper/sessions/abc.jsonl"
+	const p = "/home/u/.deepzora/sessions/abc.jsonl"
 	cases := []struct {
 		name string
 		got  string
@@ -11,23 +11,23 @@ func TestSessionSidecarLayout(t *testing.T) {
 	}{
 		// .meta appends to the full path (historical layout); the rest replace .jsonl.
 		{"meta", SessionMeta(p), p + ".meta"},
-		{"goal-state", SessionGoalState(p), "/home/u/.deeper/sessions/abc.goal-state.json"},
-		{"event-log", SessionEventLog(p), "/home/u/.deeper/sessions/abc.events.jsonl"},
-		{"event-log-damaged", SessionEventLogDamaged(p), "/home/u/.deeper/sessions/abc.events.jsonl.damaged"},
-		{"turn-event-log", SessionTurnEventLog(p), "/home/u/.deeper/sessions/abc.turns.jsonl"},
-		{"turn-event-log-damaged", SessionTurnEventLogDamaged(p), "/home/u/.deeper/sessions/abc.turns.jsonl.damaged"},
-		{"event-index", SessionEventIndex(p), "/home/u/.deeper/sessions/abc.event-index.json"},
-		{"display-index", SessionDisplayIndex(p), "/home/u/.deeper/sessions/abc.display-index.json"},
-		{"transcript-projection", SessionTranscriptProjection(p), "/home/u/.deeper/sessions/abc.transcript-projection.json"},
-		{"conflict-log", SessionConflictLog(p), "/home/u/.deeper/sessions/abc.conflicts.jsonl"},
+		{"goal-state", SessionGoalState(p), "/home/u/.deepzora/sessions/abc.goal-state.json"},
+		{"event-log", SessionEventLog(p), "/home/u/.deepzora/sessions/abc.events.jsonl"},
+		{"event-log-damaged", SessionEventLogDamaged(p), "/home/u/.deepzora/sessions/abc.events.jsonl.damaged"},
+		{"turn-event-log", SessionTurnEventLog(p), "/home/u/.deepzora/sessions/abc.turns.jsonl"},
+		{"turn-event-log-damaged", SessionTurnEventLogDamaged(p), "/home/u/.deepzora/sessions/abc.turns.jsonl.damaged"},
+		{"event-index", SessionEventIndex(p), "/home/u/.deepzora/sessions/abc.event-index.json"},
+		{"display-index", SessionDisplayIndex(p), "/home/u/.deepzora/sessions/abc.display-index.json"},
+		{"transcript-projection", SessionTranscriptProjection(p), "/home/u/.deepzora/sessions/abc.transcript-projection.json"},
+		{"conflict-log", SessionConflictLog(p), "/home/u/.deepzora/sessions/abc.conflicts.jsonl"},
 		{"lock", SessionLockFile(p), p + ".lock"},
 		{"lease-lock", SessionLeaseLock(p), p + ".lease.lock"},
 		{"lease-info", SessionLeaseInfo(p), p + ".lease.json"},
-		{"checkpoint", SessionCheckpointDir(p), "/home/u/.deeper/sessions/abc.ckpt"},
-		{"jobs", SessionJobsDir(p), "/home/u/.deeper/sessions/abc.jobs"},
-		{"inbox", SessionInboxDir(p), "/home/u/.deeper/sessions/abc.inbox"},
-		{"cleanup-pending", SessionCleanupPending(p), "/home/u/.deeper/sessions/abc.cleanup-pending.json"},
-		{"context", SessionContext(p), "/home/u/.deeper/sessions/abc.context.json"},
+		{"checkpoint", SessionCheckpointDir(p), "/home/u/.deepzora/sessions/abc.ckpt"},
+		{"jobs", SessionJobsDir(p), "/home/u/.deepzora/sessions/abc.jobs"},
+		{"inbox", SessionInboxDir(p), "/home/u/.deepzora/sessions/abc.inbox"},
+		{"cleanup-pending", SessionCleanupPending(p), "/home/u/.deepzora/sessions/abc.cleanup-pending.json"},
+		{"context", SessionContext(p), "/home/u/.deepzora/sessions/abc.context.json"},
 	}
 	for _, c := range cases {
 		if c.got != c.want {
@@ -93,23 +93,23 @@ func TestIsSessionTranscriptName(t *testing.T) {
 }
 
 func TestSessionSidecarFiles(t *testing.T) {
-	const p = "/home/u/.deeper/sessions/abc.jsonl"
+	const p = "/home/u/.deepzora/sessions/abc.jsonl"
 	got := SessionSidecarFiles(p)
 	want := []string{
 		p + ".meta",
-		"/home/u/.deeper/sessions/abc.goal-state.json",
-		"/home/u/.deeper/sessions/abc.events.jsonl",
-		"/home/u/.deeper/sessions/abc.events.jsonl.damaged",
-		"/home/u/.deeper/sessions/abc.events.jsonl.rotating",
-		"/home/u/.deeper/sessions/abc.turns.jsonl",
-		"/home/u/.deeper/sessions/abc.turns.jsonl.damaged",
-		"/home/u/.deeper/sessions/abc.event-index.json",
-		"/home/u/.deeper/sessions/abc.display-index.json",
-		"/home/u/.deeper/sessions/abc.transcript-projection.json",
-		"/home/u/.deeper/sessions/abc.conflicts.jsonl",
-		"/home/u/.deeper/sessions/abc.recovery.json",
-		"/home/u/.deeper/sessions/abc.context.json",
-		"/home/u/.deeper/sessions/abc.pinned-context.json",
+		"/home/u/.deepzora/sessions/abc.goal-state.json",
+		"/home/u/.deepzora/sessions/abc.events.jsonl",
+		"/home/u/.deepzora/sessions/abc.events.jsonl.damaged",
+		"/home/u/.deepzora/sessions/abc.events.jsonl.rotating",
+		"/home/u/.deepzora/sessions/abc.turns.jsonl",
+		"/home/u/.deepzora/sessions/abc.turns.jsonl.damaged",
+		"/home/u/.deepzora/sessions/abc.event-index.json",
+		"/home/u/.deepzora/sessions/abc.display-index.json",
+		"/home/u/.deepzora/sessions/abc.transcript-projection.json",
+		"/home/u/.deepzora/sessions/abc.conflicts.jsonl",
+		"/home/u/.deepzora/sessions/abc.recovery.json",
+		"/home/u/.deepzora/sessions/abc.context.json",
+		"/home/u/.deepzora/sessions/abc.pinned-context.json",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("SessionSidecarFiles = %v, want %v", got, want)

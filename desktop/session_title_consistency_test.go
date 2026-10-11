@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // sidebarLabelForSession returns the label the project tree paints for ref.

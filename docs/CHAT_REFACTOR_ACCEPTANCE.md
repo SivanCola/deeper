@@ -1,4 +1,4 @@
-# Deeper chat refactor: delivery and acceptance
+# Deepzora chat refactor: delivery and acceptance
 
 [简体中文](CHAT_REFACTOR_ACCEPTANCE.zh-CN.md) · [Architecture and capability decisions](TRANSCRIPT_ARCHITECTURE.md) · [Environment](evidence/chat-refactor/environment.json)
 

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/extension/uihub"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/extension/uihub"
+	"deepzora/internal/i18n"
 )
 
 // Extension structured-UI rendering (Extension Protocol v2). The

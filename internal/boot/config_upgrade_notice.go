@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
 )
 
 func emitUserConfigUpgradeNotice(sink event.Sink, cfg *config.Config, deepSeekProtocolMigrated bool, deepSeekProtocolMigErr error, endpointRepairs []config.ProviderEndpointRepair) {

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 type workspaceEffectiveCall struct {

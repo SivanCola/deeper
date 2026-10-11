@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/billing"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/provider"
 )
 
 // BillingConfig controls host-side cost display. It never changes provider

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/proc"
-	"deeper/internal/secrets"
+	"deepzora/internal/proc"
+	"deepzora/internal/secrets"
 )
 
 // docState tracks what we last sent the server for a document, so ensureSynced

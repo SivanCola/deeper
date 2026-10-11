@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // ExtensionActionView is the JSON twin of control.ExtensionActionView for the

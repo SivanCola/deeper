@@ -81,7 +81,7 @@ git diff --check
 (cd desktop/frontend && pnpm exec tsx --test src/__tests__/project-tree*.test.ts src/__tests__/session-identity*.test.ts src/__tests__/independent-session*.test.* src/__tests__/session-read-activity.test.ts src/__tests__/session-lifecycle-fences.test.ts)
 (cd desktop/frontend && node bench/independent-sessions.mjs)
 python3 desktop/packaging/registry-previous-writer-smoke.py
-(cd desktop && go build -o build/bin/deeper-desktop-service .)
+(cd desktop && go build -o build/bin/deepzora-desktop-service .)
 (cd desktop/electron && pnpm build)
 node desktop/packaging/independent-session-native-smoke.mjs
 ```
@@ -92,15 +92,15 @@ Desktop 全量测试本身需数分钟，20 分钟是整个进程上限，不是
 
 | 层次 | 本地证据 |
 | --- | --- |
-| 根 Go | 全量通过，`deeper-independent-root-final.log` |
-| Desktop Go | 最终全量通过，主包耗时 301.282 秒，`deeper-independent-desktop-final.log` |
-| Race | registry、导航/AI标题/分叉生命周期及空白会话创建复用测试通过，`deeper-independent-registry-race.log`、`deeper-independent-lifecycle-race.log`、`deeper-independent-blank-race.log` |
-| 前端 | 50 项会话 focused tests、通知/音效回归、生产/测试 typecheck 及 build 通过。`pnpm test` 的 pretest 通过，随后 discovery runner 发现旧组织 CAS 夹具；将其迁至新语义接口后，394 个 discovery suites 全部通过（`deeper-frontend-discovery-final.log`）。build 包含 hooks、界面层级、CSS 及当前工作区预算检查 |
-| 契约/inventory | 按当前源码重新生成；inventory 新鲜度检查通过，`deeper-independent-inventory-check.log`；`git diff --check` 通过 |
-| Chromium | 真实 ProjectTree、顶部、HistoryPanel、审批卡和 command owners；仅 RPC 边界使用 stub。覆盖键盘、拖拽/分组/排序、审批/停止、归档竞态、分页及未读。`deeper-independent-browser/result.json`、workbench/creation 明暗四种截图与 `pagination-recovered.png` |
-| Electron | 真实开发壳、生产构建 App 前端、真实 Go service、临时 loopback provider；七项场景通过，含启动身份复用、后台完成及两次重启。`deeper-independent-native/result.json`；`phase-*.json` 记录 canonical 身份和 pending-create 检查点 |
-| 旧版写入 | 真实基线拒绝 v3 且保留文件字节，通过。`deeper-independent-registry-compatibility.json` |
-| 远程/工作区 | 协议/owner 隔离夹具及前端 `pnpm test:remote`、`pnpm test:workspace` 通过，`deeper-independent-remote-front.log`、`deeper-independent-workspace-front.log`；未进行真实 SSH 主机断线重连验收 |
+| 根 Go | 全量通过，`deepzora-independent-root-final.log` |
+| Desktop Go | 最终全量通过，主包耗时 301.282 秒，`deepzora-independent-desktop-final.log` |
+| Race | registry、导航/AI标题/分叉生命周期及空白会话创建复用测试通过，`deepzora-independent-registry-race.log`、`deepzora-independent-lifecycle-race.log`、`deepzora-independent-blank-race.log` |
+| 前端 | 50 项会话 focused tests、通知/音效回归、生产/测试 typecheck 及 build 通过。`pnpm test` 的 pretest 通过，随后 discovery runner 发现旧组织 CAS 夹具；将其迁至新语义接口后，394 个 discovery suites 全部通过（`deepzora-frontend-discovery-final.log`）。build 包含 hooks、界面层级、CSS 及当前工作区预算检查 |
+| 契约/inventory | 按当前源码重新生成；inventory 新鲜度检查通过，`deepzora-independent-inventory-check.log`；`git diff --check` 通过 |
+| Chromium | 真实 ProjectTree、顶部、HistoryPanel、审批卡和 command owners；仅 RPC 边界使用 stub。覆盖键盘、拖拽/分组/排序、审批/停止、归档竞态、分页及未读。`deepzora-independent-browser/result.json`、workbench/creation 明暗四种截图与 `pagination-recovered.png` |
+| Electron | 真实开发壳、生产构建 App 前端、真实 Go service、临时 loopback provider；七项场景通过，含启动身份复用、后台完成及两次重启。`deepzora-independent-native/result.json`；`phase-*.json` 记录 canonical 身份和 pending-create 检查点 |
+| 旧版写入 | 真实基线拒绝 v3 且保留文件字节，通过。`deepzora-independent-registry-compatibility.json` |
+| 远程/工作区 | 协议/owner 隔离夹具及前端 `pnpm test:remote`、`pnpm test:workspace` 通过，`deepzora-independent-remote-front.log`、`deepzora-independent-workspace-front.log`；未进行真实 SSH 主机断线重连验收 |
 | CI / 安装包 | 未运行；不能替代跨平台 CI 或生产签名安装包验证 |
 
 表中命名文件为本次本地证据，脚本可重新生成。原生测试使用隔离 home，无外部模型凭据；先创建真实分叉，应用关闭后只在临时 registry 中设为历史同 TopicID 场景，不替换任一 SessionID 或 transcript。

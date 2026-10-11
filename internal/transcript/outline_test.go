@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/turnevent"
 )
 
 func outlineProjection(t *testing.T, baseline []Message) *Projection {

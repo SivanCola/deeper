@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/historycatalog"
+	"deepzora/internal/historycatalog"
 )
 
 func TestIndexedCatalogManagerCloseFencesOpenAndAllowsRestart(t *testing.T) {

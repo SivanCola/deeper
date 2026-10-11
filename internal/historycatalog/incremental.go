@@ -3,8 +3,8 @@ package historycatalog
 import (
 	"context"
 
-	"deeper/internal/agent"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
 )
 
 func sourceProjectionUnchanged(queryErr error, oldContent, content, oldMeta, meta, oldDigest, digest string) bool {

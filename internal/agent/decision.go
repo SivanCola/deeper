@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type acceptedDecision struct {

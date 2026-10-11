@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/transcript"
+	"deepzora/internal/config"
+	"deepzora/internal/transcript"
 )
 
 // rendererFollowCursor mirrors TranscriptFollowClient.validate in

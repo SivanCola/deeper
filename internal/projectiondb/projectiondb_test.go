@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 func testMigrations() []Migration {

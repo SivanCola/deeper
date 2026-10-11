@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider/openai"
 )
 
 func TestEffectiveVisionEnablesPinnedOfficialDeepSeekVisionSKU(t *testing.T) {

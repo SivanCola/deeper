@@ -3,9 +3,9 @@ package skill
 import (
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/tool"
-	_ "deeper/internal/tool/builtin"
+	"deepzora/internal/config"
+	"deepzora/internal/tool"
+	_ "deepzora/internal/tool/builtin"
 )
 
 func TestToolReferenceDiagnostics(t *testing.T) {

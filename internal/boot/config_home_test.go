@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/history"
-	"deeper/internal/historycatalog"
+	"deepzora/internal/config"
+	"deepzora/internal/history"
+	"deepzora/internal/historycatalog"
 )
 
 // isolateConfigHome redirects user config and cache paths to a per-test temp
@@ -25,7 +25,7 @@ func isolateConfigHome(t *testing.T) string {
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("AppData", filepath.Join(dir, "AppData"))
 	t.Setenv("LocalAppData", filepath.Join(dir, "LocalAppData"))
-	t.Setenv("DEEPER_CREDENTIALS_STORE", "file")
+	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
 	t.Setenv(config.CompletionValidationModeEnv, config.CompletionValidationOff)
 	t.Cleanup(func() { closeBootTestHistoryCatalog(t) })
 	return dir
@@ -48,7 +48,7 @@ func closeBootTestHistoryCatalog(t *testing.T) {
 
 // fenceBootTestHistoryCatalog releases a process-global projection inherited
 // from an earlier test and closes the replacement before t.TempDir cleanup.
-// Windows cannot remove a temporary DEEPER_HOME while SQLite still owns it.
+// Windows cannot remove a temporary DEEPZORA_HOME while SQLite still owns it.
 func fenceBootTestHistoryCatalog(t *testing.T) {
 	t.Helper()
 	closeBootTestHistoryCatalog(t)

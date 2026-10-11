@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/remote/sftpfs"
+	"deepzora/internal/remote/sftpfs"
 )
 
-// ensureBinary resolves a usable deeper binary on the remote host per the
+// ensureBinary resolves a usable deepzora binary on the remote host per the
 // install strategy, returning its path and version. A located binary older
 // than MinVersion counts as missing (it lacks --port-file/--token-file).
 func ensureBinary(ctx context.Context, conn Conn, fs *sftpfs.FS, opts Options, home, goos, goarch string, paths StatePaths) (bin, version string, err error) {
@@ -28,7 +28,7 @@ func ensureBinary(ctx context.Context, conn Conn, fs *sftpfs.FS, opts Options, h
 
 	switch strategy {
 	case InstallNever:
-		return "", "", fmt.Errorf("bootstrap: deeper not found on remote and serve_install = never")
+		return "", "", fmt.Errorf("bootstrap: deepzora not found on remote and serve_install = never")
 	case InstallNPM:
 		return installViaNPM(ctx, conn, opts.MinVersion)
 	case InstallUpload:
@@ -45,7 +45,7 @@ func ensureBinary(ctx context.Context, conn Conn, fs *sftpfs.FS, opts Options, h
 					attempts = append(attempts, uploadErr)
 				}
 			} else if opts.LocalBinary == "" {
-				attempts = append(attempts, errors.New("bootstrap: no local Deeper CLI is available for upload"))
+				attempts = append(attempts, errors.New("bootstrap: no local Deepzora CLI is available for upload"))
 			} else {
 				attempts = append(attempts, fmt.Errorf("bootstrap: local binary is %s/%s but remote is %s/%s", opts.LocalGOOS, opts.LocalGOARCH, goos, goarch))
 			}
@@ -66,7 +66,7 @@ func ensureBinary(ctx context.Context, conn Conn, fs *sftpfs.FS, opts Options, h
 	}
 }
 
-// locate finds an existing deeper and returns it only if its serve command
+// locate finds an existing deepzora and returns it only if its serve command
 // supports --port-file (the bootstrap contract). A binary that lacks the flag —
 // including every currently-released version — is reported as missing so the
 // install/upload path replaces it. minVersion is accepted for signature
@@ -125,7 +125,7 @@ func locateWithCommand(ctx context.Context, conn Conn, command, minVersion strin
 }
 
 func installViaNPM(ctx context.Context, conn Conn, minVersion string) (bin, version string, err error) {
-	res, err := conn.Exec(ctx, "npm i -g deeper 2>&1")
+	res, err := conn.Exec(ctx, "npm i -g deepzora 2>&1")
 	if err != nil {
 		return "", "", fmt.Errorf("bootstrap: npm install: %w", err)
 	}
@@ -135,17 +135,17 @@ func installViaNPM(ctx context.Context, conn Conn, minVersion string) (bin, vers
 	// npm may install outside the login PATH; probe npm prefix explicitly.
 	loc, ver := locateNPMGlobal(ctx, conn, minVersion)
 	if loc == "" {
-		return "", "", fmt.Errorf("bootstrap: deeper not found after npm install (check remote PATH / npm prefix)")
+		return "", "", fmt.Errorf("bootstrap: deepzora not found after npm install (check remote PATH / npm prefix)")
 	}
 	return loc, ver, nil
 }
 
-// installViaUpload uploads the local deeper binary when the remote platform
+// installViaUpload uploads the local deepzora binary when the remote platform
 // matches the local one. Cross-platform release download is a documented V1
 // limitation: use serve_install = npm for a differing remote platform.
 func installViaUpload(ctx context.Context, conn Conn, fs *sftpfs.FS, opts Options, home, goos, goarch, uploaded string) (bin, version string, err error) {
 	if opts.LocalBinary == "" {
-		return "", "", fmt.Errorf("bootstrap: upload strategy needs the local deeper binary path")
+		return "", "", fmt.Errorf("bootstrap: upload strategy needs the local deepzora binary path")
 	}
 	if opts.LocalGOOS != goos || opts.LocalGOARCH != goarch {
 		return "", "", fmt.Errorf("bootstrap: cannot upload: local binary is %s/%s but remote is %s/%s; use serve_install = npm",

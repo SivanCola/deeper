@@ -12,7 +12,7 @@ function Invoke-UpgradeUIButton($element) {
 function Invoke-PendingHistoricalSession($root) {
   foreach ($element in (Get-UpgradeUIDescendants $root)) {
     $current = $element.Current
-    if ($current.AutomationId -eq 'deeper-prepare-restored-session' -and -not $current.IsOffscreen -and
+    if ($current.AutomationId -eq 'deepzora-prepare-restored-session' -and -not $current.IsOffscreen -and
         $current.BoundingRectangle.Width -gt 0 -and $current.BoundingRectangle.Height -gt 0) {
       Invoke-UpgradeUIButton $element
       return $true
@@ -71,14 +71,14 @@ function Test-VisibleUpgradeHistory($root, [string]$text, [switch]$AllowPendingS
     if ($current.IsOffscreen -or $current.BoundingRectangle.Width -le 0 -or $current.BoundingRectangle.Height -le 0) { continue }
     # Old content alone cannot prove recovery: reject a still-loading/failed
     # recovery surface and the obsolete chat notice that originally hid this bug.
-    if (([string]$current.AutomationId).StartsWith('deeper-session-recovery-') -or
-        (-not $AllowPendingSource -and $current.AutomationId -eq 'deeper-prepare-restored-session') -or
+    if (([string]$current.AutomationId).StartsWith('deepzora-session-recovery-') -or
+        (-not $AllowPendingSource -and $current.AutomationId -eq 'deepzora-prepare-restored-session') -or
         ([string]$current.Name).Contains('Failed to load conversation history.') -or
         ([string]$current.Name).Contains('加载会话历史失败。') -or
         ([string]$current.Name).Contains('載入會話歷史失敗。')) { return $false }
   }
   foreach ($transcript in $descendants) {
-    if (-not ([string]$transcript.Current.AutomationId).StartsWith('deeper-chat-transcript-') -or $transcript.Current.IsOffscreen) { continue }
+    if (-not ([string]$transcript.Current.AutomationId).StartsWith('deepzora-chat-transcript-') -or $transcript.Current.IsOffscreen) { continue }
     foreach ($element in (Get-UpgradeUIDescendants $transcript)) {
       $current = $element.Current
       if (-not $current.IsOffscreen -and $current.BoundingRectangle.Width -gt 0 -and $current.BoundingRectangle.Height -gt 0 -and

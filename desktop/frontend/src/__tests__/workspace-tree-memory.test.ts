@@ -46,7 +46,7 @@ ok(projectA?.openDirs.has("src/") === true && projectA.scrollTop === 144, "resto
 ok(projectA?.dockTreeWidth === 320 && projectA.dockPreviewWidth === 640, "restores both outer dock widths");
 ok(projectB?.selectedFilePath === "README.md" && projectB.treeWidth === 220, "keeps project state isolated by key");
 
-const persisted = JSON.parse(localStorage.getItem("deeper.workspaceState.v2") ?? "null") as { version?: number } | null;
+const persisted = JSON.parse(localStorage.getItem("deepzora.workspaceState.v2") ?? "null") as { version?: number } | null;
 ok(persisted?.version === 2, "writes an explicit schema version");
 
 let synchronousWrites = 0;
@@ -110,11 +110,11 @@ ok(
 );
 
 resetWorkspaceTreeMemoryForTests();
-localStorage.setItem("deeper.workspaceState.v2", JSON.stringify({ version: 99, projects: [{ key: "future", state: {} }] }));
+localStorage.setItem("deepzora.workspaceState.v2", JSON.stringify({ version: 99, projects: [{ key: "future", state: {} }] }));
 ok(readWorkspaceTreeMemory("future") === null, "safely ignores storage from an unsupported future schema");
 
 resetWorkspaceTreeMemoryForTests();
-localStorage.setItem("deeper.workspaceState.v2", "{not-json");
+localStorage.setItem("deepzora.workspaceState.v2", "{not-json");
 ok(readWorkspaceTreeMemory("broken") === null, "a corrupt cache cannot prevent workspace startup");
 
 dom.window.close();

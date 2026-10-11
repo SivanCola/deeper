@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
 )
 
 func TestFinishedStreamUnregistersDrainCancel(t *testing.T) {

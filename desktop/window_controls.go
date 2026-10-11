@@ -25,7 +25,7 @@ func (a *App) IsMainWindowMaximised() bool {
 	return a.nativeHost().WindowIsMaximised(a.ctx)
 }
 
-// CloseMainWindow preserves Deeper's configured close behavior for the
+// CloseMainWindow preserves Deepzora's configured close behavior for the
 // Windows frameless titlebar close button.
 func (a *App) CloseMainWindow() {
 	if a.ctx == nil {

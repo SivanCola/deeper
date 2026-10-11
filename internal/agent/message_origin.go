@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type inputMessageOriginKey struct{}

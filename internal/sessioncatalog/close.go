@@ -3,7 +3,7 @@ package sessioncatalog
 import (
 	"context"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 func (c *Catalog) Close(ctx context.Context) error {

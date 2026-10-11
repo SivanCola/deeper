@@ -1,7 +1,7 @@
 package responses
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func messagesToInput(messages []provider.Message, vision, replayWebSearchItems, summary bool) []map[string]any {

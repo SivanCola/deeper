@@ -7,7 +7,7 @@ import (
 	"maps"
 	"sort"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // RuntimeSnapshot is the frozen, effective runtime configuration produced by

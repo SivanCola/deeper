@@ -1,6 +1,6 @@
 package control
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 type interruptedTailEvidence struct {
 	turnID string

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verify the Windows portable release unit (versioned-v1) before packaging.
 # This must run on the Windows staging directory: NTFS treats file names
-# case-insensitively, so Deeper.exe and deeper.exe silently overwrite each
+# case-insensitively, so Deepzora.exe and deepzora.exe silently overwrite each
 # other even though a source-level packaging test sees two different strings.
 set -euo pipefail
 
@@ -16,12 +16,12 @@ esac
 
 # Root entry points for versioned-v1 (no Guard, no flat desktop/helper).
 required_root=(
-	"Deeper.exe"
-	"deeper-cli.exe"
+	"Deepzora.exe"
+	"deepzora-cli.exe"
 	"current.json"
 )
 if [ "$layout" = "legacy-dual" ]; then
-	required_root+=("deeper-launcher.exe")
+	required_root+=("deepzora-launcher.exe")
 fi
 
 for expected in "${required_root[@]}"; do
@@ -63,7 +63,7 @@ version_path="$staging/$active_dir"
 	echo "Windows portable activeDir does not exist: $active_dir" >&2
 	exit 1
 }
-for name in deeper-desktop.exe deeper-cli.exe deeper-update-helper.exe; do
+for name in deepzora-desktop.exe deepzora-cli.exe deepzora-update-helper.exe; do
 	[ -f "$version_path/$name" ] || {
 		echo "Windows portable version member is missing: $active_dir/$name" >&2
 		exit 1
@@ -71,7 +71,7 @@ for name in deeper-desktop.exe deeper-cli.exe deeper-update-helper.exe; do
 done
 
 # The Electron bundle is the app/ tree member of the active version.
-for name in "app/Deeper.exe" "app/resources/app.asar" "app/resources/build.json" "app/resources/app/index.html" "app/resources/bin/deeper-cli-launcher.exe"; do
+for name in "app/Deepzora.exe" "app/resources/app.asar" "app/resources/build.json" "app/resources/app/index.html" "app/resources/bin/deepzora-cli-launcher.exe"; do
 	[ -f "$version_path/$name" ] || {
 		echo "Windows portable app tree member is missing: $active_dir/$name" >&2
 		exit 1
@@ -79,32 +79,32 @@ for name in "app/Deeper.exe" "app/resources/app.asar" "app/resources/build.json"
 done
 
 # Guard must not persist in a normal portable layout.
-if [ -e "$staging/deeper-guard.exe" ] || [ -e "$staging/deeper-desktop.exe" ]; then
-	echo "Windows portable must not ship flat deeper-guard.exe or deeper-desktop.exe at InstallRoot" >&2
+if [ -e "$staging/deepzora-guard.exe" ] || [ -e "$staging/deepzora-desktop.exe" ]; then
+	echo "Windows portable must not ship flat deepzora-guard.exe or deepzora-desktop.exe at InstallRoot" >&2
 	exit 1
 fi
 
 # Historical packages must contain identical launcher entries. New artifacts
 # must not regain the compatibility entry merely because it exists in staging.
 if [ "$layout" = "legacy-dual" ]; then
-	cmp -s "$staging/Deeper.exe" "$staging/deeper-launcher.exe" || {
-		echo "Deeper.exe differs from the legacy GUI entry" >&2; exit 1
+	cmp -s "$staging/Deepzora.exe" "$staging/deepzora-launcher.exe" || {
+		echo "Deepzora.exe differs from the legacy GUI entry" >&2; exit 1
 	}
 fi
 if [ -n "$payload_launcher" ]; then
-	cmp -s "$staging/Deeper.exe" "$payload_launcher" || {
-		echo "Deeper.exe does not match the payload launcher" >&2; exit 1
+	cmp -s "$staging/Deepzora.exe" "$payload_launcher" || {
+		echo "Deepzora.exe does not match the payload launcher" >&2; exit 1
 	}
 fi
-if cmp -s "$staging/Deeper.exe" "$staging/deeper-cli.exe"; then
-	echo "Deeper.exe was overwritten by the CLI sidecar" >&2
+if cmp -s "$staging/Deepzora.exe" "$staging/deepzora-cli.exe"; then
+	echo "Deepzora.exe was overwritten by the CLI sidecar" >&2
 	exit 1
 fi
-cmp -s "$staging/deeper-cli.exe" "$version_path/app/resources/bin/deeper-cli-launcher.exe" || {
-	echo "deeper-cli.exe is not the packaged CLI forwarding entry" >&2
+cmp -s "$staging/deepzora-cli.exe" "$version_path/app/resources/bin/deepzora-cli-launcher.exe" || {
+	echo "deepzora-cli.exe is not the packaged CLI forwarding entry" >&2
 	exit 1
 }
-if cmp -s "$staging/deeper-cli.exe" "$version_path/deeper-cli.exe"; then
+if cmp -s "$staging/deepzora-cli.exe" "$version_path/deepzora-cli.exe"; then
 	echo "Windows portable duplicated the full CLI at InstallRoot" >&2
 	exit 1
 fi
@@ -115,8 +115,8 @@ while IFS= read -r -d '' path; do
 	[ -f "$path" ] && [ ! -L "$path" ] || { echo "Invalid Windows root entry: $path" >&2; exit 1; }
 	name="${path##*/}"
 	case "$name" in
-		Deeper.exe|deeper-cli.exe) ;;
-		deeper-launcher.exe) [ "$layout" = "legacy-dual" ] || { echo "Unexpected legacy launcher" >&2; exit 1; } ;;
+		Deepzora.exe|deepzora-cli.exe) ;;
+		deepzora-launcher.exe) [ "$layout" = "legacy-dual" ] || { echo "Unexpected legacy launcher" >&2; exit 1; } ;;
 		*) echo "Unexpected Windows root executable: $name" >&2; exit 1 ;;
 	esac
 	folded=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')

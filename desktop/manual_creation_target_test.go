@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 // The registry has already merged an old workspace ID into its canonical

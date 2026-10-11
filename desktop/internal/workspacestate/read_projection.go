@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 // WorkspaceIndex resolves every persisted workspace root once and reuses the

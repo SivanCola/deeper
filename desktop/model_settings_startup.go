@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
 	"errors"
 	"strings"
 )

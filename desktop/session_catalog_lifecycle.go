@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/history"
-	"deeper/internal/projectiondb"
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/taskcatalog"
+	"deepzora/internal/history"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/taskcatalog"
 )
 
 func (a *App) runSessionCatalog(ctx context.Context, initialReconcileDone chan struct{}, metadataRequests <-chan struct{}) {

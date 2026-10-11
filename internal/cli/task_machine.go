@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/jobs"
+	"deepzora/internal/agent"
+	"deepzora/internal/jobs"
 )
 
 type machineTask struct {

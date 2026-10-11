@@ -16,7 +16,7 @@ import (
 func withTempCache(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("DEEPER_CACHE_HOME", dir)
+	t.Setenv("DEEPZORA_CACHE_HOME", dir)
 	return dir
 }
 

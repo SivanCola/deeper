@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/crashreport"
-	"deeper/internal/i18n"
+	"deepzora/internal/config"
+	"deepzora/internal/crashreport"
+	"deepzora/internal/i18n"
 )
 
 var sendCLIReport = crashreport.Send
@@ -22,7 +22,7 @@ func reportCommand(args []string) int {
 }
 
 func reportCommandWithIO(args []string, interactive bool, in io.Reader, out, errOut io.Writer) int {
-	home := config.DeeperHomeDir()
+	home := config.DeepzoraHomeDir()
 	action := ""
 	id := ""
 	if len(args) > 0 {

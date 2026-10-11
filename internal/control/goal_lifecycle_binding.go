@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
 )
 
 type legacyGoalProjection struct {

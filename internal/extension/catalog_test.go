@@ -3,7 +3,7 @@ package extension
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func src(scope Scope, pluginID, origin string) ContributionSource {

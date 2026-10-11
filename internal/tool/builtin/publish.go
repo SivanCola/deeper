@@ -8,8 +8,8 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/fileops"
-	"deeper/internal/tool"
+	"deepzora/internal/fileops"
+	"deepzora/internal/tool"
 )
 
 // ErrFileChanged is returned when a structured write tool re-reads the target

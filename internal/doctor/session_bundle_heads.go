@@ -3,7 +3,7 @@ package doctor
 import (
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // SessionBundleHead is one head of a schema-2 session log as the bundle

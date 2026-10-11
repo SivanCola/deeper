@@ -4,8 +4,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 // promptStopReason maps a finished controller run onto ACP v1. Controlled

@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/textutil"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/textutil"
+	"deepzora/internal/tool"
 )
 
 // list_sessions tool

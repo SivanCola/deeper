@@ -10,9 +10,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/desktop/internal/instanceidentity"
-	"deeper/internal/extension/rpcwire"
-	"deeper/internal/pathidentity"
+	"deepzora/desktop/internal/instanceidentity"
+	"deepzora/internal/extension/rpcwire"
+	"deepzora/internal/pathidentity"
 )
 
 // Hooks are the lifecycle owners behind the desktop/* requests. A nil hook

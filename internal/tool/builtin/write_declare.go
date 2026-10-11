@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func effectiveWriteRoots(ctx context.Context, set *sandbox.WritableRootSet, fallback []string) []string {

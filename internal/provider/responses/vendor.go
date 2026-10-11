@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // vendorCapabilities describes how a Responses-compatible endpoint deviates

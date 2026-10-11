@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func historicalSourceKeyMatches(mappingKey, sourceID string) bool {

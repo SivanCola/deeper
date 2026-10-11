@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func dagTestSession(t *testing.T) string {

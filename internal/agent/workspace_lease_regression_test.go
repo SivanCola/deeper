@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
-	"deeper/internal/tool/builtin"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool/builtin"
+	"deepzora/internal/workspacelease"
 )
 
 type workspaceWritingHooks struct {

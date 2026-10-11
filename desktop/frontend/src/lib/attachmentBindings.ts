@@ -55,14 +55,14 @@ export function makeMockAttachmentBindings(): AttachmentBindings & Partial<AppBi
     async ReleaseDraftImageForTarget(_token: string, id: string) { mockImages.delete(id); },
     async ReleaseDraftImageForTab(_tabID: string, id: string) { mockImages.delete(id); },
     async SavePastedImage(dataURL: string) {
-      const path = `.deeper/attachments/mock-${mockImages.size + 1}.png`;
+      const path = `.deepzora/attachments/mock-${mockImages.size + 1}.png`;
       mockImages.set(path, dataURL);
       return path;
     },
     async SavePastedImageForComposerTarget(_target: ComposerTarget, dataURL: string) { return this.SavePastedImage(dataURL); },
     async SavePastedImageForTab(_tabID: string, dataURL: string) { return this.SavePastedImage(dataURL); },
     async SavePastedFile(name: string, dataURL: string) {
-      const path = `.deeper/attachments/mock-${name}`;
+      const path = `.deepzora/attachments/mock-${name}`;
       mockImages.set(path, dataURL);
       return path;
     },
@@ -70,7 +70,7 @@ export function makeMockAttachmentBindings(): AttachmentBindings & Partial<AppBi
     async SavePastedFileForTarget(token: string, name: string, dataURL: string) { return this.SavePastedFileForTab(token,name,dataURL); },
     async SavePastedFileForTab(_tabID: string, name: string, dataURL: string) { return this.SavePastedFile(name, dataURL); },
     async SaveClipboardImage() {
-      const path = `.deeper/attachments/mock-clipboard-${mockImages.size + 1}.png`;
+      const path = `.deepzora/attachments/mock-clipboard-${mockImages.size + 1}.png`;
       mockImages.set(path, mockPreviewImageDataURL);
       return path;
     },
@@ -85,9 +85,9 @@ export function makeMockAttachmentBindings(): AttachmentBindings & Partial<AppBi
       const name = path.split(/[/\\]/).filter(Boolean).pop() ?? path;
       if (!/\.\w{1,6}$/i.test(name)) {
         const tokenName = name.replace(/[^\w.-]+/g, "-") || "folder";
-        return { kind: "workspace", path: `__deeper_external_folder/mock/${tokenName}`, isDir: true, displayPath: path };
+        return { kind: "workspace", path: `__deepzora_external_folder/mock/${tokenName}`, isDir: true, displayPath: path };
       }
-      const attachmentPath = `.deeper/attachments/mock-${name}`;
+      const attachmentPath = `.deepzora/attachments/mock-${name}`;
       mockImages.set(attachmentPath, mockPreviewImageDataURL);
       return { kind: "attachment", path: attachmentPath };
     },

@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 func TestServePromptFailureReturnsRedactedJSONRPCError(t *testing.T) {
@@ -63,7 +63,7 @@ func TestServePromptFailureReturnsRedactedJSONRPCError(t *testing.T) {
 		if notification.Method != sessionStatusUpdateMethod {
 			continue
 		}
-		var update DeeperStatusUpdate
+		var update DeepzoraStatusUpdate
 		if err := json.Unmarshal(notification.Params, &update); err != nil {
 			t.Fatalf("status update: %v", err)
 		}

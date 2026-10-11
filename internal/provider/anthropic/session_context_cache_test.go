@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontext"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontext"
 )
 
 func TestBuildRequestRestoresSessionContextBlockAndUsesThreeBreakpoints(t *testing.T) {

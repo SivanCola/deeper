@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestIntersectToolLists(t *testing.T) {

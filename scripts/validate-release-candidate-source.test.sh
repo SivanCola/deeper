@@ -2,9 +2,9 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-root="$(mktemp -d "${TMPDIR:-/tmp}/deeper-candidate-source-test.XXXXXX")"
+root="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-candidate-source-test.XXXXXX")"
 cleanup() {
-	case "$root" in */deeper-candidate-source-test.*) rm -rf -- "$root" ;; *) exit 1 ;; esac
+	case "$root" in */deepzora-candidate-source-test.*) rm -rf -- "$root" ;; *) exit 1 ;; esac
 }
 trap cleanup EXIT
 

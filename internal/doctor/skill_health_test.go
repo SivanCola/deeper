@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/skill"
+	"deepzora/internal/config"
+	"deepzora/internal/skill"
 )
 
 func TestCollectSkillHealthWarnings(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/plugin"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
 )
 
 func TestMCPServerPolicyDefaultsToParallelExceptKnownStateful(t *testing.T) {

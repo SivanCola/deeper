@@ -1,7 +1,7 @@
 # Responses tool-stream validation
 
 Responses-compatible endpoints may omit individual tool-call completion events.
-Deeper can recover a complete `function_call` from the terminal response's
+Deepzora can recover a complete `function_call` from the terminal response's
 `output`, using `call_id` to avoid dispatching the same recovered call twice.
 
 A clean completion must not silently lose a tool call:
@@ -31,7 +31,7 @@ Errors contain no tool arguments or provider payloads.
 Explicit `response.incomplete` output limits retain their truncation warning
 and existing recovery behavior. Connection EOF before a terminal remains a
 stream interruption. A text-only final answer, even one describing a future
-step, remains a valid final; Deeper does not infer tool calls from prose.
+step, remains a valid final; Deepzora does not infer tool calls from prose.
 
 The regression suite uses local HTTP SSE fixtures through the real Responses
 adapter and Agent. It establishes backend behavior, not that a particular

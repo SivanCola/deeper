@@ -8,8 +8,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 func TestUseLegacyViewportScrollClear(t *testing.T) {

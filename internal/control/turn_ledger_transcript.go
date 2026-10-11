@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"slices"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/turnevent"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/turnevent"
 )
 
 func (c *Controller) updateTurnLedgerTranscript(ledger *turnevent.Ledger) *provider.ReadCompletion {

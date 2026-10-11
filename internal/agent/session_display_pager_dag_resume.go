@@ -12,8 +12,8 @@ import (
 	"os"
 	"time"
 
-	"deeper/internal/historywork"
-	"deeper/internal/provider"
+	"deepzora/internal/historywork"
+	"deepzora/internal/provider"
 )
 
 func dagPagerBatch(ctx context.Context, db *sql.DB, p *dagPagerProgress, work func(*sql.Tx) error) error {

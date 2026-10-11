@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
 )
 
 // remoteTabModelSeq stamps every remote-tab model assignment; the credential

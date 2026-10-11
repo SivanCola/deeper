@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 
-	"deeper/internal/persistentshell"
-	"deeper/internal/sessiontemp"
+	"deepzora/internal/persistentshell"
+	"deepzora/internal/sessiontemp"
 )
 
 // withSubagentSessionTemp installs a private temporary directory and persistent

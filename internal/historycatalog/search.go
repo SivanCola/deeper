@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/retrieval"
+	"deepzora/internal/retrieval"
 )
 
 func (c *Catalog) Search(ctx context.Context, req SearchRequest) (SearchResult, error) {

@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestReadPauseHistoryAndTopic(t *testing.T) {

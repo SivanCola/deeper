@@ -1,6 +1,6 @@
 package control
 
-import "deeper/internal/jobs"
+import "deepzora/internal/jobs"
 
 // ModelApplicationDetails contains only user-facing state; never credentials,
 // request bodies, internal paths, or mutable resolver configuration.

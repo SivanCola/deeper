@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {

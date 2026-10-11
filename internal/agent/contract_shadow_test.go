@@ -1,9 +1,9 @@
 package agent
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 	"reflect"
 	"testing"
 )

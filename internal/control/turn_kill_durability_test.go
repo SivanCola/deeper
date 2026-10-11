@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 // killMidStreamProvider answers the first request, then streams part of the
@@ -68,7 +68,7 @@ func containsUserText(messages []provider.Message, text string) bool {
 }
 
 func TestKilledLegacyTurnKeepsItsPrompt(t *testing.T) {
-	if root := os.Getenv("DEEPER_LEGACY_TURN_KILL_FIXTURE"); root != "" {
+	if root := os.Getenv("DEEPZORA_LEGACY_TURN_KILL_FIXTURE"); root != "" {
 		a := agent.New(&killMidStreamProvider{exitIn: 300 * time.Millisecond}, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
 		c := newOwnedTestController(t, Options{Executor: a, Runner: a, SessionPath: filepath.Join(root, "session.jsonl"), SessionDir: root, Sink: event.Discard, NativeLegacySession: true})
 		if err := c.RunTurn(context.Background(), "first question"); err != nil {
@@ -77,7 +77,7 @@ func TestKilledLegacyTurnKeepsItsPrompt(t *testing.T) {
 		_ = c.RunTurn(context.Background(), "second question")
 		t.Fatal("fixture was not killed")
 	}
-	root := runKillFixture(t, "TestKilledLegacyTurnKeepsItsPrompt", "DEEPER_LEGACY_TURN_KILL_FIXTURE")
+	root := runKillFixture(t, "TestKilledLegacyTurnKeepsItsPrompt", "DEEPZORA_LEGACY_TURN_KILL_FIXTURE")
 	path := filepath.Join(root, "session.jsonl")
 	sess, err := agent.LoadSession(path)
 	if err != nil {
@@ -140,7 +140,7 @@ func historyRowsContaining(page session.HistoryWindowPage, text string) []sessio
 }
 
 func TestKilledTurnKeepsItsPartialOutput(t *testing.T) {
-	if root := os.Getenv("DEEPER_V3_TURN_KILL_FIXTURE"); root != "" {
+	if root := os.Getenv("DEEPZORA_V3_TURN_KILL_FIXTURE"); root != "" {
 		midTurnSnapshotInterval.Store(int64(25 * time.Millisecond))
 		service, err := session.NewService("desktop", session.NewFilesystemPersistence(root))
 		if err != nil {
@@ -159,7 +159,7 @@ func TestKilledTurnKeepsItsPartialOutput(t *testing.T) {
 		time.Sleep(10 * time.Second)
 		t.Fatal("fixture was not killed")
 	}
-	root := runKillFixture(t, "TestKilledTurnKeepsItsPartialOutput", "DEEPER_V3_TURN_KILL_FIXTURE")
+	root := runKillFixture(t, "TestKilledTurnKeepsItsPartialOutput", "DEEPZORA_V3_TURN_KILL_FIXTURE")
 	service, binding, ref := openKilledV3Session(t, root)
 	page := readNewestHistory(t, service, ref)
 	if len(historyRowsContaining(page, "second question")) != 1 {
@@ -290,7 +290,7 @@ func (killingTool) Execute(context.Context, json.RawMessage) (string, error) {
 }
 
 func TestKilledAfterCommittedStreamShowsItOnce(t *testing.T) {
-	if root := os.Getenv("DEEPER_V3_COMMITTED_KILL_FIXTURE"); root != "" {
+	if root := os.Getenv("DEEPZORA_V3_COMMITTED_KILL_FIXTURE"); root != "" {
 		midTurnSnapshotInterval.Store(int64(20 * time.Millisecond))
 		service, err := session.NewService("desktop", session.NewFilesystemPersistence(root))
 		if err != nil {
@@ -308,7 +308,7 @@ func TestKilledAfterCommittedStreamShowsItOnce(t *testing.T) {
 		time.Sleep(10 * time.Second)
 		t.Fatal("fixture was not killed")
 	}
-	root := runKillFixture(t, "TestKilledAfterCommittedStreamShowsItOnce", "DEEPER_V3_COMMITTED_KILL_FIXTURE")
+	root := runKillFixture(t, "TestKilledAfterCommittedStreamShowsItOnce", "DEEPZORA_V3_COMMITTED_KILL_FIXTURE")
 	service, binding, ref := openKilledV3Session(t, root)
 	events, err := binding.Runtime().Session().AcceptedPage(t.Context(), 0, 1000)
 	if err != nil {

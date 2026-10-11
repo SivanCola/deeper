@@ -4,9 +4,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/retrieval"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/retrieval"
 )
 
 const (

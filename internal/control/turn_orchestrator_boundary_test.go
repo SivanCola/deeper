@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 func TestTurnOrchestratorCheckpointBoundaryPrecedesUserMessage(t *testing.T) {

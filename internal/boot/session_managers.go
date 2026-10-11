@@ -1,10 +1,10 @@
 package boot
 
 import (
-	"deeper/internal/persistentshell"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/persistentshell"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 func sessionManagers(opts Options) (*sessiontemp.Manager, *persistentshell.Manager) {

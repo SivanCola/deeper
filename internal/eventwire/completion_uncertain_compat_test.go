@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // An older client does not know completion_uncertain and ignores the additive

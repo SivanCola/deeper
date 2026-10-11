@@ -329,18 +329,18 @@ export function releaseRefs(release) {
   return releaseItems(release).flatMap((item) => item.refs || []);
 }
 
-// Historical records keep their original PR and author attribution. New Deeper
+// Historical records keep their original PR and author attribution. New Deepzora
 // records declare their own repository in links.github.
 export function releaseRepository(release) {
   const match = /^https:\/\/github\.com\/([^/]+\/[^/]+)\/releases(?:\/|$)/.exec(release.links.github);
-  return match?.[1] ?? "SivanCola/deeper";
+  return match?.[1] ?? "SivanCola/deepzora";
 }
 
 // credits maps a ref to its lookup result; a ref absent from it renders plain.
 export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
   const isZh = lang === "zh";
   const repository = releaseRepository(release);
-  const product = repository === "esengine/DeepSeek-Reasonix" ? "Reasonix" : "Deeper";
+  const product = repository === "esengine/DeepSeek-Reasonix" ? "Reasonix" : "Deepzora";
   const notesURL = release.links.github;
   const isPreview = release.channel === "prerelease";
   const channelLabel = isPreview ? (isZh ? "预览版" : "Preview") : (isZh ? "稳定版" : "Stable");

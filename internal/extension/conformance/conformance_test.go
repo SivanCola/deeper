@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/rpcwire"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/rpcwire"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/pluginpkg"
 )
 
 // examplePath is the built fullsidecar binary, shared by every test.

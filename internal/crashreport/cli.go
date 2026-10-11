@@ -23,8 +23,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/netclient"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/netclient"
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 	maxFieldBytes        = 4 << 10
 )
 
-var reportEndpoint = os.Getenv("DEEPER_REPORT_ENDPOINT")
+var reportEndpoint = os.Getenv("DEEPZORA_REPORT_ENDPOINT")
 
 var queueMu sync.Mutex
 
@@ -88,7 +88,7 @@ var ErrNoReports = errors.New("no pending CLI crash reports")
 // paths, or provider response content.
 func CapturePanic(home, version string, recovered any, stack []byte) error {
 	if strings.TrimSpace(home) == "" {
-		return errors.New("crash report: empty Deeper home")
+		return errors.New("crash report: empty Deepzora home")
 	}
 	cleanStack := sanitizeStack(string(stack))
 	report := Report{
@@ -189,7 +189,7 @@ func Preview(report Report) ([]byte, error) {
 // callers remove the report only after a successful response.
 func Send(ctx context.Context, report Report, proxy netclient.ProxySpec) error {
 	if reportEndpoint == "" {
-		return fmt.Errorf("Deeper report endpoint is not configured; the report remains available locally")
+		return fmt.Errorf("Deepzora report endpoint is not configured; the report remains available locally")
 	}
 	client, err := netclient.NewHTTPClient(proxy, netclient.TransportOptions{
 		DialTimeout:           3 * time.Second,
@@ -260,7 +260,7 @@ func write(home string, report Report) error {
 
 func ensureReportIdentity(report *Report, stableID string) {
 	if report.EventID == "" {
-		sum := sha256.Sum256([]byte("deeper-cli-event\n" + stableID))
+		sum := sha256.Sum256([]byte("deepzora-cli-event\n" + stableID))
 		report.EventID = hex.EncodeToString(sum[:16])
 	}
 	if report.DedupKey == "" {

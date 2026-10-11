@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 // reportRunFailure states why a run ended without a result. Text output — which

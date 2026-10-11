@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
 )
 
 const SchemaVersion = 1

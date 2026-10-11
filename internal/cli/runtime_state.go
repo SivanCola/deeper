@@ -1,6 +1,6 @@
 package cli
 
-import "deeper/internal/event"
+import "deepzora/internal/event"
 
 func (s *metricsSink) RuntimeStateChanged(snapshot event.RuntimeStateSnapshot) {
 	if s != nil {

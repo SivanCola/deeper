@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
-	_ "deeper/internal/tool/builtin"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
+	_ "deepzora/internal/tool/builtin"
 )
 
 func TestBuiltinToolContractDocumentation(t *testing.T) {

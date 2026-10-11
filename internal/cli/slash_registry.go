@@ -4,8 +4,8 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
 )
 
 // builtinSlashSpec is the single source of truth for a built-in command's
@@ -60,7 +60,7 @@ func builtinSlashSpecs() []builtinSlashSpec {
 		{name: "/setup", aliases: []string{"/auth"}, insert: "/setup", hint: "Configure model connections", showInHelp: true},
 		{name: "/help", aliases: []string{"/?"}, insert: "/help", hint: i18n.M.CmdHelp, showInHelp: true},
 		{name: "/web", insert: "/web", hint: i18n.M.CmdWeb, showInHelp: true},
-		{name: "/docs", aliases: []string{"/deeper:docs"}, insert: "/docs ", hint: i18n.M.CmdDocs, showInHelp: true},
+		{name: "/docs", aliases: []string{"/deepzora:docs"}, insert: "/docs ", hint: i18n.M.CmdDocs, showInHelp: true},
 		{name: "/memory", insert: "/memory ", hint: i18n.M.CmdMemory, showInHelp: true},
 		{name: "/migrate", aliases: []string{"/migration"}, insert: "/migrate", hint: i18n.M.CmdMigrate, showInHelp: true},
 		{name: "/goal", insert: "/goal ", hint: i18n.M.CmdGoal, descend: true},

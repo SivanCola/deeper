@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncatalog"
 )
 
 // forkThreeIdenticalRecoveryCopies builds one lineage whose parent went on to
@@ -193,7 +193,7 @@ func TestRecoveryCopySweepRespectsConfigGate(t *testing.T) {
 	catalog := openSweepTestCatalog(t, dir)
 	app := sweepTestApp(catalog)
 
-	configDir := filepath.Join(home, ".deeper")
+	configDir := filepath.Join(home, ".deepzora")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

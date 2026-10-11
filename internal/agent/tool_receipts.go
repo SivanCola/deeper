@@ -3,8 +3,8 @@ package agent
 import (
 	"encoding/json"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 // recordToolReceipts files the turn-scoped evidence for one executed call:

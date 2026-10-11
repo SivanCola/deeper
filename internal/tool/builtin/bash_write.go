@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/permissionpreset"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/permissionpreset"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func (b bash) Schema() json.RawMessage {

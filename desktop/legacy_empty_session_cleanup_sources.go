@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/store"
-	"deeper/internal/transcript"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
+	"deepzora/internal/transcript"
 )
 
 type legacyCleanupSourceTarget struct {

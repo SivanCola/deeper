@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func TestSandboxWriteDenialClassifierRejectsOrdinaryFailures(t *testing.T) {

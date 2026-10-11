@@ -19,7 +19,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/remote/sshtest"
 )
 
 func TestNewSSHClientPrefersRecordedHostKeyAlgorithm(t *testing.T) {

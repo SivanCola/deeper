@@ -39,7 +39,7 @@ try {
  const summaryBox=await summary.boundingBox();
  const composerBox=await page.locator('.composer').boundingBox();
  if(!summaryBox || !composerBox || summaryBox.y+summaryBox.height>composerBox.y || summaryBox.y<0)throw Error('search summary is outside the readable transcript viewport');
- await page.screenshot({path:'/tmp/deeper-protocol-recovery-browser.png',fullPage:true});
+ await page.screenshot({path:'/tmp/deepzora-protocol-recovery-browser.png',fullPage:true});
  if(errors.length)throw Error(errors.join('\n'));
  console.log('PASS: one recovery button, click, stop, no late search, source-free successful search and summary; no page errors');
-} catch(error) { console.error(error); if(browser){const p=browser.contexts()[0]?.pages()[0]; if(p){await p.screenshot({path:'/tmp/deeper-protocol-browser-failure.png'});console.error((await p.locator('body').innerText()).slice(-4500));}} throw error; } finally {await browser?.close();await server.close();}
+} catch(error) { console.error(error); if(browser){const p=browser.contexts()[0]?.pages()[0]; if(p){await p.screenshot({path:'/tmp/deepzora-protocol-browser-failure.png'});console.error((await p.locator('body').innerText()).slice(-4500));}} throw error; } finally {await browser?.close();await server.close();}

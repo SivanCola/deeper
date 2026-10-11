@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 type fakeProvider struct {

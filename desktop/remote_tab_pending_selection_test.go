@@ -432,7 +432,7 @@ func TestRemoteTabNewSessionRestoresRouteFromCommittedDeferredSelection(t *testi
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		expectedPath <- req.Header.Get(expectedSessionPathHeader)
 		header := make(http.Header)
-		header.Set("X-Deeper-Session-Path", freshPath)
+		header.Set("X-Deepzora-Session-Path", freshPath)
 		return &http.Response{StatusCode: http.StatusNoContent, Header: header, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
 	})}
 	a.remoteTabMu.Lock()
@@ -459,7 +459,7 @@ func TestRemoteTabDeferredNewSessionRechecksCurrentBlankState(t *testing.T) {
 		}
 		requested <- struct{}{}
 		header := make(http.Header)
-		header.Set("X-Deeper-Session-Path", freshPath)
+		header.Set("X-Deepzora-Session-Path", freshPath)
 		return &http.Response{StatusCode: http.StatusNoContent, Header: header, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
 	})}
 	tab := &remoteTab{

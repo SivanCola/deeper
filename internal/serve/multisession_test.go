@@ -15,13 +15,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
 )
 
 type replayStubController struct{ *control.Controller }

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type fakeProvider struct {

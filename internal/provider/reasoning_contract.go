@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/nilutil"
+	"deepzora/internal/nilutil"
 )
 
 // ReasoningState distinguishes observed empty output from absent and unsafe output.

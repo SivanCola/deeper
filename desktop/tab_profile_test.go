@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
 )
 
 func testTab(id, root string) *WorkspaceTab {
@@ -78,7 +78,7 @@ model = "deepseek-v4-flash"
 api_key_env = "PROJECT_API_KEY"
 effort = "max"
 `
-	if err := os.WriteFile(filepath.Join(projectRoot, "deeper.toml"), []byte(configBody), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectRoot, "deepzora.toml"), []byte(configBody), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, projectRoot)
@@ -108,7 +108,7 @@ base_url = "https://proxy.example.com/v1"
 model = "deepseek-v4-flash"
 api_key_env = "PROJECT_API_KEY"
 `
-	if err := os.WriteFile(filepath.Join(projectRoot, "deeper.toml"), []byte(configBody), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectRoot, "deepzora.toml"), []byte(configBody), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, projectRoot)
@@ -178,9 +178,9 @@ name = "deepseek-flash"
 kind = "openai"
 base_url = "https://example.invalid/v1"
 model = "deepseek-v4-flash"
-api_key_env = "DEEPER_TEST_KEY_UNSET"
+api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(configBody), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(configBody), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, root)
@@ -574,7 +574,7 @@ func TestLegacyBypassMigratesToWorkspaceWriteAndPreservesPlanMode(t *testing.T) 
 
 func userConfigPathForTest() string {
 	if dir, err := os.UserConfigDir(); err == nil {
-		return dir + "/deeper/deeper.toml"
+		return dir + "/deepzora/deepzora.toml"
 	}
 	return ""
 }

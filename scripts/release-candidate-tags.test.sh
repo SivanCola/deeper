@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-test_root="$(mktemp -d "${TMPDIR:-/tmp}/deeper-candidate-tags-test.XXXXXX")"
+test_root="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-candidate-tags-test.XXXXXX")"
 trap 'rm -rf -- "$test_root"' EXIT
 git init -q --bare "$test_root/remote.git"
 git init -q "$test_root/product"

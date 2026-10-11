@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 )
 
 func (c *Controller) startGoalCommandTurnWithAdmission(cmd GoalCommand, display string, admission turnAdmission) {

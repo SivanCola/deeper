@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/jobs"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/control"
+	"deepzora/internal/jobs"
+	"deepzora/internal/workspacelease"
 )
 
 type backgroundRuntimeController struct {

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func planFor(t *testing.T, items ...fleetTaskItem) (fleetPlan, error) {

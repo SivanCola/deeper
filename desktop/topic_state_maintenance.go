@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/topicstate"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/topicstate"
 )
 
 // withExclusiveScope keeps the authoritative topic database and its legacy

@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/filelock"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/filelock"
+	"deepzora/internal/provider"
 )
 
 func flushRecorder(t *testing.T, recorder *Recorder) {

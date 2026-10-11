@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/topicstate"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/topicstate"
 )
 
 func createUpgradeTopicFixture(t *testing.T, path, topicID, marker string) *sql.DB {

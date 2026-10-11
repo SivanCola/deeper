@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func TestWebSlashRequestsFrontendHandoff(t *testing.T) {

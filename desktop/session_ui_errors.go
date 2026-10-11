@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/desktop/internal/sessionui"
+	"deepzora/desktop/internal/sessionui"
 	"errors"
 )
 

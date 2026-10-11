@@ -1,4 +1,4 @@
-declare module "deeper-playwright-injected" {
+declare module "deepzora-playwright-injected" {
   export class InjectedScript {
     constructor(window: Window, options: { isUnderTest: boolean; sdkLanguage: string; testIdAttributeName: string; stableRafCount: number; browserName: string; customEngines: unknown[]; isUtilityWorld: boolean });
     ariaSnapshotWithRefs(root: Element, options: { mode: "ai" }): { text: string };

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // Prompts returns every MCP prompt discovered across connected servers.

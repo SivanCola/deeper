@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/worktree"
+	"deepzora/internal/worktree"
 )
 
 func startFinalizeAdmissionTest(t *testing.T, app *App, request worktree.CleanupRequest) <-chan error {

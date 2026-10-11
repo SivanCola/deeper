@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/diff"
+	"deepzora/internal/diff"
 )
 
 // writerRegistry is shared across parent/child observers so background writer
@@ -225,7 +225,7 @@ func (o *MutationObserver) BeforeMutationFromChange(ch diff.Change, tool string)
 }
 
 // AfterMutation re-reads the path after a tool attempt (success or failure),
-// records the after fingerprint under Deeper ownership, and reports whether
+// records the after fingerprint under Deepzora ownership, and reports whether
 // the captured workspace content actually changed.
 func (o *MutationObserver) AfterMutation(path, tool string) bool {
 	if o == nil || o.store == nil || path == "" {

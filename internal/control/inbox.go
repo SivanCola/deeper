@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/store"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/store"
 )
 
 // TurnAdmission is the exported classification of TrySubmitInboxItem /

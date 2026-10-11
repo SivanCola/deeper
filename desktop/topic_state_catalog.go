@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 // ListProjectTopics surfaces topic-state failures instead of hiding them as empty pages.

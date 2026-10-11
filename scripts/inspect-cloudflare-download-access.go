@@ -25,11 +25,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "invalid Stable version")
 			os.Exit(2)
 		}
-		request, err := http.NewRequest(http.MethodGet, "https://github.com/SivanCola/deeper/releases/latest/download/latest.json", nil)
+		request, err := http.NewRequest(http.MethodGet, "https://github.com/SivanCola/deepzora/releases/latest/download/latest.json", nil)
 		if err != nil {
 			panic(err)
 		}
-		request.Header.Set("User-Agent", fmt.Sprintf("Deeper-Updater/v%s (%s/%s; build=stable; update=stable)", version, runtime.GOOS, runtime.GOARCH))
+		request.Header.Set("User-Agent", fmt.Sprintf("Deepzora-Updater/v%s (%s/%s; build=stable; update=stable)", version, runtime.GOOS, runtime.GOARCH))
 		response, err := client.Do(request)
 		if err != nil {
 			panic(err)
@@ -45,11 +45,11 @@ func main() {
 		}
 	}
 	for _, target := range []struct{ kind, url string }{
-		{"homepage", "https://github.com/SivanCola/deeper/?download=desktop&release-postflight=v1.38.12"},
-		{"changelog", "https://github.com/SivanCola/deeper/releases/tag/v1.38.12/"},
+		{"homepage", "https://github.com/SivanCola/deepzora/?download=desktop&release-postflight=v1.38.12"},
+		{"changelog", "https://github.com/SivanCola/deepzora/releases/tag/v1.38.12/"},
 	} {
 		for _, profile := range []struct{ kind, userAgent string }{
-			{"updater", fmt.Sprintf("Deeper-Updater/v1.38.12 (%s/%s; build=stable; update=stable)", runtime.GOOS, runtime.GOARCH)},
+			{"updater", fmt.Sprintf("Deepzora-Updater/v1.38.12 (%s/%s; build=stable; update=stable)", runtime.GOOS, runtime.GOARCH)},
 			{"browser", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"},
 		} {
 			request, err := http.NewRequest(http.MethodGet, target.url, nil)

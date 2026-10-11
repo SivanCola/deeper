@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 type commandCodeRoundTripFunc func(*http.Request) (*http.Response, error)

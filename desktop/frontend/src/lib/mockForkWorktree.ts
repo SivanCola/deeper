@@ -3,7 +3,7 @@ import type { ForkAnchorView, ForkCreationView, ForkTargetSetView, ForkTargetVie
 import type { HistoryMessage, TabMeta } from "./types";
 
 export function mockForkWorktree(tab: TabMeta): ForkWorktreeResultView {
-  return { tab: { ...tab, workspaceRoot: `${tab.workspaceRoot}-worktree` }, isolated: true, branch: "deeper/delivery-mock" };
+  return { tab: { ...tab, workspaceRoot: `${tab.workspaceRoot}-worktree` }, isolated: true, branch: "deepzora/delivery-mock" };
 }
 
 export function increaseMockForkTitle(title: string): string {

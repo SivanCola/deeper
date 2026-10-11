@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestTaskWarrantsPlanner(t *testing.T) {

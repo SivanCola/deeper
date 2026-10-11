@@ -4,7 +4,7 @@ set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 desktop_dir="$root/desktop"
 
-vite_port="${DEEPER_DESKTOP_VITE_PORT:-}"
+vite_port="${DEEPZORA_DESKTOP_VITE_PORT:-}"
 if [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]]; then
   vite_port="$1"
   shift
@@ -25,18 +25,18 @@ if (( vite_port < 1024 || vite_port > 36000 )); then
   exit 2
 fi
 
-export DEEPER_DESKTOP_VITE_PORT="$vite_port"
-export DEEPER_DEV=1
+export DEEPZORA_DESKTOP_VITE_PORT="$vite_port"
+export DEEPZORA_DEV=1
 # pnpm honors npm_config_* not PNPM_CONFIG_*; suppress headless TTY purge prompt + age gate.
 export npm_config_confirm_modules_purge=false
 export npm_config_minimum_release_age=0
 
-service="$desktop_dir/build/bin/deeper-desktop-service"
+service="$desktop_dir/build/bin/deepzora-desktop-service"
 if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* || "$OSTYPE" == win32* ]]; then
   service="$service.exe"
 fi
 
-echo "Deeper desktop dev (Electron shell)"
+echo "Deepzora desktop dev (Electron shell)"
 echo "  worktree: $root"
 echo "  vite:     http://127.0.0.1:$vite_port"
 echo "  service:  $service"
@@ -45,7 +45,7 @@ mkdir -p "$(dirname "$service")"
 (cd "$desktop_dir" && go build -o "$service" .)
 
 # The Vite dev server hot-reloads the frontend; the Electron shell loads it via
-# DEEPER_ELECTRON_DEV_URL (see desktop/electron/scripts/start.mjs).
+# DEEPZORA_ELECTRON_DEV_URL (see desktop/electron/scripts/start.mjs).
 (cd "$desktop_dir/frontend" && exec pnpm dev) &
 vite_pid=$!
 trap 'kill "$vite_pid" 2>/dev/null || true' EXIT

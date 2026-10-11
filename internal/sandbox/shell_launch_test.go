@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/internal/secrets"
+	"deepzora/internal/secrets"
 )
 
 func TestWindowsPowerShellCandidatesIncludeStoreAlias(t *testing.T) {

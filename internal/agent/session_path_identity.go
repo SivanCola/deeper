@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/filelock"
-	"deeper/internal/pathidentity"
+	"deepzora/internal/filelock"
+	"deepzora/internal/pathidentity"
 )
 
 // LockSessionMetaPath serializes a branch-meta read-modify-write cycle across

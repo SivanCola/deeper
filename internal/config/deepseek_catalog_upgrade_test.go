@@ -12,7 +12,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 func TestDeepSeekCatalogUpgradePreservesSelectionsAndDeletion(t *testing.T) {

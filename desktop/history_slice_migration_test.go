@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // TestHistorySliceColdLegacyEventFormat pages an ancient event-record

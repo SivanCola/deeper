@@ -6,10 +6,10 @@ import (
 	"math"
 	"sync/atomic"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/provider"
 )
 
 // Only a threshold is shared, never the mutable config snapshot. Foreground

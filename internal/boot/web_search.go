@@ -3,13 +3,13 @@ package boot
 import (
 	"slices"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
-	"deeper/internal/websearch"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
+	"deepzora/internal/websearch"
 )
 
 func addWebSearch(reg *tool.Registry, cfg *config.Config, current *config.ProviderEntry, proxy netclient.ProxySpec, sink event.Sink) {

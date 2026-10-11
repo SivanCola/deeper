@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/config"
+	"deepzora/internal/sessioncatalog"
 )
 
 func TestSessionCatalogInitialReconcileSignalFollowsRestoredTabs(t *testing.T) {

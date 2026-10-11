@@ -1,7 +1,7 @@
 package control
 
 import (
-	"deeper/internal/jobs"
+	"deepzora/internal/jobs"
 	"fmt"
 )
 

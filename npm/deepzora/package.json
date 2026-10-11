@@ -1,0 +1,41 @@
+{
+  "name": "@sivancola/deepzora",
+  "version": "0.0.0",
+  "description": "Cache-first DeepSeek coding agent for the terminal.",
+  "bin": {
+    "deepzora": "bin/deepzora.js"
+  },
+  "files": [
+    "bin/deepzora.js",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "homepage": "https://deepzora.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SivanCola/deepzora.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SivanCola/deepzora/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "ai",
+    "agent",
+    "cli",
+    "coding-assistant",
+    "tui"
+  ],
+  "optionalDependencies": {
+    "@sivancola/deepzora-cli-darwin-arm64": "0.0.0",
+    "@sivancola/deepzora-cli-darwin-x64": "0.0.0",
+    "@sivancola/deepzora-cli-linux-arm64": "0.0.0",
+    "@sivancola/deepzora-cli-linux-x64": "0.0.0",
+    "@sivancola/deepzora-cli-win32-arm64": "0.0.0",
+    "@sivancola/deepzora-cli-win32-x64": "0.0.0"
+  }
+}

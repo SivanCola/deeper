@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/workspacelease"
+	"deepzora/internal/event"
+	"deepzora/internal/workspacelease"
 )
 
 // SessionBackgroundScope owns resources which outlive a controller generation.

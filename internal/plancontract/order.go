@@ -29,7 +29,7 @@ func (p Plan) Ordered() []Step {
 
 // phaseIDs resolves each step to the id of the top-level phase it belongs to,
 // or "" when the step is a phase itself. No parent, an unknown parent, and a
-// parent chain that loops all mean the same thing, and nesting deeper than two
+// parent chain that loops all mean the same thing, and nesting deepzora than two
 // levels flattens onto the top ancestor.
 func phaseIDs(steps []Step) []string {
 	index := make(map[string]int, len(steps))

@@ -16,14 +16,14 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"deeper/internal/persistentshell"
-	"deeper/internal/proc"
-	"deeper/internal/sandbox"
-	"deeper/internal/secrets"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/shellparse"
-	"deeper/internal/shellrun"
-	"deeper/internal/tool"
+	"deepzora/internal/persistentshell"
+	"deepzora/internal/proc"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/shellparse"
+	"deepzora/internal/shellrun"
+	"deepzora/internal/tool"
 )
 
 const (
@@ -70,7 +70,7 @@ func cachedBashShellPATH(ctx context.Context) string {
 // empty uses the process cwd. timeout optionally caps foreground commands;
 // zero or negative means no tool-local cap, while parent context cancellation
 // still kills the process tree. guard appends a warning to the output of
-// commands that reference Deeper's own session stores (see SessionDataGuard).
+// commands that reference Deepzora's own session stores (see SessionDataGuard).
 // sessionTemp, when non-nil, supplies the logical-session private temporary
 // directory shared across shell calls (see package sessiontemp). A Manager on
 // the execution context overrides this for sub-agent isolation.
@@ -630,7 +630,7 @@ func defaultBashShellPATH(ctx context.Context) string {
 	if shell == "" {
 		return ""
 	}
-	const marker = "__DEEPER_BASH_PATH__="
+	const marker = "__DEEPZORA_BASH_PATH__="
 	script := "printf '\\n" + marker + "%s\\n' \"$PATH\""
 	for _, args := range [][]string{
 		{"-l", "-i", "-c", script},

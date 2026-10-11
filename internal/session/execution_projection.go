@@ -1,6 +1,6 @@
 package session
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // rejectedToolResult contains only host-recorded identities and state, never
 // tool bodies or model-authored claims about whether a call executed.

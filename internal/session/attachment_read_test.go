@@ -12,11 +12,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/attachment"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/store"
+	"deepzora/internal/attachment"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/store"
 )
 
 const attachmentReadPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="

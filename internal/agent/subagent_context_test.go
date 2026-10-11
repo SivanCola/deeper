@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func TestComposeChildTaskPromptUsesFactsPack(t *testing.T) {

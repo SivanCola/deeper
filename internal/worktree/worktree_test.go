@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/gitcmd"
+	"deepzora/internal/gitcmd"
 )
 
 // opened is dir's identity as a session opening it resolves it; a directory
@@ -63,8 +63,8 @@ func initRepo(t *testing.T) string {
 		t.Helper()
 		cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
 		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=Deeper Test", "GIT_AUTHOR_EMAIL=deeper@example.invalid",
-			"GIT_COMMITTER_NAME=Deeper Test", "GIT_COMMITTER_EMAIL=deeper@example.invalid")
+			"GIT_AUTHOR_NAME=Deepzora Test", "GIT_AUTHOR_EMAIL=deepzora@example.invalid",
+			"GIT_COMMITTER_NAME=Deepzora Test", "GIT_COMMITTER_EMAIL=deepzora@example.invalid")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
@@ -98,14 +98,14 @@ func TestCreateManagedWorktreeFromRepositoryFolder(t *testing.T) {
 	if result.WorkspaceRoot != result.WorktreeRoot {
 		t.Fatalf("workspace root = %q, worktree root = %q", result.WorkspaceRoot, result.WorktreeRoot)
 	}
-	if !strings.HasPrefix(result.Branch, "deeper/delivery-") {
+	if !strings.HasPrefix(result.Branch, "deepzora/delivery-") {
 		t.Fatalf("branch = %q", result.Branch)
 	}
 	if _, err := os.Stat(filepath.Join(result.WorktreeRoot, "README.md")); err != nil {
 		t.Fatalf("created worktree missing committed file: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(result.WorktreeRoot, ".deeper-source")); !os.IsNotExist(err) {
-		t.Fatalf("worktree must not contain a Deeper marker, stat err = %v", err)
+	if _, err := os.Stat(filepath.Join(result.WorktreeRoot, ".deepzora-source")); !os.IsNotExist(err) {
+		t.Fatalf("worktree must not contain a Deepzora marker, stat err = %v", err)
 	}
 	branchCmd := exec.Command("git", "-C", result.WorktreeRoot, "branch", "--show-current")
 	branchOut, err := branchCmd.Output()
@@ -128,7 +128,7 @@ func TestCreatePreservesSelectedRepositorySubdirectory(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git add: %v %s", err, out)
 	}
-	cmd = exec.Command("git", "-C", repo, "-c", "user.name=Deeper Test", "-c", "user.email=deeper@example.invalid", "commit", "-m", "subdir")
+	cmd = exec.Command("git", "-C", repo, "-c", "user.name=Deepzora Test", "-c", "user.email=deepzora@example.invalid", "commit", "-m", "subdir")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git commit: %v %s", err, out)
 	}
@@ -149,7 +149,7 @@ func TestInspectRejectsUncommittedSelectedSubdirectoryWithoutGitMutation(t *test
 	if err := os.MkdirAll(untracked, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	before, _, err := runGit(context.Background(), opened(t, repo), "for-each-ref", "--format=%(refname)", "refs/heads/deeper/delivery-")
+	before, _, err := runGit(context.Background(), opened(t, repo), "for-each-ref", "--format=%(refname)", "refs/heads/deepzora/delivery-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestInspectRejectsUncommittedSelectedSubdirectoryWithoutGitMutation(t *test
 	if got.Available || !strings.Contains(got.Reason, "committed HEAD") {
 		t.Fatalf("availability = %+v", got)
 	}
-	after, _, err := runGit(context.Background(), opened(t, repo), "for-each-ref", "--format=%(refname)", "refs/heads/deeper/delivery-")
+	after, _, err := runGit(context.Background(), opened(t, repo), "for-each-ref", "--format=%(refname)", "refs/heads/deepzora/delivery-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +368,7 @@ func TestRollbackCreatePreservesIgnoredContent(t *testing.T) {
 			if out, err := git.CombinedOutput(); err != nil {
 				t.Fatalf("git add .gitignore: %v %s", err, out)
 			}
-			git = exec.Command("git", "-C", repo, "-c", "user.name=Deeper Test", "-c", "user.email=deeper@example.invalid", "commit", "-m", "ignore generated files")
+			git = exec.Command("git", "-C", repo, "-c", "user.name=Deepzora Test", "-c", "user.email=deepzora@example.invalid", "commit", "-m", "ignore generated files")
 			if out, err := git.CombinedOutput(); err != nil {
 				t.Fatalf("git commit .gitignore: %v %s", err, out)
 			}
@@ -408,7 +408,7 @@ func TestCreateSupportsPathsWithSpaces(t *testing.T) {
 	}
 	git := func(args ...string) {
 		cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
-		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=Deeper Test", "GIT_AUTHOR_EMAIL=deeper@example.invalid", "GIT_COMMITTER_NAME=Deeper Test", "GIT_COMMITTER_EMAIL=deeper@example.invalid")
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=Deepzora Test", "GIT_AUTHOR_EMAIL=deepzora@example.invalid", "GIT_COMMITTER_NAME=Deepzora Test", "GIT_COMMITTER_EMAIL=deepzora@example.invalid")
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v %s", args, err, out)
 		}

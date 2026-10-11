@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func TestHistoricalImportRetriesSettlementAfterReceiptCompletes(t *testing.T) {

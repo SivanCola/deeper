@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func readWindowID(callID, resultRef, path string) string {

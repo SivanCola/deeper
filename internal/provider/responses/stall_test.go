@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestDefaultStreamIdleTimeoutIsFiveMinutes(t *testing.T) {

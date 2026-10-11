@@ -8,7 +8,7 @@ import { resolve, join } from "node:path";
 import { JSDOM } from "jsdom";
 
 test("production minification cannot leak main-world bundler helpers into page scripts", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "deeper-page-bundle-"));
+  const dir = await mkdtemp(join(tmpdir(), "deepzora-page-bundle-"));
   const dom = new JSDOM('<body><button aria-label="Save">Save</button></body>', { runScripts: "outside-only", pretendToBeVisual: true });
   try {
     // Same failure mechanism as the former nested snapshot walker: keepNames

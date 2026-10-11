@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 const (

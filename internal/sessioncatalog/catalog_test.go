@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/projectiondb"
+	"deepzora/internal/agent"
+	"deepzora/internal/projectiondb"
 )
 
 func TestReconcileMakesUnknownCountsVisibleWithoutReadingTranscript(t *testing.T) {

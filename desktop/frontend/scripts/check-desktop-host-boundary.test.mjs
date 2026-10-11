@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { checkDesktopHostBoundary, desktopHostViolations } from "./check-desktop-host-boundary.mjs";
 
-const fixture = mkdtempSync(join(tmpdir(), "deeper-host-boundary-"));
+const fixture = mkdtempSync(join(tmpdir(), "deepzora-host-boundary-"));
 const write = (name, source) => {
   const file = join(fixture, name);
   mkdirSync(dirname(file), { recursive: true });
@@ -17,13 +17,13 @@ try {
     const c = (window as unknown as { runtime?: unknown }).runtime;
     const d = globalThis.window.runtime;
     const e = window["go"];
-    const f = window.deeperDesktop?.browser;
+    const f = window.deepzoraDesktop?.browser;
     import { EventsOn } from "../../wailsjs/runtime/runtime";
     export { X } from "@wailsapp/runtime";
     const lazy = () => import("../wailsjs/go/main/App");
   `, "flagged.ts");
   assert.deepEqual(flagged.map((entry) => entry.replace(/^\d+: /, "")), [
-    "window.go", "window.runtime", "window.runtime", "window.runtime", 'window["go"]', "window.deeperDesktop",
+    "window.go", "window.runtime", "window.runtime", "window.runtime", 'window["go"]', "window.deepzoraDesktop",
     "import from ../../wailsjs/runtime/runtime", "export from @wailsapp/runtime", "dynamic import of ../wailsjs/go/main/App",
   ]);
 
@@ -33,7 +33,7 @@ try {
     const wails = window.wails;
     const phase = tab.runtime.phase;
     const goCount = stats.go;
-    const host = shell.deeperDesktop;
+    const host = shell.deepzoraDesktop;
   `, "clean.ts");
   assert.deepEqual(clean, [], "comments, strings and unrelated members are not host access");
 

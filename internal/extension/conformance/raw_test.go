@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/rpcwire"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/rpcwire"
 )
 
 // rawSidecar drives the example binary directly over hand-written JSON-RPC

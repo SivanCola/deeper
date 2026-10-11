@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestHistoryToolSearchAndAroundAreUsable(t *testing.T) {
@@ -17,7 +17,7 @@ func TestHistoryToolSearchAndAroundAreUsable(t *testing.T) {
 	writeSession(t, path, []provider.Message{
 		{Role: provider.RoleUser, Content: "Should history use vector embeddings?"},
 		{Role: provider.RoleAssistant, Content: "Decision: keep history retrieval lightweight with BM25 and no vector database."},
-		{Role: provider.RoleUser, Content: "Great, port that to Deeper."},
+		{Role: provider.RoleUser, Content: "Great, port that to Deepzora."},
 	})
 
 	tl := NewTool(Options{SessionDir: sessionDir})

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestForkCreatesIndependentSessionAtCompletedTurnBoundary(t *testing.T) {

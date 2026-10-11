@@ -1,19 +1,20 @@
 package session
 
 // IsFramedCodec recognizes the supported v4 wire identities. Historical stores
-// retain their codec; new stores use Deeper's identity and separate directories.
+// retain their codec; new stores use Deepzora's identity and separate directories.
 func IsFramedCodec(codec string) bool {
-	return codec == V4Codec || codec == "reasonix.session.linear/v4"
+	return codec == V4Codec || codec == "deeper.session.linear/v4" || codec == "reasonix.session.linear/v4"
 }
 
 func isPrototypeCodec(codec string) bool {
-	return codec == PrototypeCodec || codec == "reasonix.session.events/v3"
+	return codec == PrototypeCodec || codec == "deeper.session.events/v3" || codec == "reasonix.session.events/v3"
 }
 
 // IsLegacyCodec recognizes the supported pre-v4 wire identities.
 func IsLegacyCodec(codec string) bool {
 	switch codec {
 	case FinalV31Codec, LegacyLinearCodec, PrototypeCodec,
+		"deeper.session.linear/v3.1", "deeper.session.linear/v3", "deeper.session.events/v3",
 		"reasonix.session.linear/v3.1", "reasonix.session.linear/v3", "reasonix.session.events/v3":
 		return true
 	default:

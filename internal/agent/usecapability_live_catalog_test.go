@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/capability"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 func twoToolMCPServer(t *testing.T) *httptest.Server {
@@ -58,7 +58,7 @@ func twoToolMCPServer(t *testing.T) *httptest.Server {
 // still surface the live tool so inspect on its mcp-tool id succeeds instead
 // of returning "unknown capability_id".
 func TestCatalogSurfacesLiveServerToolMissingFromRegistrySnapshot(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

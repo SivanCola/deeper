@@ -3,10 +3,10 @@ package cli
 import (
 	"testing"
 
-	"deeper/internal/command"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/skill"
+	"deepzora/internal/command"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/skill"
 )
 
 func TestSlashArgSnapshotSurvivesNoMatchWithinEditingSession(t *testing.T) {

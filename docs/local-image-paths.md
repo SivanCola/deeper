@@ -6,7 +6,7 @@ Relative paths resolve against the task workspace. Session external-folder alias
 
 ## Composer attachments
 
-Pasted and dropped files are first saved under `.deeper/attachments` in the workspace of the tab that started the operation, then admitted into the session content store as immutable originals. Saving, previewing, and native vision all retain that tab and workspace identity across asynchronous work; switching tabs does not redirect a result into the newly active draft. Target-scoped operations negotiate `attachments-v2` before browser file reads or hashing; the legacy tab API retains its `attachments-v1` capability name. Neither path trusts client-supplied digests. Legacy `@.deeper/attachments/...` references remain readable without rewriting history. History cards for admitted images carry digest-only attachments; the desktop loads original bytes through `ReadSessionAttachmentForTab` after the session content graph authorizes that digest. Remote Serve advertises neither local staging capability.
+Pasted and dropped files are first saved under `.deepzora/attachments` in the workspace of the tab that started the operation, then admitted into the session content store as immutable originals. Saving, previewing, and native vision all retain that tab and workspace identity across asynchronous work; switching tabs does not redirect a result into the newly active draft. Target-scoped operations negotiate `attachments-v2` before browser file reads or hashing; the legacy tab API retains its `attachments-v1` capability name. Neither path trusts client-supplied digests. Legacy `@.deepzora/attachments/...` references remain readable without rewriting history. History cards for admitted images carry digest-only attachments; the desktop loads original bytes through `ReadSessionAttachmentForTab` after the session content graph authorizes that digest. Remote Serve advertises neither local staging capability.
 
 Explicit image attachments are read, fully decoded, and persisted before a turn is accepted or the draft is cleared. A missing, unreadable, unsafe, unsupported, damaged, oversized, canceled, or concurrently changed image rejects the complete turn before model or tool execution. The composer keeps its text and attachments so the user can restore the file or attach it again and retry. Non-image references keep their existing behavior. After admission, later edits or deletion of the original workspace file do not change the persisted original.
 
@@ -24,7 +24,7 @@ All structured tool images, including direct and on-demand MCP images, share the
 | --- | --- | --- | --- |
 | Old `images []string` (data URL / HTTP / Files ID) | Written | Read as-is; not rewritten | Read as-is |
 | New `image_inputs` attachment refs | Not written | Written on new messages after StorageRevision 3 | Session refused (`ErrUnsupportedVersion`) |
-| Workspace `.deeper/attachments/...` files | Written | Still a composer/CLI entry; admitted objects live in `.content-v1` | Read as files |
+| Workspace `.deepzora/attachments/...` files | Written | Still a composer/CLI entry; admitted objects live in `.content-v1` | Read as files |
 | Inbox schema 2 | Written | Migrated to 3 on writer open | Read/write |
 | Inbox schema 3 with `imageInputs` | Not written | Written | Read-only pause |
 
@@ -37,7 +37,7 @@ Attachment regressions additionally cover a process working directory different 
 The opt-in live probe uses generated images with random codes and colored rectangles. It reads configured official DeepSeek credentials without printing them and tests three native protocols plus explicit/automatic summary-service routing with changed images:
 
 ```sh
-DEEPER_LIVE_TOOL_IMAGES=1 go test -tags live ./internal/imageinput -run TestLiveToolImages -v -count=1
+DEEPZORA_LIVE_TOOL_IMAGES=1 go test -tags live ./internal/imageinput -run TestLiveToolImages -v -count=1
 ```
 
 The live `auto` case injects a same-provider selector to exercise the service route; actual configured catalog selection is owned by Boot. Live probes incur API usage. A successful request alone is insufficient: image-derived content must pass the assertions. OCR can still misread ambiguous characters, and summaries are not a substitute for pixel-exact visual access.

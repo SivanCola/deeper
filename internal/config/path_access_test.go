@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"testing"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 // refuseCanonicalizingUnder makes every path below mount fail to canonicalize
@@ -32,7 +32,7 @@ func TestLoadForRootReadsProjectConfigUnderUncanonicalizableMount(t *testing.T) 
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[ui]\ncursor_shape = \"block\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte("[ui]\ncursor_shape = \"block\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	refuseCanonicalizingUnder(t, mount)
@@ -56,7 +56,7 @@ func TestLoadForRootWithoutProjectConfigUnderUncanonicalizableMount(t *testing.T
 	refuseCanonicalizingUnder(t, mount)
 
 	if _, err := LoadForRoot(root); err != nil {
-		t.Fatalf("LoadForRoot(%q) with no deeper.toml: %v", root, err)
+		t.Fatalf("LoadForRoot(%q) with no deepzora.toml: %v", root, err)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestProjectConfigLinkUnderUncanonicalizableMountStillRefused(t *testing.T) 
 	if err := os.WriteFile(target, []byte("\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(root, "deeper.toml")
+	link := filepath.Join(root, "deepzora.toml")
 	if err := os.Symlink(target, link); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
 	}

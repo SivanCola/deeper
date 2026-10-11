@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/filelock"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/event"
+	"deepzora/internal/filelock"
+	"deepzora/internal/sessioninbox"
 )
 
 func TestInboxSnapshotRecoversUnownedInFlightItem(t *testing.T) {

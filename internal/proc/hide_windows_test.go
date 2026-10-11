@@ -38,14 +38,14 @@ func TestHideWindowPreservesExistingFlags(t *testing.T) {
 }
 
 func TestHideWindowPreservesStdoutCapture(t *testing.T) {
-	cmd := exec.Command("cmd", "/c", "echo", "deeper-ok")
+	cmd := exec.Command("cmd", "/c", "echo", "deepzora-ok")
 	HideWindow(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("command failed: %v", err)
 	}
-	if !strings.Contains(string(out), "deeper-ok") {
-		t.Fatalf("output = %q, want it to contain deeper-ok", out)
+	if !strings.Contains(string(out), "deepzora-ok") {
+		t.Fatalf("output = %q, want it to contain deepzora-ok", out)
 	}
 }
 

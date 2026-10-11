@@ -4,7 +4,7 @@ import React, { act } from "react";
 import { JSDOM } from "jsdom";
 
 import type { BrowserDownloadView, BrowserLayoutRect, BrowserTabView, DesktopBrowserHost } from "../lib/browserHost";
-import type { DeeperDesktopHost } from "../lib/desktopHost";
+import type { DeepzoraDesktopHost } from "../lib/desktopHost";
 
 const dom = new JSDOM("<div id='root'></div>", { url: "http://localhost", pretendToBeVisual: true });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage,
@@ -57,7 +57,7 @@ const browser: DesktopBrowserHost = {
   onDownload: (cb) => { downloadCb = cb; return () => { downloadCb = null; }; },
 };
 const noop = () => {};
-window.deeperDesktop = {
+window.deepzoraDesktop = {
   kind: "electron",
   contract: { protocolVersion: 1, digest: "test", commands: [] },
   platform: { os: "darwin", arch: "arm64", versions: {} },
@@ -72,7 +72,7 @@ window.deeperDesktop = {
     onServiceState: () => noop,
   },
   browser,
-} satisfies DeeperDesktopHost;
+} satisfies DeepzoraDesktopHost;
 
 const root = createRoot(document.getElementById("root")!);
 const paint = (taskId: string) => act(async () => root.render(

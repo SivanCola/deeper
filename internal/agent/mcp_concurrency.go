@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 // MCP concurrency policies. A server is parallel unless something says

@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func (m *chatTUI) collapseFinalToolOutput(tool event.Tool) {

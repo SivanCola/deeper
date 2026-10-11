@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/sessiontemp"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/sessiontemp"
 )
 
 func TestSessionTempSurvivesHotRebuildStyleRetain(t *testing.T) {

@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/eventwire"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/eventwire"
 )
 
 func (m *takeoverMirror) run(initialClient *http.Client, initialRecord takeoverServeRecord) {

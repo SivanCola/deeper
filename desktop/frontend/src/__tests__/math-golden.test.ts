@@ -12,7 +12,7 @@ import ReactMarkdown from "react-markdown";
 import katex from "katex";
 import { latexNormalizeForKatex, stripMathDelimiters } from "../components/latexNormalize";
 import { classifyInlineMath, isLikelyInlineMath } from "../components/mathClassify";
-import { deeperRehypePlugins, deeperRemarkPlugins } from "../components/markdownRemarkPlugins";
+import { deepzoraRehypePlugins, deepzoraRemarkPlugins } from "../components/markdownRemarkPlugins";
 import {
   normalizeMath,
   restoreProtectedInlineMathSource,
@@ -475,7 +475,7 @@ for (const { src, expected, label } of passthrough) {
 }
 
 // ── remark-math render boundary ────────────────────────────────────────────────
-// These cases cross the real react-markdown → remark-math → Deeper AST
+// These cases cross the real react-markdown → remark-math → Deepzora AST
 // policy → rehype-katex boundary. The policy restores literal nodes after
 // parsing, so rejected content cannot be reparsed as math.
 
@@ -484,8 +484,8 @@ console.log("\nnormalizeMath → remark-math render boundary");
 function renderHtml(src: string): string {
   return renderToStaticMarkup(
     createElement(ReactMarkdown, {
-      remarkPlugins: deeperRemarkPlugins,
-      rehypePlugins: deeperRehypePlugins,
+      remarkPlugins: deepzoraRemarkPlugins,
+      rehypePlugins: deepzoraRehypePlugins,
       children: normalizeMath(src),
     }),
   );
@@ -703,7 +703,7 @@ check("inline Young diagrams preserve their authored macro source", () => {
   const html = renderHtml("before $V=\\yng(2,1)$ after");
   return html.includes("katex")
     && !html.includes("katex-error")
-    && !html.includes("deeperInternal")
+    && !html.includes("deepzoraInternal")
     && html.includes('data-latex-source="V=\\yng(2,1)"')
     && html.includes('encoding="application/x-tex">V=\\yng(2,1)</annotation>');
 });
@@ -711,7 +711,7 @@ check("display Young tableaux preserve their authored macro source", () => {
   const html = renderHtml("$$\\young(ab,c)$$");
   return html.includes("katex-display")
     && !html.includes("katex-error")
-    && !html.includes("deeperInternal")
+    && !html.includes("deepzoraInternal")
     && html.includes('data-latex-source="\\young(ab,c)"')
     && html.includes('encoding="application/x-tex">\\young(ab,c)</annotation>');
 });
@@ -720,7 +720,7 @@ check("Young source survives nested pipe protection without cross-assignment", (
   const source = "V=\\yng(2,1) | x + \\young(ab,c)";
   return html.includes("katex")
     && !html.includes("katex-error")
-    && !html.includes("deeperInternal")
+    && !html.includes("deepzoraInternal")
     && html.includes(`data-latex-source="${source}"`)
     && html.includes(`encoding="application/x-tex">${source}</annotation>`);
 });

@@ -11,7 +11,7 @@ import (
 // in the checkout, where the project file could not have granted it anyway.
 func TestPersistWorkspaceWriteAccessRecordsBothGrants(t *testing.T) {
 	home, root, extra := t.TempDir(), t.TempDir(), t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("# keep\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte("# keep\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := PersistWorkspaceWriteAccess(home, root, []string{extra}, "Edit"); err != nil {
@@ -24,8 +24,8 @@ func TestPersistWorkspaceWriteAccessRecordsBothGrants(t *testing.T) {
 	if !slices.Equal(grant.Allow, []string{"Edit"}) || len(grant.AllowWrite) != 1 {
 		t.Fatalf("grant = %+v, want the rule and the directory", grant)
 	}
-	if raw, _ := os.ReadFile(filepath.Join(root, "deeper.toml")); string(raw) != "# keep\n" {
-		t.Fatalf("the checkout's deeper.toml changed: %q", raw)
+	if raw, _ := os.ReadFile(filepath.Join(root, "deepzora.toml")); string(raw) != "# keep\n" {
+		t.Fatalf("the checkout's deepzora.toml changed: %q", raw)
 	}
 }
 

@@ -4,13 +4,13 @@ import (
 	"log/slog"
 	"os"
 
-	"deeper/internal/installlayout"
+	"deepzora/internal/installlayout"
 )
 
 // supersededDesktopNeedsRelaunch reports whether this executable is a retained
 // versions/<old>/ desktop after current.json already points at a newer version.
 func supersededDesktopNeedsRelaunch(exe string) bool {
-	if os.Getenv("DEEPER_DEV") != "" {
+	if os.Getenv("DEEPZORA_DEV") != "" {
 		return false
 	}
 	active, err := installlayout.IsActiveDesktopExecutable(exe)

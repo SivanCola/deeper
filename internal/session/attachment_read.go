@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/attachment"
-	"deeper/internal/projectiondb"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/attachment"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/sessioncontent"
 )
 
 const sessionAttachmentReadLimit = 1 << 20

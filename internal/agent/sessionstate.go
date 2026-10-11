@@ -4,7 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 // sessionRuntime is the host state one conversation owns. Its lifetime sits

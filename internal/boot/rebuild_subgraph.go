@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/extension/uihub"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/extension/uihub"
+	"deepzora/internal/provider"
 )
 
 // tryRebuildSubgraph patches narrow plans without BuildRuntime (fail-atomic).
@@ -31,7 +31,7 @@ func tryRebuildSubgraph(ctx context.Context, old *control.Controller, previous *
 		from = previous.Plan.Graph
 	}
 	graphStart := time.Now()
-	to, gerr := buildRuntimeGraph(config.DeeperHomeDir(), nil)
+	to, gerr := buildRuntimeGraph(config.DeepzoraHomeDir(), nil)
 	extension.DefaultLifecycleMetrics.ObserveGraphBuild(time.Since(graphStart))
 	if gerr != nil {
 		return nil, false, nil
@@ -176,7 +176,7 @@ func (res *BuildResult) ensureRuntime(gen uint64) *extension.RuntimeSet {
 // mutating live controller bindings. BindGeneration and stream-router install
 // wait for commit; staged-generation host/ui/* is dropped until then.
 func stageSidecarSubgraph(ctx context.Context, res *BuildResult, oldMgr *sidecar.Manager, plan *extension.RuntimePlan, session protocol.SessionContext, gen uint64) error {
-	home := config.DeeperHomeDir()
+	home := config.DeepzoraHomeDir()
 	var ui sidecar.UIHandler
 	if res.ExtensionUI != nil {
 		ui = res.ExtensionUI

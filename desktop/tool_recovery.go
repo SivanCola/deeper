@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 type toolRecoveryController interface {

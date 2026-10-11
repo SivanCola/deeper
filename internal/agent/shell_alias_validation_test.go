@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 func TestLegacyShellAliasesPassArgumentGateWithoutDescription(t *testing.T) {

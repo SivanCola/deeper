@@ -1,7 +1,7 @@
 package main
 
 // Workspace change invalidation lives at the desktop boundary. Agent events
-// cover Deeper writes; fsnotify covers IDE and external terminal edits.
+// cover Deepzora writes; fsnotify covers IDE and external terminal edits.
 // The hub emits bounded metadata; panels decide which resources to reload.
 
 import (
@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/fileref"
-	"deeper/internal/gitcmd"
+	"deepzora/internal/event"
+	"deepzora/internal/fileref"
+	"deepzora/internal/gitcmd"
 	"github.com/fsnotify/fsnotify"
 )
 

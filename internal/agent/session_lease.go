@@ -12,10 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/pathidentity"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/pathidentity"
+	"deepzora/internal/store"
 )
 
 var ErrSessionLeaseHeld = errors.New("session lease held by another runtime")

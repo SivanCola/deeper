@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 // SessionMutationResult is the stable response for an explicitly targeted

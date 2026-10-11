@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
-	"deeper/internal/transcript"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
+	"deepzora/internal/transcript"
 )
 
 // Session owns the live business state for one session identity: sequence

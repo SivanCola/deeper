@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/store"
 )
 
 var (
 	errTopicHasActiveWork = errors.New("wait for the session to finish, answer pending prompts, and stop background jobs before archiving this topic")
-	errTopicArchiveBusy   = errors.New("Deeper is finishing another session change — wait a moment and retry archiving")
+	errTopicArchiveBusy   = errors.New("Deepzora is finishing another session change — wait a moment and retry archiving")
 )
 
 var topicArchiveCleanupHookForTest func() error

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioninbox"
 )
 
 // inboxPreview is a bounded UI row for the composer shelf (never full body).

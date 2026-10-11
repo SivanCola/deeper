@@ -10,8 +10,8 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 func TestDeleteSessionValidatesLocalBasenameBeforeCleanup(t *testing.T) {

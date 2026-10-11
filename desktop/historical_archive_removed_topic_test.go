@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 // Earlier purge writers dropped the deleted session's topic from every receipt,

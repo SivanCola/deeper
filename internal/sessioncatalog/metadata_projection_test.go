@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/historywork"
+	"deepzora/internal/historywork"
 )
 
 func TestMetadataIncrementalWaitingObservationCanCancel(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // Once a source-bound Serve supports the enhanced protocol, it owns refresh

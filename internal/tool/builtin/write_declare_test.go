@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func TestFileToolsDeclareParentDirectories(t *testing.T) {

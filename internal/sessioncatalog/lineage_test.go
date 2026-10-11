@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func saveLineageSession(t *testing.T, path string, messages ...string) {

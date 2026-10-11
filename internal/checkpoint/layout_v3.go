@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"deeper/internal/fileutil"
-	fileenc "deeper/internal/fileutil/encoding"
+	"deepzora/internal/fileutil"
+	fileenc "deepzora/internal/fileutil/encoding"
 )
 
 func (s *Store) turnsDir() string {

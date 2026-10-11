@@ -20,8 +20,8 @@ import (
 	"syscall"
 	"unicode"
 
-	"deeper/internal/attachment"
-	"deeper/internal/nilutil"
+	"deepzora/internal/attachment"
+	"deepzora/internal/nilutil"
 )
 
 // Role is the role of a message.
@@ -35,11 +35,11 @@ const (
 )
 
 // LocalOnlyToolName/ID make display-only records safe when a newer transcriptis opened by an older
-// Deeperbinary that does not know Message.LocalOnly.
+// Deepzorabinary that does not know Message.LocalOnly.
 // Oldwirenormalizationtreatsthisunmatchedtoolresultasanorphananddropsitinsteadofreplayingpartialcontenttothemodel.
 const (
-	LocalOnlyToolName = "__deeper_local_only__"
-	LocalOnlyToolID   = "__deeper_local_only__"
+	LocalOnlyToolName = "__deepzora_local_only__"
+	LocalOnlyToolID   = "__deepzora_local_only__"
 )
 
 // Message is a single conversation message.
@@ -213,7 +213,7 @@ type ToolCall struct {
 	Diff             string `json:"diff,omitempty"`
 	Added            int    `json:"added,omitempty"`
 	Removed          int    `json:"removed,omitempty"`
-	// Resolved* fields are Deeper-local display metadata for stable proxycalls such as use_capability.
+	// Resolved* fields are Deepzora-local display metadata for stable proxycalls such as use_capability.
 	// Provider request builders deliberatelyserialize only provider-visible fields,
 	// sothesevaluesneveraltertheprovider-visible conversation orprompt-cache prefix.
 	ResolvedName     string `json:"resolved_name,omitempty"`

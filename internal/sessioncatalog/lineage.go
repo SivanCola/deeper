@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // classifyRecoveryLineage assigns recovery_group_id, recovery_role, and

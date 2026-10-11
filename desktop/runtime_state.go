@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 type RuntimeSessionState struct {

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/mcplaunch"
+	"deepzora/internal/mcplaunch"
 )
 
 func TestStoredNPXLauncherLockUsesExactOfflinePackage(t *testing.T) {

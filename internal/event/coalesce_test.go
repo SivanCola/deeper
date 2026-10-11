@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 type checkedRecordSink struct {

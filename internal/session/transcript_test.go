@@ -3,10 +3,10 @@ package session
 import (
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/transcript"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/transcript"
+	"deepzora/internal/turnevent"
 )
 
 func TestRuntimeTranscriptCoverageIncludesNonVisibleBusinessCommits(t *testing.T) {

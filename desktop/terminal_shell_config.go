@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 // terminalCommandFromConfig follows the shell tool's configured-path safety

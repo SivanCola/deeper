@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 // forgetTool deletes a saved memory the model judges wrong or stale. Like

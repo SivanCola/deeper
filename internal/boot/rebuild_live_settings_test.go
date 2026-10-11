@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func liveSettingsFixture(t *testing.T) (*BuildResult, *config.Config, string) {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func TestTurnAppliesExternalCredentialSaveBeforeAuthentication(t *testing.T) {

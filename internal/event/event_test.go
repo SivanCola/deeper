@@ -4,8 +4,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
 )
 
 // Kind constants

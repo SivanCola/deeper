@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
 )
 
 type recordingSink struct {

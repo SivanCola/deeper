@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/serve"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/serve"
 )
 
 func TestRemoteModelOfferCapacityPreservesOwnedRoutes(t *testing.T) {
@@ -375,7 +375,7 @@ func TestRemoteModelSettingsLegacyServeHTMLIndexIsCapabilityRejection(t *testing
 		if r.Method == http.MethodGet {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("<!DOCTYPE html><html><body>Deeper</body></html>"))
+			_, _ = w.Write([]byte("<!DOCTYPE html><html><body>Deepzora</body></html>"))
 			return
 		}
 		mutations++

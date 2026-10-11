@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/transcript"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/transcript"
 )
 
 // The shape reproduces the reported long tool-driven turn without any copied

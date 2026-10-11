@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // topicMigrationMarker records a completed legacy→topic migration for the

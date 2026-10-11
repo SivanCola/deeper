@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestClassifyRunCompletionNamesTheFailureClass(t *testing.T) {

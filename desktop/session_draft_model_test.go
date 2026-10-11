@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/internal/config"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/internal/config"
 )
 
 func writeDraftDefaultModelConfig(t *testing.T, model string) {

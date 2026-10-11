@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 func (a *Agent) dispatchResolvedTool(ctx context.Context, plan *toolCallPlan) (result string, images []string, execution *tool.ShellExecution, err error) {

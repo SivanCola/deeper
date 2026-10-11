@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/sidecar"
-	"deeper/internal/extensioncontract"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/sidecar"
+	"deepzora/internal/extensioncontract"
 )
 
 func TestIntegrationNoOpDoesNotBuildNewController(t *testing.T) {

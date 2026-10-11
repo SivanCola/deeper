@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 var (

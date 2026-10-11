@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/historywork"
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/historywork"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 type cancelEventRead struct {

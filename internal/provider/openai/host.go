@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // matchesVendorHost reports whether baseURL points at one of the canonical

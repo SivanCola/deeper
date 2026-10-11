@@ -34,7 +34,7 @@ async function call(channel: string, ...args: unknown[]): Promise<unknown> {
 }
 
 function fire(channel: string, ...args: unknown[]): void {
-  void call(channel, ...args).catch((error: unknown) => console.warn(`[deeperDesktop] ${channel} failed`, error));
+  void call(channel, ...args).catch((error: unknown) => console.warn(`[deepzoraDesktop] ${channel} failed`, error));
 }
 
 function readContract(): ContractInfo {
@@ -59,7 +59,7 @@ function emit(name: string, args: unknown[]): void {
     try {
       listener(...args);
     } catch (error) {
-      console.error(`[deeperDesktop] listener for ${name} failed`, error);
+      console.error(`[deepzoraDesktop] listener for ${name} failed`, error);
     }
   }
 }
@@ -185,7 +185,7 @@ const browser = {
   onDownload,
 };
 
-contextBridge.exposeInMainWorld("deeperDesktop", {
+contextBridge.exposeInMainWorld("deepzoraDesktop", {
   kind: "electron",
   contract: readContract(),
   platform: {

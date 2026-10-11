@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // returnCurrentMirror refreshes the binding after pushLocked while sendMu

@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // TransientUserBlockTags names every block the host prepends to a user turn as

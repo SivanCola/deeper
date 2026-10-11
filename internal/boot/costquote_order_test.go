@@ -4,9 +4,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // TestCostQuoteReachesInnerSinkBeforeRecording documents the required wrap

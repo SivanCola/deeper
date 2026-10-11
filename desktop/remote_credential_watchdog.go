@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/remote/bootstrap"
+	"deepzora/internal/remote/bootstrap"
 )
 
 type credentialWatchdog struct {

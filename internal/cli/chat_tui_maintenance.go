@@ -3,9 +3,9 @@ package cli
 import (
 	tea "charm.land/bubbletea/v2"
 	"context"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 	"fmt"
 	"strings"
 )

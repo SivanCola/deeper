@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/tool"
+import "deepzora/internal/tool"
 
 // blockedToolOutcome shapes a tool's own refusal into the standard blocked
 // outcome, with the not-run shell metadata a blocked bash card renders.

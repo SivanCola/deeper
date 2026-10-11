@@ -1,4 +1,4 @@
-// Package sessioncatalog maintains a disposable SQLite projection of Deeper
+// Package sessioncatalog maintains a disposable SQLite projection of Deepzora
 // session sidecars. Session JSONL/event/meta files remain authoritative; every
 // row in this package may be discarded and rebuilt.
 package sessioncatalog
@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/historywork"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/historywork"
 )
 
 const (

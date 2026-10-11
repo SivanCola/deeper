@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 	"os"
 	"path/filepath"
 	"strings"

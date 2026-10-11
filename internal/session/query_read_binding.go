@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"deeper/internal/historywork"
+	"deepzora/internal/historywork"
 )
 
 type queryReadScope struct {

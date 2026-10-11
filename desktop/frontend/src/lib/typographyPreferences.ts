@@ -25,8 +25,8 @@ export type RegionTypography = {
 
 export type TypographyPreferences = Record<TypographyRegion, RegionTypography>;
 
-export const TYPOGRAPHY_STORAGE_KEY = "deeper-region-typography-v1";
-export const TYPOGRAPHY_CHANGE_EVENT = "deeper:typography-change";
+export const TYPOGRAPHY_STORAGE_KEY = "deepzora-region-typography-v1";
+export const TYPOGRAPHY_CHANGE_EVENT = "deepzora:typography-change";
 
 const typographyListeners = new Set<() => void>();
 let lastAppliedTypographySignature = "";

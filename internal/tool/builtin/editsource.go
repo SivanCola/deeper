@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/fileops"
-	fileenc "deeper/internal/fileutil/encoding"
-	"deeper/internal/tool"
+	"deepzora/internal/fileops"
+	fileenc "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/tool"
 )
 
 // editSource is the file state a read-modify-write tool works against, plus the

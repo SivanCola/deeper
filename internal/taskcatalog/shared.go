@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"deeper/internal/taskmonitor"
+	"deepzora/internal/taskmonitor"
 )
 
 type sharedManager struct {
@@ -232,5 +232,5 @@ func (m *sharedManager) catalogForNotification(projectRoot string) *Catalog {
 // is shared with the disposable catalog.
 func ObservedStore() taskmonitor.WriteStore {
 	ensureShared()
-	return taskmonitor.NewObservedFileStore(filepath.Join(".deeper", "tasks"), sharedSink{})
+	return taskmonitor.NewObservedFileStore(filepath.Join(".deepzora", "tasks"), sharedSink{})
 }

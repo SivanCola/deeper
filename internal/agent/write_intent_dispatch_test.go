@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 func TestPreparedToolContextPreservesDurableWriteIntentHook(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
 	"github.com/BurntSushi/toml"
 )
 

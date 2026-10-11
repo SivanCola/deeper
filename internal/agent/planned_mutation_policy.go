@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"deeper/internal/runtimepolicy"
+	"deepzora/internal/runtimepolicy"
 )
 
 // applyExecutionPreflight classifies the resolved call and applies the

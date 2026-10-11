@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"strings"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 type draftAdmissionProfile struct {

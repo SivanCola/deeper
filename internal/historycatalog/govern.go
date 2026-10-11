@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 const (

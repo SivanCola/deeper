@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func writeSchemaTwoSession(t *testing.T, path string) (*agent.Session, *agent.Session) {

@@ -9,8 +9,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/i18n"
-	"deeper/internal/skill"
+	"deepzora/internal/i18n"
+	"deepzora/internal/skill"
 )
 
 var scopePriority = map[skill.Scope]int{

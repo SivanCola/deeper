@@ -116,9 +116,9 @@ The final-SHA package gate runs once before pushing. Build with
 and run:
 
 ```sh
-node desktop/packaging/smoke.mjs /isolated/Deeper.app
+node desktop/packaging/smoke.mjs /isolated/Deepzora.app
 node desktop/packaging/attachment-native-smoke.mjs \
-  /isolated/Deeper.app /isolated/evidence
+  /isolated/Deepzora.app /isolated/evidence
 ```
 
 The attachment fixture launches the production Electron shell and bundled

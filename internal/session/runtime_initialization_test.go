@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // Both messages have valid canonical identities, but their display records

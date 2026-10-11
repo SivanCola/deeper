@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func loadedGoalDraftMode(goal string) bool {

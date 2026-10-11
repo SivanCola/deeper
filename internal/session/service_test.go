@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestServiceForkAndRewindUsePersistedTurnBoundaries(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // The lease registry folds session paths through agent.CanonicalSessionPath

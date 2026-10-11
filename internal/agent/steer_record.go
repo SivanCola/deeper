@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 // UnappliedSteerNotice returns the durable warning shown for guidance that was

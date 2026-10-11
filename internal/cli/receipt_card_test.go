@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 var ansiSequence = regexp.MustCompile(`\x1b\[[0-9;]*m`)

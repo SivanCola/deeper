@@ -2,13 +2,13 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/event"
+	"deepzora/internal/event"
 	"encoding/json"
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // stubGate denies any call whose tool name is in deny; everything else allows.

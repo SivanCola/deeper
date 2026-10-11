@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func dingtalkConfigFromView(view DingtalkBotView, current config.DingtalkBotConfig) config.DingtalkBotConfig {

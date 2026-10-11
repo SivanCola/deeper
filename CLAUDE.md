@@ -1,6 +1,6 @@
-# Deeper
+# Deepzora
 
-The project's standing instructions live in `DEEPER.md` — one file, read by
-both Deeper and Claude Code. Add rules there, never here.
+The project's standing instructions live in `DEEPZORA.md` — one file, read by
+both Deepzora and Claude Code. Add rules there, never here.
 
-@DEEPER.md
+@DEEPZORA.md

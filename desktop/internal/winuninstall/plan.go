@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	CurrentKeyName = "DeeperDeeper"
-	LegacyKeyName  = "Deeper"
+	CurrentKeyName = "DeepzoraDeepzora"
+	LegacyKeyName  = "Deepzora"
 )
 
 type Registration struct {
@@ -29,7 +29,7 @@ type ReconcilePlan struct {
 }
 
 // Plan returns the safe per-user uninstall-registration mutation for an
-// installed Deeper tree. Portable trees have no owned registration and no
+// installed Deepzora tree. Portable trees have no owned registration and no
 // root uninstaller, so they deliberately produce a no-op plan.
 func Plan(current, legacy *Registration, installRoot, version string, uninstallerPresent bool) (ReconcilePlan, error) {
 	root := cleanWindowsPath(installRoot)
@@ -60,11 +60,11 @@ func Plan(current, legacy *Registration, installRoot, version string, uninstalle
 	return ReconcilePlan{
 		Managed: true,
 		Desired: Registration{
-			DisplayName:          "Deeper",
+			DisplayName:          "Deepzora",
 			DisplayVersion:       strings.TrimPrefix(version, "v"),
-			Publisher:            "Deeper",
+			Publisher:            "Deepzora",
 			InstallLocation:      root,
-			DisplayIcon:          joinWindowsPath(root, "Deeper.exe"),
+			DisplayIcon:          joinWindowsPath(root, "Deepzora.exe"),
 			UninstallString:      quoteWindowsPath(uninstaller),
 			QuietUninstallString: quoteWindowsPath(uninstaller) + " /S",
 		},
@@ -73,7 +73,7 @@ func Plan(current, legacy *Registration, installRoot, version string, uninstalle
 }
 
 func registrationOwnsRoot(reg *Registration, root string) bool {
-	if reg == nil || !strings.EqualFold(strings.TrimSpace(reg.DisplayName), "Deeper") {
+	if reg == nil || !strings.EqualFold(strings.TrimSpace(reg.DisplayName), "Deepzora") {
 		return false
 	}
 	if sameWindowsPath(reg.InstallLocation, root) {

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 	"strings"
 	"sync"
 	"testing"

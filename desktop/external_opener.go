@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 const (
@@ -343,7 +343,7 @@ func copyLocalPathAs(path, target string) (err error) {
 		return fmt.Errorf("destination is the same as the source")
 	}
 
-	tmp, err := os.CreateTemp(filepath.Dir(target), "."+filepath.Base(target)+".deeper-copy-*")
+	tmp, err := os.CreateTemp(filepath.Dir(target), "."+filepath.Base(target)+".deepzora-copy-*")
 	if err != nil {
 		return err
 	}

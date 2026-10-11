@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func (t *WorkspaceTab) sessionRuntimeLookupKeys() []string {

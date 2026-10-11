@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"deeper/desktop/internal/hostrpc"
+	"deepzora/desktop/internal/hostrpc"
 )
 
 // rpcNativeHost implements nativeHost over host/* requests to the Electron

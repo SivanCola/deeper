@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // slashCompletionCache memoizes the two expensive completion snapshots: the

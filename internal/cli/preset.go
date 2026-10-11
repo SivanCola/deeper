@@ -5,8 +5,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/agentpreset"
-	"deeper/internal/i18n"
+	"deepzora/internal/agentpreset"
+	"deepzora/internal/i18n"
 )
 
 // /preset, /work-mode, and /profile remain as hidden compatibility commands.

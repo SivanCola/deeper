@@ -7,14 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
 )
 
 func writeLegacyGoalArchive(t *testing.T, root, taskID, goal string) string {
 	t.Helper()
-	taskRoot := filepath.Join(root, ".deeper", "autoresearch", taskID)
+	taskRoot := filepath.Join(root, ".deepzora", "autoresearch", taskID)
 	if err := os.MkdirAll(filepath.Join(taskRoot, "state"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -425,7 +425,7 @@ func TestLegacyArchiveMigrationWriteFailureRemainsBlockedAndRetryable(t *testing
 		t.Fatal(err)
 	}
 	c.goals.setStatePath(filepath.Join(blockedParent, "goal.json"))
-	rawGoal := "resume .deeper/autoresearch/" + taskID + "/"
+	rawGoal := "resume .deepzora/autoresearch/" + taskID + "/"
 	_, _, _ = c.goals.setLegacyArchiveBlocked(rawGoal, budgetClassResearch, "retry migration")
 	_, epoch, ok := c.goals.legacyArchiveBlockedState()
 	if !ok {
@@ -465,7 +465,7 @@ func TestLegacyArchiveMigrationWriteFailureRemainsBlockedAndRetryable(t *testing
 
 func TestStaleLegacyArchiveRetryCannotReplaceNewGoal(t *testing.T) {
 	var g goalMachine
-	g.setLegacyArchiveBlocked("resume .deeper/autoresearch/old/", budgetClassResearch, "missing")
+	g.setLegacyArchiveBlocked("resume .deepzora/autoresearch/old/", budgetClassResearch, "missing")
 	_, epoch, ok := g.legacyArchiveBlockedState()
 	if !ok {
 		t.Fatal("legacy archive block state unavailable")
@@ -577,7 +577,7 @@ func TestExplicitLegacyGoalRetryNeverRunsArchivePathAsGoal(t *testing.T) {
 	defer c.Close()
 
 	const taskID = "repair-explicit-archive"
-	rawGoal := "resume .deeper/autoresearch/" + taskID + "/"
+	rawGoal := "resume .deepzora/autoresearch/" + taskID + "/"
 	c.SetGoal(rawGoal)
 	if got := c.GoalStatus(); got != GoalStatusBlocked {
 		t.Fatalf("initial status = %q, want blocked", got)
@@ -616,7 +616,7 @@ func TestMalformedLegacyArchivePathCannotResumeAsGoalText(t *testing.T) {
 	c := newOwnedTestController(t, Options{WorkspaceRoot: t.TempDir()})
 	defer c.Close()
 
-	c.SetGoal("resume .deeper/autoresearch/../escape")
+	c.SetGoal("resume .deepzora/autoresearch/../escape")
 	if c.GoalStatus() != GoalStatusBlocked {
 		t.Fatalf("status = %q, want blocked", c.GoalStatus())
 	}
@@ -631,7 +631,7 @@ func TestMalformedLegacyArchivePathCannotResumeAsGoalText(t *testing.T) {
 func TestMalformedExplicitLegacyGoalStaysBlockedAfterRestart(t *testing.T) {
 	root := t.TempDir()
 	sessionPath := filepath.Join(root, "sessions", "s.jsonl")
-	rawGoal := "resume .deeper/autoresearch/bad-task/../../escape"
+	rawGoal := "resume .deepzora/autoresearch/bad-task/../../escape"
 
 	exec1 := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
 	c1 := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionDir: root, Executor: exec1})
@@ -661,7 +661,7 @@ func TestMissingLegacyGoalCommandDoesNotStartProviderTurn(t *testing.T) {
 	c := newOwnedTestController(t, Options{WorkspaceRoot: t.TempDir(), Runner: runner})
 	t.Cleanup(c.Close)
 
-	if !c.applyGoalCommand("/goal resume .deeper/autoresearch/missing-task/", "") {
+	if !c.applyGoalCommand("/goal resume .deepzora/autoresearch/missing-task/", "") {
 		t.Fatal("legacy Goal command was not parsed")
 	}
 	if c.Running() {
@@ -686,11 +686,11 @@ func TestUnreadableExplicitLegacyArchiveBlocks(t *testing.T) {
 	c := newOwnedTestController(t, Options{WorkspaceRoot: root})
 	t.Cleanup(c.Close)
 
-	c.SetGoal("resume .deeper/autoresearch/" + taskID + "/")
+	c.SetGoal("resume .deepzora/autoresearch/" + taskID + "/")
 	if got := c.GoalStatus(); got != GoalStatusBlocked {
 		t.Fatalf("GoalStatus() = %q, want blocked", got)
 	}
-	if got := c.Goal(); got != "resume .deeper/autoresearch/"+taskID+"/" {
+	if got := c.Goal(); got != "resume .deepzora/autoresearch/"+taskID+"/" {
 		t.Fatalf("Goal() = %q, archive goal must not be trusted", got)
 	}
 }

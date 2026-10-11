@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"deeper/internal/completion"
-	"deeper/internal/event"
+	"deepzora/internal/completion"
+	"deepzora/internal/event"
 )
 
 // completionReceipt projects the report onto the delivery shape. Runs with

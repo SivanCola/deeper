@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 const projectCollisionMarker = ".workspace-root"

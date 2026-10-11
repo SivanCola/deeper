@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import type { DeeperDesktopHost } from "../lib/desktopHost";
+import type { DeepzoraDesktopHost } from "../lib/desktopHost";
 
 const dom = new JSDOM('<div id="root"></div>', { url: "http://localhost/" });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage, IS_REACT_ACT_ENVIRONMENT: true });
@@ -12,7 +12,7 @@ let expire = false;
 let fail = false;
 let held: (() => void) | undefined;
 const releases: string[] = [];
-window.deeperDesktop = {
+window.deepzoraDesktop = {
   kind: "electron", contract: { commands: ["ListHistorySessions", "SearchHistoryContent", "ReleaseReadSnapshot"] },
   native: { window: {} },
   on: (name: string, cb: (...args: unknown[]) => void) => { listeners.set(name, cb); return () => { listeners.delete(name); }; },
@@ -28,7 +28,7 @@ window.deeperDesktop = {
     const end = Math.min(105, offset + req.limit);
     return { items: Array.from({ length: end - offset }, (_, i) => ({ sessionPath: "/fixture", messageIndex: offset + i, partIndex: 0, snippet: String(offset + i) })), nextCursor: end < 105 ? String(end) : "", snapshotId: "search", revision: calls, partial: false, staleCursor: false, status: { indexed: 1, total: 1 } };
   },
-} as unknown as DeeperDesktopHost;
+} as unknown as DeepzoraDesktopHost;
 const { useHistoryCatalog } = await import("../lib/useHistoryCatalog");
 let state!: ReturnType<typeof useHistoryCatalog>;
 function Harness() { state = useHistoryCatalog({ isTrash: false, suppliedSessions: [], scope: "all", status: "all", timeFilter: "all", query: "marker" }); return <div>{state.searchHits.length}:{state.error}</div>; }

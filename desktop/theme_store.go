@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 func themeStatePath() string {
@@ -357,7 +357,7 @@ func writeThemeStaging(m *ThemePackManifest, imagePath string, imageBytes []byte
 	if err := validateThemePackManifest(m); err != nil {
 		return "", err
 	}
-	staging, err = os.MkdirTemp("", "deeper-theme-stage-*")
+	staging, err = os.MkdirTemp("", "deepzora-theme-stage-*")
 	if err != nil {
 		return "", err
 	}

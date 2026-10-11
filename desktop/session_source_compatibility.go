@@ -13,12 +13,12 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	"deeper/internal/session"
-	"deeper/internal/topicstate"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/session"
+	"deepzora/internal/topicstate"
 )
 
 func desktopSourceKey(path, head string) string {

@@ -13,7 +13,7 @@ import (
 
 func TestResolveInstallRootThroughDirectoryJunction(t *testing.T) {
 	root := t.TempDir()
-	launcher := filepath.Join(root, "deeper-launcher.exe")
+	launcher := filepath.Join(root, "deepzora-launcher.exe")
 	if err := os.WriteFile(launcher, []byte("launcher"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestResolveInstallRootThroughDirectoryJunction(t *testing.T) {
 		t.Fatalf("create directory junction: %v: %s", err, output)
 	}
 
-	got, err := resolveInstallRoot(filepath.Join(junction, "deeper-launcher.exe"))
+	got, err := resolveInstallRoot(filepath.Join(junction, "deepzora-launcher.exe"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +54,10 @@ func TestNormalizeFinalWindowsPath(t *testing.T) {
 		path string
 		want string
 	}{
-		{name: "drive", path: `\\?\C:\Apps\Deeper`, want: `C:\Apps\Deeper`},
-		{name: "UNC", path: `\\?\UNC\server\share\Deeper`, want: `\\server\share\Deeper`},
-		{name: "volume GUID", path: `\\?\Volume{abc}\Deeper`, want: `\\?\Volume{abc}\Deeper`},
-		{name: "ordinary", path: `C:\Apps\Deeper`, want: `C:\Apps\Deeper`},
+		{name: "drive", path: `\\?\C:\Apps\Deepzora`, want: `C:\Apps\Deepzora`},
+		{name: "UNC", path: `\\?\UNC\server\share\Deepzora`, want: `\\server\share\Deepzora`},
+		{name: "volume GUID", path: `\\?\Volume{abc}\Deepzora`, want: `\\?\Volume{abc}\Deepzora`},
+		{name: "ordinary", path: `C:\Apps\Deepzora`, want: `C:\Apps\Deepzora`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -77,13 +77,13 @@ func TestClassifyLaunchLocation(t *testing.T) {
 		wantErr   bool
 		wantQuery bool
 	}{
-		{name: "Parallels UNC", path: `\\psf\Home\Desktop\Deeper`, want: launchLocationUNC},
-		{name: "ordinary UNC", path: `\\server\share\Deeper`, want: launchLocationUNC},
-		{name: "mapped remote drive", path: `Z:\Deeper`, driveType: windows.DRIVE_REMOTE, want: launchLocationRemoteDrive, wantQuery: true},
-		{name: "local fixed drive", path: `C:\Deeper`, driveType: windows.DRIVE_FIXED, want: launchLocationLocal, wantQuery: true},
-		{name: "local removable drive", path: `E:\Deeper`, driveType: windows.DRIVE_REMOVABLE, want: launchLocationLocal, wantQuery: true},
-		{name: "unknown drive", path: `Q:\Deeper`, driveType: windows.DRIVE_UNKNOWN, wantErr: true, wantQuery: true},
-		{name: "missing volume", path: `Deeper`, wantErr: true},
+		{name: "Parallels UNC", path: `\\psf\Home\Desktop\Deepzora`, want: launchLocationUNC},
+		{name: "ordinary UNC", path: `\\server\share\Deepzora`, want: launchLocationUNC},
+		{name: "mapped remote drive", path: `Z:\Deepzora`, driveType: windows.DRIVE_REMOTE, want: launchLocationRemoteDrive, wantQuery: true},
+		{name: "local fixed drive", path: `C:\Deepzora`, driveType: windows.DRIVE_FIXED, want: launchLocationLocal, wantQuery: true},
+		{name: "local removable drive", path: `E:\Deepzora`, driveType: windows.DRIVE_REMOVABLE, want: launchLocationLocal, wantQuery: true},
+		{name: "unknown drive", path: `Q:\Deepzora`, driveType: windows.DRIVE_UNKNOWN, wantErr: true, wantQuery: true},
+		{name: "missing volume", path: `Deepzora`, wantErr: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func forkLegacyVersion(t *testing.T, legacy *agent.Session, path, kind, name, answer string) string {

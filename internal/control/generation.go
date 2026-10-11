@@ -1,8 +1,8 @@
 package control
 
 import (
-	"deeper/internal/event"
-	"deeper/internal/extension"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
 )
 
 // RuntimePhase is the observable publish/drain phase for this controller.

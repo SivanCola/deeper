@@ -19,7 +19,7 @@ export function sendPersistedComposer<T>(tabId: string, display: string, submit:
  const task = (async () => {
   const complete = await beginPersistedComposerSubmission(tabId,id,JSON.stringify({kind,display,submit}),expectedEdit,sourceKey,owner);
   try {
-    if (tabs.get(tabId) !== sourceKey || tabOwners.get(tabId) !== owner) throw new Error("deeper_error:inbox_not_submitted");
+    if (tabs.get(tabId) !== sourceKey || tabOwners.get(tabId) !== owner) throw new Error("deepzora_error:inbox_not_submitted");
     const result = await send();
     await complete?.("accepted");
     return result;
@@ -84,7 +84,7 @@ async function load(entry: Entry) {
       const content=parse(state.contentJson);
       entry.state = state; entry.content = content; entry.error = undefined; entry.unreadable = false;
       const tabId = [...tabs].find(([, key]) => key === keyFor(entry.ref))?.[0];
-      if (tabId && content.workspaceRefs.some(ref => ref.isDir && ref.path.startsWith("__deeper_external_folder/"))) {
+      if (tabId && content.workspaceRefs.some(ref => ref.isDir && ref.path.startsWith("__deepzora_external_folder/"))) {
         const { restoreExternalFolderReferences } = await import("./attachmentSubmit");
         await restoreExternalFolderReferences(app, {kind:"session",session:entry.ref,tabId}, content.workspaceRefs);
       }
@@ -154,7 +154,7 @@ export async function beginPersistedComposerSubmission(tabId: string, submission
   const entry = key ? entries.get(key) : undefined;
   if (!entry) return undefined;
   await flush(entry);
-  if (!owner || tabs.get(tabId) !== key || tabOwners.get(tabId) !== owner) throw new Error("deeper_error:inbox_not_submitted");
+  if (!owner || tabs.get(tabId) !== key || tabOwners.get(tabId) !== owner) throw new Error("deepzora_error:inbox_not_submitted");
   if (expectedEdit !== undefined && entry.version !== expectedEdit) throw new Error("Input changed while preparing submission; review and send again");
   if (exiting || !entry.state || locked(entry)) throw new Error("Review the saved input before sending");
   const submittedVersion = entry.version;

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 func TestArchiveRuntimeMutationOutlastsBriefBackgroundHolders(t *testing.T) {

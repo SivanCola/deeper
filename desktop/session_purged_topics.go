@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func (a *App) validatePlaceholderTopicOpen(topicID, sessionPath string) error {

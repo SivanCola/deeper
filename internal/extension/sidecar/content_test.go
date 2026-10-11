@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/extension/protocol"
+	"deepzora/internal/extension/protocol"
 )
 
 // readAll pages a content ref through ReadHandler the way an extension would

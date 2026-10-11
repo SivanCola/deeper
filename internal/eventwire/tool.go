@@ -3,8 +3,8 @@ package eventwire
 import (
 	"encoding/json"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // Tool is the JSON form of an event.Tool.

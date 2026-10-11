@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 )
 
 func renderModels(width int, refs []string, active string) string {

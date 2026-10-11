@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/plugin"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/plugin"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestSkillDiagnosticsFollowRuntimeBindingScope(t *testing.T) {

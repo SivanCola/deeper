@@ -3,8 +3,8 @@ package boot
 import (
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/plugin"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
 )
 
 // capabilityServerInventory adds explicitly supplied host-session servers to

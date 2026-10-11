@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func TestRemoveWorkspaceBlocksNewProjectRuntimeAdmissionDuringSnapshot(t *testing.T) {

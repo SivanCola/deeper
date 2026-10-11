@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestStableRecoveryPathPeelsNestedNames(t *testing.T) {
@@ -34,17 +34,17 @@ func TestSaveRecoveryBranchStampsStableRootDepth(t *testing.T) {
 		t.Fatalf("parent = %q, want root %q", info.Meta.ParentID, BranchID(path))
 	}
 
-	deeper, staleDeeper := divergedSessionPair(t, dir, "deeper.jsonl")
-	stampRecoveryMeta(t, deeper, 1)
-	info, err = staleDeeper.SaveRecoveryBranch(RecoveryBranchOptions{OriginalPath: deeper})
+	deepzora, staleDeepzora := divergedSessionPair(t, dir, "deepzora.jsonl")
+	stampRecoveryMeta(t, deepzora, 1)
+	info, err = staleDeepzora.SaveRecoveryBranch(RecoveryBranchOptions{OriginalPath: deepzora})
 	if err != nil {
 		t.Fatalf("SaveRecoveryBranch from recovered file: %v", err)
 	}
 	if info.Meta.RecoveryDepth != 1 {
 		t.Fatalf("stable fork depth = %d, want 1", info.Meta.RecoveryDepth)
 	}
-	if info.Meta.ParentID != recoveryRootID(deeper) {
-		t.Fatalf("parent = %q, want root %q", info.Meta.ParentID, recoveryRootID(deeper))
+	if info.Meta.ParentID != recoveryRootID(deepzora) {
+		t.Fatalf("parent = %q, want root %q", info.Meta.ParentID, recoveryRootID(deepzora))
 	}
 
 	capped, staleCapped := divergedSessionPair(t, dir, "capped.jsonl")

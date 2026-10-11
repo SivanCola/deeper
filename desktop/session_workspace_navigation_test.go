@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 func TestOpenSessionSelectsLocalTabAfterRemote(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // Submission receipts introduced by #10392 are host metadata. Migration must

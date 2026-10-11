@@ -4,10 +4,10 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/extension"
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/extension"
+	"deepzora/internal/skill/skillwatch"
 )
 
 func TestRuntimeDoctorEmptyApp(t *testing.T) {

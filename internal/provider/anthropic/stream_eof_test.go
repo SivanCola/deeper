@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // Compatible Anthropic gateways often omit message_stop after message_delta

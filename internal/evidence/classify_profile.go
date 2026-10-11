@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"deeper/internal/shellsafe"
+	"deepzora/internal/shellsafe"
 )
 
 // ClassifyEffect returns the concrete effect profile for one invocation.

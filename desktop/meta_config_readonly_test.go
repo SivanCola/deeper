@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestTabMetaExtrasRefreshDoesNotPinCredentials(t *testing.T) {

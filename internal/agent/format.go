@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // responseFormatContextKey carries a per-turn structured-output request through

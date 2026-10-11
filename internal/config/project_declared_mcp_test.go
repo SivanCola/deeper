@@ -19,7 +19,7 @@ func enabledNames(entries []PluginEntry) []string {
 func writeProjectDeclaredServers(t *testing.T) (home, root string) {
 	t.Helper()
 	home, root = t.TempDir(), t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", home)
@@ -34,7 +34,7 @@ func writeProjectDeclaredServers(t *testing.T) (home, root string) {
 name = "user-stdio"
 command = "user-server"
 `)
-	mustWrite(filepath.Join(root, "deeper.toml"), `
+	mustWrite(filepath.Join(root, "deepzora.toml"), `
 [[plugins]]
 name = "toml-stdio"
 command = "project-server"
@@ -127,7 +127,7 @@ func TestProjectDecisionHoldsOnlyForTheApprovedDeclaration(t *testing.T) {
 		change func(root string) error
 	}{
 		{"command args", func(root string) error {
-			return os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[[plugins]]\nname = \"srv\"\ncommand = \"./server.sh\"\nargs = [\"--other\"]\n"), 0o600)
+			return os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte("[[plugins]]\nname = \"srv\"\ncommand = \"./server.sh\"\nargs = [\"--other\"]\n"), 0o600)
 		}},
 		{"workspace executable content", func(root string) error {
 			return os.WriteFile(filepath.Join(root, "server.sh"), []byte("#!/bin/sh\necho changed\n"), 0o700)
@@ -138,13 +138,13 @@ func TestProjectDecisionHoldsOnlyForTheApprovedDeclaration(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			home, root := t.TempDir(), t.TempDir()
-			t.Setenv("DEEPER_HOME", home)
+			t.Setenv("DEEPZORA_HOME", home)
 			t.Setenv("HOME", home)
 			t.Setenv("XDG_CONFIG_HOME", home)
 			t.Setenv("SRV_FLAG", "")
 			os.Unsetenv("SRV_FLAG")
 			for name, body := range map[string]string{
-				"deeper.toml": "[[plugins]]\nname = \"srv\"\ncommand = \"./server.sh\"\nargs = [\"${SRV_FLAG}\"]\n",
+				"deepzora.toml": "[[plugins]]\nname = \"srv\"\ncommand = \"./server.sh\"\nargs = [\"${SRV_FLAG}\"]\n",
 				"server.sh":   "#!/bin/sh\necho ok\n",
 				".env":        "SRV_FLAG=--ok\n",
 			} {
@@ -172,7 +172,7 @@ func TestProjectDecisionHoldsOnlyForTheApprovedDeclaration(t *testing.T) {
 
 func TestProjectDotEnvDoesNotExpandUserLevelServers(t *testing.T) {
 	home, root := t.TempDir(), t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", home)
 	t.Setenv("USER_SRV_OPTS", "")
@@ -189,15 +189,15 @@ func TestProjectDotEnvDoesNotExpandUserLevelServers(t *testing.T) {
 	}
 }
 
-// Carrying a decision across a Deeper edit covers only the declaration that
+// Carrying a decision across a Deepzora edit covers only the declaration that
 // edit wrote; a different one found afterwards stays unapproved.
 func TestKeptDecisionDoesNotCoverAnotherWritersDeclaration(t *testing.T) {
 	home, root := t.TempDir(), t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", home)
 	toml := func(arg string) error {
-		return os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[[plugins]]\nname = \"srv\"\ncommand = \"server\"\nargs = [\""+arg+"\"]\n"), 0o600)
+		return os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte("[[plugins]]\nname = \"srv\"\ncommand = \"server\"\nargs = [\""+arg+"\"]\n"), 0o600)
 	}
 	if err := toml("--approved"); err != nil {
 		t.Fatal(err)
@@ -237,7 +237,7 @@ func TestKeptDecisionDoesNotCoverAnotherWritersDeclaration(t *testing.T) {
 	}
 }
 
-// Inputs the declaration draws from the workspace that change while Deeper
+// Inputs the declaration draws from the workspace that change while Deepzora
 // writes an edit are not covered by the decision the edit carries.
 func TestKeptDecisionRejectsInputsChangedDuringTheEdit(t *testing.T) {
 	for _, tc := range []struct {
@@ -248,12 +248,12 @@ func TestKeptDecisionRejectsInputsChangedDuringTheEdit(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			home, root := t.TempDir(), t.TempDir()
-			t.Setenv("DEEPER_HOME", home)
+			t.Setenv("DEEPZORA_HOME", home)
 			t.Setenv("HOME", home)
 			t.Setenv("XDG_CONFIG_HOME", home)
 			t.Setenv("ENTRY", "")
 			os.Unsetenv("ENTRY")
-			for name, body := range map[string]string{"deeper.toml": tc.toml, tc.file: tc.before} {
+			for name, body := range map[string]string{"deepzora.toml": tc.toml, tc.file: tc.before} {
 				if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0o600); err != nil {
 					t.Fatal(err)
 				}

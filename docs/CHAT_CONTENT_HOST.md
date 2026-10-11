@@ -2,7 +2,7 @@
 
 ## Scope and source
 
-The production chat path adopts the content layering, compact process rows, call inspection, and file-artifact interactions of DeepSeek Harness `c291e7961a515f6d7af9304e7fd1d257929aef26`, while retaining Deeper session protocols, permissions, the built-in `present` tool, resource APIs, and Electron workspace.
+The production chat path adopts the content layering, compact process rows, call inspection, and file-artifact interactions of DeepSeek Harness `c291e7961a515f6d7af9304e7fd1d257929aef26`, while retaining Deepzora session protocols, permissions, the built-in `present` tool, resource APIs, and Electron workspace.
 
 ```text
 controller / history / LiveStream / remote events
@@ -37,7 +37,7 @@ Read only, Workspace write, and Full access remain unchanged. The composer, stop
 
 A completed turn folds only when it has a confirmed answer and complete process boundary. Running, cancelled, interrupted, terminally failed, tool-only, and partial-history turns stay expanded. A recovered tool failure may fold with the successful turn, while its failure count remains visible. A manual expansion is not overridden by later streaming updates.
 
-Folding unmounts Markdown, diagrams, terminal output, and detail subtrees. Deeper intentionally does not retain Harness `hidden="until-found"` DOM, so browser find covers mounted content only.
+Folding unmounts Markdown, diagrams, terminal output, and detail subtrees. Deepzora intentionally does not retain Harness `hidden="until-found"` DOM, so browser find covers mounted content only.
 
 ## Trusted tool and file facts
 

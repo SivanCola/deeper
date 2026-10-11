@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 type forkTargetsController interface {

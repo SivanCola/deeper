@@ -64,7 +64,7 @@
 }
 
 .settings-center__search {
-  --deeper-draggable: no-drag;
+  --deepzora-draggable: no-drag;
   flex-shrink: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

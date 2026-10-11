@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 func requireTabPreset(t *testing.T, app *App, tab *WorkspaceTab, sessionID, want string) {
@@ -294,7 +294,7 @@ func TestStalePresetChoiceDoesNotLandOnNavigatedSession(t *testing.T) {
 	if !errors.Is(err, errPermissionSessionChanged) {
 		t.Fatalf("stale choice for %s on %s: err = %v, want errPermissionSessionChanged", refA.SessionID, refB.SessionID, err)
 	}
-	if !strings.Contains(err.Error(), "deeper_error:"+permissionSessionChangedCode) {
+	if !strings.Contains(err.Error(), "deepzora_error:"+permissionSessionChangedCode) {
 		t.Fatalf("bridge error %q does not carry the refusal code", err)
 	}
 	if got, ok := recordedSessionPresets(t)[refB.SessionID]; ok {

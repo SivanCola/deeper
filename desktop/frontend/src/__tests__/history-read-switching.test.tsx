@@ -3,7 +3,7 @@ import { mock } from "node:test";
 import { JSDOM } from "jsdom";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import type { DeeperDesktopHost } from "../lib/desktopHost";
+import type { DeepzoraDesktopHost } from "../lib/desktopHost";
 import type { SessionMeta } from "../lib/types";
 
 const dom = new JSDOM('<div id="root"></div>', { url: "http://localhost/" });
@@ -11,14 +11,14 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, l
 type Request = { workspaceRoot: string; cursor: string };
 const reads: { name: string; req: Request; resolve: (page: unknown) => void }[] = [];
 const released: string[] = [];
-window.deeperDesktop = {
+window.deepzoraDesktop = {
   kind: "electron", contract: { commands: ["ListHistorySessions", "SearchHistoryContent", "ReleaseReadSnapshot"] }, native: { window: {} },
   on: () => () => {},
   invoke: (name: string, args: unknown[]) => {
     if (name === "ReleaseReadSnapshot") { released.push(String(args[0])); return Promise.resolve(); }
     return new Promise(resolve => reads.push({ name, req: args[0] as Request, resolve }));
   },
-} as unknown as DeeperDesktopHost;
+} as unknown as DeepzoraDesktopHost;
 const { useHistoryCatalog } = await import("../lib/useHistoryCatalog");
 let state!: ReturnType<typeof useHistoryCatalog>;
 function Harness({ project, session, trash = false, sessionId }: { project: string; session: string; trash?: boolean; sessionId?: string }) {

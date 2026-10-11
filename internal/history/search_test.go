@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestSearchRanksSavedSessionHistory(t *testing.T) {
@@ -18,7 +18,7 @@ func TestSearchRanksSavedSessionHistory(t *testing.T) {
 
 	writeSession(t, filepath.Join(sessionDir, "first.jsonl"), []provider.Message{
 		{Role: provider.RoleUser, Content: "We need a cache-first implementation."},
-		{Role: provider.RoleAssistant, Content: "Decision: keep the prefix stable and avoid CGO SQLite for Deeper history retrieval."},
+		{Role: provider.RoleAssistant, Content: "Decision: keep the prefix stable and avoid CGO SQLite for Deepzora history retrieval."},
 	})
 	writeSession(t, filepath.Join(sessionDir, "second.jsonl"), []provider.Message{
 		{Role: provider.RoleUser, Content: "Talk about dashboard colors."},

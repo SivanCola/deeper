@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/attachment"
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/attachment"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func TestHistoricalImageLossDoesNotBlockTextOrHealthyImages(t *testing.T) {

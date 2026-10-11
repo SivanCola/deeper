@@ -28,7 +28,7 @@ try {
   assert.equal(hasConfirmedFullAccessForProject(otherProject), false);
   assert.equal(hasConfirmedFullAccessForProject(remoteProject), false);
 
-  localStorage.setItem("deeper-full-access-confirmed-projects-v1", "not-json");
+  localStorage.setItem("deepzora-full-access-confirmed-projects-v1", "not-json");
   assert.equal(hasConfirmedFullAccessForProject(project), false, "invalid persisted data fails safely");
   rememberFullAccessConfirmationForProject(project);
   assert.equal(hasConfirmedFullAccessForProject(project), true, "invalid persisted data can be repaired by a new confirmation");

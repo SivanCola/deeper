@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ErrInvalidFunctionCall identifies a malformed function call in completed output.

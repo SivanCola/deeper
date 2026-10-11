@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 func (a *App) metadataTopicPage(req ProjectTopicPageRequest) (ProjectTopicPage, error) {

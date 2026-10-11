@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func sessionOrderInfoIsHiddenRecovery(info agent.SessionOrderInfo, parentDir string) bool {

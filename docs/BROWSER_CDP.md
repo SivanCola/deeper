@@ -3,7 +3,7 @@
 [简体中文](BROWSER_CDP.zh-CN.md)
 
 The [desktop browser](DESKTOP_BROWSER.md) gives the agent a Chromium surface
-the user shares, served by the Electron shell. CLI, `deeper serve`, and
+the user shares, served by the Electron shell. CLI, `deepzora serve`, and
 headless sessions have no shell behind them, so the same `browser_*` tools were
 registered and then failed closed with no host to answer them.
 
@@ -19,7 +19,7 @@ unchanged — only who answers them is new.
 enabled = true
 ```
 
-That is the whole ordinary path. On the first browser tool call Deeper
+That is the whole ordinary path. On the first browser tool call Deepzora
 launches a Chrome it owns, in a throwaway profile, and kills it with the
 session. Nothing is launched at session start: a session that never touches a
 browser never pays for one.
@@ -42,7 +42,7 @@ endpoint = "http://127.0.0.1:9222"
 | `enabled` | Off by default. On means the tools get a real browser. |
 | `endpoint` | A running Chrome's DevTools endpoint. Empty launches one. |
 | `allow_remote_endpoint` | Permits a non-loopback endpoint. Off by default. |
-| `chrome_path` | Browser binary. Empty searches the usual Chrome, Chromium, and Edge locations, then `DEEPER_CHROME` and `CHROME_PATH`. |
+| `chrome_path` | Browser binary. Empty searches the usual Chrome, Chromium, and Edge locations, then `DEEPZORA_CHROME` and `CHROME_PATH`. |
 | `chrome_args` | Extra launch flags, for example a proxy. |
 | `user_data_dir` | Profile for a launched browser. Empty uses a throwaway directory, so logins never outlive the session. |
 | `headless` | Launch without a window. |
@@ -126,7 +126,7 @@ The unit tests run against a scripted DevTools server. The injected page helper
 exercised against a real browser:
 
 ```bash
-DEEPER_LIVE_CHROME=1 go test ./internal/browser/cdp -run '^TestLiveChrome$' -v -count=1
+DEEPZORA_LIVE_CHROME=1 go test ./internal/browser/cdp -run '^TestLiveChrome$' -v -count=1
 ```
 
 That test needs a Chrome install and stays skipped otherwise.

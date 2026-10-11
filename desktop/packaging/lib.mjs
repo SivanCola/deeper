@@ -18,12 +18,12 @@ export function runBuildScript(directory, script, args = [], env = {}) {
 }
 
 export const PRODUCT = Object.freeze({
-  name: "Deeper",
-  executable: "Deeper",
-  bundleId: "io.github.sivancola.deeper",
-  serviceExecutable: "deeper-desktop",
-  cliExecutable: "deeper",
-  windowsCliExecutable: "deeper-cli",
+  name: "Deepzora",
+  executable: "Deepzora",
+  bundleId: "com.deepzora.desktop",
+  serviceExecutable: "deepzora-desktop",
+  cliExecutable: "deepzora",
+  windowsCliExecutable: "deepzora-cli",
   category: "public.app-category.developer-tools",
 });
 
@@ -72,7 +72,7 @@ export function displayVersion(tag) {
 export function readProductIdentity() {
   return {
     projectName: PRODUCT.serviceExecutable,
-    companyName: "Deeper",
+    companyName: "Deepzora",
     productName: PRODUCT.name,
     copyright: "Copyright © 2026 Reasonix Contributors and Deeper Contributors",
   };
@@ -149,9 +149,9 @@ export function nsisProjectDefines(identity, version) {
     `!define INFO_COMPANYNAME "${identity.companyName}"`,
     `!define INFO_PRODUCTNAME "${identity.productName}"`,
     `!define INFO_PRODUCTVERSION "${versions.resource}"`,
-    `!define DEEPER_DISPLAY_VERSION "${versions.display}"`,
+    `!define DEEPZORA_DISPLAY_VERSION "${versions.display}"`,
     `!define INFO_COPYRIGHT "${identity.copyright}"`,
-    `!define DEEPER_VERSION_TAG "${versions.canonical}"`,
+    `!define DEEPZORA_VERSION_TAG "${versions.canonical}"`,
   ];
   // makensis only decodes an include as UTF-8 when it carries a BOM; the copyright sign needs it.
   return "﻿" + lines.join("\r\n") + "\r\n";
@@ -184,12 +184,12 @@ export function parseSigningFileList(text) {
 }
 
 export const WINDOWS_FLAT_PAYLOAD = Object.freeze([
-  "deeper-desktop.exe",
-  "deeper-guard.exe",
-  "deeper-launcher.exe",
-  "deeper-update-helper.exe",
-  "deeper-cli.exe",
-  "deeper-uninstall.exe",
+  "deepzora-desktop.exe",
+  "deepzora-guard.exe",
+  "deepzora-launcher.exe",
+  "deepzora-update-helper.exe",
+  "deepzora-cli.exe",
+  "deepzora-uninstall.exe",
 ]);
 
 const APP_RESOURCES = ["resources/app.asar", "resources/app/index.html", "resources/build.json", "resources/icons/appicon.png", "resources/icons/trayTemplate.png", "resources/icons/trayTemplate@2x.png"];
@@ -202,8 +202,8 @@ function darwinBundleMembers() {
     `Contents/MacOS/${PRODUCT.serviceExecutable}`,
     `Contents/Resources/service/${PRODUCT.serviceExecutable}`,
     // The CLI sidecar lives in Resources/service/, never Contents/MacOS/: on
-    // case-insensitive APFS "deeper" there collides with the Electron main
-    // executable "Deeper" and cp would clobber it.
+    // case-insensitive APFS "deepzora" there collides with the Electron main
+    // executable "Deepzora" and cp would clobber it.
     `Contents/Resources/service/${PRODUCT.cliExecutable}`,
     "Contents/Resources/app.asar",
     "Contents/Resources/app/index.html",
@@ -221,10 +221,10 @@ const VERSION_DIR = "versions/v[^/]+";
 const PACKAGING_JUNK = /(^|\/)(?:[^/]+\.map|__tests__|testdata|\.cache|coverage|npm-debug\.log|pnpm-debug\.log|yarn-error\.log)(?:$|\/)/;
 
 const MEMBERS = {
-  "darwin-app-dir": { required: darwinBundleMembers(), forbidden: ["Contents/MacOS/deeper-guard"] },
+  "darwin-app-dir": { required: darwinBundleMembers(), forbidden: ["Contents/MacOS/deepzora-guard"] },
   "darwin-zip": {
     required: darwinBundleMembers().map((name) => `${PRODUCT.name}.app/${name}`),
-    forbidden: [`${PRODUCT.name}.app/Contents/MacOS/deeper-guard`],
+    forbidden: [`${PRODUCT.name}.app/Contents/MacOS/deepzora-guard`],
   },
   "windows-app-dir": {
     required: [`${PRODUCT.executable}.exe`, "ffmpeg.dll", "libEGL.dll", "libGLESv2.dll", "resources.pak", "icudtl.dat", "locales/en-US.pak", ...APP_RESOURCES],
@@ -235,38 +235,38 @@ const MEMBERS = {
       `${PRODUCT.executable}.exe`,
       `${PRODUCT.windowsCliExecutable}.exe`,
       "current.json",
-      new RegExp(`^${VERSION_DIR}/deeper-desktop\\.exe$`),
-      new RegExp(`^${VERSION_DIR}/deeper-update-helper\\.exe$`),
-      new RegExp(`^${VERSION_DIR}/deeper-cli\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/deepzora-desktop\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/deepzora-update-helper\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/deepzora-cli\\.exe$`),
       new RegExp(`^${VERSION_DIR}/app/${PRODUCT.executable}\\.exe$`),
-      new RegExp(`^${VERSION_DIR}/app/resources/bin/deeper-cli-launcher\\.exe$`),
+      new RegExp(`^${VERSION_DIR}/app/resources/bin/deepzora-cli-launcher\\.exe$`),
       new RegExp(`^${VERSION_DIR}/app/resources/app\\.asar$`),
       new RegExp(`^${VERSION_DIR}/app/resources/app/index\\.html$`),
       new RegExp(`^${VERSION_DIR}/app/resources/build\\.json$`),
     ],
-    forbidden: ["deeper-guard.exe", "deeper-desktop.exe"],
+    forbidden: ["deepzora-guard.exe", "deepzora-desktop.exe"],
   },
   "linux-app-dir": {
     required: [PRODUCT.executable, "chrome-sandbox", "chrome_crashpad_handler", "libffmpeg.so", "resources.pak", "locales/en-US.pak", ...APP_RESOURCES],
     forbidden: [],
   },
   "linux-tar": {
-    required: ["deeper-desktop", "deeper-launcher", "deeper-guard", "deeper", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
+    required: ["deepzora-desktop", "deepzora-launcher", "deepzora-guard", "deepzora", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
     forbidden: [],
   },
   "linux-deb": {
     required: [
-      "usr/bin/deeper-desktop",
-      "usr/bin/deeper-launcher",
-      "usr/bin/deeper",
-      "usr/lib/deeper/deeper-update-helper",
-      `usr/lib/deeper/app/${PRODUCT.executable}`,
-      "usr/lib/deeper/app/chrome-sandbox",
-      ...APP_RESOURCES.map((name) => `usr/lib/deeper/app/${name}`),
-      "usr/share/polkit-1/actions/io.github.sivancola.deeper.update.policy",
-      "usr/share/applications/deeper.desktop",
+      "usr/bin/deepzora-desktop",
+      "usr/bin/deepzora-launcher",
+      "usr/bin/deepzora",
+      "usr/lib/deepzora/deepzora-update-helper",
+      `usr/lib/deepzora/app/${PRODUCT.executable}`,
+      "usr/lib/deepzora/app/chrome-sandbox",
+      ...APP_RESOURCES.map((name) => `usr/lib/deepzora/app/${name}`),
+      "usr/share/polkit-1/actions/com.deepzora.desktop.update.policy",
+      "usr/share/applications/deepzora.desktop",
     ],
-    forbidden: ["usr/bin/deeper-guard"],
+    forbidden: ["usr/bin/deepzora-guard"],
   },
 };
 
@@ -280,8 +280,8 @@ function memberSpec(kind, portableLayout) {
   if (!spec) throw new Error(`unknown artifact kind ${JSON.stringify(kind)}`);
   if (kind !== "windows-portable-zip") return spec;
   return portableLayout === "legacy-dual"
-    ? { required: [...spec.required, "deeper-launcher.exe"], forbidden: spec.forbidden }
-    : { required: spec.required, forbidden: [...spec.forbidden, "deeper-launcher.exe"] };
+    ? { required: [...spec.required, "deepzora-launcher.exe"], forbidden: spec.forbidden }
+    : { required: spec.required, forbidden: [...spec.forbidden, "deepzora-launcher.exe"] };
 }
 
 export function requiredMembers(kind, portableLayout = "canonical") {
@@ -294,7 +294,7 @@ export function checkMembers(entries, kind, portableLayout = "canonical") {
   const matches = (rule) => (rule instanceof RegExp ? [...names].some((name) => rule.test(name)) : names.has(rule));
   const forbidden = [...spec.forbidden, PACKAGING_JUNK].filter((rule) => matches(rule)).map(String);
   if (kind === "windows-portable-zip") {
-    const rootEntries = new Set(["Deeper.exe", "deeper-cli.exe", ...(portableLayout === "legacy-dual" ? ["deeper-launcher.exe"] : [])]);
+    const rootEntries = new Set(["Deepzora.exe", "deepzora-cli.exe", ...(portableLayout === "legacy-dual" ? ["deepzora-launcher.exe"] : [])]);
     for (const name of names) {
       if (!name.includes("/") && /\.(exe|dll)$/i.test(name) && !rootEntries.has(name) && !forbidden.includes(name)) forbidden.push(name);
     }
@@ -363,8 +363,8 @@ export function elfInterpreter(bytes) {
 }
 
 const LINUX_GO_MEMBERS = {
-  "linux-tar": ["deeper-desktop", "deeper-launcher", "deeper-guard", "deeper"],
-  "linux-deb": ["usr/bin/deeper-desktop", "usr/bin/deeper-launcher", "usr/bin/deeper", "usr/lib/deeper/deeper-update-helper"],
+  "linux-tar": ["deepzora-desktop", "deepzora-launcher", "deepzora-guard", "deepzora"],
+  "linux-deb": ["usr/bin/deepzora-desktop", "usr/bin/deepzora-launcher", "usr/bin/deepzora", "usr/lib/deepzora/deepzora-update-helper"],
 };
 
 export function checkStaticGoMembers(kind, readMember) {
@@ -414,8 +414,8 @@ export function inferArtifactKind(pathname, isDirectory, entries = []) {
     if (entries.includes("chrome-sandbox")) return "linux-app-dir";
     throw new Error(`cannot infer the artifact kind of directory ${pathname}`);
   }
-  if (/^Deeper-darwin-.*\.zip$/.test(name)) return "darwin-zip";
-  if (/^Deeper-windows-.*\.zip$/.test(name)) return "windows-portable-zip";
+  if (/^Deepzora-darwin-.*\.zip$/.test(name)) return "darwin-zip";
+  if (/^Deepzora-windows-.*\.zip$/.test(name)) return "windows-portable-zip";
   if (name.endsWith(".tar.gz")) return "linux-tar";
   if (name.endsWith(".deb")) return "linux-deb";
   throw new Error(`cannot infer the artifact kind of ${pathname}`);

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 // cacheTagCtrl stubs the two SessionAPI reads cacheTag performs; every other

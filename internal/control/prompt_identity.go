@@ -7,8 +7,8 @@ import (
 	"sort"
 	"sync"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 type PendingPromptOwner struct {

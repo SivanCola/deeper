@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 // Exercise the reported ordering on disposable state, including a retired

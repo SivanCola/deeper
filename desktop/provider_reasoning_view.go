@@ -1,6 +1,6 @@
 package main
 
-import "deeper/internal/config"
+import "deepzora/internal/config"
 
 func providerModelCapabilitiesForView(p config.ProviderEntry, models []string) []ProviderModelCapabilityView {
 	resolver := config.NewModelCapabilityResolver()

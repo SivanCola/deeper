@@ -9,13 +9,13 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/capability"
-	"deeper/internal/event"
-	"deeper/internal/plugin"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/capability"
+	"deepzora/internal/event"
+	"deepzora/internal/plugin"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestRunSkillMissingNestedArgumentsDoesNotStartSubagent(t *testing.T) {
@@ -47,7 +47,7 @@ func TestRunSkillMissingNestedArgumentsDoesNotStartSubagent(t *testing.T) {
 }
 
 func TestMCPInvalidArgumentsDoNotCallRemote(t *testing.T) {
-	t.Setenv("DEEPER_CACHE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_CACHE_HOME", t.TempDir())
 	var toolCalls atomic.Int32
 	server := requiredQueryMCPServer(t, &toolCalls)
 	defer server.Close()
@@ -76,7 +76,7 @@ func TestMCPInvalidArgumentsDoNotCallRemote(t *testing.T) {
 	}
 	valid := a.executeOne(ctx, &a.turn, provider.ToolCall{
 		ID: "mcp-good", Name: "use_capability",
-		Arguments: `{"action":"call","capability_id":"mcp-tool:svc/search","arguments":{"q":"deeper"}}`,
+		Arguments: `{"action":"call","capability_id":"mcp-tool:svc/search","arguments":{"q":"deepzora"}}`,
 	})
 	if valid.errMsg != "" {
 		t.Fatalf("valid call = %+v", valid)

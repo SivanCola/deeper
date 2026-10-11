@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestStreamUsesConfiguredRequestURLExactly(t *testing.T) {

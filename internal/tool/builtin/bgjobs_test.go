@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/jobs"
-	"deeper/internal/planmode"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/jobs"
+	"deepzora/internal/planmode"
+	"deepzora/internal/tool"
 )
 
 // End-to-end through the actual tools: a background bash job runs under a manager

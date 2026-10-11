@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 func TestReadPauseKeepsItsTerminalOutcome(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestNativePairedHistoryResolutionPreservesNewestSource(t *testing.T) {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 // ParallelTasksTool dispatches multiple read-only sub-agent tasks concurrently

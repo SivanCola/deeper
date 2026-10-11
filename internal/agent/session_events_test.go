@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func sessionWithTurns(t *testing.T, path string, turns int) *Session {
@@ -707,7 +707,7 @@ func TestSessionsShareContentSeesEventLogDivergence(t *testing.T) {
 	}
 
 	// Grow A normally, then restore its old compatibility checkpoint to model a
-	// crash or an older Deeper build that did not advance the display read
+	// crash or an older Deepzora build that did not advance the display read
 	// model. Transcript equality must still follow the event log.
 	anchorB, err := os.ReadFile(pathB)
 	if err != nil {

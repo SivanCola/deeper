@@ -8,33 +8,33 @@ import (
 
 func TestShortcutRepairPolicy(t *testing.T) {
 	root := t.TempDir()
-	launcher := filepath.Join(root, "deeper-launcher.exe")
+	launcher := filepath.Join(root, "deepzora-launcher.exe")
 	if err := os.WriteFile(launcher, []byte("launcher"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	electron := filepath.Join(root, "versions", "v1.38.6", "app", "Deeper.exe")
-	goDesktop := filepath.Join(root, "versions", "v1.20.0", "deeper-desktop.exe")
-	flat := filepath.Join(root, "deeper-desktop.exe")
+	electron := filepath.Join(root, "versions", "v1.38.6", "app", "Deepzora.exe")
+	goDesktop := filepath.Join(root, "versions", "v1.20.0", "deepzora-desktop.exe")
+	flat := filepath.Join(root, "deepzora-desktop.exe")
 	customIcon := filepath.Join(root, "custom.ico")
 	for _, tt := range []struct {
 		name, target, icon, id string
 		want                   shortcutRepair
 	}{
 		{"new pin", launcher, "", "", shortcutRepair{identity: AppUserModelID}},
-		{"legacy pin", launcher, "", "Deeper", shortcutRepair{identity: AppUserModelID}},
+		{"legacy pin", launcher, "", "Deepzora", shortcutRepair{identity: AppUserModelID}},
 		{"healthy", launcher, launcher, AppUserModelID, shortcutRepair{}},
-		{"versioned electron", electron, electron, "Deeper", shortcutRepair{target: launcher, icon: launcher, identity: AppUserModelID}},
+		{"versioned electron", electron, electron, "Deepzora", shortcutRepair{target: launcher, icon: launcher, identity: AppUserModelID}},
 		{"versioned Go", goDesktop, goDesktop, "", shortcutRepair{target: launcher, icon: launcher, identity: AppUserModelID}},
-		{"flat electron", filepath.Join(root, "app", "Deeper.exe"), "", "Deeper", shortcutRepair{target: launcher, identity: AppUserModelID}},
+		{"flat electron", filepath.Join(root, "app", "Deepzora.exe"), "", "Deepzora", shortcutRepair{target: launcher, identity: AppUserModelID}},
 		{"custom icon", electron, customIcon, "", shortcutRepair{target: launcher, identity: AppUserModelID}},
 		{"missing flat", flat, flat, "", shortcutRepair{target: launcher, icon: launcher, identity: AppUserModelID}},
 		{"current ID stale target", electron, launcher, AppUserModelID, shortcutRepair{target: launcher}},
 		{"stable target stale icon", launcher, electron, AppUserModelID, shortcutRepair{icon: launcher}},
-		{"studio ID", electron, electron, "io.github.sivancola.deeper.studio", shortcutRepair{}},
-		{"Tauri ID", electron, electron, "io.github.sivancola.deeper.dev", shortcutRepair{}},
+		{"studio ID", electron, electron, "com.deepzora.desktop.studio", shortcutRepair{}},
+		{"Tauri ID", electron, electron, "com.deepzora.desktop.dev", shortcutRepair{}},
 		{"unknown ID", electron, electron, "Custom.App", shortcutRepair{}},
-		{"other install", filepath.Join(t.TempDir(), "Deeper.exe"), electron, "Deeper", shortcutRepair{}},
-		{"Studio executable", filepath.Join(root, "Deeper Studio.exe"), electron, "Deeper", shortcutRepair{}},
+		{"other install", filepath.Join(t.TempDir(), "Deepzora.exe"), electron, "Deepzora", shortcutRepair{}},
+		{"Studio executable", filepath.Join(root, "Deepzora Studio.exe"), electron, "Deepzora", shortcutRepair{}},
 		{"unrelated executable", filepath.Join(root, "other.exe"), electron, "", shortcutRepair{}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -55,7 +55,7 @@ func TestShortcutRepairPolicy(t *testing.T) {
 	if err := os.Remove(launcher); err != nil {
 		t.Fatal(err)
 	}
-	if got := planShortcutRepair(electron, electron, "Deeper", root, false); got != (shortcutRepair{identity: AppUserModelID}) {
+	if got := planShortcutRepair(electron, electron, "Deepzora", root, false); got != (shortcutRepair{identity: AppUserModelID}) {
 		t.Fatalf("missing launcher must not create a dangling entry: %+v", got)
 	}
 }
@@ -69,7 +69,7 @@ func TestShortcutOwnershipResolvesLinksBeforeCheckingLayout(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(root, "versions", "v1.0.0")); err != nil {
 		t.Skipf("symbolic links unavailable: %v", err)
 	}
-	for _, suffix := range []string{"deeper-desktop.exe", filepath.Join("app", "Deeper.exe")} {
+	for _, suffix := range []string{"deepzora-desktop.exe", filepath.Join("app", "Deepzora.exe")} {
 		if ownedShortcutTarget(filepath.Join(root, "versions", "v1.0.0", suffix), root) {
 			t.Fatalf("external target %s treated as owned", suffix)
 		}
@@ -78,18 +78,18 @@ func TestShortcutOwnershipResolvesLinksBeforeCheckingLayout(t *testing.T) {
 	if err := os.Symlink(root, alias); err != nil {
 		t.Fatal(err)
 	}
-	if !ownedShortcutTarget(filepath.Join(alias, "versions", "v2.0.0", "app", "Deeper.exe"), root) {
+	if !ownedShortcutTarget(filepath.Join(alias, "versions", "v2.0.0", "app", "Deepzora.exe"), root) {
 		t.Fatal("alias of the owned root with a pruned version must remain repairable")
 	}
-	if ownedShortcutTarget(filepath.Join(root, "Deeper.exe"), filepath.Join(root, "missing-root")) {
+	if ownedShortcutTarget(filepath.Join(root, "Deepzora.exe"), filepath.Join(root, "missing-root")) {
 		t.Fatal("missing installation root must not establish ownership")
 	}
 }
 
 func TestCanonicalShortcutMigratesLegacyButPreservesCustomProperties(t *testing.T) {
 	root := t.TempDir()
-	canonical := filepath.Join(root, "Deeper.exe")
-	legacy := filepath.Join(root, "deeper-launcher.exe")
+	canonical := filepath.Join(root, "Deepzora.exe")
+	legacy := filepath.Join(root, "deepzora-launcher.exe")
 	for _, path := range []string{canonical, legacy} {
 		if err := os.WriteFile(path, []byte("launcher"), 0o600); err != nil {
 			t.Fatal(err)
@@ -102,7 +102,7 @@ func TestCanonicalShortcutMigratesLegacyButPreservesCustomProperties(t *testing.
 		{"legacy stable", legacy, legacy, AppUserModelID, shortcutRepair{target: canonical, icon: canonical}},
 		{"custom icon", legacy, filepath.Join(root, "custom.ico"), AppUserModelID, shortcutRepair{target: canonical}},
 		{"canonical", canonical, canonical, AppUserModelID, shortcutRepair{}},
-		{"foreign identity", legacy, legacy, "io.github.sivancola.deeper.studio", shortcutRepair{}},
+		{"foreign identity", legacy, legacy, "com.deepzora.desktop.studio", shortcutRepair{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := planShortcutRepair(tc.target, tc.icon, tc.id, root, true); got != tc.want {
@@ -110,7 +110,7 @@ func TestCanonicalShortcutMigratesLegacyButPreservesCustomProperties(t *testing.
 			}
 		})
 	}
-	oldTarget := filepath.Join(root, "versions", "v1.38.9", "app", "Deeper.exe")
+	oldTarget := filepath.Join(root, "versions", "v1.38.9", "app", "Deepzora.exe")
 	for _, tc := range []struct {
 		dir  string
 		want bool

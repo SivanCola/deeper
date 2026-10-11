@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // turnOrchestrator owns foreground turn execution while Controller keeps the

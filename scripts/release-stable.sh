@@ -12,7 +12,7 @@ fi
 candidate_id="$1"
 operation="${2:-publish}"
 case "$operation" in publish | recover) ;; *) echo "operation must be publish or recover" >&2; exit 2 ;; esac
-repository="${RELEASE_REPOSITORY:-SivanCola/deeper}"
+repository="${RELEASE_REPOSITORY:-SivanCola/deepzora}"
 
 for command in gh jq; do
 	command -v "$command" >/dev/null || { echo "required command is unavailable: $command" >&2; exit 2; }

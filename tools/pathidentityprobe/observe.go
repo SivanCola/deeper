@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"unicode/utf16"
 
-	"deeper/internal/pathidentity"
+	"deepzora/internal/pathidentity"
 )
 
 type failure struct {
@@ -40,8 +40,8 @@ type observation struct {
 	Lstat       outcome `json:"lstat"`
 	Readlink    outcome `json:"readlink"`
 	Eval        outcome `json:"filepath_eval_symlinks"`
-	Resolve     outcome `json:"deeper_resolve_follow_leaf"`
-	Preserve    outcome `json:"deeper_resolve_preserve_leaf"`
+	Resolve     outcome `json:"deepzora_resolve_follow_leaf"`
+	Preserve    outcome `json:"deepzora_resolve_preserve_leaf"`
 	Native      outcome `json:"windows_native"`
 }
 
@@ -106,7 +106,7 @@ func defaultPaths(current *user.User, extra []string) []string {
 		identity = strings.TrimSpace(current.HomeDir)
 	}
 	digest := sha256.Sum256([]byte(identity))
-	locks := filepath.Join(current.HomeDir, ".deeper", "locks", fmt.Sprintf("config-edits-%x", digest[:8]))
+	locks := filepath.Join(current.HomeDir, ".deepzora", "locks", fmt.Sprintf("config-edits-%x", digest[:8]))
 	paths := []string{locks}
 	entries, err := os.ReadDir(locks)
 	if err == nil {
@@ -120,7 +120,7 @@ func defaultPaths(current *user.User, extra []string) []string {
 		}
 	}
 	// Never create this entry: it exercises the existing-ancestor branch.
-	paths = append(paths, filepath.Join(locks, "deeper-probe-uncreated-child", "absent.lock"))
+	paths = append(paths, filepath.Join(locks, "deepzora-probe-uncreated-child", "absent.lock"))
 	paths = append(paths, extra...)
 	var result []string
 	seen := map[string]bool{}

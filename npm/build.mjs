@@ -39,9 +39,9 @@ mkdirSync(STAGE, { recursive: true });
 
 const subPackages = [];
 for (const t of TARGETS) {
-  const name = `@sivancola/deeper-cli-${t.node}`;
+  const name = `@sivancola/deepzora-cli-${t.node}`;
   const dir = join(STAGE, `cli-${t.node}`);
-  const exe = t.goos === "windows" ? "deeper.exe" : "deeper";
+  const exe = t.goos === "windows" ? "deepzora.exe" : "deepzora";
   mkdirSync(join(dir, "bin"), { recursive: true });
 
   console.log(`build ${t.goos}/${t.goarch} -> ${name}`);
@@ -51,10 +51,10 @@ for (const t of TARGETS) {
       "build",
       "-trimpath",
       "-ldflags",
-      `-s -w -X main.version=${binaryVersion} -X main.gitCommit=${gitCommit} -X main.buildTimeUTC=${buildTimeUTC} -X deeper/internal/productdocs.linkedVersion=${binaryVersion} -X deeper/internal/productdocs.linkedRevision=${candidateSha}`,
+      `-s -w -X main.version=${binaryVersion} -X main.gitCommit=${gitCommit} -X main.buildTimeUTC=${buildTimeUTC} -X deepzora/internal/productdocs.linkedVersion=${binaryVersion} -X deepzora/internal/productdocs.linkedRevision=${candidateSha}`,
       "-o",
       join(dir, "bin", exe),
-      "./cmd/deeper",
+      "./cmd/deepzora",
     ],
     {
       cwd: ROOT,
@@ -69,16 +69,16 @@ for (const t of TARGETS) {
       {
         name,
         version,
-        description: `deeper prebuilt binary for ${t.node}.`,
+        description: `deepzora prebuilt binary for ${t.node}.`,
         os: [t.goos === "windows" ? "win32" : t.goos],
         cpu: [t.goarch === "amd64" ? "x64" : "arm64"],
         files: ["bin/", "LICENSE", "NOTICE"],
         license: "MIT",
         repository: {
           type: "git",
-          url: "git+https://github.com/SivanCola/deeper.git",
+          url: "git+https://github.com/SivanCola/deepzora.git",
         },
-        deeperCandidateSha: candidateSha,
+        deepzoraCandidateSha: candidateSha,
       },
       null,
       2,
@@ -88,28 +88,28 @@ for (const t of TARGETS) {
   subPackages.push({ name, dir });
 }
 
-const mainDir = join(STAGE, "deeper");
+const mainDir = join(STAGE, "deepzora");
 mkdirSync(mainDir, { recursive: true });
-cpSync(join(HERE, "deeper", "bin"), join(mainDir, "bin"), { recursive: true });
+cpSync(join(HERE, "deepzora", "bin"), join(mainDir, "bin"), { recursive: true });
 cpSync(join(ROOT, "README.md"), join(mainDir, "README.md"));
 for (const file of ["LICENSE", "NOTICE"]) cpSync(join(ROOT, file), join(mainDir, file));
 
 const mainPkg = JSON.parse(
-  readFileSync(join(HERE, "deeper", "package.json"), "utf8"),
+  readFileSync(join(HERE, "deepzora", "package.json"), "utf8"),
 );
 mainPkg.version = version;
-mainPkg.deeperCandidateSha = candidateSha;
+mainPkg.deepzoraCandidateSha = candidateSha;
 for (const key of Object.keys(mainPkg.optionalDependencies)) {
   mainPkg.optionalDependencies[key] = version;
 }
 // Guard against drift between the platform packages we build and the
 // optionalDependencies the main package declares: a typo would otherwise ship
 // a main package referencing a binary package that was never built.
-const expectedNames = TARGETS.map((t) => `@sivancola/deeper-cli-${t.node}`);
+const expectedNames = TARGETS.map((t) => `@sivancola/deepzora-cli-${t.node}`);
 const writtenNames = Object.keys(mainPkg.optionalDependencies);
 const missing = expectedNames.filter((name) => !writtenNames.includes(name));
 const unexpected = writtenNames.filter(
-  (key) => !/^@sivancola\/deeper-cli-/.test(key) || !expectedNames.includes(key),
+  (key) => !/^@sivancola\/deepzora-cli-/.test(key) || !expectedNames.includes(key),
 );
 if (missing.length > 0 || unexpected.length > 0) {
   throw new Error(
@@ -134,7 +134,7 @@ if (!publish) {
 // reuses packages that already prove the same candidate SHA, fills only missing
 // packages, and never moves latest/next/canary back to an older version.
 publishPackages({
-  packages: [...subPackages, { name: "@sivancola/deeper", dir: mainDir }],
+  packages: [...subPackages, { name: "@sivancola/deepzora", dir: mainDir }],
   version,
   candidateSha,
   stableDistTag: stableDistTagFromEnv(),

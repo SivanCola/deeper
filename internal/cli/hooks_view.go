@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/hook"
+	"deepzora/internal/hook"
 )
 
 func renderHooks(width int, hooks []hook.ResolvedHook) string {
@@ -24,6 +24,6 @@ func renderHooks(width int, hooks []hook.ResolvedHook) string {
 			h.Event, viewMeta(fmt.Sprintf("%-8s", h.Scope)), viewMeta(fmt.Sprintf("%-8s", match)), viewCompactText(h.Command, viewBudget(width, used)))
 	}
 	b.WriteByte('\n')
-	b.WriteString(viewHint(viewCompactText("config: project .deeper/settings.json + global <Deeper home>/settings.json", viewBudget(width, 2))))
+	b.WriteString(viewHint(viewCompactText("config: project .deepzora/settings.json + global <Deepzora home>/settings.json", viewBudget(width, 2))))
 	return strings.TrimRight(b.String(), "\n")
 }

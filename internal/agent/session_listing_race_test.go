@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestSessionListingBackfillDoesNotOverwriteNewerCounts(t *testing.T) {

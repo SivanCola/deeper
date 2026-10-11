@@ -1,9 +1,9 @@
 package acp
 
-import "deeper/internal/billing"
+import "deepzora/internal/billing"
 
-// DeeperUsage reports inclusive totals alongside cache and reasoning subsets.
-type DeeperUsage struct {
+// DeepzoraUsage reports inclusive totals alongside cache and reasoning subsets.
+type DeepzoraUsage struct {
 	TotalTokens      int                `json:"totalTokens"`
 	PromptTokens     int                `json:"promptTokens"`
 	CompletionTokens int                `json:"completionTokens"`
@@ -23,7 +23,7 @@ type DeeperUsage struct {
 	UsageSource      string             `json:"usageSource"`
 }
 
-type DeeperStatusUsage struct {
-	Turn       DeeperUsage `json:"turn"`
-	Cumulative DeeperUsage `json:"cumulative"`
+type DeepzoraStatusUsage struct {
+	Turn       DeepzoraUsage `json:"turn"`
+	Cumulative DeepzoraUsage `json:"cumulative"`
 }

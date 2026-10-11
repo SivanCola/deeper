@@ -56,7 +56,7 @@ func legacyKeyringGetBounded(ctx context.Context, get func() (string, error)) (v
 
 // lookupLegacyKeyringBatch probes keys under a single shared deadline in-process.
 // There is no external helper entrypoint: secrets never leave the process via
-// stdout or a caller-controlled DEEPER_HOME dump path.
+// stdout or a caller-controlled DEEPZORA_HOME dump path.
 func lookupLegacyKeyringBatch(keys []string, budget time.Duration) map[string]legacyKeyringOutcome {
 	out := make(map[string]legacyKeyringOutcome, len(keys))
 	if len(keys) == 0 {

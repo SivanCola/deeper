@@ -12,7 +12,7 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 )
 
 func TestV4CodecExternalizesLargePayloadAndRoundTripsExactBytes(t *testing.T) {

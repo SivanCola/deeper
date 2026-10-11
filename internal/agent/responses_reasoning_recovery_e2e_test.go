@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/provider/responses"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/responses"
 )
 
 const responsesToolWithoutReasoningSSE = `data: {"type":"response.output_item.added","item":{"id":"fc_1","type":"function_call","call_id":"call_1","name":"echo"}}

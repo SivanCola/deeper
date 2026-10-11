@@ -66,7 +66,7 @@ async function main() {
   rejecting.uninstall();
 
   reloads = 0;
-  delete (globalThis as any).window.deeperDesktop;
+  delete (globalThis as any).window.deepzoraDesktop;
   paintCrashOverlay(buildCrashPayload("react", new Error("render exploded")));
   restartButton()?.click();
   await flush();

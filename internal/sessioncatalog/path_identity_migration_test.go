@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 func TestPathIdentityMigrationsInvalidateLegacyProjectionForAuthoritativeRebuild(t *testing.T) {

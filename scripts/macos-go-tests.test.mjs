@@ -7,16 +7,16 @@ import { fileURLToPath } from "node:url";
 import { darwinRoots, selectPackages, testArgs } from "./macos-go-tests.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const packages = ["deeper/cmd/deeper", "deeper/internal/agent", "deeper/internal/cli",
-  "deeper/internal/cli/theme", "deeper/internal/clipboard", "deeper/internal/sandbox",
-  "deeper/internal/tool/builtin", "deeper/internal/toolbox", "deeper/tools/repolint"];
+const packages = ["deepzora/cmd/deepzora", "deepzora/internal/agent", "deepzora/internal/cli",
+  "deepzora/internal/cli/theme", "deepzora/internal/clipboard", "deepzora/internal/sandbox",
+  "deepzora/internal/tool/builtin", "deepzora/internal/toolbox", "deepzora/tools/repolint"];
 
 test("the pull-request group keeps darwin packages and drops the rest", () => {
-  assert.deepEqual(selectPackages(packages, "darwin"), ["deeper/internal/cli",
-    "deeper/internal/cli/theme", "deeper/internal/sandbox", "deeper/internal/tool/builtin"]);
+  assert.deepEqual(selectPackages(packages, "darwin"), ["deepzora/internal/cli",
+    "deepzora/internal/cli/theme", "deepzora/internal/sandbox", "deepzora/internal/tool/builtin"]);
   // Prefix matching must not swallow a sibling that merely shares a name stem.
-  assert.ok(!selectPackages(packages, "darwin").includes("deeper/internal/clipboard"));
-  assert.ok(!selectPackages(packages, "darwin").includes("deeper/internal/toolbox"));
+  assert.ok(!selectPackages(packages, "darwin").includes("deepzora/internal/clipboard"));
+  assert.ok(!selectPackages(packages, "darwin").includes("deepzora/internal/toolbox"));
   assert.deepEqual(selectPackages(packages, "full"), packages);
   assert.deepEqual(testArgs(packages, "darwin").slice(0, 2), ["test", "-timeout=8m"]);
   assert.throws(() => testArgs(packages, "typo"), /Unknown/);
@@ -38,7 +38,7 @@ test("every darwin-specific package is inside the pull-request group", () => {
       if (!entry.name.endsWith(".go")) continue;
       const darwin = /_darwin(_test)?\.go$/.test(entry.name)
         || /^\/\/go:build[^\n]*\bdarwin\b/m.test(readFileSync(full, "utf8").slice(0, 2048));
-      if (darwin) owners.add(`deeper/${path.relative(root, dir).replaceAll(path.sep, "/")}`);
+      if (darwin) owners.add(`deepzora/${path.relative(root, dir).replaceAll(path.sep, "/")}`);
     }
   };
   for (const top of ["internal", "cmd"]) walk(path.join(root, top));

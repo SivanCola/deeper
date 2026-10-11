@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"deeper/internal/diff"
-	"deeper/internal/readcoord"
-	"deeper/internal/tool"
+	"deepzora/internal/diff"
+	"deepzora/internal/readcoord"
+	"deepzora/internal/tool"
 	udiff "github.com/aymanbagabas/go-udiff"
 )
 

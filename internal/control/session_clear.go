@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
 )
 
 // ClearSession discards the current conversation without preserving it in

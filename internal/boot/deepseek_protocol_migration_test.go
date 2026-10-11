@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/event"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
 )
 
 func TestBuildScopesMalformedConfigDeepSeekMigrationWarningToNonDesktopFrontends(t *testing.T) {
@@ -25,7 +25,7 @@ func TestBuildScopesMalformedConfigDeepSeekMigrationWarningToNonDesktopFrontends
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			home := isolateConfigHome(t)
-			t.Setenv("DEEPER_HOME", filepath.Join(home, "deeper-home"))
+			t.Setenv("DEEPZORA_HOME", filepath.Join(home, "deepzora-home"))
 			userPath := config.UserConfigPath()
 			if err := os.MkdirAll(filepath.Dir(userPath), 0o700); err != nil {
 				t.Fatal(err)
@@ -39,7 +39,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 
 [[plugins]]
 name = "windows-mcp"
-command = "C:\Users\deeper\mcp.exe"
+command = "C:\Users\deepzora\mcp.exe"
 `
 			if err := os.WriteFile(userPath, []byte(raw), 0o600); err != nil {
 				t.Fatal(err)
@@ -95,12 +95,12 @@ command = "C:\Users\deeper\mcp.exe"
 
 func TestBuildDeliversProjectConfigWarningsWithoutDeepSeekMigrationError(t *testing.T) {
 	home := isolateConfigHome(t)
-	t.Setenv("DEEPER_HOME", filepath.Join(home, "deeper-home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(home, "deepzora-home"))
 	workspace := t.TempDir()
-	projectPath := filepath.Join(workspace, "deeper.toml")
+	projectPath := filepath.Join(workspace, "deepzora.toml")
 	raw := `[[plugins]]
 name = "windows-mcp"
-command = "C:\Users\deeper\mcp.exe"
+command = "C:\Users\deepzora\mcp.exe"
 `
 	if err := os.WriteFile(projectPath, []byte(raw), 0o600); err != nil {
 		t.Fatal(err)

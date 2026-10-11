@@ -3,8 +3,8 @@ package control
 import (
 	"testing"
 
-	"deeper/internal/command"
-	"deeper/internal/skill"
+	"deepzora/internal/command"
+	"deepzora/internal/skill"
 )
 
 func TestResolvedBuiltinDocsSlashNameMatchesRuntimeOwner(t *testing.T) {
@@ -20,25 +20,25 @@ func TestResolvedBuiltinDocsSlashNameMatchesRuntimeOwner(t *testing.T) {
 			name:     "visible custom command",
 			commands: []command.Command{{Name: DocsSlashName}},
 			owner:    SlashOwnerCustom,
-			builtin:  DeeperDocsSlashName,
+			builtin:  DeepzoraDocsSlashName,
 		},
 		{
 			name:     "hidden plugin command alias",
 			commands: []command.Command{{Name: DocsSlashName, Plugin: "manuals", Hidden: true}},
 			owner:    SlashOwnerCustom,
-			builtin:  DeeperDocsSlashName,
+			builtin:  DeepzoraDocsSlashName,
 		},
 		{
 			name:    "visible project skill",
 			skills:  []skill.Skill{{Name: DocsSlashName}},
 			owner:   SlashOwnerSkill,
-			builtin: DeeperDocsSlashName,
+			builtin: DeepzoraDocsSlashName,
 		},
 		{
 			name:    "compatible plugin skill alias",
 			skills:  []skill.Skill{{Name: DocsSlashName, Plugin: "manuals"}},
 			owner:   SlashOwnerSkill,
-			builtin: DeeperDocsSlashName,
+			builtin: DeepzoraDocsSlashName,
 		},
 		{
 			name: "ambiguous plugin skill aliases",
@@ -62,8 +62,8 @@ func TestResolvedBuiltinDocsSlashNameMatchesRuntimeOwner(t *testing.T) {
 			if got := IsBuiltinDocsSlash(DocsSlashName, tt.commands, tt.skills); got != (tt.owner == SlashOwnerBuiltin) {
 				t.Fatalf("short built-in = %v, owner=%v", got, tt.owner)
 			}
-			if !IsBuiltinDocsSlash(DeeperDocsSlashName, tt.commands, tt.skills) {
-				t.Fatal("preferred qualified Deeper docs name should resolve to the built-in when unoccupied")
+			if !IsBuiltinDocsSlash(DeepzoraDocsSlashName, tt.commands, tt.skills) {
+				t.Fatal("preferred qualified Deepzora docs name should resolve to the built-in when unoccupied")
 			}
 		})
 	}
@@ -72,14 +72,14 @@ func TestResolvedBuiltinDocsSlashNameMatchesRuntimeOwner(t *testing.T) {
 func TestQualifiedBuiltinDocsSlashPreservesExistingQualifiedCommands(t *testing.T) {
 	commands := []command.Command{
 		{Name: DocsSlashName},
-		{Name: DeeperDocsSlashName},
-		{Name: "deeper:builtin:docs"},
+		{Name: DeepzoraDocsSlashName},
+		{Name: "deepzora:builtin:docs"},
 	}
-	want := "deeper:builtin:docs:2"
+	want := "deepzora:builtin:docs:2"
 	if got := ResolvedBuiltinSlashName(DocsSlashName, commands, nil); got != want {
 		t.Fatalf("resolved built-in name = %q, want %q", got, want)
 	}
-	for _, existing := range []string{DocsSlashName, DeeperDocsSlashName, "deeper:builtin:docs"} {
+	for _, existing := range []string{DocsSlashName, DeepzoraDocsSlashName, "deepzora:builtin:docs"} {
 		if IsBuiltinDocsSlash(existing, commands, nil) {
 			t.Fatalf("existing command %q was displaced by the built-in", existing)
 		}

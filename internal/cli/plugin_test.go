@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/pluginpkg"
 )
 
 func TestPluginInstallReturnsFailureExitForFailedJSON(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 
 	source := filepath.Join(t.TempDir(), "superpowers")
 	writePluginTestFile(t, filepath.Join(source, pluginpkg.CodexManifest), `{

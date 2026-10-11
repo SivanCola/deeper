@@ -1,8 +1,8 @@
 package main
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 func historySteerRows(content string, unapplied bool) ([]HistoryMessage, bool) {

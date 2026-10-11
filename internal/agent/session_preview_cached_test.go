@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // seedPreviewSessions writes synthetic sessions with fresh BranchMeta

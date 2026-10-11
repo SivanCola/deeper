@@ -161,9 +161,9 @@ func TestRepairProviderEndpointContractPreservesUnprovenRoutes(t *testing.T) {
 }
 
 func TestProjectProviderEndpointRepairIsRuntimeOnly(t *testing.T) {
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	root := t.TempDir()
-	path := filepath.Join(root, "deeper.toml")
+	path := filepath.Join(root, "deepzora.toml")
 	raw := `[[providers]]
 name = "deepseek-anthropic"
 preset_id = "deepseek-anthropic"

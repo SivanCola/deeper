@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 // ForkTargets reports the fork state of this controller's current session: the

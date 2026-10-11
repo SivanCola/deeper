@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestSessionsReportsForeignWriterAsTakenOver(t *testing.T) {

@@ -11,14 +11,14 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"deeper/internal/agent"
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/store"
-	"deeper/internal/tool"
-	"deeper/internal/transcript"
+	"deepzora/internal/agent"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
+	"deepzora/internal/tool"
+	"deepzora/internal/transcript"
 )
 
 func TestHistoryMessagesIncludeAssistantReasoning(t *testing.T) {
@@ -201,14 +201,14 @@ func TestHistoryMessagesDoNotReplayMemoryCompilerContract(t *testing.T) {
 }
 
 func TestHistoryMessagesRestoreCompiledSkillInvocationWithoutContract(t *testing.T) {
-	raw := historyMemoryCompilerContract(t, "/deeper-develop ship the refactor")
+	raw := historyMemoryCompilerContract(t, "/deepzora-develop ship the refactor")
 	msgs := []provider.Message{{Role: provider.RoleUser, Content: raw}}
 
 	got := historyMessages(msgs, func(string) string { return "ship the refactor" })
 	if len(got) != 1 {
 		t.Fatalf("history length = %d, want 1: %+v", len(got), got)
 	}
-	if got[0].Content != "ship the refactor" || got[0].SubmitText != "/deeper-develop ship the refactor" {
+	if got[0].Content != "ship the refactor" || got[0].SubmitText != "/deepzora-develop ship the refactor" {
 		t.Fatalf("compiled skill history = %+v", got[0])
 	}
 	assertNoHistoryMemoryContract(t, got[0].Content)
@@ -405,7 +405,7 @@ func TestHistoryForTabRestoresPlannerDisplayAfterReload(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "session.jsonl")
 	handoff := strings.Join([]string{
-		"# Deeper executor handoff",
+		"# Deepzora executor handoff",
 		"",
 		"You are the executor now.",
 		"",

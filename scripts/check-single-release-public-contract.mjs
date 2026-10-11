@@ -14,7 +14,7 @@ const migrationReferences = new Set([
 ]);
 const rules = [
   [/release-channel-switch/, "public release channel selector"],
-  [/deeper upgrade (?:preview|stable)\b/i, "deprecated channel install command"],
+  [/deepzora upgrade (?:preview|stable)\b/i, "deprecated channel install command"],
   [/[?&]channel=(?:preview|canary)\b/i, "public channel deep link"],
   [/npm (?:i|install).*(?:@canary|@next)\b/i, "public prerelease npm install"],
   [/\bStable 1\.x\b|· stable\b|current 1\.x stable\b/i, "public Stable channel label"],

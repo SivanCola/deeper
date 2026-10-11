@@ -1,6 +1,6 @@
 # Tool interruption and recovery
 
-Deeper records execution facts so every provider tool call has an honest result. These facts describe uncertainty; they do not grant or revoke access to later tools.
+Deepzora records execution facts so every provider tool call has an honest result. These facts describe uncertainty; they do not grant or revoke access to later tools.
 
 ## Outcome model
 

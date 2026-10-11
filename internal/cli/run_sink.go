@@ -6,11 +6,11 @@ import (
 
 	"golang.org/x/term"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/telemetry"
-	"deeper/internal/trajectory"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/telemetry"
+	"deepzora/internal/trajectory"
 )
 
 // runSinkChain is the assembled event pipeline for one `run` invocation, with

@@ -8,13 +8,13 @@ const SHA_RE = /^[0-9a-f]{40}$/;
 export const FROZEN_HOMEBREW = "frozen";
 
 export const npmPackageNames = [
-  "@sivancola/deeper",
-  "@sivancola/deeper-cli-darwin-arm64",
-  "@sivancola/deeper-cli-darwin-x64",
-  "@sivancola/deeper-cli-linux-arm64",
-  "@sivancola/deeper-cli-linux-x64",
-  "@sivancola/deeper-cli-win32-arm64",
-  "@sivancola/deeper-cli-win32-x64",
+  "@sivancola/deepzora",
+  "@sivancola/deepzora-cli-darwin-arm64",
+  "@sivancola/deepzora-cli-darwin-x64",
+  "@sivancola/deepzora-cli-linux-arm64",
+  "@sivancola/deepzora-cli-linux-x64",
+  "@sivancola/deepzora-cli-win32-arm64",
+  "@sivancola/deepzora-cli-win32-x64",
 ];
 
 function compareStable(a, b) {
@@ -64,9 +64,9 @@ export function createCoreLedger({ version, sourceSHA, operation, cliRelease, de
     if (!npmPackageNames.includes(item.name) || item.version !== version || !item.integrity) {
       throw new Error(`invalid npm publication observation: ${item.name ?? "<unknown>"}`);
     }
-    if ((item.deeperCandidateSha && item.deeperCandidateSha !== sourceSHA)
+    if ((item.deepzoraCandidateSha && item.deepzoraCandidateSha !== sourceSHA)
         || (item.gitHead && item.gitHead !== sourceSHA)
-        || (!item.deeperCandidateSha && !item.gitHead)) {
+        || (!item.deepzoraCandidateSha && !item.gitHead)) {
       throw new Error(`npm package does not match the candidate: ${item.name}`);
     }
     const frozenTag = item.distTag !== undefined;

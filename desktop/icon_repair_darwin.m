@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void deeper_set_error(char **output, NSError *error, NSString *fallback) {
+static void deepzora_set_error(char **output, NSError *error, NSString *fallback) {
     if (output == NULL) {
         return;
     }
@@ -13,7 +13,7 @@ static void deeper_set_error(char **output, NSError *error, NSString *fallback) 
     *output = strdup(message.UTF8String ?: "unknown macOS alias error");
 }
 
-static void deeper_set_exception(char **output, NSException *exception, NSString *fallback) {
+static void deepzora_set_exception(char **output, NSException *exception, NSString *fallback) {
     if (output == NULL) {
         return;
     }
@@ -21,7 +21,7 @@ static void deeper_set_exception(char **output, NSException *exception, NSString
     *output = strdup(message.UTF8String ?: "unknown macOS alias exception");
 }
 
-static BOOL deeper_is_alias(NSURL *url, NSError **error) {
+static BOOL deepzora_is_alias(NSURL *url, NSError **error) {
     NSNumber *value = nil;
     if (![url getResourceValue:&value forKey:NSURLIsAliasFileKey error:error]) {
         return NO;
@@ -29,18 +29,18 @@ static BOOL deeper_is_alias(NSURL *url, NSError **error) {
     return value.boolValue;
 }
 
-static int deeper_create_alias(NSURL *targetURL, NSURL *aliasURL, char **error_message) {
+static int deepzora_create_alias(NSURL *targetURL, NSURL *aliasURL, char **error_message) {
     NSError *error = nil;
     NSData *bookmark = [targetURL bookmarkDataWithOptions:NSURLBookmarkCreationSuitableForBookmarkFile
                            includingResourceValuesForKeys:nil
                                             relativeToURL:nil
                                                     error:&error];
     if (bookmark == nil) {
-        deeper_set_error(error_message, error, @"create Finder alias bookmark");
+        deepzora_set_error(error_message, error, @"create Finder alias bookmark");
         return -1;
     }
     if (![NSURL writeBookmarkData:bookmark toURL:aliasURL options:0 error:&error]) {
-        deeper_set_error(error_message, error, @"write Finder alias bookmark");
+        deepzora_set_error(error_message, error, @"write Finder alias bookmark");
         return -1;
     }
     return 0;
@@ -50,22 +50,22 @@ static int deeper_create_alias(NSURL *targetURL, NSURL *aliasURL, char **error_m
 // Finder aliases that resolve to other schemes. Objective-C exceptions cannot
 // cross the cgo boundary safely, so keep this classifier fail-closed and convert
 // any unexpected Foundation exception into a normal native error.
-static int deeper_is_deeper_bundle_url(NSURL *url, char **error_message) {
+static int deepzora_is_deepzora_bundle_url(NSURL *url, char **error_message) {
     if (url == nil || !url.isFileURL) {
         return 0;
     }
     @try {
         NSBundle *bundle = [NSBundle bundleWithURL:url];
-        return [bundle.bundleIdentifier isEqualToString:@"io.github.sivancola.deeper"] ? 1 : 0;
+        return [bundle.bundleIdentifier isEqualToString:@"com.deepzora.desktop"] ? 1 : 0;
     } @catch (NSException *exception) {
-        deeper_set_exception(error_message, exception, @"inspect Finder alias target");
+        deepzora_set_exception(error_message, exception, @"inspect Finder alias target");
         return -1;
     }
 }
 
 // Kept as a narrow C entry point so Go regression tests exercise the exact
 // native URL classifier used by startup alias repair.
-int deeper_is_deeper_bundle_url_string(const char *url_string,
+int deepzora_is_deepzora_bundle_url_string(const char *url_string,
                                            char **error_message) {
     @autoreleasepool {
         @try {
@@ -76,34 +76,34 @@ int deeper_is_deeper_bundle_url_string(const char *url_string,
             if (value == nil) {
                 return 0;
             }
-            return deeper_is_deeper_bundle_url([NSURL URLWithString:value], error_message);
+            return deepzora_is_deepzora_bundle_url([NSURL URLWithString:value], error_message);
         } @catch (NSException *exception) {
-            deeper_set_exception(error_message, exception, @"parse Finder alias target");
+            deepzora_set_exception(error_message, exception, @"parse Finder alias target");
             return -1;
         }
     }
 }
 
-static int deeper_write_alias_impl(const char *target_path, const char *alias_path,
+static int deepzora_write_alias_impl(const char *target_path, const char *alias_path,
                                      char **error_message) {
     NSURL *targetURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:target_path]];
     NSURL *aliasURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:alias_path]];
-    return deeper_create_alias(targetURL, aliasURL, error_message);
+    return deepzora_create_alias(targetURL, aliasURL, error_message);
 }
 
-int deeper_write_alias(const char *target_path, const char *alias_path,
+int deepzora_write_alias(const char *target_path, const char *alias_path,
                          char **error_message) {
     @autoreleasepool {
         @try {
-            return deeper_write_alias_impl(target_path, alias_path, error_message);
+            return deepzora_write_alias_impl(target_path, alias_path, error_message);
         } @catch (NSException *exception) {
-            deeper_set_exception(error_message, exception, @"write Finder alias");
+            deepzora_set_exception(error_message, exception, @"write Finder alias");
             return -1;
         }
     }
 }
 
-static int deeper_resolve_alias_impl(const char *alias_path, char **target_path,
+static int deepzora_resolve_alias_impl(const char *alias_path, char **target_path,
                                        char **error_message) {
     NSError *error = nil;
     NSURL *aliasURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:alias_path]];
@@ -112,7 +112,7 @@ static int deeper_resolve_alias_impl(const char *alias_path, char **target_path,
                                                          NSURLBookmarkResolutionWithoutMounting
                                                    error:&error];
     if (resolved == nil || !resolved.isFileURL) {
-        deeper_set_error(error_message, error, @"resolve Finder alias to file URL");
+        deepzora_set_error(error_message, error, @"resolve Finder alias to file URL");
         return -1;
     }
     if (target_path != NULL) {
@@ -121,23 +121,23 @@ static int deeper_resolve_alias_impl(const char *alias_path, char **target_path,
     return 0;
 }
 
-int deeper_resolve_alias(const char *alias_path, char **target_path,
+int deepzora_resolve_alias(const char *alias_path, char **target_path,
                            char **error_message) {
     @autoreleasepool {
         @try {
-            return deeper_resolve_alias_impl(alias_path, target_path, error_message);
+            return deepzora_resolve_alias_impl(alias_path, target_path, error_message);
         } @catch (NSException *exception) {
-            deeper_set_exception(error_message, exception, @"resolve Finder alias");
+            deepzora_set_exception(error_message, exception, @"resolve Finder alias");
             return -1;
         }
     }
 }
 
-static int deeper_repair_alias_impl(const char *alias_path, const char *current_app_path,
+static int deepzora_repair_alias_impl(const char *alias_path, const char *current_app_path,
                                       int allow_broken, char **error_message) {
     NSError *error = nil;
     NSURL *aliasURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:alias_path]];
-    if (!deeper_is_alias(aliasURL, &error)) {
+    if (!deepzora_is_alias(aliasURL, &error)) {
         // Missing metadata means this is an ordinary desktop file, not an
         // owned integration failure. Never replace it merely by name.
         return 0;
@@ -163,7 +163,7 @@ static int deeper_repair_alias_impl(const char *alias_path, const char *current_
             // launch so Finder metadata and any user customization remain.
             return 0;
         }
-        int ownership = deeper_is_deeper_bundle_url(resolved, error_message);
+        int ownership = deepzora_is_deepzora_bundle_url(resolved, error_message);
         if (ownership < 0) {
             return -1;
         }
@@ -178,9 +178,9 @@ static int deeper_repair_alias_impl(const char *alias_path, const char *current_
     }
 
     NSURL *directory = [aliasURL URLByDeletingLastPathComponent];
-    NSString *temporaryName = [NSString stringWithFormat:@".deeper-alias-%@", NSUUID.UUID.UUIDString];
+    NSString *temporaryName = [NSString stringWithFormat:@".deepzora-alias-%@", NSUUID.UUID.UUIDString];
     NSURL *temporaryURL = [directory URLByAppendingPathComponent:temporaryName];
-    if (deeper_create_alias(currentURL, temporaryURL, error_message) != 0) {
+    if (deepzora_create_alias(currentURL, temporaryURL, error_message) != 0) {
         return -1;
     }
 
@@ -192,19 +192,19 @@ static int deeper_repair_alias_impl(const char *alias_path, const char *current_
                                          resultingItemURL:&resultingURL
                                                     error:&error]) {
         [[NSFileManager defaultManager] removeItemAtURL:temporaryURL error:nil];
-        deeper_set_error(error_message, error, @"replace Finder alias");
+        deepzora_set_error(error_message, error, @"replace Finder alias");
         return -1;
     }
     return 1;
 }
 
-int deeper_repair_alias(const char *alias_path, const char *current_app_path,
+int deepzora_repair_alias(const char *alias_path, const char *current_app_path,
                           int allow_broken, char **error_message) {
     @autoreleasepool {
         @try {
-            return deeper_repair_alias_impl(alias_path, current_app_path, allow_broken, error_message);
+            return deepzora_repair_alias_impl(alias_path, current_app_path, allow_broken, error_message);
         } @catch (NSException *exception) {
-            deeper_set_exception(error_message, exception, @"repair Finder alias");
+            deepzora_set_exception(error_message, exception, @"repair Finder alias");
             return -1;
         }
     }

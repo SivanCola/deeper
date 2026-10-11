@@ -18,10 +18,10 @@ import (
 	"github.com/klauspost/compress/zstd"
 	bolt "go.etcd.io/bbolt"
 
-	"deeper/internal/agent"
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/agent"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
 )
 
 // Version 8 carries the live message ids the writer checks new completions

@@ -3,7 +3,7 @@ package agent
 import (
 	"time"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // missingReasoningWatch is this conversation's live view of one incident. Only

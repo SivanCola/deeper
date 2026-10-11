@@ -3,9 +3,9 @@ package control
 import (
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 type recallAuditSink struct {

@@ -10,8 +10,8 @@ import (
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 const codePageLine = "FIND: 参数格式不正确\r\n"

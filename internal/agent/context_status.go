@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // ContextMaintenanceSnapshot is a read-only view of the current provider-bound

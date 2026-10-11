@@ -14,19 +14,19 @@ type LayoutPreferences = {
   sizes?: Partial<Record<LayoutSizeKey, number>>;
 };
 
-const STORAGE_KEY = "deeper.layoutPreferences.v1";
+const STORAGE_KEY = "deepzora.layoutPreferences.v1";
 
 const LEGACY_SIZE_KEYS: Record<LayoutSizeKey, string[]> = {
-  sidebarWidth: ["deeper.sidebar.width"],
+  sidebarWidth: ["deepzora.sidebar.width"],
   sidebarWidthGraphite: [],
   rightDockWidth: [],
   rightDockTreeWidth: [],
   rightDockPreviewWidth: [],
   workspaceFileTreePanelWidth: [],
-  workspaceTreeWidth: ["deeper.workspaceTree.width"],
-  composerHeight: ["deeper.composerHeight"],
-  drawerWidth: ["deeper.drawer.width"],
-  settingsDrawerWidth: ["deeper.settingsDrawer.width"],
+  workspaceTreeWidth: ["deepzora.workspaceTree.width"],
+  composerHeight: ["deepzora.composerHeight"],
+  drawerWidth: ["deepzora.drawer.width"],
+  settingsDrawerWidth: ["deepzora.settingsDrawer.width"],
 };
 
 type ClampSize = (value: number) => number;

@@ -4,13 +4,13 @@ import { platformPackage, renderHomebrewCask, targets } from "./build-release-cl
 
 test("platform package embeds the immutable full candidate identity", () => {
   const pkg = platformPackage(targets[0], "1.2.3", "a".repeat(40));
-  assert.equal(pkg.name, "@sivancola/deeper-cli-darwin-arm64");
-  assert.equal(pkg.deeperCandidateSha, "a".repeat(40));
+  assert.equal(pkg.name, "@sivancola/deepzora-cli-darwin-arm64");
+  assert.equal(pkg.deepzoraCandidateSha, "a".repeat(40));
   assert.equal(pkg.gitHead, "a".repeat(40));
 });
 
 test("homebrew cask is checksum-bound to prepared CLI archives", () => {
-  const sums = Object.fromEntries(targets.filter(target => target.goos !== "windows").map(target => [`deeper-${target.key}.tar.gz`, target.key.includes("arm64") ? "a".repeat(64) : "b".repeat(64)]));
+  const sums = Object.fromEntries(targets.filter(target => target.goos !== "windows").map(target => [`deepzora-${target.key}.tar.gz`, target.key.includes("arm64") ? "a".repeat(64) : "b".repeat(64)]));
   const cask = renderHomebrewCask("1.2.3", sums);
   assert.match(cask, /version "1\.2\.3"/);
   assert.match(cask, /sha256 "a{64}"/);

@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 // TestRestoredTabGoalFollowsSessionGoalState pins the restart half of the

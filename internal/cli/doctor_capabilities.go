@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"deeper/internal/capdiag"
+	"deepzora/internal/capdiag"
 )
 
 func doctorCapabilitiesCommand(args []string) int {
@@ -22,7 +22,7 @@ func doctorCapabilitiesCommand(args []string) int {
 		return code
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper doctor capabilities [--root PATH] [--json] [--live] [--timeout 5s]")
+		fmt.Fprintln(os.Stderr, "usage: deepzora doctor capabilities [--root PATH] [--json] [--live] [--timeout 5s]")
 		return 2
 	}
 

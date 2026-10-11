@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // resolveTurnImages resolves each user attachment once. Text-only parents keep

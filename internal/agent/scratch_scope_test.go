@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/tool"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/tool"
 )
 
 func TestScratchScriptExecutionKeepsCheckpointCoverageFailClosed(t *testing.T) {

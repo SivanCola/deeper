@@ -16,12 +16,12 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/sessioncontent"
 )
 
 const (
 	V4SchemaVersion      = 4
-	V4Codec              = "deeper.session.linear/v4"
+	V4Codec              = "deepzora.session.linear/v4"
 	v4InlinePayloadBytes = 64 << 10
 	v4MaxFrameBytes      = 8 << 20
 	v4FrameHeaderBytes   = 12

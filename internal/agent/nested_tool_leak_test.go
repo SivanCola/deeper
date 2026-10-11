@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
 )
 
 func TestBackgroundTaskToolEventsStayNestedUnderParentCall(t *testing.T) {

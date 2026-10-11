@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/topicstate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/topicstate"
 )
 
 func (m *topicStateManager) openTopicStoreWithRecovery(ctx context.Context, scope *topicStateScope) (*topicstate.Store, error) {

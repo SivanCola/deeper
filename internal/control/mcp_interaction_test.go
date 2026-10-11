@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/mcpinteraction"
+	"deepzora/internal/event"
+	"deepzora/internal/mcpinteraction"
 )
 
 type interactionProbeSink struct {

@@ -1,7 +1,7 @@
 package serve
 
 import (
-	"deeper/internal/session"
+	"deepzora/internal/session"
 	"encoding/json"
 	"net/http"
 	"strconv"

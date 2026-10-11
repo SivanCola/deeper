@@ -69,7 +69,7 @@ export function createPerformanceHost(deps: {
         });
         if (confirmation.response !== 1 || !valid()) return { status: "cancelled" };
         const destination = await deps.dialog.showSaveDialog(win, {
-          title: zh ? "保存内存快照" : "Save heap snapshot", defaultPath: "deeper-renderer.heapsnapshot",
+          title: zh ? "保存内存快照" : "Save heap snapshot", defaultPath: "deepzora-renderer.heapsnapshot",
           filters: [{ name: "Heap snapshot", extensions: ["heapsnapshot"] }],
         });
         if (destination.canceled || !destination.filePath || !valid()) return { status: "cancelled" };

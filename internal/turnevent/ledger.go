@@ -15,10 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/fileutil"
-	"deeper/internal/store"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/store"
 )
 
 const (
@@ -38,7 +38,7 @@ var ErrTurnLedgerUnavailable = errors.New("turn event ledger unavailable")
 var atomicWriteLedgerFile = fileutil.AtomicWriteFileStrict
 
 // UnsupportedSchemaError is deliberately distinct from corruption. A newer
-// Deeper may own the file, so the current process must leave it untouched.
+// Deepzora may own the file, so the current process must leave it untouched.
 type UnsupportedSchemaError struct{ Version int }
 
 func (e *UnsupportedSchemaError) Error() string {

@@ -19,7 +19,7 @@ func testPlanID(t *testing.T, req request, actions []action) string {
 func TestImportedExecutionInputsInvalidateApproval(t *testing.T) {
 	for _, field := range []string{"env", "headers"} {
 		t.Run(field, func(t *testing.T) {
-			t.Setenv("DEEPER_HOME", t.TempDir())
+			t.Setenv("DEEPZORA_HOME", t.TempDir())
 			root := t.TempDir()
 			src := filepath.Join(root, ".mcp.json")
 			tl := NewTool(Options{ProjectRoot: root, HomeDir: t.TempDir()})

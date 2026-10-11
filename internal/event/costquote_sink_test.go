@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/provider"
 )
 
 func TestEnsureCostQuoteDoesNotUseRuntimeFX(t *testing.T) {

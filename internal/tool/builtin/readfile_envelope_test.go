@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func writeEnvelopeFixture(t *testing.T, name string, lines int) (dir, path string) {

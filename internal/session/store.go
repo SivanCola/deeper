@@ -1,4 +1,4 @@
-// Package session owns Deeper's canonical session service.
+// Package session owns Deepzora's canonical session service.
 //
 // Runtime owns live business state and activity authority, PersistenceBinding
 // owns accepted work and durability progress, Store owns framed bytes and the
@@ -22,10 +22,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/filelock"
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/filelock"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
 )
 
 const (
@@ -37,9 +37,9 @@ const (
 	// Codec identifies the current framed linear session format. Earlier linear
 	// and prototype stores are immutable migration inputs.
 	Codec             = V4Codec
-	FinalV31Codec     = "deeper.session.linear/v3.1"
-	LegacyLinearCodec = "deeper.session.linear/v3"
-	PrototypeCodec    = "deeper.session.events/v3"
+	FinalV31Codec     = "deepzora.session.linear/v3.1"
+	LegacyLinearCodec = "deepzora.session.linear/v3"
+	PrototypeCodec    = "deepzora.session.events/v3"
 	LiveBatchDelay    = 200 * time.Millisecond
 	currentLogName    = "events.frames"
 	legacyLogName     = "events.jsonl"

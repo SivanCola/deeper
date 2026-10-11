@@ -10,6 +10,6 @@ app.whenReady().then(async () => {
     show: false, focusable: false, width: 1920, height: 1080, useContentSize: true,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
   });
-  await window.loadURL(process.env.DEEPER_LAYOUT_URL);
+  await window.loadURL(process.env.DEEPZORA_LAYOUT_URL);
 });
 app.on("window-all-closed", () => app.quit());

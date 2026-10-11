@@ -36,25 +36,25 @@ Settings -> Models -> Usage -> Agent runtime -> Thinking language
 ```
 
 The desktop setting writes the user-level default. A project can still override
-it with `./deeper.toml`.
+it with `./deepzora.toml`.
 
 ## CLI And TUI
 
 For shell scripts or one-off configuration:
 
 ```bash
-deeper config reasoning-language auto
-deeper config reasoning-language zh
-deeper config reasoning-language en
+deepzora config reasoning-language auto
+deepzora config reasoning-language zh
+deepzora config reasoning-language en
 ```
 
 By default this writes the user config. To write a project-local override:
 
 ```bash
-deeper config reasoning-language --local zh
+deepzora config reasoning-language --local zh
 ```
 
-Inside `deeper`, use the slash command:
+Inside `deepzora`, use the slash command:
 
 ```text
 /reasoning-language auto
@@ -64,12 +64,12 @@ Inside `deeper`, use the slash command:
 
 The slash command writes the user-level setting and updates the current chat
 controller for subsequent turns. It does not rewrite the current project's
-`deeper.toml`; use the shell command with `--local` for that.
+`deepzora.toml`; use the shell command with `--local` for that.
 
 Headless runs also use the same setting:
 
 ```bash
-deeper run "explain this module"
+deepzora run "explain this module"
 ```
 
 ## Config File
@@ -84,7 +84,7 @@ reasoning_language = "auto" # auto|zh|en
 Resolution order for this setting:
 
 ```text
-./deeper.toml > user config.toml > built-in defaults
+./deepzora.toml > user config.toml > built-in defaults
 ```
 
 There is currently no command-line flag for this setting. Prefer config because
@@ -94,12 +94,12 @@ argument.
 ## Cache Behavior
 
 `auto` is still cache-friendly. When the raw user prompt clearly looks Chinese,
-Deeper adds the same small transient `<reasoning-language>` block for that
+Deepzora adds the same small transient `<reasoning-language>` block for that
 turn; English and ambiguous turns inject nothing and rely on the existing stable
 language policy. Injected reference context such as `@file` contents is ignored
 for this auto decision.
 
-When set to `zh` or `en`, Deeper always adds a small transient
+When set to `zh` or `en`, Deepzora always adds a small transient
 `<reasoning-language>` block to the user turn. In all modes, this does not
 change tool schema bytes or ordering. Official DeepSeek-V4-Pro also prepends a
 stable first-line persona to the system prompt; other models leave the system

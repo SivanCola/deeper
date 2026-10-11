@@ -4,7 +4,7 @@
 # writing a script instead of reading, so compaction never engaged and the
 # arms measured the same thing the other shapes did. Kept as an honest record
 # of the attempt, and as a config variant that still exercises the workspace
-# deeper.toml merge path.
+# deepzora.toml merge path.
 # Forced-delegation twin: identical workdir and checks, only the prompt differs.
 set -e
 # 36 files across three non-overlapping packages, each needing a real read

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"deeper/internal/plancontract"
+	"deepzora/internal/plancontract"
 )
 
 // PlanSubmission is where submit_plan leaves an accepted plan for the host that

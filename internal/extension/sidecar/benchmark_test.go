@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/pluginpkg"
 )
 
 // BenchmarkExtensionSidecarStartup measures a real no-op sidecar process

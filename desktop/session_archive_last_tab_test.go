@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
 )
 
 // Archiving the only visible session hands the surface to the empty welcome.

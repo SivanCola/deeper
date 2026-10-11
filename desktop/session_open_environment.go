@@ -3,10 +3,10 @@ package main
 import (
 	"strings"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/plugin"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/plugin"
 )
 
 type sessionOpenEnvironment struct {

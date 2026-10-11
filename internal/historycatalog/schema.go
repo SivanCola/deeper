@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 const migrationV1 = `

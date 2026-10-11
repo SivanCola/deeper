@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/frontmatter"
+	"deepzora/internal/config"
+	"deepzora/internal/frontmatter"
 )
 
 var reservedSubagentSlashNames = map[string]bool{

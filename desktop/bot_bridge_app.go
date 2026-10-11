@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"deeper/internal/bot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/bot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 // 本文件是 botBridgeHub 对 App 的全部胶水：会话枚举（含后台 detached）、

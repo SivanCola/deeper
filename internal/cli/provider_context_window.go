@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"deeper/internal/i18n"
+	"deepzora/internal/i18n"
 )
 
 // defaultCustomContextWindow is the fallback for a relay whose window we cannot

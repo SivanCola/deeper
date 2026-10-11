@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
 )
 
 // Round trips through the wire DTOs must preserve every provider-visible

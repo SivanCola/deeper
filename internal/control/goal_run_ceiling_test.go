@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // workingGoalTool is a writer, so every round counts as acting on the

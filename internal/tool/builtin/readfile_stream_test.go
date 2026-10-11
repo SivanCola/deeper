@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 
-	fileenc "deeper/internal/fileutil/encoding"
+	fileenc "deepzora/internal/fileutil/encoding"
 )
 
 // TestReadFileStreamsLargeGB18030 proves GB18030 content far past the 256KB

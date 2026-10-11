@@ -19,9 +19,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 const (

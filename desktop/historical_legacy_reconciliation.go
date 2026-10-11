@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/historywork"
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/historywork"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/store"
 )
 
 // Reuse catalog metadata instead of enumerating legacy directories a second

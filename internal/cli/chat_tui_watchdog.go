@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func (m *chatTUI) noteWatchdogRunning() {

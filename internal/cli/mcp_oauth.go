@@ -7,18 +7,18 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/mcpdiag"
-	"deeper/internal/netclient"
-	"deeper/internal/plugin"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/mcpdiag"
+	"deepzora/internal/netclient"
+	"deepzora/internal/plugin"
 )
 
 var mcpAuthorizeForCLI = plugin.AuthorizeHTTPMCP
 
 func mcpAuthCLI(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: deeper mcp auth <name>")
+		fmt.Fprintln(os.Stderr, "usage: deepzora mcp auth <name>")
 		return 2
 	}
 	name, workspace := strings.TrimSpace(args[0]), mcpCLIWorkspaceRoot()
@@ -50,7 +50,7 @@ func mcpAuthCLI(args []string) int {
 	}
 	specs := boot.PluginSpecsForRootWithOptions([]config.PluginEntry{entry}, workspace, boot.PluginSpecOptions{
 		DefaultCallTimeout: 30 * time.Second, ConfigSource: string(entry.Source),
-		StateHome: config.DeeperHomeDir(), Network: true, OAuthHTTPClient: client,
+		StateHome: config.DeepzoraHomeDir(), Network: true, OAuthHTTPClient: client,
 	})
 	if len(specs) != 1 {
 		fmt.Fprintf(os.Stderr, "could not build MCP authorization specification for %q\n", name)
@@ -62,7 +62,7 @@ func mcpAuthCLI(args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	fmt.Printf("authorized MCP server %q — run `deeper mcp retry %s` or reconnect it in the current session\n", name, name)
+	fmt.Printf("authorized MCP server %q — run `deepzora mcp retry %s` or reconnect it in the current session\n", name, name)
 	return 0
 }
 
@@ -92,7 +92,7 @@ func probeMCPReadiness(entry config.PluginEntry) (plugin.MCPInstallResult, error
 	}
 	specs := boot.PluginSpecsForRootWithOptions([]config.PluginEntry{entry}, workspace, boot.PluginSpecOptions{
 		DefaultCallTimeout: 30 * time.Second, ConfigSource: string(config.MCPSourceUserConfig),
-		StateHome: config.DeeperHomeDir(), Network: true, OAuthHTTPClient: client,
+		StateHome: config.DeepzoraHomeDir(), Network: true, OAuthHTTPClient: client,
 	})
 	if len(specs) != 1 {
 		err := fmt.Errorf("could not build MCP launch specification")

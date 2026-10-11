@@ -6,16 +6,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/sessiontemp"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/sessiontemp"
 )
 
 func TestRebuildReusesSessionTempManager(t *testing.T) {
 	// Isolate config/home so boot.Build does not touch the developer home.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("DEEPER_HOME", filepath.Join(home, ".deeper"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(home, ".deepzora"))
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "config"))
 	t.Setenv("XDG_DATA_HOME", filepath.Join(home, "data"))
 

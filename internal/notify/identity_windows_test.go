@@ -15,13 +15,13 @@ import (
 func TestWindowsNotificationsKeepDesktopIdentityAndReadableName(t *testing.T) {
 	registered := false
 	err := registerDesktopNotifications(func(data toast.AppData) error {
-		if data.AppID != "io.github.sivancola.deeper" {
+		if data.AppID != "com.deepzora.desktop" {
 			t.Fatalf("registered ID = %q", data.AppID)
 		}
 		registered = true
 		return nil
 	}, func(id, name string) error {
-		if !registered || id != "io.github.sivancola.deeper" || name != "Deeper" {
+		if !registered || id != "com.deepzora.desktop" || name != "Deepzora" {
 			t.Fatalf("display name update = %q/%q, registered=%t", id, name, registered)
 		}
 		return nil
@@ -30,7 +30,7 @@ func TestWindowsNotificationsKeepDesktopIdentityAndReadableName(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := desktopNotification(Message{Title: "Done", Body: "Task completed"})
-	if n.AppID != "io.github.sivancola.deeper" || n.Title != "Done" || n.Body != "Task completed" {
+	if n.AppID != "com.deepzora.desktop" || n.Title != "Done" || n.Body != "Task completed" {
 		t.Fatalf("notification = %+v", n)
 	}
 }
@@ -47,7 +47,7 @@ func TestWindowsNotificationRegistrationFailureDoesNotWriteMetadata(t *testing.T
 }
 
 func TestNotificationDisplayNamePreservesOtherRegistrations(t *testing.T) {
-	prefix := "Deeper.IdentityTest." + rand.Text()
+	prefix := "Deepzora.IdentityTest." + rand.Text()
 	ids := []string{prefix + ".Legacy", prefix + ".Desktop"}
 	for _, id := range ids {
 		path := filepath.Join("Software", "Classes", "AppUserModelId", id)
@@ -64,7 +64,7 @@ func TestNotificationDisplayNamePreservesOtherRegistrations(t *testing.T) {
 		}
 		key.Close()
 	}
-	if err := setNotificationDisplayName(ids[1], "Deeper"); err != nil {
+	if err := setNotificationDisplayName(ids[1], "Deepzora"); err != nil {
 		t.Fatal(err)
 	}
 	for i, id := range ids {
@@ -77,7 +77,7 @@ func TestNotificationDisplayNamePreservesOtherRegistrations(t *testing.T) {
 		key.Close()
 		want := id
 		if i == 1 {
-			want = "Deeper"
+			want = "Deepzora"
 		}
 		if nameErr != nil || activatorErr != nil || name != want || activator != "preserve-activator" {
 			t.Fatalf("registration %s changed unexpectedly: name=%q (%v), activator=%q (%v)", id, name, nameErr, activator, activatorErr)

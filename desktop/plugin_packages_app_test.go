@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/command"
+	"deepzora/internal/command"
 )
 
 func TestDecoratePluginCommandConflicts(t *testing.T) {

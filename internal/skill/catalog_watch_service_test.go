@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/skill/skillwatch"
+	"deepzora/internal/skill/skillwatch"
 )
 
 func catalogNames(snapshot CatalogSnapshot) []string {
@@ -42,7 +42,7 @@ func waitForCatalog(t *testing.T, what string, cond func() bool) {
 // single coalesced notification.
 func TestHostWatchServiceSharedAcrossStores(t *testing.T) {
 	root := t.TempDir()
-	skillsDir := filepath.Join(root, ".deeper", "skills")
+	skillsDir := filepath.Join(root, ".deepzora", "skills")
 	if err := os.MkdirAll(filepath.Join(skillsDir, "alpha"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -52,8 +52,8 @@ func TestHostWatchServiceSharedAcrossStores(t *testing.T) {
 	svc := skillwatch.NewService(skillwatch.Options{Stderr: io.Discard})
 	defer svc.Close()
 
-	storeA := New(Options{HomeDir: t.TempDir(), DeeperHomeDir: t.TempDir(), ProjectRoot: root, Stderr: io.Discard, Watch: true, WatchService: svc})
-	storeB := New(Options{HomeDir: t.TempDir(), DeeperHomeDir: t.TempDir(), ProjectRoot: root, Stderr: io.Discard, Watch: true, WatchService: svc})
+	storeA := New(Options{HomeDir: t.TempDir(), DeepzoraHomeDir: t.TempDir(), ProjectRoot: root, Stderr: io.Discard, Watch: true, WatchService: svc})
+	storeB := New(Options{HomeDir: t.TempDir(), DeepzoraHomeDir: t.TempDir(), ProjectRoot: root, Stderr: io.Discard, Watch: true, WatchService: svc})
 	defer storeA.Close()
 	defer storeB.Close()
 
@@ -121,7 +121,7 @@ func TestHostWatchServiceSharedAcrossStores(t *testing.T) {
 // must not invalidate the catalog through the watch service.
 func TestHostWatchServiceIgnoresSkippedBodies(t *testing.T) {
 	root := t.TempDir()
-	skillsDir := filepath.Join(root, ".deeper", "skills")
+	skillsDir := filepath.Join(root, ".deepzora", "skills")
 	if err := os.MkdirAll(filepath.Join(skillsDir, "alpha", "scripts"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestHostWatchServiceIgnoresSkippedBodies(t *testing.T) {
 	svc := skillwatch.NewService(skillwatch.Options{Stderr: io.Discard})
 	defer svc.Close()
 
-	store := New(Options{HomeDir: t.TempDir(), DeeperHomeDir: t.TempDir(), ProjectRoot: root, Stderr: io.Discard, Watch: true, WatchService: svc})
+	store := New(Options{HomeDir: t.TempDir(), DeepzoraHomeDir: t.TempDir(), ProjectRoot: root, Stderr: io.Discard, Watch: true, WatchService: svc})
 	defer store.Close()
 	snap, err := store.Snapshot(t.Context())
 	if err != nil {

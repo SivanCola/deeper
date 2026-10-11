@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/capability"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/capability"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 // mockSpec mirrors helperSpec (lazy_test.go): the test binary re-runs itself

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/attachment"
-	"deeper/internal/config"
-	"deeper/internal/imageinput"
-	"deeper/internal/provider"
+	"deepzora/internal/attachment"
+	"deepzora/internal/config"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/provider"
 )
 
 func writeImageGateConfig(t *testing.T, root string) {
@@ -20,7 +20,7 @@ func writeImageGateConfig(t *testing.T, root string) {
 		{Name: "custom", Kind: "openai", BaseURL: "https://example.invalid/v1", Models: []string{"mystery"}},
 		{Name: "declared", Kind: "openai", BaseURL: "https://example.invalid/v1", Models: []string{"text-only", "vision-pro"}, VisionModels: []string{"vision-pro"}},
 	}
-	if err := cfg.SaveTo(filepath.Join(root, "deeper.toml")); err != nil {
+	if err := cfg.SaveTo(filepath.Join(root, "deepzora.toml")); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 	approveWorkspace(t, root)

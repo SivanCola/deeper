@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 func TestSnapshotForShutdownAppendsToSessionLogInsteadOfForking(t *testing.T) {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"deeper/internal/control"
+	"deepzora/internal/control"
 	"errors"
 )
 

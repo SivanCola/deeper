@@ -49,20 +49,20 @@ function cleanEnvDir(input: HomeEnvironment, name: string): string {
   return clean(dir);
 }
 
-// Mirrors internal/config.DeeperHomeDir so the hello `instance.home` matches
+// Mirrors internal/config.DeepzoraHomeDir so the hello `instance.home` matches
 // what the Go service computes for the same environment.
-export function deeperHome(input: HomeEnvironment): string {
-  const explicit = cleanEnvDir(input, "DEEPER_HOME");
+export function deepzoraHome(input: HomeEnvironment): string {
+  const explicit = cleanEnvDir(input, "DEEPZORA_HOME");
   if (explicit !== "") return explicit;
   const home = userHome(input);
   if (input.platform === "win32") {
     const appData = (input.env.APPDATA ?? "").trim();
-    if (appData !== "") return clean(appData + sep + "deeper");
-    if (home !== "") return clean(home + sep + "AppData" + sep + "Roaming" + sep + "deeper");
+    if (appData !== "") return clean(appData + sep + "deepzora");
+    if (home !== "") return clean(home + sep + "AppData" + sep + "Roaming" + sep + "deepzora");
     return "";
   }
-  if (home !== "") return clean(home + sep + ".deeper");
+  if (home !== "") return clean(home + sep + ".deepzora");
   const xdg = (input.env.XDG_CONFIG_HOME ?? "").trim();
-  if (xdg !== "") return clean(xdg + sep + "deeper");
+  if (xdg !== "") return clean(xdg + sep + "deepzora");
   return "";
 }

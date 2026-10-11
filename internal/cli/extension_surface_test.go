@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
 )
 
 // extensionStubCtrl stubs the SessionAPI surface the extension slash dispatch

@@ -9,9 +9,9 @@ import (
 	"sort"
 	"sync"
 
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/turnevent"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/turnevent"
 )
 
 const ProtocolVersion = 1

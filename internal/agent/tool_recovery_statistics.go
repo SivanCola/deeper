@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 	"strings"
 )
 

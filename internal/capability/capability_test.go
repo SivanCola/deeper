@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestRoutePrefersReviewSkillForReviewRequest(t *testing.T) {

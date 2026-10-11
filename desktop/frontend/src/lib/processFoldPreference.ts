@@ -2,12 +2,12 @@ import { applySessionExperience } from "./sessionExperience";
 
 export type ProcessFoldPreference = "auto" | "expanded";
 
-const PROCESS_FOLD_KEY = "deeper-process-fold";
-const PROCESS_FOLD_EVENT = "deeper:process-fold";
+const PROCESS_FOLD_KEY = "deepzora-process-fold";
+const PROCESS_FOLD_EVENT = "deepzora:process-fold";
 
 export function getProcessFoldPreference(): ProcessFoldPreference {
   if (typeof localStorage !== "undefined") {
-    const experience = localStorage.getItem("deeper-session-experience");
+    const experience = localStorage.getItem("deepzora-session-experience");
     if (experience === "deep") return "expanded";
     if (experience === "standard") return "auto";
   }

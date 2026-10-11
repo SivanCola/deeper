@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/jobs"
+	"deepzora/internal/jobs"
 )
 
 // TaskRecorder bridges jobs.Manager lifecycle events into the Task Store. It

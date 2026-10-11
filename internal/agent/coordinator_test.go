@@ -2,15 +2,15 @@ package agent
 
 import (
 	"context"
-	"deeper/internal/event"
+	"deepzora/internal/event"
 	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // mockProvider replays preset chunks and records the last request it received.
@@ -241,7 +241,7 @@ func TestHandoffTaskRecoversOriginalInput(t *testing.T) {
 	if got := HandoffTask(formatHandoff(multi, "plan")); got != multi {
 		t.Errorf("HandoffTask(multi-line) = %q, want %q", got, multi)
 	}
-	for _, plain := range []string{"ordinary input", "", "# Deeper executor handoff with no sections"} {
+	for _, plain := range []string{"ordinary input", "", "# Deepzora executor handoff with no sections"} {
 		if got := HandoffTask(plain); got != plain {
 			t.Errorf("HandoffTask(%q) = %q, want unchanged", plain, got)
 		}
@@ -594,7 +594,7 @@ func (t coordinatorTestTool) ReadOnly() bool { return t.readOnly }
 func TestCoordinatorPlannerUsesReadOnlyResearchTools(t *testing.T) {
 	planner := &mockProvider{name: "planner", streams: [][]provider.Chunk{
 		{
-			{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "call-1", Name: "read_file", Arguments: `{"path":"DEEPER.md"}`}},
+			{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "call-1", Name: "read_file", Arguments: `{"path":"DEEPZORA.md"}`}},
 			{Type: provider.ChunkDone},
 		},
 		submitPlanChunk(`{"objective":"edit the narrow file","steps":[{"title":"follow the loaded rule"}]}`),
@@ -662,7 +662,7 @@ func TestCoordinatorSetReasoningLanguageClearsPlannerAgent(t *testing.T) {
 
 func TestCoordinatorPlannerMaxStepsUsesExplicitRuntimeKey(t *testing.T) {
 	planner := &mockProvider{name: "planner", chunks: []provider.Chunk{
-		{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "call-1", Name: "read_file", Arguments: `{"path":"DEEPER.md"}`}},
+		{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "call-1", Name: "read_file", Arguments: `{"path":"DEEPZORA.md"}`}},
 		{Type: provider.ChunkDone},
 	}}
 	exec := &mockProvider{name: "executor", chunks: []provider.Chunk{
@@ -844,7 +844,7 @@ func TestCoordinatorHandoffAffirmsExecutorToolSchemasWhenPlannerClaimsNoMCP(t *t
 			{Type: provider.ChunkDone},
 		},
 		{
-			{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "call-1", Name: "mcp__github__search", Arguments: `{"query":"Deeper discussions"}`}},
+			{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: "call-1", Name: "mcp__github__search", Arguments: `{"query":"Deepzora discussions"}`}},
 			{Type: provider.ChunkDone},
 		},
 		{

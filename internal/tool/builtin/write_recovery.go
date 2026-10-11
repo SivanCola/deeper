@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func contentDigest(content string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(content))) }

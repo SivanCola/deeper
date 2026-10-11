@@ -17,9 +17,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"deeper/internal/browser"
-	"deeper/internal/remote/sftpfs"
-	"deeper/internal/remote/sshtest"
+	"deepzora/internal/browser"
+	"deepzora/internal/remote/sftpfs"
+	"deepzora/internal/remote/sshtest"
 )
 
 // brokerFakeExecutor answers from fixed fields and records the session each
@@ -406,7 +406,7 @@ func TestBrowserBrokerRejectsBadToken(t *testing.T) {
 }
 
 func TestBrowserBrokerScreenshotRelaysCapture(t *testing.T) {
-	exec := &brokerFakeExecutor{screenshot: browser.Screenshot{Path: "/tmp/deeper-browser/tab-1/shot.png", MIME: "image/png", Width: 10, Height: 10}}
+	exec := &brokerFakeExecutor{screenshot: browser.Screenshot{Path: "/tmp/deepzora-browser/tab-1/shot.png", MIME: "image/png", Width: 10, Height: 10}}
 	rig := newBrokerTestRig(t, sessionResolver(exec, "/ws", map[string]bool{"/s": true}))
 	rig.conn = fakeSFTPConn{}
 	rig.relayTo = "/remote/scratch/"
@@ -423,7 +423,7 @@ func TestBrowserBrokerScreenshotRelaysCapture(t *testing.T) {
 		t.Fatalf("screenshot path = %q, want the relayed remote path", shot.Path)
 	}
 	calls := rig.relayCalls()
-	if len(calls) != 1 || calls[0].workspace != "/ws" || calls[0].localPath != "/tmp/deeper-browser/tab-1/shot.png" {
+	if len(calls) != 1 || calls[0].workspace != "/ws" || calls[0].localPath != "/tmp/deepzora-browser/tab-1/shot.png" {
 		t.Fatalf("relay calls = %+v", calls)
 	}
 }

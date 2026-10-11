@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/evidence"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/evidence"
 )
 
 // activationEventRecorder captures "topic:activation" events through the

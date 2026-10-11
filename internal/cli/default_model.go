@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/extension/providerext"
+	"deepzora/internal/config"
+	"deepzora/internal/extension/providerext"
 )
 
 // resolveModelForCLI picks the chat model a CLI subcommand should boot on. A
@@ -36,9 +36,9 @@ func resolveModelForCLI(explicitRef string, cfg *config.Config) (ref string, fal
 			return "", false, fmt.Errorf("unknown model %q", explicitRef)
 		}
 		if !entry.Configured() {
-			// Provider keys resolve only from the Deeper credentials file, so
+			// Provider keys resolve only from the Deepzora credentials file, so
 			// naming the variable alone sends users to their shell environment.
-			return "", false, fmt.Errorf("model %q has no API key: add %s=<key> to %s or run `deeper setup` (shell environment variables are not read)", explicitRef, entry.APIKeyEnv, config.UserCredentialsPath())
+			return "", false, fmt.Errorf("model %q has no API key: add %s=<key> to %s or run `deepzora setup` (shell environment variables are not read)", explicitRef, entry.APIKeyEnv, config.UserCredentialsPath())
 		}
 		return entry.Name + "/" + entry.Model, false, nil
 	}
@@ -47,7 +47,7 @@ func resolveModelForCLI(explicitRef string, cfg *config.Config) (ref string, fal
 }
 
 // resolveServeModel keeps serve's implicit model scoped to the user config.
-// A project deeper.toml may configure the served workspace, but it must not
+// A project deepzora.toml may configure the served workspace, but it must not
 // replace the account-level model used for new serve sessions.
 func resolveServeModel(modelName string) string {
 	if strings.TrimSpace(modelName) != "" {

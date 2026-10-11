@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 type Scope string
@@ -21,8 +21,8 @@ const (
 	ScopeLocal    Scope = "local"
 )
 
-var DocumentNames = []string{"DEEPER.md", "AGENTS.md", "CLAUDE.md"}
-var LocalDocumentNames = []string{"DEEPER.local.md", "AGENTS.local.md", "CLAUDE.local.md"}
+var DocumentNames = []string{"DEEPZORA.md", "AGENTS.md", "CLAUDE.md"}
+var LocalDocumentNames = []string{"DEEPZORA.local.md", "AGENTS.local.md", "CLAUDE.local.md"}
 
 const MaxImportDepth = 5
 
@@ -321,7 +321,7 @@ func importBoundaryForPath(path string, boundaries []string) string {
 func userInstructionImportRoots(userDir string) []string {
 	roots := []string{absolutePath(userDir)}
 	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
-		for _, name := range []string{".deeper", ".agents", ".agent", ".claude"} {
+		for _, name := range []string{".deepzora", ".agents", ".agent", ".claude"} {
 			roots = append(roots, absolutePath(filepath.Join(home, name)))
 		}
 	}

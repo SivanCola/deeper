@@ -356,7 +356,7 @@ desktopStub.replaceCommands(({
     App: {
       Settings: async () => {
         failingSettingsCalls += 1;
-        if (failingSettingsCalls === 1) throw new Error("/Users/example/.deeper/settings.toml: permission denied");
+        if (failingSettingsCalls === 1) throw new Error("/Users/example/.deepzora/settings.toml: permission denied");
         return baseSettings("standard");
       },
     } as Partial<AppBindings> as AppBindings,
@@ -455,7 +455,7 @@ desktopStub.replaceCommands(({
   },
 }).main.App);
 
-localStorage.setItem("deeper-zoom-restart", "1");
+localStorage.setItem("deepzora-zoom-restart", "1");
 await act(async () => {
   zoomRoot.render(
     <LocaleProvider>
@@ -493,7 +493,7 @@ await act(async () => {
 await waitFor("display zoom reset", () => document.querySelector(".zoom-slider__value")?.textContent?.trim() === "100%");
 
 eq(savedZoomFactors.at(-1), 1, "display zoom reset writes the default zoom factor");
-eq(localStorage.getItem("deeper-zoom-restart"), "1", "display zoom reset updates the local restart zoom cache");
+eq(localStorage.getItem("deepzora-zoom-restart"), "1", "display zoom reset updates the local restart zoom cache");
 
 await act(async () => {
   zoomRoot.unmount();

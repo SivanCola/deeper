@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/topicstate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/topicstate"
 )
 
 func topicRemovalTrashEntries(state workspacestate.State, query string) []TrashEntry {

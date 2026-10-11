@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/skill"
+	"deepzora/internal/skill"
 )
 
 var githubAPIBaseURL = "https://api.github.com"

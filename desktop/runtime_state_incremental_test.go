@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 type countedRuntimeReader struct {

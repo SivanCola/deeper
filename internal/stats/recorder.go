@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
 )
 
 // Recorder is a passthrough event.Sink that snapshots token usage (event.Usage)

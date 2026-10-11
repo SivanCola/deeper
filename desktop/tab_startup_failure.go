@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 type startupFailureRestorePolicy uint8

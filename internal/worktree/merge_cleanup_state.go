@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 const (
@@ -210,7 +210,7 @@ func validateLegacyCleanupState(metadata mergeMetadata, expectedHead string, sta
 }
 
 func validateCleanupRecoveryPath(metadata mergeMetadata, path string) error {
-	cleanupDir := filepath.Join(filepath.Dir(metadata.WorktreeRoot), ".deeper-cleanup")
+	cleanupDir := filepath.Join(filepath.Dir(metadata.WorktreeRoot), ".deepzora-cleanup")
 	cleanupInfo, err := os.Lstat(cleanupDir)
 	if err != nil || !cleanupInfo.IsDir() || cleanupInfo.Mode()&os.ModeSymlink != 0 {
 		return errors.New("cleanup recovery directory is not a real directory")

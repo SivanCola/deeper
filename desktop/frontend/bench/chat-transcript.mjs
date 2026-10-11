@@ -21,8 +21,8 @@ process.env.PLAYWRIGHT_BROWSERS_PATH = !process.env.PLAYWRIGHT_BROWSERS_PATH || 
   : process.env.PLAYWRIGHT_BROWSERS_PATH;
 // Playwright reads PLAYWRIGHT_BROWSERS_PATH at module evaluation.
 const { chromium, webkit, _electron } = await import("playwright");
-const outDir = await mkdtemp(path.join(tmpdir(), "deeper-chat-build-"));
-const evidence = process.env.DEEPER_CHAT_EVIDENCE ?? process.env.DEEPER_LAYOUT_ARTIFACTS ?? path.join(tmpdir(), "deeper-chat-evidence");
+const outDir = await mkdtemp(path.join(tmpdir(), "deepzora-chat-build-"));
+const evidence = process.env.DEEPZORA_CHAT_EVIDENCE ?? process.env.DEEPZORA_LAYOUT_ARTIFACTS ?? path.join(tmpdir(), "deepzora-chat-evidence");
 await mkdir(evidence, { recursive: true });
 const loaded = await loadConfigFromFile({ command: "build", mode: "production" }, path.join(root, "vite.config.ts"));
 const config = loaded.config;
@@ -33,7 +33,7 @@ await build({ ...config, configFile: false, root, logLevel: "error",
 const server = await preview({ configFile: false, root, logLevel: "error", build: { outDir }, preview: { host: "127.0.0.1", port: 0 } });
 const address = server.httpServer.address();
 const reports = [];
-const mode = process.env.DEEPER_TRANSCRIPT_MODE ?? (process.env.DEEPER_TRANSCRIPT_NATIVE_THUMB === "1" ? "native-scrollbar" : "headless-reader");
+const mode = process.env.DEEPZORA_TRANSCRIPT_MODE ?? (process.env.DEEPZORA_TRANSCRIPT_NATIVE_THUMB === "1" ? "native-scrollbar" : "headless-reader");
 try {
   for (const [name, engine] of Object.entries(process.env.CHAT_BROWSER === "electron" ? { electron: _electron } : process.env.CHAT_BROWSER === "webkit" ? { webkit } : process.env.CHAT_BROWSER === "chromium" ? { chromium } : { chromium, webkit })) {
     let electronApp;
@@ -41,9 +41,9 @@ try {
     if (name === "electron") {
       const main = path.join(outDir, "main.cjs");
       await copyFile(path.join(root, "bench/transcript-layout-electron.cjs"), main);
-      electronApp = await engine.launch({ executablePath: createRequire(path.join(root, "../electron/package.json"))("electron"), args: [main], env: { ...process.env, DEEPER_LAYOUT_URL: url } });
+      electronApp = await engine.launch({ executablePath: createRequire(path.join(root, "../electron/package.json"))("electron"), args: [main], env: { ...process.env, DEEPZORA_LAYOUT_URL: url } });
     }
-    const nativeThumb = process.env.DEEPER_TRANSCRIPT_NATIVE_THUMB === "1";
+    const nativeThumb = process.env.DEEPZORA_TRANSCRIPT_NATIVE_THUMB === "1";
     const browser = electronApp ? undefined : await engine.launch({ headless: !nativeThumb });
     const report = { browser: name, complete: false, samples: [], errors: [],
       version: browser?.version() ?? await electronApp.evaluate(() => process.versions.electron),
@@ -61,7 +61,7 @@ try {
     try {
       const page = electronApp ? await electronApp.firstWindow() : await browser.newPage({ viewport: { width: 1280, height: 900 } });
       const errors = report.errors;
-      await page.addInitScript(() => { window.chatWrites = []; window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__ = write => { window.chatWrites.push(write); if (window.chatWrites.length > 100) window.chatWrites.shift(); }; });
+      await page.addInitScript(() => { window.chatWrites = []; window.__DEEPZORA_TRANSCRIPT_SCROLL_WRITE__ = write => { window.chatWrites.push(write); if (window.chatWrites.length > 100) window.chatWrites.shift(); }; });
       await installTranscriptPerformanceObserver(page);
       page.on("pageerror", error => { errors.push(error.message); console.error(error.stack); });
       page.on("console", message => { if (/Maximum update depth|ResizeObserver loop|Encountered two children with the same key/.test(message.text())) errors.push(message.text()); });
@@ -336,7 +336,7 @@ try {
       const writesAfterIdle = await page.evaluate(() => window.chatWrites.at(-1)?.transaction);
       assert.equal(writesAfterIdle, writesBeforeIdle, "settled layout queue converges");
       await page.evaluate(() => window.chatFixture.authored());
-      await page.getByText("我是 Deeper。", { exact: true }).waitFor();
+      await page.getByText("我是 Deepzora。", { exact: true }).waitFor();
       const authoredText = await page.locator(".chat-column").innerText();
       assert.match(authoredText, /你是谁/);
       assert.match(authoredText, /旧会话问题/);

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // TestReplayPendingPromptsReEmitsBlockedApproval proves a tool approval that is

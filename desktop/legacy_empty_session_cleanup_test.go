@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/desktop/internal/draftstate"
-	"deeper/desktop/internal/legacycleanup"
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/draftstate"
+	"deepzora/desktop/internal/legacycleanup"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 func newLegacyCleanupTestApp(t *testing.T) (*App, string) {

@@ -34,7 +34,7 @@ canonical 选择器仍指向已登记的会话；source 选择器明确指向保
 ## 传输
 
 - 帧格式：按行分隔的 JSON-RPC 2.0（`rpcwire` 严格模式）。一行一帧，UTF-8，不允许批量数组。
-- Go 服务以 `deeper-desktop --host-rpc` 启动。stdout 只承载协议帧，stderr 承载日志。
+- Go 服务以 `deepzora-desktop --host-rpc` 启动。stdout 只承载协议帧，stderr 承载日志。
 	壳仅在 `desktop/shutdown` 明确返回 `completed` 后关闭 stdin 作为退出兜底；
 	没有完成结果的 stdin 关闭按 `connection_lost` 进入有界收尾。
 - 限制：双向单帧 64 MiB，服务端最多 512 个并发入站处理器，30 秒写入停滞看门狗。
@@ -53,7 +53,7 @@ canonical 选择器仍指向已登记的会话；source 选择器明确指向保
   "contractDigest": "sha256:…",       // 壳包内嵌的契约摘要
   "build": {"version":"v1.30.0","channel":"stable","commit":"abc123"},
   "host": {"name":"electron","version":"44.2.0","chrome":"152.0.0","platform":"darwin","arch":"arm64"},
-  "instance": {"home":"/Users/…/.deeper","dev":false}
+  "instance": {"home":"/Users/…/.deepzora","dev":false}
 }}
 // 服务 → 壳
 {"result":{
@@ -61,7 +61,7 @@ canonical 选择器仍指向已登记的会话；source 选择器明确指向保
   "contractDigest": "sha256:…",
   "service": {"version":"v1.30.0","channel":"stable","commit":"abc123","pid":4242},
   "runtimeGeneration": "g-01J…",       // 每个服务进程唯一
-  "instance": {"identityVersion":3,"identityDigest":"sha256:…","legacyId":"io.github.sivancola.deeper.…"},
+  "instance": {"identityVersion":3,"identityDigest":"sha256:…","legacyId":"com.deepzora.desktop.…"},
   "runId": "…", "incidentId": "…", "diagnosticsEnabled": true,
   "resources": {"origin":"http://127.0.0.1:51234","token":"…"},
   "window": {"width":1280,"height":820,"minWidth":760,"minHeight":480,"frameless":false,"zoomFactor":1}
@@ -163,7 +163,7 @@ JSON 序列化的参数，结果为 `()`、`(T)`、`(error)` 或 `(T, error)`。
 ```
 
 `args` 保留原事件桥的可变参数载荷，多数事件只有一个元素。壳把该帧经
-`deeper:event` 通道转给渲染进程；preload 的 `on(name, cb)` 按 `name` 过滤并调用
+`deepzora:event` 通道转给渲染进程；preload 的 `on(name, cb)` 按 `name` 过滤并调用
 `cb(...args)`。序号在同一世代内严格递增，重新挂载的渲染进程可据此发现缺口并重新
 快照，而不是信任陈旧状态。
 
@@ -233,18 +233,18 @@ Wails 实现已随 Electron 壳落地删除。
 
 ## 资源源
 
-服务在回环端口上监听，承载现有的授权资源处理器（`/__deeper_workspace_media/…`、
-`/__deeper_theme_asset/…`、远程 markdown 图片代理）。壳从受限的 `deeper://app/`
+服务在回环端口上监听，承载现有的授权资源处理器（`/__deepzora_workspace_media/…`、
+`/__deepzora_theme_asset/…`、远程 markdown 图片代理）。壳从受限的 `deepzora://app/`
 scheme 提供打包界面，只把上述前缀转发到资源源，并在主进程中附加
 `Authorization: Bearer <token>`。token 从不到达渲染进程、网站视图、远程窗口或
 MCP App 框架。Go 保留今天的全部文件身份与 TTL 检查。
 
 ## 渲染进程 preload 接口
 
-可信 preload 只暴露一个对象 `window.deeperDesktop`：
+可信 preload 只暴露一个对象 `window.deepzoraDesktop`：
 
 ```ts
-interface DeeperDesktopHost {
+interface DeepzoraDesktopHost {
   readonly kind: "electron";
   readonly contract: { protocolVersion: number; digest: string; commands: readonly string[] };
   readonly platform: { os: "darwin" | "windows" | "linux"; arch: string; versions: Record<string, string> };
@@ -310,9 +310,9 @@ warning: "invalid-config" | "unreadable-config" | "unsupported-version" | null }
 ## 安全边界
 
 - 应用窗口：sandbox 开启，context isolation 开启，Node integration 关闭，只加载
-  `deeper://app`，使用上述 preload。
+  `deepzora://app`，使用上述 preload。
 - 网站视图、远程 Serve 窗口和 MCP App 框架：独立 session，没有应用 preload，不能访问
-  `deeper://`，不能触达 `host/*`。
+  `deepzora://`，不能触达 `host/*`。
 - IPC 处理器只接受来自应用窗口 `webContents` 的请求，其他发送者被拒绝并记录。
 - 内嵌契约之外的 `desktop/invoke` 名称在到达 Go 之前失败。
 

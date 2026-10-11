@@ -1,6 +1,6 @@
-# Deeper Engineering Spec
+# Deepzora Engineering Spec
 
-> Deeper is a coding agent: a thin harness driving multiple models, with **all
+> Deepzora is a coding agent: a thin harness driving multiple models, with **all
 > capabilities supplied by configuration and plugins**. This document is the
 > contract — code follows it. Change the contract first, then the code.
 
@@ -29,14 +29,14 @@ README is bilingual (`README.md` English + `README.zh-CN.md`).
 ## 2. Layout
 
 ```
-deeper/
-├── go.mod / go.sum          # module deeper; require BurntSushi/toml
+deepzora/
+├── go.mod / go.sum          # module deepzora; require BurntSushi/toml
 ├── Makefile                 # build / cross / vet / fmt / test
 ├── README.md / README.zh-CN.md
-├── deeper.example.toml         # sample config
+├── deepzora.example.toml         # sample config
 ├── docs/SPEC.md             # this file
-├── cmd/deeper/main.go          # entry; blank-imports built-in providers/tools
-├── cmd/deeper-plugin-example/  # reference MCP stdio plugin (a runnable example)
+├── cmd/deepzora/main.go          # entry; blank-imports built-in providers/tools
+├── cmd/deepzora-plugin-example/  # reference MCP stdio plugin (a runnable example)
 └── internal/
     ├── cli/                 # subcommand routing, flags, assembly, exit codes
     ├── config/              # TOML loading (flag > project > user > defaults)
@@ -45,12 +45,12 @@ deeper/
     ├── tool/                # Tool interface + Registry
     │   └── builtin/         # read_file/write_file/edit_file/move_file/bash/ls/glob/grep
     ├── permission/          # per-call Policy: allow/ask/deny rules → Decision
-    ├── command/             # custom slash commands loaded from .deeper/commands/*.md
+    ├── command/             # custom slash commands loaded from .deepzora/commands/*.md
     ├── plugin/              # stdio JSON-RPC (MCP) client; adapts remote tools
     ├── remote/              # SSH transport for the Remote-SSH module
     │   ├── forward/         # -L / -R port-forward lifecycle
     │   ├── sftpfs/          # SFTP file layer (quarantines pkg/sftp)
-    │   └── bootstrap/       # detached `deeper serve` bootstrap over SSH
+    │   └── bootstrap/       # detached `deepzora serve` bootstrap over SSH
     └── agent/               # Session + harness loop
 ```
 
@@ -134,7 +134,7 @@ type Tool interface {
 ### 3.3 Plugins (`internal/plugin`) — MCP client
 
 An external plugin is an MCP server declared in config. The wire protocol is
-**JSON-RPC 2.0** in every case; only the transport differs. Deeper keeps the
+**JSON-RPC 2.0** in every case; only the transport differs. Deepzora keeps the
 product-level client and delegates protocol negotiation, request correlation,
 cancellation, pagination, and transport framing to the official MCP Go SDK.
 One concurrency-safe session per configured server is shared by tools, prompts,
@@ -156,9 +156,9 @@ and resources.
     Server Metadata discovery, dynamic client registration, PKCE S256, a
     loopback callback, resource indicators, and refresh-token rotation. Client
     credentials and tokens are stored with mode `0600` in the server's private
-    Deeper MCP state directory, outside the workspace; tokens are bound to the
+    Deepzora MCP state directory, outside the workspace; tokens are bound to the
     configured resource URL and are never reused after that URL changes. OAuth
-    discovery, registration, and token requests honor Deeper's resolved
+    discovery, registration, and token requests honor Deepzora's resolved
     network-proxy settings. Removing a declaration clears this state unless the
     effective fallback uses the same OAuth resource.
   - `sse` — the legacy 2024-11-05 HTTP+SSE transport. A persistent GET stream
@@ -187,10 +187,10 @@ and resources.
   workflow gates rather than separate process sandboxes.
 - Configuration provenance is runtime metadata and determines persistence scope.
   Desktop and CLI installs write the user-global `config.toml`; project
-  `deeper.toml` and `.mcp.json` entries remain in their owning project file.
+  `deepzora.toml` and `.mcp.json` entries remain in their owning project file.
   Every configured source is trusted without a separate launch-confirmation
   step. Project entries override same-name global entries, and project
-  `deeper.toml` overrides `.mcp.json`. Editing writes to the effective entry's
+  `deepzora.toml` overrides `.mcp.json`. Editing writes to the effective entry's
   source; removing it reveals the next lower-priority declaration.
 - Each remote tool is adapted to the `Tool` interface and injected into the run
   registry, namespaced `mcp__<server>__<tool>` (spaces normalised to `_`) to
@@ -199,7 +199,7 @@ and resources.
   to false (a remote tool is opaque — we can't see its side effects), so a
   plugin opts a tool into parallel-batch dispatch and the permission layer's
   reader-default by declaring `readOnlyHint: true` in `tools/list`.
-- Installation is the trust decision for tool metadata. Deeper assumes an
+- Installation is the trust decision for tool metadata. Deepzora assumes an
   installed server reports `readOnlyHint` and `destructiveHint` honestly;
   planner/read-only filtering is a workflow boundary for trusted servers, not
   containment against a malicious MCP server. Explicit deny rules and the
@@ -210,7 +210,7 @@ and resources.
   server order. `/mcp` shows connected servers, counts, protocol/listening state,
   reconnect attempts, and a redacted error category; it never exposes a session
   identifier.
-- `cmd/deeper-plugin-example` is a runnable reference stdio server (`echo`,
+- `cmd/deepzora-plugin-example` is a runnable reference stdio server (`echo`,
   `wordcount`), driven by an end-to-end test that builds the real binary.
 
 ### 3.4 Agent (`internal/agent`)
@@ -270,7 +270,7 @@ executor:
 
 ### 3.6 Context management (content-driven summary)
 
-Long tasks fill the model window. Deeper keeps a **cache-first, append-only**
+Long tasks fill the model window. Deepzora keeps a **cache-first, append-only**
 canonical transcript and installs a short **provider-visible checkpoint** only
 when the sole automatic threshold is crossed.
 
@@ -285,7 +285,7 @@ when the sole automatic threshold is crossed.
 - **At the trigger** one singleflight maintenance transaction first persistently
   prunes every tool result over 8192 Unicode code points to `4096 head +
   "[... tool result middle pruned ...]" + 1024 tail`. If this clears pressure,
-  no summary request is made. Otherwise Deeper summarizes the old contiguous
+  no summary request is made. Otherwise Deepzora summarizes the old contiguous
   prefix and retains the newest **16%** of the context window verbatim, aligned so
   assistant tool calls and tool results are never split.
 - The summary request replays the original system message, the selected message
@@ -312,7 +312,7 @@ when the sole automatic threshold is crossed.
   marker until the view fits under the trigger; `ErrCompactionRequired` is
   returned only when even that cannot reclaim enough.
 - Users inspect or change the threshold with
-  `deeper config compact-ratio [--local] [VALUE]`. Project config overrides the
+  `deepzora config compact-ratio [--local] [VALUE]`. Project config overrides the
   user-global value used by desktop and new CLI sessions. UI always shows the
   **effective** ratio.
 - `max_output_tokens` is an independent **per-turn** completion ceiling and
@@ -329,7 +329,7 @@ when the sole automatic threshold is crossed.
     compatible APIs do not assume a shared window until a trusted context 400.
   - A positive value is an explicit cost cap and may still be clipped down to
     the physical remainder. A negative value force-omits optional wire limits;
-    if the known auto budget no longer fits, Deeper compacts instead of
+    if the known auto budget no longer fits, Deepzora compacts instead of
     overriding that choice.
 - Canonical tool storage remains backward compatible: `Content` is the stable
   provider-visible ≤32KB form and `RawContent` holds the full local original.
@@ -497,8 +497,8 @@ func (p Policy) Decide(toolName string, readOnly bool, args json.RawMessage) Dec
   three presets: `read-only`, `workspace-write`, and `danger-full-access`.
   Workspace write is the default and confines local mutations to the workspace
   and private session temporary directory. Full access skips ordinary prompts
-  and Deeper filesystem/network confinement. Explicit host deny rules still
-  run before launch, but Deeper does not constrain the launched process.
+  and Deepzora filesystem/network confinement. Explicit host deny rules still
+  run before launch, but Deepzora does not constrain the launched process.
   Shell syntax does not alter the selected preset.
   Neither posture answers `ask` questions or approves `exit_plan_mode` plans.
   Plan Mode is entered only through an explicit user choice and remains
@@ -536,7 +536,7 @@ func (p Policy) Decide(toolName string, readOnly bool, args json.RawMessage) Dec
   and versioned `update_goal(edit|pause|resume|complete|blocked)`. There is no
   `continue` action: `active + armed` is sufficient for the idle driver. There
   is no host readiness evaluator, second research protocol or writable sidecar
-  runtime. Legacy `.deeper/autoresearch/...`
+  runtime. Legacy `.deepzora/autoresearch/...`
   archives remain read-only and explicit old paths recover as ordinary Goals.
   Ordinary prompts never force collaboration mode at the host level, although
   the model may create a long-running goal from a directly authorized human
@@ -557,7 +557,7 @@ func (p Policy) Decide(toolName string, readOnly bool, args json.RawMessage) Dec
 | --- | --- | --- | --- |
 | Read only / `read-only` | Reads are allowed; writes and external side effects require a scoped authorization | Waits for user | Waits for user |
 | Workspace access / `workspace-write` | Workspace and private session temp writes run inside the OS sandbox; boundary crossings require authorization | Waits for user | Waits for user |
-| Full access / `danger-full-access` | Ordinary prompts and Deeper process sandboxing are skipped; explicit host deny rules still run before launch | Waits for user | Waits for user |
+| Full access / `danger-full-access` | Ordinary prompts and Deepzora process sandboxing are skipped; explicit host deny rules still run before launch | Waits for user | Waits for user |
 | Approved-plan execution window | The approved plan may execute only within the active preset; explicit `ask` / `deny` rules remain | Future plans still wait | Waits for user |
 
 Out of the box, new sessions use `workspace-write`: workspace and private
@@ -576,8 +576,8 @@ The chat TUI accepts `/command` input. Three kinds share one dispatch:
   saving the previous transcript for resume/history. `/clear` requires
   confirmation, then discards the current context without saving it; it does not
   delete project memory.
-- **Custom commands** are Markdown files under `.deeper/commands/` (project) and
-  the user config dir, e.g. `~/.deeper/commands/` on macOS/Linux; the project dir overrides the user dir on a
+- **Custom commands** are Markdown files under `.deepzora/commands/` (project) and
+  the user config dir, e.g. `~/.deepzora/commands/` on macOS/Linux; the project dir overrides the user dir on a
   name clash. A file `review.md` becomes `/review`; a subdirectory namespaces it
   (`git/commit.md` → `/git:commit`). Invoking one renders its body and sends the
   result as the next user turn.
@@ -592,7 +592,7 @@ Review the staged diff. Focus on $ARGUMENTS, list bugs with file:line.
 ```
 
 - Frontmatter is an optional `---`-fenced block of simple `key: value` lines;
-  `description` and `argument-hint` are recognised (no YAML dependency — Deeper
+  `description` and `argument-hint` are recognised (no YAML dependency — Deepzora
   stays lean). The remainder is the body template.
 - Substitution in the body: `$ARGUMENTS` (all args, space-joined), `$1`…`$N`
   (positional, empty when absent), `$$` (a literal `$`). Arguments are the
@@ -655,10 +655,10 @@ the profile with the Boot-wired Skill runners. Each run gets an isolated child
 session and returns only its final answer to the caller. The headless contract is
 explicit:
 
-- `deeper subagent try <name> ... <task>` uses the read-only Skill runner;
-- `deeper subagent run <name> ... <task>` uses the normal permission and
+- `deepzora subagent try <name> ... <task>` uses the read-only Skill runner;
+- `deepzora subagent run <name> ... <task>` uses the normal permission and
   sandbox path; and
-- ordinary `Controller.Run` / `deeper run` remains unchanged and does not
+- ordinary `Controller.Run` / `deepzora run` remains unchanged and does not
   reinterpret slash-prefixed input as a subagent command.
 
 Desktop and CLI profile mutations share
@@ -764,7 +764,7 @@ A child inherits nothing implicitly. What it receives is exactly this:
 | Plan-mode marker, reasoning/response language | run options, when set |
 | A prior transcript | only via `continue_from` / `fork_from` |
 
-Not inherited, by construction: `DEEPER.md`, `AGENTS.md`, `CLAUDE.md`, project
+Not inherited, by construction: `DEEPZORA.md`, `AGENTS.md`, `CLAUDE.md`, project
 and global memory (the memory queue is disabled, so a child cannot record memory
 either), the parent conversation, the current Goal, planner output, and sibling
 sub-agent results. A constraint that must reach a child today has to be in its
@@ -812,7 +812,7 @@ writer is never abandoned mid-write.
 ### 3.15 One child-construction primitive
 
 The APIs that spawn a child are many — `task`, `read_only_task`, `fleet`,
-`parallel_tasks`, `run_skill`, `/<profile>`, `deeper subagent run|try`,
+`parallel_tasks`, `run_skill`, `/<profile>`, `deepzora subagent run|try`,
 desktop preview. The execution primitive behind them must stay one. Each entry
 point compiles its request into a `ProfileExecSpec` and hands it to
 `TaskTool.RunProfileSpec`, which is the only place that resolves depth, tool
@@ -872,7 +872,7 @@ Orchestration is easy to add and hard to justify: more agents always cost more
 tokens, and the extra tokens alone can look like an improvement. Comparing arms
 therefore has to hold the model fixed and read host-recorded facts, not prose.
 
-`deeper run --json` emits per-run delegation counters alongside the existing
+`deepzora run --json` emits per-run delegation counters alongside the existing
 token, cache, cost, and duration totals:
 
 | Counter | Answers |
@@ -994,22 +994,22 @@ type Chunk struct {
 
 ## 5. Configuration (TOML)
 
-Resolution order: **flag > project `./deeper.toml` > the user config file
-> built-in defaults**. Starting with **Deeper v1.8.1**, the user config lives
-at `~/.deeper/config.toml` on macOS/Linux and
-`%AppData%\deeper\config.toml` on Windows. See
+Resolution order: **flag > project `./deepzora.toml` > the user config file
+> built-in defaults**. Starting with **Deepzora v1.8.1**, the user config lives
+at `~/.deepzora/config.toml` on macOS/Linux and
+`%AppData%\deepzora\config.toml` on Windows. See
 [Configuration paths](./CONFIG_PATHS.md) for migration and related data paths.
-Fields marked user/global only are not overridden by project `deeper.toml`.
+Fields marked user/global only are not overridden by project `deepzora.toml`.
 Provider entries name secrets with `api_key_env`; saved key values live in
-Deeper's global `<Deeper home>/.env`, shared by CLI and desktop. Project
+Deepzora's global `<Deepzora home>/.env`, shared by CLI and desktop. Project
 `.env`, home `.env`, inherited shell environment variables, legacy credentials,
 and the OS keyring are not provider-key runtime fallbacks. Project `.env` still
 feeds workspace-scoped, non-provider `${VAR}` expansion for MCP/plugin settings
-without importing provider keys or Deeper control variables.
+without importing provider keys or Deepzora control variables.
 
 ```toml
 default_model = "deepseek"   # provider name (→ its default model) or "provider/model"
-# language    = "zh"                # ui language tag; empty = auto-detect from $LANG / $DEEPER_LANG
+# language    = "zh"                # ui language tag; empty = auto-detect from $LANG / $DEEPZORA_LANG
 
 [ui]
 # shortcut_layout = "desktop"       # classic|desktop; compatibility setting
@@ -1017,7 +1017,7 @@ default_model = "deepseek"   # provider name (→ its default model) or "provide
 show_turn_usage = false              # hide per-request token/cost receipts in the TUI; default true
 
 [agent]
-system_prompt = "You are Deeper, a coding agent..."  # or system_prompt_file = "..."
+system_prompt = "You are Deepzora, a coding agent..."  # or system_prompt_file = "..."
 temperature       = 0.0
 reasoning_language = "auto"       # visible reasoning text: auto|zh|en
 # plan_mode_read_only_commands = ["gh issue view"]   # legacy compatibility only; Plan bash uses Permissions
@@ -1088,12 +1088,12 @@ ask   = []                                 # force a prompt even if otherwise al
 [serve]
 auth_mode = "none"             # none|token|password; use auth before binding beyond localhost
 # token = ""                   # optional fixed token; empty token mode generates one at startup
-# password_hash = ""           # bcrypt hash generated with deeper serve --hash-password --password '...'
+# password_hash = ""           # bcrypt hash generated with deepzora serve --hash-password --password '...'
 # behind_proxy = false         # trust X-Forwarded-* only behind a trusted reverse proxy
 
 [[plugins]]
 name    = "example"            # type defaults to "stdio"
-command = "deeper-plugin-example"
+command = "deepzora-plugin-example"
 args    = []
 # env   = { FOO = "bar" }
 # startup_timeout_seconds = 60         # initialize + tools/list cap; 0 = global/default cap
@@ -1124,18 +1124,18 @@ parseable for upgrade compatibility, but are ignored and removed by a one-time
 migration. The CLI `--max-steps` flag and `[bot].max_steps` remain separate,
 explicit controls for one-off and unattended execution; bot `0` means continuous.
 
-`deeper setup` writes this default config so the CLI is usable out of the box.
+`deepzora setup` writes this default config so the CLI is usable out of the box.
 
 `[ui].cursor_shape` is normalized to `underline`, `block`, or `bar`; empty or
 unknown values fall back to `bar`. It applies to the Bubble Tea CLI/TUI
 textarea only, while desktop and browser inputs keep their platform-native
 cursor behavior.
 
-`[serve]` controls the HTTP browser frontend used by `deeper serve`. The
+`[serve]` controls the HTTP browser frontend used by `deepzora serve`. The
 default `auth_mode = "none"` is intended for the loopback default
 `127.0.0.1:8787`; deployments reachable from another machine must use `token` or
 `password`. In `none` mode every state-changing request still needs the launch
-token, which Serve writes to a 0600 file under `<Deeper home>/remote/` rather
+token, which Serve writes to a 0600 file under `<Deepzora home>/remote/` rather
 than to the terminal, and otherwise refuses with `launch_token_required`.
 `[serve]` is read from the user config only. Password mode requires either a startup `--password` or a stored
 bcrypt `password_hash`. `behind_proxy` must stay false unless the server is
@@ -1145,9 +1145,9 @@ headers.
 MCP servers may also be declared in a project-root `.mcp.json` using Claude
 Code's exact `mcpServers` schema (`command`/`args`/`env`, `type`/`url`/`headers`,
 `${VAR}` expansion). It is read after the TOML files and merged into
-`[[plugins]]`; on a name collision `deeper.toml` wins (it is the more explicit,
-Deeper-specific source). This lets a server already configured for Claude work in
-Deeper unchanged.
+`[[plugins]]`; on a name collision `deepzora.toml` wins (it is the more explicit,
+Deepzora-specific source). This lets a server already configured for Claude work in
+Deepzora unchanged.
 
 MCP startup has a separate lifecycle from an individual tool call. A caller
 waits briefly for cold startup, while the shared launch/authorization/
@@ -1166,14 +1166,14 @@ the connection is ready.
 `[sandbox]` is the *enforcement* layer beneath permissions (which are *policy*).
 They stay two layers: a permitted call still cannot write outside the approved
 roots. Interactive sessions can extend those roots with a write-access approval
-(once / session / project `deeper.toml` / deny). File tools request the target
+(once / session / project `deepzora.toml` / deny). File tools request the target
 parent directory automatically. Bash must declare `additional_write_dirs` and a
 `justification`; the host does not infer paths from the command text. Headless
-`deeper run` fails closed unless the directory is already in
+`deepzora run` fails closed unless the directory is already in
 `[sandbox].allow_write` or `--add-dir`. Granting `${HOME}` is allowed with a
-high-risk warning; the filesystem root and Deeper session/state paths are not.
+high-risk warning; the filesystem root and Deepzora session/state paths are not.
 Phase 0 confines the file-writing built-ins (`write_file`, `edit_file`,
-`multi_edit`, `move_file`) to `workspace_root` (default cwd), the Deeper user
+`multi_edit`, `move_file`) to `workspace_root` (default cwd), the Deepzora user
 config dir, plus `allow_write`: a write whose target — resolved to an absolute,
 symlink-free path so a symlinked dir or `..` cannot tunnel out — falls outside
 every root is refused, and the error is fed back to the model. Confinement is on
@@ -1187,9 +1187,9 @@ Linux): each command is allowed to write only
 the same roots plus platform-specific command temp/cache roots, denied reads
 under `forbid_read`, and allowed to reach the network only when
 `network = true`.
-**Windows status:** Deeper does not ship an OS-level Bash sandbox on Windows.
+**Windows status:** Deepzora does not ship an OS-level Bash sandbox on Windows.
 The effective mode is fixed to `off`; an older config containing
-`bash = "enforce"` remains readable but resolves to `off`, `deeper doctor`
+`bash = "enforce"` remains readable but resolves to `off`, `deepzora doctor`
 reports the ignored value, and the desktop control is read-only. Bash therefore
 runs unconfined on Windows. The in-process file tools continue to enforce
 `workspace_root`, `allow_write`, and `forbid_read`.
@@ -1216,7 +1216,7 @@ behavior. The escape-prompt and broader OS support are Phase 1's remainder (§9)
 
 ## 8. Distribution
 
-- Build: `CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=$(VERSION)" -o deeper ./cmd/deeper`
+- Build: `CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=$(VERSION)" -o deepzora ./cmd/deepzora`
 - Cross matrix: `darwin|linux|windows` × `amd64|arm64`.
 - Version injected via ldflags (`git describe --tags --always`).
 - Install: prebuilt binary / `go install` / future `brew tap`.
@@ -1227,7 +1227,7 @@ behavior. The escape-prompt and broader OS support are Phase 1's remainder (§9)
   file-writer built-ins (Phase 0) — are confined to the workspace. **Seatbelt on
   macOS and bubblewrap on Linux ship, on by default when available** (see §5).
   Restricted presets fail closed when the platform sandbox cannot be established;
-  Deeper never offers an unconfined retry as a fallback.
+  Deepzora never offers an unconfined retry as a fallback.
 - MCP long tail (deferred deliberately): `headersHelper` auth for remote
   servers; the remaining `.mcp.json` scopes
   (local / user — project scope shipped, see §5); tool-search deferral;

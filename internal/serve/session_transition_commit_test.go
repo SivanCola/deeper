@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/provider"
 )
 
 func TestSessionTransitionPublishesRouteOnlyAfterControllerCommit(t *testing.T) {

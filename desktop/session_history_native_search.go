@@ -12,9 +12,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/config"
-	"deeper/internal/projectiondb"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/session"
 )
 
 // The native preparation owns both databases. Search is admitted only after

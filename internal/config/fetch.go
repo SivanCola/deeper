@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 var knownModelFetchCompatSuffixes = []string{
@@ -120,7 +120,7 @@ func modelFetchAuthMode(e *ProviderEntry) openai.ModelFetchAuthMode {
 }
 
 // BuildModelFetchURLs derives likely OpenAI-compatible model-list endpoints.
-// It keeps Deeper's historical {base}/models path first, then tries the common
+// It keeps Deepzora's historical {base}/models path first, then tries the common
 // {base}/v1/models shape used by many aggregators. Known official Token Rhythm
 // URLs collapse to a single /v1/models candidate because that /v1 route is complete.
 func BuildModelFetchURLs(baseURL, override string) ([]string, error) {

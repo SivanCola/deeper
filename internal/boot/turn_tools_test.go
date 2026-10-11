@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestInteractiveAgentToolsEndNaturallyWithoutFinish(t *testing.T) {

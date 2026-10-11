@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // DesktopSessionInfo 是一个桌面 live 会话(tab)的快照，用于 /desktop status。

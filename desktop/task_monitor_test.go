@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/taskcatalog"
-	"deeper/internal/taskmonitor"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/taskcatalog"
+	"deepzora/internal/taskmonitor"
 )
 
 type taskKillController struct {

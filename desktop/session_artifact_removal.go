@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func removeDesktopSessionArtifactsWithGuard(path string, guard *agent.SessionRemovalGuard) error {

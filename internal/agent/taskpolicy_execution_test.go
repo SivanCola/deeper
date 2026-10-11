@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/provider"
-	"deeper/internal/runtimepolicy"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/provider"
+	"deepzora/internal/runtimepolicy"
+	"deepzora/internal/tool"
 )
 
 func setTurnConstraints(a *Agent, raw string) {

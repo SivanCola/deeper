@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioncontent"
 )
 
 // TitleMessages reads the first authored turns from the durable UI history.

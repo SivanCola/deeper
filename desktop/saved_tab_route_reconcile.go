@@ -9,8 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 type savedTabRouteCandidate struct {

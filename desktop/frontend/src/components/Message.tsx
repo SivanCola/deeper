@@ -27,8 +27,8 @@ type ImSourceMessage = {
   text: string;
 };
 
-const IM_SOURCE_START = "[[deeper-im]]";
-const IM_SOURCE_END = "[[/deeper-im]]";
+const IM_SOURCE_START = "[[deepzora-im]]";
+const IM_SOURCE_END = "[[/deepzora-im]]";
 
 function parseImSourceMessage(text: string): ImSourceMessage | null {
   // Display-only metadata: keep IM sender/chat details out of model prompts.

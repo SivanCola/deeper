@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 // Conversion receipts certify adoption of a particular history, not ownership
@@ -110,7 +110,7 @@ func (a *App) reconcileCanonicalConversion(ctx context.Context, source desktopMi
 // Validate the full referenced content closure before consuming a residual
 // directory. A transcript digest alone does not prove attachment blobs readable.
 func verifyCanonicalConversionClosure(ctx context.Context, path string) error {
-	tmp, err := os.MkdirTemp("", "deeper-conversion-proof-")
+	tmp, err := os.MkdirTemp("", "deepzora-conversion-proof-")
 	if err != nil {
 		return err
 	}

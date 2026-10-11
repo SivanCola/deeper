@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/boundedllm"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/boundedllm"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 const (

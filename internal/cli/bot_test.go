@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/bot"
-	"deeper/internal/botruntime"
-	"deeper/internal/config"
+	"deepzora/internal/bot"
+	"deepzora/internal/botruntime"
+	"deepzora/internal/config"
 )
 
 func TestRememberBotRemoteStoresIncomingChatID(t *testing.T) {
@@ -300,7 +300,7 @@ func TestBotDoctorPrefersUserBotSettingsOverProjectBotConfig(t *testing.T) {
 	}
 
 	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
 [bot]
 enabled = false
 `), 0o644); err != nil {
@@ -340,7 +340,7 @@ func TestBotDoctorIgnoresProjectBotConfig(t *testing.T) {
 		projectCfg.Bot.Connections = []config.BotConnectionConfig{
 			{ID: "weixin-weixin", Provider: "weixin", Domain: "weixin", Label: "微信", Enabled: true, Status: "connected"},
 		}
-		if err := projectCfg.SaveTo("deeper.toml"); err != nil {
+		if err := projectCfg.SaveTo("deepzora.toml"); err != nil {
 			t.Fatalf("save project config: %v", err)
 		}
 		out := captureStdout(t, func() { _ = botDoctor([]string{"--json"}) })

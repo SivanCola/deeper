@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func TestRepairBatchHoldsSourceGenerationThroughCommit(t *testing.T) {

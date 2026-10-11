@@ -1,8 +1,8 @@
 package responses
 
 import (
-	"deeper/internal/netclient"
-	"deeper/internal/provider"
+	"deepzora/internal/netclient"
+	"deepzora/internal/provider"
 )
 
 func newFromConfig(cfg provider.Config) (provider.Provider, error) {

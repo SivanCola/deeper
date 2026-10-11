@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/stats"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/stats"
 )
 
 func newListenerTestServer(t *testing.T) *Server {
@@ -24,7 +24,7 @@ func newListenerTestServer(t *testing.T) *Server {
 		}
 	}
 	closeUsage()
-	t.Setenv("DEEPER_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	t.Cleanup(closeUsage)
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{

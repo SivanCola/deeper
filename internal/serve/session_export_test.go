@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestSessionExportHTTPFixedCompleteSnapshot(t *testing.T) {
@@ -65,7 +65,7 @@ func TestSessionExportHTTPFixedCompleteSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.StatusCode != http.StatusOK || response.Header.Get("X-Deeper-Export-Records") != "110" || !json.Valid(body) {
+	if response.StatusCode != http.StatusOK || response.Header.Get("X-Deepzora-Export-Records") != "110" || !json.Valid(body) {
 		t.Fatalf("response: %d %s", response.StatusCode, body)
 	}
 	if !bytes.Contains(body, []byte("question-000")) || !bytes.Contains(body, []byte("question-109")) || bytes.Contains(body, []byte("AFTER-SNAPSHOT")) {

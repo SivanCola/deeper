@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/event"
-	"deeper/internal/permission"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
 )
 
 // emitUnmatchableRuleNotice warns about permission rules that name a tool

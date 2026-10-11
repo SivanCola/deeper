@@ -2,9 +2,9 @@ package main
 
 import (
 	cryptorand "crypto/rand"
-	"deeper/internal/control"
-	"deeper/internal/serve"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/serve"
+	"deepzora/internal/sessioninbox"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -74,7 +74,7 @@ type queuedFollowupError struct {
 	receipt InboxReceiptView
 }
 
-func (e *queuedFollowupError) Error() string { return "deeper_error:queued_followup" }
+func (e *queuedFollowupError) Error() string { return "deepzora_error:queued_followup" }
 
 func (e *queuedFollowupError) RPCErrorData() map[string]any {
 	return map[string]any{"queuedFollowup": e.receipt}

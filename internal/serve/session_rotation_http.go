@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 func (s *Server) planDecision(w http.ResponseWriter, r *http.Request) {

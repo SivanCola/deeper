@@ -12,15 +12,15 @@ import (
 func TestTrustApprovesWhatTheWorkspaceNamesOnlyWhenAsked(t *testing.T) {
 	home := t.TempDir()
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
-	if err := os.MkdirAll(filepath.Join(root, ".deeper"), 0o700); err != nil {
+	t.Setenv("DEEPZORA_HOME", home)
+	if err := os.MkdirAll(filepath.Join(root, ".deepzora"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deeper", "settings.json"), []byte(`{"hooks":{"Stop":[{"command":"echo stop"}]}}`), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "settings.json"), []byte(`{"hooks":{"Stop":[{"command":"echo stop"}]}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	rg := filepath.Join(filepath.VolumeName(os.TempDir())+string(filepath.Separator), "opt", "deeper-test", "rg")
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte("[tools.search]\nrg_path = '"+rg+"'\n"), 0o600); err != nil {
+	rg := filepath.Join(filepath.VolumeName(os.TempDir())+string(filepath.Separator), "opt", "deepzora-test", "rg")
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte("[tools.search]\nrg_path = '"+rg+"'\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	run := func(input string, interactive bool, args ...string) (int, string) {

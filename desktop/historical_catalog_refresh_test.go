@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/historywork"
+	"deepzora/internal/config"
+	"deepzora/internal/historywork"
 )
 
 func TestHistoricalCatalogPublishesBoundedDiscoveryBeforeCompletion(t *testing.T) {

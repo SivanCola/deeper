@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/plugin"
+	"deepzora/internal/plugin"
 )
 
 const mcpMaxItemsPerSection = 6
@@ -230,7 +230,7 @@ func writeMCPItem(b *strings.Builder, width int, indent, ref, desc string) {
 }
 
 // sanitizeExternalDisplayText strips ANSI/OSC/C0 control sequences from text
-// that originated outside Deeper (MCP tool/prompt/resource fields, source
+// that originated outside Deepzora (MCP tool/prompt/resource fields, source
 // labels, failure messages) before it is rendered into the TUI. TrimSpace and
 // Fields alone leave CSI sequences intact and would let a malicious MCP rewrite
 // the terminal, spoof chrome, or poke the clipboard.

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 const bootPinnedContextProviderKind = "boot-pinned-context-test"
@@ -73,7 +73,7 @@ func TestBuildInjectsPinnedContextOnceWithStablePrefix(t *testing.T) {
 	registerBootPinnedContextProvider()
 	recorder := &bootPinnedContextProvider{}
 	useBootPinnedContextProvider(t, recorder)
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

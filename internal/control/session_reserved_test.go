@@ -1,10 +1,10 @@
 package control
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 	"path/filepath"
 	"testing"
 )

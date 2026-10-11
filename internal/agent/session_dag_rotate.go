@@ -7,9 +7,9 @@ import (
 	"slices"
 	"time"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
-	"deeper/internal/store"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
 
 // sessionDAGWriterQuietPeriod is how long another writer must have been silent

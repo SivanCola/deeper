@@ -10,7 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestLegacyReasoningDefaultsStaySeparateFromSavedOverrides(t *testing.T) {

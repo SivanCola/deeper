@@ -6,10 +6,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/config"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 // runModelSubcommand handles "/model": with no argument it opens the configured

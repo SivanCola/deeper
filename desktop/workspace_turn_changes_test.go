@@ -1,12 +1,12 @@
 package main
 
 import (
-	"deeper/internal/checkpoint"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/provider"
-	"deeper/internal/turnevent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/provider"
+	"deepzora/internal/turnevent"
 	"encoding/json"
 	"path/filepath"
 	"testing"

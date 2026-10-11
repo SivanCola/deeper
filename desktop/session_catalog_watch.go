@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/history"
-	"deeper/internal/sessioncatalog"
-	"deeper/internal/store"
+	"deepzora/internal/history"
+	"deepzora/internal/sessioncatalog"
+	"deepzora/internal/store"
 	"github.com/fsnotify/fsnotify"
 )
 

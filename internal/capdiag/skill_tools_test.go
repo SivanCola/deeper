@@ -10,13 +10,13 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/capdiag"
-	"deeper/internal/config"
-	"deeper/internal/doctor"
+	"deepzora/internal/capdiag"
+	"deepzora/internal/config"
+	"deepzora/internal/doctor"
 )
 
 func TestSkillDiagnosticsProbeHelper(t *testing.T) {
-	if marker := os.Getenv("DEEPER_SKILL_DIAGNOSTIC_PROBE"); marker != "" {
+	if marker := os.Getenv("DEEPZORA_SKILL_DIAGNOSTIC_PROBE"); marker != "" {
 		if err := os.WriteFile(marker, []byte("started"), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -27,10 +27,10 @@ func TestDoctorSkillReferenceParity(t *testing.T) {
 	for _, withMCP := range []bool{false, true} {
 		t.Run(fmt.Sprintf("mcp=%v", withMCP), func(t *testing.T) {
 			root, home := t.TempDir(), t.TempDir()
-			rh := filepath.Join(home, ".deeper")
+			rh := filepath.Join(home, ".deepzora")
 			t.Setenv("HOME", home)
 			t.Setenv("USERPROFILE", home)
-			t.Setenv("DEEPER_HOME", rh)
+			t.Setenv("DEEPZORA_HOME", rh)
 			t.Chdir(root)
 			custom, excluded := filepath.Join(root, "custom"), filepath.Join(root, "excluded")
 			var requests atomic.Int32
@@ -53,7 +53,7 @@ excluded_paths = [%q]
 disabled_skills = ["disabled-example"]
 `, server.URL, custom, excluded, excluded)
 			marker := filepath.Join(root, "mcp-started")
-			t.Setenv("DEEPER_SKILL_DIAGNOSTIC_PROBE", marker)
+			t.Setenv("DEEPZORA_SKILL_DIAGNOSTIC_PROBE", marker)
 			if withMCP {
 				exe, err := os.Executable()
 				if err != nil {
@@ -61,7 +61,7 @@ disabled_skills = ["disabled-example"]
 				}
 				cfgText += fmt.Sprintf("\n[[plugins]]\nname = \"probe\"\ntype = \"stdio\"\ncommand = %q\nargs = [\"-test.run=^TestSkillDiagnosticsProbeHelper$\"]\nauto_start = true\n", exe)
 			}
-			write(t, filepath.Join(root, "deeper.toml"), cfgText)
+			write(t, filepath.Join(root, "deepzora.toml"), cfgText)
 			collect := func() ([]string, capdiag.Report) {
 				t.Helper()
 				cfg, err := config.LoadForRootReadOnly(root)
@@ -69,7 +69,7 @@ disabled_skills = ["disabled-example"]
 					t.Fatal(err)
 				}
 				ordinary := doctor.Collect(doctor.Options{Config: cfg})
-				return ordinary.Warnings, capdiag.Collect(capdiag.Options{Root: root, HomeDir: home, DeeperHomeDir: rh})
+				return ordinary.Warnings, capdiag.Collect(capdiag.Options{Root: root, HomeDir: home, DeepzoraHomeDir: rh})
 			}
 			warnings, report := collect()
 			for _, w := range warnings {
@@ -94,7 +94,7 @@ disabled_skills = ["disabled-example"]
 			writeSkill(custom, "disabled-example", "disabled_typo")
 			writeSkill(excluded, "excluded-example", "excluded_typo")
 			writeSkill(filepath.Join(rh, "skills"), "shadow-example", "shadowed_typo")
-			writeSkill(filepath.Join(root, ".deeper", "skills"), "shadow-example", "use_capability")
+			writeSkill(filepath.Join(root, ".deepzora", "skills"), "shadow-example", "use_capability")
 			warnings, report = collect()
 			joined := strings.Join(warnings, "\n")
 			matched := 0

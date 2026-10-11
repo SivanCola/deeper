@@ -10,14 +10,14 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/permission"
-	"deeper/internal/provider"
-	"deeper/internal/shellparse"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/permission"
+	"deepzora/internal/provider"
+	"deepzora/internal/shellparse"
+	"deepzora/internal/tool"
 )
 
 // notifier is the slice of Conn the dispatch sink depends on: it pushes
@@ -61,7 +61,7 @@ type updateSink struct {
 	answerMCPInteraction    func(string, string, map[string]any) error
 	status                  func(event.Event)
 	// extensionSurface records the client's negotiated
-	// deeper.extensionSurface support: structured surfaces go out as vendor
+	// deepzora.extensionSurface support: structured surfaces go out as vendor
 	// session/update payloads on top of the always-sent text fallback.
 	extensionSurface bool
 	// speculativeToolIDs tracks parent-sampling tool IDs published under the
@@ -237,7 +237,7 @@ func (s *updateSink) Emit(e event.Event) {
 }
 
 // emitExtension maps one extension structured-UI event onto ACP updates. A
-// client that negotiated deeper.extensionSurface receives the structured DTO
+// client that negotiated deepzora.extensionSurface receives the structured DTO
 // (the shared eventwire JSON contract) in a vendor session/update variant;
 // every client — including that one, belt and suspenders — also receives the
 // flattened text fallback as an ordinary agent_message_chunk. Blocking
@@ -253,7 +253,7 @@ func (s *updateSink) emitExtension(e event.Event) {
 			s.send(extensionSurfaceUpdate{
 				SessionUpdate: extensionSurfaceUpdateKind,
 				Meta: map[string]any{
-					"deeper.io": map[string]any{
+					"deepzora.com": map[string]any{
 						"extensionSurface": dto,
 					},
 				},
@@ -420,11 +420,11 @@ func (s *updateSink) requestPermission(ctx context.Context, a event.Approval) {
 		var res PermissionRequestResult
 		if json.Unmarshal(raw, &res) == nil && res.Outcome.Outcome == "selected" {
 			switch res.Outcome.OptionID {
-			case "deeper_write_once":
+			case "deepzora_write_once":
 				allow = true
-			case "deeper_write_session":
+			case "deepzora_write_session":
 				allow, session = true, true
-			case "deeper_write_deny":
+			case "deepzora_write_deny":
 			case string(OptAllowOnce):
 				allow = true
 			case string(OptAllowAlways):
@@ -437,36 +437,36 @@ func (s *updateSink) requestPermission(ctx context.Context, a event.Approval) {
 
 func writeAccessApprovalOptions() []PermissionOption {
 	return []PermissionOption{
-		{OptionID: "deeper_write_once", Name: "Allow once", Kind: OptAllowOnce},
-		{OptionID: "deeper_write_session", Name: "Allow these directories for this session", Kind: OptAllowAlways},
-		{OptionID: "deeper_write_deny", Name: "Reject", Kind: OptRejectOnce},
+		{OptionID: "deepzora_write_once", Name: "Allow once", Kind: OptAllowOnce},
+		{OptionID: "deepzora_write_session", Name: "Allow these directories for this session", Kind: OptAllowAlways},
+		{OptionID: "deepzora_write_deny", Name: "Reject", Kind: OptRejectOnce},
 	}
 }
 
-// permissionMeta carries Deeper-owned structured data that an ACP supervisor
+// permissionMeta carries Deepzora-owned structured data that an ACP supervisor
 // may trust independently from model-supplied rawInput. A foreground bash call
 // receives argv only when the command is a single static command: shell
 // expansion, control operators, redirects, assignments, and background jobs are
 // omitted from this advisory argv field; execution still follows the active
 // permission preset and OS sandbox rather than the command's syntax shape.
 func (s *updateSink) permissionMeta(a event.Approval) map[string]any {
-	deeper := map[string]any{
+	deepzora := map[string]any{
 		"approvalId": a.ID,
 		"tool":       a.Tool,
 		"subject":    a.Subject,
 		"fresh":      a.Fresh,
 	}
 	if reason := strings.TrimSpace(a.Reason); reason != "" {
-		deeper["reason"] = reason
+		deepzora["reason"] = reason
 	}
 	if wa := a.WriteAccess; wa != nil {
-		deeper["kind"] = event.ApprovalKindWriteAccess
-		deeper["directories"] = append([]string{}, wa.Directories...)
-		deeper["displayDirectories"] = append([]string{}, wa.DisplayDirectories...)
-		deeper["justification"] = wa.Justification
-		deeper["broadHomeAccess"] = wa.BroadHomeAccess
-		deeper["ordinaryPermissionNeeded"] = wa.OrdinaryPermissionNeeded
-		deeper["persistAllowed"] = wa.PersistAllowed
+		deepzora["kind"] = event.ApprovalKindWriteAccess
+		deepzora["directories"] = append([]string{}, wa.Directories...)
+		deepzora["displayDirectories"] = append([]string{}, wa.DisplayDirectories...)
+		deepzora["justification"] = wa.Justification
+		deepzora["broadHomeAccess"] = wa.BroadHomeAccess
+		deepzora["ordinaryPermissionNeeded"] = wa.OrdinaryPermissionNeeded
+		deepzora["persistAllowed"] = wa.PersistAllowed
 	}
 	if tool.IsShellToolName(a.Tool) && strings.TrimSpace(s.cwd) != "" {
 		var input struct {
@@ -489,13 +489,13 @@ func (s *updateSink) permissionMeta(a event.Approval) map[string]any {
 				}
 			}
 			if cwdErr == nil && commandErr == nil && exact && len(command.Argv) > 0 {
-				deeper["commandSchemaVersion"] = 1
-				deeper["argv"] = command.Argv
-				deeper["cwd"] = cwd
+				deepzora["commandSchemaVersion"] = 1
+				deepzora["argv"] = command.Argv
+				deepzora["cwd"] = cwd
 			}
 		}
 	}
-	return map[string]any{"deeper.io": deeper}
+	return map[string]any{"deepzora.com": deepzora}
 }
 
 func (s *updateSink) requestAsk(ctx context.Context, a event.Ask) {

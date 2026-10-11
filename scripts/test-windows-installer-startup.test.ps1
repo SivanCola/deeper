@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 if ($env:OS -ne 'Windows_NT') { throw 'Run these tests on Windows.' }
 . (Join-Path $PSScriptRoot 'test-windows-installer-startup.ps1') -InstallerPath unused -ExpectedVersion v1.2.3
 
-$script:testRoot = [IO.Path]::GetFullPath((Join-Path $env:TEMP ('deeper-installer-tests-' + [guid]::NewGuid().ToString('N'))))
+$script:testRoot = [IO.Path]::GetFullPath((Join-Path $env:TEMP ('deepzora-installer-tests-' + [guid]::NewGuid().ToString('N'))))
 $null = [IO.Directory]::CreateDirectory($script:testRoot)
 $script:occupiedPath = ''
 $script:running = $false
@@ -21,7 +21,7 @@ function Assert-Throws([scriptblock]$Action, [string]$Message) {
   }
   throw "Expected failure containing: $Message"
 }
-function Get-DefaultDeeperDataHome {
+function Get-DefaultDeepzoraDataHome {
   # This OS boundary is redirected to the test fixture, never the VM account.
   return (Join-Path $script:testRoot "default-data-$script:testCount")
 }
@@ -49,21 +49,21 @@ function Get-ItemProperty {
 }
 function Assert-IsolatedEnvironment([string]$HomePath) {
   $HomePath = [IO.Path]::GetFullPath($HomePath)
-  Assert-Equal $env:DEEPER_HOME $HomePath
-  Assert-Equal $env:DEEPER_STATE_HOME $HomePath
-  Assert-Equal $env:DEEPER_CACHE_HOME (Join-Path $HomePath 'cache')
-  Assert-Equal $env:DEEPER_NONINTERACTIVE '1'
-  foreach ($key in @('DEEPER_DEV','DEEPER_DESKTOP_SERVICE','DEEPER_ELECTRON_DEV_URL',
-      'DEEPER_UNKNOWN_TEST_OVERRIDE','NODE_OPTIONS','ELECTRON_RUN_AS_NODE')) {
+  Assert-Equal $env:DEEPZORA_HOME $HomePath
+  Assert-Equal $env:DEEPZORA_STATE_HOME $HomePath
+  Assert-Equal $env:DEEPZORA_CACHE_HOME (Join-Path $HomePath 'cache')
+  Assert-Equal $env:DEEPZORA_NONINTERACTIVE '1'
+  foreach ($key in @('DEEPZORA_DEV','DEEPZORA_DESKTOP_SERVICE','DEEPZORA_ELECTRON_DEV_URL',
+      'DEEPZORA_UNKNOWN_TEST_OVERRIDE','NODE_OPTIONS','ELECTRON_RUN_AS_NODE')) {
     Assert-Equal ([string][Environment]::GetEnvironmentVariable($key, 'Process')) ''
   }
 }
 function Assert-ParentEnvironment {
-  Assert-Equal $env:DEEPER_HOME 'untouched-user-home'
-  Assert-Equal $env:DEEPER_STATE_HOME 'untouched-user-state'
-  Assert-Equal $env:DEEPER_CACHE_HOME 'untouched-user-cache'
-  Assert-Equal $env:DEEPER_DEV 'untouched-dev-mode'
-  Assert-Equal $env:DEEPER_UNKNOWN_TEST_OVERRIDE 'untouched-override'
+  Assert-Equal $env:DEEPZORA_HOME 'untouched-user-home'
+  Assert-Equal $env:DEEPZORA_STATE_HOME 'untouched-user-state'
+  Assert-Equal $env:DEEPZORA_CACHE_HOME 'untouched-user-cache'
+  Assert-Equal $env:DEEPZORA_DEV 'untouched-dev-mode'
+  Assert-Equal $env:DEEPZORA_UNKNOWN_TEST_OVERRIDE 'untouched-override'
   Assert-Equal $env:NODE_OPTIONS 'untouched-node-options'
   Assert-Equal $env:ELECTRON_RUN_AS_NODE '1'
 }
@@ -77,15 +77,15 @@ function Start-Process {
     [IO.Directory]::Delete($script:installRoot, $true)
     if ($script:uninstallFault -eq 'program') {
       $null = [IO.Directory]::CreateDirectory($script:installRoot)
-      [IO.File]::WriteAllText((Join-Path $script:installRoot 'Deeper.exe'), 'leftover')
+      [IO.File]::WriteAllText((Join-Path $script:installRoot 'Deepzora.exe'), 'leftover')
     } elseif ($script:uninstallFault -eq 'shortcut') {
-      $script:occupiedPath = Join-Path ([Environment]::GetFolderPath('Programs', 'DoNotVerify')) 'Deeper.lnk'
+      $script:occupiedPath = Join-Path ([Environment]::GetFolderPath('Programs', 'DoNotVerify')) 'Deepzora.lnk'
     } elseif ($script:uninstallFault -eq 'registration') {
-      $script:occupiedPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeeperDeeper'
+      $script:occupiedPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DeepzoraDeepzora'
     } elseif ($script:uninstallFault -eq 'process') {
       $script:running = $true
     } elseif ($script:uninstallFault -eq 'default-data') {
-      [IO.Directory]::Delete((Get-DefaultDeeperDataHome), $true)
+      [IO.Directory]::Delete((Get-DefaultDeepzoraDataHome), $true)
     } elseif ($script:uninstallFault -eq 'runtime-data') {
       [IO.Directory]::Delete((Join-Path $script:evidence 'fresh-install\home'), $true)
     } elseif ($script:uninstallFault -eq 'modified-data') {
@@ -149,11 +149,11 @@ foreach ($key in @('GITHUB_ACTIONS','RUNNER_ENVIRONMENT')) {
 try {
   $env:GITHUB_ACTIONS = 'false'
   $env:RUNNER_ENVIRONMENT = 'self-hosted'
-  $env:DEEPER_HOME = 'untouched-user-home'
-  $env:DEEPER_DEV = 'untouched-dev-mode'
-  $env:DEEPER_STATE_HOME = 'untouched-user-state'
-  $env:DEEPER_CACHE_HOME = 'untouched-user-cache'
-  $env:DEEPER_UNKNOWN_TEST_OVERRIDE = 'untouched-override'
+  $env:DEEPZORA_HOME = 'untouched-user-home'
+  $env:DEEPZORA_DEV = 'untouched-dev-mode'
+  $env:DEEPZORA_STATE_HOME = 'untouched-user-state'
+  $env:DEEPZORA_CACHE_HOME = 'untouched-user-cache'
+  $env:DEEPZORA_UNKNOWN_TEST_OVERRIDE = 'untouched-override'
   $env:NODE_OPTIONS = 'untouched-node-options'
   $env:ELECTRON_RUN_AS_NODE = '1'
   New-TestCase
@@ -162,14 +162,14 @@ try {
   Assert-Equal (Test-Path -LiteralPath $script:evidence) $false
 
   $protected = @(
-    (Join-Path ([Environment]::GetFolderPath('DesktopDirectory', 'DoNotVerify')) 'Deeper.lnk'),
-    (Join-Path ([Environment]::GetFolderPath('Programs', 'DoNotVerify')) 'Deeper.lnk'),
-    (Join-Path $env:LOCALAPPDATA 'Programs\Deeper'),
-    (Join-Path $env:APPDATA 'deeper-desktop.exe')
+    (Join-Path ([Environment]::GetFolderPath('DesktopDirectory', 'DoNotVerify')) 'Deepzora.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Programs', 'DoNotVerify')) 'Deepzora.lnk'),
+    (Join-Path $env:LOCALAPPDATA 'Programs\Deepzora'),
+    (Join-Path $env:APPDATA 'deepzora-desktop.exe')
   )
   foreach ($hive in @('HKCU:', 'HKLM:')) {
     foreach ($software in @('Software', 'Software\WOW6432Node')) {
-      foreach ($product in @('DeeperDeeper', 'Deeper')) {
+      foreach ($product in @('DeepzoraDeepzora', 'Deepzora')) {
         $protected += "$hive\$software\Microsoft\Windows\CurrentVersion\Uninstall\$product"
       }
     }
@@ -177,18 +177,18 @@ try {
   foreach ($path in $protected) {
     New-TestCase
     $script:occupiedPath = $path
-    Assert-Throws { Invoke-TestCase } 'Existing Deeper'
+    Assert-Throws { Invoke-TestCase } 'Existing Deepzora'
     Assert-Equal $script:events.Count 0
     Assert-Equal (Test-Path -LiteralPath $script:evidence) $false
   }
   New-TestCase
-  $script:occupiedPath = Get-DefaultDeeperDataHome
-  Assert-Throws { Invoke-TestCase } 'Existing Deeper'
+  $script:occupiedPath = Get-DefaultDeepzoraDataHome
+  Assert-Throws { Invoke-TestCase } 'Existing Deepzora'
   Assert-Equal $script:events.Count 0
   Assert-Equal (Test-Path -LiteralPath $script:evidence) $false
   New-TestCase
   $script:running = $true
-  Assert-Throws { Invoke-TestCase } 'Deeper is running'
+  Assert-Throws { Invoke-TestCase } 'Deepzora is running'
   Assert-Equal $script:events.Count 0
 
   foreach ($version in @('v1.38.9', 'v1.38.9-2', 'v1.38.9-preview.42', 'v1.38.9-rc.1')) {
@@ -230,7 +230,7 @@ try {
     $fixture = Join-Path $script:testRoot "runtime-$script:testCount"
     $null = [IO.Directory]::CreateDirectory($fixture)
     [IO.File]::WriteAllText((Join-Path $fixture 'current.json'), '{"activeVersion":"v1.2.3","activeDir":"versions/v1.2.3"}')
-    [IO.File]::WriteAllText((Join-Path $fixture 'Deeper.exe'), 'never executed')
+    [IO.File]::WriteAllText((Join-Path $fixture 'Deepzora.exe'), 'never executed')
     $parameters = @{ EvidenceDirectory = $script:evidence }
     if ($mode -eq 'Installed') {
       $parameters.InstallRoot = $fixture
@@ -260,10 +260,10 @@ try {
     try { Assert-IsolatedEnvironment (Join-Path $script:testRoot 'inner-home') }
     finally { Restore-WindowsAcceptanceEnvironment -Snapshot $innerEnvironment }
     Assert-IsolatedEnvironment $outerHome
-    $env:DEEPER_CREATED_INSIDE_TEST = 'remove on exit'
+    $env:DEEPZORA_CREATED_INSIDE_TEST = 'remove on exit'
   } finally { Restore-WindowsAcceptanceEnvironment -Snapshot $outerEnvironment }
   Assert-ParentEnvironment
-  Assert-Equal ([string]$env:DEEPER_CREATED_INSIDE_TEST) ''
+  Assert-Equal ([string]$env:DEEPZORA_CREATED_INSIDE_TEST) ''
   New-TestCase 'v1.38.9'
   $script:changeArtifact = $true
   Assert-Throws { Invoke-TestCase } 'Installer bytes changed'
@@ -274,7 +274,7 @@ try {
   $env:RUNNER_ENVIRONMENT = 'github-hosted'
   Assert-InstallerTestAccount
   $script:occupiedPath = $protected[0]
-  Assert-Throws { Assert-InstallerTestAccount } 'Existing Deeper'
+  Assert-Throws { Assert-InstallerTestAccount } 'Existing Deepzora'
   Write-Host "PASS: $script:testCount installer acceptance cases (mock processes and registry; no real installation)."
 } finally {
   Restore-WindowsAcceptanceEnvironment -Snapshot $saved

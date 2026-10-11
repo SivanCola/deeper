@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func canonicalIdentityController(t *testing.T, service *session.Service, id, legacy string, manager *jobs.Manager) *Controller {

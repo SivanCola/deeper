@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/jobs"
-	"deeper/internal/runtimepolicy"
-	"deeper/internal/sessiontemp"
+	"deepzora/internal/jobs"
+	"deepzora/internal/runtimepolicy"
+	"deepzora/internal/sessiontemp"
 )
 
 // CodeQL's generic context model propagates the raw input through any Value

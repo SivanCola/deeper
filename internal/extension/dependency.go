@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/extensioncontract"
+	"deepzora/internal/extensioncontract"
 )
 
 // ComponentID is the stable identity of one lifecycle component (initially one
@@ -319,7 +319,7 @@ func topoOrder(g *DependencyGraph, reverse bool) []ComponentID {
 
 // componentLess implements the fixed sort: dependency rank, scope rank,
 // priority, canonical component ID. Dependency rank is approximated by
-// number of transitive providers (deeper deps first in activation).
+// number of transitive providers (deepzora deps first in activation).
 func componentLess(g *DependencyGraph, a, b ComponentID) bool {
 	ra, rb := dependencyRank(g, a), dependencyRank(g, b)
 	if ra != rb {

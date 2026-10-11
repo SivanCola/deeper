@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
 )
 
 // modelForResumePath answers which model a resumed run should use. An explicit

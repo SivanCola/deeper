@@ -4,9 +4,9 @@ package eventwire
 import (
 	"encoding/json"
 
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // CompletionSummary is the JSON form of event.CompletionSummaryInfo.

@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 var (
@@ -412,10 +412,10 @@ func (s *session) run(ctx context.Context, req Request) Result {
 	}
 
 	id := newMarkerID()
-	start := "DEEPER_START_" + id
+	start := "DEEPZORA_START_" + id
 	// The status digits must follow the end marker immediately, so echoed
 	// wrapper source can never fabricate a completion.
-	end := "DEEPER_END_" + id + ":"
+	end := "DEEPZORA_END_" + id + ":"
 	if err := s.writeCommand(runCtx, req.Command, start, end); err != nil {
 		s.markClosed()
 		return Result{

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 func TestLoadMCPJSON(t *testing.T) {
@@ -218,7 +218,7 @@ func TestMCPJSONUpdateRemovesRetiredApprovalFieldsAndPreservesUnknownFields(t *t
 		t.Fatal("unknown-only tool entry was removed")
 	}
 	if _, ok := tools["remove_keep"]["approval_mode"]; ok {
-		t.Fatal("removed Deeper approval mode survived")
+		t.Fatal("removed Deepzora approval mode survived")
 	}
 	if _, ok := tools["remove_keep"]["enabled"]; !ok {
 		t.Fatal("removing approval mode removed external fields")
@@ -360,7 +360,7 @@ func TestLoadMergesMCPJSON(t *testing.T) {
 name = "shared"
 command = "local-bin"
 `
-	if err := os.WriteFile("deeper.toml", []byte(toml), 0o644); err != nil {
+	if err := os.WriteFile("deepzora.toml", []byte(toml), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	mcp := `{ "mcpServers": {
@@ -383,7 +383,7 @@ command = "local-bin"
 		t.Fatalf("plugins = %+v, want shared + extra", cfg.Plugins)
 	}
 	if byName["shared"].Command != "local-bin" || byName["shared"].URL != "" {
-		t.Errorf("deeper.toml should win the collision, got %+v", byName["shared"])
+		t.Errorf("deepzora.toml should win the collision, got %+v", byName["shared"])
 	}
 	if byName["extra"].Command != "extra-bin" {
 		t.Errorf("extra not merged from .mcp.json, got %+v", byName["extra"])
@@ -410,7 +410,7 @@ func TestLoadMergesPluginsAcrossTOMLSources(t *testing.T) {
 	if err := os.WriteFile(gpath, []byte("[[plugins]]\nname = \"globalmcp\"\ncommand = \"global-bin\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile("deeper.toml", []byte("[[plugins]]\nname = \"projectmcp\"\ncommand = \"project-bin\"\n"), 0o644); err != nil {
+	if err := os.WriteFile("deepzora.toml", []byte("[[plugins]]\nname = \"projectmcp\"\ncommand = \"project-bin\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -425,14 +425,14 @@ func TestLoadMergesPluginsAcrossTOMLSources(t *testing.T) {
 		sources[p.Name] = p.Source
 	}
 	if !names["globalmcp"] || !names["projectmcp"] {
-		t.Fatalf("a project deeper.toml [[plugins]] dropped the global config's server; got %+v", cfg.Plugins)
+		t.Fatalf("a project deepzora.toml [[plugins]] dropped the global config's server; got %+v", cfg.Plugins)
 	}
 	if sources["globalmcp"] != MCPSourceUserConfig || sources["projectmcp"] != MCPSourceProjectConfig {
 		t.Fatalf("plugin provenance = %+v", sources)
 	}
 }
 
-func TestLoadProjectMCPPriorityIsDeeperThenMCPJSONThenGlobal(t *testing.T) {
+func TestLoadProjectMCPPriorityIsDeepzoraThenMCPJSONThenGlobal(t *testing.T) {
 	_, userConfig, _ := legacyHome(t)
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Dir(userConfig), 0o755); err != nil {
@@ -462,10 +462,10 @@ command = "global-mcp"
 		t.Fatalf("global + .mcp.json effective entry = %+v, want project .mcp.json", entry)
 	}
 
-	if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(`
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(`
 [[plugins]]
 name = "shared"
-command = "project-deeper-mcp"
+command = "project-deepzora-mcp"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -474,8 +474,8 @@ command = "project-deeper-mcp"
 		t.Fatal(err)
 	}
 	entry, ok = pluginEntryByName(cfg.Plugins, "shared")
-	if !ok || entry.Command != "project-deeper-mcp" || entry.Source != MCPSourceProjectConfig {
-		t.Fatalf("deeper.toml + .mcp.json + global effective entry = %+v, want project deeper.toml", entry)
+	if !ok || entry.Command != "project-deepzora-mcp" || entry.Source != MCPSourceProjectConfig {
+		t.Fatalf("deepzora.toml + .mcp.json + global effective entry = %+v, want project deepzora.toml", entry)
 	}
 }
 
@@ -492,7 +492,7 @@ command = "global-old"
 `), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	projectPath := filepath.Join(root, "deeper.toml")
+	projectPath := filepath.Join(root, "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte(`
 [[plugins]]
 name = "project"
@@ -541,11 +541,11 @@ command = "global-mcp"
 `), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	projectPath := filepath.Join(root, "deeper.toml")
+	projectPath := filepath.Join(root, "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte(`
 [[plugins]]
 name = "shared"
-command = "project-deeper-mcp"
+command = "project-deepzora-mcp"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -592,7 +592,7 @@ func TestLoadNormalizesTOMLPastedCommandLine(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	t.Chdir(t.TempDir())
 
-	if err := os.WriteFile("deeper.toml", []byte("[[plugins]]\nname = \"playwright\"\ncommand = \"npx -y @playwright/mcp\"\n"), 0o644); err != nil {
+	if err := os.WriteFile("deepzora.toml", []byte("[[plugins]]\nname = \"playwright\"\ncommand = \"npx -y @playwright/mcp\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := Load()
@@ -611,8 +611,8 @@ func TestLoadNormalizesTOMLPastedCommandLine(t *testing.T) {
 }
 
 func TestMergeMCPJSONPrecedence(t *testing.T) {
-	// deeper.toml already declares "shared" (stdio); .mcp.json offers a colliding
-	// "shared" (http) plus a fresh "extra". deeper.toml must win on the collision;
+	// deepzora.toml already declares "shared" (stdio); .mcp.json offers a colliding
+	// "shared" (http) plus a fresh "extra". deepzora.toml must win on the collision;
 	// "extra" gets appended.
 	cfg := &Config{Plugins: []PluginEntry{
 		{Name: "shared", Command: "local-bin"},
@@ -626,7 +626,7 @@ func TestMergeMCPJSONPrecedence(t *testing.T) {
 		t.Fatalf("plugins = %+v, want 2 (shared kept, extra added)", cfg.Plugins)
 	}
 	if cfg.Plugins[0].Name != "shared" || cfg.Plugins[0].Command != "local-bin" || cfg.Plugins[0].URL != "" {
-		t.Errorf("collision not won by deeper.toml: %+v", cfg.Plugins[0])
+		t.Errorf("collision not won by deepzora.toml: %+v", cfg.Plugins[0])
 	}
 	if cfg.Plugins[1].Name != "extra" || cfg.Plugins[1].Command != "extra-bin" {
 		t.Errorf("non-colliding entry not appended: %+v", cfg.Plugins[1])
@@ -714,10 +714,10 @@ func TestClearPluginAuthenticationInSourcePrefersTOML(t *testing.T) {
 	t.Setenv("AppData", filepath.Join(root, "AppData"))
 	t.Chdir(t.TempDir())
 
-	if err := os.WriteFile("deeper.toml", []byte(`[[plugins]]
+	if err := os.WriteFile("deepzora.toml", []byte(`[[plugins]]
 name = "dida"
 type = "http"
-url = "https://deeper.example/mcp?access_token=toml"
+url = "https://deepzora.example/mcp?access_token=toml"
 [plugins.headers]
 Authorization = "Bearer ${TOML_TOKEN}"
 `), 0o644); err != nil {
@@ -741,19 +741,19 @@ Authorization = "Bearer ${TOML_TOKEN}"
 	if !changed {
 		t.Fatal("ClearPluginAuthenticationInSource should report changed")
 	}
-	if source != "deeper.toml" {
-		t.Fatalf("source = %q, want deeper.toml", source)
+	if source != "deepzora.toml" {
+		t.Fatalf("source = %q, want deepzora.toml", source)
 	}
-	if updated.URL != "https://deeper.example/mcp" {
+	if updated.URL != "https://deepzora.example/mcp" {
 		t.Fatalf("updated URL = %q", updated.URL)
 	}
 
-	projectRaw, err := os.ReadFile("deeper.toml")
+	projectRaw, err := os.ReadFile("deepzora.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(projectRaw), "access_token=toml") || strings.Contains(string(projectRaw), "Authorization") {
-		t.Fatalf("deeper.toml auth material should be removed:\n%s", projectRaw)
+		t.Fatalf("deepzora.toml auth material should be removed:\n%s", projectRaw)
 	}
 	mcpRaw, err := os.ReadFile(mcpJSONFile)
 	if err != nil {
@@ -778,7 +778,7 @@ name = "dida"
 type = "http"
 url = "https://example.test/mcp?access_token=%s&workspace=main"
 `, token)
-		if err := os.WriteFile(filepath.Join(root, "deeper.toml"), []byte(raw), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(raw), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -793,10 +793,10 @@ url = "https://example.test/mcp?access_token=%s&workspace=main"
 	if !changed || updated.URL != "https://example.test/mcp?workspace=main" {
 		t.Fatalf("updated = %+v, changed = %v", updated, changed)
 	}
-	if want := filepath.Join(rootA, "deeper.toml"); !samePath(source, want) {
+	if want := filepath.Join(rootA, "deepzora.toml"); !samePath(source, want) {
 		t.Fatalf("source = %q, want %q", source, want)
 	}
-	rootBRaw, err := os.ReadFile(filepath.Join(rootB, "deeper.toml"))
+	rootBRaw, err := os.ReadFile(filepath.Join(rootB, "deepzora.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -898,7 +898,7 @@ func TestRemovePluginFromSourcesForRootRemovesEveryWritableDeclaration(t *testin
 	if err := os.MkdirAll(filepath.Dir(userConfig), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{userConfig, filepath.Join(root, "deeper.toml")} {
+	for _, path := range []string{userConfig, filepath.Join(root, "deepzora.toml")} {
 		if err := os.WriteFile(path, []byte(`
 [[plugins]]
 name = "duplicate"
@@ -924,7 +924,7 @@ command = "duplicate-mcp"
 	if !removed {
 		t.Fatal("RemovePluginFromSourcesForRoot reported no removal")
 	}
-	for _, path := range []string{userConfig, filepath.Join(root, "deeper.toml")} {
+	for _, path := range []string{userConfig, filepath.Join(root, "deepzora.toml")} {
 		for _, p := range LoadForEdit(path).Plugins {
 			if p.Name == "duplicate" {
 				t.Fatalf("duplicate MCP survived in %s: %+v", path, p)
@@ -1127,7 +1127,7 @@ func TestMCPJSONRejectsExternalAndBrokenSymlinks(t *testing.T) {
 
 func TestClearPluginAuthenticationHonorsMCPJSONFileLock(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", filepath.Join(root, "home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(root, "home"))
 	mcpPath := filepath.Join(root, mcpJSONFile)
 	if err := os.WriteFile(mcpPath, []byte(`{
   "mcpServers": {
@@ -1164,7 +1164,7 @@ func TestClearPluginAuthenticationHonorsMCPJSONFileLock(t *testing.T) {
 
 func TestInstallUserPluginForRootRestoresConfigWhenActivationFails(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	workspace := t.TempDir()
 
 	cfg := Default()
@@ -1206,7 +1206,7 @@ func TestInstallUserPluginForRootRestoresConfigWhenActivationFails(t *testing.T)
 
 func TestRemoveEffectivePluginLocksAllCompetingSources(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", filepath.Join(root, "home"))
+	t.Setenv("DEEPZORA_HOME", filepath.Join(root, "home"))
 	userPath := UserConfigPath()
 	cfg := Default()
 	if err := cfg.UpsertPlugin(PluginEntry{Name: "shared", Command: "user-mcp"}); err != nil {
@@ -1219,7 +1219,7 @@ func TestRemoveEffectivePluginLocksAllCompetingSources(t *testing.T) {
 	// The project file does not currently define "shared", but it can become the
 	// higher-priority owner at any time. Holding its cross-process lock must stop
 	// effective-source selection before the user declaration is removed.
-	projectPath := filepath.Join(root, "deeper.toml")
+	projectPath := filepath.Join(root, "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte("# project config\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -1247,8 +1247,8 @@ func TestRemoveEffectivePluginLocksAllCompetingSources(t *testing.T) {
 
 func TestRemovePluginFromSourcesRejectsBrokenConfigSymlink(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("DEEPER_HOME", filepath.Join(root, "home"))
-	link := filepath.Join(root, "deeper.toml")
+	t.Setenv("DEEPZORA_HOME", filepath.Join(root, "home"))
+	link := filepath.Join(root, "deepzora.toml")
 	if err := os.Symlink(filepath.Join(root, "missing.toml"), link); err != nil {
 		t.Skipf("symlinks are unavailable: %v", err)
 	}
@@ -1266,7 +1266,7 @@ func TestRemovePluginFromSourcesRejectsBrokenConfigSymlink(t *testing.T) {
 
 func TestUpsertPluginInProjectSourceRequiresProjectFileLock(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, "deeper.toml")
+	path := filepath.Join(root, "deepzora.toml")
 	const original = "# project config\n"
 	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
 		t.Fatal(err)

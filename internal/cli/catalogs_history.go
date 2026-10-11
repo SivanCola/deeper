@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/config"
-	"deeper/internal/historycatalog"
+	"deepzora/internal/config"
+	"deepzora/internal/historycatalog"
 )
 
 func init() {

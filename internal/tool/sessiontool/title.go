@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/agent"
-	"deeper/internal/store"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/store"
+	"deepzora/internal/tool"
 )
 
 // TitleChangedFunc projects a successful canonical title write into optional

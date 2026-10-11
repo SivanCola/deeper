@@ -12,7 +12,7 @@ import {
   type BrowserSession,
 } from "./browserControl.js";
 
-const home = () => mkdtempSync(join(tmpdir(), "deeper-browser-control-"));
+const home = () => mkdtempSync(join(tmpdir(), "deepzora-browser-control-"));
 
 type FakeSession = BrowserSession & {
   certificateProcs: (((request: unknown, callback: (result: number) => void) => void) | null)[];

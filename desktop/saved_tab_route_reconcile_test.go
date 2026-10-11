@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
+	"deepzora/desktop/internal/workspacestate"
 )
 
 func TestReconcileSavedTabsNormalizesExactCanonicalRoute(t *testing.T) {
@@ -42,7 +42,7 @@ func TestReconcileSavedTabsNormalizesWindowsPseudoRouteWithCanonicalEvidence(t *
 	ref, workspaceID := createLegacyCleanupSession(t, app, root, "windows-pseudo-route", true)
 	finishSavedTabMigration(app)
 	entry := savedProjectTab("saved", "", "", root, workspaceID)
-	entry.SessionPath = `C:\old\deeper\session-id:` + ref.SessionID
+	entry.SessionPath = `C:\old\deepzora\session-id:` + ref.SessionID
 
 	got, changed := app.reconcileSavedTabs(t.Context(), desktopTabsFile{Tabs: []desktopTabEntry{entry}})
 	if !changed || len(got.Tabs) != 1 || got.Tabs[0].SessionID != ref.SessionID || got.Tabs[0].SessionPath != "" {

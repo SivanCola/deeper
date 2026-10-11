@@ -150,7 +150,7 @@ type APIError struct {
 	Body                string
 	TraceID             string // provider trace identifier from the response headers, when present
 	RequestPath         string // path only; query and URL userinfo are never retained
-	ToolContext         string // resolved Deeper/MCP identity for provider-indexed tool schema errors
+	ToolContext         string // resolved Deepzora/MCP identity for provider-indexed tool schema errors
 }
 
 func (e *APIError) Error() string {

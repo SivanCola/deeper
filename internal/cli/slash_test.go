@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"deeper/internal/command"
+	"deepzora/internal/command"
 )
 
 func TestChatCommandNames(t *testing.T) {

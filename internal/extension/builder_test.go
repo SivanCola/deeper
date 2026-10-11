@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // staticContributor returns a contributor with a fixed name and contribution

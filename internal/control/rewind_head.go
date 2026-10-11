@@ -3,7 +3,7 @@ package control
 import (
 	"log/slog"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // undoHeadRewind returns the controller to the head it left through an

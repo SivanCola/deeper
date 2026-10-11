@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/fileutil"
-	"deeper/internal/provider"
+	"deepzora/internal/fileutil"
+	"deepzora/internal/provider"
 )
 
 const sessionContextWriteChunk = 256 << 10

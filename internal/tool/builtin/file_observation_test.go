@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/fileops"
-	"deeper/internal/tool"
+	"deepzora/internal/fileops"
+	"deepzora/internal/tool"
 )
 
 func observedContext() context.Context {

@@ -1,12 +1,12 @@
-# Deeper Windows SignPath 配置与验收 SOP
+# Deepzora Windows SignPath 配置与验收 SOP
 
 本文供 SignPath 管理员、GitHub 仓库管理员和 Release Maintainer 配置并验收
-Deeper Windows Authenticode 两阶段签名链路。
+Deepzora Windows Authenticode 两阶段签名链路。
 
 关联变更：
 
-- PR：[SivanCola/deeper#6904](https://github.com/SivanCola/deeper/pull/6904)
-- 历史 Preview 渠道改造（仅供兼容背景）：[SivanCola/deeper#6155](https://github.com/SivanCola/deeper/pull/6155)
+- PR：[SivanCola/deepzora#6904](https://github.com/SivanCola/deepzora/pull/6904)
+- 历史 Preview 渠道改造（仅供兼容背景）：[SivanCola/deepzora#6155](https://github.com/SivanCola/deepzora/pull/6155)
 - 本 SOP 的验收对象：每次执行前通过 PR API 读回的当前 PR Head
 - 签名工作流：`.github/workflows/release-stable.yml`、
   `.github/workflows/release-desktop.yml`
@@ -58,11 +58,11 @@ SignPath 权限说明：
 
 截至 2026-07-25 的线上核对结果：
 
-- SignPath 组织：`deeper [OSS]`
-- SignPath 项目：`deeper`
+- SignPath 组织：`deepzora [OSS]`
+- SignPath 项目：`deepzora`
 - 项目状态：`VALID`
 - Repository URL：
-  `https://github.com/SivanCola/deeper.git`
+  `https://github.com/SivanCola/deepzora.git`
 - 当前 Artifact Configurations：
   - `Initial version`
   - `windows-installer`，状态为 `DEFAULT`
@@ -88,7 +88,7 @@ SignPath 权限说明：
 
 1. 登录 SignPath。
 2. 进入 `Projects`。
-3. 打开 `deeper`。
+3. 打开 `deepzora`。
 4. 进入项目编辑或项目权限设置。
 5. 在 `Configurators` 中添加负责维护签名配置的用户或用户组。
 6. 保存。
@@ -106,11 +106,11 @@ SignPath 权限说明：
 - 仓库路径：
   `.signpath/artifact-configurations/windows-payload.xml`
 - 固定版本：
-  [windows-payload.xml@fe354e5](https://github.com/SivanCola/deeper/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-payload.xml)
+  [windows-payload.xml@fe354e5](https://github.com/SivanCola/deepzora/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-payload.xml)
 
 ### 5.2 导入步骤
 
-1. SignPath → `Projects` → `deeper`。
+1. SignPath → `Projects` → `deepzora`。
 2. 找到 `Artifact Configurations`。
 3. 点击 `Add`。
 4. 选择 `Custom`。
@@ -139,12 +139,12 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 
 该配置需要给以下 6 个 EXE 执行 `authenticode-sign`：
 
-- `deeper-desktop.exe`
-- `deeper-guard.exe`
-- `deeper-launcher.exe`
-- `deeper-update-helper.exe`
-- `deeper-cli.exe`
-- `deeper-uninstall.exe`
+- `deepzora-desktop.exe`
+- `deepzora-guard.exe`
+- `deepzora-launcher.exe`
+- `deepzora-update-helper.exe`
+- `deepzora-cli.exe`
+- `deepzora-uninstall.exe`
 
 参考：
 
@@ -159,7 +159,7 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 - 仓库路径：
   `.signpath/artifact-configurations/windows-installer-v2.xml`
 - 固定版本：
-  [windows-installer-v2.xml@fe354e5](https://github.com/SivanCola/deeper/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-installer-v2.xml)
+  [windows-installer-v2.xml@fe354e5](https://github.com/SivanCola/deepzora/blob/fe354e59a9a076930403b7d8aefb0bcd0b4e182a/.signpath/artifact-configurations/windows-installer-v2.xml)
 
 ### 6.2 导入步骤
 
@@ -231,7 +231,7 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 - 如果启用 Origin Verification，仓库地址必须为：
 
   ```text
-  https://github.com/SivanCola/deeper.git
+  https://github.com/SivanCola/deepzora.git
   ```
 
 ### 8.2 `release-signing`
@@ -246,7 +246,7 @@ GitHub `upload-artifact` 提交给 SignPath 的产物是 ZIP，因此配置根�
 - Repository URL：
 
   ```text
-  https://github.com/SivanCola/deeper.git
+  https://github.com/SivanCola/deepzora.git
   ```
 
 - Allowed branches：**只能填写 `main`**
@@ -320,7 +320,7 @@ You can either enable the approval process or use another certificate.
 
 ```bash
 gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
-  --repo SivanCola/deeper \
+  --repo SivanCola/deepzora \
   --body unverified
 ```
 
@@ -354,7 +354,7 @@ AMD64/ARM64，由 `CI builds` 自动批准 SignPath 请求，并跳过 publish j
 
 ```bash
 RUN_ID="$(gh run list \
-  --repo SivanCola/deeper \
+  --repo SivanCola/deepzora \
   --workflow release-stable.yml \
   --branch main \
   --event workflow_dispatch \
@@ -363,7 +363,7 @@ RUN_ID="$(gh run list \
   --jq '.[0].databaseId')"
 
 gh run watch "$RUN_ID" \
-  --repo SivanCola/deeper \
+  --repo SivanCola/deepzora \
   --exit-status
 ```
 
@@ -423,7 +423,7 @@ SignPath Signing Requests 中应出现 4 个成功请求：
 
 ```bash
 gh variable get SIGNPATH_RELEASE_SIGNING_ATTESTATION \
-  --repo SivanCola/deeper
+  --repo SivanCola/deepzora
 ```
 
 值必须为 `v1:` 加 64 位小写十六进制 SHA-256。只要 workflow、签名脚本、
@@ -449,7 +449,7 @@ Status = Valid
 在干净的 Windows 11 AMD64 和 ARM64 环境中检查安装目录：
 
 ```powershell
-Get-ChildItem "<Deeper安装目录>" -Recurse -Filter *.exe |
+Get-ChildItem "<Deepzora安装目录>" -Recurse -Filter *.exe |
   ForEach-Object {
     $signature = Get-AuthenticodeSignature $_.FullName
     [PSCustomObject]@{
@@ -491,7 +491,7 @@ Get-ChildItem "<Deeper安装目录>" -Recurse -Filter *.exe |
 
 ```bash
 gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
-  --repo SivanCola/deeper \
+  --repo SivanCola/deepzora \
   --body unverified
 ```
 
@@ -528,4 +528,4 @@ gh variable set SIGNPATH_RELEASE_SIGNING_ATTESTATION \
 - [SignPath Projects](https://docs.signpath.io/projects)
 - [SignPath Users and Permissions](https://docs.signpath.io/users/)
 - [SignPath GitHub Trusted Build System](https://docs.signpath.io/trusted-build-systems/github)
-- [Deeper PR #6904](https://github.com/SivanCola/deeper/pull/6904)
+- [Deepzora PR #6904](https://github.com/SivanCola/deepzora/pull/6904)

@@ -6,7 +6,7 @@ import (
 	"context"
 	"os/exec"
 
-	"deeper/internal/proc"
+	"deepzora/internal/proc"
 )
 
 func windowsBatchCommand(ctx context.Context, command string) (*exec.Cmd, bool) {

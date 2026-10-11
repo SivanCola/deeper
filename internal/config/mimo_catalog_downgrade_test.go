@@ -12,9 +12,9 @@ import (
 // Use an isolated schema-v11 checkout to exercise the actual previous reader
 // and writer, including deletion followed by a restart in the new version.
 func TestMimoCatalogPreviousReaderRoundTrip(t *testing.T) {
-	checkout := os.Getenv("DEEPER_MIMO_PREVIOUS_CHECKOUT")
+	checkout := os.Getenv("DEEPZORA_MIMO_PREVIOUS_CHECKOUT")
 	if checkout == "" {
-		t.Skip("set DEEPER_MIMO_PREVIOUS_CHECKOUT for previous-reader acceptance")
+		t.Skip("set DEEPZORA_MIMO_PREVIOUS_CHECKOUT for previous-reader acceptance")
 	}
 	checkout, err := filepath.Abs(checkout)
 	if err != nil {
@@ -25,7 +25,7 @@ func TestMimoCatalogPreviousReaderRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	t.Setenv("DEEPER_HOME", dir)
+	t.Setenv("DEEPZORA_HOME", dir)
 	path := filepath.Join(dir, "config.toml")
 	const raw = `config_version = 11
 default_model = "mimo/mimo-v2.5-pro"
@@ -48,11 +48,11 @@ vision_models = ["mimo-v2.5"]
 import ("os"; "slices"; "testing")
 func TestMimoPreviousReaderProbe(t *testing.T) {
  if Default().ConfigVersion != 11 { t.Fatal("probe requires a schema-v11 reader") }
- path := os.Getenv("DEEPER_COMPAT_CONFIG")
+ path := os.Getenv("DEEPZORA_COMPAT_CONFIG")
  c := LoadForEdit(path)
  p,ok := c.Provider("mimo")
  if !ok || p.DefaultModel() != "mimo-v2.5-pro" || c.ConfigVersion != 12 { t.Fatal("old reader lost selection or marker") }
- if os.Getenv("DEEPER_COMPAT_DELETE_FLASH") == "1" {
+ if os.Getenv("DEEPZORA_COMPAT_DELETE_FLASH") == "1" {
   p.Models = slices.DeleteFunc(p.Models,func(m string) bool { return m == "mimo-v2.6-flash" })
  } else if !p.HasModel("mimo-v2.6-flash") { t.Fatal("old reader lost the new option") }
  p.DisplayName = "old-reader-edited"
@@ -74,7 +74,7 @@ func TestMimoPreviousReaderProbe(t *testing.T) {
 	for _, deleted := range []string{"0", "1"} {
 		cmd := exec.Command("go", "test", "-overlay", overlay, "./internal/config", "-run", "^TestMimoPreviousReaderProbe$", "-v", "-count=1")
 		cmd.Dir = checkout
-		cmd.Env = append(os.Environ(), "DEEPER_COMPAT_CONFIG="+path, "DEEPER_COMPAT_DELETE_FLASH="+deleted)
+		cmd.Env = append(os.Environ(), "DEEPZORA_COMPAT_CONFIG="+path, "DEEPZORA_COMPAT_DELETE_FLASH="+deleted)
 		output, err := cmd.CombinedOutput()
 		if err != nil || !strings.Contains(string(output), "--- PASS: TestMimoPreviousReaderProbe") {
 			t.Fatalf("old reader: %v\n%s", err, output)

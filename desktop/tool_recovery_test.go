@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/provider"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
 )
 
 func TestRemoteToolRecoveryKeepsIdentityAndNeverReplaysUnknownPost(t *testing.T) {

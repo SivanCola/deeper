@@ -7,12 +7,12 @@ import (
 	"path"
 	"strings"
 
-	"deeper/internal/attachment"
-	"deeper/internal/config"
-	"deeper/internal/i18n"
-	"deeper/internal/imageinput"
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/attachment"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
+	"deepzora/internal/imageinput"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 func (c *Controller) StageImage(ctx context.Context, displayName, mime, dataURL string) (attachment.DraftCredential, error) {

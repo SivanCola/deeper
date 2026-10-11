@@ -31,7 +31,7 @@ for tag in "v$version" "npm-v$version" "desktop-v$version"; do
 	fi
 done
 
-catalog="$(mktemp "${TMPDIR:-/tmp}/deeper-candidate-catalog.XXXXXX")"
+catalog="$(mktemp "${TMPDIR:-/tmp}/deepzora-candidate-catalog.XXXXXX")"
 trap 'rm -f -- "$catalog"' EXIT
 git show "$candidate:release-notes/releases.json" >"$catalog"
 jq -e --arg version "$version" '

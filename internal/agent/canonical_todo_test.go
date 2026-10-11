@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func TestTodoStateAllowsParallelAndOutOfOrderStatuses(t *testing.T) {

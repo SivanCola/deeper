@@ -15,11 +15,11 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func TestHookExecHelperProcess(t *testing.T) {
-	if os.Getenv("DEEPER_HOOK_EXEC_HELPER") != "1" {
+	if os.Getenv("DEEPZORA_HOOK_EXEC_HELPER") != "1" {
 		return
 	}
 	for i, arg := range os.Args {
@@ -48,7 +48,7 @@ func TestExecFormPreservesLiteralArgumentsEndToEnd(t *testing.T) {
 		`a && b | c > out`,
 		`double"quote`,
 		"single'quote",
-		`C:\Program Files\Deeper\hook.cmd`,
+		`C:\Program Files\Deepzora\hook.cmd`,
 		"第一行\n第二行",
 		"emoji-🧪",
 	}
@@ -57,7 +57,7 @@ func TestExecFormPreservesLiteralArgumentsEndToEnd(t *testing.T) {
 		Command: executable,
 		Args:    args,
 		Mode:    ExecutionExec,
-		Env:     map[string]string{"DEEPER_HOOK_EXEC_HELPER": "1"},
+		Env:     map[string]string{"DEEPZORA_HOOK_EXEC_HELPER": "1"},
 		Timeout: realSpawnTimeout,
 	})
 	if result.ExitCode != 0 || result.SpawnErr != nil {
@@ -174,7 +174,7 @@ func TestResolvedHookShellPathAcceptsExecutableAndRejectsMissing(t *testing.T) {
 	if err != nil || got != "/bin/sh" {
 		t.Fatalf("resolved /bin/sh = %q, %v", got, err)
 	}
-	if _, err := resolvedHookShellPath(sandbox.Shell{Kind: sandbox.ShellBash, Path: "/definitely/missing/deeper-hook-shell"}); err == nil {
+	if _, err := resolvedHookShellPath(sandbox.Shell{Kind: sandbox.ShellBash, Path: "/definitely/missing/deepzora-hook-shell"}); err == nil {
 		t.Fatal("missing absolute shell unexpectedly resolved")
 	}
 }
@@ -292,7 +292,7 @@ func FuzzPowerShellCommandEncodingRoundTrip(f *testing.F) {
 	for _, seed := range []string{
 		"",
 		`Write-Output "a && 'b'"`,
-		`$value = "C:\Program Files\Deeper"; $value`,
+		`$value = "C:\Program Files\Deepzora"; $value`,
 		"第一行\n第二行",
 		"Write-Output '🧪'",
 		"`$literal; $(Write-Output nested)",

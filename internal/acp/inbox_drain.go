@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/sessioninbox"
 )
 
 type acpInboxController interface {

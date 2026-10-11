@@ -7,13 +7,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rewriteDragRegions, shellFromEnv } from "./scripts/shell-css.mjs";
 
-const devPort = Number(process.env.DEEPER_DESKTOP_VITE_PORT || "5173");
+const devPort = Number(process.env.DEEPZORA_DESKTOP_VITE_PORT || "5173");
 const configDir = dirname(fileURLToPath(import.meta.url));
 
 // Stamps the build commit into the bundle so a minified crash stack can be mapped
 // back to the sourcemap of the exact build. Falls back to "dev" off a git checkout.
 function buildCommit(): string {
-  if (process.env.DEEPER_COMMIT) return process.env.DEEPER_COMMIT;
+  if (process.env.DEEPZORA_COMMIT) return process.env.DEEPZORA_COMMIT;
   try {
     return execSync("git rev-parse --short HEAD", { cwd: configDir }).toString().trim();
   } catch {
@@ -22,7 +22,7 @@ function buildCommit(): string {
 }
 
 function buildChannel(): string {
-  return process.env.DEEPER_CHANNEL || "stable";
+  return process.env.DEEPZORA_CHANNEL || "stable";
 }
 
 // A crossorigin module/stylesheet fetched over a custom app scheme is CORS-blocked

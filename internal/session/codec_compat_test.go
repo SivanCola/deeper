@@ -11,7 +11,7 @@ import (
 )
 
 func TestHistoricalCodecManifestBoundaries(t *testing.T) {
-	for _, prefix := range []string{"deeper", "reasonix"} {
+	for _, prefix := range []string{"deepzora", "deeper", "reasonix"} {
 		for _, format := range []string{"linear/v3", "linear/v3.1", "events/v3"} {
 			codec := prefix + ".session." + format
 			if !supportedStoredManifest(Manifest{SchemaVersion: 3, Codec: codec}) {
@@ -32,7 +32,7 @@ func TestHistoricalCodecManifestBoundaries(t *testing.T) {
 			}
 		}
 	}
-	for _, codec := range []string{"other.session.linear/v4", "reasonix.session.linear/v5", "deeper.session.events/v4"} {
+	for _, codec := range []string{"other.session.linear/v4", "reasonix.session.linear/v5", "deepzora.session.events/v4"} {
 		if supportedStoredManifest(Manifest{SchemaVersion: 4, Codec: codec, StorageRevision: StorageRevision}) {
 			t.Errorf("accepted unknown format %q", codec)
 		}
@@ -86,8 +86,49 @@ func TestHistoricalV4WriterRejectsManifestCodecMismatch(t *testing.T) {
 }
 
 func TestReasonixLinearStoreRetainsOriginalCodec(t *testing.T) {
-	for _, codec := range []string{"reasonix.session.linear/v3", "reasonix.session.linear/v3.1", "reasonix.session.events/v3"} {
-		t.Run(codec, func(t *testing.T) { testNativeLinearStore(t, codec) })
+	for _, prefix := range []string{"deeper", "reasonix"} {
+		for _, format := range []string{"linear/v3", "linear/v3.1", "events/v3"} {
+			codec := prefix + ".session." + format
+			t.Run(codec, func(t *testing.T) { testNativeLinearStore(t, codec) })
+		}
+	}
+}
+
+func TestDeeperV4StorePreservesIdentityAfterRename(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "legacy")
+	runtime, err := CreateStore(dir, "legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Close(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "manifest.json")
+	manifest, err := readStoredManifest(path)
+	if err != nil || manifest.Codec != "deepzora.session.linear/v4" {
+		t.Fatalf("new namespace: %+v, %v", manifest, err)
+	}
+	manifest.Codec = "deeper.session.linear/v4"
+	if err := writeManifestFile(path, manifest); err != nil {
+		t.Fatal(err)
+	}
+	batch := Batch{OperationID: "after-rename", Events: []Event{{Kind: "diagnostic", Payload: json.RawMessage(`{"text":"preserve history"}`)}}}
+	var first Commit
+	for restart := range 2 {
+		runtime, err := Open(dir, "legacy")
+		if err != nil {
+			t.Fatal(err)
+		}
+		commit, appendErr := runtime.Append(t.Context(), batch)
+		closeErr := runtime.Close(t.Context())
+		if appendErr != nil || closeErr != nil || commit.Codec != manifest.Codec || (restart > 0 && commit.ID != first.ID) {
+			t.Fatalf("restart %d: %+v, append=%v close=%v", restart, commit, appendErr, closeErr)
+		}
+		first = commit
+	}
+	commits, err := Replay(dir, nil)
+	if err != nil || len(commits) != 1 || commits[0].Codec != manifest.Codec || !bytes.Equal(commits[0].Events[0].Payload, batch.Events[0].Payload) {
+		t.Fatalf("legacy round trip: %+v, %v", commits, err)
 	}
 }
 
@@ -108,7 +149,7 @@ func TestHistoricalV4StorePreservesCodecAcrossAppendAndRestart(t *testing.T) {
 		t.Fatalf("historical replay: %d commits, %v", len(commits), err)
 	}
 	payload, _ := json.Marshal(map[string]string{"text": string(bytes.Repeat([]byte("x"), 2*v4InlinePayloadBytes))})
-	batch := Batch{OperationID: "deeper-continue-old", Events: []Event{{Kind: "diagnostic", Payload: payload}}}
+	batch := Batch{OperationID: "deepzora-continue-old", Events: []Event{{Kind: "diagnostic", Payload: payload}}}
 	var first Commit
 	for restart := range 2 {
 		runtime, err := Open(dir, "canonical-complete")

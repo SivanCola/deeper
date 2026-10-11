@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 // Both recovery and the sidebar resolve durable registry members. Legacy

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestSubagentProgressPartialIsTerminal(t *testing.T) {

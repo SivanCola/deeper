@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"deeper/internal/historywork"
+	"deepzora/internal/historywork"
 )
 
 // Native writers put identifying fields first. Legacy writers may reorder JSON

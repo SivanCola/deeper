@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 func TestCompatibilityColdContentUsesReadOnlyNativePreparation(t *testing.T) {

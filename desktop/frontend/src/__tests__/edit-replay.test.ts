@@ -26,8 +26,8 @@ eq(
 );
 
 eq(
-  replaySubmitText("hidden session context\nvisible prompt @.deeper/attachments/a.png", "visible prompt @[a.png](.deeper/attachments/a.png)", "updated prompt @[a.png](.deeper/attachments/a.png)", "updated prompt @.deeper/attachments/a.png"),
-  "hidden session context\nupdated prompt @.deeper/attachments/a.png",
+  replaySubmitText("hidden session context\nvisible prompt @.deepzora/attachments/a.png", "visible prompt @[a.png](.deepzora/attachments/a.png)", "updated prompt @[a.png](.deepzora/attachments/a.png)", "updated prompt @.deepzora/attachments/a.png"),
+  "hidden session context\nupdated prompt @.deepzora/attachments/a.png",
   "edited visible text preserves submit-only prefix and raw attachment refs",
 );
 
@@ -55,8 +55,8 @@ eq(
 );
 
 eq(
-  replaySubmitText("/deeper-develop review this change", "review this change", "review the updated change", "review the updated change"),
-  "/deeper-develop review the updated change",
+  replaySubmitText("/deepzora-develop review this change", "review this change", "review the updated change", "review the updated change"),
+  "/deepzora-develop review the updated change",
   "editing a structured skill message preserves its slash invocation",
 );
 
@@ -116,12 +116,12 @@ eq(
 const sessionPrefix = "以下是用户引用的历史会话上下文：\n\n[会话：Earlier]\n...\n\n---\n\n当前用户问题：\n";
 eq(
   replaySubmitText(
-    `${sessionPrefix}/deeper-develop review this change`,
+    `${sessionPrefix}/deepzora-develop review this change`,
     "review this change",
     "review the updated change",
     "review the updated change",
   ),
-  `${sessionPrefix}/deeper-develop review the updated change`,
+  `${sessionPrefix}/deepzora-develop review the updated change`,
   "editing a structured message keeps the hidden referenced-session prefix",
 );
 

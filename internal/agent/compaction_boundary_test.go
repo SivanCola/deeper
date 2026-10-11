@@ -8,7 +8,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 func TestCompactionPartialCommitThenBudgetFailure(t *testing.T) {

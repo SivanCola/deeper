@@ -12,10 +12,10 @@ import (
 // mouseCaptureOffByDefault hands the mouse to the terminal over SSH, where
 // native click-drag selection and the right-click menu beat the in-app
 // scrollbar and wheel-scroll, and capture cannot reach the local clipboard
-// anyway. DEEPER_DISABLE_MOUSE=0 forces capture on everywhere; /mouse flips
+// anyway. DEEPZORA_DISABLE_MOUSE=0 forces capture on everywhere; /mouse flips
 // either way for the session.
 func mouseCaptureOffByDefault() bool {
-	v := strings.TrimSpace(os.Getenv("DEEPER_DISABLE_MOUSE"))
+	v := strings.TrimSpace(os.Getenv("DEEPZORA_DISABLE_MOUSE"))
 	if v != "" {
 		return v != "0"
 	}

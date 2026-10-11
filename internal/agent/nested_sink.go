@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // nestedSink is the event view a fleet or parallel_tasks item runs under: tool

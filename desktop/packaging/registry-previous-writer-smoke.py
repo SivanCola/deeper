@@ -8,7 +8,7 @@ import sys
 
 root = Path(__file__).resolve().parents[2]
 baseline = sys.argv[1] if len(sys.argv) > 1 else "4c8cec3b9f69f979c34769eb197908b7f549c578"
-with tempfile.TemporaryDirectory(prefix="deeper-registry-previous-") as temporary:
+with tempfile.TemporaryDirectory(prefix="deepzora-registry-previous-") as temporary:
     checkout = Path(temporary)
     package = checkout / "internal/workspacestate"
     package.mkdir(parents=True)
@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix="deeper-registry-previous-") as temporar
     for name in files:
         if name.endswith(".go") and not name.endswith("_test.go"):
             (package / Path(name).name).write_bytes(subprocess.check_output(["git", "show", f"{baseline}:{name}"], cwd=root))
-    manifest = (root / "desktop/go.mod").read_text().replace("replace deeper => ../", f"replace deeper => {root}")
+    manifest = (root / "desktop/go.mod").read_text().replace("replace deepzora => ../", f"replace deepzora => {root}")
     manifest = manifest.replace("=> ./third_party/systray", f"=> {root}/desktop/third_party/systray")
     (checkout / "go.mod").write_text(manifest)
     (checkout / "go.sum").write_bytes((root / "desktop/go.sum").read_bytes())
@@ -41,5 +41,5 @@ func TestPreviousWriterRejectsV3(t *testing.T) {
     evidence = {"baseline": baseline, "passed": result.returncode == 0,
                 "scope": "actual baseline registry reader and writer; v3 bytes unchanged",
                 "stdout": result.stdout, "stderr": result.stderr}
-    (Path(tempfile.gettempdir()) / "deeper-independent-registry-compatibility.json").write_text(json.dumps(evidence, indent=2))
+    (Path(tempfile.gettempdir()) / "deepzora-independent-registry-compatibility.json").write_text(json.dumps(evidence, indent=2))
     sys.exit(result.returncode)

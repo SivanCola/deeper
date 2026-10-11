@@ -9,9 +9,9 @@ import (
 	"strings"
 	"unicode"
 
-	"deeper/internal/agent"
-	"deeper/internal/session"
-	"deeper/internal/textutil"
+	"deepzora/internal/agent"
+	"deepzora/internal/session"
+	"deepzora/internal/textutil"
 )
 
 func nativeHistorySequence(p *agent.DisplayPager) uint64 {

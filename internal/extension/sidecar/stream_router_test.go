@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/extension/protocol"
-	"deeper/internal/pluginpkg"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/pluginpkg"
 )
 
 // recordingRouter captures routed provider stream notifications.

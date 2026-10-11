@@ -1,6 +1,6 @@
 # 用量 Catalog
 
-Deeper 将可丢弃的用量聚合保存到 `<cache root>/usage-catalog/v1.sqlite`。每日统计
+Deepzora 将可丢弃的用量聚合保存到 `<cache root>/usage-catalog/v1.sqlite`。每日统计
 JSONL 继续作为权威数据，并与旧版保持字节兼容。Catalog 记录文件 offset 和行 hash，
 用于跨进程幂等，再派生按日、source、model/provider 的 rollup。
 
@@ -14,8 +14,8 @@ torn tail、空行、坏 JSON、旧 requests 默认值、时区、日期边界�
 启动或退出。
 
 ```sh
-deeper doctor catalogs [--json]
-deeper catalogs reindex usage [--json]
+deepzora doctor catalogs [--json]
+deepzora catalogs reindex usage [--json]
 ```
 
 诊断只暴露 schema、完整性、lag、数量和错误，不包含模型请求内容；reindex 不修改每日

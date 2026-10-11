@@ -1,6 +1,6 @@
-# Deeper 主题包 V2
+# Deepzora 主题包 V2
 
-Deeper 桌面端原生主题包。主题是**受控皮肤**：语义颜色令牌、密度/圆角配方，以及首页与任务/工作区可独立配置的本地背景图。主题**不能**执行 CSS、JavaScript、加载字体、远程 URL 或 SVG 脚本。V1 主题继续兼容，并在两个场景共用首页图片。
+Deepzora 桌面端原生主题包。主题是**受控皮肤**：语义颜色令牌、密度/圆角配方，以及首页与任务/工作区可独立配置的本地背景图。主题**不能**执行 CSS、JavaScript、加载字体、远程 URL 或 SVG 脚本。V1 主题继续兼容，并在两个场景共用首页图片。
 
 > English: [THEME_PACK.md](./THEME_PACK.md)
 
@@ -50,8 +50,8 @@ Deeper 桌面端原生主题包。主题是**受控皮肤**：语义颜色令牌
 | --- | --- | --- | --- | --- |
 | **基础风格** | 六种视觉方向（Graphite、Aurora、Slate、Carbon、Nocturne、Amber），无令牌覆盖 | 否（需先复制） | 否 | 否 |
 | **官方主题** | 安装包内嵌的八款只读主题（清单 + 原创背景 + 缩略图，MIT） | 否（需先复制） | 否 | 否 |
-| **我的主题** | 编辑器新建、复制，或导入 `.deeper-theme` | 是 | 是 | 是 |
-| **插件主题** | 已启用插件贡献的 `.deeper-theme`（Manifest v2 `contributes.themes`），直接从插件目录读取——从不拷入用户库 | 否 | 否（禁用或卸载插件） | 否 |
+| **我的主题** | 编辑器新建、复制，或导入 `.deepzora-theme` | 是 | 是 | 是 |
+| **插件主题** | 已启用插件贡献的 `.deepzora-theme`（Manifest v2 `contributes.themes`），直接从插件目录读取——从不拷入用户库 | 否 | 否（禁用或卸载插件） | 否 |
 
 - 14 个内置 id（6 基础 + 8 官方）均为**保留名**：保存、导入、覆盖复制与删除都会拒绝冲突。
 - 激活官方主题时，仅把其 id 写入 `desktop-theme-state.json`；资源在运行时从嵌入副本读取。
@@ -72,11 +72,11 @@ Deeper 桌面端原生主题包。主题是**受控皮肤**：语义颜色令牌
 | `official-cyan-stage` | Cyan Stage / 青岚舞台 | carbon | 青蓝舞台与光环、原创数字表演者 |
 | `official-noir-gold` | Noir Gold / 黑金序曲 | carbon | 黑丝绒、金色聚光灯、原创绅士 |
 
-预览在应用内主题库（设置 → 外观）中展示，来自真实 Deeper 构建。**请勿把应用截图当作主题背景导入。** 素材来源、哈希与许可记录见 [THEME_ASSETS.zh-CN.md](./THEME_ASSETS.zh-CN.md)；生成脚本在 `scripts/official-theme-art/`（程序化、固定种子、可复现）。
+预览在应用内主题库（设置 → 外观）中展示，来自真实 Deepzora 构建。**请勿把应用截图当作主题背景导入。** 素材来源、哈希与许可记录见 [THEME_ASSETS.zh-CN.md](./THEME_ASSETS.zh-CN.md)；生成脚本在 `scripts/official-theme-art/`（程序化、固定种子、可复现）。
 
 ## 包格式
 
-以 `.deeper-theme` ZIP 分发。根目录**只能**包含：
+以 `.deepzora-theme` ZIP 分发。根目录**只能**包含：
 
 | 文件 | 必需 | 说明 |
 | --- | --- | --- |
@@ -176,7 +176,7 @@ JSON Schema： [theme-pack.schema.json](./theme-pack.schema.json)
 
 ## 存储
 
-| Deeper 主目录路径 | 用途 |
+| Deepzora 主目录路径 | 用途 |
 | --- | --- |
 | `desktop-theme-state.json` | 版本化的当前主题指针（**不**改 `config.toml`） |
 | `themes/<id>/` | 用户主题库（`theme.json` + 最多两张可选场景图片） |
@@ -186,7 +186,7 @@ JSON Schema： [theme-pack.schema.json](./theme-pack.schema.json)
 ## 桌面桥接
 
 列出 / 启用 / 重置 / 保存 / 删除 / 复制 / 导入 / 导出 / 选择背景。
-前端只接收临时资源 URL（`/__deeper_theme_asset/...`）或 data URL，不暴露本机绝对路径。
+前端只接收临时资源 URL（`/__deepzora_theme_asset/...`）或 data URL，不暴露本机绝对路径。
 
 同 ID 导入默认拒绝，确认后才允许原子替换。内置主题不可覆盖或删除。损坏/丢失回退 Graphite 路径。安全模式不加载外部主题。`/theme reset` 与命令面板可恢复默认。
 
@@ -199,4 +199,4 @@ JSON Schema： [theme-pack.schema.json](./theme-pack.schema.json)
 
 ## 模板
 
-无版权素材的纯色模板（不含背景图）见英文版 [THEME_PACK.md](./THEME_PACK.md) 中的 `paper-dawn` 示例；将仅含 `theme.json` 的根目录打成 `paper-dawn.deeper-theme` 即可导入。
+无版权素材的纯色模板（不含背景图）见英文版 [THEME_PACK.md](./THEME_PACK.md) 中的 `paper-dawn` 示例；将仅含 `theme.json` 的根目录打成 `paper-dawn.deepzora-theme` 即可导入。

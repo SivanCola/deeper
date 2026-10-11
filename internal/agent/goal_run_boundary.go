@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // maxStepsPause is a resumable stop after a positive model-round budget.

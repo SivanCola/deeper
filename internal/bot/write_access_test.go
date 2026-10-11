@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/sandbox"
+	"deepzora/internal/event"
+	"deepzora/internal/sandbox"
 )
 
 func (c *blockingApprovalController) ResolveApproval(id string, allow bool, scope sandbox.ApprovalScope) error {

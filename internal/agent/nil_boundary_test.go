@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/tool"
 )
 
 type typedNilAgentSink struct{}

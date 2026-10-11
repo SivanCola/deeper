@@ -4,9 +4,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
-	"deeper/internal/secrets"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
+	"deepzora/internal/secrets"
 )
 
 func clipStatusText(value string, limit int) string {

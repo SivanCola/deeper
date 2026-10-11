@@ -3,8 +3,8 @@ package config
 import (
 	"slices"
 
-	"deeper/internal/provider"
-	"deeper/internal/provider/openai"
+	"deepzora/internal/provider"
+	"deepzora/internal/provider/openai"
 )
 
 // OfficialDeepSeekPinnedVisionModels returns the official vision SKU when it is

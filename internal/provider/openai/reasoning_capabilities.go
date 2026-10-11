@@ -2,7 +2,7 @@ package openai
 
 import (
 	"context"
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func (c *client) ReasoningReplayCapabilities() provider.ReasoningReplayCapabilities {

@@ -7,8 +7,8 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // newTestChatTUI builds a chatTUI with just the pieces the streaming/commit and
@@ -103,7 +103,7 @@ func TestIngestSeparatesReasoningFromAnswer(t *testing.T) {
 	if len(m.transcript) != 3 || !strings.Contains(m.transcript[2], "Hello") {
 		t.Fatalf("answer should commit as a separate entry, transcript=%v", m.transcript)
 	}
-	if plain := ansi.Strip(m.transcript[2]); !strings.HasPrefix(plain, "  ◆ Deeper\n\n  Hello answer") {
+	if plain := ansi.Strip(m.transcript[2]); !strings.HasPrefix(plain, "  ◆ Deepzora\n\n  Hello answer") {
 		t.Fatalf("answer should have an explicit assistant identity and indented body, got %q", plain)
 	}
 }
@@ -116,7 +116,7 @@ func TestAssistantAnswerWithoutReasoningHasNoLeadingSpacer(t *testing.T) {
 	if len(m.transcript) != 1 {
 		t.Fatalf("direct answer should remain one compact block, got %d: %v", len(m.transcript), m.transcript)
 	}
-	if plain := ansi.Strip(m.transcript[0]); !strings.HasPrefix(plain, "  ◆ Deeper\n\n  Direct answer") {
+	if plain := ansi.Strip(m.transcript[0]); !strings.HasPrefix(plain, "  ◆ Deepzora\n\n  Direct answer") {
 		t.Fatalf("direct answer block = %q", plain)
 	}
 }
@@ -658,7 +658,7 @@ func TestSubagentProgressOrdinaryToolProgressUnaffected(t *testing.T) {
 }
 
 // TestSubagentProgressUnknownReservedChannelIgnored locks forward compatibility:
-// an older CLI must suppress a future deeper.subagent.* channel instead of
+// an older CLI must suppress a future deepzora.subagent.* channel instead of
 // treating its body as ordinary tool output.
 func TestSubagentProgressUnknownReservedChannelIgnored(t *testing.T) {
 	m := newTestChatTUI()

@@ -1,12 +1,12 @@
-# Deeper Plugin Packages
+# Deepzora Plugin Packages
 
-Deeper plugin packages bundle skills, hooks, MCP servers, prompts, themes,
+Deepzora plugin packages bundle skills, hooks, MCP servers, prompts, themes,
 and code extensions behind one installable unit.
 
 ## CLI Mode
 
-Use `deeper plugin` when installing or managing plugin packages from a
-terminal. Plugin packages are installed globally under the Deeper home
+Use `deepzora plugin` when installing or managing plugin packages from a
+terminal. Plugin packages are installed globally under the Deepzora home
 directory.
 
 ### Install From CLI
@@ -17,31 +17,31 @@ directory.
   `https://github.com/obra/superpowers`.
 - A GitHub branch or subdirectory URL, such as
   `https://github.com/owner/repo/tree/main/path/to/plugin`.
-- A local directory that contains `deeper-plugin.json`,
+- A local directory that contains `deepzora-plugin.json`,
   `.codex-plugin/plugin.json`, or `.claude-plugin/plugin.json`.
 
 Preview the install plan without writing files:
 
 ```bash
-deeper plugin install git:github.com/obra/superpowers --dry-run
+deepzora plugin install git:github.com/obra/superpowers --dry-run
 ```
 
 Install a plugin after reviewing the plan:
 
 ```bash
-deeper plugin install git:github.com/obra/superpowers --yes
+deepzora plugin install git:github.com/obra/superpowers --yes
 ```
 
 Install with an explicit name or replace an installed plugin with the same name:
 
 ```bash
-deeper plugin install git:github.com/obra/superpowers --name superpowers --replace --yes
+deepzora plugin install git:github.com/obra/superpowers --name superpowers --replace --yes
 ```
 
 Use a local directory in developer mode:
 
 ```bash
-deeper plugin install /path/to/plugin --link --replace --yes
+deepzora plugin install /path/to/plugin --link --replace --yes
 ```
 
 CLI install flags:
@@ -52,10 +52,10 @@ CLI install flags:
   name.
 - `--name <name>` or `--name=<name>` overrides the name from the plugin
   manifest for this install.
-- `--link` links a local plugin directory instead of copying it into Deeper's
+- `--link` links a local plugin directory instead of copying it into Deepzora's
   plugin storage. Moving or deleting that directory breaks the linked plugin.
 
-Running `deeper plugin install <source>` without `--dry-run` or `--yes`
+Running `deepzora plugin install <source>` without `--dry-run` or `--yes`
 refuses to write files and prints a reminder to rerun with one of those flags.
 Install and remove commands print the structured JSON response from the same
 install-source backend used by the desktop UI.
@@ -63,8 +63,8 @@ install-source backend used by the desktop UI.
 Installed plugin state is stored in:
 
 ```text
-~/.deeper/plugin-packages.json
-~/.deeper/plugins/<name>/
+~/.deepzora/plugin-packages.json
+~/.deepzora/plugins/<name>/
 ```
 
 ### Manage From CLI
@@ -72,13 +72,13 @@ Installed plugin state is stored in:
 List installed plugins:
 
 ```bash
-deeper plugin list
+deepzora plugin list
 ```
 
 Show one plugin's metadata, root, source, and exported capability counts:
 
 ```bash
-deeper plugin show superpowers
+deepzora plugin show superpowers
 ```
 
 `show` also prints the concrete capability inventory when available:
@@ -92,29 +92,29 @@ deeper plugin show superpowers
 Check that the manifest and skill roots are readable:
 
 ```bash
-deeper plugin doctor superpowers
+deepzora plugin doctor superpowers
 ```
 
 For a workspace-wide capability report (skills, hooks, MCP merge, package roots), see
 [Capability diagnostics](./CAPABILITY_DIAGNOSTICS.md):
 
 ```bash
-deeper doctor capabilities --json
+deepzora doctor capabilities --json
 # Desktop: Settings → Diagnostics
-# Agent:   /deeper-guide
+# Agent:   /deepzora-guide
 ```
 
 Enable or disable a plugin without uninstalling it:
 
 ```bash
-deeper plugin disable superpowers
-deeper plugin enable superpowers
+deepzora plugin disable superpowers
+deepzora plugin enable superpowers
 ```
 
 Remove a plugin:
 
 ```bash
-deeper plugin remove superpowers --yes
+deepzora plugin remove superpowers --yes
 ```
 
 `remove` also accepts `uninstall` as an alias. It requires `--yes` because it
@@ -124,7 +124,7 @@ external source directory is left in place.
 ### Use Installed Plugins From CLI
 
 Installed plugins do not open a separate chat surface. When a plugin is enabled,
-Deeper loads its capabilities into normal interactive sessions:
+Deepzora loads its capabilities into normal interactive sessions:
 
 - Run `/plugins` inside an interactive session to list installed plugin
   packages. Run `/plugins show <name>` to inspect a plugin's exported skills,
@@ -135,10 +135,10 @@ Deeper loads its capabilities into normal interactive sessions:
 - **Hooks** run automatically at their configured lifecycle events, such as
   `SessionStart`, `UserPromptSubmit`, `PreToolUse`, or `PostToolUse`.
 - **MCP servers** join the normal MCP/tool flow. Ask for the task you want done;
-  Deeper can call the plugin's tools when they are relevant.
+  Deepzora can call the plugin's tools when they are relevant.
 
 After installing, enabling, disabling, or updating a plugin from a separate
-terminal while a session is already running, start a new `deeper` session or
+terminal while a session is already running, start a new `deepzora` session or
 reopen `/skills` to verify the current session sees the expected skills.
 
 ## Desktop Settings
@@ -169,7 +169,7 @@ Installer options:
   installed plugin with the same name. Leave it off when duplicate-name installs
   should fail instead of replacing existing content.
 - **Developer mode: link source folder** appears for **Local folder** installs.
-  It links the selected directory instead of copying it into Deeper's plugin
+  It links the selected directory instead of copying it into Deepzora's plugin
   storage. Use it while developing or debugging a plugin. Moving or deleting the
   selected directory will break the linked plugin.
 
@@ -210,7 +210,7 @@ The desktop settings page uses the same runtime model as the CLI:
 
 ## Native Manifest
 
-Deeper plugins can declare `deeper-plugin.json` at the plugin root:
+Deepzora plugins can declare `deepzora-plugin.json` at the plugin root:
 
 ```json
 {
@@ -240,7 +240,7 @@ Deeper plugins can declare `deeper-plugin.json` at the plugin root:
 }
 ```
 
-Relative paths are resolved inside the plugin root. Deeper does not run
+Relative paths are resolved inside the plugin root. Deepzora does not run
 third-party install scripts during plugin installation.
 
 Plugin hook execution is explicit:
@@ -253,16 +253,16 @@ Plugin hook execution is explicit:
   `cmd` (Windows only), or `auto`. On Windows, `auto` prefers Git Bash and
   falls back to PowerShell.
 - Existing native hooks that declare neither field keep the historical
-  Deeper shell-command behavior. `shellCommand: true` remains supported as
+  Deepzora shell-command behavior. `shellCommand: true` remains supported as
   the legacy spelling of shell form.
 
 ## Manifest v2 (Extensions)
 
-Native Deeper extensions use the exact v2 `apiVersion`:
+Native Deepzora extensions use the exact v2 `apiVersion`:
 
 ```json
 {
-  "apiVersion": "deeper.io/plugin/v2",
+  "apiVersion": "deepzora.com/plugin/v2",
   "name": "example",
   "version": "1.0.0",
   "description": "Example extension",
@@ -282,10 +282,10 @@ Native Deeper extensions use the exact v2 `apiVersion`:
     "prompts": ["prompts"],
     "hooks": {},
     "mcpServers": {},
-    "themes": ["themes/*.deeper-theme"]
+    "themes": ["themes/*.deepzora-theme"]
   },
   "runtime": {
-    "command": "${DEEPER_PLUGIN_ROOT}/bin/example",
+    "command": "${DEEPZORA_PLUGIN_ROOT}/bin/example",
     "args": [],
     "env": {},
     "required": true,
@@ -299,18 +299,18 @@ Native Deeper extensions use the exact v2 `apiVersion`:
 
 Parsing rules:
 
-- Native `deeper-plugin.json` manifests must declare the exact
-  `deeper.io/plugin/v2` value. v1 and missing versions are rejected; there
+- Native `deepzora-plugin.json` manifests must declare the exact
+  `deepzora.com/plugin/v2` value. v1 and missing versions are rejected; there
   is no v1 dual-read or automatic migration path.
 - v2 is strict: any unknown field — at the root or nested under
   `contributes`/`runtime` — is an error naming the field path, so typos fail
   loudly instead of silently disabling a capability.
-- v2 resource discovery is explicit. Deeper loads only the skills, agents,
+- v2 resource discovery is explicit. Deepzora loads only the skills, agents,
   commands, prompts, hooks, MCP servers, themes, and runtime declared by the
   native manifest. Host-specific sidecars such as a root `CLAUDE.md`,
   `hooks/hooks.json`, `.claude/settings.json`, or `.mcp.json` are not imported
   implicitly.
-- Minor aliases (`deeper.io/plugin/v2.0`, `v2.1`, …) and unknown major
+- Minor aliases (`deepzora.com/plugin/v2.0`, `v2.1`, …) and unknown major
   versions are rejected.
 - `requires` and `provides` declare dependency constraints and the capability
   ceiling enforced against the Sidecar handshake.
@@ -327,19 +327,19 @@ New resource types:
 - `prompts` are prompt templates using the same semantics and argument
   substitution as commands, invoked as `/<plugin>:<name>`. `commands` remains
   a compatible alias.
-- `themes` are `.deeper-theme` files shown read-only in Desktop Settings as
+- `themes` are `.deepzora-theme` files shown read-only in Desktop Settings as
   plugin themes (IDs `plugin:<plugin>:<theme>`); they are never copied into
   the user theme library. If the plugin is disabled or uninstalled while its
   theme is active, the desktop falls back to the base style but keeps the
   ID, so reinstalling the same plugin restores the theme.
 
-The `runtime` block declares a code extension — a sidecar process Deeper
+The `runtime` block declares a code extension — a sidecar process Deepzora
 launches and talks to over the Extension Protocol (JSON-RPC 2.0 over stdio;
 see `docs/EXTENSION_PROTOCOL.generated.md` for the method index and
 `sdk/go/README.md` for the Go SDK):
 
 - `command`/`args`/`env` are **exec form only** — the command is the
-  executable (never shell-interpreted); `${DEEPER_PLUGIN_ROOT}` expands to
+  executable (never shell-interpreted); `${DEEPZORA_PLUGIN_ROOT}` expands to
   the installed plugin root.
 - `intercepts` lists the events the extension wants to intercept (for example
   `input.receive`, `tool.before`, `permission.decision`); `replaces` declares
@@ -363,7 +363,7 @@ environment, bypass permissions, and operate the machine directly; a
 Installing, updating, replacing, or `--link`ing a plugin with a `runtime`
 block *is* the authorization — there is no second confirmation prompt, and
 `--link` keeps trusting changed content automatically. The install preview,
-`deeper plugin show`, capability diagnostics, and the Desktop installer
+`deepzora plugin show`, capability diagnostics, and the Desktop installer
 therefore display a prominent `FULL TRUST` block with the runtime command,
 interceptors, replacement slots, and provider/UI capabilities. Review that
 block before installing, and only install runtimes you trust completely.
@@ -372,13 +372,13 @@ configuration can never declare one.
 
 ## Codex & Claude Compatibility
 
-Deeper also reads Codex plugin manifests at `.codex-plugin/plugin.json` and
+Deepzora also reads Codex plugin manifests at `.codex-plugin/plugin.json` and
 Claude plugin manifests at `.claude-plugin/plugin.json`. The install preview
 reports `full`, `partial`, or `none` compatibility, lists mapped capabilities,
 and identifies every skipped entry. A non-native package with no mapped
 capabilities is blocked instead of being recorded as an unusable installation.
 `full` means every declared capability in the manifest parsed and mapped to a
-Deeper construct; it does not by itself guarantee every runtime decision an
+Deepzora construct; it does not by itself guarantee every runtime decision an
 imported hook can make is honored. `PreToolUse`/`PermissionRequest` "deny" and
 `PermissionRequest` "allow" are implemented, but a hook's `updatedInput` or
 `PreToolUse`'s `ask`/`defer` decisions are chosen by the script's stdout at
@@ -393,11 +393,11 @@ plugin name to select only that entry. Object sources are accepted only for a
 GitHub repository URL pinned to a full commit SHA. Unpinned external strings,
 npm, `strict: false`, and other advanced marketplace protocols are skipped in
 a bulk install and rejected when selected by name. For packages such as
-Superpowers and Claude-style skill packs, Deeper maps the following
+Superpowers and Claude-style skill packs, Deepzora maps the following
 compatibility conventions. Native v2 manifests use only their explicit
 declarations and do not apply these fallbacks:
 
-- `skills` to Deeper skill roots. A Claude manifest that declares no
+- `skills` to Deepzora skill roots. A Claude manifest that declares no
   `skills` field falls back to the conventional `skills/` (or `.claude/skills/`)
   directory, matching Claude's own auto-discovery. Plugin skills are displayed
   and invoked canonically as `/<plugin>:<skill>`. An unambiguous `/<skill>` is
@@ -406,7 +406,7 @@ declarations and do not apply these fallbacks:
   independently addressable only by their qualified names. This user-facing
   namespace does not change the bare skill identifiers in the model skill index
   or the `run_skill` tool.
-- `commands/` (and `.claude/commands/`) to Deeper custom slash commands: each
+- `commands/` (and `.claude/commands/`) to Deepzora custom slash commands: each
   `<name>.md` prompt template is displayed and invoked canonically as
   `/<plugin>:<name>`, with frontmatter `description` / `argument-hint` and
   `$ARGUMENTS` / `$1..$N` substitution honored. An unambiguous `/<name>` remains
@@ -415,35 +415,35 @@ declarations and do not apply these fallbacks:
   list. User- and project-authored commands own their short names, and no short
   alias is created when multiple plugins export the same command name. An
   explicit custom command can also occupy the qualified name; desktop plugin
-  details report that conflict. Native `deeper-plugin.json` manifests can
+  details report that conflict. Native `deepzora-plugin.json` manifests can
   declare the same thing explicitly with a `"commands"` path list.
 - `agents/*.md` to manually invoked, plugin-owned subagent profiles. Claude
-  model aliases inherit the active Deeper model; inline `tools` lists map to
-  Deeper tool names, including wildcard MCP names such as `mcp__*__search`.
+  model aliases inherit the active Deepzora model; inline `tools` lists map to
+  Deepzora tool names, including wildcard MCP names such as `mcp__*__search`.
   Agents use `/<plugin>:agent:<name>`, so an upstream agent and skill may share
   the same name without shadowing one another.
-- `hooks/session-start-codex` to the Deeper `SessionStart` hook when present.
+- `hooks/session-start-codex` to the Deepzora `SessionStart` hook when present.
 - For Codex compatibility packages, a plugin-root `CLAUDE.md` file to a built-in
-  `SessionStart` context hook. The file is read directly by Deeper, without
+  `SessionStart` context hook. The file is read directly by Deepzora, without
   spawning a shell command. Claude plugin manifests ignore this file, matching
   Claude Code's plugin contract.
-- `.claude/settings.json` and `hooks/hooks.json` command hooks to Deeper hook
+- `.claude/settings.json` and `hooks/hooks.json` command hooks to Deepzora hook
   events when the event names match. `matcher`, `args`, `shell`, `async`,
   `env`, and timeout are preserved. Claude's execution contract is retained:
   an `args` field (even an empty array) selects exec form and preserves every
   argument literally; omitting `args` selects shell form and passes the raw
   command to the declared Bash or PowerShell interpreter. `matcher` and the
   `tool_name` a hook script sees are
-  translated between Deeper's own tool names and Claude's (`bash` ↔
+  translated between Deepzora's own tool names and Claude's (`bash` ↔
   `Bash`, `write_file` ↔ `Write`, ...), so a matcher like `"Bash"` fires
-  correctly; every Deeper subagent-spawning tool (`task`, `read_only_task`,
+  correctly; every Deepzora subagent-spawning tool (`task`, `read_only_task`,
   `parallel_tasks`, and the dedicated `explore`/`research`/`review`/
   `security_review` wrappers) maps to Claude's single `Agent` tool, and a
   matcher can still use the legacy `Task` name. Every mapped `Agent` payload
-  includes Claude's required `prompt` and `description`; Deeper supplies a
+  includes Claude's required `prompt` and `description`; Deepzora supplies a
   stable operation label when its tool call omitted the optional description.
   `tool_input` keys that
-  Deeper names differently from Claude are renamed too — `path` becomes
+  Deepzora names differently from Claude are renamed too — `path` becomes
   `file_path` for `Read`/`Write`/`Edit`/`MultiEdit` and `notebook_path` for
   `NotebookEdit`, `name`/`arguments` become `skill`/`args` for `Skill`,
   `job_id` becomes `task_id` for the current `TaskOutput`/`TaskStop`, the
@@ -459,22 +459,22 @@ declarations and do not apply these fallbacks:
   claiming a `0`ms budget.
   `AskUserQuestion` supplies omitted `multiSelect:false` and empty option
   descriptions. `TodoWrite` accepts only flat `content` and `status` items; legacy `activeForm` is rejected by strict
-  validation. `NotebookEdit` also supplies `new_source` from Deeper's
+  validation. `NotebookEdit` also supplies `new_source` from Deepzora's
   accepted aliases, or an empty string for delete/empty-cell operations.
   Relative `file_path`/`notebook_path` values are resolved
   absolute against the payload `cwd`, matching Claude's file-tool contract,
   so prefix-matching guards inspect the path the tool actually accesses. A
   `Bash` `tool_response` is delivered in Claude's `{stdout, stderr,
-  interrupted}` shape (Deeper combines both streams into `stdout`; the
+  interrupted}` shape (Deepzora combines both streams into `stdout`; the
   failure error text becomes `stderr`), which the official security-guidance
   plugin's commit/push checks read; other tools' responses pass through as
   the raw result. Imported hooks receive Claude-compatible snake_case stdin
   payloads, including `hook_event_name`. Before process launch, the host
-  expands `${CLAUDE_PLUGIN_ROOT}` and `${DEEPER_PLUGIN_ROOT}` (plus their
+  expands `${CLAUDE_PLUGIN_ROOT}` and `${DEEPZORA_PLUGIN_ROOT}` (plus their
   unbraced `$NAME` and Windows `%NAME%` spellings), so plugin-relative paths
   do not depend on the target shell's environment-variable syntax. On Windows,
   shell-form hooks without an explicit shell use the same Git Bash-first,
-  PowerShell-fallback selection as Deeper's shell tool; when a hook points to
+  PowerShell-fallback selection as Deepzora's shell tool; when a hook points to
   a POSIX-shebang script file, the host also converts Windows paths to a Bash-
   compatible form. Explicit Bash hooks
   and legacy bare `sh -c`/`bash -c` hooks are routed through a discovered Git
@@ -483,8 +483,8 @@ declarations and do not apply these fallbacks:
   reports a clear prerequisite error instead of the localized `sh is not
   recognized` output. A non-standard or portable Bash configured with
   `[tools.shell] prefer = "bash"` and `path = ".../bash.exe"` is reused by
-  explicit Bash hooks. `deeper plugin doctor <name>` and
-  `deeper doctor capabilities` report a missing required shell before the
+  explicit Bash hooks. `deepzora plugin doctor <name>` and
+  `deepzora doctor capabilities` report a missing required shell before the
   first hook invocation. Captured legacy-code-page output is normalized to
   UTF-8 before it reaches the UI. A `PreToolUse` or
   `UserPromptSubmit` hook can still deny via exit code 2 or its JSON deny
@@ -496,10 +496,10 @@ declarations and do not apply these fallbacks:
   `updatedInput` is not yet applied to the tool call, and a hook's `if`
   condition or `asyncRewake` field is not evaluated. A package reports partial
   compatibility with a structured warning when it declares either field, a
-  `Stop`/`SubagentStop` hook (which cannot block the turn in Deeper), or a
-  matcher that covers one of three inputs Deeper cannot losslessly express:
-  `WebFetch.prompt`, `NotebookEdit.cell_id` for a Deeper `cell_number` call,
-  or `TaskOutput.task_id` when Deeper `wait` covers multiple/all jobs. Each
+  `Stop`/`SubagentStop` hook (which cannot block the turn in Deepzora), or a
+  matcher that covers one of three inputs Deepzora cannot losslessly express:
+  `WebFetch.prompt`, `NotebookEdit.cell_id` for a Deepzora `cell_number` call,
+  or `TaskOutput.task_id` when Deepzora `wait` covers multiple/all jobs. Each
   structural gap is reported once per hooks file, so a wildcard-matcher
   plugin sees one warning per gap instead of one per hook.
 - A plugin-root `.mcp.json` to installed MCP entries. Claude `local` maps to
@@ -508,16 +508,16 @@ declarations and do not apply these fallbacks:
   `auto_start=false`; users connect them on demand so startup does not change
   the provider-visible tool schema.
 
-Unsupported Claude hook item types are skipped with a warning. Deeper does not
+Unsupported Claude hook item types are skipped with a warning. Deepzora does not
 run third-party install scripts.
 
 Plugin hooks receive these environment variables:
 
-- `DEEPER_PLUGIN_ROOT`
-- `DEEPER_PLUGIN_NAME`
-- `DEEPER_PLUGIN_VERSION`
-- `DEEPER_HOME`
-- `DEEPER_WORKSPACE_ROOT`
+- `DEEPZORA_PLUGIN_ROOT`
+- `DEEPZORA_PLUGIN_NAME`
+- `DEEPZORA_PLUGIN_VERSION`
+- `DEEPZORA_HOME`
+- `DEEPZORA_WORKSPACE_ROOT`
 - `CLAUDE_PROJECT_DIR`
 - `CLAUDE_PLUGIN_ROOT`
 

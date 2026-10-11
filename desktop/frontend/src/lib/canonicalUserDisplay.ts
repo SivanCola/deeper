@@ -31,7 +31,7 @@ function legacyText(content: string): string {
     if (next === text) break;
     text = next;
   }
-  if (text.trimStart().startsWith("# Deeper executor handoff")) {
+  if (text.trimStart().startsWith("# Deepzora executor handoff")) {
     const start = text.indexOf("Original task:\n");
     if (start >= 0) text = text.slice(start + "Original task:\n".length).split("\n\nPlanner output:")[0];
     while (leadingBlock.test(text)) text = text.replace(leadingBlock, "");

@@ -20,7 +20,7 @@ installBridgeApp({
   ReleaseAttachmentTarget: async () => {},
   StageImageForTarget: async () => ({ draftId: "0123456789abcdef0123456789abcdef", displayName: "draft.png", mime: "image/png", width: 1, height: 1, bytes: 12 }),
   ReadDraftImageForTarget: async () => "data:image/png;base64,iVBORw0KGgo=",
-  SavePastedImageForTab: async () => ".deeper/attachments/draft.png",
+  SavePastedImageForTab: async () => ".deepzora/attachments/draft.png",
   AttachmentDataURLForTab: async () => "data:image/png;base64,iVBORw0KGgo=",
   InboxSnapshot: async () => otherHost ? { revision: 1, sessionPath: "session-a", mutationsSupported: true, items: [{ id: "other-host", preview: "other host queue", state: "queued" }] } : fixture.InboxSnapshot("tab-a"),
   ListTabs: async () => [{ id: "tab-a", turnId: "live-turn" }],

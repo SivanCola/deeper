@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // TestDesktopHotRebuildPathsKeepSessionTemp covers the same-session rebuilds

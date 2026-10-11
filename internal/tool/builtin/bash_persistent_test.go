@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/persistentshell"
-	"deeper/internal/sandbox"
+	"deepzora/internal/persistentshell"
+	"deepzora/internal/sandbox"
 )
 
 func TestPowerShellNeverUsesPersistentSession(t *testing.T) {

@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func restoreHistoricalSourcePendingTab(t *testing.T) (*App, *WorkspaceTab, string) {

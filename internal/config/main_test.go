@@ -5,11 +5,11 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/testenv"
+	"deepzora/internal/testenv"
 )
 
 func TestMain(m *testing.M) {
-	if os.Getenv("DEEPER_CONFIG_LOCK_HELPER") == "1" {
+	if os.Getenv("DEEPZORA_CONFIG_LOCK_HELPER") == "1" {
 		os.Exit(m.Run())
 	}
 	// RunWithIsolatedUserState redirects every path-shaped location, but the OS

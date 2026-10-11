@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"deeper/internal/projectiondb"
+	"deepzora/internal/projectiondb"
 )
 
 var ErrCatalogInvalidated = errors.New("catalog generation invalidated")

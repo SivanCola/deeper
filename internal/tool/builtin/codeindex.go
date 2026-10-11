@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(codeIndex{}) }

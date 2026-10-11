@@ -3,7 +3,7 @@ package sandbox
 import (
 	"context"
 
-	"deeper/internal/permissionpreset"
+	"deepzora/internal/permissionpreset"
 )
 
 type permissionPresetContextKey struct{}

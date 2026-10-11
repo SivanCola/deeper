@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/proc"
-	"deeper/internal/secrets"
-	"deeper/internal/shellparse"
+	"deepzora/internal/proc"
+	"deepzora/internal/secrets"
+	"deepzora/internal/shellparse"
 )
 
 const ProbeTimeout = 2 * time.Second

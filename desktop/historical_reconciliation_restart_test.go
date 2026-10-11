@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/session"
 )
 
 func TestHistoricalDiscoveryResumesPublishedRepair(t *testing.T) {

@@ -1,6 +1,6 @@
 package responses
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 func (c *client) ReasoningReplayCapabilities() provider.ReasoningReplayCapabilities {
 	fallback := ""

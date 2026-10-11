@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/stats"
+	"deepzora/internal/config"
+	"deepzora/internal/stats"
 )
 
 func closeCLIUsageCatalogs() {

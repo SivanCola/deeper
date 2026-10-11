@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent/testutil"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent/testutil"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 const wantPrecedence = "The user's new message takes precedence. If it is unrelated to the interrupted task, do not resume that task."

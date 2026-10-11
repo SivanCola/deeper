@@ -32,7 +32,7 @@
 
 旧会话迁移还会输出 `desktop session migration transcript initialization failed`，
 包含同一份诊断、`stage=legacy_import` 和 `source_key`。使用 `source_key` 对照
-Deeper 配置目录下 `desktop/session-migration-v5.json` 中已有的 `sourceKey`。
+Deepzora 配置目录下 `desktop/session-migration-v5.json` 中已有的 `sourceKey`。
 即使重试时生成了不同的目标会话 ID，也能据此关联同一迁移来源。每次失败输出一条运行时
 诊断；在该迁移路径中再输出一条迁移诊断。失败来源保留，正常会话可继续迁移。
 
@@ -42,7 +42,7 @@ Deeper 配置目录下 `desktop/session-migration-v5.json` 中已有的 `sourceK
 
 同一个已处理的迁移失败还会进入本地待上传队列，作为 `exception` 上报；其
 `source=desktop.session_migration`、`label=transcript.initialization`，fingerprint hint
-只包含无正文的错误分类。仅配置自有 `DEEPER_REPORT_ENDPOINT` 后才会投递报告；默认不上传，继续遵守现有 Desktop telemetry 同意开关、失败重试和按版本
+只包含无正文的错误分类。仅配置自有 `DEEPZORA_REPORT_ENDPOINT` 后才会投递报告；默认不上传，继续遵守现有 Desktop telemetry 同意开关、失败重试和按版本
 去重规则。会话/迁移来源摘要以及记录标识摘要只保留在本地。旧版本未捕获的 panic 继续走
 已有的 `go.runtime` / `go.fatal` 上报链路，并按高等级崩溃展示。
 

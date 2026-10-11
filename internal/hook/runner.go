@@ -182,7 +182,7 @@ func (r *Runner) PostToolUseFailure(ctx context.Context, name string, args json.
 		p.IsInterrupt = errors.Is(err, context.Canceled)
 	}
 	r.handle(Run(ctx, p, r.hooks, r.spawner))
-	// Native Deeper PostToolUse historically observed both success and
+	// Native Deepzora PostToolUse historically observed both success and
 	// failure. Preserve that contract while Claude hooks use the distinct event.
 	legacy := r.nativeHooks(PostToolUse)
 	if len(legacy) > 0 {
@@ -192,7 +192,7 @@ func (r *Runner) PostToolUseFailure(ctx context.Context, name string, args json.
 }
 
 // PermissionRequest fires before a tool approval prompt is shown. A native
-// Deeper hook here can't answer the dialog (non-pass outcomes are surfaced
+// Deepzora hook here can't answer the dialog (non-pass outcomes are surfaced
 // via notify only); a Claude-imported hook (PayloadFormat "claude") can
 // answer it on the user's behalf via exit 2 or a JSON decision, matching
 // Claude's own contract. decision == nil means "no opinion, show the prompt

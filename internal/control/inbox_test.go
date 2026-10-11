@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/memory"
-	"deeper/internal/provider"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/memory"
+	"deepzora/internal/provider"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestEnqueueInboxDurableAndSnapshot(t *testing.T) {

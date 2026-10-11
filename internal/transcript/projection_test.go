@@ -9,10 +9,10 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/turnevent"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/turnevent"
 )
 
 func TestProjectionAttachesCompletedTurnUsageAndTimingToFinalAnswer(t *testing.T) {

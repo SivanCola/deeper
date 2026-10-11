@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/filelock"
+	"deepzora/internal/filelock"
 )
 
 func warningFingerprint(label string) string {

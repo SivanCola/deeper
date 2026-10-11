@@ -1,4 +1,4 @@
-// Command windows-resource stamps Deeper branding and metadata into a Windows
+// Command windows-resource stamps Deepzora branding and metadata into a Windows
 // support executable after it has been built. The desktop executable rides the
 // same winres library; keeping the support binaries on the same resource path
 // avoids generic Explorer, shortcut, and taskbar icons.
@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	companyName = "Deeper"
+	companyName = "Deepzora"
 	copyright   = "Copyright © 2026 Reasonix Contributors and Deeper Contributors"
 )
 
@@ -96,7 +96,7 @@ func stampExecutable(opts resourceOptions) error {
 	}
 	rs.SetManifest(winres.AppManifest{
 		Identity: winres.AssemblyIdentity{
-			Name:    "Deeper." + opts.internalName,
+			Name:    "Deepzora." + opts.internalName,
 			Version: numericVersion,
 		},
 		Description:         opts.fileDescription,
@@ -117,9 +117,9 @@ func stampExecutable(opts resourceOptions) error {
 		version.InternalName:     opts.internalName,
 		version.LegalCopyright:   copyright,
 		version.OriginalFilename: opts.originalName,
-		version.ProductName:      "Deeper",
+		version.ProductName:      "Deepzora",
 		version.ProductVersion:   opts.numericVersion,
-		version.Comments:         "Deeper desktop support component.",
+		version.Comments:         "Deepzora desktop support component.",
 	} {
 		if err := info.Set(version.LangDefault, key, value); err != nil {
 			return fmt.Errorf("set version field %s: %w", key, err)
@@ -197,7 +197,7 @@ func verifyResources(executable []byte, opts resourceOptions, numericVersion [4]
 		version.FileDescription:  opts.fileDescription,
 		version.InternalName:     opts.internalName,
 		version.OriginalFilename: opts.originalName,
-		version.ProductName:      "Deeper",
+		version.ProductName:      "Deepzora",
 	} {
 		if got := (*table)[key]; got != want {
 			return fmt.Errorf("version field %s=%q, want %q", key, got, want)
@@ -207,7 +207,7 @@ func verifyResources(executable []byte, opts resourceOptions, numericVersion [4]
 }
 
 func replaceFile(path string, data []byte, mode os.FileMode) error {
-	temp, err := os.CreateTemp(filepath.Dir(path), ".deeper-resource-*.exe")
+	temp, err := os.CreateTemp(filepath.Dir(path), ".deepzora-resource-*.exe")
 	if err != nil {
 		return err
 	}

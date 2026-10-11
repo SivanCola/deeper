@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 // slowPhaseProvider stalls before answering so the provider span clears
@@ -52,7 +52,7 @@ func TestEffectTurnPhaseBillsProviderWaitThroughRealBuild(t *testing.T) {
 	provider.Register("phase-effect", func(provider.Config) (provider.Provider, error) {
 		return prov, nil
 	})
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]

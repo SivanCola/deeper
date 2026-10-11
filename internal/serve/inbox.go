@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"deeper/internal/control"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/sessioninbox"
 )
 
 func (s *Server) registerInboxRoutes(mux *http.ServeMux) {

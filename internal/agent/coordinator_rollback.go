@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // rollbackPlannerTurn restores the snapshot unless compaction rewrote it.

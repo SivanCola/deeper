@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/command"
-	"deeper/internal/hook"
-	"deeper/internal/memory"
-	"deeper/internal/outputstyle"
-	"deeper/internal/plugin"
-	"deeper/internal/skill"
+	"deepzora/internal/command"
+	"deepzora/internal/hook"
+	"deepzora/internal/memory"
+	"deepzora/internal/outputstyle"
+	"deepzora/internal/plugin"
+	"deepzora/internal/skill"
 )
 
 func TestRenderSkillListUsesSharedVisualLanguage(t *testing.T) {
@@ -60,12 +60,12 @@ func TestRenderMemoryGroupsDocsAndStore(t *testing.T) {
 		t.Fatalf("save memory: %v", err)
 	}
 	got := renderMemory(width, &memory.Set{
-		Docs:  []memory.Source{{Path: "/Users/me/project/DEEPER.md", Scope: memory.ScopeProject}},
+		Docs:  []memory.Source{{Path: "/Users/me/project/DEEPZORA.md", Scope: memory.ScopeProject}},
 		Store: store,
 		Index: store.Index(),
 	})
 	for _, want := range []string{
-		"memory", "instructions", "precedence=1", "scope=project", "DEEPER.md",
+		"memory", "instructions", "precedence=1", "scope=project", "DEEPZORA.md",
 		"saved memories", "saved-fact", "Saved Fact", "revision=1", "freshness=fresh",
 		"doc edits apply next session",
 	} {
@@ -111,7 +111,7 @@ func TestRenderHooksUsesSharedVisualLanguage(t *testing.T) {
 		Event:      hook.PreToolUse,
 		Scope:      hook.ScopeProject,
 	}})
-	for _, want := range []string{"hooks (1 active)", "PreToolUse", "project", "…", ".deeper/settings.json"} {
+	for _, want := range []string{"hooks (1 active)", "PreToolUse", "project", "…", ".deepzora/settings.json"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("hooks view missing %q:\n%s", want, got)
 		}
@@ -164,7 +164,7 @@ func TestRenderHelpDocsShowsOnlyRuntimeWinner(t *testing.T) {
 	if !strings.Contains(got, "custom docs") || strings.Contains(got, "docs skill") {
 		t.Fatalf("help did not preserve the runtime-winning custom command:\n%s", got)
 	}
-	if !strings.Contains(got, "/deeper:docs") {
+	if !strings.Contains(got, "/deepzora:docs") {
 		t.Fatalf("help did not preserve the qualified built-in docs fallback:\n%s", got)
 	}
 }
@@ -181,7 +181,7 @@ func TestRenderHelpDocsUsesQualifiedFallbackForHiddenAlias(t *testing.T) {
 	if strings.Contains(got, "\n  /docs ") {
 		t.Fatalf("help exposed a misleading hidden /docs alias:\n%s", got)
 	}
-	for _, want := range []string{"/deeper:docs", "/manuals:docs"} {
+	for _, want := range []string{"/deepzora:docs", "/manuals:docs"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("help missing %q:\n%s", want, got)
 		}
@@ -191,7 +191,7 @@ func TestRenderHelpDocsUsesQualifiedFallbackForHiddenAlias(t *testing.T) {
 func TestRenderSkillPathsStaysWithinWidth(t *testing.T) {
 	width := 72
 	got := renderSkillPaths(width, []skill.Root{{
-		Dir:      "/Users/me/projects/really/deep/path/to/.deeper/skills",
+		Dir:      "/Users/me/projects/really/deep/path/to/.deepzora/skills",
 		Scope:    skill.ScopeProject,
 		Priority: 0,
 		Status:   skill.StatusMissing,

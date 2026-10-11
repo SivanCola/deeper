@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"maps"
 
-	"deeper/internal/extension/rpcwire"
-	"deeper/internal/pathidentity"
+	"deepzora/internal/extension/rpcwire"
+	"deepzora/internal/pathidentity"
 )
 
 // Error codes from docs/DESKTOP_HOST_PROTOCOL.md. Business errors raised by
@@ -21,7 +21,7 @@ const (
 )
 
 // Identity is what the service reports about itself in hello and checks
-// the shell against. Home is the canonical Deeper data home.
+// the shell against. Home is the canonical Deepzora data home.
 type Identity struct {
 	Version string
 	Channel string

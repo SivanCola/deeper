@@ -13,10 +13,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
-	filelock "deeper/internal/identitylock"
-	"deeper/internal/session"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
+	filelock "deepzora/internal/identitylock"
+	"deepzora/internal/session"
 )
 
 // crash_pending.go captures Go-side panics to disk and ships them on the next

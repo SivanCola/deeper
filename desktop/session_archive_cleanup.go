@@ -3,8 +3,8 @@ package main
 import (
 	"log/slog"
 
-	"deeper/internal/control"
-	"deeper/internal/session"
+	"deepzora/internal/control"
+	"deepzora/internal/session"
 )
 
 // archivedRuntimeCleanup owns post-commit joins. Keep removal/admission

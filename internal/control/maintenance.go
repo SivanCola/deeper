@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/session"
 )
 
 var (

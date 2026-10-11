@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/attachment"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/attachment"
+	"deepzora/internal/sessioninbox"
 )
 
 // RunInboxTurn synchronously claims and executes one durable item. Bot and ACP

@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func TestBashCancelKillsWindowsChildProcessTree(t *testing.T) {

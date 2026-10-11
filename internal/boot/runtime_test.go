@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 func TestBuildRuntimeDisablesImplicitSkillInvocation(t *testing.T) {
@@ -21,7 +21,7 @@ func TestBuildRuntimeDisablesImplicitSkillInvocation(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	configPath := filepath.Join(dir, "deeper.toml")
+	configPath := filepath.Join(dir, "deepzora.toml")
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		t.Fatalf("read fixture config: %v", err)
@@ -56,7 +56,7 @@ func TestRebuildFromForceFullRebuildRefreshesSkillPolicy(t *testing.T) {
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	writeRuntimeFixture(t, dir)
-	configPath := filepath.Join(dir, "deeper.toml")
+	configPath := filepath.Join(dir, "deepzora.toml")
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		t.Fatalf("read fixture config: %v", err)
@@ -100,7 +100,7 @@ func TestRebuildFromForceFullRebuildRefreshesSkillPolicy(t *testing.T) {
 // environment probe section disabled (it embeds machine-specific data).
 func writeRuntimeFixture(t *testing.T, dir string) {
 	t.Helper()
-	writeFile(t, dir, "deeper.toml", `
+	writeFile(t, dir, "deepzora.toml", `
 default_model = "test-model"
 
 [agent]
@@ -114,7 +114,7 @@ name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
 model = "x"
-api_key_env = "DEEPER_TEST_KEY_UNSET"
+api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
 }

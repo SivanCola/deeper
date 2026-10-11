@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/permission"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
 )
 
 func TestMemoryApprovalStillPromptsUnderAsk(t *testing.T) {

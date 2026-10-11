@@ -2,9 +2,9 @@ package control
 
 import (
 	"context"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/skill"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/skill"
 	"testing"
 )
 

@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
 )
 
 // commitLoadedResume moves an idle controller to a validated transcript while

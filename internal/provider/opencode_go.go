@@ -293,7 +293,7 @@ func ModelScopeModelInfo(kind, baseURL, model string) (ModelInfo, bool) {
 
 // FilterOfficialOpenCodeGoModels removes models that the shared OpenCode Go
 // /v1/models catalog exposes for a different wire format. Custom endpoints are
-// returned unchanged because Deeper cannot infer their routing policy.
+// returned unchanged because Deepzora cannot infer their routing policy.
 func FilterOfficialOpenCodeGoModels(kind, baseURL string, models []string) []string {
 	if _, ok := OfficialOpenCodeGoRoute(kind, baseURL); !ok {
 		return models

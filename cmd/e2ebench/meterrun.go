@@ -87,7 +87,7 @@ func startTaskMeter(cfg suiteConfig) (env []string, m *meter, stop func(), err e
 		_ = os.RemoveAll(home)
 		return nil, nil, nil, err
 	}
-	return []string{"DEEPER_HOME=" + home}, m, func() {
+	return []string{"DEEPZORA_HOME=" + home}, m, func() {
 		stopServer()
 		_ = os.RemoveAll(home)
 	}, nil

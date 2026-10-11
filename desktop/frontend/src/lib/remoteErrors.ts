@@ -39,5 +39,5 @@ export function isRemoteDegradedWarning(status?: RemoteConnectionStatus): boolea
 export function isRemoteTakeoverError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   return /\(HTTP 409\)/.test(message)
-    || /taken over by a local Deeper|writer is owned by another runtime|in use by another Deeper process/.test(message);
+    || /taken over by a local Deepzora|writer is owned by another runtime|in use by another Deepzora process/.test(message);
 }

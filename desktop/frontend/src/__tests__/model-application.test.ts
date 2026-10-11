@@ -11,7 +11,7 @@ assert.equal(modelApplicationError(error),details);
 assert.equal(definitelyNotAccepted(error),true);
 assert.equal(isUnknownSubmissionError(error),false,"structured outcome wins over English error text");
 assert.equal(isUnknownSubmissionError(Object.assign(new Error("settlement failed"),{data:{submissionOutcome:"unknown"}})),true);
-assert.equal(followupNotSubmitted(Object.assign(new Error("deeper_error:channel_read_only"), {data:{submissionOutcome:"unknown"}})), false, "structured uncertainty overrides legacy rejection text");
+assert.equal(followupNotSubmitted(Object.assign(new Error("deepzora_error:channel_read_only"), {data:{submissionOutcome:"unknown"}})), false, "structured uncertainty overrides legacy rejection text");
 const calls:unknown[]=[];
 const bindings={
  StartTurnWithModelApplication:async(...args:unknown[])=>{calls.push(args);return {turnId:"turn"};},

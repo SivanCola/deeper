@@ -3,7 +3,7 @@ package acp
 import (
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestTitleFromHistorySkipsPinnedContextRevision(t *testing.T) {

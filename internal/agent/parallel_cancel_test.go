@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 // stubbornTool ignores its context: it returns only when released.

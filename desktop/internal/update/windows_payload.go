@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/installlayout"
+	"deepzora/internal/installlayout"
 )
 
 const (
@@ -19,24 +19,24 @@ const (
 	// file of the app/ shell tree; schema 1 manifests carry the flat list only.
 	WindowsPayloadManifestSchemaVersion = 2
 	windowsPayloadFlatSchemaVersion     = 1
-	WindowsPayloadManifestName          = "deeper-payload.json"
+	WindowsPayloadManifestName          = "deepzora-payload.json"
 	WindowsPayloadSignatureName         = WindowsPayloadManifestName + ".minisig"
 	// WindowsPayloadTreePrefix starts every shell tree entry name.
 	WindowsPayloadTreePrefix = installlayout.AppShellDirName + "/"
 )
 
 var windowsPayloadFileNames = [...]string{
-	"deeper-desktop.exe",
-	"deeper-guard.exe",
-	"deeper-launcher.exe",
-	"deeper-update-helper.exe",
-	"deeper-cli.exe",
+	"deepzora-desktop.exe",
+	"deepzora-guard.exe",
+	"deepzora-launcher.exe",
+	"deepzora-update-helper.exe",
+	"deepzora-cli.exe",
 }
 
 var windowsPayloadVersionFileNames = [...]string{
-	"deeper-desktop.exe",
-	"deeper-update-helper.exe",
-	"deeper-cli.exe",
+	"deepzora-desktop.exe",
+	"deepzora-update-helper.exe",
+	"deepzora-cli.exe",
 }
 
 type WindowsPayloadManifest struct {

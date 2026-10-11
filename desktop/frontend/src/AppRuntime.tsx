@@ -29,10 +29,10 @@ const AppRuntimeView = lazy(() => import("./app-shell/AppRuntimeView").then((mod
 
 function AppRuntimeViewFallback() {
   return (
-    <div className="boot-shell" role="status" aria-label="Deeper is starting">
+    <div className="boot-shell" role="status" aria-label="Deepzora is starting">
       <div className="boot-shell__card">
         <div className="boot-shell__mark" aria-hidden="true"><img src={logoSymbol} alt="" draggable={false} /></div>
-        <div className="boot-shell__name">Deeper</div>
+        <div className="boot-shell__name">Deepzora</div>
         <div className="boot-shell__dots" aria-hidden="true"><span /><span /><span /></div>
       </div>
     </div>
@@ -164,7 +164,7 @@ export function AppRuntime() {
     let live = true;
     const showCleanupNotice = (status: LegacyEmptySessionCleanupStatus) => {
       if (!live || status.removed <= 0 || !status.batchId) return;
-      const storageKey = `deeper.legacy-empty-session-cleanup.notice.${status.batchId}`;
+      const storageKey = `deepzora.legacy-empty-session-cleanup.notice.${status.batchId}`;
       let shown = false;
       try {
         shown = window.localStorage.getItem(storageKey) === "shown";

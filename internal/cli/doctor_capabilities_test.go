@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/capdiag"
+	"deepzora/internal/capdiag"
 )
 
 func TestDoctorCapabilitiesStaticJSON(t *testing.T) {

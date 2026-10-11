@@ -1,6 +1,6 @@
 package agent
 
-import "deeper/internal/provider"
+import "deepzora/internal/provider"
 
 // outcomeRunState preserves explicit execution evidence before image enrichment.
 // The fallback covers older and synthetic outcomes that have no image prepass.

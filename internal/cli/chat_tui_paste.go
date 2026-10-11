@@ -16,12 +16,12 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/atotto/clipboard"
 
-	"deeper/internal/agent"
-	"deeper/internal/control"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
-	"deeper/internal/secrets"
-	"deeper/internal/shellparse"
+	"deepzora/internal/agent"
+	"deepzora/internal/control"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
+	"deepzora/internal/secrets"
+	"deepzora/internal/shellparse"
 )
 
 // This file holds the chat TUI's paste & image-attachment input layer: folding

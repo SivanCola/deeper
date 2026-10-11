@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/plugin"
+	"deepzora/internal/config"
+	"deepzora/internal/plugin"
 )
 
-func TestMCPAuthCLIUsesDeeperPrivateState(t *testing.T) {
+func TestMCPAuthCLIUsesDeepzoraPrivateState(t *testing.T) {
 	home, workspace := t.TempDir(), t.TempDir()
-	t.Setenv("DEEPER_HOME", home)
+	t.Setenv("DEEPZORA_HOME", home)
 	t.Chdir(workspace)
 	entry := config.PluginEntry{Name: "figma", Type: "http", URL: "https://mcp.figma.com/mcp", Source: config.MCPSourceUserConfig}
 	if _, err := config.InstallUserPluginForRoot(workspace, entry, true); err != nil {
@@ -25,7 +25,7 @@ func TestMCPAuthCLIUsesDeeperPrivateState(t *testing.T) {
 			t.Fatalf("authorization spec = %+v", spec)
 		}
 		if spec.StateDir == "" || strings.HasPrefix(filepath.Clean(spec.StateDir), filepath.Clean(workspace)+string(filepath.Separator)) {
-			t.Fatalf("OAuth state dir must be private Deeper state, got %q", spec.StateDir)
+			t.Fatalf("OAuth state dir must be private Deepzora state, got %q", spec.StateDir)
 		}
 		if spec.OAuthHTTPClient == nil || openURL == nil {
 			t.Fatal("authorization requires the proxy-aware client and browser opener")

@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // isCommandCodeTransientResponsesError recognizes Command Code's anonymous,

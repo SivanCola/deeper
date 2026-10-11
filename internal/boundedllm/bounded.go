@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/nilutil"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/nilutil"
+	"deepzora/internal/provider"
 )
 
 const (

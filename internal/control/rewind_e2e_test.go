@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/checkpoint"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestCompatibilityRewindRequiresConfirmationForPartialCoverage(t *testing.T) {
@@ -128,7 +128,7 @@ func TestResumeRecoversCommittingCombinedRewind(t *testing.T) {
 			Path: "a.txt", AbsPath: filePath, Action: "write", Published: true,
 			RestoreExisted: true, RestoreSHA: checkpoint.Digest([]byte("before")), RestoreMode: diskMode,
 			ForwardExisted: true, ForwardSHA: checkpoint.Digest([]byte("after")), ForwardMode: diskMode,
-			ForwardInline: []byte("after"), BackupPath: filepath.Join(root, ".a.txt.deeper-recovery.bak"),
+			ForwardInline: []byte("after"), BackupPath: filepath.Join(root, ".a.txt.deepzora-recovery.bak"),
 		}},
 	}
 	raw, err := json.Marshal(tx)

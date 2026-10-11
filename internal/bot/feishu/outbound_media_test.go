@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestReadOutboundFileConfinement(t *testing.T) {

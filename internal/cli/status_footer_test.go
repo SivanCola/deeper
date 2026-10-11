@@ -8,11 +8,11 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"deeper/internal/billing"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/i18n"
-	"deeper/internal/provider"
+	"deepzora/internal/billing"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 func TestTurnReceiptKeepsCompletePerTurnBreakdown(t *testing.T) {
@@ -185,8 +185,8 @@ func TestTurnReceiptAdaptsContrastAcrossThemes(t *testing.T) {
 }
 
 func TestStatusFooterSemanticPaletteAcrossThemes(t *testing.T) {
-	t.Setenv("DEEPER_THEME", "")
-	t.Setenv("DEEPER_THEME_STYLE", "")
+	t.Setenv("DEEPZORA_THEME", "")
+	t.Setenv("DEEPZORA_THEME_STYLE", "")
 	defer restoreThemeForTest(activeColorProfile, activeCLITheme)
 	activeColorProfile = colorprofile.ANSI256
 
@@ -229,7 +229,7 @@ func TestStatusFooterThemesKeepIdenticalGeometry(t *testing.T) {
 	m.label = "deepseek-v4-flash"
 	m.effortLevel = "max"
 	m.balance = "¥12.34"
-	m.gitStatus = gitStatus{Repo: "deeper", Branch: "feature/theme-footer", Added: 3}
+	m.gitStatus = gitStatus{Repo: "deepzora", Branch: "feature/theme-footer", Added: 3}
 
 	render := func(mode string, profile colorprofile.Profile) string {
 		activeColorProfile = profile
@@ -258,9 +258,9 @@ func TestStatusFooterGitAndDividerAdaptToTheme(t *testing.T) {
 		t.Run(tt.mode, func(t *testing.T) {
 			configureCLITheme(tt.mode)
 			m := newTestChatTUI()
-			m.gitStatus = gitStatus{Repo: "deeper", Branch: "db4be5e6", Detached: true}
+			m.gitStatus = gitStatus{Repo: "deepzora", Branch: "db4be5e6", Detached: true}
 			git := m.layoutGitTelemetry(80)
-			if !strings.Contains(git, tt.gitSGR+"deeper") {
+			if !strings.Contains(git, tt.gitSGR+"deepzora") {
 				t.Fatalf("%s Git identity should use warm semantic colour: %q", tt.mode, git)
 			}
 			divider := statusFooterDivider(40)
@@ -419,7 +419,7 @@ func TestStatusFooterSwapsModelAndGitGroups(t *testing.T) {
 	m.effortLevel = "auto"
 	m.balance = "¥12.34"
 	m.gitStatus = gitStatus{
-		Repo:      "deeper",
+		Repo:      "deepzora",
 		Branch:    "feature/responsive-footer",
 		Added:     1199,
 		Removed:   244,
@@ -434,13 +434,13 @@ func TestStatusFooterSwapsModelAndGitGroups(t *testing.T) {
 	if !strings.Contains(lines[0], "MODEL deepseek-v4-flash   EFFORT auto") {
 		t.Fatalf("first row should keep model and effort in one session group:\n%s", strings.Join(lines, "\n"))
 	}
-	if strings.Contains(lines[0], "deeper@") {
+	if strings.Contains(lines[0], "deepzora@") {
 		t.Fatalf("first row should not contain Git identity:\n%s", strings.Join(lines, "\n"))
 	}
 	if strings.Trim(lines[1], "─ ") != "" {
 		t.Fatalf("middle row should be a divider:\n%s", strings.Join(lines, "\n"))
 	}
-	if !strings.Contains(lines[2], "deeper@feature/responsive-footer") || strings.Contains(lines[2], "…") {
+	if !strings.Contains(lines[2], "deepzora@feature/responsive-footer") || strings.Contains(lines[2], "…") {
 		t.Fatalf("second row should preserve the full Git identity when it fits:\n%s", strings.Join(lines, "\n"))
 	}
 	if !strings.Contains(lines[2], "+1199 -244 ?3") || !strings.HasSuffix(lines[2], "BAL ¥12.34") {
@@ -508,7 +508,7 @@ func TestStatusFooterStacksGitAndTelemetryWithoutFloatingContinuation(t *testing
 
 	m := newTestChatTUI()
 	m.gitStatus = gitStatus{
-		Repo: "deeper", Branch: "feature/responsive-footer", Added: 20, Removed: 4,
+		Repo: "deepzora", Branch: "feature/responsive-footer", Added: 20, Removed: 4,
 	}
 	m.balance = "¥123.45"
 
@@ -516,7 +516,7 @@ func TestStatusFooterStacksGitAndTelemetryWithoutFloatingContinuation(t *testing
 	if len(lines) != 2 {
 		t.Fatalf("stacked Git/telemetry rows = %d, want 2:\n%s", len(lines), strings.Join(lines, "\n"))
 	}
-	if !strings.HasPrefix(lines[0], statusFooterIndent+"deeper@") || !strings.Contains(lines[0], "+20 -4") {
+	if !strings.HasPrefix(lines[0], statusFooterIndent+"deepzora@") || !strings.Contains(lines[0], "+20 -4") {
 		t.Fatalf("Git should own the complete first row:\n%s", strings.Join(lines, "\n"))
 	}
 	if !strings.HasPrefix(lines[1], statusFooterIndent+"BAL ¥123.45") {
@@ -532,7 +532,7 @@ func TestStatusFooterNarrowLayoutBreaksBetweenGroups(t *testing.T) {
 	m.label = "provider/" + strings.Repeat("long-model-", 8)
 	m.balance = "¥123.45"
 	m.gitStatus = gitStatus{
-		Repo:    "deeper-Workspace",
+		Repo:    "deepzora-Workspace",
 		Branch:  "feature/" + strings.Repeat("long-branch-", 8),
 		Added:   20,
 		Removed: 4,
@@ -563,14 +563,14 @@ func TestStatusFooterCustomLineStillReplacesBuiltInData(t *testing.T) {
 	m.balance = "¥12.34"
 	m.statuslineCmd = "custom-status"
 	m.statuslineOut = "custom telemetry"
-	m.gitStatus = gitStatus{Repo: "Deeper", Branch: "main"}
+	m.gitStatus = gitStatus{Repo: "Deepzora", Branch: "main"}
 
 	primary := m.primaryStatusLine(" Auto ", false, false)
 	block := ansi.Strip(m.renderStatusBlock(primary, 120))
 	if strings.Contains(block, "deepseek-v4-flash") || strings.Contains(block, "¥12.34") {
 		t.Fatalf("custom statusline should replace built-in data fields:\n%s", block)
 	}
-	if !strings.Contains(block, "Deeper@main") || !strings.Contains(block, "custom telemetry") {
+	if !strings.Contains(block, "Deepzora@main") || !strings.Contains(block, "custom telemetry") {
 		t.Fatalf("custom statusline should coexist with Git identity:\n%s", block)
 	}
 }

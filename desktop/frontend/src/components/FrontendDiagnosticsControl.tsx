@@ -9,7 +9,7 @@ import {
   type FrontendDiagnosticSnapshot,
 } from "../lib/frontendDiagnostics";
 
-const defaultFilename = (reportId: string) => `deeper-frontend-diagnostics-${reportId.slice(0, 8) || "trace"}.json`;
+const defaultFilename = (reportId: string) => `deepzora-frontend-diagnostics-${reportId.slice(0, 8) || "trace"}.json`;
 const COPY: Record<Locale, {
   start: string;
   startHint: string;

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/extension"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/extension/sidecar"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/extension/sidecar"
 )
 
 // The production Client interface exists so the real sidecar client drops in

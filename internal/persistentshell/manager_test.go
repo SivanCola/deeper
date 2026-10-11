@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/sandbox"
+	"deepzora/internal/sandbox"
 )
 
 func testManager(t *testing.T) *Manager {
@@ -92,10 +92,10 @@ func TestPersistentShellKeepsExportedEnv(t *testing.T) {
 	sh := posixShell(t)
 	dir := t.TempDir()
 	m := testManager(t)
-	if res := runPersistent(t, m, sh, dir, "export DEEPER_PERSIST=ok", 5*time.Second); res.Err != nil {
+	if res := runPersistent(t, m, sh, dir, "export DEEPZORA_PERSIST=ok", 5*time.Second); res.Err != nil {
 		t.Fatalf("export: %v (%q)", res.Err, res.Output)
 	}
-	res := runPersistent(t, m, sh, dir, "printf '%s\\n' \"$DEEPER_PERSIST\"", 5*time.Second)
+	res := runPersistent(t, m, sh, dir, "printf '%s\\n' \"$DEEPZORA_PERSIST\"", 5*time.Second)
 	if res.Err != nil {
 		t.Fatalf("printf: %v (%q)", res.Err, res.Output)
 	}

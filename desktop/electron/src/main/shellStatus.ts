@@ -2,11 +2,11 @@ import { createServer, type Server } from "node:net";
 import { createHash, randomUUID } from "node:crypto";
 import type { Logger } from "./log.js";
 
-export const QUIT_REQUEST = "--deeper-lifecycle-request=quit";
+export const QUIT_REQUEST = "--deepzora-lifecycle-request=quit";
 export const STATUS_LIMIT = 16 * 1024;
 export interface ShellStatus {
   schemaVersion: 1;
-  product: "io.github.sivancola.deeper";
+  product: "com.deepzora.desktop";
   pid: number;
   version: string;
   generation: string;
@@ -24,10 +24,10 @@ export function homeKey(profile: string): string {
 }
 
 export function initialShellStatus(profile: string, version: string): ShellStatus {
-  return { schemaVersion: 1, product: "io.github.sivancola.deeper", pid: process.pid, version, generation: randomUUID(), homeKey: homeKey(profile), lifecycle: "starting", service: "starting", servicePID: 0, visible: false, rendererVersion: "", healthy: false };
+  return { schemaVersion: 1, product: "com.deepzora.desktop", pid: process.pid, version, generation: randomUUID(), homeKey: homeKey(profile), lifecycle: "starting", service: "starting", servicePID: 0, visible: false, rendererVersion: "", healthy: false };
 }
 
-export function listenShellStatus(snapshot: () => ShellStatus, log: Logger, address = `\\\\.\\pipe\\deeper-shell-v1-${process.pid}`): Server {
+export function listenShellStatus(snapshot: () => ShellStatus, log: Logger, address = `\\\\.\\pipe\\deepzora-shell-v1-${process.pid}`): Server {
   const server = createServer((socket) => {
     socket.on("error", () => undefined);
     socket.setTimeout(2000, () => socket.destroy());

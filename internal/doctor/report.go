@@ -15,14 +15,14 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/netclient"
-	"deeper/internal/sandbox"
-	"deeper/internal/secrets"
-	"deeper/internal/skill"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/netclient"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
+	"deepzora/internal/skill"
+	"deepzora/internal/store"
 )
 
 type Options struct {
@@ -167,7 +167,7 @@ func Collect(opts Options) Report {
 		warnings = append(warnings, `config requests [sandbox] bash = "enforce", but Windows does not provide an OS-level Bash sandbox; the setting is fixed to "off" and bash runs unconfined`)
 	}
 	// Supervised deployments sometimes override HOME onto a service config dir
-	// while Deeper isolation should use DEEPER_HOME. Do not rewrite
+	// while Deepzora isolation should use DEEPZORA_HOME. Do not rewrite
 	// subprocess HOME automatically (#7600 rejected); surface the mismatch.
 	if warn := homeIsolationWarning(); warn != "" {
 		warnings = append(warnings, warn)
@@ -251,7 +251,7 @@ func configWarnings(cfg *config.Config, sourcePath string) []string {
 	warnings := cfg.LoadWarnings()
 	// Settings edits user configuration, while project files can still tighten
 	// the sandbox (#5961, #6046). A project cannot override user constraints.
-	if sourcePath != "" && filepath.Base(sourcePath) == "deeper.toml" {
+	if sourcePath != "" && filepath.Base(sourcePath) == "deepzora.toml" {
 		if raw, err := fileencoding.ReadFileUTF8(sourcePath); err == nil && tomlHasSandboxTable(raw) {
 			warnings = append(warnings, "project "+redactHome(sourcePath)+" sets [sandbox]; project values may narrow user-level Settings -> Sandbox for this workspace — edit the project file to change those constraints")
 		}
@@ -277,7 +277,7 @@ func appendRecoveryWarnings(warnings []string, recovery RecoveryLifecycleReport)
 
 func RenderText(r Report) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "deeper %s doctor\n", r.Version)
+	fmt.Fprintf(&b, "deepzora %s doctor\n", r.Version)
 	fmt.Fprintf(&b, "  system       %s/%s\n", r.OS, r.Arch)
 	if r.CWD != "" {
 		fmt.Fprintf(&b, "  cwd          %s\n", r.CWD)
@@ -500,10 +500,10 @@ func valueOr(s, fallback string) string {
 }
 
 // homeIsolationWarning detects a process HOME that differs from the OS account
-// home while DEEPER_HOME is unset. Services should keep the real account HOME
-// and isolate Deeper state with DEEPER_HOME instead of rewriting HOME.
+// home while DEEPZORA_HOME is unset. Services should keep the real account HOME
+// and isolate Deepzora state with DEEPZORA_HOME instead of rewriting HOME.
 func homeIsolationWarning() string {
-	if strings.TrimSpace(os.Getenv("DEEPER_HOME")) != "" {
+	if strings.TrimSpace(os.Getenv("DEEPZORA_HOME")) != "" {
 		return ""
 	}
 	envHome := strings.TrimSpace(os.Getenv("HOME"))
@@ -526,7 +526,7 @@ func homeIsolationWarning() string {
 	// Do not embed either absolute path: when HOME is overridden, redactHome
 	// cannot mask the account home, and shareable doctor output must stay free
 	// of machine-local identity.
-	return "process HOME differs from the OS account home; keep the real account HOME for services and isolate Deeper with DEEPER_HOME"
+	return "process HOME differs from the OS account home; keep the real account HOME for services and isolate Deepzora with DEEPZORA_HOME"
 }
 
 func samePathFold(a, b string) bool {

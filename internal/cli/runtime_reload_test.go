@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/boot"
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/boot"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 // stubRuntimeRebuilder records how often the /reload build seam ran and

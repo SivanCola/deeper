@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
 )
 
 func TestNewProviderBuildsSCNetOpenAIDeepSeekRequestContract(t *testing.T) {

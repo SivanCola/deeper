@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/serve"
+	"deepzora/internal/serve"
 )
 
 // runServeListenerAfterReady opens the browser only after HTTP responds.

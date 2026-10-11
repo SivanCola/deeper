@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"deeper/internal/attachment"
-	"deeper/internal/control"
+	"deepzora/internal/attachment"
+	"deepzora/internal/control"
 )
 
 type attachmentTarget struct {
@@ -172,11 +172,11 @@ func (a *App) finishAttachmentWrite(target attachmentTarget, rel string, err err
 
 func isAttachmentRefPath(path string) bool {
 	path = filepath.ToSlash(filepath.Clean(filepath.FromSlash(path)))
-	return strings.HasPrefix(path, ".deeper/attachments/")
+	return strings.HasPrefix(path, ".deepzora/attachments/")
 }
 
 // SavePastedImage stores a browser clipboard image data URL under the active
-// tab's workspace .deeper/attachments and returns the relative @-reference path.
+// tab's workspace .deepzora/attachments and returns the relative @-reference path.
 func (a *App) SavePastedImage(dataURL string) (string, error) {
 	target, err := a.attachmentTargetForTab("")
 	if err != nil {
@@ -196,7 +196,7 @@ func (a *App) SavePastedImageForTab(tabID, dataURL string) (string, error) {
 }
 
 // SaveClipboardImage reads the native OS clipboard image under the active tab's
-// workspace .deeper/attachments and returns the relative @-reference path.
+// workspace .deepzora/attachments and returns the relative @-reference path.
 func (a *App) SaveClipboardImage() (string, error) {
 	target, err := a.attachmentTargetForTab("")
 	if err != nil {
@@ -217,7 +217,7 @@ func (a *App) SaveClipboardImageForTab(tabID string) (string, error) {
 
 // SavePastedFile stores a dropped non-image file (the browser exposes its bytes
 // as a data URL but not a real path) under the active tab's workspace
-// .deeper/attachments and returns the relative @-reference path.
+// .deepzora/attachments and returns the relative @-reference path.
 func (a *App) SavePastedFile(name, dataURL string) (string, error) {
 	target, err := a.attachmentTargetForTab("")
 	if err != nil {

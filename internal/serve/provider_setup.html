@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Deeper Provider Setup</title>
+<title>Deepzora Provider Setup</title>
 <style>
 *,*::before,*::after{box-sizing:border-box}
 :root{color-scheme:dark;--bg:#121316;--panel:#1c1e22;--border:#353840;--text:#f1f2f4;--muted:#a4a8b2;--accent:#e1663f;--accent-hover:#ed7650;--danger:#ff806f}
@@ -18,9 +18,9 @@ label{display:block;margin:0 0 8px;font-weight:600}.field{width:100%;height:44px
 </head>
 <body>
 <main class="card">
-  <div class="brand"><img src="/assets/logo-wordmark.svg" alt="Deeper" /><span class="badge" id="remote-badge">Remote</span></div>
+  <div class="brand"><img src="/assets/logo-wordmark.svg" alt="Deepzora" /><span class="badge" id="remote-badge">Remote</span></div>
   <h1 id="title">Configure the remote Provider</h1>
-  <p id="intro">This Deeper Serve is ready, but its selected Provider has no saved API key on this host.</p>
+  <p id="intro">This Deepzora Serve is ready, but its selected Provider has no saved API key on this host.</p>
   <dl class="meta">
     <dt id="provider-label">Provider</dt><dd id="provider">—</dd>
     <dt id="model-label">Model</dt><dd id="model">—</dd>
@@ -29,16 +29,16 @@ label{display:block;margin:0 0 8px;font-weight:600}.field{width:100%;height:44px
   <form id="setup-form">
     <label for="api-key" id="api-key-label">API Key</label>
     <input class="field" id="api-key" type="password" autocomplete="off" spellcheck="false" required />
-    <p class="hint" id="hint">The key is stored only in this remote host's Deeper credential file.</p>
-    <div class="actions"><button id="save" type="submit">Save and open Deeper</button><span class="status" id="status" role="status"></span></div>
+    <p class="hint" id="hint">The key is stored only in this remote host's Deepzora credential file.</p>
+    <div class="actions"><button id="save" type="submit">Save and open Deepzora</button><span class="status" id="status" role="status"></span></div>
   </form>
 </main>
 <script>
 const langPref='__LANG__';
 const zh=String(langPref).toLowerCase().startsWith('zh');
 const copy=zh?{
-  badge:'远端',title:'配置远端 Provider',intro:'Deeper Serve 已可访问，但这台主机尚未保存当前 Provider 的 API Key。',provider:'Provider',model:'模型',credential:'凭据变量',apiKey:'API Key',hint:'密钥只会保存到这台远端主机的 Deeper 凭据文件。',pendingHint:'API Key 已安全保存。现在只需重试激活 Provider。',save:'保存并打开 Deeper',retry:'重试激活',saving:'正在保存…',activating:'正在激活…',failed:'保存失败，请重试。'
-}:{badge:'Remote',title:'Configure the remote Provider',intro:'This Deeper Serve is ready, but its selected Provider has no saved API key on this host.',provider:'Provider',model:'Model',credential:'Credential',apiKey:'API Key',hint:"The key is stored only in this remote host's Deeper credential file.",pendingHint:'The API key is safely stored. Retry Provider activation without entering it again.',save:'Save and open Deeper',retry:'Retry activation',saving:'Saving…',activating:'Activating…',failed:'Setup failed. Try again.'};
+  badge:'远端',title:'配置远端 Provider',intro:'Deepzora Serve 已可访问，但这台主机尚未保存当前 Provider 的 API Key。',provider:'Provider',model:'模型',credential:'凭据变量',apiKey:'API Key',hint:'密钥只会保存到这台远端主机的 Deepzora 凭据文件。',pendingHint:'API Key 已安全保存。现在只需重试激活 Provider。',save:'保存并打开 Deepzora',retry:'重试激活',saving:'正在保存…',activating:'正在激活…',failed:'保存失败，请重试。'
+}:{badge:'Remote',title:'Configure the remote Provider',intro:'This Deepzora Serve is ready, but its selected Provider has no saved API key on this host.',provider:'Provider',model:'Model',credential:'Credential',apiKey:'API Key',hint:"The key is stored only in this remote host's Deepzora credential file.",pendingHint:'The API key is safely stored. Retry Provider activation without entering it again.',save:'Save and open Deepzora',retry:'Retry activation',saving:'Saving…',activating:'Activating…',failed:'Setup failed. Try again.'};
 const $=id=>document.getElementById(id);
 const __nativeFetch=window.fetch.bind(window);
 function bootstrapFragmentToken(){

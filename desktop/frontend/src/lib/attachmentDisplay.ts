@@ -1,6 +1,6 @@
 import { escapeRefPath, refTokenRe, unescapeRefPath } from "./refToken";
 
-const attachmentRefRe = /@(\.deeper\/attachments\/[^\s]+)/g;
+const attachmentRefRe = /@(\.deepzora\/attachments\/[^\s]+)/g;
 const namedAttachmentRefRe = /(^|\s)@\[([^\]\r\n]+)\]\(([^)\s]+)\)/g;
 const trailingPunctuationRe = /[.,;!?)\]}，。；！？）】]+$/;
 
@@ -135,14 +135,14 @@ export function sortDisplayAttachments<T extends { kind: "image" | "file" | "fol
 
 function isDisplayReference(path: string): boolean {
   if (path.startsWith("draft:") || path.startsWith("attachment:")) return true;
-  if (path.startsWith(".deeper/attachments/")) return true;
+  if (path.startsWith(".deepzora/attachments/")) return true;
   if (path.endsWith("/")) return true;
   if (path.includes("/")) return true;
   return attachmentExt(path) !== "";
 }
 
 function displayAttachment(path: string, name: string): DisplayAttachment {
-  if (path.startsWith("draft:") || path.startsWith("attachment:") || path.startsWith(".deeper/attachments/")) {
+  if (path.startsWith("draft:") || path.startsWith("attachment:") || path.startsWith(".deepzora/attachments/")) {
     const kind = isImageAttachmentRef(path) ? "image" : "file";
     return {
       path,

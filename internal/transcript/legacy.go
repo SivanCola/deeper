@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/store"
+	"deepzora/internal/store"
 )
 
 // LegacyDisplayTurn is read-only compatibility for pre-projection desktops.

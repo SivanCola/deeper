@@ -1,6 +1,6 @@
 # 模型能力元数据
 
-Deeper 通过 Provider Adapter 按具体模型解析输入能力。Adapter 遵循
+Deepzora 通过 Provider Adapter 按具体模型解析输入能力。Adapter 遵循
 `deepseek-harness` 的模型契约，为精确模型返回 `inputModalities`：
 
 - `text` 表示支持文本输入；
@@ -15,7 +15,7 @@ OpenAI-compatible `/models` 响应优先使用标准字段 `input_modalities`，
 无效也不会由别名偷偷开启。重复 ID 合并与顺序无关：未知项不覆盖有效声明，
 相互矛盾的有效声明最终保持未知。不会根据模型名称猜测视觉能力。
 
-动态元数据保存在 Deeper 缓存目录下独立的
+动态元数据保存在 Deepzora 缓存目录下独立的
 `model-capabilities-v2.json` 文件中，不会写入 `config.toml`。已有的
 `vision` 和 `vision_models` 配置仍可读取，并优先于动态元数据。V2 不读取、
 迁移或修改 V1，因为旧缓存无法区分缺字段与明确否定。只依赖 V1 正面缓存
@@ -60,7 +60,7 @@ vision = true # false 为关闭；删除此字段恢复自动
 包含历史图片的上下文投影，因此不能保证这些会话在重建前后缓存命中不变。
 
 更完整的 Provider/模型目录来源于 MIT 许可的
-`github.com/sky-valley/pi/ai` Go 版 Pi。Deeper 只使用其嵌入的模型数据
+`github.com/sky-valley/pi/ai` Go 版 Pi。Deepzora 只使用其嵌入的模型数据
 （`GetModels`、`Model.Input` 及相关字段），不引入它的 Agent 或 Provider
 运行时。依赖版本固定在 `go.mod` 中，目录更新需要按数据和许可证变更审查。
 

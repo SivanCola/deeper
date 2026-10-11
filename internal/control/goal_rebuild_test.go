@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	goaldomain "deeper/internal/goal"
-	"deeper/internal/session"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	goaldomain "deepzora/internal/goal"
+	"deepzora/internal/session"
+	"deepzora/internal/tool"
 )
 
 func TestInheritLifecycleCarriesLiveGoalStateAcrossSameRuntimeRebuild(t *testing.T) {

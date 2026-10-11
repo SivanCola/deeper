@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/store"
 )
 
 const sessionBundleSchemaVersion = 1
@@ -214,7 +214,7 @@ func resolveSessionBundlePath(ref string) (string, error) {
 		}
 	}
 	if len(matches) == 0 {
-		return "", fmt.Errorf("session %q not found under Deeper session directories", branch)
+		return "", fmt.Errorf("session %q not found under Deepzora session directories", branch)
 	}
 	sort.Strings(matches)
 	if len(matches) > 1 {
@@ -246,9 +246,9 @@ func redactSessionBundlePath(path string) string {
 		if rootErr == nil && pathErr == nil {
 			if rel, err := filepath.Rel(absRoot, absPath); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 				if rel == "." {
-					return "<DEEPER_HOME>"
+					return "<DEEPZORA_HOME>"
 				}
-				return filepath.ToSlash(filepath.Join("<DEEPER_HOME>", rel))
+				return filepath.ToSlash(filepath.Join("<DEEPZORA_HOME>", rel))
 			}
 		}
 	}
@@ -267,9 +267,9 @@ func redactSessionBundleText(text string) string {
 		return text
 	}
 	if root := strings.TrimSpace(config.MemoryUserDir()); root != "" {
-		text = replacePathPrefix(text, root, "<DEEPER_HOME>")
+		text = replacePathPrefix(text, root, "<DEEPZORA_HOME>")
 		if absRoot, err := filepath.Abs(root); err == nil {
-			text = replacePathPrefix(text, absRoot, "<DEEPER_HOME>")
+			text = replacePathPrefix(text, absRoot, "<DEEPZORA_HOME>")
 		}
 	}
 	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
@@ -438,7 +438,7 @@ func defaultSessionBundlePath(branch string) string {
 	if branch == "" {
 		branch = "session"
 	}
-	return filepath.Join(os.TempDir(), "deeper-session-"+branch+"-diag.zip")
+	return filepath.Join(os.TempDir(), "deepzora-session-"+branch+"-diag.zip")
 }
 
 func safeBundleName(name string) string {

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/projectiondb"
-	"deeper/internal/provider"
+	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
 )
 
 func appendCompleteMessage(t *testing.T, s *Session, operationID string, message provider.Message) error {

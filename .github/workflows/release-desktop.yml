@@ -7,7 +7,7 @@ name: Release desktop
 # The Electron shell cannot cross-compile its native targets from one host, so
 # build/ fans out to one native runner per platform. Artifacts are
 # minisign-signed (MINISIGN_* secrets), a latest.json manifest is generated, and
-# everything is published to Deeper's GitHub Releases. Stable promotion attaches
+# everything is published to Deepzora's GitHub Releases. Stable promotion attaches
 # the verified pointer to the CLI release and advances GitHub latest. A custom
 # R2 mirror is optional and is not part of the default updater channel.
 #
@@ -286,7 +286,7 @@ jobs:
       - name: Reject upstream recovery exceptions
         if: ${{ inputs.reuse_manual_artifacts || inputs.desktop_manual_only }}
         run: |
-          echo "::error::Upstream artifact reuse and unsigned release exceptions are unavailable in Deeper"
+          echo "::error::Upstream artifact reuse and unsigned release exceptions are unavailable in Deepzora"
           exit 1
       - name: Validate signing mode
         env:
@@ -360,7 +360,7 @@ jobs:
           echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
 
       - name: Require current standalone signing attestation
-        if: ${{ github.repository == 'SivanCola/deeper' && !inputs.signing_preflight && !inputs.production_signing_smoke && !(inputs.orchestrated && inputs.signing_preflight_verified) }}
+        if: ${{ github.repository == 'SivanCola/deepzora' && !inputs.signing_preflight && !inputs.production_signing_smoke && !(inputs.orchestrated && inputs.signing_preflight_verified) }}
         env:
           ACTUAL: ${{ vars.SIGNPATH_RELEASE_SIGNING_ATTESTATION }}
           EXPECTED: ${{ steps.contract.outputs.fingerprint }}
@@ -493,24 +493,24 @@ jobs:
       - name: Smoke-test native macOS archive startup
         if: runner.os == 'macOS' && matrix.name != 'darwin-universal'
         run: |
-          ditto -xk "dist/Deeper-${{ matrix.name }}.zip" "$RUNNER_TEMP/desktop-startup"
-          node desktop/packaging/verify.mjs "$RUNNER_TEMP/desktop-startup/Deeper.app" --kind darwin-app-dir
-          node desktop/packaging/smoke.mjs "$RUNNER_TEMP/desktop-startup/Deeper.app"
+          ditto -xk "dist/Deepzora-${{ matrix.name }}.zip" "$RUNNER_TEMP/desktop-startup"
+          node desktop/packaging/verify.mjs "$RUNNER_TEMP/desktop-startup/Deepzora.app" --kind darwin-app-dir
+          node desktop/packaging/smoke.mjs "$RUNNER_TEMP/desktop-startup/Deepzora.app"
 
       - name: Smoke-test Universal macOS candidate on Apple Silicon
         if: runner.os == 'macOS' && matrix.name == 'darwin-universal'
         run: |
-          node desktop/packaging/verify.mjs desktop/build/candidate/darwin-universal/Deeper.app --kind darwin-app-dir
-          node desktop/packaging/smoke.mjs desktop/build/candidate/darwin-universal/Deeper.app
+          node desktop/packaging/verify.mjs desktop/build/candidate/darwin-universal/Deepzora.app --kind darwin-app-dir
+          node desktop/packaging/smoke.mjs desktop/build/candidate/darwin-universal/Deepzora.app
 
       - name: Smoke-test packaged Linux startup
         if: runner.os == 'Linux'
         run: |
           xvfb-run -a node desktop/packaging/smoke.mjs \
-            desktop/build/bin/app --service desktop/build/bin/deeper-desktop
+            desktop/build/bin/app --service desktop/build/bin/deepzora-desktop
 
       # Same tree, no handed-over service path: a shell started directly (pinned
-      # taskbar icon, double-click) must find deeper-desktop beside app/.
+      # taskbar icon, double-click) must find deepzora-desktop beside app/.
       - name: Smoke-test packaged Linux startup without a configured service
         if: runner.os == 'Linux'
         run: |
@@ -604,7 +604,7 @@ jobs:
       - name: Install NSIS
         run: pwsh -NoProfile -File scripts/install-nsis.ps1
       - name: Require Windows Authenticode signing
-        if: github.repository == 'SivanCola/deeper' && !inputs.desktop_manual_only
+        if: github.repository == 'SivanCola/deepzora' && !inputs.desktop_manual_only
         run: |
           if [ "$HAS_CERTUM" != "true" ]; then
             echo "::error::Certum credentials are required for public Windows releases"
@@ -613,7 +613,7 @@ jobs:
       - name: Build and package
         env:
           # windows-sign rebuilds both packages from the signed payload.
-          DEEPER_WINDOWS_PAYLOAD_ONLY: ${{ env.HAS_CERTUM == 'true' && '1' || '0' }}
+          DEEPZORA_WINDOWS_PAYLOAD_ONLY: ${{ env.HAS_CERTUM == 'true' && '1' || '0' }}
         run: scripts/desktop-build.sh "${{ matrix.platform }}" "${{ needs.resolve.outputs.version }}" "${{ needs.resolve.outputs.channel }}"
       - name: Checkout protected release verifier
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -625,12 +625,12 @@ jobs:
         run: |
           node desktop/packaging/smoke.mjs \
             desktop/build/electron/${{ matrix.name }}/app \
-            --service desktop/build/bin/deeper-desktop.exe
+            --service desktop/build/bin/deepzora-desktop.exe
       - name: Archive Windows signing inputs
         if: env.HAS_CERTUM == 'true'
         run: |
           signing_archive="$(cygpath -u "$RUNNER_TEMP")/windows-signing-inputs.tar"
-          tar -cf "$signing_archive" desktop/build/windows/signing-payload desktop/build/windows/installer/deeper_project.nsh
+          tar -cf "$signing_archive" desktop/build/windows/signing-payload desktop/build/windows/installer/deepzora_project.nsh
       - name: Upload Windows signing inputs
         if: env.HAS_CERTUM == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -645,13 +645,13 @@ jobs:
         env:
           MINISIGN_PRIVATE_KEY: ${{ secrets.MINISIGN_PRIVATE_KEY }}
           MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
-          DEEPER_REQUIRE_PAYLOAD_MANIFEST: "1"
+          DEEPZORA_REQUIRE_PAYLOAD_MANIFEST: "1"
         run: |
           (
             cd desktop
             go run ./cmd/sign windows-payload build/windows/signing-payload "${{ needs.resolve.outputs.version }}"
-            go run ./cmd/sign sign build/windows/signing-payload/deeper-payload.json
-            go run ./cmd/sign verify build/windows/signing-payload/deeper-payload.json
+            go run ./cmd/sign sign build/windows/signing-payload/deepzora-payload.json
+            go run ./cmd/sign verify build/windows/signing-payload/deepzora-payload.json
           )
           scripts/package-windows-desktop.sh "${{ matrix.arch }}" desktop/build/windows/signing-payload
       - name: Install and smoke-test final manual Windows installer
@@ -659,9 +659,9 @@ jobs:
         shell: pwsh
         run: >-
           ./release-control/scripts/test-windows-installer-startup.ps1
-          -InstallerPath "dist/Deeper-windows-${{ matrix.arch }}-installer.exe"
+          -InstallerPath "dist/Deepzora-windows-${{ matrix.arch }}-installer.exe"
           -ExpectedVersion "${{ needs.resolve.outputs.version }}"
-          -EvidenceDirectory "$env:RUNNER_TEMP/deeper-installer-acceptance"
+          -EvidenceDirectory "$env:RUNNER_TEMP/deepzora-installer-acceptance"
       - name: Sign manual artifacts (minisign)
         if: inputs.desktop_manual_only
         working-directory: desktop
@@ -710,7 +710,7 @@ jobs:
   windows-sign:
     name: sign Windows candidate
     needs: [resolve, windows-build, signing-contract]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.windows-build.result == 'success' && needs.signing-contract.result == 'success' && github.repository == 'SivanCola/deeper' && !inputs.desktop_manual_only }}
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.windows-build.result == 'success' && needs.signing-contract.result == 'success' && github.repository == 'SivanCola/deepzora' && !inputs.desktop_manual_only }}
     runs-on: windows-2022
     timeout-minutes: 45
     permissions:
@@ -1000,18 +1000,18 @@ jobs:
           ./release-control/scripts/test-windows-installer-startup.ps1 `
             -InstallerPath $installer[0].FullName `
             -ExpectedVersion "${{ needs.resolve.outputs.version }}" `
-            -EvidenceDirectory "$env:RUNNER_TEMP/deeper-installer-acceptance"
+            -EvidenceDirectory "$env:RUNNER_TEMP/deepzora-installer-acceptance"
       - name: Upload signed Windows installer acceptance evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: windows-installer-acceptance-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.arch }}-signed
           path: |
-            ${{ runner.temp }}/deeper-installer-acceptance/**/*.json
-            ${{ runner.temp }}/deeper-installer-acceptance/**/*.png
-            ${{ runner.temp }}/deeper-installer-acceptance/**/*.log
-            !${{ runner.temp }}/deeper-installer-acceptance/installed/**
-            !${{ runner.temp }}/deeper-installer-acceptance/**/cache/**
+            ${{ runner.temp }}/deepzora-installer-acceptance/**/*.json
+            ${{ runner.temp }}/deepzora-installer-acceptance/**/*.png
+            ${{ runner.temp }}/deepzora-installer-acceptance/**/*.log
+            !${{ runner.temp }}/deepzora-installer-acceptance/installed/**
+            !${{ runner.temp }}/deepzora-installer-acceptance/**/cache/**
           if-no-files-found: ignore
           retention-days: 90
       - name: Record signed Windows acceptance receipt
@@ -1061,19 +1061,19 @@ jobs:
           run-id: ${{ inputs.reuse_manual_artifacts && '34816299501' || github.run_id }}
       - name: Mount and smoke-test the exact Universal DMG
         run: |
-          mount_dir="$RUNNER_TEMP/deeper-universal"
-          app_dir="$RUNNER_TEMP/deeper-universal-app/Deeper.app"
+          mount_dir="$RUNNER_TEMP/deepzora-universal"
+          app_dir="$RUNNER_TEMP/deepzora-universal-app/Deepzora.app"
           mkdir -p "$mount_dir" "$(dirname "$app_dir")"
-          hdiutil attach -nobrowse -readonly -mountpoint "$mount_dir" "$RUNNER_TEMP/universal-bundle/files/Deeper-darwin-universal.dmg"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount_dir" "$RUNNER_TEMP/universal-bundle/files/Deepzora-darwin-universal.dmg"
           trap 'hdiutil detach "$mount_dir"' EXIT
-          ditto "$mount_dir/Deeper.app" "$app_dir"
+          ditto "$mount_dir/Deepzora.app" "$app_dir"
           codesign --verify --deep --strict "$app_dir"
           node desktop/packaging/verify.mjs "$app_dir" --kind darwin-app-dir
           node desktop/packaging/smoke.mjs "$app_dir"
       - name: Record Intel macOS acceptance receipt
         run: |
           jq -n --arg version "${{ needs.resolve.outputs.version }}" \
-            --arg sha256 "$(shasum -a 256 "$RUNNER_TEMP/universal-bundle/files/Deeper-darwin-universal.dmg" | awk '{print $1}')" \
+            --arg sha256 "$(shasum -a 256 "$RUNNER_TEMP/universal-bundle/files/Deepzora-darwin-universal.dmg" | awk '{print $1}')" \
             '{schema: 1, kind: "macos-universal-intel", status: "passed", version: $version, sha256: $sha256}' \
             > "$RUNNER_TEMP/macos-universal-intel.json"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -1189,7 +1189,7 @@ jobs:
           fi
           bash release-control/scripts/validate-desktop-release-manifest.sh \
             "$validation_channel" "$VERSION" \
-            "https://github.com/SivanCola/deeper/releases/download/${TAG}/" \
+            "https://github.com/SivanCola/deepzora/releases/download/${TAG}/" \
             dist/latest.json "$NOTES_VERSION"
 
       - name: Download orchestrator-reviewed release notes
@@ -1235,9 +1235,9 @@ jobs:
 
           ## Manual desktop downloads / 桌面版手动下载
 
-          This ${version} desktop release is manual-download only on every platform. Windows packages do not carry Deeper Authenticode signatures because SignPath signing is unavailable; Windows may show an unknown-publisher warning. Detached minisign signatures and SHA-256 checksums remain available. Desktop automatic-update channels are unchanged by this release and keep serving their previous version. CLI and npm distribution are unaffected.
+          This ${version} desktop release is manual-download only on every platform. Windows packages do not carry Deepzora Authenticode signatures because SignPath signing is unavailable; Windows may show an unknown-publisher warning. Detached minisign signatures and SHA-256 checksums remain available. Desktop automatic-update channels are unchanged by this release and keep serving their previous version. CLI and npm distribution are unaffected.
 
-          本次 ${version} 桌面版所有平台均需手动下载安装。因 SignPath 签名服务暂不可用，Windows 包不含 Deeper Authenticode 签名，系统可能显示未知发布者提示；仍提供 minisign 签名和 SHA-256 校验。本次发布不改变桌面自动更新通道，其仍指向此前版本；CLI 和 npm 正常发布。
+          本次 ${version} 桌面版所有平台均需手动下载安装。因 SignPath 签名服务暂不可用，Windows 包不含 Deepzora Authenticode 签名，系统可能显示未知发布者提示；仍提供 minisign 签名和 SHA-256 校验。本次发布不改变桌面自动更新通道，其仍指向此前版本；CLI 和 npm 正常发布。
           NOTES
 
       - name: Publish GitHub release
@@ -1268,7 +1268,7 @@ jobs:
   attest-signing-contract:
     name: record standalone Windows signing attestation
     needs: [signing-contract, build, windows-build, windows-sign, windows-runtime-acceptance]
-    if: ${{ always() && !cancelled() && inputs.signing_preflight && !inputs.orchestrated && github.repository == 'SivanCola/deeper' && needs.signing-contract.result == 'success' && needs.build.result == 'success' && needs.windows-build.result == 'success' && needs.windows-sign.result == 'success' && needs.windows-runtime-acceptance.result == 'success' }}
+    if: ${{ always() && !cancelled() && inputs.signing_preflight && !inputs.orchestrated && github.repository == 'SivanCola/deepzora' && needs.signing-contract.result == 'success' && needs.build.result == 'success' && needs.windows-build.result == 'success' && needs.windows-sign.result == 'success' && needs.windows-runtime-acceptance.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1413,7 +1413,7 @@ jobs:
           fi
           bash release-control/scripts/validate-desktop-release-manifest.sh \
             "$validation_channel" "$VERSION" \
-            "https://github.com/SivanCola/deeper/releases/download/${TAG}/" \
+            "https://github.com/SivanCola/deepzora/releases/download/${TAG}/" \
             assets/latest.json "$NOTES_VERSION"
 
       - name: Configure AWS CLI for R2
@@ -1462,10 +1462,10 @@ jobs:
           if [ "$CHANNEL" != "preview" ] && [ "$PRERELEASE" = "true" ]; then
             validation_channel="any"
           fi
-          asset_base="https://github.com/SivanCola/deeper/releases/download/${TAG}/"
+          asset_base="https://github.com/SivanCola/deepzora/releases/download/${TAG}/"
           existing_manifest=false
 
-          signature_verifier=/tmp/deeper-desktop-sign
+          signature_verifier=/tmp/deepzora-desktop-sign
           go -C release-control/desktop build -o "$signature_verifier" ./cmd/sign
           verify_signature_directory() {
             local directory="$1"
@@ -1556,12 +1556,12 @@ jobs:
             "$published_directory/latest.json" "$published_directory"
 
           aws s3 cp "s3://${R2_BUCKET}/${TAG}/latest.json" \
-            /tmp/deeper-desktop-tag-latest.json --endpoint-url "$ENDPOINT"
+            /tmp/deepzora-desktop-tag-latest.json --endpoint-url "$ENDPOINT"
           bash release-control/scripts/validate-desktop-release-manifest.sh \
             "legacy-${validation_channel}" "$VERSION" "$asset_base" \
-            /tmp/deeper-desktop-tag-latest.json "$NOTES_VERSION"
+            /tmp/deepzora-desktop-tag-latest.json "$NOTES_VERSION"
           bash release-control/scripts/compare-desktop-release-manifests.sh \
-            assets/latest.json /tmp/deeper-desktop-tag-latest.json
+            assets/latest.json /tmp/deepzora-desktop-tag-latest.json
 
           if [ "$DESKTOP_MANUAL_ONLY" = "true" ]; then
             echo "pointer_moved=false" >> "$GITHUB_OUTPUT"
@@ -1581,7 +1581,7 @@ jobs:
             local current_channel="$1"
             local current_version="$2"
             local current_file="$3"
-            local current_base="https://github.com/SivanCola/deeper/releases/download/desktop-${current_version}/"
+            local current_base="https://github.com/SivanCola/deepzora/releases/download/desktop-${current_version}/"
             if bash release-control/scripts/validate-desktop-release-manifest.sh \
               "$current_channel" "$current_version" "$current_base" \
               "$current_file"; then
@@ -1598,7 +1598,7 @@ jobs:
             # Early Preview pointers referenced the mutable desktop-preview/
             # directory. Try that layout only after the immutable legacy layout
             # so later legacy pointers retain their version-bound asset URLs.
-            local legacy_preview_base="https://github.com/SivanCola/deeper/releases/download/desktop-preview/"
+            local legacy_preview_base="https://github.com/SivanCola/deepzora/releases/download/desktop-preview/"
             if [ "$current_channel" = "preview" ] && \
               bash release-control/scripts/validate-desktop-release-manifest.sh \
                 legacy-preview "$current_version" "$legacy_preview_base" \
@@ -1615,7 +1615,7 @@ jobs:
           if [ "$CHANNEL" = "preview" ]; then
             preview_manifest=-
             preview_version=""
-            preview_download=/tmp/deeper-desktop-current-preview.json
+            preview_download=/tmp/deepzora-desktop-current-preview.json
             if download_optional "preview/latest.json" "$preview_download"; then
               preview_version="$(jq -er '.version | strings' "$preview_download")"
               validate_current_pointer preview "$preview_version" "$preview_download"
@@ -1629,7 +1629,7 @@ jobs:
 
             canary_manifest=-
             canary_version=""
-            canary_download=/tmp/deeper-desktop-current-canary.json
+            canary_download=/tmp/deepzora-desktop-current-canary.json
             if download_optional "canary/latest.json" "$canary_download"; then
               canary_version="$(jq -er '.version | strings' "$canary_download")"
               validate_current_pointer preview "$canary_version" "$canary_download"
@@ -1648,7 +1648,7 @@ jobs:
             pointer_state="preview=${preview_version:-unset}, canary=${canary_version:-unset}"
           else
             current_version=""
-            current_manifest=/tmp/deeper-desktop-current-pointer.json
+            current_manifest=/tmp/deepzora-desktop-current-pointer.json
             if download_optional "latest/latest.json" "$current_manifest"; then
               current_version="$(jq -er '.version | strings' "$current_manifest")"
               validate_current_pointer stable "$current_version" "$current_manifest"
@@ -1680,7 +1680,7 @@ jobs:
 
           publish_pointer() {
             local destination="$1"
-            local downloaded="/tmp/deeper-desktop-${destination}-latest.json"
+            local downloaded="/tmp/deepzora-desktop-${destination}-latest.json"
             aws s3 cp "$pointer_source" "s3://${R2_BUCKET}/${destination}/latest.json" \
               --endpoint-url "$ENDPOINT" \
               --content-type "application/json; charset=utf-8" \
@@ -1696,7 +1696,7 @@ jobs:
             # still observes the old primary and safely retries both writes.
             publish_pointer canary
             publish_pointer preview
-            if ! cmp -s /tmp/deeper-desktop-canary-latest.json /tmp/deeper-desktop-preview-latest.json; then
+            if ! cmp -s /tmp/deepzora-desktop-canary-latest.json /tmp/deepzora-desktop-preview-latest.json; then
               echo "::error::Desktop Preview and Canary pointers diverged after publication"
               exit 1
             fi
@@ -1731,40 +1731,40 @@ jobs:
           if [ "$CHANNEL" != "preview" ] && [ "$PRERELEASE" = "true" ]; then
             validation_channel="any"
           fi
-          asset_base="https://github.com/SivanCola/deeper/releases/download/${TAG}/"
+          asset_base="https://github.com/SivanCola/deepzora/releases/download/${TAG}/"
           bash release-control/scripts/validate-desktop-release-manifest.sh \
             "$validation_channel" "$VERSION" "$asset_base" "$f" "$NOTES_VERSION"
 
-          aws s3 cp "s3://${R2_BUCKET}/${TAG}/latest.json" /tmp/deeper-desktop-tag-latest.json --endpoint-url "$ENDPOINT"
+          aws s3 cp "s3://${R2_BUCKET}/${TAG}/latest.json" /tmp/deepzora-desktop-tag-latest.json --endpoint-url "$ENDPOINT"
           bash release-control/scripts/validate-desktop-release-manifest.sh \
             "legacy-${validation_channel}" "$VERSION" "$asset_base" \
-            /tmp/deeper-desktop-tag-latest.json "$NOTES_VERSION"
+            /tmp/deepzora-desktop-tag-latest.json "$NOTES_VERSION"
           bash release-control/scripts/compare-desktop-release-manifests.sh \
-            "$f" /tmp/deeper-desktop-tag-latest.json
+            "$f" /tmp/deepzora-desktop-tag-latest.json
 
           if [ "$POINTER_MOVED" = "true" ]; then
             pointer="latest"
             [ "$CHANNEL" = "preview" ] && pointer="preview"
-            aws s3 cp "s3://${R2_BUCKET}/${pointer}/latest.json" /tmp/deeper-desktop-pointer-latest.json --endpoint-url "$ENDPOINT"
-            pointer_base="https://github.com/SivanCola/deeper/releases/download/desktop-${POINTER_VERSION}/"
+            aws s3 cp "s3://${R2_BUCKET}/${pointer}/latest.json" /tmp/deepzora-desktop-pointer-latest.json --endpoint-url "$ENDPOINT"
+            pointer_base="https://github.com/SivanCola/deepzora/releases/download/desktop-${POINTER_VERSION}/"
             if ! bash release-control/scripts/validate-desktop-release-manifest.sh \
               "$CHANNEL" "$POINTER_VERSION" "$pointer_base" \
-              /tmp/deeper-desktop-pointer-latest.json; then
+              /tmp/deepzora-desktop-pointer-latest.json; then
               legacy_base="$pointer_base"
-              [ "$CHANNEL" = "preview" ] && legacy_base="https://github.com/SivanCola/deeper/releases/download/desktop-preview/"
+              [ "$CHANNEL" = "preview" ] && legacy_base="https://github.com/SivanCola/deepzora/releases/download/desktop-preview/"
               bash release-control/scripts/validate-desktop-release-manifest.sh \
                 "legacy-${CHANNEL}" "$POINTER_VERSION" "$legacy_base" \
-                /tmp/deeper-desktop-pointer-latest.json
+                /tmp/deepzora-desktop-pointer-latest.json
             fi
             if [ "$CHANNEL" = "preview" ]; then
-              aws s3 cp "s3://${R2_BUCKET}/canary/latest.json" /tmp/deeper-desktop-canary-latest.json --endpoint-url "$ENDPOINT"
-              cmp -s /tmp/deeper-desktop-pointer-latest.json /tmp/deeper-desktop-canary-latest.json
+              aws s3 cp "s3://${R2_BUCKET}/canary/latest.json" /tmp/deepzora-desktop-canary-latest.json --endpoint-url "$ENDPOINT"
+              cmp -s /tmp/deepzora-desktop-pointer-latest.json /tmp/deepzora-desktop-canary-latest.json
             fi
           fi
 
           jq -r '(.platforms[] | .url, .sig), ((.native_packages // {})[] | .url, .sig), ((.downloads // {})[] | .url, .sig)' "$f" | while IFS= read -r asset; do
             [ -n "$asset" ] || continue
-            key="${asset#https://github.com/SivanCola/deeper/releases/download/}"
+            key="${asset#https://github.com/SivanCola/deepzora/releases/download/}"
             aws s3api head-object --bucket "$R2_BUCKET" --key "$key" --endpoint-url "$ENDPOINT" >/dev/null
           done
 

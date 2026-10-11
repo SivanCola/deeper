@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func TestObservedDeletionCannotBecomeBlindCreate(t *testing.T) {

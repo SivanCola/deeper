@@ -1,4 +1,4 @@
-// Package ablation switches individual Deeper subsystems off so a benchmark
+// Package ablation switches individual Deepzora subsystems off so a benchmark
 // can attribute a change in solve rate to one of them.
 package ablation
 

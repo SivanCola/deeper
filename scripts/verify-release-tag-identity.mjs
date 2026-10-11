@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-const repository = "SivanCola/deeper";
+const repository = "SivanCola/deepzora";
 
 // Release tags contain no slash after refs/tags/. Unknown pattern syntax is
 // treated conservatively: it may include a tag, but cannot exclude one.

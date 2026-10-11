@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"deeper/internal/config"
-	"deeper/internal/fileutil"
+	"deepzora/internal/config"
+	"deepzora/internal/fileutil"
 )
 
 const forkOperationsSchemaVersion = 1

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestSetActiveTabRepublishesTerminalRemoteState(t *testing.T) {
@@ -345,7 +345,7 @@ func TestRemoteRotationResponseCannotOverwriteLaterRouteAdoption(t *testing.T) {
 		}
 		close(requestEntered)
 		<-releaseResponse
-		w.Header().Set("X-Deeper-Session-Path", responsePath)
+		w.Header().Set("X-Deepzora-Session-Path", responsePath)
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()

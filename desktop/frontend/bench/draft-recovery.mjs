@@ -23,7 +23,7 @@ try {
   assert.match(await alert.locator('[role="status"]').innerText(), /Session startup|会话启动|工作階段啟動/);
   await alert.locator("button").click();
   assert.equal(await page.evaluate(() => window.draftRecoveryRetries()), 1);
-  const evidence = process.env.DEEPER_DRAFT_EVIDENCE ?? "/tmp/deeper-draft-recovery-evidence";
+  const evidence = process.env.DEEPZORA_DRAFT_EVIDENCE ?? "/tmp/deepzora-draft-recovery-evidence";
   await mkdir(evidence, { recursive: true });
   await page.screenshot({ path: path.join(evidence, "runtime-failure.png") });
   await page.evaluate(() => window.paintDraftRecovery(true));

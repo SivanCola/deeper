@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"deeper/internal/sessioncatalog"
+	"deepzora/internal/sessioncatalog"
 )
 
 func snapshotReadError(err error) (*ReadError, bool) {

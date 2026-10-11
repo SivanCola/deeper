@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/historywork"
-	"deeper/internal/provider"
+	"deepzora/internal/historywork"
+	"deepzora/internal/provider"
 )
 
 // Query is the read model shared by desktop, CLI, Serve, ACP and bots. It uses

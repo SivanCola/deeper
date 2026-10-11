@@ -1,8 +1,8 @@
-# Deeper 工程规格
+# Deepzora 工程规格
 
 <a href="./SPEC.md">English</a>
 
-> Deeper 是一个 coding agent：由极薄的 harness 驱动多个模型，所有能力都由配置和插件提供。本文是工程契约，代码应遵循它；需要改变行为时，应先更新契约，再修改代码。
+> Deepzora 是一个 coding agent：由极薄的 harness 驱动多个模型，所有能力都由配置和插件提供。本文是工程契约，代码应遵循它；需要改变行为时，应先更新契约，再修改代码。
 
 现行文件操作、调度与中断恢复契约见 [Harness 风格执行机制迁移](DSH_EXECUTION_MIGRATION.zh-CN.md)。
 
@@ -22,14 +22,14 @@
 ## 2. 目录与依赖方向
 
 ```text
-deeper/
+deepzora/
 ├── go.mod / go.sum
 ├── Makefile
 ├── README.md / README.zh-CN.md
-├── deeper.example.toml
+├── deepzora.example.toml
 ├── docs/SPEC.md / docs/SPEC.zh-CN.md
-├── cmd/deeper/main.go
-├── cmd/deeper-plugin-example/
+├── cmd/deepzora/main.go
+├── cmd/deepzora-plugin-example/
 └── internal/
     ├── cli/
     ├── config/
@@ -96,10 +96,10 @@ type Tool interface {
 
 ### 3.3 插件与 MCP（`internal/plugin`）
 
-外部插件是配置中声明的 MCP server。协议统一为 JSON-RPC 2.0。Deeper 保留产品层客户端，协议协商、请求关联、取消、分页与传输 framing 交给官方 MCP Go SDK；每个 server 的工具、Prompt 与 Resource 共用同一个并发安全会话：
+外部插件是配置中声明的 MCP server。协议统一为 JSON-RPC 2.0。Deepzora 保留产品层客户端，协议协商、请求关联、取消、分页与传输 framing 交给官方 MCP Go SDK；每个 server 的工具、Prompt 与 Resource 共用同一个并发安全会话：
 
 - `stdio`：本地持久子进程，每行一条 JSON 消息。
-- `http` / `streamable-http`：初始化后立即建立长期 GET/SSE 监听，POST 承载客户端请求；继续兼容 POST-only 与 sessionless server。`Mcp-Session-Id` 会用于后续 GET、POST 和有界关闭 DELETE。配置 header 仅发送到原 endpoint 的同源请求，跨域重定向不会携带敏感 header。未配置静态 `Authorization` header 时，用户可发起 OAuth：客户端按 Protected Resource Metadata / Authorization Server Metadata 发现端点，使用动态客户端注册、PKCE S256、loopback callback、resource indicator 与 refresh token 轮换。客户端凭据和 token 以 `0600` 权限保存在工作区之外的 Deeper 私有 MCP 状态目录，并绑定到配置的 resource URL；URL 改变后不会复用旧 token。OAuth 发现、注册和 token 请求遵守 Deeper 解析后的网络代理设置。删除声明时会清理该状态；若之后生效的 fallback 使用同一 OAuth resource，则保留该状态。
+- `http` / `streamable-http`：初始化后立即建立长期 GET/SSE 监听，POST 承载客户端请求；继续兼容 POST-only 与 sessionless server。`Mcp-Session-Id` 会用于后续 GET、POST 和有界关闭 DELETE。配置 header 仅发送到原 endpoint 的同源请求，跨域重定向不会携带敏感 header。未配置静态 `Authorization` header 时，用户可发起 OAuth：客户端按 Protected Resource Metadata / Authorization Server Metadata 发现端点，使用动态客户端注册、PKCE S256、loopback callback、resource indicator 与 refresh token 轮换。客户端凭据和 token 以 `0600` 权限保存在工作区之外的 Deepzora 私有 MCP 状态目录，并绑定到配置的 resource URL；URL 改变后不会复用旧 token。OAuth 发现、注册和 token 请求遵守 Deepzora 解析后的网络代理设置。删除声明时会清理该状态；若之后生效的 fallback 使用同一 OAuth resource，则保留该状态。
 - `sse`：兼容旧版 2024-11-05 HTTP+SSE；持久 GET 接收 server 公布的相对 POST endpoint、JSON-RPC 响应与 server 消息。为避免静态 header 泄漏，会拒绝跨域 endpoint。
 
 `${VAR}` 与 `${VAR:-default}` 可用于 `command`、`args`、`env`、`url` 和 `headers`，使 secret 留在环境中。生命周期为 `initialize` → `notifications/initialized` → `tools/list`，调用使用 `tools/call`。
@@ -152,7 +152,7 @@ executor-only；已配置但模型不可用是配置错误，不会静默改走 
 
 ### 3.6 上下文管理（内容驱动摘要）
 
-长任务会填满模型窗口。Deeper 保持 **cache-first、append-only** 的 canonical
+长任务会填满模型窗口。Deepzora 保持 **cache-first、append-only** 的 canonical
 transcript，仅在唯一自动阈值被跨越时安装 provider 可见的短 **checkpoint**。
 
 - 每个 provider 声明 `context_window`（tokens）。唯一自动触发值是
@@ -180,7 +180,7 @@ transcript，仅在唯一自动阈值被跨越时安装 provider 可见的短 **
   改为有损的 `truncate` 投影：先抹去最旧的工具结果，再丢弃最旧的回放单元，
   留下明确标记，直到视图回到阈值以下；只有连这样也回收不够时才返回
   `ErrCompactionRequired`。
-- 用户可用 `deeper config compact-ratio [--local] [VALUE]` 查看或修改阈值。
+- 用户可用 `deepzora config compact-ratio [--local] [VALUE]` 查看或修改阈值。
   项目配置优先于桌面与新 CLI 会话共用的用户全局配置。UI 始终展示**实际生效**值。
 - `max_output_tokens` 是独立的**本轮**输出上限，**绝不**改变 `triggerTokens` / `compact_ratio`。
   - `0` 是 Provider 自动值。本地准入使用 Provider 能力（官方 DeepSeek 384K、OpenCode Go 模型表，或 400 学到的 completion）。它不再表示“跳过本地输出检查”。
@@ -206,7 +206,7 @@ transcript，仅在唯一自动阈值被跨越时安装 provider 可见的短 **
   不再创建 prune archive。
 
 `history` tool 支持对 session 与归档进行 BM25 搜索；`memory` tool 用于检索自动记忆，
-`remember` 与 `forget` 负责写入和归档。每个真实用户回合前，Deeper 会用原始用户消息执行
+`remember` 与 `forget` 负责写入和归档。每个真实用户回合前，Deepzora 会用原始用户消息执行
 有预算的 BM25 自动召回，把命中作为低权限 user-turn 后缀追加；泛化请求会被抑制，等价事实优先
 项目级版本，stale 内容会降权。这不会修改稳定 system prompt 或工具 schema。
 
@@ -232,19 +232,19 @@ func (p Policy) Decide(toolName string, readOnly bool, args json.RawMessage) Dec
 - rule 可以是 `Tool` 或 `Tool(specifier)`，例如 `Bash(go test:*)`、`Edit(docs/**)`；`Bash=<literal>` 是整条 Bash 命令的精确授权格式，其中 glob 与 Shell 元字符都按普通字符匹配。
 - 优先级为 `deny > ask > allow > fallback`；只读工具 fallback 为 Allow，写工具 fallback 使用 `Mode`。
 - 交互授权只有单次允许、本会话允许当前范围和拒绝；会话授权绑定具体命令、规范目录或服务器能力，不写入项目配置。
-- 非交互 `deeper run` 与无头子智能体没有授权界面：当前预设不覆盖的操作失败关闭。显式 `deny` 在所有预设下都不可绕过。
+- 非交互 `deepzora run` 与无头子智能体没有授权界面：当前预设不覆盖的操作失败关闭。显式 `deny` 在所有预设下都不可绕过。
 - 管道、命令替换、重定向、Shell `-c` 和运行时内联代码都遵循同一个权限预设和 OS 沙盒，不再因为语法形式单独触发审批。
-- 安装 MCP server 即授权其全部工具，不再有 server、raw tool、writer 或 destructive 的第二套审批策略；项目 `deeper.toml` 与 `.mcp.json` 声明同样默认可信，不需要额外启动确认，显式全局 `deny` 仍然优先。全局安装写入用户 `config.toml`，项目声明保留在原项目文件；同名时项目覆盖全局，项目内部 `deeper.toml` 高于 `.mcp.json`。编辑写回当前生效来源，删除高优先级声明后露出下一层。`readOnlyHint` 与 `destructiveHint` 仅用于调度、Plan/严格只读边界及缓存到实时安全分类复核，不会新增逐调用审批。严格只读子智能体 registry 仍仅暴露已授权且 `readOnlyHint: true`、无 `destructiveHint` 的 MCP；双模型 Planner 通过固定 `use_capability` 代理（从不暴露直接 `mcp__*` schema）调用已授权、非 destructive 的 MCP，不再要求 `readOnlyHint`，destructive 工具留给 Executor。Balanced 双模型的 Executor 使用独立 frontend 复用同一稳定代理，因此 Planner 发现的 capability ID 可在 handoff 后直接执行，同时保持两侧 ledger/audit 隔离。分发前代理会再次复核当前 controller 的 enable、授权和完整运行时连接身份；共享 Host 中仅 server 同名不构成复用权限。
+- 安装 MCP server 即授权其全部工具，不再有 server、raw tool、writer 或 destructive 的第二套审批策略；项目 `deepzora.toml` 与 `.mcp.json` 声明同样默认可信，不需要额外启动确认，显式全局 `deny` 仍然优先。全局安装写入用户 `config.toml`，项目声明保留在原项目文件；同名时项目覆盖全局，项目内部 `deepzora.toml` 高于 `.mcp.json`。编辑写回当前生效来源，删除高优先级声明后露出下一层。`readOnlyHint` 与 `destructiveHint` 仅用于调度、Plan/严格只读边界及缓存到实时安全分类复核，不会新增逐调用审批。严格只读子智能体 registry 仍仅暴露已授权且 `readOnlyHint: true`、无 `destructiveHint` 的 MCP；双模型 Planner 通过固定 `use_capability` 代理（从不暴露直接 `mcp__*` schema）调用已授权、非 destructive 的 MCP，不再要求 `readOnlyHint`，destructive 工具留给 Executor。Balanced 双模型的 Executor 使用独立 frontend 复用同一稳定代理，因此 Planner 发现的 capability ID 可在 handoff 后直接执行，同时保持两侧 ledger/audit 隔离。分发前代理会再次复核当前 controller 的 enable、授权和完整运行时连接身份；共享 Host 中仅 server 同名不构成复用权限。
 - Plan 是协作流程，不等于权限预设。普通 built-in 与 Bash 继续遵循当前预设和 Sandbox；独立双模型 Planner 允许已授权、非 destructive 的 MCP（即使没有 `readOnlyHint`），但在规划阶段持续阻止 destructive 与未授权目标；没有独立 Planner 的单模型 Plan 仍阻止 MCP writer/destructive。
 - Plan 只能由用户显式选择进入，与当前权限预设相互独立；普通聊天不会自动切换到 Plan。权限预设不会回答 `ask`，也不会替用户批准 `exit_plan_mode`，获批计划的短期自动执行窗口也不会自动批准后续计划或嵌套/间接 Bash。
-- 桌面端协作模式分为 `normal`、`plan` 和 `goal`。Goal 默认不限自动轮数：目标保持 `active + armed` 时，运行时空闲驱动器每次只通过统一入口接纳一个普通顶层回合，模型 final 本身不会结束目标。模型使用 `get_goal`、`create_goal` 和带精确 ID/revision 的 `update_goal(edit|pause|resume|complete|blocked)`；`continue` 已退役。自动轮 blocked 至少需要 3 个已接纳轮次，宿主只校验轮数与权限，同一阻碍是否持续由模型判断。正数 `[agent].goal_token_budget` 和 `max_goal_rounds` 是可恢复的显式边界；未配置时累计轮次、token 与真实 provider 请求数只做观测。目标状态只写入 v3 `goal/state` 投影，activation 不持久化且冷启动、导入、fork 一律 disarm。旧简单/写入/研究参数、Goal sidecar 与 `.deeper/autoresearch/.../` 仅在显式兼容／导入边界读取，不恢复旧执行器。普通聊天不会被宿主强制切换协作模式，但模型可依据当前直接人类请求创建长期目标。
+- 桌面端协作模式分为 `normal`、`plan` 和 `goal`。Goal 默认不限自动轮数：目标保持 `active + armed` 时，运行时空闲驱动器每次只通过统一入口接纳一个普通顶层回合，模型 final 本身不会结束目标。模型使用 `get_goal`、`create_goal` 和带精确 ID/revision 的 `update_goal(edit|pause|resume|complete|blocked)`；`continue` 已退役。自动轮 blocked 至少需要 3 个已接纳轮次，宿主只校验轮数与权限，同一阻碍是否持续由模型判断。正数 `[agent].goal_token_budget` 和 `max_goal_rounds` 是可恢复的显式边界；未配置时累计轮次、token 与真实 provider 请求数只做观测。目标状态只写入 v3 `goal/state` 投影，activation 不持久化且冷启动、导入、fork 一律 disarm。旧简单/写入/研究参数、Goal sidecar 与 `.deepzora/autoresearch/.../` 仅在显式兼容／导入边界读取，不恢复旧执行器。普通聊天不会被宿主强制切换协作模式，但模型可依据当前直接人类请求创建长期目标。
 
 ### 3.8 Slash command
 
 Slash command 分为三类：
 
 - built-in action：`/compact`、`/new`、`/clear`、`/effort`、`/mcp`、`/help`；
-- `.deeper/commands/*.md` 与用户配置目录中的自定义命令；
+- `.deepzora/commands/*.md` 与用户配置目录中的自定义命令；
 - MCP prompt：`/mcp__<server>__<prompt>`。
 
 自定义命令支持简单 frontmatter、`$ARGUMENTS`、`$1…$N` 和 `$$`。加载失败的单个命令会被跳过，不应使应用整体退出。
@@ -263,7 +263,7 @@ Bubble Tea TUI 的 modal overlay 必须隐藏 composer；slash/`@` autocomplete 
 
 子智能体 Profile 是带 `runAs: subagent` 的 Skill。桌面端和 CLI 只允许修改简单、手动调用的 project/global profile；包含 `references/`、`scripts/` 或非托管 frontmatter 的丰富 Skill 不会被编辑器扁平化覆盖。
 
-`deeper subagent try` 使用只读 Skill runner；`deeper subagent run` 使用常规权限与 Sandbox。`task` 支持 `profile`、`model`、`effort` 和 `write_paths`；`fleet` 在 session scheduler 上并发调度多个任务。详见[子智能体 Profile](./SUBAGENT_PROFILES.zh-CN.md)。
+`deepzora subagent try` 使用只读 Skill runner；`deepzora subagent run` 使用常规权限与 Sandbox。`task` 支持 `profile`、`model`、`effort` 和 `write_paths`；`fleet` 在 session scheduler 上并发调度多个任务。详见[子智能体 Profile](./SUBAGENT_PROFILES.zh-CN.md)。
 
 Profile 描述的是 worker，不是一次运行。委派由五个彼此独立的概念构成：profile 说明这个 worker 怎么思考，`TaskSpec` 说明本次要什么，`CapabilityGrant` 说明本次能碰什么，`ContextCapsule` 说明从什么上下文起步，`SchedulerPolicy` 说明何时以及怎么运行。字段归属于**决定其取值**的那一方，因此 profile 可以携带能力**上界**（`allowed-tools`、`read-only`），但绝不能携带 `max_turns`、`write_paths`、重试或验证策略这类按次取值——它们由任务或调度决定。Skill frontmatter 可以继续变胖；`agent.ProfileFromSkill` 是唯一的收窄点，路由元数据（triggers、auto-use、cost、freshness）到此为止，因为它决定的是**何时**选中一个 worker，而不是它怎么思考。`internal/agent/profile_boundary_test.go` 会在任何一次拓宽时失败。
 
@@ -304,7 +304,7 @@ Profile 描述的是 worker，不是一次运行。委派由五个彼此独立�
 | plan-mode 标记、推理/回复语言 | 运行选项（设置时） |
 | 既有 transcript | 仅通过 `continue_from` / `fork_from` |
 
-按设计**不继承**：`DEEPER.md`、`AGENTS.md`、`CLAUDE.md`、项目与全局记忆（memory queue 被关闭，子智能体也无法写入记忆）、父对话、当前 Goal、planner 输出、同级子智能体的结果。今天要让一条约束抵达子智能体，只能写进它的 profile body 或任务文本——不存在环境通道。
+按设计**不继承**：`DEEPZORA.md`、`AGENTS.md`、`CLAUDE.md`、项目与全局记忆（memory queue 被关闭，子智能体也无法写入记忆）、父对话、当前 Goal、planner 输出、同级子智能体的结果。今天要让一条约束抵达子智能体，只能写进它的 profile body 或任务文本——不存在环境通道。
 
 每次运行都会在其 transcript sidecar 中记录一份 `ContextCapsule`：workspace、系统提示来源与哈希、解析后的工具范围与 schema 哈希、model 与 effort、父会话与父工具调用 id、续接的 transcript，以及一个所有字段均为 false 的 `inherited` 块。`capsuleHash` 是它的稳定标识，因此"为什么这个 reviewer 没看到那条约束"可以从记录回答，两次行为不同的运行也可以直接比对而不是猜。capsule 只保存引用与摘要——绝不复制父上下文，这正是委派保持低成本、子前缀保持可缓存的原因。
 
@@ -327,7 +327,7 @@ id 默认取 1 起的序号。重复 id、指向不存在任务的 id、自环�
 
 ### 3.15 只有一个子智能体构造原语
 
-对外能派生子智能体的 API 很多——`task`、`read_only_task`、`fleet`、`parallel_tasks`、`run_skill`、`/<profile>`、`deeper subagent run|try`、桌面端预览。它们背后的执行原语必须只有一个：每个入口把请求编译成 `ProfileExecSpec`，交给 `TaskTool.RunProfileSpec`——那是唯一解析深度、工具范围、权限、sandbox、写声明、调度槽位、MCP 前端、transcript 与 capsule、evidence ledger 以及完成契约的地方。
+对外能派生子智能体的 API 很多——`task`、`read_only_task`、`fleet`、`parallel_tasks`、`run_skill`、`/<profile>`、`deepzora subagent run|try`、桌面端预览。它们背后的执行原语必须只有一个：每个入口把请求编译成 `ProfileExecSpec`，交给 `TaskTool.RunProfileSpec`——那是唯一解析深度、工具范围、权限、sandbox、写声明、调度槽位、MCP 前端、transcript 与 capsule、evidence ledger 以及完成契约的地方。
 
 这不是风格偏好。散落在多条构造路径上的安全边界，只要被漏掉一次就够了：此前预览路径构造出未受约束的文件工具、profile 编辑器保存时丢掉 `read-only`，都是某一个入口少套了一层。
 
@@ -357,7 +357,7 @@ concurrency = "serial"   # parallel（默认）| serial
 
 编排容易加、难证明：agent 越多 token 一定越多，而多烧的 token 本身就可能看起来像"变好了"。因此对比实验臂必须**固定模型**并读取 host 记录的事实，而不是散文。
 
-`deeper run --json` 在既有的 token / cache / 成本 / 耗时之外，额外输出每次运行的委派计数：
+`deepzora run --json` 在既有的 token / cache / 成本 / 耗时之外，额外输出每次运行的委派计数：
 
 | 计数 | 回答什么 |
 | --- | --- |
@@ -399,10 +399,10 @@ provider 层的核心类型包括 `Role`、`Message`、`ToolCall`、`ToolSchema`
 配置优先级：
 
 ```text
-flag > ./deeper.toml > 用户 config.toml > 内置默认值
+flag > ./deepzora.toml > 用户 config.toml > 内置默认值
 ```
 
-从 v1.8.1 起，用户配置位于 macOS/Linux 的 `~/.deeper/config.toml` 或 Windows 的 `%AppData%\deeper\config.toml`。provider key 保存在 Deeper home 的 `.env`；项目 `.env` 只用于 workspace 范围的非 provider 变量展开。完整路径见[配置路径](./CONFIG_PATHS.zh-CN.md)。
+从 v1.8.1 起，用户配置位于 macOS/Linux 的 `~/.deepzora/config.toml` 或 Windows 的 `%AppData%\deepzora\config.toml`。provider key 保存在 Deepzora home 的 `.env`；项目 `.env` 只用于 workspace 范围的非 provider 变量展开。完整路径见[配置路径](./CONFIG_PATHS.zh-CN.md)。
 
 ```toml
 default_model = "deepseek"
@@ -451,11 +451,11 @@ auth_mode = "none"
 原生 CLI 更新器始终安装最新的严格 `vX.Y.Z` 正式版。1.x 期间仍解析旧渠道配置与
 参数，但统一指向正式版，并在后续保存配置时省略这些字段。
 
-权限预设直接选择强制沙盒边界。交互会话可以用「扩展写入范围」授权（仅本次 / 本会话 / 拒绝）按需扩大可写根；文件工具会申请目标父目录，Bash 必须声明 `additional_write_dirs` 和 `justification`。无头 `deeper run` 缺少目录时失败关闭。file writer 默认限制在 workspace root、会话私有临时目录和显式授权根；`forbid_read` 可阻止读取敏感路径。macOS 使用 Seatbelt，Linux 使用 bubblewrap；受限 backend 不可用时拒绝执行，不无约束回退。Windows 没有 OS 级 Shell 沙箱：受限预设仍约束文件工具，Shell 命令以当前系统账户运行。
+权限预设直接选择强制沙盒边界。交互会话可以用「扩展写入范围」授权（仅本次 / 本会话 / 拒绝）按需扩大可写根；文件工具会申请目标父目录，Bash 必须声明 `additional_write_dirs` 和 `justification`。无头 `deepzora run` 缺少目录时失败关闭。file writer 默认限制在 workspace root、会话私有临时目录和显式授权根；`forbid_read` 可阻止读取敏感路径。macOS 使用 Seatbelt，Linux 使用 bubblewrap；受限 backend 不可用时拒绝执行，不无约束回退。Windows 没有 OS 级 Shell 沙箱：受限预设仍约束文件工具，Shell 命令以当前系统账户运行。
 
-`[serve]` 控制 `deeper serve` 的 browser frontend。默认 `auth_mode = "none"` 仅适合 loopback；暴露到其他机器时必须使用 token 或 password。`none` 模式下所有会改变状态的请求仍需启动令牌（serve 把它写进 `<Deeper home>/remote/` 下 0600 文件而非终端），否则以 `launch_token_required` 拒绝；`[serve]` 只从用户配置读取。只有位于可信 reverse proxy 后方时才能启用 `behind_proxy`。
+`[serve]` 控制 `deepzora serve` 的 browser frontend。默认 `auth_mode = "none"` 仅适合 loopback；暴露到其他机器时必须使用 token 或 password。`none` 模式下所有会改变状态的请求仍需启动令牌（serve 把它写进 `<Deepzora home>/remote/` 下 0600 文件而非终端），否则以 `launch_token_required` 拒绝；`[serve]` 只从用户配置读取。只有位于可信 reverse proxy 后方时才能启用 `behind_proxy`。
 
-项目根目录的 `.mcp.json` 可使用 Claude Code 的 `mcpServers` schema；与 `deeper.toml` 同名时，以后者为准。
+项目根目录的 `.mcp.json` 可使用 Claude Code 的 `mcpServers` schema；与 `deepzora.toml` 同名时，以后者为准。
 
 MCP 启动与单次工具调用使用不同生命周期。调用方只短暂等待冷启动，而共享的进程启动、授权、
 `initialize`、`tools/list` 可在后台继续，最长由 `mcp_startup_timeout_seconds`（默认 `30`）
@@ -477,7 +477,7 @@ MCP 启动与单次工具调用使用不同生命周期。调用方只短暂等�
 
 ## 8. 分发
 
-- 构建：`CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=$(VERSION)" -o deeper ./cmd/deeper`
+- 构建：`CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=$(VERSION)" -o deepzora ./cmd/deepzora`
 - 目标矩阵：`darwin|linux|windows × amd64|arm64`
 - 版本通过 ldflags 注入，来源为 `git describe --tags --always`
 - 支持预编译二进制、`go install` 与 Homebrew。

@@ -4,11 +4,11 @@ import (
 	"errors"
 	"strings"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // errPermissionSessionChanged refuses a preset choice read from a session the
-// tab no longer shows; the bridge carries it as deeper_error:permission_session_changed.
+// tab no longer shows; the bridge carries it as deepzora_error:permission_session_changed.
 var errPermissionSessionChanged = errors.New("permission choice was made in another session")
 
 const permissionSessionChangedCode = "permission_session_changed"

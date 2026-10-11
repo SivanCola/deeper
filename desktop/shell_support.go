@@ -5,13 +5,13 @@ import (
 	"runtime"
 	"strings"
 
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/sandbox"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/sandbox"
 )
 
 // Shell support discovery and repair guidance. The Git.Git winget manifest may
-// elevate even with user scope, so Deeper never launches that installer and
+// elevate even with user scope, so Deepzora never launches that installer and
 // Windows exposes only the official manual link.
 
 // shellInstallActionGitForWindows is the single install action id hosts may

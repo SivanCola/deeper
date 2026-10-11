@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/permission"
-	"deeper/internal/sandbox"
-	"deeper/internal/sessiontemp"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/sessiontemp"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
 func TestSessionTempWriteDoesNotRequestScopeExpansion(t *testing.T) {
@@ -83,7 +83,7 @@ func TestSessionTempWriteDoesNotRequestScopeExpansion(t *testing.T) {
 			t.Fatalf("unowned directory %q = %+v, %v; want denied", dir, decision, err)
 		}
 	}
-	checkBlocked(filepath.Join(filepath.Dir(lease.Dir()), "deeper-session-tmp-unowned"))
+	checkBlocked(filepath.Join(filepath.Dir(lease.Dir()), "deepzora-session-tmp-unowned"))
 	if err := os.Symlink(t.TempDir(), filepath.Join(lease.Dir(), "escape")); err == nil {
 		checkBlocked(filepath.Join(lease.Dir(), "escape"))
 	}
@@ -332,7 +332,7 @@ func TestCheckWriteAccessHeadlessMissingDir(t *testing.T) {
 		Tool:       "write_file",
 		Expandable: true,
 		Declaration: tool.WriteAccessDeclaration{
-			Directories: []string{filepath.Join(os.TempDir(), "deeper-write-access-outside")},
+			Directories: []string{filepath.Join(os.TempDir(), "deepzora-write-access-outside")},
 		},
 	})
 	if err != nil {
@@ -355,7 +355,7 @@ func TestCheckWriteAccessSubagentCannotExpand(t *testing.T) {
 		Tool:       "write_file",
 		Expandable: false,
 		Declaration: tool.WriteAccessDeclaration{
-			Directories: []string{filepath.Join(os.TempDir(), "deeper-write-access-child")},
+			Directories: []string{filepath.Join(os.TempDir(), "deepzora-write-access-child")},
 		},
 	})
 	if err != nil {

@@ -3,8 +3,8 @@ package provider
 import (
 	"testing"
 
-	"deeper/internal/attachment"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/attachment"
+	"deepzora/internal/sessioncontent"
 )
 
 func TestMessageRejectsCombinedImageFields(t *testing.T) {

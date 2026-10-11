@@ -2,9 +2,9 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-root="$(mktemp -d "${TMPDIR:-/tmp}/deeper-stable-dispatch-test.XXXXXX")"
+root="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-stable-dispatch-test.XXXXXX")"
 cleanup() {
-	case "$root" in */deeper-stable-dispatch-test.*) rm -rf -- "$root" ;; *) exit 1 ;; esac
+	case "$root" in */deepzora-stable-dispatch-test.*) rm -rf -- "$root" ;; *) exit 1 ;; esac
 }
 trap cleanup EXIT
 
@@ -16,7 +16,7 @@ body="$(cat)"
 test "$1" = api
 test "$2" = -X
 test "$3" = POST
-test "$4" = "repos/SivanCola/deeper/actions/workflows/release-promote.yml/dispatches"
+test "$4" = "repos/SivanCola/deepzora/actions/workflows/release-promote.yml/dispatches"
 jq -e '.ref == "main" and .inputs.candidate_id == "v1.2.3-aaaaaaaaaaaa-bbbbbbbbbbbb" and (.inputs.operation == "publish" or .inputs.operation == "recover")' <<<"$body" >/dev/null
 EOF
 chmod +x "$root/bin/gh"

@@ -40,7 +40,7 @@ installDesktopHostStub({
   StageImageForTarget: async () => ({ draftId: "0123456789abcdef0123456789abcdef", displayName: "draft.png", mime: "image/png", width: 1, height: 1, bytes: 12 }),
   ReadDraftImageForTarget: async () => "data:image/png;base64,iVBORw0KGgo=",
   ReadDraftImageForTab: async () => "data:image/png;base64,iVBORw0KGgo=",
-  SavePastedImageForTab: async () => ".deeper/attachments/draft.png",
+  SavePastedImageForTab: async () => ".deepzora/attachments/draft.png",
   AttachmentDataURLForTab: async () => "data:image/png;base64,iVBORw0KGgo=",
 });
 
@@ -52,7 +52,7 @@ try {
       running={false} collaborationMode="normal" toolApprovalMode="ask" goal="" cwd="/repo"
       modelLabel="DeepSeek-R1" tabId="tab-a" sessionKey="session-a" ready
       insertRequest={{ id: 1, text: "keep this draft", mode: "replace" }}
-      onSend={async () => { throw new Error("deeper_error:image_attachment_unreadable"); }}
+      onSend={async () => { throw new Error("deepzora_error:image_attachment_unreadable"); }}
       onCancel={async () => ({ discardedItemIds: [] })} onCycleMode={() => {}} onSetMode={() => {}}
       onSetCollaborationMode={() => {}} onSetToolApprovalMode={() => {}} onClearGoal={() => {}}
       onSwitchModel={() => {}} onSetEffort={() => {}}

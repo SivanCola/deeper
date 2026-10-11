@@ -2,7 +2,7 @@ package control
 
 import (
 	"context"
-	"deeper/internal/attachment"
+	"deepzora/internal/attachment"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -115,7 +115,7 @@ func (c *Controller) structuredImageSources(ctx context.Context, items []Submiss
 			}
 			sources = append(sources, attachment.Source{Existing: &draft.Ref, DisplayName: draft.DisplayName, Path: "draft:" + item.DraftID})
 		} else if item.Path != "" {
-			sources = append(sources, attachment.Source{Path: item.Path, WorkspaceRoot: c.workspaceRoot, Confine: ".deeper/attachments"})
+			sources = append(sources, attachment.Source{Path: item.Path, WorkspaceRoot: c.workspaceRoot, Confine: ".deepzora/attachments"})
 		} else {
 			if _, _, err := c.ReadSessionAttachment(ctx, item.Reference.Content.Digest, 0, 1); err != nil {
 				return nil, submissionSourceFailure(item, index, err)

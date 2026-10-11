@@ -28,12 +28,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
-	"deeper/internal/remote/bootstrap"
-	"deeper/internal/store"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
+	"deepzora/internal/remote/bootstrap"
+	"deepzora/internal/store"
 )
 
 // SessionTakeoverView is what the confirmation dialog is built from.
@@ -79,7 +79,7 @@ type takeoverServeRecord struct {
 }
 
 // discoverLocalTakeoverServes enumerates the serve state files under
-// <Deeper home>/remote. The bootstrap wrote them over SFTP; the takeover
+// <Deepzora home>/remote. The bootstrap wrote them over SFTP; the takeover
 // reads them locally because this machine is now where the user sits.
 func discoverLocalTakeoverServes() []takeoverServeRecord {
 	dir := config.RemoteStateDir()

@@ -9,30 +9,30 @@ import (
 	"testing"
 )
 
-func writeDeeperTestBundle(t *testing.T, path string) {
+func writeDeepzoraTestBundle(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Join(path, "Contents"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	plist := `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>io.github.sivancola.deeper</string></dict></plist>`
+<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.deepzora.desktop</string></dict></plist>`
 	if err := os.WriteFile(filepath.Join(path, "Contents", "Info.plist"), []byte(plist), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestRepairMacDesktopAliasesRetargetsBrokenDeeperAlias(t *testing.T) {
+func TestRepairMacDesktopAliasesRetargetsBrokenDeepzoraAlias(t *testing.T) {
 	root := t.TempDir()
 	desktop := filepath.Join(root, "Desktop")
 	if err := os.Mkdir(desktop, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	oldApp := filepath.Join(root, "Deeper.app.deeper-update-backup")
-	currentApp := filepath.Join(root, "Deeper.app")
-	writeDeeperTestBundle(t, oldApp)
-	writeDeeperTestBundle(t, currentApp)
-	alias := filepath.Join(desktop, "Deeper")
+	oldApp := filepath.Join(root, "Deepzora.app.deepzora-update-backup")
+	currentApp := filepath.Join(root, "Deepzora.app")
+	writeDeepzoraTestBundle(t, oldApp)
+	writeDeepzoraTestBundle(t, currentApp)
+	alias := filepath.Join(desktop, "Deepzora")
 	if err := writeMacAlias(oldApp, alias); err != nil {
 		t.Fatal(err)
 	}
@@ -63,9 +63,9 @@ func TestRepairMacDesktopAliasesPreservesUnrelatedBrokenAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	oldTarget := filepath.Join(root, "Other.app")
-	currentApp := filepath.Join(root, "Deeper.app")
-	writeDeeperTestBundle(t, oldTarget)
-	writeDeeperTestBundle(t, currentApp)
+	currentApp := filepath.Join(root, "Deepzora.app")
+	writeDeepzoraTestBundle(t, oldTarget)
+	writeDeepzoraTestBundle(t, currentApp)
 	alias := filepath.Join(desktop, "Other")
 	if err := writeMacAlias(oldTarget, alias); err != nil {
 		t.Fatal(err)
@@ -97,11 +97,11 @@ func TestRepairMacDesktopAliasesPreservesUnrelatedHealthyAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	otherApp := filepath.Join(root, "Other.app")
-	currentApp := filepath.Join(root, "Deeper.app")
+	currentApp := filepath.Join(root, "Deepzora.app")
 	if err := os.MkdirAll(filepath.Join(otherApp, "Contents"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeDeeperTestBundle(t, currentApp)
+	writeDeepzoraTestBundle(t, currentApp)
 	alias := filepath.Join(desktop, "Other")
 	if err := writeMacAlias(otherApp, alias); err != nil {
 		t.Fatal(err)
@@ -123,15 +123,15 @@ func TestRepairMacDesktopAliasesPreservesUnrelatedHealthyAlias(t *testing.T) {
 	}
 }
 
-func TestRepairMacDesktopAliasesPreservesOrdinaryDeeperFile(t *testing.T) {
+func TestRepairMacDesktopAliasesPreservesOrdinaryDeepzoraFile(t *testing.T) {
 	root := t.TempDir()
 	desktop := filepath.Join(root, "Desktop")
 	if err := os.Mkdir(desktop, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	currentApp := filepath.Join(root, "Deeper.app")
-	writeDeeperTestBundle(t, currentApp)
-	ordinary := filepath.Join(desktop, "Deeper")
+	currentApp := filepath.Join(root, "Deepzora.app")
+	writeDeepzoraTestBundle(t, currentApp)
+	ordinary := filepath.Join(desktop, "Deepzora")
 	const content = "user-owned file"
 	if err := os.WriteFile(ordinary, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
@@ -145,19 +145,19 @@ func TestRepairMacDesktopAliasesPreservesOrdinaryDeeperFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(got) != content {
-		t.Fatalf("ordinary Deeper file changed to %q", got)
+		t.Fatalf("ordinary Deepzora file changed to %q", got)
 	}
 }
 
-func TestRepairMacDesktopAliasesPreservesHealthyDeeperAlias(t *testing.T) {
+func TestRepairMacDesktopAliasesPreservesHealthyDeepzoraAlias(t *testing.T) {
 	root := t.TempDir()
 	desktop := filepath.Join(root, "Desktop")
 	if err := os.Mkdir(desktop, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	currentApp := filepath.Join(root, "Deeper.app")
-	writeDeeperTestBundle(t, currentApp)
-	alias := filepath.Join(desktop, "Deeper")
+	currentApp := filepath.Join(root, "Deepzora.app")
+	writeDeepzoraTestBundle(t, currentApp)
+	alias := filepath.Join(desktop, "Deepzora")
 	if err := writeMacAlias(currentApp, alias); err != nil {
 		t.Fatal(err)
 	}
@@ -184,11 +184,11 @@ func TestRepairMacDesktopAliasesRetargetsCustomNamedInstalledAlias(t *testing.T)
 	if err := os.Mkdir(desktop, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	oldApp := filepath.Join(root, "Deeper-old.app")
-	currentApp := filepath.Join(root, "Deeper.app")
-	writeDeeperTestBundle(t, oldApp)
-	writeDeeperTestBundle(t, currentApp)
-	alias := filepath.Join(desktop, "My Deeper")
+	oldApp := filepath.Join(root, "Deepzora-old.app")
+	currentApp := filepath.Join(root, "Deepzora.app")
+	writeDeepzoraTestBundle(t, oldApp)
+	writeDeepzoraTestBundle(t, currentApp)
+	alias := filepath.Join(desktop, "My Deepzora")
 	if err := writeMacAlias(oldApp, alias); err != nil {
 		t.Fatal(err)
 	}
@@ -210,24 +210,24 @@ func TestRepairMacDesktopAliasesRetargetsCustomNamedInstalledAlias(t *testing.T)
 }
 
 func TestMacBundleOwnershipRejectsNonFileURL(t *testing.T) {
-	owned, err := macURLReferencesDeeperBundle("https://example.com/Deeper.app")
+	owned, err := macURLReferencesDeepzoraBundle("https://example.com/Deepzora.app")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if owned {
-		t.Fatal("non-file URL was classified as a Deeper application bundle")
+		t.Fatal("non-file URL was classified as a Deepzora application bundle")
 	}
 }
 
-func TestMacBundleOwnershipRecognizesInstalledDeeperBundle(t *testing.T) {
-	app := filepath.Join(t.TempDir(), "Deeper.app")
-	writeDeeperTestBundle(t, app)
-	owned, err := macURLReferencesDeeperBundle((&url.URL{Scheme: "file", Path: app}).String())
+func TestMacBundleOwnershipRecognizesInstalledDeepzoraBundle(t *testing.T) {
+	app := filepath.Join(t.TempDir(), "Deepzora.app")
+	writeDeepzoraTestBundle(t, app)
+	owned, err := macURLReferencesDeepzoraBundle((&url.URL{Scheme: "file", Path: app}).String())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !owned {
-		t.Fatal("installed Deeper application bundle was not recognized")
+		t.Fatal("installed Deepzora application bundle was not recognized")
 	}
 }
 
@@ -237,8 +237,8 @@ func TestRepairMacDesktopAliasesAllowsEmptyFirstInstallDesktop(t *testing.T) {
 	if err := os.Mkdir(desktop, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	currentApp := filepath.Join(root, "Deeper.app")
-	writeDeeperTestBundle(t, currentApp)
+	currentApp := filepath.Join(root, "Deepzora.app")
+	writeDeepzoraTestBundle(t, currentApp)
 
 	if err := repairMacDesktopAliases(desktop, currentApp); err != nil {
 		t.Fatal(err)
@@ -254,8 +254,8 @@ func TestRepairMacDesktopAliasesAllowsEmptyFirstInstallDesktop(t *testing.T) {
 
 func TestRepairMacDesktopAliasesAllowsMissingFirstInstallDesktop(t *testing.T) {
 	root := t.TempDir()
-	currentApp := filepath.Join(root, "Deeper.app")
-	writeDeeperTestBundle(t, currentApp)
+	currentApp := filepath.Join(root, "Deepzora.app")
+	writeDeepzoraTestBundle(t, currentApp)
 
 	if err := repairMacDesktopAliases(filepath.Join(root, "Desktop"), currentApp); err != nil {
 		t.Fatal(err)

@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // writeRecoveryBranchAtPath persists one bounded recovery lane. collision is

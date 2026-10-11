@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/billing"
-	"deeper/internal/capability"
-	"deeper/internal/event"
-	"deeper/internal/evidence"
-	"deeper/internal/fileutil"
+	"deepzora/internal/billing"
+	"deepzora/internal/capability"
+	"deepzora/internal/event"
+	"deepzora/internal/evidence"
+	"deepzora/internal/fileutil"
 )
 
 // SourceUsage is one Usage origin's share of a run. Steps counts every billed

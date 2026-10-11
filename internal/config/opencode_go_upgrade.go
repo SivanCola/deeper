@@ -13,9 +13,9 @@ import (
 	"slices"
 	"strings"
 
-	"deeper/internal/fileutil"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/provider"
+	"deepzora/internal/fileutil"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/provider"
 	"github.com/BurntSushi/toml"
 )
 

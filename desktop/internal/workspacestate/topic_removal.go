@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"deeper/internal/fileutil"
+	"deepzora/internal/fileutil"
 )
 
 // TopicRemoval journals metadata-only removals independently of session

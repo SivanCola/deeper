@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
 )
 
 func powerShellCommandAtUnits(t *testing.T, sh sandbox.Shell, units int) string {

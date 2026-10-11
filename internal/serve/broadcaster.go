@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/billing"
-	"deeper/internal/event"
-	"deeper/internal/eventwire"
+	"deepzora/internal/agent"
+	"deepzora/internal/billing"
+	"deepzora/internal/event"
+	"deepzora/internal/eventwire"
 )
 
 type subscription struct {

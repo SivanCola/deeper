@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/config"
-	"deeper/internal/provider"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/internal/config"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 func awaitNativeSearch(t *testing.T, a *App, id, text, cursor string, limit int) session.SearchHistoryPage {

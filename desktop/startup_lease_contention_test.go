@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/config"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
 )
 
 // TestEnsureTabSessionLeaseForRebuildSurvivesTransientHolder reproduces the
-// startup "this session is already open in another Deeper window" false
+// startup "this session is already open in another Deepzora window" false
 // positive: a transient lease holder — CleanupStaleRunning probing a running
 // subagent's parent session during a concurrent controller build — holds the
 // session lease for a few milliseconds while the tab's own startup bind runs.

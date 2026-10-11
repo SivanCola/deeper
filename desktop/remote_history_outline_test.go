@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"deeper/internal/servecontract"
-	"deeper/internal/session"
+	"deepzora/internal/servecontract"
+	"deepzora/internal/session"
 )
 
 func TestRemoteHistoryOutlineCapabilityCutAndFailure(t *testing.T) {

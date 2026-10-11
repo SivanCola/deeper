@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func envelope(readID, path, version string, intent tool.ReadIntent, requested *tool.ReadRange, delivered []tool.ReadRange, eof bool) tool.ReadResultEnvelope {

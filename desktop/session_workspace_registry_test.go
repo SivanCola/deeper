@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/session"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 type registrySessionCreator struct{ service *session.Service }
@@ -168,7 +168,7 @@ func TestWorkspaceRegistryRejectsSessionHeaderFromDifferentWorkspace(t *testing.
 	}
 }
 
-// A portable build or DEEPER_HOME move leaves Global's stored root and every
+// A portable build or DEEPZORA_HOME move leaves Global's stored root and every
 // global session's recorded CWD at the old data directory (#10638, #10659).
 func TestGlobalWorkspaceSurvivesMovedDataDirectory(t *testing.T) {
 	isolateDesktopUserDirs(t)

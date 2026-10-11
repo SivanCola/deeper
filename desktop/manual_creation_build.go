@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 // Register only after boot success. Publication locks unwind before this join;

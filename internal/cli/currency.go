@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/config"
-	"deeper/internal/i18n"
+	"deepzora/internal/config"
+	"deepzora/internal/i18n"
 )
 
 func (m *chatTUI) runCurrencySubcommand(input string) tea.Cmd {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func TestACPBeginRefusesWhileStateChangeIsInFlight(t *testing.T) {

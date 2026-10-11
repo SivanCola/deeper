@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/remote/bootstrap"
+	"deepzora/internal/remote/bootstrap"
 )
 
 // CheckRemotePlatform verifies the connected host runs a supported OS

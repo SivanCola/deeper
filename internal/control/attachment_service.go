@@ -6,8 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"deeper/internal/attachment"
-	"deeper/internal/sessioncontent"
+	"deepzora/internal/attachment"
+	"deepzora/internal/sessioncontent"
 )
 
 var hostVariantCache = attachment.NewVariantCache(attachment.DefaultCacheBytes, attachment.DefaultTransforms)
@@ -84,7 +84,7 @@ func (c *Controller) sessionContentStore() *sessioncontent.Store {
 		return sessioncontent.New(filepath.Join(filepath.Dir(c.sessionPath), ".content-v1"))
 	}
 	if c.workspaceRoot != "" {
-		return sessioncontent.New(filepath.Join(c.workspaceRoot, ".deeper", "content-v1"))
+		return sessioncontent.New(filepath.Join(c.workspaceRoot, ".deepzora", "content-v1"))
 	}
 	return nil
 }

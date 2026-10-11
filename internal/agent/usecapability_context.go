@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 
-	"deeper/internal/capability"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/tool"
 )
 
 // contextualEntry overlays live availability on a copy. The cached catalog

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
 )
 
 // The gate pauses a real projection read after App bindings were copied. Its

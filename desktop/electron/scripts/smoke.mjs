@@ -16,8 +16,8 @@ const { _electron: electron } = require("playwright");
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const artifacts = resolve(root, "artifacts", "smoke");
 mkdirSync(artifacts, { recursive: true });
-const service = process.env.DEEPER_DESKTOP_SERVICE
-  || resolve(root, "../build/bin", process.platform === "win32" ? "deeper-desktop-service.exe" : "deeper-desktop-service");
+const service = process.env.DEEPZORA_DESKTOP_SERVICE
+  || resolve(root, "../build/bin", process.platform === "win32" ? "deepzora-desktop-service.exe" : "deepzora-desktop-service");
 if (!existsSync(service)) {
   console.error(`desktop service binary not found: ${service}`);
   process.exit(2);
@@ -27,7 +27,7 @@ if (!existsSync(resolve(root, "dist/main.cjs"))) {
   process.exit(2);
 }
 
-const home = mkdtempSync(join(tmpdir(), "deeper-electron-smoke-"));
+const home = mkdtempSync(join(tmpdir(), "deepzora-electron-smoke-"));
 const previewProject = join(home, "preview-project");
 mkdirSync(previewProject, { recursive: true });
 const previewFile = join(previewProject, "index.html");
@@ -43,11 +43,11 @@ const check = (name, ok, detail = "") => {
 
 async function mainRenderer(app) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const page = app.windows().find((candidate) => candidate.url().startsWith("deeper://app/"));
+    const page = app.windows().find((candidate) => candidate.url().startsWith("deepzora://app/"));
     if (page) return page;
     await new Promise((resolveWait) => setTimeout(resolveWait, 100));
   }
-  throw new Error("Deeper main renderer is unavailable");
+  throw new Error("Deepzora main renderer is unavailable");
 }
 
 function processTree(pid) {
@@ -86,11 +86,11 @@ const app = await electron.launch({
   args: [root],
   env: {
     ...process.env,
-    DEEPER_HOME: home,
-    DEEPER_STATE_HOME: home,
-    DEEPER_CACHE_HOME: join(home, "cache"),
-    DEEPER_DEV: "1",
-    DEEPER_DESKTOP_SERVICE: service,
+    DEEPZORA_HOME: home,
+    DEEPZORA_STATE_HOME: home,
+    DEEPZORA_CACHE_HOME: join(home, "cache"),
+    DEEPZORA_DEV: "1",
+    DEEPZORA_DESKTOP_SERVICE: service,
   },
   timeout: 60_000,
 });
@@ -98,12 +98,12 @@ const shellPid = app.process().pid;
 let exitCode = 1;
 try {
   let page = await app.firstWindow({ timeout: 60_000 });
-  await page.waitForURL("deeper://app/index.html", { timeout: 60_000 });
-  await page.waitForFunction(() => Boolean(window.deeperDesktop), null, { timeout: 30_000 });
+  await page.waitForURL("deepzora://app/index.html", { timeout: 60_000 });
+  await page.waitForFunction(() => Boolean(window.deepzoraDesktop), null, { timeout: 30_000 });
   const contract = await page.evaluate(() => ({
-    digest: window.deeperDesktop.contract.digest,
-    commands: window.deeperDesktop.contract.commands.length,
-    protocolVersion: window.deeperDesktop.contract.protocolVersion,
+    digest: window.deepzoraDesktop.contract.digest,
+    commands: window.deepzoraDesktop.contract.commands.length,
+    protocolVersion: window.deepzoraDesktop.contract.protocolVersion,
   }));
   check("preload exposes the contract", contract.digest.startsWith("sha256:") && contract.commands > 500, `${contract.commands} commands, ${contract.digest.slice(0, 19)}`);
 
@@ -112,7 +112,7 @@ try {
   check("React replaced the boot shell", true, `${readyMs} ms after launch`);
 
   const state = await page.evaluate(() => new Promise((resolveState) => {
-    const off = window.deeperDesktop.native.onServiceState((s) => {
+    const off = window.deepzoraDesktop.native.onServiceState((s) => {
       if (s.phase === "ready" || s.phase === "failed" || s.phase === "exited") {
         queueMicrotask(() => { off(); resolveState(s); });
       }
@@ -121,17 +121,17 @@ try {
   }));
   check("late subscribers receive the service state", state.phase === "ready", `phase=${state.phase} generation=${state.generation ?? ""}`);
 
-  const version = await page.evaluate(() => window.deeperDesktop.invoke("Version", []));
-  const platform = await page.evaluate(() => window.deeperDesktop.invoke("Platform", []));
+  const version = await page.evaluate(() => window.deepzoraDesktop.invoke("Version", []));
+  const platform = await page.evaluate(() => window.deepzoraDesktop.invoke("Platform", []));
   check("desktop/invoke round-trips business commands", typeof version === "string" && typeof platform === "string", `Version=${version} Platform=${platform}`);
 
-  const unknown = await page.evaluate(() => window.deeperDesktop.invoke("NoSuchCommand", []).then(() => "resolved", (e) => String(e.message)));
+  const unknown = await page.evaluate(() => window.deepzoraDesktop.invoke("NoSuchCommand", []).then(() => "resolved", (e) => String(e.message)));
   check("unknown commands are rejected before reaching Go", unknown.includes("-32601"), unknown);
 
-  const shellStatus = await page.evaluate(() => window.deeperDesktop.invoke("GetDesktopShellStatus", []));
+  const shellStatus = await page.evaluate(() => window.deepzoraDesktop.invoke("GetDesktopShellStatus", []));
   check("shell status is served by Go", shellStatus && typeof shellStatus === "object", JSON.stringify(shellStatus).slice(0, 120));
 
-  const bounds = await page.evaluate(() => window.deeperDesktop.native.window.getBounds());
+  const bounds = await page.evaluate(() => window.deepzoraDesktop.native.window.getBounds());
   check("native window bounds are readable", bounds.width >= 760 && bounds.height >= 480, `${bounds.width}x${bounds.height} at ${bounds.x},${bounds.y}`);
 
   const leaked = await page.evaluate(() => ({ go: typeof window.go, runtime: typeof window.runtime, require: typeof window.require, process: typeof window.process }));
@@ -142,7 +142,7 @@ try {
 
   let tab;
   try {
-    tab = await page.evaluate(() => window.deeperDesktop.browser.open("example.com", { temporary: true }));
+    tab = await page.evaluate(() => window.deepzoraDesktop.browser.open("example.com", { temporary: true }));
   } catch (error) {
     // Electron can replace Playwright's execution context when the first
     // WebContentsView is attached. The application renderer remains alive;
@@ -150,7 +150,7 @@ try {
     if (!String(error).includes("Execution context was destroyed")) throw error;
     page = await mainRenderer(app);
     tab = await page.evaluate(async () => {
-      const tabs = await window.deeperDesktop.browser.list();
+      const tabs = await window.deepzoraDesktop.browser.list();
       return tabs.find((entry) => {
         try { return new URL(entry.url).origin === "https://example.com"; } catch { return false; }
       });
@@ -160,7 +160,7 @@ try {
   if (!tab) throw new Error("example.com browser tab was not created");
   const title = await page.evaluate(async (tabId) => {
     for (let attempt = 0; attempt < 50; attempt += 1) {
-      const tabs = await window.deeperDesktop.browser.list();
+      const tabs = await window.deepzoraDesktop.browser.list();
       const found = tabs.find((entry) => entry.id === tabId);
       if (found && found.title !== "") return found.title;
       await new Promise((resolveWait) => setTimeout(resolveWait, 200));
@@ -168,27 +168,27 @@ try {
     return "";
   }, tab.id);
   check("the website view loads example.com", title === "Example Domain", `title=${JSON.stringify(title)}`);
-  await page.evaluate((tabId) => window.deeperDesktop.browser.close(tabId), tab.id);
-  const remaining = await page.evaluate(() => window.deeperDesktop.browser.list());
+  await page.evaluate((tabId) => window.deepzoraDesktop.browser.close(tabId), tab.id);
+  const remaining = await page.evaluate(() => window.deepzoraDesktop.browser.list());
   check("browser tab closes cleanly", remaining.every((entry) => entry.id !== tab.id), `${remaining.length} tabs left`);
 
   await app.evaluate(({ shell }) => {
-    globalThis.__deeperSmokeOpenExternal = { calls: [], original: shell.openExternal };
-    shell.openExternal = async (url) => { globalThis.__deeperSmokeOpenExternal.calls.push(url); };
+    globalThis.__deepzoraSmokeOpenExternal = { calls: [], original: shell.openExternal };
+    shell.openExternal = async (url) => { globalThis.__deepzoraSmokeOpenExternal.calls.push(url); };
   });
-  const projectTab = await page.evaluate((rootPath) => window.deeperDesktop.invoke("EnsureBlankTab", ["project", rootPath]), previewProject);
-	const modelRejection = await page.evaluate(async (tabId) => window.deeperDesktop.invokeResult("StartTurnWithModelApplication", [tabId, "native-stale-model-choice", { input: "do not execute", display: "do not execute", invocations: [], attachments: [] }, { mode: "applied_once", expectedAppliedRevision: "stale", expectedDesiredRevision: "stale", expectedRuntimeIdentity: "stale" }]), projectTab.id);
+  const projectTab = await page.evaluate((rootPath) => window.deepzoraDesktop.invoke("EnsureBlankTab", ["project", rootPath]), previewProject);
+	const modelRejection = await page.evaluate(async (tabId) => window.deepzoraDesktop.invokeResult("StartTurnWithModelApplication", [tabId, "native-stale-model-choice", { input: "do not execute", display: "do not execute", invocations: [], attachments: [] }, { mode: "applied_once", expectedAppliedRevision: "stale", expectedDesiredRevision: "stale", expectedRuntimeIdentity: "stale" }]), projectTab.id);
 	check("native context bridge preserves definite rejection and model recovery data", modelRejection.ok === false && modelRejection.data?.submissionOutcome === "not_accepted" && modelRejection.data?.modelApplication?.code === "model_choice_stale", JSON.stringify(modelRejection).slice(0, 240));
   const openPreview = async (operationId) => {
     try {
-      return await page.evaluate(({ tabId, generation, operation }) => window.deeperDesktop.invoke("OpenFileBrowserPreviewForTab", [tabId, {
+      return await page.evaluate(({ tabId, generation, operation }) => window.deepzoraDesktop.invoke("OpenFileBrowserPreviewForTab", [tabId, {
         source: "workspace", path: "index.html", operationId: operation,
         expectedSessionGeneration: generation, userInitiated: true,
       }]), { tabId: projectTab.id, generation: projectTab.sessionGeneration, operation: operationId });
     } catch (error) {
       if (!String(error).includes("Execution context was destroyed")) throw error;
       page = await mainRenderer(app);
-      const owned = await page.evaluate((taskId) => window.deeperDesktop.browser.list().then((tabs) => tabs.find((entry) => entry.taskId === taskId)), projectTab.id);
+      const owned = await page.evaluate((taskId) => window.deepzoraDesktop.browser.list().then((tabs) => tabs.find((entry) => entry.taskId === taskId)), projectTab.id);
       if (!owned) throw error;
       return { tabId: owned.id, url: owned.url, status: "opened", sessionGeneration: projectTab.sessionGeneration ?? 0 };
     }
@@ -210,19 +210,19 @@ try {
   const previewV2 = await openPreview("smoke-preview-v2");
   const secondInteraction = await executeInPreview(previewV2.url, "document.querySelector('#action').click(); document.querySelector('#result').textContent");
   check("updated HTML reuses and reloads the preview tab", previewV2.tabId === previewV1.tabId && previewV2.url !== previewV1.url && secondInteraction === "v2", `${previewV2.tabId} ${secondInteraction}`);
-  const previewTabs = await page.evaluate((taskId) => window.deeperDesktop.browser.list().then((tabs) => tabs.filter((entry) => entry.taskId === taskId)), projectTab.id);
+  const previewTabs = await page.evaluate((taskId) => window.deepzoraDesktop.browser.list().then((tabs) => tabs.filter((entry) => entry.taskId === taskId)), projectTab.id);
   check("file preview keeps one task-owned browser tab", previewTabs.length === 1 && previewTabs[0].id === previewV1.tabId, `${previewTabs.length} tab(s)`);
   const externalOpens = await app.evaluate(({ shell }) => {
-    const state = globalThis.__deeperSmokeOpenExternal;
+    const state = globalThis.__deepzoraSmokeOpenExternal;
     shell.openExternal = state.original;
     return state.calls;
   });
   check("HTML preview never invokes the external browser", externalOpens.length === 0, `${externalOpens.length} calls`);
-  await page.evaluate((tabId) => window.deeperDesktop.browser.close(tabId), previewV1.tabId);
+  await page.evaluate((tabId) => window.deepzoraDesktop.browser.close(tabId), previewV1.tabId);
 
   await page.screenshot({ path: join(artifacts, "main-window.png") });
   const tree = processTree(shellPid);
-  const servicePids = tree.filter((p) => p.comm.includes("deeper-desktop")).map((p) => p.pid);
+  const servicePids = tree.filter((p) => p.comm.includes("deepzora-desktop")).map((p) => p.pid);
   check("Go service runs as a child of the shell", servicePids.length === 1, `pids=${servicePids.join(",")} tree=${tree.length}`);
 
   await app.close();

@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/agent"
-	"deeper/internal/event"
-	"deeper/internal/session"
-	"deeper/internal/sessioninbox"
-	"deeper/internal/tool"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
+	"deepzora/internal/sessioninbox"
+	"deepzora/internal/tool"
 )
 
 func TestTargetGuidanceDoesNotSteerSuccessorTurn(t *testing.T) {

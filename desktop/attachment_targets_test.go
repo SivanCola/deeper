@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func TestAttachmentTargetRejectsReplacementBeforeFileUpload(t *testing.T) {

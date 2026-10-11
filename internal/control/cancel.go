@@ -1,8 +1,8 @@
 package control
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/event"
+	"deepzora/internal/agent"
+	"deepzora/internal/event"
 )
 
 // CancelReceipt acknowledges a session-scoped Stop request. Accepted means the

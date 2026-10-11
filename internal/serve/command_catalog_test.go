@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"deeper/internal/command"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/skill"
+	"deepzora/internal/command"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/skill"
 )
 
 func TestServeCommandsUsesActiveControllerCatalog(t *testing.T) {

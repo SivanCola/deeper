@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"deeper/internal/control"
+	"deepzora/internal/control"
 )
 
 func (s *Server) registerRuntimeRecoveryRoutes(mux *http.ServeMux) {

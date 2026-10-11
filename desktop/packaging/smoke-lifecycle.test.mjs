@@ -8,7 +8,7 @@ import { test } from "node:test";
 import { closeAndVerify, processAlive, waitForProcessesToExit } from "./smoke-lifecycle.mjs";
 
 async function ownedProcess(t) {
-  const directory = mkdtempSync(join(tmpdir(), "deeper-smoke-lifecycle-"));
+  const directory = mkdtempSync(join(tmpdir(), "deepzora-smoke-lifecycle-"));
   const script = join(directory, "child.cjs");
   writeFileSync(script, 'process.on("message", () => process.exit(0)); process.send("ready");\n');
   const child = fork(script, [], { stdio: ["ignore", "ignore", "ignore", "ipc"] });

@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"deeper/internal/agent"
-	"deeper/internal/provider"
-	"deeper/internal/transcript"
-	"deeper/internal/turnevent"
+	"deepzora/internal/agent"
+	"deepzora/internal/provider"
+	"deepzora/internal/transcript"
+	"deepzora/internal/turnevent"
 )
 
 func (c *Controller) restoreTranscriptProjection(sessionPath string, ledger *turnevent.Ledger) (*transcript.Projection, error) {

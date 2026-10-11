@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
-	"deeper/internal/session"
+	"deepzora/internal/event"
+	"deepzora/internal/session"
 )
 
 func TestResolvePromptExactRejectsStaleTurnBeforeDispatch(t *testing.T) {

@@ -82,7 +82,7 @@ type Checkpoint struct {
   not duplicate preimages in the content-addressed blob store. v1/v2 JSON and
   blobs remain readable for upgrade compatibility; transaction/undo payloads
   may still use blobs. Each v3 turn also writes a payload-free v2 compatibility
-  marker (`turn-<turn>.json`). A previous Deeper version can therefore keep
+  marker (`turn-<turn>.json`). A previous Deepzora version can therefore keep
   turn numbering monotonic after a downgrade, but cannot restore the v3 file
   payload represented by that marker. The marker is also the v3 turn's liveness
   record: if an older reader truncates the marker, a later upgrade ignores the
@@ -159,7 +159,7 @@ re-render uniformly.
 - **bash / external side effects** (`rm`, `mv`, DB writes, deploys) are not
   tracked — rewind cannot undo them (Claude Code parity).
 - **External edits between turns**: restore compares the current existence,
-  SHA-256, and mode with Deeper's last after-image. A mismatch is reported as
+  SHA-256, and mode with Deepzora's last after-image. A mismatch is reported as
   a conflict and is not overwritten.
 - **Deletions**: an edit-tool deletion is restorable (snapshot has the content); a
   `bash rm` is not.

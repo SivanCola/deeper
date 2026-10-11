@@ -25,19 +25,19 @@ function integerEnv(name, fallback) {
   return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
-const MEMORY_PROTOCOL = memoryProtocol(process.env.DEEPER_APP_MEMORY_PROFILE ?? "full");
-const CYCLES = integerEnv("DEEPER_APP_MEMORY_CYCLES", MEMORY_PROTOCOL.cycles);
-const MIXED_CYCLES = integerEnv("DEEPER_APP_MEMORY_MIXED_CYCLES", MEMORY_PROTOCOL.mixedCycles);
-const BASELINE_ATTEMPTS = integerEnv("DEEPER_APP_MEMORY_BASELINE_ATTEMPTS", 4);
-const SHARD = process.env.DEEPER_APP_MEMORY_SHARD === undefined ? null : Number(process.env.DEEPER_APP_MEMORY_SHARD);
+const MEMORY_PROTOCOL = memoryProtocol(process.env.DEEPZORA_APP_MEMORY_PROFILE ?? "full");
+const CYCLES = integerEnv("DEEPZORA_APP_MEMORY_CYCLES", MEMORY_PROTOCOL.cycles);
+const MIXED_CYCLES = integerEnv("DEEPZORA_APP_MEMORY_MIXED_CYCLES", MEMORY_PROTOCOL.mixedCycles);
+const BASELINE_ATTEMPTS = integerEnv("DEEPZORA_APP_MEMORY_BASELINE_ATTEMPTS", 4);
+const SHARD = process.env.DEEPZORA_APP_MEMORY_SHARD === undefined ? null : Number(process.env.DEEPZORA_APP_MEMORY_SHARD);
 if (SHARD !== null && (!Number.isInteger(SHARD) || SHARD < 1 || SHARD > MEMORY_PROTOCOL.shards)) throw new Error(`memory shard must be between 1 and ${MEMORY_PROTOCOL.shards}`);
-const PROCESSES = SHARD === null ? integerEnv("DEEPER_APP_MEMORY_PROCESSES", MEMORY_PROTOCOL.shards) : 1;
-const preparedFile = process.env.DEEPER_APP_MEMORY_PREPARED;
+const PROCESSES = SHARD === null ? integerEnv("DEEPZORA_APP_MEMORY_PROCESSES", MEMORY_PROTOCOL.shards) : 1;
+const preparedFile = process.env.DEEPZORA_APP_MEMORY_PREPARED;
 const prepared = preparedFile ? JSON.parse(readFileSync(preparedFile, "utf8")) : null;
 if (SHARD !== null && (!prepared || CYCLES !== MEMORY_PROTOCOL.cycles || MIXED_CYCLES !== MEMORY_PROTOCOL.mixedCycles
   || JSON.stringify(prepared.protocol) !== JSON.stringify(MEMORY_PROTOCOL))) throw new Error(`memory shard requires the shared build and complete ${MEMORY_PROTOCOL.profile} protocol`);
-const PORT = integerEnv("DEEPER_APP_MEMORY_PORT", 4647);
-const artifacts = path.resolve(process.env.DEEPER_APP_MEMORY_ARTIFACTS ?? path.join(frontendDir, "bench/app-memory-artifacts"));
+const PORT = integerEnv("DEEPZORA_APP_MEMORY_PORT", 4647);
+const artifacts = path.resolve(process.env.DEEPZORA_APP_MEMORY_ARTIFACTS ?? path.join(frontendDir, "bench/app-memory-artifacts"));
 mkdirSync(artifacts, { recursive: true });
 
 const fixtures = MEMORY_FIXTURES;
@@ -88,7 +88,7 @@ async function forceGc(cdp, page) {
   const [heap, dom, lifecycle, performance] = await Promise.all([
     cdp.send("Runtime.getHeapUsage"),
     cdp.send("Memory.getDOMCounters"),
-    page.evaluate(() => window.__deeperAppLifecycle?.snapshot()),
+    page.evaluate(() => window.__deepzoraAppLifecycle?.snapshot()),
     page.evaluate(() => ({ entries: window.performance.getEntries().length, attachedElements: document.querySelectorAll("*").length })),
   ]);
   if (!lifecycle) throw new Error("App lifecycle probe was not published by the production build");
@@ -101,8 +101,8 @@ async function enterSafety(page) {
   await page.evaluate(() => {
     const transcript = document.querySelector(".transcript");
     if (!(transcript instanceof HTMLElement)) throw new Error("transcript viewport missing");
-    window.__deeperMemoryScrollWrites = [];
-    window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__ = (write) => window.__deeperMemoryScrollWrites.push(write);
+    window.__deepzoraMemoryScrollWrites = [];
+    window.__DEEPZORA_TRANSCRIPT_SCROLL_WRITE__ = (write) => window.__deepzoraMemoryScrollWrites.push(write);
     Object.defineProperty(transcript, "scrollHeight", { configurable: true, get: () => Number.NaN });
     const probe = document.createElement("span");
     probe.hidden = true;
@@ -110,14 +110,14 @@ async function enterSafety(page) {
     transcript.querySelector(".chat-column")?.append(probe);
   });
   await timings.measure("safety.ready", () => page.waitForFunction(() => (
-    window.__deeperMemoryScrollWrites?.some((write) => write.rejectedReason === "invalid-geometry")
+    window.__deepzoraMemoryScrollWrites?.some((write) => write.rejectedReason === "invalid-geometry")
   ), undefined, { timeout: 15_000, polling: "raf" }));
   await page.evaluate(() => {
     const transcript = document.querySelector(".transcript");
     if (transcript instanceof HTMLElement) delete transcript.scrollHeight;
     transcript?.querySelector("[data-memory-scroll-probe]")?.remove();
-    delete window.__DEEPER_TRANSCRIPT_SCROLL_WRITE__;
-    delete window.__deeperMemoryScrollWrites;
+    delete window.__DEEPZORA_TRANSCRIPT_SCROLL_WRITE__;
+    delete window.__deepzoraMemoryScrollWrites;
   });
   await settleFrames(page);
 }

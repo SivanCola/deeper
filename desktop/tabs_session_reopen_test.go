@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"deeper/internal/session"
+	"deepzora/internal/session"
 )
 
 func TestSingleSurfaceReopenUsesNewTabBindingForStableSession(t *testing.T) {

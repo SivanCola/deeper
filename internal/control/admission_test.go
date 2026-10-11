@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/event"
+	"deepzora/internal/event"
 )
 
 // holdFinishingWindow returns a sink that blocks inside the FIRST TurnDone

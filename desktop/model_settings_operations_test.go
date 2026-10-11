@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"deeper/internal/config"
+	"deepzora/internal/config"
 )
 
 func TestModelSettingsEveryOperationWithoutSessionRejectsForeignFields(t *testing.T) {

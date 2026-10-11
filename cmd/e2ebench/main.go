@@ -17,8 +17,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"deeper/internal/ablation"
-	fileencoding "deeper/internal/fileutil/encoding"
+	"deepzora/internal/ablation"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 type task struct {
@@ -227,7 +227,7 @@ const defaultSuiteTokenBudget = 800_000
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "e2ebench — Deeper end-to-end benchmark.\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "e2ebench — Deepzora end-to-end benchmark.\n\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", flag.CommandLine.Name())
 		flag.PrintDefaults()
 		fmt.Fprintf(flag.CommandLine.Output(), "\nExamples:\n")
@@ -241,7 +241,7 @@ func main() {
 	addr := flag.String("addr", "127.0.0.1:7480", "serve mode: live dashboard listen address")
 	subset := flag.String("subset", "benchmarks/swebench/subset.json", "swebench mode: instance subset file")
 	namespace := flag.String("namespace", "swebench", "swebench mode: registry namespace holding the evaluation images")
-	runID := flag.String("run-id", "deeper", "swebench mode: run id passed to the official harness")
+	runID := flag.String("run-id", "deepzora", "swebench mode: run id passed to the official harness")
 	harnessPy := flag.String("harness-python", "python3", "swebench mode: interpreter with the swebench package installed")
 	dataset := flag.String("dataset", "princeton-nlp/SWE-bench_Verified", "swebench mode: dataset name")
 	permission := flag.String("permission", "workspace-write", "swebench mode: agent permission preset (read-only | workspace-write | danger-full-access)")
@@ -260,7 +260,7 @@ func main() {
 	bundles := flag.String("bundles", "", "fork mode: directory of captured bundles (<task-id>/bundle.json)")
 	forkArms := flag.String("arm", "control,treatment", "fork mode: comma-separated continuation arms (control | treatment)")
 	forkReps := flag.Int("reps", 1, "fork mode: continuation repetitions per bundle per arm")
-	bin := flag.String("bin", "deeper", "path to the deeper binary")
+	bin := flag.String("bin", "deepzora", "path to the deepzora binary")
 	model := flag.String("model", "", "provider/model name (default: config default)")
 	ablateFlag := flag.String("ablate", "", "ablation arm: subsystems to switch off (evidence, planner, subagent, retrieval, compaction; none|all)")
 	outMD := flag.String("out", "", "write the markdown report here (default: stdout)")

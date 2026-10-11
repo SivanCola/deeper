@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/permission"
-	"deeper/internal/plugin"
-	"deeper/internal/tool"
+	"deepzora/internal/permission"
+	"deepzora/internal/plugin"
+	"deepzora/internal/tool"
 )
 
 func validateSavedPermissionRule(list, raw string, tools []tool.ContractEntry, servers []string) error {

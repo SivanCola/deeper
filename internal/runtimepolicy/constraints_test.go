@@ -3,7 +3,7 @@ package runtimepolicy
 import (
 	"testing"
 
-	"deeper/internal/evidence"
+	"deepzora/internal/evidence"
 )
 
 func TestParseConstraintsNeverBansMutationFromProse(t *testing.T) {

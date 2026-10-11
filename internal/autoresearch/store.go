@@ -1,5 +1,5 @@
 // Package autoresearch is a read-only compatibility reader for historical
-// `.deeper/autoresearch/<task-id>/` archives. New Goal runs never create or
+// `.deepzora/autoresearch/<task-id>/` archives. New Goal runs never create or
 // mutate these directories.
 package autoresearch
 
@@ -16,12 +16,12 @@ import (
 	"strings"
 	"unicode"
 
-	fileencoding "deeper/internal/fileutil/encoding"
+	fileencoding "deepzora/internal/fileutil/encoding"
 )
 
 var safeTaskID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
-const explicitTaskPathPrefix = ".deeper/autoresearch/"
+const explicitTaskPathPrefix = ".deepzora/autoresearch/"
 
 // Store is a fail-closed reader over a workspace's legacy AutoResearch root.
 type Store struct {
@@ -35,7 +35,7 @@ func NewStore(workspaceRoot string) *Store {
 	}
 	return &Store{
 		workspaceRoot: workspaceRoot,
-		root:          filepath.Join(workspaceRoot, ".deeper", "autoresearch"),
+		root:          filepath.Join(workspaceRoot, ".deepzora", "autoresearch"),
 	}
 }
 
@@ -102,7 +102,7 @@ func (s *Store) LoadTask(taskID string) (*Task, error) {
 }
 
 // ResumeFromGoalText loads an archive only when goal text names an explicit
-// `.deeper/autoresearch/<task-id>/` path. ok is true when a path was found;
+// `.deepzora/autoresearch/<task-id>/` path. ok is true when a path was found;
 // err is non-nil when that path is missing, corrupt, a symlink, or invalid.
 func (s *Store) ResumeFromGoalText(goal string) (*Task, bool, error) {
 	taskID, found, err := ExplicitTaskID(goal)
@@ -405,8 +405,8 @@ func (s *Store) openArchiveRoot() (*os.Root, error) {
 	}
 	defer workspace.Close()
 
-	archiveRel := filepath.Join(".deeper", "autoresearch")
-	rels := []string{".deeper", archiveRel}
+	archiveRel := filepath.Join(".deepzora", "autoresearch")
+	rels := []string{".deepzora", archiveRel}
 	infos := make([]os.FileInfo, len(rels))
 	for i, rel := range rels {
 		info, err := workspace.Lstat(rel)

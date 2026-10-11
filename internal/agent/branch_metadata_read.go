@@ -2,8 +2,8 @@ package agent
 
 import (
 	"context"
-	fileencoding "deeper/internal/fileutil/encoding"
-	"deeper/internal/historywork"
+	fileencoding "deepzora/internal/fileutil/encoding"
+	"deepzora/internal/historywork"
 	"encoding/json"
 	"fmt"
 	"io"

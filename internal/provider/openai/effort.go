@@ -5,7 +5,7 @@ package openai
 import (
 	"strings"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 // configuredThinkingType reads the optional explicit `thinking` config field —

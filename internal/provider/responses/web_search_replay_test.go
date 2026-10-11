@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 func TestConversationDigestIncludesEnabledWebSearchReplayItems(t *testing.T) {

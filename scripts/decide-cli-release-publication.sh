@@ -53,12 +53,12 @@ if [ ! -f "$checksums" ]; then
 fi
 
 required_assets='[
-  "deeper-darwin-amd64.tar.gz",
-  "deeper-darwin-arm64.tar.gz",
-  "deeper-linux-amd64.tar.gz",
-  "deeper-linux-arm64.tar.gz",
-  "deeper-windows-amd64.zip",
-  "deeper-windows-arm64.zip",
+  "deepzora-darwin-amd64.tar.gz",
+  "deepzora-darwin-arm64.tar.gz",
+  "deepzora-linux-amd64.tar.gz",
+  "deepzora-linux-arm64.tar.gz",
+  "deepzora-windows-amd64.zip",
+  "deepzora-windows-arm64.zip",
   "SHA256SUMS"
 ]'
 
@@ -103,7 +103,7 @@ jq -r '
 
 if ! awk '
 	BEGIN { valid = 1 }
-	$0 !~ /^[0-9a-f]{64}  deeper-(darwin|linux|windows)-(amd64|arm64)\.(tar\.gz|zip)$/ {
+	$0 !~ /^[0-9a-f]{64}  deepzora-(darwin|linux|windows)-(amd64|arm64)\.(tar\.gz|zip)$/ {
 		valid = 0
 	}
 	{ print }

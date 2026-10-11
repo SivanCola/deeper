@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sort"
 
-	"deeper/internal/checkpoint"
+	"deepzora/internal/checkpoint"
 )
 
 type serveCheckpointMeta struct {

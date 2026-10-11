@@ -19,20 +19,20 @@ async function flush(){await act(async()=>{await flushAllSessionComposers();resu
 try {
  await paint("wiring");
  const owner=editor.target!;
- await act(async()=>owner.onPatch!(owner.draftId,owner.generation,{text:"retained",attachments:[{path:"draft:temporary",draftId:"temporary",recoveryPath:".deeper/attachments/kept.png",displayName:"kept.png",previewUrl:"blob:ephemeral"}]}));
+ await act(async()=>owner.onPatch!(owner.draftId,owner.generation,{text:"retained",attachments:[{path:"draft:temporary",draftId:"temporary",recoveryPath:".deepzora/attachments/kept.png",displayName:"kept.png",previewUrl:"blob:ephemeral"}]}));
  await flush();
  const saved=JSON.parse((await backend.GetSessionComposerState({hostId:"local",sessionId:"wiring"})).contentJson);
- assert.equal(saved.attachments[0].path,".deeper/attachments/kept.png");
+ assert.equal(saved.attachments[0].path,".deepzora/attachments/kept.png");
  assert.equal(saved.attachments[0].draftId,undefined);
  assert.equal(saved.attachments[0].previewUrl,undefined);
  await backend.SaveSessionComposerState({ref:{hostId:"local",sessionId:"wiring-restored"},expectedRevision:"0",contentJson:JSON.stringify(saved),contentVersion:1});
  await paint("wiring-restored");
  assert.equal(editor.target!.initial.attachments[0].previewUrl,"data:image/png;base64,aW1hZ2U=");
- assert.ok(previews.includes(".deeper/attachments/kept.png"));
+ assert.ok(previews.includes(".deepzora/attachments/kept.png"));
  await paint("wiring");
 
  for (const code of ["inbox_capacity_items","inbox_capacity_bytes","inbox_item_too_large","channel_read_only","workspace_starting","workspace_start_failed","image_attachment_unreadable"]) {
-  await act(async()=>{await assert.rejects(sendPersistedComposer("wiring","retained","retained",code,async()=>{throw Error(`deeper_error:${code}`);}));});
+  await act(async()=>{await assert.rejects(sendPersistedComposer("wiring","retained","retained",code,async()=>{throw Error(`deepzora_error:${code}`);}));});
   assert.equal(editor.blocked,false,`${code} is a definite rejection, not an unknown execution`);
   assert.equal(editor.target!.initial.text,"retained");
  }

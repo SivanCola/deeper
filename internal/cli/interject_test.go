@@ -5,9 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/sessioninbox"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/sessioninbox"
 )
 
 type busyInboxController struct {

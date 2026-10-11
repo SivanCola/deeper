@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"deeper/internal/tool"
+	"deepzora/internal/tool"
 )
 
 func init() { tool.RegisterBuiltin(getGoal{}) }

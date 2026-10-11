@@ -1,9 +1,9 @@
 # History Search Catalog
 
-Deeper stores the history search projection at
+Deepzora stores the history search projection at
 `<cache root>/history-search/v1.sqlite`. Session JSONL, event logs, metadata,
 sub-agent transcripts, and archives remain authoritative. Removing or
-rebuilding the database never removes conversation data, and older Deeper
+rebuilding the database never removes conversation data, and older Deepzora
 versions continue to read the same authoritative files.
 
 The catalog stores normalized retrieval tokens in FTS5, not complete message
@@ -40,8 +40,8 @@ are preserved in degraded read mode.
 Diagnostics and safe rebuild commands:
 
 ```sh
-deeper doctor catalogs [--json]
-deeper catalogs reindex history [--dir PATH ...] [--json]
+deepzora doctor catalogs [--json]
+deepzora catalogs reindex history [--dir PATH ...] [--json]
 ```
 
 Diagnostics never print queries, tokens, snippets, messages, tool arguments, or

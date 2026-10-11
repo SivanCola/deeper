@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/provider"
-	"deeper/internal/tool"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func restartProjectionState(path string, msgs []provider.Message, version uint64, covered int) CompactionState {

@@ -11,22 +11,22 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/ablation"
-	"deeper/internal/acp"
-	"deeper/internal/boot"
-	"deeper/internal/config"
-	"deeper/internal/control"
-	"deeper/internal/extension/providerext"
-	"deeper/internal/i18n"
-	"deeper/internal/netclient"
-	"deeper/internal/plugin"
-	"deeper/internal/provider"
-	"deeper/internal/sandbox"
-	"deeper/internal/tool"
-	"deeper/internal/tool/builtin"
+	"deepzora/internal/ablation"
+	"deepzora/internal/acp"
+	"deepzora/internal/boot"
+	"deepzora/internal/config"
+	"deepzora/internal/control"
+	"deepzora/internal/extension/providerext"
+	"deepzora/internal/i18n"
+	"deepzora/internal/netclient"
+	"deepzora/internal/plugin"
+	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
+	"deepzora/internal/tool"
+	"deepzora/internal/tool/builtin"
 )
 
-// acpCommand runs Deeper as an Agent Client Protocol agent: a stdio JSON-RPC
+// acpCommand runs Deepzora as an Agent Client Protocol agent: a stdio JSON-RPC
 // server that editors and other host clients drive (initialize, session/new,
 // session/prompt, session/cancel). It keeps v2 wire-compatible with the many
 // tools that integrated with v1 over ACP.
@@ -86,7 +86,7 @@ func acpCommand(args []string, version string) int {
 		networkOverride: networkOverride, workspaceOnly: *workspaceOnly,
 		bashOverride: bashMode, requireSandbox: bashMode == "enforce",
 	}
-	info := acp.AgentInfo{Name: "deeper", Version: version}
+	info := acp.AgentInfo{Name: "deepzora", Version: version}
 	if err := acp.Serve(ctx, os.Stdin, os.Stdout, factory, info); err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 1

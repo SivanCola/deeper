@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"deeper/internal/capability"
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/capability"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 func TestUseCapabilitySkillCallAcceptsStringArgumentsPayload(t *testing.T) {

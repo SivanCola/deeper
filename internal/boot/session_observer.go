@@ -1,8 +1,8 @@
 package boot
 
 import (
-	"deeper/internal/agent"
-	"deeper/internal/history"
+	"deepzora/internal/agent"
+	"deepzora/internal/history"
 )
 
 func newObservedSession(systemPrompt string) *agent.Session {

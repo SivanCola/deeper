@@ -34,7 +34,7 @@ func (a *App) ExportManualCreationDiagnostics() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path, err := a.PickExportFile("deeper-creation-diagnostics-"+time.Now().Format("20060102-150405")+".json", "application/json")
+	path, err := a.PickExportFile("deepzora-creation-diagnostics-"+time.Now().Format("20060102-150405")+".json", "application/json")
 	if err != nil || path == "" {
 		return path, err
 	}

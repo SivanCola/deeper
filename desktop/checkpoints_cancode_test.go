@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/agent"
-	"deeper/internal/checkpoint"
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/provider"
+	"deepzora/internal/agent"
+	"deepzora/internal/checkpoint"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/provider"
 )
 
 func TestDesktopRewindCommitAndUndoUseAuthoritativeControllerState(t *testing.T) {

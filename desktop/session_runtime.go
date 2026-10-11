@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 type SessionRuntimePhase string

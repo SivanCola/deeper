@@ -1,6 +1,6 @@
 # 官方主题素材来源与许可记录
 
-八款 Deeper 官方主题的全部图片均为**原创**，由 `scripts/official-theme-art/` 中的脚本
+八款 Deepzora 官方主题的全部图片均为**原创**，由 `scripts/official-theme-art/` 中的脚本
 从零程序化生成（numpy + Pillow，固定随机种子，可完全复现）。视觉*方向*参考了 MIT 许可的
 [Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin) 概念图库，但是：
 
@@ -11,7 +11,7 @@
   绅士（黑金序曲）。赤曜新城不含人物。
 - 背景中不含窗口、侧栏、卡片、按钮、输入框或可读文字，并已去除 EXIF 等元数据。
 
-素材随 Deeper 仓库以 MIT 许可发布，© Deeper Contributors。人工审核：Deeper Contributors（发布 PR 审核）。
+素材随 Deepzora 仓库以 MIT 许可发布，© Deepzora Contributors。人工审核：Deepzora Contributors（发布 PR 审核）。
 
 生成日期：2026-07-17
 

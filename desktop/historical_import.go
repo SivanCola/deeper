@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"deeper/desktop/internal/workspacestate"
-	"deeper/internal/agent"
-	"deeper/internal/historywork"
-	"deeper/internal/identitylock"
-	"deeper/internal/session"
-	"deeper/internal/store"
+	"deepzora/desktop/internal/workspacestate"
+	"deepzora/internal/agent"
+	"deepzora/internal/historywork"
+	"deepzora/internal/identitylock"
+	"deepzora/internal/session"
+	"deepzora/internal/store"
 )
 
 var errHistoricalSourceBusy = errors.New("historical session is in use; close the other instance and retry")

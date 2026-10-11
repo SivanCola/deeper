@@ -8,7 +8,7 @@ import (
 )
 
 // resolveSetupTargets treats any unrecognized argument as the config path, so
-// before this guard `deeper setup --help` wrote a config file literally named
+// before this guard `deepzora setup --help` wrote a config file literally named
 // "--help" into the working directory — and so did every mistyped flag.
 func TestSetupRejectsDashedArgumentsInsteadOfWritingThem(t *testing.T) {
 	dir := t.TempDir()

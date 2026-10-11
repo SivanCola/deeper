@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"deeper/internal/skill"
-	"deeper/internal/tool"
+	"deepzora/internal/skill"
+	"deepzora/internal/tool"
 )
 
 // ProfileDefinition is the delegation-facing narrowing of a stored Skill: what

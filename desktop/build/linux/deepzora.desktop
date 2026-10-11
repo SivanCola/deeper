@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Deepzora
+Comment=Deepzora desktop — an Electron shell around the Go kernel
+Exec=deepzora-launcher
+Icon=deepzora-desktop
+Categories=Development;Utility;
+Terminal=false
+StartupWMClass=Deepzora

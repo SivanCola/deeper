@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 func ambiguousResumeWorkspace(t *testing.T) (string, string) {
 	t.Helper()
-	t.Setenv("DEEPER_STATE_HOME", t.TempDir())
+	t.Setenv("DEEPZORA_STATE_HOME", t.TempDir())
 	t.Chdir(t.TempDir())
 	dir := resolveCLISessionDir()
 	if err := os.MkdirAll(dir, 0o700); err != nil {

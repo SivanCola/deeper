@@ -6,25 +6,25 @@
      in a zip before SignPath receives it. -->
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
-    <pe-file path="deeper-desktop.exe">
+    <pe-file path="deepzora-desktop.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="deeper-guard.exe">
+    <pe-file path="deepzora-guard.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="deeper-launcher.exe">
+    <pe-file path="deepzora-launcher.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="deeper-update-helper.exe">
+    <pe-file path="deepzora-update-helper.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="deeper-cli.exe">
+    <pe-file path="deepzora-cli.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="deeper-uninstall.exe">
+    <pe-file path="deepzora-uninstall.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="app/Deeper.exe">
+    <pe-file path="app/Deepzora.exe">
       <authenticode-sign />
     </pe-file>
     <pe-file-set>

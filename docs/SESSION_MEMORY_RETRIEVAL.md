@@ -1,6 +1,6 @@
 # Context Engine v2: Instructions, Memory, and Retrieval
 
-Context Engine v2 gives Deeper two durable context layers with different
+Context Engine v2 gives Deepzora two durable context layers with different
 authority:
 
 - **Standing instructions** define how the agent must work.
@@ -14,7 +14,7 @@ finding it at the right moment.
 
 | Put this in | Use it for | Examples |
 | --- | --- | --- |
-| `AGENTS.md`, `DEEPER.md`, or `CLAUDE.md` | Rules that must be present on every relevant turn | required test commands, repository boundaries, review conventions |
+| `AGENTS.md`, `DEEPZORA.md`, or `CLAUDE.md` | Rules that must be present on every relevant turn | required test commands, repository boundaries, review conventions |
 | Project memory | Durable facts that apply only to this workspace | release branch, non-obvious service constraint, project ticket URL |
 | Global memory | A fact that should be available in every workspace | a user preference explicitly chosen as global |
 | Session history | Original wording, tool output, or a decision that is not yet a stable fact | an error from yesterday, an abandoned approach |
@@ -39,13 +39,13 @@ agent's background-fact `remember` tool.
 
 ## Instruction resolution
 
-Deeper recognizes `DEEPER.md`, `AGENTS.md`, and `CLAUDE.md`, plus matching
+Deepzora recognizes `DEEPZORA.md`, `AGENTS.md`, and `CLAUDE.md`, plus matching
 `.local.md` variants. It first loads user-global instruction files from the
-Deeper home directory. It then walks from the workspace root to the target
+Deepzora home directory. It then walks from the workspace root to the target
 path; at each directory it loads the normal files followed by that directory's
 `.local.md` files.
 
-Deeper directories beat broader directories, and a local variant beats normal
+Deepzora directories beat broader directories, and a local variant beats normal
 files in the same directory. Later entries therefore win when rules conflict.
 The current user request remains the highest-authority user instruction. Files
 with identical expanded content are deduplicated, preferring the more specific
@@ -118,7 +118,7 @@ lower-priority `session-context` section before the next real user turn. Pinning
 is an
 explicit user choice (`/memory pin <id-or-name>`, or asking the assistant),
 and total pinned bodies are capped at 1,500 characters — enforced when
-pinning, with overflow directed to DEEPER.md/AGENTS.md instructions, where
+pinning, with overflow directed to DEEPZORA.md/AGENTS.md instructions, where
 always-binding rules belong. A fact is either pinned (in `session-context`) or
 relevant (recallable): never both, never neither.
 
@@ -130,7 +130,7 @@ recall match.
 
 ## Automatic recall
 
-Before each real user turn, Deeper searches active facts using the raw user
+Before each real user turn, Deepzora searches active facts using the raw user
 message. Host-added provider context is not fed back into the query. The selected
 facts are appended to that user turn as a bounded, low-authority suffix; they do
 not mutate the system prompt or tool schema.
@@ -181,13 +181,13 @@ Inspect the last decision with:
 The trace includes the query, selected IDs and revisions, scores, match reasons,
 freshness, budget use, omitted count, and suppression reason.
 
-The explicit read-only `memory` tool remains available for deeper `search`,
+The explicit read-only `memory` tool remains available for deepzora `search`,
 `read`, and `list` operations. Use `history` instead when exact wording or tool
 output matters.
 
 ## Safe writes and confirmation
 
-The ordinary path is zero-configuration. Deeper may automatically create a
+The ordinary path is zero-configuration. Deepzora may automatically create a
 new memory only when all of these conditions hold:
 
 - the owning controller has the current project store (interactive or top-level
@@ -229,7 +229,7 @@ approval prompt.
 Updating a fact creates an immutable snapshot of the previous revision. A stale
 `expected_revision` is rejected instead of overwriting a newer edit.
 
-Restoring an old revision does not rewind storage in place. Deeper copies the
+Restoring an old revision does not rewind storage in place. Deepzora copies the
 chosen content into a new, higher revision, preserving a monotonic audit trail:
 
 ```text
@@ -262,7 +262,7 @@ There is no setup toggle. It proposes:
 Scanning uses original user content, deduplicates against facts from both scopes
 and loaded instruction bodies, and never writes by itself. Every candidate shows
 evidence and must be explicitly accepted. Remote workspaces fail closed:
-Deeper does not fall back to local sessions or local memory when the remote
+Deepzora does not fall back to local sessions or local memory when the remote
 surface cannot provide the feature.
 
 ## Management surfaces

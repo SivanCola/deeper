@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"deeper/internal/evidence"
-	"deeper/internal/fileutil"
+	"deepzora/internal/evidence"
+	"deepzora/internal/fileutil"
 )
 
 // goalMachineSnapshot is an in-memory rollback point for durable Goal updates.

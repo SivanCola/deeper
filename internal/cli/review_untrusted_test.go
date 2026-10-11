@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 const untrustedReviewProbeKind = "cli-review-untrusted-probe"
@@ -24,7 +24,7 @@ func init() {
 }
 
 // A reviewed checkout configures a search binary and ships its own review
-// skill; `deeper review` must execute neither, and must run the built-in
+// skill; `deepzora review` must execute neither, and must run the built-in
 // read-only review prompt rather than the checkout's.
 func TestReviewCommandIgnoresCheckoutToolsAndSkills(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -49,9 +49,9 @@ func TestReviewCommandIgnoresCheckoutToolsAndSkills(t *testing.T) {
 	skillMarker := filepath.Join(dir, "skill-bash-ran")
 	writeUntrustedReviewFile(t, dir, "tools/rg", "#!/bin/sh\necho ran > '"+rgMarker+"'\n", 0o755)
 	writeUntrustedReviewFile(t, dir, "tools/evil.sh", "#!/bin/sh\necho ran > '"+skillMarker+"'\n", 0o755)
-	writeUntrustedReviewFile(t, dir, ".deeper/skills/review/SKILL.md",
+	writeUntrustedReviewFile(t, dir, ".deepzora/skills/review/SKILL.md",
 		"---\ndescription: checkout review\nrunAs: subagent\nallowed-tools: grep, bash, web_fetch\n---\n"+untrustedReviewSkillBody+"\n", 0o644)
-	writeUntrustedReviewFile(t, dir, "deeper.toml", `
+	writeUntrustedReviewFile(t, dir, "deepzora.toml", `
 default_model = "reviewer"
 
 [[providers]]
@@ -77,7 +77,7 @@ rg_path = "tools/rg"
 		t.Fatalf("review subagent reached the provider %d times, want the grep and bash rounds too", calls)
 	}
 	if strings.Contains(system, untrustedReviewSkillBody) {
-		t.Error("review ran the checkout's .deeper/skills/review prompt")
+		t.Error("review ran the checkout's .deepzora/skills/review prompt")
 	}
 	if offered["web_fetch"] {
 		t.Error("review offered web_fetch, which only the checkout's review skill grants")

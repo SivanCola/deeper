@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"deeper/internal/agent"
+	"deepzora/internal/agent"
 )
 
 // HeadRecord is one head of a schema-2 session as the catalog projects it.

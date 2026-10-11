@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/evidence"
-	"deeper/internal/tool"
+	"deepzora/internal/evidence"
+	"deepzora/internal/tool"
 )
 
 // boundWriterFixture builds a workspace with an in-claim directory and an

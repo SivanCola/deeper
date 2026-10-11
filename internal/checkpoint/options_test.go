@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/diff"
+	"deepzora/internal/diff"
 )
 
 func TestOptionsOverrideRetentionDefaults(t *testing.T) {

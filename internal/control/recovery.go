@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"deeper/internal/agent"
-	"deeper/internal/recovery"
+	"deepzora/internal/agent"
+	"deepzora/internal/recovery"
 )
 
 // ResolveRecovery is retained as a wire-compatible endpoint for older clients.

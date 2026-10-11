@@ -18,7 +18,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"deeper/internal/provider"
+	"deepzora/internal/provider"
 )
 
 const (

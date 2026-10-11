@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/jobs"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/jobs"
 )
 
 type teardownFactory struct {

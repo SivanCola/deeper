@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"deeper/internal/control"
-	"deeper/internal/event"
-	"deeper/internal/permission"
+	"deepzora/internal/control"
+	"deepzora/internal/event"
+	"deepzora/internal/permission"
 )
 
 const identityPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
@@ -57,7 +57,7 @@ func TestIndependentAttachmentIdentityUsesBoundWorkspace(t *testing.T) {
 	if one == two {
 		t.Fatal("same-named images in separate workspaces resolved to the same bytes")
 	}
-	if _, err := os.Stat(filepath.Join(processDir, ".deeper")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(processDir, ".deepzora")); !os.IsNotExist(err) {
 		t.Fatal("attachment write used the process working directory")
 	}
 }
@@ -71,7 +71,7 @@ func TestIndependentAttachmentAdmissionKeepsDraftOnFailure(t *testing.T) {
 	}
 	_, err = c.SubmitIdentified(control.SubmissionRequest{
 		ID:    "sub-keep-draft",
-		Input: "inspect @.deeper/attachments/missing.png",
+		Input: "inspect @.deepzora/attachments/missing.png",
 	})
 	var failures control.ImageReferenceFailures
 	if !errors.As(err, &failures) {

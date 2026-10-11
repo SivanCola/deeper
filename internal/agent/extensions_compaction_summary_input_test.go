@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"deeper/internal/event"
-	"deeper/internal/extension"
-	"deeper/internal/extension/dispatch"
-	"deeper/internal/extension/protocol"
-	"deeper/internal/provider"
+	"deepzora/internal/event"
+	"deepzora/internal/extension"
+	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/extension/protocol"
+	"deepzora/internal/provider"
 )
 
 func TestCompactionPrepareReplaceGuidance(t *testing.T) {

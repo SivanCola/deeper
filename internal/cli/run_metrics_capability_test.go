@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"deeper/internal/capability"
+	"deepzora/internal/capability"
 )
 
 func TestMergeCapabilityAuditCopiesNestedCounters(t *testing.T) {
