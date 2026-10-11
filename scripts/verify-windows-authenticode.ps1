@@ -12,7 +12,7 @@ param(
 
     [switch]$RequireTrusted,
 
-    [ValidateSet("canonical", "legacy-dual")]
+    [ValidateSet("canonical")]
     [string]$PortableLayout = "canonical"
 )
 
@@ -20,7 +20,7 @@ $ErrorActionPreference = "Stop"
 
 $expectedPayload = @(
     "deepzora-desktop.exe",
-    "deepzora-guard.exe",
+    "deepzora-layout-installer.exe",
     "deepzora-launcher.exe",
     "deepzora-update-helper.exe",
     "deepzora-cli.exe",
@@ -127,9 +127,6 @@ try {
         [pscustomobject]@{ Portable = (Join-Path $activeDir "deepzora-update-helper.exe"); Payload = "deepzora-update-helper.exe" },
         [pscustomobject]@{ Portable = (Join-Path $activeDir "deepzora-cli.exe"); Payload = "deepzora-cli.exe" }
     )
-    if ($PortableLayout -eq "legacy-dual") {
-        $portableSources += [pscustomobject]@{ Portable = "deepzora-launcher.exe"; Payload = "deepzora-launcher.exe" }
-    }
     foreach ($entry in ($signingFiles | Where-Object { $_ -like "app/*" })) {
         $portableSources += [pscustomobject]@{
             Portable = (Join-Path $activeDir ($entry -replace '/', [System.IO.Path]::DirectorySeparatorChar))

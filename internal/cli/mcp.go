@@ -329,8 +329,7 @@ func mcpCommand(args []string) int {
 		return mcpEnableCLI(args[1:], true)
 	case "disable":
 		return mcpEnableCLI(args[1:], false)
-	case "retry", "connect":
-		// connect remains a compatibility alias for enable/retry.
+	case "retry":
 		return mcpRetryCLI(args[1:])
 	case "auth", "authorize":
 		return mcpAuthCLI(args[1:])

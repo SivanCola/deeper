@@ -57,7 +57,6 @@ type Messages struct {
 	EvidenceNudge                    string // evidence_nudge: unverified mutations
 	ReasoningGovernor                string // reasoning_governor engaged
 	UnappliedSteerFmt                string // unapplied_steer — %s = the dropped guidance
-	DeprecatedContextRetention       string // agent.keep / agent.recent_keep deprecation warning
 	FinishReasonLength               string
 	FinishReasonContentFilter        string
 	FinishReasonRepetition           string
@@ -108,114 +107,111 @@ type Messages struct {
 	ResumeRecoveryBadgeFmt string // recovery-copy badge — %s = short parent session id
 
 	// chat TUI status line / approval banner.
-	ChatThinking                           string // live reasoning marker label, e.g. "thinking…"
-	ChatThoughtForFmt                      string // collapsed reasoning summary, "%d" = elapsed s
-	ChatStatusThinkingFmt                  string // "%s thinking… (%ds · <cancel hint>)" — %s = spinner, %d = elapsed s
-	TurnPhaseWorking                       string // host turn_phase label: working
-	ReadStatusReadingFmt                   string // read status: reading a file
-	ReadStatusCoveredFmt                   string // read status: covered lines
-	ReadStatusDoneFmt                      string // read status: finished a window
-	ReadStatusPausedFmt                    string // read status: paused, needs attention
-	ReadStatusRecovery                     string // next step after a bounded read stops
-	TurnPhaseChecking                      string // host turn_phase label: checking
-	TurnPhaseVerifying                     string // host turn_phase label: verifying
-	TurnPhaseReviewing                     string // host turn_phase label: reviewing
-	CompletionSummaryBlocked               string // concise non-verbose alert for a blocked turn
-	CompletionSummaryNeedsAttention        string // concise non-verbose alert for verification/review gaps
-	ChatToolWorkingFmt                     string // "%s working · %ds" under a running tool — %s = spinner, %d = elapsed s
-	ChatSubagentPhaseQueued                string // sub-agent progress phase label ("queued")
-	ChatSubagentPhaseRunning               string // ("running")
-	ChatSubagentPhaseReasoning             string // ("reasoning")
-	ChatSubagentPhaseResponding            string // ("responding")
-	ChatSubagentPhaseTool                  string // ("using tools")
-	ChatSubagentPhaseRetrying              string // ("retrying")
-	ChatSubagentPhaseCompleted             string // ("completed")
-	ChatSubagentPhaseFailed                string // ("failed")
-	ChatSubagentPhaseCancelled             string // ("cancelled")
-	ChatSubagentProgressFmt                string // live progress line — %s = phase label, %d = elapsed s, %d = idle s ("%s · %ds · %ds ago")
-	ChatSubagentProgressDoneFmt            string // terminal summary — %s = phase label, %d = duration s ("%s · %ds")
-	ChatSubagentPreviewLabel               string // verbose preview marker ("▎")
-	ChatStatusRetryingFmt                  string // "%s retrying (%d/%d)…" — %s = spinner, %d/%d = attempt/max
-	ChatStatusCancellingFmt                string // "%s stopping… (%ds · Ctrl+C exits)" — %s = spinner, %d = elapsed s
-	ChatStatusIdle                         string // shortcuts hint when idle
-	ChatStatusCycleHint                    string // plan-toggle shortcut hint shown when no modal prompt owns the status row
-	ChatStatusCycleHintCompact             string // readable shortcut hint used by the persistent footer
-	ChatTurnReceiptLabel                   string // compact per-turn usage receipt attached to the completed assistant response
-	RateBandPeak                           string
-	RateBandOffPeak                        string
-	RateBandMixed                          string
-	ChatStatusModelLabel                   string
-	ChatStatusEffortLabel                  string
-	ChatStatusPresetLabel                  string
-	ChatStatusCacheLabel                   string
-	ChatStatusContextLabel                 string
-	ChatStatusCompactLabel                 string
-	ChatStatusJobsLabel                    string
-	ChatStatusBalanceLabel                 string
-	ChatStatusCostLabel                    string
-	ChatStatusCacheNowFmt                  string // cache status tag, "%s" = latest-turn hit rate with percent sign
-	ChatStatusCacheAvgFmt                  string // cache status tag, "%s" = session-average hit rate with percent sign
-	ChatStatusPlanApproval                 string // shortcuts hint while a plan is pending
-	PlanApprovalPrompt                     string // one-line "plan above is ready" banner shown above the input
-	PlanApprovalChoices                    string // start / revise / exit-without-executing choice list
-	ChatStatusToolApproval                 string // shortcuts hint while a tool call awaits approval
-	ToolApprovalPromptFmt                  string // approval banner — tool, subject suffix, source/intent detail, choices
-	ToolApprovalChoices                    string // standard approval choice list
-	BashPrefixChoices                      string // approval choice list when a bash prefix can be granted
-	PlanModeReadOnlyCommandChoices         string // approval choice list for plan-mode read-only command trust
-	FreshHumanApprovalChoices              string // approval choice list for prompts that cannot be remembered
-	RecoveryApprovalChoices                string // one-shot Auto Guard decision list
-	RecoveryPlanChangeChoices              string // material Auto plan transition decision list
-	RecoveryPlanDecisionPrompt             string // neutral title for a material Auto plan transition
-	RecoveryPlanBeforeFmt                  string // compact previous-plan line, one %s
-	RecoveryPlanAfterFmt                   string // compact proposed-plan line, one %s
-	RecoveryTaskGrantChoices               string // Auto Guard list with a current-task semantic grant
-	SandboxEscapeApprovalChoices           string // approval choice list for OS sandbox escape prompts
-	ApprovalNeededFmt                      string // notification text for a pending approval, tool only
-	ApprovalNeededWithSubjectFmt           string // notification text for a pending approval with subject
-	ToolApprovalSourceFmt                  string // "Source: %s" / "来源: %s"
-	ToolApprovalBuiltIn                    string // built-in tool source label
-	ToolApprovalImageUse                   string // image-understanding detail for understand_image-style tools
-	ApprovalToolLabelBash                  string // user-facing label for bash approvals
-	ApprovalToolLabelEditFile              string // user-facing label for edit_file approvals
-	ApprovalToolLabelWriteFile             string // user-facing label for write_file approvals
-	ApprovalToolLabelMultiEdit             string // user-facing label for multi_edit approvals
-	ApprovalToolLabelMoveFile              string // user-facing label for move_file approvals
-	ApprovalToolLabelWebFetch              string // user-facing label for web_fetch approvals
-	ApprovalToolLabelRunSkill              string // user-facing label for run_skill approvals
-	ApprovalToolLabelRemember              string // user-facing label for remember approvals
-	ApprovalToolLabelForget                string // user-facing label for forget approvals
-	ApprovalToolLabelSandboxEscape         string // user-facing label for OS sandbox escape approvals
-	ApprovalToolLabelPlanModeReadOnly      string // user-facing label for plan-mode read-only command trust approvals
-	MemoryApprovalSaveUpdate               string // subject prefix for remember approval
-	MemoryApprovalBodyLabel                string // label before the body excerpt in remember approval
-	MemoryApprovalArchiveFmt               string // subject for forget approval, %q = memory name
-	PlanModeBashTrustSubjectFmt            string // subject for bash read-only prefix trust approval, prefix + command
-	PlanModeBashTrustReason                string // reason for bash read-only prefix trust approval
-	PlanModeBashTrustDeclined              string // model-facing denial after bash read-only prefix rejection
-	SandboxEscapeSubjectFallback           string // fallback subject for a one-shot unconfined sandbox escape approval
-	SandboxEscapeSubjectPrefix             string // subject prefix before the shell command for one-shot unconfined escape approval
-	SandboxEscapeWrapReason                string // reason when no OS sandbox can wrap the command
-	SandboxEscapeRuntimeReason             string // fallback reason when an OS sandbox cannot start the command
-	SandboxEscapeDeclined                  string // model-facing denial when the user declines a one-shot unconfined retry
-	ApprovalToolLabelConfigWrite           string // user-facing label for Deepzora-managed config write approvals
-	ConfigWriteSubjectPrefix               string // subject prefix before the config file path for managed config write approval
-	ConfigWriteReason                      string // reason shown for managed config write approval
-	ConfigWriteDeclined                    string // model-facing denial when the user declines a managed config write
-	ConfigWriteApprovalChoices             string // approval choice list for managed config write prompts
-	WriteAccessApprovalChoices             string // four-choice list for extending writable roots
-	WriteAccessHomeWarning                 string // high-risk warning when granting the whole home directory
-	WriteAccessMergedPermissionHint        string // note that the same choice also grants ordinary tool permission
-	WriteAccessProjectHint                 string // note that project persist edits deepzora.toml
-	PermissionSavedFmt                     string // permission rule saved notice: path, rule
-	PermissionAlreadyAllowedFmt            string // permission rule already covered notice: path, rule
-	PermissionSaveFailedFmt                string // permission rule save failure notice: rule, error
-	PlanModeReadOnlyCommandTrustSavedFmt   string // plan-mode bash read-only prefix saved notice: path, prefix
-	PlanModeReadOnlyCommandTrustAlreadyFmt string // plan-mode bash read-only prefix already covered notice: path, prefix
-	PlanModeReadOnlyCommandTrustFailedFmt  string // plan-mode bash read-only prefix save failure notice: prefix, error
-	DiffFoldedFmt                          string // "… +%d more lines" footer when a writer diff is folded
-	DiffFoldEnabledFmt                     string // notice when /diff-fold enables folding, %d = line limit
-	DiffFoldDisabled                       string // notice when /diff-fold disables folding (shows all lines)
+	ChatThinking                      string // live reasoning marker label, e.g. "thinking…"
+	ChatThoughtForFmt                 string // collapsed reasoning summary, "%d" = elapsed s
+	ChatStatusThinkingFmt             string // "%s thinking… (%ds · <cancel hint>)" — %s = spinner, %d = elapsed s
+	TurnPhaseWorking                  string // host turn_phase label: working
+	ReadStatusReadingFmt              string // read status: reading a file
+	ReadStatusCoveredFmt              string // read status: covered lines
+	ReadStatusDoneFmt                 string // read status: finished a window
+	ReadStatusPausedFmt               string // read status: paused, needs attention
+	ReadStatusRecovery                string // next step after a bounded read stops
+	TurnPhaseChecking                 string // host turn_phase label: checking
+	TurnPhaseVerifying                string // host turn_phase label: verifying
+	TurnPhaseReviewing                string // host turn_phase label: reviewing
+	CompletionSummaryBlocked          string // concise non-verbose alert for a blocked turn
+	CompletionSummaryNeedsAttention   string // concise non-verbose alert for verification/review gaps
+	ChatToolWorkingFmt                string // "%s working · %ds" under a running tool — %s = spinner, %d = elapsed s
+	ChatSubagentPhaseQueued           string // sub-agent progress phase label ("queued")
+	ChatSubagentPhaseRunning          string // ("running")
+	ChatSubagentPhaseReasoning        string // ("reasoning")
+	ChatSubagentPhaseResponding       string // ("responding")
+	ChatSubagentPhaseTool             string // ("using tools")
+	ChatSubagentPhaseRetrying         string // ("retrying")
+	ChatSubagentPhaseCompleted        string // ("completed")
+	ChatSubagentPhaseFailed           string // ("failed")
+	ChatSubagentPhaseCancelled        string // ("cancelled")
+	ChatSubagentProgressFmt           string // live progress line — %s = phase label, %d = elapsed s, %d = idle s ("%s · %ds · %ds ago")
+	ChatSubagentProgressDoneFmt       string // terminal summary — %s = phase label, %d = duration s ("%s · %ds")
+	ChatSubagentPreviewLabel          string // verbose preview marker ("▎")
+	ChatStatusRetryingFmt             string // "%s retrying (%d/%d)…" — %s = spinner, %d/%d = attempt/max
+	ChatStatusCancellingFmt           string // "%s stopping… (%ds · Ctrl+C exits)" — %s = spinner, %d = elapsed s
+	ChatStatusIdle                    string // shortcuts hint when idle
+	ChatStatusCycleHint               string // plan-toggle shortcut hint shown when no modal prompt owns the status row
+	ChatStatusCycleHintCompact        string // readable shortcut hint used by the persistent footer
+	ChatTurnReceiptLabel              string // compact per-turn usage receipt attached to the completed assistant response
+	RateBandPeak                      string
+	RateBandOffPeak                   string
+	RateBandMixed                     string
+	ChatStatusModelLabel              string
+	ChatStatusEffortLabel             string
+	ChatStatusPresetLabel             string
+	ChatStatusCacheLabel              string
+	ChatStatusContextLabel            string
+	ChatStatusCompactLabel            string
+	ChatStatusJobsLabel               string
+	ChatStatusBalanceLabel            string
+	ChatStatusCostLabel               string
+	ChatStatusCacheNowFmt             string // cache status tag, "%s" = latest-turn hit rate with percent sign
+	ChatStatusCacheAvgFmt             string // cache status tag, "%s" = session-average hit rate with percent sign
+	ChatStatusPlanApproval            string // shortcuts hint while a plan is pending
+	PlanApprovalPrompt                string // one-line "plan above is ready" banner shown above the input
+	PlanApprovalChoices               string // start / revise / exit-without-executing choice list
+	ChatStatusToolApproval            string // shortcuts hint while a tool call awaits approval
+	ToolApprovalPromptFmt             string // approval banner — tool, subject suffix, source/intent detail, choices
+	ToolApprovalChoices               string // standard approval choice list
+	BashPrefixChoices                 string // approval choice list when a bash prefix can be granted
+	PlanModeReadOnlyCommandChoices    string // approval choice list for plan-mode read-only command trust
+	FreshHumanApprovalChoices         string // approval choice list for prompts that cannot be remembered
+	RecoveryApprovalChoices           string // one-shot Auto Guard decision list
+	RecoveryPlanChangeChoices         string // material Auto plan transition decision list
+	RecoveryPlanDecisionPrompt        string // neutral title for a material Auto plan transition
+	RecoveryPlanBeforeFmt             string // compact previous-plan line, one %s
+	RecoveryPlanAfterFmt              string // compact proposed-plan line, one %s
+	RecoveryTaskGrantChoices          string // Auto Guard list with a current-task semantic grant
+	SandboxEscapeApprovalChoices      string // approval choice list for OS sandbox escape prompts
+	ApprovalNeededFmt                 string // notification text for a pending approval, tool only
+	ApprovalNeededWithSubjectFmt      string // notification text for a pending approval with subject
+	ToolApprovalSourceFmt             string // "Source: %s" / "来源: %s"
+	ToolApprovalBuiltIn               string // built-in tool source label
+	ToolApprovalImageUse              string // image-understanding detail for understand_image-style tools
+	ApprovalToolLabelBash             string // user-facing label for bash approvals
+	ApprovalToolLabelEditFile         string // user-facing label for edit_file approvals
+	ApprovalToolLabelWriteFile        string // user-facing label for write_file approvals
+	ApprovalToolLabelMultiEdit        string // user-facing label for multi_edit approvals
+	ApprovalToolLabelMoveFile         string // user-facing label for move_file approvals
+	ApprovalToolLabelWebFetch         string // user-facing label for web_fetch approvals
+	ApprovalToolLabelRunSkill         string // user-facing label for run_skill approvals
+	ApprovalToolLabelRemember         string // user-facing label for remember approvals
+	ApprovalToolLabelForget           string // user-facing label for forget approvals
+	ApprovalToolLabelSandboxEscape    string // user-facing label for OS sandbox escape approvals
+	ApprovalToolLabelPlanModeReadOnly string // user-facing label for plan-mode read-only command trust approvals
+	MemoryApprovalSaveUpdate          string // subject prefix for remember approval
+	MemoryApprovalBodyLabel           string // label before the body excerpt in remember approval
+	MemoryApprovalArchiveFmt          string // subject for forget approval, %q = memory name
+	PlanModeBashTrustSubjectFmt       string // subject for bash read-only prefix trust approval, prefix + command
+	PlanModeBashTrustReason           string // reason for bash read-only prefix trust approval
+	PlanModeBashTrustDeclined         string // model-facing denial after bash read-only prefix rejection
+	SandboxEscapeSubjectFallback      string // fallback subject for a one-shot unconfined sandbox escape approval
+	SandboxEscapeSubjectPrefix        string // subject prefix before the shell command for one-shot unconfined escape approval
+	SandboxEscapeWrapReason           string // reason when no OS sandbox can wrap the command
+	SandboxEscapeRuntimeReason        string // fallback reason when an OS sandbox cannot start the command
+	SandboxEscapeDeclined             string // model-facing denial when the user declines a one-shot unconfined retry
+	ApprovalToolLabelConfigWrite      string // user-facing label for Deepzora-managed config write approvals
+	ConfigWriteSubjectPrefix          string // subject prefix before the config file path for managed config write approval
+	ConfigWriteReason                 string // reason shown for managed config write approval
+	ConfigWriteDeclined               string // model-facing denial when the user declines a managed config write
+	ConfigWriteApprovalChoices        string // approval choice list for managed config write prompts
+	WriteAccessApprovalChoices        string // four-choice list for extending writable roots
+	WriteAccessHomeWarning            string // high-risk warning when granting the whole home directory
+	WriteAccessMergedPermissionHint   string // note that the same choice also grants ordinary tool permission
+	WriteAccessProjectHint            string // note that project persist edits deepzora.toml
+	PermissionSavedFmt                string // permission rule saved notice: path, rule
+	PermissionAlreadyAllowedFmt       string // permission rule already covered notice: path, rule
+	PermissionSaveFailedFmt           string // permission rule save failure notice: rule, error
+	DiffFoldedFmt                     string // "… +%d more lines" footer when a writer diff is folded
+	DiffFoldEnabledFmt                string // notice when /diff-fold enables folding, %d = line limit
+	DiffFoldDisabled                  string // notice when /diff-fold disables folding (shows all lines)
 
 	// `ask` tool question card.
 	AskTypeSomething   string // the "type your own answer" option label
@@ -319,7 +315,6 @@ type Messages struct {
 	CmdWorkMode         string // /work-mode
 	CmdDocs             string // /docs
 	CmdMemory           string // /memory
-	CmdMigrate          string // /migrate
 	CmdGoal             string // /goal
 	CmdRemember         string // /remember
 	CmdForget           string // /forget
@@ -417,7 +412,6 @@ type Messages struct {
 	WorkModeUsage                string
 	// WorkModeDeprecatedNotice is shown once when a legacy /work-mode or
 	// /profile command is used. Prefer /preset.
-	WorkModeDeprecatedNotice string
 	// QualityFloorApplied confirms a quality floor switch.
 	QualityFloorApplied      string
 	RewindNone               string
@@ -632,7 +626,6 @@ type Messages struct {
 
 	// `deepzora upgrade` / `deepzora update` — self-update
 	UpgradeChecking            string // "Checking for updates…"
-	UpgradeChannelDeprecated   string // legacy channel selection is ignored
 	UpgradeDevBuild            string // dev builds cannot self-update
 	UpgradeFetchFailed         string // "failed to check for updates: %v"
 	UpgradeInvalidVersion      string // remote version not valid semver

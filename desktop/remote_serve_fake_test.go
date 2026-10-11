@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -141,7 +142,7 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			time.Sleep(enterDelay)
 		}
 		if newSessionPath != "" {
-			w.Header().Set("X-Deepzora-Session-Path", newSessionPath)
+			w.Header().Set("X-Deepzora-Session-ID", remoteSessionIDFromRoute(newSessionPath))
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
@@ -152,8 +153,8 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 		}
 		// Mirrors the real handler: a canonical row carries only sessionId, so
 		// requiring a path here would hide every identity-route regression.
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Path == "" && body.SessionID == "" {
-			http.Error(w, "missing path or sessionId", http.StatusBadRequest)
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.SessionID == "" {
+			http.Error(w, "missing sessionId", http.StatusBadRequest)
 			return
 		}
 		fs.mu.Lock()
@@ -167,10 +168,9 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			http.Error(w, fail, http.StatusConflict)
 			return
 		}
-		fs.resumePath, fs.resumeSessionID = body.Path, body.SessionID
+		fs.resumePath, fs.resumeSessionID = remoteSessionIdentityRoute("", body.SessionID), body.SessionID
 		for i := range fs.sessions {
-			fs.sessions[i].Current = body.SessionID != "" && fs.sessions[i].SessionID == body.SessionID ||
-				body.SessionID == "" && fs.sessions[i].Path == body.Path
+			fs.sessions[i].Current = remoteSessionIDFromRoute(fs.sessions[i].Path) == body.SessionID || fs.sessions[i].SessionID == body.SessionID
 		}
 		fs.mu.Unlock()
 		if body.SessionID != "" {
@@ -183,7 +183,7 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 		}
 		if resumeStarted != nil {
 			select {
-			case resumeStarted <- body.Path:
+			case resumeStarted <- remoteSessionIdentityRoute("", body.SessionID):
 			default:
 			}
 		}
@@ -276,7 +276,7 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			data, _ := io.ReadAll(io.LimitReader(r.Body, 4<<10))
 			fs.record(r.Method, path, string(data))
 			fs.mu.Lock()
-			fs.expectedPaths = append(fs.expectedPaths, r.Header.Get(expectedSessionPathHeader))
+			fs.expectedPaths = append(fs.expectedPaths, remoteSessionIDRoutePrefix+r.Header.Get(expectedSessionIDHeader))
 			fail := fs.failNext
 			fs.failNext = ""
 			if path == "/cancel" && fs.statusAfterCancel != "" {
@@ -474,4 +474,8 @@ func openReadyRemoteTab(t *testing.T, a *App, opts RemoteTabOpenOptions) TabMeta
 	}
 	waitForTabState(t, a, meta.ID, "ready")
 	return meta
+}
+
+func remoteSessionIDFromRoute(route string) string {
+	return strings.TrimPrefix(route, remoteSessionIDRoutePrefix)
 }

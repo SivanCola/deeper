@@ -346,7 +346,7 @@ func BenchmarkSlashEffortArgCompletionKeystroke(b *testing.B) {
 	b.Chdir(root)
 	ctrl := newOwnedTestController(b, control.Options{})
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	m.input.SetValue("/effort ")
 	m.updateCompletion() // resolve config once for this popup generation
 	if !m.completion.active {

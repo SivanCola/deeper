@@ -9,17 +9,6 @@ import (
 	"deepzora/internal/control"
 )
 
-func persistCLIModelSelection(ctrl control.SessionAPI) error {
-	selected, ok := ctrl.(interface {
-		ModelRef() string
-		ModelSelectionIdentity() string
-	})
-	if !ok || selected.ModelSelectionIdentity() == "" || ctrl.SessionPath() == "" {
-		return nil
-	}
-	return agent.SetBranchModelSelectionPreserveUpdated(ctrl.SessionPath(), selected.ModelRef(), selected.ModelSelectionIdentity())
-}
-
 // bindAndLoadCLIResume acquires the single-writer lease before reading the
 // transcript. Loading first leaves a race where the previous writer can append
 // and release between the read and Rebind, giving the new CLI ownership of a

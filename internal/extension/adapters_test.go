@@ -122,8 +122,7 @@ func TestSkillsContributor(t *testing.T) {
 }
 
 // TestCommandsContributor: LoadRoots resolution runs first — the plugin
-// command arrives under its qualified name, its unambiguous short alias is
-// retained as a hidden compatibility entry, and plain commands map to the
+// command arrives under its qualified name, and plain commands map to the
 // project tier.
 func TestCommandsContributor(t *testing.T) {
 	userDir := t.TempDir()
@@ -148,13 +147,13 @@ func TestCommandsContributor(t *testing.T) {
 		}
 		byID[ct.ID] = ct
 	}
-	if len(byID) != 3 {
-		t.Fatalf("command IDs = %v, want review, pkg:commit, and the hidden commit alias", byID)
+	if len(byID) != 2 {
+		t.Fatalf("command IDs = %v, want review and pkg:commit", byID)
 	}
 	if byID["review"].Source.Scope != ScopeProject {
 		t.Fatalf("review scope = %s, want project", byID["review"].Source.Scope)
 	}
-	for _, id := range []string{"pkg:commit", "commit"} {
+	for _, id := range []string{"pkg:commit"} {
 		if byID[id].Source.Scope != ScopePlugin || byID[id].Source.PluginID != "pkg" {
 			t.Fatalf("%s source = %+v, want plugin tier owned by pkg", id, byID[id].Source)
 		}

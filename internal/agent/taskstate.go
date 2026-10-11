@@ -13,7 +13,6 @@ type taskRuntime struct {
 	ledger     *evidence.Ledger
 	outcome    *evidence.OutcomeTracker
 	budget     runBudget
-	ebm        ebmState
 }
 
 // restartLedger begins a new task's accounting. It is written as one assignment

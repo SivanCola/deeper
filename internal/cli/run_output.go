@@ -67,9 +67,6 @@ type runResult struct {
 	SessionID           string  `json:"session_id,omitempty"`
 	TotalCost           float64 `json:"total_cost,omitempty"`
 	Currency            string  `json:"currency,omitempty"`
-	// TotalCostUSD is the released compatibility alias. It mirrors TotalCost;
-	// new consumers must pair TotalCost with Currency instead of assuming USD.
-	TotalCostUSD float64 `json:"total_cost_usd,omitempty"`
 	// CostComplete is false when mixed originals lack a shared display valuation.
 	CostComplete    bool   `json:"cost_complete"`
 	DisplayComplete bool   `json:"display_complete"`
@@ -245,9 +242,9 @@ func (s *runOutputSink) Emit(e event.Event) {
 			if cur := billing.NormalizeCurrency(q.Original.Currency); cur != "" {
 				s.originalCosts[cur] += q.Original.Float64()
 			}
-			if q.Selected != nil && (s.currency == "" || s.currency == q.LegacyCurrencyCode()) {
+			if q.Selected != nil && (s.currency == "" || s.currency == q.SelectedCurrencyCode()) {
 				s.cost += q.Selected.Float64()
-				s.currency = q.LegacyCurrencyCode()
+				s.currency = q.SelectedCurrencyCode()
 			} else if q.Selected != nil {
 				s.currency = ""
 				s.cost = 0
@@ -327,7 +324,7 @@ func (s *runOutputSink) Finalize(sessionID string, started time.Time, runErr err
 		aggQuote = &agg
 		if agg.Selected != nil {
 			s.cost = agg.Selected.Float64()
-			s.currency = agg.LegacyCurrencyCode()
+			s.currency = agg.SelectedCurrencyCode()
 		}
 		if agg.Selected == nil {
 			s.cost = 0
@@ -352,7 +349,6 @@ func (s *runOutputSink) Finalize(sessionID string, started time.Time, runErr err
 		SessionID:           sessionID,
 		TotalCost:           s.cost,
 		Currency:            s.currency,
-		TotalCostUSD:        s.cost,
 		CostComplete:        s.costComplete || (!s.sawQuote && s.currency != ""),
 		DisplayComplete:     s.displayComplete,
 		DisplayStatus:       s.displayStatus,

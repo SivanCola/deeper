@@ -55,8 +55,6 @@ type IdentityLifecycle interface {
 	UsesExclusiveSession() bool
 	BindFreshSession(context.Context, string) (session.SessionRef, error)
 	OpenSession(context.Context, session.SessionRef) (session.SessionRef, error)
-	ContinueLegacySession(context.Context, string, string) (session.SessionRef, error)
-	ContinuePrototypeSession(context.Context, string) (session.SessionRef, error)
 }
 
 // IdentityCreateLifecycle is the header-aware creation extension used by the
@@ -64,7 +62,6 @@ type IdentityLifecycle interface {
 // IdentityLifecycle.BindFreshSession while they do not own Workspace metadata.
 type IdentityCreateLifecycle interface {
 	BindFreshSessionWithOptions(context.Context, session.CreateOptions) (session.SessionRef, error)
-	ContinueLegacySessionWithOptions(context.Context, string, string, session.CreateOptions) (session.SessionRef, error)
 }
 
 // TurnControl covers driving a model turn and observing its run state: the
@@ -72,8 +69,6 @@ type IdentityCreateLifecycle interface {
 type TurnControl interface {
 	Submit(input string)
 	SubmitDisplay(display, input string)
-	SubmitFinalReadinessRecovery(display, input string)
-	SubmitDeliveryRecovery(display, input string)
 	SubmitInvocationDisplay(display, input string, invocations []InvocationRequest)
 	SubmitEditedDisplay(display, input, original string)
 	SubmitHTTP(input string)
@@ -83,7 +78,6 @@ type TurnControl interface {
 	SendWithRaw(input, raw string)
 	Run(ctx context.Context, input string) error
 	RunTurn(ctx context.Context, input string) error
-	RunFinalReadinessRecovery(ctx context.Context, input string) error
 	RunShell(command string)
 	Cancel()
 	Steer(text string)
@@ -103,8 +97,6 @@ type Approvals interface {
 	ResolveApproval(id string, allow bool, scope sandbox.ApprovalScope) error
 	ResolvePlanDecision(id string, action PlanDecisionAction) error
 	ResolvePlanDecisionWithFeedback(id string, action PlanDecisionAction, feedback string) error
-	// ResolveRecovery rejects retired Auto Guard actions with recovery_retired.
-	ResolveRecovery(id string, action agent.RecoveryAction, feedback string) error
 	AnswerMCPInteraction(id, action string, content map[string]any)
 	AnswerQuestion(id string, answers []event.AskAnswer)
 	AnswerQuestionChecked(id string, answers []event.AskAnswer) error
@@ -120,10 +112,6 @@ type Approvals interface {
 	ToolApprovalMode() string
 	SetToolApprovalMode(mode string)
 	AutoApproveTools() bool
-	SetAutoApproveTools(on bool)
-	Bypass() bool
-	SetBypass(on bool)
-	SetMode(plan, autoApproveTools bool)
 }
 
 // Goals covers the active-goal FSM and plan mode.
@@ -140,26 +128,13 @@ type Goals interface {
 	EditGoalDurable(objective string, maxGoalRounds *uint64) error
 	// SetGoalWithResearchMode is retained for deprecated CLI budget flags. The
 	// mode is translated at the boundary and is not stored in the Goal runtime.
-	SetGoalWithResearchMode(goal string, researchMode GoalResearchMode)
 	ResumeGoal() bool
 	PauseGoal() bool
 	GoalRuntime() GoalRuntimeView
-	GoalStrict(strict bool)
 	ClearGoal()
 	ResetPlannerSession()
 	PlanMode() bool
 	SetPlanMode(v bool)
-	// AgentPreset is the session role setting (standard|delivery), derived
-	// from the quality floor.
-	AgentPreset() string
-	// SetAgentPreset updates the role setting for subsequent turns without
-	// rebuilding the controller.
-	SetAgentPreset(preset string)
-	// QualityFloor is the session delivery floor (standard|delivery).
-	QualityFloor() string
-	// SetQualityFloor updates the session delivery floor for subsequent
-	// turns without rebuilding the controller.
-	SetQualityFloor(floor string) error
 }
 
 // SessionHistory covers checkpoint/rewind, branch/fork, and the log-restructuring

@@ -1051,20 +1051,6 @@
       ]
     }
   },
-  "CancelSessionPreparation": {
-    "domain": "desktop/session_preparation.go",
-    "owner": "App.CancelSessionPreparation",
-    "sources": [
-      "desktop/session_preparation.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CancelSessionPreparation",
-      "inputs": [
-        "operationID"
-      ]
-    }
-  },
   "CancelShellInstall": {
     "domain": "desktop/shell_support.go",
     "owner": "App.CancelShellInstall",
@@ -1237,20 +1223,6 @@
       ]
     }
   },
-  "CheckHistoricalSourceUpdate": {
-    "domain": "desktop/session_preparation.go",
-    "owner": "App.CheckHistoricalSourceUpdate",
-    "sources": [
-      "desktop/session_preparation.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CheckHistoricalSourceUpdate",
-      "inputs": [
-        "selector"
-      ]
-    }
-  },
   "CheckRemotePlatform": {
     "domain": "desktop/remote_platform.go",
     "owner": "App.CheckRemotePlatform",
@@ -1330,20 +1302,6 @@
       "resolver": "App.CleanRecoveryLineage",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "CleanRemoteLegacyWorkbenchData": {
-    "domain": "desktop/remote_legacy_cleanup.go",
-    "owner": "App.CleanRemoteLegacyWorkbenchData",
-    "sources": [
-      "desktop/remote_legacy_cleanup.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CleanRemoteLegacyWorkbenchData",
-      "inputs": [
-        "target"
       ]
     }
   },
@@ -1731,20 +1689,6 @@
       ]
     }
   },
-  "ControlHistoricalImport": {
-    "domain": "desktop/historical_import.go",
-    "owner": "App.ControlHistoricalImport",
-    "sources": [
-      "desktop/historical_import.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ControlHistoricalImport",
-      "inputs": [
-        "action"
-      ]
-    }
-  },
   "CopySessionTarget": {
     "domain": "desktop/session_workspace_api.go",
     "owner": "App.CopySessionTarget",
@@ -1788,20 +1732,6 @@
       "inputs": [
         "parentDir",
         "projectName"
-      ]
-    }
-  },
-  "CreateDeliveryWorktree": {
-    "domain": "desktop/delivery_worktree.go",
-    "owner": "App.CreateDeliveryWorktree",
-    "sources": [
-      "desktop/delivery_worktree.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CreateDeliveryWorktree",
-      "inputs": [
-        "workspaceRoot"
       ]
     }
   },
@@ -1995,20 +1925,6 @@
       ]
     }
   },
-  "DeleteRecoveryCopy": {
-    "domain": "desktop/app.go",
-    "owner": "App.DeleteRecoveryCopy",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.DeleteRecoveryCopy",
-      "inputs": [
-        "path"
-      ]
-    }
-  },
   "DeleteRemotePath": {
     "domain": "desktop/remote_app.go",
     "owner": "App.DeleteRemotePath",
@@ -2038,20 +1954,6 @@
         "hostID",
         "workspace",
         "name"
-      ]
-    }
-  },
-  "DeleteSession": {
-    "domain": "desktop/session_legacy_lifecycle_rpc.go",
-    "owner": "App.DeleteSession",
-    "sources": [
-      "desktop/session_legacy_lifecycle_rpc.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.DeleteSession",
-      "inputs": [
-        "path"
       ]
     }
   },
@@ -2109,20 +2011,6 @@
       "resolver": "App.DeleteTopic",
       "inputs": [
         "topicID"
-      ]
-    }
-  },
-  "DeliveryWorktreeAvailability": {
-    "domain": "desktop/delivery_worktree.go",
-    "owner": "App.DeliveryWorktreeAvailability",
-    "sources": [
-      "desktop/delivery_worktree.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.DeliveryWorktreeAvailability",
-      "inputs": [
-        "workspaceRoot"
       ]
     }
   },
@@ -2524,20 +2412,6 @@
       ]
     }
   },
-  "FetchAllProviderModels": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.FetchAllProviderModels",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.FetchAllProviderModels",
-      "inputs": [
-        "providers"
-      ]
-    }
-  },
   "FetchProviderModelCatalog": {
     "domain": "desktop/settings_app.go",
     "owner": "App.FetchProviderModelCatalog",
@@ -2564,20 +2438,6 @@
       "inputs": [
         "p",
         "key"
-      ]
-    }
-  },
-  "FetchProviderModels": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.FetchProviderModels",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.FetchProviderModels",
-      "inputs": [
-        "p"
       ]
     }
   },
@@ -2835,18 +2695,6 @@
       ]
     }
   },
-  "GetHistoricalImportStatus": {
-    "domain": "desktop/historical_import.go",
-    "owner": "App.GetHistoricalImportStatus",
-    "sources": [
-      "desktop/historical_import.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.GetHistoricalImportStatus",
-      "inputs": []
-    }
-  },
   "GetHistoryIndexStatus": {
     "domain": "desktop/history_catalog.go",
     "owner": "App.GetHistoryIndexStatus",
@@ -2871,18 +2719,6 @@
       "inputs": [
         "req"
       ]
-    }
-  },
-  "GetLegacyEmptySessionCleanupStatus": {
-    "domain": "desktop/legacy_empty_session_cleanup.go",
-    "owner": "App.GetLegacyEmptySessionCleanupStatus",
-    "sources": [
-      "desktop/legacy_empty_session_cleanup.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.GetLegacyEmptySessionCleanupStatus",
-      "inputs": []
     }
   },
   "GetManualSessionCreation": {
@@ -3096,32 +2932,6 @@
       "inputs": [
         "workspace"
       ]
-    }
-  },
-  "GetSessionPreparation": {
-    "domain": "desktop/session_preparation.go",
-    "owner": "App.GetSessionPreparation",
-    "sources": [
-      "desktop/session_preparation.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetSessionPreparation",
-      "inputs": [
-        "operationID"
-      ]
-    }
-  },
-  "GetSessionUpgradeStatus": {
-    "domain": "desktop/session_recovery_api.go",
-    "owner": "App.GetSessionUpgradeStatus",
-    "sources": [
-      "desktop/session_recovery_api.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.GetSessionUpgradeStatus",
-      "inputs": []
     }
   },
   "GetSessionVersionState": {
@@ -3554,20 +3364,6 @@
       ]
     }
   },
-  "ImportHistoricalSession": {
-    "domain": "desktop/historical_import.go",
-    "owner": "App.ImportHistoricalSession",
-    "sources": [
-      "desktop/historical_import.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ImportHistoricalSession",
-      "inputs": [
-        "id"
-      ]
-    }
-  },
   "ImportThemePack": {
     "domain": "desktop/theme_app.go",
     "owner": "App.ImportThemePack",
@@ -3840,18 +3636,6 @@
       ]
     }
   },
-  "ListHistoricalSessions": {
-    "domain": "desktop/historical_import.go",
-    "owner": "App.ListHistoricalSessions",
-    "sources": [
-      "desktop/historical_import.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ListHistoricalSessions",
-      "inputs": []
-    }
-  },
   "ListHistorySessions": {
     "domain": "desktop/history_read_snapshots.go",
     "owner": "App.ListHistorySessions",
@@ -3904,34 +3688,6 @@
       "resolver": "App.ListProjectTopics",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "ListProjectTree": {
-    "domain": "desktop/session_catalog_runtime.go",
-    "owner": "App.ListProjectTree",
-    "sources": [
-      "desktop/session_catalog_runtime.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ListProjectTree",
-      "inputs": []
-    }
-  },
-  "ListRecoveryEntries": {
-    "domain": "desktop/session_recovery_api.go",
-    "owner": "App.ListRecoveryEntries",
-    "sources": [
-      "desktop/session_recovery_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListRecoveryEntries",
-      "inputs": [
-        "query",
-        "cursor",
-        "limit"
       ]
     }
   },
@@ -4136,18 +3892,6 @@
         "cursor",
         "limit"
       ]
-    }
-  },
-  "ListTrashedSessions": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTrashedSessions",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ListTrashedSessions",
-      "inputs": []
     }
   },
   "ListWorkspaceSessions": {
@@ -4509,22 +4253,6 @@
       "resolver": "App.MetaForTab",
       "inputs": [
         "tabID"
-      ]
-    }
-  },
-  "MigrateDesktopPreferences": {
-    "domain": "desktop/settings_preferences.go",
-    "owner": "App.MigrateDesktopPreferences",
-    "sources": [
-      "desktop/settings_preferences.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.MigrateDesktopPreferences",
-      "inputs": [
-        "language",
-        "theme",
-        "style"
       ]
     }
   },
@@ -5245,35 +4973,6 @@
       ]
     }
   },
-  "PrepareHistoricalSourceVersion": {
-    "domain": "desktop/session_preparation.go",
-    "owner": "App.PrepareHistoricalSourceVersion",
-    "sources": [
-      "desktop/session_preparation.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.PrepareHistoricalSourceVersion",
-      "inputs": [
-        "sourceRef",
-        "version"
-      ]
-    }
-  },
-  "PrepareSession": {
-    "domain": "desktop/session_preparation.go",
-    "owner": "App.PrepareSession",
-    "sources": [
-      "desktop/session_preparation.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.PrepareSession",
-      "inputs": [
-        "selector"
-      ]
-    }
-  },
   "PrepareWorktreeMerge": {
     "domain": "desktop/delivery_worktree.go",
     "owner": "App.PrepareWorktreeMerge",
@@ -5285,20 +4984,6 @@
       "resolver": "App.PrepareWorktreeMerge",
       "inputs": [
         "tabID"
-      ]
-    }
-  },
-  "PreviewRecoveryEntry": {
-    "domain": "desktop/session_recovery_api.go",
-    "owner": "App.PreviewRecoveryEntry",
-    "sources": [
-      "desktop/session_recovery_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.PreviewRecoveryEntry",
-      "inputs": [
-        "id"
       ]
     }
   },
@@ -5358,34 +5043,6 @@
       "resolver": "App.PurgeCanonicalSession",
       "inputs": [
         "ref"
-      ]
-    }
-  },
-  "PurgeRecoveryCopy": {
-    "domain": "desktop/app.go",
-    "owner": "App.PurgeRecoveryCopy",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.PurgeRecoveryCopy",
-      "inputs": [
-        "path"
-      ]
-    }
-  },
-  "PurgeTrashedSession": {
-    "domain": "desktop/session_legacy_lifecycle_rpc.go",
-    "owner": "App.PurgeTrashedSession",
-    "sources": [
-      "desktop/session_legacy_lifecycle_rpc.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.PurgeTrashedSession",
-      "inputs": [
-        "path"
       ]
     }
   },
@@ -5768,32 +5425,6 @@
       "resolver": "App.RecordUIPerf",
       "inputs": [
         "signals"
-      ]
-    }
-  },
-  "RecoveryCheckpointEnabled": {
-    "domain": "desktop/app.go",
-    "owner": "App.RecoveryCheckpointEnabled",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.RecoveryCheckpointEnabled",
-      "inputs": []
-    }
-  },
-  "RecoveryCheckpointEnabledTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.RecoveryCheckpointEnabledTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.RecoveryCheckpointEnabledTab",
-      "inputs": [
-        "_"
       ]
     }
   },
@@ -6904,18 +6535,6 @@
       ]
     }
   },
-  "ResetThemePack": {
-    "domain": "desktop/theme_app.go",
-    "owner": "App.ResetThemePack",
-    "sources": [
-      "desktop/theme_app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ResetThemePack",
-      "inputs": []
-    }
-  },
   "ResizeTerminalForTab": {
     "domain": "desktop/terminal.go",
     "owner": "App.ResizeTerminalForTab",
@@ -7063,58 +6682,6 @@
       ]
     }
   },
-  "ResolveRecovery": {
-    "domain": "desktop/app.go",
-    "owner": "App.ResolveRecovery",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResolveRecovery",
-      "inputs": [
-        "id",
-        "action",
-        "feedback"
-      ]
-    }
-  },
-  "ResolveRecoveryTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.ResolveRecoveryTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResolveRecoveryTab",
-      "inputs": [
-        "tabID",
-        "id",
-        "action",
-        "feedback"
-      ]
-    }
-  },
-  "ResolveRecoveryTabForTurn": {
-    "domain": "desktop/decision_runtime_api.go",
-    "owner": "App.ResolveRecoveryTabForTurn",
-    "sources": [
-      "desktop/decision_runtime_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResolveRecoveryTabForTurn",
-      "inputs": [
-        "tabID",
-        "turnID",
-        "runtimeEpoch",
-        "id",
-        "action",
-        "feedback"
-      ]
-    }
-  },
   "ResolveReferencePathForTab": {
     "domain": "desktop/chat_file_reference.go",
     "owner": "App.ResolveReferencePathForTab",
@@ -7193,21 +6760,6 @@
         "hostID",
         "toolCallID",
         "remotePath"
-      ]
-    }
-  },
-  "ResolveToolRecoveryForTab": {
-    "domain": "desktop/tool_recovery.go",
-    "owner": "App.ResolveToolRecoveryForTab",
-    "sources": [
-      "desktop/tool_recovery.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResolveToolRecoveryForTab",
-      "inputs": [
-        "tabID",
-        "req"
       ]
     }
   },
@@ -7321,35 +6873,6 @@
         "tabID",
         "ref",
         "revision"
-      ]
-    }
-  },
-  "RestoreRecoveryEntry": {
-    "domain": "desktop/session_recovery_api.go",
-    "owner": "App.RestoreRecoveryEntry",
-    "sources": [
-      "desktop/session_recovery_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.RestoreRecoveryEntry",
-      "inputs": [
-        "id",
-        "operationID"
-      ]
-    }
-  },
-  "RestoreSession": {
-    "domain": "desktop/app.go",
-    "owner": "App.RestoreSession",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.RestoreSession",
-      "inputs": [
-        "path"
       ]
     }
   },
@@ -7524,18 +7047,6 @@
         "tabID",
         "id"
       ]
-    }
-  },
-  "RetryLegacyEmptySessionCleanup": {
-    "domain": "desktop/legacy_empty_session_cleanup.go",
-    "owner": "App.RetryLegacyEmptySessionCleanup",
-    "sources": [
-      "desktop/legacy_empty_session_cleanup.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.RetryLegacyEmptySessionCleanup",
-      "inputs": []
     }
   },
   "RetryManualSessionCreation": {
@@ -8324,18 +7835,6 @@
       ]
     }
   },
-  "ScanRemoteLegacyWorkbenchData": {
-    "domain": "desktop/remote_legacy_cleanup.go",
-    "owner": "App.ScanRemoteLegacyWorkbenchData",
-    "sources": [
-      "desktop/remote_legacy_cleanup.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ScanRemoteLegacyWorkbenchData",
-      "inputs": []
-    }
-  },
   "ScanSSHConfig": {
     "domain": "desktop/remote_app.go",
     "owner": "App.ScanSSHConfig",
@@ -8403,23 +7902,6 @@
       "resolver": "App.SearchHistoryContent",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "SearchHistoryContentForTarget": {
-    "domain": "desktop/session_target_history_legacy.go",
-    "owner": "App.SearchHistoryContentForTarget",
-    "sources": [
-      "desktop/session_target_history_legacy.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SearchHistoryContentForTarget",
-      "inputs": [
-        "selector",
-        "query",
-        "cursor",
-        "limit"
       ]
     }
   },
@@ -8674,66 +8156,7 @@
       "resolver": "App.SetAgentParams",
       "inputs": [
         "temperature",
-        "maxSteps",
-        "plannerMaxSteps",
         "systemPrompt"
-      ]
-    }
-  },
-  "SetAgentPreset": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetAgentPreset",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetAgentPreset",
-      "inputs": [
-        "preset"
-      ]
-    }
-  },
-  "SetAgentPresetForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetAgentPresetForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetAgentPresetForTab",
-      "inputs": [
-        "tabID",
-        "preset"
-      ]
-    }
-  },
-  "SetAutoApproveTools": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetAutoApproveTools",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetAutoApproveTools",
-      "inputs": [
-        "on"
-      ]
-    }
-  },
-  "SetAutoPlan": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.SetAutoPlan",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetAutoPlan",
-      "inputs": [
-        "mode"
       ]
     }
   },
@@ -8748,20 +8171,6 @@
       "resolver": "App.SetBotConnectionToolApprovalMode",
       "inputs": [
         "connID",
-        "mode"
-      ]
-    }
-  },
-  "SetBotDingtalkToolApprovalMode": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.SetBotDingtalkToolApprovalMode",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetBotDingtalkToolApprovalMode",
-      "inputs": [
         "mode"
       ]
     }
@@ -8792,20 +8201,6 @@
       "resolver": "App.SetBotSettings",
       "inputs": [
         "b"
-      ]
-    }
-  },
-  "SetBypass": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetBypass",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetBypass",
-      "inputs": [
-        "on"
       ]
     }
   },
@@ -8881,20 +8276,6 @@
       "inputs": [
         "name",
         "value"
-      ]
-    }
-  },
-  "SetDefaultAutoRecoveryCheckpoint": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.SetDefaultAutoRecoveryCheckpoint",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetDefaultAutoRecoveryCheckpoint",
-      "inputs": [
-        "_"
       ]
     }
   },
@@ -9053,20 +8434,6 @@
       ]
     }
   },
-  "SetDesktopUpdateChannel": {
-    "domain": "desktop/settings_preferences.go",
-    "owner": "App.SetDesktopUpdateChannel",
-    "sources": [
-      "desktop/settings_preferences.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetDesktopUpdateChannel",
-      "inputs": [
-        "channel"
-      ]
-    }
-  },
   "SetDesktopZoomFactor": {
     "domain": "desktop/zoom_factor.go",
     "owner": "App.SetDesktopZoomFactor",
@@ -9078,20 +8445,6 @@
       "resolver": "App.SetDesktopZoomFactor",
       "inputs": [
         "factor"
-      ]
-    }
-  },
-  "SetDisplayMode": {
-    "domain": "desktop/reasoning_display_app.go",
-    "owner": "App.SetDisplayMode",
-    "sources": [
-      "desktop/reasoning_display_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetDisplayMode",
-      "inputs": [
-        "arg0"
       ]
     }
   },
@@ -9121,20 +8474,6 @@
       "inputs": [
         "tabID",
         "level"
-      ]
-    }
-  },
-  "SetExpandThinking": {
-    "domain": "desktop/reasoning_display_app.go",
-    "owner": "App.SetExpandThinking",
-    "sources": [
-      "desktop/reasoning_display_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetExpandThinking",
-      "inputs": [
-        "arg0"
       ]
     }
   },
@@ -9194,21 +8533,6 @@
       "inputs": [
         "name",
         "enabled"
-      ]
-    }
-  },
-  "SetMCPServerTier": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetMCPServerTier",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetMCPServerTier",
-      "inputs": [
-        "name",
-        "tier"
       ]
     }
   },
@@ -9474,49 +8798,6 @@
       ]
     }
   },
-  "SetQualityFloor": {
-    "domain": "desktop/quality_floor.go",
-    "owner": "App.SetQualityFloor",
-    "sources": [
-      "desktop/quality_floor.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetQualityFloor",
-      "inputs": [
-        "floor"
-      ]
-    }
-  },
-  "SetQualityFloorForTab": {
-    "domain": "desktop/quality_floor.go",
-    "owner": "App.SetQualityFloorForTab",
-    "sources": [
-      "desktop/quality_floor.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetQualityFloorForTab",
-      "inputs": [
-        "tabID",
-        "floor"
-      ]
-    }
-  },
-  "SetReasoningDisplayMode": {
-    "domain": "desktop/reasoning_display_app.go",
-    "owner": "App.SetReasoningDisplayMode",
-    "sources": [
-      "desktop/reasoning_display_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetReasoningDisplayMode",
-      "inputs": [
-        "mode"
-      ]
-    }
-  },
   "SetReasoningLanguage": {
     "domain": "desktop/settings_app.go",
     "owner": "App.SetReasoningLanguage",
@@ -9528,35 +8809,6 @@
       "resolver": "App.SetReasoningLanguage",
       "inputs": [
         "lang"
-      ]
-    }
-  },
-  "SetRecoveryCheckpointEnabled": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetRecoveryCheckpointEnabled",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetRecoveryCheckpointEnabled",
-      "inputs": [
-        "_"
-      ]
-    }
-  },
-  "SetRecoveryCheckpointEnabledTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetRecoveryCheckpointEnabledTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetRecoveryCheckpointEnabledTab",
-      "inputs": [
-        "_",
-        "_"
       ]
     }
   },
@@ -9667,21 +8919,6 @@
       "inputs": [
         "tabID",
         "on"
-      ]
-    }
-  },
-  "SetRemoteTabQualityFloor": {
-    "domain": "desktop/remote_tab.go",
-    "owner": "App.SetRemoteTabQualityFloor",
-    "sources": [
-      "desktop/remote_tab.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetRemoteTabQualityFloor",
-      "inputs": [
-        "tabID",
-        "floor"
       ]
     }
   },
@@ -9905,35 +9142,6 @@
       ]
     }
   },
-  "SetTokenMode": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetTokenMode",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetTokenMode",
-      "inputs": [
-        "mode"
-      ]
-    }
-  },
-  "SetTokenModeForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetTokenModeForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetTokenModeForTab",
-      "inputs": [
-        "tabID",
-        "mode"
-      ]
-    }
-  },
   "SetToolApprovalMode": {
     "domain": "desktop/app.go",
     "owner": "App.SetToolApprovalMode",
@@ -10121,20 +9329,6 @@
       "inputs": [
         "provider",
         "domain"
-      ]
-    }
-  },
-  "StartHistoricalImport": {
-    "domain": "desktop/historical_import.go",
-    "owner": "App.StartHistoricalImport",
-    "sources": [
-      "desktop/historical_import.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.StartHistoricalImport",
-      "inputs": [
-        "ids"
       ]
     }
   },
@@ -10380,39 +9574,6 @@
       "resolver": "App.Submit",
       "inputs": [
         "input"
-      ]
-    }
-  },
-  "SubmitDeliveryRecoveryToTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SubmitDeliveryRecoveryToTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitDeliveryRecoveryToTab",
-      "inputs": [
-        "tabID",
-        "display",
-        "input"
-      ]
-    }
-  },
-  "SubmitDeliveryRecoveryToTabWithID": {
-    "domain": "desktop/turn_submission_app.go",
-    "owner": "App.SubmitDeliveryRecoveryToTabWithID",
-    "sources": [
-      "desktop/turn_submission_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitDeliveryRecoveryToTabWithID",
-      "inputs": [
-        "tabID",
-        "display",
-        "input",
-        "submissionID"
       ]
     }
   },
@@ -11229,20 +10390,6 @@
         "name",
         "scope",
         "input"
-      ]
-    }
-  },
-  "UpgradeDeepSeekProviderAccess": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.UpgradeDeepSeekProviderAccess",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.UpgradeDeepSeekProviderAccess",
-      "inputs": [
-        "name"
       ]
     }
   },

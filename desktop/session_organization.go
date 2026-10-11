@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -43,8 +42,7 @@ func organizationSnapshot(o workspacestate.Organization, applied bool) SessionOr
 	return SessionOrganizationSnapshot{Revision: o.Revision, Applied: applied, ManualOrderEnabled: o.ManualOrderEnabled, Order: append([]string{}, o.Order...), Groups: groups}
 }
 
-// Import known sources incrementally. Imported includes explicit ungrouped
-// choices, so later discoveries never reinstate a topic-level preference.
+// Keep organization membership aligned with the current workspace registry.
 func (a *App) ensureSessionOrganization(scope, root string) (string, workspacestate.Organization, error) {
 	return a.ensureSessionOrganizationSources(scope, root, false)
 }
@@ -54,12 +52,16 @@ func (a *App) ensureSessionOrganizationSources(scope, root string, mutation bool
 	if err != nil {
 		return "", workspacestate.Organization{}, err
 	}
+	id, err := a.resolveDesktopWorkspaceID(a.bootContext(), scope, root)
+	if err != nil {
+		return "", workspacestate.Organization{}, err
+	}
 	state, err := a.workspaceRegistry().LoadProjection(a.bootContext())
 	if err != nil {
 		return "", workspacestate.Organization{}, err
 	}
-	id, found := workspacestate.FindWorkspace(state, desktopWorkspaceRoot(scope, root))
-	if !found {
+	w, exists := state.Workspaces[id]
+	if !exists {
 		id, err = a.ensureDesktopWorkspace(a.bootContext(), scope, root)
 		if err != nil {
 			return "", workspacestate.Organization{}, err
@@ -68,70 +70,34 @@ func (a *App) ensureSessionOrganizationSources(scope, root string, mutation bool
 		if err != nil {
 			return "", workspacestate.Organization{}, err
 		}
+		w = state.Workspaces[id]
 	}
-	workspace := state.Workspaces[id]
-	projects := loadProjectsFile()
-	importKey, cacheable := a.organizationImportKey(scope, root, state, id, projects)
-	if cacheable && !mutation {
-		if organization, ok := a.desktopSessions.organizations.get(importKey); ok {
-			return id, organization, nil
+	update := func(o *workspacestate.Organization) error {
+		if o.Imported == nil {
+			o.Imported = map[string]bool{}
 		}
-	}
-	legacy := legacyOrganizationPreferences(projects, scope, root)
-	nodes := []ProjectNode{}
-	// Registry identities are already loaded; retain them for transactional
-	// fork/group attachment without consulting any session file or catalog page.
-	aliases := workspaceSourceAliases(state, id)
-	for _, sid := range workspace.SessionIDs {
-		p := state.Presentation[sid]
-		ref := session.SessionRef{HostID: localDesktopHostID, SessionID: sid}
-		nodes = append(nodes, ProjectNode{Session: &ref, TopicID: p.TopicID, SessionPath: sessionRoute(sid), IdentityAliases: aliases[sid]})
-	}
-	// Default organization has no source-dependent preferences to import.
-	// Do not enumerate every history page just to establish an empty group and
-	// automatic ordering projection on the first sidebar request.
-	if mutation || legacy.ManualSessionOrder || legacy.ManualTopicOrder || len(legacy.Groups) > 0 {
-		req := ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Limit: 200}
-		for {
-			page, e := a.listProjectTopics(req)
-			if e != nil {
-				return "", workspacestate.Organization{}, e
+		for _, sid := range w.SessionIDs {
+			ref := session.SessionRef{HostID: localDesktopHostID, SessionID: sid}
+			key := projectNodeSessionKey(ProjectNode{Session: &ref})
+			o.Imported[key] = true
+			if !slices.Contains(o.Order, key) {
+				o.Order = append(o.Order, key)
 			}
-			for _, node := range page.Items {
-				nodes = append(nodes, expandSessionSourceRows(node)...)
-			}
-			if page.NextCursor == "" {
-				break
-			}
-			if page.NextCursor == req.Cursor {
-				return "", workspacestate.Organization{}, fmt.Errorf("legacy cursor did not advance")
-			}
-			req.Cursor = page.NextCursor
 		}
-	}
-	importSources := func(o *workspacestate.Organization) error {
-		projectLegacyOrganization(o, nodes, legacy)
 		return nil
 	}
-	// A settled import is a read. Do not enter the cross-process write lock or
-	// serialize the whole registry merely to discover that nothing changed.
-	if workspace.Organization != nil {
-		candidate := workspace.Organization.Clone()
-		if err := importSources(&candidate); err != nil {
-			return "", workspacestate.Organization{}, err
-		}
-		if reflect.DeepEqual(candidate, *workspace.Organization) {
-			if cacheable {
-				a.desktopSessions.organizations.put(importKey, candidate)
-			}
-			return id, candidate, nil
+	if w.Organization != nil {
+		next := w.Organization.Clone()
+		_ = update(&next)
+		if reflect.DeepEqual(next, *w.Organization) {
+			return id, next, nil
 		}
 	}
-	org, _, err := a.workspaceRegistry().UpdateOrganization(a.bootContext(), id, nil, importSources)
-	return id, org, err
+	o, _, err := a.workspaceRegistry().UpdateOrganization(a.bootContext(), id, nil, update)
+	return id, o, err
 }
 
-func legacyOrganizationPreferences(projects desktopProjectFile, scope, root string) desktopProject {
+func projectShellPreferences(projects desktopProjectFile, scope, root string) desktopProject {
 	if scope == "project" {
 		// Most callers use the persisted spelling; avoid filesystem comparisons
 		// unless this request actually uses an alias.
@@ -147,57 +113,6 @@ func legacyOrganizationPreferences(projects desktopProjectFile, scope, root stri
 	}
 	return desktopProject{Groups: projects.GlobalGroups, SessionOrder: projects.GlobalSessionOrder,
 		Topics: projects.GlobalTopics, ManualSessionOrder: projects.GlobalManualSessionOrder, ManualTopicOrder: projects.GlobalManualTopicOrder}
-}
-
-// projectLegacyOrganization shares the import semantics with the writer, but
-// changes only the caller-owned organization. Snapshot callers supply already
-// materialized nodes and never perform a second discovery pass or persist it.
-func projectLegacyOrganization(o *workspacestate.Organization, nodes []ProjectNode, legacy desktopProject) {
-	if o.Imported == nil {
-		o.Imported = map[string]bool{}
-	}
-	canonicalByAlias := map[string]string{}
-	for _, node := range nodes {
-		if node.Session != nil {
-			for _, alias := range node.IdentityAliases {
-				canonicalByAlias[alias] = projectNodeSessionKey(node)
-			}
-		}
-	}
-	initial := o.MigrationVersion == 0
-	manual := legacy.ManualSessionOrder || legacy.ManualTopicOrder
-	if initial {
-		o.ManualOrderEnabled = manual
-		for _, group := range legacy.Groups {
-			o.Groups = append(o.Groups, workspacestate.OrganizationGroup{ID: group.ID, Title: group.Title, Members: []string{}})
-		}
-	}
-	importOrganizationMembers(o, nodes, legacy.Groups, canonicalByAlias)
-	if initial {
-		importOrganizationOrder(o, nodes, legacy.SessionOrder, legacy.Topics, canonicalByAlias, manual)
-	}
-	o.MigrationVersion = 1
-}
-
-func projectedShellOrganization(workspace workspacestate.Workspace, state workspacestate.State, sources []ProjectNode, legacy desktopProject) workspacestate.Organization {
-	org := workspacestate.Organization{}
-	if workspace.Organization != nil {
-		org = workspace.Organization.Clone()
-	}
-	// Shells have no group filter. Without an old manual order there is
-	// nothing to project, so ordinary refreshes do not rebuild import members.
-	if org.MigrationVersion != 0 || !legacy.ManualSessionOrder && !legacy.ManualTopicOrder {
-		return org
-	}
-	aliases := workspaceSourceAliases(state, workspace.ID)
-	nodes := make([]ProjectNode, 0, len(workspace.SessionIDs)+len(sources))
-	for _, id := range workspace.SessionIDs {
-		ref := session.SessionRef{HostID: localDesktopHostID, SessionID: id}
-		nodes = append(nodes, ProjectNode{Session: &ref, TopicID: state.Presentation[id].TopicID, IdentityAliases: aliases[id]})
-	}
-	nodes = append(nodes, sources...)
-	projectLegacyOrganization(&org, nodes, legacy)
-	return org
 }
 
 func workspaceSourceAliases(state workspacestate.State, workspaceID string) map[string][]string {
@@ -219,21 +134,7 @@ func workspaceSourceAliases(state workspacestate.State, workspaceID string) map[
 			result[id] = append(result[id], "topic\x00"+topic)
 		}
 	}
-	for _, m := range state.SourceMappings {
-		if m.WorkspaceID != workspaceID {
-			continue
-		}
-		for _, key := range state.SourceKeys(m.SourceKey) {
-			result[m.SessionID] = append(result[m.SessionID], "source\x00local\x00"+key)
-		}
-		if sourceMappingHasPathAlias(m) {
-			// Lazy catalog pages use a path source key even for a single-head
-			// DAG. Include both displayed identities in runtime merges and
-			// lifecycle receipts, without claiming independent sibling heads.
-			result[m.SessionID] = append(result[m.SessionID], "path\x00"+m.Path,
-				"source\x00local\x00"+desktopSourceKey(m.Path, ""))
-		}
-	}
+
 	for id, aliases := range result {
 		slices.Sort(aliases)
 		result[id] = slices.Compact(aliases)
@@ -259,7 +160,6 @@ func (a *App) UpdateSessionOrganization(workspace SessionOrganizationWorkspace, 
 	}
 	// Group edits address either a group or one explicit source. Only moving
 	// in a manual order needs the complete relative order of other sources.
-	// Old source-dependent preferences still take their normal import path.
 	id, current, err := a.ensureSessionOrganizationSources(workspace.Scope, workspace.WorkspaceRoot, mutation.Kind == "move")
 	if err != nil {
 		return SessionOrganizationSnapshot{}, err
@@ -290,22 +190,10 @@ func (a *App) UpdateSessionOrganization(workspace SessionOrganizationWorkspace, 
 		if target.SessionRef.SessionID != "" {
 			ref = &target.SessionRef
 		} else {
-			if _, err := os.Stat(target.SessionPath); err != nil {
-				return "", newSessionOperationError("target_not_found", "The historical source is unavailable.")
-			}
-			// Both path-only compatibility selectors and explicit source refs
-			// must name the same physical member used by the sidebar.
-			head := ""
-			if target.Source != nil {
-				head = target.Source.HeadID
-			} else if selector.Source != nil {
-				head = selector.Source.HeadID
-			}
-			target.Source = &SessionSourceRef{HostID: localDesktopHostID, Path: target.SessionPath,
-				HeadID: head, SourceKey: desktopSourceKey(target.SessionPath, head)}
+			return "", workspacestate.ErrMutationConflict
 		}
 		resolved = append(resolved, target)
-		return projectNodeSessionKey(ProjectNode{Session: ref, SessionPath: target.SessionPath, Source: target.Source}), nil
+		return projectNodeSessionKey(ProjectNode{Session: ref, SessionPath: target.SessionPath}), nil
 	}
 	key, anchor := "", ""
 	if mutation.Kind == "move" || mutation.Kind == "set-group" {
@@ -344,9 +232,7 @@ func (a *App) shownSessionOrder(scope, root, sortMode string) ([]string, error) 
 			return nil, err
 		}
 		for _, node := range page.Items {
-			for _, row := range expandSessionSourceRows(node) {
-				keys = append(keys, projectNodeSessionKey(row))
-			}
+			keys = append(keys, projectNodeSessionKey(node))
 		}
 		if page.NextCursor == "" {
 			return keys, nil
@@ -388,13 +274,7 @@ func seedManualOrder(o *workspacestate.Organization, shown []string) {
 func applyResolvedOrganizationMutation(state *workspacestate.State, workspaceID string, o *workspacestate.Organization, resolved []SessionTarget, mutation SessionOrganizationMutation, key, anchor string) error {
 	for _, target := range resolved {
 		if target.SessionRef.SessionID == "" {
-			if target.Source == nil || target.Source.SourceKey == "" {
-				return workspacestate.ErrMutationConflict
-			}
-			if _, adopted, err := state.ResolveSource(target.Source.SourceKey); adopted || err != nil {
-				return workspacestate.ErrMutationConflict
-			}
-			continue
+			return workspacestate.ErrMutationConflict
 		}
 		current := state.SessionStates[target.SessionRef.SessionID]
 		if current.Lifecycle != workspacestate.Active || current.Generation != target.LifecycleGeneration || !slices.Contains(state.Workspaces[workspaceID].SessionIDs, target.SessionRef.SessionID) {
@@ -426,11 +306,7 @@ func (a *App) replaceSessionOrganizationGroups(ctx context.Context, scope, root 
 	if err != nil {
 		return ProjectGroupsSnapshot{}, err
 	}
-	legacy, err := a.unadoptedLegacyTopics(ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Limit: 200}, map[string]bool{}, map[string]bool{})
-	if err != nil {
-		return ProjectGroupsSnapshot{}, err
-	}
-	nodes := append([]ProjectNode{}, legacy.Items...)
+	nodes := []ProjectNode{}
 	for _, sid := range state.Workspaces[id].SessionIDs {
 		if state.SessionStates[sid].Lifecycle != workspacestate.Active {
 			continue
@@ -556,77 +432,4 @@ func applyOrganizationMutation(o *workspacestate.Organization, mutation SessionO
 		return fmt.Errorf("unsupported organization mutation")
 	}
 	return nil
-}
-
-func importOrganizationMembers(o *workspacestate.Organization, nodes []ProjectNode, groups []desktopGroup, canonicalByAlias map[string]string) {
-	ordered := make(map[string]bool, len(o.Order)+len(nodes))
-	for _, key := range o.Order {
-		ordered[key] = true
-	}
-	for _, n := range nodes {
-		if n.Session == nil && n.SessionPath == "" {
-			continue
-		}
-		key := projectNodeSessionKey(n)
-		if _, adopted := canonicalByAlias[key]; adopted {
-			continue
-		}
-		if o.Imported[key] {
-			continue
-		}
-		for _, old := range groups {
-			included := desktopGroupContainsNode(old, n)
-			for _, alias := range n.IdentityAliases {
-				if slices.Contains(old.ExcludedSessionKeys, alias) {
-					included = false
-					break
-				}
-				if slices.Contains(old.SessionKeys, alias) {
-					included = true
-				}
-			}
-			if included {
-				for i := range o.Groups {
-					if o.Groups[i].ID == old.ID {
-						o.Groups[i].Members = append(o.Groups[i].Members, key)
-						break
-					}
-				}
-			}
-		}
-		if !ordered[key] {
-			o.Order = append(o.Order, key)
-			ordered[key] = true
-		}
-		o.Imported[key] = true
-	}
-}
-
-func importOrganizationOrder(o *workspacestate.Organization, nodes []ProjectNode, order, topicOrder []string, canonicalByAlias map[string]string, manual bool) {
-	if manual && len(order) == 0 {
-		for _, topic := range topicOrder {
-			for _, node := range nodes {
-				if node.TopicID == topic {
-					order = append(order, projectNodeSessionKey(node))
-				}
-			}
-		}
-	}
-	if len(order) > 0 {
-		next := []string{}
-		for _, key := range order {
-			if canonical, ok := canonicalByAlias[key]; ok {
-				key = canonical
-			}
-			if o.Imported[key] && !slices.Contains(next, key) {
-				next = append(next, key)
-			}
-		}
-		for _, key := range o.Order {
-			if !slices.Contains(next, key) {
-				next = append(next, key)
-			}
-		}
-		o.Order = next
-	}
 }

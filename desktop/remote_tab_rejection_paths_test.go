@@ -13,7 +13,7 @@ func TestRemoteResumeFailurePathsPublishOneRestoredSnapshot(t *testing.T) {
 	for _, kind := range []string{"http", "busy", "listing", "notfound", "transport"} {
 		t.Run(kind, func(t *testing.T) {
 			isolateDesktopUserDirs(t)
-			const oldPath, targetPath = "/sessions/old.jsonl", "/sessions/target.jsonl"
+			const oldPath, targetPath = "session-id:old", "session-id:target"
 			client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				code, body := http.StatusConflict, "rejected"
 				if kind == "busy" {
@@ -29,7 +29,7 @@ func TestRemoteResumeFailurePathsPublishOneRestoredSnapshot(t *testing.T) {
 					if req.URL.Path == "/resume" {
 						return nil, errors.New("response lost")
 					}
-					code, body = http.StatusOK, `[{"name":"old","path":"/sessions/old.jsonl","title":"Old","current":true}]`
+					code, body = http.StatusOK, `[{"name":"old","path":"session-id:old","title":"Old","current":true}]`
 				}
 				return &http.Response{StatusCode: code, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
 			})}
@@ -70,9 +70,9 @@ func TestRemoteResumeFailurePathsPublishOneRestoredSnapshot(t *testing.T) {
 
 func TestRemoteRejectedResumePreservesProbedAuthoritativeSelection(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	const previousPath = "/sessions/previous.jsonl"
-	const targetPath = "/sessions/target.jsonl"
-	const authoritativePath = "/sessions/authoritative.jsonl"
+	const previousPath = "session-id:previous"
+	const targetPath = "session-id:target"
+	const authoritativePath = "session-id:authoritative"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7, selectionRevision: 11,

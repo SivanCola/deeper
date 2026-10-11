@@ -321,24 +321,3 @@ func TestPinnedContextEndToEndProviderRequest(t *testing.T) {
 		t.Fatalf("desktop history user rows = %d, want 2: %+v", users, rows)
 	}
 }
-
-func TestLegacyTabPinnedFilesMigrateToSessionSidecar(t *testing.T) {
-	sessionPath := filepath.Join(t.TempDir(), "session.jsonl")
-	legacy := []string{"README.md", "docs/api.md"}
-
-	state, err := loadOrMigratePinnedContextState(sessionPath, legacy)
-	if err != nil {
-		t.Fatalf("migrate legacy pins: %v", err)
-	}
-	if strings.Join(state.Files, ",") != strings.Join(legacy, ",") {
-		t.Fatalf("migrated files = %v, want %v", state.Files, legacy)
-	}
-
-	loaded, err := loadPinnedContextState(sessionPath)
-	if err != nil {
-		t.Fatalf("load migrated sidecar: %v", err)
-	}
-	if strings.Join(loaded.Files, ",") != strings.Join(legacy, ",") {
-		t.Fatalf("sidecar files = %v, want %v", loaded.Files, legacy)
-	}
-}

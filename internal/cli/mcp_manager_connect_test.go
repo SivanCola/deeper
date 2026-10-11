@@ -11,10 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
-	"deepzora/internal/plugin"
 )
 
 // gatedMCPServer answers MCP over HTTP but holds initialize until release is
@@ -180,46 +178,5 @@ func TestMCPConnectFinishingAfterRemovalIsDropped(t *testing.T) {
 	}
 	if model.mcpConnecting["docs"] {
 		t.Fatal("in-flight marker survived the dropped connect")
-	}
-}
-
-func TestApplyMCPModeRecordsPluginConnectFailure(t *testing.T) {
-	isolateUserConfig(t)
-	t.Setenv("PATH", "")
-	cfg := config.Default()
-	cfg.Plugins = []config.PluginEntry{{Name: "broken", Command: "definitely-missing-deepzora-mcp", Tier: "background"}}
-	if err := cfg.SaveTo("deepzora.toml"); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	m := newTestChatTUI()
-	m.ctrl = newOwnedTestController(t, control.Options{Host: plugin.NewHost()})
-	defer m.ctrl.Close()
-	m.host = m.ctrl.Host()
-	m.mcp = &mcpManager{
-		stage: mcpStageMode,
-		name:  "broken",
-		snapshot: mcpSnapshot{configPath: "deepzora.toml", servers: []mcpServerView{{
-			Name: "broken", Transport: "stdio", Status: "deferred", Configured: true, Tier: "background",
-		}}},
-	}
-
-	next, cmd := m.applyMCPMode("background")
-	if cmd == nil {
-		t.Fatal("mode change started no connect")
-	}
-	m = next.(chatTUI)
-	m.handleMCPConnectDone(cmd().(mcpConnectDoneMsg))
-
-	failures := m.ctrl.Host().Failures()
-	if len(failures) != 1 || failures[0].Name != "broken" {
-		t.Fatalf("Host.Failures() = %+v, want broken failure", failures)
-	}
-	v, ok := m.mcp.selectedServer()
-	if !ok {
-		t.Fatal("selected server missing after refresh")
-	}
-	if v.Status != "failed" {
-		t.Fatalf("server status = %q, want failed; server = %+v", v.Status, v)
 	}
 }

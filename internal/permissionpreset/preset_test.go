@@ -2,9 +2,9 @@ package permissionpreset
 
 import "testing"
 
-func TestLegacyMigrationIsConservative(t *testing.T) {
+func TestOnlyCurrentPresetsAreRecognized(t *testing.T) {
 	tests := map[string]Preset{
-		"ask": ReadOnly, "auto": WorkspaceWrite, "yolo": WorkspaceWrite,
+		"ask": ReadOnly, "auto": ReadOnly, "yolo": ReadOnly,
 		"read-only": ReadOnly, "workspace-write": WorkspaceWrite,
 		"danger-full-access": DangerFullAccess,
 		"dontAsk":            ReadOnly, "unknown": ReadOnly,

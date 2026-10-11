@@ -110,8 +110,9 @@ func TestWorkspaceIdentityHelpersPreserveCanonicalRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	ancestors := ancestorDirectories(owner.compatibility)
-	if len(ancestors) == 0 || ancestors[len(ancestors)-1] != owner.compatibility {
-		t.Fatalf("ancestor chain = %q, want compatibility root %q last", ancestors, owner.compatibility)
+	wantAncestor := compatibilityIdentityPath(owner.compatibility)
+	if len(ancestors) == 0 || ancestors[len(ancestors)-1] != wantAncestor {
+		t.Fatalf("ancestor chain = %q, want normalized physical root %q last", ancestors, wantAncestor)
 	}
 	if got := workspaceLockPath(owner.lockDir, owner.compatibility); got != owner.lockPath {
 		t.Fatalf("compatibility root lock = %q, want owner lock %q", got, owner.lockPath)

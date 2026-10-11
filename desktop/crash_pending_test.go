@@ -89,7 +89,7 @@ func TestWritePendingReportQueuesWithoutOverwritingExistingCrash(t *testing.T) {
 	hang.Source = "native.watchdog"
 	hang.Label = "mac.main_thread.hang"
 	hang.Message = "hang"
-	if !writePendingReport(hang, false) {
+	if !writePendingReport(hang) {
 		t.Fatal("writePendingReport should enqueue the second report")
 	}
 	after, ok := readPending(t)
@@ -121,7 +121,7 @@ func TestWritePendingReportQueueIsBoundedUnderConcurrentWriters(t *testing.T) {
 			report.Message = strings.Repeat("hang", 1024)
 			ready.Done()
 			<-start
-			if writePendingReport(report, false) {
+			if writePendingReport(report) {
 				successes.Add(1)
 			}
 		})
@@ -234,7 +234,7 @@ func TestPendingCrashDoesNotPersistInstallID(t *testing.T) {
 	t.Cleanup(removeAllPendingCrashes)
 	report := baseCrashReport("crash")
 	report.Message = "pending"
-	if !writePendingReport(report, true) {
+	if !writePendingReport(report) {
 		t.Fatal("writePendingReport failed")
 	}
 	paths := pendingCrashQueuePaths()
@@ -272,8 +272,8 @@ func TestFlushPendingCrashDeduplicatesEventIDWithoutCollapsingSimilarEvents(t *t
 	report.TopFrame = "main.go:12"
 	report.Message = "same crash"
 	report.EventID = "11111111111111111111111111111111"
-	firstQueued := writePendingReport(report, false)
-	secondQueued := writePendingReport(report, false)
+	firstQueued := writePendingReport(report)
+	secondQueued := writePendingReport(report)
 	if !firstQueued || !secondQueued {
 		t.Fatal("failed to queue duplicate reports")
 	}
@@ -283,7 +283,7 @@ func TestFlushPendingCrashDeduplicatesEventIDWithoutCollapsingSimilarEvents(t *t
 	}
 
 	report.EventID = "22222222222222222222222222222222"
-	if !writePendingReport(report, false) {
+	if !writePendingReport(report) {
 		t.Fatal("failed to queue distinct similar event")
 	}
 	NewApp().flushPendingCrash()
@@ -367,50 +367,6 @@ func TestFlushPendingCrashFailureDoesNotRecordOrDelete(t *testing.T) {
 	}
 }
 
-func TestFlushPendingCrashBackfillsOldIdentityAndPreservesFutureSchema(t *testing.T) {
-	removeAllPendingCrashes()
-	oldVersion, oldEndpoint := version, crashEndpoint
-	t.Cleanup(func() {
-		version, crashEndpoint = oldVersion, oldEndpoint
-		removeAllPendingCrashes()
-	})
-	version = "v9.9.9"
-	if err := os.MkdirAll(pendingCrashDir(), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	oldPath := filepath.Join(pendingCrashDir(), "001-old.json")
-	futurePath := filepath.Join(pendingCrashDir(), "002-future.json")
-	oldReport := `{"kind":"crash","version":"v9.9.9","os":"linux","arch":"amd64","message":"old","schemaVersion":2,"source":"go","errorType":"panic","topFrame":"main.go:12"}`
-	futureReport := `{"kind":"crash","version":"v10.0.0","os":"linux","arch":"amd64","message":"future","schemaVersion":99,"futureField":"keep"}`
-	if err := os.WriteFile(oldPath, []byte(oldReport), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(futurePath, []byte(futureReport), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	var uploaded crashReport
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewDecoder(r.Body).Decode(&uploaded); err != nil {
-			t.Error(err)
-		}
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer srv.Close()
-	crashEndpoint = srv.URL
-
-	NewApp().flushPendingCrash()
-	if len(uploaded.EventID) != 32 || len(uploaded.DedupKey) != 64 {
-		t.Fatalf("old report identity not backfilled: %+v", uploaded)
-	}
-	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
-		t.Fatalf("old report was not removed after send: %v", err)
-	}
-	body, err := os.ReadFile(futurePath)
-	if err != nil || !bytes.Contains(body, []byte(`"futureField":"keep"`)) {
-		t.Fatalf("future schema was not preserved: body=%s err=%v", body, err)
-	}
-}
-
 func TestFlushPendingCrashUploadsCurrentSchemaThree(t *testing.T) {
 	removeAllPendingCrashes()
 	oldVersion, oldEndpoint := version, crashEndpoint
@@ -434,7 +390,7 @@ func TestFlushPendingCrashUploadsCurrentSchemaThree(t *testing.T) {
 	if report.SchemaVersion != currentCrashSchema {
 		t.Fatalf("current producer schema = %d, supported = %d", report.SchemaVersion, currentCrashSchema)
 	}
-	if !writePendingReport(report, false) {
+	if !writePendingReport(report) {
 		t.Fatal("failed to queue current-schema report")
 	}
 	NewApp().flushPendingCrash()
@@ -463,7 +419,7 @@ func TestWritePendingReportPrunesKnownReportsWithoutDeletingFutureSchema(t *test
 		report.Source = "go"
 		report.Label = fmt.Sprintf("panic-%d", index)
 		report.Message = "bounded current report"
-		if !writePendingReport(report, false) {
+		if !writePendingReport(report) {
 			t.Fatalf("failed to queue current report %d", index)
 		}
 	}

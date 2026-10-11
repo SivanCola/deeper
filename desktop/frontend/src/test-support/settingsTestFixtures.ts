@@ -30,7 +30,7 @@ export async function waitFor(label: string, predicate: () => boolean) {
   throw new Error(`timed out waiting for ${label}`);
 }
 
-export function baseSettings(displayMode: "standard" | "compact" = "standard"): SettingsView {
+export function baseSettings(): SettingsView {
   return {
     modelSettingsFingerprint: "test-model-settings-revision",
     defaultModel: "",
@@ -38,7 +38,6 @@ export function baseSettings(displayMode: "standard" | "compact" = "standard"): 
     visionModel: "",
     subagentModel: "",
     subagentEffort: "",
-    autoPlan: "off",
     providers: [],
     officialProviders: [],
     providerPresets: [],
@@ -54,32 +53,11 @@ export function baseSettings(displayMode: "standard" | "compact" = "standard"): 
       debounceMs: 0,
       queueMode: "steer",
       queueCap: 20,
-      queueDrop: "summarize",
       ignoreSelfMessages: true,
       selfUserIds: { qq: [], feishu: [], weixin: [], dingtalk: [] },
       control: { enabled: false, addr: "127.0.0.1:37913", tokenEnv: "DEEPZORA_BOT_CONTROL_TOKEN" },
       pairing: { enabled: true, requestTtlMinutes: 60, maxPendingPerPlatform: 3 },
       routes: [],
-      allowlist: {
-        enabled: false,
-        allowAll: false,
-        qqUsers: [],
-        feishuUsers: [],
-        weixinUsers: [],
-        qqApprovers: [],
-        feishuApprovers: [],
-        weixinApprovers: [],
-        qqAdmins: [],
-        feishuAdmins: [],
-        weixinAdmins: [],
-        qqGroups: [],
-        feishuGroups: [],
-        weixinGroups: [],
-        dingtalkUsers: [],
-        dingtalkApprovers: [],
-        dingtalkAdmins: [],
-        dingtalkGroups: [],
-      },
       qq: {
         enabled: false,
         appId: "",
@@ -101,9 +79,7 @@ export function baseSettings(displayMode: "standard" | "compact" = "standard"): 
     desktopThemeStyle: "graphite",
     desktopTerminalTheme: "auto",
     closeBehavior: "background",
-    displayMode,
-    reasoningDisplayMode: "auto",
-    reasoningDisplayModeExplicit: false,
+    sessionExperience: "standard",
     statusBarStyle: "text",
     statusBarItems: ["model", "workspace", "git_branch", "cache", "balance"],
     defaultToolApprovalMode: "auto",
@@ -115,6 +91,5 @@ export function baseSettings(displayMode: "standard" | "compact" = "standard"): 
     configPath: "/tmp/deepzora/config.toml",
     providerKinds: [],
     autoApproveTools: false,
-    bypass: false,
   };
 }

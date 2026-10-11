@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -136,39 +138,24 @@ func TestClearedCanonicalTitleFallsBackToPreviewEverywhere(t *testing.T) {
 	}
 }
 
-// Legacy sessions had the opposite asymmetry: the rename reached the sidebar
-// row but never the open tab bound to that file.
-func TestLegacySessionRenameProjectsIntoOpenTab(t *testing.T) {
+func TestRenameSessionRejectsHistoricalFilePath(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
 	t.Cleanup(app.closeSessionServices)
-	dir := desktopSessionDir(globalWorkspaceRoot())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	dir := t.TempDir()
+	path := writeTopicSessionWithPrompt(t, dir, "historical-title.jsonl", "historical-topic", "Original", "", "prompt", time.Now())
+	before, err := os.ReadFile(path)
+	if err != nil {
 		t.Fatal(err)
 	}
-	const topicID = "topic_legacy_title"
-	if err := setTopicTitle("", topicID, "旧标题"); err != nil {
-		t.Fatal(err)
+	if err := app.RenameSession(path, "Unsupported"); err == nil {
+		t.Fatal("historical file path accepted")
 	}
-	path := writeTopicSessionWithPrompt(t, dir, "legacy-title.jsonl", topicID, "旧标题", "", "legacy prompt", time.Now())
-	tab := &WorkspaceTab{
-		ID: "legacy-tab", Scope: "global", TopicID: topicID, TopicTitle: "旧标题",
-		topicTitleSource: topicTitleSourceManual, SessionPath: path, disabledMCP: map[string]ServerView{},
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("historical source changed")
 	}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-
-	if err := app.RenameSession(path, "AI 标题"); err != nil {
-		t.Fatalf("rename legacy session: %v", err)
-	}
-	if tab.TopicTitle != "AI 标题" || tab.topicTitleSource != topicTitleSourceManual {
-		t.Fatalf("open legacy tab after rename = %q/%q", tab.TopicTitle, tab.topicTitleSource)
-	}
-	if err := app.RenameSession(path, ""); err != nil {
-		t.Fatalf("clear legacy session title: %v", err)
-	}
-	if tab.TopicTitle != "旧标题" {
-		t.Fatalf("cleared legacy title must fall back to the topic title, got %q", tab.TopicTitle)
+	if _, err := os.Stat(filepath.Join(dir, ".titles.json")); !os.IsNotExist(err) {
+		t.Fatal("historical title map was written")
 	}
 }

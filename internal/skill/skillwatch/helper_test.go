@@ -82,18 +82,7 @@ func TestHelperProtocolEvents(t *testing.T) {
 
 func TestHelperRestartBudgetDegradesThenScans(t *testing.T) {
 	dir := t.TempDir()
-	var procMu sync.Mutex
-	var current *pipeHelperProcess
-	svc := NewService(Options{Stderr: io.Discard, ForceHelper: true, HelperCommand: func(ctx context.Context) (helperProcess, error) {
-		h, err := startRunHelper(ctx)
-		if err != nil {
-			return nil, err
-		}
-		procMu.Lock()
-		current = h.(*pipeHelperProcess)
-		procMu.Unlock()
-		return h, nil
-	}})
+	svc := NewService(Options{Stderr: io.Discard, ForceHelper: true, HelperCommand: startRunHelper})
 	defer svc.Close()
 
 	var hits int
@@ -106,15 +95,23 @@ func TestHelperRestartBudgetDegradesThenScans(t *testing.T) {
 	// Kill the helper repeatedly: restart 1, restart 2, then the budget is
 	// spent and the service must degrade this root to scan fallback.
 	for i := range 3 {
-		procMu.Lock()
-		proc := current
-		procMu.Unlock()
-		if proc != nil {
-			proc.Kill()
+		svc.helper.mu.Lock()
+		proc := svc.helper.proc
+		svc.helper.mu.Unlock()
+		if proc == nil {
+			t.Fatal("registered helper has no live process")
+		}
+		if err := proc.Kill(); err != nil {
+			t.Fatal(err)
 		}
 		if i < 2 {
 			waitFor(t, "restart to re-register", func() bool {
-				return svc.helper.physicalWatches() > 0 && svc.Diagnostics().HelperRestarts == uint64(i+1)
+				// The restart counter advances before spawn/replay. Join the
+				// replacement so the next kill cannot hit the already dead process.
+				svc.helper.mu.Lock()
+				ready := svc.helper.proc != nil && svc.helper.proc != proc && !svc.helper.restarting && !svc.helper.unusable
+				svc.helper.mu.Unlock()
+				return ready && svc.helper.physicalWatches() > 0 && svc.Diagnostics().HelperRestarts == uint64(i+1)
 			})
 		}
 	}

@@ -3,11 +3,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { acceptsRuntimeEventEpoch, historyMessagesToItems, initialState, normalizeTurnSubmit, reducer, replayPendingPromptsForActiveTab, runtimeReadyForSubmit } from "../lib/useController";
-import { continueDelivery } from "../lib/deliveryContinue";
+import { acceptsRuntimeEventEpoch, initialState, normalizeTurnSubmit, reducer, replayPendingPromptsForActiveTab, runtimeReadyForSubmit } from "../lib/useController";
 import type { WireEvent } from "../lib/types";
 import { submitPlanDecision, type SessionActionPorts } from "../app-runtime/sessionActionOwner";
-import { createSessionSurfaceFence } from "../app-runtime/sessionTarget";
 import { sessionIdentityStableKey } from "../lib/sessionIdentity";
 
 let passed = 0;
@@ -153,103 +151,14 @@ const rebuiltAsk = reducer(reducer(waitingAsk, { type: "controller_rebuilt" }), 
 const oldEpochSuccess = reducer(rebuiltAsk, { type: "ask_submit_succeeded", target: askTarget("ask-existing", "turn-existing"), epoch: waitingAsk.promptEpoch });
 eq(oldEpochSuccess.ask?.id, "ask-existing", "old prompt epoch cannot clear an id reused by a rebuilt controller");
 
-const readinessStarted = reducer(sent, { type: "event", e: { kind: "turn_started" } as WireEvent });
-const readinessState = reducer(readinessStarted, {
-  type: "event",
-  e: {
-    kind: "turn_done",
-		outcome: "final_readiness",
-		err: "final-answer readiness failed 3 times: missing verification",
-		submissionId: "send-0",
-		readiness: { attempts: 3, missing: ["verification", "review"] },
-  } as WireEvent,
-});
-const readinessNotice = readinessState.items[readinessState.items.length - 1];
-eq(readinessNotice.kind, "notice", "final readiness appends a notice");
-eq(readinessNotice.kind === "notice" && readinessNotice.level, "info", "final readiness uses informational severity");
-eq(readinessNotice.kind === "notice" && readinessNotice.variant, "delivery", "final readiness keeps the compatibility notice variant");
-eq(readinessNotice.kind === "notice" && readinessNotice.title, "Checks are not complete", "final readiness uses the generic recovery title");
-eq(
-  readinessNotice.kind === "notice" && readinessNotice.text,
-  "The response was generated, but required verification or review is still incomplete.",
-  "final readiness explains the recovery boundary",
-);
-eq(readinessNotice.kind === "notice" && readinessNotice.detail, "Still needed: verification, change review", "structured requirements produce localized detail");
-eq(readinessNotice.kind === "notice" && readinessNotice.action, "continue_delivery", "final readiness offers a recovery action");
-const readinessUser = readinessState.items.find((it) => it.kind === "user");
-eq(readinessUser?.kind === "user" && Boolean(readinessUser.failed), false, "final readiness does not mark the delivered user message as failed");
-eq(readinessState.running, false, "an unclicked continue-check action does not keep the turn running");
-eq(readinessState.pendingPrompt, false, "an unclicked continue-check action does not create a pending prompt");
-
-const reloadedReadiness = historyMessagesToItems([{
-  role: "notice",
-  content: "Task status needs one more check; continue the remaining work.",
-  code: "final_readiness",
-  level: "info",
-  pending: true,
-  readiness: { attempts: 1, missing: ["verification"] },
-}], "h").items[0];
-eq(reloadedReadiness.kind === "notice" && reloadedReadiness.action, "continue_delivery", "reloaded readiness metadata restores the explicit action");
-eq(reloadedReadiness.kind === "notice" && reloadedReadiness.detail, "Still needed: verification", "reloaded readiness metadata restores structured detail");
-
-const recovering = reducer(readinessState, { type: "user", text: "Continue checks", seq: readinessState.seq, submissionId: "recovery-submit", deliveryRecovery: true });
-const recovered = reducer(recovering, { type: "event", e: { kind: "turn_done", submissionId: "recovery-submit" } as WireEvent });
-eq(recovered.items.some((it) => it.kind === "notice" && it.variant === "delivery"), false, "successful explicit recovery removes the stale delivery card");
-
-const ordinaryTurnError = reducer(readinessStarted, {
+const turnStarted = reducer(sent, { type: "event", e: { kind: "turn_started" } as WireEvent });
+const ordinaryTurnError = reducer(turnStarted, {
   type: "event",
   e: { kind: "turn_done", err: "provider failed", submissionId: "send-0" } as WireEvent,
 });
 const ordinaryTurnNotice = ordinaryTurnError.items[ordinaryTurnError.items.length - 1];
 eq(ordinaryTurnNotice.kind === "notice" && ordinaryTurnNotice.level, "warn", "ordinary turn errors remain warnings");
 eq(ordinaryTurnNotice.kind === "notice" && ordinaryTurnNotice.text, "provider failed", "ordinary turn errors keep their diagnostic text");
-
-const recoveryPaused = reducer(readinessStarted, {
-  type: "event",
-  e: {
-    kind: "turn_done",
-    submissionId: "send-0",
-    outcome: "recovery_paused",
-    err: "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send \"continue\" to start a fresh attempt, or add instructions to change direction.",
-  } as WireEvent,
-});
-const recoveryNotice = recoveryPaused.items[recoveryPaused.items.length - 1];
-eq(recoveryNotice.kind === "notice" && recoveryNotice.level, "info", "recovery_paused uses informational severity");
-eq(recoveryNotice.kind === "notice" && Boolean(recoveryNotice.title), true, "recovery_paused shows a product title");
-eq(
-  recoveryNotice.kind === "notice" && recoveryNotice.text,
-  "Deepzora stopped repeated attempts and kept completed work. Send “Continue” to start a fresh attempt, or add instructions to change direction.",
-  "recovery_paused uses the localized product copy",
-);
-eq(
-  recoveryNotice.kind === "notice" && Boolean(recoveryNotice.detail),
-  false,
-  "recovery_paused does not repeat the backend English fallback as localized detail",
-);
-const recoveryUser = recoveryPaused.items.find((it) => it.kind === "user");
-eq(recoveryUser?.kind === "user" && Boolean(recoveryUser.failed), false, "recovery_paused does not mark the user message as failed");
-eq(recoveryPaused.running, false, "recovery_paused frees the composer");
-
-const completionUncertain = reducer(readinessStarted, {
-  type: "event",
-  e: {
-    kind: "turn_done",
-    submissionId: "send-0",
-    outcome: "completion_uncertain",
-    err: "Completion could not be confirmed. Deepzora kept the current result and all completed work.",
-  } as WireEvent,
-});
-const uncertainNotice = completionUncertain.items[completionUncertain.items.length - 1];
-eq(uncertainNotice.kind === "notice" && uncertainNotice.level, "info", "completion_uncertain uses informational severity, not a send failure");
-eq(uncertainNotice.kind === "notice" && Boolean(uncertainNotice.title), true, "completion_uncertain shows a product title");
-eq(
-  uncertainNotice.kind === "notice" && uncertainNotice.text,
-  "The result could not be confirmed as complete. The current answer and all completed work are kept. Send “继续 / continue” to resume, or restate what should change.",
-  "completion_uncertain uses the localized product copy",
-);
-const uncertainUser = completionUncertain.items.find((it) => it.kind === "user");
-eq(uncertainUser?.kind === "user" && Boolean(uncertainUser.failed), false, "completion_uncertain does not mark the user message as failed");
-eq(completionUncertain.running, false, "completion_uncertain frees the composer");
 
 const shellSent = reducer({ ...initialState }, { type: "user", text: "!ls", seq: 0, submissionId: "shell-0" });
 const shellFailed = reducer(shellSent, { type: "send_failed", submissionId: "shell-0", error: "Command failed: workspace is still starting" });
@@ -294,7 +203,7 @@ eq(controllerSource.includes('e.kind === "mcp_surface_ready"'), true, "reducer h
   const target = { tabId: "tab-source", sessionKey: "session-source:1", hostId: "local", sessionId: "session-source", sessionGeneration: 1,
     promptId: "approval-7", kind: "plan" as const, instanceKey: "plan-source:approval-7" };
   await submitPlanDecision(target, {
-    action: "start_execution", leavePlanMode: true, remote: false, goal: "", toolApprovalMode: "ask",
+    action: "start_execution", leavePlanMode: true, remote: false, goal: "", toolApprovalMode: "workspace-write",
   }, ports, { checkpoint() {}, ownsUI: () => true });
   eq(
     calls.join("|"),
@@ -304,13 +213,13 @@ eq(controllerSource.includes('e.kind === "mcp_surface_ready"'), true, "reducer h
 
   calls.length = 0;
   await submitPlanDecision(target, {
-    action: "exit_plan", leavePlanMode: true, remote: false, goal: "", toolApprovalMode: "ask",
+    action: "exit_plan", leavePlanMode: true, remote: false, goal: "", toolApprovalMode: "workspace-write",
   }, ports, { checkpoint() {}, ownsUI: () => true });
   eq(calls[calls.length - 1], "resolve:tab-source:approval-7:exit_plan", "exit-without-executing records the explicit source-bound plan exit last");
 
   calls.length = 0;
   await submitPlanDecision(target, {
-    action: "revise_plan", leavePlanMode: false, remote: false, goal: "", toolApprovalMode: "ask",
+    action: "revise_plan", leavePlanMode: false, remote: false, goal: "", toolApprovalMode: "workspace-write",
   }, ports, { checkpoint() {}, ownsUI: () => true });
   eq(calls.join("|"), "resolve:tab-source:approval-7:revise_plan", "plan revision records only the source-bound revise decision");
 }
@@ -386,85 +295,6 @@ replayPendingPromptsForActiveTab("tab-b", () => {
 });
 await new Promise((resolve) => setTimeout(resolve, 0));
 eq(replayCalls, 2, "replay bridge failures are swallowed by the tab-switch effect");
-
-console.log("\ndelivery recovery continuation");
-
-interface ContinueCalls {
-  resumes: string[];
-  sends: string[];
-}
-
-async function runContinueDelivery(opts: {
-  goal: string | undefined;
-  resumed?: boolean;
-  ready?: boolean;
-  tabId?: string | null;
-  tabAfterResume?: string;
-}): Promise<ContinueCalls> {
-  const calls: ContinueCalls = { resumes: [], sends: [] };
-  await continueDelivery({
-    tabId: opts.tabId === undefined ? "tab-a" : opts.tabId,
-    ready: opts.ready ?? true,
-    goal: opts.goal,
-    activeTabId: () => opts.tabAfterResume ?? "tab-a",
-    resumeGoal: (tabId) => {
-      calls.resumes.push(tabId);
-      return Promise.resolve(opts.resumed ?? true);
-    },
-    send: (tabId) => {
-      calls.sends.push(tabId);
-      return Promise.resolve();
-    },
-  });
-  return calls;
-}
-
-const noGoal = await runContinueDelivery({ goal: undefined });
-eq(noGoal.resumes.length, 0, "delivery recovery without a Goal skips the resume call");
-eq(noGoal.sends.join(","), "tab-a", "delivery recovery without a Goal submits the continuation directly");
-
-{
-  const fence = createSessionSurfaceFence();
-  const ownership = fence.commit("tab-a", "session-a:1")!;
-  let releaseResume!: () => void;
-  const resumeGate = new Promise<void>((resolve) => { releaseResume = resolve; });
-  const sends: string[] = [];
-  const pending = continueDelivery({
-    tabId: "tab-a",
-    ready: true,
-    goal: "ship",
-    uiOwnership: ownership,
-    ownsUI: fence.ownsUnknown,
-    resumeGoal: async () => { await resumeGate; return true; },
-    send: async (tabId) => { sends.push(tabId); },
-  });
-  fence.commit("tab-b", "session-b:1");
-  fence.commit("tab-a", "session-a:1");
-  releaseResume();
-  await pending;
-  eq(sends.length, 0, "delivery recovery cannot reacquire UI ownership after A → B → A");
-}
-
-const blankGoal = await runContinueDelivery({ goal: "   " });
-eq(blankGoal.resumes.length, 0, "delivery recovery treats a blank Goal as absent");
-eq(blankGoal.sends.join(","), "tab-a", "delivery recovery with a blank Goal still submits the continuation");
-
-const goalResumed = await runContinueDelivery({ goal: "ship it", resumed: true });
-eq(goalResumed.resumes.join(","), "tab-a", "delivery recovery with a Goal resumes it first");
-eq(goalResumed.sends.join(","), "tab-a", "delivery recovery submits after the Goal resumes");
-
-const goalRefused = await runContinueDelivery({ goal: "ship it", resumed: false });
-eq(goalRefused.resumes.join(","), "tab-a", "an unresumable Goal is still offered the resume");
-eq(goalRefused.sends.length, 0, "an unresumable (completed) Goal does not submit the continuation");
-
-const tabSwitched = await runContinueDelivery({ goal: "ship it", resumed: true, tabAfterResume: "tab-b" });
-eq(tabSwitched.sends.length, 0, "a tab switch during resume drops the continuation");
-
-const notReady = await runContinueDelivery({ goal: undefined, ready: false });
-eq(notReady.sends.length, 0, "delivery recovery waits for controller readiness");
-
-const noTab = await runContinueDelivery({ goal: undefined, tabId: null });
-eq(noTab.sends.length, 0, "delivery recovery without an active tab is a no-op");
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

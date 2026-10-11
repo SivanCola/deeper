@@ -14,7 +14,7 @@ func desktopStartupSettingsFromConfig(cfg *config.Config) DesktopStartupSettings
 		return DesktopStartupSettingsView{
 			Bot: botSettingsView(config.BotConfig{}), DesktopLayoutStyle: "workbench",
 			DesktopTheme: "auto", DesktopThemeStyle: "graphite", DesktopTerminalTheme: "auto",
-			DisplayMode: "standard", SessionExperience: "standard", ReasoningDisplayMode: "auto", StatusBarStyle: "icon",
+			SessionExperience: "standard", StatusBarStyle: "icon",
 			StatusBarItems: config.DefaultDesktopStatusBarItems(), CheckUpdates: false, UpdaterEnabled: desktopUpdaterEnabled(),
 			UpdateChannel: "stable", ConversationWidth: "standard",
 		}
@@ -23,9 +23,9 @@ func desktopStartupSettingsFromConfig(cfg *config.Config) DesktopStartupSettings
 		Bot: botSettingsView(cfg.Bot), DesktopLanguage: cfg.DesktopLanguage(),
 		DesktopLayoutStyle: cfg.DesktopLayoutStyle(), DesktopTheme: cfg.DesktopTheme(),
 		DesktopThemeStyle: cfg.DesktopThemeStyle(), DesktopTerminalTheme: cfg.DesktopTerminalTheme(),
-		DisplayMode: cfg.DesktopDisplayMode(), SessionExperience: cfg.DesktopSessionExperience(), ReasoningDisplayMode: cfg.DesktopReasoningDisplayMode(),
-		ReasoningDisplayModeExplicit: cfg.DesktopReasoningDisplayModeExplicit(), StatusBarStyle: cfg.DesktopStatusBarStyle(),
-		StatusBarItems: cfg.DesktopStatusBarItems(), CheckUpdates: cfg.DesktopCheckUpdates(), UpdaterEnabled: desktopUpdaterEnabled(),
+		SessionExperience: cfg.DesktopSessionExperience(),
+		StatusBarStyle:    cfg.DesktopStatusBarStyle(),
+		StatusBarItems:    cfg.DesktopStatusBarItems(), CheckUpdates: cfg.DesktopCheckUpdates(), UpdaterEnabled: desktopUpdaterEnabled(),
 		UpdateChannel: cfg.DesktopUpdateChannel(), ConversationWidth: cfg.DesktopConversationWidth(),
 		ConfigWarnings: cfg.LoadWarnings(), ConfigPath: config.UserConfigPath(),
 	}
@@ -35,7 +35,7 @@ func (a *App) defaultSettingsView() SettingsView {
 	defaults := config.Default()
 	return SettingsView{
 		WebSearchModels: []string{},
-		Providers:       []ProviderView{}, OfficialProviders: officialProviderViews(map[string]bool{}, ""),
+		Providers:       []ProviderView{}, OfficialProviders: officialProviderViews(map[string]bool{}),
 		ProviderPresets: providerPresetViewsForRootWithResolver(nil, a.activeWorkspaceRoot(), nil),
 		ProviderKinds:   nonNil(provider.Kinds()),
 		Permissions:     PermissionsView{Mode: "ask", Allow: []string{}, Ask: []string{}, Deny: []string{}},
@@ -47,41 +47,21 @@ func (a *App) defaultSettingsView() SettingsView {
 			ShellRepairGuidance: shellRepairGuidanceForGOOS(runtime.GOOS),
 			GitRepairGuidance:   gitRepairGuidanceForGOOS(runtime.GOOS)},
 		Agent: AgentView{
-			PlannerMaxSteps: 0, MaxSubagentDepth: agent.DefaultMaxSubagentDepth,
+			MaxSubagentDepth:       agent.DefaultMaxSubagentDepth,
 			MaxSubagentConcurrency: agent.DefaultMaxSubagentConcurrency, MaxParallelWriters: agent.DefaultMaxParallelWriters,
 			ReasoningLanguage: "auto",
 			CompactRatio:      defaults.Agent.CompactRatio, EffectiveCompactRatio: defaults.Agent.CompactRatio,
 		},
-		Bot: botSettingsView(config.BotConfig{}), AutoPlan: "off", DesktopLayoutStyle: "workbench",
+		Bot: botSettingsView(config.BotConfig{}), DesktopLayoutStyle: "workbench",
 		DesktopTheme: "auto", DesktopThemeStyle: "graphite", DesktopTerminalTheme: "auto",
-		CloseBehavior: "background", DisplayMode: "standard", ReasoningDisplayMode: "auto",
+		CloseBehavior:  "background",
 		StatusBarStyle: "icon", StatusBarItems: config.DefaultDesktopStatusBarItems(), SessionExperience: "standard",
 		DefaultToolApprovalMode: "workspace-write", CheckUpdates: false, UpdaterEnabled: desktopUpdaterEnabled(), UpdateChannel: "stable",
-		Telemetry: true, Metrics: true, ExpandThinking: false, ConversationWidth: "standard",
+		Telemetry: true, Metrics: true, ConversationWidth: "standard",
 	}
-}
-
-// SetReasoningDisplayMode persists presentation only; no controller rebuild is needed.
-func (a *App) SetReasoningDisplayMode(mode string) error {
-	return a.applyConfigOnly(func(c *config.Config) error {
-		if mode == "expanded" {
-			return c.SetDesktopSessionExperience(string(config.SessionExperienceDeep))
-		}
-		return c.SetDesktopSessionExperience(string(config.SessionExperienceStandard))
-	})
 }
 
 // SetSessionExperience persists the canonical two-state desktop presentation.
 func (a *App) SetSessionExperience(mode string) error {
 	return a.applyConfigOnly(func(c *config.Config) error { return c.SetDesktopSessionExperience(mode) })
-}
-
-// SetDisplayMode preserves the legacy density setter for one release.
-func (a *App) SetDisplayMode(string) error {
-	return a.SetSessionExperience(string(config.SessionExperienceStandard))
-}
-
-// SetExpandThinking preserves the legacy reasoning boolean for one release.
-func (a *App) SetExpandThinking(bool) error {
-	return a.SetSessionExperience(string(config.SessionExperienceStandard))
 }

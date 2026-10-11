@@ -37,7 +37,7 @@ func (h heldEndpoints) gateEndpoints(c *Config, store *ProjectProgramStore, ws s
 			trusted = append(trusted, p)
 			continue
 		}
-		detail := strings.TrimSpace(p.Name + " " + p.BaseURL + " " + p.RequestURL + " " + p.ChatURL + " key=" + p.APIKeyEnv)
+		detail := strings.TrimSpace(p.Name + " " + p.BaseURL + " " + p.RequestURL + " key=" + p.APIKeyEnv)
 		prog := NewProjectProgram(ProjectProgramProvider, p.Name, detail, ws, ws, p, nil)
 		if c.admit(store, ws, "providers."+p.Name, prog) {
 			approved = append(approved, p)
@@ -84,7 +84,6 @@ func (h heldEndpoints) restoreUnresolvedModels(c *Config, heldBack []ProviderEnt
 		{"default_model", &c.DefaultModel, h.defaultModel},
 		{"agent.planner_model", &c.Agent.PlannerModel, h.agent.PlannerModel},
 		{"agent.guardian_model", &c.Agent.GuardianModel, h.agent.GuardianModel},
-		{"agent.recovery_model", &c.Agent.RecoveryModel, h.agent.RecoveryModel},
 		{"agent.subagent_model", &c.Agent.SubagentModel, h.agent.SubagentModel},
 		{"agent.vision_model", &c.Agent.VisionModel, h.agent.VisionModel},
 		{"agent.web_search_model", &c.Agent.WebSearchModel, h.agent.WebSearchModel},

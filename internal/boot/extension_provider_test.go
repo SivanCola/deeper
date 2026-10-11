@@ -124,7 +124,7 @@ func writeRuntimeFixtureWithConflictingProvider(t *testing.T, dir, name string) 
 name = "plugin"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "%s/fake/x"
+models = ["%s/fake/x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `, name))
 }

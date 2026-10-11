@@ -24,18 +24,11 @@ func resolveOpenAIChatURL(baseURL string, extra map[string]any) string {
 	if requestURL != "" && !provider.EndpointOverrideRepeatsBase(requestURL, baseURL) {
 		return requestURL
 	}
-	legacyChatURL, _ := extra["chat_url"].(string)
-	return normalizeChatURL(baseURL, legacyChatURL)
+	return normalizeChatURL(baseURL)
 }
 
-func normalizeChatURL(baseURL, chatURL string) string {
-	legacy := strings.TrimRight(strings.TrimSpace(chatURL), "/")
-	if legacy != "" && !provider.EndpointOverrideRepeatsBase(legacy, baseURL) {
-		if canonical, ok := canonicalKnownVendorChatURL(legacy); ok {
-			return canonical
-		}
-		return legacy
-	}
+func normalizeChatURL(baseURL string) string {
+
 	if canonical, ok := canonicalKnownVendorChatURL(baseURL); ok {
 		return canonical
 	}

@@ -68,7 +68,7 @@ export function WorkspaceDockRegion(props: WorkspaceDockRegionProps) {
 
   const renderTab = (tab: TabItem): ReactNode => {
     if (!projectReady) return null;
-    if (firstFileTabId) readWorkspaceTreeMemory(workspaceViewMemoryKey(props.workspaceKey, firstFileTabId, true));
+    if (firstFileTabId) readWorkspaceTreeMemory(workspaceViewMemoryKey(props.workspaceKey, firstFileTabId));
     switch (tab.type) {
       case "context":
         if (showContext) return <ContextPanel {...props.context} />;
@@ -87,7 +87,7 @@ export function WorkspaceDockRegion(props: WorkspaceDockRegionProps) {
             {...requests}
             dockTabId={tab.id}
             fileNavigation={fileNavigation}
-            workspaceMemoryKey={workspaceViewMemoryKey(props.workspaceKey, tab.id, tab.id === firstFileTabId)}
+            workspaceMemoryKey={workspaceViewMemoryKey(props.workspaceKey, tab.id)}
             workspaceMemoryVisitId={0}
             initialViewMode={tab.type === "changed" ? "changed" : "files"}
           />

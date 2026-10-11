@@ -12,6 +12,7 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
 )
 
 func TestReconcileMakesUnknownCountsVisibleWithoutReadingTranscript(t *testing.T) {
@@ -587,14 +588,18 @@ func TestRemoveSessionWinsOverQueuedStaleWriteAndAllowsLaterRecreation(t *testin
 	if _, ok, err := catalog.GetTopic(ctx, TopicKey{Scope: "global", TopicID: "topic"}); err != nil || ok {
 		t.Fatalf("queued write resurrected removed row: ok=%v err=%v", ok, err)
 	}
-	if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
+	sess := agent.NewSession("")
+	for range 2 {
+		sess.Add(provider.Message{Role: provider.RoleUser, Content: "recreated"})
+		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "ok"})
+	}
+	if err := sess.Save(path); err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMeta(path, agent.BranchMeta{
-		Scope: "global", TopicID: "topic", SchemaVersion: agent.BranchMetaCountsVersion, Turns: 2,
-	}); err != nil {
+	if err := agent.UpdateBranchMeta(path, false, func(m *agent.BranchMeta) error { m.Scope = "global"; m.TopicID = "topic"; return nil }); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := catalog.ReconcileDirectory(ctx, DirectoryTarget{Path: dir, Scope: "global"}); err != nil {
 		t.Fatal(err)
 	}
@@ -752,46 +757,5 @@ func TestOpenBlankPathUsesMemoryWithoutWritingCWD(t *testing.T) {
 		if strings.Contains(entry.Name(), "session-catalog") || strings.HasSuffix(entry.Name(), ".sqlite") {
 			t.Fatalf("blank path wrote projection into cwd: %s", entry.Name())
 		}
-	}
-}
-
-func TestRebuildFailureKeepsExistingCatalog(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "catalog.sqlite")
-	catalog, err := Open(ctx, Options{Path: path, DisableRepair: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := t.TempDir()
-	session := filepath.Join(dir, "keep.jsonl")
-	if err := os.WriteFile(session, []byte(`{"role":"user","content":"hello"}`+"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := catalog.UpsertSession(ctx, SessionRecord{
-		Path: session, Directory: dir, Scope: "global", TopicID: "keep",
-		Turns: 1, TurnsState: TurnsValid, Health: HealthOK, Preview: "hello",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := catalog.Close(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	// ListSessionOrder on a regular file fails; Rebuild must keep the old DB.
-	fileTarget := filepath.Join(t.TempDir(), "not-a-dir")
-	if err := os.WriteFile(fileTarget, []byte("x"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Rebuild(ctx, path, []DirectoryTarget{{Path: fileTarget, Scope: "global"}}); err == nil {
-		t.Fatal("expected rebuild failure for file path")
-	}
-	restored, err := Open(ctx, Options{Path: path, DisableRepair: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = restored.Close(context.Background()) })
-	topic, ok, err := restored.GetTopic(ctx, TopicKey{Scope: "global", TopicID: "keep"})
-	if err != nil || !ok || len(topic.Sessions) != 1 {
-		t.Fatalf("rebuild failure lost catalog: ok=%v topic=%#v err=%v", ok, topic, err)
 	}
 }

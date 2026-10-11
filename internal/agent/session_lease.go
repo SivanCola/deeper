@@ -12,9 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deepzora/internal/fileutil"
-	fileencoding "deepzora/internal/fileutil/encoding"
-	"deepzora/internal/pathidentity"
 	"deepzora/internal/store"
 )
 
@@ -106,15 +103,13 @@ func (e *SessionLeaseError) Unwrap() error {
 }
 
 type SessionLease struct {
-	path             string // filesystem identity key
-	accessPath       string // physical path used for file access
-	legacyAccessPath string // frozen v1 path used by older runtime locks
-	ownerID          uint64
-	mu               sync.Mutex
-	leaseLock        *sessionLockFile
-	legacyLeaseLock  *sessionLockFile
-	released         bool
-	writeGeneration  uint64
+	path            string // filesystem identity key
+	accessPath      string // physical path used for file access
+	ownerID         uint64
+	mu              sync.Mutex
+	leaseLock       *sessionLockFile
+	released        bool
+	writeGeneration uint64
 	// activeSaves counts authority-guarded save cycles still inside path/file
 	// locks. Release waits for this to reach zero so a rebind cannot revoke
 	// mid-write and create an ABA ownership hole.
@@ -170,8 +165,7 @@ func TryAcquireSessionLease(path string) (*SessionLease, error) {
 		info, _ := LoadSessionLeaseInfo(accessPath)
 		return nil, &SessionLeaseError{Path: path, Info: info}
 	}
-	legacyAccessPath := pathidentity.Canonical(identity.AccessPath)
-	leaseLock, legacyLeaseLock, err := tryTakeCompatibleSessionLeaseLocks(accessPath, legacyAccessPath)
+	leaseLock, err := tryTakeSessionLeaseLock(accessPath)
 	if err != nil {
 		sessionLeaseOwners.CompareAndDelete(path, ownerID)
 		if errors.Is(err, ErrSessionLeaseHeld) {
@@ -184,7 +178,7 @@ func TryAcquireSessionLease(path string) (*SessionLease, error) {
 	// holder unlocks it. Re-check only after acquiring the OS lock so a plain
 	// contender cannot race between reservation publication and unlock.
 	if info, infoErr := LoadSessionLeaseInfo(accessPath); infoErr == nil && handoffReservationActive(info, time.Now().UTC()) {
-		unlockSessionLeaseLocks(leaseLock, legacyLeaseLock)
+		leaseLock.Unlock()
 		sessionLeaseOwners.CompareAndDelete(path, ownerID)
 		return nil, &SessionLeaseError{Path: path, Info: info}
 	}
@@ -192,8 +186,8 @@ func TryAcquireSessionLease(path string) (*SessionLease, error) {
 	// is stale. Clear it before publishing this generation.
 	sessionLeaseActiveOwners.Delete(path)
 	lease := &SessionLease{
-		path: path, accessPath: accessPath, legacyAccessPath: legacyAccessPath,
-		ownerID: ownerID, leaseLock: leaseLock, legacyLeaseLock: legacyLeaseLock,
+		path: path, accessPath: accessPath,
+		ownerID: ownerID, leaseLock: leaseLock,
 	}
 	if err := lease.publishOwner(); err != nil {
 		lease.Release()
@@ -241,8 +235,7 @@ func TryReclaimCurrentProcessSessionLease(path string) (*SessionLease, error) {
 		// probe instead of wedging on metadata damage.
 		info = nil
 	}
-	legacyAccessPath := pathidentity.Canonical(identity.AccessPath)
-	leaseLock, legacyLeaseLock, err := tryTakeCompatibleSessionLeaseLocks(accessPath, legacyAccessPath)
+	leaseLock, err := tryTakeSessionLeaseLock(accessPath)
 	if err != nil {
 		if errors.Is(err, ErrSessionLeaseHeld) {
 			return nil, &SessionLeaseError{Path: path, Info: info}
@@ -255,8 +248,8 @@ func TryReclaimCurrentProcessSessionLease(path string) (*SessionLease, error) {
 	// later misses its CompareAndDelete against the new owner id.
 	ownerID := sessionLeaseSeq.Add(1)
 	lease := &SessionLease{
-		path: path, accessPath: accessPath, legacyAccessPath: legacyAccessPath,
-		ownerID: ownerID, leaseLock: leaseLock, legacyLeaseLock: legacyLeaseLock,
+		path: path, accessPath: accessPath,
+		ownerID: ownerID, leaseLock: leaseLock,
 	}
 	sessionLeaseActiveOwners.Delete(path)
 	sessionLeaseOwners.Store(path, ownerID)
@@ -285,23 +278,21 @@ func SessionLeaseHeldByOtherRuntime(path string) bool {
 		return true
 	}
 	key, accessPath := identity.Key, identity.PhysicalPath
-	legacyAccessPath := pathidentity.Canonical(identity.AccessPath)
 	if _, ok := sessionLeaseActiveOwners.Load(key); ok {
 		// Held by this process; no need to touch the lock file.
 		return false
 	}
-	info, err := loadCompatibleSessionLeaseInfo(accessPath, legacyAccessPath)
+	info, err := LoadSessionLeaseInfo(accessPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// No info file means no holder: live holders keep it present for
 			// their whole hold.
 			return false
 		}
-		unlock, lockErr := tryLockCompatibleSessionLeaseFiles(accessPath, legacyAccessPath)
+		unlock, lockErr := probeSessionLeaseFile(accessPath)
 		if lockErr == nil {
 			// Corrupt/empty info with a free lock is a crash leftover. Remove the
 			// bad metadata so future probes do not keep reporting a ghost owner.
-			_ = os.Remove(sessionLeaseInfoPath(accessPath))
 			unlock()
 			return false
 		}
@@ -312,14 +303,13 @@ func SessionLeaseHeldByOtherRuntime(path string) bool {
 	if info != nil && info.PID == os.Getpid() && info.WriterID == SessionWriterID() {
 		return false
 	}
-	unlock, err := tryLockCompatibleSessionLeaseFiles(accessPath, legacyAccessPath)
+	unlock, err := probeSessionLeaseFile(accessPath)
 	if err == nil {
 		if handoffReservationActive(info, time.Now().UTC()) {
 			unlock()
 			return false
 		}
 		// Foreign info but a free lock: leftover from a crashed process.
-		_ = os.Remove(sessionLeaseInfoPath(accessPath))
 		unlock()
 		return false
 	}
@@ -339,15 +329,14 @@ func InspectSessionLease(path string) (*SessionLeaseInfo, bool, error) {
 		return nil, false, err
 	}
 	key, accessPath := identity.Key, identity.PhysicalPath
-	legacyAccessPath := pathidentity.Canonical(identity.AccessPath)
-	info, err := loadCompatibleSessionLeaseInfo(accessPath, legacyAccessPath)
+	info, err := LoadSessionLeaseInfo(accessPath)
 	if err != nil {
 		return nil, false, err
 	}
 	if _, ok := sessionLeaseActiveOwners.Load(key); ok {
 		return info, true, nil
 	}
-	unlock, lockErr := tryLockCompatibleSessionLeaseFiles(accessPath, legacyAccessPath)
+	unlock, lockErr := probeSessionLeaseFile(accessPath)
 	if lockErr != nil {
 		if errors.Is(lockErr, ErrSessionLeaseHeld) {
 			return info, true, nil
@@ -425,15 +414,12 @@ func (l *SessionLease) ReleaseForHandoff(targetWriterID, handoffID string) error
 	}
 	l.released = true
 	leaseLock := l.leaseLock
-	legacyLeaseLock := l.legacyLeaseLock
 	l.leaseLock = nil
-	l.legacyLeaseLock = nil
 	l.mu.Unlock()
 
 	sessionLeaseActiveOwners.CompareAndDelete(l.path, l.ownerID)
 	sessionLeaseOwners.CompareAndDelete(l.path, l.ownerID)
-	unlockSessionLeaseLocks(leaseLock, legacyLeaseLock)
-	_ = os.Remove(sessionLeaseInfoPath(l.accessPath))
+	leaseLock.Unlock()
 	_ = removeStaleSessionLockSidecar(l.accessPath, store.SessionLockFile(l.accessPath))
 	return nil
 }
@@ -458,8 +444,7 @@ func TryAcquireSessionLeaseWithHandoff(path, sourceWriterID, handoffID string) (
 		info, _ := LoadSessionLeaseInfo(accessPath)
 		return nil, &SessionLeaseError{Path: path, Info: info}
 	}
-	legacyAccessPath := pathidentity.Canonical(identity.AccessPath)
-	leaseLock, legacyLeaseLock, err := tryTakeCompatibleSessionLeaseLocks(accessPath, legacyAccessPath)
+	leaseLock, err := tryTakeSessionLeaseLock(accessPath)
 	if err != nil {
 		sessionLeaseOwners.CompareAndDelete(path, ownerID)
 		info, _ := LoadSessionLeaseInfo(accessPath)
@@ -470,21 +455,20 @@ func TryAcquireSessionLeaseWithHandoff(path, sourceWriterID, handoffID string) (
 	}
 	info, infoErr := LoadSessionLeaseInfo(accessPath)
 	if infoErr != nil || !handoffReservationMatches(info, sourceWriterID, SessionWriterID(), handoffID, time.Now().UTC()) {
-		unlockSessionLeaseLocks(leaseLock, legacyLeaseLock)
+		leaseLock.Unlock()
 		sessionLeaseOwners.CompareAndDelete(path, ownerID)
 		return nil, &SessionLeaseError{Path: path, Info: info}
 	}
 	sessionLeaseActiveOwners.Delete(path)
 	lease := &SessionLease{
-		path: path, accessPath: accessPath, legacyAccessPath: legacyAccessPath,
-		ownerID: ownerID, leaseLock: leaseLock, legacyLeaseLock: legacyLeaseLock,
+		path: path, accessPath: accessPath,
+		ownerID: ownerID, leaseLock: leaseLock,
 	}
 	if err := lease.publishOwner(); err != nil {
 		lease.Release()
 		return nil, err
 	}
 	sessionLeaseActiveOwners.Store(path, ownerID)
-	_ = os.Remove(sessionLeaseInfoPath(accessPath))
 	return lease, nil
 }
 
@@ -533,9 +517,7 @@ func (l *SessionLease) Release() {
 	}
 	l.released = true
 	leaseLock := l.leaseLock
-	legacyLeaseLock := l.legacyLeaseLock
 	l.leaseLock = nil
-	l.legacyLeaseLock = nil
 	beforeReleaseLock := l.beforeReleaseLock
 	l.mu.Unlock()
 
@@ -543,7 +525,6 @@ func (l *SessionLease) Release() {
 	// to a successor. CompareAndDelete keeps a stale generation from
 	// deauthorizing a newer reclaimed lease.
 	sessionLeaseActiveOwners.CompareAndDelete(l.path, l.ownerID)
-	_ = os.Remove(sessionLeaseInfoPath(l.accessPath))
 	// Only remove the entry this lease owns: after a reclaim the map may
 	// already point at a newer lease for the same path.
 	sessionLeaseOwners.CompareAndDelete(l.path, l.ownerID)
@@ -556,9 +537,7 @@ func (l *SessionLease) Release() {
 		// handoff to SessionRemovalGuard without an unlock/reacquire window.
 		_ = leaseLock.RemoveAndUnlock()
 	}
-	if legacyLeaseLock != nil {
-		_ = legacyLeaseLock.RemoveAndUnlock()
-	}
+
 	_ = removeStaleSessionLockSidecar(l.accessPath, store.SessionLockFile(l.accessPath))
 }
 
@@ -579,71 +558,15 @@ func (l *SessionLease) publishOwner() error {
 }
 
 func (l *SessionLease) writeOwnerInfo(info SessionLeaseInfo) error {
-	if err := writeSessionLeaseInfo(l.leaseLock, info); err != nil {
-		return err
-	}
-	if l.legacyLeaseLock != nil {
-		if err := writeSessionLeaseInfo(l.legacyLeaseLock, info); err != nil {
-			return err
-		}
-	}
-	return nil
+	return writeSessionLeaseInfo(l.leaseLock, info)
 }
 
-// tryTakeCompatibleSessionLeaseLocks preserves the v1.38.10 lock name while
-// making the physical-path lock authoritative. The compatibility lock is only
-// opened when its directory entry has a distinct identity, avoiding a second
-// lock attempt on the same file on case-insensitive filesystems.
-func tryTakeCompatibleSessionLeaseLocks(accessPath, legacyAccessPath string) (*sessionLockFile, *sessionLockFile, error) {
-	primary, err := tryTakeSessionLeaseLock(accessPath)
-	if err != nil {
-		return nil, nil, err
-	}
-	if sameSessionLeaseLockIdentity(accessPath, legacyAccessPath) {
-		return primary, nil, nil
-	}
-	legacy, err := tryTakeSessionLeaseLock(legacyAccessPath)
-	if err != nil {
-		// Preserve any reservation metadata already stored in the primary
-		// lock file. Stale empty lock files are harmless and cleaned later.
-		primary.Unlock()
-		return nil, nil, err
-	}
-	return primary, legacy, nil
-}
-
-func sameSessionLeaseLockIdentity(a, b string) bool {
-	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
-		return true
-	}
-	left, leftErr := pathidentity.Resolve(store.SessionLeaseLock(a), pathidentity.Options{FollowLeaf: false})
-	right, rightErr := pathidentity.Resolve(store.SessionLeaseLock(b), pathidentity.Options{FollowLeaf: false})
-	return leftErr == nil && rightErr == nil && left.Key == right.Key
-}
-
-func unlockSessionLeaseLocks(primary, legacy *sessionLockFile) {
-	if legacy != nil {
-		legacy.Unlock()
-	}
-	if primary != nil {
-		primary.Unlock()
-	}
-}
-
-func tryLockCompatibleSessionLeaseFiles(accessPath, legacyAccessPath string) (func(), error) {
-	primary, legacy, err := tryTakeCompatibleSessionLeaseLocks(accessPath, legacyAccessPath)
+func probeSessionLeaseFile(accessPath string) (func(), error) {
+	lock, err := tryTakeSessionLeaseLock(accessPath)
 	if err != nil {
 		return nil, err
 	}
-	return func() { unlockSessionLeaseLocks(primary, legacy) }, nil
-}
-
-func loadCompatibleSessionLeaseInfo(accessPath, legacyAccessPath string) (*SessionLeaseInfo, error) {
-	info, err := LoadSessionLeaseInfo(accessPath)
-	if err == nil || !os.IsNotExist(err) || sameSessionLeaseLockIdentity(accessPath, legacyAccessPath) {
-		return info, err
-	}
-	return LoadSessionLeaseInfo(legacyAccessPath)
+	return lock.Unlock, nil
 }
 
 func writeSessionLeaseInfo(leaseLock *sessionLockFile, info SessionLeaseInfo) error {
@@ -663,31 +586,13 @@ func writeSessionLeaseInfo(leaseLock *sessionLockFile, info SessionLeaseInfo) er
 // let the lock decide" instead of "no holder".
 var errSessionLeaseInfoCorrupt = errors.New("session lease info corrupt")
 
-// LoadSessionLeaseInfo reports the holder identity for path. New writers
-// publish it inside .lease.lock; the .lease.json sidecar is a read-only
-// compatibility source for sessions last held by older builds. An empty or
-// undecodable source reads as corrupt (the live lock is the truth); only the
-// absence of both sources reads as no-holder.
+// LoadSessionLeaseInfo reads the owner published inside the current lease lock.
 func LoadSessionLeaseInfo(path string) (*SessionLeaseInfo, error) {
-	lockPath := store.SessionLeaseLock(canonicalSessionSavePath(path))
-	if raw, err := readSessionLeaseLockFile(lockPath); err == nil {
-		b := fileencoding.DecodeToUTF8(raw)
-		if info, decodeErr := decodeSessionLeaseInfo(b); decodeErr == nil {
-			return info, nil
-		} else if !errors.Is(decodeErr, os.ErrNotExist) {
-			return nil, decodeErr
-		}
-	} else if !os.IsNotExist(err) {
-		// An unreadable lock file (permission damage, torn disk) still hides
-		// the holder identity; fail on the read rather than silently falling
-		// back to the legacy sidecar.
-		return nil, err
-	}
-	b, err := fileencoding.ReadFileUTF8(sessionLeaseInfoPath(path))
+	raw, err := readSessionLeaseLockFile(store.SessionLeaseLock(canonicalSessionSavePath(path)))
 	if err != nil {
 		return nil, err
 	}
-	return decodeSessionLeaseInfo(b)
+	return decodeSessionLeaseInfo(raw)
 }
 
 func decodeSessionLeaseInfo(b []byte) (*SessionLeaseInfo, error) {
@@ -699,44 +604,6 @@ func decodeSessionLeaseInfo(b []byte) (*SessionLeaseInfo, error) {
 		return nil, fmt.Errorf("%w: %w", errSessionLeaseInfoCorrupt, err)
 	}
 	return &info, nil
-}
-
-// SaveSessionLeaseInfo writes the legacy .lease.json sidecar. Production
-// writers publish owner identity inside .lease.lock instead; this remains for
-// tests and tooling that need to stage the compatibility read path.
-func SaveSessionLeaseInfo(path string, info SessionLeaseInfo) error {
-	leasePath := sessionLeaseInfoPath(path)
-	if err := os.MkdirAll(filepath.Dir(leasePath), 0o755); err != nil {
-		return err
-	}
-	b, err := json.MarshalIndent(info, "", "  ")
-	if err != nil {
-		return err
-	}
-	b = append(b, '\n')
-	tmp, err := os.CreateTemp(filepath.Dir(leasePath), ".lease.*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	if _, err := tmp.Write(b); err != nil {
-		tmp.Close()
-		os.Remove(tmpPath)
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmpPath)
-		return err
-	}
-	if err := fileutil.ReplaceFile(tmpPath, leasePath); err != nil {
-		os.Remove(tmpPath)
-		return err
-	}
-	return nil
-}
-
-func sessionLeaseInfoPath(path string) string {
-	return store.SessionLeaseInfo(canonicalSessionSavePath(path))
 }
 
 // unleasedWriteObserved dedupes the write-authority probe below to one report

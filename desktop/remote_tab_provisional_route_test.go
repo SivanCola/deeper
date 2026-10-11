@@ -68,8 +68,8 @@ func TestRetiringPumpGenerationClosesProvisionalRouteEpoch(t *testing.T) {
 // transition re-installs the route; the recovered tab must still accept
 // commands because the provisional gate belonged to the dead generation.
 func TestRemoteResumeTransportFailureReattachAcceptsCommands(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	fs, a := reattachSelectionFixture(t, []serveSessionEntry{
 		{Name: "old", Path: oldPath, Current: true},
 		{Name: "target", Path: targetPath},
@@ -134,7 +134,7 @@ func TestRemoteResumeTransportFailureReattachAcceptsCommands(t *testing.T) {
 // registration must not open the provisional gate, so commands keep flowing
 // while the idempotent /resume is in flight.
 func TestReselectingCurrentRemoteSessionDoesNotEnterSwitchingState(t *testing.T) {
-	const path = "/sessions/s1.jsonl"
+	const path = "session-id:s1"
 	fs, a := reattachSelectionFixture(t, []serveSessionEntry{{Name: "s1", Path: path, Current: true}})
 	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s1", SessionPath: path})
 

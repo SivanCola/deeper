@@ -64,7 +64,6 @@ function meta(overrides: Partial<LooseMeta> = {}): Meta {
     eventChannel: "events",
     cwd: "/repo",
     autoApproveTools: false,
-    bypass: false,
     collaborationMode: "normal",
     toolApprovalMode: "workspace-write",
     goal: "",
@@ -89,10 +88,10 @@ console.log("\ncomposer profile");
 
 {
   let profiles: ComposerProfilesByTab = {};
-  profiles = hydrateComposerProfilesFromTabs(profiles, [tab({ toolApprovalMode: "auto" })]);
-  eq(profiles["tab-1"].toolApprovalMode, "workspace-write", "legacy auto hydrates as workspace write");
-  profiles = hydrateComposerProfileFromMeta(profiles, "tab-1", meta({ toolApprovalMode: "auto" }));
-  eq(Boolean(profiles["tab-1"].pending.toolApprovalMode), false, "workspace write is acknowledged by legacy meta");
+  profiles = hydrateComposerProfilesFromTabs(profiles, [tab({ toolApprovalMode: "workspace-write" })]);
+  eq(profiles["tab-1"].toolApprovalMode, "workspace-write", "workspace-write hydrates explicitly");
+  profiles = hydrateComposerProfileFromMeta(profiles, "tab-1", meta({ toolApprovalMode: "workspace-write" }));
+  eq(Boolean(profiles["tab-1"].pending.toolApprovalMode), false, "workspace write is acknowledged by current meta");
 }
 
 {
@@ -135,12 +134,12 @@ console.log("\ncomposer profile");
     { collaborationMode: "normal", goalDraftMode: false, goal: "", toolApprovalMode: "workspace-write" },
     ["toolApprovalMode"],
   );
-  profiles = hydrateComposerProfileFromMeta(profiles, "tab-1", meta({ toolApprovalMode: "ask" }));
+  profiles = hydrateComposerProfileFromMeta(profiles, "tab-1", meta({ toolApprovalMode: "read-only" }));
 
   eq(profiles["tab-1"].toolApprovalMode, "workspace-write", "stale meta cannot erase a pending workspace-write selection");
   eq(Boolean(profiles["tab-1"].pending.toolApprovalMode), true, "workspace-write selection stays pending while meta is stale");
 
-  profiles = hydrateComposerProfileFromMeta(profiles, "tab-1", meta({ toolApprovalMode: "auto" }));
+  profiles = hydrateComposerProfileFromMeta(profiles, "tab-1", meta({ toolApprovalMode: "workspace-write" }));
 
   eq(profiles["tab-1"].toolApprovalMode, "workspace-write", "acknowledged workspace-write remains enabled");
   eq(Boolean(profiles["tab-1"].pending.toolApprovalMode), false, "workspace-write pending clears after matching meta");
@@ -172,16 +171,6 @@ console.log("\ncomposer profile");
   eq(Boolean(profiles["tab-2"]), false, "tab hydration removes profiles for closed tabs");
 }
 
-{
-  let profiles: ComposerProfilesByTab = {};
-  profiles = hydrateComposerProfilesFromTabs(profiles, [tab({ toolApprovalMode: "auto" })]);
-  profiles = hydrateComposerProfilesFromTabs(profiles, [tab({ toolApprovalMode: "" })]);
-
-  eq(profiles["tab-1"].toolApprovalMode, "workspace-write", "blank tab payload does not demote workspace write to read only");
-
-  profiles = hydrateComposerProfileFromMeta(profiles, "tab-1", meta({ toolApprovalMode: "" }));
-  eq(profiles["tab-1"].toolApprovalMode, "workspace-write", "blank meta payload does not demote workspace write to read only");
-}
 
 {
   let intents: UserPlanModeIntents = {};

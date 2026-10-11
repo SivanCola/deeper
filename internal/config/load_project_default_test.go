@@ -29,7 +29,7 @@ func TestLoadForRoot_UnresolvableProjectDefaultModelFallsBackToUserDefault(t *te
 name        = "deepseek-pro"
 kind        = "openai"
 base_url    = "https://api.deepseek.com"
-model       = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "DEEPSEEK_API_KEY"
 `)
 
@@ -66,14 +66,14 @@ func TestLoadForRoot_ResolvableProjectDefaultModelStillWins(t *testing.T) {
 name        = "deepseek-pro"
 kind        = "openai"
 base_url    = "https://api.deepseek.com"
-model       = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "DEEPSEEK_API_KEY"
 
 [[providers]]
 name        = "local"
 kind        = "openai"
 base_url    = "http://127.0.0.1:8080/v1"
-model       = "local-model"
+models = ["local-model"]
 `)
 
 	project := t.TempDir()
@@ -103,7 +103,7 @@ func TestLoadForRoot_ProjectDefaultModelKeptWhenUserDefaultUnresolvable(t *testi
 name        = "deepseek-pro"
 kind        = "openai"
 base_url    = "https://api.deepseek.com"
-model       = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "DEEPSEEK_API_KEY"
 `)
 
@@ -138,7 +138,7 @@ func TestLoadForRoot_NoUserConfigKeepsBrokenProjectDefaultModel(t *testing.T) {
 name        = "deepseek-flash"
 kind        = "openai"
 base_url    = "https://example.invalid"
-model       = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 
@@ -165,7 +165,7 @@ func TestLoadForRoot_NoProjectOverrideLeavesUserDefaultAlone(t *testing.T) {
 name        = "deepseek-pro"
 kind        = "openai"
 base_url    = "https://api.deepseek.com"
-model       = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "DEEPSEEK_API_KEY"
 `)
 

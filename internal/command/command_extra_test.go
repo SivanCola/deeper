@@ -1,6 +1,7 @@
 package command
 
 import (
+	"deepzora/internal/frontmatter"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 // splitFrontmatter
 
 func TestSplitFrontmatterNoFence(t *testing.T) {
-	fm, body := splitFrontmatter("just body text\nno fence")
+	fm, body := frontmatter.Split("just body text\nno fence")
 	if len(fm) != 0 {
 		t.Errorf("expected empty fm, got %v", fm)
 	}
@@ -20,7 +21,7 @@ func TestSplitFrontmatterNoFence(t *testing.T) {
 }
 
 func TestSplitFrontmatterUnclosed(t *testing.T) {
-	fm, body := splitFrontmatter("---\nkey: val\n\nbody without closing")
+	fm, body := frontmatter.Split("---\nkey: val\n\nbody without closing")
 	if len(fm) != 0 {
 		t.Errorf("unclosed fence should return empty fm, got %v", fm)
 	}
@@ -30,7 +31,7 @@ func TestSplitFrontmatterUnclosed(t *testing.T) {
 }
 
 func TestSplitFrontmatterEmptyBody(t *testing.T) {
-	fm, body := splitFrontmatter("---\nkey: val\n---\n")
+	fm, body := frontmatter.Split("---\nkey: val\n---\n")
 	if fm["key"] != "val" {
 		t.Errorf("key = %q", fm["key"])
 	}
@@ -40,14 +41,14 @@ func TestSplitFrontmatterEmptyBody(t *testing.T) {
 }
 
 func TestSplitFrontmatterQuotedValues(t *testing.T) {
-	fm, _ := splitFrontmatter("---\ndescription: \"quoted\"\n---\n")
+	fm, _ := frontmatter.Split("---\ndescription: \"quoted\"\n---\n")
 	if fm["description"] != "quoted" {
 		t.Errorf("description should be unquoted: %q", fm["description"])
 	}
 }
 
 func TestSplitFrontmatterCRLF(t *testing.T) {
-	fm, body := splitFrontmatter("---\r\nkey: val\r\n---\r\nbody\r\n")
+	fm, body := frontmatter.Split("---\r\nkey: val\r\n---\r\nbody\r\n")
 	if fm["key"] != "val" {
 		t.Errorf("key = %q", fm["key"])
 	}

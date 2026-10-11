@@ -30,14 +30,3 @@ func TestConfiguredEffortRejectsBeforeCredentialsOrIO(t *testing.T) {
 		}
 	}
 }
-
-func TestStoredDeepSeekEffortCompatibility(t *testing.T) {
-	for _, kind := range []string{"openai", "anthropic"} {
-		for _, effort := range []string{"medium", "xhigh"} {
-			entry := config.ProviderEntry{Name: "legacy", Kind: kind, Model: "deepseek-v4-flash", BaseURL: "https://api.deepseek.com", Effort: effort}
-			if _, err := NewProvider(&entry); err != nil {
-				t.Fatalf("%s/%s: %v", kind, effort, err)
-			}
-		}
-	}
-}

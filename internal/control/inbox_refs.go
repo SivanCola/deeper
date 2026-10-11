@@ -111,12 +111,5 @@ func applyInboxReferences(env sessioninbox.PromptEnvelope) (submit string, image
 		submit = "Referenced context:\n\n" + env.FrozenRefBlock + "\n\n" + submit
 		return submit, images, "", nil
 	}
-	if len(env.Refs) == 0 {
-		return submit, images, "", nil
-	}
-	legacyBlock, bodies, materializeErr := sessioninbox.MaterializeRefs(context.Background(), "", env.Refs)
-	if materializeErr != nil || legacyBlock != "" {
-		return "", nil, legacyBlock, materializeErr
-	}
-	return sessioninbox.ApplyFrozenRefs(submit, bodies), images, "", nil
+	return submit, images, "", nil
 }

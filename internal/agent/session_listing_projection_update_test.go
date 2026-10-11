@@ -49,27 +49,6 @@ func TestUpdateSessionListingProjectionIfCurrentRejectsAdvancedGeneration(t *tes
 	}
 }
 
-func TestUpdateSessionListingProjectionIfCurrentRepairsMatchingLegacySession(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "20260101-000000-deepseek-chat.jsonl")
-	writeSessionFile(t, path, []provider.Message{{Role: provider.RoleUser, Content: "legacy question"}})
-	if err := SaveBranchMeta(path, BranchMeta{ID: BranchID(path)}); err != nil {
-		t.Fatal(err)
-	}
-	_, state, _, err := LoadSessionDisplayMessages(path)
-	if err != nil || state.RevisionKnown {
-		t.Fatalf("load legacy state = %+v err=%v", state, err)
-	}
-	applied, err := UpdateSessionListingProjectionIfCurrent(path, "", "", "legacy question", 1, false, state)
-	if err != nil || !applied {
-		t.Fatalf("legacy projection applied=%v err=%v", applied, err)
-	}
-	meta, ok, err := LoadBranchMeta(path)
-	if err != nil || !ok || meta.Preview != "legacy question" || meta.Turns != 1 || meta.SchemaVersion != BranchMetaCountsVersion {
-		t.Fatalf("legacy projection missing: ok=%v err=%v meta=%+v", ok, err, meta)
-	}
-}
-
 func TestUpdateSessionListingProjectionIfCurrentStampsMatchingGeneration(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "20260101-000000-deepseek-chat.jsonl")

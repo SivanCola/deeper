@@ -39,10 +39,6 @@ func (h *readHandle) scanCatalog(ctx context.Context, apply func(Commit) error) 
 		applyErr = apply(commit)
 		return applyErr == nil
 	}
-	if IsFramedCodec(manifest.Codec) {
-		err = scanV4CommitFile(ctx, file, 0, 1, contentStoreForSessionDir(dir), nil, visit)
-	} else {
-		err = scanCommitFileCodec(file, 0, 1, manifest.Codec, nil, visit)
-	}
+	err = scanV4CommitFile(ctx, file, 0, 1, contentStoreForSessionDir(dir), nil, visit)
 	return errors.Join(err, applyErr, ctx.Err())
 }

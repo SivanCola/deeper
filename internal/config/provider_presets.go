@@ -33,12 +33,11 @@ type ProviderPreset struct {
 }
 
 const (
-	ProviderPresetVersion        = 1
-	longCat20ContextWindow       = 1_048_576
-	legacyLongCat20ContextWindow = 131_072
-	longCatOpenAIBaseURL         = "https://api.longcat.chat/openai/v1"
-	longCatAnthropicBaseURL      = "https://api.longcat.chat/anthropic"
-	deepSeekAnthropicBaseURL     = "https://api.deepseek.com/anthropic"
+	ProviderPresetVersion    = 1
+	longCat20ContextWindow   = 1_048_576
+	longCatOpenAIBaseURL     = "https://api.longcat.chat/openai/v1"
+	longCatAnthropicBaseURL  = "https://api.longcat.chat/anthropic"
+	deepSeekAnthropicBaseURL = "https://api.deepseek.com/anthropic"
 )
 
 // CuratedProviderPresets returns one-click provider templates for common
@@ -48,8 +47,8 @@ const (
 func CuratedProviderPresets() []ProviderPreset {
 	presets := make([]ProviderPreset, 0, len(curatedProviderPresets))
 	for _, preset := range curatedProviderPresets {
-		// Keep the old direct lookup available for installed configurations, but
-		// do not offer the redundant Anthropic preset in new-provider surfaces.
+		// The alternate Anthropic transport remains optional; the primary
+		// access surface offers the recommended DeepSeek transport.
 		if preset.ID == "deepseek-anthropic" {
 			continue
 		}
@@ -94,7 +93,6 @@ func providerPresetDisplayRank(id string) int {
 }
 
 var (
-	legacyKimiAPIModels = []string{"kimi-k2.7-code", "kimi-k2.7-code-highspeed", "kimi-k2.6", "kimi-k2.5"}
 	kimiAPIModels       = []string{"kimi-k3", "kimi-k2.7-code", "kimi-k2.7-code-highspeed", "kimi-k2.6", "kimi-k2.5"}
 	kimiAPIVisionModels = []string{"kimi-k3", "kimi-k2.7-code", "kimi-k2.7-code-highspeed", "kimi-k2.6", "kimi-k2.5"}
 	kimiCodingModels    = []string{"kimi-for-coding"}
@@ -126,12 +124,8 @@ var (
 	// The pay-as-you-go channel serves the same reasoning SKUs; 3.7-flash
 	// additionally accepts image input there (verified live), while the
 	// step_plan channel rejects images outright.
-	stepfunAPIModels       = []string{"step-3.7-flash", "step-3.5-flash", "step-3.5-flash-2603"}
-	stepfunAPIVisionModels = []string{"step-3.7-flash"}
-
-	legacyOpenCodeGoModels           = []string{"glm-5.2", "glm-5.1", "kimi-k2.7-code", "kimi-k2.6", "deepseek-v4-pro", "deepseek-v4-flash", "mimo-v2.5-pro", "mimo-v2.5"}
-	preVisionOpenCodeGoModels        = []string{"glm-5.3", "glm-5.2", "glm-5.1", "kimi-k3", "kimi-k2.7-code", "kimi-k2.6", "deepseek-v4-pro", "deepseek-v4-flash", "mimo-v2.5-pro", "mimo-v2.5", "hy3"}
-	preVisionOpenCodeGoVisionModels  = []string{"kimi-k3"}
+	stepfunAPIModels                 = []string{"step-3.7-flash", "step-3.5-flash", "step-3.5-flash-2603"}
+	stepfunAPIVisionModels           = []string{"step-3.7-flash"}
 	opencodeGoModels                 = provider.OpenCodeGoModelIDs(provider.OpenCodeGoRouteChat)
 	opencodeGoVisionModels           = provider.OpenCodeGoVisionModelIDs(provider.OpenCodeGoRouteChat)
 	opencodeZenAnthropicModels       = []string{"claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5", "qwen3.6-plus", "qwen3.5-plus", "qwen3.6-plus-free"}
@@ -1047,10 +1041,7 @@ func cloneProviderEntry(e ProviderEntry) ProviderEntry {
 		value := *e.WebSearch
 		e.WebSearch = &value
 	}
-	if e.ResponsesStateful != nil {
-		value := *e.ResponsesStateful
-		e.ResponsesStateful = &value
-	}
+
 	if e.visionOverride != nil {
 		value := *e.visionOverride
 		e.visionOverride = &value

@@ -15,24 +15,18 @@ const (
 	QueueModeCollect   = "collect"
 	QueueModeInterrupt = "interrupt"
 
-	QueueDropSummarize = "summarize"
-	QueueDropOld       = "old"
-	QueueDropNew       = "new"
-
 	DefaultQueueCap = 20
 )
 
 type QueueOptions struct {
 	Mode string
 	Cap  int
-	Drop string
 }
 
 type QueueResult struct {
 	Acquired bool
 	Queued   bool
 	Rejected bool
-	Dropped  bool
 	Pending  int
 	Mode     string
 }
@@ -40,7 +34,6 @@ type QueueResult struct {
 type QueueSnapshot struct {
 	Active   int
 	Pending  int
-	Dropped  int
 	Sessions int
 }
 
@@ -71,17 +64,6 @@ func NormalizeOptionalQueueMode(mode string) string {
 		return QueueModeInterrupt
 	default:
 		return ""
-	}
-}
-
-func NormalizeQueueDrop(drop string) string {
-	switch strings.ToLower(strings.TrimSpace(drop)) {
-	case QueueDropOld:
-		return QueueDropOld
-	case QueueDropNew:
-		return QueueDropNew
-	default:
-		return QueueDropSummarize
 	}
 }
 
@@ -175,7 +157,6 @@ type SessionManager struct {
 	pending       map[string][]pendingTurn // session key -> 等待队列
 	debounce      time.Duration
 	modeOverrides map[string]string
-	dropped       map[string][]string
 }
 
 // NewSessionManager 创建一个新的 session 管理器。debounce 是消息合并窗口。
@@ -188,14 +169,13 @@ func NewSessionManager(debounce time.Duration) *SessionManager {
 		pending:       make(map[string][]pendingTurn),
 		debounce:      debounce,
 		modeOverrides: make(map[string]string),
-		dropped:       make(map[string][]string),
 	}
 }
 
 // TryAcquire 尝试获取 session 锁。如果 session 正忙且消息非绕过命令，返回 false。
 // 返回 (acquired, merged) — merged 为 true 表示消息已合并到等待队列。
 func (sm *SessionManager) TryAcquire(key string, msg InboundMessage) (acquired bool, merged bool) {
-	result := sm.TryAcquireWithQueue(key, msg, QueueOptions{Mode: QueueModeCollect, Cap: DefaultQueueCap, Drop: QueueDropSummarize})
+	result := sm.TryAcquireWithQueue(key, msg, QueueOptions{Mode: QueueModeCollect, Cap: DefaultQueueCap})
 	return result.Acquired, result.Queued
 }
 
@@ -211,7 +191,6 @@ func (sm *SessionManager) TryAcquireWithQueue(key string, msg InboundMessage, op
 	if cap <= 0 {
 		cap = DefaultQueueCap
 	}
-	drop := NormalizeQueueDrop(opts.Drop)
 
 	if sm.active[key] {
 		// 绕过命令立即返回 true（让调用方直接处理）
@@ -220,17 +199,9 @@ func (sm *SessionManager) TryAcquireWithQueue(key string, msg InboundMessage, op
 		}
 		queue := sm.pending[key]
 		if len(queue) >= cap {
-			switch drop {
-			case QueueDropNew:
-				return QueueResult{Rejected: true, Pending: len(queue), Mode: mode}
-			case QueueDropOld, QueueDropSummarize:
-				removed := queue[0]
-				queue = queue[1:]
-				if drop == QueueDropSummarize {
-					sm.dropped[key] = append(sm.dropped[key], queueSummary(removed.msg.Text))
-				}
-			}
+			return QueueResult{Rejected: true, Pending: len(queue), Mode: mode}
 		}
+
 		if mode == QueueModeCollect && len(queue) > 0 {
 			last := &queue[len(queue)-1]
 			if msg.Text != "" && time.Since(last.timestamp) < sm.debounce {
@@ -242,12 +213,12 @@ func (sm *SessionManager) TryAcquireWithQueue(key string, msg InboundMessage, op
 				last.timestamp = time.Now()
 				last.mode = mode
 				sm.pending[key] = queue
-				return QueueResult{Queued: true, Dropped: len(sm.dropped[key]) > 0, Pending: len(queue), Mode: mode}
+				return QueueResult{Queued: true, Pending: len(queue), Mode: mode}
 			}
 		}
 		queue = append(queue, pendingTurn{msg: msg, timestamp: time.Now(), mode: mode})
 		sm.pending[key] = queue
-		return QueueResult{Queued: true, Dropped: len(sm.dropped[key]) > 0, Pending: len(queue), Mode: mode}
+		return QueueResult{Queued: true, Pending: len(queue), Mode: mode}
 	}
 
 	sm.active[key] = true
@@ -275,7 +246,6 @@ func (sm *SessionManager) ReplacePending(key string, msg InboundMessage) QueueRe
 		return QueueResult{Acquired: true, Mode: QueueModeInterrupt}
 	}
 	sm.pending[key] = []pendingTurn{{msg: msg, timestamp: time.Now(), mode: QueueModeFollowup}}
-	delete(sm.dropped, key)
 	return QueueResult{Queued: true, Pending: 1, Mode: QueueModeInterrupt}
 }
 
@@ -288,7 +258,6 @@ func (sm *SessionManager) Release(key string) *InboundMessage {
 	if len(queue) == 0 {
 		delete(sm.active, key)
 		delete(sm.pending, key)
-		delete(sm.dropped, key)
 		return nil
 	}
 
@@ -302,7 +271,6 @@ func (sm *SessionManager) Release(key string) *InboundMessage {
 		} else {
 			sm.pending[key] = queue[1:]
 		}
-		merged.Text = sm.consumeDroppedPrefixLocked(key, merged.Text)
 		return merged
 	}
 
@@ -318,44 +286,8 @@ func (sm *SessionManager) Release(key string) *InboundMessage {
 		}
 	}
 	delete(sm.pending, key)
-	merged.Text = sm.consumeDroppedPrefixLocked(key, merged.Text)
 	// active 保持 true，因为调用方会立即用 merged 消息开始新 turn
 	return merged
-}
-
-func (sm *SessionManager) consumeDroppedPrefixLocked(key, text string) string {
-	dropped := sm.dropped[key]
-	if len(dropped) == 0 {
-		return text
-	}
-	delete(sm.dropped, key)
-	var b strings.Builder
-	fmt.Fprintf(&b, "[Queue note: %d older pending message(s) were dropped because this bot session reached its queue cap.", len(dropped))
-	if len(dropped) > 0 {
-		b.WriteString(" Dropped summaries:")
-		limit := min(len(dropped), 3)
-		for i := range limit {
-			fmt.Fprintf(&b, "\n- %s", dropped[i])
-		}
-		if len(dropped) > limit {
-			fmt.Fprintf(&b, "\n- ... and %d more", len(dropped)-limit)
-		}
-	}
-	b.WriteString("]\n\n")
-	b.WriteString(text)
-	return b.String()
-}
-
-func queueSummary(text string) string {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return "(empty message)"
-	}
-	runes := []rune(text)
-	if len(runes) <= 180 {
-		return text
-	}
-	return string(runes[:180]) + "..."
 }
 
 // IsActive 返回 session 是否有正在运行的任务。
@@ -386,7 +318,6 @@ func (sm *SessionManager) runIfIdle(key string, fn func() bool) bool {
 		return false
 	}
 	delete(sm.pending, key)
-	delete(sm.dropped, key)
 	return true
 }
 
@@ -407,17 +338,13 @@ func (sm *SessionManager) Snapshot() QueueSnapshot {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	var pending int
-	var dropped int
 	for _, queue := range sm.pending {
 		pending += len(queue)
 	}
-	for _, summaries := range sm.dropped {
-		dropped += len(summaries)
-	}
+
 	return QueueSnapshot{
 		Active:   len(sm.active),
 		Pending:  pending,
-		Dropped:  dropped,
 		Sessions: len(sm.active) + len(sm.pending),
 	}
 }
@@ -451,5 +378,4 @@ func (sm *SessionManager) ForceRelease(key string) {
 	defer sm.mu.Unlock()
 	delete(sm.active, key)
 	delete(sm.pending, key)
-	delete(sm.dropped, key)
 }

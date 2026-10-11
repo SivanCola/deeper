@@ -11,7 +11,7 @@ import (
 )
 
 func TestUnrecognizedDraftDatabaseIsNeverInitializedOrRewritten(t *testing.T) {
-	for _, version := range []int{-1, 0, SchemaVersion + 1} {
+	for _, version := range []int{-1, 0, 1, 2, 3, SchemaVersion + 1} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "drafts.sqlite")
 			db, err := sql.Open("sqlite", path)

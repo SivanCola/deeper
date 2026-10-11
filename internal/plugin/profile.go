@@ -84,14 +84,6 @@ func (p HostProfile) Normalize() HostProfile {
 	}
 }
 
-// UsesEnhancedCache reports whether the profile declares anything beyond the
-// legacy client surface. Such profiles cannot reuse the v2 cache: a server may
-// return a different tools/list once it sees elicitation or ui extensions, so
-// they read and write an isolated v3 cache instead.
-func (p HostProfile) UsesEnhancedCache() bool {
-	return p.Normalize() != HostProfileCore
-}
-
 // ProfileCacheHash is a stable, short digest of the declared capabilities.
 // It appears in the enhanced cache filename (<slug>.host-<hash>.json) so
 // caches written under different profiles never collide.

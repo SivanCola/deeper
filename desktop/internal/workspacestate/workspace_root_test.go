@@ -48,65 +48,6 @@ func writeRegistryState(t *testing.T, path string, state State) []byte {
 	return body
 }
 
-// A state written before physical identity could record one directory twice.
-// The registry must repair that on contact: refusing leaves every projection
-// over the directory ambiguous, which strands both records in the sidebar.
-func TestEnsureWorkspaceResolvedRepairsAmbiguousLegacyOwners(t *testing.T) {
-	root := t.TempDir()
-	alias := filepath.Join(t.TempDir(), "alias")
-	if err := os.Symlink(root, alias); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
-	}
-	path := filepath.Join(t.TempDir(), "workspace-state-v1.json")
-	state := newState()
-	state.WorkspaceIDs = []string{"old-a", "old-b"}
-	state.Workspaces["old-a"] = Workspace{ID: "old-a", Root: root, Title: "kept", SessionIDs: []string{"session-a"}}
-	state.Workspaces["old-b"] = Workspace{
-		ID: "old-b", Root: alias, Visible: true, SessionIDs: []string{"session-b"},
-		Organization: &Organization{Groups: []OrganizationGroup{{ID: "group-b", Title: "B", Members: []string{SessionKey("session-b")}}}},
-	}
-	state.SessionStates = map[string]SessionState{
-		"session-a": {Lifecycle: Active}, "session-b": {Lifecycle: Active},
-	}
-	state.SourceMappings["source-b"] = SourceMapping{SourceKey: "source-b", SessionID: "session-b", WorkspaceID: "old-b", Fingerprint: "fp-b"}
-	writeRegistryState(t, path, state)
-
-	store := NewStore(path)
-	if id, found, err := ResolveWorkspaceID(state, alias); err != nil || !found || id != "old-a" {
-		t.Fatalf("read-only resolution = %q (found=%v): %v", id, found, err)
-	}
-	index := NewWorkspaceIndex(state)
-	for _, candidate := range []string{root, alias} {
-		if id, found, err := index.Resolve(candidate); err != nil || !found || id != "old-a" {
-			t.Fatalf("indexed resolution for %q = %q (found=%v): %v", candidate, id, found, err)
-		}
-	}
-	id, err := store.EnsureWorkspaceResolved(t.Context(), Workspace{ID: "candidate", Root: root})
-	if err != nil || id != "old-a" {
-		t.Fatalf("resolved id = %q, err = %v", id, err)
-	}
-	repaired, err := store.Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	owner, ok := repaired.Workspaces["old-a"]
-	if !ok || len(repaired.Workspaces) != 1 || !slices.Equal(repaired.WorkspaceIDs, []string{"old-a"}) {
-		t.Fatalf("duplicate survived the repair: %+v", repaired.Workspaces)
-	}
-	if owner.Root != root || owner.Title != "kept" || !owner.Visible {
-		t.Fatalf("owner lost its identity or presentation: %+v", owner)
-	}
-	if !slices.Equal(owner.SessionIDs, []string{"session-a", "session-b"}) {
-		t.Fatalf("sessions = %v", owner.SessionIDs)
-	}
-	if owner.Organization == nil || len(owner.Organization.Groups) != 1 || owner.Organization.Groups[0].ID != "group-b" {
-		t.Fatalf("organization was dropped: %+v", owner.Organization)
-	}
-	if repaired.SourceMappings["source-b"].WorkspaceID != "old-a" {
-		t.Fatalf("source mapping still names the absorbed workspace: %+v", repaired.SourceMappings)
-	}
-}
-
 // The Global folder lives at a fixed directory. A user who also added that
 // directory as an ordinary project owns it twice, and Global must survive:
 // its ID is addressed across the app and cannot be removed or hidden.
@@ -289,29 +230,5 @@ func TestEnsureWorkspaceResolvedRebindsGlobalAfterDataDirectoryMoves(t *testing.
 	}
 	if back, _ := NewStore(path).Load(t.Context()); back.Workspaces[GlobalWorkspaceID].Root != oldRoot || !slices.Equal(back.Workspaces[GlobalWorkspaceID].FormerRoots, []string{newRoot}) {
 		t.Fatalf("global after moving back = %+v", back.Workspaces[GlobalWorkspaceID])
-	}
-}
-
-func TestReconcileDiscoveredSessionRebindsGlobalAfterDataDirectoryMoves(t *testing.T) {
-	oldRoot := filepath.Join(t.TempDir(), "old-home", "global-workspace")
-	newRoot := filepath.Join(t.TempDir(), "new-home", "global-workspace")
-	path := filepath.Join(t.TempDir(), "workspace-state-v1.json")
-	state := newState()
-	state.WorkspaceIDs = []string{GlobalWorkspaceID}
-	state.Workspaces[GlobalWorkspaceID] = Workspace{ID: GlobalWorkspaceID, Root: oldRoot, Visible: true}
-	writeRegistryState(t, path, state)
-
-	err := NewStore(path).ReconcileDiscoveredSession(t.Context(),
-		RecoveryEntry{ID: "canonical-s", SourceKey: "canonical:s", SessionID: "s", Format: "canonical", Status: "pending"},
-		&Workspace{ID: GlobalWorkspaceID, Root: newRoot, Visible: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := NewStore(path).Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if global := loaded.Workspaces[GlobalWorkspaceID]; global.Root != newRoot || !slices.Equal(global.SessionIDs, []string{"s"}) {
-		t.Fatalf("global after discovery = %+v", global)
 	}
 }

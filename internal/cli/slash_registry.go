@@ -62,14 +62,12 @@ func builtinSlashSpecs() []builtinSlashSpec {
 		{name: "/web", insert: "/web", hint: i18n.M.CmdWeb, showInHelp: true},
 		{name: "/docs", aliases: []string{"/deepzora:docs"}, insert: "/docs ", hint: i18n.M.CmdDocs, showInHelp: true},
 		{name: "/memory", insert: "/memory ", hint: i18n.M.CmdMemory, showInHelp: true},
-		{name: "/migrate", aliases: []string{"/migration"}, insert: "/migrate", hint: i18n.M.CmdMigrate, showInHelp: true},
 		{name: "/goal", insert: "/goal ", hint: i18n.M.CmdGoal, descend: true},
 		{name: "/remember", insert: "/remember ", hint: i18n.M.CmdRemember},
 		{name: "/forget", insert: "/forget ", hint: i18n.M.CmdForget},
 		{name: "/quit", aliases: []string{"/exit"}, insert: "/quit", hint: i18n.M.CmdQuit},
 		{name: "/copy", insert: "/copy", hint: i18n.M.CmdCopy, showInHelp: true},
 		{name: control.RecoverContextCommand, insert: control.RecoverContextCommand, hint: i18n.M.ProtocolRecoveryLabel, showInHelp: true},
-		{name: control.ContinueChecksCommand, insert: control.ContinueChecksCommand, hint: i18n.M.CmdContinueChecks, showInHelp: true},
 		{name: "/export", insert: "/export", hint: i18n.M.CmdExport, showInHelp: true},
 	}
 }

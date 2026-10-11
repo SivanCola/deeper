@@ -5,11 +5,11 @@
 # other even though a source-level packaging test sees two different strings.
 set -euo pipefail
 
-staging="${1:?usage: verify-windows-portable.sh STAGING_DIR [canonical|legacy-dual] [PAYLOAD_LAUNCHER]}"
+staging="${1:?usage: verify-windows-portable.sh STAGING_DIR [canonical] [PAYLOAD_LAUNCHER]}"
 layout="${2:-canonical}"
 payload_launcher="${3:-}"
 case "$layout" in
-	canonical|legacy-dual) ;;
+	canonical) ;;
 	*) echo "Unknown Windows portable layout: $layout" >&2; exit 1 ;;
 esac
 [ -d "$staging" ] || { echo "Windows portable staging directory is missing: $staging" >&2; exit 1; }
@@ -20,9 +20,6 @@ required_root=(
 	"deepzora-cli.exe"
 	"current.json"
 )
-if [ "$layout" = "legacy-dual" ]; then
-	required_root+=("deepzora-launcher.exe")
-fi
 
 for expected in "${required_root[@]}"; do
 	[ -f "$staging/$expected" ] && [ ! -L "$staging/$expected" ] || {
@@ -84,13 +81,6 @@ if [ -e "$staging/deepzora-guard.exe" ] || [ -e "$staging/deepzora-desktop.exe" 
 	exit 1
 fi
 
-# Historical packages must contain identical launcher entries. New artifacts
-# must not regain the compatibility entry merely because it exists in staging.
-if [ "$layout" = "legacy-dual" ]; then
-	cmp -s "$staging/Deepzora.exe" "$staging/deepzora-launcher.exe" || {
-		echo "Deepzora.exe differs from the legacy GUI entry" >&2; exit 1
-	}
-fi
 if [ -n "$payload_launcher" ]; then
 	cmp -s "$staging/Deepzora.exe" "$payload_launcher" || {
 		echo "Deepzora.exe does not match the payload launcher" >&2; exit 1
@@ -116,7 +106,6 @@ while IFS= read -r -d '' path; do
 	name="${path##*/}"
 	case "$name" in
 		Deepzora.exe|deepzora-cli.exe) ;;
-		deepzora-launcher.exe) [ "$layout" = "legacy-dual" ] || { echo "Unexpected legacy launcher" >&2; exit 1; } ;;
 		*) echo "Unexpected Windows root executable: $name" >&2; exit 1 ;;
 	esac
 	folded=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')

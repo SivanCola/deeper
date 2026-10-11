@@ -17,7 +17,6 @@ func TestDecoratePluginCommandConflicts(t *testing.T) {
 		},
 	}
 	decoratePluginCommandConflicts(&view, []command.Command{
-		{Name: "plan", Plugin: "pwf", ShortName: "plan", Hidden: true},
 		{Name: "pwf:plan", Plugin: "pwf", ShortName: "plan"},
 		{Name: "pwf:status", Description: "explicit command"},
 	})

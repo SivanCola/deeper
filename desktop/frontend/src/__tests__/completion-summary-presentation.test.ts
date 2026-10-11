@@ -16,7 +16,7 @@ const result = normalizeCompletionSummary(mergeTurnResult(legacy, receipt, "turn
 assert.equal(result.checkpointTurn, 0);
 assert.match(turnChangeText(result, t), /1.*file.*\+2 −1/);
 assert.equal(turnCheckState(result).status, "none");
-assert.equal(completionSummaryPresentation(result, "standard", t)?.title, "Turn result");
+assert.equal(completionSummaryPresentation(result, t)?.title, "Turn result");
 assert.match(turnChangeText(mergeTurnResult(undefined, { ...receipt, diff: { ...diff, coverage: "partial" } }), t), /partial/i);
 assert.equal(normalizeTurnChanges({ ...diff, added: -1 })?.coverage, "unknown");
 for (const [check, expected] of [

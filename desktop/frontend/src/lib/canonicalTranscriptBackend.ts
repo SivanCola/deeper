@@ -38,10 +38,6 @@ export function canonicalMessage(message: PersistentMessage, body: unknown): His
   if (Boolean(raw.local_only) && Object.keys(readPause).length > 0) {
     return { role: "notice", messageId: String(raw.id ?? message.messageId), content: "", code: "incomplete_read", level: "info", readPause: readPause as unknown as HistoryMessage["readPause"] };
   }
-  const readiness = asWireObject(raw.final_readiness_recovery);
-  if (Boolean(raw.local_only) && readiness.pending === true) {
-    return { role: "notice", messageId: String(raw.id ?? message.messageId), content: "Final checks are still required before this task is complete.", code: "historical_checks", level: "info", readiness: { missing: Array.isArray(readiness.missing) ? readiness.missing.map(String) : undefined } };
-  }
   const protocolRecovery = asWireObject(raw.protocol_recovery);
   if (Boolean(raw.local_only) && protocolRecovery.state === "pending" && typeof protocolRecovery.id === "string") {
     return { role: "notice", messageId: String(raw.id ?? message.messageId), content: "", code: "protocol_recovery", level: "info", pending: true, protocolRecovery: { id: protocolRecovery.id } };

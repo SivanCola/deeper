@@ -140,11 +140,11 @@ func TestLarkInstallFollowsSDKDomainSwitchAndStoresSecret(t *testing.T) {
 		t.Fatalf("credential = %+v, want stored Lark secret", poll.Connection.Credential)
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if !cfg.Bot.Enabled || !cfg.Bot.Feishu.Enabled || cfg.Bot.Feishu.Domain != "lark" || cfg.Bot.Feishu.Mode != "websocket" || !cfg.Bot.Feishu.RequireMention {
+	if !cfg.Bot.Enabled || cfg.Bot.Feishu.Domain != "lark" || cfg.Bot.Feishu.Mode != "websocket" || !cfg.Bot.Feishu.RequireMention {
 		t.Fatalf("saved feishu config = %+v, want enabled websocket lark with mention gating", cfg.Bot.Feishu)
 	}
-	if len(cfg.Bot.Allowlist.FeishuUsers) != 1 || cfg.Bot.Allowlist.FeishuUsers[0] != "ou-installer" {
-		t.Fatalf("feishu allowlist = %+v, want installer open_id", cfg.Bot.Allowlist.FeishuUsers)
+	if len(cfg.Bot.Connections[0].Access.Users) != 1 || cfg.Bot.Connections[0].Access.Users[0] != "ou-installer" {
+		t.Fatalf("feishu allowlist = %+v, want installer open_id", cfg.Bot.Connections[0].Access.Users)
 	}
 	if err := os.Unsetenv("LARK_BOT_APP_SECRET"); err != nil {
 		t.Fatalf("unset lark secret env: %v", err)
@@ -296,11 +296,11 @@ func TestFeishuInstallStoresFeishuSecretAndSurvivesReload(t *testing.T) {
 		t.Fatalf("registration hosts = %q, want Feishu begin and poll", got)
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if !cfg.Bot.Enabled || !cfg.Bot.Feishu.Enabled || cfg.Bot.Feishu.Domain != "feishu" || cfg.Bot.Feishu.AppID != "cli-feishu" {
+	if !cfg.Bot.Enabled || cfg.Bot.Feishu.Domain != "feishu" || len(cfg.Bot.Connections) != 1 || cfg.Bot.Connections[0].Credential.AppID != "cli-feishu" {
 		t.Fatalf("saved feishu config = %+v, want enabled Feishu websocket config", cfg.Bot.Feishu)
 	}
-	if len(cfg.Bot.Allowlist.FeishuUsers) != 1 || cfg.Bot.Allowlist.FeishuUsers[0] != "ou-feishu-installer" {
-		t.Fatalf("feishu allowlist = %+v, want installer open_id", cfg.Bot.Allowlist.FeishuUsers)
+	if len(cfg.Bot.Connections[0].Access.Users) != 1 || cfg.Bot.Connections[0].Access.Users[0] != "ou-feishu-installer" {
+		t.Fatalf("feishu allowlist = %+v, want installer open_id", cfg.Bot.Connections[0].Access.Users)
 	}
 	if err := os.Unsetenv("FEISHU_BOT_APP_SECRET"); err != nil {
 		t.Fatalf("unset feishu secret env: %v", err)
@@ -347,11 +347,11 @@ func TestWeixinInstallStoresSavedAccountAndConnection(t *testing.T) {
 		t.Fatalf("credential = %+v, want saved account to count as configured token", poll.Connection.Credential)
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if !cfg.Bot.Enabled || !cfg.Bot.Weixin.Enabled || cfg.Bot.Weixin.AccountID != "weixin-account" || cfg.Bot.Weixin.TokenEnv != "WEIXIN_BOT_TOKEN" {
+	if !cfg.Bot.Enabled || len(cfg.Bot.Connections) != 1 || !cfg.Bot.Connections[0].Enabled || cfg.Bot.Connections[0].Credential.AccountID != "weixin-account" || cfg.Bot.Connections[0].Credential.TokenEnv != "WEIXIN_BOT_TOKEN" {
 		t.Fatalf("saved weixin config = %+v, want enabled saved account", cfg.Bot.Weixin)
 	}
-	if len(cfg.Bot.Allowlist.WeixinUsers) != 1 || cfg.Bot.Allowlist.WeixinUsers[0] != "user-1" {
-		t.Fatalf("weixin allowlist = %+v, want installer user id", cfg.Bot.Allowlist.WeixinUsers)
+	if len(cfg.Bot.Connections[0].Access.Users) != 1 || cfg.Bot.Connections[0].Access.Users[0] != "user-1" {
+		t.Fatalf("weixin allowlist = %+v, want installer user id", cfg.Bot.Connections[0].Access.Users)
 	}
 	reloaded, err := config.Load()
 	if err != nil {
@@ -444,11 +444,11 @@ status = "connected"
 	if cfg.Bot.Enabled {
 		t.Fatal("re-scanning an existing connection re-enabled the embedded bot over an explicit enabled = false")
 	}
-	if !cfg.Bot.Weixin.Enabled || cfg.Bot.Weixin.AccountID != "weixin-account" {
+	if len(cfg.Bot.Connections) != 1 || !cfg.Bot.Connections[0].Enabled || cfg.Bot.Connections[0].Credential.AccountID != "weixin-account" {
 		t.Fatalf("saved weixin config = %+v, want refreshed credentials", cfg.Bot.Weixin)
 	}
-	if len(cfg.Bot.Allowlist.WeixinUsers) != 1 || cfg.Bot.Allowlist.WeixinUsers[0] != "user-1" {
-		t.Fatalf("weixin allowlist = %+v, want installer user id", cfg.Bot.Allowlist.WeixinUsers)
+	if len(cfg.Bot.Connections[0].Access.Users) != 1 || cfg.Bot.Connections[0].Access.Users[0] != "user-1" {
+		t.Fatalf("weixin allowlist = %+v, want installer user id", cfg.Bot.Connections[0].Access.Users)
 	}
 }
 

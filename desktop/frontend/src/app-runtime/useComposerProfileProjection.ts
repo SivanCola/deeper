@@ -7,7 +7,6 @@ import {
   composerProfileFromTab,
   composerProfileOwner,
   composerProfileOwnersConflict,
-  composerProfileMode,
   defaultComposerProfile,
   displayedComposerProfileCollaborationMode,
   patchComposerProfile,
@@ -43,14 +42,10 @@ export function useComposerProfileProjection(input: ComposerProfileProjectionInp
   const activeComposerProfile = activeTabId ? composerProfileForOwner(profilesByTab[activeTabId], activeOwner) : undefined;
   const backendActiveComposerProfile = useMemo(() => {
     if (meta && !composerProfileOwnersConflict(composerProfileOwner(meta), activeOwner)) {
-      return composerProfileFromMeta(
-        meta,
-        activeTab ? composerProfileMode(composerProfileFromTab(activeTab, activeComposerProfile?.toolApprovalMode)) : undefined,
-        activeComposerProfile?.toolApprovalMode,
-      );
+      return composerProfileFromMeta(meta);
     }
-    return composerProfileFromTab(activeTab, activeComposerProfile?.toolApprovalMode);
-  }, [activeComposerProfile?.toolApprovalMode, activeOwner, activeTab, meta]);
+    return composerProfileFromTab(activeTab);
+  }, [activeOwner, activeTab, meta]);
   const composerProfile = activeTabId
     ? activeComposerProfile ?? backendActiveComposerProfile
     : defaultComposerProfile;
@@ -62,7 +57,7 @@ export function useComposerProfileProjection(input: ComposerProfileProjectionInp
     : "";
   const remoteComposerProfileReady = useRemoteComposerProfileSync({ activeTabId, sessionRoute: remoteSessionRoute, remote,
     remoteProfile: remoteSession.composerProfile, collaborationMode, toolApprovalMode, goal,
-    qualityFloor: composerProfile.qualityFloor, pending: composerProfile.pending, setProfiles: setProfilesByTab });
+    pending: composerProfile.pending, setProfiles: setProfilesByTab });
 
   const patchActiveComposerProfile = useCommittedCommand((patch: Partial<Omit<ComposerProfile, "pending">>, pendingFields: ComposerProfileField[]) => {
     if (!activeTabId) return;

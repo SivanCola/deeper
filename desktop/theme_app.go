@@ -62,7 +62,7 @@ func (a *App) ListThemePacks() ([]ThemePackView, error) {
 	themeMu.Lock()
 	defer themeMu.Unlock()
 
-	st := a.migrateThemeDesktopStateLocked()
+	st := a.themeDesktopStateLocked()
 	activeID := resolveActiveThemeID(st)
 	baseStyle := a.desktopBaseStyleLocked()
 
@@ -112,7 +112,7 @@ func (a *App) GetActiveThemePack() (ThemeActiveView, error) {
 	defer themeMu.Unlock()
 
 	view := ThemeActiveView{}
-	st := a.migrateThemeDesktopStateLocked()
+	st := a.themeDesktopStateLocked()
 	activeID := resolveActiveThemeID(st)
 	if st.ActiveThemeID != "" && activeID == "" {
 		// Plugin theme pointer whose plugin is missing/disabled/uninstalled:
@@ -150,9 +150,8 @@ func (a *App) GetThemeExperience() (ThemeExperienceView, error) {
 	themeMu.Lock()
 	defer themeMu.Unlock()
 
-	// Migrate first so a v1 base-style activeThemeId lands in desktop.theme_style
-	// before we read appearance.
-	st := a.migrateThemeDesktopStateLocked()
+	// Read the current pack selection before composing appearance.
+	st := a.themeDesktopStateLocked()
 	themeMode, baseStyle := a.desktopAppearanceLocked()
 	_, themeWarnings := discoverPluginThemes()
 	view := ThemeExperienceView{
@@ -237,7 +236,7 @@ func (a *App) ActivateThemePack(id string) error {
 	defer themeMu.Unlock()
 
 	id = strings.TrimSpace(id)
-	st := a.migrateThemeDesktopStateLocked()
+	st := a.themeDesktopStateLocked()
 	if id == "" {
 		st.ActiveThemeID = ""
 		return saveThemeDesktopState(st)
@@ -282,7 +281,7 @@ func (a *App) ActivateBaseStyle(style string) error {
 	if err := a.SetDesktopAppearance(themeMode, style); err != nil {
 		return err
 	}
-	st := a.migrateThemeDesktopStateLocked()
+	st := a.themeDesktopStateLocked()
 	st.ActiveThemeID = ""
 	return saveThemeDesktopState(st)
 }
@@ -292,7 +291,7 @@ func (a *App) ActivateBaseStyle(style string) error {
 func (a *App) DisableThemePack() error {
 	themeMu.Lock()
 	defer themeMu.Unlock()
-	st := a.migrateThemeDesktopStateLocked()
+	st := a.themeDesktopStateLocked()
 	st.ActiveThemeID = ""
 	return saveThemeDesktopState(st)
 }
@@ -306,43 +305,26 @@ func (a *App) RestoreGraphiteAppearance() error {
 	if err := a.SetDesktopAppearance(themeMode, "graphite"); err != nil {
 		return err
 	}
-	st := a.migrateThemeDesktopStateLocked()
+	st := a.themeDesktopStateLocked()
 	st.ActiveThemeID = ""
 	return saveThemeDesktopState(st)
 }
 
-// ResetThemePack is a compatibility wrapper for older frontends.
-// Prefer DisableThemePack or RestoreGraphiteAppearance.
-func (a *App) ResetThemePack() error {
-	return a.DisableThemePack()
-}
-
-// migrateThemeDesktopStateLocked upgrades v1 state and clears invalid ids —
-// except plugin: pointers, which are preserved even when unresolvable.
-// Caller must hold themeMu. Side effect: may write desktop.theme_style when a
-// v1 base-style activeThemeId is migrated.
-func (a *App) migrateThemeDesktopStateLocked() ThemeDesktopState {
+// themeDesktopStateLocked clears invalid pack ids while preserving plugin
+// pointers so reinstalling a plugin can restore its theme. Caller holds themeMu.
+func (a *App) themeDesktopStateLocked() ThemeDesktopState {
 	st := loadThemeDesktopState()
 	changed := false
 	id := strings.TrimSpace(st.ActiveThemeID)
 
-	// v1 stored base styles as activeThemeId — move them to desktop.theme_style.
-	if isBuiltinThemeID(id) {
-		themeMode, _ := a.desktopAppearanceLocked()
-		_ = a.SetDesktopAppearance(themeMode, id)
-		st.ActiveThemeID = ""
-		changed = true
-	} else if id != "" && !isPluginThemeID(id) && resolveActiveThemeID(st) == "" {
+	if id != "" && !isPluginThemeID(id) && resolveActiveThemeID(st) == "" {
 		// Missing / corrupt official or user pack — clear pointer only. Plugin
 		// pointers are never auto-cleared: they survive a missing/disabled
 		// plugin so a reinstall restores the theme.
 		st.ActiveThemeID = ""
 		changed = true
 	}
-	if st.SchemaVersion != themeStateSchemaVer {
-		st.SchemaVersion = themeStateSchemaVer
-		changed = true
-	}
+
 	if changed {
 		_ = saveThemeDesktopState(st)
 		st = loadThemeDesktopState()
@@ -359,7 +341,7 @@ func (a *App) desktopAppearanceLocked() (themeMode, baseStyle string) {
 		themeMode = "auto"
 	}
 	baseStyle = cfg.DesktopThemeStyle()
-	// Frontend maps legacy aliases; for API consumers normalize known bases.
+	// API consumers receive a supported base style.
 	if !isBuiltinThemeID(baseStyle) {
 		switch baseStyle {
 		case "ember":

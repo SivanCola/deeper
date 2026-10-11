@@ -27,7 +27,7 @@ dom.window.cancelAnimationFrame = globalThis.cancelAnimationFrame;
 const settings = {
   model: "fixture/model",
   mode: "normal",
-  toolApprovalMode: "ask",
+  toolApprovalMode: "workspace-write",
   disabledMcp: {},
   mcpOrder: [],
 };

@@ -116,7 +116,7 @@ func TestIsSlashBypass(t *testing.T) {
 func TestSessionManager_TryAcquire(t *testing.T) {
 	sm := NewSessionManager(100 * time.Millisecond)
 
-	msg := InboundMessage{Text: "hello", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
+	msg := InboundMessage{ConnectionID: string(PlatformQQ), Text: "hello", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
 	key := BuildSessionKey(msg.Session())
 
 	// 第一次获取成功
@@ -150,7 +150,7 @@ func TestSessionManager_TryAcquire(t *testing.T) {
 func TestSessionManager_Debounce(t *testing.T) {
 	sm := NewSessionManager(200 * time.Millisecond)
 
-	msg := InboundMessage{Text: "first", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
+	msg := InboundMessage{ConnectionID: string(PlatformQQ), Text: "first", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
 	key := BuildSessionKey(msg.Session())
 
 	acquired, _ := sm.TryAcquire(key, msg)
@@ -176,7 +176,7 @@ func TestSessionManager_Debounce(t *testing.T) {
 func TestSessionManager_ForceRelease(t *testing.T) {
 	sm := NewSessionManager(100 * time.Millisecond)
 
-	msg := InboundMessage{Text: "test", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
+	msg := InboundMessage{ConnectionID: string(PlatformQQ), Text: "test", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
 	key := BuildSessionKey(msg.Session())
 
 	sm.TryAcquire(key, msg)
@@ -192,7 +192,7 @@ func TestSessionManager_ForceRelease(t *testing.T) {
 
 func TestSessionManagerRunIfIdleSerializesNewAdmission(t *testing.T) {
 	sm := NewSessionManager(100 * time.Millisecond)
-	msg := InboundMessage{Text: "test", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
+	msg := InboundMessage{ConnectionID: string(PlatformQQ), Text: "test", Platform: PlatformQQ, ChatType: ChatDM, ChatID: "c1", UserID: "u1"}
 	key := BuildSessionKey(msg.Session())
 	entered := make(chan struct{})
 	release := make(chan struct{})

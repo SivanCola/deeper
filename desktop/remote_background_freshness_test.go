@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-const backgroundRemoteTestPath = "/sessions/background.jsonl"
+const backgroundRemoteTestPath = "session-id:background"
 
 // backgroundFreshness reports the freshness the runtime snapshot assigns to
 // the tab's background route.

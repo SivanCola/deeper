@@ -12,71 +12,23 @@ import (
 	"deepzora/internal/store"
 )
 
-type dagRoute int
-
-const (
-	dagRouteSchemaOne dagRoute = iota
-	dagRouteNative
-	dagRouteUpgrade
-)
-
-// SessionLogSchemaEnv is the emergency switch back to the schema-1 writer for
-// sessions that have not been upgraded yet; upgraded logs stay schema 2.
-const SessionLogSchemaEnv = "DEEPZORA_SESSION_LOG"
-
-func dagWriterEnabled() bool {
-	return os.Getenv(SessionLogSchemaEnv) != "v1"
-}
-
-// probeLogForSave classifies the event log for a save, refusing a schema this
-// build cannot own and healing a torn schema-1 tail before anything appends
-// behind it.
-func probeLogForSave(path string) (sessionEventLogProbe, error) {
+// probeNativeLogForSave permits only current logs or an empty new path.
+func (s *Session) probeNativeLogForSave(path string) (sessionEventLogProbe, error) {
 	probe, err := probeSessionEventLog(path)
 	if err != nil {
 		return probe, err
 	}
-	if probe.futureSchema {
-		return probe, fmt.Errorf("session event log for %s uses schema %d; this build supports up to %d", path, probe.schemaVersion, sessionDAGSchemaVersion)
+	if probe.size > 0 && !probe.dag {
+		return probe, fmt.Errorf("unsupported session log schema %d", probe.schemaVersion)
 	}
-	if probe.native && probe.size > 0 {
-		if err := repairSessionEventLogTail(path); err != nil {
-			return probe, fmt.Errorf("repair session event log: %w", err)
+	if probe.size == 0 {
+		if info, err := os.Stat(path); err == nil && info.Size() > 0 {
+			return probe, fmt.Errorf("unsupported checkpoint-only session")
+		} else if err != nil && !os.IsNotExist(err) {
+			return probe, err
 		}
 	}
 	return probe, nil
-}
-
-// Loaded bare checkpoints remain checkpoint-only on continuation.
-func (s *Session) probeNativeLogForSave(path string) (sessionEventLogProbe, error) {
-	probe, err := probeLogForSave(path)
-	if s.persistFormat == sessionPersistLegacy && probe.size == 0 {
-		probe.native = false
-	}
-	return probe, err
-}
-
-// Loaded sessions retain their schema; fresh sessions use normal DAG admission.
-func (s *Session) dagSaveRoute(path string, probe sessionEventLogProbe) dagRoute {
-	if probe.dag {
-		return dagRouteNative
-	}
-	if s != nil && s.persistFormat == sessionPersistLegacy {
-		return dagRouteSchemaOne
-	}
-	if !dagWriterEnabled() || !probe.native {
-		return dagRouteSchemaOne
-	}
-	if probe.size > 0 {
-		if !SessionLeaseHeldByCurrentRuntime(path) {
-			return dagRouteSchemaOne
-		}
-		return dagRouteUpgrade
-	}
-	if SessionLeaseHeldByOtherRuntime(path) {
-		return dagRouteSchemaOne
-	}
-	return dagRouteUpgrade
 }
 
 // saveDAGLocked persists msgs to a schema-2 log: it replays (or extends) the
@@ -84,10 +36,10 @@ func (s *Session) dagSaveRoute(path string, probe sessionEventLogProbe) dagRoute
 // appends the resulting entries in one batch, and refreshes the derived
 // files. Concurrent writers never conflict; a writer that only fell behind
 // its own head reports a stale-prefix conflict so the caller adopts disk.
-func (s *Session) saveDAGLocked(path string, mode sessionSaveMode, route dagRoute, msgs []provider.Message, version uint64, rewriteVersion int, digest [sha256.Size]byte) error {
+func (s *Session) saveDAGLocked(path string, mode sessionSaveMode, msgs []provider.Message, version uint64, rewriteVersion int, digest [sha256.Size]byte) error {
 	ctx := context.Background()
 	now := time.Now().UTC()
-	baseRevision, _, err := sessionContentRevision(path)
+	baseRevision, ledgerDigest, err := sessionContentRevision(path)
 	ledgerUnreadable := err != nil
 	if ledgerUnreadable {
 		// A persisted session with an unreadable ledger fails closed, as in
@@ -98,12 +50,10 @@ func (s *Session) saveDAGLocked(path string, mode sessionSaveMode, route dagRout
 		}
 		baseRevision = 0
 	}
-	var st *sessionDAGState
-	if route == dagRouteUpgrade {
-		st, err = s.upgradeLogForSave(ctx, path, now)
-	} else {
-		st, err = s.dagStateForSave(ctx, path, now)
+	if err := s.initializeSessionLog(path, now); err != nil {
+		return err
 	}
+	st, err := s.dagStateForSave(ctx, path, now)
 	if err != nil {
 		return err
 	}
@@ -120,7 +70,16 @@ func (s *Session) saveDAGLocked(path string, mode sessionSaveMode, route dagRout
 	plan.entries = append(plan.entries, pending...)
 	if len(plan.entries) == 0 {
 		s.adoptDAGPosition(st, plan)
-		s.republishDAGDerivedIfPending(ctx, path, st, plan, msgs, digest, baseRevision)
+		if ledgerDigest != digestString(digest) {
+			baseRevision, err = recordSessionContentRevision(path, digest, baseRevision, 0)
+			if err != nil {
+				return err
+			}
+		}
+		state := s.persistState(path)
+		if !deferProjection && (state.projectionPending || !state.saveVerified || ledgerDigest != digestString(digest)) {
+			s.republishDAGDerived(ctx, path, st, plan, msgs, digest, baseRevision)
+		}
 		s.maintainDAGLog(ctx, path, st, plan, mode, now)
 		s.markCheckpointPersisted(path, digest, version, baseRevision, rewriteVersion, msgs, deferProjection)
 		return nil
@@ -145,8 +104,7 @@ func (s *Session) saveDAGLocked(path string, mode sessionSaveMode, route dagRout
 	}
 	plan.applyIDRenames(s)
 	s.adoptDAGPosition(st, plan)
-	// The compatibility checkpoint lands before the ledger, as in schema 1, so
-	// a metadata failure never leaves the anchor behind the log.
+	// Publish the selected head's read model before its revision ledger.
 	selected := st.selectedHead()
 	displayCurrent := selected == plan.head && writeDAGCheckpointCache(path, plan, msgs, baseRevision)
 	revision, err := recordSessionContentRevision(path, digest, baseRevision, reserved)
@@ -221,34 +179,6 @@ func settleDAGTail(ctx context.Context, path string, st *sessionDAGState, now ti
 		return fmt.Errorf("session log %s has a torn tail that is still being written", path)
 	}
 	return nil
-}
-
-// upgradeLogForSave replaces the schema-1 log (or bare checkpoint) with
-// generation 1 of a schema-2 log built from the transcript on disk. The
-// in-memory delta is then written by the ordinary diff, exactly like any
-// other save. Callers hold the file lock and satisfied dagSaveRoute.
-func (s *Session) upgradeLogForSave(ctx context.Context, path string, now time.Time) (*sessionDAGState, error) {
-	disk, err := loadSessionTranscript(ctx, path, defaultSessionReplayLimits, nil)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-	msgs := migrateLegacyProviderContent(NormalizeSession(disk.msgs))
-	assignLegacyMessageIDs(path, msgs)
-	var inFlight *InFlightTurnMeta
-	if meta, ok, err := LoadBranchMeta(path); err == nil && ok {
-		inFlight = meta.InFlightTurn
-	}
-	if err := upgradeSessionLogToDAG(path, msgs, disk.times, inFlight, now); err != nil {
-		return nil, err
-	}
-	st, err := replaySessionDAG(ctx, store.SessionEventLog(path), defaultSessionReplayLimits)
-	if err != nil {
-		return nil, err
-	}
-	if len(msgs) > 0 {
-		slog.Info("session: upgraded event log to schema 2", "path", path, "messages", len(msgs))
-	}
-	return st, nil
 }
 
 // ensureMessageIDsForSave mints ids for messages that reached the session
@@ -361,4 +291,22 @@ func (s *Session) maintainDAGLog(ctx context.Context, path string, st *sessionDA
 	if err := writeSessionDAGIndex(ctx, path, fresh); err != nil {
 		slog.Warn("session: head index write after rotation failed", "path", path, "err", err)
 	}
+}
+
+// initializeSessionLog creates a new current DAG without importing other formats.
+func (s *Session) initializeSessionLog(path string, now time.Time) error {
+	probe, err := probeSessionEventLog(path)
+	if err != nil {
+		return err
+	}
+	if probe.dag {
+		return nil
+	}
+	if probe.size > 0 {
+		return fmt.Errorf("unsupported session log schema %d", probe.schemaVersion)
+	}
+	if !probe.creatable {
+		return fmt.Errorf("unsupported session event path")
+	}
+	return initializeSessionDAG(path, now)
 }

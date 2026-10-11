@@ -234,7 +234,7 @@ func (m *chatTUI) bindRuntimeRebuilder(maxSteps int, sink event.Sink, yolo bool,
 		m.lastBuildResult = res
 		res.Controller.EnableInteractiveApproval()
 		if yolo {
-			res.Controller.SetAutoApproveTools(true)
+			res.Controller.SetToolApprovalMode("workspace-write")
 		}
 		return res, nil
 	}

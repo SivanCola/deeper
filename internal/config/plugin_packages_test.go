@@ -16,9 +16,13 @@ func TestLoadMergesInstalledPluginSkillRootsAndMCP(t *testing.T) {
   "apiVersion": "deepzora.com/plugin/v2",
   "name": "superpowers",
   "version": "1.0.0",
-  "skills": "skills",
-  "mcpServers": {
-    "helper": { "command": "bin/helper" }
+  "contributes": {
+    "skills": "skills",
+    "mcpServers": {
+      "helper": {
+        "command": "bin/helper"
+      }
+    }
   }
 }`)
 	if err := pluginpkg.Upsert(home, pluginpkg.InstalledPlugin{

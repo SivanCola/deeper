@@ -15,7 +15,7 @@ type transcriptInput struct {
 
 func applyTranscriptMetadata(p *Projection, commit Commit, ev Event) {
 	switch ev.Kind {
-	case "history/replace", "legacy/import":
+	case "history/replace":
 		p.TranscriptInputs = nil
 		p.HiddenTurns = nil
 		p.RetractedInputs = nil

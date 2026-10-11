@@ -64,12 +64,12 @@ planner_model = "planner"
 [[providers]]
 name = "executor"
 kind = "`+plannerHookProbeKind+`"
-model = "executor-model"
+models = ["executor-model"]
 
 [[providers]]
 name = "planner"
 kind = "`+plannerHookProbeKind+`"
-model = "planner-model"
+models = ["planner-model"]
 `)
 	approveWorkspace(t, dir)
 	writeFile(t, dir, "marker.txt", "planner hook probe")

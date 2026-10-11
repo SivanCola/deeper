@@ -9,7 +9,6 @@ import (
 
 const (
 	CurrentKeyName = "DeepzoraDeepzora"
-	LegacyKeyName  = "Deepzora"
 )
 
 type Registration struct {
@@ -23,15 +22,14 @@ type Registration struct {
 }
 
 type ReconcilePlan struct {
-	Managed      bool
-	Desired      Registration
-	DeleteLegacy bool
+	Managed bool
+	Desired Registration
 }
 
 // Plan returns the safe per-user uninstall-registration mutation for an
 // installed Deepzora tree. Portable trees have no owned registration and no
 // root uninstaller, so they deliberately produce a no-op plan.
-func Plan(current, legacy *Registration, installRoot, version string, uninstallerPresent bool) (ReconcilePlan, error) {
+func Plan(current *Registration, installRoot, version string, uninstallerPresent bool) (ReconcilePlan, error) {
 	root := cleanWindowsPath(installRoot)
 	if root == "" {
 		return ReconcilePlan{}, fmt.Errorf("Windows install root is empty")
@@ -48,10 +46,6 @@ func Plan(current, legacy *Registration, installRoot, version string, uninstalle
 	}
 
 	currentOwned := registrationOwnsRoot(current, root)
-	legacyOwned := registrationOwnsRoot(legacy, root)
-	// A legacy-only key may still point at the Tauri 0.53 uninstaller. The full
-	// signed installer replaces that binary before migrating the key; the
-	// update helper must not promote it into the current desktop identity.
 	if !currentOwned {
 		return ReconcilePlan{}, nil
 	}
@@ -68,7 +62,6 @@ func Plan(current, legacy *Registration, installRoot, version string, uninstalle
 			UninstallString:      quoteWindowsPath(uninstaller),
 			QuietUninstallString: quoteWindowsPath(uninstaller) + " /S",
 		},
-		DeleteLegacy: legacyOwned,
 	}, nil
 }
 

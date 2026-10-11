@@ -22,7 +22,7 @@ const WINDOW_MS = 200;
  * actively editing stays off this list.
  */
 const COALESCED = new Set([
-  "ListProjectTree",
+  "GetProjectTreeSnapshot",
   "ListTabs",
   "ContextPanel",
   "MetaForTab",

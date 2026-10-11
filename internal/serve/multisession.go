@@ -222,16 +222,13 @@ func (s *Server) setControllerPath(ctrl *control.Controller, path string) {
 // two-argument test builder remains supported; tests that need to assert the
 // complete boot contract can inject buildControllerWithOptions.
 func (s *Server) buildTagged(ctx context.Context, ref string, inheritTemp bool) (*control.Controller, *sessionTagSink, error) {
-	return s.buildTaggedMode(ctx, ref, inheritTemp, false)
+	return s.buildTaggedMode(ctx, ref, inheritTemp)
 }
 
-func (s *Server) buildTaggedMode(ctx context.Context, ref string, inheritTemp, nativeLegacy bool) (*control.Controller, *sessionTagSink, error) {
+func (s *Server) buildTaggedMode(ctx context.Context, ref string, inheritTemp bool) (*control.Controller, *sessionTagSink, error) {
 	tag := newSessionTagSink(s.bc)
 	opts := s.buildOptions
-	opts.NativeLegacySession = nativeLegacy
-	if nativeLegacy {
-		opts.SessionRuntime = nil
-	}
+
 	if s.managedModels != nil {
 		opts.ModelSettings = s.managedModels
 	}
@@ -464,7 +461,7 @@ func (s *Server) busyDetach(ctx context.Context, cur *control.Controller, target
 	if s.tagFor(cur) == nil {
 		return errSessionTagUnavailable
 	}
-	newCtrl, tag, err := s.buildTaggedMode(ctx, currentModelRef(cur), false, strings.TrimSpace(targetPath) != "")
+	newCtrl, tag, err := s.buildTaggedMode(ctx, currentModelRef(cur), false)
 	if err != nil {
 		return err
 	}
@@ -569,52 +566,6 @@ func (s *Server) rollbackDetach(demoted *control.SessionLeaseKeeper, ctrl *contr
 	if ctrl != nil {
 		ctrl.SetOnSessionRecovered(s.sessionRecoveryHandler(ctrl, s.leases))
 	}
-}
-
-func (s *Server) resumeActiveSession(w http.ResponseWriter, r *http.Request, cur control.SessionAPI, realPath string) bool {
-	if agent.CanonicalSessionPath(cur.SessionPath()) == agent.CanonicalSessionPath(realPath) {
-		s.bc.SetCurrentSession(realPath)
-		s.announceSessionChanged(realPath, false)
-		w.WriteHeader(http.StatusNoContent)
-		return true
-	}
-	if detached := s.takeDetached(realPath); detached != nil {
-		if err := s.reattachDetached(cur, detached); err != nil {
-			s.renderBindError(w, err)
-			return true
-		}
-		s.announceSessionChanged(realPath, false)
-		w.WriteHeader(http.StatusNoContent)
-		s.replayPendingPromptsBroadcast()
-		return true
-	}
-	if s.detachedBusy(realPath) {
-		http.Error(w, "session is finishing background teardown; retry shortly", http.StatusConflict)
-		return true
-	}
-	if !controllerHasActiveRuntimeWork(cur) {
-		return false
-	}
-	curCtrl, ok := cur.(*control.Controller)
-	if !ok {
-		http.Error(w, "cannot switch session while active work or background jobs are running", http.StatusConflict)
-		return true
-	}
-	err := s.busyDetach(r.Context(), curCtrl, realPath, func(next *control.Controller) error {
-		loaded, err := agent.LoadSession(realPath)
-		if err == nil {
-			next.Resume(loaded, realPath)
-		}
-		return err
-	})
-	if err != nil {
-		s.renderBindError(w, err)
-		return true
-	}
-	s.announceSessionChanged(realPath, false)
-	w.WriteHeader(http.StatusNoContent)
-	s.replayPendingPromptsBroadcast()
-	return true
 }
 
 // reattachDetached promotes a controller owned by the background registry.

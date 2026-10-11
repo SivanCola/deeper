@@ -474,7 +474,7 @@ func (a *App) captureSessionExportSource(job *sessionExportJob, selector Session
 		}
 		job.browserScope = browserDiagnosticScope(job.sourceHostID, job.handle.Snapshot.Ref.SessionID)
 	} else {
-		if selector.Ref == nil && selector.Source == nil && selector.SessionPath == "" && selector.TopicID == "" {
+		if selector.Ref == nil && selector.SessionPath == "" && selector.TopicID == "" {
 			a.mu.RLock()
 			tab := a.tabByIDLocked(tabID)
 			if tab != nil {
@@ -533,8 +533,6 @@ func remoteExportSelectorMatches(selector SessionSelector, tab *remoteTab) bool 
 	if selector.Ref != nil {
 		return selector.Ref.HostID == tab.ref.HostID && remoteSessionIDRoutePrefix+selector.Ref.SessionID == tab.routing.currentPath
 	}
-	if selector.Source != nil {
-		return selector.Source.HostID == tab.ref.HostID && (selector.Source.Path == tab.session.path || selector.Source.Path == tab.routing.currentPath)
-	}
+
 	return selector.SessionPath == "" || selector.SessionPath == tab.session.path || selector.SessionPath == tab.routing.currentPath
 }

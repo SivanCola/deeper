@@ -34,7 +34,7 @@ default_model = "legacy-missing"
 name = "deepseek-flash"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -61,7 +61,7 @@ default_model = "deepseek-pro"
 name = "deepseek-pro"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 
@@ -97,32 +97,6 @@ default_model = "deepseek-flash"
 	t.Fatalf("expected a warning naming the ignored project model and user fallback; got %v", notices)
 }
 
-func TestBuildMigratesLegacyBareMimoModelOverride(t *testing.T) {
-	dir := robustTempDir(t)
-	fenceBootTestHistoryCatalog(t)
-	t.Chdir(dir)
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "deepseek-flash"
-
-[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://example.invalid"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-`)
-	approveWorkspace(t, dir)
-
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, Model: "mimo-v2.5-pro"})
-	if err != nil {
-		t.Fatalf("Build should migrate legacy bare MiMo model override: %v", err)
-	}
-	defer ctrl.Close()
-	if ctrl.Label() != "mimo-v2.5-pro" {
-		t.Fatalf("controller label = %q, want mimo-v2.5-pro", ctrl.Label())
-	}
-}
-
 // TestBuildNoticesMissingAPIKey: a resolvable model whose API key env is unset
 // builds fine (RequireKey is false so the UI stays reachable) but must emit a
 // notice naming the env var, instead of silently showing a dead/empty model.
@@ -138,7 +112,7 @@ default_model = "x"
 name = "x"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "m"
+models = ["m"]
 api_key_env = "`+keyEnv+`"
 `)
 	approveWorkspace(t, dir)
@@ -180,7 +154,7 @@ default_model = "relay/chat"
 name = "relay"
 kind = "openai"
 base_url = "https://example.invalid/v1"
-model = "chat"
+models = ["chat"]
 api_key_env = "RELAY_TEST_KEY"
 `)
 	dir := robustTempDir(t)
@@ -268,21 +242,21 @@ default_model = "deepseek/deepseek-v4-flash"
 name = "deepseek"
 kind = "openai"
 base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "`+keylessEnv+`"
 
 [[providers]]
 name = "audio"
 kind = "openai"
 base_url = "https://audio.example.com/v1"
-model = "tts-1"
+models = ["tts-1"]
 api_key_env = "`+configuredEnv+`"
 
 [[providers]]
 name = "minimax"
 kind = "openai"
 base_url = "https://api.MiniMax.chat/v1"
-model = "MiniMax-M3"
+models = ["MiniMax-M3"]
 api_key_env = "`+configuredEnv+`"
 `)
 	approveWorkspace(t, dir)
@@ -322,14 +296,14 @@ default_model = "minimax/MiniMax-M3"
 name = "deepseek"
 kind = "openai"
 base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "`+keylessEnv+`"
 
 [[providers]]
 name = "minimax"
 kind = "openai"
 base_url = "https://api.MiniMax.chat/v1"
-model = "MiniMax-M3"
+models = ["MiniMax-M3"]
 api_key_env = "`+configuredEnv+`"
 `)
 	approveWorkspace(t, dir)

@@ -679,9 +679,7 @@ func VisibleSlashSkills(skills []Skill) []Skill {
 	return out
 }
 
-// ResolveSlashSkill resolves a visible qualified plugin name or a compatible
-// short name. A short plugin name is rejected when multiple plugin packages
-// contribute it; a higher-priority non-plugin winner keeps its short name.
+// ResolveSlashSkill resolves the canonical slash name of a skill.
 func ResolveSlashSkill(skills []Skill, name string) (Skill, bool) {
 	name = strings.TrimPrefix(strings.TrimSpace(name), "/")
 	if name == "" {
@@ -692,27 +690,7 @@ func ResolveSlashSkill(skills []Skill, name string) (Skill, bool) {
 			return sk, true
 		}
 	}
-	if strings.Contains(name, ":") || !IsValidName(name) {
-		return Skill{}, false
-	}
-	var winner Skill
-	var found bool
-	plugins := map[string]bool{}
-	for _, sk := range skills {
-		if sk.Name != name {
-			continue
-		}
-		if !found {
-			winner, found = sk, true
-		}
-		if sk.Plugin != "" {
-			plugins[sk.Plugin] = true
-		}
-	}
-	if !found || winner.Plugin != "" && len(plugins) > 1 {
-		return Skill{}, false
-	}
-	return winner, true
+	return Skill{}, false
 }
 
 // Read resolves one skill by name from the current catalog index and reads only

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -109,42 +108,15 @@ func (c *Config) SetVisionModel(name string) error {
 	return nil
 }
 
-// SetAutoPlan is retained for source compatibility with older desktop clients.
-// Automatic plan mode is retired: "off" is an idempotent compatibility write,
-// while every attempt to enable it is rejected explicitly.
-func (c *Config) SetAutoPlan(mode string) error {
-	if strings.EqualFold(strings.TrimSpace(mode), "off") {
-		c.Agent.AutoPlan = "off"
-		c.Agent.AutoPlanClassifier = ""
-		return nil
-	}
-	return fmt.Errorf("automatic plan mode has been retired; use Plan Mode explicitly")
-}
-
 // SetDesktopDefaultToolApprovalMode sets the execution permission preset used
-// only for newly-created desktop sessions. Legacy names remain accepted at
-// this compatibility boundary.
+// only for newly-created desktop sessions using the current permission presets.
 func (c *Config) SetDesktopDefaultToolApprovalMode(mode string) error {
 	raw := strings.ToLower(strings.TrimSpace(mode))
 	switch raw {
-	case "ask", "auto", "yolo", "full", "full-access", "danger_full_access", string(permissionpreset.ReadOnly), string(permissionpreset.WorkspaceWrite), string(permissionpreset.DangerFullAccess):
+	case string(permissionpreset.ReadOnly), string(permissionpreset.WorkspaceWrite), string(permissionpreset.DangerFullAccess):
 		c.Desktop.DefaultToolApprovalMode = string(permissionpreset.Normalize(raw))
 	default:
 		return fmt.Errorf("default_tool_approval_mode %q: must be read-only|workspace-write|danger-full-access", mode)
-	}
-	return nil
-}
-
-// SetUIShortcutLayout selects the CLI keyboard shortcut layout. "classic" keeps
-// historical behavior; "desktop" enables the two-axis desktop-style shortcuts.
-func (c *Config) SetUIShortcutLayout(layout string) error {
-	switch strings.ToLower(strings.TrimSpace(layout)) {
-	case "", "classic", "default", "legacy", "off":
-		c.UI.ShortcutLayout = "classic"
-	case "desktop", "dual", "dual-axis", "dual_axis":
-		c.UI.ShortcutLayout = "desktop"
-	default:
-		return fmt.Errorf("shortcut_layout %q: must be classic|desktop", layout)
 	}
 	return nil
 }
@@ -290,7 +262,7 @@ func (c *Config) SetDesktopLayoutStyle(style string) error {
 	switch strings.ToLower(strings.TrimSpace(style)) {
 	case "creation":
 		c.Desktop.LayoutStyle = "creation"
-	case "", "classic", "workbench", "workspace":
+	case "", "workbench":
 		// "classic" is retired and stores as workbench, matching the read path
 		// in normalizeDesktopLayoutStyle. An older caller that still sends it
 		// gets the surviving style rather than an error.
@@ -332,19 +304,6 @@ func (c *Config) SetDesktopCloseBehavior(mode string) error {
 	return nil
 }
 
-// SetDesktopDisplayMode sets the transcript display mode. UI-only.
-func (c *Config) SetDesktopDisplayMode(mode string) error {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case "compact", "minimal":
-		c.Desktop.DisplayMode = "compact"
-	case "", "standard":
-		c.Desktop.DisplayMode = "standard"
-	default:
-		return fmt.Errorf("display mode %q: must be standard|compact", mode)
-	}
-	return nil
-}
-
 // SetDesktopStatusBarStyle sets the desktop status bar metric label style.
 // UI-only; it must not affect CLI output or provider-visible request data.
 func (c *Config) SetDesktopStatusBarStyle(style string) error {
@@ -356,7 +315,6 @@ func (c *Config) SetDesktopStatusBarStyle(style string) error {
 	default:
 		return fmt.Errorf("status bar style %q: must be icon|text", style)
 	}
-	c.Desktop.StatusBarStyleInitialized = true
 	return nil
 }
 
@@ -387,25 +345,6 @@ func (c *Config) SetDesktopStatusBarItems(items []string) error {
 // startup. Manual checks remain available in Settings regardless of this value.
 func (c *Config) SetDesktopCheckUpdates(enabled bool) error {
 	c.Desktop.CheckUpdates = &enabled
-	return nil
-}
-
-// SetDesktopUpdateChannel is retained for pre-single-channel desktop clients.
-// Clearing the legacy field keeps the next canonical write channel-free.
-func (c *Config) SetDesktopUpdateChannel(_ string) error {
-	c.Desktop.UpdateChannel = ""
-	return nil
-}
-
-// SetCLIUpdateChannel is retained for older CLI scripts. Every recognized
-// historical value migrates to the official channel and is omitted on save.
-func (c *Config) SetCLIUpdateChannel(channel string) error {
-	switch strings.ToLower(strings.TrimSpace(channel)) {
-	case "", "stable", "preview", "canary", "beta", "next":
-		c.CLI.UpdateChannel = ""
-	default:
-		return fmt.Errorf("CLI update channel %q is unsupported; Deepzora now uses the official release channel", channel)
-	}
 	return nil
 }
 
@@ -466,11 +405,6 @@ func (c *Config) SetDesktopConversationWidth(width string) error {
 		return fmt.Errorf("conversation width %q: must be standard|full", width)
 	}
 	return nil
-}
-
-// SetUICloseBehavior is kept for callers compiled against the old edit API.
-func (c *Config) SetUICloseBehavior(mode string) error {
-	return c.SetDesktopCloseBehavior(mode)
 }
 
 // SetShowReasoning sets the CLI's default verbose-reasoning preference. When
@@ -931,9 +865,6 @@ func ClearPluginAuthenticationInSourceForRoot(root, name string) (PluginEntry, b
 	}
 	lockPaths := append([]string{}, userConfigCandidatePaths()...)
 	lockPaths = append(lockPaths, projectTOML, projectMCPJSON)
-	if legacy := legacyConfigPath(); strings.TrimSpace(legacy) != "" {
-		lockPaths = append(lockPaths, legacy)
-	}
 	unlock, err := lockConfigFilesEdits(lockPaths...)
 	if err != nil {
 		return PluginEntry{}, false, "", fmt.Errorf("clear plugin authentication: %w", err)
@@ -1017,8 +948,6 @@ func MCPConfigPathForEntry(root string, entry PluginEntry) string {
 			}
 		}
 		return UserConfigPath()
-	case MCPSourceLegacyUser:
-		return legacyConfigPath()
 	case MCPSourcePluginPackage:
 		return ""
 	}
@@ -1095,7 +1024,7 @@ func InstallUserPluginForRoot(root string, entry PluginEntry, forceEnable bool) 
 		if configured.Name != entry.Name {
 			continue
 		}
-		if configured.Source != MCPSourceUserConfig && configured.Source != MCPSourceLegacyUser {
+		if configured.Source != MCPSourceUserConfig {
 			return "", fmt.Errorf(
 				"MCP server %q is already configured by %s; edit or remove that declaration before installing a global server with the same name",
 				entry.Name,
@@ -1175,15 +1104,6 @@ func removePluginFromSourceForRootLocked(entry PluginEntry, path string) (bool, 
 		return removed, path, err
 	case MCPSourcePluginPackage:
 		return false, "", fmt.Errorf("MCP server %q is managed by an installed plugin package", entry.Name)
-	case MCPSourceLegacyUser:
-		edit, changed, err := planLegacyMCPDisable(path, entry.Name)
-		if err != nil || !changed {
-			return false, path, err
-		}
-		if err := applyConfigSourceEdits([]configSourceEdit{edit}); err != nil {
-			return false, path, err
-		}
-		return true, path, nil
 	}
 	cfg, err := LoadForEditReadOnlyStrict(path)
 	if err != nil {
@@ -1235,9 +1155,6 @@ func mcpConfigSourcePathsForRoot(root string) []string {
 	}
 	paths := append([]string{}, userConfigCandidatePaths()...)
 	paths = append(paths, projectTOML, projectMCPJSON)
-	if legacy := legacyConfigPath(); strings.TrimSpace(legacy) != "" {
-		paths = append(paths, legacy)
-	}
 	return paths
 }
 
@@ -1250,7 +1167,7 @@ type configSourceEdit struct {
 }
 
 func newConfigSourceEdit(path string, write func() error) (configSourceEdit, error) {
-	userOwned := isUserConfigPath(path) || samePath(path, legacyConfigPath())
+	userOwned := isUserConfigPath(path)
 	resolved, err := resolveConfigAccessPath(path, userOwned)
 	if err != nil {
 		return configSourceEdit{}, err
@@ -1330,95 +1247,6 @@ func planMCPJSONPluginRemoval(path, name string) (configSourceEdit, bool, error)
 	return edit, err == nil, err
 }
 
-func planLegacyMCPDisable(path, name string) (configSourceEdit, bool, error) {
-	if strings.TrimSpace(path) == "" {
-		return configSourceEdit{}, false, nil
-	}
-	resolved, err := resolveConfigAccessPath(path, true)
-	if err != nil {
-		return configSourceEdit{}, false, err
-	}
-	info, err := os.Stat(resolved)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return configSourceEdit{}, false, nil
-		}
-		return configSourceEdit{}, false, err
-	}
-	data, err := fileencoding.ReadFileUTF8(resolved)
-	if err != nil {
-		return configSourceEdit{}, false, err
-	}
-	var root map[string]json.RawMessage
-	var view struct {
-		MCP         []string                   `json:"mcp"`
-		MCPServers  map[string]json.RawMessage `json:"mcpServers"`
-		MCPDisabled []string                   `json:"mcpDisabled"`
-	}
-	if err := json.Unmarshal(data, &root); err != nil {
-		return configSourceEdit{}, false, nil
-	}
-	if err := json.Unmarshal(data, &view); err != nil {
-		return configSourceEdit{}, false, nil
-	}
-
-	foundNamed := false
-	changed := false
-	filtered := make([]string, 0, len(view.MCP))
-	for i, raw := range view.MCP {
-		entry, ok := parseLegacyMCPSpec(raw)
-		if !ok {
-			filtered = append(filtered, raw)
-			continue
-		}
-		effectiveName := entry.Name
-		if effectiveName == "" {
-			effectiveName = anonymousMCPName(i)
-		}
-		if effectiveName != name {
-			filtered = append(filtered, raw)
-			continue
-		}
-		if entry.Name == "" {
-			changed = true
-			continue
-		}
-		foundNamed = true
-		filtered = append(filtered, raw)
-	}
-	if _, ok := view.MCPServers[name]; ok {
-		foundNamed = true
-	}
-	if foundNamed && !containsString(view.MCPDisabled, name) {
-		view.MCPDisabled = append(view.MCPDisabled, name)
-		changed = true
-	}
-	if !changed {
-		return configSourceEdit{}, false, nil
-	}
-	if len(filtered) != len(view.MCP) {
-		raw, marshalErr := json.Marshal(filtered)
-		if marshalErr != nil {
-			return configSourceEdit{}, false, marshalErr
-		}
-		root["mcp"] = raw
-	}
-	disabledRaw, err := json.Marshal(view.MCPDisabled)
-	if err != nil {
-		return configSourceEdit{}, false, err
-	}
-	root["mcpDisabled"] = disabledRaw
-	out, err := json.MarshalIndent(root, "", "  ")
-	if err != nil {
-		return configSourceEdit{}, false, err
-	}
-	out = append(out, '\n')
-	edit, err := newConfigSourceEdit(path, func() error {
-		return fileutil.AtomicWriteFile(resolved, out, info.Mode().Perm())
-	})
-	return edit, err == nil, err
-}
-
 // RemovePluginFromSourcesForRoot removes an MCP server from every writable
 // config source that can contribute it for root. Removing all matching TOML
 // declarations prevents a lower-priority duplicate from reappearing after the
@@ -1447,15 +1275,11 @@ func RemovePluginFromSourcesForRoot(root, name string) (bool, error) {
 	if resolvedRoot != "." {
 		mcpPath = filepath.Join(resolvedRoot, mcpJSONFile)
 	}
-	legacyPath := legacyConfigPath()
 	lockPaths := append([]string{}, userPaths...)
 	if !isUserPath {
 		lockPaths = append(lockPaths, projectTOML)
 	}
 	lockPaths = append(lockPaths, mcpPath)
-	if legacyPath != "" {
-		lockPaths = append(lockPaths, legacyPath)
-	}
 	unlock, err := lockConfigFilesEdits(lockPaths...)
 	if err != nil {
 		return false, fmt.Errorf("remove MCP server: %w", err)
@@ -1490,13 +1314,6 @@ func RemovePluginFromSourcesForRoot(root, name string) (bool, error) {
 	}
 	if changed {
 		edits = append(edits, mcpEdit)
-	}
-	legacyEdit, changed, err := planLegacyMCPDisable(legacyPath, name)
-	if err != nil {
-		return false, err
-	}
-	if changed {
-		edits = append(edits, legacyEdit)
 	}
 	if len(edits) == 0 {
 		return false, nil
@@ -1617,13 +1434,8 @@ func (c *Config) saveProjectIncrementalResolved(logicalPath, resolvedPath string
 	removePlugins := len(tomlPluginsForScope(c.Plugins, RenderScopeProject)) == 0 && tomlBodyHasSection(body, "plugins")
 	removeSandboxBash := shouldRemoveIneffectiveProjectSandboxBash(body, c)
 	removeSkills := projectSkillsKeysToRemove(body, c)
-	_, hasLegacyDesktopAutoGuard := tomlSectionKeyValue(body, "desktop", "default_auto_recovery_checkpoint")
-	_, hasRetiredAgentAutoGuard := tomlSectionKeyValue(body, "agent", "auto_recovery_checkpoint")
-	_, hasRetiredRecoveryModel := tomlSectionKeyValue(body, "agent", "recovery_model")
-	_, hasRetiredRecoveryTemperature := tomlSectionKeyValue(body, "agent", "recovery_temperature")
-	removeRetiredAutoGuard := hasLegacyDesktopAutoGuard || hasRetiredAgentAutoGuard || hasRetiredRecoveryModel || hasRetiredRecoveryTemperature
 	writeProviderAccess := c.Desktop.ProviderAccess != nil
-	if strings.TrimSpace(delta) == "" && !removePlugins && !removeSandboxBash && !removeSkills && !removeRetiredAutoGuard && !writeProviderAccess {
+	if strings.TrimSpace(delta) == "" && !removePlugins && !removeSandboxBash && !removeSkills && !writeProviderAccess {
 		return nil // no changes to write
 	}
 	// Parse delta into section blocks and merge each into body
@@ -1638,11 +1450,6 @@ func (c *Config) saveProjectIncrementalResolved(logicalPath, resolvedPath string
 	}
 	if removeSkills {
 		body = cleanupProjectSkillsKeys(body, c)
-	}
-	if removeRetiredAutoGuard {
-		body = removeTOMLSectionKey(body, "desktop", "default_auto_recovery_checkpoint")
-		body = removeTOMLSectionKey(body, "agent", "auto_recovery_checkpoint")
-		body = removeTOMLSectionKey(removeTOMLSectionKey(body, "agent", "recovery_model"), "agent", "recovery_temperature")
 	}
 	if writeProviderAccess {
 		body = upsertTOMLSectionKey(body, "desktop", "provider_access", "provider_access = "+renderStringArray(c.Desktop.ProviderAccess))
@@ -1828,9 +1635,6 @@ func writeConfigFileResolved(path, body string, perm os.FileMode) error {
 	if strings.TrimSpace(path) == "" {
 		return fmt.Errorf("save: empty config path")
 	}
-	if err := finalizeOpenCodeGoJournal(path); err != nil {
-		return err
-	}
 	return fileutil.AtomicWriteFileStrict(path, []byte(body), perm)
 }
 
@@ -1840,9 +1644,6 @@ func writeConfigFileResolved(path, body string, perm os.FileMode) error {
 func atomicWriteToConfigFile(path, body string, perm os.FileMode) error {
 	resolved, err := resolveConfigReadPath(path)
 	if err != nil {
-		return err
-	}
-	if err := finalizeOpenCodeGoJournal(resolved); err != nil {
 		return err
 	}
 	if err := fileutil.AtomicWriteFile(resolved, []byte(body), perm); err != nil {

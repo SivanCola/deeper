@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +12,7 @@ import (
 )
 
 // Both recovery and the sidebar resolve durable registry members. Legacy
-// catalog rows remain available only until their exact source is adopted.
+// Current session identities are resolved through their workspace registry.
 func (a *App) unifiedProjectTopics(req ProjectTopicPageRequest) (ProjectTopicPage, error) {
 	return a.readProjectTopicPage(req, a.desktopSessionService("").Query())
 }
@@ -87,9 +86,7 @@ func (a *App) buildProjectTopics(req ProjectTopicPageRequest, reader workspaceSe
 	if workspace.Organization != nil {
 		org = *workspace.Organization
 	}
-	if page, validate, handled, err := a.lazyProjectTopicSnapshot(req, reader, snap, state, workspaceID, org, versions); handled {
-		return page, validate, err
-	}
+
 	return a.materializeProjectTopics(req, reader, snap, state, workspacestate.NewWorkspaceIndex(state), workspaceID, org, nil, versions)
 }
 
@@ -110,26 +107,7 @@ func (a *App) projectTopicsFromProjection(req ProjectTopicPageRequest, state wor
 	if req.Cursor == "" {
 		first, err = store.build(a.bootContext(), binding, func(ctx context.Context, snap *readSnapshot) error {
 			versions := projectionReadVersions(state, snapshotVersions)
-			effectiveOrg := org
-			tryLazy := true
-			if shellPreferences != nil {
-				workspace := state.Workspaces[workspaceID]
-				if workspace.Organization != nil {
-					effectiveOrg = *workspace.Organization
-				}
-				// An old manual order needs its source-alias translation first.
-				tryLazy = effectiveOrg.MigrationVersion != 0 || !shellPreferences.ManualSessionOrder && !shellPreferences.ManualTopicOrder
-			}
-			var page ProjectTopicPage
-			var validate func() error
-			var handled bool
-			var err error
-			if tryLazy {
-				page, validate, handled, err = a.lazyProjectTopicSnapshot(req, a.desktopSessionService("").Query(), snap, state, workspaceID, effectiveOrg, versions)
-			}
-			if !handled {
-				page, validate, err = a.materializeProjectTopics(req, a.desktopSessionService("").Query(), snap, state, workspaceIndex, workspaceID, org, shellPreferences, versions)
-			}
+			page, validate, err := a.materializeProjectTopics(req, a.desktopSessionService("").Query(), snap, state, workspaceIndex, workspaceID, org, shellPreferences, versions)
 			if err != nil {
 				return err
 			}
@@ -177,56 +155,34 @@ func (a *App) materializeProjectTopics(req ProjectTopicPageRequest, reader works
 	}
 	workspace.SessionIDs = admittedWorkspaceTopicMembers(req, state, workspace)
 	infos, _ := listWorkspaceSessionInfo(a.bootContext(), reader, workspace.SessionIDs)
-	adopted := adoptedSourceRows(state)
-	adoptedTopics := state.AdoptedTopicIDs(workspaceID)
-	all := req
-	all.Cursor = ""
-	all.Query = ""
-	all.TimeFilter = ""
-	all.GroupFilter = "all"
-	all.ExcludePinned = false
-	all.groupSelected = nil
-	all.groupAll = nil
-	legacy, err := a.unadoptedLegacyTopics(all, adopted, adoptedTopics)
-	if err != nil {
-		return legacy, nil, err
-	}
-	legacy.Items = a.withRemovablePlaceholderTopics(req, state, legacy.Items, adoptedTopics)
-	sources := append(legacy.Items, a.historicalCanonicalTopicsFromProjection(req.Scope, req.WorkspaceRoot, state, workspaceIndex)...)
-	if saved, err := readHistoricalSidecar(); err == nil {
-		applyHistoricalPresentations(sources, saved)
-	}
-	if shellPreferences != nil {
-		org = projectedShellOrganization(workspace, state, sources, *shellPreferences)
-	}
+	sources := a.withRemovablePlaceholderTopics(req, state, nil, state.AdoptedTopicIDs(workspaceID))
+	page := ProjectTopicPage{Items: []ProjectNode{}, Complete: true}
 	filtered := a.indexedWorkspaceTopics(req, state, workspace, org, infos, sources)
-	legacy.Items = cloneTopicPage(filtered)
-	for i := range legacy.Items {
-		if ref := legacy.Items[i].Session; ref != nil {
-			_, legacy.Items[i].Open = a.desktopSessionService("").Runtime(*ref)
+	page.Items = cloneTopicPage(filtered)
+	for i := range page.Items {
+		if ref := page.Items[i].Session; ref != nil {
+			_, page.Items[i].Open = a.desktopSessionService("").Runtime(*ref)
 		}
 	}
-	legacy.Revision += state.Generation
-	legacy.NextCursor = ""
+	page.Revision += state.Generation
+	page.NextCursor = ""
 	// Ordinary activity and organization edits do not revoke frozen reads.
 	// Membership removal, lifecycle transitions and source adoption do.
 	validate := a.workspaceReadFence(versions, workspace, filtered)
-	sourcesFence := &readSourceFence{app: a, files: map[string]os.FileInfo{}, bindings: map[string]string{}, versions: versions, store: &a.desktopSessions.readSnapshots, snapshot: snap, metadataOnly: true}
+	sourcesFence := &readSourceFence{app: a, files: map[string]os.FileInfo{}, store: &a.desktopSessions.readSnapshots, snapshot: snap, metadataOnly: true}
 	for _, node := range filtered {
 		if node.Session != nil {
 			continue
 		}
 		path := node.SessionPath
-		if node.Source != nil {
-			path = node.Source.Path
-		}
+
 		if path != "" {
 			if err := sourcesFence.add(a.bootContext(), path); err != nil {
-				return legacy, nil, err
+				return page, nil, err
 			}
 		}
 	}
-	return legacy, func() error {
+	return page, func() error {
 		current, err := a.workspaceRegistry().VerifySnapshot(a.bootContext())
 		if err != nil {
 			return err
@@ -372,22 +328,13 @@ func (a *App) mergeCanonicalWorkspaceShellsFromProjection(projects []ProjectNode
 			scope, root = "global", ""
 		}
 		req := ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Limit: 200, pinnedOnly: true}
-		workspaceID, found := owner(scope, root)
-		workspace := state.Workspaces[workspaceID]
-		legacy := legacyOrganizationPreferences(preferences, scope, root)
-		if !found || len(workspace.SessionIDs) == 0 {
-			pins, err := a.historicalPinnedShellsFromProjection(req, state, workspaceIndex, legacy)
-			if err != nil {
-				project.Health = "metadata_failed"
-			} else {
-				project.Children = pins
-			}
-			continue
-		}
+		workspaceID, _ := owner(scope, root)
+		preferencesForShell := projectShellPreferences(preferences, scope, root)
+
 		pins := []ProjectNode{}
 		snapshotID := ""
 		for {
-			page, err := a.projectTopicsFromProjection(req, state, workspaceIndex, workspaceID, workspacestate.Organization{}, &legacy, versions)
+			page, err := a.projectTopicsFromProjection(req, state, workspaceIndex, workspaceID, workspacestate.Organization{}, &preferencesForShell, versions)
 			if err != nil {
 				project.Health = "metadata_failed"
 				break
@@ -423,95 +370,8 @@ func globalWorkspaceHasSessions(state workspacestate.State) bool {
 			return true
 		}
 	}
-	for _, mapping := range state.SourceMappings {
-		if mapping.WorkspaceID == workspacestate.GlobalWorkspaceID {
-			return true
-		}
-	}
-	return false
-}
 
-func (a *App) unadoptedLegacyTopics(req ProjectTopicPageRequest, adopted, adoptedTopics map[string]bool) (ProjectTopicPage, error) {
-	if req.metadataSnapshot == nil {
-		rows := a.metadataProjectTopics(req.Scope, req.WorkspaceRoot)
-		req.metadataSnapshot = &rows
-	}
-	req.readAllSources = true
-	if catalog := a.sessionCatalog.Load(); catalog != nil && req.readContext == nil {
-		availability := a.catalogWorkspaceAvailability(catalog, req.Scope, req.WorkspaceRoot)
-		req.readAvailability = &availability
-		var page ProjectTopicPage
-		err := catalog.WithReadView(a.bootContext(), func(ctx context.Context) error {
-			req.readContext = ctx
-			var err error
-			page, err = a.unadoptedLegacyTopics(req, adopted, adoptedTopics)
-			return err
-		})
-		return page, err
-	}
-	legacyReq := req
-	legacyReq.Cursor, legacyReq.Limit = "", 200
-	legacy := ProjectTopicPage{Items: []ProjectNode{}}
-	deleted := map[string]bool{}
-	for _, topicID := range loadProjectsFile().DeletedTopics {
-		deleted[topicID] = true
-	}
-	for {
-		page, err := a.listProjectTopics(legacyReq)
-		if err != nil {
-			return page, err
-		}
-		legacy.Complete, legacy.ReadyDirectories, legacy.PendingDirectories, legacy.FailedDirectories = page.Complete, page.ReadyDirectories, page.PendingDirectories, page.FailedDirectories
-		legacy.Revision = max(legacy.Revision, page.Revision)
-		expanded := []ProjectNode{}
-		for _, node := range page.Items {
-			if deleted[node.TopicID] {
-				continue
-			}
-			rows := expandSessionSourceRows(node)
-			// A single visible head is also addressed by its historical path.
-			// Preserve explicit sibling identities once the source has branched.
-			if len(rows) == 1 && rows[0].Source != nil && adopted[sessionRuntimeKey(node.SessionPath)] {
-				continue
-			}
-			expanded = append(expanded, rows...)
-		}
-		for _, node := range expanded {
-			if node.Source != nil {
-				if a.unavailableHistoricalSource(node.Source.SourceKey) {
-					continue
-				}
-				node.PreparationStatus = a.historicalPreparationStatus(node.Source.SourceKey)
-				if !adopted[projectNodeSessionKey(node)] {
-					legacy.Items = append(legacy.Items, node)
-				}
-				continue
-			}
-			if adopted[sessionRuntimeKey(node.SessionPath)] || (node.SessionPath == "" && adoptedTopics[node.TopicID]) {
-				remaining := []ProjectNode{}
-				for _, child := range node.Children {
-					if !adopted[sessionRuntimeKey(child.SessionPath)] {
-						remaining = append(remaining, child)
-					}
-				}
-				if len(remaining) > 0 {
-					node.Children = remaining
-					node.SessionPath = remaining[0].SessionPath
-					legacy.Items = append(legacy.Items, node)
-				}
-				continue
-			}
-			legacy.Items = append(legacy.Items, node)
-		}
-		if page.NextCursor == "" {
-			break
-		}
-		if page.NextCursor == legacyReq.Cursor {
-			return legacy, fmt.Errorf("legacy session cursor did not advance")
-		}
-		legacyReq.Cursor = page.NextCursor
-	}
-	return legacy, nil
+	return false
 }
 
 func (a *App) canonicalTopicNodes(req ProjectTopicPageRequest, state workspacestate.State, workspace workspacestate.Workspace, infos map[string]session.SessionInfo, initial []ProjectNode, created ...map[string]int64) []ProjectNode {

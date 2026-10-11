@@ -114,14 +114,6 @@ func Parse(content string) (Snapshot, bool) {
 		return Snapshot{}, false
 	}
 	sections, ok := parseFramedSections(body)
-	if !ok && strings.HasPrefix(body, preamble+"\n\nSection lengths: ") {
-		return Snapshot{}, false
-	}
-	if !ok {
-		// Existing v1 snapshots predate the length manifest. Keep accepting their
-		// legacy heading parser so upgraded clients can resume old sessions.
-		sections, ok = parseSections(body)
-	}
 	if !ok {
 		return Snapshot{}, false
 	}
@@ -319,59 +311,6 @@ func parseSectionManifest(line string) ([4]int, bool) {
 		lengths[i] = n
 	}
 	return lengths, true
-}
-
-func parseSections(body string) (Sections, bool) {
-	if body == preamble {
-		return Sections{}, true
-	}
-	if !strings.HasPrefix(body, preamble+"\n\n") {
-		return Sections{}, false
-	}
-	rest := strings.TrimPrefix(body, preamble+"\n\n")
-	type sectionSpec struct {
-		heading string
-		set     func(*Sections, string)
-	}
-	specs := []sectionSpec{
-		{"## Environment\n\n", func(s *Sections, v string) { s.Environment = v }},
-		{"## Workspace\n\n", func(s *Sections, v string) { s.Workspace = v }},
-		{"## Background memory\n\n", func(s *Sections, v string) { s.BackgroundMemory = v }},
-		{"## Skills catalog\n\n", func(s *Sections, v string) { s.SkillsCatalog = v }},
-	}
-	var sections Sections
-	nextSpec := 0
-	for rest != "" {
-		found := -1
-		for i := nextSpec; i < len(specs); i++ {
-			if strings.HasPrefix(rest, specs[i].heading) {
-				found = i
-				break
-			}
-		}
-		if found < 0 {
-			return Sections{}, false
-		}
-		rest = strings.TrimPrefix(rest, specs[found].heading)
-		end := len(rest)
-		for i := found + 1; i < len(specs); i++ {
-			if at := strings.Index(rest, "\n\n"+specs[i].heading); at >= 0 && at < end {
-				end = at
-			}
-		}
-		value := rest[:end]
-		if value == "" || strings.TrimSpace(value) != value {
-			return Sections{}, false
-		}
-		specs[found].set(&sections, value)
-		nextSpec = found + 1
-		if end == len(rest) {
-			rest = ""
-		} else {
-			rest = strings.TrimPrefix(rest[end:], "\n\n")
-		}
-	}
-	return sections, true
 }
 
 func sectionStat(value string) SectionStat {

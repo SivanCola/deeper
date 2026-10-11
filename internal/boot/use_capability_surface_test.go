@@ -26,16 +26,16 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
 
 	var surfaces [][]string
-	for _, mode := range []string{"", "economy", TokenModeFull, TokenModeDelivery, "light", "balanced"} {
+	for _, mode := range []string{"", "economy", "standard", "standard", "light", "balanced"} {
 		prov := testutil.NewMock("ucap-"+mode, testutil.Turn{Text: "done"})
 		setBootTokenProfileTestProvider(t, prov)
-		ctrl, err := Build(context.Background(), Options{Sink: event.Discard, TokenMode: mode, AgentPreset: mode})
+		ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
 		if err != nil {
 			t.Fatalf("Build(%q): %v", mode, err)
 		}
@@ -93,7 +93,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
@@ -149,7 +149,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
@@ -167,7 +167,7 @@ model = "x"
 	ctrl, err := Build(context.Background(), withTestSession(t, Options{
 		SessionDir:           sessionDir,
 		Sink:                 event.Discard,
-		HeadlessApprovalMode: control.ToolApprovalYolo,
+		HeadlessApprovalMode: control.ToolApprovalDangerFullAccess,
 		OnSessionTitleChanged: func(gotDir, gotPath, gotTitle string) error {
 			if gotDir != sessionDir || gotTitle != "Current integration task" {
 				t.Fatalf("projection = %q %q %q", gotDir, gotPath, gotTitle)

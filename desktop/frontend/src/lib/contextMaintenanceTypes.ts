@@ -1,8 +1,8 @@
 import type { Translator } from "./i18n";
 
 export type ContextMaintenanceStatus = "planned" | "applied" | "noop" | "blocked" | "failed";
-/** New writers emit summary | noop | truncate (the lossy ceiling rescue). snip/prune/native are legacy restore-only. */
-export type ContextMaintenanceAction = "summary" | "noop" | "truncate" | "snip" | "prune" | "native_tool_clear";
+/** Current maintenance writes summary, noop, or truncate. */
+export type ContextMaintenanceAction = "summary" | "noop" | "truncate";
 
 export interface WireContextMaintenance {
   status?: ContextMaintenanceStatus;
@@ -36,11 +36,9 @@ export interface ContextMaintenanceInfo {
   summaryTokens?: number;
   lastSavedTokens?: number;
   /** @deprecated always 0; use triggerTokens */
-  snipTrigger?: number;
   /** @deprecated alias of triggerTokens */
   foldTrigger?: number;
   /** @deprecated always 0; use triggerTokens */
-  forceTrigger?: number;
   triggerTokens?: number;
   /** none | restored | applied — runtime only */
   checkpointState?: "none" | "restored" | "applied";

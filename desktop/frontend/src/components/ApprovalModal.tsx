@@ -19,7 +19,6 @@ import {
   useFileReferenceMenu,
 } from "./FileReferenceMenu";
 import { WriteAccessApprovalDetails, writeAccessDecisionActions, type DecisionAction } from "./WriteAccessApproval";
-import { RetiredRecoveryApproval } from "./RetiredRecoveryApproval";
 import type { ApprovalModalProps } from "./approvalTypes";
 import { approvalToolLabel } from "./approvalToolLabel";
 import { usePromptStop } from "../lib/usePromptStop";
@@ -112,86 +111,7 @@ function localizePlanModeApprovalReason(tool: string, reason: string, t: Transla
   return reason;
 }
 
-const RECOVERY_FEEDBACK_MAX = 1000;
-
-function recoveryReasonText(
-  changeKind: string | undefined,
-  fallback: string | undefined,
-  t: Translator,
-): string {
-  switch ((changeKind ?? "").toLowerCase()) {
-    case "risk":
-      return t("approval.recoveryReasonRisk");
-    case "scope":
-      return t("approval.recoveryReasonScope");
-    case "strategy":
-      return t("approval.recoveryReasonStrategy");
-    case "uncertain":
-    case "same_strategy":
-      return t("approval.recoveryReasonUncertain");
-    default:
-      return fallback?.trim() || t("approval.recoveryReasonUncertain");
-  }
-}
-
-type PlanLine = { key: string; text: string };
-type PlanDelta = { removed: string[]; added: string[] };
-
-function planLines(raw: string | undefined): PlanLine[] {
-  return (raw ?? "")
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\s+\[[^\]\r\n]+\]\s*$/, "").trimEnd())
-    .filter((line) => line.trim() !== "")
-    .map((line) => {
-      const match = line.match(/^(\s*)(?:\d+\.\s*)?(.*)$/);
-      const nested = (match?.[1].length ?? 0) > 0;
-      const body = (match?.[2] ?? line).replace(/\s+/g, " ").trim();
-      return { key: `${nested ? 1 : 0}:${body}`, text: `${nested ? "  " : ""}${body}` };
-    });
-}
-
-// LCS keeps unchanged steps out of the card and turns additions, removals, and
-// reordering into a compact plan-level delta. Status suffixes are ignored.
-function planDelta(beforeRaw: string | undefined, afterRaw: string | undefined): PlanDelta | null {
-  const before = planLines(beforeRaw);
-  const after = planLines(afterRaw);
-  if (before.length === 0 || after.length === 0) return null;
-  const dp = Array.from({ length: before.length + 1 }, () => Array<number>(after.length + 1).fill(0));
-  for (let i = before.length - 1; i >= 0; i -= 1) {
-    for (let j = after.length - 1; j >= 0; j -= 1) {
-      dp[i][j] = before[i].key === after[j].key
-        ? dp[i + 1][j + 1] + 1
-        : Math.max(dp[i + 1][j], dp[i][j + 1]);
-    }
-  }
-  const removed: string[] = [];
-  const added: string[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < before.length && j < after.length) {
-    if (before[i].key === after[j].key) {
-      i += 1;
-      j += 1;
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      removed.push(before[i].text);
-      i += 1;
-    } else {
-      added.push(after[j].text);
-      j += 1;
-    }
-  }
-  while (i < before.length) removed.push(before[i++].text);
-  while (j < after.length) added.push(after[j++].text);
-  return removed.length > 0 || added.length > 0 ? { removed, added } : null;
-}
-
-// Recovery approvals belong to the retired Auto Guard mechanism. Old sessions
-// can still decode them, but they are historical facts rather than decisions.
-// Keep the payload visible without exposing confirmation, retry, or grant
-// controls that could imply the retired gate is still active.
 export function ApprovalModal(props: ApprovalModalProps) {
-  const isHistoricalRecovery = props.approval.kind === "recovery" || Boolean(props.approval.recovery);
-  if (isHistoricalRecovery) return <RetiredRecoveryApproval approval={props.approval} />;
   const { approval } = props;
   const identity = JSON.stringify([props.tabId, approval.id, approval.kind,
     approval.turnId, approval.runtimeEpoch, approval.generation, approval.permissionRevision]);
@@ -201,7 +121,6 @@ export function ApprovalModal(props: ApprovalModalProps) {
 function InteractiveApprovalModal({
   approval,
   onAnswer,
-  onResolveRecovery,
   onRevisePlan,
   onExitPlan,
   onStop,
@@ -215,14 +134,8 @@ function InteractiveApprovalModal({
   const t = useT();
   const isPlanApproval = approval.tool === "exit_plan_mode";
   const isWriteAccessApproval = approval.kind === "write_access" || Boolean(approval.write_access);
-  const isRecoveryApproval = approval.kind === "recovery" || Boolean(approval.recovery);
-  const recovery = approval.recovery;
-  const recoveryChangeKind = (recovery?.change_kind ?? "").toLowerCase();
-  const isRecoveryPlanChange =
-    isRecoveryApproval && (recoveryChangeKind === "strategy" || recoveryChangeKind === "scope");
-  const taskGrantScope = recovery?.task_grant_scope?.trim() ?? "";
   const toolLabel = approvalToolLabel(approval.tool, t);
-  const isFreshHumanApproval = approval.fresh === true || requiresFreshHumanApproval(approval.tool) || isRecoveryApproval;
+  const isFreshHumanApproval = approval.fresh === true || requiresFreshHumanApproval(approval.tool);
   const hasFreshSessionGrant = approval.tool === "sandbox_escape" || approval.tool === "config_write";
   // Switching the approval segmented control to a more permissive mode does not
   // resolve an already-pending request; say so on the card instead of leaving
@@ -235,7 +148,6 @@ function InteractiveApprovalModal({
     APPROVAL_MODE_RANK[normalizeToolApprovalMode(toolApprovalMode)] > APPROVAL_MODE_RANK[normalizeToolApprovalMode(initialToolApprovalModeRef.current)];
   const subject = localizeApprovalSubject(approval.tool, approval.subject, t);
   const reason = localizePlanModeApprovalReason(approval.tool, localizeApprovalReason(approval.tool, approval.reason, t), t);
-  const subjectSummary = subject.split(/\r?\n/).find((line) => line.trim())?.trim() ?? "";
   // Plan approvals already show the plan above; keep a short hint. Tool
   // approvals render their command/subject in the details block, so header
   // metadata is only a fallback when there is no subject to show there.
@@ -243,19 +155,15 @@ function InteractiveApprovalModal({
   const hasToolDetails = Boolean(reason || subject);
   // Subject (command) is visible by default; long reason can collapse.
   const [reasonOpen, setReasonOpen] = useState(() => {
-    if (isRecoveryApproval) return false; // recovery details stay collapsed
     return Boolean(reason) && reason.length <= 160;
   });
   // Immediate Plan/Auto decisions have no hidden selection. Ordinary tool
   // approvals retain select-then-confirm and default to Allow once.
-  const [selectedIndex, setSelectedIndex] = useState(() => (isPlanApproval || isRecoveryApproval ? -1 : 0));
+  const [selectedIndex, setSelectedIndex] = useState(() => (isPlanApproval ? -1 : 0));
   const [expandedDescriptionId, setExpandedDescriptionId] = useState<string | null>(null);
   const [descriptionTruncated, setDescriptionTruncated] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionText, setRevisionText] = useState("");
-  const [recoveryGuidanceOpen, setRecoveryGuidanceOpen] = useState(false);
-  const [recoveryGuidanceText, setRecoveryGuidanceText] = useState("");
-  const [grantSimilarForTask, setGrantSimilarForTask] = useState(false);
   const [answerPending, setSubmitting] = useState(false);
   const { stopping, stopFailed, stopTask } = usePromptStop(onStop);
   const [submitFailed, setSubmitFailed] = useState(false);
@@ -264,8 +172,6 @@ function InteractiveApprovalModal({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const shelfRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const recoveryGuidanceRef = useRef<HTMLTextAreaElement | null>(null);
-  const recoveryGuidanceTriggerRef = useRef<HTMLButtonElement | null>(null);
   const consumedInsertIdRef = useRef(0);
   const onRevisionActiveChangeRef = useRef(onRevisionActiveChange);
   const revisionActiveRef = useRef(false);
@@ -298,57 +204,7 @@ function InteractiveApprovalModal({
     if (el) animateElementExit(el, { opacity: 0, y: 8, duration: DUR_FAST, onComplete: () => undefined });
   };
 
-  const resolveRecovery = useCallback(
-    (action: "continue" | "continue_task" | "revise", feedback?: string) => {
-      const resolve = onResolveRecovery ?? ((a: "continue" | "continue_task" | "revise") => onAnswer(a !== "revise", false, false));
-      if (action === "revise") {
-        const text = feedback?.trim().slice(0, RECOVERY_FEEDBACK_MAX) ?? "";
-        return resolve("revise", text || undefined);
-      }
-      return resolve(action);
-    },
-    [onResolveRecovery, onAnswer],
-  );
-
-  const toolActions: DecisionAction[] = isRecoveryPlanChange
-    ? [
-        {
-          key: "1",
-          label: t("approval.recoveryAdoptPlan"),
-          desc: t("approval.recoveryAdoptPlanDesc"),
-          kind: "direct",
-          run: () => resolveRecovery("continue"),
-        },
-        {
-          key: "2",
-          label: t("approval.recoveryAdjustPlan"),
-          desc: t("approval.recoveryAdjustPlanDesc"),
-          kind: "toggle-guidance",
-        },
-      ]
-    : isRecoveryApproval
-    ? [
-        {
-          key: "1",
-          label: t("approval.recoveryRevise"),
-          desc: t("approval.recoveryReviseDesc"),
-          primary: true,
-          kind: "direct",
-          run: () => resolveRecovery("revise"),
-        },
-        {
-          key: "2",
-          label: grantSimilarForTask
-            ? t("approval.recoveryContinueTask")
-            : t("approval.recoveryContinue"),
-          desc: grantSimilarForTask
-            ? t("approval.recoveryContinueTaskDesc")
-            : t("approval.recoveryContinueDesc"),
-          kind: "direct",
-          run: () => resolveRecovery(grantSimilarForTask && recovery?.can_grant_task ? "continue_task" : "continue"),
-        },
-      ]
-    : isWriteAccessApproval
+  const toolActions: DecisionAction[] = isWriteAccessApproval
     ? writeAccessDecisionActions(t, onAnswer)
     : isPlanApproval
     ? [
@@ -436,7 +292,7 @@ function InteractiveApprovalModal({
   const selectedIndexRef = useRef(selectedIndex);
   selectedIndexRef.current = selectedIndex;
   const selectedAction = toolActions[Math.min(selectedIndex, actionCount - 1)] ?? toolActions[0];
-  const selectedDescriptionId = !isPlanApproval && !isRecoveryApproval && selectedIndex >= 0
+  const selectedDescriptionId = !isPlanApproval && selectedIndex >= 0
     ? `${instanceId}-description-${selectedIndex}`
     : undefined;
   const descriptionExpanded = selectedDescriptionId !== undefined && expandedDescriptionId === selectedDescriptionId;
@@ -445,8 +301,8 @@ function InteractiveApprovalModal({
     // Ordinary permission cards must not steal focus from the composer or an
     // active IME composition. Plan and recovery decisions retain focus because
     // they replace the composer interaction rather than supplement it.
-    if (isPlanApproval || isRecoveryApproval) cardRef.current?.focus();
-  }, [isPlanApproval, isRecoveryApproval]);
+    if (isPlanApproval) cardRef.current?.focus();
+  }, [isPlanApproval]);
 
   useEffect(() => {
     setExpandedDescriptionId(null);
@@ -454,20 +310,16 @@ function InteractiveApprovalModal({
 
   const confirmSelected = useCallback(() => {
     if (submitting || closingRef.current) return;
-    if (isPlanApproval || isRecoveryApproval) return;
+    if (isPlanApproval) return;
     const action = toolActions[selectedIndexRef.current];
     if (!action) return;
     if (action.kind === "toggle-revision") {
       setRevisionOpen((open) => !open);
       return;
     }
-    if (action.kind === "toggle-guidance") {
-      setGrantSimilarForTask(false);
-      setRecoveryGuidanceOpen(true);
-      return;
-    }
+
     if (action.run) answerWithExit(action.run);
-  }, [submitting, toolActions, isPlanApproval, isRecoveryApproval]);
+  }, [submitting, toolActions, isPlanApproval]);
 
   const activateAction = useCallback((action: DecisionAction, index: number) => {
     if (submitting) return;
@@ -479,11 +331,7 @@ function InteractiveApprovalModal({
       setRevisionOpen((open) => !open);
       return;
     }
-    if (action.kind === "toggle-guidance") {
-      setGrantSimilarForTask(false);
-      setRecoveryGuidanceOpen(true);
-      return;
-    }
+
     setSelectedIndex(index);
   }, [submitting]);
 
@@ -495,16 +343,7 @@ function InteractiveApprovalModal({
         return;
       }
       if (submitting) return;
-      if (isRecoveryApproval && recoveryGuidanceOpen && event.key === "Escape") {
-        event.preventDefault();
-        setRecoveryGuidanceOpen(false);
-        setRecoveryGuidanceText("");
-        requestAnimationFrame(() => {
-          if (isRecoveryPlanChange) cardRef.current?.focus();
-          else recoveryGuidanceTriggerRef.current?.focus();
-        });
-        return;
-      }
+
       const target = event.target instanceof Element ? event.target : null;
       const tag = target?.tagName.toLowerCase();
       // Editing revision / file menu owns arrows and digits while focused.
@@ -513,13 +352,12 @@ function InteractiveApprovalModal({
         tag === "input" ||
         tag === "textarea" ||
         tag === "select" ||
-        (target instanceof HTMLElement && target.isContentEditable) ||
-        (isRecoveryApproval && recoveryGuidanceOpen);
+        (target instanceof HTMLElement && target.isContentEditable);
       if (editing && (event.key === "1" || event.key === "2" || event.key === "3" || event.key === "4")) {
         return;
       }
       if (tag === "input" || tag === "textarea" || tag === "select" || (target instanceof HTMLElement && target.isContentEditable)) return;
-      const immediateDecision = isPlanApproval || isRecoveryApproval;
+      const immediateDecision = isPlanApproval;
       if (immediateDecision && (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Enter")) {
         return;
       }
@@ -536,11 +374,9 @@ function InteractiveApprovalModal({
           return (base + 1) % actionCount;
         });
       } else if (event.key === "Enter") {
-        if (isRecoveryApproval && selectedIndexRef.current < 0) return;
         event.preventDefault();
         confirmSelected();
       } else if (event.key === "1" || event.key === "2" || event.key === "3" || event.key === "4") {
-        if (isRecoveryApproval && recoveryGuidanceOpen) return;
         const index = Number(event.key) - 1;
         if (index < 0 || index >= actionCount) return;
         event.preventDefault();
@@ -557,7 +393,7 @@ function InteractiveApprovalModal({
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [actionCount, activateAction, confirmSelected, stopTask, submitting, isPlanApproval, isRecoveryApproval, isRecoveryPlanChange, recoveryGuidanceOpen, toolActions]);
+  }, [actionCount, activateAction, confirmSelected, stopTask, submitting, isPlanApproval, toolActions]);
 
   useEffect(() => {
     revisionActiveRef.current = revisionOpen;
@@ -640,63 +476,6 @@ function InteractiveApprovalModal({
     answerWithExit(() => onRevisePlan?.(text));
   };
 
-  const closeRecoveryGuidance = () => {
-    setRecoveryGuidanceOpen(false);
-    setRecoveryGuidanceText("");
-    requestAnimationFrame(() => {
-      if (isRecoveryPlanChange) cardRef.current?.focus();
-      else recoveryGuidanceTriggerRef.current?.focus();
-    });
-  };
-
-  const submitRecoveryGuidance = () => {
-    const text = recoveryGuidanceText.trim();
-    if (!text) {
-      recoveryGuidanceRef.current?.focus();
-      return;
-    }
-    answerWithExit(() => resolveRecovery("revise", text));
-  };
-
-  const onRecoveryGuidanceKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      event.stopPropagation();
-      submitRecoveryGuidance();
-      return;
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      closeRecoveryGuidance();
-      return;
-    }
-    event.stopPropagation();
-  };
-
-  const recoveryReason = isRecoveryApproval
-    ? recoveryReasonText(
-        recovery?.change_kind,
-        recovery?.change_rationale || recovery?.review_rationale || reason,
-        t,
-      )
-    : "";
-  const recoveryActionSummary =
-    recovery?.next_action ||
-    recovery?.next_tool ||
-    subjectSummary ||
-    approval.tool;
-  const recoveryPlanDelta = isRecoveryPlanChange
-    ? planDelta(recovery?.plan_before, recovery?.plan_after)
-    : null;
-  const hasRecoveryDetails = Boolean(
-    recovery?.failed_summary ||
-    recovery?.diagnosis ||
-    recovery?.change_rationale ||
-    recovery?.review_rationale ||
-    recovery?.source_agent,
-  );
-
   const confirmIsDanger = selectedAction?.tone === "danger";
   const confirmLabel =
     selectedAction?.kind === "toggle-revision"
@@ -709,46 +488,32 @@ function InteractiveApprovalModal({
     <div ref={shelfRef}>
       <PromptShelf
         decision
-        actionsRole={isPlanApproval || isRecoveryApproval ? "group" : "listbox"}
-        className={isPlanApproval ? "prompt-shelf--plan-approval" : isRecoveryApproval ? "prompt-shelf--recovery-approval" : "prompt-shelf--tool-approval"}
+        actionsRole={isPlanApproval ? "group" : "listbox"}
+        className={isPlanApproval ? "prompt-shelf--plan-approval" : "prompt-shelf--tool-approval"}
         barRef={cardRef}
-        titleId={isPlanApproval ? "plan-approval-title" : isRecoveryApproval ? "recovery-approval-title" : "tool-approval-title"}
+        titleId={isPlanApproval ? "plan-approval-title" : "tool-approval-title"}
         title={
           isPlanApproval
             ? t("approval.planReady")
             : isWriteAccessApproval
               ? t("approval.writeAccessPending")
-            : isRecoveryPlanChange
-              ? t("approval.recoveryPlanChangePending")
-              : isRecoveryApproval
-                ? t("approval.recoveryPending")
-                : t("approval.toolPending")
+             : t("approval.toolPending")
         }
         badges={
           <>
-            {!isPlanApproval && !isRecoveryApproval && <PromptBadge tone="amber">{toolLabel}</PromptBadge>}
+            {!isPlanApproval && <PromptBadge tone="amber">{toolLabel}</PromptBadge>}
             {isPlanApproval && revisionOpen && <PromptBadge>{t("approval.revisePlan")}</PromptBadge>}
-            {isRecoveryPlanChange && (
-              <PromptBadge>
-                {t(recoveryChangeKind === "strategy" ? "approval.recoveryDecisionStrategy" : "approval.recoveryDecisionScope")}
-              </PromptBadge>
-            )}
           </>
         }
-        meta={isRecoveryApproval ? undefined : toolMeta}
+        meta={toolMeta}
         headerActions={
           <>
-            {isRecoveryApproval && hasRecoveryDetails && (
-              <PromptHeaderAction onClick={() => setReasonOpen((open) => !open)} disabled={submitting}>
-                {t(reasonOpen ? "approval.recoveryHideTechnicalDetails" : "approval.recoveryTechnicalDetails")}
-              </PromptHeaderAction>
-            )}
-            {!isPlanApproval && !isRecoveryApproval && hasToolDetails && reason && (
+            {!isPlanApproval && hasToolDetails && reason && (
               <PromptHeaderAction onClick={() => setReasonOpen((open) => !open)} disabled={submitting}>
                 {t(reasonOpen ? "approval.hideDetails" : "approval.details")}
               </PromptHeaderAction>
             )}
-            {!isPlanApproval && !isRecoveryApproval && (
+            {!isPlanApproval && (
               <PromptHeaderAction
                 onClick={stopTask}
                 ariaLabel={t("decision.stopTask")}
@@ -770,7 +535,7 @@ function InteractiveApprovalModal({
                   description={action.desc}
                   descriptionId={`${instanceId}-description-${index}`}
                   descriptionDisclosure
-                  onDescriptionOverflowChange={!isPlanApproval && !isRecoveryApproval && selectedIndex === index
+                  onDescriptionOverflowChange={!isPlanApproval && selectedIndex === index
                     ? setDescriptionTruncated
                     : undefined}
                   onClick={() => {
@@ -779,49 +544,17 @@ function InteractiveApprovalModal({
                   primary={action.primary}
                   selected={selectedIndex === index}
                   tone={action.tone}
-                  role={isPlanApproval || isRecoveryApproval ? "button" : "option"}
+                  role={isPlanApproval ? "button" : "option"}
                   disabled={submitting}
                 />
               );
-              if (isRecoveryApproval && !isRecoveryPlanChange && index === 1 && recovery?.can_grant_task) {
-                return (
-                  <div
-                    key={action.key}
-                    className={[
-                      "recovery-continue-option",
-                      grantSimilarForTask ? "recovery-continue-option--granted" : "",
-                    ].filter(Boolean).join(" ")}
-                  >
-                    {actionNode}
-                    {!recoveryGuidanceOpen && (
-                      <label className="recovery-task-grant">
-                        <input
-                          type="checkbox"
-                          checked={grantSimilarForTask}
-                          onChange={(event) => setGrantSimilarForTask(event.target.checked)}
-                          disabled={submitting}
-                        />
-                        <span>
-                          <strong>{t("approval.recoveryTaskGrant")}</strong>
-                          <small>
-                            {taskGrantScope ? (
-                              <>
-                                {t("approval.recoveryTaskGrantScope")} <code>{taskGrantScope}</code>
-                              </>
-                            ) : t("approval.recoveryTaskGrantDesc")}
-                          </small>
-                        </span>
-                      </label>
-                    )}
-                  </div>
-                );
-              }
+
               return actionNode;
             })}
           </>
         }
         note={
-          !isPlanApproval && !isRecoveryApproval && selectedDescriptionId && descriptionTruncated ? (
+          !isPlanApproval && selectedDescriptionId && descriptionTruncated ? (
             <PromptDescriptionDisclosure
               descriptionId={`${selectedDescriptionId}-detail`}
               label={selectedAction?.label}
@@ -830,57 +563,10 @@ function InteractiveApprovalModal({
               onToggle={() => setExpandedDescriptionId((current) => current === selectedDescriptionId ? null : selectedDescriptionId)}
               disabled={submitting}
             />
-          ) : isRecoveryApproval ? (
-            recoveryGuidanceOpen ? (
-              <div className="recovery-guidance">
-                <textarea
-                  ref={recoveryGuidanceRef}
-                  className="plan-revision__input recovery-guidance__input"
-                  value={recoveryGuidanceText}
-                  rows={3}
-                  maxLength={RECOVERY_FEEDBACK_MAX}
-                  aria-label={t("approval.recoveryGuidanceLabel")}
-                  placeholder={t("approval.recoveryGuidancePlaceholder")}
-                  onChange={(event) => setRecoveryGuidanceText(event.target.value.slice(0, RECOVERY_FEEDBACK_MAX))}
-                  onKeyDown={onRecoveryGuidanceKeyDown}
-                  disabled={submitting}
-                  autoFocus
-                />
-                <div className="recovery-guidance__actions">
-                  <button className="btn" type="button" onClick={closeRecoveryGuidance} disabled={submitting}>
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    className="btn btn--primary"
-                    type="button"
-                    onClick={submitRecoveryGuidance}
-                    disabled={submitting || !recoveryGuidanceText.trim()}
-                  >
-                    {t(isRecoveryPlanChange ? "approval.recoveryPlanGuidanceSubmit" : "approval.recoveryGuidanceSubmit")}
-                  </button>
-                </div>
-              </div>
-            ) : isRecoveryPlanChange ? undefined : (
-              <button
-                ref={recoveryGuidanceTriggerRef}
-                type="button"
-                className="recovery-guidance-trigger"
-                aria-expanded="false"
-                onClick={() => {
-                  // Guidance rejects the pending action; a task-scoped grant
-                  // belongs only to Continue and would be misleading here.
-                  setGrantSimilarForTask(false);
-                  setRecoveryGuidanceOpen(true);
-                }}
-                disabled={submitting}
-              >
-                {t("approval.recoveryGuidanceTrigger")}
-              </button>
-            )
           ) : undefined
         }
         footer={
-          isRecoveryApproval || isPlanApproval ? undefined : (
+          isPlanApproval ? undefined : (
             <DecisionConfirmBar
               hint={t("decision.selectHint")}
               confirmLabel={confirmLabel}
@@ -893,81 +579,16 @@ function InteractiveApprovalModal({
       >
         {(submitFailed || stopFailed) && <p role="alert">{t("approval.submitFailed")}</p>}
         {(approvalModeRelaxed ||
-          isRecoveryApproval ||
-          (!isPlanApproval && !isRecoveryApproval && (subject || isWriteAccessApproval || (reasonOpen && reason))) ||
+          (!isPlanApproval && (subject || isWriteAccessApproval || (reasonOpen && reason))) ||
           (isPlanApproval && revisionOpen)) && (
           <>
-            {approvalModeRelaxed && !isRecoveryApproval && (
+            {approvalModeRelaxed && (
               <div className="approval-mode-hint">{t("approval.modeSwitchPendingHint")}</div>
             )}
-            {isRecoveryApproval && (
-              <section className="recovery-summary" aria-label={t("approval.recoverySummaryLabel")}>
-                <p className="recovery-summary__reason">{recoveryReason}</p>
-                {!isRecoveryPlanChange && recoveryActionSummary && (
-                  <p className="recovery-summary__action">
-                    <span>{t("approval.recoveryNextLabel")}</span>
-                    <code>{recoveryActionSummary}</code>
-                  </p>
-                )}
-              </section>
-            )}
-            {isRecoveryPlanChange && recoveryPlanDelta && (
-              <section className="plan-change-delta" aria-label={t("approval.recoveryPlanDeltaLabel")}>
-                <div className="plan-change-delta__title">{t("approval.recoveryPlanDeltaLabel")}</div>
-                {recoveryPlanDelta.removed.length > 0 && (
-                  <div className="plan-change-delta__group plan-change-delta__group--removed">
-                    <div className="plan-change-delta__label">{t("approval.recoveryPlanRemoved")}</div>
-                    {recoveryPlanDelta.removed.map((line, index) => (
-                      <div className="plan-change-delta__line" key={`removed-${index}-${line}`}><span>−</span>{line}</div>
-                    ))}
-                  </div>
-                )}
-                {recoveryPlanDelta.added.length > 0 && (
-                  <div className="plan-change-delta__group plan-change-delta__group--added">
-                    <div className="plan-change-delta__label">{t("approval.recoveryPlanAdded")}</div>
-                    {recoveryPlanDelta.added.map((line, index) => (
-                      <div className="plan-change-delta__line" key={`added-${index}-${line}`}><span>+</span>{line}</div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-            {isRecoveryApproval && reasonOpen && (
-              <dl className="approval-details recovery-details">
-                {recovery?.failed_summary && (
-                  <div className="recovery-detail-row">
-                    <dt>{t("approval.recoveryFailedLabel")}</dt>
-                    <dd>
-                      {recovery.failed_tool && <code>{recovery.failed_tool}</code>}
-                      {recovery.failed_tool && " · "}
-                      {recovery.failed_summary}
-                    </dd>
-                  </div>
-                )}
-                {recovery?.diagnosis && (
-                  <div className="recovery-detail-row">
-                    <dt>{t("approval.recoveryDiagnosisLabel")}</dt>
-                    <dd>{recovery.diagnosis}</dd>
-                  </div>
-                )}
-                {(recovery?.change_rationale || recovery?.review_rationale) && (
-                  <div className="recovery-detail-row">
-                    <dt>{t("approval.recoveryWhyLabel")}</dt>
-                    <dd>{recovery.change_rationale || recovery.review_rationale}</dd>
-                  </div>
-                )}
-                {recovery?.source_agent && (
-                  <div className="recovery-detail-row">
-                    <dt>{t("approval.recoverySourceLabel")}</dt>
-                    <dd><code>{recovery.source_agent}</code></dd>
-                  </div>
-                )}
-              </dl>
-            )}
-            {!isPlanApproval && !isRecoveryApproval && isWriteAccessApproval && (
+            {!isPlanApproval && isWriteAccessApproval && (
               <WriteAccessApprovalDetails approval={approval} subject={subject} reason={reason} reasonOpen={reasonOpen} t={t} />
             )}
-            {!isPlanApproval && !isRecoveryApproval && !isWriteAccessApproval && subject && (
+            {!isPlanApproval && !isWriteAccessApproval && subject && (
               <div className="approval-details">
                 <pre className="approval-subject">{subject}</pre>
                 {reasonOpen && reason && <div className="approval-reason">{reason}</div>}

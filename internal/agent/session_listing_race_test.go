@@ -17,7 +17,7 @@ func TestSessionListingBackfillDoesNotOverwriteNewerCounts(t *testing.T) {
 	})
 	if err := SaveBranchMeta(path, BranchMeta{
 		ID:            BranchID(path),
-		SchemaVersion: branchMetaCountsInitialVersion,
+		SchemaVersion: BranchMetaCountsVersion,
 	}); err != nil {
 		t.Fatalf("SaveBranchMeta: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestSessionListingBackfillRejectsChangedTranscriptGeneration(t *testing.T) 
 	writeSessionFile(t, path, []provider.Message{{Role: provider.RoleSystem, Content: "system"}})
 	if err := SaveBranchMeta(path, BranchMeta{
 		ID:            BranchID(path),
-		SchemaVersion: branchMetaCountsInitialVersion,
+		SchemaVersion: BranchMetaCountsVersion,
 		Revision:      1,
 		ContentDigest: "old",
 	}); err != nil {
@@ -87,7 +87,7 @@ func TestSessionListingBackfillRejectsChangedTranscriptGeneration(t *testing.T) 
 	if err != nil || !ok {
 		t.Fatalf("LoadBranchMeta: ok=%v err=%v", ok, err)
 	}
-	if meta.SchemaVersion != branchMetaCountsInitialVersion || meta.Revision != 2 || meta.ContentDigest != "new" {
+	if meta.Revision != 2 || meta.ContentDigest != "new" || meta.ListingRevision == 2 {
 		t.Fatalf("stale backfill crossed transcript generation: %+v", meta)
 	}
 }

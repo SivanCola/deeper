@@ -10,25 +10,6 @@ import (
 	"deepzora/internal/store"
 )
 
-func TestPreviousInboxReaderPausesSchemaThree(t *testing.T) {
-	const previousSchema = 2
-	if SchemaVersion <= previousSchema {
-		t.Fatalf("inbox schema %d is not newer than previous reader %d", SchemaVersion, previousSchema)
-	}
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(session, Limits{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-	if s.Snapshot().SchemaVersion != SchemaVersion {
-		t.Fatalf("schema = %d, want %d", s.Snapshot().SchemaVersion, SchemaVersion)
-	}
-	if !(s.Snapshot().SchemaVersion > previousSchema) {
-		t.Fatal("previous inbox reader would not pause schema 3")
-	}
-}
-
 func TestInboxNewerSchemaIsReadonlyPaused(t *testing.T) {
 	session := filepath.Join(t.TempDir(), "s.jsonl")
 	inboxDir := store.SessionInboxDir(session)

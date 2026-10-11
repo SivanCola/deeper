@@ -15,7 +15,7 @@ var cliSessionServices = struct {
 }{byRoot: map[string]*session.Service{}}
 
 func cliSessionService(sessionDir string) *session.Service {
-	root := session.RootForLegacyDir(sessionDir)
+	root := session.RootForSessionDir(sessionDir)
 	if root == "" {
 		return nil
 	}

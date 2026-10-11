@@ -68,9 +68,6 @@ func trashSessionArtifactsWithGuard(dir, sessionPath, key string, guard *agent.S
 		return err
 	}
 	defer invalidateTopicSessionIndexForPath(sessionPath)
-	if err := invalidateTopicDirMarkers(dir); err != nil {
-		return err
-	}
 	for _, artifact := range sessionTrashArtifacts(sessionPath, key) {
 		if err := movePathIfExists(artifact.src, filepath.Join(itemDir, artifact.name)); err != nil {
 			return err

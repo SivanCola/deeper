@@ -3,7 +3,7 @@ import type { RecoveryLineageView, SessionMeta } from "../lib/types";
 
 const session = (path: string): SessionMeta => ({
   path, preview: path, turns: 1, turnsState: "valid", createdAt: 1,
-  lastActivityAt: 1, modTime: 1, current: false, open: false,
+  lastActivityAt: 1, current: false, open: false,
   scope: "global", topicId: "topic",
 });
 const view: RecoveryLineageView = {

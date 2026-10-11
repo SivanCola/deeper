@@ -12,7 +12,7 @@ import (
 )
 
 func TestDesktopBranchTransitionMovesLeaseAndTabAtomically(t *testing.T) {
-	dir := schemaOneTempDir(t)
+	dir := t.TempDir()
 	originalPath := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})

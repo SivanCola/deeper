@@ -92,16 +92,9 @@ var ProjectionKinds = map[string]bool{
 	"todo/write": true, "interaction/created": true, "interaction/resolved": true,
 	"plan/state": true, "goal/state": true, "session/title": true, "session/config": true, "session/permission-preset": true,
 	"model/context-replace": true, "history/replace": true,
-	"compaction": true, "runtime/recovery": true, "legacy/import": true,
+	"compaction": true, "runtime/recovery": true,
 	"diagnostic": true,
 }
-
-var PrototypeProjectionKinds = func() map[string]bool {
-	kinds := make(map[string]bool, len(ProjectionKinds)+1)
-	maps.Copy(kinds, ProjectionKinds)
-	kinds["context/replace"] = true
-	return kinds
-}()
 
 func Project(commits []Commit) (Projection, error) {
 	projection := Projection{Todos: []event.Todo{}, Interactions: map[string]string{}, ActiveTools: map[string]string{}}
@@ -144,8 +137,6 @@ func applyProjectionEvents(projection *Projection, commit Commit) error {
 			projectStreamCheckpoint(projection, ev)
 		case "submission/accepted":
 			err = projectSubmission(projection, commit, ev)
-		case "legacy/import":
-			err = projectLegacyImport(projection, commit, ev)
 		case "message/complete":
 			err = projectMessageComplete(projection, commit, ev)
 		case "message/upsert":
@@ -204,20 +195,6 @@ func applyProjectionEvents(projection *Projection, commit Commit) error {
 	for index := closedBefore; index < len(projection.Turns); index++ {
 		projection.Turns[index].Availability = forkProjectionAvailability(*projection, projection.Turns[index].BoundarySequence)
 	}
-	return nil
-}
-
-func projectLegacyImport(projection *Projection, commit Commit, ev Event) error {
-	var body legacyImportPayload
-	if err := strictPayload(ev.Payload, &body); err != nil || body.Messages == nil {
-		return damagedPayload(ev, err)
-	}
-	messages := firstMessageOccurrences(body.Messages)
-	projection.Messages = append([]provider.Message{}, messages...)
-	projection.ModelMessages = append([]provider.Message{}, provider.ModelMessages(messages)...)
-	projection.GoalState = cloneRaw(body.Goal)
-	projection.ModelRef = strings.TrimSpace(body.ModelRef)
-	projection.ModelIdentity = strings.TrimSpace(body.ModelIdentity)
 	return nil
 }
 
@@ -330,7 +307,10 @@ func projectHistoryReplace(projection *Projection, commit Commit, ev Event) erro
 	if err := strictPayload(ev.Payload, &body); err != nil || body.Messages == nil {
 		return damagedPayload(ev, err)
 	}
-	messages := firstMessageOccurrences(body.Messages)
+	messages, err := replacementEventMessages(ev, ev.Payload)
+	if err != nil {
+		return err
+	}
 	projection.Messages = append([]provider.Message(nil), messages...)
 	projection.ModelMessages = append([]provider.Message(nil), provider.ModelMessages(messages)...)
 	return nil

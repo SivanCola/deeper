@@ -249,18 +249,13 @@ func indexedSessionListing(path string, meta BranchMeta) (preview string, turns 
 	if probe.futureSchema {
 		return "", 0, false, true, nil
 	}
-	if probe.native && probe.size > 0 {
-		eventIdx, err := readSessionEventIndex(path)
-		if err != nil || eventIdx == nil || eventIdx.LogSize != probe.size ||
-			eventIdx.Revision != meta.Revision || eventIdx.ContentDigest != digest ||
-			eventIdx.MessageCount != idx.MessageCount {
-			return "", 0, false, false, nil
-		}
-		eventInfo, eventErr := os.Stat(store.SessionEventIndex(path))
-		logInfo, logErr := os.Stat(store.SessionEventLog(path))
-		if eventErr != nil || logErr != nil || !eventInfo.ModTime().After(logInfo.ModTime()) {
-			return "", 0, false, false, nil
-		}
+
+	if !probe.dag {
+		return "", 0, false, false, nil
+	}
+	headIndex, err := ReadSessionHeadIndex(path)
+	if err != nil || !headIndex.Current(path) || headIndex.ContentDigest != digest || headIndex.MessageCount != idx.MessageCount {
+		return "", 0, false, false, nil
 	}
 	return idx.ListingPreview, idx.AuthoredTurns, true, false, nil
 }

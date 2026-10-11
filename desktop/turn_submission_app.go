@@ -228,34 +228,6 @@ func (a *App) submitDisplayToTab(tabID, display, input, submissionID string) err
 	return nil
 }
 
-func (a *App) SubmitDeliveryRecoveryToTabWithID(tabID, display, input, submissionID string) error {
-	return a.submitDeliveryRecoveryToTab(tabID, display, input, submissionID)
-}
-
-func (a *App) submitDeliveryRecoveryToTab(tabID, display, input, submissionID string) error {
-	if err := validateTurnInput(input); err != nil {
-		return err
-	}
-	req := control.SubmissionRequest{ID: submissionID, Input: input, Display: display, Action: "delivery-recovery"}
-	if found, err := a.knownSubmission(tabID, req); found || err != nil {
-		return err
-	}
-	admission, ctrl, err := a.beginTabTurn(tabID, true, submissionID)
-	if err != nil {
-		return a.submissionAdmissionError(tabID, req, err)
-	}
-	defer admission.abort()
-	tab := admission.tab
-	if err := a.ensureTabTopicIndexedForUserTurn(tab); err != nil {
-		return err
-	}
-	if err := submitIdentified(ctrl, req, func() { ctrl.SubmitDeliveryRecovery(display, input) }); err != nil {
-		return err
-	}
-	admission.finish(ctrl)
-	return nil
-}
-
 func (a *App) SubmitInvocationsToTabWithID(tabID, display, input string, invocations []InvocationRequest, submissionID string) error {
 	return a.submitInvocationsToTab(tabID, display, input, invocations, submissionID)
 }

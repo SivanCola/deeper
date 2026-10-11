@@ -39,7 +39,7 @@ func TestModelSwitchBuildFailurePreservesControllerAndLease(t *testing.T) {
 	workspace := t.TempDir()
 	sessionPath := filepath.Join(workspace, "current.jsonl")
 	gw := NewGateway(GatewayConfig{Model: "provider/old", WorkspaceRoot: workspace}, nil, logger)
-	msg := InboundMessage{Platform: PlatformDingtalk, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
+	msg := InboundMessage{ConnectionID: string(PlatformDingtalk), Platform: PlatformDingtalk, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	key := BuildSessionKey(msg.Session())
 	ctrl := &failureAtomicBotController{workspaceRoot: workspace, sessionPath: sessionPath}
 	leases := control.NewSessionLeaseKeeper()
@@ -51,7 +51,7 @@ func TestModelSwitchBuildFailurePreservesControllerAndLease(t *testing.T) {
 		leases:           leases,
 		model:            "provider/old",
 		workspaceRoot:    workspace,
-		toolApprovalMode: control.ToolApprovalAsk,
+		toolApprovalMode: control.ToolApprovalReadOnly,
 		sessionPath:      sessionPath,
 	}
 	gw.controllers[key] = state

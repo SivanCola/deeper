@@ -134,7 +134,6 @@ async function closeHarness(dom: JSDOM, root: Root) {
 
 function summary(mutations: number, checksFailed = 1): WireCompletionSummary {
   return {
-    preset: "balanced",
     verdict: "partial",
     mutations,
     checks_passed: 2,

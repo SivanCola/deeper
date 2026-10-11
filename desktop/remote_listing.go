@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -118,8 +119,7 @@ const expectedModelSettingsHeader = "X-Deepzora-Expected-Model-Settings"
 const remoteSessionIDRoutePrefix = "session-id:"
 
 func remoteSessionIdentityRoute(path, sessionID string) string {
-	// A session the Serve migrated into the identity catalog keeps its legacy
-	// path only as a read-only artifact; the identity is the live route.
+	// A durable session identity is the live routing key.
 	if sessionID = strings.TrimSpace(sessionID); sessionID != "" {
 		return remoteSessionIDRoutePrefix + sessionID
 	}
@@ -144,8 +144,7 @@ func remoteSessionRouteIdentity(route string) (path, sessionID string) {
 }
 
 // servePostForSession fences a foreground mutation to the session the Desktop
-// tab displayed when the command was issued. Older Serve binaries ignore the
-// optional header and retain their single-session behavior.
+// tab displayed when the command was issued.
 func servePostForSession(ctx context.Context, client *http.Client, url string, body []byte, expectedPath string, modelRevision ...string) error {
 	if body == nil {
 		body = []byte("{}")
@@ -244,7 +243,7 @@ func serveDoForSession(ctx context.Context, client *http.Client, method, url str
 		if sessionID, ok := strings.CutPrefix(expectedPath, remoteSessionIDRoutePrefix); ok {
 			req.Header.Set(expectedSessionIDHeader, sessionID)
 		} else {
-			req.Header.Set(expectedSessionPathHeader, expectedPath)
+			return nil, errors.New("remote requests require a session identity")
 		}
 	}
 	return client.Do(req)

@@ -117,9 +117,8 @@ const (
 type ExecutionMode string
 
 const (
-	ExecutionLegacy ExecutionMode = ""
-	ExecutionExec   ExecutionMode = "exec"
-	ExecutionShell  ExecutionMode = "shell"
+	ExecutionExec  ExecutionMode = "exec"
+	ExecutionShell ExecutionMode = "shell"
 )
 
 // HookConfig is one hook as written in settings.json.
@@ -251,12 +250,6 @@ func Load(opts LoadOptions) []ResolvedHook {
 	}
 	if s := readSettings(g); s != nil {
 		appendResolved(&out, s, ScopeGlobal, g)
-	} else if !pathExists(g) {
-		if legacy := legacyGlobalSettingsPath(opts.HomeDir); legacy != "" {
-			if s := readSettings(legacy); s != nil {
-				appendResolved(&out, s, ScopeGlobal, legacy)
-			}
-		}
 	}
 	return out
 }
@@ -290,14 +283,6 @@ func readSettings(path string) *Settings {
 	return &s
 }
 
-func pathExists(path string) bool {
-	if strings.TrimSpace(path) == "" {
-		return false
-	}
-	_, err := os.Stat(path)
-	return err == nil || !os.IsNotExist(err)
-}
-
 func appendResolved(out *[]ResolvedHook, s *Settings, scope Scope, source string) {
 	if s.Hooks == nil {
 		return
@@ -307,7 +292,6 @@ func appendResolved(out *[]ResolvedHook, s *Settings, scope Scope, source string
 			if strings.TrimSpace(cfg.Command) == "" {
 				continue
 			}
-			cfg.Command = NormalizeCommand(cfg.Command)
 			*out = append(*out, ResolvedHook{HookConfig: cfg, Event: event, Scope: scope, Source: source})
 		}
 	}
@@ -394,7 +378,7 @@ func pluginHookExecutionConfig(h pluginpkg.Hook, root string) HookConfig {
 }
 
 func pluginHookExecutionConfigForPlatform(h pluginpkg.Hook, root, goos string) HookConfig {
-	mode := ExecutionLegacy
+	mode := ExecutionShell
 	switch {
 	case h.ArgsSet:
 		mode = ExecutionExec
@@ -1290,10 +1274,8 @@ func spawnCommand(ctx context.Context, command string, mode ExecutionMode, shell
 	switch mode {
 	case ExecutionExec:
 		return spawnExecCommand(ctx, command, args, options)
-	case ExecutionShell:
+	case "", ExecutionShell:
 		return spawnShellCommand(ctx, command, shell, options)
-	case ExecutionLegacy:
-		return spawnLegacyCommand(ctx, command, args, options)
 	default:
 		return nil, fmt.Errorf("unsupported hook execution mode %q", mode)
 	}
@@ -1314,51 +1296,6 @@ func spawnExecCommand(ctx context.Context, command string, args []string, option
 		}
 	}
 	return proc.CommandContext(ctx, command, args...), nil
-}
-
-// spawnLegacyCommand preserves the pre-contract behavior:
-//   - a command this call just repaired (its broken quoting means it never
-//     worked through a shell, so there is no expansion behavior to preserve);
-//   - on Windows, a recognized node -e stdin-hook command: `cmd /c` mangles
-//     quoted JS (&, %, nested quotes), which is the breakage this repair
-//     exists for, and cmd performs no POSIX-style $ expansion to preserve.
-//   - on Windows, an explicit `sh -c` / `bash -c` command: Git Bash is often
-//     installed outside cmd.exe's PATH, and direct exec preserves its quoting.
-//
-// POSIX commands that were already well-formed keep their shell semantics
-// verbatim — normalizeStaticNodeEval's rendering escapes $ and backticks, so
-// even repaired commands re-entering here behave identically under sh -c.
-func spawnLegacyCommand(ctx context.Context, command string, args []string, options RuntimeOptions) (*exec.Cmd, error) {
-	if args != nil {
-		return spawnExecCommand(ctx, command, args, options)
-	}
-	if node, flag, script, ok := repairableNodeEvalArgs(command); ok {
-		return proc.CommandContext(ctx, node, flag, script), nil
-	}
-	if powershell, args, ok := repairablePowerShellFileArgs(command); ok {
-		return proc.CommandContext(ctx, powershell, args...), nil
-	}
-	if runtime.GOOS == "windows" {
-		if cmd, matched := windowsBatchCommand(ctx, command); matched {
-			return cmd, nil
-		}
-		if shell, args, matched, err := windowsPOSIXShellInvocationWith(command, func() (string, error) {
-			return resolveWindowsHookBash(options.BashPath)
-		}); matched {
-			if err != nil {
-				return nil, err
-			}
-			return proc.CommandContext(ctx, shell, args...), nil
-		}
-		if node, flag, script, ok := directNodeEvalArgs(command); ok {
-			return proc.CommandContext(ctx, node, flag, script), nil
-		}
-		if cmd, ok := windowsCmdShellCommand(ctx, command); ok {
-			return cmd, nil
-		}
-	}
-	name, args := shellInvocation(command)
-	return proc.CommandContext(ctx, name, args...), nil
 }
 
 func spawnShellCommand(ctx context.Context, command, preferred string, options RuntimeOptions) (*exec.Cmd, error) {
@@ -1454,13 +1391,6 @@ func powerShellCommand(ctx context.Context, path, command string) *exec.Cmd {
 	return proc.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)
 }
 
-func shellInvocation(command string) (string, []string) {
-	if runtime.GOOS == "windows" {
-		return "cmd", []string{"/c", command}
-	}
-	return "sh", []string{"-c", command}
-}
-
 // cappedBuffer is an io.Writer that stops storing after outputCapBytes and
 // records that it truncated, but keeps reporting full writes so the child never
 // sees a short-write error.
@@ -1505,43 +1435,4 @@ func deepzoraHomeForOptions(opts LoadOptions) string {
 		return filepath.Clean(dir)
 	}
 	return deepzoraHome(opts.HomeDir)
-}
-
-func legacyGlobalSettingsPath(homeDir string) string {
-	dir := legacyDeepzoraHome(homeDir)
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, SettingsFilename)
-}
-
-func legacyDeepzoraHome(override string) string {
-	if override != "" {
-		return ""
-	}
-	if config.IsolatedHomeDir() != "" {
-		return ""
-	}
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return ""
-	}
-	legacy := filepath.Join(home, SettingsDirname)
-	if sameCleanPath(legacy, deepzoraHome("")) {
-		return ""
-	}
-	return legacy
-}
-
-func sameCleanPath(a, b string) bool {
-	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
-		return false
-	}
-	if aa, err := filepath.Abs(a); err == nil {
-		a = aa
-	}
-	if bb, err := filepath.Abs(b); err == nil {
-		b = bb
-	}
-	return filepath.Clean(a) == filepath.Clean(b)
 }

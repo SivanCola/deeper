@@ -169,7 +169,7 @@ func FingerprintPath(root, path string) (Fingerprint, error) {
 // no ownership tracking (legacy) — callers should treat as unverified.
 func CompareIdentity(current Fingerprint, afterSHA string, afterExisted *bool, afterMode uint32) (conflict string) {
 	if afterExisted == nil && afterSHA == "" {
-		return ConflictCoverageLegacy
+		return ConflictOwnershipUnverified
 	}
 	wantExist := false
 	if afterExisted != nil {

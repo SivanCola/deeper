@@ -3,7 +3,6 @@ package acp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"math"
 	"runtime"
 	"slices"
@@ -58,9 +57,8 @@ type SessionRuntimeState struct {
 // effective policy is being reported. Model/profile switches rebuild the
 // controller, so status must be recomputed from the same resolved inputs.
 type SessionRuntimeStateParams struct {
-	Cwd            string
-	Model          string
-	RuntimeProfile string
+	Cwd   string
+	Model string
 }
 
 // SessionRuntimeStateProvider exposes effective process/session policy without
@@ -79,16 +77,14 @@ type DeepzoraStatusGoal struct {
 
 type DeepzoraGoalRuntime struct {
 	TurnsUsed        int    `json:"turnsUsed"`
-	TurnsLimit       int    `json:"turnsLimit"` // Deprecated: always 0.
 	TokensUsed       int    `json:"tokensUsed"`
 	RequestsUsed     int    `json:"requestsUsed,omitempty"`
 	WorkDurationMs   int64  `json:"workDurationMs,omitempty"`
-	TokensLimit      int    `json:"tokensLimit"` // Deprecated: always 0; retained for protocol compatibility.
+	TokensLimit      int    `json:"tokensLimit"` // Optional goal token budget; zero is unlimited.
 	NoProgressTurns  int    `json:"noProgressTurns"`
-	NoProgressLimit  int    `json:"noProgressLimit"` // Deprecated: always 0.
 	LastReason       string `json:"lastReason,omitempty"`
 	StopCause        string `json:"stopCause,omitempty"`
-	BudgetExtensions int    `json:"budgetExtensions"` // Deprecated: always 0.
+	BudgetExtensions int    `json:"budgetExtensions"` // Number of accepted goal budget extensions.
 }
 
 type DeepzoraTurnOutcome struct {
@@ -189,7 +185,7 @@ func (a *usageAccumulator) addQuoted(u *provider.Usage, pricing *provider.Pricin
 			Estimated:              u.Estimated,
 		}, time.Time{})
 		if quote.Selected != nil {
-			cur := quote.LegacyCurrencyCode()
+			cur := quote.SelectedCurrencyCode()
 			if a.pricedEvents == 1 {
 				a.currency = cur
 				a.costComplete = quote.Complete
@@ -243,7 +239,7 @@ func (a usageAccumulator) wire() DeepzoraUsage {
 		usage.OriginalTotals = append([]billing.Money(nil), agg.OriginalTotals...)
 		if agg.Selected != nil && !math.IsNaN(agg.Selected.Float64()) && !math.IsInf(agg.Selected.Float64(), 0) {
 			cost := agg.Selected.Float64()
-			currency := agg.LegacyCurrencyCode()
+			currency := agg.SelectedCurrencyCode()
 			usage.EstimatedCost = &cost
 			usage.Currency = &currency
 		}
@@ -323,11 +319,7 @@ func (t *statusTelemetry) onEvent(e event.Event) (string, bool) {
 		return "phase", true
 	case event.ToolDispatch:
 		t.mutate(func(t *statusTelemetry) { t.phase = "implementing" })
-	case event.Notice:
-		if e.Code == event.NoticeCodeFinalReadiness {
-			t.mutate(func(t *statusTelemetry) { t.phase = "checking_readiness" })
-			return "phase", true
-		}
+
 	}
 	return "", false
 }
@@ -358,24 +350,8 @@ func (t *statusTelemetry) finishTurn(runErr error, cancelled bool, goalStatus, s
 			t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: "goal blocked"}
 			eventName = "pause"
 		default:
-			var readinessErr *agent.FinalReadinessError
-			var recoveryPause *agent.RecoveryPauseError
-			var completionPause *agent.CompletionUncertainError
 			_, runPause := agent.InspectRunPause(runErr)
 			switch {
-			case errors.As(runErr, &readinessErr):
-				t.phase = "readiness_paused"
-				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusError(readinessErr, 2_048)}
-				t.finalReadiness.Risks = redactStatusTexts(readinessErr.Missing, 2_048)
-				eventName = "pause"
-			case errors.As(runErr, &recoveryPause):
-				t.phase = "recovery_paused"
-				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusText(recoveryPause.Error(), 2_048)}
-				eventName = "pause"
-			case errors.As(runErr, &completionPause):
-				t.phase = "completion_uncertain"
-				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusText(completionPause.Error(), 2_048)}
-				eventName = "pause"
 			case runPause:
 				t.phase = "paused"
 				t.turnOutcome = DeepzoraTurnOutcome{Kind: "paused", Reason: clipStatusError(runErr, 2_048)}
@@ -694,13 +670,11 @@ func (s *acpSession) statusSnapshot() DeepzoraSessionStatus {
 			rt := ctrl.GoalRuntime()
 			goalRuntime = &DeepzoraGoalRuntime{
 				TurnsUsed:        rt.TurnsUsed,
-				TurnsLimit:       rt.TurnsLimit,
 				TokensUsed:       rt.TokensUsed,
 				RequestsUsed:     rt.RequestsUsed,
 				WorkDurationMs:   rt.WorkDurationMs,
 				TokensLimit:      rt.TokensLimit,
 				NoProgressTurns:  rt.NoProgressTurns,
-				NoProgressLimit:  rt.NoProgressLimit,
 				LastReason:       rt.LastReason,
 				StopCause:        rt.StopCause,
 				BudgetExtensions: rt.BudgetExtensions,

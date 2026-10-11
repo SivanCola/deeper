@@ -25,7 +25,7 @@ assert.equal((markup.match(/presented-file__split/g) ?? []).length, 4, "every pr
 const changes = renderToStaticMarkup(<LocaleProvider><ModifiedFiles tabId="tab-1" files={[
   { path: "src/app.ts", toolCallId: "write-1", operation: "modified" },
 ]} summary={{
-  preset: "balanced", verdict: "complete", mutations: 2, changed_files: 2, checks_passed: 0, checks_failed: 0,
+  verdict: "complete", mutations: 2, changed_files: 2, checks_passed: 0, checks_failed: 0,
   checks_suppressed: 0, review: "passed", constraint_degraded: false,
   receipt: { verdict: "complete", diff: { id: "result", turn: 1, coverage: "complete", added: 7, removed: 3, reasons: [], files: [
     { path: "src/app.ts", kind: "modify", added: 5, removed: 2 },
@@ -42,7 +42,7 @@ console.log("presented files UI: changed summary and four-card split controls pa
 const mutationFiles = [{ path: "src/app.ts", toolCallId: "edit-1", operation: "modified" as const }];
 const renderChanges = (diff?: NonNullable<WireCompletionSummary["receipt"]>["diff"]) => renderToStaticMarkup(
   <LocaleProvider><ModifiedFiles files={mutationFiles} summary={diff ? {
-    preset: "balanced", verdict: "complete", mutations: 2, changed_files: diff.files.length,
+    verdict: "complete", mutations: 2, changed_files: diff.files.length,
     checks_passed: 0, checks_failed: 0, checks_suppressed: 0, review: "passed", constraint_degraded: false,
     receipt: { verdict: "complete", diff },
   } : undefined} /></LocaleProvider>,

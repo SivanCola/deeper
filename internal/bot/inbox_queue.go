@@ -167,14 +167,6 @@ func shortItemID(id string) string {
 	return id[:8]
 }
 
-// warnDeprecatedQueueDrop logs once when an old drop policy is still configured.
-func warnDeprecatedQueueDrop(drop string) {
-	switch NormalizeQueueDrop(drop) {
-	case QueueDropOld, QueueDropSummarize:
-		slog.Warn("bot: queue_drop is deprecated; capacity rejections no longer drop old messages", "drop", drop)
-	}
-}
-
 // handleQueueInboxCommand extends /queue with durable inbox management.
 // Returns handled=false for mode-switch forms of /queue.
 func (gw *BotGateway) handleQueueInboxCommand(ctx context.Context, key string, msg InboundMessage) (string, bool, bool) {

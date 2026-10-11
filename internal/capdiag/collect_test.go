@@ -195,9 +195,7 @@ func TestProjectHooksEnabledByDefault(t *testing.T) {
 	r := capdiag.Collect(capdiag.Options{
 		Root: root, HomeDir: home, DeepzoraHomeDir: filepath.Join(home, ".deepzora"),
 	})
-	if !r.Hooks.TrustedProject {
-		t.Fatal("compatibility field trusted_project should reflect default enablement")
-	}
+
 	if len(r.Hooks.Entries) != 1 || r.Hooks.Entries[0].Scope != "project" {
 		t.Fatalf("project hook should be diagnosed as active by default: %+v", r.Hooks.Entries)
 	}
@@ -224,7 +222,7 @@ func TestLoadForRootReadOnlyDoesNotRewriteTier(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(userCfg), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	original := "[[plugins]]\nname = \"x\"\ncommand = \"echo\"\ntier = \"eager\"\n"
+	original := "[[plugins]]\nname = \"x\"\ncommand = \"echo\"\n"
 	if err := os.WriteFile(userCfg, []byte(original), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -301,8 +299,14 @@ func TestCollectRejectsNonRegularPluginContextFile(t *testing.T) {
 	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{
   "apiVersion": "deepzora.com/plugin/v2",
   "name": "demo",
-  "hooks": {
-    "SessionStart": [{"contextFile": "CLAUDE.md"}]
+  "contributes": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "contextFile": "CLAUDE.md"
+        }
+      ]
+    }
   }
 }`)
 	if err := os.MkdirAll(filepath.Join(pluginRoot, "CLAUDE.md"), 0o755); err != nil {
@@ -333,7 +337,15 @@ func TestPluginPackageCommandsAreReported(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", deepzoraHome)
 
 	pluginRoot := filepath.Join(deepzoraHome, "plugins", "demo")
-	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{"apiVersion":"deepzora.com/plugin/v2","name":"demo","commands":["commands"]}`)
+	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "demo",
+  "contributes": {
+    "commands": [
+      "commands"
+    ]
+  }
+}`)
 	write(t, filepath.Join(pluginRoot, "commands", "ship.md"), "---\ndescription: ship it\n---\nShip $ARGUMENTS\n")
 	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name: "demo", Root: "plugins/demo", ManifestKind: "deepzora", Enabled: true,

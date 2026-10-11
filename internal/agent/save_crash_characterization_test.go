@@ -79,7 +79,7 @@ func messageCount(t *testing.T, s *Session) int {
 // save replays the append without duplicating or losing messages.
 // (Message counts include the leading system message.)
 func TestCrashAtWALAppendKeepsPreviousCheckpointUsable(t *testing.T) {
-	path := schemaOneSessionPath(t, "session.jsonl")
+	path := currentDAGSessionPath(t, "session.jsonl")
 	s := NewSession("system")
 	s.Add(userMessage("first"))
 	if err := s.SaveSnapshot(path); err != nil {
@@ -87,7 +87,7 @@ func TestCrashAtWALAppendKeepsPreviousCheckpointUsable(t *testing.T) {
 	}
 
 	s.Add(userMessage("second"))
-	_, restore := crashAt(t, "wal-append", store.SessionEventLog(path))
+	_, restore := crashAt(t, "dag-append", store.SessionEventLog(path))
 	crash := saveCrashing(func() { _ = s.SaveSnapshot(path) })
 	restore()
 	if crash == nil {
@@ -114,8 +114,8 @@ func TestCrashAtWALAppendKeepsPreviousCheckpointUsable(t *testing.T) {
 	if got := messageCount(t, final); got != 3 {
 		t.Fatalf("final reload = %d messages, want 3", got)
 	}
-	if got := countEventLogRecords(t, path); got != 2 {
-		t.Fatalf("event log = %d records after retry, want 2 (replace + append)", got)
+	if got := countEventLogRecords(t, path); got != 5 {
+		t.Fatalf("event log = %d records after retry, want 5 DAG entries", got)
 	}
 }
 
@@ -125,7 +125,7 @@ func TestCrashAtWALAppendKeepsPreviousCheckpointUsable(t *testing.T) {
 // rename still exposes the full transcript on reload, because the event log
 // is authoritative. The compatibility checkpoint never comes to exist.
 func TestCrashAtCheckpointWriteLeavesEventLogAuthoritative(t *testing.T) {
-	path := schemaOneSessionPath(t, "session.jsonl")
+	path := currentDAGSessionPath(t, "session.jsonl")
 	s := NewSession("system")
 	s.Add(userMessage("first"))
 	s.Add(userMessage("second"))
@@ -151,8 +151,8 @@ func TestCrashAtCheckpointWriteLeavesEventLogAuthoritative(t *testing.T) {
 	if err := reloaded.SaveSnapshot(path); err != nil {
 		t.Fatalf("follow-up save: %v", err)
 	}
-	if got := countEventLogRecords(t, path); got != 1 {
-		t.Fatalf("event log = %d records, want 1 (no duplicate replace)", got)
+	if got := countEventLogRecords(t, path); got != 5 {
+		t.Fatalf("event log = %d records, want 5 current DAG entries", got)
 	}
 	checkpointBytes, err := os.ReadFile(path)
 	if err != nil {
@@ -168,7 +168,7 @@ func TestCrashAtCheckpointWriteLeavesEventLogAuthoritative(t *testing.T) {
 // the new digest leaves a stale ledger. The next same-content save must heal
 // the ledger via the ledgerStale path instead of appending new events.
 func TestCrashAtRevisionLedgerHealsOnNextSave(t *testing.T) {
-	path := schemaOneSessionPath(t, "session.jsonl")
+	path := currentDAGSessionPath(t, "session.jsonl")
 	s := NewSession("system")
 	s.Add(userMessage("first"))
 	if err := s.SaveSnapshot(path); err != nil {
@@ -230,7 +230,7 @@ func TestCrashAtRevisionLedgerHealsOnNextSave(t *testing.T) {
 // authoritative. A reload observes the new transcript and the next save
 // succeeds without event-log duplication.
 func TestCrashAtEventIndexKeepsSaveDurable(t *testing.T) {
-	path := schemaOneSessionPath(t, "session.jsonl")
+	path := currentDAGSessionPath(t, "session.jsonl")
 	s := NewSession("system")
 	s.Add(userMessage("first"))
 	if err := s.SaveSnapshot(path); err != nil {
@@ -255,8 +255,8 @@ func TestCrashAtEventIndexKeepsSaveDurable(t *testing.T) {
 	if err := reloaded.SaveSnapshot(path); err != nil {
 		t.Fatalf("follow-up save: %v", err)
 	}
-	if got := countEventLogRecords(t, path); got != 2 {
-		t.Fatalf("event log = %d records, want 2 (no duplication from index loss)", got)
+	if got := countEventLogRecords(t, path); got != 5 {
+		t.Fatalf("event log = %d records, want 5 current DAG entries", got)
 	}
 }
 

@@ -40,11 +40,8 @@ type Entry struct {
 // Inspection is a read-only hook configuration snapshot. It does not execute
 // hooks.
 type Inspection struct {
-	// TrustedProject is retained in diagnostics for backward compatibility.
-	// A non-empty project root is always trusted now.
-	TrustedProject bool
-	Sources        []SourceStatus
-	Entries        []Entry
+	Sources []SourceStatus
+	Entries []Entry
 	// ProjectDefines is true when project settings declare hooks.
 	ProjectDefines bool
 }
@@ -54,7 +51,6 @@ type Inspection struct {
 // skip.
 func Inspect(opts LoadOptions) Inspection {
 	out := Inspection{
-		TrustedProject: opts.ProjectRoot != "",
 		ProjectDefines: opts.ProjectRoot != "" && ProjectDefinesHooks(opts.ProjectRoot),
 	}
 
@@ -81,14 +77,7 @@ func Inspect(opts LoadOptions) Inspection {
 		g = GlobalSettingsPath(opts.HomeDir)
 	}
 	st := inspectSettingsFile(g, ScopeGlobal)
-	if st.Status == "missing" {
-		if legacy := legacyGlobalSettingsPath(opts.HomeDir); legacy != "" {
-			if pathExists(legacy) {
-				g = legacy
-				st = inspectSettingsFile(g, ScopeGlobal)
-			}
-		}
-	}
+
 	out.Sources = append(out.Sources, st)
 	if s := readSettingsRaw(g); s != nil {
 		appendInspectEntries(&out, s, ScopeGlobal, g)

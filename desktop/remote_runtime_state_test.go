@@ -15,7 +15,7 @@ import (
 	"deepzora/internal/event"
 )
 
-const runtimeRemoteTestPath = "/sessions/current.jsonl"
+const runtimeRemoteTestPath = "session-id:current"
 
 func remoteRuntimeTestSnapshot(epoch string, revision uint64, phase string) event.RuntimeStateSnapshot {
 	return event.RuntimeStateSnapshot{SchemaVersion: 1, RuntimeEpoch: epoch, Revision: revision, Phase: phase,
@@ -84,10 +84,10 @@ func TestRemoteRuntimeStateReducerOrdersAndFencesInstances(t *testing.T) {
 		t.Fatal("newer idle did not clear running")
 	}
 	background := remoteRuntimeTestSnapshot("background", 1, "executing")
-	if !acceptRemoteRuntimeStateLocked(tab, "/sessions/background.jsonl", background, true) {
+	if !acceptRemoteRuntimeStateLocked(tab, "session-id:background", background, true) {
 		t.Fatal("background instance registration failed")
 	}
-	if !reflect.DeepEqual(tab.runtime.snapshot, newer) || !tab.routing.running["/sessions/background.jsonl"] {
+	if !reflect.DeepEqual(tab.runtime.snapshot, newer) || !tab.routing.running["session-id:background"] {
 		t.Fatal("background runtime replaced selected session or failed to aggregate")
 	}
 	replacement := remoteRuntimeTestSnapshot("epoch-b", 1, "idle")
@@ -170,7 +170,7 @@ func TestRemoteRuntimeStateGETRejectsChangedSelectionAndGeneration(t *testing.T)
 			case "client":
 				tab.client = &http.Client{}
 			case "rehydration":
-				tab.routing.rehydratingPath = "/sessions/next.jsonl"
+				tab.routing.rehydratingPath = "session-id:next"
 			}
 			a.remoteTabMu.Unlock()
 			releaseGET()
@@ -199,62 +199,6 @@ func TestRemoteRuntimeStateSSERejectsOldPumpAndDuplicate(t *testing.T) {
 	}
 	if !reflect.DeepEqual(tab.runtime.snapshot, initial) || events.Load() != 0 {
 		t.Fatalf("old/duplicate frame mutated state or notified: state=%+v events=%d", tab.runtime.snapshot, events.Load())
-	}
-}
-
-func TestRemoteRuntimeStateLegacy404CachedForConnection(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	var probes, statuses atomic.Int32
-	statusBody := remoteRuntimeTestJSON(t, map[string]any{"sessionPath": runtimeRemoteTestPath, "running": false})
-	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.URL.Path == "/runtime-states" {
-			probes.Add(1)
-			return remoteRuntimeTestResponse(req, 404, "not supported"), nil
-		}
-		if req.URL.Path == "/status" {
-			statuses.Add(1)
-			return remoteRuntimeTestResponse(req, 200, statusBody), nil
-		}
-		return nil, errors.New("unexpected runtime fallback endpoint")
-	})}
-	a, _ := remoteRuntimeTestApp(client)
-	for range 2 {
-		if _, err := a.SyncRuntimeState(); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if probes.Load() != 1 || statuses.Load() != 2 {
-		t.Fatalf("legacy capability fallback count probes=%d statuses=%d", probes.Load(), statuses.Load())
-	}
-}
-
-func TestRemoteRuntimeStateReconnectProbesCapabilityAgain(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	var probes atomic.Int32
-	updated := remoteRuntimeTestSnapshot("new-server", 1, "idle")
-	body := remoteRuntimeTestPayload(t, updated)
-	statusBody := remoteRuntimeTestJSON(t, map[string]any{"sessionPath": runtimeRemoteTestPath, "running": false})
-	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.URL.Path == "/runtime-states" {
-			if probes.Add(1) == 1 {
-				return remoteRuntimeTestResponse(req, 404, "old server"), nil
-			}
-			return remoteRuntimeTestResponse(req, 200, body), nil
-		}
-		return remoteRuntimeTestResponse(req, 200, statusBody), nil
-	})}
-	a, tab := remoteRuntimeTestApp(client)
-	if _, err := a.SyncRuntimeState(); err != nil {
-		t.Fatal(err)
-	}
-	a.remoteTabMu.Lock()
-	tab.gen++
-	a.remoteTabMu.Unlock()
-	if _, err := a.SyncRuntimeState(); err != nil {
-		t.Fatal(err)
-	}
-	if probes.Load() != 2 || !reflect.DeepEqual(tab.runtime.snapshot, updated) {
-		t.Fatalf("new connection inherited old capability rejection: probes=%d state=%+v", probes.Load(), tab.runtime.snapshot)
 	}
 }
 
@@ -358,7 +302,7 @@ func TestRemoteRuntimeStateOldSelectionFrameOnlyUpdatesBackground(t *testing.T) 
 	a, tab := remoteRuntimeTestApp(nil)
 	old := remoteRuntimeTestSnapshot("old-selection", 2, "executing")
 	acceptRemoteRuntimeStateLocked(tab, runtimeRemoteTestPath, old, true)
-	nextPath := "/sessions/next.jsonl"
+	nextPath := "session-id:next"
 	next := remoteRuntimeTestSnapshot("new-selection", 1, "executing")
 	a.remoteTabMu.Lock()
 	tab.selectionRevision++

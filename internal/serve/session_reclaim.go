@@ -8,109 +8,21 @@ import (
 	"strings"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/session"
 )
 
-// reclaim is the remote side's way back: it asks the local writer to yield
-// the session, waits for the lease to come free, then re-owns the session.
-// The local side demotes passively — it sees reclaimRequested on its next
-// frame push or heartbeat — so exactly one side speaks at any moment.
 func (s *Server) reclaim(w http.ResponseWriter, r *http.Request) {
 	var body handoffRequest
-	if err := decodeTakeoverJSON(w, r, &body); err != nil || strings.TrimSpace(body.SessionPath) == "" {
-		if err == nil {
-			http.Error(w, "missing sessionPath", http.StatusBadRequest)
-		}
+	if err := decodeTakeoverJSON(w, r, &body); err != nil {
 		return
 	}
-	if isSessionIDRoute(body.SessionPath) {
-		s.reclaimIdentity(w, r, body)
+	if !isSessionIDRoute(body.SessionPath) {
+		http.Error(w, "use an immutable session identity", http.StatusBadRequest)
 		return
 	}
-	mode := parseHandoffMode(body.Mode)
-	timeout := handoffTimeout(body.TimeoutMs)
-	realPath, err := s.resolveSessionPath(body.SessionPath)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	canonical := agent.CanonicalSessionPath(realPath)
-
-	s.mirrorMu.Lock()
-	m, ok := s.mirrored[canonical]
-	if !ok {
-		s.mirrorMu.Unlock()
-		if s.serveHoldsSession(realPath) {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		// A local holder that never adopted has no mirror forwarder to signal,
-		// so the reclaim can only wait for the lease to free. Cap that wait
-		// short: the caller needs feedback, not a two-minute hang.
-		if leaseHeldByForeignRuntime(realPath) {
-			slog.Info("serve: reclaim on un-mirrored foreign-held session (adopter absent)",
-				"session", canonical)
-			deadline := time.Now().Add(10 * time.Second)
-			for leaseHeldByForeignRuntime(realPath) {
-				if time.Now().After(deadline) {
-					http.Error(w, "session is held by a local Deepzora window that never registered a mirror; close that window or retry after it exits", http.StatusConflict)
-					return
-				}
-				time.Sleep(handoffPollInterval)
-			}
-			s.bindMu.Lock()
-			defer s.bindMu.Unlock()
-			s.resumeSession(w, r, realPath)
-			return
-		}
-		http.Error(w, "session is not held by any known runtime", http.StatusConflict)
-		return
-	}
-	m.reclaimRequested = true
-	m.reclaimMode = mode
-	m.phase = mirrorPhaseReclaimRequested
-	s.mirrored[canonical] = m
-	s.mirrorMu.Unlock()
-	s.bc.Emit(event.Event{
-		Kind:        event.Notice,
-		Code:        event.NoticeCodeSessionReclaimRequested,
-		Text:        "The remote side asked to take this session back.",
-		SessionPath: canonical,
-	})
-	slog.Info("serve: reclaim requested", "session", canonical, "mode", string(mode))
-
-	deadline := time.Now().Add(timeout)
-	for leaseHeldByForeignRuntime(realPath) {
-		if time.Now().After(deadline) {
-			http.Error(w, "local writer did not yield the session; retry", http.StatusConflict)
-			return
-		}
-		time.Sleep(handoffPollInterval)
-	}
-
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	current, ok := s.mirroredEntry(realPath)
-	if !ok || current.mirrorID != m.mirrorID {
-		if s.serveHoldsSession(realPath) {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		http.Error(w, "mirror generation changed during reclaim", http.StatusConflict)
-		return
-	}
-	s.reclaimMirroredLocked(w, realPath, current)
-}
-
-func (s *Server) serveHoldsSession(realPath string) bool {
-	cur := s.ctl()
-	if cur != nil && agent.CanonicalSessionPath(cur.SessionPath()) == agent.CanonicalSessionPath(realPath) {
-		return true
-	}
-	return s.detachedBusy(realPath)
+	s.reclaimIdentity(w, r, body)
 }
 
 // serveHoldsIdentity reports whether this serve process runs ref anywhere: on
@@ -248,112 +160,6 @@ func (s *Server) reclaimIdentityLocked(w http.ResponseWriter, ctx context.Contex
 	s.replayPendingPromptsBroadcast()
 }
 
-// reclaimMirroredLocked acquires the returning writer's reservation, reloads
-// and binds the controller, and only then clears the matching mirror epoch.
-// Callers hold bindMu.
-func (s *Server) reclaimMirroredLocked(w http.ResponseWriter, realPath string, mirror mirroredSession) {
-	current, ok := s.mirroredEntry(realPath)
-	if !ok || current.mirrorID != mirror.mirrorID {
-		http.Error(w, "mirror generation changed", http.StatusConflict)
-		return
-	}
-	s.touchMirrored(realPath, mirror.mirrorID, mirrorPhaseRecovering)
-	cur := s.ctl()
-	if cur == nil || s.leases == nil {
-		http.Error(w, "session runtime unavailable", http.StatusInternalServerError)
-		return
-	}
-	canonical := agent.CanonicalSessionPath(realPath)
-	if agent.CanonicalSessionPath(cur.SessionPath()) != canonical && !s.foregroundMirroredLocked() {
-		if err := cur.Snapshot(); err != nil {
-			http.Error(w, "snapshot current session: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-	previous, err := s.acquireReturningLease(realPath, mirror)
-	if err != nil {
-		if errors.Is(err, agent.ErrSessionLeaseHeld) {
-			http.Error(w, sessionInUseError(err), http.StatusConflict)
-		} else {
-			http.Error(w, "session lease: "+err.Error(), http.StatusInternalServerError)
-		}
-		return
-	}
-	committed := false
-	defer func() {
-		if committed {
-			if previous != nil {
-				previous.RetireDetached()
-			}
-			return
-		}
-		s.rollbackReclaimLease(cur, previous)
-	}()
-	loaded, err := agent.LoadSession(realPath)
-	if err != nil {
-		http.Error(w, "load session: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	if !s.commitLoadedResume(w, cur, loaded, realPath) {
-		return
-	}
-	if _, ok := s.clearMirrored(realPath, mirror.mirrorID); !ok {
-		http.Error(w, "mirror generation changed", http.StatusConflict)
-		return
-	}
-	committed = true
-	s.bc.ResetSessionPath(realPath)
-	s.announceSessionChanged(realPath, false)
-	s.broadcastReclaimed(realPath)
-	w.WriteHeader(http.StatusNoContent)
-	s.replayPendingPromptsBroadcast()
-}
-
-// rollbackReclaimLease restores the controller and keeper that were detached
-// while a mirrored target was acquired. commitLoadedResume can reject after
-// Resume (for example when a test hook rotates the current controller), so the
-// source transcript is reloaded and re-authorized before the failed target
-// lease is retired.
-func (s *Server) rollbackReclaimLease(cur control.SessionAPI, previous *control.SessionLeaseKeeper) {
-	failed := s.leases.Split()
-	if previous == nil {
-		if failed != nil {
-			failed.Release()
-		}
-		return
-	}
-	previousPath := previous.HeldPath()
-	loaded, err := agent.LoadSession(previousPath)
-	if err == nil {
-		err = previous.BindSessionAuthority(loaded)
-	}
-	if err == nil {
-		cur.Resume(loaded, previousPath)
-	} else {
-		slog.Error("serve: restore source after failed reclaim", "err", err)
-	}
-	s.leases.Adopt(previous)
-	if ctrl, ok := cur.(*control.Controller); ok && err == nil {
-		if bindErr := s.leases.BindControllerAuthority(ctrl); bindErr != nil {
-			slog.Error("serve: restore source authority after failed reclaim", "err", bindErr)
-		}
-	}
-	if failed != nil {
-		// The same controller may already be restored through s.leases. Retire
-		// only the failed target lease without clearing that shared authority.
-		failed.RetireDetached()
-	}
-}
-
-func (s *Server) acquireReturningLease(realPath string, mirror mirroredSession) (*control.SessionLeaseKeeper, error) {
-	info, err := agent.LoadSessionLeaseInfo(realPath)
-	if err == nil && info != nil && info.HandoffTo == agent.SessionWriterID() &&
-		info.HandoffID == mirror.returnHandoffID && info.WriterID == mirror.targetWriterID {
-		return s.leases.RebindDetachingWithHandoff(realPath, mirror.targetWriterID, mirror.returnHandoffID)
-	}
-	return s.leases.RebindDetaching(realPath)
-}
-
 func (s *Server) broadcastReclaimed(realPath string) {
 	s.bc.Emit(event.Event{
 		Kind:        event.Notice,
@@ -375,17 +181,11 @@ func (s *Server) maybeAutoReclaimMirrored(path string) <-chan struct{} {
 	if time.Since(m.lastContact) < mirrorStaleAfter {
 		return nil
 	}
-	legacyPath, ref, identityDir, err := s.autoReclaimTarget(path)
+	ref, identityDir, err := s.resolveSessionIdentity(path)
 	if err != nil {
 		return nil
 	}
-	held := false
-	if ref.SessionID != "" {
-		held = session.ProbeWriterHeld(identityDir)
-	} else {
-		held = leaseHeldByForeignRuntime(legacyPath)
-	}
-	if held {
+	if session.ProbeWriterHeld(identityDir) {
 		// The writer is alive but quiet (or another runtime took the file).
 		// Push the staleness window so a chatty-but-healthy writer never
 		// gets reclaimed under itself.
@@ -408,11 +208,7 @@ func (s *Server) maybeAutoReclaimMirrored(path string) <-chan struct{} {
 			return
 		}
 		recorder := &statusRecorder{header: http.Header{}}
-		if ref.SessionID != "" {
-			s.reclaimIdentityLocked(recorder, context.Background(), path, ref, current)
-		} else {
-			s.reclaimMirroredLocked(recorder, legacyPath, current)
-		}
+		s.reclaimIdentityLocked(recorder, context.Background(), path, ref, current)
 		if recorder.status >= http.StatusBadRequest {
 			slog.Warn("serve: auto-reclaim of stale mirror failed", "session", path, "status", recorder.status)
 			return

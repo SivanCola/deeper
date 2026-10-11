@@ -27,20 +27,8 @@ type PluginEntry struct {
 	ToolTimeoutSeconds map[string]int `toml:"tool_timeout_seconds"`
 	// Concurrency is "parallel" (default) or "serial"; see SPEC 3.16.
 	Concurrency string `toml:"concurrency"`
-	// AutoStart controls whether the server connects during session startup.
-	// Nil preserves historical behavior: configured servers start automatically.
-	AutoStart *bool `toml:"auto_start"`
-	// Tier is a legacy compatibility field. New config rendering omits it; enabled
-	// MCP servers connect automatically in the background unless auto_start=false.
-	// Historical values are accepted for old files:
-	//   "eager"      — blocks startup until the handshake completes; required for
-	//                  servers whose tools the system prompt depends on.
-	//   "lazy"       — legacy alias for background.
-	//   "background" — placeholder + spawn fired at boot but not waited on;
-	//                  swap happens once the spawn finishes.
-	// Empty defaults to "background" so enabled MCPs connect automatically
-	// without blocking chat. Unknown non-empty values fall back to "background".
-	Tier         string          `toml:"tier"`
+	// AutoStart enables the server catalog. Nil uses the default enabled setting.
+	AutoStart    *bool           `toml:"auto_start"`
 	Source       MCPConfigSource `toml:"-" json:"-"`
 	expansionEnv map[string]string
 }

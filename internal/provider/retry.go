@@ -31,34 +31,12 @@ type SendOptions struct {
 	KeyEnv              string // api_key_env the key is read from, when known
 	KeySource           string // human-readable source of KeyEnv, when known
 	KeyPresent          bool   // a non-empty key is being sent — separates "rejected" from "missing"
-	RetryAuth           bool   // retained for compatibility; authentication failures are terminal
 }
-
-// RetryInfo is retained for callers of the retired transport retry callback.
-type RetryInfo struct {
-	Attempt int
-	Max     int
-	Delay   time.Duration
-	Err     error
-}
-
-type RetryNotify func(RetryInfo)
-
-type retryNotifyKey struct{}
 
 type requestAttemptCounterKey struct{}
 
 type requestAttemptCounter struct {
 	count atomic.Int64
-}
-
-// WithRetryNotify retains compatibility with older callers. HTTP requests no
-// longer retry automatically, so the callback is never invoked.
-func WithRetryNotify(ctx context.Context, fn RetryNotify) context.Context {
-	if fn == nil {
-		return ctx
-	}
-	return context.WithValue(ctx, retryNotifyKey{}, fn)
 }
 
 // WithRequestAttemptCounter returns a context that counts every HTTP request

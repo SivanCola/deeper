@@ -63,7 +63,7 @@ func TestCacheRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(body), `"spec_hash"`) || strings.Contains(string(body), `"cache_key"`) {
+	if !strings.Contains(string(body), `"cache_key"`) || strings.Contains(string(body), `"spec_hash"`) {
 		t.Fatalf("schema cache JSON compatibility changed: %s", body)
 	}
 	got, ok := LoadCachedSchema(spec.Name, key)
@@ -150,12 +150,8 @@ func TestCacheLoadsLegacyToolWithoutDestructiveField(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, ok := LoadCachedSchema(spec.Name, hash)
-	if !ok || len(got.Tools) != 1 {
-		t.Fatalf("legacy cache = (%+v,%v), want one tool", got, ok)
-	}
-	if got.Tools[0].Destructive {
-		t.Fatal("legacy cache without destructive field must default to false")
+	if _, ok := LoadCachedSchema(spec.Name, hash); ok {
+		t.Fatal("historical cache was accepted")
 	}
 }
 
@@ -434,38 +430,6 @@ func TestSchemaCacheKeyRedactsURLCredentialsButKeepsResourceScope(t *testing.T) 
 	variantRotated.URL = "https://user:first@example.com/mcp?ACCESS-TOKEN=four&workspace=alpha&tenant=t1"
 	if SchemaCacheKey(variant) != SchemaCacheKey(variantRotated) {
 		t.Fatal("variant-spelled credential key leaked its value into the schema cache key")
-	}
-}
-
-func TestLoadCachedSchemaForSpecMigratesLegacyURLCacheKey(t *testing.T) {
-	redirectCache(t)
-	spec := sampleSpec()
-	spec.Name = "legacy-url"
-	spec.Type = "http"
-	spec.URL = "https://example.com/mcp?access_token=secret&workspace=alpha"
-
-	legacy, ok := legacySchemaCacheKey(spec)
-	if !ok {
-		t.Fatal("legacy cache key unavailable for credential-bearing URL")
-	}
-	if err := SaveCachedSchema(spec.Name, CachedSchema{
-		CacheKey:     legacy,
-		Capabilities: map[string]bool{"tools": true},
-		Tools:        []CachedTool{{Name: "echo", Schema: json.RawMessage(`{"type":"object"}`)}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	cs, ok := LoadCachedSchemaForSpec(spec)
-	if !ok || len(cs.Tools) != 1 || cs.Tools[0].Name != "echo" {
-		t.Fatalf("legacy cache entry did not load: ok=%v cs=%+v", ok, cs)
-	}
-	if cs.CacheKey != SchemaCacheKey(spec) {
-		t.Fatalf("loaded cache kept legacy key %q", cs.CacheKey)
-	}
-	// The upgrade persists: a plain current-key load now succeeds.
-	if _, ok := LoadCachedSchema(spec.Name, SchemaCacheKey(spec)); !ok {
-		t.Fatal("legacy cache entry was not rewritten in place")
 	}
 }
 

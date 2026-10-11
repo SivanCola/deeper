@@ -31,66 +31,7 @@ type SaveResult struct {
 	Previous *Memory
 }
 
-type MigrationReport struct {
-	Migrated int
-}
-
 var memoryStoreMutationMu sync.Mutex
-
-func (s Store) MigrateV2() (MigrationReport, error) {
-	memoryStoreMutationMu.Lock()
-	defer memoryStoreMutationMu.Unlock()
-	var report MigrationReport
-	for _, dir := range s.dirs() {
-		if strings.TrimSpace(dir) == "" {
-			continue
-		}
-		info, err := os.Stat(dir)
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			return report, err
-		}
-		if !info.IsDir() {
-			return report, fmt.Errorf("memory store path %q is not a directory", dir)
-		}
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return report, err
-		}
-		for _, entry := range entries {
-			if entry.IsDir() || entry.Name() == indexFile || !strings.HasSuffix(entry.Name(), ".md") {
-				continue
-			}
-			path := filepath.Join(dir, entry.Name())
-			raw, err := os.ReadFile(path)
-			if err != nil {
-				return report, err
-			}
-			frontmatter, _ := splitFrontmatter(string(raw))
-			if strings.TrimSpace(frontmatter["id"]) != "" && parsePositiveInt(frontmatter["revision"]) > 0 {
-				continue
-			}
-			memory, ok := loadMemory(path)
-			if !ok {
-				continue
-			}
-			memory.Name = slug(memory.Name)
-			if memory.Scope == "" {
-				memory.Scope = s.scopeForDir(dir)
-			}
-			if err := writeMemoryAtomic(path, []byte(render(memory, memory.Name)), 0o644); err != nil {
-				return report, err
-			}
-			if err := reindexIn(dir, memory.Name, memory); err != nil {
-				return report, err
-			}
-			report.Migrated++
-		}
-	}
-	return report, nil
-}
 
 // inheritOnUpdate keeps the update-omittable fields of an existing revision:
 // an update that leaves scope, activation, volatility, expiry, verification,
@@ -133,9 +74,7 @@ func (s Store) validateSave(m Memory) error {
 }
 
 // validatePinnedBudget rejects a save that would push the total pinned-body
-// runes over PinnedGuidanceBudgetChars. Legacy virtually-pinned guidance
-// counts — it occupies the same prefix — so an over-budget store forces
-// curation before anything new can be pinned.
+// runes over PinnedGuidanceBudgetChars. Only explicitly pinned facts count.
 func (s Store) validatePinnedBudget(m Memory) error {
 	if ResolveActivation(m) != ActivationPinned {
 		return nil
@@ -172,7 +111,11 @@ func (s Store) SaveWithOptions(m Memory, opts SaveOptions) (SaveResult, error) {
 			return SaveResult{}, fmt.Errorf("memory id %q not found", m.ID)
 		}
 	} else if inputRef.raw != "" {
-		existing, existingPath, exists = s.findActive(m.Name)
+		if !inputRef.qualified && strings.TrimSpace(string(m.Scope)) != "" {
+			existing, existingPath, exists = s.findActiveInDir(s.DirFor(m.Scope), m.Name)
+		} else {
+			existing, existingPath, exists = s.findActive(m.Name)
+		}
 	}
 	if opts.RequireExpectedRevision {
 		actual := 0
@@ -217,6 +160,10 @@ func (s Store) SaveWithOptions(m Memory, opts SaveOptions) (SaveResult, error) {
 		m.CreatedAt = now
 	}
 	m.UpdatedAt = now
+	m.Activation = ResolveActivation(m)
+	if NormalizeVolatility(string(m.Volatility)) == "" {
+		m.Volatility = VolatilityStable
+	}
 	m.Type = NormalizeType(string(m.Type))
 	if strings.TrimSpace(string(m.Scope)) == "" {
 		if inputRef.qualified {
@@ -260,21 +207,6 @@ func (s Store) SaveWithOptions(m Memory, opts SaveOptions) (SaveResult, error) {
 	}
 	if err := reindexIn(dir, m.Name, m); err != nil {
 		return SaveResult{Path: path, Memory: m}, err
-	}
-	// Legacy unqualified name updates keep the previous single-active-copy
-	// behavior. Stable IDs and scope-qualified references select one identity
-	// exactly, so they must not remove a same-named fact in the other scope.
-	if inputID == "" && !inputRef.qualified {
-		for _, otherDir := range s.dirs() {
-			if sameDir(otherDir, dir) {
-				continue
-			}
-			if duplicate, _, ok := s.findActiveInDir(otherDir, m.Name); ok && duplicate.ID != m.ID {
-				if _, err := archiveMemoryInDir(otherDir, duplicate.Name); err != nil {
-					return SaveResult{}, err
-				}
-			}
-		}
 	}
 
 	result := SaveResult{Path: path, Memory: m}
@@ -589,11 +521,6 @@ func newMemoryID(name string, now time.Time) string {
 	}
 	sum := sha256.Sum256([]byte(name + "\x00" + strconv.FormatInt(now.UnixNano(), 10)))
 	return "mem-" + hex.EncodeToString(sum[:16])
-}
-
-func legacyMemoryID(name string, scope FactScope) string {
-	sum := sha256.Sum256([]byte("deepzora-memory-v2\x00" + string(NormalizeFactScope(string(scope))) + "\x00" + slug(name)))
-	return "legacy-" + hex.EncodeToString(sum[:12])
 }
 
 func cleanMemoryPath(path string) string {

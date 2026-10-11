@@ -54,7 +54,6 @@ console.log("\nworkspace changes git errors");
     { files: [], gitAvailable: true },
     {
       completionSummary: {
-        preset: "balanced",
         verdict: "partial",
         mutations: 3,
         checks_passed: 12,

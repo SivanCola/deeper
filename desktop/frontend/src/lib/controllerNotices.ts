@@ -1,6 +1,5 @@
-import { asArray } from "./array";
 import { t, type DictKey } from "./i18n";
-import type { HistoryMessage, WireFinalReadiness, WireDecisionReceipt } from "./types";
+import type { HistoryMessage, WireDecisionReceipt } from "./types";
 import type { Item } from "./useController";
 import { readPauseItem } from "./readPause";
 
@@ -19,8 +18,6 @@ export function errorMessage(err: unknown): string {
 }
 
 const noticeCodeKeys: Record<string, DictKey> = {
-  final_readiness: "notice.finalReadiness",
-  historical_checks: "notice.historicalChecks",
   search_sources_not_provided: "sources.notProvided",
   empty_final: "notice.emptyFinal",
   executor_handoff: "notice.executorHandoff",
@@ -30,8 +27,6 @@ const noticeCodeKeys: Record<string, DictKey> = {
   workspace_lease: "notice.workspaceLease",
   cancelled_turn_display: "notice.cancelledTurnDisplay",
   protocol_recovery: "notice.protocolRecoveryBody",
-  recovery_paused: "notice.recoveryPausedBody",
-  completion_uncertain: "notice.completionUncertainBody",
   session_recovery_forked: "recovery.noticeSavedCopy",
   session_recovery_adopted: "recovery.noticeAdopted",
   session_recovery_adopted_covered: "recovery.noticeAdoptedCovered",
@@ -64,33 +59,6 @@ export function localizedNoticeText(text: string, code?: string): string {
   }
   const key = code ? noticeCodeKeys[code] : undefined;
   return key ? t(key) : localizedBackendNoticeText(text);
-}
-
-const deliveryRequirementKeys: Record<string, DictKey> = {
-  project_check: "notice.deliveryRequirementProjectCheck",
-  todo: "notice.deliveryRequirementTodo",
-  criteria: "notice.deliveryRequirementCriteria",
-  verification: "notice.deliveryRequirementVerification",
-  review: "notice.deliveryRequirementReview",
-  signoff: "notice.deliveryRequirementSignoff",
-  action: "notice.deliveryRequirementAction",
-  mutation: "notice.deliveryRequirementMutation",
-  task: "notice.deliveryRequirementTask",
-  capability: "notice.deliveryRequirementCapability",
-};
-
-export function readinessMissingIds(readiness: WireFinalReadiness | undefined): string[] {
-  return asArray(readiness?.missing).map((id) => String(id));
-}
-
-export function deliveryReadinessDetail(readiness: WireFinalReadiness | undefined, fallback = ""): string {
-  const labels = asArray(readiness?.missing)
-    .map((id) => deliveryRequirementKeys[id])
-    .filter((key): key is DictKey => Boolean(key))
-    .map((key) => t(key));
-  return labels.length === 0
-    ? fallback
-    : t("notice.deliveryIncompleteMissing", { items: labels.join(t("notice.deliveryRequirementSeparator")) });
 }
 
 function localizedSessionAction(action: string): string {

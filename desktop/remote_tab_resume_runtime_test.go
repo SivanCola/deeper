@@ -7,8 +7,8 @@ import (
 )
 
 func TestProvisionalResumeClearsPreviousSessionJobsAndRollbackRestoresThem(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,

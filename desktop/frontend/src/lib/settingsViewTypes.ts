@@ -14,7 +14,6 @@ export interface SettingsView {
   webSearchModelOverridden?: boolean;
   subagentModel: string;
   subagentEffort: string;
-  autoPlan: string;
   providers: ProviderView[];
   officialProviders: ProviderView[];
   providerPresets: ProviderPresetView[];
@@ -29,7 +28,7 @@ export interface SettingsView {
   desktopThemeStyle: string;
   desktopTerminalTheme: string; // "auto" follows app | "dark" | "light"
   closeBehavior: string; // "background" | "quit"
-  displayMode: string; sessionExperience?: "standard" | "deep"; reasoningDisplayMode: string; reasoningDisplayModeExplicit?: boolean;
+  sessionExperience: "standard" | "deep";
   statusBarStyle: string; // "icon" | "text"
   statusBarItems: string[]; // ordered visible status bar item ids
   defaultToolApprovalMode: ToolApprovalMode | string; // default for newly-created sessions
@@ -42,6 +41,5 @@ export interface SettingsView {
   shadowedByPath?: string; // workspace deepzora.toml that outranks configPath, when one exists
   providerKinds: string[]; // provider implementations the kernel registered (for the kind picker)
   autoApproveTools: boolean;
-  bypass: boolean; // legacy JSON key for live YOLO/full-access tool auto-approval
   conversationWidth?: string; // "standard" | "full"; absent from older Wails payloads
 }

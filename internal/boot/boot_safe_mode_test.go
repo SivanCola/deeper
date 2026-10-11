@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +24,6 @@ func TestBuildIgnoresSafeModeEnvForTools(t *testing.T) {
 
 	ctrl, err := Build(context.Background(), Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
-		TokenMode:  TokenModeFull,
 		Sink:       event.Discard,
 	})
 	if err != nil {
@@ -43,49 +41,15 @@ func TestBuildIgnoresSafeModeEnvForTools(t *testing.T) {
 	}
 }
 
-func TestBuildMemoryMigrationFailureWarnsAndContinues(t *testing.T) {
-	isolateConfigHome(t)
-	project := robustTempDir(t)
-	t.Setenv("DEEPZORA_SAFE_MODE", "")
-	globalDir := filepath.Join(config.MemoryUserDir(), "memory", "global")
-	if err := os.MkdirAll(filepath.Dir(globalDir), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(globalDir, []byte("not a directory"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var notices []event.Event
-	ctrl, err := Build(context.Background(), Options{
-		WorkspaceRoot: project,
-		SessionDir:    filepath.Join(t.TempDir(), "sessions"),
-		Sink: event.FuncSink(func(e event.Event) {
-			if e.Kind == event.Notice {
-				notices = append(notices, e)
-			}
-		}),
-	})
-	if err != nil {
-		t.Fatalf("Build should continue after memory migration failure: %v", err)
-	}
-	ctrl.Close()
-	for _, notice := range notices {
-		if notice.Level == event.LevelWarn && strings.Contains(notice.Text, "Memory metadata migration") && notice.Detail != "" {
-			return
-		}
-	}
-	t.Fatalf("memory migration warning missing: %+v", notices)
-}
-
 func TestBuildNormalModeKeepsSourceConnectorAndSkillTools(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
 	t.Chdir(dir)
 	t.Setenv("DEEPZORA_SAFE_MODE", "")
 
-	for _, tokenMode := range []string{TokenModeFull, TokenModeDelivery} {
+	for _, tokenMode := range []string{"standard", "standard"} {
 		ctrl, err := Build(context.Background(), Options{
 			SessionDir: filepath.Join(t.TempDir(), "sessions"),
-			TokenMode:  tokenMode,
 			Sink:       event.Discard,
 		})
 		if err != nil {

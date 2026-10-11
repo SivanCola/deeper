@@ -20,24 +20,11 @@ var (
 	credentialStoreQuarantine = quarantineCredentialStore
 )
 
-// readCredentialFile repairs a denied read of the global credential store
-// only when a retired-sandbox marker proves the deny came from Deepzora. The
-// original permission error stays the cause so callers keep their semantics.
-func readCredentialFile(path string) ([]byte, error) {
-	data, err := os.ReadFile(path)
-	if err == nil || !os.IsPermission(err) || runtimeGOOS != "windows" || !isGlobalCredentialPath(path) {
-		return data, err
-	}
-	if repairErr := winaclresidue.RepairLegacyCredentialDeny(credentialRepairPath(path)); repairErr != nil {
-		slog.Warn("config: legacy credential ACL repair failed", "path", path, "err", repairErr)
-		return nil, fmt.Errorf("%w (legacy ACL repair: %w)", err, repairErr)
-	}
-	return os.ReadFile(path)
-}
+func readCredentialFile(path string) ([]byte, error) { return os.ReadFile(path) }
 
 // readCredentialFileForWrite serves an explicit save. Saving must not depend
-// on proving who locked the file: after the provenance-checked repair it
-// resets the DACL without reading it and, failing that, moves the locked file
+// on proving who locked the file: it resets the DACL without reading it and,
+// failing that, moves the locked file
 // aside and starts a fresh store. The old file stays next to it for recovery.
 func readCredentialFileForWrite(path string) ([]byte, error) {
 	data, err := readCredentialFile(path)
@@ -64,9 +51,8 @@ func isGlobalCredentialPath(path string) bool {
 	return path != "" && credentials != "" && samePath(path, credentials)
 }
 
-// credentialRepairPath resolves links because older Windows builds recorded
-// the canonical path before writing a deny marker. Only the denied path is
-// resolved so ordinary reads stay free of the extra filesystem round trip.
+// credentialRepairPath resolves the denied credential file before a current
+// explicit save repairs it. Ordinary reads do not resolve the extra path.
 func credentialRepairPath(path string) string {
 	if real, err := filepath.EvalSymlinks(path); err == nil {
 		return real

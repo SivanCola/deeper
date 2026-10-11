@@ -11,11 +11,5 @@ for manifest in "$candidate" "$existing"; do
 	fi
 done
 
-# Immutable manifests published before release_notes_url existed remain valid.
-# Normalize only that missing field from the strict candidate; every other
-# semantic difference must still fail the immutable recovery check.
-jq -e -s '
-	.[0] as $candidate |
-	.[1] as $existing |
-	($existing | .release_notes_url = (.release_notes_url // $candidate.release_notes_url)) == $candidate
-' "$candidate" "$existing" >/dev/null
+# Immutable release metadata must be semantically identical.
+jq -e -s '.[0] == .[1]' "$candidate" "$existing" >/dev/null

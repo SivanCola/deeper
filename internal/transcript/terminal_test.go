@@ -19,14 +19,11 @@ func TestSnapshotRetainsTerminalRecoveryAndFailure(t *testing.T) {
 		code string
 	}{
 		{"protocol", event.Event{Status: event.TurnFailed, Err: errors.New("provider failed"), ProtocolRecovery: &provider.ProtocolRecoveryAction{ID: "recover"}}, "protocol_recovery"},
-		{"readiness", event.Event{Status: event.TurnFailed, Outcome: event.TurnOutcomeFinalReadiness, Readiness: &event.FinalReadiness{Missing: []string{"checks"}}}, event.NoticeCodeFinalReadiness},
 		{"read pause", event.Event{Status: event.TurnFailed, Outcome: event.TurnOutcomeIncompleteRead, ReadPause: &provider.ReadPause{}}, event.TurnOutcomeIncompleteRead},
 		{"read completion", event.Event{Status: event.TurnCompleted, ReadCompletion: &provider.ReadCompletion{ID: "run"}}, "read_completion"},
 		{"cancel", event.Event{Status: event.TurnInterrupted}, event.NoticeCodeCancelledTurn},
 		{"unknown effect", event.Event{Status: event.TurnRecoveryRequired}, event.NoticeCodeCancelledTurn},
 		{"failure", event.Event{Status: event.TurnFailed, Err: errors.New("provider failed")}, event.NoticeCodeProviderRequestFailed},
-		{"recovery pause", event.Event{Status: event.TurnFailed, Outcome: event.TurnOutcomeRecoveryPaused}, event.TurnOutcomeRecoveryPaused},
-		{"uncertain", event.Event{Status: event.TurnCompleted, Outcome: event.TurnOutcomeCompletionUncertain}, event.TurnOutcomeCompletionUncertain},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p, err := NewProjection(testIdentity, nil, 0)
@@ -47,9 +44,7 @@ func TestSnapshotRetainsTerminalRecoveryAndFailure(t *testing.T) {
 					if tc.e.ProtocolRecovery != nil && (row.Message.ProtocolRecovery == nil || row.Message.ProtocolRecovery.ID != "recover" || !row.Message.Pending) {
 						t.Fatal("lost recovery token")
 					}
-					if tc.e.Readiness != nil && (row.Message.Readiness == nil || len(row.Message.Readiness.Missing) != 1) {
-						t.Fatal("lost readiness")
-					}
+
 					if tc.e.ReadPause != nil && row.Message.ReadPause == nil {
 						t.Fatal("lost read pause")
 					}

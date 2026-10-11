@@ -20,32 +20,6 @@ func TestInstallerCommandLineUsesVisibleUpdateModeAndKeepsDFlagLast(t *testing.T
 	}
 }
 
-func TestWindowsUpdateHandoffArgsCarryParentInstallAndRelaunch(t *testing.T) {
-	got := windowsUpdateHandoffArgs(
-		4242,
-		`C:\Users\Jane Doe\AppData\Local\Deepzora\updates\Deepzora-windows-amd64-installer.exe`,
-		strings.Repeat("a", 64),
-		`D:\Tools\Deepzora App`,
-		`D:\Tools\Deepzora App\deepzora-desktop.exe`,
-		"v1.6.0",
-		"2026-07-29T00:00:00Z",
-		"transaction-1",
-	)
-	want := []string{
-		"--parent-pid", "4242",
-		"--installer", `C:\Users\Jane Doe\AppData\Local\Deepzora\updates\Deepzora-windows-amd64-installer.exe`,
-		"--installer-sha256", strings.Repeat("a", 64),
-		"--to-version", "v1.6.0",
-		"--created-at", "2026-07-29T00:00:00Z",
-		"--transaction-id", "transaction-1",
-		"--install-dir", `D:\Tools\Deepzora App`,
-		"--relaunch", `D:\Tools\Deepzora App\deepzora-desktop.exe`,
-	}
-	if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
-		t.Fatalf("args = %#v, want %#v", got, want)
-	}
-}
-
 func TestWindowsVersionedUpdateHandoffArgsDoNotRequireLegacyPendingIdentity(t *testing.T) {
 	got := windowsVersionedUpdateHandoffArgs(
 		4242,
@@ -81,10 +55,7 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 	}
 	script := string(data)
 	for _, want := range []string{
-		`!define DEEPZORA_LEGACY_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Deepzora"`,
-		`!define DEEPZORA_LEGACY_PRODUCT_KEY "Software\deepzora\Deepzora"`,
 		`!define DEEPZORA_UPDATE_HELPER "deepzora-update-helper.exe"`,
-		`!define DEEPZORA_GUARD "deepzora-guard.exe"`,
 		`!define DEEPZORA_LAUNCHER "deepzora-launcher.exe"`,
 		`!define DEEPZORA_CLI "deepzora-cli.exe"`,
 		`!define DEEPZORA_PORTABLE_ENTRY "Deepzora.exe"`,
@@ -111,7 +82,6 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 		"Function deepzora.waitForExecutableUnlock",
 		`FileOpen $1 "$INSTDIR\${PRODUCT_EXECUTABLE}" a`,
 		`FileOpen $1 "$INSTDIR\versions\${DEEPZORA_VERSION_TAG}\${PRODUCT_EXECUTABLE}" a`,
-		`FileOpen $1 "$INSTDIR\${DEEPZORA_GUARD}" a`,
 		`FileOpen $1 "$INSTDIR\${DEEPZORA_LAUNCHER}" a`,
 		`FileOpen $1 "$INSTDIR\${DEEPZORA_CLI}" a`,
 		`FileOpen $1 "$INSTDIR\${DEEPZORA_PORTABLE_ENTRY}" a`,
@@ -119,10 +89,10 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 		"Call deepzora.waitForExecutableUnlock",
 		`File "/oname=${DEEPZORA_UPDATE_HELPER}" "${DEEPZORA_UPDATE_HELPER}"`,
 		`File "/oname=${DEEPZORA_CLI}" "${DEEPZORA_CLI}"`,
-		`File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_GUARD}"`,
+		`File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_LAYOUT_INSTALLER}"`,
 		`nsExec::ExecToLog /OEM`,
 		`Deepzora layout activator output:`,
-		`--activate-staging "$R9" --no-relaunch`,
+		`--activate-staging "$R9" $R7`,
 		`LangString deepzoraActivateBusy ${LANG_ENGLISH}`,
 		`LangString deepzoraActivateBusy ${LANG_SIMPCHINESE}`,
 		`LangString deepzoraActivateBusy ${LANG_TRADCHINESE}`,
@@ -135,8 +105,6 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 		`File "/oname=${DEEPZORA_PAYLOAD_SIGNATURE}" "${DEEPZORA_PAYLOAD_SIGNATURE}"`,
 		`Delete "$INSTDIR\${DEEPZORA_UPDATE_HELPER}"`,
 		`Delete "$INSTDIR\${DEEPZORA_CLI}"`,
-		`DeleteRegValue HKCU "${DEEPZORA_LEGACY_PRODUCT_KEY}" ""`,
-		`!insertmacro deepzora.deleteLegacyInstallerStateIfOwned`,
 	} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("project.nsi missing %q", want)
@@ -172,16 +140,8 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 	if strings.Contains(script, `FileOpen $0 "$INSTDIR\current.json" w`) {
 		t.Fatal("normal installer must delegate the current.json commit to the atomic Go activator")
 	}
-	writeCurrent := strings.Index(script, `!insertmacro deepzora.writeUninstaller`)
-	deleteLegacy := strings.Index(script, `!insertmacro deepzora.deleteLegacyInstallerStateIfOwned`)
-	if writeCurrent < 0 || deleteLegacy < 0 || writeCurrent > deleteLegacy {
-		t.Fatalf("installer must write the current uninstall entry before reconciling owned legacy state (write=%d delete=%d)", writeCurrent, deleteLegacy)
-	}
-	legacyMacro := script[strings.Index(script, `!macro deepzora.deleteLegacyInstallerStateIfOwned`):strings.Index(script, `!macro deepzora.deleteUninstaller`)]
-	deleteLegacyLocation := strings.Index(legacyMacro, `DeleteRegValue HKCU "${DEEPZORA_LEGACY_PRODUCT_KEY}" ""`)
-	deleteLegacyAlias := strings.Index(legacyMacro, `DeleteRegKey HKCU "${DEEPZORA_LEGACY_UNINST_KEY}"`)
-	if deleteLegacyLocation < 0 || deleteLegacyAlias < 0 || deleteLegacyLocation > deleteLegacyAlias {
-		t.Fatalf("installer must clear the same-root Tauri install-location breadcrumb before deleting its uninstall alias (location=%d alias=%d)", deleteLegacyLocation, deleteLegacyAlias)
+	if strings.Contains(script, "DEEPZORA_LEGACY_") || strings.Contains(script, "deleteLegacyInstallerState") {
+		t.Fatal("installer must not reconcile historical installation state")
 	}
 	metadataBranch := strings.Index(script, `deepzora_stage_payload:`)
 	metadataFile := strings.Index(script, `File "/oname=${DEEPZORA_PAYLOAD_MANIFEST}"`)
@@ -232,7 +192,7 @@ func TestDesktopBuildScriptCompilesAndPackagesWindowsUpdateHelper(t *testing.T) 
 		`./cmd/update-helper`,
 		`"$installer_dir/$UPDATE_HELPER"`,
 		`stamp_windows_executable "$installer_dir/$UPDATE_HELPER" "Deepzora Update Helper"`,
-		`for name in "$BINNAME.exe" "$GUARDNAME.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deepzora-uninstall.exe"; do`,
+		`for name in "$BINNAME.exe" "$LAYOUT_INSTALLER.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deepzora-uninstall.exe"; do`,
 		`cp "$installer_dir/$name" "$payload_dir/$name"`,
 	} {
 		if !strings.Contains(script, want) {
@@ -262,7 +222,7 @@ func TestWindowsUpdateRequiresObservedHelperHandoff(t *testing.T) {
 		t.Fatal(err)
 	}
 	source := string(data)
-	if !strings.Contains(source, "return startWindowsUpdateHelper(") {
+	if !strings.Contains(source, "func startWindowsVersionedUpdateHandoff(") {
 		t.Fatal("Windows update handoff does not require the observed helper path")
 	}
 	if strings.Contains(source, "return installerCommand(installerPath, installDir).Start()") {

@@ -31,7 +31,7 @@ const settings = {
   effort: "high",
   mode: "normal",
   collaborationMode: "normal",
-  toolApprovalMode: "ask",
+  toolApprovalMode: "workspace-write",
   disabledMcp: {},
   mcpOrder: [],
 };

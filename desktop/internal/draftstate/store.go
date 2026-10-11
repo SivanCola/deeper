@@ -109,7 +109,7 @@ func (s *Store) openLocked() error {
 		_ = db.Close()
 		return err
 	}
-	if version < 0 || version > SchemaVersion {
+	if version != 0 && version != SchemaVersion {
 		_ = db.Close()
 		return fmt.Errorf("%w: %d", ErrUnsupportedVersion, version)
 	}
@@ -126,16 +126,10 @@ func (s *Store) openLocked() error {
 				_ = db.Close()
 				return err
 			}
-			if version < 1 || version > SchemaVersion {
+			if version != SchemaVersion {
 				_ = db.Close()
 				return fmt.Errorf("%w: %d", ErrUnsupportedVersion, version)
 			}
-		}
-	}
-	if version > 0 && version < SchemaVersion {
-		if err := backupBeforeUpgrade(db, s.path, version); err != nil {
-			_ = db.Close()
-			return err
 		}
 	}
 	// Even changing journal mode writes the database header. Check the version
@@ -155,27 +149,7 @@ func (s *Store) openLocked() error {
 			_ = db.Close()
 			return err
 		}
-	} else {
-		if version == 1 {
-			if err = migrateV1ToV2(db); err != nil {
-				_ = db.Close()
-				return err
-			}
-			version = 2
-		}
-		if version == 2 {
-			if err = migrateV2ToV3(db); err != nil {
-				_ = db.Close()
-				return err
-			}
-			version = 3
-		}
-		if version == 3 {
-			if err = migrateV3ToV4(db); err != nil {
-				_ = db.Close()
-				return err
-			}
-		}
+
 	}
 	s.db = db
 	return nil
@@ -219,57 +193,6 @@ func initialize(db *sql.DB) error {
 		if _, err := tx.Exec(statement); err != nil {
 			return err
 		}
-	}
-	return tx.Commit()
-}
-
-func migrateV3ToV4(db *sql.DB) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer rollbackTransaction(tx)
-	for _, query := range []string{
-		`ALTER TABLE operations ADD COLUMN request_id TEXT NOT NULL DEFAULT ''`,
-		`ALTER TABLE operations ADD COLUMN source_digest TEXT NOT NULL DEFAULT ''`,
-		`ALTER TABLE operations ADD COLUMN operation_revision INTEGER NOT NULL DEFAULT 1`,
-		`ALTER TABLE operations ADD COLUMN execution_json TEXT NOT NULL DEFAULT ''`,
-		`CREATE UNIQUE INDEX operations_by_request ON operations(draft_id, request_id) WHERE request_id <> ''`,
-		`PRAGMA user_version = 4`,
-	} {
-		if _, err := tx.Exec(query); err != nil {
-			return err
-		}
-	}
-	return tx.Commit()
-}
-
-func migrateV1ToV2(db *sql.DB) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer rollbackTransaction(tx)
-	if _, err := tx.Exec(`ALTER TABLE operations ADD COLUMN topic_id TEXT NOT NULL DEFAULT ''`); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`PRAGMA user_version = 2`); err != nil {
-		return err
-	}
-	return tx.Commit()
-}
-
-// v3 makes operation request_json a versioned, frozen execution snapshot.
-// The shape is validated by the application because keeping the JSON opaque
-// lets older completed records remain readable without rewriting user data.
-func migrateV2ToV3(db *sql.DB) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer rollbackTransaction(tx)
-	if _, err := tx.Exec(`PRAGMA user_version = 3`); err != nil {
-		return err
 	}
 	return tx.Commit()
 }

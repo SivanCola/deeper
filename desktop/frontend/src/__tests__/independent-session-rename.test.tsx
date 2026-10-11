@@ -18,7 +18,7 @@ function savedSession(id: string, canonical: boolean): SessionMeta {
   return {
     path: `/sessions/${id}.jsonl`, sessionId: canonical ? id : undefined,
     hostId: "local", topicId: sharedTopic, title: `Original ${id}`, preview: id,
-    turns: 1, createdAt: 1, lastActivityAt: 1, modTime: 1, current: false, open: false,
+    turns: 1, createdAt: 1, lastActivityAt: 1, current: false, open: false,
     scope: "project", workspaceRoot: "/repo",
   };
 }

@@ -2,11 +2,8 @@ package agent
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"slices"
-	"strconv"
 	"time"
 
 	"deepzora/internal/provider"
@@ -18,7 +15,6 @@ import (
 const (
 	messageIDLen      = 26
 	messageIDAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
-	legacyMessageIDNS = "deepzora-legacy-entry-v1"
 )
 
 // NewMessageID mints a time-prefixed random id: 48 bits of unix milliseconds
@@ -44,42 +40,6 @@ func encodeMessageID(raw [16]byte) string {
 		hi >>= 5
 	}
 	return string(out[:])
-}
-
-// legacyMessageID derives the id of a message that predates ids. The running
-// transcript digest binds it to everything before it, so two processes loading
-// the same bytes agree and a moved or edited prefix cannot alias an id.
-func legacyMessageID(branchID string, index int, running []byte) string {
-	h := sha256.New()
-	h.Write([]byte(legacyMessageIDNS))
-	h.Write([]byte{0})
-	h.Write([]byte(branchID))
-	h.Write([]byte{0})
-	h.Write([]byte(strconv.Itoa(index)))
-	h.Write([]byte{0})
-	h.Write(running)
-	var raw [16]byte
-	copy(raw[:], h.Sum(nil))
-	return encodeMessageID(raw)
-}
-
-// assignLegacyMessageIDs fills in ids for messages loaded from storage that
-// carries none. Messages that already have an id keep it; the running digest
-// mirrors sessionTranscriptHasher so it is independent of the ids themselves.
-func assignLegacyMessageIDs(path string, msgs []provider.Message) {
-	branchID := BranchID(path)
-	h := sha256.New()
-	for i := range msgs {
-		b, err := json.Marshal(messageForSessionIdentity(msgs[i]))
-		if err != nil {
-			return
-		}
-		h.Write(b)
-		h.Write([]byte{'\n'})
-		if msgs[i].ID == "" {
-			msgs[i].ID = legacyMessageID(branchID, i, h.Sum(nil))
-		}
-	}
 }
 
 func mintMessageIDs(msgs []provider.Message) {

@@ -69,7 +69,7 @@ const surfaceInput = {
     controllerReady: true,
     showContextWindowRing: false,
   },
-  profile: { collaborationMode: "normal", toolApprovalMode: "ask", goal: "" },
+  profile: { collaborationMode: "normal", toolApprovalMode: "workspace-write", goal: "" },
   router: { handleSend: noop, handleSteer: noop },
   modes: { applyMode: noop, applyToolApprovalMode: noop },
   goals: { setCollaborationModeFromUi: noop, clearGoalFromUi: noop, editGoalFromUi: noop },

@@ -24,7 +24,6 @@ let failOpen = false;
 let submitError: Error | undefined;
 let failHydration = true;
 let statusGoalStatus: "stopped" | "complete" = "stopped";
-let statusQualityFloor: "standard" | "delivery" = "standard";
 let statusModelLabel = "DeepSeek · Mock";
 let statusEffort = "high";
 let statusPendingPrompt = false, replayedPrompts: unknown[] = [];
@@ -54,7 +53,7 @@ const desktopStub = installDesktopHostStub(({ main: { App: {
 			}
 			return {
 				history: [{ role: "assistant", content: rotationSnapshotCalls === 1 ? "initial session" : rotationSnapshotCalls === 3 ? "fresh rotated session" : "fresh reconciled turn" }],
-				status: { running: false, label: "Rotation", plan: false, toolApprovalMode: "ask", goal: "" },
+				status: { running: false, label: "Rotation", plan: false, toolApprovalMode: "workspace-write", goal: "" },
 			};
 		}
 		if (tabId === "tab-tool-history") return {
@@ -62,10 +61,10 @@ const desktopStub = installDesktopHostStub(({ main: { App: {
 				{ role: "assistant", content: "", toolCalls: [{ id: "remote-tool", name: "bash", arguments: "{\"command\":\"go test ./...\"}" }] },
 				{ role: "tool", content: "remote tool output", toolCallId: "remote-tool", toolName: "bash" },
 			],
-			status: { running: false, label: "Tools", plan: false, toolApprovalMode: "ask", goal: "" },
+			status: { running: false, label: "Tools", plan: false, toolApprovalMode: "workspace-write", goal: "" },
 		};
 		if (tabId === "tab-replay") return {
-			history: [], status: { label: "Replay", plan: false, toolApprovalMode: "ask", goal: "" },
+			history: [], status: { label: "Replay", plan: false, toolApprovalMode: "workspace-write", goal: "" },
 			pendingEvents: [
 				{ kind: "approval_request", approval: { id: "replayed-approval", tool: "bash", subject: "pending while inactive" } },
 				{ kind: "extension_surface", extension: { pluginId: "replayed-plugin", surfaceId: "replayed-form", kind: "form", form: { title: "Pending form", fields: [{ key: "region", label: "Region", kind: "input" }] } } },
@@ -87,11 +86,10 @@ const desktopStub = installDesktopHostStub(({ main: { App: {
       status: {
         label: statusModelLabel,
         plan: true,
-        toolApprovalMode: "auto",
+        toolApprovalMode: "danger-full-access",
         goal: "",
         goalStatus: statusGoalStatus,
-        goalRuntime: { turnsUsed: 2, turnsLimit: 0, tokensUsed: 321, requestsUsed: 3, workDurationMs: 4000, tokensLimit: 0, noProgressTurns: 0, noProgressLimit: 0, budgetExtensions: 0 },
-        qualityFloor: statusQualityFloor,
+        goalRuntime: { turnsUsed: 2, tokensUsed: 321, requestsUsed: 3, workDurationMs: 4000, tokensLimit: 0, noProgressTurns: 0, budgetExtensions: 0 },
         effort: { supported: true, current: statusEffort, default: "auto", levels: ["auto", "high", "max"] },
         used: 1200,
         window: 64000,
@@ -107,13 +105,13 @@ const desktopStub = installDesktopHostStub(({ main: { App: {
 	async RemoteTabStatus(tabId: string) {
 		tape.push(`status:${tabId}`);
 		if (tabId === "tab-status-fallback") {
-			return { running: false, plan: true, toolApprovalMode: "yolo", goal: "", qualityFloor: "standard" };
+			return { running: false, plan: true, toolApprovalMode: "danger-full-access", goal: "" };
 		}
 		return {
 			running: false, pendingPrompt: statusPendingPrompt, backgroundJobs: 0,
-			label: statusModelLabel, plan: true, toolApprovalMode: "auto", goal: "",
-			goalStatus: statusGoalStatus, qualityFloor: statusQualityFloor,
-			goalRuntime: { turnsUsed: 2, turnsLimit: 0, tokensUsed: 321, requestsUsed: 3, workDurationMs: 4000, tokensLimit: 0, noProgressTurns: 0, noProgressLimit: 0, budgetExtensions: 0 },
+			label: statusModelLabel, plan: true, toolApprovalMode: "danger-full-access", goal: "",
+			goalStatus: statusGoalStatus,
+			goalRuntime: { turnsUsed: 2, tokensUsed: 321, requestsUsed: 3, workDurationMs: 4000, tokensLimit: 0, noProgressTurns: 0, budgetExtensions: 0 },
 			effort: { supported: true, current: statusEffort, default: "auto", levels: ["auto", "high", "max"] },
 		};
 	},
@@ -492,7 +490,7 @@ function HookProbe({ tabId = "tab-remote-2" }: { tabId?: string }) { probe = use
 const probeRoot = createRoot(document.createElement("div"));
 await act(async () => { probeRoot.render(<LocaleProvider><HookProbe /></LocaleProvider>); await flush(); });
 ok(probe?.state === "ready", "a successful fenced snapshot recovers a ready event missed before listener mount");
-ok(probe?.composerProfile?.collaborationMode === "plan" && probe?.composerProfile?.toolApprovalMode === "workspace-write" && probe.goalRuntime?.tokensUsed === 321,
+ok(probe?.composerProfile?.collaborationMode === "plan" && probe?.composerProfile?.toolApprovalMode === "danger-full-access" && probe.goalRuntime?.tokensUsed === 321,
   "snapshot status hydrates the authoritative remote composer profile");
 ok(probe?.effort?.current === "high" && probe?.transcript.checkpoints[0]?.turn === 3
   && probe?.transcript.checkpoints[0]?.fileCount === 2 && probe?.transcript.checkpoints[0]?.files.length === 1,
@@ -505,8 +503,9 @@ ok(probe?.transcript.context.used === 1200 && probe.transcript.context.window ==
   "snapshot status hydrates remote context, usage, balance, cost, and jobs");
 ok(remoteRuntimeCommand("/goal write regression tests") === undefined && remoteRuntimeCommand("/goal --strict write regression tests") === undefined, "goal-setting commands remain conversational turns");
 ok(remoteRuntimeCommand("/goal")?.method === "runManagementCommand" && remoteRuntimeCommand("/goal status")?.method === "runManagementCommand"
-  && remoteRuntimeCommand("/goal --strict pause")?.method === "runManagementCommand",
+  && remoteRuntimeCommand("/goal pause")?.method === "runManagementCommand",
   "goal status and lifecycle actions remain synchronous management commands");
+ok(remoteRuntimeCommand("/goal --strict pause") === undefined && remoteRuntimeCommand("/goal --research status") === undefined, "retired flags are literal goal text");
 ok(remoteRuntimeCommand("/branch experiment")?.rehydrate === true && remoteRuntimeCommand("/switch main")?.rehydrate === true
   && remoteRuntimeCommand("/rewind 3 conversation")?.rehydrate === true && remoteRuntimeCommand("/context")?.rehydrate !== true
   && remoteRuntimeCommand("/compact preserve tests")?.method === "compact",
@@ -607,11 +606,9 @@ await act(async () => {
 });
 const metadataGeneration = probe?.surfaceGeneration;
 statusGoalStatus = "complete";
-statusQualityFloor = "delivery"; // Simulate an older server that still reports its real policy.
 await act(async () => {
   await probe?.setModel("remote/new-model");
   await probe?.setEffort("high");
-  await probe?.setQualityFloor("delivery");
   await probe?.pauseGoal();
   await probe?.resumeGoal();
   await probe?.steer("narrow the change");
@@ -619,8 +616,7 @@ await act(async () => {
   await flush();
 });
 ok(probe?.surfaceGeneration === metadataGeneration, "metadata-only remote commands preserve the transcript generation and viewport");
-ok(probe?.composerProfile?.goalStatus === "complete" && probe.composerProfile.qualityFloor === "delivery",
-  "status-only refresh preserves an older server's reported policy");
+ok(probe?.composerProfile?.goalStatus === "complete", "status refresh retains the current goal status");
 ok(probe?.modelLabel === "Model · remote/new-model" && probe.effort?.current === "high",
   "model switching refreshes the authoritative remote profile before the next turn");
 for (const want of [
@@ -633,7 +629,6 @@ for (const want of [
   "summarize:tab-remote-2:3:upto",
   "model:tab-remote-2:remote/new-model",
   "effort:tab-remote-2:high",
-  "quality-floor:tab-remote-2:delivery",
   "pause-goal:tab-remote-2",
   "resume-goal:tab-remote-2",
   "steer:tab-remote-2:narrow the change",
@@ -665,7 +660,7 @@ await act(async () => {
   await flush();
 });
 ok(fallbackProbe?.hydrated === true && fallbackProbe.composerProfile?.collaborationMode === "plan"
-  && fallbackProbe.composerProfile.toolApprovalMode === "workspace-write"
+  && fallbackProbe.composerProfile.toolApprovalMode === "danger-full-access"
   && tape.includes("status:tab-status-fallback"),
   "missing aggregate status is fetched before the remote composer becomes ready");
 await act(async () => fallbackRoot.unmount());
@@ -711,7 +706,7 @@ await act(async () => {
 	__emitMockRemoteTab("tab-race", "event", { kind: "text", text: "arrived during hydration" });
 	resolveRaceSnapshot?.({
 		history: [],
-		status: { running: true, label: "Race", plan: false, toolApprovalMode: "ask", goal: "" },
+		status: { running: true, label: "Race", plan: false, toolApprovalMode: "workspace-write", goal: "" },
 	});
 	await flush();
 });
@@ -733,14 +728,14 @@ await act(async () => {
 	__emitMockRemoteTab("tab-state-race", "state", { state: "ready" });
 	resolveStateRaceSnapshots[0]?.({
 		history: [],
-		status: { running: false, label: "Stale", plan: false, toolApprovalMode: "ask", goal: "" },
+		status: { running: false, label: "Stale", plan: false, toolApprovalMode: "workspace-write", goal: "" },
 	});
 	await flush();
 });
 await act(async () => {
 	resolveStateRaceSnapshots[1]?.({
 		history: [{ role: "assistant", content: "fresh generation" }],
-		status: { running: false, label: "Fresh", plan: false, toolApprovalMode: "ask", goal: "" },
+		status: { running: false, label: "Fresh", plan: false, toolApprovalMode: "workspace-write", goal: "" },
 	});
 	await flush();
 });
@@ -773,7 +768,7 @@ await act(async () => { __emitMockRemoteTab("tab-reconcile-rotation", "event", {
 await act(async () => {
 	resolveRotationReconcile?.({
 		history: [{ role: "assistant", content: "stale previous session" }],
-		status: { running: false, label: "Stale", plan: false, toolApprovalMode: "ask", goal: "" },
+		status: { running: false, label: "Stale", plan: false, toolApprovalMode: "workspace-write", goal: "" },
 	});
 	await flush();
 });

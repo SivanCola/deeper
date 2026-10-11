@@ -26,18 +26,16 @@ type freshSessionCreator interface {
 // desktopSessionState groups the Desktop-only persistence and navigation
 // authority so App does not grow a second set of independent scalar owners.
 type desktopSessionState struct {
-	readSnapshots                 readSnapshotStore
-	layoutWrites                  tabLayoutWriter
-	organizations                 organizationReadCache
-	beforeMigrationRegistryCommit func() error
-	root                          string
-	workspaceState                *workspacestate.Store
-	navigationSeq                 atomic.Uint64
-	navigationMu                  sync.Mutex
-	navigationGeneration          uint64
-	navigationCancel              context.CancelFunc
-	pruneBlockedPersistence       atomic.Uint64
-	pendingCreateRecovered        atomic.Uint64
+	readSnapshots           readSnapshotStore
+	layoutWrites            tabLayoutWriter
+	root                    string
+	workspaceState          *workspacestate.Store
+	navigationSeq           atomic.Uint64
+	navigationMu            sync.Mutex
+	navigationGeneration    uint64
+	navigationCancel        context.CancelFunc
+	pruneBlockedPersistence atomic.Uint64
+	pendingCreateRecovered  atomic.Uint64
 }
 
 func (a *App) beginSessionNavigationContext(navigation ...uint64) (context.Context, func()) {
@@ -165,14 +163,6 @@ func isGlobalWorkspacePath(global workspacestate.Workspace, root string) bool {
 	return slices.ContainsFunc(global.FormerRoots, func(former string) bool { return sameDesktopPath(root, former) })
 }
 
-func (a *App) isGlobalWorkspacePath(ctx context.Context, root string) bool {
-	if sameDesktopPath(root, globalWorkspaceRoot()) {
-		return true
-	}
-	state, err := a.workspaceRegistry().Load(ctx)
-	return err == nil && isGlobalWorkspacePath(state.Workspaces[workspacestate.GlobalWorkspaceID], root)
-}
-
 func (a *App) workspaceRegistry() *workspacestate.Store {
 	if a == nil {
 		return nil
@@ -187,7 +177,7 @@ func (a *App) workspaceRegistry() *workspacestate.Store {
 
 func newDesktopWorkspaceStore() *workspacestate.Store {
 	path := config.DesktopWorkspaceStatePath()
-	return workspacestate.NewStore(path, func(ctx context.Context) error { return backupDesktopUpgradeMetadataAt(ctx, path) })
+	return workspacestate.NewStore(path)
 }
 
 func (a *App) ensureDesktopWorkspace(ctx context.Context, scope, workspaceRoot string) (string, error) {
@@ -257,50 +247,8 @@ func (a *App) attachDesktopSession(ctx context.Context, scope, workspaceRoot str
 	if err := a.workspaceRegistry().AttachSession(ctx, "", workspaceID, ref.SessionID, ""); err != nil {
 		return "", err
 	}
-	if runtime, ok := a.desktopSessionService("").Runtime(ref); ok {
-		if source := runtime.Session().Manifest().Source; source != nil && source.Path != "" {
-			// Adoption is durable; opening a tab must not re-hash a refreshed
-			// source. The import path owns source validation and registry writes.
-			state, stateErr := a.workspaceRegistry().Load(ctx)
-			adopted := false
-			if stateErr == nil {
-				for _, mapping := range state.SourceMappings {
-					if mapping.SessionID == ref.SessionID && mapping.WorkspaceID == workspaceID &&
-						sessionRuntimeKey(mapping.Path) == sessionRuntimeKey(source.Path) {
-						adopted = true
-						break
-					}
-				}
-			}
-			if !adopted {
-				if fingerprint, err := desktopSourceFingerprint(source.Path); err == nil {
-					if err := a.recordDesktopSource(ctx, source.Path, "legacy", fingerprint, ref.SessionID, workspaceID); err != nil &&
-						!a.forkSourceOwnedElsewhere(ctx, err, source.Path, ref) {
-						return "", err
-					}
-				}
-			}
-		}
-	}
-	return workspaceID, nil
-}
 
-// forkSourceOwnedElsewhere reports whether a rejected source registration is
-// a fork naming a source another session already owns; only forks may skip.
-func (a *App) forkSourceOwnedElsewhere(ctx context.Context, recordErr error, sourcePath string, ref session.SessionRef) bool {
-	if !errors.Is(recordErr, workspacestate.ErrMutationConflict) {
-		return false
-	}
-	info, err := a.desktopSessionService("").Query().Stat(ctx, ref)
-	if err != nil || info.Origin != session.SessionOriginFork {
-		return false
-	}
-	state, err := a.workspaceRegistry().Load(ctx)
-	if err != nil {
-		return false
-	}
-	owner, ok := state.SourceMappings[desktopSourceKey(sourcePath, "")]
-	return ok && owner.SessionID != ref.SessionID
+	return workspaceID, nil
 }
 
 func (a *App) validateDesktopWorkspaceMembership(ctx context.Context, workspaceID string, ref session.SessionRef) error {

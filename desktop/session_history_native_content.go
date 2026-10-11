@@ -14,8 +14,8 @@ func (a *App) boundNativeHistoryContent(tabID string, ref HistoryContentRef, chu
 	if err != nil || r.tabID != tabID || r.native == nil || entryIDSession(ref.EntryID) != strings.TrimSuffix(filepath.Base(r.path), ".jsonl") {
 		return out
 	}
-	position, sub, legacyRow, ok := parseHistoryEntryID(ref.EntryID)
-	if !ok || legacyRow != -1 {
+	position, sub, ok := parseHistoryEntryID(ref.EntryID)
+	if !ok {
 		return out
 	}
 	pager, err := nativeNavigationPager(r)

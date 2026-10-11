@@ -1,36 +1,17 @@
 package agent
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"deepzora/internal/provider"
+	"deepzora/internal/store"
 )
-
-// ownsWritableBaseline reports whether this session may rewrite path at the
-// current disk revision. Ownership requires either a digest match against the
-// session's persisted baseline, or a live generation-bound write authority for
-// the path at the same revision. Process-level "I hold a lease" alone is not
-// enough: a stale controller after rebind must not rewrite under a successor.
-func (s *Session) ownsWritableBaseline(path string, existingDigest, rawDigest [sha256.Size]byte, rawDiffers bool, existingRevision int64, existingLedgerDigest string, nextVersion uint64) bool {
-	if s.ownsPersistedState(path, existingDigest, existingRevision, existingLedgerDigest, nextVersion) {
-		return true
-	}
-	if rawDiffers && s.ownsPersistedState(path, rawDigest, existingRevision, existingLedgerDigest, nextVersion) {
-		return true
-	}
-	state := s.persistState(path)
-	if !state.ok || !state.revisionKnown || state.version > nextVersion {
-		return false
-	}
-	if existingRevision != 0 && state.revision != existingRevision {
-		return false
-	}
-	// Authority-bound same-revision reshape (tool preview, load normalize).
-	return s.hasValidWriteAuthority(path)
-}
 
 // fixedWriterRecoverySessionPath is the process-wide stable recovery path
 // for originalPath. Nested -recovery- names peel back to the root branch.
@@ -50,7 +31,7 @@ func recoveryRootID(path string) string {
 }
 
 // stableRecoverySessionPath is one recovery file per (root branch, generation).
-// The 16-hex suffix stays so older desktop discovery still recognizes the file.
+// A bounded digest suffix keeps recovery identities stable across retries.
 func stableRecoverySessionPath(originalPath, generation string) string {
 	root := recoveryRootID(originalPath)
 	if strings.TrimSpace(generation) == "" {
@@ -111,10 +92,53 @@ func (s *Session) rotateRecoveryLane(current string) {
 // writeRecoveryEventLog writes a recovery event log. Isolated writer lanes
 // compact so repeated in-place rewrites stay bounded.
 
-func writeRecoveryEventLog(path string, msgs []provider.Message, digest [sha256.Size]byte, revision int64, isolated bool) error {
-	baseRevision := max(int64(0), revision-1)
-	if isolated {
-		return compactSessionEventLog(path, msgs, digest, baseRevision, "recovery")
+// writeRecoveryEventLog persists recovery lanes using the current DAG writer.
+func writeRecoveryEventLog(path string, msgs []provider.Message, isolated bool) error {
+	branch, err := loadSessionUnlocked(path)
+	if os.IsNotExist(err) {
+		branch = NewSession("")
+	} else if err != nil {
+		return err
 	}
-	return appendSessionReplaceEvent(path, msgs, digest, baseRevision, "recovery")
+	branch.Rewrite(msgs, "recovery")
+	lease, err := TryAcquireSessionLease(path)
+	if err != nil {
+		return err
+	}
+	defer lease.Release()
+	mode := sessionSaveSnapshot
+	if isolated {
+		mode = sessionSaveRewriteCompact
+	}
+	now := time.Now().UTC()
+	if err := branch.initializeSessionLog(path, now); err != nil {
+		return err
+	}
+	state, err := replaySessionDAG(context.Background(), store.SessionEventLog(path), defaultSessionReplayLimits)
+	if err != nil {
+		return err
+	}
+	branch.ensureMessageIDsForSave(msgs)
+	plan, err := branch.planDAGWrite(path, state, msgs, mode, now)
+	if err != nil {
+		return err
+	}
+	if _, err := appendSessionDAGEntries(path, plan.entries, true); err != nil {
+		return err
+	}
+	if err := state.replayFrom(context.Background(), state.lastGoodEnd, defaultSessionReplayLimits); err != nil {
+		return err
+	}
+	if state.damaged {
+		return fmt.Errorf("recovery DAG contains an incomplete batch")
+	}
+	if isolated {
+		if err := sessionDAGSingleWriterProof(path, state, now); err != nil {
+			return err
+		}
+		if err := rotateSessionDAG(path, state, now); err != nil {
+			return err
+		}
+	}
+	return nil
 }

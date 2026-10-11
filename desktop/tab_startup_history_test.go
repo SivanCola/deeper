@@ -1,80 +1,45 @@
 package main
 
 import (
-	"os"
 	"testing"
-	"time"
 
 	"deepzora/internal/agent"
 )
 
 func TestTerminalStartupFailureRemainsInProjectHistoryAfterRestart(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	topicID := "topic_failed_startup_history"
-	topicTitle := "Failed startup history"
-	if err := addProject(projectRoot, "Failed startup project"); err != nil {
-		t.Fatalf("add project: %v", err)
+	app, root, refs := canonicalOrganizationFixture(t, "failed-startup")
+	ref := refs["failed-startup"]
+	wid, err := app.resolveDesktopWorkspaceID(t.Context(), "project", root)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := setTopicTitle(projectRoot, topicID, topicTitle); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	sessionDir := desktopSessionDir(projectRoot)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
-		t.Fatalf("mkdir session directory: %v", err)
-	}
-	sessionPath := writeTopicSession(t, sessionDir, "failed-startup.jsonl", topicID, topicTitle, projectRoot)
-
-	app := NewApp()
-	failed := &WorkspaceTab{
-		ID: "failed", Scope: "project", WorkspaceRoot: projectRoot,
-		TopicID: topicID, TopicTitle: topicTitle, SessionPath: sessionPath,
-		Ready: true, disabledMCP: map[string]ServerView{},
-	}
+	failed := &WorkspaceTab{ID: "failed", Scope: "project", WorkspaceRoot: root, SessionID: ref.SessionID, Ready: true, disabledMCP: map[string]ServerView{}}
+	failed.SessionWorkspace.ID = wid
 	app.tabs[failed.ID] = failed
 	app.tabOrder = []string{failed.ID}
 	app.activeTabID = failed.ID
 	app.mu.Lock()
-	app.newSessionRuntimeLocked(failed, sessionRuntimeKey(sessionPath))
+	app.newSessionRuntimeLocked(failed, sessionRuntimeKey(failed.currentSessionIdentity()))
 	leaseHeld, save := app.markTabStartupFailureLocked(failed, agent.ErrSessionWriteAuthorityMissing, suppressStartupRestore)
 	app.mu.Unlock()
 	if leaseHeld || save == nil {
-		t.Fatalf("terminal failure result: leaseHeld=%v save=%#v", leaseHeld, save)
+		t.Fatal("terminal startup failure was not persisted")
 	}
 	app.writeTabsSaveRequest(save)
-
-	persisted := loadTabsFile()
-	if len(persisted.Tabs) != 0 || persisted.ActiveTab != "" {
-		t.Fatalf("persisted tabs = %#v active=%q, want failed tab omitted", persisted.Tabs, persisted.ActiveTab)
+	if got := loadTabsFile(); len(got.Tabs) != 0 || got.ActiveTab != "" {
+		t.Fatalf("failed runtime restored: %+v", got)
 	}
-	if _, err := os.Stat(sessionPath); err != nil {
-		t.Fatalf("terminal startup failure removed session history: %v", err)
-	}
-
+	sessionRoot := app.desktopSessions.root
+	app.closeSessionServices()
 	restarted := NewApp()
-	targetFound := false
-	for _, target := range restarted.sessionCatalogTargets() {
-		if sameDesktopPath(target.Path, sessionDir) && target.Scope == "project" && sameProjectRoot(target.WorkspaceRoot, projectRoot) {
-			targetFound = true
-			break
-		}
+	restarted.desktopSessions.root = sessionRoot
+	restarted.desktopSessions.workspaceState = app.desktopSessions.workspaceState
+	t.Cleanup(restarted.closeSessionServices)
+	if _, err := restarted.desktopSessionService(sessionRoot).Query().Stat(t.Context(), ref); err != nil {
+		t.Fatalf("durable history lost: %v", err)
 	}
-	if !targetFound {
-		t.Fatalf("restart catalog targets = %#v, want project session directory %q", restarted.sessionCatalogTargets(), sessionDir)
+	page, err := restarted.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 50})
+	if err != nil || len(page.Items) != 1 || page.Items[0].Session == nil || page.Items[0].Session.SessionID != ref.SessionID {
+		t.Fatalf("restart history: %+v %v", page, err)
 	}
-	restarted.startSessionCatalog()
-	t.Cleanup(func() { restarted.stopSessionCatalog(time.Second) })
-	waitForCatalogTreeCondition(t, restarted, "failed session history after restart", func(nodes []ProjectNode) bool {
-		for _, project := range nodes {
-			if project.Kind != "project" || !sameProjectRoot(project.Root, projectRoot) {
-				continue
-			}
-			for _, topic := range project.Children {
-				if topic.TopicID == topicID && sameDesktopPath(topic.SessionPath, sessionPath) {
-					return true
-				}
-			}
-		}
-		return false
-	})
 }

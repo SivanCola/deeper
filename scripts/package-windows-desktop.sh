@@ -26,7 +26,7 @@ BIN_DIR="$DESKTOP/build/bin"
 DIST="$ROOT/dist"
 APPNAME="Deepzora"
 BINNAME="deepzora-desktop"
-GUARDNAME="deepzora-guard"
+LAYOUT_INSTALLER="deepzora-layout-installer"
 LAUNCHERNAME="deepzora-launcher"
 UPDATE_HELPER="deepzora-update-helper.exe"
 WINDOWS_CLINAME="deepzora-cli"
@@ -40,7 +40,7 @@ PAYLOAD="$(cd "$payload_input" && pwd)"
 
 required_payload=(
 	"$BINNAME.exe"
-	"$GUARDNAME.exe"
+	"$LAYOUT_INSTALLER.exe"
 	"$LAUNCHERNAME.exe"
 	"$UPDATE_HELPER"
 	"$WINDOWS_CLINAME.exe"
@@ -78,7 +78,7 @@ fi
 # Replace every source consumed by project.nsi before compiling the installer.
 # Copying preserves the Authenticode certificate table returned by SignPath.
 cp "$PAYLOAD/$BINNAME.exe" "$INSTALLER_DIR/$BINNAME.exe"
-cp "$PAYLOAD/$GUARDNAME.exe" "$INSTALLER_DIR/$GUARDNAME.exe"
+cp "$PAYLOAD/$LAYOUT_INSTALLER.exe" "$INSTALLER_DIR/$LAYOUT_INSTALLER.exe"
 cp "$PAYLOAD/$LAUNCHERNAME.exe" "$INSTALLER_DIR/$LAUNCHERNAME.exe"
 cp "$PAYLOAD/$UPDATE_HELPER" "$INSTALLER_DIR/$UPDATE_HELPER"
 cp "$PAYLOAD/$WINDOWS_CLINAME.exe" "$INSTALLER_DIR/$WINDOWS_CLINAME.exe"

@@ -3,8 +3,6 @@ package openai
 import (
 	"strings"
 	"testing"
-
-	"deepzora/internal/provider"
 )
 
 const (
@@ -83,121 +81,6 @@ func TestCanonicalStepFunPlanEndpoints(t *testing.T) {
 			}
 			if strings.Count(gotChat, "/v1") != 1 || strings.Count(gotChat, "/chat/completions") != 1 {
 				t.Fatalf("chat %q is not a single canonical endpoint", gotChat)
-			}
-		})
-	}
-}
-
-func TestNewCanonicalizesStepFunPlanChatURLs(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name string
-		cfg  provider.Config
-		want string
-	}{
-		{
-			name: "anthropic-docs base repaired on com host",
-			cfg: provider.Config{
-				Name:    "stepfun",
-				BaseURL: "https://api.stepfun.com/step_plan",
-				Model:   "step-3.7-flash",
-			},
-			want: wantStepFunComChat,
-		},
-		{
-			name: "anthropic-docs base repaired on ai host",
-			cfg: provider.Config{
-				Name:    "stepfun-en",
-				BaseURL: "https://api.stepfun.ai/step_plan",
-				Model:   "step-3.7-flash",
-			},
-			want: wantStepFunAIChat,
-		},
-		{
-			name: "correct v1 base unchanged",
-			cfg: provider.Config{
-				Name:    "stepfun",
-				BaseURL: "https://api.stepfun.com/step_plan/v1",
-				Model:   "step-3.7-flash",
-			},
-			want: wantStepFunComChat,
-		},
-		{
-			name: "request_url stepfun typo is repaired",
-			cfg: provider.Config{
-				Name:    "custom-gateway",
-				BaseURL: "https://example.invalid/v1",
-				Model:   "step-3.7-flash",
-				Extra: map[string]any{
-					"request_url": "https://api.stepfun.com/step_plan/v1/v1/chat/completions",
-				},
-			},
-			want: wantStepFunComChat,
-		},
-		{
-			name: "legacy chat_url stepfun typo is repaired",
-			cfg: provider.Config{
-				Name:    "stepfun",
-				BaseURL: "https://example.invalid/v1",
-				Model:   "step-3.7-flash",
-				Extra: map[string]any{
-					"chat_url": "https://api.stepfun.com/step_plan/chat/completions/",
-				},
-			},
-			want: wantStepFunComChat,
-		},
-		{
-			name: "third-party base_url still appends chat completions",
-			cfg: provider.Config{
-				Name:    "other",
-				BaseURL: "https://base.example.com/v1",
-				Model:   "test-model",
-			},
-			want: "https://base.example.com/v1/chat/completions",
-		},
-		{
-			name: "standard stepfun api root keeps openai shape",
-			cfg: provider.Config{
-				Name:    "stepfun-standard",
-				BaseURL: "https://api.stepfun.com/v1",
-				Model:   "step-3.7-flash",
-			},
-			want: "https://api.stepfun.com/v1/chat/completions",
-		},
-		{
-			name: "unknown official path is not guessed",
-			cfg: provider.Config{
-				Name:    "stepfun",
-				BaseURL: "https://api.stepfun.com/step_plan/openai",
-				Model:   "step-3.7-flash",
-			},
-			want: "https://api.stepfun.com/step_plan/openai/chat/completions",
-		},
-		{
-			name: "third-party request_url wins untouched",
-			cfg: provider.Config{
-				Name:    "other",
-				BaseURL: "https://api.stepfun.com/step_plan",
-				Model:   "test-model",
-				Extra: map[string]any{
-					"request_url": "https://exact.example.com/custom/",
-				},
-			},
-			want: "https://exact.example.com/custom/",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			p, err := New(tt.cfg)
-			if err != nil {
-				t.Fatalf("New: %v", err)
-			}
-			got := p.(*client).chatURL
-			if got != tt.want {
-				t.Fatalf("chatURL = %q, want %q", got, tt.want)
 			}
 		})
 	}

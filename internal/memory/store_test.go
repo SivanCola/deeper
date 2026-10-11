@@ -3,7 +3,6 @@ package memory
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -39,7 +38,7 @@ func TestRenderEscapesYAMLMetacharacters(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			list := s.List()
+			list := s.ListAll()
 			if len(list) != 1 {
 				t.Fatalf("want 1 memory, got %d", len(list))
 			}
@@ -60,48 +59,13 @@ func TestRenderEscapesYAMLMetacharacters(t *testing.T) {
 	}
 }
 
-// TestRenderPlainValuesUsesPreviousReleaseRoutingType keeps project scope safe
-// when an older binary reads a project-scoped user preference.
-func TestRenderPlainValuesUsesPreviousReleaseRoutingType(t *testing.T) {
-	got := render(Memory{
-		Title:       "Prefers tabs",
-		Description: "User prefers tabs over spaces",
-		Type:        TypeUser,
-		Body:        "Always indent with tabs.",
-	}, "prefers-tabs")
-	want := "---\n" +
-		"name: prefers-tabs\n" +
-		"title: Prefers tabs\n" +
-		"description: User prefers tabs over spaces\n" +
-		"metadata:\n" +
-		"  type: project\n" +
-		"  fact_type: user\n" +
-		"  scope: project\n" +
-		"---\n\n" +
-		"Always indent with tabs.\n"
-	if got != want {
-		t.Fatalf("plain-value render changed bytes:\ngot:\n%s\nwant:\n%s", got, want)
-	}
-}
-
-func TestRenderKeepsPreviousReleaseRoutingScopeSafe(t *testing.T) {
+func TestRenderPreservesIndependentTypeAndScope(t *testing.T) {
 	for _, scope := range []FactScope{FactScopeProject, FactScopeGlobal} {
 		for _, typ := range []Type{TypeUser, TypeFeedback, TypeProject, TypeReference} {
-			label := string(scope) + "-" + string(typ)
-			t.Run(label, func(t *testing.T) {
-				fm, _ := splitFrontmatter(render(Memory{Description: "d", Type: typ, Scope: scope, Body: "b"}, label))
-				if got := persistedFactType(fm); got != typ {
-					t.Fatalf("new reader type = %q, want %q; frontmatter=%v", got, typ, fm)
-				}
-				legacyType := NormalizeType(fm["type"])
-				legacyRoutesGlobal := legacyType == TypeUser || legacyType == TypeFeedback
-				if wantGlobal := scope == FactScopeGlobal; legacyRoutesGlobal != wantGlobal {
-					t.Fatalf("previous release type %q routes global=%v, want %v; frontmatter=%v", legacyType, legacyRoutesGlobal, wantGlobal, fm)
-				}
-				if got := factScopeFromFrontmatter(fm["scope"]); got != scope {
-					t.Fatalf("new reader scope = %q, want %q", got, scope)
-				}
-			})
+			fm, _ := splitFrontmatter(render(Memory{Type: typ, Scope: scope, Body: "fact"}, "fact"))
+			if persistedFactType(fm) != typ || factScopeFromFrontmatter(fm["scope"]) != scope || fm["fact_type"] != "" {
+				t.Fatalf("frontmatter: %v", fm)
+			}
 		}
 	}
 }
@@ -130,7 +94,7 @@ func TestStoreSaveAndIndex(t *testing.T) {
 		t.Fatalf("index missing entry:\n%s", idx)
 	}
 
-	list := s.List()
+	list := s.ListAll()
 	if len(list) != 1 {
 		t.Fatalf("want 1 memory, got %d", len(list))
 	}
@@ -149,6 +113,10 @@ func TestStoreListDecodesGB18030MemoryFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := `---
+id: mem-cn
+revision: 1
+name: cn-pref
+scope: project
 title: 中文偏好
 description: 使用中文回答
 type: user
@@ -158,7 +126,7 @@ type: user
 		t.Fatal(err)
 	}
 
-	memories := s.List()
+	memories := s.ListAll()
 	if len(memories) != 1 {
 		t.Fatalf("List() = %+v, want one decoded memory", memories)
 	}
@@ -238,7 +206,7 @@ func TestStoreSaveTitleInIndexAndFrontmatter(t *testing.T) {
 	if idx := s.Index(); !strings.Contains(idx, "[Prefers tabs](project/tabs-rule.md)") {
 		t.Fatalf("index link should use the title label:\n%s", idx)
 	}
-	if got := s.List()[0].Title; got != "Prefers tabs" {
+	if got := s.ListAll()[0].Title; got != "Prefers tabs" {
 		t.Fatalf("title not round-tripped: %q", got)
 	}
 }
@@ -281,7 +249,7 @@ func TestStoreDelete(t *testing.T) {
 	if !strings.Contains(idx, "beta.md") {
 		t.Fatalf("unrelated entry lost on delete:\n%s", idx)
 	}
-	if names := s.List(); len(names) != 1 || names[0].Name != "beta" {
+	if names := s.ListAll(); len(names) != 1 || names[0].Name != "beta" {
 		t.Fatalf("List after delete = %+v, want only beta", names)
 	}
 }
@@ -379,8 +347,8 @@ func TestStoreArchiveReturnsArchivePath(t *testing.T) {
 	if archived[0].ArchivedAt.IsZero() {
 		t.Fatalf("archived entry missing timestamp: %+v", archived[0])
 	}
-	if len(s.List()) != 0 {
-		t.Fatalf("active List should exclude archived memories: %+v", s.List())
+	if len(s.ListAll()) != 0 {
+		t.Fatalf("active List should exclude archived memories: %+v", s.ListAll())
 	}
 }
 
@@ -431,8 +399,8 @@ func TestStoreListArchivedNewestFirst(t *testing.T) {
 		name string
 		body string
 	}{
-		{"20260101-010000.000-old.md", render(Memory{Name: "old", Description: "old d", Type: TypeProject, Body: "old body"}, "old")},
-		{"20260102-010000.000-new.md", render(Memory{Name: "new", Description: "new d", Type: TypeFeedback, Body: "new body"}, "new")},
+		{"20260101-010000.000-old.md", render(Memory{ID: "mem-old", Revision: 1, Scope: FactScopeProject, Name: "old", Description: "old d", Type: TypeProject, Body: "old body"}, "old")},
+		{"20260102-010000.000-new.md", render(Memory{ID: "mem-new", Revision: 1, Scope: FactScopeGlobal, Name: "new", Description: "new d", Type: TypeFeedback, Body: "new body"}, "new")},
 	}
 	for _, f := range files {
 		if err := os.WriteFile(filepath.Join(dir, f.name), []byte(f.body), 0o644); err != nil {
@@ -474,20 +442,16 @@ func TestNormalizeType(t *testing.T) {
 	}
 }
 
-// TestStoreForSlug ensures the project path becomes one filesystem-safe segment.
-func TestStoreForSlug(t *testing.T) {
-	s := StoreFor("/home/me/.deepzora", "/Users/me/proj")
-	if strings.Count(filepath.Base(filepath.Dir(s.Dir)), "/") != 0 {
-		t.Fatalf("slug should have no separators: %s", s.Dir)
+func TestStoreForWorkspaceIdentity(t *testing.T) {
+	home, root := t.TempDir(), t.TempDir()
+	store := StoreFor(home, root)
+	again := StoreFor(home, root)
+	other := StoreFor(home, t.TempDir())
+	if store.Dir != again.Dir || store.Dir == other.Dir {
+		t.Fatalf("workspace identity directories = %q / %q / %q", store.Dir, again.Dir, other.Dir)
 	}
-	// config.WorkspaceSlug folds case on Windows (equivalent spellings of one
-	// folder must share a slug); unix slugs keep the original case.
-	want := "-Users-me-proj"
-	if runtime.GOOS == "windows" {
-		want = "-users-me-proj"
-	}
-	if !strings.Contains(s.Dir, want) {
-		t.Fatalf("unexpected slug: %s", s.Dir)
+	if filepath.Dir(filepath.Dir(store.Dir)) != filepath.Join(home, "projects") {
+		t.Fatalf("memory escaped project home: %q", store.Dir)
 	}
 }
 
@@ -495,7 +459,7 @@ func TestStoreForSlug(t *testing.T) {
 // and errors cleanly on Save.
 func TestDisabledStoreIsNoOp(t *testing.T) {
 	var s Store
-	if s.Index() != "" || s.List() != nil {
+	if s.Index() != "" || s.ListAll() != nil {
 		t.Fatal("disabled store should read empty")
 	}
 	if _, err := s.Save(Memory{Name: "x", Description: "d", Body: "b"}); err == nil {
@@ -549,7 +513,7 @@ func TestStoreGlobalAndProject(t *testing.T) {
 	}
 
 	// List merges both directories
-	list := s.List()
+	list := s.ListAll()
 	if len(list) != 4 {
 		t.Fatalf("want 4 memories, got %d", len(list))
 	}
@@ -569,7 +533,7 @@ func TestStoreGlobalAndProject(t *testing.T) {
 	}
 
 	// List after delete
-	list2 := s.List()
+	list2 := s.ListAll()
 	if len(list2) != 3 {
 		t.Fatalf("want 3 memories after delete, got %d", len(list2))
 	}
@@ -581,45 +545,27 @@ func TestStoreGlobalAndProject(t *testing.T) {
 	}
 }
 
-func TestStoreSaveRemovesStaleCopyWhenScopeChanges(t *testing.T) {
+func TestStoreSaveKeepsSameNamedFactsInDifferentScopes(t *testing.T) {
 	dir := t.TempDir()
-	s := Store{
-		Dir:       filepath.Join(dir, "project", "memory"),
-		GlobalDir: filepath.Join(dir, "global"),
-	}
-
-	globalPath, err := s.Save(Memory{Name: "same-name", Description: "old global", Type: TypeFeedback, Scope: FactScopeGlobal, Body: "old body"})
+	s := Store{Dir: filepath.Join(dir, "project", "memory"), GlobalDir: filepath.Join(dir, "global")}
+	global, err := s.SaveWithOptions(Memory{Name: "same-name", Scope: FactScopeGlobal, Description: "global fact", Body: "global body"}, SaveOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectPath, err := s.Save(Memory{Name: "same-name", Description: "new project", Type: TypeFeedback, Scope: FactScopeProject, Body: "new body"})
+	project, err := s.SaveWithOptions(Memory{Name: "same-name", Scope: FactScopeProject, Description: "project fact", Body: "project body"}, SaveOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(projectPath, s.Dir) {
-		t.Fatalf("project-scoped rewrite should land in project dir, got %s", projectPath)
+	if global.Memory.ID == project.Memory.ID {
+		t.Fatal("scopes reused one identity")
 	}
-	if _, err := os.Stat(globalPath); !os.IsNotExist(err) {
-		t.Fatalf("old global active file should be archived away, stat err = %v", err)
+	for _, fact := range []SaveResult{global, project} {
+		if got, ok := s.Read(fact.Memory.ID); !ok || got.Body != fact.Memory.Body || got.Scope != fact.Memory.Scope {
+			t.Fatalf("scope changed or fact removed: %+v", got)
+		}
 	}
-	globalIndex, err := os.ReadFile(filepath.Join(s.GlobalDir, indexFile))
-	if err != nil {
-		t.Fatalf("read global index: %v", err)
-	}
-	if strings.Contains(string(globalIndex), "same-name.md") {
-		t.Fatalf("old global index line should be removed:\n%s", globalIndex)
-	}
-
-	list := s.List()
-	if len(list) != 1 {
-		t.Fatalf("List() = %+v, want one active copy", list)
-	}
-	if list[0].Type != TypeFeedback || list[0].Scope != FactScopeProject || !strings.Contains(list[0].Body, "new body") {
-		t.Fatalf("active copy = %+v, want new project body", list[0])
-	}
-	idx := s.Index()
-	if strings.Contains(idx, "old global") || !strings.Contains(idx, "new project") {
-		t.Fatalf("merged index should reflect new scope only:\n%s", idx)
+	if got := s.ListAll(); len(got) != 2 {
+		t.Fatalf("facts=%+v, want both scopes", got)
 	}
 }
 
@@ -675,7 +621,7 @@ func TestStoreDefaultsNewMemoriesToProjectScope(t *testing.T) {
 	if !strings.HasPrefix(path, s.Dir) {
 		t.Fatalf("default save path = %q, want project dir %q", path, s.Dir)
 	}
-	list := s.List()
+	list := s.ListAll()
 	if len(list) != 1 || list[0].Scope != FactScopeProject {
 		t.Fatalf("default memory = %+v, want project scope", list)
 	}
@@ -697,122 +643,6 @@ func TestStoreSaveWithoutScopePreservesExistingGlobalScope(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(s.Dir, "same-name.md")); !os.IsNotExist(err) {
 		t.Fatalf("unexpected project copy after inherited update, stat err=%v", err)
-	}
-}
-
-func TestStoreInfersLegacyScopeFromContainingDirectory(t *testing.T) {
-	dir := t.TempDir()
-	s := Store{Dir: filepath.Join(dir, "project"), GlobalDir: filepath.Join(dir, "global")}
-	for _, tc := range []struct {
-		dir   string
-		name  string
-		scope FactScope
-	}{
-		{s.Dir, "legacy-project", FactScopeProject},
-		{s.GlobalDir, "legacy-global", FactScopeGlobal},
-	} {
-		if err := os.MkdirAll(tc.dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		legacy := "---\nname: " + tc.name + "\ndescription: legacy\nmetadata:\n  type: feedback\n---\n\nbody\n"
-		if err := os.WriteFile(filepath.Join(tc.dir, tc.name+".md"), []byte(legacy), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		if err := reindexIn(tc.dir, tc.name, Memory{Name: tc.name, Description: "legacy", Type: TypeFeedback, Scope: tc.scope}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	got := map[string]FactScope{}
-	for _, m := range s.List() {
-		got[m.Name] = m.Scope
-	}
-	if got["legacy-project"] != FactScopeProject || got["legacy-global"] != FactScopeGlobal {
-		t.Fatalf("legacy scopes = %+v", got)
-	}
-}
-
-// TestStoreDeleteRemovesFromAllDirs verifies that after a scope migration (same
-// name in both GlobalDir and Dir), Delete removes both copies so the memory
-// truly disappears.
-func TestStoreDeleteRemovesFromAllDirs(t *testing.T) {
-	dir := t.TempDir()
-	s := Store{
-		Dir:       filepath.Join(dir, "project", "memory"),
-		GlobalDir: filepath.Join(dir, "global"),
-	}
-
-	// Simulate migration: write the same memory directly into both dirs.
-	name := "prefers-tabs"
-	for _, d := range []string{s.Dir, s.GlobalDir} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		m := Memory{Name: name, Description: "user pref", Type: TypeUser, Body: "use tabs"}
-		if err := os.WriteFile(filepath.Join(d, name+".md"), []byte(render(m, name)), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		if err := reindexIn(d, name, m); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// Both copies should appear, but deduplicated.
-	list := s.List()
-	if len(list) != 1 {
-		t.Fatalf("want 1 deduplicated memory, got %d", len(list))
-	}
-
-	// Delete should remove from BOTH directories.
-	if err := s.Delete(name); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(filepath.Join(s.GlobalDir, name+".md")); !os.IsNotExist(err) {
-		t.Fatal("global copy should be gone after delete")
-	}
-	if _, err := os.Stat(filepath.Join(s.Dir, name+".md")); !os.IsNotExist(err) {
-		t.Fatal("project copy should be gone after delete")
-	}
-
-	list2 := s.List()
-	if len(list2) != 0 {
-		t.Fatalf("want 0 memories after delete, got %d", len(list2))
-	}
-	if idx := s.Index(); idx != "" {
-		t.Fatalf("Index() should be empty after deleting all entries, got:\n%s", idx)
-	}
-}
-
-// TestStoreIndexDeduplicatesAcrossDirs verifies Index() does not emit duplicate
-// lines when the same memory name exists in both GlobalDir and Dir.
-func TestStoreIndexDeduplicatesAcrossDirs(t *testing.T) {
-	dir := t.TempDir()
-	s := Store{
-		Dir:       filepath.Join(dir, "project", "memory"),
-		GlobalDir: filepath.Join(dir, "global"),
-	}
-
-	// Write the same memory into both dirs (migration scenario).
-	name := "prefers-tabs"
-	for _, d := range []string{s.GlobalDir, s.Dir} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		m := Memory{Name: name, Description: "user pref", Type: TypeUser, Body: "use tabs"}
-		if err := os.WriteFile(filepath.Join(d, name+".md"), []byte(render(m, name)), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		if err := reindexIn(d, name, m); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	idx := s.Index()
-	count := strings.Count(idx, name+".md")
-	if count != 1 {
-		t.Fatalf("want exactly 1 index line for %s, got %d:\n%s", name, count, idx)
-	}
-	if strings.Count(idx, "# Memory") != 0 {
-		t.Fatalf("merged index should have 0 # Memory headers (Block() adds one), got %d:\n%s", strings.Count(idx, "# Memory"), idx)
 	}
 }
 

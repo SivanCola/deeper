@@ -299,9 +299,6 @@ func (m *chatTUI) runHooksSubcommand(input string) {
 	switch sub {
 	case "", "list", "ls":
 		m.hooksList(cwd)
-	case "trust":
-		// Backward-compatible response for old clients and saved commands.
-		m.notice("project hooks are enabled automatically; no trust action is required")
 	default:
 		m.notice("unknown /hooks subcommand " + args[1] + " — try: /hooks or /hooks list")
 	}

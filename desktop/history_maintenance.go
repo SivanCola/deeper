@@ -4,7 +4,6 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"encoding/json"
-	"slices"
 )
 
 func maintenanceHistoryRow(op *event.SessionOperationInfo) HistoryMessage {
@@ -24,18 +23,4 @@ func maintenanceHistoryMessage(m provider.Message) []HistoryMessage {
 	row := maintenanceHistoryRow(&op)
 	row.RecordID = m.ID
 	return []HistoryMessage{row}
-}
-
-func upsertMaintenancePreview(rows []HistoryMessage, op *event.SessionOperationInfo) []HistoryMessage {
-	if op == nil || op.OperationID == "" {
-		return rows
-	}
-	row := maintenanceHistoryRow(op)
-	for i, prior := range slices.Backward(rows) {
-		if prior.OperationID == op.OperationID {
-			rows[i] = row
-			return rows
-		}
-	}
-	return append(rows, row)
 }

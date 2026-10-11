@@ -14,30 +14,15 @@ release_version_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([
 case "$channel" in
 	stable)
 		version_pattern="$stable_version_pattern"
-		legacy=false
 		;;
 	preview)
 		version_pattern="$preview_version_pattern"
-		legacy=false
 		;;
 	any)
 		version_pattern="$release_version_pattern"
-		legacy=false
-		;;
-	legacy-stable)
-		version_pattern="$stable_version_pattern"
-		legacy=true
-		;;
-	legacy-preview)
-		version_pattern="$preview_version_pattern"
-		legacy=true
-		;;
-	legacy-any)
-		version_pattern="$release_version_pattern"
-		legacy=true
 		;;
 	*)
-		echo "Desktop manifest channel must be stable, preview, any, legacy-stable, legacy-preview, or legacy-any: $channel" >&2
+		echo "Desktop manifest channel must be stable, preview, or any: $channel" >&2
 		exit 2
 		;;
 esac
@@ -54,10 +39,7 @@ fi
 expected_tag="desktop-${version}"
 github_base="https://github.com/SivanCola/deepzora/releases/download/${expected_tag}/"
 r2_base="https://github.com/SivanCola/deepzora/releases/download/${expected_tag}/"
-legacy_preview_base="https://github.com/SivanCola/deepzora/releases/download/desktop-preview/"
-if [ "$channel" = "legacy-preview" ] && [ "$asset_base" = "$legacy_preview_base" ]; then
-	:
-elif [ "$asset_base" != "$github_base" ] && [ "$asset_base" != "$r2_base" ]; then
+if [ "$asset_base" != "$github_base" ] && [ "$asset_base" != "$r2_base" ]; then
 	echo "invalid official Desktop asset base: $asset_base" >&2
 	exit 1
 fi
@@ -70,7 +52,7 @@ jq -e \
 	--arg version "$version" \
 	--arg notes_version "$notes_version" \
 	--arg base "$asset_base" \
-	--argjson legacy "$legacy" '
+'
 	def exact_keys($expected):
 		(type == "object") and ((keys | sort) == ($expected | sort));
 	def valid_asset($name):
@@ -83,10 +65,7 @@ jq -e \
 	(type == "object") and
 	(.version == $version) and
 	(.download_page == "https://github.com/SivanCola/deepzora/releases") and
-	(if $legacy
-		then (.release_notes_url == null or .release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_version + "/"))
-		else (.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_version + "/"))
-	end) and
+	(.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_version + "/")) and
 	(.platforms | exact_keys([
 		"darwin-arm64",
 		"darwin-amd64",
@@ -101,25 +80,10 @@ jq -e \
 	(.platforms["linux-amd64"] | valid_asset("Deepzora-linux-amd64.tar.gz")) and
 	(.native_packages | exact_keys(["linux-amd64"])) and
 	(.native_packages["linux-amd64"] | valid_asset("Deepzora-linux-amd64.deb")) and
-	(if $legacy and (.downloads == null)
-		then true
-		else
-			((.downloads | exact_keys([
-				"Deepzora-darwin-arm64.dmg",
-				"Deepzora-darwin-amd64.dmg",
-				"Deepzora-darwin-universal.dmg",
-				"Deepzora-windows-amd64.zip"
-			])) or ($legacy and (.downloads | exact_keys([
-				"Deepzora-darwin-universal.dmg",
-				"Deepzora-windows-amd64.zip"
-			])))) and
-			(.downloads["Deepzora-darwin-universal.dmg"] | valid_asset("Deepzora-darwin-universal.dmg")) and
-			(.downloads["Deepzora-windows-amd64.zip"] | valid_asset("Deepzora-windows-amd64.zip")) and
-			(if .downloads["Deepzora-darwin-arm64.dmg"] == null
-				then $legacy
-				else
-					(.downloads["Deepzora-darwin-arm64.dmg"] | valid_asset("Deepzora-darwin-arm64.dmg")) and
-					(.downloads["Deepzora-darwin-amd64.dmg"] | valid_asset("Deepzora-darwin-amd64.dmg"))
-			end)
-	end)
+ (.downloads | exact_keys(["Deepzora-darwin-arm64.dmg","Deepzora-darwin-amd64.dmg","Deepzora-darwin-universal.dmg","Deepzora-windows-amd64.zip"])) and
+ (.downloads["Deepzora-darwin-arm64.dmg"] | valid_asset("Deepzora-darwin-arm64.dmg")) and
+ (.downloads["Deepzora-darwin-amd64.dmg"] | valid_asset("Deepzora-darwin-amd64.dmg")) and
+ (.downloads["Deepzora-darwin-universal.dmg"] | valid_asset("Deepzora-darwin-universal.dmg")) and
+ (.downloads["Deepzora-windows-amd64.zip"] | valid_asset("Deepzora-windows-amd64.zip"))
+
 ' "$manifest" >/dev/null

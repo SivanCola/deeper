@@ -98,48 +98,10 @@ func compressionVisibleMessages(msgs []provider.Message) []provider.Message {
 	out := make([]provider.Message, 0, len(msgs)+1)
 	for _, msg := range msgs {
 		if !msg.LocalOnly {
-			summary, user, split := splitLegacyCoalescedSummary(msg)
-			if split {
-				out = append(out, summary, user)
-			} else {
-				out = append(out, msg)
-			}
+			out = append(out, msg)
 		}
 	}
 	return out
-}
-
-// Older schema-v1 sidecars may have persisted a strict-role merge of the
-// summary and its following user turn. Split that legacy shape for range
-// planning; new sidecars keep the logical messages separate and coalesce only
-// on the provider request copy.
-func splitLegacyCoalescedSummary(msg provider.Message) (provider.Message, provider.Message, bool) {
-	if !isCompactionSummary(msg) {
-		return provider.Message{}, provider.Message{}, false
-	}
-	separator := summaryTagClose + "\n\n"
-	i := strings.Index(msg.Content, separator)
-	if i < 0 || i+len(separator) >= len(msg.Content) {
-		return provider.Message{}, provider.Message{}, false
-	}
-	summary := msg
-	summary.Origin = provider.MessageOriginHost
-	summary.Content = msg.Content[:i+len(summaryTagClose)]
-	summary.RawContent = ""
-	summary.Images = nil
-	summary.ImageInputs = nil
-	summary.ToolCalls = nil
-	summary.ResponsesItems = nil
-	summary.ServerSearch = nil
-	summary.CreatedAt = 0
-	user := msg
-	// The legacy coalesced record did not retain the following turn's
-	// provenance. Empty keeps old-session fallback available instead of
-	// asserting that an old host continuation was user-authored.
-	user.Origin = ""
-	user.Content = msg.Content[i+len(separator):]
-	user.RawContent = ""
-	return summary, user, true
 }
 
 func compressAnchorCandidate(msg provider.Message) bool {

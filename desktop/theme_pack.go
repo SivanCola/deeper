@@ -29,9 +29,8 @@ const (
 	themeStateFileName        = "desktop-theme-state.json"
 	// Schema v2: activeThemeId may only reference official, user or plugin
 	// packs. Base style ids (graphite/…) live exclusively in desktop.theme_style.
-	themeStateSchemaVer   = 2
-	themeStateSchemaVerV1 = 1
-	themeDirName          = "themes"
+	themeStateSchemaVer = 2
+	themeDirName        = "themes"
 )
 
 // Allowed base styles match the existing desktop theme directions.

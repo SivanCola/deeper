@@ -157,10 +157,9 @@ compactSettings.providers = [{
   added: true,
   kind: "openai",
   baseUrl: "https://context.example.com/v1",
-  chatUrl: "",
   models: ["context-model"],
   visionModels: [],
-  visionModelsConfigured: false,
+
   modelsUrl: "",
   default: "context-model",
   apiKeyEnv: "",
@@ -582,7 +581,7 @@ ok(
   "selected bot detail places enable, approval, and model controls between summary and access control",
 );
 ok(document.body.textContent?.includes("ou_mock_user_001") === true, "selected bot detail shows its trusted user");
-ok(document.body.textContent?.includes("Legacy global allowlist") === true, "advanced area keeps the legacy global allowlist");
+ok(document.body.textContent?.includes("Legacy global allowlist") === false, "advanced area excludes the retired global allowlist");
 ok(document.querySelector(".bot-simple-advanced")?.textContent?.includes("local control API") === false, "advanced area no longer owns mobile/control API setup");
 
 // DingTalk channel: a persisted ClientID must round-trip back into the UI.
@@ -706,10 +705,9 @@ providerRaceSettings.providers = [{
   added: true,
   kind: "openai",
   baseUrl: "https://old.example.com/v1",
-  chatUrl: "",
   models: ["old-model"],
   visionModels: [],
-  visionModelsConfigured: false,
+
   modelsUrl: "",
   default: "missing-default",
   apiKeyEnv: "RACE_PROVIDER_API_KEY",
@@ -796,10 +794,9 @@ providerRefreshCancelSettings.providers = [{
   added: true,
   kind: "anthropic",
   baseUrl: "https://api.deepseek.com/anthropic",
-  chatUrl: "",
   models: ["deepseek-v4-flash"],
   visionModels: [],
-  visionModelsConfigured: true,
+
   visionCapability: "unsupported",
   modelsUrl: "https://api.deepseek.com/models",
   default: "deepseek-v4-flash",
@@ -860,133 +857,6 @@ await act(async () => {
   providerRefreshCancelRoot.unmount();
 });
 
-// A persisted protocol upgrade with a failed runtime refresh must be read back
-// so the panel offers application retry without repeating the saved upgrade.
-const upgradeFailureRootEl = document.createElement("div");
-document.body.appendChild(upgradeFailureRootEl);
-const upgradeFailureRoot = createRoot(upgradeFailureRootEl);
-let upgradeFailureSettings = baseSettings("standard");
-upgradeFailureSettings.defaultModel = "deepseek/deepseek-v4-flash";
-upgradeFailureSettings.providers = [{
-  name: "deepseek-flash",
-  builtIn: true,
-  added: true,
-  kind: "openai",
-  baseUrl: "https://api.deepseek.com",
-  chatUrl: "",
-  models: ["deepseek-v4-flash"],
-  visionModels: [],
-  visionModelsConfigured: true,
-  visionCapability: "unsupported",
-  modelsUrl: "https://api.deepseek.com/models",
-  default: "deepseek-v4-flash",
-  apiKeyEnv: "DEEPSEEK_API_KEY",
-  keySet: true,
-  requiresKey: true,
-  configured: true,
-  balanceUrl: "https://api.deepseek.com/user/balance",
-  contextWindow: 1_000_000,
-  reasoningProtocol: "deepseek",
-  thinking: "enabled",
-  webSearch: false,
-  serverWebSearchCapability: false,
-  supportedEfforts: ["low", "high", "max"],
-  defaultEffort: "high",
-  recommendedUpgradeAvailable: true,
-}];
-let upgradeFailureSettingsCalls = 0;
-let upgradeFailureMutationCalls = 0;
-let upgradeFailureChanged: SettingsView | undefined;
-desktopStub.replaceCommands(({
-  main: {
-    App: {
-      Settings: async () => {
-        upgradeFailureSettingsCalls += 1;
-        return upgradeFailureSettings;
-      },
-      FetchAllProviderModelCatalogs: async () => ({}),
-      ApplyModelSettings: async (change) => {
-        eq(change.kind, "protocol_upgrade", "protocol upgrade uses the structured settings service");
-        upgradeFailureMutationCalls += 1;
-        upgradeFailureSettings = {
-          ...upgradeFailureSettings,
-          providers: upgradeFailureSettings.providers.map((provider) => ({
-            ...provider,
-            kind: "anthropic",
-            baseUrl: "https://api.deepseek.com/anthropic",
-            webSearch: true,
-            serverWebSearchCapability: true,
-            recommendedUpgradeAvailable: false,
-          })),
-        };
-        return { requestId: change.requestId, persisted: true, revision: "upgraded", application: "failed", targets: [{tabId: "session-one", application: "failed", appliedRevision: "old", desiredRevision: "upgraded"}], issues: [{code: "apply_failed", message: "workspace runtime boot failed after protocol upgrade"}], appliedCatalogs: [] };
-      },
-    } as Partial<AppBindings> as AppBindings,
-  },
-}).main.App);
-
-await act(async () => {
-  upgradeFailureRoot.render(
-    <LocaleProvider>
-      <SettingsPanel
-        initialTab="models"
-        desktopPlatform="linux"
-        onClose={() => {}}
-        onChanged={(settings?: SettingsView) => {
-          upgradeFailureChanged = settings;
-        }}
-      />
-    </LocaleProvider>,
-  );
-  await flushPromises();
-});
-const upgradeFailureAccessButton = Array.from(upgradeFailureRootEl.querySelectorAll(".settings-center__navitem")).find(
-  (button) => button.textContent?.trim() === "Model services",
-) as HTMLButtonElement | undefined;
-if (!upgradeFailureAccessButton) throw new Error("upgrade failure Access subtab did not render");
-await act(async () => {
-  upgradeFailureAccessButton.click();
-  await flushPromises();
-});
-await waitFor(
-  "legacy DeepSeek protocol upgrade action",
-  () => upgradeFailureRootEl.textContent?.includes("Upgrade to recommended protocol") === true,
-);
-let upgradeFailureButton = Array.from(upgradeFailureRootEl.querySelectorAll("button")).find(
-  (button) => button.textContent?.includes("Upgrade to recommended protocol"),
-) as HTMLButtonElement | undefined;
-if (!upgradeFailureButton) throw new Error("DeepSeek protocol upgrade button did not render");
-await act(async () => {
-  upgradeFailureButton?.click();
-  await flushPromises();
-});
-upgradeFailureButton = upgradeFailureRootEl.querySelector<HTMLButtonElement>(
-  ".provider-protocol-upgrade .inline-confirm > button",
-) ?? undefined;
-if (upgradeFailureButton?.textContent?.trim() !== "Confirm") throw new Error("DeepSeek protocol upgrade confirmation did not render");
-await act(async () => {
-  upgradeFailureButton?.click();
-  await flushPromises();
-});
-await waitFor("post-error settings reload", () => upgradeFailureSettingsCalls === 2);
-
-eq(upgradeFailureMutationCalls, 1, "DeepSeek protocol upgrade mutation is invoked once");
-ok(
-  upgradeFailureRootEl.textContent?.includes("Upgrade to recommended protocol") === false,
-  "persisted DeepSeek protocol upgrade disappears after a runtime refresh error",
-);
-ok(
-  upgradeFailureRootEl.textContent?.includes("workspace runtime boot failed after protocol upgrade") === true,
-  "post-mutation reload preserves the original runtime error",
-);
-ok(
-  upgradeFailureChanged?.providers[0]?.kind === "anthropic",
-  "onChanged receives the authoritative persisted protocol after a runtime error",
-);
-
-await act(async () => {
-  upgradeFailureRoot.unmount();
-});
 dom.window.close();
 
 console.log(`\n${passed} passed, ${failed} failed, ${passed + failed} total`);

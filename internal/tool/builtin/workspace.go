@@ -81,28 +81,23 @@ func (w Workspace) Tools(enabled ...string) []tool.Tool {
 	if shell.Kind == sandbox.ShellPowerShell {
 		shellTool.name = "pwsh"
 	}
-	legacyShell := tool.Tool(shellTool)
-	if shellTool.Name() == "pwsh" {
-		legacyShell, _ = AliasBash(shellTool, "bash")
-	}
 	overrides := map[string]tool.Tool{
-		"view_image":    viewImage{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
-		"present":       present{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
-		"read_file":     readFile{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots, overlay: w.FileOverlay},
-		"write_file":    writeFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay, receipt: w.FileWriteReceipt},
-		"edit_file":     editFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
-		"multi_edit":    multiEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
-		"move_file":     moveFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
-		"notebook_edit": notebookEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
-		"delete_range":  deleteRange{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
-		"delete_symbol": deleteSymbol{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
-		"code_index":    codeIndex{workDir: w.Dir, forbidRoots: forbidRoots},
-		"bash":          legacyShell,
-		"pwsh":          shellTool,
-		"ls":            listDir{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
-		"glob":          globTool{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
-		"grep":          grepTool{workDir: w.Dir, paths: w.ReadPaths, rg: w.Search.RgPath, forbidRoots: forbidRoots, sb: w.Bash, sessionTemp: w.SessionTemp, overlay: w.FileOverlay},
-		"web_fetch":     webFetch{proxySpec: w.ProxySpec},
+		"view_image":     viewImage{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
+		"present":        present{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
+		"read_file":      readFile{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots, overlay: w.FileOverlay},
+		"write_file":     writeFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay, receipt: w.FileWriteReceipt},
+		"edit_file":      editFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"multi_edit":     multiEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"move_file":      moveFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
+		"notebook_edit":  notebookEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"delete_range":   deleteRange{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"delete_symbol":  deleteSymbol{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"code_index":     codeIndex{workDir: w.Dir, forbidRoots: forbidRoots},
+		shellTool.Name(): shellTool,
+		"ls":             listDir{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
+		"glob":           globTool{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
+		"grep":           grepTool{workDir: w.Dir, paths: w.ReadPaths, rg: w.Search.RgPath, forbidRoots: forbidRoots, sb: w.Bash, sessionTemp: w.SessionTemp, overlay: w.FileOverlay},
+		"web_fetch":      webFetch{proxySpec: w.ProxySpec},
 	}
 	all := tool.Builtins()
 	if len(enabled) == 0 {
@@ -125,9 +120,6 @@ func (w Workspace) Tools(enabled ...string) []tool.Tool {
 	}
 	want := make(map[string]bool, len(enabled))
 	for _, n := range enabled {
-		if tool.IsShellToolName(n) {
-			n = "bash"
-		}
 		want[n] = true
 	}
 	out := make([]tool.Tool, 0, len(enabled))
@@ -142,7 +134,7 @@ func (w Workspace) Tools(enabled ...string) []tool.Tool {
 			out = append(out, t)
 		}
 	}
-	if shellTool.Name() == "pwsh" && want["bash"] {
+	if shellTool.Name() == "pwsh" && want["pwsh"] {
 		primary := BindWriteRootSet(shellTool, w.WriteRootSet)
 		out = append(out, primary)
 	}

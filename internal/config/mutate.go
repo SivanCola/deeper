@@ -112,7 +112,7 @@ func editConfigFile(path string, loadCredentials bool, edit func(*Config) error)
 		return err
 	}
 	defer unlock()
-	cfg, err := loadForEditStrict(path, loadCredentials, false)
+	cfg, err := loadForEditStrict(path, loadCredentials)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func resolveConfigEditTarget(path string) (configEditTarget, error) {
 	if err != nil {
 		return configEditTarget{}, err
 	}
-	userOwned := isUserConfigPath(path) || samePath(path, legacyConfigPath()) || samePath(path, UserCredentialsPath())
+	userOwned := isUserConfigPath(path) || samePath(path, UserCredentialsPath())
 	resolved, err := resolveConfigAccessPathUnpinned(path, userOwned)
 	if err != nil {
 		return configEditTarget{}, fmt.Errorf("lock config edits: %w", err)

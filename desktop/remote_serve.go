@@ -643,21 +643,7 @@ func (m *desktopRemoteManager) reloadServeProviders(ctx context.Context, generat
 		if err != nil {
 			log.Printf("[remote] reloadServeProviders: FAILED host=%s ws=%s err=%v", hostID, ws, err)
 			allOK = false
-			// Legacy serves lack this route; replace them asynchronously because
-			// EnsureServer currently holds serveMu.
-			if (strings.Contains(err.Error(), "status 404") || strings.Contains(err.Error(), "status 405")) && m.markCredFallback(hostID, ws) {
-				log.Printf("[remote] reloadServeProviders: legacy serve -> replacing host=%s ws=%s", hostID, ws)
-				go func(hostID, ws string) {
-					if err := m.StopServer(hostID, ws); err != nil {
-						log.Printf("[remote] reloadServeProviders: stop legacy serve failed host=%s ws=%s err=%v", hostID, ws, err)
-					}
-					if _, _, err := m.EnsureServer(context.Background(), hostID, ws); err != nil {
-						// EnsureServer errors can carry credential-configuration context.
-						// Keep logs useful for correlation without persisting that detail.
-						log.Printf("[remote] reloadServeProviders: restart legacy serve failed host=%s ws=%s", hostID, ws)
-					}
-				}(hostID, ws)
-			}
+
 			continue
 		}
 	}
@@ -732,27 +718,6 @@ func cancelServeBackgroundJobs(ctx context.Context, client *http.Client, base st
 		return err
 	}
 	return servePost(ctx, client, serveURL(base, "/jobs/cancel"), body)
-}
-
-// markCredFallback rate-limits the legacy-serve replacement to at most one
-// attempt every two minutes per host and workspace.
-func (m *desktopRemoteManager) markCredFallback(hostID, workspace string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	mh := m.hosts[hostID]
-	if mh == nil {
-		return false
-	}
-	now := time.Now().Unix()
-	if mh.credFallbackAt == nil {
-		mh.credFallbackAt = map[string]int64{}
-	}
-	last := mh.credFallbackAt[workspace]
-	if last != 0 && now-last < 120 {
-		return false
-	}
-	mh.credFallbackAt[workspace] = now
-	return true
 }
 
 func portOfAddr(addr string) (int, bool) {

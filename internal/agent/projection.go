@@ -124,26 +124,14 @@ const (
 
 // CompactionState is the session context sidecar payload.
 type CompactionState struct {
-	SchemaVersion      int                        `json:"schema_version"`
-	TranscriptVersion  uint64                     `json:"transcript_version"`
-	Projection         ContextProjection          `json:"projection"`
-	PromptCacheKey     string                     `json:"prompt_cache_key,omitempty"`
-	LastCacheState     string                     `json:"last_cache_state,omitempty"`
-	LastTrigger        string                     `json:"last_trigger,omitempty"`
-	LastMode           string                     `json:"last_mode,omitempty"`
-	LastSourceTokens   int                        `json:"last_source_tokens,omitempty"`
-	LastResultTokens   int                        `json:"last_result_tokens,omitempty"`
-	LastCompactionCost float64                    `json:"last_compaction_cost,omitempty"`
-	Generation         uint64                     `json:"generation,omitempty"`
-	LastReceipt        *ContextMaintenanceReceipt `json:"last_receipt,omitempty"`
-	BlockedInputHash   string                     `json:"blocked_input_hash,omitempty"`
-	BlockedReason      string                     `json:"blocked_reason,omitempty"`
-	// NativeContextEditingAccepted latches the first successful native request.
-	// ContextEditingFallbackLocal persists the only allowed request-shape switch:
-	// an explicit unsupported response before that latch was set.
-	NativeContextEditingAccepted bool      `json:"native_context_editing_accepted,omitempty"`
-	ContextEditingFallbackLocal  bool      `json:"context_editing_fallback_local,omitempty"`
-	UpdatedAt                    time.Time `json:"updated_at"`
+	SchemaVersion     int                        `json:"schema_version"`
+	TranscriptVersion uint64                     `json:"transcript_version"`
+	Projection        ContextProjection          `json:"projection"`
+	PromptCacheKey    string                     `json:"prompt_cache_key,omitempty"`
+	LastCacheState    string                     `json:"last_cache_state,omitempty"`
+	Generation        uint64                     `json:"generation,omitempty"`
+	LastReceipt       *ContextMaintenanceReceipt `json:"last_receipt,omitempty"`
+	UpdatedAt         time.Time                  `json:"updated_at"`
 }
 
 // CompactionTelemetry is the structured observability record for one
@@ -193,12 +181,8 @@ func LoadCompactionState(sessionPath string) (CompactionState, bool, error) {
 	if err := json.Unmarshal(b, &st); err != nil {
 		return CompactionState{}, false, fmt.Errorf("decode context state %s: %w", path, err)
 	}
-	if st.SchemaVersion != 0 && st.SchemaVersion != compactionStateSchemaV1 && st.SchemaVersion != compactionStateSchemaV2 &&
-		st.SchemaVersion != compactionStateSchemaV3 && st.SchemaVersion != compactionStateSchemaV4 {
+	if st.SchemaVersion != compactionStateSchemaV4 {
 		return CompactionState{}, false, fmt.Errorf("unsupported context schema version %d", st.SchemaVersion)
-	}
-	if st.SchemaVersion == 0 {
-		st.SchemaVersion = compactionStateSchemaV1
 	}
 	return st, true, nil
 }
@@ -222,15 +206,6 @@ func SaveCompactionState(sessionPath string, st CompactionState) error {
 	// LastReceipt is authoritative. Drop mirrored top-level last_*/blocked_*
 	// writer fields so new sidecars do not re-emit the pre-v3 dual schema.
 	// Old files with those keys still decode into the struct for readers.
-	st.LastTrigger = ""
-	st.LastMode = ""
-	st.LastSourceTokens = 0
-	st.LastResultTokens = 0
-	st.LastCompactionCost = 0
-	if st.LastReceipt != nil {
-		st.BlockedInputHash = ""
-		st.BlockedReason = ""
-	}
 	b, err := json.MarshalIndent(st, "", "  ")
 	if err != nil {
 		return err
@@ -271,143 +246,6 @@ func coveredPrefixHash(msgs []provider.Message, n int) string {
 	}
 	visible := modelInputMessages(msgs[:n])
 	return providerVisibleFingerprint(provider.SanitizeToolPairing(visible))
-}
-
-// boundedCoveredPrefixHash is the v3 bounded provider fingerprint. Keep the
-// named helper for old sidecar and load-repair compatibility tests.
-func boundedCoveredPrefixHash(msgs []provider.Message, n int) string {
-	if n <= 0 || n > len(msgs) {
-		return ""
-	}
-	visible := provider.ModelMessages(msgs[:n])
-	return providerVisibleFingerprint(provider.SanitizeToolPairing(visible))
-}
-
-// promotedCoveredPrefixHash reproduces the temporary v3 behavior that promoted
-// full tool RawContent into every provider request.
-func promotedCoveredPrefixHash(msgs []provider.Message, n int) string {
-	if n <= 0 || n > len(msgs) {
-		return ""
-	}
-	promoted := append([]provider.Message(nil), msgs[:n]...)
-	for i := range promoted {
-		if promoted[i].Role == provider.RoleTool && promoted[i].RawContent != "" {
-			promoted[i].Content = promoted[i].RawContent
-		}
-	}
-	return providerVisibleFingerprint(provider.SanitizeToolPairing(provider.ModelMessages(promoted)))
-}
-
-// normalizePromotedProjectionToolBodies converts the provider-visible tool
-// bodies persisted by the temporary RawContent-promoting implementation back
-// to canonical bounded Content. Every tool message must match a canonical tool
-// result exactly by identity and old provider-visible body. Duplicate call IDs
-// are safe only when every matching candidate maps to the same bounded body.
-func normalizePromotedProjectionToolBodies(projection, canonical []provider.Message, n int) ([]provider.Message, bool) {
-	if n <= 0 || n > len(canonical) {
-		return nil, false
-	}
-	normalized := append([]provider.Message(nil), projection...)
-	for i, projected := range normalized {
-		if projected.Role != provider.RoleTool {
-			continue
-		}
-		visibleBody := projected.Content
-		if projected.ProviderContent != "" {
-			visibleBody = projected.ProviderContent
-		}
-		boundedBody := ""
-		matched := false
-		for _, candidate := range canonical[:n] {
-			if candidate.Role != provider.RoleTool || candidate.ToolCallID != projected.ToolCallID || candidate.Name != projected.Name {
-				continue
-			}
-			matchesBounded := visibleBody == candidate.Content
-			matchesPromoted := candidate.RawContent != "" && visibleBody == candidate.RawContent
-			if !matchesBounded && !matchesPromoted {
-				continue
-			}
-			if matched && boundedBody != candidate.Content {
-				return nil, false
-			}
-			boundedBody = candidate.Content
-			matched = true
-		}
-		if !matched {
-			return nil, false
-		}
-		normalized[i].Content = boundedBody
-		normalized[i].RawContent = ""
-		normalized[i].ProviderContent = ""
-	}
-	return normalized, true
-}
-
-// migratePromotedCoveredPrefixHash normalizes a sidecar written while full tool
-// RawContent was model-visible. Migration is exact and atomic: both its hash and
-// retained tool bodies must match the historical form. Unrelated, stale, or
-// ambiguous sidecars stay invalid so callers drop only their projection body.
-func migratePromotedCoveredPrefixHash(st *CompactionState, msgs []provider.Message) bool {
-	if st == nil {
-		return false
-	}
-	n := st.Projection.CoveredCount
-	stored := st.Projection.CoveredPrefixHash
-	currentHash := coveredPrefixHash(msgs, n)
-	if stored == "" || currentHash == "" || stored == currentHash ||
-		stored != promotedCoveredPrefixHash(msgs, n) {
-		return false
-	}
-	normalizedMessages, ok := normalizePromotedProjectionToolBodies(st.Projection.Messages, msgs, n)
-	if !ok {
-		return false
-	}
-	st.Projection.Messages = normalizedMessages
-	st.Projection.CoveredPrefixHash = currentHash
-	if st.LastReceipt != nil && st.LastReceipt.CoveredPrefixHash == stored {
-		receipt := *st.LastReceipt
-		receipt.CoveredPrefixHash = currentHash
-		st.LastReceipt = &receipt
-	}
-	return true
-}
-
-// legacyCoveredPrefixHash reproduces the v1.25.2 fingerprint. It is used only
-// to migrate a sidecar whose persisted pre-repair transcript is still available;
-// new checkpoints always use coveredPrefixHash.
-func legacyCoveredPrefixHash(msgs []provider.Message, n int) string {
-	if n <= 0 || n > len(msgs) {
-		return ""
-	}
-	return providerVisibleFingerprint(provider.ModelMessages(msgs[:n]))
-}
-
-// migrateLegacyCoveredPrefixHash upgrades a v1.25.2 sidecar after LoadSession
-// performed a deterministic provider-visible repair. It is deliberately strict:
-// the stored legacy hash must match the exact pre-repair disk prefix, and that
-// prefix's wire-safe form must equal the current prefix. A real history or
-// system-prompt change therefore remains invalid.
-func migrateLegacyCoveredPrefixHash(st *CompactionState, current, preRepair []provider.Message) bool {
-	if st == nil || len(preRepair) == 0 {
-		return false
-	}
-	n := st.Projection.CoveredCount
-	stored := st.Projection.CoveredPrefixHash
-	if stored == "" || legacyCoveredPrefixHash(preRepair, n) != stored {
-		return false
-	}
-	preRepairWireHash := boundedCoveredPrefixHash(preRepair, n)
-	currentHash := coveredPrefixHash(current, n)
-	if currentHash == "" || preRepairWireHash != boundedCoveredPrefixHash(current, n) {
-		return false
-	}
-	st.Projection.CoveredPrefixHash = currentHash
-	if st.LastReceipt != nil && st.LastReceipt.CoveredPrefixHash == stored {
-		receipt := *st.LastReceipt
-		receipt.CoveredPrefixHash = currentHash
-		st.LastReceipt = &receipt
-	}
-	return true
 }
 
 // providerVisibleFingerprint is the stable hash of fields that reach a provider.
@@ -480,7 +318,7 @@ func projectionValid(st CompactionState, msgs []provider.Message, cacheKey strin
 	if len(st.Projection.Messages) == 0 {
 		return false
 	}
-	// Current lineage known: stored key must match (legacy native suffix ok).
+	// Current lineage known: the stored key must match exactly.
 	if cacheKey != "" {
 		if _, ok := lineageKeyCompatible(st.PromptCacheKey, cacheKey); !ok {
 			return false
@@ -505,14 +343,7 @@ func projectionContentValid(st CompactionState, msgs []provider.Message) bool {
 	if st.Projection.CoveredPrefixHash == "" {
 		return false
 	}
-	// Readers before v4 did not authenticate pinned revision provenance. Their
-	// projections may summarize or omit active pinned state, so fail closed and
-	// rebuild a v4 checkpoint from the canonical transcript.
-	if st.SchemaVersion < compactionStateSchemaV4 && containsPinnedContextRevision(msgs[:n]) {
-		return false
-	}
-	if st.SchemaVersion >= compactionStateSchemaV4 &&
-		st.Projection.PinnedContextHash != pinnedContextCoverageHash(msgs, n) {
+	if st.Projection.PinnedContextHash != pinnedContextCoverageHash(msgs, n) {
 		return false
 	}
 	if coveredPrefixHash(msgs, n) == st.Projection.CoveredPrefixHash {

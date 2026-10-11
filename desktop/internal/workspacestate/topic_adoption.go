@@ -37,13 +37,6 @@ func adoptedTopicIndex(state State) map[string]map[string]bool {
 			add(op.WorkspaceID, op.Presentation.TopicID)
 			continue
 		}
-		if op.Mapping == nil {
-			continue
-		}
-		mapping, exists := state.SourceMappings[op.Mapping.SourceKey]
-		if exists && mapping.WorkspaceID == op.WorkspaceID && mapping.SessionID == op.Mapping.SessionID {
-			add(mapping.WorkspaceID, op.Presentation.TopicID)
-		}
 	}
 	for _, removal := range state.TopicRemovals {
 		if removal.Disposition == "archive_sessions" && removal.Phase == "committed" {

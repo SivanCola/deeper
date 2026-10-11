@@ -48,7 +48,7 @@ function tabMeta(overrides: Partial<TabMeta> = {}): TabMeta {
     ready: true,
     running: false,
     mode: "normal",
-    toolApprovalMode: "ask",
+    toolApprovalMode: "workspace-write",
     tokenMode: "full",
     active: true,
     cwd: "/repo",
@@ -68,7 +68,6 @@ function metaFor(tab: TabMeta): Meta {
     workspacePath: tab.workspacePath,
     gitBranch: tab.gitBranch,
     autoApproveTools: false,
-    bypass: false,
     collaborationMode: tab.collaborationMode ?? "normal",
     toolApprovalMode: tab.toolApprovalMode ?? "ask",
     tokenMode: tab.tokenMode ?? "full",
@@ -213,7 +212,7 @@ await act(async () => {
   }, {
     goal: "Cross-tab safe goal",
     collaborationMode: "normal",
-    toolApprovalMode: "ask",
+    toolApprovalMode: "workspace-write",
   });
   await flushPromises();
 });
@@ -234,7 +233,7 @@ await act(async () => {
 
 eq(
   initialGoalCalls.join("|"),
-  "tab-a:Cross-tab safe goal:/ui-ux-pro-max Cross-tab safe goal:ui-ux-pro-max:normal:ask",
+  "tab-a:Cross-tab safe goal:/ui-ux-pro-max Cross-tab safe goal:ui-ux-pro-max:normal:workspace-write",
   "atomic Goal submit kept source tab A",
 );
 eq(initialGoalCalls.length, 1, "atomic Goal submit ran once");
@@ -261,7 +260,7 @@ await act(async () => {
     }, {
       goal: "Must not run skill",
       collaborationMode: "normal",
-      toolApprovalMode: "ask",
+      toolApprovalMode: "workspace-write",
     });
   } catch (error) {
     activationFailed = error instanceof Error && error.message.includes("workbench target changed");

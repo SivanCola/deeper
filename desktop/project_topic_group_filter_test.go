@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -23,24 +22,17 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 		t.Fatal(err)
 	}
 	app := NewApp()
-	installSessionCatalogForTest(t, app, dir, "project", root)
-	catalog := app.sessionCatalog.Load()
-	if catalog == nil {
-		t.Fatal("session catalog not installed")
-	}
-	for index, topicID := range []string{"group-a", "group-b", "ungrouped", "pinned"} {
-		if err := catalog.UpsertSession(context.Background(), sessioncatalog.SessionRecord{
-			Path: filepath.Join(dir, topicID+".jsonl"), Directory: dir,
-			Scope: "project", WorkspaceRoot: root, TopicID: topicID, TopicTitle: topicID,
-			LastActivityAt: int64(100 - index), Turns: 1,
-			TurnsState: sessioncatalog.TurnsValid, Health: sessioncatalog.HealthOK,
-		}); err != nil {
+	t.Cleanup(app.closeSessionServices)
+	for _, id := range []string{"group-a", "group-b", "ungrouped", "pinned"} {
+		ref, _ := createCurrentRegistrySession(t, app, root, id, true)
+		if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, id, id); err != nil {
+			t.Fatal(err)
+		}
+		if err := app.desktopSessionService("").SetTitle(t.Context(), ref, id); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := catalog.SyncMetadata(context.Background(), nil, []sessioncatalog.TopicMetadata{{
-		Scope: "project", WorkspaceRoot: root, TopicID: "pinned", Title: "pinned", Pinned: true,
-	}}); err != nil {
+	if err := app.SetTopicPinned("pinned", true); err != nil {
 		t.Fatal(err)
 	}
 	if err := app.SaveSessionGroups("project", root, []desktopGroup{
@@ -57,8 +49,8 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(first.Items) != 1 || first.Items[0].TopicID != "group-a" || first.NextCursor == "" {
-		t.Fatalf("first group page = %#v, want group-a and a next cursor", first)
+	if len(first.Items) != 1 || first.Items[0].TopicID != "group-b" || first.NextCursor == "" {
+		t.Fatalf("first group page = %#v, want group-b and a next cursor", first)
 	}
 	second, err := app.ListProjectTopics(ProjectTopicPageRequest{
 		Scope: "project", WorkspaceRoot: root, Limit: 1, Cursor: first.NextCursor,
@@ -67,8 +59,8 @@ func TestListProjectTopicsPaginatesCustomGroupsIndependently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(second.Items) != 1 || second.Items[0].TopicID != "group-b" || second.NextCursor != "" {
-		t.Fatalf("second group page = %#v, want group-b as final row", second)
+	if len(second.Items) != 1 || second.Items[0].TopicID != "group-a" || second.NextCursor != "" {
+		t.Fatalf("second group page = %#v, want group-a as final row", second)
 	}
 
 	ungrouped, err := app.ListProjectTopics(ProjectTopicPageRequest{

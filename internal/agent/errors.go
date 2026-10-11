@@ -2,7 +2,6 @@ package agent
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"deepzora/internal/provider"
@@ -48,18 +47,7 @@ func PauseClass(err error) string {
 	if errors.As(err, &maxSteps) {
 		return "max_steps"
 	}
-	var readiness *FinalReadinessError
-	if errors.As(err, &readiness) {
-		return "final_readiness"
-	}
-	var recovery *RecoveryPauseError
-	if errors.As(err, &recovery) {
-		return "recovery_paused"
-	}
-	var completion *CompletionUncertainError
-	if errors.As(err, &completion) {
-		return "completion_uncertain"
-	}
+
 	var incompleteRead *IncompleteReadError
 	if errors.As(err, &incompleteRead) {
 		return "incomplete_read"
@@ -118,102 +106,4 @@ func InspectRunPause(err error) (RunPauseInfo, bool) {
 		return RunPauseInfo{Kind: "incomplete_read", HostOwned: true, Reason: incompleteRead.Reason}, true
 	}
 	return RunPauseInfo{}, false
-}
-
-// ReadinessContinuationClass is retained for compatibility with hosts that
-// inspect FinalReadinessError. Ordinary Standard/Delivery turns never use it
-// to schedule another model request; only Goal/approved-Plan orchestration may
-// interpret the advisory class after the visible turn has ended.
-type ReadinessContinuationClass string
-
-const (
-	// ReadinessContinuationNone is also the zero value so older callers that
-	// construct FinalReadinessError directly never opt into another model turn.
-	ReadinessContinuationNone ReadinessContinuationClass = ""
-	// ReadinessContinuationGeneric covers ordinary post-write verification and
-	// review gaps for Goal/Plan diagnostics.
-	ReadinessContinuationGeneric ReadinessContinuationClass = "generic"
-	// ReadinessContinuationHighConfidence covers exact or strict, safely
-	// actionable readiness duties for Goal/Plan diagnostics.
-	ReadinessContinuationHighConfidence ReadinessContinuationClass = "high_confidence"
-)
-
-// FinalReadinessError reports that the model exhausted its recovery attempts
-// before satisfying the host-observed delivery checks.
-type FinalReadinessError struct {
-	Attempts          int
-	Reason            string
-	Missing           []string
-	ContinuationClass ReadinessContinuationClass
-	ProgressKey       string
-	// Operations names the concrete changes the host could not settle, so the
-	// report points at a real change with a real next action instead of a
-	// category the user has to map back onto their work themselves.
-	Operations []ReadinessOperationGap
-}
-
-// ReadinessOperationGap is one unsettled host-observed change in a readiness
-// report. Action is the closed-set next step, never prose.
-type ReadinessOperationGap struct {
-	OperationID string   `json:"operation_id"`
-	Paths       []string `json:"paths,omitempty"`
-	State       string   `json:"state"`
-	Action      string   `json:"action"`
-}
-
-func (e *FinalReadinessError) Error() string {
-	if e == nil {
-		return "final-answer readiness failed"
-	}
-	return fmt.Sprintf("final-answer readiness failed %d times: %s", e.Attempts, e.Reason)
-}
-
-// RecoveryPauseError reports that Auto recovery exhausted its Episode budget
-// and the model either summarized or continued calling tools after the one-shot
-// finalization round. It is a control-flow signal, not a provider failure:
-// completed work is kept and the user can continue in the next message.
-type RecoveryPauseError struct {
-	// Message is the user-facing English product copy for wire/CLI clients.
-	Message string
-	// StopReason is an internal classifier; never show it as product copy.
-	StopReason string
-	// Detail is optional expandable diagnostic text (last error / counts).
-	Detail string
-}
-
-func (e *RecoveryPauseError) Error() string {
-	if e == nil {
-		return "automatic retries paused"
-	}
-	if strings.TrimSpace(e.Message) != "" {
-		return e.Message
-	}
-	return "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send \"continue\" to start a fresh attempt, or add instructions to change direction."
-}
-
-// CompletionUncertainContextTool is the retained host-safety cause for a
-// context-unavailable tool being called again after the repair instruction.
-const CompletionUncertainContextTool = "context_tool_repeat"
-
-// CompletionUncertainError reports that a host safety condition paused the
-// current turn after completed work was retained. It is a control-flow signal,
-// not a provider failure: the candidate answer, tool results, and completed
-// work stay in the session, and the user can continue in the next message.
-type CompletionUncertainError struct {
-	// Cause is the stable classifier naming why completion stayed unconfirmed.
-	Cause string
-	// Message is the user-facing English product copy for wire/CLI clients.
-	Message string
-	// Detail is optional expandable diagnostic text; never product copy.
-	Detail string
-}
-
-func (e *CompletionUncertainError) Error() string {
-	if e == nil {
-		return "completion could not be confirmed"
-	}
-	if strings.TrimSpace(e.Message) != "" {
-		return e.Message
-	}
-	return "Completion could not be confirmed. Deepzora kept the current result and all completed work. Send \"continue\" to resume, or restate what should change."
 }

@@ -174,9 +174,6 @@ func runtimeEnv(rt *pluginpkg.RuntimeSpec, pkg pluginpkg.Package, installed plug
 	if version == "" {
 		version = strings.TrimSpace(pkg.Manifest.Version)
 	}
-	if pkg.Manifest.LegacyIdentity {
-		env = append(env, "DEEPER_PLUGIN_ROOT="+pkg.Root, "DEEPER_PLUGIN_ID="+installed.Name, "DEEPER_PLUGIN_VERSION="+version)
-	}
 	env = append(env,
 		envPluginRoot+"="+pkg.Root,
 		envPluginName+"="+installed.Name,

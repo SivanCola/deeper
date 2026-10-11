@@ -115,9 +115,18 @@ func TestNativeManifestRejectsUnsupportedHookShell(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, NativeManifest)
 	writeTestFile(t, path, `{
-  "apiVersion":"deepzora.com/plugin/v2",
-  "name":"bad-shell",
-  "hooks":{"SessionStart":[{"command":"echo ok","shell":"fish"}]}
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "bad-shell",
+  "contributes": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "command": "echo ok",
+          "shell": "fish"
+        }
+      ]
+    }
+  }
 }`)
 	if _, _, err := parseNative(path, root); err == nil || !strings.Contains(err.Error(), `hook shell "fish" is not supported`) {
 		t.Fatalf("parseNative unsupported shell error = %v", err)

@@ -25,7 +25,7 @@ func TestDesktopHotRebuildPathsKeepSessionTemp(t *testing.T) {
 			name:    "model",
 			prepare: func(*App, *WorkspaceTab) {},
 			rebuild: func(app *App, tab *WorkspaceTab) error {
-				return app.SetModelForTab(tab.ID, "alt/alt-model")
+				return app.SetModelForTab(tab.ID, targetModelForFixture(app, tab))
 			},
 		},
 		{
@@ -35,19 +35,11 @@ func TestDesktopHotRebuildPathsKeepSessionTemp(t *testing.T) {
 				return app.SetEffortForTab(tab.ID, "high")
 			},
 		},
-		{
-			name:    "token mode",
-			prepare: func(*App, *WorkspaceTab) {},
-			rebuild: func(app *App, tab *WorkspaceTab) error {
-				return app.SetTokenModeForTab(tab.ID, "delivery")
-			},
-			inPlace: true,
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			app, tab, oldAPI, _ := newGoalDeliveryYoloTestApp(t, control.GoalStatusRunning)
-			oldCtrl, ok := oldAPI.(*control.Controller)
-			if !ok || oldCtrl == nil {
+			app, tab, oldAPI, _ := auditCurrentTab(t)
+			oldCtrl := oldAPI
+			if oldCtrl == nil {
 				t.Fatal("old controller is not *control.Controller")
 			}
 			tc.prepare(app, tab)

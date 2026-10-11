@@ -1,9 +1,5 @@
 // SessionMeta is one saved session for the history panel.
 export interface SessionMeta {
-  source?: import("../generated/desktopContract.generated").SessionSourceRef;
-  historical?: boolean;
-  historicalBranch?: boolean;
-  preparationStatus?: string;
   path: string;
   sessionId?: string;
   hostId?: string;
@@ -15,7 +11,6 @@ export interface SessionMeta {
   turnsState?: "unknown" | "valid" | "corrupt" | string;
   createdAt: number; // unix milliseconds
   lastActivityAt: number; // unix milliseconds
-  modTime: number; // compatibility alias for lastActivityAt
   deletedAt?: number; // unix milliseconds, present for trashed sessions
   current: boolean;
   open: boolean;

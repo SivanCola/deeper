@@ -68,7 +68,6 @@ func newProviderWithSearchMode(e *config.ProviderEntry, proxy netclient.ProxySpe
 			"default_effort":     reasoning.Default,
 			"reasoning_protocol": config.ReasoningProtocolForEntry(e),
 			"max_output_tokens":  e.MaxOutputTokens,
-			"chat_url":           e.ChatURL,
 			"request_url":        e.RequestURL,
 			"headers":            e.Headers,
 			"extra_body":         e.ExtraBody,
@@ -82,7 +81,6 @@ func newProviderWithSearchMode(e *config.ProviderEntry, proxy netclient.ProxySpe
 			"mode":               e.ResponsesMode,
 			// Keep nil as nil so the responses provider can vendor-detect its
 			// default instead of accidentally treating every endpoint as stateful.
-			"stateful": e.ResponsesStateful,
 		},
 	})
 }

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"deepzora/desktop/internal/legacycleanup"
 	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/topicstate"
 )
@@ -82,8 +81,8 @@ func topicRemovalWorkspaceID(state workspacestate.State, scope, root string) str
 	return desktopWorkspaceID(scope, root)
 }
 
-func topicRemovalCandidate(state workspacestate.State, file desktopProjectFile, target TopicRemovalTarget) (legacycleanup.Candidate, error) {
-	var candidates []legacycleanup.Candidate
+func topicRemovalCandidate(state workspacestate.State, file desktopProjectFile, target TopicRemovalTarget) (topicRemovalEntry, error) {
+	var candidates []topicRemovalEntry
 	add := func(scope, root string, ids, pinned []string, groups []desktopGroup) {
 		order := slices.Index(ids, target.TopicID)
 		if order < 0 {
@@ -93,15 +92,15 @@ func topicRemovalCandidate(state workspacestate.State, file desktopProjectFile, 
 		if target.WorkspaceID != "" && target.WorkspaceID != wid {
 			return
 		}
-		candidates = append(candidates, legacycleanup.Candidate{Kind: "topic", WorkspaceID: wid, TopicID: target.TopicID,
-			Topic: legacyCleanupTopicSnapshot(scope, root, target.TopicID, "", 0, 0, order, pinned, groups)})
+		candidates = append(candidates, topicRemovalEntry{Kind: "topic", WorkspaceID: wid, TopicID: target.TopicID,
+			Topic: topicRemovalSnapshot(scope, root, target.TopicID, "", 0, 0, order, pinned, groups)})
 	}
 	add("global", "", file.GlobalTopics, file.GlobalPinnedTopics, file.GlobalGroups)
 	for _, project := range file.Projects {
 		add("project", project.Root, project.Topics, project.PinnedTopics, project.Groups)
 	}
 	if len(candidates) != 1 {
-		return legacycleanup.Candidate{}, workspacestate.ErrMutationConflict
+		return topicRemovalEntry{}, workspacestate.ErrMutationConflict
 	}
 	// A topic ID must have one owner even when a caller supplied a workspace.
 	owners := 0
@@ -114,18 +113,18 @@ func topicRemovalCandidate(state workspacestate.State, file desktopProjectFile, 
 		}
 	}
 	if owners != 1 {
-		return legacycleanup.Candidate{}, workspacestate.ErrMutationConflict
+		return topicRemovalEntry{}, workspacestate.ErrMutationConflict
 	}
 	return candidates[0], nil
 }
 
-func topicRemovalToken(item legacycleanup.Candidate, associations any) string {
+func topicRemovalToken(item topicRemovalEntry, associations any) string {
 	body, _ := json.Marshal([]any{item.WorkspaceID, item.TopicID, item.Title, item.Topic, associations})
 	sum := sha256.Sum256(body)
 	return hex.EncodeToString(sum[:])
 }
 
-func (a *App) inspectTopicRemovalSnapshot(state workspacestate.State, file desktopProjectFile, snapshot topicstate.Snapshot, item legacycleanup.Candidate) (TopicRemovalInspection, legacycleanup.Candidate, error) {
+func (a *App) inspectTopicRemovalSnapshot(state workspacestate.State, file desktopProjectFile, snapshot topicstate.Snapshot, item topicRemovalEntry) (TopicRemovalInspection, topicRemovalEntry, error) {
 	out := TopicRemovalInspection{Target: TopicRemovalTarget{WorkspaceID: item.WorkspaceID, TopicID: item.TopicID}}
 	record, exists := snapshot.Records[item.TopicID]
 	if !exists || record.RowRevision == 0 {
@@ -162,10 +161,6 @@ func (a *App) inspectTopicRemovalSnapshot(state workspacestate.State, file deskt
 			out.Reason = "busy"
 			return out, item, nil
 		}
-		if classification, reason := classifyLegacyCleanupTopicSources(item, a.knownSessionDirs()); classification != "empty" {
-			out.Reason = reason
-			return out, item, nil
-		}
 		a.mu.RLock()
 		for _, tab := range a.runtimeTabsLocked() {
 			if tab != nil && tab.TopicID == item.TopicID && (tab.Ctrl != nil || tab.SessionID != "" || tab.StartupErr == "") {
@@ -187,9 +182,9 @@ func (a *App) InspectTopicRemoval(target TopicRemovalTarget) (TopicRemovalInspec
 	return out, sessionOperationErrorForTarget(err, target.TopicID, "")
 }
 
-func (a *App) inspectTopicRemoval(target TopicRemovalTarget) (TopicRemovalInspection, legacycleanup.Candidate, error) {
+func (a *App) inspectTopicRemoval(target TopicRemovalTarget) (TopicRemovalInspection, topicRemovalEntry, error) {
 	var out TopicRemovalInspection
-	var item legacycleanup.Candidate
+	var item topicRemovalEntry
 	if strings.TrimSpace(target.TopicID) == "" {
 		return out, item, workspacestate.ErrMutationConflict
 	}
@@ -215,8 +210,7 @@ func (a *App) inspectTopicRemoval(target TopicRemovalTarget) (TopicRemovalInspec
 		if slices.Contains(file.GlobalTopics, target.TopicID) {
 			return out, item, err
 		}
-		out, err = a.inspectLegacyTopicRemoval(state, target)
-		return out, item, err
+		return out, item, workspacestate.ErrMutationConflict
 	}
 	snapshot, err := desktopTopicState.snapshot(topicTitleRoot(item.Topic.Scope, item.Topic.WorkspaceRoot))
 	if err != nil {
@@ -411,7 +405,7 @@ func (a *App) removePlaceholderAdmissionHeld(req TopicRemovalRequest) (TopicRemo
 		if err != nil {
 			return err
 		}
-		var item legacycleanup.Candidate
+		var item topicRemovalEntry
 		if operation.ID != "" {
 			if err := json.Unmarshal(operation.Snapshot, &item); err != nil {
 				return err
@@ -446,7 +440,7 @@ func (a *App) removePlaceholderAdmissionHeld(req TopicRemovalRequest) (TopicRemo
 	return topicRemovalResult(result), nil
 }
 
-func (a *App) checkRemovedTopicSources(state workspacestate.State, item legacycleanup.Candidate) error {
+func (a *App) checkRemovedTopicSources(state workspacestate.State, item topicRemovalEntry) error {
 	if topicRemovalHasPendingCreate(state, item.TopicID) {
 		return errTopicHasActiveWork
 	}
@@ -454,9 +448,6 @@ func (a *App) checkRemovedTopicSources(state workspacestate.State, item legacycl
 		if presentation.TopicID == item.TopicID && state.SessionStates[id].Lifecycle != workspacestate.Deleted {
 			return workspacestate.ErrMutationConflict
 		}
-	}
-	if classification, _ := classifyLegacyCleanupTopicSources(item, a.knownSessionDirs()); classification != "empty" {
-		return workspacestate.ErrMutationConflict
 	}
 	if a.topicHasActiveRuntimeWork(item.TopicID) {
 		return errTopicHasActiveWork
@@ -493,7 +484,7 @@ func topicRemovalError(result TopicRemovalResult) error {
 }
 
 // Requires registry, projects and topic-store writer ownership.
-func (a *App) removePlaceholderMetadataLocked(ctx context.Context, store *topicstate.Store, state workspacestate.State, file desktopProjectFile, item legacycleanup.Candidate, req TopicRemovalRequest, operation *workspacestate.TopicRemoval, checkpoint func() error) error {
+func (a *App) removePlaceholderMetadataLocked(ctx context.Context, store *topicstate.Store, state workspacestate.State, file desktopProjectFile, item topicRemovalEntry, req TopicRemovalRequest, operation *workspacestate.TopicRemoval, checkpoint func() error) error {
 	snapshot, err := store.Snapshot(ctx)
 	if err != nil {
 		return err

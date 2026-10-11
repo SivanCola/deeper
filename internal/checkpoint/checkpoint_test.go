@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -60,6 +61,8 @@ func TestRestoreToStartOfTurn(t *testing.T) {
 	write(t, a, "v2")
 	write(t, b, "new")
 
+	s.CaptureAfter(a, CaptureAfterOpts{})
+	s.CaptureAfter(b, CaptureAfterOpts{})
 	// Rewind to the start of turn 1: a back to v1, b gone.
 	if _, _, err := s.RestoreCode(1); err != nil {
 		t.Fatal(err)
@@ -84,6 +87,7 @@ func TestRestoreToTurnZero(t *testing.T) {
 	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "v1"})
 	write(t, a, "v2")
 
+	s.CaptureAfter(a, CaptureAfterOpts{})
 	if _, _, err := s.RestoreCode(0); err != nil {
 		t.Fatal(err)
 	}
@@ -109,6 +113,7 @@ func TestRestorePreservesGB18030Encoding(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	s.CaptureAfter(a, CaptureAfterOpts{})
 	if _, _, err := s.RestoreCode(0); err != nil {
 		t.Fatal(err)
 	}
@@ -136,10 +141,11 @@ func TestRestorePreservesGB18030EncodingAfterPersistence(t *testing.T) {
 	s.Begin(0, "edit gbk", 0)
 	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: original})
 
-	resumed := New(dir, root)
 	if err := os.WriteFile(a, fileenc.MustEncode(edited, fileenc.GB18030), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	s.CaptureAfter(a, CaptureAfterOpts{})
+	resumed := New(dir, root)
 	if _, _, err := resumed.RestoreCode(0); err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +203,7 @@ func TestSnapshotDedupsFirstTouchWins(t *testing.T) {
 	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "orig"})
 	s.Snapshot(diff.Change{Path: a, Kind: diff.Modify, OldText: "edited-once"}) // ignored
 	write(t, a, "edited-twice")
+	s.CaptureAfter(a, CaptureAfterOpts{})
 	if _, _, err := s.RestoreCode(0); err != nil {
 		t.Fatal(err)
 	}
@@ -257,81 +264,6 @@ func TestPersistV3KeepsCreatedFileSentinel(t *testing.T) {
 	}
 	if string(raw) != "before" {
 		t.Fatalf("before payload = %q", raw)
-	}
-}
-
-func TestGCDoesNotDeleteSharedBlobStillReferencedByNewerCheckpoint(t *testing.T) {
-	root := t.TempDir()
-	dir := filepath.Join(t.TempDir(), "sess.ckpt")
-	s := New(dir, root)
-	content := "shared"
-	ref, err := s.blobs.Put([]byte(content))
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.done = []*Checkpoint{
-		{SchemaVersion: SchemaV2, Turn: 0, Files: []FileSnap{{Path: "a.txt", Content: &content, SHA256: ref, BlobRef: ref}}},
-		{SchemaVersion: SchemaV2, Turn: 1, Files: []FileSnap{{Path: "b.txt", Content: &content, SHA256: ref, BlobRef: ref}}},
-	}
-
-	s.mu.Lock()
-	s.retainN = 1
-	s.gcLocked()
-	s.mu.Unlock()
-	if ref == "" || !s.blobs.Has(ref) {
-		t.Fatalf("shared blob %q was removed while the newer checkpoint still referenced it", ref)
-	}
-	if s.done[0].Files[0].BlobRef != "" || s.done[1].Files[0].BlobRef != ref {
-		t.Fatalf("legacy GC refs = old %q new %q", s.done[0].Files[0].BlobRef, s.done[1].Files[0].BlobRef)
-	}
-}
-
-func TestExpiredV2PayloadRemainsSafeForLegacyReader(t *testing.T) {
-	root := t.TempDir()
-	dir := filepath.Join(t.TempDir(), "sess.ckpt")
-	content := "must not be interpreted as absent"
-	checkpoint := &Checkpoint{
-		SchemaVersion: SchemaV2,
-		Turn:          0,
-		Files: []FileSnap{{
-			Path: "a.txt", Content: &content, SHA256: Digest([]byte(content)), BlobRef: Digest([]byte(content)),
-		}},
-	}
-	store := New(dir, root)
-	if err := store.persist(checkpoint); err != nil {
-		t.Fatal(err)
-	}
-	store.mu.Lock()
-	err := store.expirePayloadLocked(checkpoint)
-	store.mu.Unlock()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// A previous release only scans turn-*.json in the checkpoint root. If the
-	// expired checkpoint remains visible there, its content must never be nil:
-	// old RestoreCode interprets nil as "delete this file".
-	raw, err := os.ReadFile(filepath.Join(dir, "turn-0.json"))
-	if err == nil {
-		var legacy struct {
-			Files []struct {
-				Content *string `json:"content"`
-			} `json:"files"`
-		}
-		if err := json.Unmarshal(raw, &legacy); err != nil {
-			t.Fatal(err)
-		}
-		if len(legacy.Files) != 1 || legacy.Files[0].Content == nil {
-			t.Fatal("expired v2 payload tells a legacy reader to delete an existing file")
-		}
-	} else if !os.IsNotExist(err) {
-		t.Fatal(err)
-	}
-
-	reloaded := New(dir, root)
-	metas := reloaded.List()
-	if len(metas) != 1 || !metas[0].ExpiredFilePayload || metas[0].CanUndoFiles {
-		t.Fatalf("expired metadata was not preserved for the new reader: %+v", metas)
 	}
 }
 
@@ -481,16 +413,14 @@ func TestTruncateFromReportsPersistentDeleteFailure(t *testing.T) {
 	store := New(dir, root)
 	store.Begin(0, "first", 0)
 	store.Begin(1, "second", 2)
-	blocked := filepath.Join(dir, "turn-1.json")
-	if err := os.Remove(blocked); err != nil {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix directory permissions")
+	}
+	blocked := store.turnsDir()
+	if err := os.Chmod(blocked, 0500); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(blocked, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(blocked, "keep"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	defer os.Chmod(blocked, 0755)
 
 	if err := store.TruncateFrom(1); err == nil {
 		t.Fatal("truncate reported success despite a persistent checkpoint delete failure")
@@ -523,6 +453,7 @@ func BenchmarkRestoreGB18030Encoding(b *testing.B) {
 		if err := os.WriteFile(a, editedRaw, 0o644); err != nil {
 			b.Fatal(err)
 		}
+		s.CaptureAfter(a, CaptureAfterOpts{})
 		if _, _, err := s.RestoreCode(0); err != nil {
 			b.Fatal(err)
 		}

@@ -19,7 +19,6 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
-	"deepzora/internal/jobs"
 	"deepzora/internal/permission"
 	"deepzora/internal/provider"
 	"deepzora/internal/tool"
@@ -170,7 +169,7 @@ func TestServeEndpoints(t *testing.T) {
 		t.Error("/plan {on:true} should have enabled plan mode (Compose would prepend the marker)")
 	}
 
-	resp, err = http.Post(srv.URL+"/tool-approval-mode", "application/json", strings.NewReader(`{"mode":"auto"}`))
+	resp, err = http.Post(srv.URL+"/tool-approval-mode", "application/json", strings.NewReader(`{"mode":"workspace-write"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +177,7 @@ func TestServeEndpoints(t *testing.T) {
 		t.Fatalf("tool approval mode auto status = %d, want 204", resp.StatusCode)
 	}
 	resp.Body.Close()
-	if got := ctrl.ToolApprovalMode(); got != control.ToolApprovalAuto {
+	if got := ctrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("tool approval mode = %q, want auto", got)
 	}
 	resp, err = http.Post(srv.URL+"/tool-approval-mode", "application/json", strings.NewReader(`{"mode":"surprise"}`))
@@ -277,40 +276,6 @@ func TestHistoryMessagesPreserveToolDetails(t *testing.T) {
 	}
 	if got[2].ToolCallID != "call_1" || got[2].ToolName != "bash" || got[2].Content != "/tmp/project\n" {
 		t.Fatalf("tool result details not preserved: %+v", got[2])
-	}
-}
-
-func TestHistoryMessagesStripTransientReasoningLanguageBlock(t *testing.T) {
-	got := historyMessages([]provider.Message{
-		{Role: provider.RoleUser, Content: "<reasoning-language>\nVisible reasoning/thinking text preference: use English.\n</reasoning-language>\n\nExplain this module"},
-		{Role: provider.RoleAssistant, Content: "ok"},
-	})
-	if len(got) != 2 {
-		t.Fatalf("history length = %d, want 2: %+v", len(got), got)
-	}
-	if got[0].Role != "user" || got[0].Content != "Explain this module" {
-		t.Fatalf("user history = %+v, want plain user text without reasoning-language", got[0])
-	}
-	if strings.Contains(got[0].Content, "<reasoning-language>") {
-		t.Fatalf("reasoning-language leaked into /history user content: %q", got[0].Content)
-	}
-}
-
-func TestSessionsListPreviewStripsTransientReasoningLanguageBlock(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	s := agent.NewSession("system")
-	s.Add(provider.Message{Role: provider.RoleUser, Content: "<reasoning-language>\nVisible reasoning/thinking text preference: use English.\n</reasoning-language>\n\nExplain this module"})
-	if err := s.Save(path); err != nil {
-		t.Fatal(err)
-	}
-
-	preview, turns := agent.SessionPreview(path)
-	if turns != 1 {
-		t.Errorf("turns = %d, want 1", turns)
-	}
-	if preview != "Explain this module" {
-		t.Errorf("preview = %q, want user prompt", preview)
 	}
 }
 
@@ -508,6 +473,7 @@ func TestServeIndexPagePassesLanguagePreferenceToClient(t *testing.T) {
 
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{Sink: bc})
+	defer func() { ctrl.Close(); <-ctrl.Closed() }()
 	srv := httptest.NewServer(operatorHandler(New(ctrl, bc, config.ServeConfig{})))
 	defer srv.Close()
 
@@ -707,50 +673,6 @@ supported_efforts = ["low", "high"]
 	}
 }
 
-func TestResumeRequiresSessionPathInsideSessionDir(t *testing.T) {
-	dir := t.TempDir()
-	active := filepath.Join(dir, "active.jsonl")
-	inside := filepath.Join(dir, "inside.jsonl")
-	outsideDir := t.TempDir()
-	outside := filepath.Join(outsideDir, "outside.jsonl")
-	for _, path := range []string{active, inside, outside} {
-		if err := os.WriteFile(path, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, SessionDir: dir, SessionPath: active})
-	srv := httptest.NewServer(operatorHandler(newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})))
-	defer srv.Close()
-
-	post := func(path string) int {
-		body, err := json.Marshal(map[string]string{"path": path})
-		if err != nil {
-			t.Fatal(err)
-		}
-		resp, err := http.Post(srv.URL+"/resume", "application/json", strings.NewReader(string(body)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		resp.Body.Close()
-		return resp.StatusCode
-	}
-	if got := post(outside); got != http.StatusForbidden {
-		t.Fatalf("outside resume status = %d, want 403", got)
-	}
-	if got := post(inside); got != http.StatusNoContent {
-		t.Fatalf("inside resume status = %d, want 204", got)
-	}
-	want, err := filepath.EvalSymlinks(inside)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := filepath.Clean(ctrl.SessionPath()); got != filepath.Clean(want) {
-		t.Fatalf("session path = %q, want %q", got, want)
-	}
-}
-
 func TestResumeRejectsCleanupPendingSession(t *testing.T) {
 	dir := t.TempDir()
 	active := filepath.Join(dir, "active.jsonl")
@@ -783,134 +705,6 @@ func TestResumeRejectsCleanupPendingSession(t *testing.T) {
 	}
 	if got := filepath.Clean(ctrl.SessionPath()); got != filepath.Clean(active) {
 		t.Fatalf("session path after rejected resume = %q, want active %q", got, active)
-	}
-}
-
-func TestSessionsSkipsCleanupPending(t *testing.T) {
-	dir := t.TempDir()
-	active := filepath.Join(dir, "active.jsonl")
-	pending := filepath.Join(dir, "pending.jsonl")
-	for _, path := range []string{active, pending} {
-		if err := os.WriteFile(path, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := agent.MarkCleanupPending(pending, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, SessionDir: dir, SessionPath: active})
-	srv := httptest.NewServer(operatorHandler(newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})))
-	defer srv.Close()
-
-	resp, err := http.Get(srv.URL + "/sessions")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	var got []struct {
-		Name string `json:"name"`
-		Path string `json:"path"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 1 || got[0].Name != "active" || got[0].Path != agent.CanonicalSessionPath(active) {
-		t.Fatalf("/sessions = %+v, want only active session", got)
-	}
-}
-
-func TestDeleteSessionRequiresSessionNameInsideSessionDir(t *testing.T) {
-	dir := t.TempDir()
-	active := filepath.Join(dir, "active.jsonl")
-	old := filepath.Join(dir, "old.jsonl")
-	for _, path := range []string{active, old} {
-		if err := os.WriteFile(path, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	ref := "sa_20260102_030405_000000000_aabbccddeeff"
-	writeServeSubagentArtifact(t, dir, ref, agent.BranchID(old))
-	oldJobsDir := jobs.ArtifactDir(old)
-	if err := os.MkdirAll(oldJobsDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(oldJobsDir, "bash-1.log"), []byte("output"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	sibling := dir + "-other"
-	if err := os.MkdirAll(sibling, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	escape := filepath.Join(sibling, "escape.jsonl")
-	if err := os.WriteFile(escape, []byte("keep\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Sink: bc, SessionDir: dir, SessionPath: active})
-	srv := httptest.NewServer(operatorHandler(newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})))
-	defer srv.Close()
-
-	post := func(body string) int {
-		resp, err := http.Post(srv.URL+"/delete-session", "application/json", strings.NewReader(body))
-		if err != nil {
-			t.Fatal(err)
-		}
-		resp.Body.Close()
-		return resp.StatusCode
-	}
-	if got := post(`{"path":"` + escape + `"}`); got != http.StatusBadRequest {
-		t.Fatalf("legacy path delete status = %d, want 400", got)
-	}
-	if got := post(`{"name":"../` + filepath.Base(sibling) + `/escape"}`); got != http.StatusBadRequest {
-		t.Fatalf("sibling traversal status = %d, want 400", got)
-	}
-	if _, err := os.Stat(escape); err != nil {
-		t.Fatalf("sibling session was removed: %v", err)
-	}
-	if got := post(`{"name":"active"}`); got != http.StatusConflict {
-		t.Fatalf("active delete status = %d, want 409", got)
-	}
-	if got := post(`{"name":"old"}`); got != http.StatusNoContent {
-		t.Fatalf("valid delete status = %d, want 204", got)
-	}
-	if _, err := os.Stat(old); !os.IsNotExist(err) {
-		t.Fatalf("old session still exists or stat failed unexpectedly: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "subagents", ref+".jsonl")); !os.IsNotExist(err) {
-		t.Fatalf("old session subagent jsonl still exists or stat failed unexpectedly: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "subagents", ref+".meta.json")); !os.IsNotExist(err) {
-		t.Fatalf("old session subagent meta still exists or stat failed unexpectedly: %v", err)
-	}
-	if _, err := os.Stat(oldJobsDir); !os.IsNotExist(err) {
-		t.Fatalf("old session jobs sidecar still exists or stat failed unexpectedly: %v", err)
-	}
-}
-
-func writeServeSubagentArtifact(t *testing.T, dir, ref, parentSession string) {
-	t.Helper()
-	subagentDir := filepath.Join(dir, "subagents")
-	if err := os.MkdirAll(subagentDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(subagentDir, ref+".jsonl"), []byte(`{"role":"user","content":"sub"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	data, err := json.Marshal(agent.SubagentMeta{
-		Ref:           ref,
-		Status:        agent.SubagentCompleted,
-		Kind:          "task",
-		Name:          "task",
-		ParentSession: parentSession,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(subagentDir, ref+".meta.json"), data, 0o644); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -1098,8 +892,9 @@ func TestServeEventsReplaysPendingApprovalOnAttach(t *testing.T) {
 		Runner:   ag,
 		Executor: ag,
 		Sink:     bc,
-		Policy:   permission.New("ask", nil, nil, nil),
+		Policy:   permission.New("ask", nil, []string{"serve_write"}, nil),
 	})
+	ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	ctrl.EnableInteractiveApproval()
 	srv := httptest.NewServer(operatorHandler(New(ctrl, bc, config.ServeConfig{})))
 	defer srv.Close()

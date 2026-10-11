@@ -42,7 +42,7 @@ export function mergeTurnResult(
 ): WireCompletionSummary {
   const normalized = normalizeCompletionReceipt(receipt);
   return {
-    preset: "", verdict: normalized?.verdict ?? "unknown", mutations: 0,
+    verdict: normalized?.verdict ?? "unknown", mutations: 0,
     checks_passed: 0, checks_failed: 0, checks_suppressed: 0, review: "none", constraint_degraded: false,
     ...summary,
     receipt: normalized ?? summary?.receipt,
@@ -53,7 +53,7 @@ export function mergeTurnResult(
 
 export function turnResultHasContent(summary: WireCompletionSummary): boolean {
   const receipt = summary.receipt;
-  return Boolean(summary.checking || summary.mutations > 0 || summary.checks_failed > 0 || summary.checks_passed > 0 || summary.checks_suppressed > 0 || summary.attention
+  return Boolean(summary.checking || summary.mutations > 0 || summary.checks_failed > 0 || summary.checks_passed > 0 || summary.checks_suppressed > 0
     || receipt?.diff?.files.length || receipt?.diff?.reasons.length || receipt?.changes?.length || receipt?.verifications?.length || receipt?.gaps?.length || receipt?.risks?.length);
 }
 

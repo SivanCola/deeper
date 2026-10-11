@@ -35,26 +35,7 @@ func TestPowerShellToolUsesPwshIdentityAndConfinedLegacyAlias(t *testing.T) {
 	if strings.Contains(schema, "preserve_background_processes") {
 		t.Fatalf("pwsh schema should require formal jobs: %s", schema)
 	}
-	legacy, ok := AliasBash(primary, "bash")
-	if !ok || legacy.Name() != "bash" {
-		t.Fatalf("legacy alias = %T/%v/%q", legacy, ok, legacy.Name())
-	}
-	if got := legacy.(bash).sb.Mode; got != "enforce" {
-		t.Fatalf("legacy alias lost confinement: %q", got)
-	}
-}
 
-func TestWindowsEnabledToolShellAliasesSelectOnlyPwsh(t *testing.T) {
-	workspace := Workspace{Bash: sandbox.Spec{
-		Mode:  "enforce",
-		Shell: sandbox.Shell{Kind: sandbox.ShellPowerShell, Path: "pwsh"},
-	}}
-	for _, configured := range []string{"bash", "Bash", "PowerShell", "powershell", "pwsh"} {
-		tools := workspace.Tools(configured)
-		if len(tools) != 1 || tools[0].Name() != "pwsh" {
-			t.Fatalf("enabled %q produced %#v; want only pwsh", configured, tools)
-		}
-	}
 }
 
 func TestGitBashToolBindingPreservesBashDialectAndStableSchema(t *testing.T) {
@@ -63,7 +44,7 @@ func TestGitBashToolBindingPreservesBashDialectAndStableSchema(t *testing.T) {
 		Shell: sandbox.Shell{Kind: sandbox.ShellBash, Path: `C:\Program Files\Git\bin\bash.exe`},
 	}}
 	baseline := ConfineBash(workspace.Bash, SessionDataGuard{})
-	for _, configured := range []string{"bash", "Bash", "PowerShell", "powershell", "pwsh"} {
+	for _, configured := range []string{"bash"} {
 		tools := workspace.Tools(configured)
 		if len(tools) != 1 || tools[0].Name() != "bash" {
 			t.Fatalf("enabled %q produced %#v; want the bound Bash tool", configured, tools)
@@ -321,7 +302,6 @@ func TestManagedConfigWriteGatedOnApprover(t *testing.T) {
 	ctx := tool.WithConfigWriteApprover(context.Background(), approve)
 	for _, target := range []string{
 		config.UserConfigPath(),
-		filepath.Join(home, ".deepzora", "config.json"),
 	} {
 		args, _ := json.Marshal(map[string]string{"path": target, "content": "{}\n"})
 		if _, err := w.Execute(ctx, args); err != nil {
@@ -331,7 +311,7 @@ func TestManagedConfigWriteGatedOnApprover(t *testing.T) {
 			t.Fatalf("managed config was not created %s: %v", target, err)
 		}
 	}
-	if len(approve.asked) != 2 {
+	if len(approve.asked) != 1 {
 		t.Fatalf("approver should be asked once per write, asked=%v", approve.asked)
 	}
 

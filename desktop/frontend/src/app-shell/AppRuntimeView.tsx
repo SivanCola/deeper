@@ -308,10 +308,7 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
             banners: session.bannerCommands,
             onboarding: navigation.onboardingCommands,
           })} startupError={navigationCommands.manualCreation && navigationCommands.manualCreation.operation?.phase !== "ready" ? undefined : state.meta?.startupErr}
-          historical={core.remoteSurfaceActive ? undefined : { tab: activeTab, navigate: session.desktopNavigation.enqueueNavigation,
-            captureNavigation: () => { const intent = runtime.navigation.currentNavigationIntent(); return () => runtime.navigation.isNavigationIntentCurrent(intent); },
-            openRecoveryDetails: () => chromeCommands.openSidebarSettings("storage"),
-          }} />
+          />
 
           <ChatPaneRegion
             // Local navigation is now history-first: keep the transcript
@@ -538,9 +535,6 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
         prefillSubagentCommand: session.insertCommands.prefillSubagentCommand,
         sessionActions: {
           previewSession: runtime.sessionActions.previewSession,
-          listTrashedSessions: runtime.sessionActions.listTrashedSessions,
-          restoreSession: runtime.sessionActions.restoreSession,
-          purgeTrashedSession: runtime.sessionActions.purgeTrashedSession,
         },
         setSettingsTarget: shell.setSettingsTarget,
       })} />

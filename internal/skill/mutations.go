@@ -17,8 +17,7 @@ func (s *Store) Create(name string, scope Scope) (string, error) {
 }
 
 // CreateWithContent writes caller-supplied file contents as a canonical
-// <name>/SKILL.md skill, refusing to clobber an existing directory-layout or
-// legacy flat skill of the same name. Returns the written path.
+// <name>/SKILL.md skill, refusing to overwrite an existing canonical skill.
 func (s *Store) CreateWithContent(name string, scope Scope, content string) (string, error) {
 	if !IsValidName(name) {
 		return "", fmt.Errorf("invalid skill name %q — use letters, digits, '_', '-', '.'", name)
@@ -33,11 +32,8 @@ func (s *Store) CreateWithContent(name string, scope Scope, content string) (str
 	default:
 		root = s.globalSkillsRoot()
 	}
-	flat := filepath.Join(root, name+".md")
 	folder := filepath.Join(root, name, SkillFile)
-	if _, err := os.Stat(flat); err == nil {
-		return "", fmt.Errorf("skill %q already exists at %s", name, flat)
-	}
+
 	if _, err := os.Stat(folder); err == nil {
 		return "", fmt.Errorf("skill %q already exists at %s", name, folder)
 	}

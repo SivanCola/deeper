@@ -66,103 +66,15 @@ func deepzoraHomeDir() string {
 	return ""
 }
 
-func userConfigLoadPath() string {
-	primary := userConfigPath()
-	if primary == "" {
-		return legacyUserConfigPath()
-	}
-	if _, err := os.Stat(primary); err == nil {
-		return primary
-	}
-	if legacy := legacyUserConfigPath(); legacy != "" {
-		if _, err := os.Stat(legacy); err == nil {
-			return legacy
-		}
-	}
-	for _, legacy := range legacyXDGConfigPaths() {
-		if legacy == "" || samePath(legacy, primary) {
-			continue
-		}
-		if _, err := os.Stat(legacy); err == nil {
-			return legacy
-		}
-	}
-	return primary
-}
+func userConfigLoadPath() string { return userConfigPath() }
 
-func legacyUserConfigPath() string {
-	dir := legacyOSSupportDir()
-	if dir == "" {
-		return ""
-	}
-	path := filepath.Join(dir, "config.toml")
-	if primary := userConfigPath(); primary != "" && samePath(path, primary) {
-		return ""
-	}
-	return path
-}
-
-func userConfigCandidatePaths() []string {
-	var paths []string
-	if p := userConfigPath(); p != "" {
-		paths = append(paths, p)
-	}
-	if p := legacyUserConfigPath(); p != "" {
-		paths = append(paths, p)
-	}
-	paths = append(paths, legacyXDGConfigPaths()...)
-	return paths
-}
-
-func legacyXDGConfigPaths() []string {
-	if IsolatedHomeDir() != "" {
-		return nil
-	}
-	if runtimeGOOS == "windows" {
-		return nil
-	}
-	seen := map[string]bool{}
-	var paths []string
-	add := func(path string) {
-		if path == "" {
-			return
-		}
-		path = filepath.Clean(path)
-		if seen[path] {
-			return
-		}
-		seen[path] = true
-		paths = append(paths, path)
-	}
-	if dir := cleanEnvDir("XDG_CONFIG_HOME"); dir != "" {
-		add(filepath.Join(dir, "deepzora", "config.toml"))
-	}
-	if home, err := osUserHomeDir(); err == nil && home != "" {
-		add(filepath.Join(home, ".config", "deepzora", "config.toml"))
-	}
-	return paths
-}
+func userConfigCandidatePaths() []string { return []string{UserConfigPath()} }
 
 func userSupportDir() string {
 	if dir := cleanEnvDir("DEEPZORA_STATE_HOME"); dir != "" {
 		return dir
 	}
 	return deepzoraHomeDir()
-}
-
-func legacyOSSupportDir() string {
-	if IsolatedHomeDir() != "" {
-		return ""
-	}
-	dir := osUserConfigDir()
-	if dir == "" {
-		return ""
-	}
-	path := filepath.Join(dir, "deepzora")
-	if current := deepzoraHomeDir(); current != "" && samePath(path, current) {
-		return ""
-	}
-	return path
 }
 
 func userCacheDir() string {
@@ -248,64 +160,8 @@ func userConfigDisplayPath() string {
 // "" when the user config dir can't be resolved.
 func UserConfigPath() string { return userConfigPath() }
 
-// LegacyUserConfigPath is the old OS app-support config.toml path when it
-// differs from UserConfigPath. It is read as a compatibility fallback when the
-// primary user config does not exist.
-func LegacyUserConfigPath() string { return legacyUserConfigPath() }
-
-// LegacyUserConfigPaths returns every known legacy user config path that differs
-// from the current v1.8.1 Deepzora-home config path.
-func LegacyUserConfigPaths() []string {
-	primary := userConfigPath()
-	var out []string
-	add := func(path string) {
-		if path == "" || samePath(path, primary) {
-			return
-		}
-		for _, existing := range out {
-			if samePath(existing, path) {
-				return
-			}
-		}
-		out = append(out, path)
-	}
-	add(legacyUserConfigPath())
-	for _, path := range legacyXDGConfigPaths() {
-		add(path)
-	}
-	return out
-}
-
-// DeepzoraManagedConfigPaths returns the Deepzora-owned user configuration
-// FILES that model-driven tools may repair on the user's request, each gated
-// by a fresh per-write human approval: the current config.toml, compatibility
-// TOML locations, and the legacy v0.x ~/.deepzora/config.json. Individual
-// files, never directories — the Deepzora home also holds credentials (.env),
-// global hooks (settings.json), skills, and session stores, and none of those
-// may ride along on a config repair.
-func DeepzoraManagedConfigPaths() []string {
-	var out []string
-	out = appendUniquePath(out, UserConfigPath())
-	for _, path := range LegacyUserConfigPaths() {
-		out = appendUniquePath(out, path)
-	}
-	out = appendUniquePath(out, legacyConfigPath())
-	return out
-}
-
-func appendUniquePath(paths []string, path string) []string {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return paths
-	}
-	clean := filepath.Clean(path)
-	for _, existing := range paths {
-		if samePath(existing, clean) {
-			return paths
-		}
-	}
-	return append(paths, clean)
-}
+// DeepzoraManagedConfigPaths lists the current user configuration file.
+func DeepzoraManagedConfigPaths() []string { return []string{UserConfigPath()} }
 
 // DeepzoraHomeDir is the current Deepzora home directory. It honors
 // DEEPZORA_HOME, then uses ~/.deepzora on macOS/Linux or %APPDATA%/deepzora on
@@ -485,17 +341,6 @@ func DesktopSessionUIStatePath() string {
 		return ""
 	}
 	return filepath.Join(dir, "desktop", "session-ui-v1.sqlite")
-}
-
-// DesktopLegacyEmptySessionCleanupPath stores the one-shot upgrade batch used
-// to retire historical empty default-title sessions. It is intentionally
-// separate from the workspace registry so older binaries can ignore it.
-func DesktopLegacyEmptySessionCleanupPath() string {
-	dir := userSupportDir()
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, "desktop", "legacy-empty-session-cleanup-v1.json")
 }
 
 // StatsDir is where usage statistics are persisted (one .jsonl per day, e.g.
@@ -688,12 +533,6 @@ func CommandRootsForRoot(root string) []command.Root {
 	// so explicit commands still win exact canonical-name clashes.
 	for _, spec := range pluginPackageCommandRoots() {
 		add(spec)
-	}
-	if dir := legacyOSSupportDir(); dir != "" {
-		add(command.Root{Path: filepath.Join(dir, "commands")})
-	}
-	for _, legacy := range legacyXDGConfigPaths() {
-		add(command.Root{Path: filepath.Join(filepath.Dir(legacy), "commands")})
 	}
 	if home, err := osUserHomeDir(); err == nil {
 		for _, dir := range conventionSubdirsAsc(home, "commands") {

@@ -8,7 +8,6 @@ import (
 	"maps"
 	"net/http"
 	"reflect"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,9 +16,8 @@ import (
 )
 
 type remoteRuntimeSync struct {
-	mu          sync.Mutex
-	pending     bool
-	unsupported map[string]string
+	mu      sync.Mutex
+	pending bool
 }
 
 var remoteRuntimeDiagnostics struct {
@@ -168,9 +166,7 @@ func (a *App) SyncRuntimeState() (RuntimeStateProjection, error) {
 		return a.GetRuntimeStateSnapshot(), nil
 	}
 	syncer.pending = true
-	if syncer.unsupported == nil {
-		syncer.unsupported = map[string]string{}
-	}
+
 	syncer.mu.Unlock()
 	defer func() { syncer.mu.Lock(); syncer.pending = false; syncer.mu.Unlock() }()
 	connections := map[string]remoteRuntimeConnection{}
@@ -222,18 +218,6 @@ func (a *App) markRemoteRuntimeSyncFailed(targets []remoteRuntimeTarget, failed 
 }
 
 func (a *App) syncRemoteRuntimeConnection(conn remoteRuntimeConnection) error {
-	syncer := &a.remoteRuntimeSync
-	sort.Slice(conn.targets, func(i, j int) bool { return conn.targets[i].id < conn.targets[j].id })
-	first := conn.targets[0]
-	capabilityKey := fmt.Sprintf("%s\x00%s\x00%d\x00%p", conn.key, first.id, first.gen, first.client)
-	syncer.mu.Lock()
-	unsupported := syncer.unsupported[conn.key] == capabilityKey
-	syncer.mu.Unlock()
-	if unsupported {
-		_, err := a.RemoteTabStatus(conn.id)
-		a.markRemoteRuntimeSyncFailed(conn.targets, err != nil)
-		return err
-	}
 	ctx, cancel := context.WithTimeout(a.bootContext(), 5*time.Second)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serveURL(conn.base, "/runtime-states"), nil)
 	if err != nil {
@@ -247,16 +231,7 @@ func (a *App) syncRemoteRuntimeConnection(conn remoteRuntimeConnection) error {
 		a.markRemoteRuntimeSyncFailed(conn.targets, true)
 		return err
 	}
-	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNotImplemented {
-		resp.Body.Close()
-		cancel()
-		syncer.mu.Lock()
-		syncer.unsupported[conn.key] = capabilityKey
-		syncer.mu.Unlock()
-		_, err := a.RemoteTabStatus(conn.id)
-		a.markRemoteRuntimeSyncFailed(conn.targets, err != nil)
-		return err
-	}
+
 	var payload struct {
 		SchemaVersion int `json:"schemaVersion"`
 		Sessions      []struct {
@@ -274,8 +249,7 @@ func (a *App) syncRemoteRuntimeConnection(conn remoteRuntimeConnection) error {
 	states := make(map[string]event.RuntimeStateSnapshot, len(payload.Sessions))
 	for _, session := range payload.Sessions {
 		state, decodeErr := decodeRemoteRuntimeState(session.State)
-		// Identity runtimes from older Serve versions have no legacy path.
-		// Resolve their durable identity before validation and missing-row checks.
+		// Use the runtime identity for validation and missing-row checks.
 		if state.SessionID != "" {
 			session.SessionPath = remoteSessionIdentityRoute("", state.SessionID)
 		}
@@ -285,8 +259,7 @@ func (a *App) syncRemoteRuntimeConnection(conn remoteRuntimeConnection) error {
 			return fmt.Errorf("invalid runtime state synchronization payload")
 		}
 		if session.SessionPath == "" {
-			// An identity session a Serve has not routed yet reports no legacy
-			// path; skip it instead of failing the whole reconciliation.
+			// A runtime not yet published into routing has no selected identity.
 			continue
 		}
 		states[session.SessionPath] = state

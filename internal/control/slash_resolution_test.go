@@ -23,12 +23,6 @@ func TestResolvedBuiltinDocsSlashNameMatchesRuntimeOwner(t *testing.T) {
 			builtin:  DeepzoraDocsSlashName,
 		},
 		{
-			name:     "hidden plugin command alias",
-			commands: []command.Command{{Name: DocsSlashName, Plugin: "manuals", Hidden: true}},
-			owner:    SlashOwnerCustom,
-			builtin:  DeepzoraDocsSlashName,
-		},
-		{
 			name:    "visible project skill",
 			skills:  []skill.Skill{{Name: DocsSlashName}},
 			owner:   SlashOwnerSkill,
@@ -37,8 +31,8 @@ func TestResolvedBuiltinDocsSlashNameMatchesRuntimeOwner(t *testing.T) {
 		{
 			name:    "compatible plugin skill alias",
 			skills:  []skill.Skill{{Name: DocsSlashName, Plugin: "manuals"}},
-			owner:   SlashOwnerSkill,
-			builtin: DeepzoraDocsSlashName,
+			owner:   SlashOwnerBuiltin,
+			builtin: DocsSlashName,
 		},
 		{
 			name: "ambiguous plugin skill aliases",

@@ -11,9 +11,7 @@ import (
 )
 
 func (m *chatTUI) noticeDeprecatedGoalBudget(cmd control.GoalCommand) {
-	if cmd.DeprecatedBudgetFlag {
-		m.notice(control.GoalBudgetFlagDeprecatedNotice)
-	}
+
 }
 
 func activateGoalDriverAfterRebuild(ctrl control.SessionAPI) control.SessionAPI {
@@ -32,11 +30,10 @@ func (m *chatTUI) setGoalCommand(cmd control.GoalCommand, input string) tea.Cmd 
 			return nil
 		}
 	} else {
-		m.ctrl.SetGoalWithResearchMode(cmd.Text, cmd.ResearchMode)
+		m.ctrl.SetGoal(cmd.Text)
 	}
 	m.planMode = false
 	m.ctrl.SetPlanMode(false)
-	m.ctrl.GoalStrict(cmd.Strict)
 	if m.ctrl.GoalStatus() != control.GoalStatusRunning {
 		m.echoLocalCommand(input)
 		return nil

@@ -121,7 +121,6 @@ func (c *Controller) forkNamedReady(turn int, name string, switchToFork bool, ki
 		c.rebindCheckpoints(newPath)
 		// A historical fork rewinds before later failures, so it starts with no
 		// active recovery event even though it inherits the session preference.
-		c.loadRecoveryState(newPath)
 		if c.guardianSess != nil {
 			c.guardianSess.Reset()
 		}
@@ -225,7 +224,6 @@ func (c *Controller) Branch(name string) (string, error) {
 	if c.guardianSess != nil {
 		c.guardianSess.Reset()
 	}
-	c.carryRecoveryState(newPath)
 	c.rotateSessionTemp()
 	c.snapshotMu.Unlock()
 	c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo,
@@ -330,46 +328,7 @@ func (c *Controller) SwitchBranch(ref string) (agent.BranchInfo, error) {
 	if err := c.ValidateSessionModel(match.Path); err != nil {
 		return agent.BranchInfo{}, c.rewindFail(err)
 	}
-	if match.HeadID != "" {
-		loadedHead, err := agent.LoadSessionHeadReadOnly(match.Path, match.HeadID)
-		if err != nil {
-			return agent.BranchInfo{}, c.rewindFail(err)
-		}
-		loaded := agent.NewSession("")
-		loaded.Messages = loadedHead.Snapshot()
-		newPath := agent.NewSessionPath(c.sessionDir, c.label)
-		if err := loaded.SaveIfAbsent(newPath); err != nil {
-			return agent.BranchInfo{}, c.rewindFail(err)
-		}
-		if err := c.publishSessionChild(newPath, loaded.Messages); err != nil {
-			_ = os.Remove(newPath)
-			return agent.BranchInfo{}, c.rewindFail(fmt.Errorf("migrate legacy head: %w", err))
-		}
-		preview, turns := agent.SessionPreviewFromMessages(loaded.Messages)
-		if err := agent.SaveBranchMeta(newPath, agent.BranchMeta{
-			Name: strings.TrimSpace(match.Name), ParentID: agent.BranchID(match.Path), ForkTurn: -1,
-			ForkMessageIndex: len(loaded.Messages), Preview: preview, Turns: turns,
-			SchemaVersion: agent.BranchMetaCountsVersion, Model: c.selection.ref, ModelIdentity: c.selection.identity,
-		}); err != nil {
-			return agent.BranchInfo{}, c.rewindFail(err)
-		}
-		match = agent.BranchInfo{BranchMeta: agent.BranchMeta{ID: agent.BranchID(newPath), Name: match.Name, ParentID: agent.BranchID(match.Path)}, Path: newPath, Preview: preview, Turns: turns}
-		commitTransition, err := c.prepareSessionTransition(newPath, "migrate-legacy-head", loaded)
-		if err != nil {
-			return agent.BranchInfo{}, c.rewindFail(fmt.Errorf("bind migrated head: %w", err))
-		}
-		c.snapshotMu.Lock()
-		commitTransition.publish()
-		c.bindExecutorProjection(newPath, true)
-		c.ResetPlannerSession()
-		c.rebindCheckpoints(newPath)
-		c.loadGuardianSession()
-		c.loadRecoveryState(newPath)
-		c.rotateSessionTemp()
-		c.snapshotMu.Unlock()
-		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: "continued legacy version as an independent session"})
-		return match, nil
-	}
+
 	loaded, err := agent.LoadSession(match.Path)
 	if err != nil {
 		return agent.BranchInfo{}, c.rewindFail(err)
@@ -385,7 +344,6 @@ func (c *Controller) SwitchBranch(ref string) (agent.BranchInfo, error) {
 	c.ResetPlannerSession()
 	c.rebindCheckpoints(match.Path)
 	c.loadGuardianSession()
-	c.loadRecoveryState(match.Path)
 	c.rotateSessionTemp()
 	c.snapshotMu.Unlock()
 	c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo,
@@ -566,9 +524,18 @@ func (c *Controller) publishSessionChild(newPath string, messages []provider.Mes
 	if err != nil {
 		return err
 	}
-	payload, marshalErr := json.Marshal(map[string]any{"messages": messages})
+	var events []session.Event
+	var marshalErr error
+	for _, message := range messages {
+		var payload []byte
+		payload, marshalErr = json.Marshal(map[string]any{"message": message})
+		if marshalErr != nil {
+			break
+		}
+		events = append(events, session.Event{Kind: "message/complete", Payload: payload})
+	}
 	if marshalErr == nil {
-		_, marshalErr = child.Append(context.Background(), session.Batch{OperationID: "history-import", Events: []session.Event{{Kind: "legacy/import", Payload: payload}}})
+		_, marshalErr = child.Append(context.Background(), session.Batch{OperationID: "child-history", Events: events})
 	}
 	if marshalErr == nil {
 		_, marshalErr = child.Flush(context.Background())

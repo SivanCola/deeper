@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -104,83 +103,6 @@ func TestSessionGroupsPersistExclusiveMembership(t *testing.T) {
 	}
 	if _, err := app.ListProjectGroups("other", root); err == nil {
 		t.Fatal("unsupported scope must fail")
-	}
-}
-
-func TestProjectOrganizationSurvivesOlderBuildRoundTrip(t *testing.T) {
-	app, root, _ := canonicalOrganizationFixture(t, "a", "b", "c")
-	legacyGroups := []desktopGroup{{ID: "important", Title: "Important", TopicIDs: []string{"a", "c"}}}
-	if err := updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-		p := &f.Projects[projectIndexByRoot(f.Projects, root)]
-		p.Topics = []string{"c", "a", "b"}
-		p.ManualTopicOrder = true
-		p.SessionOrder = []string{workspacestate.SessionKey("c"), workspacestate.SessionKey("a"), workspacestate.SessionKey("b")}
-		p.ManualSessionOrder = true
-		p.Groups = legacyGroups
-		return true, nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	workspace := SessionOrganizationWorkspace{Scope: "project", WorkspaceRoot: root}
-	imported, err := app.GetSessionOrganization(workspace)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(imported.Groups) != 1 || !reflect.DeepEqual(imported.Groups[0].SessionKeys, []string{workspacestate.SessionKey("a"), workspacestate.SessionKey("c")}) {
-		t.Fatalf("legacy grouping was not imported: %#v", imported)
-	}
-	if _, err := os.Stat(filepath.Join(desktopConfigDir(), desktopProjectOrganizationFile)); err != nil {
-		t.Fatalf("legacy import sidecar missing: %v", err)
-	}
-	if err := app.ReorderSessions("project", root, []string{workspacestate.SessionKey("b"), workspacestate.SessionKey("c"), workspacestate.SessionKey("a")}); err != nil {
-		t.Fatal(err)
-	}
-	if err := app.SaveSessionGroups("project", root, []desktopGroup{{ID: "important", Title: "Independent", SessionKeys: []string{workspacestate.SessionKey("c")}}}); err != nil {
-		t.Fatal(err)
-	}
-	before, err := app.GetSessionOrganization(workspace)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// An older project's typed round trip drops its unknown organization fields.
-	// The migrated registry must retain the user's newer independent choices.
-	projectsPath := filepath.Join(desktopConfigDir(), desktopProjectsFile)
-	b, err := os.ReadFile(projectsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var old map[string]any
-	if err := json.Unmarshal(b, &old); err != nil {
-		t.Fatal(err)
-	}
-	delete(old, "globalManualTopicOrder")
-	delete(old, "globalGroups")
-	for _, value := range old["projects"].([]any) {
-		p := value.(map[string]any)
-		for _, field := range []string{"manualTopicOrder", "groups", "sessionOrder", "manualSessionOrder"} {
-			delete(p, field)
-		}
-	}
-	b, err = json.MarshalIndent(old, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(projectsPath, b, 0600); err != nil {
-		t.Fatal(err)
-	}
-	after, err := app.GetSessionOrganization(workspace)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(after, before) {
-		t.Fatalf("legacy project write overwrote registry organization: before=%#v after=%#v", before, after)
-	}
-	state, err := app.workspaceRegistry().Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if state.Version != 3 {
-		t.Fatalf("registry version=%d, want downgrade-protected v3", state.Version)
 	}
 }
 

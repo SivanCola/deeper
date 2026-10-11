@@ -21,7 +21,7 @@ func TestEffectiveVisionEnablesPinnedOfficialDeepSeekVisionSKU(t *testing.T) {
 	}
 }
 
-func TestEffectiveVisionHonorsOfficialDeepSeekVisionModels(t *testing.T) {
+func TestEffectiveVisionHonorsOfficialDeepSeekModelOverrides(t *testing.T) {
 	sku := &ProviderEntry{
 		Name:         "deepseek",
 		Kind:         "openai",
@@ -33,7 +33,7 @@ func TestEffectiveVisionHonorsOfficialDeepSeekVisionModels(t *testing.T) {
 		t.Fatal("checking image input on the official vision SKU must enable image input")
 	}
 
-	sku.VisionModels = []string{}
+	sku.ModelOverrides = map[string]ProviderModelOverride{sku.Model: {Vision: boolPointer(false)}}
 	if EffectiveVision(sku) || ExplicitModelVision(sku) {
 		t.Fatal("unchecking image input must disable image input on the official vision SKU")
 	}
@@ -61,7 +61,7 @@ func TestEffectiveVisionHonorsOfficialDeepSeekVisionModels(t *testing.T) {
 	if !EffectiveVision(flash) {
 		t.Fatal("a stale curated vision list vetoed a natively multimodal model")
 	}
-	flash.VisionModels = []string{}
+	flash.ModelOverrides = map[string]ProviderModelOverride{flash.Model: {Vision: boolPointer(false)}}
 	if EffectiveVision(flash) {
 		t.Fatal("an explicitly emptied vision list must disable image input")
 	}
@@ -149,7 +149,7 @@ func TestDeepSeekOfficialPresetsRouteVisionToMultimodalSKUs(t *testing.T) {
 		}
 		flash, _ := cfg.ResolveModel(entry.Name + "/deepseek-flash")
 		pro, _ := cfg.ResolveModel(entry.Name + "/deepseek-v4-pro")
-		vision, ok := cfg.ResolveModel(entry.Name + "/" + openai.OfficialDeepSeekVisionModel)
+		vision, ok := cfg.ResolveModel(entry.Name + "/deepseek-flash")
 		if flash == nil || pro == nil || !ok {
 			t.Fatalf("%s models did not resolve", id)
 		}

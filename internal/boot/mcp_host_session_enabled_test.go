@@ -72,7 +72,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `
 
 func runUseCapabilityCalls(t *testing.T, opts Options, capabilityIDs ...string) string {

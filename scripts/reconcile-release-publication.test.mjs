@@ -14,7 +14,7 @@ function fixture(t) {
   mkdirSync(scripts); mkdirSync(bin);
   for (const file of ["reconcile-release-publication.sh", "fetch-stable-release-manifest.sh", "check-release-public-access.sh", "release-publication-ledger.mjs"]) copyFileSync(`scripts/${file}`, path.join(scripts, file));
   const release = { isDraft: false, isPrerelease: false, assets: [] };
-  const core = createCoreLedger({ version: "1.2.3", sourceSHA: sha, operation: "recover", cliRelease: release, desktopRelease: release, npmPackages: npmPackageNames.map(name => ({ name, version: "1.2.3", latest: "1.2.3", gitHead: sha, integrity: "sha512-example" })) });
+  const core = createCoreLedger({ version: "1.2.3", sourceSHA: sha, operation: "recover", cliRelease: release, desktopRelease: release, npmPackages: npmPackageNames.map(name => ({ name, version: "1.2.3", latest: "1.2.3", deepzoraCandidateSha: sha, gitHead: sha, integrity: "sha512-example" })) });
   writeFileSync(path.join(root, "core.json"), JSON.stringify(core));
   writeFileSync(path.join(root, "full.json"), JSON.stringify(mergeLedgers(core, createPointerLedger({ version: "1.2.3", sourceSHA: sha, operation: "recover", manifest: { version: "v1.2.3" }, homebrewVersion: "1.2.3" }))));
   writeFileSync(path.join(scripts, "verify-stable-release-artifacts.sh"), `#!/usr/bin/env bash

@@ -21,7 +21,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
@@ -29,7 +29,7 @@ model = "x"
 		t.Run(firstNonEmpty(mode, "default"), func(t *testing.T) {
 			prov := testutil.NewMock("compress-"+mode, testutil.Turn{Text: "done"})
 			setBootTokenProfileTestProvider(t, prov)
-			ctrl, err := Build(context.Background(), Options{Sink: event.Discard, TokenMode: mode, AgentPreset: mode})
+			ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
 			if err != nil {
 				t.Fatalf("Build(%q): %v", mode, err)
 			}

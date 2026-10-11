@@ -66,31 +66,6 @@ func TestWindowsPayloadManifestSchema2RoundTripsShellTree(t *testing.T) {
 	}
 }
 
-func TestWindowsPayloadManifestAcceptsSchema1FlatList(t *testing.T) {
-	var files []string
-	for _, name := range windowsPayloadFileNames {
-		files = append(files, `{"name":"`+name+`","sha256":"`+strings.Repeat("a", 64)+`"}`)
-	}
-	flat := `{"schemaVersion":1,"version":"v1","files":[` + strings.Join(files, ",") + `]}`
-	hashes, err := DecodeWindowsPayloadManifest([]byte(flat), "v1")
-	if err != nil {
-		t.Fatalf("schema 1 manifest rejected: %v", err)
-	}
-	if len(hashes) != len(windowsPayloadFileNames) {
-		t.Fatalf("schema 1 members = %d, want %d", len(hashes), len(windowsPayloadFileNames))
-	}
-	if got := WindowsPayloadVersionMembers(hashes); !slices.Equal(got, []string{"deepzora-cli.exe", "deepzora-desktop.exe", "deepzora-update-helper.exe"}) {
-		t.Fatalf("schema 1 version members = %v", got)
-	}
-	tree := strings.Replace(flat, `"files":[`, `"files":[{"name":"app/Deepzora.exe","sha256":"`+strings.Repeat("a", 64)+`"},`, 1)
-	if _, err := DecodeWindowsPayloadManifest([]byte(tree), "v1"); err == nil {
-		t.Fatal("schema 1 manifest with a tree member was accepted")
-	}
-	if _, err := DecodeWindowsPayloadManifest([]byte(strings.Replace(flat, `"schemaVersion":1`, `"schemaVersion":3`, 1)), "v1"); err == nil {
-		t.Fatal("unknown schema version was accepted")
-	}
-}
-
 func TestWindowsPayloadManifestRejectsInvalidTreeNames(t *testing.T) {
 	for _, name := range []string{
 		"app/../deepzora-desktop.exe",
@@ -125,7 +100,7 @@ func TestWindowsPayloadManifestRejectsInvalidTreeNames(t *testing.T) {
 
 func TestWindowsPayloadManifestSchema2RequiresFlatReleaseUnit(t *testing.T) {
 	hashes := windowsPayloadTreeHashes()
-	delete(hashes, "deepzora-guard.exe")
+	delete(hashes, "deepzora-layout-installer.exe")
 	if _, err := EncodeWindowsPayloadManifest("v2", hashes); err == nil {
 		t.Fatal("manifest without the flat release unit was encoded")
 	}
@@ -133,7 +108,7 @@ func TestWindowsPayloadManifestSchema2RequiresFlatReleaseUnit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dropped := strings.Replace(string(b), `"name": "deepzora-guard.exe"`, `"name": "app/guard.exe"`, 1)
+	dropped := strings.Replace(string(b), `"name": "deepzora-layout-installer.exe"`, `"name": "app/guard.exe"`, 1)
 	if _, err := DecodeWindowsPayloadManifest([]byte(dropped), "v2"); err == nil {
 		t.Fatal("manifest missing a flat member was decoded")
 	}

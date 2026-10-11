@@ -17,7 +17,6 @@ import (
 
 	"deepzora/internal/config"
 	"deepzora/internal/event"
-	"deepzora/internal/recovery"
 	"deepzora/internal/turnevent"
 )
 
@@ -238,7 +237,7 @@ func (m *metricsAggregator) observeSettingsSnapshot(c *config.Config) {
 	m.inc("settings_theme", c.DesktopTheme())
 	m.inc("settings_theme_style", themeStyle)
 	m.inc("settings_close_behavior", c.DesktopCloseBehavior())
-	m.inc("settings_display_mode", c.DesktopDisplayMode())
+	m.inc("settings_session_experience", c.DesktopSessionExperience())
 	m.inc("settings_status_bar_style", c.DesktopStatusBarStyle())
 	m.inc("settings_status_bar_items_count", statusBarItemsCountBucket(len(c.DesktopStatusBarItems())))
 	m.inc("settings_check_updates", boolBucket(c.DesktopCheckUpdates()))
@@ -260,8 +259,6 @@ func (m *metricsAggregator) observeBotSettingsSnapshot(c *config.Config) {
 	m.inc("settings_bot_enabled", boolBucket(bot.Enabled))
 	m.inc("settings_bot_model", safeModelBucket(c, bot.Model))
 	m.inc("settings_bot_tool_approval", knownBucketDefault(bot.ToolApprovalMode, "workspace-write", "read-only", "workspace-write", "danger-full-access", "ask", "auto", "yolo"))
-	m.inc("settings_bot_allowlist", boolBucket(bot.Allowlist.Enabled))
-	m.inc("settings_bot_allow_all", boolBucket(bot.Allowlist.AllowAll))
 	m.inc("settings_bot_qq_enabled", boolBucket(bot.QQ.Enabled))
 	m.inc("settings_bot_feishu_enabled", boolBucket(bot.Feishu.Enabled))
 	m.inc("settings_bot_weixin_enabled", boolBucket(bot.Weixin.Enabled))
@@ -329,7 +326,7 @@ func (m *metricsAggregator) observe(e event.Event) {
 		}
 	case event.TurnDone:
 		m.inc("turns", "total")
-		if e.Err != nil && e.Outcome != event.TurnOutcomeRecoveryPaused && e.Outcome != event.TurnOutcomeCompletionUncertain && e.Outcome != event.TurnOutcomeIncompleteRead {
+		if e.Err != nil && e.Outcome != event.TurnOutcomeIncompleteRead {
 			m.inc("provider_error", errorClass(e.Err.Error()))
 		}
 	case event.ToolResult:
@@ -455,51 +452,6 @@ func toolErrorClass(msg string) string {
 		return "timeout"
 	default:
 		return "exec"
-	}
-}
-
-// observeRecoveryMetrics merges content-free recovery counters from a controller
-// (failure events, rule/review continues, human prompts/actions, reviewer errors).
-func (m *metricsAggregator) observeRecoveryMetrics(stats recovery.Metrics) {
-	if m == nil {
-		return
-	}
-	add := func(signal string, n int64) {
-		for range n {
-			m.inc(signal, "total")
-		}
-	}
-	add("recovery_failure", stats.FailureEvents)
-	add("recovery_rule_continue", stats.RuleContinues)
-	add("recovery_review_continue", stats.ReviewContinues)
-	add("recovery_human_prompt", stats.HumanPrompts)
-	add("recovery_human_continue", stats.HumanContinues)
-	add("recovery_human_revise", stats.HumanRevises)
-	add("recovery_review_error", stats.ReviewErrors)
-	add("recovery_repeat_prompt", stats.RepeatPrompts)
-	if stats.ReviewLatencyCount > 0 {
-		avg := stats.ReviewLatencyMsSum / stats.ReviewLatencyCount
-		switch {
-		case avg < 500:
-			m.inc("recovery_review_latency", "lt_500ms")
-		case avg < 2000:
-			m.inc("recovery_review_latency", "lt_2s")
-		case avg < 10000:
-			m.inc("recovery_review_latency", "lt_10s")
-		default:
-			m.inc("recovery_review_latency", "gte_10s")
-		}
-	}
-}
-
-func observeControllerRecoveryMetrics(m *metricsAggregator, ctrl any) {
-	if m == nil || ctrl == nil {
-		return
-	}
-	if drainer, ok := ctrl.(interface {
-		DrainRecoveryMetrics() recovery.Metrics
-	}); ok {
-		m.observeRecoveryMetrics(drainer.DrainRecoveryMetrics())
 	}
 }
 

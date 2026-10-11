@@ -69,51 +69,6 @@ func TestUserConfigPathUsesDeepzoraHome(t *testing.T) {
 	}
 }
 
-func TestDeepzoraManagedConfigPathsAreConfigFilesOnly(t *testing.T) {
-	home := isolateUserConfigHome(t)
-	setRuntimeGOOS(t, "windows")
-	oldConfigDir := osUserConfigDir
-	osUserConfigDir = func() string { return filepath.Join(home, "AppData", "Roaming") }
-	t.Cleanup(func() { osUserConfigDir = oldConfigDir })
-
-	paths := DeepzoraManagedConfigPaths()
-	for _, want := range []string{
-		filepath.Join(home, "AppData", "Roaming", "deepzora", "config.toml"),
-		filepath.Join(home, ".deepzora", "config.json"),
-	} {
-		found := false
-		for _, got := range paths {
-			if samePath(got, want) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatalf("managed config paths = %v, want %s", paths, want)
-		}
-	}
-	// The escape hatch is file-level by contract: no directories, and none of
-	// the sensitive Deepzora-home siblings (credentials, hooks, skills,
-	// sessions) may ride along.
-	for _, got := range paths {
-		if base := filepath.Base(got); base != "config.toml" && base != "config.json" {
-			t.Fatalf("managed config path %q is not a known config file (paths must be files, not directories): %v", got, paths)
-		}
-		for _, forbidden := range []string{
-			home,
-			DeepzoraHomeDir(),
-			UserCredentialsPath(),
-			filepath.Join(DeepzoraHomeDir(), "settings.json"),
-			filepath.Join(DeepzoraHomeDir(), "skills"),
-			filepath.Join(DeepzoraHomeDir(), "sessions"),
-		} {
-			if samePath(got, forbidden) {
-				t.Fatalf("managed config paths must not include %q: %v", forbidden, paths)
-			}
-		}
-	}
-}
-
 func TestUserConfigPathHonorsDeepzoraHome(t *testing.T) {
 	home := isolateUserConfigHome(t)
 	custom := filepath.Join(home, "custom-home")
@@ -183,386 +138,6 @@ func TestWriteRootsForRootExcludesUserConfigDirByDefault(t *testing.T) {
 	}
 	if got := filepath.Clean(roots[0]); got != filepath.Clean(project) {
 		t.Fatalf("first write root = %q, want project %q", got, project)
-	}
-}
-
-// TestRenderTOMLRoundTrips ensures the annotated TOML we emit parses back into
-// an equivalent config — i.e. the wizard never writes a file it can't read.
-func TestRenderTOMLRoundTrips(t *testing.T) {
-	orig := Default()
-	orig.Providers = append(orig.Providers, legacyMimoCustomProvider("mimo-pro"))
-	orig.DefaultModel = "mimo-pro"
-	orig.Language = "zh"
-	orig.UI.Theme = "light"
-	orig.UI.ThemeStyle = "glacier"
-	orig.UI.ShortcutLayout = "desktop"
-	orig.UI.CursorShape = "bar"
-	orig.Desktop.Language = "en"
-	orig.Desktop.LayoutStyle = "workbench"
-	orig.Desktop.Theme = "dark"
-	orig.Desktop.ThemeStyle = "graphite"
-	orig.Desktop.TerminalTheme = "light"
-	orig.Desktop.CloseBehavior = "background"
-	orig.Desktop.DisplayMode = "compact"
-	orig.Desktop.StatusBarStyle = "text"
-	orig.Desktop.StatusBarStyleInitialized = true
-	orig.Desktop.StatusBarItems = []string{"model", "balance", "cache"}
-	orig.Desktop.DefaultToolApprovalMode = "auto"
-	orig.Desktop.CheckUpdates = boolPtr(false)
-	orig.Desktop.UpdateChannel = "preview"
-	orig.Desktop.Telemetry = boolPtr(false)
-	orig.Notifications.Enabled = true
-	orig.Notifications.TurnDone = true
-	orig.Notifications.ApprovalRequest = true
-	orig.Notifications.AskRequest = true
-	orig.Agent.RecoveryModel = "mimo-pro"
-	orig.Agent.RecoveryTemperature = 0.15
-	orig.Agent.ReasoningLanguage = "zh"
-	orig.Agent.CompactRatio = 0.8
-	orig.Agent.SubagentModel = "mimo-pro"
-	orig.Agent.SubagentModels = map[string]string{"review": "deepseek-pro"}
-	orig.Agent.MaxSubagentDepth = 3
-	orig.Agent.Keep = []string{"errors", "user_marked"}
-	orig.Agent.RecentKeep = 4
-	orig.Tools.BashTimeoutSeconds = intPtr(900)
-	orig.Tools.BackgroundJobs.StalledWarningSeconds = intPtr(30)
-	orig.Tools.Shell.Prefer = "bash"
-	orig.Tools.Shell.Path = "/usr/local/bin/bash"
-	orig.Permissions = PermissionsConfig{
-		Mode:             "deny",
-		Deny:             []string{"Bash(rm -rf*)"},
-		Allow:            []string{"Bash(go test:*)", "read_file"},
-		AllowDynamicBash: true,
-	}
-	orig.Network = NetworkConfig{
-		ProxyMode: "custom",
-		NoProxy:   "localhost,127.0.0.1",
-		Proxy: NetworkProxyConfig{
-			Type:     "socks5",
-			Server:   "127.0.0.1",
-			Port:     7890,
-			Username: "user",
-			Password: "${DEEPZORA_PROXY_PASSWORD}",
-		},
-	}
-	orig.Environment.Enabled = boolPtr(false)
-	orig.Environment.Tools = map[string]string{"go": "/opt/homebrew/bin/go", "python3": "~/.pyenv/shims/python3"}
-	orig.Skills.Paths = []string{"~/my-skills", "../shared/skills"}
-	orig.Skills.ExcludedPaths = []string{"~/.agents/skills"}
-	orig.Skills.DisabledSkills = []string{"review", "explore"}
-	orig.Skills.DisableImplicitInvocation = true
-	orig.Skills.MaxDepth = 2
-	orig.Bot.ToolApprovalMode = "auto"
-	orig.Bot.Control = BotControlConfig{Enabled: true, Addr: "127.0.0.1:39001", TokenEnv: "BOT_CONTROL_TOKEN"}
-	orig.Bot.Feishu.OutboundMediaRoots = []string{"/tmp/deepzora-media", "/srv/shots"}
-	orig.Bot.Routes = []BotRouteConfig{{
-		ConnectionID:     "feishu-lark",
-		ChatType:         "group",
-		ChatID:           "oc_group",
-		Model:            "deepseek-pro",
-		ToolApprovalMode: "ask",
-		WorkspaceRoot:    "/tmp/deepzora-route",
-	}}
-	orig.Bot.DesktopWatchers = []BotDesktopWatcherConfig{{
-		Platform:     "feishu",
-		ConnectionID: "feishu-lark",
-		Domain:       "lark",
-		ChatType:     "dm",
-		ChatID:       "oc_watcher",
-	}}
-	orig.Bot.Connections = []BotConnectionConfig{{
-		ID:               "feishu-lark",
-		Provider:         "feishu",
-		Domain:           "lark",
-		Label:            "Lark",
-		Enabled:          true,
-		Status:           "connected",
-		Model:            "deepseek-pro",
-		ToolApprovalMode: "yolo",
-		WorkspaceRoot:    "/tmp/deepzora-bot",
-		Credential:       BotConnectionCredential{AppID: "cli_lark", AppSecretEnv: "LARK_BOT_APP_SECRET"},
-		SessionMappings: []BotConnectionSessionMapping{{
-			RemoteID:      "ou_123",
-			SessionID:     "topic:topic_bot",
-			Scope:         "project",
-			WorkspaceRoot: "/tmp/deepzora-bot",
-			UpdatedAt:     "2026-06-11T00:00:00Z",
-		}},
-	}}
-	orig.LSP = LSPConfig{
-		Enabled: true,
-		Servers: map[string]LSPServer{
-			"lua": {
-				Command:     "lua-language-server",
-				Args:        []string{"--stdio"},
-				Env:         map[string]string{"LUA_PATH": "./?.lua"},
-				LanguageID:  "lua",
-				Extensions:  []string{".lua", ".script", ".gui_script"},
-				InstallHint: "install lua-language-server",
-			},
-		},
-	}
-	orig.Plugins = []PluginEntry{
-		{Name: "example", Command: "deepzora-plugin-example"},
-		{Name: "stripe", Type: "http", URL: "https://mcp.stripe.com", Headers: map[string]string{"Authorization": "Bearer x"}, AutoStart: boolPtr(false), Tier: "background"},
-	}
-	mm, _ := orig.Provider("mimo-pro")
-	mm.BaseURL = "http://localhost:8000/v1"
-	mm.ChatURL = "http://localhost:8000/v1/chat/completions"
-	mm.RequestURL = "http://localhost:8000/custom/chat/completions/?token=1"
-	mm.ModelsURL = "http://localhost:8000/v1/models"
-	mm.ReasoningProtocol = "openai"
-	mm.PresetID = "mimo-api"
-	mm.PresetVersion = ProviderPresetVersion
-	ds, _ := orig.Provider("deepseek-flash")
-	ds.Effort = "max"
-
-	rendered := RenderTOML(orig)
-
-	var got Config
-	if _, err := toml.Decode(rendered, &got); err != nil {
-		t.Fatalf("rendered TOML does not parse: %v\n---\n%s", err, rendered)
-	}
-
-	if got.DefaultModel != "mimo-pro" {
-		t.Errorf("default_model = %q, want mimo-pro", got.DefaultModel)
-	}
-	if got.ConfigVersion != Default().ConfigVersion {
-		t.Errorf("config_version = %d, want %d", got.ConfigVersion, Default().ConfigVersion)
-	}
-	if got.Language != "zh" {
-		t.Errorf("language = %q, want zh", got.Language)
-	}
-	if got.UI.Theme != "light" {
-		t.Errorf("ui.theme = %q, want light", got.UI.Theme)
-	}
-	if got.UI.ThemeStyle != "glacier" {
-		t.Errorf("ui.theme_style = %q, want glacier", got.UI.ThemeStyle)
-	}
-	if got.UI.ShortcutLayout != "desktop" {
-		t.Errorf("ui.shortcut_layout = %q, want desktop", got.UI.ShortcutLayout)
-	}
-	if got.UICursorShape() != "bar" {
-		t.Errorf("ui.cursor_shape = %q, want bar", got.UICursorShape())
-	}
-	if !got.UI.ShowTurnUsage {
-		t.Error("ui.show_turn_usage = false, want true")
-	}
-	if got.Desktop.Language != "en" {
-		t.Errorf("desktop.language = %q, want en", got.Desktop.Language)
-	}
-	if got.Desktop.LayoutStyle != "workbench" {
-		t.Errorf("desktop.layout_style = %q, want workbench", got.Desktop.LayoutStyle)
-	}
-	if got.Desktop.Theme != "dark" {
-		t.Errorf("desktop.theme = %q, want dark", got.Desktop.Theme)
-	}
-	if got.Desktop.ThemeStyle != "graphite" {
-		t.Errorf("desktop.theme_style = %q, want graphite", got.Desktop.ThemeStyle)
-	}
-	if got.Desktop.TerminalTheme != "light" {
-		t.Errorf("desktop.terminal_theme = %q, want light", got.Desktop.TerminalTheme)
-	}
-	if got.Desktop.CloseBehavior != "background" {
-		t.Errorf("desktop.close_behavior = %q, want background", got.Desktop.CloseBehavior)
-	}
-	if got.DesktopDisplayMode() != "compact" {
-		t.Errorf("desktop.display_mode = %q, want compact", got.DesktopDisplayMode())
-	}
-	if got.Desktop.StatusBarStyle != "text" {
-		t.Errorf("desktop.status_bar_style = %q, want text", got.Desktop.StatusBarStyle)
-	}
-	if want := []string{"model", "balance", "cache"}; !reflect.DeepEqual(got.Desktop.StatusBarItems, want) {
-		t.Errorf("desktop.status_bar_items = %v, want %v", got.Desktop.StatusBarItems, want)
-	}
-	if got.DesktopDefaultToolApprovalMode() != "workspace-write" {
-		t.Errorf("desktop.default_tool_approval_mode = %q, want workspace-write", got.DesktopDefaultToolApprovalMode())
-	}
-	if got.Desktop.CheckUpdates == nil || *got.Desktop.CheckUpdates {
-		t.Errorf("desktop.check_updates = %+v, want false", got.Desktop.CheckUpdates)
-	}
-	if got.DesktopUpdateChannel() != "stable" {
-		t.Errorf("desktop.update_channel = %q, want stable", got.DesktopUpdateChannel())
-	}
-	if got.Agent.RecoveryModel != "" || got.Agent.RecoveryTemperature != 0 {
-		t.Errorf("retired agent recovery settings rendered: %+v", got.Agent)
-	}
-	if !got.Notifications.Enabled || !got.Notifications.TurnDone || !got.Notifications.ApprovalRequest || !got.Notifications.AskRequest {
-		t.Errorf("notifications not preserved: %+v", got.Notifications)
-	}
-	if got.Agent.MaxSteps != orig.Agent.MaxSteps {
-		t.Errorf("max_steps = %d, want %d", got.Agent.MaxSteps, orig.Agent.MaxSteps)
-	}
-	if got.Agent.PlannerMaxSteps != orig.Agent.PlannerMaxSteps {
-		t.Errorf("planner_max_steps = %d, want %d", got.Agent.PlannerMaxSteps, orig.Agent.PlannerMaxSteps)
-	}
-	if len(got.Bot.Connections) != 1 || got.Bot.Connections[0].Model != "deepseek-pro" || got.Bot.Connections[0].WorkspaceRoot != "/tmp/deepzora-bot" {
-		t.Errorf("bot connection not preserved: %+v", got.Bot.Connections)
-	}
-	if got.Bot.ToolApprovalMode != "workspace-write" || got.Bot.Connections[0].ToolApprovalMode != "workspace-write" {
-		t.Errorf("bot tool approval mode not migrated: bot=%q connection=%q", got.Bot.ToolApprovalMode, got.Bot.Connections[0].ToolApprovalMode)
-	}
-	if !got.Bot.Control.Enabled || got.Bot.Control.Addr != "127.0.0.1:39001" || got.Bot.Control.TokenEnv != "BOT_CONTROL_TOKEN" {
-		t.Errorf("bot control not preserved: %+v", got.Bot.Control)
-	}
-	if len(got.Bot.Feishu.OutboundMediaRoots) != 2 || got.Bot.Feishu.OutboundMediaRoots[0] != "/tmp/deepzora-media" {
-		t.Errorf("feishu outbound_media_roots not preserved: %+v", got.Bot.Feishu.OutboundMediaRoots)
-	}
-	if len(got.Bot.Routes) != 1 || got.Bot.Routes[0].WorkspaceRoot != "/tmp/deepzora-route" || got.Bot.Routes[0].ChatID != "oc_group" {
-		t.Errorf("bot routes not preserved: %+v", got.Bot.Routes)
-	}
-	if len(got.Bot.DesktopWatchers) != 1 || got.Bot.DesktopWatchers[0].ChatID != "oc_watcher" || got.Bot.DesktopWatchers[0].Platform != "feishu" || got.Bot.DesktopWatchers[0].Domain != "lark" {
-		t.Errorf("bot desktop watchers not preserved: %+v", got.Bot.DesktopWatchers)
-	}
-	if len(got.Bot.Connections[0].SessionMappings) != 1 || got.Bot.Connections[0].SessionMappings[0].Scope != "project" || got.Bot.Connections[0].SessionMappings[0].WorkspaceRoot != "/tmp/deepzora-bot" {
-		t.Errorf("bot session mapping scope not preserved: %+v", got.Bot.Connections[0].SessionMappings)
-	}
-	if got.Agent.Temperature != orig.Agent.Temperature {
-		t.Errorf("temperature = %v, want %v", got.Agent.Temperature, orig.Agent.Temperature)
-	}
-	if got.Agent.ReasoningLanguage != "zh" {
-		t.Errorf("reasoning_language = %q, want zh", got.Agent.ReasoningLanguage)
-	}
-	if got.Agent.CompactRatio != orig.Agent.CompactRatio {
-		t.Errorf("compact_ratio = %v, want %v", got.Agent.CompactRatio, orig.Agent.CompactRatio)
-	}
-	// Deprecated multi-threshold fields must not reappear after render/load.
-	if got.Agent.SoftCompactRatio != 0 || got.Agent.ToolResultSnipRatio != 0 || got.Agent.CompactForceRatio != 0 {
-		t.Errorf("deprecated compact ratios survived round-trip: soft=%v snip=%v force=%v",
-			got.Agent.SoftCompactRatio, got.Agent.ToolResultSnipRatio, got.Agent.CompactForceRatio)
-	}
-	if strings.Join(got.Agent.Keep, ",") != strings.Join(orig.Agent.Keep, ",") {
-		t.Errorf("keep = %v, want %v", got.Agent.Keep, orig.Agent.Keep)
-	}
-	if got.Agent.RecentKeep != orig.Agent.RecentKeep {
-		t.Errorf("recent_keep = %d, want %d", got.Agent.RecentKeep, orig.Agent.RecentKeep)
-	}
-	if got.Agent.SystemPrompt != orig.Agent.SystemPrompt {
-		t.Errorf("system_prompt mismatch:\n got %q\nwant %q", got.Agent.SystemPrompt, orig.Agent.SystemPrompt)
-	}
-	if !got.LSP.Enabled {
-		t.Error("lsp.enabled = false, want true")
-	}
-	if got.Environment.Enabled == nil || *got.Environment.Enabled {
-		t.Errorf("environment.enabled = %+v, want false", got.Environment.Enabled)
-	}
-	if !reflect.DeepEqual(got.Environment.Tools, orig.Environment.Tools) {
-		t.Errorf("environment.tools = %v, want %v", got.Environment.Tools, orig.Environment.Tools)
-	}
-	lua := got.LSP.Servers["lua"]
-	if lua.Command != "lua-language-server" || lua.LanguageID != "lua" || lua.InstallHint != "install lua-language-server" {
-		t.Errorf("lsp.servers.lua scalar fields not preserved: %+v", lua)
-	}
-	if len(lua.Args) != 1 || lua.Args[0] != "--stdio" {
-		t.Errorf("lsp.servers.lua.args = %v, want [--stdio]", lua.Args)
-	}
-	if lua.Env["LUA_PATH"] != "./?.lua" {
-		t.Errorf("lsp.servers.lua.env = %v, want LUA_PATH", lua.Env)
-	}
-	if len(lua.Extensions) != 3 || lua.Extensions[2] != ".gui_script" {
-		t.Errorf("lsp.servers.lua.extensions = %v", lua.Extensions)
-	}
-	if got.Agent.SubagentModel != "mimo-pro" {
-		t.Errorf("subagent_model = %q, want mimo-pro", got.Agent.SubagentModel)
-	}
-	if got.Agent.SubagentModels["review"] != "deepseek-pro" {
-		t.Errorf("subagent_models.review = %q, want deepseek-pro", got.Agent.SubagentModels["review"])
-	}
-	if got.Agent.MaxSubagentDepth != 3 {
-		t.Errorf("max_subagent_depth = %d, want 3", got.Agent.MaxSubagentDepth)
-	}
-	if got.Tools.BashTimeoutSeconds == nil || *got.Tools.BashTimeoutSeconds != 900 {
-		t.Errorf("tools.bash_timeout_seconds = %v, want 900", got.Tools.BashTimeoutSeconds)
-	}
-	if got.Tools.BackgroundJobs.StalledWarningSeconds == nil || *got.Tools.BackgroundJobs.StalledWarningSeconds != 30 {
-		t.Errorf("tools.background_jobs.stalled_warning_seconds = %v, want 30", got.Tools.BackgroundJobs.StalledWarningSeconds)
-	}
-	if got.Tools.Shell.Prefer != "bash" {
-		t.Errorf("tools.shell.prefer = %q, want bash", got.Tools.Shell.Prefer)
-	}
-	if got.Tools.Shell.Path != "/usr/local/bin/bash" {
-		t.Errorf("tools.shell.path = %q, want /usr/local/bin/bash", got.Tools.Shell.Path)
-	}
-	if g, _ := got.Provider("mimo-pro"); g == nil || g.BaseURL != "http://localhost:8000/v1" || g.ChatURL != "http://localhost:8000/v1/chat/completions" || g.RequestURL != "http://localhost:8000/custom/chat/completions/?token=1" || g.ModelsURL != "http://localhost:8000/v1/models" || g.ReasoningProtocol != "openai" {
-		t.Errorf("mimo-pro endpoint fields not preserved: %+v", g)
-	}
-	if g, _ := got.Provider("mimo-pro"); g == nil || g.PresetID != "mimo-api" || g.PresetVersion != ProviderPresetVersion {
-		t.Errorf("mimo-pro preset metadata not preserved: %+v", g)
-	}
-	if g, _ := got.Provider("deepseek-flash"); g == nil || g.Effort != "max" {
-		t.Errorf("deepseek-flash effort not preserved: %+v", g)
-	}
-	if len(got.Providers) != len(orig.Providers) {
-		t.Errorf("providers count = %d, want %d", len(got.Providers), len(orig.Providers))
-	}
-	if got.Permissions.Mode != "deny" {
-		t.Errorf("permissions.mode = %q, want deny", got.Permissions.Mode)
-	}
-	if len(got.Permissions.Deny) != 1 || got.Permissions.Deny[0] != "Bash(rm -rf*)" {
-		t.Errorf("permissions.deny = %v, want [Bash(rm -rf*)]", got.Permissions.Deny)
-	}
-	if len(got.Permissions.Allow) != 2 {
-		t.Errorf("permissions.allow = %v, want 2 entries", got.Permissions.Allow)
-	}
-	if got.Network.ProxyMode != "custom" || got.Network.Proxy.Type != "socks5" || got.Network.Proxy.Port != 7890 {
-		t.Errorf("network proxy not preserved: %+v", got.Network)
-	}
-	if len(got.Skills.Paths) != 2 || got.Skills.Paths[0] != "~/my-skills" {
-		t.Errorf("skills.paths = %v", got.Skills.Paths)
-	}
-	if len(got.Skills.ExcludedPaths) != 1 || got.Skills.ExcludedPaths[0] != "~/.agents/skills" {
-		t.Errorf("skills.excluded_paths = %v", got.Skills.ExcludedPaths)
-	}
-	if len(got.Skills.DisabledSkills) != 2 || got.Skills.DisabledSkills[0] != "review" || got.Skills.DisabledSkills[1] != "explore" {
-		t.Errorf("skills.disabled_skills = %v", got.Skills.DisabledSkills)
-	}
-	if !got.Skills.DisableImplicitInvocation || got.ImplicitSkillInvocationEnabled() {
-		t.Error("skills.disable_implicit_invocation was not preserved")
-	}
-	if got.SkillMaxDepth() != 2 {
-		t.Errorf("skills.max_depth = %d, want 2", got.SkillMaxDepth())
-	}
-	if len(got.Plugins) != 2 {
-		t.Fatalf("plugins count = %d, want 2", len(got.Plugins))
-	}
-	stripe := got.Plugins[1]
-	if stripe.Name != "stripe" || stripe.Type != "http" || stripe.URL != "https://mcp.stripe.com" {
-		t.Errorf("http plugin not preserved: %+v", stripe)
-	}
-	if stripe.Headers["Authorization"] != "Bearer x" {
-		t.Errorf("plugin headers not preserved: %v", stripe.Headers)
-	}
-	if strings.Contains(rendered, "trusted_read_only_tools") {
-		t.Errorf("removed plugin reader setting survived render: entry=%+v\n%s", stripe, rendered)
-	}
-	if stripe.AutoStart == nil || *stripe.AutoStart {
-		t.Errorf("auto_start should render and parse as false, got %+v", stripe.AutoStart)
-	}
-	if stripe.Tier != "" {
-		t.Errorf("plugin tier should be omitted from new config, got %q", stripe.Tier)
-	}
-	if strings.Contains(rendered, "\ntier") {
-		t.Errorf("rendered config should not contain MCP tier fields:\n%s", rendered)
-	}
-}
-
-func TestRenderTOMLDocumentsPlanModeReadOnlyCommands(t *testing.T) {
-	cfg := Default()
-	cfg.Agent.PlanModeReadOnlyCommands = []string{"gh issue view"}
-
-	rendered := RenderTOML(cfg)
-	var got Config
-	if _, err := toml.Decode(rendered, &got); err != nil {
-		t.Fatalf("rendered TOML does not parse: %v\n%s", err, rendered)
-	}
-	if !strings.Contains(rendered, `plan_mode_read_only_commands = ["gh issue view"]`) {
-		t.Fatalf("rendered config should preserve plan_mode_read_only_commands:\n%s", rendered)
-	}
-	if !strings.Contains(rendered, "legacy compatibility only") || !strings.Contains(rendered, "Plan bash uses Permissions") {
-		t.Fatalf("rendered config should document legacy plan_mode_read_only_commands semantics:\n%s", rendered)
-	}
-	if !reflect.DeepEqual(got.Agent.PlanModeReadOnlyCommands, cfg.Agent.PlanModeReadOnlyCommands) {
-		t.Fatalf("PlanModeReadOnlyCommands round trip = %v, want %v", got.Agent.PlanModeReadOnlyCommands, cfg.Agent.PlanModeReadOnlyCommands)
 	}
 }
 
@@ -664,7 +239,7 @@ func TestRenderTOMLCreationLayoutStyle(t *testing.T) {
 
 func TestScopedRenderPreservesLSPConfig(t *testing.T) {
 	const src = `
-config_version = 4
+config_version = 12
 default_model = "mimo"
 
 [lsp]
@@ -776,58 +351,6 @@ func TestNotificationsDefaultsKeepEventSwitchesEnabled(t *testing.T) {
 	}
 }
 
-func TestScopedRenderKeepsPluginsInTheirOwningConfig(t *testing.T) {
-	cfg := Default()
-	cfg.Plugins = []PluginEntry{
-		{Name: "unknown", Command: "unknown-mcp"},
-		{Name: "user", Command: "user-mcp", Source: MCPSourceUserConfig},
-		{Name: "project", Command: "project-mcp", Source: MCPSourceProjectConfig},
-		{Name: "mcp-json", Command: "json-mcp", Source: MCPSourceProjectMCPJSON},
-		{Name: "legacy", Command: "legacy-mcp", Source: MCPSourceLegacyUser},
-		{Name: "package", Command: "package-mcp", Source: MCPSourcePluginPackage},
-	}
-
-	tests := []struct {
-		name  string
-		body  string
-		want  []string
-		avoid []string
-	}{
-		{name: "full", body: RenderTOMLForScope(cfg, RenderScopeFull), want: []string{"unknown", "user", "project", "mcp-json", "legacy", "package"}},
-		{name: "user", body: RenderTOMLForScope(cfg, RenderScopeUser), want: []string{"unknown", "user"}, avoid: []string{"project", "mcp-json", "legacy", "package"}},
-		{name: "project", body: RenderTOMLForScope(cfg, RenderScopeProject), want: []string{"unknown", "project"}, avoid: []string{"user", "mcp-json", "legacy", "package"}},
-		{name: "project delta", body: RenderTOMLProjectDelta(cfg), want: []string{"unknown", "project"}, avoid: []string{"user", "mcp-json", "legacy", "package"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			for _, name := range tt.want {
-				if !strings.Contains(tt.body, `name    = "`+name+`"`) {
-					t.Fatalf("render missing plugin %q:\n%s", name, tt.body)
-				}
-			}
-			for _, name := range tt.avoid {
-				if strings.Contains(tt.body, `name    = "`+name+`"`) {
-					t.Fatalf("render leaked plugin %q:\n%s", name, tt.body)
-				}
-			}
-		})
-	}
-}
-
-func TestProjectDeltaOmitsRetiredRecoveryReviewerOverride(t *testing.T) {
-	c := Default()
-	c.Agent.RecoveryModel = "deepseek-pro"
-	c.Agent.RecoveryTemperature = 0.2
-
-	delta := RenderTOMLProjectDelta(c)
-	if strings.Contains(delta, "recovery_model") {
-		t.Fatalf("retired recovery_model rendered:\n%s", delta)
-	}
-	if strings.Contains(delta, "recovery_temperature") {
-		t.Fatalf("deprecated recovery_temperature rendered:\n%s", delta)
-	}
-}
-
 func TestProjectDeltaRendersToolsShellOverrides(t *testing.T) {
 	c := Default()
 	c.Tools.Shell.Prefer = "bash"
@@ -853,17 +376,16 @@ func TestProjectDeltaRendersToolsShellOverrides(t *testing.T) {
 }
 
 func TestResponsesProviderModeRoundTripsInUserAndProjectRender(t *testing.T) {
-	legacyFalse := false
 	cfg := Default()
 	cfg.Providers = append(cfg.Providers, ProviderEntry{
 		Name: "responses-test", Kind: "responses", BaseURL: "https://example.com/v1",
-		ChatURL: "https://legacy.example.com/chat/completions", RequestURL: "https://example.com/v1/custom/responses",
-		Model: "model", APIKeyEnv: "RESPONSES_API_KEY",
-		ResponsesMode: "stateful", ResponsesStateful: &legacyFalse,
+		RequestURL: "https://example.com/v1/custom/responses",
+		Model:      "model", APIKeyEnv: "RESPONSES_API_KEY",
+		ResponsesMode: "stateful",
 	})
 
 	for _, rendered := range []string{RenderTOMLForScope(cfg, RenderScopeUser), RenderTOMLProjectDelta(cfg)} {
-		if !strings.Contains(rendered, `responses_mode = "stateful"`) || !strings.Contains(rendered, "responses_stateful = false") {
+		if !strings.Contains(rendered, `responses_mode = "stateful"`) || strings.Contains(rendered, "responses_stateful") {
 			t.Fatalf("responses settings missing from render:\n%s", rendered)
 		}
 		var decoded Config
@@ -871,7 +393,7 @@ func TestResponsesProviderModeRoundTripsInUserAndProjectRender(t *testing.T) {
 			t.Fatalf("decode responses config: %v\n%s", err, rendered)
 		}
 		entry, ok := decoded.Provider("responses-test")
-		if !ok || entry.ChatURL != "https://legacy.example.com/chat/completions" || entry.RequestURL != "https://example.com/v1/custom/responses" || entry.ResponsesMode != "stateful" || entry.ResponsesStateful == nil || *entry.ResponsesStateful {
+		if !ok || entry.RequestURL != "https://example.com/v1/custom/responses" || entry.ResponsesMode != "stateful" {
 			t.Fatalf("responses settings did not round-trip: %+v, found=%v", entry, ok)
 		}
 	}
@@ -923,13 +445,13 @@ func TestShowTurnUsageDefaultsOnAndRendersFalseOverride(t *testing.T) {
 func TestProjectRenderPreservesNonDefaultLegacySections(t *testing.T) {
 	c := Default()
 	c.UI.Theme = "light"
-	c.UI.CloseBehavior = "quit"
+	c.Desktop.CloseBehavior = "quit"
 	c.Network.ProxyMode = "custom"
 	c.Network.Proxy.Server = "127.0.0.1"
 	c.Network.Proxy.Port = 7890
 
 	project := RenderTOMLForScope(c, RenderScopeProject)
-	for _, want := range []string{"[ui]", `theme = "light"`, `close_behavior = "quit"`, "[network]", `proxy_mode = "custom"`, `server = "127.0.0.1"`} {
+	for _, want := range []string{"[ui]", `theme = "light"`, "[network]", `proxy_mode = "custom"`, `server = "127.0.0.1"`} {
 		if !strings.Contains(project, want) {
 			t.Fatalf("project render missing legacy/non-default %q:\n%s", want, project)
 		}
@@ -961,61 +483,26 @@ func TestRenderTOMLRoundTripsPerModelPrices(t *testing.T) {
 	}
 }
 
-func TestRenderTOMLRoundTripsVisionModels(t *testing.T) {
+func TestRenderTOMLRoundTripsModelVisionOverrides(t *testing.T) {
+	on, off := true, false
 	orig := Default()
-	orig.Providers = []ProviderEntry{
-		{
-			Name:         "custom",
-			Kind:         "openai",
-			BaseURL:      "https://proxy.example.com/v1",
-			Models:       []string{"text-only", "qwen-vl-plus"},
-			Default:      "text-only",
-			APIKeyEnv:    "CUSTOM_API_KEY",
-			VisionModels: []string{"qwen-vl-plus"},
-			VisionDetail: "low",
-		},
-		{
-			Name:         "disabled-vision",
-			Kind:         "openai",
-			BaseURL:      "https://proxy.example.com/v1",
-			Models:       []string{"qwen-vl-plus"},
-			Default:      "qwen-vl-plus",
-			APIKeyEnv:    "CUSTOM_API_KEY",
-			VisionModels: []string{},
-		},
-	}
-
+	orig.Providers = []ProviderEntry{{Name: "custom", Kind: "openai", BaseURL: "https://proxy.example.com/v1", Models: []string{"text-only", "vision-model"}, Default: "text-only", VisionDetail: "low", ModelOverrides: map[string]ProviderModelOverride{"text-only": {Vision: &off}, "vision-model": {Vision: &on}}}}
 	rendered := RenderTOML(orig)
-	if !strings.Contains(rendered, `vision_models = ["qwen-vl-plus"]`) {
-		t.Fatalf("rendered TOML missing vision_models:\n%s", rendered)
+	if strings.Contains(rendered, "vision_models") || !strings.Contains(rendered, "model_overrides") {
+		t.Fatal("rendered retired capability format")
 	}
-	if !strings.Contains(rendered, `vision_models = []`) {
-		t.Fatalf("rendered TOML missing explicit empty vision_models:\n%s", rendered)
-	}
-	if !strings.Contains(rendered, `vision_detail = "low"`) {
-		t.Fatalf("rendered TOML missing vision_detail:\n%s", rendered)
-	}
-
 	var got Config
-	if _, err := toml.Decode(rendered, &got); err != nil {
-		t.Fatalf("rendered TOML does not parse: %v", err)
+	if _, err := decodeTOMLBytes([]byte(rendered), &got); err != nil {
+		t.Fatal(err)
 	}
-	p, ok := got.Provider("custom")
-	if !ok {
-		t.Fatal("custom provider missing after round trip")
-	}
-	if !reflect.DeepEqual(p.VisionModels, []string{"qwen-vl-plus"}) {
-		t.Fatalf("vision_models after round trip = %v, want [qwen-vl-plus]", p.VisionModels)
-	}
-	if p.VisionDetail != "low" {
-		t.Fatalf("vision_detail after round trip = %q, want low", p.VisionDetail)
-	}
-	disabled, ok := got.Provider("disabled-vision")
-	if !ok {
-		t.Fatal("disabled-vision provider missing after round trip")
-	}
-	if disabled.VisionModels == nil || len(disabled.VisionModels) != 0 {
-		t.Fatalf("disabled-vision vision_models after round trip = %#v, want explicit empty list", disabled.VisionModels)
+	for _, tc := range []struct {
+		model  string
+		vision bool
+	}{{"text-only", false}, {"vision-model", true}} {
+		p, ok := got.ResolveModel("custom/" + tc.model)
+		if !ok || EffectiveVision(p) != tc.vision || p.VisionDetail != "low" {
+			t.Fatal("current model capability did not survive round trip")
+		}
 	}
 }
 
@@ -1167,24 +654,6 @@ func boolPtr(v bool) *bool { return &v }
 
 func intPtr(v int) *int { return &v }
 
-func TestRenderTOMLPreservesDesktopDisplayMode(t *testing.T) {
-	c := Default()
-	if err := c.SetDesktopDisplayMode("compact"); err != nil {
-		t.Fatalf("SetDesktopDisplayMode: %v", err)
-	}
-	rendered := RenderTOMLForScope(c, RenderScopeUser)
-	if !strings.Contains(rendered, `display_mode = "compact"`) {
-		t.Fatalf("rendered user config missing display_mode:\n%s", rendered)
-	}
-	var got Config
-	if _, err := toml.Decode(rendered, &got); err != nil {
-		t.Fatalf("rendered TOML does not parse: %v\n---\n%s", err, rendered)
-	}
-	if got.DesktopDisplayMode() != "compact" {
-		t.Fatalf("display_mode after round trip = %q, want compact", got.DesktopDisplayMode())
-	}
-}
-
 func TestRenderTOMLConversationWidthRoundTrip(t *testing.T) {
 	c := Default()
 	if err := c.SetDesktopConversationWidth("full"); err != nil {
@@ -1266,48 +735,6 @@ func extractSectionLines(toml, section string) []string {
 	return lines
 }
 
-func TestRenderTOMLOmitsDeprecatedAgentStepLimits(t *testing.T) {
-	isolateUserConfigHome(t)
-	c := Default()
-	c.Agent.MaxSteps = 5
-	c.Agent.PlannerMaxSteps = 7
-	out := RenderTOML(c)
-	for _, line := range extractSectionLines(out, "[agent]") {
-		if strings.Contains(line, "max_steps") || strings.Contains(line, "planner_max_steps") {
-			t.Fatalf("deprecated step limit should never be rendered, got: %s", line)
-		}
-	}
-}
-
-func TestLoadForEditIgnoresAndDropsDeprecatedAgentStepLimitsOnSave(t *testing.T) {
-	isolateUserConfigHome(t)
-	path := UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte("[agent]\nplanner_max_steps = 9\nmax_steps = 100\ntemperature = 0.4\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg := LoadForEdit(path)
-	if cfg.Agent.MaxSteps != 0 || cfg.Agent.PlannerMaxSteps != 0 {
-		t.Fatalf("deprecated limits should normalize to zero, got max=%d planner=%d", cfg.Agent.MaxSteps, cfg.Agent.PlannerMaxSteps)
-	}
-	if cfg.Agent.Temperature != 0.4 {
-		t.Fatalf("unrelated agent setting changed: temperature=%v", cfg.Agent.Temperature)
-	}
-	if err := cfg.SaveTo(path); err != nil {
-		t.Fatal(err)
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, changed := stripLegacyAgentStepLimitLines(string(raw)); changed {
-		t.Fatalf("saved config retained deprecated step limits:\n%s", raw)
-	}
-}
-
 func TestIsolatedHomeDirEmptyByDefault(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", "")
 	if got := IsolatedHomeDir(); got != "" {
@@ -1321,22 +748,6 @@ func TestIsolatedHomeDirReturnsCleanPath(t *testing.T) {
 	got := IsolatedHomeDir()
 	if filepath.Clean(got) != filepath.Clean(raw) {
 		t.Fatalf("IsolatedHomeDir() = %q, want %q", got, raw)
-	}
-}
-
-func TestLegacyOSSupportDirEmptyWhenIsolated(t *testing.T) {
-	isolateUserConfigHome(t)
-	t.Setenv("DEEPZORA_HOME", filepath.Join(t.TempDir(), "isolated-home"))
-	if got := legacyOSSupportDir(); got != "" {
-		t.Fatalf("legacyOSSupportDir() = %q, want empty when isolated", got)
-	}
-}
-
-func TestLegacyXDGConfigPathsEmptyWhenIsolated(t *testing.T) {
-	isolateUserConfigHome(t)
-	t.Setenv("DEEPZORA_HOME", filepath.Join(t.TempDir(), "isolated-home"))
-	if got := legacyXDGConfigPaths(); got != nil {
-		t.Fatalf("legacyXDGConfigPaths() = %v, want nil when isolated", got)
 	}
 }
 
@@ -1407,29 +818,6 @@ func TestCredentialSourceCandidatesSkipHomeEnvWhenIsolated(t *testing.T) {
 		if c.Kind == CredentialSourceHomeEnv {
 			t.Fatalf("credentialSourceCandidates includes CredentialSourceHomeEnv when isolated: %v", c)
 		}
-	}
-}
-
-func TestMigrateLegacyIfNeededSkipsWhenIsolated(t *testing.T) {
-	home := isolateUserConfigHome(t)
-	isolated := filepath.Join(home, "isolated-home")
-	t.Setenv("DEEPZORA_HOME", isolated)
-
-	// Create a legacy config.json in production home — migration must skip it.
-	legacyDir := filepath.Join(home, ".deepzora")
-	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(legacyDir, "config.json"), []byte(`{"model":"production-model","apiKey":"sk-legacy"}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	res, err := MigrateLegacyIfNeeded()
-	if err != nil {
-		t.Fatalf("MigrateLegacyIfNeeded() error = %v", err)
-	}
-	if res != nil {
-		t.Fatalf("MigrateLegacyIfNeeded() = %+v, want nil when isolated", res)
 	}
 }
 

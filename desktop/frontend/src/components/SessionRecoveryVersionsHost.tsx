@@ -112,7 +112,7 @@ function sessionFromVersion(topic: ProjectTopicKey, member: RecoveryLineageMembe
   return {
     path: member.path, preview: member.preview || "", title: member.versionNote,
     turns: member.turns, turnsState: "valid", createdAt: member.createdAt || 0,
-    lastActivityAt: activityAt, modTime: activityAt, current: false, open: member.open,
+    lastActivityAt: activityAt, current: false, open: member.open,
     scope: topic.scope, workspaceRoot: topic.workspaceRoot, topicId: topic.topicId,
     recovered: true, recoveryRole: member.role, recoveryCanonical: member.canonical,
   };

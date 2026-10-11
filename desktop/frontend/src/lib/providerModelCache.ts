@@ -29,7 +29,6 @@ export function providerDiscoveryIdentity(p: ProviderView): string {
     p.kind.trim(),
     p.baseUrl.trim(),
     p.modelsUrl.trim(),
-    p.chatUrl?.trim() ?? "",
     p.requestUrl?.trim() ?? "",
     Boolean(p.noProxy),
     Boolean(p.authHeader),

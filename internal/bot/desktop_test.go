@@ -265,7 +265,7 @@ func TestDivertToDesktopTakeover(t *testing.T) {
 	bridge := newFakeDesktopBridge()
 	bridge.sessions = []DesktopSessionInfo{{TabID: "tab-1", Label: "会话一"}}
 	gw := &BotGateway{
-		cfg:           GatewayConfig{Desktop: bridge},
+		cfg:           GatewayConfig{Desktop: bridge, ConnectionAccess: map[string]AccessConfig{"feishu-main": {Enabled: true, Admins: []string{"admin-user"}}}},
 		logger:        discardLogger(),
 		adapterHealth: map[string]*AdapterHealthSnapshot{},
 	}
@@ -307,10 +307,8 @@ func TestDivertToDesktopTakeoverRevokesFormerAdmin(t *testing.T) {
 	bridge.sessions = []DesktopSessionInfo{{TabID: "tab-1", Label: "会话一"}}
 	gw := &BotGateway{
 		cfg: GatewayConfig{
-			Desktop: bridge,
-			Allowlist: AllowlistConfig{Admins: map[Platform][]string{
-				PlatformFeishu: {"current-admin"},
-			}},
+			Desktop:          bridge,
+			ConnectionAccess: map[string]AccessConfig{"feishu-main": {Admins: []string{"current-admin"}}},
 		},
 		logger:        discardLogger(),
 		adapterHealth: map[string]*AdapterHealthSnapshot{},

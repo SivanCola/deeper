@@ -23,51 +23,36 @@ Deepzora 在自己的仓库独立维护；原 MIT 许可证、提交作者及历
 | npm platform packages / 平台包 | `@sivancola/deepzora-cli-{darwin,linux,win32}-{arm64,x64}` |
 | Homebrew release tap / 发布 tap | `SivanCola/homebrew-deepzora` |
 
-Deepzora does not read `REASONIX_*` overrides or migrate `~/.reasonix` automatically.
-Configuration serialization remains compatible for an intentional manual copy,
-but configuration, credentials, sessions, app locks, shortcuts, caches, update
-helpers, protocol names, and desktop browser profiles have distinct identities.
-Install both applications separately; do not point their home overrides at the
-same directory. Windows MSI/NSIS upgrade identity and Linux Polkit policy use the
-Deepzora namespace.
+## Current version baseline / 当前版本基线
 
-Deepzora 不自动读取 Reasonix 环境变量或搬迁其用户数据。两者可以分别安装。
-如需主动复制配置，应先备份并人工选择文件，不共享运行中的数据目录。
+The current Deepzora implementation is the first supported baseline. Its
+configuration, session storage, desktop RPC and update manifests have one
+current contract. Reasonix/Deeper identities, earlier Deepzora formats,
+automatic migrations, historical imports and deprecated source aliases are
+not supported. Unsupported input is rejected without rewriting the source.
 
-### Historical session formats / 历史会话格式
+本项目将当前 Deepzora 实现视为第一个受支持版本。配置、会话、桌面接口和更新
+清单只使用当前契约，不读取或迁移 Reasonix/Deeper 及过去 Deepzora 版本的数据。
+没有历史导入入口；旧格式和旧设置必须明确拒绝，不能自动转换或悄悄忽略。
 
-The session storage owner recognizes the exact supported `reasonix.session.*`
-`deeper.session.*`, and `deepzora.session.*` codec identities. Codec compatibility does not scan or
-open Reasonix's home directory. Only data explicitly placed in Deepzora's chosen
-directories or submitted to its existing import API is considered.
+| Contract / 契约 | Supported baseline / 支持基线 |
+| --- | --- |
+| Configuration / 配置 | `config_version = 12`; current fields only / 仅当前字段 |
+| Canonical session / 统一会话 | `deepzora.session.linear/v4`, schema 4, storage revision 3 |
+| Agent session log / Agent 日志 | Current schema-2 DAG with stable message/head identities / 当前 schema-2 DAG |
+| Native plugin manifest / 原生插件 | Current manifest v2 / 当前 v2 清单 |
+| Permission preset / 权限预设 | `read-only`, `workspace-write`, `danger-full-access` |
+| Collaboration mode / 协作模式 | `normal`, `plan` |
+| Desktop RPC / 桌面接口 | Generated current contract / 自动生成的当前契约 |
+| Update artifacts / 更新产物 | Current immutable signed manifests and supported install layouts / 当前不可变签名清单与安装布局 |
 
-会话存储层兼容三组已知格式标识，不扫描或自动打开 Reasonix 数据目录。
-只有用户主动复制到 Deepzora 目录、或通过既有导入接口提供的数据才会被读取。
+“第一个版本”指兼容性边界，并不把内部 schema 数字改成 1，也不重写 Git 历史、
+MIT 许可证、NOTICE 或上游作者信息。当前 Claude/Codex/MCP、供应商协议以及
+操作系统适配属于产品功能，继续维护。会话持久化、崩溃恢复、归档与恢复、远端
+接管和安装事务恢复同样属于当前功能，不能当成历史兼容代码删除。
 
-| Format / 格式 | Deepzora behavior / Deepzora 行为 | Previous reader / 旧读取器 |
-| --- | --- | --- |
-| `reasonix.session.events/v3`, `linear/v3`, `linear/v3.1` | Read and append with the original codec; explicit import creates a separate Deepzora store / 原格式读取和续写，明确导入才创建独立 Deepzora 会话 | Original codec and event representation remain intact / 原标识和事件表达保留 |
-| `reasonix.session.linear/v4`, revisions 1–3 | Read checksummed frames and external content; append preserves the original codec / 校验帧和外部内容，续写保留原标识 | Uses the same supported v4 format; older revision limits still apply / 格式仍为原 v4，旧版本的修订上限仍适用 |
-| New `deepzora.session.*` stores | Continue to use Deepzora identities / 新会话继续使用 Deepzora 标识 | Reasonix does not read Deepzora's new namespace / Reasonix 不读取 Deepzora 的新命名空间 |
-| Unknown codecs, mismatched schemas, future revisions | Reject without rewriting data / 拒绝并保留数据 | No downgrade conversion is implied / 不隐式进行降级转换 |
-
-Existing log bytes, transaction hashes, optional events, and content references
-are preserved. A writer rejects a manifest whose codec disagrees with its v4
-log; mixed identities in one log are also rejected. The original tagged fixtures
-retain their provenance and digests, including historical `main-v2-pr…` names.
-
-既有日志字节、事务哈希、可选事件和内容引用保留。写入器拒绝 manifest 与 v4
-日志标识不一致的数据，也拒绝同一日志混用标识。历史测试文件保留真实来源、校验值
-及 `main-v2-pr…` 等历史名称。
-
-Before opening a v4 writer, codec validation opens only the fixed log leaf
-inside the selected session directory through Go's rooted filesystem API.
-Relative log symlinks staying inside that directory remain supported; links
-escaping it, including dangling outside targets, fail before manifest mutation.
-
-打开 v4 写入器前，格式校验通过 Go 的目录约束 API 读取会话目录内的固定日志文件。
-仍支持指向本目录内部的相对日志链接；指向目录外的链接（包括不存在的外部目标）
-会在修改 manifest 前被拒绝。
+For the removal scope and maintenance rule, see
+[the baseline inventory](REASONIX_LEGACY_COMPATIBILITY_INVENTORY.zh-CN.md).
 
 ## CI and release setup / CI 和发布配置
 
@@ -90,14 +75,14 @@ automatic toolchain selection, run validation with `GOTOOLCHAIN=go1.26.9`.
 扫描器发现的可达标准库与 HTTP/2 漏洞。本地 Go 配置若关闭自动工具链选择，
 验证时应显式设置 `GOTOOLCHAIN=go1.26.9`。
 
-Windows controller tests run in two complementary `A-M` and `N-Z` partitions.
-Each partition retains the 8-minute Go timeout; CI verifies the native test,
-example and fuzz-seed inventory has exactly one execution owner before running.
-Both partitions must pass for the `root` gate.
+The compact CI runs the root and desktop Go suites once on each of Linux,
+macOS, and Windows. It builds the frontend once, reuses its verified artifact,
+and keeps lint, race, SDK, renderer, and release-control checks. Packaged release
+qualification stays in the release workflows; see [CI baseline](CI_BASELINE.md).
 
-Windows 控制器测试分为互补的 `A-M` 与 `N-Z` 两组，每组保留 Go 的 8 分钟超时。
-CI 在执行前验证当前平台的测试、示例和 fuzz 种子清单，保证每项只属于一组；
-两组都通过后 `root` 检查才可通过。
+精简后的 CI 在 Linux、macOS 和 Windows 各执行一次根模块和桌面 Go 测试，
+前端只构建一次并复用经过校验的产物。lint、race、SDK、渲染器及发布控制检查
+仍然保留，正式安装包验收由发布工作流负责，详见 [CI 基线](CI_BASELINE.md)。
 
 Push and PR CI runs against `main`. CI checks do not require publishing keys.
 Protect `main` and create a GitHub environment named `release` with required

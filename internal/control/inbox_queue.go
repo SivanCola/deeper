@@ -137,7 +137,7 @@ func readInboxQueueEdit(st *sessioninbox.Store, id string) (*InboxQueueEdit, err
 	if meta.State != sessioninbox.StateQueued && meta.State != sessioninbox.StateBlocked && meta.State != sessioninbox.StateUncertain {
 		return nil, sessioninbox.ErrInvalidState
 	}
-	if env.Invocation != nil || len(env.Invocations) > 0 {
+	if len(env.Invocations) > 0 {
 		return nil, errInboxStructuredEdit
 	}
 	refs := append([]string{}, env.Attachments...)
@@ -164,7 +164,7 @@ func (c *Controller) editInboxQueue(st *sessioninbox.Store, req InboxQueueReques
 	if req.ContentVersion == "" || sessioninbox.ContentVersion(meta) != req.ContentVersion {
 		return sessioninbox.ErrContentChanged
 	}
-	if env.Invocation != nil || len(env.Invocations) > 0 {
+	if len(env.Invocations) > 0 {
 		return errInboxStructuredEdit
 	}
 	// Keep the original immutable reference bytes when only prose changes.

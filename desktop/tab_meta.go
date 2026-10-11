@@ -56,10 +56,6 @@ type TabMeta struct {
 	Mode                 string                       `json:"mode"`
 	CollaborationMode    string                       `json:"collaborationMode"`
 	ToolApprovalMode     string                       `json:"toolApprovalMode"`
-	TokenMode            string                       `json:"tokenMode"`
-	AgentPreset          string                       `json:"agentPreset,omitempty"`
-	QualityFloor         string                       `json:"qualityFloor,omitempty"`
-	FloorInferred        bool                         `json:"floorInferred,omitempty"`
 	Goal                 string                       `json:"goal,omitempty"`
 	GoalStatus           string                       `json:"goalStatus,omitempty"`
 	GoalView             *goaldomain.View             `json:"goalView,omitempty"`
@@ -71,7 +67,6 @@ type TabMeta struct {
 	VersionState         string                       `json:"versionState,omitempty"`
 	ParentVersionID      string                       `json:"parentVersionId,omitempty"`
 	StartupErr           string                       `json:"startupErr,omitempty"`
-	HistoricalSource     *SessionSourceRef            `json:"historicalSource,omitempty"`
 	Authentication       *control.AuthenticationState `json:"authentication,omitempty"`
 	ModelSettingsPending bool                         `json:"modelSettingsPending,omitempty"`
 	Active               bool                         `json:"active"`

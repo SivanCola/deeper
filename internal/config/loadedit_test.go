@@ -16,7 +16,7 @@ func TestLoadForEdit(t *testing.T) {
 name = "custom"
 kind = "openai"
 base_url = "https://x"
-model = "m"
+models = ["m"]
 api_key_env = "X_KEY"
 `
 	if err := os.WriteFile(path, []byte(custom), 0o644); err != nil {
@@ -115,7 +115,7 @@ func TestLoadForEditDecodesGB18030TOML(t *testing.T) {
 name = "local"
 kind = "openai"
 base_url = "https://example.com/v1"
-model = "中文模型"
+models = ["中文模型"]
 api_key_env = "LOCAL_KEY"
 `
 	if err := os.WriteFile(path, fileencoding.MustEncode(body, fileencoding.GB18030), 0o644); err != nil {
@@ -126,67 +126,8 @@ api_key_env = "LOCAL_KEY"
 	if cfg.DefaultModel != "local/中文模型" {
 		t.Fatalf("default_model = %q", cfg.DefaultModel)
 	}
-	if len(cfg.Providers) != 1 || cfg.Providers[0].Model != "中文模型" {
+	if len(cfg.Providers) != 1 || cfg.Providers[0].DefaultModel() != "中文模型" {
 		t.Fatalf("providers = %+v, want decoded Chinese model", cfg.Providers)
-	}
-}
-
-func TestLoadForEditNormalizesLegacyMCPTiersWithoutWriting(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "deepzora.toml")
-	body := `
-[[plugins]]
-name = "playwright"
-command = "npx"
-tier = "lazy"
-
-[[providers]]
-name = "local"
-kind = "openai"
-base_url = "https://x"
-model = "m"
-`
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg := LoadForEdit(path)
-	if len(cfg.Plugins) != 1 || cfg.Plugins[0].Tier != "" {
-		t.Fatalf("plugins after migration = %+v, want empty tier", cfg.Plugins)
-	}
-	updated, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(updated) != body {
-		t.Fatalf("LoadForEdit must not rewrite config outside its caller's edit transaction:\n%s", updated)
-	}
-}
-
-func TestLoadForEditReadOnlyStrictDoesNotMigrateDisk(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "deepzora.toml")
-	body := []byte(`
-[[plugins]]
-name = "playwright"
-command = "npx"
-tier = "lazy"
-`)
-	if err := os.WriteFile(path, body, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := LoadForEditReadOnlyStrict(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(cfg.Plugins) != 1 || cfg.Plugins[0].Tier != "" {
-		t.Fatalf("read-only normalized plugins = %+v", cfg.Plugins)
-	}
-	after, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(after) != string(body) {
-		t.Fatalf("read-only load changed config on disk:\n%s", after)
 	}
 }
 
@@ -200,7 +141,7 @@ func TestLoadForEditIgnoresProjectDotEnvForProviderCredentials(t *testing.T) {
 name = "custom"
 kind = "openai"
 base_url = "https://example.invalid/v1"
-model = "m"
+models = ["m"]
 api_key_env = "PROJECT_ONLY_KEY"
 `
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {

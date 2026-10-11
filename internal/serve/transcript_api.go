@@ -306,13 +306,7 @@ func (s *Server) transcriptRead(w http.ResponseWriter, r *http.Request, read fun
 func (s *Server) transcriptBoundRead(w http.ResponseWriter, r *http.Request, read func(control.SessionAPI) (any, error)) {
 	s.bindMu.Lock()
 	raw := strings.TrimSpace(r.URL.Query().Get("session"))
-	if raw != "" && !strings.HasPrefix(raw, remoteSessionIDQueryPrefix) {
-		if resolved, err := s.resolveSessionPath(raw); err == nil && s.sessionMirrored(agent.CanonicalSessionPath(resolved)) {
-			s.bindMu.Unlock()
-			http.Error(w, "transcript projection is unavailable", http.StatusNotImplemented)
-			return
-		}
-	}
+
 	ctrl := s.resolveReadControllerLocked(raw)
 	if ctrl == nil {
 		s.bindMu.Unlock()
@@ -372,20 +366,6 @@ func (s *Server) resolveReadControllerLocked(raw string) control.SessionAPI {
 			}
 		}
 		return nil
-	}
-	path := agent.CanonicalSessionPath(raw)
-	if resolved, err := s.resolveSessionPath(raw); err == nil {
-		path = agent.CanonicalSessionPath(resolved)
-	}
-	if agent.CanonicalSessionPath(foreground.SessionPath()) == path {
-		return foreground
-	}
-	s.detachedMu.Lock()
-	defer s.detachedMu.Unlock()
-	for _, detached := range s.detached {
-		if agent.CanonicalSessionPath(detached.ctrl.SessionPath()) == path {
-			return detached.ctrl
-		}
 	}
 	return nil
 }

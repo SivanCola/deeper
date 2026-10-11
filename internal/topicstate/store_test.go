@@ -34,7 +34,7 @@ func TestStorePersistsAtomicTopicRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.Revision != 1 || state.LegacyPendingRevision != 0 {
+	if state.Revision != 1 {
 		t.Fatalf("state = %+v", state)
 	}
 	if err := store.Close(); err != nil {
@@ -65,41 +65,6 @@ func TestStorePersistsAtomicTopicRecord(t *testing.T) {
 		t.Fatal(err)
 	} else if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("database mode = %o, want 600", info.Mode().Perm())
-	}
-}
-
-func TestStoreLegacyOutboxTracksCommittedRevision(t *testing.T) {
-	ctx := context.Background()
-	store, err := Open(ctx, filepath.Join(t.TempDir(), "topic-state-v1.sqlite"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer store.Close()
-
-	state, err := store.SetLegacyBridge(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !state.LegacyBridge {
-		t.Fatal("legacy bridge was not enabled")
-	}
-	state, err = store.Update(ctx, "topic-1", func(record *Record) { record.Title = "renamed" })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if state.LegacyPendingRevision != state.Revision || state.Revision == 0 {
-		t.Fatalf("state = %+v", state)
-	}
-	digests := [4]string{"titles", "sources", "created", "auto"}
-	state, err = store.MarkLegacyExported(ctx, state.Revision, digests)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if state.LegacyPendingRevision != 0 || state.LegacyExportedRevision != state.Revision {
-		t.Fatalf("state = %+v", state)
-	}
-	if state.LegacyTitlesDigest != "titles" || state.LegacyAutoMetaDigest != "auto" {
-		t.Fatalf("digests not retained: %+v", state)
 	}
 }
 
@@ -181,7 +146,7 @@ func TestStoreRejectsFutureSchemaWithoutChangingFile(t *testing.T) {
 	if _, err := db.Exec(`CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO schema_migrations(version, applied_at) VALUES(2, 0)`); err != nil {
+	if _, err := db.Exec(`INSERT INTO schema_migrations(version, applied_at) VALUES(999, 0)`); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Close(); err != nil {

@@ -53,9 +53,7 @@ func repairMutationTargets(paths []string) ([]repairMutationTarget, []string, []
 		primary[identity.Key] = struct{}{}
 		targets = append(targets, repairMutationTarget{identity.AccessPath, identity.Key, info, exists, link})
 		locks[identity.Key] = struct{}{}
-		if legacy := legacyCanonicalRepairPath(path); legacy != "" {
-			locks[legacy] = struct{}{}
-		}
+
 	}
 	return targets, sortedRepairKeys(primary), sortedRepairKeys(locks), nil
 }

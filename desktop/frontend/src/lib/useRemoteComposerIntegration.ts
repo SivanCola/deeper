@@ -5,7 +5,7 @@ import type { SessionResource, useSessionOperations } from "../app-runtime/useSe
 import type { RemoteNavigationCommand } from "./remoteNavigationCommands";
 import { reconcileComposerProfile, type ComposerProfile, type ComposerProfilesByTab } from "./composerProfile";
 import type { GoalAction } from "./goalAction";
-import type { CollaborationMode, QualityFloor, RemoteTabRefView, ToolApprovalMode } from "./types";
+import type { CollaborationMode, RemoteTabRefView, ToolApprovalMode } from "./types";
 import type { RemoteSessionApi } from "./useRemoteSession";
 
 type RemoteProfile = RemoteSessionApi["composerProfile"];
@@ -29,7 +29,7 @@ export function remoteRuntimeCommand(input: string):
   // turn. Custom commands, skills, docs queries, and MCP prompts deliberately
   // remain on the ordinary submit path because they can start model work.
   const management = new Set([
-    "context", "goal", "memory", "remember", "migrate", "migration",
+    "context", "goal", "memory", "remember",
     "skill", "skills", "plugin", "plugins", "reload-cmd", "hooks", "mcp",
     "provider", "tree", "branch", "switch", "rewind",
   ]);
@@ -39,8 +39,6 @@ export function remoteRuntimeCommand(input: string):
 
 function remoteGoalCommandStartsTurn(input: string): boolean {
   const args = input.trim().slice("/goal".length).trim().split(/\s+/).filter(Boolean);
-  const flags = new Set(["--strict", "--research", "--auto-research", "--deep", "--simple", "--no-research"]);
-  while (args.length > 0 && flags.has(args[0].toLowerCase())) args.shift();
   if (args.length === 0) return false;
   const action = args.join(" ").toLowerCase();
   return !new Set(["status", "clear", "off", "stop", "done", "pause", "resume"]).has(action);
@@ -79,11 +77,10 @@ export function useRemoteComposerProfileSync(options: {
   collaborationMode: CollaborationMode;
   toolApprovalMode: ToolApprovalMode;
   goal: string;
-  qualityFloor: QualityFloor;
   pending: ComposerProfile["pending"];
   setProfiles: Dispatch<SetStateAction<ComposerProfilesByTab>>;
 }): boolean {
-  const { activeTabId, sessionRoute, remote, remoteProfile, collaborationMode, toolApprovalMode, goal, qualityFloor, pending, setProfiles } = options;
+  const { activeTabId, sessionRoute, remote, remoteProfile, collaborationMode, toolApprovalMode, goal, pending, setProfiles } = options;
   // The last synced session route per tab. A tab switch A -> B -> A is not a
   // route change for A; only A's own session rotation is, so the memory must
   // be keyed by tab rather than hold the most recently active tab alone.
@@ -109,7 +106,6 @@ export function useRemoteComposerProfileSync(options: {
         goalDraftMode: false,
         toolApprovalMode: remoteProfile.toolApprovalMode,
         goal: remoteProfile.goal,
-        qualityFloor: remoteProfile.qualityFloor,
         pending: {},
       };
       const next = reconcileComposerProfile(existing, backend);
@@ -120,8 +116,7 @@ export function useRemoteComposerProfileSync(options: {
   return !remote || Boolean(remoteProfile
     && (pending.collaborationMode || collaborationMode === remoteProfile.collaborationMode)
     && (pending.toolApprovalMode || toolApprovalMode === remoteProfile.toolApprovalMode)
-    && (pending.goal || goal === remoteProfile.goal)
-    && (pending.qualityFloor || qualityFloor === remoteProfile.qualityFloor));
+    && (pending.goal || goal === remoteProfile.goal));
 }
 
 export function useRemoteComposerRuntimeActions(options: {

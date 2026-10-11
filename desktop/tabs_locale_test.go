@@ -169,7 +169,7 @@ func TestSetTrayLocalePublishesPresentationWithoutHistoryDiscovery(t *testing.T)
 func TestSetTrayLocaleKeepsExplicitCurrencyRuntime(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	cfg := config.Default()
-	cfg.Desktop.Currency = "USD"
+	cfg.Billing.DisplayCurrency = "USD"
 	cfg.ApplyDeepSeekOfficialDefaultPricing()
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save explicit currency config: %v", err)
@@ -214,7 +214,7 @@ func TestDesktopEffectivePricingCurrencyUsesLocaleOnlyForAuto(t *testing.T) {
 	}
 
 	cfg.Language = ""
-	cfg.Desktop.Currency = "USD"
+	cfg.Billing.DisplayCurrency = "USD"
 	cfg.ApplyDeepSeekOfficialDefaultPricing()
 	if got := app.desktopEffectivePricingCurrency(cfg); got != "USD" {
 		t.Fatalf("explicit currency pricing currency = %q, want USD", got)

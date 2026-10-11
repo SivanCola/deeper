@@ -36,8 +36,6 @@ func pluginCommand(args []string) int {
 		return pluginSetEnabledCommand(args[1:], false)
 	case "doctor":
 		return pluginDoctorCommand(args[1:])
-	case "migrate":
-		return pluginMigrateCommand(args[1:])
 	case "help", "--help", "-h":
 		pluginUsage()
 		return 0
@@ -56,8 +54,7 @@ func pluginUsage() {
   deepzora plugin enable <name>
   deepzora plugin disable <name>
   deepzora plugin remove <name>
-  deepzora plugin doctor <name>
-  deepzora plugin migrate <name> --to-v2`)
+  deepzora plugin doctor <name>`)
 }
 
 func pluginInstallCommand(args []string) int {
@@ -380,57 +377,6 @@ func printPluginInventory(pluginName string, inv pluginpkg.Inventory) {
 	}
 }
 
-func pluginMigrateCommand(args []string) int {
-	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "plugin migrate requires a plugin name")
-		return 2
-	}
-	name := args[0]
-	toV2 := false
-	for _, a := range args[1:] {
-		if a == "--to-v2" {
-			toV2 = true
-		} else {
-			fmt.Fprintf(os.Stderr, "unknown plugin migrate flag %q\n", a)
-			return 2
-		}
-	}
-	if !toV2 {
-		fmt.Fprintln(os.Stderr, "plugin migrate requires --to-v2")
-		return 2
-	}
-	p, ok, err := findInstalledPlugin(name)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
-	if !ok {
-		fmt.Fprintf(os.Stderr, "plugin %q is not installed\n", name)
-		return 1
-	}
-	root := pluginpkg.ResolveRoot(config.DeepzoraHomeDir(), p.Root)
-	pkg, _, err := pluginpkg.ParseNativeForMigrate(root)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "migrate parse:", err)
-		return 1
-	}
-	data, err := pluginpkg.MigrateManifestToV2(pkg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "migrate:", err)
-		return 1
-	}
-	if err := pluginpkg.WriteMigratedManifestV2(root, data); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
-	if _, _, err := pluginpkg.ParseDir(root); err != nil {
-		fmt.Fprintln(os.Stderr, "migrated manifest failed validation:", err)
-		return 1
-	}
-	fmt.Printf("migrated %s to %s (backup: %s.bak)\n", name, pluginpkg.ManifestAPIVersionV2, pluginpkg.NativeManifest)
-	return 0
-}
-
 func pluginDoctorCommand(args []string) int {
 	if len(args) != 1 {
 		fmt.Fprintln(os.Stderr, "plugin doctor requires a plugin name")
@@ -449,9 +395,6 @@ func pluginDoctorCommand(args []string) int {
 	pkg, warnings, err := pluginpkg.ParseDir(root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "invalid:", err)
-		if strings.Contains(err.Error(), "missing apiVersion") {
-			fmt.Fprintf(os.Stderr, "remediation: deepzora plugin migrate %s --to-v2\n", args[0])
-		}
 		return 1
 	}
 	if len(pkg.Manifest.Requires) > 0 {

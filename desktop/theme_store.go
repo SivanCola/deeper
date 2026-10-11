@@ -40,8 +40,8 @@ func loadThemeDesktopState() ThemeDesktopState {
 	if err := json.Unmarshal(data, &st); err != nil {
 		return ThemeDesktopState{SchemaVersion: themeStateSchemaVer}
 	}
-	if st.SchemaVersion == 0 {
-		st.SchemaVersion = themeStateSchemaVerV1
+	if st.SchemaVersion != themeStateSchemaVer {
+		return ThemeDesktopState{SchemaVersion: themeStateSchemaVer}
 	}
 	st.ActiveThemeID = strings.TrimSpace(st.ActiveThemeID)
 	return st

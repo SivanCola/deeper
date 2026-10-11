@@ -188,8 +188,6 @@ func (a *App) StartTopicActivation(req TopicActivationRequest) (TopicActivationT
 		req.Scope, req.WorkspaceRoot, req.TopicID, req.SessionPath = target.Scope, target.WorkspaceRoot, target.TopicID, target.SessionPath
 		if target.SessionRef.SessionID != "" {
 			req.SessionPath = sessionRoute(target.SessionRef.SessionID)
-		} else if target.Source != nil {
-			req.SessionPath = nativeSessionSourceRoute(target.Source)
 		}
 	}
 	a.singleSurfaceMu.Lock()
@@ -310,7 +308,7 @@ func (a *App) runTopicActivationCompletion(gen uint64, requestID, tabID string) 
 		}
 		return
 	}
-	a.emitProjectTreeRuntimeChangedWithLegacy()
+	a.emitProjectTreeRuntimeChanged()
 
 	if emittedReady {
 		a.finishTopicActivation(gen, requestID)

@@ -27,7 +27,6 @@ func TestTaskRuntimeRestartCarriesScopeAndResetsAccounting(t *testing.T) {
 		ledger:     ledger,
 		outcome:    evidence.NewOutcomeTracker(),
 		budget:     runBudget{rounds: 4, requests: 9, cost: 1.5, limit: TaskBudget{}},
-		ebm:        ebmState{fired: true, captured: true},
 	}
 	after := *before
 	after.restartLedger()
@@ -41,9 +40,6 @@ func TestTaskRuntimeRestartCarriesScopeAndResetsAccounting(t *testing.T) {
 	if after.budget.rounds != 0 || after.budget.requests != 0 || after.budget.cost != 0 {
 		t.Errorf("budget = %+v, want a fresh bill for the new task", after.budget)
 	}
-	if after.ebm != (ebmState{}) {
-		t.Errorf("historical fork state = %+v, want it reset with the ledger", after.ebm)
-	}
 	if after.outcome == nil || after.outcome == before.outcome {
 		t.Error("outcome tracker not replaced; the shadow scorer must not span tasks")
 	}
@@ -55,7 +51,6 @@ func TestTaskRuntimeRestartCarriesScopeAndResetsAccounting(t *testing.T) {
 var taskRestarted = map[string]bool{
 	"outcome": true,
 	"budget":  true,
-	"ebm":     true,
 }
 
 // restartLedger is one assignment, so an unlisted field resets by default —

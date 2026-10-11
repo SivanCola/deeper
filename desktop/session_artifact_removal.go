@@ -17,9 +17,6 @@ func removeDesktopSessionArtifactsWithGuard(path string, guard *agent.SessionRem
 		return fmt.Errorf("session removal guard is required")
 	}
 	defer guard.Release()
-	if err := invalidateTopicDirMarkers(filepath.Dir(path)); err != nil {
-		return err
-	}
 	defer invalidateTopicSessionIndexForPath(path)
 	for _, artifact := range sessionOwnedArtifactPaths(path) {
 		if strings.TrimSpace(artifact) == "" {

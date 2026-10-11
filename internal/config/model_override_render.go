@@ -29,9 +29,7 @@ func renderModelOverrides(m map[string]ProviderModelOverride) string {
 
 func renderModelOverride(ov ProviderModelOverride) string {
 	var parts []string
-	if ov.ReasoningDefaults != "" {
-		parts = append(parts, fmt.Sprintf("reasoning_defaults = %q", ov.ReasoningDefaults))
-	}
+
 	if ov.ReasoningProtocol != "" {
 		parts = append(parts, fmt.Sprintf("reasoning_protocol = %q", ov.ReasoningProtocol))
 	}

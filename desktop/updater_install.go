@@ -146,8 +146,7 @@ func artifactKindFromMeta(kind string) string {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case artifactKindDeb:
 		return artifactKindDeb
-	case artifactKindTarball, "":
-		// Empty means legacy portable cache written before artifactKind existed.
+	case artifactKindTarball:
 		return artifactKindTarball
 	default:
 		return kind

@@ -3,7 +3,6 @@ import { lazy, Suspense } from "react";
 import type { Translator } from "../lib/i18n";
 import { RemoteReclaimBanner } from "../components/RemoteReclaimBanner";
 import { UpdateBanner } from "../components/UpdateBanner";
-import type { HistoricalSessionBannerProps } from "../components/SessionTakeoverDialog";
 
 const SessionRuntimeOverlays = lazy(() => import("../components/SessionTakeoverDialog").then((module) => ({ default: module.SessionRuntimeOverlays })));
 
@@ -27,7 +26,6 @@ export type SessionStatusBannersProps = {
   onConfigureProvider: () => void;
   updateChecksEnabled: boolean;
   onShowReleaseNotes: (latest: string) => void;
-  historical?: HistoricalSessionBannerProps;
 };
 
 /** Presentation-only banner stack between the topic bar and the main pane. */
@@ -86,8 +84,8 @@ export function SessionStatusBanners(props: SessionStatusBannersProps) {
         enabled={props.updateChecksEnabled}
         onShowReleaseNotes={props.onShowReleaseNotes}
       />
-      {props.takeoverDialogTabId || props.historical ? <Suspense fallback={null}>
-        <SessionRuntimeOverlays takeoverTabId={props.takeoverDialogTabId} onCloseTakeover={props.onCloseTakeover} historical={props.historical} />
+      {props.takeoverDialogTabId ? <Suspense fallback={null}>
+        <SessionRuntimeOverlays takeoverTabId={props.takeoverDialogTabId} onCloseTakeover={props.onCloseTakeover} />
       </Suspense> : null}
     </>
   );

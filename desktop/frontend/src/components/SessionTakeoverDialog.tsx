@@ -1,12 +1,9 @@
 import { ErrorMessage } from "./ErrorMessage";
-import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../lib/i18n";
 import { app } from "../lib/bridge";
-import type { SessionTakeoverView, TabMeta } from "../lib/types";
-import type { HistoricalSourceUpdateView, SessionPreparationView } from "../generated/desktopContract.generated";
-import { historicalPreparationSnapshot, reconcileHistoricalPreparation, subscribeHistoricalPreparation, type DesktopNavigationIntent } from "../app-runtime/desktopNavigationOwner";
-import { historicalFailureKey, useManagementT } from "../lib/managementLocale";
+import type { SessionTakeoverView } from "../lib/types";
 
 /**
  * SessionTakeoverDialog confirms taking a lease-blocked session over from the
@@ -127,159 +124,11 @@ export function SessionTakeoverDialog({ tabId, onClose }: { tabId: string; onClo
   );
 }
 
-const terminalPreparation = new Set(["ready", "blocked", "failed", "cancelled"]);
-export type HistoricalSessionBannerProps = {
-  tab?: TabMeta;
-  navigate(intent: DesktopNavigationIntent): Promise<void>;
-  captureNavigation?(): () => boolean;
-  openRecoveryDetails?(): void;
-};
-type HistoricalFailure = { summary: string; detail?: unknown };
-export function HistoricalSessionBanners({ tab, navigate, captureNavigation, openRecoveryDetails }: HistoricalSessionBannerProps) {
-  const t = useT();
-  const m = useManagementT();
-  const activeRef = tab?.session ?? (tab?.sessionId ? { hostId: "local", sessionId: tab.sessionId } : undefined);
-  const preparation = useSyncExternalStore(subscribeHistoricalPreparation, historicalPreparationSnapshot);
-  const [update, setUpdate] = useState<HistoricalSourceUpdateView | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [updateError, setUpdateError] = useState<HistoricalFailure | null>(null);
-  const updateOperation = useRef(0);
-  const [cancellingOperationId, setCancellingOperationId] = useState("");
-  const cancellingOperationRef = useRef("");
-  const activeHostId = activeRef?.hostId ?? "";
-  const activeSessionId = activeRef?.sessionId ?? "";
-  const historicalSource = tab?.historicalSource;
-  const activeKey = activeSessionId ? `${activeHostId}:${activeSessionId}`
-    : historicalSource ? `source:${tab?.id}:${historicalSource.sourceKey || historicalSource.path}` : "";
-  const activeKeyRef = useRef(activeKey);
-  activeKeyRef.current = activeKey;
-  const mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-
-  useEffect(() => {
-    let current = true;
-    updateOperation.current++;
-    setUpdate(null);
-    setUpdateError(null);
-    setBusy(false);
-    if (!activeSessionId || activeHostId !== "local" || !app.CheckHistoricalSourceUpdate) return () => { current = false; };
-    const ref = { hostId: activeHostId, sessionId: activeSessionId };
-    const run = async () => {
-      let next = await app.CheckHistoricalSourceUpdate!({ ref });
-      for (let attempt = 0; current && next.status === "checking" && attempt < 60; attempt++) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        if (current) next = await app.CheckHistoricalSourceUpdate!({ ref });
-      }
-      if (!current || next.status !== "available" || !next.version || !next.source) return;
-      try {
-        if (localStorage.getItem(`historical-source-update:${next.sourceKey}`) === next.version) return;
-      } catch { /* private storage can be unavailable */ }
-      setUpdate(next);
-    };
-    void run().catch(() => {});
-    return () => { current = false; };
-  }, [activeHostId, activeSessionId, activeKey]);
-
-  const dismissUpdate = () => {
-    if (update?.version) {
-      try { localStorage.setItem(`historical-source-update:${update.sourceKey}`, update.version); } catch { /* best effort */ }
-    }
-    setUpdate(null);
-  };
-  const importUpdate = () => {
-    if (!update?.source || !update.version || !app.PrepareHistoricalSourceVersion) return;
-    const { source, version } = update;
-    return runPreparation(() => app.PrepareHistoricalSourceVersion!(source, version));
-  };
-  const importSource = () => {
-    if (!historicalSource || !app.PrepareSession) return;
-    return runPreparation(() => app.PrepareSession!({ source: historicalSource }));
-  };
-  const runPreparation = async (start: () => Promise<SessionPreparationView>) => {
-    if (busy || !app.GetSessionPreparation) return;
-    const expectedActive = activeKey;
-    const operation = ++updateOperation.current;
-    const navigationCurrent = captureNavigation?.() ?? (() => activeKeyRef.current === expectedActive);
-    const current = () => mounted.current && operation === updateOperation.current && activeKeyRef.current === expectedActive && navigationCurrent();
-    setBusy(true);
-    setUpdateError(null);
-    try {
-      let view = await start();
-      while (current() && !terminalPreparation.has(view.status)) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        if (!current()) return;
-        view = await app.GetSessionPreparation(view.operationId);
-      }
-      if (!current()) return;
-      if (view.status !== "ready" || !view.target) {
-        setUpdateError({ summary: m(historicalFailureKey(view.errorCode)), detail: view.errorDetail });
-        return;
-      }
-      try {
-        await navigate({ kind: "canonical-session", ref: view.target });
-      } catch (error) {
-        if (current()) setUpdateError({ summary: m("historicalOpenFailed"), detail: error });
-      }
-    } catch (error) {
-      if (current()) setUpdateError({ summary: m("historicalImportFailed"), detail: error });
-    }
-    finally { if (mounted.current && operation === updateOperation.current) setBusy(false); }
-  };
-  const cancelPreparation = async () => {
-    if (!preparation || !app.CancelSessionPreparation || cancellingOperationRef.current === preparation.operationId) return;
-    const operationId = preparation.operationId;
-    cancellingOperationRef.current = operationId;
-    setCancellingOperationId(operationId);
-    try {
-      const view = await app.CancelSessionPreparation(operationId);
-      if (mounted.current) reconcileHistoricalPreparation(preparation, view);
-    } catch { /* The preparation poll remains the authority after a failed cancellation request. */ }
-    finally {
-      if (cancellingOperationRef.current === operationId) cancellingOperationRef.current = "";
-      if (mounted.current) setCancellingOperationId(current => current === operationId ? "" : current);
-    }
-  };
-
-  const failureNotice = (failure: HistoricalFailure) => <ErrorMessage error={failure.detail ?? ""} summary={failure.summary} />;
-  const recoveryDetails = openRecoveryDetails
-    ? <button type="button" className="btn btn--small btn--ghost" onClick={openRecoveryDetails}>{m("historicalRecoveryDetails")}</button> : null;
-  if (preparation) {
-    const waiting = preparation.status === "queued" || preparation.status === "preparing";
-    return <div className={`banner ${waiting ? "banner--warning" : "banner--error"} banner--actionable`} role="status">
-      <span className="banner__msg">{m("historicalImporting")}: {preparation.session.title || preparation.session.topicId || m("historicalTitle")}</span>
-      <span className="banner__hint">{waiting ? m(preparation.status === "queued" ? "historicalQueued" : "historicalImporting")
-        : failureNotice({ summary: m(historicalFailureKey(preparation.errorCode)), detail: preparation.errorDetail })}</span>
-      <span className="banner__spacer" />
-      {waiting && <button type="button" className="btn btn--small" disabled={cancellingOperationId === preparation.operationId} onClick={() => void cancelPreparation()}>{t("common.cancel")}</button>}
-      {!waiting && recoveryDetails}
-      {!waiting && preparation.retryable && <button type="button" className="btn btn--small" onClick={() => void navigate({ kind: "resume-session", session: preparation.session })}>{t("common.retry")}</button>}
-    </div>;
-  }
-  if (historicalSource) return <div className={`banner ${updateError ? "banner--error" : "banner--warning"} banner--actionable`} role={updateError ? "alert" : "status"}>
-    <span className="banner__msg">{tab?.topicTitle || m("historicalTitle")} · {m("historicalAvailable")}</span>
-    <span className="banner__hint">{updateError ? failureNotice(updateError) : m(busy ? "historicalImporting" : "historicalImportToSend")}</span>
-    <span className="banner__spacer" />
-    {updateError && recoveryDetails}
-    <button id="deepzora-prepare-restored-session" type="button" className="btn btn--small" disabled={busy} onClick={() => void importSource()}>{m("historicalImportOpen")}</button>
-  </div>;
-  if (!update) return null;
-  return <div className={`banner ${updateError ? "banner--error" : "banner--warning"} banner--actionable`} role={updateError ? "alert" : "status"}>
-    <span className="banner__msg">{m("historicalSourceUpdated")}</span>
-    {(updateError || busy) && <span className="banner__hint">{updateError ? failureNotice(updateError) : m("historicalImporting")}</span>}
-    <span className="banner__spacer" />
-    {updateError && recoveryDetails}
-    <button type="button" className="btn btn--small" disabled={busy} onClick={() => void importUpdate()}>{m("historicalImportOpen")} · {m("branch")}</button>
-    <button type="button" className="btn btn--small" disabled={busy} onClick={dismissUpdate}>{t("updater.dismiss")}</button>
-  </div>;
-}
-
-export function SessionRuntimeOverlays({ takeoverTabId, onCloseTakeover, historical }: {
+export function SessionRuntimeOverlays({ takeoverTabId, onCloseTakeover }: {
   takeoverTabId: string | null;
   onCloseTakeover(): void;
-  historical?: HistoricalSessionBannerProps;
 }) {
   return <>
     {takeoverTabId ? <SessionTakeoverDialog tabId={takeoverTabId} onClose={onCloseTakeover} /> : null}
-    {historical ? <HistoricalSessionBanners {...historical} /> : null}
   </>;
 }

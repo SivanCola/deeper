@@ -18,7 +18,7 @@ default_model = "test-model"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()

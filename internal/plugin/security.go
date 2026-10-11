@@ -174,31 +174,6 @@ func normalizeIdentityURL(raw string) string {
 	return u.String()
 }
 
-// legacyNormalizeIdentityURL is the pre-credential-aware normalization kept
-// only so old schema-cache keys remain readable during the compatibility
-// window. It no longer participates in authorization or tool classification.
-func legacyNormalizeIdentityURL(raw string) string {
-	u, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		return strings.TrimSpace(raw)
-	}
-	u.Scheme = strings.ToLower(u.Scheme)
-	host := strings.ToLower(u.Hostname())
-	port := u.Port()
-	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
-		port = ""
-	}
-	if strings.Contains(host, ":") {
-		host = "[" + host + "]"
-	}
-	if port != "" {
-		host = net.JoinHostPort(strings.Trim(host, "[]"), port)
-	}
-	u.Host = host
-	u.Fragment = ""
-	return u.String()
-}
-
 func sortedMapKeys[V any](values map[string]V) []string {
 	out := make([]string, 0, len(values))
 	for key := range values {

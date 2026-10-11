@@ -11,7 +11,7 @@ import (
 
 // Seed only revision-1 events, then label the fixture with its original
 // revision. Do not use this helper to downgrade real session data.
-func revisionOneFixture(t *testing.T) (string, string, string, []byte, []byte) {
+func currentRevisionFixture(t *testing.T) (string, string, string, []byte, []byte) {
 	t.Helper()
 	root, id := filepath.Join(t.TempDir(), "sessions"), "revision-one"
 	persistence := NewFilesystemPersistence(root)
@@ -34,7 +34,7 @@ func revisionOneFixture(t *testing.T) (string, string, string, []byte, []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest.StorageRevision = 1
+	manifest.StorageRevision = StorageRevision
 	if err := writeManifestFile(manifestPath, manifest); err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func assertRevisionFixtureBytes(t *testing.T, dir string, manifestBytes, logByte
 }
 
 func TestStorageRevisionReadOnlyDoesNotUpgrade(t *testing.T) {
-	root, id, dir, manifestBytes, logBytes := revisionOneFixture(t)
+	root, id, dir, manifestBytes, logBytes := currentRevisionFixture(t)
 	persistence := NewFilesystemPersistence(root)
 	reader, err := persistence.Open(id, ReadOnly)
 	if err != nil {
@@ -78,33 +78,8 @@ func TestStorageRevisionReadOnlyDoesNotUpgrade(t *testing.T) {
 	assertRevisionFixtureBytes(t, dir, manifestBytes, logBytes)
 }
 
-func TestStorageRevisionWriterUpgradesWithoutRewritingLog(t *testing.T) {
-	root, id, dir, _, logBytes := revisionOneFixture(t)
-	writer, err := NewFilesystemPersistence(root).Open(id, ReadWrite)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := writer.Close(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := readStoredManifest(filepath.Join(dir, "manifest.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if manifest.StorageRevision != StorageRevision {
-		t.Fatalf("revision=%d, want=%d", manifest.StorageRevision, StorageRevision)
-	}
-	got, err := os.ReadFile(filepath.Join(dir, currentLogName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(got, logBytes) {
-		t.Fatal("upgrade rewrote original event bytes")
-	}
-}
-
 func TestStorageRevisionDamagedLogDoesNotUpgrade(t *testing.T) {
-	root, id, dir, manifestBytes, logBytes := revisionOneFixture(t)
+	root, id, dir, manifestBytes, logBytes := currentRevisionFixture(t)
 	logBytes[0] ^= 0xff
 	if err := os.WriteFile(filepath.Join(dir, currentLogName), logBytes, 0o600); err != nil {
 		t.Fatal(err)
@@ -118,7 +93,7 @@ func TestStorageRevisionDamagedLogDoesNotUpgrade(t *testing.T) {
 }
 
 func TestStorageRevisionExternalLeasePreventsUpgrade(t *testing.T) {
-	root, id, dir, manifestBytes, logBytes := revisionOneFixture(t)
+	root, id, dir, manifestBytes, logBytes := currentRevisionFixture(t)
 	release, err := acquireSessionWriter(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -134,36 +109,9 @@ func TestStorageRevisionExternalLeasePreventsUpgrade(t *testing.T) {
 	assertRevisionFixtureBytes(t, dir, manifestBytes, logBytes)
 }
 
-func TestPreviousReaderRejectsStorageRevisionThree(t *testing.T) {
-	const previousMaxStorageRevision = 2
-	if StorageRevision <= previousMaxStorageRevision {
-		t.Fatalf("StorageRevision=%d is not newer than previous reader max %d", StorageRevision, previousMaxStorageRevision)
-	}
-	root, id, dir, _, _ := revisionOneFixture(t)
-	writer, err := NewFilesystemPersistence(root).Open(id, ReadWrite)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := writer.Close(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := readStoredManifest(filepath.Join(dir, "manifest.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if manifest.StorageRevision != StorageRevision {
-		t.Fatalf("revision=%d, want=%d", manifest.StorageRevision, StorageRevision)
-	}
-	previousAccepts := manifest.SchemaVersion == SchemaVersion && manifest.Codec == Codec &&
-		manifest.StorageRevision >= 1 && manifest.StorageRevision <= previousMaxStorageRevision
-	if previousAccepts {
-		t.Fatal("previous reader predicate accepted StorageRevision 3")
-	}
-}
-
 func TestStorageRevisionUnknownRejectedByReadersAndWriters(t *testing.T) {
 	for _, mode := range []AccessMode{ReadOnly, ReadWrite} {
-		root, id, dir, _, logBytes := revisionOneFixture(t)
+		root, id, dir, _, logBytes := currentRevisionFixture(t)
 		manifestPath := filepath.Join(dir, "manifest.json")
 		manifest, err := readStoredManifest(manifestPath)
 		if err != nil {
@@ -185,63 +133,5 @@ func TestStorageRevisionUnknownRejectedByReadersAndWriters(t *testing.T) {
 			t.Fatalf("mode=%v unknown revision: %v", mode, err)
 		}
 		assertRevisionFixtureBytes(t, dir, manifestBytes, logBytes)
-	}
-}
-
-func TestStorageRevisionManifestPublishFailureReleasesWriter(t *testing.T) {
-	_, id, dir, manifestBytes, logBytes := revisionOneFixture(t)
-	manifestPath := filepath.Join(dir, "manifest.json")
-	backupPath := filepath.Join(dir, "manifest.before-failure.json")
-	// ObserveRecovery is called after validation and before manifest publication.
-	// A directory at the rename destination deterministically rejects the atomic
-	// publish on every platform, without timing or permission assumptions.
-	writer, err := OpenWithOptions(dir, id, OpenOptions{ObserveRecovery: func(RecoveryOpenStats) {
-		if err := os.Rename(manifestPath, backupPath); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Mkdir(manifestPath, 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}})
-	if writer != nil {
-		_ = writer.Close(context.Background())
-	}
-	if err == nil {
-		t.Fatal("manifest publish unexpectedly succeeded")
-	}
-	got, err := os.ReadFile(backupPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(got, manifestBytes) {
-		t.Fatal("failed upgrade changed old manifest bytes")
-	}
-	got, err = os.ReadFile(filepath.Join(dir, currentLogName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(got, logBytes) {
-		t.Fatal("failed upgrade changed log bytes")
-	}
-	if err := os.Remove(manifestPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Rename(backupPath, manifestPath); err != nil {
-		t.Fatal(err)
-	}
-	// The failed open must release its lease, so a retry can finish the upgrade.
-	retry, err := Open(dir, id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := retry.Close(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := readStoredManifest(manifestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if manifest.StorageRevision != StorageRevision {
-		t.Fatalf("retry revision=%d, want=%d", manifest.StorageRevision, StorageRevision)
 	}
 }

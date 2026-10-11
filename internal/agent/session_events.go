@@ -10,10 +10,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"time"
 
-	"deepzora/internal/fileutil"
 	fileencoding "deepzora/internal/fileutil/encoding"
 	"deepzora/internal/provider"
 	"deepzora/internal/store"
@@ -21,8 +19,6 @@ import (
 
 const (
 	sessionEventSchemaVersion = 1
-	sessionEventTypeReplace   = "replace"
-	sessionEventTypeAppend    = "append"
 	// sessionEventReplayMaxBytes caps decoder input before encoding/json can
 	// allocate an arbitrarily large record. The ceiling still accommodates
 	// image-bearing histories while keeping corrupt logs from exhausting RAM.
@@ -88,54 +84,11 @@ var defaultSessionReplayLimits = sessionReplayLimits{
 	maxCollectionItems: sessionEventReplayMaxCollectionItems,
 }
 
-// migrationSessionReplayLimits removes cumulative interactive-history caps for
-// an already frozen migration source. The migration path is still expected to
-// move large payloads into its target store as it reads them; these values only
-// keep the legacy decoder from rejecting valid historical totals before that
-// conversion can happen.
-func migrationSessionReplayLimits() sessionReplayLimits {
-	return sessionReplayLimits{
-		maxBytes:           int64(^uint64(0)>>1) - 1,
-		maxRecords:         int(^uint(0) >> 1),
-		maxMessages:        int(^uint(0) >> 1),
-		maxCollectionItems: int(^uint(0) >> 1),
-	}
-}
-
 func sessionReplayLimitError(path, resource string, value, limit int64) error {
 	err := &SessionReplayLimitError{Path: path, Resource: resource, Value: value, Limit: limit}
 	slog.Warn("session: refusing unsafe event-log replay",
 		"path", path, "resource", resource, "value", value, "limit", limit)
 	return err
-}
-
-type sessionEventRecord struct {
-	SchemaVersion int                `json:"schema_version"`
-	Type          string             `json:"type"`
-	Revision      int64              `json:"revision,omitempty"`
-	BaseRevision  int64              `json:"base_revision,omitempty"`
-	MessageIndex  int                `json:"message_index,omitempty"`
-	Messages      []provider.Message `json:"messages,omitempty"`
-	ContentDigest string             `json:"content_digest,omitempty"`
-	WriterID      string             `json:"writer_id,omitempty"`
-	Reason        string             `json:"reason,omitempty"`
-	CreatedAt     time.Time          `json:"created_at"`
-}
-
-// sessionEventWireRecord keeps the messages array encoded until the replay
-// budget has been checked. Decoding directly into sessionEventRecord would
-// materialize every provider.Message before replay could enforce maxMessages.
-type sessionEventWireRecord struct {
-	SchemaVersion int             `json:"schema_version"`
-	Type          string          `json:"type"`
-	Revision      int64           `json:"revision,omitempty"`
-	BaseRevision  int64           `json:"base_revision,omitempty"`
-	MessageIndex  int             `json:"message_index,omitempty"`
-	Messages      json.RawMessage `json:"messages,omitempty"`
-	ContentDigest string          `json:"content_digest,omitempty"`
-	WriterID      string          `json:"writer_id,omitempty"`
-	Reason        string          `json:"reason,omitempty"`
-	CreatedAt     time.Time       `json:"created_at"`
 }
 
 type sessionEventIndex struct {
@@ -176,142 +129,6 @@ func sessionEventLogOversized(logSize, contentBytes int64) bool {
 	return logSize > limit
 }
 
-// sessionEventReplay is the result of a tolerant event-log replay: the
-// transcript up to the last cleanly applied record, plus enough bookkeeping
-// for writers to self-heal a torn tail.
-type sessionEventReplay struct {
-	msgs []provider.Message
-	// collectionItems counts the elements in every JSON array nested below a
-	// live message. Keeping this alongside msgs bounds slices such as tool calls,
-	// images, memory citations, and interrupted-turn recovery metadata without
-	// coupling replay safety to today's provider.Message field list.
-	collectionItems int
-	// times mirrors msgs with each message's record CreatedAt. Replace events
-	// collapse per-turn history, so their messages get the zero time and
-	// callers fall back to coarser timestamps.
-	times []time.Time
-	// records counts cleanly applied events.
-	records int
-	// lastGoodEnd is the byte offset just past the last cleanly applied
-	// record; truncating the log here drops only undecodable bytes.
-	lastGoodEnd int64
-	// size is the log size that was replayed.
-	size int64
-	// damaged is set when replay stopped early on a torn/corrupt record or a
-	// broken append chain. The prefix in msgs is still a valid historical
-	// state.
-	damaged bool
-}
-
-// replaySessionEventLog decodes an event log tolerantly: decoding stops at the
-// first record that fails to parse or chain, and the state up to that point is
-// returned with damaged=true so writers can self-heal. Unsupported schema
-// versions and unknown event types stay hard errors — they mean a newer writer
-// owns this log, and truncating it would discard that writer's data.
-func replaySessionEventLog(path string) (sessionEventReplay, error) {
-	return replaySessionEventLogWithLimits(path, defaultSessionReplayLimits, nil)
-}
-
-func replaySessionEventLogWithLimits(path string, limits sessionReplayLimits, hasher *sessionTranscriptHasher) (sessionEventReplay, error) {
-	return replaySessionEventLogWithContext(context.Background(), path, limits, hasher)
-}
-
-func replaySessionEventLogWithContext(ctx context.Context, path string, limits sessionReplayLimits, hasher *sessionTranscriptHasher) (sessionEventReplay, error) {
-	if err := ctx.Err(); err != nil {
-		return sessionEventReplay{}, err
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return sessionEventReplay{}, err
-	}
-	defer f.Close()
-	info, err := f.Stat()
-	if err != nil {
-		return sessionEventReplay{}, err
-	}
-	replay := sessionEventReplay{size: info.Size()}
-	if info.Size() > limits.maxBytes {
-		return replay, sessionReplayLimitError(path, "encoded_bytes", info.Size(), limits.maxBytes)
-	}
-	// Stat and read are not atomic across processes. LimitReader keeps a log
-	// that grows after Stat inside the same byte budget.
-	limited := &io.LimitedReader{R: &contextReader{ctx: ctx, reader: f}, N: limits.maxBytes + 1}
-	dec := json.NewDecoder(limited)
-	for {
-		if err := ctx.Err(); err != nil {
-			return replay, err
-		}
-		var rec sessionEventWireRecord
-		if err := dec.Decode(&rec); err != nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				return replay, ctxErr
-			}
-			if limited.N == 0 {
-				return replay, sessionReplayLimitError(path, "encoded_bytes", limits.maxBytes+1, limits.maxBytes)
-			}
-			if errors.Is(err, io.EOF) {
-				return replay, nil
-			}
-			replay.damaged = true
-			return replay, nil
-		}
-		if rec.SchemaVersion != sessionEventSchemaVersion {
-			return replay, fmt.Errorf("decode session event log %s: unsupported schema version %d", path, rec.SchemaVersion)
-		}
-		if replay.records >= limits.maxRecords {
-			return replay, sessionReplayLimitError(path, "event_records", int64(replay.records+1), int64(limits.maxRecords))
-		}
-		switch rec.Type {
-		case sessionEventTypeReplace:
-			msgs, collectionItems, err := decodeSessionEventMessages(ctx, path, rec.Messages, 0, 0, limits)
-			if err != nil {
-				if ctxErr := ctx.Err(); ctxErr != nil {
-					return replay, ctxErr
-				}
-				if errors.Is(err, ErrSessionReplayLimitExceeded) {
-					return replay, err
-				}
-				replay.damaged = true
-				return replay, nil
-			}
-			replay.msgs = msgs
-			replay.collectionItems = collectionItems
-			replay.times = make([]time.Time, len(replay.msgs))
-			hasher.rehash(msgs)
-		case sessionEventTypeAppend:
-			if rec.MessageIndex != len(replay.msgs) {
-				replay.damaged = true
-				return replay, nil
-			}
-			msgs, collectionItems, err := decodeSessionEventMessages(ctx, path, rec.Messages, len(replay.msgs), replay.collectionItems, limits)
-			if err != nil {
-				if ctxErr := ctx.Err(); ctxErr != nil {
-					return replay, ctxErr
-				}
-				if errors.Is(err, ErrSessionReplayLimitExceeded) {
-					return replay, err
-				}
-				replay.damaged = true
-				return replay, nil
-			}
-			replay.msgs = append(replay.msgs, msgs...)
-			replay.collectionItems = collectionItems
-			for range msgs {
-				replay.times = append(replay.times, rec.CreatedAt)
-			}
-			hasher.addAll(msgs)
-		default:
-			return replay, fmt.Errorf("decode session event log %s: unsupported event type %q", path, rec.Type)
-		}
-		replay.records++
-		replay.lastGoodEnd = dec.InputOffset()
-	}
-}
-
-// decodeSessionEventMessages preflights both the top-level message count and
-// every nested JSON collection before constructing provider.Message values.
-// The token walk is independent of today's provider.Message fields, so future
-// slice fields inherit the same aggregate object-graph bound automatically.
 func decodeSessionEventMessages(
 	ctx context.Context,
 	path string,
@@ -354,71 +171,6 @@ func decodeSessionEventMessages(
 	return msgs, collectionItems, nil
 }
 
-// repairSessionEventLogTail truncates undecodable bytes left by a crash or
-// disk-full append so the next append cannot bury them mid-log where replay
-// would stop forever. Callers must hold the session file lock. The event
-// index's LogSize doubles as a cheap intact check so the common case never
-// re-reads the log.
-func repairSessionEventLogTail(sessionPath string) error {
-	path := store.SessionEventLog(sessionPath)
-	if path == "" {
-		return nil
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	if info.IsDir() || info.Size() == 0 {
-		return nil
-	}
-	if idx, err := readSessionEventIndex(sessionPath); err == nil && idx != nil && idx.LogSize == info.Size() {
-		return nil
-	}
-	replay, err := replaySessionEventLog(path)
-	if err != nil {
-		return err
-	}
-	if replay.lastGoodEnd >= replay.size {
-		return nil
-	}
-	// Salvage the bytes the truncation below discards. A torn tail is usually
-	// one partial record, but replay also stops at a buried undecodable or
-	// out-of-order record (e.g. two runtimes interleaving appends on one log) —
-	// then everything past it, including intact turns, would be silently and
-	// permanently lost (#6607). Preservation is best-effort: it must not block
-	// the repair (the log has to become appendable again either way), and its
-	// most likely failure — a full disk — is the same condition that tears
-	// tails in the first place.
-	if preserveErr := preserveDamagedEventLogTail(sessionPath, path, replay.lastGoodEnd, replay.size); preserveErr != nil {
-		slog.Warn("session: could not preserve damaged event log tail; truncating anyway",
-			"path", path, "from", replay.lastGoodEnd, "size", replay.size, "err", preserveErr)
-	}
-	if err := os.Truncate(path, replay.lastGoodEnd); err != nil {
-		return err
-	}
-	if replay.lastGoodEnd == 0 {
-		return nil
-	}
-	// The truncation point sits exactly at the end of a JSON value; restore
-	// the trailing newline so the file stays line-oriented for external tools.
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
-	if err != nil {
-		return err
-	}
-	if err := f.Chmod(0o600); err != nil {
-		_ = f.Close()
-		return err
-	}
-	if _, err := f.Write([]byte{'\n'}); err != nil {
-		f.Close()
-		return err
-	}
-	return f.Close()
-}
-
 // preserveDamagedEventLogTail appends the about-to-be-truncated byte range of
 // the event log to the .damaged salvage sidecar, prefixed with a one-line JSON
 // header recording when and where the bytes came from. The sidecar is a
@@ -455,108 +207,6 @@ func preserveDamagedEventLogTail(sessionPath, logPath string, from, to int64) er
 		return err
 	}
 	return dst.Close()
-}
-
-func appendSessionEvent(sessionPath string, rec sessionEventRecord, sync bool) error {
-	path := store.SessionEventLog(sessionPath)
-	if path == "" {
-		return fmt.Errorf("empty session event log path")
-	}
-	fileutil.Crash("wal-append", path)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	rec.SchemaVersion = sessionEventSchemaVersion
-	if rec.CreatedAt.IsZero() {
-		rec.CreatedAt = time.Now().UTC()
-	}
-	if rec.WriterID == "" {
-		rec.WriterID = SessionWriterID()
-	}
-	buf, err := json.Marshal(rec)
-	if err != nil {
-		return fmt.Errorf("encode session event: %w", err)
-	}
-	buf = append(buf, '\n')
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
-	if err != nil {
-		return fmt.Errorf("open session event log: %w", err)
-	}
-	// The event log carries the complete transcript. Chmod after opening so
-	// upgrading a pre-v0.53-boundary 0644 sidecar tightens the existing inode
-	// before any unredacted message is appended; OpenFile's perm only applies
-	// when the file is newly created.
-	if err := f.Chmod(0o600); err != nil {
-		_ = f.Close()
-		return fmt.Errorf("protect session event log: %w", err)
-	}
-	if _, err := f.Write(buf); err != nil {
-		_ = f.Close()
-		return fmt.Errorf("append session event: %w", err)
-	}
-	if sync {
-		if err := f.Sync(); err != nil {
-			_ = f.Close()
-			return err
-		}
-	}
-	return f.Close()
-}
-
-func appendSessionReplaceEvent(sessionPath string, msgs []provider.Message, digest [sha256.Size]byte, baseRevision int64, reason string) error {
-	// Replace events carry the whole transcript and mark intentional history
-	// rewrites; they are rare and fsynced so a power cut cannot lose one.
-	return appendSessionEvent(sessionPath, sessionEventRecord{
-		Type:          sessionEventTypeReplace,
-		Revision:      baseRevision + 1,
-		BaseRevision:  baseRevision,
-		MessageIndex:  0,
-		Messages:      append([]provider.Message(nil), msgs...),
-		ContentDigest: digestString(digest),
-		Reason:        reason,
-	}, true)
-}
-
-func appendSessionAppendEvent(sessionPath string, messageIndex int, msgs []provider.Message, digest [sha256.Size]byte, baseRevision int64) error {
-	if len(msgs) == 0 {
-		return nil
-	}
-	return appendSessionEvent(sessionPath, sessionEventRecord{
-		Type:          sessionEventTypeAppend,
-		Revision:      baseRevision + 1,
-		BaseRevision:  baseRevision,
-		MessageIndex:  messageIndex,
-		Messages:      append([]provider.Message(nil), msgs...),
-		ContentDigest: digestString(digest),
-	}, true)
-}
-
-// compactSessionEventLog rewrites the log as a single replace event via an
-// atomic tmp+fsync+rename, so readers observe either the old log or the
-// compacted one and never a partial state. It also heals a damaged log by
-// construction.
-func compactSessionEventLog(sessionPath string, msgs []provider.Message, digest [sha256.Size]byte, baseRevision int64, reason string) error {
-	path := store.SessionEventLog(sessionPath)
-	if path == "" {
-		return fmt.Errorf("empty session event log path")
-	}
-	rec := sessionEventRecord{
-		SchemaVersion: sessionEventSchemaVersion,
-		Type:          sessionEventTypeReplace,
-		Revision:      baseRevision + 1,
-		BaseRevision:  baseRevision,
-		Messages:      append([]provider.Message(nil), msgs...),
-		ContentDigest: digestString(digest),
-		WriterID:      SessionWriterID(),
-		Reason:        reason,
-		CreatedAt:     time.Now().UTC(),
-	}
-	buf, err := json.Marshal(rec)
-	if err != nil {
-		return fmt.Errorf("encode session event: %w", err)
-	}
-	buf = append(buf, '\n')
-	return fileutil.AtomicWriteFile(path, buf, 0o600)
 }
 
 func readSessionEventIndex(sessionPath string) (*sessionEventIndex, error) {

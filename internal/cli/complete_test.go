@@ -50,7 +50,7 @@ func TestSlashCompletionFilterAndAccept(t *testing.T) {
 	}
 	// The common commands keep their stable order; explicit readiness recovery
 	// is discoverable after them and fails safely when no card is pending.
-	want := []string{"/compact", "/context", "/copy", "/continue-checks", "/recover-context"}
+	want := []string{"/compact", "/context", "/copy", "/recover-context"}
 	if got := labels(m.completion.items); !slices.Equal(got, want) {
 		t.Fatalf("filter = %v, want %v", got, want)
 	}
@@ -115,46 +115,6 @@ func TestSlashCompletionDocsShowsOnlyRuntimeWinner(t *testing.T) {
 			}
 			if !hasLabel(m.slashItems(), "/deepzora:docs") {
 				t.Fatalf("shadowed built-in docs fallback missing: %v", labels(m.slashItems()))
-			}
-		})
-	}
-}
-
-func TestSlashCompletionDocsAccountsForHiddenCompatibilityAliases(t *testing.T) {
-	tests := []struct {
-		name          string
-		commands      []command.Command
-		skills        []skill.Skill
-		wantCanonical string
-	}{
-		{
-			name: "hidden plugin command alias",
-			commands: []command.Command{
-				{Name: "docs", Plugin: "manuals", Hidden: true},
-				{Name: "manuals:docs", Plugin: "manuals"},
-			},
-			wantCanonical: "/manuals:docs",
-		},
-		{
-			name:          "compatible plugin skill alias",
-			skills:        []skill.Skill{{Name: "docs", Plugin: "manuals"}},
-			wantCanonical: "/manuals:docs",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := newTestChatTUI()
-			m.commands = tt.commands
-			m.skills = tt.skills
-			items := m.slashItems()
-			if hasLabel(items, "/docs") {
-				t.Fatalf("hidden runtime owner left a misleading /docs entry: %v", labels(items))
-			}
-			for _, want := range []string{"/deepzora:docs", tt.wantCanonical} {
-				if !hasLabel(items, want) {
-					t.Fatalf("completion missing %q: %v", want, labels(items))
-				}
 			}
 		})
 	}

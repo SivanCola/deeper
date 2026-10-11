@@ -71,7 +71,7 @@ async function settledTabListsAreNotShared() {
 
 // Anything that mutates or starts work must never be collapsed.
 function onlyReadOnlyQueriesAreCoalesced() {
-  for (const readOnly of ["ListProjectTree", "ContextPanel", "MetaForTab", "BalanceForTab"]) {
+  for (const readOnly of ["GetProjectTreeSnapshot", "ContextPanel", "MetaForTab", "BalanceForTab"]) {
     assert.equal(coalescesQuery(readOnly), true, `${readOnly} should coalesce`);
   }
   for (const mutating of ["Send", "SetActiveTab", "OpenGlobalTab", "Cancel", "ApproveTool"]) {

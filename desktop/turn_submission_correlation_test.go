@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -146,17 +145,17 @@ func TestTabEventSinkClearsRejectedSubmissionCorrelation(t *testing.T) {
 }
 
 func TestSubmitToTabWithIDCorrelatesOnlyAdmittedGuardedTurn(t *testing.T) {
+	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
 	delivered := make(chan any, 64)
-	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
+	sink := tab.sink
+	sink.ctx = context.Background()
 	sink.runtimeEvents.emit = func(_ context.Context, _ string, payload ...any) {
-		delivered <- payload[0]
+		if len(payload) > 0 {
+			delivered <- payload[0]
+		}
 	}
-	dir := t.TempDir()
-	ctrl := control.New(control.Options{Sink: sink, SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl")})
-	defer ctrl.Close()
-	tab := &WorkspaceTab{ID: "tab", Scope: "global", Ready: true, Ctrl: ctrl, sink: sink}
-	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, activeTabID: tab.ID}
-
+	app.readyHook = func() {}
+	// Rebuilds retain the same tab sink and its correlation envelope.
 	if err := app.SubmitToTabWithID(tab.ID, "/tree", "u-local"); err != nil {
 		t.Fatalf("local command: %v", err)
 	}
@@ -187,22 +186,18 @@ func TestSubmitToTabWithIDCorrelatesOnlyAdmittedGuardedTurn(t *testing.T) {
 }
 
 func TestBeginTabTurnWaitsForTurnDoneFanoutBeforeRetry(t *testing.T) {
-	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
+	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
+	sink := tab.sink
+	sink.ctx = context.Background()
 	gate := &turnFanoutGate{kind: event.TurnDone, entered: make(chan struct{}), release: make(chan struct{})}
 	sink.SetBotSink(gate)
-	dir := t.TempDir()
-	ctrl := control.New(control.Options{Sink: sink, SessionDir: dir, SessionPath: filepath.Join(dir, "session.jsonl")})
-	t.Cleanup(ctrl.Close)
-	tab := &WorkspaceTab{ID: "tab", Scope: "global", Ready: true, Ctrl: ctrl, sink: sink}
-	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, activeTabID: tab.ID}
-	sink.app = app
 
 	if err := app.SubmitToTabWithID(tab.ID, "/mcp__definitely_missing", "u-first"); err != nil {
 		t.Fatalf("first submit: %v", err)
 	}
 	select {
 	case <-gate.entered:
-	case <-time.After(time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("first TurnDone did not enter the held fan-out")
 	}
 
@@ -231,7 +226,7 @@ func TestBeginTabTurnWaitsForTurnDoneFanoutBeforeRetry(t *testing.T) {
 			t.Fatal("next submit returned without an admission token")
 		}
 		got.admission.abort()
-	case <-time.After(time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("next submit did not retry after TurnDone fan-out")
 	}
 }

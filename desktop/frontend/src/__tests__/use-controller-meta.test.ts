@@ -1,6 +1,6 @@
 // Run: tsx src/__tests__/use-controller-meta.test.ts
 
-import { currentTurnWaitMs, foregroundRunningFromRuntimeMeta, historyMessagesToItems, initialState, localizedBackendNoticeText, localizedNoticeText, metaFromTab, reducer, sameMeta } from "../lib/useController";
+import { currentTurnWaitMs, foregroundRunningFromRuntimeMeta, historyMessagesToItems, initialState, localizedBackendNoticeText, metaFromTab, reducer, sameMeta } from "../lib/useController";
 import { effortSwitchNoticeText, modelSwitchNoticeText } from "../lib/controllerSwitchNotices";
 import { historyPageRequestBudget, historyTurnsToLoad } from "../lib/historyPaging";
 import { shouldReconcileStaleTurn } from "../lib/useStaleTurnWatchdog";
@@ -44,10 +44,8 @@ function meta(overrides: Partial<Meta> = {}): Meta {
     gitBranch: "main",
     imageInputEnabled: true,
     autoApproveTools: false,
-    bypass: false,
     collaborationMode: "normal",
-    toolApprovalMode: "ask",
-    tokenMode: "full",
+    toolApprovalMode: "workspace-write",
     goal: "",
     goalStatus: "stopped",
     ...overrides,
@@ -69,8 +67,7 @@ function tab(overrides: Partial<LooseTabMeta> = {}): TabMeta {
     running: false,
     mode: "normal",
     collaborationMode: "normal",
-    toolApprovalMode: "ask",
-    tokenMode: "full",
+    toolApprovalMode: "workspace-write",
     goal: "",
     goalStatus: "stopped",
     active: true,
@@ -225,53 +222,6 @@ console.log("\nuse controller meta");
   );
 }
 
-{
-  eq(
-    localizedNoticeText("Task status needs one more check (reworded backend copy).", "final_readiness"),
-    "Task status needs one more check; asking the assistant to finish or explain what is blocking it.",
-    "a stable notice code localizes the main copy even after backend copy edits",
-  );
-  eq(
-    localizedNoticeText("reworded workspace contention copy", "workspace_lease"),
-    "Another session is writing to this workspace; this session will continue automatically when it is safe.",
-    "workspace lease contention uses its stable localized notice code",
-  );
-  eq(
-    localizedNoticeText("reworded cancelled-turn copy", "cancelled_turn_display"),
-    "This turn was interrupted. Partial output is kept for reference; only completed tool pairs and a bounded recovery summary enter the next model turn. Inspect the workspace before continuing or reverting changes.",
-    "cancelled turn history explains the model-context boundary",
-  );
-  eq(
-    localizedNoticeText("reworded unapplied copy\nuse plan B", "unapplied_steer"),
-    "Guidance was not applied because the turn ended before it could be processed. Send it again if it is still needed:\nuse plan B",
-    "unapplied steer keeps the user's guidance while localizing the warning",
-  );
-  eq(
-    localizedNoticeText("reworded recovery copy", "session_recovery_forked"),
-    "The session changed on disk, so the unsaved local transcript was kept as another saved version.",
-    "session recovery fork localization uses its stable notice code",
-  );
-  eq(
-    localizedNoticeText("reworded covered adoption", "session_recovery_adopted_covered"),
-    "The session changed on disk, so Deepzora adopted the newer transcript; the local changes were already covered.",
-    "covered session adoption localization uses its stable notice code",
-  );
-  eq(
-    localizedNoticeText("reworded depth cap", "session_recovery_depth_cap"),
-    "Repeated save conflicts were detected, so the current version was saved separately.",
-    "session recovery depth-cap localization uses its stable notice code",
-  );
-  eq(
-    localizedNoticeText("Tool round limit reached; asking the assistant to summarize progress.", "unknown_future_code"),
-    "Tool round limit reached; asking the assistant to summarize progress.",
-    "an unknown notice code falls back to exact-text matching",
-  );
-  eq(
-    localizedNoticeText("some free-form backend message"),
-    "some free-form backend message",
-    "a codeless unmatched notice keeps its raw text",
-  );
-}
 
 {
   eq(historyTurnsToLoad(941, 1_000, 1), 500, "a distant question jump uses the bounded 500-turn history window");
@@ -392,8 +342,8 @@ eq(sameMeta(meta({ collaborationMode: "normal" }), meta({ collaborationMode: "pl
 }
 
 {
-  const preserved = metaFromTab(tab({ toolApprovalMode: "" }), meta({ toolApprovalMode: "auto", autoApproveTools: false }));
-  eq(preserved.toolApprovalMode, "workspace-write", "blank tab snapshot migrates legacy auto to workspace write");
+  const preserved = metaFromTab(tab({ toolApprovalMode: "" }), meta({ toolApprovalMode: "workspace-write", autoApproveTools: false }));
+  eq(preserved.toolApprovalMode, "read-only", "a snapshot without an explicit permission fails closed");
   eq(preserved.autoApproveTools, false, "blank tab snapshot does not silently enable full access");
   const todos = [{ content: "Keep task state", status: "in_progress" }];
   const previous = meta({ sessionPath: "/sessions/a", sessionGeneration: 1, canonicalTodos: todos });
@@ -754,31 +704,6 @@ eq(sameMeta(meta({ collaborationMode: "normal" }), meta({ collaborationMode: "pl
 }
 
 // ── Readiness cards do not derive authorization from todo completion ────────
-{
-  const args = JSON.stringify({ todos: [{ content: "Write verification notes", status: "completed" }] });
-  let s = reducer(initialState, { type: "event", e: { kind: "turn_done", outcome: "final_readiness", readiness: { missing: ["todo"], attempts: 1 } } });
-  ok(s.items.some((item) => item.kind === "notice" && item.variant === "delivery"), "todo-only readiness card shows at the gated turn");
-  s = reducer(s, { type: "event", e: { kind: "tool_dispatch", tool: { id: "tw1", name: "todo_write", args, readOnly: true } } });
-  s = reducer(s, { type: "event", e: { kind: "tool_result", tool: { id: "tw1", name: "todo_write", args, readOnly: true, output: "task list updated", todoWritten: true, todos: [{ content: "Write verification notes", status: "completed" }] } } });
-  s = reducer(s, { type: "event", e: { kind: "turn_done" } });
-  ok(s.items.some((item) => item.kind === "notice" && item.variant === "delivery"), "an all-complete todo list cannot retract a host readiness card");
-}
-{
-  const args = JSON.stringify({ todos: [{ content: "Write verification notes", status: "completed" }] });
-  let s = reducer(initialState, { type: "event", e: { kind: "turn_done", outcome: "final_readiness", readiness: { missing: ["todo", "verification"], attempts: 1 } } });
-  s = reducer(s, { type: "event", e: { kind: "tool_dispatch", tool: { id: "tw2", name: "todo_write", args, readOnly: true } } });
-  s = reducer(s, { type: "event", e: { kind: "tool_result", tool: { id: "tw2", name: "todo_write", args, readOnly: true, output: "task list updated", todoWritten: true, todos: [{ content: "Write verification notes", status: "completed" }] } } });
-  s = reducer(s, { type: "event", e: { kind: "turn_done" } });
-  ok(s.items.some((item) => item.kind === "notice" && item.variant === "delivery"), "a card listing non-todo gaps survives todo completion");
-}
-{
-  const args = JSON.stringify({ todos: [{ content: "Write verification notes", status: "in_progress" }] });
-  let s = reducer(initialState, { type: "event", e: { kind: "turn_done", outcome: "final_readiness", readiness: { missing: ["todo"], attempts: 1 } } });
-  s = reducer(s, { type: "event", e: { kind: "tool_dispatch", tool: { id: "tw3", name: "todo_write", args, readOnly: true } } });
-  s = reducer(s, { type: "event", e: { kind: "tool_result", tool: { id: "tw3", name: "todo_write", args, readOnly: true, output: "task list updated", todoWritten: true, todos: [{ content: "Write verification notes", status: "in_progress" }] } } });
-  s = reducer(s, { type: "event", e: { kind: "turn_done" } });
-  ok(s.items.some((item) => item.kind === "notice" && item.variant === "delivery"), "an incomplete todo list keeps the todo-only card");
-}
 
 console.log(`\n${passed} passed, ${failed} failed, ${passed + failed} total`);
 if (failed > 0) process.exit(1);

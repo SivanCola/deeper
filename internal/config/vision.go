@@ -1,7 +1,6 @@
 package config
 
 import (
-	"net/url"
 	"slices"
 	"strings"
 
@@ -99,36 +98,16 @@ func EffectiveVision(e *ProviderEntry) bool {
 	return VisionCapabilityForModel(e) == VisionCapabilitySupported
 }
 
-// VisionCapabilityForModel resolves the selected model's image-input
-// capability without requiring a user-maintained provider-level list. Legacy
-// Vision/VisionModels values remain valid fallbacks while model overrides take
-// precedence after ResolveModel applies them.
+// VisionCapabilityForModel uses the current model resolver and explicit overrides.
 func VisionCapabilityForModel(e *ProviderEntry) VisionCapability {
 	if e == nil {
 		return VisionCapabilityUnknown
 	}
-	if openai.IsDeepSeek(e.BaseURL) {
-		if officialDeepSeekEffectiveVision(e) {
-			return VisionCapabilitySupported
-		}
-		return VisionCapabilityUnsupported
-	}
-	if e.visionOverride != nil {
-		if *e.visionOverride {
-			return VisionCapabilitySupported
-		}
-		return VisionCapabilityUnsupported
-	}
-	if e.Vision {
+	resolved := NewModelCapabilityResolver().Resolve(e)
+	switch resolved.State {
+	case CapabilitySupported:
 		return VisionCapabilitySupported
-	}
-	if e.HasVisionModel(e.Model) {
-		return VisionCapabilitySupported
-	}
-	if isOfficialMimoVisionEntry(e) {
-		return VisionCapabilitySupported
-	}
-	if e.VisionModels != nil {
+	case CapabilityUnsupported:
 		return VisionCapabilityUnsupported
 	}
 	return VisionCapabilityUnknown
@@ -159,15 +138,6 @@ func officialDeepSeekEffectiveVision(e *ProviderEntry) bool {
 	if !openai.IsOfficialDeepSeekImageModel(e.Model) {
 		return false
 	}
-	if e.Vision {
-		return true
-	}
-	// An explicitly emptied list means the user turned image input off for the
-	// provider. A list curated before the V4.1 SKUs still omits them, so a
-	// non-empty list must not veto a model the vendor reports as capable.
-	if e.VisionModels != nil && len(e.VisionModels) == 0 {
-		return false
-	}
 	return true
 }
 
@@ -175,11 +145,11 @@ func explicitModelVision(e *ProviderEntry) (enabled, explicit bool) {
 	if e == nil {
 		return false, false
 	}
+	if ov, ok := e.modelOverrideForModel(e.Model); ok && ov.Vision != nil {
+		return *ov.Vision, true
+	}
 	if e.visionOverride != nil {
 		return *e.visionOverride, true
-	}
-	if e.HasVisionModel(e.Model) {
-		return true, true
 	}
 	return false, false
 }
@@ -195,24 +165,4 @@ func (e *ProviderEntry) HasVisionModel(model string) bool {
 		}
 	}
 	return false
-}
-
-func isOfficialMimoVisionEntry(e *ProviderEntry) bool {
-	if !isOpenAIProviderKind(e) || !mimoVisionModels[strings.ToLower(strings.TrimSpace(e.Model))] {
-		return false
-	}
-	switch officialMimoHost(e.BaseURL) {
-	case "api.xiaomimimo.com", "token-plan-cn.xiaomimimo.com", "token-plan-sgp.xiaomimimo.com", "token-plan-ams.xiaomimimo.com":
-		return true
-	default:
-		return false
-	}
-}
-
-func officialMimoHost(baseURL string) string {
-	u, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return ""
-	}
-	return strings.ToLower(u.Hostname())
 }

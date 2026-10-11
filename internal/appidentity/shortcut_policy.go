@@ -7,7 +7,7 @@ import (
 )
 
 type shortcutRepair struct {
-	target, icon, identity string
+	identity string
 }
 
 type shortcutTargetKind uint8
@@ -15,79 +15,13 @@ type shortcutTargetKind uint8
 const (
 	foreignShortcutTarget shortcutTargetKind = iota
 	stableShortcutTarget
-	flatShortcutTarget
-	flatShellShortcutTarget
-	versionedShortcutTarget
 )
 
-func planShortcutRepair(target, icon, id, root string, versioned bool) shortcutRepair {
-	kind := classifyShortcutTarget(target, root)
-	if kind == foreignShortcutTarget || (id != "" && id != legacyAppUserModelID && id != AppUserModelID) {
+func planShortcutRepair(target, id, root string) shortcutRepair {
+	if !ownedShortcutTarget(target, root) || id != "" {
 		return shortcutRepair{}
 	}
-	var plan shortcutRepair
-	if id != AppUserModelID {
-		plan.identity = AppUserModelID
-	}
-	launcher := ""
-	for _, name := range []string{"Deepzora.exe", "deepzora-launcher.exe"} {
-		candidate := filepath.Join(root, name)
-		info, err := os.Lstat(candidate)
-		if err == nil && info.Mode().IsRegular() && classifyShortcutTarget(candidate, root) == stableShortcutTarget {
-			launcher = candidate
-			break
-		}
-	}
-	if launcher == "" {
-		return plan
-	}
-	canonical := strings.EqualFold(filepath.Base(launcher), "Deepzora.exe")
-	needsRepair := func(path string, kind shortcutTargetKind) bool {
-		if staleShortcutEntry(path, kind, versioned) {
-			return true
-		}
-		if canonical && kind == stableShortcutTarget {
-			resolved, err := resolveShortcutTarget(path)
-			return err == nil && strings.EqualFold(filepath.Base(resolved), "deepzora-launcher.exe")
-		}
-		return false
-	}
-	if needsRepair(target, kind) {
-		plan.target = launcher
-	}
-	if needsRepair(icon, classifyShortcutTarget(icon, root)) {
-		plan.icon = launcher
-	}
-	return plan
-}
-
-// Preserve custom working directories. Only an empty directory or the old
-// owned executable directory needs normalization when its target is migrated.
-func repairShortcutWorkingDirectory(dir, oldTarget, root string) bool {
-	if dir == "" {
-		return true
-	}
-	kind := classifyShortcutTarget(oldTarget, root)
-	if kind != versionedShortcutTarget && kind != flatShellShortcutTarget {
-		return false
-	}
-	resolvedDir, err := resolveShortcutTarget(dir)
-	if err != nil {
-		return false
-	}
-	resolvedTarget, err := resolveShortcutTarget(oldTarget)
-	return err == nil && strings.EqualFold(resolvedDir, filepath.Dir(resolvedTarget))
-}
-
-func staleShortcutEntry(path string, kind shortcutTargetKind, versioned bool) bool {
-	if kind == versionedShortcutTarget || kind == flatShellShortcutTarget {
-		return true
-	}
-	if kind != flatShortcutTarget {
-		return false
-	}
-	_, err := os.Lstat(path)
-	return versioned || os.IsNotExist(err)
+	return shortcutRepair{identity: AppUserModelID}
 }
 
 func ownedShortcutTarget(target, root string) bool {
@@ -117,28 +51,15 @@ func classifyShortcutTarget(target, root string) shortcutTargetKind {
 	parts := strings.Split(strings.ToLower(rel), string(filepath.Separator))
 	if len(parts) == 1 {
 		switch parts[0] {
-		case "deepzora-launcher.exe", "deepzora.exe":
+		case "deepzora.exe":
 			return stableShortcutTarget
-		case "deepzora-desktop.exe":
-			return flatShortcutTarget
-		}
-	}
-	if len(parts) == 2 && parts[0] == "app" && parts[1] == "deepzora.exe" {
-		return flatShellShortcutTarget
-	}
-	if len(parts) >= 3 && parts[0] == "versions" {
-		if len(parts) == 3 && parts[2] == "deepzora-desktop.exe" {
-			return versionedShortcutTarget
-		}
-		if len(parts) == 4 && parts[2] == "app" && parts[3] == "deepzora.exe" {
-			return versionedShortcutTarget
 		}
 	}
 	return foreignShortcutTarget
 }
 
-// Resolve the existing ancestor even after an updater prunes a version. A
-// junction inside versions must not make another installation look owned.
+// Resolve the existing ancestor without treating a junction into another
+// installation as an owned shortcut target.
 func resolveShortcutTarget(path string) (string, error) {
 	path = filepath.Clean(path)
 	if _, err := os.Lstat(path); err == nil {

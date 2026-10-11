@@ -80,7 +80,15 @@ func TestPluginPackageLegacyOmitsV1Fields(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", deepzoraHome)
 
 	pluginRoot := filepath.Join(deepzoraHome, "plugins", "legacy")
-	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{"apiVersion":"deepzora.com/plugin/v2","name":"legacy","skills":["skills"]}`)
+	write(t, filepath.Join(pluginRoot, pluginpkg.NativeManifest), `{
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "legacy",
+  "contributes": {
+    "skills": [
+      "skills"
+    ]
+  }
+}`)
 	write(t, filepath.Join(pluginRoot, "skills", "s", "SKILL.md"), "---\ndescription: s\n---\nS\n")
 	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
 		Name: "legacy", Root: "plugins/legacy", ManifestKind: "deepzora", Enabled: true,

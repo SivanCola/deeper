@@ -50,3 +50,29 @@ func probeDisplayEventHeader(ctx context.Context, file *os.File) (int, string, b
 	}
 	return 0, "", false, ctx.Err()
 }
+
+// Unknown event fields are skipped token by token rather than buffering the
+// entire field/record in json.RawMessage. json.Decoder still validates nesting.
+func skipDisplayJSONValue(ctx context.Context, decoder *json.Decoder) error {
+	depth := 0
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		token, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if delim, ok := token.(json.Delim); ok {
+			switch delim {
+			case '{', '[':
+				depth++
+			case '}', ']':
+				depth--
+			}
+		}
+		if depth <= 0 {
+			return nil
+		}
+	}
+}

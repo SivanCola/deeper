@@ -12,12 +12,7 @@ import (
 	"testing"
 
 	"deepzora/desktop/internal/draftstate"
-	"deepzora/desktop/internal/legacycleanup"
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/agent"
-	"deepzora/internal/config"
-	"deepzora/internal/control"
-	"deepzora/internal/event"
 	"deepzora/internal/session"
 )
 
@@ -28,13 +23,12 @@ func newSavedTabReconcileTestApp(t *testing.T) *App {
 	app.ctx = t.Context()
 	pinDesktopSessionRoot(t, app)
 	installNoopRuntimeEvents(app)
-	app.legacyCleanup = legacycleanup.New(filepath.Join(t.TempDir(), "legacy-empty-session-cleanup-v1.json"))
 	t.Cleanup(func() { _ = app.draftStore().Close() })
 	return app
 }
 
-func finishSavedTabMigration(app *App) {
-	close(app.desktopMigrationDone)
+func finishSavedTabRecovery(app *App) {
+	close(app.desktopRecoveryDone)
 }
 
 func savedProjectTab(id, sessionID, operationID, root, workspaceID string) desktopTabEntry {
@@ -44,44 +38,9 @@ func savedProjectTab(id, sessionID, operationID, root, workspaceID string) deskt
 	}
 }
 
-func TestReconcileSavedTabsWaitsForMigrationCreatedCanonicalSession(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	root := t.TempDir()
-	workspaceID := desktopWorkspaceID("project", root)
-	file := desktopTabsFile{Tabs: []desktopTabEntry{savedProjectTab("saved", "migrated-session", "", root, workspaceID)}, ActiveTab: "saved"}
-
-	type result struct {
-		file    desktopTabsFile
-		changed bool
-	}
-	finished := make(chan result, 1)
-	reachedMigration := make(chan struct{})
-	app.beforeSavedTabMigrationWait = func() { close(reachedMigration) }
-	go func() {
-		got, changed := app.reconcileSavedTabs(t.Context(), file)
-		finished <- result{got, changed}
-	}()
-	<-reachedMigration
-	select {
-	case <-finished:
-		t.Fatal("saved tab reconciliation passed a missing canonical identity before migration completed")
-	default:
-	}
-
-	ref, gotWorkspaceID := createLegacyCleanupSession(t, app, root, "migrated-session", true)
-	if ref.SessionID != "migrated-session" || gotWorkspaceID != workspaceID {
-		t.Fatalf("migration fixture identity = %q/%q", ref.SessionID, gotWorkspaceID)
-	}
-	finishSavedTabMigration(app)
-	got := <-finished
-	if got.changed || len(got.file.Tabs) != 1 || got.file.Tabs[0].SessionID != ref.SessionID {
-		t.Fatalf("migration-created session was not restored: changed=%v file=%+v", got.changed, got.file)
-	}
-}
-
 func TestReconcileSavedTabsDropsMissingCanonicalWithoutOwner(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	root := t.TempDir()
 	file := desktopTabsFile{
 		Tabs:      []desktopTabEntry{savedProjectTab("stale", "missing-session", "", root, desktopWorkspaceID("project", root))},
@@ -96,7 +55,7 @@ func TestReconcileSavedTabsDropsMissingCanonicalWithoutOwner(t *testing.T) {
 
 func TestReconcileSavedTabsSelectsValidFallbackAfterDroppingActive(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	root := t.TempDir()
 	file := desktopTabsFile{
 		Tabs:       []desktopTabEntry{savedProjectTab("stale", "missing-session", "", root, desktopWorkspaceID("project", root))},
@@ -114,21 +73,9 @@ func TestReconcileSavedTabsSelectsValidFallbackAfterDroppingActive(t *testing.T)
 	}
 }
 
-func TestReconcileSavedTabsDropsMissingLegacyPathWithoutOwner(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	finishSavedTabMigration(app)
-	missing := filepath.Join(t.TempDir(), "missing-session.jsonl")
-	file := desktopTabsFile{Tabs: []desktopTabEntry{{ID: "legacy", Scope: "global", TopicID: "topic", SessionPath: missing}}, ActiveTab: "legacy"}
-
-	got, changed := app.reconcileSavedTabs(t.Context(), file)
-	if !changed || len(got.Tabs) != 0 {
-		t.Fatalf("missing legacy tab reconciliation = changed:%v file:%+v", changed, got)
-	}
-}
-
 func TestReconcileSavedTabsDiagnosticDoesNotExposeIdentityOrPath(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	secretPath := filepath.Join(t.TempDir(), "private-customer-path", "missing.jsonl")
 	const secretSessionID = "private-session-identity"
 	file := desktopTabsFile{Tabs: []desktopTabEntry{{
@@ -146,37 +93,16 @@ func TestReconcileSavedTabsDiagnosticDoesNotExposeIdentityOrPath(t *testing.T) {
 	if strings.Contains(logBody, secretPath) || strings.Contains(logBody, secretSessionID) || strings.Contains(logBody, "private-tab") {
 		t.Fatalf("saved-tab diagnostic exposed private identity: %s", logBody)
 	}
-	for _, field := range []string{"outcome=drop_stale_presentation", "reason=canonical_identity_absent", "identity_kind=canonical", "waited_for_migration=true"} {
+	for _, field := range []string{"outcome=drop_stale_presentation", "reason=canonical_identity_absent", "identity_kind=canonical", "waited_for_recovery=false"} {
 		if !strings.Contains(logBody, field) {
 			t.Fatalf("saved-tab diagnostic missing %q: %s", field, logBody)
 		}
 	}
 }
 
-func TestReconcileSavedTabsPreservesRecoveryEntry(t *testing.T) {
+func TestReconcileSavedTabsRetainsMatchingPendingCreateAfterRecovery(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
-	root := t.TempDir()
-	workspaceID, err := app.ensureDesktopWorkspace(t.Context(), "project", root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.workspaceRegistry().RecordRecovery(t.Context(), workspacestate.RecoveryEntry{
-		ID: "recovery", SourceKey: "recovery-source", SessionID: "missing-with-recovery", WorkspaceID: workspaceID,
-		Scope: "project", WorkspaceRoot: root, Format: "canonical", Reason: "interrupted", Status: "pending",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	finishSavedTabMigration(app)
-	file := desktopTabsFile{Tabs: []desktopTabEntry{savedProjectTab("recover", "missing-with-recovery", "", root, workspaceID)}, ActiveTab: "recover"}
-
-	got, changed := app.reconcileSavedTabs(t.Context(), file)
-	if changed || len(got.Tabs) != 1 {
-		t.Fatalf("recovery-owned tab was discarded: changed=%v file=%+v", changed, got)
-	}
-}
-
-func TestReconcileSavedTabsRetainsMatchingPendingCreateWithoutWaiting(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
+	finishSavedTabRecovery(app)
 	root := t.TempDir()
 	workspaceID, err := app.ensureDesktopWorkspace(t.Context(), "project", root)
 	if err != nil {
@@ -197,34 +123,10 @@ func TestReconcileSavedTabsRetainsMatchingPendingCreateWithoutWaiting(t *testing
 	}
 }
 
-func TestReconcileSavedTabsRestoresSessionIdentityFromPendingCreate(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	root := t.TempDir()
-	workspaceID, err := app.ensureDesktopWorkspace(t.Context(), "project", root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	const sessionID = "pending-session"
-	const operationID = "pending-operation"
-	if err := app.workspaceRegistry().BeginCreate(t.Context(), workspacestate.PendingCreate{
-		OperationID: operationID, WorkspaceID: workspaceID, SessionID: sessionID,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	file := desktopTabsFile{Tabs: []desktopTabEntry{{
-		ID: "pending", Scope: "project", WorkspaceRoot: root, WorkspaceID: workspaceID, CreateOperationID: operationID,
-	}}, ActiveTab: "pending"}
-
-	got, changed := app.reconcileSavedTabs(t.Context(), file)
-	if !changed || len(got.Tabs) != 1 || got.Tabs[0].SessionID != sessionID {
-		t.Fatalf("pending identity was not restored: changed=%v file=%+v", changed, got)
-	}
-}
-
 func TestReconcileSavedTabsDropsArchivedPresentationButKeepsSession(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
 	root := t.TempDir()
-	ref, workspaceID := createLegacyCleanupSession(t, app, root, "archived-session", true)
+	ref, workspaceID := createCurrentRegistrySession(t, app, root, "archived-session", true)
 	if err := app.archiveSessionRefsWithOperation([]session.SessionRef{ref}, "archive-test"); err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +163,7 @@ func TestReconcileSavedTabsPreservesUnregisteredCanonicalContent(t *testing.T) {
 	if err := app.desktopSessionService("").Close(t.Context(), runtime.Ref()); err != nil {
 		t.Fatal(err)
 	}
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	file := desktopTabsFile{Tabs: []desktopTabEntry{savedProjectTab("recover", runtime.Ref().SessionID, "", root, desktopWorkspaceID("project", root))}, ActiveTab: "recover"}
 
 	got, changed := app.reconcileSavedTabs(t.Context(), file)
@@ -273,10 +175,8 @@ func TestReconcileSavedTabsPreservesUnregisteredCanonicalContent(t *testing.T) {
 func TestReconcileSavedTabsPreservesEmptyWorkspaceConflictWithoutRetiredDraftReads(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
 	canonicalRoot := t.TempDir()
-	ref, workspaceID := createLegacyCleanupSession(t, app, canonicalRoot, "empty-workspace-conflict", false)
-	if err := app.initializeLegacyEmptySessionCleanupBatch(); err != nil {
-		t.Fatal(err)
-	}
+	ref, workspaceID := createCurrentRegistrySession(t, app, canonicalRoot, "empty-workspace-conflict", false)
+
 	state, err := app.workspaceRegistry().Load(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -291,7 +191,7 @@ func TestReconcileSavedTabsPreservesEmptyWorkspaceConflictWithoutRetiredDraftRea
 	if err := os.WriteFile(app.workspaceRegistry().Path(), body, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	file := desktopTabsFile{
 		Tabs:       []desktopTabEntry{savedProjectTab("empty", ref.SessionID, "", canonicalRoot, workspaceID)},
 		RemoteTabs: []desktopRemoteTabEntry{{ID: "remote", HostID: "host", Workspace: "/workspace"}},
@@ -330,10 +230,8 @@ func TestReconcileSavedTabsPreservesEmptyWorkspaceConflictWithoutRetiredDraftRea
 func TestReconcileSavedTabsPreservesNonEmptyWorkspaceConflict(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
 	canonicalRoot := t.TempDir()
-	ref, workspaceID := createLegacyCleanupSession(t, app, canonicalRoot, "used-workspace-conflict", true)
-	if err := app.initializeLegacyEmptySessionCleanupBatch(); err != nil {
-		t.Fatal(err)
-	}
+	ref, workspaceID := createCurrentRegistrySession(t, app, canonicalRoot, "used-workspace-conflict", true)
+
 	state, err := app.workspaceRegistry().Load(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -348,7 +246,7 @@ func TestReconcileSavedTabsPreservesNonEmptyWorkspaceConflict(t *testing.T) {
 	if err := os.WriteFile(app.workspaceRegistry().Path(), body, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	file := desktopTabsFile{Tabs: []desktopTabEntry{savedProjectTab("used", ref.SessionID, "", canonicalRoot, workspaceID)}, ActiveTab: "used"}
 
 	got, changed := app.reconcileSavedTabs(t.Context(), file)
@@ -366,7 +264,7 @@ func TestReconcileSavedTabsPreservesNonEmptyWorkspaceConflict(t *testing.T) {
 
 func TestRestoreDropsStaleSavedTabWithoutReplacementRuntime(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	root := t.TempDir()
 	file := desktopTabsFile{
 		Tabs:      []desktopTabEntry{savedProjectTab("stale", "gone", "", root, desktopWorkspaceID("project", root))},
@@ -402,7 +300,7 @@ func TestRestoreDropsStaleSavedTabWithoutReplacementRuntime(t *testing.T) {
 	second.ctx = t.Context()
 	pinDesktopSessionRoot(t, second)
 	t.Cleanup(func() { _ = second.draftStore().Close() })
-	finishSavedTabMigration(second)
+	finishSavedTabRecovery(second)
 	second.tabsRestored = make(chan struct{})
 	second.restoreOrBuildTabs()
 	if len(second.tabs) != 0 || len(second.runtimeByID) != 0 || len(loadTabsFile().Tabs) != 0 {
@@ -455,7 +353,7 @@ func mustMarshalJSON(t *testing.T, value any) []byte {
 
 func TestReconcileSavedTabsDropsRetiredDraftOperation(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	root := t.TempDir()
 	workspaceID, err := app.ensureDesktopWorkspace(t.Context(), "project", root)
 	if err != nil {
@@ -489,7 +387,7 @@ func TestReconcileSavedTabsPreservesResidualCanonicalArtifacts(t *testing.T) {
 	} {
 		t.Run(fixture.name, func(t *testing.T) {
 			app := newSavedTabReconcileTestApp(t)
-			finishSavedTabMigration(app)
+			finishSavedTabRecovery(app)
 			entry := desktopTabEntry{ID: "saved", Scope: "global", SessionID: "missing-manifest"}
 			artifact := filepath.Join(app.desktopSessions.root, entry.SessionID, "events.jsonl")
 			if fixture.legacyPath {
@@ -504,8 +402,15 @@ func TestReconcileSavedTabsPreservesResidualCanonicalArtifacts(t *testing.T) {
 			}
 
 			got, changed := app.reconcileSavedTabs(t.Context(), desktopTabsFile{Tabs: []desktopTabEntry{entry}})
-			if changed || len(got.Tabs) != 1 {
-				t.Fatalf("durable artifacts were hidden: changed=%v file=%+v", changed, got)
+			if fixture.legacyPath {
+				if !changed || len(got.Tabs) != 0 {
+					t.Fatal("unsupported path identity was restored")
+				}
+			} else if changed || len(got.Tabs) != 1 {
+				t.Fatalf("current residual content was hidden: %+v", got)
+			}
+			if _, err := os.Stat(artifact); err != nil {
+				t.Fatal("reconciliation removed content", err)
 			}
 		})
 	}
@@ -528,146 +433,5 @@ func TestPersistReconciledTabsRejectsStaleStartupSnapshot(t *testing.T) {
 	}
 	if got := loadTabsFile(); got.ActiveTab != "new" {
 		t.Fatalf("stale startup snapshot overwrote newer save: %+v", got)
-	}
-}
-
-func TestReconcileSavedTabsPreservesRecoveryOwnedEmptyConflict(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	canonicalRoot := t.TempDir()
-	ref, workspaceID := createLegacyCleanupSession(t, app, canonicalRoot, "recovery-owned-conflict", false)
-	if err := app.initializeLegacyEmptySessionCleanupBatch(); err != nil {
-		t.Fatal(err)
-	}
-	if err := app.workspaceRegistry().RecordRecovery(t.Context(), workspacestate.RecoveryEntry{
-		ID: "recovery", SourceKey: "source", SessionID: ref.SessionID, WorkspaceID: workspaceID,
-		Scope: "project", WorkspaceRoot: canonicalRoot, Format: "canonical", Reason: "interrupted", Status: "pending",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	state, err := app.workspaceRegistry().Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	workspace := state.Workspaces[workspaceID]
-	workspace.Root = t.TempDir()
-	state.Workspaces[workspaceID] = workspace
-	if err := os.WriteFile(app.workspaceRegistry().Path(), mustMarshalJSON(t, state), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	finishSavedTabMigration(app)
-	file := desktopTabsFile{Tabs: []desktopTabEntry{savedProjectTab("recover", ref.SessionID, "", canonicalRoot, workspaceID)}}
-
-	got, changed := app.reconcileSavedTabs(t.Context(), file)
-	if changed || len(got.Tabs) != 1 {
-		t.Fatalf("recovery-owned conflict was removed: changed=%v file=%+v", changed, got)
-	}
-	state, err = app.workspaceRegistry().Load(t.Context())
-	if err != nil || state.SessionStates[ref.SessionID].Lifecycle != workspacestate.Active {
-		t.Fatalf("recovery-owned lifecycle = %q, err=%v", state.SessionStates[ref.SessionID].Lifecycle, err)
-	}
-}
-
-func TestReconcileSavedTabsPreservesChangedSourceWithInactiveMapping(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	path := filepath.Join(t.TempDir(), "history.jsonl")
-	if err := os.WriteFile(path, []byte("{\"role\":\"user\",\"content\":\"new history\"}\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	evidence := savedTabReconcileEvidence{registry: workspacestate.State{
-		SourceMappings: map[string]workspacestate.SourceMapping{"old": {Path: path, SessionID: "archived", Fingerprint: "old-fingerprint"}},
-		SessionStates:  map[string]workspacestate.SessionState{"archived": {Lifecycle: workspacestate.Archived}},
-	}}
-	decision := app.classifyLegacySavedTab(desktopTabEntry{ID: "saved", Scope: "global", SessionPath: path}, evidence)
-	if decision.outcome != preserveRecovery {
-		t.Fatalf("changed legacy source decision = %+v, want preserve recovery", decision)
-	}
-}
-
-func TestBindLegacyRecoveryOwnerDoesNotCreateReplacement(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	path := filepath.Join(t.TempDir(), "missing.jsonl")
-	workspaceID, err := app.ensureDesktopWorkspace(t.Context(), "global", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.workspaceRegistry().RecordRecovery(t.Context(), workspacestate.RecoveryEntry{
-		ID: "recovery", SourceKey: "source", Path: path, WorkspaceID: workspaceID,
-		Scope: "global", Format: "legacy", Reason: "interrupted", Status: "pending",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	ctrl := control.New(control.Options{
-		Executor:       agent.New(nil, nil, agent.NewSession("test"), agent.Options{}, event.Discard),
-		SessionService: app.desktopSessionService(""), ExclusiveSession: true,
-	})
-	t.Cleanup(ctrl.Close)
-	ref, _, err := app.bindTabCanonicalSession(t.Context(), ctrl, &config.Config{}, "global", "", "", path, "", false)
-	if !errors.Is(err, errLegacySourceRecoveryPending) || ref.SessionID != "" {
-		t.Fatalf("legacy recovery fallback = ref:%+v err:%v", ref, err)
-	}
-}
-
-func TestReconcileSavedTabsPreservesWhenMigrationFailed(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	app.desktopMigrationFailed.Store(true)
-	finishSavedTabMigration(app)
-	file := desktopTabsFile{Tabs: []desktopTabEntry{{ID: "legacy", Scope: "global", SessionPath: filepath.Join(t.TempDir(), "missing.jsonl")}}}
-	got, changed := app.reconcileSavedTabs(t.Context(), file)
-	if changed || len(got.Tabs) != 1 {
-		t.Fatalf("failed migration discarded saved state: changed=%v file=%+v", changed, got)
-	}
-}
-
-// A 1.38 desktop saves the chat it opened at launch as the active tab; when
-// that chat was never sent it has sidecars but no conversation, and the
-// upgrade restores a fresh chat instead of a startup error.
-func TestReconcileSavedTabsDropsNeverWrittenLegacySession(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
-		extra string
-		want  savedTabReconcileOutcome
-	}{
-		{name: "never sent", want: dropStalePresentation},
-		{name: "transcript", extra: ".jsonl", want: preserveRecovery},
-		{name: "event log", extra: ".events.jsonl", want: preserveRecovery},
-		{name: "turn log", extra: ".turns.jsonl", want: preserveRecovery},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			app := newSavedTabReconcileTestApp(t)
-			stem := filepath.Join(t.TempDir(), "20260926-091504.474467700-fake-model")
-			path := stem + ".jsonl"
-			if err := os.MkdirAll(stem+".inbox", 0o700); err != nil {
-				t.Fatal(err)
-			}
-			for name, body := range map[string]string{
-				path + ".meta":            `{"id":"20260926-091504.474467700-fake-model","scope":"global"}`,
-				stem + ".goal-state.json": `{"status":"stopped","researchMode":2,"deliveryCheckpoint":{}}`,
-				filepath.Join(stem+".inbox", "transaction.lock"): "",
-			} {
-				if err := os.WriteFile(name, []byte(body), 0o600); err != nil {
-					t.Fatal(err)
-				}
-			}
-			if tc.extra != "" {
-				if err := os.WriteFile(stem+tc.extra, []byte("{}\n"), 0o600); err != nil {
-					t.Fatal(err)
-				}
-			}
-			entry := desktopTabEntry{ID: "saved", Scope: "global", SessionPath: path}
-			if got := app.classifyLegacySavedTab(entry, savedTabReconcileEvidence{}); got.outcome != tc.want {
-				t.Fatalf("decision = %+v, want %s", got, tc.want)
-			}
-			// Migration may already have mapped the source to a session it archived.
-			archived := savedTabReconcileEvidence{registry: workspacestate.State{
-				SourceMappings: map[string]workspacestate.SourceMapping{"src": {Path: path, SessionID: "archived"}},
-				SessionStates:  map[string]workspacestate.SessionState{"archived": {Lifecycle: workspacestate.Archived}},
-			}}
-			if got := app.classifyLegacySavedTab(entry, archived); got.outcome != tc.want {
-				t.Fatalf("archived mapping decision = %+v, want %s", got, tc.want)
-			}
-			if _, err := os.Stat(path + ".meta"); err != nil {
-				t.Fatalf("classification touched the session files: %v", err)
-			}
-		})
 	}
 }

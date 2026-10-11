@@ -361,12 +361,6 @@ func TestSlashNewRefreshesControllerTagAndForegroundRoute(t *testing.T) {
 	}
 }
 
-type backgroundJobOnlyController struct{ *control.Controller }
-
-func (c *backgroundJobOnlyController) RuntimeStatus() control.RuntimeStatus {
-	return control.RuntimeStatus{BackgroundJobs: 1, Cancellable: true}
-}
-
 type detachedProviderHealProbe struct {
 	*control.Controller
 	closed atomic.Bool
@@ -408,7 +402,7 @@ func TestBuildTaggedInheritsWorkspacePlacement(t *testing.T) {
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{Sink: bc, SessionDir: sessionDir, WorkspaceRoot: root})
 	server := New(ctrl, bc, config.ServeConfig{})
-	server.SetControllerBuildOptions(boot.Options{MaxSteps: 7, MaxStepsKey: "--max-steps", AgentPreset: "delivery"})
+	server.SetControllerBuildOptions(boot.Options{MaxSteps: 7, MaxStepsKey: "--max-steps"})
 	var got boot.Options
 	server.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
 		got = opts
@@ -422,8 +416,8 @@ func TestBuildTaggedInheritsWorkspacePlacement(t *testing.T) {
 	if got.SessionDir != sessionDir || got.WorkspaceRoot != root {
 		t.Fatalf("build placement = (%q, %q), want (%q, %q)", got.SessionDir, got.WorkspaceRoot, sessionDir, root)
 	}
-	if got.MaxSteps != 7 || got.MaxStepsKey != "--max-steps" || got.AgentPreset != "delivery" {
-		t.Fatalf("process build options = max:%d key:%q preset:%q, want 7/--max-steps/delivery", got.MaxSteps, got.MaxStepsKey, got.AgentPreset)
+	if got.MaxSteps != 7 || got.MaxStepsKey != "--max-steps" {
+		t.Fatalf("process build options = max:%d key:%q, want 7/--max-steps", got.MaxSteps, got.MaxStepsKey)
 	}
 }
 
@@ -519,69 +513,4 @@ func TestStatusRuntimeQuerySkipsBalance(t *testing.T) {
 			t.Fatalf("runtime status missing %s: %s", want, body)
 		}
 	}
-}
-
-func TestBusyResumeDetachesAndReattachesRunningController(t *testing.T) {
-	dir := t.TempDir()
-	aPath := filepath.Join(dir, "a.jsonl")
-	bPath := filepath.Join(dir, "b.jsonl")
-	saveServeTestSession(t, aPath)
-	saveServeTestSession(t, bPath)
-
-	bc := NewBroadcaster()
-	tag := NewSessionTagSink(bc)
-	tag.SetPath(aPath)
-	ctrlA := control.New(control.Options{Runner: blockingRunner{}, Sink: tag, SessionDir: dir, SessionPath: aPath, Label: "test"})
-	server := newLifecycleTestServer(t, ctrlA, bc, config.ServeConfig{})
-	server.RegisterSessionTag(ctrlA, tag)
-	leases := control.NewSessionLeaseKeeper()
-	defer leases.Release()
-	if err := leases.Rebind(aPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := server.SetSessionLeases(leases); err != nil {
-		t.Fatal(err)
-	}
-	server.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
-		return control.New(control.Options{Runner: blockingRunner{}, Sink: opts.Sink, SessionDir: opts.SessionDir, WorkspaceRoot: opts.WorkspaceRoot, Label: "test"}), nil
-	}
-	srv := httptest.NewServer(operatorHandler(server))
-	defer srv.Close()
-	defer server.CloseBackground()
-
-	ctrlA.Submit("keep running")
-	waitRunning(t, ctrlA)
-	postResume := func(path string) {
-		payload, _ := json.Marshal(map[string]string{"path": path})
-		resp, err := http.Post(srv.URL+"/resume", "application/json", strings.NewReader(string(payload)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusNoContent {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("resume %q = %d: %s", path, resp.StatusCode, body)
-		}
-	}
-
-	postResume(bPath)
-	wantB, err := filepath.EvalSymlinks(bPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := filepath.Clean(server.ctl().SessionPath()); got != filepath.Clean(wantB) {
-		t.Fatalf("foreground session = %q, want b", got)
-	}
-	if !ctrlA.Running() {
-		t.Fatal("switched-away session stopped instead of running in background")
-	}
-	postResume(aPath)
-	if server.ctl() != control.SessionAPI(ctrlA) {
-		t.Fatal("reattach did not restore the original controller")
-	}
-	if !ctrlA.Running() {
-		t.Fatal("running turn was lost during reattach")
-	}
-	ctrlA.Cancel()
-	waitNotRunning(t, ctrlA)
 }

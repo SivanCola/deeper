@@ -17,13 +17,6 @@ func (p *Projection) applyTerminalNotices(e event.Event) {
 	switch {
 	case e.Outcome == event.TurnOutcomeIncompleteRead:
 		row.Code, row.ReadPause = e.Outcome, e.ReadPause
-	case e.Outcome == event.TurnOutcomeFinalReadiness:
-		row.Code, row.Pending, row.Readiness = e.Outcome, true, e.Readiness
-		row.Content = "Task is not complete; continue the remaining work or checks."
-	case e.Outcome == event.TurnOutcomeRecoveryPaused:
-		row.Code, row.Content = e.Outcome, "Automatic recovery paused. You can continue the task."
-	case e.Outcome == event.TurnOutcomeCompletionUncertain:
-		row.Code, row.Content = e.Outcome, "The host could not confirm this turn is complete."
 	case e.Status == event.TurnInterrupted || e.Status == event.TurnRecoveryRequired:
 		row = interruptedNotice(nil)
 		if e.Err != nil && e.Diagnostic != nil && e.Diagnostic.Kind != provider.FailureKindCancelled {
@@ -67,7 +60,7 @@ func providerFailureNotice(e event.Event) Message {
 
 func (p *Projection) retireRecoveryNotices() {
 	for _, row := range p.buffer.messages {
-		if row.message.Role == "notice" && (row.message.ProtocolRecovery != nil || row.message.Readiness != nil) {
+		if row.message.Role == "notice" && row.message.ProtocolRecovery != nil {
 			row.message.Pending = false
 		}
 	}

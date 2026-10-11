@@ -92,28 +92,6 @@ func TestCanonicalPermissionPresetFollowsSessionIdentity(t *testing.T) {
 	}
 }
 
-func TestCanonicalComposerProfilePersistsLegacyPermissionAlias(t *testing.T) {
-	restoreSandbox := SetPresetSandboxForTest(true)
-	t.Cleanup(restoreSandbox)
-	service, err := session.NewService("desktop", session.NewFilesystemPersistence(filepath.Join(t.TempDir(), "sessions")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "composer"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	exec := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, Sink: event.Discard, SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
-	c.EnableServeSessionPermissionPresets(true)
-	if _, err := c.ApplyComposerProfileAtDurable(t.Context(), false, "ask", "", c.PermissionSnapshot().Revision); err != nil {
-		t.Fatal(err)
-	}
-	if got := runtime.Session().ExplicitPermissionPreset(); got != ToolApprovalReadOnly {
-		t.Fatalf("legacy composer alias was not persisted canonically: %q", got)
-	}
-}
-
 func TestCanonicalPermissionDowngradeFailsClosedAfterFlushError(t *testing.T) {
 	restoreSandbox := SetPresetSandboxForTest(true)
 	t.Cleanup(restoreSandbox)
@@ -309,6 +287,8 @@ func TestUnmanagedCanonicalSessionKeepsReadOnlyAcrossTransitions(t *testing.T) {
 }
 
 func TestServeForkStartsNoBroaderThanInheritedReadOnly(t *testing.T) {
+	restoreSandbox := SetPresetSandboxForTest(true)
+	t.Cleanup(restoreSandbox)
 	service, _, c := newForkTargetsHarness(t, "readonly-parent", testutil.Turn{Text: "answer"})
 	c.EnableServeSessionPermissionPresets(true)
 	if _, _, err := c.SetSessionPermissionPreset(t.Context(), ToolApprovalReadOnly, c.PermissionSnapshot().Revision); err != nil {

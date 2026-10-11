@@ -13,11 +13,9 @@ import (
 )
 
 const (
-	fatalCrashDirName           = "crash-fatal"
-	fatalCrashLogSuffix         = ".log"
-	fatalCrashCoveredSuffix     = ".covered"
-	legacyFatalCrashFile        = "crash-fatal.log"
-	legacyFatalCrashCoveredFile = "crash-fatal-covered"
+	fatalCrashDirName       = "crash-fatal"
+	fatalCrashLogSuffix     = ".log"
+	fatalCrashCoveredSuffix = ".covered"
 )
 
 var fatalCrashProcessAlive = desktopProcessAlive
@@ -42,14 +40,6 @@ func fatalCrashCoveredPathForPID(pid int) string {
 	return filepath.Join(fatalCrashDir(), strconv.Itoa(pid)+fatalCrashCoveredSuffix)
 }
 
-func legacyFatalCrashPath() string {
-	return filepath.Join(config.MemoryUserDir(), legacyFatalCrashFile)
-}
-
-func legacyFatalCrashCoveredPath() string {
-	return filepath.Join(config.MemoryUserDir(), legacyFatalCrashCoveredFile)
-}
-
 func markFatalCrashCovered() {
 	markFatalCrashCoveredForPID(os.Getpid())
 }
@@ -65,11 +55,6 @@ func markFatalCrashCoveredForPID(pid int) {
 // processes into the normal scrubbed queue. Per-PID files keep a routine second
 // launch from truncating or unlinking the running primary process's dump.
 func capturePreviousFatalCrash() {
-	// Preserve compatibility with the single-file format used by older builds.
-	// An empty legacy file may still be owned by a running older process, so it
-	// must be left untouched until it contains a completed crash dump.
-	captureFatalCrashFile(legacyFatalCrashPath(), legacyFatalCrashCoveredPath(), false)
-
 	entries, err := os.ReadDir(fatalCrashDir())
 	if err != nil {
 		return
@@ -154,7 +139,7 @@ func captureFatalCrashFile(path, coveredPath string, removeEmpty bool) {
 		CleanupOutcome: "interrupted", Evidence: "confirmed", Category: "crash",
 	}
 	report.Message = sanitizeCrashText("[go.runtime.fatal]\n\n"+stack, maxCrashDetailBytes)
-	if writePendingReport(report, true) {
+	if writePendingReport(report) {
 		_ = os.Remove(coveredPath)
 		_ = os.Remove(path)
 	}

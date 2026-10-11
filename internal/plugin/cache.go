@@ -52,12 +52,8 @@ func cacheableToolsOf(tools []tool.Tool) []CachedTool {
 	return out
 }
 
-// cacheVersion bumps whenever CachedSchema shape changes incompatibly. Old
-// files with a smaller version are treated as a miss so a stale layout never
-// crashes a reader. Version 2 is the legacy shared layout; profiles that
-// declare capabilities beyond the legacy surface write version 3 into a
-// profile-isolated file instead (see SaveCachedSchemaForProfile).
-const cacheVersion = 2
+// Current caches are version 3 and isolated by negotiated host profile.
+const cacheVersion = 3
 
 const enhancedCacheVersion = 3
 
@@ -66,15 +62,12 @@ const enhancedCacheVersion = 3
 // caller's expectedKey (from SchemaCacheKey of the current Spec) matches,
 // so renaming env vars or swapping a command never serves stale tools.
 type CachedSchema struct {
-	Version int `json:"version"`
-	// Keep the historical JSON key so older versions can reuse the same
-	// best-effort cache during rolling upgrades.
-	CacheKey      string          `json:"spec_hash"`
+	Version       int             `json:"version"`
+	CacheKey      string          `json:"cache_key"`
 	Capabilities  map[string]bool `json:"capabilities"`
 	Tools         []CachedTool    `json:"tools"`
 	LastValidated time.Time       `json:"last_validated"`
 	// Profile records which host capability profile produced this catalog.
-	// Only set in enhanced (v3) caches; empty in the legacy shared layout.
 	Profile string `json:"profile,omitempty"`
 }
 
@@ -115,18 +108,6 @@ func SchemaCacheKey(s Spec) string {
 	return schemaCacheKeyForURL(s, normalizeIdentityURL(s.URL))
 }
 
-// legacySchemaCacheKey recomputes the cache key with the
-// pre-credential-aware URL normalization, or ("", false) when it cannot
-// differ. LoadCachedSchemaForSpec uses it to upgrade old cache entries in
-// place; remove together with legacyNormalizeIdentityURL.
-func legacySchemaCacheKey(s Spec) (string, bool) {
-	legacyURL := legacyNormalizeIdentityURL(s.URL)
-	if strings.TrimSpace(s.URL) == "" || legacyURL == normalizeIdentityURL(s.URL) {
-		return "", false
-	}
-	return schemaCacheKeyForURL(s, legacyURL), true
-}
-
 func schemaCacheKeyForURL(s Spec, urlValue string) string {
 	h := sha256.New()
 	writeField(h, "name", s.Name)
@@ -154,27 +135,8 @@ func LoadCachedSchema(name, expectedKey string) (*CachedSchema, bool) {
 	return cs, true
 }
 
-// LoadCachedSchemaForSpec returns the cached schema matching the spec's
-// current key, transparently rewriting an entry still saved under the legacy
-// URL key. Without the in-place upgrade, credential rotation or
-// the credential-aware normalization rollout would force a pointless
-// re-handshake even though nothing observable changed.
 func LoadCachedSchemaForSpec(s Spec) (*CachedSchema, bool) {
-	current := SchemaCacheKey(s)
-	if cs, ok := LoadCachedSchema(s.Name, current); ok {
-		return cs, true
-	}
-	legacy, ok := legacySchemaCacheKey(s)
-	if !ok {
-		return nil, false
-	}
-	cs, ok := LoadCachedSchema(s.Name, legacy)
-	if !ok {
-		return nil, false
-	}
-	cs.CacheKey = current
-	_ = SaveCachedSchema(s.Name, *cs)
-	return cs, true
+	return LoadCachedSchema(s.Name, SchemaCacheKey(s))
 }
 
 // LoadCachedSchemaAny returns the cached schema regardless of cache-key match,
@@ -194,7 +156,7 @@ func LoadCachedSchemaAny(name, expectedKey string) (cs *CachedSchema, ok bool, k
 	if err := json.Unmarshal(b, &out); err != nil {
 		return nil, false, false
 	}
-	if out.Version != cacheVersion {
+	if out.Version != cacheVersion || out.Profile != HostProfileCore.String() {
 		return nil, false, false
 	}
 	out.Tools = filterValidCachedTools(out.Tools)
@@ -223,6 +185,7 @@ func SaveCachedSchema(name string, cs CachedSchema) error {
 		return nil
 	}
 	cs.Version = cacheVersion
+	cs.Profile = HostProfileCore.String()
 	if cs.LastValidated.IsZero() {
 		cs.LastValidated = time.Now().UTC()
 	}
@@ -238,35 +201,17 @@ func SaveCachedSchema(name string, cs CachedSchema) error {
 	return nil
 }
 
-// cachePath returns "<config.CacheDir()>/mcp/<slug(name)>.json". Returns ""
-// when CacheDir is unavailable (no-op caching).
-func cachePath(name string) string {
-	base := config.CacheDir()
-	if base == "" {
-		return ""
-	}
-	return filepath.Join(base, "mcp", slug(name)+".json")
-}
+func cachePath(name string) string { return cachePathForProfile(name, HostProfileCore) }
 
-// SaveCachedSchemaForProfile writes the handshake snapshot under the profile's
-// cache identity. The legacy profile keeps writing the shared v2 file so old
-// binaries keep working during rolling upgrades; capability-declaring profiles
-// write an isolated v3 file (<slug>.host-<hash>.json) whose catalog reflects
-// the tools/list the server returned for exactly those declared capabilities.
-// The two writers never touch each other's files.
+// SaveCachedSchemaForProfile writes an isolated snapshot for negotiated capabilities.
 func SaveCachedSchemaForProfile(profile HostProfile, name string, cs CachedSchema) error {
 	profile = profile.Normalize()
 	p := cachePathForProfile(name, profile)
 	if p == "" {
 		return nil
 	}
-	if profile.UsesEnhancedCache() {
-		cs.Version = enhancedCacheVersion
-		cs.Profile = profile.String()
-	} else {
-		cs.Version = cacheVersion
-		cs.Profile = ""
-	}
+	cs.Version = cacheVersion
+	cs.Profile = profile.String()
 	if cs.LastValidated.IsZero() {
 		cs.LastValidated = time.Now().UTC()
 	}
@@ -282,30 +227,18 @@ func SaveCachedSchemaForProfile(profile HostProfile, name string, cs CachedSchem
 	return nil
 }
 
-// cachePathForProfile maps a profile onto its cache file. The legacy profile
-// keeps the shared <slug>.json; enhanced profiles get
-// <slug>.host-<profileHash>.json.
+// cachePathForProfile separates catalogs negotiated with different host capabilities.
 func cachePathForProfile(name string, profile HostProfile) string {
 	base := config.CacheDir()
 	if base == "" {
 		return ""
 	}
-	if !profile.UsesEnhancedCache() {
-		return cachePath(name)
-	}
 	return filepath.Join(base, "mcp", slug(name)+".host-"+profile.ProfileCacheHash()+".json")
 }
 
-// LoadCachedSchemaForSpecProfile loads the handshake snapshot for the
-// profile's cache identity. An enhanced profile treats the legacy file as a
-// miss — the old catalog was negotiated under different client capabilities
-// and must not pose as this profile's catalog. A future version is a miss for
-// every reader.
+// LoadCachedSchemaForSpecProfile accepts only the current version, profile and spec identity.
 func LoadCachedSchemaForSpecProfile(s Spec, profile HostProfile) (*CachedSchema, bool) {
 	profile = profile.Normalize()
-	if !profile.UsesEnhancedCache() {
-		return LoadCachedSchemaForSpec(s)
-	}
 	current := SchemaCacheKey(s)
 	p := cachePathForProfile(s.Name, profile)
 	if p == "" {

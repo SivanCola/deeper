@@ -855,7 +855,7 @@ func TestHistorySliceSyntheticAndSteerTurns(t *testing.T) {
 		historySliceUser(0, "real question 1"),
 		historySliceAssistant(0, "answer 1"),
 		{Role: provider.RoleUser, Content: agent.MidTurnSteerPrefix + "\nfocus on tests", CreatedAt: 1_700_000_000_100},
-		{Role: provider.RoleUser, Content: "<compaction-summary>\nfolded", CreatedAt: 1_700_000_000_101},
+		{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "<compaction-summary>\nfolded", CreatedAt: 1_700_000_000_101},
 		historySliceUser(1, "real question 2"),
 		historySliceAssistant(1, "answer 2"),
 	}

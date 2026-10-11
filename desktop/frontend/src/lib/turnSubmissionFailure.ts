@@ -24,7 +24,6 @@ export function reduceSubmitFailure(
     ...state,
     pendingUser: undefined,
     pendingSubmissionId: undefined,
-    deliveryRecoveryActive: false,
     cancelRequested: false,
     seq: state.seq + 1,
     items: [...(state.transcriptProtocol === 2 ? state.items : removeEmptyAssistantItems(state.items)), { kind: "notice", id: `n${state.seq}`, local: true, level: "warn", text: error } as Item],
@@ -65,7 +64,6 @@ export function reduceSubmitQueued(state: State, submissionId: string, observedA
     assistantSegmentOrdinal: 0,
     live: undefined,
     streamAttemptJournal: undefined,
-    deliveryRecoveryActive: false,
     turnLifecycleObservedAt: observedAt,
   }, submissionId);
 }
@@ -88,7 +86,6 @@ export function reduceManagementConfirmation(state: State, submissionId: string,
     assistantSegmentOrdinal: 0,
     live: undefined,
     streamAttemptJournal: undefined,
-    deliveryRecoveryActive: false,
     turnLifecycleObservedAt: observedAt,
   } : state, submissionId);
   if (!receipt?.errorCode) return next;

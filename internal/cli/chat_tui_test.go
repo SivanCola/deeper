@@ -12,8 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/colorprofile"
 	"time"
+
+	"github.com/charmbracelet/colorprofile"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -136,11 +137,11 @@ func writeTUIImageCapabilityConfig(t *testing.T, root string) {
 	cfg := config.Default()
 	cfg.DefaultModel = "custom/text-only"
 	cfg.Providers = []config.ProviderEntry{{
-		Name:         "custom",
-		Kind:         "openai",
-		BaseURL:      "https://example.invalid/v1",
-		Models:       []string{"text-only", "vision-pro"},
-		VisionModels: []string{"vision-pro"},
+		Name:           "custom",
+		Kind:           "openai",
+		BaseURL:        "https://example.invalid/v1",
+		Models:         []string{"text-only", "vision-pro"},
+		ModelOverrides: map[string]config.ProviderModelOverride{"text-only": {Vision: new(false)}, "vision-pro": {Vision: new(true)}},
 	}}
 	if err := cfg.SaveTo(filepath.Join(root, "deepzora.toml")); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -672,7 +673,7 @@ func TestMCPManagerHidesComposerBox(t *testing.T) {
 	ctrl := newOwnedTestController(t, control.Options{})
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
 	m.mcp = &mcpManager{stage: mcpStageList, snapshot: mcpSnapshot{servers: []mcpServerView{
-		{Name: "github", Transport: "stdio", Status: "deferred", Configured: true, Tier: "background"},
+		{Name: "github", Transport: "stdio", Status: "deferred", Configured: true},
 	}}}
 
 	m0, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
@@ -788,7 +789,7 @@ func TestClearCommandInYOLOModeSkipsConfirmation(t *testing.T) {
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	path := filepath.Join(dir, "session.jsonl")
 	ctrl := newOwnedTestController(t, control.Options{Executor: exec, SystemPrompt: "sys", SessionDir: dir, SessionPath: path, Label: "test"})
-	ctrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	ctrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	if err := ctrl.Snapshot(); err != nil {
 		t.Fatal(err)
 	}
@@ -1497,51 +1498,6 @@ func TestUnsendDiscardsBufferedEvents(t *testing.T) {
 	}
 	if len(*m.pendingCommit) != 0 {
 		t.Errorf("a discarded turn should leave nothing in scrollback, committed=%v", *m.pendingCommit)
-	}
-}
-
-func TestRecoveryPauseTurnDoneIsInformational(t *testing.T) {
-	t.Cleanup(func() { i18n.DetectLanguage("en") })
-	const backendFallback = "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send \"continue\" to start a fresh attempt, or add instructions to change direction."
-	tests := []struct {
-		lang string
-		want string
-	}{
-		{
-			lang: "en",
-			want: "Automatic retries paused. Deepzora stopped repeated attempts and kept completed work. Send “Continue” to start a fresh attempt, or add instructions to change direction.",
-		},
-		{
-			lang: "zh",
-			want: "已暂停自动重试。Deepzora 已停止重复尝试，并保留已完成的工作。发送“继续”即可开始新一轮，也可以补充要求来调整方向。",
-		},
-		{
-			lang: "zh-TW",
-			want: "已暫停自動重試。Deepzora 已停止重複嘗試，並保留已完成的工作。傳送「繼續」即可開始新一輪，也可以補充要求來調整方向。",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.lang, func(t *testing.T) {
-			i18n.DetectLanguage(tt.lang)
-			m := newTestChatTUI()
-			m.width = 240
-			m.ingestEvent(event.Event{
-				Kind:    event.TurnDone,
-				Err:     &agent.RecoveryPauseError{Message: backendFallback},
-				Outcome: event.TurnOutcomeRecoveryPaused,
-			})
-
-			got := ansi.Strip(strings.Join(*m.pendingCommit, "\n"))
-			if !strings.Contains(got, tt.want) {
-				t.Fatalf("recovery pause transcript = %q, want localized pause message %q", got, tt.want)
-			}
-			if tt.lang != "en" && strings.Contains(got, backendFallback) {
-				t.Fatalf("recovery pause transcript = %q, must not leak English fallback into %s", got, tt.lang)
-			}
-			if strings.Contains(got, i18n.M.ErrorPrefix) {
-				t.Fatalf("recovery pause transcript = %q, must not use error prefix %q", got, i18n.M.ErrorPrefix)
-			}
-		})
 	}
 }
 
@@ -2415,7 +2371,7 @@ func TestEffortCommandWritesCurrentDeepSeekProvider(t *testing.T) {
 
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{Label: "deepseek-flash"})
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
 		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
 	}
@@ -2458,7 +2414,7 @@ func TestEffortCommandAutoClearsProviderEffort(t *testing.T) {
 
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{Label: "deepseek-flash"})
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
 		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
 	}
@@ -2563,7 +2519,7 @@ func TestLanguageCommandRefreshesCurrentController(t *testing.T) {
 	t.Cleanup(oldCtrl.Close)
 	m := newTestChatTUI()
 	m.ctrl = oldCtrl
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	var gotSpec controllerBuildSpec
 	m.buildController = func(spec controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
 		gotSpec = spec
@@ -2594,7 +2550,7 @@ func TestCurrencyCommandPersistsAndRefreshesCurrentController(t *testing.T) {
 	t.Cleanup(oldCtrl.Close)
 	m := newTestChatTUI()
 	m.ctrl = oldCtrl
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	var gotSpec controllerBuildSpec
 	m.buildController = func(spec controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
 		gotSpec = spec
@@ -2606,7 +2562,7 @@ func TestCurrencyCommandPersistsAndRefreshesCurrentController(t *testing.T) {
 		t.Fatal("/currency should queue a controller refresh")
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if got := cfg.DesktopCurrency(); got != "CNY" {
+	if got := cfg.DisplayCurrencyPref(); got != "CNY" {
 		t.Fatalf("saved currency = %q, want CNY", got)
 	}
 	next, _ := m.Update(cmd())
@@ -2626,7 +2582,7 @@ func TestCurrencyRefreshFailureKeepsCurrentController(t *testing.T) {
 	t.Cleanup(oldCtrl.Close)
 	m := newTestChatTUI()
 	m.ctrl = oldCtrl
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	m.buildController = func(controllerBuildSpec, []provider.Message, string, control.SessionAPI) (*control.Controller, error) {
 		return nil, errors.New("build failed")
 	}
@@ -2643,7 +2599,7 @@ func TestCurrencyRefreshFailureKeepsCurrentController(t *testing.T) {
 	if m.modelSwitchPending || m.pendingModelSwitch != nil {
 		t.Fatal("failed currency refresh left the runtime switch pending")
 	}
-	if got := config.LoadForEdit(config.UserConfigPath()).DesktopCurrency(); got != "CNY" {
+	if got := config.LoadForEdit(config.UserConfigPath()).DisplayCurrencyPref(); got != "CNY" {
 		t.Fatalf("failed refresh should retain the persisted preference, got %q", got)
 	}
 }
@@ -3702,7 +3658,7 @@ func TestFreshApprovalSessionChoiceIsLimitedToSandboxEscape(t *testing.T) {
 	if !freshApprovalAllowsSession(control.SandboxEscapeApprovalTool) {
 		t.Fatal("sandbox escape should allow an explicit session choice")
 	}
-	for _, toolName := range []string{"remember", "forget", planApprovalTool, agent.PlanModeReadOnlyCommandApprovalTool} {
+	for _, toolName := range []string{"remember", "forget", planApprovalTool} {
 		if freshApprovalAllowsSession(toolName) {
 			t.Fatalf("%s should not allow the sandbox escape session choice", toolName)
 		}
@@ -3742,54 +3698,6 @@ func TestSlashSubagentWithoutTaskStaysIdleWithUsageHint(t *testing.T) {
 	}
 	if out := strings.Join(m.transcript, "\n"); !strings.Contains(out, "usage: /helper <task>") {
 		t.Fatalf("missing task usage hint:\n%s", out)
-	}
-}
-
-func TestSlashMigrateShowsProgress(t *testing.T) {
-	isolateCLIConfigHome(t)
-	m := newTestChatTUI()
-
-	if cmd := m.runSlashCommand("/migrate"); cmd != nil {
-		t.Fatal("/migrate should run locally without returning a command")
-	}
-	out := strings.Join(m.transcript, "\n")
-	for _, want := range []string{
-		"/migrate",
-		"migration rescue: checking legacy config and credentials",
-		"migration rescue: scanning legacy memory",
-		"migration rescue: scanning legacy sessions",
-		"migration rescue complete:",
-	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("missing %q in transcript:\n%s", want, out)
-		}
-	}
-}
-
-func TestSlashMigrateFromImportsExplicitSessions(t *testing.T) {
-	home := isolateCLIConfigHome(t)
-	legacySessions := filepath.Join(home, "Old Deepzora", "sessions")
-	if err := os.MkdirAll(legacySessions, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(legacySessions, "old-chat.jsonl"), []byte(`{"role":"user","content":"hello from old install"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	m := newTestChatTUI()
-
-	input := `/migrate --from "` + filepath.Dir(legacySessions) + `"`
-	if cmd := m.runSlashCommand(input); cmd != nil {
-		t.Fatal("/migrate --from should run locally without returning a command")
-	}
-	out := strings.Join(m.transcript, "\n")
-	for _, want := range []string{
-		input,
-		"migration rescue: scanning explicit legacy sessions from " + filepath.Dir(legacySessions),
-		"imported 1 past session(s) from " + legacySessions,
-	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("missing %q in transcript:\n%s", want, out)
-		}
 	}
 }
 
@@ -4130,9 +4038,6 @@ func TestDesktopShortcutLayoutCtrlYTogglesYoloFromReadOnly(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{})
 	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout("desktop"); err != nil {
-		t.Fatal(err)
-	}
 
 	ctrlY := tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
 	out, _ := m.Update(ctrlY)
@@ -4154,11 +4059,8 @@ func TestDesktopShortcutLayoutCtrlYTogglesYoloFromReadOnly(t *testing.T) {
 func TestDesktopShortcutLayoutCtrlYRestoresWorkspacePermission(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{})
-	m.ctrl.SetToolApprovalMode(control.ToolApprovalAuto)
+	m.ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout("desktop"); err != nil {
-		t.Fatal(err)
-	}
 
 	ctrlY := tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
 	out, _ := m.Update(ctrlY)
@@ -4177,9 +4079,6 @@ func TestClassicShortcutLayoutCtrlYTogglesYolo(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{})
 	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout("classic"); err != nil {
-		t.Fatal(err)
-	}
 
 	ctrlY := tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
 	out, _ := m.Update(ctrlY)
@@ -4192,16 +4091,13 @@ func TestClassicShortcutLayoutCtrlYTogglesYolo(t *testing.T) {
 func TestPrimaryYShortcutPreservesWorkspacePermission(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{})
-	m.ctrl.SetToolApprovalMode(control.ToolApprovalAuto)
+	m.ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout("classic"); err != nil {
-		t.Fatal(err)
-	}
 
 	cmdY := tea.KeyPressMsg{Code: 'y', Mod: tea.ModSuper}
 	out, _ := m.Update(cmdY)
 	m = out.(chatTUI)
-	if got := m.ctrl.ToolApprovalMode(); got != control.ToolApprovalAuto {
+	if got := m.ctrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("Cmd/Super+Y changed workspace permission mode to %q", got)
 	}
 }
@@ -4210,9 +4106,7 @@ func TestDesktopShortcutLayoutDoesNotStealCompletionTab(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{})
 	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout("desktop"); err != nil {
-		t.Fatal(err)
-	}
+
 	m.input.SetValue("/")
 	m.completion = completion{
 		active:      true,
@@ -4224,7 +4118,7 @@ func TestDesktopShortcutLayoutDoesNotStealCompletionTab(t *testing.T) {
 
 	out, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = out.(chatTUI)
-	if got := m.ctrl.ToolApprovalMode(); got != control.ToolApprovalAsk {
+	if got := m.ctrl.ToolApprovalMode(); got != control.ToolApprovalReadOnly {
 		t.Fatalf("completion Tab changed approval mode to %q", got)
 	}
 	if got := m.input.Value(); got != "/mcp " {
@@ -4236,13 +4130,10 @@ func TestShiftTabCyclesPermissionModesUnderClassicShortcutLayout(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{})
 	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout("classic"); err != nil {
-		t.Fatal(err)
-	}
 
 	out, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	m = out.(chatTUI)
-	if m.planMode || m.ctrl.PlanMode() || m.ctrl.ToolApprovalMode() != control.ToolApprovalAuto {
+	if m.planMode || m.ctrl.PlanMode() || m.ctrl.ToolApprovalMode() != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("first Shift+Tab should enter auto, plan=%v approval=%q", m.planMode, m.ctrl.ToolApprovalMode())
 	}
 	out, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
@@ -4257,21 +4148,19 @@ func TestShiftTabCyclesPermissionModesUnderClassicShortcutLayout(t *testing.T) {
 	}
 }
 
-func TestLegacyDontAskDisplaysAndCyclesAsReadOnly(t *testing.T) {
+func TestReadOnlyDisplaysAndCyclesToWorkspaceWrite(t *testing.T) {
 	m := newTestChatTUI()
 	m.ctrl = newOwnedTestController(t, control.Options{})
-	m.ctrl.SetToolApprovalMode(control.ToolApprovalDontAsk)
+	m.ctrl.SetToolApprovalMode(control.ToolApprovalReadOnly)
 	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout("desktop"); err != nil {
-		t.Fatal(err)
-	}
+
 	if got := m.modeTagText(); got != "Read only" {
-		t.Fatalf("dontAsk mode tag = %q", got)
+		t.Fatalf("read-only mode tag = %q", got)
 	}
 
 	m.cycleMode()
-	if got := m.ctrl.ToolApprovalMode(); got != control.ToolApprovalAsk {
-		t.Fatalf("Shift+Tab from legacy dontAsk = %q, want read-only", got)
+	if got := m.ctrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
+		t.Fatalf("Shift+Tab from read-only = %q, want workspace-write", got)
 	}
 }
 

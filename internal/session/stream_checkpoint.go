@@ -38,7 +38,7 @@ func projectStreamCheckpoint(projection *Projection, ev Event) {
 // become a durable message or been recorded as interrupted.
 func supersedeStreamCheckpoint(projection *Projection, kind string) {
 	switch kind {
-	case "message/complete", "message/upsert", "message/retract", "history/replace", "legacy/import", "turn/start", "turn/end":
+	case "message/complete", "message/upsert", "message/retract", "history/replace", "turn/start", "turn/end":
 		projection.StreamCheckpoint = nil
 	}
 }

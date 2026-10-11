@@ -41,9 +41,6 @@ func TestStandardStopsAfterOneVisibleTurn(t *testing.T) {
 		textTurn("已完成学习说明。下一步可以由你决定。"),
 		textTurn("不应被隐藏续跑消费"),
 	})
-	if err := c.SetQualityFloor(QualityFloorStandard); err != nil {
-		t.Fatalf("SetQualityFloor: %v", err)
-	}
 
 	if err := newTurnOrchestrator(c).runGoalLoopWithRawDisplay(context.Background(), "学习并解释当前内容", "学习并解释当前内容", ""); err != nil {
 		t.Fatalf("standard turn returned %v", err)
@@ -67,9 +64,7 @@ func TestStandardStartReplyContinuesCurrentTodoInsideVisibleTurn(t *testing.T) {
 		},
 		textTurn("第 4 节已经完成重写。"),
 	})
-	if err := c.SetQualityFloor(QualityFloorStandard); err != nil {
-		t.Fatalf("SetQualityFloor: %v", err)
-	}
+
 	c.executor.Session().Add(provider.Message{Role: provider.RoleAssistant, Content: "让我写完整新第 4 节。"})
 
 	if err := newTurnOrchestrator(c).runGoalLoopWithRawDisplay(context.Background(), "开始", "开始", "开始"); err != nil {
@@ -124,9 +119,6 @@ func TestRetiredDeliverySettingEndsOrdinaryTurnWithoutRecoveryPause(t *testing.T
 		textTurn("已完成修改，但没有执行验证。"),
 		textTurn("显式恢复才允许消费这一轮"),
 	})
-	if err := c.SetQualityFloor(QualityFloorDelivery); err != nil {
-		t.Fatalf("SetQualityFloor: %v", err)
-	}
 
 	if err := newTurnOrchestrator(c).runGoalLoopWithRawDisplay(context.Background(), "修改 main.go", "修改 main.go", ""); err != nil {
 		t.Fatalf("ordinary turn returned %v", err)

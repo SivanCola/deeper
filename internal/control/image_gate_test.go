@@ -18,7 +18,7 @@ func writeImageGateConfig(t *testing.T, root string) {
 	cfg.DefaultModel = "custom/mystery"
 	cfg.Providers = []config.ProviderEntry{
 		{Name: "custom", Kind: "openai", BaseURL: "https://example.invalid/v1", Models: []string{"mystery"}},
-		{Name: "declared", Kind: "openai", BaseURL: "https://example.invalid/v1", Models: []string{"text-only", "vision-pro"}, VisionModels: []string{"vision-pro"}},
+		{Name: "declared", Kind: "openai", BaseURL: "https://example.invalid/v1", Models: []string{"text-only", "vision-pro"}, ModelOverrides: map[string]config.ProviderModelOverride{"vision-pro": {Vision: new(true)}, "text-only": {Vision: new(false)}}},
 	}
 	if err := cfg.SaveTo(filepath.Join(root, "deepzora.toml")); err != nil {
 		t.Fatalf("save config: %v", err)

@@ -145,14 +145,12 @@ func canonicalSubmissionFingerprint(req SubmissionRequest) string {
 }
 
 // MatchesSubmissionReceipt validates a cold durable receipt without creating
-// a Controller. Version zero keeps the exact pre-attachment fingerprint.
+// a Controller. Only the current fingerprint schema is accepted.
 func MatchesSubmissionReceipt(req SubmissionRequest, receipt session.SubmissionReceipt) bool {
 	if req.ID != receipt.SubmissionID {
 		return false
 	}
 	switch receipt.FingerprintVersion {
-	case 0:
-		return receipt.Fingerprint == submissionFingerprint(req)
 	case submissionFingerprintVersion:
 		return receipt.Fingerprint == canonicalSubmissionFingerprint(req)
 	default:
@@ -172,16 +170,11 @@ func (c *Controller) LookupSubmissionContext(ctx context.Context, req Submission
 	}
 	receipt, ok := store.Submission(req.ID)
 	fingerprint := canonicalSubmissionFingerprint(req)
-	if receipt.FingerprintVersion == 0 {
-		fingerprint = submissionFingerprint(req)
-	}
-	if ok && receipt.FingerprintVersion > submissionFingerprintVersion {
+	if ok && receipt.FingerprintVersion != submissionFingerprintVersion {
 		return receipt, true, errors.New("submission receipt version is unsupported; automatic replay is disabled")
 	}
 	if ok && receipt.Fingerprint != fingerprint {
-		if receipt.FingerprintVersion == 0 {
-			return receipt, true, errors.New("legacy submission receipt cannot be verified; automatic replay is disabled")
-		}
+
 		c.submissions.conflicts.Add(1)
 		slog.Warn("submission conflict", "submissionId", req.ID)
 		return receipt, true, errors.New("submission identity conflicts with different input")
@@ -205,6 +198,9 @@ func (c *Controller) SubmitIdentified(req SubmissionRequest) (session.Submission
 }
 
 func (c *Controller) SubmitIdentifiedContext(ctx context.Context, req SubmissionRequest) (session.SubmissionReceipt, error) {
+	if req.Action != "" && req.Action != "shell" && req.Action != ProtocolRecoveryAction {
+		return session.SubmissionReceipt{}, errors.Join(ErrSubmissionNotAccepted, errors.New("unsupported submission action"))
+	}
 	if len(req.ID) > 256 || strings.ContainsAny(req.ID, "\x00\r\n") {
 		return session.SubmissionReceipt{}, errors.Join(ErrSubmissionNotAccepted, errors.New("invalid submission identity"))
 	}
@@ -226,6 +222,9 @@ func (c *Controller) SubmitIdentifiedWithSetup(req SubmissionRequest, setup func
 }
 
 func (c *Controller) SubmitIdentifiedWithSetupContext(ctx context.Context, req SubmissionRequest, setup func() error) (session.SubmissionReceipt, error) {
+	if req.Action != "" && req.Action != "shell" && req.Action != ProtocolRecoveryAction {
+		return session.SubmissionReceipt{}, errors.Join(ErrSubmissionNotAccepted, errors.New("unsupported submission action"))
+	}
 	if len(req.ID) > 256 || strings.ContainsAny(req.ID, "\x00\r\n") {
 		return session.SubmissionReceipt{}, errors.Join(ErrSubmissionNotAccepted, errors.New("invalid submission identity"))
 	}
@@ -238,8 +237,6 @@ func (c *Controller) submitIdentifiedRequestLocked(req SubmissionRequest, admiss
 	switch {
 	case req.Action == ProtocolRecoveryAction:
 		c.submitProtocolRecoveryLocked(req.RecoveryID, req.Input, admission)
-	case req.Action == "delivery-recovery" || req.Action == FinalReadinessRecoveryAction:
-		c.submitFinalReadinessRecoveryLocked(req.Display, req.Input, admission)
 	case req.Action == "shell":
 		c.runShell(req.Input, admission)
 	case req.HTTP:

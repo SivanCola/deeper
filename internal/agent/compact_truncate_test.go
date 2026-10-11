@@ -38,7 +38,6 @@ func TestTailOnlyRewindKeepsCompactedView(t *testing.T) {
 	a := New(&fakeProvider{reply: "structured digest"}, tool.NewRegistry(), sess, Options{
 		ContextWindow: window,
 		CompactRatio:  0.80,
-		RecentKeep:    2,
 		ArchiveDir:    t.TempDir(),
 	}, event.Discard)
 

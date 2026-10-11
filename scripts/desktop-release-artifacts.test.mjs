@@ -62,7 +62,7 @@ printf installer > ../../bin/fixture-installer.exe
     // consume the first architecture's generated installer or payload.
     rmSync(path.join(root, "desktop/build/bin"), { recursive: true, force: true });
     const payload = `payload-${arch}`;
-    for (const name of ["deepzora-desktop.exe", "deepzora-guard.exe", "deepzora-launcher.exe",
+    for (const name of ["deepzora-desktop.exe", "deepzora-layout-installer.exe", "deepzora-launcher.exe",
       "deepzora-update-helper.exe", "deepzora-cli.exe", "deepzora-uninstall.exe",
       "app/Deepzora.exe", "app/resources/bin/deepzora-cli-launcher.exe",
       "app/resources/app.asar", "app/resources/build.json", "app/resources/app/index.html"]) {

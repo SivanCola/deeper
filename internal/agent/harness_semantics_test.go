@@ -210,10 +210,10 @@ func TestRetiredProofToolReturnsOrdinaryPairedResult(t *testing.T) {
 	calls := []provider.ToolCall{{ID: "old", Name: "complete_step", Arguments: `{}`}}
 	a.Session().Add(provider.Message{Role: provider.RoleAssistant, ToolCalls: calls})
 	batch := a.executeBatch(context.Background(), &a.turn, calls)
-	if batch.err != nil || len(batch.results) != 1 || !strings.Contains(batch.results[0], "tool_retired") {
+	if batch.err != nil || len(batch.results) != 1 || !strings.Contains(batch.results[0], "unknown tool") {
 		t.Fatalf("retired result = %+v", batch)
 	}
-	if got := toolResultByID(a.Session(), "old"); !strings.Contains(got, "tool_retired") {
+	if got := toolResultByID(a.Session(), "old"); !strings.Contains(got, "unknown tool") {
 		t.Fatalf("stored paired result = %q", got)
 	}
 }

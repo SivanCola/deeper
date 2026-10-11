@@ -92,13 +92,13 @@ func TestPersistModelWritesDefaultModel(t *testing.T) {
 	t.Setenv("MIMO_API_KEY", "")
 
 	m := newTestChatTUI()
-	m.persistModel("deepseek-flash/deepseek-v4-flash")
+	m.persistModel("deepseek-flash/deepseek-flash")
 
 	body, err := os.ReadFile(config.UserConfigPath())
 	if err != nil {
 		t.Fatalf("read saved config: %v", err)
 	}
-	if !strings.Contains(string(body), `default_model = "deepseek-flash/deepseek-v4-flash"`) {
+	if !strings.Contains(string(body), `default_model = "deepseek-flash/deepseek-flash"`) {
 		t.Fatalf("saved config missing default_model ref:\n%s", body)
 	}
 }

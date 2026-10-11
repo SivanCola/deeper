@@ -39,22 +39,21 @@ type scrollDiagnosticPayload struct {
 }
 
 type scrollDiagnosticManifest struct {
-	ReportID         string  `json:"reportId"`
-	CreatedAt        string  `json:"createdAt"`
-	BuildCommit      string  `json:"buildCommit"`
-	BuildChannel     string  `json:"buildChannel"`
-	Platform         string  `json:"platform"`
-	UserAgent        string  `json:"userAgent"`
-	DevicePixelRatio float64 `json:"devicePixelRatio"`
-	ViewportWidth    int     `json:"viewportWidth"`
-	ViewportHeight   int     `json:"viewportHeight"`
-	ReducedMotion    bool    `json:"reducedMotion"`
-	TranscriptWidth  float64 `json:"transcriptWidth"`
-	ContentWidth     float64 `json:"contentWidth"`
-	FontSize         float64 `json:"fontSize"`
-	LineHeight       float64 `json:"lineHeight"`
-	ProcessFold      string  `json:"processFoldPreference"`
-	ReasoningDisplay string  `json:"reasoningDisplayMode"`
+	ReportID          string  `json:"reportId"`
+	CreatedAt         string  `json:"createdAt"`
+	BuildCommit       string  `json:"buildCommit"`
+	BuildChannel      string  `json:"buildChannel"`
+	Platform          string  `json:"platform"`
+	UserAgent         string  `json:"userAgent"`
+	DevicePixelRatio  float64 `json:"devicePixelRatio"`
+	ViewportWidth     int     `json:"viewportWidth"`
+	ViewportHeight    int     `json:"viewportHeight"`
+	ReducedMotion     bool    `json:"reducedMotion"`
+	TranscriptWidth   float64 `json:"transcriptWidth"`
+	ContentWidth      float64 `json:"contentWidth"`
+	FontSize          float64 `json:"fontSize"`
+	LineHeight        float64 `json:"lineHeight"`
+	SessionExperience string  `json:"sessionExperience"`
 }
 
 type scrollDiagnosticSummary struct {
@@ -180,7 +179,7 @@ func validateScrollDiagnosticDisplay(manifest scrollDiagnosticManifest) error {
 		!finiteInRange(manifest.FontSize, 0, 512) || !finiteInRange(manifest.LineHeight, 0, 1024) {
 		return errors.New("invalid scroll diagnostic display metrics")
 	}
-	if !oneOf(manifest.ProcessFold, "auto", "expanded") || !oneOf(manifest.ReasoningDisplay, "hidden", "summary", "auto", "expanded", "legacy-collapsed", "pending") {
+	if !oneOf(manifest.SessionExperience, "standard", "deep") {
 		return errors.New("invalid scroll diagnostic display preferences")
 	}
 	return nil

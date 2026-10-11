@@ -363,19 +363,6 @@ func TestReconcileReanchorsCrossTopicRecoveryIntoOneLogicalTopic(t *testing.T) {
 	}
 }
 
-func TestRecoveryFilenameParentID(t *testing.T) {
-	parent, ok := agent.RecoveryFilenameParentID("/s/chat-recovery-0123456789abcdef.jsonl")
-	if !ok || parent != "chat" {
-		t.Fatalf("parent = %q ok=%v", parent, ok)
-	}
-	if !agent.LooksLikeRecoveryFilename("/s/chat-recovery-0123456789abcdef.jsonl") {
-		t.Fatal("expected recovery filename")
-	}
-	if agent.LooksLikeRecoveryFilename("/s/chat.jsonl") {
-		t.Fatal("normal session must not look like recovery")
-	}
-}
-
 func TestUpgradeMatrixV4RebuildKeepsSingleLogicalRowAndAuthority(t *testing.T) {
 	// Simulates 1.24.2-style multi-topic recovery storm → new v6 projection →
 	// discard cache → reindex. Ordinary list stays one row; JSONL/meta bytes
@@ -450,7 +437,7 @@ func TestUpgradeMatrixV4RebuildKeepsSingleLogicalRowAndAuthority(t *testing.T) {
 	}
 }
 
-func TestReconcileFoldsFilenameRecoveryIntoRootTopic(t *testing.T) {
+func TestReconcileDoesNotInferRecoveryFromHistoricalFilename(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	root := filepath.Join(dir, "normal.jsonl")
@@ -480,14 +467,14 @@ func TestReconcileFoldsFilenameRecoveryIntoRootTopic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(page.Items) != 1 || page.Items[0].TopicID != "legacy_normal" {
-		t.Fatalf("ListTopics = %+v, want one folded legacy_normal topic", page.Items)
+	if len(page.Items) != 2 {
+		t.Fatalf("ListTopics = %+v, want two independent topics", page.Items)
 	}
 	rec, ok, err := catalog.GetSession(ctx, recovery)
 	if err != nil || !ok {
 		t.Fatalf("GetSession recovery ok=%v err=%v", ok, err)
 	}
-	if !rec.Recovered || rec.TopicID != "legacy_normal" {
-		t.Fatalf("recovery projection = %+v, want re-anchored recovered row", rec)
+	if rec.Recovered || rec.TopicID != "legacy_recovery" {
+		t.Fatalf("recovery projection = %+v, want explicit metadata preserved", rec)
 	}
 }

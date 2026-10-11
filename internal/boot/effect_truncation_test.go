@@ -104,7 +104,7 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "`+kind+`"
-model = "x"
+models = ["x"]
 context_window = 200000
 `)
 	approveWorkspace(t, dir)

@@ -13,8 +13,7 @@ import (
 
 // NewTaskToolWithOptions is the internal standard constructor for TaskTool.
 // An empty SysPrompt still resolves to DefaultTaskSystemPrompt. No extra
-// validation or default overrides are applied beyond the historical NewTaskTool
-// behavior.
+// validation or default overrides are applied.
 func NewTaskToolWithOptions(opts TaskToolOptions) *TaskTool {
 	sysPrompt := opts.SysPrompt
 	if sysPrompt == "" {
@@ -28,11 +27,9 @@ func NewTaskToolWithOptions(opts TaskToolOptions) *TaskTool {
 		parentReg:        opts.ParentRegistry,
 		maxSteps:         opts.MaxSteps,
 		contextWindow:    opts.ContextWindow,
-		recentKeep:       opts.RecentKeep,
 		compaction:       compactionThreshold{opts.CompactRatio, opts.CompactRatioSource},
 		temperature:      opts.Temperature,
 		archiveDir:       opts.ArchiveDir,
-		keepPolicy:       opts.KeepPolicy,
 		sysPrompt:        sysPrompt,
 		gate:             opts.Gate,
 		subagentModel:    opts.SubagentModel,
@@ -59,10 +56,8 @@ func (t *TaskTool) subagentOptions(ctx context.Context, maxSteps int, pricing *p
 		UsageSource:              event.UsageSourceSubagent,
 		Gate:                     t.gate,
 		ContextWindow:            ctxWin,
-		RecentKeep:               t.recentKeep,
 		CompactRatio:             t.compaction.ratio(),
 		ArchiveDir:               t.archiveDir,
-		KeepPolicy:               t.keepPolicy,
 		ResponseLanguage:         ResponseLanguageFromContext(ctx),
 		ReasoningLanguage:        ReasoningLanguageFromContext(ctx),
 		SubagentDepth:            childDepth,
@@ -99,8 +94,7 @@ func (t *TaskTool) WithImageRequestResolver(resolver ImageRequestResolver) *Task
 }
 
 // TaskToolOptions holds the construction parameters for a TaskTool.
-// Prefer NewTaskToolWithOptions for new call sites; the positional NewTaskTool
-// remains as a compatibility wrapper for one full iteration cycle.
+// Construct tasks through NewTaskToolWithOptions.
 type TaskToolOptions struct {
 	ImageInput           *imageinput.Config
 	ImageRequestResolver ImageRequestResolver
@@ -111,18 +105,13 @@ type TaskToolOptions struct {
 	ParentRegistry       *tool.Registry
 	MaxSteps             int
 	ContextWindow        int
-	RecentKeep           int
-	SoftCompactRatio     float64
-	ToolResultSnipRatio  float64
 	CompactRatio         float64
 	// CompactRatioSource must be concurrency-safe; each child snapshots it once.
-	CompactRatioSource                    func() float64
-	CompactForceRatio                     float64
-	Temperature                           float64
-	ContextEditing, ArchiveDir, SysPrompt string
-	Gate                                  Gate
-	KeepPolicy                            KeepPolicy
-	SubagentModel                         string
-	SubagentEffort                        string
-	ResolveProvider                       func(string, string) (provider.Provider, *provider.Pricing, int, error)
+	CompactRatioSource    func() float64
+	Temperature           float64
+	ArchiveDir, SysPrompt string
+	Gate                  Gate
+	SubagentModel         string
+	SubagentEffort        string
+	ResolveProvider       func(string, string) (provider.Provider, *provider.Pricing, int, error)
 }

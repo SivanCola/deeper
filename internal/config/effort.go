@@ -54,7 +54,7 @@ func ReasoningCapabilityForEntry(e *ProviderEntry) provider.ReasoningCapability 
 	}
 	cfg := provider.Config{Name: e.Name, BaseURL: e.BaseURL, Model: e.Model, Extra: map[string]any{
 		"thinking": e.Thinking, "reasoning_protocol": ReasoningProtocolForEntry(e),
-		"request_url": e.RequestURL, "chat_url": e.ChatURL,
+		"request_url":       e.RequestURL,
 		"supported_efforts": normalizedSupportedEfforts(e), "default_effort": normalizeEffortLevel(e.DefaultEffort),
 	}}
 	return provider.ReasoningForConfig(e.Kind, cfg)
@@ -113,7 +113,7 @@ func EffectiveEffort(e *ProviderEntry) string {
 		return ""
 	}
 	if effort := normalizeStoredEffort(e.Effort); effort != "" {
-		return migrateStoredDeepSeekEffort(e, effort)
+		return effort
 	}
 	if explicitReasoningProtocol(e) == ReasoningProtocolKimiK3 {
 		return ""
@@ -171,7 +171,7 @@ func reasoningProtocolForResolvedEntry(e *ProviderEntry) string {
 		return explicit
 	}
 	if e != nil {
-		if contract, ok := provider.LookupOpenCodeGoContract(e.Kind, e.BaseURL, e.RequestURL, e.ChatURL, e.Model); ok {
+		if contract, ok := provider.LookupOpenCodeGoContract(e.Kind, e.BaseURL, e.RequestURL, e.Model); ok {
 			return contract.ReasoningProtocol
 		}
 	}
@@ -346,7 +346,6 @@ func normalizedModelOverrides(overrides map[string]ProviderModelOverride) map[st
 	}
 	out := make(map[string]ProviderModelOverride, len(overrides))
 	for rawModel, ov := range overrides {
-		ov = explicitModelReasoning(ov)
 		model := strings.TrimSpace(rawModel)
 		if model == "" {
 			continue

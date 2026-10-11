@@ -17,7 +17,7 @@ func TestCatalogPreviewUsesAuthoredTextBeforeTruncation(t *testing.T) {
 	const task = "修复左侧会话标题"
 	wrapped := "<response-language>" + strings.Repeat("internal preference ", 40) + "</response-language>\n<capability-route version=\"1\">tools</capability-route>\n" + task
 	for _, tc := range []struct{ name, content, raw, want string }{
-		{"legacy", wrapped, "", task},
+		{"plain", task, "", task},
 		{"raw", wrapped, "用户实际输入", "用户实际输入"},
 		{"raw markup is authored", wrapped, "<response-language>literal example</response-language>", "<response-language>literal example</response-language>"},
 		{"raw only", "", task, task},
@@ -45,7 +45,7 @@ func TestCatalogPreviewSurvivesColdReopen(t *testing.T) {
 	}
 	for i, message := range []provider.Message{
 		{ID: "host", Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "host context"},
-		{ID: "user", Role: provider.RoleUser, Content: "<reasoning-language>" + strings.Repeat("internal", 80) + "</reasoning-language>\n实际请求"},
+		{ID: "user", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "实际请求"},
 	} {
 		payload, _ := json.Marshal(map[string]any{"message": message})
 		if _, err := s.Append(t.Context(), Batch{OperationID: string(rune('a' + i)), Events: []Event{{Kind: "message/complete", Payload: payload}}}); err != nil {
@@ -133,7 +133,7 @@ func TestMessagePreviewDoesNotExposeHostProtocolBeforeHydration(t *testing.T) {
 	if got := messagePreview(message); got != message.RawContent {
 		t.Fatalf("authored preview = %q", got)
 	}
-	message.Origin = ""
+	message.Origin = provider.MessageOriginHost
 	message.RawContent = ""
 	message.Content = "<session-context version=\"1\">\nThis host-generated snapshot supersedes every earlier session-context snapshot.\n" + strings.Repeat("environment", 4000)
 	if got := messagePreview(message); got != "" {

@@ -16,24 +16,6 @@ func installerCommandLine(installer, dir string) string {
 	return line
 }
 
-func windowsUpdateHandoffArgs(parentPID int, installer, installerSHA256, installDir, relaunch, toVersion, createdAt, transactionID string) []string {
-	args := []string{
-		"--parent-pid", strconv.Itoa(parentPID),
-		"--installer", installer,
-		"--installer-sha256", installerSHA256,
-		"--to-version", toVersion,
-		"--created-at", createdAt,
-		"--transaction-id", transactionID,
-	}
-	if installDir != "" {
-		args = append(args, "--install-dir", installDir)
-	}
-	if relaunch != "" {
-		args = append(args, "--relaunch", relaunch)
-	}
-	return args
-}
-
 func windowsVersionedUpdateHandoffArgs(parentPID int, installer, installerSHA256, installDir, relaunch, toVersion string) []string {
 	args := []string{
 		"--parent-pid", strconv.Itoa(parentPID),

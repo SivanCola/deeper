@@ -13,7 +13,7 @@ import (
 // ready meta is the sidebar's first update — lives in
 // TestBootstrapNewSessionPublishesTabUpdateForSidebarBlankRow.
 func TestRoutedAttachAnnouncesIdentityWhileConnecting(t *testing.T) {
-	const sessionPath = "/remote/sessions/s1.jsonl"
+	const sessionPath = "session-id:s1"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "s1", Path: sessionPath, Title: "First chat", Turns: 2, Current: true},
 	})
@@ -52,7 +52,7 @@ func TestRoutedAttachAnnouncesIdentityWhileConnecting(t *testing.T) {
 			t.Fatalf("routed attach emitted no remote-tab:updated for tab %q, events: %v", meta.ID, log.recorded())
 		}
 	}
-	if update.SessionPath != sessionPath {
+	if remoteSessionIdentityRoute(update.SessionPath, update.SessionID) != sessionPath {
 		t.Fatalf("attach announcement session = %q, want the routed %q", update.SessionPath, sessionPath)
 	}
 	if update.RemoteState != "connecting" {

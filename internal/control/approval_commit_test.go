@@ -19,7 +19,7 @@ func (s failingPromptAnswerSink) EmitChecked(e event.Event) error {
 }
 
 func TestApprovalResolutionRemainsPendingWhenPersistenceFails(t *testing.T) {
-	m := newApprovalManager(permission.Policy{}, ToolApprovalAsk, 0)
+	m := newApprovalManager(permission.Policy{}, ToolApprovalReadOnly, 0)
 	id, reply := m.register("write_file", "settings.json", "test")
 	want := errors.New("ledger unavailable")
 
@@ -40,7 +40,7 @@ func TestApprovalResolutionRemainsPendingWhenPersistenceFails(t *testing.T) {
 }
 
 func TestAskResolutionRemainsPendingWhenPersistenceFails(t *testing.T) {
-	m := newApprovalManager(permission.Policy{}, ToolApprovalAsk, 0)
+	m := newApprovalManager(permission.Policy{}, ToolApprovalReadOnly, 0)
 	id, reply := m.registerAsk(askProbeQuestions())
 	m.markAskEmitted(id)
 	want := errors.New("ledger unavailable")
@@ -62,7 +62,7 @@ func TestAskResolutionRemainsPendingWhenPersistenceFails(t *testing.T) {
 }
 
 func TestClearKindDropsResolutionReservation(t *testing.T) {
-	m := newApprovalManager(permission.Policy{}, ToolApprovalAsk, 0)
+	m := newApprovalManager(permission.Policy{}, ToolApprovalReadOnly, 0)
 	id, _ := m.registerDecisionKind("recovery", "", "", true, true, "recovery", nil)
 	m.approvalResolutions[id] = newPromptResolution()
 
@@ -73,7 +73,7 @@ func TestClearKindDropsResolutionReservation(t *testing.T) {
 }
 
 func TestConcurrentDuplicateAskWaitsForSamePersistenceResult(t *testing.T) {
-	m := newApprovalManager(permission.Policy{}, ToolApprovalAsk, 0)
+	m := newApprovalManager(permission.Policy{}, ToolApprovalReadOnly, 0)
 	id, _ := m.registerAsk(askProbeQuestions())
 	m.markAskEmitted(id)
 	want := errors.New("ledger unavailable")
@@ -118,7 +118,7 @@ func TestApproveCheckedReturnsPersistenceFailureWithoutReleasingTool(t *testing.
 	want := errors.New("ledger unavailable")
 	c := &Controller{
 		sink:     failingPromptAnswerSink{err: want},
-		approval: newApprovalManager(permission.Policy{}, ToolApprovalAsk, 0),
+		approval: newApprovalManager(permission.Policy{}, ToolApprovalReadOnly, 0),
 	}
 	id, reply := c.approval.register("bash", "write output", "test")
 	if err := c.approveChecked(id, true, false, false); !errors.Is(err, want) {

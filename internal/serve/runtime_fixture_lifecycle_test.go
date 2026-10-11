@@ -2,73 +2,18 @@ package serve
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
-
-func TestResumeActiveSessionTreatsSymlinkAliasAsCurrent(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("symlink alias identity is exercised on POSIX CI")
-	}
-	dir := t.TempDir()
-	realPath := filepath.Join(dir, "real.jsonl")
-	aliasPath := filepath.Join(dir, "alias.jsonl")
-	saveServeTestSession(t, realPath)
-	if err := os.Symlink(realPath, aliasPath); err != nil {
-		t.Fatal(err)
-	}
-	ctrl := control.New(control.Options{Runner: blockingRunner{}, SessionDir: dir, SessionPath: aliasPath})
-	server := New(ctrl, NewBroadcaster(), config.ServeConfig{})
-	defer server.Close()
-	ctrl.Submit("keep running")
-	waitRunning(t, ctrl)
-	defer func() {
-		ctrl.Cancel()
-		waitNotRunning(t, ctrl)
-	}()
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/resume", nil)
-	if !server.resumeActiveSession(rec, req, ctrl, realPath) {
-		t.Fatal("active current-session alias was not handled")
-	}
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("resume through current-session symlink alias = %d, want 204", rec.Code)
-	}
-	if server.ctl() != control.SessionAPI(ctrl) || !ctrl.Running() {
-		t.Fatal("current-session alias detached or replaced the active controller")
-	}
-}
-
-func TestSessionsReportsForegroundBackgroundJobsAsRunning(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "jobs.jsonl")
-	saveServeTestSession(t, path)
-	ctrl := &backgroundJobOnlyController{Controller: control.New(control.Options{SessionDir: dir, SessionPath: path})}
-	server := New(ctrl, NewBroadcaster(), config.ServeConfig{})
-	defer server.Close()
-	rec := httptest.NewRecorder()
-	server.sessions(rec, httptest.NewRequest(http.MethodGet, "/sessions", nil))
-	var rows []sessionListEntry
-	if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil {
-		t.Fatal(err)
-	}
-	if len(rows) != 1 || !rows[0].Current || !rows[0].Running {
-		t.Fatalf("foreground background-job session = %+v, want current and running", rows)
-	}
-}
 
 func TestDetachedRecoveryMovesRegistryKey(t *testing.T) {
 	dir := t.TempDir()
@@ -126,75 +71,6 @@ func TestRegisterDetachedRevalidatesPathAtPublication(t *testing.T) {
 	}
 	ctrl.Cancel()
 	waitNotRunning(t, ctrl)
-	server.CloseBackground()
-}
-
-func TestDetachedRecoveryKeepsServeRoutingWrapper(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	aPath := filepath.Join(dir, "a.jsonl")
-	bPath := filepath.Join(dir, "b.jsonl")
-	saveServeTestSession(t, aPath)
-	saveServeTestSession(t, bPath)
-	loaded, err := agent.LoadSession(aPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bc := NewBroadcaster()
-	tag := NewSessionTagSink(bc)
-	tag.SetPath(aPath)
-	exec := agent.New(nil, nil, loaded, agent.Options{}, tag)
-	ctrlA := control.New(control.Options{Runner: blockingRunner{}, Executor: exec, Sink: tag, SessionDir: dir, SessionPath: aPath, Label: "test"})
-	server := New(ctrlA, bc, config.ServeConfig{})
-	defer server.Close()
-	server.RegisterSessionTag(ctrlA, tag)
-	leases := control.NewSessionLeaseKeeper()
-	defer leases.Release()
-	if err := leases.Rebind(aPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := server.SetSessionLeases(leases); err != nil {
-		t.Fatal(err)
-	}
-	server.buildControllerWithOptions = func(_ context.Context, _ string, opts boot.Options) (*control.Controller, error) {
-		return control.New(control.Options{Sink: opts.Sink, SessionDir: opts.SessionDir, Label: "test"}), nil
-	}
-	ctrlA.Submit("keep running")
-	waitRunning(t, ctrlA)
-	if err := server.busyDetach(context.Background(), ctrlA, bPath, func(next *control.Controller) error {
-		session, loadErr := agent.LoadSession(bPath)
-		if loadErr == nil {
-			next.Resume(session, bPath)
-		}
-		return loadErr
-	}); err != nil {
-		t.Fatal(err)
-	}
-	disk, err := agent.LoadSession(aPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	disk.Add(provider.Message{Role: provider.RoleUser, Content: "disk diverged"})
-	if err := disk.Save(aPath); err != nil {
-		t.Fatal(err)
-	}
-	ctrlA.Executor().Session().Add(provider.Message{Role: provider.RoleUser, Content: "local diverged"})
-	if err := ctrlA.Snapshot(); err != nil {
-		t.Fatal(err)
-	}
-	recoveryPath := agent.CanonicalSessionPath(ctrlA.SessionPath())
-	if recoveryPath == agent.CanonicalSessionPath(aPath) {
-		t.Fatal("detached controller did not move to a recovery transcript")
-	}
-	server.detachedMu.Lock()
-	detached := server.detached[recoveryPath]
-	oldEntry := server.detached[agent.CanonicalSessionPath(aPath)]
-	server.detachedMu.Unlock()
-	if detached == nil || detached.ctrl != control.SessionAPI(ctrlA) || oldEntry != nil || tag.Path() != recoveryPath {
-		t.Fatalf("detached recovery routing = entry %v old %v tag %q want %q", detached != nil, oldEntry != nil, tag.Path(), recoveryPath)
-	}
-	ctrlA.Cancel()
-	waitNotRunning(t, ctrlA)
 	server.CloseBackground()
 }
 
@@ -340,19 +216,13 @@ func TestSessionSnapshotEndpointsWaitForBindingEpoch(t *testing.T) {
 }
 
 func TestDeleteSessionSerializesWithForegroundPromotion(t *testing.T) {
-	dir := t.TempDir()
-	active, target := filepath.Join(dir, "active.jsonl"), filepath.Join(dir, "target.jsonl")
-	for _, path := range []string{active, target} {
-		if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	server, first, service, _ := newExclusiveSessionServe(t)
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "target"})
+	if err != nil {
+		t.Fatal(err)
 	}
-	bc := NewBroadcaster()
-	first := control.New(control.Options{Sink: bc, SessionDir: dir, SessionPath: active})
-	defer first.Close()
-	promoted := control.New(control.Options{Sink: bc, SessionDir: dir, SessionPath: target})
-	server := New(first, bc, config.ServeConfig{})
-	defer server.Close()
+	promoted := control.New(control.Options{SessionService: service, SessionRuntime: runtime, ExclusiveSession: true})
+	t.Cleanup(promoted.Close)
 	reachedLock := make(chan struct{})
 	deleteSessionBeforeOwnershipLockHookForTest = func() { close(reachedLock) }
 	t.Cleanup(func() { deleteSessionBeforeOwnershipLockHookForTest = nil })
@@ -360,7 +230,7 @@ func TestDeleteSessionSerializesWithForegroundPromotion(t *testing.T) {
 	rec := httptest.NewRecorder()
 	done := make(chan struct{})
 	go func() {
-		server.deleteSession(rec, httptest.NewRequest(http.MethodPost, "/delete-session", strings.NewReader(`{"name":"target"}`)))
+		server.deleteSession(rec, httptest.NewRequest(http.MethodPost, "/delete-session", strings.NewReader(`{"sessionId":"target"}`)))
 		close(done)
 	}()
 	select {
@@ -369,7 +239,7 @@ func TestDeleteSessionSerializesWithForegroundPromotion(t *testing.T) {
 		server.bindMu.Unlock()
 		t.Fatal("delete did not reach ownership boundary")
 	}
-	if !server.publishControllerSwap(first, promoted, target) {
+	if !server.publishControllerSwap(first, promoted, "") {
 		server.bindMu.Unlock()
 		t.Fatal("foreground promotion failed")
 	}
@@ -382,7 +252,7 @@ func TestDeleteSessionSerializesWithForegroundPromotion(t *testing.T) {
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("delete promoted session status = %d, want 409", rec.Code)
 	}
-	if _, err := os.Stat(target); err != nil {
+	if _, err := service.Query().Stat(t.Context(), runtime.Ref()); err != nil {
 		t.Fatalf("promoted session was deleted: %v", err)
 	}
 }

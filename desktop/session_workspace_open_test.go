@@ -11,7 +11,6 @@ import (
 	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
 	"deepzora/internal/transcript"
@@ -54,14 +53,15 @@ func canonicalWorkspaceOpenFixture(t *testing.T) (*App, *WorkspaceTab, *session.
 		return runtime
 	}
 	source, target := create("session-A", rootA, workspaceA), create("session-B", rootB, workspaceB)
-	ctrl, err := app.buildTabControllerBoot(app.ctx, boot.Options{Model: model, WorkspaceRoot: rootA, SessionDir: desktopSessionDir(rootA), Sink: event.Discard})
+	sink := &tabEventSink{tabID: "source-tab", app: app}
+	ctrl, err := app.buildTabControllerBoot(app.ctx, boot.Options{Model: model, WorkspaceRoot: rootA, SessionDir: desktopSessionDir(rootA), Sink: sink})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ctrl.(control.IdentityLifecycle).OpenSession(t.Context(), source.Ref()); err != nil {
 		t.Fatal(err)
 	}
-	tab := &WorkspaceTab{ID: "source-tab", Scope: "project", WorkspaceRoot: rootA, SessionID: source.Ref().SessionID, Ready: true, Ctrl: ctrl, model: model, sink: &tabEventSink{tabID: "source-tab", app: app}, disabledMCP: map[string]ServerView{}}
+	tab := &WorkspaceTab{ID: "source-tab", Scope: "project", WorkspaceRoot: rootA, SessionID: source.Ref().SessionID, Ready: true, Ctrl: ctrl, model: model, sink: sink, disabledMCP: map[string]ServerView{}}
 	tab.SessionWorkspace.ID = workspaceA
 	app.tabs[tab.ID], app.tabOrder, app.activeTabID = tab, []string{tab.ID}, tab.ID
 	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(tab.currentSessionIdentity()))
@@ -118,8 +118,8 @@ func TestCanonicalOpenFailurePreservesSource(t *testing.T) {
 
 func TestEmbeddedBotSessionOpensReadOnlyFromSidebar(t *testing.T) {
 	app, _, _, root, _ := canonicalWorkspaceOpenFixture(t)
-	botRoot := session.RootForLegacyDir(config.ProjectSessionDir(root))
-	bot, err := app.historicalSessionService(botRoot)
+	botRoot := session.RootForSessionDir(config.ProjectSessionDir(root))
+	bot, err := app.projectSessionService(botRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,8 +163,8 @@ func TestEmbeddedBotSessionOpensReadOnlyFromSidebar(t *testing.T) {
 
 func TestEmbeddedBotSessionOpenRejectsAnotherWorkspace(t *testing.T) {
 	app, tab, _, root, _ := canonicalWorkspaceOpenFixture(t)
-	botRoot := session.RootForLegacyDir(config.ProjectSessionDir(root))
-	bot, err := app.historicalSessionService(botRoot)
+	botRoot := session.RootForSessionDir(config.ProjectSessionDir(root))
+	bot, err := app.projectSessionService(botRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,8 +179,8 @@ func TestEmbeddedBotSessionOpenRejectsAnotherWorkspace(t *testing.T) {
 func TestEmbeddedGlobalBotSessionOpensFromSidebar(t *testing.T) {
 	app, _, _, _, _ := canonicalWorkspaceOpenFixture(t)
 	root := globalTabWorkspaceRoot()
-	botRoot := session.RootForLegacyDir(config.ProjectSessionDir(root))
-	bot, err := app.historicalSessionService(botRoot)
+	botRoot := session.RootForSessionDir(config.ProjectSessionDir(root))
+	bot, err := app.projectSessionService(botRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,6 @@ func TestCanonicalOpenRecoversFailedSurface(t *testing.T) {
 
 func TestCanonicalOpenCommitsTargetWorkspace(t *testing.T) {
 	app, tab, target, rootB, workspaceB := canonicalWorkspaceOpenFixture(t)
-	tab.HistoricalSource = &SessionSourceRef{Path: "/fixture/old.jsonl"}
 	if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), target.Ref().SessionID, "topic-B", "Target topic"); err != nil {
 		t.Fatal(err)
 	}
@@ -280,9 +279,7 @@ func TestCanonicalOpenCommitsTargetWorkspace(t *testing.T) {
 	if tab.TopicID != "topic-B" || tab.TopicTitle != "Target topic" {
 		t.Fatalf("wrong destination topic; got id=%q title=%q", tab.TopicID, tab.TopicTitle)
 	}
-	if tab.HistoricalSource != nil {
-		t.Fatal("canonical activation retained the preparation action")
-	}
+
 	persisted := loadTabsFile()
 	if len(persisted.Tabs) != 1 || persisted.Tabs[0].SessionID != "session-B" || persisted.Tabs[0].TopicID != "topic-B" || !sameDesktopPath(persisted.Tabs[0].WorkspaceRoot, rootB) {
 		t.Fatalf("destination binding not persisted: %+v", persisted)

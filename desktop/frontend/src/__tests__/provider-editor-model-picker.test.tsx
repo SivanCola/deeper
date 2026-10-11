@@ -56,7 +56,6 @@ function renderPicker(
   candidates: string[],
   options: {
     visionModels?: string[];
-    visionModelsConfigured?: boolean;
     visionCapability?: "configurable" | "unsupported";
     modelCapabilities?: ProviderModelCapabilityView[];
   } = {},
@@ -73,7 +72,6 @@ function renderPicker(
         candidates={candidates}
         selectedModels={[]}
         visionModels={visionModels}
-        visionModelsConfigured={visionCapability === "unsupported"}
         modelCapabilities={candidates.map(model => ({ model, state: visionModels.includes(model) ? "supported" : "unsupported" }))}
         contextWindows={{}}
         disabled={false}
@@ -126,7 +124,7 @@ ok(rootEl.querySelectorAll('input[type="checkbox"]').length === 1, "text-only mo
 await act(async () => {
   root.render(renderPicker(["deepseek-v4-flash-vision-exp"], {
     visionModels: ["deepseek-v4-flash-vision-exp"],
-    visionModelsConfigured: true,
+
   }));
   await flushPromises();
 });
@@ -222,7 +220,7 @@ const builtInProvider: ProviderView = {
   baseUrl: "https://api.deepseek.com",
   models: ["deepseek-chat"],
   visionModels: [],
-  visionModelsConfigured: false,
+
   modelsUrl: "",
   default: "deepseek-chat",
   apiKeyEnv: "",
@@ -275,10 +273,10 @@ const backendUnsupportedCustomProvider: ProviderView = {
   ],
 };
 
-const legacyChatURLProvider: ProviderView = {
+const exactRequestProvider: ProviderView = {
   ...backendUnsupportedCustomProvider,
-  name: "legacy-chat-url",
-  chatUrl: "https://legacy.example.com/chat/completions/",
+  name: "exact-request-url",
+  requestUrl: "https://gateway.example.com/chat/completions",
 };
 
 const mismatchedDeepSeekProvider: ProviderView = {
@@ -377,19 +375,19 @@ const displayedRequestURL = (input: HTMLInputElement | null) =>
   input?.value;
 const customProviderUrlInput = rootEl.querySelector<HTMLInputElement>(".provider-url-input");
 ok(rootEl.querySelectorAll('input[type="radio"]').length === 0, "existing custom providers no longer expose an address mode selector");
-ok(customProviderUrlInput?.value === "https://eu.deepseek.com/v1/chat/completions", "legacy base-only providers display their previously effective request URL");
+ok(customProviderUrlInput?.value === "https://eu.deepseek.com/v1/chat/completions", "base-only providers display their effective request URL");
 ok(rootEl.querySelector<HTMLInputElement>(".provider-name-input")?.disabled === false, "existing connection display name remains editable");
 ok(rootEl.querySelector("code")?.textContent === backendUnsupportedCustomProvider.name, "stable provider identity remains separate from display name");
 
 let migratedProvider: ProviderView | undefined;
 await act(async () => {
-  root.render(renderProviderEditor(legacyChatURLProvider, (provider) => {
+  root.render(renderProviderEditor(exactRequestProvider, (provider) => {
     migratedProvider = provider;
   }));
   await flushPromises();
 });
 const legacyProviderUrlInput = rootEl.querySelector<HTMLInputElement>(".provider-url-input");
-ok( displayedRequestURL(legacyProviderUrlInput) === "https://legacy.example.com/chat/completions", "legacy OpenAI chat URLs display their historically normalized effective endpoint");
+ok( displayedRequestURL(legacyProviderUrlInput) === "https://gateway.example.com/chat/completions", "exact request URLs are displayed");
 const saveButton = Array.from(rootEl.querySelectorAll<HTMLButtonElement>("button")).find(
   (button) => button.textContent?.trim() === "Save changes",
 );
@@ -398,14 +396,13 @@ await act(async () => {
   saveButton?.click();
   await flushPromises();
 });
-ok(migratedProvider?.requestUrl === "https://legacy.example.com/chat/completions" && migratedProvider?.baseUrl === legacyChatURLProvider.baseUrl, "saving migrates the legacy effective address without rewriting its baseUrl");
-ok(migratedProvider?.chatUrl === migratedProvider?.requestUrl, "saving mirrors the normalized legacy OpenAI endpoint for previous releases");
+ok(migratedProvider?.requestUrl === "https://gateway.example.com/chat/completions" && migratedProvider?.baseUrl === exactRequestProvider.baseUrl, "saving preserves the exact address without rewriting its baseUrl");
 
 let exactProvider: ProviderView | undefined;
 await act(async () => {
   root.render(renderProviderEditor({
-    ...legacyChatURLProvider,
-    name: "exact-request-url",
+    ...exactRequestProvider,
+    name: "another-exact-request-url",
     requestUrl: "https://exact.example.com/custom/?token=1",
   }, (provider) => {
     exactProvider = provider;
@@ -420,8 +417,7 @@ await act(async () => {
   exactSaveButton?.click();
   await flushPromises();
 });
-ok(exactProvider?.requestUrl === "https://exact.example.com/custom/?token=1" && exactProvider?.baseUrl === legacyChatURLProvider.baseUrl, "saving preserves an explicit requestUrl and independent baseUrl exactly");
-ok(exactProvider?.chatUrl === exactProvider?.requestUrl, "saving mirrors the exact OpenAI request URL for previous releases");
+ok(exactProvider?.requestUrl === "https://exact.example.com/custom/?token=1" && exactProvider?.baseUrl === exactRequestProvider.baseUrl, "saving preserves an explicit requestUrl and independent baseUrl exactly");
 
 await act(async () => {
   root.render(renderProviderEditor(mismatchedDeepSeekProvider));
@@ -436,14 +432,14 @@ ok(rootEl.querySelector<HTMLInputElement>(".provider-url-input")?.value === "htt
 ok(rootEl.querySelector<HTMLElement>('[role="alert"]') === null, "recommended route clears the mismatch gate");
 
 await act(async () => {
-  root.render(renderProviderEditor({ ...legacyChatURLProvider, name: "save-failure" }, () => { throw new Error("storage unavailable"); }));
+  root.render(renderProviderEditor({ ...exactRequestProvider, name: "save-failure" }, () => { throw new Error("storage unavailable"); }));
   await flushPromises();
 });
 const failedSaveButton = Array.from(rootEl.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent?.trim() === "Save changes");
 await act(async () => editDisplayName());
 await act(async () => { failedSaveButton?.click(); await flushPromises(); });
 ok(rootEl.textContent?.includes("storage unavailable") === true, "save errors remain visible in the provider form");
-ok(rootEl.querySelector<HTMLInputElement>(".provider-url-input")?.value === "https://legacy.example.com/chat/completions" && rootEl.querySelector(".provider-model-draft__option") !== null, "failed save retains connection and model drafts");
+ok(rootEl.querySelector<HTMLInputElement>(".provider-url-input")?.value === "https://gateway.example.com/chat/completions" && rootEl.querySelector(".provider-model-draft__option") !== null, "failed save retains connection and model drafts");
 
 await act(async () => {
   root.unmount();

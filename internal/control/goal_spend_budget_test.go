@@ -19,10 +19,10 @@ func billedGoalTurn() []provider.Chunk {
 // guessed from its own text. What bounds it is what the user configures.
 func TestGoalStartsWithNoTurnQuota(t *testing.T) {
 	prov := &scriptedTurns{turns: [][]provider.Chunk{billedGoalTurn()}}
-	c, _, _ := goalRuntimeController(t, prov, &fakeGoalEvaluator{outcome: "complete", reason: "done"})
+	c, _, _ := goalRuntimeController(t, prov)
 	c.SetGoal("research the whole subsystem end to end")
 
-	if rt := c.GoalRuntime(); rt.TurnsLimit != 0 || rt.TokensLimit != 0 {
+	if rt := c.GoalRuntime(); rt.TokensLimit != 0 {
 		t.Fatalf("runtime = %+v, want an unbounded goal out of the box", rt)
 	}
 }

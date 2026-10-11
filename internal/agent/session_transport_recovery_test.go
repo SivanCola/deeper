@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestSessionReportsProviderFailuresWithoutRetry(t *testing.T) {
-	for _, history := range []string{"new", "legacy"} {
+	for _, history := range []string{"new", "resumed"} {
 		for _, connection := range []string{"valid", "invalid-header", "unavailable"} {
 			t.Run(history+"/"+connection, func(t *testing.T) {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,9 +30,11 @@ func TestSessionReportsProviderFailuresWithoutRetry(t *testing.T) {
 				}))
 				defer server.Close()
 				sess := NewSession("system")
-				if history == "legacy" {
-					path := filepath.Join(t.TempDir(), "legacy.jsonl")
-					if err := os.WriteFile(path, []byte(legacySessionFixture), 0o600); err != nil {
+				if history == "resumed" {
+					path := filepath.Join(t.TempDir(), "resumed.jsonl")
+					sess.Add(provider.Message{Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "previous question"})
+					sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "previous answer"})
+					if err := sess.SaveSnapshot(path); err != nil {
 						t.Fatal(err)
 					}
 					var err error

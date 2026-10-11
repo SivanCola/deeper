@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
-	"os"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestTopicActivationReselectsCancelledStartup(t *testing.T) {
-	for _, canonical := range []bool{true, false} {
+	for _, canonical := range []bool{true} {
 		name := "legacy"
 		if canonical {
 			name = "canonical"
@@ -20,15 +19,6 @@ func TestTopicActivationReselectsCancelledStartup(t *testing.T) {
 			installNoopRuntimeEvents(app, source.sink)
 			t.Cleanup(func() { app.shutdown(context.Background()) })
 			path := sessionRoute(target.Ref().SessionID)
-			if !canonical {
-				saveWorkspace(root)
-				app.registerProjectRoot(root)
-				dir := desktopSessionDir(root)
-				if err := os.MkdirAll(dir, 0o700); err != nil {
-					t.Fatal(err)
-				}
-				path = writeTopicSession(t, dir, "reselect.jsonl", "reselect-topic", "Reselect", root)
-			}
 
 			buildEntered := make(chan struct{}, 4)
 			releaseBuilds := make(chan struct{})

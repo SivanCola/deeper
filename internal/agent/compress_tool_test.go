@@ -194,23 +194,6 @@ func TestCompressContextConsecutiveCallsMergeSummary(t *testing.T) {
 	}
 }
 
-func TestCompressionVisibleMessagesSplitsLegacyStrictSummary(t *testing.T) {
-	legacy := coalesceProjectionUserRuns([]provider.Message{
-		formatSummaryMessage("prior facts"),
-		{Role: provider.RoleUser, Content: "legacy retained anchor", Images: []string{"data:image/png;base64,AA=="}},
-	})
-	if len(legacy) != 1 {
-		t.Fatalf("legacy setup did not coalesce: %+v", legacy)
-	}
-	visible := compressionVisibleMessages(legacy)
-	if len(visible) != 2 || !isCompactionSummary(visible[0]) || !compressAnchorCandidate(visible[1]) {
-		t.Fatalf("legacy strict summary was not split: %+v", visible)
-	}
-	if visible[1].Content != "legacy retained anchor" || len(visible[1].Images) != 1 || len(visible[0].Images) != 0 {
-		t.Fatalf("legacy retained user payload changed: %+v", visible)
-	}
-}
-
 func TestCompressContextNoSavingsIsNoop(t *testing.T) {
 	sess := &Session{Messages: []provider.Message{
 		{Role: provider.RoleSystem, Content: "sys"},
@@ -342,7 +325,7 @@ func TestRangeCompressionSharesSummarySingleflight(t *testing.T) {
 		{Role: provider.RoleUser, Content: "keep unique"},
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}}
-	a := New(prov, tool.NewRegistry(), sess, Options{RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+	a := New(prov, tool.NewRegistry(), sess, Options{ArchiveDir: t.TempDir()}, event.Discard)
 	autoErr := make(chan error, 1)
 	go func() {
 		_, err := a.compactToProjection(context.Background(), CompactionTriggerPressure, "", true, false)

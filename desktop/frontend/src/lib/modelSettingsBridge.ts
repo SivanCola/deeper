@@ -74,7 +74,6 @@ export function makeMockModelSettingsBindings(
         case "official_add": await this.AddOfficialProviderAccess(change.name, change.key); break;
         case "preset_add": await this.AddProviderPresetAccess(change.presetId, change.key); break;
         case "preset_reset": await this.ResetProviderPresetAccess(change.presetId); break;
-        case "protocol_upgrade": await this.UpgradeDeepSeekProviderAccess(change.name); break;
         case "catalogs": result.appliedCatalogs = await this.SaveProviderModelCatalogs(change.catalogs); break;
         case "provider_remove": for (const name of change.names) await this.DeleteProvider(name); break;
         case "access_remove": await this.RemoveProviderAccesses(change.names); break;

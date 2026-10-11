@@ -84,9 +84,6 @@ func (m *chatTUI) buildSlashCatalog() []compItem {
 	docsBuiltin := "/" + control.ResolvedBuiltinSlashName(control.DocsSlashName, m.commands, m.skills)
 	items := renameSlashItem(builtinSlashItems(), "/docs", docsBuiltin)
 	for _, c := range m.commands {
-		if c.Hidden {
-			continue
-		}
 		items = append(items, compItem{label: "/" + c.Name, insert: "/" + c.Name + " ", hint: customCommandHint(c)})
 	}
 	for _, s := range m.skills {

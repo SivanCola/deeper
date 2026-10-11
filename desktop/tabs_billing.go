@@ -1,11 +1,8 @@
 package main
 
 import (
-	"time"
-
 	"deepzora/internal/billing"
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
 )
 
 func (a *App) balanceRequestTarget(tabID string) (*WorkspaceTab, control.SessionAPI, uint64) {
@@ -63,20 +60,7 @@ func (t *WorkspaceTab) selectDisplayCurrency(display string) bool {
 	t.runtimeCostQuote = nil
 	t.runtimeCostGeneration++
 	if t.usageTelemetry.CostLedger == nil || len(t.usageTelemetry.CostLedger.Entries) == 0 {
-		if t.usageTelemetry.SessionCost <= 0 {
-			return true
-		}
-		occurred := time.Now().UTC()
-		quote := billing.MigrateLegacyUsage(billing.LegacyUsageRecord{
-			SessionCost:     t.usageTelemetry.SessionCost,
-			SessionCurrency: t.usageTelemetry.SessionCurrency,
-			EndedAt:         occurred,
-		})
-		t.usageTelemetry.CostLedger = billing.NewLedger()
-		t.usageTelemetry.CostLedger.Add(quote, billing.UsageTokens{
-			PromptTokens:     t.usageTelemetry.PromptTokens,
-			CompletionTokens: t.usageTelemetry.CompletionTokens,
-		}, occurred)
+		return true
 	}
 	total := t.usageTelemetry.CostLedger.SelectDisplay(display)
 	t.usageTelemetry.SessionCostQuote = &total
@@ -85,12 +69,10 @@ func (t *WorkspaceTab) selectDisplayCurrency(display string) bool {
 		t.usageTelemetry.SessionCostComplete = false
 		t.usageTelemetry.SessionCost = 0
 		t.usageTelemetry.SessionCurrency = ""
-		t.usageTelemetry.SessionCostUsd = 0
 		return true
 	}
 	t.usageTelemetry.SessionCost = total.Selected.Float64()
-	t.usageTelemetry.SessionCurrency = total.LegacyCurrencyCode()
-	t.usageTelemetry.SessionCostUsd = t.usageTelemetry.SessionCost
+	t.usageTelemetry.SessionCurrency = total.SelectedCurrencyCode()
 	return true
 }
 
@@ -129,15 +111,6 @@ func (t *WorkspaceTab) selectRuntimeDisplayCurrencyLocked(display string) bool {
 		t.runtimeCostQuote = &total
 		return true
 	}
-	if t.usageTelemetry.SessionCost > 0 {
-		quote := billing.MigrateLegacyUsage(billing.LegacyUsageRecord{
-			SessionCost:     t.usageTelemetry.SessionCost,
-			SessionCurrency: t.usageTelemetry.SessionCurrency,
-			EndedAt:         time.Now().UTC(),
-		})
-		total := billing.AggregateQuotes([]billing.CostQuote{quote}, display)
-		t.runtimeCostQuote = &total
-	}
 	return true
 }
 
@@ -159,14 +132,4 @@ func (t *WorkspaceTab) clearRuntimeDisplayCurrency() {
 	t.runtimeCostQuote = nil
 	t.runtimeCostGeneration++
 	t.telemMu.Unlock()
-}
-
-// repriceUsage preserves the legacy call shape as a display-only rebind.
-func (t *WorkspaceTab) repriceUsage(pricingBySource map[string]*provider.Pricing) bool {
-	_ = pricingBySource
-	display := ""
-	if t != nil {
-		display = billing.NormalizeCurrency(t.usageTelemetry.SessionCurrency)
-	}
-	return t.selectDisplayCurrency(display)
 }

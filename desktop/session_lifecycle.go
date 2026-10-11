@@ -9,13 +9,12 @@ import (
 	"strings"
 
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/session"
 )
 
-func (a *App) archiveSessionRefsWithOperation(refs []session.SessionRef, operationID string, dependencies ...string) error {
-	return a.archiveSessionRefsWithOperationConditional(refs, operationID, nil, dependencies...)
+func (a *App) archiveSessionRefsWithOperation(refs []session.SessionRef, operationID string) error {
+	return a.archiveSessionRefsWithOperationConditional(refs, operationID, nil)
 }
 
 // archiveSessionRefsWithOperationConditional runs verify after runtime and
@@ -25,17 +24,17 @@ func (a *App) archiveSessionRefsWithOperation(refs []session.SessionRef, operati
 //
 // Archiving the last visible session leaves the surface empty on purpose: the
 // frontend lands on the workspace draft instead of a replacement blank session.
-func (a *App) archiveSessionRefsWithOperationConditional(refs []session.SessionRef, operationID string, verify func(context.Context, workspacestate.State) error, dependencies ...string) error {
+func (a *App) archiveSessionRefsWithOperationConditional(refs []session.SessionRef, operationID string, verify func(context.Context, workspacestate.State) error) error {
 	a.sessionRemovalMu.Lock()
 	defer a.sessionRemovalMu.Unlock()
 	cleanup := archivedRuntimeCleanup{app: a}
 	defer cleanup.finish()
-	return a.archiveSessionRefsRemovalHeld(refs, operationID, verify, &cleanup, dependencies...)
+	return a.archiveSessionRefsRemovalHeld(refs, operationID, verify, &cleanup)
 }
 
 // archiveSessionRefsRemovalHeld commits and detaches only. The caller holds
 // sessionRemovalMu and must finish cleanup after releasing title/index locks.
-func (a *App) archiveSessionRefsRemovalHeld(refs []session.SessionRef, operationID string, verify func(context.Context, workspacestate.State) error, cleanup *archivedRuntimeCleanup, dependencies ...string) error {
+func (a *App) archiveSessionRefsRemovalHeld(refs []session.SessionRef, operationID string, verify func(context.Context, workspacestate.State) error, cleanup *archivedRuntimeCleanup) error {
 	ctx := a.bootContext()
 	service := a.desktopSessionService("")
 	unique := map[string]session.SessionRef{}
@@ -58,27 +57,11 @@ func (a *App) archiveSessionRefsRemovalHeld(refs []session.SessionRef, operation
 	if err != nil {
 		return err
 	}
-	legacyTargets := map[string]bool{}
-	for _, dependency := range dependencies {
-		if mapping := state.PendingOperations[dependency].Mapping; mapping != nil {
-			legacyTargets[sessionRuntimeKey(mapping.Path)] = true
-		}
-	}
-	removed, err := a.idleArchiveRuntimes(ids, legacyTargets)
+	removed, err := a.idleArchiveRuntimes(ids, nil)
 	if err != nil {
 		return err
 	}
 	guards := []func(){}
-	staged := map[string]string{}
-	for _, dependency := range dependencies {
-		op, ok := state.PendingOperations[dependency]
-		if !ok || op.Kind != "archive-import" || op.Phase != "content_ready" {
-			return workspacestate.ErrMutationConflict
-		}
-		for _, id := range op.SessionIDs {
-			staged[id] = op.WorkspaceID
-		}
-	}
 	defer func() {
 		for _, release := range slices.Backward(guards) {
 			release()
@@ -86,7 +69,7 @@ func (a *App) archiveSessionRefsRemovalHeld(refs []session.SessionRef, operation
 	}()
 	for _, id := range ids {
 		ref := unique[id]
-		if err := a.validateConditionalArchiveWorkspace(ctx, state, ref, staged[id], verify != nil); err != nil {
+		if err := a.validateConditionalArchiveWorkspace(ctx, state, ref, "", verify != nil); err != nil {
 			return err
 		}
 		if runtime, live := service.Runtime(ref); live {
@@ -109,11 +92,11 @@ func (a *App) archiveSessionRefsRemovalHeld(refs []session.SessionRef, operation
 	if err != nil {
 		return err
 	}
-	op := workspacestate.Operation{ID: operationID, Kind: "archive", Lifecycle: workspacestate.Archived, SessionIDs: ids, ExpectedGeneration: state.Generation, Dependencies: dependencies}
+	op := workspacestate.Operation{ID: operationID, Kind: "archive", Lifecycle: workspacestate.Archived, SessionIDs: ids, ExpectedGeneration: state.Generation}
 	if err := a.beginConditionalArchiveOperation(ctx, state, op, verify); err != nil {
 		return err
 	}
-	if err := a.workspaceRegistry().PrepareOperationContent(ctx, op.ID, ids, nil, nil); err != nil {
+	if err := a.workspaceRegistry().PrepareOperationContent(ctx, op.ID, ids, nil); err != nil {
 		return err
 	}
 	a.lifecycleCheckpoint("before-archive-commit")
@@ -254,51 +237,8 @@ func (a *App) archiveCompatibleTopicWithCleanupAdmissionHeld(topicID, operationI
 	if err := a.snapshotTopicRuntimeBindings(owners); err != nil {
 		return err
 	}
-	// Snapshot first: a legacy runtime may publish its first durable file here.
-	// Only a topic with neither canonical identities nor legacy content may use
-	// the metadata-only removal path.
-	targets, err := a.topicTrashTargets(topicID)
-	if err != nil {
-		return err
-	}
-	if err := a.validateCompatibleTopicOwner(state, topicID, len(targets) > 0); err != nil {
-		return err
-	}
-	if len(refs) == 0 && len(targets) == 0 {
+	if len(refs) == 0 {
 		return a.removeEmptyCompatibleTopicAdmissionHeld(topicID, cleanup)
-	}
-	// Originals stay in place, so retain existing leases and acquire only cold
-	// sources. The importer recognizes these same-process owners when freezing.
-	localOwners := topicArchiveLeaseOwners(owners)
-	leases := []*agent.SessionLease{}
-	defer func() {
-		for _, lease := range leases {
-			lease.Release()
-		}
-	}()
-	for _, target := range targets {
-		if localOwners[sessionRuntimeKey(target.sessionPath)] != nil {
-			continue
-		}
-		lease, err := agent.TryAcquireSessionLease(target.sessionPath)
-		if err != nil {
-			if errors.Is(err, agent.ErrSessionLeaseHeld) {
-				return errSessionBusyElsewhere
-			}
-			return err
-		}
-		leases = append(leases, lease)
-	}
-	dependencies := []string{}
-	for _, target := range targets {
-		ref, dependency, err := a.stageArchiveSource(a.bootContext(), target.sessionPath)
-		if err != nil {
-			return err
-		}
-		if dependency != "" {
-			dependencies = append(dependencies, dependency)
-		}
-		refs[ref.SessionID] = ref
 	}
 	list := make([]session.SessionRef, 0, len(refs))
 	for _, ref := range refs {
@@ -308,17 +248,13 @@ func (a *App) archiveCompatibleTopicWithCleanupAdmissionHeld(topicID, operationI
 		operationID = "archive-" + newTabID()
 	}
 	if cleanup != nil {
-		err = a.archiveSessionRefsRemovalHeld(list, operationID, nil, cleanup, dependencies...)
+		err = a.archiveSessionRefsRemovalHeld(list, operationID, nil, cleanup)
 	} else {
-		err = a.archiveSessionRefsWithOperation(list, operationID, dependencies...)
+		err = a.archiveSessionRefsWithOperation(list, operationID)
 	}
 	if err != nil {
 		return err
 	}
-	for _, lease := range leases {
-		lease.Release()
-	}
-	leases = nil
 	a.emitProjectTreeChanged()
 	return nil
 }
@@ -332,68 +268,12 @@ func (a *App) removeEmptyCompatibleTopicAdmissionHeld(topicID string, cleanup *a
 	return a.removeCompatiblePlaceholderAdmissionHeld(topicID)
 }
 
-func (a *App) stageArchiveSource(ctx context.Context, path string) (session.SessionRef, string, error) {
-	if ref, found, err := a.legacyCanonicalRef(ctx, path); found || err != nil {
-		return ref, "", err
-	}
-	meta, _, err := agent.LoadBranchMeta(path)
-	if err != nil {
-		return session.SessionRef{}, "", err
-	}
-	scope, root := "global", ""
-	if meta.WorkspaceRoot != "" && !a.isGlobalWorkspacePath(ctx, meta.WorkspaceRoot) {
-		scope, root = "project", meta.WorkspaceRoot
-	}
-	workspaceID, err := a.ensureDesktopWorkspace(ctx, scope, root)
-	if err != nil {
-		return session.SessionRef{}, "", err
-	}
-	fingerprint, err := desktopSourceFingerprint(path)
-	if err != nil {
-		return session.SessionRef{}, "", err
-	}
-	if err := a.migrateLegacySession(ctx, path, desktopMigrationSource{scope: scope, workspaceRoot: root, deferArchive: true}, workspaceID); err != nil {
-		return session.SessionRef{}, "", err
-	}
-	opID := "archive-import-" + desktopSourceKey(path, "") + "-" + fingerprint
-	state, err := a.workspaceRegistry().Load(ctx)
-	if err != nil {
-		return session.SessionRef{}, "", err
-	}
-	op, exists := state.PendingOperations[opID]
-	if !exists || op.Phase != "content_ready" || len(op.SessionIDs) != 1 {
-		return session.SessionRef{}, "", workspacestate.ErrMutationConflict
-	}
-	return session.SessionRef{HostID: localDesktopHostID, SessionID: op.SessionIDs[0]}, opID, nil
-}
-
-func (a *App) restoreCanonicalSession(ctx context.Context, ref session.SessionRef, operationID string, recoveryIDs ...string) (SessionRestoreResult, error) {
+func (a *App) restoreCanonicalSession(ctx context.Context, ref session.SessionRef, operationID string) (SessionRestoreResult, error) {
 	if err := validateLocalSessionRef(ref); err != nil {
 		return SessionRestoreResult{}, err
 	}
 	workspace, err := a.canonicalSessionWorkspace(ctx, ref)
-	if errors.Is(err, errSessionWorkspaceConflict) && len(recoveryIDs) == 1 {
-		info, readErr := a.desktopSessionService("").Query().Stat(ctx, ref)
-		if readErr != nil {
-			return SessionRestoreResult{}, readErr
-		}
-		if info.CWD == "" || info.Origin == "" {
-			return SessionRestoreResult{}, errSessionWorkspaceConflict
-		}
-		scope, root := "project", info.CWD
-		if a.isGlobalWorkspacePath(ctx, root) {
-			scope, root = "global", ""
-		}
-		workspaceID, ensureErr := a.ensureDesktopWorkspace(ctx, scope, root)
-		if ensureErr != nil {
-			return SessionRestoreResult{}, ensureErr
-		}
-		state, loadErr := a.workspaceRegistry().Load(ctx)
-		if loadErr != nil {
-			return SessionRestoreResult{}, loadErr
-		}
-		workspace, err = state.Workspaces[workspaceID], nil
-	}
+
 	if err != nil {
 		return SessionRestoreResult{}, err
 	}
@@ -408,19 +288,16 @@ func (a *App) restoreCanonicalSession(ctx context.Context, ref session.SessionRe
 		return SessionRestoreResult{}, err
 	}
 	op := workspacestate.Operation{ID: operationID, Kind: "restore", WorkspaceID: workspace.ID, Lifecycle: workspacestate.Active, SessionIDs: []string{ref.SessionID}, ExpectedGeneration: state.Generation}
-	if len(recoveryIDs) == 1 {
-		op.RecoveryEntryID = recoveryIDs[0]
-	}
+
 	if err := a.workspaceRegistry().BeginOperation(ctx, op); err != nil {
 		return SessionRestoreResult{}, err
 	}
-	if err := a.workspaceRegistry().PrepareOperationContent(ctx, op.ID, op.SessionIDs, nil, nil); err != nil {
+	if err := a.workspaceRegistry().PrepareOperationContent(ctx, op.ID, op.SessionIDs, nil); err != nil {
 		return SessionRestoreResult{}, err
 	}
 	if err := a.workspaceRegistry().CommitOperation(ctx, op.ID); err != nil {
 		return SessionRestoreResult{}, err
 	}
-	a.markLegacyCleanupSessionRestored(ref.SessionID)
 	state, err = a.workspaceRegistry().Load(ctx)
 	if err != nil {
 		return SessionRestoreResult{}, err

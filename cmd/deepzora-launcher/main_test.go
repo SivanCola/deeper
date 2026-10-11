@@ -9,24 +9,6 @@ import (
 	"deepzora/internal/installlayout"
 )
 
-func TestStripLegacyLaunchArgs(t *testing.T) {
-	got := desktoplauncher.StripLegacyLaunchArgs([]string{
-		"launch", "--detach", "--safe-mode", "--app", `C:\Old\deepzora-desktop.exe`, "--foo", "bar",
-	})
-	want := []string{"--foo", "bar"}
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
-		t.Fatalf("got %#v want %#v", got, want)
-	}
-	got = desktoplauncher.StripLegacyLaunchArgs([]string{"--app=ignored", "keep"})
-	if len(got) != 1 || got[0] != "keep" {
-		t.Fatalf("got %#v", got)
-	}
-	got = desktoplauncher.StripLegacyLaunchArgs([]string{"--", "--safe-mode", "x"})
-	if len(got) != 3 || got[0] != "--" {
-		t.Fatalf("separator not preserved: %#v", got)
-	}
-}
-
 func TestResolveDesktopPathUsesCurrentJSON(t *testing.T) {
 	root := t.TempDir()
 	src := t.TempDir()

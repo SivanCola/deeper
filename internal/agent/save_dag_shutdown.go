@@ -163,13 +163,10 @@ func shutdownHeadBatch(plan *dagWritePlan, pending []sessionDAGEntry, now time.T
 	return out
 }
 
-// republishDAGDerivedIfPending refreshes the derived files a previous
+// republishDAGDerived refreshes the derived files a previous
 // unlocked or checkpoint save skipped, once a locked save finds nothing new
 // to append.
-func (s *Session) republishDAGDerivedIfPending(ctx context.Context, path string, st *sessionDAGState, plan *dagWritePlan, msgs []provider.Message, digest [sha256.Size]byte, revision int64) {
-	if !s.persistState(path).projectionPending {
-		return
-	}
+func (s *Session) republishDAGDerived(ctx context.Context, path string, st *sessionDAGState, plan *dagWritePlan, msgs []provider.Message, digest [sha256.Size]byte, revision int64) {
 	selected := st.selectedHead()
 	displayCurrent := selected == plan.head && writeDAGCheckpointCache(path, plan, msgs, revision)
 	s.publishDAGDerived(ctx, path, st, plan, msgs, digest, revision, selected, displayCurrent, false)

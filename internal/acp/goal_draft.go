@@ -33,10 +33,6 @@ func applyACPSessionMode(ctrl acpController, requested string) (nextMode, legacy
 	case sessionModeNormal, sessionModePlan:
 		clearGoal = true
 	case sessionModeGoal:
-	case sessionModeLegacyDefault:
-		nextMode, legacyApproval, clearGoal = sessionModeNormal, control.ToolApprovalReadOnly, true
-	case sessionModeLegacyAuto:
-		nextMode, legacyApproval, clearGoal = sessionModeNormal, control.ToolApprovalWorkspaceWrite, true
 	default:
 		return "", "", &RPCError{Code: ErrInvalidParams, Message: "session/set_mode: unknown modeId " + requested}
 	}

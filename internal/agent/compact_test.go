@@ -201,7 +201,7 @@ func TestCompactEmitsEvents(t *testing.T) {
 	}}
 	var got []event.Event
 	sink := event.FuncSink(func(e event.Event) { got = append(got, e) })
-	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: 50_000, RecentKeep: 2}, sink)
+	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: 50_000}, sink)
 
 	if err := a.compact(context.Background(), "auto", "", true); err != nil {
 		t.Fatalf("compact: %v", err)
@@ -249,8 +249,7 @@ func TestCompactInjectsFocusAndPreCompactHook(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, RecentKeep: 2,
-		Hooks: &stubHooks{preCompactOut: "KEEP-THE-MIGRATION-PLAN"},
+		ContextWindow: 50_000, Hooks: &stubHooks{preCompactOut: "KEEP-THE-MIGRATION-PLAN"},
 	}, event.Discard)
 
 	if err := a.compact(context.Background(), "manual", "focus on the auth refactor", true); err != nil {
@@ -276,7 +275,7 @@ func TestCompactSkipsSingleSmallMessage(t *testing.T) {
 		{Role: provider.RoleUser, Content: "next"},
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
-	a := New(prov, tool.NewRegistry(), sess, Options{RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+	a := New(prov, tool.NewRegistry(), sess, Options{ArchiveDir: t.TempDir()}, event.Discard)
 
 	if err := a.compact(context.Background(), "auto", "", false); err != nil {
 		t.Fatalf("compact: %v", err)
@@ -306,7 +305,7 @@ func TestMaybeCompactThreshold(t *testing.T) {
 			{Role: provider.RoleAssistant, Content: "f"},
 		}}
 	}
-	opts := Options{ContextWindow: window, CompactRatio: ratio, RecentKeep: 2}
+	opts := Options{ContextWindow: window, CompactRatio: ratio}
 
 	// Below compact_ratio: untouched, no summarizer call.
 	sess := newSess()
@@ -342,7 +341,7 @@ func TestMaybeCompactThreshold(t *testing.T) {
 
 	// No context window: compaction disabled.
 	sess = newSess()
-	a = New(&fakeProvider{reply: "s"}, tool.NewRegistry(), sess, Options{RecentKeep: 2}, event.Discard)
+	a = New(&fakeProvider{reply: "s"}, tool.NewRegistry(), sess, Options{}, event.Discard)
 	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 1 << 30})
 	if len(sess.Messages) != 7 {
 		t.Errorf("no window should disable compaction, len = %d", len(sess.Messages))
@@ -363,7 +362,7 @@ func TestMaybeCompactForceCeilingBypassesEconomics(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	prov := &fakeProvider{reply: "forced summary"}
-	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2}, event.Discard)
+	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 
 	// hard = 10000-256 = 9744; observe just above it.
 	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 9800})
@@ -394,7 +393,7 @@ func TestMaybeCompactSkipsLowValueRegionBeforeForceCeiling(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	prov := &fakeProvider{reply: "should not summarize"}
-	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2}, event.Discard)
+	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 
 	// fold trigger = 8500; hard = 9744. Observe between them.
 	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 8600})
@@ -420,8 +419,7 @@ func TestMaybeCompactFoldsSingleLargeMessageAtThreshold(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	a := New(&fakeProvider{reply: "single large summary"}, tool.NewRegistry(), sess, Options{
-		ContextWindow: window, CompactRatio: 0.8, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: window, CompactRatio: 0.8}, event.Discard)
 
 	prepareForObservedUsage(a, context.Background(), &provider.Usage{PromptTokens: 8500})
 	if got := len(sess.Messages); got != 5 {
@@ -499,8 +497,7 @@ func TestCompactKeepsActiveTurnVerbatim(t *testing.T) {
 		result,
 	}}
 	a := New(&fakeProvider{reply: "old work summary"}, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 1,
-	}, event.Discard)
+		ContextWindow: 50_000, CompactRatio: 0.85}, event.Discard)
 	a.activeTurnCreatedAt.Store(currentCreatedAt)
 
 	if err := a.compact(context.Background(), "auto", "", true); err != nil {
@@ -634,7 +631,7 @@ func TestCompactRollsOldDigestsIntoNew(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	a := New(&fakeProvider{reply: "merged digest"}, tool.NewRegistry(), sess,
-		Options{RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+		Options{ArchiveDir: t.TempDir()}, event.Discard)
 
 	if err := a.compact(context.Background(), "manual", "", true); err != nil {
 		t.Fatalf("compact: %v", err)

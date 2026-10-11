@@ -398,7 +398,7 @@ func sessionBundleArtifacts(sessionPath string) []sessionArtifact {
 		{role: "events_damaged", path: store.SessionEventLogDamaged(sessionPath)},
 		{role: "event_index", path: store.SessionEventIndex(sessionPath)},
 		{role: "conflicts", path: store.SessionConflictLog(sessionPath)},
-		{role: "lease", path: store.SessionLeaseInfo(sessionPath)},
+		{role: "lease", path: store.SessionLeaseLock(sessionPath)},
 	}
 }
 

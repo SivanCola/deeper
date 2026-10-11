@@ -8,7 +8,6 @@ import (
 
 	"deepzora/internal/config"
 	"deepzora/internal/i18n"
-	"deepzora/internal/migration"
 	"deepzora/internal/pluginpkg"
 	"deepzora/internal/skill"
 )
@@ -441,9 +440,6 @@ func (c *Controller) managementNotice(trimmed string) bool {
 	case "/memory":
 		args := strings.TrimSpace(strings.TrimPrefix(trimmed, fields[0]))
 		c.notice(MemoryCommandText(c, args))
-	case "/migrate", "/migration":
-		args := strings.TrimSpace(strings.TrimPrefix(trimmed, fields[0]))
-		migration.RunLegacyRescueCommand(args, c.sink)
 	case "/skill", "/skills":
 		sub := ""
 		if len(fields) >= 2 {
@@ -496,12 +492,7 @@ func (c *Controller) managementNotice(trimmed string) bool {
 		if err := c.ReloadCommands(context.Background()); err != nil {
 			c.notice("reload-cmd: " + err.Error())
 		} else {
-			visible := 0
-			for _, cmd := range c.Commands() {
-				if !cmd.Hidden {
-					visible++
-				}
-			}
+			visible := len(c.Commands())
 			c.notice("commands reloaded (" + strconv.Itoa(visible) + " available)")
 		}
 	case "/hooks":
@@ -512,9 +503,6 @@ func (c *Controller) managementNotice(trimmed string) bool {
 		switch sub {
 		case "", "list", "ls":
 			c.notice(c.hookListText())
-		case "trust":
-			// Backward-compatible response for old clients and saved commands.
-			c.notice("project hooks are enabled automatically; no trust action is required")
 		default:
 			c.notice("unknown /hooks subcommand " + fields[1] + " — try: /hooks or /hooks list")
 		}

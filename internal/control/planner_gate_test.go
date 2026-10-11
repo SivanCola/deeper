@@ -28,24 +28,24 @@ func TestTaskWarrantsPlanner(t *testing.T) {
 		{"fix auth and wait for my approval", true},
 	}
 	for _, c := range cases {
-		if got := TaskWarrantsPlanner(c.input); got != c.want {
-			t.Errorf("TaskWarrantsPlanner(%q) = %v, want %v", c.input, got, c.want)
+		if got := (DecidePlannerRoute(context.Background(), c.input).Route != agent.PlannerRouteExecutorOnly); got != c.want {
+			t.Errorf("(DecidePlannerRoute(context.Background(), %q).Route != agent.PlannerRouteExecutorOnly) = %v, want %v", c.input, got, c.want)
 		}
 	}
 }
 
 func TestNewPlannerGateIsExplicitOnly(t *testing.T) {
-	gate := NewPlannerGate()
+	gate := NewPlannerPolicy()
 	if gate == nil {
 		t.Fatal("NewPlannerGate returned nil")
 	}
-	if got := gate(context.Background(), "what is this?"); got {
+	if got := gate(context.Background(), "what is this?"); got.Route != agent.PlannerRouteExecutorOnly {
 		t.Error("planner gate should skip questions")
 	}
-	if got := gate(context.Background(), "fix the bug"); got {
+	if got := gate(context.Background(), "fix the bug"); got.Route != agent.PlannerRouteExecutorOnly {
 		t.Error("ordinary work must stay executor-only")
 	}
-	if got := gate(context.Background(), "先规划再执行认证迁移"); !got {
+	if got := gate(context.Background(), "先规划再执行认证迁移"); got.Route == agent.PlannerRouteExecutorOnly {
 		t.Error("explicit plan-then-execute must call planner")
 	}
 }
@@ -74,8 +74,8 @@ func TestDecidePlannerRouteExplicitOnly(t *testing.T) {
 		},
 		{
 			name:   "user text matching a legacy host prefix stays user authored",
-			input:  agent.CompletionValidationContinuationPrefix + " give me a plan only",
-			meta:   plannerTurnMetadata{UserText: agent.CompletionValidationContinuationPrefix + " give me a plan only"},
+			input:  "[Completion validation continuation]" + " give me a plan only",
+			meta:   plannerTurnMetadata{UserText: "[Completion validation continuation]" + " give me a plan only"},
 			route:  agent.PlannerRoutePlanOnly,
 			reason: plannerReasonUserPlanOnly,
 		},

@@ -35,10 +35,7 @@ function chimesFor(event: { err?: string; outcome?: string }, only: "success" | 
   return contexts - before;
 }
 
-const readiness = { err: "delivery checks are incomplete", outcome: "final_readiness" };
-assert.equal(chimesFor(readiness, "attention"), 1, "a turn that stopped for delivery checks must alert the user");
-assert.equal(chimesFor(readiness, "success"), 0, "a turn that stopped for delivery checks is not a success");
-for (const outcome of ["recovery_paused", "incomplete_read", "completion_uncertain"]) {
+for (const outcome of ["incomplete_read"]) {
   assert.equal(chimesFor({ err: "paused", outcome }, "attention"), 1, `${outcome} waits on the user`);
 }
 assert.equal(chimesFor({}, "success"), 1, "a clean finish keeps the success chime");

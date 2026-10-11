@@ -124,8 +124,11 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		}
 	}
 	ciWorkflow := readTestFile(t, "../.github/workflows/ci.yml")
-	if !strings.Contains(ciWorkflow, `node packaging/smoke.mjs build/electron/windows-amd64/app`) {
-		t.Error("Windows CI must smoke the packaged Electron shell startup")
+	if !strings.Contains(workflow, `Smoke-test packaged Electron startup`) {
+		t.Error("Windows release qualification must smoke the packaged Electron shell startup")
+	}
+	if strings.Contains(ciWorkflow, `node packaging/package.mjs`) {
+		t.Error("ordinary CI must keep packaged acceptance in the release workflow")
 	}
 	if strings.Contains(ciWorkflow, "webview2") || strings.Contains(ciWorkflow, "WebView2") {
 		t.Error("Windows CI must not reference the retired WebView2 smoke harness")
@@ -153,7 +156,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 	}
 	for _, want := range []string{
 		`node "$DESKTOP/packaging/signing-files.mjs" "$PAYLOAD" --check`,
-		`cp "$PAYLOAD/$GUARDNAME.exe" "$INSTALLER_DIR/$GUARDNAME.exe"`,
+		`cp "$PAYLOAD/$LAYOUT_INSTALLER.exe" "$INSTALLER_DIR/$LAYOUT_INSTALLER.exe"`,
 		`cp "$PAYLOAD/$LAUNCHERNAME.exe" "$INSTALLER_DIR/$LAUNCHERNAME.exe"`,
 		`cp "$PAYLOAD/$UPDATE_HELPER" "$INSTALLER_DIR/$UPDATE_HELPER"`,
 		`cp "$PAYLOAD/$WINDOWS_CLINAME.exe" "$INSTALLER_DIR/$WINDOWS_CLINAME.exe"`,
@@ -184,7 +187,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`Portable = (Join-Path $activeDir "deepzora-desktop.exe")`,
 		`Portable = "Deepzora.exe"; Payload = "deepzora-launcher.exe"`,
 		`Compare-Object $expectedPE $actualPE`,
-		`[ValidateSet("canonical", "legacy-dual")]`,
+		`[ValidateSet("canonical")]`,
 		"Get-FileHash -Algorithm SHA256",
 	} {
 		if !strings.Contains(verifier, want) {
@@ -245,7 +248,7 @@ func TestWindowsPackagerRejectsMissingOrPartialRequiredPayloadManifest(t *testin
 			payload := t.TempDir()
 			for _, name := range []string{
 				"deepzora-desktop.exe",
-				"deepzora-guard.exe",
+				"deepzora-layout-installer.exe",
 				"deepzora-launcher.exe",
 				"deepzora-update-helper.exe",
 				"deepzora-cli.exe",
@@ -263,7 +266,7 @@ func TestWindowsPackagerRejectsMissingOrPartialRequiredPayloadManifest(t *testin
 			if err := os.WriteFile(filepath.Join(payload, "app", "Deepzora.exe"), []byte("shell"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			signingList := "app/Deepzora.exe\ndeepzora-cli.exe\ndeepzora-desktop.exe\ndeepzora-guard.exe\ndeepzora-launcher.exe\ndeepzora-uninstall.exe\ndeepzora-update-helper.exe\n"
+			signingList := "app/Deepzora.exe\ndeepzora-cli.exe\ndeepzora-desktop.exe\ndeepzora-layout-installer.exe\ndeepzora-launcher.exe\ndeepzora-uninstall.exe\ndeepzora-update-helper.exe\n"
 			if err := os.WriteFile(filepath.Join(payload, "signing-files.txt"), []byte(signingList), 0o600); err != nil {
 				t.Fatal(err)
 			}
@@ -331,12 +334,12 @@ func TestProductionSigningRunsOnlyFromProtectedControlPlane(t *testing.T) {
 
 func TestSignPathConfigurationsCoverExactWindowsPayload(t *testing.T) {
 	flatPayload := map[string]bool{
-		"deepzora-desktop.exe":       true,
-		"deepzora-guard.exe":         true,
-		"deepzora-launcher.exe":      true,
-		"deepzora-update-helper.exe": true,
-		"deepzora-cli.exe":           true,
-		"deepzora-uninstall.exe":     true,
+		"deepzora-desktop.exe":          true,
+		"deepzora-layout-installer.exe": true,
+		"deepzora-launcher.exe":         true,
+		"deepzora-update-helper.exe":    true,
+		"deepzora-cli.exe":              true,
+		"deepzora-uninstall.exe":        true,
 	}
 
 	payload := parseSignPathConfiguration(t, "windows-payload.xml")
@@ -416,12 +419,9 @@ func TestSignPathConfigurationsCoverExactWindowsPayload(t *testing.T) {
 		}
 	}
 
-	testInstaller := parseSignPathConfiguration(t, "windows-installer-test-v2.xml")
-	if len(testInstaller.Zip.Files) != 1 {
-		t.Fatalf("windows-installer-test-v2.xml files = %d, want 1", len(testInstaller.Zip.Files))
-	}
-	file := testInstaller.Zip.Files[0]
-	if file.Path != "*installer*.exe" || file.Sign == nil || file.Verify != nil {
-		t.Fatal("windows-installer-test-v2.xml must only sign the outer installer")
+	for _, name := range []string{"windows-installer.xml", "windows-installer-test-v2.xml"} {
+		if _, err := os.Stat(filepath.Join("..", ".signpath", "artifact-configurations", name)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("historical signing configuration %s still present: %v", name, err)
+		}
 	}
 }

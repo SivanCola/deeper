@@ -155,7 +155,7 @@ func TestSendWithRetryKnownKeyFailsWithoutRetry(t *testing.T) {
 	for _, status := range []int{401, 403} {
 		calls := 0
 		cl := &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) { calls++; return statusResp(status, nil), nil })}
-		_, err := SendWithRetry(t.Context(), cl, SendOptions{Provider: "mimo", KeyPresent: true, RetryAuth: true}, newDummyReq)
+		_, err := SendWithRetry(t.Context(), cl, SendOptions{Provider: "mimo", KeyPresent: true}, newDummyReq)
 		var auth *AuthError
 		if calls != 1 || !errors.As(err, &auth) || auth.Status != status || !auth.HasKey {
 			t.Fatalf("calls=%d err=%v", calls, err)
@@ -225,18 +225,18 @@ func TestSendWithRetryUnblocksStalledErrorBody(t *testing.T) {
 
 func TestSendWithRetryReturnsUpstreamFailureWithoutNotification(t *testing.T) {
 	for _, status := range []int{408, 409, 429, 500, 503, 529} {
-		calls, notifications := 0, 0
+		calls := 0
 		cl := &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) {
 			calls++
 			return statusResp(status, map[string]string{"Retry-After": "120"}), nil
 		})}
 		ctx, cancel := context.WithCancel(t.Context())
-		ctx = WithRequestAttemptCounter(WithRetryNotify(ctx, func(RetryInfo) { notifications++; cancel() }))
+		ctx = WithRequestAttemptCounter(ctx)
 		_, err := SendWithRetry(ctx, cl, SendOptions{}, newDummyReq)
 		cancel()
 		var api *APIError
-		if !errors.As(err, &api) || api.Status != status || calls != 1 || notifications != 0 || RequestAttemptCount(ctx) != 1 {
-			t.Fatalf("status=%d calls=%d notifications=%d err=%v", status, calls, notifications, err)
+		if !errors.As(err, &api) || api.Status != status || calls != 1 || RequestAttemptCount(ctx) != 1 {
+			t.Fatalf("status=%d calls=%d err=%v", status, calls, err)
 		}
 		if api.RetryAfter != 2*time.Minute {
 			t.Fatalf("lost upstream diagnostic: %+v", api)

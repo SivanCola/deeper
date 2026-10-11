@@ -10,23 +10,23 @@ import (
 	"deepzora/internal/session"
 )
 
-// Historical directories share one owner per root, just like canonical
-// sessions. Repeated opens and rebuilds must not manufacture competing writers.
-func (a *App) historicalSessionService(root string) (*session.Service, error) {
+// Project-local bot stores share one current runtime owner per root.
+// Repeated opens and rebuilds must not manufacture competing writers.
+func (a *App) projectSessionService(root string) (*session.Service, error) {
 	root = filepath.Clean(root)
 	a.sessionServicesMu.Lock()
 	defer a.sessionServicesMu.Unlock()
-	if existing := a.historicalSessionServices[root]; existing != nil {
+	if existing := a.projectSessionServices[root]; existing != nil {
 		return existing, nil
 	}
 	service, err := session.NewService(localDesktopHostID, session.NewFilesystemPersistence(root))
 	if err != nil {
 		return nil, err
 	}
-	if a.historicalSessionServices == nil {
-		a.historicalSessionServices = map[string]*session.Service{}
+	if a.projectSessionServices == nil {
+		a.projectSessionServices = map[string]*session.Service{}
 	}
-	a.historicalSessionServices[root] = service
+	a.projectSessionServices[root] = service
 	service.UseIdlePool(&a.historyIdlePool)
 	service.ConfigureHistoryMaintenance(&a.historyMaintenance)
 	return service, nil
@@ -37,16 +37,7 @@ var errTabControllerExtensionsChanged = errors.New("desktop: controller extensio
 // buildTabControllerBoot is a thin wrapper around boot.Build so the large
 // controller assembly path can stay under function-size / complexity budgets.
 func (a *App) buildTabControllerBoot(ctx context.Context, opts boot.Options) (control.SessionAPI, error) {
-	if opts.NativeLegacySession && opts.SessionService == nil {
-		// A path-backed source may have a newer paired event store in its
-		// historical root. Keep that authority discoverable without importing
-		// either source into the current Desktop root.
-		var err error
-		opts.SessionService, err = a.historicalSessionService(desktopSessionRoot(opts.SessionDir))
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	if opts.SessionService == nil {
 		opts.SessionService = a.desktopSessionService(opts.SessionDir)
 	}
@@ -65,7 +56,7 @@ func (a *App) buildTabControllerBoot(ctx context.Context, opts boot.Options) (co
 }
 
 func desktopSessionRoot(sessionDir string) string {
-	return session.RootForLegacyDir(sessionDir)
+	return session.RootForSessionDir(sessionDir)
 }
 
 func (a *App) desktopSessionService(sessionDir string) *session.Service {
@@ -75,8 +66,8 @@ func (a *App) desktopSessionService(sessionDir string) *session.Service {
 	a.sessionServicesMu.Lock()
 	defer a.sessionServicesMu.Unlock()
 	root := a.desktopSessions.root
-	// Zero-value Apps in narrow tests retain an isolated legacy-derived root;
-	// NewApp always supplies the production v5 root.
+	// Zero-value Apps in narrow tests use an isolated session root.
+	// NewApp supplies the production root.
 	if root == "" {
 		root = desktopSessionRoot(sessionDir)
 		a.desktopSessions.root = root
@@ -88,8 +79,7 @@ func (a *App) desktopSessionService(sessionDir string) *session.Service {
 		a.sessionServices = map[string]*session.Service{}
 	}
 	for _, service := range a.sessionServices {
-		// There is deliberately one local service even when a caller still
-		// carries a project-local legacy sessionDir during the cutover.
+		// Local desktop sessions share a single runtime owner.
 		if service != nil {
 			return service
 		}

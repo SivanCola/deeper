@@ -161,7 +161,6 @@ func (s *Server) hello(_ context.Context, raw json.RawMessage) (any, error) {
 	result.Instance = &InstanceInfo{
 		IdentityVersion: pathidentity.Version,
 		IdentityDigest:  instanceidentity.Digest(s.cfg.Identity.Home),
-		LegacyID:        instanceidentity.ForHome(s.cfg.Identity.Home),
 	}
 	s.ready.Store(true)
 	return result, nil

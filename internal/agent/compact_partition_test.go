@@ -85,7 +85,7 @@ func TestPartitionMergesUserTurnsAcrossPriorDigest(t *testing.T) {
 	a := &Agent{}
 	region := []provider.Message{
 		{Role: provider.RoleUser, Content: "constraint from before the digest"},
-		{Role: provider.RoleUser, Content: summaryTagOpen + "\nprior digest\n" + summaryTagClose},
+		{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: summaryTagOpen + "\nprior digest\n" + summaryTagClose},
 		{Role: provider.RoleAssistant, Content: "work"},
 	}
 	kept, fold := partitionCoversRegion(t, a, region)
@@ -102,28 +102,12 @@ func TestPartitionFoldsPriorDigests(t *testing.T) {
 	// never sees a chain of digests.
 	a := &Agent{}
 	region := []provider.Message{
-		{Role: provider.RoleUser, Content: summaryTagOpen + "\nolder digest\n" + summaryTagClose},
-		{Role: provider.RoleUser, Content: summaryTagOpen + "\nnewer digest\n" + summaryTagClose},
+		{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: summaryTagOpen + "\nolder digest\n" + summaryTagClose},
+		{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: summaryTagOpen + "\nnewer digest\n" + summaryTagClose},
 		{Role: provider.RoleAssistant, Content: "work"},
 	}
 	kept, fold := partitionCoversRegion(t, a, region)
 	if len(kept) != 0 || len(fold) != 3 {
 		t.Fatalf("kept=%d fold=%d, want every digest folded", len(kept), len(fold))
-	}
-}
-
-func TestPartitionIgnoresDeprecatedKeepPolicy(t *testing.T) {
-	a := &Agent{keepPolicy: KeepErrors}
-	region := []provider.Message{
-		{Role: provider.RoleAssistant, Content: "unrelated prose"},
-		{Role: provider.RoleAssistant, Content: "call", ToolCalls: []provider.ToolCall{{ID: "t1", Name: "bash"}}},
-		{Role: provider.RoleTool, ToolCallID: "t1", Name: "bash", Content: "error: boom"},
-	}
-	kept, fold := partitionCoversRegion(t, a, region)
-	if len(kept) != 0 || len(fold) != 3 {
-		t.Fatalf("kept=%d fold=%d, want every old message folded", len(kept), len(fold))
-	}
-	if got := renderTranscript(fold); !strings.Contains(got, "error: boom") || !strings.Contains(got, "call") {
-		t.Fatalf("the failing call and its result must enter the summary together: %s", got)
 	}
 }

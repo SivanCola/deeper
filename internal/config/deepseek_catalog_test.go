@@ -25,7 +25,7 @@ func TestDeepSeekCurrentCatalogSurvivesSaveAndReload(t *testing.T) {
 				if !ok || !reflect.DeepEqual(p.ModelList(), []string{"deepseek-flash", "deepseek-v4-pro"}) || p.DefaultModel() != "deepseek-flash" {
 					t.Fatalf("saved preset catalog changed: %+v", p)
 				}
-				for _, model := range []string{"deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"} {
+				for _, model := range []string{"deepseek-flash"} {
 					resolved, ok := cfg.ResolveModel(id + "/" + model)
 					if !ok || resolved.Model != model || !EffectiveVision(resolved) {
 						t.Fatalf("model reference %q lost wire identity or vision: %+v", model, resolved)
@@ -42,7 +42,7 @@ func TestDeepSeekCuratedCatalogSurvivesRuntimeAndEditLoad(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("DEEPZORA_HOME", home)
 			path := filepath.Join(home, "config.toml")
-			raw := "config_version = 10\n[[providers]]\nname = \"deepseek-responses\"\nkind = \"responses\"\nbase_url = \"https://api.deepseek.com\"\nmodels = " + models + "\nvision_models = []\nfuture_field = \"preserve\"\n"
+			raw := "config_version = 12\n[[providers]]\nname = \"deepseek-responses\"\nkind = \"responses\"\nbase_url = \"https://api.deepseek.com\"\nmodels = " + models + "\nmodel_overrides = { deepseek-flash = { vision = false }, deepseek-v4-flash = { vision = false }, deepseek-v4-pro = { vision = false }, Custom-Case-ID = { vision = false } }\nfuture_field = \"preserve\"\n"
 			if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -56,8 +56,14 @@ func TestDeepSeekCuratedCatalogSurvivesRuntimeAndEditLoad(t *testing.T) {
 			}
 			for _, cfg := range []*Config{runtime, LoadForEditWithoutCredentials(path)} {
 				p, _ := cfg.Provider("deepseek-responses")
-				if !reflect.DeepEqual(p.ModelList(), original.Providers[0].ModelList()) || p.VisionModels == nil || len(p.VisionModels) != 0 {
-					t.Fatalf("loader overwrote a curated catalog or explicit vision opt-out: %+v", p)
+				if !reflect.DeepEqual(p.ModelList(), original.Providers[0].ModelList()) {
+					t.Fatalf("loader overwrote a curated catalog: %+v", p)
+				}
+				for _, model := range p.ModelList() {
+					selected, ok := cfg.ResolveModel(p.Name + "/" + model)
+					if !ok || EffectiveVision(selected) {
+						t.Fatalf("explicit image opt-out changed for %s", model)
+					}
 				}
 			}
 			if after, err := os.ReadFile(path); err != nil || string(after) != raw {
@@ -73,10 +79,10 @@ func TestDeepSeekLegacyReferenceCompatibilityIsScoped(t *testing.T) {
 		models                    []string
 		want                      bool
 	}{
-		{"chat", "openai", "https://api.deepseek.com/v1", "", []string{"deepseek-flash"}, true},
-		{"exact override", "openai", "https://api.deepseek.com", "https://api.deepseek.com/v1/chat/completions", []string{"deepseek-flash"}, true},
-		{"responses", "responses", "https://api.deepseek.com", "", []string{"deepseek-flash"}, true},
-		{"anthropic", "anthropic", "https://api.deepseek.com/anthropic", "", []string{"deepseek-flash"}, true},
+		{"chat", "openai", "https://api.deepseek.com/v1", "", []string{"deepseek-flash"}, false},
+		{"exact override", "openai", "https://api.deepseek.com", "https://api.deepseek.com/v1/chat/completions", []string{"deepseek-flash"}, false},
+		{"responses", "responses", "https://api.deepseek.com", "", []string{"deepseek-flash"}, false},
+		{"anthropic", "anthropic", "https://api.deepseek.com/anthropic", "", []string{"deepseek-flash"}, false},
 		{"third party", "openai", "https://gateway.example/v1", "", []string{"deepseek-flash"}, false},
 		{"custom route", "openai", "https://api.deepseek.com/custom", "", []string{"deepseek-flash"}, false},
 		{"custom override", "openai", "https://api.deepseek.com", "https://gateway.example/chat/completions", []string{"deepseek-flash"}, false},
@@ -103,28 +109,5 @@ func TestDeepSeekLegacyReferenceCompatibilityIsScoped(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestDeepSeekEmptyEntriesUseCurrentCatalog(t *testing.T) {
-	for _, id := range []string{"deepseek-chat", "deepseek-anthropic", "deepseek-responses"} {
-		preset, _ := CuratedProviderPreset(id)
-		entry := preset.Entries[0]
-		entry.Models, entry.Model, entry.Default = nil, "", ""
-		cfg := &Config{Providers: []ProviderEntry{entry}}
-		normalizeOfficialDeepSeekModels(cfg)
-		if p := &cfg.Providers[0]; !reflect.DeepEqual(p.ModelList(), []string{"deepseek-flash", "deepseek-v4-pro"}) || p.DefaultModel() != "deepseek-flash" {
-			t.Fatalf("%s empty entry uses stale defaults: %+v", id, p)
-		}
-	}
-	cfg := Default()
-	if p, ok := cfg.ResolveModel(cfg.DefaultModel); !ok || p.Model != "deepseek-flash" {
-		t.Fatalf("new CLI default = %+v", p)
-	}
-	cfg.Desktop.ProviderAccess = []string{"deepseek"}
-	normalizeDesktopOfficialProviderAccess(cfg)
-	normalizeOfficialDeepSeekModels(cfg)
-	if p, ok := cfg.Provider("deepseek"); !ok || !reflect.DeepEqual(p.ModelList(), []string{"deepseek-flash", "deepseek-v4-pro"}) {
-		t.Fatalf("new desktop catalog reintroduced retired aliases: %+v", p)
 	}
 }

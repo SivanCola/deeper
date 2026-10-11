@@ -9,7 +9,7 @@
     <pe-file path="deepzora-desktop.exe">
       <authenticode-sign />
     </pe-file>
-    <pe-file path="deepzora-guard.exe">
+    <pe-file path="deepzora-layout-installer.exe">
       <authenticode-sign />
     </pe-file>
     <pe-file path="deepzora-launcher.exe">

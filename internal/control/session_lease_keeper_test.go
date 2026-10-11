@@ -11,7 +11,6 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
-	"deepzora/internal/store"
 )
 
 func TestSessionLeaseKeeperRebindMovesLease(t *testing.T) {
@@ -302,9 +301,6 @@ func TestSessionLeaseKeeperReleaseRemovesLeaseInfo(t *testing.T) {
 	// release; no legacy .lease.json sidecar is left behind either.
 	if _, err := agent.LoadSessionLeaseInfo(agent.CanonicalSessionPath(a)); !os.IsNotExist(err) {
 		t.Fatalf("lease info after Release err = %v, want not exist", err)
-	}
-	if _, err := os.Stat(store.SessionLeaseInfo(agent.CanonicalSessionPath(a))); !os.IsNotExist(err) {
-		t.Fatalf("legacy lease sidecar after Release stat err = %v, want not exist", err)
 	}
 	if got := k.HeldPath(); got != "" {
 		t.Fatalf("HeldPath after Release = %q, want empty", got)

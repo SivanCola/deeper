@@ -81,7 +81,7 @@ func TestCoordinatorHandsPlanToExecutor(t *testing.T) {
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
 	plannerSess := NewSession("planner-sys")
-	coord := NewCoordinator(planner, plannerSess, nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, plannerSess, nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "fix the bug"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -136,7 +136,7 @@ func TestCoordinatorPlanAndExecuteRequiresSubmittedPlan(t *testing.T) {
 		{Type: provider.ChunkDone},
 	}}
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 	err := coord.Run(withNoClosedLoop(context.Background()), "migrate tokens")
 	if err == nil || !strings.Contains(err.Error(), plannerProtocolError) {
 		t.Fatalf("Run = %v, want the planner protocol error", err)
@@ -167,7 +167,7 @@ func TestCoordinatorBindsPlannerApprovalRequestBeforeExecutor(t *testing.T) {
 	}}
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 	gate := &coordinatorApprovalGate{allow: false}
 	coord.SetPlannerPlanApprover(gate)
 
@@ -193,7 +193,7 @@ func TestCoordinatorApprovalIgnoresProseClaims(t *testing.T) {
 	}}
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 	gate := &coordinatorApprovalGate{allow: false}
 	coord.SetPlannerPlanApprover(gate)
 
@@ -216,7 +216,7 @@ func TestCoordinatorRunsExecutorAfterPlannerApproval(t *testing.T) {
 	}}
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 	gate := &coordinatorApprovalGate{allow: true}
 	coord.SetPlannerPlanApprover(gate)
 
@@ -260,7 +260,9 @@ func TestCoordinatorSkipsPlannerForTrivialTurn(t *testing.T) {
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
 	plannerSess := NewSession("planner-sys")
-	coord := NewCoordinator(planner, plannerSess, nil, nil, Options{}, executor, 0, event.Discard, func(context.Context, string) bool { return false })
+	coord := NewCoordinatorWithPlannerPolicy(planner, plannerSess, nil, nil, Options{}, executor, 0, event.Discard, func(context.Context, string) PlannerDecision {
+		return PlannerDecision{Route: PlannerRouteExecutorOnly, Reason: "test"}
+	})
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "what does this function do?"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -611,7 +613,7 @@ func TestCoordinatorPlannerUsesReadOnlyResearchTools(t *testing.T) {
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
 	plannerSess := NewSession(PlannerPromptWithContext("Rule: keep changes narrow."))
-	coord := NewCoordinator(planner, plannerSess, nil, PlannerToolRegistry(parentReg), Options{MaxSteps: 4}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, plannerSess, nil, PlannerToolRegistry(parentReg), Options{MaxSteps: 4}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "fix the bug"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -645,7 +647,7 @@ func TestCoordinatorSetReasoningLanguageClearsPlannerAgent(t *testing.T) {
 	}}
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{ReasoningLanguage: "zh"}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{ReasoningLanguage: "zh"}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{ReasoningLanguage: "zh"}, executor, 0, event.Discard, nil)
 	coord.SetReasoningLanguage("auto")
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "plan a change"); err != nil {
@@ -675,7 +677,7 @@ func TestCoordinatorPlannerMaxStepsUsesExplicitRuntimeKey(t *testing.T) {
 	sink := &recordSink{}
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, sink)
 	plannerSess := NewSession("planner-sys")
-	coord := NewCoordinator(planner, plannerSess, nil, PlannerToolRegistry(parentReg), Options{
+	coord := NewCoordinatorWithPlannerPolicy(planner, plannerSess, nil, PlannerToolRegistry(parentReg), Options{
 		MaxSteps:    2,
 		MaxStepsKey: "planner max_steps",
 	}, executor, 0, sink, nil)
@@ -714,7 +716,7 @@ func TestCoordinatorPlannerMaxStepsZeroIsUnlimited(t *testing.T) {
 	parentReg := tool.NewRegistry()
 	parentReg.Add(coordinatorTestTool{name: "read_file", readOnly: true, output: "ok"})
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, PlannerToolRegistry(parentReg), Options{
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, PlannerToolRegistry(parentReg), Options{
 		MaxSteps:    0,
 		MaxStepsKey: "planner max_steps",
 	}, executor, 0, event.Discard, nil)
@@ -746,7 +748,7 @@ func TestCoordinatorDoesNotNudgeExecutorThatAnswersWithoutActing(t *testing.T) {
 	execReg := tool.NewRegistry()
 	execReg.Add(coordinatorTestTool{name: "write_file", readOnly: false, output: "wrote file"})
 	executor := New(exec, execReg, NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "install the skill"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -781,7 +783,7 @@ func TestCoordinatorAllowsGuidanceOnlyExecutorHandoff(t *testing.T) {
 	}}
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "I just installed EqualizerAPO, now what?"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -804,7 +806,7 @@ func TestCoordinatorAllowsGuidanceOnlyPlanWithExecutorToolContext(t *testing.T) 
 	execReg.Add(coordinatorTestTool{name: "read_file", readOnly: true, output: "file"})
 	execReg.Add(coordinatorTestTool{name: "write_file", readOnly: false, output: "wrote file"})
 	executor := New(exec, execReg, NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "Please advise on the manual audio check."); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -822,7 +824,7 @@ func TestCoordinatorRelaysSubmittedConclusionPlan(t *testing.T) {
 	}}
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "check whether the fix is already present"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -856,7 +858,7 @@ func TestCoordinatorHandoffAffirmsExecutorToolSchemasWhenPlannerClaimsNoMCP(t *t
 	execReg := tool.NewRegistry()
 	execReg.Add(coordinatorTestTool{name: "mcp__github__search", readOnly: true, output: "discussion results"})
 	executor := New(exec, execReg, NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "search GitHub discussions"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -896,7 +898,7 @@ func TestCoordinatorDoesNotNudgeExecutorThatActs(t *testing.T) {
 	execReg := tool.NewRegistry()
 	execReg.Add(coordinatorTestTool{name: "write_file", readOnly: false, output: "wrote file"})
 	executor := New(exec, execReg, NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "install the skill"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -955,7 +957,7 @@ func TestCoordinatorSetPlanModePropagates(t *testing.T) {
 
 	exec := New(nil, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
 
-	coord := NewCoordinator(prov, plannerSess, nil, plannerTools, Options{MaxSteps: 2}, exec, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(prov, plannerSess, nil, plannerTools, Options{MaxSteps: 2}, exec, 0, event.Discard, nil)
 
 	// Both should start with planMode=false
 	if coord.plannerAgent.planMode.Load() {
@@ -1038,7 +1040,7 @@ func TestCoordinatorDoesNotSkipExecutorForAlreadyImplementedPlanWithFollowUp(t *
 	}}
 
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "add refresh token support"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -1076,7 +1078,7 @@ func TestCoordinatorFailsClosedWhenPlannerFails(t *testing.T) {
 
 			executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
 			plannerSess := NewSession("planner-sys")
-			coord := NewCoordinator(tc.planner, plannerSess, nil, nil, Options{}, executor, 0, sink, nil)
+			coord := NewCoordinatorWithPlannerPolicy(tc.planner, plannerSess, nil, nil, Options{}, executor, 0, sink, nil)
 
 			err := coord.Run(withNoClosedLoop(context.Background()), "fix the bug")
 			if err == nil || !strings.Contains(err.Error(), "planner:") {
@@ -1105,7 +1107,7 @@ func TestCoordinatorPropagatesPlannerErrorWhenTurnCancelled(t *testing.T) {
 		{Type: provider.ChunkDone},
 	}}
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(&errorProvider{name: "planner"}, NewSession("planner-sys"), nil, nil, Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(&errorProvider{name: "planner"}, NewSession("planner-sys"), nil, nil, Options{}, executor, 0, event.Discard, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -1151,7 +1153,7 @@ func TestCoordinatorRollsBackPlannerSessionOnToolPlannerFailure(t *testing.T) {
 
 			executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
 			plannerSess := NewSession("planner-sys")
-			coord := NewCoordinator(tc.planner, plannerSess, nil, PlannerToolRegistry(plannerReg), Options{}, executor, 0, event.Discard, nil)
+			coord := NewCoordinatorWithPlannerPolicy(tc.planner, plannerSess, nil, PlannerToolRegistry(plannerReg), Options{}, executor, 0, event.Discard, nil)
 
 			err := coord.Run(withNoClosedLoop(context.Background()), "fix the bug")
 			if err == nil || !strings.Contains(err.Error(), "planner:") {
@@ -1275,7 +1277,7 @@ func TestCoordinatorHandoffSurvivesPlannerCompaction(t *testing.T) {
 		plannerSess.Add(provider.Message{Role: provider.RoleUser, Content: filler})
 		plannerSess.Add(provider.Message{Role: provider.RoleAssistant, Content: filler})
 	}
-	coord := NewCoordinator(planner, plannerSess, nil, PlannerToolRegistry(plannerReg), Options{ContextWindow: 2000}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, plannerSess, nil, PlannerToolRegistry(plannerReg), Options{ContextWindow: 2000}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "fix the bug"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -1312,7 +1314,7 @@ func TestCoordinatorHandoffOmitsToolContextWithoutMCPTools(t *testing.T) {
 	execReg := tool.NewRegistry()
 	execReg.Add(coordinatorTestTool{name: "write_file", readOnly: false, output: "ok"})
 	executor := New(exec, execReg, NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "fix the missing guard"); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -1344,7 +1346,12 @@ func TestCoordinatorPassesTurnContextToPlannerGate(t *testing.T) {
 		sawTurnValue = ctx.Value(gateCtxKey{}) != nil
 		return false
 	}
-	coord := NewCoordinator(&mockProvider{name: "planner"}, NewSession("planner-sys"), nil, nil, Options{}, executor, 0, event.Discard, gate)
+	coord := NewCoordinatorWithPlannerPolicy(&mockProvider{name: "planner"}, NewSession("planner-sys"), nil, nil, Options{}, executor, 0, event.Discard, func(ctx context.Context, input string) PlannerDecision {
+		if gate(ctx, input) {
+			return PlannerDecision{Route: PlannerRoutePlanAndExecute}
+		}
+		return PlannerDecision{Route: PlannerRouteExecutorOnly}
+	})
 
 	ctx := context.WithValue(context.Background(), gateCtxKey{}, "turn")
 	if err := coord.Run(ctx, "what does this do?"); err != nil {
@@ -1390,7 +1397,7 @@ func TestCoordinatorFailedTurnRollbackKeepsCompaction(t *testing.T) {
 		plannerSess.Add(provider.Message{Role: provider.RoleUser, Content: filler})
 		plannerSess.Add(provider.Message{Role: provider.RoleAssistant, Content: filler})
 	}
-	coord := NewCoordinator(planner, plannerSess, nil, PlannerToolRegistry(plannerReg), Options{ContextWindow: 2000}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, plannerSess, nil, PlannerToolRegistry(plannerReg), Options{ContextWindow: 2000}, executor, 0, event.Discard, nil)
 
 	err := coord.Run(withNoClosedLoop(context.Background()), "fix the bug")
 	if err == nil || !strings.Contains(err.Error(), "planner:") {
@@ -1410,79 +1417,5 @@ func TestCoordinatorFailedTurnRollbackKeepsCompaction(t *testing.T) {
 	msgs := plannerSess.Snapshot()
 	if last := msgs[len(msgs)-1]; last.Role == provider.RoleUser && !isCompactionSummary(last) {
 		t.Fatalf("planner session ends in a plain user message after rollback: %q", last.Content)
-	}
-}
-
-// TestCoordinatorPersistsDeniedPlanTurnToExecutorSession pins the denial
-// bookkeeping: a plan the user declines must still land in the executor
-// session (like the no-op path) so the turn survives save/reload, with a note
-// telling the next executor turn that nothing ran, plus a user-facing notice.
-func TestCoordinatorPersistsDeniedPlanTurnToExecutorSession(t *testing.T) {
-	planner := &mockProvider{name: "planner", chunks: submitPlanChunk(`{"objective":"rewrite auth","requires_approval":true,"steps":[{"title":"rewrite auth"}]}`)}
-	exec := &mockProvider{name: "executor", chunks: []provider.Chunk{
-		{Type: provider.ChunkText, Text: "should not run"},
-		{Type: provider.ChunkDone},
-	}}
-	sink := &recordSink{}
-	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, sink)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, sink, nil)
-	gate := &coordinatorApprovalGate{allow: false}
-	coord.SetPlannerPlanApprover(gate)
-
-	if err := coord.Run(withNoClosedLoop(context.Background()), "rewrite auth"); err != nil {
-		t.Fatalf("Run: %v", err)
-	}
-	if gate.calls != 1 {
-		t.Fatalf("approval gate calls = %d, want 1", gate.calls)
-	}
-	if len(exec.requests) != 0 {
-		t.Fatal("executor must not run when the plan is denied")
-	}
-	msgs := executor.sess.conversation.Messages
-	if len(msgs) < 2 {
-		t.Fatalf("executor session messages = %d, want the denied turn persisted", len(msgs))
-	}
-	last := msgs[len(msgs)-1]
-	if last.Role != provider.RoleAssistant || !strings.Contains(last.Content, plannerPlanNotApprovedNote) {
-		t.Fatalf("last executor message = %q (%s), want plan with not-approved note", last.Content, last.Role)
-	}
-	prev := msgs[len(msgs)-2]
-	if prev.Role != provider.RoleUser || !strings.Contains(prev.Content, "rewrite auth") {
-		t.Fatalf("persisted user turn = %q (%s), want original input", prev.Content, prev.Role)
-	}
-	foundNotice := false
-	for _, e := range sink.kinds(event.Notice) {
-		if strings.Contains(e.Text, "not approved") {
-			foundNotice = true
-		}
-	}
-	if !foundNotice {
-		t.Fatal("denied plan should emit a user-facing notice")
-	}
-}
-
-// TestCoordinatorApprovalGateReadsOnlyTheField pins the negation side of the
-// field-only contract: a plan that rules out an approval round in prose (and in
-// its requires_approval field) hands off directly instead of raising a
-// needless approval prompt.
-func TestCoordinatorApprovalGateReadsOnlyTheField(t *testing.T) {
-	planner := &mockProvider{name: "planner", chunks: submitPlanChunk(`{"objective":"修改 config","steps":[{"title":"修改 config.go，无需等待用户批准，直接执行修改"}]}`)}
-	exec := &mockProvider{name: "executor", chunks: []provider.Chunk{
-		{Type: provider.ChunkText, Text: "Done."},
-		{Type: provider.ChunkDone},
-	}}
-	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, plannerRegistryWithSubmitPlan(), Options{}, executor, 0, event.Discard, nil)
-	gate := &coordinatorApprovalGate{allow: false}
-	coord.SetPlannerPlanApprover(gate)
-
-	if err := coord.Run(withNoClosedLoop(context.Background()), "tweak config"); err != nil {
-		t.Fatalf("Run: %v", err)
-	}
-	if gate.calls != 0 {
-		t.Fatalf("approval gate calls = %d, want 0 for requires_approval=false", gate.calls)
-	}
-	if len(exec.requests) == 0 {
-		t.Fatal("executor should run directly for a plan that does not require approval")
 	}
 }

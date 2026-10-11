@@ -11,7 +11,7 @@ import (
 	"deepzora/internal/tool"
 )
 
-func TestTurnOrchestratorUserTextMatchingLegacySyntheticPrefixKeepsUserOrigin(t *testing.T) {
+func TestTurnOrchestratorUserTextMatchingRetiredSyntheticPrefixKeepsUserOrigin(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "session.jsonl")
 	sess := agent.NewSession("sys")
@@ -19,10 +19,8 @@ func TestTurnOrchestratorUserTextMatchingLegacySyntheticPrefixKeepsUserOrigin(t 
 	exec := agent.New(prov, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{Runner: exec, Executor: exec, SessionDir: dir, SessionPath: path, Label: "test"})
 
-	raw := agent.CompletionValidationContinuationPrefix + " give me a plan only"
-	if !IsSyntheticUserMessage(raw) {
-		t.Fatal("test setup: raw text must match the legacy compatibility classifier")
-	}
+	raw := "[Completion validation continuation]" + " give me a plan only"
+
 	if err := newTurnOrchestrator(c).runTurnWithRawDisplay(context.Background(), raw, raw, ""); err != nil {
 		t.Fatal(err)
 	}

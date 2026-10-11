@@ -97,7 +97,7 @@ func (c *Controller) CheckWriteAccess(ctx context.Context, req agent.WriteAccess
 	if !c.writeAccess.interactive {
 		return agent.WriteAccessDecision{Allow: false, Reason: agentHeadlessWriteHint(missingDisplay)}, nil
 	}
-	if c.approval.mode() == ToolApprovalDontAsk {
+	if c.approval.mode() == ToolApprovalReadOnly {
 		return agent.WriteAccessDecision{Allow: false, Reason: agentHeadlessWriteHint(missingDisplay)}, nil
 	}
 	mergeAsk := decision == permission.Ask
@@ -138,7 +138,7 @@ func (c *Controller) checkDangerFullAccessRetry(ctx context.Context, req agent.W
 	if !sandbox.ConsumeDenial(req.Declaration.DenialID, command) {
 		return agent.WriteAccessDecision{Allow: false, Reason: "danger-full-access retry requires a current host-issued denial_id for this exact command"}, nil
 	}
-	if !req.Expandable || !c.writeAccess.interactive || c.approval.mode() == ToolApprovalDontAsk {
+	if !req.Expandable || !c.writeAccess.interactive || c.approval.mode() == ToolApprovalReadOnly {
 		return agent.WriteAccessDecision{Allow: false, Reason: "danger-full-access retry requires an interactive explicit authorization"}, nil
 	}
 	req.Subject = subject
@@ -194,7 +194,7 @@ func (c *Controller) ordinaryWriteDecision(toolName string, args []byte, readOnl
 	switch mode {
 	case ToolApprovalWorkspaceWrite, ToolApprovalDangerFullAccess:
 		policy.Mode = permission.Allow
-	case ToolApprovalDontAsk:
+	case ToolApprovalReadOnly:
 		policy.Mode = permission.Deny
 	}
 	dec := policy.Decide(toolName, readOnly, args)

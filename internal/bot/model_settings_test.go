@@ -46,7 +46,7 @@ func TestBotNewRunAppliesModelSettingsAndKeepsSessionOnFailure(t *testing.T) {
 	}
 	save()
 	gw := NewGateway(GatewayConfig{Model: cfg.DefaultModel, WorkspaceRoot: root}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	msg := InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "snapshot-test", UserID: "test"}
+	msg := InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "snapshot-test", UserID: "test"}
 	key := BuildSessionKey(msg.Session())
 	built, err := gw.buildSessionState(context.Background(), key, msg, gw.sessionProfileForMessage(msg), nil)
 	if err != nil {

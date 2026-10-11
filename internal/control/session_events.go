@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -99,11 +98,7 @@ func releaseSessionEventStore(dir string, entry *sharedSessionEventStore) func(c
 }
 
 func (c *Controller) openSessionEventStore(sessionPath string) (*session.Session, func(context.Context) error, error) {
-	if c.NativeLegacySession() {
-		// The original transcript remains the only message authority. Runtime
-		// envelopes use the legacy ledger; opening must not seed a v4 copy.
-		return nil, nil, nil
-	}
+
 	if service, runtime, exclusive := c.v3Binding(); runtime != nil {
 		return runtime.Session(), nil, nil
 	} else if exclusive && service != nil {
@@ -188,14 +183,7 @@ func (c *Controller) seedSessionEventsFromExecutor(reason string) error {
 	if c == nil || c.executor == nil {
 		return nil
 	}
-	// Existing legacy transcripts are loaded by Resume after Controller
-	// construction. Seeding the constructor's system-only placeholder here
-	// would make it look authoritative and discard the loaded history.
-	if reason == "session-open" {
-		if info, err := os.Stat(c.SessionPath()); err == nil && info.Size() > 0 {
-			return nil
-		}
-	}
+
 	messages := c.executor.Session().Snapshot()
 	for i := range messages {
 		if strings.TrimSpace(messages[i].ID) == "" {
@@ -206,30 +194,6 @@ func (c *Controller) seedSessionEventsFromExecutor(reason string) error {
 		return err
 	}
 	return nil
-}
-
-// importLegacyResumeOverPlaceholder repairs the only safe pre-migration
-// overlap: an older build may have created a system-only v3 sidecar before it
-// loaded an existing legacy transcript. No executed turn can be present in
-// that projection, so replacing it with the frozen loaded history is lossless.
-func (c *Controller) importLegacyResumeOverPlaceholder(incoming *agent.Session) error {
-	if c == nil || incoming == nil {
-		return nil
-	}
-	if !c.sessionEventCommitAllowed() {
-		return nil
-	}
-	snapshot, ok := c.sessionEventSnapshot()
-	if !ok || len(snapshot.Projection.ModelMessages) != 1 || len(incoming.Snapshot()) <= 1 {
-		return nil
-	}
-	messages := incoming.Snapshot()
-	for i := range messages {
-		if strings.TrimSpace(messages[i].ID) == "" {
-			messages[i].ID = agent.NewMessageID()
-		}
-	}
-	return c.replaceSessionEventProjection(context.Background(), "legacy-resume-placeholder", messages)
 }
 
 func (c *Controller) restoreExecutorFromSessionEvents() {

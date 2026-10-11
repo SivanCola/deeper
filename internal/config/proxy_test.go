@@ -62,7 +62,7 @@ proxy_url = "${PROJECT_PROXY_URL}"
 name = "project-provider"
 kind = "openai"
 base_url = "https://provider.invalid/v1"
-model = "model"
+models = ["model"]
 api_key_env = "`+key+`"
 `), 0o600); err != nil {
 		t.Fatal(err)

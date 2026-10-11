@@ -11,7 +11,6 @@ const root = createRoot(document.getElementById("root")!);
 
 function summary(mutations: number): WireCompletionSummary {
   return {
-    preset: "balanced",
     verdict: "partial",
     mutations,
     checks_passed: 2,

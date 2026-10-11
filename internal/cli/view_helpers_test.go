@@ -169,25 +169,6 @@ func TestRenderHelpDocsShowsOnlyRuntimeWinner(t *testing.T) {
 	}
 }
 
-func TestRenderHelpDocsUsesQualifiedFallbackForHiddenAlias(t *testing.T) {
-	got := renderHelp(72,
-		[]command.Command{
-			{Name: "docs", Plugin: "manuals", Hidden: true},
-			{Name: "manuals:docs", Plugin: "manuals", Description: "plugin docs"},
-		},
-		nil,
-		nil,
-	)
-	if strings.Contains(got, "\n  /docs ") {
-		t.Fatalf("help exposed a misleading hidden /docs alias:\n%s", got)
-	}
-	for _, want := range []string{"/deepzora:docs", "/manuals:docs"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("help missing %q:\n%s", want, got)
-		}
-	}
-}
-
 func TestRenderSkillPathsStaysWithinWidth(t *testing.T) {
 	width := 72
 	got := renderSkillPaths(width, []skill.Root{{

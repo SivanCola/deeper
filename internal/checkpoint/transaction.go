@@ -58,10 +58,9 @@ func (s *Store) PrepareRewind(turn int, scope RewindScope, sessionRev int64, bou
 	s.mu.Lock()
 	writers := append([]ActiveWriter(nil), s.activeWriters...)
 	plan.ActiveWriters = writers
-	cov, gaps, legacy, expired := s.coverageFromTurnLocked(turn)
+	cov, gaps, expired := s.coverageFromTurnLocked(turn)
 	plan.Coverage = cov
 	plan.CoverageGaps = gaps
-	plan.Legacy = legacy
 	plan.ExpiredFilePayload = expired
 	files := s.filesFromTurnLocked(turn)
 	plan.Files = files
@@ -108,13 +107,6 @@ func (s *Store) PrepareRewind(turn int, scope RewindScope, sessionRev int64, bou
 			plan.CanFiles = false
 			plan.DisabledReason = "file recovery payload expired"
 			plan.Conflicts = append(plan.Conflicts, RewindConflict{Reason: ConflictExpired})
-		} else if legacy {
-			// Legacy: files can be restored only with explicit warning; batch
-			// overwrite without prompt is forbidden. Prepare still reports files
-			// but CanFiles stays false for the unprompted path.
-			plan.CanFiles = false
-			plan.DisabledReason = "legacy checkpoint cannot verify later manual edits"
-			plan.Conflicts = append(plan.Conflicts, RewindConflict{Reason: ConflictCoverageLegacy})
 		} else {
 			conflicts := s.precheckFiles(turn)
 			plan.Conflicts = append(plan.Conflicts, conflicts...)
@@ -1296,10 +1288,6 @@ func (s *Store) precheckFiles(fromTurn int) []RewindConflict {
 		}
 		// Prefer after fingerprint for conflict detection.
 		reason := CompareIdentity(fp, rev.AfterSHA256, rev.AfterExisted, rev.AfterMode)
-		if reason == ConflictCoverageLegacy {
-			// Legacy handled at plan level; skip per-file for batch.
-			continue
-		}
 		if reason != "" {
 			conflicts = append(conflicts, RewindConflict{
 				Path:            p,
@@ -1369,25 +1357,14 @@ func (s *Store) filesFromTurnLocked(fromTurn int) []string {
 	return out
 }
 
-func (s *Store) coverageFromTurnLocked(fromTurn int) (Coverage, []CoverageGap, bool, bool) {
+func (s *Store) coverageFromTurnLocked(fromTurn int) (Coverage, []CoverageGap, bool) {
 	var gaps []CoverageGap
-	legacy := false
 	expired := false
 	hasFiles := false
 	partial := false
 	for _, c := range s.all() {
 		if c.Turn < fromTurn {
 			continue
-		}
-		if c.SchemaVersion < SchemaV2 && c.SchemaVersion != 0 {
-			legacy = true
-		}
-		if c.SchemaVersion == 0 {
-			// v1 had no schemaVersion field
-			legacy = true
-		}
-		if c.Coverage == CoverageLegacy || c.Legacy {
-			legacy = true
 		}
 		if c.ExpiredFilePayload {
 			expired = true
@@ -1400,22 +1377,19 @@ func (s *Store) coverageFromTurnLocked(fromTurn int) (Coverage, []CoverageGap, b
 			hasFiles = true
 		}
 	}
-	if legacy {
-		return CoverageLegacy, append(gaps, CoverageGap{Reason: GapLegacyUnverified}), true, expired
-	}
 	if expired {
-		return CoveragePartial, append(gaps, CoverageGap{Reason: GapExpiredPayload}), false, true
+		return CoveragePartial, append(gaps, CoverageGap{Reason: GapExpiredPayload}), true
 	}
 	if !hasFiles {
 		if len(gaps) > 0 {
-			return CoverageNone, gaps, false, false
+			return CoverageNone, gaps, false
 		}
-		return CoverageNone, nil, false, false
+		return CoverageNone, nil, false
 	}
 	if partial || len(gaps) > 0 {
-		return CoveragePartial, gaps, false, false
+		return CoveragePartial, gaps, false
 	}
-	return CoverageComplete, nil, false, false
+	return CoverageComplete, nil, false
 }
 
 func (s *Store) loadRevisionBytes(rev FileRevision) ([]byte, error) {
@@ -1473,13 +1447,6 @@ func (s *Store) restoreCheckpointBackup(backup []byte) error {
 		byTurn[c.Turn] = c
 		if err := s.persist(c); err != nil {
 			return fmt.Errorf("persist restored checkpoint turn %d: %w", c.Turn, err)
-		}
-		counterpart := filepath.Join(s.expiredDir(), fmt.Sprintf("turn-%d.json", c.Turn))
-		if c.ExpiredFilePayload {
-			counterpart = filepath.Join(s.dir, fmt.Sprintf("turn-%d.json", c.Turn))
-		}
-		if err := os.Remove(counterpart); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("remove stale checkpoint counterpart turn %d: %w", c.Turn, err)
 		}
 	}
 	// Rebuild done/cur: highest turn as cur if it was cur; else all in done.
@@ -1556,9 +1523,8 @@ func (s *Store) PrepareFileRevert(path string, sessionRev int64) (RewindPlan, er
 		// generic conflict-overwrite affordance into an unsafe legacy restore.
 		plan.PlanID = ""
 		plan.CanFiles = false
-		plan.Legacy = true
-		plan.Coverage = CoverageLegacy
-		plan.DisabledReason = "legacy checkpoint cannot verify later manual edits"
+		plan.Coverage = CoveragePartial
+		plan.DisabledReason = "checkpoint cannot verify later manual edits"
 		return plan, nil
 	}
 	fp, fperr := FingerprintPath(s.root, abs)

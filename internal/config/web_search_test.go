@@ -157,14 +157,14 @@ func TestWebSearchTOMLRoundTripPreservesExplicitOff(t *testing.T) {
 }
 
 func TestLegacyOfficialWebSearchOmissionDefaultsOnAcrossLoaders(t *testing.T) {
-	const legacy = `config_version = 1
+	const legacy = `config_version = 12
 default_model = "deepseek-responses/deepseek-v4-flash"
 
 [[providers]]
 name = "deepseek-responses"
 kind = "responses"
 base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 `
 	home := t.TempDir()
 	workspace := t.TempDir()

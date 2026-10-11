@@ -13,7 +13,6 @@ func builtToolNames(t *testing.T, set ablation.Set) map[string]bool {
 	t.Helper()
 	ctrl, err := Build(context.Background(), Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
-		TokenMode:  TokenModeFull,
 		Sink:       event.Discard,
 		Ablation:   set,
 	})

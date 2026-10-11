@@ -120,7 +120,6 @@ func cliCompletionRootSpec() cliCompletionSpec {
 		completionSpec("web", serveFlags),
 		completionSpec("setup", []cliCompletionFlag{completionFlag("--local -l", cliCompletionNoValue), help}),
 		completionSpec("config", []cliCompletionFlag{help},
-			completionSpec("auto-plan", []cliCompletionFlag{completionFlag("--local", cliCompletionNoValue), help}),
 			completionSpec("reasoning-language", []cliCompletionFlag{completionFlag("--local", cliCompletionNoValue), help}),
 			completionSpec("compact-ratio", []cliCompletionFlag{completionFlag("--local", cliCompletionNoValue), help}),
 			completionSpec("currency", []cliCompletionFlag{completionFlag("--local", cliCompletionNoValue), help}),

@@ -130,7 +130,7 @@ func TestHookMachineStatusHasStableRedactedSources(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &response); err != nil {
 		t.Fatalf("decode hook status: %v", err)
 	}
-	if response.SchemaVersion != machineSchemaVersion || response.Command != "hook.status" || !response.TrustedProject {
+	if response.SchemaVersion != machineSchemaVersion || response.Command != "hook.status" {
 		t.Fatalf("status = %+v", response)
 	}
 	if len(response.Sources) != 2 {

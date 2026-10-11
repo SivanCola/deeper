@@ -23,7 +23,7 @@ func TestPruneAndSnipAreNoOps(t *testing.T) {
 		{Role: provider.RoleTool, ToolCallID: "t1", Name: "read_file", Content: strings.Repeat("x", 8000)},
 		{Role: provider.RoleUser, Content: "next"},
 	}}
-	a := New(nil, tool.NewRegistry(), sess, Options{ContextWindow: 100_000, RecentKeep: 2}, event.Discard)
+	a := New(nil, tool.NewRegistry(), sess, Options{ContextWindow: 100_000}, event.Discard)
 	st, err := a.PruneStaleToolResults()
 	if err != nil {
 		t.Fatal(err)
@@ -168,8 +168,7 @@ func TestMaintenancePrunesBeforeSummaryAndStopsWhenPressureClears(t *testing.T) 
 	)
 	prov := &countingProvider{reply: "digest"}
 	a := New(prov, tool.NewRegistry(), &Session{Messages: msgs}, Options{
-		ContextWindow: 30_000, CompactRatio: 0.5, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: 30_000, CompactRatio: 0.5}, event.Discard)
 	if _, err := a.contextManager().Prepare(context.Background(), ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
 		t.Fatal(err)
 	}

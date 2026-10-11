@@ -12,7 +12,7 @@ import (
 )
 
 // TestGoalStateWritesAreConcurrencySafe hammers goal-state persistence from many
-// goroutines (each GoalStrict builds the JSON under c.mu, then writes off-lock via
+// goroutines (each SetGoal builds the JSON under the goal lock, then writes via
 // goalWriteMu) while c.mu-guarded reads run concurrently. Under -race this proves
 // the new build-under-lock / write-off-lock split has no data race, and that
 // goalWriteMu keeps the on-disk file from being torn by interleaved writes.
@@ -22,7 +22,7 @@ func TestGoalStateWritesAreConcurrencySafe(t *testing.T) {
 	sess := agent.NewSession("sys")
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, SessionPath: path, Label: "test"})
-	c.SetGoalWithResearchMode("concurrent goal", GoalResearchOn)
+	c.SetGoal("concurrent goal")
 
 	stop := make(chan struct{})
 	var readers sync.WaitGroup
@@ -45,8 +45,8 @@ func TestGoalStateWritesAreConcurrencySafe(t *testing.T) {
 		writers.Add(1)
 		go func(w int) {
 			defer writers.Done()
-			for i := range 10 {
-				c.GoalStrict(i%2 == 0) // build under c.mu, write off-lock
+			for range 10 {
+				c.SetGoal("concurrent goal")
 			}
 		}(w)
 	}

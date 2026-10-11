@@ -1,19 +1,18 @@
 import { ErrorMessage } from "./ErrorMessage";
 import { Archive, ArrowLeft, Ellipsis, MessageSquare, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { app, onLegacyEmptySessionCleanupChanged, onProjectTreeChanged } from "../lib/bridge";
+import { app, onProjectTreeChanged } from "../lib/bridge";
 import { getLocale, useT } from "../lib/i18n";
-import type { HistoryMessage, SessionMeta } from "../lib/types";
+import type { HistoryMessage } from "../lib/types";
 import type { SessionRef } from "../lib/sessionRef";
-import type { LegacyEmptySessionCleanupStatus, SessionLifecycleRequest } from "../generated/desktopContract.generated";
+import type { SessionLifecycleRequest } from "../generated/desktopContract.generated";
 import { useConfirmDialog } from "./ConfirmDialog";
 import { ContextMenu, type ContextMenuPoint } from "./ContextMenu";
 import "./ArchivedSessionsList.css";
 
-type TrashRow = { key: string; ref?: SessionRef; recoveryEntryId?: string; cleanupKind?: string; workspaceId: string; title: string; workspace: string; updatedAt: number; canRestore: boolean; canPreview: boolean; canPurge: boolean; health: string };
+type TrashRow = { key: string; ref?: SessionRef; recoveryEntryId?: string; workspaceId: string; title: string; workspace: string; updatedAt: number; canRestore: boolean; canPreview: boolean; canPurge: boolean; health: string };
 export function ArchivedSessionsList({ active, onOpenSession }: {
   active: boolean; onOpenSession: (ref: SessionRef) => Promise<void>;
-  legacyList?: () => Promise<SessionMeta[]>; legacyRestore?: (path: string) => Promise<void>; legacyPurge?: (path: string) => Promise<void>;
 }) {
   const t = useT();
   const [rows, setRows] = useState<TrashRow[]>([]);
@@ -29,7 +28,6 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
   const [previewError, setPreviewError] = useState("");
   const [previewCursor, setPreviewCursor] = useState("");
   const [pendingRequest, setPendingRequest] = useState<SessionLifecycleRequest | null>(null);
-  const [cleanupStatus, setCleanupStatus] = useState<LegacyEmptySessionCleanupStatus>();
   const [managementMenu, setManagementMenu] = useState<ContextMenuPoint | null>(null);
   const [sessionMenu, setSessionMenu] = useState<ContextMenuPoint | null>(null);
   const registryGeneration = useRef(0);
@@ -48,7 +46,7 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
         if (seq !== generation.current) return;
         if (snapshotGeneration !== undefined && snapshotGeneration !== page.generation) throw new Error(t("history.failedLoadHistory"));
         snapshotGeneration = page.generation;
-        next.push(...page.items.map(row => ({ key: row.id, ref: row.ref ?? undefined, recoveryEntryId: row.recoveryEntryId, cleanupKind: row.cleanupKind, workspaceId: row.workspaceId, title: row.title,
+        next.push(...page.items.map(row => ({ key: row.id, ref: row.ref ?? undefined, recoveryEntryId: row.recoveryEntryId, workspaceId: row.workspaceId, title: row.title,
           workspace: row.workspaceTitle, updatedAt: row.archivedAt, canRestore: row.canRestore,
           canPreview: row.canPreview, canPurge: row.canPurge, health: row.health })));
         const after = page.nextCursor ?? "";
@@ -64,14 +62,6 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
         setSelected(undefined); setPreview([]); setPreviewCursor(""); setPreviewLoading(false); setPreviewError("");
       } else if (selectedRow) setSelected(selectedRow);
       setRows(next); setLoadError("");
-      try {
-        const cleanup = await app.GetLegacyEmptySessionCleanupStatus();
-        if (seq === generation.current) setCleanupStatus(cleanup);
-      } catch {
-        // Trash remains usable when a future or damaged cleanup sidecar makes
-        // only the optional upgrade status unavailable.
-        if (seq === generation.current) setCleanupStatus(undefined);
-      }
     } catch (err) {
       if (seq === generation.current) setLoadError(err instanceof Error ? err.message : String(err));
       throw err;
@@ -81,8 +71,7 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
     if (!active) return;
     void reload().catch(() => {});
     const unsubscribe = onProjectTreeChanged(() => { if (!mutating.current) void reload().catch(() => {}); });
-    const unsubscribeCleanup = onLegacyEmptySessionCleanupChanged(setCleanupStatus);
-    return () => { generation.current++; previewGeneration.current++; surfaceGeneration.current++; unsubscribe(); unsubscribeCleanup(); };
+    return () => { generation.current++; previewGeneration.current++; surfaceGeneration.current++; unsubscribe(); };
   }, [active, reload]);
   useEffect(() => { if (!active) dismiss(); }, [active, dismiss]);
   useEffect(() => { if (!active) { setManagementMenu(null); setSessionMenu(null); } }, [active]);
@@ -123,7 +112,7 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
           continue;
         }
         succeeded++;
-        const id = item.target.ref?.sessionId ?? item.target.recoveryEntryId?.replace(/^legacy-cleanup:/, "");
+        const id = item.target.ref?.sessionId ?? item.target.recoveryEntryId;
         setRows(current => current.filter(row => row.ref?.sessionId !== id && row.key !== id));
         if (selectedKey.current === id) closePreview();
       }
@@ -175,9 +164,6 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
       <button className="btn archived-sessions__management" aria-label={t("history.archiveManage")} aria-haspopup="menu" aria-expanded={!!managementMenu} disabled={busy || loading} onClick={event => openMenu(event, "management")}><Ellipsis size={16} /></button>
     </div>
     {notice && <div className="management-notice" role="status">{notice}</div>}
-    {!!cleanupStatus?.pending && <div className="management-notice" role="status">
-      {t("history.legacyCleanupPending", { n: cleanupStatus.pending })}
-    </div>}
     {(error || pendingRequest) && <div className="management-notice" role="alert"><ErrorMessage error={error} /><button className="btn btn--small" disabled={busy} onClick={() => pendingRequest ? void mutate(pendingRequest) : refresh()}>{t(pendingRequest ? "history.retryFailed" : "common.retry")}</button></div>}
     {loadError && <div className="management-notice" role="alert"><ErrorMessage error={loadError} /><button className="btn btn--small" disabled={busy} onClick={refresh}>{t("common.retry")}</button></div>}
     <div className="archived-sessions__layout" data-detail={!!visibleSelected}>
@@ -185,7 +171,7 @@ export function ArchivedSessionsList({ active, onOpenSession }: {
         {loading && <p role="status">{t("common.loading")}</p>}
         {!loading && !error && !filtered.length && <div className="archived-sessions__empty"><Archive size={30} /><h3>{t(query ? "history.noTrashMatches" : "history.noArchivedSessions")}</h3><p>{t(query ? "history.tryOtherSearch" : "history.emptyTrashHint")}</p></div>}
         {filtered.map(row => <div className="archived-sessions__row" key={row.key} data-selected={visibleSelected?.key === row.key || undefined}>
-          <button className="archived-sessions__open" disabled={busy || !row.canPreview} onClick={() => void select(row)} title={row.title}><MessageSquare size={17} /><span><strong>{row.title}</strong><small>{row.workspace}{row.cleanupKind === "topic_placeholder" && <> · {t("history.legacyPlaceholder")}</>}{row.health === "purge_pending" && <> · {t("history.purgePending")}</>}{row.updatedAt > 0 && <> · {new Date(row.updatedAt).toLocaleDateString(getLocale())}</>}</small></span></button>
+          <button className="archived-sessions__open" disabled={busy || !row.canPreview} onClick={() => void select(row)} title={row.title}><MessageSquare size={17} /><span><strong>{row.title}</strong><small>{row.workspace}{row.health === "purge_pending" && <> · {t("history.purgePending")}</>}{row.updatedAt > 0 && <> · {new Date(row.updatedAt).toLocaleDateString(getLocale())}</>}</small></span></button>
           {!row.canPreview && <button className="btn btn--small" disabled={busy || !row.canRestore} aria-label={t("history.restoreSession")} onClick={() => void mutate(requestFor([row], "restore"))}><RotateCcw size={14} />{t("history.restore")}</button>}
           {!row.canPreview && <button className="btn btn--small archived-sessions__delete" disabled={busy || !row.canPurge} aria-label={`${t("history.permanentlyDelete")} ${row.title}`} onClick={() => void purge([row])}><Trash2 size={14} /></button>}
         </div>)}

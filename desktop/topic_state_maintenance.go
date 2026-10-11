@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -29,13 +28,13 @@ func (m *topicStateManager) withExclusiveScope(workspaceRoot string, mutate func
 		return err
 	}
 	lockCtx, cancelLock := context.WithTimeout(context.Background(), topicStateLockTimeout)
-	release, err := filelock.Acquire(lockCtx, scope.path+".compat.lock")
+	release, err := filelock.Acquire(lockCtx, scope.path+".lock")
 	cancelLock()
 	if err != nil {
 		return err
 	}
 	defer release()
-	if err := m.ensureOpenAndReconcileLocked(scope); err != nil {
+	if err := m.ensureStoreOpenLocked(scope); err != nil {
 		return err
 	}
 	ctx, cancelOperation := m.operationContext()
@@ -45,8 +44,6 @@ func (m *topicStateManager) withExclusiveScope(workspaceRoot string, mutate func
 			return err
 		}
 	}
-	if err := m.mirrorIfPendingLocked(ctx, scope); err != nil {
-		slog.Warn("desktop: topic legacy mirror pending after maintenance", "scope", topicScopeKind(scope.root), "error_type", topicStateErrorType(err))
-	}
+
 	return nil
 }

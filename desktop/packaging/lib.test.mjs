@@ -163,7 +163,7 @@ test("signing files are every PE file, sorted, deduplicated and slash-normalised
   ]);
   assert.deepEqual(files, ["app/Deepzora.exe", "app/d3dcompiler_47.DLL", "app/ffmpeg.dll", "deepzora-desktop.exe", "deepzora-uninstall.exe"]);
   assert.deepEqual(parseSigningFileList("# comment\r\napp/Deepzora.exe\n\n deepzora-cli.exe \n"), ["app/Deepzora.exe", "deepzora-cli.exe"]);
-  assert.deepEqual([...WINDOWS_FLAT_PAYLOAD], ["deepzora-desktop.exe", "deepzora-guard.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "deepzora-uninstall.exe"]);
+  assert.deepEqual([...WINDOWS_FLAT_PAYLOAD], ["deepzora-desktop.exe", "deepzora-layout-installer.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "deepzora-uninstall.exe"]);
 });
 
 test("required members cover every artifact and the checks report gaps", () => {
@@ -184,12 +184,11 @@ test("required members cover every artifact and the checks report gaps", () => {
   ];
   assert.deepEqual(checkMembers(portable, "windows-portable-zip"), { missing: [], forbidden: [] });
   assert.deepEqual(checkMembers([...portable, "deepzora-launcher.exe"], "windows-portable-zip").forbidden, ["deepzora-launcher.exe"]);
-  assert.deepEqual(checkMembers([...portable, "deepzora-launcher.exe"], "windows-portable-zip", "legacy-dual"), { missing: [], forbidden: [] });
-  assert.deepEqual(checkMembers(portable, "windows-portable-zip", "legacy-dual").missing, ["deepzora-launcher.exe"]);
+  assert.throws(() => checkMembers(portable, "windows-portable-zip", "legacy-dual"), /unknown Windows portable layout/);
   assert.deepEqual(checkMembers([...portable, "unexpected.EXE"], "windows-portable-zip").forbidden, ["unexpected.EXE"]);
   assert.throws(() => checkMembers(portable, "windows-portable-zip", "auto"), /unknown Windows portable layout/);
   assert.deepEqual(checkMembers(portable.filter((name) => !name.endsWith("app/Deepzora.exe")), "windows-portable-zip").missing, [String(/^versions\/v[^/]+\/app\/Deepzora\.exe$/)]);
-  assert.deepEqual(checkMembers([...portable, "deepzora-guard.exe"], "windows-portable-zip").forbidden, ["deepzora-guard.exe"]);
+  assert.deepEqual(checkMembers([...portable, "deepzora-layout-installer.exe"], "windows-portable-zip").forbidden, ["deepzora-layout-installer.exe"]);
 
   const winApp = ["Deepzora.exe", "ffmpeg.dll", "libEGL.dll", "libGLESv2.dll", "resources.pak", "icudtl.dat", "locales\\en-US.pak", "resources\\app.asar", "resources\\app\\index.html", "resources\\build.json", "resources\\icons\\appicon.png", "resources\\icons\\trayTemplate.png", "resources\\icons\\trayTemplate@2x.png"];
   assert.deepEqual(checkMembers(winApp, "windows-app-dir"), { missing: [], forbidden: [] });
@@ -278,7 +277,7 @@ test("zip listing reads the central directory without extracting", () => {
   }
 });
 
-test("Windows ZIP verification checks launcher bytes and explicitly selects historical layout", t => {
+test("Windows ZIP verification checks current entries and rejects historical layout", t => {
   const dir = mkdtempSync(join(tmpdir(), "deepzora-entry-zip-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const archive = join(dir, "Deepzora-windows-amd64.zip");
@@ -296,7 +295,7 @@ test("Windows ZIP verification checks launcher bytes and explicitly selects hist
     assert.notEqual(verify("legacy-dual").status, 0);
     writeFileSync(archive, storedZip([...entries, ["deepzora-launcher.exe", "gui"]], compressed));
     assert.notEqual(verify("canonical").status, 0);
-    assert.equal(verify("legacy-dual").status, 0);
+    assert.notEqual(verify("legacy-dual").status, 0);
     writeFileSync(archive, storedZip([...entries, ["deepzora-launcher.exe", "different"]], compressed));
     assert.notEqual(verify("legacy-dual").status, 0);
   }
@@ -304,8 +303,7 @@ test("Windows ZIP verification checks launcher bytes and explicitly selects hist
   assert.throws(() => readZipMember(archive, "Deepzora.exe"), /duplicate/);
 });
 
-test("candidate layout declaration agrees with the portable verifier default", () => {
-  assert.equal(readFileSync(new URL("./windows-portable-layout.txt", import.meta.url), "utf8").trim(), "canonical");
+test("the portable verifier requires only current canonical entries", () => {
   assert.ok(!requiredMembers("windows-portable-zip").includes("deepzora-launcher.exe"));
 });
 
@@ -409,7 +407,7 @@ test("installer unlock checks do not create or lock missing release entries", ()
   const nsi = read("build/windows/installer/project.nsi");
   const body = nsi.slice(nsi.indexOf("Function deepzora.waitForExecutableUnlock"), nsi.indexOf("FunctionEnd", nsi.indexOf("Function deepzora.waitForExecutableUnlock")));
   const opens = [...body.matchAll(/FileOpen \$1 "([^"]+)" a/g)];
-  assert.equal(opens.length, 6);
+  assert.equal(opens.length, 5);
   for (const open of opens) {
     const preceding = body.slice(0, open.index);
     const guard = `IfFileExists "${open[1]}" 0 `;

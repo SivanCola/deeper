@@ -71,12 +71,6 @@ func TestDetectVendorAndModeDefaults(t *testing.T) {
 	if got := (Config{BaseURL: "https://api.deepseek.com", Mode: "stateful"}).mode(); got != "stateful" {
 		t.Fatalf("explicit mode = %q", got)
 	}
-	if got := (Config{BaseURL: "https://api.deepseek.com", Mode: "stateful", Stateful: boolPtr(false)}).mode(); got != "stateful" {
-		t.Fatalf("mode must win over legacy stateful, got %q", got)
-	}
-	if got := (Config{BaseURL: "https://example.com", Stateful: boolPtr(false)}).mode(); got != "stateless" {
-		t.Fatalf("legacy stateful=false mode = %q", got)
-	}
 }
 
 func TestDeepSeekEffortUsesResponsesReasoningShape(t *testing.T) {
@@ -165,19 +159,6 @@ func TestRequestUsesOnlySafeProviderOutputDefaults(t *testing.T) {
 	disabledBody, _, _ := disabled.buildRequestBody(provider.Request{Messages: message})
 	if _, exists := disabledBody["max_output_tokens"]; exists {
 		t.Fatalf("disabled DeepSeek Responses budget remained present: %#v", disabledBody)
-	}
-}
-
-func TestFactoryPreservesUnsetLegacyStatefulForVendorDetection(t *testing.T) {
-	p, err := newFromConfig(provider.Config{
-		Name: "deepseek", BaseURL: "https://api.deepseek.com", Model: "deepseek-v4-flash",
-		Extra: map[string]any{"stateful": (*bool)(nil)},
-	})
-	if err != nil {
-		t.Fatalf("newFromConfig: %v", err)
-	}
-	if got := p.(*client).mode; got != "stateless" {
-		t.Fatalf("unset stateful mode = %q, want DeepSeek vendor default stateless", got)
 	}
 }
 

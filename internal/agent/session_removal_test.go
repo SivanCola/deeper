@@ -49,7 +49,6 @@ func TestSessionRemovalGuardBlocksWhileLeaseHeld(t *testing.T) {
 	for _, p := range []string{
 		store.SessionLockFile(path),
 		store.SessionLeaseLock(path),
-		store.SessionLeaseInfo(path),
 	} {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
 			t.Errorf("sidecar survived removal: %s (err=%v)", p, err)

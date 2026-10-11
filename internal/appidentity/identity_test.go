@@ -13,17 +13,3 @@ func TestAppUserModelIDIsStableAndVersionIndependent(t *testing.T) {
 		t.Fatalf("invalid AppUserModelID %q", AppUserModelID)
 	}
 }
-
-func TestAppUserModelIDDoesNotMergeStudio(t *testing.T) {
-	for _, studioID := range []string{legacyAppUserModelID, studioAppUserModelID} {
-		if AppUserModelID == studioID {
-			t.Fatalf("desktop identity must not share Studio identity %q", studioID)
-		}
-	}
-}
-
-func TestAppUserModelIDDoesNotMergeLegacyTauriDesktop(t *testing.T) {
-	if AppUserModelID == legacyTauriAppUserModelID {
-		t.Fatalf("current AppUserModelID %q must remain distinct from Deepzora Desktop 0.53", AppUserModelID)
-	}
-}

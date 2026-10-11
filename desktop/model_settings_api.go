@@ -182,13 +182,7 @@ func (a *App) ApplyModelSettings(change ModelSettingsChange) (result ModelSettin
 		if err := applyModelSettingsChange(c, change, &result); err != nil {
 			return err
 		}
-		if change.Kind == "protocol_upgrade" {
-			var changed bool
-			changed, err = c.UpgradeDeepSeekProviderProtocolLocked(path, change.Name)
-			if err == nil && !changed {
-				err = fmt.Errorf("provider is not eligible for protocol upgrade")
-			}
-		} else if change.Kind == "preference" && change.Field == "search" {
+		if change.Kind == "preference" && change.Field == "search" {
 			err = c.SaveWebSearchModelTo(path)
 		} else {
 			err = c.SaveModelSettingsTo(path, baseline)
@@ -294,11 +288,6 @@ func applyModelSettingsChange(c *config.Config, change ModelSettingsChange, resu
 		return addProviderPresetConfig(c, change.PresetID, modelSettingsKey(change))
 	case "preset_reset":
 		return resetProviderPresetConfig(c, change.PresetID)
-	case "protocol_upgrade":
-		if change.Name == "" {
-			return fmt.Errorf("provider name is required")
-		}
-		return nil
 	case "catalogs":
 		revision := providerCredentialsRevision()
 		for _, update := range change.Catalogs {
@@ -433,8 +422,6 @@ func validateModelSettingsFields(change ModelSettingsChange) error {
 		allowed = "PresetID Key"
 	case "preset_reset":
 		allowed = "PresetID"
-	case "protocol_upgrade":
-		allowed = "Name"
 	case "catalogs":
 		allowed = "Catalogs"
 	case "provider_remove", "access_remove":

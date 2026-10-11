@@ -75,7 +75,7 @@ const deepSeekAnthropic: ProviderView = {
   baseUrl: "https://api.deepseek.com/anthropic",
   models: ["deepseek-v4-flash"],
   visionModels: [],
-  visionModelsConfigured: true,
+
   visionCapability: "unsupported",
   modelsUrl: "",
   default: "deepseek-v4-flash",

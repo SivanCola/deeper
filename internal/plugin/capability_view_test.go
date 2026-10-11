@@ -84,7 +84,5 @@ func TestProfileNormalizeMapsUnknownToCore(t *testing.T) {
 	if got := HostProfile("future-v9").Normalize(); got != HostProfileCore {
 		t.Fatalf("unknown profile normalized to %q", got)
 	}
-	if got := HostProfile("").UsesEnhancedCache(); got {
-		t.Fatal("empty profile must not use the enhanced cache")
-	}
+
 }

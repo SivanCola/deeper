@@ -53,9 +53,7 @@ import (
 	"path/filepath"
 	"regexp"
 	goruntime "runtime"
-	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -210,9 +208,9 @@ type App struct {
 	runtimeBySessionKey map[string]*desktopSessionRuntime
 	// sessionServices contains one SessionID-only registry for the whole local
 	// Desktop host. desktopSessions owns its persistence and navigation state.
-	sessionServicesMu         sync.Mutex
-	sessionServices           map[string]*session.Service
-	historicalSessionServices map[string]*session.Service
+	sessionServicesMu      sync.Mutex
+	sessionServices        map[string]*session.Service
+	projectSessionServices map[string]*session.Service
 	// skillWatch is the one skill-watch service this host shares across every
 	// controller build, so the host owns a single watcher helper process
 	// instead of one per rebuild. Created on first use; closed, never cleared, at shutdown.
@@ -535,7 +533,7 @@ func (a *App) startup(ctx context.Context) {
 	a.mu.Lock()
 	a.tabsRestored = make(chan struct{})
 	a.mu.Unlock()
-	a.startDesktopSessionMigration(ctx)
+	a.startDesktopSessionRecovery(ctx)
 
 	if cfg, err := config.Load(); err == nil && cfg.DesktopMetrics() && version != "dev" {
 		a.metrics.Store(newMetricsAggregator(config.MemoryUserDir()))
@@ -730,17 +728,10 @@ func (a *App) restoreOrBuildTabs() {
 	ctx := a.ctx
 	ensureWorkspace()
 
-	// Run legacy config migration before the first config load so the
-	// freshly written config (including the user's default_model) is
-	// picked up by Load instead of falling back to built-in defaults.
-	_, _ = config.MigrateLegacyIfNeeded()
 	if err := reconcileTopicArchiveMetadataPending(a.deleteTopic); err != nil {
 		slog.Warn("desktop: topic archive metadata reconciliation remains pending")
 	}
 	f, tabsVersion := a.loadTabsForRestore()
-	_, _ = recoverLegacyProjectSidebarRoots(f)
-	_, _ = config.ApplyUserConfigUpgradesOnStartup(config.UserConfigPath())
-	_, _ = config.MigrateMCPToUserConfigOnUpgrade(desktopMCPMigrationRoots(f))
 
 	// Load i18n from the first available config.
 	// Prefer DesktopLanguage (desktop UI setting) over Language (CLI setting),
@@ -778,7 +769,6 @@ func (a *App) restoreOrBuildTabs() {
 			tab.effort = cloneStringPtr(entry.Effort)
 			// Legacy role fields remain readable, but the retired setting no
 			// longer changes restored-session behavior.
-			tab.qualityFloor = control.QualityFloorStandard
 			tab.mode = persistedTabMode(entry.Mode)
 			// Validate the persisted goal against the session's goal-state
 			// sidecar: a typed /new or /clear rotates the session through the
@@ -792,9 +782,7 @@ func (a *App) restoreOrBuildTabs() {
 				tab.toolApprovalMode = a.sessionPresets.restore(id, tab.toolApprovalMode)
 			} else {
 				tab.toolApprovalMode = normalizeToolApprovalMode(entry.ToolApprovalMode)
-				if tab.toolApprovalMode == control.ToolApprovalAsk && tabModeHasAutoApproveTools(entry.Mode) {
-					tab.toolApprovalMode = control.ToolApprovalYolo
-				}
+
 			}
 			tab.SessionPath = strings.TrimSpace(entry.SessionPath)
 			tab.SessionID = strings.TrimSpace(entry.SessionID)
@@ -865,8 +853,6 @@ func newSessionPreset(userCfg *config.Config) string {
 // desktop-accessible chat model exists, the empty result lets tab startup show
 // an actionable setup error instead of re-admitting an ineligible default.
 func resolveNewSessionModel(cfg *config.Config) string {
-	def := strings.TrimSpace(cfg.DefaultModel)
-	config.NormalizeLegacyMimoCustomProvidersForRefs(cfg, def)
 	if resolved, _, ok := cfg.ResolveDesktopNewSessionModel(); ok {
 		// Keep provider identity explicit at the new-session boundary. A bare
 		// model id is ambiguous when two configured gateways expose the same
@@ -891,8 +877,7 @@ func (a *App) createTabEntryWithID(scope, workspaceRoot, topicID, id string) *Wo
 		TopicTitle:       topicTitleForTab(scope, workspaceRoot, topicID),
 		topicTitleSource: loadTopicTitleSource(topicTitleRoot(scope, workspaceRoot), topicID),
 		model:            model,
-		qualityFloor:     "",
-		mode:             tabModeFromAxes(false, toolApprovalMode == control.ToolApprovalYolo),
+		mode:             tabModeForPlan(false),
 		toolApprovalMode: toolApprovalMode,
 		disabledMCP:      map[string]ServerView{},
 	}
@@ -946,11 +931,6 @@ func (a *App) completeFrontendStartup() {
 		}
 		if err := repair.RecordHealthyConfig(version); err != nil {
 			slog.Debug("desktop: record last-known-good config", "err", err)
-		}
-		if archived, err := archiveSupersededPendingUpdateAfterReady(); err != nil {
-			slog.Warn("desktop: retire superseded update", "err", err)
-		} else if archived {
-			slog.Info("desktop: archived superseded update transaction")
 		}
 	})
 }
@@ -1069,10 +1049,6 @@ func (a *App) SubmitDisplayToTab(tabID, display, input string) error {
 	return a.submitDisplayToTab(tabID, display, input, "")
 }
 
-func (a *App) SubmitDeliveryRecoveryToTab(tabID, display, input string) error {
-	return a.submitDeliveryRecoveryToTab(tabID, display, input, "")
-}
-
 // InvocationRequest is the Wails-bound form of a composer invocation entity.
 type InvocationRequest struct {
 	Name   string `json:"name"`
@@ -1138,7 +1114,7 @@ func (a *App) submitInitialGoalToLocalTab(
 		}
 		tab.toolApprovalMode = toolApprovalMode
 		tab.goal = goal
-		tab.mode = tabModeFromAxes(false, toolApprovalMode == control.ToolApprovalYolo)
+		tab.mode = tabModeForPlan(false)
 		a.saveTabsLocked()
 		a.mu.Unlock()
 
@@ -1344,7 +1320,7 @@ func (a *App) snapshotTab(tab *WorkspaceTab) error {
 	readOnly := tab.ReadOnly
 	ctrl := tab.Ctrl
 	a.mu.RUnlock()
-	if readOnly || ctrl == nil || historicalPreview(ctrl) {
+	if readOnly || ctrl == nil {
 		return nil
 	}
 	return ctrl.Snapshot()
@@ -1453,7 +1429,7 @@ func (a *App) ensureTabControllerWorkspace(tab *WorkspaceTab) error {
 	if rootMatches && dirMatches && sessionMatches {
 		return nil
 	}
-	if !historicalPreview(ctrl) {
+	if ctrl != nil {
 		if err := ctrl.Snapshot(); err != nil {
 			return err
 		}
@@ -1551,39 +1527,6 @@ func (a *App) ResolvePlanDecisionTab(tabID, id, action string) error {
 	return ctrl.ResolvePlanDecision(id, control.PlanDecisionAction(action))
 }
 
-// ResolveRecovery retains the old bridge signature. The controller returns a
-// stable recovery_retired error and never confirms or replays an operation.
-func (a *App) ResolveRecovery(id, action, feedback string) error {
-	return a.ResolveRecoveryTab("", id, action, feedback)
-}
-
-// ResolveRecoveryTab is like ResolveRecovery but scoped to a specific tab.
-func (a *App) ResolveRecoveryTab(tabID, id, action, feedback string) error {
-	ctrl := a.ctrlByTabID(tabID)
-	if ctrl == nil {
-		return fmt.Errorf("no active session")
-	}
-	return ctrl.ResolveRecovery(id, agent.RecoveryAction(action), feedback)
-}
-
-// SetRecoveryCheckpointEnabled is retained as a no-op Wails surface for older
-// generated frontends. Auto Guard is retired.
-func (a *App) SetRecoveryCheckpointEnabled(_ bool) {}
-
-// SetRecoveryCheckpointEnabledTab is retained as a no-op Wails surface.
-func (a *App) SetRecoveryCheckpointEnabledTab(_ string, _ bool) {}
-
-// RecoveryCheckpointEnabled is retained for older generated frontends and
-// reports false because no runtime recovery checkpoint can be enabled.
-func (a *App) RecoveryCheckpointEnabled() bool {
-	return false
-}
-
-// RecoveryCheckpointEnabledTab is the tab-scoped compatibility alias.
-func (a *App) RecoveryCheckpointEnabledTab(_ string) bool {
-	return false
-}
-
 // ReplayPendingPrompts asks every tab's controller to re-emit any approval/ask
 // prompt that is currently blocking its run loop. The frontend calls this once
 // its event subscription is live (on load/reconnect) so a session that was
@@ -1656,11 +1599,7 @@ func (a *App) SetModeForTab(tabID, mode string) []string {
 	}
 	tab.mode = normalized
 	tab.toolApprovalMode = normalizeToolApprovalMode(tab.toolApprovalMode)
-	if tabModeHasAutoApproveTools(normalized) {
-		tab.toolApprovalMode = control.ToolApprovalYolo
-	} else if tab.toolApprovalMode == control.ToolApprovalYolo {
-		tab.toolApprovalMode = control.ToolApprovalAsk
-	}
+
 	ctrl := tab.Ctrl
 	approvalMode := tab.toolApprovalMode
 	tabIDForSave := tab.ID
@@ -1678,32 +1617,9 @@ func (a *App) SetModeForTab(tabID, mode string) []string {
 // modeApplier / toolApprovalApplier are the drained-id-reporting variants of
 // SessionAPI's SetMode / SetToolApprovalMode. Asserted optionally so test
 // fakes implementing the plain SessionAPI keep compiling (they report nil).
-type modeApplier interface {
-	ApplyMode(plan, autoApproveTools bool) []string
-}
 
 type toolApprovalApplier interface {
 	ApplyToolApprovalMode(mode string) []string
-}
-
-func applyTabModeToController(ctrl control.SessionAPI, mode string) []string {
-	if ctrl == nil {
-		return nil
-	}
-	plan := false
-	switch normalizeTabMode(mode) {
-	case "plan":
-		plan = true
-	case "yolo":
-		// Legacy persisted Yolo is conservatively migrated to workspace-write.
-	case "plan-yolo":
-		plan = true
-	}
-	if applier, ok := ctrl.(modeApplier); ok {
-		return applier.ApplyMode(plan, false)
-	}
-	ctrl.SetMode(plan, false)
-	return nil
 }
 
 func applyTabToolApprovalModeToController(ctrl control.SessionAPI, mode string) []string {
@@ -1779,7 +1695,7 @@ func (a *App) SetComposerProfileForTab(tabID, collaborationMode, toolApprovalMod
 	if a.tabs[tabIDForSave] == tab {
 		tab.toolApprovalMode = toolApprovalMode
 		tab.goal = goal
-		tab.mode = tabModeFromAxes(plan, toolApprovalMode == control.ToolApprovalDangerFullAccess)
+		tab.mode = tabModeForPlan(plan)
 		a.saveTabsLocked()
 	}
 	a.mu.Unlock()
@@ -1797,16 +1713,15 @@ func (a *App) SetCollaborationModeForTab(tabID, mode string) error {
 	tab.turnStartMu.Lock()
 	defer tab.turnStartMu.Unlock()
 	mode = normalizeCollaborationMode(mode)
-	approvalMode := a.tabRuntimeSnapshot(tab).currentToolApprovalMode()
 	a.mu.Lock()
 	if a.tabs[tab.ID] != tab {
 		a.mu.Unlock()
 		return a.workspaceNotReadyErr(nil)
 	}
 	nextGoal := tab.goal
-	nextMode := tabModeFromAxes(false, approvalMode == control.ToolApprovalYolo)
+	nextMode := tabModeForPlan(false)
 	if mode == "plan" {
-		nextMode = tabModeFromAxes(true, approvalMode == control.ToolApprovalYolo)
+		nextMode = tabModeForPlan(true)
 		nextGoal = ""
 	} else if mode != "goal" {
 		nextGoal = ""
@@ -2224,7 +2139,6 @@ type CheckpointMeta struct {
 	CoverageGaps       []string `json:"coverageGaps,omitempty"`
 	ExpiredFilePayload bool     `json:"expiredFilePayload,omitempty"`
 	ActiveWriters      int      `json:"activeWriters,omitempty"`
-	Legacy             bool     `json:"legacy,omitempty"`
 	CanUndoFiles       bool     `json:"canUndoFiles,omitempty"`
 	DisabledReason     string   `json:"disabledReason,omitempty"`
 }
@@ -2236,7 +2150,6 @@ type RewindPlanView struct {
 	Scope              string   `json:"scope"`
 	Coverage           string   `json:"coverage,omitempty"`
 	CoverageGaps       []string `json:"coverageGaps,omitempty"`
-	Legacy             bool     `json:"legacy,omitempty"`
 	ExpiredFilePayload bool     `json:"expiredFilePayload,omitempty"`
 	CanFiles           bool     `json:"canFiles"`
 	CanConversation    bool     `json:"canConversation"`
@@ -2311,7 +2224,6 @@ func (a *App) CheckpointsForTab(tabID string) []CheckpointMeta {
 			CoverageGaps:       gaps,
 			ExpiredFilePayload: m.ExpiredFilePayload,
 			ActiveWriters:      len(m.ActiveWriters),
-			Legacy:             m.Legacy,
 			CanUndoFiles:       m.CanUndoFiles,
 			DisabledReason:     m.DisabledReason,
 		}
@@ -2498,7 +2410,6 @@ func rewindPlanToView(plan checkpoint.RewindPlan, scope string) RewindPlanView {
 		Scope:              scope,
 		Coverage:           string(plan.Coverage),
 		CoverageGaps:       gaps,
-		Legacy:             plan.Legacy,
 		ExpiredFilePayload: plan.ExpiredFilePayload,
 		CanFiles:           plan.CanFiles,
 		CanConversation:    plan.CanConversation,
@@ -2612,16 +2523,6 @@ func (a *App) SummarizeUpToForTab(tabID string, turn int) error {
 	return ctrl.SummarizeUpTo(a.ctx, turn)
 }
 
-type channelSessionRoute struct {
-	channel       string
-	channelLabel  string
-	remoteID      string
-	chatType      string
-	userID        string
-	threadID      string
-	sessionSource string
-}
-
 type WorkspaceMeta struct {
 	Path    string `json:"path"`
 	Name    string `json:"name"`
@@ -2677,57 +2578,6 @@ func (a *App) activeSessionDir() string {
 	return tabSessionDir(tab)
 }
 
-// ListTrashedSessions returns sessions that were moved to the local trash,
-// newest-deleted first. These can be previewed, restored, or permanently purged.
-func (a *App) ListTrashedSessions() []SessionMeta {
-	out := []SessionMeta{}
-	state, stateErr := a.workspaceRegistry().Load(a.bootContext())
-	if stateErr != nil {
-		return out
-	}
-	for _, dir := range a.knownSessionDirs() {
-		paths, err := listTrashedSessionFiles(dir)
-		if err != nil {
-			continue
-		}
-		titles := loadSessionTitles(dir)
-		for _, path := range paths {
-			if !explicitlyDeletedLegacyEntry(path) {
-				continue
-			}
-			if _, adopted, err := state.ResolveSource(desktopSourceKey(path, "")); adopted || err != nil {
-				continue
-			}
-			infos, err := agent.ListSessions(filepath.Dir(path))
-			if err != nil || len(infos) == 0 {
-				continue
-			}
-			deletedAt := trashedSessionDeletedAt(path)
-			title := strings.TrimSpace(infos[0].CustomTitle)
-			if title == "" {
-				title = titles[filepath.Base(path)]
-			}
-			out = append(out, sessionMetaFromInfo(infos[0], title, false, false, deletedAt, dir))
-		}
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].DeletedAt == out[j].DeletedAt {
-			return out[i].LastActivityAt > out[j].LastActivityAt
-		}
-		return out[i].DeletedAt > out[j].DeletedAt
-	})
-	return out
-}
-
-func (a *App) trashedSessionDir(path string) (string, error) {
-	for _, dir := range a.knownSessionDirs() {
-		if _, _, _, err := validateTrashedSessionPath(dir, path); err == nil {
-			return dir, nil
-		}
-	}
-	return "", fmt.Errorf("trashed session path outside known session dirs: %s", path)
-}
-
 func (a *App) sessionDirForPath(path string) (string, string, error) {
 	for _, dir := range a.knownSessionDirs() {
 		sessionPath, _, err := validateSessionPath(dir, path)
@@ -2736,111 +2586,6 @@ func (a *App) sessionDirForPath(path string) (string, string, error) {
 		}
 	}
 	return "", "", fmt.Errorf("session path outside known session dirs: %s", path)
-}
-
-func applyChannelSessionRoute(meta *SessionMeta, route channelSessionRoute) {
-	if meta == nil {
-		return
-	}
-	meta.Kind = "channel"
-	meta.Channel = route.channel
-	meta.ChannelLabel = route.channelLabel
-	meta.RemoteID = route.remoteID
-	meta.ChatType = route.chatType
-	meta.UserID = route.userID
-	meta.ThreadID = route.threadID
-	meta.SessionSource = route.sessionSource
-}
-
-func channelSessionRoutesForDir(dir string) map[string]channelSessionRoute {
-	userPath := config.UserConfigPath()
-	if strings.TrimSpace(userPath) == "" {
-		return nil
-	}
-	cfg := config.LoadForEdit(userPath)
-	out := map[string]channelSessionRoute{}
-	for _, conn := range cfg.Bot.Connections {
-		channel := strings.TrimSpace(conn.Provider)
-		if channel == "" {
-			continue
-		}
-		channelLabel := strings.TrimSpace(conn.Label)
-		if channelLabel == "" {
-			channelLabel = channelDisplayName(channel, conn.Domain)
-		}
-		for _, mapping := range conn.SessionMappings {
-			if strings.TrimSpace(mapping.SessionSource) != "auto" {
-				continue
-			}
-			sessionPath := botSessionPathTarget(mapping.SessionID)
-			if sessionPath == "" {
-				continue
-			}
-			validPath, _, err := validateSessionPath(dir, sessionPath)
-			if err != nil {
-				continue
-			}
-			key := sessionRuntimeKey(validPath)
-			if key == "" {
-				continue
-			}
-			out[key] = channelSessionRoute{
-				channel:       channel,
-				channelLabel:  channelLabel,
-				remoteID:      strings.TrimSpace(mapping.RemoteID),
-				chatType:      strings.TrimSpace(mapping.ChatType),
-				userID:        strings.TrimSpace(mapping.UserID),
-				threadID:      strings.TrimSpace(mapping.ThreadID),
-				sessionSource: strings.TrimSpace(mapping.SessionSource),
-			}
-		}
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-func botSessionPathTarget(sessionID string) string {
-	sessionID = strings.TrimSpace(sessionID)
-	if sessionID == "" {
-		return ""
-	}
-	if strings.HasPrefix(strings.ToLower(sessionID), "path:") {
-		return strings.TrimSpace(sessionID[5:])
-	}
-	if strings.HasSuffix(sessionID, ".jsonl") || strings.Contains(sessionID, "/") || strings.Contains(sessionID, `\`) || strings.HasPrefix(sessionID, "~") {
-		return sessionID
-	}
-	return ""
-}
-
-func channelDisplayName(provider, domain string) string {
-	provider = strings.TrimSpace(provider)
-	domain = strings.TrimSpace(domain)
-	switch provider {
-	case "feishu":
-		if strings.EqualFold(domain, "lark") {
-			return "Lark"
-		}
-		return "Feishu"
-	case "weixin":
-		return "WeChat"
-	case "qq":
-		return "QQ"
-	case "dingtalk":
-		return "DingTalk"
-	default:
-		return provider
-	}
-}
-
-// DeleteRecoveryCopy is the guarded bulk-cleanup path. The frontend's copy
-// marker is only a hint. Open copies are preserved, and the backend holds both
-// parent and branch removal guards while re-proving coverage and publishing a
-// recoverable trash entry.
-func (a *App) DeleteRecoveryCopy(path string) error {
-	return friendlySessionFileError(a.deleteRecoveryCopy(path))
 }
 
 var errRecoveryCopyNotRedundant = errors.New("recovery session contains content not preserved by its parent")
@@ -3018,7 +2763,7 @@ func (a *App) prepareRemovedSessionRuntimes(removed []removedSessionRuntime) err
 				return err
 			}
 		}
-		if item.readOnly || historicalPreview(item.ctrl) {
+		if item.readOnly {
 			continue
 		}
 		if err := item.ctrl.Snapshot(); err != nil {
@@ -3180,26 +2925,6 @@ func (a *App) beginDestroySessionJobs(dir, sessionPath string) []control.Session
 	return destroys
 }
 
-func (a *App) openSessionPaths(dir string) map[string]struct{} {
-	a.mu.RLock()
-	paths := make([]string, 0, len(a.tabs)+len(a.detachedSessions))
-	for _, tab := range a.runtimeTabsLocked() {
-		if tab != nil {
-			paths = append(paths, tab.currentSessionPath())
-		}
-	}
-	a.mu.RUnlock()
-
-	out := make(map[string]struct{}, len(paths))
-	for _, path := range paths {
-		currentPath, _, err := validateSessionPath(dir, path)
-		if err == nil {
-			out[currentPath] = struct{}{}
-		}
-	}
-	return out
-}
-
 func (a *App) activeSessionPath(dir string) string {
 	a.mu.RLock()
 	var path string
@@ -3214,192 +2939,29 @@ func (a *App) activeSessionPath(dir string) string {
 	return currentPath
 }
 
-// RestoreSession moves a trashed session back into the saved-session list.
-func (a *App) RestoreSession(path string) error {
-	return friendlySessionFileError(a.restoreLegacyRecoveryPath(path))
-}
-
-func (a *App) restoreSession(path string) error {
-	dir, err := a.trashedSessionDir(path)
-	if err != nil {
-		return err
-	}
-	_, key, _, err := validateTrashedSessionPath(dir, path)
-	if err != nil {
-		return err
-	}
-	// The destroying/open checks and the trash-entry move must not interleave
-	// with DeleteSession/TrashTopic trashing the same entry.
-	a.sessionRemovalMu.Lock()
-	defer a.sessionRemovalMu.Unlock()
-	target := filepath.Join(dir, key)
-	if a.sessionDestroying(dir, target) {
-		return fmt.Errorf("session cleanup is still in progress: %s", key)
-	}
-	// A committed archive may have moved the transcript into trash while a
-	// Windows file handle temporarily kept one of its sidecars at the live
-	// path. The durable cleanup marker makes that partial move recoverable.
-	// Finish it before restore preflights the live destinations; otherwise the
-	// leftover sidecar is misreported as an unrelated restore conflict.
-	if agent.IsCleanupPending(target) {
-		_ = reconcileDesktopCleanupPending(dir)
-		if agent.IsCleanupPending(target) {
-			return fmt.Errorf("session cleanup is still in progress: %s", key)
-		}
-	}
-	if a.sessionOpen(dir, target) {
-		return fmt.Errorf("session is open: %s", key)
-	}
-	if err := restoreTrashedSessionFile(dir, path); err != nil {
-		return err
-	}
-	if err := restoreSessionTopicIndex(dir, target); err != nil {
-		return err
-	}
-	a.requestSessionCatalogPath("", "", target)
-	a.emitProjectTreeChangedForSessionDirs(dir)
-	a.invalidatePromptHistoryCache()
-	return nil
-}
-
-func (a *App) sessionDestroying(dir, sessionPath string) bool {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	for _, tab := range a.runtimeTabsLocked() {
-		if tab == nil || tab.Ctrl == nil || tabRuntimeSessionDir(tab) != dir {
-			continue
-		}
-		if tab.Ctrl.IsDestroyingSession(sessionPath) {
-			return true
-		}
-	}
-	return false
-}
-
-func (a *App) sessionOpen(dir, sessionPath string) bool {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	for _, tab := range a.runtimeTabsLocked() {
-		if tabMatchesSession(tab, dir, sessionPath) {
-			return true
-		}
-	}
-	return false
-}
-
-// PurgeRecoveryCopy is the guarded permanent-cleanup path. A trashed branch is
-// rechecked against its live parent; missing, stale, or divergent data is kept.
-func (a *App) PurgeRecoveryCopy(path string) error {
-	return friendlySessionFileError(a.purgeTrashedSession(path, true))
-}
-
-func (a *App) purgeTrashedSession(path string, requireRedundantRecovery bool) error {
-	dir, err := a.trashedSessionDir(path)
-	if err != nil {
-		return err
-	}
-	state, err := a.workspaceRegistry().Load(a.bootContext())
-	if err != nil {
-		return err
-	}
-	if _, adopted, err := state.ResolveSource(desktopSourceKey(path, "")); adopted || err != nil {
-		return errors.New("the historical source is preserved for its restored session")
-	}
-	if !explicitlyDeletedLegacyEntry(path) {
-		return errors.New("historical recovery entries cannot be permanently cleared")
-	}
-	a.sessionRemovalMu.Lock()
-	defer a.sessionRemovalMu.Unlock()
-	var parentGuard *agent.SessionRemovalGuard
-	if requireRedundantRecovery {
-		parentGuard, err = agent.TryAcquireRecoveryParentGuard(path, dir)
-		if err != nil {
-			switch {
-			case errors.Is(err, agent.ErrRecoveryBranchNotCovered):
-				return errRecoveryCopyNotRedundant
-			case errors.Is(err, agent.ErrSessionLeaseHeld):
-				return errSessionBusyElsewhere
-			default:
-				return err
-			}
-		}
-		defer parentGuard.Release()
-	}
-	if err := purgeTrashedSessionFile(dir, path); err != nil {
-		return err
-	}
-	a.invalidatePromptHistoryCache()
-	return nil
-}
-
-// RenameSession sets a custom display name for a session (empty clears it back to
-// the preview). The transcript file is unchanged; the canonical name lives in
-// the branch meta sidecar, with the legacy .titles.json map kept as a
-// compatibility write-through for older desktop data paths.
+// RenameSession renames a durable session identified by the current route.
 func (a *App) RenameSession(path, title string) error {
-	if target, err := a.resolveSessionTarget(sessionTargetSelector{SessionPath: strings.TrimSpace(path)}); err == nil {
-		a.cancelAISessionTitle(target.key())
-	}
-	a.topicTitleMutationMu.Lock()
-	defer a.topicTitleMutationMu.Unlock()
-	if id, ok := parseSessionRoute(path); ok {
-		service := a.desktopSessionService("")
-		ref := session.SessionRef{HostID: localDesktopHostID, SessionID: id}
-		if err := validateLocalSessionRef(ref); err != nil {
-			return errors.New("session version is unavailable")
-		}
-		if err := service.SetTitle(a.bootContext(), ref, title); err != nil {
-			return friendlySessionFileError(err)
-		}
-		a.invalidatePromptHistoryCache()
-		a.emitProjectTreeChanged()
-		return nil
-	}
-	dir, _, err := a.sessionDirForPath(path)
-	if err != nil {
+	id, ok := parseSessionRoute(path)
+	if !ok {
 		return errors.New("session version is unavailable")
 	}
-	return friendlySessionFileError(a.renameSessionInDir(dir, path, title))
+	return a.RenameCanonicalSession(session.SessionRef{HostID: localDesktopHostID, SessionID: id}, title)
 }
 
-func (a *App) renameSessionInDir(dir, path, title string) error {
-	sessionPath, _, err := validateSessionPath(dir, path)
+// onSessionTitleChanged projects the committed title from the current event log.
+// Reading the log keeps a delayed callback from publishing an older title.
+func (a *App) onSessionTitleChanged(_, sessionID, _ string) error {
+	a.topicTitleMutationMu.Lock()
+	defer a.topicTitleMutationMu.Unlock()
+	ref := session.SessionRef{HostID: localDesktopHostID, SessionID: sessionID}
+	if err := validateLocalSessionRef(ref); err != nil {
+		return err
+	}
+	info, err := a.desktopSessionService("").Query().Stat(a.bootContext(), ref)
 	if err != nil {
 		return err
 	}
-	if err := agent.RenameSession(sessionPath, title); err != nil {
-		return err
-	}
-	return a.onSessionTitleChanged(dir, sessionPath, title)
-}
-
-func (a *App) renameSessionInDirIfTitleUnchanged(dir, path, expectedTitle, title string) error {
-	sessionPath, _, err := validateSessionPath(dir, path)
-	if err != nil {
-		return err
-	}
-	if err := agent.RenameSessionIfTitleRevision(sessionPath, expectedTitle, title); err != nil {
-		return err
-	}
-	return a.onSessionTitleChanged(dir, sessionPath, title)
-}
-
-// onSessionTitleChanged projects the canonical BranchMeta custom title into
-// the legacy desktop map and live catalog/UI indexes. The session directory is
-// supplied by the owning boot so background tabs never route through whichever
-// tab happens to be active when the tool finishes.
-func (a *App) onSessionTitleChanged(dir, sessionPath, _ string) error {
-	validated, _, err := validateSessionPath(dir, sessionPath)
-	if err != nil {
-		return err
-	}
-	if err := syncSessionTitleFromBranchMeta(dir, validated); err != nil {
-		return err
-	}
-	a.projectLegacySessionTitleToTabs(validated)
-	a.requestSessionCatalogPath("", "", validated)
-	a.invalidatePromptHistoryCache()
-	a.emitProjectTreeChangedForSessionDirs(dir)
+	a.publishCanonicalSessionTitle(ref, info.Title)
 	return nil
 }
 
@@ -3419,73 +2981,11 @@ func (a *App) ResumeSessionPageForTab(tabID, path string, limit int) (HistoryPag
 	return a.resumeSessionPageForTab(tabID, path, limit)
 }
 
-// ResumeSessionForTab is the tab-scoped form of ResumeSession. A saved session
-// path is a runtime identity, so changing to a different path must replace the
-// tab's controller binding rather than mutating the current controller in place.
 func (a *App) ResumeSessionForTab(tabID, path string) ([]HistoryMessage, error) {
-	if ref, adopted, err := a.legacyCanonicalRef(a.bootContext(), path); err != nil {
-		return nil, err
-	} else if adopted {
-		path = sessionRoute(ref.SessionID)
-	}
-	tab, ctrl := a.tabAndCtrlByID(tabID)
-	if tab == nil || ctrl == nil {
-		return []HistoryMessage{}, fmt.Errorf("tab is not ready")
-	}
-	if _, isV3 := parseSessionRoute(path); isV3 {
-		if _, err := a.resumeCanonicalSessionForTranscript(tab, ctrl, path, defaultHistoryPageTurns, false); err != nil {
-			return nil, err
-		}
-		return a.HistoryForTab(tab.ID), nil
-	}
-	if continued := a.continuePathForOpen(path); continued != "" {
-		path = continued
-	}
-	sessionPath, _, err := validateSessionPath(controllerSessionDir(ctrl), path)
-	if err != nil {
+	if _, err := a.resumeSessionForTranscript(tabID, path, defaultHistoryPageTurns, false); err != nil {
 		return nil, err
 	}
-	if sessionRuntimeKey(tab.currentSessionPath()) == sessionRuntimeKey(sessionPath) {
-		a.mu.RLock()
-		takeoverSpectator := a.tabs[tab.ID] == tab && tab.Takeover.Spectator
-		a.mu.RUnlock()
-		if takeoverSpectator {
-			return nil, fmt.Errorf("session is held by the remote side; use TakeoverSession to reclaim it")
-		}
-		a.setTabReadOnly(tab.ID, false)
-		// A read-only transcript explicitly reopened for writing re-announces
-		// itself so a resident Serve can mirror and later reclaim it.
-		a.attachTakeoverMirror(tab.ID, sessionPath)
-		go a.adoptSessionFromLocalServe(tab.ID, sessionPath)
-		return a.HistoryForTab(tabID), nil
-	}
-	loaded, err := loadResumableSession(sessionPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := a.rebindTabToLoadedSessionPath(tab, sessionPath, loaded); err != nil {
-		return nil, err
-	}
-	a.setTabReadOnly(tab.ID, false)
-	a.attachTakeoverMirror(tab.ID, sessionPath)
-	go a.adoptSessionFromLocalServe(tab.ID, sessionPath)
 	return a.HistoryForTab(tabID), nil
-}
-
-// validateChannelSessionPath 校验 bot/channel 会话路径：channel 会话可能位于
-// 当前 controller 的 session dir（project scope）或全局 session dir
-// （global scope），单 tab 无法同时覆盖两者，因此都放行。
-func validateChannelSessionPath(ctrlDir, path string) (string, string, error) {
-	if p, b, err := validateSessionPath(ctrlDir, path); err == nil {
-		return p, b, nil
-	}
-	if globalDir := config.SessionDir(); globalDir != "" && globalDir != ctrlDir {
-		if p, b, err := validateSessionPath(globalDir, path); err == nil {
-			return p, b, nil
-		}
-	}
-	return validateSessionPath(ctrlDir, path)
 }
 
 func (a *App) OpenChannelSessionForTab(tabID, path string) ([]HistoryMessage, error) {
@@ -3500,21 +3000,7 @@ func (a *App) OpenChannelSessionForTab(tabID, path string) ([]HistoryMessage, er
 		a.setTabReadOnly(tab.ID, true)
 		return a.HistoryForTab(tab.ID), nil
 	}
-	sessionPath, _, err := validateChannelSessionPath(controllerSessionDir(ctrl), path)
-	if err != nil {
-		return nil, err
-	}
-	loaded, err := loadResumableSession(sessionPath)
-	if err != nil {
-		return nil, err
-	}
-	if sessionRuntimeKey(tab.currentSessionPath()) != sessionRuntimeKey(sessionPath) {
-		if err := a.rebindTabToLoadedSessionPath(tab, sessionPath, loaded); err != nil {
-			return nil, err
-		}
-	}
-	a.setTabReadOnly(tab.ID, true)
-	return a.HistoryForTab(tab.ID), nil
+	return nil, fmt.Errorf("channel session requires a durable session identity")
 }
 
 func (a *App) OpenChannelSessionPageForTab(tabID, path string, limit int) (HistoryPage, error) {
@@ -3522,55 +3008,11 @@ func (a *App) OpenChannelSessionPageForTab(tabID, path string, limit int) (Histo
 }
 
 func (a *App) openChannelSessionForTranscript(tabID, path string, limit int, includeHistory bool) (HistoryPage, error) {
-	if ref, adopted, err := a.legacyCanonicalRef(a.bootContext(), path); err != nil {
-		return HistoryPage{}, err
-	} else if adopted {
-		path = sessionRoute(ref.SessionID)
+	page, err := a.resumeSessionForTranscript(tabID, path, limit, includeHistory)
+	if err == nil {
+		a.setTabReadOnly(tabID, true)
 	}
-	started := time.Now()
-	phases := HistorySwitchPhases{Outcome: "ok"}
-	defer func() { logSessionSwitchPhases(phases, started) }()
-	tab, ctrl := a.tabAndCtrlByID(tabID)
-	if tab == nil || ctrl == nil {
-		phases.Outcome = "tab_not_ready"
-		return HistoryPage{}, fmt.Errorf("tab is not ready")
-	}
-	if _, isV3 := parseSessionRoute(path); isV3 {
-		page, err := a.resumeCanonicalSessionForTranscript(tab, ctrl, path, limit, includeHistory)
-		if err != nil {
-			phases.Outcome = "v3_rebind_failed"
-			return HistoryPage{}, err
-		}
-		a.setTabReadOnly(tab.ID, true)
-		phases.TotalMs = elapsedMs(started)
-		page.Switch = &phases
-		return page, nil
-	}
-	resolveStarted := time.Now()
-	sessionPath, _, err := validateChannelSessionPath(controllerSessionDir(ctrl), path)
-	if err != nil {
-		phases.Outcome = "invalid_path"
-		return HistoryPage{}, err
-	}
-	phases.ResolveMs = elapsedMs(resolveStarted)
-
-	loadStarted := time.Now()
-	phases.DurableReads++
-	loaded, err := loadResumableSession(sessionPath)
-	if err != nil {
-		phases.Outcome = "load_failed"
-		return HistoryPage{}, err
-	}
-	phases.LoadMs = elapsedMs(loadStarted)
-	phases.LoadedCount = loaded.Len()
-	phases.LoadedBytes = sessionFileBytes(sessionPath)
-	page, err := a.switchToLoadedSessionPage(tab, loaded, sessionPath, true, includeHistory, limit, &phases)
-	if err != nil {
-		return HistoryPage{}, err
-	}
-	phases.TotalMs = elapsedMs(started)
-	page.Switch = &phases
-	return page, nil
+	return page, err
 }
 
 func (a *App) rebindTabToSessionPath(tab *WorkspaceTab, sessionPath string) error {
@@ -4004,7 +3446,6 @@ func (a *App) buildSessionRebindCandidate(
 			root = wd
 		}
 	}
-	_ = config.MigrateLegacyCredentialsForRoot(root)
 	cfg, err := config.LoadForRoot(root)
 	if err != nil {
 		return nil, err
@@ -4012,7 +3453,6 @@ func (a *App) buildSessionRebindCandidate(
 
 	model := strings.TrimSpace(source.model)
 	if sessionModel, ok := agent.LoadSessionModel(sessionPath); ok {
-		config.NormalizeLegacyMimoCustomProvidersForRefs(cfg, sessionModel)
 		if _, ok := cfg.ResolveModel(sessionModel); ok {
 			model = sessionModel
 		}
@@ -4020,7 +3460,6 @@ func (a *App) buildSessionRebindCandidate(
 	if model == "" {
 		model = cfg.DefaultModel
 	}
-	config.NormalizeLegacyMimoCustomProvidersForRefs(cfg, model)
 	if resolved, _, ok := cfg.ResolveModelWithFallback(model); ok {
 		model = resolved
 	}
@@ -4040,7 +3479,7 @@ func (a *App) buildSessionRebindCandidate(
 	if _, err := loadPinnedContextState(sessionPath); err != nil {
 		return nil, err
 	}
-	nativeService, err := a.historicalSessionService(desktopSessionRoot(filepath.Dir(sessionPath)))
+	nativeService, err := a.projectSessionService(desktopSessionRoot(filepath.Dir(sessionPath)))
 	if err != nil {
 		return nil, err
 	}
@@ -4053,7 +3492,6 @@ func (a *App) buildSessionRebindCandidate(
 		Sink:                 a.desktopControllerSink(sink, cfg.Notifications),
 		WorkspaceRoot:        root,
 		SessionDir:           sessionDir,
-		NativeLegacySession:  true,
 		SessionService:       nativeService,
 		EffortOverride:       cloneStringPtr(source.effort),
 		EffortModel:          source.model,
@@ -4127,13 +3565,6 @@ func loadResumableSession(sessionPath string) (*agent.Session, error) {
 	return agent.LoadSession(sessionPath)
 }
 
-func loadResumableSessionContext(ctx context.Context, sessionPath string) (*agent.Session, error) {
-	if agent.IsCleanupPending(sessionPath) {
-		return nil, fmt.Errorf("session is pending cleanup")
-	}
-	return agent.LoadSessionContext(ctx, sessionPath)
-}
-
 // PreviewSession reads a saved session for display only. It does not snapshot or
 // swap the active controller, so the history drawer can call it while a turn runs.
 func (a *App) PreviewSession(path string) ([]HistoryMessage, error) {
@@ -4163,7 +3594,6 @@ type promptHistoryRequest struct {
 	Nonce  string `json:"nonce,omitempty"`
 	Cursor string `json:"cursor,omitempty"`
 	Limit  int    `json:"limit,omitempty"`
-	legacy bool
 }
 
 type promptHistoryCursor struct {
@@ -4186,7 +3616,12 @@ type promptHistoryTape struct {
 // carry a cursor and page limit. Older clients may still pass a bare nonce; that
 // path keeps the old cache-hit behavior.
 func (a *App) ScanPromptHistory(rawRequest string) (PromptHistoryResult, error) {
-	req := parsePromptHistoryRequest(rawRequest)
+	var req promptHistoryRequest
+	if strings.TrimSpace(rawRequest) != "" {
+		if err := json.Unmarshal([]byte(rawRequest), &req); err != nil {
+			return PromptHistoryResult{}, fmt.Errorf("invalid prompt history request: %w", err)
+		}
+	}
 	dir := a.activeSessionDir()
 	sessionPath := a.activeSessionPath(dir)
 
@@ -4196,27 +3631,10 @@ func (a *App) ScanPromptHistory(rawRequest string) (PromptHistoryResult, error) 
 		a.promptHistoryMu.Unlock()
 		return PromptHistoryResult{}, err
 	}
-	if req.legacy && req.Nonce != "" && req.Nonce == tape.nonce {
-		a.promptHistoryMu.Unlock()
-		return PromptHistoryResult{Entries: nil, Nonce: req.Nonce}, nil
-	}
+
 	result := tape.readOlder(req.Cursor, promptHistoryLimit(req.Limit))
 	a.promptHistoryMu.Unlock()
 	return result, nil
-}
-
-func parsePromptHistoryRequest(raw string) promptHistoryRequest {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return promptHistoryRequest{}
-	}
-	if strings.HasPrefix(raw, "{") {
-		var req promptHistoryRequest
-		if err := json.Unmarshal([]byte(raw), &req); err == nil {
-			return req
-		}
-	}
-	return promptHistoryRequest{Nonce: raw, legacy: true}
 }
 
 func promptHistoryLimit(limit int) int {
@@ -4500,29 +3918,15 @@ func collectJSONLUserPrompts(path string, info os.FileInfo, resolveUserContent f
 	dec := json.NewDecoder(f)
 	turn := 0
 	for {
-		var rec previewEventRecord
-		if err := dec.Decode(&rec); err != nil {
+		var message provider.Message
+		if err := dec.Decode(&message); err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return nil // partial results are better than none
+			return err
 		}
-		// Format compatibility:
-		// 1) Legacy event format: {"kind":"user.message","text":"..."}
-		// 2) Early event format:   {"type":"user.message","text":"..."}
-		// 3) Current provider.Message format: {"role":"user","content":"..."}
-		var message provider.Message
-		kindOrType := strings.TrimSpace(rec.Kind)
-		if kindOrType == "" {
-			kindOrType = strings.TrimSpace(rec.Type)
-		}
-		if kindOrType == "user.message" {
-			message = provider.Message{Role: provider.RoleUser, Content: strings.TrimSpace(rec.Text)}
-		} else if strings.TrimSpace(rec.Role) == "user" {
-			message = provider.Message{
-				Role: provider.RoleUser, Origin: rec.Origin,
-				Content: strings.TrimSpace(rec.Content), RawContent: strings.TrimSpace(rec.RawContent),
-			}
+		if message.Role == "" {
+			return agent.ErrDisplayFormatUnsupported
 		}
 		if message.Content != "" {
 			if !agent.IsUserAuthoredTurnMessage(message) {
@@ -4533,8 +3937,8 @@ func collectJSONLUserPrompts(path string, info os.FileInfo, resolveUserContent f
 				continue
 			}
 			at := fallbackAt
-			if eventAt, ok := promptHistoryEventMillis(rec); ok {
-				at = eventAt
+			if message.CreatedAt > 0 {
+				at = message.CreatedAt
 			}
 			entry := PromptHistoryEntry{
 				Text:        text,
@@ -4564,97 +3968,6 @@ func promptHistoryFallbackMillis(path string, info os.FileInfo) int64 {
 		return info.ModTime().UnixMilli()
 	}
 	return 0
-}
-
-func promptHistoryEventMillis(rec previewEventRecord) (int64, bool) {
-	for _, raw := range []json.RawMessage{
-		rec.TS,
-		rec.Time,
-		rec.Timestamp,
-		rec.CreatedAt,
-		rec.CreatedAtSnake,
-		rec.UpdatedAt,
-		rec.UpdatedAtSnake,
-	} {
-		if at, ok := parseJSONTimestampMillis(raw); ok {
-			return at, true
-		}
-	}
-	return 0, false
-}
-
-func parseJSONTimestampMillis(raw json.RawMessage) (int64, bool) {
-	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
-		return 0, false
-	}
-
-	var s string
-	if err := json.Unmarshal(raw, &s); err == nil {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return 0, false
-		}
-		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return normalizeTimestampMillis(n)
-		}
-		if f, err := strconv.ParseFloat(s, 64); err == nil {
-			return normalizeTimestampMillisFloat(f)
-		}
-		if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-			return t.UnixMilli(), true
-		}
-		return 0, false
-	}
-
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.UseNumber()
-	var n json.Number
-	if err := dec.Decode(&n); err != nil {
-		return 0, false
-	}
-	if i, err := strconv.ParseInt(n.String(), 10, 64); err == nil {
-		return normalizeTimestampMillis(i)
-	}
-	if f, err := strconv.ParseFloat(n.String(), 64); err == nil {
-		return normalizeTimestampMillisFloat(f)
-	}
-	return 0, false
-}
-
-func normalizeTimestampMillis(v int64) (int64, bool) {
-	if v <= 0 {
-		return 0, false
-	}
-	switch {
-	case v >= 1_000_000_000_000_000_000:
-		return v / 1_000_000, true // nanoseconds
-	case v >= 1_000_000_000_000_000:
-		return v / 1_000, true // microseconds
-	case v >= 100_000_000_000:
-		return v, true // milliseconds
-	case v >= 1_000_000_000:
-		return v * 1_000, true // seconds
-	default:
-		return 0, false
-	}
-}
-
-func normalizeTimestampMillisFloat(v float64) (int64, bool) {
-	if v <= 0 {
-		return 0, false
-	}
-	switch {
-	case v >= 1_000_000_000_000_000_000:
-		return int64(v / 1_000_000), true
-	case v >= 1_000_000_000_000_000:
-		return int64(v / 1_000), true
-	case v >= 100_000_000_000:
-		return int64(v), true
-	case v >= 1_000_000_000:
-		return int64(v * 1_000), true
-	default:
-		return 0, false
-	}
 }
 
 // PickWorkspace opens a folder chooser and, on a pick, opens a new project tab
@@ -4722,7 +4035,6 @@ func nearestExistingDirectory(path string) string {
 }
 
 func (a *App) ListWorkspaces() []WorkspaceMeta {
-	migrateLegacyWorkspacesIntoProjects()
 	activeRoot := ""
 	cur, _ := os.Getwd()
 	a.mu.RLock()
@@ -4813,30 +4125,6 @@ func (a *App) RemoveWorkspace(dir string) error {
 	}
 	a.emitProjectTreeMetadataChanged()
 	return nil
-}
-
-func migrateLegacyWorkspacesIntoProjects() {
-	legacy := loadWorkspaces()
-	if len(legacy) == 0 {
-		return
-	}
-	_ = updateProjectsFilePreservingLegacyState(func(f *desktopProjectFile) (bool, error) {
-		seen := make(map[string]bool, len(f.Projects)+len(legacy))
-		for _, p := range f.Projects {
-			seen[p.Root] = true
-		}
-		changed := false
-		for _, path := range legacy {
-			root := normalizeProjectRoot(path)
-			if root == "" || seen[root] {
-				continue
-			}
-			f.Projects = append(f.Projects, desktopProject{Root: root})
-			seen[root] = true
-			changed = true
-		}
-		return changed, nil
-	})
 }
 
 func workspaceName(path string) string {
@@ -5467,14 +4755,7 @@ func (state *historyMessageConvertState) convertHistoryMessage(
 	}
 	if m.Role == provider.RoleUser && content != m.Content {
 		replay := historyReplayUserContent(m.Content)
-		if agent.ContainsMemoryCompilerExecution(m.Content) {
-			// Never expose the compiler contract itself. A safely unwrapped
-			// slash invocation is useful display metadata, though: it lets the
-			// frontend restore the selected skill/subagent in history and trash.
-			if strings.HasPrefix(strings.TrimSpace(replay), "/") && replay != content {
-				hm.SubmitText = replay
-			}
-		} else if replay != content {
+		if replay != content {
 			hm.SubmitText = replay
 		}
 	}
@@ -5923,9 +5204,6 @@ func previewSessionMessages(sessionDir, path string) ([]HistoryMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	if out, ok, err := previewEventSessionMessages(sessionPath); ok || err != nil {
-		return out, err
-	}
 	loaded, err := agent.LoadSession(sessionPath)
 	if err != nil {
 		return nil, err
@@ -5943,12 +5221,6 @@ func previewSessionPage(sessionDir, path string, beforeTurn, limit int) (History
 	if err != nil {
 		return HistoryPage{}, err
 	}
-	if out, ok, err := previewEventSessionMessages(sessionPath); ok || err != nil {
-		if err != nil {
-			return HistoryPage{}, err
-		}
-		return historyPageFromMessages(out, beforeTurn, limit), nil
-	}
 	loaded, err := agent.LoadSession(sessionPath)
 	if err != nil {
 		return HistoryPage{}, err
@@ -5963,179 +5235,6 @@ func previewSessionPage(sessionDir, path string, beforeTurn, limit int) (History
 		beforeTurn,
 		limit,
 	), sessionPath, digest), nil
-}
-
-type previewEventRecord struct {
-	Kind             string                      `json:"kind"`
-	Type             string                      `json:"type"`
-	Role             string                      `json:"role"`
-	Origin           provider.MessageOrigin      `json:"origin"`
-	TS               json.RawMessage             `json:"ts"`
-	Time             json.RawMessage             `json:"time"`
-	Timestamp        json.RawMessage             `json:"timestamp"`
-	CreatedAt        json.RawMessage             `json:"createdAt"`
-	CreatedAtSnake   json.RawMessage             `json:"created_at"`
-	UpdatedAt        json.RawMessage             `json:"updatedAt"`
-	UpdatedAtSnake   json.RawMessage             `json:"updated_at"`
-	Text             string                      `json:"text"`
-	Detail           string                      `json:"detail"`
-	Code             string                      `json:"code"`
-	Content          string                      `json:"content"`
-	RawContent       string                      `json:"raw_content"`
-	Reasoning        string                      `json:"reasoning"`
-	ReasoningContent string                      `json:"reasoningContent"`
-	MemoryCitations  []provider.MemoryCitation   `json:"memoryCitations"`
-	Level            string                      `json:"level"`
-	ToolCalls        []previewToolCall           `json:"toolCalls"`
-	CallID           string                      `json:"callId"`
-	ToolCallID       string                      `json:"toolCallId"`
-	ToolName         string                      `json:"toolName"`
-	Name             string                      `json:"name"`
-	Output           string                      `json:"output"`
-	Compaction       *previewCompaction          `json:"compaction"`
-	Trigger          string                      `json:"trigger"`
-	Messages         int                         `json:"messages"`
-	Summary          string                      `json:"summary"`
-	Archive          string                      `json:"archive"`
-	SessionOperation *event.SessionOperationInfo `json:"sessionOperation"`
-}
-
-type previewToolCall struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Arguments string `json:"arguments"`
-	Function  struct {
-		Name      string `json:"name"`
-		Arguments string `json:"arguments"`
-	} `json:"function"`
-}
-
-type previewCompaction struct {
-	Trigger  string `json:"trigger"`
-	Messages int    `json:"messages"`
-	Summary  string `json:"summary"`
-	Archive  string `json:"archive"`
-}
-
-func previewEventSessionMessages(path string) ([]HistoryMessage, bool, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, false, err
-	}
-	defer f.Close()
-
-	dec := json.NewDecoder(f)
-	out := []HistoryMessage{}
-	toolName := map[string]string{}
-	sawEvent := false
-	for {
-		var rec previewEventRecord
-		if err := dec.Decode(&rec); err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if sawEvent {
-				return out, true, nil
-			}
-			return nil, false, nil
-		}
-		eventName := strings.TrimSpace(rec.Kind)
-		if eventName == "" {
-			eventName = strings.TrimSpace(rec.Type)
-		}
-		if eventName == "" {
-			continue
-		}
-		sawEvent = true
-		switch eventName {
-		case "user.message":
-			if rec.Text != "" {
-				hm := HistoryMessage{Role: "user", Content: rec.Text}
-				if at, ok := promptHistoryEventMillis(rec); ok {
-					hm.CreatedAt = at
-				}
-				out = append(out, hm)
-			}
-		case "model.final":
-			hm := HistoryMessage{Role: "assistant", Content: rec.Content, Reasoning: firstNonEmpty(rec.Reasoning, rec.ReasoningContent)}
-			if len(rec.MemoryCitations) > 0 {
-				hm.MemoryCitations = append([]provider.MemoryCitation(nil), rec.MemoryCitations...)
-			}
-			for _, tc := range rec.ToolCalls {
-				id := tc.ID
-				name := firstNonEmpty(tc.Name, tc.Function.Name)
-				args := firstNonEmpty(tc.Arguments, tc.Function.Arguments)
-				hm.ToolCalls = append(hm.ToolCalls, historyToolCall(provider.ToolCall{ID: id, Name: name, Arguments: args}, args, provider.Message{}))
-				if id != "" {
-					toolName[id] = name
-				}
-			}
-			out = append(out, hm)
-		case "tool.result":
-			callID := firstNonEmpty(rec.CallID, rec.ToolCallID)
-			content := firstNonEmpty(rec.Output, rec.Content)
-			display, archived, errPreview := historyToolResultContent(content, callID != "")
-			if len(out) > 0 && callID != "" {
-				updateHistoryToolCallSummary(out, callID, content)
-			}
-			out = append(out, HistoryMessage{
-				Role:               "tool",
-				ToolCallID:         callID,
-				ToolName:           firstNonEmpty(rec.ToolName, rec.Name, toolName[callID]),
-				Content:            display,
-				ToolResultArchived: archived,
-				ToolResultError:    errPreview,
-			})
-		case "phase":
-			out = append(out, HistoryMessage{Role: "phase", Content: firstNonEmpty(rec.Text, rec.Content)})
-		case "notice":
-			level := rec.Level
-			if level != "warn" {
-				level = "info"
-			}
-			out = append(out, HistoryMessage{Role: "notice", Level: level, Content: firstNonEmpty(rec.Text, rec.Content), Detail: rec.Detail, Code: rec.Code})
-		case "compaction_started":
-			c := rec.compactionPayload()
-			out = append(out, HistoryMessage{Role: "compaction", Pending: true, Trigger: c.Trigger})
-		case "compaction_done":
-			c := rec.compactionPayload()
-			out = append(out, HistoryMessage{
-				Role:     "compaction",
-				Trigger:  c.Trigger,
-				Messages: c.Messages,
-				Summary:  c.Summary,
-				Archive:  c.Archive,
-			})
-		case "session_operation":
-			out = upsertMaintenancePreview(out, rec.SessionOperation)
-		}
-	}
-	return out, sawEvent, nil
-}
-
-func (r previewEventRecord) compactionPayload() previewCompaction {
-	if r.Compaction != nil {
-		return *r.Compaction
-	}
-	return previewCompaction{Trigger: r.Trigger, Messages: r.Messages, Summary: r.Summary, Archive: r.Archive}
-}
-
-func updateHistoryToolCallSummary(out []HistoryMessage, callID, output string) {
-	if callID == "" {
-		return
-	}
-	for _, v := range slices.Backward(out) {
-		for j := range v.ToolCalls {
-			call := &v.ToolCalls[j]
-			if call.ID != callID {
-				continue
-			}
-			if call.Summary == "" {
-				call.Summary = historyToolSummary(call.Name, call.Arguments, output)
-			}
-			return
-		}
-	}
 }
 
 func firstNonEmpty(values ...string) string {
@@ -6364,13 +5463,11 @@ func goalRuntimeViewFromController(ctrl control.SessionAPI) *GoalRuntimeView {
 	rt := ctrl.GoalRuntime()
 	return &GoalRuntimeView{
 		TurnsUsed:        rt.TurnsUsed,
-		TurnsLimit:       rt.TurnsLimit,
 		TokensUsed:       rt.TokensUsed,
 		RequestsUsed:     rt.RequestsUsed,
 		WorkDurationMs:   rt.WorkDurationMs,
 		TokensLimit:      rt.TokensLimit,
 		NoProgressTurns:  rt.NoProgressTurns,
-		NoProgressLimit:  rt.NoProgressLimit,
 		LastReason:       rt.LastReason,
 		StopCause:        rt.StopCause,
 		BudgetExtensions: rt.BudgetExtensions,
@@ -6409,19 +5506,6 @@ func ctrlTodos(ctrl control.SessionAPI) *[]evidence.TodoItem {
 	return &todos
 }
 
-// SetAutoApproveTools is retained for older desktop bundles. Both legacy
-// states migrate to workspace-write; full access must be selected explicitly
-// through SetToolApprovalModeForTab.
-func (a *App) SetAutoApproveTools(on bool) {
-	_ = on
-	a.SetToolApprovalModeForTab("", control.ToolApprovalWorkspaceWrite)
-}
-
-// SetBypass is the legacy Wails binding for SetAutoApproveTools.
-func (a *App) SetBypass(on bool) {
-	a.SetAutoApproveTools(on)
-}
-
 func (a *App) SetToolApprovalMode(mode string) {
 	a.SetToolApprovalModeForTab("", mode)
 }
@@ -6443,7 +5527,7 @@ func (a *App) SetToolApprovalModeForTab(tabID, mode string) []string {
 		return nil
 	}
 	tab.toolApprovalMode = mode
-	tab.mode = tabModeFromAxes(plan, mode == control.ToolApprovalDangerFullAccess)
+	tab.mode = tabModeForPlan(plan)
 	ctrl := tab.Ctrl
 	tabIDForSave := tab.ID
 	a.mu.Unlock()
@@ -6532,7 +5616,7 @@ func (a *App) SetPermissionPresetForTab(tabID, expectedSessionID, preset string,
 	chosenFor := ""
 	if a.tabs[tab.ID] == tab {
 		tab.toolApprovalMode = snapshot.Preset
-		tab.mode = tabModeFromAxes(tabModeHasPlan(tab.mode), snapshot.Preset == control.ToolApprovalDangerFullAccess)
+		tab.mode = tabModeForPlan(tabModeHasPlan(tab.mode))
 		if tab.SessionID == snapshot.SessionID {
 			chosenFor = tab.SessionID
 		}
@@ -6615,9 +5699,6 @@ func (a *App) Commands() []CommandInfo {
 		out = append(out, CommandInfo{Name: s.SlashName(), Description: s.Description, Kind: kind, Group: group, Plugin: s.Plugin, Color: s.Color})
 	}
 	for _, c := range commands {
-		if c.Hidden {
-			continue
-		}
 		out = append(out, CommandInfo{Name: c.Name, Description: c.Description, Hint: c.ArgHint, Kind: "custom", Group: "skills", Plugin: c.Plugin})
 	}
 	if h := ctrl.Host(); h != nil {
@@ -6637,7 +5718,6 @@ func builtinCommandInfos() []CommandInfo {
 		{Name: "provider", Description: i18n.M.CmdProvider, Kind: "builtin", Group: "management", DraftBehavior: "unavailable"},
 		{Name: "effort", Description: i18n.M.CmdEffort, Kind: "builtin", Group: "actions", DraftBehavior: "setting"},
 		{Name: "memory", Description: i18n.M.CmdMemory, Kind: "builtin", Group: "management", DraftBehavior: "unavailable"},
-		{Name: "migrate", Description: i18n.M.CmdMigrate, Kind: "builtin", Group: "management", DraftBehavior: "unavailable"},
 		{Name: "goal", Description: i18n.M.CmdGoal, Kind: "builtin", Group: "actions"},
 		{Name: "remember", Description: i18n.M.CmdRemember, Kind: "builtin", Group: "management", DraftBehavior: "unavailable"},
 		{Name: "mcp", Description: i18n.M.CmdMcp, Kind: "builtin", Group: "integrations", DraftBehavior: "unavailable"},
@@ -6732,7 +5812,6 @@ type ServerView struct {
 	BuiltIn                bool           `json:"builtIn,omitempty"`
 	Configured             bool           `json:"configured,omitempty"`
 	AutoStart              bool           `json:"autoStart"` // deprecated: same as Enabled
-	Tier                   string         `json:"tier,omitempty"`
 	Command                string         `json:"command,omitempty"`
 	Args                   []string       `json:"args,omitempty"`
 	URL                    string         `json:"url,omitempty"`
@@ -7569,7 +6648,6 @@ func withPluginConfigInWorkspace(v ServerView, p config.PluginEntry, workspace s
 	v.Source, v.ConfigSource = mcpServerSource(p.Source)
 	v.Enabled = mcpEntryEnabled(p, workspace)
 	v.AutoStart = v.Enabled
-	v.Tier = p.ResolvedTier()
 	if v.StartIntent == "" {
 		if v.Enabled {
 			v.StartIntent = "automatic"
@@ -7623,8 +6701,6 @@ func mcpServerSource(source config.MCPConfigSource) (kind, configSource string) 
 		return "project", ".mcp.json"
 	case config.MCPSourcePluginPackage:
 		return "plugin", "plugin"
-	case config.MCPSourceLegacyUser:
-		return "user", "legacy config"
 	case config.MCPSourceUserConfig:
 		return "user", "config.toml"
 	default:
@@ -8380,7 +7456,6 @@ func (a *App) UpdateMCPServer(name string, in MCPServerInput) error {
 	updated.Command = strings.TrimSpace(in.Command)
 	updated.Args = append([]string(nil), in.Args...)
 	updated.URL = strings.TrimSpace(in.URL)
-	updated.Tier = ""
 	if in.Env != nil {
 		updated.Env = in.Env
 	}
@@ -8650,49 +7725,6 @@ func (a *App) registerConfiguredMCPServerForTab(tab *WorkspaceTab, name string) 
 	return 0, fmt.Errorf("no configured MCP server named %q", name)
 }
 
-// SetMCPServerTier is kept for old desktop bindings. New config writes drop the
-// retired tier field.
-func (a *App) SetMCPServerTier(name, tier string) error {
-	defer a.lockMCPMutation("set-tier")()
-
-	tier = normalizeMCPTier(tier)
-	tab, ctrl, root := a.activeMCPRuntime()
-	if tab != nil {
-		if err := rebuildControllerActiveWorkErrorFor(ctrl, "MCP server"); err != nil {
-			return err
-		}
-	}
-	updated, found, err := a.desktopMCPServerForEdit(root, name)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return fmt.Errorf("no configured MCP server named %q", name)
-	}
-	updated.Tier = tier
-	if !updated.ShouldAutoStart() {
-		on := true
-		updated.AutoStart = &on
-	}
-	if err := a.saveDesktopMCPServer(root, updated); err != nil {
-		return err
-	}
-	a.bumpExtensionGeneration()
-	if tab != nil && ctrl != nil && !mcpConnected(ctrl, name) {
-		if err := config.RecordExplicitStart(updated, root); err != nil {
-			return err
-		}
-		if _, err := ctrl.ConnectMCPServer(updated); err != nil {
-			recordMCPFailure(ctrl, updated, err)
-			return nil
-		}
-		a.mu.Lock()
-		delete(tab.disabledMCP, name)
-		a.mu.Unlock()
-	}
-	return nil
-}
-
 func (a *App) desktopMCPServerForEdit(root, name string) (config.PluginEntry, bool, error) {
 	// Edit the same effective declaration the runtime selected. The entry's
 	// provenance is retained so saveDesktopMCPServer writes it back to the
@@ -8743,19 +7775,6 @@ func findPluginEntry(entries []config.PluginEntry, name string) (config.PluginEn
 		}
 	}
 	return config.PluginEntry{}, false
-}
-
-func normalizeMCPTier(tier string) string {
-	switch strings.ToLower(strings.TrimSpace(tier)) {
-	case "eager":
-		return "eager"
-	case "background", "lazy":
-		return "background"
-	case "":
-		return "background"
-	default:
-		return "background"
-	}
 }
 
 func normalizeMCPTransport(transport string) string {
@@ -9646,50 +8665,6 @@ func (a *App) SetEffortForTab(tabID, level string) error {
 // Wails methods. Deepzora runs one adaptive standard execution; these methods
 // remain bound for one compatibility version as no-op wrappers: they never
 // require an idle tab, never save a mode, and never rebuild an agent.
-const SetAgentPresetDeprecatedNotice = "Deepzora now uses one adaptive standard execution: planning, verification, and review strength follow task risk automatically. Execution modes are no longer switchable; this call is accepted for compatibility and ignored."
-
-func (a *App) SetTokenMode(mode string) error {
-	// Deprecated no-op compatibility wrapper.
-	return a.SetAgentPreset(boot.NormalizeAgentPreset(mode))
-}
-
-func (a *App) SetTokenModeForTab(tabID, mode string) error {
-	// Deprecated no-op compatibility wrapper.
-	return a.SetAgentPresetForTab(tabID, boot.NormalizeAgentPreset(mode))
-}
-
-// SetAgentPreset is a deprecated no-op compatibility wrapper.
-func (a *App) SetAgentPreset(preset string) error {
-	return a.SetAgentPresetForTab("", preset)
-}
-
-// SetAgentPresetForTab is a deprecated no-op compatibility wrapper: it accepts
-// the legacy argument, does not require an idle tab, saves no mode, rebuilds
-// no agent, and always succeeds with the deprecation notice.
-func (a *App) SetAgentPresetForTab(tabID, preset string) error {
-	normalized, err := boot.NormalizeAgentPresetErr(preset)
-	if err != nil {
-		return err
-	}
-	if tab := a.tabByID(tabID); tab == nil && strings.TrimSpace(tabID) != "" {
-		return fmt.Errorf("tab %q not found", tabID)
-	}
-	return a.SetQualityFloorForTab(tabID, normalized)
-}
-
-// persistTabTokenMode persists the deprecated dual-write compatibility values
-// (agentPreset=standard, tokenMode=full) so one-version-old clients keep
-// parsing tab state and session metas. The values are fixed; nothing reads
-// them to alter runtime behavior.
-func (a *App) persistTabTokenMode(tab *WorkspaceTab) {
-	if a == nil || tab == nil {
-		return
-	}
-	a.mu.Lock()
-	a.saveTabsLocked()
-	a.mu.Unlock()
-	_ = a.saveTabSessionMetaForCurrentSession(tab)
-}
 
 func (a *App) applyProviderEffortConfig(entry *config.ProviderEntry, effort string) error {
 	return a.applyConfigChange(func(cfg *config.Config) error {
@@ -10617,7 +9592,6 @@ func (a *App) currentProviderEntryForTab(tabID string) (*config.ProviderEntry, e
 	if strings.TrimSpace(ref) == "" {
 		ref = cfg.DefaultModel
 	}
-	config.NormalizeLegacyMimoCustomProvidersForRefs(cfg, ref)
 	resolved, _, ok := cfg.ResolveModelWithFallback(ref)
 	if !ok {
 		return nil, fmt.Errorf("unknown model %q", ref)

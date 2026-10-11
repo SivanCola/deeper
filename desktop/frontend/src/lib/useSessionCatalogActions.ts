@@ -19,9 +19,7 @@ export function useSessionCatalogActions(
     await sync(true, false, { navigationIntentSeq, surfacePolicy: "replace-surface" });
   }, [requireIntent, current, sync]);
   const previewSession = useCallback(async (path: string): Promise<HistoryMessage[]> => asArray<HistoryMessage>(await app.PreviewSession(path).catch(() => [])), []);
-  const deleteSession = useCallback((path: string) => app.DeleteSession(path).finally(() => invalidateCache()), [invalidateCache]);
-  const restoreSession = useCallback((path: string) => app.RestoreSession(path).finally(() => invalidateCache()), [invalidateCache]);
-  const purgeTrashedSession = useCallback((path: string) => app.PurgeTrashedSession(path).finally(() => invalidateCache()), [invalidateCache]);
+  const deleteSession = useCallback((path: string) => app.ArchiveSessionTarget({ sessionPath: path }).then(() => undefined).finally(() => invalidateCache()), [invalidateCache]);
   const renameSession = useCallback((path: string, title: string) => app.RenameSession(path, title).catch(() => {}).finally(() => invalidateCache()), [invalidateCache]);
-  return { openCanonicalSession, previewSession, deleteSession, restoreSession, purgeTrashedSession, renameSession };
+  return { openCanonicalSession, previewSession, deleteSession, renameSession };
 }

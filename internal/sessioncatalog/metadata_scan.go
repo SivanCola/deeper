@@ -31,7 +31,7 @@ func metadataRecord(ctx context.Context, target DirectoryTarget, path string) (S
 		return SessionRecord{}, err
 	}
 	order := agent.SessionOrderInfo{Path: path, Scope: target.Scope, WorkspaceRoot: target.WorkspaceRoot,
-		CreatedAt: st.ModTime(), LastActivityAt: st.ModTime(), ModTime: st.ModTime()}
+		CreatedAt: st.ModTime(), LastActivityAt: st.ModTime()}
 	if known && metaErr == nil {
 		if strings.TrimSpace(meta.Scope) != "" {
 			order.Scope, order.WorkspaceRoot = meta.DefaultScope(), meta.WorkspaceRoot
@@ -49,10 +49,9 @@ func metadataRecord(ctx context.Context, target DirectoryTarget, path string) (S
 		order.Revision, order.ContentDigest = meta.Revision, meta.ContentDigest
 		order.ListingRevision, order.ListingContentDigest = meta.ListingRevision, meta.ListingContentDigest
 	}
-	// Every physical session remains reachable without rewriting old sidecars
-	// merely to assign a topic. A later authoritative topic assignment replaces it.
+	// Standalone sessions remain reachable without assigning durable topic metadata.
 	if order.TopicID == "" {
-		order.TopicID = agent.LegacySessionTopicID(path)
+		order.TopicID = agent.SessionTopicID(path)
 	}
 	if order.TopicTitle == "" {
 		order.TopicTitle = strings.TrimSuffix(filepath.Base(path), ".jsonl")

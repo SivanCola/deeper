@@ -33,9 +33,7 @@ type ContextMaintenanceInfo struct {
 	ProjectedTokens   int                            `json:"projectedTokens,omitempty"`
 	SummaryTokens     int                            `json:"summaryTokens,omitempty"`
 	LastSavedTokens   int                            `json:"lastSavedTokens,omitempty"`
-	SnipTrigger       int                            `json:"snipTrigger,omitempty"`  // always 0; legacy compatibility
-	FoldTrigger       int                            `json:"foldTrigger,omitempty"`  // alias of TriggerTokens
-	ForceTrigger      int                            `json:"forceTrigger,omitempty"` // always 0; legacy compatibility
+	FoldTrigger       int                            `json:"foldTrigger,omitempty"` // alias of TriggerTokens
 	TriggerTokens     int                            `json:"triggerTokens,omitempty"`
 	CheckpointState   string                         `json:"checkpointState,omitempty"` // none|restored|applied
 	HardInputCeiling  int                            `json:"hardInputCeiling,omitempty"`

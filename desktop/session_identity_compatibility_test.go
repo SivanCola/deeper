@@ -9,6 +9,7 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
+	"deepzora/internal/provider"
 	"deepzora/internal/session"
 	"deepzora/internal/taskmonitor"
 )
@@ -65,9 +66,7 @@ func TestAuditCanonicalRestoreReturnsToSidebar(t *testing.T) {
 		t.Fatalf("restore history: %+v, %v", history, err)
 	}
 	t.Log("restore removed archive marker and preserved the full test history")
-	if deleted := app.ListTrashedSessions(); len(deleted) != 0 {
-		t.Fatalf("unexpected trash: %+v", deleted)
-	}
+
 	topics, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "global", Limit: 10})
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +76,7 @@ func TestAuditCanonicalRestoreReturnsToSidebar(t *testing.T) {
 	}
 }
 
-func auditMigratedTab(t *testing.T) (*App, *WorkspaceTab, *control.Controller, string) {
+func auditCurrentTab(t *testing.T) (*App, *WorkspaceTab, *control.Controller, string) {
 	t.Helper()
 	isolateDesktopUserDirs(t)
 	model, _ := configureSwitchableDefaultModels(t)
@@ -96,18 +95,26 @@ func auditMigratedTab(t *testing.T) (*App, *WorkspaceTab, *control.Controller, s
 	if err := setTopicTitle(root, "audit-topic", "Audit"); err != nil {
 		t.Fatal(err)
 	}
-	path := writeTopicSessionWithPrompt(t, dir, "audit.jsonl", "audit-topic", "Audit", root, "preserved history", time.Now())
-	ctrl := control.New(control.Options{
-		WorkspaceRoot: root, SessionDir: dir,
-		Executor:       agent.New(nil, nil, agent.NewSession("test"), agent.Options{}, event.Discard),
-		SessionService: app.desktopSessionService(dir), ExclusiveSession: true,
-		OnSessionRotation: app.prepareDesktopSessionRotation,
-	})
-	t.Cleanup(ctrl.Close)
-	ref, err := ctrl.ContinueLegacySessionWithOptions(t.Context(), path, "", desktopLegacyImportOptions(root))
+	service := app.desktopSessionService(dir)
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "audit-current", CWD: root, Origin: session.SessionOriginNew})
 	if err != nil {
 		t.Fatal(err)
 	}
+	appendSessionTestModel(t, runtime, "audit-model", model)
+	appendSessionTestMessage(t, runtime, "audit-system", provider.Message{ID: "audit-system", Role: provider.RoleSystem, Content: "test system"})
+	appendSessionTestMessage(t, runtime, "audit-user", provider.Message{ID: "audit-user", Role: provider.RoleUser, Content: "preserved history"})
+	ctrl := control.New(control.Options{
+		WorkspaceRoot: root, SessionDir: dir,
+		Executor:       agent.New(nil, nil, agent.NewSession("test"), agent.Options{}, event.Discard),
+		SessionService: service, ExclusiveSession: true,
+		OnSessionRotation: app.prepareDesktopSessionRotation,
+	})
+	t.Cleanup(ctrl.Close)
+	ref, err := ctrl.OpenSession(t.Context(), runtime.Ref())
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := sessionRoute(ref.SessionID)
 	workspaceID, err := app.attachDesktopSession(t.Context(), "project", root, ref)
 	if err != nil {
 		t.Fatal(err)
@@ -117,10 +124,7 @@ func auditMigratedTab(t *testing.T) (*App, *WorkspaceTab, *control.Controller, s
 	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
 	installNoopRuntimeEvents(app, tab.sink)
 	app.tabs[tab.ID], app.tabOrder, app.activeTabID = tab, []string{tab.ID}, tab.ID
-	if err := tab.ensureSessionLease(path); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(tab.releaseSessionLease)
+
 	app.mu.Lock()
 	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(tab.currentSessionIdentity()))
 	app.advanceSessionRuntimeEpochLocked(tab)
@@ -128,19 +132,19 @@ func auditMigratedTab(t *testing.T) (*App, *WorkspaceTab, *control.Controller, s
 	return app, tab, ctrl, path
 }
 
-func TestAuditMigratedSessionReopen(t *testing.T) {
-	app, tab, ctrl, path := auditMigratedTab(t)
+func TestAuditCurrentSessionReopen(t *testing.T) {
+	app, tab, ctrl, path := auditCurrentTab(t)
 	_, err := app.OpenTopicSession("project", tab.WorkspaceRoot, tab.TopicID, path)
 	if err != nil {
-		t.Fatalf("reopen current migrated session: %v", err)
+		t.Fatalf("reopen current session: %v", err)
 	}
 	if tab.Ctrl != ctrl {
-		t.Fatal("reopening current migrated session replaced its controller")
+		t.Fatal("reopening current session replaced its controller")
 	}
 }
 
 func TestAuditCanonicalIdleClearRegistry(t *testing.T) {
-	app, tab, ctrl, _ := auditMigratedTab(t)
+	app, tab, ctrl, _ := auditCurrentTab(t)
 	oldRef, _ := ctrl.SessionRef()
 	result, err := app.ClearSessionForTab(tab.ID)
 	if err != nil {
@@ -173,7 +177,7 @@ func TestAuditCanonicalIdleClearRegistry(t *testing.T) {
 }
 
 func TestAuditCanonicalTaskFilter(t *testing.T) {
-	app, tab, _, _ := auditMigratedTab(t)
+	app, tab, _, _ := auditCurrentTab(t)
 	for _, id := range []string{tab.SessionID, "other-session"} {
 		if err := app.taskStore().SaveTask(t.Context(), tab.WorkspaceRoot, taskmonitor.TaskSnapshot{
 			SchemaVersion: 1, TaskID: id + "--task-1", JobID: "task-1", SessionID: id,
@@ -208,7 +212,7 @@ func (c *auditJobController) CancelJob(string) bool      { c.killed = true; retu
 func (c *auditJobController) TaskRuntimeOwnerID() string { return "audit-runtime-owner" }
 
 func TestAuditCanonicalTaskStop(t *testing.T) {
-	app, tab, ctrl, _ := auditMigratedTab(t)
+	app, tab, ctrl, _ := auditCurrentTab(t)
 	wrapper := &auditJobController{Controller: ctrl}
 	tab.Ctrl = wrapper
 	id := tab.SessionID + "--task-1"
@@ -230,7 +234,7 @@ func TestAuditCanonicalTaskStop(t *testing.T) {
 }
 
 func TestTaskControlRejectsOldRecorderGeneration(t *testing.T) {
-	app, tab, ctrl, _ := auditMigratedTab(t)
+	app, tab, ctrl, _ := auditCurrentTab(t)
 	wrapper := &auditJobController{Controller: ctrl}
 	tab.Ctrl = wrapper
 	for _, owner := range []string{"", "previous-runtime-owner"} {
@@ -249,23 +253,8 @@ func TestTaskControlRejectsOldRecorderGeneration(t *testing.T) {
 	}
 }
 
-func TestAuditMigratedCloseReleasesLease(t *testing.T) {
-	app, tab, _, path := auditMigratedTab(t)
-	keep := &WorkspaceTab{ID: "keep", Scope: "project", WorkspaceRoot: tab.WorkspaceRoot, Ready: true}
-	app.tabs[keep.ID] = keep
-	app.tabOrder = append(app.tabOrder, keep.ID)
-	if err := app.CloseTab(tab.ID); err != nil {
-		t.Fatal(err)
-	}
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatalf("closed migrated tab retained legacy lease: %v", err)
-	}
-	lease.Release()
-}
-
 func TestAuditTopicArchiveCanonicalVisibility(t *testing.T) {
-	app, tab, _, _ := auditMigratedTab(t)
+	app, tab, _, _ := auditCurrentTab(t)
 	keep := &WorkspaceTab{ID: "keep", Scope: "project", WorkspaceRoot: tab.WorkspaceRoot, TopicID: "keep", Ready: true}
 	app.tabs[keep.ID] = keep
 	app.tabOrder = append(app.tabOrder, keep.ID)

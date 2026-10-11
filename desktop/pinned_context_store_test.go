@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -80,81 +79,5 @@ func TestPinnedContextSidecarRejectsCorruptionAndUnknownSchema(t *testing.T) {
 				t.Fatal("invalid sidecar was accepted")
 			}
 		})
-	}
-}
-
-func TestLegacyPinnedFilesMigrateOnlyWhenSidecarAbsent(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	if err := savePinnedContextState(path, []string{}); err != nil {
-		t.Fatal(err)
-	}
-	state, err := loadOrMigratePinnedContextState(path, []string{"legacy.md"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(state.Files) != 0 {
-		t.Fatalf("legacy pins overwrote existing sidecar: %v", state.Files)
-	}
-	raw, err := os.ReadFile(store.SessionPinnedContext(path))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var persisted pinnedContextState
-	if err := json.Unmarshal(raw, &persisted); err != nil {
-		t.Fatal(err)
-	}
-	if len(persisted.Files) != 0 {
-		t.Fatalf("persisted files = %v, want empty", persisted.Files)
-	}
-}
-
-func TestFailedLegacyMigrationRemainsRoundTrippable(t *testing.T) {
-	root := t.TempDir()
-	blockedParent := filepath.Join(root, "blocked")
-	if err := os.WriteFile(blockedParent, []byte("not a directory"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	sessionPath := filepath.Join(blockedParent, "session.jsonl")
-	tab := &WorkspaceTab{ID: "tab", Scope: "project", SessionPath: sessionPath}
-	restoreTabPinnedContext(tab, []string{"legacy.md"})
-	if got := tab.GetPinnedFiles(); !reflect.DeepEqual(got, []string{"legacy.md"}) {
-		t.Fatalf("visible legacy pins = %v", got)
-	}
-	app := &App{tabs: map[string]*WorkspaceTab{"tab": tab}, tabOrder: []string{"tab"}, activeTabID: "tab"}
-	_, entries, _, _ := app.saveTabsCollectLocked()
-	if len(entries) != 1 || !reflect.DeepEqual(entries[0].PinnedFiles, []string{"legacy.md"}) {
-		t.Fatalf("persisted tab entries = %#v, want pending legacy pins", entries)
-	}
-
-	if err := os.Remove(blockedParent); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(blockedParent, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	migratePendingLegacyPinnedFiles(tab, sessionPath)
-	if pending := tab.pendingLegacyPinnedFilesForPersistence(); len(pending) != 0 {
-		t.Fatalf("pending legacy pins after migration = %v", pending)
-	}
-	state, err := loadPinnedContextState(sessionPath)
-	if err != nil || !reflect.DeepEqual(state.Files, []string{"legacy.md"}) {
-		t.Fatalf("migrated sidecar = %+v, err = %v", state, err)
-	}
-}
-
-func TestPathlessLegacyPinsRemainRoundTrippable(t *testing.T) {
-	tab := &WorkspaceTab{ID: "tab", Scope: "project"}
-	restoreTabPinnedContext(tab, []string{"legacy.md"})
-	if got := tab.pendingLegacyPinnedFilesForPersistence(); !reflect.DeepEqual(got, []string{"legacy.md"}) {
-		t.Fatalf("pending pathless legacy pins = %v", got)
-	}
-	sessionPath := filepath.Join(t.TempDir(), "session.jsonl")
-	prepareStartupPinnedContext(tab, sessionPath, "")
-	state, err := loadPinnedContextState(sessionPath)
-	if err != nil || !reflect.DeepEqual(state.Files, []string{"legacy.md"}) {
-		t.Fatalf("startup migration state = %+v, err = %v", state, err)
-	}
-	if pending := tab.pendingLegacyPinnedFilesForPersistence(); len(pending) != 0 {
-		t.Fatalf("pending legacy pins after startup migration = %v", pending)
 	}
 }

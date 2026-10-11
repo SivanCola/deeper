@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/sessioncatalog"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +13,7 @@ import (
 
 func mustListProjectTree(t *testing.T, a *App) []ProjectNode {
 	t.Helper()
-	nodes, err := a.ListProjectTree()
+	nodes, err := listProjectTreeForTest(a)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,4 +333,62 @@ func TestReadSnapshotEvictionOrdersEqualTimestampsAndPageAccess(t *testing.T) {
 			t.Errorf("eviction %d did not follow insertion and page-access order", i)
 		}
 	}
+}
+
+func listProjectTreeForTest(a *App) ([]ProjectNode, error) {
+	snapshot, err := a.GetProjectTreeSnapshot()
+	if err != nil {
+		return []ProjectNode{}, err
+	}
+	hasGlobal := false
+	for _, project := range snapshot.Projects {
+		if project.Kind == "global_folder" {
+			hasGlobal = true
+			break
+		}
+	}
+	if !hasGlobal && len(a.metadataProjectTopics("global", "")) > 0 {
+		f := loadProjectsFile()
+		label := strings.TrimSpace(f.GlobalTitle)
+		if label == "" {
+			label = "Global"
+		}
+		snapshot.Projects = append(snapshot.Projects, ProjectNode{
+			Key: "global_folder", Kind: "global_folder", Label: label,
+			Root: globalWorkspaceRoot(), ProjectColor: normalizeProjectColor(f.GlobalColor), Children: []ProjectNode{},
+		})
+		snapshot.Projects = applyPinnedProjectOrder(applyProjectTreeOrder(snapshot.Projects, f.SidebarOrder), f.PinnedProjects)
+	}
+	for index := range snapshot.Projects {
+		project := &snapshot.Projects[index]
+		// The lightweight snapshot carries pinned topic shells for collapsed
+		// folders. This compatibility wrapper rebuilds the complete child list,
+		// so start clean to avoid duplicating those shells with catalog rows.
+		project.Children = []ProjectNode{}
+		if project.Remote != nil {
+			continue
+		}
+		scope := "project"
+		root := project.Root
+		if project.Kind == "global_folder" {
+			scope = "global"
+			root = ""
+		}
+		cursor := ""
+		for {
+			page, err := a.ListProjectTopics(ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Cursor: cursor, Limit: sessioncatalog.MaxLimit})
+			if err != nil {
+				return nil, err
+			}
+			if cursor == "" {
+				defer a.ReleaseReadSnapshot(page.SnapshotID)
+			}
+			project.Children = append(project.Children, page.Items...)
+			if page.NextCursor == "" {
+				break
+			}
+			cursor = page.NextCursor
+		}
+	}
+	return snapshot.Projects, nil
 }

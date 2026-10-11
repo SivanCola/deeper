@@ -178,13 +178,7 @@ func (a *App) PollBotConnectionInstall(installID string) (BotInstallPollResult, 
 			Credential: config.BotConnectionCredential{AccountID: result.AccountID, TokenEnv: "WEIXIN_BOT_TOKEN"},
 		}, func(c *config.Config) {
 			c.Bot.Enabled = c.Bot.Enabled || config.BotInstallMayEnableGateway(c)
-			c.Bot.Weixin.Enabled = true
-			c.Bot.Weixin.AccountID = result.AccountID
 			c.Bot.Weixin.APIBase = result.BaseURL
-			if c.Bot.Weixin.TokenEnv == "" {
-				c.Bot.Weixin.TokenEnv = "WEIXIN_BOT_TOKEN"
-			}
-			c.Bot.Allowlist.WeixinUsers = appendUniqueBotString(c.Bot.Allowlist.WeixinUsers, result.UserID)
 		})
 		if err != nil {
 			return BotInstallPollResult{Status: "error", Error: err.Error()}, nil
@@ -302,22 +296,11 @@ func (a *App) TestDingtalkBot() (BotConnectionDiagnostic, error) {
 		return botConnectionDiagnostic(nil, "dingtalk", "error", "config", "config_load_failed", err.Error(), true), nil
 	}
 	conn, connID, connOK := dingtalkRuntimeConnection(cfg.Bot.Connections)
-	clientID := strings.TrimSpace(cfg.Bot.Dingtalk.ClientID)
-	if clientID == "" {
-		clientID = os.Getenv(strings.TrimSpace(cfg.Bot.Dingtalk.ClientIDEnv))
+	if !connOK {
+		return botConnectionDiagnostic(nil, "dingtalk", "warning", "credential", "dingtalk_connection_missing", "请先配置并启用钉钉连接。", false), nil
 	}
-	secret := strings.TrimSpace(cfg.Bot.Dingtalk.ClientSecret)
-	if secret == "" {
-		secret = os.Getenv(strings.TrimSpace(cfg.Bot.Dingtalk.SecretEnv))
-	}
-	if connOK {
-		if v := strings.TrimSpace(conn.Credential.AppID); v != "" {
-			clientID = v
-		}
-		if v := strings.TrimSpace(conn.Credential.AppSecretEnv); v != "" {
-			secret = os.Getenv(v)
-		}
-	}
+	clientID := strings.TrimSpace(conn.Credential.AppID)
+	secret := os.Getenv(strings.TrimSpace(conn.Credential.AppSecretEnv))
 	if clientID == "" || secret == "" {
 		return botConnectionDiagnostic(nil, "dingtalk", "warning", "credential", "dingtalk_secret_missing", "钉钉凭据未配置完整（AppKey / AppSecret）。", false), nil
 	}
@@ -344,12 +327,7 @@ func dingtalkRuntimeConnection(connections []config.BotConnectionConfig) (config
 		}
 		return conn, botruntime.ConnectionRuntimeID(conn), true
 	}
-	return config.BotConnectionConfig{}, string(bot.PlatformDingtalk), false
-}
-
-func dingtalkRuntimeConnectionID(connections []config.BotConnectionConfig) string {
-	_, id, _ := dingtalkRuntimeConnection(connections)
-	return id
+	return config.BotConnectionConfig{}, "", false
 }
 
 func botConnectionDiagnostic(conn *config.BotConnectionConfig, id, status, phase, code, message string, reportable bool) BotConnectionDiagnostic {
@@ -590,13 +568,9 @@ func (a *App) pollFeishuConnectionInstall(installID string, session *botInstallS
 		Credential: config.BotConnectionCredential{AppID: appID, AppSecretEnv: secretEnv},
 	}, func(c *config.Config) {
 		c.Bot.Enabled = c.Bot.Enabled || config.BotInstallMayEnableGateway(c)
-		c.Bot.Feishu.Enabled = true
 		c.Bot.Feishu.Domain = domain
-		c.Bot.Feishu.AppID = appID
-		c.Bot.Feishu.AppSecretEnv = secretEnv
 		c.Bot.Feishu.Mode = "websocket"
 		c.Bot.Feishu.RequireMention = true
-		c.Bot.Allowlist.FeishuUsers = appendUniqueBotString(c.Bot.Allowlist.FeishuUsers, userID)
 	})
 	if err != nil {
 		return BotInstallPollResult{Status: "error", Error: err.Error()}, nil
@@ -605,7 +579,7 @@ func (a *App) pollFeishuConnectionInstall(installID string, session *botInstallS
 	return BotInstallPollResult{Done: true, Status: "connected", Connection: conn, Message: label + " 已连接。"}, nil
 }
 
-func (a *App) upsertBotConnection(conn config.BotConnectionConfig, updateLegacy func(*config.Config)) (BotConnectionView, error) {
+func (a *App) upsertBotConnection(conn config.BotConnectionConfig, configure func(*config.Config)) (BotConnectionView, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	if conn.CreatedAt == "" {
 		conn.CreatedAt = now
@@ -621,8 +595,8 @@ func (a *App) upsertBotConnection(conn config.BotConnectionConfig, updateLegacy 
 		conn.ID = connectionID(conn.Provider, conn.Domain)
 	}
 	err := a.applyConfigOnly(func(c *config.Config) error {
-		if updateLegacy != nil {
-			updateLegacy(c)
+		if configure != nil {
+			configure(c)
 		}
 		replaced := false
 		for i, existing := range c.Bot.Connections {
@@ -981,19 +955,6 @@ func firstNonEmptyBot(values ...string) string {
 		}
 	}
 	return ""
-}
-
-func appendUniqueBotString(values []string, next string) []string {
-	next = strings.TrimSpace(next)
-	if next == "" {
-		return values
-	}
-	for _, value := range values {
-		if strings.TrimSpace(value) == next {
-			return values
-		}
-	}
-	return append(values, next)
 }
 
 func stringValue(value any) string {

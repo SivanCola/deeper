@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"deepzora/desktop/internal/instanceidentity"
+
 	"fyne.io/systray"
 )
 

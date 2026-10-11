@@ -40,22 +40,22 @@ function finiteNumber(value: unknown): number | undefined {
 function remoteUsage(value: unknown): WireUsage | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
-  const number = (camel: string, legacy: string) => finiteNumber(raw[camel] ?? raw[legacy]) ?? 0;
+  const number = (key: string) => finiteNumber(raw[key]) ?? 0;
   return {
-    promptTokens: number("promptTokens", "PromptTokens"),
-    completionTokens: number("completionTokens", "CompletionTokens"),
-    totalTokens: number("totalTokens", "TotalTokens"),
-    cacheHitTokens: number("cacheHitTokens", "CacheHitTokens"),
-    cacheMissTokens: number("cacheMissTokens", "CacheMissTokens"),
-    reasoningTokens: number("reasoningTokens", "ReasoningTokens"),
-    estimated: raw.estimated === true || raw.Estimated === true,
-    sessionCacheHitTokens: number("sessionCacheHitTokens", "SessionCacheHitTokens"),
-    sessionCacheMissTokens: number("sessionCacheMissTokens", "SessionCacheMissTokens"),
-    contextPromptTokens: number("contextPromptTokens", "ContextPromptTokens") || undefined,
-    contextCompletionTokens: number("contextCompletionTokens", "ContextCompletionTokens") || undefined,
-    contextReasoningTokens: number("contextReasoningTokens", "ContextReasoningTokens") || undefined,
-    contextCacheHitTokens: number("contextCacheHitTokens", "ContextCacheHitTokens") || undefined,
-    contextCacheMissTokens: number("contextCacheMissTokens", "ContextCacheMissTokens") || undefined,
+    promptTokens: number("promptTokens"),
+    completionTokens: number("completionTokens"),
+    totalTokens: number("totalTokens"),
+    cacheHitTokens: number("cacheHitTokens"),
+    cacheMissTokens: number("cacheMissTokens"),
+    reasoningTokens: number("reasoningTokens"),
+    estimated: raw.estimated === true,
+    sessionCacheHitTokens: number("sessionCacheHitTokens"),
+    sessionCacheMissTokens: number("sessionCacheMissTokens"),
+    contextPromptTokens: number("contextPromptTokens") || undefined,
+    contextCompletionTokens: number("contextCompletionTokens") || undefined,
+    contextReasoningTokens: number("contextReasoningTokens") || undefined,
+    contextCacheHitTokens: number("contextCacheHitTokens") || undefined,
+    contextCacheMissTokens: number("contextCacheMissTokens") || undefined,
   };
 }
 

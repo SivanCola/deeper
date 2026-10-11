@@ -39,10 +39,7 @@ func (s *Store) blobPath(blobName string) (string, error) {
 
 // blobNameFor returns the on-disk blob stem for a meta entry.
 func blobNameFor(meta InboxItemMeta) string {
-	if name := strings.TrimSpace(meta.BlobName); name != "" {
-		return name
-	}
-	return meta.ID
+	return meta.BlobName
 }
 
 func (s *Store) writeBlobLocked(blobName string, data []byte) error {
@@ -313,9 +310,6 @@ func idempotencyRequestHash(env PromptEnvelope) (string, error) {
 		Display string            `json:"display,omitempty"`
 	}
 	storedInvocations := append([]StructuredInvocation(nil), env.Invocations...)
-	if len(storedInvocations) == 0 && env.Invocation != nil {
-		storedInvocations = []StructuredInvocation{*env.Invocation}
-	}
 	sort.SliceStable(storedInvocations, func(i, j int) bool {
 		return storedInvocations[i].Offset < storedInvocations[j].Offset
 	})
@@ -367,7 +361,7 @@ func normalizeEnvelope(env PromptEnvelope) PromptEnvelope {
 
 func completeEnqueueEnvelope(env PromptEnvelope) PromptEnvelope {
 	env = normalizeEnvelope(env)
-	if env.Invocation != nil || len(env.Invocations) > 0 {
+	if len(env.Invocations) > 0 {
 		return env
 	}
 	if env.SubmitText == "" {

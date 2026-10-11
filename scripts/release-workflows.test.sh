@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 node --test "$repo_root/scripts/verify-manual-desktop-producer.test.mjs"
 node --test "$repo_root/scripts/release-publication-ledger.test.mjs"
-node --test "$repo_root/scripts/release-cli-freeze.test.mjs"
+node --test "$repo_root/scripts/release-baseline.test.mjs"
 bash "$repo_root/scripts/manual-desktop-exception.test.sh"
 test_root="$(mktemp -d "${TMPDIR:-/tmp}/deepzora-release-workflow-test.XXXXXX")"
 cleanup() {
@@ -255,21 +255,12 @@ test ! -e "$repo_root/scripts/test-webview2-approval-smoke.ps1"
 test ! -e "$repo_root/scripts/test-webview2-native-smoke.ps1"
 test ! -e "$repo_root/scripts/test-transcript-selection-webview2.ps1"
 test ! -e "$repo_root/.github/workflows/transcript-native-smoke.yml"
-grep -Fq 'name: Package Electron shell for native startup smoke' "$repo_root/.github/workflows/ci.yml"
-grep -Fq 'name: Smoke-test Electron native startup' "$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/package.mjs windows/amd64 v0.0.0-ci canary' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq -- '-X main.version=v0.0.0-ci -X main.channel=canary' "$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/smoke.mjs build/electron/windows-amd64/app --service build/bin/deepzora-desktop.exe' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/verify.mjs ../dist/Deepzora-darwin-arm64.zip' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/verify.mjs ../dist/Deepzora-windows-amd64.zip' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/signing-files.mjs build/windows/signing-payload --check' \
-	"$repo_root/.github/workflows/ci.yml"
+# Ordinary CI owns packaging unit tests; the release workflow above owns
+# packaged startup, installer verification, and signing qualification.
+grep -Fq 'node --test packaging/*.test.mjs' "$repo_root/.github/workflows/ci.yml"
+! grep -Fq 'node packaging/package.mjs' "$repo_root/.github/workflows/ci.yml"
 if grep -Fq 'wails build' "$repo_root/.github/workflows/ci.yml"; then
-	echo "CI must package the Electron shell, not wails build" >&2
+	echo "CI must not build the retired Wails shell" >&2
 	exit 1
 fi
 for retired_review_gate in \
@@ -323,13 +314,13 @@ if grep -Fq 'ref: ${{ inputs.approved_sha || inputs.tag || github.ref }}' \
 	echo "Desktop jobs must checkout the resolved immutable candidate SHA" >&2
 	exit 1
 fi
-grep -Fq "group: release-desktop-\${{ (inputs.channel == 'preview' || inputs.channel == 'canary') && 'preview' || 'stable' }}" \
+grep -Fq "group: release-desktop-\${{ inputs.channel == 'preview' && 'preview' || 'stable' }}" \
 	"$repo_root/.github/workflows/release-desktop.yml"
 grep -Eq 'IN_PRODUCTION_SIGNING_SMOKE:.*inputs\.production_signing_smoke' \
 	"$repo_root/.github/workflows/release-desktop.yml"
 grep -Eq 'IN_SIGNING_PREFLIGHT:.*inputs\.signing_preflight' \
 	"$repo_root/.github/workflows/release-desktop.yml"
-grep -Fq "group: release-npm-\${{ inputs.channel || 'next' }}" \
+grep -Fq "group: release-npm-stable" \
 	"$repo_root/.github/workflows/release-npm.yml"
 npm_dispatch="$(sed -n '/^  workflow_dispatch:/,/^  workflow_call:/p' "$repo_root/.github/workflows/release-npm.yml")"
 grep -Eq 'default: stable' <<<"$npm_dispatch"
@@ -411,15 +402,7 @@ if [ -z "$manifest_adoption_line" ] || [ -z "$authenticated_compare_line" ] ||
 	exit 1
 fi
 grep -Fq 'download_optional "preview/latest.json"' "$repo_root/.github/workflows/release-desktop.yml"
-grep -Fq 'download_optional "canary/latest.json"' "$repo_root/.github/workflows/release-desktop.yml"
-grep -Fq '"legacy-${current_channel}" "$current_version" "$current_base"' \
-	"$repo_root/.github/workflows/release-desktop.yml"
-grep -Fq 'legacy-preview "$current_version" "$legacy_preview_base"' \
-	"$repo_root/.github/workflows/release-desktop.yml"
-grep -Fq 'publish_pointer canary' "$repo_root/.github/workflows/release-desktop.yml"
 grep -Fq 'publish_pointer preview' "$repo_root/.github/workflows/release-desktop.yml"
-grep -Fq 'cmp -s /tmp/deepzora-desktop-canary-latest.json /tmp/deepzora-desktop-preview-latest.json' \
-	"$repo_root/.github/workflows/release-desktop.yml"
 grep -Fq 'steps.mirror_r2.outputs.pointer_moved' "$repo_root/.github/workflows/release-desktop.yml"
 if grep -Fq 'aws s3 cp assets/ "s3://${R2_BUCKET}/preview/"' "$repo_root/.github/workflows/release-desktop.yml" ||
 	grep -Fq 'aws s3 cp assets/ "s3://${R2_BUCKET}/canary/"' "$repo_root/.github/workflows/release-desktop.yml"; then
@@ -689,8 +672,9 @@ bash "$manifest_validator" any "$manifest_tag" "$manifest_repo" "$manifest_file"
 
 legacy_manifest="$test_root/cli-release-manifest-legacy.json"
 jq 'del(.release_notes_url)' "$manifest_file" >"$legacy_manifest"
-bash "$manifest_validator" legacy-stable "$manifest_tag" "$manifest_repo" "$legacy_manifest"
-bash "$manifest_comparator" "$manifest_file" "$legacy_manifest"
+if bash "$manifest_comparator" "$manifest_file" "$legacy_manifest" >/dev/null 2>&1; then
+ echo "CLI comparator accepted missing required release notes" >&2; exit 1
+fi
 if bash "$manifest_validator" stable "$manifest_tag" "$manifest_repo" "$legacy_manifest" >/dev/null 2>&1; then
 	echo "strict CLI manifest validator accepted a legacy manifest" >&2
 	exit 1
@@ -698,7 +682,7 @@ fi
 wrong_legacy_notes="$test_root/cli-release-manifest-wrong-legacy-notes.json"
 jq '.release_notes_url = "https://github.com/SivanCola/deepzora/releases/tag/v9.9.9/"' \
 	"$manifest_file" >"$wrong_legacy_notes"
-if bash "$manifest_validator" legacy-stable "$manifest_tag" "$manifest_repo" \
+if bash "$manifest_validator" stable "$manifest_tag" "$manifest_repo" \
 	"$wrong_legacy_notes" >/dev/null 2>&1; then
 	echo "legacy CLI manifest validator accepted a mismatched release-notes URL" >&2
 	exit 1
@@ -807,22 +791,16 @@ expect_pointer_source() {
 	[ "$action" = "update" ]
 	[ "$source" = "$expected" ]
 }
-expect_pointer_source "$preview_candidate" preview "$preview_candidate" - -
-expect_pointer_source "$preview_candidate" preview "$preview_candidate" "$preview_older" "$preview_older"
-expect_pointer_source "$preview_candidate" preview "$preview_candidate" "$preview_equal" "$preview_older"
-expect_pointer_source "$preview_candidate" preview "$preview_candidate" "$preview_older" "$preview_equal"
-[ "$(bash "$desktop_pointer_decider" preview "$preview_candidate" "$preview_equal" "$preview_equal")" = "skip" ]
-expect_pointer_source "$preview_candidate" preview "$preview_candidate" "$preview_equal" "$preview_equal_different"
-expect_pointer_source "$preview_newer" preview "$preview_candidate" "$preview_newer" "$preview_older"
-[ "$(bash "$desktop_pointer_decider" preview "$preview_candidate" "$preview_newer" "$preview_newer_equal")" = "skip" ]
-if bash "$desktop_pointer_decider" preview "$preview_candidate" "$preview_newer" \
-	"$preview_newer_conflict" >/dev/null 2>&1; then
-	echo "Desktop Preview pointer decider accepted conflicting equal newer aliases" >&2
-	exit 1
+expect_pointer_source "$preview_candidate" preview "$preview_candidate" -
+expect_pointer_source "$preview_candidate" preview "$preview_candidate" "$preview_older"
+[ "$(bash "$desktop_pointer_decider" preview "$preview_candidate" "$preview_equal")" = "skip" ]
+[ "$(bash "$desktop_pointer_decider" preview "$preview_candidate" "$preview_equal_different")" = "skip" ]
+[ "$(bash "$desktop_pointer_decider" preview "$preview_candidate" "$preview_newer")" = "skip" ]
+if bash "$desktop_pointer_decider" preview "$preview_candidate" "$test_root/missing.json" >/dev/null 2>&1; then
+ echo "Desktop pointer accepted unreadable manifest" >&2; exit 1
 fi
-if bash "$desktop_pointer_decider" preview "$preview_candidate" "$test_root/missing.json" - >/dev/null 2>&1; then
-	echo "Desktop Preview pointer decider accepted an unreadable manifest path" >&2
-	exit 1
+if bash "$desktop_pointer_decider" preview "$preview_candidate" "$preview_equal" "$preview_equal" >/dev/null 2>&1; then
+ echo "Desktop pointer accepted retired dual-alias arguments" >&2; exit 1
 fi
 
 stable_candidate="$test_root/stable-candidate.json"
@@ -838,7 +816,7 @@ printf '{"version":"v1.3.1","marker":"newer"}\n' >"$stable_newer"
 expect_pointer_source "$stable_candidate" stable "$stable_candidate" -
 expect_pointer_source "$stable_candidate" stable "$stable_candidate" "$stable_older"
 [ "$(bash "$desktop_pointer_decider" stable "$stable_candidate" "$stable_equal")" = "skip" ]
-expect_pointer_source "$stable_candidate" stable "$stable_candidate" "$stable_equal_different"
+[ "$(bash "$desktop_pointer_decider" stable "$stable_candidate" "$stable_equal_different")" = "skip" ]
 [ "$(bash "$desktop_pointer_decider" stable "$stable_candidate" "$stable_newer")" = "skip" ]
 
 desktop_directory_verifier="$repo_root/scripts/verify-desktop-release-directory.sh"
@@ -913,14 +891,14 @@ printf '{"version":"v1.2.3","release_notes_url":"https://github.com/SivanCola/de
 	>"$recovery_candidate_directory/latest.json"
 printf '{"version":"v1.2.3","release_notes_url":"https://github.com/SivanCola/deepzora/releases/tag/v1.2.3/","marker":"existing"}\n' \
 	>"$recovery_existing_directory/latest.json"
-if bash "$desktop_directory_verifier" --allow-missing --allow-legacy-manifest \
+if bash "$desktop_directory_verifier" --allow-missing \
 	--allow-authenticated-payload-differences \
 	"$recovery_candidate_directory" "$recovery_existing_directory" >/dev/null 2>&1; then
 	echo "Desktop recovery accepted a conflicting manifest before validated adoption" >&2
 	exit 1
 fi
 cp "$recovery_existing_directory/latest.json" "$recovery_candidate_directory/latest.json"
-bash "$desktop_directory_verifier" --allow-missing --allow-legacy-manifest \
+bash "$desktop_directory_verifier" --allow-missing \
 	--allow-authenticated-payload-differences \
 	"$recovery_candidate_directory" "$recovery_existing_directory"
 
@@ -936,8 +914,6 @@ jq -n '{
 }' >"$legacy_candidate_directory/latest.json"
 jq 'del(.release_notes_url)' "$legacy_candidate_directory/latest.json" \
 	>"$legacy_existing_directory/latest.json"
-bash "$desktop_directory_verifier" --allow-legacy-manifest \
-	"$legacy_candidate_directory" "$legacy_existing_directory"
 if bash "$desktop_directory_verifier" \
 	"$legacy_candidate_directory" "$legacy_existing_directory" >/dev/null 2>&1; then
 	echo "Desktop release directory verifier accepted a legacy manifest without opt-in" >&2
@@ -946,7 +922,7 @@ fi
 jq '.platforms["darwin-arm64"].size = 99' "$legacy_existing_directory/latest.json" \
 	>"$legacy_existing_directory/latest-conflict.json"
 mv "$legacy_existing_directory/latest-conflict.json" "$legacy_existing_directory/latest.json"
-if bash "$desktop_directory_verifier" --allow-legacy-manifest \
+if bash "$desktop_directory_verifier" \
 	"$legacy_candidate_directory" "$legacy_existing_directory" >/dev/null 2>&1; then
 	echo "Desktop release directory verifier ignored a non-legacy manifest difference" >&2
 	exit 1
@@ -1238,9 +1214,9 @@ bash "$desktop_validator" any "$desktop_rc_version" "$desktop_rc_base" \
 
 desktop_legacy_notes_manifest="$test_root/desktop-stable-legacy-notes.json"
 jq 'del(.release_notes_url)' "$desktop_stable_manifest" >"$desktop_legacy_notes_manifest"
-bash "$desktop_validator" legacy-stable "$desktop_stable_version" \
-	"$desktop_stable_base" "$desktop_legacy_notes_manifest"
-bash "$desktop_manifest_comparator" "$desktop_stable_manifest" "$desktop_legacy_notes_manifest"
+if bash "$desktop_manifest_comparator" "$desktop_stable_manifest" "$desktop_legacy_notes_manifest" >/dev/null 2>&1; then
+ echo "Desktop comparator accepted missing release notes" >&2; exit 1
+fi
 if bash "$desktop_validator" stable "$desktop_stable_version" "$desktop_stable_base" \
 	"$desktop_legacy_notes_manifest" >/dev/null 2>&1; then
 	echo "strict Desktop manifest validator accepted a legacy release-notes manifest" >&2
@@ -1309,30 +1285,30 @@ expect_invalid_desktop_manifest "the legacy mutable Preview directory" preview "
 	"$desktop_preview_base" "$test_root/desktop-rolling-preview.json"
 jq 'del(.downloads)' "$test_root/desktop-rolling-preview.json" \
 	>"$test_root/desktop-legacy-preview.json"
-bash "$desktop_validator" legacy-preview "$desktop_preview_version" \
+expect_invalid_desktop_manifest "retired incomplete manifest" preview "$desktop_preview_version" \
 	"https://github.com/SivanCola/deepzora/releases/download/desktop-preview/" "$test_root/desktop-legacy-preview.json"
 jq 'del(.release_notes_url, .downloads)' "$desktop_preview_manifest" \
 	>"$test_root/desktop-legacy-preview-immutable.json"
-bash "$desktop_validator" legacy-preview "$desktop_preview_version" \
+expect_invalid_desktop_manifest "retired incomplete manifest" preview "$desktop_preview_version" \
 	"$desktop_preview_base" "$test_root/desktop-legacy-preview-immutable.json"
 jq '.release_notes_url = null' "$desktop_preview_manifest" \
 	>"$test_root/desktop-null-legacy-preview-immutable.json"
-bash "$desktop_validator" legacy-preview "$desktop_preview_version" \
+expect_invalid_desktop_manifest "retired incomplete manifest" preview "$desktop_preview_version" \
 	"$desktop_preview_base" "$test_root/desktop-null-legacy-preview-immutable.json"
 jq 'del(.downloads)' "$desktop_stable_manifest" >"$test_root/desktop-legacy-stable.json"
-bash "$desktop_validator" legacy-stable "$desktop_stable_version" \
+expect_invalid_desktop_manifest "retired incomplete manifest" stable "$desktop_stable_version" \
 	"$desktop_stable_base" "$test_root/desktop-legacy-stable.json"
 jq '.downloads = null' "$desktop_stable_manifest" >"$test_root/desktop-null-legacy-stable.json"
-bash "$desktop_validator" legacy-stable "$desktop_stable_version" \
+expect_invalid_desktop_manifest "retired incomplete manifest" stable "$desktop_stable_version" \
 	"$desktop_stable_base" "$test_root/desktop-null-legacy-stable.json"
 jq '.downloads = {}' "$desktop_stable_manifest" >"$test_root/desktop-empty-downloads.json"
-expect_invalid_desktop_manifest "empty downloads in a legacy Stable manifest" legacy-stable \
+expect_invalid_desktop_manifest "empty downloads in a legacy Stable manifest" stable \
 	"$desktop_stable_version" "$desktop_stable_base" "$test_root/desktop-empty-downloads.json"
 expect_invalid_desktop_manifest "a legacy Stable manifest as a new publication" stable \
 	"$desktop_stable_version" "$desktop_stable_base" "$test_root/desktop-legacy-stable.json"
 jq 'del(.downloads["Deepzora-windows-amd64.zip"])' \
 	"$test_root/desktop-rolling-preview.json" >"$test_root/desktop-partial-legacy-downloads.json"
-expect_invalid_desktop_manifest "partial downloads in a legacy Preview manifest" legacy-preview \
+expect_invalid_desktop_manifest "partial downloads in a legacy Preview manifest" preview \
 	"$desktop_preview_version" "https://github.com/SivanCola/deepzora/releases/download/desktop-preview/" \
 	"$test_root/desktop-partial-legacy-downloads.json"
 expect_invalid_desktop_manifest "a Preview manifest as Stable" stable "$desktop_preview_version" \
@@ -1604,14 +1580,15 @@ fi
 grep -Eq 'Desktop Preview versions are synthesized from protected main' \
 	"$test_root/desktop-preview-tagged.log"
 
-# Legacy signing automation may still dispatch `canary`; normalize it to Preview
-# without exposing a third public release path.
-EVENT_NAME=workflow_dispatch IN_ORCHESTRATED=false IN_SIGNING_PREFLIGHT=true \
-	IN_CHANNEL=canary IN_BASE_VERSION=1.3.0 IN_TAG='' REF_NAME=main RUN_NUMBER=43 \
-	GITHUB_OUTPUT="$test_root/desktop-canary-compat.out" bash "$repo_root/scripts/resolve-desktop-release.sh"
-grep -Eq '^version=v1\.3\.0-preview\.43$' "$test_root/desktop-canary-compat.out"
-grep -Eq '^tag=desktop-v1\.3\.0-preview\.43$' "$test_root/desktop-canary-compat.out"
-grep -Eq '^channel=preview$' "$test_root/desktop-canary-compat.out"
+# Retired channel names must be rejected even for signing preflights.
+if EVENT_NAME=workflow_dispatch IN_ORCHESTRATED=false IN_SIGNING_PREFLIGHT=true \
+ IN_CHANNEL=canary IN_BASE_VERSION=1.3.0 IN_TAG='' REF_NAME=main RUN_NUMBER=43 \
+ GITHUB_OUTPUT="$test_root/desktop-canary-rejected.out" bash "$repo_root/scripts/resolve-desktop-release.sh" \
+ >"$test_root/desktop-canary-rejected.log" 2>&1; then
+ echo "retired canary channel unexpectedly passed" >&2
+ exit 1
+fi
+grep -q 'unsupported desktop release channel' "$test_root/desktop-canary-rejected.log"
 
 EVENT_NAME=workflow_dispatch IN_ORCHESTRATED=false IN_PRODUCTION_SIGNING_SMOKE=true \
 	IN_CHANNEL=preview IN_BASE_VERSION=1.3.0 IN_TAG='' REF_NAME=main RUN_NUMBER=44 \

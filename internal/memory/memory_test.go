@@ -64,12 +64,10 @@ func TestLoadIncludesStableGlobalPreferencesAndFeedback(t *testing.T) {
 	mustMkdir(t, filepath.Join(proj, ".git"))
 	mustWrite(t, filepath.Join(proj, "AGENTS.md"), "STANDING INSTRUCTION BODY")
 	store := StoreFor(user, proj)
-	if _, err := store.Save(Memory{Name: "alpha-user", Description: "global preference", Type: TypeUser, Scope: FactScopeGlobal, Body: "GLOBAL USER BODY"}); err != nil {
+	if _, err := store.Save(Memory{Name: "alpha-user", Description: "global preference", Type: TypeUser, Scope: FactScopeGlobal, Activation: ActivationPinned, Body: "GLOBAL USER BODY"}); err != nil {
 		t.Fatal(err)
 	}
-	legacyFeedback := "---\nname: zeta-feedback\ndescription: legacy global feedback\nmetadata:\n  type: feedback\n---\n\nGLOBAL FEEDBACK BODY\n"
-	mustWrite(t, filepath.Join(store.GlobalDir, "zeta-feedback.md"), legacyFeedback)
-	if err := reindexIn(store.GlobalDir, "zeta-feedback", Memory{Name: "zeta-feedback", Description: "legacy global feedback", Type: TypeFeedback, Scope: FactScopeGlobal}); err != nil {
+	if _, err := store.Save(Memory{Name: "zeta-feedback", Description: "global feedback", Type: TypeFeedback, Scope: FactScopeGlobal, Activation: ActivationPinned, Body: "GLOBAL FEEDBACK BODY"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.Save(Memory{Name: "global-reference", Description: "global reference", Type: TypeReference, Scope: FactScopeGlobal, Body: "GLOBAL REFERENCE BODY"}); err != nil {
@@ -112,7 +110,7 @@ func TestLoadProjectFactSuppressesEquivalentGlobalGuidance(t *testing.T) {
 	mustMkdir(t, filepath.Join(proj, ".git"))
 	store := StoreFor(user, proj)
 	if _, err := store.Save(Memory{
-		Name: "response-style", Type: TypeFeedback, Scope: FactScopeGlobal,
+		Name: "response-style", Type: TypeFeedback, Scope: FactScopeGlobal, Activation: ActivationPinned,
 		Description: "global style", Body: "Always be verbose.",
 	}); err != nil {
 		t.Fatal(err)
@@ -124,7 +122,7 @@ func TestLoadProjectFactSuppressesEquivalentGlobalGuidance(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := store.Save(Memory{
-		Name: "language", Type: TypeUser, Scope: FactScopeGlobal,
+		Name: "language", Type: TypeUser, Scope: FactScopeGlobal, Activation: ActivationPinned,
 		Description: "global language", Body: "Answer in Chinese.",
 	}); err != nil {
 		t.Fatal(err)

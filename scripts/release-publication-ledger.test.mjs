@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FROZEN_HOMEBREW, createCoreLedger, createPointerLedger, mergeLedgers, npmPackageNames, ownsStablePointer } from "./release-publication-ledger.mjs";
+import { createCoreLedger, createPointerLedger, mergeLedgers, npmPackageNames, ownsStablePointer } from "./release-publication-ledger.mjs";
 
 const sha = "a".repeat(40);
 const release = { isDraft: false, isPrerelease: false, assets: [{ name: "asset.zip", size: 42, digest: "sha256:abc" }] };
@@ -62,22 +62,9 @@ test("pointer ownership requires an exact release or a proven newer recovery poi
   assert.throws(() => ownsStablePointer("1.2.3", "unknown", { version: "v1.2.3" }));
 });
 
-test("a frozen line records its own npm dist-tag and no Homebrew surface", () => {
-  const frozenPackages = distTagVersion => npmPackageNames.map(name => ({
-    name, version: "1.2.3", deepzoraCandidateSha: sha, gitHead: sha, integrity: "sha512-example",
-    distTag: "legacy-v1", distTagVersion,
-  }));
-  const core = createCoreLedger({
-    version: "1.2.3", sourceSHA: sha, operation: "publish",
-    cliRelease: release, desktopRelease: release, npmPackages: frozenPackages("1.2.3"),
-  });
-  assert.ok(core.surfaces.npm.packages.every(item => item.distTag === "legacy-v1" && item.latest === undefined));
-  assert.throws(() => createCoreLedger({
-    version: "1.2.3", sourceSHA: sha, operation: "publish",
-    cliRelease: release, desktopRelease: release, npmPackages: frozenPackages("1.2.2"),
-  }), /npm legacy-v1 is inconsistent/);
-  const pointers = createPointerLedger({
-    version: "1.2.3", sourceSHA: sha, operation: "publish", manifest: { version: "v1.2.3" }, homebrewVersion: FROZEN_HOMEBREW,
-  });
-  assert.deepEqual(Object.keys(mergeLedgers(core, pointers).surfaces).sort(), ["cli", "desktop", "npm", "stableManifest", "tags"]);
+test("retired publication observations cannot bypass current public pointers", () => {
+ const args = {version:"1.2.3", sourceSHA:sha, operation:"publish", cliRelease:release, desktopRelease:release};
+ assert.throws(() => createCoreLedger({...args,npmPackages:packages("1.2.3").map(p => ({...p,distTag:"legacy-v1"}))}), /retired/);
+ assert.throws(() => createCoreLedger({...args,npmPackages:packages("1.2.3").map(p => ({...p,deepzoraCandidateSha:undefined}))}), /candidate/);
+ assert.throws(() => createPointerLedger({...args,manifest:{version:"v1.2.3"},homebrewVersion:"frozen"}), /Homebrew/);
 });

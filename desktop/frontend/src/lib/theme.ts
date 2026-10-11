@@ -24,22 +24,9 @@ export const THEME_STYLES = [
 
 export type ThemeStyle = (typeof THEME_STYLES)[number];
 
-// Old style identifiers map to the closest new direction so settings stored
-// from previous versions still resolve to a valid value.
-const LEGACY_STYLE_MAP: Record<string, ThemeStyle> = {
-  ember: "carbon",
-  midnight: "nocturne",
-  sandstone: "amber",
-  porcelain: "nocturne",
-  linen: "amber",
-  glacier: "slate",
-};
-
 const DEFAULT_THEME_STYLE: ThemeStyle = "graphite";
 const DEFAULT_THEME: Theme = "auto";
 
-const THEME_KEY = "deepzora-theme";
-const STYLE_KEY = "deepzora-theme-style";
 const AUTO_THEME_MEDIA_QUERY = "(prefers-color-scheme: light)";
 const BASE_CODE_READABILITY_STYLE_ID = "deepzora-base-code-readability";
 let currentTheme: Theme = DEFAULT_THEME;
@@ -47,20 +34,13 @@ let currentThemeStyle: ThemeStyle = DEFAULT_THEME_STYLE;
 let autoThemeMediaQuery: MediaQueryList | null = null;
 
 export function normalizeThemePreference(value: unknown): Theme {
-  if (typeof value === "object" && value !== null) {
-    return normalizeThemePreference((value as { mode?: unknown }).mode);
-  }
   if (typeof value !== "string") return DEFAULT_THEME;
   switch (value) {
     case "auto":
       return "auto";
     case "light":
-    case "focus":
-    case "forest":
       return "light";
     case "dark":
-    case "midnight":
-    case "contrast":
       return "dark";
     default:
       return DEFAULT_THEME;
@@ -81,29 +61,17 @@ export function getResolvedTheme(theme: Theme = getTheme()): ResolvedTheme {
   return "dark";
 }
 
-// Direction is orthogonal to theme, but keep this helper so callers that
-// stored values in the old "style implies theme" model can still ask.
-export function defaultStyleForTheme(_theme: Theme = getTheme()): ThemeStyle {
-  return DEFAULT_THEME_STYLE;
-}
-
-// themeForStyle previously returned the dark/light forced by the style. Style
-// is now independent of theme, so we keep the current theme.
-export function themeForStyle(_style: ThemeStyle): ResolvedTheme {
-  return getResolvedTheme();
-}
-
-export function getThemeStyle(_theme: Theme = getTheme()): ThemeStyle {
+export function getThemeStyle(): ThemeStyle {
   return currentThemeStyle;
 }
 
-export function normalizeThemeStyleForTheme(style: string | undefined, _theme?: Theme): ThemeStyle {
+export function normalizeThemeStyle(style: string | undefined): ThemeStyle {
   if (typeof style !== "string") return DEFAULT_THEME_STYLE;
   if (isThemeStyle(style)) return style;
-  return LEGACY_STYLE_MAP[style] ?? DEFAULT_THEME_STYLE;
+  return DEFAULT_THEME_STYLE;
 }
 
-export function applyTheme(theme: Theme, style: ThemeStyle = getThemeStyle(theme), options: { persist?: boolean } = {}): void {
+export function applyTheme(theme: Theme, style: ThemeStyle = getThemeStyle(), options: { persist?: boolean } = {}): void {
   if (typeof document === "undefined") return;
   ensureBaseCodeReadabilityStyle();
   const root = document.documentElement;
@@ -164,44 +132,12 @@ function syncAutoThemeBackground(): void {
   if (currentTheme === "auto" && desktopHost().kind !== "none") syncNativeWindowBackground("auto");
 }
 
-export function readLegacyThemePreference(): { theme: Theme; style: ThemeStyle; hasValue: boolean } {
-  if (typeof localStorage === "undefined") return { theme: DEFAULT_THEME, style: DEFAULT_THEME_STYLE, hasValue: false };
-  let rawTheme: string | null = null;
-  let rawStyle: string | null = null;
-  try {
-    rawTheme = localStorage.getItem(THEME_KEY);
-    rawStyle = localStorage.getItem(STYLE_KEY);
-  } catch {
-    return { theme: DEFAULT_THEME, style: DEFAULT_THEME_STYLE, hasValue: false };
-  }
-  const hasValue = rawTheme !== null || rawStyle !== null;
-  let theme = DEFAULT_THEME;
-  if (rawTheme) {
-    try {
-      theme = normalizeThemePreference(JSON.parse(rawTheme) as unknown);
-    } catch {
-      theme = normalizeThemePreference(rawTheme);
-    }
-  }
-  const style = normalizeThemeStyleForTheme(rawStyle ?? undefined, theme);
-  return { theme, style, hasValue };
-}
-
-export function clearLegacyThemePreference(): void {
-  try {
-    localStorage.removeItem(THEME_KEY);
-    localStorage.removeItem(STYLE_KEY);
-  } catch {
-    /* ignore storage failures */
-  }
-}
-
 // initTheme runs before React mounts. It applies the saved theme to the DOM and
 // sets the native window background colour to match the resolved theme, avoiding
 // a white (or wrong-colour) flash while the webview paints its first frame.
 export function initTheme(): void {
   const theme = getTheme();
-  applyTheme(theme, getThemeStyle(theme), { persist: false });
+  applyTheme(theme, getThemeStyle(), { persist: false });
 }
 
 function syncNativeWindowBackground(theme: Theme): void {

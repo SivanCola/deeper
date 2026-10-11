@@ -67,15 +67,8 @@ func TestActivateVersionedWindowsFromStaging(t *testing.T) {
 		"deepzora-cli.exe",
 		"deepzora-update-helper.exe",
 		"deepzora-launcher.exe",
-		"deepzora-guard.exe",
+		"deepzora-layout-installer.exe",
 	)
-	// Seed a flat desktop so cleanup is observable.
-	if err := os.WriteFile(filepath.Join(installDir, "deepzora-desktop.exe"), []byte("old"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(installDir, "deepzora-guard.exe"), []byte("old-guard"), 0o700); err != nil {
-		t.Fatal(err)
-	}
 
 	claimed := versionedWindowsTransaction(installDir, "v1.20.0", "2026-01-01T00:00:00Z")
 	if err := activateVersionedWindowsFromStaging(claimed, staging); err != nil {
@@ -103,12 +96,6 @@ func TestActivateVersionedWindowsFromStaging(t *testing.T) {
 	}
 	if _, err := os.Lstat(filepath.Join(installDir, "deepzora-launcher.exe")); !os.IsNotExist(err) {
 		t.Fatalf("new versioned root created a legacy entry: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(installDir, "deepzora-desktop.exe")); !os.IsNotExist(err) {
-		t.Fatal("flat desktop should be removed")
-	}
-	if _, err := os.Stat(filepath.Join(installDir, "deepzora-guard.exe")); !os.IsNotExist(err) {
-		t.Fatal("flat guard should be removed")
 	}
 	if prefer := preferRelaunchPath("", installDir); filepath.Base(prefer) != "Deepzora.exe" {
 		t.Fatalf("prefer relaunch = %s", prefer)
@@ -138,27 +125,6 @@ func TestActivateVersionedWindowsFromStagingPublishesShellTree(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(installDir, "app")); !os.IsNotExist(err) {
 		t.Fatalf("shell tree leaked into the install root: %v", err)
-	}
-}
-
-func TestVersionedWindowsUpgradePreservesExistingLegacyEntry(t *testing.T) {
-	acceptWindowsPayloadManifestForTest(t)
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "deepzora-launcher.exe"), []byte("old"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	for _, version := range []string{"v1.38.9", "v1.39.0"} {
-		staging := t.TempDir()
-		writeVersionedWindowsStaging(t, staging, version+":", version)
-		if err := activateVersionedWindowsFromStaging(versionedWindowsTransaction(root, version, version), staging); err != nil {
-			t.Fatal(err)
-		}
-		for _, name := range []string{"Deepzora.exe", "deepzora-launcher.exe"} {
-			body, err := os.ReadFile(filepath.Join(root, name))
-			if err != nil || string(body) != version+":deepzora-launcher.exe" {
-				t.Fatalf("%s=%q (%v)", name, body, err)
-			}
-		}
 	}
 }
 
@@ -234,30 +200,5 @@ func TestPreferRelaunchPathIgnoresStaleVersionedDesktop(t *testing.T) {
 	got := preferRelaunchPath(oldDesktop, installDir)
 	if filepath.Base(got) != "Deepzora.exe" {
 		t.Fatalf("preferRelaunchPath(%s) = %s, want install-root launcher", oldDesktop, got)
-	}
-}
-
-func TestInstallStagedWindowsReleaseUnitPrefersVersioned(t *testing.T) {
-	acceptWindowsPayloadManifestForTest(t)
-	installDir := t.TempDir()
-	staging := t.TempDir()
-	writeVersionedWindowsStaging(t, staging, "p:", "v1.20.0",
-		"deepzora-desktop.exe",
-		"deepzora-cli.exe",
-		"deepzora-update-helper.exe",
-		"deepzora-launcher.exe",
-		"deepzora-guard.exe",
-	)
-	// Minimal claimed unit (versioned path does not need full flat file list).
-	claimed := versionedWindowsTransaction(installDir, "v1.20.0", "2026-01-01T00:00:00Z")
-	started, receipts, err := installStagedWindowsReleaseUnit(claimed, staging)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !started || receipts != nil {
-		t.Fatalf("started=%v receipts=%v want started with nil receipts", started, receipts)
-	}
-	if !installlayout.HasCurrent(installDir) {
-		t.Fatal("versioned activation did not write current.json")
 	}
 }

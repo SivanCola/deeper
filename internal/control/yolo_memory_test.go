@@ -19,7 +19,7 @@ func TestMemoryApprovalStillPromptsUnderAsk(t *testing.T) {
 			}
 		}),
 	})
-	c.SetToolApprovalMode(ToolApprovalAsk)
+	c.SetToolApprovalMode(ToolApprovalReadOnly)
 
 	done := make(chan bool, 1)
 	errs := make(chan error, 1)
@@ -61,7 +61,7 @@ func TestMemoryApprovalStillPromptsUnderAsk(t *testing.T) {
 
 func TestAutoAndYoloAllowMemoryWithoutPrompt(t *testing.T) {
 	feedback := json.RawMessage(`{"name":"python-env-cross-project","type":"feedback","description":"cross-project Python env","body":"Embedded Python is unreliable."}`)
-	for _, mode := range []string{ToolApprovalAuto, ToolApprovalYolo} {
+	for _, mode := range []string{ToolApprovalWorkspaceWrite, ToolApprovalDangerFullAccess} {
 		t.Run(mode, func(t *testing.T) {
 			var approvalRequested bool
 			c := newOwnedTestController(t, Options{
@@ -109,7 +109,7 @@ func TestToolApprovalModeAutoPreservesExplicitMemoryAsk(t *testing.T) {
 			}
 		}),
 	})
-	c.SetToolApprovalMode(ToolApprovalAuto)
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 	gate := c.newInteractiveGate()
 	args := json.RawMessage(`{"name":"explicit-review","description":"review","body":"ask first"}`)
 	if got := gate.Policy.Decide("remember", false, args); got != permission.Ask {
@@ -152,7 +152,7 @@ func TestToolApprovalModeYoloBypassesMemoryAskAndHonorsDeny(t *testing.T) {
 			}
 		}),
 	})
-	c.SetToolApprovalMode(ToolApprovalYolo)
+	c.SetToolApprovalMode(ToolApprovalDangerFullAccess)
 
 	gate := c.newInteractiveGate()
 	if got := gate.Policy.Decide("forget", false, json.RawMessage(`{}`)); got != permission.Ask {
@@ -202,7 +202,7 @@ func TestSetAutoApproveToolsDoesNotResolvePendingMemoryApproval(t *testing.T) {
 		t.Fatal("memory approval request was not emitted")
 	}
 
-	c.SetAutoApproveTools(true)
+	c.SetToolApprovalMode("workspace-write")
 
 	select {
 	case err := <-errs:
@@ -239,7 +239,7 @@ func TestToolApprovalModeAutoDrainsPendingMemoryFallback(t *testing.T) {
 		t.Fatal("memory approval request was not emitted")
 	}
 
-	drained := c.ApplyToolApprovalMode(ToolApprovalAuto)
+	drained := c.ApplyToolApprovalMode(ToolApprovalWorkspaceWrite)
 	if len(drained) != 0 {
 		t.Fatalf("workspace preset resolved old memory approval: %v", drained)
 	}
@@ -282,7 +282,7 @@ func TestToolApprovalModeAutoKeepsPendingExplicitMemoryAsk(t *testing.T) {
 		t.Fatal("explicit memory ask was not emitted")
 	}
 
-	if drained := c.ApplyToolApprovalMode(ToolApprovalAuto); len(drained) != 0 {
+	if drained := c.ApplyToolApprovalMode(ToolApprovalWorkspaceWrite); len(drained) != 0 {
 		t.Fatalf("auto drained explicit memory ask ids = %v, want none", drained)
 	}
 	approvals, _ := c.approval.snapshotPrompts()

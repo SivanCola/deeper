@@ -37,6 +37,10 @@ func (idx *SessionHeadIndex) Current(sessionPath string) bool {
 	if err != nil || info.IsDir() || info.Size() != idx.LogSize {
 		return false
 	}
+	indexInfo, err := os.Stat(store.SessionEventIndex(sessionPath))
+	if err != nil || !indexInfo.ModTime().After(info.ModTime()) {
+		return false
+	}
 	header, ok, err := readSessionDAGHeader(sessionPath)
 	return err == nil && ok && header.generation == idx.LogGeneration
 }

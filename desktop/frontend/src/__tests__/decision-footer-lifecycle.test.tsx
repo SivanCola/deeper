@@ -26,7 +26,7 @@ const root = createRoot(document.getElementById("root")!);
 type Props = ComponentProps<typeof DecisionFooterRegion>;
 const noop = () => {};
 const composer: Props["composer"] = { hidden: false, inert: false, hero: false, props: {
-  running: false, collaborationMode: "normal", toolApprovalMode: "ask", goal: "", cwd: "/fixture",
+  running: false, collaborationMode: "normal", toolApprovalMode: "workspace-write", goal: "", cwd: "/fixture",
   modelLabel: "fixture-model", ready: true,
   onSend: noop, onCancel: noop, onCycleMode: noop, onSetMode: noop,
   onSetCollaborationMode: noop, onSetToolApprovalMode: noop,

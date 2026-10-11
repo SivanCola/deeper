@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
@@ -27,9 +26,9 @@ import (
 	"deepzora/internal/persistentshell"
 	"deepzora/internal/plugin"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/sessioninbox"
 	"deepzora/internal/sessiontemp"
-	"deepzora/internal/store"
 	"deepzora/internal/tool/builtin"
 )
 
@@ -41,11 +40,12 @@ import (
 // the sink forwards to the client over session/request_permission.
 //
 // Cwd roots the session's file tools and bash (built via builtin.Workspace).
-// Model, EffortOverride, and RuntimeProfile are optional session-local selectors
+// Model, EffortOverride are optional session-local selectors
 // from ACP config options. MCPServers are the MCP servers the client asked the
 // agent to connect for this session. The path hooks keep service bookkeeping
 // aligned; factories must wire both into the controller they build.
 type SessionParams struct {
+	SessionRuntime  *session.Runtime
 	BackgroundScope *jobs.SessionBackgroundScope
 	SessionTemp     *sessiontemp.Manager
 	PersistentShell *persistentshell.Manager
@@ -56,12 +56,6 @@ type SessionParams struct {
 	Sink            event.Sink
 	Model           string
 	EffortOverride  *string
-	RuntimeProfile  string
-	// NativeLegacySession asks the factory for a path-backed controller. It is
-	// set only when load/resume resolves an existing legacy transcript.
-	NativeLegacySession bool
-	OnSessionRecovered  func(control.SessionRecoveryInfo) error
-	OnSessionTransition func(control.SessionTransitionInfo) error
 	// FileOverlay and Terminal are non-nil when the client advertised the
 	// matching capability at initialize: file tools then see unsaved editor
 	// buffers, and foreground bash can run in a client-owned terminal.
@@ -81,21 +75,19 @@ type Factory interface {
 }
 
 // SessionConfigStateParams asks the Factory for normalized session config
-// selectors. Empty Model and RuntimeProfile use configured defaults. Nil
+// selectors. Empty Model use configured defaults. Nil
 // EffortOverride means provider config wins; a non-nil empty string means
 // provider default for this session.
 type SessionConfigStateParams struct {
 	Cwd            string
 	Model          string
 	EffortOverride *string
-	RuntimeProfile string
 }
 
 // SessionConfigState is the complete ACP-visible config state for a session.
 type SessionConfigState struct {
 	Model          string
 	EffortOverride *string
-	RuntimeProfile string
 	Models         *SessionModelState
 	ConfigOptions  []SessionConfigOption
 }
@@ -265,7 +257,6 @@ type acpController interface {
 	control.TurnControl
 	RunTurnWithRaw(ctx context.Context, input, raw, invokedSkill string) error
 	RunSkillWithName(input string) (sent, name string, found bool)
-	RunFinalReadinessRecoveryWithAdmission(ctx context.Context, input string, onAdmitted func()) error
 	TrySteer(text string) bool
 	control.Approvals
 	control.Capabilities
@@ -281,13 +272,12 @@ type acpSession struct {
 	id         string
 	ctrl       acpController
 	sink       *updateSink
-	transcript string
+	metaPath   string
 	cwd        string
 	mcpServers []plugin.Spec
 	model      string
 	// nil means use config; non-nil empty string means provider default.
 	effortOverride   *string
-	runtimeProfile   string
 	toolApprovalMode string
 	// runtimeState is the effective planner/sandbox posture captured after CLI
 	// hard overrides. status snapshots never reconstruct it from user config.
@@ -321,19 +311,6 @@ type acpSession struct {
 	done          chan struct{}
 	running       bool
 	deleted       bool
-	// lease is the session lease guarding transcript against other runtimes
-	// (a desktop window, the CLI) for the life of this session. Held from
-	// session/new / session/load and released on close/delete/teardown.
-	// Config rebuilds keep the same transcript; when a snapshot conflict
-	// retargets the controller to a recovery branch, sessionRecoveredHandler
-	// moves transcript and this lease to the recovery file at commit time.
-	lease *agent.SessionLease
-	// retiredLeases tracks outgoing leases whose Release must run after the
-	// authority-guarded save that triggered a recovery callback returns. Any
-	// ACP operation that exposes a completed Snapshot waits for these channels,
-	// so callers never observe the old transcript as still owned after the
-	// handoff has completed.
-	retiredLeases []<-chan struct{}
 	// maintenanceDone is non-nil while session-owned maintenance, such as an
 	// idle config rebuild, is in flight outside mu.
 	maintenanceDone chan struct{}
@@ -494,10 +471,10 @@ func (s *acpSession) swapToolApprovalMode(mode string) (old string) {
 
 func (s *acpSession) saveMetaIfPresent() {
 	s.mu.Lock()
-	path := s.transcript
+	path := s.metaPath
 	meta := s.metaLocked()
 	s.mu.Unlock()
-	if path != "" && sessionFileExists(path) {
+	if path != "" {
 		_ = saveACPMeta(path, meta)
 	}
 }
@@ -510,68 +487,6 @@ func (s *acpSession) currentCtrl() acpController {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.ctrl
-}
-
-// releaseSessionLease drops the session's transcript lease, if any. Idempotent.
-func (s *acpSession) releaseSessionLease() {
-	s.mu.Lock()
-	lease := s.lease
-	s.lease = nil
-	s.mu.Unlock()
-	if lease != nil {
-		lease.Release()
-	}
-	s.waitForRetiredSessionLeases()
-}
-
-// retireSessionLease defers Release until the authority-guarded save that
-// invoked a recovery callback can return. Releasing synchronously inside that
-// callback would wait on the very save executing the callback and deadlock.
-func (s *acpSession) retireSessionLease(lease *agent.SessionLease) {
-	if lease == nil {
-		return
-	}
-	done := make(chan struct{})
-	s.mu.Lock()
-	s.retiredLeases = append(s.retiredLeases, done)
-	s.mu.Unlock()
-	go func() {
-		lease.Release()
-		close(done)
-	}()
-}
-
-func (s *acpSession) waitForRetiredSessionLeases() {
-	s.mu.Lock()
-	retired := append([]<-chan struct{}(nil), s.retiredLeases...)
-	s.mu.Unlock()
-	for _, done := range retired {
-		<-done
-	}
-	s.mu.Lock()
-	pending := s.retiredLeases[:0]
-	for _, done := range s.retiredLeases {
-		select {
-		case <-done:
-		default:
-			pending = append(pending, done)
-		}
-	}
-	s.retiredLeases = pending
-	s.mu.Unlock()
-}
-
-// sessionLeaseBindError maps a lease-acquisition failure to the protocol
-// error the client sees: a held session names its holder with the shared CLI
-// wording; anything else is an internal error.
-func sessionLeaseBindError(method string, err error) *RPCError {
-	if errors.Is(err, agent.ErrSessionLeaseHeld) {
-		return &RPCError{
-			Code:    ErrInvalidRequest,
-			Message: method + ": " + control.SessionInUseMessage(err) + "; " + control.SessionLeaseCloseHint,
-		}
-	}
-	return &RPCError{Code: ErrInternal, Message: method + ": session lease: " + err.Error()}
 }
 
 // initialize advertises the agent's capability set: persisted load plus ACP v1
@@ -675,7 +590,7 @@ func (s *service) sessionNew(ctx context.Context, raw json.RawMessage) (any, err
 	}
 	cfgState = withToolApprovalConfig(cfgState, control.ToolApprovalWorkspaceWrite)
 	runtimeState, err := s.sessionRuntimeState(ctx, SessionRuntimeStateParams{
-		Cwd: cwd, Model: cfgState.Model, RuntimeProfile: cfgState.RuntimeProfile,
+		Cwd: cwd, Model: cfgState.Model,
 	})
 	if err != nil {
 		return nil, &RPCError{Code: ErrInternal, Message: "session/new: " + err.Error()}
@@ -695,7 +610,6 @@ func (s *service) sessionNew(ctx context.Context, raw json.RawMessage) (any, err
 		Sink:           sink,
 		Model:          cfgState.Model,
 		EffortOverride: cloneStringPtr(cfgState.EffortOverride),
-		RuntimeProfile: cfgState.RuntimeProfile,
 	}
 	s.bindSessionClients(id, &sessionParams)
 	ctrl, err := s.factory.NewSession(ctx, sessionParams)
@@ -719,7 +633,6 @@ func (s *service) sessionNew(ctx context.Context, raw json.RawMessage) (any, err
 		mcpServers:       clonePluginSpecs(mcpServers),
 		model:            cfgState.Model,
 		effortOverride:   cloneStringPtr(cfgState.EffortOverride),
-		runtimeProfile:   cfgState.RuntimeProfile,
 		toolApprovalMode: control.ToolApprovalWorkspaceWrite,
 		runtimeState:     runtimeState,
 		status:           newStatusTelemetry(),
@@ -728,27 +641,19 @@ func (s *service) sessionNew(ctx context.Context, raw json.RawMessage) (any, err
 		updatedAt:        now,
 	}
 	s.bindStatusEvents(sess)
-	// Exclusive v3 sessions bind the ACP id directly to the immutable storage
-	// identity. They never manufacture an id.jsonl transcript or acquire its
-	// legacy lease. Older factories retain the isolated compatibility path.
-	if ctrl.UsesExclusiveSession() {
+	if ctrl.SessionService() != nil {
 		if _, err := ctrl.BindFreshSession(ctx, id); err != nil {
 			ctrl.Close()
 			return nil, &RPCError{Code: ErrInternal, Message: "session/new: " + err.Error()}
 		}
-	} else if dir := ctrl.SessionDir(); dir != "" {
-		sess.transcript = transcriptPath(dir, id)
-		lease, err := agent.TryAcquireSessionLease(sess.transcript)
-		if err != nil {
+		sess.metaPath = sessionMetadataPath(s.sessionDir(), id)
+		if err := saveACPMeta(sess.metaPath, sess.meta()); err != nil {
 			ctrl.Close()
-			return nil, sessionLeaseBindError("session/new", err)
+			return nil, &RPCError{Code: ErrInternal, Message: "session/new: " + err.Error()}
 		}
-		sess.lease = lease
-		ctrl.SetFreshSessionPath(sess.transcript)
-		if err := bindACPWriteAuthorityOrClose(ctrl, lease); err != nil {
-			sess.lease = nil
-			return nil, sessionLeaseBindError("session/new", err)
-		}
+	} else if ctrl.SessionDir() != "" {
+		ctrl.Close()
+		return nil, &RPCError{Code: ErrInternal, Message: "session/new: session service is unavailable"}
 	}
 
 	s.mu.Lock()
@@ -770,14 +675,11 @@ func (s *service) sessionNew(ctx context.Context, raw json.RawMessage) (any, err
 }
 
 // Session modes exposed over ACP describe how the agent advances the task.
-// Tool approval and runtime profile are independent config options. The legacy
-// default/auto ids remain accepted for clients that used the old mixed axis.
+// Tool approval is an independent config option.
 const (
-	sessionModeNormal        = "normal"
-	sessionModePlan          = "plan"
-	sessionModeGoal          = "goal"
-	sessionModeLegacyDefault = "default"
-	sessionModeLegacyAuto    = "auto"
+	sessionModeNormal = "normal"
+	sessionModePlan   = "plan"
+	sessionModeGoal   = "goal"
 )
 
 func sessionModesState(current string) *SessionModeState {
@@ -805,7 +707,7 @@ func (s *service) sessionSetMode(ctx context.Context, raw json.RawMessage) (any,
 	sess.stateChangeMu.Lock()
 	defer sess.stateChangeMu.Unlock()
 	ctrl := sess.currentCtrl()
-	nextMode, legacyApproval, rpcErr := applyACPSessionMode(ctrl, p.ModeID)
+	nextMode, _, rpcErr := applyACPSessionMode(ctrl, p.ModeID)
 	if rpcErr != nil {
 		return nil, rpcErr
 	}
@@ -813,13 +715,7 @@ func (s *service) sessionSetMode(ctx context.Context, raw json.RawMessage) (any,
 	// blocked, paused, or disarmed Goal must retain its complete objective so the
 	// user's next prompt can authorize recovery instead of replacing it.
 	sess.setGoalDraftMode(selectedGoalDraftMode(nextMode, ctrl.Goal()))
-	if legacyApproval != "" {
-		ctrl.SetToolApprovalMode(legacyApproval)
-		sess.setToolApprovalMode(legacyApproval)
-		if cfgState, err := s.configStateForSession(ctx, sess); err == nil {
-			sess.sink.send(configOptionUpdate{SessionUpdate: "config_option_update", ConfigOptions: cfgState.ConfigOptions})
-		}
-	}
+
 	if sess.swapModeID(nextMode) != nextMode {
 		sess.sink.send(currentModeUpdate{SessionUpdate: "current_mode_update", CurrentModeID: nextMode})
 	}
@@ -945,9 +841,7 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 	}
 
 	if sess := s.session(id); sess != nil {
-		if agent.IsCleanupPending(sess.transcript) {
-			return SessionConfigState{}, &RPCError{Code: ErrInvalidParams, Message: method + ": unknown session " + id}
-		}
+
 		if replay {
 			ctrl := sess.currentCtrl()
 			replaySink := newUpdateSink(s.conn, id)
@@ -964,10 +858,8 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 	var saved acpSessionMeta
 	persistedPath := ""
 	if dir := s.sessionDir(); dir != "" {
-		persistedPath = resolveTranscriptPath(dir, id)
-		if agent.IsCleanupPending(persistedPath) {
-			return SessionConfigState{}, &RPCError{Code: ErrInvalidParams, Message: method + ": unknown session " + id}
-		}
+		persistedPath = sessionMetadataPath(dir, id)
+
 		meta, _, metaErr := loadACPMeta(persistedPath)
 		if metaErr != nil {
 			return SessionConfigState{}, &RPCError{Code: ErrInternal, Message: method + ": " + metaErr.Error()}
@@ -978,17 +870,16 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 		Cwd:            cwd,
 		Model:          saved.Model,
 		EffortOverride: cloneStringPtr(saved.EffortOverride),
-		RuntimeProfile: saved.RuntimeProfile,
 	}
 	cfgState, err := s.sessionConfigState(ctx, cfgParams)
-	if err != nil && (strings.TrimSpace(saved.Model) != "" || saved.EffortOverride != nil || strings.TrimSpace(saved.RuntimeProfile) != "") {
+	if err != nil && (strings.TrimSpace(saved.Model) != "" || saved.EffortOverride != nil) {
 		cfgState, err = s.sessionConfigState(ctx, SessionConfigStateParams{Cwd: cwd})
 	}
 	if err != nil {
 		return SessionConfigState{}, &RPCError{Code: ErrInternal, Message: method + ": " + err.Error()}
 	}
 	runtimeState, err := s.sessionRuntimeState(ctx, SessionRuntimeStateParams{
-		Cwd: cwd, Model: cfgState.Model, RuntimeProfile: cfgState.RuntimeProfile,
+		Cwd: cwd, Model: cfgState.Model,
 	})
 	if err != nil {
 		return SessionConfigState{}, &RPCError{Code: ErrInternal, Message: method + ": " + err.Error()}
@@ -998,13 +889,11 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 	sink.bindCwd(cwd)
 	sink.bindExtensionSurface(s.extensionSurfaceSupported())
 	sessionParams := SessionParams{
-		Cwd:                 cwd,
-		MCPServers:          mcpServers,
-		Sink:                sink,
-		Model:               cfgState.Model,
-		EffortOverride:      cloneStringPtr(cfgState.EffortOverride),
-		RuntimeProfile:      cfgState.RuntimeProfile,
-		NativeLegacySession: existingTranscript(persistedPath),
+		Cwd:            cwd,
+		MCPServers:     mcpServers,
+		Sink:           sink,
+		Model:          cfgState.Model,
+		EffortOverride: cloneStringPtr(cfgState.EffortOverride),
 	}
 	s.bindSessionClients(id, &sessionParams)
 	ctrl, err := s.factory.NewSession(ctx, sessionParams)
@@ -1014,8 +903,7 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 	ctrl.EnableInteractiveApproval()
 	sink.bindControllerPrompts(ctrl, sessionParams.MCPInteractions)
 
-	path := ""
-	var lease *agent.SessionLease
+	path := persistedPath
 	canonicalExists, statErr := canonicalSessionExists(ctx, ctrl, id)
 	if statErr != nil {
 		ctrl.Close()
@@ -1027,33 +915,8 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 			return SessionConfigState{}, err
 		}
 	} else {
-		dir := ctrl.SessionDir()
-		if dir == "" {
-			ctrl.Close()
-			return SessionConfigState{}, &RPCError{Code: ErrInternal, Message: method + ": persistence is disabled"}
-		}
-		path = resolveTranscriptPath(dir, id)
-		if path != persistedPath && agent.IsCleanupPending(path) {
-			ctrl.Close()
-			return SessionConfigState{}, &RPCError{Code: ErrInvalidParams, Message: method + ": unknown session " + id}
-		}
-		// Legacy sessions keep the path lease until their one-time migration path
-		// is selected by an explicit legacy client.
-		var leaseErr error
-		lease, leaseErr = agent.TryAcquireSessionLease(path)
-		if leaseErr != nil {
-			ctrl.Close()
-			return SessionConfigState{}, sessionLeaseBindError(method, leaseErr)
-		}
-		loaded, loadErr := agent.LoadSession(path)
-		if loadErr != nil {
-			lease.Release()
-			ctrl.Close()
-			return SessionConfigState{}, &RPCError{Code: ErrInvalidParams, Message: method + ": unknown session " + id}
-		}
-		if err := resumeACPControllerForWrite(ctrl, loaded, path, lease); err != nil {
-			return SessionConfigState{}, sessionLeaseBindError(method, err)
-		}
+		ctrl.Close()
+		return SessionConfigState{}, &RPCError{Code: ErrInvalidParams, Message: method + ": unknown session " + id}
 	}
 	toolApprovalMode := normalizeACPToolApprovalMode(saved.ToolApprovalMode)
 	if strings.TrimSpace(saved.ToolApprovalMode) == "" {
@@ -1065,7 +928,6 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 	meta := metadataForLoadedSession(path, id, cwd, ctrl.History())
 	meta.Model = cfgState.Model
 	meta.EffortOverride = cloneStringPtr(cfgState.EffortOverride)
-	meta.RuntimeProfile = cfgState.RuntimeProfile
 	meta.ToolApprovalMode = toolApprovalMode
 	meta.CollaborationMode = modeID
 	cfgState = withToolApprovalConfig(cfgState, toolApprovalMode)
@@ -1073,12 +935,11 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 		id:               id,
 		ctrl:             ctrl,
 		sink:             sink,
-		transcript:       path,
+		metaPath:         path,
 		cwd:              meta.Cwd,
 		mcpServers:       clonePluginSpecs(mcpServers),
 		model:            cfgState.Model,
 		effortOverride:   cloneStringPtr(cfgState.EffortOverride),
-		runtimeProfile:   cfgState.RuntimeProfile,
 		toolApprovalMode: toolApprovalMode,
 		runtimeState:     runtimeState,
 		status:           restoreStatusTelemetry(saved.Status),
@@ -1087,12 +948,10 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 		title:            meta.Title,
 		createdAt:        meta.CreatedAt,
 		updatedAt:        meta.UpdatedAt,
-		lease:            lease,
 	}
 	s.bindStatusEvents(sess)
 	if path != "" {
 		if err := saveACPMeta(path, sess.meta()); err != nil {
-			sess.releaseSessionLease()
 			ctrl.Close()
 			return SessionConfigState{}, &RPCError{Code: ErrInternal, Message: method + ": " + err.Error()}
 		}
@@ -1105,45 +964,6 @@ func (s *service) openExistingSession(ctx context.Context, method, id, cwdParam 
 		sink.replay(ctrl.History())
 	}
 	return enrichStateWithExtensionModels(cfgState, ctrl.ProviderCatalog()), nil
-}
-
-// transcriptPath is where a session's transcript lives — keyed by id so
-// session/load can recover it. Distinct from the cli's timestamp-labelled
-// chat/run session files (those are addressed by a picker, not by id).
-func transcriptPath(dir, id string) string {
-	return filepath.Join(dir, id+".jsonl")
-}
-
-// resolveTranscriptPath returns the transcript file session id currently
-// lives in. That is the id-keyed path by default; after a snapshot recovery
-// moved the live session onto a recovery branch, the id-keyed sidecar carries
-// an ActiveTranscript redirect (written by sessionRecoveredHandler) that
-// load/resume/delete/meta lookups must follow, or a restart silently reopens
-// the pre-recovery transcript. The redirect is a basename, must stay inside
-// dir, and its target must exist and claim the same session id; anything else
-// falls back to the id-keyed path.
-func resolveTranscriptPath(dir, id string) string {
-	path := transcriptPath(dir, id)
-	meta, ok, err := loadACPMeta(path)
-	if err != nil || !ok {
-		return path
-	}
-	active := strings.TrimSpace(meta.ActiveTranscript)
-	if active == "" || active == filepath.Base(path) {
-		return path
-	}
-	if filepath.Base(active) != active {
-		return path
-	}
-	resolved := filepath.Join(dir, active)
-	if !sessionFileExists(resolved) {
-		return path
-	}
-	targetMeta, ok, err := loadACPMeta(resolved)
-	if err != nil || !ok || targetMeta.SessionID != id {
-		return path
-	}
-	return resolved
 }
 
 // sessionPrompt runs one turn. It flattens the prompt blocks to text and runs the
@@ -1169,8 +989,7 @@ func (s *service) sessionPrompt(ctx context.Context, raw json.RawMessage) (any, 
 	if protocolRecovery && p.RecoveryID == "" {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: "session/prompt: missing recoveryId"}
 	}
-	recovery := p.Action == control.FinalReadinessRecoveryAction
-	if p.Action != "" && !recovery && !protocolRecovery {
+	if p.Action != "" && !protocolRecovery {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: "session/prompt: unsupported action " + p.Action}
 	}
 	if p.Action == "" {
@@ -1178,9 +997,6 @@ func (s *service) sessionPrompt(ctx context.Context, raw json.RawMessage) (any, 
 			protocolRecovery = true
 			p.RecoveryID = id
 			text = guidance
-		} else if prompt, ok := control.ParseFinalReadinessRecoveryCommand(text); ok {
-			recovery = true
-			text = prompt
 		} else {
 			text, invokedSkill = s.resolveSlashPrompt(ctx, sess, text)
 		}
@@ -1217,8 +1033,6 @@ func (s *service) sessionPrompt(ctx context.Context, raw json.RawMessage) (any, 
 		} else {
 			return nil, &RPCError{Code: ErrInvalidRequest, Message: "protocol recovery is unsupported by this controller"}
 		}
-	} else if recovery {
-		runErr = sess.ctrl.RunFinalReadinessRecoveryWithAdmission(runCtx, text, beginTurn)
 	} else {
 		beginTurn()
 		runErr = sess.ctrl.RunTurnWithRaw(runCtx, text, rawText, invokedSkill)
@@ -1226,12 +1040,7 @@ func (s *service) sessionPrompt(ctx context.Context, raw json.RawMessage) (any, 
 	if errors.Is(runErr, agent.ErrProtocolRecoveryUnavailable) && !statusStarted {
 		return nil, &RPCError{Code: ErrInvalidRequest, Message: "session/prompt: protocol recovery is unavailable or stale"}
 	}
-	if errors.Is(runErr, control.ErrNoFinalReadinessRecovery) && !statusStarted {
-		return nil, &RPCError{
-			Code:    ErrInvalidRequest,
-			Message: "session/prompt: no pending final-readiness check to continue",
-		}
-	}
+
 	runErr = drainACPInbox(runCtx, sess.ctrl, runErr)
 	cancelled := runCtx.Err() != nil
 
@@ -1256,25 +1065,10 @@ func (s *service) sessionPrompt(ctx context.Context, raw json.RawMessage) (any, 
 		sess.sink.Emit(promptPauseNotice(runErr, warning))
 	}
 	res := SessionPromptResult{StopReason: stop}
-	if sess.transcript != "" {
-		res.TranscriptPath = &sess.transcript
+	if path := sess.currentCtrl().SessionPath(); path != "" {
+		res.TranscriptPath = &path
 	}
 	return res, nil
-}
-
-// finalReadinessNotice is the warning text ACP clients receive when a completed
-// turn's final-readiness gate stays unsatisfied; the TUI shows the same gaps in
-// its recovery card.
-func finalReadinessNotice(e *agent.FinalReadinessError) string {
-	const maxNoticeBytes = 2_048
-	const fallback = "final-answer readiness gate not satisfied"
-	if e == nil {
-		return fallback
-	}
-	if reason := strings.TrimSpace(e.Reason); reason != "" {
-		return clipStatusCredentialText(fallback+": "+reason, maxNoticeBytes)
-	}
-	return clipStatusError(e, maxNoticeBytes)
 }
 
 // sessionSteer durably persists guidance then attempts mid-turn admission.
@@ -1404,7 +1198,6 @@ func (s *service) reloadSessionExtensionsLocked(ctx context.Context, sess *acpSe
 	cwd := sess.cwd
 	model := sess.model
 	effortOverride := cloneStringPtr(sess.effortOverride)
-	runtimeProfile := sess.runtimeProfile
 	maintenanceDone := make(chan struct{})
 	sess.maintenanceDone = maintenanceDone
 	*didMaintenance = true
@@ -1426,13 +1219,11 @@ func (s *service) reloadSessionExtensionsLocked(ctx context.Context, sess *acpSe
 		return nil, &RPCError{Code: ErrInternal, Message: sessionReloadExtensionsMethod + ": session controller does not support rebuild"}
 	}
 	rebuildParams := SessionParams{
-		Cwd:                 cwd,
-		MCPServers:          mcpServers,
-		Sink:                sink,
-		Model:               model,
-		EffortOverride:      effortOverride,
-		RuntimeProfile:      runtimeProfile,
-		NativeLegacySession: old.NativeLegacySession(),
+		Cwd:            cwd,
+		MCPServers:     mcpServers,
+		Sink:           sink,
+		Model:          model,
+		EffortOverride: effortOverride,
 	}
 	s.bindSessionClients(sess.id, &rebuildParams)
 	newCtrl, err := rebuilder.RebuildSession(ctx, rebuildParams, old)
@@ -1443,7 +1234,7 @@ func (s *service) reloadSessionExtensionsLocked(ctx context.Context, sess *acpSe
 	// Config on disk may have changed the effective planner/sandbox posture;
 	// recompute the status snapshot from the same resolved inputs.
 	runtimeState, err := s.sessionRuntimeState(ctx, SessionRuntimeStateParams{
-		Cwd: cwd, Model: model, RuntimeProfile: runtimeProfile,
+		Cwd: cwd, Model: model,
 	})
 	if err != nil {
 		newCtrl.ReleaseResources()
@@ -1476,8 +1267,8 @@ func (s *service) reloadSessionExtensionsLocked(ctx context.Context, sess *acpSe
 	}
 	sess.ctrl = newCtrl
 	sess.runtimeState = runtimeState
-	if sess.transcript != "" && sessionFileExists(sess.transcript) {
-		_ = saveACPMeta(sess.transcript, sess.metaLocked())
+	if sess.metaPath != "" {
+		_ = saveACPMeta(sess.metaPath, sess.metaLocked())
 	}
 	sess.mu.Unlock()
 	newCtrl.ActivateGoalDriverAfterRebuild()
@@ -1545,19 +1336,7 @@ func (s *service) sessionSetConfigOption(ctx context.Context, raw json.RawMessag
 	}
 	// Retired execution-mode IDs remain accepted for old clients, but they are
 	// no longer advertised and never change the live controller.
-	if id := normalizeConfigID(p.ConfigID); id == "work_mode" || id == "agent_preset" || id == "quality_floor" {
-		if err := validateDeprecatedModeValue(p.Value); err != nil {
-			return nil, &RPCError{Code: ErrInvalidParams, Message: "session/set_config_option: " + err.Error()}
-		}
-		cfgState, err := s.configStateForSession(ctx, sess)
-		if err != nil {
-			return nil, &RPCError{Code: ErrInternal, Message: "session/set_config_option: " + err.Error()}
-		}
-		return SetSessionConfigOptionResult{
-			ConfigOptions:    cfgState.ConfigOptions,
-			DeprecatedNotice: "Execution modes have been retired; this setting is accepted for compatibility and uses standard execution.",
-		}, nil
-	}
+
 	cfgState, err := s.configStateForSession(ctx, sess)
 	if err != nil {
 		return nil, &RPCError{Code: ErrInternal, Message: "session/set_config_option: " + err.Error()}
@@ -1784,9 +1563,6 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 	modeID := normalizeACPCollaborationMode(sess.modeID)
 	goalDraftMode := sess.goalDraftMode
 	toolApprovalMode := normalizeACPToolApprovalMode(sess.toolApprovalMode)
-	if strings.TrimSpace(cfgState.RuntimeProfile) == "" {
-		cfgState.RuntimeProfile = sess.runtimeProfile
-	}
 	maintenanceDone := make(chan struct{})
 	sess.maintenanceDone = maintenanceDone
 	*didMaintenance = true
@@ -1814,13 +1590,11 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 	}
 
 	rebuildParams := SessionParams{
-		Cwd:                 cwd,
-		MCPServers:          mcpServers,
-		Sink:                sink,
-		Model:               cfgState.Model,
-		EffortOverride:      cloneStringPtr(cfgState.EffortOverride),
-		RuntimeProfile:      cfgState.RuntimeProfile,
-		NativeLegacySession: prevPath != "",
+		Cwd:            cwd,
+		MCPServers:     mcpServers,
+		Sink:           sink,
+		Model:          cfgState.Model,
+		EffortOverride: cloneStringPtr(cfgState.EffortOverride),
 	}
 	s.bindSessionClients(sess.id, &rebuildParams)
 	newCtrl, err := s.buildConfigReplacement(ctx, cur, rebuildParams, modelOnly)
@@ -1829,7 +1603,7 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 	}
 	newCtrl.EnableInteractiveApproval()
 	runtimeState, err := s.sessionRuntimeState(ctx, SessionRuntimeStateParams{
-		Cwd: cwd, Model: cfgState.Model, RuntimeProfile: cfgState.RuntimeProfile,
+		Cwd: cwd, Model: cfgState.Model,
 	})
 	if err != nil {
 		newCtrl.ReleaseResources()
@@ -1847,7 +1621,10 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 			carried = append([]provider.Message{fresh[0]}, carried...)
 		}
 	}
-	newCtrl.AdoptHistory(carried, prevPath)
+	if err := newCtrl.AdoptHistory(carried, prevPath); err != nil {
+		newCtrl.ReleaseResources()
+		return &RPCError{Code: ErrInternal, Message: "session config: adopt history: " + err.Error()}
+	}
 	// Re-apply all three independent session axes. A controller rebuild must not
 	// turn Plan into tool approval, drop a running Goal, or reset Ask/Auto/Yolo.
 	newCtrl.SetToolApprovalMode(toolApprovalMode)
@@ -1899,13 +1676,12 @@ func (s *service) rebuildSessionLocked(ctx context.Context, sess *acpSession, cf
 	sess.ctrl = newCtrl
 	sess.model = cfgState.Model
 	sess.effortOverride = cloneStringPtr(cfgState.EffortOverride)
-	sess.runtimeProfile = cfgState.RuntimeProfile
 	sess.toolApprovalMode = toolApprovalMode
 	sess.runtimeState = runtimeState
 	sess.modeID = modeID
 	sess.goalDraftMode = goalDraftMode
-	if sess.transcript != "" && sessionFileExists(sess.transcript) {
-		_ = saveACPMeta(sess.transcript, sess.metaLocked())
+	if sess.metaPath != "" {
+		_ = saveACPMeta(sess.metaPath, sess.metaLocked())
 	}
 	sess.mu.Unlock()
 	newCtrl.ActivateGoalDriverAfterRebuild()
@@ -2036,7 +1812,6 @@ func (s *service) sessionClose(_ context.Context, raw json.RawMessage) (any, err
 	if sess := s.takeSession(p.SessionID); sess != nil {
 		sess.abortAndWait()
 		sess.ctrl.Close()
-		sess.releaseSessionLease()
 	}
 	return SessionCloseResult{}, nil
 }
@@ -2064,18 +1839,7 @@ func (s *service) sessionList(_ context.Context, raw json.RawMessage) (any, erro
 		if err != nil {
 			return nil, &RPCError{Code: ErrInternal, Message: "session/list: " + err.Error()}
 		}
-		// A recovered session has two sidecars claiming the same id: the
-		// active recovery transcript's own meta and the id-keyed redirect.
-		// Reduce to one representative per id before filtering, so the entry
-		// shown never carries the stale pre-recovery title/timestamps.
-		best := map[string]acpSessionMeta{}
 		for _, meta := range metas {
-			cur, ok := best[meta.SessionID]
-			if !ok || listMetaBeats(meta, cur) {
-				best[meta.SessionID] = meta
-			}
-		}
-		for _, meta := range best {
 			info := meta.info(nil)
 			if sessionInfoMatchesCwd(info, filterCwd) {
 				byID[info.SessionID] = info
@@ -2104,9 +1868,8 @@ func (s *service) sessionList(_ context.Context, raw json.RawMessage) (any, erro
 	return SessionListResult{Sessions: sessions}, nil
 }
 
-// sessionDelete removes a session from future list results. Deleting a missing
-// session succeeds silently, matching ACP's idempotent delete guidance.
-func (s *service) sessionDelete(_ context.Context, raw json.RawMessage) (any, error) {
+// sessionDelete deletes the current session identity and its ACP metadata.
+func (s *service) sessionDelete(ctx context.Context, raw json.RawMessage) (any, error) {
 	var p SessionDeleteParams
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, &RPCError{Code: ErrInvalidParams, Message: "session/delete: " + err.Error()}
@@ -2114,51 +1877,33 @@ func (s *service) sessionDelete(_ context.Context, raw json.RawMessage) (any, er
 	if err := validateSessionID("session/delete", p.SessionID); err != nil {
 		return nil, err
 	}
-
-	path := ""
-	var destroy control.SessionDestroyHandle
-	var delayed bool
-	if sess := s.takeSession(p.SessionID); sess != nil {
+	sess := s.takeSession(p.SessionID)
+	var ctrl *control.Controller
+	if sess != nil {
 		sess.deleteAndWait()
-		// The session is going away; drop its lease before removing files so
-		// the lease sidecars retire with the release (they are not in
-		// SessionSidecarFiles and would otherwise linger).
-		sess.releaseSessionLease()
-		path = sess.transcript
-		destroy = sess.ctrl.BeginDestroySession(path)
-		if result := destroy.Wait(); result.HasTimedOut() {
-			if err := agent.MarkCleanupPending(path, "delete"); err != nil {
-				go delayedDeleteSessionFiles(path, destroy)
-				sess.ctrl.CloseAfterDestroy()
-				return nil, &RPCError{Code: ErrInternal, Message: "session/delete: " + err.Error()}
-			}
-			go delayedDeleteSessionFiles(path, destroy)
-			delayed = true
-		}
-		sess.ctrl.CloseAfterDestroy()
-	}
-	if path == "" {
-		if dir := s.sessionDir(); dir != "" {
-			path = resolveTranscriptPath(dir, p.SessionID)
-		}
-	}
-	if path != "" && !delayed {
-		if err := deleteSessionFiles(path); err != nil {
+		ctrl, _ = sess.currentCtrl().(*control.Controller)
+	} else if s.sessionDir() != "" {
+		cwd, err := s.resolveSessionCwd("", p.SessionID)
+		if err != nil {
 			return nil, &RPCError{Code: ErrInternal, Message: "session/delete: " + err.Error()}
 		}
-		if destroy.Finish != nil {
-			destroy.Finish()
+		ctrl, err = s.factory.NewSession(ctx, SessionParams{Cwd: cwd, Sink: event.Discard})
+		if err != nil {
+			return nil, &RPCError{Code: ErrInternal, Message: "session/delete: " + err.Error()}
 		}
 	}
-	// A recovered session lives in two files: the recovery transcript (deleted
-	// above) and the id-keyed original holding the redirect. Remove the twin
-	// too, or it resurfaces in session/list as a ghost that delete-by-id can
-	// never reach again.
-	if dir := s.sessionDir(); dir != "" {
-		if idPath := transcriptPath(dir, p.SessionID); idPath != path {
-			if err := deleteSessionFiles(idPath); err != nil {
+	if ctrl != nil {
+		ctrl.Close()
+		if owner := ctrl.SessionService(); owner != nil {
+			err := owner.Delete(ctx, session.SessionRef{HostID: owner.HostID(), SessionID: p.SessionID})
+			if err != nil && !errors.Is(err, session.ErrSessionNotFound) && !os.IsNotExist(err) {
 				return nil, &RPCError{Code: ErrInternal, Message: "session/delete: " + err.Error()}
 			}
+		}
+	}
+	if path := sessionMetadataPath(s.sessionDir(), p.SessionID); path != "" {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return nil, &RPCError{Code: ErrInternal, Message: "session/delete: " + err.Error()}
 		}
 	}
 	return SessionDeleteResult{}, nil
@@ -2222,9 +1967,9 @@ func (s *service) sessionConfigState(ctx context.Context, p SessionConfigStatePa
 		if err != nil {
 			return SessionConfigState{}, err
 		}
-		return withoutQualityFloorConfig(state), nil
+		return state, nil
 	}
-	return withoutQualityFloorConfig(SessionConfigState{}), nil
+	return SessionConfigState{}, nil
 }
 
 func (s *service) configStateForSession(ctx context.Context, sess *acpSession) (SessionConfigState, error) {
@@ -2236,7 +1981,7 @@ func (s *service) configStateForSession(ctx context.Context, sess *acpSession) (
 	// are discoverable on every config-state read, not only when current.
 	state = enrichStateWithExtensionModels(state, sess.currentCtrl().ProviderCatalog())
 	state = withToolApprovalConfig(state, sess.currentToolApprovalMode())
-	return withoutQualityFloorConfig(state), nil
+	return state, nil
 }
 
 func (s *acpSession) configStateParams() SessionConfigStateParams {
@@ -2246,7 +1991,6 @@ func (s *acpSession) configStateParams() SessionConfigStateParams {
 		Cwd:            s.cwd,
 		Model:          s.model,
 		EffortOverride: cloneStringPtr(s.effortOverride),
-		RuntimeProfile: s.runtimeProfile,
 	}
 }
 
@@ -2305,32 +2049,7 @@ func findConfigOption(options []SessionConfigOption, id string) (SessionConfigOp
 	return SessionConfigOption{}, false
 }
 
-// validateDeprecatedModeValue accepts the historical execution-mode vocabulary
-// so one-version-old clients get a precise error for garbage values while
-// well-formed values succeed as no-ops.
-func validateDeprecatedModeValue(value string) error {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", "light", "economy", "eco", "lite", "save", "saving", "low", "minimal",
-		"standard", "normal", "balanced", "full", "delivery", "deliver", "quality":
-		return nil
-	}
-	return fmt.Errorf("invalid value %q for quality floor (accepted: standard, delivery; legacy light folds to standard)", value)
-}
-
-func normalizeConfigID(id string) string {
-	switch strings.TrimSpace(id) {
-	case "models":
-		return "model"
-	case "reasoning_effort", "thought_level":
-		return "effort"
-	case "profile", "runtime_profile", "token_mode":
-		return "work_mode"
-	case "approval", "approval_mode", "tool_approval_mode":
-		return "tool_approval"
-	default:
-		return strings.TrimSpace(id)
-	}
-}
+func normalizeConfigID(id string) string { return strings.TrimSpace(id) }
 
 func configOptionHasValue(option SessionConfigOption, value string) bool {
 	for _, opt := range option.Options {
@@ -2404,7 +2123,7 @@ func (s *service) loadMeta(id string) (acpSessionMeta, bool) {
 	if dir == "" {
 		return acpSessionMeta{}, false
 	}
-	meta, ok, err := loadACPMeta(resolveTranscriptPath(dir, id))
+	meta, ok, err := loadACPMeta(sessionMetadataPath(dir, id))
 	if err != nil {
 		return acpSessionMeta{}, false
 	}
@@ -2421,7 +2140,6 @@ func (s *service) closeAll() {
 	for _, sess := range sessions {
 		sess.abortAndWait()
 		sess.currentCtrl().Close()
-		sess.releaseSessionLease()
 	}
 }
 
@@ -2448,8 +2166,8 @@ func (s *acpSession) persistAfterTurn(prompt string) {
 	if s.createdAt.IsZero() {
 		s.createdAt = s.updatedAt
 	}
-	if s.transcript != "" && sessionFileExists(s.transcript) {
-		_ = saveACPMeta(s.transcript, s.metaLocked())
+	if s.metaPath != "" {
+		_ = saveACPMeta(s.metaPath, s.metaLocked())
 	}
 }
 
@@ -2465,7 +2183,6 @@ func (s *acpSession) metaLocked() acpSessionMeta {
 		Cwd:               s.cwd,
 		Model:             s.model,
 		EffortOverride:    cloneStringPtr(s.effortOverride),
-		RuntimeProfile:    s.runtimeProfile,
 		ToolApprovalMode:  normalizeACPToolApprovalMode(s.toolApprovalMode),
 		CollaborationMode: normalizeACPCollaborationMode(s.modeID),
 		Title:             s.title,
@@ -2512,9 +2229,7 @@ func availableCommandsFor(ctrl acpController) []AvailableCommand {
 	}
 	byName := map[string]AvailableCommand{}
 	for _, cmd := range ctrl.Commands() {
-		if cmd.Hidden {
-			continue
-		}
+
 		name := strings.TrimSpace(cmd.Name)
 		if name == "" {
 			continue
@@ -2649,23 +2364,17 @@ func invokeExtensionAction(ctx context.Context, ctrl acpController, line string)
 }
 
 type acpSessionMeta struct {
+	SchemaVersion     int                       `json:"schemaVersion"`
 	SessionID         string                    `json:"sessionId"`
 	Cwd               string                    `json:"cwd"`
 	Model             string                    `json:"model,omitempty"`
 	EffortOverride    *string                   `json:"effortOverride,omitempty"`
-	RuntimeProfile    string                    `json:"runtimeProfile,omitempty"`
 	ToolApprovalMode  string                    `json:"toolApprovalMode,omitempty"`
 	CollaborationMode string                    `json:"collaborationMode,omitempty"`
 	Title             string                    `json:"title,omitempty"`
 	CreatedAt         time.Time                 `json:"createdAt"`
 	UpdatedAt         time.Time                 `json:"updatedAt"`
 	Status            *persistedStatusTelemetry `json:"status,omitempty"`
-	// ActiveTranscript, when set on the id-keyed sidecar, is the basename of
-	// the transcript this session currently lives in: a snapshot recovery
-	// moved the live session onto a recovery branch and left this redirect
-	// behind so restart-time lookups (resolveTranscriptPath) follow the
-	// session instead of reopening the pre-recovery file.
-	ActiveTranscript string `json:"activeTranscript,omitempty"`
 }
 
 func (m acpSessionMeta) info(extra map[string]any) SessionInfo {
@@ -2717,7 +2426,7 @@ func metadataForLoadedSession(path, id, cwd string, history []provider.Message) 
 }
 
 func loadACPMeta(sessionPath string) (acpSessionMeta, bool, error) {
-	path := acpMetaPath(sessionPath)
+	path := sessionPath
 	if path == "" {
 		return acpSessionMeta{}, false, nil
 	}
@@ -2732,14 +2441,18 @@ func loadACPMeta(sessionPath string) (acpSessionMeta, bool, error) {
 	if err := json.Unmarshal(b, &meta); err != nil {
 		return acpSessionMeta{}, false, fmt.Errorf("decode ACP session metadata %s: %w", path, err)
 	}
+	if meta.SchemaVersion != 1 {
+		return acpSessionMeta{}, false, fmt.Errorf("unsupported ACP metadata version %d", meta.SchemaVersion)
+	}
 	return meta, true, nil
 }
 
 func saveACPMeta(sessionPath string, meta acpSessionMeta) error {
-	path := acpMetaPath(sessionPath)
+	path := sessionPath
 	if path == "" {
 		return nil
 	}
+	meta.SchemaVersion = 1
 	now := time.Now().UTC()
 	if meta.SessionID == "" {
 		meta.SessionID = sessionIDFromTranscript(sessionPath)
@@ -2776,34 +2489,25 @@ func saveACPMeta(sessionPath string, meta acpSessionMeta) error {
 }
 
 func listACPMetas(dir string) ([]acpSessionMeta, error) {
-	entries, err := os.ReadDir(dir)
+	root := filepath.Join(dir, "acp")
+	entries, err := os.ReadDir(root)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
 	out := []acpSessionMeta{}
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".acp.json") {
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
-		id := strings.TrimSuffix(e.Name(), ".acp.json")
-		sessionPath := transcriptPath(dir, id)
-		if agent.IsCleanupPending(sessionPath) {
+		id := strings.TrimSuffix(entry.Name(), ".json")
+		if !isSafeSessionID(id) {
 			continue
 		}
-		if !sessionFileExists(sessionPath) {
-			continue
-		}
-		meta, ok, err := loadACPMeta(sessionPath)
-		if err != nil || !ok {
-			continue
-		}
-		if meta.SessionID == "" {
-			meta.SessionID = id
-		}
-		if meta.Cwd == "" {
+		meta, ok, err := loadACPMeta(filepath.Join(root, entry.Name()))
+		if err != nil || !ok || meta.SessionID != id || meta.Cwd == "" {
 			continue
 		}
 		out = append(out, meta)
@@ -2811,16 +2515,11 @@ func listACPMetas(dir string) ([]acpSessionMeta, error) {
 	return out, nil
 }
 
-func sessionFileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
-
-func acpMetaPath(sessionPath string) string {
-	if sessionPath == "" {
+func sessionMetadataPath(dir, id string) string {
+	if dir == "" {
 		return ""
 	}
-	return strings.TrimSuffix(sessionPath, filepath.Ext(sessionPath)) + ".acp.json"
+	return filepath.Join(dir, "acp", id+".json")
 }
 
 func sessionIDFromTranscript(path string) string {
@@ -2829,19 +2528,6 @@ func sessionIDFromTranscript(path string) string {
 		base = strings.TrimSuffix(base, ext)
 	}
 	return base
-}
-
-// listMetaBeats reports whether a should represent its session id in
-// session/list over b. A meta without an ActiveTranscript redirect is the
-// session's live transcript and always beats a redirect sidecar; between two
-// of the same kind the later UpdatedAt wins.
-func listMetaBeats(a, b acpSessionMeta) bool {
-	aRedirect := strings.TrimSpace(a.ActiveTranscript) != ""
-	bRedirect := strings.TrimSpace(b.ActiveTranscript) != ""
-	if aRedirect != bRedirect {
-		return !aRedirect
-	}
-	return a.UpdatedAt.After(b.UpdatedAt)
 }
 
 func sessionInfoMatchesCwd(info SessionInfo, filter string) bool {
@@ -2907,58 +2593,6 @@ func parseSessionUpdatedAt(s string) time.Time {
 		return time.Time{}
 	}
 	return t
-}
-
-func deleteSessionFiles(sessionPath string) error {
-	paths := []string{
-		sessionPath,
-		acpMetaPath(sessionPath),
-	}
-	paths = append(paths, store.SessionSidecarFiles(sessionPath)...)
-	for _, path := range paths {
-		if path == "" {
-			continue
-		}
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	}
-	if dir := checkpointPath(sessionPath); dir != "" {
-		if err := os.RemoveAll(dir); err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	}
-	if err := agent.DeleteSubagentsByParent(filepath.Dir(sessionPath), agent.BranchID(sessionPath)); err != nil {
-		return err
-	}
-	if err := jobs.RemoveArtifacts(sessionPath); err != nil {
-		return err
-	}
-	return agent.ClearCleanupPending(sessionPath)
-}
-
-// ReconcileCleanupPending retries delayed ACP session cleanup left by a previous
-// process, including ACP's own metadata sidecar.
-func ReconcileCleanupPending(dir string) error {
-	return agent.ReconcileCleanupPending(dir, func(item agent.CleanupPendingInfo) error {
-		return deleteSessionFiles(item.SessionPath)
-	})
-}
-
-func delayedDeleteSessionFiles(sessionPath string, destroy control.SessionDestroyHandle) {
-	if destroy.WaitAll != nil {
-		destroy.WaitAll()
-	}
-	if err := deleteSessionFiles(sessionPath); err != nil {
-		slog.Warn("acp: delayed session delete failed", "path", sessionPath, "err", err)
-	}
-	if destroy.Finish != nil {
-		destroy.Finish()
-	}
-}
-
-func checkpointPath(sessionPath string) string {
-	return store.SessionCheckpointDir(sessionPath)
 }
 
 // mcpSpecs converts ACP MCP server declarations to plugin.Spec.

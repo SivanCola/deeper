@@ -142,7 +142,6 @@ func absorbOrganization(target *Workspace, source *Organization) {
 		}
 	}
 	merged.ManualOrderEnabled = merged.ManualOrderEnabled || source.ManualOrderEnabled
-	merged.MigrationVersion = max(merged.MigrationVersion, source.MigrationVersion)
 	merged.Revision++
 }
 
@@ -150,12 +149,7 @@ func absorbOrganization(target *Workspace, source *Organization) {
 // ID. An in-flight create, purge, or recovery entry keeps its owner across the
 // repair instead of resolving to a workspace this state no longer has.
 func repointWorkspaceReferences(state *State, from, to string) {
-	for key, mapping := range state.SourceMappings {
-		if mapping.WorkspaceID == from {
-			mapping.WorkspaceID = to
-			state.SourceMappings[key] = mapping
-		}
-	}
+
 	for key, pending := range state.PendingCreates {
 		if pending.WorkspaceID == from {
 			pending.WorkspaceID = to
@@ -168,12 +162,7 @@ func repointWorkspaceReferences(state *State, from, to string) {
 			state.PendingOperations[key] = operation
 		}
 	}
-	for key, entry := range state.RecoveryEntries {
-		if entry.WorkspaceID == from {
-			entry.WorkspaceID = to
-			state.RecoveryEntries[key] = entry
-		}
-	}
+
 }
 
 // directoryVerified reports whether path names a directory that exists now. A

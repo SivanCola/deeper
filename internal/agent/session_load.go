@@ -14,8 +14,7 @@ import (
 )
 
 // sessionLoadResult is one transcript read from disk: the messages of the
-// selected head (or the whole schema-1 log), per-message times where the
-// source records them, and the head position for schema-2 sessions.
+// selected head, per-message times, and the current DAG position.
 type sessionLoadResult struct {
 	msgs       []provider.Message
 	times      []time.Time
@@ -29,12 +28,9 @@ type sessionLoadResult struct {
 	events     []HeadEvent
 }
 
-// loadSessionMessages returns the session transcript, preferring the event log
-// when the native layer owns it and it holds at least one decodable record.
-// Foreign files squatting the log path (legacy import leftovers) are ignored
-// in favor of the .jsonl checkpoint. damaged reports that a native log could
-// not be replayed to its end (torn tail or corrupt record); callers that write
-// should rewrite-and-compact to heal it.
+// loadSessionMessages reads the current DAG event log. damaged reports a torn
+// tail or corrupt record; a current writer can compact that log to heal it.
+// Unsupported formats are rejected without checkpoint fallback.
 func loadSessionMessages(sessionPath string) (msgs []provider.Message, fromEvents, damaged bool, err error) {
 	return loadSessionMessagesWithLimits(sessionPath, defaultSessionReplayLimits, nil)
 }
@@ -48,9 +44,8 @@ func loadSessionMessagesWithContext(ctx context.Context, sessionPath string, lim
 	return res.msgs, res.fromEvents, res.damaged, err
 }
 
-// loadSessionTranscript dispatches on the log schema: a schema-2 log replays
-// the DAG and materializes its selected head, a schema-1 log replays its
-// records, and anything else falls back to the .jsonl checkpoint.
+// loadSessionTranscript accepts only the current DAG schema and materializes
+// its selected head.
 func loadSessionTranscript(ctx context.Context, sessionPath string, limits sessionReplayLimits, hasher *sessionTranscriptHasher) (sessionLoadResult, error) {
 	if err := ctx.Err(); err != nil {
 		return sessionLoadResult{}, err
@@ -79,21 +74,10 @@ func loadSessionTranscript(ctx context.Context, sessionPath string, limits sessi
 			events:    loadHeadEvents(st, headID),
 		}, nil
 	}
-	if probe.native && probe.size > 0 {
-		replay, replayErr := replaySessionEventLogWithContext(ctx, store.SessionEventLog(sessionPath), limits, hasher)
-		if replayErr != nil {
-			return sessionLoadResult{fromEvents: true}, replayErr
-		}
-		if replay.records > 0 {
-			return sessionLoadResult{msgs: replay.msgs, times: replay.times, fromEvents: true, damaged: replay.damaged}, nil
-		}
-		// Defensive: the probe saw a native head but nothing replayed; fall
-		// back to the checkpoint and let the next save rebuild the log.
-		msgs, err := loadSessionMessagesFromJSONLContext(ctx, sessionPath, hasher)
-		return sessionLoadResult{msgs: msgs, damaged: true}, err
+	if probe.size == 0 {
+		return sessionLoadResult{}, os.ErrNotExist
 	}
-	msgs, err := loadSessionMessagesFromJSONLContext(ctx, sessionPath, hasher)
-	return sessionLoadResult{msgs: msgs}, err
+	return sessionLoadResult{}, fmt.Errorf("unsupported session log schema %d: current schema is %d", probe.schemaVersion, sessionDAGSchemaVersion)
 }
 
 func loadSessionMessagesFromJSONL(path string, hasher *sessionTranscriptHasher) ([]provider.Message, error) {

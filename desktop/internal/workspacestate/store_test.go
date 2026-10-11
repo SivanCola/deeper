@@ -216,7 +216,7 @@ func TestAttachSessionFromSourceIfUnchangedRejectsArchivedSource(t *testing.T) {
 
 func TestStorePreservesUnknownTopLevelAndWorkspaceFields(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "workspace-state-v1.json")
-	original := `{"version":1,"generation":2,"initialized":true,"workspaceIds":["global"],"workspaces":{"global":{"id":"global","root":"","title":"Global","sessionIds":[],"visible":true,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z","futureWorkspace":{"enabled":true}}},"archivedSessionIds":[],"pendingCreates":{},"futureTop":{"value":7}}`
+	original := `{"version":3,"sessionStates":{},"generation":2,"initialized":true,"workspaceIds":["global"],"workspaces":{"global":{"id":"global","root":"","title":"Global","sessionIds":[],"visible":true,"createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z","futureWorkspace":{"enabled":true}}},"archivedSessionIds":[],"pendingCreates":{},"futureTop":{"value":7}}`
 	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}

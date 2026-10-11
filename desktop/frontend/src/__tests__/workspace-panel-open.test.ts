@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { JSDOM } from "jsdom";
+const dom = new JSDOM("", { url: "http://localhost/" });
+Object.assign(globalThis, { window: dom.window, localStorage: dom.window.localStorage });
+const { loadWorkspacePanelOpen } = await import("../store/layout");
+assert.equal(loadWorkspacePanelOpen("fresh"), true);
+localStorage.setItem("deepzora.workspacePanel.open.project-a", "0");
+assert.equal(loadWorkspacePanelOpen("project-a"), false);
+localStorage.setItem("deepzora.workspacePanel.open.project-a", "1");
+assert.equal(loadWorkspacePanelOpen("project-a"), true);
+dom.window.close();
+console.log("current project dock preference persists independently");

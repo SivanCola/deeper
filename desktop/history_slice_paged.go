@@ -22,20 +22,13 @@ func (a *App) pagedColdHistorySlice(ctx context.Context, sessionDir, path string
 		page, _, err = a.historySliceFromPager(ctx, pager, sessionDir, path, req, sourceID)
 		return err
 	})
-	if handled || nativeHistoryPreparationFailure(err) {
+	if handled || err != nil {
 		if err != nil {
 			return emptyHistorySlice(), true, err
 		}
 		return page, true, nil
 	}
 	return HistorySlice{}, false, nil
-}
-
-func nativeHistoryPreparationFailure(err error) bool {
-	// Only a positively identified unsupported format may use the legacy
-	// adapter. I/O, parse and cache failures must not silently trigger a full
-	// replay after the bounded reader has failed.
-	return err != nil && !errors.Is(err, agent.ErrDisplayFormatUnsupported)
 }
 
 // Compatibility paging and field reads borrow the same preparation and cache
@@ -89,7 +82,7 @@ func (a *App) historySliceFromPager(ctx context.Context, pager *agent.DisplayPag
 	if pager.Built {
 		page.Source = "scan"
 	}
-	if pager.DAG || pager.SchemaOne {
+	if pager.DAG {
 		page.Source = "event-log"
 	}
 	return page, true, err
@@ -111,7 +104,7 @@ func historySourceFromPager(ctx context.Context, pager *agent.DisplayPager, path
 		if err := pager.Validate(); err != nil {
 			return nil, err
 		}
-		if pager.DAG || pager.SchemaOne {
+		if pager.DAG {
 			return pager.EventMessages(lo, hi)
 		}
 		entries, err := pager.Entries(lo, hi)
@@ -128,7 +121,7 @@ func historySourceFromPager(ctx context.Context, pager *agent.DisplayPager, path
 		if hi <= lo {
 			return 0
 		}
-		if pager.DAG || pager.SchemaOne {
+		if pager.DAG {
 			entries, err := pager.Entries(lo, hi)
 			if err != nil {
 				src.readErr = err

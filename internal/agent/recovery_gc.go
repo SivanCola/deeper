@@ -34,11 +34,10 @@ const RecoveryGCGracePeriod = 24 * time.Hour
 const RecoveryGCStartupGracePeriod = 15 * time.Minute
 
 const (
-	recoveryTrashDir             = ".trash"
-	recoveryTrashMetaFile        = ".trash-meta.json"
-	recoveryTrashOperationPrefix = "recovery-trash:"
-	recoveryTrashPendingFile     = ".recovery-trash-pending.json"
-	recoveryTrashStagingPrefix   = ".recovery-trash-staging-"
+	recoveryTrashDir           = ".trash"
+	recoveryTrashMetaFile      = ".trash-meta.json"
+	recoveryTrashPendingFile   = ".recovery-trash-pending.json"
+	recoveryTrashStagingPrefix = ".recovery-trash-staging-"
 )
 
 // ErrRecoveryBranchNotCovered means the branch cannot currently be proven
@@ -449,29 +448,6 @@ func recoveryBranchIdle(path string, meta BranchMeta, now time.Time, grace time.
 	return now.Sub(idleSince) >= grace
 }
 
-// reconcileRecoveryTrashPending completes an interrupted move left by the
-// pre-staging recovery-trash protocol. Keep this compatibility path so users
-// upgrading from an intermediate build do not strand its typed marker.
-func reconcileRecoveryTrashPending(item CleanupPendingInfo) (bool, error) {
-	operation := strings.TrimSpace(item.Meta.Operation)
-	if !strings.HasPrefix(operation, recoveryTrashOperationPrefix) {
-		return false, nil
-	}
-	itemName := strings.TrimPrefix(operation, recoveryTrashOperationPrefix)
-	if itemName == "" || filepath.Base(itemName) != itemName || itemName == "." || itemName == ".." {
-		return true, fmt.Errorf("invalid recovery trash target")
-	}
-	path := filepath.Clean(item.SessionPath)
-	dir := filepath.Dir(path)
-	key := filepath.Base(path)
-	guard, err := TryAcquireSessionRemovalGuard(path)
-	if err != nil {
-		return true, err
-	}
-	defer guard.Release()
-	return true, finishRecoveryTrashMove(dir, path, key, filepath.Join(dir, recoveryTrashDir, itemName), guard)
-}
-
 // reconcileRecoveryTrashStages completes the atomic staging protocol used by
 // new runtimes. A staging directory is intentionally not a valid Desktop trash
 // item: it has neither a session-shaped directory name nor .trash-meta.json.
@@ -695,46 +671,6 @@ func validRecoveryTrashKey(key string) bool {
 		strings.HasSuffix(key, ".jsonl") && !strings.HasSuffix(key, ".events.jsonl")
 }
 
-func reserveRecoveryTrashItemDir(dir, key string) (string, string, error) {
-	root := filepath.Join(dir, recoveryTrashDir)
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return "", "", err
-	}
-	stem := strings.TrimSuffix(key, filepath.Ext(key))
-	for i := range 1000 {
-		name := key
-		if i > 0 {
-			name = fmt.Sprintf("%s-recovery-%d-%d", stem, time.Now().UTC().UnixMilli(), i)
-		}
-		itemDir := filepath.Join(root, name)
-		if err := os.Mkdir(itemDir, 0o755); err == nil {
-			return name, itemDir, nil
-		} else if !os.IsExist(err) {
-			return "", "", err
-		}
-	}
-	return "", "", fmt.Errorf("could not reserve recovery trash target")
-}
-
-func finishRecoveryTrashMove(dir, path, key, itemDir string, guard *SessionRemovalGuard) error {
-	if err := os.MkdirAll(itemDir, 0o755); err != nil {
-		return err
-	}
-	if err := moveRecoveryTrashArtifacts(dir, path, itemDir); err != nil {
-		return err
-	}
-	if err := writeRecoveryTrashMeta(itemDir, key); err != nil {
-		return err
-	}
-	// Keep the branch guard until the trash entry is complete and the hidden
-	// marker is cleared. No runtime can bind the now-vacant live path in the
-	// middle and inherit an incomplete cleanup state.
-	if err := ClearCleanupPending(path); err != nil {
-		return err
-	}
-	return guard.RemoveSidecarsAndRelease()
-}
-
 func moveRecoveryTrashArtifacts(dir, path, itemDir string) error {
 	for _, src := range recoveryTrashSidecars(path) {
 		if err := moveRecoveryTrashPath(src, filepath.Join(itemDir, filepath.Base(src))); err != nil {
@@ -742,25 +678,6 @@ func moveRecoveryTrashArtifacts(dir, path, itemDir string) error {
 		}
 	}
 	return moveRecoverySubagentArtifacts(dir, path, itemDir)
-}
-
-func prepareRecoveryTrashEntry(path, key, itemDir string) error {
-	if err := writeRecoveryTrashMeta(itemDir, key); err != nil {
-		return err
-	}
-	return moveRecoveryTrashPath(path, filepath.Join(itemDir, key))
-}
-
-func writeRecoveryTrashMeta(itemDir, key string) error {
-	meta := recoveryTrashMeta{Key: key, DeletedAt: time.Now().UnixMilli()}
-	b, err := json.MarshalIndent(meta, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(itemDir, 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(itemDir, recoveryTrashMetaFile), b, 0o644)
 }
 
 func writeRecoveryTrashMetaExisting(itemDir, key string) error {

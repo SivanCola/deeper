@@ -16,7 +16,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/fileutil"
 	filelock "deepzora/internal/identitylock"
-	"deepzora/internal/session"
 )
 
 // crash_pending.go captures Go-side panics to disk and ships them on the next
@@ -26,7 +25,6 @@ import (
 // desktop.telemetry opt-out as the launch ping.
 
 const (
-	pendingCrashFile     = "crash-pending.json" // legacy single-report path
 	pendingCrashQueueDir = "crash-pending"
 	maxPendingCrashes    = 10
 	currentCrashSchema   = 4
@@ -39,10 +37,6 @@ var (
 	pendingCrashMu       sync.Mutex
 	pendingCrashSequence atomic.Uint64
 )
-
-func pendingCrashPath() string {
-	return filepath.Join(config.MemoryUserDir(), pendingCrashFile)
-}
 
 func pendingCrashDir() string {
 	return filepath.Join(config.MemoryUserDir(), pendingCrashQueueDir)
@@ -94,35 +88,12 @@ func writePendingCrashWithDiagnostics(site string, r any, stack []byte, diagnost
 	report.TopFrame = topFrameFromStack(report.Stack)
 	report.Message = msg
 	report.Diagnostics = diagnostics
-	if writePendingReport(report, true) {
+	if writePendingReport(report) {
 		markFatalCrashCovered()
 	}
 }
 
-// queueTranscriptInitializationFailure preserves visibility after the panic is
-// fixed and the migration can fail without terminating the process. Online
-// diagnostics receive only an aggregate classification; session/source keys
-// and record fingerprints stay in the local service log.
-func queueTranscriptInitializationFailure(diagnostic *session.TranscriptInitializationError) bool {
-	if diagnostic == nil {
-		return false
-	}
-	classification := diagnostic.Classification()
-	report := baseCrashReport("exception")
-	report.SchemaVersion = currentCrashSchema
-	report.Source = "desktop.session_migration"
-	report.Label = "transcript.initialization"
-	report.ErrorType = "TranscriptInitializationError"
-	report.ErrorMessage = "Transcript initialization failed during legacy session migration."
-	report.TopFrame = "internal/transcript.NewProjection"
-	report.FingerprintHint = "desktop.session_migration.transcript_initialization." + classification
-	report.OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
-	report.Message = "[transcript initialization]\n\nstage: legacy_import\nclassification: " + classification
-	return writePendingReport(report, false)
-}
-
-func writePendingReport(report crashReport, overwrite bool) bool {
-	_ = overwrite // retained for source compatibility; the queue never overwrites.
+func writePendingReport(report crashReport) bool {
 	if ensureCrashIdentity(&report) != nil {
 		return false
 	}
@@ -243,16 +214,9 @@ func pendingCrashQueuePaths() []string {
 	return paths
 }
 
-func pendingCrashPaths() []string {
-	paths := make([]string, 0, maxPendingCrashes+1)
-	if _, err := os.Stat(pendingCrashPath()); err == nil {
-		paths = append(paths, pendingCrashPath())
-	}
-	return append(paths, pendingCrashQueuePaths()...)
-}
+func pendingCrashPaths() []string { return pendingCrashQueuePaths() }
 
 func removeAllPendingCrashes() {
-	_ = os.Remove(pendingCrashPath())
 	_ = os.RemoveAll(pendingCrashDir())
 	_ = os.Remove(fatalCrashCoveredPath())
 	_ = os.Remove(crashLedgerPath())
@@ -319,18 +283,11 @@ func (a *App) flushPendingCrash() {
 			_ = os.Remove(path)
 			continue
 		}
-		if r.SchemaVersion > currentCrashSchema {
+		if r.SchemaVersion != currentCrashSchema {
 			continue
 		}
-		identityChanged := r.EventID == "" || r.DedupKey == ""
-		if ensureCrashIdentity(&r) != nil {
-			break
-		}
-		if identityChanged {
-			updated, marshalErr := json.Marshal(r)
-			if marshalErr != nil || fileutil.AtomicWriteFile(path, updated, 0o600) != nil {
-				break
-			}
+		if r.EventID == "" || r.DedupKey == "" {
+			continue
 		}
 		key := crashLedgerKey(r)
 		if _, alreadySent := ledger.Entries[key]; alreadySent {

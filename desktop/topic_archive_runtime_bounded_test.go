@@ -76,7 +76,6 @@ func TestSessionBusyCauseKeepsTheHolderIdentity(t *testing.T) {
 		{fmt.Errorf("start: %w", agent.ErrSessionLeaseHeld), "session_lease"},
 		{fmt.Errorf("maintenance: %w", session.ErrWriterOwned), "writer_owned"},
 		{fmt.Errorf("source: %w", identitylock.ErrHeld), "source_lock"},
-		{errHistoricalSourceBusy, "historical_source"},
 	} {
 		if got := sessionBusyCause(tc.err); got != tc.want {
 			t.Errorf("sessionBusyCause(%v) = %q, want %q", tc.err, got, tc.want)

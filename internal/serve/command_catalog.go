@@ -32,7 +32,6 @@ func (s *Server) commands(w http.ResponseWriter, _ *http.Request) {
 		{Name: "provider", Description: i18n.M.CmdProvider, Kind: "builtin", Group: "management"},
 		{Name: "effort", Description: i18n.M.CmdEffort, Kind: "builtin", Group: "actions"},
 		{Name: "memory", Description: i18n.M.CmdMemory, Kind: "builtin", Group: "management"},
-		{Name: "migrate", Description: i18n.M.CmdMigrate, Kind: "builtin", Group: "management"},
 		{Name: "goal", Description: i18n.M.CmdGoal, Kind: "builtin", Group: "actions"},
 		{Name: "remember", Description: i18n.M.CmdRemember, Kind: "builtin", Group: "management"},
 		{Name: "mcp", Description: i18n.M.CmdMcp, Kind: "builtin", Group: "integrations"},
@@ -50,7 +49,7 @@ func (s *Server) commands(w http.ResponseWriter, _ *http.Request) {
 		out = append(out, commandCatalogEntry{Name: sk.SlashName(), Description: sk.Description, Kind: kind, Group: group, Plugin: sk.Plugin, Color: sk.Color})
 	}
 	for _, command := range commands {
-		if !command.Hidden {
+		{
 			out = append(out, commandCatalogEntry{Name: command.Name, Description: command.Description, Hint: command.ArgHint, Kind: "custom", Group: "skills", Plugin: command.Plugin})
 		}
 	}

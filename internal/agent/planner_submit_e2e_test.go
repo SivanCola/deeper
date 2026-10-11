@@ -45,8 +45,7 @@ func submitPlanCoordinator(t *testing.T, planner, exec *mockProvider, sink event
 	parentReg.Add(coordinatorTestTool{name: "read_file", readOnly: true, output: "contents"})
 	parentReg.Add(NewAskTool())
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, PlannerToolRegistry(parentReg),
-		Options{MaxSteps: 4}, executor, 0, sink, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, PlannerToolRegistry(parentReg), Options{MaxSteps: 4}, executor, 0, sink, nil)
 	return coord, executor
 }
 

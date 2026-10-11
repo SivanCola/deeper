@@ -74,7 +74,7 @@ func (a *App) catalogRuntimeSnapshots() []catalogRuntimeSnapshot {
 		snapshots = append(snapshots, catalogRuntimeSnapshot{
 			tabID: tab.ID,
 			scope: tab.Scope, workspaceRoot: tab.WorkspaceRoot, topicID: tab.TopicID,
-			sessionPath: tab.SessionPath, sessionHeadID: tab.SessionHeadID, activity: tab.ActivityStatus, topicTitle: tab.TopicTitle,
+			sessionPath: tab.currentSessionIdentity(), sessionHeadID: tab.SessionHeadID, activity: tab.ActivityStatus, topicTitle: tab.TopicTitle,
 			topicTitleSource: tab.topicTitleSource, ctrl: tab.Ctrl, open: open,
 		})
 	}
@@ -146,12 +146,7 @@ func (a *App) projectTreeRuntimeTopics(snapshots []catalogRuntimeSnapshot) []Pro
 				node.Session, node.SessionPath, node.Key = &ref, sessionRoute(ref.SessionID), "canonical_"+ref.SessionID
 			}
 		}
-		if node.Session == nil && path != "" {
-			node.SessionPath, node.Key = path, projectSessionNodeKey(scope, path)
-			// A legacy transcript is listed by its source identity; publishing the
-			// same one lets the renderer overlay this tab onto that row.
-			node.Source = &SessionSourceRef{HostID: localDesktopHostID, Path: path, HeadID: snapshot.sessionHeadID, SourceKey: desktopSourceKey(path, snapshot.sessionHeadID)}
-		}
+
 		if node.Session != nil {
 			workspaceID := desktopWorkspaceOwnerID(state, scope, root)
 			aliases, exists := workspaceAliases[workspaceID]
@@ -188,7 +183,7 @@ func (a *App) projectTreeRuntimeTopics(snapshots []catalogRuntimeSnapshot) []Pro
 func (a *App) attachExistingSessionRuntime(tab *WorkspaceTab, path string, appCtx context.Context) bool {
 	attached := a.attachExistingSessionRuntimeCore(tab, path, appCtx)
 	if attached {
-		a.emitProjectTreeRuntimeChangedWithLegacy()
+		a.emitProjectTreeRuntimeChanged()
 	}
 	return attached
 }
@@ -196,7 +191,7 @@ func (a *App) attachExistingSessionRuntime(tab *WorkspaceTab, path string, appCt
 func (a *App) closeTab(tabID string, allowDetach bool) error {
 	err := a.closeTabRuntime(tabID, allowDetach)
 	if err == nil {
-		a.emitProjectTreeRuntimeChangedWithLegacy()
+		a.emitProjectTreeRuntimeChanged()
 	}
 	return err
 }
@@ -215,10 +210,10 @@ func (a *App) emitProjectTreeRuntimeChanged() {
 		return
 	}
 	snapshot := a.GetRuntimeStateSnapshot()
-	a.emitRuntimeProjection(snapshot, false)
+	a.emitRuntimeProjection(snapshot)
 }
 
-func (a *App) emitRuntimeProjection(snapshot RuntimeStateProjection, legacy bool) {
+func (a *App) emitRuntimeProjection(snapshot RuntimeStateProjection) {
 	r := &a.runtimeStateProjection
 	r.mu.Lock()
 	if r.publishedEpoch == snapshot.Epoch && r.publishedRevision >= snapshot.Revision {
@@ -229,15 +224,7 @@ func (a *App) emitRuntimeProjection(snapshot RuntimeStateProjection, legacy bool
 	r.mu.Unlock()
 	a.emitRuntimeEvent("project-tree:runtime-changed", ProjectTreeRuntimeSnapshot{Revision: snapshot.Revision, Topics: snapshot.Topics})
 	a.emitRuntimeEvent("runtime-state:changed", snapshot)
-	if legacy {
-		a.emitRuntimeEvent("project-tree:changed", map[string]string{"reason": "runtime"})
-	}
-}
 
-// The tagged legacy event keeps the previous frontend usable for one release.
-func (a *App) emitProjectTreeRuntimeChangedWithLegacy() {
-	a.emitProjectTreeRuntimeChanged()
-	a.emitRuntimeEvent("project-tree:changed", map[string]string{"reason": "runtime"})
 }
 
 func (a *App) emitRuntimeEvent(name string, payload ...any) {
@@ -285,7 +272,7 @@ func (a *App) reapStaleTopicActivityStatus(now time.Time) {
 	}
 	slog.Warn("desktop: cleared stale topic activity status (no turn event within TTL)",
 		"tabs", reaped, "ttl", topicActivityStatusTTL.String())
-	a.emitProjectTreeRuntimeChangedWithLegacy()
+	a.emitProjectTreeRuntimeChanged()
 }
 
 // reconcileTabActivityStatus clears a live spinner status the session's

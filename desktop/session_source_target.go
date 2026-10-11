@@ -2,9 +2,7 @@ package main
 
 import (
 	"deepzora/internal/session"
-	"encoding/json"
 	"errors"
-	"net/url"
 	"strings"
 )
 
@@ -25,50 +23,8 @@ func (a *App) resolveTopicOpenPath(scope, root, topicID string) (string, error) 
 	return path, nil
 }
 
-// Explicit management operations retain their journaled ownership transition.
-// Navigation and runtime rebuilds must use the read-only resolver instead.
 func (a *App) resolveSessionMutationTarget(selector SessionSelector) (SessionTarget, error) {
-	target, err := a.resolveSessionTarget(selector)
-	if err != nil || target.Source == nil {
-		return target, err
-	}
-	view, err := a.PrepareSession(SessionSelector{Source: target.Source, TopicID: target.TopicID})
-	if err != nil {
-		return SessionTarget{}, err
-	}
-	c := &a.historicalImports
-	c.mu.Lock()
-	call := c.operations[view.OperationID]
-	c.mu.Unlock()
-	if call == nil {
-		return SessionTarget{}, newSessionOperationError("target_changed", "The source preparation task is unavailable.")
-	}
-	result, err := waitHistoricalImport(call)
-	if err != nil {
-		return SessionTarget{}, err
-	}
-	return a.resolveCanonicalSessionTarget(result.Session, target.TopicID)
-}
-
-func parseSessionSourceRoute(route string) (*SessionSourceRef, error) {
-	const prefix = "session-source:"
-	if !strings.HasPrefix(route, prefix) {
-		return nil, nil
-	}
-	text, err := url.PathUnescape(strings.TrimPrefix(route, prefix))
-	if err != nil {
-		return nil, err
-	}
-	var source SessionSourceRef
-	if err := json.Unmarshal([]byte(text), &source); err != nil {
-		return nil, err
-	}
-	return &source, nil
-}
-
-func nativeSessionSourceRoute(source *SessionSourceRef) string {
-	data, _ := json.Marshal(source)
-	return "session-source:" + url.PathEscape(string(data))
+	return a.resolveSessionTarget(selector)
 }
 
 // Session title projection is addressed by the same durable ID as its write.

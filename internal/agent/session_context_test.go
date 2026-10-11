@@ -72,21 +72,19 @@ func TestSessionContextPlannerSelectionAndSyntheticBootstrap(t *testing.T) {
 	planner := sessioncontext.Build(sessioncontext.Sections{SkillsCatalog: "read-only skill"})
 	bundle := TurnContextBundle{Executor: executor, Planner: planner}
 	sess := NewSession("system")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "legacy request"})
-	sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "legacy answer"})
 	a := New(nil, tool.NewRegistry(), sess, Options{}, event.Discard)
 
 	ctx := withPlannerTurnContext(WithTurnContextBundle(context.Background(), TurnContextBundle{
-		Executor: executor, Planner: planner, BootstrapOnly: true,
+		Executor: executor, Planner: planner, InitialOnly: true,
 	}))
 	if !a.AppendTurnContext(ctx) {
-		t.Fatal("legacy synthetic continuation should bootstrap one v1 snapshot")
+		t.Fatal("fresh synthetic turn should initialize one snapshot")
 	}
 	if got := sess.Messages[len(sess.Messages)-1].Content; got != planner.Content {
 		t.Fatalf("planner received %q, want read-only snapshot", got)
 	}
 	ctx = withPlannerTurnContext(WithTurnContextBundle(context.Background(), TurnContextBundle{
-		Executor: executor, Planner: sessioncontext.Build(sessioncontext.Sections{SkillsCatalog: "changed"}), BootstrapOnly: true,
+		Executor: executor, Planner: sessioncontext.Build(sessioncontext.Sections{SkillsCatalog: "changed"}), InitialOnly: true,
 	}))
 	if a.AppendTurnContext(ctx) {
 		t.Fatal("synthetic continuation consumed a pending catalog change")
@@ -196,4 +194,14 @@ func countSessionContexts(messages []provider.Message) int {
 
 func secondDiagHasPrefixReason(diagnostics *event.CacheDiagnostics, want string) bool {
 	return slices.Contains(diagnostics.PrefixChangeReasons, want)
+}
+
+func TestSyntheticContextDoesNotRepairPastConversation(t *testing.T) {
+	sess := NewSession("system")
+	sess.Add(provider.Message{Role: provider.RoleUser, Content: "earlier request"})
+	a := New(nil, tool.NewRegistry(), sess, Options{}, event.Discard)
+	ctx := WithTurnContextBundle(t.Context(), TurnContextBundle{Executor: sessioncontext.Build(sessioncontext.Sections{SkillsCatalog: "current skills"}), InitialOnly: true})
+	if a.AppendTurnContext(ctx) || countSessionContexts(sess.Snapshot()) != 0 {
+		t.Fatal("synthetic continuation repaired a prior conversation")
+	}
 }

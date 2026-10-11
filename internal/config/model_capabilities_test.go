@@ -17,10 +17,6 @@ func TestModelCapabilityResolverHonorsExplicitConfigBeforeCache(t *testing.T) {
 	if got := r.Resolve(&entry); got.State != CapabilitySupported || got.Source != CapabilitySourceAdapter {
 		t.Fatalf("adapter capability = %+v", got)
 	}
-	entry.VisionModels = []string{"mixed"}
-	if got := r.Resolve(&entry); got.State != CapabilitySupported || got.Source != CapabilitySourceLegacy {
-		t.Fatalf("legacy capability = %+v", got)
-	}
 	entry.visionOverride = capabilityBoolPtr(false)
 	if got := r.Resolve(&entry); got.State != CapabilityUnsupported || got.Source != CapabilitySourceOverride {
 		t.Fatalf("override capability = %+v", got)
@@ -181,21 +177,5 @@ func TestAcceptsImagesBlocksOnlyDeclaredTextOnlyModels(t *testing.T) {
 		if got := tc.got.AcceptsImages(tc.fallback); got != tc.want {
 			t.Errorf("%s: AcceptsImages = %v, want %v", tc.name, got, tc.want)
 		}
-	}
-}
-
-func TestVisionModelsListDeclaresOtherModelsTextOnly(t *testing.T) {
-	r := NewTransientModelCapabilityResolver()
-	entry := &ProviderEntry{Name: "custom", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "text-only", Models: []string{"text-only", "vision-pro"}, VisionModels: []string{"vision-pro"}}
-	if got := r.Resolve(entry).State; got != CapabilityUnsupported {
-		t.Fatalf("model outside vision_models = %v, want unsupported", got)
-	}
-	entry.VisionModels = []string{}
-	if got := r.Resolve(entry).State; got != CapabilityUnsupported {
-		t.Fatalf("explicitly empty vision_models = %v, want unsupported", got)
-	}
-	entry.VisionModels = nil
-	if got := r.Resolve(entry).State; got != CapabilityUnknown {
-		t.Fatalf("undeclared model = %v, want unknown", got)
 	}
 }

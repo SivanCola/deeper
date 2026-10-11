@@ -58,7 +58,7 @@ func validateContinuationRoute(before, after ProviderEntry) error {
 	if before.Kind != after.Kind || before.AuthHeader != after.AuthHeader || !reflect.DeepEqual(before.Headers, after.Headers) || !reflect.DeepEqual(before.ExtraBody, after.ExtraBody) {
 		return fmt.Errorf("provider authentication parameters changed")
 	}
-	for _, pair := range [][2]string{{before.BaseURL, after.BaseURL}, {before.ChatURL, after.ChatURL}, {before.RequestURL, after.RequestURL}} {
+	for _, pair := range [][2]string{{before.BaseURL, after.BaseURL}, {before.RequestURL, after.RequestURL}} {
 		if !continuationEndpointAllowed(pair[0], pair[1]) {
 			return fmt.Errorf("provider authentication parameters changed")
 		}

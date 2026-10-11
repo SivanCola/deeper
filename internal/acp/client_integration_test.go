@@ -15,6 +15,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/permission"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 // scriptedRequester answers agent → client requests from a per-method script
@@ -374,28 +375,21 @@ unknownMode:
 // switches, which would silently drop a user-selected plan mode.
 func TestRebuildSessionKeepsClientIOAndMode(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "sess-rebuild.jsonl")
 	base := agent.NewSession("sys prompt")
 	base.Add(provider.Message{Role: provider.RoleUser, Content: "hi"})
-	if err := base.Save(path); err != nil {
+	if err := seedACPHistory(t, dir, "sess-rebuild", base); err != nil {
 		t.Fatalf("save session: %v", err)
 	}
 
 	sink := newUpdateSink(&fakeNotifier{}, "sess-rebuild")
 	sess := &acpSession{
-		id:         "sess-rebuild",
-		sink:       sink,
-		cwd:        dir,
-		model:      "fast",
-		transcript: path,
-		modeID:     sessionModePlan,
+		id:       "sess-rebuild",
+		sink:     sink,
+		cwd:      dir,
+		model:    "fast",
+		metaPath: sessionMetadataPath(dir, "sess-rebuild"),
+		modeID:   sessionModePlan,
 	}
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatalf("acquire session lease: %v", err)
-	}
-	sess.lease = lease
-	t.Cleanup(sess.releaseSessionLease)
 	t.Cleanup(func() {
 		if ctrl := sess.currentCtrl(); ctrl != nil {
 			ctrl.Close()
@@ -412,11 +406,15 @@ func TestRebuildSessionKeepsClientIOAndMode(t *testing.T) {
 		},
 	}
 	oldCtrl := control.New(control.Options{
-		Executor:    agent.New(nil, nil, base, agent.Options{}, event.Discard),
-		SessionDir:  dir,
-		SessionPath: path,
-		Label:       "fast",
+		Executor:         agent.New(nil, nil, base, agent.Options{}, event.Discard),
+		SessionDir:       dir,
+		SessionService:   testACPService(dir),
+		ExclusiveSession: true,
+		Label:            "fast",
 	})
+	if _, err := oldCtrl.OpenSession(t.Context(), session.SessionRef{HostID: "local", SessionID: sess.id}); err != nil {
+		t.Fatal(err)
+	}
 	sess.ctrl = oldCtrl
 
 	if err := svc.rebuildSession(context.Background(), sess, SessionConfigState{Model: "pro"}, []sessionConfigDelta{{axis: "model", model: "pro"}}); err != nil {

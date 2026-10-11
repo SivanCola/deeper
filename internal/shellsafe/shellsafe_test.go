@@ -2,7 +2,7 @@ package shellsafe
 
 import "testing"
 
-func TestCommandIsReadOnly(t *testing.T) {
+func TestCommandEffectPermissionReader(t *testing.T) {
 	readOnly := []string{
 		// git read-only subcommands (the #5341 set, beyond status/diff/log/show).
 		"git status", "git diff HEAD", "git log --oneline", "git show",
@@ -25,8 +25,8 @@ func TestCommandIsReadOnly(t *testing.T) {
 		`basename "$(pwd)"`, `dirname "$(realpath .)"`,
 	}
 	for _, c := range readOnly {
-		if _, _, ok := CommandIsReadOnly(c); !ok {
-			t.Errorf("CommandIsReadOnly(%q) = false, want true", c)
+		if ok := ClassifyBash(c).IsPermissionReader(); !ok {
+			t.Errorf("CommandEffectPermissionReader(%q) = false, want true", c)
 		}
 	}
 
@@ -55,13 +55,13 @@ func TestCommandIsReadOnly(t *testing.T) {
 		`Set-Content style.css bad`, `Remove-Item style.css`,
 	}
 	for _, c := range notReadOnly {
-		if _, _, ok := CommandIsReadOnly(c); ok {
-			t.Errorf("CommandIsReadOnly(%q) = true, want false", c)
+		if ok := ClassifyBash(c).IsPermissionReader(); ok {
+			t.Errorf("CommandEffectPermissionReader(%q) = true, want false", c)
 		}
 	}
 }
 
-func TestCommandIsWorkspaceNonMutatingKeepsNetworkProbeOutOfPermissionReaders(t *testing.T) {
+func TestCommandEffectWorkspaceMutationKeepsNetworkProbeOutOfPermissionReaders(t *testing.T) {
 	tests := []struct {
 		command string
 		want    bool
@@ -73,9 +73,9 @@ func TestCommandIsWorkspaceNonMutatingKeepsNetworkProbeOutOfPermissionReaders(t 
 	}
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			_, _, got := CommandIsWorkspaceNonMutating(tt.command)
+			got := !ClassifyBash(tt.command).WorkspaceMutation()
 			if got != tt.want {
-				t.Fatalf("CommandIsWorkspaceNonMutating(%q) = %t, want %t", tt.command, got, tt.want)
+				t.Fatalf("CommandEffectWorkspaceMutation(%q) = %t, want %t", tt.command, got, tt.want)
 			}
 		})
 	}

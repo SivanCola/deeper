@@ -28,8 +28,7 @@ func TestSummarizeFromPreservesLocalOnlyOutsideModelAndArchive(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: strings.Repeat("more work ", 400)},
 	}}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: 50_000, CompactRatio: 0.85}, event.Discard)
 	before := sess.Snapshot()
 
 	if err := a.SummarizeFrom(context.Background(), 1); err != nil {
@@ -60,8 +59,7 @@ func TestSummarizeUpToPreservesLocalOnlyOutsideModelAndArchive(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "new answer"},
 	}}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: 50_000, CompactRatio: 0.85}, event.Discard)
 	before := sess.Snapshot()
 
 	if err := a.SummarizeUpTo(context.Background(), 4); err != nil {

@@ -33,9 +33,8 @@ func TestACPBuiltinToolsKeepSessionLevelBuiltins(t *testing.T) {
 	tools := toolMap(acpBuiltinTools(&config.Config{}, dir, []string{dir}))
 	for _, name := range []string{
 		"todo_write",
-		"bash_output",
-		"kill_shell",
-		"wait",
+		"job_output",
+		"job_kill",
 		"move_file",
 		"notebook_edit",
 	} {
@@ -107,7 +106,7 @@ allow_write = ["../outside"]
 		plannerOff: true, networkOverride: &off, bashOverride: "enforce", workspaceOnly: true,
 	}
 	state, err := factory.SessionRuntimeState(context.Background(), acp.SessionRuntimeStateParams{
-		Cwd: project, Model: "configured-planner", RuntimeProfile: "balanced",
+		Cwd: project, Model: "configured-planner",
 	})
 	if err != nil {
 		t.Fatalf("SessionRuntimeState: %v", err)
@@ -128,7 +127,7 @@ func TestACPSupervisorRuntimeStateDegradesWhenSandboxIsUnavailable(t *testing.T)
 	}
 	approveWorkspace(t, project)
 	unavailable := func() bool { return false }
-	params := acp.SessionRuntimeStateParams{Cwd: project, RuntimeProfile: "balanced"}
+	params := acp.SessionRuntimeStateParams{Cwd: project}
 
 	state, err := (&acpFactory{
 		bashOverride: "enforce", sandboxAvailable: unavailable,
@@ -183,7 +182,7 @@ default_model = "local"
 name = "local"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
-model = "fake-model"
+models = ["fake-model"]
 api_key_env = "DEEPZORA_TEST_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -227,7 +226,7 @@ default_model = "reasoner/reasoning-model"
 name = "reasoner"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
-model = "reasoning-model"
+models = ["reasoning-model"]
 api_key_env = "DEEPZORA_TEST_KEY"
 supported_efforts = ["low", "high"]
 
@@ -235,7 +234,7 @@ supported_efforts = ["low", "high"]
 name = "plain"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
-model = "plain-model"
+models = ["plain-model"]
 api_key_env = "DEEPZORA_TEST_KEY"
 effort = "high"
 `), 0o644); err != nil {
@@ -263,49 +262,6 @@ effort = "high"
 	})
 	if err == nil {
 		t.Fatal("explicit unsupported selection was silently cleared")
-	}
-}
-
-func TestACPFactoryPinsRuntimeProfileAndOmitsWorkMode(t *testing.T) {
-	isolateCLIConfigHome(t)
-	if _, err := config.SetCredential("DEEPZORA_TEST_KEY", "test-key"); err != nil {
-		t.Fatalf("SetCredential: %v", err)
-	}
-	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`
-default_model = "local"
-
-[[providers]]
-name = "local"
-kind = "acp-test-provider"
-base_url = "http://example.invalid"
-model = "fake-model"
-api_key_env = "DEEPZORA_TEST_KEY"
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	approveWorkspace(t, project)
-
-	state, err := (&acpFactory{}).SessionConfigState(context.Background(), acp.SessionConfigStateParams{
-		Cwd:            project,
-		RuntimeProfile: "delivery",
-	})
-	if err != nil {
-		t.Fatalf("SessionConfigState: %v", err)
-	}
-	if _, ok := findACPConfigOption(state.ConfigOptions, "work_mode"); ok {
-		t.Fatalf("work_mode should not be advertised: %+v", state.ConfigOptions)
-	}
-	if state.RuntimeProfile != "balanced" {
-		t.Fatalf("RuntimeProfile = %q, want pinned balanced", state.RuntimeProfile)
-	}
-
-	state, err = (&acpFactory{}).SessionConfigState(context.Background(), acp.SessionConfigStateParams{Cwd: project})
-	if err != nil {
-		t.Fatalf("default SessionConfigState: %v", err)
-	}
-	if state.RuntimeProfile != "balanced" {
-		t.Fatalf("default RuntimeProfile = %q, want balanced", state.RuntimeProfile)
 	}
 }
 
@@ -390,15 +346,6 @@ func TestACPSubagentProviderResolverRejectsInvalidEffort(t *testing.T) {
 	if _, _, _, err := resolve("", "max"); err == nil {
 		t.Fatal("invalid effort should fail before ACP task falls back to the parent profile")
 	}
-}
-
-func findACPConfigOption(options []acp.SessionConfigOption, id string) (acp.SessionConfigOption, bool) {
-	for _, opt := range options {
-		if opt.ID == id {
-			return opt, true
-		}
-	}
-	return acp.SessionConfigOption{}, false
 }
 
 func toolMap(tools []tool.Tool) map[string]tool.Tool {

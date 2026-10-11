@@ -50,24 +50,24 @@ func contractEntriesFromTools(tools []Tool, canonical map[string]json.RawMessage
 // this registry's write lock — holding the read lock across ReadOnly is an
 // AB-BA deadlock (boot's snapshot assembly hit it with a live swap in flight).
 func (r *Registry) ContractEntries() []ContractEntry {
-	return r.contractEntries(true, false)
+	return r.contractEntries(true)
 }
 
 // AllContractEntries returns every registered tool's contract, including tools
 // hidden from provider and capability discovery. Diagnostics and host APIs use
 // it when they need the complete registry inventory.
 func (r *Registry) AllContractEntries() []ContractEntry {
-	return r.contractEntries(false, false)
+	return r.contractEntries(false)
 }
 
 // CapabilityContractEntries returns callable non-retired tools for the
 // use_capability catalog. Compatibility aliases still resolve from old session
 // calls but are intentionally absent from discovery.
 func (r *Registry) CapabilityContractEntries() []ContractEntry {
-	return r.contractEntries(false, true)
+	return r.contractEntries(false)
 }
 
-func (r *Registry) contractEntries(providerVisibleOnly, capabilityCatalog bool) []ContractEntry {
+func (r *Registry) contractEntries(providerVisibleOnly bool) []ContractEntry {
 	r.mu.RLock()
 	tools := make([]Tool, 0, len(r.order))
 	canonical := make(map[string]json.RawMessage, len(r.order))
@@ -78,11 +78,6 @@ func (r *Registry) contractEntries(providerVisibleOnly, capabilityCatalog bool) 
 		t := r.tools[name]
 		if t == nil {
 			continue
-		}
-		if capabilityCatalog {
-			if hidden, ok := t.(CapabilityCatalogHidden); ok && hidden.HiddenFromCapabilityCatalog() {
-				continue
-			}
 		}
 		tools = append(tools, t)
 		canonical[name] = r.canon[name]

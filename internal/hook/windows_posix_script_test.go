@@ -31,7 +31,7 @@ func TestWindowsPluginHookDoesNotGuessBashForNativeOrNonShellFiles(t *testing.T)
 
 	for _, command := range []string{"hooks/native-tool", "hooks/run-hook.cmd"} {
 		config := pluginHookExecutionConfigForPlatform(pluginpkg.Hook{Command: command}, root, "windows")
-		if config.ExecutionMode != ExecutionLegacy || config.Shell != "" {
+		if config.ExecutionMode != ExecutionShell || config.Shell != "" {
 			t.Fatalf("command %q guessed shell execution: mode %q shell %q", command, config.ExecutionMode, config.Shell)
 		}
 	}
@@ -53,14 +53,14 @@ func TestWindowsImplicitPluginPOSIXScriptUsesBashPath(t *testing.T) {
 	}
 }
 
-func TestWindowsLegacyPOSIXScriptSpawnInputUsesBash(t *testing.T) {
+func TestWindowsShellPOSIXScriptSpawnInputUsesBash(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "workspace root")
 	script := filepath.Join(root, "hooks", "session-start")
 	writeHookTestFile(t, script, "#!/usr/bin/env bash\necho ok\n")
 
 	got := normalizeWindowsHookSpawnInputForPlatform(SpawnInput{
 		Command: "hooks/session-start",
-		Mode:    ExecutionLegacy,
+		Mode:    ExecutionShell,
 		Cwd:     root,
 	}, "windows")
 	if got.Mode != ExecutionShell || got.Shell != "bash" {
@@ -71,12 +71,12 @@ func TestWindowsLegacyPOSIXScriptSpawnInputUsesBash(t *testing.T) {
 	}
 }
 
-func TestWindowsLegacyPOSIXScriptRuntimeRequiresBash(t *testing.T) {
+func TestWindowsShellPOSIXScriptRuntimeRequiresBash(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "workspace root")
 	script := filepath.Join(root, "hooks", "session-start")
 	writeHookTestFile(t, script, "#!/usr/bin/env bash\necho ok\n")
 
-	config := HookConfig{Command: "hooks/session-start", Cwd: root, ExecutionMode: ExecutionLegacy}
+	config := HookConfig{Command: "hooks/session-start", Cwd: root, ExecutionMode: ExecutionShell}
 	if !requiresWindowsBash(config) {
 		t.Fatal("legacy POSIX script hook should require Bash on Windows")
 	}

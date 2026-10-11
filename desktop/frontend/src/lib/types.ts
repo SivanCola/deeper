@@ -176,7 +176,6 @@ export interface WireUsage {
   currency?: string;
   currencyCode?: string;
   // Deprecated compatibility alias. Prefer cost + currencyCode / costQuote.
-  costUsd?: number;
   costComplete?: boolean;
   displayComplete?: boolean;
   displayStatus?: string;
@@ -227,7 +226,6 @@ export interface CostQuote {
   rateBand?: "peak" | "off_peak" | "mixed" | string;
   ratedAt?: string;
   incompleteReason?: string;
-  legacyEstimate?: boolean;
   catalogSource?: string;
 }
 
@@ -446,8 +444,7 @@ export interface WireEvent extends RecoveryEventFields {
   err?: string;
   checkpointTurn?: number; // Authoritative TurnDone rewind target; zero is valid.
   submissionId?: string; // Opaque correlation for the exact optimistic user submission.
-  outcome?: "completed" | "partial" | "blocked" | "final_readiness" | "recovery_paused" | "completion_uncertain" | "incomplete_read";
-  readiness?: WireFinalReadiness;
+  outcome?: "completed" | "partial" | "blocked" | "incomplete_read";
   protocolRecovery?: { id: string };
   diagnostic?: { kind: string; status?: number; traceId?: string; providerId?: string; providerDisplayName?: string; protocol?: string; requestPath?: string; transportCode?: string };
   /** Optional: "headers" | "stream". Older clients ignore unknown fields. */
@@ -470,7 +467,6 @@ export interface WireEvent extends RecoveryEventFields {
   sessionCost?: number;
   sessionCurrency?: string;
   // Deprecated compatibility alias. Prefer sessionCost + sessionCurrency.
-  sessionCostUsd?: number;
 }
 
 export interface WireCompletionSummary {
@@ -480,7 +476,6 @@ export interface WireCompletionSummary {
 	checkpointTurn?: number;
 	checking?: boolean;
 	liveChecks?: { toolCallId: string; command: string; output?: string }[];
-  preset: string;
   verdict: string;
 	mutations: number;
 	changed_files?: number;
@@ -490,10 +485,7 @@ export interface WireCompletionSummary {
   review: string;
   gap_kinds?: string[];
   constraint_degraded: boolean;
-  /** Turn-time policy floor. Missing on historical events. */
-  floor?: "standard" | "delivery" | string;
-  /** Backend decision; authoritative when floor is present. */
-  attention?: boolean;
+
 }
 
 export type { TurnFileChange, TurnChanges, WireCompletionReceipt } from "./turnResultTypes";
@@ -545,14 +537,9 @@ export interface SessionTakeoverView {
   holderHost?: string;
 }
 
-export interface WireFinalReadiness {
-  attempts?: number;
-  missing?: string[];
-}
 
 // Tab management types (desktop/tabs.go).
 export interface TabMeta extends RemoteTabMetaFields {
-  historicalSource?: import("../generated/desktopContract.generated").SessionSourceRef;
   id: string;
   tabType?: "session" | "file";
   scope: string;
@@ -591,10 +578,6 @@ export interface TabMeta extends RemoteTabMetaFields {
   mode: Mode;
   collaborationMode?: CollaborationMode;
   toolApprovalMode?: ToolApprovalMode;
-  tokenMode?: TokenMode;
-  agentPreset?: AgentPreset; // retired compatibility field; current hosts emit standard
-  qualityFloor?: QualityFloor; // retired compatibility field; current hosts emit standard
-  floorInferred?: boolean; // retired compatibility field; current hosts emit false
   goal?: string;
   goalStatus?: GoalStatus;
   goalView?: GoalLifecycleView;
@@ -760,7 +743,6 @@ export interface ContextPanelInfo {
   sessionCost?: number;
   sessionCurrency?: string;
   // Deprecated compatibility alias. Prefer sessionCost + sessionCurrency.
-  sessionCostUsd?: number;
   sessionCostComplete?: boolean;
   sessionCostEstimated?: boolean;
   sessionBillingMode?: string;
@@ -783,7 +765,6 @@ export interface UsageSourceStats {
   requestCount: number;
   sessionCost?: number;
   sessionCurrency?: string;
-  sessionCostUsd?: number;
 }
 
 export interface ReadFileRecord {
@@ -854,7 +835,6 @@ export interface HistoryMessage extends TranscriptTurnMetadata {
   inputTokens?: number;
   resultTokens?: number;
   decisionReceipt?: WireDecisionReceipt;
-  readiness?: WireFinalReadiness;
   protocolRecovery?: { id: string };
   diagnostic?: { kind: string; status?: number; traceId?: string; providerId?: string; providerDisplayName?: string; protocol?: string; requestPath?: string; transportCode?: string };
   serverSearch?: HistoryServerSearch[];
@@ -993,7 +973,6 @@ export interface Meta extends RemoteSessionMetaFields {
   ready: boolean;
   runtime?: SessionRuntimeView;
   startupErr?: string;
-  historicalSource?: import("../generated/desktopContract.generated").SessionSourceRef;
   eventChannel: string;
   sessionPath?: string;
   sessionId?: string; session?: SessionRef | null;
@@ -1009,13 +988,8 @@ export interface Meta extends RemoteSessionMetaFields {
   imageInputEnabled?: boolean;
   visionFallbackEnabled?: boolean;
   autoApproveTools?: boolean;
-  bypass?: boolean; // legacy JSON key for YOLO/full-access tool auto-approval
   collaborationMode?: CollaborationMode;
   toolApprovalMode?: ToolApprovalMode;
-  tokenMode?: TokenMode;
-  agentPreset?: AgentPreset; // retired compatibility field; current hosts emit standard
-  qualityFloor?: QualityFloor; // retired compatibility field; current hosts emit standard
-  floorInferred?: boolean; // retired compatibility field; current hosts emit false
   goal?: string;
   goalStatus?: GoalStatus;
   goalView?: GoalLifecycleView;
@@ -1024,10 +998,7 @@ export interface Meta extends RemoteSessionMetaFields {
 }
 export type CollaborationMode = "normal" | "plan" | "goal";
 export type PermissionPreset = "read-only" | "workspace-write" | "danger-full-access";
-export type LegacyToolApprovalMode = "ask" | "auto" | "yolo";
-// Legacy values remain in the input union for old hosts and persisted fixtures;
-// normalizeToolApprovalMode is the only path into current UI/runtime state.
-export type ToolApprovalMode = PermissionPreset | LegacyToolApprovalMode;
+export type ToolApprovalMode = PermissionPreset;
 export interface SessionGrantSummary {
   scope: "tool" | "directory" | "command-prefix" | string;
   target: string;
@@ -1052,9 +1023,6 @@ export interface PermissionSnapshot {
 }
 // Retired wire vocabularies remain accepted so old sessions and remote hosts
 // can be decoded. Current local hosts emit full/balanced/standard.
-export type TokenMode = "full" | "economy" | "delivery" | "light" | "balanced";
-export type AgentPreset = "standard" | "light" | "balanced" | "delivery";
-export type QualityFloor = "standard" | "delivery";
 export type GoalStatus = "running" | "complete" | "blocked" | "stopped";
 export type GoalPhase = "active" | "paused" | "blocked" | "complete";
 export type GoalActivation = "armed" | "disarmed";
@@ -1074,89 +1042,38 @@ export interface GoalLifecycleView {
 // Optional Goal runtime summary; absent for old hosts or when no goal is active.
 export interface GoalRuntime {
   turnsUsed: number;
-  turnsLimit: number; // Deprecated: Goal exposes no turn limit and returns 0.
   tokensUsed: number;
   requestsUsed?: number;
   workDurationMs?: number;
-  /** @deprecated Goal has no hard token limit; retained as 0 for old hosts/clients. */
+  /** User-selected token budget for the current spend slice. */
   tokensLimit: number;
   noProgressTurns: number;
-  /** @deprecated No longer enforced; retained for old hosts/clients. */
-  noProgressLimit: number;
+  /** Observed turns without new progress. */
   lastReason?: string;
   stopCause?: string;
   budgetExtensions: number; // Deprecated: resumes no longer extend a numeric quota.
 }
-export function normalizeCollaborationMode(mode?: string, goal?: string, legacyMode?: Mode): CollaborationMode {
-  if (mode === "plan" || mode === "goal" || mode === "normal") return mode;
-  if (legacyMode && modeHasPlan(legacyMode)) return "plan";
-  if ((goal ?? "").trim()) return "goal";
-  return "normal";
+export function normalizeCollaborationMode(mode?: string): CollaborationMode {
+  return mode === "plan" || mode === "goal" ? mode : "normal";
 }
 
-export function normalizeToolApprovalMode(
-  mode?: string,
-  legacyMode?: Mode,
-  legacyAutoApproveTools?: boolean,
-  fallbackMode?: ToolApprovalMode,
-): PermissionPreset {
-  const normalized = typeof mode === "string" ? mode.trim().toLowerCase() : "";
-  if (normalized === "read-only" || normalized === "workspace-write" || normalized === "danger-full-access") return normalized as PermissionPreset;
-  if (normalized === "ask") return "read-only";
-  if (normalized === "auto" || normalized === "yolo") return "workspace-write";
-  if (legacyAutoApproveTools || (legacyMode && modeHasAutoApproveTools(legacyMode))) return "workspace-write";
-  if (fallbackMode && normalized === "") return normalizeToolApprovalMode(fallbackMode);
-  return "read-only";
+export function normalizeToolApprovalMode(mode?: string): PermissionPreset {
+  return mode === "workspace-write" || mode === "danger-full-access" ? mode : "read-only";
 }
 
-export function normalizeTokenMode(mode?: string): TokenMode {
-  void mode;
-  return "full";
-}
-
-/** Normalize the retired role vocabulary to the fixed compatibility value. */
-export function normalizeAgentPreset(mode?: string): AgentPreset {
-  void mode;
-  return "standard";
-}
-
-export function tokenModeFromAgentPreset(preset: AgentPreset): TokenMode {
-  void preset;
-  return "full";
-}
-
-// Mode is a compatibility string from older hosts. New permission state is
-// carried only by PermissionPreset and never derived from this display axis.
-export type Mode = "normal" | "plan" | "yolo" | "plan-yolo";
+// Mode represents the collaboration axis independently of permissions.
+export type Mode = "normal" | "plan";
 
 export function normalizeMode(mode?: string): Mode {
-  if (mode === "plan" || mode === "yolo" || mode === "plan-yolo" || mode === "yolo-plan") {
-    return mode === "yolo-plan" ? "plan-yolo" : mode;
-  }
-  return "normal";
+  return mode === "plan" ? "plan" : "normal";
 }
 
 export function modeHasPlan(mode: Mode): boolean {
-  return mode === "plan" || mode === "plan-yolo";
+  return mode === "plan";
 }
 
-export function modeHasAutoApproveTools(mode: Mode): boolean {
-  return mode === "yolo" || mode === "plan-yolo";
-}
-
-export function modeFromAxes(plan: boolean, autoApproveTools: boolean): Mode {
-  if (plan && autoApproveTools) return "plan-yolo";
-  if (plan) return "plan";
-  if (autoApproveTools) return "yolo";
-  return "normal";
-}
-
-export function modeWithPlan(mode: Mode, plan: boolean): Mode {
-  return modeFromAxes(plan, modeHasAutoApproveTools(mode));
-}
-
-export function modeWithAutoApproveTools(mode: Mode, autoApproveTools: boolean): Mode {
-  return modeFromAxes(modeHasPlan(mode), autoApproveTools);
+export function modeForPlan(plan: boolean): Mode {
+  return plan ? "plan" : "normal";
 }
 
 export interface CommandInfo {
@@ -1765,11 +1682,9 @@ export interface ProviderView {
   added: boolean;
   kind: string;
   baseUrl: string;
-  chatUrl?: string; // legacy OpenAI chat endpoint override; preserved for old-config compatibility
   requestUrl?: string; // exact provider request URL written by the current settings UI
   models: string[];
   visionModels: string[]; // legacy subset; new UI derives capability from modelOverrides
-  visionModelsConfigured: boolean; // legacy explicit-list marker retained for old configs
   visionCapability?: "configurable" | "unsupported"; // backend authority; absent on older desktop payloads
   modelsUrl: string; // optional override for model discovery; empty derives from baseUrl
   default: string;
@@ -1793,7 +1708,6 @@ export interface ProviderView {
   defaultEffort: string; // /effort level when user picks "auto" or unset; "" = supportedEfforts[0]
   modelOverrides?: ProviderModelOverrideView[] | null;
   modelCapabilities?: ProviderModelCapabilityView[] | null;
-  recommendedUpgradeAvailable?: boolean; // official legacy OpenAI entry can switch to recommended Anthropic access
   modelCatalogFingerprint?: string; // opaque compare-and-apply token for background model discovery
 }
 
@@ -1802,7 +1716,6 @@ export interface ProviderModelCatalogUpdate {
   expectedFingerprint: string;
   models: string[];
   default: string;
-  visionModels: string[];
   modelCapabilities?: ProviderModelCapabilityUpdate[];
 }
 
@@ -2018,27 +1931,6 @@ export interface AgentView {
   compactRatioOverridden?: boolean;
 }
 
-export interface BotAllowlistView {
-  enabled: boolean;
-  allowAll: boolean;
-  qqUsers: string[];
-  feishuUsers: string[];
-  weixinUsers: string[];
-  qqApprovers: string[];
-  feishuApprovers: string[];
-  weixinApprovers: string[];
-  qqAdmins: string[];
-  feishuAdmins: string[];
-  weixinAdmins: string[];
-  qqGroups: string[];
-  feishuGroups: string[];
-  weixinGroups: string[];
-  dingtalkUsers: string[];
-  dingtalkApprovers: string[];
-  dingtalkAdmins: string[];
-  dingtalkGroups: string[];
-}
-
 export interface BotAccessView {
   enabled: boolean;
   allowAll: boolean;
@@ -2171,13 +2063,11 @@ export interface BotSettingsView {
   debounceMs: number;
   queueMode: string;
   queueCap: number;
-  queueDrop: string;
   ignoreSelfMessages: boolean;
   selfUserIds: BotSelfUserIDsView;
   control: BotControlView;
   pairing: BotPairingView;
   routes: BotRouteView[];
-  allowlist: BotAllowlistView;
   qq: QQBotView;
   feishu: FeishuBotView;
   weixin: WeixinBotView;
@@ -2254,7 +2144,7 @@ export interface DesktopStartupSettingsView {
   desktopTheme: string; // "auto" | "dark" | "light"
   desktopThemeStyle: string;
   desktopTerminalTheme: string; // "auto" follows app | "dark" | "light"
-  displayMode: string; sessionExperience?: "standard" | "deep"; reasoningDisplayMode: string; reasoningDisplayModeExplicit?: boolean;
+  sessionExperience: "standard" | "deep";
   statusBarStyle: string; // "icon" | "text"
   statusBarItems: string[]; // ordered visible status bar item ids
   checkUpdates: boolean; // check for new versions on startup

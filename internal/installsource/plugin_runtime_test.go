@@ -103,7 +103,15 @@ func TestPluginRuntimePlanCarriesFullTrust(t *testing.T) {
 func TestPluginLegacyPlanOmitsRuntimeFields(t *testing.T) {
 	src := t.TempDir()
 	// v2 without runtime: skills-only package has no Runtime plan fields.
-	writeFile(t, filepath.Join(src, "deepzora-plugin.json"), `{"apiVersion":"deepzora.com/plugin/v2","name":"legacy","skills":["skills"]}`)
+	writeFile(t, filepath.Join(src, "deepzora-plugin.json"), `{
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "legacy",
+  "contributes": {
+    "skills": [
+      "skills"
+    ]
+  }
+}`)
 	writeFile(t, filepath.Join(src, "skills", "s", "SKILL.md"), "---\ndescription: s\n---\nS")
 
 	project := t.TempDir()

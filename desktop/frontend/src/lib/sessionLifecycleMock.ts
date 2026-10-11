@@ -47,9 +47,5 @@ export function makeMockSessionLifecycleBindings(mockWorkspaceSnapshot: () => Wo
       mockLifecycleResults.set(request.operationId, { request: encoded, result });
       return result;
     },
-    async ListRecoveryEntries() { return { items: [], generation: 1 }; },
-    async PreviewRecoveryEntry() { return { messages: [], startTurn: 0, endTurn: 0, totalTurns: 0, hasOlder: false }; },
-    async RestoreRecoveryEntry() { throw new Error("recovery entry is unavailable"); },
-    async GetSessionUpgradeStatus() { return { sources: 0, sessions: 0, operations: 0, discovered: 0, migrated: 0, pending: 0, failed: 0, conflicts: 0, pendingOperations: 0 }; },
   };
 }

@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"deepzora/internal/agent"
@@ -65,12 +64,8 @@ func TestToolRecoveryCrashAfterEffect(t *testing.T) {
 	defer c.Close()
 	c.recoverInterruptedTurn(path)
 	view := c.ToolRecoverySnapshot()
-	if !view.Retired || view.RetryEnabled || len(view.Calls) != 0 {
+	if len(view.Calls) != 0 {
 		t.Fatalf("unresolved crash effects=%+v", view)
-	}
-	req := ToolRecoveryRequest{SessionPath: view.SessionPath, RuntimeEpoch: view.RuntimeEpoch, Revision: view.Revision, AttemptID: "crash", Action: "inspect"}
-	if _, err = c.ResolveToolRecovery(context.Background(), req); err == nil || !strings.Contains(err.Error(), "tool_recovery_retired") {
-		t.Fatalf("retired recovery action err=%v", err)
 	}
 	projection := loadDurableSessionProjection(t, path)
 	if len(projection.ActiveTools) != 0 || projection.TurnStatus != event.TurnInterrupted {

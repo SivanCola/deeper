@@ -43,30 +43,6 @@ func waitNotRunning(t *testing.T, ctrl control.SessionAPI) {
 	}
 }
 
-// setSessionTitle sets (or, with an empty title, clears) a session's custom name.
-func setSessionTitle(dir, sessionPath, title string) error {
-	sessionPath, _, err := validateSessionPath(dir, sessionPath)
-	if err != nil {
-		return err
-	}
-	key := filepath.Base(sessionPath)
-	return updateSessionTitles(dir, func(m map[string]string) bool {
-		title = strings.TrimSpace(title)
-		if title == "" {
-			if _, ok := m[key]; !ok {
-				return false
-			}
-			delete(m, key)
-			return true
-		}
-		if m[key] == title {
-			return false
-		}
-		m[key] = title
-		return true
-	})
-}
-
 // deleteSessionFile moves a session's .jsonl and file sidecars into the local
 // trash. Title/display sidecars stay in place so trash previews and restores can
 // preserve the user's labels.

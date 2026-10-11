@@ -22,7 +22,7 @@ func TestRecoveredTerminalPathRetriesStaleRunningListingRow(t *testing.T) {
 
 func testTerminalListingRace(t *testing.T, serveStillRunning, recovered bool) {
 	t.Helper()
-	const path = "/sessions/current.jsonl"
+	const path = "session-id:current"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: path, Current: true, Running: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -52,7 +52,7 @@ func testTerminalListingRace(t *testing.T, serveStillRunning, recovered bool) {
 	a.remoteTabMu.Unlock()
 	terminalPath := path
 	if recovered {
-		terminalPath = "/sessions/current-recovery.jsonl"
+		terminalPath = "session-id:current-recovery"
 	}
 	if routed := a.routeRemoteTabFrame(meta.ID, gen, terminalPath, "turn_done"); routed != !recovered {
 		t.Fatalf("terminal route result = %v, recovered=%v", routed, recovered)
@@ -79,7 +79,7 @@ func testTerminalListingRace(t *testing.T, serveStillRunning, recovered bool) {
 }
 
 func TestAttachRemoteTabServeRejectsResponseAfterNewerAdoption(t *testing.T) {
-	const responsePath, newerPath = "/sessions/response.jsonl", "/sessions/newer.jsonl"
+	const responsePath, newerPath = "session-id:response", "session-id:newer"
 	feed := make(chan string, 1)
 	fs := newFakeServe(t, "s3cret", nil)
 	fs.mu.Lock()
@@ -102,7 +102,7 @@ func TestAttachRemoteTabServeRejectsResponseAfterNewerAdoption(t *testing.T) {
 		done <- result{entered, err}
 	}()
 	waitTestSignal(t, started, "new-session attach did not start")
-	feed <- `{"kind":"session_changed","sessionPath":"/sessions/newer.jsonl","sessionCurrent":true}`
+	feed <- `{"kind":"session_changed","sessionPath":"session-id:newer","sessionCurrent":true}`
 	waitRemoteTestPath(t, a, tab, newerPath)
 	closeTestSignal(release)
 	select {
@@ -127,11 +127,11 @@ func TestRemoteModelResponseLabelsExpectedSessionAfterABARouteChange(t *testing.
 func testRemoteModelRouteFence(t *testing.T, returnToExpected bool) {
 	t.Helper()
 	isolateDesktopUserDirs(t)
-	const oldPath, newerPath = "/sessions/old.jsonl", "/sessions/newer.jsonl"
+	const oldPath, newerPath = "session-id:old", "session-id:newer"
 	started, release := make(chan struct{}), make(chan struct{})
 	var requestPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestPath = r.Header.Get(expectedSessionPathHeader)
+		requestPath = remoteSessionIDRoutePrefix + r.Header.Get(expectedSessionIDHeader)
 		close(started)
 		<-release
 		w.WriteHeader(http.StatusNoContent)

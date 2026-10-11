@@ -26,7 +26,7 @@ func TestLauncherMaintenanceRepairsWithoutStartingDesktop(t *testing.T) {
 	if err := os.WriteFile(launcher, data, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(root, "versions", "v1.38.6", "app", "Deepzora.exe")
+	target := filepath.Join(root, "Deepzora.exe")
 	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -70,8 +70,8 @@ if ($Action -eq 'create') {
 		t.Fatalf("read shortcut: %v: %s", err, output)
 	}
 	targetInfo, targetErr := os.Stat(got.Target)
-	launcherInfo, launcherErr := os.Stat(launcher)
-	if targetErr != nil || launcherErr != nil || !os.SameFile(targetInfo, launcherInfo) || got.ID != "com.deepzora.desktop" || got.Arguments != `--session "workspace name"` {
+	canonicalInfo, canonicalErr := os.Stat(target)
+	if targetErr != nil || canonicalErr != nil || !os.SameFile(targetInfo, canonicalInfo) || got.ID != "com.deepzora.desktop" || got.Arguments != `--session "workspace name"` {
 		t.Fatalf("maintenance shortcut = %+v", got)
 	}
 }

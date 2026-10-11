@@ -90,7 +90,7 @@ func TestPortableLocalAndInstalledRemoteLocationsKeepExistingLaunchPath(t *testi
 		t.Run(test.name, func(t *testing.T) {
 			root := coordinatedLaunchFixture(t, test.portable)
 			classified, launched := false, false
-			handled, code := coordinatedLaunchWith(root, []string{"--safe-mode", "workspace"}, false, coordinatedLaunchDependencies{
+			handled, code := coordinatedLaunchWith(root, []string{"workspace"}, false, coordinatedLaunchDependencies{
 				classifyLocation: func(string) (launchLocation, error) {
 					classified = true
 					return test.location, nil

@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -23,13 +21,6 @@ func TestSessionSidecarSavesUseDurableAtomicWrite(t *testing.T) {
 		path func(string) string
 		save func(string) error
 	}{
-		{
-			name: "titles",
-			path: sessionTitlesPath,
-			save: func(dir string) error {
-				return saveSessionTitles(dir, map[string]string{"session.jsonl": "Durable title"})
-			},
-		},
 		{
 			name: "displays",
 			path: sessionDisplayPath,
@@ -79,27 +70,6 @@ func TestSessionSidecarSavesUseDurableAtomicWrite(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestSetSessionTitleHonorsSidecarLock(t *testing.T) {
-	dir := t.TempDir()
-	release, err := filelock.Acquire(context.Background(), sessionTitlesPath(dir)+".lock")
-	if err != nil {
-		t.Fatalf("acquire title sidecar lock: %v", err)
-	}
-	previousTimeout := sessionTitlesQueueTimeout
-	sessionTitlesQueueTimeout = 40 * time.Millisecond
-	t.Cleanup(func() { sessionTitlesQueueTimeout = previousTimeout })
-
-	err = setSessionTitle(dir, filepath.Join(dir, "locked.jsonl"), "Locked")
-	if err == nil {
-		release()
-		t.Fatal("setSessionTitle succeeded while the title sidecar lock was held")
-	}
-	release()
-	if err := setSessionTitle(dir, filepath.Join(dir, "locked.jsonl"), "Saved"); err != nil {
-		t.Fatalf("setSessionTitle after release: %v", err)
 	}
 }
 
@@ -157,38 +127,5 @@ func TestRecordSessionDisplayExternalLockUsesShortBudget(t *testing.T) {
 	}
 	if elapsed >= 2*time.Second {
 		t.Fatalf("record display waited %v, want the short external lock budget", elapsed)
-	}
-}
-
-func TestSetSessionTitleSerializesConcurrentUpdates(t *testing.T) {
-	dir := t.TempDir()
-	const sessions = 32
-	errs := make(chan error, sessions)
-	var wg sync.WaitGroup
-	for i := range sessions {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			path := filepath.Join(dir, fmt.Sprintf("session-%02d.jsonl", i))
-			errs <- setSessionTitle(dir, path, fmt.Sprintf("Title %02d", i))
-		}(i)
-	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			t.Fatalf("setSessionTitle: %v", err)
-		}
-	}
-
-	titles := loadSessionTitles(dir)
-	if len(titles) != sessions {
-		t.Fatalf("title count = %d, want %d: %#v", len(titles), sessions, titles)
-	}
-	for i := range sessions {
-		key := fmt.Sprintf("session-%02d.jsonl", i)
-		if got := titles[key]; got != fmt.Sprintf("Title %02d", i) {
-			t.Fatalf("%s title = %q, want retained concurrent value", key, got)
-		}
 	}
 }

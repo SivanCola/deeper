@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,55 +16,6 @@ import (
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
 )
-
-// NativeLegacySession identifies a path-backed controller across hot rebuilds.
-func (c *Controller) NativeLegacySession() bool {
-	if c == nil {
-		return false
-	}
-	c.v3BindingMu.RLock()
-	defer c.v3BindingMu.RUnlock()
-	return c.nativeLegacySession
-}
-
-// ResumeNativeSession switches to an already validated, path-backed transcript.
-// Hosts serialize admission and acquire its path lease before calling this.
-func (c *Controller) ResumeNativeSession(s *agent.Session, path string) error {
-	if s == nil || strings.TrimSpace(path) == "" {
-		return errors.New("native session and path are required")
-	}
-	if service := c.SessionService(); service != nil {
-		if ref, found, err := service.ExistingCanonicalForLegacy(path, s); err != nil {
-			return err
-		} else if found {
-			_, err = c.OpenSession(context.Background(), ref)
-			return err
-		}
-	}
-	if err := c.Snapshot(); err != nil {
-		return err
-	}
-	_, previousRuntime, _ := c.v3Binding()
-	if err := c.ReleaseSessionRuntimeBinding(); err != nil {
-		return err
-	}
-	c.v3BindingMu.Lock()
-	c.exclusiveSession = false
-	c.nativeLegacySession = true
-	c.v3BindingMu.Unlock()
-	// The retired canonical cache is owned by its service, never by the path
-	// adapter. Drop the borrowed pointer before rebinding legacy state.
-	c.turnEvents.mu.Lock()
-	if previousRuntime != nil {
-		c.turnEvents.v3 = nil
-		c.turnEvents.v3Runtime = nil
-		c.turnEvents.v3Path = ""
-		c.turnEvents.v3Release = nil
-	}
-	c.turnEvents.mu.Unlock()
-	c.Resume(s, path)
-	return c.turnEventLedgerError()
-}
 
 func bindInitialSessionRuntime(opts Options) (*session.Runtime, *session.ClientBinding) {
 	runtime := opts.SessionRuntime
@@ -192,101 +142,13 @@ func (c *Controller) bindFreshSessionWithCommit(ctx context.Context, options ses
 	return candidate.Ref(), nil
 }
 
-// ContinueLegacySession freezes and migrates the selected legacy head, then
-// publishes the returned immutable v3 identity. The source remains only as a
-// display/import locator and is never rebound as the execution store.
-func (c *Controller) ContinueLegacySession(ctx context.Context, sourcePath, headID string) (session.SessionRef, error) {
-	return c.continueLegacySession(ctx, sourcePath, headID, true, session.CreateOptions{})
-}
-
-// ContinueLegacySessionWithOptions installs immutable Desktop ownership in
-// the same publication that materializes the imported session.
-func (c *Controller) ContinueLegacySessionWithOptions(ctx context.Context, sourcePath, headID string, options session.CreateOptions) (session.SessionRef, error) {
-	return c.continueLegacySession(ctx, sourcePath, headID, true, options)
-}
-
-// ContinueLegacySessionForRebuildWithOptions performs the same fail-atomic
-// import while an Agent generation is being replaced for the same logical
-// session, and publishes host-owned immutable metadata in that same
-// transaction. The SessionTemp generation belongs to the logical session, so
-// this path must not rotate it merely because persistence crossed the
-// legacy/v3 boundary.
-func (c *Controller) ContinueLegacySessionForRebuildWithOptions(ctx context.Context, sourcePath, headID string, options session.CreateOptions) (session.SessionRef, error) {
-	return c.continueLegacySession(ctx, sourcePath, headID, false, options)
-}
-
-func (c *Controller) continueLegacySession(ctx context.Context, sourcePath, headID string, rotateSessionTemp bool, options session.CreateOptions) (session.SessionRef, error) {
-	service, _, _ := c.v3Binding()
-	if c == nil || service == nil || c.executor == nil {
-		return session.SessionRef{}, errors.New("v3 session service is unavailable")
-	}
-	restoreLegacyEvents, err := c.releaseLegacyEventStoreForImport(ctx)
-	if err != nil {
-		return session.SessionRef{}, fmt.Errorf("freeze legacy event source: %w", err)
-	}
-	published := false
-	defer func() {
-		if !published {
-			restoreLegacyEvents()
-		}
-	}()
-	candidate, _, err := service.ContinueImportedWithHeader(ctx, sourcePath, headID, options)
-	if err != nil {
-		return session.SessionRef{}, err
-	}
-	owner, err := service.Owner(candidate)
-	if err != nil {
-		return session.SessionRef{}, err
-	}
-	if err := seedRuntimeConfig(ctx, candidate, "legacy-import-config", c.ModelRef(), c.ModelSelectionIdentity()); err != nil {
-		_ = owner.Close(context.Background())
-		return session.SessionRef{}, err
-	}
-	messages := candidate.Session().ExecutionSnapshot().Projection.ModelMessages
-	prepared := agent.NewSession("").CloneWithMessages(messages)
-	if _, err = c.publishSessionRuntime(candidate, prepared, rotateSessionTemp); err != nil {
-		_ = owner.Close(context.Background())
-		return session.SessionRef{}, err
-	}
-	published = true
-	return candidate.Ref(), nil
-}
-
-// ContinuePrototypeSession imports the retired sidecar codec through the restricted
-// fail-closed bridge, then publishes the final linear session identity.
-func (c *Controller) ContinuePrototypeSession(ctx context.Context, sourceDir string) (session.SessionRef, error) {
-	service, _, _ := c.v3Binding()
-	if c == nil || service == nil || c.executor == nil {
-		return session.SessionRef{}, errors.New("v3 session service is unavailable")
-	}
-	candidate, _, err := service.ContinuePrototype(ctx, sourceDir)
-	if err != nil {
-		return session.SessionRef{}, err
-	}
-	owner, err := service.Owner(candidate)
-	if err != nil {
-		return session.SessionRef{}, err
-	}
-	if err := seedRuntimeConfig(ctx, candidate, "prototype-import-config", c.ModelRef(), c.ModelSelectionIdentity()); err != nil {
-		_ = owner.Close(context.Background())
-		return session.SessionRef{}, err
-	}
-	prepared := agent.NewSession("").CloneWithMessages(candidate.Session().ExecutionSnapshot().Projection.ModelMessages)
-	if _, err = c.publishSessionRuntime(candidate, prepared, true); err != nil {
-		_ = owner.Close(context.Background())
-		return session.SessionRef{}, err
-	}
-	return candidate.Ref(), nil
-}
-
 // OpenSession attaches this Controller to an existing immutable session identity.
 // Opening never creates a missing session and publication retains the current
 // binding until the target projection and writer are ready.
 //
 // Attaching grants only a ClientBinding, so a failed publication withdraws this
 // client's own grant instead of disposing a runtime another client may already
-// be using. A retired stored codec is the one exception: importing it publishes
-// a brand-new identity that this attempt owns outright.
+// be using.
 func (c *Controller) OpenSession(ctx context.Context, ref session.SessionRef) (session.SessionRef, error) {
 	service, current, _ := c.v3Binding()
 	if c == nil || service == nil || c.executor == nil {
@@ -385,19 +247,6 @@ func seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operation
 	return err
 }
 
-func seedRuntimeConfig(ctx context.Context, runtime *session.Runtime, operationID, modelRef, modelIdentity string) error {
-	if runtime == nil || strings.TrimSpace(modelRef) == "" {
-		return nil
-	}
-	event, err := sessionConfigEvent(modelRef, modelIdentity)
-	if err != nil {
-		return err
-	}
-	digest := sha256.Sum256(event.Payload)
-	_, err = runtime.Session().AppendBatch(ctx, fmt.Sprintf("%s:%x", operationID, digest[:16]), []session.Event{event})
-	return err
-}
-
 func sessionConfigEvent(modelRef, modelIdentity string) (session.Event, error) {
 	payload, err := json.Marshal(map[string]string{"modelRef": modelRef, "modelIdentity": modelIdentity})
 	if err != nil {
@@ -473,7 +322,6 @@ func (c *Controller) publishSessionRuntimeWithCommit(ctx context.Context, candid
 	c.sessionService = service
 	c.sessionBinding = binding
 	c.exclusiveSession = true
-	c.nativeLegacySession = false
 	c.v3BindingMu.Unlock()
 	if c.servePresetRestore {
 		c.approval.setMode(preset)

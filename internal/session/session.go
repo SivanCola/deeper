@@ -516,7 +516,7 @@ func (s *Session) cacheWeight() int64 {
 		weight += int64(128 + len(id) + len(result.ToolCallID) + len(result.Name) + len(result.State))
 	}
 	for _, message := range s.projection.ModelMessages {
-		weight += int64(len(message.ID) + len(message.Content) + len(message.RawContent) + len(message.ProviderContent) + len(message.ReasoningContent) + len(message.ReasoningSignature) + len(message.Original))
+		weight += int64(len(message.ID) + len(message.Content) + len(message.RawContent) + len(message.ReasoningContent) + len(message.ReasoningSignature) + len(message.Original))
 		for _, image := range message.Images {
 			weight += int64(len(image))
 		}

@@ -101,7 +101,7 @@ func classifyBashSegment(segment string) CommandEffect {
 		}
 		// Preserve the existing narrow, recursively proven command-substitution
 		// reader path. Its returned fields contain only opaque placeholders.
-		if base, sub, fields, ok := ClassifyReadOnlyCommand(normalized); ok {
+		if base, sub, fields, ok := classifyReadOnlyCommand(normalized); ok {
 			effect := classifyStaticFields(fields)
 			if effect.Certainty == EffectKnown && effect.Writes == 0 {
 				effect.CommandFamily = joinFamily(base, sub)

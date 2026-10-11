@@ -60,7 +60,10 @@ func (q *Query) ReadContent(ctx context.Context, ref SessionRef, contentRef sess
 }
 
 func ensureHistoryIndex(ctx context.Context, persistence *FilesystemPersistence, sessionID, path string) error {
-	dir := filepath.Join(persistence.Root, sessionID)
+	dir, err := persistence.sessionDir(sessionID, true)
+	if err != nil {
+		return err
+	}
 	revision, err := revisionOfLog(dir)
 	if err != nil {
 		return err
@@ -526,7 +529,7 @@ func indexMessageEvent(ctx context.Context, content *sessioncontent.Store, state
 	if err := indexTurnEvent(ctx, content, state, event); err != nil {
 		return err
 	}
-	if event.Kind != "message/complete" && event.Kind != "message/upsert" && event.Kind != "message/retract" && event.Kind != "history/replace" && event.Kind != "legacy/import" {
+	if event.Kind != "message/complete" && event.Kind != "message/upsert" && event.Kind != "message/retract" && event.Kind != "history/replace" {
 		return nil
 	}
 	payload := event.Payload
@@ -556,7 +559,7 @@ func indexMessageEvent(ctx context.Context, content *sessioncontent.Store, state
 		return renumberVisibleTurns(ctx, state, event.Sequence)
 	case "message/complete", "message/upsert":
 		return indexMessageRecord(ctx, content, state, event, payload)
-	case "history/replace", "legacy/import":
+	case "history/replace":
 		messages, err := replacementEventMessages(event, payload)
 		if err != nil {
 			return err

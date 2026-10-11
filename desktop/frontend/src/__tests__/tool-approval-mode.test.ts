@@ -24,11 +24,8 @@ console.log("\npermission presets");
 eq(normalizeToolApprovalMode("read-only"), "read-only", "read-only remains canonical");
 eq(normalizeToolApprovalMode("workspace-write"), "workspace-write", "workspace-write remains canonical");
 eq(normalizeToolApprovalMode("danger-full-access"), "danger-full-access", "full access remains canonical");
-eq(normalizeToolApprovalMode("ask"), "read-only", "legacy ask migrates to read-only");
-eq(normalizeToolApprovalMode("auto"), "workspace-write", "legacy auto migrates to workspace-write");
-eq(normalizeToolApprovalMode("yolo"), "workspace-write", "legacy yolo migrates conservatively");
 eq(normalizeToolApprovalMode("unknown"), "read-only", "unknown values fail closed");
-eq(normalizeToolApprovalMode("", undefined, false, "workspace-write"), "workspace-write", "new-session fallback uses workspace access");
+eq(normalizeToolApprovalMode(undefined), "read-only", "missing permission fails closed");
 
 eq(en["composer.permissionReadOnly"], "Read only", "English read-only label");
 eq(en["composer.permissionWorkspaceWrite"], "Workspace access", "English workspace label");
@@ -50,9 +47,9 @@ eq(zhTW["composer.permissionWorkspaceWrite"], "工作區內修改", "Traditional
 eq(zhTW["composer.permissionFullAccess"], "完全權限", "Traditional Chinese full-access label");
 
 const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
-eq(styles.includes(".composer-choice--permission-read-only { color: var(--composer-permission-ask); }"), true, "read-only keeps the 1.38.7 Ask blue");
-eq(styles.includes(".composer-choice--permission-workspace-write { color: var(--ok); }"), true, "workspace-write keeps the 1.38.7 Auto green");
-eq(styles.includes(".composer-choice--permission-danger-full-access { color: var(--err); }"), true, "full access keeps the 1.38.7 Yolo red");
+eq(styles.includes(".composer-choice--permission-read-only { color: var(--composer-permission-ask); }"), true, "read-only uses the read-only color");
+eq(styles.includes(".composer-choice--permission-workspace-write { color: var(--ok); }"), true, "workspace-write uses the workspace color");
+eq(styles.includes(".composer-choice--permission-danger-full-access { color: var(--err); }"), true, "full access uses the full-access color");
 
 console.log(`\n${passed} passed, ${failed} failed, ${passed + failed} total`);
 if (failed > 0) process.exit(1);

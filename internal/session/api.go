@@ -38,11 +38,7 @@ func VisitCommits(ctx context.Context, dir string, visit func(Commit) error) err
 		}
 		return visitErr == nil
 	}
-	if IsFramedCodec(manifest.Codec) {
-		err = scanV4CommitFile(ctx, file, 0, 1, contentStoreForSessionDir(dir), nil, adapter)
-	} else {
-		err = scanCommitFileCodecBoundaries(ctx, file, 0, 1, manifest.Codec, nil, func(start, _ int64, commit Commit) bool { return adapter(start, commit) })
-	}
+	err = scanV4CommitFile(ctx, file, 0, 1, contentStoreForSessionDir(dir), nil, adapter)
 	return errors.Join(err, visitErr)
 }
 
@@ -149,10 +145,8 @@ func NewFilesystemPersistence(root string) *FilesystemPersistence {
 	return &FilesystemPersistence{Root: filepath.Clean(root)}
 }
 
-// RootForLegacyDir maps a host's legacy transcript catalog to the sibling
-// final-format store. The mapping lives in the persistence package so Boot and
-// controllers never derive a v3 identity from a transcript path.
-func RootForLegacyDir(sessionDir string) string {
+// RootForSessionDir returns the current canonical store for a host catalog.
+func RootForSessionDir(sessionDir string) string {
 	dir := filepath.Clean(strings.TrimSpace(sessionDir))
 	if dir == "." || dir == "" {
 		return ""
@@ -493,11 +487,7 @@ func readCommitPageWithCache(ctx context.Context, dir, cacheDir string, offset u
 		page.Next = commit.LastSequence()
 		return true
 	}
-	if IsFramedCodec(manifest.Codec) {
-		err = scanV4CommitFile(ctx, file, checkpoint.Offset, checkpoint.FirstSequence, contentStoreForSessionDir(dir), nil, visit)
-	} else {
-		err = scanCommitFileCodecBoundaries(ctx, file, checkpoint.Offset, checkpoint.FirstSequence, manifest.Codec, nil, func(start, _ int64, commit Commit) bool { return visit(start, commit) })
-	}
+	err = scanV4CommitFile(ctx, file, checkpoint.Offset, checkpoint.FirstSequence, contentStoreForSessionDir(dir), nil, visit)
 	if err != nil {
 		return EventPage{}, err
 	}

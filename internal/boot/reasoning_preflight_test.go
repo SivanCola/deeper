@@ -50,12 +50,12 @@ planner_model="planner/deepseek-v4-pro"
 name="exec"
 kind="openai"
 base_url="https://opencode.ai/zen/go/v1"
-model="deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 [[providers]]
 name="planner"
 kind="anthropic"
 base_url="https://custom.example"
-model="deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 thinking="enabled"
 effort="max"
 `)
@@ -89,7 +89,7 @@ func TestBuildRetainsTheSelectedRoleConfigurationSnapshot(t *testing.T) {
 name="broken"
 kind="anthropic"
 base_url="https://custom.example"
-model="model"
+models = ["model"]
 thinking="enabled"
 effort="max"
 `)

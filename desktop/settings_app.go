@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -23,7 +22,6 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/boot"
-	"deepzora/internal/bot"
 	"deepzora/internal/botruntime"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
@@ -44,43 +42,40 @@ import (
 // read
 
 type ProviderView struct {
-	DisplayName                 *string                       `json:"displayName,omitempty"`
-	Name                        string                        `json:"name"`
-	PresetID                    string                        `json:"presetId,omitempty"`
-	Catalog                     *config.ProviderCatalog       `json:"catalog,omitempty"`
-	BuiltIn                     bool                          `json:"builtIn"`
-	Added                       bool                          `json:"added"`
-	Kind                        string                        `json:"kind"`
-	BaseURL                     string                        `json:"baseUrl"`
-	ChatURL                     string                        `json:"chatUrl"`
-	RequestURL                  string                        `json:"requestUrl"`
-	Models                      []string                      `json:"models"`
-	VisionModels                []string                      `json:"visionModels"`           // legacy capability projection for old frontends
-	VisionModelsSet             bool                          `json:"visionModelsConfigured"` // legacy explicit-list marker
-	VisionCapability            string                        `json:"visionCapability,omitempty"`
-	ModelsURL                   string                        `json:"modelsUrl"`
-	Default                     string                        `json:"default"`
-	APIKeyEnv                   string                        `json:"apiKeyEnv"`
-	Headers                     map[string]string             `json:"headers"`
-	ExtraBody                   map[string]any                `json:"extraBody"`
-	AuthHeader                  bool                          `json:"authHeader"`
-	NoProxy                     bool                          `json:"noProxy"`
-	KeySet                      bool                          `json:"keySet"` // the env var currently resolves to a non-empty value
-	RequiresKey                 bool                          `json:"requiresKey"`
-	Configured                  bool                          `json:"configured"` // selectable: either key is present or no key is required
-	KeySource                   string                        `json:"keySource,omitempty"`
-	KeySourcePath               string                        `json:"keySourcePath,omitempty"`
-	BalanceURL                  string                        `json:"balanceUrl"`
-	ContextWindow               int                           `json:"contextWindow"`
-	ReasoningProtocol           string                        `json:"reasoningProtocol"`
-	Thinking                    string                        `json:"thinking"`
-	WebSearch                   bool                          `json:"webSearch"`
-	ServerWebSearchCapability   bool                          `json:"serverWebSearchCapability"`
-	SupportedEfforts            []string                      `json:"supportedEfforts"`
-	DefaultEffort               string                        `json:"defaultEffort"`
-	ModelOverrides              []ProviderModelOverrideView   `json:"modelOverrides"`
-	ModelCapabilities           []ProviderModelCapabilityView `json:"modelCapabilities"`
-	RecommendedUpgradeAvailable bool                          `json:"recommendedUpgradeAvailable,omitempty"`
+	DisplayName               *string                       `json:"displayName,omitempty"`
+	Name                      string                        `json:"name"`
+	PresetID                  string                        `json:"presetId,omitempty"`
+	Catalog                   *config.ProviderCatalog       `json:"catalog,omitempty"`
+	BuiltIn                   bool                          `json:"builtIn"`
+	Added                     bool                          `json:"added"`
+	Kind                      string                        `json:"kind"`
+	BaseURL                   string                        `json:"baseUrl"`
+	RequestURL                string                        `json:"requestUrl"`
+	Models                    []string                      `json:"models"`
+	VisionModels              []string                      `json:"visionModels"` // derived image-capable models
+	VisionCapability          string                        `json:"visionCapability,omitempty"`
+	ModelsURL                 string                        `json:"modelsUrl"`
+	Default                   string                        `json:"default"`
+	APIKeyEnv                 string                        `json:"apiKeyEnv"`
+	Headers                   map[string]string             `json:"headers"`
+	ExtraBody                 map[string]any                `json:"extraBody"`
+	AuthHeader                bool                          `json:"authHeader"`
+	NoProxy                   bool                          `json:"noProxy"`
+	KeySet                    bool                          `json:"keySet"` // the env var currently resolves to a non-empty value
+	RequiresKey               bool                          `json:"requiresKey"`
+	Configured                bool                          `json:"configured"` // selectable: either key is present or no key is required
+	KeySource                 string                        `json:"keySource,omitempty"`
+	KeySourcePath             string                        `json:"keySourcePath,omitempty"`
+	BalanceURL                string                        `json:"balanceUrl"`
+	ContextWindow             int                           `json:"contextWindow"`
+	ReasoningProtocol         string                        `json:"reasoningProtocol"`
+	Thinking                  string                        `json:"thinking"`
+	WebSearch                 bool                          `json:"webSearch"`
+	ServerWebSearchCapability bool                          `json:"serverWebSearchCapability"`
+	SupportedEfforts          []string                      `json:"supportedEfforts"`
+	DefaultEffort             string                        `json:"defaultEffort"`
+	ModelOverrides            []ProviderModelOverrideView   `json:"modelOverrides"`
+	ModelCapabilities         []ProviderModelCapabilityView `json:"modelCapabilities"`
 	// ModelCatalogFingerprint is an opaque digest of the provider identity and
 	// current model selection. Background discovery must compare it while holding
 	// the config edit lock before applying a narrow catalog-only update.
@@ -104,7 +99,6 @@ type ProviderModelCatalogUpdate struct {
 	ExpectedFingerprint string                          `json:"expectedFingerprint"`
 	Models              []string                        `json:"models"`
 	Default             string                          `json:"default"`
-	VisionModels        []string                        `json:"visionModels"`
 	ModelCapabilities   []ProviderModelCapabilityUpdate `json:"modelCapabilities,omitempty"`
 }
 
@@ -183,8 +177,6 @@ type NetworkView struct {
 
 type AgentView struct {
 	Temperature            float64 `json:"temperature"`
-	MaxSteps               int     `json:"maxSteps"`
-	PlannerMaxSteps        int     `json:"plannerMaxSteps"`
 	MaxSubagentDepth       int     `json:"maxSubagentDepth"`
 	MaxSubagentConcurrency int     `json:"maxSubagentConcurrency"`
 	MaxParallelWriters     int     `json:"maxParallelWriters"`
@@ -193,27 +185,6 @@ type AgentView struct {
 	CompactRatio           float64 `json:"compactRatio,omitempty"`
 	EffectiveCompactRatio  float64 `json:"effectiveCompactRatio,omitempty"`
 	CompactRatioOverridden bool    `json:"compactRatioOverridden,omitempty"`
-}
-
-type BotAllowlistView struct {
-	Enabled           bool     `json:"enabled"`
-	AllowAll          bool     `json:"allowAll"`
-	QQUsers           []string `json:"qqUsers"`
-	FeishuUsers       []string `json:"feishuUsers"`
-	WeixinUsers       []string `json:"weixinUsers"`
-	QQApprovers       []string `json:"qqApprovers"`
-	FeishuApprovers   []string `json:"feishuApprovers"`
-	WeixinApprovers   []string `json:"weixinApprovers"`
-	QQAdmins          []string `json:"qqAdmins"`
-	FeishuAdmins      []string `json:"feishuAdmins"`
-	WeixinAdmins      []string `json:"weixinAdmins"`
-	QQGroups          []string `json:"qqGroups"`
-	FeishuGroups      []string `json:"feishuGroups"`
-	WeixinGroups      []string `json:"weixinGroups"`
-	DingtalkUsers     []string `json:"dingtalkUsers"`
-	DingtalkApprovers []string `json:"dingtalkApprovers"`
-	DingtalkAdmins    []string `json:"dingtalkAdmins"`
-	DingtalkGroups    []string `json:"dingtalkGroups"`
 }
 
 type BotAccessView struct {
@@ -310,13 +281,11 @@ type BotSettingsView struct {
 	DebounceMs         int                 `json:"debounceMs"`
 	QueueMode          string              `json:"queueMode"`
 	QueueCap           int                 `json:"queueCap"`
-	QueueDrop          string              `json:"queueDrop"`
 	IgnoreSelfMessages bool                `json:"ignoreSelfMessages"`
 	SelfUserIDs        BotSelfUserIDsView  `json:"selfUserIds"`
 	Control            BotControlView      `json:"control"`
 	Pairing            BotPairingView      `json:"pairing"`
 	Routes             []BotRouteView      `json:"routes"`
-	Allowlist          BotAllowlistView    `json:"allowlist"`
 	QQ                 QQBotView           `json:"qq"`
 	Feishu             FeishuBotView       `json:"feishu"`
 	Weixin             WeixinBotView       `json:"weixin"`
@@ -326,48 +295,43 @@ type BotSettingsView struct {
 
 // SettingsView is the whole Settings panel payload.
 type SettingsView struct {
-	ModelSettingsFingerprint     string               `json:"modelSettingsFingerprint"`
-	DefaultModel                 string               `json:"defaultModel"`
-	PlannerModel                 string               `json:"plannerModel"`
-	VisionModel                  string               `json:"visionModel"`
-	WebSearchModel               string               `json:"webSearchModel"`
-	WebSearchModels              []string             `json:"webSearchModels"`
-	WebSearchModelStatus         string               `json:"webSearchModelStatus"`
-	WebSearchModelReason         string               `json:"webSearchModelReason"`
-	EffectiveWebSearchModel      string               `json:"effectiveWebSearchModel"`
-	WebSearchModelOverridden     bool                 `json:"webSearchModelOverridden"`
-	SubagentModel                string               `json:"subagentModel"`
-	SubagentEffort               string               `json:"subagentEffort"`
-	AutoPlan                     string               `json:"autoPlan"`
-	Providers                    []ProviderView       `json:"providers"`
-	OfficialProviders            []ProviderView       `json:"officialProviders"`
-	ProviderPresets              []ProviderPresetView `json:"providerPresets"`
-	Permissions                  PermissionsView      `json:"permissions"`
-	Sandbox                      SandboxView          `json:"sandbox"`
-	Network                      NetworkView          `json:"network"`
-	Agent                        AgentView            `json:"agent"`
-	Bot                          BotSettingsView      `json:"bot"`
-	DesktopLanguage              string               `json:"desktopLanguage"`
-	DesktopCurrency              string               `json:"desktopCurrency"`
-	DesktopLayoutStyle           string               `json:"desktopLayoutStyle"`
-	DesktopTheme                 string               `json:"desktopTheme"`
-	DesktopThemeStyle            string               `json:"desktopThemeStyle"`
-	DesktopTerminalTheme         string               `json:"desktopTerminalTheme,omitempty"`
-	CloseBehavior                string               `json:"closeBehavior"`
-	SessionExperience            string               `json:"sessionExperience"`
-	DisplayMode                  string               `json:"displayMode"`
-	ReasoningDisplayMode         string               `json:"reasoningDisplayMode"`
-	ReasoningDisplayModeExplicit bool                 `json:"reasoningDisplayModeExplicit"`
-	StatusBarStyle               string               `json:"statusBarStyle"`
-	StatusBarItems               []string             `json:"statusBarItems"`
-	DefaultToolApprovalMode      string               `json:"defaultToolApprovalMode"`
+	ModelSettingsFingerprint string               `json:"modelSettingsFingerprint"`
+	DefaultModel             string               `json:"defaultModel"`
+	PlannerModel             string               `json:"plannerModel"`
+	VisionModel              string               `json:"visionModel"`
+	WebSearchModel           string               `json:"webSearchModel"`
+	WebSearchModels          []string             `json:"webSearchModels"`
+	WebSearchModelStatus     string               `json:"webSearchModelStatus"`
+	WebSearchModelReason     string               `json:"webSearchModelReason"`
+	EffectiveWebSearchModel  string               `json:"effectiveWebSearchModel"`
+	WebSearchModelOverridden bool                 `json:"webSearchModelOverridden"`
+	SubagentModel            string               `json:"subagentModel"`
+	SubagentEffort           string               `json:"subagentEffort"`
+	Providers                []ProviderView       `json:"providers"`
+	OfficialProviders        []ProviderView       `json:"officialProviders"`
+	ProviderPresets          []ProviderPresetView `json:"providerPresets"`
+	Permissions              PermissionsView      `json:"permissions"`
+	Sandbox                  SandboxView          `json:"sandbox"`
+	Network                  NetworkView          `json:"network"`
+	Agent                    AgentView            `json:"agent"`
+	Bot                      BotSettingsView      `json:"bot"`
+	DesktopLanguage          string               `json:"desktopLanguage"`
+	DesktopCurrency          string               `json:"desktopCurrency"`
+	DesktopLayoutStyle       string               `json:"desktopLayoutStyle"`
+	DesktopTheme             string               `json:"desktopTheme"`
+	DesktopThemeStyle        string               `json:"desktopThemeStyle"`
+	DesktopTerminalTheme     string               `json:"desktopTerminalTheme,omitempty"`
+	CloseBehavior            string               `json:"closeBehavior"`
+	SessionExperience        string               `json:"sessionExperience"`
+	StatusBarStyle           string               `json:"statusBarStyle"`
+	StatusBarItems           []string             `json:"statusBarItems"`
+	DefaultToolApprovalMode  string               `json:"defaultToolApprovalMode"`
 
 	CheckUpdates      bool   `json:"checkUpdates"`
 	UpdaterEnabled    bool   `json:"updaterEnabled"`
 	UpdateChannel     string `json:"updateChannel"`
 	Telemetry         bool   `json:"telemetry"`
 	Metrics           bool   `json:"metrics"`
-	ExpandThinking    bool   `json:"expandThinking"`
 	ConversationWidth string `json:"conversationWidth,omitempty"`
 	ConfigPath        string `json:"configPath"`
 	// ShadowedByPath is the workspace deepzora.toml that outranks the file this
@@ -383,7 +347,6 @@ type SettingsView struct {
 	// being skipped this session.
 	AutoApproveTools bool `json:"autoApproveTools"`
 	// Bypass is the legacy JSON key for the same live state.
-	Bypass bool `json:"bypass"`
 }
 
 // shadowingConfigPath returns the config file that outranks writePath for the
@@ -467,7 +430,6 @@ func providerModelCatalogFingerprintForCredentials(p config.ProviderEntry, crede
 	write(p.BaseURL)
 	write("models_url")
 	write(p.ModelsURL)
-	write(p.ChatURL)
 	write(p.RequestURL)
 	write(fmt.Sprintf("%t", p.NoProxy))
 	write("api_key_env")
@@ -594,12 +556,12 @@ func officialProviderHost(baseURL string) string {
 }
 
 func officialProviderKindFromEntry(p config.ProviderEntry) string {
-	host := officialProviderHost(p.BaseURL)
-	switch config.CanonicalDesktopOfficialProviderName(p.Name) {
-	case "deepseek":
-		if host == "api.deepseek.com" {
-			return "deepseek"
-		}
+	if officialProviderHost(p.BaseURL) != "api.deepseek.com" {
+		return ""
+	}
+	switch strings.TrimSpace(p.Name) {
+	case "deepseek", "deepseek-flash", "deepseek-pro":
+		return "deepseek"
 	}
 	return ""
 }
@@ -659,11 +621,6 @@ func providerViewFromEntryForRootWithResolver(p config.ProviderEntry, builtIn, a
 
 func providerViewFromEntryForRootWithResolverAndCredentials(p config.ProviderEntry, builtIn, added bool, root string, resolver *config.CredentialResolver, credentialsRevision string) ProviderView {
 	models := p.ChatModelList()
-	visionModels := p.VisionModels
-	visionModelsSet := p.Vision || p.VisionModels != nil
-	if p.Vision {
-		visionModels = models
-	}
 	if resolver == nil {
 		resolver = config.NewCredentialResolverForRoot(root)
 	}
@@ -680,30 +637,29 @@ func providerViewFromEntryForRootWithResolverAndCredentials(p config.ProviderEnt
 		catalogView = &catalog
 	}
 	return ProviderView{
-		DisplayName: &p.DisplayName, Name: p.Name, PresetID: presetID, Catalog: catalogView, BuiltIn: builtIn, Added: added, Kind: p.Kind, BaseURL: p.BaseURL, ChatURL: p.ChatURL, RequestURL: p.RequestURL,
-		Models: nonNil(models), VisionModels: nonNil(providerVisionModels(models, visionModels)), VisionModelsSet: visionModelsSet, VisionCapability: visionCapability, ModelsURL: p.ModelsURL, Default: p.DefaultModel(),
-		APIKeyEnv:                   p.APIKeyEnv,
-		Headers:                     nonNilStringMap(p.Headers),
-		ExtraBody:                   nonNilAnyMap(p.ExtraBody),
-		AuthHeader:                  p.AuthHeader,
-		NoProxy:                     p.NoProxy,
-		KeySet:                      key.Set,
-		RequiresKey:                 requiresKey,
-		Configured:                  !requiresKey || key.Set,
-		KeySource:                   key.Source.Label,
-		KeySourcePath:               key.Source.Path,
-		BalanceURL:                  p.BalanceURL,
-		ContextWindow:               p.ContextWindow,
-		ReasoningProtocol:           p.ReasoningProtocol,
-		Thinking:                    providerThinkingForSettings(p.Thinking),
-		WebSearch:                   config.EffectiveIndependentWebSearch(&p),
-		ServerWebSearchCapability:   (config.IsOfficialDeepSeekSearchEndpoint(&p) || config.HasServerWebSearchCapability(&p)),
-		SupportedEfforts:            nonNil(p.SupportedEfforts),
-		DefaultEffort:               p.DefaultEffort,
-		ModelOverrides:              providerModelOverridesForView(p.ModelOverrides, models),
-		ModelCapabilities:           modelCapabilities,
-		RecommendedUpgradeAvailable: false, // Chat Completions is the default again; retain the legacy bridge field.
-		ModelCatalogFingerprint:     providerModelCatalogFingerprintForCredentials(p, credentialsRevision),
+		DisplayName: &p.DisplayName, Name: p.Name, PresetID: presetID, Catalog: catalogView, BuiltIn: builtIn, Added: added, Kind: p.Kind, BaseURL: p.BaseURL, RequestURL: p.RequestURL,
+		Models: nonNil(models), VisionModels: nonNil(providerVisionModelsFromCapabilities(modelCapabilities)), VisionCapability: visionCapability, ModelsURL: p.ModelsURL, Default: p.DefaultModel(),
+		APIKeyEnv:                 p.APIKeyEnv,
+		Headers:                   nonNilStringMap(p.Headers),
+		ExtraBody:                 nonNilAnyMap(p.ExtraBody),
+		AuthHeader:                p.AuthHeader,
+		NoProxy:                   p.NoProxy,
+		KeySet:                    key.Set,
+		RequiresKey:               requiresKey,
+		Configured:                !requiresKey || key.Set,
+		KeySource:                 key.Source.Label,
+		KeySourcePath:             key.Source.Path,
+		BalanceURL:                p.BalanceURL,
+		ContextWindow:             p.ContextWindow,
+		ReasoningProtocol:         p.ReasoningProtocol,
+		Thinking:                  providerThinkingForSettings(p.Thinking),
+		WebSearch:                 config.EffectiveIndependentWebSearch(&p),
+		ServerWebSearchCapability: (config.IsOfficialDeepSeekSearchEndpoint(&p) || config.HasServerWebSearchCapability(&p)),
+		SupportedEfforts:          nonNil(p.SupportedEfforts),
+		DefaultEffort:             p.DefaultEffort,
+		ModelOverrides:            providerModelOverridesForView(p.ModelOverrides, models),
+		ModelCapabilities:         modelCapabilities,
+		ModelCatalogFingerprint:   providerModelCatalogFingerprintForCredentials(p, credentialsRevision),
 	}
 }
 
@@ -717,22 +673,22 @@ func providerThinkingForSettings(thinking string) string {
 	}
 }
 
-func officialProviderViews(added map[string]bool, pricingLanguage string) []ProviderView {
-	return officialProviderViewsForRoot(added, pricingLanguage, ".")
+func officialProviderViews(added map[string]bool) []ProviderView {
+	return officialProviderViewsForRoot(added, ".")
 }
 
-func officialProviderViewsForRoot(added map[string]bool, pricingLanguage, root string) []ProviderView {
-	return officialProviderViewsForRootWithResolver(added, pricingLanguage, root, nil)
+func officialProviderViewsForRoot(added map[string]bool, root string) []ProviderView {
+	return officialProviderViewsForRootWithResolver(added, root, nil)
 }
 
-func officialProviderViewsForRootWithResolver(added map[string]bool, pricingLanguage, root string, resolver *config.CredentialResolver) []ProviderView {
+func officialProviderViewsForRootWithResolver(added map[string]bool, root string, resolver *config.CredentialResolver) []ProviderView {
 	var out []ProviderView
 	if resolver == nil {
 		resolver = config.NewCredentialResolverForRoot(root)
 	}
 	credentialsRevision := providerCredentialsRevision()
 	for _, kind := range []string{"deepseek"} {
-		entries, _, err := officialProviderTemplate(kind, pricingLanguage)
+		entries, _, err := officialProviderTemplate(kind)
 		if err != nil {
 			continue
 		}
@@ -918,7 +874,6 @@ func providerEntryBelongsToPreset(existing config.ProviderEntry, preset config.P
 func providerEntryCoreMatches(existing, preset config.ProviderEntry) bool {
 	return strings.EqualFold(strings.TrimSpace(existing.Kind), strings.TrimSpace(preset.Kind)) &&
 		normalizeProviderURL(existing.BaseURL) == normalizeProviderURL(preset.BaseURL) &&
-		strings.TrimSpace(existing.ChatURL) == strings.TrimSpace(preset.ChatURL) &&
 		strings.TrimSpace(existing.RequestURL) == strings.TrimSpace(preset.RequestURL) &&
 		existing.AuthHeader == preset.AuthHeader
 }
@@ -1043,7 +998,6 @@ func (a *App) Settings() SettingsView {
 		WebSearchModels:          []string{},
 		SubagentModel:            cfg.Agent.SubagentModel,
 		SubagentEffort:           cfg.Agent.SubagentEffort,
-		AutoPlan:                 "off", // deprecated JSON compatibility for older frontends
 		Providers:                []ProviderView{},
 		OfficialProviders:        []ProviderView{},
 		ProviderPresets:          []ProviderPresetView{},
@@ -1068,8 +1022,6 @@ func (a *App) Settings() SettingsView {
 		},
 		Agent: AgentView{
 			Temperature:            cfg.Agent.Temperature,
-			MaxSteps:               cfg.Agent.MaxSteps,
-			PlannerMaxSteps:        cfg.Agent.PlannerMaxSteps,
 			MaxSubagentDepth:       desktopMaxSubagentDepth(cfg.Agent.MaxSubagentDepth),
 			MaxSubagentConcurrency: desktopSubagentConcurrency(cfg.Agent.MaxSubagentConcurrency),
 			MaxParallelWriters:     desktopParallelWriters(cfg.Agent.MaxParallelWriters, cfg.Agent.MaxSubagentConcurrency),
@@ -1078,33 +1030,28 @@ func (a *App) Settings() SettingsView {
 			CompactRatio:           cfg.Agent.CompactRatio,
 			EffectiveCompactRatio:  cfg.Agent.CompactRatio,
 		},
-		Bot:                          botSettingsView(cfg.Bot),
-		DesktopLanguage:              cfg.DesktopLanguage(),
-		DesktopCurrency:              cfg.DesktopCurrency(),
-		DesktopLayoutStyle:           cfg.DesktopLayoutStyle(),
-		DesktopTheme:                 cfg.DesktopTheme(),
-		DesktopThemeStyle:            cfg.DesktopThemeStyle(),
-		DesktopTerminalTheme:         cfg.DesktopTerminalTheme(),
-		CloseBehavior:                cfg.DesktopCloseBehavior(),
-		DisplayMode:                  cfg.DesktopDisplayMode(),
-		SessionExperience:            cfg.DesktopSessionExperience(),
-		ReasoningDisplayMode:         cfg.DesktopReasoningDisplayMode(),
-		ReasoningDisplayModeExplicit: cfg.DesktopReasoningDisplayModeExplicit(),
-		StatusBarStyle:               cfg.DesktopStatusBarStyle(),
-		StatusBarItems:               cfg.DesktopStatusBarItems(),
-		DefaultToolApprovalMode:      cfg.DesktopDefaultToolApprovalMode(),
-		CheckUpdates:                 cfg.DesktopCheckUpdates(),
-		UpdaterEnabled:               desktopUpdaterEnabled(),
-		UpdateChannel:                cfg.DesktopUpdateChannel(),
-		Telemetry:                    cfg.DesktopTelemetry(),
-		Metrics:                      cfg.DesktopMetrics(),
-		ExpandThinking:               cfg.Desktop.ExpandThinking,
-		ConversationWidth:            cfg.DesktopConversationWidth(),
-		ConfigPath:                   cfgPath,
-		ShadowedByPath:               shadowingConfigPath(cfgPath, root),
-		ProviderKinds:                nonNil(provider.Kinds()),
-		AutoApproveTools:             ctrl != nil && ctrl.AutoApproveTools(),
-		Bypass:                       ctrl != nil && ctrl.AutoApproveTools(),
+		Bot:                     botSettingsView(cfg.Bot),
+		DesktopLanguage:         cfg.DesktopLanguage(),
+		DesktopCurrency:         cfg.DisplayCurrencyPref(),
+		DesktopLayoutStyle:      cfg.DesktopLayoutStyle(),
+		DesktopTheme:            cfg.DesktopTheme(),
+		DesktopThemeStyle:       cfg.DesktopThemeStyle(),
+		DesktopTerminalTheme:    cfg.DesktopTerminalTheme(),
+		CloseBehavior:           cfg.DesktopCloseBehavior(),
+		SessionExperience:       cfg.DesktopSessionExperience(),
+		StatusBarStyle:          cfg.DesktopStatusBarStyle(),
+		StatusBarItems:          cfg.DesktopStatusBarItems(),
+		DefaultToolApprovalMode: cfg.DesktopDefaultToolApprovalMode(),
+		CheckUpdates:            cfg.DesktopCheckUpdates(),
+		UpdaterEnabled:          desktopUpdaterEnabled(),
+		UpdateChannel:           cfg.DesktopUpdateChannel(),
+		Telemetry:               cfg.DesktopTelemetry(),
+		Metrics:                 cfg.DesktopMetrics(),
+		ConversationWidth:       cfg.DesktopConversationWidth(),
+		ConfigPath:              cfgPath,
+		ShadowedByPath:          shadowingConfigPath(cfgPath, root),
+		ProviderKinds:           nonNil(provider.Kinds()),
+		AutoApproveTools:        ctrl != nil && ctrl.AutoApproveTools(),
 	}
 	if ctrl != nil {
 		if effective := ctrl.CompactRatio(); effective > 0 {
@@ -1116,18 +1063,18 @@ func (a *App) Settings() SettingsView {
 	added := providerAccessSet(cfg.Desktop.ProviderAccess)
 	resolver := config.NewCredentialResolverForRoot(root)
 	credentialsRevision := providerCredentialsRevision()
-	v.OfficialProviders = officialProviderViewsForRootWithResolver(officialProviderAddedSet(cfg), a.desktopOfficialPricingLanguage(cfg), root, resolver)
+	v.OfficialProviders = officialProviderViewsForRootWithResolver(officialProviderAddedSet(cfg), root, resolver)
 	v.ProviderPresets = providerPresetViewsForRootWithResolver(cfg, root, resolver)
 	for i := range cfg.Providers {
 		p := &cfg.Providers[i]
 		providerView := providerViewFromEntryForRootWithResolverAndCredentials(*p, isOfficialBuiltInProvider(*p), added[p.Name], root, resolver, credentialsRevision)
-		providerView.RecommendedUpgradeAvailable = providerView.RecommendedUpgradeAvailable && config.CanUpgradeDeepSeekProviderProtocolUserConfig(p.Name)
 		v.Providers = append(v.Providers, providerView)
 	}
 	return v
 }
 
 func botSettingsView(b config.BotConfig) BotSettingsView {
+	b = botConfigWithConnectionViews(b)
 	mode := strings.TrimSpace(b.Feishu.Mode)
 	if mode == "" {
 		mode = "webhook"
@@ -1140,7 +1087,6 @@ func botSettingsView(b config.BotConfig) BotSettingsView {
 		DebounceMs:         b.DebounceMs,
 		QueueMode:          b.QueueMode,
 		QueueCap:           b.QueueCap,
-		QueueDrop:          b.QueueDrop,
 		IgnoreSelfMessages: b.IgnoreSelfMessages,
 		SelfUserIDs: BotSelfUserIDsView{
 			QQ:       nonNil(b.SelfUserIDs.QQ),
@@ -1159,26 +1105,6 @@ func botSettingsView(b config.BotConfig) BotSettingsView {
 			MaxPendingPerPlatform: b.Pairing.MaxPendingPerPlatform,
 		},
 		Routes: botRouteViews(b.Routes),
-		Allowlist: BotAllowlistView{
-			Enabled:           b.Allowlist.Enabled,
-			AllowAll:          b.Allowlist.AllowAll,
-			QQUsers:           nonNil(b.Allowlist.QQUsers),
-			FeishuUsers:       nonNil(b.Allowlist.FeishuUsers),
-			WeixinUsers:       nonNil(b.Allowlist.WeixinUsers),
-			QQApprovers:       nonNil(b.Allowlist.QQApprovers),
-			FeishuApprovers:   nonNil(b.Allowlist.FeishuApprovers),
-			WeixinApprovers:   nonNil(b.Allowlist.WeixinApprovers),
-			QQAdmins:          nonNil(b.Allowlist.QQAdmins),
-			FeishuAdmins:      nonNil(b.Allowlist.FeishuAdmins),
-			WeixinAdmins:      nonNil(b.Allowlist.WeixinAdmins),
-			QQGroups:          nonNil(b.Allowlist.QQGroups),
-			FeishuGroups:      nonNil(b.Allowlist.FeishuGroups),
-			WeixinGroups:      nonNil(b.Allowlist.WeixinGroups),
-			DingtalkUsers:     nonNil(b.Allowlist.DingtalkUsers),
-			DingtalkApprovers: nonNil(b.Allowlist.DingtalkApprovers),
-			DingtalkAdmins:    nonNil(b.Allowlist.DingtalkAdmins),
-			DingtalkGroups:    nonNil(b.Allowlist.DingtalkGroups),
-		},
 		QQ: QQBotView{
 			Enabled:          b.QQ.Enabled,
 			AppID:            b.QQ.AppID,
@@ -1517,9 +1443,6 @@ func (a *App) loadDesktopUserConfigForEditForRoot(_ string) (*config.Config, str
 	if err != nil {
 		return nil, "", err
 	}
-	if err := normalizeLegacyDesktopProviderAccessForSettings(cfg, userPath); err != nil {
-		return nil, "", err
-	}
 	return cfg, userPath, nil
 }
 
@@ -1564,125 +1487,7 @@ func (a *App) loadDesktopUserConfigReadOnlyForRoot(_ string, load func(string) (
 	if err != nil {
 		return nil, "", err
 	}
-	normalizeLegacyDesktopProviderAccessInMemory(cfg, userPath)
 	return cfg, userPath, nil
-}
-
-func desktopBotConfigConfigured(bot config.BotConfig) bool {
-	defaults := config.Default().Bot
-	if bot.Enabled || strings.TrimSpace(bot.Model) != "" || len(bot.Connections) > 0 {
-		return true
-	}
-	if (bot.MaxSteps != 0 && bot.MaxSteps != defaults.MaxSteps) ||
-		(bot.DebounceMs != 0 && bot.DebounceMs != defaults.DebounceMs) ||
-		(strings.TrimSpace(bot.QueueMode) != "" && bot.QueueMode != defaults.QueueMode) ||
-		(bot.QueueCap != 0 && bot.QueueCap != defaults.QueueCap) ||
-		(strings.TrimSpace(bot.QueueDrop) != "" && bot.QueueDrop != defaults.QueueDrop) ||
-		bot.IgnoreSelfMessages != defaults.IgnoreSelfMessages ||
-		bot.Pairing.Enabled != defaults.Pairing.Enabled ||
-		(bot.Pairing.RequestTTLMinutes != 0 && bot.Pairing.RequestTTLMinutes != defaults.Pairing.RequestTTLMinutes) ||
-		(bot.Pairing.MaxPendingPerPlatform != 0 && bot.Pairing.MaxPendingPerPlatform != defaults.Pairing.MaxPendingPerPlatform) ||
-		bot.Control.Enabled != defaults.Control.Enabled ||
-		(strings.TrimSpace(bot.Control.Addr) != "" && bot.Control.Addr != defaults.Control.Addr) ||
-		(strings.TrimSpace(bot.Control.TokenEnv) != "" && bot.Control.TokenEnv != defaults.Control.TokenEnv) ||
-		len(bot.Routes) > 0 ||
-		len(bot.SelfUserIDs.QQ)+len(bot.SelfUserIDs.Feishu)+len(bot.SelfUserIDs.Weixin)+len(bot.SelfUserIDs.Dingtalk) > 0 {
-		return true
-	}
-	if bot.Allowlist.AllowAll ||
-		len(bot.Allowlist.QQUsers)+len(bot.Allowlist.FeishuUsers)+len(bot.Allowlist.WeixinUsers)+len(bot.Allowlist.DingtalkUsers) > 0 ||
-		len(bot.Allowlist.QQApprovers)+len(bot.Allowlist.FeishuApprovers)+len(bot.Allowlist.WeixinApprovers)+len(bot.Allowlist.DingtalkApprovers) > 0 ||
-		len(bot.Allowlist.QQAdmins)+len(bot.Allowlist.FeishuAdmins)+len(bot.Allowlist.WeixinAdmins)+len(bot.Allowlist.DingtalkAdmins) > 0 ||
-		len(bot.Allowlist.QQGroups)+len(bot.Allowlist.FeishuGroups)+len(bot.Allowlist.WeixinGroups)+len(bot.Allowlist.DingtalkGroups) > 0 {
-		return true
-	}
-	if bot.QQ.Enabled ||
-		strings.TrimSpace(bot.QQ.AppID) != "" ||
-		bot.QQ.AppSecretEnv != defaults.QQ.AppSecretEnv ||
-		bot.QQ.Sandbox != defaults.QQ.Sandbox ||
-		strings.TrimSpace(bot.QQ.Model) != "" ||
-		strings.TrimSpace(bot.QQ.ToolApprovalMode) != "" ||
-		strings.TrimSpace(bot.QQ.WorkspaceRoot) != "" ||
-		botruntime.BotAccessActive(bot.QQ.Access) {
-		return true
-	}
-	if bot.Feishu.Enabled ||
-		strings.TrimSpace(bot.Feishu.AppID) != "" ||
-		bot.Feishu.Domain != defaults.Feishu.Domain ||
-		bot.Feishu.AppSecretEnv != defaults.Feishu.AppSecretEnv ||
-		strings.TrimSpace(bot.Feishu.VerificationToken) != "" ||
-		bot.Feishu.Mode != defaults.Feishu.Mode ||
-		bot.Feishu.WebhookPort != defaults.Feishu.WebhookPort ||
-		bot.Feishu.RequireMention != defaults.Feishu.RequireMention {
-		return true
-	}
-	if bot.Weixin.Enabled ||
-		bot.Weixin.AccountID != defaults.Weixin.AccountID ||
-		bot.Weixin.TokenEnv != defaults.Weixin.TokenEnv ||
-		bot.Weixin.APIBase != defaults.Weixin.APIBase {
-		return true
-	}
-	if bot.Dingtalk.Enabled ||
-		strings.TrimSpace(bot.Dingtalk.ClientID) != "" ||
-		strings.TrimSpace(bot.Dingtalk.ClientSecret) != "" ||
-		strings.TrimSpace(bot.Dingtalk.ClientIDEnv) != "" ||
-		strings.TrimSpace(bot.Dingtalk.SecretEnv) != "" ||
-		strings.TrimSpace(bot.Dingtalk.BotName) != "" ||
-		bot.Dingtalk.RequireMention != defaults.Dingtalk.RequireMention {
-		return true
-	}
-	return false
-}
-
-// normalizeLegacyDesktopProviderAccessForSettings is the write-path variant:
-// it normalizes in memory and persists the migrated form to path. Callers must
-// hold config.LockUserConfigEdits() (see loadDesktopUserConfigForEdit). Read
-// paths use normalizeLegacyDesktopProviderAccessInMemory instead.
-func normalizeLegacyDesktopProviderAccessForSettings(cfg *config.Config, path string) error {
-	if !normalizeLegacyDesktopProviderAccessInMemory(cfg, path) {
-		return nil
-	}
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	return cfg.SaveTo(path)
-}
-
-// normalizeLegacyDesktopProviderAccessInMemory seeds cfg.Desktop.ProviderAccess
-// from configs written before Settings tracked explicit provider access. It
-// never touches disk; it reports whether cfg now carries a normalized list
-// that the file at path does not declare (i.e. whether a write path should
-// persist it).
-func normalizeLegacyDesktopProviderAccessInMemory(cfg *config.Config, path string) bool {
-	if cfg == nil || len(cfg.Desktop.ProviderAccess) > 0 || configDeclaresProviderAccess(path) {
-		return false
-	}
-	config.NormalizeLegacyDesktopProviderAccess(cfg)
-	return len(cfg.Desktop.ProviderAccess) > 0 && strings.TrimSpace(path) != ""
-}
-
-func configDeclaresProviderAccess(path string) bool {
-	if strings.TrimSpace(path) == "" {
-		return false
-	}
-	body, err := readFileUTF8(path)
-	if err != nil {
-		return false
-	}
-	for line := range strings.SplitSeq(string(body), "\n") {
-		if before, _, ok := strings.Cut(line, "#"); ok {
-			line = before
-		}
-		line = strings.TrimSpace(line)
-		if after, ok := strings.CutPrefix(line, "provider_access"); ok {
-			rest := strings.TrimSpace(after)
-			return strings.HasPrefix(rest, "=")
-		}
-	}
-	return false
 }
 
 func (a *App) activeWorkspaceRoot() string {
@@ -2112,13 +1917,6 @@ func (a *App) SetMaxParallelWriters(n int) error {
 	return a.applyModelConfigChange(func(c *config.Config) error { return setMaxParallelWritersConfig(c, n) })
 }
 
-// SetAutoPlan is retained for older frontend bundles. Automatic plan mode is
-// retired, so "off" is an idempotent compatibility call and enabling it is
-// rejected without mutating user configuration or live controllers.
-func (a *App) SetAutoPlan(mode string) error {
-	return config.Default().SetAutoPlan(mode)
-}
-
 // SetDefaultToolApprovalMode updates the permission preset used only for newly
 // created desktop sessions. Existing tabs keep their persisted preset.
 func (a *App) SetDefaultToolApprovalMode(mode string) error {
@@ -2127,12 +1925,7 @@ func (a *App) SetDefaultToolApprovalMode(mode string) error {
 	})
 }
 
-// SetDefaultAutoRecoveryCheckpoint is retained as a no-op bridge surface for
-// older generated frontends. Auto Guard is retired.
-func (a *App) SetDefaultAutoRecoveryCheckpoint(_ bool) error { return nil }
-
-func officialProviderTemplate(kind, pricingLanguage string) ([]config.ProviderEntry, string, error) {
-	_ = pricingLanguage // display language no longer selects list-price tables
+func officialProviderTemplate(kind string) ([]config.ProviderEntry, string, error) {
 	webSearchEnabled := true
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case "deepseek", "deepseek-official":
@@ -2175,20 +1968,6 @@ func chatProviderModels(models []string) []string {
 	return out
 }
 
-func providerVisionModels(models, visionModels []string) []string {
-	enabled := map[string]bool{}
-	for _, model := range models {
-		enabled[model] = true
-	}
-	out := make([]string, 0, len(visionModels))
-	for _, model := range chatProviderModels(visionModels) {
-		if enabled[model] {
-			out = append(out, model)
-		}
-	}
-	return out
-}
-
 func providerDefaultForModels(currentDefault string, models []string) string {
 	currentDefault = strings.TrimSpace(currentDefault)
 	if currentDefault != "" {
@@ -2222,11 +2001,8 @@ func saveProviderConfig(c *config.Config, p ProviderView) error {
 	}
 	e.Kind = p.Kind
 	e.BaseURL = p.BaseURL
-	e.ChatURL = strings.TrimSpace(p.ChatURL)
 	e.RequestURL = strings.TrimSpace(p.RequestURL)
-	if strings.EqualFold(strings.TrimSpace(e.Kind), "openai") && e.RequestURL != "" {
-		e.ChatURL = e.RequestURL
-	}
+
 	e.ModelsURL = strings.TrimSpace(p.ModelsURL)
 	e.APIKeyEnv = p.APIKeyEnv
 	e.Headers = p.Headers
@@ -2255,12 +2031,8 @@ func saveProviderConfig(c *config.Config, p ProviderView) error {
 	if len(models) > 0 {
 		e.Model = models[0] // also satisfies validateProvider's model requirement
 		e.Models = models
-		e.VisionModels = providerVisionModels(models, original.VisionModels)
 		e.ModelOverrides = providerModelOverridesForSave(p.ModelOverrides, models)
-		if p.VisionModelsSet || len(p.VisionModels) > 0 {
-			e.Vision = false
-			e.VisionModels = providerVisionModels(models, p.VisionModels)
-		}
+
 		if len(models) > 1 {
 			e.Default = providerDefaultForModels(p.Default, models)
 		}
@@ -2308,7 +2080,7 @@ func (a *App) SaveProvider(p ProviderView) error {
 }
 
 // SetProviderWebSearch updates every provider represented by one Settings
-// access card in a single config transaction. Legacy DeepSeek aliases can
+// access card in a single config transaction. Current DeepSeek references can
 // remain separate when their custom transport fields differ, so changing only
 // the first profile would leave the grouped control in a contradictory state.
 func (a *App) SetProviderWebSearch(names []string, enabled bool) error {
@@ -2380,19 +2152,15 @@ func applyProviderModelCatalogUpdate(c *config.Config, update ProviderModelCatal
 	}
 
 	next := *current
-	visionConfigured := next.Vision || next.VisionModels != nil
-	next.Model = models[0] // keep validation/back-compat populated
+	next.Model = models[0]
 	next.Models = models
 	next.Default = ""
 	if len(models) > 1 {
 		next.Default = providerDefaultForModels(update.Default, models)
 	}
 	next.Vision = false
-	if visionConfigured {
-		next.VisionModels = providerVisionModels(models, update.VisionModels)
-	} else {
-		next.VisionModels = nil
-	}
+	next.VisionModels = nil
+
 	next.ModelOverrides = providerModelOverridesForCatalog(next.ModelOverrides, models)
 	if config.ProviderEntriesConfigEqual(*current, next) {
 		return false, nil
@@ -2474,21 +2242,6 @@ func (a *App) SaveProviderWithKey(p ProviderView, key string) (string, error) {
 		}
 		return nil
 	})
-}
-
-// UpgradeDeepSeekProviderAccess applies the explicit Settings action for an
-// official legacy OpenAI entry. The config package performs a narrow raw-TOML
-// edit so unrelated and future fields are not lost to a full config render.
-func (a *App) UpgradeDeepSeekProviderAccess(name string) (string, error) {
-	changed, err := config.UpgradeDeepSeekProviderProtocolUserConfig(name)
-	if err != nil {
-		return "", err
-	}
-	if !changed {
-		return "", fmt.Errorf("DeepSeek provider %q is not eligible for the recommended protocol upgrade", name)
-	}
-	a.modelSettingsSaved("DeepSeek provider protocol")
-	return "", nil
 }
 
 // AddProviderPresetAccess installs one editable custom-provider preset. Unlike
@@ -2651,27 +2404,13 @@ func providerPresetNoExistingProviderError(id string) error {
 	return fmt.Errorf("provider preset %q cannot be reset because no same-name provider exists; add the preset instead", id)
 }
 
-// FetchProviderModels probes the provider's OpenAI-compatible model-list
+// FetchProviderModelCatalog probes the provider's OpenAI-compatible model-list
 // endpoint and returns the available model IDs. This is a settings-only helper:
 // it never touches chat request serialization or provider-visible prompt data.
 // The probe rides the configured network proxy so a broken proxy path fails
 // here, at setup time, instead of succeeding and stalling chat later (#9560).
 func (a *App) FetchProviderModelCatalog(p ProviderView) ([]ProviderModelCapabilityView, error) {
 	return a.FetchProviderModelCatalogDraft(p, "")
-}
-
-// FetchProviderModels is the legacy ID-only wrapper retained for older
-// frontends and callers.
-func (a *App) FetchProviderModels(p ProviderView) ([]string, error) {
-	catalog, err := a.FetchProviderModelCatalog(p)
-	if err != nil {
-		return []string{}, err
-	}
-	models := make([]string, 0, len(catalog))
-	for _, model := range catalog {
-		models = append(models, model.Model)
-	}
-	return nonNil(chatProviderModels(models)), nil
 }
 
 // networkProxySpecForRoot resolves the effective proxy policy chat requests use
@@ -2707,48 +2446,7 @@ func withProbeDirectHost(spec netclient.ProxySpec, baseURL string, noProxy bool)
 	return spec
 }
 
-// FetchAllProviderModels fetches model lists for all providers in a single
-// batch. Models are fetched concurrently (up to 4 parallel requests) and
-// returned as a map keyed by provider name. Errors for individual providers
-// are recorded as nil entries; callers should handle missing keys.
-func (a *App) FetchAllProviderModels(providers []ProviderView) map[string][]string {
-	results := make(map[string][]string, len(providers))
-	var mu sync.Mutex
-	g, ctx := errgroup.WithContext(a.reqCtx())
-	g.SetLimit(4)
-	root := a.activeWorkspaceRoot()
-	proxy := a.networkProxySpecForRoot(root)
-	for i := range providers {
-		p := providers[i]
-		g.Go(func() error {
-			e := config.ProviderEntry{
-				Name: p.Name, Kind: p.Kind, BaseURL: p.BaseURL, ChatURL: p.ChatURL, RequestURL: p.RequestURL,
-				ModelsURL:  strings.TrimSpace(p.ModelsURL),
-				APIKeyEnv:  p.APIKeyEnv,
-				Headers:    p.Headers,
-				AuthHeader: p.AuthHeader, NoProxy: p.NoProxy,
-			}
-			e.ResolveAPIKeyForRoot(root)
-			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-			defer cancel()
-			models, err := e.FetchModelsWithProxy(ctx, withProbeDirectHost(proxy, e.BaseURL, e.NoProxy))
-			if err != nil {
-				// Omit failed providers so the frontend can retry them through
-				// the cached single-provider path without emitting JSON null.
-				return nil
-			}
-			mu.Lock()
-			defer mu.Unlock()
-			results[p.Name] = nonNil(chatProviderModels(models))
-			return nil
-		})
-	}
-	_ = g.Wait()
-	return results
-}
-
-// FetchAllProviderModelCatalogs is the metadata-preserving batch companion to
-// FetchAllProviderModels. Individual provider failures are omitted so callers
+// FetchAllProviderModelCatalogs preserves model metadata. Failed providers are omitted so callers
 // can retry them through the single-provider path.
 func (a *App) FetchAllProviderModelCatalogs(providers []ProviderView) map[string][]ProviderModelCapabilityView {
 	results := make(map[string][]ProviderModelCapabilityView, len(providers))
@@ -2915,6 +2613,7 @@ func (a *App) SetNetwork(n NetworkView) error {
 
 func (a *App) SetBotSettings(b BotSettingsView) error {
 	err := a.applyConfigOnly(func(c *config.Config) error {
+		previous := c.Bot
 		c.Bot.Enabled = b.Enabled
 		c.Bot.Model = strings.TrimSpace(b.Model)
 		c.Bot.ToolApprovalMode = normalizeBotConnectionToolApprovalMode(b.ToolApprovalMode)
@@ -2922,7 +2621,6 @@ func (a *App) SetBotSettings(b BotSettingsView) error {
 		c.Bot.DebounceMs = b.DebounceMs
 		c.Bot.QueueMode = strings.TrimSpace(b.QueueMode)
 		c.Bot.QueueCap = b.QueueCap
-		c.Bot.QueueDrop = strings.TrimSpace(b.QueueDrop)
 		c.Bot.IgnoreSelfMessages = b.IgnoreSelfMessages
 		c.Bot.SelfUserIDs = config.BotSelfUserIDs{
 			QQ:       trimList(b.SelfUserIDs.QQ),
@@ -2941,26 +2639,6 @@ func (a *App) SetBotSettings(b BotSettingsView) error {
 			MaxPendingPerPlatform: b.Pairing.MaxPendingPerPlatform,
 		}
 		c.Bot.Routes = botRouteConfigs(b.Routes)
-		c.Bot.Allowlist = config.BotAllowlist{
-			Enabled:           b.Allowlist.Enabled,
-			AllowAll:          b.Allowlist.AllowAll,
-			QQUsers:           trimList(b.Allowlist.QQUsers),
-			FeishuUsers:       trimList(b.Allowlist.FeishuUsers),
-			WeixinUsers:       trimList(b.Allowlist.WeixinUsers),
-			QQApprovers:       trimList(b.Allowlist.QQApprovers),
-			FeishuApprovers:   trimList(b.Allowlist.FeishuApprovers),
-			WeixinApprovers:   trimList(b.Allowlist.WeixinApprovers),
-			QQAdmins:          trimList(b.Allowlist.QQAdmins),
-			FeishuAdmins:      trimList(b.Allowlist.FeishuAdmins),
-			WeixinAdmins:      trimList(b.Allowlist.WeixinAdmins),
-			QQGroups:          trimList(b.Allowlist.QQGroups),
-			FeishuGroups:      trimList(b.Allowlist.FeishuGroups),
-			WeixinGroups:      trimList(b.Allowlist.WeixinGroups),
-			DingtalkUsers:     trimList(b.Allowlist.DingtalkUsers),
-			DingtalkApprovers: trimList(b.Allowlist.DingtalkApprovers),
-			DingtalkAdmins:    trimList(b.Allowlist.DingtalkAdmins),
-			DingtalkGroups:    trimList(b.Allowlist.DingtalkGroups),
-		}
 		c.Bot.QQ = config.QQBotConfig{
 			Enabled:          b.QQ.Enabled,
 			AppID:            strings.TrimSpace(b.QQ.AppID),
@@ -2988,8 +2666,9 @@ func (a *App) SetBotSettings(b BotSettingsView) error {
 			TokenEnv:  strings.TrimSpace(b.Weixin.TokenEnv),
 			APIBase:   strings.TrimRight(strings.TrimSpace(b.Weixin.APIBase), "/"),
 		}
-		c.Bot.Dingtalk = dingtalkConfigFromView(b.Dingtalk, c.Bot.Dingtalk)
+		c.Bot.Dingtalk = dingtalkConfigFromView(b.Dingtalk)
 		c.Bot.Connections = botConnectionConfigs(b.Connections)
+		c.Bot.Connections = updateDedicatedBotConnections(c.Bot, previous)
 		return nil
 	})
 	if err == nil {
@@ -3029,25 +2708,6 @@ func (a *App) SetBotConnectionToolApprovalMode(connID, mode string) error {
 	return nil
 }
 
-// SetBotDingtalkToolApprovalMode 更新 legacy [bot.dingtalk] 的工具审批模式，
-// 不重启 bot runtime：写入配置并热更新运行中 gateway 的
-// ConnectionChannels["dingtalk"]（由 desktopBotChannelsWithLegacyDingtalk 注入），
-// 已建会话同步生效。用于设置面板的权限选择（避免全量 SetBotSettings 的重启跳变）。
-func (a *App) SetBotDingtalkToolApprovalMode(mode string) error {
-	mode = normalizeBotConnectionToolApprovalMode(mode)
-	err := a.applyConfigOnly(func(c *config.Config) error {
-		c.Bot.Dingtalk.ToolApprovalMode = mode
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if a.botRuntime != nil {
-		a.botRuntime.updateConnectionToolApprovalMode(string(bot.PlatformDingtalk), mode)
-	}
-	return nil
-}
-
 func (a *App) SetBotSecret(envName, value string) error {
 	envName = strings.TrimSpace(envName)
 	if envName == "" {
@@ -3073,13 +2733,9 @@ func (a *App) ClearBotSecret(envName string) error {
 }
 
 // SetAgentParams updates sampling temperature and the base system prompt. The
-// step arguments remain in the desktop contract for older frontends, but are
-// retired and deliberately normalized to automatic execution.
-func (a *App) SetAgentParams(temperature float64, maxSteps int, plannerMaxSteps int, systemPrompt string) error {
+func (a *App) SetAgentParams(temperature float64, systemPrompt string) error {
 	return a.applyConfigChange(func(c *config.Config) error {
 		c.Agent.Temperature = temperature
-		c.Agent.MaxSteps = 0
-		c.Agent.PlannerMaxSteps = 0
 		c.Agent.SystemPrompt = systemPrompt
 		return nil
 	})
@@ -3283,19 +2939,16 @@ func applyConnectionOverrides(entry *config.ProviderEntry, kind, baseURL string,
 	if kind != "" && kind != entry.Kind {
 		entry.Kind = kind
 		entry.RequestURL = ""
-		entry.ChatURL = ""
 		entry.ModelsURL = ""
 		entry.ExtraBody = nil
 		entry.AuthHeader = false
 		entry.Thinking = ""
 		entry.Effort = ""
 		entry.ResponsesMode = ""
-		entry.ResponsesStateful = nil
 	}
 	if baseURL != "" {
 		entry.BaseURL = baseURL
 		entry.RequestURL = ""
-		entry.ChatURL = ""
 		entry.ModelsURL = ""
 	}
 	if endpoint, ok := endpoints[entry.Kind]; ok && strings.TrimRight(entry.BaseURL, "/") == strings.TrimRight(endpoint.BaseURL, "/") {
@@ -3350,4 +3003,14 @@ func providerConnectionTemplate(c *config.Config, presetID, sourceName string) (
 		}
 	}
 	return entries, catalog, nil
+}
+
+func providerVisionModelsFromCapabilities(caps []ProviderModelCapabilityView) []string {
+	out := []string{}
+	for _, capability := range caps {
+		if capability.State == "supported" {
+			out = append(out, capability.Model)
+		}
+	}
+	return out
 }

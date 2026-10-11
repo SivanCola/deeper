@@ -3352,8 +3352,8 @@ export function Composer({
       const sorted = asArray(sessions)
         .filter((s) => !s.current)
         .sort((a, b) => {
-          const at = a.lastActivityAt || a.modTime || a.createdAt || 0;
-          const bt = b.lastActivityAt || b.modTime || b.createdAt || 0;
+          const at = a.lastActivityAt || a.createdAt || 0;
+          const bt = b.lastActivityAt || b.createdAt || 0;
           return bt - at;
         })
         .slice(0, 50);
@@ -4319,7 +4319,7 @@ export function Composer({
                   filteredPastChats.map((session, i) => {
                     // Hover preview stays on SessionMeta and never reads the transcript.
                     const turnsLabel = sessionTurnsLabel(session, t);
-                    const ts = session.lastActivityAt || session.modTime || session.createdAt;
+                    const ts = session.lastActivityAt || session.createdAt;
                     const preview = truncatePreview(session.preview);
                     const pathText = session.workspaceRoot || session.path;
                     const tooltipLabel =

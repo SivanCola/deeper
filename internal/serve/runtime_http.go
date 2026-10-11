@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"deepzora/internal/config"
-	"deepzora/internal/control"
 )
 
 func (s *Server) modelSwitch(w http.ResponseWriter, r *http.Request) {
@@ -100,33 +99,6 @@ func (s *Server) effortSwitch(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.switchEffortExpected(r.Context(), strings.TrimSpace(body.Level), r.Header.Get(expectedSessionPathHeader)); err != nil {
 		http.Error(w, err.Error(), runtimeSwitchErrorStatus(err))
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// qualityFloorSwitch retains the retired route for older clients. It validates
-// the value and session identity but never changes runtime state.
-func (s *Server) qualityFloorSwitch(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Floor string `json:"floor"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.Floor) == "" {
-		http.Error(w, "missing quality floor", http.StatusBadRequest)
-		return
-	}
-	normalized, err := control.NormalizeQualityFloor(body.Floor)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	if !s.validateExpectedSessionLocked(w, r) {
-		return
-	}
-	if err := s.ctl().SetQualityFloor(normalized); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

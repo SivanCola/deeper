@@ -6,10 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/config"
 	"deepzora/internal/provider"
 	"deepzora/internal/store"
 )
@@ -25,202 +23,6 @@ func saveSnapshotTurns(t *testing.T, path string, turns int) *agent.Session {
 		}
 	}
 	return s
-}
-
-func forkDesktopRecoveryBranch(t *testing.T, dir, name string) (parentPath, branchPath string, branchMsgs []provider.Message) {
-	t.Helper()
-	parentPath = filepath.Join(dir, name+".jsonl")
-	parent := agent.NewSession("sys")
-	parent.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	parent.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	parent.Add(provider.Message{Role: provider.RoleUser, Content: "disk " + name})
-	if err := parent.Save(parentPath); err != nil {
-		t.Fatalf("Save recovery parent: %v", err)
-	}
-	branch := agent.NewSession("sys")
-	branch.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	branch.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	branch.Add(provider.Message{Role: provider.RoleUser, Content: "local " + name})
-	info, err := branch.SaveRecoveryBranch(agent.RecoveryBranchOptions{OriginalPath: parentPath})
-	if err != nil {
-		t.Fatalf("SaveRecoveryBranch: %v", err)
-	}
-	return parentPath, info.Path, branch.Snapshot()
-}
-
-func coverDesktopRecoveryParent(t *testing.T, parentPath string, branchMsgs []provider.Message) {
-	t.Helper()
-	parent, err := agent.LoadSession(parentPath)
-	if err != nil {
-		t.Fatalf("Load covering recovery parent: %v", err)
-	}
-	parent.Replace(append([]provider.Message(nil), branchMsgs...))
-	parent.Add(provider.Message{Role: provider.RoleAssistant, Content: "parent kept the recovery content"})
-	if err := parent.SaveRewrite(parentPath); err != nil {
-		t.Fatalf("Save covering recovery parent: %v", err)
-	}
-}
-
-func TestMergeSessionInfosCountsRecoveryActivity(t *testing.T) {
-	dir := t.TempDir()
-	parentPath, branchPath, branchMsgs := forkDesktopRecoveryBranch(t, dir, "covered")
-	coverDesktopRecoveryParent(t, parentPath, branchMsgs)
-	summaries := map[string]topicSummary{}
-	now := time.Now()
-	infos := []agent.SessionInfo{
-		{
-			Path:           parentPath,
-			Turns:          3,
-			LastActivityAt: now.Add(-time.Hour),
-			Scope:          "global",
-			TopicID:        "topic-1",
-		},
-		{
-			Path:           branchPath,
-			Turns:          5,
-			LastActivityAt: now,
-			Scope:          "global",
-			TopicID:        "topic-1",
-			Recovered:      true,
-		},
-	}
-	mergeSessionInfos(dir, infos, map[string]string{}, map[string]agent.SessionInfo{}, map[string]string{}, summaries)
-	summary := summaries[topicSummaryKey("global", "", "topic-1")]
-	if !summary.hasNormalSession || !summary.hasRecoveryOnly {
-		t.Fatalf("summary flags = %+v, want both normal and recovery seen", summary)
-	}
-	if summary.turns != 3 {
-		t.Fatalf("turns = %d, want 3 (recovery copies must not double-count)", summary.turns)
-	}
-	// The copy is the live transcript after recovery: its newer activity must
-	// drive topic recency, unread state, and time filters.
-	if summary.lastActivityAt != now.UnixMilli() {
-		t.Fatalf("lastActivityAt = %d, want recovery activity %d", summary.lastActivityAt, now.UnixMilli())
-	}
-}
-
-func TestMergeSessionInfosKeepsContinuedRecoveryVisible(t *testing.T) {
-	dir := t.TempDir()
-	_, branchPath, _ := forkDesktopRecoveryBranch(t, dir, "diverged")
-	summaries := map[string]topicSummary{}
-	now := time.Now()
-	infos := []agent.SessionInfo{{
-		Path:           branchPath,
-		Turns:          5,
-		LastActivityAt: now,
-		Scope:          "global",
-		TopicID:        "topic-continued",
-		Recovered:      true,
-	}}
-
-	mergeSessionInfos(dir, infos, map[string]string{}, map[string]agent.SessionInfo{}, map[string]string{}, summaries)
-	summary := summaries[topicSummaryKey("global", "", "topic-continued")]
-	if !summary.hasAdoptedRecovery || summary.hasRecoveryOnly {
-		t.Fatalf("summary flags = %+v, want adopted recovery only", summary)
-	}
-	if topicHiddenAsRecoveryOnly(summary, false, nil) {
-		t.Fatal("continued recovery was hidden after its tab closed")
-	}
-	if got := summary.displayTurns(); got != 5 {
-		t.Fatalf("display turns = %d, want 5", got)
-	}
-}
-
-func TestSessionMetaSeparatesRecoveryProvenanceFromCleanupCopy(t *testing.T) {
-	dir := t.TempDir()
-	coveredParent, coveredBranch, coveredMsgs := forkDesktopRecoveryBranch(t, dir, "meta-covered")
-	coverDesktopRecoveryParent(t, coveredParent, coveredMsgs)
-	info := agent.SessionInfo{
-		Path:      coveredBranch,
-		Recovered: true,
-	}
-	meta := sessionMetaFromInfo(info, "", false, false, 0, dir)
-	if !meta.Recovered || !meta.RecoveryCopy {
-		t.Fatalf("covered recovery meta = %+v, want provenance and cleanup-copy flags", meta)
-	}
-
-	_, divergedBranch, _ := forkDesktopRecoveryBranch(t, dir, "meta-diverged")
-	info.Path = divergedBranch
-	meta = sessionMetaFromInfo(info, "", false, false, 0, dir)
-	if !meta.Recovered || meta.RecoveryCopy {
-		t.Fatalf("diverged recovery meta = %+v, want provenance without cleanup-copy flag", meta)
-	}
-}
-
-func TestRecoveryCopyCleanupRevalidatesInBackend(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-
-	parentPath, branchPath, branchMsgs := forkDesktopRecoveryBranch(t, dir, "delete-guard")
-	if err := app.DeleteRecoveryCopy(branchPath); err == nil {
-		t.Fatal("DeleteRecoveryCopy accepted a branch with unique content")
-	}
-	if _, err := os.Stat(branchPath); err != nil {
-		t.Fatalf("rejected recovery branch was not preserved: %v", err)
-	}
-	coverDesktopRecoveryParent(t, parentPath, branchMsgs)
-	if err := app.DeleteRecoveryCopy(branchPath); err != nil {
-		t.Fatalf("DeleteRecoveryCopy covered branch: %v", err)
-	}
-	trashPath := filepath.Join(dir, sessionTrashDir, filepath.Base(branchPath), filepath.Base(branchPath))
-	if _, err := os.Stat(trashPath); err != nil {
-		t.Fatalf("covered recovery branch was not moved to trash: %v", err)
-	}
-
-	purgeParent, purgeBranch, purgeMsgs := forkDesktopRecoveryBranch(t, dir, "purge-guard")
-	if err := app.deleteSession(purgeBranch); err != nil {
-		t.Fatalf("DeleteSession divergent branch: %v", err)
-	}
-	purgeTrashPath := filepath.Join(dir, sessionTrashDir, filepath.Base(purgeBranch), filepath.Base(purgeBranch))
-	if err := app.PurgeRecoveryCopy(purgeTrashPath); err == nil {
-		t.Fatal("PurgeRecoveryCopy accepted a trashed branch with unique content")
-	}
-	if _, err := os.Stat(purgeTrashPath); err != nil {
-		t.Fatalf("rejected trashed recovery branch was not preserved: %v", err)
-	}
-	coverDesktopRecoveryParent(t, purgeParent, purgeMsgs)
-	parentLease, err := agent.TryAcquireSessionLease(purgeParent)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease parent: %v", err)
-	}
-	if err := app.PurgeRecoveryCopy(purgeTrashPath); !errors.Is(err, errSessionBusyElsewhere) {
-		parentLease.Release()
-		t.Fatalf("PurgeRecoveryCopy while parent is live err = %v, want errSessionBusyElsewhere", err)
-	}
-	if _, err := os.Stat(purgeTrashPath); err != nil {
-		parentLease.Release()
-		t.Fatalf("busy-parent purge did not preserve recovery branch: %v", err)
-	}
-	parentLease.Release()
-	if err := app.PurgeRecoveryCopy(purgeTrashPath); err != nil {
-		t.Fatalf("PurgeRecoveryCopy covered branch: %v", err)
-	}
-	if _, err := os.Stat(purgeTrashPath); !os.IsNotExist(err) {
-		t.Fatalf("covered recovery branch survived permanent purge: %v", err)
-	}
-}
-
-func TestRecoveryCopyCleanupKeepsOpenBranch(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	parentPath, branchPath, branchMsgs := forkDesktopRecoveryBranch(t, dir, "open-delete-guard")
-	coverDesktopRecoveryParent(t, parentPath, branchMsgs)
-	app.tabs["open-copy"] = &WorkspaceTab{ID: "open-copy", Scope: "global", SessionPath: branchPath, Ready: true}
-
-	if err := app.DeleteRecoveryCopy(branchPath); !errors.Is(err, errSessionBusyElsewhere) {
-		t.Fatalf("DeleteRecoveryCopy(open) error = %v, want busy", err)
-	}
-	if _, err := os.Stat(branchPath); err != nil {
-		t.Fatalf("open recovery branch must remain visible: %v", err)
-	}
 }
 
 func TestTopicHiddenAsRecoveryOnly(t *testing.T) {
@@ -354,7 +156,7 @@ func TestTrashPathsBlockedWhileLeaseHeld(t *testing.T) {
 		path,
 		store.SessionLockFile(path),
 		store.SessionLeaseLock(path),
-		store.SessionLeaseInfo(path),
+		store.SessionLeaseLock(path),
 	} {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
 			t.Errorf("artifact survived trash: %s (err=%v)", p, err)
@@ -416,7 +218,7 @@ func TestTopicTitleUserTurnsSkipHostFraming(t *testing.T) {
 	s.Add(provider.Message{Role: provider.RoleUser, Content: "你是谁？\n\n" + agent.DeliveryRuntimeMarker})
 	s.Add(provider.Message{Role: provider.RoleAssistant, Content: "reply"})
 	// Host-injected readiness nudge, persisted as role user.
-	s.Add(provider.Message{Role: provider.RoleUser, Content: "Host final-answer readiness check failed. Before giving a final answer, address the missing host-observable receipts: x"})
+	s.Add(provider.Message{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "Host final-answer readiness check failed. Before giving a final answer, address the missing host-observable receipts: x"})
 	s.Add(provider.Message{Role: provider.RoleAssistant, Content: "reply"})
 	s.Add(provider.Message{Role: provider.RoleUser, Content: "帮我写一个魂斗罗游戏"})
 	if err := s.SaveSnapshot(path); err != nil {

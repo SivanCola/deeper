@@ -23,7 +23,7 @@ review = "global/g"
 name = "local"
 kind = "openai"
 base_url = "https://project.invalid/v1"
-model = "m"
+models = ["m"]
 api_key_env = "PROJECT_MODEL_KEY"
 `
 	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0600); err != nil {

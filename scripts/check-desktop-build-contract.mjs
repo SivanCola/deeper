@@ -55,7 +55,7 @@ assert.ok(
   "desktop/wails.json must be retired with the Wails shell",
 );
 
-for (const jobName of ["desktop-prepare", "desktop-go", "desktop-frontend", "desktop-browser-group", "desktop-macos", "desktop-windows"]) {
+for (const jobName of ["desktop-go", "desktop-frontend"]) {
   assert.deepEqual(nodeVersions(jobBody(ciWorkflow, jobName)), [pinnedNodeVersion]);
 }
 
@@ -153,16 +153,16 @@ assert.match(
   /GOOS="\$os" GOARCH="\$arch" go build -trimpath -ldflags="-s -w \$service_ldflags" -o "\$service_out"/,
   "desktop service builds must consume the platform-specific linker flags",
 );
-const windowsJob = jobBody(ciWorkflow, "desktop-windows");
+const windowsJob = jobBody(releaseWorkflow, "windows-build");
 assert.match(
   windowsJob,
-  /go build -trimpath -ldflags "-s -w -H windowsgui -X main\.version=v0\.0\.0-ci -X main\.channel=canary" -o build\/bin\/deepzora-desktop\.exe \./,
-  "Windows native startup CI must build the service as a GUI-subsystem image",
+  /scripts\/desktop-build\.sh "\$\{\{ matrix\.platform \}\}" "\$\{\{ needs\.resolve\.outputs\.version \}\}" "\$\{\{ needs\.resolve\.outputs\.channel \}\}"/,
+  "Windows release builds must use the verified service build wrapper",
 );
 assert.match(
-  windowsJob,
-  /node \.\.\/scripts\/verify-windows-gui-subsystem\.mjs build\/bin\/deepzora-desktop\.exe/,
-  "Windows native startup CI must verify the service PE subsystem",
+  desktopBuildScript,
+  /node "\$ROOT\/scripts\/verify-windows-gui-subsystem\.mjs" "\$service_out"/,
+  "Windows release builds must verify the service PE subsystem",
 );
 // The shell is packaged through the Electron packaging script, never wails build.
 assert.match(

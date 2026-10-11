@@ -202,15 +202,6 @@ func SessionLeaseLock(sessionPath string) string {
 	return sessionPath + ".lease.lock"
 }
 
-// SessionLeaseInfo is the runtime ownership metadata
-// (<id>.jsonl.lease.json).
-func SessionLeaseInfo(sessionPath string) string {
-	if sessionPath == "" {
-		return ""
-	}
-	return sessionPath + ".lease.json"
-}
-
 // SessionCheckpointDir is the snapshot-checkpoint directory (<id>.ckpt).
 func SessionCheckpointDir(sessionPath string) string {
 	if sessionPath == "" {

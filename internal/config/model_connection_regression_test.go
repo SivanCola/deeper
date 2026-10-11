@@ -101,7 +101,7 @@ func TestAuditRecoverDoesNotInventReceiptAfterExternalEdit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	external.Providers[0].Model = "external-model"
+	external.Providers[0].Models = []string{"external-model"}
 	if err := external.SaveTo(path); err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestProviderEditPathRespectsProjectOverrideOfBuiltins(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	root := t.TempDir()
 	path := filepath.Join(root, "deepzora.toml")
-	if err := os.WriteFile(path, []byte("[[providers]]\nname='deepseek'\nkind='openai'\nmodel='project-chat'\nbase_url='https://project.invalid/v1'\n"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("[[providers]]\nname='deepseek'\nkind='openai'\nmodels=['project-chat']\nbase_url='https://project.invalid/v1'\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	approveWorkspace(t, root)

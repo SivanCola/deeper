@@ -89,24 +89,6 @@ func PlatformConfigured(cfg *config.Config, platform bot.Platform) bool {
 	if cfg == nil {
 		return false
 	}
-	switch platform {
-	case bot.PlatformQQ:
-		if cfg.Bot.QQ.Enabled {
-			return true
-		}
-	case bot.PlatformFeishu:
-		if cfg.Bot.Feishu.Enabled {
-			return true
-		}
-	case bot.PlatformWeixin:
-		if cfg.Bot.Weixin.Enabled {
-			return true
-		}
-	case bot.PlatformDingtalk:
-		if cfg.Bot.Dingtalk.Enabled {
-			return true
-		}
-	}
 	for _, conn := range cfg.Bot.Connections {
 		if conn.Enabled && bot.Platform(strings.TrimSpace(conn.Provider)) == platform {
 			return true
@@ -312,42 +294,11 @@ func normalizeToolApprovalMode(mode string) string {
 	return string(permissionpreset.Normalize(mode))
 }
 
-// MergeLegacyDingtalkChannel merges the legacy [bot.dingtalk] runtime options
-// (model / tool_approval_mode / workspace_root) into the per-platform and
-// per-connection channel maps so a directly-configured DingTalk bot (no
-// [[bot.connections]] record) honors them. The desktop does the same via
-// desktopBotChannelsWithLegacyDingtalk; the CLI bot mode needs the equivalent.
-func MergeLegacyDingtalkChannel(dt config.DingtalkBotConfig, channels map[bot.Platform]bot.ChannelConfig, connectionChannels map[string]bot.ChannelConfig) (map[bot.Platform]bot.ChannelConfig, map[string]bot.ChannelConfig) {
-	channel := bot.ChannelConfig{
-		Model:            strings.TrimSpace(dt.Model),
-		ToolApprovalMode: normalizeToolApprovalMode(dt.ToolApprovalMode),
-		WorkspaceRoot:    strings.TrimSpace(dt.WorkspaceRoot),
-		SessionMappings:  SessionMappings(dt.SessionMappings),
-	}
-	if channel.Model == "" && channel.ToolApprovalMode == "" && channel.WorkspaceRoot == "" && len(channel.SessionMappings) == 0 {
-		return channels, connectionChannels
-	}
-	if channels == nil {
-		channels = make(map[bot.Platform]bot.ChannelConfig)
-	}
-	if _, ok := channels[bot.PlatformDingtalk]; !ok {
-		channels[bot.PlatformDingtalk] = channel
-	}
-	if connectionChannels == nil {
-		connectionChannels = make(map[string]bot.ChannelConfig)
-	}
-	if _, ok := connectionChannels[string(bot.PlatformDingtalk)]; !ok {
-		connectionChannels[string(bot.PlatformDingtalk)] = channel
-	}
-	return channels, connectionChannels
-}
-
 func AdapterBindings(cfg *config.Config, enabled map[bot.Platform]bool, feishuDomains map[string]bool, logger *slog.Logger) []bot.AdapterBinding {
 	if cfg == nil {
 		return nil
 	}
 	var bindings []bot.AdapterBinding
-	hasConnection := make(map[bot.Platform]bool)
 	for _, conn := range cfg.Bot.Connections {
 		if !conn.Enabled {
 			continue
@@ -361,10 +312,9 @@ func AdapterBindings(cfg *config.Config, enabled map[bot.Platform]bool, feishuDo
 		case bot.PlatformQQ:
 			qqCfg := cfg.Bot.QQ
 			qqCfg.Enabled = true
-			qqCfg.AppID = firstNonEmptyString(strings.TrimSpace(conn.Credential.AppID), qqCfg.AppID)
-			qqCfg.AppSecretEnv = firstNonEmptyString(strings.TrimSpace(conn.Credential.AppSecretEnv), qqCfg.AppSecretEnv)
+			qqCfg.AppID = strings.TrimSpace(conn.Credential.AppID)
+			qqCfg.AppSecretEnv = strings.TrimSpace(conn.Credential.AppSecretEnv)
 			bindings = append(bindings, bot.AdapterBinding{ID: id, Domain: strings.TrimSpace(conn.Domain), Platform: platform, Adapter: qq.New(qqCfg, logger)})
-			hasConnection[platform] = true
 		case bot.PlatformFeishu:
 			feishuCfg := cfg.Bot.Feishu
 			feishuCfg.Enabled = true
@@ -372,39 +322,22 @@ func AdapterBindings(cfg *config.Config, enabled map[bot.Platform]bool, feishuDo
 			if feishuDomains != nil && !feishuDomains[feishuDomainKey(feishuCfg.Domain)] {
 				continue
 			}
-			feishuCfg.AppID = firstNonEmptyString(strings.TrimSpace(conn.Credential.AppID), feishuCfg.AppID)
-			feishuCfg.AppSecretEnv = firstNonEmptyString(strings.TrimSpace(conn.Credential.AppSecretEnv), feishuCfg.AppSecretEnv)
+			feishuCfg.AppID = strings.TrimSpace(conn.Credential.AppID)
+			feishuCfg.AppSecretEnv = strings.TrimSpace(conn.Credential.AppSecretEnv)
 			bindings = append(bindings, bot.AdapterBinding{ID: id, Domain: feishuCfg.Domain, Platform: platform, Adapter: feishu.New(feishuCfg, logger)})
-			hasConnection[platform] = true
 		case bot.PlatformWeixin:
 			weixinCfg := cfg.Bot.Weixin
 			weixinCfg.Enabled = true
-			weixinCfg.AccountID = firstNonEmptyString(strings.TrimSpace(conn.Credential.AccountID), weixinCfg.AccountID)
-			weixinCfg.TokenEnv = firstNonEmptyString(strings.TrimSpace(conn.Credential.TokenEnv), weixinCfg.TokenEnv)
+			weixinCfg.AccountID = strings.TrimSpace(conn.Credential.AccountID)
+			weixinCfg.TokenEnv = strings.TrimSpace(conn.Credential.TokenEnv)
 			bindings = append(bindings, bot.AdapterBinding{ID: id, Domain: strings.TrimSpace(conn.Domain), Platform: platform, Adapter: weixin.New(weixinCfg, logger)})
-			hasConnection[platform] = true
 		case bot.PlatformDingtalk:
 			dingtalkCfg := cfg.Bot.Dingtalk
 			dingtalkCfg.Enabled = true
-			dingtalkCfg.ClientID = firstNonEmptyString(strings.TrimSpace(conn.Credential.AppID), dingtalkCfg.ClientID)
-			dingtalkCfg.SecretEnv = firstNonEmptyString(strings.TrimSpace(conn.Credential.AppSecretEnv), dingtalkCfg.SecretEnv)
+			dingtalkCfg.ClientID = strings.TrimSpace(conn.Credential.AppID)
+			dingtalkCfg.SecretEnv = strings.TrimSpace(conn.Credential.AppSecretEnv)
 			bindings = append(bindings, bot.AdapterBinding{ID: id, Domain: strings.TrimSpace(conn.Domain), Platform: platform, Adapter: dingtalk.New(dingtalkCfg, logger)})
-			hasConnection[platform] = true
 		}
-	}
-	if enabled[bot.PlatformQQ] && !hasConnection[bot.PlatformQQ] {
-		bindings = append(bindings, bot.AdapterBinding{ID: string(bot.PlatformQQ), Platform: bot.PlatformQQ, Adapter: qq.New(cfg.Bot.QQ, logger)})
-	}
-	if enabled[bot.PlatformFeishu] && !hasConnection[bot.PlatformFeishu] {
-		if feishuDomains == nil || feishuDomains[feishuDomainKey(cfg.Bot.Feishu.Domain)] {
-			bindings = append(bindings, bot.AdapterBinding{ID: string(bot.PlatformFeishu), Domain: cfg.Bot.Feishu.Domain, Platform: bot.PlatformFeishu, Adapter: feishu.New(cfg.Bot.Feishu, logger)})
-		}
-	}
-	if enabled[bot.PlatformWeixin] && !hasConnection[bot.PlatformWeixin] {
-		bindings = append(bindings, bot.AdapterBinding{ID: string(bot.PlatformWeixin), Domain: "weixin", Platform: bot.PlatformWeixin, Adapter: weixin.New(cfg.Bot.Weixin, logger)})
-	}
-	if enabled[bot.PlatformDingtalk] && !hasConnection[bot.PlatformDingtalk] {
-		bindings = append(bindings, bot.AdapterBinding{ID: string(bot.PlatformDingtalk), Domain: "dingtalk", Platform: bot.PlatformDingtalk, Adapter: dingtalk.New(cfg.Bot.Dingtalk, logger)})
 	}
 	return bindings
 }
@@ -453,18 +386,12 @@ func ModelResolver(cfg *config.Config) func(string) error {
 	}
 }
 
-func AllowlistUserCount(a config.BotAllowlist) int {
-	return len(a.QQUsers) + len(a.FeishuUsers) + len(a.WeixinUsers) + len(a.DingtalkUsers) +
-		len(a.QQApprovers) + len(a.FeishuApprovers) + len(a.WeixinApprovers) + len(a.DingtalkApprovers) +
-		len(a.QQAdmins) + len(a.FeishuAdmins) + len(a.WeixinAdmins) + len(a.DingtalkAdmins)
-}
-
 func BotAccessUserCount(access config.BotAccessConfig) int {
 	return len(access.Users) + len(access.Groups) + len(access.Approvers) + len(access.Admins)
 }
 
 func BotConfigHasAccessControl(bc config.BotConfig) bool {
-	if bc.Allowlist.AllowAll || bc.Pairing.Enabled || (bc.Allowlist.Enabled && AllowlistUserCount(bc.Allowlist) > 0) {
+	if bc.Pairing.Enabled {
 		return true
 	}
 	if BotAccessActive(bc.QQ.Access) || BotAccessActive(bc.Dingtalk.Access) {
@@ -569,21 +496,6 @@ func ForgetAutoSessionMappingsForPath(sessionPath string) error {
 		conn.UpdatedAt = now
 		changed = true
 	}
-	// legacy 直配渠道的 auto mapping 同样清理，避免残留旧会话绑定。
-	ding := &cfg.Bot.Dingtalk
-	dingNext := ding.SessionMappings[:0]
-	dingRemoved := false
-	for _, mapping := range ding.SessionMappings {
-		if strings.TrimSpace(mapping.SessionSource) == "auto" && normalizedBotSessionPath(mapping.SessionID) == target {
-			dingRemoved = true
-			continue
-		}
-		dingNext = append(dingNext, mapping)
-	}
-	if dingRemoved {
-		ding.SessionMappings = dingNext
-		changed = true
-	}
 	if !changed {
 		return nil
 	}
@@ -613,30 +525,10 @@ func rememberInbound(msg bot.InboundMessage, sessionID string, actualWorkspaceRo
 			changed = true
 		}
 	}
-	// legacy 直配 [bot.dingtalk] 没有 connection 记录：/new 旋转后的会话
-	// 路径持久化到 Dingtalk.SessionMappings，重启后仍能恢复（#9116 review）。
-	if platform == bot.PlatformDingtalk && cfg.Bot.Dingtalk.Enabled && !botHasDingtalkConnection(cfg.Bot.Connections) {
-		if rememberConnMappings(&cfg.Bot.Dingtalk.SessionMappings, cfg.Bot.Dingtalk.WorkspaceRoot, msg, remoteID, sessionID, actualWorkspaceRoot, now) {
-			changed = true
-		}
-	}
-	if rememberAllowlist(&cfg.Bot.Allowlist, platform, msg.UserID, remoteID, msg.ChatType) {
-		changed = true
-	}
 	if !changed {
 		return nil
 	}
 	return cfg.SaveTo(userPath)
-}
-
-// botHasDingtalkConnection 判断是否存在匹配的钉钉 connection 记录。
-func botHasDingtalkConnection(conns []config.BotConnectionConfig) bool {
-	for _, conn := range conns {
-		if conn.Enabled && strings.TrimSpace(conn.Provider) == string(bot.PlatformDingtalk) {
-			return true
-		}
-	}
-	return false
 }
 
 // rememberConnMappings 把会话绑定写入 mappings 切片（connection 与 legacy
@@ -760,67 +652,6 @@ func connectionMatchesInbound(conn config.BotConnectionConfig, msg bot.InboundMe
 		return strings.EqualFold(strings.TrimSpace(conn.Domain), strings.TrimSpace(msg.Domain))
 	}
 	return true
-}
-
-func rememberAllowlist(allowlist *config.BotAllowlist, platform bot.Platform, userID string, chatID string, chatType bot.ChatType) bool {
-	if allowlist == nil {
-		return false
-	}
-	changed := false
-	userID = strings.TrimSpace(userID)
-	if userID != "" {
-		switch platform {
-		case bot.PlatformQQ:
-			allowlist.QQUsers, changed = appendUniqueString(allowlist.QQUsers, userID)
-		case bot.PlatformFeishu:
-			allowlist.FeishuUsers, changed = appendUniqueString(allowlist.FeishuUsers, userID)
-		case bot.PlatformWeixin:
-			allowlist.WeixinUsers, changed = appendUniqueString(allowlist.WeixinUsers, userID)
-		case bot.PlatformDingtalk:
-			allowlist.DingtalkUsers, changed = appendUniqueString(allowlist.DingtalkUsers, userID)
-		}
-	}
-	if !chatUsesGroupAllowlist(chatType) {
-		return changed
-	}
-	groupID := strings.TrimSpace(chatID)
-	if groupID == "" {
-		return changed
-	}
-	groupChanged := false
-	switch platform {
-	case bot.PlatformQQ:
-		allowlist.QQGroups, groupChanged = appendUniqueString(allowlist.QQGroups, groupID)
-	case bot.PlatformFeishu:
-		allowlist.FeishuGroups, groupChanged = appendUniqueString(allowlist.FeishuGroups, groupID)
-	case bot.PlatformWeixin:
-		allowlist.WeixinGroups, groupChanged = appendUniqueString(allowlist.WeixinGroups, groupID)
-	case bot.PlatformDingtalk:
-		allowlist.DingtalkGroups, groupChanged = appendUniqueString(allowlist.DingtalkGroups, groupID)
-	}
-	return changed || groupChanged
-}
-
-func appendUniqueString(values []string, next string) ([]string, bool) {
-	next = strings.TrimSpace(next)
-	if next == "" {
-		return values, false
-	}
-	for _, value := range values {
-		if strings.TrimSpace(value) == next {
-			return values, false
-		}
-	}
-	return append(values, next), true
-}
-
-func chatUsesGroupAllowlist(chatType bot.ChatType) bool {
-	switch chatType {
-	case bot.ChatGroup, bot.ChatGuild, bot.ChatThread:
-		return true
-	default:
-		return false
-	}
 }
 
 func firstNonEmptyString(vals ...string) string {

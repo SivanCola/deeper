@@ -3,11 +3,9 @@ package cli
 import (
 	"context"
 	"errors"
-	"net/http"
 	"strconv"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/session"
 )
 
@@ -48,7 +46,7 @@ func TestResumeCanonicalSessionReturnsActiveCanonicalMirror(t *testing.T) {
 	if ref, bound := ctrl.SessionRef(); !bound || ref != held {
 		t.Fatalf("takeover did not attach: %+v bound=%v", ref, bound)
 	}
-	createCanonicalTestSession(t, session.RootForLegacyDir(ctrl.SessionDir()), "third", "third conversation")
+	createCanonicalTestSession(t, session.RootForSessionDir(ctrl.SessionDir()), "third", "third conversation")
 
 	idx := resumeEntryIndex(resumeEntries(ctrl.SessionDir()), func(entry resumeEntry) bool {
 		return entry.target.canonical() && entry.target.ref.SessionID == "third"
@@ -101,88 +99,6 @@ func TestCanonicalTakeoverOfSecondIdentityReturnsFirstMirror(t *testing.T) {
 	}
 }
 
-// TestResumeLegacySessionReturnsActiveCanonicalMirror covers /resume to a
-// legacy transcript while mirroring a canonical identity. The live keeper holds
-// no lease after a canonical attach, so the detached source keeper carries no
-// reverse reservation to publish; the switch must still end the mirror instead
-// of failing with "no detached session lease held" or leaking it.
-func TestResumeLegacySessionReturnsActiveCanonicalMirror(t *testing.T) {
-	route := cliCanonicalRoute("held")
-	fake := newFakeCanonicalServe(t, route)
-	withFakeCanonicalDiscovery(t, fake.base)
-	m, ctrl, _, held := newCanonicalTakeoverTUI(t)
-	m.runCanonicalTakeoverCommand(route)
-	if ref, bound := ctrl.SessionRef(); !bound || ref != held {
-		t.Fatalf("takeover did not attach: %+v bound=%v", ref, bound)
-	}
-	legacy := saveQueryTestSession(t, ctrl.SessionDir(), "legacy-target.jsonl", "LEGACY-TARGET-PROMPT")
-
-	idx := resumeEntryIndex(resumeEntries(ctrl.SessionDir()), func(entry resumeEntry) bool {
-		return !entry.target.canonical() && entry.target.path == legacy
-	})
-	if idx == 0 {
-		t.Fatal("legacy transcript missing from /resume list")
-	}
-	m.runResumeCommand("/resume " + strconv.Itoa(idx))
-
-	ref, bound := ctrl.SessionRef()
-	if bound || ctrl.SessionPath() != legacy || !ctrl.NativeLegacySession() {
-		t.Fatalf("controller after /resume = %+v bound=%v, want the native legacy transcript", ref, bound)
-	}
-	loaded := false
-	for _, msg := range ctrl.History() {
-		loaded = loaded || msg.Content == "LEGACY-TARGET-PROMPT"
-	}
-	if !loaded {
-		t.Fatal("history not loaded from the legacy target")
-	}
-	assertMirrorLeft(t, m, fake, route)
-}
-
-// TestResumeCanonicalSessionReturnsLegacyMirrorReservation covers the legacy
-// half of the leave step: switching from a mirrored legacy transcript to a
-// final-format session publishes the transcript's reverse reservation for the
-// serve and ends the mirror before the controller publishes the new identity.
-func TestResumeCanonicalSessionReturnsLegacyMirrorReservation(t *testing.T) {
-	m, ctrl, service, _ := newCanonicalTakeoverTUI(t)
-	legacy := saveQueryTestSession(t, ctrl.SessionDir(), "mirrored-legacy.jsonl", "mirrored legacy")
-	if err := m.leases.Rebind(legacy); err != nil {
-		t.Fatal(err)
-	}
-	fake := newFakeCanonicalServe(t, legacy)
-	m.takeover.AttachController(ctrl)
-	m.takeover.Activate(&cliTakeoverBinding{
-		path: legacy, record: cliServeRecord{base: fake.base}, client: &http.Client{},
-		grant: cliTakeoverGrant{MirrorID: "mirror-legacy", SourceWriterID: "serve-writer", ReturnHandoffID: "return-legacy"},
-	})
-	third, err := service.Create(t.Context(), session.CreateOptions{SessionID: "third"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.Close(t.Context(), third.Ref()); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := m.commitCanonicalSessionSwitch(third.Ref()); err != nil {
-		t.Fatalf("commitCanonicalSessionSwitch: %v", err)
-	}
-
-	if ref, bound := ctrl.SessionRef(); !bound || ref != third.Ref() {
-		t.Fatalf("controller after switch = %+v bound=%v, want third", ref, bound)
-	}
-	assertMirrorLeft(t, m, fake, legacy)
-	info, err := agent.LoadSessionLeaseInfo(legacy)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info == nil || info.HandoffTo != "serve-writer" || info.HandoffID != "return-legacy" {
-		t.Fatalf("legacy reverse reservation = %+v, want the serve's return handoff", info)
-	}
-	if held := m.leases.HeldPath(); held != "" {
-		t.Fatalf("keeper still holds %q after handing the legacy transcript back", held)
-	}
-}
-
 // TestResumeCanonicalSessionHeldElsewhereKeepsMirror pins failure atomicity of
 // the canonical switch: when the target's writer belongs to another runtime,
 // the current mirror, controller binding, and lease stay exactly as they were.
@@ -192,7 +108,7 @@ func TestResumeCanonicalSessionHeldElsewhereKeepsMirror(t *testing.T) {
 	withFakeCanonicalDiscovery(t, fake.base)
 	m, ctrl, _, held := newCanonicalTakeoverTUI(t)
 	m.runCanonicalTakeoverCommand(route)
-	other, err := session.NewService("local", session.NewFilesystemPersistence(session.RootForLegacyDir(ctrl.SessionDir())))
+	other, err := session.NewService("local", session.NewFilesystemPersistence(session.RootForSessionDir(ctrl.SessionDir())))
 	if err != nil {
 		t.Fatal(err)
 	}

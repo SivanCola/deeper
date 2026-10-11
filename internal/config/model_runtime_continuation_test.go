@@ -20,7 +20,7 @@ func TestModelRuntimeContinuationRevocation(t *testing.T) {
 		{"task budget tightened", func(c *Config) { c.Agent.TaskCostBudget = 1 }, false},
 		{"model output capped", func(c *Config) { c.Providers[0].MaxOutputTokens = 100 }, false},
 		{"request URL credential", func(c *Config) { c.Providers[0].RequestURL = "https://new.invalid?token=secret" }, false},
-		{"legacy URL credential", func(c *Config) { c.Providers[0].ChatURL = "https://user:secret@new.invalid" }, false},
+		{"legacy URL credential", func(c *Config) { c.Providers[0].RequestURL = "https://user:secret@new.invalid" }, false},
 		{"auth mode changed", func(c *Config) { c.Providers[0].AuthHeader = true }, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

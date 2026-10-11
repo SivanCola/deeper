@@ -101,7 +101,7 @@ func TestRunOutputJSONIncludesCurrencyAwareCostFields(t *testing.T) {
 			if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 				t.Fatal(err)
 			}
-			if result.TotalCost != 2 || result.TotalCostUSD != result.TotalCost || result.Currency != tt.wantCode {
+			if result.TotalCost != 2 || result.Currency != tt.wantCode {
 				t.Fatalf("currency-aware result = %+v", result)
 			}
 		})
@@ -266,63 +266,7 @@ func TestEventsJSONLHasOneCanonicalFlag(t *testing.T) {
 	}
 }
 
-func TestRunOutputJSONClassifiesRecoveryPauseAsControlledOutcome(t *testing.T) {
-	var out bytes.Buffer
-	sink := newRunOutputSink(&out, runOutputJSON)
-	runErr := fmt.Errorf("wrapped: %w", &agent.RecoveryPauseError{Message: "automatic recovery paused"})
-	if err := sink.Finalize("abc", time.Now(), runErr); err != nil {
-		t.Fatal(err)
-	}
-	var result runResult
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
-		t.Fatal(err)
-	}
-	if result.IsError || result.Subtype != event.TurnOutcomeRecoveryPaused || result.Result != runErr.Error() || result.NumTurns != 1 {
-		t.Fatalf("recovery pause result = %+v", result)
-	}
-}
-
-func TestRunOutputEventsJSONLClassifiesRecoveryPauseAsControlledOutcome(t *testing.T) {
-	var out bytes.Buffer
-	sink := newRunOutputSink(&out, runOutputEventsJSONL)
-	runErr := fmt.Errorf("wrapped: %w", &agent.RecoveryPauseError{Message: "automatic recovery paused"})
-	if err := sink.Finalize("machine-session", time.Now(), runErr); err != nil {
-		t.Fatal(err)
-	}
-	var result machineRunDone
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
-		t.Fatal(err)
-	}
-	if !result.OK || result.NumTurns != 1 || result.SessionID != "machine-session" {
-		t.Fatalf("recovery pause result = %+v", result)
-	}
-}
-
-func TestRunOutputJSONPreservesCompletionUncertainAsControlledOutcome(t *testing.T) {
-	var out bytes.Buffer
-	sink := newRunOutputSink(&out, runOutputJSON)
-	runErr := &agent.CompletionUncertainError{Cause: agent.CompletionUncertainContextTool}
-	if err := sink.Finalize("abc", time.Now(), runErr); err != nil {
-		t.Fatal(err)
-	}
-	var result runResult
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
-		t.Fatal(err)
-	}
-	if result.IsError || result.Subtype != event.TurnOutcomeCompletionUncertain || result.Result != runErr.Error() || result.NumTurns != 1 {
-		t.Fatalf("completion uncertain result = %+v", result)
-	}
-}
-
 func TestClassifyRunCompletion(t *testing.T) {
-	pause := fmt.Errorf("wrapped: %w", &agent.RecoveryPauseError{Message: "paused"})
-	if got := classifyRunCompletion(pause); got.outcome != event.TurnOutcomeRecoveryPaused || got.isError || got.exitCode != 0 {
-		t.Fatalf("pause completion = %+v", got)
-	}
-	uncertain := fmt.Errorf("wrapped: %w", &agent.CompletionUncertainError{Cause: agent.CompletionUncertainContextTool})
-	if got := classifyRunCompletion(uncertain); got.outcome != event.TurnOutcomeCompletionUncertain || got.subtype != event.TurnOutcomeCompletionUncertain || got.isError || got.exitCode != 1 {
-		t.Fatalf("completion uncertain = %+v", got)
-	}
 	incomplete := fmt.Errorf("wrapped: %w", &agent.IncompleteReadError{Reason: "page budget"})
 	if got := classifyRunCompletion(incomplete); got.outcome != event.TurnOutcomeIncompleteRead || got.subtype != event.TurnOutcomeIncompleteRead || got.isError || got.exitCode != 1 {
 		t.Fatalf("incomplete read = %+v", got)

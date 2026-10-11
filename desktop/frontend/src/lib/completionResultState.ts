@@ -1,7 +1,7 @@
 import type { Item, State } from "./useController";
 import type { HistoryMessage, WireCompletionSummary } from "./types";
 import { t } from "./i18n";
-import { completionSummaryPresentation, normalizeCompletionSummary, sessionQualityFloor } from "./completionSummary";
+import { completionSummaryPresentation, normalizeCompletionSummary } from "./completionSummary";
 import { mergeTurnResult } from "./turnResult";
 
 function lastUserIndex(items: Item[]): number {
@@ -11,7 +11,7 @@ function lastUserIndex(items: Item[]): number {
 
 export function historicalResultNotice(message: HistoryMessage, id: string): Extract<Item, { kind: "notice" }> | undefined {
   const summary = normalizeCompletionSummary(mergeTurnResult(message.completionSummary, message.completionReceipt, message.turnId, message.checkpointTurn));
-  const presentation = completionSummaryPresentation(summary, "standard", t);
+  const presentation = completionSummaryPresentation(summary, t);
   return presentation ? { kind: "notice", id, variant: "completion", action: "open_changes", level: presentation.level, title: presentation.title, text: presentation.body, completionSummary: summary } : undefined;
 }
 
@@ -19,7 +19,7 @@ export function historicalResultNotice(message: HistoryMessage, id: string): Ext
 export function withTurnResult(s: State, summary: WireCompletionSummary): State {
   const boundary = lastUserIndex(s.items);
   const index = s.items.findIndex((item, i) => i > boundary && item.kind === "notice" && item.variant === "completion");
-  const presentation = completionSummaryPresentation(summary, sessionQualityFloor(s.meta), t);
+  const presentation = completionSummaryPresentation(summary, t);
   if (!presentation) return { ...s, completionSummary: summary, items: index < 0 ? s.items : s.items.filter((_, i) => i !== index) };
   const id = index < 0 ? `q${s.seq}` : s.items[index].id;
   const notice: Item = { kind: "notice", id, variant: "completion", action: "open_changes", level: presentation.level, title: presentation.title, text: presentation.body, completionSummary: summary };

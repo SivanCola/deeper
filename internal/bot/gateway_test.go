@@ -325,11 +325,11 @@ func TestFakeAdapterInterface(t *testing.T) {
 
 func TestGatewayConstructAndStop(t *testing.T) {
 	cfg := GatewayConfig{
-		Model:         "test",
-		MaxSteps:      10,
-		WorkspaceRoot: ".",
-		Enabled:       map[Platform]bool{PlatformQQ: true},
-		Allowlist:     AllowlistConfig{Enabled: false},
+		Model:            "test",
+		MaxSteps:         10,
+		WorkspaceRoot:    ".",
+		Enabled:          map[Platform]bool{PlatformQQ: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{Enabled: false}),
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -346,8 +346,8 @@ func TestGatewayConstructAndStop(t *testing.T) {
 
 func TestGatewayStartsHealthyAdaptersWhenOneFails(t *testing.T) {
 	cfg := GatewayConfig{
-		Enabled:   map[Platform]bool{PlatformFeishu: true, PlatformWeixin: true},
-		Allowlist: AllowlistConfig{AllowAll: true},
+		Enabled:          map[Platform]bool{PlatformFeishu: true, PlatformWeixin: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 	}
 	good := newFakeAdapter(PlatformFeishu, "good-feishu")
 	bad := newFakeAdapter(PlatformWeixin, "bad-weixin")
@@ -423,8 +423,8 @@ func TestGatewaySendToAdapterReleasesLockBeforeSend(t *testing.T) {
 
 func TestGatewayReturnsErrorWhenAllAdaptersFail(t *testing.T) {
 	cfg := GatewayConfig{
-		Enabled:   map[Platform]bool{PlatformWeixin: true},
-		Allowlist: AllowlistConfig{AllowAll: true},
+		Enabled:          map[Platform]bool{PlatformWeixin: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 	}
 	bad := newFakeAdapter(PlatformWeixin, "bad-weixin")
 	bad.startErr = errors.New("missing token")
@@ -450,39 +450,31 @@ func TestGatewayReturnsErrorWhenAllAdaptersFail(t *testing.T) {
 
 func TestGatewayAllowlistCheck(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Users: map[Platform][]string{
-				PlatformQQ: {"allowed_user_1"},
-			},
-		},
+		ConnectionAccess: map[string]AccessConfig{string(PlatformQQ): {Enabled: true, Users: []string{"allowed_user_1"}}},
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
 
-	if !gw.checkAllowlist(PlatformQQ, InboundMessage{Platform: PlatformQQ, ChatType: ChatDM, UserID: "allowed_user_1"}) {
+	if !gw.checkAllowlist(PlatformQQ, InboundMessage{ConnectionID: string(PlatformQQ), Platform: PlatformQQ, ChatType: ChatDM, UserID: "allowed_user_1"}) {
 		t.Error("allowed user should pass")
 	}
-	if gw.checkAllowlist(PlatformQQ, InboundMessage{Platform: PlatformQQ, ChatType: ChatDM, UserID: "unknown_user"}) {
+	if gw.checkAllowlist(PlatformQQ, InboundMessage{ConnectionID: string(PlatformQQ), Platform: PlatformQQ, ChatType: ChatDM, UserID: "unknown_user"}) {
 		t.Error("unknown user should not pass")
 	}
 	// 不同平台
-	if gw.checkAllowlist(PlatformFeishu, InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, UserID: "allowed_user_1"}) {
+	if gw.checkAllowlist(PlatformFeishu, InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, UserID: "allowed_user_1"}) {
 		t.Error("QQ allowlist should not apply to feishu")
 	}
 }
 
 func TestGatewayRejectsBeforeInboundEnrichment(t *testing.T) {
 	adapter := newFakeAdapter(PlatformFeishu, "feishu")
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{
-		Enabled: true,
-		Users:   map[Platform][]string{PlatformFeishu: {"allowed-user"}},
-	}}, map[Platform]Adapter{PlatformFeishu: adapter}, discardLogger())
+	gw := NewGateway(GatewayConfig{ConnectionAccess: map[string]AccessConfig{string(PlatformFeishu): {Enabled: true, Users: []string{"allowed-user"}}}}, map[Platform]Adapter{PlatformFeishu: adapter}, discardLogger())
 
 	mediaLoads := 0
 	nameLoads := 0
-	gw.handleMessage(context.Background(), AdapterBinding{ID: "feishu", Platform: PlatformFeishu, Adapter: adapter}, InboundMessage{
+	gw.handleMessage(context.Background(), AdapterBinding{ID: "feishu", Platform: PlatformFeishu, Adapter: adapter}, InboundMessage{ConnectionID: string(PlatformFeishu),
 		Platform: PlatformFeishu,
 		ChatType: ChatDM,
 		ChatID:   "chat",
@@ -504,44 +496,31 @@ func TestGatewayRejectsBeforeInboundEnrichment(t *testing.T) {
 
 func TestGatewayRoleListsGrantAllowlistAdmission(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Admins: map[Platform][]string{
-				PlatformFeishu: {"admin_user"},
-			},
-			Approvers: map[Platform][]string{
-				PlatformFeishu: {"approver_user"},
-			},
-		},
+		ConnectionAccess: map[string]AccessConfig{string(PlatformFeishu): {Enabled: true, Approvers: []string{"approver_user"}, Admins: []string{"admin_user"}}},
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
 
-	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, UserID: "admin_user"}) {
+	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, UserID: "admin_user"}) {
 		t.Error("admin role should grant base bot admission")
 	}
-	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, UserID: "approver_user"}) {
+	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, UserID: "approver_user"}) {
 		t.Error("approver role should grant base bot admission")
 	}
-	if gw.checkAllowlist(PlatformFeishu, InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, UserID: "unknown_user"}) {
+	if gw.checkAllowlist(PlatformFeishu, InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, UserID: "unknown_user"}) {
 		t.Error("unknown user should still be rejected")
 	}
 }
 
 func TestGatewayApproverRoleDoesNotGrantAdminCommands(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Approvers: map[Platform][]string{
-				PlatformFeishu: {"approver_user"},
-			},
-		},
+		ConnectionAccess: map[string]AccessConfig{string(PlatformFeishu): {Enabled: true, Approvers: []string{"approver_user"}}},
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
-	msg := InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, UserID: "approver_user"}
+	msg := InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, UserID: "approver_user"}
 
 	if !gw.checkCommandRole(PlatformFeishu, msg, "approver") {
 		t.Error("approver should be allowed to run approver commands")
@@ -553,73 +532,52 @@ func TestGatewayApproverRoleDoesNotGrantAdminCommands(t *testing.T) {
 
 func TestGatewayAllowlistDoesNotApplyGroupsToDirectMessages(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Users: map[Platform][]string{
-				PlatformQQ: {"allowed_user"},
-			},
-			Groups: map[Platform][]string{
-				PlatformQQ: {"allowed_group"},
-			},
-		},
+		ConnectionAccess: map[string]AccessConfig{string(PlatformQQ): {Enabled: true, Users: []string{"allowed_user"}, Groups: []string{"allowed_group"}}},
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
 
-	if !gw.checkAllowlist(PlatformQQ, InboundMessage{Platform: PlatformQQ, ChatType: ChatDirect, ChatID: "guild-dm", UserID: "allowed_user"}) {
+	if !gw.checkAllowlist(PlatformQQ, InboundMessage{ConnectionID: string(PlatformQQ), Platform: PlatformQQ, ChatType: ChatDirect, ChatID: "guild-dm", UserID: "allowed_user"}) {
 		t.Error("direct message should not be rejected by group allowlist")
 	}
-	if gw.checkAllowlist(PlatformQQ, InboundMessage{Platform: PlatformQQ, ChatType: ChatGroup, ChatID: "unknown_group", UserID: "allowed_user"}) {
-		t.Error("unknown group should still be rejected by group allowlist")
+	if !gw.checkAllowlist(PlatformQQ, InboundMessage{ConnectionID: string(PlatformQQ), Platform: PlatformQQ, ChatType: ChatGroup, ChatID: "unknown_group", UserID: "allowed_user"}) {
+		t.Error("explicitly allowed users should retain access in other groups")
 	}
 }
 
-func TestGatewayGroupAllowlistStillNarrowsRoleAdmission(t *testing.T) {
+func TestGatewayConnectionGroupsAndRolesGrantAdmission(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Admins: map[Platform][]string{
-				PlatformFeishu: {"admin_user"},
-			},
-			Groups: map[Platform][]string{
-				PlatformFeishu: {"allowed_group"},
-			},
-		},
+		ConnectionAccess: map[string]AccessConfig{string(PlatformFeishu): {Enabled: true, Groups: []string{"allowed_group"}, Admins: []string{"admin_user"}}},
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
 
-	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "direct", UserID: "admin_user"}) {
+	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "direct", UserID: "admin_user"}) {
 		t.Error("admin role admission should still allow direct messages")
 	}
-	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "allowed_group", UserID: "admin_user"}) {
+	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "allowed_group", UserID: "admin_user"}) {
 		t.Error("admin role should pass in allowed group")
 	}
-	if gw.checkAllowlist(PlatformFeishu, InboundMessage{Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "unknown_group", UserID: "admin_user"}) {
-		t.Error("admin role should still be rejected in an unknown group")
+	if !gw.checkAllowlist(PlatformFeishu, InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "unknown_group", UserID: "admin_user"}) {
+		t.Error("an explicit administrator should retain access in other groups")
 	}
 }
 
 func TestGatewayAllowlistGatesOnOperatorNotCardRequester(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Users: map[Platform][]string{
-				PlatformFeishu: {"requester"},
-			},
-		},
+		ConnectionAccess: map[string]AccessConfig{string(PlatformFeishu): {Enabled: true, Users: []string{"requester"}}},
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
 
-	stranger := InboundMessage{Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "chat", UserID: "requester", OperatorID: "stranger"}
+	stranger := InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "chat", UserID: "requester", OperatorID: "stranger"}
 	if gw.checkAllowlist(PlatformFeishu, stranger) {
 		t.Error("a non-allowlisted operator must be rejected even when the card carries an allowlisted requester id")
 	}
 
-	allowed := InboundMessage{Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "chat", UserID: "requester", OperatorID: "requester"}
+	allowed := InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatGroup, ChatID: "chat", UserID: "requester", OperatorID: "requester"}
 	if !gw.checkAllowlist(PlatformFeishu, allowed) {
 		t.Error("an allowlisted operator should pass")
 	}
@@ -627,24 +585,24 @@ func TestGatewayAllowlistGatesOnOperatorNotCardRequester(t *testing.T) {
 
 func TestGatewayAllowlistDisabledRejectsByDefault(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{Enabled: false},
+		ConnectionAccess: testConnectionAccess(AccessConfig{Enabled: false}),
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
 
-	if gw.checkAllowlist(PlatformQQ, InboundMessage{Platform: PlatformQQ, ChatType: ChatDM, UserID: "any_user"}) {
+	if gw.checkAllowlist(PlatformQQ, InboundMessage{ConnectionID: string(PlatformQQ), Platform: PlatformQQ, ChatType: ChatDM, UserID: "any_user"}) {
 		t.Error("disabled allowlist should reject unless allow_all is explicit")
 	}
 }
 
 func TestGatewayAllowAll(t *testing.T) {
 	cfg := GatewayConfig{
-		Allowlist: AllowlistConfig{AllowAll: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(cfg, nil, logger)
 
-	if !gw.checkAllowlist(PlatformQQ, InboundMessage{Platform: PlatformQQ, ChatType: ChatDM, UserID: "any_user"}) {
+	if !gw.checkAllowlist(PlatformQQ, InboundMessage{ConnectionID: string(PlatformQQ), Platform: PlatformQQ, ChatType: ChatDM, UserID: "any_user"}) {
 		t.Error("allow_all should allow everyone")
 	}
 }
@@ -755,12 +713,12 @@ func TestGatewaySessionOptionsUseConnectionToolApprovalOverride(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
 		Model:            "default-model",
-		ToolApprovalMode: "auto",
+		ToolApprovalMode: "workspace-write",
 		Channels: map[Platform]ChannelConfig{
-			PlatformFeishu: {Model: "platform-model", ToolApprovalMode: "ask"},
+			PlatformFeishu: {Model: "platform-model", ToolApprovalMode: "read-only"},
 		},
 		ConnectionChannels: map[string]ChannelConfig{
-			"feishu-lark": {Model: "lark-model", ToolApprovalMode: "yolo"},
+			"feishu-lark": {Model: "lark-model", ToolApprovalMode: "workspace-write"},
 		},
 	}, nil, logger)
 
@@ -772,7 +730,7 @@ func TestGatewaySessionOptionsUseConnectionToolApprovalOverride(t *testing.T) {
 		t.Fatalf("lark session options = model %q mode %q, want lark-model/workspace-write", model, mode)
 	}
 
-	model, _, mode = gw.sessionOptionsForMessage(InboundMessage{Platform: PlatformFeishu})
+	model, _, mode = gw.sessionOptionsForMessage(InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu})
 	if model != "platform-model" || mode != control.ToolApprovalReadOnly {
 		t.Fatalf("platform session options = model %q mode %q, want platform-model/read-only", model, mode)
 	}
@@ -780,7 +738,7 @@ func TestGatewaySessionOptionsUseConnectionToolApprovalOverride(t *testing.T) {
 
 func TestGatewayNumericApprovalShortcutActiveWithoutPendingSendsGuidance(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
 	binding := AdapterBinding{ID: "weixin-weixin", Domain: "weixin", Platform: PlatformWeixin, Adapter: adapter}
 	msg := InboundMessage{
@@ -811,9 +769,9 @@ func TestGatewayNumericApprovalShortcutActiveWithoutPendingSendsGuidance(t *test
 
 func TestGatewayApproveWithoutSessionSendsGuidance(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
-	msg := InboundMessage{ChatType: ChatDM, ChatID: "chat", UserID: "user", Text: "/approve 1"}
+	msg := InboundMessage{ConnectionID: "weixin", Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user", Text: "/approve 1"}
 
 	gw.handleSlashCommand(context.Background(), adapter, "missing-session", msg)
 
@@ -878,113 +836,6 @@ func TestGatewayNewSessionRemembersRotatedSessionPath(t *testing.T) {
 	gw.closeSessions()
 }
 
-func TestGatewayRecoveryRebindsLeaseAndRemembersSessionPath(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	dir := schemaOneTempDir(t)
-	originalPath := filepath.Join(dir, "session.jsonl")
-
-	disk := agent.NewSession("sys")
-	disk.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	disk.Add(provider.Message{Role: provider.RoleAssistant, Content: "disk"})
-	if err := disk.Save(originalPath); err != nil {
-		t.Fatalf("save disk session: %v", err)
-	}
-
-	local := agent.NewSession("sys")
-	local.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	local.Add(provider.Message{Role: provider.RoleAssistant, Content: "local"})
-	exec := agent.New(nil, nil, local, agent.Options{}, event.Discard)
-
-	var remembered []string
-	gw := NewGateway(GatewayConfig{
-		OnSessionReady: func(_ InboundMessage, sessionID string) error {
-			remembered = append(remembered, sessionID)
-			return nil
-		},
-	}, nil, logger)
-	msg := InboundMessage{
-		Platform:     PlatformWeixin,
-		ConnectionID: "weixin-main",
-		Domain:       "weixin",
-		ChatType:     ChatDM,
-		ChatID:       "chat",
-		UserID:       "user",
-	}
-	key := BuildSessionKey(msg.Session())
-	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
-	sessionSink := &sessionEventSink{}
-	sessionSink.setTarget(newRenderSink(
-		context.Background(), adapter, msg.ConnectionID, msg.Domain, msg.ChatID,
-		msg.ChatType, msg.UserID, msg.MessageID, logger, nil, nil,
-	))
-	t.Cleanup(func() { sessionSink.setTarget(nil) })
-	leases := control.NewSessionLeaseKeeper()
-	if err := leases.Rebind(originalPath); err != nil {
-		t.Fatalf("bind original session lease: %v", err)
-	}
-	state := &sessionState{sink: sessionSink, leases: leases, sessionPath: originalPath}
-	gw.controllers[key] = state
-	gw.sessionOverrides[key] = sessionRuntimeOverride{sessionPath: originalPath, label: "session:original"}
-	ctrl := control.New(control.Options{
-		Executor:           exec,
-		SessionDir:         dir,
-		SessionPath:        originalPath,
-		Label:              "test",
-		Sink:               sessionSink,
-		OnSessionRecovered: gw.botSessionRecoveredHandler(key, msg, state),
-	})
-	state.ctrl = ctrl
-	mustBindBotControllerAuthority(t, leases, ctrl)
-	t.Cleanup(gw.closeSessions)
-
-	if err := ctrl.Snapshot(); err != nil {
-		t.Fatalf("snapshot diverged session: %v", err)
-	}
-	recoveryPath := ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == originalPath {
-		t.Fatalf("controller path = %q, want recovery path", recoveryPath)
-	}
-	if got := leases.HeldPath(); got != agent.CanonicalSessionPath(recoveryPath) {
-		t.Fatalf("held lease = %q, want recovery path %q", got, agent.CanonicalSessionPath(recoveryPath))
-	}
-	leases.WaitForRetiredLeases()
-	mustAcquireAndReleaseBotSessionLease(t, originalPath)
-
-	gw.mu.Lock()
-	gotStatePath := state.sessionPath
-	gotOverridePath := gw.sessionOverrides[key].sessionPath
-	gw.mu.Unlock()
-	if canonicalBotPath(gotStatePath) != canonicalBotPath(recoveryPath) {
-		t.Fatalf("state path = %q, want recovery path %q", gotStatePath, recoveryPath)
-	}
-	if canonicalBotPath(gotOverridePath) != canonicalBotPath(recoveryPath) {
-		t.Fatalf("override path = %q, want recovery path %q", gotOverridePath, recoveryPath)
-	}
-	if len(remembered) != 1 || remembered[0] != botSessionTarget(recoveryPath) {
-		t.Fatalf("remembered sessions = %v, want [%q]", remembered, botSessionTarget(recoveryPath))
-	}
-
-	if err := ctrl.Snapshot(); err != nil {
-		t.Fatalf("snapshot recovered session: %v", err)
-	}
-	matches, err := filepath.Glob(filepath.Join(dir, "*-recovery-*.jsonl"))
-	if err != nil {
-		t.Fatalf("glob recovery sessions: %v", err)
-	}
-	transcripts := matches[:0]
-	for _, path := range matches {
-		if !strings.HasSuffix(path, ".events.jsonl") && !strings.HasSuffix(path, ".conflicts.jsonl") && !strings.HasSuffix(path, ".turns.jsonl") {
-			transcripts = append(transcripts, path)
-		}
-	}
-	if len(transcripts) != 1 || transcripts[0] != recoveryPath {
-		t.Fatalf("recovery transcripts = %v, want only %q", transcripts, recoveryPath)
-	}
-	if sent := adapter.sentMessages(); len(sent) != 0 {
-		t.Fatalf("recovery maintenance leaked into IM messages: %+v", sent)
-	}
-}
-
 func TestGatewayRecoveryLeaseFailureKeepsOriginalGeneration(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	dir := t.TempDir()
@@ -997,7 +848,7 @@ func TestGatewayRecoveryLeaseFailureKeepsOriginalGeneration(t *testing.T) {
 			return nil
 		},
 	}, nil, logger)
-	msg := InboundMessage{Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
+	msg := InboundMessage{ConnectionID: string(PlatformWeixin), Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	key := BuildSessionKey(msg.Session())
 	leases := control.NewSessionLeaseKeeper()
 	if err := leases.Rebind(originalPath); err != nil {
@@ -1048,7 +899,7 @@ func TestGatewayLateRecoveryCannotReplaceCurrentSessionMapping(t *testing.T) {
 			return nil
 		},
 	}, nil, logger)
-	msg := InboundMessage{Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
+	msg := InboundMessage{ConnectionID: string(PlatformWeixin), Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	key := BuildSessionKey(msg.Session())
 	oldLeases := control.NewSessionLeaseKeeper()
 	if err := oldLeases.Rebind(oldPath); err != nil {
@@ -1087,7 +938,7 @@ func TestGatewayLateRecoveryAfterRetirementDoesNotReacquireLease(t *testing.T) {
 	originalPath := filepath.Join(dir, "original.jsonl")
 	recoveryPath := filepath.Join(dir, "recovery.jsonl")
 	gw := NewGateway(GatewayConfig{}, nil, logger)
-	msg := InboundMessage{Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
+	msg := InboundMessage{ConnectionID: string(PlatformWeixin), Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	key := BuildSessionKey(msg.Session())
 	leases := control.NewSessionLeaseKeeper()
 	if err := leases.Rebind(originalPath); err != nil {
@@ -1206,10 +1057,10 @@ func TestGatewayFullAccessCommandUpdatesCurrentSessionAndConnectionDefault(t *te
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	var persistedMode string
 	var persistedConnection string
-	gw := NewGateway(GatewayConfig{
-		ToolApprovalMode: "ask",
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
+		ToolApprovalMode: "read-only",
 		ConnectionChannels: map[string]ChannelConfig{
-			"feishu-lark": {ToolApprovalMode: "ask"},
+			"feishu-lark": {ToolApprovalMode: "read-only"},
 		},
 		OnToolApprovalModeChange: func(msg InboundMessage, mode string) error {
 			persistedConnection = msg.ConnectionID
@@ -1229,7 +1080,7 @@ func TestGatewayFullAccessCommandUpdatesCurrentSessionAndConnectionDefault(t *te
 	}
 	key := BuildSessionKey(msg.Session())
 	ctrl := control.New(control.Options{})
-	ctrl.SetToolApprovalMode(control.ToolApprovalAsk)
+	ctrl.SetToolApprovalMode(control.ToolApprovalReadOnly)
 	gw.controllers[key] = &sessionState{ctrl: ctrl}
 
 	gw.handleSlashCommand(context.Background(), adapter, key, msg)
@@ -1252,9 +1103,9 @@ func TestGatewayFullAccessCommandUpdatesCurrentSessionAndConnectionDefault(t *te
 func TestGatewayUpdateConnectionToolApprovalModeUpdatesHashedActiveSessions(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
-		ToolApprovalMode: "ask",
+		ToolApprovalMode: "read-only",
 		ConnectionChannels: map[string]ChannelConfig{
-			"feishu-lark": {ToolApprovalMode: "yolo"},
+			"feishu-lark": {ToolApprovalMode: "workspace-write"},
 		},
 	}, nil, logger)
 
@@ -1271,15 +1122,15 @@ func TestGatewayUpdateConnectionToolApprovalModeUpdatesHashedActiveSessions(t *t
 		t.Fatalf("test setup expected hashed key, got %q", key)
 	}
 	ctrl := control.New(control.Options{})
-	ctrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	ctrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	gw.controllers[key] = &sessionState{ctrl: ctrl, platform: msg.Platform, connectionID: msg.ConnectionID}
 
-	gw.UpdateConnectionToolApprovalMode("feishu-lark", control.ToolApprovalAsk)
+	gw.UpdateConnectionToolApprovalMode("feishu-lark", control.ToolApprovalReadOnly)
 
-	if got := ctrl.ToolApprovalMode(); got != control.ToolApprovalAsk {
+	if got := ctrl.ToolApprovalMode(); got != control.ToolApprovalReadOnly {
 		t.Fatalf("active session mode = %q, want ask", got)
 	}
-	if got := gw.cfg.ConnectionChannels["feishu-lark"].ToolApprovalMode; got != control.ToolApprovalAsk {
+	if got := gw.cfg.ConnectionChannels["feishu-lark"].ToolApprovalMode; got != control.ToolApprovalReadOnly {
 		t.Fatalf("connection default mode = %q, want ask", got)
 	}
 }
@@ -1287,10 +1138,10 @@ func TestGatewayUpdateConnectionToolApprovalModeUpdatesHashedActiveSessions(t *t
 func TestGatewayUpdateConnectionToolApprovalModeInheritsGatewayDefault(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
-		ToolApprovalMode: control.ToolApprovalAuto,
+		ToolApprovalMode: control.ToolApprovalWorkspaceWrite,
 		ConnectionChannels: map[string]ChannelConfig{
-			"feishu-lark":   {ToolApprovalMode: control.ToolApprovalYolo},
-			"feishu-feishu": {ToolApprovalMode: control.ToolApprovalYolo},
+			"feishu-lark":   {ToolApprovalMode: control.ToolApprovalDangerFullAccess},
+			"feishu-feishu": {ToolApprovalMode: control.ToolApprovalDangerFullAccess},
 		},
 	}, nil, logger)
 
@@ -1304,11 +1155,11 @@ func TestGatewayUpdateConnectionToolApprovalModeInheritsGatewayDefault(t *testin
 	}
 	larkKey := BuildSessionKey(larkMsg.Session())
 	larkCtrl := control.New(control.Options{})
-	larkCtrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	larkCtrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	gw.controllers[larkKey] = &sessionState{ctrl: larkCtrl, platform: larkMsg.Platform, connectionID: larkMsg.ConnectionID}
 
 	otherCtrl := control.New(control.Options{})
-	otherCtrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	otherCtrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	gw.controllers["other-hashed-key"] = &sessionState{ctrl: otherCtrl, platform: PlatformFeishu, connectionID: "feishu-feishu"}
 
 	gw.UpdateConnectionToolApprovalMode("feishu-lark", "")
@@ -1316,17 +1167,17 @@ func TestGatewayUpdateConnectionToolApprovalModeInheritsGatewayDefault(t *testin
 	if got := gw.cfg.ConnectionChannels["feishu-lark"].ToolApprovalMode; got != "" {
 		t.Fatalf("connection override = %q, want empty inherit", got)
 	}
-	if got := larkCtrl.ToolApprovalMode(); got != control.ToolApprovalAuto {
+	if got := larkCtrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("lark active session mode = %q, want inherited auto", got)
 	}
-	if got := otherCtrl.ToolApprovalMode(); got != control.ToolApprovalYolo {
+	if got := otherCtrl.ToolApprovalMode(); got != control.ToolApprovalDangerFullAccess {
 		t.Fatalf("other connection mode = %q, want unchanged yolo", got)
 	}
 }
 
 func TestGatewayApprovalReplyUnblocksWedgedTurn(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	binding := AdapterBinding{ID: "feishu", Platform: PlatformFeishu, Adapter: adapter}
 	msg := InboundMessage{
@@ -1380,7 +1231,7 @@ func TestGatewayApprovalReplyUnblocksWedgedTurn(t *testing.T) {
 
 func TestGatewayAskReplyUnblocksWedgedTurn(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	binding := AdapterBinding{ID: "feishu", Platform: PlatformFeishu, Adapter: adapter}
 	msg := InboundMessage{
@@ -1434,9 +1285,9 @@ func TestGatewayAskReplyUnblocksWedgedTurn(t *testing.T) {
 
 func TestGatewayModeCommandSupportsPermissionPresetsAndStatus(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 		ConnectionChannels: map[string]ChannelConfig{
-			"weixin-weixin": {ToolApprovalMode: "ask"},
+			"weixin-weixin": {ToolApprovalMode: "read-only"},
 		},
 	}, nil, logger)
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
@@ -1504,7 +1355,7 @@ func TestGatewayProjectCommandsListAndUseProjectOverride(t *testing.T) {
 	if err := os.MkdirAll(beta, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	gw := NewGateway(GatewayConfig{
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 		WorkspaceRoot: alpha,
 		ConnectionChannels: map[string]ChannelConfig{
 			"weixin-main": {WorkspaceRoot: beta},
@@ -1559,7 +1410,7 @@ func TestGatewaySessionsSearchAndAttachSessionOverride(t *testing.T) {
 	if err := agent.UpdateSessionMeta(sessionPath, "model-a", "needle attach conversation", 1, true); err != nil {
 		t.Fatalf("UpdateSessionMeta: %v", err)
 	}
-	gw := NewGateway(GatewayConfig{WorkspaceRoot: projectRoot}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}), WorkspaceRoot: projectRoot}, nil, logger)
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	msg := InboundMessage{
 		Platform:     PlatformFeishu,
@@ -1603,7 +1454,7 @@ func TestGatewayRuntimeOverridePreservesControllersWithActiveWork(t *testing.T) 
 		t.Run(tc.name, func(t *testing.T) {
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			gw := NewGateway(GatewayConfig{}, nil, logger)
-			msg := InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
+			msg := InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 			key := BuildSessionKey(msg.Session())
 			ctrl := &runtimeStatusBotController{status: tc.status, workspaceRoot: "/old"}
 			state := &sessionState{ctrl: ctrl, workspaceRoot: "/old"}
@@ -1633,7 +1484,7 @@ func TestGatewayDefersProfileMismatchWhileBackgroundWorkIsActive(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	newRoot := t.TempDir()
 	gw := NewGateway(GatewayConfig{WorkspaceRoot: newRoot}, nil, logger)
-	msg := InboundMessage{Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
+	msg := InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	key := BuildSessionKey(msg.Session())
 	ctrl := &runtimeStatusBotController{
 		status: control.RuntimeStatus{BackgroundJobs: 1}, workspaceRoot: t.TempDir(),
@@ -1717,14 +1568,10 @@ func TestSearchBotProjectsFallbackHonorsContextCancel(t *testing.T) {
 func TestGatewayAdminRoleRequiredForProjectIndexCommands(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Users:   map[Platform][]string{PlatformWeixin: []string{"user"}},
-			Admins:  map[Platform][]string{PlatformWeixin: []string{"admin"}},
-		},
+		ConnectionAccess: map[string]AccessConfig{"weixin": {Enabled: true, Users: []string{"user"}, Admins: []string{"admin"}}},
 	}, nil, logger)
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
-	msg := InboundMessage{
+	msg := InboundMessage{ConnectionID: string(PlatformWeixin),
 		Platform: PlatformWeixin,
 		ChatType: ChatDM,
 		ChatID:   "chat",
@@ -1743,7 +1590,7 @@ func TestGatewayAdminRoleRequiredForProjectIndexCommands(t *testing.T) {
 
 func TestGatewayDefaultQueueSteersActiveTurn(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := &fakeReactionAdapter{fakeAdapter: newFakeAdapter(PlatformFeishu, "fake-feishu")}
 	msg := InboundMessage{
 		Platform:     PlatformFeishu,
@@ -1780,7 +1627,7 @@ func TestGatewayDefaultQueueSteersActiveTurn(t *testing.T) {
 
 func TestGatewayRejectedSteerFallsBackToFollowupQueue(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := &fakeReactionAdapter{fakeAdapter: newFakeAdapter(PlatformFeishu, "fake-feishu")}
 	msg := InboundMessage{
 		Platform:     PlatformFeishu,
@@ -1820,8 +1667,8 @@ func TestGatewayDefaultQueueSteersMediaOnlyActiveTurn(t *testing.T) {
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
-		Allowlist:     AllowlistConfig{AllowAll: true},
-		WorkspaceRoot: t.TempDir(),
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
+		WorkspaceRoot:    t.TempDir(),
 	}, nil, logger)
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	msg := InboundMessage{
@@ -1850,7 +1697,7 @@ func TestGatewayDefaultQueueSteersMediaOnlyActiveTurn(t *testing.T) {
 
 func TestGatewayQueueFollowupKeepsMessagesForLaterTurns(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
 	msg := InboundMessage{
 		Platform:     PlatformWeixin,
@@ -1891,7 +1738,7 @@ func TestGatewayQueueFollowupKeepsMessagesForLaterTurns(t *testing.T) {
 
 func TestGatewayQueueInterruptCancelsAndKeepsNewestMessage(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, logger)
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, logger)
 	adapter := newFakeAdapter(PlatformQQ, "fake-qq")
 	msg := InboundMessage{
 		Platform:     PlatformQQ,
@@ -1935,8 +1782,8 @@ func TestGatewayUnknownDMGetsPairingCode(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
-		PairingEnabled: true,
-		Allowlist:      AllowlistConfig{Enabled: true, Users: map[Platform][]string{PlatformFeishu: nil}},
+		PairingEnabled:   true,
+		ConnectionAccess: map[string]AccessConfig{string(PlatformFeishu): {Enabled: true, Users: nil}},
 	}, nil, logger)
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	msg := InboundMessage{
@@ -1966,14 +1813,10 @@ func TestGatewayUnknownDMGetsPairingCode(t *testing.T) {
 func TestGatewayAdminRoleRequiredForFullAccessWhenConfigured(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
-		Allowlist: AllowlistConfig{
-			Enabled: true,
-			Users:   map[Platform][]string{PlatformWeixin: []string{"user"}},
-			Admins:  map[Platform][]string{PlatformWeixin: []string{"admin"}},
-		},
+		ConnectionAccess: map[string]AccessConfig{"weixin": {Enabled: true, Users: []string{"user"}, Admins: []string{"admin"}}},
 	}, nil, logger)
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
-	msg := InboundMessage{
+	msg := InboundMessage{ConnectionID: string(PlatformWeixin),
 		Platform: PlatformWeixin,
 		ChatType: ChatDM,
 		ChatID:   "chat",
@@ -1994,7 +1837,7 @@ func TestGatewayIgnoresOutboundEchoMessageID(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gw := NewGateway(GatewayConfig{
 		IgnoreSelfMessages: true,
-		Allowlist:          AllowlistConfig{AllowAll: true},
+		ConnectionAccess:   testConnectionAccess(AccessConfig{AllowAll: true}),
 	}, nil, logger)
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	msg := InboundMessage{
@@ -2024,7 +1867,7 @@ func TestGatewayIgnoresConfiguredSelfUserID(t *testing.T) {
 	gw := NewGateway(GatewayConfig{
 		IgnoreSelfMessages: true,
 		SelfUserIDs:        map[Platform][]string{PlatformWeixin: []string{"bot-user"}},
-		Allowlist:          AllowlistConfig{AllowAll: true},
+		ConnectionAccess:   testConnectionAccess(AccessConfig{AllowAll: true}),
 	}, nil, logger)
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
 	msg := InboundMessage{
@@ -2048,8 +1891,8 @@ func TestGatewayAdapterHealthTracksSend(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	gw := NewGatewayWithAdapterBindings(GatewayConfig{
-		Enabled:   map[Platform]bool{PlatformFeishu: true},
-		Allowlist: AllowlistConfig{AllowAll: true},
+		Enabled:          map[Platform]bool{PlatformFeishu: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 	}, []AdapterBinding{{ID: "feishu-lark", Platform: PlatformFeishu, Domain: "lark", Adapter: adapter}}, logger)
 	if err := gw.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -2073,11 +1916,11 @@ func TestGatewayControlServerStatusAndSend(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	adapter := newFakeAdapter(PlatformFeishu, "fake-feishu")
 	gw := NewGatewayWithAdapterBindings(GatewayConfig{
-		Enabled:        map[Platform]bool{PlatformFeishu: true},
-		Allowlist:      AllowlistConfig{AllowAll: true},
-		ControlEnabled: true,
-		ControlAddr:    "127.0.0.1:0",
-		ControlToken:   "secret",
+		Enabled:          map[Platform]bool{PlatformFeishu: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
+		ControlEnabled:   true,
+		ControlAddr:      "127.0.0.1:0",
+		ControlToken:     "secret",
 	}, []AdapterBinding{{ID: "feishu-lark", Platform: PlatformFeishu, Domain: "lark", Adapter: adapter}}, logger)
 	if err := gw.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -2256,7 +2099,7 @@ func TestGatewaySessionOptionsUseChannelOverride(t *testing.T) {
 		},
 	}, nil, logger)
 
-	model, root, mode := gw.sessionOptionsForMessage(InboundMessage{Platform: PlatformFeishu})
+	model, root, mode := gw.sessionOptionsForMessage(InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu})
 	if model != "feishu-model" || root != "/feishu" {
 		t.Fatalf("feishu options = %q,%q; want channel override", model, root)
 	}
@@ -2264,7 +2107,7 @@ func TestGatewaySessionOptionsUseChannelOverride(t *testing.T) {
 		t.Fatalf("feishu tool approval mode = %q, want workspace-write", mode)
 	}
 
-	model, root, mode = gw.sessionOptionsForMessage(InboundMessage{Platform: PlatformWeixin})
+	model, root, mode = gw.sessionOptionsForMessage(InboundMessage{ConnectionID: string(PlatformWeixin), Platform: PlatformWeixin})
 	if model != "global-model" || root != "/weixin" {
 		t.Fatalf("weixin options = %q,%q; want global model and channel root", model, root)
 	}
@@ -2272,7 +2115,7 @@ func TestGatewaySessionOptionsUseChannelOverride(t *testing.T) {
 		t.Fatalf("weixin tool approval mode = %q, want workspace-write", mode)
 	}
 
-	model, root, mode = gw.sessionOptionsForMessage(InboundMessage{Platform: PlatformQQ})
+	model, root, mode = gw.sessionOptionsForMessage(InboundMessage{ConnectionID: string(PlatformQQ), Platform: PlatformQQ})
 	if model != "global-model" || root != "/global" {
 		t.Fatalf("qq options = %q,%q; want global defaults", model, root)
 	}
@@ -2405,15 +2248,15 @@ func TestGatewaySessionOptionsPreferRemoteRouteOverride(t *testing.T) {
 	gw := NewGateway(GatewayConfig{
 		Model:            "global-model",
 		WorkspaceRoot:    "/global",
-		ToolApprovalMode: "ask",
+		ToolApprovalMode: "read-only",
 		ConnectionChannels: map[string]ChannelConfig{
-			"feishu-lark": {Model: "lark-model", WorkspaceRoot: "/lark", ToolApprovalMode: "auto"},
+			"feishu-lark": {Model: "lark-model", WorkspaceRoot: "/lark", ToolApprovalMode: "workspace-write"},
 		},
 		Routes: []RouteConfig{{
 			ConnectionID: "feishu-lark",
 			ChatType:     ChatGroup,
 			ChatID:       "group-1",
-			Channel:      ChannelConfig{Model: "route-model", WorkspaceRoot: "/route", ToolApprovalMode: "yolo"},
+			Channel:      ChannelConfig{Model: "route-model", WorkspaceRoot: "/route", ToolApprovalMode: "workspace-write"},
 		}},
 	}, nil, logger)
 
@@ -2702,5 +2545,23 @@ func TestHandleModelCommandRejectsUnresolvableModel(t *testing.T) {
 	}
 	if m := overrideModel(); m != "deepseek-v4-flash" {
 		t.Fatalf("invalid /model mutated override to %q, want unchanged", m)
+	}
+}
+
+func testConnectionAccess(access AccessConfig) map[string]AccessConfig {
+	return map[string]AccessConfig{"qq": access, "feishu": access, "weixin": access, "dingtalk": access, "feishu-main": access, "feishu-lark": access, "feishu-feishu": access, "weixin-main": access, "weixin-weixin": access}
+}
+
+func TestGatewayRequiresMatchingConnectionAccess(t *testing.T) {
+	gw := NewGateway(GatewayConfig{ConnectionAccess: map[string]AccessConfig{"first": {AllowAll: true}}}, nil, discardLogger())
+	for _, id := range []string{"", "second"} {
+		msg := InboundMessage{Platform: PlatformFeishu, ConnectionID: id, UserID: "admin", ChatType: ChatDM}
+		if gw.checkAllowlist(PlatformFeishu, msg) || gw.checkCommandRole(PlatformFeishu, msg, "admin") {
+			t.Fatalf("connection %q inherited another connection policy", id)
+		}
+	}
+	msg := InboundMessage{Platform: PlatformFeishu, ConnectionID: "first", UserID: "admin", ChatType: ChatDM}
+	if !gw.checkAllowlist(PlatformFeishu, msg) {
+		t.Fatal("current connection policy rejected")
 	}
 }

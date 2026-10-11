@@ -9,7 +9,6 @@ export function projectSessionIdentity(node: ProjectNode): string {
     if (remote.sessionId) return sessionIdentityBaseKey({ session: { hostId: remote.hostId, sessionId: remote.sessionId } });
     return `source\u0000${remote.hostId}\u0000${remote.workspace}\u0000${remote.path || remote.name}`;
   }
-  if (node.source) return `source\u0000${node.source.hostId || "local"}\u0000${node.source.sourceKey || `${node.source.path}\u0000${node.source.headId || ""}`}`;
   if (node.sessionPath) return `path\u0000${node.sessionPath.trim()}`;
   if (node.tabId) return `tab\u0000local\u0000${node.tabId}`;
   return `topic\u0000${node.topicId || node.key}`;

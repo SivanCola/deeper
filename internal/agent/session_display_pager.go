@@ -24,7 +24,6 @@ type DisplayPager struct {
 	Header        SessionDisplayIndex
 	Built         bool
 	DAG           bool
-	SchemaOne     bool
 	ctx           context.Context
 	source        string
 	sourceInfo    os.FileInfo
@@ -93,13 +92,13 @@ func openDisplayPager(ctx context.Context, source, cachePath, head string, force
 		return nil, err
 	}
 	fingerprint, plain = observed.fingerprint, observed.plain
-	eventInfo, eventVersion, dag, schemaOne := observed.eventInfo, observed.eventVersion, observed.dag, observed.schemaOne
+	eventInfo, eventVersion, dag := observed.eventInfo, observed.eventVersion, observed.dag
 	built := storedErr != nil || stored != fingerprint
 	if built {
 		_ = handle.DB.Close()
 		err = observed.rebuild(ctx, opts, source, indexPath, head, info.Size())
 		if err != nil {
-			if !dag && !schemaOne && !plain && ctx.Err() == nil {
+			if !dag && !plain && ctx.Err() == nil {
 				return openDisplayPager(ctx, source, cachePath, head, true)
 			}
 			return nil, err
@@ -109,7 +108,7 @@ func openDisplayPager(ctx context.Context, source, cachePath, head string, force
 			return nil, err
 		}
 	}
-	p := &DisplayPager{DB: handle.DB, ctx: ctx, source: source, sourceInfo: info, eventInfo: eventInfo, sourceVersion: sourceVersion, eventVersion: eventVersion, DAG: dag, SchemaOne: schemaOne, Built: built && (plain || dag || schemaOne)}
+	p := &DisplayPager{DB: handle.DB, ctx: ctx, source: source, sourceInfo: info, eventInfo: eventInfo, sourceVersion: sourceVersion, eventVersion: eventVersion, DAG: dag, Built: built && (plain || dag)}
 	matching, err := p.loadMatchingHeader(ctx, info, identity, known, head)
 	if err != nil {
 		p.Close()
@@ -117,7 +116,7 @@ func openDisplayPager(ctx context.Context, source, cachePath, head string, force
 	}
 	if !matching {
 		p.Close()
-		if !dag && !schemaOne && !plain {
+		if !dag && !plain {
 			return openDisplayPager(ctx, source, cachePath, head, true)
 		}
 		return nil, ErrDisplaySourceChanged

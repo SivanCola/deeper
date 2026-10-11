@@ -337,7 +337,7 @@ func TestApplyLocalSkillFileCopiesToProject(t *testing.T) {
 	}
 }
 
-func TestApplyLocalSkillFileDoesNotShadowFlatCompatInstall(t *testing.T) {
+func TestApplyLocalSkillFileIgnoresHistoricalFlatInstall(t *testing.T) {
 	project := t.TempDir()
 	home := t.TempDir()
 	existing := filepath.Join(project, ".deepzora", "skills", "beta.md")
@@ -353,11 +353,12 @@ func TestApplyLocalSkillFileDoesNotShadowFlatCompatInstall(t *testing.T) {
 		"scope":  "project",
 	})
 
-	if resp.OK {
-		t.Fatalf("canonical install should not shadow existing flat skill, got %+v", resp)
+	if !resp.OK {
+		t.Fatalf("historical flat file blocked current install: %+v", resp)
 	}
-	if !strings.Contains(resp.Actions[0].Error, "already exists") {
-		t.Fatalf("error = %q, want duplicate guard", resp.Actions[0].Error)
+	old, err := os.ReadFile(existing)
+	if err != nil || !strings.HasSuffix(string(old), "old") {
+		t.Fatalf("historical source was changed: %s, %v", old, err)
 	}
 }
 
@@ -667,46 +668,6 @@ func TestPlanProjectMCPJSONDefaultsProject(t *testing.T) {
 	}
 }
 
-func TestPlanMCPJSONUnknownTierProducesWarning(t *testing.T) {
-	entries, warnings, err := parseMCPJSON([]byte(`{
-  "mcpServers": {
-    "x": { "command": "node", "tier": "absurd" }
-  }
-}`))
-	if err != nil {
-		t.Fatalf("parseMCPJSON: %v", err)
-	}
-	if len(entries) != 1 || entries[0].Tier != "background" {
-		t.Fatalf("entries = %+v", entries)
-	}
-	found := false
-	for _, w := range warnings {
-		if strings.Contains(w, "absurd") {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("expected warning about unknown tier, got %v", warnings)
-	}
-}
-
-func TestPlanMCPJSONDefaultTierIsBackground(t *testing.T) {
-	entries, warnings, err := parseMCPJSON([]byte(`{
-  "mcpServers": {
-    "x": { "command": "node" }
-  }
-}`))
-	if err != nil {
-		t.Fatalf("parseMCPJSON: %v", err)
-	}
-	if len(warnings) != 0 {
-		t.Fatalf("warnings = %v, want none", warnings)
-	}
-	if len(entries) != 1 || entries[0].Tier != "background" {
-		t.Fatalf("entries = %+v, want default tier background", entries)
-	}
-}
-
 func TestPlanMCPJSONIgnoresRetiredApprovalPolicy(t *testing.T) {
 	entries, warnings, err := parseMCPJSON([]byte(`{
   "mcpServers": {
@@ -728,15 +689,6 @@ func TestPlanMCPJSONIgnoresRetiredApprovalPolicy(t *testing.T) {
 	got := entries[0]
 	if got.StartupTimeoutSeconds != 30 || got.CallTimeoutSeconds != 45 || got.ToolTimeoutSeconds["wipe"] != 120 {
 		t.Fatalf("MCP timeout config was dropped: %+v", got)
-	}
-}
-
-func TestNormalizeTierDefaultBackgroundUnknownBackground(t *testing.T) {
-	if got, ok := normalizeTier(""); got != "background" || !ok {
-		t.Fatalf("normalizeTier(empty) = %q, %v; want background, true", got, ok)
-	}
-	if got, ok := normalizeTier("absurd"); got != "background" || ok {
-		t.Fatalf("normalizeTier(absurd) = %q, %v; want background, false", got, ok)
 	}
 }
 
@@ -1826,13 +1778,6 @@ func TestLinkRiskIsMedium(t *testing.T) {
 	}
 	if level, _ := skillActionRisk("copy", skillCandidate{SourcePath: "x"}); level != RiskLow {
 		t.Errorf("copy mode should be RiskLow, got %q", level)
-	}
-}
-
-func TestEagerTierEscalatesRisk(t *testing.T) {
-	level, _ := mcpActionRisk(config.PluginEntry{Name: "x", Tier: "eager", URL: "http://x"}, nil)
-	if level != RiskHigh {
-		t.Errorf("eager tier should escalate to RiskHigh, got %q", level)
 	}
 }
 

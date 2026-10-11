@@ -10,7 +10,8 @@ export function mockProviderTemplate(p: Pick<ProviderView, "name" | "kind" | "ba
     modelsUrl: p.modelsUrl ?? "",
     models: p.models,
     visionModels: p.visionModels ?? [],
-    visionModelsConfigured: Boolean(p.visionModelsConfigured ?? ((p.visionModels ?? []).length > 0)),
+
+    modelCapabilities: p.modelCapabilities ?? p.models.map((model) => ({model,inputModalities: p.visionModels?.includes(model) ? ["text","image"] : ["text"],state:p.visionModels?.includes(model) ? "supported" : "unsupported",source:"preset"})),
     visionCapability: p.visionCapability,
     default: p.default,
     apiKeyEnv: p.apiKeyEnv,

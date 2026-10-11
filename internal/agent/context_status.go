@@ -14,9 +14,7 @@ type ContextMaintenanceSnapshot struct {
 	ProjectedTokens   int
 	SummaryTokens     int
 	LastSavedTokens   int
-	SnipTrigger       int
 	FoldTrigger       int
-	ForceTrigger      int
 	TriggerTokens     int
 	CheckpointState   string
 	HardInputCeiling  int
@@ -86,7 +84,6 @@ func (a *Agent) ContextMaintenanceSnapshot() ContextMaintenanceSnapshot {
 		}
 	}
 	snapshot.Headroom = max(0, snapshot.HardInputCeiling-snapshot.ProjectedTokens)
-	currentHash := a.contextMaintenanceInputHash(visible)
 	if state.LastReceipt != nil {
 		receipt := *state.LastReceipt
 		snapshot.LastReceipt = &receipt
@@ -97,10 +94,6 @@ func (a *Agent) ContextMaintenanceSnapshot() ContextMaintenanceSnapshot {
 		if receipt.Status == "blocked" || receipt.Status == "failed" {
 			snapshot.Blocked = true
 		}
-	}
-	// Legacy sidecars may only have top-level BlockedInputHash.
-	if !snapshot.Blocked && state.BlockedInputHash != "" && state.BlockedInputHash == currentHash {
-		snapshot.Blocked = true
 	}
 	if budget := a.lastAdmission(); budget.WindowTokens > 0 || budget.PromptTokens > 0 || budget.LastRecovery != "" && budget.LastRecovery != contextRecoveryNone {
 		snapshot.ContextBudget = &ContextBudgetSnapshot{

@@ -1,14 +1,12 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRuntimeStateSync } from "./lib/useRuntimeState";
 import { useCommittedCommand } from "./lib/useCommittedCommand";
-import { app, onLegacyEmptySessionCleanupChanged, openExternal } from "./lib/bridge";
-import type { LegacyEmptySessionCleanupStatus } from "./generated/desktopContract.generated";
+import { openExternal } from "./lib/bridge";
 import { useT, useI18n } from "./lib/i18n";
 import { useToast } from "./lib/toast";
 import { useGoalActionHandler } from "./lib/goalAction";
 import { useActiveRemoteSession } from "./lib/useRemoteSession";
 import { useWarmTerminalPanel } from "./lib/useWarmTerminalPanel";
-import { setReasoningDisplayPending } from "./lib/reasoningDisplayPreference";
 import type { ComposerProfile, UserPlanModeIntents } from "./lib/composerProfile";
 import type { TabMeta } from "./lib/types";
 import type { HistoryViewState } from "./app-runtime/historyViewProjection";
@@ -41,7 +39,6 @@ function AppRuntimeViewFallback() {
 
 // Hold reasoning UI until the authoritative desktop startup settings arrive;
 // this prevents a hidden preference from flashing content during first paint.
-setReasoningDisplayPending();
 
 /**
  * Composition root: owns the controller adapter, the session identity/fence,
@@ -158,33 +155,6 @@ export function AppRuntime() {
     },
     session,
   });
-  const openCleanupTrash = useCommittedCommand(() => navigation.historyCommands.openTrash());
-  const cleanupNoticeBatchRef = useRef("");
-  useEffect(() => {
-    let live = true;
-    const showCleanupNotice = (status: LegacyEmptySessionCleanupStatus) => {
-      if (!live || status.removed <= 0 || !status.batchId) return;
-      const storageKey = `deepzora.legacy-empty-session-cleanup.notice.${status.batchId}`;
-      let shown = false;
-      try {
-        shown = window.localStorage.getItem(storageKey) === "shown";
-      } catch {
-        // Hardened webviews may disable storage. The in-memory fence still
-        // prevents duplicate notices for this renderer lifetime.
-      }
-      if (cleanupNoticeBatchRef.current === status.batchId || shown) return;
-      cleanupNoticeBatchRef.current = status.batchId;
-      try { window.localStorage.setItem(storageKey, "shown"); } catch { /* best effort */ }
-      showToast(t("history.legacyCleanupComplete", { n: status.removed }), "info", {
-        actionLabel: t("history.viewTrash"),
-        onAction: () => void openCleanupTrash(),
-        durationMs: 8000,
-      });
-    };
-    const unsubscribe = onLegacyEmptySessionCleanupChanged(showCleanupNotice);
-    void app.GetLegacyEmptySessionCleanupStatus().then(showCleanupNotice).catch(() => {});
-    return () => { live = false; unsubscribe(); };
-  }, [openCleanupTrash, showToast, t]);
 
   return (
     <Suspense fallback={<AppRuntimeViewFallback />}>

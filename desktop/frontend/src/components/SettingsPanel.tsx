@@ -16,7 +16,7 @@ import { catalogForPreset } from "../lib/providerCatalog";
 import { ProviderCatalogPicker, type CatalogChoice } from "./ProviderCatalogPicker";
 import { Eye, EyeOff, Files } from "lucide-react";
 import { lazy, memo, Suspense, startTransition, useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
-import { ArrowRight, Check, CheckCircle2, ChevronDown, ChevronUp, CircleDollarSign, Clipboard, ExternalLink, KeyRound, Languages, ListChecks, Loader2, Monitor, MoreHorizontal, PanelBottom, Play, Power, QrCode, RefreshCw, Send, SlidersHorizontal, Trash2, Volume2 } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, ChevronUp, CircleDollarSign, Clipboard, ExternalLink, KeyRound, Languages, ListChecks, Loader2, Monitor, MoreHorizontal, PanelBottom, Play, Power, QrCode, RefreshCw, Send, SlidersHorizontal, Trash2, Volume2 } from "lucide-react";
 import { asArray } from "../lib/array";
 import { ShellInterpreterFields } from "./SettingsShellSupport";
 import { RuleList } from "./SettingsRuleList";
@@ -26,7 +26,7 @@ import { botAccessEntryCount, botAccessReady, botConnectionCredentialSummary, bo
 import { app, COMPACT_RATIO_MAX_PERCENT, COMPACT_RATIO_MIN_PERCENT, onRuntimeRebuilt, openExternal } from "../lib/bridge";
 import { normalizeLangPref, useI18n, type DictKey, type LangPref } from "../lib/i18n";
 import { createLatestRequestGate, mergedFetchedProviderModels, mergeProviderModelContextWindows, providerApiKeyEnvForSave, providerDefaultModel, providerIsConfigured, providerModelCandidates, providerModelContextWindowDrafts, providerRequiresKey } from "../lib/providerModels";
-import { cachedFetchProviderModelCatalog, cachedFetchProviderModels, invalidateProviderCacheByAPIKeyEnv, shouldSkipAutoRefresh } from "../lib/providerModelCache";
+import { cachedFetchProviderModelCatalog, invalidateProviderCacheByAPIKeyEnv, shouldSkipAutoRefresh } from "../lib/providerModelCache";
 import { providerBaseURLForSave, providerEndpointMismatchDetail, providerRequestURLForCatalogFormatChange, providerRequestURLFromConfig, trimmedBaseURL } from "../lib/providerEndpoint";
 import { providerModelVisionCapability, providerVisionModelsForView } from "../lib/providerVisionCapability";
 import { useUpdater } from "../lib/useUpdater";
@@ -35,7 +35,7 @@ import {
   getTheme,
   getThemeStyle,
   normalizeThemePreference,
-  normalizeThemeStyleForTheme,
+  normalizeThemeStyle,
   type Theme,
   type ThemeStyle,
 } from "../lib/theme";
@@ -83,7 +83,7 @@ import {
   shortcutDefinitions,
   type ShortcutAction,
 } from "../lib/keyboardShortcuts";
-import type { BotAccessView, BotAllowlistView, BotConnectionDiagnostic, BotConnectionView, BotInstallStartResult, BotRouteView, BotSettingsView, HookConfigView, HooksSettingsView, NetworkView, ProviderModelCapabilityView, ProviderModelCatalogUpdate, ProviderPresetView, ProviderView, SettingsTab, SettingsView } from "../lib/types";
+import type { BotAccessView, BotConnectionDiagnostic, BotConnectionView, BotInstallStartResult, BotRouteView, BotSettingsView, HookConfigView, HooksSettingsView, NetworkView, ProviderModelCapabilityView, ProviderModelCatalogUpdate, ProviderPresetView, ProviderView, SettingsTab, SettingsView } from "../lib/types";
 import { AppearanceOverview } from "./AppearanceOverview";
 import { applyConfiguredBaseAppearance, setBaseAppearance } from "../lib/themePack";
 import { InlineConfirmButton } from "./InlineConfirmButton";
@@ -150,7 +150,7 @@ export function SettingsPanel({
   const settingsLoadSeq = useRef(0);
   const settingsApplySeq = useRef(0);
   const [theme, setThemeState] = useState<Theme>(getTheme());
-  const [themeStyle, setThemeStyleState] = useState<ThemeStyle>(() => getThemeStyle(getTheme()));
+  const [themeStyle, setThemeStyleState] = useState<ThemeStyle>(() => getThemeStyle());
   const [terminalTheme, setTerminalThemeState] = useState<TerminalThemePreference>(getTerminalThemePreference());
   const [conversationWidth, setConversationWidth] = useState<ConversationWidth>(() => getCachedConversationWidth());
   const [textSize, setTextSizeState] = useState<TextSize>(getTextSize());
@@ -240,7 +240,7 @@ export function SettingsPanel({
   useEffect(() => {
     if (!s) return;
     const nextTheme = normalizeThemePreference(s.desktopTheme);
-    const nextStyle = normalizeThemeStyleForTheme(s.desktopThemeStyle, nextTheme);
+    const nextStyle = normalizeThemeStyle(s.desktopThemeStyle);
     setThemeState(nextTheme);
     setThemeStyleState(nextStyle);
     if (!terminalThemeSavePending.current) {
@@ -891,7 +891,6 @@ const LANGUAGE_PREFS: LangPref[] = ["", "zh", "en"];
 const TOOL_APPROVAL_MODES = ["read-only", "workspace-write", "danger-full-access"] as const;
 const BOT_TOOL_APPROVAL_MODES = ["", "read-only", "workspace-write", "danger-full-access"] as const;
 const BOT_QUEUE_MODES = ["steer", "followup", "collect", "interrupt"] as const;
-const BOT_QUEUE_DROPS = ["summarize", "old", "new"] as const;
 const BOT_ROUTE_CHAT_TYPES = ["", "dm", "group", "guild", "direct", "thread"] as const;
 
 type ProxyMode = (typeof PROXY_MODES)[number];
@@ -1069,10 +1068,6 @@ function normalizeBotQueueMode(mode: unknown): string {
   return BOT_QUEUE_MODES.includes(raw as any) ? raw : "steer";
 }
 
-function normalizeBotQueueDrop(mode: unknown): string {
-  const raw = String(mode ?? "").trim().toLowerCase();
-  return BOT_QUEUE_DROPS.includes(raw as any) ? raw : "summarize";
-}
 
 function normalizeBotRouteChatType(value: unknown): string {
   const raw = String(value ?? "").trim().toLowerCase();
@@ -1130,7 +1125,6 @@ function defaultBotSettings(): BotSettingsView {
     debounceMs: 1500,
     queueMode: "steer",
     queueCap: 20,
-    queueDrop: "summarize",
     ignoreSelfMessages: true,
     selfUserIds: {
       qq: [],
@@ -1149,26 +1143,6 @@ function defaultBotSettings(): BotSettingsView {
       maxPendingPerPlatform: 3,
     },
     routes: [],
-    allowlist: {
-      enabled: true,
-      allowAll: false,
-      qqUsers: [],
-      feishuUsers: [],
-      weixinUsers: [],
-      qqApprovers: [],
-      feishuApprovers: [],
-      weixinApprovers: [],
-      qqAdmins: [],
-      feishuAdmins: [],
-      weixinAdmins: [],
-      qqGroups: [],
-      feishuGroups: [],
-      weixinGroups: [],
-      dingtalkUsers: [],
-      dingtalkApprovers: [],
-      dingtalkAdmins: [],
-      dingtalkGroups: [],
-    },
     qq: { enabled: false, appId: "", appSecretEnv: "QQ_BOT_APP_SECRET", secretSet: false, sandbox: false, model: "", toolApprovalMode: "workspace-write", workspaceRoot: "", access: defaultBotAccess() },
     feishu: {
       enabled: false,
@@ -1231,7 +1205,6 @@ function normalizeBotAccess(raw: any, fallback: BotAccessView = defaultBotAccess
 
 function normalizeBotSettings(bot: BotSettingsView | null | undefined): BotSettingsView {
   const fallback = defaultBotSettings();
-  const allowlist = bot?.allowlist ?? fallback.allowlist;
   const selfUserIds = bot?.selfUserIds ?? fallback.selfUserIds;
   const control = bot?.control ?? fallback.control;
   const pairing = bot?.pairing ?? fallback.pairing;
@@ -1244,7 +1217,6 @@ function normalizeBotSettings(bot: BotSettingsView | null | undefined): BotSetti
     debounceMs: Number(bot?.debounceMs) || fallback.debounceMs,
     queueMode: normalizeBotQueueMode(bot?.queueMode),
     queueCap: Math.max(0, Math.floor(Number(bot?.queueCap ?? fallback.queueCap) || 0)),
-    queueDrop: normalizeBotQueueDrop(bot?.queueDrop),
     ignoreSelfMessages: bot?.ignoreSelfMessages !== false,
     selfUserIds: {
       qq: asArray(selfUserIds.qq),
@@ -1263,26 +1235,6 @@ function normalizeBotSettings(bot: BotSettingsView | null | undefined): BotSetti
       maxPendingPerPlatform: Math.max(0, Math.floor(Number(pairing.maxPendingPerPlatform ?? fallback.pairing.maxPendingPerPlatform) || 0)),
     },
     routes: asArray(bot?.routes).map(normalizeBotRoute).filter(botRouteHasValue),
-    allowlist: {
-      ...fallback.allowlist,
-      ...allowlist,
-      qqUsers: asArray(allowlist.qqUsers),
-      feishuUsers: asArray(allowlist.feishuUsers),
-      weixinUsers: asArray(allowlist.weixinUsers),
-      qqApprovers: asArray(allowlist.qqApprovers),
-      feishuApprovers: asArray(allowlist.feishuApprovers),
-      weixinApprovers: asArray(allowlist.weixinApprovers),
-      qqAdmins: asArray(allowlist.qqAdmins),
-      feishuAdmins: asArray(allowlist.feishuAdmins),
-      weixinAdmins: asArray(allowlist.weixinAdmins),
-      qqGroups: asArray(allowlist.qqGroups),
-      feishuGroups: asArray(allowlist.feishuGroups),
-      weixinGroups: asArray(allowlist.weixinGroups),
-      dingtalkUsers: asArray(allowlist.dingtalkUsers),
-      dingtalkApprovers: asArray(allowlist.dingtalkApprovers),
-      dingtalkAdmins: asArray(allowlist.dingtalkAdmins),
-      dingtalkGroups: asArray(allowlist.dingtalkGroups),
-    },
     qq: {
       ...fallback.qq,
       ...bot?.qq,
@@ -1346,9 +1298,9 @@ function normalizeBotConnection(raw: any) {
 function normalizeBotToolApprovalMode(mode: unknown, allowEmpty = false): "read-only" | "workspace-write" | "danger-full-access" | "" {
   const raw = String(mode ?? "").trim().toLowerCase();
   if (raw === "") return allowEmpty ? "" : "workspace-write";
-  if (raw === "read-only" || raw === "ask") return "read-only";
-  if (raw === "workspace-write" || raw === "auto" || raw === "yolo") return "workspace-write";
-  if (raw === "danger-full-access" || raw === "full" || raw === "full-access" || raw === "bypass") return "danger-full-access";
+  if (raw === "read-only") return "read-only";
+  if (raw === "workspace-write") return "workspace-write";
+  if (raw === "danger-full-access") return "danger-full-access";
   // A non-empty unknown value is an incompatible permission contract. Keep it
   // fail-closed even for per-connection settings that otherwise allow inherit.
   return "read-only";
@@ -1405,12 +1357,11 @@ export function normalizeProviderView(p: ProviderView): ProviderView {
     baseUrl: String(p.baseUrl ?? ""),
     builtIn: Boolean(p.builtIn),
     added: Boolean(p.added),
-    chatUrl: p.chatUrl ?? "",
     requestUrl: p.requestUrl ?? "",
     models: asArray(p.models),
     visionModels,
     modelCapabilities,
-    visionModelsConfigured: Boolean(p.visionModelsConfigured ?? visionModels.length > 0),
+
     visionCapability: p.visionCapability === "unsupported" || p.visionCapability === "configurable"
       ? p.visionCapability
       : undefined,
@@ -1427,7 +1378,6 @@ export function normalizeProviderView(p: ProviderView): ProviderView {
       : undefined,
     supportedEfforts: asArray(p.supportedEfforts),
     modelOverrides: asArray(p.modelOverrides),
-    recommendedUpgradeAvailable: Boolean(p.recommendedUpgradeAvailable),
     requiresKey,
     configured: providerIsConfigured({ ...p, requiresKey }),
     keySource: p.keySource ?? "",
@@ -1514,18 +1464,15 @@ function normalizeSettingsView(view: SettingsView | null | undefined): SettingsV
     },
     agent,
     bot: normalizeBotSettings(view.bot),
-    autoPlan: "off",
     defaultToolApprovalMode: normalizeToolApprovalMode(view.defaultToolApprovalMode),
-    autoApproveTools: Boolean(view.autoApproveTools ?? view.bypass),
-    bypass: Boolean(view.autoApproveTools ?? view.bypass),
+    autoApproveTools: Boolean(view.autoApproveTools),
     desktopLanguage: normalizeLangPref(view.desktopLanguage),
     desktopCurrency: normalizeDesktopCurrency(view.desktopCurrency),
     desktopTheme: normalizeThemePreference(view.desktopTheme),
-    desktopThemeStyle: normalizeThemeStyleForTheme(view.desktopThemeStyle, normalizeThemePreference(view.desktopTheme)),
+    desktopThemeStyle: normalizeThemeStyle(view.desktopThemeStyle),
     desktopTerminalTheme: normalizeTerminalThemePreference(view.desktopTerminalTheme),
     closeBehavior: normalizeCloseBehavior(view.closeBehavior),
     sessionExperience: view.sessionExperience === "deep" ? "deep" : "standard",
-    displayMode: "standard",
     statusBarStyle: normalizeStatusBarStyle(view.statusBarStyle),
     statusBarItems: normalizeStatusBarItems(view.statusBarItems),
     conversationWidth: normalizeConversationWidth(view.conversationWidth),
@@ -2002,25 +1949,6 @@ function NetworkSection({ s, busy, apply }: SectionProps) {
   );
 }
 
-const BOT_ALLOWLIST_TEXT_KEYS = [
-  "qqUsers",
-  "feishuUsers",
-  "weixinUsers",
-  "qqApprovers",
-  "feishuApprovers",
-  "weixinApprovers",
-  "qqAdmins",
-  "feishuAdmins",
-  "weixinAdmins",
-  "qqGroups",
-  "feishuGroups",
-  "weixinGroups",
-  "dingtalkUsers",
-  "dingtalkApprovers",
-  "dingtalkAdmins",
-  "dingtalkGroups",
-] as const;
-type BotAllowlistTextKey = typeof BOT_ALLOWLIST_TEXT_KEYS[number];
 type BotSelfUserTextKey = keyof BotSettingsView["selfUserIds"];
 type BotInstallState = {
   target: BotInstallTarget | "";
@@ -2035,29 +1963,7 @@ const BOT_INSTALL_MIN_POLL_SECONDS = 3;
 const DEFAULT_QQ_SECRET_ENV = "QQ_BOT_APP_SECRET";
 const QQ_CONNECTION_ID = "__qq_bot__";
 const DINGTALK_CONNECTION_ID = "__dingtalk_bot__";
-const BOT_PLATFORM_KEYS = ["qq", "feishu", "weixin", "dingtalk"] as const;
-type BotPlatformKey = typeof BOT_PLATFORM_KEYS[number];
-const BOT_ALLOWLIST_ROLES = ["Users", "Groups", "Approvers", "Admins"] as const;
-type BotAllowlistRole = typeof BOT_ALLOWLIST_ROLES[number];
 type BotAccessListField = "users" | "groups" | "approvers" | "admins";
-
-function botAllowlistKey(platform: BotPlatformKey, role: BotAllowlistRole): BotAllowlistTextKey {
-  return `${platform}${role}`;
-}
-
-function botConnectionPlatform(connection: BotConnectionView): BotPlatformKey {
-  if (connection.provider === "weixin") return "weixin";
-  if (connection.provider === "qq") return "qq";
-  if (connection.provider === "dingtalk") return "dingtalk";
-  return "feishu";
-}
-
-function botPlatformLabel(platform: BotPlatformKey, t: ReturnType<typeof useT>): string {
-  if (platform === "qq") return "QQ";
-  if (platform === "weixin") return t("settings.botWeixin");
-  if (platform === "dingtalk") return t("settings.botDingtalk");
-  return t("settings.botPlatformFeishuLark");
-}
 
 type BotConnectionListItem =
   | { kind: "qq" }
@@ -2069,9 +1975,7 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
   const t = useT();
   const savedBot = normalizeBotSettings(s.bot);
   const [draft, setDraft] = useState<BotSettingsView>(savedBot);
-  const [allowlistText, setAllowlistText] = useState<Record<BotAllowlistTextKey, string>>(() => botAllowlistTextValues(savedBot.allowlist));
   const [selfUserText, setSelfUserText] = useState<Record<BotSelfUserTextKey, string>>(() => botSelfUserTextValues(savedBot.selfUserIds));
-  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
   const [installTarget, setInstallTarget] = useState<BotInstallTarget>("qq");
   const [install, setInstall] = useState<BotInstallState>({ target: "qq", result: null, status: "idle", timeLeft: 0, message: "" });
   const [diagnostics, setDiagnostics] = useState<Record<string, BotConnectionDiagnostic | string>>({});
@@ -2096,7 +2000,6 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
   useEffect(() => {
     const nextBot = normalizeBotSettings(s.bot);
     setDraft(nextBot);
-    setAllowlistText(botAllowlistTextValues(nextBot.allowlist));
     setSelfUserText(botSelfUserTextValues(nextBot.selfUserIds));
     setConnectionSecrets({});
     setAccessText({});
@@ -2180,15 +2083,6 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
     setConnections((items) => items.map((item) => item.id === id ? { ...item, credential: { ...item.credential, ...patch } } : item));
   const persistConnectionCredential = (id: string, patch: Partial<BotConnectionView["credential"]>) =>
     persistConnections((items) => items.map((item) => item.id === id ? { ...item, credential: { ...item.credential, ...patch } } : item));
-  const updateAllowlist = (patch: Partial<BotAllowlistView>) =>
-    setDraft((prev) => ({ ...prev, allowlist: { ...prev.allowlist, ...patch } }));
-  const persistAllowlist = (patch: Partial<BotAllowlistView>) =>
-    persistBotDraft({ ...draft, allowlist: { ...draft.allowlist, ...patch } });
-  const persistAllowlistText = (key: BotAllowlistTextKey, value: string) => {
-    const entries = parseBotListInput(value);
-    setAllowlistText((prev) => ({ ...prev, [key]: entries.join("\n") }));
-    void persistAllowlist({ [key]: entries } as Partial<BotAllowlistView>);
-  };
   const updateBotSettings = (patch: Partial<BotSettingsView>) =>
     setDraft((prev) => ({ ...prev, ...patch }));
   const persistBotSettings = (patch: Partial<BotSettingsView>) =>
@@ -2570,16 +2464,6 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
   const selectedDiagnosticDetail = diagnosticReportDetail(selectedDiagnostic);
   const selectedConnectionRemote = selectedConnection ? firstConnectionRemote(selectedConnection) : "";
   const selectedConnectionToolApprovalMode = selectedConnection ? normalizeBotToolApprovalMode(selectedConnection.toolApprovalMode) : "workspace-write";
-  const simpleAccessMode = draft.allowlist.allowAll ? "everyone" : "trusted";
-  const connectedPlatforms = new Set<BotPlatformKey>();
-  if (qqAdded) connectedPlatforms.add("qq");
-  for (const connection of draft.connections) connectedPlatforms.add(botConnectionPlatform(connection));
-  const platformHasAllowlistText = (platform: BotPlatformKey) =>
-    BOT_ALLOWLIST_ROLES.some((role) => allowlistText[botAllowlistKey(platform, role)].trim());
-  const visibleAccessPlatforms = BOT_PLATFORM_KEYS.filter((platform) =>
-    showAllPlatforms || connectedPlatforms.size === 0 || connectedPlatforms.has(platform) || platformHasAllowlistText(platform));
-  const platformFilterAvailable = connectedPlatforms.size > 0 &&
-    BOT_PLATFORM_KEYS.some((platform) => !connectedPlatforms.has(platform) && !platformHasAllowlistText(platform));
   const botChannelConnectionForTarget = (target: BotInstallTarget) =>
     target === "qq" || target === "dingtalk" ? null : draft.connections.find((connection) => botInstallTargetMatchesConnection(target, connection));
   const botChannelIsConfigured = (target: BotInstallTarget) =>
@@ -2588,13 +2472,6 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
     setInstallTarget(target);
     const connection = botChannelConnectionForTarget(target);
     setExpandedConnectionId(target === "qq" && qqAdded ? QQ_CONNECTION_ID : connection?.id || "");
-  };
-  const setSimpleAccessMode = (mode: "trusted" | "everyone") => {
-    const patch = mode === "everyone"
-      ? { enabled: false, allowAll: true }
-      : { enabled: true, allowAll: false };
-    updateAllowlist(patch);
-    void persistAllowlist(patch);
   };
   const renderBotAccessSection = (
     id: string,
@@ -2946,7 +2823,7 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
                 onClick={() => {
                   updateDingtalk({ toolApprovalMode: mode });
                   // 热更新运行中 gateway，不重启 bot runtime（避免面板跳变）。
-                  void app.SetBotDingtalkToolApprovalMode(mode).catch((e) => {
+                  void app.SetBotConnectionToolApprovalMode(draft.connections.find((connection) => connection.provider === "dingtalk")?.id || "dingtalk", mode).catch((e) => {
                     console.warn("set dingtalk approval mode failed", e);
                   });
                 }}
@@ -3525,116 +3402,6 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
           </span>
 	        </summary>
 	        <div className="bot-simple-advanced__body">
-	          <details className="bot-access-panel bot-global-access-panel">
-	            <summary className="bot-access-panel__summary">
-	              <span>
-	                <strong>{t("settings.botGlobalAllowlist")}</strong>
-	                <small>{t("settings.botGlobalAllowlistHint")}</small>
-	              </span>
-	              <ChevronDown className="bot-access-panel__chevron" size={16} aria-hidden="true" />
-	            </summary>
-	            <div className="bot-access-panel__body">
-	              <div className="bot-choice-grid bot-choice-grid--access">
-	                <button
-	                  type="button"
-	                  className={`bot-choice-card${simpleAccessMode === "trusted" ? " bot-choice-card--active" : ""}`}
-	                  disabled={busy}
-	                  onClick={() => setSimpleAccessMode("trusted")}
-	                >
-	                  <strong>{t("settings.botAccessTrusted")}</strong>
-	                  <span>{t("settings.botAccessTrustedHint")}</span>
-	                </button>
-	                <button
-	                  type="button"
-	                  className={`bot-choice-card${simpleAccessMode === "everyone" ? " bot-choice-card--active" : ""}`}
-	                  disabled={busy}
-	                  onClick={() => setSimpleAccessMode("everyone")}
-	                >
-	                  <strong>{t("settings.botAccessEveryone")}</strong>
-	                  <span>{t("settings.botAccessEveryoneHint")}</span>
-	                </button>
-	              </div>
-	              <div className="bot-pairing-row">
-	                <div>
-	                  <strong>{t("settings.botAccessPairing")}</strong>
-	                  <span>{t("settings.botAccessPairingHint")}</span>
-	                </div>
-	                <ToggleSegment
-	                  value={draft.pairing.enabled}
-	                  disabled={busy}
-	                  onChange={(enabled) => void persistBotSettings({ pairing: { ...draft.pairing, enabled } })}
-	                />
-	              </div>
-	              {draft.allowlist.allowAll ? (
-	                <div className="bot-access-panel__warning">{t("settings.botAllowAllWarn")}</div>
-	              ) : (
-	                <>
-	                  <div className="bot-access-platforms">
-	                    {visibleAccessPlatforms.map((platform) => (
-	                      <div className="bot-access-platform" key={platform}>
-	                        <div className="bot-access-platform__name">{botPlatformLabel(platform, t)}</div>
-	                        <BotListInput
-	                          label={t("settings.botListUsers")}
-	                          value={allowlistText[botAllowlistKey(platform, "Users")]}
-	                          disabled={busy}
-	                          placeholder={t("settings.botListPlaceholder")}
-	                          onChange={(value) => setAllowlistText((prev) => ({ ...prev, [botAllowlistKey(platform, "Users")]: value }))}
-	                          onBlur={(value) => persistAllowlistText(botAllowlistKey(platform, "Users"), value)}
-	                        />
-	                        <BotListInput
-	                          label={t("settings.botListGroups")}
-	                          value={allowlistText[botAllowlistKey(platform, "Groups")]}
-	                          disabled={busy}
-	                          placeholder={t("settings.botListPlaceholder")}
-	                          onChange={(value) => setAllowlistText((prev) => ({ ...prev, [botAllowlistKey(platform, "Groups")]: value }))}
-	                          onBlur={(value) => persistAllowlistText(botAllowlistKey(platform, "Groups"), value)}
-	                        />
-	                      </div>
-	                    ))}
-	                  </div>
-	                  {platformFilterAvailable ? (
-	                    <button type="button" className="bot-access-platforms__toggle" onClick={() => setShowAllPlatforms((value) => !value)}>
-	                      {showAllPlatforms ? t("settings.botAccessShowConnectedOnly") : t("settings.botAccessShowAllPlatforms")}
-	                    </button>
-	                  ) : null}
-	                </>
-	              )}
-	              <details className="bot-access-panel bot-simple-roles">
-	                <summary className="bot-access-panel__summary">
-	                  <span>
-	                    <strong>{t("settings.botRoleAccess")}</strong>
-	                    <small>{t("settings.botRoleAccessHint")}</small>
-	                  </span>
-	                  <ChevronDown className="bot-access-panel__chevron" size={16} aria-hidden="true" />
-	                </summary>
-	                <div className="bot-access-panel__body">
-	                  <div className="bot-access-platforms">
-	                    {visibleAccessPlatforms.map((platform) => (
-	                      <div className="bot-access-platform" key={platform}>
-	                        <div className="bot-access-platform__name">{botPlatformLabel(platform, t)}</div>
-	                        <BotListInput
-	                          label={t("settings.botListApprovers")}
-	                          value={allowlistText[botAllowlistKey(platform, "Approvers")]}
-	                          disabled={busy || draft.allowlist.allowAll}
-	                          placeholder={t("settings.botListPlaceholder")}
-	                          onChange={(value) => setAllowlistText((prev) => ({ ...prev, [botAllowlistKey(platform, "Approvers")]: value }))}
-	                          onBlur={(value) => persistAllowlistText(botAllowlistKey(platform, "Approvers"), value)}
-	                        />
-	                        <BotListInput
-	                          label={t("settings.botListAdmins")}
-	                          value={allowlistText[botAllowlistKey(platform, "Admins")]}
-	                          disabled={busy || draft.allowlist.allowAll}
-	                          placeholder={t("settings.botListPlaceholder")}
-	                          onChange={(value) => setAllowlistText((prev) => ({ ...prev, [botAllowlistKey(platform, "Admins")]: value }))}
-	                          onBlur={(value) => persistAllowlistText(botAllowlistKey(platform, "Admins"), value)}
-	                        />
-	                      </div>
-	                    ))}
-	                  </div>
-	                </div>
-	              </details>
-	            </div>
-	          </details>
 	          <details className="bot-access-panel bot-gateway-panel">
             <summary className="bot-access-panel__summary">
               <span>
@@ -3693,18 +3460,6 @@ function BotsSection({ s, busy, apply, initialFocus }: BotsSectionProps) {
                 >
                   {BOT_QUEUE_MODES.map((mode) => (
                     <option key={mode} value={mode}>{t(`settings.botQueueMode.${mode}` as DictKey)}</option>
-                  ))}
-                </SettingsSelect>
-              </SettingsField>
-              <SettingsField label={t("settings.botQueueDropLabel")} hint={t("settings.botQueueDropHint")}>
-                <SettingsSelect
-                  className="mem-select"
-                  value={normalizeBotQueueDrop(draft.queueDrop)}
-                  disabled={busy}
-                  onValueChange={(value) => void persistBotSettings({ queueDrop: value })}
-                >
-                  {BOT_QUEUE_DROPS.map((mode) => (
-                    <option key={mode} value={mode}>{t(`settings.botQueueDrop.${mode}` as DictKey)}</option>
                   ))}
                 </SettingsSelect>
               </SettingsField>
@@ -4014,7 +3769,6 @@ function sanitizeBotDraft(draft: BotSettingsView): BotSettingsView {
     debounceMs: Math.max(0, Math.floor(bot.debounceMs || 0)),
     queueMode: normalizeBotQueueMode(bot.queueMode),
     queueCap: Math.max(0, Math.floor(bot.queueCap || 0)),
-    queueDrop: normalizeBotQueueDrop(bot.queueDrop),
     selfUserIds: {
       qq: uniqueStrings(bot.selfUserIds.qq.map((v) => v.trim())),
       feishu: uniqueStrings(bot.selfUserIds.feishu.map((v) => v.trim())),
@@ -4032,25 +3786,6 @@ function sanitizeBotDraft(draft: BotSettingsView): BotSettingsView {
       maxPendingPerPlatform: Math.max(0, Math.floor(bot.pairing.maxPendingPerPlatform || 0)),
     },
     routes: bot.routes.map(normalizeBotRoute).filter(botRouteHasValue),
-    allowlist: {
-      ...bot.allowlist,
-      qqUsers: uniqueStrings(bot.allowlist.qqUsers.map((v) => v.trim())),
-      feishuUsers: uniqueStrings(bot.allowlist.feishuUsers.map((v) => v.trim())),
-      weixinUsers: uniqueStrings(bot.allowlist.weixinUsers.map((v) => v.trim())),
-      qqApprovers: uniqueStrings(bot.allowlist.qqApprovers.map((v) => v.trim())),
-      feishuApprovers: uniqueStrings(bot.allowlist.feishuApprovers.map((v) => v.trim())),
-      weixinApprovers: uniqueStrings(bot.allowlist.weixinApprovers.map((v) => v.trim())),
-      qqAdmins: uniqueStrings(bot.allowlist.qqAdmins.map((v) => v.trim())),
-      feishuAdmins: uniqueStrings(bot.allowlist.feishuAdmins.map((v) => v.trim())),
-      weixinAdmins: uniqueStrings(bot.allowlist.weixinAdmins.map((v) => v.trim())),
-      qqGroups: uniqueStrings(bot.allowlist.qqGroups.map((v) => v.trim())),
-      feishuGroups: uniqueStrings(bot.allowlist.feishuGroups.map((v) => v.trim())),
-      weixinGroups: uniqueStrings(bot.allowlist.weixinGroups.map((v) => v.trim())),
-      dingtalkUsers: uniqueStrings(bot.allowlist.dingtalkUsers.map((v) => v.trim())),
-      dingtalkApprovers: uniqueStrings(bot.allowlist.dingtalkApprovers.map((v) => v.trim())),
-      dingtalkAdmins: uniqueStrings(bot.allowlist.dingtalkAdmins.map((v) => v.trim())),
-      dingtalkGroups: uniqueStrings(bot.allowlist.dingtalkGroups.map((v) => v.trim())),
-    },
     qq: {
       ...bot.qq,
       appId: bot.qq.appId.trim(),
@@ -4259,17 +3994,17 @@ export function ModelsSection({ s, busy, apply, backgroundApply, subtab, onboard
         if (stale()) return;
         if (!provider.models || provider.models.length === 0) continue;
         try {
-          const fetched = batchResults[provider.name]?.map((item) => item.model)
-            ?? await cachedFetchProviderModels((p) => app.FetchProviderModels(p), provider);
+          const catalog = batchResults[provider.name]
+            ?? await cachedFetchProviderModelCatalog((p) => app.FetchProviderModelCatalog(p), provider);
+          const fetched = catalog.map((item) => item.model);
           if (stale()) return;
           if (!fetched || fetched.length === 0) continue;
           const models = mergedFetchedProviderModels(provider.models, fetched, { preserveCurated: true });
           const currentDefault = providerDefaultModel(provider.default, models);
-          const visionModels = provider.visionModels.filter((model) => models.includes(model));
-          if (sameStringList(provider.models, models) && provider.default === currentDefault && sameStringList(provider.visionModels, visionModels)) continue;
+          if (sameStringList(provider.models, models) && provider.default === currentDefault) continue;
           const expectedFingerprint = provider.modelCatalogFingerprint?.trim() ?? "";
           if (!expectedFingerprint) continue;
-          updates.push({ name: provider.name, expectedFingerprint, models, default: currentDefault, visionModels });
+          updates.push({ name: provider.name, expectedFingerprint, models, default: currentDefault, modelCapabilities: catalog.map(({model,inputModalities}) => ({model,inputModalities})) });
         } catch {
           // Background discovery is opportunistic; manual refresh shows errors.
         }
@@ -4843,7 +4578,7 @@ export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, fo
       candidates,
       selected: candidates.filter((model) => selected.includes(model)),
       visionModels: configuredVision,
-      visionModelsConfigured: p.visionModelsConfigured,
+
       modelCapabilities: capabilities,
     };
   };
@@ -5068,15 +4803,6 @@ export function ProvidersSection({ s, busy, apply, onboarding, focusProvider, fo
               if (providerNames.length === 0) return;
               void apply(() => saveModelSettings(s, {kind: "web_search_capability", names: providerNames, enabled}));
             }}
-            onUpgradeRecommended={(name) => {
-              cancelGroupFetch(group.id);
-              return apply(() => saveModelSettings(s, {kind: "protocol_upgrade", name})).then((upgraded) => {
-                if (upgraded) {
-                  setEditing(null);
-                  setGroupModelDraft(group.id, null);
-                }
-              });
-            }}
             onSaveEditorKey={(env, value) => saveProviderKey(group, env, value)}
             onClearEditorKey={(env) => clearProviderKey(group, env)}
             onDelete={(providers) => {
@@ -5111,7 +4837,6 @@ export type ProviderAccessGroup = {
   baseUrl: string;
   kind: string;
   models: string[];
-  recommendedUpgradeAvailable: boolean;
 };
 
 type ProviderFetchResult = {
@@ -5124,7 +4849,6 @@ type ProviderModelDraft = {
   candidates: string[];
   selected: string[];
   visionModels: string[];
-  visionModelsConfigured: boolean;
   modelCapabilities: ProviderModelCapabilityView[];
 };
 
@@ -5243,7 +4967,6 @@ export function ProviderAccessCard({
   onCancelDraftModels,
   onSaveDraftModels,
   onToggleWebSearch,
-  onUpgradeRecommended,
   onSaveEditorKey,
   onClearEditorKey,
   onDelete,
@@ -5269,7 +4992,6 @@ export function ProviderAccessCard({
   onCancelDraftModels: () => void;
   onSaveDraftModels: () => void;
   onToggleWebSearch: (enabled: boolean) => void;
-  onUpgradeRecommended: (name: string) => void | Promise<void>;
   onSaveEditorKey: (apiKeyEnv: string, value: string) => Promise<void>;
   onClearEditorKey?: (apiKeyEnv: string) => Promise<void>;
   onDelete?: (providers: ProviderView[]) => Promise<void>;
@@ -5279,7 +5001,6 @@ export function ProviderAccessCard({
   const isOpenCodeGoConnection = group.id === "custom:opencode-go";
   const [editorRevision, setEditorRevision] = useState(0);
   const editingProvider = group.providers.find((p) => editing === p.name) ?? (detail && !isOpenCodeGoConnection ? editableProvider : undefined);
-  const upgradeProvider = group.providers.find((p) => p.recommendedUpgradeAvailable);
   const primaryProviderExpanded = Boolean(editableProvider && editing === editableProvider.name);
   const supportsServerWebSearch = isOpenCodeGoConnection
     || (group.providers.length > 0 && group.providers.every(providerSupportsServerWebSearchForView));
@@ -5362,26 +5083,6 @@ export function ProviderAccessCard({
       </div>
       {group.description && !editingProvider && <div className="provider-access-card__desc">{group.description}</div>}
 
-      {upgradeProvider && (
-        <div className="provider-protocol-upgrade">
-          <div className="provider-protocol-upgrade__copy">
-            <div className="provider-protocol-upgrade__title">
-              {t("settings.providerProtocol")}: OpenAI Chat Completions
-            </div>
-            <div className="provider-protocol-upgrade__desc">{t("settings.addProvider.official.deepseekDesc")}</div>
-          </div>
-          <div className="provider-protocol-upgrade__actions">
-            <InlineConfirmButton
-              label={<>{t("settings.upgradeRecommendedProtocol")}<ArrowRight size={13} aria-hidden="true" /></>}
-              confirmLabel={t("common.confirm")}
-              cancelLabel={t("common.cancel")}
-              disabled={busy}
-              primary
-              onConfirm={() => onUpgradeRecommended(canonicalOfficialProviderName(upgradeProvider.name))}
-            />
-          </div>
-        </div>
-      )}
 
       {!supportsServerWebSearch && !(detail && editingProvider) && (
         <ProviderModelSummary
@@ -5646,7 +5347,7 @@ function ProviderModelDraftPicker({
         {deferredCandidates.length > 0 ? deferredCandidates.map((model) => {
           const enabled = selected.has(model);
           const capability = providerModelVisionCapability(
-            { visionModelsConfigured: draft.visionModelsConfigured, modelCapabilities: draft.modelCapabilities },
+            {modelCapabilities: draft.modelCapabilities},
             model,
             draft.visionModels,
           );
@@ -5754,10 +5455,6 @@ export function providerAccessGroups(providers: ProviderView[], t: ReturnType<ty
       existing.keySet = existing.keySet || p.keySet;
       existing.requiresKey = existing.requiresKey && providerRequiresKey(p);
       existing.configured = existing.configured || providerIsConfigured(p);
-      existing.recommendedUpgradeAvailable = existing.recommendedUpgradeAvailable || Boolean(p.recommendedUpgradeAvailable);
-      if (existing.recommendedUpgradeAvailable && existing.id === "builtin:deepseek") {
-        existing.description = "";
-      }
       if (!existing.keySource && p.keySource) existing.keySource = p.keySource;
       if (!existing.keySourcePath && p.keySourcePath) existing.keySourcePath = p.keySourcePath;
       existing.models = uniqueStrings([...existing.models, ...p.models]);
@@ -5778,7 +5475,6 @@ export function providerAccessGroups(providers: ProviderView[], t: ReturnType<ty
       baseUrl: p.baseUrl,
       kind: p.kind,
       models: uniqueStrings(p.models),
-      recommendedUpgradeAvailable: Boolean(p.recommendedUpgradeAvailable),
     });
   }
   return Array.from(groups.values());
@@ -5852,7 +5548,7 @@ function providerGroupLabel(p: ProviderView, t?: ReturnType<typeof useT>): strin
 function providerGroupDescription(p: ProviderView, t: ReturnType<typeof useT>): string {
   const id = providerGroupID(p);
   if (id === "builtin:deepseek") {
-    return p.recommendedUpgradeAvailable ? "" : providerProtocolLabel(p.kind);
+    return providerProtocolLabel(p.kind);
   }
   if (id === "custom:opencode-go") return t("settings.providerDesc.opencodeGo");
   if (id === "custom:opencode-zen") return t("settings.providerDesc.opencodeZen");
@@ -5891,27 +5587,6 @@ function parseProviderListInput(value: string): string[] {
     .filter(Boolean));
 }
 
-function botAllowlistTextValues(allowlist: BotAllowlistView): Record<BotAllowlistTextKey, string> {
-  return {
-    qqUsers: allowlist.qqUsers.join("\n"),
-    feishuUsers: allowlist.feishuUsers.join("\n"),
-    weixinUsers: allowlist.weixinUsers.join("\n"),
-    qqApprovers: allowlist.qqApprovers.join("\n"),
-    feishuApprovers: allowlist.feishuApprovers.join("\n"),
-    weixinApprovers: allowlist.weixinApprovers.join("\n"),
-    qqAdmins: allowlist.qqAdmins.join("\n"),
-    feishuAdmins: allowlist.feishuAdmins.join("\n"),
-    weixinAdmins: allowlist.weixinAdmins.join("\n"),
-    qqGroups: allowlist.qqGroups.join("\n"),
-    feishuGroups: allowlist.feishuGroups.join("\n"),
-    weixinGroups: allowlist.weixinGroups.join("\n"),
-    dingtalkUsers: allowlist.dingtalkUsers.join("\n"),
-    dingtalkApprovers: allowlist.dingtalkApprovers.join("\n"),
-    dingtalkAdmins: allowlist.dingtalkAdmins.join("\n"),
-    dingtalkGroups: allowlist.dingtalkGroups.join("\n"),
-  };
-}
-
 function botSelfUserTextValues(selfUserIds: BotSettingsView["selfUserIds"]): Record<BotSelfUserTextKey, string> {
   return {
     qq: selfUserIds.qq.join("\n"),
@@ -5935,7 +5610,6 @@ export const ProviderEditorModelPicker = memo(function ProviderEditorModelPicker
   candidates,
   selectedModels,
   visionModels,
-  visionModelsConfigured,
   modelCapabilities,
   contextWindows,
   inheritedContextWindow,
@@ -5949,7 +5623,6 @@ export const ProviderEditorModelPicker = memo(function ProviderEditorModelPicker
   candidates: string[];
   selectedModels: string[];
   visionModels: string[];
-  visionModelsConfigured: boolean;
   modelCapabilities: ProviderModelCapabilityView[];
   contextWindows: Record<string, string>;
   inheritedContextWindow?: number;
@@ -6002,7 +5675,7 @@ export const ProviderEditorModelPicker = memo(function ProviderEditorModelPicker
         {deferredCandidates.length > 0 ? deferredCandidates.map((model) => {
           const enabled = selected.has(model);
           const capability = providerModelVisionCapability(
-            { visionModelsConfigured, modelCapabilities },
+            {modelCapabilities},
             model,
             visionModels,
           );
@@ -6056,12 +5729,7 @@ export function ProviderEditor({
   const [name, setName] = useState(initial?.name ?? "");
   const [displayName, setDisplayName] = useState(initial?.displayName ?? "");
   const [kind, setKind] = useState(initial?.kind ?? "openai");
-  const [requestUrl, setRequestUrl] = useState(() => providerRequestURLFromConfig(
-    initial?.kind ?? "openai",
-    initial?.baseUrl ?? "",
-    initial?.requestUrl ?? "",
-    initial?.chatUrl ?? "",
-  ));
+  const [requestUrl, setRequestUrl] = useState(() => providerRequestURLFromConfig(initial?.kind ?? "openai", initial?.baseUrl ?? "", initial?.requestUrl ?? ""));
   const providerNameInputId = useId();
   const providerUrlInputId = useId();
   const providerUrlHelpId = useId();
@@ -6070,9 +5738,7 @@ export function ProviderEditor({
   const [modelOverrides, setModelOverrides] = useState(initial?.modelOverrides ?? []);
   const [showKey, setShowKey] = useState(false);
   const [modelCandidates, setModelCandidates] = useState<string[]>(initial?.models ?? []);
-  const [legacyVisionModels, setLegacyVisionModels] = useState(initial?.visionModels ?? []);
   const [modelCapabilities, setModelCapabilities] = useState<ProviderModelCapabilityView[]>(initial?.modelCapabilities ?? []);
-  const visionModelsConfigured = Boolean(initial?.visionModelsConfigured ?? legacyVisionModels.length > 0);
   const [modelsUrl, setModelsUrl] = useState(initial?.modelsUrl ?? "");
   const [apiKeyEnv, setApiKeyEnv] = useState(initial?.apiKeyEnv ?? "");
   useEffect(() => { if (initial) setApiKeyEnv(initial.apiKeyEnv); }, [initial?.apiKeyEnv]);
@@ -6097,7 +5763,7 @@ export function ProviderEditor({
   const [fetchStatus, setFetchStatus] = useState<string | null>(null);
   const [fetchFallback, setFetchFallback] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const draftSnapshot = JSON.stringify([name, hideConnectionName ? "" : displayName, kind, requestUrl, models, modelsUrl, headersDraft, extraBodyDraft, authHeader, noProxy, keyDraft, balanceUrl, ctx, modelContextWindows, modelOverrides, modelCapabilities, legacyVisionModels, reasoningProtocol, thinking, webSearch]);
+  const draftSnapshot = JSON.stringify([name, hideConnectionName ? "" : displayName, kind, requestUrl, models, modelsUrl, headersDraft, extraBodyDraft, authHeader, noProxy, keyDraft, balanceUrl, ctx, modelContextWindows, modelOverrides, modelCapabilities, reasoningProtocol, thinking, webSearch]);
   const [savedSnapshot, setSavedSnapshot] = useState(draftSnapshot);
   const latestDraftSnapshot = useRef(draftSnapshot);
   const saveGeneration = useRef(0);
@@ -6124,7 +5790,6 @@ export function ProviderEditor({
   const effectiveRequestUrl = requestUrl.trim();
   const endpointMismatch = providerEndpointMismatchDetail(effectiveKind, effectiveRequestUrl, editorCatalog);
   const effectiveBaseUrl = providerBaseURLForSave(initial, effectiveKind, effectiveRequestUrl);
-  const effectiveLegacyChatUrl = effectiveKind.toLowerCase() === "openai" ? effectiveRequestUrl : initial?.chatUrl ?? "";
   const effectiveModelsUrl = modelsUrl.trim();
   const initialEffectiveBaseUrl = initial ? trimmedBaseURL(initial.baseUrl) : "";
   const retainedServerWebSearchCapability = initial &&
@@ -6153,8 +5818,8 @@ export function ProviderEditor({
     [modelCandidates, modelNames],
   );
   const visionModelNames = useMemo(
-    () => providerVisionModelsForView({models:modelNames, visionModels:legacyVisionModels, modelOverrides, modelCapabilities}),
-    [modelNames, legacyVisionModels, modelOverrides, modelCapabilities],
+    () => providerVisionModelsForView({models:modelNames, modelOverrides, modelCapabilities}),
+    [modelNames, modelOverrides, modelCapabilities],
   );
 
   // Empty supportedEfforts means "use protocol defaults". The simplified
@@ -6187,12 +5852,11 @@ export function ProviderEditor({
         added: initial?.added ?? true,
         kind: effectiveKind,
         baseUrl: effectiveBaseUrl,
-        chatUrl: effectiveLegacyChatUrl,
         requestUrl: effectiveRequestUrl,
         modelsUrl: effectiveModelsUrl,
         models: [],
         visionModels: [],
-        visionModelsConfigured: false,
+
         default: "",
         apiKeyEnv: effectiveApiKeyEnv,
         headers: effectiveHeaders,
@@ -6231,7 +5895,7 @@ export function ProviderEditor({
     setFetchStatus(null);
     setFetchFallback(null);
     const ms = parseProviderListInput(models);
-    const vms = legacyVisionModels.filter((model) => ms.includes(model));
+    const vms = providerVisionModelsForView({models: ms, modelOverrides, modelCapabilities});
     const effectiveApiKeyEnv = providerApiKeyEnvForSave(name, apiKeyEnv, keyDraft);
     const provider: ProviderView = {
       name: name.trim(),
@@ -6242,11 +5906,9 @@ export function ProviderEditor({
       added: initial?.added ?? true,
       kind: effectiveKind,
       baseUrl: effectiveBaseUrl,
-      chatUrl: effectiveLegacyChatUrl,
       requestUrl: effectiveRequestUrl,
       models: ms,
       visionModels: vms,
-      visionModelsConfigured,
       default: ms[0] ?? "",
       apiKeyEnv: effectiveApiKeyEnv,
       headers: effectiveHeaders,
@@ -6320,7 +5982,6 @@ export function ProviderEditor({
     setModelCandidates(current => current.filter(item => item !== model));
     setModelOverrides(current => current.filter(item => item.model !== model));
     setModelCapabilities(current => current.filter(item => item.model !== model));
-    setLegacyVisionModels(current => current.filter(item => item !== model));
     setModelContextWindows(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== model)));
     setModelDialog(null);
   };
@@ -6510,7 +6171,6 @@ export function ProviderEditor({
         candidates={modelCandidateNames}
         selectedModels={modelNames}
         visionModels={visionModelNames}
-        visionModelsConfigured={visionModelsConfigured}
         modelCapabilities={modelCandidateNames.map(model => { const override = modelOverrides.find(item=>item.model === model)?.vision; const info = modelCapabilities.find(item=>item.model === model); return override == null ? info : {...info, model, state:override ? "supported" : "unsupported", inputModalities:override ? ["text","image"] : ["text"], source:"override"}; }).filter((item): item is ProviderModelCapabilityView => Boolean(item))}
         contextWindows={modelContextWindows}
         inheritedContextWindow={Number(ctx) || undefined}

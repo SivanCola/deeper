@@ -55,14 +55,12 @@ function compareSemver(a, b) {
   return 0;
 }
 
-// npm rejects a tag that parses as a semver range, so `v1` is unusable here.
-export const FROZEN_STABLE_DIST_TAG = "legacy-v1";
-const STABLE_DIST_TAGS = new Set(["latest", FROZEN_STABLE_DIST_TAG]);
+const STABLE_DIST_TAGS = new Set(["latest"]);
 
 export function stableDistTagFromEnv(env = process.env) {
   const value = env.NPM_STABLE_DIST_TAG || "latest";
   if (!STABLE_DIST_TAGS.has(value)) {
-    throw new Error(`NPM_STABLE_DIST_TAG must be latest or ${FROZEN_STABLE_DIST_TAG}, got: ${value}`);
+    throw new Error(`NPM_STABLE_DIST_TAG must be latest, got: ${value}`);
   }
   return value;
 }
@@ -171,7 +169,7 @@ function verifyRegistryPackage(metadata, name, version, candidateSha) {
 
   const recordedCandidate = metadata.deepzoraCandidateSha;
   const gitHead = metadata.gitHead;
-  if (recordedCandidate && recordedCandidate !== candidateSha) {
+  if (recordedCandidate !== candidateSha) {
     throw new Error(
       `immutable npm package ${name}@${version} belongs to candidate ${recordedCandidate}, expected ${candidateSha}`,
     );
@@ -179,11 +177,6 @@ function verifyRegistryPackage(metadata, name, version, candidateSha) {
   if (gitHead && gitHead !== candidateSha) {
     throw new Error(
       `immutable npm package ${name}@${version} has gitHead ${gitHead}, expected ${candidateSha}`,
-    );
-  }
-  if (!recordedCandidate && !gitHead) {
-    throw new Error(
-      `immutable npm package ${name}@${version} has no candidate provenance`,
     );
   }
   return true;

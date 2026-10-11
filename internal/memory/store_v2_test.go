@@ -92,80 +92,6 @@ func TestStoreV2RestoreRevisionCreatesAuditedRevision(t *testing.T) {
 	}
 }
 
-func TestStoreV2LegacyMemoryGetsDeterministicIdentity(t *testing.T) {
-	dir := t.TempDir()
-	legacy := "---\nname: legacy-fact\ndescription: old file\nmetadata:\n  type: project\n  scope: project\n---\n\nlegacy body\n"
-	if err := os.WriteFile(filepath.Join(dir, "legacy-fact.md"), []byte(legacy), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	store := Store{Dir: dir}
-	first := store.List()
-	second := store.List()
-	if len(first) != 1 || len(second) != 1 || first[0].ID == "" || first[0].ID != second[0].ID || first[0].Revision != 1 {
-		t.Fatalf("legacy identities = first %+v second %+v", first, second)
-	}
-	if !strings.HasPrefix(first[0].ID, "legacy-") {
-		t.Fatalf("legacy id = %q, want recognizable deterministic id", first[0].ID)
-	}
-}
-
-func TestStoreV2MigrationPersistsLegacyIdentity(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "legacy-fact.md")
-	legacy := "---\nname: legacy-fact\ndescription: old file\nmetadata:\n  type: project\n  scope: project\n---\n\nlegacy body\n"
-	if err := os.WriteFile(path, []byte(legacy), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	store := Store{Dir: dir}
-	report, err := store.MigrateV2()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if report.Migrated != 1 {
-		t.Fatalf("migration report = %+v", report)
-	}
-	frontmatter, _ := splitFrontmatter(mustReadString(t, path))
-	if !strings.HasPrefix(frontmatter["id"], "legacy-") || frontmatter["revision"] != "1" || frontmatter["created_at"] == "" || frontmatter["updated_at"] == "" {
-		t.Fatalf("migrated frontmatter = %+v", frontmatter)
-	}
-	again, err := store.MigrateV2()
-	if err != nil || again.Migrated != 0 {
-		t.Fatalf("idempotent migration = %+v, %v", again, err)
-	}
-}
-
-func TestStoreV2LegacyIdentityIncludesScope(t *testing.T) {
-	root := t.TempDir()
-	store := Store{Dir: filepath.Join(root, "project"), GlobalDir: filepath.Join(root, "global")}
-	for _, fixture := range []struct {
-		dir   string
-		scope FactScope
-	}{
-		{dir: store.Dir, scope: FactScopeProject},
-		{dir: store.GlobalDir, scope: FactScopeGlobal},
-	} {
-		if err := os.MkdirAll(fixture.dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		legacy := "---\nname: shared-name\ndescription: old file\nmetadata:\n  type: project\n  scope: " + string(fixture.scope) + "\n---\n\nlegacy body\n"
-		if err := os.WriteFile(filepath.Join(fixture.dir, "shared-name.md"), []byte(legacy), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	project, _, ok := store.findActiveInDir(store.Dir, "shared-name")
-	if !ok {
-		t.Fatal("project legacy memory not found")
-	}
-	global, _, ok := store.findActiveInDir(store.GlobalDir, "shared-name")
-	if !ok {
-		t.Fatal("global legacy memory not found")
-	}
-	if project.ID == global.ID {
-		t.Fatalf("legacy IDs collided across scopes: %q", project.ID)
-	}
-}
-
 func TestStoreV2ArchiveByIDOnlyArchivesMatchingIdentity(t *testing.T) {
 	root := t.TempDir()
 	store := Store{Dir: filepath.Join(root, "project"), GlobalDir: filepath.Join(root, "global")}
@@ -392,6 +318,25 @@ func TestStoreV2RestoreArchivedRejectsSymlinkEntry(t *testing.T) {
 	}
 	if _, err := os.Stat(outside); err != nil {
 		t.Fatalf("outside target changed: %v", err)
+	}
+}
+
+func TestStoreRejectsHistoricalMemoryWithoutDurableIdentity(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "old.md")
+	raw := []byte("---\nname: old\nmetadata:\n  type: user\n---\n\nold body")
+	if err := os.WriteFile(path, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := loadMemory(path); ok {
+		t.Fatal("historical memory was accepted")
+	}
+	if len((Store{Dir: dir}).ListAll()) != 0 {
+		t.Fatal("historical memory was imported")
+	}
+	after, _ := os.ReadFile(path)
+	if string(after) != string(raw) {
+		t.Fatal("historical memory was changed")
 	}
 }
 

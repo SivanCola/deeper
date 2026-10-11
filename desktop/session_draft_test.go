@@ -77,7 +77,7 @@ func TestDraftExternalFolderWithSpacesUsesStableRuntimeToken(t *testing.T) {
 func TestDraftHostIdentitiesDoNotEnterProviderSubmission(t *testing.T) {
 	request := SessionDraftSubmissionRequest{
 		DraftID: "draft-secret", Display: "display", Input: "input", Goal: "goal",
-		ToolApprovalMode: "ask", Invocations: []InvocationRequest{{Name: "skill", Kind: "skill"}},
+		ToolApprovalMode: "read-only", Invocations: []InvocationRequest{{Name: "skill", Kind: "skill"}},
 	}
 	providerRequest := draftControlSubmissionRequest("submission-secret", request)
 	body, err := json.Marshal(providerRequest)
@@ -90,7 +90,7 @@ func TestDraftHostIdentitiesDoNotEnterProviderSubmission(t *testing.T) {
 }
 
 func TestDraftModelResolutionIsStrict(t *testing.T) {
-	cfg := &config.Config{Providers: []config.ProviderEntry{{Name: "fixture", Model: "model-a"}}}
+	cfg := &config.Config{Providers: []config.ProviderEntry{{Models: []string{"model-a"}, Default: "model-a", Name: "fixture", Model: "model-a"}}}
 	if _, err := resolveDraftCreateModelStrict(cfg, "removed/model"); !errors.Is(err, boot.ErrUnknownModel) {
 		t.Fatalf("strict resolution error = %v, want boot.ErrUnknownModel", err)
 	}
@@ -170,7 +170,7 @@ func TestDraftRetryAppliesFrozenSettingsToReservedSession(t *testing.T) {
 	a.tabs[tab.ID] = tab
 	a.tabOrder = []string{tab.ID}
 	settings := SessionDraftSettings{
-		Model: "new/model", Effort: "high", QualityFloor: "high", CollaborationMode: "plan",
+		Model: "new/model", Effort: "high", CollaborationMode: "plan",
 		ToolApprovalMode: control.ToolApprovalDangerFullAccess,
 		DisabledMCP:      map[string]ServerView{"disabled": {Name: "disabled"}}, MCPOrder: []string{"disabled"},
 	}
@@ -180,8 +180,8 @@ func TestDraftRetryAppliesFrozenSettingsToReservedSession(t *testing.T) {
 	if tab.PendingCreateOperationID != "new-operation" || tab.model != "new/model" || tab.effort == nil || *tab.effort != "high" {
 		t.Fatalf("retry identity/model/effort = %q / %q / %+v", tab.PendingCreateOperationID, tab.model, tab.effort)
 	}
-	if tab.qualityFloor != "high" || !tabModeHasPlan(tab.mode) || normalizeToolApprovalMode(tab.toolApprovalMode) != control.ToolApprovalDangerFullAccess {
-		t.Fatalf("retry profile = quality %q mode %q approval %q", tab.qualityFloor, tab.mode, tab.toolApprovalMode)
+	if !tabModeHasPlan(tab.mode) || normalizeToolApprovalMode(tab.toolApprovalMode) != control.ToolApprovalDangerFullAccess {
+		t.Fatalf("retry profile = mode %q approval %q", tab.mode, tab.toolApprovalMode)
 	}
 	if _, ok := tab.disabledMCP["disabled"]; !ok || len(tab.mcpOrder) != 1 || tab.mcpOrder[0] != "disabled" {
 		t.Fatalf("retry MCP profile = disabled %+v order %+v", tab.disabledMCP, tab.mcpOrder)
@@ -326,6 +326,7 @@ func TestMissingDraftImageReturnsStableErrorWithoutHostPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = a.BeginDraftSubmission(SessionDraftSubmissionRequest{
+		SnapshotVersion: draftstate.SnapshotVersion, Settings: saved.Draft.Settings, SourceDigest: saved.Draft.SnapshotDigest,
 		DraftID: draft.ID, Revision: saved.Draft.Revision,
 		Display: "inspect", Input: "inspect @.deepzora/attachments/missing.png",
 	})
@@ -361,6 +362,7 @@ func TestInvalidDraftModelFailsBeforeSessionReservation(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = a.BeginDraftSubmission(SessionDraftSubmissionRequest{
+		SnapshotVersion: draftstate.SnapshotVersion, Settings: saved.Draft.Settings, SourceDigest: saved.Draft.SnapshotDigest,
 		DraftID: draft.ID, Revision: saved.Draft.Revision, Display: "inspect", Input: "inspect",
 	})
 	if !errors.Is(err, boot.ErrUnknownModel) {

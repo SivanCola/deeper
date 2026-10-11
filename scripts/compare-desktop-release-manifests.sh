@@ -11,11 +11,5 @@ for manifest in "$candidate" "$existing"; do
 	fi
 done
 
-# Preserve immutable manifests created before release_notes_url existed. Only
-# that absent field inherits the strict candidate value; all other manifest
-# content must remain semantically identical.
-jq -e -s '
-	.[0] as $candidate |
-	.[1] as $existing |
-	($existing | .release_notes_url = (.release_notes_url // $candidate.release_notes_url)) == $candidate
-' "$candidate" "$existing" >/dev/null
+# Immutable release metadata must be semantically identical.
+jq -e -s '.[0] == .[1]' "$candidate" "$existing" >/dev/null

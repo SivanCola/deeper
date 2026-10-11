@@ -7,7 +7,6 @@ import (
 	"sort"
 	"sync"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/event"
 )
 
@@ -314,8 +313,7 @@ func promptAnswerTerminal(identity PromptIdentity, answer PromptAnswer) PromptTe
 	}
 	if (identity.Kind == PromptApproval && !answer.Allow) ||
 		(identity.Kind == PromptMCP && answer.Action == "decline") ||
-		(identity.Kind == PromptPlan && answer.Action != "start") ||
-		(identity.Kind == PromptRecovery && answer.Action != string(agent.RecoveryActionContinue)) {
+		(identity.Kind == PromptPlan && answer.Action != "start") {
 		return PromptRejected
 	}
 	return PromptAnswered
@@ -438,7 +436,6 @@ const (
 	PromptAsk      PromptKind = "ask"
 	PromptApproval PromptKind = "approval"
 	PromptPlan     PromptKind = "plan"
-	PromptRecovery PromptKind = "recovery"
 	PromptMCP      PromptKind = "mcp"
 )
 
@@ -472,8 +469,6 @@ func (c *Controller) registerOwnedPrompt(id string, kind PromptKind) {
 			return c.resolveApprovalLocked(id, answer.Allow, scopeFromApprove(answer.Allow, answer.Session, answer.Persist))
 		case PromptPlan:
 			return c.resolvePlanDecisionWithFeedbackLocked(id, PlanDecisionAction(answer.Action), answer.Feedback)
-		case PromptRecovery:
-			return c.resolveRecoveryLocked(id, agent.RecoveryAction(answer.Action), answer.Feedback)
 		case PromptMCP:
 			return c.answerMCPInteractionCheckedLocked(id, answer.Action, answer.Content)
 		default:
@@ -484,7 +479,7 @@ func (c *Controller) registerOwnedPrompt(id string, kind PromptKind) {
 		switch kind {
 		case PromptAsk:
 			c.approval.cancelAsk(id)
-		case PromptApproval, PromptPlan, PromptRecovery:
+		case PromptApproval, PromptPlan:
 			c.approval.cancel(id)
 		case PromptMCP:
 			c.approval.cancelMCPInteraction(id)

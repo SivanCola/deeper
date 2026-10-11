@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"log/slog"
@@ -58,7 +59,10 @@ func (s *Session) writeRecoveryBranchAtPath(
 			if err := refreshSessionDisplayIndex(path, msgs, digest, meta.Revision, -1); err != nil {
 				slog.Warn("session: keeping recovery branch after display index write failure", "path", path, "err", err)
 			}
-			s.markPersisted(path, digest, version, meta.Revision, rewriteVersion)
+			if err := s.adoptRecoveryDAGPosition(path); err != nil {
+				return RecoveryBranchInfo{}, false, err
+			}
+			s.setPersistedBaseline(path, digest, version, meta.Revision, true, true, rewriteVersion, msgs)
 			return RecoveryBranchInfo{Path: path, Digest: digestText, Existing: true, Meta: meta, Preview: preview, Turns: turns}, false, nil
 		}
 		state := s.persistState(path)
@@ -67,6 +71,10 @@ func (s *Session) writeRecoveryBranchAtPath(
 		}
 	} else if loadErr != nil && !os.IsNotExist(loadErr) {
 		return RecoveryBranchInfo{}, false, loadErr
+	} else if sessionArtifactExists(path) {
+		// Unsupported or incomplete content still occupies this identity.
+		// Rotate the recovery lane without modifying its files.
+		return RecoveryBranchInfo{}, true, nil
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -81,14 +89,8 @@ func (s *Session) writeRecoveryBranchAtPath(
 	if err != nil {
 		return RecoveryBranchInfo{}, false, err
 	}
-	probe, err := probeSessionEventLog(path)
-	if err != nil {
+	if err := writeRecoveryEventLog(path, msgs, shutdown); err != nil {
 		return RecoveryBranchInfo{}, false, err
-	}
-	if probe.native {
-		if err := writeRecoveryEventLog(path, msgs, digest, meta.Revision, shutdown); err != nil {
-			return RecoveryBranchInfo{}, false, err
-		}
 	}
 	if err := writeSessionMessages(path, msgs); err != nil {
 		return RecoveryBranchInfo{}, false, err
@@ -105,7 +107,10 @@ func (s *Session) writeRecoveryBranchAtPath(
 	if err := refreshSessionDisplayIndex(path, msgs, digest, meta.Revision, -1); err != nil {
 		slog.Warn("session: keeping recovery branch after display index write failure", "path", path, "err", err)
 	}
-	s.markPersisted(path, digest, version, meta.Revision, rewriteVersion)
+	if err := s.adoptRecoveryDAGPosition(path); err != nil {
+		return RecoveryBranchInfo{}, false, err
+	}
+	s.setPersistedBaseline(path, digest, version, meta.Revision, true, true, rewriteVersion, msgs)
 	return RecoveryBranchInfo{Path: path, Digest: digestText, Meta: meta, Preview: preview, Turns: turns}, false, nil
 }
 
@@ -132,7 +137,6 @@ func copyValidContextProjection(originalPath, targetPath string, msgs []provider
 	if !ok {
 		return false, nil
 	}
-	migratePromotedCoveredPrefixHash(&st, msgs)
 	n := st.Projection.CoveredCount
 	if len(st.Projection.Messages) == 0 || n <= 0 || n > len(msgs) ||
 		st.Projection.CoveredPrefixHash == "" ||
@@ -143,27 +147,6 @@ func copyValidContextProjection(originalPath, targetPath string, msgs []provider
 		return false, err
 	}
 	return true, nil
-}
-
-// LoadValidContextProjectionForMigration reconstructs the exact model-visible
-// view from a frozen legacy sidecar when it still authenticates the supplied
-// canonical transcript. Migration deliberately validates content independently
-// of the old model/workspace lineage because the canonical target persists that
-// selection separately.
-func LoadValidContextProjectionForMigration(sessionPath string, canonical []provider.Message) ([]provider.Message, bool, error) {
-	st, ok, err := LoadCompactionState(sessionPath)
-	if err != nil || !ok {
-		return nil, false, err
-	}
-	migratePromotedCoveredPrefixHash(&st, canonical)
-	if !projectionContentValid(st, canonical) {
-		return nil, false, nil
-	}
-	visible := modelVisibleFromProjection(st.Projection, canonical)
-	if len(visible) == 0 {
-		return nil, false, nil
-	}
-	return visible, true, nil
 }
 
 // healEmptyCheckpointFromWAL rebuilds a missing or 0-byte checkpoint from its
@@ -181,7 +164,7 @@ func healEmptyCheckpointFromWAL(path string) error {
 	if err != nil {
 		return err
 	}
-	if !probe.native || probe.size <= 0 || probe.futureSchema {
+	if !probe.dag || probe.size <= 0 || probe.futureSchema {
 		return nil
 	}
 	msgs, fromEvents, damaged, err := loadSessionMessages(path)
@@ -191,5 +174,21 @@ func healEmptyCheckpointFromWAL(path string) error {
 	if err := writeSessionMessages(path, msgs); err != nil {
 		return fmt.Errorf("rebuild checkpoint from WAL: %w", err)
 	}
+	return nil
+}
+
+// Pair the recovered transcript with its own head before a later cancellation
+// or rewrite. The original file's head is never a baseline for this lane.
+func (s *Session) adoptRecoveryDAGPosition(path string) error {
+	result, err := loadSessionTranscript(context.Background(), path, defaultSessionReplayLimits, nil)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.head.ref = result.head
+	s.head.dag = result.dag
+	s.head.state = result.state
+	s.head.headCount = result.headCount
+	s.mu.Unlock()
 	return nil
 }

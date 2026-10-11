@@ -19,9 +19,6 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	if answered {
 		return
 	}
-	if s.writeSpectatorStatus(w, r) {
-		return
-	}
 	s.writeForegroundStatus(w, r, identityRoute)
 }
 
@@ -31,38 +28,17 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 // spectator pin must clear the moment this serve owns the identity again.
 func (s *Server) statusIdentityRoute(w http.ResponseWriter, r *http.Request) (route string, answered bool) {
 	raw := r.URL.Query().Get("session")
-	if !isSessionIDRoute(raw) {
+	if strings.TrimSpace(raw) == "" {
 		return "", false
+	}
+	if !isSessionIDRoute(raw) {
+		http.Error(w, "immutable session identity required", http.StatusBadRequest)
+		return "", true
 	}
 	if s.statusIdentityOverride(w, raw) {
 		return "", true
 	}
 	return strings.TrimSpace(raw), false
-}
-
-// writeSpectatorStatus answers an explicitly selected legacy session with the
-// file-backed read-only view instead of the foreground controller's.
-func (s *Server) writeSpectatorStatus(w http.ResponseWriter, r *http.Request) bool {
-	raw := r.URL.Query().Get("session")
-	if raw == "" {
-		return false
-	}
-	path, err := s.resolveSessionPath(raw)
-	if err != nil {
-		return false
-	}
-	held := s.sessionMirrored(path) || leaseHeldByForeignRuntime(path)
-	if !held {
-		if view, ok := s.ownedRuntimeStatusView(path); ok {
-			writeJSON(w, view)
-			return true
-		}
-	}
-	writeJSON(w, s.statusViewForPath(path, held))
-	if s.sessionMirrored(path) {
-		s.maybeAutoReclaimMirrored(path)
-	}
-	return true
 }
 
 func (s *Server) writeForegroundStatus(w http.ResponseWriter, r *http.Request, identityRoute string) {
@@ -71,6 +47,14 @@ func (s *Server) writeForegroundStatus(w http.ResponseWriter, r *http.Request, i
 	// callers can never pair a newly published path with the outgoing history.
 	s.bindMu.Lock()
 	ctrl := s.ctl()
+	if identityRoute != "" {
+		ctrl = s.resolveReadControllerLocked(identityRoute)
+		if ctrl == nil {
+			s.bindMu.Unlock()
+			http.Error(w, "session binding changed", http.StatusConflict)
+			return
+		}
+	}
 	sess := sessionStatusFields(ctrl)
 	sessionPath := strings.TrimSpace(ctrl.SessionPath())
 	if identity, ok := ctrl.(control.IdentityLifecycle); ok {
@@ -127,7 +111,6 @@ func sessionStatusFields(ctrl control.SessionAPI) map[string]any {
 		"toolApprovalMode": ctrl.ToolApprovalMode(),
 		"goal":             ctrl.Goal(),
 		"goalStatus":       ctrl.GoalStatus(),
-		"qualityFloor":     ctrl.QualityFloor(),
 		"cwd":              ctrl.SessionDir(),
 		"used":             used,
 		"window":           window,

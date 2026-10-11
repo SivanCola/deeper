@@ -10,12 +10,12 @@ import (
 )
 
 // TurnContextBundle carries role-specific runtime snapshots without changing
-// Runner.Run. BootstrapOnly lets synthetic continuations repair an upgraded
-// legacy session that has no snapshot, while never consuming later updates.
+// Runner.Run. InitialOnly initializes a fresh synthetic turn without consuming
+// later context changes or repairing earlier conversations.
 type TurnContextBundle struct {
-	Executor      sessioncontext.Snapshot
-	Planner       sessioncontext.Snapshot
-	BootstrapOnly bool
+	Executor    sessioncontext.Snapshot
+	Planner     sessioncontext.Snapshot
+	InitialOnly bool
 }
 
 type turnContextBundleKey struct{}
@@ -89,7 +89,7 @@ func turnContextFromContext(ctx context.Context) (sessioncontext.Snapshot, bool,
 	if !valid || parsed.Digest != snapshot.Digest {
 		return sessioncontext.Snapshot{}, false, role
 	}
-	return parsed, bundle.BootstrapOnly, role
+	return parsed, bundle.InitialOnly, role
 }
 
 // AppendTurnContext appends the role-appropriate snapshot exactly once per
@@ -160,7 +160,7 @@ func (a *Agent) prepareTurnContext(ctx context.Context) (provider.Message, bool)
 	if sess == nil {
 		return provider.Message{}, false
 	}
-	snapshot, bootstrapOnly, role := turnContextFromContext(ctx)
+	snapshot, initialOnly, role := turnContextFromContext(ctx)
 	if snapshot.Content == "" {
 		return provider.Message{}, false
 	}
@@ -172,16 +172,15 @@ func (a *Agent) prepareTurnContext(ctx context.Context) (provider.Message, bool)
 		target:   role.String(),
 	}
 	if found {
-		if bootstrapOnly || previous.Digest == snapshot.Digest {
+		if initialOnly || previous.Digest == snapshot.Digest {
 			return provider.Message{}, false
 		}
 		a.turn.sessionContext.reasons = changedTurnContextReasons(previous, snapshot)
 	} else {
-		reason := "first_seen"
-		if bootstrapOnly || hasPriorConversation(visible) {
-			reason = "legacy_resume"
+		if initialOnly && hasPriorConversation(visible) {
+			return provider.Message{}, false
 		}
-		a.turn.sessionContext.reasons = []string{reason}
+		a.turn.sessionContext.reasons = []string{"first_seen"}
 	}
 	return HostGeneratedUserMessage(snapshot.Content), true
 }

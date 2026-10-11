@@ -71,15 +71,6 @@ func TestParsePreservesSectionMarkerInsideValue(t *testing.T) {
 	}
 }
 
-func TestParseAcceptsLegacyV1Snapshot(t *testing.T) {
-	body := preamble + "\n\n## Workspace\n\nlegacy workspace"
-	legacy := openTag + "\n" + body + "\n\n" + digestPrefix + digestOf(body) + "\n" + closeTag
-	parsed, ok := Parse(legacy)
-	if !ok || parsed.Sections.Workspace != "legacy workspace" {
-		t.Fatalf("legacy v1 snapshot no longer parses: ok=%v sections=%+v", ok, parsed.Sections)
-	}
-}
-
 func TestSplitBlocksPreservesBytesAndMarksOnlyValidSnapshots(t *testing.T) {
 	snapshot := Build(Sections{Workspace: "workspace"})
 	input := "before\n\n" + snapshot.Content + "\n\nafter"

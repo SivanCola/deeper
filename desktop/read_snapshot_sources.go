@@ -13,8 +13,6 @@ import (
 type readSourceFence struct {
 	app          *App
 	files        map[string]os.FileInfo
-	bindings     map[string]string
-	versions     *workspacestate.ReadVersions
 	store        *readSnapshotStore
 	snapshot     *readSnapshot
 	metadataOnly bool
@@ -31,11 +29,11 @@ func projectionReadVersions(state workspacestate.State, supplied []*workspacesta
 }
 
 func (a *App) newReadSourceFence(store *readSnapshotStore, snapshot *readSnapshot) (*readSourceFence, error) {
-	state, err := a.workspaceRegistry().VerifySnapshot(a.bootContext())
+	_, err := a.workspaceRegistry().VerifySnapshot(a.bootContext())
 	if err != nil {
 		return nil, err
 	}
-	return &readSourceFence{app: a, files: map[string]os.FileInfo{}, bindings: map[string]string{}, versions: state.ReadVersions(), store: store, snapshot: snapshot}, nil
+	return &readSourceFence{app: a, files: map[string]os.FileInfo{}, store: store, snapshot: snapshot}, nil
 }
 
 func (f *readSourceFence) add(ctx context.Context, path string) error {
@@ -67,12 +65,7 @@ func (f *readSourceFence) add(ctx context.Context, path string) error {
 	if err := f.store.reserve(f.snapshot, int64(512+len(path)*2)); err != nil {
 		return err
 	}
-	binding, err := f.versions.Source(path)
-	if err != nil {
-		return err
-	}
 	f.files[path] = info
-	f.bindings[path] = binding
 	return nil
 }
 
@@ -88,7 +81,7 @@ func (f *readSourceFence) validateCurrent() error {
 	return f.validateWithCurrent(current)
 }
 
-func (f *readSourceFence) validateWithCurrent(current *workspacestate.ReadSnapshot) error {
+func (f *readSourceFence) validateWithCurrent(_ *workspacestate.ReadSnapshot) error {
 	for path, original := range f.files {
 		if !f.metadataOnly {
 			info, err := os.Stat(path)
@@ -113,13 +106,6 @@ func (f *readSourceFence) validateWithCurrent(current *workspacestate.ReadSnapsh
 			if !found || record.MissingSince != 0 || record.Health == "missing" || snapshotBinding("catalog-source", []any{record.Scope, record.WorkspaceRoot, record.TopicID}) != expected {
 				return snapshotStale("lifecycle_changed")
 			}
-		}
-		binding, err := current.ReadVersions().Source(path)
-		if err != nil {
-			return err
-		}
-		if binding != f.bindings[path] {
-			return snapshotStale("lifecycle_changed")
 		}
 	}
 	return nil

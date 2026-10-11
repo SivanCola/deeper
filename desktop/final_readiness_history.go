@@ -1,7 +1,6 @@
 package main
 
 import (
-	"deepzora/internal/agent"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"fmt"
@@ -24,10 +23,7 @@ func historyLocalOnlyRows(m provider.Message) ([]HistoryMessage, bool) {
 		}
 		return nil, true
 	}
-	if readiness := agent.HistoricalChecks(m.FinalReadinessRecovery); readiness != nil {
-		return []HistoryMessage{{Role: "notice", Code: agent.HistoricalChecksNoticeCode, Level: "info",
-			Content: agent.HistoricalChecksNoticeText, Readiness: readiness}}, true
-	}
+
 	rows, handled := historySteerRows(m.Content, true)
 	for i := range rows {
 		rows[i].MessageID = m.ID

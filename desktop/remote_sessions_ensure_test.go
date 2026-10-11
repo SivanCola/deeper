@@ -13,7 +13,7 @@ import (
 // EnsureServer and returns the mapped rows.
 func TestRemoteProjectSessionsEnsureColdStartsServe(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/remote/sessions/s1.jsonl", Title: "First chat", Turns: 2},
+		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:     []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -48,7 +48,7 @@ func TestRemoteProjectSessionsEnsureColdStartsServe(t *testing.T) {
 // second EnsureServer round.
 func TestRemoteProjectSessionsEnsureReusesRunningServe(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/remote/sessions/s1.jsonl", Title: "First chat", Turns: 1},
+		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 1},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -77,7 +77,7 @@ func TestRemoteProjectSessionsEnsureReusesRunningServe(t *testing.T) {
 // an explicit group refresh must not reuse that client as a live Serve path.
 func TestRemoteProjectSessionsEnsureRejectsSuspendedTabClient(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/remote/sessions/s1.jsonl", Title: "Recovered chat", Turns: 3},
+		{Name: "s1", Path: "session-id:s1", Title: "Recovered chat", Turns: 3},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:     []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},

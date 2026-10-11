@@ -310,6 +310,7 @@ func TestRepeatedForkPublishesSidebarMembershipWithoutRestart(t *testing.T) {
 			}
 			checkEvent(first.SessionID)
 			checkEvent(first.SessionID)
+			waitForForkHistoryForTest(t, app, first.TabID)
 			if err := app.AcknowledgeForkOperation("test", first.OperationID); err != nil {
 				t.Fatal(err)
 			}
@@ -324,6 +325,7 @@ func TestRepeatedForkPublishesSidebarMembershipWithoutRestart(t *testing.T) {
 			}
 			checkEvent(second.SessionID)
 			checkEvent(second.SessionID)
+			waitForForkHistoryForTest(t, app, second.TabID)
 			page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: scope, WorkspaceRoot: root, Limit: 20})
 			if err != nil {
 				t.Fatal(err)
@@ -557,5 +559,23 @@ func TestCreateForkForTabReopensCompletedOperationAfterAttachFailure(t *testing.
 	app.mu.RUnlock()
 	if topicID != presentation.TopicID || title != presentation.Title {
 		t.Fatalf("retried tab presentation = %q / %q, durable sidebar = %q / %q", topicID, title, presentation.TopicID, presentation.Title)
+	}
+}
+
+func waitForForkHistoryForTest(t *testing.T, app *App, tabID string) {
+	t.Helper()
+	app.mu.RLock()
+	tab := app.tabs[tabID]
+	var done <-chan struct{}
+	if tab != nil && tab.buildExecution != nil {
+		done = tab.buildExecution.done
+	}
+	app.mu.RUnlock()
+	if done != nil {
+		select {
+		case <-done:
+		case <-time.After(15 * time.Second):
+			t.Fatal("fork tab build did not finish")
+		}
 	}
 }

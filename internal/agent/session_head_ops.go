@@ -95,15 +95,6 @@ func LoadSessionHeadReadOnlyContext(ctx context.Context, path, headID string) (*
 	return loadSessionHeadReadOnlyWithLimits(ctx, path, headID, defaultSessionReplayLimits)
 }
 
-// LoadSessionHeadForMigration materializes one head from a frozen legacy DAG
-// without applying cumulative interactive-history replay budgets.
-func LoadSessionHeadForMigration(ctx context.Context, path, headID string) (*Session, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return loadSessionHeadReadOnlyWithLimits(ctx, path, headID, migrationSessionReplayLimits())
-}
-
 func loadSessionHeadReadOnlyWithLimits(ctx context.Context, path, headID string, limits sessionReplayLimits) (*Session, error) {
 	st, err := replayDAGForHeadOpReadOnlyWithLimits(ctx, path, limits)
 	if err != nil {

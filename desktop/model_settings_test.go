@@ -242,7 +242,7 @@ func TestModelSettingsGroupedCredentialCommitAndReceipt(t *testing.T) {
 	cfg := config.Default()
 	cfg.Providers = nil
 	for _, name := range []string{"first", "second", "unrelated"} {
-		cfg.Providers = append(cfg.Providers, config.ProviderEntry{Name: name, Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "chat", APIKeyEnv: "GROUP_OLD_KEY"})
+		cfg.Providers = append(cfg.Providers, config.ProviderEntry{Models: []string{"chat"}, Default: "chat", Name: name, Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "chat", APIKeyEnv: "GROUP_OLD_KEY"})
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)

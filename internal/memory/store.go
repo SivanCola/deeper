@@ -460,46 +460,8 @@ func renderIndexLine(name string, m Memory) string {
 		NormalizeFactScope(string(m.Scope)), NormalizeType(string(m.Type)), marker, oneLine(m.Description))
 }
 
-// List returns the saved memories parsed from their files, sorted by name. Used
-// by `/memory` and the desktop memory panel. Reads from both GlobalDir and Dir,
-// merging results. Files that fail to parse are skipped so one bad file never
-// hides the rest.
-func (s Store) List() []Memory {
-	if s.Dir == "" && s.GlobalDir == "" {
-		return nil
-	}
-	var out []Memory
-	seen := map[string]bool{}
-	for _, dir := range s.dirs() {
-		if dir == "" {
-			continue
-		}
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		for _, e := range entries {
-			if e.IsDir() || e.Name() == indexFile || !strings.HasSuffix(e.Name(), ".md") {
-				continue
-			}
-			if m, ok := loadMemory(filepath.Join(dir, e.Name())); ok {
-				if m.Scope == "" {
-					m.Scope = s.scopeForDir(dir)
-				}
-				if !seen[m.Name] {
-					out = append(out, m)
-					seen[m.Name] = true
-				}
-			}
-		}
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out
-}
-
-// ListAll returns every active fact from both scopes without the legacy
-// name-based deduplication performed by List. Callers that understand scope can
-// use it to resolve project-over-global overrides without hiding either source.
+// ListAll returns every active fact from both scopes. Callers can resolve
+// project-over-global overrides without hiding either source.
 func (s Store) ListAll() []Memory {
 	if s.Dir == "" && s.GlobalDir == "" {
 		return nil
@@ -546,9 +508,8 @@ func (s Store) ListAll() []Memory {
 // snapshot always equals exactly what the user curated.
 const PinnedGuidanceBudgetChars = 1500
 
-// pinnedGuidance snapshots explicitly pinned facts (plus legacy global
-// user/feedback, which ResolveActivation keeps pinned for compatibility) for
-// session-context, most recently updated first.
+// pinnedGuidance snapshots explicitly pinned facts for session-context,
+// most recently updated first.
 func (s Store) pinnedGuidance() []Memory {
 	var out []Memory
 	for _, dir := range s.dirs() {
@@ -722,11 +683,8 @@ func loadMemory(path string) (Memory, bool) {
 	if m.Name == "" {
 		m.Name = strings.TrimSuffix(filepath.Base(path), ".md")
 	}
-	if m.ID == "" {
-		m.ID = legacyMemoryID(m.Name, legacyIdentityScope(m))
-	}
-	if m.Revision <= 0 {
-		m.Revision = 1
+	if m.ID == "" || m.Revision < 1 || m.Scope == "" || fm["fact_type"] != "" {
+		return Memory{}, false
 	}
 	if info, err := os.Stat(path); err == nil {
 		if m.CreatedAt.IsZero() {
@@ -737,16 +695,6 @@ func loadMemory(path string) (Memory, bool) {
 		}
 	}
 	return m, true
-}
-
-func legacyIdentityScope(m Memory) FactScope {
-	if m.Scope != "" {
-		return NormalizeFactScope(string(m.Scope))
-	}
-	if m.Type == TypeUser || m.Type == TypeFeedback {
-		return FactScopeGlobal
-	}
-	return FactScopeProject
 }
 
 func parsePositiveInt(value string) int {
@@ -763,9 +711,6 @@ func parseMemoryTime(value string) time.Time {
 }
 
 func persistedFactType(fm map[string]string) Type {
-	if t := Type(strings.ToLower(strings.TrimSpace(fm["fact_type"]))); validTypes[t] {
-		return t
-	}
 	return NormalizeType(fm["type"])
 }
 

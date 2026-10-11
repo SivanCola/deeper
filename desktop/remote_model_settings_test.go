@@ -357,7 +357,7 @@ func TestRemoteModelSettingsOldServeDoesNotReceiveMutation(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer server.Close()
-	if _, err := remoteModelSettingsRequest(context.Background(), server.Client(), server.URL, "session", nil); err == nil || !strings.Contains(err.Error(), "newer remote Serve") {
+	if _, err := remoteModelSettingsRequest(context.Background(), server.Client(), server.URL, "session-id:session", nil); err == nil || !strings.Contains(err.Error(), "newer remote Serve") {
 		t.Fatalf("capability error: %v", err)
 	}
 	if mutations != 0 {
@@ -383,7 +383,7 @@ func TestRemoteModelSettingsLegacyServeHTMLIndexIsCapabilityRejection(t *testing
 	}))
 	defer server.Close()
 	for _, body := range []any{nil, map[string]any{"version": 1, "ref": "p/m", "settings": map[string]any{"revision": "r"}}} {
-		_, err := remoteModelSettingsRequest(context.Background(), server.Client(), server.URL, "session", body)
+		_, err := remoteModelSettingsRequest(context.Background(), server.Client(), server.URL, "session-id:session", body)
 		if err == nil || !strings.Contains(err.Error(), "newer remote Serve") {
 			t.Fatalf("capability error: %v", err)
 		}
@@ -407,7 +407,7 @@ func TestRemoteModelSettingsNonDocumentDecodeFailureStaysError(t *testing.T) {
 		_, _ = w.Write([]byte("not-json{"))
 	}))
 	defer server.Close()
-	_, err := remoteModelSettingsRequest(context.Background(), server.Client(), server.URL, "session", nil)
+	_, err := remoteModelSettingsRequest(context.Background(), server.Client(), server.URL, "session-id:session", nil)
 	if err == nil || !strings.Contains(err.Error(), "decode remote model settings status") {
 		t.Fatalf("expected decode error, got %v", err)
 	}
@@ -424,170 +424,6 @@ type unsupportedModelSettingsKernel struct {
 func (k *unsupportedModelSettingsKernel) SwitchCredentialProxyModel(context.Context, string, string, string, string, string) error {
 	k.switches++
 	return &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint, unsupported: true}
-}
-
-// Turn admission must not fail every send against a reused legacy Serve that
-// credential mode itself still supports: the unsupported protocol is recorded
-// per tab generation and the run is admitted without a revision, until a
-// reconnect or serve replacement probes the protocol again.
-func TestEnsureRemoteModelSettingsAdmitsLegacyServeTurns(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("{}"))
-	}))
-	defer upstream.Close()
-	app := NewApp()
-	defer app.closeCredentialProxy()
-	view := ProviderView{Name: "legacy", Kind: "openai", BaseURL: upstream.URL, Models: []string{"m"}, NoProxy: true}
-	if _, err := app.SaveProviderWithKey(view, "legacy-key"); err != nil {
-		t.Fatal(err)
-	}
-	if err := editUserConfig(func(c *config.Config) error {
-		return c.UpsertRemoteHost(config.RemoteHostEntry{Name: "legacy-host", Host: "127.0.0.1", CredentialMode: "local-proxy"})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	tab := &remoteTab{
-		id: "legacy-tab", ref: RemoteTabRef{HostID: "legacy-host", Workspace: "ws"},
-		state: "ready", client: &http.Client{}, model: "legacy/m", gen: 1,
-		routing: remoteTabSessionRouting{currentPath: "/proj/session"},
-	}
-	app.remoteTabs = map[string]*remoteTab{tab.id: tab}
-	kernel := &unsupportedModelSettingsKernel{}
-	app.remoteMu.Lock()
-	app.remoteRuntime = kernel
-	app.remoteMu.Unlock()
-
-	revision, admittedGen, err := app.ensureRemoteModelSettings(tab.id)
-	if err != nil || revision != "" || admittedGen != 1 {
-		t.Fatalf("legacy Serve turn admission failed: revision=%q gen=%d err=%v", revision, admittedGen, err)
-	}
-	if kernel.switches != 1 {
-		t.Fatalf("expected one protocol probe, got %d", kernel.switches)
-	}
-	app.remoteTabMu.Lock()
-	recorded, failed := tab.settings.unsupportedGen == 1, tab.settings.failure
-	app.remoteTabMu.Unlock()
-	if !recorded || failed != "" {
-		t.Fatalf("unsupported generation not recorded cleanly: gen=%d failure=%q", tab.settings.unsupportedGen, failed)
-	}
-
-	// The remembered verdict admits later turns without re-probing the Serve.
-	if revision, admittedGen, err = app.ensureRemoteModelSettings(tab.id); err != nil || revision != "" || admittedGen != 1 || kernel.switches != 1 {
-		t.Fatalf("repeat admission re-probed legacy Serve: revision=%q gen=%d err=%v switches=%d", revision, admittedGen, err, kernel.switches)
-	}
-
-	// A new tab generation (reconnect or replaced Serve) probes once more.
-	app.remoteTabMu.Lock()
-	tab.gen = 2
-	app.remoteTabMu.Unlock()
-	if revision, admittedGen, err = app.ensureRemoteModelSettings(tab.id); err != nil || revision != "" || admittedGen != 2 || kernel.switches != 2 {
-		t.Fatalf("new generation did not re-probe the protocol: revision=%q gen=%d err=%v switches=%d", revision, admittedGen, err, kernel.switches)
-	}
-}
-
-type reconnectingUnsupportedKernel struct {
-	remoteKernel
-	switches  int
-	reconnect func()
-}
-
-func (k *reconnectingUnsupportedKernel) SwitchCredentialProxyModel(context.Context, string, string, string, string, string) error {
-	k.switches++
-	if k.reconnect != nil {
-		reconnect := k.reconnect
-		k.reconnect = nil
-		reconnect()
-	}
-	return &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint, unsupported: true}
-}
-
-// A reconnect that replaces the probe target mid-flight must not admit against
-// the retired fence: the replacement Serve may speak the protocol, so the
-// unsupported verdict is only remembered when the probed connection is still
-// current, and a replaced generation is re-probed instead.
-func TestEnsureRemoteModelSettingsReprobesReplacedConnection(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("{}"))
-	}))
-	defer upstream.Close()
-	app := NewApp()
-	defer app.closeCredentialProxy()
-	view := ProviderView{Name: "legacy", Kind: "openai", BaseURL: upstream.URL, Models: []string{"m"}, NoProxy: true}
-	if _, err := app.SaveProviderWithKey(view, "legacy-key"); err != nil {
-		t.Fatal(err)
-	}
-	if err := editUserConfig(func(c *config.Config) error {
-		return c.UpsertRemoteHost(config.RemoteHostEntry{Name: "legacy-host", Host: "127.0.0.1", CredentialMode: "local-proxy"})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	tab := &remoteTab{
-		id: "legacy-tab", ref: RemoteTabRef{HostID: "legacy-host", Workspace: "ws"},
-		state: "ready", client: &http.Client{}, model: "legacy/m", gen: 1,
-		routing: remoteTabSessionRouting{currentPath: "/proj/session"},
-	}
-	app.remoteTabs = map[string]*remoteTab{tab.id: tab}
-	kernel := &reconnectingUnsupportedKernel{reconnect: func() {
-		app.remoteTabMu.Lock()
-		tab.gen++
-		app.remoteTabMu.Unlock()
-	}}
-	app.remoteMu.Lock()
-	app.remoteRuntime = kernel
-	app.remoteMu.Unlock()
-
-	revision, admittedGen, err := app.ensureRemoteModelSettings(tab.id)
-	if err != nil || revision != "" || admittedGen != 2 {
-		t.Fatalf("replaced connection admission failed: revision=%q gen=%d err=%v", revision, admittedGen, err)
-	}
-	if kernel.switches != 2 {
-		t.Fatalf("expected the replacement generation to be re-probed, switches=%d", kernel.switches)
-	}
-	app.remoteTabMu.Lock()
-	recorded := tab.settings.unsupportedGen == 2
-	app.remoteTabMu.Unlock()
-	if !recorded {
-		t.Fatalf("verdict was not recorded on the current generation: unsupportedGen=%d gen=%d", tab.settings.unsupportedGen, tab.gen)
-	}
-}
-
-// The application status must not leave legacy generations pending forever:
-// a Serve without the protocol never applies snapshots, so the target reports
-// not_required and the receipt stops waiting and polling.
-func TestAppendRemoteModelSettingsReportsLegacyTargetNotRequired(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("{}"))
-	}))
-	defer upstream.Close()
-	app := NewApp()
-	defer app.closeCredentialProxy()
-	view := ProviderView{Name: "legacy", Kind: "openai", BaseURL: upstream.URL, Models: []string{"m"}, NoProxy: true}
-	if _, err := app.SaveProviderWithKey(view, "legacy-key"); err != nil {
-		t.Fatal(err)
-	}
-	if err := editUserConfig(func(c *config.Config) error {
-		return c.UpsertRemoteHost(config.RemoteHostEntry{Name: "legacy-host", Host: "127.0.0.1", CredentialMode: "local-proxy"})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	tab := &remoteTab{
-		id: "legacy-tab", ref: RemoteTabRef{HostID: "legacy-host", Workspace: "ws"},
-		model: "legacy/m", gen: 3,
-	}
-	tab.settings.unsupportedGen = 3
-	app.remoteTabs = map[string]*remoteTab{tab.id: tab}
-
-	result := emptyModelSettingsResult()
-	app.appendRemoteModelSettingsStatus(&result)
-	if len(result.Targets) != 1 || result.Targets[0].Application != "not_required" {
-		t.Fatalf("legacy target not reported as not_required: %+v", result.Targets)
-	}
-	if result.Application == "pending" {
-		t.Fatal("legacy target drove the receipt into a pending application")
-	}
 }
 
 // Fresh and restored tabs run generation 0 with an unrecorded verdict; they
@@ -672,5 +508,35 @@ func TestSubmitRemoteTabRejectsLegacyServeWithoutExecutionProtocol(t *testing.T)
 	close(submits)
 	if seen := len(submits); seen != 0 {
 		t.Fatalf("legacy Serve received %d submit requests, want none", seen)
+	}
+}
+
+func TestEnsureRemoteModelSettingsRejectsUnsupportedProtocol(t *testing.T) {
+	isolateDesktopUserDirs(t)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "{}") }))
+	defer upstream.Close()
+	app := NewApp()
+	defer app.closeCredentialProxy()
+	if _, err := app.SaveProviderWithKey(ProviderView{Name: "current", Kind: "openai", BaseURL: upstream.URL, Models: []string{"m"}, NoProxy: true}, "test-key"); err != nil {
+		t.Fatal(err)
+	}
+	if err := editUserConfig(func(c *config.Config) error {
+		return c.UpsertRemoteHost(config.RemoteHostEntry{Name: "host", Host: "127.0.0.1", CredentialMode: "local-proxy"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	tab := &remoteTab{id: "current-tab", ref: RemoteTabRef{HostID: "host", Workspace: "ws"}, state: "ready", client: &http.Client{}, model: "current/m", gen: 1, routing: remoteTabSessionRouting{currentPath: "session-id:current"}}
+	app.remoteTabs = map[string]*remoteTab{tab.id: tab}
+	kernel := &unsupportedModelSettingsKernel{}
+	app.remoteRuntime = kernel
+	for _, generation := range []uint64{1, 1, 2} {
+		tab.gen = generation
+		revision, _, err := app.ensureRemoteModelSettings(tab.id)
+		if err == nil || revision != "" {
+			t.Fatalf("unsupported protocol admitted generation %d: %s %v", generation, revision, err)
+		}
+	}
+	if kernel.switches != 3 {
+		t.Fatalf("unsupported verdict bypassed current acknowledgement: %d", kernel.switches)
 	}
 }

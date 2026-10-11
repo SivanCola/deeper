@@ -16,9 +16,7 @@ import (
 
 func TestRemoteInboxQueueCapabilitiesAndIdentity(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	ctrl, path := newRemoteCanonicalController(t, nil, event.Discard)
 	defer ctrl.Close()
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)
@@ -60,7 +58,9 @@ func TestRemoteInboxQueueCapabilitiesAndIdentity(t *testing.T) {
 		t.Fatal("remote queue changed unexpectedly")
 	}
 	tab.selectionRevision--
-	ctrl.SetSessionPath(filepath.Join(dir, "other.jsonl"))
+	if _, err := ctrl.BindFreshSession(t.Context(), "other"); err != nil {
+		t.Fatal(err)
+	}
 	stale, err = a.InboxQueueForTarget(target, control.InboxQueueRequest{Kind: "pause", Paused: true})
 	if err != nil || stale.Reason != "session_changed" {
 		t.Fatalf("remote foreground switch: %+v %v", stale, err)

@@ -8,7 +8,6 @@ import (
 
 // Schema versions for on-disk checkpoint JSON.
 const (
-	SchemaV1 = 1
 	SchemaV2 = 2
 	SchemaV3 = 3
 )
@@ -20,7 +19,6 @@ const (
 	CoverageComplete Coverage = "complete"
 	CoveragePartial  Coverage = "partial"
 	CoverageNone     Coverage = "none"
-	CoverageLegacy   Coverage = "legacy"
 )
 
 // CoverageGap records why a checkpoint cannot guarantee full file restore.
@@ -43,7 +41,6 @@ const (
 	GapUnreadable       = "unreadable"
 	GapOversized        = "oversized"
 	GapBackgroundWriter = "background_writer_cross_turn"
-	GapLegacyUnverified = "legacy_unverified"
 	GapCaptureFailed    = "capture_failed"
 	GapExpiredPayload   = "expired_file_payload"
 )
@@ -135,18 +132,18 @@ type RewindConflict struct {
 
 // Conflict reason constants.
 const (
-	ConflictManualEdit      = "manual_edit"
-	ConflictExternalChange  = "external_change"
-	ConflictDeletedRecreate = "deleted_and_recreated"
-	ConflictTypeChange      = "type_change"
-	ConflictModeChange      = "mode_change"
-	ConflictMissingPayload  = "missing_payload"
-	ConflictPathUnsafe      = "path_unsafe"
-	ConflictBusyWriter      = "active_writer"
-	ConflictStalePlan       = "stale_plan"
-	ConflictBoundaryInvalid = "boundary_invalid"
-	ConflictCoverageLegacy  = "legacy_unverified"
-	ConflictExpired         = "expired_payload"
+	ConflictManualEdit          = "manual_edit"
+	ConflictExternalChange      = "external_change"
+	ConflictDeletedRecreate     = "deleted_and_recreated"
+	ConflictTypeChange          = "type_change"
+	ConflictModeChange          = "mode_change"
+	ConflictMissingPayload      = "missing_payload"
+	ConflictPathUnsafe          = "path_unsafe"
+	ConflictBusyWriter          = "active_writer"
+	ConflictStalePlan           = "stale_plan"
+	ConflictBoundaryInvalid     = "boundary_invalid"
+	ConflictOwnershipUnverified = "ownership_unverified"
+	ConflictExpired             = "expired_payload"
 )
 
 // FileStage records per-file progress through a rewind transaction.
@@ -166,7 +163,6 @@ type RewindPlan struct {
 	Scope              RewindScope      `json:"scope"`
 	Coverage           Coverage         `json:"coverage"`
 	CoverageGaps       []CoverageGap    `json:"coverageGaps,omitempty"`
-	Legacy             bool             `json:"legacy,omitempty"`
 	ExpiredFilePayload bool             `json:"expiredFilePayload,omitempty"`
 	CanFiles           bool             `json:"canFiles"`
 	CanConversation    bool             `json:"canConversation"`

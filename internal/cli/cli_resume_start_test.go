@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 func ambiguousResumeWorkspace(t *testing.T) (string, string) {
@@ -17,13 +17,15 @@ func ambiguousResumeWorkspace(t *testing.T) (string, string) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	alpha := saveQueryTestSession(t, dir, "alpha-branch.jsonl", "demo-alpha rollout")
-	beta := saveQueryTestSession(t, dir, "beta-branch.jsonl", "demo-beta rollout")
+	createCanonicalTestSession(t, session.RootForSessionDir(dir), "alpha", "demo-alpha rollout")
+	createCanonicalTestSession(t, session.RootForSessionDir(dir), "beta", "demo-beta rollout")
+	waitForCatalogMetadata(t, dir, "alpha", "beta")
+	alpha, beta := cliCanonicalRoute("alpha"), cliCanonicalRoute("beta")
 	return alpha, beta
 }
 
 func TestHeadlessResumeAmbiguousQueryListsCandidates(t *testing.T) {
-	alpha, beta := ambiguousResumeWorkspace(t)
+	ambiguousResumeWorkspace(t)
 
 	var rc int
 	out := captureStderr(t, func() {
@@ -33,8 +35,8 @@ func TestHeadlessResumeAmbiguousQueryListsCandidates(t *testing.T) {
 		t.Fatalf("exit code = %d, want 1", rc)
 	}
 	for _, want := range []string{
-		agent.BranchID(alpha), "demo-alpha rollout",
-		agent.BranchID(beta), "demo-beta rollout",
+		"alpha", "demo-alpha rollout",
+		"beta", "demo-beta rollout",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("stderr does not name candidate %q:\n%s", want, out)
@@ -44,12 +46,13 @@ func TestHeadlessResumeAmbiguousQueryListsCandidates(t *testing.T) {
 
 func TestInteractiveResumeAmbiguousQueryOffersOnlyMatches(t *testing.T) {
 	alpha, beta := ambiguousResumeWorkspace(t)
-	_ = saveQueryTestSession(t, resolveCLISessionDir(), "gamma-branch.jsonl", "unrelated work")
+	createCanonicalTestSession(t, session.RootForSessionDir(resolveCLISessionDir()), "gamma", "unrelated work")
+	waitForCatalogMetadata(t, resolveCLISessionDir(), "gamma")
 
 	var offered []string
 	choose := func(entries []resumeEntry) (cliResumeTarget, int) {
 		for _, entry := range entries {
-			offered = append(offered, entry.target.path)
+			offered = append(offered, cliCanonicalRoute(entry.target.ref.SessionID))
 		}
 		return entries[len(entries)-1].target, 0
 	}
@@ -60,7 +63,7 @@ func TestInteractiveResumeAmbiguousQueryOffersOnlyMatches(t *testing.T) {
 	if len(offered) != 2 || !containsPath(offered, alpha) || !containsPath(offered, beta) {
 		t.Fatalf("chooser offered %v, want exactly %s and %s", offered, alpha, beta)
 	}
-	if target.path != offered[1] {
+	if cliCanonicalRoute(target.ref.SessionID) != offered[1] {
 		t.Fatalf("target = %+v, want the chosen %s", target, offered[1])
 	}
 }

@@ -35,7 +35,7 @@ func TestRememberToolSaves(t *testing.T) {
 		t.Fatalf("tool output must use a stable reference, got %q", out)
 	}
 
-	list := store.List()
+	list := store.ListAll()
 	if len(list) != 1 || list[0].Name != "likes-go" || list[0].Type != TypeUser || list[0].Scope != FactScopeGlobal {
 		t.Fatalf("memory not saved correctly: %+v", list)
 	}
@@ -50,24 +50,20 @@ func TestRememberToolDefaultsToProjectScope(t *testing.T) {
 	if _, err := NewRememberTool(store).Execute(context.Background(), []byte(`{"name":"project-feedback","description":"current project only","type":"feedback","body":"body"}`)); err != nil {
 		t.Fatal(err)
 	}
-	list := store.List()
+	list := store.ListAll()
 	if len(list) != 1 || list[0].Scope != FactScopeProject {
 		t.Fatalf("memory = %+v, want project scope", list)
 	}
 }
 
-func TestRememberToolUpdateWithoutScopePreservesLegacyGlobalScope(t *testing.T) {
+func TestRememberToolUpdateWithoutScopePreservesGlobalScope(t *testing.T) {
 	root := t.TempDir()
 	store := Store{Dir: filepath.Join(root, "project"), GlobalDir: filepath.Join(root, "global")}
 	if err := os.MkdirAll(store.GlobalDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	legacy := "---\nname: no-emoji\ndescription: legacy global feedback\nmetadata:\n  type: feedback\n---\n\nAvoid emoji.\n"
-	globalPath := filepath.Join(store.GlobalDir, "no-emoji.md")
-	if err := os.WriteFile(globalPath, []byte(legacy), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := reindexIn(store.GlobalDir, "no-emoji", Memory{Name: "no-emoji", Description: "legacy global feedback", Type: TypeFeedback, Scope: FactScopeGlobal}); err != nil {
+	globalPath, err := store.Save(Memory{Name: "no-emoji", Description: "global feedback", Type: TypeFeedback, Scope: FactScopeGlobal, Body: "Avoid emoji."})
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -84,7 +80,7 @@ func TestRememberToolUpdateWithoutScopePreservesLegacyGlobalScope(t *testing.T) 
 	if _, err := os.Stat(filepath.Join(store.Dir, "no-emoji.md")); !os.IsNotExist(err) {
 		t.Fatalf("omitted-scope update created a project copy, stat err=%v", err)
 	}
-	list := store.List()
+	list := store.ListAll()
 	if len(list) != 1 || list[0].Scope != FactScopeGlobal || !strings.Contains(list[0].Body, "every project") {
 		t.Fatalf("updated memory = %+v, want one global active copy", list)
 	}

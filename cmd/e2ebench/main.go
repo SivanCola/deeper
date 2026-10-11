@@ -237,7 +237,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), "  %[1]s -mode diff -base origin/main -repo . -attempts 3 -timeout 1800\n", strings.Replace(flag.CommandLine.Name(), "e2ebench", "go run ./cmd/e2ebench", 1))
 	}
 
-	mode := flag.String("mode", "suite", "suite | diff | swebench | compare | traj | serve | fork")
+	mode := flag.String("mode", "suite", "suite | diff | swebench | compare | traj | serve")
 	addr := flag.String("addr", "127.0.0.1:7480", "serve mode: live dashboard listen address")
 	subset := flag.String("subset", "benchmarks/swebench/subset.json", "swebench mode: instance subset file")
 	namespace := flag.String("namespace", "swebench", "swebench mode: registry namespace holding the evaluation images")
@@ -255,11 +255,7 @@ func main() {
 	effort := flag.String("effort", "", "reasoning effort override passed to the agent (model-specific levels, e.g. disabled|low|high|max); empty = model default")
 	checkpoints := flag.Bool("checkpoints", false, "suite mode: snapshot the workdir on every change and grade each snapshot offline after the run, yielding first_correct_ms (TTFCS) and post_solve_waste_ms")
 	pressure := registerPressureFlags()
-	policyFlag := flag.String("policy", "", "suite mode: experiment arm — empty (baseline) | ebm (evidence-before-more-mutation nudge) | governor (exploration-phase reasoning governor) | memory-off (hide the memory store: MemoryBench counterfactual arm)")
-	forkCapture := flag.String("fork-capture", "", "suite mode: capture a fork bundle per task at first EBM eligibility into <dir>/<task-id>")
-	bundles := flag.String("bundles", "", "fork mode: directory of captured bundles (<task-id>/bundle.json)")
-	forkArms := flag.String("arm", "control,treatment", "fork mode: comma-separated continuation arms (control | treatment)")
-	forkReps := flag.Int("reps", 1, "fork mode: continuation repetitions per bundle per arm")
+	policyFlag := flag.String("policy", "", "suite mode: experiment arm — empty (baseline) | memory-off (hide the memory store: MemoryBench counterfactual arm)")
 	bin := flag.String("bin", "deepzora", "path to the deepzora binary")
 	model := flag.String("model", "", "provider/model name (default: config default)")
 	ablateFlag := flag.String("ablate", "", "ablation arm: subsystems to switch off (evidence, planner, subagent, retrieval, compaction; none|all)")
@@ -317,14 +313,7 @@ func main() {
 			os.Exit(1)
 		}
 		return
-	case "fork":
-		cfg := suiteConfig{bin: *bin, model: *model, arm: arm,
-			cacheArm: cache, effort: *effort, policy: *policyFlag}
-		if err := runForkMode(*bundles, *suite, *forkArms, *forkReps, cfg, *trajDir, *outMD, *outJSON); err != nil {
-			fmt.Fprintln(os.Stderr, "fork mode:", err)
-			os.Exit(1)
-		}
-		return
+
 	}
 
 	if *mode == "diff" {
@@ -341,7 +330,7 @@ func main() {
 		bin: *bin, model: *model, arm: arm, budget: *budget,
 		trajDir: *trajDir, forcePlanner: *forcePlanner, attempts: *attempts, anchor: anchor,
 		cacheArm: cache, effort: *effort, checkpoints: *checkpoints, policy: *policyFlag,
-		forkCapture: *forkCapture, meterConfig: meterSource, meterFaults: faults, segments: segments, steers: steers,
+		meterConfig: meterSource, meterFaults: faults, segments: segments, steers: steers,
 	}, *suite, *taskFilter, *outMD, *outJSON)
 }
 
@@ -474,7 +463,7 @@ type suiteConfig struct {
 	bin, model, cacheArm, effort string
 	arm                          ablation.Set
 	anchor                       string
-	policy, forkCapture          string
+	policy                       string
 	trajDir                      string
 	forcePlanner, checkpoints    bool
 	attempts, budget             int

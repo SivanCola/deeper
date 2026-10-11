@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/checkpoint"
@@ -99,7 +98,7 @@ func TestResumeRecoversCommittingCombinedRewind(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkpointBackup, err := json.Marshal([]*checkpoint.Checkpoint{{
-		SchemaVersion: checkpoint.SchemaV2,
+		SchemaVersion: checkpoint.SchemaV3,
 		Turn:          1,
 		Prompt:        "second",
 		MsgIndex:      3,
@@ -268,7 +267,6 @@ func TestRewindConversationSucceedsWithLiveBoundary(t *testing.T) {
 }
 
 func TestCompatibilityRewindTransfersLeaseBeforeForkSwitch(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
 	c, ag, _ := runTwoTurns(t)
 	originalPath := c.SessionPath()
 	keeper := NewSessionLeaseKeeper()
@@ -362,8 +360,7 @@ func TestTailRewindKeepsCompactionProjection(t *testing.T) {
 		textTurn("second answer"),
 	}}
 	ag := agent.New(prov, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{
-		ContextWindow: 10_000, CompactRatio: 0.80, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: 10_000, CompactRatio: 0.80}, event.Discard)
 	c := newOwnedTestController(t, Options{
 		Runner:     ag,
 		Executor:   ag,
@@ -419,28 +416,18 @@ func TestEditPromptPersistsOriginalPrompt(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.SubmitEditedDisplay("edited prompt", "edited prompt", "second prompt")
-	defer c.autosaveWG.Wait()
-
-	var loaded *agent.Session
-	deadline := time.Now().Add(time.Second)
-	for {
-		var err error
-		loaded, err = agent.LoadSession(c.SessionPath())
-		if err == nil {
-			msgs := loaded.Snapshot()
-			if len(msgs) >= 2 {
-				last := msgs[len(msgs)-2]
-				if last.Role == provider.RoleUser && agent.StripTransientUserBlocks(last.Content) == "edited prompt" {
-					break
-				}
-			}
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("edited prompt was not persisted before deadline")
-		}
-		time.Sleep(10 * time.Millisecond)
+	// Join the controller's completion and persistence owners before reading
+	// disk; a fixed polling deadline measures CI filesystem speed instead.
+	waitIdle(t, c)
+	c.autosaveWG.Wait()
+	loaded, err := agent.LoadSession(c.SessionPath())
+	if err != nil {
+		t.Fatalf("load completed edited turn: %v", err)
 	}
 	msgs := loaded.Snapshot()
+	if len(msgs) < 2 {
+		t.Fatalf("completed edited turn has too few messages: %+v", msgs)
+	}
 	last := msgs[len(msgs)-2]
 	if last.Role != provider.RoleUser || agent.StripTransientUserBlocks(last.Content) != "edited prompt" {
 		t.Fatalf("last user message = %+v, want edited prompt", last)

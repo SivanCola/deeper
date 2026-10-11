@@ -31,8 +31,6 @@ func (a *App) workspaceEntryConversation(root string) (string, string, error) {
 	path := node.SessionPath
 	if node.Session != nil {
 		path = sessionRoute(node.Session.SessionID)
-	} else if node.Source != nil {
-		path = nativeSessionSourceRoute(node.Source)
 	}
 	return node.TopicID, path, nil
 }

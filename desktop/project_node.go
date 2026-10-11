@@ -5,10 +5,6 @@ import "deepzora/internal/session"
 // ProjectNode is one node in the sidebar project tree (a project folder or a
 // topic leaf).
 type ProjectNode struct {
-	Source                       *SessionSourceRef   `json:"source,omitempty"`
-	Historical                   bool                `json:"historical,omitempty"`
-	HistoricalBranch             bool                `json:"historicalBranch,omitempty"`
-	PreparationStatus            string              `json:"preparationStatus,omitempty"`
 	IdentityAliases              []string            `json:"identityAliases,omitempty"`
 	LifecycleGeneration          uint64              `json:"lifecycleGeneration,omitempty"`
 	TabID                        string              `json:"tabId,omitempty"`
@@ -43,12 +39,8 @@ type ProjectNode struct {
 	RecoveryBranchCount          int                 `json:"recoveryBranchCount,omitempty"`
 	RecoveryUnresolvedCount      int                 `json:"recoveryUnresolvedCount,omitempty"`
 	RecoveryCleanupEligibleCount int                 `json:"recoveryCleanupEligibleCount,omitempty"`
-	// RecoveryCopyCount is retained for compatibility with older desktop
-	// frontends. Ordinary project-tree payloads intentionally leave it at zero:
-	// physical recovery copies are an internal persistence detail.
-	RecoveryCopyCount int           `json:"recoveryCopyCount,omitempty"`
-	IsolatedWorktree  bool          `json:"isolatedWorktree,omitempty"`
-	Remote            *RemoteTabRef `json:"remote,omitempty"`
-	RuntimeOnly       bool          `json:"runtimeOnly,omitempty"`
-	Children          []ProjectNode `json:"children,omitempty"`
+	IsolatedWorktree             bool                `json:"isolatedWorktree,omitempty"`
+	Remote                       *RemoteTabRef       `json:"remote,omitempty"`
+	RuntimeOnly                  bool                `json:"runtimeOnly,omitempty"`
+	Children                     []ProjectNode       `json:"children,omitempty"`
 }

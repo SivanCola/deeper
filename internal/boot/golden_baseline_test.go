@@ -75,7 +75,7 @@ engine = "native"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `
 	forcePowerShell := runtime.GOOS == "windows" || os.Getenv("DEEPZORA_GOLDEN_SHELL") == "powershell"

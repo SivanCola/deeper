@@ -7,24 +7,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-func TestDesktopSessionExperienceDefaultsAndLegacyMigration(t *testing.T) {
-	for _, legacy := range []DesktopConfig{
-		{DisplayMode: "compact"},
-		{DisplayMode: "minimal"},
-		{ReasoningDisplayMode: "hidden"},
-		{ReasoningDisplayMode: "summary"},
-		{ReasoningDisplayMode: "auto"},
-		{ReasoningDisplayMode: "expanded", ExpandThinking: true},
-	} {
-		cfg := Default()
-		cfg.Desktop = legacy
-		if got := cfg.DesktopSessionExperience(); got != "standard" {
-			t.Fatalf("legacy config %+v resolved to %q, want standard", legacy, got)
-		}
-	}
-}
-
-func TestSetDesktopSessionExperienceSynchronizesCompatibilityFields(t *testing.T) {
+func TestSetDesktopSessionExperience(t *testing.T) {
 	tests := []struct {
 		mode      string
 		reasoning string
@@ -40,12 +23,6 @@ func TestSetDesktopSessionExperienceSynchronizesCompatibilityFields(t *testing.T
 			}
 			if got := cfg.DesktopSessionExperience(); got != tt.mode {
 				t.Fatalf("experience = %q, want %q", got, tt.mode)
-			}
-			if cfg.Desktop.DisplayMode != "standard" || cfg.Desktop.ReasoningDisplayMode != tt.reasoning {
-				t.Fatalf("compatibility mirrors = %+v", cfg.Desktop)
-			}
-			if got := cfg.DesktopReasoningDisplayMode(); got != tt.reasoning {
-				t.Fatalf("reasoning mode = %q, want %q", got, tt.reasoning)
 			}
 		})
 	}

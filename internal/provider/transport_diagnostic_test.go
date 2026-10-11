@@ -60,9 +60,23 @@ func TestHTTP2StdlibProtocolFailureRecordsNegotiatedTransport(t *testing.T) {
 			if _, err := io.ReadFull(conn, make([]byte, len(http2.ClientPreface))); err != nil {
 				return
 			}
-			// A valid initial SETTINGS frame, followed by an illegal DATA frame on
-			// stream zero, deterministically exercises net/http's private error type.
-			_, _ = conn.Write([]byte{0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+			framer := http2.NewFramer(conn, conn)
+			if err := framer.WriteSettings(); err != nil {
+				return
+			}
+			// Wait for a request: failing during initial connection setup can
+			// produce a generic connection error before negotiated evidence exists.
+			for {
+				frame, err := framer.ReadFrame()
+				if err != nil {
+					return
+				}
+				if _, ok := frame.(*http2.HeadersFrame); ok {
+					break
+				}
+			}
+			// DATA on stream zero exercises net/http's private protocol-error type.
+			_, _ = conn.Write([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0})
 			_, _ = io.Copy(io.Discard, conn)
 		},
 	}

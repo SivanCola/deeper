@@ -17,7 +17,7 @@ func withTestSession(t *testing.T, opts Options) Options {
 		sessionDir = config.SessionDir()
 		opts.SessionDir = sessionDir
 	}
-	service, err := session.NewService("local", session.NewFilesystemPersistence(session.RootForLegacyDir(sessionDir)))
+	service, err := session.NewService("local", session.NewFilesystemPersistence(session.RootForSessionDir(sessionDir)))
 	if err != nil {
 		t.Fatalf("NewService: %v", err)
 	}

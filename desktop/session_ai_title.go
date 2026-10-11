@@ -79,7 +79,7 @@ func (a *App) AIRenameSessionTarget(selector SessionSelector) (SessionMutationRe
 	if strings.TrimSpace(target.SessionRef.SessionID) != "" {
 		title, err = a.aiRenameCanonicalSession(operationCtx, target)
 	} else {
-		title, err = a.aiRenameLegacySession(operationCtx, target)
+		return SessionMutationResult{}, newSessionOperationError(sessionOperationNoMessages, "This session has no user messages to analyze.")
 	}
 	if err != nil {
 		if cause := context.Cause(operationCtx); cause != nil && !errors.Is(cause, context.Canceled) {
@@ -107,60 +107,6 @@ func (a *App) AIRenameSessionTarget(selector SessionSelector) (SessionMutationRe
 		Title: title, WorkspaceID: target.WorkspaceID,
 	})
 	return result, nil
-}
-
-func (a *App) aiRenameLegacySession(ctx context.Context, target SessionTarget) (string, error) {
-	sessionDir, validated, err := a.sessionDirForPath(target.SessionPath)
-	if err != nil {
-		return "", newSessionOperationError(sessionOperationTargetNotFound, "The session no longer exists.")
-	}
-	expectedRevision := ""
-	modelRef := ""
-	if meta, ok, loadErr := agent.LoadBranchMeta(validated); loadErr != nil {
-		return "", fmt.Errorf("AI rename session: read current title: %w", loadErr)
-	} else if ok {
-		modelRef = meta.Model
-	}
-	_, expectedRevision, err = agent.SessionTitleSnapshot(validated)
-	if err != nil {
-		return "", fmt.Errorf("AI rename session: read title revision: %w", err)
-	}
-	users, err := loadTopicTitleUserTurnsFromSession(validated)
-	if err != nil {
-		return "", fmt.Errorf("AI rename session: read conversation: %w", err)
-	}
-	if len(users) == 0 {
-		return "", newSessionOperationError(sessionOperationNoMessages, "This session has no user messages to analyze.")
-	}
-	title, err := a.generateTargetSessionTitle(ctx, target, modelRef, sessionTitleTranscript(users))
-	if err != nil {
-		return "", err
-	}
-	a.lifecycleCheckpoint("session-title-before-commit")
-	a.sessionRemovalMu.Lock()
-	defer a.sessionRemovalMu.Unlock()
-	a.topicTitleMutationMu.Lock()
-	defer a.topicTitleMutationMu.Unlock()
-	if err := ctx.Err(); err != nil {
-		return "", err
-	}
-	if a.sessionTargetRuntimeRebound(target) {
-		return "", newSessionOperationError("target_changed", "The session moved or changed state. Try again.")
-	}
-	// A legacy source may have been imported and archived while generation
-	// was in flight. Original files remain on disk after canonical archive.
-	if _, found, err := a.legacyCanonicalRef(ctx, validated); err != nil {
-		return "", err
-	} else if found {
-		return "", newSessionOperationError("target_changed", "The session moved or changed state. Try again.")
-	}
-	if err := a.renameSessionInDirIfTitleUnchanged(sessionDir, validated, expectedRevision, title); err != nil {
-		if errors.Is(err, agent.ErrSessionTitleChanged) {
-			return "", newSessionOperationError(sessionOperationTitleConflict, "The session title changed while AI rename was running. Try again.")
-		}
-		return "", err
-	}
-	return title, nil
 }
 
 // The model round trip is already bounded where it is made: control's session

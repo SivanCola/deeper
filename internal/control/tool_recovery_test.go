@@ -1,7 +1,6 @@
 package control
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -36,15 +35,5 @@ func TestToolRecoverySnapshotStripsArgumentsAndIsStable(t *testing.T) {
 	}
 	if s.Revision != c.ToolRecoverySnapshot().Revision {
 		t.Fatal("unchanged snapshot revision moved")
-	}
-}
-
-func TestToolRecoveryActionsAreRetired(t *testing.T) {
-	c := newOwnedTestController(t, Options{Sink: event.Discard})
-	v := c.ToolRecoverySnapshot()
-	v.Revision = "stale"
-	_, err := c.ResolveToolRecovery(context.TODO(), ToolRecoveryRequest{SessionPath: v.SessionPath, RuntimeEpoch: v.RuntimeEpoch, Revision: v.Revision, Action: "confirm"})
-	if err == nil || !strings.Contains(err.Error(), "tool_recovery_retired") {
-		t.Fatalf("err=%v", err)
 	}
 }

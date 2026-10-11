@@ -128,12 +128,21 @@ func TestRuntimeStateHTTPIncludesDetachedAndKeepsSnapshotImmutable(t *testing.T)
 }
 
 func TestRuntimeStateHTTPStatusUsesRequestedDetachedController(t *testing.T) {
-	dir := t.TempDir()
-	foreground := runtimeStateServeController(t, dir, "foreground", nil)
+	server, foreground, service, _ := newExclusiveSessionServe(t)
 	runner := runtimeStateServeRunner{started: make(chan struct{})}
-	detached := runtimeStateServeController(t, dir, "detached", runner)
-	server := New(foreground, nil, config.ServeConfig{})
-	detachedPath := agent.CanonicalSessionPath(detached.SessionPath())
+	detached := control.New(control.Options{Executor: agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, event.Discard), SessionService: service, ExclusiveSession: true, Runner: runner})
+	if _, err := detached.BindFreshSession(t.Context(), "detached"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		detached.Close()
+		select {
+		case <-detached.Closed():
+		case <-time.After(5 * time.Second):
+			t.Error("detached controller teardown timed out")
+		}
+	})
+	detachedPath := remoteSessionIDQueryPrefix + "detached"
 	server.detached[detachedPath] = &detachedSession{path: detachedPath, ctrl: detached}
 	detached.Send("isolated running turn")
 	select {
@@ -144,12 +153,13 @@ func TestRuntimeStateHTTPStatusUsesRequestedDetachedController(t *testing.T) {
 	httpServer := httptest.NewServer(operatorHandler(server))
 	defer httpServer.Close()
 	var status struct {
+		SessionID    string                     `json:"sessionId"`
 		SessionPath  string                     `json:"sessionPath"`
 		Running      bool                       `json:"running"`
 		RuntimeState event.RuntimeStateSnapshot `json:"runtimeState"`
 	}
 	runtimeStateHTTPGet(t, httpServer.URL+"/status?runtime=1&session="+url.QueryEscape(detachedPath), &status)
-	if status.SessionPath != detachedPath {
+	if status.SessionID != "detached" || status.SessionPath != "" {
 		t.Fatalf("detached status path = %q, want canonical identity %q", status.SessionPath, detachedPath)
 	}
 	if !status.Running || status.RuntimeState.Phase != "executing" || status.RuntimeState.RuntimeEpoch != detached.RuntimeStateSnapshot().RuntimeEpoch {
@@ -284,16 +294,23 @@ func TestRuntimeStateSSEFiltersSessionsAndPreservesHostOnlyPayload(t *testing.T)
 }
 
 func TestRuntimeStateInboxReceiptRetainsRichFollowupAndSessionFence(t *testing.T) {
-	dir := t.TempDir()
 	runner := runtimeStateServeRunner{started: make(chan struct{})}
-	ctrl := runtimeStateServeController(t, dir, "foreground", runner)
+	server, ctrl, _, ref := newExclusiveSessionServeWithOptions(t, func(o *control.Options) { o.Runner = runner })
+	route := remoteSessionIDQueryPrefix + ref.SessionID
+	t.Cleanup(func() {
+		ctrl.Close()
+		select {
+		case <-ctrl.Closed():
+		case <-time.After(5 * time.Second):
+			t.Error("foreground controller teardown timed out")
+		}
+	})
 	ctrl.Send("hold isolated foreground turn")
 	select {
 	case <-runner.started:
 	case <-time.After(5 * time.Second):
 		t.Fatal("foreground runner did not start")
 	}
-	server := New(ctrl, nil, config.ServeConfig{})
 	httpServer := httptest.NewServer(operatorHandler(server))
 	defer httpServer.Close()
 	request := map[string]any{
@@ -309,7 +326,7 @@ func TestRuntimeStateInboxReceiptRetainsRichFollowupAndSessionFence(t *testing.T
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(sessionPathHeader, ctrl.SessionPath())
+	req.Header.Set(expectedSessionIDHeader, ref.SessionID)
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -330,13 +347,13 @@ func TestRuntimeStateInboxReceiptRetainsRichFollowupAndSessionFence(t *testing.T
 		t.Fatalf("HTTP enqueue lost rich prompt: %+v", envelope)
 	}
 	var recovered sessioninbox.InboxReceipt
-	runtimeStateHTTPGet(t, httpServer.URL+"/inbox/receipt?key=stable-key&session="+url.QueryEscape(ctrl.SessionPath()), &recovered)
+	runtimeStateHTTPGet(t, httpServer.URL+"/inbox/receipt?key=stable-key&session="+url.QueryEscape(route), &recovered)
 	if recovered.ItemID != enqueued.ItemID {
 		t.Fatalf("idempotency receipt changed item: enqueued=%+v recovered=%+v", enqueued, recovered)
 	}
 	var snapshot sessioninbox.InboxSnapshot
-	runtimeStateHTTPGet(t, httpServer.URL+"/inbox?session="+url.QueryEscape(ctrl.SessionPath()), &snapshot)
-	if snapshot.SessionPath != ctrl.SessionPath() || len(snapshot.Items) != 1 || snapshot.Items[0].ID != enqueued.ItemID {
+	runtimeStateHTTPGet(t, httpServer.URL+"/inbox?session="+url.QueryEscape(route), &snapshot)
+	if snapshot.SessionPath != route || len(snapshot.Items) != 1 || snapshot.Items[0].ID != enqueued.ItemID {
 		t.Fatalf("remote inbox snapshot does not match receipt: %+v", snapshot)
 	}
 	for _, endpoint := range []string{"/inbox", "/inbox/receipt?key=stable-key"} {
@@ -347,19 +364,19 @@ func TestRuntimeStateInboxReceiptRetainsRichFollowupAndSessionFence(t *testing.T
 					t.Fatal(err)
 				}
 				query := u.Query()
-				wrongPath := filepath.Join(dir, "wrong.jsonl")
+				wrongPath := remoteSessionIDQueryPrefix + "wrong"
 				if fence == "query" || fence == "conflicting" {
 					query.Set("session", wrongPath)
 				} else {
-					query.Set("session", ctrl.SessionPath())
+					query.Set("session", route)
 				}
 				u.RawQuery = query.Encode()
 				req, _ := http.NewRequest(http.MethodGet, u.String(), nil)
 				switch fence {
 				case "header":
-					req.Header.Set(expectedSessionPathHeader, wrongPath)
+					req.Header.Set(expectedSessionIDHeader, "wrong")
 				case "conflicting":
-					req.Header.Set(expectedSessionPathHeader, ctrl.SessionPath())
+					req.Header.Set(expectedSessionIDHeader, ref.SessionID)
 				}
 				response, err := http.DefaultClient.Do(req)
 				if err != nil {
@@ -372,7 +389,7 @@ func TestRuntimeStateInboxReceiptRetainsRichFollowupAndSessionFence(t *testing.T
 			})
 		}
 	}
-	wrong, err := http.Get(httpServer.URL + "/inbox/receipt?key=stable-key&session=" + url.QueryEscape(filepath.Join(dir, "wrong.jsonl")))
+	wrong, err := http.Get(httpServer.URL + "/inbox/receipt?key=stable-key&session=" + url.QueryEscape(remoteSessionIDQueryPrefix+"wrong"))
 	if err != nil {
 		t.Fatal(err)
 	}

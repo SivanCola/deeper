@@ -23,7 +23,6 @@ type request struct {
 	Args      []string          `json:"args"`
 	Env       map[string]string `json:"env"`
 	Headers   map[string]string `json:"headers"`
-	Tier      string            `json:"tier"`
 	Replace   bool              `json:"replace"` // overwrite existing entries
 	Strict    *bool             `json:"strict"`  // nil -> true; require skill frontmatter
 	// PlanID is echoed back on a confirm-apply call so the host can refuse

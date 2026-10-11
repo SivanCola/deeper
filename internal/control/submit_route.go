@@ -63,7 +63,7 @@ func isSimpleManagementInput(trimmed string) bool {
 }
 
 func (c *Controller) classifySlashSubmit(trimmed string) SubmitDisposition {
-	if _, ok := ParseFinalReadinessRecoveryCommand(trimmed); ok || !strings.HasPrefix(trimmed, "/") || strings.HasPrefix(trimmed, "!") {
+	if !strings.HasPrefix(trimmed, "/") || strings.HasPrefix(trimmed, "!") {
 		return SubmitTurnStarted
 	}
 	if strings.HasPrefix(trimmed, "/mcp__") || c.isPathSubmit(trimmed) {
@@ -109,12 +109,10 @@ func (c *Controller) classifyPlanExecSubmit() SubmitDisposition {
 
 func classifyPrometheusSubmit(trimmed, command string) SubmitDisposition {
 	args := strings.TrimSpace(strings.TrimPrefix(trimmed, command))
-	if args == "" || args == "--strict" {
+	if args == "" {
 		return SubmitManagementHandled
 	}
-	if strings.HasPrefix(args, "--strict ") && strings.TrimSpace(strings.TrimPrefix(args, "--strict ")) == "" {
-		return SubmitManagementHandled
-	}
+
 	return SubmitTurnStarted
 }
 

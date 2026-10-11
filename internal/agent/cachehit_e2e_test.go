@@ -620,7 +620,6 @@ func newAgent(t *testing.T, url string, reg *tool.Registry, contextWindow, recen
 	a := New(prov, reg, NewSession(systemPrompt), Options{
 		Temperature:   0,
 		ContextWindow: contextWindow,
-		RecentKeep:    recentKeep,
 	}, sink)
 	return a, sink
 }

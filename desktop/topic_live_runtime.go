@@ -132,7 +132,7 @@ func (a *App) openTopicTabPreferLiveActivation(scope, workspaceRoot, topicID, se
 		// A TurnDone missed while the runtime was detached leaves a permanent
 		// spinner; reconcile against the controller's real turn state on open.
 		a.reconcileTabActivityStatus(promoted)
-		a.emitProjectTreeRuntimeChangedWithLegacy()
+		a.emitProjectTreeRuntimeChanged()
 		return enrichTabMeta(meta), nil
 	}
 	a.mu.Unlock()

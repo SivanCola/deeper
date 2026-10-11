@@ -13,7 +13,7 @@ import (
 // meta TopicID to the blank-row identity.
 func TestRemoteTabBlankSessionIdentity(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/remote/sessions/s1.jsonl", Title: "First chat", Turns: 2, Current: true},
+		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2, Current: true},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -26,7 +26,7 @@ func TestRemoteTabBlankSessionIdentity(t *testing.T) {
 
 	named := openReadyRemoteTab(t, a, RemoteTabOpenOptions{
 		SessionName:  "s1",
-		SessionPath:  "/remote/sessions/s1.jsonl",
+		SessionPath:  "session-id:s1",
 		SessionTitle: "First chat",
 	})
 	if want := "box\x00~/app\x00s1"; named.TopicID != want {
@@ -58,7 +58,7 @@ func TestRemoteTabBlankSessionIdentity(t *testing.T) {
 // row onto the named row.
 func TestRemoteTabAdoptsMaterializedSessionIdentity(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/remote/sessions/s1.jsonl", Title: "First chat", Turns: 2},
+		{Name: "s1", Path: "session-id:s1", Title: "First chat", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -82,7 +82,7 @@ func TestRemoteTabAdoptsMaterializedSessionIdentity(t *testing.T) {
 	// The first turn lands: the serve now lists the fresh session as Current.
 	fs.mu.Lock()
 	fs.sessions = append(fs.sessions, serveSessionEntry{
-		Name: "fresh-123", Path: "/remote/sessions/fresh.jsonl", Title: "Earned title", Turns: 1, Current: true,
+		Name: "fresh-123", Path: "session-id:fresh", Title: "Earned title", Turns: 1, Current: true,
 	})
 	fs.mu.Unlock()
 
@@ -97,8 +97,8 @@ func TestRemoteTabAdoptsMaterializedSessionIdentity(t *testing.T) {
 	if got := remoteTabTopicID(tab); got != wantTopic {
 		t.Fatalf("adopted topic id = %q, want %q", got, wantTopic)
 	}
-	if tab.session.path != "/remote/sessions/fresh.jsonl" {
-		t.Fatalf("adopted session path = %q, want /remote/sessions/fresh.jsonl", tab.session.path)
+	if tab.session.path != "session-id:fresh" {
+		t.Fatalf("adopted session path = %q, want session-id:fresh", tab.session.path)
 	}
 	if tab.session.reset {
 		t.Fatal("sessionReset must clear once the materialized session is adopted")

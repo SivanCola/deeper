@@ -67,21 +67,6 @@ func TestToWireWorkspaceChangedKeepsBoundedEmptyArrays(t *testing.T) {
 	}
 }
 
-func TestToWireCompletionSummaryCarriesTurnTimeAttention(t *testing.T) {
-	w := ToWire(event.Event{Kind: event.CompletionSummary, Completion: &event.CompletionSummaryInfo{
-		Verdict: "partial", ChecksSuppressed: 1, Floor: "delivery", Attention: true,
-	}})
-	b, err := json.Marshal(w)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, want := range []string{`"kind":"completion_summary"`, `"floor":"delivery"`, `"attention":true`} {
-		if !strings.Contains(string(b), want) {
-			t.Fatalf("completion JSON = %s, missing %s", b, want)
-		}
-	}
-}
-
 func TestToWireContextMaintenanceJSON(t *testing.T) {
 	w := ToWire(event.Event{Kind: event.ContextMaintenanceEvent, Maintenance: &event.ContextMaintenance{
 		Status: "applied", Action: "prune", SavedTokens: 4096, ProjectionVersion: 3, CacheBreak: true,
@@ -98,12 +83,12 @@ func TestToWireContextMaintenanceJSON(t *testing.T) {
 }
 
 func TestToWireNoticeCarriesCode(t *testing.T) {
-	w := ToWire(event.Event{Kind: event.Notice, Level: event.LevelInfo, Code: event.NoticeCodeFinalReadiness, Text: "readiness copy"})
+	w := ToWire(event.Event{Kind: event.Notice, Level: event.LevelInfo, Code: event.NoticeCodeProviderRequestFailed, Text: "readiness copy"})
 	b, err := json.Marshal(w)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	if !strings.Contains(string(b), `"code":"final_readiness"`) {
+	if !strings.Contains(string(b), `"code":"provider_request_failed"`) {
 		t.Fatalf("notice JSON = %s, want a stable code field", b)
 	}
 
@@ -185,7 +170,6 @@ func TestDesktopWireEventTypeCoversSharedPayloadFields(t *testing.T) {
 		"detail?: string;",
 		"outcome?:",
 		`"completed" | "partial" | "blocked"`,
-		`"final_readiness" | "recovery_paused"`,
 		"checkpointTurn?: number;",
 		"retryAttempt?: number;", "WireEvent extends RecoveryEventFields", "recovery?: RecoveryStatus;",
 		"retryMax?: number;",
@@ -294,33 +278,6 @@ func TestToWireToolOmitsHostOnlyWorkspaceMutationMetadata(t *testing.T) {
 	}
 	if strings.Contains(string(b), privatePath) || strings.Contains(string(b), "workspaceMutation") || strings.Contains(string(b), "workspacePaths") {
 		t.Fatalf("host-only workspace metadata leaked into eventwire JSON: %s", b)
-	}
-}
-
-func TestToWireTurnOutcomeIsOptionalAndMachineReadable(t *testing.T) {
-	readiness := ToWire(event.Event{
-		Kind:      event.TurnDone,
-		Err:       errors.New("final-answer readiness failed 3 times: missing verification"),
-		Outcome:   event.TurnOutcomeFinalReadiness,
-		Readiness: &event.FinalReadiness{Attempts: 3, Missing: []string{"verification", "review"}},
-	})
-	if readiness.Outcome != event.TurnOutcomeFinalReadiness || readiness.Err == "" || readiness.Readiness == nil || readiness.Readiness.Attempts != 3 {
-		t.Fatalf("readiness wire event = %+v", readiness)
-	}
-	b, err := json.Marshal(readiness)
-	if err != nil {
-		t.Fatalf("marshal readiness: %v", err)
-	}
-	if !strings.Contains(string(b), `"outcome":"final_readiness"`) || !strings.Contains(string(b), `"missing":["verification","review"]`) {
-		t.Fatalf("readiness JSON = %s, want structured outcome", b)
-	}
-
-	ordinary, err := json.Marshal(ToWire(event.Event{Kind: event.TurnDone, Err: errors.New("provider failed")}))
-	if err != nil {
-		t.Fatalf("marshal ordinary error: %v", err)
-	}
-	if strings.Contains(string(ordinary), `"outcome"`) {
-		t.Fatalf("ordinary error JSON must omit outcome: %s", ordinary)
 	}
 }
 
@@ -448,7 +405,7 @@ func TestToWireUsagePayloadJSON(t *testing.T) {
 		`"cacheHitTokens":900`, `"cacheMissTokens":100`, `"reasoningTokens":33`,
 		`"estimated":true`,
 		`"source":"title"`, `"sessionCacheHitTokens":8000`, `"sessionCacheMissTokens":2000`,
-		`"currency":"¥"`, `"costUsd":`, `"cacheDiagnostics":`, `"prefixHash":"p"`,
+		`"currency":"¥"`, `"cacheDiagnostics":`, `"prefixHash":"p"`,
 		`"prefixChanged":true`, `"prefixChangeReasons":["log_rewrite"]`, `"toolSchemaTokens":42`,
 		`"sessionContext":`, `"targetRole":"executor"`, `"reasons":["memory_changed"]`, `"chars":23`,
 	} {

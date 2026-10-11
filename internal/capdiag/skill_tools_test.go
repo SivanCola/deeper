@@ -44,7 +44,7 @@ default_model = "diagnostic-test"
 [[providers]]
 name = "diagnostic-test"
 kind = "openai"
-model = "offline"
+models = ["offline"]
 base_url = %q
 api_key = "test-placeholder"
 [skills]

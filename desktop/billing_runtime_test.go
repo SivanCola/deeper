@@ -52,7 +52,7 @@ func TestSetDesktopCurrencyRebindsLedgerWithoutControllerRebuild(t *testing.T) {
 		DisplayComplete: true,
 		Complete:        true,
 		DisplayStatus:   billing.DisplayStatusMatched,
-		ModelRef:        "deepseek-flash/deepseek-v4-flash",
+		ModelRef:        "deepseek-flash/deepseek-flash",
 	}, billing.UsageTokens{PromptTokens: 1_000_000}, nowUTC())
 	tab := &WorkspaceTab{
 		ID: "billing", Ctrl: ctrl,

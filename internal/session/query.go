@@ -75,7 +75,10 @@ func (q *Query) storageGeneration(sessionID string) string {
 	if !ok {
 		return ""
 	}
-	dir := filepath.Join(filesystem.Root, sessionID)
+	dir, err := filesystem.sessionDir(sessionID, true)
+	if err != nil {
+		return ""
+	}
 	manifest, err := readStoredManifest(filepath.Join(dir, "manifest.json"))
 	if err != nil {
 		return ""
@@ -380,8 +383,11 @@ func (q *Query) rebuildCatalogMetadata(sessionID string, generation uint64, call
 		return err
 	}
 	defer handle.Close(context.WithoutCancel(ctx))
-	sessionDir := filepath.Join(filesystem.Root, sessionID)
-	cacheDir := filepath.Join(filesystem.Root, ".query-cache", filepath.Base(sessionID))
+	sessionDir, err := filesystem.sessionDir(sessionID, true)
+	if err != nil {
+		return err
+	}
+	cacheDir := filepath.Join(filesystem.Root, ".query-cache", filepath.Base(sessionDir))
 	manifest, err := readManifest(filepath.Join(sessionDir, "manifest.json"))
 	if err != nil {
 		return err

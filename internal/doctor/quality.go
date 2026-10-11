@@ -62,7 +62,6 @@ type QualityReport struct {
 
 type QualityProfile struct {
 	ModelFamily       string `json:"model_family"`
-	RuntimeProfile    string `json:"runtime_profile"`
 	CollaborationMode string `json:"collaboration_mode"`
 	ToolApprovalMode  string `json:"tool_approval_mode"`
 	GoalActive        bool   `json:"goal_active"`
@@ -141,7 +140,6 @@ func CollectQuality(opts QualityOptions) (QualityReport, error) {
 		Version:       strings.TrimSpace(opts.Version),
 		Profile: QualityProfile{
 			ModelFamily:       publicModelFamily(meta.Model),
-			RuntimeProfile:    publicTokenMode(meta.TokenMode),
 			CollaborationMode: publicCollaborationMode(meta.Mode, meta.Goal),
 			ToolApprovalMode:  publicToolApprovalMode(meta.Mode, meta.ToolApprovalMode),
 			GoalActive:        strings.TrimSpace(meta.Goal) != "",
@@ -293,17 +291,6 @@ func publicModelFamily(model string) string {
 	}
 }
 
-func publicTokenMode(mode string) string {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case "economy":
-		return "economy"
-	case "delivery":
-		return "delivery"
-	default:
-		return "balanced"
-	}
-}
-
 func publicCollaborationMode(mode, goal string) string {
 	if strings.Contains(strings.ToLower(strings.TrimSpace(mode)), "plan") {
 		return "plan"
@@ -314,17 +301,12 @@ func publicCollaborationMode(mode, goal string) string {
 	return "normal"
 }
 
-func publicToolApprovalMode(mode, approval string) string {
-	switch strings.ToLower(strings.TrimSpace(approval)) {
-	case "auto":
-		return "auto"
-	case "yolo":
-		return "yolo"
+func publicToolApprovalMode(_ string, approval string) string {
+	switch approval {
+	case "read-only", "workspace-write", "danger-full-access":
+		return approval
 	}
-	if strings.Contains(strings.ToLower(strings.TrimSpace(mode)), "yolo") {
-		return "yolo"
-	}
-	return "ask"
+	return "read-only"
 }
 
 func RenderQualityText(report QualityReport) string {
@@ -336,9 +318,8 @@ func RenderQualityText(report QualityReport) string {
 	fmt.Fprintf(&out, "Deepzora quality diagnostics\n")
 	fmt.Fprintf(&out, "- version: %s\n", valueOrUnknown(report.Version))
 	fmt.Fprintf(&out, "- model family: %s\n", report.Profile.ModelFamily)
-	fmt.Fprintf(&out, "- profile: runtime=%s collaboration=%s approval=%s goal=%t recovered=%t\n",
-		report.Profile.RuntimeProfile, report.Profile.CollaborationMode, report.Profile.ToolApprovalMode,
-		report.Profile.GoalActive, report.Profile.Recovered)
+	fmt.Fprintf(&out, "- profile: collaboration=%s approval=%s goal=%t recovered=%t\n",
+		report.Profile.CollaborationMode, report.Profile.ToolApprovalMode, report.Profile.GoalActive, report.Profile.Recovered)
 	fmt.Fprintf(&out, "- transcript: messages=%d user=%d assistant=%d tool_results=%d tool_calls=%d writers=%d verification=%d compaction_summaries=%d\n",
 		report.Transcript.Messages, report.Transcript.UserMessages, report.Transcript.AssistantMessages,
 		report.Transcript.ToolResults, report.Transcript.ToolCalls, report.Transcript.WriterCalls,

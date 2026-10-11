@@ -71,7 +71,6 @@ type ModelRuntimePreferences struct {
 	VisionModel            string            `json:"visionModel" toml:"vision_model"`
 	WebSearchModel         string            `json:"webSearchModel" toml:"web_search_model"`
 	GuardianModel          string            `json:"guardianModel" toml:"guardian_model"`
-	RecoveryModel          string            `json:"recoveryModel" toml:"recovery_model"`
 	SubagentModel          string            `json:"subagentModel" toml:"subagent_model"`
 	SubagentModels         map[string]string `json:"subagentModels" toml:"subagent_models"`
 	SubagentEffort         string            `json:"subagentEffort" toml:"subagent_effort"`
@@ -181,7 +180,7 @@ func (settings *ModelRuntimeSettings) Apply(c *Config, root string) error {
 		}
 		return ref
 	}
-	for _, ref := range []*string{&c.Agent.PlannerModel, &c.Agent.VisionModel, &c.Agent.WebSearchModel, &c.Agent.GuardianModel, &c.Agent.RecoveryModel, &c.Agent.SubagentModel} {
+	for _, ref := range []*string{&c.Agent.PlannerModel, &c.Agent.VisionModel, &c.Agent.WebSearchModel, &c.Agent.GuardianModel, &c.Agent.SubagentModel} {
 		*ref = mapRef(*ref)
 	}
 	for name, ref := range c.Agent.SubagentModels {

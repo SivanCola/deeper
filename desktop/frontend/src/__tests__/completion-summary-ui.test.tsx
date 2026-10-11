@@ -22,7 +22,6 @@ console.log("\ncompletion summary UI");
 const harness = await createTranscriptHarness();
 const changesOpens: (WireCompletionSummary | undefined)[] = [];
 const earlierSummary = {
-  preset: "balanced",
   verdict: "partial",
   mutations: 1,
   checks_passed: 2,
@@ -31,7 +30,6 @@ const earlierSummary = {
   review: "passed",
 } satisfies WireCompletionSummary;
 const laterSummary = {
-  preset: "balanced",
   verdict: "partial",
   mutations: 3,
   checks_passed: 4,

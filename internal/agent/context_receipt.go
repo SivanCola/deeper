@@ -37,16 +37,13 @@ func (a *Agent) contextMaintenanceBlocked(inputHash string, est int) (bool, stri
 	r := a.sess.compactionState.LastReceipt
 	if r == nil {
 		// Legacy sidecars may only have BlockedInputHash without a receipt.
-		if a.sess.compactionState.BlockedInputHash != "" &&
-			(inputHash == "" || a.sess.compactionState.BlockedInputHash == inputHash) {
-			return true, a.sess.compactionState.BlockedReason
-		}
+
 		return false, ""
 	}
 	if r.Status != "blocked" && r.Status != "failed" {
 		return false, ""
 	}
-	reason := firstNonEmpty(a.sess.compactionState.BlockedReason, r.Reason)
+	reason := r.Reason
 	// A failed view stays blocked for this generation. Changed input may retry
 	// on a later turn, but not once per tool result in the same active turn.
 	if r.BlockedInputHash != "" && inputHash != "" && r.BlockedInputHash != inputHash {
@@ -128,12 +125,6 @@ func (a *Agent) recordContextMaintenanceOutcome(inputHash, trigger, action, stat
 	// CAS losers and concurrent writers cannot overwrite a newer success.
 	state.Generation++
 	// LastReceipt carries the blocked signal; clear legacy top-level mirrors.
-	state.BlockedInputHash = ""
-	state.BlockedReason = ""
-	state.LastTrigger = ""
-	state.LastMode = ""
-	state.LastSourceTokens = 0
-	state.LastResultTokens = 0
 	state.LastReceipt = &ContextMaintenanceReceipt{
 		OperationID: fmt.Sprintf("%s-%s-%d", status, action, state.Generation), Status: status, Action: action,
 		Trigger: trigger, SourceProjection: state.Projection.ProjectionVersion,

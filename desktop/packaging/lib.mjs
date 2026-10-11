@@ -185,7 +185,7 @@ export function parseSigningFileList(text) {
 
 export const WINDOWS_FLAT_PAYLOAD = Object.freeze([
   "deepzora-desktop.exe",
-  "deepzora-guard.exe",
+  "deepzora-layout-installer.exe",
   "deepzora-launcher.exe",
   "deepzora-update-helper.exe",
   "deepzora-cli.exe",
@@ -244,14 +244,14 @@ const MEMBERS = {
       new RegExp(`^${VERSION_DIR}/app/resources/app/index\\.html$`),
       new RegExp(`^${VERSION_DIR}/app/resources/build\\.json$`),
     ],
-    forbidden: ["deepzora-guard.exe", "deepzora-desktop.exe"],
+    forbidden: ["deepzora-layout-installer.exe", "deepzora-desktop.exe"],
   },
   "linux-app-dir": {
     required: [PRODUCT.executable, "chrome-sandbox", "chrome_crashpad_handler", "libffmpeg.so", "resources.pak", "locales/en-US.pak", ...APP_RESOURCES],
     forbidden: [],
   },
   "linux-tar": {
-    required: ["deepzora-desktop", "deepzora-launcher", "deepzora-guard", "deepzora", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
+    required: ["deepzora-desktop", "deepzora-launcher", "deepzora", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
     forbidden: [],
   },
   "linux-deb": {
@@ -272,16 +272,14 @@ const MEMBERS = {
 
 export const ARTIFACT_KINDS = Object.freeze(Object.keys(MEMBERS));
 
-export const WINDOWS_PORTABLE_LAYOUTS = Object.freeze(["canonical", "legacy-dual"]);
+export const WINDOWS_PORTABLE_LAYOUTS = Object.freeze(["canonical"]);
 
 function memberSpec(kind, portableLayout) {
   if (!WINDOWS_PORTABLE_LAYOUTS.includes(portableLayout)) throw new Error(`unknown Windows portable layout ${JSON.stringify(portableLayout)}`);
   const spec = MEMBERS[kind];
   if (!spec) throw new Error(`unknown artifact kind ${JSON.stringify(kind)}`);
   if (kind !== "windows-portable-zip") return spec;
-  return portableLayout === "legacy-dual"
-    ? { required: [...spec.required, "deepzora-launcher.exe"], forbidden: spec.forbidden }
-    : { required: spec.required, forbidden: [...spec.forbidden, "deepzora-launcher.exe"] };
+  return { required: spec.required, forbidden: [...spec.forbidden, "deepzora-launcher.exe"] };
 }
 
 export function requiredMembers(kind, portableLayout = "canonical") {
@@ -294,7 +292,7 @@ export function checkMembers(entries, kind, portableLayout = "canonical") {
   const matches = (rule) => (rule instanceof RegExp ? [...names].some((name) => rule.test(name)) : names.has(rule));
   const forbidden = [...spec.forbidden, PACKAGING_JUNK].filter((rule) => matches(rule)).map(String);
   if (kind === "windows-portable-zip") {
-    const rootEntries = new Set(["Deepzora.exe", "deepzora-cli.exe", ...(portableLayout === "legacy-dual" ? ["deepzora-launcher.exe"] : [])]);
+    const rootEntries = new Set(["Deepzora.exe", "deepzora-cli.exe"]);
     for (const name of names) {
       if (!name.includes("/") && /\.(exe|dll)$/i.test(name) && !rootEntries.has(name) && !forbidden.includes(name)) forbidden.push(name);
     }
@@ -363,7 +361,7 @@ export function elfInterpreter(bytes) {
 }
 
 export const LINUX_GO_MEMBERS = {
-  "linux-tar": ["deepzora-desktop", "deepzora-launcher", "deepzora-guard", "deepzora"],
+  "linux-tar": ["deepzora-desktop", "deepzora-launcher", "deepzora"],
   "linux-deb": ["usr/bin/deepzora-desktop", "usr/bin/deepzora-launcher", "usr/bin/deepzora", "usr/lib/deepzora/deepzora-update-helper"],
 };
 

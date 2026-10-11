@@ -14,7 +14,7 @@ import (
 
 func TestPinnedContextNeverChangesBasePrompt(t *testing.T) {
 	dir := t.TempDir()
-	exec := agent.New(nil, nil, agent.NewSession("legacy composed system"), agent.Options{}, event.Discard)
+	exec := agent.New(nil, nil, agent.NewSession("unframed system"), agent.Options{}, event.Discard)
 	ctrl := newOwnedTestController(t, Options{
 		Runner:       exec,
 		Executor:     exec,
@@ -24,10 +24,10 @@ func TestPinnedContextNeverChangesBasePrompt(t *testing.T) {
 		Sink:         event.Discard,
 	})
 	if got := controlSystemMessage(ctrl.History()); got != "BASE" {
-		t.Fatalf("migrated system prompt = %q", got)
+		t.Fatalf("host system prompt = %q", got)
 	}
-	if reasons := exec.Session().DrainContentRewriteReasons(); !slices.Contains(reasons, "legacy_pinned_system_migration") {
-		t.Fatalf("migration reasons = %v", reasons)
+	if reasons := exec.Session().DrainContentRewriteReasons(); !slices.Contains(reasons, "host-system-prompt") {
+		t.Fatalf("rewrite reasons = %v", reasons)
 	}
 
 	ctrl.ApplyExtensionSystemPrompt("EXTENSION")

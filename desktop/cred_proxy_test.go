@@ -543,8 +543,8 @@ func configureCredentialProxyTestModels(t *testing.T, baseURL, keyEnv string) (s
 	cfg := config.Default()
 	cfg.DefaultModel = firstRef
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "proxy-first", Kind: "openai", BaseURL: baseURL, Model: "model-a", APIKeyEnv: keyEnv},
-		{Name: "proxy-second", Kind: "openai", BaseURL: baseURL, Model: "model-b", APIKeyEnv: keyEnv},
+		{Models: []string{"model-a"}, Default: "model-a", Name: "proxy-first", Kind: "openai", BaseURL: baseURL, Model: "model-a", APIKeyEnv: keyEnv},
+		{Models: []string{"model-b"}, Default: "model-b", Name: "proxy-second", Kind: "openai", BaseURL: baseURL, Model: "model-b", APIKeyEnv: keyEnv},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save credential proxy test config: %v", err)

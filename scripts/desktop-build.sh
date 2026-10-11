@@ -10,7 +10,7 @@
 #            Deepzora-darwin-<arch>.dmg                  (drag-to-install; human download)
 #   Windows: Deepzora-windows-<arch>-installer.exe       (NSIS per-user installer; updater channel)
 #            Deepzora-windows-<arch>.zip                 (portable human download)
-#   Linux:   Deepzora-linux-<arch>.tar.gz                (desktop + guard + CLI + app/ tree; portable updater)
+#   Linux:   Deepzora-linux-<arch>.tar.gz                (desktop + launcher + CLI + app/ tree; portable updater)
 #            Deepzora-linux-<arch>.deb                   (Debian/Ubuntu package; native updater)
 #
 # Usage: scripts/desktop-build.sh <os/arch> <version> [channel]
@@ -40,7 +40,7 @@ BINNAME="deepzora-desktop"    # Go desktop service (and the active version entry
 CLINAME="deepzora"            # bundled CLI sidecar used for remote serve upload
 WINDOWS_CLINAME="deepzora-cli" # Windows cannot store Deepzora.exe and deepzora.exe separately
 WINDOWS_CLI_ENTRY="deepzora-cli-launcher.exe"
-GUARDNAME="deepzora-guard"
+LAYOUT_INSTALLER="deepzora-layout-installer"
 LAUNCHERNAME="deepzora-launcher"
 windows_resource_tool_dir=""
 windows_host_include=""
@@ -71,21 +71,9 @@ trap cleanup EXIT
 
 cd "$ROOT/desktop"
 
-# build_guard produces the one-shot legacy migrator still named deepzora-guard
-# in compatibility payloads for 1.18–1.19.1 updaters. Source is intentionally
-# separate from the removed Guard recovery product.
-build_guard() {
-	echo "==> go build Deepzora legacy migrator (compat name deepzora-guard)"
-	mkdir -p "$(dirname "$guard_out")"
-	if [ "$arch" = universal ]; then
-		guard_tmp=$(mktemp -d)
-		(cd "$ROOT" && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_tmp/amd64" ./cmd/deepzora-legacy-migrator)
-		(cd "$ROOT" && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_tmp/arm64" ./cmd/deepzora-legacy-migrator)
-		lipo -create "$guard_tmp/amd64" "$guard_tmp/arm64" -output "$guard_out"
-		rm -rf "$guard_tmp"
-	else
-		(cd "$ROOT" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$guard_out" ./cmd/deepzora-legacy-migrator)
-	fi
+build_layout_installer() {
+ echo "==> go build Deepzora layout installer"
+ (cd "$ROOT" && GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$layout_installer_out" ./cmd/deepzora-layout-installer)
 }
 
 build_cli() {
@@ -124,7 +112,7 @@ numver="${VERSION#v}"; numver="${numver%%-*}"
 
 # Regenerate the desktop host contract and fail on drift: the packaged shell
 # embeds desktopContract.json, so a stale frontend/src/generated would ship a
-# shell/service protocol mismatch. CI's desktop-prepare job runs the same check.
+# shell/service protocol mismatch. CI's desktop-frontend job runs the same check.
 echo "==> desktop host contract drift check"
 contract_snapshot=$(mktemp -d)
 cp -R frontend/src/generated "$contract_snapshot/generated"
@@ -180,6 +168,9 @@ build_service() {
 	else
 		GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags="-s -w $service_ldflags" -o "$service_out" .
 	fi
+	if [ "$os" = windows ]; then
+		node "$ROOT/scripts/verify-windows-gui-subsystem.mjs" "$service_out"
+	fi
 }
 
 # package_shell runs @electron/packager via the packaging script and leaves the
@@ -220,10 +211,6 @@ darwin)
 	# CLI sidecar ships next to the service copy the shell actually launches
 	# (desktopCLIBinaryPath resolves it beside the running service).
 	cp "$cli_out" "$app/Contents/Resources/service/$CLINAME"
-	if [ -e "$app/Contents/MacOS/$GUARDNAME" ]; then
-		echo "macOS bundle must not include $GUARDNAME" >&2
-		exit 1
-	fi
 	darwin_icon="$ROOT/desktop/build/darwin/icon.icns"
 	bundle_icon=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$app/Contents/Info.plist" 2>/dev/null || true)
 	case "$bundle_icon" in
@@ -297,9 +284,9 @@ windows)
 	go build -trimpath -o "$windows_resource_tool" ./cmd/windows-resource
 
 	installer_dir="$ROOT/desktop/build/windows/installer"
-	guard_out="$installer_dir/$GUARDNAME.exe"
-	build_guard
-	stamp_windows_executable "$guard_out" "Deepzora Legacy Migrator" "$GUARDNAME" "$GUARDNAME.exe"
+	layout_installer_out="$installer_dir/$LAYOUT_INSTALLER.exe"
+	build_layout_installer
+	stamp_windows_executable "$layout_installer_out" "Deepzora Layout Installer" "$LAYOUT_INSTALLER" "$LAYOUT_INSTALLER.exe"
 	launcher_out="$installer_dir/$LAUNCHERNAME.exe"
 	echo "==> go build Windows GUI thin launcher"
 	(cd "$ROOT" && GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -trimpath \
@@ -356,7 +343,7 @@ windows)
 	payload_dir="$ROOT/desktop/build/windows/signing-payload"
 	rm -rf -- "$payload_dir"
 	mkdir -p "$payload_dir"
-	for name in "$BINNAME.exe" "$GUARDNAME.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deepzora-uninstall.exe"; do
+	for name in "$BINNAME.exe" "$LAYOUT_INSTALLER.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deepzora-uninstall.exe"; do
 		cp "$installer_dir/$name" "$payload_dir/$name"
 	done
 	cp -R "$installer_dir/app" "$payload_dir/app"
@@ -375,10 +362,6 @@ windows)
 linux)
 	service_out="$ROOT/desktop/build/bin/$BINNAME"
 	build_service
-	# Linux still ships a one-shot migrator named deepzora-guard in the portable
-	# tarball so 1.18–1.19.1 updaters can hand off.
-	guard_out="$ROOT/desktop/build/bin/$GUARDNAME"
-	build_guard
 	launcher_out="$ROOT/desktop/build/bin/$LAUNCHERNAME"
 	echo "==> go build Linux thin launcher"
 	(cd "$ROOT" && GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath \
@@ -397,10 +380,8 @@ linux)
 		'StartupWMClass=Deepzora'; do
 		grep -F -x -q "$desktop_contract" build/linux/deepzora.desktop || { echo "Linux desktop entry missing: $desktop_contract" >&2; exit 1; }
 	done
-	# Portable Linux tarball: service + thin launcher + one-shot migrator
-	# (compat name deepzora-guard) + CLI + the Electron app/ tree. After the
-	# migrator runs, Guard self-deletes.
-	tar -cf - -C build/bin "$BINNAME" "$LAUNCHERNAME" "$GUARDNAME" "$CLINAME" app | \
+	# Portable Linux release: service, launcher, CLI and complete shell.
+	tar -cf - -C build/bin "$BINNAME" "$LAUNCHERNAME" "$CLINAME" app | \
 		gzip -9 >"$ROOT/dist/${APPNAME}-linux-${arch}.tar.gz"
 	# Build the privileged update helper shipped inside the .deb. Portable tarball
 	# installs do not need it; only the dpkg package installs helper + Polkit policy.

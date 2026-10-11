@@ -10,9 +10,7 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
 	"deepzora/internal/permission"
-	"deepzora/internal/provider"
 	"deepzora/internal/sandbox"
-	"deepzora/internal/tool"
 )
 
 // TestAutoApproveToolsStillRequiresExplicitPlanApproval proves that YOLO/full
@@ -123,7 +121,7 @@ func TestToolApprovalModeAutoKeepsAskRules(t *testing.T) {
 	c := newOwnedTestController(t, Options{
 		Policy: permission.New("ask", nil, []string{"bash(git commit*)"}, []string{"bash(rm*)"}),
 	})
-	c.SetToolApprovalMode(ToolApprovalAuto)
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 
 	gate := c.newInteractiveGate()
 	if got := gate.Policy.Decide("bash", false, json.RawMessage(`{"command":"go test ./..."}`)); got != permission.Allow {
@@ -151,7 +149,7 @@ func TestToolApprovalModeDontAskDeniesWithoutPrompt(t *testing.T) {
 			}
 		}),
 	})
-	c.SetToolApprovalMode(ToolApprovalDontAsk)
+	c.SetToolApprovalMode(ToolApprovalReadOnly)
 	gate := c.newInteractiveGate()
 
 	allow, _, err := gate.Check(context.Background(), "bash", json.RawMessage(`{"command":"go test ./..."}`), false)
@@ -200,7 +198,7 @@ func TestLegacyAutoMigrationDoesNotApprovePendingFallback(t *testing.T) {
 		t.Fatal("approval request was not emitted")
 	}
 
-	c.SetToolApprovalMode(ToolApprovalAuto)
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 
 	select {
 	case err := <-errs:
@@ -254,7 +252,7 @@ func TestToolApprovalModeAutoDoesNotDrainPendingExplicitAsk(t *testing.T) {
 		t.Fatal("approval request was not emitted")
 	}
 
-	c.SetToolApprovalMode(ToolApprovalAuto)
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 
 	select {
 	case err := <-errs:
@@ -280,7 +278,7 @@ func TestToolApprovalModeAutoDoesNotDrainPendingExplicitAsk(t *testing.T) {
 
 func TestToolApprovalModeYoloBypassesApprovalPrompts(t *testing.T) {
 	c := newOwnedTestController(t, Options{})
-	c.SetToolApprovalMode(ToolApprovalYolo)
+	c.SetToolApprovalMode(ToolApprovalDangerFullAccess)
 	if !c.AutoApproveTools() {
 		t.Fatal("YOLO mode should satisfy legacy AutoApproveTools")
 	}
@@ -366,7 +364,7 @@ func TestSetAutoApproveToolsDoesNotResolvePendingApproval(t *testing.T) {
 		t.Fatal("approval request was not emitted")
 	}
 
-	c.SetAutoApproveTools(true)
+	c.SetToolApprovalMode("workspace-write")
 
 	select {
 	case err := <-errs:
@@ -419,7 +417,7 @@ func TestSandboxEscapeApprovalIgnoresAutoApproveTools(t *testing.T) {
 		t.Fatalf("approval tool = %q, want %q", approval.Tool, SandboxEscapeApprovalTool)
 	}
 
-	c.SetAutoApproveTools(true)
+	c.SetToolApprovalMode("workspace-write")
 	select {
 	case got := <-done:
 		t.Fatalf("tool auto-approval must not answer sandbox escape; got %+v", got)
@@ -481,7 +479,7 @@ func TestSetAutoApproveToolsDoesNotDrainPendingPlanApproval(t *testing.T) {
 		t.Fatal("plan approval request was not emitted")
 	}
 
-	c.SetAutoApproveTools(true)
+	c.SetToolApprovalMode("workspace-write")
 
 	select {
 	case err := <-errs:
@@ -508,64 +506,6 @@ func TestSetAutoApproveToolsDoesNotDrainPendingPlanApproval(t *testing.T) {
 	}
 }
 
-func TestSetAutoApproveToolsDoesNotDrainPendingPlanModeReadOnlyCommandTrust(t *testing.T) {
-	approvalRequests := make(chan event.Approval, 1)
-	c := newOwnedTestController(t, Options{
-		Sink: event.FuncSink(func(e event.Event) {
-			if e.Kind == event.ApprovalRequest {
-				approvalRequests <- e.Approval
-			}
-		}),
-	})
-
-	type trustResult struct {
-		allow  bool
-		reason string
-		err    error
-	}
-	done := make(chan trustResult, 1)
-	req := agent.PlanModeReadOnlyTrustRequest{
-		ToolName: agent.PlanModeReadOnlyCommandApprovalTool,
-		Command:  "gh issue view 5867",
-		Prefix:   "gh issue view",
-	}
-	go func() {
-		allow, reason, err := planModeReadOnlyTrustApprover{c}.CheckPlanModeReadOnlyTrust(context.Background(), req)
-		done <- trustResult{allow: allow, reason: reason, err: err}
-	}()
-
-	var approval event.Approval
-	select {
-	case approval = <-approvalRequests:
-	case <-time.After(30 * time.Second):
-		t.Fatal("plan-mode bash read-only command trust approval request was not emitted")
-	}
-	if approval.Tool != agent.PlanModeReadOnlyCommandApprovalTool {
-		t.Fatalf("approval tool = %q, want %q", approval.Tool, agent.PlanModeReadOnlyCommandApprovalTool)
-	}
-
-	c.SetAutoApproveTools(true)
-
-	select {
-	case got := <-done:
-		t.Fatalf("SetAutoApproveTools must not auto-answer plan-mode bash read-only command trust; got %+v", got)
-	case <-time.After(50 * time.Millisecond):
-	}
-	if c.AutoApproveTools() || c.ToolApprovalMode() != ToolApprovalWorkspaceWrite {
-		t.Fatalf("legacy mode = %q full=%v, want workspace-write", c.ToolApprovalMode(), c.AutoApproveTools())
-	}
-
-	c.Approve(approval.ID, true, false, false)
-	select {
-	case got := <-done:
-		if got.err != nil || !got.allow || got.reason != "" {
-			t.Fatalf("manual plan-mode bash read-only command trust approval = %+v, want allow", got)
-		}
-	case <-time.After(30 * time.Second):
-		t.Fatal("plan-mode bash read-only command trust approval stayed blocked after Approve")
-	}
-}
-
 // The legacy combined mode API no longer grants full access and cannot answer
 // an approval already waiting under another snapshot.
 func TestSetModeLegacyPermissionDoesNotResolvePendingApproval(t *testing.T) {
@@ -584,7 +524,7 @@ func TestSetModeLegacyPermissionDoesNotResolvePendingApproval(t *testing.T) {
 		t.Fatal("approval request was not emitted")
 	}
 
-	c.SetMode(false, true)
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 
 	select {
 	case allow := <-done:
@@ -597,30 +537,6 @@ func TestSetModeLegacyPermissionDoesNotResolvePendingApproval(t *testing.T) {
 	}
 }
 
-func TestSetModeLegacyAppliesPlanAndWorkspacePermission(t *testing.T) {
-	c, _, _ := approvalIDs(t)
-
-	c.SetMode(true, false)
-	if !c.PlanMode() || c.AutoApproveTools() {
-		t.Fatalf("plan mode: plan=%v autoApproveTools=%v, want true/false", c.PlanMode(), c.AutoApproveTools())
-	}
-
-	c.SetMode(false, true)
-	if c.PlanMode() || c.AutoApproveTools() || c.ToolApprovalMode() != ToolApprovalWorkspaceWrite {
-		t.Fatalf("legacy write mode: plan=%v permission=%q", c.PlanMode(), c.ToolApprovalMode())
-	}
-
-	c.SetMode(true, true)
-	if !c.PlanMode() || c.AutoApproveTools() || c.ToolApprovalMode() != ToolApprovalWorkspaceWrite {
-		t.Fatalf("legacy plan mode: plan=%v permission=%q", c.PlanMode(), c.ToolApprovalMode())
-	}
-
-	c.SetMode(false, false)
-	if c.PlanMode() || c.AutoApproveTools() {
-		t.Fatalf("normal mode: plan=%v autoApproveTools=%v, want false/false", c.PlanMode(), c.AutoApproveTools())
-	}
-}
-
 type planModeCountingRunner struct {
 	calls int
 	last  bool
@@ -630,93 +546,6 @@ func (*planModeCountingRunner) Run(context.Context, string) error { return nil }
 func (r *planModeCountingRunner) SetPlanMode(v bool) {
 	r.calls++
 	r.last = v
-}
-
-func TestApplyModeUsesRunnerPlanPropagationOnce(t *testing.T) {
-	runner := &planModeCountingRunner{}
-	c := newOwnedTestController(t, Options{Runner: runner})
-	c.ApplyMode(true, true)
-	if runner.calls != 1 || !runner.last {
-		t.Fatalf("runner SetPlanMode calls=%d last=%v, want 1/true", runner.calls, runner.last)
-	}
-	if !c.PlanMode() || c.ToolApprovalMode() != ToolApprovalWorkspaceWrite {
-		t.Fatalf("controller plan=%v approval=%q, want true/workspace-write after legacy migration", c.PlanMode(), c.ToolApprovalMode())
-	}
-	c.SetPlanMode(false)
-	if runner.calls != 2 || runner.last {
-		t.Fatalf("SetPlanMode runner calls=%d last=%v, want 2/false", runner.calls, runner.last)
-	}
-}
-
-func TestApplyModePlanPropagationRunnerFallbacks(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		runner func(*agent.Agent) agent.Runner
-	}{
-		{name: "single agent", runner: func(executor *agent.Agent) agent.Runner { return executor }},
-		{name: "runner without setter", runner: func(*agent.Agent) agent.Runner {
-			return appendingRunner{session: agent.NewSession("runner")}
-		}},
-		{name: "nil runner", runner: func(*agent.Agent) agent.Runner { return nil }},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			phaseCalls := 0
-			reg := tool.NewRegistry()
-			reg.Add(plannerUnsafeReadTool{calls: &phaseCalls})
-			prov := &scriptedTurns{turns: [][]provider.Chunk{
-				toolCallTurn("phase-1", "planner_phase_only", `{}`),
-				textTurn("done"),
-			}}
-			executor := agent.New(prov, reg, agent.NewSession("executor"), agent.Options{}, event.Discard)
-			c := newOwnedTestController(t, Options{Runner: tc.runner(executor), Executor: executor})
-			c.ApplyMode(true, true)
-			if err := executor.Run(context.Background(), "try the execution-phase tool"); err != nil {
-				t.Fatalf("executor Run: %v", err)
-			}
-			if phaseCalls != 0 {
-				t.Fatalf("phase-opted-out tool executed %d times, want 0", phaseCalls)
-			}
-		})
-	}
-}
-
-type plannerUnsafeReadTool struct {
-	calls *int
-}
-
-func (plannerUnsafeReadTool) Name() string            { return "planner_phase_only" }
-func (plannerUnsafeReadTool) Description() string     { return "planner phase test tool" }
-func (plannerUnsafeReadTool) Schema() json.RawMessage { return json.RawMessage(`{"type":"object"}`) }
-func (plannerUnsafeReadTool) ReadOnly() bool          { return true }
-func (plannerUnsafeReadTool) PlanModeSafe() bool      { return false }
-func (t plannerUnsafeReadTool) Execute(context.Context, json.RawMessage) (string, error) {
-	(*t.calls)++
-	return "executed", nil
-}
-
-func TestApplyModePropagatesPlanToCoordinatorPlannerAndMigratesLegacyYolo(t *testing.T) {
-	plannerCalls := 0
-	plannerTools := agent.PlannerToolRegistry(tool.NewRegistry())
-	plannerTools.Add(plannerUnsafeReadTool{calls: &plannerCalls})
-	planner := &scriptedTurns{turns: [][]provider.Chunk{
-		toolCallTurn("planner-tool", "planner_phase_only", `{}`),
-		planTurn("1. inspect the current behavior\n2. implement the fix"),
-	}}
-	execProvider := &scriptedTurns{turns: [][]provider.Chunk{textTurn("executor done")}}
-	executor := agent.New(execProvider, tool.NewRegistry(), agent.NewSession("exec"), agent.Options{}, event.Discard)
-	coordinator := agent.NewCoordinator(planner, agent.NewSession("planner"), nil, plannerTools, agent.Options{}, executor, 0, event.Discard, nil)
-	c := newOwnedTestController(t, Options{Runner: coordinator, Executor: executor})
-
-	c.ApplyMode(true, true)
-	if err := c.Run(context.Background(), "prepare the change"); err != nil {
-		t.Fatalf("Run: %v", err)
-	}
-	if plannerCalls != 0 {
-		t.Fatalf("planner phase-only tool executed %d times, want 0 while Plan is active", plannerCalls)
-	}
-	if !c.PlanMode() || c.ToolApprovalMode() != ToolApprovalWorkspaceWrite {
-		t.Fatalf("after run plan=%v approval=%q, want true/workspace-write", c.PlanMode(), c.ToolApprovalMode())
-	}
 }
 
 type askCallResult struct {
@@ -813,7 +642,7 @@ func TestBypassDoesNotAutoAnswerAsk(t *testing.T) {
 			}
 		}),
 	})
-	c.SetBypass(true)
+	c.SetToolApprovalMode("workspace-write")
 
 	done := askController(t, c, sampleAskQuestions())
 	ask := waitAskRequest(t, askCh)
@@ -822,46 +651,6 @@ func TestBypassDoesNotAutoAnswerAsk(t *testing.T) {
 	c.AnswerQuestion(ask.ID, userAnswers)
 	result := waitAskResult(t, done)
 	assertAskAnswers(t, result.answers, userAnswers)
-}
-
-func TestAskPromptsAcrossInteractiveModes(t *testing.T) {
-	userAnswers := []event.AskAnswer{
-		{QuestionID: "approach", Selected: []string{"Alternative path"}},
-		{QuestionID: "scope", Selected: []string{"Broad"}},
-	}
-	tests := []struct {
-		name  string
-		setup func(*Controller)
-	}{
-		{name: "normal"},
-		{name: "plan", setup: func(c *Controller) { c.SetMode(true, false) }},
-		{name: "yolo", setup: func(c *Controller) { c.SetMode(false, true) }},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			askCh := make(chan event.Ask, 1)
-			c := newOwnedTestController(t, Options{
-				Sink: event.FuncSink(func(e event.Event) {
-					if e.Kind == event.AskRequest {
-						askCh <- e.Ask
-					}
-				}),
-			})
-			if tt.setup != nil {
-				tt.setup(c)
-			}
-
-			done := askController(t, c, sampleAskQuestions())
-			ask := waitAskRequest(t, askCh)
-
-			// Answer with non-recommended options to prove this is the user's
-			// selection, not an automatic recommended-option fallback.
-			c.AnswerQuestion(ask.ID, userAnswers)
-			result := waitAskResult(t, done)
-			assertAskAnswers(t, result.answers, userAnswers)
-		})
-	}
 }
 
 func TestSetAutoApproveToolsDoesNotDrainPendingAsk(t *testing.T) {
@@ -946,7 +735,7 @@ func TestApplyToolApprovalModeDoesNotAuthorizePendingApprovals(t *testing.T) {
 	askRuleID, askRuleReply := c.approval.register("bash", "git commit -m x", "")
 	planID, planReply := c.approval.registerDecision(planApprovalTool, "", "", true, false)
 
-	drained := c.ApplyToolApprovalMode(ToolApprovalAuto)
+	drained := c.ApplyToolApprovalMode(ToolApprovalWorkspaceWrite)
 	if len(drained) != 0 {
 		t.Fatalf("workspace preset resolved old approvals: %v", drained)
 	}
@@ -961,7 +750,7 @@ func TestApplyToolApprovalModeDoesNotAuthorizePendingApprovals(t *testing.T) {
 	default:
 	}
 
-	drained = c.ApplyToolApprovalMode(ToolApprovalYolo)
+	drained = c.ApplyToolApprovalMode(ToolApprovalDangerFullAccess)
 	if len(drained) != 0 {
 		t.Fatalf("full-access preset resolved old approvals: %v", drained)
 	}

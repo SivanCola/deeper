@@ -274,46 +274,6 @@ func TestTerminalOperationReusesReservedSession(t *testing.T) {
 	}
 }
 
-func TestVersionOneDatabaseMigratesOperationTopic(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "drafts.sqlite")
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, statement := range []string{
-		`CREATE TABLE operations (id TEXT PRIMARY KEY, draft_id TEXT NOT NULL, workspace_id TEXT NOT NULL, draft_revision INTEGER NOT NULL, session_id TEXT NOT NULL, submission_id TEXT NOT NULL, fingerprint TEXT NOT NULL, request_json TEXT NOT NULL, phase TEXT NOT NULL, error TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`,
-		`INSERT INTO operations VALUES('op','draft','workspace',1,'session','submission','fingerprint','{}','reserved','',1,1)`,
-		`PRAGMA user_version = 1`,
-	} {
-		if _, err := db.Exec(statement); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := db.Close(); err != nil {
-		t.Fatal(err)
-	}
-	store := New(path)
-	t.Cleanup(func() { _ = store.Close() })
-	op, err := store.Operation(context.Background(), "op")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if op.TopicID != "" {
-		t.Fatalf("migrated topic = %q, want empty reservation", op.TopicID)
-	}
-	var version int
-	if err := store.withDB(context.Background(), func(db *sql.DB) error { return db.QueryRow(`PRAGMA user_version`).Scan(&version) }); err != nil {
-		t.Fatal(err)
-	}
-	if version != SchemaVersion {
-		t.Fatalf("schema version = %d, want %d", version, SchemaVersion)
-	}
-	assigned, err := store.EnsureOperationTopic(context.Background(), op.ID, "topic")
-	if err != nil || assigned.TopicID != "topic" {
-		t.Fatalf("assigned = %+v, err %v", assigned, err)
-	}
-}
-
 func TestDispatchClaimWinsOrCancelWinsButNeverBoth(t *testing.T) {
 	ctx := context.Background()
 	store := testStore(t)

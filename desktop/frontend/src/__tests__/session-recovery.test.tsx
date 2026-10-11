@@ -23,15 +23,7 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, l
 const root = createRoot(document.getElementById("root")!);
 const readyLocal = { ...initialState, meta: { ready: true, eventChannel: "fixture" } };
 const failedLocal = applyHydrateErrorState(readyLocal, "startup", "history read failed");
-assert.deepEqual(projectSessionAvailability({ local: { ...failedLocal, meta: {
-  ...readyLocal.meta, ready: false, historicalSource: { hostId: "local", path: "/fixture/legacy.jsonl" },
-} } }), { kind: "pending", source: "runtime" }, "unprepared history is a user choice, not a failed recovery");
-const nativeHistory = projectSessionAvailability({ local: { ...readyLocal, meta: {
-  ...readyLocal.meta, historicalSource: { hostId: "local", path: "/fixture/legacy.jsonl" },
-} } });
-assert.deepEqual(nativeHistory, { kind: "pending", source: "runtime" }, "a readable native history runtime still cannot accept sends");
 const recordKey = ((key: string) => key) as Translator;
-assert.equal(submitBlockReason(nativeHistory, recordKey), "sessionRecovery.importBeforeSend", "the disabled composer says why and what to do");
 assert.equal(submitBlockReason(projectSessionAvailability({ local: readyLocal }), recordKey), undefined);
 const noop = () => {};
 const common: TranscriptSurfaceProjectionInput = {

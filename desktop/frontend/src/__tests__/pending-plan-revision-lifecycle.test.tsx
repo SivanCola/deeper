@@ -23,7 +23,7 @@ function Probe({ tab, gen, running, ready }: { tab: string; gen: number; running
   const operations = useSessionOperations({ visible, resources });
   const submission = useSessionSubmission({ target: visible, operations, missingSource: "missing",
     resources: resources.map(target => ({ target, remote: false, ready: true, unavailable: "", goalDraft: false,
-      collaboration: "normal", approval: "ask" })),
+      collaboration: "normal", approval: "workspace-write" })),
     ports: {
       send: (tab, text) => { const gate = deferred(); requests.push({ tab, text, gate }); return gate.promise; },
       clearUndo: () => {}, setGoal: async () => {}, patchGoal: () => {}, profile: async () => true,

@@ -83,14 +83,13 @@ type approvalManager struct {
 
 	// mu guards the prompt maps and posture fields; every critical section under
 	// it is short and non-blocking.
-	mu                       sync.Mutex
-	approvals                map[string]pendingApproval
-	asks                     map[string]pendingAsk
-	approvalResolutions      map[string]*promptResolution
-	askResolutions           map[string]*promptResolution
-	granted                  map[string]bool
-	planModeReadOnlyCommands map[string]bool
-	nextID                   int
+	mu                  sync.Mutex
+	approvals           map[string]pendingApproval
+	asks                map[string]pendingAsk
+	approvalResolutions map[string]*promptResolution
+	askResolutions      map[string]*promptResolution
+	granted             map[string]bool
+	nextID              int
 	// toolApprovalMode is the canonical runtime permission preset. Read-only
 	// asks for mutation authorization, workspace-write permits confined work,
 	// and danger-full-access skips ordinary prompts while explicit deny rules
@@ -138,15 +137,14 @@ func (r *promptResolution) wait() error {
 
 func newApprovalManager(policy permission.Policy, mode string, timeout time.Duration) approvalManager {
 	return approvalManager{
-		policy:                   policy,
-		approvals:                map[string]pendingApproval{},
-		asks:                     map[string]pendingAsk{},
-		approvalResolutions:      map[string]*promptResolution{},
-		askResolutions:           map[string]*promptResolution{},
-		granted:                  map[string]bool{},
-		planModeReadOnlyCommands: map[string]bool{},
-		toolApprovalMode:         mode,
-		approvalTimeout:          timeout,
+		policy:              policy,
+		approvals:           map[string]pendingApproval{},
+		asks:                map[string]pendingAsk{},
+		approvalResolutions: map[string]*promptResolution{},
+		askResolutions:      map[string]*promptResolution{},
+		granted:             map[string]bool{},
+		toolApprovalMode:    mode,
+		approvalTimeout:     timeout,
 	}
 }
 
@@ -182,7 +180,7 @@ func BuildHeadlessApprovalGate(policy permission.Policy, mode string) *freshHuma
 	case ToolApprovalWorkspaceWrite:
 		policy.Mode = permission.Allow
 		return &freshHumanHeadlessGate{gate: permission.NewGate(policy, denyPermissionApprover{})}
-	case ToolApprovalDontAsk:
+	case ToolApprovalReadOnly:
 		policy.Mode = permission.Deny
 		return &freshHumanHeadlessGate{gate: permission.NewGate(policy, denyPermissionApprover{})}
 	default:
@@ -286,7 +284,7 @@ func (a *approvalManager) preApprovedForDecisionOptions(tool, subject string, ar
 		return a.sessionGrantAllowsLocked(tool, subject)
 	}
 	if requireHuman {
-		return a.toolApprovalMode == ToolApprovalYolo || a.sessionGrantAllowsLocked(tool, subject)
+		return a.toolApprovalMode == ToolApprovalDangerFullAccess || a.sessionGrantAllowsLocked(tool, subject)
 	}
 	return a.bypassAllowsLocked(tool, subject, args) || a.sessionGrantAllowsLocked(tool, subject)
 }
@@ -389,26 +387,6 @@ func exactSessionGrantRule(tool, subject string) string {
 	return permission.SessionGrantRuleForScope(tool, subject)
 }
 
-func (a *approvalManager) planModeReadOnlyCommandTrusted(prefix string) bool {
-	prefix = normalizePlanModeReadOnlyCommandPrefix(prefix)
-	if prefix == "" {
-		return false
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.planModeReadOnlyCommands[prefix]
-}
-
-func (a *approvalManager) grantPlanModeReadOnlyCommand(prefix string) {
-	prefix = normalizePlanModeReadOnlyCommandPrefix(prefix)
-	if prefix == "" {
-		return
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.planModeReadOnlyCommands[prefix] = true
-}
-
 func (a *approvalManager) revokeSessionAuthorization(scope, target string) bool {
 	target = strings.TrimSpace(target)
 	if target == "" {
@@ -423,13 +401,6 @@ func (a *approvalManager) revokeSessionAuthorization(scope, target string) bool 
 		}
 		delete(a.granted, target)
 		return true
-	case "command-prefix":
-		target = normalizePlanModeReadOnlyCommandPrefix(target)
-		if target == "" || !a.planModeReadOnlyCommands[target] {
-			return false
-		}
-		delete(a.planModeReadOnlyCommands, target)
-		return true
 	default:
 		return false
 	}
@@ -439,15 +410,12 @@ func (a *approvalManager) snapshotSessionAuthorizations() SessionAuthorizations 
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	auth := SessionAuthorizations{
-		Grants:                   make([]string, 0, len(a.granted)),
-		PlanModeReadOnlyCommands: make([]string, 0, len(a.planModeReadOnlyCommands)),
+		Grants: make([]string, 0, len(a.granted)),
 	}
 	for rule := range a.granted {
 		auth.Grants = append(auth.Grants, rule)
 	}
-	for prefix := range a.planModeReadOnlyCommands {
-		auth.PlanModeReadOnlyCommands = append(auth.PlanModeReadOnlyCommands, prefix)
-	}
+
 	return auth
 }
 
@@ -457,9 +425,7 @@ func (a *approvalManager) restoreSessionAuthorizations(auth SessionAuthorization
 	for _, rule := range auth.Grants {
 		a.granted[rule] = true
 	}
-	for _, prefix := range auth.PlanModeReadOnlyCommands {
-		a.planModeReadOnlyCommands[prefix] = true
-	}
+
 }
 
 // cancel drops a pending approval (timeout/abort path).
@@ -718,25 +684,21 @@ func (a *approvalManager) snapshotPrompts() ([]event.Approval, []event.Ask) {
 	return approvals, asks
 }
 
-func normalizePlanModeReadOnlyCommandPrefix(prefix string) string {
-	return strings.Join(strings.Fields(strings.TrimSpace(prefix)), " ")
-}
-
 // decision helpers (caller holds a.mu)
 
 func (a *approvalManager) bypassAllowsLocked(tool, subject string, args json.RawMessage) bool {
 	if isMemoryApprovalTool(tool) {
 		switch a.toolApprovalMode {
-		case ToolApprovalYolo:
+		case ToolApprovalDangerFullAccess:
 			return true
-		case ToolApprovalAuto:
+		case ToolApprovalWorkspaceWrite:
 			return a.autoApprovalWouldAllowLocked(tool, subject, args)
 		}
 	}
 	if requiresFreshApprovalTool(tool) {
 		return false
 	}
-	if a.toolApprovalMode == ToolApprovalYolo {
+	if a.toolApprovalMode == ToolApprovalDangerFullAccess {
 		return true
 	}
 	if !a.planAutoApprove {
@@ -787,7 +749,7 @@ type drainedApproval struct {
 func normalizeToolApprovalMode(mode string) string {
 	switch strings.ToLower(strings.TrimSpace(mode)) {
 	case "dontask", "dont-ask", "deny":
-		return ToolApprovalDontAsk
+		return ToolApprovalReadOnly
 	default:
 		return string(permissionpreset.Normalize(mode))
 	}

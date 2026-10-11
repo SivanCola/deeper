@@ -181,14 +181,12 @@ func (c *Catalog) indexSessionPath(ctx context.Context, target DirectoryTarget, 
 		Path:           path,
 		CreatedAt:      info.ModTime(),
 		LastActivityAt: info.ModTime(),
-		ModTime:        info.ModTime(),
 		Scope:          target.Scope,
 		WorkspaceRoot:  target.WorkspaceRoot,
 	}
 	if ok {
 		order.CreatedAt = meta.CreatedAt
 		order.LastActivityAt = meta.UpdatedAt
-		order.ModTime = meta.UpdatedAt
 		order.Scope = meta.DefaultScope()
 		order.WorkspaceRoot = meta.WorkspaceRoot
 		order.TopicID = meta.TopicID

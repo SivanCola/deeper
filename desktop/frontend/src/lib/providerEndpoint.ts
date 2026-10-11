@@ -4,7 +4,6 @@ export interface ProviderEndpointConfig {
   kind: string;
   baseUrl: string;
   requestUrl?: string;
-  chatUrl?: string;
 }
 
 export function trimmedBaseURL(value: string): string {
@@ -15,14 +14,9 @@ export function providerRequestURLFromConfig(
   kind: string,
   baseUrl: string,
   requestUrl: string,
-  legacyChatUrl = "",
 ): string {
   const exactRequestURL = requestUrl.trim();
   if (exactRequestURL) return exactRequestURL;
-  if (kind.trim().toLowerCase() === "openai") {
-    const legacyOpenAIRequestURL = legacyChatUrl.trim().replace(/\/+$/, "");
-    if (legacyOpenAIRequestURL) return legacyOpenAIRequestURL;
-  }
   const base = trimmedBaseURL(baseUrl);
   if (!base) return "";
   switch (kind.trim().toLowerCase()) {
@@ -71,7 +65,6 @@ export function providerBaseURLForSave(
       initial.kind,
       initial.baseUrl,
       initial.requestUrl ?? "",
-      initial.chatUrl ?? "",
     );
     const kindUnchanged = initial.kind.trim().toLowerCase() === effectiveKind.trim().toLowerCase();
     if (kindUnchanged && initialRequestUrl === requestUrl) {

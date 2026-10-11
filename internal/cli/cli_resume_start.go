@@ -86,7 +86,7 @@ func resumeQueryTarget(dir, query string, w io.Writer, choose func([]resumeEntry
 	fmt.Fprintln(w, i18n.M.ErrorPrefix, err)
 	if ambiguous != nil {
 		for _, entry := range ambiguous.matches {
-			fmt.Fprintf(w, "  %s  %s  %s\n", entry.session.ModTime.Local().Format("01-02 15:04"),
+			fmt.Fprintf(w, "  %s  %s  %s\n", entry.session.LastActivityAt.Local().Format("01-02 15:04"),
 				resumeEntryID(entry), sessionSummary(entry.session))
 		}
 		fmt.Fprintln(w, i18n.M.AmbiguousResumeHint)
@@ -99,7 +99,7 @@ func resumeQueryTarget(dir, query string, w io.Writer, choose func([]resumeEntry
 func chooseResumeEntry(entries []resumeEntry) (cliResumeTarget, int) {
 	items := make([]menuItem, len(entries))
 	for i, s := range entries {
-		when := s.session.ModTime.Local().Format("01-02 15:04")
+		when := s.session.LastActivityAt.Local().Format("01-02 15:04")
 		items[i] = menuItem{
 			name: when,
 			desc: sessionSummary(s.session),

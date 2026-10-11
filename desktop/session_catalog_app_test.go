@@ -5,7 +5,6 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/history"
 	"deepzora/internal/provider"
 	"deepzora/internal/sessioncatalog"
 	"os"
@@ -149,223 +148,43 @@ func TestProjectTreeShellSurvivesCatalogRevisionRace(t *testing.T) {
 	}
 }
 
-func TestUpgradeLegacyRecoveryChainNeedsNoUserActionForOneRowSidebar(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := desktopSessionDir(globalWorkspaceRoot())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	save := func(path, topic string, messages ...provider.Message) {
-		t.Helper()
-		session := agent.NewSession("sys")
-		for _, message := range messages {
-			session.Add(message)
-		}
-		if err := session.Save(path); err != nil {
-			t.Fatal(err)
-		}
-		if err := agent.SaveBranchMetaPreserveUpdated(path, agent.BranchMeta{
-			ID: agent.BranchID(path), Scope: "global", TopicID: topic,
-			TopicTitle: "Upgraded conversation",
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	q := provider.Message{Role: provider.RoleUser, Content: "question"}
-	a := provider.Message{Role: provider.RoleAssistant, Content: "answer"}
-	next := provider.Message{Role: provider.RoleUser, Content: "continue"}
-	done := provider.Message{Role: provider.RoleAssistant, Content: "done"}
-	root := filepath.Join(dir, "root.jsonl")
-	copy := filepath.Join(dir, "copy.jsonl")
-	leaf := filepath.Join(dir, "leaf.jsonl")
-	save(root, "conversation", q, a)
-	save(copy, "legacy-copy-topic", q, a)
-	save(leaf, "legacy-leaf-topic", q, a, next, done)
-	for path, meta := range map[string]agent.BranchMeta{
-		copy: {ID: "copy", Scope: "global", TopicID: "legacy-copy-topic", Recovered: true, ParentID: "root", RecoveryDepth: 1},
-		leaf: {ID: "leaf", Scope: "global", TopicID: "legacy-leaf-topic", Recovered: true, ParentID: "copy", RecoveryDepth: 2},
-	} {
-		if err := agent.SaveBranchMetaPreserveUpdated(path, meta); err != nil {
-			t.Fatal(err)
-		}
-	}
-	app := NewApp()
-	installSessionCatalogForTest(t, app, dir, "global", "")
-	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "global", Limit: 50})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].TopicID != "conversation" || len(page.Items[0].Children) != 0 {
-		t.Fatalf("zero-touch upgraded sidebar = %+v, want one ordinary conversation row", page.Items)
-	}
-	if page.Items[0].RecoveryBranchCount != 0 || page.Items[0].RecoveryUnresolvedCount != 0 ||
-		page.Items[0].Status == topicStatusDivergedRecovery {
-		// Recovery counts and conflict status belong only to History advanced
-		// views; the ordinary root row must stay a plain conversation line.
-		t.Fatalf("ordinary row leaked recovery decoration: %+v", page.Items[0])
-	}
-}
-
 func TestListProjectTopicsSurfacesLiveTabWhileCatalogLags(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	root := t.TempDir()
-	if err := addProject(root, "Lagging Catalog"); err != nil {
-		t.Fatal(err)
-	}
-	sessionDir := desktopSessionDir(root)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	installSessionCatalogForTest(t, app, sessionDir, "project", root)
-	app.tabs["tab-1"] = &WorkspaceTab{
-		ID: "tab-1", Scope: "project", WorkspaceRoot: root,
-		TopicID: "topic_20260812-082637_live", TopicTitle: "Ownership Hub",
-	}
-
+	app, root, refs := canonicalOrganizationFixture(t, "live")
+	app.tabs["tab"] = &WorkspaceTab{ID: "tab", Scope: "project", WorkspaceRoot: root, SessionID: refs["live"].SessionID, TopicID: "live", Ready: true}
 	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].TopicID != "topic_20260812-082637_live" {
-		t.Fatalf("page items = %#v, want the live tab's topic", page.Items)
+	if err != nil || len(page.Items) != 1 || page.Items[0].Session == nil || *page.Items[0].Session != refs["live"] {
+		t.Fatalf("current live row = %+v %v", page, err)
 	}
 	if page.Items[0].CreatedAt <= 0 {
-		t.Fatalf("createdAt = %d, want the topic's creation time", page.Items[0].CreatedAt)
+		t.Fatal("live row has no creation time")
 	}
 }
 
 func TestListProjectTopicsDoesNotDuplicateIndexedLiveTab(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	root := t.TempDir()
-	if err := addProject(root, "Indexed"); err != nil {
-		t.Fatal(err)
-	}
-	sessionDir := desktopSessionDir(root)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	sessionPath := filepath.Join(sessionDir, "live.jsonl")
-	if err := os.WriteFile(sessionPath, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.UpdateBranchMeta(sessionPath, false, func(meta *agent.BranchMeta) error {
-		meta.TopicID = "topic-indexed"
-		meta.TopicTitle = "Indexed Topic"
-		meta.WorkspaceRoot = root
-		meta.Scope = "project"
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	installSessionCatalogForTest(t, app, sessionDir, "project", root)
-	app.tabs["tab-1"] = &WorkspaceTab{
-		ID: "tab-1", Scope: "project", WorkspaceRoot: root,
-		TopicID: "topic-indexed", TopicTitle: "Indexed Topic", SessionPath: sessionPath,
-	}
-
+	app, root, refs := canonicalOrganizationFixture(t, "indexed")
+	app.tabs["tab"] = &WorkspaceTab{ID: "tab", Scope: "project", WorkspaceRoot: root, SessionID: refs["indexed"].SessionID, TopicID: "indexed", Ready: true}
 	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root})
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || len(page.Items) != 1 || page.Items[0].Session == nil || *page.Items[0].Session != refs["indexed"] {
+		t.Fatalf("current live row = %+v %v", page, err)
 	}
-	if len(page.Items) != 1 {
-		t.Fatalf("page items = %#v, want the catalog row only", page.Items)
+	if page.Items[0].CreatedAt <= 0 {
+		t.Fatal("live row has no creation time")
 	}
 }
 
 func TestListProjectTopicsHonorsConversationSortMode(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	root := t.TempDir()
-	if err := addProject(root, "Sortable Conversations"); err != nil {
-		t.Fatal(err)
+	app, root, refs := canonicalOrganizationFixture(t, "older", "newer")
+	time.Sleep(time.Millisecond)
+	rt, ok := app.desktopSessionService("").Runtime(refs["older"])
+	if !ok {
+		t.Fatal("missing current runtime")
 	}
-	sessionDir := desktopSessionDir(root)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	installSessionCatalogForTest(t, app, sessionDir, "project", root)
-	catalog := app.sessionCatalog.Load()
-	if catalog == nil {
-		t.Fatal("session catalog not installed")
-	}
-	for _, record := range []sessioncatalog.SessionRecord{
-		{Path: filepath.Join(sessionDir, "created-new.jsonl"), Directory: sessionDir, Scope: "project", WorkspaceRoot: root, TopicID: "created-new", TopicTitle: "Created New", CreatedAt: 300, LastActivityAt: 100, Turns: 1, TurnsState: sessioncatalog.TurnsValid, Health: sessioncatalog.HealthOK},
-		{Path: filepath.Join(sessionDir, "updated-new.jsonl"), Directory: sessionDir, Scope: "project", WorkspaceRoot: root, TopicID: "updated-new", TopicTitle: "Updated New", CreatedAt: 100, LastActivityAt: 300, Turns: 1, TurnsState: sessioncatalog.TurnsValid, Health: sessioncatalog.HealthOK},
-	} {
-		if err := catalog.UpsertSession(context.Background(), record); err != nil {
-			t.Fatal(err)
+	appendSessionTestMessage(t, rt, "latest", provider.Message{ID: "latest", Role: provider.RoleUser, Content: "latest activity"})
+	for _, tc := range []struct{ mode, want string }{{"created", "newer"}, {"updated", "older"}} {
+		page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, SortMode: tc.mode})
+		if err != nil || len(page.Items) != 2 || page.Items[0].Session.SessionID != tc.want {
+			t.Fatalf("%s = %+v %v", tc.mode, page, err)
 		}
-	}
-
-	created, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, SortMode: "created"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	updated, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, SortMode: "updated"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(created.Items) != 2 || created.Items[0].TopicID != "created-new" {
-		t.Fatalf("created sort = %#v, want created-new first", created.Items)
-	}
-	if len(updated.Items) != 2 || updated.Items[0].TopicID != "updated-new" {
-		t.Fatalf("updated sort = %#v, want updated-new first", updated.Items)
-	}
-}
-
-func TestListProjectTopicsFoldsRestoredLegacyTopicTabIntoOneRow(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := desktopSessionDir(globalWorkspaceRoot())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	save := func(path, topic string) {
-		t.Helper()
-		session := agent.NewSession("sys")
-		session.Add(provider.Message{Role: provider.RoleUser, Content: "question"})
-		session.Add(provider.Message{Role: provider.RoleAssistant, Content: "answer"})
-		if err := session.Save(path); err != nil {
-			t.Fatal(err)
-		}
-		if err := agent.SaveBranchMetaPreserveUpdated(path, agent.BranchMeta{
-			ID: agent.BranchID(path), Scope: "global", TopicID: topic,
-			TopicTitle: "Upgraded conversation",
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	root := filepath.Join(dir, "root.jsonl")
-	copyPath := filepath.Join(dir, "copy.jsonl")
-	save(root, "conversation")
-	save(copyPath, "legacy-copy-topic")
-	if err := agent.SaveBranchMetaPreserveUpdated(copyPath, agent.BranchMeta{
-		ID: "copy", Scope: "global", TopicID: "legacy-copy-topic",
-		Recovered: true, ParentID: "root", RecoveryDepth: 1,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	installSessionCatalogForTest(t, app, dir, "global", "")
-	// A restored pre-upgrade tab still carries the legacy topic ID for the
-	// recovery copy that the catalog re-anchored onto the root logical topic.
-	// withLiveTopics must dedupe by the projected topic, not the tab's one,
-	// so the sidebar keeps exactly one row for the conversation.
-	app.tabs["tab-1"] = &WorkspaceTab{
-		ID: "tab-1", Scope: "global",
-		TopicID: "legacy-copy-topic", TopicTitle: "Upgraded conversation",
-		SessionPath: copyPath,
-	}
-	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "global", Limit: 50})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].TopicID != "conversation" {
-		t.Fatalf("page items = %#v, want one folded conversation row", page.Items)
-	}
-	if !page.Items[0].Open {
-		t.Fatal("open recovery tab must aggregate onto the logical row")
 	}
 }
 
@@ -503,52 +322,6 @@ func TestContinuePathForOpenFollowsCoveringLeafFromParent(t *testing.T) {
 	}
 }
 
-func TestListProjectTopicsUsesAvailableProjectionBeforeEveryGlobalDirectoryIsScanned(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	legacy := config.SessionDir()
-	global := desktopSessionDir(globalWorkspaceRoot())
-	for _, dir := range []string{legacy, global} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-		f.GlobalTopics = []string{"topic-keep"}
-		return true, nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := saveTopicTitles("", map[string]string{"topic-keep": "Previous chat"}); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	catalog, err := sessioncatalog.Open(context.Background(), sessioncatalog.Options{InMemory: true, DisableRepair: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		app.sessionCatalog.CompareAndSwap(catalog, nil)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		_ = catalog.Close(ctx)
-	})
-	app.sessionCatalog.Store(catalog)
-	if err := catalog.ReconcileDirectory(context.Background(), sessioncatalog.DirectoryTarget{Path: legacy, Scope: "global"}); err != nil {
-		t.Fatal(err)
-	}
-
-	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "global", Limit: 50})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].TopicID != "topic-keep" || page.Items[0].Label != "Previous chat" {
-		t.Fatalf("topics after only one global dir scanned = %#v, want merged metadata", page.Items)
-	}
-	if page.Complete || page.ReadyDirectories != 1 || page.PendingDirectories != 1 {
-		t.Fatalf("partial directory completeness = %+v", page)
-	}
-}
-
 func TestMetadataCatalogAvailabilityUsesDiscoveryStateForAbsentRoots(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
@@ -658,54 +431,6 @@ func TestListProjectTopicsPaginatesMetadataWhileCatalogIsPartiallyAvailable(t *t
 	}
 }
 
-func TestAuthoritativeBotStylePersistIndexesSessionImmediately(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	root := t.TempDir()
-	if err := addProject(root, "Bot project"); err != nil {
-		t.Fatal(err)
-	}
-	dir := desktopSessionDir(root)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	catalog, err := sessioncatalog.Open(context.Background(), sessioncatalog.Options{InMemory: true, DisableRepair: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	app.sessionCatalog.Store(catalog)
-	history.RegisterSessionPersistObserver(desktopSessionCatalogPersistObserverKey, desktopSessionCatalogPersistObserver{app: app})
-	t.Cleanup(func() {
-		history.RegisterSessionPersistObserver(desktopSessionCatalogPersistObserverKey, nil)
-		app.sessionCatalog.CompareAndSwap(catalog, nil)
-		_ = catalog.Close(context.Background())
-	})
-
-	path := filepath.Join(dir, "bot-session.jsonl")
-	if err := agent.SaveBranchMetaPreserveUpdated(path, agent.BranchMeta{
-		ID: agent.BranchID(path), Scope: "project", WorkspaceRoot: root,
-		TopicID: "bot-topic", TopicTitle: "Bot conversation",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	session := agent.NewSession("system")
-	session.SetPersistObserver(history.PersistObserver())
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "hello from bot"})
-	if err := session.Save(path); err != nil {
-		t.Fatal(err)
-	}
-
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		page, listErr := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root, Limit: 50})
-		if listErr == nil && len(page.Items) == 1 && page.Items[0].TopicID == "bot-topic" {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatal("authoritative bot-style persist did not enter the project catalog immediately")
-}
-
 type retargetRuntimeController struct {
 	stubSessionAPI
 	status control.RuntimeStatus
@@ -718,7 +443,7 @@ func (c *retargetRuntimeController) PlanMode() bool                       { retu
 func (c *retargetRuntimeController) AutoApproveTools() bool               { return false }
 func (c *retargetRuntimeController) Goal() string                         { return "" }
 func (c *retargetRuntimeController) GoalStatus() string                   { return "" }
-func (c *retargetRuntimeController) ToolApprovalMode() string             { return control.ToolApprovalAsk }
+func (c *retargetRuntimeController) ToolApprovalMode() string             { return control.ToolApprovalReadOnly }
 
 func TestRetargetOpenTabsSkipsRunningSessions(t *testing.T) {
 	isolateDesktopUserDirs(t)

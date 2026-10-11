@@ -114,7 +114,7 @@ async function renderComposer(props: Partial<Parameters<typeof Composer>[0]> = {
   let currentProps: Parameters<typeof Composer>[0] = {
     running: false,
     collaborationMode: "normal",
-    toolApprovalMode: "ask" as ToolApprovalMode,
+    toolApprovalMode: "workspace-write" as ToolApprovalMode,
 
     goal: "",
     cwd: "/repo",
@@ -1180,7 +1180,6 @@ console.log("\ncomposer session draft");
       turns: 1,
       createdAt: 1,
       lastActivityAt: 1,
-      modTime: 1,
       current: false,
       open: false,
     }],

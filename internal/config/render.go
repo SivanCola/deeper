@@ -50,15 +50,12 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 	b.WriteString("# Fields marked user/global only are not overridden by ./deepzora.toml.\n")
 	b.WriteString("# Secrets are named via api_key_env and stored in Deepzora's global .env; never put keys here.\n\n")
 
-	fmt.Fprintf(&b, "config_version = %d   # schema marker for diagnostics; old versions may ignore it\n", configVersion(c))
+	fmt.Fprintf(&b, "config_version = %d   # sole supported configuration schema\n", configVersion(c))
 	fmt.Fprintf(&b, "default_model = %q\n", c.DefaultModel)
 	if c.Language != "" {
 		fmt.Fprintf(&b, "language      = %q   # ui/model language; empty = auto-detect from $LANG / $DEEPZORA_LANG\n", c.Language)
 	} else {
 		b.WriteString("# language      = \"zh\"   # ui/model language; empty = auto-detect from $LANG / $DEEPZORA_LANG\n")
-	}
-	if scope != RenderScopeProject {
-		fmt.Fprintf(&b, "credentials_store = %q   # legacy compatibility; provider keys are saved in Deepzora's global .env\n", normalizeCredentialsStore(c.CredentialsStore))
 	}
 	b.WriteString("\n")
 
@@ -68,21 +65,15 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 		if style := c.UIThemeStyle(); style != "" {
 			fmt.Fprintf(&b, "theme_style = %q   # CLI accent palette; DEEPZORA_THEME_STYLE can override per run\n", style)
 		} else {
-			b.WriteString("# theme_style = \"graphite\"   # graphite|aurora|slate|carbon|nocturne|amber and legacy aliases\n")
+			b.WriteString("# theme_style = \"graphite\"   # graphite|aurora|slate|carbon|nocturne|amber\n")
 		}
-		if layout := c.UIShortcutLayout(); layout != "classic" {
-			fmt.Fprintf(&b, "shortcut_layout = %q   # classic|desktop; compatibility setting; Shift+Tab cycles read-only/workspace/YOLO/plan; Ctrl+Y toggles YOLO\n", layout)
-		} else {
-			b.WriteString("# shortcut_layout = \"desktop\"   # classic|desktop; compatibility setting; Shift+Tab cycles read-only/workspace/YOLO/plan; Ctrl+Y toggles YOLO\n")
-		}
+
 		if strings.TrimSpace(c.UI.CursorShape) != "" {
 			fmt.Fprintf(&b, "cursor_shape = %q   # block|underline|bar; text input cursor shape\n", c.UICursorShape())
 		} else {
 			b.WriteString("# cursor_shape = \"bar\"   # block|underline|bar; text input cursor shape\n")
 		}
-		if strings.TrimSpace(c.UI.CloseBehavior) != "" && scope == RenderScopeProject {
-			fmt.Fprintf(&b, "close_behavior = %q   # legacy desktop close behavior; prefer [desktop].close_behavior in user config\n", c.DesktopCloseBehavior())
-		}
+
 		if c.UI.ShowReasoning {
 			b.WriteString("show_reasoning = true   # CLI: show thinking text by default; false = collapsed (toggle with Ctrl+O)\n")
 		} else {
@@ -99,18 +90,14 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 		} else {
 			b.WriteString("# language = \"zh\"   # desktop UI language; empty/auto = browser/OS auto-detect\n")
 		}
-		// Legacy desktop.currency is still emitted when set so older binaries keep
-		// reading the preference; new writers also own [billing].display_currency.
-		if currency := c.DesktopCurrency(); currency != "" {
-			fmt.Fprintf(&b, "currency = %q   # legacy display currency; prefer [billing].display_currency\n", currency)
-		}
-		fmt.Fprintf(&b, "layout_style = %q   # desktop layout: workbench|creation; legacy classic migrates to workbench\n", c.DesktopLayoutStyle())
+
+		fmt.Fprintf(&b, "layout_style = %q   # desktop layout: workbench|creation\n", c.DesktopLayoutStyle())
 		fmt.Fprintf(&b, "theme = %q   # desktop only: auto|dark|light\n", c.DesktopTheme())
 		fmt.Fprintf(&b, "terminal_theme = %q   # integrated terminal: auto|dark|light; auto follows the desktop app\n", c.DesktopTerminalTheme())
 		if style := c.DesktopThemeStyle(); style != "" {
 			fmt.Fprintf(&b, "theme_style = %q   # desktop accent palette\n", style)
 		} else {
-			b.WriteString("# theme_style = \"graphite\"   # graphite|aurora|slate|carbon|nocturne|amber and legacy aliases\n")
+			b.WriteString("# theme_style = \"graphite\"   # graphite|aurora|slate|carbon|nocturne|amber\n")
 		}
 		if opener := c.DesktopExternalOpener(); opener != "" {
 			fmt.Fprintf(&b, "external_opener = %q   # desktop Open control: installed application id\n", opener)
@@ -119,7 +106,6 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 		}
 		fmt.Fprintf(&b, "close_behavior = %q   # desktop: quit|background when the window close button is clicked\n", c.DesktopCloseBehavior())
 		fmt.Fprintf(&b, "status_bar_style = %q   # desktop: icon|text metric labels in the bottom status bar\n", c.DesktopStatusBarStyle())
-		b.WriteString("status_bar_style_initialized = true   # icon default upgrade applied; preserve later user choices\n")
 		fmt.Fprintf(&b, "status_bar_items = %s   # desktop: ordered visible bottom status bar items\n", renderStringArray(c.DesktopStatusBarItems()))
 		fmt.Fprintf(&b, "default_tool_approval_mode = %q   # desktop: read-only/workspace-write/danger-full-access default for new sessions\n", c.DesktopDefaultToolApprovalMode())
 		fmt.Fprintf(&b, "check_updates = %v   # desktop: check for new versions on startup\n", c.DesktopCheckUpdates())
@@ -127,13 +113,11 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 		fmt.Fprintf(&b, "metrics = %v   # desktop: aggregate quality/lifecycle metrics (anonymous signal/bucket counts); never content\n", c.DesktopMetrics())
 		// A non-nil empty slice is intentional: provider_access = [] means the
 		// user removed every desktop access entry. Omitting it would make the next
-		// load treat the config as legacy and infer access again.
+		// load retain default access instead of the user's empty choice.
 		if c.Desktop.ProviderAccess != nil {
 			fmt.Fprintf(&b, "provider_access = %s   # desktop settings: providers shown on Settings > Model > Access\n", renderStringArray(c.Desktop.ProviderAccess))
 		}
 		renderDesktopSessionExperience(&b, c)
-		renderDesktopReasoningDisplayMode(&b, c)
-		fmt.Fprintf(&b, "display_mode = %q   # desktop: standard|compact transcript display mode\n", c.DesktopDisplayMode())
 		if width := c.DesktopConversationWidth(); width == "full" {
 			fmt.Fprintf(&b, "conversation_width = %q   # desktop: standard|full transcript width; empty = standard\n", width)
 		}
@@ -227,24 +211,12 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 		b.WriteString("# system_prompt_file = \"prompts/system.md\"   # project paths stay in <workspace>; user paths may fall back to <deepzora home>\n")
 	}
 	fmt.Fprintf(&b, "temperature       = %s\n", formatFloat(c.Agent.Temperature))
-	renderRecoveryAndCompletionValidation(&b, c)
 	if lang := c.ReasoningLanguage(); lang != "auto" {
 		fmt.Fprintf(&b, "reasoning_language = %q   # visible reasoning language: auto|zh|en\n", lang)
 	} else {
 		b.WriteString("# reasoning_language = \"zh\"   # visible reasoning language: auto|zh|en\n")
 	}
 	fmt.Fprintf(&b, "compact_ratio       = %s   # sole auto trigger; presets 0.70/0.80/0.85 (default 0.80)\n", formatFloat(c.Agent.CompactRatio))
-	if c.Agent.Keep != nil {
-		fmt.Fprintf(&b, "keep                = %s   # deprecated compatibility field; ignored at runtime\n", renderStringArray(c.Agent.Keep))
-	} else {
-		b.WriteString("# keep                = [\"errors\"]   # deprecated compatibility field; ignored at runtime\n")
-	}
-	if c.Agent.RecentKeep > 0 {
-		fmt.Fprintf(&b, "recent_keep         = %d   # deprecated compatibility field; ignored at runtime\n", c.Agent.RecentKeep)
-	} else {
-		b.WriteString("# recent_keep         = 2   # deprecated compatibility field; ignored at runtime\n")
-	}
-	renderAgentSafetyControls(&b, c, scope)
 	renderAgentModelAssignments(&b, c)
 	if c.Agent.SubagentEffort != "" {
 		fmt.Fprintf(&b, "subagent_effort = %q   # default effort for subagent entry points\n", c.Agent.SubagentEffort)
@@ -279,14 +251,12 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 	b.WriteString("\n")
 
 	if shouldRenderProviders(c, defaults, scope) {
-		for _, p := range reasoningCompatibilitySnapshots(c.Providers) {
+		for _, p := range providerConfigSnapshots(c.Providers) {
 			b.WriteString("[[providers]]\n")
 			fmt.Fprintf(&b, "name        = %q\n", p.Name)
 			fmt.Fprintf(&b, "kind        = %q\n", p.Kind)
 			fmt.Fprintf(&b, "base_url    = %q\n", p.BaseURL)
-			if p.ChatURL != "" {
-				fmt.Fprintf(&b, "chat_url    = %q   # legacy OpenAI chat endpoint override\n", p.ChatURL)
-			}
+
 			if p.RequestURL != "" {
 				fmt.Fprintf(&b, "request_url = %q   # exact provider request URL; no path completion\n", p.RequestURL)
 			}
@@ -295,8 +265,6 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 				if p.Default != "" {
 					fmt.Fprintf(&b, "default     = %q\n", p.Default)
 				}
-			} else if p.Model != "" {
-				fmt.Fprintf(&b, "model       = %q\n", p.Model)
 			}
 			if p.ModelsURL != "" {
 				fmt.Fprintf(&b, "models_url  = %q   # auto-fetch models from this URL on startup\n", p.ModelsURL)
@@ -320,9 +288,7 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 			if p.ResponsesMode != "" {
 				fmt.Fprintf(&b, "responses_mode = %q   # responses provider: stateless|stateful\n", p.ResponsesMode)
 			}
-			if p.ResponsesStateful != nil {
-				fmt.Fprintf(&b, "responses_stateful = %t   # legacy responses mode switch\n", *p.ResponsesStateful)
-			}
+
 			if p.BalanceURL != "" {
 				fmt.Fprintf(&b, "balance_url = %q   # optional; wallet-balance endpoint shown in the status bar\n", p.BalanceURL)
 			}
@@ -337,9 +303,7 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 				b.WriteString("# max_output_tokens = 65536   # optional cost cap\n")
 				b.WriteString("# max_output_tokens = 131072  # optional cost cap\n")
 			}
-			if p.Price != nil {
-				fmt.Fprintf(&b, "price       = %s   # provider-wide fallback, per 1M tokens\n", renderPricingInline(p.Price))
-			}
+
 			if len(p.Prices) > 0 {
 				fmt.Fprintf(&b, "prices      = %s   # per-model prices, per 1M tokens\n", renderPricingMap(p.Prices))
 			}
@@ -355,12 +319,7 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 			if p.Effort != "" {
 				fmt.Fprintf(&b, "effort      = %q\n", p.Effort)
 			}
-			if p.Vision {
-				b.WriteString("vision      = true   # provider accepts image input for all listed models\n")
-			}
-			if p.VisionModels != nil {
-				fmt.Fprintf(&b, "vision_models = %s   # models in this provider that accept image input\n", renderStringArray(p.VisionModels))
-			}
+
 			if p.VisionDetail != "" {
 				fmt.Fprintf(&b, "vision_detail = %q   # openai image detail hint: low|high; empty = auto\n", p.VisionDetail)
 			}
@@ -527,11 +486,6 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 		} else {
 			b.WriteString("# queue_cap = 20\n")
 		}
-		if c.Bot.QueueDrop != "" {
-			fmt.Fprintf(&b, "queue_drop = %q   # summarize|old|new\n", c.Bot.QueueDrop)
-		} else {
-			b.WriteString("# queue_drop = \"summarize\"   # summarize|old|new\n")
-		}
 		fmt.Fprintf(&b, "ignore_self_messages = %v   # ignore bot echo by returned message_id and configured self user ids\n", c.Bot.IgnoreSelfMessages)
 		b.WriteString("\n[bot.self_user_ids]\n")
 		fmt.Fprintf(&b, "qq = %s\n", renderStringArray(c.Bot.SelfUserIDs.QQ))
@@ -574,47 +528,14 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 		} else {
 			b.WriteString("# max_pending_per_platform = 3\n")
 		}
-		b.WriteString("\n[bot.allowlist]\n")
-		fmt.Fprintf(&b, "enabled = %v\n", c.Bot.Allowlist.Enabled)
-		fmt.Fprintf(&b, "allow_all = %v\n", c.Bot.Allowlist.AllowAll)
-		fmt.Fprintf(&b, "qq_users = %s\n", renderStringArray(c.Bot.Allowlist.QQUsers))
-		fmt.Fprintf(&b, "feishu_users = %s\n", renderStringArray(c.Bot.Allowlist.FeishuUsers))
-		fmt.Fprintf(&b, "weixin_users = %s\n", renderStringArray(c.Bot.Allowlist.WeixinUsers))
-		fmt.Fprintf(&b, "dingtalk_users = %s\n", renderStringArray(c.Bot.Allowlist.DingtalkUsers))
-		fmt.Fprintf(&b, "qq_approvers = %s\n", renderStringArray(c.Bot.Allowlist.QQApprovers))
-		fmt.Fprintf(&b, "feishu_approvers = %s\n", renderStringArray(c.Bot.Allowlist.FeishuApprovers))
-		fmt.Fprintf(&b, "weixin_approvers = %s\n", renderStringArray(c.Bot.Allowlist.WeixinApprovers))
-		fmt.Fprintf(&b, "dingtalk_approvers = %s\n", renderStringArray(c.Bot.Allowlist.DingtalkApprovers))
-		fmt.Fprintf(&b, "qq_admins = %s\n", renderStringArray(c.Bot.Allowlist.QQAdmins))
-		fmt.Fprintf(&b, "feishu_admins = %s\n", renderStringArray(c.Bot.Allowlist.FeishuAdmins))
-		fmt.Fprintf(&b, "weixin_admins = %s\n", renderStringArray(c.Bot.Allowlist.WeixinAdmins))
-		fmt.Fprintf(&b, "dingtalk_admins = %s\n", renderStringArray(c.Bot.Allowlist.DingtalkAdmins))
-		fmt.Fprintf(&b, "qq_groups = %s\n", renderStringArray(c.Bot.Allowlist.QQGroups))
-		fmt.Fprintf(&b, "feishu_groups = %s\n", renderStringArray(c.Bot.Allowlist.FeishuGroups))
-		fmt.Fprintf(&b, "weixin_groups = %s\n", renderStringArray(c.Bot.Allowlist.WeixinGroups))
-		fmt.Fprintf(&b, "dingtalk_groups = %s\n", renderStringArray(c.Bot.Allowlist.DingtalkGroups))
 		b.WriteString("\n[bot.qq]\n")
-		fmt.Fprintf(&b, "enabled = %v\n", c.Bot.QQ.Enabled)
-		fmt.Fprintf(&b, "app_id = %q\n", c.Bot.QQ.AppID)
-		fmt.Fprintf(&b, "app_secret_env = %q\n", c.Bot.QQ.AppSecretEnv)
 		fmt.Fprintf(&b, "sandbox = %v\n", c.Bot.QQ.Sandbox)
-		if strings.TrimSpace(c.Bot.QQ.Model) != "" {
-			fmt.Fprintf(&b, "model = %q\n", strings.TrimSpace(c.Bot.QQ.Model))
-		}
-		if strings.TrimSpace(c.Bot.QQ.ToolApprovalMode) != "" {
-			fmt.Fprintf(&b, "tool_approval_mode = %q\n", NormalizeToolApprovalMode(c.Bot.QQ.ToolApprovalMode))
-		}
-		if strings.TrimSpace(c.Bot.QQ.WorkspaceRoot) != "" {
-			fmt.Fprintf(&b, "workspace_root = %q\n", strings.TrimSpace(c.Bot.QQ.WorkspaceRoot))
-		}
+
 		if parts := renderBotAccess(c.Bot.QQ.Access); parts != "" {
 			fmt.Fprintf(&b, "access = %s\n", parts)
 		}
 		b.WriteString("\n[bot.feishu]\n")
-		fmt.Fprintf(&b, "enabled = %v\n", c.Bot.Feishu.Enabled)
-		fmt.Fprintf(&b, "app_id = %q\n", c.Bot.Feishu.AppID)
 		fmt.Fprintf(&b, "domain = %q\n", c.Bot.Feishu.Domain)
-		fmt.Fprintf(&b, "app_secret_env = %q\n", c.Bot.Feishu.AppSecretEnv)
 		fmt.Fprintf(&b, "verification_token = %q\n", c.Bot.Feishu.VerificationToken)
 		fmt.Fprintf(&b, "mode = %q\n", c.Bot.Feishu.Mode)
 		fmt.Fprintf(&b, "webhook_port = %d\n", c.Bot.Feishu.WebhookPort)
@@ -623,33 +544,15 @@ func RenderTOMLForScope(c *Config, scope RenderScope) string {
 			fmt.Fprintf(&b, "outbound_media_roots = %s\n", renderStringArray(c.Bot.Feishu.OutboundMediaRoots))
 		}
 		b.WriteString("\n[bot.weixin]\n")
-		fmt.Fprintf(&b, "enabled = %v\n", c.Bot.Weixin.Enabled)
-		fmt.Fprintf(&b, "account_id = %q\n", c.Bot.Weixin.AccountID)
-		fmt.Fprintf(&b, "token_env = %q\n", c.Bot.Weixin.TokenEnv)
 		fmt.Fprintf(&b, "api_base = %q\n", c.Bot.Weixin.APIBase)
 		b.WriteString("\n[bot.dingtalk]\n")
-		fmt.Fprintf(&b, "enabled = %v\n", c.Bot.Dingtalk.Enabled)
-		fmt.Fprintf(&b, "client_id = %q\n", c.Bot.Dingtalk.ClientID)
-		fmt.Fprintf(&b, "client_secret = %q\n", c.Bot.Dingtalk.ClientSecret)
-		fmt.Fprintf(&b, "client_id_env = %q\n", c.Bot.Dingtalk.ClientIDEnv)
-		fmt.Fprintf(&b, "secret_env = %q\n", c.Bot.Dingtalk.SecretEnv)
 		fmt.Fprintf(&b, "bot_name = %q\n", c.Bot.Dingtalk.BotName)
 		fmt.Fprintf(&b, "require_mention = %v\n", c.Bot.Dingtalk.RequireMention)
-		if strings.TrimSpace(c.Bot.Dingtalk.Model) != "" {
-			fmt.Fprintf(&b, "model = %q\n", strings.TrimSpace(c.Bot.Dingtalk.Model))
-		}
-		if strings.TrimSpace(c.Bot.Dingtalk.ToolApprovalMode) != "" {
-			fmt.Fprintf(&b, "tool_approval_mode = %q\n", NormalizeToolApprovalMode(c.Bot.Dingtalk.ToolApprovalMode))
-		}
-		if strings.TrimSpace(c.Bot.Dingtalk.WorkspaceRoot) != "" {
-			fmt.Fprintf(&b, "workspace_root = %q\n", strings.TrimSpace(c.Bot.Dingtalk.WorkspaceRoot))
-		}
+
 		if parts := renderBotAccess(c.Bot.Dingtalk.Access); parts != "" {
 			fmt.Fprintf(&b, "access = %s\n", parts)
 		}
-		if len(c.Bot.Dingtalk.SessionMappings) > 0 {
-			fmt.Fprintf(&b, "session_mappings = %s\n", renderBotSessionMappings(c.Bot.Dingtalk.SessionMappings))
-		}
+
 		for _, conn := range c.Bot.Connections {
 			b.WriteString("\n[[bot.connections]]\n")
 			fmt.Fprintf(&b, "id = %q\n", conn.ID)
@@ -822,15 +725,11 @@ func RenderTOMLProjectDelta(c *Config) string {
 		if s := c.UIThemeStyle(); s != "" && s != d.UIThemeStyle() {
 			fmt.Fprintf(&b, "theme_style = %q\n", s)
 		}
-		if l := c.UIShortcutLayout(); l != "classic" {
-			fmt.Fprintf(&b, "shortcut_layout = %q\n", l)
-		}
+
 		if strings.TrimSpace(c.UI.CursorShape) != "" {
 			fmt.Fprintf(&b, "cursor_shape = %q\n", c.UICursorShape())
 		}
-		if c.UI.CloseBehavior != d.UI.CloseBehavior {
-			fmt.Fprintf(&b, "close_behavior = %q\n", c.DesktopCloseBehavior())
-		}
+
 		if c.UI.ShowReasoning != d.UI.ShowReasoning {
 			fmt.Fprintf(&b, "show_reasoning = %v\n", c.UI.ShowReasoning)
 		}
@@ -893,7 +792,6 @@ func RenderTOMLProjectDelta(c *Config) string {
 		fmt.Fprintf(&agentBuf, "temperature = %s\n", formatFloat(c.Agent.Temperature))
 		anyAgent = true
 	}
-	diffRecoveryAndCompletionValidation(&agentBuf, *c, *d, &anyAgent)
 	if c.Agent.ReasoningLanguage != d.Agent.ReasoningLanguage {
 		if l := c.ReasoningLanguage(); l != "auto" {
 			fmt.Fprintf(&agentBuf, "reasoning_language = %q\n", l)
@@ -902,18 +800,6 @@ func RenderTOMLProjectDelta(c *Config) string {
 	}
 	if c.Agent.CompactRatio != d.Agent.CompactRatio {
 		fmt.Fprintf(&agentBuf, "compact_ratio = %s\n", formatFloat(c.Agent.CompactRatio))
-		anyAgent = true
-	}
-	if c.Agent.Keep != nil && !reflect.DeepEqual(c.Agent.Keep, d.Agent.Keep) {
-		fmt.Fprintf(&agentBuf, "keep = %s\n", renderStringArray(c.Agent.Keep))
-		anyAgent = true
-	}
-	if c.Agent.RecentKeep > 0 && c.Agent.RecentKeep != d.Agent.RecentKeep {
-		fmt.Fprintf(&agentBuf, "recent_keep = %d\n", c.Agent.RecentKeep)
-		anyAgent = true
-	}
-	if len(c.Agent.PlanModeReadOnlyCommands) > 0 && !reflect.DeepEqual(c.Agent.PlanModeReadOnlyCommands, d.Agent.PlanModeReadOnlyCommands) {
-		fmt.Fprintf(&agentBuf, "plan_mode_read_only_commands = %s\n", renderStringArray(c.Agent.PlanModeReadOnlyCommands))
 		anyAgent = true
 	}
 	renderAgentModelAssignmentDelta(&agentBuf, c, d, &anyAgent)
@@ -943,14 +829,12 @@ func RenderTOMLProjectDelta(c *Config) string {
 	// [[providers]] — include user-defined providers that aren't built-in
 	proj := projectScopedConfigForRender(c)
 	if proj != nil && len(proj.Providers) > 0 && !reflect.DeepEqual(proj.Providers, d.Providers) {
-		for _, p := range reasoningCompatibilitySnapshots(proj.Providers) {
+		for _, p := range providerConfigSnapshots(proj.Providers) {
 			b.WriteString("[[providers]]\n")
 			fmt.Fprintf(&b, "name        = %q\n", p.Name)
 			fmt.Fprintf(&b, "kind        = %q\n", p.Kind)
 			fmt.Fprintf(&b, "base_url    = %q\n", p.BaseURL)
-			if p.ChatURL != "" {
-				fmt.Fprintf(&b, "chat_url    = %q\n", p.ChatURL)
-			}
+
 			if p.RequestURL != "" {
 				fmt.Fprintf(&b, "request_url = %q\n", p.RequestURL)
 			}
@@ -959,8 +843,6 @@ func RenderTOMLProjectDelta(c *Config) string {
 				if p.Default != "" {
 					fmt.Fprintf(&b, "default     = %q\n", p.Default)
 				}
-			} else if p.Model != "" {
-				fmt.Fprintf(&b, "model       = %q\n", p.Model)
 			}
 			if p.ModelsURL != "" {
 				fmt.Fprintf(&b, "models_url  = %q\n", p.ModelsURL)
@@ -984,9 +866,7 @@ func RenderTOMLProjectDelta(c *Config) string {
 			if p.ResponsesMode != "" {
 				fmt.Fprintf(&b, "responses_mode = %q\n", p.ResponsesMode)
 			}
-			if p.ResponsesStateful != nil {
-				fmt.Fprintf(&b, "responses_stateful = %t\n", *p.ResponsesStateful)
-			}
+
 			if p.BalanceURL != "" {
 				fmt.Fprintf(&b, "balance_url = %q\n", p.BalanceURL)
 			}
@@ -996,9 +876,7 @@ func RenderTOMLProjectDelta(c *Config) string {
 			if p.MaxOutputTokens != 0 {
 				fmt.Fprintf(&b, "max_output_tokens = %d\n", p.MaxOutputTokens)
 			}
-			if p.Price != nil {
-				fmt.Fprintf(&b, "price       = %s\n", renderPricingInline(p.Price))
-			}
+
 			if len(p.Prices) > 0 {
 				fmt.Fprintf(&b, "prices      = %s\n", renderPricingMap(p.Prices))
 			}
@@ -1014,12 +892,7 @@ func RenderTOMLProjectDelta(c *Config) string {
 			if p.Effort != "" {
 				fmt.Fprintf(&b, "effort      = %q\n", p.Effort)
 			}
-			if p.Vision {
-				b.WriteString("vision      = true\n")
-			}
-			if p.VisionModels != nil {
-				fmt.Fprintf(&b, "vision_models = %s\n", renderStringArray(p.VisionModels))
-			}
+
 			if p.VisionDetail != "" {
 				fmt.Fprintf(&b, "vision_detail = %q\n", p.VisionDetail)
 			}

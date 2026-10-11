@@ -11,7 +11,6 @@ import (
 
 // CompletionSummary is the JSON form of event.CompletionSummaryInfo.
 type CompletionSummary struct {
-	Preset             string   `json:"preset"` // deprecated; pinned compat value
 	Verdict            string   `json:"verdict"`
 	Mutations          int      `json:"mutations"`
 	ChangedFiles       int      `json:"changed_files,omitempty"`
@@ -21,7 +20,6 @@ type CompletionSummary struct {
 	Review             string   `json:"review"`
 	GapKinds           []string `json:"gap_kinds,omitempty"`
 	ConstraintDegraded bool     `json:"constraint_degraded"`
-	Floor              string   `json:"floor,omitempty"`
 	Attention          bool     `json:"attention"`
 }
 
@@ -30,7 +28,6 @@ func toWireCompletionSummary(c *event.CompletionSummaryInfo) *CompletionSummary 
 		return nil
 	}
 	return &CompletionSummary{
-		Preset:             c.Preset,
 		Verdict:            c.Verdict,
 		Mutations:          c.Mutations,
 		ChangedFiles:       c.ChangedFiles,
@@ -40,8 +37,6 @@ func toWireCompletionSummary(c *event.CompletionSummaryInfo) *CompletionSummary 
 		Review:             c.Review,
 		GapKinds:           append([]string(nil), c.GapKinds...),
 		ConstraintDegraded: c.ConstraintDegraded,
-		Floor:              c.Floor,
-		Attention:          c.Attention,
 	}
 }
 
@@ -146,9 +141,7 @@ func ToWire(e event.Event) Event {
 		w.Receipt = completionReceiptWire(e.Receipt)
 		w.ProtocolRecovery = e.ProtocolRecovery
 		w.Diagnostic = e.Diagnostic
-		if e.Readiness != nil {
-			w.Readiness = &FinalReadiness{Attempts: e.Readiness.Attempts, Missing: append([]string(nil), e.Readiness.Missing...)}
-		}
+
 		if e.Err != nil {
 			w.Err = e.Err.Error()
 		}
@@ -212,9 +205,8 @@ func toWireUsage(e event.Event) *Usage {
 		wire.OriginalTotals = append([]billing.Money(nil), quote.OriginalTotals...)
 		if quote.Selected != nil {
 			wire.Cost = quote.Selected.Float64()
-			wire.Currency = quote.LegacyCurrencySymbol()
-			wire.CostUSD = wire.Cost
-			wire.CurrencyCode = quote.LegacyCurrencyCode()
+			wire.Currency = quote.SelectedCurrencySymbol()
+			wire.CurrencyCode = quote.SelectedCurrencyCode()
 		}
 	}
 	return wire
@@ -234,11 +226,6 @@ func ToWireDecisionReceipt(in *provider.DecisionReceipt) *DecisionReceipt {
 		return nil
 	}
 	return &DecisionReceipt{ID: in.ID, Kind: in.Kind, Tool: in.Tool, Subject: in.Subject, Outcome: in.Outcome}
-}
-
-type FinalReadiness struct {
-	Attempts int      `json:"attempts,omitempty"`
-	Missing  []string `json:"missing,omitempty"`
 }
 
 // MemoryCitation is the JSON form of provider.MemoryCitation.
@@ -427,9 +414,6 @@ type Usage struct {
 	Currency                string  `json:"currency,omitempty"`
 	// CurrencyCode is the ISO code for Cost (preferred over symbol Currency).
 	CurrencyCode string `json:"currencyCode,omitempty"`
-	// CostUSD is a compatibility alias for older consumers; it mirrors Cost
-	// (selected display valuation) and does not imply USD.
-	CostUSD float64 `json:"costUsd,omitempty"`
 	// CostQuote is the structured host-side quote. New consumers must prefer it
 	// over cost/currency aliases. Never sent to model providers.
 	CostQuote       *billing.CostQuote `json:"costQuote,omitempty"`
@@ -490,10 +474,9 @@ func ToWireGuardian(g event.GuardianResult) *Guardian {
 			q := event.EnsureCostQuote(event.Event{Kind: event.Usage, Usage: u, Pricing: g.Pricing}, nil)
 			if q != nil {
 				out.Usage.CostQuote = q
-				out.Usage.Cost = q.LegacyCostFloat()
-				out.Usage.Currency = q.LegacyCurrencySymbol()
-				out.Usage.CostUSD = out.Usage.Cost
-				out.Usage.CurrencyCode = q.LegacyCurrencyCode()
+				out.Usage.Cost = q.SelectedCostFloat()
+				out.Usage.Currency = q.SelectedCurrencySymbol()
+				out.Usage.CurrencyCode = q.SelectedCurrencyCode()
 			}
 		}
 	}

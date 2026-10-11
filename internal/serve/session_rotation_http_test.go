@@ -3,15 +3,12 @@ package serve
 import (
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
 )
 
@@ -62,52 +59,6 @@ func TestServeSilentRotationsPublishSessionChanged(t *testing.T) {
 				t.Fatalf("%s routing frame = %+v, old path %q", endpoint, frame, oldPath)
 			}
 		})
-	}
-}
-
-func TestServeResumeBuffersSynchronousEventsUntilRoutePublication(t *testing.T) {
-	dir := t.TempDir()
-	active := filepath.Join(dir, "active.jsonl")
-	target := filepath.Join(dir, "target.jsonl")
-	saveServeTestSession(t, active)
-	saveServeTestSession(t, target)
-
-	bc := NewBroadcaster()
-	tag := NewSessionTagSink(bc)
-	tag.SetPath(active)
-	ctrl := control.New(control.Options{Sink: tag, SessionDir: dir, SessionPath: active})
-	defer ctrl.Close()
-	server := New(ctrl, bc, config.ServeConfig{})
-	server.RegisterSessionTag(ctrl, tag)
-	all, stop := bc.SubscribeAll()
-	defer stop()
-	resumeBindHookForTest = func() {
-		tag.Emit(event.Event{Kind: event.Notice, Text: "synchronous resume warning"})
-	}
-	defer func() { resumeBindHookForTest = nil }()
-
-	httpServer := httptest.NewServer(operatorHandler(server))
-	defer httpServer.Close()
-	payload := `{"path":` + strconv.Quote(target) + `}`
-	resp, err := http.Post(httpServer.URL+"/resume", "application/json", strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
-		t.Fatalf("resume status = %d, want 204", resp.StatusCode)
-	}
-
-	canonicalTarget := agent.CanonicalSessionPath(target)
-	for _, wantKind := range []string{"notice", "session_changed"} {
-		frame := nextServeProtocolFrame(t, all, func(state eventwire.Event) {
-			if state.SessionPath != agent.CanonicalSessionPath(active) {
-				t.Fatalf("resumed runtime state preceded session_changed routing barrier: %+v", state)
-			}
-		})
-		if frame.Kind != wantKind || frame.SessionPath != canonicalTarget || !frame.SessionCurrent {
-			t.Fatalf("resumed %s frame = %+v, want target-tagged foreground frame", wantKind, frame)
-		}
 	}
 }
 

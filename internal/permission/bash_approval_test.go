@@ -97,10 +97,10 @@ func TestPolicyDynamicBashFollowsPresetAndExplicitRules(t *testing.T) {
 		want Decision
 	}{
 		{name: "workspace fallback allows inside sandbox", p: New("allow", nil, nil, nil), want: Allow},
-		{name: "explicit dynamic fallback opt-in", p: New("allow", nil, nil, nil).WithAllowDynamicBashFallback(true), want: Allow},
-		{name: "dynamic opt-in still requires allow fallback", p: New("ask", nil, nil, nil).WithAllowDynamicBashFallback(true), want: Ask},
-		{name: "dynamic opt-in keeps ask precedence", p: New("allow", nil, []string{"Bash(git*)"}, nil).WithAllowDynamicBashFallback(true), want: Ask},
-		{name: "dynamic opt-in keeps deny precedence", p: New("allow", nil, nil, []string{"Bash(git*)"}).WithAllowDynamicBashFallback(true), want: Deny},
+		{name: "explicit dynamic fallback opt-in", p: New("allow", nil, nil, nil), want: Allow},
+		{name: "dynamic opt-in still requires allow fallback", p: New("ask", nil, nil, nil), want: Ask},
+		{name: "dynamic opt-in keeps ask precedence", p: New("allow", nil, []string{"Bash(git*)"}, nil), want: Ask},
+		{name: "dynamic opt-in keeps deny precedence", p: New("allow", nil, nil, []string{"Bash(git*)"}), want: Deny},
 		{name: "bare allow remains bounded by sandbox", p: New("ask", []string{"Bash"}, nil, nil), want: Ask},
 		{name: "ordinary glob does not grant an indirect command", p: New("ask", []string{"Bash(git*)"}, nil, nil), want: Ask},
 		{name: "legacy prefix does not grant an indirect command", p: New("ask", []string{"Bash(git *)"}, nil, nil), want: Ask},

@@ -33,9 +33,9 @@ export async function executeComposerMode(input: ComposerModeInput, authority: S
   let fields: ComposerProfileField[];
   if (request.kind === "mode") {
     patch = composerProfileWithMode(request.mode);
-    fields = ["collaborationMode", "toolApprovalMode", "goal"];
+    fields = ["collaborationMode", "goal"];
     if (input.remote) {
-      const ids = await ports.setRemote(tabId, patch.collaborationMode ?? "normal", patch.toolApprovalMode ?? "ask", "");
+      const ids = await ports.setRemote(tabId, patch.collaborationMode ?? "normal", input.toolApprovalMode, "");
       authority.checkpoint();
       if (authority.ownsUI()) ports.drainRemote(tabId, ids);
     } else await ports.setMode(tabId, request.mode);

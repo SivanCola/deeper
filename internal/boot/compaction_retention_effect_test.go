@@ -68,12 +68,11 @@ default_model = "test-model"
 [agent]
 system_prompt = "BASE"
 compact_ratio = 0.5
-recent_keep = 2
 
 [[providers]]
 name = "test-model"
 kind = "boot-compaction-effect"
-model = "x"
+models = ["x"]
 context_window = 32000
 `)
 	approveWorkspace(t, dir)

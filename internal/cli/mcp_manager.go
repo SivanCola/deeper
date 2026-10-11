@@ -24,7 +24,6 @@ const (
 	mcpStageDetail
 	mcpStageTools
 	mcpStageLogs
-	mcpStageMode
 	mcpStageConfirmRemove
 	mcpStageConfirmClearAuth
 )
@@ -35,7 +34,6 @@ type mcpManager struct {
 	sel      int
 	name     string
 	action   int
-	mode     int
 	confirm  int
 }
 
@@ -52,7 +50,6 @@ type mcpServerView struct {
 	BuiltIn    bool
 	Configured bool
 	AutoStart  bool
-	Tier       string
 	Command    string
 	Args       []string
 	URL        string
@@ -75,7 +72,6 @@ type mcpAction string
 
 const (
 	mcpActionViewTools mcpAction = "view-tools"
-	mcpActionMode      mcpAction = "mode"
 	mcpActionEdit      mcpAction = "edit"
 	mcpActionConnect   mcpAction = "connect"
 	mcpActionAuth      mcpAction = "auth"
@@ -96,14 +92,12 @@ type mcpConnectCause int
 
 const (
 	mcpConnectRetry mcpConnectCause = iota
-	mcpConnectMode
 	mcpConnectAuth
 )
 
 type mcpConnectDoneMsg struct {
 	server string
 	cause  mcpConnectCause
-	entry  *config.PluginEntry // the saved entry when cause is mcpConnectMode
 	tools  int
 	err    error
 }
@@ -114,8 +108,6 @@ type mcpExternalDoneMsg struct {
 	server string
 	err    error
 }
-
-var mcpTierChoices = []string{"background", "eager"}
 
 func (m *chatTUI) openMCPManager(name string) {
 	m.mcp = &mcpManager{stage: mcpStageList, snapshot: m.buildMCPSnapshot()}
@@ -208,24 +200,6 @@ func (m chatTUI) handleMCPManagerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m.applyMCPAction(v, actions[p.action].kind)
 			}
 		}
-	case mcpStageMode:
-		switch msg.String() {
-		case "up", "k":
-			if p.mode > 0 {
-				p.mode--
-			}
-		case "down", "j":
-			if p.mode < len(mcpTierChoices)-1 {
-				p.mode++
-			}
-		case "enter":
-			return m.applyMCPMode(mcpTierChoices[p.mode])
-		default:
-			if idx, ok := numberKeyIndex(msg.String(), len(mcpTierChoices)); ok {
-				p.mode = idx
-				return m.applyMCPMode(mcpTierChoices[p.mode])
-			}
-		}
 	case mcpStageConfirmRemove:
 		switch msg.String() {
 		case "up", "k", "down", "j":
@@ -280,12 +254,6 @@ func (p *mcpManager) clamp() {
 	}
 	if p.action < 0 {
 		p.action = 0
-	}
-	if p.mode < 0 {
-		p.mode = 0
-	}
-	if p.mode >= len(mcpTierChoices) {
-		p.mode = len(mcpTierChoices) - 1
 	}
 	if p.confirm < 0 || p.confirm > 1 {
 		p.confirm = 0
@@ -406,7 +374,6 @@ func withMCPPluginConfig(v mcpServerView, p config.PluginEntry, workspace string
 	v.Transport = transport
 	v.Configured = true
 	v.AutoStart = p.ShouldAutoStart()
-	v.Tier = p.ResolvedTier()
 	v.Command = p.Command
 	v.Args = append([]string(nil), p.Args...)
 	v.URL = p.URL

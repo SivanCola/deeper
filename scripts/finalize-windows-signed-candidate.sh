@@ -64,14 +64,10 @@ run_phase seal || exit 0
 
 pwsh -NoProfile -File "$control_root/scripts/sign-certum.ps1" -FilePath "$installer"
 
-portable_layout="legacy-dual"
-if [ -f "$product_root/desktop/packaging/windows-portable-layout.txt" ]; then
-	portable_layout="$(tr -d '\r\n' < "$product_root/desktop/packaging/windows-portable-layout.txt")"
-fi
 pwsh -NoProfile -File "$control_root/scripts/verify-windows-authenticode.ps1" \
 	-PayloadDirectory "$signed_payload" -InstallerPath "$installer" \
 	-PortableArchivePath "$portable" -ExpectedThumbprint "$CERTUM_KEY_ID" \
-	-RequireTrusted -PortableLayout "$portable_layout"
+	-RequireTrusted -PortableLayout canonical
 
 node "$product_root/desktop/packaging/size-report.mjs" \
 	--platform "windows/$arch" --version "$version" \

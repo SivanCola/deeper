@@ -8,7 +8,7 @@ import (
 )
 
 func TestRemoteResumeBusyKeepsCurrentSessionReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -33,7 +33,7 @@ func TestRemoteResumeBusyKeepsCurrentSessionReady(t *testing.T) {
 }
 
 func TestRemoteResumeRejectedKeepsCurrentSessionReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -55,8 +55,8 @@ func TestRemoteResumeRejectedKeepsCurrentSessionReady(t *testing.T) {
 }
 
 func TestRemoteResumeRejectedRestoresForegroundRoute(t *testing.T) {
-	const oldPath = "/old.jsonl"
-	const targetPath = "/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "old", Path: oldPath, Current: true},
 		{Name: "target", Path: targetPath},
@@ -82,15 +82,15 @@ func TestRemoteResumeRejectedRestoresForegroundRoute(t *testing.T) {
 }
 
 func TestRemoteResumeBuffersTargetFramesUntilPostCommit(t *testing.T) {
-	const oldPath = "/old.jsonl"
-	const targetPath = "/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	feed := make(chan string, 4)
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "old", Path: oldPath, Current: true},
 		{Name: "target", Path: targetPath, Running: true},
 	})
 	fs.mu.Lock()
-	fs.eventFrames = []string{`{"kind":"ready","sessionPath":"/old.jsonl"}`}
+	fs.eventFrames = []string{`{"kind":"ready","sessionPath":"session-id:old"}`}
 	fs.eventFeed = feed
 	fs.resumeStarted = make(chan string, 1)
 	fs.resumeRelease = make(chan struct{})
@@ -137,9 +137,9 @@ func TestRemoteResumeBuffersTargetFramesUntilPostCommit(t *testing.T) {
 	if provisionalPath != targetPath || rehydratingPath != targetPath {
 		t.Fatalf("old status rolled back provisional route: current/rehydrating = %q/%q", provisionalPath, rehydratingPath)
 	}
-	feed <- `{"kind":"approval_request","approval":{"id":"target-approval"},"sessionPath":"/target.jsonl","sessionCurrent":true}`
-	feed <- `{"kind":"text","text":"first retained delta","sessionPath":"/target.jsonl","sessionCurrent":true}`
-	feed <- `{"kind":"notice","text":"second retained notice","sessionPath":"/target.jsonl","sessionCurrent":true}`
+	feed <- `{"kind":"approval_request","approval":{"id":"target-approval"},"sessionPath":"session-id:target","sessionCurrent":true}`
+	feed <- `{"kind":"text","text":"first retained delta","sessionPath":"session-id:target","sessionCurrent":true}`
+	feed <- `{"kind":"notice","text":"second retained notice","sessionPath":"session-id:target","sessionCurrent":true}`
 	deadline := time.Now().Add(time.Second)
 	for {
 		a.remoteTabMu.Lock()
@@ -200,7 +200,7 @@ func TestRemoteResumeBuffersTargetFramesUntilPostCommit(t *testing.T) {
 }
 
 func TestRemoteNewBusyKeepsCurrentSessionReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved", Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -235,7 +235,7 @@ func TestRemoteNewBusyKeepsCurrentSessionReady(t *testing.T) {
 }
 
 func TestRemoteResumeLeaseConflictFailsAttach(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	fs.mu.Lock()
 	fs.failEnter = "this session is in use by another Deepzora window or process"
 	fs.mu.Unlock()
@@ -260,7 +260,7 @@ func TestRemoteResumeLeaseConflictFailsAttach(t *testing.T) {
 }
 
 func TestRemoteResumeListFailureKeepsCurrentAttachmentReady(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",

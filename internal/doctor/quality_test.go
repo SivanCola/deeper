@@ -25,15 +25,14 @@ func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 		`{"role":"user","content":"<compaction-summary>\nprivate summary ` + secret + `"}`,
 		`{"role":"assistant","content":"done"}`,
 	}
-	if err := os.WriteFile(path, []byte(strings.Join(messages, "\n")+"\n"), 0o644); err != nil {
+	if err := saveDoctorMessages(path, messages); err != nil {
 		t.Fatal(err)
 	}
 	if err := agent.SaveBranchMeta(path, agent.BranchMeta{
 		ID:               "private-session-id",
 		Model:            "corp.private.example/supersecret-model",
-		TokenMode:        "economy",
-		Mode:             "plan-yolo",
-		ToolApprovalMode: "yolo",
+		Mode:             "plan",
+		ToolApprovalMode: "workspace-write",
 		Goal:             "finish " + secret,
 		Recovered:        true,
 	}); err != nil {
@@ -64,10 +63,10 @@ func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CollectQuality: %v", err)
 	}
-	if report.Profile.ModelFamily != "custom/unknown" || report.Profile.RuntimeProfile != "economy" {
+	if report.Profile.ModelFamily != "custom/unknown" {
 		t.Fatalf("profile = %+v", report.Profile)
 	}
-	if report.Profile.CollaborationMode != "plan" || report.Profile.ToolApprovalMode != "yolo" || !report.Profile.GoalActive || !report.Profile.Recovered {
+	if report.Profile.CollaborationMode != "plan" || report.Profile.ToolApprovalMode != "workspace-write" || !report.Profile.GoalActive || !report.Profile.Recovered {
 		t.Fatalf("profile modes = %+v", report.Profile)
 	}
 	if report.Transcript.ToolCalls != 2 || report.Transcript.WriterCalls != 1 || report.Transcript.VerificationCalls != 1 || report.Transcript.CompactionSummaries != 1 {
@@ -102,7 +101,7 @@ func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 
 func TestCollectQualityWithoutTelemetryStaysUseful(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.jsonl")
-	if err := os.WriteFile(path, []byte(`{"role":"user","content":"hello"}`+"\n"), 0o644); err != nil {
+	if err := saveDoctorMessages(path, []string{`{"role":"user","content":"hello"}`}); err != nil {
 		t.Fatal(err)
 	}
 	report, err := CollectQuality(QualityOptions{Version: "v-test", SessionRef: path})
@@ -124,19 +123,5 @@ func TestQualityTranscriptExcludesPinnedContextRevisions(t *testing.T) {
 	})
 	if report.Messages != 1 || report.UserMessages != 1 {
 		t.Fatalf("quality transcript = %+v, want one visible user message", report)
-	}
-}
-
-func TestPublicTokenModeUsesRuntimeProfileNames(t *testing.T) {
-	for input, want := range map[string]string{
-		"":         "balanced",
-		"full":     "balanced",
-		"balanced": "balanced",
-		"economy":  "economy",
-		"delivery": "delivery",
-	} {
-		if got := publicTokenMode(input); got != want {
-			t.Errorf("publicTokenMode(%q) = %q, want %q", input, got, want)
-		}
 	}
 }

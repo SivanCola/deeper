@@ -42,7 +42,7 @@ on:
         default: false
         type: boolean
       orchestrator:
-        description: "Trusted release orchestrator (legacy Preview calls remain readable)"
+        description: "Trusted release orchestrator"
         required: false
         default: stable
         type: string
@@ -333,10 +333,10 @@ jobs:
         if: ${{ steps.publication.outputs.decision == 'publish' && inputs.candidate_artifact_name == '' }}
         with:
           version: '~> v2'
-          args: release --clean${{ vars.CLI_PUBLISH_FROZEN == 'true' && ' --skip=homebrew' || '' }}
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ needs.resolve.outputs.channel == 'stable' && vars.CLI_PUBLISH_FROZEN != 'true' && secrets.HOMEBREW_TAP_TOKEN || '' }}
+          HOMEBREW_TAP_TOKEN: ${{ needs.resolve.outputs.channel == 'stable' && secrets.HOMEBREW_TAP_TOKEN || '' }}
           # workflow_dispatch recovery runs have a branch-shaped GITHUB_REF even
           # though checkout is on the release tag. Pin GoReleaser explicitly, and
           # avoid ambiguity from the three release tags sharing one commit.
@@ -359,7 +359,7 @@ jobs:
             --title "Deepzora CLI $TAG" --notes-file /tmp/release-notes.md --latest=false
 
       - name: Publish prepared Homebrew cask
-        if: ${{ inputs.candidate_artifact_name != '' && needs.resolve.outputs.channel == 'stable' && vars.CLI_PUBLISH_FROZEN != 'true' }}
+        if: ${{ inputs.candidate_artifact_name != '' && needs.resolve.outputs.channel == 'stable' }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: node release-control/scripts/publish-homebrew-cask.mjs "$RUNNER_TEMP/release-candidate/cli/deepzora.rb"
@@ -375,7 +375,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.resolve.outputs.tag }}
           NOTES_TAG: ${{ needs.resolve.outputs.notes_version }}
-          CLI_PUBLISH_FROZEN: ${{ vars.CLI_PUBLISH_FROZEN == 'true' }}
           HAS_R2: ${{ vars.ENABLE_R2_MIRROR == 'true' && secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' && secrets.R2_ACCOUNT_ID != '' && secrets.R2_BUCKET != '' }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -447,7 +446,7 @@ jobs:
           if aws s3 cp "s3://${R2_BUCKET}/${immutable_key}" /tmp/cli-release.immutable.json \
             --endpoint-url "$endpoint" 2>"$immutable_error"; then
             bash scripts/validate-cli-release-manifest.sh \
-              "legacy-${validation_channel}" "$TAG" "${{ github.repository }}" \
+              "${validation_channel}" "$TAG" "${{ github.repository }}" \
               /tmp/cli-release.immutable.json "$NOTES_TAG"
             if ! bash scripts/compare-cli-release-manifests.sh \
               /tmp/cli-release.json /tmp/cli-release.immutable.json; then
@@ -469,7 +468,7 @@ jobs:
           aws s3 cp "s3://${R2_BUCKET}/${immutable_key}" /tmp/cli-release.immutable.json \
             --endpoint-url "$endpoint"
           bash scripts/validate-cli-release-manifest.sh \
-            "legacy-${validation_channel}" "$TAG" "${{ github.repository }}" \
+            "${validation_channel}" "$TAG" "${{ github.repository }}" \
             /tmp/cli-release.immutable.json "$NOTES_TAG"
           bash scripts/compare-cli-release-manifests.sh \
             /tmp/cli-release.json /tmp/cli-release.immutable.json
@@ -479,18 +478,13 @@ jobs:
             exit 0
           fi
 
-          if [ "${CLI_PUBLISH_FROZEN:-}" = "true" ]; then
-            echo "CLI publication is frozen; the $channel pointer stays where it is and $TAG keeps only its immutable record"
-            exit 0
-          fi
-
           current_tag=""
           pointer_error="$(mktemp)"
           if aws s3 cp "s3://${R2_BUCKET}/cli/${channel}/latest.json" /tmp/cli-release.pointer.json \
             --endpoint-url "$endpoint" 2>"$pointer_error"; then
             current_tag="$(jq -er '.tag_name | strings' /tmp/cli-release.pointer.json)"
             bash scripts/validate-cli-release-manifest.sh \
-              "legacy-${channel}" "$current_tag" "${{ github.repository }}" \
+              "${channel}" "$current_tag" "${{ github.repository }}" \
               /tmp/cli-release.pointer.json "$current_tag"
           elif grep -Eiq '404|NoSuchKey|Not Found' "$pointer_error"; then
             echo "CLI $channel pointer does not exist yet"
@@ -616,7 +610,6 @@ jobs:
       - name: Check npm latest dist-tag freshness
         env:
           TAG: ${{ needs.resolve.outputs.tag }}
-          CLI_PUBLISH_FROZEN: ${{ vars.CLI_PUBLISH_FROZEN == 'true' }}
         run: |
           set -euo pipefail
           case "$TAG" in
@@ -629,10 +622,6 @@ jobs:
           if ! git ls-remote --exit-code origin "refs/tags/npm-v$version" >/dev/null; then
             echo "::error::the npm-v$version tag was never pushed — the npm channel is being left behind and 'npm update -g' users will be downgraded to the old 'latest'. Push it: git tag npm-v$version ${TAG} && git push origin npm-v$version (or 'npm dist-tag add deepzora@$version latest' for an already-published version)."
             exit 1
-          fi
-          if [ "${CLI_PUBLISH_FROZEN:-}" = "true" ]; then
-            echo "CLI publication is frozen; npm latest belongs to another line, only the npm-v$version tag is required"
-            exit 0
           fi
           for attempt in 1 2 3 4 5 6; do
             got="$(npm view deepzora dist-tags.latest 2>/dev/null || true)"

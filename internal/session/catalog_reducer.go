@@ -24,7 +24,7 @@ func (r *catalogReducer) apply(commit Commit) error {
 		if err := applyProjectionCommit(&r.state, one); err != nil {
 			return err
 		}
-		if ev.Kind == "history/replace" || ev.Kind == "legacy/import" {
+		if ev.Kind == "history/replace" {
 			r.positions = nil
 		}
 		if r.positions == nil {

@@ -7,8 +7,8 @@ import (
 )
 
 func TestRemoteResumeFailurePublishesRestoredIdentity(t *testing.T) {
-	const oldPath = "/remote/sessions/s1.jsonl"
-	const targetPath = "/remote/sessions/s2.jsonl"
+	const oldPath = "session-id:s1"
+	const targetPath = "session-id:s2"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "s1", Path: oldPath, Title: "First", Current: true},
 		{Name: "s2", Path: targetPath, Title: "Second"},
@@ -31,7 +31,7 @@ func TestRemoteResumeFailurePublishesRestoredIdentity(t *testing.T) {
 		tabID := strings.TrimSuffix(strings.TrimPrefix(name, "remote-tab:"), ":state")
 		a.remoteTabMu.Lock()
 		tab := a.remoteTabs[tabID]
-		got := identity{tab.session.name, tab.session.path, tab.routing.currentPath, tab.topicTitle}
+		got := identity{tab.session.name, remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID), tab.routing.currentPath, tab.topicTitle}
 		a.remoteTabMu.Unlock()
 		observed <- got
 	}

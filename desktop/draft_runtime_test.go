@@ -10,7 +10,7 @@ import (
 )
 
 func TestDraftRetryRebuildsCanonicalControllerAndPreservesFailedCandidate(t *testing.T) {
-	a, tab, old, _ := auditMigratedTab(t)
+	a, tab, old, _ := auditCurrentTab(t)
 	cfg, err := config.LoadForRootReadOnly(tab.WorkspaceRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -75,27 +75,6 @@ func TestDraftCancelWaitsForWorkerOwnership(t *testing.T) {
 	view, err = a.GetDraftSubmission(op.ID)
 	if err != nil || view.Phase != "cancelled" {
 		t.Fatalf("worker finish: %+v %v", view, err)
-	}
-}
-
-func TestDraftV3SnapshotSurvivesV5DatabaseAndChangedEditor(t *testing.T) {
-	a := newDraftTestApp(t)
-	draft, op := beginDraftTestOperation(t, a, "reserved")
-	request := SessionDraftSubmissionRequest{SnapshotVersion: 3, Settings: SessionDraftSettings{Model: "frozen/model", ToolApprovalMode: "read-only"}}
-	encoded, err := json.Marshal(request)
-	if err != nil {
-		t.Fatal(err)
-	}
-	op.RequestJSON = string(encoded)
-	settings, err := a.draftOperationSettings(op)
-	if err != nil || settings.Model != "frozen/model" {
-		t.Fatalf("frozen settings: %+v %v (draft %s)", settings, err, draft.ID)
-	}
-	request.SnapshotVersion = draftstate.SnapshotVersion + 1
-	encoded, _ = json.Marshal(request)
-	op.RequestJSON = string(encoded)
-	if _, err = a.draftOperationSettings(op); err == nil {
-		t.Fatal("future snapshot was interpreted as current editor settings")
 	}
 }
 

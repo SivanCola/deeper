@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"deepzora/internal/instruction"
 	"deepzora/internal/provider"
 	"deepzora/internal/tool"
 )
@@ -21,9 +20,7 @@ func TestTargetedTurnReturnsIncompleteReceiptInsteadOfReadinessRecovery(t *testi
 		{{Type: provider.ChunkText, Text: "changed, verification not run"}, {Type: provider.ChunkDone}},
 	}}
 	sink := &phaseSink{}
-	a := New(prov, reg, NewSession(""), Options{
-		ProjectChecks: []instruction.VerifyCheck{{Command: "go test ./...", SourcePath: "AGENTS.md", Line: 3}},
-	}, sink)
+	a := New(prov, reg, NewSession(""), Options{}, sink)
 
 	if err := a.Run(withNoClosedLoop(context.Background()), "update changed.go"); err != nil {
 		t.Fatalf("targeted Run returned a readiness recovery: %v", err)

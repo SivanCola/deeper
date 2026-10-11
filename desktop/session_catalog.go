@@ -96,9 +96,7 @@ type ProjectTopicPageRequest struct {
 	pinnedOnly       bool
 	timeCutoff       int64
 	readContext      context.Context
-	metadataSnapshot *[]ProjectNode
 	readAllSources   bool
-	readAvailability *catalogWorkspaceAvailability
 }
 
 type ProjectTopicKey struct {
@@ -317,30 +315,6 @@ func (a *App) cancelAllTabBuilds() {
 	a.mu.Unlock()
 }
 
-func listCatalogSessionsForDirectory(ctx context.Context, catalog *sessioncatalog.Catalog,
-	target sessioncatalog.DirectoryTarget, directory string) ([]sessioncatalog.SessionRecord, error) {
-	for range 2 {
-		records := []sessioncatalog.SessionRecord{}
-		cursor := ""
-		for {
-			page, err := catalog.ListSessions(ctx, sessioncatalog.SessionPageRequest{Scope: target.Scope,
-				WorkspaceRoot: target.WorkspaceRoot, Directory: directory, Cursor: cursor, Limit: sessioncatalog.MaxLimit})
-			if err != nil {
-				return nil, err
-			}
-			if page.StaleCursor {
-				break
-			}
-			records = append(records, page.Items...)
-			if page.NextCursor == "" {
-				return records, nil
-			}
-			cursor = page.NextCursor
-		}
-	}
-	return []sessioncatalog.SessionRecord{}, nil
-}
-
 // Metadata-only projection bounds each writer slice inside the catalog. A
 // whole-observation timeout would repeatedly restart large registries at their
 // first batch. Older catalog modes retain their whole-transaction deadline.
@@ -410,10 +384,6 @@ func (a *App) emitProjectTreeChangedV2(revision uint64, roots []string, reason s
 		roots = []string{}
 	}
 	a.emitRuntimeEvent("project-tree:changed-v2", ProjectTreeChangedV2{Revision: a.unifiedProjectRevision(revision), Roots: roots, Reason: reason})
-	// One-release compatibility event. Its wrapper is catalog-only, so legacy
-	// frontends refresh without making current frontends rebuild the whole tree
-	// after they already consumed the targeted v2 revision.
-	a.emitRuntimeEvent("project-tree:changed", map[string]string{"reason": "catalog-v2"})
 }
 
 type desktopCatalogReconcileJob struct {

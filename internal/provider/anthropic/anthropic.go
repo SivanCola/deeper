@@ -259,7 +259,6 @@ func (c *client) sendOpts() provider.SendOptions {
 		KeyEnv:              c.keyEnv,
 		KeySource:           c.keySource,
 		KeyPresent:          c.apiKey != "",
-		RetryAuth:           c.authed.Load(),
 	}
 }
 

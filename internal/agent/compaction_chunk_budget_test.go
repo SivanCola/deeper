@@ -41,7 +41,7 @@ func TestManualChunkedFallbackSharesInitialSummaryDeadline(t *testing.T) {
 			sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("a", 6000)})
 		}
 		original := sess.Snapshot()
-		a := New(p, nil, sess, Options{ContextWindow: 100000, RecentKeep: 2}, event.Discard)
+		a := New(p, nil, sess, Options{ContextWindow: 100000}, event.Discard)
 		started := time.Now()
 		err := a.CompactNow(t.Context(), "")
 		if !errors.Is(err, errSummaryBudget) || time.Since(started) != compactionBudget {

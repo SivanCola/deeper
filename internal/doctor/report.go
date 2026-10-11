@@ -149,15 +149,6 @@ func Collect(opts Options) Report {
 	cwd, _ := os.Getwd()
 	sourcePath := config.SourcePath()
 	warnings = append(warnings, configWarnings(cfg, sourcePath)...)
-	userPath := config.UserConfigPath()
-	if legacyPath := config.LegacyUserConfigPath(); userPath != "" && legacyPath != "" {
-		if _, userErr := os.Stat(userPath); userErr == nil {
-			if _, legacyErr := os.Stat(legacyPath); legacyErr == nil {
-				warnings = append(warnings, "legacy user config exists at "+redactHome(legacyPath)+
-					" but is ignored because "+redactHome(userPath)+" exists")
-			}
-		}
-	}
 	// A config that says enforce while the platform force-resolves it to off is
 	// the one case where bash behavior silently disagrees with the file the user
 	// edited (Windows has no OS-level Bash backend) — say it
@@ -179,7 +170,7 @@ func Collect(opts Options) Report {
 		CWD:     redactHome(cwd),
 		Config: ConfigReport{
 			SourcePath:   redactHome(sourcePath),
-			UserPath:     redactHome(userPath),
+			UserPath:     redactHome(config.UserConfigPath()),
 			DefaultModel: cfg.DefaultModel,
 		},
 		LSP: LSPReport{

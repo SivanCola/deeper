@@ -57,7 +57,7 @@ type ActivationRequest struct {
 	// non-empty. Callers must provide it explicitly.
 	RequiredRootNames []string
 	// WindowsRootEntries selects canonical entries and preserves an existing
-	// legacy launcher under the activation lock. Mutually exclusive with the
+	// current entries under the activation lock. Mutually exclusive with the
 	// explicit RootMembers/RequiredRootNames fields.
 	WindowsRootEntries *WindowsRootEntrySources
 	// CheckProcesses runs under the activation lock before file replacement and
@@ -270,24 +270,8 @@ func resolveWindowsRootEntries(req *ActivationRequest, installRoot string) error
 	return nil
 }
 
-func windowsRootMembers(root string, sources WindowsRootEntrySources) ([]Member, []string, error) {
-	members := []Member{
-		{Name: "Deepzora.exe", Path: sources.LauncherPath},
-		{Name: "deepzora-cli.exe", Path: sources.CLIEntryPath},
-	}
-	names := []string{"Deepzora.exe", "deepzora-cli.exe"}
-	const legacy = "deepzora-launcher.exe"
-	info, err := os.Lstat(filepath.Join(root, legacy))
-	if err == nil {
-		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-			return nil, nil, fmt.Errorf("installlayout: legacy launcher is not a regular file")
-		}
-		members = append(members, Member{Name: legacy, Path: sources.LauncherPath})
-		names = append(names, legacy)
-	} else if !os.IsNotExist(err) {
-		return nil, nil, fmt.Errorf("installlayout: inspect legacy launcher: %w", err)
-	}
-	return members, names, nil
+func windowsRootMembers(_ string, sources WindowsRootEntrySources) ([]Member, []string, error) {
+	return []Member{{Name: "Deepzora.exe", Path: sources.LauncherPath}, {Name: "deepzora-cli.exe", Path: sources.CLIEntryPath}}, []string{"Deepzora.exe", "deepzora-cli.exe"}, nil
 }
 
 func versionRollback(finalPath, versionBackup string) func() error {

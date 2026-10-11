@@ -23,7 +23,7 @@ func TestGatewayIntentionalTransitionMovesLeaseAndMapping(t *testing.T) {
 		t.Fatal(err)
 	}
 	gw := NewGateway(GatewayConfig{}, nil, logger)
-	msg := InboundMessage{Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
+	msg := InboundMessage{ConnectionID: string(PlatformWeixin), Platform: PlatformWeixin, ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	key := BuildSessionKey(msg.Session())
 	state := &sessionState{
 		leases:      control.NewSessionLeaseKeeper(),

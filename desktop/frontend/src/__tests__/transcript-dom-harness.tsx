@@ -5,7 +5,7 @@ import { JSDOM } from "jsdom";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { createServer, type ViteDevServer } from "vite";
-import type { ReasoningDisplayMode } from "../lib/reasoningDisplayPreference";
+import type { SessionExperience } from "../lib/sessionExperience";
 import type { Item } from "../lib/useController";
 import { TranscriptTestClock } from "./transcript-test-clock";
 
@@ -18,7 +18,7 @@ export interface TranscriptHarnessOptions {
   /** Extra localStorage seed values (display mode, fold preference, …). */
   storage?: Record<string, string>;
   /** Authoritative reasoning mode to hydrate before Transcript is imported. */
-  reasoningDisplayMode?: ReasoningDisplayMode;
+  sessionExperience?: SessionExperience;
 }
 
 export interface TranscriptHarness {
@@ -245,11 +245,11 @@ export async function createTranscriptHarness(options: TranscriptHarnessOptions 
     logLevel: "silent",
     server: { middlewareMode: true },
   });
-  if (options.reasoningDisplayMode) {
-    const preference = await server.ssrLoadModule("/src/lib/reasoningDisplayPreference.ts") as {
-      hydrateReasoningDisplayMode: (mode: unknown, explicit: boolean) => void;
+  if (options.sessionExperience) {
+    const preference = await server.ssrLoadModule("/src/lib/sessionExperience.ts") as {
+      hydrateSessionExperience: (mode: unknown) => void;
     };
-    preference.hydrateReasoningDisplayMode(options.reasoningDisplayMode, true);
+    preference.hydrateSessionExperience(options.sessionExperience);
   }
   // Module I/O is not owned by the fake animation clock. Await the same
   // presentation prerequisite as the production window before advancing

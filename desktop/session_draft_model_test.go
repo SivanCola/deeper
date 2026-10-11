@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -76,113 +75,6 @@ func TestInheritedDraftModelFollowsDefaultUntilExplicitlySelected(t *testing.T) 
 	}
 	if final.Revision != saved.Draft.Revision || final.Settings.Model != "fixture/model-a" || final.Settings.ModelSource != draftModelSourceExplicit {
 		t.Fatalf("explicit model was not retained: %+v", final.Settings)
-	}
-}
-
-func TestUntouchedLegacyDraftMigratesToLiveDefaultButEditedLegacyDraftDoesNot(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	writeDraftDefaultModelConfig(t, "model-a")
-	a := newDraftTestApp(t)
-
-	openLegacy := func(root, workspaceID, draftID string) draftstate.Draft {
-		t.Helper()
-		settings := a.defaultDraftSettings("project", root)
-		settings.ModelSource = ""
-		payload, err := json.Marshal(settings)
-		if err != nil {
-			t.Fatal(err)
-		}
-		record, _, err := a.draftStore().Open(t.Context(), workspaceID, "project", root, draftID, string(payload))
-		if err != nil {
-			t.Fatal(err)
-		}
-		return record
-	}
-
-	untouchedRoot := t.TempDir()
-	untouchedWorkspace, err := a.ensureDesktopWorkspace(t.Context(), "project", untouchedRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	untouched := openLegacy(untouchedRoot, untouchedWorkspace, "legacy-untouched")
-
-	editedRoot := t.TempDir()
-	editedWorkspace, err := a.ensureDesktopWorkspace(t.Context(), "project", editedRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	edited := openLegacy(editedRoot, editedWorkspace, "legacy-edited")
-	edited, err = a.draftStore().Save(t.Context(), edited.ID, edited.Revision, `{"text":"saved"}`, edited.SettingsJSON, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	writeDraftDefaultModelConfig(t, "model-b")
-	migrated, err := a.OpenSessionDraftForTarget("project", untouchedRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if migrated.ID != untouched.ID || migrated.Settings.Model != "fixture/model-b" || migrated.Settings.ModelSource != draftModelSourceDefault {
-		t.Fatalf("untouched legacy draft = %+v, want migrated live default", migrated)
-	}
-	preserved, err := a.OpenSessionDraftForTarget("project", editedRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if preserved.ID != edited.ID || preserved.Settings.Model != "fixture/model-a" || preserved.Settings.ModelSource != "" {
-		t.Fatalf("edited legacy draft = %+v, want preserved concrete model", preserved)
-	}
-}
-
-func TestLegacyDraftWithOperationKeepsFrozenModelAndStillOpens(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	writeDraftDefaultModelConfig(t, "model-a")
-	a := newDraftTestApp(t)
-	root := t.TempDir()
-	workspaceID, err := a.ensureDesktopWorkspace(t.Context(), "project", root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	settings := a.defaultDraftSettings("project", root)
-	settings.ModelSource = ""
-	payload, err := json.Marshal(settings)
-	if err != nil {
-		t.Fatal(err)
-	}
-	draft, _, err := a.draftStore().Open(t.Context(), workspaceID, "project", root, "legacy-operation", string(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-	request, err := json.Marshal(SessionDraftSubmissionRequest{
-		SnapshotVersion: 3,
-		Settings:        settings,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := a.draftStore().BeginOperation(t.Context(), draftstate.Operation{
-		ID: "legacy-operation-op", DraftID: draft.ID, WorkspaceID: workspaceID, DraftRevision: draft.Revision,
-		SessionID: "legacy-operation-session", TopicID: "legacy-operation-topic",
-		SubmissionID: "legacy-operation-submission", Fingerprint: "legacy-operation-fingerprint", RequestJSON: string(request),
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	writeDraftDefaultModelConfig(t, "model-b")
-	reopened, err := a.OpenSessionDraftForTarget("project", root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reopened.Revision != draft.Revision || reopened.Settings.Model != "fixture/model-a" || reopened.Settings.ModelSource != "" {
-		t.Fatalf("operation-owned legacy draft changed during migration: %+v", reopened)
-	}
-	op, err := a.draftStore().Operation(t.Context(), "legacy-operation-op")
-	if err != nil {
-		t.Fatal(err)
-	}
-	frozen, err := a.draftOperationSettings(op)
-	if err != nil || frozen.Model != "fixture/model-a" {
-		t.Fatalf("frozen operation model = %+v, err %v", frozen, err)
 	}
 }
 

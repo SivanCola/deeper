@@ -40,7 +40,7 @@ func TestModelSettingsApprovalResumeKeepsAcceptedCredential(t *testing.T) {
 	}
 	cfg := config.Default()
 	cfg.DefaultModel = "p/m"
-	cfg.Providers = []config.ProviderEntry{{Name: "p", Kind: "openai", BaseURL: server.URL, Model: "m", APIKeyEnv: "APPROVAL_SNAPSHOT_KEY"}}
+	cfg.Providers = []config.ProviderEntry{{Name: "p", Kind: "openai", BaseURL: server.URL, Models: []string{"m"}, APIKeyEnv: "APPROVAL_SNAPSHOT_KEY"}}
 	cfg.Permissions.Mode, cfg.Permissions.Ask = "ask", []string{"write_file"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
@@ -56,6 +56,7 @@ func TestModelSettingsApprovalResumeKeepsAcceptedCredential(t *testing.T) {
 	}
 	defer ctrl.Close()
 	ctrl.EnableInteractiveApproval()
+	ctrl.SetToolApprovalMode("workspace-write")
 	done := make(chan error, 1)
 	go func() { done <- ctrl.RunTurn(ctx, "write approved.txt") }()
 	var id string

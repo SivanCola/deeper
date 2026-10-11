@@ -267,54 +267,7 @@ func TestDurabilityTornWALTailReplaysToLastCommit(t *testing.T) {
 	}
 }
 
-func TestDurabilityStaleWriterCannotClobber(t *testing.T) {
-	useSchemaOneLog(t)
-	d := newDurabilityRun(t)
-	_, _ = d.buildSaved(1)
-
-	a, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("load A: %v", err)
-	}
-	b, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("load B: %v", err)
-	}
-	for _, m := range d.turn(2) {
-		b.Add(m)
-	}
-	if err := b.SaveSnapshot(d.path); err != nil {
-		t.Fatalf("B save: %v", err)
-	}
-	winner := append([]provider.Message(nil), b.Messages...)
-
-	a.Add(provider.Message{Role: provider.RoleUser, Content: "diverged ask"})
-	a.Add(provider.Message{Role: provider.RoleAssistant, Content: "diverged answer"})
-	saveErr := a.SaveSnapshot(d.path)
-
-	loaded, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("reload: %v", err)
-	}
-	if saveErr == nil {
-		// A stale diverged writer may be redirected, never silently accepted
-		// over B: the main path must still be B's descendant.
-		if !messagesHavePrefixWithCompatibleSystem(loaded.Messages, winner) {
-			t.Fatalf("stale writer clobbered the newer transcript: main path %d msgs no longer extends winner %d",
-				len(loaded.Messages), len(winner))
-		}
-		return
-	}
-	if _, ok := SnapshotConflictKind(saveErr); !ok {
-		t.Fatalf("stale save failed with a non-conflict error: %v", saveErr)
-	}
-	if !messagesEqualForStorageList(loaded.Messages, winner) {
-		t.Fatalf("conflict was reported but main path changed anyway (%d msgs, want %d)", len(loaded.Messages), len(winner))
-	}
-}
-
 func TestDurabilityBareSaveBootstrapsWAL(t *testing.T) {
-	useSchemaOneLog(t)
 	d := newDurabilityRun(t)
 	s := NewSession("system prompt")
 	s.Add(provider.Message{Role: provider.RoleUser, Content: "bare save"})
@@ -325,7 +278,7 @@ func TestDurabilityBareSaveBootstrapsWAL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("probe WAL: %v", err)
 	}
-	if !probe.native || probe.size == 0 {
+	if !probe.dag || probe.size == 0 {
 		t.Fatalf("bare Save did not bootstrap a native WAL: %+v", probe)
 	}
 	loaded, err := LoadSession(d.path)
@@ -337,52 +290,6 @@ func TestDurabilityBareSaveBootstrapsWAL(t *testing.T) {
 	}
 	if _, err := os.Stat(store.SessionEventLog(d.path)); err != nil {
 		t.Fatalf("bare Save WAL missing: %v", err)
-	}
-}
-
-func TestDurabilityCrossWriterIDCannotClobber(t *testing.T) {
-	useSchemaOneLog(t)
-	originalWriterID := sessionWriterID
-	t.Cleanup(func() { sessionWriterID = originalWriterID })
-
-	d := newDurabilityRun(t)
-	sessionWriterID = "writer-a"
-	a := NewSession("system prompt")
-	a.Add(provider.Message{Role: provider.RoleUser, Content: "base"})
-	if err := a.SaveSnapshot(d.path); err != nil {
-		t.Fatalf("writer A seed save: %v", err)
-	}
-	a, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("writer A load: %v", err)
-	}
-
-	sessionWriterID = "writer-b"
-	b, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("writer B load: %v", err)
-	}
-	b.Add(provider.Message{Role: provider.RoleAssistant, Content: "newer writer B"})
-	if err := b.SaveSnapshot(d.path); err != nil {
-		t.Fatalf("writer B save: %v", err)
-	}
-	winner := b.Snapshot()
-
-	sessionWriterID = "writer-a"
-	a.Add(provider.Message{Role: provider.RoleAssistant, Content: "stale writer A"})
-	err = a.SaveSnapshot(d.path)
-	if err == nil {
-		t.Fatal("cross-writer stale save unexpectedly succeeded")
-	}
-	if _, ok := SnapshotConflictKind(err); !ok {
-		t.Fatalf("cross-writer stale save error = %v, want snapshot conflict", err)
-	}
-	loaded, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("reload cross-writer winner: %v", err)
-	}
-	if !messagesEqualForStorageList(loaded.Messages, winner) {
-		t.Fatalf("cross-writer stale save clobbered winner: got %d want %d messages", len(loaded.Messages), len(winner))
 	}
 }
 
@@ -418,38 +325,6 @@ func TestDurabilityStaleCompactRewriteCannotClobber(t *testing.T) {
 	}
 	if !messagesEqualForStorageList(loaded.Messages, winner) {
 		t.Fatalf("stale compact rewrite clobbered winner: got %d want %d messages", len(loaded.Messages), len(winner))
-	}
-}
-
-func TestDurabilityRewindSuffixDoesNotResurrect(t *testing.T) {
-	useSchemaOneLog(t)
-	d := newDurabilityRun(t)
-	_, _ = d.buildSaved(3)
-
-	a, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("load A: %v", err)
-	}
-	b, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("load B: %v", err)
-	}
-	// B performs an intentional rewind to one turn and commits it.
-	short := append([]provider.Message(nil), b.Messages[:3]...) // system + turn 1
-	b.Rewrite(short, "rewind")
-	if err := b.SaveRewrite(d.path); err != nil {
-		t.Fatalf("B rewind save: %v", err)
-	}
-	// A, still holding the long pre-rewind transcript, keeps appending.
-	a.Add(provider.Message{Role: provider.RoleUser, Content: "stale continuation"})
-	_ = a.SaveSnapshot(d.path)
-
-	loaded, err := LoadSession(d.path)
-	if err != nil {
-		t.Fatalf("reload: %v", err)
-	}
-	if messagesHavePrefixWithCompatibleSystem(loaded.Messages, a.Messages) && len(loaded.Messages) >= len(a.Messages) {
-		t.Fatalf("rewound suffix resurrected on the main path (%d msgs)", len(loaded.Messages))
 	}
 }
 

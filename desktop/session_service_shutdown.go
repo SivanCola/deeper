@@ -23,7 +23,7 @@ func (a *App) closeSessionServicesResult() error {
 	for _, service := range a.sessionServices {
 		services = append(services, service)
 	}
-	for _, service := range a.historicalSessionServices {
+	for _, service := range a.projectSessionServices {
 		services = append(services, service)
 	}
 	a.sessionServicesMu.Unlock()

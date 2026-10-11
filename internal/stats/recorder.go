@@ -342,7 +342,6 @@ func (r *Recorder) recordProviderUsage(modelRef string, usage *provider.Usage, q
 		rec.IncompleteReason = quote.IncompleteReason
 		rec.BillingMode = quote.BillingMode
 		rec.CostEstimated = quote.Estimated
-		rec.LegacyEstimate = quote.LegacyEstimate
 		costComplete := quote.CostComplete
 		displayComplete := quote.DisplayComplete
 		rec.CostComplete = &costComplete

@@ -530,8 +530,7 @@ func TestTrySubagentProfileRejectsUnknownModel(t *testing.T) {
 func TestTrySubagentPermissionGateFailsClosedOnAsk(t *testing.T) {
 	cfg := config.Default()
 	cfg.Permissions.Ask = []string{"read_file"}
-	policy := permission.New(cfg.Permissions.Mode, cfg.Permissions.Allow, cfg.Permissions.Ask, cfg.Permissions.Deny).
-		WithAllowDynamicBashFallback(cfg.Permissions.AllowDynamicBash)
+	policy := permission.New(cfg.Permissions.Mode, cfg.Permissions.Allow, cfg.Permissions.Ask, cfg.Permissions.Deny)
 	gate := trySubagentPermissionGate(policy)
 
 	allow, reason, err := gate.Check(context.Background(), "read_file", json.RawMessage(`{"path":"README.md"}`), true)
@@ -544,8 +543,7 @@ func TestTrySubagentPermissionGateFailsClosedOnAsk(t *testing.T) {
 	}
 
 	cfg.Permissions.Ask = nil
-	policy = permission.New(cfg.Permissions.Mode, cfg.Permissions.Allow, cfg.Permissions.Ask, cfg.Permissions.Deny).
-		WithAllowDynamicBashFallback(cfg.Permissions.AllowDynamicBash)
+	policy = permission.New(cfg.Permissions.Mode, cfg.Permissions.Allow, cfg.Permissions.Ask, cfg.Permissions.Deny)
 	allow, reason, err = trySubagentPermissionGate(policy).Check(context.Background(), "read_file", json.RawMessage(`{"path":"README.md"}`), true)
 	if err != nil || !allow {
 		t.Fatalf("ordinary read-only fallback allow=%v reason=%q err=%v, want allowed", allow, reason, err)
@@ -872,7 +870,7 @@ func TestTrySubagentProfileCancelAbortsRunAndIsSingleFlight(t *testing.T) {
 	cfg := config.Default()
 	cfg.DefaultModel = "prov-t/model-t1"
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-t", Kind: "openai", BaseURL: srv.URL, Model: "model-t1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"model-t1"}, Default: "model-t1", Name: "prov-t", Kind: "openai", BaseURL: srv.URL, Model: "model-t1", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

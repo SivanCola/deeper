@@ -3,8 +3,7 @@ name: Release npm
 # npm line. Stable releases are called by release-stable.yml after its single
 # GitHub environment approval. Direct prerelease tag publication is disabled;
 # manual workflow_dispatch recovers only an approved Stable version from an
-# existing tag. Historical canary and next package identities remain readable,
-# but normal publication advances only the official release.
+# existing tag. Publication advances only the official release.
 on:
   workflow_dispatch:
     inputs:
@@ -52,14 +51,9 @@ on:
         default: false
         type: boolean
       orchestrator:
-        description: "Trusted release orchestrator (legacy Preview calls remain readable)"
+        description: "Trusted release orchestrator"
         required: false
         default: stable
-        type: string
-      preview_number:
-        description: "Legacy Preview ordinal for old workflow-call compatibility"
-        required: false
-        default: ""
         type: string
       candidate_artifact_name:
         description: "Same-run artifact containing a verified sealed release candidate"
@@ -76,9 +70,8 @@ permissions:
   contents: read
 
 concurrency:
-  # Serialize every publisher for one npm dist-tag. Historical canary calls
-  # remain ordered even though normal publication now uses Stable only.
-  group: release-npm-${{ inputs.channel || 'next' }}
+  # Serialize publishers for the current stable npm channel.
+  group: release-npm-stable
   cancel-in-progress: false
 
 jobs:
@@ -147,10 +140,6 @@ jobs:
           DOCS_BUILD_VERSION: v${{ inputs.base_version }}
           DOCS_SOURCE_REVISION: ${{ inputs.approved_sha }}
         run: |
-          if [ ! -f scripts/verify-embedded-docs.sh ]; then
-            echo "Legacy candidate predates the embedded docs contract; skipping."
-            exit 0
-          fi
           revision="$DOCS_SOURCE_REVISION"
           if [ -z "$revision" ]; then revision="$(git rev-parse HEAD)"; fi
           bash scripts/verify-embedded-docs.sh "$DOCS_BUILD_VERSION" "$revision"
@@ -197,8 +186,7 @@ jobs:
           name: ${{ inputs.candidate_artifact_name }}
           path: ${{ runner.temp }}/release-candidate
       # Stable publication uses the exact npm-v* tag. build.mjs strips the
-      # leading `npm-`/`v`; historical Preview inputs remain only for old
-      # workflow-call compatibility and are not reachable from a public entry.
+      # leading `npm-`/`v`.
       - name: Resolve version
         id: ver
         env:
@@ -209,7 +197,6 @@ jobs:
           IN_TAG: ${{ inputs.tag }}
           REF_NAME: ${{ github.ref_name }}
           RUN_NUMBER: ${{ github.run_number }}
-          IN_PREVIEW_NUMBER: ${{ inputs.preview_number }}
         run: bash scripts/resolve-npm-release.sh
       - name: Revalidate approved release ref
         if: ${{ inputs.orchestrated }}
@@ -221,7 +208,6 @@ jobs:
         if: ${{ inputs.candidate_artifact_name == '' }}
         env:
           VERSION_ARG: ${{ steps.ver.outputs.arg }}
-          NPM_STABLE_DIST_TAG: ${{ vars.CLI_PUBLISH_FROZEN == 'true' && 'legacy-v1' || 'latest' }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: node npm/build.mjs "$VERSION_ARG" --publish
       - name: Publish or recover prepared npm packages
@@ -229,11 +215,10 @@ jobs:
         env:
           VERSION: ${{ inputs.base_version }}
           APPROVED_SHA: ${{ inputs.approved_sha }}
-          NPM_STABLE_DIST_TAG: ${{ vars.CLI_PUBLISH_FROZEN == 'true' && 'legacy-v1' || 'latest' }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: node npm/publish-candidate.mjs "$RUNNER_TEMP/release-candidate/npm" "$VERSION" "$APPROVED_SHA"
-      - name: Align legacy aliases with the official release
-        if: ${{ inputs.channel == 'stable' && vars.CLI_PUBLISH_FROZEN != 'true' }}
+      - name: Finalize official npm publication
+        if: ${{ inputs.channel == 'stable' }}
         env:
           VERSION: ${{ inputs.base_version }}
           APPROVED_SHA: ${{ inputs.approved_sha }}

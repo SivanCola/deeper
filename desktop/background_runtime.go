@@ -291,7 +291,7 @@ func (a *App) WorkspaceConflictForTab(tabID string) WorkspaceConflictView {
 	if err != nil {
 		return empty
 	}
-	availability := a.DeliveryWorktreeAvailability(targetWorkspaceRoot)
+	availability := a.IsolatedWorktreeAvailability(targetWorkspaceRoot)
 
 	a.mu.RLock()
 	type candidate struct {

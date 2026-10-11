@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	tea "charm.land/bubbletea/v2"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
+
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestAuditSetupEditsEffectiveProviderSource(t *testing.T) {
@@ -21,7 +22,7 @@ func TestAuditSetupEditsEffectiveProviderSource(t *testing.T) {
 		t.Fatal(err)
 	}
 	project := filepath.Join(root, "deepzora.toml")
-	if err := os.WriteFile(project, []byte("[[providers]]\nname = \"relay\"\nkind = \"openai\"\nbase_url = \"https://project.invalid/v1\"\nmodel = \"chat\"\napi_key_env = \"PROJECT_KEY\"\n"), 0600); err != nil {
+	if err := os.WriteFile(project, []byte("[[providers]]\nname = \"relay\"\nkind = \"openai\"\nbase_url = \"https://project.invalid/v1\"\nmodels = [\"chat\"]\napi_key_env = \"PROJECT_KEY\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	effective, err := config.LoadForRootReadOnly(root)

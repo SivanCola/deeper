@@ -29,4 +29,4 @@ Object.assign(window, { trashFixture: {
   finishPreview() { finishPreview?.(); },
 } });
 createRoot(document.getElementById("root")!).render(<LocaleProvider><TrashPage active onBack={() => {}}
-  onOpenSession={async () => {}} list={async () => []} restore={async () => {}} purge={async () => {}} /></LocaleProvider>);
+  onOpenSession={async () => {}} /></LocaleProvider>);

@@ -43,13 +43,6 @@ func (g *recordingPermissionGate) Check(_ context.Context, name string, _ json.R
 	return g.allow, g.reason, nil
 }
 
-type legacyPlanTrustGate struct{ calls int }
-
-func (g *legacyPlanTrustGate) CheckPlanModeReadOnlyTrust(context.Context, PlanModeReadOnlyTrustRequest) (bool, string, error) {
-	g.calls++
-	return true, "", nil
-}
-
 type annotatedMCPTool struct {
 	fakeTool
 	server           string
@@ -163,23 +156,6 @@ func TestAuthorizedMCPUsesInstallAuthorizationAndExplicitDenyOnly(t *testing.T) 
 	}
 }
 
-func TestPlanModeUnsafePhaseToolStopsBeforePermission(t *testing.T) {
-	var executions int32
-	reg := tool.NewRegistry()
-	reg.Add(planSafeTool{fakeTool: fakeTool{name: "complete_step", readOnly: true, calls: &executions}, planSafe: false})
-	gate := &recordingPermissionGate{allow: true}
-	a := New(nil, reg, NewSession(""), Options{Gate: gate}, event.Discard)
-	a.SetPlanMode(true)
-
-	out := a.executeOne(context.Background(), &a.turn, provider.ToolCall{Name: "complete_step"})
-	if out.blocked || !strings.Contains(out.output, "tool_retired") {
-		t.Fatalf("retired tool outcome = %+v", out)
-	}
-	if len(gate.calls) != 0 || executions != 0 {
-		t.Fatalf("phase-blocked call reached permission/execution: gate=%+v executions=%d", gate.calls, executions)
-	}
-}
-
 func TestPlanModeSafeWriterStillUsesWriterPermission(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(planSafeTool{fakeTool: fakeTool{name: "phase_safe_writer"}, planSafe: true})
@@ -193,48 +169,6 @@ func TestPlanModeSafeWriterStillUsesWriterPermission(t *testing.T) {
 	}
 	if len(gate.calls) != 1 || gate.calls[0].readOnly {
 		t.Fatalf("phase-safe writer permission calls = %+v", gate.calls)
-	}
-}
-
-func TestPlanModeDoesNotInvokeLegacyBashTrustPrompt(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "bash"})
-	gate := &recordingPermissionGate{allow: true}
-	legacy := &legacyPlanTrustGate{}
-	a := New(nil, reg, NewSession(""), Options{
-		Gate:                      gate,
-		PlanModeReadOnlyTrustGate: legacy,
-	}, event.Discard)
-	a.SetPlanMode(true)
-
-	out := a.executeOne(context.Background(), &a.turn, provider.ToolCall{
-		Name:      "bash",
-		Arguments: `{"command":"gh issue view 6482"}`,
-	})
-	if out.blocked || out.errMsg != "" {
-		t.Fatalf("permission-approved bash outcome = %+v", out)
-	}
-	if legacy.calls != 0 {
-		t.Fatalf("obsolete Plan bash trust prompt was invoked %d times", legacy.calls)
-	}
-	if len(gate.calls) != 1 || gate.calls[0].readOnly {
-		t.Fatalf("bash must reach ordinary permission as declared writer, calls=%+v", gate.calls)
-	}
-}
-
-func TestPlanModeLegacyOverridesDoNotBypassPermissions(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "write_file"})
-	gate := &recordingPermissionGate{reason: "denied"}
-	a := New(nil, reg, NewSession(""), Options{
-		Gate:                     gate,
-		PlanModeReadOnlyCommands: []string{"gh issue view"},
-	}, event.Discard)
-	a.SetPlanMode(true)
-
-	out := a.executeOne(context.Background(), &a.turn, provider.ToolCall{Name: "write_file"})
-	if !out.blocked || len(gate.calls) != 1 {
-		t.Fatalf("legacy Plan config bypassed permissions: outcome=%+v calls=%+v", out, gate.calls)
 	}
 }
 
@@ -311,7 +245,7 @@ func TestPlanModeTodoCreatedInTurnUsesTodoWriteRecovery(t *testing.T) {
 		Name:      "complete_step",
 		Arguments: `{"result":"cleanup finished"}`,
 	})
-	if !strings.Contains(signoff.output, "retired") {
+	if !strings.Contains(signoff.output, "unknown tool") {
 		t.Fatalf("Plan complete_step outcome = %+v, want retirement result", signoff)
 	}
 	if got := a.CanonicalTodoState(); len(got) != 1 || got[0].Status != "in_progress" {
@@ -351,7 +285,7 @@ func TestPlanModeKeepsCompleteStepUnavailable(t *testing.T) {
 	if out.blocked {
 		t.Fatalf("retired tool should be a normal result: %+v", out)
 	}
-	if !strings.Contains(out.output, "tool_retired") {
+	if !strings.Contains(out.output, "unknown tool") {
 		t.Fatalf("plan-mode complete_step = %+v, want retirement guidance", out)
 	}
 	got := a.CanonicalTodoState()
@@ -546,7 +480,7 @@ func TestRunSubAgentWithSessionInheritsPlanWorkflow(t *testing.T) {
 	if !strings.Contains(user, planmode.Marker) {
 		t.Fatalf("Plan child user turn missing workflow marker: %q", user)
 	}
-	if got := lastToolResult(sess, "complete_step"); !strings.Contains(got, "tool_retired") {
+	if got := lastToolResult(sess, "complete_step"); !strings.Contains(got, "unknown tool") {
 		t.Fatalf("Plan child complete_step result = %q", got)
 	}
 }

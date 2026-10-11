@@ -41,29 +41,6 @@ func v3PayloadBytes(f FileSnap) ([]byte, error) {
 }
 
 func (s *Store) persistV3(c *Checkpoint) error {
-	// Previous builds only inspect turn-N.json. Keep a payload-free v2 marker
-	// so their NextTurn remains monotonic across a downgrade; write it first so
-	// a crash can leave reduced rewind visibility, never an invisible turn.
-	marker := *c
-	marker.Result = nil
-	marker.SchemaVersion = SchemaV2
-	marker.Files = []FileSnap{}
-	marker.Coverage = CoverageNone
-	marker.CoverageGaps = nil
-	marker.ActiveWriters = nil
-	marker.ExpiredFilePayload = true
-	markerBytes, err := json.Marshal(&marker)
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(s.dir, 0o755); err != nil {
-		return err
-	}
-	markerPath := filepath.Join(s.dir, fmt.Sprintf("turn-%d.json", c.Turn))
-	if err := fileutil.AtomicWriteFileStrict(markerPath, markerBytes, 0o644); err != nil {
-		return err
-	}
-
 	turnDir := s.turnDir(c.Turn)
 	if err := os.MkdirAll(filepath.Join(turnDir, "files"), 0o755); err != nil {
 		return err
@@ -102,19 +79,8 @@ func (s *Store) removeTurnArtifacts(turns map[int]bool) error {
 		return nil
 	}
 	for turn := range turns {
-		// The compatibility marker is the cross-version liveness record. Remove
-		// payloads first so a crash can leave a visible payload-free turn, never
-		// a markerless directory that a newer reader resurrects after downgrade.
 		if err := os.RemoveAll(s.turnDir(turn)); err != nil {
 			return fmt.Errorf("remove checkpoint turn %d: %w", turn, err)
-		}
-		for _, path := range []string{
-			filepath.Join(s.dir, fmt.Sprintf("turn-%d.json", turn)),
-			filepath.Join(s.expiredDir(), fmt.Sprintf("turn-%d.json", turn)),
-		} {
-			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-				return fmt.Errorf("remove checkpoint turn %d: %w", turn, err)
-			}
 		}
 	}
 	return nil
@@ -134,21 +100,15 @@ func (s *Store) loadV3Turns() []*Checkpoint {
 		if err != nil {
 			continue
 		}
-		// Old readers truncate only turn-N.json. Treat marker absence as a
-		// tombstone so reopening with a newer build cannot revive those turns.
-		if _, err := os.Stat(filepath.Join(s.dir, fmt.Sprintf("turn-%d.json", turn))); err != nil {
-			continue
-		}
 		b, err := fileenc.ReadFileUTF8(s.v3MetaPath(turn))
 		if err != nil {
 			continue
 		}
 		var c Checkpoint
-		if json.Unmarshal(b, &c) != nil {
+		if json.Unmarshal(b, &c) != nil || c.SchemaVersion != SchemaV3 {
 			continue
 		}
 		c.Turn = turn
-		c.SchemaVersion = SchemaV3
 		for i := range c.Files {
 			if c.Files[i].PayloadExpired {
 				continue
@@ -201,10 +161,10 @@ func (s *Store) v3PayloadSize(turn int) (int64, error) {
 	return total, err
 }
 
-// pruneV3TurnsLocked applies both count retention and the legacy 1 GiB soft
+// pruneV3TurnsLocked applies count retention and the payload
 // payload budget to complete v3 turn directories. The current and protected
 // turns may temporarily exceed the budget; the next unprotected turn prunes
-// whole oldest directories. Older v1/v2 metadata remains on its legacy path.
+// whole oldest directories.
 func (s *Store) pruneV3TurnsLocked() {
 	if s.dir == "" || s.retainN <= 0 {
 		return
@@ -261,7 +221,6 @@ func (s *Store) pruneV3TurnsLocked() {
 		}
 	}
 	s.done = kept
-	// Pre-v3 builds briefly wrote both a turn directory and a blob. Once such a
-	// turn ages out, the legacy mark-and-sweep can reclaim its orphaned blob.
+	// Reclaim payloads no longer used by rewind transactions or undo.
 	s.pruneBlobsLocked()
 }

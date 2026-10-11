@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"deepzora/internal/topicstate"
 )
@@ -43,22 +42,6 @@ func legacyTopicPaths(workspaceRoot string) [4]string {
 		topicTitlesPath(workspaceRoot), topicTitleSourcesPath(workspaceRoot),
 		topicCreatedAtsPath(workspaceRoot), topicAutoTitleMetaPath(workspaceRoot),
 	}
-}
-
-func legacyTopicFilesExist(workspaceRoot string) bool {
-	for _, path := range legacyTopicPaths(workspaceRoot) {
-		if _, err := os.Stat(path); err == nil {
-			return true
-		}
-	}
-	return false
-}
-
-func topicScopeKind(workspaceRoot string) string {
-	if strings.TrimSpace(workspaceRoot) == "" {
-		return "global"
-	}
-	return "project"
 }
 
 func topicStateErrorType(err error) string {

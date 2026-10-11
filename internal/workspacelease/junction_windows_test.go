@@ -14,7 +14,7 @@ import (
 	"deepzora/internal/filelock"
 )
 
-func TestJunctionWorkspaceRetainsOldAliasLock(t *testing.T) {
+func TestJunctionWorkspaceSharesCurrentTargetLock(t *testing.T) {
 	root := t.TempDir()
 	target, alias := filepath.Join(root, "target"), filepath.Join(root, "alias")
 	if err := os.Mkdir(target, 0o700); err != nil {
@@ -28,18 +28,16 @@ func TestJunctionWorkspaceRetainsOldAliasLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Use the historical filesystem observation, including 8.3 expansion of
-	// the runner's temporary directory. The raw input is not the old lock key.
-	oldRoot, err := filepath.EvalSymlinks(alias)
+	_, targetRoot, err := workspaceIdentities(target)
 	if err != nil {
 		t.Fatal(err)
 	}
-	oldPath := workspaceLockPath(lockDir, compatibilityIdentityPath(nearestGitWorktreeRoot(oldRoot)))
-	if owner.lockPath != oldPath {
-		t.Fatalf("legacy lock changed: %q != %q", owner.lockPath, oldPath)
+	lockPath := workspaceLockPath(lockDir, targetRoot)
+	if owner.lockPath != lockPath {
+		t.Fatalf("junction and target locks differ: %q != %q", owner.lockPath, lockPath)
 	}
 	for _, group := range []bool{false, true} {
-		releaseOld, err := filelock.TryAcquire(oldPath)
+		releaseTarget, err := filelock.TryAcquire(lockPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -51,12 +49,12 @@ func TestJunctionWorkspaceRetainsOldAliasLock(t *testing.T) {
 			release, err = owner.HoldWrite(ctx)
 		}
 		cancel()
-		releaseOld()
+		releaseTarget()
 		if release != nil {
 			release()
 		}
 		if !errors.Is(err, context.DeadlineExceeded) {
-			t.Fatalf("group=%v ignored old alias writer: %v", group, err)
+			t.Fatalf("group=%v ignored target writer: %v", group, err)
 		}
 	}
 	release, err := owner.HoldWrite(context.Background())
@@ -64,11 +62,11 @@ func TestJunctionWorkspaceRetainsOldAliasLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer release()
-	legacy, err := filelock.TryAcquire(oldPath)
-	if legacy != nil {
-		legacy()
+	targetRelease, err := filelock.TryAcquire(lockPath)
+	if targetRelease != nil {
+		targetRelease()
 	}
 	if !errors.Is(err, filelock.ErrHeld) {
-		t.Fatalf("old writer ignored current holder: %v", err)
+		t.Fatalf("target writer ignored junction holder: %v", err)
 	}
 }

@@ -138,13 +138,13 @@ func sessionMetaFromCatalog(record sessioncatalog.SessionRecord, current, open b
 	if strings.TrimSpace(preview) == "" && record.TurnsState == sessioncatalog.TurnsUnknown {
 		preview = "History is being indexed — " + filepath.Base(record.Path)
 	}
-	recovered := record.Recovered || strings.TrimSpace(record.RecoveryDigest) != "" || isAutomaticRecoverySessionPath(record.Path)
+	recovered := record.Recovered || strings.TrimSpace(record.RecoveryDigest) != ""
 	// RecoveryCopy comes from the catalog projection, which re-proves coverage
 	// from real content at index time. History uses it for the dedicated
 	// recovery-copy group and safe bulk cleanup entry points.
 	return SessionMeta{Path: record.Path, Preview: preview, Title: title, Turns: record.Turns,
 		TurnsState: string(record.TurnsState), CreatedAt: record.CreatedAt, LastActivityAt: record.LastActivityAt,
-		ModTime: record.LastActivityAt, Current: current, Open: open, Scope: record.Scope,
+		Current: current, Open: open, Scope: record.Scope,
 		WorkspaceRoot: record.WorkspaceRoot, TopicID: record.TopicID, TopicTitle: record.TopicTitle,
 		Recovered: recovered, RecoveryCopy: record.RecoveryCopy,
 		RecoveryGroupID: record.RecoveryGroupID, RecoveryRole: record.RecoveryRole,

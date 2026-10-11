@@ -7,10 +7,12 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/config"
 	"deepzora/internal/fileutil"
 	"deepzora/internal/store"
 )
@@ -124,33 +126,6 @@ func savePinnedContextState(sessionPath string, files []string) error {
 	return fileutil.AtomicWriteFileStrict(store.SessionPinnedContext(sessionPath), raw, 0o600)
 }
 
-func loadOrMigratePinnedContextState(sessionPath string, legacy []string) (pinnedContextState, error) {
-	if strings.TrimSpace(sessionPath) == "" {
-		state := emptyPinnedContextState("")
-		files, err := normalizePinnedContextFiles(legacy)
-		state.Files = files
-		return state, err
-	}
-	state, err := loadPinnedContextState(sessionPath)
-	if err != nil || len(state.Files) > 0 || len(legacy) == 0 {
-		return state, err
-	}
-	if _, statErr := os.Stat(store.SessionPinnedContext(sessionPath)); statErr == nil {
-		return state, nil
-	} else if !errors.Is(statErr, os.ErrNotExist) {
-		return state, statErr
-	}
-	files, err := normalizePinnedContextFiles(legacy)
-	if err != nil {
-		return state, err
-	}
-	if err := savePinnedContextState(sessionPath, files); err != nil {
-		return state, err
-	}
-	state.Files = files
-	return state, nil
-}
-
 func copyPinnedContextState(sourcePath, targetPath string) error {
 	if strings.TrimSpace(sourcePath) == "" || strings.TrimSpace(targetPath) == "" {
 		return nil
@@ -177,83 +152,32 @@ func loadPinnedContextStateOrEmpty(sessionPath, logMessage string) pinnedContext
 }
 
 func prepareStartupPinnedContext(tab *WorkspaceTab, startupPath, persistedPath string) {
-	if startupPath != "" {
-		migratePendingLegacyPinnedFiles(tab, startupPath)
-		if len(tab.pendingLegacyPinnedFilesForPersistence()) > 0 {
-			return
-		}
-		state := loadPinnedContextStateOrEmpty(startupPath, "desktop: load startup pinned context")
-		tab.setPinnedFiles(state.Files)
-	} else if strings.TrimSpace(persistedPath) != "" {
-		// A rejected persisted path must not seed its replacement. A pathless
-		// legacy entry keeps its cache until the one-time migration runs.
-		tab.setPinnedFiles(nil)
+	if id, ok := parseSessionRoute(startupPath); ok {
+		tab.setPinnedFiles(loadPinnedContextStateOrEmpty(desktopPinnedContextPath(id), "desktop: load pinned context").Files)
+		return
 	}
+	tab.setPinnedFiles(nil)
 }
 
-func restoreTabPinnedContext(tab *WorkspaceTab, legacy []string) {
-	// Canonical identities and rejected locators must never enter the legacy
-	// sidecar migration. Keep upgrade input until a verified binding owns it.
-	if tab.SessionID != "" {
-		tab.retainLegacyPinnedFiles(legacy)
+func restoreTabPinnedContext(tab *WorkspaceTab) {
+	if id, ok := parseSessionRoute(sessionRoute(tab.SessionID)); ok {
+		tab.setPinnedFiles(loadPinnedContextStateOrEmpty(desktopPinnedContextPath(id), "desktop: restore pinned context").Files)
 		return
 	}
-	path := ""
-	if tab.SessionPath != "" {
-		validated, ok := validatedLegacySessionPathForRead(tab.SessionPath)
-		if !ok {
-			tab.retainLegacyPinnedFiles(legacy)
-			return
-		}
-		path = string(validated)
+	tab.setPinnedFiles(nil)
+}
+
+func desktopPinnedContextPath(id string) string {
+	return filepath.Join(config.DesktopSessionStoreDir(), id, id+".jsonl")
+}
+
+func pinnedContextStateForSessionBinding(tab *WorkspaceTab, sessionPath string) pinnedContextState {
+	if id, ok := parseSessionRoute(sessionPath); ok {
+		sessionPath = desktopPinnedContextPath(id)
 	}
-	state, err := loadOrMigratePinnedContextState(path, legacy)
-	if err != nil {
-		tab.retainLegacyPinnedFiles(legacy)
-		slog.Warn("desktop: restore pinned context", "err", err)
-		return
-	}
-	if strings.TrimSpace(tab.SessionPath) == "" && len(legacy) > 0 {
-		tab.setPinnedFilesState(state.Files, legacy)
-		return
-	}
+	return loadPinnedContextStateOrEmpty(sessionPath, "desktop: load session pinned context")
+}
+
+func applyPinnedContextSessionBinding(tab *WorkspaceTab, state pinnedContextState) {
 	tab.setPinnedFiles(state.Files)
-}
-
-func migratePendingLegacyPinnedFiles(tab *WorkspaceTab, sessionPath string) {
-	legacy := tab.pendingLegacyPinnedFilesForPersistence()
-	if len(legacy) == 0 || strings.TrimSpace(sessionPath) == "" {
-		return
-	}
-	sidecar := store.SessionPinnedContext(sessionPath)
-	if _, err := os.Stat(sidecar); err == nil {
-		if _, loadErr := loadPinnedContextState(sessionPath); loadErr == nil {
-			tab.clearPendingLegacyPinnedFiles()
-		}
-		return
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return
-	}
-	if err := savePinnedContextState(sessionPath, legacy); err != nil {
-		slog.Warn("desktop: migrate pending legacy pinned context", "err", err)
-		return
-	}
-	tab.clearPendingLegacyPinnedFiles()
-}
-
-func pinnedContextStateForSessionBinding(tab *WorkspaceTab, sessionPath string) (pinnedContextState, bool) {
-	pendingLegacy := tab.pendingLegacyPinnedFilesForPersistence()
-	_, sidecarErr := os.Stat(store.SessionPinnedContext(sessionPath))
-	state, err := loadPinnedContextState(sessionPath)
-	if err != nil {
-		slog.Warn("desktop: load session pinned context", "session", agent.BranchID(sessionPath), "err", err)
-	}
-	preserveLegacy := len(pendingLegacy) > 0 && (errors.Is(sidecarErr, os.ErrNotExist) || err != nil)
-	return state, preserveLegacy
-}
-
-func applyPinnedContextSessionBinding(tab *WorkspaceTab, state pinnedContextState, preserveLegacy bool) {
-	if !preserveLegacy {
-		tab.setPinnedFiles(state.Files)
-	}
 }

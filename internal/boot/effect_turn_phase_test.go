@@ -64,7 +64,7 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "phase-effect"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 

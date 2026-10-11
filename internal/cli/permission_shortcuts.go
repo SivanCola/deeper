@@ -41,9 +41,6 @@ func (m *chatTUI) cycleMode() {
 		m.planMode = false
 		m.ctrl.SetToolApprovalMode(control.ToolApprovalReadOnly)
 		m.yoloRestoreToolApprovalMode = ""
-	case m.ctrl.ToolApprovalMode() == control.ToolApprovalDontAsk:
-		m.ctrl.SetToolApprovalMode(control.ToolApprovalReadOnly)
-		m.yoloRestoreToolApprovalMode = ""
 	case m.ctrl.ToolApprovalMode() == control.ToolApprovalReadOnly:
 		m.ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 		m.yoloRestoreToolApprovalMode = ""

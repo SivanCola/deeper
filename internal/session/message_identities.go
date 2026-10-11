@@ -75,7 +75,7 @@ func (ids messageIdentities) changeFor(commit Commit) identityChange {
 			for _, id := range retracted {
 				change.live[id] = false
 			}
-		case "history/replace", "legacy/import":
+		case "history/replace":
 			messages, err := replacementEventMessages(event, event.Payload)
 			if err != nil {
 				continue

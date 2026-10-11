@@ -45,7 +45,6 @@ type Event struct {
 	Extension        *ExtensionSurface                `json:"extension,omitempty"`
 	Err              string                           `json:"err,omitempty" externalizable:"true"`
 	Outcome          string                           `json:"outcome,omitempty"`
-	Readiness        *FinalReadiness                  `json:"readiness,omitempty"`
 	ProtocolRecovery *provider.ProtocolRecoveryAction `json:"protocolRecovery,omitempty"`
 	Diagnostic       *provider.FailureDiagnostic      `json:"diagnostic,omitempty"`
 	Receipt          *CompletionReceipt               `json:"receipt,omitempty"`

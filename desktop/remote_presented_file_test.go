@@ -68,7 +68,7 @@ func TestRemotePresentedFilesFenceRejectsRouteAndConnectionChanges(t *testing.T)
 		selectionRevision: 3,
 		capabilities:      map[string]bool{"present-files-v1": true},
 		routing: remoteTabSessionRouting{
-			currentPath: "/remote/workspace/.deepzora/sessions/one.jsonl",
+			currentPath: "/remote/workspace/.deepzorasession-id:one",
 		},
 	}
 	app := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
@@ -84,7 +84,7 @@ func TestRemotePresentedFilesFenceRejectsRouteAndConnectionChanges(t *testing.T)
 		func() { tab.gen++ },
 		func() { tab.selectionRevision++ },
 		func() { tab.client = &http.Client{} },
-		func() { tab.routing.currentPath = "/remote/workspace/.deepzora/sessions/two.jsonl" },
+		func() { tab.routing.currentPath = "/remote/workspace/.deepzorasession-id:two" },
 		func() { tab.routing.rehydratingPath = tab.routing.currentPath },
 	} {
 		mutate()

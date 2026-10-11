@@ -46,7 +46,7 @@ system_prompt = "BASE SYSTEM PROMPT"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -92,7 +92,7 @@ enabled = false
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -162,7 +162,7 @@ disable_implicit_invocation = true
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	writeFile(t, dir, ".deepzora/skills/hot/SKILL.md", "---\ndescription: explicit hot skill\n---\nHOT BODY")

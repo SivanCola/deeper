@@ -6,13 +6,11 @@ import type { SessionSelector } from "../generated/desktopContract.generated";
 // selecting the exact durable row whenever the catalog supplies its identity.
 export function sessionTitleTarget(node: ProjectNode): string {
   if (node.session?.sessionId) return `session-id:${node.session.sessionId}`;
-  if (node.source) return `session-source:${encodeURIComponent(JSON.stringify(node.source))}`;
   return node.sessionPath?.trim() || node.topicId?.trim() || "";
 }
 
 export function sessionTitleSelector(target: string): SessionSelector {
   const value = target.trim();
-  if (value.startsWith("session-source:")) return { source: JSON.parse(decodeURIComponent(value.slice("session-source:".length))) };
   if (value.startsWith("session-id:")) {
     return { ref: { hostId: "local", sessionId: value.slice("session-id:".length) } };
   }

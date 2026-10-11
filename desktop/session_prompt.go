@@ -3,13 +3,11 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
-	"deepzora/internal/store"
 )
 
 func systemPromptFrom(messages []provider.Message) string {
@@ -55,16 +53,6 @@ func withFreshSystemPrompt(messages []provider.Message, system string) []provide
 	return append([]provider.Message{{Role: provider.RoleSystem, Content: system}}, out...)
 }
 
-func noteLegacyPinnedSystemMigration(session *agent.Session, persisted, fresh string) {
-	if session == nil || persisted == "" || fresh == "" || persisted == fresh {
-		return
-	}
-	// The resumed Session already contains the refreshed bytes, so this is only a
-	// diagnostics boundary. Do not increment RewriteVersion: the persistence
-	// baseline must remain compatible with the session loaded from disk.
-	session.NoteContentRewrite("legacy_pinned_system_migration")
-}
-
 func sessionWithFreshSystemPrompt(session *agent.Session, system string) *agent.Session {
 	if session == nil {
 		return nil
@@ -76,7 +64,6 @@ func sessionWithFreshSystemPrompt(session *agent.Session, system string) *agent.
 	}
 	logSystemPromptSwap(persisted, system, "")
 	resumed := session.CloneWithMessages(withFreshSystemPrompt(messages, system))
-	noteLegacyPinnedSystemMigration(resumed, persisted, system)
 	return resumed
 }
 
@@ -96,14 +83,12 @@ func resumeWithFreshSystemPrompt(ctrl interface {
 		if path != "" {
 			if loaded, err := agent.LoadSession(path); err == nil && loaded != nil {
 				if resumed, ok := loaded.CloneWithMessagesIfCompatible(next); ok {
-					noteLegacyPinnedSystemMigration(resumed, persisted, fresh)
 					ctrl.Resume(resumed, path)
 					return
 				}
 			}
 		}
 		resumed := agent.NewSession("").CloneWithMessages(next)
-		noteLegacyPinnedSystemMigration(resumed, persisted, fresh)
 		ctrl.Resume(resumed, path)
 		return
 	}
@@ -115,30 +100,20 @@ func resumeWithFreshSystemPrompt(ctrl interface {
 // resumeWithFreshSystemPromptAndGoal resumes an existing session without
 // seeding Goal state before Resume. A goal-state sidecar is authoritative;
 // only legacy sessions that predate the sidecar fall back to the tab profile.
-func resumeWithFreshSystemPromptAndGoal(ctrl control.SessionAPI, messages []provider.Message, path, legacyGoal string) {
+func resumeWithFreshSystemPromptAndGoal(ctrl control.SessionAPI, messages []provider.Message, path string) {
 	if ctrl == nil {
 		return
 	}
-	_, sidecarErr := os.Stat(store.SessionGoalState(path))
 	resumeWithFreshSystemPrompt(ctrl, messages, path)
-	if os.IsNotExist(sidecarErr) && strings.TrimSpace(legacyGoal) != "" {
-		if loader, ok := ctrl.(interface{ LoadInactiveGoal(string) }); ok {
-			loader.LoadInactiveGoal(strings.TrimSpace(legacyGoal))
-		}
-	}
+
 }
 
-func resumeLoadedSessionAndGoal(ctrl control.SessionAPI, session *agent.Session, path, legacyGoal string) {
+func resumeLoadedSessionAndGoal(ctrl control.SessionAPI, session *agent.Session, path string) {
 	if ctrl == nil || session == nil {
 		return
 	}
-	_, sidecarErr := os.Stat(store.SessionGoalState(path))
 	ctrl.Resume(sessionWithFreshSystemPrompt(session, systemPromptFrom(ctrl.History())), path)
-	if os.IsNotExist(sidecarErr) && strings.TrimSpace(legacyGoal) != "" {
-		if loader, ok := ctrl.(interface{ LoadInactiveGoal(string) }); ok {
-			loader.LoadInactiveGoal(strings.TrimSpace(legacyGoal))
-		}
-	}
+
 }
 
 // configureControllerRuntime applies the non-persisted runtime posture before
@@ -152,7 +127,6 @@ func configureControllerRuntime(ctrl, oldCtrl control.SessionAPI, runtime normal
 	ctrl.EnableInteractiveApproval()
 	applyTabModeToController(ctrl, runtime.tabMode())
 	applyTabToolApprovalModeToController(ctrl, runtime.toolApprovalMode)
-	applyTabQualityFloorToController(ctrl, runtime.qualityFloor)
 	if next, ok := ctrl.(*control.Controller); ok {
 		if prev, ok := oldCtrl.(*control.Controller); ok {
 			next.RestoreSessionAuthorizations(prev.SessionAuthorizations())
@@ -176,14 +150,14 @@ func normalizeRestoredControllerRuntime(ctrl control.SessionAPI, requested norma
 	}
 
 	actual := requested
+	actual.goal = ""
 	actual.collaborationMode = "normal"
-	actual.legacyGoal = ""
 	switch {
 	case ctrl.PlanMode():
 		actual.collaborationMode = "plan"
 	case ctrl.GoalStatus() == control.GoalStatusRunning && strings.TrimSpace(ctrl.Goal()) != "":
 		actual.collaborationMode = "goal"
-		actual.legacyGoal = strings.TrimSpace(ctrl.Goal())
+		actual.goal = strings.TrimSpace(ctrl.Goal())
 	}
 	actual.toolApprovalMode = normalizeToolApprovalMode(ctrl.ToolApprovalMode())
 	if ctrl.PlanMode() != (actual.collaborationMode == "plan") {
@@ -196,15 +170,15 @@ func normalizeRestoredControllerRuntime(ctrl control.SessionAPI, requested norma
 }
 
 func resumeControllerRuntimeWithMessages(ctrl control.SessionAPI, messages []provider.Message, path string, requested normalizedTabRuntime) (normalizedTabRuntime, error) {
-	resumeWithFreshSystemPromptAndGoal(ctrl, messages, path, requested.legacyGoal)
+	resumeWithFreshSystemPromptAndGoal(ctrl, messages, path)
 	return normalizeRestoredControllerRuntime(ctrl, requested)
 }
 
 func resumeControllerRuntimeWithSession(ctrl control.SessionAPI, session *agent.Session, path string, requested normalizedTabRuntime) (normalizedTabRuntime, error) {
 	if session != nil {
-		resumeLoadedSessionAndGoal(ctrl, session, path, requested.legacyGoal)
+		resumeLoadedSessionAndGoal(ctrl, session, path)
 	} else {
-		resumeWithFreshSystemPromptAndGoal(ctrl, nil, path, requested.legacyGoal)
+		resumeWithFreshSystemPromptAndGoal(ctrl, nil, path)
 	}
 	return normalizeRestoredControllerRuntime(ctrl, requested)
 }

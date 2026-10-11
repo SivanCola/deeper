@@ -65,7 +65,6 @@ function ev(s: typeof initialState, e: WireEvent) {
   const complete = ev(before, {
     kind: "completion_summary",
     completion: {
-      preset: "balanced",
       verdict: "complete",
       mutations: 3,
       checks_passed: 12,
@@ -74,20 +73,17 @@ function ev(s: typeof initialState, e: WireEvent) {
       review: "passed",
       gap_kinds: [],
       constraint_degraded: false,
-      floor: "standard",
-      attention: false,
     },
   });
   eq(complete.items.length, before.items.length + 1, "workspace mutations add a neutral change notice");
   const changeNotice = complete.items[complete.items.length - 1];
   eq(changeNotice?.kind === "notice" ? changeNotice.level : "", "info", "workspace mutations use an info notice, not a warning");
   eq(changeNotice?.kind === "notice" ? changeNotice.completionSummary : undefined, complete.completionSummary, "neutral change notice retains its own normalized summary");
-  eq(complete.completionSummary?.preset, "balanced", "ordinary completion summary remains available to the change panel");
+  eq(complete.completionSummary?.verdict, "complete", "ordinary completion summary remains available to the change panel");
 
   const after = ev(complete, {
     kind: "completion_summary",
     completion: {
-      preset: "balanced",
       verdict: "partial",
       mutations: 3,
       checks_passed: 12,
@@ -96,8 +92,6 @@ function ev(s: typeof initialState, e: WireEvent) {
       review: "passed",
       gap_kinds: ["stale_check"],
       constraint_degraded: true,
-      floor: "delivery",
-      attention: true,
     },
   });
   eq(after.items.length, complete.items.length, "summary refresh replaces the same result notice");
@@ -108,22 +102,6 @@ function ev(s: typeof initialState, e: WireEvent) {
   eq(notice?.kind === "notice" ? notice.text.includes("balanced") : true, false, "compact notice does not expose internal preset values");
   eq(after.completionSummary?.checks_failed, 1, "actionable completion summary is retained for details");
 
-  const switchedFloor = ev({
-    ...complete,
-    meta: { label: "test", ready: true, eventChannel: "", cwd: "/repo", qualityFloor: "delivery" },
-  }, {
-    kind: "completion_summary",
-    completion: {
-      ...complete.completionSummary!,
-      verdict: "partial",
-      gap_kinds: ["unverified_change"],
-      floor: "standard",
-      attention: false,
-    },
-  });
-  const switchedNotice = switchedFloor.items[switchedFloor.items.length - 1];
-  eq(switchedNotice?.kind === "notice" ? switchedNotice.level : "", "info", "turn-time standard summary stays neutral after switching to delivery");
-
   const suppressed = ev(complete, {
     kind: "completion_summary",
     completion: {
@@ -131,8 +109,6 @@ function ev(s: typeof initialState, e: WireEvent) {
       mutations: 0,
       checks_suppressed: 1,
       gap_kinds: ["suppressed_requirement"],
-      floor: "delivery",
-      attention: true,
     },
   });
   const suppressedNotice = suppressed.items[suppressed.items.length - 1];

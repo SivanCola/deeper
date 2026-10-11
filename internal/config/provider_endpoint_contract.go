@@ -84,8 +84,7 @@ func ProviderRequestURL(kind, baseURL string) string {
 	}
 }
 
-// ProviderEffectiveRequestURL resolves current and legacy endpoint fields with
-// the same precedence used by the runtime adapters.
+// ProviderEffectiveRequestURL uses the configured exact request URL or derives the protocol endpoint.
 func ProviderEffectiveRequestURL(e *ProviderEntry) string {
 	if e == nil {
 		return ""
@@ -93,11 +92,7 @@ func ProviderEffectiveRequestURL(e *ProviderEntry) string {
 	if requestURL := strings.TrimSpace(e.RequestURL); requestURL != "" {
 		return requestURL
 	}
-	if normalizedProviderProtocol(e.Kind) == "openai" {
-		if chatURL := strings.TrimRight(strings.TrimSpace(e.ChatURL), "/"); chatURL != "" {
-			return chatURL
-		}
-	}
+
 	return ProviderRequestURL(e.Kind, e.BaseURL)
 }
 
@@ -197,9 +192,7 @@ func RepairProviderEndpointContract(entry *ProviderEntry) (*ProviderEndpointRepa
 	entry.Kind = toProtocol
 	entry.BaseURL = route.BaseURL
 	entry.RequestURL = ""
-	entry.ChatURL = ""
 	entry.AuthHeader = route.AuthHeader
-	entry.ResponsesStateful = nil
 	if toProtocol == "responses" {
 		entry.ResponsesMode = route.ResponsesMode
 	} else {
@@ -219,16 +212,6 @@ func repairProviderEndpointContracts(c *Config) []ProviderEndpointRepair {
 		}
 	}
 	return repairs
-}
-
-func recordProviderEndpointRepairs(path string, repairs []ProviderEndpointRepair) {
-	path = strings.TrimSpace(path)
-	if path == "" || len(repairs) == 0 {
-		return
-	}
-	providerEndpointRepairReceipts.Lock()
-	providerEndpointRepairReceipts.byPath[path] = append(providerEndpointRepairReceipts.byPath[path], repairs...)
-	providerEndpointRepairReceipts.Unlock()
 }
 
 // TakeProviderEndpointRepairReceipts returns startup repairs that occurred

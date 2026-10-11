@@ -17,7 +17,7 @@ func TestDesktopTopicStatePathUsesStateHome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join(stateHome, "projects", WorkspaceSlug(abs), "desktop", "topic-state-v1.sqlite")
+	want := filepath.Join(ProjectStateDir(stateHome, abs), "desktop", "topic-state-v1.sqlite")
 	if got := DesktopTopicStatePath(workspace); got != want {
 		t.Fatalf("project path = %q, want %q", got, want)
 	}

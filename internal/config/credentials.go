@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/joho/godotenv"
 
@@ -16,12 +15,7 @@ import (
 )
 
 const (
-	CredentialsStoreAuto    = "auto"
-	CredentialsStoreKeyring = "keyring"
-	CredentialsStoreFile    = "file"
-
-	credentialsKeyringService = "deepzora"
-	credentialClearedPrefix   = "# deepzora-cleared "
+	credentialClearedPrefix = "# deepzora-cleared "
 )
 
 const (
@@ -29,7 +23,6 @@ const (
 	CredentialSourceProjectEnv  = "project_env"
 	CredentialSourceCredentials = "credentials"
 	CredentialSourceHomeEnv     = "home_env"
-	CredentialSourceLegacy      = "legacy_credentials"
 )
 
 type CredentialSource struct {
@@ -63,13 +56,6 @@ var credentialSourceTracker = struct {
 var userCredentialEditMu sync.Mutex
 
 var storedCredentialValueLookup = storedCredentialValue
-
-// legacyKeyringProbeLookup is the test-facing single-key hook returning the full
-// four-state outcome under a caller-owned context (shared 1s migration budget).
-var legacyKeyringProbeLookup = legacyKeyringProbe
-
-// legacyKeyringLookupTimeout is the shared budget for one legacy keyring scan.
-var legacyKeyringLookupTimeout = time.Second
 
 // CredentialResolver resolves credentials repeatedly for one caller-owned view
 // build. It keeps expensive global credential-store lookups bounded to one per
@@ -116,30 +102,6 @@ func cloneCredentialResolution(res CredentialResolution) CredentialResolution {
 		res.Shadowed = append([]CredentialSource(nil), res.Shadowed...)
 	}
 	return res
-}
-
-func normalizeCredentialsStore(mode string) string {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case CredentialsStoreKeyring:
-		return CredentialsStoreKeyring
-	case CredentialsStoreFile:
-		return CredentialsStoreFile
-	default:
-		return CredentialsStoreAuto
-	}
-}
-
-func credentialsStoreMode() string {
-	if mode := strings.TrimSpace(os.Getenv("DEEPZORA_CREDENTIALS_STORE")); mode != "" {
-		return normalizeCredentialsStore(mode)
-	}
-	var partial struct {
-		CredentialsStore string `toml:"credentials_store"`
-	}
-	if path := userConfigLoadPath(); path != "" {
-		_, _ = decodeTOMLFile(path, &partial)
-	}
-	return normalizeCredentialsStore(partial.CredentialsStore)
 }
 
 func credentialEnvNamesForRoot(root string) []string {
@@ -280,34 +242,6 @@ func StoreCredentialLines(lines []string) (string, error) {
 	}
 	defer unlock()
 	return storeCredentialAssignmentsLocked(assignments)
-}
-
-// storeCredentialIfAbsentAndNotCleared writes key=value only when the current
-// credential store still lacks a value and a cleared tombstone for key. The
-// re-check and write share LockUserCredentialEdits so a concurrent settings
-// save or tombstone cannot be overwritten by a stale keyring import.
-// stored is false when the write was skipped because the key is already present
-// or cleared; err is non-nil only on lock/IO failures.
-func storeCredentialIfAbsentAndNotCleared(key, value string) (stored bool, err error) {
-	key = strings.TrimSpace(key)
-	if key == "" || !isCredentialKey(key) {
-		return false, nil
-	}
-	if strings.ContainsAny(value, "\r\n") {
-		return false, fmt.Errorf("credential value for %s contains a newline", key)
-	}
-	unlock, err := LockUserCredentialEdits()
-	if err != nil {
-		return false, err
-	}
-	defer unlock()
-	if credentialCurrentStoreHasKey(key) || credentialCurrentStoreClearedKey(key) {
-		return false, nil
-	}
-	if _, err := storeCredentialAssignmentsLocked(map[string]string{key: value}); err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 func storeCredentialAssignmentsLocked(assignments map[string]string) (string, error) {
@@ -545,8 +479,6 @@ func credentialSourceLabel(source CredentialSource) string {
 		return "Deepzora credentials"
 	case CredentialSourceHomeEnv:
 		return "home .env"
-	case CredentialSourceLegacy:
-		return "legacy Deepzora credentials"
 	case CredentialSourceEnvironment:
 		return "environment variable"
 	default:

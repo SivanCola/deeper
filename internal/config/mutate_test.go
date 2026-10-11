@@ -260,8 +260,8 @@ func assertUserConfigLockSerializesAcrossProcesses(t *testing.T, firstHome, seco
 	if len(final.Bot.Connections) != 1 || final.Bot.Connections[0].ID != "cross-process" {
 		t.Fatalf("bot update was lost: %+v", final.Bot.Connections)
 	}
-	if got := final.CLIUpdateChannel(); got != "stable" {
-		t.Fatalf("CLI channel migration was lost: %q", got)
+	if got := final.DisplayCurrencyPref(); got != "CNY" {
+		t.Fatalf("display currency update was lost: %q", got)
 	}
 }
 
@@ -307,7 +307,7 @@ func TestLockUserConfigEditsFailsClosedWhenFileLockTimesOut(t *testing.T) {
 	}
 
 	cfg := LoadForEdit(path)
-	if err := cfg.SetCLIUpdateChannel("preview"); err != nil {
+	if err := cfg.SetDisplayCurrency("CNY"); err != nil {
 		t.Fatal(err)
 	}
 	if err := cfg.SaveTo(path); err == nil {
@@ -364,7 +364,7 @@ func TestLockUserConfigEditsHelperProcess(t *testing.T) {
 			Enabled:  true,
 		}}
 	case "cli":
-		if err := cfg.SetCLIUpdateChannel("preview"); err != nil {
+		if err := cfg.SetDisplayCurrency("CNY"); err != nil {
 			t.Fatal(err)
 		}
 	default:

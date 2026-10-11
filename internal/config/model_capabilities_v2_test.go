@@ -127,7 +127,7 @@ func TestCapabilityCacheNewestSuccessWinsAcrossResolvers(t *testing.T) {
 func TestCapabilityCacheRouteIdentity(t *testing.T) {
 	r := &ModelCapabilityResolver{}
 	e := ProviderEntry{Name: "relay", Kind: "openai", BaseURL: "https://relay.test", Model: "x"}
-	for _, mutate := range []func(*ProviderEntry){func(p *ProviderEntry) { p.NoProxy = true }, func(p *ProviderEntry) { p.ChatURL = "https://a.test/chat" }, func(p *ProviderEntry) { p.RequestURL = "https://b.test/responses" }} {
+	for _, mutate := range []func(*ProviderEntry){func(p *ProviderEntry) { p.NoProxy = true }, func(p *ProviderEntry) { p.RequestURL = "https://a.test/chat" }, func(p *ProviderEntry) { p.RequestURL = "https://b.test/responses" }} {
 		other := e
 		mutate(&other)
 		if r.providerFingerprint(e) == r.providerFingerprint(other) {

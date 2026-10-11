@@ -64,7 +64,6 @@ type sessionDAGWriter struct {
 type sessionDAGState struct {
 	path            string
 	generation      int64
-	upgradedFrom    int
 	nodes           map[string]*sessionDAGNode
 	heads           map[string]*sessionDAGHead
 	headOrder       []string
@@ -186,7 +185,6 @@ func (st *sessionDAGState) apply(ctx context.Context, e sessionDAGEntry, offset 
 	switch e.Type {
 	case sessionDAGTypeLog:
 		st.generation = e.Generation
-		st.upgradedFrom = e.UpgradedFrom
 	case sessionDAGTypeMessage:
 		return st.applyMessage(ctx, e, offset, limits)
 	case sessionDAGTypePatch, sessionDAGTypeSystem, sessionDAGTypeRedact, sessionDAGTypeWriter:

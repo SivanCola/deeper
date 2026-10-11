@@ -116,7 +116,7 @@ func (s *Store) FreezeTurnChanges(turn int) *TurnChanges {
 	for _, gap := range c.CoverageGaps {
 		r.gap(string(gap.Reason))
 	}
-	if c.Legacy || c.ExpiredFilePayload {
+	if c.ExpiredFilePayload {
 		r.gap("snapshot_unavailable")
 	}
 	if !owned || len(s.activeWriters) > 0 {

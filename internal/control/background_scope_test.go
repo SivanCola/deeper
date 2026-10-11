@@ -14,7 +14,7 @@ func TestModelReplacementFencesCandidateAndRetiredCallbacks(t *testing.T) {
 	m := jobs.NewManager(event.Discard)
 	scope := jobs.NewSessionBackgroundScope(m, nil)
 	old := newOwnedTestController(t, Options{Jobs: m, BackgroundScope: scope})
-	old.SetToolApprovalMode(ToolApprovalYolo)
+	old.SetToolApprovalMode(ToolApprovalDangerFullAccess)
 	process := m.StartSessionProcess("", "bash", "gateway", func(ctx context.Context, _ io.Writer) (string, error) { <-ctx.Done(); return "", ctx.Err() })
 	if ModelReplacementBlocked(old) {
 		t.Fatal("independent process blocked model replacement")
@@ -33,8 +33,8 @@ func TestModelReplacementFencesCandidateAndRetiredCallbacks(t *testing.T) {
 	}
 	// Candidate setup can narrow its initial mode before migration restores the
 	// old mode. It must not cancel jobs still owned by the outgoing controller.
-	next.SetToolApprovalMode(ToolApprovalYolo)
-	next.SetToolApprovalMode(ToolApprovalAsk)
+	next.SetToolApprovalMode(ToolApprovalDangerFullAccess)
+	next.SetToolApprovalMode(ToolApprovalReadOnly)
 	if len(m.Running()) != 1 {
 		t.Fatal("candidate initialization cancelled outgoing process")
 	}

@@ -10,7 +10,6 @@ func persistMetricsEvent(app *App, metrics *metricsAggregator, tabID string, e e
 	}
 	if e.Kind == event.TurnDone {
 		if tab := app.tabByID(tabID); tab != nil && tab.Ctrl != nil {
-			observeControllerRecoveryMetrics(metrics, tab.Ctrl)
 			observeControllerTurnEventMetrics(metrics, tab.Ctrl)
 		}
 	}

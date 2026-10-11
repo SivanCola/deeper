@@ -13,7 +13,6 @@ interface ViewState {
   treeWidthMode: "manual" | "even";
 }
 interface ProjectViews {
-  seeded: boolean;
   views: Record<string, ViewState>;
 }
 type Snapshot = WorkspaceTreeMemorySnapshot & { openTabs?: string[]; filter?: string };
@@ -23,16 +22,16 @@ const projects = new Map<string, ProjectViews>();
 let hydrated = false;
 let writable = true;
 
-export function workspaceViewMemoryKey(project: string, tab: string, seedLegacy = false): string {
-  return PREFIX + JSON.stringify([project, tab, seedLegacy]);
+export function workspaceViewMemoryKey(project: string, tab: string): string {
+  return PREFIX + JSON.stringify([project, tab]);
 }
 
-function identity(key: string): [string, string, boolean] | null {
+function identity(key: string): [string, string] | null {
   if (!key.startsWith(PREFIX)) return null;
   try {
     const value = JSON.parse(key.slice(PREFIX.length));
     return Array.isArray(value) && typeof value[0] === "string" && typeof value[1] === "string"
-      ? [value[0], value[1], value[2] === true] : null;
+      ? [value[0], value[1]] : null;
   } catch { return null; }
 }
 
@@ -61,7 +60,7 @@ function hydrate() {
     for (const [key, value] of Object.entries(data.projects ?? {})) {
       const project = value as ProjectViews;
       if (!project || typeof project.views !== "object" || !project.views) continue;
-      projects.set(key, { seeded: project.seeded === true, views: Object.fromEntries(
+      projects.set(key, { views: Object.fromEntries(
         Object.entries(project.views).filter(([, view]) => view && typeof view === "object")
           .map(([id, view]) => [id, sanitize(view)]),
       ) });
@@ -81,20 +80,15 @@ function resolve(key: string) {
   const id = identity(key);
   if (!id) return null;
   hydrate();
-  const [projectKey, tab, seedLegacy] = id;
-  const project = projects.get(projectKey) ?? { seeded: false, views: Object.create(null) as Record<string, ViewState> };
-  const legacy = projectMemory.readWorkspaceTreeMemory(projectKey);
+  const [projectKey, tab] = id;
+  const project = projects.get(projectKey) ?? { views: Object.create(null) as Record<string, ViewState> };
+  const shared = projectMemory.readWorkspaceTreeMemory(projectKey);
   if (!Object.prototype.hasOwnProperty.call(project.views, tab)) {
-    const seed = !project.seeded && seedLegacy ? legacy : null;
-    project.views[tab] = sanitize(seed ? {
-      ...seed, openDirs: [...seed.openDirs],
-      openTabs: seed.selectedFilePath ? [seed.selectedFilePath] : [],
-    } : {});
-    if (seedLegacy) project.seeded = true;
+    project.views[tab] = sanitize();
     projects.set(projectKey, project);
     persist();
   }
-  return { projectKey, project, tab, legacy };
+  return { projectKey, project, tab, shared };
 }
 
 export function readWorkspaceTreeMemory(key: string): Snapshot | null {
@@ -103,9 +97,9 @@ export function readWorkspaceTreeMemory(key: string): Snapshot | null {
   const state = view.project.views[view.tab];
   return {
     ...state, openDirs: new Set(state.openDirs), openTabs: [...state.openTabs], visitId: 0,
-    recentPaths: view.legacy?.recentPaths ?? [],
-    dockTreeWidth: view.legacy?.dockTreeWidth ?? null,
-    dockPreviewWidth: view.legacy?.dockPreviewWidth ?? null,
+    recentPaths: view.shared?.recentPaths ?? [],
+    dockTreeWidth: view.shared?.dockTreeWidth ?? null,
+    dockPreviewWidth: view.shared?.dockPreviewWidth ?? null,
   };
 }
 

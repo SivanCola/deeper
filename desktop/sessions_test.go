@@ -38,128 +38,6 @@ func occupyReadFileWithTimeoutSlots(t *testing.T) func() {
 	return release
 }
 
-// loadSessionTitles
-
-func TestLoadSessionTitlesMissing(t *testing.T) {
-	dir := t.TempDir()
-	m := loadSessionTitles(dir)
-	if len(m) != 0 {
-		t.Errorf("missing file should return empty map, got %v", m)
-	}
-}
-
-func TestLoadSessionTitlesCorrupt(t *testing.T) {
-	dir := t.TempDir()
-	os.WriteFile(sessionTitlesPath(dir), []byte(`{not json`), 0o644)
-	m := loadSessionTitles(dir)
-	if len(m) != 0 {
-		t.Errorf("corrupt file should return empty map, got %v", m)
-	}
-}
-
-func TestLoadSessionTitlesValid(t *testing.T) {
-	dir := t.TempDir()
-	data := map[string]string{"session-1.jsonl": "My Session", "session-2.jsonl": "Another"}
-	b, _ := json.Marshal(data)
-	os.WriteFile(sessionTitlesPath(dir), b, 0o644)
-	m := loadSessionTitles(dir)
-	if m["session-1.jsonl"] != "My Session" || m["session-2.jsonl"] != "Another" {
-		t.Errorf("loaded = %v", m)
-	}
-}
-
-// saveSessionTitles
-
-func TestSaveSessionTitlesCreatesDir(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "nested", "sessions")
-	m := map[string]string{"a.jsonl": "title A"}
-	if err := saveSessionTitles(dir, m); err != nil {
-		t.Fatalf("save: %v", err)
-	}
-	// Verify file exists and is valid JSON.
-	b, err := os.ReadFile(sessionTitlesPath(dir))
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
-	var decoded map[string]string
-	if err := json.Unmarshal(b, &decoded); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if decoded["a.jsonl"] != "title A" {
-		t.Errorf("decoded = %v", decoded)
-	}
-}
-
-func TestSaveSessionTitlesRoundTrip(t *testing.T) {
-	dir := t.TempDir()
-	original := map[string]string{"s1.jsonl": "First", "s2.jsonl": "Second"}
-	if err := saveSessionTitles(dir, original); err != nil {
-		t.Fatalf("save: %v", err)
-	}
-	loaded := loadSessionTitles(dir)
-	if loaded["s1.jsonl"] != "First" || loaded["s2.jsonl"] != "Second" {
-		t.Errorf("round-trip = %v", loaded)
-	}
-}
-
-// setSessionTitle
-
-func TestSetSessionTitle(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "my-session.jsonl")
-
-	// Set a title.
-	if err := setSessionTitle(dir, sessionPath, "Custom Title"); err != nil {
-		t.Fatalf("set: %v", err)
-	}
-	m := loadSessionTitles(dir)
-	if m["my-session.jsonl"] != "Custom Title" {
-		t.Errorf("title = %q", m["my-session.jsonl"])
-	}
-
-	// Clear the title (empty string).
-	if err := setSessionTitle(dir, sessionPath, ""); err != nil {
-		t.Fatalf("clear: %v", err)
-	}
-	m = loadSessionTitles(dir)
-	if _, ok := m["my-session.jsonl"]; ok {
-		t.Error("cleared title should be removed from map")
-	}
-}
-
-func TestSetSessionTitleTrimsWhitespace(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "s.jsonl")
-	if err := setSessionTitle(dir, sessionPath, "  trimmed  "); err != nil {
-		t.Fatalf("set: %v", err)
-	}
-	m := loadSessionTitles(dir)
-	if m["s.jsonl"] != "trimmed" {
-		t.Errorf("title = %q, want trimmed", m["s.jsonl"])
-	}
-}
-
-func TestSetSessionTitlePreservesExistingTitlesWhenTimedReadSlotsFull(t *testing.T) {
-	dir := t.TempDir()
-	if err := saveSessionTitles(dir, map[string]string{"old.jsonl": "Old"}); err != nil {
-		t.Fatalf("save old title: %v", err)
-	}
-	sessionPath := filepath.Join(dir, "new.jsonl")
-	release := occupyReadFileWithTimeoutSlots(t)
-	if err := setSessionTitle(dir, sessionPath, "New"); err != nil {
-		t.Fatalf("setSessionTitle: %v", err)
-	}
-	release()
-
-	m := loadSessionTitles(dir)
-	if got := m["old.jsonl"]; got != "Old" {
-		t.Fatalf("old title = %q, want Old (all titles: %v)", got, m)
-	}
-	if got := m["new.jsonl"]; got != "New" {
-		t.Fatalf("new title = %q, want New (all titles: %v)", got, m)
-	}
-}
-
 // deleteSessionFile
 
 func TestDeleteSessionFile(t *testing.T) {
@@ -184,7 +62,7 @@ func TestDeleteSessionFile(t *testing.T) {
 	os.WriteFile(lockPath, nil, 0o644)
 	leaseLockPath := store.SessionLeaseLock(sessionPath)
 	os.WriteFile(leaseLockPath, nil, 0o644)
-	leaseInfoPath := store.SessionLeaseInfo(sessionPath)
+	leaseInfoPath := store.SessionLeaseLock(sessionPath)
 	os.WriteFile(leaseInfoPath, []byte(`{"writer_id":"stale"}`), 0o644)
 	ckptDir := filepath.Join(dir, "session.ckpt")
 	if err := os.MkdirAll(ckptDir, 0o755); err != nil {
@@ -200,7 +78,6 @@ func TestDeleteSessionFile(t *testing.T) {
 	}
 
 	// Set a title first.
-	setSessionTitle(dir, sessionPath, "My Title")
 	if err := recordSessionDisplay(dir, sessionPath, "expanded prompt", "[Pasted text #1 · 5 lines]"); err != nil {
 		t.Fatalf("record display: %v", err)
 	}
@@ -298,11 +175,7 @@ func TestDeleteSessionFile(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(trashJobsDir, "bash-1.log")); err != nil {
 		t.Fatalf("session jobs should be in trash: %v", err)
 	}
-	// Title/display should be retained until permanent deletion.
-	m := loadSessionTitles(dir)
-	if m["session.jsonl"] != "My Title" {
-		t.Errorf("title should be retained in trash, got %q", m["session.jsonl"])
-	}
+	// Current display sidecars remain available until permanent deletion.
 	if got := resolveSessionDisplay(dir, sessionPath, "expanded prompt"); got != "[Pasted text #1 · 5 lines]" {
 		t.Errorf("display sidecar should be retained in trash, got %q", got)
 	}
@@ -541,9 +414,6 @@ func TestRestoreTrashedSessionFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(jobsDir, "bash-1.log"), []byte("output"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := setSessionTitle(dir, sessionPath, "My Title"); err != nil {
-		t.Fatal(err)
-	}
 
 	if err := deleteSessionFile(dir, sessionPath); err != nil {
 		t.Fatalf("trash: %v", err)
@@ -595,9 +465,7 @@ func TestRestoreTrashedSessionFile(t *testing.T) {
 	if _, err := os.Stat(filepath.Dir(trashPath)); !os.IsNotExist(err) {
 		t.Fatalf("trash item should be removed after restore, stat err = %v", err)
 	}
-	if got := loadSessionTitles(dir)["session.jsonl"]; got != "My Title" {
-		t.Fatalf("title should survive restore, got %q", got)
-	}
+
 }
 
 func TestRestoreTrashedSessionFileWithEmptyLiveStub(t *testing.T) {
@@ -622,51 +490,6 @@ func TestRestoreTrashedSessionFileWithEmptyLiveStub(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Dir(trashPath)); !os.IsNotExist(err) {
 		t.Fatalf("trash item should be removed after restore, err=%v", err)
-	}
-}
-
-func TestRestoreTrashedSessionFileFromUniqueTrashItem(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "restore-unique.jsonl")
-	if err := os.WriteFile(sessionPath, []byte(`{"role":"user","content":"old"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := deleteSessionFile(dir, sessionPath); err != nil {
-		t.Fatalf("trash old: %v", err)
-	}
-	fixedTrashPath := filepath.Join(dir, sessionTrashDir, filepath.Base(sessionPath), filepath.Base(sessionPath))
-	if err := os.WriteFile(sessionPath, []byte(`{"role":"user","content":"new"}`+"\n"), 0o644); err != nil {
-		t.Fatalf("write new live session: %v", err)
-	}
-	if err := deleteSessionFile(dir, sessionPath); err != nil {
-		t.Fatalf("trash new with fixed trash conflict: %v", err)
-	}
-
-	trashed, err := listTrashedSessionFiles(dir)
-	if err != nil {
-		t.Fatalf("list trash: %v", err)
-	}
-	var uniqueTrashPath string
-	for _, candidate := range trashed {
-		if candidate != fixedTrashPath && filepath.Base(candidate) == filepath.Base(sessionPath) {
-			uniqueTrashPath = candidate
-			break
-		}
-	}
-	if uniqueTrashPath == "" {
-		t.Fatalf("unique trash path not listed, got %#v", trashed)
-	}
-	if err := restoreTrashedSessionFile(dir, uniqueTrashPath); err != nil {
-		t.Fatalf("restore unique trash item: %v", err)
-	}
-	if got, err := os.ReadFile(sessionPath); err != nil || !strings.Contains(string(got), "new") {
-		t.Fatalf("restored session = %q err=%v, want new content", string(got), err)
-	}
-	if _, err := os.Stat(filepath.Dir(uniqueTrashPath)); !os.IsNotExist(err) {
-		t.Fatalf("unique trash item should be removed after restore, stat err = %v", err)
-	}
-	if _, err := os.Stat(fixedTrashPath); err != nil {
-		t.Fatalf("original fixed trash item should remain: %v", err)
 	}
 }
 
@@ -791,9 +614,7 @@ func TestPurgeTrashedSessionFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(jobsDir, "bash-1.log"), []byte("output"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := setSessionTitle(dir, sessionPath, "My Title"); err != nil {
-		t.Fatal(err)
-	}
+
 	if err := recordSessionDisplay(dir, sessionPath, "expanded prompt", "[Pasted text #1 · 5 lines]"); err != nil {
 		t.Fatal(err)
 	}
@@ -824,9 +645,7 @@ func TestPurgeTrashedSessionFile(t *testing.T) {
 	if _, err := os.Stat(telemetryPath); !os.IsNotExist(err) {
 		t.Fatalf("session telemetry should be removed after purge, stat err = %v", err)
 	}
-	if _, ok := loadSessionTitles(dir)["session.jsonl"]; ok {
-		t.Fatal("title should be removed after purge")
-	}
+
 	if got := resolveSessionDisplay(dir, sessionPath, "expanded prompt"); got != "expanded prompt" {
 		t.Fatalf("display sidecar should be removed after purge, got %q", got)
 	}
@@ -896,7 +715,7 @@ func TestRemoveDesktopSessionArtifactsRemovesOwnedSidecars(t *testing.T) {
 		sessionTelemetryPath(sessionPath),
 		store.SessionLockFile(sessionPath),
 		store.SessionLeaseLock(sessionPath),
-		store.SessionLeaseInfo(sessionPath),
+		store.SessionLeaseLock(sessionPath),
 	} {
 		if err := os.WriteFile(p, []byte("{}"), 0o644); err != nil {
 			t.Fatalf("write %s: %v", p, err)
@@ -935,7 +754,7 @@ func TestRemoveDesktopSessionArtifactsRemovesOwnedSidecars(t *testing.T) {
 		sessionTelemetryPath(sessionPath),
 		store.SessionLockFile(sessionPath),
 		store.SessionLeaseLock(sessionPath),
-		store.SessionLeaseInfo(sessionPath),
+		store.SessionLeaseLock(sessionPath),
 		ckptDir,
 		jobsDir,
 	} {
@@ -1173,16 +992,6 @@ func writeSubagentArtifact(t *testing.T, dir, ref, parentSession string) {
 	}
 	if err := os.WriteFile(filepath.Join(subagentDir, ref+".meta.json"), data, 0o644); err != nil {
 		t.Fatal(err)
-	}
-}
-
-// sessionTitlesPath
-
-func TestSessionTitlesPath(t *testing.T) {
-	got := sessionTitlesPath("/sessions")
-	want := filepath.Join("/sessions", ".titles.json")
-	if got != want {
-		t.Errorf("sessionTitlesPath = %q, want %q", got, want)
 	}
 }
 

@@ -5,7 +5,6 @@ import type { RemoteTabOpenOptions, RemoteTabRefView, SessionMeta, TabMeta } fro
 import type { useAppRuntimeAdapter } from "./useAppRuntimeAdapter";
 import { isChannelSession, sidebarImSessionTarget, type SidebarImConnection } from "./sidebarImProjection";
 import type { SessionOperationAuthority } from "./useResourceOperations";
-import type { SessionPreparationView, SessionSelector } from "../generated/desktopContract.generated";
 
 export type DesktopNavigationIntent =
   | { kind: "canonical-session"; ref: SessionRef }
@@ -30,39 +29,8 @@ export type DesktopNavigationPorts = Pick<Runtime["navigation"],
     closeHistory(): void;
     listSessions(): Promise<SessionMeta[]>;
     applyHistorySessions(sessions: SessionMeta[]): void;
-    prepareSession(selector: SessionSelector): Promise<SessionPreparationView>;
-    getSessionPreparation(operationId: string): Promise<SessionPreparationView>;
     notice(notice: NavigationNotice): void;
   };
-export type HistoricalPreparationSurface = {
-  session: SessionMeta;
-  operationId: string;
-  status: SessionPreparationView["status"];
-  errorCode?: string;
-  errorDetail?: string;
-  retryable: boolean;
-  revision?: number;
-  isCurrent?: () => boolean;
-};
-let historicalPreparation: HistoricalPreparationSurface | null = null;
-const historicalPreparationListeners = new Set<() => void>();
-export const historicalPreparationSnapshot = () => historicalPreparation;
-export const subscribeHistoricalPreparation = (listener: () => void) => {
-  historicalPreparationListeners.add(listener);
-  return () => historicalPreparationListeners.delete(listener);
-};
-export const setHistoricalPreparation = (surface: HistoricalPreparationSurface | null) => {
-  historicalPreparation = surface;
-  historicalPreparationListeners.forEach(listener => listener());
-};
-export function reconcileHistoricalPreparation(expected: HistoricalPreparationSurface, view: SessionPreparationView) {
-  const current = historicalPreparation;
-  if (!current || current.operationId !== expected.operationId || current.session !== expected.session
-    || expected.isCurrent?.() === false || view.operationId !== expected.operationId
-    || view.revision < (current.revision ?? 0) || view.status === "ready") return;
-  setHistoricalPreparation({ ...current, status: view.status, errorCode: view.errorCode, errorDetail: view.errorDetail,
-    retryable: view.retryable, revision: view.revision });
-}
 export type NavigationNotice = {
   key: "history.failedOpenSession" | "history.missingWorkspaceRoot" | "history.failedOpenProject" | "sidebar.imWaiting" | "sidebar.imOpenFailed"
     | "projectTree.worktreeCreated" | "projectTree.worktreeCreatedDirty" | ReturnType<typeof sessionTitleErrorKey>;
@@ -97,13 +65,8 @@ export async function executeDesktopNavigation(input: DesktopNavigationCapture, 
   const openBlank = (scope: string, workspace: string) =>
     ports.ensureBlankSurface(scope, scope === "project" ? workspace : "", seq);
   checkpoint();
-  setHistoricalPreparation(null);
   try {
-    if (request.kind === "topic" && request.sessionPath?.startsWith("session-source:")) {
-      const { title, ...source } = JSON.parse(decodeURIComponent(request.sessionPath.slice("session-source:".length)));
-      request = { kind: "resume-session", session: { scope: request.scope, workspaceRoot: request.workspaceRoot,
-        topicId: request.topicId, title, path: source.path, source } as SessionMeta };
-    }
+
     if (request.kind === "canonical-session") {
       await ports.openCanonicalSession(request.ref, seq);
       checkpoint(); ports.closeHistory();
@@ -163,10 +126,6 @@ export async function executeDesktopNavigation(input: DesktopNavigationCapture, 
       checkpoint(); await ports.openChannelSession(session.path, tab.id, seq);
     } else if (session.sessionId && (!session.hostId || session.hostId === "local")) {
       tab = await openTopic(scope, session.workspaceRoot || "", session.topicId || `canonical-${session.sessionId}`, `session-id:${session.sessionId}`);
-	} else if (session.source) {
-		// Historical sources are opened in place. Explicit conversion remains a
-		// separate user action and never blocks normal navigation.
-		tab = await openTopic(scope, session.workspaceRoot || "", session.topicId || "", `session-source:${encodeURIComponent(JSON.stringify(session.source))}`);
     } else if (scope === "project" && session.workspaceRoot && session.topicId) {
       tab = await openTopic("project", session.workspaceRoot, session.topicId, session.path);
     } else if (scope === "global" && session.topicId) {

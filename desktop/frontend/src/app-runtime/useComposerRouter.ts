@@ -126,12 +126,12 @@ export function useComposerRouter(input: ComposerRouterInput) {
       const arg = theme[1]?.toLowerCase();
       if (!arg) {
         const cur = getTheme();
-        notice(t("settings.themeCurrent", { theme: cur, style: getThemeStyle(cur) }));
+        notice(t("settings.themeCurrent", { theme: cur, style: getThemeStyle() }));
         return;
       }
       if (arg === "reset" || arg === "default" || arg === "clear") {
         try {
-          await app.ResetThemePack();
+          await app.DisableThemePack();
           clearThemePack();
           notice(t("settings.themeReset"));
         } catch (err) {
@@ -142,7 +142,7 @@ export function useComposerRouter(input: ComposerRouterInput) {
       }
       if (isThemeMode(arg)) {
         const next = arg;
-        const style = getThemeStyle(next);
+        const style = getThemeStyle();
         try {
           await app.SetDesktopAppearance(next, style);
           applyTheme(next, style);

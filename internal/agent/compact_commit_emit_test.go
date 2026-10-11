@@ -90,8 +90,7 @@ func TestCommitSummaryEmitsOutsideCompactionLock(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.jsonl")
 	sink := &reentrantSnapshotSink{}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 20_000, CompactRatio: 0.5, RecentKeep: 2,
-		SessionPath: path, WorkspaceID: "ws", ModelRef: "p/m",
+		ContextWindow: 20_000, CompactRatio: 0.5, SessionPath: path, WorkspaceID: "ws", ModelRef: "p/m",
 	}, sink)
 	sink.agent = a
 	if err := a.CompactNow(context.Background(), ""); err != nil {
@@ -121,7 +120,7 @@ func TestCommitSummaryRetainsAcceptedProjectionOnDurabilityFailure(t *testing.T)
 		{Role: provider.RoleAssistant, Content: strings.Repeat("more work\n", 800)},
 		{Role: provider.RoleUser, Content: "tail"},
 		{Role: provider.RoleAssistant, Content: "ok"},
-	}}, Options{ContextWindow: 20_000, CompactRatio: 0.5, RecentKeep: 2, SessionCheckpointer: recorder}, event.Discard)
+	}}, Options{ContextWindow: 20_000, CompactRatio: 0.5, SessionCheckpointer: recorder}, event.Discard)
 
 	if err := a.CompactNow(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "injected flush failure") {
 		t.Fatalf("CompactNow error = %v, want durability failure", err)
@@ -155,7 +154,7 @@ func TestPendingProjectionBlocksModelUntilExactCommitIsDurable(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: strings.Repeat("more work\n", 800)},
 		{Role: provider.RoleUser, Content: "tail"},
 		{Role: provider.RoleAssistant, Content: "ok"},
-	}}, Options{ContextWindow: 20_000, CompactRatio: 0.5, RecentKeep: 2, SessionCheckpointer: recorder}, event.Discard)
+	}}, Options{ContextWindow: 20_000, CompactRatio: 0.5, SessionCheckpointer: recorder}, event.Discard)
 
 	if err := a.CompactNow(t.Context(), ""); err == nil || !strings.Contains(err.Error(), "initial flush failure") {
 		t.Fatalf("CompactNow error = %v, want initial durability failure", err)
@@ -198,7 +197,7 @@ func TestCommitSummaryRollsBackRejectedProjection(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: strings.Repeat("more work\n", 800)},
 		{Role: provider.RoleUser, Content: "tail"},
 		{Role: provider.RoleAssistant, Content: "ok"},
-	}}, Options{ContextWindow: 20_000, CompactRatio: 0.5, RecentKeep: 2, SessionCheckpointer: recorder}, event.Discard)
+	}}, Options{ContextWindow: 20_000, CompactRatio: 0.5, SessionCheckpointer: recorder}, event.Discard)
 
 	if err := a.CompactNow(context.Background(), ""); err == nil || !strings.Contains(err.Error(), "injected prepare failure") {
 		t.Fatalf("CompactNow error = %v, want prepare failure", err)
@@ -229,8 +228,7 @@ func TestCommitSurvivesPostPublishDirSyncFailure(t *testing.T) {
 	}}
 	path := filepath.Join(t.TempDir(), "session.jsonl")
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 20_000, CompactRatio: 0.5, RecentKeep: 2,
-		SessionPath: path, WorkspaceID: "ws", ModelRef: "p/m",
+		ContextWindow: 20_000, CompactRatio: 0.5, SessionPath: path, WorkspaceID: "ws", ModelRef: "p/m",
 	}, event.Discard)
 	if err := a.CompactNow(context.Background(), ""); err != nil {
 		t.Fatalf("CompactNow with post-publish dir sync fault: %v", err)
@@ -271,8 +269,7 @@ func TestBlockedReceiptSurvivesPostPublishDirSyncFailure(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.jsonl")
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), &Session{Messages: append([]provider.Message(nil), messages...)}, Options{
-		ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2,
-		WorkspaceID: "workspace", ModelRef: "model",
+		ContextWindow: window, CompactRatio: 0.85, WorkspaceID: "workspace", ModelRef: "model",
 	}, event.Discard)
 	a.BindSessionPath(path, true)
 
@@ -345,18 +342,12 @@ func TestLoadProjectionSidecarDoesNotRewriteExactKey(t *testing.T) {
 	}
 }
 
-func TestSaveCompactionStateStripsLegacyWriterFields(t *testing.T) {
+func TestSaveCompactionStatePersistsReceiptWithoutMirrors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.jsonl")
 	st := CompactionState{
 		SchemaVersion:     compactionStateSchemaCurrent,
 		TranscriptVersion: 1,
 		PromptCacheKey:    "k",
-		LastTrigger:       CompactionTriggerPressure,
-		LastMode:          CompactionModeSummarized,
-		LastSourceTokens:  1000,
-		LastResultTokens:  200,
-		BlockedInputHash:  "legacy-blocked",
-		BlockedReason:     "legacy",
 		LastReceipt: &ContextMaintenanceReceipt{
 			Status: "applied", Action: "summary", ProjectionVersion: 1,
 			InputHash: "in", OutputHash: "out",
@@ -380,9 +371,6 @@ func TestSaveCompactionStateStripsLegacyWriterFields(t *testing.T) {
 	got, ok, err := LoadCompactionState(path)
 	if err != nil || !ok {
 		t.Fatalf("load: ok=%v err=%v", ok, err)
-	}
-	if got.LastMode != "" || got.LastTrigger != "" || got.BlockedInputHash != "" {
-		t.Fatalf("legacy mirrors present after save: %+v", got)
 	}
 	if got.LastReceipt == nil || got.LastReceipt.Status != "applied" {
 		t.Fatalf("receipt lost: %+v", got.LastReceipt)

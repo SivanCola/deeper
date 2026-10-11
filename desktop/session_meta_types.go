@@ -13,7 +13,6 @@ type Meta struct {
 	Ready                 bool                        `json:"ready"`
 	Runtime               SessionRuntimeView          `json:"runtime"`
 	StartupErr            string                      `json:"startupErr,omitempty"`
-	HistoricalSource      *SessionSourceRef           `json:"historicalSource,omitempty"`
 	EventChannel          string                      `json:"eventChannel"`
 	SessionPath           string                      `json:"sessionPath,omitempty"`
 	SessionID             string                      `json:"sessionId,omitempty"`
@@ -30,13 +29,10 @@ type Meta struct {
 	ImageInputEnabled     bool                        `json:"imageInputEnabled"`
 	VisionFallbackEnabled bool                        `json:"visionFallbackEnabled,omitempty"`
 	AutoApproveTools      bool                        `json:"autoApproveTools"`
-	Bypass                bool                        `json:"bypass"` // legacy JSON key for YOLO/full-access tool auto-approval
 	CollaborationMode     string                      `json:"collaborationMode"`
 	ToolApprovalMode      string                      `json:"toolApprovalMode"`
 	// TokenMode and AgentPreset are deprecated dual-write wire values pinned to
 	// their safe defaults; one-version-old frontends still parse them.
-	TokenMode   string           `json:"tokenMode"`
-	AgentPreset string           `json:"agentPreset,omitempty"`
 	Goal        string           `json:"goal,omitempty"`
 	GoalStatus  string           `json:"goalStatus,omitempty"`
 	GoalView    *goaldomain.View `json:"goalView,omitempty"`
@@ -52,14 +48,12 @@ type Meta struct {
 
 type GoalRuntimeView struct {
 	TurnsUsed        int    `json:"turnsUsed"`
-	TurnsLimit       int    `json:"turnsLimit"` // Deprecated: always 0.
 	TokensUsed       int    `json:"tokensUsed"`
 	RequestsUsed     int    `json:"requestsUsed,omitempty"`
 	WorkDurationMs   int64  `json:"workDurationMs,omitempty"`
-	TokensLimit      int    `json:"tokensLimit"` // Deprecated: always 0; retained for bridge compatibility.
+	TokensLimit      int    `json:"tokensLimit"` // Optional goal token budget; zero is unlimited.
 	NoProgressTurns  int    `json:"noProgressTurns"`
-	NoProgressLimit  int    `json:"noProgressLimit"` // Deprecated: always 0.
 	LastReason       string `json:"lastReason,omitempty"`
 	StopCause        string `json:"stopCause,omitempty"`
-	BudgetExtensions int    `json:"budgetExtensions"` // Deprecated: always 0.
+	BudgetExtensions int    `json:"budgetExtensions"` // Number of accepted goal budget extensions.
 }

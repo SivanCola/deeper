@@ -5,15 +5,15 @@ import "deepzora/internal/config"
 func runtimeConfigHostClassification() []configTypeClassification {
 	return []configTypeClassification{
 		classifyConfigType[config.DesktopConfig](configFieldClasses{
-			runtime: "Currency ProviderAccess",
-			excluded: "Language LayoutStyle Theme ThemeStyle TerminalTheme ExternalOpener CloseBehavior DisplayMode " +
-				"StatusBarStyle StatusBarStyleInitialized StatusBarItems DefaultToolApprovalMode CheckUpdates " +
-				"UpdateChannel Telemetry Metrics SessionExperience ExpandThinking ReasoningDisplayMode ConversationWidth",
+			runtime: "ProviderAccess",
+			excluded: "Language LayoutStyle Theme ThemeStyle TerminalTheme ExternalOpener CloseBehavior " +
+				"StatusBarStyle StatusBarItems DefaultToolApprovalMode CheckUpdates " +
+				"Telemetry Metrics SessionExperience ConversationWidth",
 		}),
 		classifyConfigType[config.UIConfig](configFieldClasses{
-			excluded: "Theme ThemeStyle ShortcutLayout CloseBehavior ShowReasoning ShowTurnUsage CursorShape",
+			excluded: "Theme ThemeStyle ShowReasoning ShowTurnUsage CursorShape",
 		}),
-		classifyConfigType[config.CLIConfig](configFieldClasses{excluded: "UpdateChannel"}),
+		classifyConfigType[config.CLIConfig](configFieldClasses{excluded: ""}),
 		classifyConfigType[config.TelemetryConfig](configFieldClasses{excluded: "CLIMetrics"}),
 		classifyConfigType[config.NotificationsConfig](configFieldClasses{excluded: "Enabled TurnDone ApprovalRequest AskRequest"}),
 		classifyConfigType[config.StatuslineConfig](configFieldClasses{excluded: "Command"}),
@@ -21,19 +21,14 @@ func runtimeConfigHostClassification() []configTypeClassification {
 		// Credential variable names remain runtime inputs to subprocess protection.
 		classifyConfigType[config.BotConfig](configFieldClasses{
 			runtime: "QQ Feishu Weixin Connections",
-			excluded: "Enabled Model ToolApprovalMode MaxSteps DebounceMs QueueMode QueueCap QueueDrop " +
-				"IgnoreSelfMessages SelfUserIDs Control Pairing Allowlist Dingtalk Routes DesktopWatchers",
+			excluded: "Enabled Model ToolApprovalMode MaxSteps DebounceMs QueueMode QueueCap " +
+				"IgnoreSelfMessages SelfUserIDs Control Pairing Dingtalk Routes DesktopWatchers",
 		}),
 		classifyConfigType[config.BotDesktopWatcherConfig](configFieldClasses{excluded: "Platform ConnectionID Domain ChatType ChatID"}),
 		classifyConfigType[config.BotSelfUserIDs](configFieldClasses{excluded: "QQ Feishu Weixin Dingtalk"}),
 		classifyConfigType[config.BotControlConfig](configFieldClasses{excluded: "Enabled Addr TokenEnv"}),
 		classifyConfigType[config.BotRouteConfig](configFieldClasses{
 			excluded: "ConnectionID Platform ChatType ChatID UserID ThreadID Model ToolApprovalMode WorkspaceRoot",
-		}),
-		classifyConfigType[config.BotAllowlist](configFieldClasses{
-			excluded: "Enabled AllowAll QQUsers FeishuUsers WeixinUsers QQApprovers FeishuApprovers WeixinApprovers " +
-				"QQAdmins FeishuAdmins WeixinAdmins QQGroups FeishuGroups WeixinGroups " +
-				"DingtalkUsers DingtalkApprovers DingtalkAdmins DingtalkGroups",
 		}),
 		classifyConfigType[config.BotPairingConfig](configFieldClasses{excluded: "Enabled RequestTTLMinutes MaxPendingPerPlatform"}),
 		classifyConfigType[config.BotAccessConfig](configFieldClasses{excluded: "Enabled AllowAll PairingEnabled Users Groups Approvers Admins"}),

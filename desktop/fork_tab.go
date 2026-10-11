@@ -261,7 +261,7 @@ func (a *App) openForkedSessionTabWithWorkspace(sourceTab *WorkspaceTab, locator
 	a.mu.RUnlock()
 	// A fork is a new session: the source's preset was chosen for the source.
 	toolApprovalMode := a.sessionPresets.restore(locator.SessionID, newSessionPreset(config.LoadForEdit(config.UserConfigPath())))
-	mode = tabModeFromAxes(tabModeHasPlan(mode), toolApprovalMode == control.ToolApprovalDangerFullAccess)
+	mode = tabModeForPlan(tabModeHasPlan(mode))
 	if scope == "project" {
 		releaseAdmission, err := a.beginWorkspaceRuntimeAdmission(workspaceRoot)
 		if err != nil {

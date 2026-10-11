@@ -61,9 +61,7 @@ func TestRememberBotRemoteStoresIncomingChatID(t *testing.T) {
 	if m := wx.SessionMappings[0]; m.RemoteID != "wx-chat-1" || m.Scope != "global" || m.WorkspaceRoot != "" || m.UpdatedAt == "" {
 		t.Fatalf("weixin mapping = %+v, want global wx-chat-1 with timestamp", m)
 	}
-	if got := got.Bot.Allowlist.WeixinUsers; len(got) != 1 || got[0] != "wx-user-1" {
-		t.Fatalf("weixin users = %+v, want wx-user-1", got)
-	}
+
 }
 
 func TestRememberBotRemoteKeepsProjectScopedConnection(t *testing.T) {
@@ -99,12 +97,10 @@ func TestRememberBotRemoteKeepsProjectScopedConnection(t *testing.T) {
 	if m := got.Bot.Connections[0].SessionMappings[0]; m.RemoteID != "oc-chat-1" || m.Scope != "project" || m.WorkspaceRoot != workspace {
 		t.Fatalf("mapping = %+v, want project scoped remote", m)
 	}
-	if got := got.Bot.Allowlist.FeishuUsers; len(got) != 1 || got[0] != "ou-user-1" {
-		t.Fatalf("feishu users = %+v, want ou-user-1", got)
-	}
+
 }
 
-func TestRememberBotInboundStoresGroupAllowlist(t *testing.T) {
+func TestRememberBotInboundStoresGroupMapping(t *testing.T) {
 	isolateBotUserConfig(t)
 	cfg := config.Default()
 	cfg.Bot.Connections = []config.BotConnectionConfig{
@@ -128,12 +124,10 @@ func TestRememberBotInboundStoresGroupAllowlist(t *testing.T) {
 	}
 
 	got := config.LoadForEdit(config.UserConfigPath())
-	if users := got.Bot.Allowlist.FeishuUsers; len(users) != 1 || users[0] != "ou-user-1" {
-		t.Fatalf("feishu users = %+v, want one ou-user-1", users)
+	if len(got.Bot.Connections[0].SessionMappings) != 1 || got.Bot.Connections[0].SessionMappings[0].UserID != "ou-user-1" {
+		t.Fatalf("mappings = %+v", got.Bot.Connections[0].SessionMappings)
 	}
-	if groups := got.Bot.Allowlist.FeishuGroups; len(groups) != 1 || groups[0] != "oc-group-1" {
-		t.Fatalf("feishu groups = %+v, want one oc-group-1", groups)
-	}
+
 }
 
 func TestBotDoctorReportsSessionMappingCounts(t *testing.T) {
@@ -169,10 +163,7 @@ func TestBotDoctorDeepReportsPairingAndRoles(t *testing.T) {
 	cfg := config.Default()
 	cfg.Bot.Enabled = true
 	cfg.Bot.Pairing.Enabled = true
-	cfg.Bot.Allowlist.Enabled = true
-	cfg.Bot.Allowlist.FeishuUsers = []string{"ou-user"}
-	cfg.Bot.Allowlist.FeishuApprovers = []string{"ou-approver"}
-	cfg.Bot.Allowlist.FeishuAdmins = []string{"ou-admin"}
+	cfg.Bot.Connections = []config.BotConnectionConfig{{ID: "feishu-feishu", Provider: "feishu", Enabled: true, Access: config.BotAccessConfig{Enabled: true, Users: []string{"ou-user"}, Approvers: []string{"ou-approver"}, Admins: []string{"ou-admin"}}}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
@@ -203,17 +194,19 @@ func TestBotDoctorDeepReportsPairingAndRoles(t *testing.T) {
 	}
 }
 
-func TestBotPairingApproveAddsAllowlistAndFirstAdmin(t *testing.T) {
+func TestBotPairingApproveAddsConnectionUserAndFirstAdmin(t *testing.T) {
 	isolateBotUserConfig(t)
 	cfg := config.Default()
+	cfg.Bot.Connections = []config.BotConnectionConfig{{ID: "weixin-weixin", Provider: "weixin", Enabled: true}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 	req, _, err := bot.CreateOrRefreshPairingRequest(bot.InboundMessage{
-		Platform: bot.PlatformWeixin,
-		ChatType: bot.ChatDM,
-		ChatID:   "wx-chat",
-		UserID:   "wx-user",
+		Platform:     bot.PlatformWeixin,
+		ConnectionID: "weixin-weixin",
+		ChatType:     bot.ChatDM,
+		ChatID:       "wx-chat",
+		UserID:       "wx-user",
 	}, bot.PairingConfig{Enabled: true})
 	if err != nil {
 		t.Fatalf("create pairing: %v", err)
@@ -223,13 +216,13 @@ func TestBotPairingApproveAddsAllowlistAndFirstAdmin(t *testing.T) {
 		t.Fatalf("botPairing approve rc = %d, want 0", rc)
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
-	if users := got.Bot.Allowlist.WeixinUsers; len(users) != 1 || users[0] != "wx-user" {
+	if users := got.Bot.Connections[0].Access.Users; len(users) != 1 || users[0] != "wx-user" {
 		t.Fatalf("weixin users = %+v, want wx-user", users)
 	}
-	if admins := got.Bot.Allowlist.WeixinAdmins; len(admins) != 1 || admins[0] != "wx-user" {
+	if admins := got.Bot.Connections[0].Access.Admins; len(admins) != 1 || admins[0] != "wx-user" {
 		t.Fatalf("weixin admins = %+v, want first paired admin", admins)
 	}
-	if approvers := got.Bot.Allowlist.WeixinApprovers; len(approvers) != 1 || approvers[0] != "wx-user" {
+	if approvers := got.Bot.Connections[0].Access.Approvers; len(approvers) != 1 || approvers[0] != "wx-user" {
 		t.Fatalf("weixin approvers = %+v, want first paired approver", approvers)
 	}
 }
@@ -269,9 +262,7 @@ func TestBotPairingApproveAddsUserToConnectionAccess(t *testing.T) {
 		t.Fatalf("botPairing approve rc = %d, want 0", rc)
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
-	if users := got.Bot.Allowlist.FeishuUsers; len(users) != 0 {
-		t.Fatalf("global feishu users = %+v, want unchanged global allowlist", users)
-	}
+
 	if len(got.Bot.Connections) != 1 {
 		t.Fatalf("connections = %+v, want one connection", got.Bot.Connections)
 	}
@@ -290,8 +281,7 @@ func TestBotDoctorPrefersUserBotSettingsOverProjectBotConfig(t *testing.T) {
 	isolateBotUserConfig(t)
 	userCfg := config.Default()
 	userCfg.Bot.Enabled = true
-	userCfg.Bot.Allowlist.Enabled = true
-	userCfg.Bot.Allowlist.FeishuUsers = []string{"ou-user"}
+	userCfg.Bot.QQ.Access = config.BotAccessConfig{Enabled: true, Users: []string{"qq-user"}}
 	userCfg.Bot.Connections = []config.BotConnectionConfig{
 		{ID: "feishu-lark", Provider: "feishu", Domain: "lark", Label: "Lark", Enabled: true, Status: "connected"},
 	}
@@ -336,7 +326,7 @@ func TestBotDoctorIgnoresProjectBotConfig(t *testing.T) {
 		}
 		projectCfg := config.Default()
 		projectCfg.Bot.Enabled = true
-		projectCfg.Bot.Allowlist.AllowAll = true
+		projectCfg.Bot.QQ.Access.AllowAll = true
 		projectCfg.Bot.Connections = []config.BotConnectionConfig{
 			{ID: "weixin-weixin", Provider: "weixin", Domain: "weixin", Label: "微信", Enabled: true, Status: "connected"},
 		}

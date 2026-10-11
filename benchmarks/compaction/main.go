@@ -110,11 +110,9 @@ func newHarness(t *testingDir, p provider.Provider, window int, rec *callRecorde
 		ContextWindow: window,
 		ArchiveDir:    filepath.Join(t.dir, "archive"),
 		SessionPath:   path,
-		RecentKeep:    4,
 		// boot's default when cfg.Agent.Keep is unset; without it the bench
 		// would measure a configuration no real session runs.
-		KeepPolicy: agent.KeepErrors,
-		Ablation:   foldArm(arm.incremental),
+		Ablation: foldArm(arm.incremental),
 	}, rec.sink())
 	return &harness{sess: sess, agentA: a, path: path, calls: rec, snip: arm.snip}
 }
@@ -165,8 +163,6 @@ func (h *harness) runGeneration(ctx context.Context, gen int, probes []probe) ge
 		r.ProjectionTokens = st.Projection.ProjectionTokens
 		if st.LastReceipt != nil && st.LastReceipt.Action == "summary" {
 			r.Mode = agent.CompactionModeSummarized
-		} else if st.LastMode != "" {
-			r.Mode = st.LastMode
 		}
 	}
 	return r

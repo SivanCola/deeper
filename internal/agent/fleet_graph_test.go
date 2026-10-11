@@ -160,7 +160,7 @@ func TestFleetSkipsDependentsOfFailedTask(t *testing.T) {
 	prov := &fleetScriptedFailureProvider{}
 	reg := tool.NewRegistry()
 	reg.Add(fakeReadFileTool{})
-	task := NewTaskTool(prov, nil, reg, 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: prov, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), root, "base", "high").
 		WithScheduler(NewSubagentScheduler(4, 4))
 	fleet := NewFleetTool(task)

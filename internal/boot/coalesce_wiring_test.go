@@ -66,7 +66,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-coalesce-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 

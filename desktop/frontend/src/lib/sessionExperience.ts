@@ -8,7 +8,6 @@ export type WorkProcessPresentation = {
   keepExpandedAfterCompletion: boolean;
 };
 
-const SESSION_EXPERIENCE_KEY = "deepzora-session-experience";
 const SESSION_EXPERIENCE_EVENT = "deepzora:session-experience";
 
 let current: SessionExperience = "standard";
@@ -27,27 +26,6 @@ function emit(): void {
   }
 }
 
-function emitCompatibilitySignals(next: SessionExperience): void {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("deepzora:process-fold", {
-      detail: next === "deep" ? "expanded" : "auto",
-    }));
-    window.dispatchEvent(new CustomEvent("deepzora:reasoning-display-mode", {
-      detail: next === "deep" ? "expanded" : "auto",
-    }));
-  }
-}
-
-function writeCompatibilityMirrors(next: SessionExperience): void {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(SESSION_EXPERIENCE_KEY, next);
-  localStorage.setItem("deepzora-display-mode", "standard");
-  localStorage.setItem("deepzora-process-fold", next === "deep" ? "expanded" : "auto");
-  // The oldest boolean summary key cannot represent Deep. Let the mirrored
-  // backend reasoning field win instead of reviving a contradictory value.
-  localStorage.removeItem("deepzora-reasoning-summary");
-}
-
 export function getSessionExperience(): SessionExperience {
   // The backend snapshot is authoritative. Before it arrives, use the safe
   // default instead of reviving a stale value written by an older frontend.
@@ -59,23 +37,18 @@ export function hydrateSessionExperience(value: unknown): void {
   const next = normalize(value);
   hydrated = true;
   current = next;
-  writeCompatibilityMirrors(next);
   emit();
-  emitCompatibilitySignals(next);
 }
 
 export function applySessionExperience(value: SessionExperience): void {
   const next = normalize(value);
   hydrated = true;
-  writeCompatibilityMirrors(next);
   if (next === current) {
-    emitCompatibilitySignals(next);
     return;
   }
   for (const listener of beforeChangeListeners) listener(current, next);
   current = next;
   emit();
-  emitCompatibilitySignals(next);
 }
 
 /** Synchronously capture layout state before a mode change updates row

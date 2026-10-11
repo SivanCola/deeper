@@ -32,8 +32,8 @@ func TestSetActiveTabRepublishesTerminalRemoteState(t *testing.T) {
 }
 
 func TestRemoteTabServeDownSavedSessionClearsPendingBeforeDelayedMarker(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const savedPath = "/sessions/saved.jsonl"
+	const oldPath = "session-id:old"
+	const savedPath = "session-id:saved"
 	feed := make(chan string, 1)
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "old", Path: oldPath, Title: "Old", Current: true},
@@ -79,7 +79,7 @@ func TestRemoteTabServeDownSavedSessionClearsPendingBeforeDelayedMarker(t *testi
 
 	eventPrefix := "remote-tab:" + meta.ID + ":event"
 	before := log.count(eventPrefix)
-	feed <- `{"kind":"session_changed","sessionPath":"/sessions/saved.jsonl","sessionCurrent":true}`
+	feed <- `{"kind":"session_changed","sessionPath":"session-id:saved","sessionCurrent":true}`
 	waitForRemoteEventCount(t, log, eventPrefix, before+1)
 	a.remoteTabMu.Lock()
 	pending, prompt = len(tab.pendingEvents), tab.runtime.pendingPrompt
@@ -90,8 +90,8 @@ func TestRemoteTabServeDownSavedSessionClearsPendingBeforeDelayedMarker(t *testi
 }
 
 func TestExternalResumeRefreshesAdoptedSessionTitle(t *testing.T) {
-	const firstPath = "/sessions/first.jsonl"
-	const nextPath = "/sessions/next.jsonl"
+	const firstPath = "session-id:first"
+	const nextPath = "session-id:next"
 	feed := make(chan string, 1)
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "first", Path: firstPath, Title: "First title", Current: true}})
 	kernel := &fakeRemoteKernel{
@@ -112,7 +112,7 @@ func TestExternalResumeRefreshesAdoptedSessionTitle(t *testing.T) {
 
 	eventPrefix := "remote-tab:" + meta.ID + ":event"
 	before := log.count(eventPrefix)
-	feed <- `{"kind":"session_changed","sessionPath":"/sessions/next.jsonl","sessionCurrent":true}`
+	feed <- `{"kind":"session_changed","sessionPath":"session-id:next","sessionCurrent":true}`
 	waitForRemoteEventCount(t, log, eventPrefix, before+1)
 	deadline := time.Now().Add(2 * time.Second)
 	for {
@@ -130,10 +130,10 @@ func TestExternalResumeRefreshesAdoptedSessionTitle(t *testing.T) {
 }
 
 func TestRemoteAttachRetiringSessionConflictKeepsCurrentReady(t *testing.T) {
-	const currentPath = "/sessions/current.jsonl"
+	const currentPath = "session-id:current"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "current", Path: currentPath, Title: "Current title", Current: true},
-		{Name: "retiring", Path: "/sessions/retiring.jsonl", Title: "Retiring title"},
+		{Name: "retiring", Path: "session-id:retiring", Title: "Retiring title"},
 	})
 	fs.mu.Lock()
 	fs.failEnter = "session is finishing background teardown; retry shortly"
@@ -145,7 +145,7 @@ func TestRemoteAttachRetiringSessionConflictKeepsCurrentReady(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "retiring", SessionPath: "/sessions/retiring.jsonl"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "retiring", SessionPath: "session-id:retiring"})
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[meta.ID]
 	state, path, title := tab.state, tab.routing.currentPath, tab.topicTitle
@@ -156,8 +156,8 @@ func TestRemoteAttachRetiringSessionConflictKeepsCurrentReady(t *testing.T) {
 }
 
 func TestRemoteResumeTransportFailureReconcilesCommittedTarget(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	seedBridgeTestHost(t, "box")
 	postCalls := 0
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -167,7 +167,7 @@ func TestRemoteResumeTransportFailureReconcilesCommittedTarget(t *testing.T) {
 			// Model a response lost after Serve has already committed targetPath.
 			return nil, io.ErrUnexpectedEOF
 		case req.Method == http.MethodGet && req.URL.Path == "/sessions":
-			body := `[{"name":"target","path":"/sessions/target.jsonl","title":"Target","current":true}]`
+			body := `[{"name":"target","path":"session-id:target","title":"Target","current":true}]`
 			return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
 		default:
 			return nil, errors.New("unexpected request")
@@ -192,9 +192,9 @@ func TestRemoteResumeTransportFailureReconcilesCommittedTarget(t *testing.T) {
 }
 
 func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
-	const laterPath = "/sessions/later.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
+	const laterPath = "session-id:later"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -202,8 +202,8 @@ func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
 		routing: remoteTabSessionRouting{
 			currentPath: targetPath, rehydratingPath: targetPath, running: map[string]bool{},
 			rehydratingFrames: []json.RawMessage{
-				json.RawMessage(`{"kind":"text","text":"target-first","sessionPath":"/sessions/target.jsonl"}`),
-				json.RawMessage(`{"kind":"text","text":"target-second","sessionPath":"/sessions/target.jsonl"}`),
+				json.RawMessage(`{"kind":"text","text":"target-first","sessionPath":"session-id:target"}`),
+				json.RawMessage(`{"kind":"text","text":"target-second","sessionPath":"session-id:target"}`),
 			},
 		},
 	}
@@ -269,14 +269,14 @@ func TestRemoteResumeReplayStopsAfterLaterSessionAdoption(t *testing.T) {
 }
 
 func TestRemoteResumeReplaysPromptArrivingDuringDrain(t *testing.T) {
-	const targetPath = "/sessions/target.jsonl"
+	const targetPath = "session-id:target"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
 		routing: remoteTabSessionRouting{
 			currentPath: targetPath, rehydratingPath: targetPath, running: map[string]bool{},
 			rehydratingFrames: []json.RawMessage{
-				json.RawMessage(`{"kind":"text","text":"drain-start","sessionPath":"/sessions/target.jsonl"}`),
+				json.RawMessage(`{"kind":"text","text":"drain-start","sessionPath":"session-id:target"}`),
 			},
 		},
 	}
@@ -310,7 +310,7 @@ func TestRemoteResumeReplaysPromptArrivingDuringDrain(t *testing.T) {
 	if snapshotPending != 0 {
 		t.Fatalf("snapshot pending events = %d, want 0", snapshotPending)
 	}
-	approval := json.RawMessage(`{"kind":"approval_request","approval":{"id":"during-drain"},"sessionPath":"/sessions/target.jsonl","sessionCurrent":true}`)
+	approval := json.RawMessage(`{"kind":"approval_request","approval":{"id":"during-drain"},"sessionPath":"session-id:target","sessionCurrent":true}`)
 	if !a.bufferRemoteTabResumeFrame(tab.id, tab.gen, targetPath, "approval_request", approval) {
 		t.Fatal("prompt arriving during drain was not buffered")
 	}
@@ -333,9 +333,9 @@ func TestRemoteResumeReplaysPromptArrivingDuringDrain(t *testing.T) {
 }
 
 func TestRemoteRotationResponseCannotOverwriteLaterRouteAdoption(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const responsePath = "/sessions/response.jsonl"
-	const laterPath = "/sessions/later.jsonl"
+	const oldPath = "session-id:old"
+	const responsePath = "session-id:response"
+	const laterPath = "session-id:later"
 	requestEntered := make(chan struct{})
 	releaseResponse := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -381,8 +381,8 @@ func TestRemoteRotationResponseCannotOverwriteLaterRouteAdoption(t *testing.T) {
 }
 
 func TestRemoteStatusAdoptionWaitsForFramePublication(t *testing.T) {
-	const currentPath = "/sessions/current.jsonl"
-	const laterPath = "/sessions/later.jsonl"
+	const currentPath = "session-id:current"
+	const laterPath = "session-id:later"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -403,7 +403,7 @@ func TestRemoteStatusAdoptionWaitsForFramePublication(t *testing.T) {
 	}
 	frameDone := make(chan bool, 1)
 	go func() {
-		frame := json.RawMessage(`{"kind":"text","text":"current-frame","sessionPath":"/sessions/current.jsonl"}`)
+		frame := json.RawMessage(`{"kind":"text","text":"current-frame","sessionPath":"session-id:current"}`)
 		frameDone <- a.publishRemoteTabFrame(tab.id, tab.gen, currentPath, "text", frame)
 	}()
 	select {
@@ -413,7 +413,7 @@ func TestRemoteStatusAdoptionWaitsForFramePublication(t *testing.T) {
 	}
 	statusDone := make(chan bool, 1)
 	go func() {
-		statusDone <- a.recordRemoteTabSessionStatus(tab.id, client, tab.gen, 11, json.RawMessage(`{"sessionPath":"/sessions/later.jsonl"}`))
+		statusDone <- a.recordRemoteTabSessionStatus(tab.id, client, tab.gen, 11, json.RawMessage(`{"sessionPath":"session-id:later"}`))
 	}()
 	select {
 	case <-statusDone:
@@ -439,9 +439,9 @@ func TestRemoteStatusAdoptionWaitsForFramePublication(t *testing.T) {
 }
 
 func TestRemoteRejectedResumeReconciliationWaitsForFramePublication(t *testing.T) {
-	const previousPath = "/sessions/previous.jsonl"
-	const targetPath = "/sessions/target.jsonl"
-	const authoritativePath = "/sessions/authoritative.jsonl"
+	const previousPath = "session-id:previous"
+	const targetPath = "session-id:target"
+	const authoritativePath = "session-id:authoritative"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -463,7 +463,7 @@ func TestRemoteRejectedResumeReconciliationWaitsForFramePublication(t *testing.T
 	}
 	frameDone := make(chan bool, 1)
 	go func() {
-		frame := json.RawMessage(`{"kind":"text","text":"target-frame","sessionPath":"/sessions/target.jsonl"}`)
+		frame := json.RawMessage(`{"kind":"text","text":"target-frame","sessionPath":"session-id:target"}`)
 		frameDone <- a.publishRemoteTabFrameForRoute(tab.id, tab, client, tab.gen, targetPath, true, "text", frame)
 	}()
 	select {
@@ -506,10 +506,10 @@ func TestRemoteRejectedResumeReconciliationWaitsForFramePublication(t *testing.T
 }
 
 func TestRemoteRejectedResumeReconciliationCannotOverwriteNewerAdoption(t *testing.T) {
-	const previousPath = "/sessions/previous.jsonl"
-	const targetPath = "/sessions/target.jsonl"
-	const staleAuthoritativePath = "/sessions/stale-authoritative.jsonl"
-	const newerPath = "/sessions/newer.jsonl"
+	const previousPath = "session-id:previous"
+	const targetPath = "session-id:target"
+	const staleAuthoritativePath = "session-id:stale-authoritative"
+	const newerPath = "session-id:newer"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -538,8 +538,8 @@ func TestRemoteRejectedResumeReconciliationCannotOverwriteNewerAdoption(t *testi
 }
 
 func TestRemoteRejectedResumeReconcilesReselectedCurrentSession(t *testing.T) {
-	const currentPath = "/sessions/current.jsonl"
-	const authoritativePath = "/sessions/authoritative.jsonl"
+	const currentPath = "session-id:current"
+	const authoritativePath = "session-id:authoritative"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -565,9 +565,9 @@ func TestRemoteRejectedResumeReconcilesReselectedCurrentSession(t *testing.T) {
 }
 
 func TestRemoteRejectedResumeRollbackCannotMarkNewerRouteErrored(t *testing.T) {
-	const previousPath = "/sessions/previous.jsonl"
-	const targetPath = "/sessions/target.jsonl"
-	const newerPath = "/sessions/newer.jsonl"
+	const previousPath = "session-id:previous"
+	const targetPath = "session-id:target"
+	const newerPath = "session-id:newer"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -592,8 +592,8 @@ func TestRemoteRejectedResumeRollbackCannotMarkNewerRouteErrored(t *testing.T) {
 }
 
 func TestRemoteReselectionSuccessCannotOverwriteNewerAdoption(t *testing.T) {
-	const previousPath = "/sessions/previous.jsonl"
-	const newerPath = "/sessions/newer.jsonl"
+	const previousPath = "session-id:previous"
+	const newerPath = "session-id:newer"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -616,8 +616,8 @@ func TestRemoteReselectionSuccessCannotOverwriteNewerAdoption(t *testing.T) {
 
 func TestRemoteResumeCommitPublicationBlocksNewerAdoption(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	const targetPath = "/sessions/target.jsonl"
-	const newerPath = "/sessions/newer.jsonl"
+	const targetPath = "session-id:target"
+	const newerPath = "session-id:newer"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 7,
@@ -681,8 +681,8 @@ func TestRemoteResumeCommitPublicationBlocksNewerAdoption(t *testing.T) {
 }
 
 func TestRemoteAttachResponseCannotOverwriteNewerAdoption(t *testing.T) {
-	const responsePath = "/sessions/response.jsonl"
-	const newerPath = "/sessions/newer.jsonl"
+	const responsePath = "session-id:response"
+	const newerPath = "session-id:newer"
 	tab := &remoteTab{
 		id: "remote-1", gen: 7, topicTitle: "Newer",
 		session: remoteTabSessionState{name: "newer", path: newerPath},
@@ -704,8 +704,8 @@ func TestRemoteAttachResponseCannotOverwriteNewerAdoption(t *testing.T) {
 }
 
 func TestExternalSessionAdoptionResetsAndSeedsForegroundRuntime(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	tab := &remoteTab{
 		routing: remoteTabSessionRouting{currentPath: oldPath, running: map[string]bool{targetPath: true}},
 		session: remoteTabSessionState{name: "old", path: oldPath},
@@ -731,8 +731,8 @@ func TestRevivedSessionSelectionWaitsForVisibilityCommit(t *testing.T) {
 	if err := editUserConfig(func(c *config.Config) error { return c.SetDesktopLayoutStyle("workbench") }); err != nil {
 		t.Fatal(err)
 	}
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	remote := &remoteTab{
 		id: "remote-1", ref: RemoteTabRef{HostID: "box", Workspace: "~/app"}, state: "disconnected",
 		topicTitle: "Old title",
@@ -769,8 +769,8 @@ func TestRevivedSessionSelectionWaitsForVisibilityCommit(t *testing.T) {
 // foreground, so reclaim looked successful and messages landed in the wrong
 // transcript.
 func TestSpectatorRouteResistsForegroundCurrentMarker(t *testing.T) {
-	const watched = "/sessions/watched.jsonl"
-	const foreground = "/sessions/foreground.jsonl"
+	const watched = "session-id:watched"
+	const foreground = "session-id:foreground"
 	client := &http.Client{}
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, gen: 3,

@@ -10,7 +10,6 @@ import (
 	"sync"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/provider"
 )
 
@@ -400,45 +399,6 @@ func TestSessionQueryColdReadDoesNotAcquireWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := service.Close(t.Context(), ref); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestServiceContinueLegacyPublishesNewIdentityAndLeavesSourceUnchanged(t *testing.T) {
-	root := t.TempDir()
-	legacy := filepath.Join(root, "sessions", "old.jsonl")
-	if err := os.MkdirAll(filepath.Dir(legacy), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	source := agent.NewSession("system")
-	source.Add(provider.Message{ID: "user", Role: provider.RoleUser, Content: "hello"})
-	if err := source.Save(legacy); err != nil {
-		t.Fatal(err)
-	}
-	before, err := os.ReadFile(legacy)
-	if err != nil {
-		t.Fatal(err)
-	}
-	service, err := NewService("local", NewFilesystemPersistence(filepath.Join(root, "sessions-v4")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = service.CloseAll(context.Background()) })
-	runtime, migration, err := service.ContinueLegacy(t.Context(), legacy, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if runtime.Ref().SessionID != migration.TargetID || runtime.Ref().SessionID == "old" {
-		t.Fatalf("runtime=%+v migration=%+v", runtime.Ref(), migration)
-	}
-	after, err := os.ReadFile(legacy)
-	if err != nil || string(after) != string(before) {
-		t.Fatal("legacy source changed during continue")
-	}
-	if got := runtime.Session().Snapshot().Projection.ModelMessages; len(got) != 2 || got[1].ID != "user" {
-		t.Fatalf("migrated history = %#v", got)
-	}
-	if err := service.Close(t.Context(), runtime.Ref()); err != nil {
 		t.Fatal(err)
 	}
 }

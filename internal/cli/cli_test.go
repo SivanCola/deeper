@@ -104,25 +104,6 @@ func TestLoadResumableSessionRejectsCleanupPending(t *testing.T) {
 	}
 }
 
-func TestRunResumeRejectsCleanupPending(t *testing.T) {
-	isolateCLIConfigHome(t)
-
-	path := filepath.Join(t.TempDir(), "pending-run.jsonl")
-	saveTestSession(t, path, "pending prompt")
-	if err := agent.MarkCleanupPending(path, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	errOut := captureStderr(t, func() {
-		if rc := runAgent([]string{"--resume", path, "continue task"}, "dev"); rc != 1 {
-			t.Fatalf("run --resume cleanup-pending rc = %d, want 1", rc)
-		}
-	})
-	if !strings.Contains(errOut, "pending cleanup") {
-		t.Fatalf("run --resume cleanup-pending stderr = %q, want pending cleanup", errOut)
-	}
-}
-
 func TestServeResumeRejectsCleanupPending(t *testing.T) {
 	isolateCLIConfigHome(t)
 
@@ -209,40 +190,6 @@ func TestIsolateCLIConfigHomeOverridesExistingDeepzoraHome(t *testing.T) {
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		t.Fatalf("UserConfigPath() = %q, outside isolated home %q", got, home)
 	}
-}
-
-func TestMCPMigrationWaitsForCLIWorkspace(t *testing.T) {
-	isolateCLIConfigHome(t)
-	cwd := mustGetwd(t)
-	if err := os.WriteFile(filepath.Join(cwd, "deepzora.toml"), []byte(`
-[[plugins]]
-name = "cwd-project"
-command = "cwd-project-bin"
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	migrateLegacyConfigForCLI()
-	if cfg := config.LoadForEdit(config.UserConfigPath()); hasPluginNamed(cfg, "cwd-project") {
-		t.Fatalf("early CLI legacy migration imported the cwd project plugin: %+v", cfg.Plugins)
-	}
-
-	migrateMCPConfigForCLIWorkspace()
-	if cfg := config.LoadForEdit(config.UserConfigPath()); !hasPluginNamed(cfg, "cwd-project") {
-		t.Fatalf("workspace-aware CLI migration did not import project plugin: %+v", cfg.Plugins)
-	}
-}
-
-func hasPluginNamed(cfg *config.Config, name string) bool {
-	if cfg == nil {
-		return false
-	}
-	for _, plugin := range cfg.Plugins {
-		if plugin.Name == name {
-			return true
-		}
-	}
-	return false
 }
 
 func TestMetadataCommandsDoNotProbeTerminalTheme(t *testing.T) {
@@ -381,7 +328,6 @@ func TestRunRoutesBareInteractiveFlagsToSession(t *testing.T) {
 		{"--resume=true"},
 		{"-r=true"},
 		{"--yolo=true"},
-		{"--dangerously-skip-permissions=true"},
 		{"--permission-mode=plan"},
 		{"--effort=max"},
 	} {
@@ -516,11 +462,11 @@ func TestRunPrintFlagAfterLeadingFlagsDispatchesRun(t *testing.T) {
 
 func TestParsePermissionModeClaudeAliases(t *testing.T) {
 	tests := map[string]cliPermissionMode{
-		"ask":               {approval: control.ToolApprovalAsk},
-		"manual":            {approval: control.ToolApprovalAsk},
+		"ask":               {approval: control.ToolApprovalReadOnly},
+		"manual":            {approval: control.ToolApprovalReadOnly},
 		"acceptEdits":       {approval: control.ToolApprovalWorkspaceWrite},
 		"dontAsk":           {approval: control.ToolApprovalReadOnly},
-		"plan":              {approval: control.ToolApprovalAsk, plan: true},
+		"plan":              {approval: control.ToolApprovalReadOnly, plan: true},
 		"bypassPermissions": {approval: control.ToolApprovalWorkspaceWrite},
 	}
 	for input, want := range tests {
@@ -565,96 +511,6 @@ func TestRunKeepsChatAndCodeCompatibilityAliases(t *testing.T) {
 	want := [][]string{{"--resume"}, {"--continue"}}
 	if !reflect.DeepEqual(calls, want) {
 		t.Fatalf("interactive calls = %#v, want %#v", calls, want)
-	}
-}
-
-func TestRunMetadataCommandsDoNotMigrateLegacyConfig(t *testing.T) {
-	isolateCLIConfigHome(t)
-	legacyPath := filepath.Join(filepath.Dir(config.UserConfigPath()), "deepzora.toml")
-	if err := os.MkdirAll(filepath.Dir(legacyPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(legacyPath, []byte(`default_model = "deepseek-flash"`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	out := captureStdout(t, func() {
-		if rc := Run([]string{"version"}, "test-version"); rc != 0 {
-			t.Fatalf("version rc = %d, want 0", rc)
-		}
-	})
-	if !strings.Contains(out, "deepzora test-version") {
-		t.Fatalf("version output = %q", out)
-	}
-	if _, err := os.Stat(config.UserConfigPath()); !os.IsNotExist(err) {
-		t.Fatalf("version should not migrate legacy config, stat err=%v", err)
-	}
-}
-
-func TestConfigLoadIgnoresRetiredAutoPlan(t *testing.T) {
-	isolateCLIConfigHome(t)
-	if err := os.WriteFile("deepzora.toml", []byte("[agent]\nauto_plan = \"on\"\nauto_plan_classifier = \"deepseek-flash\"\n"), 0o644); err != nil {
-		t.Fatalf("write project config: %v", err)
-	}
-
-	cfg, err := config.Load()
-	if err != nil {
-		t.Fatalf("load config: %v", err)
-	}
-	if cfg.Agent.AutoPlan != "off" || cfg.Agent.AutoPlanClassifier != "" {
-		t.Fatalf("retired auto-plan config = (%q, %q), want off/empty", cfg.Agent.AutoPlan, cfg.Agent.AutoPlanClassifier)
-	}
-}
-
-func TestConfigAutoPlanCompatibilityCommandKeepsOffAsNoOp(t *testing.T) {
-	isolateCLIConfigHome(t)
-	path := config.UserConfigPath()
-	cfg := config.Default()
-	cfg.Agent.Temperature = 0.4
-	if err := cfg.SaveTo(path); err != nil {
-		t.Fatalf("write user config: %v", err)
-	}
-	before, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read user config before command: %v", err)
-	}
-
-	out := captureStdout(t, func() {
-		if rc := Run([]string{"config", "auto-plan", "off"}, "test-version"); rc != 0 {
-			t.Fatalf("config auto-plan off rc = %d, want 0", rc)
-		}
-	})
-	if out != "auto_plan = \"off\"\n" {
-		t.Fatalf("config auto-plan off output = %q", out)
-	}
-	after, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read user config after command: %v", err)
-	}
-	if !bytes.Equal(after, before) {
-		t.Fatalf("config auto-plan off must not rewrite user config\nbefore:\n%s\nafter:\n%s", before, after)
-	}
-
-	out = captureStdout(t, func() {
-		if rc := Run([]string{"config", "auto-plan"}, "test-version"); rc != 0 {
-			t.Fatalf("config auto-plan query rc = %d, want 0", rc)
-		}
-	})
-	if out != "auto_plan = \"off\"\n" {
-		t.Fatalf("config auto-plan query output = %q", out)
-	}
-}
-
-func TestConfigAutoPlanCompatibilityCommandRejectsEnable(t *testing.T) {
-	isolateCLIConfigHome(t)
-
-	errOut := captureStderr(t, func() {
-		if rc := Run([]string{"config", "auto-plan", "on"}, "test-version"); rc != 2 {
-			t.Fatalf("config auto-plan on rc = %d, want 2", rc)
-		}
-	})
-	if !strings.Contains(errOut, "automatic plan mode has been retired") {
-		t.Fatalf("config auto-plan on stderr = %q", errOut)
 	}
 }
 
@@ -884,7 +740,7 @@ func TestConfigCurrencyCommandWritesUserConfig(t *testing.T) {
 		t.Fatalf("config currency output = %q", out)
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if got := cfg.DesktopCurrency(); got != "CNY" {
+	if got := cfg.DisplayCurrencyPref(); got != "CNY" {
 		t.Fatalf("saved currency = %q, want CNY", got)
 	}
 	if got := cfg.DisplayCurrencyPref(); got != "CNY" {
@@ -906,7 +762,7 @@ func TestConfigCurrencyAutoRemainsUnresolved(t *testing.T) {
 		t.Fatalf("config currency auto output = %q", out)
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if got := cfg.DesktopCurrency(); got != "" {
+	if got := cfg.DisplayCurrencyPref(); got != "" {
 		t.Fatalf("auto should clear saved currency, got %q", got)
 	}
 }
@@ -1280,25 +1136,6 @@ func TestUndecidedCLITelemetryDoesNotPromptOrUploadWhenIneligible(t *testing.T) 
 				t.Fatalf("ineligible invocation wrote config: %v", err)
 			}
 		})
-	}
-}
-
-func TestLegacySafeModeEnvDoesNotAlterConfiguredCLITelemetry(t *testing.T) {
-	isolateCLIConfigHome(t)
-	clearCLITelemetryPolicyEnv(t)
-	t.Setenv("DEEPZORA_SAFE_MODE", "1")
-	cfg := config.Default()
-	if err := cfg.SetCLITelemetryMode("auto"); err != nil {
-		t.Fatal(err)
-	}
-	previousStart := startCLITelemetryReporter
-	t.Cleanup(func() { startCLITelemetryReporter = previousStart })
-	want := &telemetry.Reporter{}
-	startCLITelemetryReporter = func(telemetry.Options) *telemetry.Reporter { return want }
-	if got := startCLITelemetryWithIO(cfg, telemetry.Options{
-		Version: "v1.20.0", Interactive: true, CLIMode: "tui",
-	}, strings.NewReader(""), io.Discard, io.Discard); got != want {
-		t.Fatalf("telemetry reporter = %p, want %p", got, want)
 	}
 }
 
@@ -1971,55 +1808,6 @@ func TestRepairInvalidProviderKeyEnvs(t *testing.T) {
 	}
 }
 
-// TestFilterStaleCustomEntries covers the wizard's auto-cleanup of legacy
-// "custom" / "anthropic" magic-name entries that previous versions wrote
-// into deepzora.toml. These collide with the wizard's own menu items, so
-// they're dropped from the providers list before grouping — but the caller
-// still gets them back in the dropped slice to surface a warning.
-func TestFilterStaleCustomEntries(t *testing.T) {
-	in := []config.ProviderEntry{
-		{Name: "deepseek", Kind: "openai", BaseURL: "https://api.deepseek.com"},
-		{Name: "custom", Kind: "openai", BaseURL: "https://old.example/v1"},                // stale
-		{Name: "anthropic", Kind: "anthropic", BaseURL: "https://old.example/v1/messages"}, // stale
-		{Name: "mimo-tp", Kind: "openai", BaseURL: "https://token-plan-cn.xiaomimimo.com/v1"},
-	}
-	kept, dropped := filterStaleCustomEntries(in)
-	if len(kept) != 2 {
-		t.Errorf("kept = %d entries, want 2: %+v", len(kept), kept)
-	}
-	if len(dropped) != 2 {
-		t.Errorf("dropped = %d entries, want 2: %+v", len(dropped), dropped)
-	}
-	for _, k := range kept {
-		if k.Name == "custom" || k.Name == "anthropic" {
-			t.Errorf("magic name leaked through: %q", k.Name)
-		}
-	}
-
-	t.Run("non-magic names with kind anthropic are kept", func(t *testing.T) {
-		// An entry someone deliberately named "claude" (kind=anthropic) must
-		// not be touched by the filter — only the bare "anthropic" magic name.
-		in := []config.ProviderEntry{
-			{Name: "claude", Kind: "anthropic", BaseURL: "https://api.anthropic.com"},
-		}
-		kept, dropped := filterStaleCustomEntries(in)
-		if len(kept) != 1 || len(dropped) != 0 {
-			t.Errorf("claude should be kept, got kept=%d dropped=%d", len(kept), len(dropped))
-		}
-	})
-
-	t.Run("custom kind anthropic is kept", func(t *testing.T) {
-		// Name="custom" with kind=anthropic is ambiguous — keep it.
-		in := []config.ProviderEntry{
-			{Name: "custom", Kind: "anthropic", BaseURL: "https://x"},
-		}
-		kept, dropped := filterStaleCustomEntries(in)
-		if len(kept) != 1 || len(dropped) != 0 {
-			t.Errorf("custom+anthropic should be kept (ambiguous), got kept=%d dropped=%d", len(kept), len(dropped))
-		}
-	})
-}
-
 func TestWithBuiltinFamiliesDoesNotAddMissingMimo(t *testing.T) {
 	// The user's case: a deepzora.toml that defines only deepseek providers.
 	cfg := []config.ProviderEntry{
@@ -2110,23 +1898,6 @@ func groupByFamilyKeys(ps []config.ProviderEntry, key string) []int {
 	return members[key]
 }
 
-func TestWriteDefaultConfigOmitsLegacyInternalMCPSections(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "deepzora.toml")
-	if rc := writeDefaultConfig(path); rc != 0 {
-		t.Fatalf("writeDefaultConfig rc = %d", rc)
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(raw)
-	for _, forbidden := range []string{"[codegraph]", "[builtin_mcp]", "[builtin_mcp_updates]"} {
-		if strings.Contains(text, forbidden) {
-			t.Fatalf("default config should omit %s:\n%s", forbidden, text)
-		}
-	}
-}
-
 func captureStderr(t *testing.T, fn func()) string {
 	t.Helper()
 	old := os.Stderr
@@ -2187,18 +1958,10 @@ func TestProvidersWithMissingKeysIncludesPlannerModel(t *testing.T) {
 	}
 }
 
-func TestParseRuntimeProfile(t *testing.T) {
-	for input, want := range map[string]string{
-		"": "standard", "balanced": "standard", "standard": "standard", "full": "standard",
-		"economy": "standard", "light": "standard", "lite": "standard", "eco": "standard",
-		"delivery": "standard", "deliver": "standard", "quality": "standard",
-	} {
-		got, err := parseRuntimeProfile(input)
-		if err != nil || got != want {
-			t.Errorf("parseRuntimeProfile(%q) = %q, %v; want %q", input, got, err, want)
+func TestChatRejectsHistoricalPermissionFlags(t *testing.T) {
+	for _, flag := range []string{"--yolo", "--dangerously-skip-permissions"} {
+		if chatREPL([]string{flag}, "test") == 0 {
+			t.Fatalf("historical flag accepted: %s", flag)
 		}
-	}
-	if _, err := parseRuntimeProfile("fast"); err == nil {
-		t.Fatal("unknown profile should fail")
 	}
 }

@@ -1,12 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
-	"path/filepath"
 	"testing"
-
-	"deepzora/internal/config"
 )
 
 func TestActivateBaseStyleClearsActivePack(t *testing.T) {
@@ -51,36 +47,6 @@ func TestActivateThemePackRejectsBaseStyle(t *testing.T) {
 	app := NewApp()
 	if err := app.ActivateThemePack("amber"); err == nil {
 		t.Fatal("expected base style activation to fail")
-	}
-}
-
-func TestMigrateV1BaseActiveIDToBaseStyle(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("DEEPZORA_HOME", home)
-	// Write v1 state with base style as activeThemeId.
-	statePath := filepath.Join(config.MemoryUserDir(), themeStateFileName)
-	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	raw, _ := json.Marshal(map[string]any{"schemaVersion": 1, "activeThemeId": "amber"})
-	if err := os.WriteFile(statePath, raw, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	exp, err := app.GetThemeExperience()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exp.ActiveThemeID != "" {
-		t.Fatalf("activeThemeId should be cleared, got %q", exp.ActiveThemeID)
-	}
-	if exp.BaseStyle != "amber" {
-		t.Fatalf("baseStyle = %q, want amber after migration", exp.BaseStyle)
-	}
-	// File rewritten as v2 without base id.
-	st := loadThemeDesktopState()
-	if st.SchemaVersion != themeStateSchemaVer || st.ActiveThemeID != "" {
-		t.Fatalf("persisted state = %+v", st)
 	}
 }
 

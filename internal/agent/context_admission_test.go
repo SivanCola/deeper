@@ -8,7 +8,6 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
-	"deepzora/internal/tool"
 )
 
 type policyWindowProvider struct {
@@ -165,18 +164,6 @@ func TestZeroConfigWindowUsesLearned(t *testing.T) {
 	a.learnContextBudget(262_144, 0, false)
 	if a.effectiveContextWindow() != 262_144 {
 		t.Fatalf("zero config window = %d", a.effectiveContextWindow())
-	}
-}
-
-func TestForkCaptureForwardsContextBudgetPolicy(t *testing.T) {
-	t.Setenv("DEEPZORA_EXPERIMENT_FORK_CAPTURE_DIR", t.TempDir())
-	inner := &policyWindowProvider{policy: provider.ContextBudgetPolicy{
-		WindowMode: provider.ContextWindowShared, AutoOutputTokens: 384_000, LimitMode: provider.OutputLimitOmitWhenSafe,
-	}}
-	a := New(inner, tool.NewRegistry(), NewSession(""), Options{}, event.Discard)
-	got := provider.ResolveContextBudgetPolicy(a.svc.prov)
-	if got.AutoOutputTokens != 384_000 || got.WindowMode != provider.ContextWindowShared {
-		t.Fatalf("wrapped policy = %+v", got)
 	}
 }
 

@@ -15,8 +15,8 @@ const dom = new JSDOM("<div id='root'></div>");
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true });
 
 type RemoteProfile = NonNullable<RemoteSessionApi["composerProfile"]>;
-const backend: RemoteProfile = { collaborationMode: "normal", toolApprovalMode: "ask", goal: "", qualityFloor: "standard" };
-const chosen = (tabId: string): ComposerProfile => ({ collaborationMode: "plan", goalDraftMode: false, toolApprovalMode: "ask", goal: "", qualityFloor: "standard", pending: { collaborationMode: true } });
+const backend: RemoteProfile = { collaborationMode: "normal", toolApprovalMode: "workspace-write", goal: "", qualityFloor: "standard" };
+const chosen = (tabId: string): ComposerProfile => ({ collaborationMode: "plan", goalDraftMode: false, toolApprovalMode: "workspace-write", goal: "", qualityFloor: "standard", pending: { collaborationMode: true } });
 let profiles: ComposerProfilesByTab = {};
 let setProfilesRef: React.Dispatch<React.SetStateAction<ComposerProfilesByTab>> | undefined;
 function Probe({ activeTabId, sessionRoute }: { activeTabId: string; sessionRoute: string }) {

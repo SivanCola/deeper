@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/provider"
 )
 
 func TestIndexSessionPathSkipsUnchangedProjection(t *testing.T) {
@@ -55,13 +56,16 @@ func TestIndexSessionPathDoesNotRequeueRepairAfterRepair(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	dir := t.TempDir()
-	path := filepath.Join(dir, "legacy.jsonl")
-	if err := os.WriteFile(path, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o600); err != nil {
+	path := filepath.Join(dir, "current.jsonl")
+	sess := agent.NewSession("")
+	sess.Add(provider.Message{Role: provider.RoleUser, Content: "hi"})
+	if err := sess.Save(path); err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMeta(path, agent.BranchMeta{TopicID: "topic", SchemaVersion: 1}); err != nil {
+	if err := agent.UpdateBranchMeta(path, false, func(m *agent.BranchMeta) error { m.TopicID = "topic"; m.SchemaVersion = 0; return nil }); err != nil {
 		t.Fatal(err)
 	}
+
 	catalog, err := Open(ctx, Options{InMemory: true, QueueCapacity: 2})
 	if err != nil {
 		t.Fatal(err)

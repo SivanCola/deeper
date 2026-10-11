@@ -4,23 +4,11 @@ import (
 	"fmt"
 	"runtime"
 	"time"
-
-	"deepzora/internal/repair"
 )
 
 func (a *App) recordPreviousRunDiagnostics() {
-	previous := a.lifecycle.previousRun
-	if previous.Abnormal {
-		report := previousRunReport(previous)
-		_ = writePendingReport(report, true)
-		if m := a.metrics.Load(); m != nil {
-			m.inc("desktop_legacy_exit", "abnormal")
-			m.inc("desktop_legacy_exit_phase", metricBucket(previous.Phase))
-			m.persist()
-		}
-	}
 	for _, lifecycle := range a.lifecycle.previousRuns {
-		persisted := writePendingReport(desktopLifecycleReport(lifecycle), true)
+		persisted := writePendingReport(desktopLifecycleReport(lifecycle))
 		a.lifecycle.tracker.finalizeObservation(lifecycle, persisted)
 		if !persisted {
 			continue
@@ -31,48 +19,6 @@ func (a *App) recordPreviousRunDiagnostics() {
 			m.persist()
 		}
 	}
-}
-
-func previousRunReport(previous repair.PreviousRunObservation) crashReport {
-	phase := metricBucket(previous.Phase)
-	uptime := metricBucket(previous.UptimeBucket)
-	profile := metricBucket(previous.InstallProfile)
-	update := "none"
-	if previous.UpdateTo != "" {
-		update = sanitizeCrashField(previous.UpdateFrom+" -> "+previous.UpdateTo, 128)
-	}
-	message := fmt.Sprintf(`[desktop.legacy_abnormal_exit]
-
-Deepzora consumed a legacy v1.18-v1.19 startup record whose owner was no longer running.
-
---- lifecycle context ---
-phase: %s
-uptime bucket: %s
-install profile: %s
-previous version: %s
-update transition: %s`,
-		phase,
-		uptime,
-		profile,
-		sanitizeCrashField(previous.Version, 64),
-		update,
-	)
-	report := baseCrashReport("crash")
-	report.SchemaVersion = 4
-	report.Source = "native.lifecycle.legacy"
-	report.Label = "desktop.legacy_abnormal_exit"
-	report.ErrorType = "LegacyAbnormalDesktopExit"
-	report.ErrorMessage = "A legacy startup record was consumed once after its owner stopped."
-	report.TopFrame = "desktop.lifecycle.legacy." + phase
-	report.FingerprintHint = "desktop.legacy_abnormal_exit." + runtime.GOOS + "." + phase
-	report.Diagnostics = &crashDiagnostics{
-		SubjectVersion: previous.Version, ObserverVersion: version, ObserverBuildCommit: buildCommit(),
-		ProcessRole: "service", LastPhase: phase, ObservedAt: time.Now().UTC().Format(time.RFC3339Nano),
-		TerminationReason: "unknown", CleanupOutcome: "unknown", Evidence: "observed",
-		Category: "historical_record", LegacyParsed: true,
-	}
-	report.Message = sanitizeCrashText(message, maxCrashDetailBytes)
-	return report
 }
 
 func desktopLifecycleReport(previous desktopLifecycleObservation) crashReport {

@@ -16,8 +16,7 @@ import (
 	"deepzora/internal/proc"
 )
 
-// Run resolves the active desktop, performs the one-time legacy handoff when
-// needed, and starts the desktop process.
+// Run resolves and starts the current desktop process.
 func Run(args []string, buildVersion string) int {
 	if len(args) > 0 && args[0] == "--repair-shortcuts" {
 		if err := repairInstallerShortcuts(args[1:], ResolveInstallRoot, appidentity.RepairShortcuts); err != nil {
@@ -48,10 +47,6 @@ func Run(args []string, buildVersion string) int {
 	if err := appidentity.RepairOwnedShortcuts(installRoot); err != nil {
 		fmt.Fprintln(os.Stderr, "warning: repair Windows shortcut identity:", err)
 	}
-	if err := runLegacyMigratorIfNeeded(installRoot); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		return 1
-	}
 
 	desktopPath, err := ResolveDesktopPath(installRoot)
 	if err != nil {
@@ -63,7 +58,7 @@ func Run(args []string, buildVersion string) int {
 		return code
 	}
 
-	cmd := exec.Command(desktopPath, StripLegacyLaunchArgs(args)...)
+	cmd := exec.Command(desktopPath, args...)
 	proc.HideConsole(cmd)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	cmd.Dir = installRoot
@@ -118,48 +113,6 @@ func ResolveDesktopPath(installRoot string) (string, error) {
 	return "", fmt.Errorf("cannot locate deepzora-desktop under %s (missing current.json)", installRoot)
 }
 
-func runLegacyMigratorIfNeeded(installRoot string) error {
-	currentPath := filepath.Join(installRoot, installlayout.CurrentFileName)
-	if _, err := os.Lstat(currentPath); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("inspect current.json before migration: %w", err)
-	}
-
-	migratorName := "deepzora-guard"
-	if runtime.GOOS == "windows" {
-		migratorName += ".exe"
-	}
-	migratorPath := filepath.Join(installRoot, migratorName)
-	info, err := os.Lstat(migratorPath)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("inspect legacy migrator: %w", err)
-	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("legacy migrator is not a regular file")
-	}
-
-	cmd := exec.Command(migratorPath, "--install-root", installRoot, "--no-relaunch")
-	proc.HideConsole(cmd)
-	cmd.Dir = installRoot
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("legacy layout migration failed: %w", err)
-	}
-	if _, err := installlayout.ReadCurrent(installRoot); err != nil {
-		return fmt.Errorf("legacy layout migration did not commit current.json: %w", err)
-	}
-	// The parent launcher owns Windows cleanup after the migrator process exits.
-	// Unix migrators normally unlink themselves, so NotExist is also success.
-	if err := os.Remove(migratorPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("remove completed legacy migrator: %w", err)
-	}
-	return nil
-}
-
 func siblingDesktop(installRoot string) string {
 	path := filepath.Join(installRoot, installlayout.DesktopBinaryName())
 	info, err := os.Lstat(path)
@@ -167,33 +120,6 @@ func siblingDesktop(installRoot string) string {
 		return ""
 	}
 	return path
-}
-
-// StripLegacyLaunchArgs removes tokens emitted by old Guard shortcuts.
-func StripLegacyLaunchArgs(args []string) []string {
-	out := make([]string, 0, len(args))
-	skipNext := false
-	for i := range args {
-		if skipNext {
-			skipNext = false
-			continue
-		}
-		arg := args[i]
-		switch arg {
-		case "launch", "--detach", "--safe-mode", "-safe-mode":
-			continue
-		case "--app":
-			skipNext = true
-			continue
-		case "--":
-			return append(out, args[i:]...)
-		}
-		if strings.HasPrefix(arg, "--app=") {
-			continue
-		}
-		out = append(out, arg)
-	}
-	return out
 }
 
 // DetachByDefault reports whether the Windows packaged entry should start the
@@ -213,6 +139,5 @@ func DetachByDefault() bool {
 func usage() {
 	fmt.Println("usage: deepzora-launcher [args...]")
 	fmt.Println("  Starts the active Deepzora desktop from current.json.")
-	fmt.Println("  Legacy --safe-mode / launch --detach tokens are ignored.")
 	fmt.Println("  --repair-shortcuts <absolute.lnk...> repairs owned installer shortcuts without launching.")
 }

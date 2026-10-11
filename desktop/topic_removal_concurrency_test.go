@@ -2,16 +2,13 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
 )
 
 func awaitRemovalTest[T any](t *testing.T, ch <-chan T) T {
@@ -23,100 +20,6 @@ func awaitRemovalTest[T any](t *testing.T, ch <-chan T) T {
 		t.Fatal("concurrent removal operation did not complete")
 		var zero T
 		return zero
-	}
-}
-
-// The model finishes before removal, but its commit is delayed until removal
-// holds the title lock. Removal must already own the removal lock too, and the
-// delayed title must not commit after archive (including legacy import).
-func TestTopicRemovalConcurrentAIRename(t *testing.T) {
-	for _, legacy := range []bool{false, true} {
-		t.Run(fmt.Sprintf("legacy=%t", legacy), func(t *testing.T) {
-			a, _, rt, _, path := newCanonicalTitleFixture(t)
-			installNoopRuntimeEvents(a)
-			topicID := "topic-canonical"
-			appendSessionTestMessage(t, rt, "user", provider.Message{ID: "user", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "keep this message"})
-			var target SessionTarget
-			var err error
-			if legacy {
-				topic, createErr := a.CreateTopic("global", "", "Legacy")
-				if createErr != nil {
-					t.Fatal(createErr)
-				}
-				topicID = topic.ID
-				dir := desktopSessionDir(globalWorkspaceRoot())
-				if err := os.MkdirAll(dir, 0700); err != nil {
-					t.Fatal(err)
-				}
-				path = filepath.Join(dir, "legacy-title.jsonl")
-				writeTopicSessionWithPrompt(t, dir, filepath.Base(path), topicID, "Legacy", globalWorkspaceRoot(), "keep this message", time.Now())
-				target = SessionTarget{SessionPath: path, TopicID: topicID}
-			} else {
-				target, err = a.resolveSessionMutationTarget(SessionSelector{TopicID: topicID})
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			req := inspectedTopicRemoval(t, a, topicID)
-			generated, commit := make(chan struct{}), make(chan struct{})
-			var release sync.Once
-			t.Cleanup(func() { release.Do(func() { close(commit) }) })
-			a.lifecycleCheckpointHook = func(phase string) {
-				switch phase {
-				case "session-title-before-commit":
-					close(generated)
-					<-commit
-				case "topic-sessions-before-archive":
-					if a.sessionRemovalMu.TryLock() {
-						a.sessionRemovalMu.Unlock()
-						t.Error("removal acquired title before removal ownership")
-					}
-					release.Do(func() { close(commit) })
-				}
-			}
-			renamed := make(chan error, 1)
-			go func() {
-				var err error
-				if legacy {
-					_, err = a.aiRenameLegacySession(t.Context(), target)
-				} else {
-					_, err = a.aiRenameCanonicalSession(t.Context(), target)
-				}
-				renamed <- err
-			}()
-			awaitRemovalTest(t, generated)
-			removed := make(chan error, 1)
-			go func() {
-				out, err := a.RemoveTopic(req)
-				if err == nil && !out.Committed {
-					err = fmt.Errorf("removal: %+v", out)
-				}
-				removed <- err
-			}()
-			if err := awaitRemovalTest(t, removed); err != nil {
-				t.Fatal(err)
-			}
-			if err := awaitRemovalTest(t, renamed); err == nil {
-				t.Fatal("stale AI title committed after archive")
-			}
-			if legacy {
-				assertLegacyLifecycle(t, a, path, "archived")
-				meta, _, err := agent.LoadBranchMeta(path)
-				if err != nil || meta.CustomTitle != "" {
-					t.Fatalf("legacy title changed: %+v %v", meta, err)
-				}
-			} else {
-				state, err := a.workspaceRegistry().Load(t.Context())
-				if err != nil || state.SessionStates[rt.Ref().SessionID].Lifecycle != workspacestate.Archived {
-					t.Fatalf("archive state: %+v %v", state, err)
-				}
-			}
-			if unlock, ok := a.tryLockRuntimeMutation("verify removal completed"); !ok {
-				t.Fatal("runtime admission leaked")
-			} else {
-				unlock()
-			}
-		})
 	}
 }
 

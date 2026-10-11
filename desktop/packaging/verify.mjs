@@ -18,7 +18,7 @@ const kindArg = kindIndex >= 0 ? args[kindIndex + 1] : undefined;
 const layoutIndex = args.indexOf("--portable-layout");
 const portableLayout = layoutIndex >= 0 ? args[layoutIndex + 1] : "canonical";
 if (!artifactArg || (kindArg && !ARTIFACT_KINDS.includes(kindArg)) || !WINDOWS_PORTABLE_LAYOUTS.includes(portableLayout)) {
-  console.error(`usage: verify.mjs <artifact> [--kind <${ARTIFACT_KINDS.join("|")}>] [--portable-layout canonical|legacy-dual] [--list]`);
+  console.error(`usage: verify.mjs <artifact> [--kind <${ARTIFACT_KINDS.join("|")}>] [--portable-layout canonical] [--list]`);
   process.exit(2);
 }
 const artifact = resolve(artifactArg);
@@ -49,9 +49,6 @@ if (kind === "windows-portable-zip" && missing.length === 0 && forbidden.length 
   const readMember = name => directory ? readFileSync(join(artifact, name)) : readZipMember(artifact, name);
   const gui = readMember("Deepzora.exe");
   if (gui.equals(readMember("deepzora-cli.exe"))) layoutErrors.push("GUI entry contains CLI bytes");
-  if (portableLayout === "legacy-dual" && !gui.equals(readMember("deepzora-launcher.exe"))) {
-    layoutErrors.push("legacy GUI entry differs from Deepzora.exe");
-  }
 }
 const modeErrors = checkEntryModes(rows, kind);
 if ((kind === "linux-tar" || kind === "linux-deb") && missing.length === 0) {

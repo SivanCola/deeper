@@ -158,7 +158,7 @@ func TestNewConnectionProtocolOverride(t *testing.T) {
 	for _, p := range cfg.Providers {
 		if p.BaseURL == "https://gateway.example/v1" {
 			kinds[p.Kind] = true
-			if p.RequestURL != "" || p.ChatURL != "" || p.ModelsURL != "" {
+			if p.RequestURL != "" || p.ModelsURL != "" {
 				t.Fatal("stale endpoint")
 			}
 		}

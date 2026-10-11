@@ -161,9 +161,6 @@ func (c *Config) writeModelConfigResolved(path, body string, perm os.FileMode) e
 	if c.modelCredentialCommit == nil {
 		return writeConfigFileResolved(path, body, perm)
 	}
-	if err := finalizeOpenCodeGoJournal(path); err != nil {
-		return err
-	}
 	return c.publishModelConfigBytes(path, []byte(body), perm)
 }
 

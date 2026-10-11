@@ -10,8 +10,8 @@ import (
 )
 
 func TestRemoteTabReconnectDefersCachedSessionSelectionUntilReady(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "old", Path: oldPath, Title: "Old", Current: true},
 		{Name: "target", Path: targetPath, Title: "Target"},
@@ -39,7 +39,7 @@ func TestRemoteTabReconnectDefersCachedSessionSelectionUntilReady(t *testing.T) 
 
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[meta.ID]
-	state, sessionPath, route := tab.state, tab.session.path, tab.routing.currentPath
+	state, sessionPath, route := tab.state, remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID), tab.routing.currentPath
 	pending := tab.pendingSelection
 	a.remoteTabMu.Unlock()
 	if state != "reconnecting" || sessionPath != oldPath || route != oldPath || pending == nil || pending.path != targetPath {
@@ -63,7 +63,7 @@ func TestRemoteTabReconnectDefersCachedSessionSelectionUntilReady(t *testing.T) 
 	deadline := time.Now().Add(3 * time.Second)
 	for {
 		a.remoteTabMu.Lock()
-		state, sessionPath, route = tab.state, tab.session.path, tab.routing.currentPath
+		state, sessionPath, route = tab.state, remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID), tab.routing.currentPath
 		pending = tab.pendingSelection
 		a.remoteTabMu.Unlock()
 		if state == "ready" && sessionPath == targetPath && route == targetPath && pending == nil {
@@ -93,19 +93,19 @@ func TestRemoteTabDeferredResumeRejectsSupersededSelectionRevision(t *testing.T)
 	tab := &remoteTab{
 		id: "remote-1", state: "ready", client: client, base: "http://127.0.0.1:43210", gen: 7,
 		selectionRevision: 2,
-		routing:           remoteTabSessionRouting{currentPath: "/sessions/newer.jsonl", running: map[string]bool{}},
+		routing:           remoteTabSessionRouting{currentPath: "session-id:newer", running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}
-	a.resumeRemoteTabSessionPathForSelection(tab.id, "stale", "/sessions/stale.jsonl", "Stale", 1)
+	a.resumeRemoteTabSessionPathForSelection(tab.id, "stale", "session-id:stale", "Stale", 1)
 	if requests != 0 {
 		t.Fatalf("superseded deferred selection sent %d Serve requests", requests)
 	}
 }
 
 func TestReadyTabRapidSelectionsRollbackToServeAuthoritativeSnapshot(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const firstPath = "/sessions/first.jsonl"
-	const secondPath = "/sessions/second.jsonl"
+	const oldPath = "session-id:old"
+	const firstPath = "session-id:first"
+	const secondPath = "session-id:second"
 	requests := 0
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		requests++
@@ -152,25 +152,25 @@ func TestReadyTabRapidSelectionsRollbackToServeAuthoritativeSnapshot(t *testing.
 
 func TestReadyTabInFlightSelectionsSerializeThroughDefinitiveRollback(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	const oldPath = "/sessions/old.jsonl"
-	const firstPath = "/sessions/first.jsonl"
-	const secondPath = "/sessions/second.jsonl"
+	const oldPath = "session-id:old"
+	const firstPath = "session-id:first"
+	const secondPath = "session-id:second"
 	firstStarted := make(chan struct{}, 1)
 	releaseFirst := make(chan struct{})
 	secondStarted := make(chan struct{}, 1)
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		var payload struct {
-			Path string `json:"path"`
+			SessionID string `json:"sessionId"`
 		}
 		_ = json.NewDecoder(req.Body).Decode(&payload)
-		switch payload.Path {
+		switch remoteSessionIdentityRoute("", payload.SessionID) {
 		case firstPath:
 			firstStarted <- struct{}{}
 			<-releaseFirst
 		case secondPath:
 			secondStarted <- struct{}{}
 		default:
-			t.Fatalf("unexpected resume path %q", payload.Path)
+			t.Fatalf("unexpected resume session %q", payload.SessionID)
 		}
 		return &http.Response{
 			StatusCode: http.StatusConflict, Header: make(http.Header),
@@ -203,7 +203,7 @@ func TestReadyTabInFlightSelectionsSerializeThroughDefinitiveRollback(t *testing
 		t.Fatal("second selection was not queued")
 	}
 	a.remoteTabMu.Lock()
-	queued, sessionPath := tab.pendingSelection, tab.session.path
+	queued, sessionPath := tab.pendingSelection, remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID)
 	a.remoteTabMu.Unlock()
 	if queued != second.selection || !queued.deferred || sessionPath != firstPath {
 		t.Fatalf("in-flight selection queue/session = %+v/%q, want deferred second/%q", queued, sessionPath, firstPath)
@@ -240,8 +240,8 @@ func TestReadyTabInFlightSelectionsSerializeThroughDefinitiveRollback(t *testing
 }
 
 func TestRemoteTabResumeRequeuesSelectionWhenReadinessDrops(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
 	started := make(chan string, 1)
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.Method == http.MethodPost && req.URL.Path == "/resume" {
@@ -287,9 +287,9 @@ func TestRemoteTabResumeRequeuesSelectionWhenReadinessDrops(t *testing.T) {
 }
 
 func TestRemoteTabReadinessLossPreservesNewerQueuedSelection(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const firstPath = "/sessions/first.jsonl"
-	const secondPath = "/sessions/second.jsonl"
+	const oldPath = "session-id:old"
+	const firstPath = "session-id:first"
+	const secondPath = "session-id:second"
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	previous := &remoteTabOpenSelection{
 		session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old",
@@ -337,9 +337,9 @@ func TestRemoteTabReadinessLossPreservesNewerQueuedSelection(t *testing.T) {
 }
 
 func TestRemoteTabNewSessionSupersedesDeferredCachedSelection(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
-	const freshPath = "/sessions/fresh.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
+	const freshPath = "session-id:fresh"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
 		{Name: "old", Path: oldPath, Title: "Old", Current: true},
 		{Name: "target", Path: targetPath, Title: "Target"},
@@ -401,9 +401,9 @@ func TestRemoteTabNewSessionSupersedesDeferredCachedSelection(t *testing.T) {
 }
 
 func TestRemoteTabNewSessionRestoresRouteFromCommittedDeferredSelection(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const targetPath = "/sessions/target.jsonl"
-	const freshPath = "/sessions/fresh.jsonl"
+	const oldPath = "session-id:old"
+	const targetPath = "session-id:target"
+	const freshPath = "session-id:fresh"
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	previous := &remoteTabOpenSelection{
 		session: remoteTabSessionState{name: "old", path: oldPath}, topicTitle: "Old",
@@ -425,12 +425,12 @@ func TestRemoteTabNewSessionRestoresRouteFromCommittedDeferredSelection(t *testi
 		t.Fatal("New Session did not reuse the reconnecting tab")
 	}
 	if tab.session.path != oldPath || tab.routing.currentPath != oldPath || tab.pendingSelection == nil || !tab.pendingSelection.newSession {
-		t.Fatalf("supersession left session/route/pending = %q/%q/%+v", tab.session.path, tab.routing.currentPath, tab.pendingSelection)
+		t.Fatalf("supersession left session/route/pending = %q/%q/%+v", remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID), tab.routing.currentPath, tab.pendingSelection)
 	}
 
 	expectedPath := make(chan string, 1)
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		expectedPath <- req.Header.Get(expectedSessionPathHeader)
+		expectedPath <- remoteSessionIDRoutePrefix + req.Header.Get(expectedSessionIDHeader)
 		header := make(http.Header)
 		header.Set("X-Deepzora-Session-Path", freshPath)
 		return &http.Response{StatusCode: http.StatusNoContent, Header: header, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
@@ -450,8 +450,8 @@ func TestRemoteTabNewSessionRestoresRouteFromCommittedDeferredSelection(t *testi
 }
 
 func TestRemoteTabDeferredNewSessionRechecksCurrentBlankState(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const freshPath = "/sessions/fresh.jsonl"
+	const oldPath = "session-id:old"
+	const freshPath = "session-id:fresh"
 	requested := make(chan struct{}, 1)
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.Method != http.MethodPost || req.URL.Path != "/new" {

@@ -26,14 +26,13 @@ func newServeBootstrap() (*serve.Broadcaster, *serve.SessionTagSink, *config.Con
 	return bc, serve.NewSessionTagSink(bc), cfg
 }
 
-func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, preset string, tag *serve.SessionTagSink, leases *control.SessionLeaseKeeper) (*control.Controller, boot.Options, error) {
-	migrateMCPConfigForCLIWorkspace()
+func setupCLIMultiSessionProfile(ctx context.Context, model string, maxSteps int, tag *serve.SessionTagSink, leases *control.SessionLeaseKeeper) (*control.Controller, boot.Options, error) {
 	broker, err := serveBrowserBrokerFromEnv(os.Getenv)
 	if err != nil {
 		return nil, boot.Options{}, err
 	}
 	opts := cliProfileBuildOptions(model, maxSteps, false, tag, cliBuildOverrides{
-		Preset: preset, OnSessionRecovered: cliSessionRecoveredHandler(leases),
+		OnSessionRecovered: cliSessionRecoveredHandler(leases),
 	})
 	// A chat fork is a user-visible child conversation. Keep it in its own
 	// transcript so remote project listings can show both the source and child,

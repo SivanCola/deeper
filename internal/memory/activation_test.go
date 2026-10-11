@@ -5,20 +5,16 @@ import (
 	"testing"
 )
 
-func TestResolveActivationLegacyDefaults(t *testing.T) {
-	legacyGlobalUser := Memory{Scope: FactScopeGlobal, Type: TypeUser}
-	if ResolveActivation(legacyGlobalUser) != ActivationPinned {
-		t.Fatal("legacy global user facts must stay pinned for compatibility")
+func TestResolveActivationDoesNotInferHistoricalPinnedDefaults(t *testing.T) {
+	for _, typ := range []Type{TypeUser, TypeFeedback, TypeReference, TypeProject} {
+		for _, scope := range []FactScope{FactScopeGlobal, FactScopeProject} {
+			if ResolveActivation(Memory{Scope: scope, Type: typ}) != ActivationRelevant {
+				t.Fatalf("unset %s/%s implicitly pinned", scope, typ)
+			}
+		}
 	}
-	if ResolveActivation(Memory{Scope: FactScopeGlobal, Type: TypeReference}) != ActivationRelevant {
-		t.Fatal("global references were never guidance; they resolve relevant")
-	}
-	if ResolveActivation(Memory{Scope: FactScopeProject, Type: TypeFeedback}) != ActivationRelevant {
-		t.Fatal("project facts without an explicit choice resolve relevant")
-	}
-	explicit := Memory{Scope: FactScopeGlobal, Type: TypeUser, Activation: ActivationRelevant}
-	if ResolveActivation(explicit) != ActivationRelevant {
-		t.Fatal("an explicit relevant choice beats the legacy default")
+	if ResolveActivation(Memory{Activation: ActivationPinned}) != ActivationPinned {
+		t.Fatal("explicit pinned choice lost")
 	}
 }
 
@@ -91,16 +87,16 @@ func TestPinnedBudgetRejectsOverflowAndAllowsUpdates(t *testing.T) {
 	}
 }
 
-func TestUnpinPersistsExplicitRelevantForLegacyGuidance(t *testing.T) {
+func TestUnpinPersistsExplicitRelevantChoice(t *testing.T) {
 	store := recallTestStore(t)
 	recallTestWrite(t, store.GlobalDir, Memory{
 		ID: "mem-legacy", Name: "legacy-pref", Title: "Legacy preference",
 		Description: "Legacy global preference", Type: TypeUser,
-		Scope: FactScopeGlobal, Body: "Old habit body.",
+		Scope: FactScopeGlobal, Activation: ActivationPinned, Body: "Pinned body.",
 	})
 	loaded, ok := store.Read("mem-legacy")
 	if !ok || ResolveActivation(loaded) != ActivationPinned {
-		t.Fatalf("legacy guidance should load virtually pinned, got %+v", loaded)
+		t.Fatalf("explicit guidance should load pinned, got %+v", loaded)
 	}
 
 	loaded.Activation = ActivationRelevant

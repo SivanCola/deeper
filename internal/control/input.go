@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"unicode"
 
 	"deepzora/internal/ablation"
 	"deepzora/internal/agent"
@@ -28,10 +27,6 @@ type InvocationRequest struct {
 // prompt prefix is left untouched and the toggle costs nothing in cache hits.
 const PlanModeMarker = planmode.Marker
 
-// legacyPlanModeMarker is retained only so transcripts written by older builds
-// can be displayed without their injected workflow prefix.
-const legacyPlanModeMarker = "[Plan mode — read-only. Explore the codebase first (read_file, ls, grep, glob, web_fetch, task, ask are available; writers are refused by the harness). Before planning, if a decision that is genuinely the user's — tech stack, an ambiguous requirement, scope, an irreversible choice — would materially shape the plan and you can't settle it from the codebase or a sensible default, use the ask tool to clarify it first; otherwise pick the obvious default and state the assumption in the plan instead of asking. Then present a LAYERED plan as your reply and stop — do not write files, edit, or run side-effecting bash. Structure the plan as a two-level markdown list so it becomes a layered task list: each PHASE is a top-level numbered list item (a coherent milestone, e.g. \"1. Add the config loader\"), and each phase's concrete, verifiable sub-steps are bullets indented beneath it (e.g. \"   - parse the TOML into Config\"). Use plain numbered list items for phases — do NOT write phases as markdown headings (##, ###) — so both levels parse. Keep phases few (about 2-6). The user will be asked to approve before any changes are made.]"
-
 const (
 	activeGoalOpen  = "<active-goal>"
 	activeGoalClose = "</active-goal>"
@@ -50,21 +45,13 @@ const (
 	GoalStatusStopped  = "stopped"
 )
 
-type GoalResearchMode int
-
-const (
-	GoalResearchAuto GoalResearchMode = iota
-	GoalResearchOn
-	GoalResearchOff
-)
-
 // StripComposePrefixes removes controller-injected prefixes from a composed
 // user message so that the display text matches what the user actually typed.
 // It strips the PlanModeMarker plus transient XML blocks such as
 // <reasoning-language>, <memory-update>, and <background-jobs> that Compose
 // prepends to user turns. This is used as a fallback when no .display.json
-// sidecar recording exists (e.g. sessions created before the display-recording
-// feature, or synthetic user messages injected by the controller).
+// sidecar recording exists, including synthetic user messages injected by the
+// current controller.
 func StripComposePrefixes(content string) string {
 	// The plan marker is prepended after the transient blocks, so a block can
 	// become leading only after the marker strips: iterate to a fixpoint.
@@ -72,8 +59,6 @@ func StripComposePrefixes(content string) string {
 	for range 4 {
 		next := agent.StripTransientUserBlocks(s)
 		next = stripComposeMarker(next, PlanModeMarker)
-		next = stripComposeMarker(next, legacyPlanModeMarker)
-		next = stripComposeMarker(next, planmode.LegacyWorkflowMarker)
 		if next == s {
 			break
 		}
@@ -141,7 +126,7 @@ func IsSyntheticUserMessage(content string) bool {
 	// The prefix list lives in internal/agent (agent.SyntheticUserPrefixes) so
 	// preview/title/turn-count derivations there share the exact same filter
 	// (#3653).
-	return agent.IsSyntheticUserText(content)
+	return agent.IsHostRecoveryGuidance(content)
 }
 
 // Compose applies the plan-mode marker to a turn's text when plan mode is on,
@@ -392,14 +377,9 @@ const (
 )
 
 type GoalCommand struct {
-	Action               GoalCommandAction
-	Text                 string
-	Strict               bool
-	ResearchMode         GoalResearchMode
-	DeprecatedBudgetFlag bool
+	Action GoalCommandAction
+	Text   string
 }
-
-const GoalBudgetFlagDeprecatedNotice = "This /goal budget flag is deprecated and no longer changes the execution limit; Goal now runs continuously by default."
 
 func ParseGoalCommand(input string) (GoalCommand, bool) {
 	trimmed := strings.TrimSpace(input)
@@ -407,51 +387,20 @@ func ParseGoalCommand(input string) (GoalCommand, bool) {
 		return GoalCommand{}, false
 	}
 	args := strings.TrimSpace(trimmed[len("/goal"):])
-	strict, researchMode, actionArgs := parseLeadingGoalFlags(args)
-	deprecatedBudgetFlag := researchMode != GoalResearchAuto
+	actionArgs := args
 
 	switch strings.ToLower(actionArgs) {
 	case "", "status":
-		return GoalCommand{Action: GoalCommandStatus, Strict: strict, ResearchMode: researchMode, DeprecatedBudgetFlag: deprecatedBudgetFlag}, true
+		return GoalCommand{Action: GoalCommandStatus}, true
 	case "clear", "off", "stop", "done":
-		return GoalCommand{Action: GoalCommandClear, Strict: strict, ResearchMode: researchMode, DeprecatedBudgetFlag: deprecatedBudgetFlag}, true
+		return GoalCommand{Action: GoalCommandClear}, true
 	case "pause":
-		return GoalCommand{Action: GoalCommandPause, Strict: strict, ResearchMode: researchMode, DeprecatedBudgetFlag: deprecatedBudgetFlag}, true
+		return GoalCommand{Action: GoalCommandPause}, true
 	case "resume":
-		return GoalCommand{Action: GoalCommandResume, Strict: strict, ResearchMode: researchMode, DeprecatedBudgetFlag: deprecatedBudgetFlag}, true
+		return GoalCommand{Action: GoalCommandResume}, true
 	default:
-		return GoalCommand{Action: GoalCommandSet, Text: actionArgs, Strict: strict, ResearchMode: researchMode, DeprecatedBudgetFlag: deprecatedBudgetFlag}, true
+		return GoalCommand{Action: GoalCommandSet, Text: actionArgs}, true
 	}
-}
-
-func parseLeadingGoalFlags(args string) (bool, GoalResearchMode, string) {
-	strict := false
-	mode := GoalResearchAuto
-	rest := strings.TrimLeftFunc(args, unicode.IsSpace)
-	for rest != "" {
-		token, after := leadingGoalToken(rest)
-		switch strings.ToLower(token) {
-		case "--strict":
-			strict = true
-		case "--research", "--auto-research", "--deep":
-			mode = GoalResearchOn
-		case "--simple", "--no-research":
-			mode = GoalResearchOff
-		default:
-			return strict, mode, strings.TrimSpace(rest)
-		}
-		rest = strings.TrimLeftFunc(after, unicode.IsSpace)
-	}
-	return strict, mode, ""
-}
-
-func leadingGoalToken(s string) (string, string) {
-	for i, r := range s {
-		if unicode.IsSpace(r) {
-			return s[:i], s[i:]
-		}
-	}
-	return s, ""
 }
 
 // CustomCommand resolves a "/name args…" line against the loaded custom slash

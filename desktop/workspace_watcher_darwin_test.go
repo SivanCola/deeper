@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/provider"
+
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/sys/unix"
 )
@@ -423,14 +423,14 @@ func runDarwinLowNoFileChild(t *testing.T) {
 		}
 	}
 	projectConfig := filepath.Join(root, "deepzora.toml")
-	if err := os.WriteFile(projectConfig, []byte("[agent]\nmemory_compiler = { enabled = true, verbosity = \"compact\" }\n"), 0o600); err != nil {
+	if err := os.WriteFile(projectConfig, []byte("[agent]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	userConfig := config.UserConfigPath()
 	if err := os.MkdirAll(filepath.Dir(userConfig), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(userConfig, []byte("[agent]\nmemory_compiler = \"compact\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(userConfig, []byte("[agent]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -465,20 +465,6 @@ func runDarwinLowNoFileChild(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitForDarwinContentRevision(t, app, beforeContent)
-
-	changed, err := config.MigrateLegacyMemoryCompilerForRoot(root)
-	if err != nil || !changed {
-		t.Fatalf("config migration changed=%v err=%v", changed, err)
-	}
-	for _, path := range []string{userConfig, projectConfig} {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(raw), "memory_compiler") {
-			t.Fatalf("legacy memory_compiler remains in %s", path)
-		}
-	}
 
 	subagents := filepath.Join(base, "sessions", "subagents")
 	if err := os.MkdirAll(subagents, 0o700); err != nil {

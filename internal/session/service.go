@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/event"
 	"deepzora/internal/transcript"
 )
@@ -334,120 +332,6 @@ func (s *Service) Flush(ctx context.Context, ref SessionRef) (DurableReceipt, er
 		return DurableReceipt{}, ErrSessionNotRunning
 	}
 	return runtime.session.Flush(ctx)
-}
-
-// ContinueLegacy freezes one legacy head, publishes its deterministic final
-// session, then attaches that exact session. It never writes the source and it
-// does not accept the caller's pending submission; hosts enqueue the unchanged
-// submission only after this method returns the new immutable identity.
-func (s *Service) ContinueLegacy(ctx context.Context, sourcePath, headID string) (*Runtime, MigrationResult, error) {
-	filesystem, ok := s.persistence.(*FilesystemPersistence)
-	if !ok {
-		return nil, MigrationResult{}, errors.New("session: persistence does not support legacy migration")
-	}
-	result, err := migrateLegacyHeadForHost(ctx, sourcePath, filesystem.Root, headID)
-	if err != nil {
-		return nil, result, err
-	}
-	runtime, err := s.openRuntime(ctx, SessionRef{HostID: s.hostID, SessionID: result.TargetID})
-	return runtime, result, err
-}
-
-// ContinueImported resolves the paired legacy transcript and retired event
-// sidecar as one frozen migration decision. It refuses divergent histories
-// instead of letting a caller accidentally resume whichever source it opened
-// first.
-func (s *Service) ContinueImported(ctx context.Context, sourcePath, headID string) (*Runtime, ImportResult, error) {
-	return s.ContinueImportedWithHeader(ctx, sourcePath, headID, CreateOptions{})
-}
-
-// ContinueImportedWithHeader publishes Desktop ownership in the same atomic
-// directory publication as the imported history.
-func (s *Service) ContinueImportedWithHeader(ctx context.Context, sourcePath, headID string, options CreateOptions) (*Runtime, ImportResult, error) {
-	filesystem, ok := s.persistence.(*FilesystemPersistence)
-	if !ok {
-		return nil, ImportResult{}, errors.New("session: persistence does not support imported sessions")
-	}
-	result, err := importSourceForLegacyWithHeader(ctx, sourcePath, filesystem.Root, headID, options)
-	if err != nil {
-		return nil, result, err
-	}
-	runtime, err := s.openRuntime(ctx, SessionRef{HostID: s.hostID, SessionID: result.TargetID})
-	return runtime, result, err
-}
-
-// ContinuePrototype is the explicit, fail-closed bridge for the retired
-// sidecar codec. Unknown required events or conflicting tails remain read-only.
-func (s *Service) ContinuePrototype(ctx context.Context, sourceDir string) (*Runtime, PrototypeImportResult, error) {
-	filesystem, ok := s.persistence.(*FilesystemPersistence)
-	if !ok {
-		return nil, PrototypeImportResult{}, errors.New("session: persistence does not support prototype import")
-	}
-	result, err := ImportPrototype(ctx, sourceDir, filesystem.Root)
-	if err != nil {
-		return nil, result, err
-	}
-	runtime, err := s.openRuntime(ctx, SessionRef{HostID: s.hostID, SessionID: result.TargetID})
-	return runtime, result, err
-}
-
-// ContinueImportedFrom resolves legacy history against its original paired
-// store while publishing only into this service's separate staging root.
-func (s *Service) ContinueImportedFrom(ctx context.Context, sourcePath, sourceRoot, headID string) (*Runtime, ImportResult, error) {
-	return s.ContinueImportedSource(ctx, sourcePath, filepath.Join(sourceRoot, agent.BranchID(sourcePath)), headID)
-}
-
-// ContinueImportedSource accepts a provenance-linked directory whose identity
-// may have changed when a legacy head was previously converted.
-func (s *Service) ContinueImportedSource(ctx context.Context, sourcePath, sourceDir, headID string) (*Runtime, ImportResult, error) {
-	filesystem, ok := s.persistence.(*FilesystemPersistence)
-	if !ok {
-		return nil, ImportResult{}, errors.New("session: persistence does not support imported sessions")
-	}
-	result, err := importSourceForLegacyAt(ctx, sourcePath, sourceDir, filesystem.Root, headID, CreateOptions{})
-	if err != nil {
-		return nil, result, err
-	}
-	sourceRoot := filepath.Dir(sourceDir)
-	if result.Kind == "final" && filepath.Clean(sourceRoot) != filepath.Clean(filesystem.Root) {
-		tmp, err := os.MkdirTemp("", "deepzora-canonical-stage-")
-		if err != nil {
-			return nil, result, err
-		}
-		defer os.RemoveAll(tmp)
-		bundle := filepath.Join(tmp, "bundle")
-		if err := NewFilesystemPersistence(sourceRoot).exportCold(ctx, result.TargetID, bundle); err != nil {
-			return nil, result, err
-		}
-		if _, err := s.Import(ctx, bundle); err != nil {
-			return nil, result, err
-		}
-	}
-	runtime, err := s.openRuntime(ctx, SessionRef{HostID: s.hostID, SessionID: result.TargetID})
-	return runtime, result, err
-}
-
-// ContinueStoredPreview upgrades a pre-ownership linear store selected by its
-// former session id. The old directory remains read-only; execution resumes on
-// the deterministic final-codec identity returned here.
-func (s *Service) ContinueStoredPreview(ctx context.Context, sessionID string) (*Runtime, PrototypeImportResult, error) {
-	filesystem, ok := s.persistence.(*FilesystemPersistence)
-	if !ok {
-		return nil, PrototypeImportResult{}, errors.New("session: persistence does not support preview import")
-	}
-	if err := validateSessionID(sessionID); err != nil {
-		return nil, PrototypeImportResult{}, err
-	}
-	sourceDir, err := filesystem.sessionDir(sessionID, true)
-	if err != nil {
-		return nil, PrototypeImportResult{}, err
-	}
-	result, err := ImportStoredPreview(ctx, sourceDir, filesystem.Root)
-	if err != nil {
-		return nil, result, err
-	}
-	runtime, err := s.openRuntime(ctx, SessionRef{HostID: s.hostID, SessionID: result.TargetID})
-	return runtime, result, err
 }
 
 // Fork creates an independent child at the exact end event of a completed

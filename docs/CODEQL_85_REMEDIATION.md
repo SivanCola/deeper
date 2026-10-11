@@ -170,4 +170,3 @@ diff lines. Alert IDs remain stable for final-state readback.
 | F83 | #19 | `internal/agent/session_dag_unlocked.go:73` | Containment guard clarified |
 | F84 | #18 | `internal/agent/session_dag_unlocked.go:62` | Containment guard clarified |
 | F85 | #17 | `internal/agent/session_dag_rotate.go:94` | Containment guard clarified |
-

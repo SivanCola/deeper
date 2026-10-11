@@ -22,6 +22,9 @@ func configBackgroundBlocked(ctrl acpController, modelOnly bool) bool {
 }
 
 func (s *service) buildConfigReplacement(ctx context.Context, old acpController, params SessionParams, modelOnly bool) (*control.Controller, error) {
+	if current, ok := old.(*control.Controller); ok {
+		_, params.SessionRuntime, _ = current.SessionBinding()
+	}
 	finish, abort := func(*control.Controller) error { return nil }, func() {}
 	if modelOnly {
 		if c, ok := old.(*control.Controller); ok {

@@ -101,7 +101,7 @@ func TestLoadOverrideAndMissingDir(t *testing.T) {
 	}
 }
 
-func TestLoadRootsUsesCanonicalPluginNamesAndHiddenCompatibleShortName(t *testing.T) {
+func TestLoadRootsUsesCanonicalPluginNames(t *testing.T) {
 	pluginDir := t.TempDir()
 	projectDir := t.TempDir()
 	write(t, pluginDir, "plan.md", "---\ndescription: Plugin plan\n---\nPLUGIN $ARGUMENTS")
@@ -119,17 +119,17 @@ func TestLoadRootsUsesCanonicalPluginNamesAndHiddenCompatibleShortName(t *testin
 	for _, cmd := range cmds {
 		byName[cmd.Name] = cmd
 	}
-	if got := byName["plan"]; got.Body != "PROJECT $ARGUMENTS" || got.Plugin != "" || got.ShortName != "" || got.Hidden {
+	if got := byName["plan"]; got.Body != "PROJECT $ARGUMENTS" || got.Plugin != "" || got.ShortName != "" {
 		t.Fatalf("short-name winner = %+v, want project command", got)
 	}
 	canonical, ok := byName["planning-with-files:plan"]
-	if !ok || canonical.Body != "PLUGIN $ARGUMENTS" || canonical.Plugin != "planning-with-files" || canonical.ShortName != "plan" || canonical.Hidden {
+	if !ok || canonical.Body != "PLUGIN $ARGUMENTS" || canonical.Plugin != "planning-with-files" || canonical.ShortName != "plan" {
 		t.Fatalf("canonical plugin command = %+v, %v", canonical, ok)
 	}
-	if got := byName["status"]; got.Plugin != "planning-with-files" || got.ShortName != "status" || !got.Hidden {
-		t.Fatalf("short compatibility command = %+v, want hidden plugin alias", got)
+	if _, exists := byName["status"]; exists {
+		t.Fatal("plugin command created an unqualified alias")
 	}
-	if got := byName["planning-with-files:status"]; got.Plugin != "planning-with-files" || got.ShortName != "status" || got.Hidden {
+	if got := byName["planning-with-files:status"]; got.Plugin != "planning-with-files" || got.ShortName != "status" {
 		t.Fatalf("canonical status command = %+v", got)
 	}
 	if got := canonical.Render([]string{"feature"}); got != "PLUGIN feature" {
@@ -153,7 +153,7 @@ func TestLoadRootsDoesNotReplaceAnExplicitQualifiedCommand(t *testing.T) {
 	}
 	for _, cmd := range cmds {
 		if cmd.Name == "planning-with-files:plan" {
-			if cmd.Body != "EXPLICIT QUALIFIED" || cmd.Plugin != "" || cmd.ShortName != "" || cmd.Hidden {
+			if cmd.Body != "EXPLICIT QUALIFIED" || cmd.Plugin != "" || cmd.ShortName != "" {
 				t.Fatalf("explicit qualified command was replaced: %+v", cmd)
 			}
 			return

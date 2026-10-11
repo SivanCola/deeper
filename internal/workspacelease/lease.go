@@ -221,8 +221,7 @@ func workspaceIdentities(root string) (canonical, compatibility string, err erro
 	if err != nil {
 		return "", "", fmt.Errorf("resolve workspace lease root: %w", err)
 	}
-	compatibility, err = legacyWorkspaceIdentity(root)
-	return identity.Key, compatibility, err
+	return identity.Key, identity.PhysicalPath, nil
 }
 
 func nearestGitWorktreeRoot(path string) string {

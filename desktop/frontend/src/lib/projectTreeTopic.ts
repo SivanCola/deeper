@@ -264,8 +264,7 @@ export function projectTreeTopicOpenRequest(node: ProjectNode): ProjectTreeTopic
     scope,
     workspaceRoot: scope === "global" ? "" : node.root ?? "",
     topicId: node.topicId ?? "",
-    sessionPath: node.session ? `session-id:${node.session.sessionId}` : node.source
-      ? `session-source:${encodeURIComponent(JSON.stringify({ ...node.source, title: node.label }))}` : node.sessionPath,
+    sessionPath: node.session ? `session-id:${node.session.sessionId}` : node.sessionPath,
   };
 }
 
@@ -336,7 +335,6 @@ export function topicIsActive(
   activeSessionPath?: string,
   activeRemote?: ActiveRemoteSessionIdentity,
 ): boolean {
-  if (node.source?.headId) return projectTreeTopicOpenRequest(node)?.sessionPath === activeSessionPath;
   if (node.session?.sessionId) {
     return Boolean(activeSessionPath && (activeSessionPath === `session-id:${node.session.sessionId}` || activeSessionPath === node.sessionPath
       || projectSessionKeys(node).includes(`path\u0000${activeSessionPath}`)));
@@ -443,7 +441,7 @@ export function topicUsesResultSequence(node: ProjectNode): boolean {
 
 export function projectTreeReadActivityKey(node: ProjectNode): string | null {
   if (node.session?.sessionId) return projectSessionIdentity(node);
-  if (node.sessionPath || node.source || node.remoteSession) return projectSessionIdentity(node);
+  if (node.sessionPath || node.remoteSession) return projectSessionIdentity(node);
   const request = projectTreeTopicOpenRequest(node);
   if (!request?.topicId) return null;
   return [request.scope, request.workspaceRoot, request.topicId].join("\u001f");

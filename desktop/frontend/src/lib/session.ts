@@ -1,7 +1,7 @@
 import type { HistorySearchHit, ProjectNode, SessionMeta } from "./types";
 
 export function sessionActivityTime(session: SessionMeta): number {
-  return session.lastActivityAt ?? session.modTime;
+  return session.lastActivityAt;
 }
 
 export function historySessionDisplayTitle(session: Pick<SessionMeta, "preview" | "title" | "topicTitle">, fallback: string): string {

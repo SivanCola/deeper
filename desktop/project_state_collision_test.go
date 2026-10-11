@@ -61,7 +61,7 @@ func TestNewCollidingProjectGetsOwnStateWithoutMovingExistingProject(t *testing.
 	if err := addProject(plain, ""); err != nil {
 		t.Fatal(err)
 	}
-	wantPlain := filepath.Join(config.MemoryUserDir(), "projects", config.WorkspaceSlug(plain), "sessions")
+	wantPlain := filepath.Join(config.ProjectStateDir(config.MemoryUserDir(), plain), "sessions")
 	if got := config.ProjectSessionDir(plain); got != wantPlain {
 		t.Fatalf("non-colliding project moved to %q, want %q", got, wantPlain)
 	}
@@ -114,48 +114,6 @@ func TestNewCollidingProjectGetsOwnStateWithoutMovingExistingProject(t *testing.
 	}
 }
 
-func TestLegacyProjectImportsKeepExistingCollisionState(t *testing.T) {
-	for _, source := range []string{"workspace-list", "sidebar-recovery"} {
-		t.Run(source, func(t *testing.T) {
-			t.Setenv("DEEPZORA_HOME", t.TempDir())
-			root := t.TempDir()
-			first := filepath.Join(root, "front-end", "app")
-			second := filepath.Join(root, "front", "end-app")
-			for _, path := range []string{first, second} {
-				if err := os.MkdirAll(path, 0o700); err != nil {
-					t.Fatal(err)
-				}
-			}
-			if err := addProject(first, ""); err != nil {
-				t.Fatal(err)
-			}
-			legacyDir := config.ProjectSessionDir(second)
-			if err := os.MkdirAll(legacyDir, 0o700); err != nil {
-				t.Fatal(err)
-			}
-			oldSession := filepath.Join(legacyDir, "legacy.jsonl")
-			if err := os.WriteFile(oldSession, []byte("legacy session\n"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			switch source {
-			case "workspace-list":
-				rememberWorkspace(second)
-				migrateLegacyWorkspacesIntoProjects()
-			case "sidebar-recovery":
-				if _, err := recoverLegacyProjectSidebarRoots(desktopTabsFile{Tabs: []desktopTabEntry{{Scope: "project", WorkspaceRoot: second}}}); err != nil {
-					t.Fatal(err)
-				}
-			}
-			if got := config.ProjectSessionDir(second); got != legacyDir {
-				t.Fatalf("imported project moved to %q, want %q", got, legacyDir)
-			}
-			if got, err := os.ReadFile(oldSession); err != nil || string(got) != "legacy session\n" {
-				t.Fatalf("imported session changed: %q, %v", got, err)
-			}
-		})
-	}
-}
-
 func TestProjectRegistrationKeepsOpeningOnProjectListLockFailure(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	root := t.TempDir()
@@ -166,50 +124,5 @@ func TestProjectRegistrationKeepsOpeningOnProjectListLockFailure(t *testing.T) {
 	app := NewApp()
 	if err := app.registerProjectRoot(root); err != nil {
 		t.Fatalf("project list lock failure blocked opening: %v", err)
-	}
-}
-
-func TestCollidingProjectRegistrationFailsBeforeUsingUnownedState(t *testing.T) {
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	root := t.TempDir()
-	first := filepath.Join(root, "front-end", "app")
-	second := filepath.Join(root, "front", "end-app")
-	if err := addProject(first, ""); err != nil {
-		t.Fatal(err)
-	}
-	if err := config.AssignProjectStateCollision(config.MemoryUserDir(), second); err != nil {
-		t.Fatal(err)
-	}
-	assigned := config.ProjectStateDir(config.MemoryUserDir(), second)
-	if err := os.Remove(filepath.Join(assigned, ".workspace-root")); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(assigned, "orphan"), []byte("keep"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := addProject(second, ""); err == nil {
-		t.Fatal("registration accepted an unowned, nonempty assigned directory")
-	}
-	if len(loadProjectsFile().Projects) != 1 {
-		t.Fatal("failed registration changed the saved project list")
-	}
-}
-
-func TestPreviouslyRecordedCollisionKeepsBothLegacyPaths(t *testing.T) {
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	root := t.TempDir()
-	first := filepath.Join(root, "front-end", "app")
-	second := filepath.Join(root, "front", "end-app")
-	if err := saveProjectsFile(desktopProjectFile{Projects: []desktopProject{{Root: first}, {Root: second}}}); err != nil {
-		t.Fatal(err)
-	}
-	legacy := config.ProjectSessionDir(first)
-	for _, path := range []string{first, second} {
-		if err := addProject(path, ""); err != nil {
-			t.Fatal(err)
-		}
-		if got := config.ProjectSessionDir(path); got != legacy {
-			t.Fatalf("previously recorded project %q moved to %q", path, got)
-		}
 	}
 }

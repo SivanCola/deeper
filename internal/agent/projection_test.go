@@ -59,36 +59,6 @@ func TestCompactionStateAtomicSaveLoad(t *testing.T) {
 	}
 }
 
-func TestLoadCompactionStateAcceptsLegacyV1(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "legacy.jsonl")
-	legacy := CompactionState{
-		SchemaVersion:     compactionStateSchemaV1,
-		TranscriptVersion: 2,
-		Projection: ContextProjection{
-			Messages:          []provider.Message{{Role: provider.RoleUser, Content: "legacy summary"}},
-			TranscriptVersion: 2,
-			ProjectionVersion: 1,
-			CoveredCount:      3,
-		},
-		LastTrigger: CompactionTriggerManual,
-	}
-	raw, err := json.Marshal(legacy)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(ContextStatePath(path), raw, 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	got, ok, err := LoadCompactionState(path)
-	if err != nil || !ok {
-		t.Fatalf("load legacy V1: ok=%v err=%v", ok, err)
-	}
-	if got.SchemaVersion != compactionStateSchemaV1 || got.Projection.Messages[0].Content != "legacy summary" {
-		t.Fatalf("legacy state changed: %+v", got)
-	}
-}
-
 func TestSaveCompactionStateCreatesPreviousReaderBoundary(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "current.jsonl")
 	if err := SaveCompactionState(path, CompactionState{
@@ -146,7 +116,6 @@ func TestCompactToProjectionLeavesCanonicalIntact(t *testing.T) {
 	a := New(fp, nil, sess, Options{
 		ContextWindow: 50_000,
 		CompactRatio:  0.85,
-		RecentKeep:    2,
 		SessionPath:   sessionPath,
 		ModelRef:      "test/model",
 	}, event.Discard)
@@ -203,7 +172,7 @@ func TestCompactFailureDoesNotWriteMechanicalMarker(t *testing.T) {
 		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("a", 200)})
 	}
 	before := append([]provider.Message(nil), sess.Messages...)
-	a := New(fp, nil, sess, Options{ContextWindow: 2000, RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+	a := New(fp, nil, sess, Options{ContextWindow: 2000, ArchiveDir: t.TempDir()}, event.Discard)
 	err := a.CompactNow(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected compaction error")
@@ -237,7 +206,7 @@ func TestFixedEarlyUserTurnsStableAcrossCompactions(t *testing.T) {
 		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("work-", 50) + string(rune('A'+i%26))})
 	}
 	dir := t.TempDir()
-	a := New(fp, nil, sess, Options{ContextWindow: 4000, RecentKeep: 2, ArchiveDir: dir, SessionPath: filepath.Join(dir, "s.jsonl")}, event.Discard)
+	a := New(fp, nil, sess, Options{ContextWindow: 4000, ArchiveDir: dir, SessionPath: filepath.Join(dir, "s.jsonl")}, event.Discard)
 	if err := a.CompactNow(context.Background(), ""); err != nil {
 		t.Fatalf("compact1: %v", err)
 	}
@@ -303,7 +272,7 @@ func TestLocalOnlyExcludedFromCompactionRequest(t *testing.T) {
 		Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
 		Content: "secret local only", LocalOnly: true,
 	})
-	a := New(fp, nil, sess, Options{ContextWindow: 2000, RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+	a := New(fp, nil, sess, Options{ContextWindow: 2000, ArchiveDir: t.TempDir()}, event.Discard)
 	if err := a.CompactNow(context.Background(), ""); err != nil {
 		t.Fatalf("compact: %v", err)
 	}
@@ -338,7 +307,7 @@ func TestArchiveDirIgnoredOnCheckpointInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := New(fp, nil, sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2, ArchiveDir: badArchive,
+		ContextWindow: 50_000, CompactRatio: 0.85, ArchiveDir: badArchive,
 	}, event.Discard)
 	if err := a.CompactNow(context.Background(), ""); err != nil {
 		t.Fatalf("CompactNow with unusable ArchiveDir: %v", err)
@@ -396,7 +365,7 @@ func TestCompactReplacesHistory(t *testing.T) {
 	}}
 	dir := t.TempDir()
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2, ArchiveDir: dir,
+		ContextWindow: 50_000, CompactRatio: 0.85, ArchiveDir: dir,
 	}, event.Discard)
 	beforeLen := len(sess.Messages)
 
@@ -458,7 +427,7 @@ func TestManualCompactReportsSummarizerFailure(t *testing.T) {
 	}}
 	var got []event.Event
 	sink := event.FuncSink(func(e event.Event) { got = append(got, e) })
-	a := New(prov, tool.NewRegistry(), sess, Options{RecentKeep: 2, ArchiveDir: t.TempDir()}, sink)
+	a := New(prov, tool.NewRegistry(), sess, Options{ArchiveDir: t.TempDir()}, sink)
 
 	before := append([]provider.Message(nil), sess.Messages...)
 	if err := a.compact(context.Background(), "manual", "", true); err == nil {
@@ -503,8 +472,7 @@ func TestCompactRewriteVersionFeedsCacheDiagnostics(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "f"},
 	}}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: 50_000, CompactRatio: 0.85}, event.Discard)
 	beforeVersion := sess.RewriteVersion()
 
 	if err := a.compact(context.Background(), "auto", "", true); err != nil {
@@ -545,7 +513,7 @@ func TestCompactSummarizesMidSessionUserTurns(t *testing.T) {
 	// The summarizer is given a reply that drops the fact entirely: a mid-session
 	// user turn must survive on its own, never on the digest having captured it.
 	a := New(&fakeProvider{reply: "Standing facts: none"}, tool.NewRegistry(), sess,
-		Options{ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2}, event.Discard)
+		Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 
 	if err := a.compact(context.Background(), "manual", "", true); err != nil {
 		t.Fatalf("compact: %v", err)
@@ -602,7 +570,7 @@ func TestCompactKeepsPriorDigests(t *testing.T) {
 	}}
 	prov := &fakeProvider{reply: "Standing facts: db is orion_prod_42"}
 	a := New(prov, tool.NewRegistry(), sess,
-		Options{RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+		Options{ArchiveDir: t.TempDir()}, event.Discard)
 
 	if err := a.compact(context.Background(), "manual", "", true); err != nil {
 		t.Fatalf("compact: %v", err)
@@ -652,8 +620,7 @@ func TestCompactSummarizesErrorMessagesDespiteDeprecatedKeep(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2, KeepPolicy: KeepErrors,
-	}, event.Discard)
+		ContextWindow: 50_000, CompactRatio: 0.85}, event.Discard)
 
 	if err := a.compact(context.Background(), "manual", "", true); err != nil {
 		t.Fatalf("compact: %v", err)
@@ -694,8 +661,7 @@ func TestCompactSummarizesUserMarkedMessagesDespiteDeprecatedKeep(t *testing.T) 
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2, KeepPolicy: KeepUserMarked,
-	}, event.Discard)
+		ContextWindow: 50_000, CompactRatio: 0.85}, event.Discard)
 
 	if err := a.compact(context.Background(), "manual", "", true); err != nil {
 		t.Fatalf("compact: %v", err)
@@ -741,7 +707,7 @@ func TestRunCompactsAfterFinalAnswer(t *testing.T) {
 	// fakeProvider replies "done" for the main sample; compact also uses the same
 	// provider for the summary call (also returns "done", which is fine as a digest).
 	a := New(&fakeProvider{reply: "done"}, tool.NewRegistry(), sess,
-		Options{ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2}, event.Discard)
+		Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 
 	if before := a.estimatedPromptTokens(a.modelVisibleMessages()); before < a.compactTrigger() {
 		t.Fatalf("fixture est=%d below fold trigger %d", before, a.compactTrigger())
@@ -766,7 +732,7 @@ func TestCompactFoldsSingleLargeMessage(t *testing.T) {
 		{Role: provider.RoleUser, Content: "next"},
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
-	a := New(prov, tool.NewRegistry(), sess, Options{RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+	a := New(prov, tool.NewRegistry(), sess, Options{ArchiveDir: t.TempDir()}, event.Discard)
 	before := len(sess.Messages)
 
 	if err := a.compact(context.Background(), "auto", "", false); err != nil {

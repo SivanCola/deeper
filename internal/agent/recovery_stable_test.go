@@ -48,7 +48,7 @@ func TestSaveRecoveryBranchStampsStableRootDepth(t *testing.T) {
 	}
 
 	capped, staleCapped := divergedSessionPair(t, dir, "capped.jsonl")
-	stampRecoveryMeta(t, capped, SessionRecoveryMaxDepth)
+	stampRecoveryMeta(t, capped, 3)
 	info, err = staleCapped.SaveRecoveryBranch(RecoveryBranchOptions{OriginalPath: capped})
 	if err != nil {
 		t.Fatalf("SaveRecoveryBranch at historical cap: %v", err)

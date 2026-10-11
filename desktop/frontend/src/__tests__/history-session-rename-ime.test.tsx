@@ -18,7 +18,7 @@ const root = createRoot(document.getElementById("root")!);
 const renamed: string[] = [];
 const session: SessionMeta = {
   path: "/sessions/one.jsonl", title: "Old name", preview: "Old name",
-  turns: 1, createdAt: Date.now(), lastActivityAt: Date.now(), modTime: Date.now(),
+  turns: 1, createdAt: Date.now(), lastActivityAt: Date.now(),
   current: false, open: false,
 };
 

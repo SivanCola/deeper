@@ -15,5 +15,3 @@ type stubSessionAPI struct {
 }
 
 func (stubSessionAPI) SessionHead() (agent.HeadRef, bool) { return agent.HeadRef{}, false }
-func (stubSessionAPI) QualityFloor() string               { return control.QualityFloorStandard }
-func (stubSessionAPI) SetQualityFloor(string) error       { return nil }

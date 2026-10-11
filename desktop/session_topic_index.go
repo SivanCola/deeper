@@ -70,10 +70,7 @@ func cloneTopicPage(nodes []ProjectNode) []ProjectNode {
 			ref := *node.ParentSession
 			node.ParentSession = &ref
 		}
-		if node.Source != nil {
-			ref := *node.Source
-			node.Source = &ref
-		}
+
 		if node.Remote != nil {
 			ref := *node.Remote
 			node.Remote = &ref

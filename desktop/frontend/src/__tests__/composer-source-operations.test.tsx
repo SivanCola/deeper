@@ -31,7 +31,7 @@ let operations!: ReturnType<typeof useSessionOperations>;
 function Probe({ id, remote = false, generation = "" }: { id: string; remote?: boolean; generation?: string }) {
   operations = useSessionOperations({ visible: { tabId: id, sessionKey: id + generation }, resources: ["A", "B"].map(tabId => ({ tabId, sessionKey: tabId + generation })) });
   commands = useComposerModeActions({
-    remote, collaborationMode: "goal", toolApprovalMode: "ask", goal: "task",
+    remote, collaborationMode: "plan", toolApprovalMode: "workspace-write", goal: "task",
     target: { tabId: id, sessionKey: id + generation }, operations, ports,
     planIntentsRef, yoloRestoreRef,
     showError: message => effects.push(`error:${message}`),
@@ -109,12 +109,12 @@ try {
     setMode: () => { throw new Error("remote mode cannot use local mode changes"); },
     setApproval: () => { throw new Error("remote approval cannot use local mode changes"); },
   };
-  for (const request of [{ kind: "collaboration", mode: "normal" }, { kind: "approval", mode: "yolo" }] as const) {
+  for (const request of [{ kind: "collaboration", mode: "normal" }, { kind: "approval", mode: "danger-full-access" }] as const) {
     await executeComposerMode({ target: { tabId: "A", sessionKey: "A" }, request,
-      remote: true, collaborationMode: "goal", toolApprovalMode: "ask", goal: "task", ports: remotePorts,
+      remote: true, collaborationMode: "plan", toolApprovalMode: "workspace-write", goal: "task", ports: remotePorts,
     }, { checkpoint() {}, ownsUI: () => true });
   }
-  assert.deepEqual(writes, [["A", "normal", "ask", ""], ["A", "goal", "yolo", "task"]], "each remote change sends every axis in one atomic profile transaction");
+  assert.deepEqual(writes, [["A", "normal", "workspace-write", ""], ["A", "goal", "danger-full-access", "task"]], "each remote change sends every axis in one atomic profile transaction");
   console.log("composer source operations: source isolation, ABA, identity replacement, lanes, finally and disposal passed");
 } finally {
   if (document.getElementById("root")?.hasChildNodes()) await act(async () => root.unmount());

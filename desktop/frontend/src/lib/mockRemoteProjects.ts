@@ -136,7 +136,6 @@ export function createMockRemoteProjects(tabs: MockRemoteTabCatalog): {
     async CancelRemoteTab(tabId) { __emitMockRemoteTab(tabId, "event", { kind: "turn_done" }); },
     async ApproveRemoteTab() {},
     async ResolveRemoteTabPlanDecision() {},
-    async SetRemoteTabQualityFloor() {},
     async AnswerRemoteTab() {},
     async SubmitRemoteTabExtensionForm() {},
     async ReclaimRemoteTabSession() {},

@@ -31,6 +31,45 @@ func decodeTOMLBytes(data []byte, v any) (toml.MetaData, error) {
 		return meta, err
 	}
 	if cfg, ok := v.(*Config); ok {
+		if meta.IsDefined("config_version") && cfg.ConfigVersion != CurrentConfigVersion {
+			return meta, fmt.Errorf("unsupported config_version %d; current schema is %d", cfg.ConfigVersion, CurrentConfigVersion)
+		}
+		for _, retired := range [][2]string{{"desktop", "status_bar_style_initialized"}, {"ui", "shortcut_layout"}, {"bot", "queue_drop"}, {"bot", "allowlist"}, {"permissions", "allow_dynamic_bash"}} {
+			if meta.IsDefined(retired[0], retired[1]) {
+				return meta, fmt.Errorf("unsupported retired setting %s.%s", retired[0], retired[1])
+			}
+		}
+		for _, key := range []string{
+			"auto_recovery", "max_steps", "planner_max_steps", "recovery_model", "recovery_temperature",
+			"auto_plan", "auto_plan_classifier", "soft_compact_ratio", "tool_result_snip_ratio",
+			"compact_force_ratio", "context_editing", "keep", "recent_keep",
+			"plan_mode_read_only_commands", "legacy_anchor_safety_gate", "completion_validation",
+			"completion_evaluator_model", "redact_tool_output", "memory_compiler",
+		} {
+			if meta.IsDefined("agent", key) {
+				return meta, fmt.Errorf("unsupported retired setting agent.%s", key)
+			}
+		}
+		for _, platform := range []string{"qq", "feishu", "weixin", "dingtalk"} {
+			for _, key := range []string{"enabled", "app_id", "app_secret_env", "account_id", "token_env", "client_id", "client_secret", "client_id_env", "secret_env", "model", "tool_approval_mode", "workspace_root", "session_mappings"} {
+				if meta.IsDefined("bot", platform, key) {
+					return meta, fmt.Errorf("unsupported direct bot setting bot.%s.%s; use bot.connections", platform, key)
+				}
+			}
+		}
+		for _, path := range meta.Keys() {
+			if len(path) == 2 && path[0] == "plugins" && path[1] == "tier" {
+				return meta, fmt.Errorf("unsupported retired setting plugins.tier")
+			}
+			if len(path) != 2 || path[0] != "providers" {
+				continue
+			}
+			for _, key := range []string{"chat_url", "responses_stateful", "model", "price", "vision", "vision_models", "reasoning_defaults"} {
+				if path[len(path)-1] == key {
+					return meta, fmt.Errorf("unsupported retired setting providers.%s", key)
+				}
+			}
+		}
 		if err := isolateDecodedProviders(text, meta, cfg); err != nil {
 			return meta, err
 		}

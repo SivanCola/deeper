@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"deepzora/desktop/internal/legacycleanup"
 	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/topicstate"
 )
@@ -18,7 +17,7 @@ func topicRemovalTrashEntries(state workspacestate.State, query string) []TrashE
 		if operation.Disposition != "archive_placeholder" || (operation.Phase != "committed" && operation.Phase != "prepared" && operation.Phase != "restoring") {
 			continue
 		}
-		var item legacycleanup.Candidate
+		var item topicRemovalEntry
 		if json.Unmarshal(operation.Snapshot, &item) != nil || item.Topic == nil {
 			continue
 		}
@@ -99,7 +98,7 @@ func (a *App) restoreRemovedTopic(id, workspaceID string) error {
 		if operation.Phase != "committed" && operation.Phase != "restoring" {
 			return workspacestate.ErrMutationConflict
 		}
-		var item legacycleanup.Candidate
+		var item topicRemovalEntry
 		if err := json.Unmarshal(operation.Snapshot, &item); err != nil {
 			return err
 		}
@@ -136,15 +135,15 @@ func (a *App) restoreRemovedTopic(id, workspaceID string) error {
 	})
 }
 
-func restoreRemovedTopicIndex(file *desktopProjectFile, item legacycleanup.Candidate) {
+func restoreRemovedTopicIndex(file *desktopProjectFile, item topicRemovalEntry) {
 	snapshot := item.Topic
 	file.DeletedTopics = removeString(file.DeletedTopics, item.TopicID)
 	if snapshot.Scope == "global" {
-		file.GlobalTopics = insertLegacyTopicAt(file.GlobalTopics, item.TopicID, snapshot.Order)
+		file.GlobalTopics = insertTopicAt(file.GlobalTopics, item.TopicID, snapshot.Order)
 		if snapshot.Pinned && !slices.Contains(file.GlobalPinnedTopics, item.TopicID) {
 			file.GlobalPinnedTopics = append(file.GlobalPinnedTopics, item.TopicID)
 		}
-		if groups, changed := restoreLegacyTopicGroup(file.GlobalGroups, snapshot, item.TopicID); changed {
+		if groups, changed := restoreTopicGroup(file.GlobalGroups, snapshot, item.TopicID); changed {
 			file.GlobalGroups = groups
 			file.GlobalGroupsRevision++
 		}
@@ -152,18 +151,18 @@ func restoreRemovedTopicIndex(file *desktopProjectFile, item legacycleanup.Candi
 	}
 	i := projectIndexByRoot(file.Projects, snapshot.WorkspaceRoot)
 	project := &file.Projects[i]
-	project.Topics = insertLegacyTopicAt(project.Topics, item.TopicID, snapshot.Order)
+	project.Topics = insertTopicAt(project.Topics, item.TopicID, snapshot.Order)
 	if snapshot.Pinned && !slices.Contains(project.PinnedTopics, item.TopicID) {
 		project.PinnedTopics = append(project.PinnedTopics, item.TopicID)
 	}
-	if groups, changed := restoreLegacyTopicGroup(project.Groups, snapshot, item.TopicID); changed {
+	if groups, changed := restoreTopicGroup(project.Groups, snapshot, item.TopicID); changed {
 		project.Groups = groups
 		project.GroupsRevision++
 	}
 }
 
 // Requires registry, projects and topic-store writer ownership.
-func (a *App) restoreRemovedTopicMetadataLocked(ctx context.Context, store *topicstate.Store, state workspacestate.State, file desktopProjectFile, item legacycleanup.Candidate, metadata topicstate.Record, operation *workspacestate.TopicRemoval, checkpoint func() error) error {
+func (a *App) restoreRemovedTopicMetadataLocked(ctx context.Context, store *topicstate.Store, state workspacestate.State, file desktopProjectFile, item topicRemovalEntry, metadata topicstate.Record, operation *workspacestate.TopicRemoval, checkpoint func() error) error {
 	snapshot, err := store.Snapshot(ctx)
 	if err != nil {
 		return err

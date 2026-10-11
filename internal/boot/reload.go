@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/extension"
@@ -222,29 +221,14 @@ func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration, crea
 			if err := ctrl.AdoptRebuiltModelContext(carried); err != nil {
 				return err
 			}
-		} else if m.prevPath != "" {
-			path := agent.ContinueSessionPath(m.prevPath, ctrl.SessionDir(), ctrl.Label())
-			loaded, err := agent.LoadSession(path)
-			if err != nil {
-				return err
-			}
-			if err := ctrl.ResumeNativeSession(loaded.CloneWithMessages(carried), path); err != nil {
-				return err
-			}
 		} else {
-			// A compatibility rebuild can start from an in-memory controller
-			// with no persistent identity. Preserve that state without minting
-			// a new logical session (which would rotate session-private temp).
-			ctrl.AdoptHistory(carried, "")
+			if err := ctrl.AdoptHistory(carried, ""); err != nil {
+				return err
+			}
 		}
 	} else {
-		path := agent.ContinueSessionPath(m.prevPath, ctrl.SessionDir(), ctrl.Label())
-		if ctrl.NativeLegacySession() {
-			if err := ctrl.AdoptNativeRebuiltContext(old, carried, path); err != nil {
-				return err
-			}
-		} else {
-			ctrl.AdoptHistory(carried, path)
+		if err := ctrl.AdoptHistory(carried, ""); err != nil {
+			return err
 		}
 	}
 
@@ -255,11 +239,6 @@ func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration, crea
 	if m.goalRunning && strings.TrimSpace(m.goal) != "" && strings.TrimSpace(ctrl.Goal()) == "" {
 		ctrl.SetGoal(m.goal)
 	}
-	if m.prevPath == "" {
-		// No persisted recovery sidecar; carry the live checkpoint.
-		ctrl.CarryRecoveryFrom(old)
-	}
-
 	if err := ctrl.InheritLifecycleFrom(old); err != nil {
 		return fmt.Errorf("inherit controller lifecycle: %w", err)
 	}

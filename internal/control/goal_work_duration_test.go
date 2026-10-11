@@ -111,7 +111,7 @@ func TestGoalWorkAccumulatesOnceAcrossPauseResumeAndDurableRestore(t *testing.T)
 	for _, commit := range commits.Commits {
 		for _, item := range commit.Events {
 			if item.Kind == "goal/state" {
-				restored, err = goalLifecycleFromProjection(item.Payload, runtime.Ref().SessionID, time.Time{})
+				restored, err = goalLifecycleFromProjection(item.Payload)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -175,16 +175,6 @@ func TestGoalWorkRecordsCancelledAndFailedRuns(t *testing.T) {
 				t.Fatalf("failed run work = %d", got)
 			}
 		})
-	}
-}
-
-func TestGoalWorkLegacyProjectionPreservesDuration(t *testing.T) {
-	machine, err := goalLifecycleFromProjection([]byte(`{"goal":"legacy","status":"stopped","turnsUsed":2,"workDurationMs":12345}`), "legacy", time.Time{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := machine.Get().WorkDurationMs; got != 12345 {
-		t.Fatalf("legacy duration = %d", got)
 	}
 }
 

@@ -67,13 +67,12 @@ func TestCatalogForProviderEntryUsesHiddenLegacyPreset(t *testing.T) {
 }
 
 func TestRepairProviderEndpointContractUsesExactCatalogRoute(t *testing.T) {
-	legacyStateful := true
 	entry := ProviderEntry{
 		Name: "deepseek-anthropic", DisplayName: "Deepseek2", PresetID: "deepseek-anthropic",
 		Kind: "responses", BaseURL: "https://api.deepseek.com", RequestURL: "https://api.deepseek.com/anthropic/v1/messages",
-		ChatURL: "https://stale.example/chat/completions", Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash",
+		Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash",
 		APIKeyEnv: "MY_DEEPSEEK_KEY", Headers: map[string]string{"X-Test": "keep"}, ExtraBody: map[string]any{"future": "keep"},
-		ContextWindow: 1_000_000, ResponsesMode: "stateful", ResponsesStateful: &legacyStateful,
+		ContextWindow: 1_000_000, ResponsesMode: "stateful",
 	}
 	repair, changed := RepairProviderEndpointContract(&entry)
 	if !changed || repair == nil {
@@ -84,7 +83,7 @@ func TestRepairProviderEndpointContractUsesExactCatalogRoute(t *testing.T) {
 		t.Fatalf("repair = %+v", repair)
 	}
 	if entry.Kind != "anthropic" || entry.BaseURL != "https://api.deepseek.com/anthropic" ||
-		entry.RequestURL != "" || entry.ChatURL != "" || entry.ResponsesMode != "" || entry.ResponsesStateful != nil {
+		entry.RequestURL != "" || entry.ResponsesMode != "" {
 		t.Fatalf("repaired entry = %+v", entry)
 	}
 	if got := ProviderEffectiveRequestURL(&entry); got != "https://api.deepseek.com/anthropic/v1/messages" {
@@ -196,7 +195,7 @@ default = "deepseek-v4-flash"
 }
 
 func TestRewriteProviderEndpointContractsPreservesInlineUnknownFields(t *testing.T) {
-	raw := `config_version = 10 # keep
+	raw := `config_version = 12 # keep
 providers = [{name="deepseek-anthropic", preset_id="deepseek-anthropic", kind="anthropic", base_url="https://api.deepseek.com/anthropic", request_url="https://api.deepseek.com/responses", responses_stateful=true, api_key_env="MY_KEY", models=["deepseek-v4-flash"], future={value="keep"}}] # keep inline
 `
 	next, repairs, err := rewriteProviderEndpointContracts(raw)
@@ -207,7 +206,7 @@ providers = [{name="deepseek-anthropic", preset_id="deepseek-anthropic", kind="a
 		t.Fatalf("repairs = %+v", repairs)
 	}
 	for _, want := range []string{
-		"config_version = 10 # keep",
+		"config_version = 12 # keep",
 		`kind="responses"`,
 		`base_url="https://api.deepseek.com"`,
 		`request_url=""`,

@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -250,19 +249,5 @@ func TestRecoveryGCSkipsWhenLeaseAcquiredAfterScan(t *testing.T) {
 	}
 	if _, err := os.Stat(branchPath); err != nil {
 		t.Fatalf("leased branch must remain: %v", err)
-	}
-}
-
-func TestRecoveryGCUsesDeleteRecoveryCopyNotDeleteSession(t *testing.T) {
-	source, err := os.ReadFile("recovery_gc.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(source)
-	if !strings.Contains(text, "DeleteRecoveryCopy(path)") {
-		t.Fatal("background recovery GC must call DeleteRecoveryCopy")
-	}
-	if strings.Contains(text, "DeleteSession(path)") {
-		t.Fatal("background recovery GC must not use unguarded DeleteSession")
 	}
 }

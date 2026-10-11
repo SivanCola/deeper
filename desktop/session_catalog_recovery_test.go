@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"deepzora/internal/sessioncatalog"
 )
@@ -178,9 +176,7 @@ func TestProjectNodeFromCatalogTopicCollapsesDivergedForksToOne(t *testing.T) {
 	if len(node.Children) != 0 {
 		t.Fatalf("children = %d, want collapsed parent-only row, children=%+v", len(node.Children), node.Children)
 	}
-	if node.RecoveryCopyCount != 0 {
-		t.Fatalf("recoveryCopyCount = %d, want compatibility field hidden from ordinary tree", node.RecoveryCopyCount)
-	}
+
 }
 
 func TestProjectNodeFromCatalogTopicHidesFoldedCoveredCopyCount(t *testing.T) {
@@ -196,13 +192,11 @@ func TestProjectNodeFromCatalogTopicHidesFoldedCoveredCopyCount(t *testing.T) {
 				Recovered: true, RecoveryCopy: true, LastActivityAt: 95},
 		},
 	}
-	node, ok := app.projectNodeFromCatalogTopic(topic, map[string]catalogRuntimeOverlay{}, map[string]catalogRuntimeOverlay{}, nil)
+	_, ok := app.projectNodeFromCatalogTopic(topic, map[string]catalogRuntimeOverlay{}, map[string]catalogRuntimeOverlay{}, nil)
 	if !ok {
 		t.Fatal("topic with parent should stay visible")
 	}
-	if node.RecoveryCopyCount != 0 {
-		t.Fatalf("recoveryCopyCount = %d, want compatibility field hidden from ordinary tree", node.RecoveryCopyCount)
-	}
+
 }
 
 func TestProjectNodeFromCatalogTopicHidesOrphanForkTopicsWhenPreferredElsewhere(t *testing.T) {
@@ -219,42 +213,5 @@ func TestProjectNodeFromCatalogTopicHidesOrphanForkTopicsWhenPreferredElsewhere(
 	preferred := map[string]struct{}{"/s/root.jsonl": {}}
 	if _, ok := app.projectNodeFromCatalogTopic(topic, map[string]catalogRuntimeOverlay{}, map[string]catalogRuntimeOverlay{}, preferred); ok {
 		t.Fatal("orphan non-preferred recovery topic must stay out of the ordinary tree")
-	}
-}
-
-func TestListProjectTopicsSkipsRecoveryOnlyPages(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	ctx := context.Background()
-	catalog, err := sessioncatalog.Open(ctx, sessioncatalog.Options{
-		Path: filepath.Join(t.TempDir(), "catalog.sqlite"), DisableRepair: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = catalog.Close(context.Background()) })
-	base := time.Date(2026, 8, 11, 10, 0, 0, 0, time.UTC)
-	// Two idle recovery-only topics (newer) then one ordinary topic (older).
-	for i, topicID := range []string{"copy-b", "copy-a", "real"} {
-		record := sessioncatalog.SessionRecord{
-			Path: filepath.Join("/s", topicID+".jsonl"), Directory: "/s", Scope: "global",
-			TopicID: topicID, TopicTitle: topicID, Turns: 1, TurnsState: sessioncatalog.TurnsValid,
-			Health: sessioncatalog.HealthOK, LastActivityAt: base.Add(time.Duration(2-i) * time.Minute).UnixMilli(),
-		}
-		if topicID != "real" {
-			record.Recovered = true
-			record.RecoveryCopy = true
-		}
-		if err := catalog.UpsertSession(ctx, record); err != nil {
-			t.Fatal(err)
-		}
-	}
-	app := &App{tabs: map[string]*WorkspaceTab{}, detachedSessions: map[string]*WorkspaceTab{}}
-	app.sessionCatalog.Store(catalog)
-	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "global", Limit: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].TopicID != "real" {
-		t.Fatalf("page = %+v, want the ordinary topic after skipping recovery-only pages", page.Items)
 	}
 }

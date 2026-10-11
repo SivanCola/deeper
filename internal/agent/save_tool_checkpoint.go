@@ -2,7 +2,6 @@ package agent
 
 import (
 	"crypto/sha256"
-	"log/slog"
 
 	"deepzora/internal/provider"
 )
@@ -40,32 +39,4 @@ func (s *Session) markCheckpointPersisted(path string, digest [sha256.Size]byte,
 // Checkpoint modes share ordinary CAS and rewrite rules, but defer projections.
 func (mode sessionSaveMode) defersProjection() bool {
 	return mode == sessionSaveToolCheckpoint
-}
-
-func (mode sessionSaveMode) allowsOwnedRewrite() bool {
-	return mode == sessionSaveRewrite || mode == sessionSaveRewriteCompact
-}
-
-func (s *Session) refreshPendingCheckpointProjection(path string, msgs []provider.Message, digest [sha256.Size]byte, revision int64, deferred bool) {
-	state := s.persistState(path)
-	if deferred || (!state.projectionPending && state.saveVerified) {
-		return
-	}
-	if err := refreshSessionDisplayIndex(path, msgs, digest, revision, -1); err != nil {
-		// Match normal saves: a derived index cannot invalidate a durable receipt.
-		slog.Warn("session: keeping save after display index write failure", "path", path, "err", err)
-	}
-}
-
-func (mode sessionSaveMode) eventReason() string {
-	switch mode {
-	case sessionSaveSnapshot, sessionSaveToolCheckpoint:
-		return "snapshot"
-	case sessionSaveRewrite:
-		return "rewrite"
-	case sessionSaveRewriteCompact:
-		return "rewrite-compact"
-	default:
-		return "save"
-	}
 }

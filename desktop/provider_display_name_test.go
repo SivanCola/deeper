@@ -2,10 +2,11 @@ package main
 
 import (
 	"deepzora/internal/config"
-	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
 
 func TestProviderDisplayNamePreservesIdentity(t *testing.T) {

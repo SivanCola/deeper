@@ -55,7 +55,7 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `
 
 type browserSurface struct {

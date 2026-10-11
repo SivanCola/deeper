@@ -58,15 +58,6 @@ func TestDAGTurnMarkersRideTheNextSave(t *testing.T) {
 	}
 }
 
-func TestDAGTurnMarkersAreNotQueuedForSchemaOne(t *testing.T) {
-	useSchemaOneLog(t)
-	path := dagTestSession(t)
-	s := dagSavedSession(t, path, "q1")
-	if s.QueueTurnBegin("turn-1", true) || s.QueueTurnEnd("turn-1") {
-		t.Fatal("schema-1 sessions keep the sidecar marker")
-	}
-}
-
 func TestDAGTurnContinuedOnOtherHead(t *testing.T) {
 	path := dagTestSession(t)
 	a := dagSavedSession(t, path, "q1", "a1")

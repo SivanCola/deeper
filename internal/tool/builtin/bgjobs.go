@@ -24,9 +24,6 @@ import (
 func init() {
 	tool.RegisterBuiltin(jobOutput{})
 	tool.RegisterBuiltin(jobKill{})
-	tool.RegisterBuiltin(bashOutput{})
-	tool.RegisterBuiltin(killShell{})
-	tool.RegisterBuiltin(waitJob{})
 }
 
 const (
@@ -166,68 +163,6 @@ func (jobKill) Execute(ctx context.Context, args json.RawMessage) (string, error
 	return fmt.Sprintf("Job %q had already finished or is unknown.", p.JobID), nil
 }
 
-// bash_output: poll a background job's new output (non-blocking)
-
-type bashOutput struct{}
-
-func (bashOutput) Name() string { return "bash_output" }
-
-func (bashOutput) Description() string {
-	return "Legacy alias: read new output from a background job without blocking. New calls should use job_output."
-}
-
-func (bashOutput) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"job_id":{"type":"string","description":"The background job id (e.g. \"bash-1\") returned when it was started."},"filter":{"type":"string","description":"Optional regular expression; only matching lines of the new output are returned."}},"required":["job_id"]}`)
-}
-
-func (bashOutput) ReadOnly() bool { return true }
-
-func (bashOutput) HiddenFromCapabilityCatalog() bool { return true }
-
-func (bashOutput) ProviderVisible(ctx context.Context) bool {
-	_, ok := jobs.FromContext(ctx)
-	return ok
-}
-
-func (bashOutput) Execute(ctx context.Context, args json.RawMessage) (string, error) {
-	var p struct {
-		JobID  string `json:"job_id"`
-		Filter string `json:"filter"`
-	}
-	if err := json.Unmarshal(args, &p); err != nil {
-		return "", fmt.Errorf("invalid args: %w", err)
-	}
-	if p.JobID == "" {
-		return "", fmt.Errorf("job_id is required")
-	}
-	if _, err := regexp.Compile(p.Filter); err != nil {
-		return "", fmt.Errorf("invalid filter regexp: %w", err)
-	}
-	jm, ok := jobs.FromContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("background jobs are not available in this context")
-	}
-	text, status, found := jm.OutputForSession(jobs.SessionFromContext(ctx), p.JobID)
-	if !found {
-		return "", fmt.Errorf("no background job %q", p.JobID)
-	}
-	if status != jobs.Running {
-		collectBackgroundEvidence(ctx, jm, p.JobID)
-	}
-	if p.Filter != "" && text != "" {
-		filtered, err := filterLines(text, p.Filter)
-		if err != nil {
-			return "", err
-		}
-		text = filtered
-	}
-	header := fmt.Sprintf("[%s] %s", p.JobID, status)
-	if strings.TrimSpace(text) == "" {
-		return header + "\n(no new output)", nil
-	}
-	return header + "\n" + text, nil
-}
-
 // filterLines keeps only the lines of s matching the regular expression re.
 func filterLines(s, re string) (string, error) {
 	rx, err := regexp.Compile(re)
@@ -241,110 +176,6 @@ func filterLines(s, re string) (string, error) {
 		}
 	}
 	return strings.Join(keep, "\n"), nil
-}
-
-// kill_shell: terminate a running background job
-
-type killShell struct{}
-
-func (killShell) Name() string { return "kill_shell" }
-
-func (killShell) Description() string {
-	return "Legacy alias: terminate a running background job. New calls should use job_kill."
-}
-
-func (killShell) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"job_id":{"type":"string","description":"The background job id to terminate (e.g. \"bash-1\")."}},"required":["job_id"]}`)
-}
-
-func (killShell) ReadOnly() bool { return false }
-
-func (killShell) HiddenFromCapabilityCatalog() bool { return true }
-
-func (killShell) ProviderVisible(ctx context.Context) bool {
-	_, ok := jobs.FromContext(ctx)
-	return ok
-}
-
-func (killShell) Execute(ctx context.Context, args json.RawMessage) (string, error) {
-	var p struct {
-		JobID string `json:"job_id"`
-	}
-	if err := json.Unmarshal(args, &p); err != nil {
-		return "", fmt.Errorf("invalid args: %w", err)
-	}
-	if p.JobID == "" {
-		return "", fmt.Errorf("job_id is required")
-	}
-	jm, ok := jobs.FromContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("background jobs are not available in this context")
-	}
-	if jm.KillForSession(jobs.SessionFromContext(ctx), p.JobID) {
-		return fmt.Sprintf("Killed background job %q.", p.JobID), nil
-	}
-	return fmt.Sprintf("Background job %q was not running (already finished or unknown).", p.JobID), nil
-}
-
-// wait: block until background jobs finish, then return their results
-
-type waitJob struct{}
-
-func (waitJob) Name() string { return "wait" }
-
-func (waitJob) Description() string {
-	return "Legacy multi-job wait retained for old sessions. New calls should use job_output with wait=true."
-}
-
-func (waitJob) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"job_ids":{"type":"array","items":{"type":"string"},"description":"Background job ids to wait for. Omit to wait for every currently-running job."},"timeout_seconds":{"type":"integer","description":"Optional maximum seconds to block before returning current progress. Omit to wait until the jobs finish.","minimum":1}}}`)
-}
-
-func (waitJob) ReadOnly() bool { return true }
-
-func (waitJob) HiddenFromCapabilityCatalog() bool { return true }
-
-func (waitJob) ProviderVisible(ctx context.Context) bool {
-	_, ok := jobs.FromContext(ctx)
-	return ok
-}
-
-func (waitJob) Execute(ctx context.Context, args json.RawMessage) (string, error) {
-	var p struct {
-		JobIDs         []string `json:"job_ids"`
-		TimeoutSeconds int      `json:"timeout_seconds"`
-	}
-	if len(args) > 0 {
-		if err := json.Unmarshal(args, &p); err != nil {
-			return "", fmt.Errorf("invalid args: %w", err)
-		}
-	}
-	jm, ok := jobs.FromContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("background jobs are not available in this context")
-	}
-	results := jm.WaitForSession(ctx, jobs.SessionFromContext(ctx), p.JobIDs, p.TimeoutSeconds)
-	if len(results) == 0 {
-		return "No background jobs to wait for.", nil
-	}
-	var b strings.Builder
-	for i, r := range results {
-		if r.Status != jobs.Running {
-			collectBackgroundEvidence(ctx, jm, r.ID)
-		}
-		if i > 0 {
-			b.WriteString("\n\n")
-		}
-		label := r.ID
-		if r.Label != "" {
-			label = fmt.Sprintf("%s (%s)", r.ID, r.Label)
-		}
-		fmt.Fprintf(&b, "[%s] %s", label, r.Status)
-		if strings.TrimSpace(r.Output) != "" {
-			b.WriteString("\n" + r.Output)
-		}
-	}
-	return b.String(), nil
 }
 
 func collectBackgroundEvidence(ctx context.Context, jm *jobs.Manager, jobID string) {

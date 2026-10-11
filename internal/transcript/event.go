@@ -41,7 +41,7 @@ func EventFromEnvelope(envelope turnevent.Envelope) (event.Event, bool) {
 		e.Kind = event.CompletionSummary
 		if w.Completion != nil {
 			c := w.Completion
-			e.Completion = &event.CompletionSummaryInfo{Preset: c.Preset, Verdict: c.Verdict, Mutations: c.Mutations, ChecksPassed: c.ChecksPassed, ChecksFailed: c.ChecksFailed, ChecksSuppressed: c.ChecksSuppressed, Review: c.Review, GapKinds: c.GapKinds, ConstraintDegraded: c.ConstraintDegraded, Floor: c.Floor, Attention: c.Attention}
+			e.Completion = &event.CompletionSummaryInfo{Verdict: c.Verdict, Mutations: c.Mutations, ChecksPassed: c.ChecksPassed, ChecksFailed: c.ChecksFailed, ChecksSuppressed: c.ChecksSuppressed, Review: c.Review, GapKinds: c.GapKinds, ConstraintDegraded: c.ConstraintDegraded}
 		}
 	case "turn_done":
 		e.Kind = event.TurnDone
@@ -52,9 +52,7 @@ func EventFromEnvelope(envelope turnevent.Envelope) (event.Event, bool) {
 		if w.Err != "" {
 			e.Err = errors.New(w.Err)
 		}
-		if w.Readiness != nil {
-			e.Readiness = &event.FinalReadiness{Attempts: w.Readiness.Attempts, Missing: w.Readiness.Missing}
-		}
+
 	default:
 		return event.Event{}, false
 	}

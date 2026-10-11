@@ -1,7 +1,6 @@
 package control
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -58,27 +57,6 @@ func goalToolTurn(status, reason, nextAction string) [][]provider.Chunk {
 }
 
 var goalToolCallSeq atomic.Uint64
-
-// fakeGoalEvaluator is a scripted bounded Goal evaluator for tests.
-type legacyEvaluatorVerdict struct {
-	Outcome string
-	Reason  string
-}
-
-type fakeGoalEvaluator struct {
-	outcome string
-	reason  string
-	err     error
-	calls   int
-}
-
-func (f *fakeGoalEvaluator) Evaluate(_ context.Context, _ struct{}) (legacyEvaluatorVerdict, error) {
-	f.calls++
-	if f.err != nil {
-		return legacyEvaluatorVerdict{}, f.err
-	}
-	return legacyEvaluatorVerdict{Outcome: f.outcome, Reason: f.reason}, nil
-}
 
 // flattenTurns concatenates per-goal-turn provider sequences into one flat
 // scripted provider stream.
@@ -199,185 +177,14 @@ func TestResearchGoalUsesContinuousRuntimeWithoutArchive(t *testing.T) {
 	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
 	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionDir: root, Executor: exec})
 	c.Resume(sess, sessionPath)
-	c.SetGoalWithResearchMode("fix the typo and add a test", GoalResearchOn)
+	c.SetGoal("fix the typo and add a test")
 	defer c.Close()
-	if got := c.GoalRuntime().TurnsLimit; got != 0 {
-		t.Fatalf("research Goal turns limit = %d, want unlimited", got)
-	}
-	// The class still drives behaviour; it just no longer mints a turn quota.
-	if got := c.goals.budgetClass; got != budgetClassResearch {
-		t.Fatalf("research Goal budget class = %q, want %q", got, budgetClassResearch)
-	}
+
 	if _, err := os.Stat(filepath.Join(root, ".deepzora", "autoresearch")); !os.IsNotExist(err) {
 		t.Fatalf("research Goal created legacy archive: %v", err)
 	}
 	if composed := c.Compose("continue"); strings.Contains(composed, "AutoResearch") || strings.Contains(composed, "autoresearch") {
 		t.Fatalf("Goal prompt exposes removed AutoResearch protocol:\n%s", composed)
-	}
-}
-
-func TestLegacyGoalSidecarMigratesToContinuousRuntimeWithoutTaskID(t *testing.T) {
-	root := t.TempDir()
-	sessionPath := filepath.Join(root, "sessions", "s.jsonl")
-	if err := os.MkdirAll(filepath.Dir(sessionPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	writeLegacyGoalArchive(t, root, "old-task", "archive fallback should not replace sidecar goal")
-	if err := os.WriteFile(goalStatePath(sessionPath), []byte(`{"goal":"investigate runtime","status":"running","researchMode":1,"autoResearchTaskID":"old-task"}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	sess := agent.NewSession("sys")
-	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionDir: root, Executor: exec})
-	c.Resume(sess, sessionPath)
-	defer c.Close()
-	if got := c.GoalRuntime().TurnsLimit; got != 0 {
-		t.Fatalf("migrated Goal turns limit = %d, want unlimited", got)
-	}
-	if got := c.goals.budgetClass; got != budgetClassResearch {
-		t.Fatalf("migrated Goal budget class = %q, want %q", got, budgetClassResearch)
-	}
-	if got := c.Goal(); got != "investigate runtime" {
-		t.Fatalf("migrated Goal = %q, want sidecar goal", got)
-	}
-	raw, err := os.ReadFile(goalStatePath(sessionPath))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var state goalState
-	if err := json.Unmarshal(raw, &state); err != nil {
-		t.Fatal(err)
-	}
-	if state.AutoResearchTaskID != "old-task" {
-		t.Fatalf("read-only restore rewrote the original sidecar: %q", state.AutoResearchTaskID)
-	}
-}
-
-func TestMissingExplicitLegacyTaskBlocksWithoutCreatingArchive(t *testing.T) {
-	root := t.TempDir()
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root})
-	defer c.Close()
-	c.SetGoalWithResearchMode("resume .deepzora/autoresearch/missing-task/", GoalResearchOn)
-	if got := c.GoalStatus(); got != GoalStatusBlocked {
-		t.Fatalf("GoalStatus = %q, want blocked", got)
-	}
-	if _, err := os.Stat(filepath.Join(root, ".deepzora", "autoresearch")); !os.IsNotExist(err) {
-		t.Fatalf("missing legacy task created archive: %v", err)
-	}
-
-	c.SetGoal("resume .deepzora/autoresearch/missing-task/../../escape")
-	if got := c.GoalStatus(); got != GoalStatusBlocked {
-		t.Fatalf("unsafe legacy path status = %q, want blocked", got)
-	}
-	if got := c.Goal(); got != "resume .deepzora/autoresearch/missing-task/../../escape" {
-		t.Fatalf("unsafe legacy path silently resumed a truncated task: %q", got)
-	}
-}
-
-func TestExplicitLegacyTaskPathRestoresOriginalGoal(t *testing.T) {
-	root := t.TempDir()
-	if resolved, err := filepath.EvalSymlinks(root); err == nil {
-		root = resolved
-	}
-	taskID := "20260630-original-goal"
-	taskRoot := filepath.Join(root, ".deepzora", "autoresearch", taskID)
-	if err := os.MkdirAll(filepath.Join(taskRoot, "state"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(taskRoot, "logs"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	spec := `{"task_id":"` + taskID + `","goal":"find the original root cause","allowed_operations":{"write":true},"success_criteria":[]}`
-	progress := `{"status":"running","iteration":2,"updated_at":"2026-06-30T10:00:00Z"}`
-	for name, body := range map[string]string{
-		"state/task_spec.json":        spec,
-		"state/progress.json":         progress,
-		"state/directions_tried.json": "[]\n",
-		"state/findings.jsonl":        "",
-		"state/iteration_log.jsonl":   "",
-		"logs/heartbeat.jsonl":        "",
-	} {
-		if err := os.WriteFile(filepath.Join(taskRoot, name), []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	before, err := os.ReadFile(filepath.Join(taskRoot, "state", "task_spec.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root})
-	defer c.Close()
-	c.SetGoalWithResearchMode("resume .deepzora/autoresearch/"+taskID+"/", GoalResearchAuto)
-	if got := c.Goal(); got != "find the original root cause" {
-		t.Fatalf("Goal() = %q, want original archive goal", got)
-	}
-	if got := c.GoalRuntime().TurnsLimit; got != 0 {
-		t.Fatalf("turns limit = %d, want unlimited", got)
-	}
-	if got := c.goals.budgetClass; got != budgetClassResearch {
-		t.Fatalf("budget class = %q, want %q", got, budgetClassResearch)
-	}
-	if got := c.GoalStatus(); got != GoalStatusRunning {
-		t.Fatalf("status = %q", got)
-	}
-	after, err := os.ReadFile(filepath.Join(taskRoot, "state", "task_spec.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(before) != string(after) {
-		t.Fatal("archive task_spec mutated during resume")
-	}
-}
-
-func TestLegacySidecarEmptyGoalFilledFromArchive(t *testing.T) {
-	root := t.TempDir()
-	if resolved, err := filepath.EvalSymlinks(root); err == nil {
-		root = resolved
-	}
-	sessionPath := filepath.Join(root, "sessions", "s.jsonl")
-	if err := os.MkdirAll(filepath.Dir(sessionPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	taskID := "fill-from-archive"
-	taskRoot := filepath.Join(root, ".deepzora", "autoresearch", taskID)
-	if err := os.MkdirAll(filepath.Join(taskRoot, "state"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(taskRoot, "logs"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	for name, body := range map[string]string{
-		"state/task_spec.json":        `{"task_id":"` + taskID + `","goal":"recover me from archive","allowed_operations":{"write":true},"success_criteria":[]}`,
-		"state/progress.json":         `{"status":"running","updated_at":"2026-06-30T10:00:00Z"}`,
-		"state/directions_tried.json": "[]\n",
-		"state/findings.jsonl":        "",
-		"state/iteration_log.jsonl":   "",
-		"logs/heartbeat.jsonl":        "",
-	} {
-		if err := os.WriteFile(filepath.Join(taskRoot, name), []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := os.WriteFile(goalStatePath(sessionPath), []byte(`{"status":"running","researchMode":1,"autoResearchTaskID":"`+taskID+`","turnsUsed":3,"turnsLimit":40}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	sess := agent.NewSession("sys")
-	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{WorkspaceRoot: root, SessionDir: root, Executor: exec})
-	c.Resume(sess, sessionPath)
-	defer c.Close()
-	if got := c.Goal(); got != "recover me from archive" {
-		t.Fatalf("Goal() = %q", got)
-	}
-	if got := c.GoalRuntime().TurnsUsed; got != 3 {
-		t.Fatalf("turns used = %d, want preserved 3", got)
-	}
-	raw, err := os.ReadFile(goalStatePath(sessionPath))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), "autoResearchTaskID") {
-		t.Fatalf("sidecar retained task id: %s", raw)
 	}
 }
 
@@ -413,7 +220,7 @@ func TestCancelStopsIdleGoalWithIncompleteTodos(t *testing.T) {
 	ag := agent.New(nil, nil, agent.NewSession(""), agent.Options{}, event.Discard)
 	ag.SeedTodoState([]evidence.TodoItem{{Content: "finish the migration", Status: "in_progress"}})
 	c := newOwnedTestController(t, Options{Executor: ag, Sink: event.Discard})
-	c.SetGoalWithResearchMode("finish the migration", GoalResearchOn)
+	c.SetGoal("finish the migration")
 
 	c.Cancel()
 
@@ -522,30 +329,5 @@ func TestGoalSidecarRoundTripPreservesBlockedDeliveryCheckpoint(t *testing.T) {
 	id, _, ok := fresh.goals.deliveryScope()
 	if !ok || id != scopeID {
 		t.Fatalf("resumed scope = %q, want %q", id, scopeID)
-	}
-}
-
-func TestLegacyRunningGoalSidecarAllocatesScope(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "legacy.jsonl")
-	data := []byte(`{"goal":"legacy goal","status":"running"}`)
-	if err := os.WriteFile(store.SessionGoalState(path), data, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, Label: "test"})
-	c.Resume(agent.NewSession("sys"), path)
-	if c.goals.active() {
-		t.Fatal("restored goal automatically active")
-	}
-	if !c.ResumeGoal() {
-		t.Fatal("explicit resume failed")
-	}
-	id, task, ok := c.goals.deliveryScope()
-	if !ok || id == "" || task != "legacy goal" {
-		t.Fatalf("legacy delivery scope = (%q, %q, %v)", id, task, ok)
-	}
-	if got := exec.DeliveryCheckpoint(); got.ScopeID != id {
-		t.Fatalf("legacy checkpoint scope = %q, want %q", got.ScopeID, id)
 	}
 }

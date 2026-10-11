@@ -553,7 +553,7 @@ func TestExecuteBatchSegmentsAroundWrites(t *testing.T) {
 	}
 }
 
-func TestExecuteBatchPairsRetiredCompleteStepWithoutBlockingPeers(t *testing.T) {
+func TestExecuteBatchPairsUnknownToolWithoutBlockingPeers(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "bash", readOnly: false})
 	a := New(nil, reg, NewSession(""), Options{}, event.Discard)
@@ -572,7 +572,7 @@ func TestExecuteBatchPairsRetiredCompleteStepWithoutBlockingPeers(t *testing.T) 
 	if len(results) != 2 {
 		t.Fatalf("got %d results, want 2", len(results))
 	}
-	if !strings.Contains(results[1], "tool_retired") || !a.task.ledger.HasSuccessfulCommand("go test ./internal/...") {
+	if !strings.Contains(results[1], `unknown tool "complete_step"`) || !a.task.ledger.HasSuccessfulCommand("go test ./internal/...") {
 		t.Fatalf("retired result=%q bash receipt missing=%v", results[1], !a.task.ledger.HasSuccessfulCommand("go test ./internal/..."))
 	}
 }

@@ -60,6 +60,7 @@ func TestSaveMemoryRefreshesBackgroundSnapshotWithoutLegacyUpdate(t *testing.T) 
 		Description: "preferred response language",
 		Type:        memory.TypeUser,
 		Scope:       memory.FactScopeGlobal,
+		Activation:  memory.ActivationPinned,
 		Body:        body,
 	}); err != nil {
 		t.Fatalf("SaveMemory: %v", err)
@@ -88,6 +89,7 @@ func TestForgetMemoryRefreshesBackgroundSnapshotWithoutLegacyUpdate(t *testing.T
 		Description: "avoid emoji",
 		Type:        memory.TypeFeedback,
 		Scope:       memory.FactScopeGlobal,
+		Activation:  memory.ActivationPinned,
 		Body:        body,
 	}); err != nil {
 		t.Fatal(err)

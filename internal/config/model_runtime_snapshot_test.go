@@ -51,7 +51,7 @@ func TestSaveModelSettingsPreservesUnknownFields(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		t.Fatal(err)
 	}
-	raw := `config_version = 5
+	raw := `config_version = 12
 future_root = "keep"
 [agent]
 future_agent = "keep-agent"
@@ -60,7 +60,7 @@ planner_model = ""
 name = "custom"
 kind = "openai"
 base_url = "http://localhost:1234/v1"
-model = "m"
+models = ["m"]
 future_provider = "keep-provider"
 [providers.future_nested]
 value = "keep-nested"

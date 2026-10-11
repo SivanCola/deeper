@@ -97,138 +97,6 @@ func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 	}
 }
 
-// primarySessionFiles filters a recovery-branch glob down to primary session
-// transcripts, dropping lifecycle/diagnostic sidecars that the broad recovery
-// glob also matches.
-func primarySessionFiles(paths []string) []string {
-	out := make([]string, 0, len(paths))
-	for _, path := range paths {
-		base := filepath.Base(path)
-		if strings.HasSuffix(base, ".jsonl") &&
-			!strings.HasSuffix(base, ".events.jsonl") &&
-			!strings.HasSuffix(base, ".guardian.jsonl") &&
-			!strings.HasSuffix(base, ".turns.jsonl") {
-			out = append(out, path)
-		}
-	}
-	return out
-}
-
-// TestSwitchModelContinuesRecoveryPathAfterSnapshotConflict is the serve twin
-// of the desktop rebuild fix: when the pre-switch Snapshot hits a conflict and
-// retargets the old controller to a recovery branch, the rebuilt controller
-// must continue on that recovery path. Capturing prevPath before Snapshot
-// bound the just-recovered transcript back to the original file, so every
-// later save re-conflicted and derived yet another recovery branch.
-func TestSwitchModelContinuesRecoveryPathAfterSnapshotConflict(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "switch-conflict.jsonl")
-
-	disk := agent.NewSession("sys prompt")
-	disk.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	disk.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	disk.Add(provider.Message{Role: provider.RoleUser, Content: "disk second"})
-	if err := disk.Save(originalPath); err != nil {
-		t.Fatalf("save disk session: %v", err)
-	}
-
-	stale := agent.NewSession("sys prompt")
-	stale.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	stale.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	stale.Add(provider.Message{Role: provider.RoleUser, Content: "local second"})
-
-	bc := NewBroadcaster()
-	old := control.New(control.Options{
-		Executor:    agent.New(nil, nil, stale, agent.Options{}, event.Discard),
-		SessionDir:  dir,
-		SessionPath: originalPath,
-		Label:       "old",
-		Sink:        bc,
-	})
-	s := &Server{ctrl: old, bc: bc}
-	defer s.Close()
-	leases := control.NewSessionLeaseKeeper()
-	t.Cleanup(leases.Release)
-	if err := leases.Rebind(originalPath); err != nil {
-		t.Fatalf("seed original lease: %v", err)
-	}
-	s.SetSessionLeases(leases)
-
-	var built *control.Controller
-	s.buildController = func(_ context.Context, _ string) (*control.Controller, error) {
-		built = control.New(control.Options{
-			Executor:   agent.New(nil, nil, agent.NewSession("sys prompt"), agent.Options{}, event.Discard),
-			SessionDir: dir,
-			Label:      "new",
-			Sink:       bc,
-		})
-		return built, nil
-	}
-
-	if err := s.switchModel(context.Background(), "next-model"); err != nil {
-		t.Fatalf("switchModel: %v", err)
-	}
-
-	recoveryPath := built.SessionPath()
-	if recoveryPath == "" || recoveryPath == originalPath || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("switched session path = %q, want recovery path distinct from %q", recoveryPath, originalPath)
-	}
-	if s.ctl() != built {
-		t.Fatal("switchModel did not publish the rebuilt controller")
-	}
-	if got, want := leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after pre-switch recovery = %q, want %q", got, want)
-	}
-
-	matches, err := filepath.Glob(filepath.Join(dir, "*-recovery-*.jsonl"))
-	if err != nil {
-		t.Fatalf("glob recovery branches: %v", err)
-	}
-	matches = primarySessionFiles(matches)
-	if len(matches) != 1 || matches[0] != recoveryPath {
-		t.Fatalf("recovery branches after switch = %v, want only %q", matches, recoveryPath)
-	}
-
-	// The rebuilt controller adopted the recovery file's baseline, so its next
-	// snapshot must not derive a second recovery branch.
-	if err := built.Snapshot(); err != nil {
-		t.Fatalf("Snapshot after switch: %v", err)
-	}
-	matches, err = filepath.Glob(filepath.Join(dir, "*-recovery-*.jsonl"))
-	if err != nil {
-		t.Fatalf("glob recovery branches after snapshot: %v", err)
-	}
-	matches = primarySessionFiles(matches)
-	if len(matches) != 1 || matches[0] != recoveryPath {
-		t.Fatalf("recovery branches after follow-up snapshot = %v, want only %q", matches, recoveryPath)
-	}
-
-	// A later ordinary autosave on the rebuilt controller must use the same
-	// ownership callback. Force another divergence after the switch and verify
-	// the keeper follows the second recovery before the controller commits it.
-	diskAfterSwitch, err := agent.LoadSession(recoveryPath)
-	if err != nil {
-		t.Fatalf("load recovery transcript for external change: %v", err)
-	}
-	diskAfterSwitch.Add(provider.Message{Role: provider.RoleUser, Content: "disk third"})
-	if err := diskAfterSwitch.Save(recoveryPath); err != nil {
-		t.Fatalf("save external recovery transcript change: %v", err)
-	}
-	built.Executor().Session().Add(provider.Message{Role: provider.RoleUser, Content: "local third"})
-	if err := built.Snapshot(); err != nil {
-		t.Fatalf("Snapshot rebuilt controller after divergence: %v", err)
-	}
-	secondRecoveryPath := built.SessionPath()
-	if secondRecoveryPath == recoveryPath || !strings.Contains(filepath.Base(secondRecoveryPath), "-recovery-") {
-		t.Fatalf("rebuilt controller path = %q, want recovery path distinct from %q", secondRecoveryPath, recoveryPath)
-	}
-	if got, want := leases.HeldPath(), agent.CanonicalSessionPath(secondRecoveryPath); got != want {
-		t.Fatalf("lease after rebuilt-controller recovery = %q, want %q", got, want)
-	}
-}
-
 // TestSwitchModelRefreshesLeadingSystemPrompt pins the fix for the bug where
 // switchModel rebuilt the controller with the target model/profile's own
 // system prompt, only for AdoptHistory to immediately overwrite it with the
@@ -293,8 +161,7 @@ func TestSwitchModelRestoresSessionAuthorizations(t *testing.T) {
 		Sink:       bc,
 	})
 	old.RestoreSessionAuthorizations(control.SessionAuthorizations{
-		Grants:                   []string{"bash|go test ./..."},
-		PlanModeReadOnlyCommands: []string{"go test ./..."},
+		Grants: []string{"bash|go test ./..."},
 	})
 
 	s := &Server{ctrl: old, bc: bc}
@@ -320,9 +187,7 @@ func TestSwitchModelRestoresSessionAuthorizations(t *testing.T) {
 	if len(got.Grants) != 1 || got.Grants[0] != "bash|go test ./..." {
 		t.Fatalf("restored grants = %+v, want [\"bash|go test ./...\"]", got.Grants)
 	}
-	if len(got.PlanModeReadOnlyCommands) != 1 || got.PlanModeReadOnlyCommands[0] != "go test ./..." {
-		t.Fatalf("restored plan-mode read-only commands = %+v, want [\"go test ./...\"]", got.PlanModeReadOnlyCommands)
-	}
+
 }
 
 // TestSwitchModelPersistsRefreshedSystemPromptToDisk pins the disk half of the
@@ -406,8 +271,8 @@ func TestSwitchModelSnapshotFailureKeepsOldController(t *testing.T) {
 	}
 
 	err := s.switchModel(context.Background(), "next-model")
-	if err == nil || !strings.Contains(err.Error(), "snapshot adopted history") {
-		t.Fatalf("switchModel error = %v, want snapshot adopted history failure", err)
+	if err == nil || !strings.Contains(err.Error(), "switch model:") {
+		t.Fatalf("switchModel error = %v, want history persistence failure", err)
 	}
 	if got := s.ctl(); got != old {
 		t.Fatalf("active controller changed after persistence failure: got %T %p, want outgoing %p", got, got, old)

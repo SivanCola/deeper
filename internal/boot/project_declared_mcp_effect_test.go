@@ -94,7 +94,7 @@ system_prompt = "BASE"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 
 [[plugins]]
@@ -167,7 +167,7 @@ default_model = "test-model"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `
 	approved := filepath.Join(dir, "approved-ran")

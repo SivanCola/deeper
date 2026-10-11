@@ -79,9 +79,7 @@ import { uiPerfTracker } from "./uiPerf";
 import { getLocale, t } from "./i18n";
 import {
   appendNoticeItem,
-  deliveryReadinessDetail,
   errorMessage,
-  readinessMissingIds,
 } from "./controllerNotices";
 import { applyReadStatusEvent, type ReadStatusHost } from "./readStatus";
 import { upsertReadPause } from "./readPause";
@@ -108,7 +106,6 @@ import { attachWebSearchOutput } from "./searchTranscript";
 import { initialForkTurnState, reduceForkTurn, settleForkTurnForTab, type ForkTurnAction, type ForkTurnState } from "./forkTurn";
 import { createTurnBoundaryReads } from "./turnBoundaryReads";
 import { fileDiffFromWire, summarize, summarizeFileDiff, type ToolFileDiff } from "./tools";
-import type { QualityFloor } from "./types";
 import type { SessionClearResult } from "./historyTypes";
 import type {
   BalanceInfo,
@@ -152,11 +149,9 @@ function resolvePromptForSession(target: InteractionTarget, answer: Record<strin
 export { foregroundRunningFromRuntimeMeta } from "./runtimeMeta";
 export { historyMessagesToItems, historyToolError, isReadOnlyTool } from "./historyItems";
 export {
-  deliveryReadinessDetail,
   localizedBackendNoticeText,
   localizedNoticeText,
   quietTranscriptNoticeKey,
-  readinessMissingIds,
 } from "./controllerNotices";
 export type ToolStatus = "running" | "done" | "error" | "stopped" | "unknown";
 // Reserved ToolProgress channel names for sub-agent progress previews (the Go
@@ -340,7 +335,7 @@ export type Item = { turnId?: string } & (
   | { kind: "user"; id: string; messageId?: string; submissionId?: string; submissionState?: "sending" | "confirmed" | "failed" | "unknown"; text: string; submitText?: string; failed?: boolean; createdAt?: number; checkpointTurn?: number; historyTurn?: number }
   | { kind: "assistant"; id: string; text: string; reasoning: string; streaming: boolean; turnFinal?: boolean; samplingCount?: number; toolCount?: number; wasStreamed?: true; reasoningComplete?: boolean; reasoningDurationMs?: number; workDurationMs?: number; turnDurationMs?: number; turnUsage?: TurnUsage; tokensPerSecond?: number; createdAt?: number; memoryCitations?: MemoryCitation[]; searchSources?: SearchSource[] }
   | { kind: "phase"; id: string; text: string }
-  | { kind: "notice"; id: string; local?: boolean; level: "info" | "warn"; text: string; detail?: string; diagnostic?: WireEvent["diagnostic"]; code?: string; title?: string; variant?: "delivery" | "completion"; action?: "continue_delivery" | "open_changes" | "recover_context"; recoveryId?: string; completionSummary?: WireCompletionSummary; decisionReceipt?: WireDecisionReceipt; missing?: string[]; inboxItemId?: string }
+  | { kind: "notice"; id: string; local?: boolean; level: "info" | "warn"; text: string; detail?: string; diagnostic?: WireEvent["diagnostic"]; code?: string; title?: string; variant?: "completion"; action?: "open_changes" | "recover_context"; recoveryId?: string; completionSummary?: WireCompletionSummary; decisionReceipt?: WireDecisionReceipt; missing?: string[]; inboxItemId?: string }
   | {
       kind: "compaction";
       id: string;
@@ -500,7 +495,6 @@ export interface State extends ReadStatusHost, ForkTurnState {
   live?: LiveStream;
   pendingUser?: string;
   pendingSubmissionId?: string;
-  deliveryRecoveryActive: boolean;
   discardTurn?: boolean;
   turnStartAt: number;
   turnDoneAt: number;
@@ -647,7 +641,6 @@ export const initialState: State = {
   historyPrefixCount: 0, transcriptProjectedIds: [],
   historyMutation: { seq: 0, kind: "replace" },
   backendActivationPending: false,
-  deliveryRecoveryActive: false,
   promptEpoch: 0,
   turnStartAt: 0,
   turnDoneAt: 0,
@@ -731,8 +724,6 @@ export function sameMeta(a?: Meta, b?: Meta): boolean {
     a.runtime?.issue?.holderHost === b.runtime?.issue?.holderHost &&
     a.runtime?.issue?.acquiredAt === b.runtime?.issue?.acquiredAt &&
     a.startupErr === b.startupErr &&
-    a.historicalSource?.path === b.historicalSource?.path &&
-    a.historicalSource?.headId === b.historicalSource?.headId &&
     a.eventChannel === b.eventChannel &&
     a.cwd === b.cwd &&
     a.workspaceRoot === b.workspaceRoot &&
@@ -746,14 +737,9 @@ export function sameMeta(a?: Meta, b?: Meta): boolean {
     a.imageInputEnabled === b.imageInputEnabled &&
     a.visionFallbackEnabled === b.visionFallbackEnabled &&
     a.autoApproveTools === b.autoApproveTools &&
-    a.bypass === b.bypass &&
     a.collaborationMode === b.collaborationMode &&
     a.toolApprovalMode === b.toolApprovalMode &&
 
-    a.tokenMode === b.tokenMode &&
-    a.agentPreset === b.agentPreset &&
-    a.qualityFloor === b.qualityFloor &&
-    a.floorInferred === b.floorInferred &&
     a.goal === b.goal &&
     a.goalStatus === b.goalStatus &&
     sameTodoList(a.canonicalTodos, b.canonicalTodos)
@@ -800,7 +786,7 @@ export type Action =
   | { type: "transcript_runtime"; runtime: import("../generated/desktopContract.generated").Runtime }
   | { type: "event"; e: WireEvent; remote?: boolean }
   | { type: "stream_batch"; segments: StreamSegment[] }
-  | { type: "user"; text: string; submitText?: string; seq: number; submissionId: string; deliveryRecovery?: boolean }
+  | { type: "user"; text: string; submitText?: string; seq: number; submissionId: string;  }
   | { type: "unsend" }
   | { type: "send_confirmed"; submissionId: string }
   | { type: "management_confirmed"; submissionId: string; receipt?: import("./turnSubmit").ManagementReceipt }
@@ -1630,7 +1616,7 @@ function applyEvent(s: State, e: WireEvent, preserveToolPayloads = false): State
       const usageTokens = usageTotalTokens(e.usage);
       const turnTotalTokens = settled.turnTotalTokens + usageTokens;
       const sessionTokens = settled.sessionTokens + usageTokens;
-      const usageCost = e.usage?.cost ?? e.usage?.costUsd ?? 0;
+      const usageCost = e.usage?.cost ?? 0;
       const turnCost = settled.turnCost + usageCost;
       const turnRateBand = mergeRateBand(settled.turnRateBand, e.usage?.costQuote?.rateBand);
       const sessionCost = settled.sessionCost + usageCost;
@@ -1772,37 +1758,9 @@ function applyEvent(s: State, e: WireEvent, preserveToolPayloads = false): State
           : it,
       );
 	  let items: Item[] = finalized;
-	  if (s.deliveryRecoveryActive && !e.err) {
-		items = finalized.filter((item) => item.kind !== "notice" || item.variant !== "delivery");
-	  }
+
       if (e.outcome === "incomplete_read") {
         items = upsertReadPause(items, e.readPause, `read-pause-${e.turnId ?? s.seq}`);
-      } else if (e.outcome === "final_readiness") {
-        const previous = items.map((item) => item.kind === "notice" && item.variant === "delivery"
-          ? { ...item, action: undefined }
-          : item);
-        items = [...previous, {
-          kind: "notice",
-          id: `e${s.seq}`,
-          level: "info",
-          variant: "delivery",
-          title: t("notice.deliveryIncompleteTitle"),
-          text: t("notice.deliveryIncompleteBody"),
-          detail: deliveryReadinessDetail(e.readiness, e.err),
-          action: "continue_delivery",
-          missing: readinessMissingIds(e.readiness),
-        }];
-      } else if (e.outcome === "recovery_paused") {
-        // Informational pause — not a send failure. Composer is immediately free.
-        items = [...finalized, {
-          kind: "notice",
-          id: `e${s.seq}`,
-          level: "info",
-          title: t("notice.recoveryPausedTitle"),
-          text: t("notice.recoveryPausedBody"),
-        }];
-      } else if (e.outcome === "completion_uncertain") {
-        items = [...finalized, { kind: "notice", id: `e${s.seq}`, level: "info", title: t("notice.completionUncertainTitle"), text: t("notice.completionUncertainBody") }];
       } else if (e.status === "interrupted" || e.status === "recovery_required") {
         const interruptItems: Item[] = [{ kind: "notice", id: `e${s.seq}`, level: "info", text: t("notice.cancelledTurnDisplay") }];
         // A stop during a broken provider stream would otherwise look like an
@@ -1846,7 +1804,6 @@ function applyEvent(s: State, e: WireEvent, preserveToolPayloads = false): State
         approval: keepPlanApproval ? s.approval : undefined,
         ask: undefined,
         mcpInteraction: undefined,
-        deliveryRecoveryActive: false,
         turnLifecycleObservedAt: promptEventClock(),
         seq: s.seq + Math.max(items.length - finalized.length, 1),
         lastStreamInterrupt: undefined,
@@ -3644,31 +3601,6 @@ export function useController() {
     }
   }, [bumpCancelHydrateSeq, dispatchTo, rejectTurnSubmission, startTranscriptFollow]);
 
-  const recoverDeliveryToTab = useCallback(async (tabId: string, displayText: string, submitText = displayText) => {
-    if (!tabId) throw new Error(t("composer.workspaceStarting"));
-    const currentState = getOrCreateState(statesRef.current, tabId);
-    const runtime = currentState.meta?.runtime;
-    if (currentState.meta && !runtimeReadyForSubmit(currentState.meta)) {
-      throw new Error(runtime?.issue?.message || currentState.meta.startupErr || t("composer.workspaceStarting"));
-    }
-    const seq = currentState.seq;
-    const submissionId = createTurnSubmissionId(tabId, currentState.sessionGen, seq, runtimeEpochByTabRef.current.get(tabId) ?? runtime?.epoch);
-    const current = () => submissionBindingCurrent(statesRef.current.get(tabId), currentState);
-    const display = displayText.trim();
-    const submit = submitText.trim();
-    dispatchTo(tabId, { type: "user", text: displayText, submitText: display !== submit ? submit : undefined, seq, submissionId, deliveryRecovery: true });
-    invalidateCache();
-    try {
-      void app.SubmitDeliveryRecoveryToTabWithID(tabId, display, submit, submissionId).then(
-        () => { if (current()) dispatchTo(tabId, { type: "send_confirmed", submissionId }); },
-        (error) => { if (current()) rejectTurnSubmission(tabId, submissionId, error); },
-      );
-    } catch (error) {
-      if (current()) rejectTurnSubmission(tabId, submissionId, error);
-      throw error;
-    }
-  }, [dispatchTo, rejectTurnSubmission]);
-
   const send = useCallback((displayText: string, submitText = displayText) => {
     const tabId = activeTabIdRef.current ?? activeTabId;
     if (tabId) {
@@ -3916,11 +3848,6 @@ export function useController() {
     await setToolApprovalModeForTab(activeTabId, mode);
   }, [activeTabId, setToolApprovalModeForTab]);
 
-  const setQualityFloor = useCallback(async (floor: QualityFloor): Promise<void> => {
-    if (!activeTabId) return;
-    await app.SetQualityFloorForTab(activeTabId, floor).catch(() => undefined);
-    await refreshMetaForTab(activeTabId);
-  }, [activeTabId, refreshMetaForTab]);
 
   const setComposerProfileForTab = useCallback(async (
     tabId: string,
@@ -4066,7 +3993,6 @@ export function useController() {
     if (!page) throw new Error(t("history.failedLoadHistory"));
     return asArray<SessionMeta>(page.items);
   }, []);
-  const listTrashedSessions = useCallback(async (): Promise<SessionMeta[]> => asArray<SessionMeta>(await app.ListTrashedSessions()), []);
   const retrySessionHistory = useCallback(async (tabId?: string) => {
     const id = tabId || activeTabIdRef.current; if (!id) return;
     const m = statesRef.current.get(id)?.meta;
@@ -4182,7 +4108,7 @@ export function useController() {
     return { value: undefined, surfaceReady };
   }, [beginActiveNavigation, bumpSessionLoadSeq, dispatchTo, ensureTranscriptSubscription, failSessionNavigation, invalidateCheckpoints, isNavigationIntentCurrent, navigationCompletionCurrent, reconcileSessionNavigationForTab, refreshTurnBoundaries, requireRegisteredNavigationIntent, sessionLoadCurrent, startTranscriptFollow, snapshotNavigationSourceTab, waitForTabReady]);
 
-  const { openCanonicalSession, previewSession, deleteSession, restoreSession, purgeTrashedSession, renameSession } =
+  const { openCanonicalSession, previewSession, deleteSession, renameSession } =
     useSessionCatalogActions(requireRegisteredNavigationIntent, isNavigationIntentCurrent, syncActiveTabFromBackend, invalidateCache);
   const refreshMeta = useCallback(async () => {
     if (!activeTabId) return;
@@ -4672,8 +4598,7 @@ export function useController() {
     pendingTopicActivationRef.current = pending;
     noteActivationRequested(pending.requestId);
     const ticket = await app.StartTopicActivation({
-      selector: sessionPath.startsWith("session-source:") ? { source: JSON.parse(decodeURIComponent(sessionPath.slice("session-source:".length))) }
-        : sessionPath.startsWith("session-id:") ? { ref: { hostId: "local", sessionId: sessionPath.slice("session-id:".length) } }
+      selector: sessionPath.startsWith("session-id:") ? { ref: { hostId: "local", sessionId: sessionPath.slice("session-id:".length) } }
           : sessionPath ? { sessionPath } : undefined,
       scope,
       workspaceRoot,
@@ -4869,13 +4794,13 @@ export function useController() {
     state: projectedState,
     liveStore,
     activeTabId,
-    send, sendToTab, recoverDeliveryToTab, runShell, runShellForTab, steer, steerForTab, notice,
+    send, sendToTab, runShell, runShellForTab, steer, steerForTab, notice,
     cancel, cancelForTab, approve, approveForTab, isPromptCurrentForTab, resolvePlanDecision, resolvePlanDecisionForTab,
     resolveRecovery, resolveRecoveryForTab, answerQuestion, answerQuestionForTab,
     answerMCPInteraction, answerMCPInteractionForTab, setControllerMode, setControllerModeForTab,
     dismissExtensionForm, drainExtensionNotifications,
-    setCollaborationMode, setCollaborationModeForTab, setToolApprovalMode, setToolApprovalModeForTab, setQualityFloor, setComposerProfileForTab, setGoal, setGoalForTab, editGoalForTab, clearGoal, clearGoalForTab, resumeGoal, resumeGoalForTab, pauseGoal, pauseGoalForTab,
-    newSession, clearSession, listSessions, listTrashedSessions, retrySessionHistory, resumeSession, openChannelSession, previewSession, deleteSession, restoreSession, purgeTrashedSession, renameSession,
+    setCollaborationMode, setCollaborationModeForTab, setToolApprovalMode, setToolApprovalModeForTab,  setComposerProfileForTab, setGoal, setGoalForTab, editGoalForTab, clearGoal, clearGoalForTab, resumeGoal, resumeGoalForTab, pauseGoal, pauseGoalForTab,
+    newSession, clearSession, listSessions, retrySessionHistory, resumeSession, openChannelSession, previewSession, deleteSession, renameSession,
     loadOlderHistory, loadNewerHistory, navigateToTurn,
     requestHistoryFullContent,
     refreshMeta, pickWorkspace, switchWorkspace, compact, rewind, rewindForTab, rewindForTabDetailed, undoRewindForTab, forkTurnForTab, setModel, setModelForTab, setEffort, setEffortForTab, cancelJob,

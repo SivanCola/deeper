@@ -14,8 +14,6 @@ import (
 
 	"deepzora/internal/boot"
 	"deepzora/internal/config"
-	"deepzora/internal/control"
-	"deepzora/internal/event"
 	"deepzora/internal/netclient"
 	"deepzora/internal/provider"
 )
@@ -180,49 +178,37 @@ func TestImageInputSaveDefersAllTabsUntilNextTurn(t *testing.T) {
 	root := t.TempDir()
 	t.Chdir(root)
 	app := NewApp()
-	view := ProviderView{Name: "relay", Kind: "openai", BaseURL: "http://127.0.0.1:1", Models: []string{"relay-model"}}
+	off := false
+	view := ProviderView{Name: "relay", Kind: "openai", BaseURL: "http://127.0.0.1:1", Models: []string{"relay-model"}, ModelOverrides: []ProviderModelOverrideView{{Model: "relay-model", Vision: &off}}}
 	if err := app.SaveProvider(view); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := app.SetConnectionKey("relay", "test-key"); err != nil {
 		t.Fatal(err)
 	}
-	build := func() *control.Controller {
-		t.Helper()
-		ctrl, err := boot.Build(context.Background(), boot.Options{Model: "relay/relay-model", WorkspaceRoot: root, Sink: event.Discard})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return ctrl
-	}
-	active, other := build(), build()
 	app.ctx = context.Background()
 	app.readyHook = func() {}
-	app.setTestCtrl(active, "relay/relay-model")
-	app.activeTab().WorkspaceRoot = root
-	otherTab := &WorkspaceTab{ID: "other-image", Scope: "global", WorkspaceRoot: root, model: "relay/relay-model", Label: "relay/relay-model", Ctrl: other, Ready: true, disabledMCP: map[string]ServerView{}}
-	otherTab.sink = &tabEventSink{tabID: otherTab.ID, app: app, ctx: context.Background()}
-	app.tabs[otherTab.ID] = otherTab
-	installNoopRuntimeEvents(app, otherTab.sink)
-	t.Cleanup(func() {
-		for _, tab := range app.tabs {
-			if tab.Ctrl != nil {
-				tab.Ctrl.Close()
-			}
-			tab.releaseSessionLease()
+	activeTab := modelSettingsBootTab(t, app, "active-image", root, "relay/relay-model")
+	otherTab := modelSettingsBootTab(t, app, "other-image", root, "relay/relay-model")
+	app.activeTabID = activeTab.ID
+	active, other := activeTab.Ctrl, otherTab.Ctrl
+	t.Cleanup(app.closeSessionServices)
+	// Serialize the background rebuild while checking that saving only persists config.
+	func() {
+		app.runtimeRebuildMu.Lock()
+		defer app.runtimeRebuildMu.Unlock()
+		on := true
+		view.ModelOverrides = []ProviderModelOverrideView{{Model: "relay-model", Vision: &on}}
+		if err := app.SaveProvider(view); err != nil {
+			t.Fatal(err)
 		}
-	})
-	on := true
-	view.ModelOverrides = []ProviderModelOverrideView{{Model: "relay-model", Vision: &on}}
-	if err := app.SaveProvider(view); err != nil {
-		t.Fatal(err)
-	}
-	if app.activeCtrl() != active || app.Meta().ImageInputEnabled {
-		t.Fatal("save replaced active runtime before the next run")
-	}
-	if app.MetaForTab(otherTab.ID).ImageInputEnabled || otherTab.Ctrl != other {
-		t.Fatal("other idle tab displayed saved config before rebuilding")
-	}
+		if app.activeCtrl() != active || app.Meta().ImageInputEnabled {
+			t.Fatalf("save changed frozen runtime: controller replaced=%v image enabled=%v", app.activeCtrl() != active, app.Meta().ImageInputEnabled)
+		}
+		if app.MetaForTab(otherTab.ID).ImageInputEnabled || otherTab.Ctrl != other {
+			t.Fatal("other idle tab displayed saved config before rebuilding")
+		}
+	}()
 	admission, current, err := app.beginTabTurn(otherTab.ID, false)
 	if err != nil {
 		t.Fatal(err)
@@ -357,7 +343,7 @@ func TestDiscoveryFailurePreservesSuccessfulCache(t *testing.T) {
 	if _, err := app.FetchProviderModelCatalog(view); err == nil {
 		t.Fatal("expected discovery error")
 	}
-	e := config.ProviderEntry{Name: view.Name, Kind: view.Kind, BaseURL: view.BaseURL, NoProxy: true, Model: "relay-model"}
+	e := config.ProviderEntry{Models: []string{"relay-model"}, Default: "relay-model", Name: view.Name, Kind: view.Kind, BaseURL: view.BaseURL, NoProxy: true, Model: "relay-model"}
 	if got := config.NewModelCapabilityResolver().Resolve(&e); got.State != config.CapabilitySupported {
 		t.Fatalf("failure erased success: %+v", got)
 	}
@@ -376,7 +362,7 @@ func TestBatchDiscoveryPersistsFactsForNoProxyIdentity(t *testing.T) {
 	if len(got[view.Name]) != 1 || got[view.Name][0].State != "supported" {
 		t.Fatalf("batch catalog = %+v", got)
 	}
-	entry := config.ProviderEntry{Name: view.Name, Kind: view.Kind, BaseURL: view.BaseURL, NoProxy: true, Model: "relay-model"}
+	entry := config.ProviderEntry{Models: []string{"relay-model"}, Default: "relay-model", Name: view.Name, Kind: view.Kind, BaseURL: view.BaseURL, NoProxy: true, Model: "relay-model"}
 	if capability := config.NewModelCapabilityResolver().Resolve(&entry); capability.State != config.CapabilitySupported {
 		t.Fatalf("batch result was not stored under the no_proxy identity: %+v", capability)
 	}

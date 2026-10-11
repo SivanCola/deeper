@@ -55,7 +55,6 @@ import { useRemoteWorkspaceCommands } from "./useRemoteWorkspaceCommands";
 import { useAutomationNavigation } from "./useAutomationNavigation";
 import { useDesktopNavigation } from "./useDesktopNavigation";
 import { useTranscriptSurfaceProjection } from "./useTranscriptSurfaceProjection";
-import { useDeliveryContinueCommands } from "./useDeliveryContinueCommands";
 import { projectConversation, projectConversationLayout, projectWorkspaceScopeKey, projectWorkspaceTreeMemoryKey } from "./conversationProjection";
 import { projectControllerProfiles, projectVisibleTabs } from "./controllerProfileOwner";
 import { projectDecisionSurface, type AppDecisionSurfaceKind } from "./decisionSurfaceProjection";
@@ -140,7 +139,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
   useRecoverableErrorToasts(showToast);
   const {
     state, liveStore, activeTabId, notice, activeTab, remoteSurfaceActive, remoteSession, remoteComposerReady,
-    remoteSend, activeSessionIdentity, sessionSurfaceFence, sessionOperations,
+    remoteSend, activeSessionIdentity, sessionOperations,
   } = input.core;
   // remoteCancel is consumed by the shell view through core.
   const {
@@ -160,7 +159,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     setModelForTab, setEffortForTab,
   } = runtime.composer;
   const {
-    recoverDeliveryToTab, approveForTab, isPromptCurrentForTab, resolvePlanDecisionForTab, resolveRecoveryForTab,
+    approveForTab, isPromptCurrentForTab, resolvePlanDecisionForTab, resolveRecoveryForTab,
     answerQuestionForTab, answerMCPInteractionForTab, dismissExtensionForm, drainExtensionNotifications,
     clearSession, newSession, loadOlderHistory, loadNewerHistory, navigateToTurn, rewindForTab, rewindForTabDetailed, undoRewindForTab, forkTurnForTab,
     listSessions, openChannelSession, resumeSession,
@@ -688,17 +687,6 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     },
   });
 
-  const { handleDeliveryContinue } = useDeliveryContinueCommands({
-    surfaceFence: sessionSurfaceFence,
-    ready: controllerReady,
-    goal: state.meta?.goal,
-    t,
-    ports: {
-      resumeGoal: resumeControllerGoalForTab,
-      recoverDelivery: recoverDeliveryToTab,
-    },
-  });
-
   const { openAutomationTopic, topicAccepted } = useAutomationNavigation({ noteIntent: noteNavigationIntent,
     enqueue: useCommittedCommand((intent, seq) => enqueueNavigationWithIntent(intent, seq)) });  const {
     enqueueNavigation, enqueueNavigationWithIntent, openRemoteProject,
@@ -708,7 +696,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
       ensureBlankSurface, openCanonicalSession, createIsolatedWorktree, openChannelSession, resumeSession,
       registeredNavigationIntent, switchRemoteTab, openRemoteProject: desktopBridge.openRemoteProjectTab,
       listTabs: desktopBridge.listTabs, applyTabs: setTabMetas, seedTab: seedActiveTabMeta, listSessions, topicAccepted,
-      prepareSession: desktopBridge.prepareSession, getSessionPreparation: desktopBridge.getSessionPreparation },
+    },
     setTabRevealSignal, setProjectRevision, setHistory: setHistView, t, showToast,
     noteIntent: noteNavigationIntent, beginSurface: beginNavigationSurface, settleSurface: settleNavigationSurface,
     showChat: enterConversation,
@@ -742,7 +730,6 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
       rewindState, rewindCommitting, rewindSignal, handleSessionRevertCommitted, handleMessageAction, handleForkTurn, handleUndoRewind, handleEditPrompt,
     },
     todoPanel: { showTodos, scopedTodoBatch, todos, dismissTodos, handleTodoContinue },
-    delivery: { handleDeliveryContinue },
     transcript: {
       transcriptHydrating, emptyHero, availability,
       visibleTranscriptItems, visibleTranscriptTabId, visibleTranscriptGeometryKey,

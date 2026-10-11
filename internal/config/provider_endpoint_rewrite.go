@@ -2,49 +2,13 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
-
-	"deepzora/internal/fileutil"
-	fileencoding "deepzora/internal/fileutil/encoding"
 )
-
-// repairProviderEndpointContractsFileLocked performs a narrow lexical edit for
-// a caller that already owns LockConfigFileEdits. It preserves comments,
-// unknown provider fields, inline tables, encoding and file permissions.
-func repairProviderEndpointContractsFileLocked(path string) ([]ProviderEndpointRepair, error) {
-	resolved, exists, err := statConfigPath(path)
-	if err != nil || !exists {
-		return nil, err
-	}
-	info, err := os.Stat(resolved)
-	if err != nil {
-		return nil, err
-	}
-	rawBytes, err := os.ReadFile(resolved)
-	if err != nil {
-		return nil, err
-	}
-	encoding, detected := fileencoding.Detect(rawBytes)
-	raw := fileencoding.Decode(detected, encoding)
-	next, repairs, err := rewriteProviderEndpointContracts(string(raw))
-	if err != nil || len(repairs) == 0 {
-		return repairs, err
-	}
-	encoded, err := fileencoding.Encode(next, encoding)
-	if err != nil {
-		return nil, err
-	}
-	if err := fileutil.AtomicWriteFile(resolved, encoded, info.Mode().Perm()); err != nil {
-		return nil, err
-	}
-	return repairs, nil
-}
 
 func rewriteProviderEndpointContracts(raw string) (string, []ProviderEndpointRepair, error) {
 	var decoded struct {

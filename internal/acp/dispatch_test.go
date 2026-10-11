@@ -187,18 +187,11 @@ func TestUpdateSinkDropsAndWarns(t *testing.T) {
 	if got := len(fn.notifs); got != 0 {
 		t.Fatalf("info notice produced %d notifications, want 0", got)
 	}
-	sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Code: event.NoticeCodeCompletionUncertain, Text: "completion could not be confirmed"})
-	if got := len(fn.notifs); got != 1 {
-		t.Fatalf("completion uncertainty produced %d notifications, want 1", got)
-	}
-	if text := chunkText(t, fn.updateMap(t, 0)); !strings.Contains(text, "completion could not be confirmed") || strings.Contains(text, "[warning]") {
-		t.Fatalf("completion uncertainty notice = %q, want informational text", text)
-	}
 	sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "watch out"})
-	if got := len(fn.notifs); got != 2 {
-		t.Fatalf("warn notice produced %d notifications, want 2 total", got)
+	if got := len(fn.notifs); got != 1 {
+		t.Fatalf("warn notice produced %d notifications, want 1 total", got)
 	}
-	u := fn.updateMap(t, 1)
+	u := fn.updateMap(t, 0)
 	if u["sessionUpdate"] != "agent_message_chunk" {
 		t.Errorf("warn update = %v", u["sessionUpdate"])
 	}
@@ -686,7 +679,7 @@ func TestClip(t *testing.T) {
 // Replay must show the user-authored view, not the persisted wire form:
 // injected transient blocks and protocol markers stay in history for parsing
 // but never reach the client (#6882).
-func TestUpdateSinkReplayStripsInjectedWrappers(t *testing.T) {
+func TestUpdateSinkReplayUsesRawAuthoredText(t *testing.T) {
 	fn := &fakeNotifier{}
 	sink := newUpdateSink(fn, "sess-1")
 	sink.replay([]provider.Message{
@@ -695,8 +688,8 @@ func TestUpdateSinkReplayStripsInjectedWrappers(t *testing.T) {
 			Content: "<pinned_context_revision>private pinned body</pinned_context_revision>",
 		},
 		{
-			Role: provider.RoleUser,
-			Content: "<response-language>\nFinal answer language preference: use Simplified Chinese.\n</response-language>\n" +
+			Role:       provider.RoleUser,
+			RawContent: "Introduce yourself", Content: "<response-language>\nFinal answer language preference: use Simplified Chinese.\n</response-language>\n" +
 				"Introduce yourself",
 		},
 		{
