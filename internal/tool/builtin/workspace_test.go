@@ -139,7 +139,11 @@ func TestWorkspacePreviewBinds(t *testing.T) {
 
 // TestWorkspaceEnabledFilter checks the enabled whitelist.
 func TestWorkspaceEnabledFilter(t *testing.T) {
-	tools := Workspace{Dir: t.TempDir()}.Tools("read_file", "bash", "todo_write", "job_output")
+	shellName := "bash"
+	if sandbox.ResolveShell("", "", nil).Kind == sandbox.ShellPowerShell {
+		shellName = "pwsh"
+	}
+	tools := Workspace{Dir: t.TempDir()}.Tools("read_file", shellName, "todo_write", "job_output")
 	got := byName(tools)
 	if len(got) != 4 || got["read_file"] == nil || got["todo_write"] == nil || got["job_output"] == nil {
 		t.Fatalf("enabled filter returned %d tools: %v", len(got), keys(got))

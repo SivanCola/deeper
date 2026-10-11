@@ -36,7 +36,7 @@ func TestDefaultSpawnerRunsQuotedPluginBatchHook(t *testing.T) {
 	}{
 		{name: "shell form", command: `"` + filepath.ToSlash(script) + `" session-start`},
 		{name: "explicit default shell form", command: `"` + filepath.ToSlash(script) + `" session-start`, mode: ExecutionShell},
-		{name: "argv form", command: filepath.ToSlash(script), args: []string{"session-start"}},
+		{name: "argv form", command: filepath.ToSlash(script), args: []string{"session-start"}, mode: ExecutionExec},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			result := DefaultSpawner(context.Background(), SpawnInput{

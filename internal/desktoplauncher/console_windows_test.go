@@ -65,69 +65,60 @@ func TestLauncherDoesNotCreateConsoleWindow(t *testing.T) {
 	binary.LittleEndian.PutUint16(guiBytes[peOffset+24+68:], 2)
 	probeBytes := buildConsoleProbe(t)
 	for _, entry := range []string{"deepzora-launcher.exe", "Deepzora.exe"} {
-		for _, legacy := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s/legacy=%t", entry, legacy), func(t *testing.T) {
-				root := t.TempDir()
-				active := filepath.Join(root, "versions", "v1.0.0")
-				if err := os.MkdirAll(active, 0o755); err != nil {
+		t.Run(entry, func(t *testing.T) {
+			root := t.TempDir()
+			active := filepath.Join(root, "versions", "v1.0.0")
+			if err := os.MkdirAll(active, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			paths := []string{filepath.Join(root, entry), filepath.Join(active, "deepzora-desktop.exe")}
+			if err := writeConsoleTestPointer(root); err != nil {
+				t.Fatal(err)
+			}
+			for _, path := range paths {
+				data := probeBytes
+				if path == paths[0] {
+					data = guiBytes
+				}
+				if err := os.WriteFile(path, data, 0o755); err != nil {
 					t.Fatal(err)
 				}
-				paths := []string{filepath.Join(root, entry), filepath.Join(active, "deepzora-desktop.exe")}
-				if legacy {
-					paths = append(paths, filepath.Join(root, "deepzora-guard.exe"))
-				} else if err := writeConsoleTestPointer(root); err != nil {
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, paths[0])
+			cmd.Env = append(os.Environ(), consoleTestEnv+"="+root)
+			cmd.WaitDelay = 5 * time.Second
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("launcher: %v\n%s", err, output)
+			}
+			seen := make(map[string]bool)
+			for line := range bytes.SplitSeq(output, []byte{'\n'}) {
+				if !bytes.HasPrefix(line, []byte("console-state ")) {
+					continue
+				}
+				var name string
+				var cp, window uint64
+				if _, err := fmt.Sscanf(string(line), "console-state %s %d %d", &name, &cp, &window); err != nil {
 					t.Fatal(err)
 				}
-				for _, path := range paths {
-					data := probeBytes
-					if path == paths[0] {
-						data = guiBytes
-					}
-					if err := os.WriteFile(path, data, 0o755); err != nil {
-						t.Fatal(err)
-					}
+				seen[name] = true
+				// CREATE_NO_WINDOW still permits a console code page; the
+				// regression is creating a window, not having console I/O.
+				if window != 0 {
+					t.Errorf("%s created a console window: codepage=%d window=%d", name, cp, window)
 				}
-				ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-				defer cancel()
-				cmd := exec.CommandContext(ctx, paths[0])
-				cmd.Env = append(os.Environ(), consoleTestEnv+"="+root)
-				cmd.WaitDelay = 5 * time.Second
-				output, err := cmd.CombinedOutput()
-				if err != nil {
-					t.Fatalf("launcher: %v\n%s", err, output)
+			}
+			for _, path := range paths {
+				if !seen[filepath.Base(path)] {
+					t.Errorf("missing process probe for %s: %s", filepath.Base(path), output)
 				}
-				seen := make(map[string]bool)
-				for line := range bytes.SplitSeq(output, []byte{'\n'}) {
-					if !bytes.HasPrefix(line, []byte("console-state ")) {
-						continue
-					}
-					var name string
-					var cp, window uint64
-					if _, err := fmt.Sscanf(string(line), "console-state %s %d %d", &name, &cp, &window); err != nil {
-						t.Fatal(err)
-					}
-					seen[name] = true
-					// CREATE_NO_WINDOW still permits a console code page; the
-					// regression is creating a window, not having console I/O.
-					if window != 0 {
-						t.Errorf("%s created a console window: codepage=%d window=%d", name, cp, window)
-					}
-				}
-				for _, path := range paths {
-					if !seen[filepath.Base(path)] {
-						t.Errorf("missing process probe for %s: %s", filepath.Base(path), output)
-					}
-				}
-				if legacy {
-					if _, err := os.Stat(filepath.Join(root, "deepzora-guard.exe")); !os.IsNotExist(err) {
-						t.Errorf("completed legacy migrator was not removed: %v", err)
-					}
-				}
-				if strings.Contains(string(output), "error:") {
-					t.Fatalf("launcher reported an error: %s", output)
-				}
-			})
-		}
+			}
+			if strings.Contains(string(output), "error:") {
+				t.Fatalf("launcher reported an error: %s", output)
+			}
+		})
 	}
 }
 

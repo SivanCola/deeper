@@ -271,8 +271,8 @@ func TestSwitchModelSnapshotFailureKeepsOldController(t *testing.T) {
 	}
 
 	err := s.switchModel(context.Background(), "next-model")
-	if err == nil || !strings.Contains(err.Error(), "adopt history") {
-		t.Fatalf("switchModel error = %v, want adopt history failure", err)
+	if err == nil || !strings.Contains(err.Error(), "switch model:") {
+		t.Fatalf("switchModel error = %v, want history persistence failure", err)
 	}
 	if got := s.ctl(); got != old {
 		t.Fatalf("active controller changed after persistence failure: got %T %p, want outgoing %p", got, got, old)

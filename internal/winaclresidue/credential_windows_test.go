@@ -9,6 +9,7 @@ import (
 	"testing"
 	"unsafe"
 
+	"deepzora/internal/testenv"
 	"golang.org/x/sys/windows"
 )
 
@@ -30,6 +31,7 @@ func installReadDeny(t *testing.T, path, userSID string) {
 }
 
 func TestResetCredentialDACLRestoresAccessWithoutReadingACL(t *testing.T) {
+	defer testenv.WithoutWindowsPrivileges(t)()
 	path := filepath.Join(t.TempDir(), ".env")
 	if err := os.WriteFile(path, []byte("KEY=value\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -77,6 +79,7 @@ func TestResetCredentialDACLRestoresAccessWithoutReadingACL(t *testing.T) {
 }
 
 func TestRenameLockedFileMovesDeniedStore(t *testing.T) {
+	defer testenv.WithoutWindowsPrivileges(t)()
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".env")
 	if err := os.WriteFile(path, []byte("KEY=value\n"), 0o600); err != nil {

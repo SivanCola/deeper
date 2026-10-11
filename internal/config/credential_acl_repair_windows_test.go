@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"deepzora/internal/testenv"
 	"deepzora/internal/winaclresidue"
 	"golang.org/x/sys/windows"
 )
@@ -18,6 +19,7 @@ import (
 // An explicit save can recover an unreadable current credential store while
 // preserving its values. Ordinary reads must not modify its ACL.
 func TestCredentialSaveResetsDeniedCurrentStore(t *testing.T) {
+	defer testenv.WithoutWindowsPrivileges(t)()
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	t.Setenv("ACL_RESET_INTEGRATION_KEY", "")
 	path := UserCredentialsPath()
