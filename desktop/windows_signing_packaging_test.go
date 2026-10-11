@@ -301,8 +301,8 @@ func TestProductionSigningRunsOnlyFromProtectedControlPlane(t *testing.T) {
 		t.Fatal("automatic preparation must use the protected Notes push, never tags or PR heads")
 	}
 	activation := readTestFile(t, "../scripts/release-candidate-tags.sh")
-	if !regexp.MustCompile(`(?m)actions/attest-build-provenance@[0-9a-f]{40} # v3$`).MatchString(candidate + "\n" + promote + "\n" + activation) {
-		t.Error("sealed release control plane must attest with actions/attest-build-provenance v3 pinned to a commit")
+	if !regexp.MustCompile(`(?m)actions/attest-build-provenance@[0-9a-f]{40} # v4\.2\.2$`).MatchString(candidate + "\n" + promote + "\n" + activation) {
+		t.Error("sealed release control plane must attest with actions/attest-build-provenance v4.2.2 pinned to a commit")
 	}
 	for _, want := range []string{
 		`candidate_preparation: true`,
