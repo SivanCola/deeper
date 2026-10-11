@@ -148,7 +148,7 @@ func TestBuildQuoteScheduledRateUsesMatchingPeerBand(t *testing.T) {
 	q := BuildQuote(QuoteInput{
 		Usage:      UsageTokens{CacheHitTokens: 1_000_000, CacheMissTokens: 1_000_000, CompletionTokens: 1_000_000},
 		Rates:      RateCard{CacheHit: 0.10, Input: 3, Output: 9, Currency: "CNY"},
-		OccurredAt: at, DisplayCurrency: "USD", BillingMode: BillingModePAYG,
+		OccurredAt: at, Display: DisplayRequest{Currency: "USD", Source: DisplaySourceExplicit}, BillingMode: BillingModePAYG,
 		ProviderKind: "deepseek", ModelID: "deepseek-v4-flash", ScheduleID: ScheduleDeepSeekV4August2026,
 	})
 	if q.RateBand != RateBandOffPeak || q.Original.Amount != "6.05" || q.RatedAt != at.Format(time.RFC3339Nano) {

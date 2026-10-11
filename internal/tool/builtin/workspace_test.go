@@ -139,9 +139,9 @@ func TestWorkspacePreviewBinds(t *testing.T) {
 
 // TestWorkspaceEnabledFilter checks the enabled whitelist.
 func TestWorkspaceEnabledFilter(t *testing.T) {
-	tools := Workspace{Dir: t.TempDir()}.Tools("read_file", "bash", "todo_write", "wait")
+	tools := Workspace{Dir: t.TempDir()}.Tools("read_file", "bash", "todo_write", "job_output")
 	got := byName(tools)
-	if len(got) != 4 || got["read_file"] == nil || got["todo_write"] == nil || got["wait"] == nil {
+	if len(got) != 4 || got["read_file"] == nil || got["todo_write"] == nil || got["job_output"] == nil {
 		t.Fatalf("enabled filter returned %d tools: %v", len(got), keys(got))
 	}
 	requireWorkspaceShell(t, tools)
@@ -151,9 +151,9 @@ func TestWorkspacePreservesSessionLevelBuiltins(t *testing.T) {
 	got := byName(Workspace{Dir: t.TempDir()}.Tools())
 	for _, name := range []string{
 		"todo_write",
-		"bash_output",
-		"kill_shell",
-		"wait",
+		"job_output",
+		"job_kill",
+		"job_output",
 		"move_file",
 		"notebook_edit",
 	} {

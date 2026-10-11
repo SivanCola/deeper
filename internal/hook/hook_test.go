@@ -120,220 +120,6 @@ func TestLoadDecodesUTF8BOMProjectSettings(t *testing.T) {
 	}
 }
 
-func TestLoadNormalizesQuotedNodeEvalHooksPerProject(t *testing.T) {
-	requireNode(t)
-
-	home := t.TempDir()
-	projA := t.TempDir()
-	projB := t.TempDir()
-	script := "const payload = JSON.parse(require('fs').readFileSync(0, 'utf8')); console.log(payload.toolName)"
-	bad := `node -e "\"` + script + `\""`
-	want := NormalizeCommand(bad)
-	if want == bad {
-		t.Fatal("test command did not normalize")
-	}
-	writeSettings(t, projA, hookSettingsWithCommand(t, PreToolUse, bad))
-	writeSettings(t, projB, hookSettingsWithCommand(t, PreToolUse, bad))
-
-	for _, project := range []string{projA, projB, projB} {
-		approveProjectHooks(t, LoadOptions{HomeDir: home, ProjectRoot: project})
-		hooks := Load(LoadOptions{HomeDir: home, ProjectRoot: project})
-		if len(hooks) != 1 {
-			t.Fatalf("Load(%q) hooks = %+v, want one", project, hooks)
-		}
-		if hooks[0].Command != want {
-			t.Fatalf("Load(%q) command = %q, want %q", project, hooks[0].Command, want)
-		}
-		rep := Run(context.Background(), Payload{Event: PreToolUse, Cwd: project, ToolName: "bash"}, hooks, nil)
-		if len(rep.Outcomes) != 1 || rep.Outcomes[0].Decision != DecisionPass || rep.Outcomes[0].Stdout != "bash" {
-			t.Fatalf("normalized hook outcome = %+v, want pass with bash stdout", rep)
-		}
-	}
-}
-
-func TestNormalizeCommandRepairsOnlyStdinNodeEvalQuoting(t *testing.T) {
-	script := "const payload = JSON.parse(require('fs').readFileSync(0, 'utf8')); console.log(payload.toolName)"
-	doubleQuoteScript := `const payload = JSON.parse(require(\"fs\").readFileSync(0, \"utf8\")); console.log(payload.toolName)`
-	tests := []struct {
-		name    string
-		command string
-		repair  bool
-	}{
-		{
-			name:    "quoted script argument",
-			command: `node -e "\"` + script + `\""`,
-			repair:  true,
-		},
-		{
-			name:    "json escaped shell quotes",
-			command: `node -e \"` + script + `\"`,
-			repair:  true,
-		},
-		{
-			name:    "json escaped shell and script quotes",
-			command: `node -e \"` + doubleQuoteScript + `\"`,
-			repair:  true,
-		},
-		{
-			name:    "normal hook command",
-			command: `node -e "` + script + `"`,
-		},
-		{
-			name:    "intentional string literal",
-			command: `node -e '"hello"'`,
-		},
-		{
-			name:    "not stdin hook script",
-			command: `node -e "\"console.log(1)\""`,
-		},
-		{
-			name:    "compound command",
-			command: `node -e "\"` + script + `\"" && echo done`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := NormalizeCommand(tt.command)
-			if tt.repair {
-				if got == tt.command {
-					t.Fatalf("NormalizeCommand(%q) did not repair", tt.command)
-				}
-				if strings.Contains(got, `\""`) {
-					t.Fatalf("NormalizeCommand(%q) left accidental escaped quotes in %q", tt.command, got)
-				}
-				requireNode(t)
-				r := DefaultSpawner(context.Background(), SpawnInput{
-					Command: got,
-					Stdin:   `{"toolName":"bash"}`,
-					Timeout: realSpawnTimeout,
-				})
-				if r.ExitCode != 0 || r.Stdout != "bash" {
-					t.Fatalf("normalized command did not execute: command=%q result=%+v", got, r)
-				}
-				return
-			}
-			if got != tt.command {
-				t.Fatalf("NormalizeCommand(%q) = %q, want unchanged", tt.command, got)
-			}
-		})
-	}
-}
-
-func TestNormalizeCommandRepairsOnlyPowerShellFileEscapedQuotes(t *testing.T) {
-	tests := []struct {
-		name    string
-		command string
-		want    string
-	}{
-		{
-			name:    "powershell file path copied with json escaped quotes",
-			command: `powershell -File \"C:\Users\Example\.deepzora\hooks\archive-attachments.ps1\"`,
-			want:    `powershell -File "C:\Users\Example\.deepzora\hooks\archive-attachments.ps1"`,
-		},
-		{
-			name:    "pwsh file path with spaces",
-			command: `pwsh.exe -NoProfile -NonInteractive -File \"C:\Program Files\Deepzora Hooks\archive attachments.ps1\"`,
-			want:    `pwsh.exe -NoProfile -NonInteractive -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`,
-		},
-		{
-			name:    "doubly escaped copied quotes",
-			command: `pwsh -File \\\"C:\Program Files\Deepzora Hooks\archive attachments.ps1\\\" \"arg with spaces\"`,
-			want:    `pwsh -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1" "arg with spaces"`,
-		},
-		{
-			name:    "powershell executable path copied with escaped quotes",
-			command: `\"C:\Program Files\PowerShell\7\pwsh.exe\" -File \"C:\hooks\archive.ps1\"`,
-			want:    `"C:\Program Files\PowerShell\7\pwsh.exe" -File "C:\hooks\archive.ps1"`,
-		},
-		{
-			name:    "well formed file command stays unchanged",
-			command: `powershell -NoProfile -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`,
-			want:    `powershell -NoProfile -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`,
-		},
-		{
-			name:    "command mode may intentionally contain escaped quotes",
-			command: `powershell -Command \"Write-Output hi\"`,
-			want:    `powershell -Command \"Write-Output hi\"`,
-		},
-		{
-			name:    "compound command is left alone",
-			command: `powershell -File \"C:\hooks\archive.ps1\" && echo done`,
-			want:    `powershell -File \"C:\hooks\archive.ps1\" && echo done`,
-		},
-		{
-			name:    "multiline command is left alone",
-			command: "powershell -File \\\"C:\\hooks\\archive.ps1\\\"\necho done",
-			want:    "powershell -File \\\"C:\\hooks\\archive.ps1\\\"\necho done",
-		},
-		{
-			name:    "well formed sibling argument keeps its escaped quotes",
-			command: `powershell -File \"C:\hooks\archive.ps1\" "say \"hi\""`,
-			want:    `powershell -File "C:\hooks\archive.ps1" "say \"hi\""`,
-		},
-		{
-			name:    "single quoted sibling argument stays literal",
-			command: `powershell -File \"C:\hooks\archive.ps1\" 'keep \" literal'`,
-			want:    `powershell -File "C:\hooks\archive.ps1" 'keep \" literal'`,
-		},
-		{
-			name:    "non powershell command is left alone",
-			command: `python \"C:\hooks\archive.py\"`,
-			want:    `python \"C:\hooks\archive.py\"`,
-		},
-		{
-			name:    "missing file argument is left alone",
-			command: `powershell -NoProfile -File`,
-			want:    `powershell -NoProfile -File`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NormalizeCommand(tt.command); got != tt.want {
-				t.Fatalf("NormalizeCommand(%q) = %q, want %q", tt.command, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestLoadNormalizesPowerShellFileEscapedQuotes(t *testing.T) {
-	home := t.TempDir()
-	bad := `powershell -File \"C:\Program Files\Deepzora Hooks\archive attachments.ps1\"`
-	want := `powershell -File "C:\Program Files\Deepzora Hooks\archive attachments.ps1"`
-	writeSettings(t, home, hookSettingsWithCommand(t, SessionStart, bad))
-
-	hooks := Load(LoadOptions{HomeDir: home})
-	if len(hooks) != 1 {
-		t.Fatalf("Load hooks = %+v, want one", hooks)
-	}
-	if hooks[0].Command != want {
-		t.Fatalf("loaded command = %q, want %q", hooks[0].Command, want)
-	}
-}
-
-func TestRepairablePowerShellFileArgs(t *testing.T) {
-	command := `powershell -NoProfile -NonInteractive -File \"C:\Program Files\Deepzora Hooks\archive attachments.ps1\" -Mode \"startup\"`
-	name, args, ok := repairablePowerShellFileArgs(command)
-	if !ok {
-		t.Fatalf("repairablePowerShellFileArgs(%q) ok = false, want true", command)
-	}
-	if name != "powershell" {
-		t.Fatalf("name = %q, want powershell", name)
-	}
-	wantArgs := []string{"-NoProfile", "-NonInteractive", "-File", `C:\Program Files\Deepzora Hooks\archive attachments.ps1`, "-Mode", "startup"}
-	if strings.Join(args, "\x00") != strings.Join(wantArgs, "\x00") {
-		t.Fatalf("args = %#v, want %#v", args, wantArgs)
-	}
-	if _, _, ok := repairablePowerShellFileArgs(`powershell -File "C:\hooks\archive.ps1"`); ok {
-		t.Fatal("well formed PowerShell command should keep shell execution")
-	}
-	if _, _, ok := repairablePowerShellFileArgs(`powershell -File \"C:\hooks\archive.ps1\" && echo done`); ok {
-		t.Fatal("compound PowerShell command should not be direct-exec repaired")
-	}
-	if _, _, ok := repairablePowerShellFileArgs("powershell -File \\\"C:\\hooks\\archive.ps1\\\"\necho done"); ok {
-		t.Fatal("multiline PowerShell command should not be direct-exec repaired")
-	}
-}
-
 // installSuperpowersV611HookFixture reproduces the package shape reported in
 // #6602: a Codex-kind installation of superpowers 6.1.1 whose Claude
 // compatibility manifest launches a quoted, mixed-separator run-hook.cmd.
@@ -674,12 +460,22 @@ func TestLoadPluginHooksPreservesExecutionContract(t *testing.T) {
 	deepzoraHome := filepath.Join(home, ".deepzora")
 	root := filepath.Join(deepzoraHome, "plugins", "hook-contract")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "deepzora.com/plugin/v2", "name": "hook-contract",
-  "hooks": {
-    "SessionStart": [
-      {"command":"bin/check","args":[],"shellCommand":true},
-      {"command":"printf 'one' && printf 'two'","shell":"bash"}
-    ]
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "hook-contract",
+  "contributes": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "command": "bin/check",
+          "args": [],
+          "shellCommand": true
+        },
+        {
+          "command": "printf 'one' && printf 'two'",
+          "shell": "bash"
+        }
+      ]
+    }
   }
 }`)
 	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
@@ -713,16 +509,23 @@ func TestLoadExpandsDeepzoraPluginRootBeforeShellLaunch(t *testing.T) {
 	root := filepath.Join(deepzoraHome, "plugins", "impeccable")
 	projectRoot := filepath.Join(home, "$CLAUDE_PLUGIN_ROOT-project")
 	writeHookTestFile(t, filepath.Join(root, pluginpkg.NativeManifest), `{
-  "apiVersion": "deepzora.com/plugin/v2", "name": "impeccable",
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "impeccable",
   "version": "3.9.1",
-  "hooks": {
-    "PostToolUse": [{
-      "match": "edit",
-      "command": "node \"${DEEPZORA_PLUGIN_ROOT}/skills/impeccable/scripts/hook.mjs\"",
-      "shellCommand": true,
-      "cwd": "${DEEPZORA_PLUGIN_ROOT}/work",
-      "env": {"IMPECCABLE_CACHE": "%DEEPZORA_PLUGIN_ROOT%/cache"}
-    }]
+  "contributes": {
+    "hooks": {
+      "PostToolUse": [
+        {
+          "match": "edit",
+          "command": "node \"${DEEPZORA_PLUGIN_ROOT}/skills/impeccable/scripts/hook.mjs\"",
+          "shellCommand": true,
+          "cwd": "${DEEPZORA_PLUGIN_ROOT}/work",
+          "env": {
+            "IMPECCABLE_CACHE": "%DEEPZORA_PLUGIN_ROOT%/cache"
+          }
+        }
+      ]
+    }
   }
 }`)
 	if err := pluginpkg.Upsert(deepzoraHome, pluginpkg.InstalledPlugin{
@@ -1848,9 +1651,7 @@ func TestWellFormedNodeEvalKeepsShellSemantics(t *testing.T) {
 	}
 	requireNode(t)
 	command := `node -e "const payload = JSON.parse(require('fs').readFileSync(0, 'utf8')); console.log('$HOOK_TEST_MARKER' + payload.toolName)"`
-	if got := NormalizeCommand(command); got != command {
-		t.Fatalf("well-formed command was rewritten: %q", got)
-	}
+
 	r := DefaultSpawner(context.Background(), SpawnInput{
 		Command: command,
 		Stdin:   `{"toolName":"bash"}`,

@@ -19,9 +19,7 @@ func (a *App) remoteSessionOrganization(w SessionOrganizationWorkspace, revision
 		if selector.Ref != nil && selector.Ref.HostID == w.HostID && selector.Ref.SessionID != "" {
 			return "ref\x00" + w.HostID + "\x00" + selector.Ref.SessionID, nil
 		}
-		if selector.Source != nil && selector.Source.HostID == w.HostID && selector.Source.Path != "" {
-			return "source\x00" + w.HostID + "\x00" + w.WorkspaceRoot + "\x00" + selector.Source.Path, nil
-		}
+
 		return "", newSessionOperationError("target_changed", "The session belongs to a different host.")
 	}
 	key, anchor := "", ""
@@ -81,7 +79,7 @@ func (a *App) remoteSessionOrganization(w SessionOrganizationWorkspace, revision
 }
 
 func mutateRemoteOrganization(p *config.RemoteProjectEntry, revision *uint64, mutation *SessionOrganizationMutation, key, anchor string) (SessionOrganizationSnapshot, bool, error) {
-	o := workspacestate.Organization{Order: []string{}, Groups: []workspacestate.OrganizationGroup{}, Imported: map[string]bool{}, MigrationVersion: 1}
+	o := workspacestate.Organization{Order: []string{}, Groups: []workspacestate.OrganizationGroup{}, Imported: map[string]bool{}}
 	if p.SessionOrganization != "" {
 		if err := json.Unmarshal([]byte(p.SessionOrganization), &o); err != nil {
 			return SessionOrganizationSnapshot{}, false, err

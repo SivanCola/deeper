@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -77,6 +78,11 @@ func TestRepairSessionListingProjectionHonorsCancellationDuringLargeDecode(t *te
 	writeSessionFile(t, path, []provider.Message{{
 		Role: provider.RoleUser, Content: "large", Images: []string{strings.Repeat("a", 49<<20)},
 	}})
+	for _, sidecar := range []string{store.SessionEventIndex(path), store.SessionDisplayIndex(path)} {
+		if err := os.Remove(sidecar); err != nil {
+			t.Fatal(err)
+		}
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(time.Millisecond, cancel)
 	started := time.Now()

@@ -14,7 +14,7 @@ func TestLoadForRootKeepsOfficialProviderAliasesDistinct(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(userPath, []byte(`
-config_version = 2
+config_version = 12
 default_model = "deepseek/deepseek-v4-flash"
 
 [desktop]
@@ -35,7 +35,7 @@ api_key_env = "USER_DEEPSEEK_KEY"
 name = "deepseek-flash"
 kind = "openai"
 base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "PROJECT_DEEPSEEK_KEY"
 effort = "max"
 `), 0o644); err != nil {
@@ -75,7 +75,7 @@ func TestLoadForRootKeepsUserProviderOverSameNamedProjectProvider(t *testing.T) 
 name = "shared"
 kind = "openai"
 base_url = "https://global.example/v1"
-model = "global-model"
+models = ["global-model"]
 api_key_env = "GLOBAL_SHARED_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -85,14 +85,14 @@ api_key_env = "GLOBAL_SHARED_KEY"
 name = "shared"
 kind = "openai"
 base_url = "https://project.example/v1"
-model = "project-model"
+models = ["project-model"]
 api_key_env = "PROJECT_SHARED_KEY"
 
 [[providers]]
 name = "project-only"
 kind = "openai"
 base_url = "https://project.example/v1"
-model = "project-only-model"
+models = ["project-only-model"]
 api_key_env = "PROJECT_ONLY_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ api_key_env = "PROJECT_ONLY_KEY"
 	if !ok {
 		t.Fatalf("shared provider missing: %+v", cfg.Providers)
 	}
-	if shared.BaseURL != "https://global.example/v1" || shared.APIKeyEnv != "GLOBAL_SHARED_KEY" || shared.Model != "global-model" {
+	if shared.BaseURL != "https://global.example/v1" || shared.APIKeyEnv != "GLOBAL_SHARED_KEY" || shared.DefaultModel() != "global-model" {
 		t.Fatalf("shared provider = %+v, want global provider to win over project provider", shared)
 	}
 	if _, ok := cfg.Provider("project-only"); !ok {
@@ -143,7 +143,7 @@ default_model = "custom/m"
 name = "custom"
 kind = "openai"
 base_url = "https://example.invalid/v1"
-model = "m"
+models = ["m"]
 api_key_env = "`+key+`"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -187,7 +187,7 @@ default_model = "custom/m"
 name = "custom"
 kind = "openai"
 base_url = "https://example.invalid/v1"
-model = "m"
+models = ["m"]
 api_key_env = "`+key+`"
 `), 0o644); err != nil {
 		t.Fatal(err)

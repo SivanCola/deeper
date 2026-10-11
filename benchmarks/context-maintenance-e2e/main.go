@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/billing"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	_ "deepzora/internal/provider/openai"
@@ -38,7 +39,7 @@ func (c *costCap) add(u *provider.Usage, pricing *provider.Pricing) error {
 	if c == nil || u == nil || pricing == nil {
 		return nil
 	}
-	c.spent += pricing.Cost(u)
+	c.spent += billing.OriginalCostAmount(billing.RateCard{CacheHit: pricing.CacheHit, Input: pricing.Input, Output: pricing.Output, Currency: pricing.Currency}, billing.UsageTokens{PromptTokens: u.PromptTokens, CompletionTokens: u.CompletionTokens, CacheHitTokens: u.CacheHitTokens, CacheMissTokens: u.CacheMissTokens, CacheWriteTokens: u.CacheWriteTokens, CacheWriteBilledTokens: u.CacheWriteBilledTokens}).Float64()
 	if c.maxUSD > 0 && c.spent > c.maxUSD {
 		return fmt.Errorf("cost cap exceeded: spent $%.4f > max $%.4f", c.spent, c.maxUSD)
 	}
@@ -107,7 +108,6 @@ func newAgent(p provider.Provider, sess *agent.Session, path string, sink event.
 	return agent.New(p, tool.NewRegistry(), sess, agent.Options{
 		ContextWindow: windowTokens,
 		CompactRatio:  compactRatio,
-		RecentKeep:    2,
 		SessionPath:   path,
 		WorkspaceID:   "cm-e2e",
 		ModelRef:      "deepseek/" + model,

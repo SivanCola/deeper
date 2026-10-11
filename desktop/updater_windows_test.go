@@ -5,7 +5,6 @@ package main
 import (
 	"crypto/sha256"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,8 +12,6 @@ import (
 	"time"
 
 	"golang.org/x/sys/windows"
-
-	"deepzora/internal/repair"
 )
 
 func TestInstallerCommandShowsUpdateProgressAndPassesUnquotedDFlagLast(t *testing.T) {
@@ -149,47 +146,5 @@ func TestStageWindowsUpdateHelperCopyAllocatesExclusiveNodes(t *testing.T) {
 		if err != nil || string(got) != string(content) {
 			t.Fatalf("staged helper %q = %q, %v", path, got, err)
 		}
-	}
-}
-
-func TestPreparedWindowsUpdateHelperSHA256BindsReleaseUnitMember(t *testing.T) {
-	installDir := t.TempDir()
-	helper := filepath.Join(installDir, windowsUpdateHelperFileName)
-	expected := strings.Repeat("a", sha256.Size*2)
-	prepared := &repair.UpdateTransaction{
-		SchemaVersion: 1,
-		TargetKind:    "file",
-		TargetPath:    filepath.Join(installDir, "deepzora-desktop.exe"),
-		ToVersion:     "v2",
-		Platform:      "windows/amd64",
-		CreatedAt:     "2026-07-29T00:00:00Z",
-		Files: []repair.UpdateTransactionFile{{
-			TargetPath: helper,
-			SHA256:     expected,
-		}},
-	}
-	got, err := preparedWindowsUpdateHelperSHA256(prepared, installDir)
-	if err != nil || got != expected {
-		t.Fatalf("prepared helper SHA-256 = %q, %v", got, err)
-	}
-	prepared.Files[0].MissingBefore = true
-	if _, err := preparedWindowsUpdateHelperSHA256(prepared, installDir); err == nil {
-		t.Fatal("prepared transaction with a missing helper authorized execution")
-	}
-}
-
-func TestPrepareWindowsUpdateHelperRejectsPreparedHashDrift(t *testing.T) {
-	installDir := t.TempDir()
-	if err := os.WriteFile(
-		filepath.Join(installDir, windowsUpdateHelperFileName),
-		[]byte("changed-helper"),
-		0o700,
-	); err != nil {
-		t.Fatal(err)
-	}
-	prepared := sha256.Sum256([]byte("prepared-helper"))
-	_, _, err := prepareWindowsUpdateHelper(installDir, fmt.Sprintf("%x", prepared))
-	if err == nil || !strings.Contains(err.Error(), "changed after transaction prepare") {
-		t.Fatalf("changed packaged helper = %v", err)
 	}
 }

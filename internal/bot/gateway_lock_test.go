@@ -112,8 +112,8 @@ func TestBotGatewayStopWaitsForDispatchHandler(t *testing.T) {
 	entered := make(chan struct{})
 	release := make(chan struct{})
 	gw := NewGatewayWithAdapterBindings(GatewayConfig{
-		Enabled:   map[Platform]bool{PlatformFeishu: true},
-		Allowlist: AllowlistConfig{AllowAll: true},
+		Enabled:          map[Platform]bool{PlatformFeishu: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 		OnInbound: func(InboundMessage) {
 			close(entered)
 			<-release
@@ -150,8 +150,8 @@ func TestBotGatewayStopWaitsForDispatchHandler(t *testing.T) {
 func TestBotGatewayStopWaitsForTurn(t *testing.T) {
 	adapter := newFakeAdapter(PlatformWeixin, "fake-weixin")
 	gw := NewGatewayWithAdapterBindings(GatewayConfig{
-		Enabled:   map[Platform]bool{PlatformWeixin: true},
-		Allowlist: AllowlistConfig{AllowAll: true},
+		Enabled:          map[Platform]bool{PlatformWeixin: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 	}, []AdapterBinding{{ID: "weixin", Platform: PlatformWeixin, Adapter: adapter}}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	ctrl := &stopWaitBotController{started: make(chan struct{}), release: make(chan struct{})}
 	msg := InboundMessage{Platform: PlatformWeixin, ConnectionID: "weixin", ChatType: ChatDM, ChatID: "chat", UserID: "user", Text: "hello"}
@@ -211,7 +211,7 @@ type panickingRootBotController struct {
 func (panickingRootBotController) WorkspaceRoot() string { panic("workspace root unavailable") }
 
 func TestAPanicWhileClaimingASessionReleasesTheGatewayLock(t *testing.T) {
-	gw := NewGateway(GatewayConfig{Allowlist: AllowlistConfig{AllowAll: true}}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	gw := NewGateway(GatewayConfig{ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true})}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	msg := InboundMessage{Platform: PlatformWeixin, ConnectionID: "weixin", ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	key := BuildSessionKey(msg.Session())
 	gw.controllers[key] = &sessionState{ctrl: panickingRootBotController{}, sink: &sessionEventSink{}}
@@ -266,8 +266,8 @@ func TestBotGatewayStopBeforeTurnCancelPublication(t *testing.T) {
 		release:     make(chan struct{}),
 	}
 	gw := NewGatewayWithAdapterBindings(GatewayConfig{
-		Enabled:   map[Platform]bool{PlatformWeixin: true},
-		Allowlist: AllowlistConfig{AllowAll: true},
+		Enabled:          map[Platform]bool{PlatformWeixin: true},
+		ConnectionAccess: testConnectionAccess(AccessConfig{AllowAll: true}),
 	}, []AdapterBinding{{ID: "weixin", Platform: PlatformWeixin, Adapter: adapter}}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	closeEntered := make(chan struct{}, 2)
 	closeHold := make(chan struct{})
@@ -393,10 +393,10 @@ func TestBotGatewayToolApprovalModeConcurrentWithConfigReaders(t *testing.T) {
 		cfg: GatewayConfig{
 			WorkspaceRoot: t.TempDir(),
 			Channels: map[Platform]ChannelConfig{
-				PlatformFeishu: {ToolApprovalMode: control.ToolApprovalAsk},
+				PlatformFeishu: {ToolApprovalMode: control.ToolApprovalReadOnly},
 			},
 			ConnectionChannels: map[string]ChannelConfig{
-				"feishu-lark": {ToolApprovalMode: control.ToolApprovalAsk},
+				"feishu-lark": {ToolApprovalMode: control.ToolApprovalReadOnly},
 			},
 		},
 		controllers:      map[string]*sessionState{},
@@ -414,12 +414,12 @@ func TestBotGatewayToolApprovalModeConcurrentWithConfigReaders(t *testing.T) {
 	go func() {
 		defer close(writerDone)
 		<-start
-		modes := []string{control.ToolApprovalYolo, control.ToolApprovalAsk, control.ToolApprovalAuto}
+		modes := []string{control.ToolApprovalDangerFullAccess, control.ToolApprovalReadOnly, control.ToolApprovalWorkspaceWrite}
 		for i := range iterations {
 			mode := modes[i%len(modes)]
 			gw.UpdateConnectionToolApprovalMode("feishu-lark", mode)
 			gw.mu.Lock()
-			gw.updateToolApprovalModeDefaultLocked(InboundMessage{Platform: PlatformFeishu}, mode)
+			gw.updateToolApprovalModeDefaultLocked(InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu}, mode)
 			gw.updateToolApprovalModeDefaultLocked(InboundMessage{}, mode)
 			gw.mu.Unlock()
 			runtime.Gosched()
@@ -430,7 +430,7 @@ func TestBotGatewayToolApprovalModeConcurrentWithConfigReaders(t *testing.T) {
 	connMsg := InboundMessage{Platform: PlatformFeishu, ConnectionID: "feishu-lark", ChatType: ChatDM, ChatID: "chat", UserID: "user"}
 	for range iterations {
 		gw.sessionOptionsForMessage(connMsg)
-		gw.sessionOptionsForMessage(InboundMessage{Platform: PlatformFeishu})
+		gw.sessionOptionsForMessage(InboundMessage{ConnectionID: string(PlatformFeishu), Platform: PlatformFeishu})
 		projects := gw.buildProjectIndex()
 		gw.buildSessionIndex(projects)
 		runtime.Gosched()

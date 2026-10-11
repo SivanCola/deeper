@@ -2,14 +2,12 @@ package main
 
 import (
 	"slices"
-
-	"deepzora/desktop/internal/legacycleanup"
 )
 
 // Tombstones are global to the topic ID. A replay must not remove indexes in
 // a different workspace or clear that tombstone over a newly occupied ID.
 // Caller owns the cross-process projects writer lock.
-func topicRemovalHasOtherOwner(file desktopProjectFile, item legacycleanup.Candidate) bool {
+func topicRemovalHasOtherOwner(file desktopProjectFile, item topicRemovalEntry) bool {
 	references := func(ids, pins []string, groups []desktopGroup) bool {
 		if slices.Contains(ids, item.TopicID) || slices.Contains(pins, item.TopicID) {
 			return true

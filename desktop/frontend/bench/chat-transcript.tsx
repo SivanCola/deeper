@@ -130,7 +130,7 @@ function Fixture() {
         const messages = [
           { role: "user", origin: "host", content: '<session-context version="1">private environment</session-context>' },
           { role: "user", origin: "user", content: '<response-language>internal policy</response-language>你是谁', raw_content: "你是谁" },
-          { role: "user", content: '<capability-route>legacy internal route</capability-route>旧会话问题' },
+          { role: "user", origin: "user", content: '<capability-route>internal route</capability-route>当前会话问题', raw_content: "当前会话问题" },
           { role: "user", origin: "user", raw_content: '<response-language>用户引用的 XML</response-language>' },
           { role: "assistant", content: "我是 Deepzora。" },
         ].map((raw, i) => canonicalMessage({ messageId: `authored-${i}`, position: i, version: 1, role: raw.role }, raw));

@@ -175,10 +175,12 @@ func TestParseCodexWithoutSessionStartHookDoesNotWarn(t *testing.T) {
 func TestRejectsEscapingSkillPath(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, filepath.Join(root, NativeManifest), `{
-	  "apiVersion": "deepzora.com/plugin/v2",
-	  "name": "bad",
-	  "skills": "../skills"
-	}`)
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "bad",
+  "contributes": {
+    "skills": "../skills"
+  }
+}`)
 	if _, _, err := ParseDir(root); err == nil {
 		t.Fatal("ParseDir should reject escaping skill path")
 	}
@@ -743,7 +745,15 @@ func TestParseClaudePluginMapsCommandsDir(t *testing.T) {
 // deepzora-plugin.json, including path validation.
 func TestNativeManifestCommandsField(t *testing.T) {
 	root := t.TempDir()
-	writeTestFile(t, filepath.Join(root, NativeManifest), `{"apiVersion":"deepzora.com/plugin/v2","name": "native-pack", "commands": ["cmds"]}`)
+	writeTestFile(t, filepath.Join(root, NativeManifest), `{
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "native-pack",
+  "contributes": {
+    "commands": [
+      "cmds"
+    ]
+  }
+}`)
 	writeTestFile(t, filepath.Join(root, "cmds", "ship.md"), "---\ndescription: ship it\n---\nShip $1")
 
 	pkg, _, err := ParseDir(root)
@@ -759,7 +769,15 @@ func TestNativeManifestCommandsField(t *testing.T) {
 	}
 
 	rootBad := t.TempDir()
-	writeTestFile(t, filepath.Join(rootBad, NativeManifest), `{"apiVersion":"deepzora.com/plugin/v2","name": "bad-pack", "commands": ["../escape"]}`)
+	writeTestFile(t, filepath.Join(rootBad, NativeManifest), `{
+  "apiVersion": "deepzora.com/plugin/v2",
+  "name": "bad-pack",
+  "contributes": {
+    "commands": [
+      "../escape"
+    ]
+  }
+}`)
 	if _, _, err := ParseDir(rootBad); err == nil {
 		t.Fatal("ParseDir must reject a commands path escaping the plugin root")
 	}

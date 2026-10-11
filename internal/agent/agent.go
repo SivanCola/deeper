@@ -20,7 +20,6 @@ import (
 	"deepzora/internal/fileops"
 	"deepzora/internal/i18n"
 	"deepzora/internal/imageinput"
-	"deepzora/internal/instruction"
 	"deepzora/internal/jobs"
 	"deepzora/internal/mcpinteraction"
 	"deepzora/internal/memory"
@@ -38,8 +37,6 @@ import (
 // maxToolOutputBytes bounds the stable provider-visible Content. RawContent
 // retains the complete local result for explicit session-scoped paging.
 const maxToolOutputBytes = 32 * 1024
-
-var deprecatedContextRetentionWarning sync.Once
 
 const maxEmptyFinalBlocks = 3
 
@@ -220,25 +217,6 @@ type ExplicitDenyGate interface {
 	ExplicitlyDenies(toolName string, args json.RawMessage) bool
 }
 
-const PlanModeReadOnlyCommandApprovalTool = "plan_mode_read_only_command"
-
-// PlanModeReadOnlyTrustRequest describes a bash command that is safe enough to
-// ask the user to accept as read-only during planning. Command is the concrete
-// attempted command and Prefix is the reusable prefix to trust.
-type PlanModeReadOnlyTrustRequest struct {
-	ToolName string
-	Command  string
-	Prefix   string
-	Args     json.RawMessage
-}
-
-// PlanModeReadOnlyTrustGate is the legacy Plan bash trust bridge. It remains in
-// the internal API for controller compatibility, but ordinary Plan execution no
-// longer invokes it; bash calls use the normal permission gate.
-type PlanModeReadOnlyTrustGate interface {
-	CheckPlanModeReadOnlyTrust(ctx context.Context, req PlanModeReadOnlyTrustRequest) (allow bool, reason string, err error)
-}
-
 const DefaultMaxSubagentDepth = 2
 
 // NormalizeMaxSubagentDepth applies the public config contract: values below 1
@@ -360,7 +338,6 @@ type Agent struct {
 
 	// pending is what an external caller arms before the next Run; see
 	// turnruntime.go.
-	pending pendingTurn
 
 	// capabilityLedger tracks require/prefer outcomes for this user turn only.
 	// Never serialized into prompts or session state.
@@ -375,7 +352,6 @@ type Agent struct {
 
 	// Context management keeps the canonical transcript immutable and installs
 	// at most one provider-visible checkpoint each time compactRatio is crossed.
-	keepPolicy             KeepPolicy
 	strictAlternatingRoles bool // coalesce adjacent user turns on provider request copies
 	// activeTurnCreatedAt identifies the real/synthetic user message that began
 	// the currently running turn. Compaction may rewrite older history while a
@@ -385,15 +361,6 @@ type Agent struct {
 	// Pinned revisions are staged after admission and appended with the user turn.
 	pinned pinnedContextRuntime
 }
-
-// KeepPolicy is a bitmask controlling which messages are preserved beyond the
-// recent tail during compaction.
-type KeepPolicy int
-
-const (
-	KeepErrors KeepPolicy = 1 << iota
-	KeepUserMarked
-)
 
 // SetPlanMode toggles the plan-first workflow flag. Ordinary calls still use
 // Permissions/Sandbox; only explicit phase opt-outs are refused. The system
@@ -448,29 +415,6 @@ func (a *Agent) SetExtensions(d *dispatch.Dispatcher) {
 		return
 	}
 	a.svc.extensions = d
-}
-
-// SetRecoveryGate is retained for source compatibility. Auto Guard is retired,
-// so no caller can reinstall its execution gates.
-func (a *Agent) SetRecoveryGate(g RecoveryGate) {
-}
-
-// SetRecoveryIdentity sets the agent/task labels used on recovery cards.
-func (a *Agent) SetRecoveryIdentity(agentID, taskID string) {
-}
-
-// RecoveryGate is retained for source compatibility and always returns nil.
-func (a *Agent) RecoveryGate() RecoveryGate {
-	return nil
-}
-
-// SetPlanModeReadOnlyTrustGate retains the legacy confirmation bridge for old
-// controller/session data. Main Plan execution no longer calls it.
-func (a *Agent) SetPlanModeReadOnlyTrustGate(g PlanModeReadOnlyTrustGate) {
-	if nilutil.IsNil(g) {
-		g = nil
-	}
-	a.svc.planTrust = g
 }
 
 // SetSandboxEscapeApprover installs the optional one-shot approval path used by
@@ -813,10 +757,6 @@ type Options struct {
 	// NewPlannerAgent sets this; strict read-only sub-agents must not.
 	PlannerMCPExecution bool
 
-	// PlanModeReadOnlyTrustGate is retained for legacy controller compatibility.
-	// The main Plan execution path no longer invokes it.
-	PlanModeReadOnlyTrustGate PlanModeReadOnlyTrustGate
-
 	// SandboxEscapeApprover confirms a one-shot unconfined shell rerun after an
 	// enforced OS sandbox fails. nil keeps fail-closed behavior.
 	SandboxEscapeApprover sandbox.EscapeApprover
@@ -825,24 +765,15 @@ type Options struct {
 	// files outside the workspace roots. nil keeps fail-closed behavior.
 	ConfigWriteApprover tool.ConfigWriteApprover
 
-	// Context management. ContextWindow <= 0 disables automatic compaction. Ratios and
-	// RecentKeep fall back to defaults when unset.
+	// ContextWindow <= 0 disables automatic compaction. CompactRatio defaults when unset.
 	ContextWindow int
 	CompactRatio  float64
 	// CompactRatioSource must be concurrency-safe; root/planner decisions stay live.
-	CompactRatioSource func() float64
-	// Deprecated compatibility inputs. New agents ignore these fields; automatic
-	// maintenance is controlled only by CompactRatio.
-	SoftCompactRatio       float64
-	ToolResultSnipRatio    float64
-	CompactForceRatio      float64
-	RecentKeep             int
+	CompactRatioSource     func() float64
 	ArchiveDir             string
-	KeepPolicy             KeepPolicy
 	SessionPath            string // projection sidecar path; empty = memory only
 	WorkspaceID            string // prompt-cache lineage component
 	StrictAlternatingRoles bool   // merge adjacent user turns for strict providers at request time
-	ContextEditing         string // deprecated; native provider editing was removed
 
 	// Hooks fires PreToolUse / PostToolUse shell hooks around tool calls. nil
 	// disables hook firing.
@@ -887,10 +818,6 @@ type Options struct {
 	// construction; boot always supplies it for writer-capable sessions.
 	WorkspaceLease *workspacelease.Owner
 
-	// ProjectChecks is a retired compatibility option. Project instructions
-	// remain in normal model context and are not compiled into host obligations.
-	ProjectChecks []instruction.VerifyCheck
-
 	// InheritedExecution is the writer parent's host execution context.
 	InheritedExecution *runtimepolicy.InheritedExecutionContext
 
@@ -911,10 +838,6 @@ type Options struct {
 	// CapabilityAudit is the optional non-persisted metrics sink for routing.
 	CapabilityAudit *capability.Audit
 
-	// RequireReviewReportKind is a retired compatibility field. Subagents return
-	// their ordinary final answer without a proof tool.
-	RequireReviewReportKind evidence.ReviewKind
-
 	// ReasoningLanguage controls visible reasoning language preference as transient
 	// user-turn context. Empty/auto injects nothing.
 	ReasoningLanguage string
@@ -922,18 +845,6 @@ type Options struct {
 	// ResponseLanguage controls final-answer language preference as transient
 	// user-turn context. Empty/auto keeps the stable same-as-user policy.
 	ResponseLanguage string
-
-	// PlanModeReadOnlyCommands is retained for old config/controller data. Main
-	// Plan execution classifies bash through Permissions instead.
-	PlanModeReadOnlyCommands []string
-
-	// RecoveryGate and the identity fields are retired compatibility inputs.
-	// Agent construction ignores them.
-	RecoveryGate RecoveryGate
-	// RecoveryAgentID labels this agent on recovery cards (empty = root).
-	RecoveryAgentID string
-	// RecoveryTaskID isolates recovery state for this agent (empty = root task).
-	RecoveryTaskID string
 
 	// SubagentDepth is the current nesting depth for this agent. Root sessions are
 	// depth 0; child subagents are depth 1. MaxSubagentDepth caps delegation.
@@ -962,23 +873,16 @@ type Options struct {
 // provider errors (compaction keeps the context bounded). A nil sink is replaced
 // with event.Discard so the agent can always emit unconditionally.
 func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Options, sink event.Sink) *Agent {
-	warnDeprecatedRetention := deprecatedContextRetentionConfigured(opts)
 	if opts.CompactRatio <= 0 {
 		opts.CompactRatio = defaultCompactRatio
 	}
-	if opts.RecentKeep <= 0 {
-		opts.RecentKeep = minRecentKeep
-	}
+
 	if nilutil.IsNil(sink) {
 		sink = event.Discard
 	}
 	gate := opts.Gate
 	if nilutil.IsNil(gate) {
 		gate = nil
-	}
-	planModeReadOnlyTrust := opts.PlanModeReadOnlyTrustGate
-	if nilutil.IsNil(planModeReadOnlyTrust) {
-		planModeReadOnlyTrust = nil
 	}
 	sandboxEscapeApprover := opts.SandboxEscapeApprover
 	if nilutil.IsNil(sandboxEscapeApprover) {
@@ -1010,7 +914,7 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 	a := &Agent{
 		imageInput:    newImageInput(opts.ImageInput, prov),
 		imageResolver: opts.ImageRequestResolver,
-		svc: newAgentServices(prov, tools, sink, gate, planModeReadOnlyTrust,
+		svc: newAgentServices(prov, tools, sink, gate,
 			sandboxEscapeApprover, configWriteApprover, hooks, opts),
 		reads:            readState{},
 		fileObservations: fileops.NewStore(),
@@ -1030,7 +934,6 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 			contextWindow:      opts.ContextWindow,
 			compactRatio:       opts.CompactRatio,
 			compactRatioSource: opts.CompactRatioSource,
-			recentKeep:         opts.RecentKeep,
 			archiveDir:         opts.ArchiveDir,
 		},
 		sess: sessionRuntime{
@@ -1050,7 +953,6 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 		ablation:               opts.Ablation,
 		capabilityLedger:       opts.CapabilityLedger,
 		capabilityAudit:        opts.CapabilityAudit,
-		keepPolicy:             opts.KeepPolicy,
 		strictAlternatingRoles: opts.StrictAlternatingRoles,
 	}
 	a.sess.output.outputBudget = outputBudgetOf(prov)
@@ -1060,23 +962,8 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 	a.SetResponseLanguage(opts.ResponseLanguage)
 	a.SetReasoningLanguage(opts.ReasoningLanguage)
 	a.bindCapabilityObservers()
-	a.maybeArmForkFromEnv()
-	a.maybeWrapForkCaptureProvider()
-	if warnDeprecatedRetention {
-		deprecatedContextRetentionWarning.Do(func() {
-			a.svc.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn,
-				Text:   i18n.M.DeprecatedContextRetention,
-				Detail: "Harness-style compaction now retains only the newest 16% of the context window; legacy retention fields are preserved in configuration but ignored at runtime."})
-		})
-	}
-	return a
-}
 
-func deprecatedContextRetentionConfigured(opts Options) bool {
-	recentNonDefault := opts.RecentKeep > 0 && opts.RecentKeep != minRecentKeep
-	defaultKeepPolicy := KeepErrors | KeepUserMarked
-	keepNonDefault := opts.KeepPolicy != 0 && opts.KeepPolicy != KeepErrors && opts.KeepPolicy != defaultKeepPolicy
-	return recentNonDefault || keepNonDefault
+	return a
 }
 
 // closedLoopActive reports whether the current (or most recent) turn must
@@ -1192,9 +1079,7 @@ func (a *Agent) Run(ctx context.Context, input string) (runErr error) {
 	if err != nil {
 		return err
 	}
-	if a.pending.forkRestore != nil {
-		a.pending.forkRestore(state)
-	}
+
 	state.runMaxSteps = runMaxSteps
 	state.runMaxStepsKey = runMaxStepsKey
 	state.workDurationMs = workDurationMs
@@ -1953,12 +1838,10 @@ func mcpDestructiveHint(t tool.Tool) bool {
 	return ok && annotations.MCPDestructiveHint()
 }
 
-func (a *Agent) planModeDecision(toolName string, readOnly bool, safety planmode.PlanSafety, args json.RawMessage) planmode.Decision {
+func (a *Agent) planModeDecision(toolName string, safety planmode.PlanSafety) planmode.Decision {
 	return (planmode.Policy{}).Decide(planmode.Call{
-		Name:     toolName,
-		ReadOnly: readOnly,
-		Safety:   safety,
-		Args:     args,
+		Name:   toolName,
+		Safety: safety,
 	})
 }
 

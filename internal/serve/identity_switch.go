@@ -30,7 +30,7 @@ func (s *Server) busySwitchIdentity(ctx context.Context, cur *control.Controller
 	if s.tagFor(cur) == nil {
 		return errSessionTagUnavailable
 	}
-	next, tag, err := s.buildTaggedMode(ctx, currentModelRef(cur), false, false)
+	next, tag, err := s.buildTaggedMode(ctx, currentModelRef(cur), false)
 	if err != nil {
 		return err
 	}

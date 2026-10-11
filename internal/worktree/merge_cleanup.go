@@ -18,7 +18,7 @@ type cleanupRetention struct {
 	RecoveryRetained           bool
 	RecoveryWorktreeRegistered bool
 	BranchRetained             bool
-	LegacyCompleted            bool
+	Completed                  bool
 }
 
 type registeredWorktree struct {
@@ -40,7 +40,7 @@ func finalizeCleanupWorktree(ctx context.Context, metadata mergeMetadata, expect
 		if journal.Current != nil {
 			return resumeRetainedCleanup(ctx, metadata, *journal.Current)
 		}
-		return migrateLegacyCleanup(ctx, metadata, *journal.Legacy)
+		return emptyCleanupRetention(), errors.New("unsupported cleanup journal")
 	}
 
 	entries, err := registeredWorktreesForBranch(ctx, metadata.SourceRepo, metadata.WorktreeBranch)
@@ -70,7 +70,7 @@ func finalizeCleanupWorktree(ctx context.Context, metadata mergeMetadata, expect
 		}
 		if len(entries) == 0 && !branchExists {
 			retention := emptyCleanupRetention()
-			retention.LegacyCompleted = true
+			retention.Completed = true
 			return retention, nil
 		}
 		retention := emptyCleanupRetention()
@@ -199,87 +199,6 @@ func resumeRetainedCleanup(ctx context.Context, metadata mergeMetadata, state cl
 		return retention, fmt.Errorf("inspect former worktree path after recovery move: %w", err)
 	}
 	return retention, nil
-}
-
-func migrateLegacyCleanup(ctx context.Context, metadata mergeMetadata, legacy legacyCleanupState) (cleanupRetention, error) {
-	retention := emptyCleanupRetention()
-	branchHead, branchExists, err := cleanupBranchHead(ctx, metadata.SourceRepo, metadata.WorktreeBranch)
-	if err != nil {
-		return retention, err
-	}
-	retention.BranchRetained = branchExists
-	registeredExists, err := cleanupPathExists(legacy.RegisteredRoot)
-	if err != nil {
-		return retention, fmt.Errorf("inspect legacy registered cleanup root: %w", err)
-	}
-	detachedExists, err := cleanupPathExists(legacy.DetachedRoot)
-	if err != nil {
-		return retention, fmt.Errorf("inspect legacy detached cleanup root: %w", err)
-	}
-	if registeredExists && detachedExists {
-		return retention, errors.New("recovery_required: both legacy cleanup roots exist; both were preserved")
-	}
-	entries, err := registeredWorktreesForBranch(ctx, metadata.SourceRepo, metadata.WorktreeBranch)
-	if err != nil {
-		return retention, err
-	}
-	if len(entries) > 1 {
-		return retention, errors.New("recovery_required: multiple worktrees use the legacy cleanup branch")
-	}
-	if len(entries) == 1 && entries[0].Head == legacy.WorktreeHead && sameCleanupPath(entries[0].Root, legacy.RegisteredRoot) {
-		switch {
-		case registeredExists:
-			if err := verifyLegacyManifest(ctx, legacy.RegisteredRoot, legacy.Manifest); err != nil {
-				return retention, err
-			}
-		case detachedExists:
-			if err := verifyLegacyManifest(ctx, legacy.DetachedRoot, legacy.Manifest); err != nil {
-				return retention, err
-			}
-			if err := os.Rename(legacy.DetachedRoot, legacy.RegisteredRoot); err != nil {
-				return retention, fmt.Errorf("restore registered legacy recovery worktree: %w", err)
-			}
-		default:
-			return retention, errors.New("recovery_required: legacy recovery checkout disappeared while still registered")
-		}
-		state := cleanupState{
-			Version: cleanupStateVersion, OriginalRoot: legacy.OriginalRoot, RecoveryRoot: legacy.RegisteredRoot,
-			WorktreeBranch: legacy.WorktreeBranch, WorktreeHead: legacy.WorktreeHead, Stage: cleanupStageRetained,
-		}
-		if err := writeCleanupState(metadata, state); err != nil {
-			return retention, err
-		}
-		return resumeRetainedCleanup(ctx, metadata, state)
-	}
-	if detachedExists || registeredExists {
-		retention.RecoveryRoot = legacy.DetachedRoot
-		if registeredExists {
-			retention.RecoveryRoot = legacy.RegisteredRoot
-		}
-		retention.Blockers = append(retention.Blockers, MergeBlocker{
-			Code: "legacy_recovery_preserved", Message: "a legacy detached recovery checkout was preserved for manual repair", Paths: []string{"."},
-		})
-		return retention, errors.New("recovery_required: legacy cleanup state is no longer a registered worktree")
-	}
-	if len(entries) == 0 && !branchExists {
-		retention.LegacyCompleted = true
-		return retention, nil
-	}
-	if branchExists && branchHead != legacy.WorktreeHead {
-		return retention, errors.New("recovery_required: legacy recovery branch changed and was preserved")
-	}
-	return retention, errors.New("recovery_required: legacy cleanup identity is incomplete; remaining resources were preserved")
-}
-
-func verifyLegacyManifest(ctx context.Context, root string, expected []cleanupManifestEntry) error {
-	actual, err := captureCleanupManifest(ctx, root)
-	if err != nil {
-		return err
-	}
-	if !manifestsEqual(expected, actual) {
-		return errors.New("cleanup_state_changed: legacy recovery checkout no longer matches its manifest")
-	}
-	return nil
 }
 
 func verifyCleanupWorktree(ctx context.Context, metadata mergeMetadata, dir, expectedHead string) ([]string, error) {

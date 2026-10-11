@@ -59,11 +59,11 @@ func nativeHistoryLocation(r *desktopHistoryReader, p *agent.DisplayPager, messa
 		location.Status = "stale_cursor"
 		return location, nil
 	}
-	position, sub, legacyRow, ok := parseHistoryEntryID(messageID)
+	position, sub, ok := parseHistoryEntryID(messageID)
 	// Cold outline identities name the first display row of a provider message.
 	// Require an exact round trip; permissive Sscanf parsing alone is not proof
 	// of this source, rewrite epoch, or an existing display identity.
-	if !ok || sub != 0 || legacyRow != -1 || position < 0 || messageID != nativeHistoryEntryID(r, p, position) {
+	if !ok || sub != 0 || position < 0 || messageID != nativeHistoryEntryID(r, p, position) {
 		return location, nil
 	}
 	entry, err := p.Entry(position)
@@ -106,7 +106,7 @@ func (a *App) readNativeHistoryOutline(r *desktopHistoryReader, req session.Hist
 		// Only requested prompt positions are read, one at a time. Never retain
 		// the entire transcript or decode tool/attachment records between turns.
 		var prompt string
-		if p.DAG || p.SchemaOne {
+		if p.DAG {
 			messages, readErr := p.EventMessages(entry.Index, entry.Index+1)
 			err = readErr
 			if err == nil && len(messages) == 1 {

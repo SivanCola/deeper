@@ -86,7 +86,6 @@ function tabMeta(): TabMeta {
 function metaForTab(): Meta {
   return {
     label: "model", ready: true, eventChannel: "agent:event", cwd: "/repo", workspaceRoot: "/repo",
-    workspaceName: "repo", workspacePath: "/repo", autoApproveTools: false, bypass: false,
     collaborationMode: "normal", toolApprovalMode: sessions[current].preset, tokenMode: "full",
     goal: "", goalStatus: "stopped", session: { hostId: "local", sessionId: current },
   } as Meta;

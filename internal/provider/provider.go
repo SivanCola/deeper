@@ -57,11 +57,8 @@ type Message struct {
 	// RawContent holds the full local original when it differs from Content.
 	// Provider projections always strip it; bounded
 	// Contentisthestablewirerepresentationandkeepssessionfilessafefor older readers.
-	RawContent string `json:"raw_content,omitempty"`
-	// ProviderContent is a transitional field written by early Context Engine v2
-	// builds. Loaders migrate it into Content/RawContent before normal use.
-	ProviderContent string   `json:"provider_content,omitempty"`
-	Images          []string `json:"images,omitempty"` // vision refs: data URLs, http(s) image URLs, or Files API file-api- ids; embedded only for vision-capable models
+	RawContent string   `json:"raw_content,omitempty"`
+	Images     []string `json:"images,omitempty"` // vision refs: data URLs, http(s) image URLs, or Files API file-api- ids; embedded only for vision-capable models
 	// ImageInputs is the durable ordered image payload for new messages.
 	// Images remains the old-data read path. A message must not carry both.
 	ImageInputs      []attachment.ImageInput `json:"image_inputs,omitempty"`
@@ -101,11 +98,8 @@ type Message struct {
 	// ModelMessages strips the field before handing requests to providers.
 	DecisionReceipts []*DecisionReceipt       `json:"decision_receipts,omitempty"`
 	InterruptedTurn  *InterruptedTurnRecovery `json:"interrupted_turn,omitempty"`
-	// FinalReadinessRecovery is durable host state on a LocalOnly sentinel.
-	// ModelMessages removes it before provider serialization.
-	FinalReadinessRecovery *FinalReadinessRecovery `json:"final_readiness_recovery,omitempty"`
-	ProtocolRecovery       json.RawMessage         `json:"protocol_recovery,omitempty"`
-	ReadPause              *ReadPause              `json:"read_pause,omitempty"`
+	ProtocolRecovery json.RawMessage          `json:"protocol_recovery,omitempty"`
+	ReadPause        *ReadPause               `json:"read_pause,omitempty"`
 	// ToolExecution is local shell UI metadata on tool-result messages. It ispersisted for
 	// Desktop/CLI/Servecards and stripped by
 	// ModelMessagesbeforeanyproviderrequestsotoolschemasandprompt-cacheprefixes stay stable.
@@ -754,39 +748,6 @@ type Pricing struct {
 	Input    float64 `toml:"input"`     // per 1M uncached prompt tokens
 	Output   float64 `toml:"output"`    // per 1M completion tokens
 	Currency string  `toml:"currency"`
-}
-
-// Cost estimates the spend for a usage record. Compatibility adapter only —
-// new host code must consume billing.CostQuote instead of aggregating floats.
-func (p *Pricing) Cost(u *Usage) float64 {
-	if p == nil || u == nil {
-		return 0
-	}
-	// Keepthehistoricalfloatpathbyte-stableforteststhatassertexactfloatresultswithoutgoingthroughthefixed-pointquotelayer.
-	hit := u.CacheHitTokens
-	miss := u.CacheMissTokens
-	if hit+miss == 0 && u.PromptTokens > 0 {
-		miss = u.PromptTokens
-	} else if miss == 0 && hit > 0 && u.PromptTokens > hit {
-		miss = u.PromptTokens - hit
-	}
-	// CacheMissTokens intentionally remains the raw prompt-token denominatorused by cache hit-rate displays,
-	// socache writes are included there. Forcost, split those writes back out and replace themwiththeirprovider-
-	// supplied input-token equivalent (for example Anthropic's 1.25x 5-minutewrites or 2x 1-hour writes).
-	// Olderproviders leave both fields at zero andkeep the legacy one-input-rate behavior.
-	// Awritecountwithoutbilledunits also falls back to 1xforbackward compatibility.
-	write := min(max(u.CacheWriteTokens, 0), miss)
-	billedWrite := 0.0
-	if write > 0 {
-		billedWrite = u.CacheWriteBilledTokens
-		if billedWrite <= 0 {
-			billedWrite = float64(write)
-		}
-	}
-	inputTokenUnits := float64(miss-write) + billedWrite
-	return (float64(hit)*p.CacheHit +
-		inputTokenUnits*p.Input +
-		float64(u.CompletionTokens)*p.Output) / 1e6
 }
 
 // Symbol returns the currency display symbol, defaulting to "¥".

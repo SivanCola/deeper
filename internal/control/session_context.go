@@ -28,9 +28,9 @@ func (c *Controller) withTurnContext(ctx context.Context, realUserTurn bool) con
 		plannerSections.SkillsCatalog = skill.ReadOnlyCatalogBlock(sk)
 	}
 	bundle := agent.TurnContextBundle{
-		Executor:      sessioncontext.Build(executorSections),
-		Planner:       sessioncontext.Build(plannerSections),
-		BootstrapOnly: !realUserTurn,
+		Executor:    sessioncontext.Build(executorSections),
+		Planner:     sessioncontext.Build(plannerSections),
+		InitialOnly: !realUserTurn,
 	}
 	return agent.WithTurnContextBundle(ctx, bundle)
 }

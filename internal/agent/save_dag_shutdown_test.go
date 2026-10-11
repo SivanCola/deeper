@@ -181,17 +181,6 @@ func TestAppendForShutdownWithoutLockWritesMarkersOnTheSameHead(t *testing.T) {
 	}
 }
 
-func TestAppendForShutdownWithoutLockLeavesSchemaOneToRecovery(t *testing.T) {
-	useSchemaOneLog(t)
-	path := dagTestSession(t)
-	s := dagSavedSession(t, path, "q1")
-	s.Add(provider.Message{Role: provider.RoleAssistant, Content: "a1"})
-	holdLockAndShortenWait(t, path)
-	if handled, err := s.AppendForShutdownWithoutLock(path, false); handled || err != nil {
-		t.Fatalf("schema-1 session = handled %v err %v, want the recovery-copy path", handled, err)
-	}
-}
-
 func TestReplaySkipsTornLineBetweenEntries(t *testing.T) {
 	path := dagTestSession(t)
 	ids, base := dagLinearLog(t, path)

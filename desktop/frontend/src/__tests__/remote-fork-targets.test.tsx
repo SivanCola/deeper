@@ -51,7 +51,7 @@ const forkTarget = (turnId: string) => ({ sourceSessionId: "parent-1", sessionGe
 const commands = {
   RemoteTabSnapshot: async (tabId: string) => { calls.push(`snapshot:${tabId}`); return { history: [] }; },
   RemoteTabMetadata: async () => ({ history: [] }),
-  RemoteTabStatus: async (tabId: string) => { calls.push(`status:${tabId}`); return { plan: false, toolApprovalMode: "ask", goal: "", label: "m", running: false }; },
+  RemoteTabStatus: async (tabId: string) => { calls.push(`status:${tabId}`); return { plan: false, toolApprovalMode: "workspace-write", goal: "", label: "m", running: false }; },
   ForkTargetsRemoteTab: async (tabId: string) => { calls.push(`targets:${tabId}`); return targetView; },
   CreateForkRemoteTab: async (tabId: string, target: ReturnType<typeof forkTarget>) => {
     calls.push(`create:${tabId}:${target.turnId}:${target.sourceSessionId}:${target.boundarySequence}`);

@@ -385,7 +385,7 @@ func (a *App) TrySubagentProfile(input SubagentProfileInput, task string) (strin
 // closed when a configured rule or writer fallback needs approval: the try
 // runner has no approval UI that could answer such a request.
 func trySubagentPermissionGate(policy permission.Policy) agent.Gate {
-	return control.BuildHeadlessApprovalGate(policy, control.ToolApprovalAsk)
+	return control.BuildHeadlessApprovalGate(policy, control.ToolApprovalReadOnly)
 }
 
 // trySubagentHookRunner loads hooks the way a chat session in root does, project

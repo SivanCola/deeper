@@ -228,15 +228,6 @@ func projectLogicalSessions(records []SessionRecord) []SessionRecord {
 			}
 			continue
 		}
-		// Filename fallback when meta ParentID is empty.
-		if strings.TrimSpace(records[i].ParentID) == "" {
-			if parent, ok := agent.RecoveryFilenameParentID(records[i].Path); ok {
-				records[i].ParentID = parent
-				if records[i].RecoveryGroupID == "" {
-					records[i].RecoveryGroupID = parent
-				}
-			}
-		}
 		if records[i].RecoveryGroupID == "" {
 			records[i].RecoveryGroupID = firstNonEmpty(records[i].ParentID, agent.BranchID(records[i].Path))
 		}

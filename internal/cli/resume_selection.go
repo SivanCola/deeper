@@ -53,15 +53,6 @@ func copyResumableSession(model, resumePath string, cfg *config.Config) (string,
 	return copySessionForWriting(resumePath)
 }
 
-// resumeWithPersistedSelection records the selection the resumed controller
-// actually accepted, so the next restart restores it instead of re-resolving.
-func resumeWithPersistedSelection(ctrl *control.Controller, session *agent.Session, path string) error {
-	if err := ctrl.ResumeNativeSession(session, path); err != nil {
-		return err
-	}
-	return persistCLIModelSelection(ctrl)
-}
-
 // commitResumedSession is a no-op without a resume target, so callers need no
 // second guard around the takeover handover.
 func commitResumedSession(binding *cliTakeoverBinding, manager *cliTakeoverManager, ctrl *control.Controller, session *agent.Session, target cliResumeTarget) error {
@@ -81,7 +72,7 @@ func commitResumedSession(binding *cliTakeoverBinding, manager *cliTakeoverManag
 	if err := binding.commitPrevious(manager); err != nil {
 		return err
 	}
-	return resumeWithPersistedSelection(ctrl, session, target.path)
+	return errors.New("use an immutable session identity")
 }
 
 // prepareServeSessionPath picks serve's auto-save target: reuse the resumed
@@ -89,7 +80,7 @@ func commitResumedSession(binding *cliTakeoverBinding, manager *cliTakeoverManag
 // fresh path.
 func prepareServeSessionPath(ctrl *control.Controller, session *agent.Session, resumePath, sessionID string) error {
 	if strings.TrimSpace(resumePath) != "" {
-		return resumeWithPersistedSelection(ctrl, session, resumePath)
+		return errors.New("use an immutable session identity")
 	}
 	if strings.TrimSpace(sessionID) == "" {
 		return nil

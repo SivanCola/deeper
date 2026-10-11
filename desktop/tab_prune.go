@@ -16,7 +16,7 @@ func (a *App) keepOnlyVisibleTab(tabID string) (TabMeta, error) {
 	}
 	// Visibility and detached/open ownership are runtime state. Snapshot saves
 	// already enqueue exact-path catalog updates; switching must not rescan.
-	a.emitProjectTreeRuntimeChangedWithLegacy()
+	a.emitProjectTreeRuntimeChanged()
 	return enrichTabMeta(meta), nil
 }
 

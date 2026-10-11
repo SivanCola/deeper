@@ -1,10 +1,8 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 
-	"deepzora/internal/fileutil"
 	"deepzora/internal/provider"
 	"deepzora/internal/provider/openai"
 )
@@ -57,15 +55,6 @@ func DeepSeekV4PricesForCurrency(currency string) map[string]*provider.Pricing {
 	return deepSeekV4PricesUSD()
 }
 
-// DeepSeekV4PricesForLanguage is retained for compatibility with older call
-// sites. New desktop code should pass an explicit pricing currency.
-func DeepSeekV4PricesForLanguage(lang string) map[string]*provider.Pricing {
-	if normalizeDeepSeekPricingLanguage(lang) == "zh" {
-		return DeepSeekV4PricesForCurrency("CNY")
-	}
-	return DeepSeekV4PricesForCurrency("USD")
-}
-
 func deepSeekV4PricesForConfig(c *Config) map[string]*provider.Pricing {
 	return DeepSeekV4PricesForCurrency(c.DeepSeekOfficialPricingCurrency())
 }
@@ -74,33 +63,12 @@ func deepSeekV4PriceForModel(currency, model string) *provider.Pricing {
 	return clonePricing(DeepSeekV4PricesForCurrency(currency)[strings.TrimSpace(model)])
 }
 
-// DeepSeekOfficialPricingLanguage is retained for older settings/template call
-// sites that still express the pricing region as a language. List-price region
-// is frozen per provider (billing_currency), not the global display currency.
-func (c *Config) DeepSeekOfficialPricingLanguage() string {
-	if c.DeepSeekOfficialPricingCurrency() == "CNY" {
-		return "zh"
-	}
-	return "en"
-}
-
 func normalizeDeepSeekPricingCurrency(currency string) string {
 	switch strings.ToUpper(strings.TrimSpace(currency)) {
 	case "CNY", "RMB", "CNH", "¥", "￥":
 		return "CNY"
 	case "USD", "$", "US$":
 		return "USD"
-	default:
-		return ""
-	}
-}
-
-func normalizeDeepSeekPricingLanguage(lang string) string {
-	switch strings.ToLower(strings.TrimSpace(lang)) {
-	case "zh", "zh-cn", "zh-hans", "cn", "chinese", "中文", "zh-tw", "zh-hant", "zh-hk", "zh-mo":
-		return "zh"
-	case "en", "en-us", "en-gb", "english":
-		return "en"
 	default:
 		return ""
 	}
@@ -251,293 +219,6 @@ func longCat20Prices(models []string) map[string]*provider.Pricing {
 	return prices
 }
 
-const (
-	deepSeekPricingResetConfigVersion      = 3
-	windowsBashSandboxDefaultConfigVersion = 4
-	retiredAutoPlanConfigVersion           = 5
-	billingSplitConfigVersion              = 6
-	deepSeekScheduledPricingConfigVersion  = 7
-)
-
-// ApplyUserConfigUpgradesOnStartup applies one-time startup migrations. It
-// intentionally runs from the desktop and CLI startup paths, not every config
-// Load(), so user edits made after the upgrade are preserved.
-func ApplyUserConfigUpgradesOnStartup(path string) (bool, error) {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return false, nil
-	}
-	unlock, err := LockConfigFileEdits(path)
-	if err != nil {
-		return false, err
-	}
-	defer unlock()
-
-	changed, err := applyUserConfigUpgradesThroughV10Locked(path)
-	if err != nil {
-		return changed, err
-	}
-	upgraded, err := upgradeDeepSeekCatalogFileLocked(path, fileutil.AtomicWriteFile)
-	changed = changed || upgraded
-	if err != nil {
-		return changed, err
-	}
-	upgraded, err = upgradeMimoCatalogFileLocked(path, fileutil.AtomicWriteFile)
-	return changed || upgraded, err
-}
-
-func applyUserConfigUpgradesThroughV10Locked(path string) (bool, error) {
-	_, exists, err := statConfigPath(path)
-	if err != nil {
-		return false, err
-	}
-	if !exists {
-		return false, nil
-	}
-	var header Config
-	if _, err := decodeTOMLFile(path, &header); err != nil {
-		return false, fmt.Errorf("config %s: %w", path, err)
-	}
-	defaultVersion := Default().ConfigVersion
-	if header.ConfigVersion > defaultVersion {
-		return false, nil
-	}
-	if header.ConfigVersion >= openCodeGoUpgradeVersion {
-		resolved, _, err := statConfigPath(path)
-		if err != nil {
-			return false, err
-		}
-		if err := finalizeOpenCodeGoJournal(resolved); err != nil {
-			return false, err
-		}
-	}
-	classicDesktopLayout := strings.EqualFold(strings.TrimSpace(header.Desktop.LayoutStyle), "classic")
-	if header.ConfigVersion == defaultVersion && !classicDesktopLayout {
-		return repairProviderEndpointContractsOnStartup(path, false)
-	}
-	// Versions 7-9 commit the protocol upgrades and final version together,
-	// preserving the original bytes in one backup before any replacement.
-	if header.ConfigVersion >= deepSeekScheduledPricingConfigVersion && header.ConfigVersion < openCodeGoUpgradeVersion {
-		return upgradeOpenCodeGoAndRepairProviderEndpoints(path)
-	}
-	cfg := LoadForEdit(path)
-	changed := false
-	if classicDesktopLayout {
-		cfg.Desktop.LayoutStyle = "workbench"
-		changed = true
-	}
-	if header.ConfigVersion < deepSeekPricingResetConfigVersion {
-		resetOfficialProviderPricingDefaults(cfg)
-		changed = true
-	}
-	if shouldMarkWindowsBashSandboxDefaultUpgrade(header.ConfigVersion) {
-		resetWindowsBashSandboxDefaultOnUpgrade(cfg)
-		// Mark the Windows v4 migration even when the user was already on off,
-		// so a later manual enforce choice is not treated as the old template default.
-		changed = true
-	}
-	if header.ConfigVersion < retiredAutoPlanConfigVersion {
-		normalizeRetiredAutoPlan(cfg)
-		// Mark every older config as migrated even when Auto Plan was already off;
-		// the v5 renderer removes both retired keys so older binaries also observe
-		// the manual-only default after a downgrade.
-		changed = true
-	}
-	if header.ConfigVersion < billingSplitConfigVersion {
-		migrateBillingDisplayCurrency(cfg)
-		freezeProviderBillingCurrencies(cfg)
-		changed = true
-	}
-	if header.ConfigVersion < deepSeekScheduledPricingConfigVersion {
-		migrateDeepSeekScheduledPricingDefaults(cfg)
-		// Mark every older config, including custom-price configs, so their values
-		// remain user-owned on later startups instead of being reconsidered.
-		changed = true
-	}
-	if header.ConfigVersion < deepSeekChatDefaultConfigVersion {
-		restoreDeepSeekChatDefaults(cfg)
-		changed = true
-	}
-	if header.ConfigVersion < deepSeekOfficialChatUpgradeConfigVersion {
-		migrateOfficialDeepSeekChat(cfg)
-		changed = true
-	}
-	if !changed {
-		return repairProviderEndpointContractsOnStartup(path, false)
-	}
-	if header.ConfigVersion < openCodeGoUpgradeVersion {
-		cfg.ConfigVersion = deepSeekOfficialChatUpgradeConfigVersion
-	}
-	if err := cfg.SaveTo(path); err != nil {
-		return false, err
-	}
-	if header.ConfigVersion < openCodeGoUpgradeVersion {
-		if _, err := upgradeOpenCodeGoFileLocked(path); err != nil {
-			return false, err
-		}
-	}
-	return repairProviderEndpointContractsOnStartup(path, true)
-}
-
-func upgradeOpenCodeGoAndRepairProviderEndpoints(path string) (bool, error) {
-	upgraded, err := upgradeOpenCodeGoFileLocked(path)
-	if err != nil {
-		return false, err
-	}
-	return repairProviderEndpointContractsOnStartup(path, upgraded)
-}
-
-func repairProviderEndpointContractsOnStartup(path string, changed bool) (bool, error) {
-	repairs, err := repairProviderEndpointContractsFileLocked(path)
-	if err != nil {
-		return false, err
-	}
-	recordProviderEndpointRepairs(path, repairs)
-	return changed || len(repairs) > 0, nil
-}
-
-// ResetOfficialProviderPricingOnUpgrade is retained for older call sites.
-func ResetOfficialProviderPricingOnUpgrade(path string) (bool, error) {
-	return ApplyUserConfigUpgradesOnStartup(path)
-}
-
-func shouldMarkWindowsBashSandboxDefaultUpgrade(fromVersion int) bool {
-	// Windows resolves every [sandbox].bash value to off at load time (see
-	// BashModeForGOOS), so no persisted rewrite is needed; explicit values stay
-	// readable and doctor reports them as ignored.
-	return false
-}
-
-func resetWindowsBashSandboxDefaultOnUpgrade(c *Config) {
-	if c == nil {
-		return
-	}
-	if strings.TrimSpace(c.Sandbox.Bash) != "enforce" {
-		return
-	}
-	c.Sandbox.Bash = "off"
-}
-
-func resetOfficialProviderPricingDefaults(c *Config) {
-	if c == nil {
-		return
-	}
-	for i := range c.Providers {
-		p := &c.Providers[i]
-		switch {
-		case officialProviderKind(p) == "deepseek":
-			resetDeepSeekOfficialPricing(p, deepSeekV4PricesForConfig(c))
-		}
-	}
-}
-
-func resetDeepSeekOfficialPricing(p *ProviderEntry, defaults map[string]*provider.Pricing) {
-	if p == nil {
-		return
-	}
-	p.Price = nil
-	if strings.TrimSpace(p.Model) != "" && len(p.Models) == 0 {
-		if price := defaults[strings.TrimSpace(p.Model)]; price != nil {
-			p.Price = clonePricing(price)
-			p.Prices = nil
-			return
-		}
-	}
-	if p.Prices == nil {
-		p.Prices = map[string]*provider.Pricing{}
-	}
-	for model, price := range defaults {
-		if p.HasModel(model) {
-			p.Prices[model] = clonePricing(price)
-		}
-	}
-}
-
-func legacyDeepSeekV4PricesCNY() map[string]*provider.Pricing {
-	return map[string]*provider.Pricing{
-		"deepseek-v4-flash": {CacheHit: 0.02, Input: 1, Output: 2, Currency: "¥"},
-		"deepseek-v4-pro":   {CacheHit: 0.025, Input: 3, Output: 6, Currency: "¥"},
-	}
-}
-
-func legacyDeepSeekV4PricesUSD() map[string]*provider.Pricing {
-	return map[string]*provider.Pricing{
-		"deepseek-v4-flash": {CacheHit: 0.0028, Input: 0.14, Output: 0.28, Currency: "$"},
-		"deepseek-v4-pro":   {CacheHit: 0.003625, Input: 0.435, Output: 0.87, Currency: "$"},
-	}
-}
-
-// augustDeepSeekV4Prices* are the 2026-08-17 table. They are recognized so a
-// config that never left that generation is still refreshed to the current
-// prices, and so it is not mistaken for a hand-edited custom rate.
-func augustDeepSeekV4PricesCNY() map[string]*provider.Pricing {
-	return map[string]*provider.Pricing{
-		"deepseek-v4-flash":                {CacheHit: 0.10, Input: 3, Output: 9, Currency: "¥"},
-		openai.OfficialDeepSeekVisionModel: {CacheHit: 0.10, Input: 3, Output: 9, Currency: "¥"},
-		"deepseek-v4-pro":                  {CacheHit: 0.30, Input: 9, Output: 27, Currency: "¥"},
-	}
-}
-
-func augustDeepSeekV4PricesUSD() map[string]*provider.Pricing {
-	return map[string]*provider.Pricing{
-		"deepseek-v4-flash":                {CacheHit: 0.014, Input: 0.44, Output: 1.32, Currency: "$"},
-		openai.OfficialDeepSeekVisionModel: {CacheHit: 0.014, Input: 0.44, Output: 1.32, Currency: "$"},
-		"deepseek-v4-pro":                  {CacheHit: 0.044, Input: 1.32, Output: 3.96, Currency: "$"},
-	}
-}
-
-// migrateDeepSeekScheduledPricingDefaults replaces only the exact pre-August
-// official defaults. Custom endpoints and any edited numeric rate remain intact.
-func migrateDeepSeekScheduledPricingDefaults(c *Config) {
-	if c == nil {
-		return
-	}
-	for i := range c.Providers {
-		p := &c.Providers[i]
-		if officialProviderKind(p) != "deepseek" || !isOfficialDeepSeekBillingEndpoint(p) {
-			continue
-		}
-		currency := p.ProviderBillingCurrency()
-		if currency == "" {
-			currency = "USD"
-		}
-		legacy := legacyDeepSeekV4PricesUSD()
-		if normalizeDeepSeekPricingCurrency(currency) == "CNY" {
-			legacy = legacyDeepSeekV4PricesCNY()
-		}
-		migrate := func(model string, price *provider.Pricing) *provider.Pricing {
-			old := legacy[strings.TrimSpace(model)]
-			if !samePricingNormalizedCurrency(price, old) {
-				return price
-			}
-			return deepSeekV4PriceForModel(currency, model)
-		}
-		if p.Price != nil {
-			p.Price = migrate(p.Model, p.Price)
-		}
-		// Treat a multi-model official table atomically. A mixture of an old
-		// default row and a user-edited row is custom as a whole; partially
-		// rewriting it would leave an incoherent price book.
-		canMigrateTable := false
-		for model, price := range p.Prices {
-			old, known := legacy[strings.TrimSpace(model)]
-			if !known {
-				continue
-			}
-			canMigrateTable = true
-			if !samePricingNormalizedCurrency(price, old) {
-				canMigrateTable = false
-				break
-			}
-		}
-		if canMigrateTable {
-			for model, price := range p.Prices {
-				p.Prices[model] = migrate(model, price)
-			}
-		}
-	}
-}
-
 func isKnownDeepSeekOfficialPricing(model string, price *provider.Pricing) bool {
 	model = strings.TrimSpace(model)
 	if model == "" || price == nil {
@@ -545,8 +226,6 @@ func isKnownDeepSeekOfficialPricing(model string, price *provider.Pricing) bool 
 	}
 	for _, prices := range []map[string]*provider.Pricing{
 		deepSeekV4PricesCNY(), deepSeekV4PricesUSD(),
-		augustDeepSeekV4PricesCNY(), augustDeepSeekV4PricesUSD(),
-		legacyDeepSeekV4PricesCNY(), legacyDeepSeekV4PricesUSD(),
 	} {
 		if samePricingNormalizedCurrency(price, prices[model]) {
 			return true

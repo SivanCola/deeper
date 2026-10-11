@@ -24,11 +24,10 @@ import (
 )
 
 const (
-	NativeManifest       = "deepzora-plugin.json"
-	LegacyNativeManifest = "deeper-plugin.json"
-	CodexManifest        = ".codex-plugin/plugin.json"
-	ClaudeManifest       = ".claude-plugin/plugin.json"
-	StateFilename        = "plugin-packages.json"
+	NativeManifest = "deepzora-plugin.json"
+	CodexManifest  = ".codex-plugin/plugin.json"
+	ClaudeManifest = ".claude-plugin/plugin.json"
+	StateFilename  = "plugin-packages.json"
 
 	PluginStatusDisabledIncompatible = "disabled_incompatible"
 
@@ -134,7 +133,6 @@ type MCPServerRef struct {
 
 // Manifest is the normalized manifest shape used by Deepzora.
 type Manifest struct {
-	LegacyIdentity bool `json:"-"` // Derived from the exact pre-rename v2 API identity.
 	// APIVersion is deepzora.com/plugin/v2 for native packages; empty for Claude/Codex.
 	APIVersion  string
 	Name        string
@@ -238,7 +236,6 @@ type MCPServer struct {
 	URL         string            `json:"url,omitempty"`
 	Headers     map[string]string `json:"headers,omitempty"`
 	AutoStart   *bool             `json:"auto_start,omitempty"`
-	Tier        string            `json:"tier,omitempty"`
 	DisplayName string            `json:"display_name,omitempty"`
 	Description string            `json:"description,omitempty"`
 	Imported    bool              `json:"imported,omitempty"`
@@ -394,7 +391,7 @@ func ParseDir(root string) (Package, []string, error) {
 	// A manifest that EXISTS but fails to parse fails loudly with the real
 	// error (a v1 typo names its field path); only a missing file falls
 	// through to the next manifest kind.
-	for _, name := range []string{NativeManifest, LegacyNativeManifest} {
+	for _, name := range []string{NativeManifest} {
 		if pkg, warnings, err := parseNative(filepath.Join(root, name), root); err == nil {
 			return pkg, warnings, nil
 		} else if !errors.Is(err, os.ErrNotExist) {
@@ -412,55 +409,6 @@ func ParseDir(root string) (Package, []string, error) {
 		return Package{}, nil, err
 	}
 	return Package{}, nil, fmt.Errorf("no %s, %s, or %s found", NativeManifest, CodexManifest, ClaudeManifest)
-}
-
-// parseNativeLegacy is the pre-extension native manifest path, preserved
-// byte-for-byte: manifests without an apiVersion parse exactly as they
-// always have, including silently ignoring unknown fields.
-func parseNativeLegacy(b []byte, root string) (Package, []string, error) {
-	var raw struct {
-		Name        string               `json:"name"`
-		Version     string               `json:"version"`
-		Description string               `json:"description"`
-		Homepage    string               `json:"homepage"`
-		Repository  string               `json:"repository"`
-		Skills      json.RawMessage      `json:"skills"`
-		Commands    json.RawMessage      `json:"commands"`
-		Hooks       map[string][]Hook    `json:"hooks"`
-		MCPServers  map[string]MCPServer `json:"mcpServers"`
-	}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return Package{}, nil, err
-	}
-	skills, err := parseSkillPaths(raw.Skills)
-	if err != nil {
-		return Package{}, nil, err
-	}
-	commands, err := parseSkillPaths(raw.Commands)
-	if err != nil {
-		return Package{}, nil, err
-	}
-	manifest := Manifest{
-		Name:        strings.TrimSpace(raw.Name),
-		Version:     strings.TrimSpace(raw.Version),
-		Description: strings.TrimSpace(raw.Description),
-		Homepage:    strings.TrimSpace(raw.Homepage),
-		Repository:  strings.TrimSpace(raw.Repository),
-		Skills:      skills,
-		Commands:    commands,
-		Hooks:       normalizeHooks(raw.Hooks),
-		MCPServers:  raw.MCPServers,
-	}
-	if err := validateManifest(root, &manifest); err != nil {
-		return Package{}, nil, err
-	}
-	warnings, issues := applyClaudeCompatibility(root, &manifest)
-	if err := validateManifest(root, &manifest); err != nil {
-		return Package{}, warnings, err
-	}
-	pkg := Package{Root: root, ManifestKind: "deepzora", Manifest: manifest}
-	pkg.Compatibility = compatibilityFor(pkg, issues)
-	return pkg, warnings, nil
 }
 
 func parseCodex(path, root string) (Package, []string, error) {

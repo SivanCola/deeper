@@ -48,7 +48,6 @@ type Config struct {
 	ModelInfo   *provider.ModelInfo
 	Effort      string
 	Mode        string // stateful | stateless; empty uses vendor detection.
-	Stateful    *bool  // legacy form of Mode; nil preserves vendor detection.
 	WebSearch   bool   // expose the provider-executed web_search tool.
 	Proxy       netclient.ProxySpec
 	KeyEnv      string
@@ -71,12 +70,7 @@ func (c Config) mode() string {
 	if mode == "stateful" || mode == "stateless" {
 		return mode
 	}
-	if c.Stateful != nil {
-		if *c.Stateful {
-			return "stateful"
-		}
-		return "stateless"
-	}
+
 	if capabilitiesFor(DetectVendor(c.BaseURL)).stateless {
 		return "stateless"
 	}
@@ -228,7 +222,7 @@ func nativeToolSearchModel(model string) bool {
 }
 
 func (c *client) sendOpts() provider.SendOptions {
-	return provider.SendOptions{Provider: c.name, ProviderDisplayName: c.identity.DisplayName, Protocol: c.identity.Protocol, KeyEnv: c.keyEnv, KeySource: c.keySource, KeyPresent: c.apiKey != "", RetryAuth: c.authed.Load()}
+	return provider.SendOptions{Provider: c.name, ProviderDisplayName: c.identity.DisplayName, Protocol: c.identity.Protocol, KeyEnv: c.keyEnv, KeySource: c.keySource, KeyPresent: c.apiKey != ""}
 }
 
 // ResetContext drops stateful continuation metadata. Full-input stateless mode

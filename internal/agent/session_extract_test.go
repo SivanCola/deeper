@@ -487,7 +487,7 @@ func TestChunkedFoldSummaryIgnoresLocalRawContentForChunking(t *testing.T) {
 	}
 	for _, req := range prov.requests {
 		for _, msg := range req.Messages {
-			if msg.RawContent != "" || msg.ProviderContent != "" {
+			if msg.RawContent != "" {
 				t.Fatalf("local-only content reached fallback request: %+v", msg)
 			}
 		}
@@ -517,7 +517,7 @@ func TestCompactFallsBackToChunkedSummaryOnTruncation(t *testing.T) {
 		sess.Add(provider.Message{Role: provider.RoleUser, Content: strings.Repeat("u", 6000)})
 		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("a", 6000)})
 	}
-	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: 100_000, RecentKeep: 2, ArchiveDir: t.TempDir()}, event.Discard)
+	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: 100_000, ArchiveDir: t.TempDir()}, event.Discard)
 	if err := a.CompactNow(context.Background(), ""); err != nil {
 		t.Fatalf("CompactNow: %v", err)
 	}

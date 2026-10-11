@@ -1,21 +1,21 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"context"
+	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
-	"deepzora/internal/provider"
+	"deepzora/internal/session"
 )
 
 type snapshotErrorSessionController struct {
@@ -87,100 +87,6 @@ func TestTrashTopicRejectsConcurrentRuntimeMutationWithoutWaiting(t *testing.T) 
 	}
 }
 
-func TestTrashTopicForeignLeaseFailsBeforeCleanupCommit(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	topicID := "topic_foreign_lease"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
-	}
-	if err := setTopicTitle(projectRoot, topicID, "Foreign lease"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	sessionPath := writeTopicSessionWithPrompt(t, dir, "foreign-lease.jsonl", topicID, "Foreign lease", projectRoot, "preserve me", time.Now())
-
-	cmd := exec.Command(os.Args[0], "-test.run=^TestTrashTopicForeignLeaseHelper$")
-	cmd.Env = append(os.Environ(),
-		"DEEPZORA_TOPIC_ARCHIVE_LEASE_HELPER=1",
-		"DEEPZORA_TOPIC_ARCHIVE_LEASE_PATH="+sessionPath,
-	)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		t.Fatalf("lease helper stdin: %v", err)
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		t.Fatalf("lease helper stdout: %v", err)
-	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start lease helper: %v", err)
-	}
-	released := false
-	release := func() {
-		if released {
-			return
-		}
-		released = true
-		_ = stdin.Close()
-		if err := cmd.Wait(); err != nil {
-			t.Errorf("lease helper exit: %v (%s)", err, stderr.String())
-		}
-	}
-	defer release()
-	ready, err := bufio.NewReader(stdout).ReadString('\n')
-	if err != nil || strings.TrimSpace(ready) != "ready" {
-		t.Fatalf("lease helper readiness = %q, err=%v (%s)", ready, err, stderr.String())
-	}
-
-	app := NewApp()
-	if err := app.TrashTopic(topicID); !errors.Is(err, errSessionBusyElsewhere) {
-		t.Fatalf("TrashTopic foreign lease error = %v, want %v", err, errSessionBusyElsewhere)
-	}
-	if agent.IsCleanupPending(sessionPath) {
-		t.Fatal("rejected archive published a cleanup-pending marker")
-	}
-	if got := loadTopicTitle(projectRoot, topicID); got != "Foreign lease" {
-		t.Fatalf("rejected archive topic title = %q", got)
-	}
-	if err := reconcileDesktopCleanupPending(dir); err != nil {
-		t.Fatalf("reconcile without marker: %v", err)
-	}
-	if _, err := os.Stat(sessionPath); err != nil {
-		t.Fatalf("rejected archive removed the live session: %v", err)
-	}
-
-	release()
-	if err := reconcileDesktopCleanupPending(dir); err != nil {
-		t.Fatalf("reconcile after foreign release: %v", err)
-	}
-	if _, err := os.Stat(sessionPath); err != nil {
-		t.Fatalf("failed archive scheduled a later deletion: %v", err)
-	}
-}
-
-func TestTrashTopicForeignLeaseHelper(t *testing.T) {
-	if os.Getenv("DEEPZORA_TOPIC_ARCHIVE_LEASE_HELPER") != "1" {
-		return
-	}
-	lease, err := agent.TryAcquireSessionLease(os.Getenv("DEEPZORA_TOPIC_ARCHIVE_LEASE_PATH"))
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	if _, err := os.Stdout.WriteString("ready\n"); err != nil {
-		lease.Release()
-		t.Fatalf("write readiness: %v", err)
-	}
-	var release [1]byte
-	_, _ = os.Stdin.Read(release[:])
-	lease.Release()
-}
-
 func TestSnapshotTopicRuntimeConflictLogOmitsSessionPath(t *testing.T) {
 	privatePath := filepath.Join(t.TempDir(), "private-session.jsonl")
 	base := control.New(control.Options{})
@@ -204,46 +110,6 @@ func TestSnapshotTopicRuntimeConflictLogOmitsSessionPath(t *testing.T) {
 	}
 	if !strings.Contains(logged, string(agent.SessionSnapshotConflictDiverged)) {
 		t.Fatalf("snapshot conflict log omitted the safe conflict kind: %s", logged)
-	}
-}
-
-func TestTrashTopicConvertsLocalLeaseWithoutUnlockWindow(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	topicID := "topic_local_lease"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
-	}
-	if err := setTopicTitle(projectRoot, topicID, "Local lease"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	sessionPath := writeTopicSessionWithPrompt(t, dir, "local-lease.jsonl", topicID, "Local lease", projectRoot, "preserve me", time.Now())
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: sessionPath, Label: "test", WorkspaceRoot: projectRoot})
-	defer ctrl.Close()
-	tab := &WorkspaceTab{ID: "local", Scope: "project", WorkspaceRoot: projectRoot, TopicID: topicID,
-		TopicTitle: "Local lease", SessionPath: sessionPath, Ctrl: ctrl, Ready: true, disabledMCP: map[string]ServerView{}}
-	if err := tab.ensureSessionLease(sessionPath); err != nil {
-		t.Fatalf("ensureSessionLease: %v", err)
-	}
-	keep := &WorkspaceTab{ID: "keep", Scope: "project", WorkspaceRoot: projectRoot, TopicID: "keep", Ready: true}
-	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab, keep.ID: keep}, tabOrder: []string{tab.ID, keep.ID}, activeTabID: tab.ID}
-
-	pinDesktopSessionRoot(t, app)
-	if err := app.TrashTopic("  " + topicID + "  "); err != nil {
-		t.Fatalf("TrashTopic: %v", err)
-	}
-	if agent.IsCleanupPending(sessionPath) {
-		t.Fatal("completed archive left cleanup pending")
-	}
-	assertLegacyLifecycle(t, app, sessionPath, "archived")
-	if lease, err := agent.TryAcquireSessionLease(sessionPath); err != nil {
-		t.Fatalf("lease was not released: %v", err)
-	} else {
-		lease.Release()
 	}
 }
 
@@ -291,66 +157,6 @@ func TestLegacyTrashTopicCommittedCleanupFailureReconcilesWithoutFailureResponse
 	}
 }
 
-func TestLegacyTrashTopicLegacyMirrorFailureStaysCommittedAndRepairs(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	seedLegacyTopicBridge(t, projectRoot)
-	topicID := "topic_metadata_retry"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
-	}
-	if err := setTopicTitle(projectRoot, topicID, "Metadata retry"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	writeTopicSessionWithPrompt(t, dir, "metadata-retry.jsonl", topicID, "Metadata retry", projectRoot, "preserve me", time.Now())
-	topicLegacyWriteHookForTest = func(path string) error {
-		if path == topicTitleSourcesPath(projectRoot) {
-			return errors.New("injected legacy mirror failure")
-		}
-		return nil
-	}
-	t.Cleanup(func() { topicLegacyWriteHookForTest = nil })
-
-	app := NewApp()
-	if err := app.trashTopic(topicID); err != nil {
-		t.Fatalf("committed TrashTopic returned a failure: %v", err)
-	}
-	if got := loadTopicTitle(projectRoot, topicID); got != "" {
-		t.Fatalf("authoritative deleted title = %q, want empty", got)
-	}
-	if _, err := os.Stat(topicArchiveMetadataPendingPath(topicID)); !os.IsNotExist(err) {
-		t.Fatalf("SQLite-committed delete should not create archive retry intent: %v", err)
-	}
-
-	topicLegacyWriteHookForTest = nil
-	if err := setTopicCreatedAt(projectRoot, "topic-live", 1234); err != nil {
-		t.Fatalf("trigger pending mirror repair: %v", err)
-	}
-	legacyTitles, err := loadLegacyStringMap(topicTitlesPath(projectRoot))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := legacyTitles[topicID]; ok {
-		t.Fatalf("repaired legacy mirror resurrected deleted topic: %#v", legacyTitles)
-	}
-	if got := loadTopicTitle(projectRoot, topicID); got != "" {
-		t.Fatalf("reconciled archive retained topic title %q", got)
-	}
-	if _, err := os.Stat(topicArchiveMetadataPendingPath(topicID)); !os.IsNotExist(err) {
-		t.Fatalf("reconciled metadata marker still exists, err=%v", err)
-	}
-	projects := loadProjectsFile()
-	for _, project := range projects.Projects {
-		if containsDesktopString(project.Topics, topicID) || containsDesktopString(project.PinnedTopics, topicID) {
-			t.Fatalf("reconciled archive retained topic in project index: %+v", project)
-		}
-	}
-}
-
 func TestTopicArchiveIntentCompletesSessionsAndMetadataAfterRestart(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	projectRoot := t.TempDir()
@@ -390,50 +196,6 @@ func TestTopicArchiveIntentCompletesSessionsAndMetadataAfterRestart(t *testing.T
 	}
 	if _, err := os.Stat(topicArchiveMetadataPendingPath(topicID)); !os.IsNotExist(err) {
 		t.Fatalf("reconciled archive retained topic marker, err=%v", err)
-	}
-}
-
-func TestTrashTopicPreservesDivergedExistingTrash(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	topicID := "topic_diverged_trash"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
-	}
-	if err := setTopicTitle(projectRoot, topicID, "Diverged trash"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	sessionPath := writeTopicSessionWithPrompt(t, dir, "diverged-trash.jsonl", topicID, "Diverged trash", projectRoot, "new live history", time.Now())
-	existingTrashPath := filepath.Join(sessionTrashPath(dir), filepath.Base(sessionPath), filepath.Base(sessionPath))
-	existing := agent.NewSession("system")
-	existing.Add(provider.Message{Role: provider.RoleUser, Content: "older trash history"})
-	if err := existing.SaveSnapshot(existingTrashPath); err != nil {
-		t.Fatalf("write existing trash: %v", err)
-	}
-
-	app := NewApp()
-	if err := app.TrashTopic(topicID); err != nil {
-		t.Fatalf("TrashTopic: %v", err)
-	}
-	ref := assertLegacyLifecycle(t, app, sessionPath, "archived")
-	old, err := agent.LoadSession(existingTrashPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	found := false
-	for _, message := range old.Snapshot() {
-		found = found || message.Content == "older trash history"
-	}
-	if !found {
-		t.Fatal("older trash history was overwritten")
-	}
-	page, err := app.ReadSessionHistory(ref, "", 32)
-	if err != nil || !hasHistoryContent(page.Messages, "new live history") {
-		t.Fatalf("new archived history=%+v %v", page, err)
 	}
 }
 
@@ -492,100 +254,10 @@ func TestUnusedTransientBlankSessionOnlyMatchesZeroByteFiles(t *testing.T) {
 	}
 }
 
-func TestTransientBlankCleanupPreservesTopicWithSiblingInAnotherGlobalDirectory(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	app := NewApp()
-	ghostDir := desktopSessionDir(globalWorkspaceRoot())
-	legacyDir := config.SessionDir()
-	for _, dir := range []string{ghostDir, legacyDir} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	topicID := "shared-global-topic"
-	ghost := filepath.Join(ghostDir, "ghost.jsonl")
-	sibling := filepath.Join(legacyDir, "sibling.jsonl")
-	writeZeroByteSession(t, ghost)
-	if err := pinNewEmptySessionBranchMeta(ghost, "global", "", topicID, defaultTopicTitle); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(sibling, []byte(`{"role":"user","content":"keep"}`+"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := pinNewEmptySessionBranchMeta(sibling, "global", "", topicID, "Keep"); err != nil {
-		t.Fatal(err)
-	}
-	if err := prependTopicsInProjectsFile("", []string{topicID}, false); err != nil {
-		t.Fatal(err)
-	}
-	app.discardUnusedTransientBlankSessions([]string{ghostDir}, "")
-	if _, err := os.Stat(ghost); !os.IsNotExist(err) {
-		t.Fatalf("transient ghost should be removed, stat err = %v", err)
-	}
-	if _, err := os.Stat(sibling); err != nil {
-		t.Fatalf("sibling session should remain: %v", err)
-	}
-	if !topicIndexedInRegistry("global", "", topicID) {
-		t.Fatal("sibling topic registration was removed with a ghost from another directory")
-	}
-}
-
 func writeZeroByteSession(t *testing.T, path string) {
 	t.Helper()
 	if err := os.WriteFile(path, nil, 0o600); err != nil {
 		t.Fatalf("write zero-byte session %s: %v", path, err)
-	}
-}
-
-func TestTrashTopicArchivesFailedRuntimeWithStaleWriteAuthority(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := t.TempDir()
-	topicID := "topic_failed_authority"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
-	}
-	if err := setTopicTitle(projectRoot, topicID, "Failed authority"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	sessionPath := writeTopicSession(t, dir, "failed-authority.jsonl", topicID, "Failed authority", projectRoot)
-	ctrl := controllerWithContent(t, sessionPath)
-	defer ctrl.Close()
-	lease, err := agent.TryAcquireSessionLease(sessionPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	if err := ctrl.BindSessionWriteAuthority(lease); err != nil {
-		lease.Release()
-		t.Fatalf("BindSessionWriteAuthority: %v", err)
-	}
-	lease.Release()
-	if err := ctrl.Snapshot(); !errors.Is(err, agent.ErrSessionWriteAuthorityStale) {
-		t.Fatalf("Snapshot error = %v, want %v", err, agent.ErrSessionWriteAuthorityStale)
-	}
-
-	failed := &WorkspaceTab{ID: "failed", Scope: "project", WorkspaceRoot: projectRoot, TopicID: topicID,
-		TopicTitle: "Failed authority", SessionPath: sessionPath, Ctrl: ctrl, disabledMCP: map[string]ServerView{}}
-	keep := &WorkspaceTab{ID: "keep", Scope: "project", WorkspaceRoot: projectRoot, TopicID: "keep", Ready: true}
-	app := &App{tabs: map[string]*WorkspaceTab{failed.ID: failed, keep.ID: keep}, tabOrder: []string{failed.ID, keep.ID}, activeTabID: failed.ID}
-	app.desktopSessionService(dir)
-	t.Cleanup(app.closeSessionServices)
-	app.mu.Lock()
-	app.newSessionRuntimeLocked(failed, sessionRuntimeKey(sessionPath))
-	_, save := app.markTabStartupFailureLocked(failed, agent.ErrSessionWriteAuthorityStale, suppressStartupRestore)
-	app.mu.Unlock()
-	app.writeTabsSaveRequest(save)
-
-	if err := app.TrashTopic(topicID); err != nil {
-		t.Fatalf("TrashTopic: %v", err)
-	}
-	assertLegacyLifecycle(t, app, sessionPath, "archived")
-	if app.tabs[keep.ID] != keep || app.tabs[failed.ID] != nil {
-		t.Fatalf("runtime bindings after archive = %#v", app.tabs)
 	}
 }
 
@@ -607,5 +279,37 @@ func TestTopicArchiveRejectsFailedRuntimeThatStartedRetrying(t *testing.T) {
 	}
 	if app.tabs[tab.ID] != tab || tab.removed {
 		t.Fatal("rejected stale archive changed the retrying tab")
+	}
+}
+
+func TestTrashTopicForeignLeaseFailsBeforeCleanupCommit(t *testing.T) {
+	app, ref := lifecycleFixture(t)
+	const topicID = "topic_foreign_lease"
+	if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, topicID, "Foreign lease"); err != nil {
+		t.Fatal(err)
+	}
+	foreign, err := session.NewService(localDesktopHostID, session.NewFilesystemPersistence(app.desktopSessions.root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding, err := foreign.Open(t.Context(), ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	release := func() { _ = binding.Release(context.Background()); _ = foreign.Close(context.Background(), ref) }
+	defer release()
+	if err := app.TrashTopic(topicID); !errors.Is(err, errSessionBusyElsewhere) {
+		t.Fatalf("foreign lease error = %v", err)
+	}
+	state, err := app.workspaceRegistry().Load(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.SessionStates[ref.SessionID].Lifecycle != workspacestate.Active || state.Presentation[ref.SessionID].TopicID != topicID {
+		t.Fatal("rejected archive changed identity or lifecycle")
+	}
+	release()
+	if _, err := app.desktopSessionService("").Query().Snapshot(t.Context(), ref); err != nil {
+		t.Fatalf("rejected archive removed session: %v", err)
 	}
 }

@@ -12,7 +12,6 @@ type SessionOrderInfo struct {
 	Path                 string
 	CreatedAt            time.Time
 	LastActivityAt       time.Time
-	ModTime              time.Time // compatibility alias for LastActivityAt
 	Scope                string
 	WorkspaceRoot        string
 	TopicID              string
@@ -37,7 +36,7 @@ type SessionOrderInfo struct {
 	ListingRevision      int64
 	ListingContentDigest string
 	// Schema-2 sessions mirror their selected head here so listings never
-	// replay the log; LogSchema is 0 for schema-1 sidecars.
+	// replay the log.
 	HeadID    string
 	HeadCount int
 	LogSchema int
@@ -48,8 +47,7 @@ type SessionOrderInfo struct {
 type RecoveryPreferenceResolver func(path string, meta BranchMeta) bool
 
 // ListingProjectionFresh reports whether Turns/Preview describe this record's
-// current transcript generation. Legacy sidecars that predate the content
-// ledger remain usable until their first revisioned save.
+// current transcript generation.
 func (s SessionOrderInfo) ListingProjectionFresh() bool {
 	return sessionListingProjectionFresh(s.SchemaVersion, s.Turns, s.Revision, s.ListingRevision, s.ContentDigest, s.ListingContentDigest)
 }
@@ -59,7 +57,6 @@ func sessionInfoFromOrder(session SessionOrderInfo, preview string, turns int, c
 		Path:                 session.Path,
 		CreatedAt:            session.CreatedAt,
 		LastActivityAt:       session.LastActivityAt,
-		ModTime:              session.ModTime,
 		Preview:              preview,
 		Turns:                turns,
 		CountsKnown:          countsKnown,
@@ -87,16 +84,8 @@ func sessionArtifactsHaveContent(path string) bool {
 }
 
 func sessionListingProjectionFresh(schemaVersion, turns int, revision, listingRevision int64, contentDigest, listingContentDigest string) bool {
-	if schemaVersion < branchMetaCountsInitialVersion {
+	if schemaVersion != BranchMetaCountsVersion || turns < 0 {
 		return false
-	}
-	if turns == 0 && schemaVersion < BranchMetaCountsVersion {
-		return false
-	}
-	contentDigest = strings.TrimSpace(contentDigest)
-	listingContentDigest = strings.TrimSpace(listingContentDigest)
-	if revision == 0 && listingRevision == 0 && contentDigest == "" && listingContentDigest == "" {
-		return true
 	}
 	return revision > 0 && listingRevision == revision && contentDigest != "" && listingContentDigest == contentDigest
 }

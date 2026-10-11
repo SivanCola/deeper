@@ -25,7 +25,7 @@ default_model = "test-model"
 [[providers]]
 name = "test-model"
 kind = "boot-subagent-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	writeFile(t, dir, "marker.txt", "hook probe")

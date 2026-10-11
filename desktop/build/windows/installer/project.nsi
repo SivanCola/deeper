@@ -206,15 +206,12 @@ Name "${INFO_PRODUCTNAME}"
 OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
 !define DEEPZORA_DEFAULT_INSTALLDIR "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
 !define DEEPZORA_UPDATE_HELPER "deepzora-update-helper.exe"
-!define DEEPZORA_GUARD "deepzora-guard.exe"
 !define DEEPZORA_LAUNCHER "deepzora-launcher.exe"
 !define DEEPZORA_CLI "deepzora-cli.exe"
 !define DEEPZORA_PORTABLE_ENTRY "Deepzora.exe"
 !define DEEPZORA_LAYOUT_INSTALLER "deepzora-layout-installer.exe"
 !define DEEPZORA_PAYLOAD_MANIFEST "deepzora-payload.json"
 !define DEEPZORA_PAYLOAD_SIGNATURE "deepzora-payload.json.minisig"
-!define DEEPZORA_LEGACY_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Deepzora"
-!define DEEPZORA_LEGACY_PRODUCT_KEY "Software\deepzora\Deepzora"
 Var DeepzoraUpdateMode
 Var DeepzoraStageMode
 InstallDirRegKey HKCU "${UNINST_KEY}" "InstallLocation" # Reuse the previous install path on update; .onInit falls back to the default on first install.
@@ -255,47 +252,6 @@ ShowInstDetails show # This will always show the installation details.
     WriteRegDWORD HKCU "${UNINST_KEY}" "EstimatedSize" "$0"
 !macroend
 
-; Tauri 0.53 separately persisted $INSTDIR under its manufacturer/product key
-; and restores that value before every later install. Clear only a same-root
-; value so re-running 0.53 cannot overwrite the current uninstaller; preserve a
-; genuinely separate legacy installation. If this cleanup fails, retain the old
-; uninstall alias so a later update can retry the migration.
-!macro deepzora.deleteLegacyInstallerStateIfOwned
-    StrCpy $1 "1"
-    ClearErrors
-    ReadRegStr $0 HKCU "${DEEPZORA_LEGACY_PRODUCT_KEY}" ""
-    ${If} $0 == "$INSTDIR"
-        ClearErrors
-        DeleteRegValue HKCU "${DEEPZORA_LEGACY_PRODUCT_KEY}" ""
-        ${If} ${Errors}
-            StrCpy $1 "0"
-        ${EndIf}
-    ${ElseIf} $0 == "$\"$INSTDIR$\""
-        ClearErrors
-        DeleteRegValue HKCU "${DEEPZORA_LEGACY_PRODUCT_KEY}" ""
-        ${If} ${Errors}
-            StrCpy $1 "0"
-        ${EndIf}
-    ${EndIf}
-
-    ${If} $1 == "1"
-        ClearErrors
-        ReadRegStr $0 HKCU "${DEEPZORA_LEGACY_UNINST_KEY}" "InstallLocation"
-        ${If} $0 == "$INSTDIR"
-            DeleteRegKey HKCU "${DEEPZORA_LEGACY_UNINST_KEY}"
-        ${ElseIf} $0 == "$\"$INSTDIR$\""
-            DeleteRegKey HKCU "${DEEPZORA_LEGACY_UNINST_KEY}"
-        ${Else}
-            ClearErrors
-            ReadRegStr $0 HKCU "${DEEPZORA_LEGACY_UNINST_KEY}" "UninstallString"
-            ${If} $0 == "$INSTDIR\uninstall.exe"
-                DeleteRegKey HKCU "${DEEPZORA_LEGACY_UNINST_KEY}"
-            ${ElseIf} $0 == "$\"$INSTDIR\uninstall.exe$\""
-                DeleteRegKey HKCU "${DEEPZORA_LEGACY_UNINST_KEY}"
-            ${EndIf}
-        ${EndIf}
-    ${EndIf}
-!macroend
 
 !macro deepzora.deleteUninstaller
     Delete "$INSTDIR\uninstall.exe"
@@ -332,54 +288,7 @@ deepzora_update_mode_done:
 
 deepzora_stage_mode_done:
 
-   ; InstallDirRegKey leaves $INSTDIR empty when the InstallLocation value is
-   ; missing. Older installers still wrote DisplayIcon, so use its parent folder
-   ; as a compatibility bridge before falling back to the per-user default.
    StrCmp $INSTDIR "" 0 done
-   ClearErrors
-   ReadRegStr $0 HKCU "${UNINST_KEY}" "DisplayIcon"
-   IfErrors legacy_location
-   StrCmp $0 "" legacy_location
-   ${GetParent} "$0" $INSTDIR
-   StrCmp $INSTDIR "" legacy_location done
-
-legacy_location:
-   ; Tauri 0.53 used a different uninstall key and may have stored the selected
-   ; directory with surrounding quotes (for example "D:\Deepzora"). Reuse it
-   ; only while its uninstaller still exists so a stale registry value cannot
-   ; redirect the repair installer into an unrelated directory.
-   ClearErrors
-   ReadRegStr $0 HKCU "${DEEPZORA_LEGACY_UNINST_KEY}" "InstallLocation"
-   IfErrors legacy_uninstaller
-   StrCmp $0 "" legacy_uninstaller
-   StrCpy $1 $0 1
-   StrCmp $1 "$\"" 0 legacy_location_ready
-   StrCpy $1 $0 1 -1
-   StrCmp $1 "$\"" 0 legacy_location_ready
-   StrCpy $0 $0 -1 1
-
-legacy_location_ready:
-   IfFileExists "$0\uninstall.exe" 0 legacy_uninstaller
-   StrCpy $INSTDIR $0
-   Goto done
-
-legacy_uninstaller:
-   ClearErrors
-   ReadRegStr $0 HKCU "${DEEPZORA_LEGACY_UNINST_KEY}" "UninstallString"
-   IfErrors fallback
-   StrCmp $0 "" fallback
-   StrCpy $1 $0 1
-   StrCmp $1 "$\"" 0 legacy_uninstaller_ready
-   StrCpy $1 $0 1 -1
-   StrCmp $1 "$\"" 0 legacy_uninstaller_ready
-   StrCpy $0 $0 -1 1
-
-legacy_uninstaller_ready:
-   IfFileExists "$0" 0 fallback
-   ${GetParent} "$0" $INSTDIR
-   StrCmp $INSTDIR "" fallback done
-
-fallback:
    StrCpy $INSTDIR "${DEEPZORA_DEFAULT_INSTALLDIR}"
 done:
 FunctionEnd
@@ -425,22 +334,13 @@ deepzora_unlock_check:
 deepzora_unlock_stable_locked:
    StrCpy $2 1
 deepzora_unlock_versioned:
-   IfFileExists "$INSTDIR\versions\${DEEPZORA_VERSION_TAG}\${PRODUCT_EXECUTABLE}" 0 deepzora_unlock_guard
+   IfFileExists "$INSTDIR\versions\${DEEPZORA_VERSION_TAG}\${PRODUCT_EXECUTABLE}" 0 deepzora_unlock_launcher
    ClearErrors
    FileOpen $1 "$INSTDIR\versions\${DEEPZORA_VERSION_TAG}\${PRODUCT_EXECUTABLE}" a
    IfErrors deepzora_unlock_versioned_locked
    FileClose $1
-   Goto deepzora_unlock_guard
-deepzora_unlock_versioned_locked:
-   StrCpy $2 1
-deepzora_unlock_guard:
-   IfFileExists "$INSTDIR\${DEEPZORA_GUARD}" 0 deepzora_unlock_launcher
-   ClearErrors
-   FileOpen $1 "$INSTDIR\${DEEPZORA_GUARD}" a
-   IfErrors deepzora_unlock_guard_locked
-   FileClose $1
    Goto deepzora_unlock_launcher
-deepzora_unlock_guard_locked:
+deepzora_unlock_versioned_locked:
    StrCpy $2 1
 deepzora_unlock_launcher:
    IfFileExists "$INSTDIR\${DEEPZORA_LAUNCHER}" 0 deepzora_unlock_cli
@@ -495,13 +395,8 @@ SectionEnd
 Section
     !insertmacro deepzora.setShellContext
 
-    ; /DEEPZORASTAGE=1: flat executables plus the Electron app/ tree for
-    ; 1.18–1.19.1 helpers (and the new helper's staging extract). Do not write
-    ; shortcuts/uninstaller.
-    ; Normal install: versioned-v1 layout under versions/${DEEPZORA_VERSION_TAG}/
-    ; with a permanent thin launcher at InstallRoot. Guard is only present in
-    ; STAGE payloads (as the one-shot legacy migrator) and is not persisted on
-    ; a normal install.
+    ; Staging exposes the verified current release unit. Normal installs
+    ; activate it transactionally under versions/<version>.
     StrCmp $DeepzoraStageMode "1" deepzora_stage_payload
     ; The signed activator coordinates all installed versions before committing.
     Call deepzora.waitForExecutableUnlock
@@ -519,8 +414,8 @@ deepzora_stage_payload:
     !if /FileExists "${DEEPZORA_UPDATE_HELPER}"
     File "/oname=${DEEPZORA_UPDATE_HELPER}" "${DEEPZORA_UPDATE_HELPER}"
     !endif
-    !if /FileExists "${DEEPZORA_GUARD}"
-    File "/oname=${DEEPZORA_GUARD}" "${DEEPZORA_GUARD}"
+    !if /FileExists "${DEEPZORA_LAYOUT_INSTALLER}"
+    File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_LAYOUT_INSTALLER}"
     !endif
     !if /FileExists "${DEEPZORA_LAUNCHER}"
     File "/oname=${DEEPZORA_LAUNCHER}" "${DEEPZORA_LAUNCHER}"
@@ -558,17 +453,17 @@ deepzora_normal_install:
     !endif
 
     SetOutPath "$PLUGINSDIR"
-    !if /FileExists "${DEEPZORA_GUARD}"
-    File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_GUARD}"
+    !if /FileExists "${DEEPZORA_LAYOUT_INSTALLER}"
+    File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_LAYOUT_INSTALLER}"
     !else
-    !error "${DEEPZORA_GUARD} was not found; normal installs require the signed layout activator."
+    !error "${DEEPZORA_LAYOUT_INSTALLER} was not found; normal installs require the signed layout activator."
     !endif
     DetailPrint "Deepzora layout activator output:"
     StrCpy $R7 ""
     IfSilent +2 0
     StrCpy $R7 "--interactive-recovery"
 deepzora_layout_activate:
-    nsExec::ExecToLog /OEM '"$PLUGINSDIR\${DEEPZORA_LAYOUT_INSTALLER}" --install-root "$INSTDIR" --version "${DEEPZORA_VERSION_TAG}" --activate-staging "$R9" --no-relaunch $R7'
+    nsExec::ExecToLog /OEM '"$PLUGINSDIR\${DEEPZORA_LAYOUT_INSTALLER}" --install-root "$INSTDIR" --version "${DEEPZORA_VERSION_TAG}" --activate-staging "$R9" $R7'
     Pop $0
     StrCmp $0 "0" deepzora_layout_activated
     DetailPrint "Deepzora layout activation failed with exit code $0; the previous version remains active."
@@ -600,11 +495,6 @@ deepzora_layout_activated:
     RMDir /r "$R9"
     SetOutPath "$INSTDIR"
 
-    ; Remove flat leftovers from prior 1.18–1.19 installs when overwriting.
-    Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    Delete "$INSTDIR\${DEEPZORA_GUARD}"
-    Delete "$INSTDIR\${DEEPZORA_UPDATE_HELPER}"
-
     !if /FileExists "${DEEPZORA_LAUNCHER}"
     ; Keep both target and icon on the stable launcher. Pointing IconLocation at
     ; versions\vX\deepzora-desktop.exe leaves a blank shortcut as soon as version
@@ -629,7 +519,6 @@ deepzora_layout_activated:
     !insertmacro deepzora.associateFiles
     !insertmacro deepzora.associateCustomProtocols
     !insertmacro deepzora.writeUninstaller
-    !insertmacro deepzora.deleteLegacyInstallerStateIfOwned
 
 deepzora_section_done:
 SectionEnd
@@ -638,12 +527,10 @@ SectionEnd
 Section "uninstall"
     !insertmacro deepzora.setShellContext
 
-    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the legacy webview data directory
 
     ; Precision uninstall: flat leftovers, thin entry points, and version trees.
     Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
     Delete "$INSTDIR\${DEEPZORA_UPDATE_HELPER}"
-    Delete "$INSTDIR\${DEEPZORA_GUARD}"
     Delete "$INSTDIR\${DEEPZORA_LAUNCHER}"
     Delete "$INSTDIR\${DEEPZORA_CLI}"
     Delete "$INSTDIR\${DEEPZORA_PORTABLE_ENTRY}"
@@ -657,7 +544,6 @@ Section "uninstall"
     !insertmacro deepzora.unassociateCustomProtocols
 
     !insertmacro deepzora.deleteUninstaller
-    !insertmacro deepzora.deleteLegacyInstallerStateIfOwned
 
     ; Only remove the installation directory if it is empty to prevent data loss
     RMDir $INSTDIR

@@ -210,7 +210,7 @@ func TestPluginSkillsUseQualifiedSlashNamesWithoutChangingModelIndex(t *testing.
 	}
 }
 
-func TestPluginSkillShortAliasIsHiddenAndProjectSkillKeepsShortName(t *testing.T) {
+func TestPluginSkillRequiresQualifiedNameAndProjectSkillKeepsShortName(t *testing.T) {
 	home := t.TempDir()
 	project := t.TempDir()
 	pluginRoot := t.TempDir()
@@ -223,8 +223,8 @@ func TestPluginSkillShortAliasIsHiddenAndProjectSkillKeepsShortName(t *testing.T
 		PluginPaths:     map[string][]string{config.CanonicalSkillPath(pluginRoot): {"superpowers"}},
 		DisableBuiltins: true,
 	})
-	if sk, ok := st.ReadSlash("plan"); !ok || sk.Body != "PLUGIN" {
-		t.Fatalf("unambiguous short compatibility alias = %+v, %v", sk, ok)
+	if sk, ok := st.ReadSlash("plan"); ok {
+		t.Fatalf("unqualified plugin alias accepted = %+v", sk)
 	}
 	if got := st.SlashList(); len(got) != 1 || got[0].SlashName() != "superpowers:plan" {
 		t.Fatalf("visible plugin skills = %+v", got)
@@ -1053,7 +1053,7 @@ func TestCreateRefusesOverwrite(t *testing.T) {
 	}
 
 	writeSkill(t, home, ".deepzora/skills/legacy.md", "---\ndescription: legacy\n---\nbody")
-	if _, err := st.Create("legacy", ScopeGlobal); err == nil {
-		t.Error("create should refuse to shadow an existing legacy flat skill")
+	if _, err := st.Create("legacy", ScopeGlobal); err != nil {
+		t.Fatalf("historical flat file blocked current skill creation: %v", err)
 	}
 }

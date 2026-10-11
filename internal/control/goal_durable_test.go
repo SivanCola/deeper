@@ -50,13 +50,13 @@ func TestApplyComposerProfileIsTransactionalAndPreservesMatchingGoal(t *testing.
 		t.Fatal(err)
 	}
 	c.SetPlanMode(true)
-	c.SetToolApprovalMode(ToolApprovalAuto)
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 	notDirectory := filepath.Join(dir, "not-a-directory")
 	if err := os.WriteFile(notDirectory, []byte("block nested writes"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	c.goals.setStatePath(filepath.Join(notDirectory, "goal.json"))
-	if _, err := c.ApplyComposerProfile(false, ToolApprovalYolo, "replace the goal"); err == nil {
+	if _, err := c.ApplyComposerProfile(false, ToolApprovalDangerFullAccess, "replace the goal"); err == nil {
 		t.Fatal("ApplyComposerProfile succeeded despite an invalid Goal sidecar parent")
 	}
 	if got := c.Goal(); got != "keep the old goal" {
@@ -65,21 +65,21 @@ func TestApplyComposerProfileIsTransactionalAndPreservesMatchingGoal(t *testing.
 	if !c.PlanMode() {
 		t.Fatal("failed profile transaction changed plan mode")
 	}
-	if got := c.ToolApprovalMode(); got != ToolApprovalAuto {
-		t.Fatalf("tool approval mode = %q, want %q", got, ToolApprovalAuto)
+	if got := c.ToolApprovalMode(); got != ToolApprovalWorkspaceWrite {
+		t.Fatalf("tool approval mode = %q, want %q", got, ToolApprovalWorkspaceWrite)
 	}
 	c.goals.setStatePath(filepath.Join(dir, "goal.json"))
 	if !c.PauseGoal() {
 		t.Fatal("failed to pause goal")
 	}
 	want := c.GoalRuntime()
-	if _, err := c.ApplyComposerProfile(false, ToolApprovalYolo, "keep the old goal"); err != nil {
+	if _, err := c.ApplyComposerProfile(false, ToolApprovalDangerFullAccess, "keep the old goal"); err != nil {
 		t.Fatal(err)
 	}
 	if got := c.GoalRuntime(); got != want {
 		t.Fatalf("matching profile reset paused Goal runtime: got %+v, want %+v", got, want)
 	}
-	if got := c.ToolApprovalMode(); got != ToolApprovalYolo {
+	if got := c.ToolApprovalMode(); got != ToolApprovalDangerFullAccess {
 		t.Fatalf("tool approval mode = %q, want yolo", got)
 	}
 }

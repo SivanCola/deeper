@@ -9,7 +9,7 @@ import (
 func TestSetVisionModelValidatesCapabilityAndCanonicalizesRef(t *testing.T) {
 	c := &Config{Providers: []ProviderEntry{{
 		Name: "gateway", Kind: "openai", BaseURL: "http://127.0.0.1:1",
-		Models: []string{"text", "vision"}, Default: "text", VisionModels: []string{"vision"},
+		Models: []string{"text", "vision"}, Default: "text", ModelOverrides: map[string]ProviderModelOverride{"text": {Vision: boolPointer(false)}, "vision": {Vision: boolPointer(true)}},
 	}}}
 	if err := c.SetVisionModel("auto"); err != nil || c.Agent.VisionModel != "auto" {
 		t.Fatalf("auto: err=%v value=%q", err, c.Agent.VisionModel)
@@ -54,7 +54,7 @@ func TestVisionCapabilityDistinguishesUnknownAndExplicitTextOnly(t *testing.T) {
 	}
 
 	textOnly := *unknown
-	textOnly.VisionModels = []string{}
+	textOnly.ModelOverrides = map[string]ProviderModelOverride{"opaque-chat": {Vision: boolPointer(false)}}
 	if got := VisionCapabilityForModel(&textOnly); got != VisionCapabilityUnsupported {
 		t.Fatalf("explicit text-only capability = %q, want %q", got, VisionCapabilityUnsupported)
 	}
@@ -86,7 +86,7 @@ func TestModelScopePresetDeclaresVerifiedVisionModels(t *testing.T) {
 	}
 	text := entry
 	text.Model = "ZhipuAI/GLM-5.2"
-	if got := VisionCapabilityForModel(&text); got != VisionCapabilityUnknown {
-		t.Fatalf("ModelScope GLM capability = %q, want %q", got, VisionCapabilityUnknown)
+	if got := VisionCapabilityForModel(&text); got != VisionCapabilityUnsupported {
+		t.Fatalf("ModelScope GLM capability = %q, want %q", got, VisionCapabilityUnsupported)
 	}
 }

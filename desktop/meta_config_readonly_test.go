@@ -19,7 +19,7 @@ func TestTabMetaExtrasRefreshDoesNotPinCredentials(t *testing.T) {
 	cfg.Agent.VisionModel = "custom/vision"
 	cfg.Providers = []config.ProviderEntry{{
 		Name: "custom", Kind: "openai", BaseURL: "https://example.invalid/v1",
-		APIKeyEnv: key, Models: []string{"vision"}, VisionModels: []string{"vision"},
+		APIKeyEnv: key, Models: []string{"vision"}, ModelOverrides: map[string]config.ProviderModelOverride{"vision": {Vision: new(true)}},
 	}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)

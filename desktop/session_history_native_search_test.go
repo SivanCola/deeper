@@ -40,7 +40,7 @@ func awaitNativeSearch(t *testing.T, a *App, id, text, cursor string, limit int)
 }
 
 func TestNativeHistorySearchColdFormatsAndReuse(t *testing.T) {
-	for _, kind := range []string{"checkpoint", "schema1"} {
+	for _, kind := range []string{"checkpoint"} {
 		t.Run(kind, func(t *testing.T) {
 			a := historySliceTestApp(t)
 			t.Cleanup(a.closeHistoryReaders)
@@ -55,14 +55,6 @@ func TestNativeHistorySearchColdFormatsAndReuse(t *testing.T) {
 			for _, message := range messages {
 				body, _ := json.Marshal(message)
 				checkpoint = append(checkpoint, append(body, '\n')...)
-			}
-			var event []byte
-			if kind == "schema1" {
-				checkpoint = []byte("{\"role\":\"user\",\"content\":\"obsolete needle\"}\n")
-				event, _ = json.Marshal(map[string]any{"schema_version": 1, "type": "replace", "messages": messages})
-				if err := os.WriteFile(store.SessionEventLog(tab.SessionPath), event, 0600); err != nil {
-					t.Fatal(err)
-				}
 			}
 			if err := os.WriteFile(tab.SessionPath, checkpoint, 0600); err != nil {
 				t.Fatal(err)
@@ -127,7 +119,7 @@ func TestNativeHistorySearchColdFormatsAndReuse(t *testing.T) {
 			}
 			body, _ := os.ReadFile(tab.SessionPath)
 			log, _ := os.ReadFile(store.SessionEventLog(tab.SessionPath))
-			if string(body) != string(checkpoint) || string(log) != string(event) || tab.Ctrl != nil {
+			if string(body) != string(checkpoint) || len(log) != 0 || tab.Ctrl != nil {
 				t.Fatal("cold search changed authoritative history or created a runtime")
 			}
 			if err := os.WriteFile(tab.SessionPath, []byte("{\"role\":\"user\",\"content\":\"replacement\"}\n"), 0600); err != nil {

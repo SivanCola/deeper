@@ -22,7 +22,7 @@ import (
 
 func (m chatTUI) applyMCPAction(v mcpServerView, action mcpAction) (tea.Model, tea.Cmd) {
 	switch action {
-	case mcpActionMode, mcpActionConnect, mcpActionAuth, mcpActionClearAuth, mcpActionDisable, mcpActionRemove:
+	case mcpActionConnect, mcpActionAuth, mcpActionClearAuth, mcpActionDisable, mcpActionRemove:
 		if m.mcpConnectBusy(v.Name) {
 			return m, nil
 		}
@@ -30,9 +30,6 @@ func (m chatTUI) applyMCPAction(v mcpServerView, action mcpAction) (tea.Model, t
 	switch action {
 	case mcpActionViewTools:
 		m.mcp.stage = mcpStageTools
-	case mcpActionMode:
-		m.mcp.stage = mcpStageMode
-		m.mcp.mode = mcpModeIndex(v.Tier)
 	case mcpActionEdit:
 		return m.openMCPConfig(v)
 	case mcpActionAuth:
@@ -63,7 +60,7 @@ func (m chatTUI) connectSelectedMCP(v mcpServerView) (tea.Model, tea.Cmd) {
 	}
 	delete(m.mcpDisabled, v.Name)
 	m.notice("connecting " + v.Name + "…")
-	return m, m.startMCPConnect(v.Name, mcpConnectRetry, nil)
+	return m, m.startMCPConnect(v.Name, mcpConnectRetry)
 }
 
 // mcpConnectBusy refuses an action on a server whose connect is in flight:
@@ -78,7 +75,7 @@ func (m *chatTUI) mcpConnectBusy(name string) bool {
 
 // startMCPConnect runs the handshake off the UI loop: it can take up to the
 // server's startup timeout, and inside Update it would freeze every key.
-func (m *chatTUI) startMCPConnect(name string, cause mcpConnectCause, entry *config.PluginEntry) tea.Cmd {
+func (m *chatTUI) startMCPConnect(name string, cause mcpConnectCause) tea.Cmd {
 	if m.mcpConnecting == nil {
 		m.mcpConnecting = map[string]bool{}
 	}
@@ -86,7 +83,7 @@ func (m *chatTUI) startMCPConnect(name string, cause mcpConnectCause, entry *con
 	ctrl := m.ctrl
 	return func() tea.Msg {
 		n, err := ctrl.ConnectConfiguredMCPServer(name)
-		return mcpConnectDoneMsg{server: name, cause: cause, entry: entry, tools: n, err: err}
+		return mcpConnectDoneMsg{server: name, cause: cause, tools: n, err: err}
 	}
 }
 
@@ -100,11 +97,6 @@ func (m *chatTUI) handleMCPConnectDone(msg mcpConnectDoneMsg) {
 		return
 	}
 	switch {
-	case msg.err != nil && msg.cause == mcpConnectMode:
-		if msg.entry != nil {
-			recordMCPModePluginFailure(m.ctrl, *msg.entry, msg.err)
-		}
-		m.notice("saved connection mode, but connect failed: " + msg.err.Error())
 	case msg.err != nil && msg.cause == mcpConnectAuth:
 		m.notice("MCP authorization saved, but reconnect failed: " + msg.err.Error())
 	case msg.err != nil:
@@ -188,70 +180,6 @@ func (m chatTUI) removeSelectedMCP() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m chatTUI) applyMCPMode(tier string) (tea.Model, tea.Cmd) {
-	v, ok := m.mcp.selectedServer()
-	if !ok {
-		return m, nil
-	}
-	workspace := m.mcpWorkspaceRoot()
-	cfg, err := config.LoadForRoot(workspace)
-	if err != nil {
-		m.notice("mcp mode: " + err.Error())
-		return m, nil
-	}
-	found := false
-	var selected config.PluginEntry
-	for _, entry := range cfg.Plugins {
-		if entry.Name == v.Name {
-			entry.Tier = normalizeMCPTierForCLI(tier)
-			if !entry.ShouldAutoStart() {
-				entry.AutoStart = mcpBoolPtr(true)
-			}
-			selected = entry
-			found = true
-			break
-		}
-	}
-	if !found {
-		m.notice(fmt.Sprintf("mcp mode: no configured MCP server named %q", v.Name))
-		return m, nil
-	}
-	if _, err := config.UpsertPluginKeepingDecision(workspace, selected); err != nil {
-		m.notice("mcp mode: " + err.Error())
-		return m, nil
-	}
-	if m.mcpDisabled != nil {
-		delete(m.mcpDisabled, v.Name)
-	}
-	var connect tea.Cmd
-	if m.ctrl != nil && !mcpConnected(m.ctrl, v.Name) {
-		connect = m.startMCPConnect(v.Name, mcpConnectMode, &selected)
-	}
-	m.refreshMCPManager()
-	if m.mcp != nil {
-		m.mcp.stage = mcpStageDetail
-		m.mcp.selectName(v.Name)
-	}
-	m.notice("updated connection mode for " + v.Name)
-	return m, connect
-}
-
-func recordMCPModePluginFailure(ctrl control.Capabilities, e config.PluginEntry, err error) {
-	if ctrl == nil || ctrl.Host() == nil || err == nil {
-		return
-	}
-	exp := e.ExpandedPlugin()
-	ctrl.Host().RecordFailure(plugin.Spec{
-		Name:    exp.Name,
-		Type:    exp.Type,
-		Command: exp.Command,
-		Args:    exp.Args,
-		Env:     exp.Env,
-		URL:     exp.URL,
-		Headers: exp.Headers,
-	}, err)
-}
-
 func (m chatTUI) openMCPConfig(v mcpServerView) (tea.Model, tea.Cmd) {
 	fallback := config.UserConfigPath()
 	if m.mcp != nil && strings.TrimSpace(m.mcp.snapshot.configPath) != "" {
@@ -304,7 +232,7 @@ func (m *chatTUI) handleMCPExternalDone(msg mcpExternalDoneMsg) tea.Cmd {
 	if m.mcpConnectBusy(msg.server) {
 		return nil
 	}
-	return m.startMCPConnect(msg.server, mcpConnectAuth, nil)
+	return m.startMCPConnect(msg.server, mcpConnectAuth)
 }
 
 func (m chatTUI) clearSelectedMCPAuthentication() (tea.Model, tea.Cmd) {
@@ -360,29 +288,6 @@ func (m chatTUI) clearMCPAuthentication(v mcpServerView) (tea.Model, tea.Cmd) {
 		m.notice("cleared local authentication state for " + v.Name)
 	}
 	return m, nil
-}
-
-func mcpModeIndex(tier string) int {
-	tier = normalizeMCPTierForCLI(tier)
-	for i, choice := range mcpTierChoices {
-		if choice == tier {
-			return i
-		}
-	}
-	return 0
-}
-
-func normalizeMCPTierForCLI(tier string) string {
-	switch strings.ToLower(strings.TrimSpace(tier)) {
-	case "eager":
-		return "eager"
-	case "background", "lazy":
-		return "background"
-	case "":
-		return "background"
-	default:
-		return "background"
-	}
 }
 
 type mcpEditConfigLaunch struct {

@@ -23,7 +23,6 @@ const (
 	SessionOriginNew             SessionOrigin = "new"
 	SessionOriginFork            SessionOrigin = "fork"
 	SessionOriginCanonicalImport SessionOrigin = "canonical-v4-import"
-	SessionOriginLegacyImport    SessionOrigin = "legacy-import"
 )
 
 // SessionHeader is immutable Desktop ownership metadata. It deliberately
@@ -69,7 +68,7 @@ func headerForCreate(options CreateOptions) (*SessionHeader, error) {
 
 func validSessionOrigin(origin SessionOrigin) bool {
 	switch origin {
-	case SessionOriginNew, SessionOriginFork, SessionOriginCanonicalImport, SessionOriginLegacyImport:
+	case SessionOriginNew, SessionOriginFork, SessionOriginCanonicalImport:
 		return true
 	default:
 		return false

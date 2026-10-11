@@ -28,12 +28,12 @@ func ShellExecutableNameFor(goos string) string {
 }
 
 // ShellMembers enumerates a complete shell tree without following symlinks.
-// Legacy flat releases may omit it; a present tree must contain its entry and
-// renderer resources before any version pointer can be committed.
+// The tree must contain its entry and renderer resources before the version
+// pointer can be committed.
 func ShellMembers(root, goos string) ([]Member, error) {
 	tree := filepath.Join(root, AppShellDirName)
 	if _, err := os.Lstat(tree); os.IsNotExist(err) {
-		return nil, nil
+		return nil, fmt.Errorf("shell tree is missing: %s", tree)
 	} else if err != nil {
 		return nil, err
 	}

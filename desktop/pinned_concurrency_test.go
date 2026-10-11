@@ -152,44 +152,40 @@ func TestGetPinnedFilesForTabDoesNotOverwriteNewerCachedPins(t *testing.T) {
 	}
 }
 
+func TestCanonicalPinnedContextRestoresBySessionIdentity(t *testing.T) {
+	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
+	if err := os.WriteFile(filepath.Join(tab.WorkspaceRoot, "context.md"), []byte("context"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.PinFileForTab(tab.ID, "context.md"); err != nil {
+		t.Fatal(err)
+	}
+	restored := &WorkspaceTab{SessionID: tab.SessionID}
+	restoreTabPinnedContext(restored)
+	if got := restored.GetPinnedFiles(); len(got) != 1 || got[0] != "context.md" {
+		t.Fatalf("restored pins = %v", got)
+	}
+	if got, err := app.GetPinnedFilesForTab(tab.ID); err != nil || len(got) != 1 || got[0].Path != "context.md" {
+		t.Fatalf("current pins = %+v, %v", got, err)
+	}
+	if tab.Ctrl.SessionPath() != "" {
+		t.Fatal("pinned context changed the execution selector to a path")
+	}
+}
+
 func TestNewSessionWaitsForPinAndClearsItsResult(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	oldRef, _ := configureSwitchableDefaultModels(t)
-	root := globalWorkspaceRoot()
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	path, err := createEmptySessionFile(desktopSessionDir(root), "old-model")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.SetBranchModelPreserveUpdated(path, oldRef); err != nil {
-		t.Fatal(err)
-	}
+	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
+	root := tab.WorkspaceRoot
 	if err := os.WriteFile(filepath.Join(root, "context.md"), []byte("context"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	exec := agent.New(nil, nil, agent.NewSession("BASE"), agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Executor: exec, SystemPrompt: "BASE", SessionDir: desktopSessionDir(root), SessionPath: path, Label: oldRef, Sink: event.Discard})
-	app := NewApp()
-	app.ctx = context.Background()
-	tab := &WorkspaceTab{
-		ID: "pin-new-race", Scope: "global", WorkspaceRoot: root, SessionPath: path,
-		Ready: true, Ctrl: ctrl, model: oldRef, disabledMCP: map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-	t.Cleanup(func() {
-		if tab.Ctrl != nil {
-			tab.Ctrl.Close()
-		}
-		tab.releaseSessionLease()
-	})
 
 	readStarted := make(chan struct{})
 	releaseRead := make(chan struct{})
 	var once sync.Once
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(releaseRead) }) }
+	t.Cleanup(release)
 	hook := func() {
 		once.Do(func() { close(readStarted) })
 		<-releaseRead
@@ -225,14 +221,18 @@ func TestNewSessionWaitsForPinAndClearsItsResult(t *testing.T) {
 		t.Fatalf("NewSession bypassed in-flight Pin: %v", err)
 	default:
 	}
-	close(releaseRead)
+	release()
 	if err := <-pinDone; err != nil {
 		t.Fatalf("PinFileForTab: %v", err)
 	}
 	if err := <-newDone; err != nil {
 		t.Fatalf("NewSessionForTab: %v", err)
 	}
-	state, err := loadPinnedContextState(tab.currentSessionPath())
+	statePath, err := controllerPinnedContextPath(tab.Ctrl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := loadPinnedContextState(statePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,11 @@ func TestRunningClearDoesNotMigrateOldPinnedCache(t *testing.T) {
 	if got := tab.GetPinnedFiles(); len(got) != 0 {
 		t.Fatalf("running clear retained cached pins: %v", got)
 	}
-	state, err := loadPinnedContextState(tab.currentSessionPath())
+	statePath, err := controllerPinnedContextPath(tab.Ctrl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := loadPinnedContextState(statePath)
 	if err != nil || len(state.Files) != 0 {
 		t.Fatalf("replacement pins = %+v, err=%v", state, err)
 	}

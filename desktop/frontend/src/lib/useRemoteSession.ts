@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRuntimeSession } from "./useRuntimeState";
-import { createLegacyRemotePolicyNoticeTracker } from "./legacyRemotePolicyNotice";
 import { app, onRemoteTabEvent, onRemoteTabState } from "./bridge";
 import { queuedFollowupOutcome } from "./pendingFollowup";
 import { onRemoteTabUpdated } from "./remoteTabEvents";
@@ -8,7 +7,6 @@ import { hydrateRemoteTelemetry, loadRemoteStatusSnapshot } from "./remoteTeleme
 import { remoteStatusTakenOver, remoteStatusToAction } from "./remoteStatus";
 import { isRemoteTakeoverError } from "./remoteErrors";
 import { useRemoteForkTurn } from "./remoteForkTurn";
-import { useT } from "./i18n";
 import type { CancelOutcome } from "./inboxCancel";
 import type { HistoryMessage } from "./types";
 import { createTurnSubmissionId, initialState, reducer, type ControllerLiveStore, type HistoryLoadOutcome, type HistoryLoadTrigger, type State } from "./useController";
@@ -18,7 +16,7 @@ import { getTranscriptStore } from "./transcriptStore";
 import type { NavigateToTurn } from "./historyTurnNavigation";
 import { historyReplaceAction } from "./sessionTranscriptMode";
 import { isAuthoritativeRemoteStatus, remoteCheckpoints, remoteComposerState, remoteGoalRuntime, remoteGoalView } from "./remoteStatus";
-import type { CollaborationMode, CommandInfo, EffortInfo, GoalLifecycleView, GoalRuntime, GoalStatus, QualityFloor, RemoteTabStateValue, TabMeta, ToolApprovalMode, WireEvent } from "./types";
+import type { CollaborationMode, CommandInfo, EffortInfo, GoalLifecycleView, GoalRuntime, GoalStatus, RemoteTabStateValue, TabMeta, ToolApprovalMode, WireEvent } from "./types";
 import type { RemoteAskAnswer } from "./remoteTypes";
 import type { ForkTargetView } from "./forkTargets";
 
@@ -56,7 +54,6 @@ export interface RemoteSessionApi {
     toolApprovalMode: ToolApprovalMode;
     goal: string;
     goalStatus?: GoalStatus;
-    qualityFloor: QualityFloor;
   };
   goalRuntime?: GoalRuntime;
   goalView?: GoalLifecycleView;
@@ -78,7 +75,6 @@ export interface RemoteSessionApi {
   acknowledgeFork: (operationId: string) => Promise<void>;
   setModel: (ref: string) => Promise<void>;
   setEffort: (level: string) => Promise<void>;
-  setQualityFloor: (floor: QualityFloor) => Promise<void>;
   pauseGoal: () => Promise<void>;
   resumeGoal: () => Promise<void>;
   editGoal: (objective: string, maxGoalRounds: number | null) => Promise<void>;
@@ -110,21 +106,12 @@ export function useActiveRemoteSession(
   activeTab: TabMeta | undefined,
   showToast: (message: string, level: "warn" | "error") => void,
 ) {
-	const t = useT();
 	const active = Boolean(activeTab?.remote);
 	const session = useRemoteSession(active && activeTab ? activeTab.id : undefined, activeTab?.remoteState, activeTab?.sessionPath);
 	const composer = useRemoteComposer(session, showToast);
-	useEffect(() => {
-		if (!activeTab?.remote || !activeTab.id) return;
-    const legacyQuality = session.transcript.items.some(item => item.kind === "notice" && (item.code === "final_readiness" || item.variant === "delivery"));
-		const key = `${activeTab.id}\u0000${activeTab.sessionPath ?? ""}`;
-    const notice = legacyRemotePolicyNotice(key, session.composerProfile?.qualityFloor, session.goalRuntime?.stopCause, legacyQuality);
-    if (notice) showToast(t(notice), "warn");
-	}, [activeTab?.remote, activeTab?.id, activeTab?.sessionPath, session.composerProfile?.qualityFloor, session.transcript.items, session.goalRuntime?.stopCause, showToast, t]);
 	return { active, session, ready: active && session.state === "ready" && session.hydrated && Boolean(session.composerProfile), ...composer };
 }
 
-const legacyRemotePolicyNotice = createLegacyRemotePolicyNoticeTracker();
 
 export function useRemoteSession(tabId: string | undefined, initial?: RemoteTabStateValue, sessionPath?: string): RemoteSessionApi {
   const runtimeState = useRuntimeSession(tabId, sessionPath);
@@ -688,14 +675,6 @@ export function useRemoteSession(tabId: string | undefined, initial?: RemoteTabS
     await refreshStatus();
   }, [refreshStatus, tabId]);
 
-  const setQualityFloor = useCallback(async (floor: QualityFloor) => {
-    if (!tabId) return;
-    // Compatibility only. The new client never asks an old server to change
-    // policy behind the user's back; its next status remains authoritative.
-    if (floor !== "standard" && floor !== "delivery") throw new Error(`Unknown retired execution setting: ${floor}`);
-    await app.SetRemoteTabQualityFloor(tabId, floor);
-  }, [tabId]);
-
   const pauseGoal = useCallback(async () => {
     if (!tabId) return;
     await app.PauseRemoteTabGoal(tabId);
@@ -726,7 +705,7 @@ export function useRemoteSession(tabId: string | undefined, initial?: RemoteTabS
   return {
     state, error, transcript, liveStore, hydrated, revalidating, syncMode: "v2", navigateToTurn: (target, current) => navigateRef.current?.(target, current) ?? Promise.resolve("cancelled"), loadOlderHistory: (_targetTurn?: number, trigger?: HistoryLoadTrigger) => olderRef.current?.(trigger) ?? Promise.resolve("empty"), loadNewerHistory: (latest = false, current) => newerRef.current?.(latest, current) ?? Promise.resolve("empty"), running: transcript.running, modelLabel, commands,
     composerProfile, goalRuntime, goalView, effort, surfaceGeneration, promptError, submit, runManagementCommand, compact, cancelTurn,
-    approve, resolvePlanDecision, answer, clearExtensionForm, rewind, forkTurn, acknowledgeFork, setModel, setEffort, setQualityFloor, pauseGoal, resumeGoal, editGoal, steer, cancelJob,
+    approve, resolvePlanDecision, answer, clearExtensionForm, rewind, forkTurn, acknowledgeFork, setModel, setEffort, pauseGoal, resumeGoal, editGoal, steer, cancelJob,
     drainApprovals, retryHydration,
   };
 }

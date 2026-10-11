@@ -32,7 +32,6 @@ type machineHookList struct {
 type machineHookStatus struct {
 	SchemaVersion  int                 `json:"schema_version"`
 	Command        string              `json:"command"`
-	TrustedProject bool                `json:"trusted_project"`
 	ProjectDefines bool                `json:"project_defines"`
 	Sources        []machineHookSource `json:"sources"`
 }
@@ -106,7 +105,6 @@ func runHookCommand(args []string, out io.Writer) int {
 	return writeMachineJSON(out, machineHookStatus{
 		SchemaVersion:  machineSchemaVersion,
 		Command:        command,
-		TrustedProject: inspection.TrustedProject,
 		ProjectDefines: inspection.ProjectDefines,
 		Sources:        sources,
 	})

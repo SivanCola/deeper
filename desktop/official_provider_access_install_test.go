@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -40,7 +39,7 @@ language = "zh"
 	if pro == nil || pro.Output != 3.96 || pro.Currency != "$" {
 		t.Fatalf("pro price = %+v, want frozen USD official table", pro)
 	}
-	if got := cfg.ResolveDisplayCurrency(); got != "" {
+	if got := cfg.ExplicitDisplayCurrency(); got != "" {
 		t.Fatalf("display currency = %q, want unresolved auto", got)
 	}
 }
@@ -76,75 +75,6 @@ headers = { X-Route = "official-custom" }
 	}
 	if !providerAccessSet(cfg.Desktop.ProviderAccess)["deepseek"] {
 		t.Fatalf("provider_access missing preserved DeepSeek provider: %+v", cfg.Desktop.ProviderAccess)
-	}
-}
-
-func TestAddOfficialProviderAccessRepairsCatalogWithoutResettingOfficialTransport(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	if err := os.MkdirAll(filepath.Dir(config.UserConfigPath()), 0o755); err != nil {
-		t.Fatalf("mkdir config dir: %v", err)
-	}
-	if err := os.WriteFile(config.UserConfigPath(), []byte(`
-[[providers]]
-name = "deepseek"
-kind = "openai"
-base_url = "https://api.deepseek.com/v1"
-api_key_env = "MY_DEEPSEEK_KEY"
-headers = { X-Route = "official-custom" }
-`), 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-
-	if _, err := NewApp().AddOfficialProviderAccess("deepseek", "test-key"); err != nil {
-		t.Fatalf("AddOfficialProviderAccess: %v", err)
-	}
-	cfg := config.LoadForEditWithoutCredentials(config.UserConfigPath())
-	p, ok := cfg.Provider("deepseek")
-	if !ok {
-		t.Fatal("deepseek provider not saved")
-	}
-	if p.Kind != "openai" || p.BaseURL != "https://api.deepseek.com/v1" || p.APIKeyEnv == "MY_DEEPSEEK_KEY" || p.Headers["X-Route"] != "official-custom" {
-		t.Fatalf("official transport customization was overwritten: %+v", p)
-	}
-	if got := p.ModelList(); !slices.Equal(got, []string{"deepseek-flash", "deepseek-v4-pro"}) {
-		t.Fatalf("repaired model catalog = %v, want current official Flash/Pro models", got)
-	}
-	if !config.CredentialStored(p.APIKeyEnv) || config.CredentialStored("MY_DEEPSEEK_KEY") || config.CredentialStored("DEEPSEEK_API_KEY") {
-		t.Fatal("credential was not saved exclusively under the new connection reference")
-	}
-}
-
-func TestAddOfficialProviderAccessRetargetsLegacyDeepSeekReferences(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	if err := os.MkdirAll(filepath.Dir(config.UserConfigPath()), 0o755); err != nil {
-		t.Fatalf("mkdir config dir: %v", err)
-	}
-	if err := os.WriteFile(config.UserConfigPath(), []byte(`
-default_model = "deepseek-flash"
-
-[agent]
-planner_model = "deepseek-pro"
-subagent_model = "deepseek-flash/custom-flash"
-subagent_models = { vision = "deepseek-pro/custom-pro", keep = "other/model" }
-
-[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-api_key_env = "DEEPSEEK_API_KEY"
-`), 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-
-	if _, err := NewApp().AddOfficialProviderAccess("deepseek", ""); err != nil {
-		t.Fatalf("AddOfficialProviderAccess: %v", err)
-	}
-	cfg := config.LoadForEditWithoutCredentials(config.UserConfigPath())
-	if cfg.DefaultModel != "deepseek/deepseek-v4-flash" || cfg.Agent.PlannerModel != "deepseek/deepseek-v4-pro" ||
-		cfg.Agent.SubagentModel != "deepseek/custom-flash" || cfg.Agent.SubagentModels["vision"] != "deepseek/custom-pro" ||
-		cfg.Agent.SubagentModels["keep"] != "other/model" {
-		t.Fatalf("legacy DeepSeek references were not retargeted: default=%q planner=%q subagent=%q skills=%v",
-			cfg.DefaultModel, cfg.Agent.PlannerModel, cfg.Agent.SubagentModel, cfg.Agent.SubagentModels)
 	}
 }
 

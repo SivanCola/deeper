@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"deepzora/desktop/internal/update"
-	"deepzora/internal/installlayout"
 	"deepzora/internal/repair"
 )
 
@@ -27,13 +26,12 @@ var errUpdateInProgress = errors.New("update: another download or install is alr
 var updaterRequestIDRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
 var (
-	pendingUpdateExistsForInstall            = repair.PendingUpdateExists
-	archiveSupersededPendingUpdateForInstall = archiveSupersededPendingUpdateAfterReady
-	reconcilePendingUpdateForInstall         = repair.ReconcilePendingUpdate
-	readPendingUpdateForHealth               = repair.ReadPendingUpdate
-	markPendingUpdateHealthyAfterReady       = repair.MarkUpdateHealthyExact
-	updaterHTTPClient                        = httpClient
-	updaterHTTPClientIPv4                    = httpClientIPv4
+	pendingUpdateExistsForInstall      = repair.PendingUpdateExists
+	reconcilePendingUpdateForInstall   = repair.ReconcilePendingUpdate
+	readPendingUpdateForHealth         = repair.ReadPendingUpdate
+	markPendingUpdateHealthyAfterReady = repair.MarkUpdateHealthyExact
+	updaterHTTPClient                  = httpClient
+	updaterHTTPClientIPv4              = httpClientIPv4
 )
 
 func validateUpdaterRequest(requestID, selectedChannel, expectedVersion string) (string, string, string, error) {
@@ -41,7 +39,10 @@ func validateUpdaterRequest(requestID, selectedChannel, expectedVersion string) 
 	if !updaterRequestIDRE.MatchString(requestID) {
 		return "", "", "", fmt.Errorf("update: invalid request id")
 	}
-	selectedChannel = targetUpdateChannel(selectedChannel)
+	selectedChannel = normalizeUpdateChannel(selectedChannel)
+	if selectedChannel == "" {
+		return "", "", "", fmt.Errorf("update: unsupported channel")
+	}
 	expectedVersion = strings.TrimSpace(expectedVersion)
 	if !stableDesktopVersionRE.MatchString(expectedVersion) {
 		return "", "", "", fmt.Errorf("update: invalid %s version %q", selectedChannel, expectedVersion)
@@ -89,6 +90,9 @@ func (a *App) CheckUpdate(selectedChannel string) (*UpdateInfo, error) {
 		return &UpdateInfo{Current: version, Channel: "stable"}, nil
 	}
 	selectedChannel = targetUpdateChannel(selectedChannel)
+	if selectedChannel == "" {
+		return nil, fmt.Errorf("update: unsupported channel")
+	}
 	profile := detectInstallProfile()
 	c, err := updaterHTTPClient()
 	if err != nil {
@@ -279,11 +283,6 @@ func (a *App) reconcilePendingUpdateForRequest(requestID string, meta *cachedUpd
 		// an eligible superseded app-bundle or flat-layout transaction here as
 		// well as in the delayed post-DOM health task, so an immediate click never
 		// has to fail once and ask the user to retry.
-		if archived, archiveErr := archiveSupersededPendingUpdateForInstall(); archiveErr != nil {
-			slog.Debug("desktop: superseded update was not eligible for automatic archival", "err", archiveErr)
-		} else if archived {
-			slog.Info("desktop: archived superseded update before install")
-		}
 		// Visible UI at the pending target is health evidence — heal before
 		// reconcile so a missed post-DOM task does not block the next update.
 		// Exact and probationary commits are independent best-effort paths.
@@ -340,11 +339,6 @@ func (a *App) AbandonPendingUpdate() error {
 	if err := a.commitPendingUpdateHealth(); err != nil {
 		slog.Debug("desktop: commit healthy update during abandon", "err", err)
 	}
-	if archived, err := archiveSupersededPendingUpdateForInstall(); err != nil {
-		slog.Debug("desktop: archive superseded update during abandon", "err", err)
-	} else if archived {
-		return nil
-	}
 	if _, err := repair.AbandonPendingUpdate(version); err != nil {
 		return fmt.Errorf("could not discard the previous update: %w", err)
 	}
@@ -384,23 +378,10 @@ func (a *App) installDebUpdate(requestID string, meta *cachedUpdate) error {
 
 func (a *App) installPortableUpdate(requestID string, meta *cachedUpdate, data []byte) error {
 	a.emitProgress(requestID, meta.Channel, meta.Version, "installing", meta.Size, meta.Size, "")
-	var preparedUpdate *repair.UpdateTransaction
-	versionedPortable := (runtime.GOOS == "windows" || runtime.GOOS == "linux") && installlayout.HasCurrent(currentInstallDir())
-	if runtime.GOOS == "windows" && !versionedPortable {
-		// Back up the complete legacy release unit (main binary plus launcher
-		// and migration siblings) so rollback never leaves a mixed-version
-		// install. Deb installs deliberately skip this because package-manager
-		// state owns /usr/bin.
-		var err error
-		preparedUpdate, err = repair.PrepareFileUpdate(version, meta.Version, currentExecutablePath(), updateSiblingArtifacts()...)
-		if err != nil {
-			return a.failUpdate(requestID, meta.Channel, meta.Version, err)
-		}
-	}
 	var err error
 	switch runtime.GOOS {
 	case "windows":
-		err = applyWindowsFile(meta.Path, meta.SHA256, meta.Version, preparedUpdate)
+		err = applyWindowsFile(meta.Path, meta.SHA256, meta.Version)
 	case "darwin":
 		err = applyMac(meta.Path, meta.Version, a.updateHandoffOwnerPID())
 	case "linux":
@@ -409,41 +390,9 @@ func (a *App) installPortableUpdate(requestID string, meta *cachedUpdate, data [
 		err = fmt.Errorf("self-update unsupported on %s", runtime.GOOS)
 	}
 	if err != nil {
-		if runtime.GOOS == "linux" {
-			// applyLinux replaces the legacy migration member before the main
-			// binary swap, so a failure can already have produced a mixed
-			// install. Restore the recorded release unit immediately; if that
-			// fails, retain the transaction for explicit repair/reconciliation.
-			if preparedUpdate != nil {
-				if _, rollbackErr := repair.RollbackPendingUpdateExact(preparedUpdate); rollbackErr != nil {
-					err = errors.Join(err, fmt.Errorf("restore prepared release unit: %w", rollbackErr))
-				} else if clearErr := repair.ClearUpdateApplyFailureExact(preparedUpdate); clearErr != nil {
-					err = errors.Join(err, fmt.Errorf("clear update recovery marker: %w", clearErr))
-				}
-			}
-		} else if runtime.GOOS == "windows" {
-			// The helper may fail to start after another same-version attempt
-			// has prepared a newer transaction. Cancel only this attempt.
-			if preparedUpdate != nil {
-				if cancelErr := repair.CancelPendingUpdateExact(preparedUpdate); cancelErr != nil {
-					err = errors.Join(err, fmt.Errorf("cancel prepared update: %w", cancelErr))
-				}
-			}
-		} else if runtime.GOOS != "darwin" {
-			if preparedUpdate != nil {
-				if cancelErr := repair.CancelPendingUpdateExact(preparedUpdate); cancelErr != nil {
-					err = errors.Join(err, fmt.Errorf("cancel prepared update: %w", cancelErr))
-				}
-			}
-		}
 		return a.failUpdate(requestID, meta.Channel, meta.Version, err)
 	}
-
 	a.emitProgress(requestID, meta.Channel, meta.Version, "done", meta.Size, meta.Size, "")
-
-	// Persist the conversation and stop subprocesses before handing off (same as
-	// shutdown). On Linux the binary is now replaced, so relaunch it; on Windows and
-	// macOS the installer/helper we launched takes over once we exit.
 	a.relaunchAfterPortableUpdate()
 	return nil
 }

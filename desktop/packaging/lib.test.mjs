@@ -163,7 +163,7 @@ test("signing files are every PE file, sorted, deduplicated and slash-normalised
   ]);
   assert.deepEqual(files, ["app/Deepzora.exe", "app/d3dcompiler_47.DLL", "app/ffmpeg.dll", "deepzora-desktop.exe", "deepzora-uninstall.exe"]);
   assert.deepEqual(parseSigningFileList("# comment\r\napp/Deepzora.exe\n\n deepzora-cli.exe \n"), ["app/Deepzora.exe", "deepzora-cli.exe"]);
-  assert.deepEqual([...WINDOWS_FLAT_PAYLOAD], ["deepzora-desktop.exe", "deepzora-guard.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "deepzora-uninstall.exe"]);
+  assert.deepEqual([...WINDOWS_FLAT_PAYLOAD], ["deepzora-desktop.exe", "deepzora-layout-installer.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "deepzora-uninstall.exe"]);
 });
 
 test("required members cover every artifact and the checks report gaps", () => {
@@ -189,7 +189,7 @@ test("required members cover every artifact and the checks report gaps", () => {
   assert.deepEqual(checkMembers([...portable, "unexpected.EXE"], "windows-portable-zip").forbidden, ["unexpected.EXE"]);
   assert.throws(() => checkMembers(portable, "windows-portable-zip", "auto"), /unknown Windows portable layout/);
   assert.deepEqual(checkMembers(portable.filter((name) => !name.endsWith("app/Deepzora.exe")), "windows-portable-zip").missing, [String(/^versions\/v[^/]+\/app\/Deepzora\.exe$/)]);
-  assert.deepEqual(checkMembers([...portable, "deepzora-guard.exe"], "windows-portable-zip").forbidden, ["deepzora-guard.exe"]);
+  assert.deepEqual(checkMembers([...portable, "deepzora-layout-installer.exe"], "windows-portable-zip").forbidden, ["deepzora-layout-installer.exe"]);
 
   const winApp = ["Deepzora.exe", "ffmpeg.dll", "libEGL.dll", "libGLESv2.dll", "resources.pak", "icudtl.dat", "locales\\en-US.pak", "resources\\app.asar", "resources\\app\\index.html", "resources\\build.json", "resources\\icons\\appicon.png", "resources\\icons\\trayTemplate.png", "resources\\icons\\trayTemplate@2x.png"];
   assert.deepEqual(checkMembers(winApp, "windows-app-dir"), { missing: [], forbidden: [] });

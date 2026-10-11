@@ -570,10 +570,7 @@ func (c *Controller) emitTurnDoneEvent(err error, cancelRequested bool, completi
 	if !cancelRequested {
 		done.ProtocolRecovery = c.executor.PendingProtocolRecovery()
 	}
-	var readinessErr *agent.FinalReadinessError
-	if errors.As(err, &readinessErr) {
-		done.Readiness = &event.FinalReadiness{Attempts: readinessErr.Attempts, Missing: append([]string(nil), readinessErr.Missing...)}
-	}
+
 	c.onInboxTurnDone()
 	c.sink.Emit(done)
 }

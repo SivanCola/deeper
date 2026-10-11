@@ -145,16 +145,16 @@ func TestSubmitInitialGoalAppliesToolApprovalProfileBeforeSubmit(t *testing.T) {
 		"ship with YOLO",
 		nil,
 		"normal",
-		string(control.ToolApprovalYolo),
+		string(control.ToolApprovalDangerFullAccess),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tab.toolApprovalMode != string(control.ToolApprovalYolo) {
-		t.Fatalf("tab approval mode = %q, want %q", tab.toolApprovalMode, control.ToolApprovalYolo)
+	if tab.toolApprovalMode != string(control.ToolApprovalDangerFullAccess) {
+		t.Fatalf("tab approval mode = %q, want %q", tab.toolApprovalMode, control.ToolApprovalDangerFullAccess)
 	}
-	if got := recorder.ToolApprovalMode(); got != string(control.ToolApprovalYolo) {
-		t.Fatalf("controller approval mode = %q, want %q", got, control.ToolApprovalYolo)
+	if got := recorder.ToolApprovalMode(); got != string(control.ToolApprovalDangerFullAccess) {
+		t.Fatalf("controller approval mode = %q, want %q", got, control.ToolApprovalDangerFullAccess)
 	}
 	if recorder.input != "ship with YOLO" {
 		t.Fatalf("recorded input = %q, want first Goal input", recorder.input)

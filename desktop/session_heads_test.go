@@ -56,7 +56,7 @@ func newSchemaTwoTabFixture(t *testing.T) schemaTwoTabFixture {
 	mode := uint32(info.Mode().Perm())
 	before, afterExists := "before", true
 	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{
-		SchemaVersion: checkpoint.SchemaV2, Turn: 1, Time: time.Now(), Prompt: "edit", MsgIndex: 3,
+		SchemaVersion: checkpoint.SchemaV3, Turn: 1, Time: time.Now(), Prompt: "edit", MsgIndex: 3,
 		Coverage: checkpoint.CoverageComplete,
 		Files: []checkpoint.FileSnap{{
 			Path: "a.txt", Content: &before, SHA256: checkpoint.Digest([]byte(before)), Mode: mode,
@@ -182,32 +182,6 @@ func TestCommitRewindForTabOpensIndependentChild(t *testing.T) {
 	reloaded, err := agent.LoadSession(fx.path)
 	if err != nil || len(reloaded.Messages) != 5 {
 		t.Fatalf("reload after undo = %d messages err=%v, want the parent head persisted as current", len(reloaded.Messages), err)
-	}
-}
-
-func TestChooseLegacyRecoveryHeadMaterializesIndependentSession(t *testing.T) {
-	fx := newSchemaTwoTabFixture(t)
-	from := fx.session.Snapshot()[2].ID
-	fork, err := fx.session.ForkHead(fx.path, from, agent.HeadKindFork, "alternative")
-	if err != nil {
-		t.Fatal(err)
-	}
-	req := RecoveryPreferenceRequest{Scope: "global", TopicID: "topic", Path: fx.path, HeadID: agent.SessionMainHead}
-	if err := fx.app.ChooseRecoveryBranch(req); err != nil {
-		t.Fatalf("ChooseRecoveryBranch(main): %v", err)
-	}
-	if got := len(fx.ctrl.History()); got != 5 || fx.ctrl.SessionPath() == fx.path {
-		t.Fatalf("after choosing main: history %d path %q", got, fx.ctrl.SessionPath())
-	}
-	if gen := fx.app.tabs["test"].SessionGeneration; gen != 1 {
-		t.Fatalf("session generation = %d, want one materialization bump", gen)
-	}
-	heads, err := agent.ListSessionHeads(fx.path)
-	if err != nil || len(heads) != 2 || heads[1].ID != fork || !heads[1].Selected {
-		t.Fatalf("legacy source was modified while materializing: %+v err=%v", heads, err)
-	}
-	if err := fx.app.ChooseRecoveryBranch(RecoveryPreferenceRequest{Scope: "global", TopicID: "topic", Path: fx.path, HeadID: "missing"}); err == nil {
-		t.Fatal("choosing an unknown head must fail")
 	}
 }
 

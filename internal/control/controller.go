@@ -30,8 +30,6 @@ import (
 
 	"deepzora/internal/ablation"
 	"deepzora/internal/agent"
-	"deepzora/internal/agentpreset"
-	"deepzora/internal/autoresearch"
 	"deepzora/internal/billing"
 	"deepzora/internal/capability"
 	"deepzora/internal/checkpoint"
@@ -72,9 +70,6 @@ import (
 // ErrTurnRunning reports that a caller tried to start a second foreground turn
 // while one is already active in the same Controller.
 var ErrTurnRunning = errors.New("turn already running")
-
-// ErrNoFinalReadinessRecovery is retained for old recovery-action clients.
-var ErrNoFinalReadinessRecovery = errors.New("final_readiness_recovery_retired: readiness recovery actions can no longer restore evidence or replay checks")
 
 // ErrRuntimeDraining reports that a caller targeted a controller generation
 // superseded by a successful rebuild.
@@ -182,20 +177,19 @@ type Controller struct {
 	// Zero uses the documented 15 second boundary.
 	testCancelGrace time.Duration
 
-	shell                             sandbox.Shell // interpreter for user-invoked "!" commands; zero = auto
-	startedOnce                       bool          // guards the one-shot SessionStart hook on first turn
-	closeOnce                         sync.Once     // makes close idempotent under racing teardown paths
-	closeFinalizeOnce                 sync.Once     // releases persistence/resources only after the terminal boundary
-	closeFinalized                    chan struct{} // closes after every controller-owned resource has been released
-	closeFireSessionEnd               bool
-	closeJobsMode                     closeJobsMode
-	onRemember                        func(rule string) RememberResult // set via Options; invoked when user picks "always allow"
-	onRememberPlanModeReadOnlyCommand func(prefix string) PlanModeReadOnlyCommandTrustResult
-	writeAccess                       controllerWriteAccess
-	sessionRecoveryMeta               func(SessionRecoveryRequest) agent.BranchMeta
-	onSessionRecovered                func(SessionRecoveryInfo) error
-	onSessionTransition               func(SessionTransitionInfo) error
-	onSessionRotation                 func(context.Context, SessionRotationRequest) (SessionRotationPlan, error)
+	shell               sandbox.Shell // interpreter for user-invoked "!" commands; zero = auto
+	startedOnce         bool          // guards the one-shot SessionStart hook on first turn
+	closeOnce           sync.Once     // makes close idempotent under racing teardown paths
+	closeFinalizeOnce   sync.Once     // releases persistence/resources only after the terminal boundary
+	closeFinalized      chan struct{} // closes after every controller-owned resource has been released
+	closeFireSessionEnd bool
+	closeJobsMode       closeJobsMode
+	onRemember          func(rule string) RememberResult // set via Options; invoked when user picks "always allow"
+	writeAccess         controllerWriteAccess
+	sessionRecoveryMeta func(SessionRecoveryRequest) agent.BranchMeta
+	onSessionRecovered  func(SessionRecoveryInfo) error
+	onSessionTransition func(SessionTransitionInfo) error
+	onSessionRotation   func(context.Context, SessionRotationRequest) (SessionRotationPlan, error)
 
 	// balanceURL/balanceKey target the active provider's optional wallet-balance
 	// endpoint (empty when the provider declares none). Captured at build so a
@@ -279,9 +273,6 @@ type Controller struct {
 	// legacyResearchArchive reads explicit pre-unification task paths. It never
 	// creates or mutates archive state. See
 	// autoresearch_manager.go.
-	legacyResearchArchive legacyResearchArchive
-	legacyRestoreMu       sync.Mutex
-	legacyRestore         legacyGoalRestore
 
 	// workspaceRoot is the workspace root: the base for resolving @-refs and slash
 	// path refs, the working directory for user "!" shell commands and custom
@@ -427,7 +418,6 @@ type controllerSessionBinding struct {
 	sessionRuntime       *session.Runtime
 	sessionBinding       *session.ClientBinding
 	exclusiveSession     bool
-	nativeLegacySession  bool
 	// Only Serve opts into session-scoped preset restoration. TUI and Desktop
 	// keep their own live permission policy across canonical session binds.
 	servePresetRestore bool
@@ -467,13 +457,6 @@ const (
 	ToolApprovalReadOnly         = string(permissionpreset.ReadOnly)
 	ToolApprovalWorkspaceWrite   = string(permissionpreset.WorkspaceWrite)
 	ToolApprovalDangerFullAccess = string(permissionpreset.DangerFullAccess)
-	ToolApprovalDontAsk          = "dontAsk"
-
-	// Deprecated source aliases. Persisted legacy strings are migrated by
-	// normalizeToolApprovalMode; these names keep older integrations building.
-	ToolApprovalAsk  = ToolApprovalReadOnly
-	ToolApprovalAuto = ToolApprovalWorkspaceWrite
-	ToolApprovalYolo = ToolApprovalDangerFullAccess
 )
 
 const (
@@ -484,16 +467,6 @@ const (
 // RememberResult describes what happened when an approval rule was persisted.
 type RememberResult struct {
 	Rule      string
-	Path      string
-	Saved     bool
-	CoveredBy string
-	Err       error
-}
-
-// PlanModeReadOnlyCommandTrustResult describes what happened when a trusted bash
-// command prefix was persisted for plan-mode research.
-type PlanModeReadOnlyCommandTrustResult struct {
-	Prefix    string
 	Path      string
 	Saved     bool
 	CoveredBy string
@@ -567,12 +540,9 @@ type Options struct {
 	TaskBudget agent.TaskBudget
 	// GoalTokenBudget bounds an unattended Goal loop by cumulative tokens.
 	GoalTokenBudget int
-	// GoalEvaluator is accepted only for source compatibility.
-	// when the working model submits no update_goal report. nil fails closed:
-	// the goal pauses instead of defaulting to continue.
-	GoalEvaluator any // deprecated: accepted but never invoked
-	Sink          event.Sink
-	Policy        permission.Policy
+
+	Sink   event.Sink
+	Policy permission.Policy
 	// SubagentGate is the shared, mutable gate every headless-only sub-agent
 	// surface (task, writer-capable skill sub-agents, planner) reads from. Nil
 	// disables gating for those surfaces same as before this field existed.
@@ -619,7 +589,6 @@ type Options struct {
 	SessionCreateService *session.Service
 	SessionRuntime       *session.Runtime
 	ExclusiveSession     bool
-	NativeLegacySession  bool
 	Host                 *plugin.Host
 	// MCPHostProfile is the surface lazily created hosts declare; injected
 	// hosts keep their own profile.
@@ -707,10 +676,6 @@ type Options struct {
 	// persist to disk (e.g. "Bash(go test:*)"). The callback is wired into the
 	// permission Gate on EnableInteractiveApproval.
 	OnRemember func(rule string) RememberResult
-	// OnRememberPlanModeReadOnlyCommand persists a bash command prefix as trusted
-	// read-only when the user chooses "always allow" from the plan-mode trust
-	// prompt.
-	OnRememberPlanModeReadOnlyCommand func(prefix string) PlanModeReadOnlyCommandTrustResult
 	// OnPersistWriteAccess writes sandbox.allow_write and an optional permission
 	// rule to the workspace deepzora.toml as one transaction.
 	OnPersistWriteAccess PersistWriteAccessFunc
@@ -806,60 +771,59 @@ func New(opts Options) *Controller {
 	}
 	sessionRuntime, sessionBinding := bindInitialSessionRuntime(opts)
 	c := &Controller{
-		authentication:                    newAuthenticationGate(opts.Authentication, opts.ModelRef),
-		taskBudget:                        opts.TaskBudget,
-		goalTokenBudget:                   opts.GoalTokenBudget,
-		goalTokenLimit:                    opts.GoalTokenBudget,
-		goals:                             goalMachine{tokenBudget: opts.GoalTokenBudget},
-		runner:                            opts.Runner,
-		executor:                          opts.Executor,
-		guardianSess:                      opts.Guardian,
-		guardianPath:                      guardian.PathFor(opts.SessionPath),
-		goalUsageTee:                      usageTee,
-		sink:                              sink,
-		policy:                            opts.Policy,
-		subagentGate:                      opts.SubagentGate,
-		label:                             opts.Label,
-		selection:                         modelSelection{ref: opts.ModelRef, identity: opts.ModelIdentity},
-		resolveSessionModel:               opts.ResolveSessionModel,
-		visionModel:                       strings.TrimSpace(opts.VisionModel),
-		visionProviderResolver:            opts.VisionProviderResolver,
-		visionModelSelector:               opts.VisionModelSelector,
-		modelCapabilityResolver:           opts.ModelCapabilityResolver,
-		frozenImageInput:                  opts.FrozenImageInput,
-		imageCapabilityChanged:            opts.ImageCapabilityChanged,
-		modelSettings:                     newControllerModelSettings(opts),
-		prompt:                            newControllerPromptState(opts.SystemPrompt, opts.Executor),
-		pinnedContextLoader:               opts.PinnedContextLoader,
-		sessionContextStatic:              opts.SessionContextStatic,
-		sessionDir:                        opts.SessionDir,
-		sessionPath:                       opts.SessionPath,
-		controllerSessionBinding:          controllerSessionBinding{sessionService: opts.SessionService, sessionCreateService: opts.SessionCreateService, sessionRuntime: sessionRuntime, sessionBinding: sessionBinding, exclusiveSession: opts.ExclusiveSession, nativeLegacySession: opts.NativeLegacySession},
-		commands:                          atomic.Pointer[[]command.Command]{},
-		skills:                            newSkillSet(opts.Skills, opts.AllSkills, opts.SkillStore, opts.AllSkillStore),
-		disableImplicitSkillInvocation:    opts.DisableImplicitSkillInvocation,
-		skillRunner:                       opts.SkillRunner,
-		readOnlySkillRunner:               opts.ReadOnlySkillRunner,
-		skillProfile:                      opts.SkillProfile,
-		hooks:                             opts.Hooks,
-		memory:                            newMemoryManager(opts.Memory),
-		cleanup:                           opts.Cleanup,
-		responseLanguage:                  config.NormalizeLanguage(opts.ResponseLanguage),
-		reasoningLanguage:                 config.NormalizeReasoningLanguage(opts.ReasoningLanguage),
-		disableColdResumePrune:            opts.DisableColdResumePrune,
-		headPolicy:                        sessionHeadPolicy{fileBranchesOnly: opts.FileBranchesOnly},
-		shell:                             opts.Shell,
-		onRemember:                        opts.OnRemember,
-		onRememberPlanModeReadOnlyCommand: opts.OnRememberPlanModeReadOnlyCommand,
-		writeAccess:                       newControllerWriteAccess(opts),
-		sessionRecoveryMeta:               opts.SessionRecoveryMeta,
-		onSessionRecovered:                opts.OnSessionRecovered,
-		onSessionTransition:               opts.OnSessionTransition,
-		onSessionRotation:                 opts.OnSessionRotation,
-		balanceURL:                        opts.BalanceURL,
-		balanceKey:                        opts.BalanceKey,
-		balanceClient:                     opts.BalanceClient,
-		jobs:                              opts.Jobs,
+		authentication:                 newAuthenticationGate(opts.Authentication, opts.ModelRef),
+		taskBudget:                     opts.TaskBudget,
+		goalTokenBudget:                opts.GoalTokenBudget,
+		goalTokenLimit:                 opts.GoalTokenBudget,
+		goals:                          goalMachine{tokenBudget: opts.GoalTokenBudget},
+		runner:                         opts.Runner,
+		executor:                       opts.Executor,
+		guardianSess:                   opts.Guardian,
+		guardianPath:                   guardian.PathFor(opts.SessionPath),
+		goalUsageTee:                   usageTee,
+		sink:                           sink,
+		policy:                         opts.Policy,
+		subagentGate:                   opts.SubagentGate,
+		label:                          opts.Label,
+		selection:                      modelSelection{ref: opts.ModelRef, identity: opts.ModelIdentity},
+		resolveSessionModel:            opts.ResolveSessionModel,
+		visionModel:                    strings.TrimSpace(opts.VisionModel),
+		visionProviderResolver:         opts.VisionProviderResolver,
+		visionModelSelector:            opts.VisionModelSelector,
+		modelCapabilityResolver:        opts.ModelCapabilityResolver,
+		frozenImageInput:               opts.FrozenImageInput,
+		imageCapabilityChanged:         opts.ImageCapabilityChanged,
+		modelSettings:                  newControllerModelSettings(opts),
+		prompt:                         newControllerPromptState(opts.SystemPrompt, opts.Executor),
+		pinnedContextLoader:            opts.PinnedContextLoader,
+		sessionContextStatic:           opts.SessionContextStatic,
+		sessionDir:                     opts.SessionDir,
+		sessionPath:                    opts.SessionPath,
+		controllerSessionBinding:       controllerSessionBinding{sessionService: opts.SessionService, sessionCreateService: opts.SessionCreateService, sessionRuntime: sessionRuntime, sessionBinding: sessionBinding, exclusiveSession: opts.ExclusiveSession},
+		commands:                       atomic.Pointer[[]command.Command]{},
+		skills:                         newSkillSet(opts.Skills, opts.AllSkills, opts.SkillStore, opts.AllSkillStore),
+		disableImplicitSkillInvocation: opts.DisableImplicitSkillInvocation,
+		skillRunner:                    opts.SkillRunner,
+		readOnlySkillRunner:            opts.ReadOnlySkillRunner,
+		skillProfile:                   opts.SkillProfile,
+		hooks:                          opts.Hooks,
+		memory:                         newMemoryManager(opts.Memory),
+		cleanup:                        opts.Cleanup,
+		responseLanguage:               config.NormalizeLanguage(opts.ResponseLanguage),
+		reasoningLanguage:              config.NormalizeReasoningLanguage(opts.ReasoningLanguage),
+		disableColdResumePrune:         opts.DisableColdResumePrune,
+		headPolicy:                     sessionHeadPolicy{fileBranchesOnly: opts.FileBranchesOnly},
+		shell:                          opts.Shell,
+		onRemember:                     opts.OnRemember,
+		writeAccess:                    newControllerWriteAccess(opts),
+		sessionRecoveryMeta:            opts.SessionRecoveryMeta,
+		onSessionRecovered:             opts.OnSessionRecovered,
+		onSessionTransition:            opts.OnSessionTransition,
+		onSessionRotation:              opts.OnSessionRotation,
+		balanceURL:                     opts.BalanceURL,
+		balanceKey:                     opts.BalanceKey,
+		balanceClient:                  opts.BalanceClient,
+		jobs:                           opts.Jobs,
 		background: controllerBackground{scope: opts.BackgroundScope, sink: opts.BackgroundSink,
 			candidate: opts.BackgroundScope != nil && opts.BackgroundScope.Manager.ReplacementInProgress()},
 		workspaceLease:         opts.WorkspaceLease,
@@ -875,7 +839,7 @@ func New(opts Options) *Controller {
 		runtimeGeneration:      opts.RuntimeGeneration,
 		runtimeOwner:           runtimeOwner,
 		goalDriverControl:      goalDriverControl{ctx: goalDriverCtx, cancel: goalDriverCancel},
-		approval:               newApprovalManager(opts.Policy, ToolApprovalAsk, opts.ApprovalTimeout),
+		approval:               newApprovalManager(opts.Policy, ToolApprovalReadOnly, opts.ApprovalTimeout),
 		turns:                  turnLoop{phase: session.RuntimeIdle},
 		closeFinalized:         make(chan struct{}),
 	}
@@ -903,9 +867,6 @@ func (c *Controller) initializeOwnedResources(opts Options) {
 	c.sessionTemp.Retain()
 	c.persistentShell = controllerPersistentShell(opts.PersistentShell)
 	c.persistentShell.Retain()
-	if strings.TrimSpace(opts.WorkspaceRoot) != "" {
-		c.legacyResearchArchive = legacyResearchArchive{store: autoresearch.NewStore(opts.WorkspaceRoot)}
-	}
 	if opts.Extensions != nil {
 		c.extensions = opts.Extensions
 		c.sink = newFrontendEventSink(c.sink, opts.Extensions)
@@ -938,8 +899,28 @@ func (c *Controller) initializeOwnedResources(opts Options) {
 				}
 			}
 			c.restoreExecutorFromSessionEvents()
-		} else if err := c.seedSessionEventsFromExecutor("session-open"); err != nil {
-			c.failTurnEventLedger(err)
+		} else {
+			// Path-backed CLI and embedded runtimes use the current Agent DAG.
+			// Restore that source before seeding a new host event projection;
+			// a fresh placeholder must never overwrite a persisted conversation.
+			messages := c.executor.Session().Snapshot()
+			placeholder := true
+			for _, message := range messages {
+				if message.Role != provider.RoleSystem {
+					placeholder = false
+					break
+				}
+			}
+			if placeholder && strings.TrimSpace(opts.SessionPath) != "" {
+				if loaded, err := agent.LoadSession(opts.SessionPath); err == nil {
+					c.executor.SetSession(loaded)
+				} else if !errors.Is(err, os.ErrNotExist) {
+					c.failTurnEventLedger(err)
+				}
+			}
+			if err := c.seedSessionEventsFromExecutor("session-open"); err != nil {
+				c.failTurnEventLedger(err)
+			}
 		}
 	}
 	cmdsInit := opts.Commands
@@ -1576,9 +1557,7 @@ func (c *Controller) submitCommandOrTurnReady(trimmed, input, display string, sc
 		c.submitProtocolRecoveryLocked(id, guidance, admission)
 		return
 	}
-	if c.submitFinalReadinessCommand(trimmed, display, admission) {
-		return
-	}
+
 	switch {
 	case trimmed == "/compact" || strings.HasPrefix(trimmed, "/compact "):
 		focus := strings.TrimSpace(strings.TrimPrefix(trimmed, "/compact"))
@@ -1750,19 +1729,13 @@ const prometheusPrompt = "You are Prometheus, a strategic planner. Interview the
 // Prometheus agent. It enters goal mode with a structured interview prompt.
 func (c *Controller) applyPrometheus(input, display string, admission turnAdmission) {
 	args := strings.TrimSpace(strings.TrimPrefix(input, "/prometheus"))
-	if args == "" || args == "--strict" {
+	if args == "" {
 		c.notice("usage: /prometheus <your task description>")
 		return
-	}
-	strict := false
-	if strings.HasPrefix(args, "--strict ") {
-		strict = true
-		args = strings.TrimPrefix(args, "--strict ")
 	}
 	prompt := prometheusPrompt + "\n\n## User request\n\n" + args + "\n\nBegin the interview by asking your first clarifying question."
 	c.SetPlanMode(false)
 	c.SetGoal("plan: " + ShortGoalForNotice(args))
-	c.GoalStrict(strict)
 	c.notice("prometheus: starting planning interview")
 	if c.runner != nil {
 		c.runGuardedWithAdmission(func(ctx context.Context) error {
@@ -2150,13 +2123,11 @@ func (c *Controller) recordDecisionReceipt(pending pendingApproval, outcome stri
 // Interactive frontends (chat, desktop) call this; the headless run keeps the
 // silent gate and a nil asker from setup.
 func (c *Controller) EnableInteractiveApproval() {
-	trustGate := planModeReadOnlyTrustApprover{c}
 	escapeApprover := sandboxEscapeApprover{c}
 	configApprover := managedConfigWriteApprover{c}
 	c.writeAccess.interactive = true
 	if c.executor != nil {
 		c.executor.SetGate(c.newInteractiveGate())
-		c.executor.SetPlanModeReadOnlyTrustGate(trustGate)
 		c.executor.SetSandboxEscapeApprover(escapeApprover)
 		c.executor.SetConfigWriteApprover(configApprover)
 		c.executor.SetWriteAccessGate(c)
@@ -2164,11 +2135,6 @@ func (c *Controller) EnableInteractiveApproval() {
 		c.executor.SetPermissionPresetProvider(c.ToolApprovalMode)
 		c.executor.SetAsker(c)
 		c.executor.SetInteractionBroker(c)
-	}
-	if setter, ok := c.runner.(interface {
-		SetPlanModeReadOnlyTrustGate(agent.PlanModeReadOnlyTrustGate)
-	}); ok {
-		setter.SetPlanModeReadOnlyTrustGate(trustGate)
 	}
 	if setter, ok := c.runner.(interface {
 		SetSandboxEscapeApprover(sandbox.EscapeApprover)
@@ -2235,7 +2201,7 @@ func (c *Controller) newInteractiveGate() *permission.Gate {
 	switch mode {
 	case ToolApprovalWorkspaceWrite, ToolApprovalDangerFullAccess:
 		policy.Mode = permission.Allow
-	case ToolApprovalDontAsk:
+	case ToolApprovalReadOnly:
 		policy.Mode = permission.Deny
 	default:
 		policy.Mode = permission.Ask
@@ -2254,7 +2220,7 @@ func (c *Controller) newInteractiveGate() *permission.Gate {
 	// The OS sandbox, rather than shell syntax heuristics, owns the write
 	// boundary for all three presets. Explicit ask and deny rules still win.
 	var approver permission.Approver = gateApprover{c}
-	if mode == ToolApprovalDontAsk {
+	if mode == ToolApprovalReadOnly {
 		approver = denyPermissionApprover{}
 	}
 	gate := permission.NewGate(policy, approver)
@@ -2533,7 +2499,6 @@ func (c *Controller) ReplayPendingPrompts() {
 	c.approval.promptEmitMu.Unlock()
 	if noApprovals {
 		// Retained compatibility hook; live Auto Guard cards are ordinary approvals.
-		c.ReplayUnresolvedRecoveries()
 	}
 }
 
@@ -2599,22 +2564,6 @@ func (c *Controller) SetPlanMode(v bool) {
 	c.applyPlanMode(v)
 }
 
-// SetAgentPreset accepts retired role inputs for compatibility. Recognized
-// values no longer change runtime behavior.
-func (c *Controller) SetAgentPreset(preset string) {
-	if c == nil {
-		return
-	}
-	if p, err := agentpreset.Normalize(preset); err == nil {
-		_ = c.SetQualityFloor(string(p))
-	}
-}
-
-// AgentPreset returns the fixed compatibility label.
-func (c *Controller) AgentPreset() string {
-	return string(agentpreset.Standard)
-}
-
 // SetResponseLanguage updates the final-answer language preference for
 // subsequent turns.
 func (c *Controller) SetResponseLanguage(lang string) {
@@ -2649,34 +2598,6 @@ func (c *Controller) PlanMode() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.sessionSettings.planMode
-}
-
-// GoalStrict enables or disables strict goal mode. Since the structured
-// protocol, every complete claim is validated against host readiness and an
-// incomplete-todo intercept can never be overridden, so the flag is persisted
-// for compatibility with older frontends but no longer changes FSM behavior.
-func (c *Controller) GoalStrict(strict bool) {
-	if c.sessionEngineEnabled() {
-		return
-	}
-	path, data, ok := c.goals.setStrict(strict)
-	c.persistGoalState(path, data, ok)
-}
-
-// SetGoal stores a session-scoped active goal. Compose injects it into outgoing
-// user turns, not the system prompt or tool schema, so it does not disturb the
-// cache-stable prefix.
-func (c *Controller) SetGoal(goal string) {
-	c.SetGoalWithResearchMode(goal, GoalResearchAuto)
-}
-
-// LoadInactiveGoal restores a legacy metadata-only objective without starting
-// execution or writing a sidecar during read-only history access.
-func (c *Controller) LoadInactiveGoal(goal string) {
-	c.goals.mu.Lock()
-	defer c.goals.mu.Unlock()
-	c.goals.installGoalLocked(strings.TrimSpace(goal), ClassifyGoalBudget(goal))
-	c.goals.disarmed = true
 }
 
 // SetGoalDurable updates the Goal only when its sidecar can be replaced
@@ -2716,85 +2637,20 @@ func (c *Controller) SetGoalDurable(goal string) error {
 		return err
 	}
 	snapshot := c.goals.capture()
-	legacySnapshot, hadLegacySnapshot := c.legacyRestoreSnapshot()
-	resolved, setup := c.resolveGoalText(goal, GoalResearchAuto)
-	var path string
-	var data []byte
-	var persist bool
-	if setup.blockReason != "" {
-		path, data, persist = c.goals.setLegacyArchiveBlockedWithTaskID(resolved, setup.budgetClass, setup.blockReason, setup.legacyTaskID)
-		c.replaceLegacyRestore(legacyGoalRestore{taskID: setup.legacyTaskID, epoch: c.goals.continuationToken(), explicit: setup.explicit})
-	} else {
-		path, data, persist = c.goals.set(resolved, setup.budgetClass)
-		c.replaceLegacyRestore(legacyGoalRestore{})
-	}
+	path, data, persist := c.goals.set(strings.TrimSpace(goal))
 	if persist {
 		if err := c.goals.writeStateErr(path, data); err != nil {
 			c.goals.restore(snapshot)
-			if hadLegacySnapshot {
-				legacySnapshot.epoch = c.goals.continuationToken()
-				c.replaceLegacyRestore(legacySnapshot)
-			} else {
-				c.replaceLegacyRestore(legacyGoalRestore{})
-			}
 			return err
 		}
-	}
-	if setup.notice != "" {
-		c.notice(setup.notice)
-	}
-	if setup.blockReason != "" {
-		c.notice("legacy research archive resume failed: " + setup.blockReason)
 	}
 	return nil
 }
 
-func (c *Controller) SetGoalWithResearchMode(goal string, researchMode GoalResearchMode) {
-	if c.sessionEngineEnabled() {
-		if err := c.SetGoalDurable(goal); err != nil {
-			c.notice("goal: " + err.Error())
-		}
-		return
+func (c *Controller) SetGoal(goal string) {
+	if err := c.SetGoalDurable(goal); err != nil {
+		c.notice("goal: " + err.Error())
 	}
-	resolved, setup := c.resolveGoalText(goal, researchMode)
-	if setup.notice != "" {
-		c.notice(setup.notice)
-	}
-	var path string
-	var data []byte
-	var ok bool
-	if setup.blockReason != "" {
-		path, data, ok = c.goals.setLegacyArchiveBlockedWithTaskID(resolved, setup.budgetClass, setup.blockReason, setup.legacyTaskID)
-		c.replaceLegacyRestore(legacyGoalRestore{taskID: setup.legacyTaskID, epoch: c.goals.continuationToken(), explicit: setup.explicit})
-		c.notice("legacy research archive resume failed: " + setup.blockReason)
-	} else {
-		path, data, ok = c.goals.set(resolved, setup.budgetClass)
-		c.replaceLegacyRestore(legacyGoalRestore{})
-	}
-	c.persistGoalState(path, data, ok)
-}
-
-// goalSetSetup is the resolved objective and budget class after archive lookup.
-type goalSetSetup struct {
-	budgetClass  string
-	notice       string
-	blockReason  string
-	legacyTaskID string
-	explicit     bool
-}
-
-func (c *Controller) resolveGoalText(goal string, researchMode GoalResearchMode) (string, goalSetSetup) {
-	setup := goalSetSetup{budgetClass: budgetClassForLegacyMode(goal, researchMode)}
-	legacy := c.prepareLegacyResearchTask(goal)
-	if !legacy.explicit {
-		return goal, setup
-	}
-	setup.notice, setup.blockReason, setup.legacyTaskID, setup.explicit = legacy.notice, legacy.blockReason, legacy.taskID, legacy.explicit
-	if legacy.blockReason != "" {
-		return goal, setup
-	}
-	setup.budgetClass = budgetClassResearch
-	return legacy.goal, setup
 }
 
 // ResumeGoal re-enters a recoverable blocked/stopped Goal without resetting its
@@ -2821,9 +2677,7 @@ func (c *Controller) ResumeGoal() bool {
 		c.kickGoalDriver()
 		return true
 	}
-	if handled, resumed := c.retryBlockedLegacyGoal(); handled {
-		return resumed
-	}
+
 	spentBudget := c.goals.runtimeView().StopCause == stopCauseBudgetSpend
 	path, data, persist, resumed := c.goals.resume()
 	if !resumed {
@@ -2882,14 +2736,10 @@ func (c *Controller) GoalRuntime() GoalRuntimeView {
 		if view == nil {
 			return GoalRuntimeView{}
 		}
-		limit := 0
-		if view.MaxGoalRounds != nil {
-			limit = int(*view.MaxGoalRounds)
-		}
 		c.goalResourceMu.Lock()
 		used, requests, tokenLimit, extensions := c.goalTokensUsed, c.goalRequestsUsed, c.goalTokenLimit, c.goalBudgetExtensions
 		c.goalResourceMu.Unlock()
-		return GoalRuntimeView{TurnsUsed: int(view.RoundsStarted), TurnsLimit: limit, TokensUsed: used,
+		return GoalRuntimeView{TurnsUsed: int(view.RoundsStarted), TokensUsed: used,
 			RequestsUsed: requests, WorkDurationMs: view.WorkDurationMs, TokensLimit: tokenLimit, StopCause: view.StopReason, BudgetExtensions: extensions}
 	}
 	return c.goals.runtimeView()
@@ -2994,31 +2844,7 @@ func (c *Controller) NewSession() error {
 		return err
 	}
 	defer c.endRotation()
-	if c.NativeLegacySession() && c.SessionService() != nil {
-		oldPath := c.SessionPath()
-		c.flushRecoveryPersistence(oldPath)
-		if err := c.Snapshot(); err != nil {
-			return err
-		}
-		if err := c.extensionSessionPhase(context.Background(), extension.PointSessionRotate, dispatch.PhaseRotate, oldPath); err != nil {
-			return err
-		}
-		c.hooks.SessionEnd(context.Background(), "new")
-		c.extensionSessionEvent(extension.PointSessionEnd, dispatch.PhaseEnd, oldPath)
-		plan := SessionRotationPlan{}
-		if c.onSessionRotation != nil {
-			var err error
-			plan, err = c.onSessionRotation(context.Background(), SessionRotationRequest{SourcePath: c.SessionPath(), Reason: "new"})
-			if err != nil {
-				return err
-			}
-		}
-		ref, err := c.bindFreshSessionWithCommit(context.Background(), plan.CreateOptions, plan.Commit)
-		if err == nil {
-			c.startExclusiveSession(ref, "new")
-		}
-		return err
-	}
+
 	if c.sessionEngineEnabled() {
 		return c.rotateExclusiveSession(false)
 	}
@@ -3026,7 +2852,6 @@ func (c *Controller) NewSession() error {
 	// old-session checkpoint. Otherwise an earlier write can outlive the path
 	// rotation (or process teardown) and race cleanup of the old session.
 	oldPath := c.SessionPath()
-	c.flushRecoveryPersistence(oldPath)
 	if err := c.Snapshot(); err != nil {
 		return err
 	}
@@ -3059,7 +2884,6 @@ func (c *Controller) NewSession() error {
 	c.ResetPlannerSession()
 	c.rebindCheckpoints(freshPath)
 	seedErr := c.seedSessionEventsFromExecutor("session-new")
-	c.resetRecoveryForNewSession(freshPath)
 	c.rotateSessionTemp()
 	c.snapshotMu.Unlock()
 	// Old session keeps its inbox (paused); the fresh session starts empty.
@@ -3243,50 +3067,13 @@ func (c *Controller) summarizeAt(ctx context.Context, turn int, from bool) error
 // see the previous session's temporary files. Same-path Resume (hot rebuild
 // migration via AdoptHistory) keeps the generation.
 func (c *Controller) Resume(s *agent.Session, path string) {
-	if c.NativeLegacySession() && strings.TrimSpace(path) != "" {
-		if service := c.SessionService(); service != nil {
-			ref, found, err := service.ExistingCanonicalForLegacy(path, s)
-			if err != nil {
-				c.failTurnEventLedger(err)
-				return
-			}
-			if found {
-				if _, err := c.OpenSession(context.Background(), ref); err != nil {
-					c.failTurnEventLedger(err)
-				}
-				return
-			}
-		}
-	}
+
 	if c.sessionEngineEnabled() {
-		if _, runtime, _ := c.v3Binding(); runtime != nil && strings.TrimSpace(path) == "" {
-			c.restoreExecutorFromSessionEvents()
+		if strings.TrimSpace(path) != "" {
+			c.failTurnEventLedger(errors.New("use an immutable session identity"))
 			return
 		}
-		if strings.TrimSpace(path) == "" {
-			if _, err := c.BindFreshSession(context.Background(), ""); err != nil {
-				c.failTurnEventLedger(err)
-			}
-			return
-		}
-		if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
-			if _, err := c.BindFreshSession(context.Background(), ""); err != nil {
-				c.failTurnEventLedger(err)
-				return
-			}
-			if s != nil && len(s.Snapshot()) > 0 {
-				if err := c.replaceSessionEventProjection(context.Background(), "fresh-resume", s.Snapshot()); err != nil {
-					c.failTurnEventLedger(err)
-				} else {
-					c.restoreExecutorFromSessionEvents()
-				}
-			}
-			return
-		}
-		if err := c.ResumeNativeSession(s, path); err != nil {
-			slog.Warn("controller: resume native legacy session", "path", path, "err", err)
-			c.failTurnEventLedger(err)
-		}
+		c.restoreExecutorFromSessionEvents()
 		return
 	}
 	// See snapshotMu: the swap must not interleave with an in-flight save.
@@ -3305,11 +3092,8 @@ func (c *Controller) Resume(s *agent.Session, path string) {
 	c.ResetPlannerSession()
 	c.setActiveJobSession(path)
 	c.rebindCheckpoints(path)
-	if err := c.seedSessionEventsFromExecutor("legacy-resume"); err != nil {
+	if err := c.seedSessionEventsFromExecutor("session-resume"); err != nil {
 		slog.Warn("controller: import resumed transcript into v3", "err", err)
-	}
-	if err := c.importLegacyResumeOverPlaceholder(s); err != nil {
-		slog.Warn("controller: replace placeholder v3 history from legacy resume", "err", err)
 	}
 	if err := c.adoptResumeSystemPrompt(s); err != nil {
 		slog.Warn("controller: record refreshed system prompt in v3", "err", err)
@@ -3322,15 +3106,11 @@ func (c *Controller) Resume(s *agent.Session, path string) {
 	if c.sessionEventCommitAllowed() {
 		c.restoreExecutorFromSessionEvents()
 	}
-	migPath, migData, migrated, legacy := c.goals.restoreFromState(path)
-	if !c.restorePendingLegacyGoal(legacy) && migrated {
-		c.persistGoalState(migPath, migData, true)
-	}
+	c.goals.restoreFromState(path)
 	if c.executor != nil {
 		c.executor.RestoreDeliveryCheckpoint(c.goals.deliveryState())
 	}
 	c.loadGuardianSession()
-	c.loadRecoveryState(path)
 	if shouldRotateSessionTempOnResume(prevPath, path) {
 		c.rotateSessionTemp()
 	}
@@ -3588,7 +3368,6 @@ func (c *Controller) snapshotWithDurability(markActivity, forceRewrite, shutdown
 	c.emitHeadEvents()
 	transcriptDurable := true
 	// Persist recovery gate state so unresolved checkpoints survive restart.
-	c.saveRecoveryState(path)
 	// Record the listing-only sidecar fields (model, preview, user-turn count)
 	// straight from the in-memory conversation, so the sidebar and resume picker
 	// never have to decode the whole .jsonl just to show them. markActivity bumps
@@ -4130,13 +3909,11 @@ func (c *Controller) setSessionPath(p string, fresh bool) {
 		c.failTurnEventLedger(err)
 	}
 	if fresh {
-		c.resetRecoveryForNewSession(p)
 		// A newly-created conversation must not share the previous logical
 		// session's temporary files (e.g. after EnsureSessionPath on a
 		// controller that already ran commands).
 		c.rotateSessionTemp()
 	} else {
-		c.loadRecoveryState(p)
 	}
 	c.snapshotMu.Unlock()
 	c.rebindInbox()
@@ -4373,9 +4150,6 @@ func (c *Controller) ReloadCommands(ctx context.Context) error {
 		})
 	}
 	for _, cmd := range cmds {
-		if cmd.Hidden {
-			continue
-		}
 
 		entries = append(entries, command.SlashEntry{
 			Name:        cmd.Name,
@@ -4538,7 +4312,7 @@ func (c *Controller) AddMCPServer(e config.PluginEntry) (int, error) {
 			if configured.Name != e.Name {
 				continue
 			}
-			if configured.Source != config.MCPSourceUserConfig && configured.Source != config.MCPSourceLegacyUser {
+			if configured.Source != config.MCPSourceUserConfig {
 				return 0, fmt.Errorf("MCP server %q is already configured by %s; edit or remove that declaration before installing a global server with the same name", e.Name, configured.Source)
 			}
 			break
@@ -5282,32 +5056,6 @@ func (c *Controller) ToolApprovalMode() string {
 	return c.approval.mode()
 }
 
-// SetAutoApproveTools is the legacy boolean compatibility binding. Both values
-// migrate to the safe workspace preset; full access requires an explicit preset.
-func (c *Controller) SetAutoApproveTools(on bool) {
-	_ = on
-	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
-}
-
-// SetBypass is the legacy name for SetAutoApproveTools. Keep it for existing
-// desktop/serve bindings and CLI code that still uses the bypass wording.
-func (c *Controller) SetBypass(on bool) {
-	c.SetAutoApproveTools(on)
-}
-
-// SetMode is the legacy combined Plan/permission binding. New callers use
-// ApplyComposerProfile with an explicit permission preset.
-func (c *Controller) SetMode(plan, autoApproveTools bool) {
-	c.ApplyMode(plan, autoApproveTools)
-}
-
-// ApplyMode is the legacy SetMode variant that reports invalidated prompt IDs.
-func (c *Controller) ApplyMode(plan, autoApproveTools bool) []string {
-	c.applyPlanMode(plan)
-	_ = autoApproveTools
-	return c.ApplyToolApprovalMode(ToolApprovalWorkspaceWrite)
-}
-
 // ApplyComposerProfile publishes the collaboration, approval, and Goal axes as
 // one controller operation. The only fallible mutation (durable Goal state)
 // commits first, so a persistence failure leaves Plan and approval unchanged.
@@ -5339,7 +5087,7 @@ func (c *Controller) ApplyComposerProfileAtDurable(ctx context.Context, plan boo
 		return nil, fmt.Errorf("permission revision changed: have %d, expected %d", current, expectedPermissionRevision)
 	}
 	raw := strings.ToLower(strings.TrimSpace(toolApprovalMode))
-	if raw != "ask" && raw != "auto" && raw != "yolo" && !permissionpreset.Valid(raw) {
+	if !permissionpreset.Valid(raw) {
 		return nil, fmt.Errorf("permission preset must be read-only, workspace-write, or danger-full-access")
 	}
 	raw = normalizeToolApprovalMode(raw)
@@ -5389,11 +5137,6 @@ func (c *Controller) applyComposerProfileLocked(plan bool, toolApprovalMode, goa
 // AutoApproveTools is the legacy status query for explicit full access.
 func (c *Controller) AutoApproveTools() bool {
 	return c.ToolApprovalMode() == ToolApprovalDangerFullAccess
-}
-
-// Bypass is the legacy name for AutoApproveTools.
-func (c *Controller) Bypass() bool {
-	return c.AutoApproveTools()
 }
 
 // memory
@@ -5498,8 +5241,6 @@ func (g gateApprover) approveWithPolicyReason(ctx context.Context, tool, subject
 	return allow, remember, "", err
 }
 
-type planModeReadOnlyTrustApprover struct{ c *Controller }
-
 type sandboxEscapeApprover struct{ c *Controller }
 
 func (s sandboxEscapeApprover) ApproveSandboxEscape(ctx context.Context, req sandbox.EscapeRequest) (bool, string, error) {
@@ -5571,45 +5312,6 @@ func (m managedConfigWriteApprover) ManagedConfigWriteSessionAllowed(_ context.C
 
 func managedConfigWriteApprovalSubject(path string) string {
 	return i18n.M.ConfigWriteSubjectPrefix + strings.TrimSpace(path)
-}
-
-func (p planModeReadOnlyTrustApprover) CheckPlanModeReadOnlyTrust(ctx context.Context, req agent.PlanModeReadOnlyTrustRequest) (bool, string, error) {
-	prefix := normalizePlanModeReadOnlyCommandPrefix(req.Prefix)
-	if prefix == "" {
-		return false, "missing plan-mode read-only command prefix", nil
-	}
-	return p.checkBashReadOnlyCommandTrust(ctx, req, prefix)
-}
-
-func (p planModeReadOnlyTrustApprover) checkBashReadOnlyCommandTrust(ctx context.Context, req agent.PlanModeReadOnlyTrustRequest, prefix string) (bool, string, error) {
-	if p.c.approval.planModeReadOnlyCommandTrusted(prefix) {
-		return true, "", nil
-	}
-	command := strings.TrimSpace(req.Command)
-	if command == "" {
-		command = strings.TrimSpace(string(req.Args))
-	}
-	subject := fmt.Sprintf(i18n.M.PlanModeBashTrustSubjectFmt, prefix, command)
-	reason := i18n.M.PlanModeBashTrustReason
-	reply, err := p.c.requestFreshApprovalDecision(ctx, agent.PlanModeReadOnlyCommandApprovalTool, subject, req.Args, reason)
-	if err != nil {
-		return false, "approval aborted", err
-	}
-	if !reply.allow {
-		return false, i18n.M.PlanModeBashTrustDeclined, nil
-	}
-	if reply.session {
-		p.c.permissionStateMu.Lock()
-		p.c.approval.grantPlanModeReadOnlyCommand(prefix)
-		p.c.permissionStateMu.Unlock()
-	}
-	if reply.persist && p.c.onRememberPlanModeReadOnlyCommand != nil {
-		p.c.emitPlanModeReadOnlyCommandTrustResult(p.c.onRememberPlanModeReadOnlyCommand(prefix))
-		p.c.permissionStateMu.Lock()
-		p.c.approval.grantPlanModeReadOnlyCommand(prefix)
-		p.c.permissionStateMu.Unlock()
-	}
-	return true, "", nil
 }
 
 func approvalDisplaySubject(tool, subject string, args json.RawMessage) string {
@@ -5922,23 +5624,5 @@ func (c *Controller) emitRememberResult(r RememberResult) {
 		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: fmt.Sprintf(i18n.M.PermissionSavedFmt, r.Path, r.Rule)})
 	case strings.TrimSpace(r.CoveredBy) != "":
 		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: fmt.Sprintf(i18n.M.PermissionAlreadyAllowedFmt, r.Path, r.CoveredBy)})
-	}
-}
-
-func (c *Controller) emitPlanModeReadOnlyCommandTrustResult(r PlanModeReadOnlyCommandTrustResult) {
-	prefix := strings.TrimSpace(r.Prefix)
-	if r.Err != nil {
-		c.sink.Emit(event.Event{
-			Kind:  event.Notice,
-			Level: event.LevelWarn,
-			Text:  fmt.Sprintf(i18n.M.PlanModeReadOnlyCommandTrustFailedFmt, prefix, r.Err),
-		})
-		return
-	}
-	switch {
-	case r.Saved:
-		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: fmt.Sprintf(i18n.M.PlanModeReadOnlyCommandTrustSavedFmt, r.Path, prefix)})
-	case strings.TrimSpace(r.CoveredBy) != "":
-		c.sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: fmt.Sprintf(i18n.M.PlanModeReadOnlyCommandTrustAlreadyFmt, r.Path, r.CoveredBy)})
 	}
 }

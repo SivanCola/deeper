@@ -390,7 +390,6 @@ func (c *client) sendOpts() provider.SendOptions {
 		KeyEnv:              c.keyEnv,
 		KeySource:           c.keySource,
 		KeyPresent:          c.apiKey != "",
-		RetryAuth:           c.authed.Load(),
 	}
 }
 
@@ -697,7 +696,7 @@ func sendChunk(ctx context.Context, out chan<- provider.Chunk, chunk provider.Ch
 }
 
 func (c *client) buildRequest(req provider.Request) chatRequest {
-	openCodeGoRoute, officialOpenCodeGo := provider.OpenCodeGoRequestRoute("openai", c.baseURL, c.chatURL, "")
+	openCodeGoRoute, officialOpenCodeGo := provider.OpenCodeGoRequestRoute("openai", c.baseURL, c.chatURL)
 	openCodeGoChat := officialOpenCodeGo && openCodeGoRoute == provider.OpenCodeGoRouteChat
 	// Repair tool-call pairing before sending: an interrupted/resumed history can
 	// carry an assistant tool_calls turn whose results never landed, which DeepSeek

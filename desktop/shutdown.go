@@ -224,7 +224,6 @@ func (a *App) runShutdown(c *desktopShutdownCoordinator) (err error) {
 		c.runStep("cancel-session-exports", a.cancelSessionExports)
 		c.runStep("runtime-projections", a.flushRuntimeProjections)
 		c.runStep("tab-layout", a.flushTabLayoutWrites)
-		c.runStep("historical-imports", a.stopHistoricalImports)
 		c.runStep("session-catalog", func() { a.stopSessionCatalog(250 * time.Millisecond) })
 		c.mu.Lock()
 		c.frozen = true
@@ -268,7 +267,7 @@ func (a *App) runShutdown(c *desktopShutdownCoordinator) (err error) {
 	c.setPhase("saving")
 	a.lifecycle.tracker.markShutdown(reason, "saving", "in_progress")
 	for _, item := range items {
-		if item.readOnly || historicalPreview(item.ctrl) {
+		if item.readOnly {
 			continue
 		}
 		c.mu.Lock()
@@ -358,11 +357,6 @@ func (a *App) shutdownBody(c *desktopShutdownCoordinator, items []desktopShutdow
 		}
 		if err := a.commitPendingUpdateHealth(); err != nil {
 			slog.Warn("desktop: commit healthy update during shutdown", "err", err)
-		}
-		if archived, err := archiveSupersededPendingUpdateAfterReady(); err != nil {
-			slog.Warn("desktop: retire superseded update during shutdown", "err", err)
-		} else if archived {
-			slog.Info("desktop: archived superseded update transaction during shutdown")
 		}
 		_ = repair.RecordHealthyConfig(version)
 	})

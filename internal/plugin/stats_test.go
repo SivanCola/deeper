@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"deepzora/internal/config"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -257,32 +258,6 @@ func TestStatsSlugCollisionDoesNotCrossDemote(t *testing.T) {
 	}
 }
 
-// TestStatsLegacyNamedFileMigrated: a pre-hash stats file whose recorded Name
-// matches is this server's own history — Recommend keeps working from it and
-// the next write carries it into the hashed path.
-func TestStatsLegacyNamedFileMigrated(t *testing.T) {
-	withTempCache(t)
-
-	legacy := StartupStats{Version: statsVersion, Name: "legacy", LastSeen: time.Now()}
-	for range 3 {
-		legacy.SamplesMs = append(legacy.SamplesMs, 100)
-	}
-	if err := writeStatsAtomic(legacyStatsPath("legacy"), legacy); err != nil {
-		t.Fatalf("write legacy stats: %v", err)
-	}
-
-	if rec := Recommend("legacy", time.Second, 0); rec.P99 == 0 {
-		t.Fatalf("legacy named stats not readable: %+v", rec)
-	}
-	if err := RecordStartup("legacy", 100*time.Millisecond); err != nil {
-		t.Fatalf("RecordStartup after legacy: %v", err)
-	}
-	s := readStats(t, "legacy")
-	if s.Name != "legacy" || len(s.SamplesMs) != 4 {
-		t.Fatalf("legacy migration = %+v, want name kept and 4 samples", s)
-	}
-}
-
 // TestStatsLegacyNamelessCollisionNotTrusted: a pre-ownership legacy file has
 // no Name, so it is shared by every server whose name collapses to the slug
 // and its samples cannot be attributed. It must not demote anyone and must
@@ -335,17 +310,15 @@ func TestStatsLegacyFileWithoutNameAdopted(t *testing.T) {
 		t.Fatalf("write legacy stats: %v", err)
 	}
 
-	// Recommend still reads the legacy file (no ownership check possible).
-	if rec := Recommend("legacy", time.Second, 0); rec.P99 == 0 {
-		t.Fatalf("legacy stats not readable: %+v", rec)
+	if rec := Recommend("legacy", time.Second, 0); rec.P99 != 0 {
+		t.Fatalf("nameless cache accepted: %+v", rec)
 	}
-	// The next write adopts the file without dropping history.
 	if err := RecordStartup("legacy", 100*time.Millisecond); err != nil {
-		t.Fatalf("RecordStartup after legacy: %v", err)
+		t.Fatal(err)
 	}
 	s = readStats(t, "legacy")
-	if s.Name != "legacy" || len(s.SamplesMs) != 4 {
-		t.Fatalf("legacy adoption = %+v, want name set and 4 samples kept", s)
+	if s.Name != "legacy" || len(s.SamplesMs) != 1 {
+		t.Fatalf("old cache adopted: %+v", s)
 	}
 }
 
@@ -377,4 +350,16 @@ func TestStatsPathBoundedForLongNames(t *testing.T) {
 	if statsPath(other) == p {
 		t.Fatalf("distinct long names collapsed to one stats path: %q", p)
 	}
+}
+
+// legacyStatsPath is the pre-hash location, shared by every server whose name
+// collapses to the same slug. Read-only for migration: a named legacy file is
+// adopted by its owner; a nameless one (pre-Name builds) has no provable owner
+// and is never trusted for demotion or adopted into a new window.
+func legacyStatsPath(name string) string {
+	base := config.CacheDir()
+	if base == "" {
+		return ""
+	}
+	return filepath.Join(base, "mcp", slug(name)+".stats.json")
 }

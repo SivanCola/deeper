@@ -61,6 +61,7 @@ var (
 	ErrNotFound            = errors.New("inbox item not found")
 	ErrInvalidState        = errors.New("inbox item state does not allow this operation")
 	ErrSchemaReadonly      = errors.New("inbox schema is newer and is read-only")
+	ErrUnsupportedSchema   = errors.New("unsupported inbox schema")
 	ErrClosed              = errors.New("inbox is closed")
 	ErrSnapshotBusy        = errors.New("inbox snapshot is busy")
 	ErrEmpty               = errors.New("inbox item body is empty")
@@ -75,8 +76,7 @@ type InboxItemMeta struct {
 	Intent    InboxIntent `json:"intent"`
 	State     InboxState  `json:"state"`
 	Revision  int64       `json:"revision"`
-	// BlobName is the on-disk blob filename stem (without .json). Empty means
-	// legacy layout where the blob is named by item ID. Updates write a new
+	// BlobName is the required on-disk blob filename stem. Updates write a new
 	// immutable blob and switch this pointer after manifest commit.
 	BlobName    string       `json:"blobName,omitempty"`
 	Source      string       `json:"source,omitempty"`
@@ -127,14 +127,11 @@ type StructuredInvocation struct {
 
 // PromptEnvelope is the full durable body stored only in blobs/<id>.json.
 type PromptEnvelope struct {
-	FingerprintVersion int    `json:"fingerprintVersion,omitempty"`
-	RequestFingerprint string `json:"requestFingerprint,omitempty"`
-	DisplayText        string `json:"displayText"`
-	RawText            string `json:"rawText"`
-	SubmitText         string `json:"submitText"`
-	// Invocation is retained for schema-v1 compatibility. New writers use
-	// Invocations so multiple rich-composer entities preserve visual order.
-	Invocation           *StructuredInvocation  `json:"invocation,omitempty"`
+	FingerprintVersion   int                    `json:"fingerprintVersion,omitempty"`
+	RequestFingerprint   string                 `json:"requestFingerprint,omitempty"`
+	DisplayText          string                 `json:"displayText"`
+	RawText              string                 `json:"rawText"`
+	SubmitText           string                 `json:"submitText"`
 	Invocations          []StructuredInvocation `json:"invocations,omitempty"`
 	Format               string                 `json:"format,omitempty"`
 	Attachments          []string               `json:"attachments,omitempty"`

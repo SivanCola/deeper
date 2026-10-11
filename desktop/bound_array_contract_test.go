@@ -17,7 +17,6 @@ func TestBoundArrayPayloadsAreNonNilBeforeStartup(t *testing.T) {
 	}{
 		{"Checkpoints", app.Checkpoints()},
 		{"ListSessions", app.ListSessions()},
-		{"ListTrashedSessions", app.ListTrashedSessions()},
 		{"ListWorkspaces", app.ListWorkspaces()},
 		{"History", app.History()},
 		{"Jobs", app.Jobs()},
@@ -60,13 +59,11 @@ func TestBoundArrayPayloadsAreNonNilBeforeStartup(t *testing.T) {
 	if got := app.Settings(); got.Providers == nil || got.OfficialProviders == nil || got.ProviderPresets == nil || got.ProviderKinds == nil ||
 		got.Permissions.Allow == nil || got.Permissions.Ask == nil || got.Permissions.Deny == nil ||
 		got.Sandbox.AllowWrite == nil || got.Sandbox.EffectiveWriteRoots == nil ||
-		got.Bot.Allowlist.QQUsers == nil || got.Bot.Allowlist.FeishuUsers == nil || got.Bot.Allowlist.WeixinUsers == nil ||
-		got.Bot.Allowlist.QQGroups == nil || got.Bot.Allowlist.FeishuGroups == nil || got.Bot.Allowlist.WeixinGroups == nil {
+		got.Bot.QQ.Access.Users == nil || got.Bot.QQ.Access.Groups == nil {
 		t.Fatalf("Settings() contains nil array fields: %+v", got)
 	}
 	if got := app.DesktopStartupSettings(); got.StatusBarItems == nil ||
-		got.Bot.Allowlist.QQUsers == nil || got.Bot.Allowlist.FeishuUsers == nil || got.Bot.Allowlist.WeixinUsers == nil ||
-		got.Bot.Allowlist.QQGroups == nil || got.Bot.Allowlist.FeishuGroups == nil || got.Bot.Allowlist.WeixinGroups == nil {
+		got.Bot.QQ.Access.Users == nil || got.Bot.QQ.Access.Groups == nil {
 		t.Fatalf("DesktopStartupSettings() contains nil array fields: %+v", got)
 	}
 

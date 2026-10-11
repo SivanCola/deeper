@@ -66,9 +66,7 @@ func TestCanonicalInboxTargetEnqueuesAndConfirmsReceipt(t *testing.T) {
 
 func TestRemoteInboxTargetLostReceiptOnlyQueriesOriginalRequest(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Sink: event.Discard})
+	ctrl, path := newRemoteCanonicalController(t, nil, event.Discard)
 	defer ctrl.Close()
 	if err := ctrl.SetInboxPaused(true); err != nil {
 		t.Fatal(err)

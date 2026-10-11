@@ -15,7 +15,7 @@ func TestBackgroundTaskToolEventsStayNestedUnderParentCall(t *testing.T) {
 		{toolCallChunk("c1", "bash", `{"command":"ls"}`), {Type: provider.ChunkDone}},
 		finalText, finalText,
 	}}
-	task := NewTaskTool(sub, nil, evidenceRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: evidenceRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(NewSubagentStore(t.TempDir()), t.TempDir(), "base-model", "base-effort")
 	jm := jobs.NewManager(event.Discard)
 	defer jm.Close()

@@ -36,8 +36,7 @@ func TestACPRebuildSerializesCollaborationAndApprovalChanges(t *testing.T) {
 		sink:             sink,
 		cwd:              t.TempDir(),
 		model:            "fast",
-		runtimeProfile:   "balanced",
-		toolApprovalMode: control.ToolApprovalAsk,
+		toolApprovalMode: control.ToolApprovalReadOnly,
 		modeID:           sessionModeNormal,
 	}
 	svc := &service{factory: factory, sessions: map[string]*acpSession{sess.id: sess}}
@@ -65,7 +64,7 @@ func TestACPRebuildSerializesCollaborationAndApprovalChanges(t *testing.T) {
 		modeDone <- err
 	}()
 	go func() {
-		_, err := svc.switchSessionToolApproval(context.Background(), sess, control.ToolApprovalAuto)
+		_, err := svc.switchSessionToolApproval(context.Background(), sess, control.ToolApprovalWorkspaceWrite)
 		approvalDone <- err
 	}()
 	select {
@@ -92,7 +91,7 @@ func TestACPRebuildSerializesCollaborationAndApprovalChanges(t *testing.T) {
 		}
 	}
 	ctrl := sess.currentCtrl()
-	if !ctrl.PlanMode() || ctrl.ToolApprovalMode() != control.ToolApprovalAuto {
+	if !ctrl.PlanMode() || ctrl.ToolApprovalMode() != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("post-rebuild axes = plan:%v approval:%q, want plan + auto", ctrl.PlanMode(), ctrl.ToolApprovalMode())
 	}
 	if sess.model != "pro" || sess.currentModeID() != sessionModePlan {
@@ -319,12 +318,11 @@ func TestACPRebuildSessionAppliesPendingConfigAfterMaintenance(t *testing.T) {
 func TestACPRebuildSessionQueuedCrossAxisChangeDoesNotRollbackCompletedAxis(t *testing.T) {
 	sink := newUpdateSink(&fakeNotifier{}, "sess-cross-axis")
 	sess := &acpSession{
-		id:             "sess-cross-axis",
-		sink:           sink,
-		cwd:            t.TempDir(),
-		model:          "fast",
-		runtimeProfile: "balanced",
-		ctrl:           control.New(control.Options{}),
+		id:    "sess-cross-axis",
+		sink:  sink,
+		cwd:   t.TempDir(),
+		model: "fast",
+		ctrl:  control.New(control.Options{}),
 	}
 	factory := &blockingConfigFactory{
 		started:      make(chan string, 2),
@@ -656,12 +654,11 @@ func TestACPPendingConfigMergesAxesQueuedDuringActiveTurn(t *testing.T) {
 	factory := &configurableFactory{}
 	sink := newUpdateSink(&fakeNotifier{}, "sess-pending-merge")
 	sess := &acpSession{
-		id:             "sess-pending-merge",
-		ctrl:           control.New(control.Options{}),
-		sink:           sink,
-		cwd:            t.TempDir(),
-		model:          "pro",
-		runtimeProfile: "balanced",
+		id:    "sess-pending-merge",
+		ctrl:  control.New(control.Options{}),
+		sink:  sink,
+		cwd:   t.TempDir(),
+		model: "pro",
 	}
 	svc := &service{factory: factory, sessions: map[string]*acpSession{sess.id: sess}}
 
@@ -707,12 +704,11 @@ func TestACPApplyPendingClaimsStateBeforeResolving(t *testing.T) {
 	}
 	high := "high"
 	sess := &acpSession{
-		id:             "sess-pending-order",
-		ctrl:           control.New(control.Options{}),
-		sink:           newUpdateSink(&fakeNotifier{}, "sess-pending-order"),
-		cwd:            t.TempDir(),
-		model:          "fast",
-		runtimeProfile: "balanced",
+		id:    "sess-pending-order",
+		ctrl:  control.New(control.Options{}),
+		sink:  newUpdateSink(&fakeNotifier{}, "sess-pending-order"),
+		cwd:   t.TempDir(),
+		model: "fast",
 		pendingConfig: []sessionConfigDelta{
 			{axis: "model", model: "pro"},
 			{axis: "thought_level", effortOverride: &high},
@@ -783,12 +779,11 @@ func TestACPFailedRebuildStillDrainsNewerPendingConfig(t *testing.T) {
 		release: make(chan struct{}),
 	}
 	sess := &acpSession{
-		id:             "sess-failed-drain",
-		ctrl:           control.New(control.Options{}),
-		sink:           newUpdateSink(&fakeNotifier{}, "sess-failed-drain"),
-		cwd:            t.TempDir(),
-		model:          "fast",
-		runtimeProfile: "balanced",
+		id:    "sess-failed-drain",
+		ctrl:  control.New(control.Options{}),
+		sink:  newUpdateSink(&fakeNotifier{}, "sess-failed-drain"),
+		cwd:   t.TempDir(),
+		model: "fast",
 	}
 	svc := &service{factory: factory, sessions: map[string]*acpSession{sess.id: sess}}
 
@@ -844,8 +839,7 @@ func TestACPReportPendingConfigFailureRestoresClientState(t *testing.T) {
 		sink:             newUpdateSink(notifier, "sess-pending-failure-update"),
 		cwd:              t.TempDir(),
 		model:            "fast",
-		runtimeProfile:   "balanced",
-		toolApprovalMode: control.ToolApprovalAsk,
+		toolApprovalMode: control.ToolApprovalReadOnly,
 	}
 	svc := &service{factory: &configurableFactory{}, sessions: map[string]*acpSession{sess.id: sess}}
 
@@ -926,13 +920,12 @@ func TestACPFinishTurnModeDriftDoesNotRevertConcurrentSetMode(t *testing.T) {
 
 	sink := newUpdateSink(&fakeNotifier{}, "sess-setmode-race")
 	sess := &acpSession{
-		id:             "sess-setmode-race",
-		ctrl:           probe,
-		sink:           sink,
-		cwd:            t.TempDir(),
-		model:          "fast",
-		runtimeProfile: "balanced",
-		modeID:         sessionModeNormal,
+		id:     "sess-setmode-race",
+		ctrl:   probe,
+		sink:   sink,
+		cwd:    t.TempDir(),
+		model:  "fast",
+		modeID: sessionModeNormal,
 	}
 	svc := &service{factory: &configurableFactory{}, sessions: map[string]*acpSession{sess.id: sess}}
 

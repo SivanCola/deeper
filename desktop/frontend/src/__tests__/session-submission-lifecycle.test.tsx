@@ -27,7 +27,7 @@ const ports: SubmissionPorts = {
 let commands!: ReturnType<typeof useSessionSubmission>;
 function Probe({ tab, gen, draft, readOnly }: { tab: string; gen: number; draft: boolean; readOnly: boolean }) {
   const resources: SubmissionResource[] = ["A", "B"].map(tabId => ({ target: { tabId, sessionKey: tabId + gen },
-    ready: true, remote: false, unavailable: readOnly ? "read-only" : "", goalDraft: draft, collaboration: "normal", approval: "ask" }));
+    ready: true, remote: false, unavailable: readOnly ? "read-only" : "", goalDraft: draft, collaboration: "normal", approval: "workspace-write" }));
   const target = resources.find(source => source.target.tabId === tab)!.target;
   const operations = useSessionOperations({ visible: target, resources: resources.map(source => source.target) });
   commands = useSessionSubmission({ target, resources, operations, ports, missingSource: "missing" });
@@ -43,9 +43,9 @@ try {
     clearUndo: () => {}, patchGoal: () => {}, profile: async () => true,
   });
   await adapter.setGoal("B", "goal", false); await adapter.setGoal("A", "", false);
-  await adapter.send("B", "display", " raw bytes ", undefined, { goal: "goal", collaborationMode: "normal", toolApprovalMode: "ask" });
+  await adapter.send("B", "display", " raw bytes ", undefined, { goal: "goal", collaborationMode: "normal", toolApprovalMode: "workspace-write" });
   assert.deepEqual(adapterCalls, [["set", "B", "goal"], ["clear", "A"], ["send", "B", "display", " raw bytes ", undefined, undefined,
-    { goal: "goal", collaborationMode: "normal", toolApprovalMode: "ask" }]], "runtime adapter preserves explicit Controller targets, original-text slot and atomic Goal payload");
+    { goal: "goal", collaborationMode: "normal", toolApprovalMode: "workspace-write" }]], "runtime adapter preserves explicit Controller targets, original-text slot and atomic Goal payload");
   await paint(); profileGate = deferred();
   const first = commands.submit("A", " display ", " provider bytes ");
   await paint("B"); profileGate.resolve(); await first;
@@ -70,7 +70,7 @@ try {
   const structured = { display: "skill", input: "/skill input", invocations: [{ name: "skill", kind: "skill" as const, offset: 0 }] };
   await commands.submit("A", " goal text ", " /skill input ", structured);
   assert.deepEqual(calls, [["undo", "A"], ["send", "A", "goal text", "/skill input", structured,
-    { goal: "goal text", collaborationMode: "normal", toolApprovalMode: "ask" }], ["patch", "A", "goal text"]], "structured Goal uses one atomic source send and unchanged invocation bytes");
+    { goal: "goal text", collaborationMode: "normal", toolApprovalMode: "workspace-write" }], ["patch", "A", "goal text"]], "structured Goal uses one atomic source send and unchanged invocation bytes");
   calls.length = 0;
   await commands.submit("A", " goal text ", " task bytes ");
   assert.equal(calls[1][3], "/goal task bytes", "ordinary first Goal retains its existing prefix");
@@ -90,8 +90,8 @@ try {
 
   calls.length = 0; await paint();
   await commands.submit("A", "/goal --deep --research preserve flags");
-  assert.deepEqual(calls, [["patch", "A", "preserve flags"], ["undo", "A"],
-    ["send", "A", "/goal --deep --research preserve flags", "/goal --deep --research preserve flags", undefined, undefined]], "legacy Goal flags remain backend-visible and do not invoke separate activation");
+  assert.deepEqual(calls, [["undo", "A"],
+    ["send", "A", "/goal --deep --research preserve flags", "/goal --deep --research preserve flags", undefined, undefined]], "unsupported Goal options are sent for backend rejection without changing the local Goal");
 
   calls.length = 0; await paint("A", 1, false, true);
   await assert.rejects(commands.commitThenSend("A", "direct"), /read-only/);

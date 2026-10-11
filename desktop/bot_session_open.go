@@ -26,8 +26,8 @@ func (a *App) embeddedBotSessionPath(scope, workspaceRoot, route string) (string
 			return "", fmt.Errorf("workspaceRoot is required")
 		}
 	}
-	storeRoot := session.RootForLegacyDir(config.ProjectSessionDir(root))
-	service, err := a.historicalSessionService(storeRoot)
+	storeRoot := session.RootForSessionDir(config.ProjectSessionDir(root))
+	service, err := a.projectSessionService(storeRoot)
 	if err != nil {
 		return "", err
 	}
@@ -43,8 +43,6 @@ func (a *App) embeddedBotSessionPath(scope, workspaceRoot, route string) (string
 		return "", errSessionWorkspaceConflict
 	}
 	path := filepath.Join(storeRoot, id)
-	if !nativeStoredDirectory(path) {
-		return "", session.ErrSessionNotFound
-	}
+
 	return path, nil
 }

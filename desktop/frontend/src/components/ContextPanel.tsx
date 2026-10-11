@@ -116,10 +116,10 @@ export function contextCostDisplay({
   sessionCurrency,
   usage,
 }: {
-  info?: Pick<ContextPanelInfo, "sessionCost" | "sessionCurrency" | "sessionCostUsd" | "sessionCostComplete" | "sessionCostEstimated" | "sessionBillingMode" | "sessionCostQuote"> | null;
+  info?: Pick<ContextPanelInfo, "sessionCost" | "sessionCurrency" | "sessionCostComplete" | "sessionCostEstimated" | "sessionBillingMode" | "sessionCostQuote"> | null;
   sessionCost?: number;
   sessionCurrency?: string;
-  usage?: Pick<WireUsage, "cost" | "costUsd" | "currency" | "currencyCode" | "costQuote">;
+  usage?: Pick<WireUsage, "cost" | "currency" | "currencyCode" | "costQuote">;
 }): {
   amount: number;
   currency?: string;
@@ -164,7 +164,7 @@ export function contextCostDisplay({
       };
     }
   }
-  // Session-scoped scalar fallbacks (legacy telemetry).
+  // Current session numeric totals.
   if (info?.sessionCost && info.sessionCost > 0) {
     return {
       amount: info.sessionCost,
@@ -178,15 +178,6 @@ export function contextCostDisplay({
     return {
       amount: sessionCost,
       currency: sessionCurrency || info?.sessionCurrency || usage?.currencyCode || usage?.currency,
-      estimated: true,
-      complete: true,
-      labelKind: "estimated",
-    };
-  }
-  if (info?.sessionCostUsd && info.sessionCostUsd > 0) {
-    return {
-      amount: info.sessionCostUsd,
-      currency: info.sessionCurrency || sessionCurrency || usage?.currencyCode || usage?.currency,
       estimated: true,
       complete: true,
       labelKind: "estimated",
@@ -314,7 +305,7 @@ function sourceLabel(source: string, t: Translator): string {
 }
 
 function sourceCost(stats: UsageSourceStats): number {
-  return stats.sessionCost && stats.sessionCost > 0 ? stats.sessionCost : stats.sessionCostUsd ?? 0;
+  return stats.sessionCost && stats.sessionCost > 0 ? stats.sessionCost : 0;
 }
 
 function sourceTokenTotal(row: Pick<ContextSourceRow, "promptTokens" | "completionTokens" | "totalTokens">): number {

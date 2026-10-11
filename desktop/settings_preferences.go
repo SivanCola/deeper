@@ -55,7 +55,7 @@ func (a *App) SetDesktopLanguage(lang string) error {
 // and live controllers are intentionally untouched.
 func (a *App) SetDesktopCurrency(currency string) error {
 	err := a.applyConfigOnly(func(c *config.Config) error {
-		return c.SetDesktopCurrency(currency)
+		return c.SetDisplayCurrency(currency)
 	})
 	if err != nil {
 		return err
@@ -81,14 +81,6 @@ func (a *App) desktopEffectivePricingCurrency(cfg *config.Config) string {
 		return pref
 	}
 	return cfg.ExplicitDisplayCurrency()
-}
-
-func (a *App) desktopOfficialPricingLanguage(cfg *config.Config) string {
-	// Used only for display-language adjacent UI; list prices use billing_currency.
-	if a.desktopEffectivePricingCurrency(cfg) == "CNY" {
-		return "zh"
-	}
-	return "en"
 }
 
 // SetTrayLocale mirrors the resolved desktop UI language into the native tray
@@ -136,12 +128,6 @@ func (a *App) SetDesktopCheckUpdates(enabled bool) error {
 	return a.applyConfigOnly(func(c *config.Config) error { return c.SetDesktopCheckUpdates(enabled) })
 }
 
-// SetDesktopUpdateChannel is retained for older Wails clients. The config layer
-// clears the retired preference and every updater request uses Stable.
-func (a *App) SetDesktopUpdateChannel(channel string) error {
-	return a.applyConfigOnly(func(c *config.Config) error { return c.SetDesktopUpdateChannel(channel) })
-}
-
 // SetDesktopTelemetry sets whether the desktop sends the anonymous launch ping.
 func (a *App) SetDesktopTelemetry(enabled bool) error {
 	return a.applyConfigOnly(func(c *config.Config) error { return c.SetDesktopTelemetry(enabled) })
@@ -169,23 +155,4 @@ func (a *App) SetDesktopMetrics(enabled bool) error {
 // standard = 960px fixed; full = 90% of the parent, with a 960px floor. Pure config-only.
 func (a *App) SetDesktopConversationWidth(width string) error {
 	return a.applyConfigOnly(func(c *config.Config) error { return c.SetDesktopConversationWidth(width) })
-}
-
-// MigrateDesktopPreferences imports old browser-local desktop preferences into
-// the user config once. Existing [desktop] values win so stale localStorage never
-// overwrites an explicit config edit.
-func (a *App) MigrateDesktopPreferences(language, theme, style string) error {
-	return a.applyConfigOnly(func(c *config.Config) error {
-		if strings.TrimSpace(c.Desktop.Language) == "" {
-			if err := c.SetDesktopLanguage(language); err != nil {
-				return err
-			}
-		}
-		if strings.TrimSpace(c.Desktop.Theme) == "" && strings.TrimSpace(c.Desktop.ThemeStyle) == "" {
-			if err := c.SetDesktopAppearance(theme, style); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
 }

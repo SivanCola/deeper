@@ -6,7 +6,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { LocaleProvider } from "../lib/i18n";
 import { AssistantMessage } from "../components/Message";
-import { hydrateReasoningDisplayMode } from "../lib/reasoningDisplayPreference";
+import { hydrateSessionExperience } from "../lib/sessionExperience";
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -52,7 +52,7 @@ globalThis.cancelAnimationFrame = dom.window.cancelAnimationFrame.bind(dom.windo
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("missing root");
 const root = createRoot(rootEl);
-hydrateReasoningDisplayMode("hidden", true);
+hydrateSessionExperience("standard");
 
 await act(async () => {
   root.render(

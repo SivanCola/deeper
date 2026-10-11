@@ -10,10 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
-	"deepzora/internal/session"
 )
 
 func TestBuildRuntimeDisablesImplicitSkillInvocation(t *testing.T) {
@@ -113,7 +111,7 @@ enabled = false
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -230,12 +228,11 @@ func TestRebuildMigratesSessionState(t *testing.T) {
 		{Role: provider.RoleUser, Content: "hello"},
 		{Role: provider.RoleAssistant, Content: "hi there"},
 	}, "")
-	oldCtrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	oldCtrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	oldCtrl.SetPlanMode(true)
 	oldCtrl.SetGoal("ship the kernel")
 	oldCtrl.RestoreSessionAuthorizations(control.SessionAuthorizations{
-		Grants:                   []string{"bash(go test ./...)"},
-		PlanModeReadOnlyCommands: []string{"git status"},
+		Grants: []string{"bash(go test ./...)"},
 	})
 	oldHistory := oldCtrl.History()
 
@@ -273,8 +270,8 @@ func TestRebuildMigratesSessionState(t *testing.T) {
 	}
 
 	// Session axes migrated.
-	if got := res.Controller.ToolApprovalMode(); got != control.ToolApprovalYolo {
-		t.Fatalf("tool approval mode = %q, want %q", got, control.ToolApprovalYolo)
+	if got := res.Controller.ToolApprovalMode(); got != control.ToolApprovalDangerFullAccess {
+		t.Fatalf("tool approval mode = %q, want %q", got, control.ToolApprovalDangerFullAccess)
 	}
 	if !res.Controller.PlanMode() {
 		t.Fatal("plan mode did not migrate")
@@ -285,9 +282,6 @@ func TestRebuildMigratesSessionState(t *testing.T) {
 	auth := res.Controller.SessionAuthorizations()
 	if !slices.Contains(auth.Grants, "bash(go test ./...)") {
 		t.Fatalf("session grants = %v, want the migrated grant", auth.Grants)
-	}
-	if !slices.Contains(auth.PlanModeReadOnlyCommands, "git status") {
-		t.Fatalf("plan-mode trust = %v, want the migrated prefix", auth.PlanModeReadOnlyCommands)
 	}
 
 	// old keeps working: history intact, runtime set untouched, close clean.
@@ -325,130 +319,6 @@ func TestRebuildKeepsLiveReadOnlyAfterStoredRemotePreset(t *testing.T) {
 	t.Cleanup(next.Controller.Close)
 	if got := next.Controller.ToolApprovalMode(); got != control.ToolApprovalReadOnly {
 		t.Fatalf("rebuild widened live read-only mode to %q", got)
-	}
-}
-
-func TestRebuildKeepsLegacySessionNativeWithHostService(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-	writeRuntimeFixture(t, dir)
-
-	old, err := BuildRuntime(context.Background(), Options{})
-	if err != nil {
-		t.Fatalf("BuildRuntime legacy: %v", err)
-	}
-	t.Cleanup(old.Controller.Close)
-	old.Controller.EnsureSessionPath()
-	old.Controller.AdoptHistory([]provider.Message{
-		{Role: provider.RoleSystem, Content: systemMessage(old.Controller.History())},
-		{Role: provider.RoleUser, Content: "legacy history"},
-	}, old.Controller.SessionPath())
-	if err := old.Controller.Snapshot(); err != nil {
-		t.Fatalf("Snapshot legacy: %v", err)
-	}
-
-	workspace := filepath.Join(dir, "workspace")
-	storeRoot := filepath.Join(dir, "desktop-sessions-v5", "by-id")
-	service, err := session.NewService("local", session.NewFilesystemPersistence(storeRoot))
-	if err != nil {
-		t.Fatalf("NewService: %v", err)
-	}
-	t.Cleanup(func() { _ = service.Shutdown(context.Background()) })
-
-	rebuilt, err := Rebuild(context.Background(), old.Controller, Options{
-		SessionService: service,
-		SessionCreateOptions: session.CreateOptions{
-			CWD: workspace, Origin: session.SessionOriginLegacyImport,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Rebuild: %v", err)
-	}
-	t.Cleanup(rebuilt.Controller.Close)
-	if _, ok := rebuilt.Controller.SessionRef(); ok || !rebuilt.Controller.NativeLegacySession() {
-		t.Fatal("rebuild converted historical storage")
-	}
-	if rebuilt.Controller.SessionPath() != old.Controller.SessionPath() || rebuilt.Controller.SessionService() != service {
-		t.Fatal("rebuild lost native path or current-store service")
-	}
-	if got := rebuilt.Controller.History(); len(got) != 2 || got[1].Content != "legacy history" {
-		t.Fatalf("rebuild lost history: %+v", got)
-	}
-	if entries, err := os.ReadDir(storeRoot); err != nil && !os.IsNotExist(err) || len(entries) != 0 {
-		t.Fatalf("rebuild created canonical history: %v %v", entries, err)
-	}
-	other, err := session.NewService("local", session.NewFilesystemPersistence(filepath.Join(dir, "other-root")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = other.Shutdown(context.Background()) })
-	if err := control.ActivateControllerReplacement(old.Controller, rebuilt.Controller); err != nil {
-		t.Fatal(err)
-	}
-	next, err := Rebuild(context.Background(), rebuilt.Controller, Options{SessionService: other})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(next.Controller.Close)
-	if next.Controller.SessionService() != service || next.Controller.SessionCreationService() != service || next.Controller.SessionPath() != rebuilt.Controller.SessionPath() {
-		t.Fatal("second rebuild replaced the authoritative store or creation service")
-	}
-}
-
-func TestNativeRebuildPreservesSelectedDAGHead(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-	writeRuntimeFixture(t, dir)
-	old := buildRuntimeFixture(t)
-	t.Cleanup(old.Controller.Close)
-	path := filepath.Join(dir, "selected.jsonl")
-	s := agent.NewSession(systemMessage(old.Controller.History()))
-	s.Add(provider.Message{Role: provider.RoleUser, Content: "question"})
-	s.Add(provider.Message{Role: provider.RoleAssistant, Content: "main answer"})
-	if err := s.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.ForkHead(path, s.Snapshot()[1].ID, agent.HeadKindFork, "alternate"); err != nil {
-		t.Fatal(err)
-	}
-	s.Add(provider.Message{Role: provider.RoleAssistant, Content: "alternate answer"})
-	if err := s.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	selected, err := agent.LoadSessionHeadReadOnly(path, agent.SessionMainHead)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := old.Controller.ResumeNativeSession(selected, path); err != nil {
-		t.Fatal(err)
-	}
-	rebuilt, err := Rebuild(t.Context(), old.Controller, Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(rebuilt.Controller.Close)
-	head, ok := rebuilt.Controller.SessionHead()
-	if !ok || head.HeadID != agent.SessionMainHead {
-		t.Fatalf("rebuild switched head: %+v", head)
-	}
-	if err := rebuilt.Controller.Snapshot(); err != nil {
-		t.Fatal(err)
-	}
-	reopened, err := agent.LoadSessionHeadReadOnly(path, agent.SessionMainHead)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if history := reopened.Snapshot(); history[len(history)-1].Content != "main answer" {
-		t.Fatalf("rebuild overwrote selected history: %+v", history)
-	}
-	other, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if history := other.Snapshot(); history[len(history)-1].Content != "alternate answer" {
-		t.Fatalf("rebuild changed default head: %+v", history)
 	}
 }
 
@@ -494,7 +364,7 @@ func TestRebuildFailureKeepsOldController(t *testing.T) {
 	oldCtrl.AdoptHistory([]provider.Message{
 		{Role: provider.RoleSystem, Content: systemMessage(oldCtrl.History())},
 		{Role: provider.RoleUser, Content: "hello"},
-	}, prevPath)
+	}, "")
 
 	res, err := Rebuild(context.Background(), oldCtrl, Options{Model: "definitely-unknown-model"})
 	if err == nil {

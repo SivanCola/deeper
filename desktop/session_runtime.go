@@ -110,6 +110,11 @@ func (a *App) newSessionRuntimeLocked(tab *WorkspaceTab, key string) *desktopSes
 		Owner:   tab,
 		readyCh: make(chan struct{}),
 	}
+	if tab != nil {
+		if _, runtime, exclusive := exclusiveSessionBinding(tab.Ctrl); exclusive && runtime != nil {
+			rt.Epoch = runtime.StateSnapshot().Epoch
+		}
+	}
 	if tab != nil && tab.Ctrl != nil && tab.Ready {
 		rt.Phase = sessionRuntimeReady
 		closeRuntimeReadyChannelLocked(rt)

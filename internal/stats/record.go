@@ -61,7 +61,6 @@ type record struct {
 	AggregateMode      string   `json:"aggregate_mode,omitempty"`
 	OriginalTotals     []string `json:"original_totals,omitempty"`
 	CostEstimated      bool     `json:"cost_estimated,omitempty"`
-	LegacyEstimate     bool     `json:"legacy_estimate,omitempty"`
 	PricingFingerprint string   `json:"pricing_fingerprint,omitempty"`
 	RateDate           string   `json:"rate_date,omitempty"`
 	RateBand           string   `json:"rate_band,omitempty"`

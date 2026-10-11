@@ -544,7 +544,7 @@ func TestAttachDroppedOutsideWorkspaceDirRegistersAfterPinnedOwnerRebuild(t *tes
 	cfg.DefaultModel = "test/test-model"
 	cfg.Desktop.ProviderAccess = []string{"test"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "test", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "test-model", APIKeyEnv: "TEST_MODEL_KEY"},
+		{Models: []string{"test-model"}, Default: "test-model", Name: "test", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "test-model", APIKeyEnv: "TEST_MODEL_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

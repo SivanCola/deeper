@@ -27,7 +27,7 @@ func TestPurgeSharedTopicKeepsSurvivingSession(t *testing.T) {
 	}
 	var refs []session.SessionRef
 	for _, id := range []string{"purge-shared-old", "purge-shared-live"} {
-		ref, _ := createLegacyCleanupSession(t, a, root, id, true)
+		ref, _ := createCurrentRegistrySession(t, a, root, id, true)
 		if err := a.workspaceRegistry().EnsureSessionTopic(t.Context(), id, topic.ID, "Shared history"); err != nil {
 			t.Fatal(err)
 		}

@@ -471,21 +471,8 @@ var plannerWorkTerms = []string{
 	"改造", "评审", "审查", "排查", "调试", "测试", "加个", "加一", "补一个", "补个",
 }
 
-// TaskWarrantsPlanner is retained as a small compatibility predicate for
-// callers and tests that only need "planner vs executor".
-func TaskWarrantsPlanner(input string) bool {
-	return DecidePlannerRoute(context.Background(), input).Route != agent.PlannerRouteExecutorOnly
-}
-
 // NewPlannerPolicy returns the structured deterministic policy used by the
 // two-model product path.
 func NewPlannerPolicy() agent.PlannerPolicy {
 	return DecidePlannerRoute
-}
-
-// NewPlannerGate retains the historical bool shape for direct callers.
-func NewPlannerGate() func(context.Context, string) bool {
-	return func(ctx context.Context, input string) bool {
-		return DecidePlannerRoute(ctx, input).Route != agent.PlannerRouteExecutorOnly
-	}
 }

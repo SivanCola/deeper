@@ -182,7 +182,7 @@ func (f *FleetTool) Execute(ctx context.Context, args json.RawMessage) (result s
 		// Fleet writers without write_paths claim the whole workspace so the
 		// preflight can detect multi-writer collisions before anything starts.
 		forceBackgroundClaim := !item.ReadOnly
-		spec, err := f.taskTool.buildTaskSpec(ctx, item.Prompt, item.Description, item.Profile, item.WritePaths, item.Tools, item.MaxSteps, item.Model, item.Effort, "", "", false, item.ReadOnly)
+		spec, err := f.taskTool.buildTaskSpec(ctx, item.Prompt, item.Description, item.Profile, item.WritePaths, item.Tools, item.MaxSteps, item.Model, item.Effort, "", false, item.ReadOnly)
 		if err != nil {
 			return "", fmt.Errorf("task %d: %w", i+1, err)
 		}

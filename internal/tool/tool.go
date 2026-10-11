@@ -39,7 +39,7 @@ type Tool interface {
 // exposes pwsh and older sessions continue to contain bash calls.
 func IsShellToolName(name string) bool {
 	switch strings.ToLower(strings.TrimSpace(name)) {
-	case "bash", "pwsh", "powershell", "shell":
+	case "bash", "pwsh":
 		return true
 	default:
 		return false
@@ -69,12 +69,6 @@ type BatchClassifier interface {
 // permissions, hooks, leases, or Execute so stale transcripts fail closed.
 type ContextualTool interface {
 	ProviderVisible(context.Context) bool
-}
-
-// CapabilityCatalogHidden marks compatibility-only routes that remain
-// executable for replay but must not be suggested to new model turns.
-type CapabilityCatalogHidden interface {
-	HiddenFromCapabilityCatalog() bool
 }
 
 // Previewer is an optional capability a writer Tool may implement: given the
@@ -303,9 +297,6 @@ func RegisterBuiltin(t Tool) {
 func Builtins() []Tool {
 	names := make([]string, 0, len(builtins))
 	for n := range builtins {
-		if n == "complete_step" || n == "session_read_strategy_receipt" {
-			continue
-		}
 		names = append(names, n)
 	}
 	sort.Strings(names)
@@ -318,9 +309,6 @@ func Builtins() []Tool {
 
 // LookupBuiltin returns a registered built-in by name.
 func LookupBuiltin(name string) (Tool, bool) {
-	if name == "complete_step" || name == "session_read_strategy_receipt" {
-		return nil, false
-	}
 	t, ok := builtins[name]
 	return t, ok
 }
@@ -560,14 +548,6 @@ func (r *Registry) ResolveCall(name string) (resolved Tool, canonical string, ca
 
 	if t, ok := r.tools[name]; ok {
 		return t, name, nil
-	}
-	if IsShellToolName(name) {
-		if t, ok := r.tools["pwsh"]; ok {
-			return t, "pwsh", nil
-		}
-		if t, ok := r.tools["bash"]; ok {
-			return t, "bash", nil
-		}
 	}
 	matches := map[string]Tool{}
 	for canonicalName, t := range r.tools {

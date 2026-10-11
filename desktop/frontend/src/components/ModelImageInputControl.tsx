@@ -14,7 +14,6 @@ export function ModelImageInputControl({ model, mode, capability, baseURL, fallb
   const status = blocked ? t("settings.imageInputProtocolBadge")
     : mode === "on" ? t("settings.imageInputManualOn")
     : mode === "off" ? t("settings.imageInputManualOff")
-    : capability?.automaticSource === "legacy" ? t("settings.imageInputLegacy")
     : state === "supported" ? t("settings.imageInputSupported")
     : state === "unsupported" ? t("settings.imageInputUnsupported") : t("settings.imageInputUnknown");
   const statusTone = blocked ? "restricted" : mode === "on" || state === "supported" ? "supported"

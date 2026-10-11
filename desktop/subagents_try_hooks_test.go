@@ -33,12 +33,13 @@ func TestTrySubagentProfileRunsWorkspaceAndUserHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(`
-default_model = "tryer"
+default_model = "tryer/try-model"
 
 [[providers]]
 name = "tryer"
 kind = "`+tryHookProbeKind+`"
-model = "try-model"
+models = ["try-model"]
+default = "try-model"
 base_url = "http://127.0.0.1:1"
 `), 0o644); err != nil {
 		t.Fatal(err)

@@ -42,7 +42,6 @@ func newRestartMaintenanceAgent(path string, messages []provider.Message, sink e
 	return New(nil, tool.NewRegistry(), &Session{Messages: append([]provider.Message(nil), messages...)}, Options{
 		ContextWindow: restartMaintenanceWindow,
 		CompactRatio:  0.80,
-		RecentKeep:    2,
 		SessionPath:   path,
 		WorkspaceID:   "workspace",
 		ModelRef:      "provider/model",
@@ -107,7 +106,6 @@ func TestContextMaintenanceRestoresAppliedProjectionWithoutReapplying(t *testing
 		&Session{Messages: append([]provider.Message(nil), messages...)}, Options{
 			ContextWindow: restartMaintenanceWindow,
 			CompactRatio:  0.80,
-			RecentKeep:    2,
 			SessionPath:   path,
 			WorkspaceID:   "workspace",
 			ModelRef:      "provider/model",
@@ -136,7 +134,6 @@ func TestContextMaintenanceRestoresAppliedProjectionWithoutReapplying(t *testing
 		&Session{Messages: append([]provider.Message(nil), messages...)}, Options{
 			ContextWindow: restartMaintenanceWindow,
 			CompactRatio:  0.80,
-			RecentKeep:    2,
 			SessionPath:   path,
 			WorkspaceID:   "workspace",
 			ModelRef:      "provider/model",

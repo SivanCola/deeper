@@ -15,7 +15,7 @@ const testPluginConfig = `default_model = "plugin/commandcode/commandcode/deepse
 name = "deepseek-flash"
 kind = "openai"
 base_url = "https://api.deepseek.com/v1"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "DEEPZORA_TEST_KEY"
 `
 

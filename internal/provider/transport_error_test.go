@@ -56,20 +56,19 @@ func TestSendWithRetryRejectsPermanentTransportErrors(t *testing.T) {
 	for _, managed := range []bool{false, true} {
 		t.Run(fmt.Sprintf("managed=%v", managed), func(t *testing.T) {
 			cause := errors.New("invalid request configuration")
-			calls, retries := 0, 0
+			calls := 0
 			client := &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) {
 				calls++
 				return nil, cause
 			})}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
-			ctx = WithRetryNotify(ctx, func(RetryInfo) { retries++; cancel() })
 			if managed {
 				ctx = WithManagedRecovery(ctx)
 			}
 			_, err := SendWithRetry(ctx, client, SendOptions{Provider: "saved-provider"}, newDummyReq)
-			if calls != 1 || retries != 0 || !errors.Is(err, cause) {
-				t.Fatalf("calls=%d retries=%d err=%v", calls, retries, err)
+			if calls != 1 || !errors.Is(err, cause) {
+				t.Fatalf("calls=%d err=%v", calls, err)
 			}
 			if ClassifyRecovery(err).Retryable || DiagnoseFailure(err).Kind == "temporary" {
 				t.Fatalf("permanent transport failure entered network recovery: %v", err)

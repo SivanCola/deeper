@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"deepzora/internal/fileutil"
-	"deepzora/internal/provider"
 	"deepzora/internal/store"
 )
 
@@ -126,7 +125,7 @@ func buildRotatedSessionDAG(st *sessionDAGState, now time.Time) ([]sessionDAGEnt
 		heads = append(heads, st.headRecord(id, selected))
 	}
 	entries := []sessionDAGEntry{
-		{Type: sessionDAGTypeLog, At: now, Generation: st.generation + 1, RotatedFrom: st.generation, UpgradedFrom: st.upgradedFrom},
+		{Type: sessionDAGTypeLog, At: now, Generation: st.generation + 1, RotatedFrom: st.generation},
 		{Type: sessionDAGTypeCheckpoint, At: now, SelectedHead: selected, Heads: heads, Dropped: dropped, Tombstones: tombstones},
 	}
 
@@ -210,52 +209,19 @@ func buildRotatedSessionDAG(st *sessionDAGState, now time.Time) ([]sessionDAGEnt
 	return entries, nil
 }
 
-// upgradeSessionLogToDAG replaces a schema-1 log with generation 1 of the
-// schema-2 log: one message entry per transcript message under the main head,
-// keeping the ids the caller already assigned, plus an open turn marker when
-// the schema-1 in-flight sidecar recorded one. The caller holds the file lock
-// and has obtained the single-writer proof.
-func upgradeSessionLogToDAG(sessionPath string, msgs []provider.Message, times []time.Time, inFlight *InFlightTurnMeta, now time.Time) error {
+func initializeSessionDAG(sessionPath string, now time.Time) error {
 	path := store.SessionEventLog(sessionPath)
 	if path == "" {
 		return fmt.Errorf("empty session event log path")
 	}
 	host, _ := os.Hostname()
 	entries := []sessionDAGEntry{
-		{Type: sessionDAGTypeLog, At: now, Generation: 1, UpgradedFrom: sessionEventSchemaVersion},
+		{Type: sessionDAGTypeLog, At: now, Generation: 1},
 		{Type: sessionDAGTypeWriter, At: now, PID: os.Getpid(), Hostname: host},
-	}
-	parent, digest := "", ""
-	for i, m := range msgs {
-		if m.ID == "" {
-			return fmt.Errorf("upgrade session log: message %d has no id", i)
-		}
-		at := now
-		if i < len(times) && !times[i].IsZero() {
-			at = times[i]
-		}
-		e, err := newSessionDAGMessageEntry(SessionMainHead, parent, digest, "", m, at)
-		if err != nil {
-			return err
-		}
-		entries = append(entries, e)
-		parent, digest = m.ID, e.Digest
-	}
-	if inFlight != nil && inFlight.ID != "" && inFlight.StartMessageIndex >= 0 && inFlight.StartMessageIndex <= len(msgs) {
-		leaf := ""
-		if inFlight.StartMessageIndex > 0 {
-			leaf = msgs[inFlight.StartMessageIndex-1].ID
-		}
-		at := inFlight.StartedAt
-		if at.IsZero() {
-			at = now
-		}
-		entries = append(entries, sessionDAGEntry{Type: sessionDAGTypeTurnBegin, Head: SessionMainHead, Turn: inFlight.ID, Leaf: leaf, PreserveUser: inFlight.PreserveUser, At: at})
 	}
 	data, err := encodeSessionDAGEntries(entries, now)
 	if err != nil {
 		return err
 	}
-	fileutil.Crash("dag-upgrade", path)
 	return fileutil.AtomicWriteFileStrict(path, data, 0o600)
 }

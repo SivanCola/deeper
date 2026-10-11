@@ -1,7 +1,6 @@
 package control
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -457,77 +456,6 @@ func TestManagementMemoryArchiveRecoveryAcceptsQuotedPathWithSpaces(t *testing.T
 	for _, want := range []string{archivePath, "recovered archived-policy", "revision=2"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("/memory archive flow missing %q:\n%s", want, joined)
-		}
-	}
-}
-
-func TestManagementHooksTrustCompatibilityNotice(t *testing.T) {
-	isolateControlConfigHome(t)
-	var notices []string
-	c := newOwnedTestController(t, Options{Sink: event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e.Text)
-		}
-	})})
-	if !c.managementNotice("/hooks trust") {
-		t.Fatal("legacy /hooks trust was not handled")
-	}
-	if len(notices) != 1 || !strings.Contains(notices[0], "enabled automatically") {
-		t.Fatalf("legacy /hooks trust notice = %v", notices)
-	}
-}
-
-func TestManagementMigrateEmitsProgress(t *testing.T) {
-	isolateControlConfigHome(t)
-	var notices []string
-	c := newOwnedTestController(t, Options{Sink: event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e.Text)
-		}
-	})})
-
-	if !c.managementNotice("/migrate") {
-		t.Fatal("/migrate was not handled")
-	}
-	joined := strings.Join(notices, "\n")
-	for _, want := range []string{
-		"migration rescue: checking legacy config and credentials",
-		"migration rescue: scanning legacy memory",
-		"migration rescue: scanning legacy sessions",
-		"migration rescue complete:",
-	} {
-		if !strings.Contains(joined, want) {
-			t.Fatalf("missing notice %q in:\n%s", want, joined)
-		}
-	}
-}
-
-func TestManagementMigrateFromImportsExplicitSessions(t *testing.T) {
-	home := isolateControlConfigHome(t)
-	legacySessions := filepath.Join(home, "Old Deepzora", "sessions")
-	if err := os.MkdirAll(legacySessions, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(legacySessions, "old-chat.jsonl"), []byte(`{"role":"user","content":"hello from old install"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var notices []string
-	c := newOwnedTestController(t, Options{Sink: event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e.Text)
-		}
-	})})
-
-	if !c.managementNotice(`/migrate --from "` + filepath.Dir(legacySessions) + `"`) {
-		t.Fatal("/migrate --from was not handled")
-	}
-	joined := strings.Join(notices, "\n")
-	for _, want := range []string{
-		"migration rescue: scanning explicit legacy sessions from " + filepath.Dir(legacySessions),
-		"imported 1 past session(s) from " + legacySessions,
-	} {
-		if !strings.Contains(joined, want) {
-			t.Fatalf("missing notice %q in:\n%s", want, joined)
 		}
 	}
 }

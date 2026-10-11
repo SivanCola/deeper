@@ -113,9 +113,6 @@ func sessionInboxInvocations(requests []InvocationRequest) []sessioninbox.Struct
 
 func controlInvocationsFromInbox(env sessioninbox.PromptEnvelope) []InvocationRequest {
 	stored := env.Invocations
-	if len(stored) == 0 && env.Invocation != nil {
-		stored = []sessioninbox.StructuredInvocation{*env.Invocation}
-	}
 	out := make([]InvocationRequest, 0, len(stored))
 	for _, invocation := range stored {
 		out = append(out, InvocationRequest{Name: invocation.Name, Kind: invocation.Kind, Offset: invocation.Offset})

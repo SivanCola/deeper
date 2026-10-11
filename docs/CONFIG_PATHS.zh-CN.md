@@ -165,11 +165,8 @@ Deepzora 会原地改写这个变量；读取同名变量的项目会像之前�
 ### 自定义 provider 的端点 URL
 
 桌面端自定义 provider 表单会把「API 地址」作为完整请求地址写入 `request_url`，
-Deepzora 不会追加或改写路径。已有 TOML 配置不会被重新解释：旧 `chat_url` 继续
-保持原来的 OpenAI 专用行为，Anthropic 和 Responses 仍会根据 `base_url` 推导请求
-路径；只有用户在新版桌面端明确保存该 provider 后，才会写入并启用 `request_url`。
-保存 OpenAI-compatible provider 时还会把完整地址同步到旧 `chat_url`，使旧版本
-继续使用同一请求目标。旧版本无法识别 Anthropic 或 Responses 的任意自定义请求路径。
+Deepzora 不会追加或改写路径。只有 `request_url` 指定完整请求地址，历史字段 `chat_url` 不再受支持。
+未设置 `request_url` 时，各协议根据 `base_url` 推导请求路径。
 模型发现需要单独地址时可设置 `models_url`；否则 Deepzora 会继续从 `base_url`
 推测模型发现地址。
 

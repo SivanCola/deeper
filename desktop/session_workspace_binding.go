@@ -127,7 +127,7 @@ func canonicalWorkspaceChanged(snap tabRuntimeSnapshot, workspace workspacestate
 func applyCanonicalWorkspaceLocked(tab *WorkspaceTab, workspace workspacestate.Workspace, workspaceChanged bool) {
 	if workspaceChanged {
 		tab.TopicID, tab.TopicTitle, tab.topicTitleSource = "", "", ""
-		tab.setPinnedFilesState(nil, nil)
+		tab.setPinnedFiles(nil)
 	}
 	tab.Scope, tab.WorkspaceRoot = canonicalWorkspaceScope(workspace), workspace.Root
 	tab.SessionWorkspace.ID = workspace.ID
@@ -173,9 +173,9 @@ func (a *App) commitCanonicalSessionBinding(tab *WorkspaceTab, ctrl control.Sess
 // cold surface, and only when the header and registry independently name B.
 func (a *App) reconcileCanonicalTabWorkspace(ctx context.Context, tab *WorkspaceTab, generation uint64) error {
 	a.mu.RLock()
-	id, ctrl := tab.SessionID, tab.Ctrl
+	id, ctrl, route := tab.SessionID, tab.Ctrl, tab.SessionPath
 	a.mu.RUnlock()
-	if id == "" || ctrl != nil {
+	if id == "" || ctrl != nil || strings.HasPrefix(route, embeddedBotSessionPrefix) {
 		return nil
 	}
 	workspace, err := a.canonicalSessionWorkspace(ctx, session.SessionRef{HostID: localDesktopHostID, SessionID: id})

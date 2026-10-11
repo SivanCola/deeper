@@ -311,7 +311,7 @@ ok(
     /app\.CompactForTab\(tabId\)/.test(controllerSource) &&
     /import\("\.\/rewindCommit"\)/.test(controllerSource) &&
     /app\.PreviewRewindForTab\(sourceTabId, turn, scope\)/.test(rewindCommitSource) &&
-    /app\.CommitRewindForTab\(sourceTabId, remoteLegacy \? "" : \(plan\.planId \|\| ""\), turn, scope\)/.test(rewindCommitSource) &&
+    /app\.CommitRewindForTab\(sourceTabId, plan\.planId \|\| "", turn, scope\)/.test(rewindCommitSource) &&
     /app\.UndoRewindForTab\(sourceTabId, transactionId\)/.test(rewindCommitSource) &&
     /bindings\.ForkForTab\(sourceTabId, turn\)[\s\S]*bindings\.ForkWorktreeForTab\(sourceTabId, turn\)/.test(forkWorktreeSource) &&
     /app\.SummarizeFromForTab\(sourceTabId, turn\)/.test(controllerSource) &&

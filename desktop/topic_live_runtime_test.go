@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,163 +9,26 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
-	"deepzora/internal/sessioncatalog"
 )
 
-func TestStartTopicActivationKeepsExplicitRepresentativeSeparateFromLiveSibling(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	sessionDir := desktopSessionDir(projectRoot)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	oldPath := writeTopicSessionWithPrompt(t, sessionDir, "old.jsonl", "topic-b", "Topic B", projectRoot, "yesterday unsigned todos", time.Now().Add(-24*time.Hour))
-	livePath := writeTopicSessionWithPrompt(t, sessionDir, "live.jsonl", "topic-b", "Topic B", projectRoot, "today live turn", time.Now())
-
-	app := NewApp()
-	app.ctx = context.Background()
-	app.readyHook = func() {}
-	events := newActivationEventRecorder(app)
-	t.Cleanup(func() { app.shutdown(context.Background()) })
-
-	stub := &activationStubController{sessionPath: livePath}
-	live := &WorkspaceTab{
-		ID:             "tab-live",
-		Scope:          "project",
-		WorkspaceRoot:  projectRoot,
-		TopicID:        "topic-b",
-		TopicTitle:     "Topic B",
-		SessionPath:    livePath,
-		Ctrl:           stub,
-		Label:          "stub-model",
-		Ready:          true,
-		ActivityStatus: topicStatusPaused,
-		disabledMCP:    map[string]ServerView{},
-	}
-	live.sink = &tabEventSink{tabID: live.ID, app: app}
-	installNoopRuntimeEvents(app, live.sink)
-	if err := live.ensureSessionLease(livePath); err != nil {
-		t.Fatalf("ensureSessionLease live: %v", err)
-	}
-	app.detachedSessions[sessionRuntimeKey(livePath)] = live
-
-	ticket, err := app.StartTopicActivation(TopicActivationRequest{
-		Scope:         "project",
-		WorkspaceRoot: projectRoot,
-		TopicID:       "topic-b",
-		SessionPath:   oldPath,
-		RequestID:     "req-live",
-	})
-	if err != nil {
-		t.Fatalf("StartTopicActivation: %v", err)
-	}
-	events.waitFor(t, activationEventFor("req-live", "ready"))
-
-	app.mu.RLock()
-	tab := app.tabs[ticket.TabID]
-	app.mu.RUnlock()
-	if tab == nil {
-		t.Fatal("activated tab missing")
-	}
-	if tab.Ctrl == stub {
-		t.Fatal("explicit history selection reused the same-topic sibling controller")
-	}
-	assertActivatedNativeSource(t, app, tab, oldPath)
-	if stub.closed.Load() {
-		t.Fatal("live controller was closed while attaching")
-	}
-	if ticket.Meta.SessionPath != "" && sessionRuntimeKey(ticket.Meta.SessionPath) != sessionRuntimeKey(oldPath) {
-		t.Fatalf("ticket session path = %q, want selected %q", ticket.Meta.SessionPath, oldPath)
-	}
-}
-
 func TestStartTopicActivationReadyDoesNotWaitForRebuildMutex(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	sessionDir := desktopSessionDir(projectRoot)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	pathA := writeTopicSession(t, sessionDir, "a.jsonl", "topic-a", "Topic A", projectRoot)
-	writeTopicSessionWithPrompt(t, sessionDir, "b-old.jsonl", "topic-b", "Topic B", projectRoot, "old b", time.Now().Add(-time.Hour))
-	liveB := writeTopicSessionWithPrompt(t, sessionDir, "b-live.jsonl", "topic-b", "Topic B", projectRoot, "live b", time.Now())
-
-	app := NewApp()
-	app.ctx = context.Background()
+	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
+	installNoopRuntimeEvents(app)
 	app.readyHook = func() {}
-	events := newActivationEventRecorder(app)
-	t.Cleanup(func() { app.shutdown(context.Background()) })
-
-	stubA := &activationStubController{sessionPath: pathA}
-	tabA := &WorkspaceTab{
-		ID:            "tab-a",
-		Scope:         "project",
-		WorkspaceRoot: projectRoot,
-		TopicID:       "topic-a",
-		TopicTitle:    "Topic A",
-		SessionPath:   pathA,
-		Ctrl:          stubA,
-		Label:         "stub-a",
-		Ready:         true,
-		disabledMCP:   map[string]ServerView{},
-	}
-	tabA.sink = &tabEventSink{tabID: tabA.ID, app: app}
-	installNoopRuntimeEvents(app, tabA.sink)
-	if err := tabA.ensureSessionLease(pathA); err != nil {
-		t.Fatalf("ensureSessionLease A: %v", err)
-	}
-	app.tabs[tabA.ID] = tabA
-	app.tabOrder = []string{tabA.ID}
-	app.activeTabID = tabA.ID
-
-	stubB := &activationStubController{sessionPath: liveB}
-	live := &WorkspaceTab{
-		ID:            "tab-b",
-		Scope:         "project",
-		WorkspaceRoot: projectRoot,
-		TopicID:       "topic-b",
-		TopicTitle:    "Topic B",
-		SessionPath:   liveB,
-		Ctrl:          stubB,
-		Label:         "stub-b",
-		Ready:         true,
-		disabledMCP:   map[string]ServerView{},
-	}
-	live.sink = &tabEventSink{tabID: live.ID, app: app}
-	installNoopRuntimeEvents(app, live.sink)
-	if err := live.ensureSessionLease(liveB); err != nil {
-		t.Fatalf("ensureSessionLease B: %v", err)
-	}
-	app.detachedSessions[sessionRuntimeKey(liveB)] = live
-
 	app.runtimeRebuildMu.Lock()
 	defer app.runtimeRebuildMu.Unlock()
-
-	ticket, err := app.StartTopicActivation(TopicActivationRequest{
-		Scope:         "project",
-		WorkspaceRoot: projectRoot,
-		TopicID:       "topic-b",
-		SessionPath:   liveB,
-		RequestID:     "req-rebuild",
-	})
-	if err != nil {
-		t.Fatalf("StartTopicActivation: %v", err)
-	}
-	// runtimeRebuildMu remains held, so obtaining a ticket proves that activation
-	// publication does not wait for the MCP rebuild mutex.
-	deadline := time.After(400 * time.Millisecond)
-	for {
-		select {
-		case ev := <-events.ch:
-			if ev.RequestID == "req-rebuild" && ev.Phase == "ready" {
-				if sessionRuntimeKey(ticket.Meta.SessionPath) != sessionRuntimeKey(liveB) {
-					t.Fatalf("ticket path = %q, want live %q", ticket.Meta.SessionPath, liveB)
-				}
-				return
-			}
-		case <-deadline:
-			t.Fatal("ready waited for keepOnlyVisibleTab to acquire the rebuild mutex")
+	done := make(chan error, 1)
+	go func() {
+		_, err := app.StartTopicActivation(TopicActivationRequest{Scope: tab.Scope, WorkspaceRoot: tab.WorkspaceRoot, SessionPath: sessionRoute(tab.SessionID), RequestID: "current"})
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
 		}
+	case <-time.After(time.Second):
+		t.Fatal("ready activation waited for the rebuild mutex")
 	}
 }
 
@@ -273,88 +135,5 @@ func TestResolveOpenTopicSessionPathKeepsPausedLiveOnCoveringParent(t *testing.T
 	_, resolved := app.resolveOpenTopicSessionPath("global", "", parent)
 	if resolved != parent {
 		t.Fatalf("resolve paused parent = %q, want keep live parent %q (not covering leaf %q)", resolved, parent, leaf)
-	}
-}
-
-func TestStartTopicActivationKeepsRecoveryContinuationSeparateFromLiveSibling(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	app := NewApp()
-	app.ctx = context.Background()
-	app.readyHook = func() {}
-	events := newActivationEventRecorder(app)
-	t.Cleanup(func() { app.shutdown(context.Background()) })
-
-	parent, leaf, livePath := installCoveringLeafTopicCatalog(t, app)
-	topic, ok := app.catalogTopicRecord("global", "", "conversation")
-	if !ok {
-		t.Fatal("catalog topic missing")
-	}
-	canonical := sessioncatalog.CanonicalSessionPathForTopic(topic.Sessions, "")
-	if sessionRuntimeKey(canonical) != sessionRuntimeKey(leaf) {
-		t.Fatalf("canonical = %q, want covering leaf %q", canonical, leaf)
-	}
-	if topic.RepresentativePath != "" && sessionRuntimeKey(topic.RepresentativePath) != sessionRuntimeKey(parent) && sessionRuntimeKey(topic.RepresentativePath) != sessionRuntimeKey(leaf) {
-		t.Fatalf("representative = %q, want parent %q or covering leaf %q", topic.RepresentativePath, parent, leaf)
-	}
-
-	stub := &activationStubController{sessionPath: livePath, status: &control.RuntimeStatus{}}
-	live := &WorkspaceTab{
-		ID:             "tab-live",
-		Scope:          "global",
-		TopicID:        "conversation",
-		TopicTitle:     "Upgraded",
-		SessionPath:    livePath,
-		Ctrl:           stub,
-		Label:          "stub-model",
-		Ready:          true,
-		ActivityStatus: topicStatusPaused,
-		disabledMCP:    map[string]ServerView{},
-	}
-	live.sink = &tabEventSink{tabID: live.ID, app: app}
-	installNoopRuntimeEvents(app, live.sink)
-	if err := live.ensureSessionLease(livePath); err != nil {
-		t.Fatalf("ensureSessionLease live: %v", err)
-	}
-	app.detachedSessions[sessionRuntimeKey(livePath)] = live
-
-	ticket, err := app.StartTopicActivation(TopicActivationRequest{
-		Scope:       "global",
-		TopicID:     "conversation",
-		SessionPath: parent,
-		RequestID:   "req-covering-parent",
-	})
-	if err != nil {
-		t.Fatalf("StartTopicActivation: %v", err)
-	}
-	events.waitFor(t, activationEventFor("req-covering-parent", "ready"))
-
-	app.mu.RLock()
-	tab := app.tabs[ticket.TabID]
-	app.mu.RUnlock()
-	if tab == nil {
-		t.Fatal("activated tab missing")
-	}
-	if tab.Ctrl == stub {
-		t.Fatal("recovery parent selection reused an unrelated same-topic controller")
-	}
-	assertActivatedNativeSource(t, app, tab, leaf)
-	if ticket.Meta.SessionPath != "" && sessionRuntimeKey(ticket.Meta.SessionPath) != sessionRuntimeKey(leaf) {
-		t.Fatalf("ticket session path = %q, want recovery leaf %q", ticket.Meta.SessionPath, leaf)
-	}
-}
-
-func assertActivatedNativeSource(t *testing.T, app *App, tab *WorkspaceTab, sourcePath string) {
-	t.Helper()
-	if tab.SessionID != "" || sessionRuntimeKey(tab.currentSessionPath()) != sessionRuntimeKey(sourcePath) {
-		t.Fatalf("activated session did not preserve native source %q: %q %q", sourcePath, tab.SessionID, tab.currentSessionPath())
-	}
-	state, err := app.workspaceRegistry().Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, mapping := range state.SourceMappings {
-		if sessionRuntimeKey(mapping.Path) == sessionRuntimeKey(sourcePath) {
-			t.Fatal("ordinary activation created an import mapping")
-		}
 	}
 }

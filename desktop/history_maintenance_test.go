@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -23,26 +21,6 @@ func TestMaintenanceHistoryKeepsProgressPendingUntilRuntimeSync(t *testing.T) {
 	rows := historyMessages([]provider.Message{{
 		ID: "maintenance:maintenance-history", Role: provider.Role("compaction"), Content: string(payload),
 	}}, strings.TrimSpace)
-	assertPendingMaintenanceHistory(t, rows)
-}
-
-func TestPreviewMaintenanceHistoryKeepsProgressPendingUntilRuntimeSync(t *testing.T) {
-	op := event.SessionOperationInfo{
-		OperationID: "maintenance-history", OperationRevision: 3, RuntimeEpoch: "runtime-old",
-		Kind: "compact", Activity: "running", Status: "running", InputTokens: 1200,
-	}
-	record, err := json.Marshal(previewEventRecord{Kind: "session_operation", SessionOperation: &op})
-	if err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(t.TempDir(), "events.jsonl")
-	if err := os.WriteFile(path, append(record, '\n'), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	rows, ok, err := previewEventSessionMessages(path)
-	if err != nil || !ok {
-		t.Fatalf("previewEventSessionMessages = ok %v, err %v", ok, err)
-	}
 	assertPendingMaintenanceHistory(t, rows)
 }
 

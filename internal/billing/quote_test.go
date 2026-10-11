@@ -11,18 +11,18 @@ func testInput(currency, provider, model string) QuoteInput {
 		rates = RateCard{CacheHit: 0.014, Input: 0.44, Output: 1.32, Currency: currency}
 	}
 	return QuoteInput{
-		Usage:           UsageTokens{PromptTokens: 1000, CompletionTokens: 2000},
-		Rates:           rates,
-		DisplayCurrency: currency,
-		ModelRef:        model,
-		ProviderKind:    provider,
-		ModelID:         model,
+		Usage:        UsageTokens{PromptTokens: 1000, CompletionTokens: 2000},
+		Rates:        rates,
+		Display:      DisplayRequest{Currency: currency, Source: DisplaySourceExplicit},
+		ModelRef:     model,
+		ProviderKind: provider,
+		ModelID:      model,
 	}
 }
 
 func TestBuildQuoteIdentityAndOfficialTableOnly(t *testing.T) {
 	in := testInput("USD", "deepseek", "deepseek-v4-flash")
-	in.DisplayCurrency = "CNY"
+	in.Display = DisplayRequest{Currency: "CNY", Source: DisplaySourceExplicit}
 	q := BuildQuote(in)
 	if q.Original.Currency != "USD" || q.Original.Amount == "0" {
 		t.Fatalf("original = %+v", q.Original)
@@ -39,7 +39,7 @@ func TestBuildQuoteIdentityAndOfficialTableOnly(t *testing.T) {
 func TestBuildQuoteCustomPriceFallsBackWithoutFX(t *testing.T) {
 	in := testInput("CNY", "deepseek", "deepseek-v4-flash")
 	in.Rates.Input = 99 // no longer matches the official table
-	in.DisplayCurrency = "USD"
+	in.Display = DisplayRequest{Currency: "USD", Source: DisplaySourceExplicit}
 	q := BuildQuote(in)
 	if len(q.Valuations) != 1 || q.Valuations["CNY"].Basis != BasisIdentity {
 		t.Fatalf("unexpected valuations: %+v", q.Valuations)
@@ -130,7 +130,7 @@ func TestBuildQuoteNoPriceIsUnavailable(t *testing.T) {
 }
 
 func TestBuildQuoteMissingUsageIsUnavailable(t *testing.T) {
-	q := BuildQuote(QuoteInput{Rates: RateCard{Input: 1, Currency: "USD"}, DisplayCurrency: "USD"})
+	q := BuildQuote(QuoteInput{Rates: RateCard{Input: 1, Currency: "USD"}, Display: DisplayRequest{Currency: "USD", Source: DisplaySourceExplicit}})
 	if q.CostComplete || q.DisplayComplete || q.Complete || q.Selected != nil || q.DisplayStatus != DisplayStatusUnavailable {
 		t.Fatalf("missing usage = %+v", q)
 	}

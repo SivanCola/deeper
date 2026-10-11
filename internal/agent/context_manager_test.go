@@ -107,8 +107,7 @@ func TestContextManagerPersistsAndRestoresBlockedFailureFingerprint(t *testing.T
 	path := filepath.Join(t.TempDir(), "session.jsonl")
 	newAgent := func(p *failingSummaryProvider) *Agent {
 		a := New(p, tool.NewRegistry(), &Session{Messages: append([]provider.Message(nil), messages...)}, Options{
-			ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2,
-			WorkspaceID: "workspace", ModelRef: "model",
+			ContextWindow: window, CompactRatio: 0.85, WorkspaceID: "workspace", ModelRef: "model",
 		}, event.Discard)
 		a.BindSessionPath(path, true)
 		return a
@@ -132,9 +131,6 @@ func TestContextManagerPersistsAndRestoresBlockedFailureFingerprint(t *testing.T
 	}
 	if first.sess.compactionState.LastReceipt.BlockedInputHash == "" {
 		t.Fatal("failure receipt missing input hash")
-	}
-	if first.sess.compactionState.BlockedInputHash != "" {
-		t.Fatalf("top-level blocked mirror should not be written: %q", first.sess.compactionState.BlockedInputHash)
 	}
 	if _, err := first.contextManager().Prepare(context.Background(), policy); err != nil {
 		t.Fatal(err)
@@ -173,8 +169,7 @@ func TestFailedSummaryReceiptTracksLatestViewHash(t *testing.T) {
 	}}
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
 
 	if _, err := a.contextManager().Prepare(context.Background(), policy); err != nil {
@@ -221,8 +216,7 @@ func TestStuckLatchDoesNotBlockChangedInput(t *testing.T) {
 	}}
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
 
 	oldHash := a.contextMaintenanceInputHash(a.modelVisibleMessages())
@@ -259,8 +253,7 @@ func TestFailedSummaryReceiptBacksOffChangedViewsWithinActiveTurn(t *testing.T) 
 	}}
 	prov := &failingSummaryProvider{}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
 	a.activeTurnCreatedAt.Store(11)
 
@@ -307,8 +300,7 @@ func TestPrepareThresholdSkipsExtensionInterceptors(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	a := New(&fakeProvider{reply: "unused"}, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.85, RecentKeep: 2,
-		Extensions: d, WorkspaceID: "ws", ModelRef: "m",
+		ContextWindow: 50_000, CompactRatio: 0.85, Extensions: d, WorkspaceID: "ws", ModelRef: "m",
 	}, event.Discard)
 
 	// Below fold: Prepare sizes the view and must not touch interceptors.
@@ -341,7 +333,7 @@ func TestStrictAlternatingRolesStillConvergesBeforeSampling(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "recent response"},
 	}}
 	a := New(&fakeProvider{reply: "old work summarized"}, tool.NewRegistry(), sess, Options{
-		ContextWindow: 10_000, RecentKeep: 2, StrictAlternatingRoles: true,
+		ContextWindow: 10_000, StrictAlternatingRoles: true,
 	}, event.Discard)
 
 	prepared, err := a.prepareSamplingRequest(context.Background())

@@ -2016,32 +2016,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/session_preparation.go",
-      "name": "CancelSessionPreparation",
-      "owner": "App.CancelSessionPreparation",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionPreparationView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "operationID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CancelSessionPreparation"
-      },
-      "sources": [
-        "desktop/session_preparation.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/shell_support.go",
       "name": "CancelShellInstall",
       "owner": "App.CancelShellInstall",
@@ -2363,33 +2337,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/session_preparation.go",
-      "name": "CheckHistoricalSourceUpdate",
-      "owner": "App.CheckHistoricalSourceUpdate",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.SessionSelector"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoricalSourceUpdateView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "selector"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CheckHistoricalSourceUpdate"
-      },
-      "sources": [
-        "desktop/session_preparation.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/remote_platform.go",
       "name": "CheckRemotePlatform",
       "owner": "App.CheckRemotePlatform",
@@ -2536,28 +2483,6 @@
       },
       "sources": [
         "desktop/recovery_lineage.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/remote_legacy_cleanup.go",
-      "name": "CleanRemoteLegacyWorkbenchData",
-      "owner": "App.CleanRemoteLegacyWorkbenchData",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "target"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CleanRemoteLegacyWorkbenchData"
-      },
-      "sources": [
-        "desktop/remote_legacy_cleanup.go"
       ]
     },
     {
@@ -3230,32 +3155,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/historical_import.go",
-      "name": "ControlHistoricalImport",
-      "owner": "App.ControlHistoricalImport",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoricalImportStatus"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "action"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ControlHistoricalImport"
-      },
-      "sources": [
-        "desktop/historical_import.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/session_workspace_api.go",
       "name": "CopySessionTarget",
       "owner": "App.CopySessionTarget",
@@ -3346,32 +3245,6 @@
       },
       "sources": [
         "desktop/blank_project.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/delivery_worktree.go",
-      "name": "CreateDeliveryWorktree",
-      "owner": "App.CreateDeliveryWorktree",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.IsolatedWorktreeOpenResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "workspaceRoot"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CreateDeliveryWorktree"
-      },
-      "sources": [
-        "desktop/delivery_worktree.go"
       ]
     },
     {
@@ -3738,28 +3611,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "DeleteRecoveryCopy",
-      "owner": "App.DeleteRecoveryCopy",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.DeleteRecoveryCopy"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/remote_app.go",
       "name": "DeleteRemotePath",
       "owner": "App.DeleteRemotePath",
@@ -3816,28 +3667,6 @@
       },
       "sources": [
         "desktop/remote_tab_commands.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_legacy_lifecycle_rpc.go",
-      "name": "DeleteSession",
-      "owner": "App.DeleteSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.DeleteSession"
-      },
-      "sources": [
-        "desktop/session_legacy_lifecycle_rpc.go"
       ]
     },
     {
@@ -3935,31 +3764,6 @@
       },
       "sources": [
         "desktop/topic_delete.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/delivery_worktree.go",
-      "name": "DeliveryWorktreeAvailability",
-      "owner": "App.DeliveryWorktreeAvailability",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "worktree.Availability"
-      },
-      "scope": {
-        "inputs": [
-          "workspaceRoot"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.DeliveryWorktreeAvailability"
-      },
-      "sources": [
-        "desktop/delivery_worktree.go"
       ]
     },
     {
@@ -4767,43 +4571,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/settings_app.go",
-      "name": "FetchAllProviderModels",
-      "owner": "App.FetchAllProviderModels",
-      "params": [
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.ProviderView"
-          },
-          "kind": "array"
-        }
-      ],
-      "result": {
-        "elem": {
-          "elem": {
-            "kind": "string"
-          },
-          "kind": "array"
-        },
-        "key": {
-          "kind": "string"
-        },
-        "kind": "map"
-      },
-      "scope": {
-        "inputs": [
-          "providers"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.FetchAllProviderModels"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
       "name": "FetchProviderModelCatalog",
       "owner": "App.FetchProviderModelCatalog",
       "params": [
@@ -4863,35 +4630,6 @@
       },
       "sources": [
         "desktop/provider_settings_probe.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "FetchProviderModels",
-      "owner": "App.FetchProviderModels",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.ProviderView"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "string"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "p"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.FetchProviderModels"
-      },
-      "sources": [
-        "desktop/settings_app.go"
       ]
     },
     {
@@ -5362,25 +5100,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/historical_import.go",
-      "name": "GetHistoricalImportStatus",
-      "owner": "App.GetHistoricalImportStatus",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoricalImportStatus"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.GetHistoricalImportStatus"
-      },
-      "sources": [
-        "desktop/historical_import.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/history_catalog.go",
       "name": "GetHistoryIndexStatus",
       "owner": "App.GetHistoryIndexStatus",
@@ -5425,26 +5144,6 @@
       },
       "sources": [
         "desktop/history_catalog.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/legacy_empty_session_cleanup.go",
-      "name": "GetLegacyEmptySessionCleanupStatus",
-      "owner": "App.GetLegacyEmptySessionCleanupStatus",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.LegacyEmptySessionCleanupStatus"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.GetLegacyEmptySessionCleanupStatus"
-      },
-      "sources": [
-        "desktop/legacy_empty_session_cleanup.go"
       ]
     },
     {
@@ -5830,52 +5529,6 @@
       },
       "sources": [
         "desktop/session_organization.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_preparation.go",
-      "name": "GetSessionPreparation",
-      "owner": "App.GetSessionPreparation",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionPreparationView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "operationID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.GetSessionPreparation"
-      },
-      "sources": [
-        "desktop/session_preparation.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_recovery_api.go",
-      "name": "GetSessionUpgradeStatus",
-      "owner": "App.GetSessionUpgradeStatus",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionUpgradeStatus"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.GetSessionUpgradeStatus"
-      },
-      "sources": [
-        "desktop/session_recovery_api.go"
       ]
     },
     {
@@ -6682,32 +6335,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/historical_import.go",
-      "name": "ImportHistoricalSession",
-      "owner": "App.ImportHistoricalSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionRestoreResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ImportHistoricalSession"
-      },
-      "sources": [
-        "desktop/historical_import.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/theme_app.go",
       "name": "ImportThemePack",
       "owner": "App.ImportThemePack",
@@ -7245,26 +6872,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/historical_import.go",
-      "name": "ListHistoricalSessions",
-      "owner": "App.ListHistoricalSessions",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoricalImportStatus"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ListHistoricalSessions"
-      },
-      "sources": [
-        "desktop/historical_import.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/history_read_snapshots.go",
       "name": "ListHistorySessions",
       "owner": "App.ListHistorySessions",
@@ -7370,63 +6977,6 @@
       },
       "sources": [
         "desktop/topic_state_catalog.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_catalog_runtime.go",
-      "name": "ListProjectTree",
-      "owner": "App.ListProjectTree",
-      "params": [],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "main.ProjectNode"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ListProjectTree"
-      },
-      "sources": [
-        "desktop/session_catalog_runtime.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_recovery_api.go",
-      "name": "ListRecoveryEntries",
-      "owner": "App.ListRecoveryEntries",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.RecoveryEntryPage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "query",
-          "cursor",
-          "limit"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListRecoveryEntries"
-      },
-      "sources": [
-        "desktop/session_recovery_api.go"
       ]
     },
     {
@@ -7834,28 +7384,6 @@
       },
       "sources": [
         "desktop/session_lifecycle_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ListTrashedSessions",
-      "owner": "App.ListTrashedSessions",
-      "params": [],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "main.SessionMeta"
-        },
-        "kind": "array"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ListTrashedSessions"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -8562,36 +8090,6 @@
       },
       "sources": [
         "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_preferences.go",
-      "name": "MigrateDesktopPreferences",
-      "owner": "App.MigrateDesktopPreferences",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "language",
-          "theme",
-          "style"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.MigrateDesktopPreferences"
-      },
-      "sources": [
-        "desktop/settings_preferences.go"
       ]
     },
     {
@@ -9897,64 +9395,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/session_preparation.go",
-      "name": "PrepareHistoricalSourceVersion",
-      "owner": "App.PrepareHistoricalSourceVersion",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.SessionSourceRef"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionPreparationView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "sourceRef",
-          "version"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.PrepareHistoricalSourceVersion"
-      },
-      "sources": [
-        "desktop/session_preparation.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_preparation.go",
-      "name": "PrepareSession",
-      "owner": "App.PrepareSession",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.SessionSelector"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionPreparationView"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "selector"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.PrepareSession"
-      },
-      "sources": [
-        "desktop/session_preparation.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/delivery_worktree.go",
       "name": "PrepareWorktreeMerge",
       "owner": "App.PrepareWorktreeMerge",
@@ -9977,32 +9417,6 @@
       },
       "sources": [
         "desktop/delivery_worktree.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_recovery_api.go",
-      "name": "PreviewRecoveryEntry",
-      "owner": "App.PreviewRecoveryEntry",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoryPage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.PreviewRecoveryEntry"
-      },
-      "sources": [
-        "desktop/session_recovery_api.go"
       ]
     },
     {
@@ -10117,50 +9531,6 @@
       },
       "sources": [
         "desktop/session_purge.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "PurgeRecoveryCopy",
-      "owner": "App.PurgeRecoveryCopy",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.PurgeRecoveryCopy"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_legacy_lifecycle_rpc.go",
-      "name": "PurgeTrashedSession",
-      "owner": "App.PurgeTrashedSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.PurgeTrashedSession"
-      },
-      "sources": [
-        "desktop/session_legacy_lifecycle_rpc.go"
       ]
     },
     {
@@ -10892,48 +10262,6 @@
       },
       "sources": [
         "desktop/uiperf_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "RecoveryCheckpointEnabled",
-      "owner": "App.RecoveryCheckpointEnabled",
-      "params": [],
-      "result": {
-        "kind": "boolean"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.RecoveryCheckpointEnabled"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "RecoveryCheckpointEnabledTab",
-      "owner": "App.RecoveryCheckpointEnabledTab",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "boolean"
-      },
-      "scope": {
-        "inputs": [
-          "_"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RecoveryCheckpointEnabledTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -12972,22 +12300,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/theme_app.go",
-      "name": "ResetThemePack",
-      "owner": "App.ResetThemePack",
-      "params": [],
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ResetThemePack"
-      },
-      "sources": [
-        "desktop/theme_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/terminal.go",
       "name": "ResizeTerminalForTab",
       "owner": "App.ResizeTerminalForTab",
@@ -13286,112 +12598,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResolveRecovery",
-      "owner": "App.ResolveRecovery",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id",
-          "action",
-          "feedback"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResolveRecovery"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResolveRecoveryTab",
-      "owner": "App.ResolveRecoveryTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "id",
-          "action",
-          "feedback"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResolveRecoveryTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/decision_runtime_api.go",
-      "name": "ResolveRecoveryTabForTurn",
-      "owner": "App.ResolveRecoveryTabForTurn",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "turnID",
-          "runtimeEpoch",
-          "id",
-          "action",
-          "feedback"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResolveRecoveryTabForTurn"
-      },
-      "sources": [
-        "desktop/decision_runtime_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/chat_file_reference.go",
       "name": "ResolveReferencePathForTab",
       "owner": "App.ResolveReferencePathForTab",
@@ -13553,37 +12759,6 @@
       },
       "sources": [
         "desktop/remote_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/tool_recovery.go",
-      "name": "ResolveToolRecoveryForTab",
-      "owner": "App.ResolveToolRecoveryForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "object",
-          "ref": "control.ToolRecoveryRequest"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "control.ToolRecoverySnapshot"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "req"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResolveToolRecoveryForTab"
-      },
-      "sources": [
-        "desktop/tool_recovery.go"
       ]
     },
     {
@@ -13785,58 +12960,6 @@
         ],
         "kind": "owner-inputs",
         "resolver": "App.RestoreMemoryRevisionForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_recovery_api.go",
-      "name": "RestoreRecoveryEntry",
-      "owner": "App.RestoreRecoveryEntry",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.SessionRestoreResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id",
-          "operationID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RestoreRecoveryEntry"
-      },
-      "sources": [
-        "desktop/session_recovery_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "RestoreSession",
-      "owner": "App.RestoreSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "path"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RestoreSession"
       },
       "sources": [
         "desktop/app.go"
@@ -14174,26 +13297,6 @@
       },
       "sources": [
         "desktop/inbox_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/legacy_empty_session_cleanup.go",
-      "name": "RetryLegacyEmptySessionCleanup",
-      "owner": "App.RetryLegacyEmptySessionCleanup",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.LegacyEmptySessionCleanupStatus"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.RetryLegacyEmptySessionCleanup"
-      },
-      "sources": [
-        "desktop/legacy_empty_session_cleanup.go"
       ]
     },
     {
@@ -15689,25 +14792,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/remote_legacy_cleanup.go",
-      "name": "ScanRemoteLegacyWorkbenchData",
-      "owner": "App.ScanRemoteLegacyWorkbenchData",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.LegacyWorkbenchDataView"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ScanRemoteLegacyWorkbenchData"
-      },
-      "sources": [
-        "desktop/remote_legacy_cleanup.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/remote_app.go",
       "name": "ScanSSHConfig",
       "owner": "App.ScanSSHConfig",
@@ -15846,45 +14930,6 @@
       },
       "sources": [
         "desktop/history_read_snapshots.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_target_history_legacy.go",
-      "name": "SearchHistoryContentForTarget",
-      "owner": "App.SearchHistoryContentForTarget",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.SessionSelector"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistorySearchPage"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "selector",
-          "query",
-          "cursor",
-          "limit"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SearchHistoryContentForTarget"
-      },
-      "sources": [
-        "desktop/session_target_history_legacy.go"
       ]
     },
     {
@@ -16410,12 +15455,6 @@
           "kind": "number"
         },
         {
-          "kind": "integer"
-        },
-        {
-          "kind": "integer"
-        },
-        {
           "kind": "string"
         }
       ],
@@ -16423,103 +15462,10 @@
       "scope": {
         "inputs": [
           "temperature",
-          "maxSteps",
-          "plannerMaxSteps",
           "systemPrompt"
         ],
         "kind": "owner-inputs",
         "resolver": "App.SetAgentParams"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetAgentPreset",
-      "owner": "App.SetAgentPreset",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "preset"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetAgentPreset"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetAgentPresetForTab",
-      "owner": "App.SetAgentPresetForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "preset"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetAgentPresetForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetAutoApproveTools",
-      "owner": "App.SetAutoApproveTools",
-      "params": [
-        {
-          "kind": "boolean"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "on"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetAutoApproveTools"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "SetAutoPlan",
-      "owner": "App.SetAutoPlan",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetAutoPlan"
       },
       "sources": [
         "desktop/settings_app.go"
@@ -16546,28 +15492,6 @@
         ],
         "kind": "owner-inputs",
         "resolver": "App.SetBotConnectionToolApprovalMode"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "SetBotDingtalkToolApprovalMode",
-      "owner": "App.SetBotDingtalkToolApprovalMode",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetBotDingtalkToolApprovalMode"
       },
       "sources": [
         "desktop/settings_app.go"
@@ -16620,27 +15544,6 @@
       },
       "sources": [
         "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetBypass",
-      "owner": "App.SetBypass",
-      "params": [
-        {
-          "kind": "boolean"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "on"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetBypass"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -16777,28 +15680,6 @@
         ],
         "kind": "owner-inputs",
         "resolver": "App.SetConnectionKey"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "SetDefaultAutoRecoveryCheckpoint",
-      "owner": "App.SetDefaultAutoRecoveryCheckpoint",
-      "params": [
-        {
-          "kind": "boolean"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "_"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetDefaultAutoRecoveryCheckpoint"
       },
       "sources": [
         "desktop/settings_app.go"
@@ -17052,28 +15933,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/settings_preferences.go",
-      "name": "SetDesktopUpdateChannel",
-      "owner": "App.SetDesktopUpdateChannel",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "channel"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetDesktopUpdateChannel"
-      },
-      "sources": [
-        "desktop/settings_preferences.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/zoom_factor.go",
       "name": "SetDesktopZoomFactor",
       "owner": "App.SetDesktopZoomFactor",
@@ -17092,28 +15951,6 @@
       },
       "sources": [
         "desktop/zoom_factor.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/reasoning_display_app.go",
-      "name": "SetDisplayMode",
-      "owner": "App.SetDisplayMode",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "arg0"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetDisplayMode"
-      },
-      "sources": [
-        "desktop/reasoning_display_app.go"
       ]
     },
     {
@@ -17162,28 +15999,6 @@
       },
       "sources": [
         "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/reasoning_display_app.go",
-      "name": "SetExpandThinking",
-      "owner": "App.SetExpandThinking",
-      "params": [
-        {
-          "kind": "boolean"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "arg0"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetExpandThinking"
-      },
-      "sources": [
-        "desktop/reasoning_display_app.go"
       ]
     },
     {
@@ -17281,32 +16096,6 @@
         ],
         "kind": "owner-inputs",
         "resolver": "App.SetMCPServerEnabled"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetMCPServerTier",
-      "owner": "App.SetMCPServerTier",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "name",
-          "tier"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetMCPServerTier"
       },
       "sources": [
         "desktop/app.go"
@@ -17764,76 +16553,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/quality_floor.go",
-      "name": "SetQualityFloor",
-      "owner": "App.SetQualityFloor",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "floor"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetQualityFloor"
-      },
-      "sources": [
-        "desktop/quality_floor.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/quality_floor.go",
-      "name": "SetQualityFloorForTab",
-      "owner": "App.SetQualityFloorForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "floor"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetQualityFloorForTab"
-      },
-      "sources": [
-        "desktop/quality_floor.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/reasoning_display_app.go",
-      "name": "SetReasoningDisplayMode",
-      "owner": "App.SetReasoningDisplayMode",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetReasoningDisplayMode"
-      },
-      "sources": [
-        "desktop/reasoning_display_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/settings_app.go",
       "name": "SetReasoningLanguage",
       "owner": "App.SetReasoningLanguage",
@@ -17852,52 +16571,6 @@
       },
       "sources": [
         "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetRecoveryCheckpointEnabled",
-      "owner": "App.SetRecoveryCheckpointEnabled",
-      "params": [
-        {
-          "kind": "boolean"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "_"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetRecoveryCheckpointEnabled"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetRecoveryCheckpointEnabledTab",
-      "owner": "App.SetRecoveryCheckpointEnabledTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "boolean"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "_",
-          "_"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetRecoveryCheckpointEnabledTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -18106,32 +16779,6 @@
       },
       "sources": [
         "desktop/remote_tab_commands.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/remote_tab.go",
-      "name": "SetRemoteTabQualityFloor",
-      "owner": "App.SetRemoteTabQualityFloor",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "floor"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetRemoteTabQualityFloor"
-      },
-      "sources": [
-        "desktop/remote_tab.go"
       ]
     },
     {
@@ -18514,54 +17161,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
-      "name": "SetTokenMode",
-      "owner": "App.SetTokenMode",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetTokenMode"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetTokenModeForTab",
-      "owner": "App.SetTokenModeForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetTokenModeForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
       "name": "SetToolApprovalMode",
       "owner": "App.SetToolApprovalMode",
       "params": [
@@ -18904,35 +17503,6 @@
       },
       "sources": [
         "desktop/bot_connection_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/historical_import.go",
-      "name": "StartHistoricalImport",
-      "owner": "App.StartHistoricalImport",
-      "params": [
-        {
-          "elem": {
-            "kind": "string"
-          },
-          "kind": "array"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.HistoricalImportStatus"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "ids"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.StartHistoricalImport"
-      },
-      "sources": [
-        "desktop/historical_import.go"
       ]
     },
     {
@@ -19422,70 +17992,6 @@
       },
       "sources": [
         "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SubmitDeliveryRecoveryToTab",
-      "owner": "App.SubmitDeliveryRecoveryToTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "input"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitDeliveryRecoveryToTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/turn_submission_app.go",
-      "name": "SubmitDeliveryRecoveryToTabWithID",
-      "owner": "App.SubmitDeliveryRecoveryToTabWithID",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "input",
-          "submissionID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitDeliveryRecoveryToTabWithID"
-      },
-      "sources": [
-        "desktop/turn_submission_app.go"
       ]
     },
     {
@@ -21106,31 +19612,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "UpgradeDeepSeekProviderAccess",
-      "owner": "App.UpgradeDeepSeekProviderAccess",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "string"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "name"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.UpgradeDeepSeekProviderAccess"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/stats_app.go",
       "name": "UsageStats",
       "owner": "App.UsageStats",
@@ -21769,13 +20250,6 @@
           }
         },
         {
-          "name": "legacyEstimate",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
           "name": "catalogSource",
           "optional": true,
           "type": {
@@ -22060,12 +20534,6 @@
     },
     "capdiag.HookReport": {
       "fields": [
-        {
-          "name": "trusted_project",
-          "type": {
-            "kind": "boolean"
-          }
-        },
         {
           "name": "project_defines_hooks",
           "type": {
@@ -23630,46 +22098,6 @@
         }
       ]
     },
-    "control.ToolRecoveryRequest": {
-      "fields": [
-        {
-          "name": "sessionPath",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "runtimeEpoch",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "revision",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "attemptId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "inspectionId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "action",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
     "control.ToolRecoverySnapshot": {
       "fields": [
         {
@@ -23711,18 +22139,6 @@
               "ref": "provider.ToolCallRecord"
             },
             "kind": "array"
-          }
-        },
-        {
-          "name": "retryEnabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "retired",
-          "type": {
-            "kind": "boolean"
           }
         }
       ]
@@ -23972,27 +22388,6 @@
           "name": "after",
           "type": {
             "kind": "integer"
-          }
-        }
-      ]
-    },
-    "event.FinalReadiness": {
-      "fields": [
-        {
-          "name": "attempts",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "missing",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
           }
         }
       ]
@@ -24920,12 +23315,6 @@
     "eventwire.CompletionSummary": {
       "fields": [
         {
-          "name": "preset",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "verdict",
           "type": {
             "kind": "string"
@@ -24982,13 +23371,6 @@
           "name": "constraint_degraded",
           "type": {
             "kind": "boolean"
-          }
-        },
-        {
-          "name": "floor",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         },
         {
@@ -25431,17 +23813,6 @@
           "optional": true,
           "type": {
             "kind": "string"
-          }
-        },
-        {
-          "name": "readiness",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "eventwire.FinalReadiness"
-            },
-            "kind": "nullable"
           }
         },
         {
@@ -25895,27 +24266,6 @@
               "ref": "eventwire.ExtensionNotification"
             },
             "kind": "nullable"
-          }
-        }
-      ]
-    },
-    "eventwire.FinalReadiness": {
-      "fields": [
-        {
-          "name": "attempts",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "missing",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
           }
         }
       ]
@@ -26981,13 +25331,6 @@
           }
         },
         {
-          "name": "costUsd",
-          "optional": true,
-          "type": {
-            "kind": "number"
-          }
-        },
-        {
           "name": "costQuote",
           "optional": true,
           "type": {
@@ -27513,18 +25856,6 @@
           }
         },
         {
-          "name": "maxSteps",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "plannerMaxSteps",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "maxSubagentDepth",
           "type": {
             "kind": "integer"
@@ -27770,166 +26101,6 @@
         },
         {
           "name": "admins",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.BotAllowlistView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "allowAll",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "qqUsers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "feishuUsers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "weixinUsers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "qqApprovers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "feishuApprovers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "weixinApprovers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "qqAdmins",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "feishuAdmins",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "weixinAdmins",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "qqGroups",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "feishuGroups",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "weixinGroups",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "dingtalkUsers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "dingtalkApprovers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "dingtalkAdmins",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "dingtalkGroups",
           "type": {
             "elem": {
               "kind": "string"
@@ -28528,12 +26699,6 @@
           }
         },
         {
-          "name": "queueDrop",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "ignoreSelfMessages",
           "type": {
             "kind": "boolean"
@@ -28568,13 +26733,6 @@
               "ref": "main.BotRouteView"
             },
             "kind": "array"
-          }
-        },
-        {
-          "name": "allowlist",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotAllowlistView"
           }
         },
         {
@@ -28894,13 +27052,6 @@
           "optional": true,
           "type": {
             "kind": "integer"
-          }
-        },
-        {
-          "name": "legacy",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
           }
         },
         {
@@ -29333,21 +27484,7 @@
           }
         },
         {
-          "name": "snipTrigger",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "foldTrigger",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "forceTrigger",
           "optional": true,
           "type": {
             "kind": "integer"
@@ -29678,13 +27815,6 @@
           }
         },
         {
-          "name": "sessionCostUsd",
-          "optional": true,
-          "type": {
-            "kind": "number"
-          }
-        },
-        {
           "name": "sessionCostComplete",
           "optional": true,
           "type": {
@@ -29834,27 +27964,9 @@
           }
         },
         {
-          "name": "displayMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "sessionExperience",
           "type": {
             "kind": "string"
-          }
-        },
-        {
-          "name": "reasoningDisplayMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "reasoningDisplayModeExplicit",
-          "type": {
-            "kind": "boolean"
           }
         },
         {
@@ -30851,12 +28963,6 @@
           }
         },
         {
-          "name": "turnsLimit",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "tokensUsed",
           "type": {
             "kind": "integer"
@@ -30884,12 +28990,6 @@
         },
         {
           "name": "noProgressTurns",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "noProgressLimit",
           "type": {
             "kind": "integer"
           }
@@ -31097,178 +29197,6 @@
               "kind": "boolean"
             },
             "kind": "nullable"
-          }
-        }
-      ]
-    },
-    "main.HistoricalImportStatus": {
-      "fields": [
-        {
-          "name": "items",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.HistoricalSessionView"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "running",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "paused",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "remaining",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "completed",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "blocked",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "failed",
-          "type": {
-            "kind": "integer"
-          }
-        }
-      ]
-    },
-    "main.HistoricalSessionView": {
-      "fields": [
-        {
-          "name": "id",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "title",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "format",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "errorCode",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "errorDetail",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "session",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "session.SessionRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
-          "name": "source",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.SessionSourceRef"
-            },
-            "kind": "nullable"
-          }
-        }
-      ]
-    },
-    "main.HistoricalSourceUpdateView": {
-      "fields": [
-        {
-          "name": "sourceKey",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "version",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "target",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "session.SessionRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
-          "name": "source",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.SessionSourceRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
-          "name": "errorCode",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "retryable",
-          "type": {
-            "kind": "boolean"
           }
         }
       ]
@@ -32780,161 +30708,6 @@
         }
       ]
     },
-    "main.LegacyEmptySessionCleanupItem": {
-      "fields": [
-        {
-          "name": "id",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "kind",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sessionId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "topicId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "title",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "phase",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "classification",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "reason",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.LegacyEmptySessionCleanupStatus": {
-      "fields": [
-        {
-          "name": "version",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "batchId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "state",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "removed",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "pending",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "busy",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "unknown",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "protected",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "hasContent",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "items",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.LegacyEmptySessionCleanupItem"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.LegacyWorkbenchDataView": {
-      "fields": [
-        {
-          "name": "mirrorCount",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "mirrorBytes",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "trustFile",
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
     "main.MCPAppInstanceView": {
       "fields": [
         {
@@ -34132,17 +31905,6 @@
           }
         },
         {
-          "name": "historicalSource",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.SessionSourceRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
           "name": "eventChannel",
           "type": {
             "kind": "string"
@@ -34258,12 +32020,6 @@
           }
         },
         {
-          "name": "bypass",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
           "name": "collaborationMode",
           "type": {
             "kind": "string"
@@ -34271,19 +32027,6 @@
         },
         {
           "name": "toolApprovalMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "tokenMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "agentPreset",
-          "optional": true,
           "type": {
             "kind": "string"
           }
@@ -35338,38 +33081,6 @@
     "main.ProjectNode": {
       "fields": [
         {
-          "name": "source",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.SessionSourceRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
-          "name": "historical",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "historicalBranch",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "preparationStatus",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "identityAliases",
           "optional": true,
           "type": {
@@ -35609,13 +33320,6 @@
         },
         {
           "name": "recoveryCleanupEligibleCount",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "recoveryCopyCount",
           "optional": true,
           "type": {
             "kind": "integer"
@@ -36216,15 +33920,6 @@
           }
         },
         {
-          "name": "visionModels",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
           "name": "modelCapabilities",
           "optional": true,
           "type": {
@@ -36531,12 +34226,6 @@
           }
         },
         {
-          "name": "chatUrl",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "requestUrl",
           "type": {
             "kind": "string"
@@ -36558,12 +34247,6 @@
               "kind": "string"
             },
             "kind": "array"
-          }
-        },
-        {
-          "name": "visionModelsConfigured",
-          "type": {
-            "kind": "boolean"
           }
         },
         {
@@ -36728,13 +34411,6 @@
               "ref": "main.ProviderModelCapabilityView"
             },
             "kind": "array"
-          }
-        },
-        {
-          "name": "recommendedUpgradeAvailable",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
           }
         },
         {
@@ -36982,89 +34658,6 @@
         }
       ]
     },
-    "main.RecoveryEntryPage": {
-      "fields": [
-        {
-          "name": "items",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.RecoveryEntryView"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "nextCursor",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "generation",
-          "type": {
-            "kind": "integer"
-          }
-        }
-      ]
-    },
-    "main.RecoveryEntryView": {
-      "fields": [
-        {
-          "name": "workspaceChoices",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.RecoveryWorkspaceChoice"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "id",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "title",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "format",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "reason",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "canPreview",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "canRestore",
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
     "main.RecoveryLineageMember": {
       "fields": [
         {
@@ -37256,22 +34849,6 @@
         {
           "name": "headId",
           "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.RecoveryWorkspaceChoice": {
-      "fields": [
-        {
-          "name": "id",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "title",
           "type": {
             "kind": "string"
           }
@@ -38210,13 +35787,6 @@
           }
         },
         {
-          "name": "legacy",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
           "name": "expiredFilePayload",
           "optional": true,
           "type": {
@@ -38887,13 +36457,6 @@
           "name": "autoStart",
           "type": {
             "kind": "boolean"
-          }
-        },
-        {
-          "name": "tier",
-          "optional": true,
-          "type": {
-            "kind": "string"
           }
         },
         {
@@ -39606,13 +37169,6 @@
         },
         {
           "name": "effort",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "qualityFloor",
           "optional": true,
           "type": {
             "kind": "string"
@@ -40343,38 +37899,6 @@
     "main.SessionMeta": {
       "fields": [
         {
-          "name": "source",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.SessionSourceRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
-          "name": "historical",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "historicalBranch",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "preparationStatus",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "path",
           "type": {
             "kind": "string"
@@ -40441,12 +37965,6 @@
         },
         {
           "name": "lastActivityAt",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "modTime",
           "type": {
             "kind": "integer"
           }
@@ -40789,88 +38307,6 @@
         }
       ]
     },
-    "main.SessionPreparationView": {
-      "fields": [
-        {
-          "name": "operationId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sourceKey",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "revision",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "target",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "session.SessionRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
-          "name": "errorCode",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "errorDetail",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "retryable",
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.SessionRestoreResult": {
-      "fields": [
-        {
-          "name": "session",
-          "type": {
-            "kind": "object",
-            "ref": "session.SessionRef"
-          }
-        },
-        {
-          "name": "workspaceId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "generation",
-          "type": {
-            "kind": "integer"
-          }
-        }
-      ]
-    },
     "main.SessionRuntimeIssue": {
       "fields": [
         {
@@ -40944,17 +38380,6 @@
     "main.SessionSelector": {
       "fields": [
         {
-          "name": "source",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.SessionSourceRef"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
           "name": "ref",
           "optional": true,
           "type": {
@@ -40974,36 +38399,6 @@
         },
         {
           "name": "topicId",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.SessionSourceRef": {
-      "fields": [
-        {
-          "name": "hostId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sourceKey",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "path",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "headId",
           "optional": true,
           "type": {
             "kind": "string"
@@ -41070,64 +38465,6 @@
           "optional": true,
           "type": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.SessionUpgradeStatus": {
-      "fields": [
-        {
-          "name": "sources",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "sessions",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "operations",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "discovered",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "migrated",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "pending",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "failed",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "conflicts",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "pendingOperations",
-          "type": {
-            "kind": "integer"
           }
         }
       ]
@@ -41261,12 +38598,6 @@
           }
         },
         {
-          "name": "autoPlan",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "providers",
           "type": {
             "elem": {
@@ -41381,24 +38712,6 @@
           }
         },
         {
-          "name": "displayMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "reasoningDisplayMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "reasoningDisplayModeExplicit",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
           "name": "statusBarStyle",
           "type": {
             "kind": "string"
@@ -41450,12 +38763,6 @@
           }
         },
         {
-          "name": "expandThinking",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
           "name": "conversationWidth",
           "optional": true,
           "type": {
@@ -41486,12 +38793,6 @@
         },
         {
           "name": "autoApproveTools",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "bypass",
           "type": {
             "kind": "boolean"
           }
@@ -42364,33 +39665,6 @@
           }
         },
         {
-          "name": "tokenMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "agentPreset",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "qualityFloor",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "floorInferred",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
           "name": "goal",
           "optional": true,
           "type": {
@@ -42469,17 +39743,6 @@
           "optional": true,
           "type": {
             "kind": "string"
-          }
-        },
-        {
-          "name": "historicalSource",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.SessionSourceRef"
-            },
-            "kind": "nullable"
           }
         },
         {
@@ -44821,13 +42084,6 @@
           "optional": true,
           "type": {
             "kind": "string"
-          }
-        },
-        {
-          "name": "sessionCostUsd",
-          "optional": true,
-          "type": {
-            "kind": "number"
           }
         }
       ]
@@ -47813,17 +45069,6 @@
             "elem": {
               "kind": "object",
               "ref": "provider.DecisionReceipt"
-            },
-            "kind": "nullable"
-          }
-        },
-        {
-          "name": "readiness",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "event.FinalReadiness"
             },
             "kind": "nullable"
           }

@@ -28,20 +28,6 @@ type topicArchiveTrace struct {
 }
 
 func (a *App) TrashTopic(topicID string) error {
-	if key, historical := strings.CutPrefix(topicID, "historical-"); historical {
-		if _, err := a.ListHistoricalSessions(); err != nil {
-			return err
-		}
-		c := &a.historicalImports
-		c.mu.Lock()
-		source, found := c.sources[key]
-		c.mu.Unlock()
-		if !found {
-			return newSessionOperationError(sessionOperationTargetNotFound, "The historical source is unavailable.")
-		}
-		_, err := a.ArchiveSessionTarget(SessionSelector{Source: &SessionSourceRef{Path: source.path, SourceKey: key, HeadID: source.head}})
-		return err
-	}
 	return friendlySessionFileError(a.archiveCompatibleTopic(topicID))
 }
 
@@ -85,14 +71,11 @@ func (a *App) trashTopic(topicID string) (retErr error) {
 	// The last visible topic leaves no replacement runtime (the frontend lands
 	// on the workspace draft). Abandoned transient blanks still go, or
 	// reconciliation could promote a default-titled blank into the registry.
-	keepPath := ""
 	a.mu.RLock()
 	if tab := a.tabs[a.activeTabID]; tab != nil {
-		keepPath = tab.SessionPath
 	}
 	a.mu.RUnlock()
 	trace.phase = "discard_unused_blanks"
-	a.discardUnusedTransientBlankSessions(changedDirs, keepPath)
 	trace.phase = "notify"
 	if len(changedDirs) > 0 {
 		a.emitProjectTreeChangedForSessionDirs(changedDirs...)
@@ -308,71 +291,6 @@ func topicIndexedInRegistry(scope, workspaceRoot, topicID string) bool {
 		return containsDesktopString(f.Projects[i].Topics, topicID)
 	}
 	return false
-}
-
-func (a *App) discardUnusedTransientBlankSessions(dirs []string, keepPath string) {
-	// Forced legacy repair promotes indexed sidecars under this same lock. Hold
-	// it through classification, deletion, and scoped registry cleanup so a
-	// concurrent reconcile cannot reinsert a zero-byte ghost after we sweep it.
-	legacyMigrationMu.Lock()
-	defer legacyMigrationMu.Unlock()
-
-	keepPath = canonicalTabSessionPath(strings.TrimSpace(keepPath))
-	kept := map[string]bool{}
-	if keepPath != "" {
-		kept[keepPath] = true
-	}
-	if a != nil {
-		a.mu.RLock()
-		for _, tabs := range []map[string]*WorkspaceTab{a.tabs, a.detachedSessions} {
-			for _, tab := range tabs {
-				if tab == nil {
-					continue
-				}
-				if path := canonicalTabSessionPath(strings.TrimSpace(tab.SessionPath)); path != "" {
-					kept[path] = true
-				}
-			}
-		}
-		a.mu.RUnlock()
-	}
-	siblingDirs := append([]string(nil), dirs...)
-	if a != nil {
-		siblingDirs = append(siblingDirs, a.knownSessionDirs()...)
-	}
-	seen := map[string]bool{}
-	for _, dir := range dirs {
-		dir = strings.TrimSpace(dir)
-		if dir == "" || seen[dir] {
-			continue
-		}
-		seen[dir] = true
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		for _, entry := range entries {
-			name := entry.Name()
-			if entry.IsDir() || !store.IsSessionTranscriptName(name) {
-				continue
-			}
-			path := filepath.Join(dir, name)
-			if kept[canonicalTabSessionPath(path)] {
-				continue
-			}
-			if !unusedTransientBlankSession(dir, path) {
-				continue
-			}
-			meta, hasMeta, _ := agent.LoadBranchMeta(path)
-			removed := discardTransientBlankSessionArtifacts(path)
-			if removed && hasMeta && !transientTopicHasSibling(siblingDirs, path, meta) {
-				cleanupTransientBlankTopicRegistration(meta)
-			}
-			if removed && a != nil {
-				a.removeSessionCatalogPath(path, "transient_blank_discarded")
-			}
-		}
-	}
 }
 
 func unusedTransientBlankSession(dir, path string) bool {

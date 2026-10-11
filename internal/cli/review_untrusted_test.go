@@ -52,12 +52,13 @@ func TestReviewCommandIgnoresCheckoutToolsAndSkills(t *testing.T) {
 	writeUntrustedReviewFile(t, dir, ".deepzora/skills/review/SKILL.md",
 		"---\ndescription: checkout review\nrunAs: subagent\nallowed-tools: grep, bash, web_fetch\n---\n"+untrustedReviewSkillBody+"\n", 0o644)
 	writeUntrustedReviewFile(t, dir, "deepzora.toml", `
-default_model = "reviewer"
+default_model = "reviewer/review-model"
 
 [[providers]]
 name = "reviewer"
 kind = "`+untrustedReviewProbeKind+`"
-model = "review-model"
+models = ["review-model"]
+default = "review-model"
 base_url = "http://127.0.0.1:1"
 
 [tools.search]

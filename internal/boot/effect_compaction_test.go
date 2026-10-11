@@ -145,7 +145,7 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "boot-dense-summary"
-model = "x"
+models = ["x"]
 context_window = 40000
 `)
 	approveWorkspace(t, dir)

@@ -40,7 +40,7 @@ const followMode = new Map<string, "ok" | "deferred">();
 const followDeferred = new Map<string, ReturnType<typeof deferred<TranscriptFollowResponse>>>();
 const polls = new Map<string, ReturnType<typeof deferred<TranscriptFollowResponse>>>();
 const windowDeferred = new Map<string, ReturnType<typeof deferred<HistoryWindowPage>>>();
-const status = { running: false, label: "Model", plan: false, toolApprovalMode: "ask", goal: "" };
+const status = { running: false, label: "Model", plan: false, toolApprovalMode: "workspace-write", goal: "" };
 const inline = (id: string, content: string) => ({ messageId: id, position: 0, version: 1, role: "assistant", eventSequence: 1, visibleTurn: 1, preview: "", inline: { id, role: "assistant", content } });
 function followResponse(tabId: string): TranscriptFollowResponse {
   return {

@@ -97,18 +97,11 @@ func ContainsShellSyntax(cmd string) bool {
 	return shellparse.ContainsShellSyntax(cmd)
 }
 
-// CommandIsReadOnly is the legacy coarse read-only adapter.
-// Deprecated: production policy must use ClassifyBash and project its axis.
-func CommandIsReadOnly(command string) (base, sub string, ok bool) {
-	base, sub, _, ok = ClassifyReadOnlyCommand(command)
-	return base, sub, ok
-}
-
-// ClassifyReadOnlyCommand returns the resolved argument fields as well as the
+// classifyReadOnlyCommand returns the resolved argument fields as well as the
 // command classification. Dynamic fields are opaque placeholders and are
 // returned only for the narrowly verified substitution shape above.
-// Deprecated: retained for compatibility and narrow substitution validation.
-func ClassifyReadOnlyCommand(command string) (base, sub string, fields []string, ok bool) {
+// Used internally by the effect classifier for narrow substitution validation.
+func classifyReadOnlyCommand(command string) (base, sub string, fields []string, ok bool) {
 	fields, malformed := shellparse.StaticFields(command)
 	if malformed != "" {
 		var dynamic bool
@@ -287,32 +280,4 @@ func nestedReadOnlyArgsSafe(base, sub string, fields []string) bool {
 		}
 	}
 	return base != "git" || sub != "tag" || len(args) == 0 || args[0] == "-l" || args[0] == "--list"
-}
-
-// CommandIsWorkspaceNonMutating reports commands that Delivery can execute
-// without acquiring the workspace writer. Permission-safe readers are a
-// subset; network probes live only in workspaceNonMutatingCommands so this
-// classification cannot silently widen approval or read-only subagent access.
-// Deprecated: production policy consumers must use ClassifyBash.
-func CommandIsWorkspaceNonMutating(command string) (base, sub string, ok bool) {
-	base, sub, _, ok = ClassifyWorkspaceNonMutatingCommand(command)
-	return base, sub, ok
-}
-
-// ClassifyWorkspaceNonMutatingCommand is the field-carrying form used by
-// Delivery mutation accounting.
-// Deprecated: retained as a compatibility adapter.
-func ClassifyWorkspaceNonMutatingCommand(command string) (base, sub string, fields []string, ok bool) {
-	if base, sub, fields, ok = ClassifyReadOnlyCommand(command); ok {
-		return base, sub, fields, true
-	}
-	fields, malformed := shellparse.StaticFields(command)
-	if malformed != "" || len(fields) == 0 {
-		return "", "", nil, false
-	}
-	base = strings.ToLower(fields[0])
-	if workspaceNonMutatingCommands[base] {
-		return base, "", fields, true
-	}
-	return "", "", nil, false
 }

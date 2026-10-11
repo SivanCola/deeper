@@ -154,7 +154,6 @@ func providerRemovalStateFingerprint(c *config.Config, credentialsRevision strin
 	write(c.Agent.PlannerModel)
 	write(c.Agent.VisionModel)
 	write(c.Agent.GuardianModel)
-	write(c.Agent.RecoveryModel)
 	write(c.Agent.SubagentModel)
 	write(c.Bot.Model)
 	write(c.Bot.QQ.Model)
@@ -193,18 +192,7 @@ func providerRemovalStateFingerprint(c *config.Config, credentialsRevision strin
 	return string(h.Sum(nil))
 }
 
-func officialProviderRemovalTargets(names []string) []string {
-	targets := append([]string(nil), names...)
-	for _, name := range names {
-		switch canonical := config.CanonicalDesktopOfficialProviderName(name); canonical {
-		case "deepseek":
-			targets = append(targets, canonical, "deepseek-flash", "deepseek-pro")
-		default:
-			targets = append(targets, canonical)
-		}
-	}
-	return uniqueNonEmptyStrings(targets)
-}
+func officialProviderRemovalTargets(names []string) []string { return uniqueNonEmptyStrings(names) }
 
 func providerAccessFallbackRef(c *config.Config, names []string) string {
 	removed := providerAccessSet(names)
@@ -243,9 +231,6 @@ func retargetProviderReferences(c *config.Config, names []string, fallbackRef st
 	}
 	if providerRefMatchesAny(c, c.Agent.GuardianModel, names) {
 		c.Agent.GuardianModel = fallbackRef
-	}
-	if providerRefMatchesAny(c, c.Agent.RecoveryModel, names) {
-		c.Agent.RecoveryModel = fallbackRef
 	}
 	if providerRefMatchesAny(c, c.Agent.SubagentModel, names) {
 		c.Agent.SubagentModel = fallbackRef
@@ -375,17 +360,8 @@ func (a *App) commitCustomProviderRemovals(plan providerRemovalPlan) (string, er
 	}
 	baseline := fresh.ModelSettingsBaseline()
 	fallbackRef := providerAccessFallbackRef(fresh, plan.targets)
-	// Config.RemoveProvider has a compatibility fallback across every configured
-	// provider. Settings access removal is narrower: hidden providers must not
-	// silently become the new default after restart. Retarget first so the
-	// persisted config and every rebuilt tab use the same visible provider. Keep
-	// the historical provider-only persisted form while the runtime uses the
-	// exact provider/model reference returned below.
-	persistedFallback := fallbackRef
-	if providerName, _, ok := strings.Cut(fallbackRef, "/"); ok {
-		persistedFallback = providerName
-	}
-	retargetProviderReferences(fresh, plan.targets, persistedFallback)
+	// Retarget before removal so hidden providers cannot become the default.
+	retargetProviderReferences(fresh, plan.targets, fallbackRef)
 	for _, name := range plan.targets {
 		if err := fresh.RemoveProvider(name); err != nil {
 			return "", err

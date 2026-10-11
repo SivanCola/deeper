@@ -1,5 +1,5 @@
 // Package releasenotes exposes the reviewed release catalog bundled with each
-// Reasonix build.
+// Deepzora build.
 package releasenotes
 
 import "embed"

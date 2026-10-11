@@ -12,10 +12,10 @@ func agedMemory(age time.Duration) Memory {
 	return Memory{Type: TypeProject, UpdatedAt: freshnessNow.Add(-age)}
 }
 
-func TestVolatilityOverridesTypeWindows(t *testing.T) {
-	old := agedMemory(60 * 24 * time.Hour) // past project fresh (30d), inside current (180d)
-	if got := FreshnessFor(old, freshnessNow); got != FreshnessCurrent {
-		t.Fatalf("type default: 60d project fact = %q, want current", got)
+func TestVolatilityOverridesStableDefault(t *testing.T) {
+	old := agedMemory(60 * 24 * time.Hour) // within the current stable fresh window (90d)
+	if got := FreshnessFor(old, freshnessNow); got != FreshnessFresh {
+		t.Fatalf("stable default: 60d project fact = %q, want fresh", got)
 	}
 
 	volatile := old
@@ -57,9 +57,9 @@ func TestExpiryIsAHardBoundaryExcludedFromRecall(t *testing.T) {
 }
 
 func TestVerificationRenewsTheFreshnessClock(t *testing.T) {
-	m := agedMemory(200 * 24 * time.Hour) // past project current window: stale
+	m := agedMemory(400 * 24 * time.Hour) // past the stable current window: stale
 	if got := FreshnessFor(m, freshnessNow); got != FreshnessStale {
-		t.Fatalf("200d project fact = %q, want stale", got)
+		t.Fatalf("400d project fact = %q, want stale", got)
 	}
 	m.LastVerifiedAt = freshnessNow.Add(-24 * time.Hour)
 	if got := FreshnessFor(m, freshnessNow); got != FreshnessFresh {

@@ -1637,7 +1637,7 @@ jobs:
             scripts/verify-release-artifact-archive.test.mjs \
             scripts/build-release-cli-candidate.test.mjs scripts/publish-homebrew-cask.test.mjs \
             scripts/desktop-release-artifacts.test.mjs scripts/release-publication-ledger.test.mjs \
-            scripts/release-cli-freeze.test.mjs \
+            scripts/release-baseline.test.mjs \
             scripts/ci-paths.test.mjs scripts/ci-workflow.test.mjs scripts/macos-go-tests.test.mjs \
             scripts/desktop-windows-go-tests.test.mjs \
             npm/publish.test.mjs

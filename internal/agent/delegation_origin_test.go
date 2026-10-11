@@ -30,7 +30,7 @@ func runDelegationForOrigin(t *testing.T, prompt string) evidence.DelegationAudi
 		{toolCallChunk("2", "read_file", `{"path":"src/scanner.go"}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
 	}}
-	task := NewTaskTool(prov, nil, reg, 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: prov, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), t.TempDir(), "base", "high").
 		WithScheduler(NewSubagentScheduler(4, 4))
 	ctx := withCallContext(context.Background(), "call-1", probe, nil, false)

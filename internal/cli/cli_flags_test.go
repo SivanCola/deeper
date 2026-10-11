@@ -9,6 +9,7 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/provider"
+
 	"github.com/spf13/pflag"
 )
 
@@ -123,46 +124,6 @@ func TestStripLeadingPrintFlag(t *testing.T) {
 	}
 }
 
-func TestResolveSessionQueryByMachineSessionID(t *testing.T) {
-	identityKey := installMachineTestIdentity(t)
-	dir := t.TempDir()
-	path := saveQueryTestSession(t, dir, "opaque-branch.jsonl", "resume by machine id")
-	machineID := machineSessionIDWithKey(agent.BranchID(path), identityKey)
-	if machineID == "" || !looksLikeMachineSessionID(machineID) {
-		t.Fatalf("machine session id = %q", machineID)
-	}
-
-	got, err := resolveSessionQuery(dir, machineID)
-	if err != nil || got.path != path || got.canonical() {
-		t.Fatalf("resolve by machine id = (%+v, %v), want %q", got, err, path)
-	}
-	missing := "session_" + strings.Repeat("0", 32)
-	if _, err := resolveSessionQuery(dir, missing); err == nil || !strings.Contains(err.Error(), "no session") {
-		t.Fatalf("missing machine id error = %v", err)
-	}
-}
-
-func TestResolveSessionQueryByIDAndPreview(t *testing.T) {
-	dir := t.TempDir()
-	first := saveQueryTestSession(t, dir, "alpha-session.jsonl", "fix provider configuration")
-	_ = saveQueryTestSession(t, dir, "beta-session.jsonl", "improve terminal picker")
-
-	got, err := resolveSessionQuery(dir, "alpha-session")
-	if err != nil || got.path != first || got.canonical() {
-		t.Fatalf("resolve by ID = (%+v, %v), want %q", got, err, first)
-	}
-	got, err = resolveSessionQuery(dir, "provider configuration")
-	if err != nil || got.path != first || got.canonical() {
-		t.Fatalf("resolve by preview = (%+v, %v), want %q", got, err, first)
-	}
-	if _, err := resolveSessionQuery(dir, "session"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
-		t.Fatalf("ambiguous query error = %v", err)
-	}
-	if _, err := resolveSessionQuery(dir, "missing"); err == nil || !strings.Contains(err.Error(), "no session") {
-		t.Fatalf("missing query error = %v", err)
-	}
-}
-
 func saveQueryTestSession(t *testing.T, dir, name, prompt string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
@@ -186,11 +147,10 @@ func TestResolveSessionQueryMatchesCanonicalSessions(t *testing.T) {
 	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	legacy := saveQueryTestSession(t, sessionDir, "alpha-session.jsonl", "fix provider configuration")
-	migrated := saveQueryTestSession(t, sessionDir, "migrated-source.jsonl", "rewrite the desktop tree")
+	saveQueryTestSession(t, sessionDir, "alpha-session.jsonl", "fix provider configuration")
+	createCanonicalTestSession(t, v4root, "canon0002", "second current conversation")
 	createCanonicalTestSession(t, v4root, "canon0001", "rewrite the desktop tree")
-	writeTestMigrationMap(t, v4root, migrated, "canon0001")
-	waitForCatalogMetadata(t, sessionDir, "canon0001")
+	waitForCatalogMetadata(t, sessionDir, "canon0001", "canon0002")
 
 	for _, query := range []string{"canon0001", cliCanonicalRoute("canon0001"), "desktop tree"} {
 		got, err := resolveSessionQuery(sessionDir, query)
@@ -198,12 +158,11 @@ func TestResolveSessionQueryMatchesCanonicalSessions(t *testing.T) {
 			t.Fatalf("resolve %q = (%+v, %v), want the canonical session", query, got, err)
 		}
 	}
-	got, err := resolveSessionQuery(sessionDir, "provider configuration")
-	if err != nil || got.canonical() || got.path != legacy {
-		t.Fatalf("resolve legacy preview = (%+v, %v), want %q", got, err, legacy)
+	if _, err := resolveSessionQuery(sessionDir, "provider configuration"); err == nil {
+		t.Fatal("retired path transcript became a selectable session")
 	}
-	if _, err := resolveSessionQuery(sessionDir, "t"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
-		t.Fatalf("query matching both stores = %v, want ambiguous", err)
+	if _, err := resolveSessionQuery(sessionDir, "canon"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("ambiguous current identities: %v", err)
 	}
 	if _, err := resolveSessionQuery(sessionDir, "nothing here"); err == nil || !strings.Contains(err.Error(), "no session") {
 		t.Fatalf("missing query error = %v", err)

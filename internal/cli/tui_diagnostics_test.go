@@ -84,7 +84,7 @@ func TestCLIProfileBuildOptionsPropagateInteractiveOwners(t *testing.T) {
 	}
 	opts := cliProfileBuildOptions("provider/model", 9, false, event.Discard, cliBuildOverrides{
 		WorkspaceRoot:        "/workspace",
-		HeadlessApprovalMode: control.ToolApprovalAuto,
+		HeadlessApprovalMode: control.ToolApprovalWorkspaceWrite,
 		Stderr:               &diagnostic,
 		OnSessionRecovered:   onRecovered,
 	})
@@ -101,8 +101,8 @@ func TestCLIProfileBuildOptionsPropagateInteractiveOwners(t *testing.T) {
 	if !recovered {
 		t.Fatal("propagated recovery callback was not invoked")
 	}
-	if opts.HeadlessApprovalMode != control.ToolApprovalAuto {
-		t.Fatalf("HeadlessApprovalMode = %q, want %q", opts.HeadlessApprovalMode, control.ToolApprovalAuto)
+	if opts.HeadlessApprovalMode != control.ToolApprovalWorkspaceWrite {
+		t.Fatalf("HeadlessApprovalMode = %q, want %q", opts.HeadlessApprovalMode, control.ToolApprovalWorkspaceWrite)
 	}
 }
 

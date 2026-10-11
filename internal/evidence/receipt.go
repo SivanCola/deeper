@@ -58,10 +58,6 @@ type Receipt struct {
 	// Verification is the host's classification of a shell call: one of the
 	// Verification* values. Empty means the host never classified this receipt.
 	Verification string `json:"verification,omitempty"`
-	// PolicyFloor is the session quality floor in force when this write was
-	// committed ("delivery" or empty). Host-only replay fact: the contract
-	// rebuild reads it back so a floor change never rewrites history.
-	PolicyFloor string `json:"policy_floor,omitempty"`
 }
 
 // ReceiptRef is the bounded, model-safe projection of a host receipt: enough

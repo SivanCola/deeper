@@ -87,13 +87,9 @@ func (a *Agent) pruneToolResultsToProjectionLocked(ctx context.Context, trigger 
 			continue
 		}
 		source := projected[i].Content
-		if projected[i].ProviderContent != "" {
-			source = projected[i].ProviderContent
-		}
 		if pruned, changed := pruneToolResultContent(source); changed {
 			projected[i].Content = pruned
 			projected[i].RawContent = ""
-			projected[i].ProviderContent = ""
 			affected++
 		}
 	}

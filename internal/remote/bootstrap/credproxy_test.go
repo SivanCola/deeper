@@ -146,7 +146,7 @@ func TestEnsureCredentialProviderMaterializesBuiltinDefault(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, ".deepzora"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	cfg := "config_version = 6\n\ndefault_model = \"deepseek-flash\"   # user's choice stays\n\n[ui]\ntheme = \"dark\"\n"
+	cfg := "config_version = 12\n\ndefault_model = \"deepseek-flash\"   # user's choice stays\n\n[ui]\ntheme = \"dark\"\n"
 	if err := os.WriteFile(filepath.Join(root, ".deepzora", "config.toml"), []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}

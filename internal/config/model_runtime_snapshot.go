@@ -37,7 +37,6 @@ func LoadModelRuntimeSnapshot(root string, sessionRefs ...string) (*Config, erro
 	}
 	// Restored session aliases may introduce providers absent from the file.
 	// Expand them while both locks are held, before freezing their credentials.
-	NormalizeLegacyMimoCustomProvidersForRefs(c, sessionRefs...)
 	c.FreezeProviderCredentials()
 	return c, nil
 }
@@ -70,15 +69,15 @@ func (c *Config) ModelRuntimeFingerprint(model string) string {
 		providers = append(providers, providerSnapshot{entry, key})
 	}
 	data, err := json.Marshal(struct {
-		Model                                                         string
-		Providers                                                     []providerSnapshot
-		Access                                                        []string
-		Planner, Vision, Search, Guardian, Recovery, Subagent, Effort string
-		SubagentModels, SubagentEfforts                               map[string]string
-		Depth, Concurrency, Writers                                   int
+		Model                                               string
+		Providers                                           []providerSnapshot
+		Access                                              []string
+		Planner, Vision, Search, Guardian, Subagent, Effort string
+		SubagentModels, SubagentEfforts                     map[string]string
+		Depth, Concurrency, Writers                         int
 	}{model, providers, c.Desktop.ProviderAccess,
 		c.Agent.PlannerModel, c.Agent.VisionModel, c.Agent.WebSearchModel,
-		c.Agent.GuardianModel, c.Agent.RecoveryModel, c.Agent.SubagentModel,
+		c.Agent.GuardianModel, c.Agent.SubagentModel,
 		c.Agent.SubagentEffort, c.Agent.SubagentModels, c.Agent.SubagentEfforts,
 		c.Agent.MaxSubagentDepth, c.Agent.MaxSubagentConcurrency, c.Agent.MaxParallelWriters})
 	if err != nil {

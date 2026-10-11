@@ -537,7 +537,6 @@ func recentDisplayMessage(message provider.Message) (json.RawMessage, error) {
 	preview := detachMessages([]provider.Message{message})[0]
 	preview.Content = messagePreview(message)
 	preview.RawContent = ""
-	preview.ProviderContent = ""
 	preview.Images = nil
 	preview.ImageInputs = nil
 	preview.ResponsesItems = nil
@@ -684,7 +683,7 @@ func applyRecentCommit(messages *[]provider.Message, commit Commit) error {
 	recent.Events = nil
 	for _, event := range commit.Events {
 		switch event.Kind {
-		case "message/complete", "message/upsert", "message/retract", "history/replace", "legacy/import":
+		case "message/complete", "message/upsert", "message/retract", "history/replace":
 			recent.Events = append(recent.Events, event)
 		}
 	}

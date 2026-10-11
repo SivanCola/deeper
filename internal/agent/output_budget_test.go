@@ -576,20 +576,3 @@ func TestCalibratedBudgetIgnoresEncryptedSearchRaw(t *testing.T) {
 			gotBudget, gotClipped, gotErr, wantBudget, wantClipped, wantErr)
 	}
 }
-
-func TestForkCaptureProviderPreservesOutputBudgetCapabilities(t *testing.T) {
-	t.Setenv("DEEPZORA_EXPERIMENT_FORK_CAPTURE_DIR", t.TempDir())
-	prov := &sharedWindowTestProvider{budget: 128 * 1024, shared: true,
-		policy: provider.SharedWindowInputPolicy{ReplaysOrdinaryReasoning: true, ReplaysResponsesItems: true}}
-	a := New(prov, tool.NewRegistry(), NewSession(""), Options{}, event.Discard)
-
-	if !sharesContextWindow(a.svc.prov) {
-		t.Fatal("fork capture wrapper erased shared-window output capability")
-	}
-	if got := outputBudgetOf(a.svc.prov); got != prov.budget {
-		t.Fatalf("wrapped output budget = %d, want %d", got, prov.budget)
-	}
-	if got := sharedWindowInputPolicyOf(a.svc.prov); got != prov.policy {
-		t.Fatalf("wrapped input policy = %+v, want %+v", got, prov.policy)
-	}
-}

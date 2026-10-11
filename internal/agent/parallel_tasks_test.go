@@ -132,7 +132,7 @@ func TestParallelTasksForegroundCompletesAndClosesWorkers(t *testing.T) {
 func TestParallelTasksLongResultsStayIndependentlyRetrievable(t *testing.T) {
 	workspace := t.TempDir()
 	store := NewSubagentStore(t.TempDir())
-	task := NewTaskTool(parallelLongResultProvider{}, nil, tool.NewRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: parallelLongResultProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(store, workspace, "base-model", "base-effort")
 	parallel := NewParallelTasksTool(task, tool.NewRegistry())
 	ctx := WithParentSession(withCallContext(context.Background(), "parallel-call", event.Discard, nil, false), "parent-session")
@@ -181,7 +181,7 @@ func TestParallelTasksLongResultsStayIndependentlyRetrievable(t *testing.T) {
 
 func TestParallelTasksInjectsWorkspaceContextIntoChildren(t *testing.T) {
 	workspace := t.TempDir()
-	task := NewTaskTool(promptRoutingProvider{}, nil, tool.NewRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: promptRoutingProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(NewSubagentStore(t.TempDir()), workspace, "base-model", "base-effort")
 	parallel := NewParallelTasksTool(task, tool.NewRegistry())
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)
@@ -207,7 +207,7 @@ func TestParallelTasksInjectsWorkspaceContextIntoChildren(t *testing.T) {
 // and would exhaust final-answer readiness instead of answering.
 func TestParallelTasksDeliveryClassifiesPristinePrompt(t *testing.T) {
 	workspace := t.TempDir()
-	task := NewTaskTool(promptRoutingProvider{}, nil, tool.NewRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: promptRoutingProvider{}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(NewSubagentStore(t.TempDir()), workspace, "base-model", "base-effort")
 	parallel := NewParallelTasksTool(task, tool.NewRegistry())
 	ctx := withCallContext(context.Background(), "parallel-call", event.Discard, nil, false)

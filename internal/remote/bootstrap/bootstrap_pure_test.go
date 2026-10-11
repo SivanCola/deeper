@@ -243,7 +243,7 @@ default_model = "deepseek/deepseek-v4-flash"
 name        = "deepzora-desktop-proxy-bc965691ed1e10b8"
 kind        = "openai"
 base_url    = "http://127.0.0.1:46407"
-model       = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "DEEPZORA_PROXY_TOKEN_BC965691ED1E10B8"
 
 [[providers]]
@@ -251,7 +251,7 @@ api_key_env = "DEEPZORA_PROXY_TOKEN_BC965691ED1E10B8"
 name = "deepzora-desktop-proxy-bc965691ed1e10b8"
 kind = "openai"
 base_url = "http://127.0.0.1:41333"
-model = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "DEEPZORA_PROXY_TOKEN_BC965691ED1E10B8"
 
 [[providers]]

@@ -3,8 +3,6 @@ package main
 import (
 	"errors"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -71,10 +69,7 @@ func sessionOperationErrorForTarget(err error, targetKey, operationID string) er
 		}
 		return &copy
 	}
-	if historicalSourceBusyError(err) {
-		slog.Info("desktop: session operation busy", "target", targetKey, "operation", operationID, "cause", sessionBusyCause(err))
-		return &SessionOperationError{Code: sessionOperationBusy, Message: "Another operation is using this session. Try again shortly.", TargetKey: targetKey, OperationID: operationID, Retryable: true}
-	}
+
 	switch {
 	case errors.Is(err, workspacestate.ErrMutationConflict):
 		return &SessionOperationError{
@@ -124,8 +119,6 @@ func sessionBusyCause(err error) string {
 		return "writer_owned"
 	case errors.Is(err, identitylock.ErrHeld):
 		return "source_lock"
-	case errors.Is(err, errHistoricalSourceBusy):
-		return "historical_source"
 	}
 	return "unknown"
 }
@@ -167,33 +160,6 @@ func (a *App) RenameSessionTarget(selector SessionSelector, title string) (Sessi
 			})
 			return result, nil
 		}
-	} else if target.SessionPath != "" {
-		if target.Source != nil {
-			err = a.saveHistoricalSourcePresentation(target.Source.SourceKey, func(presentation *historicalSourcePresentation) {
-				presentation.Title = title
-			})
-		}
-		if err != nil {
-			return SessionMutationResult{}, sessionOperationErrorForTarget(err, key, operationID)
-		}
-		if info, statErr := os.Stat(target.SessionPath); target.Source != nil && statErr == nil && info.IsDir() {
-			a.emitSessionTargetChange("session_metadata_changed", SessionTargetChangeEvent{TargetKey: key, OperationID: operationID, Title: title})
-			a.emitProjectTreeMetadataChanged()
-			return SessionMutationResult{TargetKey: key, OperationID: operationID, Committed: true, Title: title}, nil
-		}
-		err = a.RenameSession(target.SessionPath, title)
-		if err == nil {
-			_, revision, revisionErr := agent.SessionTitleSnapshot(target.SessionPath)
-			result := SessionMutationResult{
-				TargetKey: key, OperationID: operationID, Committed: true, Title: title,
-				TitleVersion: revision, LifecycleGeneration: target.LifecycleGeneration,
-				ProjectionPending: revisionErr != nil,
-			}
-			a.emitSessionTargetChange("session_metadata_changed", SessionTargetChangeEvent{
-				TargetKey: key, OperationID: operationID, LifecycleGeneration: target.LifecycleGeneration, Title: title,
-			})
-			return result, nil
-		}
 	} else if target.TopicID != "" {
 		err = a.RenameTopic(target.TopicID, title)
 		if err == nil {
@@ -222,12 +188,7 @@ func titleSequenceVersion(sequence uint64) string {
 // ArchiveSessionTarget archives one explicit durable target. It does not select
 // the target or create a conversation controller.
 func (a *App) ArchiveSessionTarget(selector SessionSelector) (SessionMutationResult, error) {
-	if selector.Ref == nil && selector.Source != nil {
-		return a.archiveHistoricalSource(selector)
-	}
-	if resolved, err := a.resolveSessionTarget(selector); err == nil && resolved.Source != nil {
-		return a.archiveHistoricalSource(SessionSelector{Source: resolved.Source, TopicID: resolved.TopicID})
-	}
+
 	target, err := a.resolveSessionMutationTarget(selector)
 	if err != nil {
 		return SessionMutationResult{}, err
@@ -237,8 +198,6 @@ func (a *App) ArchiveSessionTarget(selector SessionSelector) (SessionMutationRes
 	var archived SessionTarget
 	if target.SessionRef.SessionID != "" {
 		archived, err = a.archiveCanonicalSessionWithOperation(target.SessionRef, operationID)
-	} else if target.SessionPath != "" {
-		archived, err = a.archiveSessionPathWithOperation(target.SessionPath, operationID)
 	} else {
 		err = newSessionOperationError(sessionOperationNoMessages, "This empty session has no durable content to archive.")
 	}
@@ -293,40 +252,7 @@ func (a *App) RestoreSessionTarget(selector SessionSelector) (SessionMutationRes
 		return SessionMutationResult{}, sessionOperationErrorForTarget(err, key, operationID)
 	}
 
-	// A legacy trash path is intentionally outside the live-session resolver.
-	// Honor selector priority and try this only when sessionPath is the explicit
-	// highest-priority field.
-	if selector.Ref != nil || strings.TrimSpace(selector.SessionPath) == "" {
-		return SessionMutationResult{}, sessionOperationErrorForTarget(err, "", operationID)
-	}
-	trashPath := strings.TrimSpace(selector.SessionPath)
-	dir, trashErr := a.trashedSessionDir(trashPath)
-	if trashErr != nil {
-		return SessionMutationResult{}, sessionOperationErrorForTarget(err, "", operationID)
-	}
-	_, keyName, _, trashErr := validateTrashedSessionPath(dir, trashPath)
-	if trashErr != nil {
-		return SessionMutationResult{}, sessionOperationErrorForTarget(trashErr, "", operationID)
-	}
-	targetKey := (SessionTarget{SessionPath: trashPath}).key()
-	a.cancelAISessionTitle(targetKey)
-	if restoreErr := a.RestoreSession(trashPath); restoreErr != nil {
-		return SessionMutationResult{}, sessionOperationErrorForTarget(restoreErr, targetKey, operationID)
-	}
-	livePath := filepath.Join(dir, keyName)
-	restored, resolveErr := a.resolveSessionTarget(SessionSelector{SessionPath: livePath})
-	if resolveErr != nil {
-		restored = SessionTarget{SessionPath: livePath}
-	}
-	a.emitSessionTargetChange("session_restored", SessionTargetChangeEvent{
-		TargetKey: targetKey, OperationID: operationID,
-		LifecycleGeneration: restored.LifecycleGeneration, WorkspaceID: restored.WorkspaceID,
-	})
-	return SessionMutationResult{
-		TargetKey: targetKey, OperationID: operationID, Committed: true,
-		LifecycleGeneration: restored.LifecycleGeneration,
-		ProjectionPending:   resolveErr != nil,
-	}, nil
+	return SessionMutationResult{}, sessionOperationErrorForTarget(err, "", operationID)
 }
 
 // MoveSessionTarget reorders one explicit session inside its owning workspace.
@@ -339,39 +265,7 @@ func (a *App) MoveSessionTarget(selector SessionSelector, workspaceID, beforeSes
 	}
 	key := target.key()
 	operationID := "move-" + strings.TrimPrefix(newTabID(), "tab_")
-	if target.SessionRef.SessionID == "" {
-		scope, root := target.Scope, target.WorkspaceRoot
-		if scope == "" {
-			scope = "global"
-		}
-		adoptionWorkspace, ensureErr := a.ensureDesktopWorkspace(a.bootContext(), scope, root)
-		if ensureErr != nil {
-			return SessionMutationResult{}, sessionOperationErrorForTarget(ensureErr, key, operationID)
-		}
-		if strings.TrimSpace(workspaceID) == "" {
-			workspaceID = adoptionWorkspace
-		}
-		if workspaceID != adoptionWorkspace {
-			err = newSessionOperationError("target_changed", "The session cannot be moved outside its owning workspace.")
-			return SessionMutationResult{}, sessionOperationErrorForTarget(err, key, operationID)
-		}
-		if migrateErr := a.migrateLegacySession(
-			a.bootContext(),
-			target.SessionPath,
-			desktopMigrationSource{scope: scope, workspaceRoot: root},
-			adoptionWorkspace,
-		); migrateErr != nil {
-			return SessionMutationResult{}, sessionOperationErrorForTarget(migrateErr, key, operationID)
-		}
-		adopted, adoptedErr := a.resolveSessionTarget(SessionSelector{SessionPath: target.SessionPath})
-		if adoptedErr != nil || adopted.SessionRef.SessionID == "" {
-			if adoptedErr == nil {
-				adoptedErr = workspacestate.ErrMutationConflict
-			}
-			return SessionMutationResult{}, sessionOperationErrorForTarget(adoptedErr, key, operationID)
-		}
-		target = adopted
-	}
+
 	moved, err := a.moveWorkspaceSessionWithOperation(target.SessionRef, workspaceID, beforeSessionID, operationID)
 	if err != nil {
 		return SessionMutationResult{}, sessionOperationErrorForTarget(err, key, operationID)

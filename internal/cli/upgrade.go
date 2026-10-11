@@ -73,7 +73,7 @@ var (
 
 func parseCLIReleaseChannel(value string) (cliReleaseChannel, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", string(cliReleaseStable), "preview", "canary", "beta", "next":
+	case "", string(cliReleaseStable):
 		return cliReleaseStable, nil
 	default:
 		return "", fmt.Errorf("release channel %q is unsupported; Deepzora now uses the official release", value)
@@ -83,95 +83,26 @@ func parseCLIReleaseChannel(value string) (cliReleaseChannel, error) {
 type cliUpgradeSyntax struct {
 	checkOnly     bool
 	force         bool
-	positional    *cliReleaseChannel
-	flagChannel   *cliReleaseChannel
 	helpRequested bool
 	helpText      string
 }
 
-// parseCLIUpgradeSyntax accepts the ergonomic positional channel while keeping
-// --channel available for scripts. pflag's interspersed parsing allows both
-// `upgrade preview --check` and `upgrade --check preview`.
 func parseCLIUpgradeSyntax(args []string) (cliUpgradeSyntax, error) {
 	fs := pflag.NewFlagSet("upgrade", pflag.ContinueOnError)
-	fs.SetInterspersed(true)
-	var parseOutput bytes.Buffer
-	fs.SetOutput(&parseOutput)
-	checkOnly := fs.Bool("check", false, "check for updates without installing")
+	var output bytes.Buffer
+	fs.SetOutput(&output)
+	check := fs.Bool("check", false, "check for updates without installing")
 	force := fs.Bool("force", false, "reinstall even if already on the latest version")
-	channelValue := fs.String("channel", "", "deprecated compatibility option; updates use the official release")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, pflag.ErrHelp) {
-			return cliUpgradeSyntax{helpRequested: true, helpText: parseOutput.String()}, nil
+			return cliUpgradeSyntax{helpRequested: true, helpText: output.String()}, nil
 		}
 		return cliUpgradeSyntax{}, err
 	}
-
-	var positional *cliReleaseChannel
-	if rest := fs.Args(); len(rest) > 1 {
-		return cliUpgradeSyntax{}, fmt.Errorf("upgrade accepts at most one deprecated positional channel")
-	} else if len(rest) == 1 {
-		channel, err := parseCLIReleaseChannel(rest[0])
-		if err != nil || strings.TrimSpace(rest[0]) == "" {
-			if err == nil {
-				err = fmt.Errorf("channel is required")
-			}
-			return cliUpgradeSyntax{}, err
-		}
-		positional = &channel
+	if len(fs.Args()) != 0 {
+		return cliUpgradeSyntax{}, fmt.Errorf("upgrade accepts no positional arguments")
 	}
-
-	var flagChannel *cliReleaseChannel
-	if fs.Changed("channel") {
-		if strings.TrimSpace(*channelValue) == "" {
-			return cliUpgradeSyntax{}, fmt.Errorf("--channel requires a legacy channel value")
-		}
-		channel, err := parseCLIReleaseChannel(*channelValue)
-		if err != nil {
-			return cliUpgradeSyntax{}, err
-		}
-		flagChannel = &channel
-	}
-	if positional != nil && flagChannel != nil && *positional != *flagChannel {
-		return cliUpgradeSyntax{}, fmt.Errorf("conflicting release channels: positional %q and --channel %q", *positional, *flagChannel)
-	}
-	return cliUpgradeSyntax{
-		checkOnly:   *checkOnly,
-		force:       *force,
-		positional:  positional,
-		flagChannel: flagChannel,
-	}, nil
-}
-
-func resolveCLIUpgradeChannel(syntax cliUpgradeSyntax, configured string) (cliReleaseChannel, bool, error) {
-	configuredChannel, err := parseCLIReleaseChannel(config.NormalizeCLIUpdateChannel(configured))
-	if err != nil {
-		return "", false, err
-	}
-	if syntax.positional != nil {
-		return *syntax.positional, *syntax.positional != configuredChannel, nil
-	}
-	if syntax.flagChannel != nil {
-		return *syntax.flagChannel, false, nil
-	}
-	return configuredChannel, false, nil
-}
-
-var persistCLIReleaseChannel = func(channel cliReleaseChannel) error {
-	path := config.UserConfigPath()
-	unlock, err := config.LockConfigFileEdits(path)
-	if err != nil {
-		return err
-	}
-	defer unlock()
-	cfg, err := config.LoadForEditReadOnlyStrict(path)
-	if err != nil {
-		return err
-	}
-	if err := cfg.SetCLIUpdateChannel(string(channel)); err != nil {
-		return err
-	}
-	return cfg.SaveTo(path)
+	return cliUpgradeSyntax{checkOnly: *check, force: *force}, nil
 }
 
 var loadCLIUpgradeConfig = config.Load
@@ -205,21 +136,7 @@ func upgradeCommand(args []string, version string) int {
 		fmt.Fprintf(os.Stderr, "%s cannot load config: empty result\n", i18n.M.ErrorPrefix)
 		return 1
 	}
-	legacyConfigChannel := strings.TrimSpace(cfg.CLI.UpdateChannel)
-	selectedChannel, persistChannel, err := resolveCLIUpgradeChannel(syntax, cfg.CLIUpdateChannel())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
-	if persistChannel || legacyConfigChannel != "" {
-		if err := persistCLIReleaseChannel(selectedChannel); err != nil {
-			fmt.Fprintf(os.Stderr, "%s cannot save CLI update channel: %v\n", i18n.M.ErrorPrefix, err)
-			return 1
-		}
-	}
-	if syntax.positional != nil || syntax.flagChannel != nil || legacyConfigChannel != "" {
-		fmt.Fprintln(os.Stderr, i18n.M.UpgradeChannelDeprecated)
-	}
+	selectedChannel := cliReleaseStable
 	spec := cfg.NetworkProxySpec()
 	c, err := netclient.NewHTTPClient(spec, netclient.TransportOptions{
 		ResponseHeaderTimeout: upgradeTimeout,

@@ -73,12 +73,12 @@ on:
         default: false
         type: boolean
       orchestrator:
-        description: "Trusted release orchestrator (legacy Preview calls remain readable)"
+        description: "Trusted release orchestrator"
         required: false
         default: stable
         type: string
       preview_number:
-        description: "Legacy Preview ordinal for old workflow-call compatibility"
+        description: "Preview release ordinal"
         required: false
         default: ""
         type: string
@@ -150,8 +150,8 @@ on:
 
 concurrency:
   # A channel pointer is a monotonic public state machine. Serialize every
-  # publisher for the same normalized channel, including the legacy canary alias.
-  group: release-desktop-${{ (inputs.channel == 'preview' || inputs.channel == 'canary') && 'preview' || 'stable' }}
+  # publisher for the same release channel.
+  group: release-desktop-${{ inputs.channel == 'preview' && 'preview' || 'stable' }}
   cancel-in-progress: false
 
 env:
@@ -1303,7 +1303,7 @@ jobs:
     needs: [resolve, publish]
     runs-on: ubuntu-latest
     permissions:
-      contents: write # gh release download + compatibility manifest upload
+      contents: write # gh release download + manifest upload
     # Stable keeps GitHub as a fallback when R2 is unavailable. Preview has no
     # GitHub release, so it must fail closed before attempting publication.
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.publish.result == 'success' && github.repository_owner == 'SivanCola' && vars.ENABLE_R2_MIRROR == 'true' }}
@@ -1511,14 +1511,14 @@ jobs:
             if [ -f "$existing_directory/latest.json" ]; then
               existing_manifest=true
               bash release-control/scripts/validate-desktop-release-manifest.sh \
-                "legacy-${validation_channel}" "$VERSION" "$asset_base" \
+                "${validation_channel}" "$VERSION" "$asset_base" \
                 "$existing_directory/latest.json" "$NOTES_VERSION"
               bash release-control/scripts/verify-desktop-release-manifest-assets.sh \
                 "$existing_directory/latest.json" "$existing_directory"
               cp "$existing_directory/latest.json" assets/latest.json
             fi
             bash release-control/scripts/verify-desktop-release-directory.sh \
-              --allow-missing --allow-legacy-manifest \
+              --allow-missing \
               --allow-authenticated-payload-differences assets "$existing_directory"
 
             # Preserve every already-published authenticated payload/signature
@@ -1549,7 +1549,7 @@ jobs:
           aws s3 cp "s3://${R2_BUCKET}/${TAG}/" "$published_directory/" \
             --recursive --endpoint-url "$ENDPOINT"
           bash release-control/scripts/verify-desktop-release-directory.sh \
-            --allow-legacy-manifest assets "$published_directory"
+            assets "$published_directory"
           verify_signature_directory "$published_directory"
           require_signature_coverage "$published_directory"
           bash release-control/scripts/verify-desktop-release-manifest-assets.sh \
@@ -1558,7 +1558,7 @@ jobs:
           aws s3 cp "s3://${R2_BUCKET}/${TAG}/latest.json" \
             /tmp/deepzora-desktop-tag-latest.json --endpoint-url "$ENDPOINT"
           bash release-control/scripts/validate-desktop-release-manifest.sh \
-            "legacy-${validation_channel}" "$VERSION" "$asset_base" \
+            "${validation_channel}" "$VERSION" "$asset_base" \
             /tmp/deepzora-desktop-tag-latest.json "$NOTES_VERSION"
           bash release-control/scripts/compare-desktop-release-manifests.sh \
             assets/latest.json /tmp/deepzora-desktop-tag-latest.json
@@ -1582,32 +1582,8 @@ jobs:
             local current_version="$2"
             local current_file="$3"
             local current_base="https://github.com/SivanCola/deepzora/releases/download/desktop-${current_version}/"
-            if bash release-control/scripts/validate-desktop-release-manifest.sh \
-              "$current_channel" "$current_version" "$current_base" \
-              "$current_file"; then
-              return 0
-            fi
-
-            if bash release-control/scripts/validate-desktop-release-manifest.sh \
-              "legacy-${current_channel}" "$current_version" "$current_base" \
-              "$current_file"; then
-              echo "using legacy $current_channel manifest $current_version at its immutable base only as the monotonic migration baseline"
-              return 0
-            fi
-
-            # Early Preview pointers referenced the mutable desktop-preview/
-            # directory. Try that layout only after the immutable legacy layout
-            # so later legacy pointers retain their version-bound asset URLs.
-            local legacy_preview_base="https://github.com/SivanCola/deepzora/releases/download/desktop-preview/"
-            if [ "$current_channel" = "preview" ] && \
-              bash release-control/scripts/validate-desktop-release-manifest.sh \
-                legacy-preview "$current_version" "$legacy_preview_base" \
-                "$current_file"; then
-              echo "using legacy Preview manifest $current_version at the rolling base only as the monotonic migration baseline"
-              return 0
-            fi
-            echo "::error::existing Desktop $current_channel pointer is invalid"
-            return 1
+            bash release-control/scripts/validate-desktop-release-manifest.sh \
+              "$current_channel" "$current_version" "$current_base" "$current_file"
           }
 
           pointer_decision=""
@@ -1627,25 +1603,11 @@ jobs:
               fi
             fi
 
-            canary_manifest=-
-            canary_version=""
-            canary_download=/tmp/deepzora-desktop-current-canary.json
-            if download_optional "canary/latest.json" "$canary_download"; then
-              canary_version="$(jq -er '.version | strings' "$canary_download")"
-              validate_current_pointer preview "$canary_version" "$canary_download"
-              canary_manifest="$canary_download"
-            else
-              status=$?
-              if [ "$status" -ne 3 ]; then
-                exit "$status"
-              fi
-            fi
-
             pointer_decision="$(
               bash release-control/scripts/decide-desktop-pointer-update.sh \
-                preview assets/latest.json "$preview_manifest" "$canary_manifest"
+                preview assets/latest.json "$preview_manifest"
             )"
-            pointer_state="preview=${preview_version:-unset}, canary=${canary_version:-unset}"
+            pointer_state="preview=${preview_version:-unset}"
           else
             current_version=""
             current_manifest=/tmp/deepzora-desktop-current-pointer.json
@@ -1692,14 +1654,7 @@ jobs:
           }
 
           if [ "$CHANNEL" = "preview" ]; then
-            # Write compatibility first. If the primary write fails, a rerun
-            # still observes the old primary and safely retries both writes.
-            publish_pointer canary
             publish_pointer preview
-            if ! cmp -s /tmp/deepzora-desktop-canary-latest.json /tmp/deepzora-desktop-preview-latest.json; then
-              echo "::error::Desktop Preview and Canary pointers diverged after publication"
-              exit 1
-            fi
           else
             publish_pointer latest
           fi
@@ -1737,7 +1692,7 @@ jobs:
 
           aws s3 cp "s3://${R2_BUCKET}/${TAG}/latest.json" /tmp/deepzora-desktop-tag-latest.json --endpoint-url "$ENDPOINT"
           bash release-control/scripts/validate-desktop-release-manifest.sh \
-            "legacy-${validation_channel}" "$VERSION" "$asset_base" \
+            "${validation_channel}" "$VERSION" "$asset_base" \
             /tmp/deepzora-desktop-tag-latest.json "$NOTES_VERSION"
           bash release-control/scripts/compare-desktop-release-manifests.sh \
             "$f" /tmp/deepzora-desktop-tag-latest.json
@@ -1747,19 +1702,9 @@ jobs:
             [ "$CHANNEL" = "preview" ] && pointer="preview"
             aws s3 cp "s3://${R2_BUCKET}/${pointer}/latest.json" /tmp/deepzora-desktop-pointer-latest.json --endpoint-url "$ENDPOINT"
             pointer_base="https://github.com/SivanCola/deepzora/releases/download/desktop-${POINTER_VERSION}/"
-            if ! bash release-control/scripts/validate-desktop-release-manifest.sh \
+            bash release-control/scripts/validate-desktop-release-manifest.sh \
               "$CHANNEL" "$POINTER_VERSION" "$pointer_base" \
-              /tmp/deepzora-desktop-pointer-latest.json; then
-              legacy_base="$pointer_base"
-              [ "$CHANNEL" = "preview" ] && legacy_base="https://github.com/SivanCola/deepzora/releases/download/desktop-preview/"
-              bash release-control/scripts/validate-desktop-release-manifest.sh \
-                "legacy-${CHANNEL}" "$POINTER_VERSION" "$legacy_base" \
-                /tmp/deepzora-desktop-pointer-latest.json
-            fi
-            if [ "$CHANNEL" = "preview" ]; then
-              aws s3 cp "s3://${R2_BUCKET}/canary/latest.json" /tmp/deepzora-desktop-canary-latest.json --endpoint-url "$ENDPOINT"
-              cmp -s /tmp/deepzora-desktop-pointer-latest.json /tmp/deepzora-desktop-canary-latest.json
-            fi
+              /tmp/deepzora-desktop-pointer-latest.json
           fi
 
           jq -r '(.platforms[] | .url, .sig), ((.native_packages // {})[] | .url, .sig), ((.downloads // {})[] | .url, .sig)' "$f" | while IFS= read -r asset; do
@@ -1828,5 +1773,5 @@ jobs:
           if gh release view "$VERSION" >/dev/null 2>&1; then
             gh release upload "$VERSION" assets/latest.json --clobber
           else
-            echo "CLI release $VERSION does not exist yet; release.yml will attach the compatibility latest.json when it publishes."
+            echo "CLI release $VERSION does not exist yet; release.yml will attach latest.json when it publishes."
           fi

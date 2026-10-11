@@ -13,7 +13,7 @@ const goodResult = {
   diagnosticsEnabled: true,
   resources: { origin: "http://127.0.0.1:51234", token: "secret" },
   window: { width: 1280, height: 820, minWidth: 760, minHeight: 480, frameless: false, zoomFactor: 1 },
-  instance: { identityVersion: 2, identityDigest: "sha256:def", legacyId: "com.deepzora.desktop.0123456789abcdef" },
+  instance: { identityVersion: 2, identityDigest: "sha256:def" },
 };
 
 test("hello params carry the documented shape", () => {

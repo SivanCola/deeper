@@ -15,12 +15,10 @@ var (
 		{group: "platforms", key: "linux-amd64", filename: "Deepzora-linux-amd64.tar.gz"},
 		{group: "native_packages", key: "linux-amd64", filename: "Deepzora-linux-amd64.deb"},
 	}
-	legacyDesktopDownloadAssets = []requiredDesktopAsset{
+	requiredDesktopDownloadAssets = []requiredDesktopAsset{
 		{group: "downloads", key: "Deepzora-darwin-universal.dmg", filename: "Deepzora-darwin-universal.dmg"},
 		{group: "downloads", key: "Deepzora-windows-amd64.zip", filename: "Deepzora-windows-amd64.zip"},
+		{group: "downloads", key: "Deepzora-darwin-arm64.dmg", filename: "Deepzora-darwin-arm64.dmg"},
+		{group: "downloads", key: "Deepzora-darwin-amd64.dmg", filename: "Deepzora-darwin-amd64.dmg"},
 	}
-	requiredDesktopDownloadAssets = append(append([]requiredDesktopAsset(nil), legacyDesktopDownloadAssets...),
-		requiredDesktopAsset{group: "downloads", key: "Deepzora-darwin-arm64.dmg", filename: "Deepzora-darwin-arm64.dmg"},
-		requiredDesktopAsset{group: "downloads", key: "Deepzora-darwin-amd64.dmg", filename: "Deepzora-darwin-amd64.dmg"},
-	)
 )

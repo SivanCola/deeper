@@ -11,7 +11,6 @@ func TestNewPrefersExactRequestURLOverLegacyChatURL(t *testing.T) {
 		BaseURL: "https://base.example.com/v1",
 		Model:   "model-a",
 		Extra: map[string]any{
-			"chat_url":    "https://legacy.example.com/chat/completions/",
 			"request_url": "https://exact.example.com/custom/?token=1",
 		},
 	})
@@ -43,9 +42,6 @@ func TestEndpointOverrideRepeatingBaseResolvesCanonicalChatURL(t *testing.T) {
 		"request_url":            {"request_url": base},
 		"request_url slash":      {"request_url": base + "/"},
 		"request_url upper host": {"request_url": "HTTP://LOCALHOST:8000/v1"},
-		"chat_url":               {"chat_url": base},
-		"chat_url upper host":    {"chat_url": "http://LocalHost:8000/v1/"},
-		"both repeat base":       {"request_url": base, "chat_url": base},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := resolveOpenAIChatURL(base, extra); got != base+"/chat/completions" {
@@ -67,8 +63,6 @@ func TestEndpointOverrideDistinctFromBaseStaysVerbatim(t *testing.T) {
 		if got := resolveOpenAIChatURL(base, map[string]any{"request_url": override}); got != override {
 			t.Errorf("request_url %q resolved to %q, want it verbatim", override, got)
 		}
-		if got := resolveOpenAIChatURL(base, map[string]any{"chat_url": override}); got != override {
-			t.Errorf("chat_url %q resolved to %q, want it verbatim", override, got)
-		}
+
 	}
 }

@@ -46,12 +46,7 @@ type StartupStats struct {
 	Version   int       `json:"version"`
 	SamplesMs []int64   `json:"samples_ms"`
 	LastSeen  time.Time `json:"last_seen"`
-	// Name is the raw (pre-slug) server name that owns these samples. The
-	// filename slug is lossy — "foo.bar" and "foo-bar" share one file — so
-	// readers verify ownership before trusting samples, or a slow server's
-	// history could demote an unrelated healthy one. Empty on files written
-	// by older versions; those are adopted by the first writer (additive
-	// field, no version bump, so downgraded builds still read the file).
+	// Name is the exact server identity that owns this sample window.
 	Name string `json:"name,omitempty"`
 }
 
@@ -182,18 +177,6 @@ func statsPath(name string) string {
 	return filepath.Join(base, "mcp", fmt.Sprintf("%s-%08x.stats.json", stem, h.Sum32()))
 }
 
-// legacyStatsPath is the pre-hash location, shared by every server whose name
-// collapses to the same slug. Read-only for migration: a named legacy file is
-// adopted by its owner; a nameless one (pre-Name builds) has no provable owner
-// and is never trusted for demotion or adopted into a new window.
-func legacyStatsPath(name string) string {
-	base := config.CacheDir()
-	if base == "" {
-		return ""
-	}
-	return filepath.Join(base, "mcp", slug(name)+".stats.json")
-}
-
 // loadStats reads and decodes a stats file. Any failure (missing file,
 // permission denied, malformed JSON) returns a zero StartupStats so callers
 // can treat absence and corruption identically. The slog.Warn fires only on
@@ -215,27 +198,12 @@ func loadStats(path string) StartupStats {
 	return s
 }
 
-// loadStatsForOwner reads name's history from its hashed path, falling back to
-// the shared legacy (pre-hash) file for a one-time migration. Legacy files are
-// trusted only when their recorded Name matches: a nameless legacy file
-// (written before ownership tracking) is shared by every server whose name
-// collapses to the same slug, so its samples cannot be attributed and must not
-// seed anyone's window or demote anyone.
 func loadStatsForOwner(name string) StartupStats {
-	if s := loadStats(statsPath(name)); s.Version != 0 || len(s.SamplesMs) > 0 {
-		if s.Name == "" || s.Name == name {
-			return s
-		}
+	s := loadStats(statsPath(name))
+	if s.Version != statsVersion || s.Name != name {
 		return StartupStats{}
 	}
-	legacy := legacyStatsPath(name)
-	if legacy == "" {
-		return StartupStats{}
-	}
-	if s := loadStats(legacy); s.Name == name {
-		return s
-	}
-	return StartupStats{}
+	return s
 }
 
 // writeStatsAtomic serialises s and writes it via tmpfile + os.Rename so that

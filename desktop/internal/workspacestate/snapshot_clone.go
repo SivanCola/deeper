@@ -41,26 +41,14 @@ func cloneSnapshot(s State) State {
 		status.extra = cloneUnknownFields(status.extra)
 		s.SessionStates[id] = status
 	}
-	s.SourceMappings = maps.Clone(s.SourceMappings)
-	for id, m := range s.SourceMappings {
-		s.SourceMappings[id] = cloneSourceMapping(m)
-	}
 	s.PendingOperations = maps.Clone(s.PendingOperations)
 	for id, op := range s.PendingOperations {
 		op.Request, op.Result = bytes.Clone(op.Request), bytes.Clone(op.Result)
-		op.SessionIDs, op.Dependencies = slices.Clone(op.SessionIDs), slices.Clone(op.Dependencies)
+		op.SessionIDs = slices.Clone(op.SessionIDs)
 		op.extra = cloneUnknownFields(op.extra)
 		op.Presentation = clonePresentation(op.Presentation)
-		if op.Mapping != nil {
-			m := cloneSourceMapping(*op.Mapping)
-			op.Mapping = &m
-		}
+
 		s.PendingOperations[id] = op
-	}
-	s.RecoveryEntries = maps.Clone(s.RecoveryEntries)
-	for id, entry := range s.RecoveryEntries {
-		entry.extra = cloneUnknownFields(entry.extra)
-		s.RecoveryEntries[id] = entry
 	}
 	s.Presentation = maps.Clone(s.Presentation)
 	for id, p := range s.Presentation {
@@ -68,12 +56,6 @@ func cloneSnapshot(s State) State {
 		s.Presentation[id] = p
 	}
 	return s
-}
-
-func cloneSourceMapping(m SourceMapping) SourceMapping {
-	m.RetainedArtifacts = slices.Clone(m.RetainedArtifacts)
-	m.extra = cloneUnknownFields(m.extra)
-	return m
 }
 
 func clonePresentation(p *Presentation) *Presentation {

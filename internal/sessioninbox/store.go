@@ -177,6 +177,9 @@ func (s *Store) loadOrInitLocked() error {
 		return fmt.Errorf("sessioninbox: read manifest: %w", err)
 	}
 	man, err := decodeManifest(data)
+	if errors.Is(err, ErrUnsupportedSchema) {
+		return err
+	}
 	if err != nil {
 		// Corrupt manifest → quarantine, salvage orphan blobs as uncertain
 		// items, pause for user inspection. Never present "0 recovered".
@@ -194,28 +197,6 @@ func (s *Store) loadOrInitLocked() error {
 		s.readonly = true
 		s.man.Paused = true
 		return nil
-	}
-	migrated := man.SchemaVersion < SchemaVersion
-	if migrated {
-		for key, id := range man.Idempotency {
-			if man.IdempotencyHashes[key] != "" {
-				continue
-			}
-			meta, ok := man.item(id)
-			if !ok {
-				return fmt.Errorf("sessioninbox: migrate idempotency target: %w", ErrNotFound)
-			}
-			env, err := s.readBlobLocked(blobNameFor(meta), meta.Checksum)
-			if err != nil {
-				return fmt.Errorf("sessioninbox: migrate idempotency body: %w", err)
-			}
-			hash, err := idempotencyRequestHash(env)
-			if err != nil {
-				return fmt.Errorf("sessioninbox: migrate idempotency hash: %w", err)
-			}
-			man.IdempotencyHashes[key] = hash
-		}
-		man.SchemaVersion = SchemaVersion
 	}
 	// Cross-process recovery: another run left in-flight items.
 	recovered := 0
@@ -239,7 +220,7 @@ func (s *Store) loadOrInitLocked() error {
 	man.RunID = s.runID
 	s.man = man
 	s.readonly = false
-	if recovered > 0 || migrated {
+	if recovered > 0 {
 		return s.commitManifestLocked(man)
 	}
 	// GC orphan blobs without holding callers longer than needed.
@@ -349,7 +330,7 @@ func (s *Store) Enqueue(req EnqueueRequest) (InboxReceipt, error) {
 		return InboxReceipt{}, ErrClosed
 	}
 	env := completeEnqueueEnvelope(req.Envelope)
-	hasInvocation := env.Invocation != nil || len(env.Invocations) > 0
+	hasInvocation := len(env.Invocations) > 0
 	if strings.TrimSpace(env.SubmitText) == "" && strings.TrimSpace(env.DisplayText) == "" && strings.TrimSpace(env.RawText) == "" && !hasInvocation {
 		return InboxReceipt{}, ErrEmpty
 	}
@@ -503,7 +484,7 @@ func (s *Store) updateItem(id string, env PromptEnvelope, alias string, aliasEnv
 	if version == "" {
 		env = normalizeEnvelope(env)
 	}
-	if strings.TrimSpace(env.SubmitText) == "" && env.Invocation == nil && len(env.Invocations) == 0 {
+	if strings.TrimSpace(env.SubmitText) == "" && len(env.Invocations) == 0 {
 		return InboxItemMeta{}, ErrEmpty
 	}
 	blobBytes, checksum, byteSize, err := encodeEnvelope(env)

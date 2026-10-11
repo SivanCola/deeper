@@ -1,11 +1,9 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/config"
 )
 
 // Archiving the only visible session hands the surface to the empty welcome.
@@ -41,40 +39,6 @@ func TestArchiveLastVisibleSessionLeavesNoReplacementBlankSession(t *testing.T) 
 	if err != nil || len(page.Sessions) != 0 {
 		t.Fatalf("workspace still lists sessions after archiving its only one: %+v, %v", page.Sessions, err)
 	}
-}
-
-// The legacy topic archive shares the fallback mechanism with canonical
-// archive, so it must leave the same empty surface.
-func TestTrashLastTopicLeavesNoReplacementBlankSession(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	projectRoot := t.TempDir()
-	topicID := "topic_trash_last"
-	if err := addProject(projectRoot, ""); err != nil {
-		t.Fatalf("add project: %v", err)
-	}
-	if err := setTopicTitle(projectRoot, topicID, "Trash last"); err != nil {
-		t.Fatalf("set topic title: %v", err)
-	}
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	sessionPath := writeTopicSession(t, dir, "trash-last.jsonl", topicID, "Trash last", projectRoot)
-	ctrl := controllerWithContent(t, sessionPath)
-	tab := &WorkspaceTab{ID: "only", Scope: "project", WorkspaceRoot: projectRoot, TopicID: topicID,
-		TopicTitle: "Trash last", SessionPath: sessionPath, Ctrl: ctrl, Ready: true, disabledMCP: map[string]ServerView{}}
-	app := NewApp()
-	app.ctx = t.Context()
-	installNoopRuntimeEvents(app)
-	t.Cleanup(app.closeSessionServices)
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-
-	if err := app.TrashTopic(topicID); err != nil {
-		t.Fatalf("TrashTopic: %v", err)
-	}
-	assertNoVisibleRuntime(t, app)
 }
 
 func assertNoVisibleRuntime(t *testing.T, a *App) {

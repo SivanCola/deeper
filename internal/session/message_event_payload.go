@@ -40,60 +40,27 @@ type historyReplacePayload struct {
 	Sources  []uint64           `json:"sourceSequences,omitempty"`
 }
 
-type legacyImportPayload struct {
-	Source        Source             `json:"source"`
-	Messages      []provider.Message `json:"messages"`
-	Goal          json.RawMessage    `json:"goal,omitempty"`
-	ModelRef      string             `json:"modelRef,omitempty"`
-	ModelIdentity string             `json:"modelIdentity,omitempty"`
-}
-
 // ErrDuplicateMessageID refuses a write that would give two messages one
 // stable id; every reader of the log keys a message by that id.
 var ErrDuplicateMessageID = errors.New("session: duplicate stable message id")
 
-// replacementEventMessages keeps the first occurrence of each id, so a log
-// written before the writer refused duplicates projects and indexes alike.
 func replacementEventMessages(event Event, payload json.RawMessage) ([]provider.Message, error) {
 	messages, err := decodeReplacementMessages(event, payload)
 	if err != nil {
 		return nil, err
 	}
-	return firstMessageOccurrences(messages), nil
-}
-
-func decodeReplacementMessages(event Event, payload json.RawMessage) ([]provider.Message, error) {
-	var messages []provider.Message
-	var err error
-	if event.Kind == "legacy/import" {
-		var body legacyImportPayload
-		err = strictPayload(payload, &body)
-		messages = body.Messages
-	} else {
-		var body historyReplacePayload
-		err = strictPayload(payload, &body)
-		messages = body.Messages
-	}
-	if err != nil || messages == nil {
-		return nil, damagedPayload(event, err)
+	if id, duplicate := duplicateMessageID(messages); duplicate {
+		return nil, damagedPayload(event, fmt.Errorf("%w: %s", ErrDuplicateMessageID, id))
 	}
 	return messages, nil
 }
 
-func firstMessageOccurrences(messages []provider.Message) []provider.Message {
-	if _, duplicated := duplicateMessageID(messages); !duplicated {
-		return messages
+func decodeReplacementMessages(event Event, payload json.RawMessage) ([]provider.Message, error) {
+	var body historyReplacePayload
+	if err := strictPayload(payload, &body); err != nil || body.Messages == nil {
+		return nil, damagedPayload(event, err)
 	}
-	seen := make(map[string]bool, len(messages))
-	unique := make([]provider.Message, 0, len(messages))
-	for _, message := range messages {
-		if message.ID != "" && seen[message.ID] {
-			continue
-		}
-		seen[message.ID] = true
-		unique = append(unique, message)
-	}
-	return unique
+	return body.Messages, nil
 }
 
 func duplicateMessageID(messages []provider.Message) (string, bool) {
@@ -113,7 +80,7 @@ func duplicateMessageID(messages []provider.Message) (string, bool) {
 // checkReplacementIdentities refuses a new replacement that repeats an id. A
 // payload that does not decode is the projection's to refuse.
 func checkReplacementIdentities(event Event) error {
-	if event.Kind != "history/replace" && event.Kind != "legacy/import" {
+	if event.Kind != "history/replace" {
 		return nil
 	}
 	messages, err := decodeReplacementMessages(event, event.Payload)

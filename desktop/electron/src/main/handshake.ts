@@ -52,7 +52,7 @@ export interface HelloResult {
   diagnosticsEnabled: boolean;
   resources: { origin: string; token: string };
   window: HelloWindow;
-  instance?: { identityVersion: number; identityDigest: string; legacyId: string };
+  instance?: { identityVersion: number; identityDigest: string };
 }
 
 export interface HandshakeFailure {
@@ -142,7 +142,6 @@ export function validateHelloResult(value: unknown, expectedProtocolVersion = DE
     instance = {
       identityVersion,
       identityDigest: str(rawInstance, "identityDigest", "result.instance"),
-      legacyId: str(rawInstance, "legacyId", "result.instance"),
     };
   }
   return {

@@ -159,7 +159,7 @@ func (a *App) buildRemoteModelSettingsOffer(host, workspace, model string, remot
 	}
 	p := &bundle.Preferences
 	p.PlannerModel, p.VisionModel, p.WebSearchModel = mapRef(p.PlannerModel), mapRef(p.VisionModel), mapRef(p.WebSearchModel)
-	p.GuardianModel, p.RecoveryModel, p.SubagentModel = mapRef(p.GuardianModel), mapRef(p.RecoveryModel), mapRef(p.SubagentModel)
+	p.GuardianModel, p.SubagentModel = mapRef(p.GuardianModel), mapRef(p.SubagentModel)
 	p.SubagentModels = map[string]string{}
 	for name, ref := range cfg.Agent.SubagentModels {
 		p.SubagentModels[name] = mapRef(ref)
@@ -339,7 +339,11 @@ func remoteModelSettingsRequest(ctx context.Context, client *http.Client, base, 
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if expectedPath != "" {
-		req.Header.Set(expectedSessionPathHeader, expectedPath)
+		sessionID, ok := strings.CutPrefix(expectedPath, remoteSessionIDRoutePrefix)
+		if !ok || strings.TrimSpace(sessionID) == "" {
+			return result, errors.New("remote requests require a session identity")
+		}
+		req.Header.Set(expectedSessionIDHeader, sessionID)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -373,7 +377,7 @@ func remoteModelSettingsRequest(ctx context.Context, client *http.Client, base, 
 
 // ensureRemoteModelSettings is the Desktop remote run-admission boundary.
 // Approval/ask/steer replies bypass it because they belong to the accepted run.
-// The returned generation scopes the admission (revision or legacy skip) to one
+// The returned generation scopes the admission (revision) to one
 // tab generation; callers must re-admit before a target that no longer runs it.
 func (a *App) ensureRemoteModelSettings(tabID string) (string, uint64, error) {
 	if !a.remoteTabLocalProxy(tabID) {
@@ -392,13 +396,7 @@ func (a *App) ensureRemoteModelSettings(tabID string) (string, uint64, error) {
 		}
 		model, applied, generation, path := tab.model, tab.settings.revision, tab.gen, tab.routing.currentPath
 		valid := tab.settings.generation == generation && tab.settings.sessionPath == path
-		// Generation 0 is an unrecorded verdict, not a legacy one: fresh and
-		// restored tabs run generation 0 before their first attachment.
-		unsupported := tab.settings.unsupportedGen != 0 && tab.settings.unsupportedGen == generation
 		a.remoteTabMu.Unlock()
-		if unsupported {
-			return "", generation, nil
-		}
 		if model == "" {
 			model = resolveNewSessionModel(cfg)
 		}
@@ -411,24 +409,7 @@ func (a *App) ensureRemoteModelSettings(tabID string) (string, uint64, error) {
 			err = a.SetRemoteTabModel(tabID, next)
 		}
 		if err != nil {
-			if isRemoteModelSettingsUnsupported(err) {
-				// A legacy Serve cannot apply snapshots; admit without a revision
-				// only when the verdict belongs to the current connection.
-				a.remoteTabMu.Lock()
-				current := a.remoteTabs[tabID]
-				recorded := current == tab && current.gen == generation && current.routing.currentPath == path
-				if recorded {
-					current.settings.unsupportedGen = generation
-				}
-				a.remoteTabMu.Unlock()
-				if !recorded {
-					// A reconnect replaced the probe's target mid-flight; the
-					// replacement Serve may speak the protocol, so re-probe it
-					// instead of admitting against the retired fence.
-					continue
-				}
-				return "", generation, nil
-			}
+
 			a.remoteTabMu.Lock()
 			if current := a.remoteTabs[tabID]; current == tab && current.gen == generation && current.routing.currentPath == path {
 				current.settings.failure = modelSettingsIssue("apply_failed", err).Message
@@ -471,14 +452,7 @@ func (a *App) appendRemoteModelSettingsStatus(result *ModelSettingsResult) {
 			model = resolveNewSessionModel(cfg)
 		}
 		desired := cfg.ModelRuntimeFingerprint(model)
-		// Generation 0 is an unrecorded verdict: a not-yet-attached tab has not
-		// probed any Serve and must stay pending, not claim not_required.
-		if tab.settings.unsupportedGen != 0 && tab.settings.unsupportedGen == tab.gen {
-			// Legacy targets never apply snapshots, so report them as not required
-			// instead of leaving the settings receipt pending indefinitely.
-			result.Targets = append(result.Targets, ModelSettingsTarget{TabID: tab.id, Title: tab.topicTitle, Application: "not_required", AppliedRevision: tab.settings.revision, DesiredRevision: desired})
-			continue
-		}
+
 		state := "applied"
 		if tab.settings.revision != desired || tab.settings.generation != tab.gen || tab.settings.sessionPath != tab.routing.currentPath {
 			state = "pending"
@@ -509,9 +483,6 @@ type remoteModelApplicationState struct {
 	failureRevision   string
 	generation        uint64
 	sessionPath       string
-	// unsupportedGen records a generation whose Serve predates model-settings;
-	// a reconnect or replacement generation probes the protocol again.
-	unsupportedGen uint64
 }
 
 func applyRemoteModelSettingsSnapshot(ctx context.Context, client *http.Client, base, expectedPath, remoteRef string, bundle *config.ModelRuntimeSettings, status remoteModelSettingsStatus) (remoteModelSettingsStatus, error) {

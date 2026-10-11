@@ -293,7 +293,6 @@ func collectHooks(root, home, deepzoraHome string, cfg *config.Config, disp func
 	rep := HookReport{
 		// Retained in schema v1 for compatibility; project hooks are enabled by
 		// default whenever a project root is present.
-		TrustedProject: insp.TrustedProject,
 		ProjectDefines: insp.ProjectDefines,
 		Sources:        []HookSource{},
 		Entries:        []HookEntry{},

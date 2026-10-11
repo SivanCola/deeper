@@ -25,7 +25,6 @@ func TestMaybeCompactIgnoresRetryAggregateBelowContextThreshold(t *testing.T) {
 	a := New(&fakeProvider{reply: "summary"}, tool.NewRegistry(), sess, Options{
 		ContextWindow: window,
 		CompactRatio:  0.85,
-		RecentKeep:    2,
 	}, event.Discard)
 
 	// Aggregate 9000 would be above fold (8500); latest context attempt 4000 is not.
@@ -51,7 +50,6 @@ func TestMaybeCompactStillTriggersAtLatestContextThreshold(t *testing.T) {
 	a := New(&fakeProvider{reply: "summary"}, tool.NewRegistry(), sess, Options{
 		ContextWindow: window,
 		CompactRatio:  0.85,
-		RecentKeep:    2,
 	}, event.Discard)
 
 	// Latest context attempt at/above fold trigger (8500) must install a summary.

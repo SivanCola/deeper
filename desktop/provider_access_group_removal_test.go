@@ -12,14 +12,13 @@ func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testi
 	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
 
 	cfg := config.Default()
-	fallback := config.ProviderEntry{
+	fallback := config.ProviderEntry{Models: []string{"mimo-v2.5-pro"}, Default: "mimo-v2.5-pro",
 		Name: "mimo-pro", Kind: "openai", BaseURL: "https://mimo.example/v1",
 		Model: "mimo-v2.5-pro", APIKeyEnv: "DEEPZORA_TEST_KEY",
 	}
 	cfg.DefaultModel = "opencode-go/glm-5.3"
 	cfg.Agent.PlannerModel = "opencode-go-anthropic/qwen3.7-plus"
 	cfg.Agent.VisionModel = "opencode-go/kimi-k3"
-	cfg.Agent.RecoveryModel = "opencode-go-anthropic/qwen3.7-plus"
 	cfg.Agent.SubagentModel = "opencode-go-responses/grok-4.5"
 	cfg.Agent.SubagentModels = map[string]string{"review": "opencode-go/glm-5.3"}
 	cfg.Bot.Model = "opencode-go-anthropic/qwen3.7-plus"
@@ -35,19 +34,19 @@ func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testi
 		"opencode-go-deepseek-responses", "mimo-pro",
 	}
 	cfg.Providers = []config.ProviderEntry{
-		{
+		{Models: []string{"glm-5.3"}, Default: "glm-5.3",
 			Name: "opencode-go", Kind: "openai", BaseURL: "https://opencode.ai/zen/go/v1",
 			Model: "glm-5.3", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go",
 		},
-		{
+		{Models: []string{"qwen3.7-plus"}, Default: "qwen3.7-plus",
 			Name: "opencode-go-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go",
 			Model: "qwen3.7-plus", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go-anthropic",
 		},
-		{
+		{Models: []string{"grok-4.5"}, Default: "grok-4.5",
 			Name: "opencode-go-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1",
 			Model: "grok-4.5", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go-responses",
 		},
-		{
+		{Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash",
 			Name: "opencode-go-deepseek-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1",
 			Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY", PresetID: "opencode-go-deepseek-responses",
 		},
@@ -84,14 +83,14 @@ func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testi
 			t.Fatalf("provider %q still exists after grouped removal", name)
 		}
 	}
-	wantFallback := "mimo-pro"
-	if got.DefaultModel != wantFallback || got.Agent.PlannerModel != wantFallback || got.Agent.RecoveryModel != "" || got.Agent.SubagentModel != wantFallback || got.Agent.SubagentModels["review"] != wantFallback {
-		t.Fatalf("provider refs were not retargeted: default=%q planner=%q recovery=%q subagent=%q skills=%+v", got.DefaultModel, got.Agent.PlannerModel, got.Agent.RecoveryModel, got.Agent.SubagentModel, got.Agent.SubagentModels)
+	wantFallback := "mimo-pro/mimo-v2.5-pro"
+	if got.DefaultModel != wantFallback || got.Agent.PlannerModel != wantFallback || got.Agent.SubagentModel != wantFallback || got.Agent.SubagentModels["review"] != wantFallback {
+		t.Fatalf("provider refs were not retargeted: default=%q planner=%q subagent=%q skills=%+v", got.DefaultModel, got.Agent.PlannerModel, got.Agent.SubagentModel, got.Agent.SubagentModels)
 	}
 	if got.Agent.VisionModel != "" {
 		t.Fatalf("vision_model = %q, want cleared removed provider reference", got.Agent.VisionModel)
 	}
-	if got.Bot.Model != wantFallback || got.Bot.QQ.Model != wantFallback || got.Bot.Dingtalk.Model != wantFallback || len(got.Bot.Routes) != 1 || got.Bot.Routes[0].Model != wantFallback || len(got.Bot.Connections) != 2 || got.Bot.Connections[0].Model != wantFallback || got.Bot.Connections[1].Model != "mimo-pro/mimo-v2.5-pro" {
+	if got.Bot.Model != wantFallback || len(got.Bot.Routes) != 1 || got.Bot.Routes[0].Model != wantFallback || len(got.Bot.Connections) != 2 || got.Bot.Connections[0].Model != wantFallback || got.Bot.Connections[1].Model != "mimo-pro/mimo-v2.5-pro" {
 		t.Fatalf("bot refs were not retargeted selectively: model=%q qq=%q dingtalk=%q routes=%+v connections=%+v", got.Bot.Model, got.Bot.QQ.Model, got.Bot.Dingtalk.Model, got.Bot.Routes, got.Bot.Connections)
 	}
 	for index, tab := range tabs {
@@ -104,7 +103,7 @@ func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testi
 func TestProviderRemovalStateFingerprintCoversAuxiliaryModelReferences(t *testing.T) {
 	newConfig := func() *config.Config {
 		cfg := config.Default()
-		cfg.Providers = []config.ProviderEntry{{Name: "provider", Kind: "openai", BaseURL: "https://provider.example/v1", Model: "model"}}
+		cfg.Providers = []config.ProviderEntry{{Models: []string{"model"}, Default: "model", Name: "provider", Kind: "openai", BaseURL: "https://provider.example/v1", Model: "model"}}
 		return cfg
 	}
 	base := providerRemovalStateFingerprint(newConfig(), "revision")
@@ -143,12 +142,12 @@ func TestRemoveProviderAccessesKeepsCoreRoutesWhenRemovingOpenCodeGoSearchSubset
 	cfg.DefaultModel = "opencode-go/glm-5.3"
 	cfg.Desktop.ProviderAccess = append(append(append([]string(nil), coreNames...), searchNames...), "fallback")
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "opencode-go", Kind: "openai", BaseURL: "https://opencode.ai/zen/go/v1", Model: "glm-5.3", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "opencode-go-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "qwen3.7-plus", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "opencode-go-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "grok-4.5", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "opencode-go-deepseek-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "opencode-go-deepseek-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "fallback", Kind: "openai", BaseURL: "https://fallback.example/v1", Model: "fallback-model", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"glm-5.3"}, Default: "glm-5.3", Name: "opencode-go", Kind: "openai", BaseURL: "https://opencode.ai/zen/go/v1", Model: "glm-5.3", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"qwen3.7-plus"}, Default: "qwen3.7-plus", Name: "opencode-go-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "qwen3.7-plus", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"grok-4.5"}, Default: "grok-4.5", Name: "opencode-go-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "grok-4.5", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash", Name: "opencode-go-deepseek-anthropic", Kind: "anthropic", BaseURL: "https://opencode.ai/zen/go", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash", Name: "opencode-go-deepseek-responses", Kind: "responses", BaseURL: "https://opencode.ai/zen/go/v1", Model: "deepseek-v4-flash", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"fallback-model"}, Default: "fallback-model", Name: "fallback", Kind: "openai", BaseURL: "https://fallback.example/v1", Model: "fallback-model", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -181,8 +180,8 @@ func TestRemoveProviderAccessesStillRejectsUnrelatedCustomBatch(t *testing.T) {
 	cfg := config.Default()
 	cfg.Desktop.ProviderAccess = []string{"custom-a", "custom-b"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "custom-a", Kind: "openai", BaseURL: "https://a.example/v1", Model: "a", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "custom-b", Kind: "openai", BaseURL: "https://b.example/v1", Model: "b", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"a"}, Default: "a", Name: "custom-a", Kind: "openai", BaseURL: "https://a.example/v1", Model: "a", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"b"}, Default: "b", Name: "custom-b", Kind: "openai", BaseURL: "https://b.example/v1", Model: "b", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

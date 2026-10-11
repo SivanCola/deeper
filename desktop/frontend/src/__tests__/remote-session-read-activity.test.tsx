@@ -42,10 +42,10 @@ test("zero is a ready baseline; pending metadata is never a read", () => {
   assert.equal(unread(remote(3), store), true);
 });
 
-test("legacy time records migrate only with ready authority and cannot downgrade", () => {
-  const legacy = remote(undefined);
-  const old = markSessionRead(empty(), legacy, 10000);
-  const key = projectTreeReadActivityKey(legacy)!;
+test("pending remote time observations yield to ready result counts", () => {
+  const pending = remote(undefined);
+  const old = markSessionRead(empty(), pending, 10000);
+  const key = projectTreeReadActivityKey(pending)!;
   assert.equal(seedSessionReads(old, [remote(0, false)]), old);
   const upgraded = seedSessionReads(old, [remote(3)]);
   assert.equal(upgraded.records[key].metric, "result");
@@ -53,8 +53,8 @@ test("legacy time records migrate only with ready authority and cannot downgrade
   assert.equal(mergeReadStores(old, upgraded).records[key].value, 3);
   const read = markSessionRead(upgraded, remote(6));
   assert.equal(mergeReadStores(read, old).records[key].value, 6);
-  assert.equal(markSessionRead(read, legacy), read);
-  assert.equal(unread({ ...legacy, lastActivityAt: 99999 }, read), false, "old service cannot compare timestamps with a result count");
+  assert.equal(markSessionRead(read, pending), read);
+  assert.equal(unread({ ...pending, lastActivityAt: 99999 }, read), false, "pending observation cannot compare timestamps with a result count");
   assert.equal(unread(remote(9), read), true);
 });
 

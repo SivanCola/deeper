@@ -23,7 +23,6 @@ type Dict = Record<DictKey, string>;
 
 const DICTS: Partial<Record<Locale, Dict>> = { en };
 const localeLoads = new Map<Locale, Promise<void>>();
-const STORAGE_KEY = "deepzora-lang";
 
 // currentLocale mirrors the active locale for callers outside React (lib/tools.ts).
 let currentLocale: Locale = "en";
@@ -80,19 +79,6 @@ function readPref(): LangPref {
 
 export function normalizeLangPref(v: unknown): LangPref {
   return v === "en" || v === "zh" || v === "zh-TW" ? v : "";
-}
-
-export function readLegacyLangPref(): LangPref {
-  const v = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-  return normalizeLangPref(v);
-}
-
-export function clearLegacyLangPref(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* private mode / no storage */
-  }
 }
 
 // translate resolves a key for a locale and fills {placeholders}. Missing keys fall

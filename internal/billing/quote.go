@@ -100,7 +100,6 @@ type CostQuote struct {
 	RateBand           string `json:"rateBand,omitempty"` // peak | off_peak | mixed
 	RatedAt            string `json:"ratedAt,omitempty"`  // RFC3339 UTC for scheduled quotes
 	IncompleteReason   string `json:"incompleteReason,omitempty"`
-	LegacyEstimate     bool   `json:"legacyEstimate,omitempty"`
 	CatalogSource      string `json:"catalogSource,omitempty"`
 }
 
@@ -150,7 +149,6 @@ type QuoteInput struct {
 	Usage              UsageTokens
 	Rates              RateCard
 	OccurredAt         time.Time
-	DisplayCurrency    string         // compatibility alias for Display.Currency
 	Display            DisplayRequest // runtime display request; empty means auto
 	BillingMode        string
 	ModelRef           string
@@ -291,12 +289,6 @@ func newQuoteBuildState(in QuoteInput) *quoteBuildState {
 
 func quoteDisplayRequest(in QuoteInput) DisplayRequest {
 	request := in.Display
-	if request.Currency == "" && in.DisplayCurrency != "" {
-		request.Currency = in.DisplayCurrency
-		if request.Source == "" {
-			request.Source = DisplaySourceExplicit
-		}
-	}
 	if request.Source == "" {
 		request.Source = DisplaySourceAuto
 	}
@@ -448,25 +440,25 @@ func (q CostQuote) WithSelected(display string) CostQuote {
 	return out
 }
 
-// LegacyCostFloat returns the selected (or original) amount as float64 for
-// compatibility aliases cost / costUsd / total_cost.
-func (q CostQuote) LegacyCostFloat() float64 {
+// SelectedCostFloat returns the selected (or original) amount as float64 for
+// current numeric cost displays.
+func (q CostQuote) SelectedCostFloat() float64 {
 	if q.Selected != nil {
 		return q.Selected.Float64()
 	}
 	return q.Original.Float64()
 }
 
-// LegacyCurrencySymbol returns a display symbol for the selected/original currency.
-func (q CostQuote) LegacyCurrencySymbol() string {
+// SelectedCurrencySymbol returns a display symbol for the selected/original currency.
+func (q CostQuote) SelectedCurrencySymbol() string {
 	if q.Selected != nil && q.Selected.Currency != "" {
 		return CurrencySymbol(q.Selected.Currency)
 	}
 	return CurrencySymbol(q.Original.Currency)
 }
 
-// LegacyCurrencyCode returns the ISO code for selected/original.
-func (q CostQuote) LegacyCurrencyCode() string {
+// SelectedCurrencyCode returns the ISO code for selected/original.
+func (q CostQuote) SelectedCurrencyCode() string {
 	if q.Selected != nil && q.Selected.Currency != "" {
 		return NormalizeCurrency(q.Selected.Currency)
 	}
@@ -528,7 +520,6 @@ func (a *quoteAccumulator) add(quote CostQuote) {
 			a.out.IncompleteReason = quote.IncompleteReason
 		}
 	}
-	a.out.LegacyEstimate = a.out.LegacyEstimate || quote.LegacyEstimate
 	if quote.BillingMode != "" {
 		a.modes[quote.BillingMode] = struct{}{}
 	}
@@ -721,8 +712,7 @@ func quoteHasCompleteCostFact(q CostQuote) bool {
 		return true
 	}
 	switch q.IncompleteReason {
-	case "no_price", "missing_price_or_usage", "legacy_unrecoverable",
-		"legacy_wiped_or_zero", "legacy_invalid_amount", "mixed_original_currencies",
+	case "no_price", "missing_price_or_usage", "mixed_original_currencies",
 		"incomplete_cost_fact":
 		return false
 	}

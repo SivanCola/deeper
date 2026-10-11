@@ -110,29 +110,6 @@ func TestLoadSessionMessagesWithDigestMatchesLegacyEventLog(t *testing.T) {
 	}
 }
 
-func TestLoadSessionMessagesWithDigestMatchesLegacyJSONL(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	writeLegacyJSONLSession(t, path, representativeSessionMessages())
-
-	msgs, fromEvents, damaged, digest, digestOK, err := loadAndDigestSessionMessages(path)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	if fromEvents || damaged {
-		t.Fatalf("fromEvents=%v damaged=%v, want plain jsonl load", fromEvents, damaged)
-	}
-	if !digestOK {
-		t.Fatal("digestOK = false, want true")
-	}
-	want, err := legacyDigestSessionMessages(msgs)
-	if err != nil {
-		t.Fatalf("legacy digest: %v", err)
-	}
-	if digest != want {
-		t.Fatalf("incremental digest %x != legacy digest %x", digest, want)
-	}
-}
-
 func TestLoadSessionMessagesWithDigestCoversOnlyCleanPrefix(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.jsonl")
 	sessionWithTurns(t, path, 2)
@@ -197,41 +174,6 @@ func TestLoadSessionDigestFastPathKeepsPersistedBaseline(t *testing.T) {
 	}
 	if loaded.HasUnsavedChanges(path) {
 		t.Fatal("HasUnsavedChanges = true right after a clean load, want false")
-	}
-}
-
-func TestLoadSessionDigestRecomputedAfterNormalizationRepair(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
-	// Dangling tool call: normalization fabricates a placeholder tool result,
-	// so the persisted baseline must be the digest of the repaired transcript.
-	writeLegacyJSONLSession(t, path, []provider.Message{
-		{Role: provider.RoleSystem, Content: "sys"},
-		{Role: provider.RoleUser, Content: "run it"},
-		{Role: provider.RoleAssistant, Content: "", ToolCalls: []provider.ToolCall{
-			{ID: "call_1", Name: "read_file", Arguments: `{"path":"a.go"}`},
-		}},
-	})
-
-	loaded, err := LoadSession(path)
-	if err != nil {
-		t.Fatalf("LoadSession: %v", err)
-	}
-	if !loaded.normalizedDirty {
-		t.Fatal("normalizedDirty = false, want true for a dangling tool call")
-	}
-	want, err := legacyDigestSessionMessages(loaded.Snapshot())
-	if err != nil {
-		t.Fatalf("legacy digest: %v", err)
-	}
-	if !loaded.persisted.ok || loaded.persisted.digest != want {
-		t.Fatalf("persisted baseline digest %x (ok=%v) != legacy digest of repaired transcript %x", loaded.persisted.digest, loaded.persisted.ok, want)
-	}
-	rawWant, err := legacyDigestSessionMessages(loaded.rawMessages)
-	if err != nil {
-		t.Fatalf("legacy raw digest: %v", err)
-	}
-	if loaded.persisted.digest == rawWant {
-		t.Fatal("persisted baseline still hashes the pre-repair transcript")
 	}
 }
 

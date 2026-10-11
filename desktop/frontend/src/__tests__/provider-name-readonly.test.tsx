@@ -75,7 +75,7 @@ const customProvider: ProviderView = {
   baseUrl: "https://example.com/v1",
   models: ["demo"],
   visionModels: [],
-  visionModelsConfigured: false,
+
   modelsUrl: "",
   default: "demo",
   apiKeyEnv: "",

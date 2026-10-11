@@ -558,8 +558,8 @@ func TestRenderMCPManagerListGroupsRuntimeAndConfiguredServers(t *testing.T) {
 		servers: []mcpServerView{
 			{Name: "managed-search", Transport: "stdio", Status: "connected", BuiltIn: true, Tools: 4},
 			{Name: "project-docs", Transport: "http", Status: "deferred", Configured: true, Source: config.MCPSourceProjectConfig},
-			{Name: "github", Transport: "stdio", Status: "deferred", Configured: true, Tier: "background", Tools: 12},
-			{Name: "figma", Transport: "http", Status: "failed", Configured: true, Tier: "background", URL: "https://mcp.figma.com", Error: "connect: 401 unauthorized"},
+			{Name: "github", Transport: "stdio", Status: "deferred", Configured: true, Tools: 12},
+			{Name: "figma", Transport: "http", Status: "failed", Configured: true, URL: "https://mcp.figma.com", Error: "connect: 401 unauthorized"},
 		},
 	}}
 	got := p.renderList(120)
@@ -647,7 +647,7 @@ func TestMCPConfigPathForViewPrefersSelectedServerSource(t *testing.T) {
 
 func TestRenderMCPManagerListCompactsLongNames(t *testing.T) {
 	p := &mcpManager{snapshot: mcpSnapshot{servers: []mcpServerView{
-		{Name: "@modelcontextprotocol/server-sequential-thinking", Transport: "stdio", Status: "deferred", Configured: true, Tier: "background"},
+		{Name: "@modelcontextprotocol/server-sequential-thinking", Transport: "stdio", Status: "deferred", Configured: true},
 	}}}
 	got := p.renderList(80)
 	for line := range strings.SplitSeq(got, "\n") {
@@ -668,7 +668,7 @@ func TestRenderMCPManagerAuthFailureActions(t *testing.T) {
 			configPath: "deepzora.toml",
 			servers: []mcpServerView{{
 				Name: "figma", Transport: "http", Status: "failed", Configured: true,
-				Tier: "background", URL: "https://mcp.figma.com", Error: "connect: 401 unauthorized",
+				URL: "https://mcp.figma.com", Error: "connect: 401 unauthorized",
 			}},
 		},
 	}
@@ -729,7 +729,7 @@ func TestRenderMCPManagerClearAuthConfirmation(t *testing.T) {
 		snapshot: mcpSnapshot{
 			servers: []mcpServerView{{
 				Name: "figma", Transport: "http", Status: "failed", Configured: true,
-				Tier: "background", URL: "https://mcp.figma.com", Error: "connect: 401 unauthorized",
+				URL: "https://mcp.figma.com", Error: "connect: 401 unauthorized",
 			}},
 		},
 	}
@@ -756,7 +756,7 @@ func TestRenderMCPManagerRemoteDeferredAuthHint(t *testing.T) {
 			configPath: "deepzora.toml",
 			servers: []mcpServerView{{
 				Name: "dida", Transport: "http", Status: "deferred", Configured: true,
-				Tier: "background", URL: "https://mcp.dida365.com",
+				URL: "https://mcp.dida365.com",
 			}},
 		},
 	}
@@ -787,7 +787,7 @@ func TestRenderMCPManagerDetailCompactsConfigPath(t *testing.T) {
 			configPath: "/Users/example-with-a-long-home-directory/Library/Application Support/deepzora/config.toml",
 			servers: []mcpServerView{{
 				Name: "github", Transport: "stdio", Status: "deferred", Configured: true,
-				Tier: "background", Command: "npx", Args: []string{"-y", "@modelcontextprotocol/server-github"},
+				Command: "npx", Args: []string{"-y", "@modelcontextprotocol/server-github"},
 			}},
 		},
 	}
@@ -1070,40 +1070,6 @@ func TestMCPEditConfigLaunchUsesSystemDefaultLast(t *testing.T) {
 	}
 	if len(launch.cmd.Args) == 0 || len(want.Args) == 0 || launch.cmd.Args[0] != want.Args[0] {
 		t.Fatalf("system default command = %v, want command starting with %v", launch.cmd.Args, want.Args)
-	}
-}
-
-func TestApplyMCPModeDropsLegacyTier(t *testing.T) {
-	isolateUserConfig(t)
-	cfg := config.Default()
-	cfg.Plugins = []config.PluginEntry{{Name: "github", Command: "npx", Args: []string{"server"}, Tier: "lazy"}}
-	if err := cfg.SaveTo("deepzora.toml"); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	m := newTestChatTUI()
-	m.mcp = &mcpManager{
-		stage: mcpStageMode,
-		name:  "github",
-		snapshot: mcpSnapshot{configPath: "deepzora.toml", servers: []mcpServerView{{
-			Name: "github", Transport: "stdio", Status: "deferred", Configured: true, Tier: "background",
-		}}},
-	}
-	_, _ = m.applyMCPMode("background")
-
-	loaded, err := config.Load()
-	if err != nil {
-		t.Fatalf("load config: %v", err)
-	}
-	if len(loaded.Plugins) != 1 || loaded.Plugins[0].Tier != "" {
-		t.Fatalf("tier should be migrated away, plugins=%+v", loaded.Plugins)
-	}
-	raw, err := os.ReadFile("deepzora.toml")
-	if err != nil {
-		t.Fatalf("read config: %v", err)
-	}
-	if strings.Contains(string(raw), "\ntier") {
-		t.Fatalf("legacy tier should not be written back:\n%s", raw)
 	}
 }
 

@@ -1,5 +1,7 @@
 # Manual session rollback: historical data compatibility
 
+> 已归档：本文记录旧版验证，其兼容、迁移及降级结论不适用于当前 Deepzora。当前支持范围见[当前版本基线](../current-version-baseline.md)。旧证据生成脚本已移除。
+
 本报告记录 #10469 行为回滚的增补验证。所有数据均为隔离目录内的合成数据；没有读取或
 修改用户真实会话，没有安装旧客户端到系统应用目录，也没有发布版本。
 

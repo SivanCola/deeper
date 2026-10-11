@@ -91,7 +91,7 @@ func TestInputTextWithMediaKeepsDeferredFailurePlaceholder(t *testing.T) {
 	workspace := t.TempDir()
 	adapter := newFakeAdapter(PlatformFeishu, "feishu")
 	gw := NewGateway(GatewayConfig{WorkspaceRoot: workspace}, map[Platform]Adapter{PlatformFeishu: adapter}, discardLogger())
-	input := gw.inputTextWithMedia(context.Background(), adapter, InboundMessage{
+	input := gw.inputTextWithMedia(context.Background(), adapter, InboundMessage{ConnectionID: string(PlatformFeishu),
 		Platform: PlatformFeishu,
 		ChatType: ChatDM,
 		ChatID:   "chat",

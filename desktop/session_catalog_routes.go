@@ -68,7 +68,7 @@ func (a *App) listCanonicalSessionsFromDir(dir, active string) []SessionMeta {
 				HostID: service.HostID(), Codec: info.Codec, Error: info.Error,
 				Title: info.Title, Turns: info.Turns, TurnsState: "valid",
 				CreatedAt: info.CreatedAt.UnixMilli(), LastActivityAt: info.UpdatedAt.UnixMilli(),
-				ModTime: info.UpdatedAt.UnixMilli(), Current: info.SessionID == activeID,
+				Current: info.SessionID == activeID,
 			}
 			if info.Error != "" {
 				meta.TurnsState = "corrupt"

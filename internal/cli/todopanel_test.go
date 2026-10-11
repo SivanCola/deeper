@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"deepzora/internal/event"
+
 	"github.com/charmbracelet/x/ansi"
 )
 

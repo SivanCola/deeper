@@ -22,7 +22,7 @@ func TestDoctorRepairDryRunDoesNotMigrateConfig(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(root, "deepzora.toml")
-	body := []byte("[[plugins]]\nname = \"legacy\"\ncommand = \"legacy\"\ntier = \"lazy\"\n")
+	body := []byte("[[plugins]]\nname = \"legacy\"\ncommand = \"legacy\"\n")
 	if err := os.WriteFile(path, body, 0o600); err != nil {
 		t.Fatal(err)
 	}

@@ -233,8 +233,8 @@ func TestLoadSessionMalformed(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for malformed JSONL")
 	}
-	if !strings.Contains(err.Error(), "decode") {
-		t.Errorf("error should mention decode: %v", err)
+	if !os.IsNotExist(err) {
+		t.Errorf("unsupported checkpoint must not be read: %v", err)
 	}
 }
 
@@ -280,7 +280,7 @@ func TestListSessionsSorted(t *testing.T) {
 		t.Fatalf("want 2 sessions, got %d", len(sessions))
 	}
 	// Newest first.
-	if sessions[0].ModTime.Before(sessions[1].ModTime) {
+	if sessions[0].LastActivityAt.Before(sessions[1].LastActivityAt) {
 		t.Error("sessions should be sorted newest first")
 	}
 }
@@ -332,38 +332,6 @@ func TestPreviewSession(t *testing.T) {
 	}
 	if !strings.Contains(preview, "debug") {
 		t.Errorf("preview = %q", preview)
-	}
-}
-
-func TestPreviewSessionStripsTransientReasoningLanguageBlock(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	s := NewSession("system")
-	s.Add(provider.Message{Role: provider.RoleUser, Content: "<reasoning-language>\nVisible reasoning/thinking text preference: use Simplified Chinese.\n</reasoning-language>\n\nHelp me debug the auth module"})
-	s.Save(path)
-
-	preview, turns := previewSession(path)
-	if turns != 1 {
-		t.Errorf("turns = %d, want 1", turns)
-	}
-	if preview != "Help me debug the auth module" {
-		t.Errorf("preview = %q, want user prompt", preview)
-	}
-}
-
-func TestPreviewSessionStripsTransientResponseLanguageBlock(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	s := NewSession("system")
-	s.Add(provider.Message{Role: provider.RoleUser, Content: "<response-language>\nFinal answer language preference: use English.\n</response-language>\n\nHelp me debug the auth module"})
-	s.Save(path)
-
-	preview, turns := previewSession(path)
-	if turns != 1 {
-		t.Errorf("turns = %d, want 1", turns)
-	}
-	if preview != "Help me debug the auth module" {
-		t.Errorf("preview = %q, want user prompt", preview)
 	}
 }
 

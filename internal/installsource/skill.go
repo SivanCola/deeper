@@ -155,17 +155,14 @@ func (t *installSourceTool) verifySkill(scope, name string, act *action) error {
 	return nil
 }
 
-// skillConflictTargets returns every existing layout that would collide with
-// installing name: the canonical directory, its SKILL.md, and the legacy flat
-// file. The apply step checks all of them so new canonical installs don't
-// silently shadow older <name>.md installs.
+// skillConflictTargets returns the canonical directory and SKILL.md paths.
 func (t *installSourceTool) skillConflictTargets(name, scope string) ([]string, error) {
 	canonical, err := t.skillCanonicalPath(name, scope)
 	if err != nil {
 		return nil, err
 	}
 	dir := filepath.Dir(canonical)
-	return []string{dir, canonical, filepath.Join(filepath.Dir(dir), name+".md")}, nil
+	return []string{dir, canonical}, nil
 }
 
 // readSkillFile reads and validates a single skill file. The fallback name

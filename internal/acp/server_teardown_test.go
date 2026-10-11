@@ -40,9 +40,10 @@ func (f *teardownFactory) NewSession(_ context.Context, p SessionParams) (*contr
 	}
 	return control.New(control.Options{
 		Runner:     runner,
+		Executor:   testACPExecutor(p.Sink),
 		Sink:       p.Sink,
-		SessionDir: f.dir,
-		Jobs:       jm,
+		SessionDir: f.dir, SessionService: testACPService(f.dir), SessionRuntime: p.SessionRuntime, ExclusiveSession: f.dir != "",
+		Jobs: jm,
 	}), nil
 }
 

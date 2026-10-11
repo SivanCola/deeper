@@ -73,7 +73,7 @@ func (a *App) surfaceForCanonicalSession(ref session.SessionRef, workspace works
 		Scope:            scope,
 		WorkspaceRoot:    actualRoot,
 		model:            model,
-		mode:             tabModeFromAxes(false, toolApprovalMode == control.ToolApprovalDangerFullAccess),
+		mode:             tabModeForPlan(false),
 		toolApprovalMode: toolApprovalMode,
 		disabledMCP:      map[string]ServerView{},
 	}

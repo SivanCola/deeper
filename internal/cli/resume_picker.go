@@ -65,7 +65,7 @@ func (m *chatTUI) openResumePicker() {
 			status = "taken back"
 		}
 		label := sessionPickerLabel(entry.session)
-		description := entry.session.ModTime.Local().Format("2006-01-02 15:04")
+		description := entry.session.LastActivityAt.Local().Format("2006-01-02 15:04")
 		if entry.project != "" {
 			label = fmt.Sprintf("[%s] %s", entry.project, label)
 			description = entry.project + " · " + description

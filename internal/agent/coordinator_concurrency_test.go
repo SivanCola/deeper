@@ -34,7 +34,7 @@ func (p *concurrentPlannerProvider) Stream(_ context.Context, _ provider.Request
 
 func TestCoordinatorSerializesConcurrentPlannerCalls(t *testing.T) {
 	planner := &concurrentPlannerProvider{}
-	coord := NewCoordinator(planner, NewSession("planner-sys"), nil, PlannerToolRegistry(tool.NewRegistry()), Options{}, nil, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, NewSession("planner-sys"), nil, PlannerToolRegistry(tool.NewRegistry()), Options{}, nil, 0, event.Discard, nil)
 
 	errs := make(chan error, 2)
 	for _, input := range []string{"first", "second"} {

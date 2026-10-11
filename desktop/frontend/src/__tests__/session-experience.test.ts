@@ -36,15 +36,11 @@ check(resolveWorkProcessPresentation("deep").showWhileRunning === true, "deep sh
 check(resolveWorkProcessPresentation("deep").keepExpandedAfterCompletion === true, "deep keeps completed work expanded");
 
 applySessionExperience("deep");
-check(getSessionExperience() === "deep", "apply persists deep");
-check(localStorage.getItem("deepzora-session-experience") === "deep", "canonical localStorage key stores deep");
-check(localStorage.getItem("deepzora-display-mode") === "standard", "compatibility density mirror stays standard");
-check(localStorage.getItem("deepzora-process-fold") === "expanded", "deep mirrors the old expanded fold value");
+check(getSessionExperience() === "deep", "apply sets deep for the active view");
 
 // An authoritative startup snapshot must win over a stale local optimistic value.
 hydrateSessionExperience("standard");
 check(getSessionExperience() === "standard", "authoritative hydrate wins over stale localStorage");
-check(localStorage.getItem("deepzora-session-experience") === "standard", "hydrate rewrites the canonical localStorage value");
 
 if (failed > 0) {
   throw new Error(`${failed} session experience checks failed`);

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/permission"
 	"deepzora/internal/provider"
+	"deepzora/internal/session"
 	"deepzora/internal/tool"
 )
 
@@ -97,12 +99,15 @@ func (f *e2eFactory) NewSession(_ context.Context, p SessionParams) (*control.Co
 	executor := agent.New(f.prov, reg, agent.NewSession("you are a test agent"),
 		opts, p.Sink)
 	return control.New(control.Options{
-		Runner:     executor,
-		Executor:   executor,
-		Sink:       p.Sink,
-		Policy:     f.policy,
-		Label:      "fake-model",
-		SessionDir: f.sessionDir,
+		Runner:           executor,
+		Executor:         executor,
+		Sink:             p.Sink,
+		Policy:           f.policy,
+		Label:            "fake-model",
+		SessionDir:       f.sessionDir,
+		SessionService:   testACPService(f.sessionDir),
+		SessionRuntime:   p.SessionRuntime,
+		ExclusiveSession: f.sessionDir != "",
 	}), nil
 }
 
@@ -289,21 +294,19 @@ func TestE2EToolTurnAndPersistence(t *testing.T) {
 		t.Errorf("stopReason = %q, want end_turn", pr.StopReason)
 	}
 
-	// Persistence: a transcript path was returned and the turn is on disk.
-	if pr.TranscriptPath == nil {
-		t.Fatal("no transcriptPath returned")
-	}
-	if !strings.HasPrefix(*pr.TranscriptPath, dir) {
-		t.Errorf("transcriptPath %q not under session dir %q", *pr.TranscriptPath, dir)
-	}
-	data, err := os.ReadFile(*pr.TranscriptPath)
+	// Read the current identity through its authoritative query API.
+	owner := testACPService(dir)
+	snapshot, err := owner.Query().Snapshot(t.Context(), session.SessionRef{HostID: owner.HostID(), SessionID: sid})
 	if err != nil {
-		t.Fatalf("read transcript: %v", err)
+		t.Fatal(err)
 	}
-	body := string(data)
+	data, err := json.Marshal(snapshot.Projection.Messages)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, want := range []string{"look at x", "All done.", "peek"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("transcript missing %q; got:\n%s", want, body)
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("persisted history missing %q: %s", want, data)
 		}
 	}
 }
@@ -410,10 +413,7 @@ func TestE2ESessionListResumeAndDelete(t *testing.T) {
 	if err := json.Unmarshal(promptResp.Result, &pr); err != nil {
 		t.Fatalf("prompt result: %v", err)
 	}
-	if pr.TranscriptPath == nil {
-		t.Fatal("prompt did not return a transcript path")
-	}
-	transcript := *pr.TranscriptPath
+	transcript := transcriptPath(dir, nr.SessionID)
 	stop1()
 
 	client2, stop2 := startServer(t, mkFactory())
@@ -473,7 +473,7 @@ func TestE2ESessionListResumeAndDelete(t *testing.T) {
 	}
 }
 
-func TestE2ESessionListSkipsUnpromptedSessionAfterRestart(t *testing.T) {
+func TestE2ESessionListIncludesCreatedSessionAfterRestart(t *testing.T) {
 	dir := t.TempDir()
 	factory := &e2eFactory{
 		prov: &scriptedProvider{name: "fake", responses: [][]provider.Chunk{
@@ -501,8 +501,8 @@ func TestE2ESessionListSkipsUnpromptedSessionAfterRestart(t *testing.T) {
 	if err := json.Unmarshal(listResp.Result, &lr); err != nil {
 		t.Fatalf("session/list result: %v", err)
 	}
-	if len(lr.Sessions) != 0 {
-		t.Fatalf("session/list returned unprompted session: %+v", lr.Sessions)
+	if len(lr.Sessions) != 1 || lr.Sessions[0].SessionID != nr.SessionID {
+		t.Fatalf("session/list lost newly created session: %+v", lr.Sessions)
 	}
 }
 
@@ -563,7 +563,7 @@ func TestE2EDeleteActiveSessionDoesNotRecreateFiles(t *testing.T) {
 	if len(lr.Sessions) != 0 {
 		t.Fatalf("session/list after active delete = %+v, want empty", lr.Sessions)
 	}
-	for _, path := range []string{transcriptPath(dir, sid), acpMetaPath(transcriptPath(dir, sid))} {
+	for _, path := range []string{filepath.Join(session.RootForSessionDir(dir), sid), sessionMetadataPath(dir, sid)} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("%s after active delete stat err = %v, want not exist", path, err)
 		}
@@ -590,7 +590,7 @@ func TestE2EApprovalRoundTrip(t *testing.T) {
 	factory := &e2eFactory{
 		prov:       prov,
 		tool:       fakeTool{name: "writeit", ro: false, out: "written ok", executed: toolExecuted},
-		policy:     permission.New("ask", nil, nil, nil),
+		policy:     permission.New("ask", nil, []string{"writeit"}, nil),
 		sessionDir: t.TempDir(),
 	}
 	client, stop := startServer(t, factory)
@@ -600,7 +600,7 @@ func TestE2EApprovalRoundTrip(t *testing.T) {
 	if resp := client.call(t, "session/set_config_option", SetSessionConfigOptionParams{
 		SessionID: sid,
 		ConfigID:  "tool_approval",
-		Value:     control.ToolApprovalReadOnly,
+		Value:     control.ToolApprovalWorkspaceWrite,
 	}); resp.Error != nil {
 		t.Fatalf("set read-only permission: %+v", resp.Error)
 	}

@@ -35,11 +35,6 @@ import (
 // all diagnostics go to stderr. Each session is assembled by acpFactory, rooted
 // at the cwd the client opens.
 func acpCommand(args []string, version string) int {
-	args, deprecatedMode, err := consumeDeprecatedModeFlags(args, "profile")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
 	fs := flag.NewFlagSet("acp", flag.ContinueOnError)
 	model := fs.String("model", "", "provider name (default: config default_model)")
 	plannerFlag := fs.String("planner", "auto", "planner policy: auto | off")
@@ -71,10 +66,6 @@ func acpCommand(args []string, version string) int {
 	bashMode := strings.ToLower(strings.TrimSpace(*bashFlag))
 	if bashMode != "auto" && bashMode != "enforce" {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "sandbox-bash must be auto or enforce")
-		return 2
-	}
-	if err := acceptDeprecatedModeFlag(deprecatedMode); err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 2
 	}
 
@@ -164,31 +155,28 @@ func (f *acpFactory) sessionBootOptions(p acp.SessionParams) (boot.Options, erro
 	}
 	sessionDir := f.SessionDir()
 	return boot.Options{
-		Model:                    firstNonEmpty(p.Model, f.model),
-		RequireKey:               true,
-		Sink:                     p.Sink,
-		StatsSource:              "cli",
-		EffortOverride:           p.EffortOverride,
-		Stderr:                   os.Stderr,
-		WorkspaceRoot:            root,
-		SessionDir:               sessionDir,
-		SessionService:           cliSessionService(sessionDir),
-		NativeLegacySession:      p.NativeLegacySession,
-		BackgroundScope:          p.BackgroundScope,
-		SessionTemp:              p.SessionTemp,
-		PersistentShell:          p.PersistentShell,
-		SessionHostID:            "local",
-		ExtraPlugins:             p.MCPServers,
-		MCPHostProfile:           plugin.HostProfileForInteractive(p.MCPInteractions),
-		CleanupPendingReconciler: acp.ReconcileCleanupPending,
-		OnSessionRecovered:       p.OnSessionRecovered,
-		OnSessionTransition:      p.OnSessionTransition,
-		FileOverlay:              p.FileOverlay,
-		TerminalRunner:           p.Terminal,
-		Ablation:                 f.ablationSet(),
-		SandboxNetworkOverride:   f.networkOverride,
-		SandboxBashOverride:      bashOverride,
-		WorkspaceOnly:            f.workspaceOnly,
+		Model:                  firstNonEmpty(p.Model, f.model),
+		RequireKey:             true,
+		Sink:                   p.Sink,
+		StatsSource:            "cli",
+		EffortOverride:         p.EffortOverride,
+		Stderr:                 os.Stderr,
+		WorkspaceRoot:          root,
+		SessionDir:             sessionDir,
+		SessionService:         cliSessionService(sessionDir),
+		SessionRuntime:         p.SessionRuntime,
+		BackgroundScope:        p.BackgroundScope,
+		SessionTemp:            p.SessionTemp,
+		PersistentShell:        p.PersistentShell,
+		SessionHostID:          "local",
+		ExtraPlugins:           p.MCPServers,
+		MCPHostProfile:         plugin.HostProfileForInteractive(p.MCPInteractions),
+		FileOverlay:            p.FileOverlay,
+		TerminalRunner:         p.Terminal,
+		Ablation:               f.ablationSet(),
+		SandboxNetworkOverride: f.networkOverride,
+		SandboxBashOverride:    bashOverride,
+		WorkspaceOnly:          f.workspaceOnly,
 	}, nil
 }
 
@@ -281,8 +269,6 @@ func (f *acpFactory) SessionConfigState(_ context.Context, p acp.SessionConfigSt
 	if root != "" && !filepath.IsAbs(root) {
 		return acp.SessionConfigState{}, fmt.Errorf("session cwd must be an absolute path: %s", root)
 	}
-	_, _ = config.MigrateLegacyIfNeededForRoot(root)
-	_, _ = config.MigrateMCPToUserConfigOnUpgrade([]string{root})
 	cfg, err := config.LoadForRoot(root)
 	if err != nil {
 		return acp.SessionConfigState{}, err
@@ -372,11 +358,9 @@ func (f *acpFactory) SessionConfigState(_ context.Context, p acp.SessionConfigSt
 			Options:      acpEffortOptions(cap.Levels),
 		})
 	}
-	// RuntimeProfile stays pinned for old status readers; mode options are unpublished.
 	return acp.SessionConfigState{
 		Model:          currentModel,
 		EffortOverride: effortOverride,
-		RuntimeProfile: "balanced",
 		Models: &acp.SessionModelState{
 			AvailableModels: modelInfos,
 			CurrentModelID:  currentModel,

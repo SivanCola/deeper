@@ -2,6 +2,7 @@ package agent
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -142,15 +143,17 @@ func TestHeadMarkersOnDiskSelectRetireRename(t *testing.T) {
 	}
 }
 
-func TestHeadOperationsRefuseSchemaOneSessions(t *testing.T) {
-	useSchemaOneLog(t)
+func TestHeadOperationsRefuseUnsupportedSessions(t *testing.T) {
 	path := dagTestSession(t)
-	s := dagSavedSession(t, path, "q1")
-	if _, err := s.ForkHead(path, "", HeadKindFork, ""); !errors.Is(err, ErrSessionNotDAG) {
-		t.Fatalf("ForkHead on schema 1 err = %v", err)
+	if err := os.WriteFile(SessionEventLogPath(path), []byte(`{"schema":1}`+"\n"), 0600); err != nil {
+		t.Fatal(err)
 	}
-	if err := SelectSessionHead(path, SessionMainHead); !errors.Is(err, ErrSessionNotDAG) {
-		t.Fatalf("SelectSessionHead on schema 1 err = %v", err)
+	session := NewSession("")
+	if _, err := session.ForkHead(path, "", HeadKindFork, ""); err == nil {
+		t.Fatal("unsupported log accepted")
+	}
+	if err := SelectSessionHead(path, SessionMainHead); err == nil {
+		t.Fatal("unsupported log accepted")
 	}
 }
 

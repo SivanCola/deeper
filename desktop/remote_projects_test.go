@@ -122,7 +122,7 @@ func TestRemoteRootWorkspaceContainsAbsoluteDescendants(t *testing.T) {
 // update leaves the new project group empty.
 func TestBootstrapNewSessionPublishesTabUpdateForSidebarBlankRow(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", nil)
-	const freshPath = "/remote/sessions/fresh.jsonl"
+	const freshPath = "session-id:fresh"
 	fs.mu.Lock()
 	fs.newSessionPath = freshPath
 	fs.mu.Unlock()
@@ -176,12 +176,12 @@ func TestBootstrapNewSessionPublishesTabUpdateForSidebarBlankRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || sessions[0].Name != "" || sessions[0].Path != freshPath || !sessions[0].Current {
+	if len(sessions) != 1 || sessions[0].Name != "" || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
 		t.Fatalf("unlisted fresh session = %+v, want one synthetic current blank", sessions)
 	}
 
 	fs.mu.Lock()
-	fs.statusPayload = `{"sessionName":"fresh","sessionPath":"/remote/sessions/fresh.jsonl","running":false}`
+	fs.statusPayload = `{"sessionName":"fresh","sessionPath":"session-id:fresh","running":false}`
 	fs.mu.Unlock()
 	if _, err := a.RemoteTabStatus(meta.ID); err != nil {
 		t.Fatal(err)
@@ -196,18 +196,18 @@ func TestBootstrapNewSessionPublishesTabUpdateForSidebarBlankRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || sessions[0].Name != "" || sessions[0].Path != freshPath || !sessions[0].Current {
+	if len(sessions) != 1 || sessions[0].Name != "" || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
 		t.Fatalf("named but unlisted fresh session = %+v, want the synthetic current blank", sessions)
 	}
 
 	fs.mu.Lock()
-	fs.sessions = []serveSessionEntry{{Name: "fresh", Path: freshPath, Title: "Fresh", Current: true}}
+	fs.sessions = []serveSessionEntry{{Name: "fresh", SessionID: remoteSessionIDFromRoute(freshPath), Title: "Fresh", Current: true}}
 	fs.mu.Unlock()
 	sessions, err = a.RemoteProjectSessions("box", "~/app")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || sessions[0].Name != "fresh" || sessions[0].Path != freshPath || !sessions[0].Current {
+	if len(sessions) != 1 || sessions[0].Name != "fresh" || sessions[0].SessionID != remoteSessionIDFromRoute(freshPath) || !sessions[0].Current {
 		t.Fatalf("materialized fresh session = %+v, want the real current row", sessions)
 	}
 }

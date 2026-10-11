@@ -99,7 +99,7 @@ func TestResumeRecoversCommittingCombinedRewind(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkpointBackup, err := json.Marshal([]*checkpoint.Checkpoint{{
-		SchemaVersion: checkpoint.SchemaV2,
+		SchemaVersion: checkpoint.SchemaV3,
 		Turn:          1,
 		Prompt:        "second",
 		MsgIndex:      3,
@@ -268,7 +268,6 @@ func TestRewindConversationSucceedsWithLiveBoundary(t *testing.T) {
 }
 
 func TestCompatibilityRewindTransfersLeaseBeforeForkSwitch(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
 	c, ag, _ := runTwoTurns(t)
 	originalPath := c.SessionPath()
 	keeper := NewSessionLeaseKeeper()
@@ -362,8 +361,7 @@ func TestTailRewindKeepsCompactionProjection(t *testing.T) {
 		textTurn("second answer"),
 	}}
 	ag := agent.New(prov, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{
-		ContextWindow: 10_000, CompactRatio: 0.80, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: 10_000, CompactRatio: 0.80}, event.Discard)
 	c := newOwnedTestController(t, Options{
 		Runner:     ag,
 		Executor:   ag,

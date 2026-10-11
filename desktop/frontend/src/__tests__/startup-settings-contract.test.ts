@@ -48,7 +48,7 @@ ok(
   "startup and reload barriers reject stale events while repeated session builds stay deduplicated",
 );
 ok(
-  bridgeSource.includes('displayMode: "standard", sessionExperience: "standard", reasoningDisplayMode: "auto", reasoningDisplayModeExplicit: false'),
+  bridgeSource.includes('sessionExperience: "standard"'),
   "browser startup defaults include the canonical standard session experience",
 );
 ok(
@@ -144,12 +144,6 @@ ok(
   "browser mock hides the redundant DeepSeek Anthropic preset",
 );
 ok(
-  bridgeSource.includes('value === "deepseek-upgrade"') &&
-    bridgeSource.includes('recommendedUpgradeAvailable: false') &&
-    bridgeSource.includes('headers: deepSeekUpgradeMock ? { "X-Route": "official-custom" } : undefined'),
-  "browser mock preserves custom DeepSeek headers without proposing the retired protocol upgrade",
-);
-ok(
   /async ConnectKey\(apiKey: string\)[\s\S]*?await this\.AddOfficialProviderAccess\("deepseek", apiKey\)/.test(bridgeSource),
   "browser onboarding installs the same current DeepSeek official template as production",
 );
@@ -160,26 +154,10 @@ ok(
   "official templates allow separate connections while preserving credential status",
 );
 ok(
-  /onUpgradeRecommended=\{\(name\) => \{[\s\S]*?cancelGroupFetch\(group\.id\);[\s\S]*?return apply\(\(\) => saveModelSettings\(s, \{kind: "protocol_upgrade", name\}\)\)/.test(settingsSource) &&
-    settingsSource.includes("onConfirm={() => onUpgradeRecommended(canonicalOfficialProviderName(upgradeProvider.name))}") &&
-    settingsSource.includes('className="provider-protocol-upgrade"') &&
-    settingsSource.includes('t("settings.providerProtocol")}: OpenAI Chat Completions') &&
-    /<InlineConfirmButton[\s\S]*?label=\{<>\{t\("settings\.upgradeRecommendedProtocol"\)\}[\s\S]*?primary[\s\S]*?onConfirm=\{\(\) => onUpgradeRecommended/.test(settingsSource),
-  "legacy official DeepSeek cards expose an explicit recommended-protocol action",
-);
-ok(
   settingsSource.includes("const providerNames = group.providers.map((provider) => provider.name)") &&
     settingsSource.includes('kind: "web_search_capability", names: providerNames, enabled') &&
     !settingsSource.includes("app.SaveProvider({ ...provider, webSearch: enabled })"),
   "grouped DeepSeek profiles update server-side web search through one atomic backend call",
-);
-ok(
-  /<div className="provider-access-card__actions">[\s\S]*?<ProviderAccessMoreMenu[\s\S]*?<\/div>\s*<\/div>\s*\{group\.description && !editingProvider && <div className="provider-access-card__desc">[\s\S]*?\{upgradeProvider && \(/.test(settingsSource) &&
-    settingsSource.includes('className="provider-access-more__menu"') &&
-    settingsSource.includes('buttonRole="menuitem"') &&
-    stylesSource.includes(".provider-protocol-upgrade") &&
-    stylesSource.includes(".provider-access-more__menu"),
-  "provider protocol migration stays in a stable row and removal lives in the overflow menu",
 );
 ok(
   settingsSource.includes('className="provider-technical-details"') &&
@@ -198,11 +176,6 @@ ok(
     settingsSource.includes("group.providers.every((provider) => Boolean(provider.webSearch))") &&
     settingsSource.includes("supported={supportsServerWebSearch}"),
   "all provider cards keep endpoint details collapsed and use backend web-search capability authority",
-);
-ok(
-  /existing\.recommendedUpgradeAvailable = existing\.recommendedUpgradeAvailable \|\| Boolean\(p\.recommendedUpgradeAvailable\)/.test(settingsSource) &&
-    /case "deepseek-flash":\s*case "deepseek-pro":\s*return "deepseek";/.test(settingsSource),
-  "legacy DeepSeek aliases remain grouped into one official provider card",
 );
 ok(
   settingsSource.includes('className="btn btn--small provider-profile-row__refresh"') &&

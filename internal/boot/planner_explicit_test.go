@@ -22,7 +22,7 @@ default_model = "executor"
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "executor-model"
+models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 
@@ -52,12 +52,12 @@ planner_model = "planner"
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "executor-model"
+models = ["executor-model"]
 
 [[providers]]
 name = "planner"
 kind = "boot-token-profile-test"
-model = "planner-model"
+models = ["planner-model"]
 `)
 	approveWorkspace(t, dir)
 
@@ -87,7 +87,7 @@ planner_model = "executor"
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "shared-model"
+models = ["shared-model"]
 `)
 	approveWorkspace(t, dir)
 

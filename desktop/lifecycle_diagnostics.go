@@ -15,7 +15,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/fileutil"
 	filelock "deepzora/internal/identitylock"
-	"deepzora/internal/repair"
 )
 
 const (
@@ -59,7 +58,6 @@ type desktopLifecycleObservation struct {
 }
 
 type desktopLifecycleRuntime struct {
-	previousRun  repair.PreviousRunObservation
 	previousRuns []desktopLifecycleObservation
 	tracker      *desktopLifecycleTracker
 }
@@ -167,10 +165,6 @@ func initializeLifecycleDiagnostics(app *App) {
 		tracker = newDesktopLifecycleTracker(config.MemoryUserDir(), version, channel)
 	}
 	enabled := app.diagnosticsTelemetry
-	legacy := repair.NewStartupTracker("").ObservePreviousRun()
-	if enabled {
-		app.lifecycle.previousRun = legacy
-	}
 	app.lifecycle.previousRuns = tracker.consumePrevious(enabled)
 }
 

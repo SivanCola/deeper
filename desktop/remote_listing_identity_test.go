@@ -60,27 +60,12 @@ func TestSyntheticCurrentRowCarriesIdentityAsSessionID(t *testing.T) {
 	}
 }
 
-// A legacy path route keeps its path: only identity routes move to sessionId.
-func TestSyntheticCurrentRowKeepsLegacyPathRoute(t *testing.T) {
-	seedBridgeTestHost(t, "box")
-	fs := newFakeServe(t, "s3cret", nil)
-	a, _ := remoteListingTab(t, fs, "/sessions/legacy.jsonl")
-
-	sessions, err := a.RemoteProjectSessions("box", "~/app")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(sessions) != 1 || sessions[0].Path != "/sessions/legacy.jsonl" || sessions[0].SessionID != "" {
-		t.Fatalf("legacy synthetic row = %+v, want the path preserved", sessions)
-	}
-}
-
 // An ID-only selection (the synthetic identity row has no name) must resume by
 // the committed identity instead of falling through to a listing lookup keyed
 // on the empty name, which reports "not found".
 func TestResumeAcceptsCommittedIdentityWithoutAName(t *testing.T) {
 	seedBridgeTestHost(t, "box")
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "other", Path: "/other.jsonl", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "other", Path: "session-id:other", Current: true}})
 	a, tab := remoteListingTab(t, fs, remoteSessionIDRoutePrefix+"committed-id")
 
 	if !a.resumeRemoteTabSessionPathForOpenSelection(tab.id, "", "", "", 0, nil) {

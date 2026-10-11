@@ -72,29 +72,3 @@ func TestCommandChildRejectsInterveningLifecycle(t *testing.T) {
 		t.Fatalf("receipt generation %d, commit %d", result.Generation, latest.Generation)
 	}
 }
-
-func TestHistoricalArchiveCommitPreservesUnknownTime(t *testing.T) {
-	s := NewStore(filepath.Join(t.TempDir(), "registry.json"))
-	ctx := t.Context()
-	if err := s.EnsureWorkspace(ctx, Workspace{ID: "global", Root: t.TempDir(), Visible: true}); err != nil {
-		t.Fatal(err)
-	}
-	op := Operation{ID: "legacy-trash", Kind: "archive-import", Lifecycle: Archived, WorkspaceID: "global", SessionIDs: []string{"old"}}
-	if err := s.BeginOperation(ctx, op); err != nil {
-		t.Fatal(err)
-	}
-	mapping := &SourceMapping{SourceKey: "old-source", Path: "/legacy/old.jsonl", Format: "legacy", Fingerprint: "proof", SessionID: "old"}
-	if err := s.PrepareOperationContent(ctx, op.ID, op.SessionIDs, mapping, nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.CommitOperation(ctx, op.ID); !errors.Is(err, ErrMutationConflict) {
-		t.Fatalf("batch guard lost: %v", err)
-	}
-	if err := s.CommitHistoricalArchive(ctx, op.ID); err != nil {
-		t.Fatal(err)
-	}
-	state, _ := s.Load(ctx)
-	if state.SessionStates["old"].Lifecycle != Archived || state.SessionStates["old"].ArchivedAt != 0 || state.PendingOperations[op.ID].Phase != "committed" {
-		t.Fatalf("invalid historical commit: %+v", state)
-	}
-}

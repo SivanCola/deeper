@@ -34,14 +34,6 @@ func (s *Server) fixedSessionExportSource(w http.ResponseWriter, r *http.Request
 	}
 	current, bound := identity.SessionRef()
 	controller, _ := s.ctl().(*control.Controller)
-	legacyExpected := strings.TrimSpace(r.Header.Get(expectedSessionPathHeader))
-	if legacyExpected != "" && !strings.HasPrefix(legacyExpected, remoteSessionIDQueryPrefix) {
-		if err := s.expectedSessionPathErrorLocked(legacyExpected); err != nil {
-			s.bindMu.Unlock()
-			http.Error(w, err.Error(), http.StatusConflict)
-			return nil, session.SessionRef{}, nil, false
-		}
-	}
 	query := service.Query()
 	hostID := service.HostID()
 	s.bindMu.Unlock()
@@ -65,12 +57,6 @@ func (s *Server) fixedSessionExportSource(w http.ResponseWriter, r *http.Request
 	}
 	if !addTarget(r.URL.Query().Get("sessionId")) ||
 		!addTarget(r.Header.Get(expectedSessionIDHeader)) ||
-		!addTarget(func() string {
-			if strings.HasPrefix(legacyExpected, remoteSessionIDQueryPrefix) {
-				return legacyExpected
-			}
-			return ""
-		}()) ||
 		!addTarget(snapshotRef.SessionID) {
 		return nil, session.SessionRef{}, nil, false
 	}
@@ -107,7 +93,7 @@ func (s *Server) fixedSessionExportSource(w http.ResponseWriter, r *http.Request
 // boundary. A remote caller selects an opaque session name; it never supplies
 // a path beneath the service-owned storage root.
 func canonicalSessionExportID(raw string) (string, error) {
-	candidate := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), remoteSessionIDQueryPrefix))
+	candidate := strings.TrimSpace(raw)
 	if candidate == "" {
 		return "", nil
 	}

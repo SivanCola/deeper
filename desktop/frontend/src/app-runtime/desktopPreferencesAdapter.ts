@@ -1,10 +1,9 @@
 import { app } from "../lib/bridge";
-import { clearLegacyLangPref, normalizeLangPref, readLegacyLangPref } from "../lib/i18n";
-import { clearLegacyThemePreference, normalizeThemePreference, normalizeThemeStyleForTheme, readLegacyThemePreference } from "../lib/theme";
+import { normalizeLangPref } from "../lib/i18n";
+import { normalizeThemePreference, normalizeThemeStyle } from "../lib/theme";
 import { applyConfiguredBaseAppearance, applyThemePack, clearThemePack } from "../lib/themePack";
 import { applyTerminalThemePreference } from "../lib/terminalTheme";
 import { applyConversationWidth } from "../lib/conversationWidth";
-import { hydrateReasoningDisplayMode } from "../lib/reasoningDisplayPreference";
 import { hydrateSessionExperience } from "../lib/sessionExperience";
 import { loadBotRuntimeStatus } from "./botRuntimeAdapter";
 import type { CommandAuthority } from "../lib/commandOutcome";
@@ -13,11 +12,10 @@ import type { BotRuntimeStatusView, DesktopStartupSettingsView, SettingsView } f
 export type DesktopPreferencesSnapshot = DesktopStartupSettingsView | SettingsView;
 export function applyPreferencesAppearance(settings: DesktopPreferencesSnapshot) {
   const theme = normalizeThemePreference(settings.desktopTheme);
-  applyConfiguredBaseAppearance(theme, normalizeThemeStyleForTheme(settings.desktopThemeStyle, theme));
+  applyConfiguredBaseAppearance(theme, normalizeThemeStyle(settings.desktopThemeStyle));
   applyTerminalThemePreference(settings.desktopTerminalTheme);
   applyConversationWidth(settings.conversationWidth);
   hydrateSessionExperience(settings.sessionExperience);
-  hydrateReasoningDisplayMode(settings.sessionExperience === "deep" ? "expanded" : "auto", settings.sessionExperience === "deep");
   return normalizeLangPref(settings.desktopLanguage);
 }
 type Input = {
@@ -29,14 +27,6 @@ type Input = {
 /** Every async boundary is fenced before publishing preferences or theme DOM. */
 export async function synchronizeDesktopPreferences(input: Input, authority: CommandAuthority) {
   authority.checkpoint();
-  const language = readLegacyLangPref();
-  const theme = readLegacyThemePreference();
-  if (language || theme.hasValue) {
-    await app.MigrateDesktopPreferences(language, theme.theme, theme.style);
-    authority.checkpoint();
-    clearLegacyLangPref();
-    clearLegacyThemePreference();
-  }
   const [settings, runtime] = await Promise.all([
     input.provided ?? app.DesktopStartupSettings(), loadBotRuntimeStatus(),
   ]);

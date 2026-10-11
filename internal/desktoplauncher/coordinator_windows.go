@@ -57,7 +57,7 @@ func coordinatedLaunchWith(root string, args []string, interactive bool, deps co
 		if err != nil {
 			return err
 		}
-		cmd := exec.Command(path, StripLegacyLaunchArgs(args)...)
+		cmd := exec.Command(path, args...)
 		proc.HideConsole(cmd)
 		cmd.Dir = root
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
@@ -66,7 +66,7 @@ func coordinatedLaunchWith(root string, args []string, interactive bool, deps co
 		}
 		go func() { _ = cmd.Wait() }()
 		return nil
-	}, StripLegacyLaunchArgs(args)...)
+	}, args...)
 	if err != nil {
 		return coordinatedLaunchError(err, interactive, deps)
 	}

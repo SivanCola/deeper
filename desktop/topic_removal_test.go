@@ -350,32 +350,6 @@ func TestTopicRemovalWorkspaceUnavailableAndRestoreGroupMissing(t *testing.T) {
 	}
 }
 
-func TestTopicRemovalLegacyContentUsesCanonicalArchive(t *testing.T) {
-	a, topic, _ := topicRemovalFixture(t, "global", "Historical content")
-	dir := desktopSessionDir(globalWorkspaceRoot())
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		t.Fatal(err)
-	}
-	writeTopicSessionWithPrompt(t, dir, "removal-legacy.jsonl", topic.ID, topic.Title, globalWorkspaceRoot(), "keep this message", time.Now())
-	// A real old source can outlive its desktop-projects index entry.
-	if err := updateProjectsFile(func(file *desktopProjectFile) (bool, error) {
-		file.GlobalTopics = removeString(file.GlobalTopics, topic.ID)
-		return true, nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	req := inspectedTopicRemoval(t, a, topic.ID)
-	out, err := a.RemoveTopic(req)
-	if err != nil || !out.Committed || out.Disposition != "archive_sessions" {
-		again, inspectErr := a.InspectTopicRemoval(req.Target)
-		t.Fatalf("legacy content removal: %+v %v request=%+v inspection=%+v %v", out, err, req, again, inspectErr)
-	}
-	page, err := a.ListTrashEntries("", "", 50)
-	if err != nil || len(page.Items) != 1 || !page.Items[0].CanRestore || page.Items[0].Ref == nil {
-		t.Fatalf("legacy content not archived: %+v %v", page, err)
-	}
-}
-
 func TestTopicRemovalRejectsAmbiguousLegacyOwner(t *testing.T) {
 	a, topic, _ := topicRemovalFixture(t, "global", "Keep both")
 	root := t.TempDir()

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,7 +13,6 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/fileutil"
-	"deepzora/internal/provider"
 	"deepzora/internal/secrets"
 	"deepzora/internal/store"
 )
@@ -257,107 +255,6 @@ func redactSessionArtifact(path string, dryRun bool) (changed int64, bytesRewrit
 	}
 }
 
-// redactSessionTranscript rewrites one session (anchor .jsonl plus its event
-// log) through the agent's own save machinery. This explicit cleanup command
-// redacts the loaded snapshot before saving it, folds the event log into one
-// clean replace event, and refreshes the anchor, index, and revision under the
-// same cross-process locks live sessions use. Ordinary Session.Save calls keep
-// transcript content byte-for-byte intact.
-func redactSessionTranscript(path string, dryRun bool) (int64, int64, error) {
-	s, err := agent.LoadSession(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, 0, nil
-		}
-		return 0, 0, err
-	}
-	files := int64(1)
-	eventLog := store.SessionEventLog(path)
-	eventLogExists := false
-	if _, err := os.Stat(eventLog); err == nil {
-		files++
-		eventLogExists = true
-	}
-	// The replayed view alone is not enough: a replace event supersedes
-	// earlier records without erasing them, so a raw secret can survive in a
-	// stale event while the current messages are already clean. Scan every
-	// record; SaveRewriteCompact folds the whole log into one clean replace
-	// event, which erases the stale bytes.
-	if !messagesNeedRedaction(s.Messages) && !(eventLogExists && eventLogNeedsRedaction(eventLog)) {
-		return 0, 0, nil
-	}
-	if dryRun {
-		return files, redactedEncodedSize(s.Messages), nil
-	}
-	s.Replace(secrets.RedactMessages(s.Messages))
-	// Redaction is an intentional rewrite, but it must still be CAS-protected:
-	// the loaded transcript may have gone stale while the doctor inspected it.
-	// SaveRewrite preserves the newer external transcript and reports a conflict
-	// instead of force-replacing it with an older pre-redaction snapshot.
-	if err := s.SaveRewriteCompact(path); err != nil {
-		return 0, 0, err
-	}
-	var rewritten int64
-	if info, err := os.Stat(path); err == nil {
-		rewritten += info.Size()
-	}
-	if info, err := os.Stat(eventLog); err == nil {
-		rewritten += info.Size()
-	}
-	return files, rewritten, nil
-}
-
-// eventLogNeedsRedaction reports whether any event record — including ones a
-// later replace event superseded — still carries redactable message content.
-// Undecodable trailing bytes also count: a torn tail can hold raw secret text,
-// and the compaction that a rewrite performs erases it either way.
-func eventLogNeedsRedaction(path string) bool {
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	dec := json.NewDecoder(f)
-	for {
-		var rec struct {
-			Messages []provider.Message `json:"messages"`
-		}
-		if err := dec.Decode(&rec); err != nil {
-			// EOF is a clean end; anything else is an undecodable tail whose
-			// torn bytes may hold raw secret text — compact it away.
-			return !errors.Is(err, io.EOF)
-		}
-		if messagesNeedRedaction(rec.Messages) {
-			return true
-		}
-	}
-}
-
-// messagesNeedRedaction reports whether RedactMessages would alter the
-// storage encoding of msgs. Comparing encoded forms (not struct equality)
-// matches exactly what a rewrite would put on disk.
-func messagesNeedRedaction(msgs []provider.Message) bool {
-	redacted := secrets.RedactMessages(msgs)
-	for i := range msgs {
-		before, errB := json.Marshal(msgs[i])
-		after, errA := json.Marshal(redacted[i])
-		if errB != nil || errA != nil || !bytes.Equal(before, after) {
-			return true
-		}
-	}
-	return false
-}
-
-func redactedEncodedSize(msgs []provider.Message) int64 {
-	var n int64
-	for _, m := range secrets.RedactMessages(msgs) {
-		if b, err := json.Marshal(m); err == nil {
-			n += int64(len(b)) + 1
-		}
-	}
-	return n
-}
-
 // redactBranchMeta masks the free-text fields of the branch-metadata sidecar
 // (preview, titles, goal, recovery reason) through the typed load/save pair so
 // revisions, digests, and timestamps survive untouched.
@@ -436,6 +333,21 @@ func redactJSONFile(path string, dryRun bool) (int64, int64, error) {
 		return 0, 0, err
 	}
 	return 1, int64(len(next)), nil
+}
+
+// redactSessionTranscript handles only the current DAG format.
+func redactSessionTranscript(path string, dryRun bool) (int64, int64, error) {
+	changed, rewritten, err := agent.RedactSessionLog(path, dryRun)
+	if os.IsNotExist(err) {
+		return 0, 0, nil
+	}
+	if err != nil {
+		return 0, 0, err
+	}
+	if !changed {
+		return 0, 0, nil
+	}
+	return 2, rewritten, nil
 }
 
 func redactJSONValue(v any) (any, bool) {

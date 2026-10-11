@@ -8,7 +8,7 @@ import (
 )
 
 func TestOfficialDeepSeekTemplateUsesCurrentCatalog(t *testing.T) {
-	entries, _, err := officialProviderTemplate("deepseek", "en")
+	entries, _, err := officialProviderTemplate("deepseek")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -17,9 +17,9 @@ func TestOfficialDeepSeekTemplateUsesCurrentCatalog(t *testing.T) {
 		t.Fatalf("official template uses stale models: %+v", p)
 	}
 	cfg := &config.Config{Providers: entries}
-	for _, model := range []string{"deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"} {
+	for _, model := range []string{"deepseek-flash", "deepseek-v4-pro"} {
 		e, ok := cfg.ResolveModel("deepseek/" + model)
-		if !ok || e.Model != model || !config.EffectiveVision(e) {
+		if !ok || e.Model != model {
 			t.Fatalf("official model reference %q lost identity or vision: %+v", model, e)
 		}
 		if _, err := config.NormalizeEffort(e, "low"); err != nil {

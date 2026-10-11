@@ -25,7 +25,7 @@ func TestHistoryIdentityAndLegacyPresentation(t *testing.T) {
 	raw := "[Pasted text #1 · 2 lines]\n--- Begin [Pasted text #1 · 2 lines] ---\none\ntwo\n--- End [Pasted text #1 · 2 lines] ---"
 	messages := []provider.Message{{ID: "user", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: raw, RawContent: raw},
 		{ID: "plan", Role: provider.RoleAssistant, Content: "plan and its final note", ToolCalls: []provider.ToolCall{{ID: "call", Name: "proxy", ResolvedName: "read_file", CapabilityID: "read", Arguments: "full args", Diff: "diff", Added: 1}}}}
-	rows := History(messages, HistoryOptions{SubmitContent: func(m provider.Message) string { return m.Content }, LegacyTurns: []LegacyDisplayTurn{{TurnID: "turn", UserMessageID: "user", Messages: []Message{{MessageID: "plan", Role: "assistant", Content: "plan"}}}}})
+	rows := History(messages, HistoryOptions{SubmitContent: func(m provider.Message) string { return m.Content }, RecoveredTurns: []RecoveredDisplayTurn{{TurnID: "turn", UserMessageID: "user", Messages: []Message{{MessageID: "plan", Role: "assistant", Content: "plan"}}}}})
 	if len(rows) != 2 || rows[0].Content != "[Pasted text #1 · 2 lines]" || rows[0].SubmitText != raw {
 		t.Fatalf("legacy display/replay mismatch: %+v", rows)
 	}
@@ -68,7 +68,7 @@ func TestHistoryCancelledLegacySuppressesCanonicalLocalBody(t *testing.T) {
 	rows := History([]provider.Message{{ID: "u", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "q"},
 		{ID: "partial", Role: provider.RoleAssistant, LocalOnly: true, Content: "must not duplicate"},
 		{ID: "receipt", Role: provider.RoleAssistant, LocalOnly: true, DecisionReceipt: &provider.DecisionReceipt{ID: "decision"}}},
-		HistoryOptions{LegacyTurns: []LegacyDisplayTurn{{UserMessageID: "u", TurnID: "t", Messages: []Message{{Role: "assistant", Content: "partial display"}, {Role: "notice", Code: event.NoticeCodeCancelledTurn}}}}})
+		HistoryOptions{RecoveredTurns: []RecoveredDisplayTurn{{UserMessageID: "u", TurnID: "t", Messages: []Message{{Role: "assistant", Content: "partial display"}, {Role: "notice", Code: event.NoticeCodeCancelledTurn}}}}})
 	if len(rows) != 4 {
 		t.Fatalf("rows=%+v", rows)
 	}

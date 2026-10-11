@@ -104,6 +104,6 @@ func (a *App) keepOnlyRemoteVisibleTab(tabID string) (TabMeta, error) {
 	for _, cancel := range remoteCancels {
 		cancel()
 	}
-	a.emitProjectTreeRuntimeChangedWithLegacy()
+	a.emitProjectTreeRuntimeChanged()
 	return meta, nil
 }

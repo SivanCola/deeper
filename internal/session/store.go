@@ -36,13 +36,9 @@ const (
 	StorageRevision = 3
 	// Codec identifies the current framed linear session format. Earlier linear
 	// and prototype stores are immutable migration inputs.
-	Codec             = V4Codec
-	FinalV31Codec     = "deepzora.session.linear/v3.1"
-	LegacyLinearCodec = "deepzora.session.linear/v3"
-	PrototypeCodec    = "deepzora.session.events/v3"
-	LiveBatchDelay    = 200 * time.Millisecond
-	currentLogName    = "events.frames"
-	legacyLogName     = "events.jsonl"
+	Codec          = V4Codec
+	LiveBatchDelay = 200 * time.Millisecond
+	currentLogName = "events.frames"
 )
 
 var (
@@ -73,11 +69,10 @@ type Manifest struct {
 const sharedContentRoot = "../.content-v1"
 
 type Source struct {
-	Path         string `json:"path"`
-	Size         int64  `json:"size"`
-	SHA256       string `json:"sha256"`
-	Version      string `json:"version,omitempty"`
-	LegacyHeadID string `json:"legacyHeadId,omitempty"`
+	Path    string `json:"path"`
+	Size    int64  `json:"size"`
+	SHA256  string `json:"sha256"`
+	Version string `json:"version,omitempty"`
 }
 
 type Event struct {
@@ -147,8 +142,8 @@ type OpenOptions struct {
 	Write     func(context.Context, io.Writer, []byte) error
 	Sync      func(*os.File) error
 	// ExternalHistory keeps durable UI messages out of the live projection.
-	// Production SessionService enables it; low-level compatibility callers
-	// retain the historical full-projection behavior unless requested.
+	// Production SessionService enables it; low-level callers may keep the
+	// full projection in memory.
 	ExternalHistory bool
 	// ObserveRecovery receives bounded open-path I/O counters after recovery.
 	// Capacity tests use it to distinguish checkpoint recovery from prefix replay.
@@ -282,14 +277,13 @@ func (s *Store) writableFile() (*os.File, error) {
 	return s.file, nil
 }
 
-// Open opens an existing legacy-compatible path, creating it when absent. It
+// Open opens a current session, creating it when absent. It
 // returns a live Session: the in-memory log is the caller's business state.
 func Open(dir, sessionID string) (*Session, error) {
 	return OpenWithOptions(dir, sessionID, OpenOptions{})
 }
 
-// OpenWithOptions is the low-level test/import constructor retained while the
-// old controller adapter is removed. Production callers use
+// OpenWithOptions is the low-level open-or-create constructor. Production callers use
 // FilesystemPersistence, whose Open is strict and never creates a session.
 func OpenWithOptions(dir, sessionID string, opts OpenOptions) (*Session, error) {
 	if _, err := os.Stat(filepath.Clean(strings.TrimSpace(dir))); os.IsNotExist(err) {
@@ -418,7 +412,7 @@ func openExistingHandle(dir, sessionID string, opts OpenOptions) (*Store, error)
 	}
 	// Build runtime state in one streaming validation pass. A newer required
 	// event or a damaged complete batch leaves the original tail untouched.
-	startup, durableEnd, torn, stats, usedCheckpoint, err := loadStartupSessionStateForManifest(ctx, dir, eventsPath, manifest, opts.ExternalHistory, recovery, identity)
+	startup, durableEnd, torn, stats, usedCheckpoint, err := loadStartupSessionState(ctx, dir, eventsPath, opts.ExternalHistory, recovery, identity)
 	if opts.ObserveRecovery != nil {
 		opts.ObserveRecovery(stats)
 	}
@@ -578,7 +572,7 @@ func loadBoundedStartupSessionState(ctx context.Context, dir string, file *os.Fi
 		recent.Events = nil
 		for _, event := range commit.Events {
 			switch event.Kind {
-			case "message/complete", "message/upsert", "message/retract", "history/replace", "legacy/import":
+			case "message/complete", "message/upsert", "message/retract", "history/replace":
 				resolved, err := resolveProjectionEvent(ctx, content, event)
 				if err != nil {
 					projectionErr = err
@@ -668,7 +662,7 @@ func resolveProjectionEvent(ctx context.Context, content *sessioncontent.Store, 
 
 func modelProjectionEvent(kind string) bool {
 	switch kind {
-	case "message/complete", "message/upsert", "message/retract", "history/replace", "model/context-replace", "compaction", "legacy/import":
+	case "message/complete", "message/upsert", "message/retract", "history/replace", "model/context-replace", "compaction":
 		return true
 	default:
 		return false
@@ -677,7 +671,7 @@ func modelProjectionEvent(kind string) bool {
 
 func modelProjectionReset(kind string) bool {
 	switch kind {
-	case "history/replace", "model/context-replace", "compaction", "legacy/import":
+	case "history/replace", "model/context-replace", "compaction":
 		return true
 	default:
 		return false
@@ -737,26 +731,13 @@ func contentStoreForSessionDir(dir string) *sessioncontent.Store {
 	return sessioncontent.New(root)
 }
 
-func logPathForManifest(dir string, manifest Manifest) string {
-	if IsFramedCodec(manifest.Codec) {
-		return filepath.Join(dir, currentLogName)
-	}
-	return filepath.Join(dir, legacyLogName)
-}
+func logPathForManifest(dir string, _ Manifest) string { return filepath.Join(dir, currentLogName) }
 
-func supportedStoredManifest(manifest Manifest) bool {
-	if currentStoredManifest(manifest) {
-		return true
-	}
-	if manifest.SchemaVersion == SchemaVersion && IsFramedCodec(manifest.Codec) && manifest.StorageRevision == 0 {
-		return true
-	}
-	return manifest.SchemaVersion == 3 && IsLegacyCodec(manifest.Codec)
-}
+func supportedStoredManifest(manifest Manifest) bool { return currentStoredManifest(manifest) }
 
 func currentStoredManifest(manifest Manifest) bool {
 	return manifest.SchemaVersion == SchemaVersion && IsFramedCodec(manifest.Codec) &&
-		manifest.StorageRevision >= 1 && manifest.StorageRevision <= StorageRevision
+		manifest.StorageRevision == StorageRevision
 }
 
 func readStoredManifest(path string) (Manifest, error) {
@@ -826,12 +807,7 @@ func (s *Store) persist(ctx context.Context, file *os.File, commits []Commit) er
 			_ = os.Remove(stagedPath)
 		}
 	}()
-	var lengths []int64
-	if IsFramedCodec(s.manifest.Codec) {
-		lengths, err = encodeV4Commits(ctx, staged, s.content, commits)
-	} else {
-		lengths, err = encodeLegacyCommits(ctx, staged, commits)
-	}
+	lengths, err := encodeV4Commits(ctx, staged, s.content, commits)
 	if err != nil {
 		return err
 	}
@@ -870,33 +846,6 @@ func (s *Store) persist(ctx context.Context, file *os.File, commits []Commit) er
 	}
 	s.recordPersistedIndex(file, start, commits, lengths)
 	return nil
-}
-
-func encodeLegacyCommits(ctx context.Context, dst io.Writer, commits []Commit) ([]int64, error) {
-	lengths := make([]int64, 0, len(commits))
-	for _, commit := range commits {
-		if isPrototypeCodec(commit.Codec) {
-			commit = cloneCommit(commit)
-			for i := range commit.Events {
-				if commit.Events[i].Kind == "history/replace" {
-					commit.Events[i].Kind = "context/replace"
-				}
-			}
-		}
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		encoded, err := json.Marshal(commit)
-		if err != nil {
-			return nil, err
-		}
-		encoded = append(encoded, '\n')
-		if _, err := dst.Write(encoded); err != nil {
-			return nil, err
-		}
-		lengths = append(lengths, int64(len(encoded)))
-	}
-	return lengths, nil
 }
 
 func copyStagedAppend(ctx context.Context, source io.Reader, destination io.Writer, writeFn func(context.Context, io.Writer, []byte) error) error {
@@ -1025,10 +974,7 @@ func scanDurableCommits(dir string, knownKinds map[string]bool, visit func(Commi
 		}
 		return visit(commit)
 	}
-	if IsFramedCodec(manifest.Codec) {
-		return scanV4CommitFile(context.Background(), file, 0, 1, contentStoreForSessionDir(dir), knownKinds, adapter)
-	}
-	return scanCommitFileCodec(file, 0, 1, manifest.Codec, knownKinds, adapter)
+	return scanV4CommitFile(context.Background(), file, 0, 1, contentStoreForSessionDir(dir), knownKinds, adapter)
 }
 
 func preserveAndTruncateTail(path string, cut int64, label string) (string, error) {

@@ -16,8 +16,8 @@ import (
 func setupTestConfig() *config.Config {
 	cfg := config.Default()
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "desktop-provider", Kind: "openai", BaseURL: "https://desktop.example/v1", Model: "desktop-model", APIKeyEnv: "SHARED_API_KEY"},
-		{Name: "cli-provider", Kind: "openai", BaseURL: "https://cli.example/v1", Model: "cli-model"},
+		{Name: "desktop-provider", Kind: "openai", BaseURL: "https://desktop.example/v1", Models: []string{"desktop-model"}, Default: "desktop-model", Model: "desktop-model", APIKeyEnv: "SHARED_API_KEY"},
+		{Name: "cli-provider", Kind: "openai", BaseURL: "https://cli.example/v1", Models: []string{"cli-model"}, Default: "cli-model", Model: "cli-model"},
 	}
 	cfg.DefaultModel = "desktop-provider"
 	cfg.Agent.Temperature = 0.77
@@ -216,26 +216,6 @@ func TestProviderSetupSessionAddAccessRespectsExplicitEmptyList(t *testing.T) {
 	}
 }
 
-func TestProviderSetupSessionAddAccessSeedsUndeclaredLegacyProviders(t *testing.T) {
-	cfg := setupTestConfig()
-	cfg.Desktop.ProviderAccess = nil
-	s := newProviderSetupSession(cfg)
-	added := config.ProviderEntry{Name: "grok-relay", Kind: "openai", BaseURL: "https://relay.example/v1", Model: "grok-4.5", APIKeyEnv: "GROK_API_KEY"}
-	s.addProviderAccess([]config.ProviderEntry{added, added})
-	if got := cfg.Desktop.ProviderAccess; !containsString(got, "cli-provider") || !containsString(got, "grok-relay") {
-		t.Fatalf("undeclared legacy access should preserve configured siblings and add the new provider: %v", got)
-	}
-	count := 0
-	for _, name := range cfg.Desktop.ProviderAccess {
-		if name == "grok-relay" {
-			count++
-		}
-	}
-	if count != 1 {
-		t.Fatalf("added provider access should be deduplicated: %v", cfg.Desktop.ProviderAccess)
-	}
-}
-
 func TestLocalProviderSetupAccessOnlySeedsProjectProviders(t *testing.T) {
 	isolateUserConfig(t)
 	path := filepath.Join(t.TempDir(), "deepzora.toml")
@@ -244,7 +224,7 @@ func TestLocalProviderSetupAccessOnlySeedsProjectProviders(t *testing.T) {
 name = "project-relay"
 kind = "openai"
 base_url = "https://project.example/v1"
-model = "project-model"
+models = ["project-model"]
 api_key_env = ""
 `), 0o600); err != nil {
 		t.Fatal(err)
@@ -475,8 +455,9 @@ func TestProviderSetupOperationReplayRejectsConcurrentSameProviderEdit(t *testin
 	working := config.LoadForEdit(path)
 	s := newProviderSetupSessionForPath(working, path)
 	edited := working.Providers[0]
+	edited.Default = "setup-model"
 	edited.Model = "setup-model"
-	edited.Models = nil
+	edited.Models = []string{"setup-model"}
 	if err := s.upsert([]config.ProviderEntry{edited}); err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +474,7 @@ func TestProviderSetupOperationReplayRejectsConcurrentSameProviderEdit(t *testin
 		t.Fatalf("commit conflict = %v, want provider conflict", err)
 	}
 	got := config.LoadForEdit(path)
-	if got.Providers[0].BaseURL != "https://external.example/v1" || got.Providers[0].Model != "desktop-model" {
+	if got.Providers[0].BaseURL != "https://external.example/v1" || got.Providers[0].Default != "desktop-model" {
 		t.Fatalf("conflicting setup edit changed disk config: %+v", got.Providers[0])
 	}
 }
@@ -509,8 +490,9 @@ func TestProviderSetupSaveConflictDoesNotWriteStagedCredentials(t *testing.T) {
 	working := config.LoadForEdit(path)
 	s := newProviderSetupSessionForPath(working, path)
 	edited := working.Providers[0]
+	edited.Default = "setup-model"
 	edited.Model = "setup-model"
-	edited.Models = nil
+	edited.Models = []string{"setup-model"}
 	if err := s.upsert([]config.ProviderEntry{edited}); err != nil {
 		t.Fatal(err)
 	}
@@ -660,7 +642,7 @@ func TestProviderSetupOperationReplayMaterializesLatestProjectProviders(t *testi
 name = "initial-project"
 kind = "openai"
 base_url = "https://initial.example/v1"
-model = "initial-model"
+models = ["initial-model"]
 api_key_env = ""
 `
 	if err := os.WriteFile(path, []byte(initialBody), 0o644); err != nil {
@@ -679,7 +661,7 @@ api_key_env = ""
 name = "external-project"
 kind = "openai"
 base_url = "https://external.example/v1"
-model = "external-model"
+models = ["external-model"]
 api_key_env = ""
 `
 	if err := os.WriteFile(path, []byte(externalBody), 0o644); err != nil {

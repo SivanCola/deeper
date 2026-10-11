@@ -164,66 +164,6 @@ func TestSessionEffortIsBoundToExactModelIdentity(t *testing.T) {
 	}
 }
 
-func TestReasoningSnapshotSupportsOlderReadersAndWriters(t *testing.T) {
-	preset, _ := CuratedProviderPreset("token-rhythm")
-	e := preset.Entries[0]
-	e.ModelOverrides["deepseek-flash"] = ProviderModelOverride{DefaultEffort: "max", ContextWindow: 123456}
-	cfg := &Config{Providers: []ProviderEntry{e}}
-	body := RenderTOML(cfg)
-	// An older reader knows the original fields and ignores the optional marker.
-	type oldOverride struct {
-		ReasoningProtocol string   `toml:"reasoning_protocol"`
-		SupportedEfforts  []string `toml:"supported_efforts"`
-		DefaultEffort     string   `toml:"default_effort"`
-		ContextWindow     int      `toml:"context_window"`
-	}
-	var old struct {
-		Providers []struct {
-			Name           string                 `toml:"name"`
-			Kind           string                 `toml:"kind"`
-			BaseURL        string                 `toml:"base_url"`
-			Models         []string               `toml:"models"`
-			ModelOverrides map[string]oldOverride `toml:"model_overrides"`
-		} `toml:"providers"`
-	}
-	if _, err := toml.Decode(body, &old); err != nil {
-		t.Fatal(err)
-	}
-	ov := old.Providers[0].ModelOverrides["deepseek-flash"]
-	if ov.ReasoningProtocol != "deepseek" || len(ov.SupportedEfforts) != 4 || ov.DefaultEffort != "max" {
-		t.Fatal(ov)
-	}
-	path := filepath.Join(t.TempDir(), "config.toml")
-	if err := os.WriteFile(path, []byte(body), 0600); err != nil {
-		t.Fatal(err)
-	}
-	current := LoadForEdit(path)
-	explicit := current.Providers[0].ModelOverrides["deepseek-flash"]
-	if explicit.DefaultEffort != "max" || explicit.ContextWindow != 123456 || len(explicit.SupportedEfforts) != 0 || explicit.ReasoningProtocol != "" {
-		t.Fatalf("generated fields froze or user fields lost: %+v", explicit)
-	}
-	// A legacy editor changes the vocabulary and drops the unknown marker.
-	ov.SupportedEfforts, ov.DefaultEffort = []string{"high"}, "high"
-	old.Providers[0].ModelOverrides["deepseek-flash"] = ov
-	var edited strings.Builder
-	if err := toml.NewEncoder(&edited).Encode(old); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(edited.String()), 0600); err != nil {
-		t.Fatal(err)
-	}
-	resolved, _ := LoadForEdit(path).ResolveModel("token-rhythm/deepseek-flash")
-	if cap := ReasoningCapabilityForEntry(resolved); !reflect.DeepEqual(cap.IDs(), []string{"high"}) {
-		t.Fatalf("legacy edit lost: %+v", cap)
-	}
-	// Editors retaining unknown fields also retain manual reasoning changes.
-	snapshot := reasoningCompatibilitySnapshot(e).ModelOverrides["deepseek-flash"]
-	snapshot.SupportedEfforts = []string{"custom"}
-	if got := explicitModelReasoning(snapshot); !reflect.DeepEqual(got.SupportedEfforts, []string{"custom"}) || got.ReasoningProtocol != "deepseek" {
-		t.Fatalf("changed snapshot erased: %+v", got)
-	}
-}
-
 func TestReasoningSnapshotDoesNotShadowConnectionEditsInOlderReaders(t *testing.T) {
 	e := ProviderEntry{Name: "gateway", Kind: "openai", BaseURL: "https://tokenrhythm.studio/v1", Models: []string{"deepseek-flash"}, ReasoningProtocol: "deepseek", SupportedEfforts: []string{"high"}, DefaultEffort: "high"}
 	var previousReader Config

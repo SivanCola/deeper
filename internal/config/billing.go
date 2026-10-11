@@ -15,16 +15,11 @@ type BillingConfig struct {
 	DisplayCurrency string `toml:"display_currency"`
 }
 
-// DisplayCurrencyPref returns the user preference: "" (auto), "CNY", or "USD".
 func (c *Config) DisplayCurrencyPref() string {
 	if c == nil {
 		return ""
 	}
-	if v := normalizeDisplayCurrency(c.Billing.DisplayCurrency); v != "" {
-		return v
-	}
-	// Legacy [desktop].currency continues to work until rewritten.
-	return c.DesktopCurrency()
+	return normalizeDisplayCurrency(c.Billing.DisplayCurrency)
 }
 
 // ExplicitDisplayCurrency returns only a user-pinned display currency. Empty
@@ -33,18 +28,11 @@ func (c *Config) ExplicitDisplayCurrency() string {
 	return c.DisplayCurrencyPref()
 }
 
-// ResolveDisplayCurrency is retained for callers that need a compatibility
-// name. Auto is no longer resolved from language, host region, or browser
-// locale; it remains empty until a surface supplies a wallet hint.
-func (c *Config) ResolveDisplayCurrency() string {
-	return c.ExplicitDisplayCurrency()
-}
-
 func normalizeDisplayCurrency(currency string) string {
 	switch strings.ToUpper(strings.TrimSpace(currency)) {
 	case "", "AUTO":
 		return ""
-	case "CNY", "RMB", "CNH":
+	case "CNY":
 		return "CNY"
 	case "USD":
 		return "USD"
@@ -62,23 +50,14 @@ func (c *Config) SetDisplayCurrency(currency string) error {
 	switch strings.ToUpper(strings.TrimSpace(currency)) {
 	case "", "AUTO":
 		c.Billing.DisplayCurrency = ""
-		c.Desktop.Currency = "" // keep legacy field in sync for older readers
-	case "CNY", "RMB", "CNH":
+	case "CNY":
 		c.Billing.DisplayCurrency = "CNY"
-		c.Desktop.Currency = "CNY"
 	case "USD":
 		c.Billing.DisplayCurrency = "USD"
-		c.Desktop.Currency = "USD"
 	default:
 		return fmt.Errorf("display currency %q: must be auto|CNY|USD", currency)
 	}
 	return nil
-}
-
-// SetDesktopCurrency is retained for call-site compatibility. It now only
-// changes the display currency preference and never rewrites official prices.
-func (c *Config) SetDesktopCurrency(currency string) error {
-	return c.SetDisplayCurrency(currency)
 }
 
 // ProviderBillingCurrency returns the frozen list-price currency for a provider.
@@ -224,20 +203,6 @@ func isMiMoTokenPlanProvider(p *ProviderEntry) bool {
 	return strings.Contains(name, "token-plan") || strings.Contains(preset, "token-plan")
 }
 
-// migrateBillingDisplayCurrency copies legacy desktop.currency into billing.
-func migrateBillingDisplayCurrency(c *Config) {
-	if c == nil {
-		return
-	}
-	if strings.TrimSpace(c.Billing.DisplayCurrency) != "" {
-		c.Billing.DisplayCurrency = normalizeDisplayCurrency(c.Billing.DisplayCurrency)
-		return
-	}
-	if cur := c.DesktopCurrency(); cur != "" {
-		c.Billing.DisplayCurrency = cur
-	}
-}
-
 // DeepSeekOfficialPricingCurrency resolves which official DeepSeek table to
 // use for *new default template fills*. It no longer follows display currency
 // for existing providers — those use BillingCurrency. For templates without a
@@ -281,11 +246,11 @@ func QuoteForUsage(price *provider.Pricing, usage *provider.Usage, display strin
 			CacheWriteBilledTokens: usage.CacheWriteBilledTokens,
 			Estimated:              usage.Estimated,
 		},
-		Rates:           card,
-		DisplayCurrency: display,
-		BillingMode:     billingMode,
-		ModelRef:        modelRef,
-		UsageSource:     usageSource,
-		CatalogSource:   catalogSource,
+		Rates:         card,
+		Display:       billing.DisplayRequest{Currency: display, Source: billing.DisplaySourceExplicit},
+		BillingMode:   billingMode,
+		ModelRef:      modelRef,
+		UsageSource:   usageSource,
+		CatalogSource: catalogSource,
 	})
 }

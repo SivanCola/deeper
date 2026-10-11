@@ -5,114 +5,17 @@ package winaclresidue
 import (
 	"bytes"
 	"context"
-	"errors"
+	"deepzora/internal/proc"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"golang.org/x/sys/windows"
-
-	"deepzora/internal/proc"
 )
 
-const (
-	allApplicationPackagesSID           = "S-1-15-2-1"
-	allRestrictedApplicationPackagesSID = "S-1-15-2-2"
-	// stillActiveExitCode is STILL_ACTIVE from GetExitCodeProcess.
-	stillActiveExitCode = 259
-	// icacls can stall on antivirus-scanned volumes; the bound keeps a stuck
-	// cleanup from pinning startup or a credential read.
-	icaclsTimeout = 30 * time.Second
-)
-
-// markerDir is the directory the retired backend used for crash-residue
-// markers; the name is part of the on-disk contract with older builds.
-func markerDir() string {
-	return filepath.Join(os.TempDir(), "windows-sandbox-denylocks")
-}
-
-// SweepStaleMarkers removes the ACEs recorded by crashed runs of the retired
-// backend whose owning process is provably gone, then deletes their markers.
-// It is best-effort: errors keep the marker for a later sweep and never block
-// the caller.
-func SweepStaleMarkers() {
-	dir := markerDir()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return
-	}
-	sids := residueSIDs()
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		pid, ok := markerOwnerPID(entry.Name())
-		if !ok || !processExited(pid) {
-			continue
-		}
-		sweepMarkerFile(filepath.Join(dir, entry.Name()), sids)
-	}
-}
-
-// residueSIDs is the exact trustee set the retired backend applied; removing
-// only these cannot disturb a legitimate ACL.
-func residueSIDs() []string {
-	userSID, _ := currentProcessUserSIDString()
-	return dedupeSIDStrings([]string{allApplicationPackagesSID, allRestrictedApplicationPackagesSID, userSID})
-}
-
-// sweepMarkerFile removes the recorded ACEs and deletes the marker only when
-// every removal succeeded, so a failed cleanup keeps its evidence for the next
-// sweep instead of orphaning the ACE on disk.
-func sweepMarkerFile(markerPath string, sids []string) {
-	clean := true
-	for _, e := range readResidueMarker(markerPath) {
-		if isWindowsSystemRoot(e.path) {
-			continue
-		}
-		if _, err := os.Stat(e.path); err != nil {
-			continue
-		}
-		flag := "/remove:g"
-		if e.kind == residueDeny {
-			flag = "/remove:d"
-		}
-		for _, sid := range sids {
-			if err := icacls(e.path, flag, "*"+sid, "/C"); err != nil {
-				clean = false
-			}
-		}
-	}
-	if clean {
-		_ = os.Remove(markerPath)
-	}
-}
-
-// processExited reports whether a marker owner is provably gone. This package
-// writes no markers, so one carrying our own PID was left by a dead
-// predecessor after PID reuse. Access denied does not prove death.
-func processExited(pidText string) bool {
-	if pidText == strconv.Itoa(os.Getpid()) {
-		return true
-	}
-	pid, err := strconv.ParseUint(pidText, 10, 32)
-	if err != nil || pid == 0 {
-		return false
-	}
-	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
-	if err != nil {
-		return errors.Is(err, windows.ERROR_INVALID_PARAMETER)
-	}
-	defer windows.CloseHandle(handle)
-	var code uint32
-	if err := windows.GetExitCodeProcess(handle, &code); err != nil {
-		return false
-	}
-	return code != stillActiveExitCode
-}
+const icaclsTimeout = 30 * time.Second
 
 func currentProcessUserSIDString() (string, error) {
 	user, err := windows.GetCurrentProcessToken().GetTokenUser()

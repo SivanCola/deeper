@@ -34,11 +34,10 @@ const RecoveryGCGracePeriod = 24 * time.Hour
 const RecoveryGCStartupGracePeriod = 15 * time.Minute
 
 const (
-	recoveryTrashDir             = ".trash"
-	recoveryTrashMetaFile        = ".trash-meta.json"
-	recoveryTrashOperationPrefix = "recovery-trash:"
-	recoveryTrashPendingFile     = ".recovery-trash-pending.json"
-	recoveryTrashStagingPrefix   = ".recovery-trash-staging-"
+	recoveryTrashDir           = ".trash"
+	recoveryTrashMetaFile      = ".trash-meta.json"
+	recoveryTrashPendingFile   = ".recovery-trash-pending.json"
+	recoveryTrashStagingPrefix = ".recovery-trash-staging-"
 )
 
 // ErrRecoveryBranchNotCovered means the branch cannot currently be proven
@@ -447,29 +446,6 @@ func recoveryBranchIdle(path string, meta BranchMeta, now time.Time, grace time.
 		idleSince = info.ModTime()
 	}
 	return now.Sub(idleSince) >= grace
-}
-
-// reconcileRecoveryTrashPending completes an interrupted move left by the
-// pre-staging recovery-trash protocol. Keep this compatibility path so users
-// upgrading from an intermediate build do not strand its typed marker.
-func reconcileRecoveryTrashPending(item CleanupPendingInfo) (bool, error) {
-	operation := strings.TrimSpace(item.Meta.Operation)
-	if !strings.HasPrefix(operation, recoveryTrashOperationPrefix) {
-		return false, nil
-	}
-	itemName := strings.TrimPrefix(operation, recoveryTrashOperationPrefix)
-	if itemName == "" || filepath.Base(itemName) != itemName || itemName == "." || itemName == ".." {
-		return true, fmt.Errorf("invalid recovery trash target")
-	}
-	path := filepath.Clean(item.SessionPath)
-	dir := filepath.Dir(path)
-	key := filepath.Base(path)
-	guard, err := TryAcquireSessionRemovalGuard(path)
-	if err != nil {
-		return true, err
-	}
-	defer guard.Release()
-	return true, finishRecoveryTrashMove(dir, path, key, filepath.Join(dir, recoveryTrashDir, itemName), guard)
 }
 
 // reconcileRecoveryTrashStages completes the atomic staging protocol used by

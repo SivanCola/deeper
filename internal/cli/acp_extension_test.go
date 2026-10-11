@@ -153,7 +153,6 @@ func writeACPFixture(t *testing.T, dir string) {
 default_model = "local/fake-model"
 
 [agent]
-completion_validation = "off"
 
 [environment]
 enabled = false
@@ -162,7 +161,7 @@ enabled = false
 name = "local"
 kind = "acp-test-provider"
 base_url = "http://example.invalid"
-model = "fake-model"
+models = ["fake-model"]
 api_key_env = "DEEPZORA_TEST_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)

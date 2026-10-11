@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"deepzora/internal/agent"
 	"deepzora/internal/control"
@@ -11,25 +10,17 @@ import (
 	"deepzora/internal/store"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
-	"sort"
 	"strings"
 	"unicode/utf8"
 )
 
-// This file implements the windowed history paging API (Phase B1 of the
-// history-pipeline refactor). HistoryPageForTab copies and converts the whole
-// transcript on every request; HistorySliceForTab pages toward older history
-// using the per-session display index sidecar (internal/agent
-// SessionDisplayIndex) so only the returned window is read from disk and
-// converted. The legacy API stays untouched for one compatibility cycle.
-//
+// Windowed history paging reads current canonical sessions and native DAG
+// projections. Unsupported historical formats are rejected.//
 // Entry ID scheme: s<sessionFileID>:r<rewriteEpoch>:m<messageIndex>:o<subOrder>.
 //   - sessionFileID is the transcript basename minus .jsonl — stable for the
 //     life of the session file.
@@ -527,7 +518,7 @@ func (a *App) liveHistorySliceSource(ctrl control.SessionAPI, sessionPath string
 
 // newInMemoryHistorySliceSource builds a source by classifying a full
 // in-memory snapshot with the resolver-based visible-turn rule — the same
-// semantics the legacy history path uses.
+// semantics used by the current history projection.
 func newInMemoryHistorySliceSource(sessionID string, msgs []provider.Message, resolver func(string) string, ps agent.PersistedState, psOK bool) *historySliceSource {
 	turns := make([]int, len(msgs))
 	roles := make([]provider.Role, len(msgs))
@@ -695,35 +686,6 @@ func readSessionMessagesAtOffsetsContext(ctx context.Context, sessionPath string
 		out = append(out, m)
 	}
 	return out, nil
-}
-
-// historySessionLooksEventFormat reports whether the transcript is a legacy
-// event-record log rather than a provider-message transcript: event records
-// carry kind/type and no role.
-func historySessionLooksEventFormat(path string) bool {
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	line, err := bufio.NewReaderSize(f, 1<<20).ReadSlice('\n')
-	if errors.Is(err, bufio.ErrBufferFull) {
-		// Legacy event headers are tiny. A megabyte first record is a provider
-		// message or malformed input, neither of which needs event probing.
-		return false
-	}
-	if len(line) == 0 || err != nil && len(line) == 0 {
-		return false
-	}
-	var probe struct {
-		Role provider.Role `json:"role"`
-		Kind string        `json:"kind"`
-		Type string        `json:"type"`
-	}
-	if err := json.Unmarshal(line, &probe); err != nil {
-		return false
-	}
-	return probe.Role == "" && (probe.Kind != "" || probe.Type != "")
 }
 
 // pageHistorySliceSource cuts one page from src. Pages are suffixes of the
@@ -1088,7 +1050,7 @@ func (a *App) HistoryContentForTab(tabID string, ref HistoryContentRef, chunkInd
 		return a.boundNativeHistoryContent(tabID, ref, chunkIndex)
 	}
 	out := HistoryContentChunk{EntryID: ref.EntryID, Field: ref.Field, Chunk: max(chunkIndex, 0)}
-	msgIndex, sub, legacyRow, ok := parseHistoryEntryID(ref.EntryID)
+	msgIndex, sub, ok := parseHistoryEntryID(ref.EntryID)
 	if !ok {
 		out.Done = true
 		return out
@@ -1150,9 +1112,7 @@ func (a *App) HistoryContentForTab(tabID string, ref HistoryContentRef, chunkInd
 
 	var value string
 	var found bool
-	if legacyRow >= 0 {
-		value, found = a.legacyHistoryFieldValue(sessionPath, sessionDir, legacyRow, ref)
-	} else if ctrl != nil {
+	if ctrl != nil {
 		var stale bool
 		value, found, stale = a.liveHistoryFieldValue(ctrl, sessionDir, sessionPath, msgIndex, sub, ref)
 		if stale {
@@ -1197,7 +1157,7 @@ func (a *App) HistoryContentForTarget(selector SessionSelector, ref HistoryConte
 	if err != nil {
 		return out, err
 	}
-	msgIndex, sub, legacyRow, ok := parseHistoryEntryID(ref.EntryID)
+	msgIndex, sub, ok := parseHistoryEntryID(ref.EntryID)
 	if !ok {
 		out.Done = true
 		return out, nil
@@ -1242,11 +1202,7 @@ func (a *App) HistoryContentForTarget(selector SessionSelector, ref HistoryConte
 		found bool
 		stale bool
 	)
-	if legacyRow >= 0 {
-		value, found = a.legacyHistoryFieldValue(sessionPath, sessionDir, legacyRow, ref)
-	} else {
-		value, found, stale = a.coldHistoryFieldValue(sessionDir, sessionPath, msgIndex, sub, ref)
-	}
+	value, found, stale = a.coldHistoryFieldValue(sessionDir, sessionPath, msgIndex, sub, ref)
 	if stale || !found || len(value) != ref.Size {
 		out.Stale = true
 		return out, nil
@@ -1256,24 +1212,19 @@ func (a *App) HistoryContentForTarget(selector SessionSelector, ref HistoryConte
 	return out, nil
 }
 
-// parseHistoryEntryID parses s<id>:r<epoch>:m<msgIndex>:o<sub> and the legacy
-// event-format s<id>:r<epoch>:e<row>:o0 form.
-func parseHistoryEntryID(entryID string) (msgIndex, sub, legacyRow int, ok bool) {
-	legacyRow = -1
+// parseHistoryEntryID parses the current provider-message display identity.
+func parseHistoryEntryID(entryID string) (msgIndex, sub int, ok bool) {
 	parts := strings.Split(entryID, ":")
 	if len(parts) != 4 {
-		return 0, 0, -1, false
+		return 0, 0, false
 	}
-	if _, err := fmt.Sscanf(parts[2], "m%d", &msgIndex); err == nil {
-		if _, err := fmt.Sscanf(parts[3], "o%d", &sub); err != nil {
-			return 0, 0, -1, false
-		}
-		return msgIndex, sub, -1, true
+	if _, err := fmt.Sscanf(parts[2], "m%d", &msgIndex); err != nil {
+		return 0, 0, false
 	}
-	if _, err := fmt.Sscanf(parts[2], "e%d", &legacyRow); err == nil {
-		return 0, 0, legacyRow, true
+	if _, err := fmt.Sscanf(parts[3], "o%d", &sub); err != nil {
+		return 0, 0, false
 	}
-	return 0, 0, -1, false
+	return msgIndex, sub, true
 }
 
 func entryIDSession(entryID string) string {
@@ -1326,45 +1277,7 @@ func (a *App) coldHistoryFieldValue(sessionDir, sessionPath string, msgIndex, su
 			sessionDisplayResolver(sessionDir, absPath), sessionPlannerDisplayTurns(sessionDir, absPath), nil)
 		return src.readErr
 	})
-	if handled || nativeHistoryPreparationFailure(err) {
-		return value, found, stale || err != nil
-	}
-	// Formats not handled by the native pager retain their compatibility
-	// reader. A failed read on an admitted native source never falls back.
-	info, err := os.Stat(absPath)
-	if err != nil {
-		return "", false, true
-	}
-	resolver := sessionDisplayResolver(sessionDir, absPath)
-	idx, idxErr := agent.LoadSessionDisplayIndex(store.SessionDisplayIndex(absPath))
-	identity, identityKnown, identityErr := agent.SessionContentIdentity(absPath)
-	if identityErr != nil {
-		return "", false, true
-	}
-	valid := idxErr == nil && idx != nil && idx.TranscriptSize == info.Size() && historyIndexTimestampValid(store.SessionDisplayIndex(absPath), absPath, info, idx, true)
-	if valid && identityKnown {
-		valid = agent.ValidateSessionDisplayIndex(idx, identity.Revision, identity.RevisionKnown, identity.Digest, info.Size())
-	} else if valid {
-		valid = !idx.RevisionKnown
-	}
-	var src *historySliceSource
-	if valid {
-		src = coldHistorySliceSource(absPath, idx)
-	} else if scanned, scanErr := agent.ScanSessionDisplayIndex(absPath); scanErr == nil && (!identityKnown || scanned.ContentDigest == identity.DigestHex) {
-		if identityKnown {
-			scanned.Revision = identity.Revision
-			scanned.RevisionKnown = identity.RevisionKnown
-		}
-		_ = agent.WriteSessionDisplayIndex(store.SessionDisplayIndex(absPath), scanned)
-		src = coldHistorySliceSource(absPath, scanned)
-	} else {
-		messages, state, repairable, loadErr := agent.LoadSessionDisplayMessages(absPath)
-		if loadErr != nil || !repairable {
-			return "", false, true
-		}
-		src = newInMemoryHistorySliceSource(strings.TrimSuffix(filepath.Base(absPath), ".jsonl"), messages, resolver, state, true)
-	}
-	return a.historyFieldValueForSource(src, msgIndex, sub, ref, resolver, sessionPlannerDisplayTurns(sessionDir, absPath), nil)
+	return value, found, stale || !handled || err != nil
 }
 
 func (a *App) historyFieldValueForSource(src *historySliceSource, msgIndex, sub int, ref HistoryContentRef, resolver func(string) string, plannerTurns []plannerDisplayTurn, checkpointTurns map[int]int) (string, bool, bool) {
@@ -1429,111 +1342,4 @@ func historyEntryFieldValue(m *HistoryMessage, field, toolCallID string) (string
 		return "", false
 	}
 	return "", false
-}
-
-// --- Legacy event-format paging -------------------------------------------
-
-// coldEventHistorySlice pages a legacy event-record session. The decode
-// streams the file once per request (constant memory); only ancient sessions
-// take this path.
-func coldEventHistorySlice(sessionPath string, info os.FileInfo, req HistorySliceRequest) (HistorySlice, error) {
-	messages, ok, err := previewEventSessionMessages(sessionPath)
-	if err != nil || !ok {
-		return emptyHistorySlice(), err
-	}
-	digest := fmt.Sprintf("event:%d:%d", info.Size(), info.ModTime().UnixNano())
-	src := &historySliceSource{
-		sessionID: strings.TrimSuffix(filepath.Base(sessionPath), ".jsonl"),
-		digest:    digest,
-	}
-	return pageHistoryEventRows(src, messages, req), nil
-}
-
-// pageHistoryEventRows cuts a page from already-converted rows (legacy event
-// format). Row indexes play the role of message indexes; every row is its own
-// group. Turns count user rows, 1-based.
-func pageHistoryEventRows(src *historySliceSource, rows []HistoryMessage, req HistorySliceRequest) HistorySlice {
-	cursor, err := decodeHistorySliceCursor(req.Cursor)
-	hasCursor := req.Cursor != "" && err == nil
-	if hasCursor && src.digest != cursor.Digest {
-		return staleHistorySlice(0, false, src.digest)
-	}
-	hi := len(rows)
-	if hasCursor && cursor.Before < hi {
-		hi = cursor.Before
-	}
-	// Visible turn per row.
-	turns := make([]int, len(rows))
-	turn := 0
-	for i, r := range rows {
-		if r.Role == "user" {
-			turn++
-		}
-		turns[i] = turn
-	}
-	src.turns = turns
-	src.totalTurns = turn
-	src.total = len(rows)
-	page := HistorySlice{Entries: []HistoryEntry{}, TotalTurns: turn, Digest: src.digest}
-	if hi <= 0 {
-		return page
-	}
-	newestTurn := turns[hi-1]
-	oldestTurn := 0
-	if newestTurn > 0 {
-		oldestTurn = max(newestTurn-req.Turns+1, 1)
-	}
-	candidateLo := sort.Search(hi, func(i int) bool { return turns[i] >= oldestTurn })
-	if oldestTurn <= 1 {
-		candidateLo = 0
-	}
-	// Suffix cut: walk backward from the newest row, keeping whole rows until
-	// a budget is reached; always keep the newest row so a single oversized
-	// row still makes progress.
-	kept := make([]HistoryEntry, 0, req.Entries)
-	entryCount, byteCount := 0, 0
-	lo := hi
-	for i := hi - 1; i >= candidateLo; i-- {
-		entry := newHistoryEntry(src, fmt.Sprintf("s%s:r0:e%d:o0", src.sessionID, i), i, 0, rows[i])
-		b := entry.inlineBytes()
-		if len(kept) > 0 && (entryCount+1 > req.Entries || byteCount+b > req.Bytes) {
-			break
-		}
-		kept = append(kept, entry)
-		entryCount++
-		byteCount += b
-		lo = i
-	}
-	for _, e := range slices.Backward(kept) {
-		page.Entries = append(page.Entries, e)
-	}
-	for _, e := range page.Entries {
-		if e.Turn <= 0 {
-			continue
-		}
-		if page.StartTurn == 0 || e.Turn < page.StartTurn {
-			page.StartTurn = e.Turn
-		}
-		if e.Turn > page.EndTurn {
-			page.EndTurn = e.Turn
-		}
-	}
-	page.HasOlder = lo > 0
-	if page.HasOlder {
-		page.NextCursor = encodeHistorySliceCursor(historySliceCursor{V: 1, Digest: src.digest, Before: lo})
-	}
-	return page
-}
-
-// legacyHistoryFieldValue re-resolves a field of a legacy event-format row.
-func (a *App) legacyHistoryFieldValue(sessionPath, sessionDir string, row int, ref HistoryContentRef) (string, bool) {
-	absPath, _, err := validateSessionPath(sessionDir, sessionPath)
-	if err != nil {
-		return "", false
-	}
-	messages, ok, err := previewEventSessionMessages(absPath)
-	if err != nil || !ok || row < 0 || row >= len(messages) {
-		return "", false
-	}
-	return historyEntryFieldValue(&messages[row], ref.Field, ref.ToolCallID)
 }

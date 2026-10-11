@@ -5,7 +5,6 @@ import { pathToFileURL } from "node:url";
 const VERSION_RE = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
 const SHA_RE = /^[0-9a-f]{40}$/;
 
-export const FROZEN_HOMEBREW = "frozen";
 
 export const npmPackageNames = [
   "@sivancola/deepzora",
@@ -66,21 +65,20 @@ export function createCoreLedger({ version, sourceSHA, operation, cliRelease, de
     }
     if ((item.deepzoraCandidateSha && item.deepzoraCandidateSha !== sourceSHA)
         || (item.gitHead && item.gitHead !== sourceSHA)
-        || (!item.deepzoraCandidateSha && !item.gitHead)) {
+        || item.deepzoraCandidateSha !== sourceSHA) {
       throw new Error(`npm package does not match the candidate: ${item.name}`);
     }
-    const frozenTag = item.distTag !== undefined;
-    if (frozenTag && item.distTag !== "legacy-v1") throw new Error(`unexpected npm dist-tag for ${item.name}: ${item.distTag}`);
-    const observed = frozenTag ? item.distTagVersion : item.latest;
+    if (item.distTag !== undefined || item.distTagVersion !== undefined) throw new Error(`retired npm dist-tag observation: ${item.name}`);
+    const observed = item.latest;
     const pointerComparison = compareStable(observed, version);
     if (pointerComparison < 0 || (operation === "publish" && pointerComparison !== 0)) {
-      throw new Error(`npm ${frozenTag ? item.distTag : "latest"} is inconsistent for ${item.name}: ${observed}`);
+      throw new Error(`npm latest is inconsistent for ${item.name}: ${observed}`);
     }
     return {
       name: item.name,
       version: item.version,
       integrity: item.integrity,
-      ...(frozenTag ? { distTag: item.distTag, distTagVersion: observed } : { latest: observed }),
+      latest: observed,
       state: "identity-verified",
       pointerState: pointerComparison === 0 ? "public-entry-updated" : "newer-entry-preserved",
     };
@@ -112,8 +110,7 @@ export function createCoreLedger({ version, sourceSHA, operation, cliRelease, de
 export function createPointerLedger({ version, sourceSHA, operation, manifest, homebrewVersion, observedAt = new Date().toISOString() }) {
   requireIdentity(version, sourceSHA, operation);
   if (manifest?.version !== `v${version}`) throw new Error("Stable manifest does not match the publication ledger");
-  const homebrewFrozen = homebrewVersion === FROZEN_HOMEBREW;
-  if (!homebrewFrozen && homebrewVersion !== version) throw new Error("Homebrew cask does not match the publication ledger");
+  if (homebrewVersion !== version) throw new Error("Homebrew cask does not match the publication ledger");
   return {
     schema: 1,
     version,
@@ -122,7 +119,7 @@ export function createPointerLedger({ version, sourceSHA, operation, manifest, h
     observedAt,
     surfaces: {
       stableManifest: { state: "public-entry-updated", version: manifest.version },
-      ...(homebrewFrozen ? {} : { homebrew: { state: "public-entry-updated", version } }),
+      homebrew: { state: "public-entry-updated", version },
     },
   };
 }

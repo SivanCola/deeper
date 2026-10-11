@@ -33,66 +33,30 @@ func assertEntryBytes(t *testing.T, root, name, want string) {
 }
 
 func TestWindowsEntriesFreshRepairAndUpgrade(t *testing.T) {
-	for _, legacy := range []bool{false, true} {
-		for _, canonical := range []bool{false, true} {
-			t.Run(map[bool]string{false: "fresh", true: "legacy"}[legacy]+map[bool]string{false: "", true: "-canonical"}[canonical], func(t *testing.T) {
-				root := filepath.Join(t.TempDir(), "Deepzora 测试")
-				if err := os.Mkdir(root, 0o755); err != nil {
-					t.Fatal(err)
-				}
-				if legacy {
-					writeTempMember(t, root, "deepzora-launcher.exe", "old")
-				}
-				if canonical {
-					writeTempMember(t, root, "Deepzora.exe", "old")
-				}
-				for i, version := range []string{"v1.38.9", "v1.38.9", "v1.39.0"} {
-					body := []string{"install", "repair", "upgrade"}[i]
-					if err := ActivateVersion(windowsEntryRequest(t, root, version, body)); err != nil {
-						t.Fatal(err)
-					}
-					assertEntryBytes(t, root, "Deepzora.exe", body+"-gui")
-					assertEntryBytes(t, root, "deepzora-cli.exe", body+"-cli")
-					if legacy {
-						assertEntryBytes(t, root, "deepzora-launcher.exe", body+"-gui")
-					} else if _, err := os.Lstat(filepath.Join(root, "deepzora-launcher.exe")); !os.IsNotExist(err) {
-						t.Fatalf("created legacy entry: %v", err)
-					}
-					ptr, err := ReadCurrent(root)
-					if err != nil || ptr.ActiveVersion != version || ptr.SchemaVersion != 1 {
-						t.Fatalf("pointer=%+v err=%v", ptr, err)
-					}
-				}
-			})
+	root := filepath.Join(t.TempDir(), "Deepzora 测试")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i, version := range []string{"v1.38.9", "v1.38.9", "v1.39.0"} {
+		body := []string{"install", "repair", "upgrade"}[i]
+		if err := ActivateVersion(windowsEntryRequest(t, root, version, body)); err != nil {
+			t.Fatal(err)
+		}
+		assertEntryBytes(t, root, "Deepzora.exe", body+"-gui")
+		assertEntryBytes(t, root, "deepzora-cli.exe", body+"-cli")
+		if _, err := os.Lstat(filepath.Join(root, "deepzora-launcher.exe")); !os.IsNotExist(err) {
+			t.Fatalf("retired entry created: %v", err)
+		}
+		ptr, err := ReadCurrent(root)
+		if err != nil || ptr.ActiveVersion != version {
+			t.Fatalf("pointer=%+v err=%v", ptr, err)
 		}
 	}
 }
 
-func TestWindowsEntriesInspectLegacyAfterLockAcquisition(t *testing.T) {
-	root := t.TempDir()
-	req := windowsEntryRequest(t, root, "v1.39.0", "new")
-	// Simulate the previous writer publishing the legacy entry while this
-	// activation waits to acquire its lock. No sleeps or global test hooks.
-	err := activateVersion(req, func(ctx context.Context, path string) (func(), error) {
-		writeTempMember(t, root, "deepzora-launcher.exe", "previous-writer")
-		return filelock.Acquire(ctx, path)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	assertEntryBytes(t, root, "deepzora-launcher.exe", "new-gui")
-}
-
-func TestConcurrentOldAndNewActivationPreservesCommittedLegacyEntry(t *testing.T) {
+func TestConcurrentActivationPublishesCurrentEntries(t *testing.T) {
 	root := t.TempDir()
 	first := windowsEntryRequest(t, root, "v1.38.9", "old")
-	first.RootMembers = []Member{
-		{Name: "Deepzora.exe", Path: first.WindowsRootEntries.LauncherPath},
-		{Name: "deepzora-launcher.exe", Path: first.WindowsRootEntries.LauncherPath},
-		{Name: "deepzora-cli.exe", Path: first.WindowsRootEntries.CLIEntryPath},
-	}
-	first.RequiredRootNames = []string{"Deepzora.exe", "deepzora-launcher.exe", "deepzora-cli.exe"}
-	first.WindowsRootEntries = nil // Model the old writer's explicit entry list.
 	second := windowsEntryRequest(t, root, "v1.39.0", "new")
 	firstLocked, releaseFirst, secondAcquiring := make(chan struct{}), make(chan struct{}), make(chan struct{})
 	checks := 0
@@ -132,7 +96,6 @@ func TestConcurrentOldAndNewActivationPreservesCommittedLegacyEntry(t *testing.T
 		t.Fatal(err)
 	}
 	assertEntryBytes(t, root, "Deepzora.exe", "new-gui")
-	assertEntryBytes(t, root, "deepzora-launcher.exe", "new-gui")
 	assertEntryBytes(t, root, "deepzora-cli.exe", "new-cli")
 	ptr, err := ReadCurrent(root)
 	if err != nil || ptr.ActiveVersion != "v1.39.0" {
@@ -144,7 +107,6 @@ func TestWindowsEntriesRollbackAllSelectedEntries(t *testing.T) {
 	for _, failure := range []string{"process", "pointer", "root"} {
 		t.Run(failure, func(t *testing.T) {
 			root := t.TempDir()
-			writeTempMember(t, root, "deepzora-launcher.exe", "original")
 			if err := ActivateVersion(windowsEntryRequest(t, root, "v1.38.9", "old")); err != nil {
 				t.Fatal(err)
 			}
@@ -178,7 +140,6 @@ func TestWindowsEntriesRollbackAllSelectedEntries(t *testing.T) {
 				t.Fatal("activation should fail")
 			}
 			assertEntryBytes(t, root, "Deepzora.exe", "old-gui")
-			assertEntryBytes(t, root, "deepzora-launcher.exe", "old-gui")
 			if failure != "root" {
 				assertEntryBytes(t, root, "deepzora-cli.exe", "old-cli")
 			}
@@ -190,37 +151,6 @@ func TestWindowsEntriesRollbackAllSelectedEntries(t *testing.T) {
 			}
 			if _, err := os.Stat(filepath.Join(root, "versions", "v1.39.0")); !os.IsNotExist(err) {
 				t.Fatalf("uncommitted version survived: %v", err)
-			}
-		})
-	}
-}
-
-func TestWindowsEntriesRejectInvalidLegacyAndMixedInputs(t *testing.T) {
-	for _, kind := range []string{"directory", "symlink", "mixed"} {
-		t.Run(kind, func(t *testing.T) {
-			root := t.TempDir()
-			req := windowsEntryRequest(t, root, "v1.39.0", "new")
-			legacy := filepath.Join(root, "deepzora-launcher.exe")
-			switch kind {
-			case "directory":
-				if err := os.Mkdir(legacy, 0o755); err != nil {
-					t.Fatal(err)
-				}
-			case "symlink":
-				if err := os.Symlink(req.WindowsRootEntries.LauncherPath, legacy); err != nil {
-					t.Skipf("symlink privilege unavailable: %v", err)
-				}
-			case "mixed":
-				req.RootMembers = []Member{{Name: "other", Path: req.WindowsRootEntries.LauncherPath}}
-			}
-			if err := ActivateVersion(req); err == nil {
-				t.Fatal("invalid request accepted")
-			}
-			if HasCurrent(root) {
-				t.Fatal("invalid activation committed")
-			}
-			if _, err := os.Lstat(filepath.Join(root, "Deepzora.exe")); !os.IsNotExist(err) {
-				t.Fatalf("published root entry: %v", err)
 			}
 		})
 	}

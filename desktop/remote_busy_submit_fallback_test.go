@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"deepzora/internal/config"
-	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/serve"
 )
@@ -21,14 +18,9 @@ import (
 // surfacing "session is busy" to the user.
 func TestRemoteBusySubmitFallsBackToDurableInbox(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "remote.jsonl")
-	if err := os.WriteFile(path, nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
 	runner := remoteInboxRunner{started: make(chan string, 4), release: make(chan struct{}, 4)}
 	sink := &remoteInboxSink{states: make(chan event.RuntimeStateSnapshot, 64)}
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Runner: runner, Sink: sink})
+	ctrl, path := newRemoteCanonicalController(t, runner, sink)
 	t.Cleanup(func() {
 		runner.release <- struct{}{}
 		runner.release <- struct{}{}

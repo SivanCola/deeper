@@ -10,9 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -64,7 +62,7 @@ func TestProviderViewFromEntry_FiltersNonChatModels(t *testing.T) {
 			"mimo-v2-asr", "mimo-v2-tts",
 			"mimo-v2-tts-voiceclone", "mimo-v2-tts-voicedesign",
 		},
-		VisionModels: []string{"mimo-v2", "mimo-v2-asr", "mimo-v2-omni"},
+		ModelOverrides: map[string]config.ProviderModelOverride{"mimo-v2": {Vision: new(true)}, "mimo-v2-asr": {Vision: new(true)}, "mimo-v2-omni": {Vision: new(true)}},
 	}
 	view := providerViewFromEntry(p, true, false)
 	want := []string{"mimo-v2", "mimo-v2-pro"}
@@ -73,9 +71,6 @@ func TestProviderViewFromEntry_FiltersNonChatModels(t *testing.T) {
 	}
 	if got, want := view.VisionModels, []string{"mimo-v2"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("ProviderView.VisionModels = %v, want %v", got, want)
-	}
-	if !view.VisionModelsSet {
-		t.Fatal("ProviderView.VisionModelsSet = false, want true for configured vision_models")
 	}
 }
 
@@ -99,44 +94,6 @@ func TestProviderModelOverridesPreservePerModelContextWindow(t *testing.T) {
 	}
 	if got := saved["short-model"].ContextWindow; got != 32_768 {
 		t.Fatalf("saved short-model context window = %d, want 32768", got)
-	}
-}
-
-func TestProviderViewFromEntry_MigratesProviderWideVision(t *testing.T) {
-	p := config.ProviderEntry{
-		Name:   "custom",
-		Models: []string{"text-only", "qwen-vl-plus"},
-		Vision: true,
-	}
-	view := providerViewFromEntry(p, false, true)
-	if got, want := view.VisionModels, []string{"text-only", "qwen-vl-plus"}; !reflect.DeepEqual(got, want) {
-		t.Errorf("ProviderView.VisionModels = %v, want %v", got, want)
-	}
-	if !view.VisionModelsSet {
-		t.Fatal("ProviderView.VisionModelsSet = false, want true for provider-wide vision")
-	}
-}
-
-func TestProviderViewFromEntryOffersOnlySafeDeepSeekProtocolUpgrade(t *testing.T) {
-	legacy := config.ProviderEntry{
-		Name: "deepseek-flash", Kind: "openai", BaseURL: "https://api.deepseek.com",
-		Model: "deepseek-v4-flash", APIKeyEnv: "DEEPSEEK_API_KEY",
-	}
-	if view := providerViewFromEntry(legacy, true, true); view.RecommendedUpgradeAvailable {
-		t.Fatal("standard official OpenAI entry still offers the retired protocol upgrade")
-	}
-
-	proxy := legacy
-	proxy.BaseURL = "https://deepseek-proxy.example/v1"
-	if view := providerViewFromEntry(proxy, false, true); view.RecommendedUpgradeAvailable {
-		t.Fatal("proxy entry unexpectedly offered the official protocol upgrade")
-	}
-
-	anthropic := legacy
-	anthropic.Kind = "anthropic"
-	anthropic.BaseURL = "https://api.deepseek.com/anthropic"
-	if view := providerViewFromEntry(anthropic, true, true); view.RecommendedUpgradeAvailable {
-		t.Fatal("already-upgraded entry still offered the protocol upgrade")
 	}
 }
 
@@ -364,7 +321,7 @@ func seedProviderCredentialReference(t *testing.T, app *App, env string) {
 	}
 }
 
-func TestFetchProviderModelsFiltersNonChatModels(t *testing.T) {
+func TestFetchProviderModelCatalogFiltersNonChatModels(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	if _, err := config.SetCredential("TEST_PROVIDER_KEY", "test-key"); err != nil {
 		t.Fatalf("SetCredential: %v", err)
@@ -389,21 +346,26 @@ func TestFetchProviderModelsFiltersNonChatModels(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	got, err := NewApp().FetchProviderModels(ProviderView{
+	catalog, err := NewApp().FetchProviderModelCatalog(ProviderView{
 		Name:      "mimo-api",
+		Kind:      "openai",
 		BaseURL:   srv.URL,
 		APIKeyEnv: "TEST_PROVIDER_KEY",
 	})
 	if err != nil {
-		t.Fatalf("FetchProviderModels: %v", err)
+		t.Fatalf("FetchProviderModelCatalog: %v", err)
+	}
+	got := make([]string, len(catalog))
+	for i, item := range catalog {
+		got[i] = item.Model
 	}
 	want := []string{"mimo-v2.5-pro"}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("FetchProviderModels = %v, want %v", got, want)
+		t.Errorf("FetchProviderModelCatalog = %v, want %v", got, want)
 	}
 }
 
-func TestFetchProviderModelsUsesSavedCredentialBeforeEnvironment(t *testing.T) {
+func TestFetchProviderModelCatalogUsesSavedCredentialBeforeEnvironment(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	const keyEnv = "TEST_PROVIDER_FETCH_KEY"
 	if _, err := config.SetCredential(keyEnv, "saved-key"); err != nil {
@@ -429,23 +391,27 @@ func TestFetchProviderModelsUsesSavedCredentialBeforeEnvironment(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	got, err := NewApp().FetchProviderModels(ProviderView{
+	catalog, err := NewApp().FetchProviderModelCatalog(ProviderView{
 		Name:      "custom",
 		BaseURL:   srv.URL,
 		APIKeyEnv: keyEnv,
 	})
 	if err != nil {
-		t.Fatalf("FetchProviderModels: %v", err)
+		t.Fatalf("FetchProviderModelCatalog: %v", err)
+	}
+	got := make([]string, len(catalog))
+	for i, item := range catalog {
+		got[i] = item.Model
 	}
 	if want := []string{"model-a"}; !reflect.DeepEqual(got, want) {
-		t.Errorf("FetchProviderModels = %v, want %v", got, want)
+		t.Errorf("FetchProviderModelCatalog = %v, want %v", got, want)
 	}
 	if got := os.Getenv(keyEnv); got != "stale-env-key" {
 		t.Fatalf("process env = %q, want stale env left untouched", got)
 	}
 }
 
-func TestFetchAllProviderModelsOmitsFailuresWithoutJSONNulls(t *testing.T) {
+func TestFetchAllProviderModelCatalogsOmitsFailuresWithoutJSONNulls(t *testing.T) {
 	good := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"object": "list",
@@ -458,12 +424,12 @@ func TestFetchAllProviderModelsOmitsFailuresWithoutJSONNulls(t *testing.T) {
 	}))
 	defer bad.Close()
 
-	got := NewApp().FetchAllProviderModels([]ProviderView{
+	got := NewApp().FetchAllProviderModelCatalogs([]ProviderView{
 		{Name: "good", Kind: "openai", BaseURL: good.URL},
 		{Name: "bad", Kind: "openai", BaseURL: bad.URL},
 	})
-	if want := []string{"model-a"}; !reflect.DeepEqual(got["good"], want) {
-		t.Fatalf("good provider models = %v, want %v", got["good"], want)
+	if len(got["good"]) != 1 || got["good"][0].Model != "model-a" {
+		t.Fatalf("good provider catalog = %v", got["good"])
 	}
 	if _, ok := got["bad"]; ok {
 		t.Fatalf("failed provider unexpectedly present: %#v", got)
@@ -482,18 +448,14 @@ func TestSaveProviderFiltersNonChatModels(t *testing.T) {
 
 	app := NewApp()
 	if err := app.SaveProvider(ProviderView{
-		Name:    "mimo-api",
-		Kind:    "openai",
-		BaseURL: "https://api.xiaomimimo.com/v1",
-		Models:  []string{"mimo-v2.5-asr", "mimo-v2.5-pro", "mimo-v2.5-tts"},
-		VisionModels: []string{
-			"mimo-v2.5-asr",
-			"mimo-v2.5-pro",
-			"mimo-v2.5-tts",
-		},
-		VisionModelsSet: true,
-		Default:         "mimo-v2.5-asr",
-		APIKeyEnv:       "MIMO_API_KEY",
+		Name:           "mimo-api",
+		Kind:           "openai",
+		BaseURL:        "https://api.xiaomimimo.com/v1",
+		Models:         []string{"mimo-v2.5-asr", "mimo-v2.5-pro", "mimo-v2.5-tts"},
+		ModelOverrides: []ProviderModelOverrideView{{Model: "mimo-v2.5-asr", Vision: new(true)}, {Model: "mimo-v2.5-pro", Vision: new(true)}, {Model: "mimo-v2.5-tts", Vision: new(true)}},
+
+		Default:   "mimo-v2.5-asr",
+		APIKeyEnv: "MIMO_API_KEY",
 	}); err != nil {
 		t.Fatalf("SaveProvider: %v", err)
 	}
@@ -510,8 +472,8 @@ func TestSaveProviderFiltersNonChatModels(t *testing.T) {
 	if got.DefaultModel() != "mimo-v2.5-pro" {
 		t.Errorf("saved provider default = %q, want mimo-v2.5-pro", got.DefaultModel())
 	}
-	if got, want := got.VisionModels, []string{"mimo-v2.5-pro"}; !reflect.DeepEqual(got, want) {
-		t.Errorf("saved provider vision_models = %v, want %v", got, want)
+	if ov := got.ModelOverrides["mimo-v2.5-pro"]; ov.Vision == nil || !*ov.Vision || len(got.ModelOverrides) != 1 {
+		t.Fatalf("filtered per-model overrides = %+v", got.ModelOverrides)
 	}
 	raw, err := os.ReadFile(config.UserConfigPath())
 	if err != nil {
@@ -532,8 +494,8 @@ func TestSaveProviderFiltersNonChatModels(t *testing.T) {
 	if strings.Contains(block, `model       = "mimo-v2.5-pro"`) {
 		t.Fatalf("saved provider block should not persist explicit single selection as legacy model:\n%s", block)
 	}
-	if !strings.Contains(block, `vision_models = ["mimo-v2.5-pro"]`) {
-		t.Fatalf("saved provider block did not persist filtered vision_models:\n%s", block)
+	if strings.Contains(block, "vision_models") || !strings.Contains(block, "vision = true") {
+		t.Fatalf("saved provider block did not persist current per-model capability:\n%s", block)
 	}
 }
 
@@ -809,7 +771,6 @@ func TestSaveProviderPersistsAndMirrorsCustomEndpointURLs(t *testing.T) {
 		Name:       "sub2api",
 		Kind:       "openai",
 		BaseURL:    "https://proxy.example.com/v1",
-		ChatURL:    " https://legacy.example.com/chat/completions/ ",
 		RequestURL: " https://proxy.example.com/custom/chat/completions/?token=1 ",
 		ModelsURL:  " https://proxy.example.com/v1/models ",
 		Models:     []string{"model-a"},
@@ -824,8 +785,8 @@ func TestSaveProviderPersistsAndMirrorsCustomEndpointURLs(t *testing.T) {
 	if !ok {
 		t.Fatal("saved provider not found")
 	}
-	if got.ChatURL != "https://proxy.example.com/custom/chat/completions/?token=1" {
-		t.Fatalf("saved chat_url = %q", got.ChatURL)
+	if got.RequestURL != "https://proxy.example.com/custom/chat/completions/?token=1" {
+		t.Fatalf("saved chat_url = %q", got.RequestURL)
 	}
 	if got.RequestURL != "https://proxy.example.com/custom/chat/completions/?token=1" {
 		t.Fatalf("saved request_url = %q", got.RequestURL)
@@ -839,8 +800,8 @@ func TestSaveProviderPersistsAndMirrorsCustomEndpointURLs(t *testing.T) {
 		if provider.Name != "sub2api" {
 			continue
 		}
-		if provider.ChatURL != "https://proxy.example.com/custom/chat/completions/?token=1" {
-			t.Fatalf("Settings chatUrl = %q", provider.ChatURL)
+		if provider.RequestURL != "https://proxy.example.com/custom/chat/completions/?token=1" {
+			t.Fatalf("Settings chatUrl = %q", provider.RequestURL)
 		}
 		if provider.RequestURL != "https://proxy.example.com/custom/chat/completions/?token=1" {
 			t.Fatalf("Settings requestUrl = %q", provider.RequestURL)
@@ -858,19 +819,19 @@ func TestSaveProviderPreservesHiddenProviderFields(t *testing.T) {
 
 	cfg := config.LoadForEdit(config.UserConfigPath())
 	cfg.Providers = []config.ProviderEntry{{
-		Name:         "custom",
-		Kind:         "openai",
-		BaseURL:      "https://proxy.example.com/v1",
-		Models:       []string{"model-a", "model-b"},
-		Default:      "model-a",
-		APIKeyEnv:    "CUSTOM_API_KEY",
-		Price:        &provider.Pricing{Input: 1, Output: 2, Currency: "$"},
-		Prices:       map[string]*provider.Pricing{"model-b": {Input: 3, Output: 4, Currency: "$"}},
-		Thinking:     "adaptive",
-		Effort:       "high",
-		VisionDetail: "low",
-		ExtraBody:    map[string]any{"enable_thinking": true},
-		NoProxy:      true,
+		Name:      "custom",
+		Kind:      "openai",
+		BaseURL:   "https://proxy.example.com/v1",
+		Models:    []string{"model-a", "model-b"},
+		Default:   "model-a",
+		APIKeyEnv: "CUSTOM_API_KEY",
+
+		Prices:        map[string]*provider.Pricing{"model-a": {Input: 1, Output: 2, Currency: "$"}, "model-b": {Input: 3, Output: 4, Currency: "$"}},
+		Thinking:      "adaptive",
+		DefaultEffort: "high",
+		VisionDetail:  "low",
+		ExtraBody:     map[string]any{"enable_thinking": true},
+		NoProxy:       true,
 	}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("SaveTo: %v", err)
@@ -903,14 +864,14 @@ func TestSaveProviderPreservesHiddenProviderFields(t *testing.T) {
 	if !ok {
 		t.Fatal("saved provider not found")
 	}
-	if got.Price == nil || got.Price.Input != 1 || got.Price.Output != 2 || got.Price.Currency != "$" {
-		t.Fatalf("provider-wide price = %+v, want preserved", got.Price)
+	if got.Prices["model-a"] == nil || got.Prices["model-a"].Input != 1 || got.Prices["model-a"].Output != 2 || got.Prices["model-a"].Currency != "$" {
+		t.Fatalf("provider-wide price = %+v, want preserved", got.Prices["model-a"])
 	}
 	if got.Prices["model-b"] == nil || got.Prices["model-b"].Input != 3 || got.Prices["model-b"].Output != 4 || got.Prices["model-b"].Currency != "$" {
 		t.Fatalf("per-model prices = %+v, want model-b price preserved", got.Prices)
 	}
-	if got.Thinking != "adaptive" || got.Effort != "high" {
-		t.Fatalf("thinking/effort = %q/%q, want adaptive/high", got.Thinking, got.Effort)
+	if got.Thinking != "adaptive" || got.DefaultEffort != "high" {
+		t.Fatalf("thinking/effort = %q/%q, want adaptive/high", got.Thinking, got.DefaultEffort)
 	}
 	if got.VisionDetail != "low" {
 		t.Fatalf("vision_detail = %q, want low", got.VisionDetail)
@@ -920,89 +881,6 @@ func TestSaveProviderPreservesHiddenProviderFields(t *testing.T) {
 	}
 	if !got.NoProxy {
 		t.Fatal("no_proxy = false, want preserved true")
-	}
-}
-
-func TestSaveProviderClearsProviderWideVisionForPerModelSelection(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	cfg := config.LoadForEdit(config.UserConfigPath())
-	cfg.Providers = []config.ProviderEntry{{
-		Name:    "custom",
-		Kind:    "openai",
-		BaseURL: "https://proxy.example.com/v1",
-		Models:  []string{"text-only", "qwen-vl-plus"},
-		Default: "text-only",
-		Vision:  true,
-	}}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("SaveTo: %v", err)
-	}
-
-	if err := NewApp().SaveProvider(ProviderView{
-		Name:            "custom",
-		Kind:            "openai",
-		BaseURL:         "https://proxy.example.com/v1",
-		Models:          []string{"text-only", "qwen-vl-plus"},
-		VisionModels:    []string{"qwen-vl-plus"},
-		VisionModelsSet: true,
-		Default:         "text-only",
-	}); err != nil {
-		t.Fatalf("SaveProvider: %v", err)
-	}
-
-	gotCfg := config.LoadForEdit(config.UserConfigPath())
-	got, ok := gotCfg.Provider("custom")
-	if !ok {
-		t.Fatal("saved provider not found")
-	}
-	if got.Vision {
-		t.Fatal("saved provider kept provider-wide vision=true")
-	}
-	if got, want := got.VisionModels, []string{"qwen-vl-plus"}; !reflect.DeepEqual(got, want) {
-		t.Fatalf("saved provider vision_models = %v, want %v", got, want)
-	}
-	textOnly := *got
-	textOnly.Model = "text-only"
-	if config.EffectiveVision(&textOnly) {
-		t.Fatal("unchecked text-only model should not inherit image input")
-	}
-	vision := *got
-	vision.Model = "qwen-vl-plus"
-	if !config.EffectiveVision(&vision) {
-		t.Fatal("checked vision model should keep image input")
-	}
-}
-
-func TestSaveProviderPreservesExplicitEmptyVisionModels(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	if err := NewApp().SaveProvider(ProviderView{
-		Name:            "custom",
-		Kind:            "openai",
-		BaseURL:         "https://proxy.example.com/v1",
-		Models:          []string{"text-only", "qwen-vl-plus"},
-		VisionModels:    []string{},
-		VisionModelsSet: true,
-		Default:         "text-only",
-	}); err != nil {
-		t.Fatalf("SaveProvider: %v", err)
-	}
-
-	cfg := config.LoadForEdit(config.UserConfigPath())
-	got, ok := cfg.Provider("custom")
-	if !ok {
-		t.Fatal("saved provider not found")
-	}
-	if got.VisionModels == nil || len(got.VisionModels) != 0 {
-		t.Fatalf("saved provider vision_models = %#v, want explicit empty list", got.VisionModels)
-	}
-	raw, err := os.ReadFile(config.UserConfigPath())
-	if err != nil {
-		t.Fatalf("read saved config: %v", err)
-	}
-	if !strings.Contains(string(raw), `vision_models = []`) {
-		t.Fatalf("saved config did not persist explicit empty vision_models:\n%s", raw)
 	}
 }
 
@@ -1188,7 +1066,7 @@ func TestSetProviderWebSearchSavesWithDetachedRuntime(t *testing.T) {
 	cfg := config.Default()
 	cfg.DefaultModel = "deepseek/deepseek-v4-flash"
 	cfg.Desktop.ProviderAccess = []string{"deepseek"}
-	cfg.Providers = []config.ProviderEntry{{
+	cfg.Providers = []config.ProviderEntry{{Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash",
 		Name: "deepseek", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
 		Model: "deepseek-v4-flash", APIKeyEnv: "DEEPSEEK_API_KEY", WebSearch: &enabled,
 	}}
@@ -1283,489 +1161,6 @@ func TestSaveProviderDoesNotCarryOfficialWebSearchToCustomEndpoint(t *testing.T)
 	}
 }
 
-func TestUpgradeDeepSeekProviderAccessPreservesCustomizedFields(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	path := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	raw := `default_model = "deepseek-flash/deepseek-v4-flash"
-
-[desktop]
-provider_access = ["deepseek"]
-
-[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-vision = true
-chat_url = "https://api.deepseek.com/anthropic/v1/messages"
-models_url = "https://api.deepseek.com/models"
-headers = { X-Trace = "keep" }
-extra_body = { route = "keep" }
-auth_header = true
-thinking = "enabled"
-web_search = true
-no_proxy = true
-cache_ttl_minutes = 17
-context_window = 900000
-max_output_tokens = 111111
-supported_efforts = ["disabled", "low", "high"]
-default_effort = "low"
-price = { cache_hit = 0.1, input = 1.25, output = 2.25, currency = "T" }
-future_capability = "keep"
-
-[[providers]]
-name = "deepseek-pro"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-pro"
-api_key_env = "DEEPSEEK_API_KEY"
-chat_url = "https://api.deepseek.com/anthropic/v1/messages"
-models_url = "https://api.deepseek.com/models"
-headers = { X-Trace = "keep" }
-extra_body = { route = "keep" }
-auth_header = true
-thinking = "enabled"
-web_search = true
-no_proxy = true
-cache_ttl_minutes = 17
-context_window = 800000
-max_output_tokens = 222222
-reasoning_protocol = "none"
-supported_efforts = ["disabled", "high", "max"]
-default_effort = "max"
-price = { cache_hit = 0.2, input = 3.75, output = 6.75, currency = "T" }
-`
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := NewApp().UpgradeDeepSeekProviderAccess("deepseek"); err != nil {
-		t.Fatalf("UpgradeDeepSeekProviderAccess: %v", err)
-	}
-	updated, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(updated)
-	if strings.Count(text, `kind = "anthropic"`) != 2 ||
-		strings.Count(text, `base_url = "https://api.deepseek.com/anthropic"`) != 2 {
-		t.Fatalf("provider family was not upgraded:\n%s", text)
-	}
-	for _, preserved := range []string{`vision = true`, `headers = { X-Trace = "keep" }`, `extra_body = { route = "keep" }`, `future_capability = "keep"`, `reasoning_protocol = "none"`} {
-		if !strings.Contains(text, preserved) {
-			t.Errorf("upgrade dropped %q:\n%s", preserved, text)
-		}
-	}
-
-	cfg, err := config.LoadForRootReadOnly(t.TempDir())
-	if err != nil {
-		t.Fatalf("load upgraded config: %v", err)
-	}
-	if got := cfg.Desktop.ProviderAccess; len(got) != 1 || got[0] != "deepseek" {
-		t.Fatalf("provider_access = %v, want one canonical DeepSeek entry", got)
-	}
-	canonical, ok := cfg.Provider("deepseek")
-	if !ok {
-		t.Fatal("effective canonical DeepSeek provider missing after upgrade")
-	}
-	if canonical.ChatURL != "https://api.deepseek.com/anthropic/v1/messages" ||
-		canonical.ModelsURL != "https://api.deepseek.com/models" ||
-		canonical.Headers["X-Trace"] != "keep" || canonical.ExtraBody["route"] != "keep" ||
-		!canonical.AuthHeader || !canonical.NoProxy || canonical.CacheTTLMinutes != 17 {
-		t.Fatalf("canonical transport fields were not preserved: %+v", canonical)
-	}
-	flash, ok := cfg.ResolveModel("deepseek/deepseek-v4-flash")
-	if !ok {
-		t.Fatal("canonical DeepSeek Flash model did not resolve")
-	}
-	if flash.ContextWindow != 900000 || flash.MaxOutputTokens != 111111 || flash.DefaultEffort != "low" ||
-		flash.Price == nil || flash.Price.Output != 2.25 {
-		t.Fatalf("Flash model fields were not preserved: %+v", flash)
-	}
-	if !config.EffectiveVision(flash) {
-		t.Fatal("V4 Flash is natively multimodal on the official DeepSeek endpoint")
-	}
-	flashOverride := canonical.ModelOverrides["deepseek-v4-flash"]
-	if flashOverride.Vision == nil || !*flashOverride.Vision {
-		t.Fatalf("Flash vision metadata was dropped instead of being safely ignored: %+v", flashOverride)
-	}
-	pro, ok := cfg.ResolveModel("deepseek/deepseek-v4-pro")
-	if !ok {
-		t.Fatal("canonical DeepSeek Pro model did not resolve")
-	}
-	if pro.ContextWindow != 800000 || pro.MaxOutputTokens != 222222 || pro.ReasoningProtocol != "none" ||
-		pro.DefaultEffort != "max" || pro.Price == nil || pro.Price.Output != 6.75 {
-		t.Fatalf("Pro model fields were not preserved: %+v", pro)
-	}
-}
-
-func TestUpgradeDeepSeekProviderAccessDoesNotWaitForRuntimeRebuild(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	path := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	raw := `[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-`
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	app := NewApp()
-	app.runtimeRebuildMu.Lock()
-	rebuildLocked := true
-	defer func() {
-		if rebuildLocked {
-			app.runtimeRebuildMu.Unlock()
-		}
-	}()
-	done := make(chan error, 1)
-	go func() {
-		_, err := app.UpgradeDeepSeekProviderAccess("deepseek")
-		done <- err
-	}()
-	select {
-	case err := <-done:
-		if err != nil {
-			t.Fatalf("UpgradeDeepSeekProviderAccess: %v", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("protocol save waited for the runtime mutation lock")
-	}
-	app.runtimeRebuildMu.Unlock()
-	rebuildLocked = false
-	after, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(after), `kind = "anthropic"`) {
-		t.Fatalf("protocol was not upgraded after acquiring the runtime mutation lock:\n%s", after)
-	}
-}
-
-func TestUpgradeDeepSeekProviderAccessPreservesEveryVisibleRuntime(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPSEEK_API_KEY", "sk-test")
-	path := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	raw := `default_model = "deepseek-flash/deepseek-v4-flash"
-
-[desktop]
-provider_access = ["deepseek"]
-
-[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-`
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	workspace := t.TempDir()
-	sessionDir := config.SessionDir()
-	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	newOldController := func(id string) *blockingSnapshotCtrl {
-		session := agent.NewSession("old system prompt")
-		session.Add(provider.Message{Role: provider.RoleUser, Content: "history " + id})
-		exec := agent.New(nil, nil, session, agent.Options{}, event.Discard)
-		ctrl := control.New(control.Options{
-			Executor: exec, SessionDir: sessionDir,
-			SessionPath: filepath.Join(sessionDir, id+".jsonl"), Label: id, Sink: event.Discard,
-		})
-		wrapped := newBlockingSnapshotCtrl(ctrl)
-		close(wrapped.releaseSnapshot)
-		return wrapped
-	}
-	oldA := newOldController("tab-a")
-	oldB := newOldController("tab-b")
-	app := NewApp()
-	app.ctx = context.Background()
-	app.readyHook = func() {}
-	tabA := &WorkspaceTab{
-		ID: "tab-a", Scope: "global", WorkspaceRoot: workspace, Ready: true,
-		Ctrl: oldA, model: "deepseek/deepseek-v4-flash", sink: &tabEventSink{tabID: "tab-a", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	tabB := &WorkspaceTab{
-		ID: "tab-b", Scope: "global", WorkspaceRoot: workspace, Ready: true,
-		Ctrl: oldB, model: "deepseek/deepseek-v4-flash", sink: &tabEventSink{tabID: "tab-b", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{tabA.ID: tabA, tabB.ID: tabB}
-	app.tabOrder = []string{tabA.ID, tabB.ID}
-	app.activeTabID = tabA.ID
-	t.Cleanup(func() {
-		for _, tab := range []*WorkspaceTab{tabA, tabB} {
-			if tab.Ctrl != nil {
-				tab.Ctrl.Close()
-			}
-			tab.releaseSessionLease()
-		}
-	})
-
-	if _, err := app.UpgradeDeepSeekProviderAccess("deepseek"); err != nil {
-		t.Fatalf("UpgradeDeepSeekProviderAccess: %v", err)
-	}
-	if tabA.Ctrl != oldA || tabB.Ctrl != oldB {
-		t.Fatal("saving protocol replaced a visible runtime")
-	}
-	if oldA.closeCount.Load() != 0 || oldB.closeCount.Load() != 0 {
-		t.Fatal("saving protocol closed an existing controller")
-	}
-	for _, tab := range []*WorkspaceTab{tabA, tabB} {
-		history := tab.Ctrl.History()
-		if len(history) < 2 || !strings.HasPrefix(history[1].Content, "history ") {
-			t.Fatalf("rebuilt tab %q lost history: %+v", tab.ID, history)
-		}
-	}
-}
-
-func TestUpgradeDeepSeekProviderAccessSavesIndependentlyOfWorkspaceBuild(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPSEEK_API_KEY", "sk-test")
-	path := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	// The explicit Settings action runs after the one-time startup migration.
-	// The running app has completed the startup migration before a manual switch.
-	raw := `config_version = 9
-default_model = "deepseek-flash/deepseek-v4-flash"
-
-[desktop]
-provider_access = ["deepseek"]
-
-[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-`
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	brokenRoot := t.TempDir()
-	if err := os.WriteFile(filepath.Join(brokenRoot, "deepzora.toml"), []byte(`[agent]
-system_prompt_file = "/outside-workspace/system.md"
-`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	approveWorkspace(t, brokenRoot)
-	workingRoot := t.TempDir()
-	sessionDir := config.SessionDir()
-	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	newOldController := func(id string) *blockingSnapshotCtrl {
-		session := agent.NewSession("old system prompt")
-		session.Add(provider.Message{Role: provider.RoleUser, Content: "history " + id})
-		exec := agent.New(nil, nil, session, agent.Options{}, event.Discard)
-		ctrl := control.New(control.Options{
-			Executor: exec, SessionDir: sessionDir,
-			SessionPath: filepath.Join(sessionDir, id+".jsonl"), Label: id, Sink: event.Discard,
-		})
-		wrapped := newBlockingSnapshotCtrl(ctrl)
-		close(wrapped.releaseSnapshot)
-		return wrapped
-	}
-	oldBroken := newOldController("upgrade-broken")
-	oldWorking := newOldController("upgrade-working")
-	app := NewApp()
-	app.ctx = context.Background()
-	app.readyHook = func() {}
-	broken := &WorkspaceTab{
-		ID: "a-broken", Scope: "project", WorkspaceRoot: brokenRoot, Ready: true,
-		Ctrl: oldBroken, model: "deepseek/deepseek-v4-flash", sink: &tabEventSink{tabID: "a-broken", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	working := &WorkspaceTab{
-		ID: "b-working", Scope: "project", WorkspaceRoot: workingRoot, Ready: true,
-		Ctrl: oldWorking, model: "deepseek/deepseek-v4-flash", sink: &tabEventSink{tabID: "b-working", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{broken.ID: broken, working.ID: working}
-	app.tabOrder = []string{broken.ID, working.ID}
-	app.activeTabID = broken.ID
-	t.Cleanup(func() {
-		for _, tab := range []*WorkspaceTab{broken, working} {
-			if tab.Ctrl != nil {
-				tab.Ctrl.Close()
-			}
-			tab.releaseSessionLease()
-		}
-	})
-
-	warning, err := app.UpgradeDeepSeekProviderAccess("deepseek")
-	if err != nil {
-		t.Fatalf("UpgradeDeepSeekProviderAccess save: %v", err)
-	}
-	if warning != "" {
-		t.Fatalf("UpgradeDeepSeekProviderAccess warning = %q, want no lease warning", warning)
-	}
-	updated, readErr := os.ReadFile(path)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if !strings.Contains(string(updated), `kind = "anthropic"`) {
-		t.Fatalf("protocol was not persisted before the runtime error:\n%s", updated)
-	}
-	if broken.Ctrl != oldBroken || oldBroken.closeCount.Load() != 0 {
-		t.Fatalf("failed tab changed controller: ctrl=%T closes=%d", broken.Ctrl, oldBroken.closeCount.Load())
-	}
-	if working.Ctrl != oldWorking || oldWorking.closeCount.Load() != 0 {
-		t.Fatal("saving protocol replaced the sibling runtime")
-	}
-}
-
-func TestUpgradeDeepSeekProviderAccessPreservesLeasedTabAndSibling(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPSEEK_API_KEY", "sk-test")
-	path := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	raw := `default_model = "deepseek-flash/deepseek-v4-flash"
-
-[desktop]
-provider_access = ["deepseek"]
-
-[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-`
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	workspace := t.TempDir()
-	sessionDir := config.SessionDir()
-	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	leasedPath := filepath.Join(sessionDir, "upgrade-leased.jsonl")
-	workingPath := filepath.Join(sessionDir, "upgrade-working.jsonl")
-	externalLease, err := agent.TryAcquireSessionLease(leasedPath)
-	if err != nil {
-		t.Fatalf("TryAcquireSessionLease: %v", err)
-	}
-	t.Cleanup(externalLease.Release)
-	newOldController := func(id, sessionPath string) *blockingSnapshotCtrl {
-		session := agent.NewSession("old system prompt")
-		session.Add(provider.Message{Role: provider.RoleUser, Content: "history " + id})
-		exec := agent.New(nil, nil, session, agent.Options{}, event.Discard)
-		ctrl := control.New(control.Options{
-			Executor: exec, SessionDir: sessionDir, SessionPath: sessionPath, Label: id, Sink: event.Discard,
-		})
-		wrapped := newBlockingSnapshotCtrl(ctrl)
-		close(wrapped.releaseSnapshot)
-		return wrapped
-	}
-	oldLeased := newOldController("upgrade-leased", leasedPath)
-	oldWorking := newOldController("upgrade-working", workingPath)
-	app := NewApp()
-	app.ctx = context.Background()
-	app.readyHook = func() {}
-	leased := &WorkspaceTab{
-		ID: "a-leased", Scope: "global", WorkspaceRoot: workspace, SessionPath: leasedPath, Ready: true,
-		Ctrl: oldLeased, model: "deepseek/deepseek-v4-flash", sink: &tabEventSink{tabID: "a-leased", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	working := &WorkspaceTab{
-		ID: "b-working", Scope: "global", WorkspaceRoot: workspace, SessionPath: workingPath, Ready: true,
-		Ctrl: oldWorking, model: "deepseek/deepseek-v4-flash", sink: &tabEventSink{tabID: "b-working", app: app},
-		disabledMCP: map[string]ServerView{},
-	}
-	app.tabs = map[string]*WorkspaceTab{leased.ID: leased, working.ID: working}
-	app.tabOrder = []string{leased.ID, working.ID}
-	app.activeTabID = leased.ID
-	t.Cleanup(func() {
-		for _, tab := range []*WorkspaceTab{leased, working} {
-			if tab.Ctrl != nil {
-				tab.Ctrl.Close()
-			}
-			tab.releaseSessionLease()
-		}
-	})
-
-	warning, err := app.UpgradeDeepSeekProviderAccess("deepseek")
-	if err != nil {
-		t.Fatalf("UpgradeDeepSeekProviderAccess: %v", err)
-	}
-	if warning != "" {
-		t.Fatalf("protocol save acquired runtime lease: %q", warning)
-	}
-	if !app.deferredRebuildPending(leased.ID) {
-		t.Fatal("leased tab lost its pending settings application")
-	}
-	if !app.deferredRebuildPending(working.ID) {
-		t.Fatal("working sibling did not schedule settings application")
-	}
-	if leased.Ctrl != oldLeased || oldLeased.closeCount.Load() != 0 {
-		t.Fatalf("leased tab changed controller: ctrl=%T closes=%d", leased.Ctrl, oldLeased.closeCount.Load())
-	}
-	if working.Ctrl != oldWorking || oldWorking.closeCount.Load() != 0 {
-		t.Fatal("saving protocol replaced the sibling runtime")
-	}
-}
-
-func TestUpgradeDeepSeekProviderAccessSavesWithDetachedRuntime(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	path := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	raw := `[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-`
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	app := NewApp()
-	detachedCtrl := control.New(control.Options{Label: "detached", Sink: event.Discard})
-	app.detachedSessions = map[string]*WorkspaceTab{
-		"detached": {ID: "detached", Scope: "global", Ready: true, Ctrl: detachedCtrl},
-	}
-	t.Cleanup(detachedCtrl.Close)
-
-	_, err := app.UpgradeDeepSeekProviderAccess("deepseek")
-	if err != nil || app.detachedSessions["detached"].Ctrl != detachedCtrl {
-		t.Fatalf("protocol save must preserve detached runtime: %v", err)
-	}
-	after, readErr := os.ReadFile(path)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if !strings.Contains(string(after), `kind = "anthropic"`) {
-		t.Fatalf("protocol was not saved with detached runtime:\n%s", after)
-	}
-}
-
 func TestProviderModelOverrideViewPreservesMaxOutputTokens(t *testing.T) {
 	input := map[string]config.ProviderModelOverride{
 		"limited": {ContextWindow: 64_000, MaxOutputTokens: 8_192},
@@ -1784,36 +1179,8 @@ func TestProviderModelOverrideViewPreservesMaxOutputTokens(t *testing.T) {
 	}
 }
 
-func TestDeepSeekProtocolUpgradeSourceAvailableWithLegacyGlobalAndProjectConfig(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	legacyPath := config.LegacyUserConfigPath()
-	if legacyPath == "" {
-		t.Skip("platform has no distinct legacy user-config path")
-	}
-	if err := os.MkdirAll(filepath.Dir(legacyPath), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(legacyPath, []byte(`[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	project := t.TempDir()
-	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte("# project config\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	approveWorkspace(t, project)
-	if !config.CanUpgradeDeepSeekProviderProtocolUserConfig("deepseek") {
-		t.Fatal("project config must not hide an available legacy global upgrade source")
-	}
-}
-
 func TestOfficialMimoAPITemplateRemoved(t *testing.T) {
-	if entries, keyEnv, err := officialProviderTemplate("mimo-api", "en"); err == nil {
+	if entries, keyEnv, err := officialProviderTemplate("mimo-api"); err == nil {
 		t.Fatalf("officialProviderTemplate(mimo-api) = entries=%v key=%q nil error, want unknown template", entries, keyEnv)
 	}
 }
@@ -1822,7 +1189,7 @@ func TestOfficialDeepSeekTemplateUsesRegionalPricing(t *testing.T) {
 	// Language no longer selects list-price tables; templates freeze the default
 	// USD official rates. Display currency is independent (billing.display_currency).
 	for _, language := range []string{"en", "zh"} {
-		entries, keyEnv, err := officialProviderTemplate("deepseek", language)
+		entries, keyEnv, err := officialProviderTemplate("deepseek")
 		if err != nil {
 			t.Fatalf("officialProviderTemplate(%s): %v", language, err)
 		}
@@ -1845,26 +1212,20 @@ func TestOfficialDeepSeekTemplateUsesRegionalPricing(t *testing.T) {
 	}
 }
 
-func TestSetAgentParamsIgnoresDeprecatedStepLimits(t *testing.T) {
+func TestSetAgentParamsPersistsCurrentParameters(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if err := app.SetAgentParams(0.35, 37, 9, "custom system"); err != nil {
+	if err := app.SetAgentParams(0.35, "custom system"); err != nil {
 		t.Fatalf("SetAgentParams: %v", err)
 	}
 
 	view := app.Settings()
-	if view.Agent.MaxSteps != 0 || view.Agent.PlannerMaxSteps != 0 {
-		t.Fatalf("Settings().Agent = %+v, want deprecated step limits normalized to zero", view.Agent)
-	}
 	if view.Agent.Temperature != 0.35 || view.Agent.SystemPrompt != "custom system" {
 		t.Fatalf("Settings().Agent did not preserve other agent params: %+v", view.Agent)
 	}
 
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if cfg.Agent.MaxSteps != 0 || cfg.Agent.PlannerMaxSteps != 0 {
-		t.Fatalf("saved config agent steps = max:%d planner:%d, want automatic 0/0", cfg.Agent.MaxSteps, cfg.Agent.PlannerMaxSteps)
-	}
 	if cfg.Agent.Temperature != 0.35 || cfg.Agent.SystemPrompt != "custom system" {
 		t.Fatalf("saved config did not preserve other agent params: %+v", cfg.Agent)
 	}
@@ -1909,10 +1270,6 @@ func TestSetCompactRatioPersistsToUserConfig(t *testing.T) {
 	cfg := config.LoadForEdit(config.UserConfigPath())
 	if cfg.Agent.CompactRatio != 0.7 {
 		t.Fatalf("saved compact ratio = %v, want 0.7", cfg.Agent.CompactRatio)
-	}
-	// Deprecated multi-threshold fields stay cleared / unused.
-	if cfg.Agent.ToolResultSnipRatio != 0 || cfg.Agent.CompactForceRatio != 0 {
-		t.Fatalf("setting compact ratio revived deprecated thresholds: %+v", cfg.Agent)
 	}
 	if err := app.SetCompactRatio(0.3); err != nil {
 		t.Fatalf("SetCompactRatio lower bound: %v", err)
@@ -2014,7 +1371,7 @@ func TestSetDesktopCurrencyPersistsDisplayWithoutRewritingOfficialPricing(t *tes
 	}
 	flash, ok := cfg.Provider("deepseek-flash")
 	// Display currency must not rewrite frozen list prices (default USD table).
-	if !ok || flash.Price == nil || flash.Price.Output != 1.2 || flash.Price.Currency != "$" {
+	if !ok || flash.PriceForModel("deepseek-flash") == nil || flash.PriceForModel("deepseek-flash").Output != 1.2 || flash.PriceForModel("deepseek-flash").Currency != "$" {
 		t.Fatalf("saved DeepSeek flash price = %+v, want frozen USD official price", flash)
 	}
 }
@@ -2063,22 +1420,6 @@ func TestSetReasoningLanguageUpdatesLiveTabControllers(t *testing.T) {
 	}
 }
 
-func TestSetAutoPlanCompatibilityCannotReenableRetiredFeature(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	app := NewApp()
-	if err := app.SetAutoPlan("off"); err != nil {
-		t.Fatalf("SetAutoPlan(off): %v", err)
-	}
-	if err := app.SetAutoPlan("on"); err == nil || !strings.Contains(err.Error(), "retired") {
-		t.Fatalf("SetAutoPlan(on) error = %v, want retired error", err)
-	}
-	got := config.LoadForEdit(config.UserConfigPath())
-	if got.Agent.AutoPlan != "off" || got.Agent.AutoPlanClassifier != "" {
-		t.Fatalf("retired auto-plan state = (%q, %q), want off/empty", got.Agent.AutoPlan, got.Agent.AutoPlanClassifier)
-	}
-}
-
 func TestSetReasoningLanguageRejectsBackgroundJobsBeforeSavingConfig(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
@@ -2115,29 +1456,6 @@ func TestSetDesktopCheckUpdatesPersistsToUserConfig(t *testing.T) {
 	}
 	if cfg.DesktopCheckUpdates() {
 		t.Fatal("DesktopCheckUpdates() = true, want false")
-	}
-}
-
-func TestSetDesktopUpdateChannelMigratesToStable(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	app := NewApp()
-	if got := app.Settings().UpdateChannel; got != "stable" {
-		t.Fatalf("Settings().UpdateChannel default = %q, want stable", got)
-	}
-	if err := app.SetDesktopUpdateChannel("canary"); err != nil {
-		t.Fatalf("SetDesktopUpdateChannel: %v", err)
-	}
-	view := app.Settings()
-	if view.UpdateChannel != "stable" {
-		t.Fatalf("Settings().UpdateChannel = %q, want stable", view.UpdateChannel)
-	}
-	cfg := config.LoadForEdit(config.UserConfigPath())
-	if cfg.Desktop.UpdateChannel != "" {
-		t.Fatalf("desktop.update_channel = %q, want omitted legacy field", cfg.Desktop.UpdateChannel)
-	}
-	if cfg.DesktopUpdateChannel() != "stable" {
-		t.Fatalf("DesktopUpdateChannel() = %q, want stable", cfg.DesktopUpdateChannel())
 	}
 }
 
@@ -2185,41 +1503,22 @@ func TestSetDefaultToolApprovalModePersistsToUserConfig(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if app.Settings().DefaultToolApprovalMode != control.ToolApprovalAuto {
+	if app.Settings().DefaultToolApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("Settings().DefaultToolApprovalMode = %q, want auto", app.Settings().DefaultToolApprovalMode)
 	}
-	if err := app.SetDefaultToolApprovalMode(control.ToolApprovalAuto); err != nil {
+	if err := app.SetDefaultToolApprovalMode(control.ToolApprovalWorkspaceWrite); err != nil {
 		t.Fatalf("SetDefaultToolApprovalMode: %v", err)
 	}
 	view := app.Settings()
-	if view.DefaultToolApprovalMode != control.ToolApprovalAuto {
+	if view.DefaultToolApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("Settings().DefaultToolApprovalMode = %q, want auto", view.DefaultToolApprovalMode)
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if cfg.Desktop.DefaultToolApprovalMode != control.ToolApprovalAuto {
+	if cfg.Desktop.DefaultToolApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("desktop.default_tool_approval_mode = %q, want auto", cfg.Desktop.DefaultToolApprovalMode)
 	}
-	if cfg.DesktopDefaultToolApprovalMode() != control.ToolApprovalAuto {
+	if cfg.DesktopDefaultToolApprovalMode() != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("DesktopDefaultToolApprovalMode() = %q, want auto", cfg.DesktopDefaultToolApprovalMode())
-	}
-}
-
-func TestRetiredAutoRecoveryCheckpointSettingsAreNoOps(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	cfgPath := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
-		t.Fatalf("mkdir config: %v", err)
-	}
-	if err := os.WriteFile(cfgPath, []byte("[agent]\nauto_recovery_checkpoint = \"off\"\n"), 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-	app := NewApp()
-	if err := app.SetDefaultAutoRecoveryCheckpoint(false); err != nil {
-		t.Fatalf("legacy setter: %v", err)
-	}
-	if app.RecoveryCheckpointEnabled() || app.RecoveryCheckpointEnabledTab("legacy") {
-		t.Fatal("retired config or legacy setter re-enabled Auto Guard")
 	}
 }
 
@@ -2322,30 +1621,6 @@ func TestSaveHooksSettingsDecodesLegacyEncodedGlobalSettings(t *testing.T) {
 	}
 }
 
-func TestSaveHooksSettingsNormalizesQuotedNodeEvalHookCommand(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	script := "const payload = JSON.parse(require('fs').readFileSync(0, 'utf8')); console.log(payload.toolName)"
-	bad := `node -e "\"` + script + `\""`
-	want := hook.NormalizeCommand(bad)
-	if want == bad {
-		t.Fatal("test command did not normalize")
-	}
-
-	app := NewApp()
-	if err := app.SaveHooksSettings("global", []HookConfigView{{
-		Event:   string(hook.PreToolUse),
-		Match:   "bash",
-		Command: bad,
-	}}); err != nil {
-		t.Fatalf("SaveHooksSettings: %v", err)
-	}
-
-	view := app.HooksSettings("global")
-	if len(view.Hooks) != 1 || view.Hooks[0].Command != want {
-		t.Fatalf("HooksSettings = %+v, want normalized command %q", view.Hooks, want)
-	}
-}
-
 func TestProjectHooksSettingsUseActiveWorkspaceRootAndLoadOnceSaved(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	project := t.TempDir()
@@ -2400,56 +1675,6 @@ func TestSaveHooksSettingsForRootUsesDisplayedProjectRoot(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(projectB, ".deepzora", "settings.json")); err == nil {
 		t.Fatal("active project root was written instead of displayed project root")
-	}
-}
-
-// TestLoadDesktopUserConfigForViewDoesNotPersistLegacyProviderAccess locks the
-// read-path contract: loading a legacy-form config (configured providers but
-// no declared desktop.provider_access) through the View helpers returns a
-// normalized in-memory view while leaving the file bytes untouched. The
-// on-disk migration only happens once a locked write path runs.
-func TestLoadDesktopUserConfigForViewDoesNotPersistLegacyProviderAccess(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	userPath := config.UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(userPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	legacy := "default_model = \"local/m1\"\n\n[[providers]]\nname = \"local\"\nbase_url = \"http://127.0.0.1:9999/v1\"\nmodels = [\"m1\"]\n"
-	if err := os.WriteFile(userPath, []byte(legacy), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	app := NewApp()
-	for name, load := range map[string]func() (*config.Config, string, error){
-		"view":                  app.loadDesktopUserConfigForView,
-		"view-with-credentials": app.loadDesktopUserConfigForViewWithCredentials,
-	} {
-		cfg, _, err := load()
-		if err != nil {
-			t.Fatalf("%s load: %v", name, err)
-		}
-		if len(cfg.Desktop.ProviderAccess) == 0 {
-			t.Fatalf("%s load should normalize legacy provider access in memory", name)
-		}
-		raw, err := os.ReadFile(userPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(raw) != legacy {
-			t.Fatalf("%s load must not rewrite the user config, got:\n%s", name, raw)
-		}
-	}
-
-	// The first locked write path persists the pending migration.
-	if err := app.applyConfigOnly(func(*config.Config) error { return nil }); err != nil {
-		t.Fatalf("applyConfigOnly: %v", err)
-	}
-	if !configDeclaresProviderAccess(userPath) {
-		t.Fatal("locked write path should persist the provider access migration to disk")
-	}
-	migrated := config.LoadForEditWithoutCredentials(userPath)
-	if len(migrated.Desktop.ProviderAccess) == 0 {
-		t.Fatalf("migrated config lost provider access: %v", migrated.Desktop.ProviderAccess)
 	}
 }
 

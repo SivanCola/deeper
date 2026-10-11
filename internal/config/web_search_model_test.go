@@ -1,11 +1,12 @@
 package config
 
 import (
-	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
 
 func searchAssignmentConfig() *Config {

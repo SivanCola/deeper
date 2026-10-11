@@ -33,8 +33,8 @@ func TestForgetToolDeletes(t *testing.T) {
 	if strings.Contains(out, store.Dir) {
 		t.Fatalf("forget output exposed the absolute store path: %q", out)
 	}
-	if len(store.List()) != 0 {
-		t.Fatalf("memory not deleted: %+v", store.List())
+	if len(store.ListAll()) != 0 {
+		t.Fatalf("memory not deleted: %+v", store.ListAll())
 	}
 }
 

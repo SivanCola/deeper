@@ -46,7 +46,7 @@ func (gw *BotGateway) buildBotController(ctx context.Context, opts boot.Options)
 }
 
 func (gw *BotGateway) botSessionService(sessionDir string) (*session.Service, error) {
-	root := session.RootForLegacyDir(sessionDir)
+	root := session.RootForSessionDir(sessionDir)
 	if root == "" {
 		return nil, nil
 	}
@@ -229,9 +229,6 @@ func bindBotSessionIdentity(ctx context.Context, identity control.IdentityLifecy
 			return session.SessionRef{}, err
 		}
 		return identity.BindFreshSession(ctx, ref.SessionID)
-	}
-	if profile.sessionPath != "" {
-		return identity.ContinueLegacySession(ctx, profile.sessionPath, "")
 	}
 	stableID := ""
 	if strings.TrimSpace(msg.ChatID) != "" {

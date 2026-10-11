@@ -12,7 +12,7 @@ func TestSavedCredentialAllowsAdmissionThroughPendingMetadata(t *testing.T) {
 	if err := os.MkdirAll(config.DeepzoraHomeDir(), 0700); err != nil {
 		t.Fatal(err)
 	}
-	body := "default_model='relay/chat'\n[[providers]]\nname='relay'\nkind='openai'\nbase_url='https://relay.invalid/v1'\nmodel='chat'\napi_key_env='MISSING_REVIEW_KEY'\n[desktop]\nprovider_access=['relay']\n"
+	body := "default_model='relay/chat'\n[[providers]]\nname='relay'\nkind='openai'\nbase_url='https://relay.invalid/v1'\nmodels = ['chat']\napi_key_env='MISSING_REVIEW_KEY'\n[desktop]\nprovider_access=['relay']\n"
 	if err := os.WriteFile(config.UserConfigPath(), []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}

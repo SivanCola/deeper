@@ -1,9 +1,7 @@
 import {
-  modeFromAxes,
-  modeHasAutoApproveTools,
+  modeForPlan,
   modeHasPlan,
   normalizeCollaborationMode,
-  normalizeMode,
   normalizeToolApprovalMode,
   type CollaborationMode,
   type GoalStatus,
@@ -11,11 +9,11 @@ import {
   type Meta,
   type Mode,
   type TabMeta,
-  type QualityFloor,
+
   type ToolApprovalMode,
 } from "./types";
 
-export type ComposerProfileField = "collaborationMode" | "toolApprovalMode" | "goal" | "qualityFloor";
+export type ComposerProfileField = "collaborationMode" | "toolApprovalMode" | "goal";
 
 export type ComposerProfilePending = Partial<Record<ComposerProfileField, true>>;
 
@@ -24,7 +22,6 @@ export interface ComposerProfile {
   goalDraftMode: boolean;
   toolApprovalMode: ToolApprovalMode;
   goal: string;
-  qualityFloor: QualityFloor;
   pending: ComposerProfilePending;
   /** Session the values were read for; "" while the surface has none. */
   owner?: string;
@@ -33,14 +30,13 @@ export interface ComposerProfile {
 export type ComposerProfilesByTab = Record<string, ComposerProfile>;
 export type UserPlanModeIntents = Record<string, true>;
 
-const profileFields: ComposerProfileField[] = ["collaborationMode", "toolApprovalMode", "goal", "qualityFloor"];
+const profileFields: ComposerProfileField[] = ["collaborationMode", "toolApprovalMode", "goal"];
 
 export const defaultComposerProfile: ComposerProfile = Object.freeze({
   collaborationMode: "normal",
   goalDraftMode: false,
   toolApprovalMode: "workspace-write",
   goal: "",
-  qualityFloor: "standard",
   pending: {},
 });
 
@@ -72,46 +68,28 @@ function profileWithPending(profile: Omit<ComposerProfile, "pending">, pending: 
   return { ...profile, pending };
 }
 
-function fallbackToolApprovalMode(rawMode: string | undefined, fallback?: ToolApprovalMode | null): ToolApprovalMode | undefined {
-  if ((rawMode ?? "").trim() !== "") return undefined;
-  return fallback ? normalizeToolApprovalMode(fallback) : undefined;
-}
 
-export function composerProfileFromTab(tab?: TabMeta | null, fallback?: ToolApprovalMode | null): ComposerProfile {
+export function composerProfileFromTab(tab?: TabMeta | null): ComposerProfile {
   if (!tab) return { ...defaultComposerProfile, pending: {} };
-  const legacyMode = normalizeMode(tab.mode);
   const goal = activeGoal(tab.goal, tab.goalStatus, tab.goalView);
   return profileWithPending({
-    collaborationMode: normalizeCollaborationMode(tab.collaborationMode, goal, legacyMode),
+    collaborationMode: normalizeCollaborationMode(tab.collaborationMode),
     goalDraftMode: false,
-    toolApprovalMode: normalizeToolApprovalMode(
-      tab.toolApprovalMode,
-      legacyMode,
-      false,
-      fallbackToolApprovalMode(tab.toolApprovalMode, fallback),
-    ),
+    toolApprovalMode: normalizeToolApprovalMode(tab.toolApprovalMode),
     goal,
-    qualityFloor: tab.qualityFloor ?? "standard",
     owner: composerProfileOwner(tab),
   });
 }
 
-export function composerProfileFromMeta(meta?: Meta | null, legacyMode?: Mode, fallback?: ToolApprovalMode | null): ComposerProfile {
+export function composerProfileFromMeta(meta?: Meta | null): ComposerProfile {
   if (!meta) return { ...defaultComposerProfile, pending: {} };
-  const fallbackMode = normalizeMode(legacyMode);
   const goal = activeGoal(meta.goal, meta.goalStatus, meta.goalView);
-  const toolApprovalMode = normalizeToolApprovalMode(
-    meta.toolApprovalMode,
-    fallbackMode,
-    meta.autoApproveTools ?? meta.bypass,
-    fallbackToolApprovalMode(meta.toolApprovalMode, fallback),
-  );
+  const toolApprovalMode = normalizeToolApprovalMode(meta.toolApprovalMode);
   return profileWithPending({
-    collaborationMode: normalizeCollaborationMode(meta.collaborationMode, goal, fallbackMode),
+    collaborationMode: normalizeCollaborationMode(meta.collaborationMode),
     goalDraftMode: false,
     toolApprovalMode,
     goal,
-    qualityFloor: meta.qualityFloor ?? "standard",
     owner: composerProfileOwner(meta),
   });
 }
@@ -131,9 +109,6 @@ function assignField(profile: ComposerProfile, field: ComposerProfileField, valu
     case "goal":
       profile.goal = value;
       return;
-    case "qualityFloor":
-      profile.qualityFloor = value as QualityFloor;
-      return;
   }
 }
 
@@ -143,7 +118,6 @@ function profilesEqual(a: ComposerProfile | undefined, b: ComposerProfile | unde
     && a.goalDraftMode === b.goalDraftMode
     && a.toolApprovalMode === b.toolApprovalMode
     && a.goal === b.goal
-    && a.qualityFloor === b.qualityFloor
     && (a.owner ?? "") === (b.owner ?? "")
     && profileFields.every((field) => Boolean(a.pending[field]) === Boolean(b.pending[field]));
 }
@@ -177,7 +151,7 @@ export function hydrateComposerProfilesFromTabs(current: ComposerProfilesByTab, 
 
   for (const tab of tabs) {
     const previous = composerProfileForOwner(current[tab.id], composerProfileOwner(tab));
-    const profile = reconcileComposerProfile(previous, composerProfileFromTab(tab, previous?.toolApprovalMode));
+    const profile = reconcileComposerProfile(previous, composerProfileFromTab(tab));
     next[tab.id] = profile;
     if (!profilesEqual(current[tab.id], profile)) changed = true;
   }
@@ -193,11 +167,7 @@ export function hydrateComposerProfileFromMeta(current: ComposerProfilesByTab, t
   const owner = composerProfileOwner(meta);
   if (composerProfileOwnersConflict(composerProfileOwner(tab), owner)) return current;
   const previous = composerProfileForOwner(current[tabId], owner);
-  const backend = composerProfileFromMeta(
-    meta,
-    previous ? composerProfileMode(previous) : undefined,
-    previous?.toolApprovalMode,
-  );
+  const backend = composerProfileFromMeta(meta);
   const profile = reconcileComposerProfile(previous, backend);
   if (profilesEqual(previous, profile)) return current;
   return { ...current, [tabId]: profile };
@@ -226,7 +196,7 @@ export function patchComposerProfile(
 }
 
 export function composerProfileMode(profile: ComposerProfile): Mode {
-  return modeFromAxes(profile.collaborationMode === "plan", normalizeToolApprovalMode(profile.toolApprovalMode) === "danger-full-access");
+  return modeForPlan(profile.collaborationMode === "plan");
 }
 
 export function displayedComposerProfileCollaborationMode(profile: ComposerProfile): CollaborationMode {
@@ -243,7 +213,6 @@ export function composerProfileWithMode(mode: Mode): Partial<Omit<ComposerProfil
   return {
     collaborationMode: modeHasPlan(mode) ? "plan" : "normal",
     goalDraftMode: false,
-    toolApprovalMode: modeHasAutoApproveTools(mode) ? "workspace-write" : "read-only",
     goal: "",
   };
 }

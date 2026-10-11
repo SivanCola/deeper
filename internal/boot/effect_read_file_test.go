@@ -116,7 +116,7 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "boot-read-then-mutate"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 

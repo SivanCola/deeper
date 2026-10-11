@@ -535,7 +535,7 @@ func TestStreamUsesConfiguredChatURL(t *testing.T) {
 		BaseURL: srv.URL + "/base",
 		Model:   "model-a",
 		APIKey:  "k",
-		Extra:   map[string]any{"chat_url": srv.URL + "/proxy/v1/chat/completions/"},
+		Extra:   map[string]any{"request_url": srv.URL + "/proxy/v1/chat/completions"},
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)

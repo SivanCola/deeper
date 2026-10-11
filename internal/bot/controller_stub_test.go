@@ -17,37 +17,36 @@ import (
 // not make that exception harmless on every Windows runner.
 type stubBotController struct{}
 
-func (stubBotController) NewSession() error                           { return nil }
-func (stubBotController) ClearSession() error                         { return nil }
-func (stubBotController) Resume(*agent.Session, string)               {}
-func (stubBotController) SetSessionPath(string)                       {}
-func (stubBotController) SessionPath() string                         { return "" }
-func (stubBotController) SessionDir() string                          { return "" }
-func (stubBotController) Label() string                               { return "" }
-func (stubBotController) ModelRef() string                            { return "" }
-func (stubBotController) WorkspaceRoot() string                       { return "" }
-func (stubBotController) Close()                                      {}
-func (stubBotController) Submit(string)                               {}
-func (stubBotController) SubmitDisplay(string, string)                {}
-func (stubBotController) SubmitFinalReadinessRecovery(string, string) {}
-func (stubBotController) SubmitDeliveryRecovery(string, string)       {}
+func (stubBotController) NewSession() error             { return nil }
+func (stubBotController) ClearSession() error           { return nil }
+func (stubBotController) Resume(*agent.Session, string) {}
+func (stubBotController) SetSessionPath(string)         {}
+func (stubBotController) SessionPath() string           { return "" }
+func (stubBotController) SessionDir() string            { return "" }
+func (stubBotController) Label() string                 { return "" }
+func (stubBotController) ModelRef() string              { return "" }
+func (stubBotController) WorkspaceRoot() string         { return "" }
+func (stubBotController) Close()                        {}
+func (stubBotController) Submit(string)                 {}
+func (stubBotController) SubmitDisplay(string, string)  {}
+
 func (stubBotController) SubmitInvocationDisplay(string, string, []control.InvocationRequest) {
 }
-func (stubBotController) SubmitEditedDisplay(string, string, string)              {}
-func (stubBotController) SubmitHTTP(string)                                       {}
-func (stubBotController) SubmitHTTPFormat(string, string)                         {}
-func (stubBotController) SubmitUserTurn(string, string)                           {}
-func (stubBotController) Send(string)                                             {}
-func (stubBotController) SendWithRaw(string, string)                              {}
-func (stubBotController) Run(context.Context, string) error                       { return nil }
-func (stubBotController) RunTurn(context.Context, string) error                   { return nil }
-func (stubBotController) RunFinalReadinessRecovery(context.Context, string) error { return nil }
-func (stubBotController) RunShell(string)                                         {}
-func (stubBotController) Cancel()                                                 {}
-func (stubBotController) Steer(string)                                            {}
-func (stubBotController) SteerConsumed() bool                                     { return false }
-func (stubBotController) Running() bool                                           { return false }
-func (stubBotController) CancelRequested() bool                                   { return false }
+func (stubBotController) SubmitEditedDisplay(string, string, string) {}
+func (stubBotController) SubmitHTTP(string)                          {}
+func (stubBotController) SubmitHTTPFormat(string, string)            {}
+func (stubBotController) SubmitUserTurn(string, string)              {}
+func (stubBotController) Send(string)                                {}
+func (stubBotController) SendWithRaw(string, string)                 {}
+func (stubBotController) Run(context.Context, string) error          { return nil }
+func (stubBotController) RunTurn(context.Context, string) error      { return nil }
+
+func (stubBotController) RunShell(string)       {}
+func (stubBotController) Cancel()               {}
+func (stubBotController) Steer(string)          {}
+func (stubBotController) SteerConsumed() bool   { return false }
+func (stubBotController) Running() bool         { return false }
+func (stubBotController) CancelRequested() bool { return false }
 
 // Pre-seeded fake sessions represent the currently executing test turn. Mark
 // them running so unrelated config defaults cannot retire the fake before the
@@ -66,10 +65,10 @@ func (stubBotController) ResolvePlanDecision(string, control.PlanDecisionAction)
 func (stubBotController) ResolvePlanDecisionWithFeedback(string, control.PlanDecisionAction, string) error {
 	return nil
 }
-func (stubBotController) ResolveRecovery(string, agent.RecoveryAction, string) error { return nil }
-func (stubBotController) AnswerMCPInteraction(string, string, map[string]any)        {}
-func (stubBotController) AnswerQuestion(string, []event.AskAnswer)                   {}
-func (stubBotController) AnswerQuestionChecked(string, []event.AskAnswer) error      { return nil }
+
+func (stubBotController) AnswerMCPInteraction(string, string, map[string]any)   {}
+func (stubBotController) AnswerQuestion(string, []event.AskAnswer)              {}
+func (stubBotController) AnswerQuestionChecked(string, []event.AskAnswer) error { return nil }
 func (stubBotController) AnswerMCPInteractionChecked(string, string, map[string]any) error {
 	return nil
 }
@@ -84,9 +83,5 @@ func (stubBotController) EnableInteractiveApproval()                 {}
 func (stubBotController) ToolApprovalMode() string                   { return "" }
 func (stubBotController) SetToolApprovalMode(string)                 {}
 func (stubBotController) AutoApproveTools() bool                     { return false }
-func (stubBotController) SetAutoApproveTools(bool)                   {}
-func (stubBotController) Bypass() bool                               { return false }
-func (stubBotController) SetBypass(bool)                             {}
-func (stubBotController) SetMode(bool, bool)                         {}
 
 var _ botController = stubBotController{}

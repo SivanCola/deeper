@@ -40,31 +40,6 @@ func TestSessionLocatorSeparatesCanonicalRoutesFromLegacyPaths(t *testing.T) {
 	}
 }
 
-func TestSavedTabRouteCandidateUsesOnlyExactRouteComponents(t *testing.T) {
-	tests := []struct {
-		name, raw, kind, id string
-	}{
-		{name: "exact", raw: "session-id:valid-id", kind: "canonical_route", id: "valid-id"},
-		{name: "windows drive", raw: `C:\old\session-id:valid-id`, kind: "pseudo_route_path", id: "valid-id"},
-		{name: "windows UNC", raw: `\\server\share\session-id:valid-id`, kind: "pseudo_route_path", id: "valid-id"},
-		{name: "posix", raw: "/old/session-id:valid-id", kind: "pseudo_route_path", id: "valid-id"},
-		{name: "relative", raw: "old/session-id:valid-id"},
-		{name: "intermediate component", raw: "/old/session-id:valid-id/history"},
-		{name: "transcript", raw: "/old/session-id:valid-id.jsonl"},
-		{name: "sidecar", raw: "/old/session-id:valid-id.jsonl.meta"},
-		{name: "invalid exact", raw: "session-id:bad/id", kind: "invalid_route"},
-		{name: "invalid pseudo", raw: "/old/session-id:bad?id", kind: "invalid_route"},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := savedTabRouteCandidateForPath(test.raw)
-			if got.kind != test.kind || got.sessionID != test.id {
-				t.Fatalf("candidate = kind:%q id:%q", got.kind, got.sessionID)
-			}
-		})
-	}
-}
-
 func TestTabSessionMetaRejectsRouteBeforeCreatingSidecars(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
@@ -174,7 +149,7 @@ func TestSessionLeaseRejectsRouteBeforeFileAccess(t *testing.T) {
 func TestCanonicalHiddenTabPruneSkipsLegacyMetadataWriter(t *testing.T) {
 	app := newSavedTabReconcileTestApp(t)
 	root := t.TempDir()
-	ref, workspaceID := createLegacyCleanupSession(t, app, root, "hidden-canonical", true)
+	ref, workspaceID := createCurrentRegistrySession(t, app, root, "hidden-canonical", true)
 	tab := &WorkspaceTab{
 		ID: "hidden", Scope: "project", WorkspaceRoot: root, SessionWorkspace: desktopTabWorkspace{ID: workspaceID},
 		SessionID: ref.SessionID, SessionPath: sessionRoute(ref.SessionID),

@@ -28,7 +28,6 @@ export function withRemoteTurnInterrupted(state: State): State {
     cancellable: false,
     pendingUser: undefined,
     pendingSubmissionId: undefined,
-    deliveryRecoveryActive: false,
     retry: undefined,
     approval: undefined,
     ask: undefined,

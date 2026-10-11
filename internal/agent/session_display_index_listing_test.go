@@ -56,7 +56,7 @@ func TestIndexedSessionListingRejectsEqualDisplayIndexMtime(t *testing.T) {
 }
 
 func TestIndexedSessionListingRejectsEqualEventIndexMtime(t *testing.T) {
-	path := schemaOneSessionPath(t, "session.jsonl")
+	path := currentDAGSessionPath(t, "session.jsonl")
 	session := NewSession("system")
 	session.Add(provider.Message{Role: provider.RoleUser, Content: "question"})
 	if err := session.SaveSnapshot(path); err != nil {

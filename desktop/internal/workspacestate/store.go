@@ -63,34 +63,24 @@ type State struct {
 	ArchivedSessionIDs []string                 `json:"archivedSessionIds"`
 	PendingCreates     map[string]PendingCreate `json:"pendingCreates"`
 	SessionStates      map[string]SessionState  `json:"sessionStates"`
-	SourceMappings     map[string]SourceMapping `json:"sourceMappings"`
 	PendingOperations  map[string]Operation     `json:"pendingOperations"`
-	RecoveryEntries    map[string]RecoveryEntry `json:"recoveryEntries"`
 	Presentation       map[string]Presentation  `json:"presentation"`
 	TopicRemovals      map[string]TopicRemoval  `json:"topicRemovals,omitempty"`
 	// Immutable derived index for display copies; never serialized.
-	adoptedTopics    map[string]map[string]bool
-	sourceIdentities *sourceIdentityIndex
-	extra            map[string]json.RawMessage
+	adoptedTopics map[string]map[string]bool
+	extra         map[string]json.RawMessage
 }
 
 type Store struct {
 	path           string
 	mu             sync.Mutex
-	beforeUpgrade  func(context.Context) error
 	readBody       []byte
 	readSnapshot   atomic.Pointer[ReadSnapshot]
 	verificationMu sync.Mutex
 	verification   *snapshotVerification
 }
 
-func NewStore(path string, beforeUpgrade ...func(context.Context) error) *Store {
-	store := &Store{path: filepath.Clean(path)}
-	if len(beforeUpgrade) > 0 {
-		store.beforeUpgrade = beforeUpgrade[0]
-	}
-	return store
-}
+func NewStore(path string) *Store { return &Store{path: filepath.Clean(path)} }
 
 func (s *Store) Path() string {
 	if s == nil {
@@ -133,10 +123,9 @@ func (r *ReadSnapshot) cloneState(projection bool) State {
 	if projection {
 		state = State{Version: state.Version, Generation: state.Generation, Initialized: state.Initialized,
 			WorkspaceIDs: state.WorkspaceIDs, Workspaces: state.Workspaces,
-			SessionStates: state.SessionStates, SourceMappings: state.SourceMappings, Presentation: state.Presentation,
+			SessionStates: state.SessionStates, Presentation: state.Presentation,
 			adoptedTopics: r.adoptedTopics}
 	}
-	state.sourceIdentities = r.state.sourceIdentities
 	return cloneSnapshot(state)
 }
 
@@ -394,33 +383,6 @@ func (s *Store) mutate(ctx context.Context, change func(*State) error) error {
 		return err
 	}
 	defer release()
-	upgrading := false
-	if body, err := os.ReadFile(s.path); err == nil {
-		var header struct {
-			Version int `json:"version"`
-		}
-		upgrading = json.Unmarshal(body, &header) == nil && header.Version < SchemaVersion
-	}
-	if s.beforeUpgrade != nil {
-		body, readErr := os.ReadFile(s.path)
-		if readErr != nil && !os.IsNotExist(readErr) {
-			return readErr
-		}
-		var header struct {
-			Version int `json:"version"`
-		}
-		if len(body) > 0 && json.Unmarshal(body, &header) == nil && header.Version == 1 {
-			if err := s.beforeUpgrade(ctx); err != nil {
-				return err
-			}
-		}
-	}
-	if err := backupV1(s.path); err != nil {
-		return err
-	}
-	if err := backupV2(s.path); err != nil {
-		return err
-	}
 	state, err := load(s.path)
 	if err != nil {
 		return err
@@ -436,7 +398,7 @@ func (s *Store) mutate(ctx context.Context, change func(*State) error) error {
 	if err != nil {
 		return err
 	}
-	if bytes.Equal(before, after) && !upgrading {
+	if bytes.Equal(before, after) {
 		return nil
 	}
 	state.Generation++
@@ -479,28 +441,19 @@ func decodeState(body []byte) (State, error) {
 	if err := json.Unmarshal(body, &state); err != nil {
 		return State{}, fmt.Errorf("decode workspace state: %w", err)
 	}
-	if state.Version != 1 && state.Version != 2 && state.Version != SchemaVersion {
+	if state.Version != SchemaVersion {
 		return State{}, fmt.Errorf("%w: %d", ErrUnsupportedVersion, state.Version)
 	}
-	if state.Version == 1 {
-		state.SessionStates = map[string]SessionState{}
-		for _, id := range state.ArchivedSessionIDs {
-			state.SessionStates[id] = SessionState{Lifecycle: Archived, Generation: state.Generation}
-		}
-		state.Version = SchemaVersion
-	} else {
-		if state.WorkspaceIDs == nil || state.Workspaces == nil || state.SessionStates == nil {
-			return State{}, fmt.Errorf("%w: missing required registry fields", ErrUnsupportedVersion)
-		}
-		for _, workspace := range state.Workspaces {
-			for _, id := range workspace.SessionIDs {
-				if _, ok := state.SessionStates[id]; !ok {
-					return State{}, fmt.Errorf("%w: missing session lifecycle", ErrUnsupportedVersion)
-				}
+	if state.WorkspaceIDs == nil || state.Workspaces == nil || state.SessionStates == nil {
+		return State{}, fmt.Errorf("%w: missing required registry fields", ErrUnsupportedVersion)
+	}
+	for _, workspace := range state.Workspaces {
+		for _, id := range workspace.SessionIDs {
+			if _, ok := state.SessionStates[id]; !ok {
+				return State{}, fmt.Errorf("%w: missing session lifecycle", ErrUnsupportedVersion)
 			}
 		}
 	}
-	state.Version = SchemaVersion
 	normalize(&state)
 	if err := validate(state); err != nil {
 		return State{}, err
@@ -521,15 +474,11 @@ func normalize(state *State) {
 	if state.SessionStates == nil {
 		state.SessionStates = map[string]SessionState{}
 	}
-	if state.SourceMappings == nil {
-		state.SourceMappings = map[string]SourceMapping{}
-	}
+
 	if state.PendingOperations == nil {
 		state.PendingOperations = map[string]Operation{}
 	}
-	if state.RecoveryEntries == nil {
-		state.RecoveryEntries = map[string]RecoveryEntry{}
-	}
+
 	if state.Presentation == nil {
 		state.Presentation = map[string]Presentation{}
 	}

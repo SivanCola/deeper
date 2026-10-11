@@ -212,12 +212,8 @@ again to rotate that connection to a private slot.
 
 The desktop custom-provider form treats its **API address** as the exact request
 URL and stores it in `request_url`; Deepzora does not append or rewrite its path.
-Existing TOML entries are not reinterpreted: legacy `chat_url` keeps its former
-OpenAI-only behavior, while Anthropic and Responses continue deriving their path
-from `base_url` until the provider is explicitly saved in the current desktop UI.
-Saving an OpenAI-compatible provider mirrors the exact address into legacy
-`chat_url`, so previous releases continue using the same target. Previous
-releases cannot honor arbitrary Anthropic or Responses request paths.
+Only `request_url` selects an exact request target. The historical `chat_url` field is unsupported.
+Without `request_url`, the protocol path is derived from `base_url`.
 If model discovery needs a separate address, set `models_url`; otherwise Deepzora
 probes candidates derived from `base_url`.
 

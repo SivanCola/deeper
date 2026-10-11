@@ -3,38 +3,28 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-
-	"deepzora/internal/boot"
-	"deepzora/internal/control"
 )
 
 type desktopTabEntry struct {
-	ID                string  `json:"id"`
-	Scope             string  `json:"scope"`
-	WorkspaceRoot     string  `json:"workspaceRoot"`
-	WorkspaceID       string  `json:"workspaceId,omitempty"`
-	TopicID           string  `json:"topicId"`
-	SessionPath       string  `json:"sessionPath,omitempty"`
-	SessionID         string  `json:"sessionId,omitempty"`
-	SessionHeadID     string  `json:"sessionHeadId,omitempty"`
-	CreateOperationID string  `json:"createOperationId,omitempty"`
-	ReadOnly          bool    `json:"readOnly,omitempty"`
-	TakeoverSpectator bool    `json:"takeoverSpectator,omitempty"`
-	Model             string  `json:"model,omitempty"`
-	Effort            *string `json:"effort,omitempty"`
-	TokenMode         string  `json:"tokenMode,omitempty"`
-	AgentPreset       string  `json:"agentPreset,omitempty"`
-	QualityFloor      string  `json:"qualityFloor,omitempty"`
-	Mode              string  `json:"mode,omitempty"`
-	Goal              string  `json:"goal,omitempty"`
-	ToolApprovalMode  string  `json:"toolApprovalMode,omitempty"`
-	// PinnedFiles is read-only upgrade input from the unmerged tab-scoped
-	// implementation. New writers persist pins beside the owning session.
-	PinnedFiles        []string `json:"pinnedFiles,omitempty"`
+	ID                 string  `json:"id"`
+	Scope              string  `json:"scope"`
+	WorkspaceRoot      string  `json:"workspaceRoot"`
+	WorkspaceID        string  `json:"workspaceId,omitempty"`
+	TopicID            string  `json:"topicId"`
+	SessionPath        string  `json:"sessionPath,omitempty"`
+	SessionID          string  `json:"sessionId,omitempty"`
+	SessionHeadID      string  `json:"sessionHeadId,omitempty"`
+	CreateOperationID  string  `json:"createOperationId,omitempty"`
+	ReadOnly           bool    `json:"readOnly,omitempty"`
+	TakeoverSpectator  bool    `json:"takeoverSpectator,omitempty"`
+	Model              string  `json:"model,omitempty"`
+	Effort             *string `json:"effort,omitempty"`
+	Mode               string  `json:"mode,omitempty"`
+	Goal               string  `json:"goal,omitempty"`
+	ToolApprovalMode   string  `json:"toolApprovalMode,omitempty"`
 	extra              map[string]json.RawMessage
 	restoreBlocked     bool
 	restoreBlockReason string
-	historicalSource   *SessionSourceRef
 }
 
 type desktopTabsFile struct {
@@ -65,13 +55,9 @@ func persistedDesktopTabEntry(tab *WorkspaceTab) desktopTabEntry {
 		TakeoverSpectator: tab.Takeover.Spectator,
 		Model:             tab.model,
 		Effort:            cloneStringPtr(tab.effort),
-		AgentPreset:       boot.AgentPresetStandard,
-		TokenMode:         boot.TokenModeFull,
-		QualityFloor:      control.QualityFloorStandard,
 		Mode:              persistedTabMode(currentTabMode(tab)),
 		Goal:              persistedTabGoal(tab),
 		ToolApprovalMode:  persistedToolApprovalMode(currentTabToolApprovalMode(tab)),
-		PinnedFiles:       tab.pendingLegacyPinnedFilesForPersistence(),
 		extra:             cloneDesktopJSONFields(tab.persistenceExtra),
 	}
 }

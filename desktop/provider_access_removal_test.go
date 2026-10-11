@@ -14,64 +14,6 @@ import (
 	"deepzora/internal/provider"
 )
 
-func TestRemoveProviderAccessesRemovesGroupedOfficialAliasesAtomically(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "DEEPSEEK_API_KEY", "sk-test")
-	setDesktopTestCredential(t, "MIMO_API_KEY", "sk-test")
-
-	cfg := config.Default()
-	cfg.DefaultModel = "deepseek-flash/deepseek-v4-flash"
-	cfg.Agent.PlannerModel = "deepseek-pro/deepseek-v4-pro"
-	cfg.Agent.SubagentModel = "deepseek-flash/deepseek-v4-flash"
-	cfg.Agent.SubagentModels = map[string]string{"review": "deepseek-pro/deepseek-v4-pro"}
-	cfg.Desktop.ProviderAccess = []string{"deepseek-flash", "deepseek-pro", "mimo-pro"}
-	cfg.Providers = []config.ProviderEntry{
-		{
-			Name: "deepseek-flash", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
-			Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash", APIKeyEnv: "DEEPSEEK_API_KEY",
-			Headers: map[string]string{"X-Route": "flash"},
-		},
-		{
-			Name: "deepseek-pro", Kind: "openai", BaseURL: "https://api.deepseek.com",
-			Models: []string{"deepseek-v4-pro"}, Default: "deepseek-v4-pro", APIKeyEnv: "DEEPSEEK_API_KEY",
-			Headers: map[string]string{"X-Route": "pro"},
-		},
-		{Name: "mimo-pro", Kind: "openai", BaseURL: "https://token-plan-cn.xiaomimimo.com/v1", Model: "mimo-v2.5-pro", APIKeyEnv: "MIMO_API_KEY"},
-	}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	app := NewApp()
-	flashTab := &WorkspaceTab{ID: "flash", Scope: "global", model: "deepseek-flash/deepseek-v4-flash"}
-	proTab := &WorkspaceTab{ID: "pro", Scope: "global", model: "deepseek-pro/deepseek-v4-pro"}
-	app.tabs = map[string]*WorkspaceTab{flashTab.ID: flashTab, proTab.ID: proTab}
-	app.tabOrder = []string{flashTab.ID, proTab.ID}
-	app.activeTabID = flashTab.ID
-
-	if err := app.RemoveProviderAccesses([]string{"deepseek-flash", "deepseek-pro", "deepseek-flash"}); err != nil {
-		t.Fatalf("RemoveProviderAccesses: %v", err)
-	}
-
-	got := config.LoadForEdit(config.UserConfigPath())
-	access := providerAccessSet(got.Desktop.ProviderAccess)
-	if access["deepseek"] || access["deepseek-flash"] || access["deepseek-pro"] || !access["mimo-pro"] {
-		t.Fatalf("provider_access = %+v, want only mimo-pro", got.Desktop.ProviderAccess)
-	}
-	fallback := "mimo-pro/mimo-v2.5-pro"
-	if got.DefaultModel != fallback || got.Agent.PlannerModel != fallback || got.Agent.SubagentModel != fallback || got.Agent.SubagentModels["review"] != fallback {
-		t.Fatalf("grouped provider refs were not retargeted: default=%q planner=%q subagent=%q skills=%+v", got.DefaultModel, got.Agent.PlannerModel, got.Agent.SubagentModel, got.Agent.SubagentModels)
-	}
-	if flashTab.model != "deepseek-flash/deepseek-v4-flash" || proTab.model != "deepseek-pro/deepseek-v4-pro" {
-		t.Fatalf("saving grouped removal changed current tab models: %q, %q", flashTab.model, proTab.model)
-	}
-	flash, flashOK := got.Provider("deepseek-flash")
-	pro, proOK := got.Provider("deepseek-pro")
-	if !flashOK || !proOK || flash.Headers["X-Route"] != "flash" || pro.Headers["X-Route"] != "pro" {
-		t.Fatalf("built-in profiles or custom fields changed: flash=%+v/%v pro=%+v/%v", flash, flashOK, pro, proOK)
-	}
-}
-
 func TestDeleteProviderSavesWithoutBuildingInvalidFallback(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "DEEPZORA_TEST_KEY", "sk-test")
@@ -80,8 +22,8 @@ func TestDeleteProviderSavesWithoutBuildingInvalidFallback(t *testing.T) {
 	cfg.DefaultModel = "prov-a/model-a"
 	cfg.Desktop.ProviderAccess = []string{"prov-a", "broken"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "broken", Kind: "missing-provider-kind", BaseURL: "https://broken.example.invalid", Model: "model-b", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"model-a"}, Default: "model-a", Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"model-b"}, Default: "model-b", Name: "broken", Kind: "missing-provider-kind", BaseURL: "https://broken.example.invalid", Model: "model-b", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -120,14 +62,14 @@ func TestRemoveOfficialProviderAccessPreservesLiveTabUntilNextRun(t *testing.T) 
 	setDesktopTestCredential(t, "GOOD_KEY", "sk-test")
 
 	cfg := config.Default()
-	cfg.DefaultModel = "deepseek/deepseek-v4-flash"
-	cfg.Desktop.ProviderAccess = []string{"deepseek", "good"}
+	cfg.DefaultModel = "deepseek-flash/deepseek-flash"
+	cfg.Desktop.ProviderAccess = []string{"deepseek-flash", "good"}
 	cfg.Providers = []config.ProviderEntry{
-		{
-			Name: "deepseek", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
-			Model: "deepseek-v4-flash", APIKeyEnv: "DEEPSEEK_API_KEY",
+		{Models: []string{"deepseek-flash"}, Default: "deepseek-flash",
+			Name: "deepseek-flash", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
+			Model: "deepseek-flash", APIKeyEnv: "DEEPSEEK_API_KEY",
 		},
-		{Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
+		{Models: []string{"good-model"}, Default: "good-model", Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -153,14 +95,14 @@ func TestRemoveOfficialProviderAccessPreservesLiveTabUntilNextRun(t *testing.T) 
 		tab.releaseSessionLease()
 	})
 
-	if err := app.RemoveProviderAccess("deepseek"); err != nil {
+	if err := app.RemoveProviderAccess("deepseek-flash"); err != nil {
 		t.Fatalf("RemoveProviderAccess: %v", err)
 	}
 	if tab.model != cfg.DefaultModel || tab.Ctrl != old || old.closeCount.Load() != 0 {
 		t.Fatalf("saving removal changed the live tab: model=%q ctrl=%T old closes=%d", tab.model, tab.Ctrl, old.closeCount.Load())
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
-	if providerAccessSet(got.Desktop.ProviderAccess)["deepseek"] {
+	if providerAccessSet(got.Desktop.ProviderAccess)["deepseek-flash"] {
 		t.Fatalf("provider_access still contains DeepSeek: %v", got.Desktop.ProviderAccess)
 	}
 }
@@ -175,8 +117,8 @@ func TestDeleteProviderPreservesEveryVisibleRuntimeUsingAuxiliaryProvider(t *tes
 	cfg.Agent.SubagentModel = "removed/vision-model"
 	cfg.Desktop.ProviderAccess = []string{"removed", "good"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "removed", Kind: "openai", BaseURL: "https://removed.example.invalid/v1", Model: "vision-model", APIKeyEnv: "REMOVED_KEY", Vision: true},
-		{Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
+		{Models: []string{"vision-model"}, Default: "vision-model", Name: "removed", Kind: "openai", BaseURL: "https://removed.example.invalid/v1", Model: "vision-model", APIKeyEnv: "REMOVED_KEY", Vision: true},
+		{Models: []string{"good-model"}, Default: "good-model", Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -222,7 +164,7 @@ func TestDeleteProviderPreservesEveryVisibleRuntimeUsingAuxiliaryProvider(t *tes
 	if _, ok := got.Provider("removed"); ok {
 		t.Fatal("removed auxiliary provider still exists")
 	}
-	if got.Agent.SubagentModel != "good" {
+	if got.Agent.SubagentModel != "good/good-model" {
 		t.Fatalf("subagent_model = %q, want persisted visible fallback", got.Agent.SubagentModel)
 	}
 }
@@ -236,8 +178,8 @@ func TestDeleteProviderPreservesNonActiveWorkspaceAndProjectAuxiliaryReference(t
 	cfg.DefaultModel = "good/good-model"
 	cfg.Desktop.ProviderAccess = []string{"removed", "good"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "removed", Kind: "openai", BaseURL: "https://removed.example.invalid/v1", Model: "vision-model", APIKeyEnv: "REMOVED_KEY", Vision: true},
-		{Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
+		{Models: []string{"vision-model"}, Default: "vision-model", Name: "removed", Kind: "openai", BaseURL: "https://removed.example.invalid/v1", Model: "vision-model", APIKeyEnv: "REMOVED_KEY", Vision: true},
+		{Models: []string{"good-model"}, Default: "good-model", Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -300,8 +242,8 @@ func TestDeleteProviderPreservesDetachedRuntimeUsingAuxiliaryProvider(t *testing
 	cfg.Agent.SubagentModel = "removed/vision-model"
 	cfg.Desktop.ProviderAccess = []string{"removed", "good"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "removed", Kind: "openai", BaseURL: "https://removed.example.invalid/v1", Model: "vision-model", APIKeyEnv: "REMOVED_KEY", Vision: true},
-		{Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
+		{Models: []string{"vision-model"}, Default: "vision-model", Name: "removed", Kind: "openai", BaseURL: "https://removed.example.invalid/v1", Model: "vision-model", APIKeyEnv: "REMOVED_KEY", Vision: true},
+		{Models: []string{"good-model"}, Default: "good-model", Name: "good", Kind: "openai", BaseURL: "https://good.example.invalid/v1", Model: "good-model", APIKeyEnv: "GOOD_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -319,7 +261,7 @@ func TestDeleteProviderPreservesDetachedRuntimeUsingAuxiliaryProvider(t *testing
 		t.Fatalf("DeleteProvider interrupted detached runtime: %v", err)
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
-	if _, ok := got.Provider("removed"); ok || got.Agent.SubagentModel != "good" {
+	if _, ok := got.Provider("removed"); ok || got.Agent.SubagentModel != "good/good-model" {
 		t.Fatalf("removal was not committed: provider=%v subagent_model=%q", ok, got.Agent.SubagentModel)
 	}
 }
@@ -332,8 +274,8 @@ func TestDeleteProviderPreservesLiveHistoryAndSharedHost(t *testing.T) {
 	cfg.DefaultModel = "prov-a/model-a"
 	cfg.Desktop.ProviderAccess = []string{"prov-a", "prov-b"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "DEEPZORA_TEST_KEY"},
-		{Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.invalid/v1", Model: "model-b", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"model-a"}, Default: "model-a", Name: "prov-a", Kind: "openai", BaseURL: "https://a.example.invalid/v1", Model: "model-a", APIKeyEnv: "DEEPZORA_TEST_KEY"},
+		{Models: []string{"model-b"}, Default: "model-b", Name: "prov-b", Kind: "openai", BaseURL: "https://b.example.invalid/v1", Model: "model-b", APIKeyEnv: "DEEPZORA_TEST_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -407,29 +349,29 @@ func TestRemoveProviderAccessSavesWhilePreservingDetachedRuntime(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.DefaultModel = "mimo-pro/mimo-v2.5-pro"
-	cfg.Desktop.ProviderAccess = []string{"deepseek", "mimo-pro"}
+	cfg.Desktop.ProviderAccess = []string{"deepseek-flash", "mimo-pro"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 
 	app := NewApp()
-	detachedCtrl := control.New(control.Options{Label: "deepseek"})
+	detachedCtrl := control.New(control.Options{Label: "deepseek-flash"})
 	detached := &WorkspaceTab{
 		ID: detachedRuntimeTabID("detached-provider-removal"), Scope: "global", Ready: true,
-		Ctrl: detachedCtrl, model: "deepseek/deepseek-v4-flash", Label: "deepseek",
+		Ctrl: detachedCtrl, model: "deepseek-flash/deepseek-flash", Label: "deepseek-flash",
 	}
 	app.detachedSessions = map[string]*WorkspaceTab{"detached-provider-removal": detached}
 	t.Cleanup(detachedCtrl.Close)
 
-	err := app.RemoveProviderAccess("deepseek")
+	err := app.RemoveProviderAccess("deepseek-flash")
 	if err != nil {
 		t.Fatalf("RemoveProviderAccess rejected detached runtime: %v", err)
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
-	if providerAccessSet(got.Desktop.ProviderAccess)["deepseek"] {
+	if providerAccessSet(got.Desktop.ProviderAccess)["deepseek-flash"] {
 		t.Fatalf("provider access removal was not committed: %+v", got.Desktop.ProviderAccess)
 	}
-	if detached.Ctrl != detachedCtrl || detached.model != "deepseek/deepseek-v4-flash" {
+	if detached.Ctrl != detachedCtrl || detached.model != "deepseek-flash/deepseek-flash" {
 		t.Fatalf("detached runtime changed after rejection: ctrl=%T model=%q", detached.Ctrl, detached.model)
 	}
 }
@@ -437,43 +379,43 @@ func TestRemoveProviderAccessSavesWhilePreservingDetachedRuntime(t *testing.T) {
 func TestRemoveProviderAccessesRejectsMixedGroupBeforeMutation(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	cfg := config.Default()
-	cfg.Desktop.ProviderAccess = []string{"deepseek", "custom"}
+	cfg.Desktop.ProviderAccess = []string{"deepseek-flash", "custom"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "deepseek", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic", Model: "deepseek-v4-flash"},
-		{Name: "custom", Kind: "openai", BaseURL: "https://proxy.example/v1", Model: "custom-model"},
+		{Models: []string{"deepseek-flash"}, Default: "deepseek-flash", Name: "deepseek-flash", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic", Model: "deepseek-flash"},
+		{Models: []string{"custom-model"}, Default: "custom-model", Name: "custom", Kind: "openai", BaseURL: "https://proxy.example/v1", Model: "custom-model"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 
-	if err := NewApp().RemoveProviderAccesses([]string{"deepseek", "custom"}); err == nil {
+	if err := NewApp().RemoveProviderAccesses([]string{"deepseek-flash", "custom"}); err == nil {
 		t.Fatal("RemoveProviderAccesses accepted mixed official and custom providers")
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
 	access := providerAccessSet(got.Desktop.ProviderAccess)
-	if !access["deepseek"] || !access["custom"] {
+	if !access["deepseek-flash"] || !access["custom"] {
 		t.Fatalf("provider access was partially mutated after rejection: %+v", got.Desktop.ProviderAccess)
 	}
 }
 
 func TestProviderAccessFallbackSkipsUnconfiguredProviders(t *testing.T) {
 	cfg := &config.Config{
-		Desktop: config.DesktopConfig{ProviderAccess: []string{"deepseek", "unconfigured", "local"}},
+		Desktop: config.DesktopConfig{ProviderAccess: []string{"deepseek-flash", "unconfigured", "local"}},
 		Providers: []config.ProviderEntry{
-			{Name: "deepseek", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic", Model: "deepseek-v4-flash"},
-			{Name: "unconfigured", Kind: "openai", BaseURL: "https://api.example.invalid/v1", Model: "remote", APIKeyEnv: "MISSING_API_KEY"},
-			{Name: "local", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "local-model"},
+			{Models: []string{"deepseek-flash"}, Default: "deepseek-flash", Name: "deepseek-flash", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic", Model: "deepseek-flash"},
+			{Models: []string{"remote"}, Default: "remote", Name: "unconfigured", Kind: "openai", BaseURL: "https://api.example.invalid/v1", Model: "remote", APIKeyEnv: "MISSING_API_KEY"},
+			{Models: []string{"local-model"}, Default: "local-model", Name: "local", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "local-model"},
 		},
 	}
 
-	if got := providerAccessFallbackRef(cfg, []string{"deepseek"}); got != "local/local-model" {
+	if got := providerAccessFallbackRef(cfg, []string{"deepseek-flash"}); got != "local/local-model" {
 		t.Fatalf("fallback = %q, want configured local provider", got)
 	}
 }
 
 func TestProviderRemovalStateFingerprintCoversConfigAndCredentialRevision(t *testing.T) {
 	cfg := config.Default()
-	cfg.Providers = []config.ProviderEntry{{
+	cfg.Providers = []config.ProviderEntry{{Models: []string{"model-a"}, Default: "model-a",
 		Name: "candidate", Kind: "openai", BaseURL: "https://example.invalid/v1",
 		Model: "model-a", APIKeyEnv: "CANDIDATE_API_KEY",
 	}}
@@ -498,9 +440,9 @@ func TestProviderAccessFallbackSkipsConfiguredProvidersOutsideAccessList(t *test
 	cfg := &config.Config{
 		Desktop: config.DesktopConfig{ProviderAccess: []string{"removed", "visible"}},
 		Providers: []config.ProviderEntry{
-			{Name: "removed", Kind: "openai", BaseURL: "https://removed.example/v1", Model: "removed-model"},
-			{Name: "hidden", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "hidden-model"},
-			{Name: "visible", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "visible-model"},
+			{Models: []string{"removed-model"}, Default: "removed-model", Name: "removed", Kind: "openai", BaseURL: "https://removed.example/v1", Model: "removed-model"},
+			{Models: []string{"hidden-model"}, Default: "hidden-model", Name: "hidden", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "hidden-model"},
+			{Models: []string{"visible-model"}, Default: "visible-model", Name: "visible", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "visible-model"},
 		},
 	}
 
@@ -518,9 +460,9 @@ func TestDeleteProviderPersistsVisibleFallbackInsteadOfHiddenConfiguredProvider(
 	cfg.Agent.SubagentModels = map[string]string{"review": "removed/removed-model"}
 	cfg.Desktop.ProviderAccess = []string{"removed", "visible"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "removed", Kind: "openai", BaseURL: "https://removed.example/v1", Model: "removed-model"},
-		{Name: "hidden", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "hidden-model"},
-		{Name: "visible", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "visible-model"},
+		{Models: []string{"removed-model"}, Default: "removed-model", Name: "removed", Kind: "openai", BaseURL: "https://removed.example/v1", Model: "removed-model"},
+		{Models: []string{"hidden-model"}, Default: "hidden-model", Name: "hidden", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "hidden-model"},
+		{Models: []string{"visible-model"}, Default: "visible-model", Name: "visible", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "visible-model"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -531,7 +473,7 @@ func TestDeleteProviderPersistsVisibleFallbackInsteadOfHiddenConfiguredProvider(
 	}
 
 	got := config.LoadForEdit(config.UserConfigPath())
-	want := "visible"
+	want := "visible/visible-model"
 	if got.DefaultModel != want || got.Agent.PlannerModel != want || got.Agent.SubagentModel != want || got.Agent.SubagentModels["review"] != want {
 		t.Fatalf("persisted refs used a hidden fallback: default=%q planner=%q subagent=%q skills=%+v", got.DefaultModel, got.Agent.PlannerModel, got.Agent.SubagentModel, got.Agent.SubagentModels)
 	}
@@ -546,8 +488,8 @@ func TestDeleteProviderSavesAndBlocksNewRunWhenOnlyHiddenProviderRemains(t *test
 	cfg.DefaultModel = "removed/removed-model"
 	cfg.Desktop.ProviderAccess = []string{"removed"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "removed", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "removed-model"},
-		{Name: "hidden", Kind: "openai", BaseURL: "http://127.0.0.1:11435/v1", Model: "hidden-model"},
+		{Models: []string{"removed-model"}, Default: "removed-model", Name: "removed", Kind: "openai", BaseURL: "http://127.0.0.1:11434/v1", Model: "removed-model"},
+		{Models: []string{"hidden-model"}, Default: "hidden-model", Name: "hidden", Kind: "openai", BaseURL: "http://127.0.0.1:11435/v1", Model: "hidden-model"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -581,25 +523,25 @@ func TestRemoveProviderAccessesSavesAndBlocksNewRunWithoutConfiguredFallback(t *
 	setDesktopTestCredential(t, "DEEPSEEK_API_KEY", "sk-test")
 
 	cfg := config.Default()
-	cfg.DefaultModel = "deepseek/deepseek-v4-flash"
-	cfg.Desktop.ProviderAccess = []string{"deepseek", "mimo-pro"}
+	cfg.DefaultModel = "deepseek-flash/deepseek-flash"
+	cfg.Desktop.ProviderAccess = []string{"deepseek-flash", "mimo-pro"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 
 	app := NewApp()
-	tab := &WorkspaceTab{ID: "deepseek", Scope: "global", model: cfg.DefaultModel}
+	tab := &WorkspaceTab{ID: "deepseek-flash", Scope: "global", model: cfg.DefaultModel}
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
-	err := app.RemoveProviderAccess("deepseek")
+	err := app.RemoveProviderAccess("deepseek-flash")
 	if err != nil {
 		t.Fatalf("RemoveProviderAccess should save without a fallback: %v", err)
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
 	access := providerAccessSet(got.Desktop.ProviderAccess)
-	if access["deepseek"] || !access["mimo-pro"] {
+	if access["deepseek-flash"] || !access["mimo-pro"] {
 		t.Fatalf("provider access was not committed: %+v", got.Desktop.ProviderAccess)
 	}
 	if got.DefaultModel != "" || tab.model != cfg.DefaultModel {
@@ -616,15 +558,15 @@ func TestRemoveProviderAccessesRejectsOfficialProviderChangedBeforeCommit(t *tes
 	setDesktopTestCredential(t, "MIMO_API_KEY", "sk-test")
 
 	cfg := config.Default()
-	cfg.DefaultModel = "deepseek/deepseek-v4-flash"
-	cfg.Desktop.ProviderAccess = []string{"deepseek", "mimo-pro"}
+	cfg.DefaultModel = "deepseek-flash/deepseek-flash"
+	cfg.Desktop.ProviderAccess = []string{"deepseek-flash", "mimo-pro"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 
 	app := NewApp()
-	ctrl := newBlockingSnapshotCtrl(control.New(control.Options{Label: "deepseek"}))
-	tab := &WorkspaceTab{ID: "deepseek", Scope: "global", model: cfg.DefaultModel, Ctrl: ctrl}
+	ctrl := newBlockingSnapshotCtrl(control.New(control.Options{Label: "deepseek-flash"}))
+	tab := &WorkspaceTab{ID: "deepseek-flash", Scope: "global", model: cfg.DefaultModel, Ctrl: ctrl}
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -633,7 +575,7 @@ func TestRemoveProviderAccessesRejectsOfficialProviderChangedBeforeCommit(t *tes
 
 	unlock := config.LockUserConfigEdits()
 	changed := config.LoadForEdit(config.UserConfigPath())
-	provider, ok := changed.Provider("deepseek")
+	provider, ok := changed.Provider("deepseek-flash")
 	if !ok {
 		unlock()
 		t.Fatal("deepseek provider missing")
@@ -644,13 +586,13 @@ func TestRemoveProviderAccessesRejectsOfficialProviderChangedBeforeCommit(t *tes
 		t.Fatalf("save overlapping config edit: %v", err)
 	}
 	unlock()
-	result := app.ApplyModelSettings(ModelSettingsChange{Kind: "access_remove", Names: []string{"deepseek"}, RequestID: "remove", ExpectedFingerprint: fingerprint})
+	result := app.ApplyModelSettings(ModelSettingsChange{Kind: "access_remove", Names: []string{"deepseek-flash"}, RequestID: "remove", ExpectedFingerprint: fingerprint})
 	if result.Persisted || len(result.Issues) == 0 {
 		t.Fatal("RemoveProviderAccess accepted an official provider changed before commit")
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
 	access := providerAccessSet(got.Desktop.ProviderAccess)
-	if !access["deepseek"] || !access["mimo-pro"] {
+	if !access["deepseek-flash"] || !access["mimo-pro"] {
 		t.Fatalf("provider access changed after rejected overlap: %+v", got.Desktop.ProviderAccess)
 	}
 	if ctrl.closeCount.Load() != 0 || tab.Ctrl != ctrl || tab.model != cfg.DefaultModel {
@@ -664,28 +606,28 @@ func TestRemoveProviderAccessesRejectsCredentialChangeBeforeCommit(t *testing.T)
 	setDesktopTestCredential(t, "MIMO_API_KEY", "old-key")
 
 	cfg := config.Default()
-	cfg.DefaultModel = "deepseek/deepseek-v4-flash"
-	cfg.Desktop.ProviderAccess = []string{"deepseek", "mimo-pro"}
+	cfg.DefaultModel = "deepseek-flash/deepseek-flash"
+	cfg.Desktop.ProviderAccess = []string{"deepseek-flash", "mimo-pro"}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
 
 	app := NewApp()
-	ctrl := newBlockingSnapshotCtrl(control.New(control.Options{Label: "deepseek"}))
-	tab := &WorkspaceTab{ID: "deepseek", Scope: "global", model: cfg.DefaultModel, Ctrl: ctrl}
+	ctrl := newBlockingSnapshotCtrl(control.New(control.Options{Label: "deepseek-flash"}))
+	tab := &WorkspaceTab{ID: "deepseek-flash", Scope: "global", model: cfg.DefaultModel, Ctrl: ctrl}
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
 	fingerprint := app.Settings().ModelSettingsFingerprint
 	setDesktopTestCredential(t, "MIMO_API_KEY", "new-key")
-	result := app.ApplyModelSettings(ModelSettingsChange{Kind: "access_remove", Names: []string{"deepseek"}, RequestID: "remove", ExpectedFingerprint: fingerprint})
+	result := app.ApplyModelSettings(ModelSettingsChange{Kind: "access_remove", Names: []string{"deepseek-flash"}, RequestID: "remove", ExpectedFingerprint: fingerprint})
 	if result.Persisted || len(result.Issues) == 0 {
 		t.Fatal("RemoveProviderAccess accepted credentials changed before commit")
 	}
 	got := config.LoadForEdit(config.UserConfigPath())
 	access := providerAccessSet(got.Desktop.ProviderAccess)
-	if !access["deepseek"] || !access["mimo-pro"] {
+	if !access["deepseek-flash"] || !access["mimo-pro"] {
 		t.Fatalf("provider access changed after rejected credential overlap: %+v", got.Desktop.ProviderAccess)
 	}
 	if ctrl.closeCount.Load() != 0 || tab.Ctrl != ctrl || tab.model != cfg.DefaultModel {

@@ -1,21 +1,15 @@
-import { modeHasAutoApproveTools, normalizeMode, normalizeToolApprovalMode, type Meta, type TabMeta } from "./types";
+import { normalizeToolApprovalMode, type Meta, type TabMeta } from "./types";
 import { sameSessionIdentity } from "./sessionIdentity";
 
 export function metaFromTab(tab: TabMeta, existing?: Meta): Meta {
   const cwd = tab.cwd || tab.workspaceRoot || existing?.cwd || "";
-  const toolApprovalMode = normalizeToolApprovalMode(
-    tab.toolApprovalMode,
-    normalizeMode(tab.mode),
-    modeHasAutoApproveTools(tab.mode),
-    (tab.toolApprovalMode ?? "").trim() === "" ? existing?.toolApprovalMode : undefined,
-  );
+  const toolApprovalMode = normalizeToolApprovalMode(tab.toolApprovalMode);
   const autoApproveTools = toolApprovalMode === "danger-full-access";
   return {
     label: tab.label || existing?.label || "",
     ready: tab.ready,
     runtime: tab.runtime,
     startupErr: tab.startupErr,
-    historicalSource: tab.historicalSource,
     eventChannel: existing?.eventChannel ?? "agent:event",
     cwd,
     workspaceRoot: tab.workspaceRoot || existing?.workspaceRoot || cwd,
@@ -30,13 +24,8 @@ export function metaFromTab(tab: TabMeta, existing?: Meta): Meta {
     imageInputEnabled: existing?.imageInputEnabled,
     visionFallbackEnabled: existing?.visionFallbackEnabled,
     autoApproveTools,
-    bypass: autoApproveTools,
     collaborationMode: tab.collaborationMode ?? existing?.collaborationMode ?? "normal",
     toolApprovalMode,
-    tokenMode: tab.tokenMode ?? existing?.tokenMode ?? "full",
-    agentPreset: tab.agentPreset ?? existing?.agentPreset,
-    qualityFloor: tab.qualityFloor ?? existing?.qualityFloor,
-    floorInferred: tab.floorInferred ?? existing?.floorInferred,
     goal: tab.goal ?? existing?.goal,
     goalStatus: tab.goalStatus ?? existing?.goalStatus,
     goalView: tab.goalView ?? existing?.goalView,

@@ -19,10 +19,10 @@ const (
 func newDefaultModelTestConfig() *config.Config {
 	return &config.Config{
 		Providers: []config.ProviderEntry{
-			{Name: "deepseek-flash", Kind: "openai", BaseURL: "https://api.deepseek.com", Model: "deepseek-v4-flash", APIKeyEnv: defaultModelTestKeylessEnv},
-			{Name: "audio", Kind: "openai", BaseURL: "https://audio.example.com", Model: "tts-1", APIKeyEnv: defaultModelTestConfiguredEnv},
-			{Name: "embedding", Kind: "openai", BaseURL: "https://embedding.example.com", Model: "text-embedding-3-small", APIKeyEnv: defaultModelTestConfiguredEnv},
-			{Name: "minimax", Kind: "openai", BaseURL: "https://api.MiniMax.chat/v1", Model: "MiniMax-M3", APIKeyEnv: defaultModelTestConfiguredEnv},
+			{Name: "deepseek-flash", Kind: "openai", BaseURL: "https://api.deepseek.com", Models: []string{"deepseek-flash"}, Default: "deepseek-flash", APIKeyEnv: defaultModelTestKeylessEnv},
+			{Name: "audio", Kind: "openai", BaseURL: "https://audio.example.com", Models: []string{"tts-1"}, Default: "tts-1", APIKeyEnv: defaultModelTestConfiguredEnv},
+			{Name: "embedding", Kind: "openai", BaseURL: "https://embedding.example.com", Models: []string{"text-embedding-3-small"}, Default: "text-embedding-3-small", APIKeyEnv: defaultModelTestConfiguredEnv},
+			{Name: "minimax", Kind: "openai", BaseURL: "https://api.MiniMax.chat/v1", Models: []string{"MiniMax-M3"}, Default: "MiniMax-M3", APIKeyEnv: defaultModelTestConfiguredEnv},
 		},
 	}
 }
@@ -45,7 +45,7 @@ func TestResolveModelForCLI(t *testing.T) {
 			// default. Issue #6996.
 			name:         "keyless default falls back to configured provider",
 			explicitRef:  "",
-			defaultModel: "deepseek-flash/deepseek-v4-flash",
+			defaultModel: "deepseek-flash/deepseek-flash",
 			configured:   true,
 			keyless:      false,
 			wantRef:      "minimax/MiniMax-M3",
@@ -66,10 +66,10 @@ func TestResolveModelForCLI(t *testing.T) {
 			// the user which API key to set.
 			name:         "all keyless preserves raw default for downstream banner",
 			explicitRef:  "",
-			defaultModel: "deepseek-flash/deepseek-v4-flash",
+			defaultModel: "deepseek-flash/deepseek-flash",
 			configured:   false,
 			keyless:      false,
-			wantRef:      "deepseek-flash/deepseek-v4-flash",
+			wantRef:      "deepseek-flash/deepseek-flash",
 			wantFallback: false,
 		},
 		{
@@ -87,7 +87,7 @@ func TestResolveModelForCLI(t *testing.T) {
 			defaultModel: "",
 			configured:   false,
 			keyless:      false,
-			wantRef:      "deepseek-flash/deepseek-v4-flash",
+			wantRef:      "deepseek-flash/deepseek-flash",
 			wantFallback: true,
 		},
 		{
@@ -103,7 +103,7 @@ func TestResolveModelForCLI(t *testing.T) {
 			// when another provider is configured and could be used; the
 			// user asked for a specific model.
 			name:         "explicit keyless ref errors even with configured fallback available",
-			explicitRef:  "deepseek-flash/deepseek-v4-flash",
+			explicitRef:  "deepseek-flash/deepseek-flash",
 			defaultModel: "minimax/MiniMax-M3",
 			configured:   true,
 			keyless:      false,
@@ -112,7 +112,7 @@ func TestResolveModelForCLI(t *testing.T) {
 		{
 			name:         "explicit configured ref is used verbatim",
 			explicitRef:  "minimax/MiniMax-M3",
-			defaultModel: "deepseek-flash/deepseek-v4-flash",
+			defaultModel: "deepseek-flash/deepseek-flash",
 			configured:   true,
 			keyless:      false,
 			wantRef:      "minimax/MiniMax-M3",
@@ -179,7 +179,7 @@ func TestResolveServeModelUsesGlobalChatFallback(t *testing.T) {
 	setCredential(t, defaultModelTestKeylessEnv, false)
 
 	cfg := newDefaultModelTestConfig()
-	cfg.DefaultModel = "deepseek-flash/deepseek-v4-flash"
+	cfg.DefaultModel = "deepseek-flash/deepseek-flash"
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ default_model = "project/project-chat"
 name = "project"
 kind = "openai"
 base_url = "https://project.example.com"
-model = "project-chat"
+models = ["project-chat"]
 api_key_env = "`+defaultModelTestConfiguredEnv+`"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -215,7 +215,7 @@ func TestNewChatTUIKeepsExplicitKeylessControllerModel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const explicit = "deepseek-flash/deepseek-v4-flash"
+	const explicit = "deepseek-flash/deepseek-flash"
 	ctrl, err := setupProfile(context.Background(), explicit, 0, false, event.Discard, "")
 	if err != nil {
 		t.Fatalf("interactive build should remain reachable for missing-key recovery: %v", err)

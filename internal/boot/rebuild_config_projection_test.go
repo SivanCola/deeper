@@ -29,7 +29,6 @@ func TestRuntimeConfigFingerprintIgnoresPresentation(t *testing.T) {
 		name string
 		edit func(*config.Config)
 	}{
-		{"compact ratio", func(c *config.Config) { c.Agent.CompactRatio = .8 }},
 		{"CLI appearance", func(c *config.Config) { c.UI.Theme = "light" }},
 		{"desktop appearance", func(c *config.Config) { c.Desktop.Theme = "light" }},
 		{"desktop language", func(c *config.Config) { c.Desktop.Language = "zh" }},
@@ -37,7 +36,6 @@ func TestRuntimeConfigFingerprintIgnoresPresentation(t *testing.T) {
 		{"notifications", func(c *config.Config) { c.Notifications.Enabled = !c.Notifications.Enabled }},
 		{"telemetry", func(c *config.Config) { c.Telemetry.CLIMetrics = "off" }},
 		{"status line", func(c *config.Config) { c.Statusline.Command = "printf test" }},
-		{"CLI updates", func(c *config.Config) { c.CLI.UpdateChannel = "test" }},
 		{"bot transport", func(c *config.Config) { c.Bot.QueueCap++ }},
 		{"serve transport", func(c *config.Config) { c.Serve.BehindProxy = !c.Serve.BehindProxy }},
 		{"provider label", func(c *config.Config) { c.Providers[0].DisplayName = "Renamed" }},
@@ -68,9 +66,6 @@ func TestRuntimeConfigFingerprintRetainsRuntimeDependencies(t *testing.T) {
 		{"temperature", func(c *config.Config) { c.Agent.Temperature++ }},
 		{"task budget", func(c *config.Config) { c.Agent.TaskCostBudget++ }},
 		{"goal budget", func(c *config.Config) { c.Agent.GoalTokenBudget++ }},
-		{"keep policy", func(c *config.Config) { c.Agent.Keep = []string{"all"} }},
-		{"recent keep", func(c *config.Config) { c.Agent.RecentKeep++ }},
-		{"plan command policy", func(c *config.Config) { c.Agent.PlanModeReadOnlyCommands = []string{"git status"} }},
 		{"planner model", func(c *config.Config) { c.Agent.PlannerModel = "fixture/planner" }},
 		{"child model", func(c *config.Config) { c.Agent.SubagentModel = "fixture/worker" }},
 		{"provider access", func(c *config.Config) { c.Desktop.ProviderAccess = []string{} }},
@@ -80,7 +75,6 @@ func TestRuntimeConfigFingerprintRetainsRuntimeDependencies(t *testing.T) {
 		{"balance endpoint", func(c *config.Config) { c.Providers[0].BalanceURL = "https://example.invalid/balance" }},
 		{"credential name", func(c *config.Config) { c.Providers[0].APIKeyEnv = "OTHER_KEY" }},
 		{"display currency", func(c *config.Config) { c.Billing.DisplayCurrency = "CNY" }},
-		{"legacy currency", func(c *config.Config) { c.Billing.DisplayCurrency = ""; c.Desktop.Currency = "CNY" }},
 		{"enabled tools", func(c *config.Config) { c.Tools.Enabled = []string{"read_file"} }},
 		{"shell", func(c *config.Config) { c.Tools.Shell.Path = "/fixture/shell" }},
 		{"permission rules", func(c *config.Config) { c.Permissions.Deny = []string{"bash"} }},

@@ -12,7 +12,6 @@ import (
 	"deepzora/desktop/internal/sessionui"
 	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/config"
-	"deepzora/internal/control"
 	"deepzora/internal/session"
 )
 
@@ -237,8 +236,8 @@ func (a *App) reserveManualSessionTab(ctx context.Context, view ManualSessionCre
 	settings := view.Settings
 	tab := &WorkspaceTab{Scope: view.Scope, WorkspaceRoot: desktopWorkspaceRoot(view.Scope, view.WorkspaceRoot),
 		SessionID: view.Ref.SessionID, TopicID: view.TopicID, TopicTitle: defaultTopicTitle, topicTitleSource: topicTitleSourceAuto,
-		PendingCreateOperationID: view.OperationID, model: settings.Model, qualityFloor: settings.QualityFloor,
-		mode:             tabModeFromAxes(tabModeHasPlan(settings.Mode), settings.ToolApprovalMode == control.ToolApprovalDangerFullAccess),
+		PendingCreateOperationID: view.OperationID, model: settings.Model,
+		mode:             tabModeForPlan(tabModeHasPlan(settings.Mode)),
 		toolApprovalMode: settings.ToolApprovalMode, disabledMCP: cloneServerViewMap(settings.DisabledMCP), mcpOrder: append([]string(nil), settings.MCPOrder...)}
 	tab.SessionWorkspace.ID = view.WorkspaceID
 	if settings.Effort != "" {

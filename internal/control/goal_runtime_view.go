@@ -5,13 +5,11 @@ import "fmt"
 // GoalRuntimeView is the host-side runtime summary exposed to frontends.
 type GoalRuntimeView struct {
 	TurnsUsed        int    `json:"turnsUsed"`
-	TurnsLimit       int    `json:"turnsLimit"`
 	TokensUsed       int    `json:"tokensUsed"`
 	RequestsUsed     int    `json:"requestsUsed,omitempty"`
 	WorkDurationMs   int64  `json:"workDurationMs,omitempty"`
 	TokensLimit      int    `json:"tokensLimit"`
 	NoProgressTurns  int    `json:"noProgressTurns"`
-	NoProgressLimit  int    `json:"noProgressLimit"`
 	LastReason       string `json:"lastReason,omitempty"`
 	StopCause        string `json:"stopCause,omitempty"`
 	BudgetExtensions int    `json:"budgetExtensions"`
@@ -25,12 +23,11 @@ func (g *goalMachine) runtimeView() GoalRuntimeView {
 		last = g.lastContinuationReason
 	}
 	return GoalRuntimeView{
-		TurnsUsed: g.turnsUsed, TurnsLimit: 0,
-		TokensUsed: g.tokensUsed, RequestsUsed: g.requestsUsed,
+		TurnsUsed: g.turnsUsed, TokensUsed: g.tokensUsed, RequestsUsed: g.requestsUsed,
 		WorkDurationMs: g.workDurationMs,
 		TokensLimit:    g.tokensLimit, NoProgressTurns: g.noProgressTurns,
-		NoProgressLimit: 0, LastReason: last,
-		StopCause: g.stopCause, BudgetExtensions: 0,
+		LastReason: last,
+		StopCause:  g.stopCause, BudgetExtensions: g.budgetExtensions,
 	}
 }
 

@@ -13,26 +13,29 @@ import (
 	"deepzora/internal/store"
 )
 
-func TestRedactSessionsScrubsHistoricalSessionArtifacts(t *testing.T) {
+func TestRedactSessionsScrubsCurrentSessionArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	const secret = "sk-real-secret-value-123456"
 	sessionPath := filepath.Join(dir, "abc.jsonl")
+	if err := saveDoctorMessages(sessionPath, []string{`{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}`}); err != nil {
+		t.Fatal(err)
+	}
 	files := map[string]string{
-		sessionPath:                                                     `{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}` + "\n",
-		store.SessionEventLog(sessionPath):                              `{"schema_version":1,"type":"replace","messages":[{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}]}` + "\n",
-		store.SessionMeta(sessionPath):                                  `{"id":"abc","preview":"DEEPSEEK_API_KEY=` + secret + `"}` + "\n",
-		store.SessionGoalState(sessionPath):                             `{"goal":"rotate token ` + secret + `"}` + "\n",
+		store.SessionGoalState(sessionPath):                             `{"schemaVersion":1,"goal":"rotate token ` + secret + `"}` + "\n",
 		filepath.Join(store.SessionJobsDir(sessionPath), "bash-1.log"):  "DEEPSEEK_API_KEY=" + secret + "\n",
 		filepath.Join(store.SessionJobsDir(sessionPath), "bash-1.json"): `{"label":"echo DEEPSEEK_API_KEY=` + secret + `"}` + "\n",
-		store.SessionEventIndex(sessionPath):                            `{"schema_version":1}` + "\n",
 	}
 	for path, body := range files {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 			t.Fatal(err)
 		}
+	}
+
+	if err := agent.UpdateBranchMeta(sessionPath, false, func(m *agent.BranchMeta) error { m.Name = "DEEPSEEK_API_KEY=" + secret; return nil }); err != nil {
+		t.Fatal(err)
 	}
 
 	res := RedactSessions(RedactSessionsOptions{Dirs: []string{dir}})
@@ -78,7 +81,7 @@ func TestRedactSessionsHandlesQuotedSecretsWithoutCorruption(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(sessionPath, append(line, '\n'), 0o644); err != nil {
+	if err := saveDoctorMessages(sessionPath, []string{string(line)}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -86,8 +89,8 @@ func TestRedactSessionsHandlesQuotedSecretsWithoutCorruption(t *testing.T) {
 	if len(res.Errors) > 0 {
 		t.Fatalf("RedactSessions errors = %v", res.Errors)
 	}
-	if res.FilesChanged != 1 {
-		t.Fatalf("FilesChanged = %d, want 1", res.FilesChanged)
+	if res.FilesChanged != 2 {
+		t.Fatalf("FilesChanged = %d, want 2", res.FilesChanged)
 	}
 	loaded, err := agent.LoadSession(sessionPath)
 	if err != nil {
@@ -150,19 +153,24 @@ func TestRedactSessionsDryRunDoesNotWrite(t *testing.T) {
 	const secret = "sk-real-secret-value-123456"
 	path := filepath.Join(dir, "abc.jsonl")
 	body := `{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}` + "\n"
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+	if err := saveDoctorMessages(path, []string{strings.TrimSpace(body)}); err != nil {
+		t.Fatal(err)
+	}
+
+	before, err := os.ReadFile(store.SessionEventLog(path))
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	res := RedactSessions(RedactSessionsOptions{Dirs: []string{dir}, DryRun: true})
-	if res.FilesChanged != 1 {
-		t.Fatalf("FilesChanged = %d, want 1", res.FilesChanged)
+	if res.FilesChanged != 2 {
+		t.Fatalf("FilesChanged = %d, want 2", res.FilesChanged)
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(store.SessionEventLog(path))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(data) != body {
+	if string(data) != string(before) {
 		t.Fatalf("dry-run modified file:\n%s", data)
 	}
 }
@@ -171,7 +179,7 @@ func TestRedactSessionsSkipsLeasedSession(t *testing.T) {
 	dir := t.TempDir()
 	const secret = "sk-real-secret-value-123456"
 	path := filepath.Join(dir, "abc.jsonl")
-	if err := os.WriteFile(path, []byte(`{"role":"tool","content":"DEEPSEEK_API_KEY=`+secret+`"}`+"\n"), 0o644); err != nil {
+	if err := saveDoctorMessages(path, []string{`{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}`}); err != nil {
 		t.Fatal(err)
 	}
 	lease, err := agent.TryAcquireSessionLease(path)
@@ -181,10 +189,10 @@ func TestRedactSessionsSkipsLeasedSession(t *testing.T) {
 	defer lease.Release()
 
 	res := RedactSessions(RedactSessionsOptions{Dirs: []string{dir}})
-	if res.FilesSkipped != 1 {
-		t.Fatalf("FilesSkipped = %d, want 1", res.FilesSkipped)
+	if res.FilesSkipped != 3 {
+		t.Fatalf("FilesSkipped = %d, want 3", res.FilesSkipped)
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(store.SessionEventLog(path))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +205,7 @@ func TestRedactSessionsHoldsLeaseAcrossRewrite(t *testing.T) {
 	dir := t.TempDir()
 	secret := "sk-" + "real-secret-value-123456"
 	path := filepath.Join(dir, "abc.jsonl")
-	if err := os.WriteFile(path, []byte(`{"role":"tool","content":"DEEPSEEK_API_KEY=`+secret+`"}`+"\n"), 0o644); err != nil {
+	if err := saveDoctorMessages(path, []string{`{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}`}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -207,7 +215,12 @@ func TestRedactSessionsHoldsLeaseAcrossRewrite(t *testing.T) {
 		if agent.CanonicalSessionPath(got) != agent.CanonicalSessionPath(path) {
 			return
 		}
-		close(acquired)
+		select {
+		case <-acquired:
+			return
+		default:
+			close(acquired)
+		}
 		<-continueRedaction
 	}
 	t.Cleanup(func() { sessionRedactionLeaseAcquired = nil })
@@ -227,8 +240,8 @@ func TestRedactSessionsHoldsLeaseAcrossRewrite(t *testing.T) {
 	}
 	close(continueRedaction)
 	res := <-done
-	if len(res.Errors) > 0 || res.FilesChanged != 1 {
-		t.Fatalf("RedactSessions = %+v, want one successful rewrite", res)
+	if len(res.Errors) > 0 || res.FilesChanged != 2 {
+		t.Fatalf("RedactSessions = %+v, want one successful DAG rewrite", res)
 	}
 }
 
@@ -311,15 +324,18 @@ func TestRedactSessionsScrubsStaleEventLogRecords(t *testing.T) {
 	dir := t.TempDir()
 	const secret = "sk-real-secret-value-123456"
 	sessionPath := filepath.Join(dir, "abc.jsonl")
-	events := `{"schema_version":1,"type":"replace","messages":[{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}]}` + "\n" +
-		`{"schema_version":1,"type":"replace","messages":[{"role":"user","content":"clean"}]}` + "\n"
-	if err := os.WriteFile(sessionPath, []byte(`{"role":"user","content":"clean"}`+"\n"), 0o644); err != nil {
+	if err := saveDoctorMessages(sessionPath, []string{`{"role":"tool","content":"DEEPSEEK_API_KEY=` + secret + `"}`}); err != nil {
+		t.Fatal(err)
+	}
+	sess, err := agent.LoadSession(sessionPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess.Rewrite([]provider.Message{{Role: provider.RoleUser, Content: "clean"}}, "replace")
+	if err := sess.SaveRewrite(sessionPath); err != nil {
 		t.Fatal(err)
 	}
 	evPath := store.SessionEventLog(sessionPath)
-	if err := os.WriteFile(evPath, []byte(events), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	res := RedactSessions(RedactSessionsOptions{Dirs: []string{dir}})
 	if len(res.Errors) > 0 {

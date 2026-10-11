@@ -33,7 +33,6 @@ export interface RemoteProjectBindings {
   RemoteTabMetadata?(tabId: string): Promise<RemoteTabSnapshot>;
   RemoteTabStatus(tabId: string): Promise<unknown>;
   SetRemoteTabEffort(tabId: string, level: string): Promise<void>;
-  SetRemoteTabQualityFloor(tabId: string, floor: string): Promise<void>;
   PauseRemoteTabGoal(tabId: string): Promise<void>;
   ResumeRemoteTabGoal(tabId: string): Promise<void>;
   CancelRemoteTabJobs(tabId: string, jobIds: string[]): Promise<void>;

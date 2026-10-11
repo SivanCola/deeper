@@ -13,21 +13,21 @@ func TestRegisterRemoteTabOpenReviveCarriesSelectedTitle(t *testing.T) {
 	ref := RemoteTabRef{HostID: "box", Workspace: "~/app"}
 	existing := &remoteTab{
 		id: "remote-1", ref: ref, state: "disconnected", topicTitle: "Old title",
-		session: remoteTabSessionState{name: "old", path: "/sessions/old.jsonl"},
-		routing: remoteTabSessionRouting{currentPath: "/sessions/old.jsonl", running: map[string]bool{}},
+		session: remoteTabSessionState{name: "old", path: "session-id:old"},
+		routing: remoteTabSessionRouting{currentPath: "session-id:old", running: map[string]bool{}},
 	}
 	a := &App{remoteTabs: map[string]*remoteTab{existing.id: existing}}
 	registration := a.registerRemoteTabOpen(&remoteTab{id: "unused", ref: ref}, "Box", RemoteTabOpenOptions{
-		SessionName: "selected", SessionPath: "/sessions/selected.jsonl", SessionTitle: "Selected title",
+		SessionName: "selected", SessionPath: "session-id:selected", SessionTitle: "Selected title",
 	})
 	if registration.reuseID != existing.id || !registration.revive {
 		t.Fatalf("registration = %+v, want revived %q", registration, existing.id)
 	}
-	if existing.topicTitle != "Old title" || existing.routing.currentPath != "/sessions/old.jsonl" {
+	if existing.topicTitle != "Old title" || existing.routing.currentPath != "session-id:old" {
 		t.Fatalf("registration changed identity before visibility commit: title=%q path=%q", existing.topicTitle, existing.routing.currentPath)
 	}
 	if !a.commitRemoteTabOpenRegistration(&registration, "Box", RemoteTabOpenOptions{
-		SessionName: "selected", SessionPath: "/sessions/selected.jsonl", SessionTitle: "Selected title",
+		SessionName: "selected", SessionPath: "session-id:selected", SessionTitle: "Selected title",
 	}) {
 		t.Fatal("commitRemoteTabOpenRegistration rejected the reused shell")
 	}
@@ -41,7 +41,7 @@ func TestRegisterRemoteTabOpenReviveCarriesSelectedTitle(t *testing.T) {
 // the tab's event channel and the session cookie riding the jar.
 func TestRemoteTabBridgeEntersNewSessionAndStreams(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", nil)
-	fs.newSessionPath = "/sessions/fresh.jsonl"
+	fs.newSessionPath = "session-id:fresh"
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView:  RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL},
@@ -75,7 +75,7 @@ func TestRemoteTabBridgeEntersNewSessionAndStreams(t *testing.T) {
 	a.remoteTabMu.Lock()
 	currentPath := a.remoteTabs[meta.ID].routing.currentPath
 	a.remoteTabMu.Unlock()
-	if currentPath != "/sessions/fresh.jsonl" {
+	if currentPath != "session-id:fresh" {
 		t.Fatalf("current session path = %q, want response header path", currentPath)
 	}
 	// State becomes observable immediately before its event is emitted. Wait for
@@ -167,7 +167,7 @@ func TestRemoteTabBridgeToleratesTrailingSlashBase(t *testing.T) {
 
 func TestRemoteTabBusyAttachKeepsCurrentSessionMetadata(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "current", Path: "/sessions/current.jsonl", Title: "Current work", Current: true},
+		{Name: "current", Path: "session-id:current", Title: "Current work", Current: true},
 	})
 	fs.mu.Lock()
 	fs.failEnter = "cannot start a new session while a turn is running"
@@ -230,7 +230,7 @@ func TestRemoteTabBridgeHandshakeFailureSurfacesError(t *testing.T) {
 // the entry's path, never the bare name.
 func TestRemoteTabBridgeResumeResolvesSessionPath(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/remote/sessions/s1.jsonl", Title: "First", Turns: 2},
+		{Name: "s1", Path: "session-id:s1", Title: "First", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -250,7 +250,7 @@ func TestRemoteTabBridgeResumeResolvesSessionPath(t *testing.T) {
 	if newCalled != 0 {
 		t.Fatalf("POST /new called %d times, want 0 for a resume open", newCalled)
 	}
-	if resumePath != "/remote/sessions/s1.jsonl" {
+	if resumePath != "session-id:s1" {
 		t.Fatalf("POST /resume path = %q, want the /sessions entry path", resumePath)
 	}
 }
@@ -350,7 +350,7 @@ func TestSetModelForTabRemoteOwnsModelOnDesktop(t *testing.T) {
 	}
 
 	fs := newFakeServe(t, "s3cret", nil)
-	fs.newSessionPath = "/remote/sessions/model-switch.jsonl"
+	fs.newSessionPath = "session-id:model-switch"
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView:  RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL},

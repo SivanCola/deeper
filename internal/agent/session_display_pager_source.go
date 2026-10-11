@@ -13,10 +13,10 @@ import (
 )
 
 type displayPagerEventSource struct {
-	fingerprint           string
-	eventInfo             os.FileInfo
-	eventVersion          fileops.Version
-	dag, schemaOne, plain bool
+	fingerprint  string
+	eventInfo    os.FileInfo
+	eventVersion fileops.Version
+	dag, plain   bool
 }
 
 func observeDisplayPagerEvents(ctx context.Context, source, head string, forceSource, plain bool, indexInfo os.FileInfo, fingerprint, stored string, storedErr error) (*displayPagerEventSource, error) {
@@ -24,30 +24,19 @@ func observeDisplayPagerEvents(ctx context.Context, source, head string, forceSo
 	var eventInfo os.FileInfo
 	var eventVersion fileops.Version
 	dag := false
-	schemaOne := false
 	hasDAG := false
 	if eventInfo, err = os.Stat(store.SessionEventLog(source)); err == nil && eventInfo.Size() > 0 {
 		eventTarget, version := fileops.DiskSnapshot(store.SessionEventLog(source), eventInfo)
 		eventVersion = version
 		fingerprint += fmt.Sprintf(":event:%s:%s", eventTarget.Key, eventVersion)
-		// Reuse the proven kind for unchanged schema-1 sources. A legacy JSON
-		// writer may place its identifying fields after a huge messages array;
-		// rediscovering that header on every cached open would reread the array.
-		if plain && head == "" && storedErr == nil && stored == fingerprint+":schema1" {
-			schemaOne = true
-		} else {
-			schema, kind, known, probeErr := validatedDisplayEventKind(ctx, source)
-			if probeErr != nil {
-				return nil, probeErr
-			}
-			hasDAG = known && schema == sessionDAGSchemaVersion
-			dag = hasDAG && (plain || head != "" || forceSource)
-			schemaOne = known && schema == sessionEventSchemaVersion && (kind == sessionEventTypeReplace || kind == sessionEventTypeAppend) && plain
+		schema, _, known, probeErr := validatedDisplayEventKind(ctx, source)
+		if probeErr != nil {
+			return nil, probeErr
 		}
+		hasDAG = known && schema == sessionDAGSchemaVersion
+		dag = hasDAG && (plain || head != "" || forceSource)
 		if dag {
 			fingerprint += fmt.Sprintf(":dag:%d:%d:%s", eventInfo.Size(), eventInfo.ModTime().UnixNano(), head)
-		} else if schemaOne {
-			fingerprint += ":schema1"
 		}
 	} else if err != nil && !os.IsNotExist(err) {
 		return nil, err
@@ -59,7 +48,7 @@ func observeDisplayPagerEvents(ctx context.Context, source, head string, forceSo
 	if head != "" && !dag {
 		return nil, errors.New("requested branch has no DAG source")
 	}
-	if dag || schemaOne {
+	if dag {
 		plain = false
 	}
 	if plain {
@@ -69,10 +58,10 @@ func observeDisplayPagerEvents(ctx context.Context, source, head string, forceSo
 			return nil, err
 		}
 		fingerprint += ":checkpoint"
-	} else if !dag && !schemaOne {
+	} else if !dag {
 		fingerprint += fmt.Sprintf(":%d:%d", indexInfo.Size(), indexInfo.ModTime().UnixNano())
 	}
-	return &displayPagerEventSource{fingerprint, eventInfo, eventVersion, dag, schemaOne, plain}, nil
+	return &displayPagerEventSource{fingerprint, eventInfo, eventVersion, dag, plain}, nil
 }
 
 func validatedDisplayEventKind(ctx context.Context, source string) (int, string, bool, error) {
@@ -85,7 +74,7 @@ func validatedDisplayEventKind(ctx context.Context, source string) (int, string,
 	if probeErr != nil {
 		return 0, "", false, probeErr
 	}
-	if known && (schema > sessionDAGSchemaVersion || schema == sessionEventSchemaVersion && kind != sessionEventTypeReplace && kind != sessionEventTypeAppend) {
+	if known && (schema != sessionDAGSchemaVersion) {
 		return 0, "", false, fmt.Errorf("%w: event schema %d type %q", ErrDisplayFormatUnsupported, schema, kind)
 	}
 	return schema, kind, known, nil
@@ -115,9 +104,7 @@ func (s *displayPagerEventSource) build(ctx context.Context, db *sql.DB, source,
 	if s.dag {
 		return buildDAGDisplayPager(ctx, db, source, s.fingerprint, head, checkpointSize)
 	}
-	if s.schemaOne {
-		return buildEventDisplayPager(ctx, db, source, s.fingerprint, checkpointSize)
-	}
+
 	if s.plain {
 		return buildCheckpointDisplayPager(ctx, db, source, s.fingerprint)
 	}
@@ -127,11 +114,10 @@ func (s *displayPagerEventSource) build(ctx context.Context, db *sql.DB, source,
 func (s *displayPagerEventSource) rebuild(ctx context.Context, opts projectiondb.OpenOptions, source, indexPath, head string, size int64) error {
 	if s.plain {
 		opts.ResumeKey = "checkpoint-v1:" + s.fingerprint
-	} else if s.schemaOne {
-		opts.ResumeKey = "event-v1:" + s.fingerprint
+
 	} else if s.dag {
 		opts.ResumeKey = "dag-v1:" + s.fingerprint
-	} else if !s.dag && !s.schemaOne {
+	} else if !s.dag {
 		opts.ResumeKey = "display-import-v1:" + s.fingerprint
 	}
 	return projectiondb.Rebuild(ctx, opts, func(ctx context.Context, db *sql.DB) error {

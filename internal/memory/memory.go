@@ -16,7 +16,7 @@ import (
 // quick-add targets can be resolved without re-deriving discovery context.
 type Set struct {
 	Docs                   []Source // DEEPZORA.md / AGENTS.md, ascending precedence
-	PinnedGuidance         []Memory // snapshot of pinned fact bodies (incl. legacy global user/feedback)
+	PinnedGuidance         []Memory // snapshot of explicitly pinned fact bodies
 	Store                  Store    // auto-memory store (may be a zero/disabled Store)
 	Index                  string   // MEMORY.md contents at load time
 	CWD                    string   // project working dir used for discovery

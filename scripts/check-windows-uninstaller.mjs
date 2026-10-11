@@ -23,7 +23,7 @@ try {
   }
   for (const arch of ["AMD64", "ARM64"]) {
     mkdirSync(join(installer, "app"), { recursive: true });
-    for (const name of ["deepzora-desktop.exe", "deepzora-launcher.exe", "deepzora-guard.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "app/Deepzora.exe"]) {
+    for (const name of ["deepzora-desktop.exe", "deepzora-launcher.exe", "deepzora-layout-installer.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "app/Deepzora.exe"]) {
       writeFileSync(join(installer, name), Buffer.alloc(1024, 42));
     }
     const output = join(installer, "deepzora-uninstall.exe");

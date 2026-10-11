@@ -199,7 +199,7 @@ func (m *chatTUI) ingestTurnPhase(e event.Event) {
 
 func (m *chatTUI) ingestCompletionSummary(e event.Event) {
 	if e.Completion != nil {
-		if completionSummaryNeedsAttention(e.Completion, "") {
+		if completionSummaryNeedsAttention(e.Completion) {
 			m.finalizeStreamed()
 			m.commitLine(fmt.Sprintf("  ! %s", completionSummaryWarning(e.Completion)))
 		}

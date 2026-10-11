@@ -111,7 +111,7 @@ func TestClearSessionRebindsProjectionSidecarPath(t *testing.T) {
 }
 
 func TestBranchRebindsProjectionSidecarPath(t *testing.T) {
-	dir := schemaOneTempDir(t)
+	dir := t.TempDir()
 	path := agent.NewSessionPath(dir, "main")
 	sess := agent.NewSession("sys")
 	sess.Add(provider.Message{Role: provider.RoleUser, Content: "task"})
@@ -129,8 +129,7 @@ func TestBranchRebindsProjectionSidecarPath(t *testing.T) {
 	}
 	prov := &scriptedTurns{turns: [][]provider.Chunk{textTurn("summary")}}
 	exec := agent.New(prov, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{
-		SessionPath: path, ContextWindow: 10_000, CompactRatio: 0.8, RecentKeep: 2,
-	}, event.Discard)
+		SessionPath: path, ContextWindow: 10_000, CompactRatio: 0.8}, event.Discard)
 	c := newOwnedTestController(t, Options{Executor: exec, SessionDir: dir, Label: "test", DisableColdResumePrune: true})
 	c.Resume(sess, path)
 	if err := exec.CompactNow(context.Background(), ""); err != nil {

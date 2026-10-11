@@ -11,7 +11,7 @@ import (
 func TestExportRemoteGoalDiagnosticsUsesSessionFence(t *testing.T) {
 	var expectedPath string
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		expectedPath = req.Header.Get(expectedSessionPathHeader)
+		expectedPath = req.Header.Get(expectedSessionIDHeader)
 		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"schemaVersion":1}`)), Request: req}, nil
 	})}
 	app, tab := remoteRuntimeTestApp(client)
@@ -21,7 +21,7 @@ func TestExportRemoteGoalDiagnosticsUsesSessionFence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(payload) != `{"schemaVersion":1}` || expectedPath != runtimeRemoteTestPath {
+	if string(payload) != `{"schemaVersion":1}` || expectedPath != remoteSessionIDFromRoute(runtimeRemoteTestPath) {
 		t.Fatalf("payload/path = %s / %q", payload, expectedPath)
 	}
 }

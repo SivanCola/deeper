@@ -474,12 +474,12 @@ func TestMetaForTabFastPathCachesExpensiveFields(t *testing.T) {
 	cfg.Agent.VisionModel = "auto"
 	cfg.Desktop.ProviderAccess = []string{"custom"}
 	cfg.Providers = []config.ProviderEntry{{
-		Name:         "custom",
-		Kind:         "openai",
-		BaseURL:      "https://example.invalid/v1",
-		APIKeyEnv:    "CUSTOM_KEY",
-		Models:       []string{"text-only", "vision-pro"},
-		VisionModels: []string{"vision-pro"},
+		Name:           "custom",
+		Kind:           "openai",
+		BaseURL:        "https://example.invalid/v1",
+		APIKeyEnv:      "CUSTOM_KEY",
+		Models:         []string{"text-only", "vision-pro"},
+		ModelOverrides: map[string]config.ProviderModelOverride{"vision-pro": {Vision: func() *bool { value := true; return &value }()}},
 	}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

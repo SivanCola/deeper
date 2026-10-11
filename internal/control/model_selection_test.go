@@ -10,7 +10,7 @@ import (
 )
 
 func TestControllerModelSelectionPersistsAndBranches(t *testing.T) {
-	dir := schemaOneTempDir(t)
+	dir := t.TempDir()
 	path := agent.NewSessionPath(dir, "original")
 	s := agent.NewSession("fixture system")
 	s.Add(provider.Message{Role: provider.RoleUser, Content: "keep this"})
@@ -34,7 +34,7 @@ func TestControllerModelSelectionPersistsAndBranches(t *testing.T) {
 }
 
 func TestControllerRejectsHistoricalBranchBeforeTransition(t *testing.T) {
-	dir := schemaOneTempDir(t)
+	dir := t.TempDir()
 	path := agent.NewSessionPath(dir, "other")
 	s := agent.NewSession("fixture")
 	s.Add(provider.Message{Role: provider.RoleUser, Content: "historical branch"})

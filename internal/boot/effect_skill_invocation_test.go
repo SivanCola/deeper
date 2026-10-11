@@ -50,7 +50,7 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "boot-effect-skill-invocation"
-model = "x"
+models = ["x"]
 `)
 			approveWorkspace(t, dir)
 			writeFile(t, dir, ".deepzora/skills/probe/SKILL.md", "---\ndescription: probe skill\ntriggers: probe, tidy\nauto-use: require\n---\nPROBE BODY\nthen run /other")

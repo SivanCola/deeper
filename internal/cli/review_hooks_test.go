@@ -185,12 +185,13 @@ func setupReviewCheckout(t *testing.T, extraTOML func(dir string) string) string
 		extra = extraTOML(dir)
 	}
 	writeReviewTestFile(t, dir, "deepzora.toml", `
-default_model = "reviewer"
+default_model = "reviewer/review-model"
 
 [[providers]]
 name = "reviewer"
 kind = "`+reviewHookProbeKind+`"
-model = "review-model"
+models = ["review-model"]
+default = "review-model"
 base_url = "http://127.0.0.1:1"
 `+extra)
 	approveWorkspace(t, dir)

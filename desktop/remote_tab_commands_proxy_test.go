@@ -33,7 +33,7 @@ func TestDeleteRemoteProjectSessionSendsCanonicalIdentity(t *testing.T) {
 // reaches the right serve endpoint with the mapped body.
 func TestRemoteTabCommandsForwardedToServe(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", nil)
-	const currentPath = "/sessions/current.jsonl"
+	const currentPath = "session-id:current"
 	fs.newSessionPath = currentPath
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -49,9 +49,7 @@ func TestRemoteTabCommandsForwardedToServe(t *testing.T) {
 	a.remoteTabMu.Unlock()
 	var profileDrained []string
 	beforeRetiredFloorCall := len(fs.recorded())
-	if err := a.SetRemoteTabQualityFloor(meta.ID, "delivery"); err != nil {
-		t.Fatalf("retired quality-floor compatibility call: %v", err)
-	}
+
 	if got := len(fs.recorded()); got != beforeRetiredFloorCall {
 		t.Fatalf("retired quality-floor call reached the remote server: before=%d after=%d", beforeRetiredFloorCall, got)
 	}

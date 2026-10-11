@@ -21,7 +21,7 @@ func (a *App) startModelApplicationTurn(tabID, submissionID string, req control.
 	if receipt, found, err := a.knownSubmissionReceipt(tabID, req); found || err != nil {
 		return TurnStartView{TurnID: receipt.TurnID, SubmissionID: submissionID, Status: event.TurnQueued, Disposition: control.SubmitTurnStarted}, err
 	}
-	admission, ctrl, err := a.beginRuntimeTurnWithModelChoice(tabID, true, false, identifiedSubmissionCheck([]string{submissionID}), choice, submissionID)
+	admission, ctrl, err := a.beginRuntimeTurnWithModelChoice(tabID, true, false, nil, choice, submissionID)
 	if err != nil {
 		return TurnStartView{}, a.submissionAdmissionError(tabID, req, err)
 	}
@@ -52,7 +52,7 @@ func (a *App) startModelApplicationTurn(tabID, submissionID string, req control.
 			a.mu.Lock()
 			admission.tab.goal = req.Goal
 			admission.tab.toolApprovalMode = normalizeToolApprovalMode(req.ToolApprovalMode)
-			admission.tab.mode = tabModeFromAxes(false, admission.tab.toolApprovalMode == control.ToolApprovalYolo)
+			admission.tab.mode = tabModeForPlan(false)
 			a.saveTabsLocked()
 			a.mu.Unlock()
 			ctrl.SetPlanMode(false)

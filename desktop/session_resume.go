@@ -13,62 +13,6 @@ import (
 
 var errSessionNavigationSuperseded = errors.New("session navigation was superseded")
 
-func (a *App) continueLegacySessionForTranscript(tab *WorkspaceTab, ctrl control.SessionAPI, sourcePath string, limit int, includeHistory, readOnly bool) (HistoryPage, error) {
-	identity, ok := ctrl.(control.IdentityLifecycle)
-	if !ok || !identity.UsesExclusiveSession() {
-		return HistoryPage{}, fmt.Errorf("session identity protocol is unavailable")
-	}
-	navigationCtx, finishNavigation := a.beginSessionNavigationContext()
-	defer finishNavigation()
-	if err := context.Cause(navigationCtx); err != nil {
-		return HistoryPage{}, err
-	}
-	if _, adopted, err := a.legacyCanonicalRef(navigationCtx, sourcePath); err != nil {
-		return HistoryPage{}, err
-	} else if !adopted {
-		// Explicit navigation imports before taking any controller swap gate.
-		if _, err := a.ImportHistoricalSession(desktopSourceKey(sourcePath, "")); err != nil {
-			return HistoryPage{}, err
-		}
-	}
-
-	a.runtimeRebuildMu.Lock()
-	defer a.runtimeRebuildMu.Unlock()
-	tab.turnStartMu.Lock()
-	defer tab.turnStartMu.Unlock()
-	if err := context.Cause(navigationCtx); err != nil {
-		return HistoryPage{}, err
-	}
-
-	current := a.controllerForTab(tab)
-	if current != ctrl || current == nil {
-		return HistoryPage{}, fmt.Errorf("tab runtime changed while continuing legacy session")
-	}
-	if current.RuntimeStatus().Running || current.RuntimeStatus().PendingPrompt {
-		return HistoryPage{}, control.ErrTurnRunning
-	}
-	if !historicalPreview(current) {
-		if err := current.Snapshot(); err != nil {
-			return HistoryPage{}, err
-		}
-	}
-	a.mu.RLock()
-	createOptions := desktopLegacyImportOptions(snapshotTabRuntimeLocked(tab).workspaceRoot)
-	a.mu.RUnlock()
-	_, err := a.openOrImportDesktopLegacySession(navigationCtx, identity, sourcePath, createOptions)
-	if err != nil {
-		return HistoryPage{}, err
-	}
-	a.syncTabSessionIdentity(tab, current)
-	a.setTabReadOnly(tab.ID, readOnly)
-	a.invalidatePromptHistoryCache()
-	a.notifyTabRuntimeRebuilt(tab)
-	if !includeHistory {
-		return HistoryPage{Messages: []HistoryMessage{}}, nil
-	}
-	return historyPageFromMessagesForTab(tab, current, current.History(), 0, limit), nil
-}
-
 // canonicalOpenIdentity validates the identity protocol of a resolved runtime.
 // A nil runtime is a dormant tab, not a protocol failure.
 func canonicalOpenIdentity(ctrl control.SessionAPI) (control.IdentityLifecycle, error) {
@@ -78,9 +22,7 @@ func canonicalOpenIdentity(ctrl control.SessionAPI) (control.IdentityLifecycle, 
 	// A native historical JSONL runtime is a supported source, but has no
 	// canonical binding to reuse. Let the existing prepare-and-swap path build
 	// the destination runtime without closing or converting the source first.
-	if native, ok := ctrl.(*control.Controller); ok && native.NativeLegacySession() {
-		return nil, nil
-	}
+
 	identity, ok := ctrl.(control.IdentityLifecycle)
 	if !ok || !identity.UsesExclusiveSession() {
 		return nil, fmt.Errorf("session identity protocol is unavailable")
@@ -142,7 +84,7 @@ func (a *App) resumeCanonicalSessionForTranscript(tab *WorkspaceTab, ctrl contro
 	}
 	workspaceChanged := canonicalWorkspaceChanged(a.tabRuntimeSnapshot(tab), workspace)
 	if current == nil || currentRef != ref || workspaceChanged {
-		if current != nil && !controllerHasActiveRuntimeWork(current) && !historicalPreview(current) {
+		if current != nil && !controllerHasActiveRuntimeWork(current) {
 			if err := current.Snapshot(); err != nil {
 				return HistoryPage{}, err
 			}

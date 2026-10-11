@@ -92,7 +92,9 @@ func TestReleaseSessionForHandoffLeavesControllerAllocatable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	controller.AdoptHistory([]provider.Message{{ID: "u1", Role: provider.RoleUser, Content: "keep me durable"}}, "")
+	if err := controller.RecordSessionMessages(t.Context(), "seed-handoff", []provider.Message{{ID: "u1", Role: provider.RoleUser, Content: "keep me durable"}}); err != nil {
+		t.Fatal(err)
+	}
 	if msgs := controller.History(); len(msgs) == 0 {
 		t.Fatal("fixture did not seed the bound session")
 	}

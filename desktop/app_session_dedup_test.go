@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
@@ -323,7 +324,7 @@ func TestBlankTabSessionPathRejectsOtherProjectWorkspace(t *testing.T) {
 }
 
 func TestForkKeepsProjectWorkspaceContext(t *testing.T) {
-	isolateDesktopUserDirsSchemaOne(t)
+	isolateDesktopUserDirs(t)
 
 	projectA := robustTempDir(t)
 	projectB := robustTempDir(t)
@@ -495,42 +496,6 @@ func TestEnsureBlankTabPreservesReusableManualTopicTitle(t *testing.T) {
 	}
 }
 
-func TestEnsureBlankTabKeepsActiveTabWhenTitleResetFails(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := t.TempDir()
-	seedLegacyTopicBridge(t, projectRoot)
-	app := NewApp()
-	topic, err := app.CreateTopic("project", projectRoot, "")
-	if err != nil {
-		t.Fatalf("create topic: %v", err)
-	}
-	if err := setTopicTitleWithSource(projectRoot, topic.ID, "Old auto title", topicTitleSourceAuto); err != nil {
-		t.Fatalf("set stale auto title: %v", err)
-	}
-	activeTab := app.createTabEntryWithID("global", globalTabWorkspaceRoot(), "", "active-tab")
-	reusableTab := app.createTabEntryWithID("project", projectRoot, topic.ID, "reusable-tab")
-	app.tabs[activeTab.ID] = activeTab
-	app.tabs[reusableTab.ID] = reusableTab
-	app.tabOrder = []string{activeTab.ID, reusableTab.ID}
-	app.activeTabID = activeTab.ID
-
-	titlePath := topicTitlesPath(projectRoot)
-	if err := os.Remove(titlePath); err != nil {
-		t.Fatalf("remove title file: %v", err)
-	}
-	if err := os.Mkdir(titlePath, 0o755); err != nil {
-		t.Fatalf("replace title file with directory: %v", err)
-	}
-
-	if _, err := app.EnsureBlankTab("project", projectRoot); err == nil {
-		t.Fatal("EnsureBlankTab succeeded, want title reset error")
-	}
-	if got := app.activeTabID; got != activeTab.ID {
-		t.Fatalf("active tab after failed title reset = %q, want %q", got, activeTab.ID)
-	}
-}
-
 // EnsureBlankTab picks up an existing blank topic created in the sidebar
 // instead of creating a fresh topic, for global scope.
 
@@ -588,32 +553,19 @@ func TestEnsureBlankTabOpensExistingProjectSidebarBlankTopic(t *testing.T) {
 }
 
 func TestEnsureBlankTabDoesNotReuseProjectTopicWithSession(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := robustTempDir(t)
-	app := NewApp()
-	topic, err := app.CreateTopic("project", projectRoot, "")
+	app, root, refs := canonicalOrganizationFixture(t, "existing")
+	before := refs["existing"]
+	installNoopRuntimeEvents(app)
+	app.readyHook = func() {}
+	meta, err := app.EnsureBlankTab("project", root)
 	if err != nil {
-		t.Fatalf("CreateTopic: %v", err)
+		t.Fatal(err)
 	}
-	dir := desktopSessionDir(projectRoot)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
+	if meta.SessionID == before.SessionID || meta.TopicID == "existing" {
+		t.Fatalf("blank reused populated session: %+v", meta)
 	}
-	existingPath := writeTopicSession(t, dir, "existing.jsonl", topic.ID, defaultTopicTitle, projectRoot)
-	if got, _ := app.findTopicSessionForTarget("project", projectRoot, topic.ID); got != existingPath {
-		t.Fatalf("precondition topic session = %q, want %q", got, existingPath)
-	}
-
-	meta, err := app.EnsureBlankTab("project", projectRoot)
-	if err != nil {
-		t.Fatalf("EnsureBlankTab: %v", err)
-	}
-	if meta.TopicID == topic.ID {
-		t.Fatalf("EnsureBlankTab reused topic %q even though it already has session %q", topic.ID, existingPath)
-	}
-	if got, _ := app.findTopicSessionForTarget("project", projectRoot, topic.ID); got != existingPath {
-		t.Fatalf("existing topic session changed = %q, want %q", got, existingPath)
+	if _, err := app.desktopSessionService("").Query().Stat(t.Context(), before); err != nil {
+		t.Fatal("blank creation removed existing history")
 	}
 }
 
@@ -673,64 +625,20 @@ func TestNewSessionNoopsWhenCurrentTabIsBlank(t *testing.T) {
 }
 
 func TestNewSessionUsesFreshTopicIdentity(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	projectRoot := t.TempDir()
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	oldTopicID := "topic_old"
-	oldTopicTitle := "Old topic"
-	oldPath := writeTopicSessionWithPrompt(t, dir, "old.jsonl", oldTopicID, oldTopicTitle, projectRoot, "old prompt", time.Now().Add(-time.Hour))
-	sess := &agent.Session{}
-	sess.Replace([]provider.Message{{Role: provider.RoleUser, Content: "old prompt"}})
-	ag := agent.New(stubProvider{}, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Executor: ag, SessionDir: dir, SessionPath: oldPath, Sink: event.Discard})
-
-	app := NewApp()
-	app.setTestCtrl(ctrl, "model-a")
-	tab := app.tabs["test"]
-	tab.Scope = "project"
-	tab.WorkspaceRoot = projectRoot
-	tab.TopicID = oldTopicID
-	tab.TopicTitle = oldTopicTitle
-	tab.SessionPath = oldPath
-	app.projectTreeChangedHook = func() {}
-
+	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
+	beforeID := tab.SessionID
+	tab.TopicID, tab.TopicTitle = "source-topic", "Source title"
+	app.ctx = context.Background()
+	installNoopRuntimeEvents(app)
+	app.readyHook = func() {}
 	if err := app.NewSession(); err != nil {
-		t.Fatalf("NewSession: %v", err)
+		t.Fatal(err)
 	}
-	if got := tab.TopicID; got == "" || got == oldTopicID {
-		t.Fatalf("new session topic ID = %q, want fresh ID distinct from %q", got, oldTopicID)
+	if tab.TopicID == "" || tab.TopicID == "source-topic" || tab.SessionID == "" || tab.SessionID == beforeID {
+		t.Fatalf("new session retained source identity: %+v", app.tabMeta(tab, true))
 	}
-	if got := tab.TopicTitle; got != defaultTopicTitle {
-		t.Fatalf("new session topic title = %q, want %q", got, defaultTopicTitle)
-	}
-	newPath := ctrl.SessionPath()
-	if newPath == "" || filepath.Clean(newPath) == filepath.Clean(oldPath) {
-		t.Fatalf("new session path = %q, want fresh path distinct from %q", newPath, oldPath)
-	}
-	if err := os.WriteFile(newPath, []byte(`{"role":"user","content":"new prompt"}`+"\n"), 0o644); err != nil {
-		t.Fatalf("write new session: %v", err)
-	}
-	if !app.maybeAutoTitleTopic(tab) {
-		t.Fatalf("new session should auto-title its fresh topic")
-	}
-
-	oldMeta, ok, err := agent.LoadBranchMeta(oldPath)
-	if err != nil || !ok {
-		t.Fatalf("load old meta: ok=%v err=%v", ok, err)
-	}
-	if oldMeta.TopicID != oldTopicID || oldMeta.TopicTitle != oldTopicTitle {
-		t.Fatalf("old session meta changed after new session auto-title: %+v", oldMeta)
-	}
-	newMeta, ok, err := agent.LoadBranchMeta(newPath)
-	if err != nil || !ok {
-		t.Fatalf("load new meta: ok=%v err=%v", ok, err)
-	}
-	if newMeta.TopicID != tab.TopicID || newMeta.TopicTitle != "new prompt" {
-		t.Fatalf("new session meta = %+v, want topic %q titled new prompt", newMeta, tab.TopicID)
+	if tab.TopicTitle != defaultTopicTitle {
+		t.Fatalf("new title = %q", tab.TopicTitle)
 	}
 }
 

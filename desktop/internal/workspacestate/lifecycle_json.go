@@ -48,29 +48,6 @@ func (v SessionState) MarshalJSON() ([]byte, error) {
 	return mergeUnknown(body, v.extra)
 }
 
-func (v *SourceMapping) UnmarshalJSON(body []byte) error {
-	type plain SourceMapping
-	var decoded plain
-	if err := json.Unmarshal(body, &decoded); err != nil {
-		return err
-	}
-	extra, err := unknownFields(body, "sourceKey", "path", "headId", "format", "fingerprint", "sessionId", "workspaceId", "retainedArtifacts")
-	if err != nil {
-		return err
-	}
-	*v = SourceMapping(decoded)
-	v.extra = extra
-	return nil
-}
-func (v SourceMapping) MarshalJSON() ([]byte, error) {
-	type plain SourceMapping
-	body, err := json.Marshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	return mergeUnknown(body, v.extra)
-}
-
 func (v *Presentation) UnmarshalJSON(body []byte) error {
 	type plain Presentation
 	var decoded plain
@@ -87,29 +64,6 @@ func (v *Presentation) UnmarshalJSON(body []byte) error {
 }
 func (v Presentation) MarshalJSON() ([]byte, error) {
 	type plain Presentation
-	body, err := json.Marshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	return mergeUnknown(body, v.extra)
-}
-
-func (v *RecoveryEntry) UnmarshalJSON(body []byte) error {
-	type plain RecoveryEntry
-	var decoded plain
-	if err := json.Unmarshal(body, &decoded); err != nil {
-		return err
-	}
-	extra, err := unknownFields(body, "id", "sourceKey", "path", "headId", "sessionId", "workspaceId", "scope", "workspaceRoot", "format", "reason", "status", "fingerprint")
-	if err != nil {
-		return err
-	}
-	*v = RecoveryEntry(decoded)
-	v.extra = extra
-	return nil
-}
-func (v RecoveryEntry) MarshalJSON() ([]byte, error) {
-	type plain RecoveryEntry
 	body, err := json.Marshal(plain(v))
 	if err != nil {
 		return nil, err

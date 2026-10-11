@@ -9,8 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/i18n"
+	"deepzora/internal/provider"
 )
 
 func TestDoctorCommandPrintsJSON(t *testing.T) {
@@ -164,9 +166,8 @@ func TestDoctorQualityCommandPrintsPublicSafeJSON(t *testing.T) {
 	}
 	path := filepath.Join(sessionDir, "abc.jsonl")
 	const secret = "quality-command-secret"
-	if err := os.WriteFile(path, []byte(`{"role":"user","content":"`+secret+`"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	saveTestSession(t, path, secret)
+
 	out := captureStdout(t, func() {
 		if rc := doctorCommand([]string{"quality", "abc", "--json"}, "test-version"); rc != 0 {
 			t.Fatalf("doctor quality rc = %d, want 0", rc)
@@ -233,7 +234,9 @@ func TestDoctorRedactSessionsCommand(t *testing.T) {
 	dir := t.TempDir()
 	const secret = "sensitive-value-that-must-not-leak"
 	path := filepath.Join(dir, "abc.jsonl")
-	if err := os.WriteFile(path, []byte(`{"role":"tool","content":"DEEPSEEK_API_KEY=`+secret+`"}`+"\n"), 0o644); err != nil {
+	sess := agent.NewSession("system")
+	sess.Add(provider.Message{Role: provider.RoleUser, Content: "DEEPSEEK_API_KEY=" + secret})
+	if err := sess.Save(path); err != nil {
 		t.Fatal(err)
 	}
 
@@ -242,7 +245,7 @@ func TestDoctorRedactSessionsCommand(t *testing.T) {
 			t.Fatalf("doctor redact-sessions rc = %d, want 0", rc)
 		}
 	})
-	if !strings.Contains(out, "session secret cleanup redacted 1/1 files") {
+	if !strings.Contains(out, "session secret cleanup redacted 3/3 files") {
 		t.Fatalf("unexpected output:\n%s", out)
 	}
 	data, err := os.ReadFile(path)

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"deepzora/internal/sessioncatalog"
+
 	"golang.org/x/sys/unix"
 )
 

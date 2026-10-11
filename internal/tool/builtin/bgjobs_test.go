@@ -41,7 +41,7 @@ func TestBackgroundBashWaitAndOutput(t *testing.T) {
 	id := running[0].ID
 
 	// wait blocks until it finishes, then returns its output.
-	wout, err := waitJob{}.Execute(ctx, []byte(`{"job_ids":["`+id+`"]}`))
+	wout, err := jobOutput{}.Execute(ctx, []byte(`{"job_id":"`+id+`","wait":true}`))
 	if err != nil {
 		t.Fatalf("wait: %v", err)
 	}
@@ -50,12 +50,12 @@ func TestBackgroundBashWaitAndOutput(t *testing.T) {
 	}
 
 	// bash_output reads the buffered output (wait doesn't consume the read cursor).
-	bo, err := bashOutput{}.Execute(ctx, []byte(`{"job_id":"`+id+`"}`))
+	bo, err := jobOutput{}.Execute(ctx, []byte(`{"job_id":"`+id+`"}`))
 	if err != nil {
 		t.Fatalf("bash_output: %v", err)
 	}
-	if !strings.Contains(bo, "hello") {
-		t.Errorf("bash_output = %q, want hello", bo)
+	if !strings.Contains(bo, "(no new output)") {
+		t.Errorf("bash_output = %q, want no new output", bo)
 	}
 }
 
@@ -129,30 +129,6 @@ func TestJobOutputCarriesBackgroundShellFailureMetadata(t *testing.T) {
 	}
 }
 
-func TestLegacyJobAliasesStayCallableButHiddenFromCapabilityCatalog(t *testing.T) {
-	registry := tool.NewRegistry()
-	registry.Add(jobOutput{})
-	registry.Add(jobKill{})
-	registry.Add(bashOutput{})
-	registry.Add(waitJob{})
-	registry.Add(killShell{})
-	want := map[string]bool{"job_output": true, "job_kill": true}
-	for _, entry := range registry.CapabilityContractEntries() {
-		if !want[entry.Name] {
-			t.Fatalf("compatibility alias leaked into catalog: %q", entry.Name)
-		}
-		delete(want, entry.Name)
-	}
-	if len(want) != 0 {
-		t.Fatalf("formal job tools missing from catalog: %v", want)
-	}
-	for _, legacy := range []string{"bash_output", "wait", "kill_shell"} {
-		if resolved, canonical, ambiguous := registry.ResolveCall(legacy); resolved == nil || canonical != legacy || len(ambiguous) != 0 {
-			t.Fatalf("legacy route %q is not executable", legacy)
-		}
-	}
-}
-
 func TestWaitMergesBackgroundEvidenceExactlyOnce(t *testing.T) {
 	m := jobs.NewManager(event.Discard)
 	defer m.Close()
@@ -172,15 +148,15 @@ func TestWaitMergesBackgroundEvidenceExactlyOnce(t *testing.T) {
 		return "done", nil
 	})
 
-	args := []byte(`{"job_ids":["` + j.ID + `"]}`)
-	if _, err := (waitJob{}).Execute(ctx, args); err != nil {
+	args := []byte(`{"job_id":"` + j.ID + `","wait":true}`)
+	if _, err := (jobOutput{}).Execute(ctx, args); err != nil {
 		t.Fatalf("wait: %v", err)
 	}
 	if !ledger.Summary().HasMutation() {
 		t.Fatal("wait did not merge the task job's mutation evidence")
 	}
 	firstLen := ledger.Len()
-	if _, err := (waitJob{}).Execute(ctx, args); err != nil {
+	if _, err := (jobOutput{}).Execute(ctx, args); err != nil {
 		t.Fatalf("second wait: %v", err)
 	}
 	if got := ledger.Len(); got != firstLen {
@@ -198,13 +174,13 @@ func TestWaitWithoutLedgerDoesNotConsumeBackgroundEvidence(t *testing.T) {
 		}}})
 		return "done", nil
 	})
-	args := []byte(`{"job_ids":["` + j.ID + `"]}`)
-	if _, err := (waitJob{}).Execute(baseCtx, args); err != nil {
+	args := []byte(`{"job_id":"` + j.ID + `","wait":true}`)
+	if _, err := (jobOutput{}).Execute(baseCtx, args); err != nil {
 		t.Fatalf("wait without ledger: %v", err)
 	}
 
 	ledger := evidence.NewLedger()
-	if _, err := (waitJob{}).Execute(evidence.WithLedger(baseCtx, ledger), args); err != nil {
+	if _, err := (jobOutput{}).Execute(evidence.WithLedger(baseCtx, ledger), args); err != nil {
 		t.Fatalf("wait with ledger: %v", err)
 	}
 	if !ledger.Summary().HasMutation() {
@@ -222,13 +198,13 @@ func TestWaitInPlanModeDefersBackgroundEvidence(t *testing.T) {
 		}}})
 		return "done", nil
 	})
-	args := []byte(`{"job_ids":["` + j.ID + `"]}`)
+	args := []byte(`{"job_id":"` + j.ID + `","wait":true}`)
 
 	// A planning turn may wait on jobs, but merging mutation receipts there
 	// would arm delivery sign-off demands the read-only turn cannot satisfy.
 	planLedger := evidence.NewLedger()
 	planCtx := planmode.WithActive(evidence.WithLedger(baseCtx, planLedger), true)
-	if _, err := (waitJob{}).Execute(planCtx, args); err != nil {
+	if _, err := (jobOutput{}).Execute(planCtx, args); err != nil {
 		t.Fatalf("wait in plan mode: %v", err)
 	}
 	if planLedger.Summary().HasMutation() {
@@ -238,7 +214,7 @@ func TestWaitInPlanModeDefersBackgroundEvidence(t *testing.T) {
 	// The evidence stays on the job for the first normal turn to collect.
 	ledger := evidence.NewLedger()
 	normalCtx := planmode.WithActive(evidence.WithLedger(baseCtx, ledger), false)
-	if _, err := (waitJob{}).Execute(normalCtx, args); err != nil {
+	if _, err := (jobOutput{}).Execute(normalCtx, args); err != nil {
 		t.Fatalf("wait after plan mode: %v", err)
 	}
 	if !ledger.Summary().HasMutation() {
@@ -259,11 +235,11 @@ func TestBackgroundKill(t *testing.T) {
 	}
 	id := m.Running()[0].ID
 
-	kout, err := killShell{}.Execute(ctx, []byte(`{"job_id":"`+id+`"}`))
+	kout, err := jobKill{}.Execute(ctx, []byte(`{"job_id":"`+id+`"}`))
 	if err != nil {
 		t.Fatalf("kill_shell: %v", err)
 	}
-	if !strings.Contains(kout, "Killed") {
+	if !strings.Contains(kout, "killed") {
 		t.Errorf("kill_shell = %q, want it to report Killed", kout)
 	}
 	// 120s natural duration keeps the job far from finishing on its own, so the
@@ -308,14 +284,14 @@ func TestKilledJobBashOutputDoesNotNoteLeaseBeforeEvidenceIsReady(t *testing.T) 
 		return "", context.Canceled
 	})
 
-	if _, err := (killShell{}).Execute(ctx, []byte(`{"job_id":"`+j.ID+`"}`)); err != nil {
+	if _, err := (jobKill{}).Execute(ctx, []byte(`{"job_id":"`+j.ID+`"}`)); err != nil {
 		t.Fatalf("kill_shell: %v", err)
 	}
 	<-cancelSeen // the goroutine observed the cancellation but has not returned
 
 	// bash_output lands in the unwinding window: status already reports Killed,
 	// but the job's done channel is not closed yet and no evidence exists.
-	bo, err := bashOutput{}.Execute(ctx, []byte(`{"job_id":"`+j.ID+`"}`))
+	bo, err := jobOutput{}.Execute(ctx, []byte(`{"job_id":"`+j.ID+`"}`))
 	if err != nil {
 		t.Fatalf("bash_output during unwind: %v", err)
 	}
@@ -336,7 +312,7 @@ func TestKilledJobBashOutputDoesNotNoteLeaseBeforeEvidenceIsReady(t *testing.T) 
 
 	// A later retry — the model calling bash_output again, or the next turn's
 	// automatic re-lease — must still find the evidence, not a dead dedupe entry.
-	if _, err := (bashOutput{}).Execute(ctx, []byte(`{"job_id":"`+j.ID+`"}`)); err != nil {
+	if _, err := (jobOutput{}).Execute(ctx, []byte(`{"job_id":"`+j.ID+`"}`)); err != nil {
 		t.Fatalf("bash_output after unwind: %v", err)
 	}
 	if !ledger.Summary().HasMutation() {
@@ -351,7 +327,7 @@ func TestKilledJobBashOutputDoesNotNoteLeaseBeforeEvidenceIsReady(t *testing.T) 
 // rather than panicking.
 func TestBackgroundToolsNoManager(t *testing.T) {
 	ctx := context.Background()
-	if _, err := (bashOutput{}).Execute(ctx, []byte(`{"job_id":"bash-1"}`)); err == nil {
+	if _, err := (jobOutput{}).Execute(ctx, []byte(`{"job_id":"bash-1"}`)); err == nil {
 		t.Error("bash_output without a manager should error")
 	}
 	if _, err := (bash{}).Execute(ctx, []byte(`{"command":"echo hi","run_in_background":true}`)); err == nil {

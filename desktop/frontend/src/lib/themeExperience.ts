@@ -146,7 +146,7 @@ export async function activateBaseStyle(style: ThemeStyle): Promise<ThemeExperie
     await api.ActivateBaseStyle(style);
   } else {
     // Legacy fallback: clear pack then set appearance.
-    await app.ResetThemePack();
+    await app.DisableThemePack();
     const theme = (experienceCache?.themeMode as Theme) || "auto";
     await app.SetDesktopAppearance(theme, style);
   }
@@ -173,7 +173,7 @@ export async function disableThemePack(): Promise<ThemeExperienceView> {
   if (typeof api.DisableThemePack === "function") {
     await api.DisableThemePack();
   } else {
-    await app.ResetThemePack();
+    await app.DisableThemePack();
   }
   endPreviewIfAny();
   const view = await loadThemeExperience();
@@ -186,7 +186,7 @@ export async function restoreGraphiteAppearance(): Promise<ThemeExperienceView> 
   if (typeof api.RestoreGraphiteAppearance === "function") {
     await api.RestoreGraphiteAppearance();
   } else {
-    await app.ResetThemePack();
+    await app.DisableThemePack();
     const theme = (experienceCache?.themeMode as Theme) || "auto";
     await app.SetDesktopAppearance(theme, "graphite");
   }

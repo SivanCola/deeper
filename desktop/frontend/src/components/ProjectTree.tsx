@@ -1,3 +1,4 @@
+import { invalidateSharedQuery } from "../lib/queryCoalesce";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { captureListReadAnchor, restoreListReadAnchor, type ListReadAnchor } from "../lib/listReadAnchor";
 import { ProjectTreeSessionBadges } from "./ProjectTreeSessionBadges";
@@ -464,6 +465,7 @@ export function ProjectTree({
     const request = ++shellRequestRef.current;
     const reloadRequestedProjects = (projects: ProjectNode[]) => reloadProjectTreeTopics(projects, options, reloadProjectTopicLists), catalogStatusGeneration = catalogStatusGenerationRef.current;
     try {
+      invalidateSharedQuery("GetProjectTreeSnapshot", []);
       const snapshot = await app.GetProjectTreeSnapshot();
       if (request !== shellRequestRef.current) return;
       const rev = snapshot.revision ?? 0, empty = treeRef.current.length === 0;
@@ -870,7 +872,7 @@ export function ProjectTree({
     if (!title) return;
     try {
       if (await remoteSessionActions.mutate(topicId, (remote) => app.RenameRemoteProjectSession(remote.hostId, remote.workspace, remoteSessionActionIdentity(remote), title))) return;
-      if (node.session || node.sessionPath) await app.RenameSessionTarget({ ref: node.session, source: node.source, sessionPath: node.sessionPath }, title);
+      if (node.session || node.sessionPath) await app.RenameSessionTarget({ ref: node.session, sessionPath: node.sessionPath }, title);
       else if (onRenameTopic) await onRenameTopic(topicId, title);
       else await app.RenameTopic(topicId, title);
       // Paint the new label immediately; the catalog event round-trip can lag.
@@ -917,7 +919,7 @@ export function ProjectTree({
     setMenuPoint(null);
     try {
       if (await remoteSessionActions.mutate(topicId, (remote) => app.SetRemoteSessionPinned(remote.hostId, remote.workspace, remoteSessionActionIdentity(remote), pinned))) return;
-      if (node.session || node.sessionPath) await app.SetSessionPinned({ ref: node.session, source: node.source, sessionPath: node.sessionPath }, pinned);
+      if (node.session || node.sessionPath) await app.SetSessionPinned({ ref: node.session, sessionPath: node.sessionPath }, pinned);
       else await app.SetTopicPinned(topicId, pinned);
       await refresh();
       await onTopicsChanged?.();
@@ -1378,7 +1380,7 @@ export function ProjectTree({
             <span className="project-tree__topic-copy">
               <span className="project-tree__topic-heading">
                 <span className="project-tree__topic-label">{label}</span>
-                <ProjectTreeSessionBadges node={node} forkedFromLabel={forkedFromLabel} recoveryLabel={recoveryLabel} />
+                <ProjectTreeSessionBadges forkedFromLabel={forkedFromLabel} recoveryLabel={recoveryLabel} />
                 {imSource && (
                   <span
                     className={`project-tree__topic-im project-tree__topic-im--${imSourcePlatform}`}

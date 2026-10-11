@@ -877,10 +877,8 @@ type managedHost struct {
 	serveMu        sync.Mutex              // serializes EnsureServer/StopServer for this host
 	// credPort is the last healed reverse-tunnel port; 0 means unknown.
 	// It is atomic because ensure and status dispatch use different locks.
-	credPort atomic.Int64
-	// credFallbackAt throttles legacy-serve replacement per workspace.
-	credFallbackAt map[string]int64
-	credWatch      credentialWatchdog
+	credPort  atomic.Int64
+	credWatch credentialWatchdog
 }
 
 // serveEntry is one workspace's serve registration: the published view (with
@@ -1073,7 +1071,7 @@ func (m *desktopRemoteManager) Connect(hostID string) error {
 	mh := &managedHost{
 		ctx: hostCtx, cancel: cancel,
 		status: RemoteConnectionStatusView{HostID: hostID, State: "connecting"},
-		serves: map[string]*serveEntry{}, credFallbackAt: map[string]int64{},
+		serves: map[string]*serveEntry{},
 	}
 	secretPrompt := m.secretPrompt(hostID, mh)
 	auth := desktopAuthForHost(host, secretPrompt)

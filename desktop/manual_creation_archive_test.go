@@ -12,7 +12,6 @@ func TestManualCreationAfterArchive(t *testing.T) {
 	for _, scope := range []string{"global", "project"} {
 		t.Run(scope, func(t *testing.T) {
 			a := newManualSessionTestApp(t)
-			corruptRetiredDraftDatabase(t)
 			root := ""
 			if scope == "project" {
 				root = t.TempDir()

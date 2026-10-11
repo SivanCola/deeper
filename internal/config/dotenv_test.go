@@ -780,32 +780,6 @@ func TestSetCredentialRejectsInvalidInput(t *testing.T) {
 	}
 }
 
-func TestProjectConfigCannotOverrideCredentialStoreMode(t *testing.T) {
-	home := isolateUserConfigHome(t)
-	project := t.TempDir()
-	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "")
-	os.Unsetenv("DEEPZORA_CREDENTIALS_STORE")
-	requireTestPathWithin(t, home, UserConfigPath())
-	if err := os.MkdirAll(filepath.Dir(UserConfigPath()), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(UserConfigPath(), []byte(`credentials_store = "file"`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(project, "deepzora.toml"), []byte(`credentials_store = "keyring"`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	approveWorkspace(t, project)
-
-	cfg, err := LoadForRoot(project)
-	if err != nil {
-		t.Fatalf("LoadForRoot: %v", err)
-	}
-	if cfg.CredentialsStore != CredentialsStoreFile {
-		t.Fatalf("CredentialsStore = %q, want file from user config", cfg.CredentialsStore)
-	}
-}
-
 // TestLoadDotEnvGlobalCredentialsOverrideEnv confirms Deepzora-owned global
 // credentials beat inherited environment variables.
 func TestLoadDotEnvGlobalCredentialsOverrideEnv(t *testing.T) {

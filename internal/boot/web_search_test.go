@@ -159,7 +159,7 @@ func TestBuildExposesIndependentSearch(t *testing.T) {
 name = "local"
 kind = "anthropic"
 base_url = "http://localhost:12345"
-model = "m"
+models = ["m"]
 web_search = true
 `)
 	approveWorkspace(t, dir)

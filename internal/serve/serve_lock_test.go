@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -192,20 +191,15 @@ func TestSwitchModelRejectsWhileRunning(t *testing.T) {
 	waitNotRunning(t, ctrl)
 }
 
-func TestForegroundMutationRejectsStaleSessionPath(t *testing.T) {
-	dir := t.TempDir()
-	currentPath := filepath.Join(dir, "current.jsonl")
-	stalePath := filepath.Join(dir, "stale.jsonl")
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Runner: blockingRunner{}, Sink: bc, SessionPath: currentPath})
-	s := newLifecycleTestServer(t, ctrl, bc, config.ServeConfig{})
+func TestForegroundMutationRejectsStaleSessionID(t *testing.T) {
+	s, ctrl, _, ref := newExclusiveSessionServeWithOptions(t, func(o *control.Options) { o.Runner = blockingRunner{} })
 
 	ctrl.SubmitHTTP("hi")
 	waitRunning(t, ctrl)
 	req := httptest.NewRequest(http.MethodPost, "/cancel", strings.NewReader(`{}`))
 	req.Host = "127.0.0.1"
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(expectedSessionPathHeader, stalePath)
+	req.Header.Set(expectedSessionIDHeader, "stale")
 	rec := httptest.NewRecorder()
 	operatorHandler(s).ServeHTTP(rec, req)
 	if rec.Code != http.StatusConflict {
@@ -218,7 +212,7 @@ func TestForegroundMutationRejectsStaleSessionPath(t *testing.T) {
 	req = httptest.NewRequest(http.MethodPost, "/cancel", strings.NewReader(`{}`))
 	req.Host = "127.0.0.1"
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(expectedSessionPathHeader, currentPath)
+	req.Header.Set(expectedSessionIDHeader, ref.SessionID)
 	rec = httptest.NewRecorder()
 	operatorHandler(s).ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {

@@ -26,6 +26,11 @@ func TestRepairSessionListingProjectionCancelsDuringPublish(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	for _, sidecar := range []string{store.SessionEventIndex(path), store.SessionDisplayIndex(path)} {
+		if err := os.Remove(sidecar); err != nil {
+			t.Fatal(err)
+		}
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	publishStarted := make(chan struct{})
 	ctx = withSessionPublishStartHook(ctx, func() {

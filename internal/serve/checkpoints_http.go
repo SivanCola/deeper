@@ -21,7 +21,6 @@ type serveCheckpointMeta struct {
 	CoverageGaps       []string `json:"coverageGaps,omitempty"`
 	ExpiredFilePayload bool     `json:"expiredFilePayload,omitempty"`
 	ActiveWriters      int      `json:"activeWriters,omitempty"`
-	Legacy             bool     `json:"legacy,omitempty"`
 	CanUndoFiles       bool     `json:"canUndoFiles,omitempty"`
 	DisabledReason     string   `json:"disabledReason,omitempty"`
 }
@@ -44,7 +43,7 @@ func serveCheckpointMetas(raw []checkpoint.Meta, hasBoundary func(int) bool) []s
 			TurnFileCount: len(item.Paths), Time: item.Time.UnixMilli(),
 			CanCode: len(item.Paths) > 0 && item.CanUndoFiles, CanConversation: hasBoundary(item.Turn),
 			Coverage: string(item.Coverage), CoverageGaps: gaps, ExpiredFilePayload: item.ExpiredFilePayload,
-			ActiveWriters: len(item.ActiveWriters), Legacy: item.Legacy, CanUndoFiles: item.CanUndoFiles,
+			ActiveWriters: len(item.ActiveWriters), CanUndoFiles: item.CanUndoFiles,
 			DisabledReason: item.DisabledReason,
 		})
 	}

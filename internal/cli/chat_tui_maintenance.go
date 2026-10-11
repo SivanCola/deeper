@@ -1,13 +1,14 @@
 package cli
 
 import (
-	tea "charm.land/bubbletea/v2"
 	"context"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/i18n"
 	"fmt"
 	"strings"
+
+	tea "charm.land/bubbletea/v2"
 )
 
 func (m chatTUI) maintenanceCancellable() bool {

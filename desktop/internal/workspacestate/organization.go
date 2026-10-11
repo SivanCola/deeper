@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
-	"os"
 	"slices"
 	"strings"
 )
@@ -17,7 +15,6 @@ type Organization struct {
 	ManualOrderEnabled bool                `json:"manualOrderEnabled"`
 	Order              []string            `json:"order"`
 	Groups             []OrganizationGroup `json:"groups"`
-	MigrationVersion   int                 `json:"migrationVersion"`
 	Imported           map[string]bool     `json:"imported"`
 	extra              map[string]json.RawMessage
 }
@@ -198,85 +195,4 @@ func attachOrganizationSession(w *Workspace, id, parentID string) {
 	}
 	o.Imported[key] = true
 	o.Revision++
-}
-
-// Replace every already-imported source alias in the same commit as its mapping.
-func adoptOrganizationSource(state *State, m SourceMapping) {
-	w, ok := state.Workspaces[m.WorkspaceID]
-	if !ok || w.Organization == nil {
-		return
-	}
-	o := w.Organization
-	normalizeOrganization(o)
-	oldKeys := []string{"source\x00local\x00" + m.SourceKey}
-	if m.HeadID == "" {
-		oldKeys = append(oldKeys, "path\x00"+m.Path)
-	}
-	target := SessionKey(m.SessionID)
-	already := o.Imported[target]
-	changed := false
-	replace := func(values []string) []string {
-		out := []string{}
-		for _, v := range values {
-			if slices.Contains(oldKeys, v) {
-				if already {
-					continue
-				}
-				v = target
-				changed = true
-			}
-			if !slices.Contains(out, v) {
-				out = append(out, v)
-			}
-		}
-		return out
-	}
-	o.Order = replace(o.Order)
-	for i := range o.Groups {
-		o.Groups[i].Members = replace(o.Groups[i].Members)
-	}
-	for _, old := range oldKeys {
-		if o.Imported[old] {
-			o.Imported[target] = true
-			delete(o.Imported, old)
-			changed = true
-		}
-	}
-	if changed {
-		o.Revision++
-	}
-	mirrorOrganizationOrder(&w)
-	state.Workspaces[m.WorkspaceID] = w
-}
-
-func backupV2(path string) error {
-	b, e := os.ReadFile(path)
-	if errors.Is(e, os.ErrNotExist) {
-		return nil
-	}
-	if e != nil {
-		return e
-	}
-	var h struct {
-		Version int `json:"version"`
-	}
-	if json.Unmarshal(b, &h) != nil || h.Version != 2 {
-		return nil
-	}
-	f, e := os.OpenFile(path+".v2.bak", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	if errors.Is(e, os.ErrExist) {
-		return nil
-	}
-	if e != nil {
-		return e
-	}
-	_, e = f.Write(b)
-	if e == nil {
-		e = f.Sync()
-	}
-	closeErr := f.Close()
-	if e != nil {
-		return e
-	}
-	return closeErr
 }

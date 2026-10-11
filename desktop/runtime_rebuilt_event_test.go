@@ -2,49 +2,19 @@ package main
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
-	"deepzora/internal/provider"
 )
 
 // TestRuntimeRebuildsEmitRuntimeRebuiltForTab pins the chime-dedupe contract:
 // model/effort rebuilds emit runtime:rebuilt; deprecated SetTokenMode does not.
 func TestRuntimeRebuildsEmitRuntimeRebuiltForTab(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	setDesktopTestCredential(t, "OLD_MODEL_KEY", "sk-test")
-	setDesktopTestCredential(t, "NEW_MODEL_KEY", "sk-test")
-
-	cfg := config.Default()
-	cfg.DefaultModel = "old/old-model"
-	cfg.Desktop.ProviderAccess = []string{"old", "new"}
-	cfg.Providers = []config.ProviderEntry{
-		{Name: "old", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "old-model", APIKeyEnv: "OLD_MODEL_KEY"},
-		{Name: "new", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "deepseek-v4-pro", APIKeyEnv: "NEW_MODEL_KEY"},
-	}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
-
-	dir := config.SessionDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir session dir: %v", err)
-	}
-	sess := agent.NewSession("sys")
-	sess.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	exec := agent.New(nil, nil, sess, agent.Options{}, event.Discard)
-	path := filepath.Join(dir, "rebuild-events.jsonl")
-	ctrl := control.New(control.Options{Executor: exec, SessionDir: dir, SessionPath: path, Label: "old", Sink: event.Discard})
-
-	app := NewApp()
-	app.ctx = context.Background()
+	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
+	tab.sink.ctx = context.Background()
 	// emitReady calls the Wails runtime directly; the ready hook keeps the
 	// workspace-reconcile path (which SetEffortForTab can take) off the real
 	// event bridge, which log.Fatals on a plain Background context.
@@ -75,16 +45,6 @@ func TestRuntimeRebuildsEmitRuntimeRebuiltForTab(t *testing.T) {
 		mu.Unlock()
 	}
 
-	tab := &WorkspaceTab{
-		ID:            "tab_rebuild_events",
-		Scope:         "global",
-		WorkspaceRoot: globalTabWorkspaceRoot(),
-		Ready:         true,
-		model:         "old/old-model",
-		Ctrl:          ctrl,
-		sink:          &tabEventSink{tabID: "tab_rebuild_events", app: app, ctx: context.Background()},
-		disabledMCP:   map[string]ServerView{},
-	}
 	tab.sink.runtimeEvents.emit = sinkEmit
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
@@ -112,7 +72,7 @@ func TestRuntimeRebuildsEmitRuntimeRebuiltForTab(t *testing.T) {
 		t.Fatalf("after %s: runtime:rebuilt events = %v, want %d", step, rebuilt, want)
 	}
 
-	if err := app.SetModelForTab(tab.ID, "new/deepseek-v4-pro"); err != nil {
+	if err := app.SetModelForTab(tab.ID, "new/new-model"); err != nil {
 		t.Fatalf("SetModelForTab: %v", err)
 	}
 	waitCount(1, "model switch")
@@ -122,14 +82,11 @@ func TestRuntimeRebuildsEmitRuntimeRebuiltForTab(t *testing.T) {
 	}
 	waitCount(2, "effort switch")
 
-	if err := app.SetTokenModeForTab(tab.ID, "economy"); err != nil {
-		t.Fatalf("SetTokenModeForTab: %v", err)
-	}
 	// Give a real rebuild event time to arrive if the no-op regresses.
 	time.Sleep(50 * time.Millisecond)
 	mu.Lock()
 	if len(rebuilt) != 2 {
-		t.Fatalf("after SetTokenModeForTab: runtime:rebuilt events = %v, want 2 (no rebuild)", rebuilt)
+		t.Fatalf("after current model/effort switches: runtime:rebuilt events = %v, want 2 (no rebuild)", rebuilt)
 	}
 	for i, id := range rebuilt {
 		if id == "VIA-APP-QUEUE" {

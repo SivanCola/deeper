@@ -339,9 +339,9 @@ try {
       await page.getByText("我是 Deepzora。", { exact: true }).waitFor();
       const authoredText = await page.locator(".chat-column").innerText();
       assert.match(authoredText, /你是谁/);
-      assert.match(authoredText, /旧会话问题/);
+      assert.match(authoredText, /当前会话问题/);
       assert.match(authoredText, /<response-language>用户引用的 XML<\/response-language>/);
-      assert.doesNotMatch(authoredText, /private environment|internal policy|legacy internal route|session-context|capability-route/);
+      assert.doesNotMatch(authoredText, /private environment|internal policy|internal route|session-context|capability-route/);
       await page.screenshot({ path: path.join(evidence, `${name}-authored-chat.png`) });
       await page.evaluate(() => window.chatFixture.maintenance("start"));
       const maintenanceCard = page.locator('[data-entrance="maintenance:bench-maintenance"]');

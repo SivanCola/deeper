@@ -11,7 +11,7 @@ import (
 // Owned artifacts are independent copies, never links to the parent. History
 // references remain relative to the session that owns their imported data.
 func copyOwnedSessionFiles(ctx context.Context, source, target string) error {
-	for _, name := range []string{"attachments", "assets", "legacy"} {
+	for _, name := range []string{"attachments", "assets"} {
 		root := filepath.Join(source, name)
 		if _, err := os.Lstat(root); os.IsNotExist(err) {
 			continue

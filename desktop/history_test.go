@@ -12,7 +12,6 @@ import (
 	"unicode/utf8"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/boot"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
@@ -118,103 +117,6 @@ func TestHistoryMessagesPreferPersistedRawUserContent(t *testing.T) {
 	}
 }
 
-func TestHistoryMessagesRecoverLegacyExpandedPasteWithoutSidecar(t *testing.T) {
-	const label = "[已粘贴文本 #1 · 3 行]"
-	const display = "review this\n\n" + label
-	const expanded = display + "\n\n--- Begin " + label + " ---\nfirst\nsecond\nthird\n--- End " + label + " ---"
-	const rendered = "<active-goal>\nship the release\n</active-goal>\n\n" + expanded
-	msgs := []provider.Message{{Role: provider.RoleUser, Content: rendered, RawContent: expanded}}
-
-	got := historyMessages(msgs, historyReplayUserContent)
-	if len(got) != 1 || got[0].Content != display {
-		t.Fatalf("legacy pasted display = %+v, want %q", got, display)
-	}
-	if got[0].SubmitText != expanded {
-		t.Fatalf("legacy pasted replay = %q, want expanded user input", got[0].SubmitText)
-	}
-	if strings.Contains(got[0].SubmitText, "<active-goal>") {
-		t.Fatalf("transient goal leaked into legacy replay: %+v", got[0])
-	}
-}
-
-func TestHistoryMessagesExpandedRawSupportsSidecarAndPreviousClients(t *testing.T) {
-	const label = "[Pasted text #1 · 2 lines]"
-	const display = "inspect\n\n" + label
-	const expanded = display + "\n\n--- Begin " + label + " ---\none\ntwo\n--- End " + label + " ---"
-	const rendered = "<capability-route version=\"1\">\nuse review\n</capability-route>\n\n" + expanded
-	msgs := []provider.Message{{Role: provider.RoleUser, Content: rendered, RawContent: expanded}}
-
-	// Previous desktop releases use RawContent as their replay source. Keeping
-	// the expanded markers there lets them reconstruct the same inline card
-	// instead of rendering an opaque label with no accessible payload.
-	previousReplay := agent.UserMessageText(msgs[0])
-	if !strings.Contains(previousReplay, "--- Begin "+label+" ---") || !strings.Contains(previousReplay, "--- End "+label+" ---") {
-		t.Fatalf("previous-client replay lost pasted payload markers: %q", previousReplay)
-	}
-
-	got := historyMessages(msgs, func(content string) string {
-		if content != rendered {
-			t.Fatalf("sidecar resolver content = %q, want rendered content", content)
-		}
-		return display
-	})
-	if len(got) != 1 || got[0].Content != display || got[0].SubmitText != expanded {
-		t.Fatalf("legacy sidecar history = %+v, want display %q and expanded replay", got, display)
-	}
-	if strings.Contains(got[0].SubmitText, "capability-route") {
-		t.Fatalf("provider-only wrapper leaked into sidecar replay: %+v", got[0])
-	}
-}
-
-func TestHistoryMessagesLegacyReferenceReplayExcludesResolvedContext(t *testing.T) {
-	const raw = "@src/main.go explain the entrypoint"
-	const rendered = "<capability-route version=\"1\">\nuse review\n</capability-route>\n\nReferenced context:\n\n<file path=\"src/main.go\">\npackage main\n</file>\n\n" + raw
-	msgs := []provider.Message{{Role: provider.RoleUser, Content: rendered, RawContent: raw}}
-
-	got := historyMessages(msgs, historyReplayUserContent)
-	if len(got) != 1 || got[0].Content != raw || got[0].SubmitText != "" {
-		t.Fatalf("legacy reference history = %+v, want compact raw replay", got)
-	}
-	if strings.Contains(got[0].Content, "<file") || strings.Contains(got[0].SubmitText, "<file") {
-		t.Fatalf("resolved reference leaked into editable history: %+v", got[0])
-	}
-}
-
-func TestHistoryMessagesDoNotReplayMemoryCompilerContract(t *testing.T) {
-	raw := historyMemoryCompilerContract(t, "ship the refactor")
-	msgs := []provider.Message{
-		{Role: provider.RoleUser, Content: raw},
-		{Role: provider.RoleAssistant, Content: "done"},
-	}
-
-	got := historyMessages(msgs, control.StripComposePrefixes)
-	if len(got) != 2 {
-		t.Fatalf("history length = %d, want 2: %+v", len(got), got)
-	}
-	if got[0].Content != "ship the refactor" {
-		t.Fatalf("visible user content = %q, want source_event", got[0].Content)
-	}
-	if got[0].SubmitText != "" {
-		t.Fatalf("raw Memory v5 contract should not be replay submitText, got %q", got[0].SubmitText)
-	}
-	assertNoHistoryMemoryContract(t, got[0].Content)
-}
-
-func TestHistoryMessagesRestoreCompiledSkillInvocationWithoutContract(t *testing.T) {
-	raw := historyMemoryCompilerContract(t, "/deepzora-develop ship the refactor")
-	msgs := []provider.Message{{Role: provider.RoleUser, Content: raw}}
-
-	got := historyMessages(msgs, func(string) string { return "ship the refactor" })
-	if len(got) != 1 {
-		t.Fatalf("history length = %d, want 1: %+v", len(got), got)
-	}
-	if got[0].Content != "ship the refactor" || got[0].SubmitText != "/deepzora-develop ship the refactor" {
-		t.Fatalf("compiled skill history = %+v", got[0])
-	}
-	assertNoHistoryMemoryContract(t, got[0].Content)
-	assertNoHistoryMemoryContract(t, got[0].SubmitText)
-}
-
 func TestHistoryMessagesStripActiveGoalFromVisibleUserContent(t *testing.T) {
 	raw := "<active-goal>\nship the approval redesign\n</active-goal>\n\ncontinue implementation"
 	msgs := []provider.Message{
@@ -239,7 +141,7 @@ func TestHistoryMessagesCarryCheckpointTurnsAcrossHiddenSyntheticUsers(t *testin
 		{Role: provider.RoleSystem, Content: "sys"},
 		{Role: provider.RoleUser, Content: "first visible"},
 		{Role: provider.RoleAssistant, Content: "first answer"},
-		{Role: provider.RoleUser, Content: "Continue pursuing the active goal. If it is complete, provide the concise final result."},
+		{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "Continue pursuing the active goal. If it is complete, provide the concise final result."},
 		{Role: provider.RoleAssistant, Content: "hidden continuation"},
 		{Role: provider.RoleUser, Content: "second visible"},
 		{Role: provider.RoleAssistant, Content: "second answer"},
@@ -322,7 +224,7 @@ func TestHistoryPageFromProviderMessagesWindowsVisibleUsers(t *testing.T) {
 		{Role: provider.RoleSystem, Content: "sys"},
 		{Role: provider.RoleUser, Content: "first"},
 		{Role: provider.RoleAssistant, Content: "one"},
-		{Role: provider.RoleUser, Content: "Continue pursuing the active goal. If it is complete, provide the concise final result."},
+		{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "Continue pursuing the active goal. If it is complete, provide the concise final result."},
 		{Role: provider.RoleAssistant, Content: "hidden continuation"},
 		{Role: provider.RoleUser, Content: "second"},
 		{Role: provider.RoleAssistant, Content: "two"},
@@ -388,7 +290,7 @@ func TestHistoryCheckpointTurnsSkipsHiddenUsers(t *testing.T) {
 	msgs := []provider.Message{
 		{Role: provider.RoleUser, Content: "first visible"},
 		{Role: provider.RoleAssistant, Content: "ok"},
-		{Role: provider.RoleUser, Content: "Continue pursuing the active goal. If it is complete, provide the concise final result."},
+		{Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "Continue pursuing the active goal. If it is complete, provide the concise final result."},
 		{Role: provider.RoleUser, Content: "second visible"},
 	}
 	got := historyCheckpointTurns(
@@ -556,7 +458,7 @@ func TestHistoryForTabRestoresPlannerDisplayWhenCancelledBeforeExecutorStarts(t 
 	executorSession := agent.NewSession("system")
 	executor := agent.New(stubProvider{}, tool.NewRegistry(), executorSession, agent.Options{}, tab.sink)
 	planner := &blockingPlannerProvider{started: make(chan struct{})}
-	runner := agent.NewCoordinator(planner, agent.NewSession("planner system"), nil, agent.PlannerToolRegistry(tool.NewRegistry()), agent.Options{}, executor, 0, tab.sink, nil)
+	runner := agent.NewCoordinatorWithPlannerPolicy(planner, agent.NewSession("planner system"), nil, agent.PlannerToolRegistry(tool.NewRegistry()), agent.Options{}, executor, 0, tab.sink, nil)
 	ctrl := control.New(control.Options{Runner: runner, Executor: executor, SessionDir: dir, SessionPath: path, Sink: tab.sink})
 	defer ctrl.Close()
 	ctrl.SetPlanMode(true)
@@ -942,9 +844,8 @@ func TestRebindTabToLoadedSessionPersistsAndRestoresSessionProfile(t *testing.T)
 	writeHistoryTestSession(t, currentPath, "current prompt")
 	writeHistoryTestSession(t, targetPath, "target prompt")
 	if err := agent.SaveBranchMetaPreserveUpdated(targetPath, agent.BranchMeta{
-		TokenMode:        boot.TokenModeFull,
-		Mode:             "yolo",
-		ToolApprovalMode: control.ToolApprovalYolo,
+		Mode:             "normal",
+		ToolApprovalMode: control.ToolApprovalDangerFullAccess,
 	}); err != nil {
 		t.Fatalf("SaveBranchMetaPreserveUpdated target: %v", err)
 	}
@@ -954,8 +855,8 @@ func TestRebindTabToLoadedSessionPersistsAndRestoresSessionProfile(t *testing.T)
 		t.Fatalf("LoadSession: %v", err)
 	}
 	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: currentPath, Label: "current", Sink: event.Discard})
-	ctrl.SetMode(true, false)
-	ctrl.SetToolApprovalMode(control.ToolApprovalAuto)
+	ctrl.SetPlanMode(true)
+	ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	defer ctrl.Close()
 
 	app := NewApp()
@@ -967,7 +868,7 @@ func TestRebindTabToLoadedSessionPersistsAndRestoresSessionProfile(t *testing.T)
 		Ctrl:             ctrl,
 		Ready:            true,
 		mode:             "plan",
-		toolApprovalMode: control.ToolApprovalAuto,
+		toolApprovalMode: control.ToolApprovalWorkspaceWrite,
 		sink:             &tabEventSink{tabID: "tab", app: app},
 		disabledMCP:      map[string]ServerView{},
 	}
@@ -983,18 +884,15 @@ func TestRebindTabToLoadedSessionPersistsAndRestoresSessionProfile(t *testing.T)
 	if err != nil || !ok {
 		t.Fatalf("LoadBranchMeta current ok=%v err=%v", ok, err)
 	}
-	if currentMeta.TokenMode != boot.TokenModeFull || currentMeta.AgentPreset != boot.AgentPresetStandard ||
-		currentMeta.Mode != "plan" || currentMeta.ToolApprovalMode != control.ToolApprovalAuto {
-		t.Fatalf("current session profile = token:%q preset:%q mode:%q approval:%q, want full/standard/plan/auto",
-			currentMeta.TokenMode, currentMeta.AgentPreset, currentMeta.Mode, currentMeta.ToolApprovalMode)
+	if currentMeta.Mode != "plan" || currentMeta.ToolApprovalMode != control.ToolApprovalWorkspaceWrite {
+		t.Fatalf("current session profile = mode:%q approval:%q, want plan/auto",
+			currentMeta.Mode, currentMeta.ToolApprovalMode)
 	}
-	if got := currentTabTokenMode(tab); got != boot.TokenModeFull {
-		t.Fatalf("rebound token mode = %q, want full", got)
-	}
-	if got := currentTabMode(tab); got != "yolo" {
+
+	if got := currentTabMode(tab); got != "normal" {
 		t.Fatalf("rebound mode = %q, want yolo", got)
 	}
-	if got := currentTabToolApprovalMode(tab); got != control.ToolApprovalYolo {
+	if got := currentTabToolApprovalMode(tab); got != control.ToolApprovalDangerFullAccess {
 		t.Fatalf("rebound tool approval = %q, want yolo", got)
 	}
 }
@@ -1217,9 +1115,8 @@ func newAtomicRebindTestApp(t *testing.T) (*App, *WorkspaceTab, control.SessionA
 	writeHistoryTestSession(t, sourcePath, "source prompt")
 	writeHistoryTestSession(t, targetPath, "target prompt")
 	if err := agent.SaveBranchMetaPreserveUpdated(targetPath, agent.BranchMeta{
-		TokenMode:        boot.TokenModeDelivery,
 		Mode:             "normal",
-		ToolApprovalMode: control.ToolApprovalAsk,
+		ToolApprovalMode: control.ToolApprovalReadOnly,
 	}); err != nil {
 		t.Fatalf("save target profile: %v", err)
 	}
@@ -1237,7 +1134,7 @@ func newAtomicRebindTestApp(t *testing.T) (*App, *WorkspaceTab, control.SessionA
 	})
 	oldCtrl.Resume(sourceSession, sourcePath)
 	oldCtrl.SetPlanMode(true)
-	oldCtrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	oldCtrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 
 	app := NewApp()
 	app.ctx = context.Background()
@@ -1251,7 +1148,7 @@ func newAtomicRebindTestApp(t *testing.T) (*App, *WorkspaceTab, control.SessionA
 		Ready:            true,
 		model:            "",
 		mode:             "plan-yolo",
-		toolApprovalMode: control.ToolApprovalYolo,
+		toolApprovalMode: control.ToolApprovalDangerFullAccess,
 		sink:             &tabEventSink{tabID: "atomic-rebind", app: app, ctx: app.ctx},
 		disabledMCP:      map[string]ServerView{},
 	}
@@ -1293,10 +1190,9 @@ func assertAtomicRebindFailurePreservedSource(
 	if got := tab.sessionLeaseRuntimeKey(); got != sessionRuntimeKey(sourcePath) {
 		t.Fatalf("lease after failed rebind = %q, want source key %q", got, sessionRuntimeKey(sourcePath))
 	}
-	if !oldCtrl.PlanMode() || oldCtrl.ToolApprovalMode() != control.ToolApprovalYolo ||
-		currentTabTokenMode(tab) != boot.TokenModeFull {
-		t.Fatalf("source profile changed after failed rebind: plan=%v approval=%q token=%q",
-			oldCtrl.PlanMode(), oldCtrl.ToolApprovalMode(), currentTabTokenMode(tab))
+	if !oldCtrl.PlanMode() || oldCtrl.ToolApprovalMode() != control.ToolApprovalDangerFullAccess {
+		t.Fatalf("source profile changed after failed rebind: plan=%v approval=%q",
+			oldCtrl.PlanMode(), oldCtrl.ToolApprovalMode())
 	}
 	app.mu.RLock()
 	view := app.sessionRuntimeViewLocked(tab)
@@ -1377,8 +1273,8 @@ func TestCloseTabPersistsSessionProfileBeforeRemovingVisibleTab(t *testing.T) {
 	}
 
 	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: currentPath, Label: "profile", Sink: event.Discard})
-	ctrl.SetMode(true, false)
-	ctrl.SetToolApprovalMode(control.ToolApprovalAuto)
+	ctrl.SetPlanMode(true)
+	ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	ctrl.SetGoal("finish the review")
 
 	app := NewApp()
@@ -1390,7 +1286,7 @@ func TestCloseTabPersistsSessionProfileBeforeRemovingVisibleTab(t *testing.T) {
 		Ctrl:             ctrl,
 		Ready:            true,
 		mode:             "plan",
-		toolApprovalMode: control.ToolApprovalAuto,
+		toolApprovalMode: control.ToolApprovalWorkspaceWrite,
 		sink:             &tabEventSink{tabID: "profile", app: app},
 		disabledMCP:      map[string]ServerView{},
 	}
@@ -1415,10 +1311,9 @@ func TestCloseTabPersistsSessionProfileBeforeRemovingVisibleTab(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("LoadBranchMeta current ok=%v err=%v", ok, err)
 	}
-	if meta.TokenMode != boot.TokenModeFull || meta.AgentPreset != boot.AgentPresetStandard ||
-		meta.Mode != "plan" || meta.ToolApprovalMode != control.ToolApprovalAuto || meta.Goal != "finish the review" {
-		t.Fatalf("closed session profile = token:%q preset:%q mode:%q approval:%q goal:%q, want full/standard/plan/auto/goal",
-			meta.TokenMode, meta.AgentPreset, meta.Mode, meta.ToolApprovalMode, meta.Goal)
+	if meta.Mode != "plan" || meta.ToolApprovalMode != control.ToolApprovalWorkspaceWrite || meta.Goal != "finish the review" {
+		t.Fatalf("closed session profile = mode:%q approval:%q goal:%q, want plan/auto/goal",
+			meta.Mode, meta.ToolApprovalMode, meta.Goal)
 	}
 }
 
@@ -1439,8 +1334,8 @@ func TestKeepOnlyVisibleTabPersistsRemovedSessionProfile(t *testing.T) {
 	}
 
 	removedCtrl := control.New(control.Options{SessionDir: dir, SessionPath: removedPath, Label: "removed", Sink: event.Discard})
-	removedCtrl.SetMode(true, false)
-	removedCtrl.SetToolApprovalMode(control.ToolApprovalAuto)
+	removedCtrl.SetPlanMode(true)
+	removedCtrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	removedCtrl.SetGoal("keep this profile")
 
 	app := NewApp()
@@ -1460,7 +1355,7 @@ func TestKeepOnlyVisibleTabPersistsRemovedSessionProfile(t *testing.T) {
 		Ctrl:             removedCtrl,
 		Ready:            true,
 		mode:             "plan",
-		toolApprovalMode: control.ToolApprovalAuto,
+		toolApprovalMode: control.ToolApprovalWorkspaceWrite,
 		sink:             &tabEventSink{tabID: "removed", app: app},
 		disabledMCP:      map[string]ServerView{},
 	}
@@ -1477,10 +1372,9 @@ func TestKeepOnlyVisibleTabPersistsRemovedSessionProfile(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("LoadBranchMeta removed ok=%v err=%v", ok, err)
 	}
-	if meta.TokenMode != boot.TokenModeFull || meta.AgentPreset != boot.AgentPresetStandard ||
-		meta.Mode != "plan" || meta.ToolApprovalMode != control.ToolApprovalAuto || meta.Goal != "keep this profile" {
-		t.Fatalf("removed session profile = token:%q preset:%q mode:%q approval:%q goal:%q, want full/standard/plan/auto/goal",
-			meta.TokenMode, meta.AgentPreset, meta.Mode, meta.ToolApprovalMode, meta.Goal)
+	if meta.Mode != "plan" || meta.ToolApprovalMode != control.ToolApprovalWorkspaceWrite || meta.Goal != "keep this profile" {
+		t.Fatalf("removed session profile = mode:%q approval:%q goal:%q, want plan/auto/goal",
+			meta.Mode, meta.ToolApprovalMode, meta.Goal)
 	}
 }
 
@@ -1491,23 +1385,19 @@ func TestLoadTabSessionProfileIgnoresTerminalGoalState(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeHistoryTestSession(t, sessionPath, "terminal prompt")
-	if err := agent.SaveBranchMetaPreserveUpdated(sessionPath, agent.BranchMeta{
-		TokenMode: "economy", Mode: "plan", ToolApprovalMode: control.ToolApprovalAuto, Goal: "stale terminal goal",
-	}); err != nil {
+	if err := agent.SaveBranchMetaPreserveUpdated(sessionPath, agent.BranchMeta{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(store.SessionGoalState(sessionPath), []byte(`{"goal":"stale terminal goal","status":"complete"}`), 0o644); err != nil {
+	if err := os.WriteFile(store.SessionGoalState(sessionPath), []byte(`{"schemaVersion":1,"goal":"stale terminal goal","status":"complete"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	profile := loadTabSessionProfile(sessionPath)
-	if profile.goal != "" || profile.tokenMode != "full" || profile.qualityFloor != control.QualityFloorStandard || profile.mode != "plan" || profile.toolApprovalMode != control.ToolApprovalAuto {
+	if profile.goal != "" || profile.mode != "normal" || profile.toolApprovalMode != control.ToolApprovalReadOnly {
 		t.Fatalf("profile=%+v", profile)
 	}
 	tab := &WorkspaceTab{}
 	applyTabSessionProfile(tab, profile)
-	if currentTabTokenMode(tab) != boot.TokenModeFull {
-		t.Fatal("legacy economy must fold to standard")
-	}
+
 }
 
 func TestLoadTabSessionProfileMissingApprovalDefaultsAsk(t *testing.T) {
@@ -1520,7 +1410,7 @@ func TestLoadTabSessionProfileMissingApprovalDefaultsAsk(t *testing.T) {
 	if err := agent.SaveBranchMetaPreserveUpdated(sessionPath, agent.BranchMeta{Mode: "normal"}); err != nil {
 		t.Fatal(err)
 	}
-	if profile := loadTabSessionProfile(sessionPath); profile.toolApprovalMode != control.ToolApprovalAsk {
+	if profile := loadTabSessionProfile(sessionPath); profile.toolApprovalMode != control.ToolApprovalReadOnly {
 		t.Fatalf("legacy missing tool approval mode = %q, want ask", profile.toolApprovalMode)
 	}
 }

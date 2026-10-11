@@ -72,12 +72,6 @@ func TestSessionCatalogDeferredCorruptionReplacesOwnerAndRevokesOldReads(t *test
 	if _, err := old.ListOrdinarySessions(lease.Context(context.Background()), sessioncatalog.OrdinaryPageRequest{Scope: "global"}); !errors.Is(err, sessioncatalog.ErrCatalogInvalidated) {
 		t.Fatalf("old cursor was not revoked: %v", err)
 	}
-	reader := &lazyTopicPageReader{catalog: old, lease: lease, positions: map[int]topicPagePosition{0: {}}}
-	_, _, readErr := reader.page(t.Context(), 0, 50)
-	var operationErr *SessionOperationError
-	if !errors.As(readErr, &operationErr) || operationErr.Code != "stale_cursor" {
-		t.Fatalf("replaced catalog cursor lost its typed status: %v", readErr)
-	}
 	got, err := os.ReadFile(source)
 	if err != nil || string(got) != string(body) {
 		t.Fatalf("metadata rebuild changed original content: %v", err)

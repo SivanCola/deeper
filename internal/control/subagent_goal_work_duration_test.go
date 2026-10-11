@@ -33,7 +33,7 @@ func TestSubagentSkillRecordsWorkDurationOnChildMessage(t *testing.T) {
 		},
 	})
 	defer c.Close()
-	c.SetGoalWithResearchMode("list the existing notes", GoalResearchOff)
+	c.SetGoal("list the existing notes")
 	c.SubmitInvocationDisplay(
 		"list the existing notes",
 		"list the existing notes",
@@ -76,7 +76,7 @@ func TestSubagentSkillGoalRejectsStaleWorkDuration(t *testing.T) {
 		},
 	})
 	defer c.Close()
-	c.SetGoalWithResearchMode("original goal", GoalResearchOff)
+	c.SetGoal("original goal")
 	c.SubmitInvocationDisplay(
 		"inspect the notes",
 		"inspect the notes",
@@ -88,7 +88,7 @@ func TestSubagentSkillGoalRejectsStaleWorkDuration(t *testing.T) {
 		t.Fatal("subagent skill did not start")
 	}
 
-	c.SetGoalWithResearchMode("replacement goal", GoalResearchOff)
+	c.SetGoal("replacement goal")
 	close(release)
 	waitForTurnDone(t, events)
 

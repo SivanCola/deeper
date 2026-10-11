@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"deepzora/internal/diff"
 )
@@ -466,37 +465,6 @@ func TestCompensationRecoversCrashBetweenBackupAndPublishRenames(t *testing.T) {
 	}
 	if _, err := os.Stat(publish); !os.IsNotExist(err) {
 		t.Fatalf("publish temp remains after compensation: %v", err)
-	}
-}
-
-func TestLegacyFileRevertIsRefusedWithoutOwnershipFingerprint(t *testing.T) {
-	root := t.TempDir()
-	dir := t.TempDir()
-	path := filepath.Join(root, "a.txt")
-	write(t, path, "manual")
-	before := "before"
-	legacy := Checkpoint{Turn: 0, Time: time.Now(), Files: []FileSnap{{Path: "a.txt", Content: &before}}}
-	raw, err := json.Marshal(legacy)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "turn-0.json"), raw, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	store := New(dir, root)
-	plan, err := store.PrepareFileRevert("a.txt", 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if plan.CanFiles || plan.PlanID != "" {
-		t.Fatalf("legacy single-file revert was authorized: %+v", plan)
-	}
-	if _, err := store.CommitFileRevert(plan.PlanID, ResolveOverwriteCheckpoint); err == nil {
-		t.Fatal("legacy file revert commit must be refused")
-	}
-	if got := read(t, path); got != "manual" {
-		t.Fatalf("legacy refusal changed file to %q", got)
 	}
 }
 

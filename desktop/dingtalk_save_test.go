@@ -11,19 +11,10 @@ import (
 func TestSetBotSettingsDingtalkRoundTrip(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	cfg := config.Default()
-	cfg.Bot.Dingtalk = config.DingtalkBotConfig{
-		Enabled:        true,
-		ClientID:       "appkey-initial",
-		SecretEnv:      "DINGTALK_CLIENT_SECRET",
-		BotName:        "InitialBot",
-		RequireMention: true,
-		SessionMappings: []config.BotConnectionSessionMapping{{
-			RemoteID:      "cid-preserved",
-			Scope:         "global",
-			SessionID:     "path:/sessions/preserved.jsonl",
-			SessionSource: "auto",
-		}},
-	}
+	cfg.Bot.Dingtalk.BotName = "InitialBot"
+	cfg.Bot.Dingtalk.RequireMention = true
+	cfg.Bot.Connections = []config.BotConnectionConfig{{ID: "ding-main", Provider: "dingtalk", Domain: "dingtalk", Enabled: true, Credential: config.BotConnectionCredential{AppID: "appkey-initial", AppSecretEnv: "DINGTALK_CLIENT_SECRET"}, SessionMappings: []config.BotConnectionSessionMapping{{RemoteID: "cid-preserved", Scope: "global", SessionID: "session-current", SessionSource: "auto"}}}}
+
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save initial: %v", err)
 	}
@@ -39,8 +30,8 @@ func TestSetBotSettingsDingtalkRoundTrip(t *testing.T) {
 	}
 
 	got := config.LoadForEditWithoutCredentials(config.UserConfigPath())
-	if got.Bot.Dingtalk.ClientID != "appkey-edited" {
-		t.Fatalf("clientId = %q, want appkey-edited", got.Bot.Dingtalk.ClientID)
+	if got.Bot.Connections[0].Credential.AppID != "appkey-edited" {
+		t.Fatalf("clientId = %q, want appkey-edited", got.Bot.Connections[0].Credential.AppID)
 	}
 	if got.Bot.Dingtalk.BotName != "EditedBot" {
 		t.Fatalf("botName = %q, want EditedBot", got.Bot.Dingtalk.BotName)
@@ -48,61 +39,24 @@ func TestSetBotSettingsDingtalkRoundTrip(t *testing.T) {
 	if got.Bot.Dingtalk.RequireMention {
 		t.Fatalf("requireMention = true, want false")
 	}
-	if got.Bot.Dingtalk.SecretEnv != "DINGTALK_CLIENT_SECRET" {
-		t.Fatalf("secretEnv = %q, want DINGTALK_CLIENT_SECRET", got.Bot.Dingtalk.SecretEnv)
+	if got.Bot.Connections[0].Credential.AppSecretEnv != "DINGTALK_CLIENT_SECRET" {
+		t.Fatalf("secretEnv = %q, want DINGTALK_CLIENT_SECRET", got.Bot.Connections[0].Credential.AppSecretEnv)
 	}
-	if mappings := got.Bot.Dingtalk.SessionMappings; len(mappings) != 1 || mappings[0].RemoteID != "cid-preserved" || mappings[0].SessionID != "path:/sessions/preserved.jsonl" {
-		t.Fatalf("session mappings = %+v, want hidden legacy mapping preserved", mappings)
-	}
-}
-
-// TestDesktopBotConfigConfiguredDetectsDingtalk 防止回归：用户只配置钉钉（其他平台
-// 均未配置）时，desktopBotConfigConfigured 必须返回 true，否则 legacy 合并路径会
-// 用 legacy config 整体覆盖 userCfg.Bot，导致钉钉 ClientID 等配置被丢弃
-// （表现为「输入 ClientID 后消失」）。
-func TestDesktopBotConfigConfiguredDetectsDingtalk(t *testing.T) {
-	cfg := config.Default()
-	cfg.Bot.Dingtalk.ClientID = "dingappkey123"
-	if !desktopBotConfigConfigured(cfg.Bot) {
-		t.Fatalf("dingtalk-only bot config must count as configured")
-	}
-	// 仅 SecretEnv 配了也应算已配置（环境变量形式的密钥）。
-	cfg = config.Default()
-	cfg.Bot.Dingtalk.SecretEnv = "DINGTALK_CLIENT_SECRET"
-	if !desktopBotConfigConfigured(cfg.Bot) {
-		t.Fatalf("dingtalk secret-env-only config must count as configured")
+	if mappings := got.Bot.Connections[0].SessionMappings; len(mappings) != 1 || mappings[0].RemoteID != "cid-preserved" || mappings[0].SessionID != "session-current" {
+		t.Fatalf("session mappings = %+v, want current connection binding preserved", mappings)
 	}
 }
 
-// TestDingtalkRuntimeConnectionID 验证测试发送时解析到真实运行的 connection id
-// （自定义 id 如 dingtalk-test 必须命中），而不是硬编码退回 "dingtalk"。
 func TestDingtalkRuntimeConnectionID(t *testing.T) {
-	// 自定义 id：优先命中启用的钉钉连接。
-	got := dingtalkRuntimeConnectionID([]config.BotConnectionConfig{
-		{ID: "feishu-feishu", Provider: "feishu", Enabled: true},
-		{ID: "dingtalk-test", Provider: "dingtalk", Enabled: true},
-	})
-	if got != "dingtalk-test" {
-		t.Fatalf("runtime connection id = %q, want dingtalk-test", got)
+	conn, id, ok := dingtalkRuntimeConnection([]config.BotConnectionConfig{{ID: "feishu", Provider: "feishu", Enabled: true}, {ID: "ding-current", Provider: "dingtalk", Enabled: true}})
+	if !ok || id != "ding-current" || conn.ID != id {
+		t.Fatalf("current connection = %+v %q %v", conn, id, ok)
 	}
-	// 未启用：跳过。
-	got = dingtalkRuntimeConnectionID([]config.BotConnectionConfig{
-		{ID: "dingtalk-disabled", Provider: "dingtalk", Enabled: false},
-	})
-	if got != "dingtalk" {
-		t.Fatalf("disabled connection must be skipped, got %q", got)
-	}
-	// 无 id 的钉钉连接：退回 provider 名。
-	got = dingtalkRuntimeConnectionID([]config.BotConnectionConfig{
-		{Provider: "dingtalk", Enabled: true},
-	})
-	if got != "dingtalk" {
-		t.Fatalf("id-less connection should fall back to %q, got %q", "dingtalk", got)
-	}
-	// 无任何钉钉连接：退回 "dingtalk"（legacy [bot.dingtalk] 路径）。
-	got = dingtalkRuntimeConnectionID(nil)
-	if got != "dingtalk" {
-		t.Fatalf("no connection should fall back to %q, got %q", "dingtalk", got)
+	for _, records := range [][]config.BotConnectionConfig{nil, {{ID: "disabled", Provider: "dingtalk"}}} {
+		_, id, ok := dingtalkRuntimeConnection(records)
+		if ok || id != "" {
+			t.Fatalf("missing current connection = %q %v", id, ok)
+		}
 	}
 }
 
@@ -141,30 +95,23 @@ func TestDingtalkRuntimeConnectionResolvesCredentials(t *testing.T) {
 func TestSetBotSettingsDingtalkRuntimeOptionsRoundTrip(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	cfg := config.Default()
-	cfg.Bot.Dingtalk = config.DingtalkBotConfig{
-		Enabled:          true,
-		ClientID:         "ding-appkey",
-		ClientSecret:     "secret",
-		SecretEnv:        "DINGTALK_CLIENT_SECRET",
-		BotName:          "安博特",
-		RequireMention:   true,
-		Model:            "deepseek-flash/deepseek-v4-flash",
-		ToolApprovalMode: "danger-full-access",
-		WorkspaceRoot:    "/tmp/probe-ws",
-	}
+	cfg.Bot.Dingtalk.BotName = "安博特"
+	cfg.Bot.Dingtalk.RequireMention = true
+	cfg.Bot.Connections = []config.BotConnectionConfig{{ID: "ding-main", Provider: "dingtalk", Domain: "dingtalk", Enabled: true, Credential: config.BotConnectionCredential{AppID: "ding-appkey", AppSecretEnv: "DINGTALK_CLIENT_SECRET"}, Model: "deepseek-flash/deepseek-flash", ToolApprovalMode: "danger-full-access", WorkspaceRoot: "/tmp/probe-ws"}}
+
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save initial: %v", err)
 	}
 
 	app := NewApp()
 	view := botSettingsView(cfg.Bot)
-	if view.Dingtalk.Model != "deepseek-flash/deepseek-v4-flash" {
+	if view.Dingtalk.Model != "deepseek-flash/deepseek-flash" {
 		t.Fatalf("view model = %q, want deepseek-flash", view.Dingtalk.Model)
 	}
 	if view.Dingtalk.ToolApprovalMode != "danger-full-access" {
 		t.Fatalf("view permission preset = %q, want danger-full-access", view.Dingtalk.ToolApprovalMode)
 	}
-	view.Dingtalk.Model = "deepseek-flash/deepseek-v4-flash"
+	view.Dingtalk.Model = "deepseek-flash/deepseek-flash"
 	view.Dingtalk.ToolApprovalMode = "danger-full-access"
 	view.Dingtalk.WorkspaceRoot = "/tmp/probe-ws"
 	if err := app.SetBotSettings(view); err != nil {
@@ -172,18 +119,18 @@ func TestSetBotSettingsDingtalkRuntimeOptionsRoundTrip(t *testing.T) {
 	}
 
 	got := config.LoadForEditWithoutCredentials(config.UserConfigPath())
-	if got.Bot.Dingtalk.Model != "deepseek-flash/deepseek-v4-flash" {
-		t.Fatalf("model = %q, want deepseek-flash (render must persist)", got.Bot.Dingtalk.Model)
+	if got.Bot.Connections[0].Model != "deepseek-flash/deepseek-flash" {
+		t.Fatalf("model = %q, want deepseek-flash (render must persist)", got.Bot.Connections[0].Model)
 	}
-	if got.Bot.Dingtalk.ToolApprovalMode != "danger-full-access" {
-		t.Fatalf("toolApprovalMode = %q, want danger-full-access (render must persist)", got.Bot.Dingtalk.ToolApprovalMode)
+	if got.Bot.Connections[0].ToolApprovalMode != "danger-full-access" {
+		t.Fatalf("toolApprovalMode = %q, want danger-full-access (render must persist)", got.Bot.Connections[0].ToolApprovalMode)
 	}
-	if got.Bot.Dingtalk.WorkspaceRoot != "/tmp/probe-ws" {
-		t.Fatalf("workspaceRoot = %q, want /tmp/probe-ws (render must persist)", got.Bot.Dingtalk.WorkspaceRoot)
+	if got.Bot.Connections[0].WorkspaceRoot != "/tmp/probe-ws" {
+		t.Fatalf("workspaceRoot = %q, want /tmp/probe-ws (render must persist)", got.Bot.Connections[0].WorkspaceRoot)
 	}
 	// 原有字段不能丢。
-	if got.Bot.Dingtalk.ClientSecret != "secret" {
-		t.Fatalf("clientSecret lost: %q", got.Bot.Dingtalk.ClientSecret)
+	if got.Bot.Connections[0].Credential.AppSecretEnv != "DINGTALK_CLIENT_SECRET" {
+		t.Fatalf("connection credential reference lost: %+v", got.Bot.Connections[0].Credential)
 	}
 	if got.Bot.Dingtalk.BotName != "安博特" {
 		t.Fatalf("botName lost: %q", got.Bot.Dingtalk.BotName)

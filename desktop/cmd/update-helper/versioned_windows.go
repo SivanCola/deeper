@@ -20,7 +20,6 @@ import (
 //
 //	InstallRoot/
 //	  Deepzora.exe              (canonical GUI entry)
-//	  deepzora-launcher.exe     (only when preserving an existing entry)
 //	  deepzora-cli.exe          (small CLI entry)
 //	  current.json
 //	  versions/<version>/
@@ -99,15 +98,6 @@ func activateVersionedWindowsFromStaging(claimed *repair.UpdateTransaction, stag
 		return err
 	}
 
-	// Remove flat release-unit leftovers so the install root is the thin layout.
-	// Do not remove the launcher/CLI/alias we just wrote.
-	for _, name := range []string{
-		"deepzora-desktop.exe",
-		"deepzora-guard.exe",
-		"deepzora-update-helper.exe", // helper lives only under versions/
-	} {
-		_ = os.Remove(filepath.Join(installRoot, name))
-	}
 	// Best-effort retention GC of older version trees.
 	_ = installlayout.CleanupStaleStaging(installRoot, 0)
 	return nil

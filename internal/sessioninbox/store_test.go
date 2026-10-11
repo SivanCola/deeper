@@ -116,24 +116,6 @@ func TestIdempotencyConflictRejectsDifferentInput(t *testing.T) {
 	}
 }
 
-func TestIdempotencyHashTreatsLegacyAndModernInvocationAsEquivalent(t *testing.T) {
-	legacy, err := idempotencyRequestHash(completeEnqueueEnvelope(PromptEnvelope{
-		DisplayText: "/init", Invocation: &StructuredInvocation{Name: "init"},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	modern, err := idempotencyRequestHash(completeEnqueueEnvelope(PromptEnvelope{
-		DisplayText: "/init", Invocations: []StructuredInvocation{{Name: "init", Kind: "skill", Offset: 7}},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if legacy != modern {
-		t.Fatalf("legacy hash %q != modern hash %q", legacy, modern)
-	}
-}
-
 func TestIdempotencyReceiptSurvivesAckAndReopen(t *testing.T) {
 	session := filepath.Join(t.TempDir(), "s.jsonl")
 	s, err := Open(session, Limits{})
@@ -203,59 +185,6 @@ func TestCollectAliasReceiptSurvivesAck(t *testing.T) {
 	}
 	if !retry.Idempotent || retry.ItemID != first.ItemID || len(s.Snapshot().Items) != 0 {
 		t.Fatalf("completed collect replay = %+v snapshot=%+v", retry, s.Snapshot())
-	}
-}
-
-func TestV1ManifestMigratesIdempotencyFingerprint(t *testing.T) {
-	session := filepath.Join(t.TempDir(), "s.jsonl")
-	s, err := Open(session, Limits{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	first, err := s.Enqueue(EnqueueRequest{
-		Envelope: PromptEnvelope{SubmitText: "legacy durable input"}, Idempotency: "legacy-msg-1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.Close()
-
-	manifestPath := filepath.Join(store.SessionInboxDir(session), manifestName)
-	data, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var legacy map[string]any
-	if err := json.Unmarshal(data, &legacy); err != nil {
-		t.Fatal(err)
-	}
-	legacy["schemaVersion"] = float64(1)
-	delete(legacy, "idempotencyHashes")
-	delete(legacy, "receipts")
-	data, err = json.MarshalIndent(legacy, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(manifestPath, append(data, '\n'), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	reopened, err := Open(session, Limits{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer reopened.Close()
-	retry, err := reopened.Enqueue(EnqueueRequest{
-		Envelope: PromptEnvelope{SubmitText: "legacy durable input"}, Idempotency: "legacy-msg-1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !retry.Idempotent || retry.ItemID != first.ItemID {
-		t.Fatalf("migrated replay = %+v, first = %+v", retry, first)
-	}
-	if reopened.man.SchemaVersion != SchemaVersion || !validSHA256(reopened.man.IdempotencyHashes["legacy-msg-1"]) {
-		t.Fatalf("manifest was not upgraded with fingerprint: %+v", reopened.man)
 	}
 }
 
@@ -699,22 +628,6 @@ func TestFreezeRefsRejectsSymlinkEscape(t *testing.T) {
 	}
 	if !strings.Contains(string(refs[0].Content), "path escapes workspace") {
 		t.Fatalf("want symlink escape rejection, got %q", refs[0].Content)
-	}
-}
-
-func TestApplyFrozenRefsIsDeterministic(t *testing.T) {
-	bodies := map[string]string{
-		"z/file.txt": "z-body",
-		"a/file.txt": "a-body",
-	}
-	first := ApplyFrozenRefs("inspect refs", bodies)
-	for range 20 {
-		if got := ApplyFrozenRefs("inspect refs", bodies); got != first {
-			t.Fatalf("frozen reference serialization changed between calls:\n%s\n---\n%s", first, got)
-		}
-	}
-	if strings.Index(first, "@a/file.txt") > strings.Index(first, "@z/file.txt") {
-		t.Fatalf("frozen references are not sorted: %q", first)
 	}
 }
 

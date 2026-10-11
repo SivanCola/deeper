@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"log/slog"
-	"path/filepath"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/provider"
@@ -24,25 +23,12 @@ func (c *Controller) restoreTranscriptProjection(sessionPath string, ledger *tur
 	if err != nil || restored {
 		return p, err
 	}
-	dir := c.sessionDir
-	if dir == "" && sessionPath != "" {
-		dir = filepath.Dir(sessionPath)
-	}
-	legacy, err := transcript.LoadLegacyDisplays(dir, sessionPath)
-	if err != nil {
-		return nil, err
-	}
+	var recoveredTurns []transcript.RecoveredDisplayTurn
 	pending := ledger.PendingProjections()
 	users := make([]provider.Message, 0)
 	for _, m := range messages {
 		if agent.IsUserAuthoredTurnMessage(m) {
 			users = append(users, m)
-		}
-	}
-	installedTurns := make(map[string]bool)
-	for _, turn := range legacy.Turns {
-		if turn.TurnID != "" {
-			installedTurns[turn.TurnID] = true
 		}
 	}
 	covered, prefixEnd := latest, len(messages)
@@ -68,25 +54,19 @@ func (c *Controller) restoreTranscriptProjection(sessionPath string, ledger *tur
 			}
 			continue
 		}
-		if installedTurns[group.TurnID] {
-			continue
-		}
 		rows := transcript.PendingDisplayMessages(group, transcript.Formatter{})
 		if len(rows) == 0 {
 			continue
 		}
 		userIndex := len(users) - len(pending) + i
 		if userIndex < 0 || userIndex >= len(users) {
-			return nil, errors.New("legacy display recovery has no matching user boundary")
+			return nil, errors.New("display recovery has no matching current user boundary")
 		}
-		legacy.Turns = append(legacy.Turns, transcript.LegacyDisplayTurn{TurnID: group.TurnID, UserMessageID: users[userIndex].ID, Messages: rows})
+		recoveredTurns = append(recoveredTurns, transcript.RecoveredDisplayTurn{TurnID: group.TurnID, UserMessageID: users[userIndex].ID, Messages: rows})
 	}
-	rows := transcript.History(messages[:prefixEnd], transcript.HistoryOptions{LegacyTurns: legacy.Turns, CheckpointTurns: c.CheckpointTurnsByMessageIndex(), SubmitContent: func(m provider.Message) string {
+	rows := transcript.History(messages[:prefixEnd], transcript.HistoryOptions{RecoveredTurns: recoveredTurns, CheckpointTurns: c.CheckpointTurnsByMessageIndex(), SubmitContent: func(m provider.Message) string {
 		return StripReferencedContextPrefix(StripComposePrefixes(m.Content))
 	}, UserContent: func(m provider.Message) string {
-		if display := legacy.Users[transcript.LegacyDisplayKey(m.Content)]; display != "" {
-			return display
-		}
 		if m.RawContent != "" {
 			return m.RawContent
 		}

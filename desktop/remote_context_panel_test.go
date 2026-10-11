@@ -4,7 +4,7 @@ import "testing"
 
 func TestRemoteContextPanelReadsServeContext(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", nil)
-	fs.newSessionPath = "/sessions/remote.jsonl"
+	fs.newSessionPath = "session-id:remote"
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView:  RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL},

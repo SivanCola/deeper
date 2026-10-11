@@ -55,7 +55,7 @@ func TestEnsureBlankTabInheritsActiveTabLocalSettings(t *testing.T) {
 		model:            "inherit/model",
 		effort:           &effort,
 		mode:             "plan",
-		toolApprovalMode: control.ToolApprovalYolo,
+		toolApprovalMode: control.ToolApprovalDangerFullAccess,
 		disabledMCP:      map[string]ServerView{"srv-x": {}},
 		mcpOrder:         []string{"srv-x", "srv-y"},
 	}
@@ -79,10 +79,8 @@ func TestEnsureBlankTabInheritsActiveTabLocalSettings(t *testing.T) {
 	if created.effort == nil || *created.effort != "max" {
 		t.Fatalf("effort = %v, want inherited \"max\"", created.effort)
 	}
-	if created.qualityFloor != "" && created.qualityFloor != control.QualityFloorStandard {
-		t.Fatalf("qualityFloor = %q, want standard default (must not inherit economy)", created.qualityFloor)
-	}
-	if created.toolApprovalMode != control.ToolApprovalAuto {
+
+	if created.toolApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("toolApprovalMode = %q, want global default auto", created.toolApprovalMode)
 	}
 	if created.mode != "normal" {
@@ -112,7 +110,7 @@ func TestEnsureBlankTabUsesGlobalSessionDefaultsForModelAndToolApproval(t *testi
 	if err := cfg.SetDefaultModel("deepseek-pro/deepseek-v4-pro"); err != nil {
 		t.Fatalf("SetDefaultModel: %v", err)
 	}
-	if err := cfg.SetDesktopDefaultToolApprovalMode(control.ToolApprovalAuto); err != nil {
+	if err := cfg.SetDesktopDefaultToolApprovalMode(control.ToolApprovalWorkspaceWrite); err != nil {
 		t.Fatalf("SetDesktopDefaultToolApprovalMode: %v", err)
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
@@ -126,9 +124,9 @@ func TestEnsureBlankTabUsesGlobalSessionDefaultsForModelAndToolApproval(t *testi
 		WorkspaceRoot:    workspace,
 		TopicID:          "topic_src",
 		SessionPath:      filepath.Join(workspace, "src.jsonl"),
-		model:            "deepseek-flash/deepseek-v4-flash",
+		model:            "deepseek-flash/deepseek-flash",
 		mode:             "plan",
-		toolApprovalMode: control.ToolApprovalAsk,
+		toolApprovalMode: control.ToolApprovalReadOnly,
 		disabledMCP:      map[string]ServerView{},
 	}
 	src.sink = &tabEventSink{tabID: "src", app: app}
@@ -147,10 +145,10 @@ func TestEnsureBlankTabUsesGlobalSessionDefaultsForModelAndToolApproval(t *testi
 	if created.model != "deepseek-pro/deepseek-v4-pro" {
 		t.Fatalf("new tab model = %q, want global default model", created.model)
 	}
-	if created.toolApprovalMode != control.ToolApprovalAuto {
+	if created.toolApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("new tab toolApprovalMode = %q, want global default auto", created.toolApprovalMode)
 	}
-	if src.model != "deepseek-flash/deepseek-v4-flash" || src.toolApprovalMode != control.ToolApprovalAsk {
+	if src.model != "deepseek-flash/deepseek-flash" || src.toolApprovalMode != control.ToolApprovalReadOnly {
 		t.Fatalf("existing tab should not be overwritten, got model=%q approval=%q", src.model, src.toolApprovalMode)
 	}
 	requireTabSessionModel(t, created, "deepseek-pro/deepseek-v4-pro")
@@ -401,8 +399,8 @@ func configureSameNameModelProviders(t *testing.T) (model, oldRef, defaultRef st
 	cfg.DefaultModel = defaultRef
 	cfg.Desktop.ProviderAccess = []string{"qwen", "token-rhythm"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "qwen", Kind: "openai", BaseURL: "https://qwen.example.invalid/v1", Model: model, APIKeyEnv: "DUPLICATE_MODEL_KEY"},
-		{Name: "token-rhythm", Kind: "openai", BaseURL: "https://token-rhythm.example.invalid/v1", Model: model, APIKeyEnv: "DUPLICATE_MODEL_KEY"},
+		{Models: []string{model}, Default: model, Name: "qwen", Kind: "openai", BaseURL: "https://qwen.example.invalid/v1", Model: model, APIKeyEnv: "DUPLICATE_MODEL_KEY"},
+		{Models: []string{model}, Default: model, Name: "token-rhythm", Kind: "openai", BaseURL: "https://token-rhythm.example.invalid/v1", Model: model, APIKeyEnv: "DUPLICATE_MODEL_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -413,7 +411,7 @@ func configureSameNameModelProviders(t *testing.T) (model, oldRef, defaultRef st
 func TestDesktopNewSessionDefaultsHonorExplicitAsk(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if err := cfg.SetDesktopDefaultToolApprovalMode(control.ToolApprovalAsk); err != nil {
+	if err := cfg.SetDesktopDefaultToolApprovalMode(control.ToolApprovalReadOnly); err != nil {
 		t.Fatalf("SetDesktopDefaultToolApprovalMode: %v", err)
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
@@ -421,7 +419,7 @@ func TestDesktopNewSessionDefaultsHonorExplicitAsk(t *testing.T) {
 	}
 
 	_, approvalMode := desktopNewSessionDefaults("global", "")
-	if approvalMode != control.ToolApprovalAsk {
+	if approvalMode != control.ToolApprovalReadOnly {
 		t.Fatalf("explicit desktop approval default = %q, want ask", approvalMode)
 	}
 }
@@ -444,7 +442,7 @@ func TestDesktopNewSessionDefaultsSkipsKeylessDefaultModel(t *testing.T) {
 	seedUserCredentials(t, "DEEPZORA_TEST_SESSION_KEY=test-key\n")
 
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	cfg.Providers = append(cfg.Providers, config.ProviderEntry{
+	cfg.Providers = append(cfg.Providers, config.ProviderEntry{Models: []string{"test-model"}, Default: "test-model",
 		Name:      "test-prov",
 		Kind:      "openai",
 		BaseURL:   "https://example.com",
@@ -507,7 +505,7 @@ func TestDesktopNewSessionDefaultsRejectsNonChatDefaultWithoutFallback(t *testin
 	seedUserCredentials(t, "DEEPZORA_TEST_AUDIO_KEY=test-key\n")
 
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	cfg.Providers = []config.ProviderEntry{{
+	cfg.Providers = []config.ProviderEntry{{Models: []string{"tts-1"}, Default: "tts-1",
 		Name:      "audio",
 		Kind:      "openai",
 		BaseURL:   "https://audio.example.com",
@@ -541,7 +539,7 @@ func TestDesktopNewSessionDefaultsHonorExplicitEmptyProviderAccess(t *testing.T)
 	seedUserCredentials(t, "DEEPZORA_TEST_SESSION_KEY=test-key\n")
 
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	cfg.Providers = []config.ProviderEntry{{
+	cfg.Providers = []config.ProviderEntry{{Models: []string{"test-model"}, Default: "test-model",
 		Name:      "test-prov",
 		Kind:      "openai",
 		BaseURL:   "https://example.com",
@@ -578,7 +576,7 @@ func TestDesktopNewSessionDefaultsUsesProjectDefaultAndSkipsItsKeylessProvider(t
 	seedUserCredentials(t, "DEEPZORA_TEST_SESSION_KEY=test-key\n")
 
 	userCfg := config.LoadForEdit(config.UserConfigPath())
-	userCfg.Providers = append(userCfg.Providers, config.ProviderEntry{
+	userCfg.Providers = append(userCfg.Providers, config.ProviderEntry{Models: []string{"test-model"}, Default: "test-model",
 		Name:      "test-prov",
 		Kind:      "openai",
 		BaseURL:   "https://example.com",
@@ -733,8 +731,8 @@ func configureSwitchableDefaultModels(t *testing.T) (oldRef, newRef string) {
 	cfg.DefaultModel = newRef
 	cfg.Desktop.ProviderAccess = []string{"old", "new"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "old", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "old-model", APIKeyEnv: "OLD_MODEL_KEY"},
-		{Name: "new", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "new-model", APIKeyEnv: "NEW_MODEL_KEY"},
+		{Models: []string{"old-model"}, Default: "old-model", Name: "old", Kind: "openai", ReasoningProtocol: "openai-effort", SupportedEfforts: []string{"low", "high"}, BaseURL: "https://example.invalid/v1", Model: "old-model", APIKeyEnv: "OLD_MODEL_KEY"},
+		{Models: []string{"new-model"}, Default: "new-model", Name: "new", Kind: "openai", ReasoningProtocol: "openai-effort", SupportedEfforts: []string{"low", "high"}, BaseURL: "https://example.invalid/v1", Model: "new-model", APIKeyEnv: "NEW_MODEL_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

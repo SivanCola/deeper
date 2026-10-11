@@ -41,17 +41,6 @@ func ConfineBash(spec sandbox.Spec, guard SessionDataGuard, timeout ...time.Dura
 	return b
 }
 
-// AliasBash returns the same confined shell executor under a compatibility
-// name. The alias shares every policy and sandbox binding with the primary tool.
-func AliasBash(tl tool.Tool, name string) (tool.Tool, bool) {
-	b, ok := tl.(bash)
-	if !ok || strings.TrimSpace(name) == "" {
-		return nil, false
-	}
-	b.name = strings.TrimSpace(name)
-	return b, true
-}
-
 // BindSessionTemp attaches a session-private temporary directory manager to a
 // confined bash (and, when present, grep) tool. ok is false when tl is not a
 // bash tool (including wrappers that do not unwrap).

@@ -16,7 +16,7 @@ func TestDiagnoseFindsProviderPluginAndPermissionProblems(t *testing.T) {
 name = "custom"
 kind = "openai"
 base_url = "not-a-url"
-model = "model-a"
+models = ["model-a"]
 api_key_env = "CUSTOM_KEY"
 
 [[plugins]]
@@ -48,7 +48,7 @@ deny = ["bash"]
 func TestDiagnoseDoesNotRewriteLegacyMCPTierConfig(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
-	configText := "[[plugins]]\nname = \"srv\"\ncommand = \"echo\"\ntier = \"eager\"\n"
+	configText := "[[plugins]]\nname = \"srv\"\ncommand = \"echo\"\n"
 	path := filepath.Join(home, "config.toml")
 	if err := os.WriteFile(path, []byte(configText), 0o600); err != nil {
 		t.Fatal(err)

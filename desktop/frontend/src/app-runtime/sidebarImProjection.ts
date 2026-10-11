@@ -102,12 +102,6 @@ function uniqueTrimmedValues(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
-function sidebarImAllowlistUsers(bot: BotSettingsView, platform: SidebarImPlatform): string[] {
-  if (platform === "qq") return uniqueTrimmedValues(asArray(bot.allowlist.qqUsers));
-  if (platform === "weixin") return uniqueTrimmedValues(asArray(bot.allowlist.weixinUsers));
-  return uniqueTrimmedValues(asArray(bot.allowlist.feishuUsers));
-}
-
 function sidebarImQQAdded(qq: BotSettingsView["qq"]): boolean {
   return Boolean(qq.enabled || qq.secretSet || qq.appId.trim());
 }
@@ -132,7 +126,7 @@ function sidebarImQQConnection(bot: BotSettingsView, translate: Translator, runt
   const remoteId = bot.qq.appId.trim();
   const status = sidebarImQQStatus(bot, runtimeStatus, nativeRuntime);
   const statusLabel = sidebarImStatusLabel(status, translate);
-  const allowlistUsers = sidebarImAllowlistUsers(bot, "qq");
+  const allowlistUsers = uniqueTrimmedValues([...asArray(bot.qq.access.users), ...asArray(bot.qq.access.approvers), ...asArray(bot.qq.access.admins)]);
   const subtitleParts = [
     remoteId ? compactRemoteId(remoteId) : "QQ",
     statusLabel,
@@ -151,8 +145,8 @@ function sidebarImQQConnection(bot: BotSettingsView, translate: Translator, runt
     sessionSource: "",
     scope: "global",
     workspaceRoot: "",
-    allowAll: bot.allowlist.allowAll,
-    allowlistEnabled: bot.allowlist.enabled,
+    allowAll: bot.qq.access.allowAll,
+    allowlistEnabled: bot.qq.access.enabled,
     allowlistUsers,
     allowlistMatched: remoteId ? allowlistUsers.includes(remoteId) : false,
   };
@@ -181,7 +175,7 @@ export function sidebarImConnectionsFromBot(
       const workspaceRoot = botMappingWorkspaceRoot(mapping, connection.workspaceRoot);
       const status = sidebarImStatus(connection, bot.enabled);
       const title = connection.label.trim() || platformLabel;
-      const allowlistUsers = sidebarImAllowlistUsers(bot, platform);
+      const allowlistUsers = uniqueTrimmedValues([...asArray(connection.access.users), ...asArray(connection.access.approvers), ...asArray(connection.access.admins)]);
       const identityLabel = botMappingIdentityLabel(mapping);
       const mappedUserId = mapping?.userId.trim() ?? "";
       const subtitleParts = [
@@ -204,11 +198,11 @@ export function sidebarImConnectionsFromBot(
         sessionSource,
         scope,
         workspaceRoot,
-        allowAll: bot.allowlist.allowAll,
-        allowlistEnabled: bot.allowlist.enabled,
+        allowAll: connection.access.allowAll,
+        allowlistEnabled: connection.access.enabled,
         allowlistUsers,
         allowlistMatched: remoteId
-          ? allowlistUsers.includes(remoteId) || (mappedUserId ? allowlistUsers.includes(mappedUserId) : false)
+          ? asArray(connection.access.groups).includes(remoteId) || allowlistUsers.includes(remoteId) || (mappedUserId ? allowlistUsers.includes(mappedUserId) : false)
           : false,
       });
     });

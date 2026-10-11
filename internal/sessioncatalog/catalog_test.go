@@ -12,6 +12,7 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/projectiondb"
+	"deepzora/internal/provider"
 )
 
 func TestReconcileMakesUnknownCountsVisibleWithoutReadingTranscript(t *testing.T) {
@@ -587,14 +588,18 @@ func TestRemoveSessionWinsOverQueuedStaleWriteAndAllowsLaterRecreation(t *testin
 	if _, ok, err := catalog.GetTopic(ctx, TopicKey{Scope: "global", TopicID: "topic"}); err != nil || ok {
 		t.Fatalf("queued write resurrected removed row: ok=%v err=%v", ok, err)
 	}
-	if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
+	sess := agent.NewSession("")
+	for range 2 {
+		sess.Add(provider.Message{Role: provider.RoleUser, Content: "recreated"})
+		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: "ok"})
+	}
+	if err := sess.Save(path); err != nil {
 		t.Fatal(err)
 	}
-	if err := agent.SaveBranchMeta(path, agent.BranchMeta{
-		Scope: "global", TopicID: "topic", SchemaVersion: agent.BranchMetaCountsVersion, Turns: 2,
-	}); err != nil {
+	if err := agent.UpdateBranchMeta(path, false, func(m *agent.BranchMeta) error { m.Scope = "global"; m.TopicID = "topic"; return nil }); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := catalog.ReconcileDirectory(ctx, DirectoryTarget{Path: dir, Scope: "global"}); err != nil {
 		t.Fatal(err)
 	}

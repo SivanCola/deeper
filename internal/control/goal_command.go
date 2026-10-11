@@ -32,9 +32,7 @@ func (c *Controller) applyGoalCommandWithAdmission(input, display string, admiss
 	if !ok {
 		return false
 	}
-	if cmd.DeprecatedBudgetFlag {
-		c.notice(GoalBudgetFlagDeprecatedNotice)
-	}
+
 	switch cmd.Action {
 	case GoalCommandSet:
 		if c.sessionEngineEnabled() {
@@ -43,10 +41,9 @@ func (c *Controller) applyGoalCommandWithAdmission(input, display string, admiss
 				break
 			}
 		} else {
-			c.SetGoalWithResearchMode(cmd.Text, cmd.ResearchMode)
+			c.SetGoal(cmd.Text)
 		}
 		c.SetPlanMode(false)
-		c.GoalStrict(cmd.Strict)
 		c.startGoalCommandTurnWithAdmission(cmd, display, admission)
 	case GoalCommandClear:
 		if c.sessionEngineEnabled() {

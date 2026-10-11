@@ -9,7 +9,7 @@ import (
 )
 
 func TestModelSettingsEveryOperationWithoutSessionRejectsForeignFields(t *testing.T) {
-	kinds := []string{"default", "planner", "vision", "search", "subagent", "subagent_effort", "profile_model", "profile_effort", "depth", "concurrency", "writers", "provider_save", "credential", "web_search_capability", "connection_add", "official_add", "preset_add", "preset_reset", "protocol_upgrade", "catalogs", "provider_remove", "access_remove", "rename"}
+	kinds := []string{"default", "planner", "vision", "search", "subagent", "subagent_effort", "profile_model", "profile_effort", "depth", "concurrency", "writers", "provider_save", "credential", "web_search_capability", "connection_add", "official_add", "preset_add", "preset_reset", "catalogs", "provider_remove", "access_remove", "rename"}
 	for _, kind := range kinds {
 		t.Run(kind, func(t *testing.T) {
 			isolateDesktopUserDirs(t)
@@ -89,19 +89,6 @@ func sessionlessModelSettingsOperation(t *testing.T, app *App, kind, ref string)
 		} else if _, err := app.AddProviderPresetAccess(change.PresetID, key); err != nil {
 			t.Fatal(err)
 		}
-	case "protocol_upgrade":
-		// This compatibility operation upgrades a legacy single-model OpenAI
-		// connection. A newly added official connection already has the current
-		// catalog and is intentionally ineligible.
-		cfg := config.LoadForEdit(config.UserConfigPath())
-		cfg.Providers = append(cfg.Providers, config.ProviderEntry{
-			Name: "deepseek-flash", Kind: "openai", BaseURL: "https://api.deepseek.com",
-			Model: "deepseek-v4-flash", APIKeyEnv: "DEEPSEEK_API_KEY",
-		})
-		if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-			t.Fatal(err)
-		}
-		change.Name = "deepseek-flash"
 	case "catalogs":
 		cfg := config.LoadForEdit(config.UserConfigPath())
 		entry, _ := cfg.Provider("old")

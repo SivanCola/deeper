@@ -116,9 +116,6 @@ func projectRuntimeConfig(cfg *config.Config, root string) runtimeConfigDependen
 			TaskCostBudget: a.TaskCostBudget, TaskTimeBudgetMinutes: a.TaskTimeBudgetMinutes,
 			GoalTokenBudget: a.GoalTokenBudget, OutputStyle: a.OutputStyle,
 			ReasoningLanguage: cfg.ReasoningLanguage(), ColdResumePrune: a.ColdResumePrune,
-			Keep: a.Keep, RecentKeep: a.RecentKeep, PlanModeReadOnlyCommands: a.PlanModeReadOnlyCommands,
-			SoftCompactRatio: a.SoftCompactRatio, ToolResultSnipRatio: a.ToolResultSnipRatio,
-			CompactForceRatio: a.CompactForceRatio, ContextEditing: a.ContextEditing,
 		},
 		Tools: cfg.Tools, Checkpoints: cfg.Checkpoints, Permissions: cfg.Permissions,
 		Sandbox: config.SandboxConfig{

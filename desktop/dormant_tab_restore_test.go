@@ -93,7 +93,7 @@ func TestRemoteOnlyRestoreBuildsOwnedDormantTabWithoutTakingTheSurface(t *testin
 // before the wait — keeps the open from failing with a spurious
 // "tab runtime changed" error.
 func TestOpenSessionAdoptsRuntimePublishedWhileWaitingForTheRebuildLock(t *testing.T) {
-	app, tab, ctrl, _ := auditMigratedTab(t)
+	app, tab, ctrl, _ := auditCurrentTab(t)
 	ref, ok := ctrl.SessionRef()
 	if !ok {
 		t.Fatal("fixture controller has no session ref")

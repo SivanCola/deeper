@@ -266,7 +266,7 @@ func TestOfficialActivateRestoreReset(t *testing.T) {
 		t.Fatalf("restart did not restore official theme: %+v", active2)
 	}
 	// Reset returns to the Graphite path.
-	if err := app2.ResetThemePack(); err != nil {
+	if err := app2.DisableThemePack(); err != nil {
 		t.Fatal(err)
 	}
 	active3, _ := app2.GetActiveThemePack()

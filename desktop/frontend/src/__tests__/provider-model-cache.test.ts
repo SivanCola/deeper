@@ -40,7 +40,7 @@ function provider(overrides: Partial<ProviderView> = {}): ProviderView {
     modelsUrl: "https://example.test/v1/models",
     models: ["model-a"],
     visionModels: [],
-    visionModelsConfigured: false,
+
     default: "model-a",
     apiKeyEnv: "CUSTOM_API_KEY",
     keySet: true,

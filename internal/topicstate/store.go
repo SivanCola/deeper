@@ -23,7 +23,7 @@ import (
 	sqlite3 "modernc.org/sqlite/lib"
 )
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 // FutureSchemaError means a newer Deepzora version owns this database. Callers
 // must leave the file untouched and may only use an explicitly compatible
@@ -52,14 +52,7 @@ type Record struct {
 
 // State tracks the authoritative revision and the legacy JSON mirror outbox.
 type State struct {
-	Revision               int64
-	LegacyBridge           bool
-	LegacyExportedRevision int64
-	LegacyPendingRevision  int64
-	LegacyTitlesDigest     string
-	LegacySourcesDigest    string
-	LegacyCreatedAtsDigest string
-	LegacyAutoMetaDigest   string
+	Revision int64
 }
 
 // Snapshot is one transactionally consistent view of all topic metadata.
@@ -145,7 +138,7 @@ func applyMigrations(ctx context.Context, db *sql.DB, now func() time.Time) erro
 	if err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX(version), 0) FROM schema_migrations`).Scan(&current); err != nil {
 		return err
 	}
-	if current > schemaVersion {
+	if current != 0 && current != schemaVersion {
 		return &FutureSchemaError{Found: current, Supported: schemaVersion}
 	}
 	if current == schemaVersion {
@@ -169,14 +162,7 @@ func applyMigrations(ctx context.Context, db *sql.DB, now func() time.Time) erro
 	}
 	if _, err := tx.ExecContext(ctx, `CREATE TABLE store_state (
         id INTEGER PRIMARY KEY CHECK (id = 1),
-        revision INTEGER NOT NULL DEFAULT 0,
-        legacy_bridge INTEGER NOT NULL DEFAULT 0,
-        legacy_exported_revision INTEGER NOT NULL DEFAULT 0,
-        legacy_pending_revision INTEGER NOT NULL DEFAULT 0,
-        legacy_titles_digest TEXT NOT NULL DEFAULT '',
-        legacy_sources_digest TEXT NOT NULL DEFAULT '',
-        legacy_created_ats_digest TEXT NOT NULL DEFAULT '',
-        legacy_auto_meta_digest TEXT NOT NULL DEFAULT ''
+        revision INTEGER NOT NULL DEFAULT 0
     )`); err != nil {
 		return fmt.Errorf("create store state table: %w", err)
 	}
@@ -224,64 +210,6 @@ func (s *Store) Snapshot(ctx context.Context) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	return Snapshot{Records: records, State: state}, nil
-}
-
-// SetLegacyBridge enables the compatibility outbox permanently. Enabling it
-// marks the current revision pending so the caller must publish a full mirror.
-func (s *Store) SetLegacyBridge(ctx context.Context) (State, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return State{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	state, err := readState(ctx, tx)
-	if err != nil {
-		return State{}, err
-	}
-	if !state.LegacyBridge {
-		state.LegacyBridge = true
-		state.LegacyPendingRevision = state.Revision
-		if _, err := tx.ExecContext(ctx, `UPDATE store_state SET legacy_bridge=1, legacy_pending_revision=? WHERE id=1`, state.LegacyPendingRevision); err != nil {
-			return State{}, err
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return State{}, err
-	}
-	return state, nil
-}
-
-// MarkLegacyExported acknowledges a complete legacy mirror. It only clears the
-// outbox when expectedRevision is still the current authoritative revision.
-func (s *Store) MarkLegacyExported(ctx context.Context, expectedRevision int64, digests [4]string) (State, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return State{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	state, err := readState(ctx, tx)
-	if err != nil {
-		return State{}, err
-	}
-	if state.Revision == expectedRevision {
-		state.LegacyExportedRevision = expectedRevision
-		state.LegacyPendingRevision = 0
-		state.LegacyTitlesDigest = digests[0]
-		state.LegacySourcesDigest = digests[1]
-		state.LegacyCreatedAtsDigest = digests[2]
-		state.LegacyAutoMetaDigest = digests[3]
-		if _, err := tx.ExecContext(ctx, `UPDATE store_state SET
-            legacy_exported_revision=?, legacy_pending_revision=0,
-            legacy_titles_digest=?, legacy_sources_digest=?,
-            legacy_created_ats_digest=?, legacy_auto_meta_digest=?
-            WHERE id=1`, expectedRevision, digests[0], digests[1], digests[2], digests[3]); err != nil {
-			return State{}, err
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return State{}, err
-	}
-	return state, nil
 }
 
 // Update atomically changes one topic. Empty records are removed.
@@ -357,10 +285,8 @@ func (s *Store) mutateOne(ctx context.Context, topicID string, mutate func(*Reco
 			return State{}, err
 		}
 	}
-	if state.LegacyBridge {
-		state.LegacyPendingRevision = state.Revision
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE store_state SET revision=?, legacy_pending_revision=? WHERE id=1`, state.Revision, state.LegacyPendingRevision); err != nil {
+
+	if _, err := tx.ExecContext(ctx, `UPDATE store_state SET revision=? WHERE id=1`, state.Revision); err != nil {
 		return State{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -527,10 +453,8 @@ func (s *Store) mutate(ctx context.Context, mutate func(map[string]Record)) (Sta
 	if err := writeRecords(ctx, tx, records); err != nil {
 		return State{}, err
 	}
-	if state.LegacyBridge {
-		state.LegacyPendingRevision = state.Revision
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE store_state SET revision=?, legacy_pending_revision=? WHERE id=1`, state.Revision, state.LegacyPendingRevision); err != nil {
+
+	if _, err := tx.ExecContext(ctx, `UPDATE store_state SET revision=? WHERE id=1`, state.Revision); err != nil {
 		return State{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -549,18 +473,7 @@ type rowQuerier interface {
 
 func readState(ctx context.Context, q rowQuerier) (State, error) {
 	var state State
-	var bridge int
-	err := q.QueryRowContext(ctx, `SELECT revision, legacy_bridge,
-        legacy_exported_revision, legacy_pending_revision,
-        legacy_titles_digest, legacy_sources_digest,
-        legacy_created_ats_digest, legacy_auto_meta_digest
-        FROM store_state WHERE id=1`).Scan(
-		&state.Revision, &bridge, &state.LegacyExportedRevision,
-		&state.LegacyPendingRevision, &state.LegacyTitlesDigest,
-		&state.LegacySourcesDigest, &state.LegacyCreatedAtsDigest,
-		&state.LegacyAutoMetaDigest,
-	)
-	state.LegacyBridge = bridge != 0
+	err := q.QueryRowContext(ctx, "SELECT revision FROM store_state WHERE id=1").Scan(&state.Revision)
 	return state, err
 }
 

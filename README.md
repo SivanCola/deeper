@@ -74,6 +74,12 @@
   to six targets with one command. The result is a fully self-contained static
   binary — nothing to install on the target machine beyond the binary itself.
 
+## Supported baseline
+
+This version is the first supported Deepzora baseline. Historical Reasonix
+formats, migration paths, and older client fallbacks are retired. Start with
+current configuration and session formats; see [the baseline contract](docs/current-version-baseline.md).
+
 ## Install
 
 Choose the path that matches how you want to use Deepzora. The CLI/TUI,

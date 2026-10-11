@@ -12,7 +12,7 @@ import (
 func TestSaveConflictRecoveryBranchAtCapStaysBounded(t *testing.T) {
 	dir := t.TempDir()
 	path, stale := divergedSessionPair(t, dir, "session.jsonl")
-	stampRecoveryMeta(t, path, SessionRecoveryMaxDepth)
+	stampRecoveryMeta(t, path, 3)
 
 	current := path
 	var firstPath string

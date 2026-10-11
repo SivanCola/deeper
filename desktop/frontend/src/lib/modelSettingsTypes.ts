@@ -11,7 +11,6 @@ export type ModelSettingsChange = { requestId: string; expectedFingerprint: stri
   | { kind: "official_add"; name: string; key: string }
   | { kind: "preset_add"; presetId: string; key: string }
   | { kind: "preset_reset"; presetId: string }
-  | { kind: "protocol_upgrade"; name: string }
   | { kind: "catalogs"; catalogs: ProviderModelCatalogUpdate[] }
   | { kind: "provider_remove" | "access_remove"; names: string[] }
   | { kind: "rename"; names: string[]; ref: string }

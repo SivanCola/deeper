@@ -35,7 +35,6 @@ type CapabilitySource string
 const (
 	CapabilitySourceOverride CapabilitySource = "override"
 	CapabilitySourcePreset   CapabilitySource = "preset"
-	CapabilitySourceLegacy   CapabilitySource = "legacy"
 	CapabilitySourceAdapter  CapabilitySource = "adapter"
 	CapabilitySourceCache    CapabilitySource = "cache"
 	CapabilitySourceDefault  CapabilitySource = "adapter_default"
@@ -141,9 +140,7 @@ func (r *ModelCapabilityResolver) resolveWithCredentialRevision(entry *ProviderE
 		resolved.State, resolved.Source, resolved.InputModalities = value.State, value.Source, value.InputModalities
 	}
 	requestURL := entry.RequestURL
-	if requestURL == "" && entry.Kind == "openai" {
-		requestURL = entry.ChatURL
-	}
+
 	if (openai.IsDeepSeek(entry.BaseURL) || openai.IsDeepSeek(requestURL)) && openai.IsOfficialDeepSeekTextModel(entry.Model) {
 		resolved.State, resolved.Source = CapabilityUnsupported, CapabilitySourceProtocol
 		resolved.InputModalities = []provider.ModelModality{provider.ModalityText}
@@ -164,16 +161,14 @@ func (r *ModelCapabilityResolver) resolveAutomatic(entry *ProviderEntry, credent
 	if model == "" {
 		return ResolvedModelCapability{State: CapabilityUnknown, Source: CapabilitySourceUnknown}
 	}
-	// Resolve catalog facts separately so a vision override or legacy declaration
+	// Resolve catalog facts separately so a vision override
 	// cannot erase context/output/protocol metadata.
 	catalogURL := entry.BaseURL
-	if entry.RequestURL != "" || entry.ChatURL != "" {
+	if entry.RequestURL != "" {
 		catalogURL = entry.RequestURL
-		if catalogURL == "" {
-			catalogURL = entry.ChatURL
-		}
+
 	}
-	if contract, ok := provider.LookupOpenCodeGoContract(entry.Kind, entry.BaseURL, entry.RequestURL, entry.ChatURL, model); ok {
+	if contract, ok := provider.LookupOpenCodeGoContract(entry.Kind, entry.BaseURL, entry.RequestURL, model); ok {
 		switch contract.Route {
 		case provider.OpenCodeGoRouteChat:
 			catalogURL = "https://opencode.ai/zen/go/v1"
@@ -195,16 +190,7 @@ func (r *ModelCapabilityResolver) resolveAutomatic(entry *ProviderEntry, credent
 		}
 		return resolved
 	}
-	if entry.Vision {
-		resolved := capabilityFromBool(model, true, CapabilitySourceLegacy)
-		resolved.ModelInfo = facts
-		return resolved
-	}
-	if entry.HasVisionModel(model) {
-		resolved := capabilityFromBool(model, true, CapabilitySourceLegacy)
-		resolved.ModelInfo = facts
-		return resolved
-	}
+
 	if hasFacts {
 		resolved := capabilityFromModalities(model, facts.InputModalities, CapabilitySourceAdapter)
 		resolved.ModelInfo = facts
@@ -219,19 +205,14 @@ func (r *ModelCapabilityResolver) resolveAutomatic(entry *ProviderEntry, credent
 			return capabilityFromModalities(model, cached.InputModalities, cached.Source)
 		}
 	}
-	if entry.VisionModels != nil {
-		resolved := capabilityFromBool(model, false, CapabilitySourceLegacy)
-		resolved.ModelInfo = facts
-		return resolved
-	}
+
 	return capabilityFromModalities(model, nil, CapabilitySourceUnknown)
 }
 
 // presetModelInfo turns the repository's curated provider templates into a
-// local model catalog. It only applies to an untouched preset identity; an
-// explicitly edited vision list remains a user-owned legacy override.
+// local model catalog for a matching preset identity.
 func presetModelInfo(entry *ProviderEntry, model string) (provider.ModelInfo, bool) {
-	if entry == nil || entry.RequestURL != "" || entry.ChatURL != "" || strings.TrimSpace(entry.PresetID) == "" {
+	if entry == nil || entry.RequestURL != "" || strings.TrimSpace(entry.PresetID) == "" {
 		return provider.ModelInfo{}, false
 	}
 	preset, ok := CuratedProviderPreset(entry.PresetID)
@@ -242,9 +223,7 @@ func presetModelInfo(entry *ProviderEntry, model string) (provider.ModelInfo, bo
 		if candidate.Name != entry.Name || candidate.Kind != entry.Kind || candidate.BaseURL != entry.BaseURL || !candidate.HasModel(model) {
 			continue
 		}
-		if !stringSlicesEqual(candidate.VisionModels, entry.VisionModels) {
-			return provider.ModelInfo{}, false
-		}
+
 		modalities := []provider.ModelModality{provider.ModalityText}
 		// The curated templates predate the V4.1 multimodal SKUs, so the vendor
 		// authority also decides here; otherwise a matching preset would lock a
@@ -353,7 +332,7 @@ func (r *ModelCapabilityResolver) providerFingerprint(entry ProviderEntry) strin
 func (r *ModelCapabilityResolver) providerFingerprintForCredentialRevision(entry ProviderEntry, credentialsRevision string) string {
 	h := hmac.New(sha256.New, []byte("deepzora-model-capabilities-cache-v2"))
 	for _, value := range []string{
-		"deepzora-model-capabilities-v2", entry.Name, entry.Kind, entry.BaseURL, entry.ChatURL, entry.RequestURL,
+		"deepzora-model-capabilities-v2", entry.Name, entry.Kind, entry.BaseURL, entry.RequestURL,
 		entry.ModelsURL, entry.APIKeyEnv, fmt.Sprintf("%t", entry.AuthHeader), fmt.Sprintf("%t", entry.NoProxy),
 		credentialsRevision,
 	} {

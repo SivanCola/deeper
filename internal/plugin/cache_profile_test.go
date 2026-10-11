@@ -8,88 +8,22 @@ import (
 	"time"
 )
 
-// TestProfileCacheIsolation pins the cross-version contract from the MCP 2026
-// PR plan: the legacy profile keeps the shared v2 file; capability-declaring
-// profiles write an isolated v3 file and treat the legacy file as a miss, so
-// catalogs negotiated under different client capabilities never masquerade as
-// each other.
 func TestProfileCacheIsolation(t *testing.T) {
-	dir := redirectCache(t)
+	redirectCache(t)
 	spec := sampleSpec()
-	key := SchemaCacheKey(spec)
-
-	legacy := CachedSchema{
-		CacheKey:     key,
-		Capabilities: map[string]bool{"tools": true},
-		Tools:        []CachedTool{{Name: "legacy_tool", Schema: []byte(`{"type":"object"}`)}},
-	}
-	if err := SaveCachedSchema(spec.Name, legacy); err != nil {
-		t.Fatalf("save legacy: %v", err)
-	}
-
-	if _, ok := LoadCachedSchemaForSpecProfile(spec, HostProfileInteractive); ok {
-		t.Fatal("interactive profile read the legacy shared cache; must be a miss")
-	}
-	if _, ok := LoadCachedSchemaForSpecProfile(spec, HostProfileDesktopApps); ok {
-		t.Fatal("desktop profile read the legacy shared cache; must be a miss")
-	}
-	if cs, ok := LoadCachedSchemaForSpecProfile(spec, HostProfileCore); !ok || len(cs.Tools) != 1 {
-		t.Fatal("core profile must keep reading the legacy shared cache")
-	}
-
-	enhanced := CachedSchema{
-		CacheKey:     key,
-		Capabilities: map[string]bool{"tools": true},
-		Tools: []CachedTool{{
-			Name: "app_tool", Schema: []byte(`{"type":"object"}`),
-			Visibility: []string{"model", "app"}, UIResourceURI: "ui://app/index.html",
-		}},
-	}
-	if err := SaveCachedSchemaForProfile(HostProfileDesktopApps, spec.Name, enhanced); err != nil {
-		t.Fatalf("save enhanced: %v", err)
-	}
-
-	files, err := filepath.Glob(filepath.Join(dir, "mcp", "my-server*"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(files) != 2 {
-		t.Fatalf("expected exactly legacy + enhanced cache files, got %v", files)
-	}
-	var sawEnhanced bool
-	for _, f := range files {
-		if filepath.Base(f) == "my-server.json" {
-			continue
-		}
-		sawEnhanced = true
-		b, err := os.ReadFile(f)
-		if err != nil {
+	profiles := []HostProfile{HostProfileCore, HostProfileInteractive, HostProfileDesktopApps}
+	for _, profile := range profiles {
+		cs := sampleCachedSchema(SchemaCacheKey(spec))
+		cs.Tools[0].Name = profile.String()
+		if err := SaveCachedSchemaForProfile(profile, spec.Name, cs); err != nil {
 			t.Fatal(err)
 		}
-		var cs CachedSchema
-		if err := json.Unmarshal(b, &cs); err != nil {
-			t.Fatal(err)
+	}
+	for _, profile := range profiles {
+		cs, ok := LoadCachedSchemaForSpecProfile(spec, profile)
+		if !ok || cs.Version != cacheVersion || cs.Profile != profile.String() || cs.Tools[0].Name != profile.String() {
+			t.Fatalf("profile %s: %+v %v", profile, cs, ok)
 		}
-		if cs.Version != enhancedCacheVersion || cs.Profile != HostProfileDesktopApps.String() {
-			t.Fatalf("enhanced cache version/profile = %d/%q", cs.Version, cs.Profile)
-		}
-	}
-	if !sawEnhanced {
-		t.Fatal("enhanced cache file not created")
-	}
-
-	cs, ok := LoadCachedSchemaForSpecProfile(spec, HostProfileDesktopApps)
-	if !ok || len(cs.Tools) != 1 || cs.Tools[0].Name != "app_tool" {
-		t.Fatalf("desktop profile cannot load its own enhanced cache: %+v", cs)
-	}
-	if !cs.Tools[0].ToolIsModelVisible() {
-		t.Fatal("model+app visibility must stay model-visible")
-	}
-	if cs, ok := LoadCachedSchemaForSpecProfile(spec, HostProfileInteractive); ok {
-		t.Fatalf("interactive profile read the desktop cache: %+v", cs)
-	}
-	if cs, ok := LoadCachedSchemaForSpecProfile(spec, HostProfileCore); !ok || cs.Tools[0].Name != "legacy_tool" {
-		t.Fatal("legacy writer's cache was disturbed by the enhanced writer")
 	}
 }
 

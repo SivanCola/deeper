@@ -10,30 +10,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
 	"deepzora/internal/installlayout"
-	"deepzora/internal/repair"
 )
 
 const testInstallerSHA256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-
-func prepareLegacyWindowsUpdate(t *testing.T, installDir, toVersion string) *repair.UpdateTransaction {
-	t.Helper()
-	paths := windowsReleaseUnitPaths(installDir)
-	for _, path := range paths {
-		if err := os.WriteFile(path, []byte("old-"+filepath.Base(path)), 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	tx, err := repair.PrepareFileUpdate("v1", toVersion, paths[0], paths[1:]...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return tx
-}
 
 func TestStageVerifiedInstallerFreezesExpectedBytes(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "installer.exe")
@@ -116,7 +98,6 @@ func TestRunVersionedLayoutDoesNotReadOrClaimLegacyPending(t *testing.T) {
 
 	originalInstaller := runInstallerFn
 	originalRelaunch := startRelaunchFn
-	originalClaim := claimPendingFileUpdateFn
 	originalStageInstaller := stageInstallerFn
 	originalClaimInstallerExecution := claimInstallerExecutionFn
 	originalReconcileUninstall := reconcileWindowsUninstallRegistrationFn
@@ -124,18 +105,12 @@ func TestRunVersionedLayoutDoesNotReadOrClaimLegacyPending(t *testing.T) {
 	t.Cleanup(func() {
 		runInstallerFn = originalInstaller
 		startRelaunchFn = originalRelaunch
-		claimPendingFileUpdateFn = originalClaim
 		stageInstallerFn = originalStageInstaller
 		claimInstallerExecutionFn = originalClaimInstallerExecution
 		reconcileWindowsUninstallRegistrationFn = originalReconcileUninstall
 		verifyDesktopHandoffFn = originalVerify
 	})
 	verifyDesktopHandoffFn = func(string, bool) error { return nil }
-	legacyClaimed := false
-	claimPendingFileUpdateFn = func(string, string, string, string, []string, time.Duration) (*repair.UpdateTransaction, func(), error) {
-		legacyClaimed = true
-		return nil, func() {}, errors.New("legacy claim must not run")
-	}
 	stageInstallerFn = func(path, _ string) (string, func() error, error) {
 		return path, func() error { return nil }, nil
 	}
@@ -165,9 +140,6 @@ func TestRunVersionedLayoutDoesNotReadOrClaimLegacyPending(t *testing.T) {
 		"--install-layout", "versioned-v1",
 	}); code != 0 {
 		t.Fatalf("run exit code = %d", code)
-	}
-	if legacyClaimed {
-		t.Fatal("versioned update claimed legacy pending transaction")
 	}
 	if !relaunched {
 		t.Fatal("versioned update did not relaunch")
@@ -285,358 +257,6 @@ func TestRelaunchPublishedInstallBlockedOwnerPreventsRelaunch(t *testing.T) {
 	}
 }
 
-func TestRunHoldsReleaseUnitLockAcrossInstallerHandoff(t *testing.T) {
-	stubDesktopHandoff(t)
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	installDir := t.TempDir()
-	pending := prepareLegacyWindowsUpdate(t, installDir, "v2")
-	var events []string
-	originalWait := waitForProcessExitFn
-	originalInstaller := runInstallerFn
-	originalRelaunch := startRelaunchFn
-	originalClaim := claimPendingFileUpdateFn
-	originalInstallStaged := installStagedReleaseUnitFn
-	originalRecord := recordInstalledUpdateFn
-	originalStageInstaller := stageInstallerFn
-	originalClaimInstallerExecution := claimInstallerExecutionFn
-	t.Cleanup(func() {
-		waitForProcessExitFn = originalWait
-		runInstallerFn = originalInstaller
-		startRelaunchFn = originalRelaunch
-		claimPendingFileUpdateFn = originalClaim
-		installStagedReleaseUnitFn = originalInstallStaged
-		recordInstalledUpdateFn = originalRecord
-		stageInstallerFn = originalStageInstaller
-		claimInstallerExecutionFn = originalClaimInstallerExecution
-	})
-	waitForProcessExitFn = func(uint32, time.Duration) error {
-		events = append(events, "wait")
-		return nil
-	}
-	runInstallerFn = func(string, string) error {
-		events = append(events, "installer")
-		return nil
-	}
-	startRelaunchFn = func(string, string) error {
-		events = append(events, "relaunch")
-		return nil
-	}
-	claimPendingFileUpdateFn = func(toVersion, createdAt, transactionID, launcherPath string, paths []string, _ time.Duration) (*repair.UpdateTransaction, func(), error) {
-		events = append(events, "claim:"+strings.Join([]string{toVersion, createdAt, transactionID, launcherPath, strings.Join(paths, "\x00")}, "\x01"))
-		return pending, func() { events = append(events, "release") }, nil
-	}
-	installStagedReleaseUnitFn = func(*repair.UpdateTransaction, string) (bool, []repair.FileUpdateInstallReceipt, error) {
-		events = append(events, "publish")
-		return true, []repair.FileUpdateInstallReceipt{}, nil
-	}
-	recordInstalledUpdateFn = func(tx *repair.UpdateTransaction, _ ...repair.FileUpdateInstallReceipt) (*repair.UpdateTransaction, error) {
-		events = append(events, "record-installed")
-		return tx, nil
-	}
-	stageInstallerFn = func(path, sha256 string) (string, func() error, error) {
-		events = append(events, "stage-installer:"+sha256)
-		return path + ".claimed", func() error { return nil }, nil
-	}
-	claimInstallerExecutionFn = func(string, string) (func(), error) {
-		events = append(events, "claim-installer")
-		return func() { events = append(events, "release-installer") }, nil
-	}
-
-	if code := run([]string{
-		"--parent-pid", "1234",
-		"--installer", filepath.Join(installDir, "installer.exe"),
-		"--installer-sha256", testInstallerSHA256,
-		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "deepzora-desktop.exe"),
-		"--to-version", pending.ToVersion,
-		"--created-at", pending.CreatedAt,
-		"--transaction-id", repair.UpdateTransactionID(pending),
-	}); code != 0 {
-		t.Fatalf("run exit code = %d", code)
-	}
-	wantClaim := "claim:" + strings.Join([]string{
-		pending.ToVersion,
-		pending.CreatedAt,
-		repair.UpdateTransactionID(pending),
-		filepath.Join(installDir, "deepzora-desktop.exe"),
-		strings.Join(windowsReleaseUnitPaths(installDir), "\x00"),
-	}, "\x01")
-	if len(events) != 10 || events[0] != "wait" || events[1] != wantClaim ||
-		events[2] != "stage-installer:"+testInstallerSHA256 ||
-		events[3] != "claim-installer" || events[4] != "installer" ||
-		events[5] != "release-installer" || events[6] != "publish" ||
-		events[7] != "record-installed" || events[8] != "relaunch" ||
-		events[9] != "release" {
-		t.Fatalf("handoff events = %#v", events)
-	}
-}
-
-func TestRunDoesNotClaimUpdateBeforeParentExits(t *testing.T) {
-	stubDesktopHandoff(t)
-	installDir := t.TempDir()
-	originalWait := waitForProcessExitFn
-	originalInstaller := runInstallerFn
-	originalClaim := claimPendingFileUpdateFn
-	originalRecord := recordInstalledUpdateFn
-	t.Cleanup(func() {
-		waitForProcessExitFn = originalWait
-		runInstallerFn = originalInstaller
-		claimPendingFileUpdateFn = originalClaim
-		recordInstalledUpdateFn = originalRecord
-	})
-	waitForProcessExitFn = func(uint32, time.Duration) error {
-		return errors.New("parent still running")
-	}
-	claimed := false
-	claimPendingFileUpdateFn = func(string, string, string, string, []string, time.Duration) (*repair.UpdateTransaction, func(), error) {
-		claimed = true
-		return &repair.UpdateTransaction{}, func() {}, nil
-	}
-	installerRan := false
-	runInstallerFn = func(string, string) error {
-		installerRan = true
-		return nil
-	}
-
-	if code := run([]string{
-		"--parent-pid", "1234",
-		"--installer", filepath.Join(installDir, "installer.exe"),
-		"--installer-sha256", testInstallerSHA256,
-		"--install-dir", installDir,
-		"--to-version", "v2",
-		"--created-at", "2026-07-29T00:00:00Z",
-		"--transaction-id", "transaction-1",
-	}); code != 1 {
-		t.Fatalf("run exit code = %d, want 1", code)
-	}
-	if claimed || installerRan {
-		t.Fatalf("claim=%v installer=%v before parent exit", claimed, installerRan)
-	}
-}
-
-func TestRunRelaunchesWhenLegacyPendingCannotBeClaimed(t *testing.T) {
-	stubDesktopHandoff(t)
-	installDir := t.TempDir()
-	originalWait := waitForProcessExitFn
-	originalRelaunch := startRelaunchFn
-	originalClaim := claimPendingFileUpdateFn
-	t.Cleanup(func() {
-		waitForProcessExitFn = originalWait
-		startRelaunchFn = originalRelaunch
-		claimPendingFileUpdateFn = originalClaim
-	})
-
-	waitForProcessExitFn = func(uint32, time.Duration) error { return nil }
-	relaunched := false
-	startRelaunchFn = func(path, dir string) error {
-		relaunched = path == filepath.Join(installDir, "deepzora-desktop.exe") && dir == installDir
-		return nil
-	}
-	claimPendingFileUpdateFn = func(string, string, string, string, []string, time.Duration) (*repair.UpdateTransaction, func(), error) {
-		return nil, nil, errors.New("pending lock unavailable")
-	}
-
-	if code := run([]string{
-		"--parent-pid", "1234",
-		"--installer", filepath.Join(installDir, "installer.exe"),
-		"--installer-sha256", testInstallerSHA256,
-		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "deepzora-desktop.exe"),
-		"--to-version", "v2",
-		"--created-at", "2026-08-02T00:00:00Z",
-		"--transaction-id", strings.Repeat("a", 64),
-	}); code != 1 {
-		t.Fatalf("run exit code = %d, want 1", code)
-	}
-	if !relaunched {
-		t.Fatal("helper did not relaunch the existing desktop")
-	}
-}
-
-func TestRunCancelsTransactionWhenStagedExtractionFails(t *testing.T) {
-	stubDesktopHandoff(t)
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	installDir := t.TempDir()
-	originalWait := waitForProcessExitFn
-	originalInstaller := runInstallerFn
-	originalRelaunch := startRelaunchFn
-	originalClaim := claimPendingFileUpdateFn
-	originalInstallStaged := installStagedReleaseUnitFn
-	originalRecord := recordInstalledUpdateFn
-	originalStageInstaller := stageInstallerFn
-	originalClaimInstallerExecution := claimInstallerExecutionFn
-	t.Cleanup(func() {
-		waitForProcessExitFn = originalWait
-		runInstallerFn = originalInstaller
-		startRelaunchFn = originalRelaunch
-		claimPendingFileUpdateFn = originalClaim
-		installStagedReleaseUnitFn = originalInstallStaged
-		recordInstalledUpdateFn = originalRecord
-		stageInstallerFn = originalStageInstaller
-		claimInstallerExecutionFn = originalClaimInstallerExecution
-	})
-	waitForProcessExitFn = func(uint32, time.Duration) error { return nil }
-	runInstallerFn = func(string, string) error { return errors.New("installer failed") }
-	startRelaunchFn = func(string, string) error { return nil }
-	claimed := prepareLegacyWindowsUpdate(t, installDir, "v2")
-	claimPendingFileUpdateFn = func(string, string, string, string, []string, time.Duration) (*repair.UpdateTransaction, func(), error) {
-		return claimed, func() {}, nil
-	}
-	stageInstallerFn = func(path, _ string) (string, func() error, error) {
-		return path, func() error { return nil }, nil
-	}
-	claimInstallerExecutionFn = func(string, string) (func(), error) {
-		return func() {}, nil
-	}
-	transactionID := repair.UpdateTransactionID(claimed)
-	if code := run([]string{
-		"--installer", filepath.Join(installDir, "installer.exe"),
-		"--installer-sha256", testInstallerSHA256,
-		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "deepzora-desktop.exe"),
-		"--to-version", "v2",
-		"--created-at", claimed.CreatedAt,
-		"--transaction-id", transactionID,
-	}); code != 1 {
-		t.Fatalf("run exit code = %d, want 1", code)
-	}
-	if _, ok := repair.ReadUpdateApplyFailure(); ok {
-		t.Fatal("staging-only installer failure left a recovery marker despite no live publish")
-	}
-}
-
-func TestRunTreatsInstalledReleaseUnitRecordingFailureAsApplyFailure(t *testing.T) {
-	stubDesktopHandoff(t)
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	installDir := t.TempDir()
-	originalWait := waitForProcessExitFn
-	originalInstaller := runInstallerFn
-	originalRelaunch := startRelaunchFn
-	originalClaim := claimPendingFileUpdateFn
-	originalRecord := recordInstalledUpdateFn
-	originalStageInstaller := stageInstallerFn
-	originalClaimInstallerExecution := claimInstallerExecutionFn
-	t.Cleanup(func() {
-		waitForProcessExitFn = originalWait
-		runInstallerFn = originalInstaller
-		startRelaunchFn = originalRelaunch
-		claimPendingFileUpdateFn = originalClaim
-		recordInstalledUpdateFn = originalRecord
-		stageInstallerFn = originalStageInstaller
-		claimInstallerExecutionFn = originalClaimInstallerExecution
-	})
-	waitForProcessExitFn = func(uint32, time.Duration) error { return nil }
-	runInstallerFn = func(string, string) error { return nil }
-	relaunched := false
-	startRelaunchFn = func(string, string) error {
-		relaunched = true
-		return nil
-	}
-	claimed := prepareLegacyWindowsUpdate(t, installDir, "v2")
-	claimPendingFileUpdateFn = func(string, string, string, string, []string, time.Duration) (*repair.UpdateTransaction, func(), error) {
-		return claimed, func() {}, nil
-	}
-	stageInstallerFn = func(path, _ string) (string, func() error, error) {
-		return path, func() error { return nil }, nil
-	}
-	claimInstallerExecutionFn = func(string, string) (func(), error) {
-		return func() {}, nil
-	}
-	installStagedReleaseUnitFn = func(*repair.UpdateTransaction, string) (bool, []repair.FileUpdateInstallReceipt, error) {
-		return true, []repair.FileUpdateInstallReceipt{{
-			UpdateTransactionID: repair.UpdateTransactionID(claimed),
-			TargetPath:          claimed.TargetPath,
-			InstalledStateID:    "installed",
-		}}, nil
-	}
-	recordInstalledUpdateFn = func(*repair.UpdateTransaction, ...repair.FileUpdateInstallReceipt) (*repair.UpdateTransaction, error) {
-		return nil, errors.New("release unit drifted")
-	}
-	transactionID := repair.UpdateTransactionID(claimed)
-
-	if code := run([]string{
-		"--installer", filepath.Join(installDir, "installer.exe"),
-		"--installer-sha256", testInstallerSHA256,
-		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "deepzora-desktop.exe"),
-		"--to-version", "v2",
-		"--created-at", claimed.CreatedAt,
-		"--transaction-id", transactionID,
-	}); code != 1 {
-		t.Fatalf("run exit code = %d, want 1", code)
-	}
-	if !relaunched {
-		t.Fatal("helper did not relaunch through recovery after post-install verification failure")
-	}
-	failure, ok := repair.ReadUpdateApplyFailure()
-	if !ok || failure.UpdateTransactionID != transactionID {
-		t.Fatalf("failure marker = %+v, present=%v", failure, ok)
-	}
-}
-
-func TestRunRelaunchesWhenStagingIdentityCannotBeBound(t *testing.T) {
-	stubDesktopHandoff(t)
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	installDir := t.TempDir()
-	originalWait := waitForProcessExitFn
-	originalInstaller := runInstallerFn
-	originalRelaunch := startRelaunchFn
-	originalClaim := claimPendingFileUpdateFn
-	originalStageInstaller := stageInstallerFn
-	originalLstatStaging := lstatUpdateStagingFn
-	t.Cleanup(func() {
-		waitForProcessExitFn = originalWait
-		runInstallerFn = originalInstaller
-		startRelaunchFn = originalRelaunch
-		claimPendingFileUpdateFn = originalClaim
-		stageInstallerFn = originalStageInstaller
-		lstatUpdateStagingFn = originalLstatStaging
-	})
-	waitForProcessExitFn = func(uint32, time.Duration) error { return nil }
-	installerRan := false
-	runInstallerFn = func(string, string) error {
-		installerRan = true
-		return nil
-	}
-	relaunched := false
-	startRelaunchFn = func(string, string) error {
-		relaunched = true
-		return nil
-	}
-	claimed := prepareLegacyWindowsUpdate(t, installDir, "v2")
-	releases := 0
-	claimPendingFileUpdateFn = func(string, string, string, string, []string, time.Duration) (*repair.UpdateTransaction, func(), error) {
-		return claimed, func() { releases++ }, nil
-	}
-	stageInstallerFn = func(path, _ string) (string, func() error, error) {
-		return path, func() error { return nil }, nil
-	}
-	lstatUpdateStagingFn = func(string) (os.FileInfo, error) {
-		return nil, errors.New("staging identity unavailable")
-	}
-
-	if code := run([]string{
-		"--installer", filepath.Join(installDir, "installer.exe"),
-		"--installer-sha256", testInstallerSHA256,
-		"--install-dir", installDir,
-		"--relaunch", filepath.Join(installDir, "deepzora-desktop.exe"),
-		"--to-version", claimed.ToVersion,
-		"--created-at", claimed.CreatedAt,
-		"--transaction-id", repair.UpdateTransactionID(claimed),
-	}); code != 1 {
-		t.Fatalf("run exit code = %d, want 1", code)
-	}
-	if installerRan {
-		t.Fatal("installer ran without a bound staging directory")
-	}
-	if !relaunched {
-		t.Fatal("helper did not relaunch after staging identity failure")
-	}
-	if releases == 0 {
-		t.Fatal("helper did not release the update claim")
-	}
-}
-
 func TestClaimVerifiedInstallerForExecutionFreezesPath(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "installer.exe")
 	content := []byte("verified-installer")
@@ -671,5 +291,14 @@ func TestClaimVerifiedInstallerForExecutionRejectsHashDrift(t *testing.T) {
 	if release, err := claimVerifiedInstallerForExecution(path, testInstallerSHA256); err == nil {
 		release()
 		t.Fatal("installer with the wrong SHA-256 received an execution claim")
+	}
+}
+
+func TestRunRejectsHistoricalUpdateArguments(t *testing.T) {
+	for _, extra := range [][]string{{"--created-at", "2026-01-01"}, {"--transaction-id", "old"}, {"--install-layout", "flat"}, {}} {
+		args := append([]string{"--installer", "installer.exe", "--installer-sha256", testInstallerSHA256, "--install-dir", t.TempDir(), "--to-version", "v1.0.0"}, extra...)
+		if code := run(args); code != 2 {
+			t.Fatalf("historical arguments %v returned %d", extra, code)
+		}
 	}
 }

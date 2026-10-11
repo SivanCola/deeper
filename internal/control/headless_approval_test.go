@@ -65,7 +65,7 @@ func runHeadlessWriteOnce(t *testing.T, mode string, askRules []string) (prompts
 // under headless auto (there is no one to approve it), yet must not prompt or
 // hang either. auto preserves explicit ask rules by failing closed.
 func TestApplyHeadlessApprovalModeAutoDeniesExplicitAskRule(t *testing.T) {
-	prompts, written := runHeadlessWriteOnce(t, ToolApprovalAuto, []string{"write_file"})
+	prompts, written := runHeadlessWriteOnce(t, ToolApprovalWorkspaceWrite, []string{"write_file"})
 	if prompts != 0 {
 		t.Fatalf("approval prompts = %d, want 0 (headless run has no UI to answer)", prompts)
 	}
@@ -78,7 +78,7 @@ func TestApplyHeadlessApprovalModeAutoDeniesExplicitAskRule(t *testing.T) {
 // auto-approves the ordinary writer fallback (no explicit rule): that is the
 // permissiveness auto is meant to add over the default headless gate.
 func TestApplyHeadlessApprovalModeAutoAllowsWriterFallback(t *testing.T) {
-	prompts, written := runHeadlessWriteOnce(t, ToolApprovalAuto, nil)
+	prompts, written := runHeadlessWriteOnce(t, ToolApprovalWorkspaceWrite, nil)
 	if prompts != 0 {
 		t.Fatalf("approval prompts = %d, want 0", prompts)
 	}
@@ -88,7 +88,7 @@ func TestApplyHeadlessApprovalModeAutoAllowsWriterFallback(t *testing.T) {
 }
 
 func TestApplyHeadlessApprovalModeAskDeniesWriterFallback(t *testing.T) {
-	prompts, written := runHeadlessWriteOnce(t, ToolApprovalAsk, nil)
+	prompts, written := runHeadlessWriteOnce(t, ToolApprovalReadOnly, nil)
 	if prompts != 0 {
 		t.Fatalf("approval prompts = %d, want 0 (headless run has no UI to answer)", prompts)
 	}
@@ -100,7 +100,7 @@ func TestApplyHeadlessApprovalModeAskDeniesWriterFallback(t *testing.T) {
 // TestApplyHeadlessApprovalModeYoloBypassesAskRule confirms only bypass runs an
 // explicitly ask-gated command unattended.
 func TestApplyHeadlessApprovalModeYoloBypassesAskRule(t *testing.T) {
-	prompts, written := runHeadlessWriteOnce(t, ToolApprovalYolo, []string{"write_file"})
+	prompts, written := runHeadlessWriteOnce(t, ToolApprovalDangerFullAccess, []string{"write_file"})
 	if prompts != 0 {
 		t.Fatalf("approval prompts = %d, want 0", prompts)
 	}
@@ -134,7 +134,7 @@ func TestApplyHeadlessApprovalModeDontAskDeniesWithoutPrompting(t *testing.T) {
 			}
 		}),
 	})
-	c.ApplyHeadlessApprovalMode(ToolApprovalDontAsk)
+	c.ApplyHeadlessApprovalMode(ToolApprovalReadOnly)
 
 	done := make(chan error, 1)
 	go func() { done <- c.runTurnWithRaw(context.Background(), "edit", "edit") }()
@@ -190,7 +190,7 @@ func TestApplyHeadlessApprovalModeAllowsOnlyLowRiskProjectMemoryCreate(t *testin
 					}
 				}),
 			})
-			c.ApplyHeadlessApprovalMode(ToolApprovalAsk)
+			c.ApplyHeadlessApprovalMode(ToolApprovalReadOnly)
 			if err := c.runTurnWithRaw(context.Background(), "remember", "remember"); err != nil {
 				t.Fatalf("runTurnWithRaw: %v", err)
 			}
@@ -206,7 +206,7 @@ func TestApplyHeadlessApprovalModeAllowsOnlyLowRiskProjectMemoryCreate(t *testin
 }
 
 func TestHeadlessAutoAndYoloKeepFreshMemoryBoundary(t *testing.T) {
-	for _, mode := range []string{ToolApprovalAuto, ToolApprovalYolo} {
+	for _, mode := range []string{ToolApprovalWorkspaceWrite, ToolApprovalDangerFullAccess} {
 		t.Run(mode, func(t *testing.T) {
 			gate := BuildHeadlessApprovalGate(permission.New("ask", nil, nil, nil), mode)
 			for _, name := range []string{memoryRememberTool, memoryForgetTool} {
@@ -264,10 +264,10 @@ func TestBuildHeadlessApprovalGateMatchesParentExecutorContract(t *testing.T) {
 		return append([]string(nil), writer.paths...)
 	}
 
-	if got := runSubagentGateWriteOnce(t, ToolApprovalAuto); len(got) != 0 {
+	if got := runSubagentGateWriteOnce(t, ToolApprovalWorkspaceWrite); len(got) != 0 {
 		t.Fatalf("auto: executed writes = %v, want none (a sub-agent must fail closed on an explicit ask rule too)", got)
 	}
-	if got := runSubagentGateWriteOnce(t, ToolApprovalYolo); len(got) != 1 || got[0] != "a.txt" {
+	if got := runSubagentGateWriteOnce(t, ToolApprovalDangerFullAccess); len(got) != 1 || got[0] != "a.txt" {
 		t.Fatalf("yolo: executed writes = %v, want [a.txt] (bypass runs even explicit ask rules)", got)
 	}
 }
@@ -283,7 +283,7 @@ func TestBuildHeadlessApprovalGateMatchesParentExecutorContract(t *testing.T) {
 // actually reads (boot wires the same *SharedHeadlessGate into all of them).
 func TestSetToolApprovalModePropagatesToSubagentGate(t *testing.T) {
 	policy := permission.New("ask", nil, []string{"write_file"}, nil)
-	subagentGate := NewSharedHeadlessGate(policy, ToolApprovalAsk)
+	subagentGate := NewSharedHeadlessGate(policy, ToolApprovalReadOnly)
 	c := newOwnedTestController(t, Options{Policy: policy, SubagentGate: subagentGate})
 
 	runSubagentWriteOnce := func(t *testing.T) []string {
@@ -317,12 +317,12 @@ func TestSetToolApprovalModePropagatesToSubagentGate(t *testing.T) {
 		t.Fatalf("ask (initial): executed writes = %v, want none", got)
 	}
 
-	c.SetToolApprovalMode(ToolApprovalAuto)
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 	if got := runSubagentWriteOnce(t); len(got) != 0 {
 		t.Fatalf("auto: executed writes = %v, want none (sub-agent gate must follow the mode switch and fail closed on the ask rule)", got)
 	}
 
-	c.SetToolApprovalMode(ToolApprovalYolo)
+	c.SetToolApprovalMode(ToolApprovalDangerFullAccess)
 	if got := runSubagentWriteOnce(t); len(got) != 1 || got[0] != "a.txt" {
 		t.Fatalf("yolo: executed writes = %v, want [a.txt] (bypass runs even explicit ask rules)", got)
 	}
@@ -353,7 +353,7 @@ func TestInteractiveGateIgnoresSessionAllowForFreshHumanTools(t *testing.T) {
 // workspace preset. Filesystem containment is enforced by the sandbox rather
 // than by fragile command-string heuristics.
 func TestHeadlessWorkspaceWriteAllowsInlineInterpreter(t *testing.T) {
-	gate := BuildHeadlessApprovalGate(permission.New("ask", nil, nil, nil), ToolApprovalAuto)
+	gate := BuildHeadlessApprovalGate(permission.New("ask", nil, nil, nil), ToolApprovalWorkspaceWrite)
 
 	allow, reason, err := gate.Check(context.Background(), "bash",
 		json.RawMessage(`{"command":"cd /testbed && python -c \"print(1)\""}`), false)

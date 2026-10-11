@@ -13,15 +13,7 @@ export interface ToolRecoverySnapshot {
   runtimeEpoch: string;
   revision: string;
   calls: RecoveryCall[];
-  retryEnabled: boolean;
-	retired?: boolean;
-}
-export interface ToolRecoveryRequest {
-  sessionPath: string; runtimeEpoch: string; revision: string;
-  attemptId: string; inspectionId: string;
-  action: "inspect" | "confirm" | "reject" | "retry";
 }
 export interface ToolRecoveryBindings {
   GetToolRecoveryForTab?(tabId: string): Promise<ToolRecoverySnapshot>;
-  ResolveToolRecoveryForTab?(tabId: string, request: ToolRecoveryRequest): Promise<ToolRecoverySnapshot>;
 }

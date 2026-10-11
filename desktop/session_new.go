@@ -158,14 +158,17 @@ func (a *App) adoptSessionPreset(tab *WorkspaceTab, ctrl control.SessionAPI, ses
 		return
 	}
 	tab.toolApprovalMode = preset
-	tab.mode = tabModeFromAxes(tabModeHasPlan(tab.mode), preset == control.ToolApprovalDangerFullAccess)
+	tab.mode = tabModeForPlan(tabModeHasPlan(tab.mode))
 	a.mu.Unlock()
 	applyTabToolApprovalModeToController(ctrl, preset)
 }
 
 func clearBlankSessionPinnedContext(tab *WorkspaceTab, ctrl control.SessionAPI) error {
 	oldFiles := tab.GetPinnedFiles()
-	path := ctrl.SessionPath()
+	path, err := controllerPinnedContextPath(ctrl)
+	if err != nil {
+		return err
+	}
 	if path != "" {
 		if err := savePinnedContextState(path, []string{}); err != nil {
 			return err

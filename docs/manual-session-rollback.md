@@ -1,5 +1,7 @@
 # Manual conversation creation and upgraded data
 
+> 已归档：本文记录旧版验证，其兼容、迁移及降级结论不适用于当前 Deepzora。当前支持范围见[当前版本基线](current-version-baseline.md)。旧证据生成脚本已移除。
+
 This is a forward fix for the draft-first behavior introduced by #10469. It is
 intended for the next incremented Desktop release, with a matching Electron
 shell and Go service. It does not replace historical tags or downgrade storage.

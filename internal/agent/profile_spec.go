@@ -112,9 +112,8 @@ type CapabilityGrant struct {
 // ContextRequest is the context a child starts from, as opposed to the task it
 // is given. Today that is only a prior transcript to resume.
 type ContextRequest struct {
-	// ContinueFrom / ForkFrom are transcript continuation refs (writer path).
+	// ContinueFrom are transcript continuation refs (writer path).
 	ContinueFrom string
-	ForkFrom     string
 	// Ephemeral forces a non-persisted transcript for entry points that promise
 	// no durable host side effects, such as read_only_task.
 	Ephemeral bool

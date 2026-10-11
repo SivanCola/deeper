@@ -8,8 +8,7 @@ export async function commitRewindWithPreview(
   scope: "conversation" | "code" | "both",
 ): Promise<RewindResultView> {
   const plan = await app.PreviewRewindForTab(sourceTabId, turn, scope);
-  const remoteLegacy = !plan?.ok && /remote host uses legacy rewind semantics/i.test(plan?.error || "");
-  if (!remoteLegacy) {
+  {
     const canCommit = scope === "conversation"
       ? plan?.canConversation
       : scope === "both"
@@ -32,7 +31,7 @@ export async function commitRewindWithPreview(
       }
     }
   }
-  return app.CommitRewindForTab(sourceTabId, remoteLegacy ? "" : (plan.planId || ""), turn, scope);
+  return app.CommitRewindForTab(sourceTabId, plan.planId || "", turn, scope);
 }
 
 export function partialRewindNotice(result: RewindResultView): string {

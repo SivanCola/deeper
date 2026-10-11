@@ -373,7 +373,7 @@ func TestDesktopV3CatalogResumeRenameAndDeleteUseSessionIdentity(t *testing.T) {
 	if snap, err := service.Query().Snapshot(t.Context(), second.Ref()); err != nil || snap.Projection.Title != "renamed v3" {
 		t.Fatalf("renamed snapshot = %+v, %v", snap, err)
 	}
-	if err := app.DeleteSession(sessionRoute(second.Ref().SessionID)); err != nil {
+	if err := app.ArchiveCanonicalSession(second.Ref()); err != nil {
 		t.Fatal(err)
 	}
 	if !tab.removed {

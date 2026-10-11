@@ -18,16 +18,12 @@ type goalMachineSnapshot struct {
 	scopeID                string
 	deliveryCheckpoint     evidence.DeliveryCheckpoint
 	block                  string
-	strict                 bool
-	budgetClass            string
 	turnsUsed              int
-	turnsLimit             int
 	tokensUsed             int
 	requestsUsed           int
 	workDurationMs         int64
 	tokensLimit            int
 	noProgressTurns        int
-	noProgressLimit        int
 	lastContinuationReason string
 	lastEvaluatorReason    string
 	stopCause              string
@@ -47,13 +43,12 @@ func (g *goalMachine) captureLocked() goalMachineSnapshot {
 		disarmed: g.disarmed,
 		goal:     g.goal, status: g.status,
 		scopeID: g.scopeID, deliveryCheckpoint: g.deliveryCheckpoint,
-		block: g.block, strict: g.strict,
-		budgetClass: g.budgetClass, turnsUsed: g.turnsUsed,
-		turnsLimit: g.turnsLimit, tokensUsed: g.tokensUsed,
+		block:          g.block,
+		turnsUsed:      g.turnsUsed,
+		tokensUsed:     g.tokensUsed,
 		requestsUsed:   g.requestsUsed,
 		workDurationMs: g.workDurationMs,
 		tokensLimit:    g.tokensLimit, noProgressTurns: g.noProgressTurns,
-		noProgressLimit:        g.noProgressLimit,
 		lastContinuationReason: g.lastContinuationReason,
 		lastEvaluatorReason:    g.lastEvaluatorReason,
 		stopCause:              g.stopCause, budgetExtensions: g.budgetExtensions,
@@ -68,13 +63,11 @@ func (g *goalMachine) restore(snapshot goalMachineSnapshot) {
 	g.disarmed = snapshot.disarmed
 	g.scopeID = snapshot.scopeID
 	g.deliveryCheckpoint, g.block = snapshot.deliveryCheckpoint, snapshot.block
-	g.strict = snapshot.strict
-	g.budgetClass = snapshot.budgetClass
-	g.turnsUsed, g.turnsLimit = snapshot.turnsUsed, snapshot.turnsLimit
+	g.turnsUsed = snapshot.turnsUsed
 	g.tokensUsed, g.tokensLimit = snapshot.tokensUsed, snapshot.tokensLimit
 	g.requestsUsed = snapshot.requestsUsed
 	g.workDurationMs = snapshot.workDurationMs
-	g.noProgressTurns, g.noProgressLimit = snapshot.noProgressTurns, snapshot.noProgressLimit
+	g.noProgressTurns = snapshot.noProgressTurns
 	g.lastContinuationReason = snapshot.lastContinuationReason
 	g.lastEvaluatorReason = snapshot.lastEvaluatorReason
 	g.stopCause = snapshot.stopCause

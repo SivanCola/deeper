@@ -2,7 +2,6 @@ package worktree
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -202,118 +201,6 @@ func TestFinalizeMergeResumesPlannedRecoveryMove(t *testing.T) {
 	}
 }
 
-func TestFinalizeMergeMigratesRegisteredLegacyJournal(t *testing.T) {
-	requireGit(t)
-	repo, managed, created, result := mergedWorktreeFixture(t)
-	metadata, _, _, err := readMergeMetadataForCleanup(created.WorktreeRoot, managed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-cleanup")
-	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
-		t.Fatal(err)
-	}
-	registeredRoot := filepath.Join(cleanupDir, "legacy-registered")
-	gitTest(t, repo, "worktree", "move", created.WorktreeRoot, registeredRoot)
-	manifest, err := captureCleanupManifest(context.Background(), registeredRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	legacy := legacyCleanupState{
-		Version: legacyCleanupStateVersion, OriginalRoot: created.WorktreeRoot, RegisteredRoot: registeredRoot,
-		DetachedRoot: filepath.Join(cleanupDir, "legacy-detached"), WorktreeBranch: result.WorktreeBranch,
-		WorktreeHead: result.WorktreeHead, Stage: legacyCleanupStagePrepared, Manifest: manifest,
-	}
-	writeLegacyCleanupState(t, metadata, legacy)
-
-	cleanup, err := FinalizeMerge(context.Background(), managed, cleanupFromMerge(result))
-	if err != nil || cleanup.RecoveryRoot != registeredRoot {
-		t.Fatalf("legacy migration = %+v, %v", cleanup, err)
-	}
-	assertRetainedCleanup(t, repo, result, cleanup)
-	journal, hasState, err := readCleanupState(metadata, result.WorktreeHead)
-	if err != nil || !hasState || journal.Current == nil || journal.Current.Version != cleanupStateVersion {
-		t.Fatalf("migrated journal = %+v, %v, %v", journal, hasState, err)
-	}
-}
-
-func TestFinalizeMergeRestoresPreparedLegacyDetachedCheckout(t *testing.T) {
-	requireGit(t)
-	repo, managed, created, result := mergedWorktreeFixture(t)
-	metadata, _, _, err := readMergeMetadataForCleanup(created.WorktreeRoot, managed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-cleanup")
-	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
-		t.Fatal(err)
-	}
-	registeredRoot := filepath.Join(cleanupDir, "legacy-registered")
-	detachedRoot := filepath.Join(cleanupDir, "legacy-detached")
-	gitTest(t, repo, "worktree", "move", created.WorktreeRoot, registeredRoot)
-	manifest, err := captureCleanupManifest(context.Background(), registeredRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Rename(registeredRoot, detachedRoot); err != nil {
-		t.Fatal(err)
-	}
-	legacy := legacyCleanupState{
-		Version: legacyCleanupStateVersion, OriginalRoot: created.WorktreeRoot, RegisteredRoot: registeredRoot,
-		DetachedRoot: detachedRoot, WorktreeBranch: result.WorktreeBranch, WorktreeHead: result.WorktreeHead,
-		Stage: legacyCleanupStagePrepared, Manifest: manifest,
-	}
-	writeLegacyCleanupState(t, metadata, legacy)
-
-	cleanup, err := FinalizeMerge(context.Background(), managed, cleanupFromMerge(result))
-	if err != nil || cleanup.RecoveryRoot != registeredRoot {
-		t.Fatalf("legacy detached restore = %+v, %v", cleanup, err)
-	}
-	assertRetainedCleanup(t, repo, result, cleanup)
-}
-
-func TestFinalizeMergePreservesUnregisteredLegacyDetachedCheckout(t *testing.T) {
-	requireGit(t)
-	repo, managed, created, result := mergedWorktreeFixture(t)
-	metadata, _, _, err := readMergeMetadataForCleanup(created.WorktreeRoot, managed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cleanupDir := filepath.Join(filepath.Dir(created.WorktreeRoot), ".deepzora-cleanup")
-	if err := ensureCleanupRecoveryDir(cleanupDir); err != nil {
-		t.Fatal(err)
-	}
-	registeredRoot := filepath.Join(cleanupDir, "legacy-registered")
-	detachedRoot := filepath.Join(cleanupDir, "legacy-detached")
-	gitTest(t, repo, "worktree", "move", created.WorktreeRoot, registeredRoot)
-	manifest, err := captureCleanupManifest(context.Background(), registeredRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Rename(registeredRoot, detachedRoot); err != nil {
-		t.Fatal(err)
-	}
-	gitTest(t, repo, "worktree", "remove", registeredRoot)
-	legacy := legacyCleanupState{
-		Version: legacyCleanupStateVersion, OriginalRoot: created.WorktreeRoot, RegisteredRoot: registeredRoot,
-		DetachedRoot: detachedRoot, WorktreeBranch: result.WorktreeBranch, WorktreeHead: result.WorktreeHead,
-		Stage: legacyCleanupStageUnregistered, Manifest: manifest,
-	}
-	writeLegacyCleanupState(t, metadata, legacy)
-
-	cleanup, err := FinalizeMerge(context.Background(), managed, cleanupFromMerge(result))
-	if err == nil || cleanup.RecoveryRoot != detachedRoot || cleanup.RecoveryWorktreeRegistered ||
-		!cleanup.BranchRetained || !hasBlocker(cleanup.Blockers, "legacy_recovery_preserved") {
-		t.Fatalf("unregistered legacy recovery = %+v, %v", cleanup, err)
-	}
-	if _, err := os.Stat(detachedRoot); err != nil {
-		t.Fatalf("legacy detached checkout was removed: %v", err)
-	}
-	if got := gitTest(t, repo, "rev-parse", "refs/heads/"+result.WorktreeBranch); got != result.WorktreeHead {
-		t.Fatalf("legacy branch changed: %s", got)
-	}
-}
-
 func TestFinalizeMergePreservesWorktreeMovedOutsideRecovery(t *testing.T) {
 	requireGit(t)
 	repo, managed, created, result := mergedWorktreeFixture(t)
@@ -346,16 +233,5 @@ func TestFinalizeMergeRejectsUnknownCleanupJournalVersion(t *testing.T) {
 	}
 	if got := gitTest(t, repo, "rev-parse", "refs/heads/"+result.WorktreeBranch); got != result.WorktreeHead {
 		t.Fatalf("unknown journal changed recovery branch: %s", got)
-	}
-}
-
-func writeLegacyCleanupState(t *testing.T, metadata mergeMetadata, state legacyCleanupState) {
-	t.Helper()
-	body, err := json.Marshal(state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(cleanupJournalPath(metadata), append(body, '\n'), 0o600); err != nil {
-		t.Fatal(err)
 	}
 }

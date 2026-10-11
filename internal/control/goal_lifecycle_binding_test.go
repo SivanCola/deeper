@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
@@ -17,7 +16,7 @@ import (
 
 func TestGoalLifecycleProjectionRestoreIsDisarmed(t *testing.T) {
 	raw := json.RawMessage(`{"version":1,"current":{"id":"goal-1","revision":2,"objective":"ship","phase":"active","maxGoalRounds":null,"roundsStarted":5,"createdAt":"2026-09-13T10:00:00Z","updatedAt":"2026-09-13T10:00:00Z"}}`)
-	machine, err := goalLifecycleFromProjection(raw, "session-1", time.Time{})
+	machine, err := goalLifecycleFromProjection(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,37 +26,8 @@ func TestGoalLifecycleProjectionRestoreIsDisarmed(t *testing.T) {
 	}
 }
 
-func TestGoalLifecycleLegacyProjectionImportsWithoutTodoOrActivation(t *testing.T) {
-	raw := json.RawMessage(`{"goal":"finish migration","status":"running","turnsUsed":7,"todos":[{"content":"stale"}],"futurePolicy":{"mode":"adaptive"}}`)
-	machine, err := goalLifecycleFromProjection(raw, "session-legacy", time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC))
-	if err != nil {
-		t.Fatal(err)
-	}
-	view := machine.Get()
-	if view == nil || view.Objective != "finish migration" || view.RoundsStarted != 7 {
-		t.Fatalf("view = %+v", view)
-	}
-	if view.Activation != goaldomain.ActivationDisarmed || view.MaxGoalRounds != nil {
-		t.Fatalf("activation/limit = %s/%v", view.Activation, view.MaxGoalRounds)
-	}
-	encoded, err := machine.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if json.Valid(encoded) == false || string(encoded) == string(raw) {
-		t.Fatalf("encoded migration = %s", encoded)
-	}
-	var document map[string]json.RawMessage
-	if err := json.Unmarshal(encoded, &document); err != nil {
-		t.Fatal(err)
-	}
-	if len(document["legacyState"]) == 0 {
-		t.Fatalf("legacy source was not preserved: %s", encoded)
-	}
-}
-
 func TestGoalLifecycleMalformedProjectionFailsClosed(t *testing.T) {
-	if _, err := goalLifecycleFromProjection(json.RawMessage(`{"version":99,"current":null}`), "session-1", time.Time{}); err == nil {
+	if _, err := goalLifecycleFromProjection(json.RawMessage(`{"version":99,"current":null}`)); err == nil {
 		t.Fatal("unknown goal state version was accepted")
 	}
 }
@@ -147,7 +117,7 @@ func TestGoalLifecycleMutationAppendsToActiveV3Session(t *testing.T) {
 	if len(projected) == 0 {
 		t.Fatal("goal mutation did not append goal/state")
 	}
-	loaded, err := goalLifecycleFromProjection(projected, runtime.Ref().SessionID, time.Time{})
+	loaded, err := goalLifecycleFromProjection(projected)
 	if err != nil || loaded.Get() == nil || loaded.Get().ID != created.ID {
 		t.Fatalf("projected goal = %+v, err = %v", loaded.Get(), err)
 	}

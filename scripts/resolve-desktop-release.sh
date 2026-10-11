@@ -3,11 +3,11 @@
 # build, publish, and mirror jobs so they agree on a single value. Reads the run's
 # context from env and writes the four outputs to $GITHUB_OUTPUT.
 #
-#   stable: from a historical desktop-v* run, an official manual recovery with
+#   stable: from a desktop-v* run, an official manual recovery with
 #           `tag`, or the stable release orchestrator's workflow_call input.
 #   preview: public publication requires the approved Preview orchestrator;
 #            standalone Preview is limited to non-publishing signing checks.
-#            Legacy canary input is accepted for those checks. The version uses
+#            The version uses
 #            the orchestrator ordinal or, for a signing check, the run number.
 set -euo pipefail
 
@@ -15,7 +15,12 @@ stable_semver_re='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 release_semver_re='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?$'
 preview_semver_re='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.(0|[1-9][0-9]*)$'
 
-if [ "${IN_CHANNEL:-stable}" = "preview" ] || [ "${IN_CHANNEL:-stable}" = "canary" ]; then
+case "${IN_CHANNEL:-stable}" in
+	stable|preview) ;;
+	*) echo "::error::unsupported desktop release channel: ${IN_CHANNEL}" >&2; exit 1 ;;
+esac
+
+if [ "${IN_CHANNEL:-stable}" = "preview" ]; then
 	if [ "${IN_ORCHESTRATED:-false}" != "true" ] && \
 		[ "${IN_PRODUCTION_SIGNING_SMOKE:-false}" != "true" ] && \
 		[ "${IN_SIGNING_PREFLIGHT:-false}" != "true" ]; then

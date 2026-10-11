@@ -27,12 +27,6 @@ func (t *installSourceTool) mcpEntryAction(req request, e config.PluginEntry, so
 	}
 	var normalizedCommand bool
 	e, normalizedCommand = config.NormalizePluginCommandLine(e)
-	// Tier comes from the call (req.Tier) or the entry; either way we
-	// validate. An unrecognised tier is silently downgraded to "background" by
-	// normalizeTier — we capture the original value to surface a warning.
-	desired := firstNonEmpty(req.Tier, e.Tier)
-	norm, ok := normalizeTier(desired)
-	e.Tier = norm
 	a := action{
 		Kind:       "mcp",
 		Action:     "install_mcp_server",
@@ -48,9 +42,6 @@ func (t *installSourceTool) mcpEntryAction(req request, e config.PluginEntry, so
 		Headers:    e.Headers,
 		entry:      e,
 	}
-	if !ok && strings.TrimSpace(desired) != "" {
-		a.RiskReasons = append(a.RiskReasons, fmt.Sprintf("tier %q is unknown; treating as background", desired))
-	}
 	if normalizedCommand {
 		a.RiskReasons = append(a.RiskReasons, "split a pasted MCP command line into command and args")
 	}
@@ -59,8 +50,7 @@ func (t *installSourceTool) mcpEntryAction(req request, e config.PluginEntry, so
 }
 
 // mcpActionRisk classifies a single MCP install. An entry with auth headers,
-// an `eager` tier, or a package-name source is medium. An entry with auth
-// material and an out-of-tree URL is high.
+// material is high risk; other installations are medium risk.
 func mcpActionRisk(e config.PluginEntry, reasons []string) (RiskLevel, []string) {
 	level := RiskMedium
 	hasAuth := false
@@ -69,10 +59,6 @@ func mcpActionRisk(e config.PluginEntry, reasons []string) (RiskLevel, []string)
 			hasAuth = true
 			reasons = append(reasons, "sends auth headers to "+e.URL)
 		}
-	}
-	if e.Tier == "eager" {
-		level = RiskHigh
-		reasons = append(reasons, "tier=eager blocks startup until the handshake completes")
 	}
 	if hasAuth && level == RiskMedium {
 		level = RiskHigh
@@ -99,7 +85,6 @@ func (t *installSourceTool) remoteMCPAction(req request, sourceURL string) actio
 		Type:    transport,
 		URL:     sourceURL,
 		Headers: cleanMap(req.Headers),
-		Tier:    req.Tier,
 	}
 	return t.mcpEntryAction(req, e, sourceURL)
 }
@@ -121,7 +106,6 @@ func (t *installSourceTool) localExecutableMCPAction(req request, path string) a
 		Command: command,
 		Args:    append([]string(nil), req.Args...),
 		Env:     cleanMap(req.Env),
-		Tier:    req.Tier,
 	}
 	return t.mcpEntryAction(req, e, path)
 }
@@ -148,7 +132,6 @@ func (t *installSourceTool) packageMCPAction(req request) action {
 		Command: command,
 		Args:    args,
 		Env:     cleanMap(req.Env),
-		Tier:    req.Tier,
 	}
 	return t.mcpEntryAction(req, e, req.Source)
 }
@@ -184,7 +167,6 @@ func parseMCPJSON(b []byte) ([]config.PluginEntry, []string, error) {
 			StartupTimeoutSeconds int               `json:"startup_timeout_seconds"`
 			CallTimeoutSeconds    int               `json:"call_timeout_seconds"`
 			ToolTimeoutSeconds    map[string]int    `json:"tool_timeout_seconds"`
-			Tier                  string            `json:"tier"`
 		} `json:"mcpServers"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -216,10 +198,6 @@ func parseMCPJSON(b []byte) ([]config.PluginEntry, []string, error) {
 				typ = "stdio"
 			}
 		}
-		tier, ok := normalizeTier(s.Tier)
-		if !ok && strings.TrimSpace(s.Tier) != "" {
-			warnings = append(warnings, fmt.Sprintf("%s: tier %q is unknown; treating as background", name, s.Tier))
-		}
 		e := config.PluginEntry{
 			Name:                  name,
 			Type:                  typ,
@@ -232,7 +210,6 @@ func parseMCPJSON(b []byte) ([]config.PluginEntry, []string, error) {
 			StartupTimeoutSeconds: s.StartupTimeoutSeconds,
 			CallTimeoutSeconds:    s.CallTimeoutSeconds,
 			ToolTimeoutSeconds:    s.ToolTimeoutSeconds,
-			Tier:                  tier,
 		}
 		// An empty Type is the canonical "stdio" form; keep it that way so
 		// the rest of the config layer (UpsertPlugin / ShouldAutoStart)

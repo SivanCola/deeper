@@ -31,7 +31,6 @@ import (
 	"deepzora/internal/gitcmd"
 	"deepzora/internal/i18n"
 	"deepzora/internal/memory"
-	"deepzora/internal/migration"
 	"deepzora/internal/outputstyle"
 	"deepzora/internal/plugin"
 	"deepzora/internal/provider"
@@ -3617,13 +3616,11 @@ func formatCompletionSummaryLine(c *event.CompletionSummaryInfo) string {
 	return line
 }
 
-func completionSummaryNeedsAttention(c *event.CompletionSummaryInfo, _ string) bool {
+func completionSummaryNeedsAttention(c *event.CompletionSummaryInfo) bool {
 	if c == nil {
 		return false
 	}
-	if strings.TrimSpace(c.Floor) != "" {
-		return c.Attention
-	}
+
 	if strings.EqualFold(strings.TrimSpace(c.Verdict), "blocked") || c.ChecksFailed > 0 || c.ChecksSuppressed > 0 {
 		return true
 	}
@@ -3726,9 +3723,7 @@ func compactApprovalPlan(plan string) string {
 // MCP tools are advertised as mcp__<server>__<tool>; showing the short tool name
 // first keeps the approval prompt readable while preserving the source.
 func approvalToolDetails(toolName string) (name, detail string) {
-	if toolName == agent.PlanModeReadOnlyCommandApprovalTool {
-		return i18n.M.ApprovalToolLabelPlanModeReadOnly, fmt.Sprintf(i18n.M.ToolApprovalSourceFmt, i18n.M.ToolApprovalBuiltIn)
-	}
+
 	if toolName == control.SandboxEscapeApprovalTool {
 		return i18n.M.ApprovalToolLabelSandboxEscape, fmt.Sprintf(i18n.M.ToolApprovalSourceFmt, i18n.M.ToolApprovalBuiltIn)
 	}
@@ -3971,35 +3966,10 @@ func (m *chatTUI) growInputToFit() {
 	}
 }
 
-func (m chatTUI) desktopShortcutLayout() bool {
-	return m.cfg != nil && m.cfg.UIShortcutLayout() == "desktop"
-}
-
 func (m chatTUI) modeTagText() string {
 	goalMode := strings.TrimSpace(m.ctrl.Goal()) != "" && m.ctrl.GoalStatus() == control.GoalStatusRunning
 	toolApprovalMode := m.ctrl.ToolApprovalMode()
-	if m.desktopShortcutLayout() {
-		switch {
-		case m.planMode && toolApprovalMode == control.ToolApprovalDangerFullAccess:
-			return "Plan+YOLO"
-		case goalMode && toolApprovalMode == control.ToolApprovalDangerFullAccess:
-			return "Goal+YOLO"
-		case toolApprovalMode == control.ToolApprovalDangerFullAccess:
-			return "YOLO"
-		case m.planMode:
-			return "Plan"
-		case goalMode && toolApprovalMode == control.ToolApprovalWorkspaceWrite:
-			return "Goal+Workspace"
-		case goalMode:
-			return "Goal"
-		case toolApprovalMode == control.ToolApprovalWorkspaceWrite:
-			return "Workspace"
-		case toolApprovalMode == control.ToolApprovalDontAsk:
-			return "Read only"
-		default:
-			return "Read only"
-		}
-	}
+
 	switch {
 	case m.planMode && toolApprovalMode == control.ToolApprovalDangerFullAccess:
 		return "Plan+YOLO"
@@ -4013,8 +3983,6 @@ func (m chatTUI) modeTagText() string {
 		return "YOLO"
 	case toolApprovalMode == control.ToolApprovalWorkspaceWrite:
 		return "Workspace"
-	case toolApprovalMode == control.ToolApprovalDontAsk:
-		return "Read only"
 	case m.planMode:
 		return "Plan"
 	case goalMode:
@@ -4133,11 +4101,6 @@ func (m *chatTUI) runSlashCommand(input string) tea.Cmd {
 				runner.SubmitProtocolRecovery(id, guidance)
 			}
 		})
-	case control.ContinueChecksCommand:
-		prompt, _ := control.ParseFinalReadinessRecoveryCommand(input)
-		return m.startControllerTurn(input, input, func(ctrl control.SessionAPI) {
-			ctrl.SubmitFinalReadinessRecovery(input, prompt)
-		})
 	case "/compact":
 		return m.runCompactCommand(input, typedCmd)
 	case "/context":
@@ -4193,9 +4156,6 @@ func (m *chatTUI) runSlashCommand(input string) tea.Cmd {
 		m.showSandboxStatus()
 	case "/effort":
 		return m.runEffortCommand(input)
-	case "/preset", "/work-mode", "/profile":
-		m.echoLocalCommand(input)
-		return m.runPresetCommand(input)
 	case "/reasoning-language":
 		m.echoLocalCommand(input)
 		m.runReasoningLanguageCommand(input)
@@ -4302,13 +4262,6 @@ func (m *chatTUI) runSlashCommand(input string) tea.Cmd {
 	case "/memory":
 		m.echoLocalCommand(input)
 		m.showMemory(input)
-	case "/migrate", "/migration":
-		m.echoLocalCommand(input)
-		migration.RunLegacyRescueCommand(strings.TrimSpace(strings.TrimPrefix(input, typedCmd)), event.FuncSink(func(e event.Event) {
-			if e.Kind == event.Notice {
-				m.notice(e.Text)
-			}
-		}))
 	case "/goal":
 		return m.runGoalSubcommand(input)
 	case "/remember":
@@ -4526,7 +4479,7 @@ func (m *chatTUI) echoLocalCommand(input string) {
 func (m *chatTUI) commandNames() string {
 	names := make([]string, 0, len(m.commands))
 	for _, c := range m.commands {
-		if !c.Hidden {
+		{
 			names = append(names, "/"+c.Name)
 		}
 	}
@@ -4755,10 +4708,7 @@ func replaySectionsForWithRenderers(
 			if recovery, ok := provider.DecodeProtocolRecovery(m.ProtocolRecovery); ok && recovery.State == "pending" {
 				out = append(out, fmt.Sprintf("  · %s: /recover-context %s\n\n", i18n.M.ProtocolRecoveryLabel, recovery.ID))
 			}
-			if m.FinalReadinessRecovery != nil && m.FinalReadinessRecovery.Pending {
-				out = append(out, fmt.Sprintf("  · %s\n\n", i18n.M.FinalReadinessRecovery))
-				continue
-			}
+
 			if reasoning := strings.TrimSpace(m.ReasoningContent); reasoning != "" {
 				out = append(out, dim("  ▎ "+i18n.M.ChatThinking)+"\n"+renderReasoning(reasoning, width, 0)+"\n\n")
 			}

@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -344,55 +343,8 @@ func (s *Server) detachedIdentityHolder(ref session.SessionRef) *detachedSession
 	return nil
 }
 
-// ownership reports who currently writes a session, whether a remote SSE
-// client is attached, and whether a turn is running — the inputs a local
-// takeover prompt needs. remoteAttached counts every SSE subscriber; Serve
-// cannot distinguish the desktop pump from a browser tab, so it is an
-// over-approximation of "the remote side is watching".
 func (s *Server) ownership(w http.ResponseWriter, r *http.Request) {
-	raw := r.URL.Query().Get("session")
-	if isSessionIDRoute(raw) {
-		s.ownershipIdentity(w, raw)
-		return
-	}
-	realPath, err := s.resolveSessionPath(raw)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	view := ownershipView{SessionPath: agent.CanonicalSessionPath(realPath), RemoteAttached: s.bc.Subscribers() > 0}
-	if m, ok := s.mirroredEntry(realPath); ok {
-		view.Holder = "external"
-		view.Mirrored = true
-		view.TakenOver = true
-		view.ReclaimRequested = m.reclaimRequested
-		s.appendServeIdentity(&view)
-		writeJSON(w, view)
-		return
-	}
-	cur := s.ctl()
-	foreground := cur != nil && agent.CanonicalSessionPath(cur.SessionPath()) == agent.CanonicalSessionPath(realPath)
-	if foreground {
-		view.Holder = "serve"
-		view.Running = controllerHasActiveRuntimeWork(cur)
-		s.appendServeIdentity(&view)
-		writeJSON(w, view)
-		return
-	}
-	if s.detachedBusy(realPath) {
-		view.Holder = "serve"
-		view.Running = s.detachedHasActiveWork(realPath)
-		s.appendServeIdentity(&view)
-		writeJSON(w, view)
-		return
-	}
-	if leaseHeldByForeignRuntime(realPath) {
-		view.Holder = "other"
-	}
-	if view.Holder == "" {
-		view.Holder = "free"
-	}
-	writeJSON(w, view)
+	s.ownershipIdentity(w, r.URL.Query().Get("session"))
 }
 
 func (s *Server) appendServeIdentity(view *ownershipView) {
@@ -438,20 +390,9 @@ func (s *Server) externalFrames(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "too many frames", http.StatusRequestEntityTooLarge)
 		return
 	}
-	// Final-format identity routes key the registry verbatim; legacy references
-	// still validate as transcript paths inside the session dir.
-	if isSessionIDRoute(body.SessionPath) {
-		if _, _, err := s.resolveSessionIdentity(body.SessionPath); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	} else {
-		realPath, err := s.resolveSessionPath(body.SessionPath)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		body.SessionPath = agent.CanonicalSessionPath(realPath)
+	if _, _, err := s.resolveSessionIdentity(body.SessionPath); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	canonical := mirrorKey(body.SessionPath)
 	mirrorID := strings.TrimSpace(body.MirrorID)
@@ -603,194 +544,47 @@ func (s *Server) adopt(w http.ResponseWriter, r *http.Request) {
 	}
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
-	if isSessionIDRoute(body.SessionPath) {
-		// Final-format identities prove ownership by the writer lock itself;
-		// there is no lease sidecar to inspect. The claim is accepted only when
-		// some local runtime actually holds the writer.
-		ref, dir, idErr := s.resolveSessionIdentity(body.SessionPath)
-		if idErr != nil {
-			http.Error(w, idErr.Error(), resolveSessionPathStatus(idErr))
-			return
-		}
-		if s.serveHoldsIdentity(ref) {
-			http.Error(w, "session is held by this serve; use POST /handoff to take it over", http.StatusConflict)
-			return
-		}
-		if !session.ProbeWriterHeld(dir) {
-			http.Error(w, "session is not held by the claimed writer", http.StatusConflict)
-			return
-		}
-		writerID := strings.TrimSpace(body.WriterID)
-		if existing, ok := s.mirroredEntry(body.SessionPath); ok && existing.targetWriterID != writerID {
-			http.Error(w, "session is mirrored by another writer", http.StatusConflict)
-			return
-		}
-		m, err := newMirroredSession(mirrorKey(body.SessionPath), agent.SessionWriterID(), writerID, mirrorPhaseExternal)
-		if err != nil {
-			http.Error(w, "create mirror generation", http.StatusInternalServerError)
-			return
-		}
-		m.handoffID = ""
-		s.markMirrored(m)
-		slog.Info("serve: final-format session adopted by local runtime", "session", m.path)
-		s.bc.Emit(event.Event{
-			Kind:        event.Notice,
-			Level:       event.LevelWarn,
-			Code:        event.NoticeCodeSessionTakenOver,
-			Text:        "This session was taken over by a local Deepzora window and is read-only here.",
-			Detail:      "A Deepzora window on this machine opened this session; it keeps streaming here. Use \"take back\" to reclaim it.",
-			SessionPath: m.path,
-		})
-		writeJSON(w, m.grant("adopted"))
+
+	// Final-format identities prove ownership by the writer lock itself;
+	// there is no lease sidecar to inspect. The claim is accepted only when
+	// some local runtime actually holds the writer.
+	ref, dir, idErr := s.resolveSessionIdentity(body.SessionPath)
+	if idErr != nil {
+		http.Error(w, idErr.Error(), resolveSessionPathStatus(idErr))
 		return
 	}
-	realPath, err := s.resolveSessionPath(body.SessionPath)
-	if err != nil {
-		http.Error(w, err.Error(), resolveSessionPathStatus(err))
-		return
-	}
-	if s.serveHoldsSession(realPath) {
+	if s.serveHoldsIdentity(ref) {
 		http.Error(w, "session is held by this serve; use POST /handoff to take it over", http.StatusConflict)
 		return
 	}
-	info, held, inspectErr := agent.InspectSessionLease(realPath)
-	if inspectErr != nil || !held || info == nil || info.WriterID != strings.TrimSpace(body.WriterID) {
+	if !session.ProbeWriterHeld(dir) {
 		http.Error(w, "session is not held by the claimed writer", http.StatusConflict)
 		return
 	}
-	if existing, ok := s.mirroredEntry(realPath); ok && existing.targetWriterID != info.WriterID {
+	writerID := strings.TrimSpace(body.WriterID)
+	if existing, ok := s.mirroredEntry(body.SessionPath); ok && existing.targetWriterID != writerID {
 		http.Error(w, "session is mirrored by another writer", http.StatusConflict)
 		return
 	}
-	m, err := newMirroredSession(agent.CanonicalSessionPath(realPath), agent.SessionWriterID(), info.WriterID, mirrorPhaseExternal)
+	m, err := newMirroredSession(mirrorKey(body.SessionPath), agent.SessionWriterID(), writerID, mirrorPhaseExternal)
 	if err != nil {
 		http.Error(w, "create mirror generation", http.StatusInternalServerError)
 		return
 	}
 	m.handoffID = ""
 	s.markMirrored(m)
-	slog.Info("serve: session adopted by local runtime", "session", agent.CanonicalSessionPath(realPath))
+	slog.Info("serve: final-format session adopted by local runtime", "session", m.path)
 	s.bc.Emit(event.Event{
 		Kind:        event.Notice,
 		Level:       event.LevelWarn,
 		Code:        event.NoticeCodeSessionTakenOver,
 		Text:        "This session was taken over by a local Deepzora window and is read-only here.",
 		Detail:      "A Deepzora window on this machine opened this session; it keeps streaming here. Use \"take back\" to reclaim it.",
-		SessionPath: agent.CanonicalSessionPath(realPath),
+		SessionPath: m.path,
 	})
 	writeJSON(w, m.grant("adopted"))
-}
+	return
 
-// mirroredReadView reports whether session is mirrored, and if so builds the
-// file-backed read view for read-only endpoints that select a specific
-// session.
-func (s *Server) mirroredReadView(session string) (string, []provider.Message, bool) {
-	realPath, err := s.resolveSessionPath(session)
-	if err != nil || !s.sessionMirrored(realPath) {
-		return "", nil, false
-	}
-	msgs, ok := s.mirroredHistory(realPath)
-	if !ok {
-		return "", nil, false
-	}
-	return agent.CanonicalSessionPath(realPath), msgs, true
-}
-
-// externalReadView serves the file-backed read view for any session a local
-// runtime owns — mirrored via /adopt or /handoff, or merely held by another
-// process on this machine. A spectator client (remote tab) needs the local
-// writer's transcript, not Serve's foreground.
-func (s *Server) externalReadView(session string) (string, []provider.Message, bool) {
-	if s.sessionMirrored(session) {
-		return s.mirroredReadView(session)
-	}
-	realPath, err := s.resolveSessionPath(session)
-	if err != nil || !leaseHeldByForeignRuntime(realPath) {
-		return "", nil, false
-	}
-	msgs, ok := s.mirroredHistory(realPath)
-	if !ok {
-		return "", nil, false
-	}
-	return agent.CanonicalSessionPath(realPath), msgs, true
-}
-
-// statusViewForPath renders the per-session status payload for the ?session=
-// selector. Local-owned sessions (mirrored or foreign-held) report takenOver;
-// Serve-owned sessions report takenOver=false so a spectator client clears its
-// read-only pin after reclaim or when the session returns to the foreground.
-func (s *Server) statusViewForPath(path string, held bool) map[string]any {
-	if held {
-		return s.externalStatusView(path)
-	}
-	running := false
-	cur := s.ctl()
-	if cur != nil && agent.CanonicalSessionPath(cur.SessionPath()) == agent.CanonicalSessionPath(path) {
-		running = controllerHasActiveRuntimeWork(cur)
-	}
-	return map[string]any{
-		"label":            s.ctl().Label(),
-		"running":          running,
-		"plan":             false,
-		"autoApproveTools": false,
-		"bypass":           false,
-		"toolApprovalMode": control.ToolApprovalWorkspaceWrite,
-		"cwd":              s.ctl().SessionDir(),
-		"pendingPrompt":    false,
-		"backgroundJobs":   0,
-		"takenOver":        false,
-		"sessionName":      strings.TrimSuffix(filepath.Base(path), ".jsonl"),
-		"sessionPath":      agent.CanonicalSessionPath(path),
-	}
-}
-
-// externalStatusView renders the status payload for a session a local runtime
-// owns (mirrored or foreign-held): nothing here can run, ownership is external,
-// and the surface must render read-only.
-func (s *Server) externalStatusView(path string) map[string]any {
-	if _, ok := s.mirroredEntry(path); ok {
-		return s.mirrorStatusView(path)
-	}
-	sess := map[string]any{
-		"label":            s.ctl().Label(),
-		"running":          false,
-		"plan":             false,
-		"autoApproveTools": false,
-		"bypass":           false,
-		"toolApprovalMode": control.ToolApprovalReadOnly,
-		"cwd":              s.ctl().SessionDir(),
-		"pendingPrompt":    false,
-		"backgroundJobs":   0,
-		"takenOver":        true,
-		"sessionName":      strings.TrimSuffix(filepath.Base(path), ".jsonl"),
-		"sessionPath":      agent.CanonicalSessionPath(path),
-	}
-	return sess
-}
-
-// mirrorStatusView renders the status payload for a mirrored session selected
-// via ?session=: nothing can run here, ownership is external, and the surface
-// must render read-only.
-func (s *Server) mirrorStatusView(path string) map[string]any {
-	m, ok := s.mirroredEntry(path)
-	sess := map[string]any{
-		"label":            s.ctl().Label(),
-		"running":          false,
-		"plan":             false,
-		"autoApproveTools": false,
-		"bypass":           false,
-		"toolApprovalMode": control.ToolApprovalReadOnly,
-		"cwd":              s.ctl().SessionDir(),
-		"pendingPrompt":    false,
-		"backgroundJobs":   0,
-		"takenOver":        true,
-		"sessionName":      strings.TrimSuffix(filepath.Base(path), ".jsonl"),
-		"sessionPath":      agent.CanonicalSessionPath(path),
-	}
-	if ok {
-		sess["reclaimRequested"] = m.reclaimRequested
-	}
-	return sess
 }
 
 // mirrorEnd is the local writer's farewell: it has closed its tab and dropped
@@ -813,28 +607,7 @@ func (s *Server) mirrorEnd(w http.ResponseWriter, r *http.Request) {
 		s.mirrorEndIdentity(w, r, body.SessionPath, strings.TrimSpace(body.MirrorID))
 		return
 	}
-	realPath, err := s.resolveSessionPath(body.SessionPath)
-	if err != nil {
-		http.Error(w, err.Error(), resolveSessionPathStatus(err))
-		return
-	}
-	m, ok := s.mirroredEntry(realPath)
-	if !ok || m.mirrorID != strings.TrimSpace(body.MirrorID) {
-		http.Error(w, "mirror generation changed", http.StatusConflict)
-		return
-	}
-	if leaseHeldByForeignRuntime(realPath) {
-		http.Error(w, "local writer still holds the session; release it before ending the mirror", http.StatusConflict)
-		return
-	}
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	current, ok := s.mirroredEntry(realPath)
-	if !ok || current.mirrorID != m.mirrorID {
-		http.Error(w, "mirror generation changed", http.StatusConflict)
-		return
-	}
-	s.reclaimMirroredLocked(w, realPath, current)
+	http.Error(w, "use an immutable session identity", http.StatusBadRequest)
 }
 
 // The desktop sends mirror-end at tab close and releases its runtime in the

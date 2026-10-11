@@ -45,7 +45,7 @@ enabled = false
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `, pluginRef))
 	approveWorkspace(t, dir)

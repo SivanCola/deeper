@@ -30,12 +30,6 @@ func lockRemoteTabRoute(tab *remoteTab) func() {
 	return tab.routeEventMu.Unlock
 }
 
-// enterRemoteSession is the compatibility wrapper used by bridge tests.
-func enterRemoteSession(ctx context.Context, client *http.Client, base string, opts RemoteTabOpenOptions) error {
-	_, err := enterRemoteSessionTarget(ctx, client, base, opts)
-	return err
-}
-
 // preflightRemoteSessionTarget resolves the foreground identity without
 // mutating Serve. Attach uses it to publish routing before the event pump can
 // observe an immediate replay from a detached controller.
@@ -45,7 +39,11 @@ func preflightRemoteSessionTarget(ctx context.Context, client *http.Client, base
 		return serveSessionEntry{Name: name, SessionID: sessionID, Title: strings.TrimSpace(opts.SessionTitle), Current: true}, nil
 	}
 	if path := strings.TrimSpace(opts.SessionPath); path != "" {
-		return serveSessionEntry{Name: name, Path: path, Title: strings.TrimSpace(opts.SessionTitle), Current: true}, nil
+		_, id := remoteSessionRouteIdentity(path)
+		if id == "" {
+			return serveSessionEntry{}, fmt.Errorf("remote session requires a durable identity")
+		}
+		return serveSessionEntry{Name: name, SessionID: id, Title: strings.TrimSpace(opts.SessionTitle), Current: true}, nil
 	}
 	if name == "" {
 		return serveCurrentSession(ctx, client, base)
@@ -63,21 +61,16 @@ func preflightRemoteSessionTarget(ctx context.Context, client *http.Client, base
 	return serveSessionEntry{}, fmt.Errorf("remote session %q not found", name)
 }
 
-// remoteSessionResumeBody is the single request builder for /resume. The
-// identity catalog deliberately leaves Path empty for canonical sessions, so
-// callers must carry SessionID through instead of serializing an empty path.
-// Name is retained as a compatibility hint for Serve versions that can
-// resolve a listed session by name.
+// remoteSessionResumeBody uses the durable session identity for the current protocol.
 func remoteSessionResumeBody(target serveSessionEntry) ([]byte, error) {
-	if remoteSessionRoute(target) == "" {
-		return nil, fmt.Errorf("remote session %q has no resumable identity", strings.TrimSpace(target.Name))
+	id := strings.TrimSpace(target.SessionID)
+	if id == "" {
+		_, id = remoteSessionRouteIdentity(strings.TrimSpace(target.Path))
 	}
-	return json.Marshal(map[string]string{
-		"path":      strings.TrimSpace(target.Path),
-		"hostId":    strings.TrimSpace(target.HostID),
-		"sessionId": strings.TrimSpace(target.SessionID),
-		"name":      strings.TrimSpace(target.Name),
-	})
+	if id == "" {
+		return nil, fmt.Errorf("remote session %q has no durable identity", target.Name)
+	}
+	return json.Marshal(map[string]string{"hostId": strings.TrimSpace(target.HostID), "sessionId": id})
 }
 
 func enterRemoteSessionTarget(ctx context.Context, client *http.Client, base string, opts RemoteTabOpenOptions) (serveSessionEntry, error) {

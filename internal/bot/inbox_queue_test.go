@@ -19,7 +19,7 @@ func TestCollectAppendDeduplicatesPlatformRedelivery(t *testing.T) {
 		Sink:        event.Discard,
 	})
 	t.Cleanup(ctrl.Close)
-	first := InboundMessage{
+	first := InboundMessage{ConnectionID: string(PlatformFeishu),
 		Platform: PlatformFeishu, ChatType: ChatDM, ChatID: "chat-1",
 		UserID: "user-1", MessageID: "msg-1", Text: "first request",
 	}

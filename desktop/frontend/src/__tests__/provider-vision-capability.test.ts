@@ -27,7 +27,7 @@ function provider(overrides: Partial<ProviderView> = {}): ProviderView {
     modelsUrl: "",
     models: ["vision-model", "text-model", "opaque-model"],
     visionModels: ["vision-model"],
-    visionModelsConfigured: true,
+
     default: "vision-model",
     apiKeyEnv: "CUSTOM_API_KEY",
     keySet: true,
@@ -57,7 +57,7 @@ ok(
 
 const metadata = provider({
   visionModels: [],
-  visionModelsConfigured: false,
+
   modelCapabilities: [
     { model: "vision-model", inputModalities: ["text", "image"], state: "supported", source: "adapter" },
     { model: "text-model", inputModalities: ["text"], state: "unsupported", source: "adapter" },
@@ -71,7 +71,7 @@ ok(
   providerModelVisionCapability(
     provider({
       visionModels: [],
-      visionModelsConfigured: false,
+
       visionCapability: "unsupported",
       modelCapabilities: [],
     }),
@@ -83,7 +83,7 @@ ok(
 
 const overrideMetadata = provider({
   visionModels: [],
-  visionModelsConfigured: false,
+
   modelOverrides: [{
     model: "vision-model",
     reasoningProtocol: "",
@@ -98,7 +98,7 @@ ok(providerModelVisionCapability(overrideMetadata, "vision-model", metadataVisio
 ok(providerModelVisionCapability(overrideMetadata, "opaque-model", metadataVision) === "unknown", "unknown model stays conservative");
 
 const modelScopePreset = createMockModelScopePreset(
-  (input) => ({ ...provider(), ...input, visionModels: [], visionModelsConfigured: false }),
+  (input) => ({ ...provider(), ...input, visionModels: [], }),
   (id, label, description, keyEnv, provider) => ({ id, label, description, keyEnv, provider, providers: [provider] }),
 );
 const modelScopeVision = providerVisionModelsForView(modelScopePreset.provider);

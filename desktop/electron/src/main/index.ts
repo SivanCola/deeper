@@ -129,7 +129,7 @@ function bootstrap(dataHome: string): void {
   const distRoot = resolveDistRoot({ env: process.env, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, packaged: app.isPackaged });
   const devURL = (process.env.DEEPZORA_ELECTRON_DEV_URL ?? "").trim();
   const appURL = devURL !== "" ? devURL : APP_INDEX_URL;
-  const zoomStore = new AppZoomStore(join(dataHome, "electron-app-zoom.json"), join(dataHome, "desktop-zoom.json"));
+  const zoomStore = new AppZoomStore(join(dataHome, "electron-app-zoom.json"));
   const icons = iconCandidates({ platform: process.platform, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, packaged: app.isPackaged });
   const windowIcon = process.platform === "darwin" ? undefined : (firstExisting(icons.window) ?? undefined);
   const serviceLookup = resolveServiceBinary({

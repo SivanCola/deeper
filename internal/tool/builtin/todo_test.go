@@ -74,10 +74,3 @@ func TestTodoWriteValidationIsStrictAndNonMutating(t *testing.T) {
 		})
 	}
 }
-
-func TestCompleteStepTombstoneIsActionable(t *testing.T) {
-	_, err := (completeStep{}).Execute(context.Background(), json.RawMessage(`{"result":"done"}`))
-	if err == nil || !strings.Contains(err.Error(), "retired") || !strings.Contains(err.Error(), "todo_write") {
-		t.Fatalf("retirement error = %v", err)
-	}
-}

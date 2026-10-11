@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"deepzora/internal/skill/skillwatch"
-	"deepzora/internal/winaclresidue"
 
 	// Blank imports wire compile-time built-ins into their registries, exactly as
 	// cmd/deepzora does — boot.Build resolves providers/tools from these registries.
@@ -31,9 +30,7 @@ import (
 var version = "dev"
 
 // channel records the build's release line, injected via
-// `-X main.channel=preview`. Default "stable" tracks the public release;
-// "preview" tracks the opt-in test line. Legacy "canary" builds are treated as
-// preview for compatibility.
+// `-X main.channel=stable`. Only the stable release line is supported.
 var channel = "stable"
 
 // macSelfUpdate is injected as "true" only for Developer ID signed + notarized
@@ -68,7 +65,6 @@ func main() {
 	}
 	// Older Windows builds could leave sandbox ACL residue behind after a
 	// crash; sweep it in the background so startup never waits on icacls.
-	go winaclresidue.SweepStaleMarkers()
 	// The detached macOS self-update child must run before any shell starts.
 	if handled, exitCode := maybeRunMacUpdateHandoff(os.Args[1:]); handled {
 		os.Exit(exitCode)

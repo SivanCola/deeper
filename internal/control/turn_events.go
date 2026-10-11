@@ -599,9 +599,7 @@ func (c *Controller) rebindTurnEvents(sessionPath string) {
 }
 
 func (c *Controller) openTurnLedger(path, id string, storeErr error) (*turnevent.Ledger, error) {
-	if storeErr == nil && c.NativeLegacySession() && path != "" {
-		return turnevent.Open(path, id)
-	}
+
 	return turnevent.NewMemory(id), storeErr
 }
 

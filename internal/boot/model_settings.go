@@ -46,7 +46,6 @@ func runtimeImageCapabilityReader(root, modelName, snapshot string, settings *co
 		if err != nil {
 			return false
 		}
-		config.NormalizeLegacyMimoCustomProvidersForRefs(current, modelName)
 		return config.ModelCapabilitySnapshot(current, config.NewModelCapabilityResolver()) != snapshot
 	}
 }

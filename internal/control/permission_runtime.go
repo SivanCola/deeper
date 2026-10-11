@@ -118,16 +118,14 @@ func (c *Controller) PermissionSnapshot() PermissionSnapshot {
 	c.permissionStateMu.RLock()
 	defer c.permissionStateMu.RUnlock()
 	auth := c.SessionAuthorizations()
-	grants := make([]SessionGrantSummary, 0, len(auth.Grants)+len(auth.WriteRoots)+len(auth.PlanModeReadOnlyCommands))
+	grants := make([]SessionGrantSummary, 0, len(auth.Grants)+len(auth.WriteRoots))
 	for _, target := range auth.Grants {
 		grants = append(grants, SessionGrantSummary{Scope: "tool", Target: target})
 	}
 	for _, target := range auth.WriteRoots {
 		grants = append(grants, SessionGrantSummary{Scope: "directory", Target: target})
 	}
-	for _, target := range auth.PlanModeReadOnlyCommands {
-		grants = append(grants, SessionGrantSummary{Scope: "command-prefix", Target: target})
-	}
+
 	return PermissionSnapshot{
 		SessionID: c.parentSessionID(), Generation: c.runtimeGeneration,
 		Revision: c.permissionRevision.Load(), Preset: c.ToolApprovalMode(),

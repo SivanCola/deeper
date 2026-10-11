@@ -141,9 +141,6 @@ func TestPluginSlashToolShowsOnlyCanonicalQualifiedName(t *testing.T) {
 	entries := func(cmds []Command) []SlashEntry {
 		out := make([]SlashEntry, 0, len(cmds))
 		for _, cmd := range cmds {
-			if cmd.Hidden {
-				continue
-			}
 
 			out = append(out, SlashEntry{Name: cmd.Name, Description: cmd.Description, ArgHint: cmd.ArgHint, Render: func(args []string) string { return cmd.Render(args) }})
 		}

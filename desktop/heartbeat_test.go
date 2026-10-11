@@ -361,7 +361,7 @@ func TestHeartbeatExecuteTaskPersistsFreshConversationTopicID(t *testing.T) {
 		Title:                  "Fresh",
 		Prompt:                 "ping",
 		NewConversationEachRun: true,
-		ApprovalMode:           "auto",
+		ApprovalMode:           "workspace-write",
 	}
 	if err := engine.saveTasks([]HeartbeatTask{seed}); err != nil {
 		t.Fatal(err)

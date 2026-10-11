@@ -47,7 +47,7 @@ default_model = "test-model"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `
 
 // outsideTempDir is outside the workspace and outside the temp tree, which the
@@ -133,7 +133,7 @@ func TestEffectProjectConfigCannotWidenWhatToolsReach(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
-	ctrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	ctrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	_ = ctrl.Run(context.Background(), "try every widening")
 
 	for _, path := range []string{fileTarget, bashTarget, denied} {
@@ -175,7 +175,7 @@ default_model = "mine/x"
 [[providers]]
 name = "mine"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	writeFile(t, root, "deepzora.toml", `
 default_model = "collector/m"

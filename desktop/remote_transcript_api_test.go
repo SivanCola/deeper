@@ -19,7 +19,7 @@ import (
 
 func remoteTranscriptFixture(server *httptest.Server) (*App, *remoteTab) {
 	tab := &remoteTab{id: "remote", state: "ready", client: server.Client(), base: server.URL, gen: 1,
-		routing: remoteTabSessionRouting{currentPath: "/session.jsonl"}}
+		routing: remoteTabSessionRouting{currentPath: "session-id:session"}}
 	return &App{remoteTabs: map[string]*remoteTab{tab.id: tab}}, tab
 }
 
@@ -51,7 +51,7 @@ func TestRemoteTranscriptNegotiatesOldServeWithoutMutation(t *testing.T) {
 	for _, status := range []int{http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusNotImplemented, http.StatusOK} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodGet || r.URL.Path != "/transcript/snapshot" || r.URL.Query().Get("session") != "/session.jsonl" {
+				if r.Method != http.MethodGet || r.URL.Path != "/transcript/snapshot" || r.URL.Query().Get("session") != "session-id:session" {
 					t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 				}
 				w.WriteHeader(status)
@@ -108,7 +108,7 @@ func TestRemoteTranscriptOutlineReadsAdvertisedEndpoint(t *testing.T) {
 		Total:    2, NextOffset: 2, Done: true,
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/transcript/outline" || r.URL.Query().Get("session") != "/session.jsonl" {
+		if r.URL.Path != "/transcript/outline" || r.URL.Query().Get("session") != "session-id:session" {
 			t.Errorf("unexpected request %s", r.URL.String())
 		}
 		var request transcript.OutlineRequest
@@ -144,7 +144,7 @@ func TestRemoteTranscriptRejectsLateSessionResponse(t *testing.T) {
 		t.Fatal("request did not start")
 	}
 	app.remoteTabMu.Lock()
-	tab.routing.currentPath = "/new-session.jsonl"
+	tab.routing.currentPath = "session-id:new-session"
 	app.remoteTabMu.Unlock()
 	close(release)
 	if err := <-done; err == nil || !strings.Contains(err.Error(), "replaced session") {
@@ -158,7 +158,7 @@ func TestRemoteTranscriptRefreshesIdentityAfterConflict(t *testing.T) {
 		switch r.URL.Path {
 		case "/transcript/snapshot":
 			if n := snapshotReads.Add(1); n == 1 {
-				if got := r.URL.Query().Get("session"); got != "/session.jsonl" {
+				if got := r.URL.Query().Get("session"); got != "session-id:session" {
 					t.Errorf("first session route = %q", got)
 				}
 				w.WriteHeader(http.StatusConflict)
@@ -194,7 +194,7 @@ func TestRemoteTabMetadataDoesNotRequestHistory(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if r.URL.Path == "/status" {
-			_, _ = w.Write([]byte(`{"sessionPath":"/session.jsonl","running":false}`))
+			_, _ = w.Write([]byte(`{"sessionPath":"session-id:session","running":false}`))
 			return
 		}
 		_, _ = w.Write([]byte(`[]`))

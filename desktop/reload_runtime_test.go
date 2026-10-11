@@ -22,7 +22,7 @@ func reloadRuntimeFixture(t *testing.T) string {
 	cfg.DefaultModel = "old/old-model"
 	cfg.Desktop.ProviderAccess = []string{"old"}
 	cfg.Providers = []config.ProviderEntry{
-		{Name: "old", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "old-model", APIKeyEnv: "OLD_MODEL_KEY"},
+		{Models: []string{"old-model"}, Default: "old-model", Name: "old", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "old-model", APIKeyEnv: "OLD_MODEL_KEY"},
 	}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save config: %v", err)

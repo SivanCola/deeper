@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
+	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/serve"
+	"deepzora/internal/session"
 	"deepzora/internal/sessioninbox"
 )
 
@@ -43,14 +43,9 @@ func (s *remoteInboxSink) RuntimeStateChanged(state event.RuntimeStateSnapshot) 
 
 func TestRemoteRuntimeInboxReceiptSnapshotAndConsumptionOverHTTP(t *testing.T) {
 	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "remote.jsonl")
-	if err := os.WriteFile(path, nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
 	runner := remoteInboxRunner{started: make(chan string, 2), release: make(chan struct{}, 2)}
 	sink := &remoteInboxSink{states: make(chan event.RuntimeStateSnapshot, 64)}
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Runner: runner, Sink: sink})
+	ctrl, path := newRemoteCanonicalController(t, runner, sink)
 	t.Cleanup(func() {
 		defer ctrl.Close()
 		before := ctrl.RuntimeStateSnapshot()
@@ -150,7 +145,7 @@ func TestRemoteRuntimeInboxRejectsStaleResponseIdentity(t *testing.T) {
 			case "base":
 				tab.base = "http://other.invalid"
 			case "path":
-				tab.routing.currentPath = "/other.jsonl"
+				tab.routing.currentPath = "session-id:other"
 			case "rehydrating":
 				tab.routing.rehydratingPath = runtimeRemoteTestPath
 			case "replaced":
@@ -167,8 +162,23 @@ func TestRemoteRuntimeInboxRejectsStaleResponseIdentity(t *testing.T) {
 	}
 }
 
+func newRemoteCanonicalController(t *testing.T, runner agent.Runner, sink event.Sink) (*control.Controller, string) {
+	t.Helper()
+	service, err := session.NewService("local", session.NewFilesystemPersistence(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := agent.New(nil, nil, agent.NewSession("system"), agent.Options{}, sink)
+	ctrl := control.New(control.Options{Executor: executor, Runner: runner, SessionService: service, Sink: sink})
+	if _, err := ctrl.BindFreshSession(t.Context(), "remote-current"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ctrl.Close(); <-ctrl.Closed(); _ = service.Shutdown(context.Background()) })
+	return ctrl, "session-id:remote-current"
+}
+
 func TestRemoteRuntimeInboxRejectsMissingOrWrongResponseSession(t *testing.T) {
-	for _, path := range []string{"", "/sessions/other.jsonl"} {
+	for _, path := range []string{"", "session-id:other"} {
 		t.Run(path, func(t *testing.T) {
 			data, _ := json.Marshal(sessioninbox.InboxSnapshot{SessionPath: path})
 			a, tab := remoteRuntimeTestApp(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {

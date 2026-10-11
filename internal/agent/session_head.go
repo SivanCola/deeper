@@ -9,8 +9,8 @@ import (
 	"deepzora/internal/store"
 )
 
-// sessionHeadState is what a Session knows about its schema-2 log position;
-// it stays zero for schema-1 sessions. state caches the replayed graph so a
+// sessionHeadState records the current DAG log position. state caches the
+// replayed graph so a
 // save only reads the bytes appended since the last observed tail.
 type sessionHeadState struct {
 	ref       HeadRef
@@ -77,7 +77,7 @@ func loadHeadEvents(st *sessionDAGState, selected string) []HeadEvent {
 }
 
 // Head reports the head this session was loaded from or last saved to. ok is
-// false for sessions that still live in a schema-1 log or a bare .jsonl.
+// false for a fresh session that has not been persisted.
 func (s *Session) Head() (HeadRef, bool) {
 	if s == nil {
 		return HeadRef{}, false
@@ -205,12 +205,6 @@ func (st *sessionDAGState) reachable() map[string]struct{} {
 // session has no heads and returns nil, nil.
 func ListSessionHeads(path string) ([]SessionHead, error) {
 	return listSessionHeads(context.Background(), path, defaultSessionReplayLimits, false)
-}
-
-// ListSessionHeadsForMigration enumerates a frozen source without the cumulative
-// interactive replay budget. The migration owner must freeze the source first.
-func ListSessionHeadsForMigration(ctx context.Context, path string) ([]SessionHead, error) {
-	return listSessionHeads(ctx, path, migrationSessionReplayLimits(), true)
 }
 
 func listSessionHeads(ctx context.Context, path string, limits sessionReplayLimits, strict bool) ([]SessionHead, error) {

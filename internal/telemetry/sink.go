@@ -358,12 +358,7 @@ func exitBucket(e event.Event) string {
 	if e.Cancelled || errors.Is(e.Err, context.Canceled) {
 		return "cancelled"
 	}
-	if e.Outcome == event.TurnOutcomeRecoveryPaused {
-		return "recovery_paused"
-	}
-	if e.Outcome == event.TurnOutcomeCompletionUncertain {
-		return "completion_uncertain"
-	}
+
 	if e.Outcome == event.TurnOutcomeIncompleteRead {
 		return "incomplete_read"
 	}

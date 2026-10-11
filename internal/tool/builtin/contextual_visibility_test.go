@@ -10,7 +10,7 @@ import (
 
 func TestContextualBuiltinVisibilityFollowsOwningContext(t *testing.T) {
 	goal, _ := tool.LookupBuiltin("update_goal")
-	jobNames := []string{"bash_output", "wait", "kill_shell"}
+	jobNames := []string{"job_output", "job_kill"}
 
 	if goal.(tool.ContextualTool).ProviderVisible(context.Background()) {
 		t.Fatal("update_goal visible without a Goal lifecycle owner")

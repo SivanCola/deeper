@@ -11,7 +11,6 @@ import (
 )
 
 func TestAppendSessionDisplayReadModelRejectsEqualMTime(t *testing.T) {
-	useSchemaOneLog(t)
 	path := filepath.Join(t.TempDir(), "equal-mtime.jsonl")
 	base := []provider.Message{
 		{Role: provider.RoleUser, Content: "question"},
@@ -33,7 +32,7 @@ func TestAppendSessionDisplayReadModelRejectsEqualMTime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := appendSessionReplaceEvent(path, full, digest, meta.Revision, "equal-mtime-test"); err != nil {
+	if err := appendDAGFixture(path, full, digest, meta.Revision, "equal-mtime-test"); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(path)

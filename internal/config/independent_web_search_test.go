@@ -33,7 +33,7 @@ func TestIndependentWebSearchSelectionAndIsolation(t *testing.T) {
 	entry := ProviderEntry{Name: "search", Kind: "responses", BaseURL: "http://localhost:8080", Model: "m", WebSearch: boolPointer(true), ResponsesMode: "stateful", Headers: map[string]string{"X-Test": "original"}}
 	cfg := &Config{Providers: []ProviderEntry{entry}}
 	got := cfg.ResolveWebSearchProvider(&ProviderEntry{Name: "chat", Kind: "openai", Model: "m"})
-	if got == nil || got.BaseURL != entry.BaseURL || got.ResponsesMode != "stateless" || got.ResponsesStateful == nil || *got.ResponsesStateful {
+	if got == nil || got.BaseURL != entry.BaseURL || got.ResponsesMode != "stateless" {
 		t.Fatalf("bad fallback: %+v", got)
 	}
 	got.Headers["X-Test"] = "changed"
@@ -89,7 +89,7 @@ func TestOfficialSearchEndpointAcceptsDerivedRequestURL(t *testing.T) {
 		if got := IsOfficialDeepSeekSearchEndpoint(&entry); got != tc.want {
 			t.Errorf("%s %s request=%s: official = %v, want %v", tc.kind, tc.base, tc.request, got, tc.want)
 		}
-		entry.RequestURL, entry.ChatURL = "", tc.request
+		entry.RequestURL, entry.RequestURL = "", tc.request
 		if got := IsOfficialDeepSeekSearchEndpoint(&entry); got != tc.want {
 			t.Errorf("%s %s chat=%s: official = %v, want %v", tc.kind, tc.base, tc.request, got, tc.want)
 		}

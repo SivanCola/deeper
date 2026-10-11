@@ -69,7 +69,7 @@ func (a *App) prepareDraftRuntime(op draftstate.Operation, settings SessionDraft
 	if snap.effort != nil {
 		effort = *snap.effort
 	}
-	runtime := normalizedTabRuntime{collaborationMode: settings.CollaborationMode, toolApprovalMode: normalizeToolApprovalMode(settings.ToolApprovalMode), qualityFloor: settings.QualityFloor, tokenMode: snap.tokenMode}
+	runtime := normalizedTabRuntime{collaborationMode: settings.CollaborationMode, toolApprovalMode: normalizeToolApprovalMode(settings.ToolApprovalMode)}
 	if runtime.collaborationMode == "" && tabModeHasPlan(settings.Mode) {
 		runtime.collaborationMode = "plan"
 	}
@@ -183,7 +183,7 @@ func (a *App) verifyDraftRuntime(tabID string, settings SessionDraftSettings) er
 	a.mu.RLock()
 	toolsMatch := (reflect.DeepEqual(tab.disabledMCP, settings.DisabledMCP) || len(tab.disabledMCP) == 0 && len(settings.DisabledMCP) == 0) && (reflect.DeepEqual(tab.mcpOrder, settings.MCPOrder) || len(tab.mcpOrder) == 0 && len(settings.MCPOrder) == 0)
 	a.mu.RUnlock()
-	if effort != settings.Effort || !toolsMatch || snap.qualityFloor != settings.QualityFloor {
+	if effort != settings.Effort || !toolsMatch {
 		return errors.New("draft execution profile changed before admission")
 	}
 	model := strings.TrimSpace(settings.Model)

@@ -30,7 +30,6 @@ type GatewayConfig struct {
 	MaxSteps          int
 	QueueMode         string
 	QueueCap          int
-	QueueDrop         string
 	PairingEnabled    bool
 	PairingTTL        time.Duration
 	PairingMaxPending int
@@ -55,7 +54,6 @@ type GatewayConfig struct {
 	ConnectionChannels map[string]ChannelConfig
 	Routes             []RouteConfig
 	ConnectionAccess   map[string]AccessConfig
-	Allowlist          AllowlistConfig
 	Enabled            map[Platform]bool
 	Debounce           time.Duration
 	// OnInbound observes every allowlisted inbound message before dispatch.
@@ -133,16 +131,6 @@ type AdapterBinding struct {
 	Adapter  Adapter
 }
 
-// AllowlistConfig 控制哪些用户/群可以使用 bot。
-type AllowlistConfig struct {
-	Enabled   bool
-	AllowAll  bool
-	Users     map[Platform][]string
-	Approvers map[Platform][]string
-	Admins    map[Platform][]string
-	Groups    map[Platform][]string
-}
-
 // AccessConfig controls who may use one concrete bot connection.
 type AccessConfig struct {
 	Enabled        bool
@@ -192,8 +180,6 @@ type BotGateway struct {
 	mu                      sync.Mutex
 	controllers             map[string]*sessionState // session key -> active state
 	pendingReactionCleanups map[string][]func()
-	allowlist               map[Platform]map[string]bool
-	groupAllowlist          map[Platform]map[string]bool
 	selfUserIDs             map[Platform]map[string]bool
 	outboundMessageIDs      map[string]time.Time
 	adapterHealth           map[string]*AdapterHealthSnapshot
@@ -317,7 +303,6 @@ func NewGatewayWithAdapterBindings(cfg GatewayConfig, adapters []AdapterBinding,
 	if cfg.QueueCap <= 0 {
 		cfg.QueueCap = DefaultQueueCap
 	}
-	cfg.QueueDrop = NormalizeQueueDrop(cfg.QueueDrop)
 	if cfg.PairingTTL <= 0 {
 		cfg.PairingTTL = defaultPairingTTL
 	}
@@ -330,8 +315,6 @@ func NewGatewayWithAdapterBindings(cfg GatewayConfig, adapters []AdapterBinding,
 		sessions:                NewSessionManager(cfg.Debounce),
 		controllers:             make(map[string]*sessionState),
 		pendingReactionCleanups: make(map[string][]func()),
-		allowlist:               make(map[Platform]map[string]bool),
-		groupAllowlist:          make(map[Platform]map[string]bool),
 		selfUserIDs:             make(map[Platform]map[string]bool),
 		outboundMessageIDs:      make(map[string]time.Time),
 		adapterHealth:           make(map[string]*AdapterHealthSnapshot),
@@ -340,7 +323,6 @@ func NewGatewayWithAdapterBindings(cfg GatewayConfig, adapters []AdapterBinding,
 		buildController:         boot.Build,
 		logger:                  logger.With("component", "bot_gateway"),
 	}
-	gw.buildAllowlist()
 	gw.buildSelfUserIDs()
 	for _, binding := range gw.adapters {
 		gw.setAdapterConfigured(binding)
@@ -365,31 +347,6 @@ func normalizeAdapterBindings(adapters []AdapterBinding) []AdapterBinding {
 		out = append(out, binding)
 	}
 	return out
-}
-
-func (gw *BotGateway) buildAllowlist() {
-	for _, plat := range []Platform{PlatformQQ, PlatformFeishu, PlatformWeixin, PlatformDingtalk} {
-		gw.allowlist[plat] = make(map[string]bool)
-		if !gw.cfg.Allowlist.Enabled {
-			continue
-		}
-		addAllowlistUsers(gw.allowlist[plat], gw.cfg.Allowlist.Users[plat])
-		addAllowlistUsers(gw.allowlist[plat], gw.cfg.Allowlist.Admins[plat])
-		addAllowlistUsers(gw.allowlist[plat], gw.cfg.Allowlist.Approvers[plat])
-		gw.groupAllowlist[plat] = make(map[string]bool)
-		for _, gid := range gw.cfg.Allowlist.Groups[plat] {
-			gw.groupAllowlist[plat][gid] = true
-		}
-	}
-}
-
-func addAllowlistUsers(dst map[string]bool, users []string) {
-	for _, uid := range users {
-		uid = strings.TrimSpace(uid)
-		if uid != "" {
-			dst[uid] = true
-		}
-	}
 }
 
 func (gw *BotGateway) buildSelfUserIDs() {
@@ -809,7 +766,6 @@ func (gw *BotGateway) handleMessage(ctx context.Context, binding AdapterBinding,
 	cleanup := gw.addPendingReaction(ctx, binding.Platform, binding.Adapter, msg)
 
 	queueMode := gw.queueMode(key, msg)
-	warnDeprecatedQueueDrop(gw.cfg.QueueDrop)
 	if gw.sessions.IsActive(key) {
 		// Busy session: durable inbox is the authority (not SessionManager.pending).
 		if IsSlashBypass(msg.Text) {
@@ -870,7 +826,6 @@ func (gw *BotGateway) handleMessage(ctx context.Context, binding AdapterBinding,
 	result := gw.sessions.TryAcquireWithQueue(key, msg, QueueOptions{
 		Mode: QueueModeFollowup, // never drop_old; capacity enforced by inbox
 		Cap:  sessioninbox.DefaultMaxItems,
-		Drop: QueueDropNew,
 	})
 	if result.Rejected {
 		gw.logger.Warn("bot queue rejected message", "session", key[:8], "pending", result.Pending, "mode", result.Mode)
@@ -1095,28 +1050,9 @@ func accessConfigActive(access AccessConfig) bool {
 		len(access.Admins) > 0
 }
 
-func (gw *BotGateway) checkAllowlist(plat Platform, msg InboundMessage) bool {
-	if access, ok := gw.connectionAccess(msg); ok {
-		return checkConnectionAllowlist(access, msg)
-	}
-	if gw.cfg.Allowlist.AllowAll {
-		return true
-	}
-	if !gw.cfg.Allowlist.Enabled {
-		return false
-	}
-	actor := msg.UserID
-	if msg.OperatorID != "" {
-		actor = msg.OperatorID
-	}
-	if !gw.allowlist[plat][actor] {
-		return false
-	}
-	groups := gw.groupAllowlist[plat]
-	if chatUsesGroupAllowlist(msg.ChatType) && len(groups) > 0 && !groups[msg.ChatID] {
-		return false
-	}
-	return true
+func (gw *BotGateway) checkAllowlist(_ Platform, msg InboundMessage) bool {
+	access, ok := gw.connectionAccess(msg)
+	return ok && checkConnectionAllowlist(access, msg)
 }
 
 func checkConnectionAllowlist(access AccessConfig, msg InboundMessage) bool {
@@ -1148,7 +1084,7 @@ func (gw *BotGateway) requireCommandRole(ctx context.Context, adapter Adapter, m
 	return false
 }
 
-func (gw *BotGateway) checkCommandRole(plat Platform, msg InboundMessage, role string) bool {
+func (gw *BotGateway) checkCommandRole(_ Platform, msg InboundMessage, role string) bool {
 	actor := msg.UserID
 	if msg.OperatorID != "" {
 		actor = msg.OperatorID
@@ -1166,17 +1102,6 @@ func (gw *BotGateway) checkCommandRole(plat Platform, msg InboundMessage, role s
 			return true
 		}
 		return role == "approver" && approvers[actor]
-	}
-	admins := stringSet(gw.cfg.Allowlist.Admins[plat])
-	approvers := stringSet(gw.cfg.Allowlist.Approvers[plat])
-	if len(admins) == 0 && len(approvers) == 0 {
-		return true
-	}
-	if admins[actor] {
-		return true
-	}
-	if role == "approver" && approvers[actor] {
-		return true
 	}
 	return false
 }
@@ -1467,11 +1392,7 @@ func (gw *BotGateway) handleSlashCommandCore(ctx context.Context, adapter Adapte
 		gw.mu.Unlock()
 		if ok && state.ctrl != nil {
 			// Recovery cards map allow → continue for older clients that only know Approve.
-			if gw.pendingApprovalIsRecovery(key, parts[1]) {
-				_ = state.ctrl.ResolveRecovery(parts[1], agent.RecoveryActionContinue, "")
-			} else {
-				state.ctrl.Approve(parts[1], true, false, false)
-			}
+			state.ctrl.Approve(parts[1], true, false, false)
 			gw.forgetPendingApproval(key, parts[1])
 			_ = gw.sendText(ctx, adapter, msg, "已批准。")
 		} else {
@@ -1491,110 +1412,11 @@ func (gw *BotGateway) handleSlashCommandCore(ctx context.Context, adapter Adapte
 		state, ok := gw.controllers[key]
 		gw.mu.Unlock()
 		if ok && state.ctrl != nil {
-			if gw.pendingApprovalIsRecovery(key, parts[1]) {
-				_ = state.ctrl.ResolveRecovery(parts[1], agent.RecoveryActionRevise, "")
-			} else {
-				state.ctrl.Approve(parts[1], false, false, false)
-			}
+			state.ctrl.Approve(parts[1], false, false, false)
 			gw.forgetPendingApproval(key, parts[1])
 			_ = gw.sendText(ctx, adapter, msg, "已拒绝。")
 		} else {
 			_ = gw.sendText(ctx, adapter, msg, "没有找到当前会话中的待审批操作，请重新触发一次操作。")
-		}
-
-	case strings.HasPrefix(msg.Text, "/recovery-continue-task"):
-		if !gw.requireCommandRole(ctx, adapter, msg, "approver") {
-			return
-		}
-		parts := strings.Fields(msg.Text)
-		if len(parts) < 2 {
-			_ = gw.sendText(ctx, adapter, msg, "用法: /recovery-continue-task <id>")
-			return
-		}
-		gw.mu.Lock()
-		state, ok := gw.controllers[key]
-		gw.mu.Unlock()
-		if ok && state.ctrl != nil {
-			if err := state.ctrl.ResolveRecovery(parts[1], agent.RecoveryActionContinueTask, ""); err != nil {
-				_ = gw.sendText(ctx, adapter, msg, "确认失败: "+err.Error())
-				return
-			}
-			gw.forgetPendingApproval(key, parts[1])
-			_ = gw.sendText(ctx, adapter, msg, "已继续；本任务内同类操作将自动执行，范围扩大或风险升级仍会确认。")
-		} else {
-			_ = gw.sendText(ctx, adapter, msg, "没有找到当前会话中的待确认操作。")
-		}
-
-	case strings.HasPrefix(msg.Text, "/recovery-continue"):
-		if !gw.requireCommandRole(ctx, adapter, msg, "approver") {
-			return
-		}
-		parts := strings.Fields(msg.Text)
-		if len(parts) < 2 {
-			_ = gw.sendText(ctx, adapter, msg, "用法: /recovery-continue <id>")
-			return
-		}
-		gw.mu.Lock()
-		state, ok := gw.controllers[key]
-		gw.mu.Unlock()
-		if ok && state.ctrl != nil {
-			if err := state.ctrl.ResolveRecovery(parts[1], agent.RecoveryActionContinue, ""); err != nil {
-				_ = gw.sendText(ctx, adapter, msg, "确认失败: "+err.Error())
-				return
-			}
-			gw.forgetPendingApproval(key, parts[1])
-			_ = gw.sendText(ctx, adapter, msg, "已继续。")
-		} else {
-			_ = gw.sendText(ctx, adapter, msg, "没有找到当前会话中的待确认操作。")
-		}
-
-	case strings.HasPrefix(msg.Text, "/recovery-revise"):
-		if !gw.requireCommandRole(ctx, adapter, msg, "approver") {
-			return
-		}
-		parts := strings.Fields(msg.Text)
-		if len(parts) < 2 {
-			_ = gw.sendText(ctx, adapter, msg, "用法: /recovery-revise <id> [补充要求]")
-			return
-		}
-		feedback := strings.TrimSpace(strings.Join(parts[2:], " "))
-		gw.mu.Lock()
-		state, ok := gw.controllers[key]
-		gw.mu.Unlock()
-		if ok && state.ctrl != nil {
-			if err := state.ctrl.ResolveRecovery(parts[1], agent.RecoveryActionRevise, feedback); err != nil {
-				_ = gw.sendText(ctx, adapter, msg, "修改方案失败: "+err.Error())
-				return
-			}
-			gw.forgetPendingApproval(key, parts[1])
-			_ = gw.sendText(ctx, adapter, msg, "已拒绝当前变更并注入修改要求。")
-		} else {
-			_ = gw.sendText(ctx, adapter, msg, "没有找到当前会话中的恢复检查点。")
-		}
-
-	case strings.HasPrefix(msg.Text, "/recovery-stop"):
-		// Backward compatibility for cards rendered by an older client: reject
-		// the proposed mutation but leave task cancellation to ordinary /stop.
-		if !gw.requireCommandRole(ctx, adapter, msg, "approver") {
-			return
-		}
-		parts := strings.Fields(msg.Text)
-		if len(parts) < 2 {
-			_ = gw.sendText(ctx, adapter, msg, "用法: /recovery-stop <id>")
-			return
-		}
-		gw.mu.Lock()
-		state, ok := gw.controllers[key]
-		gw.mu.Unlock()
-		if ok && state.ctrl != nil {
-			if err := state.ctrl.ResolveRecovery(parts[1], agent.RecoveryActionRevise, "cancel this proposed action"); err != nil {
-				_ = gw.sendText(ctx, adapter, msg, "取消变更失败: "+err.Error())
-				return
-			}
-			gw.forgetPendingApproval(key, parts[1])
-			_ = gw.sendText(ctx, adapter, msg, "已取消当前变更；如需停止整个任务，请使用 /stop。")
-		} else {
-			_ = gw.sendText(ctx, adapter, msg, "没有找到当前会话中的恢复检查点。")
 		}
 
 	case strings.HasPrefix(msg.Text, "/answer"):
@@ -2034,7 +1856,7 @@ func (gw *BotGateway) queueStatusText(key string, msg InboundMessage) string {
 		inboxN = len(snap.Items)
 		paused = snap.Paused
 	}
-	return fmt.Sprintf("当前队列模式：%s\n持久化 Inbox: %d%s\n全局上限: %d\n溢出策略: 拒绝新消息（queue_drop 已弃用）\n用法：/queue steer|followup|collect|interrupt|status|list|show|delete|move|pause|resume|retry|default",
+	return fmt.Sprintf("当前队列模式：%s\n持久化 Inbox: %d%s\n全局上限: %d\n溢出策略: 拒绝新消息\n用法：/queue steer|followup|collect|interrupt|status|list|show|delete|move|pause|resume|retry|default",
 		queueModeLabel(gw.queueMode(key, msg)),
 		inboxN,
 		map[bool]string{true: " (paused)", false: ""}[paused],

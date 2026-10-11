@@ -39,7 +39,7 @@ const tape: string[] = [];
 type FollowMode = "ok" | "transient" | "takeover";
 const followMode = new Map<string, FollowMode>();
 const takenOver = new Map<string, boolean>();
-const statusFor = (tabId: string) => ({ running: false, label: "Model", plan: false, toolApprovalMode: "ask", goal: "", takenOver: takenOver.get(tabId) === true });
+const statusFor = (tabId: string) => ({ running: false, label: "Model", plan: false, toolApprovalMode: "workspace-write", goal: "", takenOver: takenOver.get(tabId) === true });
 const inline = (id: string, content: string) => ({ messageId: id, position: 0, version: 1, role: "assistant", eventSequence: 1, visibleTurn: 1, preview: "", inline: { id, role: "assistant", content } });
 function followResponse(tabId: string): TranscriptFollowResponse {
   return {

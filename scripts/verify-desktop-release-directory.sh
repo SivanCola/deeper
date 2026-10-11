@@ -2,17 +2,12 @@
 set -euo pipefail
 
 allow_missing=false
-allow_legacy_manifest=false
 allow_signature_differences=false
 allow_authenticated_payload_differences=false
 while [ "$#" -gt 0 ]; do
 	case "$1" in
 	--allow-missing)
 		allow_missing=true
-		shift
-		;;
-	--allow-legacy-manifest)
-		allow_legacy_manifest=true
 		shift
 		;;
 	--allow-signature-differences)
@@ -35,7 +30,7 @@ while [ "$#" -gt 0 ]; do
 	esac
 done
 if [ "$#" -ne 2 ]; then
-	echo "usage: $0 [--allow-missing] [--allow-legacy-manifest] [--allow-signature-differences] [--allow-authenticated-payload-differences] CANDIDATE_DIRECTORY EXISTING_DIRECTORY" >&2
+	echo "usage: $0 [--allow-missing] [--allow-signature-differences] [--allow-authenticated-payload-differences] CANDIDATE_DIRECTORY EXISTING_DIRECTORY" >&2
 	exit 2
 fi
 
@@ -58,14 +53,10 @@ verify_subset() {
 			echo "Desktop release directory is missing $relative" >&2
 			return 1
 		fi
-		if [ "$allow_legacy_manifest" = "true" ] && [ "$relative" = "latest.json" ]; then
-			if ! bash "$script_dir/compare-desktop-release-manifests.sh" \
-				"$candidate_dir/latest.json" "$existing_dir/latest.json"; then
-				echo "Desktop release directory has conflicting content for $relative" >&2
-				return 1
-			fi
-			continue
-		fi
+ if [ "$relative" = "latest.json" ]; then
+  bash "$script_dir/compare-desktop-release-manifests.sh" "$source_file" "$target_file" || return 1
+  continue
+ fi
 		if [ "$allow_signature_differences" = "true" ] && [[ "$relative" = *.minisig ]]; then
 			if [ ! -s "$source_file" ] || [ ! -s "$target_file" ]; then
 				echo "Desktop release directory has an empty signature for $relative" >&2

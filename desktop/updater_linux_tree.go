@@ -54,7 +54,7 @@ func stageLinuxShellRelease(archive []byte, staging string) ([]installlayout.Mem
 			return nil, nil, err
 		}
 		switch name {
-		case "deepzora-desktop", "deepzora", "deepzora-launcher", "deepzora-guard":
+		case "deepzora-desktop", "deepzora", "deepzora-launcher":
 		default:
 			if !strings.HasPrefix(name, "app/") {
 				return nil, nil, fmt.Errorf("unexpected release member %q", name)

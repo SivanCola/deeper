@@ -6,7 +6,7 @@ import { historyToolStatus } from "./historyToolStatus";
 // on item identity and tool call/result folding.
 import { asArray } from "./array";
 import { historicalResultNotice } from "./completionResultState";
-import { appendNoticeItem, deliveryReadinessDetail, readinessMissingIds } from "./controllerNotices";
+import { appendNoticeItem } from "./controllerNotices";
 import { appendHistoryAttachmentRefs } from "./historyAttachmentRefs";
 import { createUniqueItemIDAllocator, historyMessageIdentity } from "./historyItemIds";
 import { t } from "./i18n";
@@ -84,21 +84,6 @@ export function historyMessagesToItems(messages: HistoryMessage[], idPrefix: str
       if (m.code === "protocol_recovery" && m.pending && m.protocolRecovery?.id) {
         items.push({kind:"notice",id:recordItemId,level:"info",code:m.code,text:t("notice.protocolRecoveryBody"),action:"recover_context",recoveryId:m.protocolRecovery.id});
 				seq++;
-        continue;
-      }
-      if (m.code === "final_readiness" && m.pending) {
-        items.push({
-          kind: "notice",
-          id: recordItemId,
-          level: "info",
-          variant: "delivery",
-          title: t("notice.deliveryIncompleteTitle"),
-          text: t("notice.deliveryIncompleteBody"),
-          detail: deliveryReadinessDetail(m.readiness),
-          action: "continue_delivery",
-          missing: readinessMissingIds(m.readiness),
-        });
-        seq++;
         continue;
       }
       if (m.content.trim() !== "" || m.decisionReceipt) {

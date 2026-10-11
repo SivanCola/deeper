@@ -3,14 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"deepzora/desktop/internal/workspacestate"
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/session"
-	"deepzora/internal/sessioncatalog"
 )
 
 type SessionOperationMode int
@@ -79,24 +76,15 @@ func (e *SessionOperationError) RPCErrorData() map[string]any {
 // only the lowest-priority legacy/topic-only compatibility lookup.
 // Higher-priority fields never fall back when invalid.
 type SessionSelector struct {
-	Source      *SessionSourceRef   `json:"source,omitempty"`
 	Ref         *session.SessionRef `json:"ref,omitempty"`
 	SessionPath string              `json:"sessionPath,omitempty"`
 	TopicID     string              `json:"topicId,omitempty"`
-}
-
-type SessionSourceRef struct {
-	HostID    string `json:"hostId"`
-	SourceKey string `json:"sourceKey,omitempty"`
-	Path      string `json:"path"`
-	HeadID    string `json:"headId,omitempty"`
 }
 
 // SessionTarget resolves durable identity independently from runtime state.
 // Controller is optional and is never used to decide whether the session
 // exists.
 type SessionTarget struct {
-	Source              *SessionSourceRef
 	TopicID             string
 	SessionRef          session.SessionRef
 	SessionPath         string
@@ -118,9 +106,7 @@ func (target SessionTarget) key() string {
 	if strings.TrimSpace(target.SessionRef.SessionID) != "" {
 		return "ref:" + target.SessionRef.HostID + ":" + target.SessionRef.SessionID
 	}
-	if target.Source != nil {
-		return "source:" + target.Source.HostID + ":" + target.Source.SourceKey
-	}
+
 	if path := strings.TrimSpace(target.SessionPath); path != "" {
 		return "path:" + sessionRuntimeKey(path)
 	}
@@ -151,19 +137,12 @@ func (a *App) resolveSessionTargetWithArchived(selector sessionTargetSelector, a
 		}
 		return a.resolveCanonicalSessionTargetState(*selector.Ref, strings.TrimSpace(selector.TopicID), allowArchived)
 	}
-	if selector.Source != nil {
-		return a.resolveSourceSessionTarget(selector, allowArchived)
-	}
+
 	if path := strings.TrimSpace(selector.SessionPath); path != "" {
-		if source, err := parseSessionSourceRoute(path); err != nil {
-			return SessionTarget{}, err
-		} else if source != nil {
-			return a.resolveSessionTargetWithArchived(SessionSelector{Source: source, TopicID: selector.TopicID}, allowArchived)
-		}
 		if ref, ok := sessionRefForRoute(a.desktopSessionService(""), path); ok {
 			return a.resolveCanonicalSessionTargetState(ref, strings.TrimSpace(selector.TopicID), allowArchived)
 		}
-		return a.resolveLegacySessionTarget(path, strings.TrimSpace(selector.TopicID), allowArchived)
+		return SessionTarget{}, newSessionOperationError("unsupported", "Use a current session identity.")
 	}
 	topicID := strings.TrimSpace(selector.TopicID)
 	if topicID == "" {
@@ -174,25 +153,8 @@ func (a *App) resolveSessionTargetWithArchived(selector sessionTargetSelector, a
 		return SessionTarget{}, err
 	}
 	scope, root, ok := a.findTopicLocation(topicID)
-	legacyPaths := a.legacySessionPathsForTopic(scope, root, topicID)
 	if canonical {
-		if len(legacyPaths) != 0 {
-			return SessionTarget{}, newSessionOperationError("ambiguous_target", "Select a specific session before using this action.")
-		}
 		return a.resolveCanonicalSessionTargetState(ref, topicID, allowArchived)
-	}
-	if len(legacyPaths) > 1 {
-		return SessionTarget{}, newSessionOperationError("ambiguous_target", "Select a specific session before using this action.")
-	}
-	if len(legacyPaths) == 1 {
-		if rows := expandSessionSourceRows(ProjectNode{SessionPath: legacyPaths[0]}); len(rows) > 1 {
-			return SessionTarget{}, newSessionOperationError("ambiguous_target", "Select a specific historical head before using this action.")
-		}
-		target, resolveErr := a.resolveLegacySessionTarget(legacyPaths[0], topicID, allowArchived)
-		if resolveErr == nil {
-			target.Scope, target.WorkspaceRoot = scope, root
-		}
-		return target, resolveErr
 	}
 	if runtime := a.runtimeSessionTarget(topicID, session.SessionRef{}, ""); runtime.Controller != nil {
 		if runtimeRef, bound := runtime.Controller.SessionRef(); bound {
@@ -212,59 +174,6 @@ func (a *App) resolveSessionTargetWithArchived(selector sessionTargetSelector, a
 	// A newly created topic can exist before its first user turn has allocated
 	// physical session storage. It is a valid empty target, not a missing one.
 	return SessionTarget{TopicID: topicID, Scope: scope, WorkspaceRoot: root}, nil
-}
-
-func (a *App) legacySessionPathsForTopic(scope, workspaceRoot, topicID string) []string {
-	topicID = strings.TrimSpace(topicID)
-	if topicID == "" {
-		return nil
-	}
-	mapped := map[string]bool{}
-	if state, err := a.workspaceRegistry().Load(a.bootContext()); err == nil {
-		for _, mapping := range state.SourceMappings {
-			if path := strings.TrimSpace(mapping.Path); path != "" {
-				mapped[sessionRuntimeKey(path)] = true
-			}
-		}
-	}
-	paths := map[string]string{}
-	add := func(path string) {
-		path = strings.TrimSpace(path)
-		if path == "" {
-			return
-		}
-		if _, canonical := parseSessionRoute(path); canonical {
-			return
-		}
-		key := sessionRuntimeKey(path)
-		if key == "" || mapped[key] || agent.IsCleanupPending(path) {
-			return
-		}
-		paths[key] = path
-	}
-	if scope != "" {
-		if catalog := a.sessionCatalog.Load(); catalog != nil {
-			topic, found, err := catalog.GetTopic(a.bootContext(), sessioncatalog.TopicKey{
-				Scope: scope, WorkspaceRoot: workspaceRoot, TopicID: topicID,
-			})
-			if err == nil && found {
-				for _, record := range topic.Sessions {
-					add(record.Path)
-				}
-			}
-		}
-	}
-	for _, dir := range a.knownSessionDirs() {
-		for _, match := range topicSessionMatches(dir, topicID) {
-			add(match.path)
-		}
-	}
-	out := make([]string, 0, len(paths))
-	for _, path := range paths {
-		out = append(out, path)
-	}
-	sort.Strings(out)
-	return out
 }
 
 func (a *App) canonicalSessionRefForTopic(topicID string) (session.SessionRef, bool, error) {
@@ -332,28 +241,6 @@ func (a *App) resolveCanonicalSessionTargetState(ref session.SessionRef, topicID
 	}
 	if target.TopicID == "" {
 		target.TopicID = "canonical-" + ref.SessionID
-	}
-	return target, nil
-}
-
-func (a *App) resolveLegacySessionTarget(path, topicID string, allowArchived bool) (SessionTarget, error) {
-	dir, validated, err := a.sessionDirForPath(path)
-	if err != nil {
-		return SessionTarget{}, newSessionOperationError(sessionOperationTargetNotFound, "The session no longer exists.")
-	}
-	if _, _, err := validateSessionPath(dir, validated); err != nil {
-		return SessionTarget{}, newSessionOperationError(sessionOperationTargetNotFound, "The session no longer exists.")
-	}
-	if ref, adopted, adoptionErr := a.legacyCanonicalRef(a.bootContext(), validated); adoptionErr != nil {
-		return SessionTarget{}, newSessionOperationError("target_changed", "The session location or identity changed. Reload it and try again.")
-	} else if adopted {
-		return a.resolveCanonicalSessionTargetState(ref, topicID, allowArchived)
-	}
-	target := a.runtimeSessionTarget(topicID, session.SessionRef{}, validated)
-	target.SessionPath = validated
-	target.TopicID = topicID
-	if meta, ok, err := agent.LoadBranchMeta(validated); err == nil && ok {
-		target.TopicID, target.Scope, target.WorkspaceRoot = meta.TopicID, meta.Scope, meta.WorkspaceRoot
 	}
 	return target, nil
 }

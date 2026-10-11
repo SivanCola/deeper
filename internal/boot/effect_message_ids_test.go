@@ -43,7 +43,7 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "boot-effect-message-ids"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	ctrl, err := Build(context.Background(), withTestSession(t, Options{Sink: event.Discard, Ablation: ablation.Set{}}))

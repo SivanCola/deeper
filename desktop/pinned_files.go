@@ -194,48 +194,21 @@ func pinnedInfoForPath(infos []PinnedFileInfo, path string) (PinnedFileInfo, boo
 }
 
 func (t *WorkspaceTab) setPinnedFiles(files []string) {
-	t.setPinnedFilesState(files, nil)
-}
-
-func (t *WorkspaceTab) setPinnedFilesState(files, pendingLegacy []string) {
 	if t == nil {
 		return
 	}
 	t.pinnedFilesMu.Lock()
+	defer t.pinnedFilesMu.Unlock()
 	t.PinnedFiles = append([]string(nil), files...)
-	t.pendingLegacyPinnedFiles = append([]string(nil), pendingLegacy...)
-	t.pinnedFilesMu.Unlock()
 }
 
-func (t *WorkspaceTab) pinnedFilesState() ([]string, []string) {
+func (t *WorkspaceTab) pinnedFilesState() []string {
 	if t == nil {
-		return []string{}, []string{}
+		return nil
 	}
 	t.pinnedFilesMu.RLock()
 	defer t.pinnedFilesMu.RUnlock()
-	return append([]string{}, t.PinnedFiles...), append([]string{}, t.pendingLegacyPinnedFiles...)
-}
-
-func (t *WorkspaceTab) retainLegacyPinnedFiles(files []string) {
-	normalized, err := normalizePinnedContextFiles(files)
-	if err != nil {
-		normalized = []string{}
-	}
-	t.setPinnedFilesState(normalized, files)
-}
-
-func (t *WorkspaceTab) pendingLegacyPinnedFilesForPersistence() []string {
-	_, pending := t.pinnedFilesState()
-	return pending
-}
-
-func (t *WorkspaceTab) clearPendingLegacyPinnedFiles() {
-	if t == nil {
-		return
-	}
-	t.pinnedFilesMu.Lock()
-	t.pendingLegacyPinnedFiles = nil
-	t.pinnedFilesMu.Unlock()
+	return append([]string(nil), t.PinnedFiles...)
 }
 
 // PinFile updates the tab-local cache. Durable desktop mutations go through
@@ -344,7 +317,10 @@ func (a *App) mutatePinnedFiles(tabID, relPath string, pin bool) (PinnedFileInfo
 	if ctrl.RuntimeStatus().Running {
 		return PinnedFileInfo{}, "", control.ErrTurnRunning
 	}
-	sessionPath := ctrl.SessionPath()
+	sessionPath, err := controllerPinnedContextPath(ctrl)
+	if err != nil {
+		return PinnedFileInfo{}, "", err
+	}
 	state, err := loadPinnedContextState(sessionPath)
 	if err != nil {
 		return PinnedFileInfo{}, "", err
@@ -436,7 +412,11 @@ func (a *App) GetPinnedFilesForTab(tabID string) ([]PinnedFileInfo, error) {
 	if ctrl == nil {
 		return []PinnedFileInfo{}, a.workspaceNotReadyErr(tab)
 	}
-	state, err := loadPinnedContextState(ctrl.SessionPath())
+	path, err := controllerPinnedContextPath(ctrl)
+	if err != nil {
+		return []PinnedFileInfo{}, err
+	}
+	state, err := loadPinnedContextState(path)
 	if err != nil {
 		return []PinnedFileInfo{}, err
 	}
@@ -445,4 +425,13 @@ func (a *App) GetPinnedFilesForTab(tabID string) ([]PinnedFileInfo, error) {
 		infos = []PinnedFileInfo{}
 	}
 	return infos, nil
+}
+
+func controllerPinnedContextPath(ctrl control.SessionAPI) (string, error) {
+	if state, ok := ctrl.(interface {
+		SessionStatePath(context.Context) (string, error)
+	}); ok {
+		return state.SessionStatePath(context.Background())
+	}
+	return ctrl.SessionPath(), nil
 }

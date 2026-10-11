@@ -1,0 +1,53 @@
+package main
+
+import (
+	"deepzora/internal/installlayout"
+	"os"
+	"path/filepath"
+	"runtime"
+	"testing"
+)
+
+func TestInstallerActivationPublishesEntireElectronTree(t *testing.T) {
+	root := t.TempDir()
+	staging := writeInstallerStaging(t, root, "new", true)
+	names := append(installlayout.ShellRequiredNames(runtime.GOOS), "app/locales/en-US.pak", "app/resources/extra.bin")
+	for _, name := range names {
+		p := filepath.Join(staging, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(name), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := activateInstallerStaging(root, "v1.39.0", staging); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(staging); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
+		data, err := os.ReadFile(filepath.Join(root, "versions", "v1.39.0", filepath.FromSlash(name)))
+		if err != nil || string(data) != name {
+			t.Errorf("%s missing/corrupt after staging cleanup: %v", name, err)
+		}
+	}
+}
+
+func TestInstallerRejectsIncompleteShellBeforePointerCommit(t *testing.T) {
+	root := t.TempDir()
+	staging := writeInstallerStaging(t, root, "new", true)
+	if err := os.RemoveAll(filepath.Join(staging, "app")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(staging, "app"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := activateInstallerStaging(root, "v1.39.0", staging); err == nil {
+		t.Fatal("accepted empty shell")
+	}
+	if installlayout.HasCurrent(root) {
+		t.Fatal("committed incomplete shell")
+	}
+}

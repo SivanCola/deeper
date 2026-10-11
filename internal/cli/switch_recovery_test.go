@@ -2,18 +2,13 @@ package cli
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	tea "charm.land/bubbletea/v2"
-
 	"deepzora/internal/agent"
-	"deepzora/internal/boot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -32,7 +27,7 @@ func chatTUIWithRunningBackgroundJob(t *testing.T) chatTUI {
 	})
 	m := newTestChatTUI()
 	m.ctrl = ctrl
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	m.buildController = func(controllerBuildSpec, []provider.Message, string, control.SessionAPI) (*control.Controller, error) {
 		t.Fatal("runtime switch built a replacement while a background job was running")
 		return nil, nil
@@ -61,13 +56,6 @@ func TestRuntimeSwitchesRejectRunningBackgroundJobs(t *testing.T) {
 		m := chatTUIWithRunningBackgroundJob(t)
 		if m.scheduleSkillSessionRefresh("skill refresh", "") {
 			t.Fatal("skill refresh queued a rebuild while a background job was running")
-		}
-	})
-
-	t.Run("work mode", func(t *testing.T) {
-		m := chatTUIWithRunningBackgroundJob(t)
-		if cmd := m.runWorkModeCommand("/work-mode delivery"); cmd != nil {
-			t.Fatal("work-mode switch queued a rebuild while a background job was running")
 		}
 	})
 
@@ -105,16 +93,13 @@ func divergedSessionControllerWithRecovery(t *testing.T, dir, path string, onRec
 	t.Helper()
 	disk := agent.NewSession("sys prompt")
 	disk.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	disk.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	disk.Add(provider.Message{Role: provider.RoleUser, Content: "disk second"})
+	disk.Add(provider.Message{Role: provider.RoleAssistant, Content: "disk"})
 	if err := disk.Save(path); err != nil {
-		t.Fatalf("save disk session: %v", err)
+		t.Fatal(err)
 	}
-
 	stale := agent.NewSession("sys prompt")
 	stale.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	stale.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	stale.Add(provider.Message{Role: provider.RoleUser, Content: "local second"})
+	stale.Add(provider.Message{Role: provider.RoleAssistant, Content: "local"})
 	return newOwnedTestController(t, control.Options{
 		Executor:           agent.New(nil, nil, stale, agent.Options{}, event.Discard),
 		SessionDir:         dir,
@@ -124,280 +109,7 @@ func divergedSessionControllerWithRecovery(t *testing.T, dir, path string, onRec
 	})
 }
 
-func TestSessionRecoveryCallbackMovesLeaseBeforeControllerCommit(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "turn-end-conflict.jsonl")
-	leases := control.NewSessionLeaseKeeper()
-	t.Cleanup(leases.Release)
-	if err := leases.Rebind(originalPath); err != nil {
-		t.Fatalf("seed original lease: %v", err)
-	}
-	ctrl := divergedSessionControllerWithRecovery(t, dir, originalPath, cliSessionRecoveredHandler(leases))
-	t.Cleanup(ctrl.Close)
-	if err := leases.BindControllerAuthority(ctrl); err != nil {
-		t.Fatalf("bind controller authority: %v", err)
-	}
-
-	if err := ctrl.Snapshot(); err != nil {
-		t.Fatalf("Snapshot: %v", err)
-	}
-	recoveryPath := ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == originalPath || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("controller path = %q, want recovery path distinct from %q", recoveryPath, originalPath)
-	}
-	if got, want := leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after recovery callback = %q, want %q", got, want)
-	}
-	leases.WaitForRetiredLeases()
-	if probe, err := agent.TryAcquireSessionLease(originalPath); err != nil {
-		t.Fatalf("original lease was not released after recovery: %v", err)
-	} else {
-		probe.Release()
-	}
-	if probe, err := agent.TryAcquireSessionLease(recoveryPath); !errors.Is(err, agent.ErrSessionLeaseHeld) {
-		if probe != nil {
-			probe.Release()
-		}
-		t.Fatalf("recovery path was not guarded after callback: %v", err)
-	}
-}
-
-func TestSessionRecoveryCallbackFailureKeepsOriginalLeaseAndPath(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "held-recovery-conflict.jsonl")
-	leases := control.NewSessionLeaseKeeper()
-	t.Cleanup(leases.Release)
-	if err := leases.Rebind(originalPath); err != nil {
-		t.Fatalf("seed original lease: %v", err)
-	}
-	handler := cliSessionRecoveredHandler(leases)
-	var heldRecovery *agent.SessionLease
-	ctrl := divergedSessionControllerWithRecovery(t, dir, originalPath, func(info control.SessionRecoveryInfo) error {
-		var err error
-		heldRecovery, err = agent.TryAcquireSessionLease(info.RecoveryPath)
-		if err != nil {
-			return fmt.Errorf("hold recovery path for test: %w", err)
-		}
-		return handler(info)
-	})
-	t.Cleanup(ctrl.Close)
-	t.Cleanup(func() {
-		if heldRecovery != nil {
-			heldRecovery.Release()
-		}
-	})
-
-	err := ctrl.Snapshot()
-	if err == nil {
-		t.Fatal("Snapshot succeeded while recovery path lease was held")
-	}
-	if strings.Contains(err.Error(), dir) || strings.Contains(err.Error(), filepath.Base(originalPath)) {
-		t.Fatalf("recovery bind error exposed a local path: %q", err)
-	}
-	if !strings.Contains(err.Error(), "session is in use") {
-		t.Fatalf("recovery bind error = %q, want sanitized lease refusal", err)
-	}
-	if got := ctrl.SessionPath(); got != originalPath {
-		t.Fatalf("controller path after failed callback = %q, want original %q", got, originalPath)
-	}
-	if got, want := leases.HeldPath(), agent.CanonicalSessionPath(originalPath); got != want {
-		t.Fatalf("lease after failed callback = %q, want original %q", got, want)
-	}
-}
-
-// TestModelSwitchCarriesRecoveryPathAfterSnapshotConflict is the TUI /model
-// twin of the desktop rebuild fix: when the pre-switch Snapshot retargets the
-// controller to a recovery branch, the resume path handed to buildController
-// must be that recovery path. A pre-snapshot capture bound the just-recovered
-// transcript back to the original file, re-conflicting on every later save.
-func TestModelSwitchCarriesRecoveryPathAfterSnapshotConflict(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	isolateUserConfig(t)
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "model-switch-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, originalPath)
-	m.modelRef = "old/old-model"
-	var gotResumePath string
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, resumePath string, _ control.SessionAPI) (*control.Controller, error) {
-		gotResumePath = resumePath
-		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
-	}
-
-	m.runModelSubcommand("/model deepseek-flash/deepseek-v4-flash")
-	if m.pendingModelSwitch == nil {
-		t.Fatal("runModelSubcommand did not queue a model switch")
-	}
-	m.pendingModelSwitch()
-
-	if gotResumePath == "" || gotResumePath == originalPath || !strings.Contains(filepath.Base(gotResumePath), "-recovery-") {
-		t.Fatalf("resume path = %q, want recovery path distinct from %q", gotResumePath, originalPath)
-	}
-	if got := m.ctrl.SessionPath(); got != gotResumePath {
-		t.Fatalf("old controller session path = %q, want recovery path %q", got, gotResumePath)
-	}
-}
-
-// TestEffortSwitchCarriesRecoveryPathAfterSnapshotConflict covers the same
-// contract for the TUI /effort rebuild path.
-func TestEffortSwitchCarriesRecoveryPathAfterSnapshotConflict(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	isolateUserConfig(t)
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "effort-switch-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, originalPath)
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
-	var gotResumePath string
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, resumePath string, _ control.SessionAPI) (*control.Controller, error) {
-		gotResumePath = resumePath
-		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
-	}
-
-	cmd := m.runEffortCommand("/effort max")
-	if cmd == nil {
-		t.Fatal("runEffortCommand did not queue a rebuild")
-	}
-	cmd()
-
-	if gotResumePath == "" || gotResumePath == originalPath || !strings.Contains(filepath.Base(gotResumePath), "-recovery-") {
-		t.Fatalf("resume path = %q, want recovery path distinct from %q", gotResumePath, originalPath)
-	}
-	if got := m.ctrl.SessionPath(); got != gotResumePath {
-		t.Fatalf("old controller session path = %q, want recovery path %q", got, gotResumePath)
-	}
-}
-
-// TestSkillRefreshCarriesRecoveryPathAfterSnapshotConflict covers the TUI skill
-// rebuild path, which also snapshots then rebuilds the controller in place.
-func TestSkillRefreshCarriesRecoveryPathAfterSnapshotConflict(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "skill-refresh-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, originalPath)
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
-	var gotResumePath string
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, resumePath string, _ control.SessionAPI) (*control.Controller, error) {
-		gotResumePath = resumePath
-		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
-	}
-
-	if !m.scheduleSkillSessionRefresh("skill refresh", "") {
-		t.Fatal("scheduleSkillSessionRefresh did not queue a rebuild")
-	}
-	m.pendingModelSwitch()
-
-	if gotResumePath == "" || gotResumePath == originalPath || !strings.Contains(filepath.Base(gotResumePath), "-recovery-") {
-		t.Fatalf("resume path = %q, want recovery path distinct from %q", gotResumePath, originalPath)
-	}
-	if got := m.ctrl.SessionPath(); got != gotResumePath {
-		t.Fatalf("old controller session path = %q, want recovery path %q", got, gotResumePath)
-	}
-}
-
-func TestRetiredWorkModeIsNoOpWithoutRebuildOrLeaseMove(t *testing.T) {
-	dir := t.TempDir()
-	originalPath := filepath.Join(dir, "work-mode-conflict.jsonl")
-
-	m := newTestChatTUI()
-	oldCtrl := divergedSessionController(t, dir, originalPath)
-	m.ctrl = oldCtrl
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(originalPath); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-	builds := 0
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, resumePath string, _ control.SessionAPI) (*control.Controller, error) {
-		builds++
-		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
-	}
-
-	cmd := m.runWorkModeCommand("/preset delivery")
-	if cmd != nil {
-		t.Fatal("/preset must not queue a controller rebuild")
-	}
-	if m.ctrl != oldCtrl {
-		t.Fatal("controller instance must stay the same")
-	}
-	if m.ctrl.AgentPreset() != boot.AgentPresetStandard {
-		t.Fatalf("controller preset = %q, want standard", m.ctrl.AgentPreset())
-	}
-	if builds != 0 {
-		t.Fatalf("unexpected rebuilds: %d", builds)
-	}
-	// Lease stays on the original session path — no recovery rewrite.
-	if got := m.leases.HeldPath(); got != agent.CanonicalSessionPath(originalPath) {
-		t.Fatalf("lease path = %q, want original %q", got, originalPath)
-	}
-}
-
-func TestResumeCommandKeepsLeaseOnRecoveryPathWhenTargetHeld(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	active := filepath.Join(dir, "resume-active-conflict.jsonl")
-	target := filepath.Join(dir, "resume-target.jsonl")
-	saveTestSession(t, target, "target session")
-
-	m := newTestChatTUI()
-	m.width = 80
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-	holdSessionLease(t, target)
-
-	m.runResumeCommand(fmt.Sprintf("/resume %d", resumeIndexForPath(t, dir, target)))
-
-	recoveryPath := m.ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == active || recoveryPath == target || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("session path after refused resume = %q, want recovery path distinct from active %q and target %q", recoveryPath, active, target)
-	}
-	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after refused resume = %q, want recovery path %q", got, want)
-	}
-}
-
-func TestResumePickerKeepsLeaseOnRecoveryPathWhenTargetHeld(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	active := filepath.Join(dir, "resume-picker-active-conflict.jsonl")
-	target := filepath.Join(dir, "resume-picker-target.jsonl")
-	saveTestSession(t, target, "target session")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.resumePick = &resumePicker{entries: []resumeEntry{{session: agent.SessionInfo{Path: target}}}, sel: 0}
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-	holdSessionLease(t, target)
-
-	next, _ := m.applyResumePick()
-	m = next.(chatTUI)
-
-	recoveryPath := m.ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == active || recoveryPath == target || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("session path after refused picker resume = %q, want recovery path distinct from active %q and target %q", recoveryPath, active, target)
-	}
-	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after refused picker resume = %q, want recovery path %q", got, want)
-	}
-}
-
 func TestCompactDoneDoesNotRepeatMaintenanceSnapshot(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
 	dir := t.TempDir()
 	active := filepath.Join(dir, "compact-active-conflict.jsonl")
 
@@ -418,247 +130,6 @@ func TestCompactDoneDoesNotRepeatMaintenanceSnapshot(t *testing.T) {
 	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(active); got != want {
 		t.Fatalf("lease after compact completion = %q, want unchanged %q", got, want)
 	}
-}
-
-func TestBranchTreeKeepsLeaseOnRecoveryPathAfterSnapshotConflict(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	active := filepath.Join(dir, "tree-active-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.width = 80
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-
-	m.showBranchTree()
-
-	recoveryPath := m.ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == active || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("session path after tree snapshot = %q, want recovery path distinct from active %q", recoveryPath, active)
-	}
-	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after tree snapshot = %q, want recovery path %q", got, want)
-	}
-}
-
-func TestShutdownMessageSnapshotsCurrentController(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	active := filepath.Join(dir, "shutdown-active-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-
-	next, cmd := m.Update(tuiShutdownMsg{})
-	m = next.(chatTUI)
-	if cmd == nil {
-		t.Fatal("shutdown message should return tea.Quit")
-	}
-	if msg := cmd(); msg != (tea.QuitMsg{}) {
-		t.Fatalf("shutdown command = %T, want tea.QuitMsg", msg)
-	}
-
-	recoveryPath := m.ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == active || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("session path after shutdown snapshot = %q, want recovery path distinct from active %q", recoveryPath, active)
-	}
-	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after shutdown snapshot = %q, want recovery path %q", got, want)
-	}
-}
-
-// TestBranchCompletionKeepsLeaseOnRecoveryPathAfterSnapshotConflict covers the
-// /switch tab-completion path: listing branches snapshots the session, which
-// can retarget the controller to a recovery branch even though no switch runs.
-func TestBranchCompletionKeepsLeaseOnRecoveryPathAfterSnapshotConflict(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	active := filepath.Join(dir, "completion-active-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-
-	if _, _, ok := m.branchArgItems("/switch "); !ok {
-		t.Fatal("branchArgItems did not handle /switch completion")
-	}
-
-	recoveryPath := m.ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == active || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("session path after completion snapshot = %q, want recovery path distinct from active %q", recoveryPath, active)
-	}
-	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after completion snapshot = %q, want recovery path %q", got, want)
-	}
-}
-
-// TestModelSwitchFailureKeepsLeaseOnRecoveryPathAfterSnapshotConflict covers
-// the rebuild-failure branch: the pre-switch snapshot can retarget the kept
-// controller to a recovery branch, and a failed build must not leave the lease
-// on the stale original path.
-func TestModelSwitchFailureKeepsLeaseOnRecoveryPathAfterSnapshotConflict(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	isolateUserConfig(t)
-	dir := t.TempDir()
-	active := filepath.Join(dir, "model-switch-failure-conflict.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.modelRef = "old/old-model"
-	m.buildController = func(controllerBuildSpec, []provider.Message, string, control.SessionAPI) (*control.Controller, error) {
-		return nil, fmt.Errorf("build failed")
-	}
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-
-	m.runModelSubcommand("/model deepseek-flash/deepseek-v4-flash")
-	if m.pendingModelSwitch == nil {
-		t.Fatal("runModelSubcommand did not queue a model switch")
-	}
-	next, _ := m.Update(m.pendingModelSwitch())
-	m = next.(chatTUI)
-
-	recoveryPath := m.ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == active || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("session path after failed switch = %q, want recovery path distinct from active %q", recoveryPath, active)
-	}
-	if got, want := m.leases.HeldPath(), agent.CanonicalSessionPath(recoveryPath); got != want {
-		t.Fatalf("lease after failed switch = %q, want recovery path %q", got, want)
-	}
-}
-
-// TestModelSwitchMovesLeaseToRecoveryPathBeforeRebuild pins the lease-before-
-// bind order: the rebuilt controller resumes prevPath for writing inside
-// buildController, so the lease must already guard the retargeted path when
-// the build starts, not only after modelSwitchMsg lands.
-func TestModelSwitchMovesLeaseToRecoveryPathBeforeRebuild(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	isolateUserConfig(t)
-	dir := t.TempDir()
-	active := filepath.Join(dir, "model-switch-lease-order.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.modelRef = "old/old-model"
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-	var heldAtBuild string
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
-		heldAtBuild = m.leases.HeldPath()
-		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
-	}
-
-	m.runModelSubcommand("/model deepseek-flash/deepseek-v4-flash")
-	if m.pendingModelSwitch == nil {
-		t.Fatal("runModelSubcommand did not queue a model switch")
-	}
-	m.pendingModelSwitch()
-
-	assertLeaseHeldRecoveryPathAtBuild(t, &m, active, heldAtBuild)
-}
-
-// TestEffortSwitchMovesLeaseToRecoveryPathBeforeRebuild covers the same
-// lease-before-bind order for the /effort rebuild path.
-func TestEffortSwitchMovesLeaseToRecoveryPathBeforeRebuild(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	isolateUserConfig(t)
-	dir := t.TempDir()
-	active := filepath.Join(dir, "effort-switch-lease-order.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-	var heldAtBuild string
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
-		heldAtBuild = m.leases.HeldPath()
-		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
-	}
-
-	cmd := m.runEffortCommand("/effort max")
-	if cmd == nil {
-		t.Fatal("runEffortCommand did not queue a rebuild")
-	}
-	cmd()
-
-	assertLeaseHeldRecoveryPathAtBuild(t, &m, active, heldAtBuild)
-}
-
-// TestSkillRefreshMovesLeaseToRecoveryPathBeforeRebuild covers the same
-// lease-before-bind order for the TUI skill rebuild path.
-func TestSkillRefreshMovesLeaseToRecoveryPathBeforeRebuild(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	dir := t.TempDir()
-	active := filepath.Join(dir, "skill-refresh-lease-order.jsonl")
-
-	m := newTestChatTUI()
-	m.ctrl = divergedSessionController(t, dir, active)
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
-	m.leases = control.NewSessionLeaseKeeper()
-	t.Cleanup(m.leases.Release)
-	if err := m.leases.Rebind(active); err != nil {
-		t.Fatalf("seed active lease: %v", err)
-	}
-	var heldAtBuild string
-	m.buildController = func(_ controllerBuildSpec, _ []provider.Message, _ string, _ control.SessionAPI) (*control.Controller, error) {
-		heldAtBuild = m.leases.HeldPath()
-		return newOwnedTestController(t, control.Options{Label: "deepseek-flash"}), nil
-	}
-
-	if !m.scheduleSkillSessionRefresh("skill refresh", "") {
-		t.Fatal("scheduleSkillSessionRefresh did not queue a rebuild")
-	}
-	m.pendingModelSwitch()
-
-	assertLeaseHeldRecoveryPathAtBuild(t, &m, active, heldAtBuild)
-}
-
-// assertLeaseHeldRecoveryPathAtBuild verifies that the snapshot retargeted the
-// controller to a recovery branch and that the lease already guarded that
-// branch when buildController ran.
-func assertLeaseHeldRecoveryPathAtBuild(t *testing.T, m *chatTUI, active, heldAtBuild string) {
-	t.Helper()
-	recoveryPath := m.ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == active || !strings.Contains(filepath.Base(recoveryPath), "-recovery-") {
-		t.Fatalf("session path after switch snapshot = %q, want recovery path distinct from active %q", recoveryPath, active)
-	}
-	if want := agent.CanonicalSessionPath(recoveryPath); heldAtBuild != want {
-		t.Fatalf("lease when build started = %q, want recovery path %q", heldAtBuild, want)
-	}
-}
-
-func resumeIndexForPath(t *testing.T, dir, path string) int {
-	t.Helper()
-	for i, session := range mergedResumeSessions(dir) {
-		if session.Path == path {
-			return i + 1
-		}
-	}
-	t.Fatalf("session %q not found in recent sessions", path)
-	return 0
 }
 
 // TestAdoptCarriedHistoryRefreshesLeadingSystemPrompt pins the fix for the
@@ -701,8 +172,7 @@ func TestAdoptCarriedHistoryRefreshesLeadingSystemPrompt(t *testing.T) {
 func TestAdoptCarriedHistoryRestoresSessionAuthorizations(t *testing.T) {
 	old := newOwnedTestController(t, control.Options{})
 	old.RestoreSessionAuthorizations(control.SessionAuthorizations{
-		Grants:                   []string{"bash|go test ./..."},
-		PlanModeReadOnlyCommands: []string{"go test ./..."},
+		Grants: []string{"bash|go test ./..."},
 	})
 
 	fresh := newOwnedTestController(t, control.Options{
@@ -717,9 +187,7 @@ func TestAdoptCarriedHistoryRestoresSessionAuthorizations(t *testing.T) {
 	if len(got.Grants) != 1 || got.Grants[0] != "bash|go test ./..." {
 		t.Fatalf("restored grants = %+v, want [\"bash|go test ./...\"]", got.Grants)
 	}
-	if len(got.PlanModeReadOnlyCommands) != 1 || got.PlanModeReadOnlyCommands[0] != "go test ./..." {
-		t.Fatalf("restored plan-mode read-only commands = %+v, want [\"go test ./...\"]", got.PlanModeReadOnlyCommands)
-	}
+
 }
 
 // TestAdoptCarriedHistoryPersistsRefreshedSystemPromptToDisk pins the disk

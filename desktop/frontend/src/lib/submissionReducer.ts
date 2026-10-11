@@ -251,7 +251,6 @@ export function startLocalSubmission(s: State, a: Extract<Action, { type: "user"
     live: undefined,
     streamAttemptJournal: undefined,
     streamInterruptNoticeShown: undefined,
-    deliveryRecoveryActive: Boolean(a.deliveryRecovery),
     discardTurn: false,
   };
   return beginLocalSubmission(next, {

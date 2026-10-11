@@ -20,7 +20,7 @@ func TestManagedConfigWriteApprovalIsFreshHuman(t *testing.T) {
 		t.Fatal("config_write should allow explicit session grants for one repair flow")
 	}
 
-	a := newApprovalManager(permission.Policy{}, ToolApprovalYolo, time.Minute)
+	a := newApprovalManager(permission.Policy{}, ToolApprovalDangerFullAccess, time.Minute)
 	subject := "write Deepzora config: /home/u/.deepzora/config.toml"
 	if a.preApprovedForDecision(ManagedConfigWriteApprovalTool, subject, nil, true) {
 		t.Fatal("YOLO posture must not pre-approve a managed config write")
@@ -44,7 +44,7 @@ func TestManagedConfigWriteApprovalIsFreshHuman(t *testing.T) {
 func TestApprovedPlanAutoAllowsFallbackButPreservesExplicitRules(t *testing.T) {
 	a := newApprovalManager(
 		permission.New("ask", nil, []string{"sensitive_writer", "Edit(secret.txt)"}, []string{"denied_writer"}),
-		ToolApprovalAsk,
+		ToolApprovalReadOnly,
 		time.Minute,
 	)
 	a.setPlanAutoApprove(true)

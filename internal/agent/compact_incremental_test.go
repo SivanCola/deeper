@@ -26,8 +26,7 @@ func TestIncrementalFoldSummarizesPriorDigestPlusNewWork(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "ok"},
 	}}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 50_000, CompactRatio: 0.5, RecentKeep: 2,
-	}, event.Discard)
+		ContextWindow: 50_000, CompactRatio: 0.5}, event.Discard)
 
 	if err := a.compact(context.Background(), CompactionTriggerManual, "", true); err != nil {
 		t.Fatalf("first compact: %v", err)
@@ -111,8 +110,7 @@ func TestRefoldIntoBodyKeepsUnfoldedBodyTail(t *testing.T) {
 	)
 	sess := &Session{Messages: msgs}
 	a := New(prov, tool.NewRegistry(), sess, Options{
-		ContextWindow: 5_000, CompactRatio: 0.5, RecentKeep: 5,
-	}, event.Discard)
+		ContextWindow: 5_000, CompactRatio: 0.5}, event.Discard)
 
 	// Prior projection of the visible-compression shape: the body freezes the
 	// whole view through the kept user turns; only [tail wall, go, ok] splice.

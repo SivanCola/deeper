@@ -44,18 +44,6 @@ import (
 	_ "deepzora/internal/provider/openai"
 )
 
-func TestAgentKeepPolicyFromConfig(t *testing.T) {
-	if got := agentKeepPolicy(nil); got != agent.KeepErrors|agent.KeepUserMarked {
-		t.Fatalf("nil keep policy = %v, want KeepErrors|KeepUserMarked", got)
-	}
-	if got := agentKeepPolicy([]string{}); got != 0 {
-		t.Fatalf("empty keep policy = %v, want 0", got)
-	}
-	if got := agentKeepPolicy([]string{"errors", "user_marked"}); got != agent.KeepErrors|agent.KeepUserMarked {
-		t.Fatalf("combined keep policy = %v, want errors|user_marked", got)
-	}
-}
-
 // TestBuildFoldsProjectMemoryIntoSystemPrompt is the end-to-end proof of the
 // cache-first wiring: a project DEEPZORA.md is discovered at boot and folded
 // into the session's system message (the cached prefix), and the `remember`
@@ -74,7 +62,7 @@ system_prompt = "BASE SYSTEM PROMPT"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -120,7 +108,7 @@ system_prompt = "BASE"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -184,7 +172,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-retrieval-tool-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -405,7 +393,6 @@ func firstTokenProfileRequest(t *testing.T, tokenMode string) provider.Request {
 
 	opts := Options{Sink: event.Discard}
 	if tokenMode != "" {
-		opts.TokenMode = tokenMode
 	}
 	ctrl, err := Build(context.Background(), opts)
 	if err != nil {
@@ -430,7 +417,6 @@ func captureTokenProfileSurface(t *testing.T, tokenMode string) (provider.Reques
 
 	opts := Options{Sink: event.Discard}
 	if tokenMode != "" {
-		opts.TokenMode = tokenMode
 	}
 	ctrl, err := Build(context.Background(), opts)
 	if err != nil {
@@ -464,7 +450,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-subagent-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -534,7 +520,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-subagent-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -589,7 +575,7 @@ reasoning_language = "zh"
 [[providers]]
 name = "test-model"
 kind = "boot-subagent-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -633,7 +619,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-subagent-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -675,7 +661,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-subagent-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -711,7 +697,7 @@ model = "x"
 	if !requestToolSchemaContains(parentReq, shellName, "run_in_background") {
 		t.Fatalf("parent %s schema should include run_in_background", shellName)
 	}
-	for _, hidden := range []string{"task", "run_skill", "read_only_skill", "read_skill", "install_skill", "install_source", "explore", "research", "review", "security_review", "job_output", "job_kill", "wait", "bash_output", "kill_shell"} {
+	for _, hidden := range []string{"task", "run_skill", "read_only_skill", "read_skill", "install_skill", "install_source", "explore", "research", "review", "security_review", "job_output", "job_kill", "wait", "job_output", "kill_shell"} {
 		if requestHasTool(subReq, hidden) {
 			t.Fatalf("skill subagent request should hide %q; tools=%v", hidden, toolSchemaNames(subReq.Tools))
 		}
@@ -766,12 +752,11 @@ func TestBuildRunSkillSubagentRegistryHonorsReadOnlyFlag(t *testing.T) {
 default_model = "test-model"
 [agent]
 system_prompt = "BASE"
-completion_validation = "off"
 
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	writeFile(t, dir, ".deepzora/skills/wskill.md",
@@ -1003,7 +988,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-headless-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -1057,7 +1042,7 @@ default_model = "test-model"
 [[providers]]
 name = "test-model"
 kind = "boot-headless-test"
-model = "x"
+models = ["x"]
 `)
 			approveWorkspace(t, dir)
 			writeFile(t, dir, "marker.txt", "dummy hook probe")
@@ -1243,7 +1228,7 @@ ask = ["write_file"]
 [[providers]]
 name = "test-model"
 kind = "boot-headless-write-test"
-model = "x"
+models = ["x"]
 `)
 		approveWorkspace(t, dir)
 
@@ -1290,7 +1275,7 @@ system_prompt = "GLOBAL"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `), 0o644); err != nil {
 		t.Fatalf("write user config: %v", err)
@@ -1308,7 +1293,7 @@ system_prompt = "PROJECT"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -1345,10 +1330,10 @@ func TestRecoveryHeadlessModeUsesExplicitFrontendCapability(t *testing.T) {
 	if recoveryHeadlessMode(Options{ApprovalTimeout: time.Minute}) {
 		t.Fatal("a bounded bot approval timeout must not make recovery headless")
 	}
-	if !recoveryHeadlessMode(Options{HeadlessApprovalMode: control.ToolApprovalAuto}) {
+	if !recoveryHeadlessMode(Options{HeadlessApprovalMode: control.ToolApprovalWorkspaceWrite}) {
 		t.Fatal("deepzora run Auto mode must fail closed instead of waiting for a card")
 	}
-	if !recoveryHeadlessMode(Options{HeadlessApprovalMode: control.ToolApprovalAsk}) {
+	if !recoveryHeadlessMode(Options{HeadlessApprovalMode: control.ToolApprovalReadOnly}) {
 		t.Fatal("all explicit headless permission modes must use the non-waiting recovery path")
 	}
 }
@@ -1383,7 +1368,7 @@ ask = ["write_file"]
 [[providers]]
 name = "test-model"
 kind = "boot-headless-write-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -1393,13 +1378,13 @@ model = "x"
 	}
 	defer ctrl.Close()
 
-	ctrl.SetToolApprovalMode("auto")
+	ctrl.SetToolApprovalMode("workspace-write")
 
 	if err := ctrl.Run(context.Background(), "use a task subagent to write a file"); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(filepath.Join(dir, "sub.txt")); statErr == nil {
-		t.Fatal("auto (interactive mode switch): task sub-agent wrote sub.txt despite the explicit ask rule on write_file")
+		t.Fatal("auto (interactive mode switch): task sub-agent wrote sub.txt despite the explicit deny rule on write_file")
 	}
 }
 
@@ -1566,7 +1551,7 @@ func TestNewProviderAppliesOfficialKimiK3RequestContract(t *testing.T) {
 		Name:              "kimi-cn",
 		Kind:              "openai",
 		BaseURL:           "https://api.moonshot.cn/v1",
-		ChatURL:           srv.URL,
+		RequestURL:        srv.URL,
 		Model:             "kimi-k3",
 		ReasoningProtocol: config.ReasoningProtocolOpenAI,
 		SupportedEfforts:  []string{"low", "high", "max"},
@@ -1611,7 +1596,7 @@ func TestNewProviderPropagatesConfiguredMaxOutputTokens(t *testing.T) {
 
 	p, err := NewProvider(&config.ProviderEntry{
 		Name: "openai", Kind: "openai", BaseURL: "https://api.openai.com/v1",
-		ChatURL: "https://legacy.invalid/chat/completions/", RequestURL: srv.URL, Model: "o3", MaxOutputTokens: 4096,
+		RequestURL: srv.URL, Model: "o3", MaxOutputTokens: 4096,
 	})
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
@@ -1684,7 +1669,7 @@ func TestNewProviderBuildsDeepSeekAnthropicPreset(t *testing.T) {
 	if err := cfg.UpsertProvider(preset.Entries[0]); err != nil {
 		t.Fatalf("UpsertProvider: %v", err)
 	}
-	entry, ok := cfg.ResolveModel("deepseek-anthropic/deepseek-v4-flash")
+	entry, ok := cfg.ResolveModel("deepseek-anthropic/" + preset.Entries[0].Models[0])
 	if !ok {
 		t.Fatal("ResolveModel failed")
 	}
@@ -1709,12 +1694,12 @@ func TestNewProviderAllowsExplicitUnknownDeepSeekVisionModel(t *testing.T) {
 	defer srv.Close()
 
 	p, err := NewProvider(&config.ProviderEntry{
-		Name:         "deepseek",
-		Kind:         "openai",
-		BaseURL:      "https://api.deepseek.com",
-		ChatURL:      srv.URL,
-		Model:        "deepseek-v5-vision",
-		VisionModels: []string{"deepseek-v5-vision"},
+		Name:           "deepseek",
+		Kind:           "openai",
+		BaseURL:        "https://api.deepseek.com",
+		RequestURL:     srv.URL,
+		Model:          "deepseek-v5-vision",
+		ModelOverrides: map[string]config.ProviderModelOverride{"deepseek-v5-vision": {Vision: new(true)}},
 	})
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
@@ -1765,7 +1750,7 @@ default_model = "test-model"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -1803,7 +1788,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	writeFile(t, dir, ".deepzora/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
@@ -1889,7 +1874,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	pluginRoot := filepath.Join(deepzoraHome, "plugins", "superpowers")
@@ -1955,160 +1940,6 @@ model = "x"
 	}
 }
 
-func TestBuildTokenFullMatchesDefaultRequestPrefix(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "boot-token-profile-test"
-model = "x"
-`)
-	approveWorkspace(t, dir)
-	writeFile(t, dir, ".deepzora/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
-
-	defaultReq := firstTokenProfileRequest(t, "")
-	fullReq := firstTokenProfileRequest(t, TokenModeFull)
-
-	if got, want := systemMessage(defaultReq.Messages), systemMessage(fullReq.Messages); got != want {
-		t.Fatalf("explicit full mode changed the system prompt\n--- default ---\n%s\n--- full ---\n%s", got, want)
-	}
-	if strings.Contains(systemMessage(fullReq.Messages), tokenEconomyPrompt) {
-		t.Fatalf("full mode system prompt should not include token economy prompt:\n%s", systemMessage(fullReq.Messages))
-	}
-	if !strings.Contains(systemMessage(fullReq.Messages), "# Skills") || strings.Contains(systemMessage(fullReq.Messages), "projskill") {
-		t.Fatalf("full mode should keep only skills policy in system:\n%s", systemMessage(fullReq.Messages))
-	}
-	if contextBlock := sessionContextMessage(fullReq.Messages); !strings.Contains(contextBlock, "projskill") {
-		t.Fatalf("full mode should publish the skills catalog in session context:\n%s", contextBlock)
-	}
-	if got, want := toolSchemaNames(fullReq.Tools), toolSchemaNames(defaultReq.Tools); !reflect.DeepEqual(got, want) {
-		t.Fatalf("explicit full mode changed tool schema order\nfull=%v\ndefault=%v", got, want)
-	}
-	if !reflect.DeepEqual(fullReq.Tools, defaultReq.Tools) {
-		t.Fatalf("explicit full mode changed provider-visible tool schemas; names=%v", toolSchemaNames(fullReq.Tools))
-	}
-	if requestHasTool(fullReq, "connect_tool_source") {
-		t.Fatalf("full mode should not expose economy connector; tools=%v", toolSchemaNames(fullReq.Tools))
-	}
-}
-
-func TestBuildTokenBalancedAliasMatchesDefaultRequestPrefix(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "boot-token-profile-test"
-model = "x"
-`)
-	approveWorkspace(t, dir)
-
-	defaultReq := firstTokenProfileRequest(t, "")
-	balancedReq := firstTokenProfileRequest(t, "balanced")
-	if !reflect.DeepEqual(withoutMessageIDs(balancedReq.Messages), withoutMessageIDs(defaultReq.Messages)) {
-		t.Fatal("balanced alias changed provider-visible messages")
-	}
-	if !reflect.DeepEqual(balancedReq.Tools, defaultReq.Tools) {
-		t.Fatal("balanced alias changed provider-visible tool schemas")
-	}
-}
-
-func TestNormalizeTokenModeSupportsRuntimeProfilesAndLegacyAliases(t *testing.T) {
-	// NormalizeTokenMode remains the dual-write legacy mapping; light folds
-	// to full because standard already runs light work lightly.
-	for input, want := range map[string]string{
-		"":           TokenModeFull,
-		"full":       TokenModeFull,
-		"standard":   TokenModeFull,
-		"balanced":   TokenModeFull,
-		"economy":    TokenModeFull,
-		"eco":        TokenModeFull,
-		"light":      TokenModeFull,
-		"lite":       TokenModeFull,
-		"delivery":   TokenModeFull,
-		"quality":    TokenModeFull,
-		"unexpected": TokenModeFull,
-	} {
-		if got := NormalizeTokenMode(input); got != want {
-			t.Errorf("NormalizeTokenMode(%q) = %q, want %q", input, got, want)
-		}
-	}
-	for input, want := range map[string]string{
-		"":         AgentPresetStandard,
-		"full":     AgentPresetStandard,
-		"standard": AgentPresetStandard,
-		"balanced": AgentPresetStandard,
-		"economy":  AgentPresetStandard,
-		"light":    AgentPresetStandard,
-		"delivery": AgentPresetStandard,
-	} {
-		if got := NormalizeAgentPreset(input); got != want {
-			t.Errorf("NormalizeAgentPreset(%q) = %q, want %q", input, got, want)
-		}
-	}
-}
-
-func TestBuildTokenDeliverySharesUnifiedSurfaceAndExecutionPolicy(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "boot-token-profile-test"
-model = "x"
-`)
-	approveWorkspace(t, dir)
-
-	fullReq := firstTokenProfileRequest(t, TokenModeFull)
-	deliveryReq := firstTokenProfileRequest(t, TokenModeDelivery)
-	fullSystem := systemMessage(fullReq.Messages)
-	deliverySystem := systemMessage(deliveryReq.Messages)
-	if fullSystem != deliverySystem {
-		t.Fatal("delivery must share the balanced system prompt (no mode-specific injection)")
-	}
-	if strings.Contains(deliverySystem, tokenDeliveryPrompt) || strings.Contains(deliverySystem, tokenEconomyPrompt) {
-		t.Fatalf("role settings must not inject mode-specific system prompts:\n%s", deliverySystem)
-	}
-	if !requestHasTool(deliveryReq, "use_capability") || !requestHasTool(fullReq, "use_capability") {
-		t.Fatal("every role setting must expose use_capability")
-	}
-	if !reflect.DeepEqual(toolSchemaNames(fullReq.Tools), toolSchemaNames(deliveryReq.Tools)) {
-		t.Fatalf("delivery tools diverged from balanced\nfull=%v\ndelivery=%v", toolSchemaNames(fullReq.Tools), toolSchemaNames(deliveryReq.Tools))
-	}
-	if requestHasTool(deliveryReq, "connect_tool_source") {
-		t.Fatal("legacy token-mode inputs must not expose a connector")
-	}
-	if requestMessageContains(fullReq.Messages, provider.RoleUser, "<execution-policy") ||
-		requestMessageContains(deliveryReq.Messages, provider.RoleUser, "<execution-policy") {
-		t.Fatal("new turns must not inject execution-policy")
-	}
-	if requestMessageContains(deliveryReq.Messages, provider.RoleUser, "<delivery-runtime>") {
-		t.Fatal("delivery-runtime marker is retired")
-	}
-}
-
 func TestBuildBalancedDualModelAddsStableProxyToExecutor(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
@@ -2127,7 +1958,7 @@ func TestBuildBalancedDualModelAddsStableProxyToExecutor(t *testing.T) {
 [[providers]]
 name = "planner"
 kind = "boot-token-profile-test"
-model = "planner-model"`
+models = ["planner-model"]`
 		}
 		writeFile(t, dir, "deepzora.toml", fmt.Sprintf(`
 default_model = "executor"
@@ -2139,7 +1970,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "executor-model"%s
+models = ["executor-model"]%s
 `, plannerLine, plannerProvider))
 		approveWorkspace(t, dir)
 	}
@@ -2189,7 +2020,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 			approveWorkspace(t, dir)
 
@@ -2225,7 +2056,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -2264,7 +2095,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
@@ -2294,11 +2125,11 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
-	fullReq, _ := captureTokenProfileSurface(t, TokenModeFull)
+	fullReq, _ := captureTokenProfileSurface(t, "standard")
 	economyReq, _ := captureTokenProfileSurface(t, "economy")
 	doc, err := os.ReadFile(filepath.Join(pkgDir, "..", "..", "docs", "TOOL_CONTRACT.md"))
 	if err != nil {
@@ -2360,76 +2191,6 @@ func platformShellToolName() string {
 	return "bash"
 }
 
-func TestBuildTokenEconomyStartsWithLeanToolSurface(t *testing.T) {
-	// Light (legacy economy) shares the unified provider-visible surface with
-	// Balanced/Delivery: core tools + host-control + use_capability.
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	registerBootTokenProfileTestProvider()
-	prov := testutil.NewMock("token-economy", testutil.Turn{Text: "done"})
-	setBootTokenProfileTestProvider(t, prov)
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "boot-token-profile-test"
-model = "x"
-
-[[plugins]]
-name = "mockmcp"
-command = "deepzora-missing-mockmcp"
-`)
-	approveWorkspace(t, dir)
-	writeFile(t, dir, ".deepzora/skills/projskill.md", "---\ndescription: a project skill\n---\nplaybook")
-
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, TokenMode: "economy"})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-	if err := ctrl.Run(context.Background(), "use the lean surface"); err != nil {
-		t.Fatalf("Run: %v", err)
-	}
-	reqs := mainConversationRequests(prov.Requests())
-	if len(reqs) != 1 {
-		t.Fatalf("requests = %d, want 1", len(reqs))
-	}
-	req := reqs[0]
-	wantTools := unifiedBootToolNames()
-	if got := toolSchemaNames(req.Tools); !reflect.DeepEqual(got, wantTools) {
-		t.Fatalf("light first request tool order changed\ngot  %v\nwant %v", got, wantTools)
-	}
-	for _, want := range []string{"compress", "use_capability", "read_file", "edit_file", "write_file", platformShellToolName(), "ask"} {
-		if !requestHasTool(req, want) {
-			t.Fatalf("light first request missing tool %q; tools=%v", want, toolSchemaNames(req.Tools))
-		}
-	}
-	for _, forbidden := range []string{
-		"connect_tool_source", "web_fetch", "task", "read_only_task", "read_only_skill", "run_skill", "read_skill", "install_skill", "install_source",
-		"explore", "research", "review", "security_review",
-		"lsp_definition", "lsp_references", "lsp_hover", "lsp_diagnostics",
-		"code_index", "glob", "grep", "ls", "move_file", "multi_edit",
-		"docs", "history", "list_sessions", "read_session", "set_session_title", "memory", "remember", "forget", "slash_command",
-	} {
-		if requestHasTool(req, forbidden) {
-			t.Fatalf("light first request should hide %q; tools=%v", forbidden, toolSchemaNames(req.Tools))
-		}
-	}
-	if requestHasToolPrefix(req, "mcp__mockmcp") {
-		t.Fatalf("light first request should not expose MCP placeholders; tools=%v", toolSchemaNames(req.Tools))
-	}
-	sys := systemMessage(req.Messages)
-	if strings.Contains(sys, tokenEconomyPrompt) || strings.Contains(sys, tokenDeliveryPrompt) {
-		t.Fatalf("role settings must not inject mode-specific system prompts:\n%s", sys)
-	}
-}
-
 func TestUseCapabilityDispatchesOptionalToolsWithoutSchemaGrowth(t *testing.T) {
 	// Replaces the retired connect_tool_source on-demand source matrix: optional
 	// tools stay off the provider-visible surface and dispatch through use_capability.
@@ -2446,7 +2207,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
@@ -2482,7 +2243,7 @@ model = "x"
 				testutil.Turn{Text: "done"},
 			)
 			setBootTokenProfileTestProvider(t, prov)
-			ctrl, err := Build(context.Background(), Options{Sink: event.Discard, TokenMode: "economy"})
+			ctrl, err := Build(context.Background(), Options{Sink: event.Discard})
 			if err != nil {
 				t.Fatalf("Build: %v", err)
 			}
@@ -2514,65 +2275,6 @@ model = "x"
 	}
 }
 
-func TestUseCapabilitySurfaceStableAcrossRoleSettings(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "boot-token-profile-test"
-model = "x"
-`)
-	approveWorkspace(t, dir)
-	registerBootTokenProfileTestProvider()
-	var base []string
-	for _, mode := range []string{"economy", TokenModeFull, TokenModeDelivery, "light", "balanced"} {
-		prov := testutil.NewMock("stable-"+mode, testutil.Turn{Text: "done"})
-		setBootTokenProfileTestProvider(t, prov)
-		ctrl, err := Build(context.Background(), Options{Sink: event.Discard, TokenMode: mode, AgentPreset: mode})
-		if err != nil {
-			t.Fatalf("Build(%q): %v", mode, err)
-		}
-		if err := ctrl.Run(context.Background(), "hi"); err != nil {
-			ctrl.Close()
-			t.Fatalf("Run(%q): %v", mode, err)
-		}
-		names := toolSchemaNames(prov.Requests()[0].Tools)
-		if requestHasTool(prov.Requests()[0], "connect_tool_source") {
-			ctrl.Close()
-			t.Fatalf("%q still exposes connect_tool_source", mode)
-		}
-		if !requestHasTool(prov.Requests()[0], "use_capability") {
-			ctrl.Close()
-			t.Fatalf("%q missing use_capability: %v", mode, names)
-		}
-		// Hidden tools remain dispatchable through the host registry.
-		reg := map[string]bool{}
-		for _, e := range ctrl.AllToolContractEntries() {
-			reg[e.Name] = true
-		}
-		for _, hidden := range []string{"grep", "glob", "ls", "web_fetch"} {
-			if !reg[hidden] {
-				ctrl.Close()
-				t.Fatalf("%q registry missing %q for use_capability dispatch", mode, hidden)
-			}
-		}
-		if base == nil {
-			base = names
-		} else if !reflect.DeepEqual(base, names) {
-			ctrl.Close()
-			t.Fatalf("provider surface diverged for %q\nbase=%v\ngot=%v", mode, base, names)
-		}
-		ctrl.Close()
-	}
-}
-
 func TestUseCapabilityWorksInPlanMode(t *testing.T) {
 	isolateConfigHome(t)
 	dir := robustTempDir(t)
@@ -2587,7 +2289,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 	registerBootTokenProfileTestProvider()
@@ -2624,57 +2326,14 @@ model = "x"
 	}
 }
 
-func TestBuildLegacyPlanModeReadOnlyCommandsDoesNotEmitGateWarning(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	registerBootTokenProfileTestProvider()
-	prov := testutil.NewMock("plan-mode-read-only-commands", testutil.Turn{Text: "done"})
-	setBootTokenProfileTestProvider(t, prov)
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-plan_mode_read_only_commands = ["bash", "gh issue view"]
-
-[[providers]]
-name = "test-model"
-kind = "boot-token-profile-test"
-model = "x"
-`)
-	approveWorkspace(t, dir)
-
-	var notices []event.Event
-	sink := event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e)
-		}
-	})
-
-	ctrl, err := Build(context.Background(), Options{Sink: sink})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-
-	for _, notice := range notices {
-		if strings.Contains(notice.Text, "plan-mode command") || strings.Contains(notice.Detail, "plan_mode_read_only_commands") {
-			t.Fatalf("legacy Plan command setting emitted obsolete gate warning: %+v", notice)
-		}
-	}
-}
-
 func TestAddBuiltinsWithWorkspaceRootKeepsSessionTools(t *testing.T) {
 	reg := tool.NewRegistry()
 	var stderr bytes.Buffer
 	addBuiltins(reg, nil, []string{robustTempDir(t)}, nil, sandbox.Spec{}, 120*time.Second, builtin.SearchSpec{}, &stderr, robustTempDir(t), netclient.ProxySpec{}, nil, nil, builtin.SessionDataGuard{}, builtin.ManagedConfigPaths{}, nil, nil, nil, nil)
 	for _, name := range []string{
 		"todo_write",
-		"bash_output",
-		"kill_shell",
-		"wait",
+		"job_output",
+		"job_kill",
 		"move_file",
 		"notebook_edit",
 	} {
@@ -2703,7 +2362,7 @@ disabled_skills = ["projskill", "review"]
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -2755,7 +2414,7 @@ excluded_paths = [%q]
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `, excluded))
 	approveWorkspace(t, dir)
@@ -2799,7 +2458,7 @@ system_prompt = "JUST THE BASE"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -2835,7 +2494,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 		approveWorkspace(t, dir)
 	}
@@ -2903,7 +2562,7 @@ system_prompt = "BASE"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -2933,7 +2592,7 @@ system_prompt = "BASE"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -3294,60 +2953,6 @@ func TestRememberPermissionRuleEmptyRootFilesUnderTheWorkingDirectory(t *testing
 	}
 }
 
-func TestRememberPlanModeReadOnlyCommandUsesWorkspaceRoot(t *testing.T) {
-	home := robustTempDir(t)
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("AppData", filepath.Join(home, "AppData"))
-
-	cwd := robustTempDir(t)
-	workspace := robustTempDir(t)
-	t.Chdir(cwd)
-	writeFile(t, cwd, "deepzora.toml", `
-[agent]
-plan_mode_read_only_commands = ["cwd query"]
-`)
-	approveWorkspace(t, cwd)
-	writeFile(t, workspace, "deepzora.toml", `
-[agent]
-plan_mode_read_only_commands = ["workspace query"]
-`)
-	approveWorkspace(t, workspace)
-
-	res := rememberPlanModeReadOnlyCommand(workspace, "gh issue view")
-	if !res.Saved || res.Path != filepath.Join(workspace, "deepzora.toml") {
-		t.Fatalf("remember result = %+v, want saved to workspace config", res)
-	}
-
-	cwdCfg := config.LoadForEdit(filepath.Join(cwd, "deepzora.toml"))
-	if hasPlanModeReadOnlyCommand(cwdCfg.Agent.PlanModeReadOnlyCommands, "gh issue view") {
-		t.Fatalf("remembered command was written to cwd config: %v", cwdCfg.Agent.PlanModeReadOnlyCommands)
-	}
-	workspaceCfg := config.LoadForEdit(filepath.Join(workspace, "deepzora.toml"))
-	if !hasPlanModeReadOnlyCommand(workspaceCfg.Agent.PlanModeReadOnlyCommands, "gh issue view") {
-		t.Fatalf("remembered command missing from workspace config: %v", workspaceCfg.Agent.PlanModeReadOnlyCommands)
-	}
-}
-
-func TestRememberPlanModeReadOnlyCommandSkipsCoveredPrefix(t *testing.T) {
-	workspace := robustTempDir(t)
-	writeFile(t, workspace, "deepzora.toml", `
-[agent]
-plan_mode_read_only_commands = ["gh issue view"]
-`)
-	approveWorkspace(t, workspace)
-
-	res := rememberPlanModeReadOnlyCommand(workspace, "gh issue view 5867")
-	if res.Saved || res.CoveredBy != "gh issue view" {
-		t.Fatalf("remember result = %+v, want already covered", res)
-	}
-	cfg := config.LoadForEdit(filepath.Join(workspace, "deepzora.toml"))
-	if len(cfg.Agent.PlanModeReadOnlyCommands) != 1 || cfg.Agent.PlanModeReadOnlyCommands[0] != "gh issue view" {
-		t.Fatalf("plan-mode read-only commands = %v, want only existing prefix", cfg.Agent.PlanModeReadOnlyCommands)
-	}
-}
-
 func hasPermissionRule(rules []string, want string) bool {
 	return slices.Contains(rules, want)
 }
@@ -3359,344 +2964,6 @@ func hasPlanModeReadOnlyCommand(commands []string, want string) bool {
 		}
 	}
 	return false
-}
-
-// TestBuildMigratesLegacyConfigEndToEnd drives the real boot path: a v0.x
-// ~/.deepzora/config.json with no v1+ config present must be imported during
-// Build — config written, key pinned into the env, and the user told via a notice.
-func TestBuildMigratesLegacyConfigEndToEnd(t *testing.T) {
-	home := robustTempDir(t)
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)                               // os.UserHomeDir on Windows
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config")) // os.UserConfigDir on Linux
-	t.Setenv("AppData", filepath.Join(home, "AppData"))         // os.UserConfigDir on Windows
-	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
-	t.Setenv("DEEPSEEK_API_KEY", "") // track for cleanup; migration os.Setenv's it live
-
-	proj := robustTempDir(t)
-	t.Chdir(proj)
-	// Project config merges over the migrated user config without dropping the
-	// migrated plugins.
-	writeFile(t, proj, "deepzora.toml", "")
-	approveWorkspace(t, proj)
-	writeFile(t, filepath.Join(home, ".deepzora"), "config.json",
-		`{"apiKey":"sk-e2e","lang":"zh","mcpServers":{"fs":{"command":"npx","args":["-y","server-fs"]}}}`)
-	writeFile(t, filepath.Join(home, ".deepzora", "sessions"), "chat-1.events.jsonl",
-		`{"type":"user.message","id":1,"ts":"t","turn":0,"text":"hello from v0.x"}`+"\n"+
-			`{"type":"model.final","id":2,"ts":"t","turn":0,"content":"hi","toolCalls":[],"usage":{},"costUsd":0}`+"\n")
-
-	var notices []string
-	sink := event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e.Text)
-		}
-	})
-
-	ctrl, err := Build(context.Background(), Options{Sink: sink})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-
-	migrated := false
-	for _, n := range notices {
-		if strings.Contains(n, "migrated your previous configuration") {
-			migrated = true
-		}
-	}
-	if !migrated {
-		t.Fatalf("no migration notice emitted; got %v", notices)
-	}
-
-	dest := config.UserConfigPath()
-	data, err := os.ReadFile(dest)
-	if err != nil {
-		t.Fatalf("v2 config not written to %s: %v", dest, err)
-	}
-	if !strings.Contains(string(data), `name    = "fs"`) || !strings.Contains(string(data), `language      = "zh"`) {
-		t.Errorf("migrated config missing plugin/lang:\n%s", data)
-	}
-
-	if got := os.Getenv("DEEPSEEK_API_KEY"); got != "sk-e2e" {
-		t.Errorf("DEEPSEEK_API_KEY not pinned into env after migration: %q", got)
-	}
-
-	if data, err := os.ReadFile(config.UserCredentialsPath()); err != nil || !strings.Contains(string(data), "DEEPSEEK_API_KEY=sk-e2e") {
-		t.Errorf("credentials store missing migrated key: %q (err %v)", data, err)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".env")); !os.IsNotExist(err) {
-		t.Errorf("migration must not write the user's ~/.env, stat err=%v", err)
-	}
-
-	sessionImported := false
-	for _, n := range notices {
-		if strings.Contains(n, "imported") && strings.Contains(n, "past session") {
-			sessionImported = true
-		}
-	}
-	if !sessionImported {
-		t.Errorf("no session-import notice emitted; got %v", notices)
-	}
-	migratedSession := filepath.Join(config.SessionDir(), "chat-1.jsonl")
-	if _, err := os.Stat(migratedSession); err != nil {
-		t.Errorf("legacy session not imported to %s: %v", migratedSession, err)
-	}
-}
-
-func TestBuildMigratesDeprecatedAgentStepLimitsWithOneNotice(t *testing.T) {
-	home := isolateConfigHome(t)
-	t.Setenv("DEEPZORA_HOME", filepath.Join(home, "deepzora-home"))
-	project := robustTempDir(t)
-	configPath := filepath.Join(project, "deepzora.toml")
-	writeFile(t, project, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-max_steps = 3
-planner_max_steps = 4
-
-[[providers]]
-name = "test-model"
-kind = "openai"
-base_url = "https://example.invalid"
-model = "x"
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-`)
-	approveWorkspace(t, project)
-
-	var notices []event.Event
-	sink := event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e)
-		}
-	})
-	build := func() {
-		t.Helper()
-		ctrl, err := Build(context.Background(), Options{Sink: sink, WorkspaceRoot: project})
-		if err != nil {
-			t.Fatalf("Build: %v", err)
-		}
-		ctrl.Close()
-	}
-
-	build()
-	migrationNotices := 0
-	for _, notice := range notices {
-		if notice.Text == "Deprecated agent step limits were removed." {
-			migrationNotices++
-			if notice.Level != event.LevelInfo || !strings.Contains(notice.Detail, "--max-steps") || !strings.Contains(notice.Detail, "[bot].max_steps") {
-				t.Fatalf("migration notice = %+v", notice)
-			}
-		}
-	}
-	if migrationNotices != 1 {
-		t.Fatalf("migration notices = %d, want 1; got %+v", migrationNotices, notices)
-	}
-	raw, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), "planner_max_steps") || strings.Contains(string(raw), "\nmax_steps = 3") {
-		t.Fatalf("deprecated agent step limits remain after boot:\n%s", raw)
-	}
-
-	notices = nil
-	build()
-	for _, notice := range notices {
-		if strings.Contains(notice.Text, "Deprecated agent step") {
-			t.Fatalf("second boot repeated migration notice: %+v", notice)
-		}
-	}
-}
-
-func TestBuildMigratesDeprecatedRedactToolOutputWithOneNotice(t *testing.T) {
-	home := isolateConfigHome(t)
-	t.Setenv("DEEPZORA_HOME", filepath.Join(home, "deepzora-home"))
-	project := robustTempDir(t)
-	configPath := filepath.Join(project, "deepzora.toml")
-	writeFile(t, project, "deepzora.toml", `
-default_model = "test-model"
-
-[secrets]
-redact_tool_output = true
-
-[[providers]]
-name = "test-model"
-kind = "openai"
-base_url = "https://example.invalid"
-model = "x"
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-`)
-	approveWorkspace(t, project)
-
-	var notices []event.Event
-	sink := event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e)
-		}
-	})
-	build := func() {
-		t.Helper()
-		ctrl, err := Build(context.Background(), Options{Sink: sink, WorkspaceRoot: project})
-		if err != nil {
-			t.Fatalf("Build: %v", err)
-		}
-		ctrl.Close()
-	}
-
-	build()
-	migrationNotices := 0
-	for _, notice := range notices {
-		if notice.Text == "Deprecated redact_tool_output setting was removed." {
-			migrationNotices++
-			if notice.Level != event.LevelInfo || !strings.Contains(notice.Detail, "doctor redact-sessions") {
-				t.Fatalf("migration notice = %+v", notice)
-			}
-		}
-	}
-	if migrationNotices != 1 {
-		t.Fatalf("migration notices = %d, want 1; got %+v", migrationNotices, notices)
-	}
-	raw, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), "redact_tool_output") {
-		t.Fatalf("deprecated redact_tool_output remains after boot:\n%s", raw)
-	}
-
-	notices = nil
-	build()
-	for _, notice := range notices {
-		if strings.Contains(notice.Text, "redact_tool_output") {
-			t.Fatalf("second boot repeated migration notice: %+v", notice)
-		}
-	}
-}
-
-func TestBuildMigratesLegacySessionsFromConfigSessionDir(t *testing.T) {
-	home := robustTempDir(t)
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
-	t.Setenv("AppData", filepath.Join(home, "AppData"))
-
-	proj := robustTempDir(t)
-	writeFile(t, proj, "deepzora.toml", "")
-	approveWorkspace(t, proj)
-
-	legacyConfig := config.LegacyUserConfigPath()
-	if legacyConfig == "" {
-		t.Skip("legacy OS config path matches primary path on this platform")
-	}
-	legacyDir := filepath.Join(filepath.Dir(legacyConfig), "sessions")
-	writeFile(t, legacyDir, "custom-root.events.jsonl",
-		`{"type":"user.message","id":1,"ts":"t","turn":0,"text":"hello from redirected config root"}`+"\n"+
-			`{"type":"model.final","id":2,"ts":"t","turn":0,"content":"hi from redirected root","toolCalls":[],"usage":{},"costUsd":0}`+"\n")
-
-	var notices []string
-	sink := event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice {
-			notices = append(notices, e.Text)
-		}
-	})
-
-	// Pass the project root via WorkspaceRoot instead of t.Chdir: changing the
-	// process cwd into a t.TempDir makes Windows refuse to remove that dir during
-	// test cleanup (the cwd counts as "in use"), which is the only thing this test
-	// failed on. WorkspaceRoot loads the same config without touching the cwd.
-	ctrl, err := Build(context.Background(), Options{Sink: sink, WorkspaceRoot: proj})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-
-	sessionPath := filepath.Join(config.SessionDir(), "custom-root.jsonl")
-	data, err := os.ReadFile(sessionPath)
-	if err != nil {
-		t.Fatalf("legacy config-root session not imported to %s: %v", sessionPath, err)
-	}
-	if !strings.Contains(string(data), "hello from redirected config root") {
-		t.Fatalf("migrated session missing legacy content:\n%s", data)
-	}
-	if _, err := os.Stat(filepath.Join(config.SessionDir(), ".legacy-imported.v0-events-config")); err != nil {
-		t.Fatalf("config-root legacy import marker missing: %v", err)
-	}
-	sessionImported := false
-	for _, n := range notices {
-		if strings.Contains(n, "imported") && strings.Contains(n, "past session") && strings.Contains(n, legacyDir) {
-			sessionImported = true
-		}
-	}
-	if !sessionImported {
-		t.Errorf("no config-root session-import notice emitted; got %v", notices)
-	}
-}
-
-func TestBuildSkipsLegacySessionMigrationWhenIsolated(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("legacy XDG paths are Unix-only")
-	}
-	home := robustTempDir(t)
-	xdg := filepath.Join(home, "xdg-config")
-	deepzoraHome := filepath.Join(home, "rx-home")
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("XDG_CONFIG_HOME", xdg)
-	t.Setenv("DEEPZORA_HOME", deepzoraHome)
-
-	proj := robustTempDir(t)
-	writeFile(t, proj, "deepzora.toml", "[codegraph]\nenabled = false\n")
-	approveWorkspace(t, proj)
-
-	legacyRoot := filepath.Join(xdg, "deepzora")
-	writeFile(t, filepath.Join(legacyRoot, "sessions"), "xdg-flat.events.jsonl",
-		`{"type":"user.message","id":1,"ts":"t","turn":0,"text":"hello from xdg"}`+"\n"+
-			`{"type":"model.final","id":2,"ts":"t","turn":0,"content":"hi from xdg","toolCalls":[],"usage":{},"costUsd":0}`+"\n")
-
-	slug := config.WorkspaceSlug(proj)
-	legacyProjectDir := filepath.Join(legacyRoot, "projects", slug, "sessions")
-	session := agent.NewSession("")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "hello from old project session"})
-	if err := session.Save(filepath.Join(legacyProjectDir, "project-chat.jsonl")); err != nil {
-		t.Fatalf("save legacy project session: %v", err)
-	}
-
-	ctrl, err := Build(context.Background(), Options{WorkspaceRoot: proj})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-
-	if _, err := os.Stat(filepath.Join(config.SessionDir(), "xdg-flat.jsonl")); !os.IsNotExist(err) {
-		t.Fatal("legacy XDG flat session was imported but must not be when DEEPZORA_HOME is set")
-	}
-	projectPath := filepath.Join(config.MemoryUserDir(), "projects", slug, "sessions", "project-chat.jsonl")
-	if _, err := os.Stat(projectPath); !os.IsNotExist(err) {
-		t.Fatal("legacy project session was imported but must not be when DEEPZORA_HOME is set")
-	}
-}
-
-// TestPartitionByTier pins the bucket assignment contract that the rest of
-// boot.go's plugin orchestration depends on: eager keeps its blocking startup
-// slice, while empty, background, legacy lazy, and unknown tiers all warm up in
-// the background.
-func TestPartitionByTier(t *testing.T) {
-	entries := []config.PluginEntry{
-		{Name: "e1", Tier: "eager"},
-		{Name: "l1", Tier: "lazy"},
-		{Name: "b1", Tier: "background"},
-		{Name: "default", Tier: ""}, // empty defaults to background
-	}
-
-	eager, bg := partitionByTier(entries)
-
-	if len(eager) != 1 || eager[0].Name != "e1" {
-		t.Fatalf("eager bucket = %+v, want [e1]", eager)
-	}
-	if len(bg) != 3 || bg[0].Name != "l1" || bg[1].Name != "b1" || bg[2].Name != "default" {
-		t.Fatalf("background bucket = %+v, want [l1, b1, default] preserving input order", bg)
-	}
 }
 
 func TestPluginSpecsMapConfiguredMCPTimeouts(t *testing.T) {
@@ -3734,44 +3001,6 @@ func TestPluginSpecsMapConfiguredMCPTimeouts(t *testing.T) {
 	}
 	if _, ok := specs[0].ToolTimeouts[""]; ok {
 		t.Fatalf("empty tool timeout should be ignored: %+v", specs[0].ToolTimeouts)
-	}
-}
-
-func TestPluginSpecsMapMCPSourceDefaults(t *testing.T) {
-	tests := []struct {
-		name           string
-		source         config.MCPConfigSource
-		wantAuthorized bool
-		wantApproval   bool
-	}{
-		{name: "user config", source: config.MCPSourceUserConfig, wantAuthorized: true},
-		{name: "legacy user config", source: config.MCPSourceLegacyUser, wantAuthorized: true},
-		{name: "plugin package", source: config.MCPSourcePluginPackage, wantAuthorized: true},
-		{name: "project config", source: config.MCPSourceProjectConfig, wantAuthorized: true},
-		{name: "project mcp json", source: config.MCPSourceProjectMCPJSON, wantAuthorized: true},
-		{name: "unknown"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			specs := PluginSpecsForRootWithOptions([]config.PluginEntry{{
-				Name:   "server",
-				Source: tc.source,
-			}}, "/workspace", PluginSpecOptions{ConfigSource: "workspace_config"})
-			if len(specs) != 1 {
-				t.Fatalf("spec count = %d", len(specs))
-			}
-			if specs[0].Authorized != tc.wantAuthorized || specs[0].RequireLaunchApproval != tc.wantApproval {
-				t.Fatalf("source defaults = %+v, want authorized=%v approval=%v", specs[0], tc.wantAuthorized, tc.wantApproval)
-			}
-			wantSource := string(tc.source)
-			if wantSource == "" {
-				wantSource = "workspace_config"
-			}
-			if specs[0].ConfigSource != wantSource {
-				t.Fatalf("ConfigSource = %q, want %q", specs[0].ConfigSource, wantSource)
-			}
-		})
 	}
 }
 
@@ -3867,100 +3096,6 @@ func TestPluginSpecsForRootDoesNotPinHTTPCodeGraph(t *testing.T) {
 	}
 }
 
-func TestBuildMigratesLegacyEagerTierToBackground(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "openai"
-base_url = "https://example.invalid"
-model = "x"
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-
-[[plugins]]
-name = "legacy-eager"
-command = "deepzora-missing-legacy-eager-mcp"
-tier = "eager"
-`)
-	approveWorkspace(t, dir)
-
-	enableProjectMCPForTest(t, dir)
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	ctrl, err := Build(ctx, Options{})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-
-	failures := waitForMCPFailure(t, ctrl.Host(), "legacy-eager", 2*time.Second)
-	if len(failures) != 1 || failures[0].Name != "legacy-eager" {
-		t.Fatalf("failures = %+v, want background startup failure for migrated legacy eager plugin", failures)
-	}
-	raw, err := os.ReadFile(filepath.Join(dir, "deepzora.toml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), "\ntier") {
-		t.Fatalf("legacy eager tier should be removed during load:\n%s", raw)
-	}
-}
-
-func TestBuildMigratesLegacyLazyTierToBackground(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "openai"
-base_url = "https://example.invalid"
-model = "x"
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-
-[[plugins]]
-name = "legacy-lazy"
-command = "deepzora-missing-legacy-lazy-mcp"
-tier = "lazy"
-`)
-	approveWorkspace(t, dir)
-
-	enableProjectMCPForTest(t, dir)
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	ctrl, err := Build(ctx, Options{})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-
-	failures := waitForMCPFailure(t, ctrl.Host(), "legacy-lazy", 2*time.Second)
-	if len(failures) != 1 || failures[0].Name != "legacy-lazy" {
-		t.Fatalf("failures = %+v, want background startup failure for migrated legacy lazy plugin", failures)
-	}
-	raw, err := os.ReadFile(filepath.Join(dir, "deepzora.toml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), "\ntier") {
-		t.Fatalf("legacy lazy tier should be removed during load:\n%s", raw)
-	}
-}
-
 func TestBuildDefaultsToNearestGitRoot(t *testing.T) {
 	isolateConfigHome(t)
 	root := robustTempDir(t)
@@ -3981,7 +3116,7 @@ system_prompt = "BASE"
 name = "root-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, root)
@@ -4124,7 +3259,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, root)
 	registerBootTokenProfileTestProvider()
@@ -4174,7 +3309,7 @@ model = "x"
 		t.Fatalf("Build writer: %v", err)
 	}
 	defer ctrl.Close()
-	if err := ctrl.Run(context.Background(), "write into the additional directory without tests"); err != nil && !errors.As(err, new(*agent.FinalReadinessError)) {
+	if err := ctrl.Run(context.Background(), "write into the additional directory without tests"); err != nil {
 		t.Fatalf("Run writer: %v", err)
 	}
 	if got, err := os.ReadFile(target); err != nil || string(got) != "ok" {
@@ -4202,7 +3337,7 @@ bash = "enforce"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, root)
 	registerBootTokenProfileTestProvider()
@@ -4216,84 +3351,17 @@ model = "x"
 	ctrl, err := Build(context.Background(), Options{
 		Sink:                 event.Discard,
 		AdditionalDirs:       []string{extra},
-		HeadlessApprovalMode: control.ToolApprovalYolo,
+		HeadlessApprovalMode: control.ToolApprovalDangerFullAccess,
 	})
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 	defer ctrl.Close()
-	if err := ctrl.Run(context.Background(), "write from sandboxed bash"); err != nil && !errors.As(err, new(*agent.FinalReadinessError)) {
+	if err := ctrl.Run(context.Background(), "write from sandboxed bash"); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if got, err := os.ReadFile(target); err != nil || string(got) != "ok" {
 		t.Fatalf("sandboxed file = %q, err=%v", got, err)
-	}
-}
-
-func TestBuildMigratesLegacyEagerBeforeStatsDemotion(t *testing.T) {
-	isolateConfigHome(t)
-	dir := robustTempDir(t)
-	t.Chdir(dir)
-
-	// Three samples above 2*budget — the rule in stats.go's Recommend triggers
-	// when the trailing window is entirely over the threshold. Use 30s so even
-	// future budget bumps stay below the threshold.
-	for i := range 3 {
-		if err := plugin.RecordStartup("slowserver", 30*time.Second); err != nil {
-			t.Fatalf("RecordStartup #%d: %v", i, err)
-		}
-	}
-
-	writeFile(t, dir, "deepzora.toml", `
-default_model = "test-model"
-
-[agent]
-system_prompt = "BASE"
-
-[[providers]]
-name = "test-model"
-kind = "openai"
-base_url = "https://example.invalid"
-model = "x"
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-
-[[plugins]]
-name = "slowserver"
-command = "deepzora-missing-slow-mcp-binary"
-tier = "eager"
-`)
-	approveWorkspace(t, dir)
-
-	var notices []event.Event
-	enableProjectMCPForTest(t, dir)
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	ctrl, err := Build(ctx, Options{
-		Sink: event.FuncSink(func(e event.Event) {
-			if e.Kind == event.Notice {
-				notices = append(notices, e)
-			}
-		}),
-	})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	defer ctrl.Close()
-
-	failures := waitForMCPFailure(t, ctrl.Host(), "slowserver", 2*time.Second)
-	if len(failures) != 1 || failures[0].Name != "slowserver" {
-		t.Fatalf("Host.Failures() = %+v, want background startup failure for migrated plugin", failures)
-	}
-
-	foundDemoteNotice := false
-	for _, n := range notices {
-		if strings.Contains(n.Text, "lazy") {
-			foundDemoteNotice = true
-			break
-		}
-	}
-	if foundDemoteNotice {
-		t.Fatalf("demotion notice should not mention legacy lazy tier; got notices %+v", notices)
 	}
 }
 
@@ -4450,7 +3518,6 @@ func TestBuildKeepsSourceConnectorAndSkillToolsDespiteSafeModeEnv(t *testing.T) 
 
 	ctrl, err := Build(context.Background(), Options{
 		SessionDir: filepath.Join(t.TempDir(), "sessions"),
-		TokenMode:  TokenModeFull,
 		Sink:       event.Discard,
 	})
 	if err != nil {

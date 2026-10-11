@@ -99,7 +99,7 @@ func (f *commandFactory) NewSession(_ context.Context, p SessionParams) (*contro
 			return nil
 		},
 	}
-	return control.New(control.Options{Runner: runner, Sink: p.Sink, Commands: f.commands, Skills: f.skills, SessionDir: f.dir}), nil
+	return control.New(control.Options{Runner: runner, Sink: p.Sink, Commands: f.commands, Skills: f.skills, Executor: testACPExecutor(p.Sink), SessionDir: f.dir, SessionService: testACPService(f.dir), ExclusiveSession: f.dir != ""}), nil
 }
 
 type configurableFactory struct {
@@ -121,7 +121,6 @@ func (f *configurableFactory) NewSession(_ context.Context, p SessionParams) (*c
 		Cwd:            p.Cwd,
 		Model:          p.Model,
 		EffortOverride: cloneStringPtr(p.EffortOverride),
-		RuntimeProfile: p.RuntimeProfile,
 		FileOverlay:    p.FileOverlay,
 		Terminal:       p.Terminal,
 	})
@@ -147,7 +146,7 @@ func (f *configurableFactory) NewSession(_ context.Context, p SessionParams) (*c
 			return behavior(ctx, sink, input, p)
 		},
 	}
-	opts := control.Options{Runner: runner, Sink: p.Sink, SessionDir: f.dir, OnSessionRecovered: p.OnSessionRecovered}
+	opts := control.Options{Runner: runner, Executor: testACPExecutor(p.Sink), Sink: p.Sink, SessionDir: f.dir, SessionService: testACPService(f.dir), SessionRuntime: p.SessionRuntime, ExclusiveSession: f.dir != ""}
 	if f.withHooks {
 		opts.Hooks = f.hookRunner()
 	}
@@ -185,20 +184,9 @@ func (f *configurableFactory) SessionConfigState(_ context.Context, p SessionCon
 		{Value: "auto", Name: "Auto"},
 		{Value: "high", Name: "High"},
 	}
-	runtimeProfile := strings.TrimSpace(p.RuntimeProfile)
-	if runtimeProfile == "" || runtimeProfile == "full" {
-		runtimeProfile = "standard"
-	}
-	if runtimeProfile == "light" {
-		runtimeProfile = "economy"
-	}
-	if runtimeProfile != "standard" && runtimeProfile != "economy" && runtimeProfile != "balanced" && runtimeProfile != "delivery" {
-		return SessionConfigState{}, os.ErrInvalid
-	}
 	return SessionConfigState{
 		Model:          model,
 		EffortOverride: effortOverride,
-		RuntimeProfile: runtimeProfile,
 		Models: &SessionModelState{
 			AvailableModels: []ModelInfo{{ModelID: "fast", Name: "Fast"}, {ModelID: "pro", Name: "Pro"}},
 			CurrentModelID:  model,
@@ -217,21 +205,6 @@ func requireNoExecutionModeOptions(t *testing.T, options []SessionConfigOption) 
 			t.Fatalf("advertised %s", id)
 		}
 	}
-}
-func requireDeprecatedConfigNoop(t *testing.T, client *rpcClient, factory *configurableFactory, sessionID, configID, value string, buildsBefore int) SetSessionConfigOptionResult {
-	t.Helper()
-	resp := client.call(t, "session/set_config_option", SetSessionConfigOptionParams{SessionID: sessionID, ConfigID: configID, Value: value})
-	if resp.Error != nil {
-		t.Fatalf("set_config_option %s=%s: %+v", configID, value, resp.Error)
-	}
-	var set SetSessionConfigOptionResult
-	if err := json.Unmarshal(resp.Result, &set); err != nil {
-		t.Fatalf("set_config_option %s result err=%v", configID, err)
-	}
-	if got := factory.buildCount(); got != buildsBefore {
-		t.Fatalf("set_config_option %s rebuilt controller: builds=%d, want %d", configID, got, buildsBefore)
-	}
-	return set
 }
 
 func (f *configurableFactory) buildAt(t *testing.T, idx int) SessionParams {
@@ -397,6 +370,9 @@ func startServer(t *testing.T, factory Factory) (*rpcClient, func()) {
 		_ = inW.Close()
 		<-done
 		_ = outW.Close()
+		if source, ok := factory.(interface{ SessionDir() string }); ok {
+			closeTestACPService(source.SessionDir())
+		}
 	})
 	t.Cleanup(stop)
 	return client, stop
@@ -692,11 +668,6 @@ func TestServeAdvertisesAndExpandsCustomCommands(t *testing.T) {
 				ArgHint:     "path",
 				Body:        "Review $1",
 			},
-			{
-				Name:   "plan",
-				Body:   "Plan $ARGUMENTS",
-				Hidden: true,
-			},
 		},
 	}
 	client, stop := startServer(t, factory)
@@ -829,12 +800,11 @@ func TestServeAdvertisesCommandsAfterEverySessionOpenResponse(t *testing.T) {
 	requireResponseFrame(t, client.next(t), 3)
 
 	persistedID := "ordered-session-open"
-	path := transcriptPath(sessionDir, persistedID)
-	if err := agent.NewSession("").Save(path); err != nil {
+	if err := seedACPHistory(t, sessionDir, persistedID, agent.NewSession("")); err != nil {
 		t.Fatalf("save transcript: %v", err)
 	}
 	now := time.Now().UTC()
-	if err := saveACPMeta(path, acpSessionMeta{
+	if err := saveACPMeta(sessionMetadataPath(sessionDir, persistedID), acpSessionMeta{
 		SessionID: persistedID,
 		Cwd:       sessionDir,
 		CreatedAt: now,
@@ -942,7 +912,6 @@ func TestServeSessionConfigSwitchesModelAndEffort(t *testing.T) {
 
 func TestServeSessionAxesStayIndependent(t *testing.T) {
 	type observed struct {
-		preset   string
 		approval string
 		plan     bool
 		goal     string
@@ -951,7 +920,6 @@ func TestServeSessionAxesStayIndependent(t *testing.T) {
 	factory := &configurableFactory{
 		withCtrl: func(_ context.Context, sink event.Sink, _ string, _ SessionParams, ctrl *control.Controller) error {
 			seen <- observed{
-				preset:   ctrl.AgentPreset(),
 				approval: ctrl.ToolApprovalMode(),
 				plan:     ctrl.PlanMode(),
 				goal:     ctrl.Goal(),
@@ -977,24 +945,6 @@ func TestServeSessionAxesStayIndependent(t *testing.T) {
 	}
 
 	buildsBefore := factory.buildCount()
-	for _, tc := range []struct {
-		id    string
-		value string
-	}{
-		{id: "work_mode", value: "delivery"},
-		{id: "agent_preset", value: "delivery"},
-		{id: "profile", value: "economy"},
-		{id: "runtime_profile", value: "balanced"},
-		{id: "token_mode", value: "light"},
-	} {
-		set := requireDeprecatedConfigNoop(t, client, factory, nr.SessionID, tc.id, tc.value, buildsBefore)
-		requireNoExecutionModeOptions(t, set.ConfigOptions)
-		modelOpt, _ := findConfigOption(set.ConfigOptions, "model")
-		approvalOpt, _ := findConfigOption(set.ConfigOptions, "tool_approval")
-		if modelOpt.CurrentValue != "fast" || approvalOpt.CurrentValue != control.ToolApprovalWorkspaceWrite {
-			t.Fatalf("deprecated %s mutated live axes: model=%q approval=%q", tc.id, modelOpt.CurrentValue, approvalOpt.CurrentValue)
-		}
-	}
 	bad := client.call(t, "session/set_config_option", SetSessionConfigOptionParams{
 		SessionID: nr.SessionID,
 		ConfigID:  "work_mode",
@@ -1010,7 +960,7 @@ func TestServeSessionAxesStayIndependent(t *testing.T) {
 	setApproval := client.call(t, "session/set_config_option", SetSessionConfigOptionParams{
 		SessionID: nr.SessionID,
 		ConfigID:  "tool_approval",
-		Value:     control.ToolApprovalAuto,
+		Value:     control.ToolApprovalWorkspaceWrite,
 	})
 	if setApproval.Error != nil {
 		t.Fatalf("set tool approval: %+v", setApproval.Error)
@@ -1032,8 +982,8 @@ func TestServeSessionAxesStayIndependent(t *testing.T) {
 		t.Fatalf("goal prompt: %+v", promptResp.Error)
 	}
 	goalObserved := <-seen
-	if goalObserved.preset != "standard" || goalObserved.approval != control.ToolApprovalAuto || goalObserved.plan || goalObserved.goal != "ship the ACP profile switch" {
-		t.Fatalf("goal axes = %+v, want standard + auto + goal", goalObserved)
+	if goalObserved.approval != control.ToolApprovalWorkspaceWrite || goalObserved.plan || goalObserved.goal != "ship the ACP profile switch" {
+		t.Fatalf("goal axes = %+v, want workspace-write + goal", goalObserved)
 	}
 
 	setPlan := client.call(t, "session/set_mode", SessionSetModeParams{SessionID: nr.SessionID, ModeID: sessionModePlan})
@@ -1049,72 +999,24 @@ func TestServeSessionAxesStayIndependent(t *testing.T) {
 		t.Fatalf("plan prompt: %+v", promptResp.Error)
 	}
 	planObserved := <-seen
-	if planObserved.preset != "standard" || planObserved.approval != control.ToolApprovalAuto || !planObserved.plan || planObserved.goal != "" {
-		t.Fatalf("plan axes = %+v, want standard + auto + plan", planObserved)
-	}
-}
-
-func TestServeLegacyModeAliasesRemainCompatible(t *testing.T) {
-	type observed struct {
-		approval string
-		plan     bool
-	}
-	seen := make(chan observed, 2)
-	factory := &configurableFactory{
-		withCtrl: func(_ context.Context, sink event.Sink, _ string, _ SessionParams, ctrl *control.Controller) error {
-			seen <- observed{approval: ctrl.ToolApprovalMode(), plan: ctrl.PlanMode()}
-			sink.Emit(event.Event{Kind: event.Text, Text: "done"})
-			return nil
-		},
-	}
-	client, stop := startServer(t, factory)
-	defer stop()
-	client.call(t, "initialize", InitializeParams{ProtocolVersion: 1})
-	newResp := client.call(t, "session/new", SessionNewParams{Cwd: t.TempDir()})
-	var nr SessionNewResult
-	if err := json.Unmarshal(newResp.Result, &nr); err != nil {
-		t.Fatalf("session/new result: %v", err)
-	}
-
-	for _, tc := range []struct {
-		mode string
-		want string
-	}{
-		{mode: sessionModeLegacyDefault, want: control.ToolApprovalReadOnly},
-		{mode: sessionModeLegacyAuto, want: control.ToolApprovalWorkspaceWrite},
-	} {
-		if resp := client.call(t, "session/set_mode", SessionSetModeParams{SessionID: nr.SessionID, ModeID: tc.mode}); resp.Error != nil {
-			t.Fatalf("set legacy mode %q: %+v", tc.mode, resp.Error)
-		}
-		promptCh := client.callAsync("session/prompt", SessionPromptParams{
-			SessionID: nr.SessionID,
-			Prompt:    []ContentBlock{{Type: "text", Text: "check legacy mode"}},
-		})
-		_, promptResp := drainPrompt(t, client, promptCh)
-		if promptResp.Error != nil {
-			t.Fatalf("prompt after legacy mode %q: %+v", tc.mode, promptResp.Error)
-		}
-		if got := <-seen; got.approval != tc.want || got.plan {
-			t.Fatalf("legacy mode %q = %+v, want approval %q without plan", tc.mode, got, tc.want)
-		}
+	if planObserved.approval != control.ToolApprovalWorkspaceWrite || !planObserved.plan || planObserved.goal != "" {
+		t.Fatalf("plan axes = %+v, want workspace-write + plan", planObserved)
 	}
 }
 
 func TestServeSessionAxesRestoreFromMetadata(t *testing.T) {
 	dir := t.TempDir()
 	sessionID := "axes-restore"
-	path := transcriptPath(dir, sessionID)
 	saved := agent.NewSession("")
 	saved.Add(provider.Message{Role: provider.RoleUser, Content: "persist these axes"})
-	if err := saved.Save(path); err != nil {
+	if err := seedACPHistory(t, dir, sessionID, saved); err != nil {
 		t.Fatalf("save transcript: %v", err)
 	}
-	if err := saveACPMeta(path, acpSessionMeta{
+	if err := saveACPMeta(sessionMetadataPath(dir, sessionID), acpSessionMeta{
 		SessionID:         sessionID,
 		Cwd:               dir,
 		Model:             "fast",
-		RuntimeProfile:    "delivery",
-		ToolApprovalMode:  control.ToolApprovalAuto,
+		ToolApprovalMode:  control.ToolApprovalWorkspaceWrite,
 		CollaborationMode: sessionModePlan,
 		CreatedAt:         time.Now().UTC(),
 		UpdatedAt:         time.Now().UTC(),
@@ -1150,12 +1052,10 @@ func TestServeSessionAxesRestoreFromMetadata(t *testing.T) {
 	}
 	requireNoExecutionModeOptions(t, lr.ConfigOptions)
 	approval, _ := findConfigOption(lr.ConfigOptions, "tool_approval")
-	if approval.CurrentValue != control.ToolApprovalAuto || lr.Modes == nil || lr.Modes.CurrentModeID != sessionModePlan {
+	if approval.CurrentValue != control.ToolApprovalWorkspaceWrite || lr.Modes == nil || lr.Modes.CurrentModeID != sessionModePlan {
 		t.Fatalf("reloaded axes = approval:%+v modes:%+v", approval, lr.Modes)
 	}
-	if got := reloadedFactory.buildAt(t, 0).RuntimeProfile; got != "standard" {
-		t.Fatalf("reloaded build profile = %q, want standard", got)
-	}
+
 	promptCh := reloadedClient.callAsync("session/prompt", SessionPromptParams{
 		SessionID: sessionID,
 		Prompt:    []ContentBlock{{Type: "text", Text: "verify restored controller"}},
@@ -1165,7 +1065,7 @@ func TestServeSessionAxesRestoreFromMetadata(t *testing.T) {
 		t.Fatalf("reloaded prompt: %+v", promptResp.Error)
 	}
 	observed := <-seen
-	if observed.approval != control.ToolApprovalAuto || !observed.plan {
+	if observed.approval != control.ToolApprovalWorkspaceWrite || !observed.plan {
 		t.Fatalf("restored controller axes = %+v, want auto + plan", observed)
 	}
 }
@@ -1253,8 +1153,7 @@ func TestServeSessionConfigRejectsBackgroundJobsWhileIdle(t *testing.T) {
 	release := make(chan struct{})
 	var releaseOnce sync.Once
 	started := make(chan struct{})
-	sessionPath := transcriptPath(dir, nr.SessionID)
-	jm.StartForSession(agent.BranchID(sessionPath), "bash", "server", func(ctx context.Context, _ io.Writer) (string, error) {
+	jm.StartForSession(nr.SessionID, "bash", "server", func(ctx context.Context, _ io.Writer) (string, error) {
 		close(started)
 		select {
 		case <-release:
@@ -1288,13 +1187,13 @@ func TestServeSessionConfigRejectsBackgroundJobsWhileIdle(t *testing.T) {
 	if got := factory.buildCount(); got != 1 {
 		t.Fatalf("build count after rejected switch = %d, want 1", got)
 	}
-	if running := jm.RunningForSession(agent.BranchID(sessionPath)); len(running) != 1 {
+	if running := jm.RunningForSession(nr.SessionID); len(running) != 1 {
 		t.Fatalf("running jobs after rejected switch = %+v, want original job still running", running)
 	}
 
 	releaseOnce.Do(func() { close(release) })
-	_ = jm.WaitForSession(context.Background(), agent.BranchID(sessionPath), nil, 5)
-	if running := jm.RunningForSession(agent.BranchID(sessionPath)); len(running) != 0 {
+	_ = jm.WaitForSession(context.Background(), nr.SessionID, nil, 5)
+	if running := jm.RunningForSession(nr.SessionID); len(running) != 0 {
 		t.Fatalf("running jobs after release = %+v, want none before retry", running)
 	}
 
@@ -1361,7 +1260,7 @@ func TestQueuedRebuildPreservesControllerSideAxisDrift(t *testing.T) {
 				// Controller-side state changes late in the turn, after the
 				// client has queued a model rebuild.
 				ctrl.SetPlanMode(false)
-				ctrl.SetToolApprovalMode(control.ToolApprovalAuto)
+				ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 			} else {
 				seen <- struct {
 					model    string
@@ -1393,7 +1292,6 @@ func TestQueuedRebuildPreservesControllerSideAxisDrift(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("first prompt did not start")
 	}
-	requireDeprecatedConfigNoop(t, client, factory, nr.SessionID, "work_mode", "delivery", 1)
 	if resp := client.call(t, "session/set_config_option", SetSessionConfigOptionParams{
 		SessionID: nr.SessionID,
 		ConfigID:  "model",
@@ -1420,7 +1318,7 @@ func TestQueuedRebuildPreservesControllerSideAxisDrift(t *testing.T) {
 		t.Fatalf("second prompt: %+v", resp.Error)
 	}
 	got := <-seen
-	if got.approval != control.ToolApprovalAuto || got.plan {
+	if got.approval != control.ToolApprovalWorkspaceWrite || got.plan {
 		t.Fatalf("axes = %+v, want auto + normal (plan cleared)", got)
 	}
 	if got.model != "pro" {
@@ -1521,7 +1419,7 @@ func TestServeQueuedSessionConfigDiscardedWhenPromptLeavesBackgroundJob(t *testi
 
 	close(releaseJob)
 	jm := factory.managerAt(t, 0)
-	_ = jm.WaitForSession(context.Background(), agent.BranchID(transcriptPath(dir, nr.SessionID)), nil, 5)
+	_ = jm.WaitForSession(context.Background(), nr.SessionID, nil, 5)
 	second := client.callAsync("session/prompt", SessionPromptParams{
 		SessionID: nr.SessionID,
 		Prompt:    []ContentBlock{{Type: "text", Text: "second"}},
@@ -1652,14 +1550,13 @@ func TestServeSessionLoadFallsBackFromStaleSavedModel(t *testing.T) {
 	dir := t.TempDir()
 	cwd := t.TempDir()
 	sessionID := "stale-model"
-	path := transcriptPath(dir, sessionID)
 	saved := agent.NewSession("")
 	saved.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	if err := saved.Save(path); err != nil {
+	if err := seedACPHistory(t, dir, sessionID, saved); err != nil {
 		t.Fatal(err)
 	}
 	effort := "high"
-	if err := saveACPMeta(path, acpSessionMeta{
+	if err := saveACPMeta(sessionMetadataPath(dir, sessionID), acpSessionMeta{
 		SessionID:      sessionID,
 		Cwd:            cwd,
 		Model:          "missing/model",
@@ -1682,9 +1579,7 @@ func TestServeSessionLoadFallsBackFromStaleSavedModel(t *testing.T) {
 	if got := factory.buildAt(t, 0).Model; got != "fast" {
 		t.Fatalf("fallback build model = %q, want fast", got)
 	}
-	if got := factory.buildAt(t, 0).RuntimeProfile; got != "standard" {
-		t.Fatalf("old metadata runtime profile = %q, want standard", got)
-	}
+
 	var loaded SessionLoadResult
 	if err := json.Unmarshal(loadResp.Result, &loaded); err != nil {
 		t.Fatalf("session/load result: %v", err)
@@ -1693,51 +1588,12 @@ func TestServeSessionLoadFallsBackFromStaleSavedModel(t *testing.T) {
 	if approval.CurrentValue != control.ToolApprovalWorkspaceWrite || loaded.Modes == nil || loaded.Modes.CurrentModeID != sessionModeNormal {
 		t.Fatalf("old metadata axes = approval:%+v modes:%+v, want workspace-write + normal", approval, loaded.Modes)
 	}
-	meta, ok, err := loadACPMeta(path)
+	meta, ok, err := loadACPMeta(sessionMetadataPath(dir, sessionID))
 	if err != nil || !ok {
 		t.Fatalf("load rewritten meta = %v, ok=%v", err, ok)
 	}
 	if meta.Model != "fast" {
 		t.Fatalf("rewritten meta model = %q, want fast", meta.Model)
-	}
-}
-
-func TestServeSessionLoadRejectsCleanupPending(t *testing.T) {
-	dir := t.TempDir()
-	cwd := t.TempDir()
-	sessionID := "pending-load"
-	path := transcriptPath(dir, sessionID)
-	saved := agent.NewSession("")
-	saved.Add(provider.Message{Role: provider.RoleUser, Content: "hello"})
-	if err := saved.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := saveACPMeta(path, acpSessionMeta{
-		SessionID: sessionID,
-		Cwd:       cwd,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.MarkCleanupPending(path, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	factory := &configurableFactory{dir: dir}
-	client, stop := startServer(t, factory)
-	defer stop()
-
-	client.call(t, "initialize", InitializeParams{ProtocolVersion: 1})
-	loadResp := client.call(t, "session/load", SessionLoadParams{SessionID: sessionID, Cwd: cwd})
-	if loadResp.Error == nil || !strings.Contains(loadResp.Error.Message, "unknown session") {
-		t.Fatalf("session/load cleanup-pending error = %+v, want unknown session", loadResp.Error)
-	}
-	factory.mu.Lock()
-	builds := append([]SessionParams(nil), factory.builds...)
-	factory.mu.Unlock()
-	if len(builds) != 0 {
-		t.Fatalf("cleanup-pending load should not build a controller, got builds %+v", builds)
 	}
 }
 
@@ -1924,49 +1780,6 @@ func TestServeSessionClose(t *testing.T) {
 	}
 }
 
-func TestSessionDeleteWithStuckJobWaitsOnlyForDestroyGrace(t *testing.T) {
-	dir := t.TempDir()
-	factory := &teardownFactory{dir: dir, grace: 0}
-	client, stop := startServer(t, factory)
-	defer stop()
-
-	client.call(t, "initialize", InitializeParams{ProtocolVersion: 1})
-	newResp := client.call(t, "session/new", SessionNewParams{Cwd: t.TempDir()})
-	var nr SessionNewResult
-	if err := json.Unmarshal(newResp.Result, &nr); err != nil || nr.SessionID == "" {
-		t.Fatalf("session/new: %v (%q)", err, nr.SessionID)
-	}
-	path := transcriptPath(dir, nr.SessionID)
-	if err := os.WriteFile(path, []byte(`{"role":"user","content":"hello"}`+"\n"), 0o644); err != nil {
-		t.Fatalf("write transcript: %v", err)
-	}
-	releaseJob := startNonCooperativeACPJob(t, factory.lastManager(t), path)
-	defer releaseJob()
-
-	resp := client.call(t, "session/delete", SessionDeleteParams{SessionID: nr.SessionID})
-	if resp.Error != nil {
-		t.Fatalf("session/delete errored: %+v", resp.Error)
-	}
-	timeouts := factory.teardownTimeoutDetails()
-	if len(timeouts) != 1 || !strings.Contains(timeouts[0], "during destroy session") {
-		t.Fatalf("teardown timeout events = %q, want one destroy-session wait and no close wait", timeouts)
-	}
-	if !agent.IsCleanupPending(path) {
-		t.Fatalf("stuck ACP delete should mark cleanup pending")
-	}
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("stuck ACP transcript should remain until delayed cleanup: %v", err)
-	}
-	releaseJob()
-	deadline := time.Now().Add(2 * time.Second)
-	for agent.IsCleanupPending(path) {
-		if time.Now().After(deadline) {
-			t.Fatalf("cleanup-pending marker was not cleared after stuck job release")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-}
-
 func TestServeRejectsPathLikeSessionID(t *testing.T) {
 	factory := &fakeFactory{behavior: func(context.Context, event.Sink, string) error { return nil }}
 	client, stop := startServer(t, factory)
@@ -1978,98 +1791,6 @@ func TestServeRejectsPathLikeSessionID(t *testing.T) {
 	}
 	if resp.Error.Code != ErrInvalidParams || !strings.Contains(resp.Error.Message, "invalid sessionId") {
 		t.Fatalf("session/delete error = %+v, want invalid sessionId", resp.Error)
-	}
-}
-
-func TestListACPMetasSkipsCleanupPending(t *testing.T) {
-	dir := t.TempDir()
-	visibleID := "visible"
-	pendingID := "pending"
-	for _, id := range []string{visibleID, pendingID} {
-		path := transcriptPath(dir, id)
-		if err := os.WriteFile(path, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		if err := saveACPMeta(path, acpSessionMeta{
-			SessionID: id,
-			Cwd:       t.TempDir(),
-			Title:     id,
-			CreatedAt: time.Now().UTC(),
-			UpdatedAt: time.Now().UTC(),
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := agent.MarkCleanupPending(transcriptPath(dir, pendingID), "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	metas, err := listACPMetas(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(metas) != 1 || metas[0].SessionID != visibleID {
-		t.Fatalf("listACPMetas = %+v, want only %q", metas, visibleID)
-	}
-}
-
-func TestDeleteSessionFilesDeletesOwnedSubagents(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "session.jsonl")
-	if err := os.WriteFile(sessionPath, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ref := "sa_20260102_030405_000000000_aabbccddeeff"
-	writeACPSubagentArtifact(t, dir, ref, agent.BranchID(sessionPath))
-	jobsDir := jobs.ArtifactDir(sessionPath)
-	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(jobsDir, "bash-1.log"), []byte("output"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := deleteSessionFiles(sessionPath); err != nil {
-		t.Fatalf("deleteSessionFiles: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "subagents", ref+".jsonl")); !os.IsNotExist(err) {
-		t.Fatalf("subagent jsonl should be deleted, stat err = %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "subagents", ref+".meta.json")); !os.IsNotExist(err) {
-		t.Fatalf("subagent meta should be deleted, stat err = %v", err)
-	}
-	if _, err := os.Stat(jobsDir); !os.IsNotExist(err) {
-		t.Fatalf("jobs sidecar should be deleted, stat err = %v", err)
-	}
-}
-
-func TestReconcileCleanupPendingDeletesACPMeta(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := transcriptPath(dir, "pending-acp")
-	if err := os.WriteFile(sessionPath, []byte(`{"role":"user","content":"hi"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := saveACPMeta(sessionPath, acpSessionMeta{Cwd: t.TempDir(), Model: "test-model"}); err != nil {
-		t.Fatal(err)
-	}
-	jobsDir := jobs.ArtifactDir(sessionPath)
-	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(jobsDir, "bash-1.log"), []byte("output"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.MarkCleanupPending(sessionPath, "delete"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := ReconcileCleanupPending(dir); err != nil {
-		t.Fatalf("ReconcileCleanupPending: %v", err)
-	}
-	for _, path := range []string{sessionPath, acpMetaPath(sessionPath), jobsDir, agent.CleanupPendingPath(sessionPath)} {
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			t.Fatalf("%s still exists after reconciliation (err=%v)", path, err)
-		}
 	}
 }
 

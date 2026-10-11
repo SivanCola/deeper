@@ -59,7 +59,6 @@ function session(overrides: Partial<SessionMeta> & { path: string }): SessionMet
     turns: 3,
     createdAt: now - 3_600_000,
     lastActivityAt: now,
-    modTime: now,
     current: false,
     open: false,
     ...overrides,

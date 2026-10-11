@@ -12,6 +12,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/store"
 	"deepzora/internal/tool"
 )
 
@@ -68,24 +69,19 @@ func marshalMessages(t *testing.T, msgs []provider.Message) []byte {
 	return b
 }
 
-// copySessionFiles clones a saved transcript (checkpoint anchor, event log,
-// meta sidecar) to an independent path, so a rebind can load the state saved
-// at that moment while the original controller keeps running and autosaving.
 func copySessionFiles(t *testing.T, from, to string) {
 	t.Helper()
-	copied := false
-	for _, suffix := range []string{"", ".events.jsonl", ".meta"} {
-		b, err := os.ReadFile(from + suffix)
-		if err != nil {
+	for _, paths := range [][2]string{{from, to}, {store.SessionEventLog(from), store.SessionEventLog(to)}, {store.SessionMeta(from), store.SessionMeta(to)}} {
+		body, err := os.ReadFile(paths[0])
+		if os.IsNotExist(err) {
 			continue
 		}
-		if err := os.WriteFile(to+suffix, b, 0o644); err != nil {
-			t.Fatalf("copy session file %s: %v", suffix, err)
+		if err != nil {
+			t.Fatal(err)
 		}
-		copied = true
-	}
-	if !copied {
-		t.Fatalf("no session files found at %s", from)
+		if err := os.WriteFile(paths[1], body, 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -155,14 +151,14 @@ func TestRebindReproducesRequestBytes(t *testing.T) {
 	}
 }
 
-// TestRebindWithDriftedPromptBreaksRequestPrefix pins the failure mode the
+// TestRebindPreservesCurrentPersistedSystemPrompt pins the failure mode the
 // guard above protects against: when the freshly composed prompt differs from
 // the one the transcript was recorded with, the swap rewrites the first
 // message and the request diverges from the no-rebind baseline. If a future
 // change moves the swap policy to keep the persisted prompt for resumed
 // conversations, this test should be updated to assert the bytes survive
 // instead.
-func TestRebindWithDriftedPromptBreaksRequestPrefix(t *testing.T) {
+func TestRebindPreservesCurrentPersistedSystemPrompt(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "session.jsonl")
@@ -196,10 +192,7 @@ func TestRebindWithDriftedPromptBreaksRequestPrefix(t *testing.T) {
 		t.Fatalf("post-rebind turn: %v", err)
 	}
 	rebound := prov2.lastRequestMessages(t)
-	if string(marshalMessages(t, rebound)) == string(baselineBytes) {
-		t.Fatal("drifted prompt unexpectedly reproduced the baseline request — the swap policy changed; update these guards")
-	}
-	if len(rebound) == 0 || rebound[0].Content == baseline[0].Content {
-		t.Fatalf("drift should surface in the leading system message; got %q", rebound[0].Content)
+	if string(marshalMessages(t, rebound)) != string(baselineBytes) {
+		t.Fatal("current persisted system prompt changed during rebind")
 	}
 }

@@ -77,7 +77,7 @@ func TestApprovalToolWideEndToEnd(t *testing.T) {
 	c := newOwnedTestController(t, Options{
 		Runner:   ag,
 		Executor: ag,
-		Policy:   permission.New("ask", nil, nil, nil), // writers ask by default
+		Policy:   permission.New("ask", nil, []string{"write_file"}, nil), // writers ask by default
 		Sink: event.FuncSink(func(e event.Event) {
 			if e.Kind == event.ApprovalRequest {
 				prompts++
@@ -86,6 +86,7 @@ func TestApprovalToolWideEndToEnd(t *testing.T) {
 		}),
 	})
 	c.EnableInteractiveApproval()
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 
 	// Answer the first prompt with "allow for this session" (allow, session, !persist).
 	go func() { c.Approve(<-approvalID, true, true, false) }()
@@ -118,9 +119,9 @@ func TestPlanModeApprovalPostureMatrix(t *testing.T) {
 	}{
 		// YOLO/Auto avoid hanging on interactive approval while still proving
 		// Plan ForbidMutation blocks the write.
-		{name: "Auto blocks writer under plan constraints", mode: ToolApprovalAuto, wantWrites: 0},
-		{name: "YOLO blocks writer under plan constraints", mode: ToolApprovalYolo, askRules: []string{"write_file"}, wantWrites: 0},
-		{name: "deny still blocks in YOLO plan", mode: ToolApprovalYolo, denyRules: []string{"write_file"}, wantWrites: 0},
+		{name: "Auto blocks writer under plan constraints", mode: ToolApprovalWorkspaceWrite, wantWrites: 0},
+		{name: "YOLO blocks writer under plan constraints", mode: ToolApprovalDangerFullAccess, askRules: []string{"write_file"}, wantWrites: 0},
+		{name: "deny still blocks in YOLO plan", mode: ToolApprovalDangerFullAccess, denyRules: []string{"write_file"}, wantWrites: 0},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -177,6 +178,7 @@ func TestApprovedPlanExecutionUsesAutoSemantics(t *testing.T) {
 	})
 	defer c.Close()
 	c.EnableInteractiveApproval()
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 
 	runCalled := false
 	err := (plannerPlanApprover{c: c}).RunWithPlannerApproval(t.Context(), "1. Apply the change", func(ctx context.Context) error {

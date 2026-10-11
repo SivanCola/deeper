@@ -327,7 +327,7 @@ func (t *UseCapabilityTool) inspectSessionToolResult() (string, error) {
 		"description": "Read one bounded page from a complete tool result retained in this agent's current session.",
 		"status":      "ready", "read_only": true,
 		"arguments": map[string]any{
-			"tool_call_id": "required", "result_ref": "required for new truncated results; optional for unambiguous legacy records",
+			"tool_call_id": "required", "result_ref": "required for truncated results; optional for unambiguous complete results",
 			"offset": 0, "limit_default": toolResultPageDefaultBytes, "limit_max": toolResultPageMaxBytes,
 		},
 	}

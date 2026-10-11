@@ -99,46 +99,6 @@ func TestDAGSaveCreatesSchemaTwoLogAndAppendsDelta(t *testing.T) {
 	assertNoTranscriptCopies(t, path)
 }
 
-func TestDAGSaveDisabledByEnvKeepsSchemaOne(t *testing.T) {
-	useSchemaOneLog(t)
-	path := dagTestSession(t)
-	dagSavedSession(t, path, "q1")
-	probe, err := probeSessionEventLog(path)
-	if err != nil || probe.dag || !probe.native {
-		t.Fatalf("probe = %+v err=%v", probe, err)
-	}
-}
-
-func TestLoadedLegacyCheckpointStaysOnLegacyWriter(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "legacy.jsonl")
-	body := `{"role":"user","content":"old question"}` + "\n"
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	s, err := LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.Add(provider.Message{Role: provider.RoleAssistant, Content: "continued answer"})
-	if err := s.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	probe, err := probeSessionEventLog(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if probe.dag || probe.size != 0 {
-		t.Fatalf("legacy save changed format: %+v", probe)
-	}
-	if _, err := os.Stat(store.SessionEventLog(path)); !os.IsNotExist(err) {
-		t.Fatalf("checkpoint-only continuation created a duplicate log: %v", err)
-	}
-	loaded, err := LoadSession(path)
-	if err != nil || len(loaded.Messages) != 2 || loaded.Messages[1].Content != "continued answer" {
-		t.Fatalf("continued legacy session = %+v, err=%v", loaded, err)
-	}
-}
-
 func TestDAGSaveLocalMetadataBecomesPatch(t *testing.T) {
 	path := dagTestSession(t)
 	s := dagSavedSession(t, path, "q1", "a1")
@@ -213,48 +173,6 @@ func TestDAGSaveTruncationRewindsWithoutErasingBytes(t *testing.T) {
 	loaded, err = LoadSession(path)
 	if err != nil || strings.Join(dagContents(loaded.Messages), ",") != "sys,q1,a1,a2-new" {
 		t.Fatalf("after re-append: %v err=%v", dagContents(loaded.Messages), err)
-	}
-}
-
-func TestLoadedSchemaOneLogStaysNativeEvenUnderLease(t *testing.T) {
-	t.Setenv(SessionLogSchemaEnv, "v1")
-	path := dagTestSession(t)
-	v1 := dagSavedSession(t, path, "q1", "a1")
-	if err := os.Unsetenv(SessionLogSchemaEnv); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	loaded.Add(provider.Message{Role: provider.RoleUser, Content: "q2"})
-	if err := loaded.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	if probe, _ := probeSessionEventLog(path); probe.dag {
-		t.Fatal("unleased writer must not upgrade an existing schema-1 log")
-	}
-	lease, err := TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer lease.Release()
-	loaded.Add(provider.Message{Role: provider.RoleAssistant, Content: "a2"})
-	if err := loaded.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	probe, _ := probeSessionEventLog(path)
-	if probe.dag {
-		t.Fatal("a lease must not implicitly upgrade an existing schema-1 log")
-	}
-	again, err := LoadSession(path)
-	if err != nil || strings.Join(dagContents(again.Messages), ",") != "sys,q1,a1,q2,a2" {
-		t.Fatalf("after native append: %v err=%v", dagContents(again.Messages), err)
-	}
-	for i := range v1.Messages {
-		if again.Messages[i].ID != loaded.Messages[i].ID {
-			t.Fatalf("message %d id changed across native append", i)
-		}
 	}
 }
 
@@ -462,29 +380,6 @@ func TestDAGSaveConcurrentGoroutinesExtendTheirOwnHeads(t *testing.T) {
 		}
 	}
 	assertNoTranscriptCopies(t, path)
-}
-
-func TestExportSessionSchemaOneWritesReadableSchemaOneSession(t *testing.T) {
-	path := dagTestSession(t)
-	s := dagSavedSession(t, path, "q1", "a1")
-	dst := filepath.Join(t.TempDir(), "export.jsonl")
-	if err := ExportSessionSchemaOne(path, dst); err != nil {
-		t.Fatal(err)
-	}
-	probe, err := probeSessionEventLog(dst)
-	if err != nil || !probe.native || probe.dag {
-		t.Fatalf("export probe = %+v err=%v", probe, err)
-	}
-	exported, err := LoadSession(dst)
-	if err != nil || strings.Join(dagContents(exported.Messages), ",") != strings.Join(dagContents(s.Messages), ",") {
-		t.Fatalf("export reload = %v err=%v", dagContents(exported.Messages), err)
-	}
-	if _, ok := exported.Head(); ok {
-		t.Fatal("exported session must be schema 1")
-	}
-	if err := ExportSessionSchemaOne(path, dst); err == nil {
-		t.Fatal("export must refuse to overwrite an existing destination")
-	}
 }
 
 func TestDAGSaveIndependentIdenticalTranscriptsConverge(t *testing.T) {

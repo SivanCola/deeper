@@ -22,7 +22,7 @@ system_prompt = "BASE"
 name = "test-model"
 kind = "openai"
 base_url = "https://example.invalid"
-model = "x"
+models = ["x"]
 api_key_env = "DEEPZORA_TEST_KEY_UNSET"
 `)
 	approveWorkspace(t, dir)
@@ -70,7 +70,7 @@ system_prompt = "BASE"
 [[providers]]
 name = "test-model"
 kind = "boot-token-profile-test"
-model = "x"
+models = ["x"]
 `+environmentSection)
 		approveWorkspace(t, dir)
 

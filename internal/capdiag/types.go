@@ -116,9 +116,6 @@ type AssetEntry struct {
 
 // HookReport covers hook configuration.
 type HookReport struct {
-	// TrustedProject is retained in schema v1 for compatibility. Project hooks
-	// are enabled by default, so this is true whenever a project root is present.
-	TrustedProject bool         `json:"trusted_project"`
 	ProjectDefines bool         `json:"project_defines_hooks"`
 	Sources        []HookSource `json:"sources"`
 	Entries        []HookEntry  `json:"entries"`

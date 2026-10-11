@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	unlimitedGoalTurns = -1
 
 	// Bound the persisted novelty window. Signatures are compact hashes, and
 	// retaining the most recent window is enough to stop short repeat cycles
@@ -24,42 +23,11 @@ const (
 	maxGoalProgressEvidence = 512
 )
 
-// Budget class aliases remain as sidecar/CLI compatibility metadata only.
+// Stop causes distinguish a spend pause from a manual pause.
 const (
-	budgetClassSimple   = BudgetClassSimple
-	budgetClassWrite    = BudgetClassWrite
-	budgetClassResearch = BudgetClassResearch
+	stopCauseBudgetSpend = "budget_spend"
+	stopCauseManual      = "manual"
 )
-
-// Stop causes distinguish a safe pause from a genuine block. Removed numeric
-// causes remain migration-only constants so old sidecars can be normalized.
-const (
-	stopCauseBudgetTurns   = "budget_turns" // legacy; the class-derived turn quota is gone
-	stopCauseBudgetSpend   = "budget_spend"
-	stopCauseBudgetTokens  = "budget_tokens"   // legacy; never written by current runtime
-	stopCauseNoProgress    = "no_progress"     // legacy; never written by current runtime
-	stopCauseGoalRunBudget = "goal_run_budget" // legacy; the per-Run round ceiling is gone
-	stopCauseGoalStuck     = "goal_stuck"
-	stopCauseEvaluator     = "evaluator_unavailable"
-	stopCauseLegacyArchive = "legacy_archive"
-	stopCauseManual        = "manual"
-)
-
-// budgetClassForLegacyMode translates old sidecars and deprecated CLI flags at
-// the compatibility boundary. The active Goal runtime stores only budgetClass.
-func budgetClassForLegacyMode(goal string, researchMode GoalResearchMode) string {
-	switch researchMode {
-	case GoalResearchOn:
-		return budgetClassResearch
-	case GoalResearchOff:
-		if GoalNeedsWriteBudget(goal) {
-			return budgetClassWrite
-		}
-		return budgetClassSimple
-	default:
-		return ClassifyGoalBudget(goal)
-	}
-}
 
 // goalMachine owns the active goal FSM and its persistence. It is a strict
 // leaf: methods take only machine locks and never call back into Controller.
@@ -73,7 +41,6 @@ type goalMachine struct {
 	scopeID            string
 	deliveryCheckpoint evidence.DeliveryCheckpoint
 	block              string
-	strict             bool
 	continuationEpoch  uint64
 
 	tokenBudget int // configured ceiling for an unattended loop; 0 = unbounded
@@ -81,30 +48,22 @@ type goalMachine struct {
 	// Runtime statistics and optional user-selected spend state, persisted
 	// across turns and restarts. turnsUsed and noProgressTurns are observational;
 	// tokensLimit is non-zero only when the user configured a Goal token budget.
-	budgetClass            string
 	turnsUsed              int
-	turnsLimit             int
 	tokensUsed             int
 	requestsUsed           int
 	workDurationMs         int64
-	tokensLimit            int // always 0 at runtime; deprecated hard limit
+	tokensLimit            int // ceiling of the current user-selected spend slice
 	noProgressTurns        int
-	noProgressLimit        int
 	lastContinuationReason string
 	launch                 goalLaunchState
 	goalActivationState
 	lastEvaluatorReason string
 	stopCause           string
-	budgetExtensions    int // deprecated historical sidecar field
+	budgetExtensions    int // number of user-authorized spend extensions
 	progressEvidence    []string
 	// stateExtra preserves fields written by a newer peer during read/modify/
 	// write cycles. Known current fields always win on serialization.
 	stateExtra map[string]json.RawMessage
-	// legacyTaskID is retained only while a historical AutoResearch archive is
-	// awaiting migration. It is serialized on fail-closed blocked sidecars so a
-	// restart can retry the migration without treating the raw archive path as a
-	// new Goal.
-	legacyTaskID string
 
 	// statePath is the persisted goal-state sidecar; empty disables persistence.
 	statePath string
@@ -113,36 +72,26 @@ type goalMachine struct {
 	writeMu sync.Mutex
 }
 
-// goalState is the serializable form of a running goal. New fields are
-// safe-to-omit JSON: old readers ignore them, and restoreFromState re-derives
-// defaults when they are missing.
+// goalState is the current persisted goal projection. Todo state belongs to
+// the current turn and is not part of a goal record.
 type goalState struct {
-	Goal               string                      `json:"goal,omitempty"`
-	Status             string                      `json:"status,omitempty"`
-	ResearchMode       GoalResearchMode            `json:"researchMode,omitempty"`
-	AutoResearchTaskID string                      `json:"autoResearchTaskID,omitempty"`
-	ScopeID            string                      `json:"scopeID,omitempty"`
-	DeliveryCheckpoint evidence.DeliveryCheckpoint `json:"deliveryCheckpoint,omitempty"`
-	Turns              int                         `json:"turns,omitempty"`
-	Blocks             int                         `json:"blocks,omitempty"`
-	Block              string                      `json:"block,omitempty"`
-	Strict             bool                        `json:"strict,omitempty"`
-	Todos              []evidence.TodoItem         `json:"todos,omitempty"`
-
-	BudgetClass            string   `json:"budgetClass,omitempty"`
-	TurnsUsed              int      `json:"turnsUsed,omitempty"`
-	TurnsLimit             int      `json:"turnsLimit,omitempty"`
-	TokensUsed             int      `json:"tokensUsed,omitempty"`
-	RequestsUsed           int      `json:"requestsUsed,omitempty"`
-	WorkDurationMs         int64    `json:"workDurationMs,omitempty"`
-	TokensLimit            int      `json:"tokensLimit,omitempty"`
-	NoProgressTurns        int      `json:"noProgressTurns,omitempty"`
-	NoProgressLimit        int      `json:"noProgressLimit,omitempty"`
-	LastContinuationReason string   `json:"lastContinuationReason,omitempty"`
-	LastEvaluatorReason    string   `json:"lastEvaluatorReason,omitempty"`
-	StopCause              string   `json:"stopCause,omitempty"`
-	BudgetExtensions       int      `json:"budgetExtensions,omitempty"`
-	ProgressEvidence       []string `json:"progressEvidence,omitempty"`
+	SchemaVersion          int                         `json:"schemaVersion"`
+	Goal                   string                      `json:"goal,omitempty"`
+	Status                 string                      `json:"status,omitempty"`
+	ScopeID                string                      `json:"scopeID,omitempty"`
+	DeliveryCheckpoint     evidence.DeliveryCheckpoint `json:"deliveryCheckpoint,omitempty"`
+	Block                  string                      `json:"block,omitempty"`
+	TurnsUsed              int                         `json:"turnsUsed,omitempty"`
+	TokensUsed             int                         `json:"tokensUsed,omitempty"`
+	RequestsUsed           int                         `json:"requestsUsed,omitempty"`
+	WorkDurationMs         int64                       `json:"workDurationMs,omitempty"`
+	TokensLimit            int                         `json:"tokensLimit,omitempty"`
+	NoProgressTurns        int                         `json:"noProgressTurns,omitempty"`
+	LastContinuationReason string                      `json:"lastContinuationReason,omitempty"`
+	LastEvaluatorReason    string                      `json:"lastEvaluatorReason,omitempty"`
+	StopCause              string                      `json:"stopCause,omitempty"`
+	BudgetExtensions       int                         `json:"budgetExtensions,omitempty"`
+	ProgressEvidence       []string                    `json:"progressEvidence,omitempty"`
 }
 
 // goalStatePath derives a session's persisted goal-state sidecar.
@@ -222,19 +171,12 @@ func (g *goalMachine) statusForDisplay() string {
 // the per-goal runtime counters, and returns the state to persist. ok is
 // false (no persistence) when the goal is unchanged or no state path is
 // configured.
-func (g *goalMachine) set(goal, preferredBudgetClass string) (string, []byte, bool) {
+func (g *goalMachine) set(goal string) (string, []byte, bool) {
 	goal = strings.TrimSpace(goal)
-	if goal != "" && preferredBudgetClass == "" {
-		preferredBudgetClass = ClassifyGoalBudget(goal)
-	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if goal != "" && g.goal == goal && g.status == GoalStatusRunning {
 		if !g.disarmed {
-			if g.budgetClass != preferredBudgetClass {
-				g.budgetClass = preferredBudgetClass
-				return g.buildStateLocked()
-			}
 			return "", nil, false
 		}
 		// Explicitly starting the restored objective preserves its identity and
@@ -243,36 +185,11 @@ func (g *goalMachine) set(goal, preferredBudgetClass string) (string, []byte, bo
 		g.continuationEpoch++
 		return g.buildStateLocked()
 	}
-	g.installGoalLocked(goal, preferredBudgetClass)
+	g.installGoalLocked(goal)
 	return g.buildStateLocked()
 }
 
-// setLegacyArchiveBlocked atomically installs and blocks an explicit legacy
-// archive goal. A concurrent Goal replacement cannot be blocked between two
-// separate FSM mutations.
-func (g *goalMachine) setLegacyArchiveBlocked(goal, preferredBudgetClass, reason string) (string, []byte, bool) {
-	return g.setLegacyArchiveBlockedWithTaskID(goal, preferredBudgetClass, reason, "")
-}
-
-func (g *goalMachine) setLegacyArchiveBlockedWithTaskID(goal, preferredBudgetClass, reason, taskID string) (string, []byte, bool) {
-	goal = strings.TrimSpace(goal)
-	taskID = strings.TrimSpace(taskID)
-	if goal != "" && preferredBudgetClass == "" {
-		preferredBudgetClass = ClassifyGoalBudget(goal)
-	}
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	g.installGoalLocked(goal, preferredBudgetClass)
-	if goal != "" {
-		g.status = GoalStatusBlocked
-	}
-	g.stopCause = stopCauseLegacyArchive
-	g.block = clipGoalReason(reason)
-	g.legacyTaskID = taskID
-	return g.buildStateLocked()
-}
-
-func (g *goalMachine) installGoalLocked(goal, preferredBudgetClass string) {
+func (g *goalMachine) installGoalLocked(goal string) {
 	g.disarmed = false
 	g.continuationEpoch++
 	g.turnsUsed, g.tokensUsed, g.requestsUsed, g.noProgressTurns = 0, 0, 0, 0
@@ -284,29 +201,15 @@ func (g *goalMachine) installGoalLocked(goal, preferredBudgetClass string) {
 	g.progressEvidence = nil
 	if goal == "" {
 		g.goal, g.status = "", GoalStatusStopped
-		g.budgetClass = ""
-		g.turnsLimit = 0
-		g.noProgressLimit = 0
 		g.scopeID = ""
 		g.deliveryCheckpoint = evidence.DeliveryCheckpoint{}
 	} else {
 		g.goal, g.status = goal, GoalStatusRunning
 		g.scopeID = newGoalScopeID()
 		g.deliveryCheckpoint = evidence.DeliveryCheckpoint{ScopeID: g.scopeID}
-		g.budgetClass = preferredBudgetClass
-		g.turnsLimit = unlimitedGoalTurns
 		g.tokensLimit = g.tokenBudget
-		g.noProgressLimit = 0
 	}
-	// Installing a normal Goal always abandons any pending legacy migration.
-	g.legacyTaskID = ""
-}
 
-func (g *goalMachine) setStrict(strict bool) (string, []byte, bool) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	g.strict = strict
-	return g.buildStateLocked()
 }
 
 // stop transitions a running goal to the given terminal status and clears the
@@ -345,11 +248,7 @@ func (g *goalMachine) pauseFor(stopCause, reason string) (string, []byte, bool) 
 func (g *goalMachine) resume() (path string, data []byte, persist, resumed bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	if g.stopCause == stopCauseLegacyArchive {
-		// A legacy archive block is recoverable only through the read-only
-		// archive boundary; never reinterpret it as an ordinary Goal resume.
-		return "", nil, false, false
-	}
+
 	if strings.TrimSpace(g.goal) == "" || g.status == GoalStatusComplete {
 		return "", nil, false, false
 	}
@@ -362,8 +261,6 @@ func (g *goalMachine) resume() (path string, data []byte, persist, resumed bool)
 	g.block = ""
 	g.stopCause = ""
 	g.noProgressTurns = 0
-	g.turnsLimit = unlimitedGoalTurns
-	g.noProgressLimit = 0
 	g.budgetExtensions = 0
 	g.grantSpendSliceLocked(spentBudget)
 	if g.scopeID == "" {
@@ -409,38 +306,23 @@ func (g *goalMachine) eventState() ([]byte, bool) {
 
 func (g *goalMachine) marshalStateLocked() ([]byte, bool) {
 	state := goalState{
-		Goal:               g.goal,
-		Status:             g.status,
-		ScopeID:            g.scopeID,
-		DeliveryCheckpoint: g.deliveryCheckpoint,
-		Turns:              g.turnsUsed,
-		Block:              g.block,
-		Strict:             g.strict,
-		// Todos is intentionally omitted. Legacy sidecars remain readable, but
-		// turn-local progress is never persisted with a Goal.
-		BudgetClass:            g.budgetClass,
+		SchemaVersion:          1,
+		Goal:                   g.goal,
+		Status:                 g.status,
+		ScopeID:                g.scopeID,
+		DeliveryCheckpoint:     g.deliveryCheckpoint,
+		Block:                  g.block,
 		TurnsUsed:              g.turnsUsed,
-		TurnsLimit:             g.turnsLimit,
 		TokensUsed:             g.tokensUsed,
 		RequestsUsed:           g.requestsUsed,
 		WorkDurationMs:         g.workDurationMs,
 		TokensLimit:            g.tokensLimit,
 		NoProgressTurns:        g.noProgressTurns,
-		NoProgressLimit:        g.noProgressLimit,
 		LastContinuationReason: g.lastContinuationReason,
 		LastEvaluatorReason:    g.lastEvaluatorReason,
 		StopCause:              g.stopCause,
 		BudgetExtensions:       g.budgetExtensions,
 		ProgressEvidence:       append([]string(nil), g.progressEvidence...),
-	}
-	// GoalResearchOff is a downgrade fence for ordinary Goal sidecars. A
-	// fail-closed legacy migration keeps its task identity and compatibility mode
-	// until the archive has been validated and the Goal-only state is committed.
-	if g.legacyTaskID != "" && g.status == GoalStatusBlocked && g.stopCause == stopCauseLegacyArchive {
-		state.AutoResearchTaskID = g.legacyTaskID
-		state.ResearchMode = GoalResearchOn
-	} else {
-		state.ResearchMode = GoalResearchOff
 	}
 	b, err := marshalGoalState(state, g.stateExtra)
 	if err != nil {
@@ -458,76 +340,61 @@ func (g *goalMachine) writeState(path string, data []byte) {
 	}
 }
 
-// restoreFromState reloads Goal state from the sidecar. The sidecar is
-// authoritative; active Goals are normalized to continuous-runtime sentinels.
-// migrated means path/data were atomically rewritten (without a provider call).
-// legacyTaskID is returned only
-// so Controller can fill missing goal text from a historical archive.
-func (g *goalMachine) restoreFromState(sessionPath string) (path string, data []byte, migrated bool, legacy legacyGoalRestore) {
+func (g *goalMachine) restoreFromState(sessionPath string) {
 	if strings.TrimSpace(sessionPath) == "" {
-		return "", nil, false, legacyGoalRestore{}
+		return
 	}
-	// Ensure write path is bound even when the controller rebuilds.
 	if g.statePath == "" {
 		g.setStatePath(goalStatePath(sessionPath))
 	}
 	raw, err := fileencoding.ReadFileUTF8(goalStatePath(sessionPath))
 	if err != nil {
-		if !os.IsNotExist(err) {
-			slog.Warn("controller: read goal state", "err", err)
-		}
-		return "", nil, false, legacyGoalRestore{}
+		return
 	}
-	var state goalState
-	if err := json.Unmarshal(raw, &state); err != nil {
-		slog.Warn("controller: parse goal state", "err", err)
-		return "", nil, false, legacyGoalRestore{}
+	state, decodeErr := decodeGoalState(raw)
+	if decodeErr != nil {
+		return
 	}
-	legacy = g.restoreDecodedState(raw, state)
-	return "", nil, false, legacy
+	g.restoreDecodedState(raw, state)
 }
 
 // restoreGoalEvent installs a persisted v3 goal projection without reviving
 // an execution loop. Goal events retain objective, status and budgets, while
 // Todo remains a separate current-turn projection.
 func (g *goalMachine) restoreGoalEvent(raw []byte) error {
-	if len(raw) == 0 {
-		raw = []byte(`{}`)
+	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "null" {
+		raw = []byte(`{"schemaVersion":1}`)
 	}
-	var state goalState
-	if err := json.Unmarshal(raw, &state); err != nil {
+	var discriminator map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &discriminator); err != nil {
 		return err
 	}
-	state.Todos = nil
+	if _, lifecycle := discriminator["version"]; lifecycle {
+		if _, err := goalLifecycleFromProjection(raw); err != nil {
+			return err
+		}
+		// The current human-directed lifecycle owns its own projection. It does
+		// not activate the autonomous execution machine during a cold restore.
+		g.restoreDecodedState(nil, goalState{SchemaVersion: 1})
+		return nil
+	}
+	state, err := decodeGoalState(raw)
+	if err != nil {
+		return err
+	}
 	g.restoreDecodedState(raw, state)
 	return nil
 }
 
-func (g *goalMachine) restoreDecodedState(raw []byte, state goalState) legacyGoalRestore {
+func (g *goalMachine) restoreDecodedState(raw []byte, state goalState) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.stateExtra = goalStateUnknownFields(raw)
-	delete(g.stateExtra, "todos")
-	delete(g.stateExtra, "todo")
 	g.goal = strings.TrimSpace(state.Goal)
 	g.disarmed = true
 	g.status = state.Status
 	if g.status == "" {
 		g.status = GoalStatusStopped
-	}
-	// Legacy task identity is migration-only compatibility data. It is returned to
-	// the Controller's archive boundary and retained in the machine only while a
-	// fail-closed migration remains pending.
-	legacy := legacyGoalRestore{
-		taskID: strings.TrimSpace(state.AutoResearchTaskID),
-	}
-	// A task id is pending only when the sidecar has no Goal text. A legacy
-	// sidecar that already contains an objective can be migrated directly and
-	// must serialize as ordinary Goal state on the first write.
-	if g.goal == "" {
-		g.legacyTaskID = legacy.taskID
-	} else {
-		g.legacyTaskID = ""
 	}
 	g.scopeID = strings.TrimSpace(state.ScopeID)
 	if g.scopeID == "" {
@@ -545,31 +412,20 @@ func (g *goalMachine) restoreDecodedState(raw []byte, state goalState) legacyGoa
 		g.deliveryCheckpoint = evidence.DeliveryCheckpoint{ScopeID: g.scopeID}
 	}
 	g.block = state.Block
-	g.strict = state.Strict
 	g.stopCause = state.StopCause
 	g.budgetExtensions = state.BudgetExtensions
 	g.progressEvidence, _ = mergeGoalProgressEvidence(nil, state.ProgressEvidence)
 	g.lastContinuationReason = state.LastContinuationReason
 	g.lastEvaluatorReason = state.LastEvaluatorReason
-	// Old sidecars carry Turns (pre-budget counting); treat it as turn usage.
+	// Restore the current usage counters.
 	g.turnsUsed = state.TurnsUsed
-	if g.turnsUsed == 0 && state.Turns > 0 {
-		g.turnsUsed = state.Turns
-	}
+
 	g.tokensUsed = state.TokensUsed
 	g.requestsUsed = state.RequestsUsed
 	g.workDurationMs = state.WorkDurationMs
-	g.budgetClass = normalizeBudgetClass(g.goal, state.BudgetClass, state.ResearchMode)
-	g.turnsLimit = state.TurnsLimit
 	g.noProgressTurns = state.NoProgressTurns
-	g.noProgressLimit = state.NoProgressLimit
 	g.tokensLimit = state.TokensLimit
-	// Normalize in memory only. Reading history must not write a sidecar;
-	// the next ordinary save persists compatibility values under its lease.
-	g.normalizeContinuousState(state.ResearchMode, legacy.taskID)
 	g.continuationEpoch++
-	legacy.epoch = g.continuationEpoch
-	return legacy
 }
 
 // clipGoalReason bounds a recorded reason for storage and display.
@@ -603,31 +459,12 @@ func (c *Controller) persistGoalState(path string, data []byte, ok bool) {
 	if !ok || c.executor == nil {
 		return
 	}
-	eventData := goalEventPayload(data)
-	if err := c.appendDomainState("goal/state", eventData, "goal-update"); err != nil {
+	if err := c.appendDomainState("goal/state", data, "goal-update"); err != nil {
 		slog.Warn("controller: append goal state event", "err", err)
 		c.failTurnEventLedger(err)
 		return
 	}
 	c.goals.writeState(path, data)
-}
-
-func goalEventPayload(data []byte) []byte {
-	var state map[string]json.RawMessage
-	if json.Unmarshal(data, &state) != nil {
-		return data
-	}
-	delete(state, "todos")
-	delete(state, "todo")
-	delete(state, "activeForm")
-	delete(state, "step_id")
-	delete(state, "auto_continue")
-	delete(state, "autoContinue")
-	clean, err := json.Marshal(state)
-	if err != nil {
-		return data
-	}
-	return clean
 }
 
 func (c *Controller) persistGoalStateAtEpoch(epoch uint64) (bool, error) {

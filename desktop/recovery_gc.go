@@ -64,7 +64,7 @@ func (a *App) reclaimRecoveryBranchesIn(dirs []string, now time.Time, grace time
 			// DeleteRecoveryCopy re-proves real parent coverage under removal
 			// guards. A concurrent continue-edit, missing parent, or busy lease
 			// skips without moving or permanently deleting anything.
-			if err := a.DeleteRecoveryCopy(path); err != nil {
+			if err := a.deleteRecoveryCopy(path); err != nil {
 				slog.Warn("desktop: trash reclaimed recovery branch", "path", path, "err", err)
 				continue
 			}

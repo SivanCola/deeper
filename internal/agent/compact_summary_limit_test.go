@@ -318,7 +318,7 @@ func TestFailedReceiptLiftsWhenViewOutgrowsFailure(t *testing.T) {
 		{Role: provider.RoleAssistant, Content: "tail"},
 	}}
 	prov := &failingSummaryProvider{}
-	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85, RecentKeep: 2}, event.Discard)
+	a := New(prov, tool.NewRegistry(), sess, Options{ContextWindow: window, CompactRatio: 0.85}, event.Discard)
 	policy := ContextPreparePolicy{Trigger: CompactionTriggerPressure, ObservedInputTokens: 8600}
 	a.activeTurnCreatedAt.Store(11)
 

@@ -7,11 +7,8 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/historywork"
 	"deepzora/internal/session"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -126,15 +123,7 @@ func (a *App) GetSessionArchitectureDiagnostics() (SessionArchitectureDiagnostic
 			result.PendingOperations++
 		}
 	}
-	for _, entry := range state.RecoveryEntries {
-		if entry.Status == "restored" {
-			continue
-		}
-		result.RecoveryEntries++
-		if strings.Contains(entry.Reason, "conflict") {
-			result.SourceConflicts++
-		}
-	}
+
 	for _, workspace := range state.Workspaces {
 		result.WorkspaceMembersTotal += len(workspace.SessionIDs)
 		for _, sessionID := range workspace.SessionIDs {
@@ -158,26 +147,6 @@ func (a *App) GetSessionArchitectureDiagnostics() (SessionArchitectureDiagnostic
 			result.ProjectionPending++
 		case session.MetadataFailed:
 			result.ProjectionFailed++
-		}
-	}
-	desktopMigrationMu.Lock()
-	var ledger desktopMigrationLedger
-	body, readErr := os.ReadFile(desktopMigrationLedgerPath())
-	if readErr == nil {
-		readErr = json.Unmarshal(body, &ledger)
-	}
-	desktopMigrationMu.Unlock()
-	if readErr != nil && !os.IsNotExist(readErr) {
-		return result, readErr
-	}
-	for _, record := range ledger.Records {
-		switch record.Status {
-		case "pending":
-			result.MigrationPending++
-		case "failed":
-			result.MigrationFailed++
-		case "completed":
-			result.MigrationCompleted++
 		}
 	}
 	return result, listErr
@@ -577,10 +546,8 @@ func (a *App) CopySessionTarget(selector SessionSelector, operationID string) (S
 		_, err = service.CopySession(a.bootContext(), session.CopyRequest{
 			Source: target.SessionRef, ChildID: childID, OperationID: operationID, CWD: cwd,
 		})
-	} else if strings.TrimSpace(target.SessionPath) == "" {
-		err = newSessionOperationError(sessionOperationNoMessages, "This session has no conversation history to copy.")
 	} else {
-		err = a.copyLegacySessionTarget(target, childRef, operationID, cwd)
+		err = newSessionOperationError(sessionOperationNoMessages, "This session has no conversation history to copy.")
 	}
 	if err != nil {
 		_ = a.workspaceRegistry().AbortCreate(context.Background(), childID)
@@ -618,49 +585,6 @@ func (a *App) CopySessionTarget(selector SessionSelector, operationID string) (S
 		OperationID: operationID, WorkspaceID: workspaceID,
 	})
 	return SessionCreationResult{Ref: childRef, OperationID: operationID, Committed: true}, nil
-}
-
-func (a *App) copyLegacySessionTarget(target SessionTarget, child session.SessionRef, operationID, cwd string) error {
-	container, err := os.MkdirTemp("", "deepzora-legacy-copy-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(container)
-	migrationRoot := filepath.Join(container, "migrated")
-	migrated, err := session.MigrateLegacy(a.bootContext(), target.SessionPath, migrationRoot)
-	if err != nil {
-		return err
-	}
-	service := a.desktopSessionService("")
-	if matched, matchErr := service.CopyOperationMatches(a.bootContext(), child, migrated.TargetID, operationID); matchErr == nil && matched {
-		return nil
-	}
-	staging, err := session.NewService(localDesktopHostID, session.NewFilesystemPersistence(migrationRoot))
-	if err != nil {
-		return err
-	}
-	defer func() { _ = staging.CloseAll(context.Background()) }()
-	source := session.SessionRef{HostID: localDesktopHostID, SessionID: migrated.TargetID}
-	copied, err := staging.CopySession(a.bootContext(), session.CopyRequest{
-		Source: source, ChildID: child.SessionID, OperationID: operationID, CWD: cwd,
-	})
-	if err != nil {
-		return err
-	}
-	bundle := filepath.Join(container, "bundle")
-	if err := staging.Export(a.bootContext(), copied.Child, bundle); err != nil {
-		return err
-	}
-	_, err = service.ImportWithHeader(a.bootContext(), bundle, session.CreateOptions{
-		SessionID: child.SessionID, CWD: cwd, Origin: session.SessionOriginLegacyImport,
-	})
-	if err == nil {
-		return nil
-	}
-	if matched, matchErr := service.CopyOperationMatches(a.bootContext(), child, migrated.TargetID, operationID); matchErr == nil && matched {
-		return nil
-	}
-	return err
 }
 
 func (a *App) ReadSessionHistory(ref session.SessionRef, cursor string, limit int) (HistoryPage, error) {
@@ -750,16 +674,7 @@ func (a *App) SetSessionPinned(selector SessionSelector, pinned bool) error {
 	if err != nil {
 		return err
 	}
-	if target.SessionRef.SessionID == "" && target.Source != nil {
-		value := pinned
-		if err := a.saveHistoricalSourcePresentation(target.Source.SourceKey, func(presentation *historicalSourcePresentation) {
-			presentation.Pinned = &value
-		}); err != nil {
-			return err
-		}
-		a.emitProjectTreeMetadataChanged()
-		return nil
-	}
+
 	if target.SessionRef.SessionID == "" {
 		return newSessionOperationError(sessionOperationNoMessages, "This empty session has no durable preference yet.")
 	}

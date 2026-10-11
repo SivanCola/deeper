@@ -1,14 +1,13 @@
 import type { SettingsView } from "./types";
 import { normalizeStatusBarItems } from "./statusBarItems";
-import { applyMockLegacyReasoningMode, applyMockSessionExperience } from "./sessionExperienceMock";
+import { applyMockSessionExperience } from "./sessionExperienceMock";
 
-/** Browser fixtures share one preference snapshot and its compatibility mirrors. */
+/** Browser fixtures share one preference snapshot . */
 export function createDesktopPreferencesMock(settings: SettingsView) {
   return {
     async SetCloseBehavior(mode: string) {
       settings.closeBehavior = mode === "quit" ? "quit" : "background";
     },
-    async SetDisplayMode() { applyMockSessionExperience(settings, "standard"); },
     async SetStatusBarStyle(style: string) {
       settings.statusBarStyle = style === "text" ? "text" : "icon";
     },
@@ -24,10 +23,6 @@ export function createDesktopPreferencesMock(settings: SettingsView) {
     async SetDesktopCheckUpdates(enabled: boolean) {
       settings.checkUpdates = enabled;
     },
-    async SetDesktopUpdateChannel(channel: string) {
-      void channel;
-      settings.updateChannel = "stable";
-    },
     async SetDesktopTelemetry(enabled: boolean) {
       settings.telemetry = enabled;
     },
@@ -35,15 +30,6 @@ export function createDesktopPreferencesMock(settings: SettingsView) {
       settings.metrics = enabled;
     },
     async SetDesktopConversationWidth(width: string) { settings.conversationWidth = width; },
-    async SetReasoningDisplayMode(mode: "hidden" | "summary" | "auto" | "expanded") { applyMockLegacyReasoningMode(settings, mode); },
     async SetSessionExperience(mode: "standard" | "deep") { applyMockSessionExperience(settings, mode); },
-    async SetExpandThinking() { applyMockSessionExperience(settings, "standard"); },
-    async MigrateDesktopPreferences(language: string, theme: string, style: string) {
-      if (!settings.desktopLanguage) settings.desktopLanguage = language === "en" || language === "zh" || language === "zh-TW" ? language : "";
-      if (!settings.desktopTheme && !settings.desktopThemeStyle) {
-        settings.desktopTheme = theme === "auto" || theme === "light" ? theme : "dark";
-        settings.desktopThemeStyle = style;
-      }
-    },
   };
 }

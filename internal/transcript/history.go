@@ -15,7 +15,7 @@ type HistoryOptions struct {
 	UserContent     func(provider.Message) string
 	SubmitContent   func(provider.Message) string
 	ToolCall        func(provider.ToolCall) ToolCall
-	LegacyTurns     []LegacyDisplayTurn
+	RecoveredTurns  []RecoveredDisplayTurn
 	CheckpointTurns map[int]int
 }
 
@@ -23,7 +23,7 @@ type HistoryOptions struct {
 // Derived notices are keyed by their owning message, never by their body.
 func History(messages []provider.Message, opts HistoryOptions) []Message {
 	out := make([]Message, 0, len(messages))
-	byUser := legacyTurnsByUser(opts.LegacyTurns)
+	byUser := recoveredTurnsByUser(opts.RecoveredTurns)
 	canonicalMessages := canonicalMessageIDs(messages)
 	suppressCanonical := false
 	todoArgs := completedTodoArguments(messages)
@@ -41,7 +41,7 @@ func History(messages []provider.Message, opts HistoryOptions) []Message {
 		stampHistoryRows(rows, m, used)
 		out = append(out, rows...)
 		if m.Role == provider.RoleUser && !m.LocalOnly && agent.IsUserAuthoredTurnMessage(m) {
-			if appendLegacyTurnRows(&out, byUser, canonicalMessages, m) {
+			if appendRecoveredTurnRows(&out, byUser, canonicalMessages, m) {
 				suppressCanonical = true
 			}
 		}
@@ -59,12 +59,12 @@ func canonicalMessageIDs(messages []provider.Message) map[string]bool {
 	return canonicalMessages
 }
 
-func legacyTurnsByUser(turns []LegacyDisplayTurn) map[string][]LegacyDisplayTurn {
-	byUser := make(map[string][]LegacyDisplayTurn)
+func recoveredTurnsByUser(turns []RecoveredDisplayTurn) map[string][]RecoveredDisplayTurn {
+	byUser := make(map[string][]RecoveredDisplayTurn)
 	for _, turn := range turns {
 		key := turn.UserMessageID
 		if key == "" {
-			key = "legacy:" + turn.UserHash
+			continue
 		}
 		byUser[key] = append(byUser[key], turn)
 	}
@@ -73,7 +73,7 @@ func legacyTurnsByUser(turns []LegacyDisplayTurn) map[string][]LegacyDisplayTurn
 
 func independentLocalMessage(m provider.Message) bool {
 	_, steer := agent.ReplaySteerText(m.Content)
-	return m.LocalOnly && (m.ReadPause != nil || m.ReadCompletion != nil || len(m.ProtocolRecovery) > 0 || (m.FinalReadinessRecovery != nil && m.FinalReadinessRecovery.Pending) || steer)
+	return m.LocalOnly && (m.ReadPause != nil || m.ReadCompletion != nil || len(m.ProtocolRecovery) > 0 || steer)
 }
 
 func historyRows(m provider.Message, messageIndex int, opts HistoryOptions, todoArgs map[string]string) []Message {
@@ -91,10 +91,6 @@ func historyRows(m provider.Message, messageIndex int, opts HistoryOptions, todo
 			return []Message{{Role: "notice", Code: "protocol_recovery", Level: "info", Pending: true, ProtocolRecovery: &provider.ProtocolRecoveryAction{ID: recovery.ID}}}
 		}
 		return nil
-	case m.LocalOnly && m.FinalReadinessRecovery != nil && m.FinalReadinessRecovery.Pending:
-		return []Message{{Role: "notice", Code: agent.HistoricalChecksNoticeCode, Level: "info",
-			Content:   agent.HistoricalChecksNoticeText,
-			Readiness: agent.HistoricalChecks(m.FinalReadinessRecovery)}}
 	default:
 		return defaultHistoryRows(m, messageIndex, opts, todoArgs)
 	}
@@ -162,7 +158,7 @@ func applyUserHistoryContent(row *Message, m provider.Message, messageIndex int,
 	row.Content = CollapseExpandedPaste(row.Content)
 	if opts.SubmitContent != nil && row.Content != m.Content {
 		replay := opts.SubmitContent(m)
-		if replay != row.Content && (!agent.ContainsMemoryCompilerExecution(m.Content) || strings.HasPrefix(strings.TrimSpace(replay), "/")) {
+		if replay != row.Content {
 			row.SubmitText = replay
 		}
 	}
@@ -224,13 +220,10 @@ func unappliedSteerRecordID(messageID string) string {
 	return "m:" + messageID + ":notice:0"
 }
 
-// appendLegacyTurnRows reports whether the replayed turn carried a
+// appendRecoveredTurnRows reports whether the replayed turn carried a
 // cancelled-turn notice, which suppresses its canonical successor messages.
-func appendLegacyTurnRows(out *[]Message, byUser map[string][]LegacyDisplayTurn, canonicalMessages map[string]bool, m provider.Message) bool {
+func appendRecoveredTurnRows(out *[]Message, byUser map[string][]RecoveredDisplayTurn, canonicalMessages map[string]bool, m provider.Message) bool {
 	key := m.ID
-	if len(byUser[key]) == 0 {
-		key = "legacy:" + LegacyDisplayKey(agent.UserMessageText(m))
-	}
 	turns := byUser[key]
 	if len(turns) == 0 {
 		return false
@@ -252,7 +245,7 @@ func appendLegacyTurnRows(out *[]Message, byUser map[string][]LegacyDisplayTurn,
 			if legacy.MessageID != "" {
 				legacy.RecordID = "m:" + legacy.MessageID
 			} else {
-				legacy.RecordID = fmt.Sprintf("m:%s:legacy:%s:%d", m.ID, turn.TurnID, i)
+				legacy.RecordID = fmt.Sprintf("m:%s:recovered:%s:%d", m.ID, turn.TurnID, i)
 			}
 		}
 		if legacy.Role == "notice" && legacy.Code == event.NoticeCodeCancelledTurn {

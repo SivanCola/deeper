@@ -320,52 +320,6 @@ eq(decisionSurfaceMockFromInput(LONG_DECISION_OPTIONS_MOCK_TRIGGER), null, "long
   dom.window.close();
 }
 
-// Auto Guard recovery decisions are retired. Old payloads remain visible as
-// history, with no confirmation, retry, task grant, or guidance action.
-{
-  const dom = installDom();
-  const root = createRoot(document.getElementById("root")!);
-  const decisions: Array<{ action: string; feedback?: string }> = [];
-  const approval: WireApproval = {
-    id: "guard-history",
-    tool: "bash",
-    subject: "git push origin feature",
-    kind: "recovery",
-    recovery: {
-      next_action: "git push origin feature",
-      change_kind: "risk",
-      can_grant_task: true,
-      task_grant_scope: "git push origin → feature",
-      failed_summary: "The previous result was not recorded.",
-    },
-  };
-
-  await act(async () => {
-    root.render(
-      <LocaleProvider>
-        <ApprovalModal
-          approval={approval}
-          onAnswer={() => undefined}
-          onResolveRecovery={(action, feedback) => decisions.push({ action, feedback })}
-          onStop={() => undefined}
-        />
-      </LocaleProvider>,
-    );
-    await flushTimers();
-  });
-
-  ok(document.body.textContent?.includes("Historical recovery record"), "old recovery payload is labeled as history");
-  ok(document.body.textContent?.includes("retired recovery mechanism"), "history explains that the recovery gate is retired");
-  ok(document.body.textContent?.includes("git push origin feature"), "historical action remains visible");
-  eq(document.querySelectorAll(".prompt-shelf__actions .prompt-action").length, 0, "history exposes no decision actions");
-  ok(!document.querySelector(".recovery-task-grant"), "history exposes no task grant");
-  ok(!document.querySelector(".recovery-guidance-trigger"), "history exposes no recovery guidance control");
-  eq(decisions.length, 0, "rendering history never resolves or replays the old action");
-
-  await act(async () => root.unmount());
-  dom.window.close();
-}
-
 // A fresh decision for a dynamic tool is one-shot.
 {
   const dom = installDom();

@@ -176,23 +176,6 @@ func TestRenderNormalizesType(t *testing.T) {
 
 // loadMemory
 
-func TestLoadMemoryNoFrontmatter(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "no-fm.md")
-	os.WriteFile(f, []byte("just a body\nno frontmatter"), 0o644)
-	m, ok := loadMemory(f)
-	if !ok {
-		t.Fatal("loadMemory should succeed for files without frontmatter")
-	}
-	// Name should be derived from filename.
-	if m.Name != "no-fm" {
-		t.Errorf("name = %q, want no-fm", m.Name)
-	}
-	if !strings.Contains(m.Body, "just a body") {
-		t.Errorf("body = %q", m.Body)
-	}
-}
-
 func TestLoadMemoryMissingFile(t *testing.T) {
 	_, ok := loadMemory("/nonexistent/path.md")
 	if ok {
@@ -200,28 +183,15 @@ func TestLoadMemoryMissingFile(t *testing.T) {
 	}
 }
 
-func TestLoadMemoryEmptyFile(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "empty.md")
-	os.WriteFile(f, nil, 0o644)
-	m, ok := loadMemory(f)
-	if !ok {
-		t.Fatal("loadMemory should succeed for empty files")
-	}
-	if m.Name != "empty" {
-		t.Errorf("name = %q", m.Name)
-	}
-}
-
 // Store.List edge cases
 
 func TestListSkipsNonMdFiles(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "fact.md"), []byte("---\nname: fact\n---\nbody"), 0o644)
+	os.WriteFile(filepath.Join(dir, "fact.md"), []byte(render(Memory{ID: "mem-fact", Revision: 1, Scope: FactScopeProject, Name: "fact", Body: "body"}, "fact")), 0o644)
 	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("not a memory"), 0o644)
 	os.WriteFile(filepath.Join(dir, "MEMORY.md"), []byte("# Memory\n"), 0o644)
 	s := Store{Dir: dir}
-	list := s.List()
+	list := s.ListAll()
 	if len(list) != 1 {
 		t.Fatalf("want 1 memory, got %d", len(list))
 	}
@@ -232,7 +202,7 @@ func TestListSkipsNonMdFiles(t *testing.T) {
 
 func TestListEmptyDir(t *testing.T) {
 	s := Store{Dir: t.TempDir()}
-	if list := s.List(); len(list) != 0 {
+	if list := s.ListAll(); len(list) != 0 {
 		t.Errorf("empty dir should return empty list, got %d", len(list))
 	}
 }
@@ -240,10 +210,10 @@ func TestListEmptyDir(t *testing.T) {
 func TestListSortedByName(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"zebra", "alpha", "middle"} {
-		os.WriteFile(filepath.Join(dir, name+".md"), []byte("---\nname: "+name+"\n---\nbody"), 0o644)
+		os.WriteFile(filepath.Join(dir, name+".md"), []byte(render(Memory{ID: "mem-" + name, Revision: 1, Scope: FactScopeProject, Name: name, Body: "body"}, name)), 0o644)
 	}
 	s := Store{Dir: dir}
-	list := s.List()
+	list := s.ListAll()
 	if len(list) != 3 {
 		t.Fatalf("want 3, got %d", len(list))
 	}

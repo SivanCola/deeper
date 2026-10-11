@@ -1,5 +1,5 @@
 // Activation: whether a fact's body rides the session-context background
-// snapshot (pinned) or stays retrieval-only (relevant), plus legacy defaults.
+// snapshot (pinned) or stays retrieval-only (relevant).
 package memory
 
 import "strings"
@@ -15,8 +15,7 @@ const (
 )
 
 // NormalizeActivation validates a persisted or requested activation. Empty and
-// unknown values return "" (unset) so ResolveActivation can apply the
-// legacy-aware default instead of silently inventing an explicit choice.
+// unknown values return "" (unset); new facts default to relevant.
 func NormalizeActivation(s string) Activation {
 	switch Activation(strings.ToLower(strings.TrimSpace(s))) {
 	case ActivationRelevant:
@@ -27,18 +26,10 @@ func NormalizeActivation(s string) Activation {
 	return ""
 }
 
-// ResolveActivation defaults an unset activation. Legacy global user/feedback
-// facts predate the field and were always loaded as stable guidance, so they
-// resolve to pinned until a rewrite records an explicit choice; everything
-// else is relevant.
+// ResolveActivation requires an explicit pinned choice. Unset facts are relevant.
 func ResolveActivation(m Memory) Activation {
 	if a := NormalizeActivation(string(m.Activation)); a != "" {
 		return a
-	}
-	if NormalizeFactScope(string(m.Scope)) == FactScopeGlobal {
-		if t := NormalizeType(string(m.Type)); t == TypeUser || t == TypeFeedback {
-			return ActivationPinned
-		}
 	}
 	return ActivationRelevant
 }

@@ -50,46 +50,6 @@ func TestNewMessageIDShapeAndUniqueness(t *testing.T) {
 	}
 }
 
-func TestLegacyMessageIDsAreDeterministicAndPositional(t *testing.T) {
-	a := idFixtureMessages()
-	b := idFixtureMessages()
-	assignLegacyMessageIDs("/tmp/x/sess-1.jsonl", a)
-	assignLegacyMessageIDs("/other/dir/sess-1.jsonl", b)
-	for i := range a {
-		if a[i].ID == "" || len(a[i].ID) != messageIDLen {
-			t.Fatalf("message %d id %q malformed", i, a[i].ID)
-		}
-		if a[i].ID != b[i].ID {
-			t.Fatalf("message %d: same branch id and bytes derived %q vs %q", i, a[i].ID, b[i].ID)
-		}
-		for j := range a[:i] {
-			if a[j].ID == a[i].ID {
-				t.Fatalf("messages %d and %d share id %q", j, i, a[i].ID)
-			}
-		}
-	}
-	c := idFixtureMessages()
-	assignLegacyMessageIDs("/tmp/x/sess-2.jsonl", c)
-	if c[0].ID == a[0].ID {
-		t.Fatal("different branch ids must derive different message ids")
-	}
-	d := idFixtureMessages()
-	d[1].Content = "changed"
-	assignLegacyMessageIDs("/tmp/x/sess-1.jsonl", d)
-	if d[0].ID != a[0].ID {
-		t.Fatal("an edit after message 0 must not change message 0's id")
-	}
-	if d[2].ID == a[2].ID {
-		t.Fatal("an edited prefix must change the ids that follow it")
-	}
-	e := idFixtureMessages()
-	e[3].ID = "PRESET"
-	assignLegacyMessageIDs("/tmp/x/sess-1.jsonl", e)
-	if e[3].ID != "PRESET" || e[4].ID != a[4].ID {
-		t.Fatalf("preset ids must be kept and must not perturb later ids: %q %q", e[3].ID, e[4].ID)
-	}
-}
-
 func TestLoadSessionDerivesStableIDsForLegacyTranscripts(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "legacy.jsonl")

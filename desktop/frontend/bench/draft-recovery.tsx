@@ -9,7 +9,7 @@ import "../src/styles.css";
 
 const noop = () => {};
 const failure = "Session runtime could not resolve the configuration path.";
-const settings = { model: "fixture/model", mode: "normal", toolApprovalMode: "ask", disabledMcp: {}, mcpOrder: [] };
+const settings = { model: "fixture/model", mode: "normal", toolApprovalMode: "workspace-write", disabledMcp: {}, mcpOrder: [] };
 const surface: SessionDraftSurface = {
   kind: "draft", draft: { id: "draft", workspaceId: "workspace", scope: "project", workspaceRoot: "/fixture", revision: 1, contentJson: "{}", settings, status: "active", updatedAt: 1 },
   content: { text: "Keep my draft", invocations: [], attachments: [], workspaceRefs: [], pastedBlocks: [], openPastedLabels: [], sessionRefs: [], selectedTextRefs: [] },

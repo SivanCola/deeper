@@ -64,7 +64,7 @@ system_prompt = "BASE"
 name = "novita"
 kind = "openai"
 base_url = "https://api.novita.ai/openai"
-model = "deepseek-v4-pro"
+models = ["deepseek-v4-pro"]
 api_key_env = "`+envName+`"
 `)
 	approveWorkspace(t, dir)

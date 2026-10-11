@@ -48,7 +48,7 @@ func announceSkillSubagentStart(sink event.Sink, parentID, skillName, model, eff
 func finishSkillSubagentFailure(ctx context.Context, taskTool *agent.TaskTool, store *agent.SubagentStore, sink event.Sink, parentID, skillName, model, effort, taskText string, run *agent.SubagentRun, cause error) (string, error) {
 	result, runErr := preserveSubagentFailure(run, store, cause)
 	if taskTool != nil {
-		result, runErr = taskTool.ResolveAmbiguousSubagentFailure(ctx, run, taskText, model, sink, cause)
+		result, runErr = taskTool.FailedSubagentResult(run, cause)
 	}
 	phase, outcome := agent.TerminalSubagentLifecycle(runErr)
 	agent.EmitSubagentLifecycle(sink, phase, parentID, skillName, model, effort, run, outcome)

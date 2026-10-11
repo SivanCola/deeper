@@ -62,55 +62,6 @@ func TestSessionLeaseRejectsConcurrentWriterAndReleases(t *testing.T) {
 	third.Release()
 }
 
-func TestCompatibleSessionLeaseLocksCompeteWithLegacyName(t *testing.T) {
-	dir := t.TempDir()
-	primaryPath := filepath.Join(dir, "Current", "session.jsonl")
-	legacyPath := filepath.Join(dir, "Legacy", "session.jsonl")
-	for _, path := range []string{primaryPath, legacyPath} {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	legacy, err := tryTakeSessionLeaseLock(legacyPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if primary, compatibility, err := tryTakeCompatibleSessionLeaseLocks(primaryPath, legacyPath); !errors.Is(err, ErrSessionLeaseHeld) {
-		if compatibility != nil {
-			compatibility.Unlock()
-		}
-		if primary != nil {
-			primary.Unlock()
-		}
-		t.Fatalf("new acquisition against legacy holder = %v, want ErrSessionLeaseHeld", err)
-	}
-	legacy.Unlock()
-
-	primary, compatibility, err := tryTakeCompatibleSessionLeaseLocks(primaryPath, legacyPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if compatibility == nil {
-		t.Fatal("distinct legacy lock was not acquired")
-	}
-	if old, err := tryTakeSessionLeaseLock(legacyPath); !errors.Is(err, ErrSessionLeaseHeld) {
-		if old != nil {
-			old.Unlock()
-		}
-		t.Fatalf("legacy acquisition against new holder = %v, want ErrSessionLeaseHeld", err)
-	}
-	compatibility.RemoveAndUnlock()
-	primary.RemoveAndUnlock()
-
-	// The failed combined acquisition above must not leave its primary lock held.
-	probe, err := tryTakeSessionLeaseLock(primaryPath)
-	if err != nil {
-		t.Fatalf("primary lock leaked after compatibility contention: %v", err)
-	}
-	probe.RemoveAndUnlock()
-}
-
 func TestSessionLeaseHandoffTargetsWriterAndGeneration(t *testing.T) {
 	userPath, _ := leaseTestPath(t)
 	originalWriterID := sessionWriterID
@@ -208,16 +159,6 @@ func TestSessionLeaseExpiredHandoffAllowsPlainAcquire(t *testing.T) {
 	lease.Release()
 }
 
-func TestSessionLeaseLegacyMetadataDefaultsHandoffFields(t *testing.T) {
-	info, err := decodeSessionLeaseInfo([]byte(`{"session_path":"x","writer_id":"legacy","pid":1,"acquired_at":"2026-01-01T00:00:00Z"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.HandoffTo != "" || info.HandoffID != "" || !info.HandoffExpiresAt.IsZero() {
-		t.Fatalf("legacy metadata decoded with reservation: %+v", info)
-	}
-}
-
 func TestSessionLeaseMetadataOmitsEmptyHandoffAndIgnoresUnknownFields(t *testing.T) {
 	encoded, err := json.Marshal(SessionLeaseInfo{
 		SessionPath: "x", WriterID: "writer", PID: 1, AcquiredAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -245,9 +186,9 @@ func TestSessionLeaseReclaimsCurrentProcessStaleOwner(t *testing.T) {
 	sessionLeaseOwners.Store(key, struct{}{})
 	t.Cleanup(func() {
 		sessionLeaseOwners.Delete(key)
-		_ = os.Remove(sessionLeaseInfoPath(key))
+		_ = os.Remove(store.SessionLeaseLock(key))
 	})
-	if err := SaveSessionLeaseInfo(key, SessionLeaseInfo{
+	if err := writeLeaseOwnerFixture(key, SessionLeaseInfo{
 		SessionPath: key,
 		WriterID:    SessionWriterID(),
 		PID:         os.Getpid(),
@@ -302,9 +243,9 @@ func TestSessionLeaseReclaimsOrphanedEntryWithCorruptInfo(t *testing.T) {
 	sessionLeaseOwners.Store(key, uint64(1<<61))
 	t.Cleanup(func() {
 		sessionLeaseOwners.Delete(key)
-		_ = os.Remove(sessionLeaseInfoPath(key))
+		_ = os.Remove(store.SessionLeaseLock(key))
 	})
-	if err := os.WriteFile(sessionLeaseInfoPath(key), []byte("{torn"), 0o644); err != nil {
+	if err := os.WriteFile(store.SessionLeaseLock(key), []byte("{torn"), 0o644); err != nil {
 		t.Fatalf("write corrupt lease info: %v", err)
 	}
 
@@ -320,7 +261,7 @@ func TestSessionLeaseReclaimRefusesForeignInfo(t *testing.T) {
 	// even with the lock free — that separation belongs to
 	// SessionLeaseHeldByOtherRuntime's cleanup, not to reclaim.
 	userPath, key := leaseTestPath(t)
-	if err := SaveSessionLeaseInfo(key, SessionLeaseInfo{
+	if err := writeLeaseOwnerFixture(key, SessionLeaseInfo{
 		SessionPath: key,
 		WriterID:    "other-host-1234-deadbeef",
 		PID:         os.Getpid() + 1,
@@ -328,7 +269,7 @@ func TestSessionLeaseReclaimRefusesForeignInfo(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("SaveSessionLeaseInfo: %v", err)
 	}
-	t.Cleanup(func() { _ = os.Remove(sessionLeaseInfoPath(key)) })
+	t.Cleanup(func() { _ = os.Remove(store.SessionLeaseLock(key)) })
 
 	if lease, err := TryReclaimCurrentProcessSessionLease(userPath); !errors.Is(err, ErrSessionLeaseHeld) {
 		if lease != nil {
@@ -343,9 +284,9 @@ func TestSessionLeaseConcurrentReclaimSingleWinner(t *testing.T) {
 	sessionLeaseOwners.Store(key, struct{}{})
 	t.Cleanup(func() {
 		sessionLeaseOwners.Delete(key)
-		_ = os.Remove(sessionLeaseInfoPath(key))
+		_ = os.Remove(store.SessionLeaseLock(key))
 	})
-	if err := SaveSessionLeaseInfo(key, SessionLeaseInfo{
+	if err := writeLeaseOwnerFixture(key, SessionLeaseInfo{
 		SessionPath: key,
 		WriterID:    SessionWriterID(),
 		PID:         os.Getpid(),
@@ -481,7 +422,7 @@ func TestSessionLeaseHeldByOtherRuntime(t *testing.T) {
 			t.Fatalf("tryLockSessionLeaseFile: %v", err)
 		}
 		defer unlock()
-		if err := SaveSessionLeaseInfo(key, SessionLeaseInfo{
+		if err := writeLeaseOwnerFixture(key, SessionLeaseInfo{
 			SessionPath: key,
 			WriterID:    "other-host-1234-deadbeef",
 			PID:         os.Getpid() + 1,
@@ -489,14 +430,14 @@ func TestSessionLeaseHeldByOtherRuntime(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("SaveSessionLeaseInfo: %v", err)
 		}
-		t.Cleanup(func() { _ = os.Remove(sessionLeaseInfoPath(key)) })
+		t.Cleanup(func() { _ = os.Remove(store.SessionLeaseLock(key)) })
 		if !SessionLeaseHeldByOtherRuntime(userPath) {
 			t.Fatal("foreign-held session not reported as held by another runtime")
 		}
 	})
 	t.Run("foreign info from crashed process", func(t *testing.T) {
 		userPath, key := leaseTestPath(t)
-		if err := SaveSessionLeaseInfo(key, SessionLeaseInfo{
+		if err := writeLeaseOwnerFixture(key, SessionLeaseInfo{
 			SessionPath: key,
 			WriterID:    "other-host-1234-deadbeef",
 			PID:         os.Getpid() + 1,
@@ -504,26 +445,26 @@ func TestSessionLeaseHeldByOtherRuntime(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("SaveSessionLeaseInfo: %v", err)
 		}
-		t.Cleanup(func() { _ = os.Remove(sessionLeaseInfoPath(key)) })
+		t.Cleanup(func() { _ = os.Remove(store.SessionLeaseLock(key)) })
 		// Info file left behind but the lock is free: the holder crashed, so
 		// the session is not considered held.
 		if SessionLeaseHeldByOtherRuntime(userPath) {
 			t.Fatal("crashed holder's leftover info reported as held")
 		}
-		if _, err := os.Stat(sessionLeaseInfoPath(key)); !os.IsNotExist(err) {
-			t.Fatalf("crashed holder's leftover info should be removed, stat err = %v", err)
+		if _, err := os.Stat(store.SessionLeaseLock(key)); err != nil {
+			t.Fatalf("stable lock identity must remain, stat err = %v", err)
 		}
 	})
 	t.Run("corrupt info from crashed process", func(t *testing.T) {
 		userPath, key := leaseTestPath(t)
-		if err := os.WriteFile(sessionLeaseInfoPath(key), nil, 0o644); err != nil {
+		if err := os.WriteFile(store.SessionLeaseLock(key), nil, 0o644); err != nil {
 			t.Fatalf("write corrupt lease info: %v", err)
 		}
 		if SessionLeaseHeldByOtherRuntime(userPath) {
 			t.Fatal("corrupt crashed holder info reported as held")
 		}
-		if _, err := os.Stat(sessionLeaseInfoPath(key)); !os.IsNotExist(err) {
-			t.Fatalf("corrupt lease info should be removed, stat err = %v", err)
+		if _, err := os.Stat(store.SessionLeaseLock(key)); err != nil {
+			t.Fatalf("stable lock identity must remain, stat err = %v", err)
 		}
 	})
 }

@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -71,8 +70,10 @@ func configuredUpdateChannel() string {
 }
 
 func targetUpdateChannel(selected string) string {
-	_ = selected
-	return configuredUpdateChannel()
+	if strings.TrimSpace(selected) == "" {
+		return configuredUpdateChannel()
+	}
+	return normalizeUpdateChannel(selected)
 }
 
 func runningUpdateChannel() string {
@@ -247,10 +248,11 @@ func normalizeVersion(v string) (string, bool) {
 	return semver.Canonical(v), true
 }
 
-// validateManifestChannel rejects every prerelease. The selected value remains
-// in the signature for compatibility with existing callers.
+// validateManifestChannel admits only current stable releases.
 func validateManifestChannel(selected string, m *update.Manifest) error {
-	_ = selected
+	if selected != "stable" {
+		return fmt.Errorf("update: unsupported channel %q", selected)
+	}
 	if !stableDesktopVersionRE.MatchString(m.Version) {
 		return fmt.Errorf("official manifest has invalid release version %q", m.Version)
 	}
@@ -261,19 +263,17 @@ func desktopReleaseTag(_ string, version string) string {
 	return "desktop-" + version
 }
 
-func desktopAssetBases(selected, version string, allowLegacyPreview bool) []string {
+func desktopAssetBases(selected, version string) []string {
 	_ = selected
-	_ = allowLegacyPreview
 	tag := desktopReleaseTag(selected, version)
 	return []string{
 		fmt.Sprintf("%s/%s/", githubReleaseAssetBase, tag),
-		fmt.Sprintf("https://github.com/SivanCola/deepzora/releases/download/%s/", version),
 	}
 }
 
-func validateManifestAsset(selected, version, filename string, asset update.Asset, allowLegacyPreview bool) (string, error) {
+func validateManifestAsset(selected, version, filename string, asset update.Asset) (string, error) {
 	base := ""
-	for _, candidate := range desktopAssetBases(selected, version, allowLegacyPreview) {
+	for _, candidate := range desktopAssetBases(selected, version) {
 		if asset.URL == candidate+filename {
 			base = candidate
 			break
@@ -297,12 +297,10 @@ func validateManifestAsset(selected, version, filename string, asset update.Asse
 	return base, nil
 }
 
-// validateAssetInstallLayout accepts the pre-v1.20 empty layout (flat install)
-// and the v1.20+ versioned-v1 layout. Unknown values must fail closed so a new
-// client never partially installs an unrecognized package shape.
+// validateAssetInstallLayout accepts current Windows and Electron layouts.
 func validateAssetInstallLayout(layout string) error {
 	switch strings.TrimSpace(layout) {
-	case "", installlayout.InstallLayoutVersionedV1, update.ElectronInstallLayout:
+	case installlayout.InstallLayoutVersionedV1, update.ElectronInstallLayout:
 		return nil
 	default:
 		return fmt.Errorf("unsupported install_layout %q (keeping current version)", layout)
@@ -317,21 +315,11 @@ func validateDesktopManifest(selected string, m *update.Manifest) error {
 	if m.DownloadPage != manifestDownloadPageURL {
 		return fmt.Errorf("%s manifest has invalid download page %q", selected, m.DownloadPage)
 	}
-	// Historical manifests either omitted website downloads or carried only the
-	// Universal DMG and Windows portable ZIP. New manifests add both native-arch
-	// DMGs. Seeing either new key switches validation to the complete new set so a
-	// partially published architecture matrix cannot reach the website.
-	legacyManifest := m.Downloads == nil
-	requiredAssets := append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...)
-	if !legacyManifest {
-		downloadAssets := legacyDesktopDownloadAssets
-		if _, arm := m.Downloads["Deepzora-darwin-arm64.dmg"]; arm {
-			downloadAssets = requiredDesktopDownloadAssets
-		} else if _, intel := m.Downloads["Deepzora-darwin-amd64.dmg"]; intel {
-			downloadAssets = requiredDesktopDownloadAssets
-		}
-		requiredAssets = append(requiredAssets, downloadAssets...)
+	notesVersion := strings.SplitN(m.Version, "-pr", 2)[0]
+	if m.ReleaseNotesURL != "https://github.com/SivanCola/deepzora/releases/tag/"+notesVersion+"/" {
+		return fmt.Errorf("%s manifest has invalid release notes URL %q", selected, m.ReleaseNotesURL)
 	}
+	requiredAssets := append(append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...), requiredDesktopDownloadAssets...)
 	base := ""
 	for _, required := range requiredAssets {
 		var assets map[string]update.Asset
@@ -349,7 +337,7 @@ func validateDesktopManifest(selected string, m *update.Manifest) error {
 		if !ok {
 			return fmt.Errorf("%s manifest has no %s asset for %s", selected, required.group, required.key)
 		}
-		assetBase, err := validateManifestAsset(selected, m.Version, required.filename, asset, legacyManifest)
+		assetBase, err := validateManifestAsset(selected, m.Version, required.filename, asset)
 		if err != nil {
 			return fmt.Errorf("%s %s asset: %w", required.group, required.key, err)
 		}
@@ -455,15 +443,13 @@ func evaluateWithProfileForChannel(current, selected string, m *update.Manifest,
 		info.Err = "manifest has no valid version"
 		return info
 	}
-	// A dev/invalid running version never auto-prompts. Within a channel, only a
-	// newer semver is an update. Across channels, a different target latest is an
-	// explicit channel switch, so allow installing stable over a newer preview.
-	if okCur {
-		if selected != runningUpdateChannel() {
-			info.Available = latest != cur
-		} else if semver.Compare(latest, cur) > 0 {
-			info.Available = true
-		}
+	// Updates only move to a newer release in the supported channel.
+	if selected == "" {
+		info.Err = "unsupported update channel"
+		return info
+	}
+	if okCur && semver.Compare(latest, cur) > 0 {
+		info.Available = true
 	}
 	if a, kind, ok := selectUpdateAsset(m, profile); ok {
 		info.AssetSize = a.Size
@@ -645,7 +631,7 @@ func cachedUpdateMatchesForChannel(selected, version string, asset update.Asset,
 	}
 	kind = artifactKindFromMeta(kind)
 	metaKind := artifactKindFromMeta(meta.ArtifactKind)
-	// Legacy portable caches omit artifactKind and remain valid for tarball only.
+	// Current caches require an explicit artifact kind.
 	// Deb installs never reuse a cache that lacks a matching signature file.
 	if kind == artifactKindDeb {
 		if metaKind != artifactKindDeb || meta.SignaturePath == "" {
@@ -994,105 +980,7 @@ func extractBinary(targz []byte, name string) ([]byte, error) {
 	return nil, fmt.Errorf("update: %q not found in archive", name)
 }
 
-func extractLinuxReleaseUnit(targz []byte) (map[string][]byte, error) {
-	const (
-		desktop = "deepzora-desktop"
-		guard   = "deepzora-guard"
-		cli     = "deepzora"
-	)
-	want := map[string]struct{}{desktop: {}, guard: {}, cli: {}}
-	found := make(map[string][]byte, len(want))
-	gz, err := gzip.NewReader(bytes.NewReader(targz))
-	if err != nil {
-		return nil, err
-	}
-	defer gz.Close()
-	tr := tar.NewReader(gz)
-	for {
-		h, err := tr.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		name := path.Base(strings.TrimSpace(h.Name))
-		if _, ok := want[name]; !ok {
-			continue
-		}
-		if h.Typeflag != tar.TypeReg || h.Size < 0 {
-			return nil, fmt.Errorf("update: release member %q is not a regular file", name)
-		}
-		if _, duplicate := found[name]; duplicate {
-			return nil, fmt.Errorf("update: release member %q appears more than once", name)
-		}
-		body, err := io.ReadAll(tr)
-		if err != nil {
-			return nil, err
-		}
-		found[name] = body
-	}
-	if len(found) != len(want) {
-		for name := range want {
-			if _, ok := found[name]; !ok {
-				return nil, fmt.Errorf("update: release member %q not found in archive", name)
-			}
-		}
-	}
-	return found, nil
-}
-
-// applyLinux replaces the running binary with the one inside the downloaded
-// tar.gz; the caller relaunches afterwards.
-func applyLinux(targz []byte, prepared *repair.UpdateTransaction) error {
-	release, err := extractLinuxReleaseUnit(targz)
-	if err != nil {
-		return err
-	}
-	bin := release["deepzora-desktop"]
-	guard := release["deepzora-guard"]
-	cli := release["deepzora"]
-	exe := currentExecutablePathForLinux()
-	if exe == "" {
-		return fmt.Errorf("update: current executable path is unavailable")
-	}
-	releasePaths := releaseUnitPathsFor(filepath.Dir(exe), "linux")
-	if prepared == nil {
-		return fmt.Errorf("update: prepared transaction is unavailable")
-	}
-	claimed, releaseClaim, err := repair.ClaimPendingFileUpdateExact(
-		prepared.ToVersion,
-		prepared.CreatedAt,
-		repair.UpdateTransactionID(prepared),
-		exe,
-		releasePaths,
-		2*time.Minute,
-	)
-	if err != nil {
-		return fmt.Errorf("update: claim prepared transaction: %w", err)
-	}
-	defer releaseClaim()
-	if err := repair.MarkUpdateApplyFailedExact(claimed, "Linux update publish did not complete"); err != nil {
-		return fmt.Errorf("update: record recovery intent: %w", err)
-	}
-	receipts, err := applyLinuxReleaseUnit(claimed, exe, bin, guard, cli)
-	if err != nil {
-		return err
-	}
-	if _, err := repair.RecordClaimedFileUpdateInstalled(claimed, receipts...); err != nil {
-		return fmt.Errorf("update: record installed release unit: %w", err)
-	}
-	// pending-update.json remains immutable; the transaction-unique sidecar now
-	// binds every installed member. A crash before marker cleanup is safe:
-	// startup correlates the exact transaction and rolls the release unit back.
-	_ = repair.ClearUpdateApplyFailureExact(claimed)
-	return nil
-}
-
-// applyLinuxVersioned publishes a verified compatibility tarball into a new
-// version directory and swaps current.json last. The tar still contains the
-// one-shot deepzora-guard member for v1.18-v1.19 updaters, but v1.20+ ignores
-// that member and never persists it again.
+// applyLinuxVersioned publishes the current release and swaps current.json last.
 func applyLinuxVersioned(targz []byte, targetVersion string) error {
 	return activateLinuxShellRelease(targz, targetVersion, currentInstallDirForLinuxUpdate())
 }
@@ -1100,51 +988,12 @@ func applyLinuxVersioned(targz []byte, targetVersion string) error {
 var currentExecutablePathForLinux = currentExecutablePath
 var currentInstallDirForLinuxUpdate = currentInstallDir
 
-var applyLinuxReleaseUnit = func(
-	claimed *repair.UpdateTransaction,
-	exe string,
-	bin, guard, cli []byte,
-) ([]repair.FileUpdateInstallReceipt, error) {
-	receipts := make([]repair.FileUpdateInstallReceipt, 0, 3)
-	receipt, err := repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deepzora"), cli, 0o700)
-	if err != nil {
-		return receipts, fmt.Errorf("update CLI sidecar: %w", err)
-	}
-	receipts = append(receipts, receipt)
-	receipt, err = repair.PublishClaimedFileUpdateMemberExact(claimed, filepath.Join(filepath.Dir(exe), "deepzora-guard"), guard, 0o700)
-	if err != nil {
-		return receipts, fmt.Errorf("update Guard: %w", err)
-	}
-	receipts = append(receipts, receipt)
-	receipt, err = repair.PublishClaimedFileUpdateMemberExact(claimed, exe, bin, 0o700)
-	if err != nil {
-		return receipts, fmt.Errorf("update desktop: %w", err)
-	}
-	receipts = append(receipts, receipt)
-	return receipts, nil
-}
-
-func applyWindowsFile(path, expectedSHA256, targetVersion string, prepared *repair.UpdateTransaction) error {
+func applyWindowsFile(path, expectedSHA256, targetVersion string) error {
 	installDir := currentInstallDir()
-	if installlayout.HasCurrent(installDir) {
-		return startWindowsVersionedUpdateHandoff(
-			path,
-			expectedSHA256,
-			installDir,
-			currentLauncherPath(),
-			targetVersion,
-		)
+	if !installlayout.HasCurrent(installDir) {
+		return fmt.Errorf("update: current installation layout is required")
 	}
-	if prepared == nil {
-		return fmt.Errorf("update: prepared transaction is unavailable")
-	}
-	return startWindowsUpdateHandoff(
-		path,
-		expectedSHA256,
-		installDir,
-		currentLauncherPath(),
-		prepared,
-	)
+	return startWindowsVersionedUpdateHandoff(path, expectedSHA256, installDir, currentLauncherPath(), targetVersion)
 }
 
 func currentExecutablePath() string {
@@ -1172,44 +1021,6 @@ func currentInstallDir() string {
 	return filepath.Dir(exe)
 }
 
-// archiveSupersededPendingUpdateAfterReady retires a transaction only after the
-// current desktop has shown a usable UI. App-bundle recovery handles interrupted
-// macOS generations; the versioned-layout branch handles older flat Windows and
-// Linux transactions.
-func archiveSupersededPendingUpdateAfterReady() (bool, error) {
-	exe := currentExecutablePath()
-	if exe == "" || version == "" || version == "dev" {
-		return false, nil
-	}
-	if archived, err := repair.ArchiveSupersededPendingAppBundleUpdate(version); err != nil || archived {
-		return archived, err
-	}
-	if runtime.GOOS == "darwin" {
-		return false, nil
-	}
-	root, err := installlayout.ResolveInstallRoot(exe)
-	if err != nil {
-		return false, err
-	}
-	ptr, err := installlayout.ReadCurrent(root)
-	if err != nil {
-		// Package-managed and legacy flat installs have no versioned pointer and
-		// therefore are not authorized to retire a transaction.
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	running := strings.TrimSpace(version)
-	if !strings.HasPrefix(running, "v") {
-		running = "v" + running
-	}
-	if ptr.ActiveVersion != running {
-		return false, fmt.Errorf("active install version %s does not match running version %s", ptr.ActiveVersion, running)
-	}
-	return repair.ArchiveSupersededPendingFileUpdate(running, root)
-}
-
 func capturePendingUpdateHealthIdentity(app *App) {
 	if app == nil {
 		return
@@ -1228,74 +1039,6 @@ func capturePendingUpdateHealthIdentity(app *App) {
 // version-prefix mismatch).
 func refreshPendingUpdateHealthIdentity(app *App) {
 	capturePendingUpdateHealthIdentity(app)
-}
-
-// updateSiblingArtifacts lists the packaged binaries an update replaces beside
-// the main executable, so PrepareFileUpdate can snapshot the complete release
-// unit. Paths that do not exist on disk are skipped by the backup.
-func updateSiblingArtifacts() []string {
-	dir := currentInstallDir()
-	if dir == "" {
-		return nil
-	}
-	paths := releaseUnitPathsFor(dir, runtime.GOOS)
-	if len(paths) <= 1 {
-		return nil
-	}
-	return paths[1:]
-}
-
-func releaseUnitPathsFor(dir, goos string) []string {
-	if dir == "" {
-		return nil
-	}
-	// Versioned-v1 layout: primary is the active desktop under versions/.
-	if goos == "windows" && installlayout.HasCurrent(dir) {
-		paths := make([]string, 0, 6)
-		if desktop, err := installlayout.ActiveDesktopPath(dir); err == nil {
-			paths = append(paths, desktop)
-		} else {
-			paths = append(paths, filepath.Join(dir, "deepzora-desktop.exe"))
-		}
-		if helper, err := installlayout.ActiveUpdateHelperPath(dir); err == nil {
-			paths = append(paths, helper)
-		}
-		if cli, err := installlayout.ActiveCLIPath(dir); err == nil {
-			paths = append(paths, cli)
-		}
-		for _, name := range []string{"deepzora-launcher.exe", "deepzora-cli.exe", "Deepzora.exe"} {
-			paths = append(paths, filepath.Join(dir, name))
-		}
-		return paths
-	}
-	names := updateSiblingNames(goos)
-	paths := make([]string, 0, len(names)+1)
-	switch goos {
-	case "linux":
-		paths = append(paths, filepath.Join(dir, "deepzora-desktop"))
-	case "windows":
-		paths = append(paths, filepath.Join(dir, "deepzora-desktop.exe"))
-	}
-	if len(names) == 0 {
-		return paths
-	}
-	for _, name := range names {
-		paths = append(paths, filepath.Join(dir, name))
-	}
-	return paths
-}
-
-func updateSiblingNames(goos string) []string {
-	switch goos {
-	case "windows":
-		// Legacy flat release unit. deepzora-guard.exe may still exist on disk
-		// during migration from 1.18–1.19.1; the new layout omits it.
-		return []string{"deepzora-guard.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "Deepzora.exe"}
-	case "linux":
-		return []string{"deepzora-guard", "deepzora"}
-	default:
-		return nil
-	}
 }
 
 func currentLauncherPath() string {

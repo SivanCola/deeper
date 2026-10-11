@@ -31,6 +31,5 @@ type agentConfig struct {
 	contextWindow      int
 	compactRatio       float64
 	compactRatioSource func() float64
-	recentKeep         int
 	archiveDir         string
 }

@@ -31,7 +31,7 @@ func TestShellTimeoutClampsBeforeDurationConversion(t *testing.T) {
 }
 
 func TestInvalidJobFilterPreservesUnreadOutput(t *testing.T) {
-	for _, reader := range []tool.Tool{jobOutput{}, bashOutput{}} {
+	for _, reader := range []tool.Tool{jobOutput{}} {
 		t.Run(reader.Name(), func(t *testing.T) {
 			m := jobs.NewManager(event.Discard)
 			defer m.Close()

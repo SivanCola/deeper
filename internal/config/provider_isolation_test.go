@@ -9,7 +9,7 @@ import (
 
 // customProviderTOML declares a single self-hosted OpenAI-compatible provider
 // and none of the vendor-specific fields an official DeepSeek entry carries.
-const customProviderTOML = `config_version = 1
+const customProviderTOML = `config_version = 12
 default_model = "gateway/my-model"
 
 [[providers]]
@@ -169,14 +169,14 @@ api_key_env = "SECOND_KEY"
 // officialDeepSeekTOML declares the official endpoint under name without
 // context_window, balance_url or price, which a documented config may omit.
 func officialDeepSeekTOML(name string) string {
-	return `config_version = 1
+	return `config_version = 12
 default_model = "` + name + `/deepseek-v4-flash"
 
 [[providers]]
 name        = "` + name + `"
 kind        = "openai"
 base_url    = "https://api.deepseek.com"
-model       = "deepseek-v4-flash"
+models      = ["deepseek-v4-flash"]
 api_key_env = "DEEPSEEK_API_KEY"
 `
 }
@@ -233,31 +233,19 @@ func TestOfficialDeepSeekProviderStillGetsItsDefaults(t *testing.T) {
 	}
 }
 
-func TestMissingCanonicalDeepSeekUsesChatDefault(t *testing.T) {
-	cfg := Default()
-	ensureDeepSeekOfficialProvider(cfg)
-	p, ok := cfg.Provider("deepseek")
-	if !ok {
-		t.Fatal("canonical DeepSeek provider missing after load")
-	}
-	if p.Kind != "openai" || p.BaseURL != "https://api.deepseek.com" || !EffectiveIndependentWebSearch(p) {
-		t.Fatalf("canonical DeepSeek provider = kind:%q base_url:%q web_search:%t, want Chat Completions with independent search", p.Kind, p.BaseURL, EffectiveIndependentWebSearch(p))
-	}
-}
-
 func TestExplicitOpenAIDeepSeekProviderIsNotMigrated(t *testing.T) {
 	home := t.TempDir()
 	ws := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
 	path := filepath.Join(home, "config.toml")
-	raw := `config_version = 1
+	raw := `config_version = 12
 default_model = "deepseek-flash/deepseek-v4-flash"
 
 [[providers]]
 name        = "deepseek-flash"
 kind        = "openai"
 base_url    = "https://api.deepseek.com"
-model       = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "DEEPSEEK_API_KEY"
 `
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
@@ -284,14 +272,14 @@ func TestOfficialDeepSeekBackfillRespectsDeclaredValues(t *testing.T) {
 	home := t.TempDir()
 	ws := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
-	declared := `config_version = 1
+	declared := `config_version = 12
 default_model = "deepseek-flash/deepseek-v4-flash"
 
 [[providers]]
 name           = "deepseek-flash"
 kind           = "openai"
 base_url       = "https://api.deepseek.com"
-model          = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env    = "DEEPSEEK_API_KEY"
 context_window = 65536
 `

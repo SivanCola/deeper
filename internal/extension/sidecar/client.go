@@ -143,7 +143,6 @@ const (
 // Client is one live sidecar connection: the rpcwire transport, the handshake
 // state, the content store, and the process handle.
 type Client struct {
-	legacyIdentity   bool
 	pluginID         string
 	version          string
 	rt               *pluginpkg.RuntimeSpec
@@ -228,7 +227,6 @@ func newClient(p *process, opts ClientOptions) *Client {
 		version = strings.TrimSpace(opts.Package.Manifest.Version)
 	}
 	c := &Client{
-		legacyIdentity:   opts.Package.Manifest.LegacyIdentity,
 		pluginID:         p.pluginID,
 		version:          version,
 		rt:               opts.Package.Manifest.Runtime,

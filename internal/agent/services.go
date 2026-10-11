@@ -44,9 +44,6 @@ type agentServices struct {
 	// controller generation; nil means every intercept point passes through
 	// byte-identically. See extensions.go.
 	extensions *dispatch.Dispatcher
-	// planTrust is retained for legacy controller wiring. The main Plan
-	// execution path no longer consults it.
-	planTrust PlanModeReadOnlyTrustGate
 	// sandboxEscape can ask the user whether one shell command may rerun
 	// unconfined after the OS sandbox failed to start.
 	sandboxEscape sandbox.EscapeApprover
@@ -120,7 +117,7 @@ func (s *agentServices) setGate(g Gate) {
 // under the function-size limit and so adding a collaborator touches one place.
 func newAgentServices(
 	prov provider.Provider, tools *tool.Registry, sink event.Sink, gate Gate,
-	planTrust PlanModeReadOnlyTrustGate, sandboxEscape sandbox.EscapeApprover,
+	sandboxEscape sandbox.EscapeApprover,
 	configWrite tool.ConfigWriteApprover, hooks ToolHooks, opts Options,
 ) agentServices {
 	return agentServices{
@@ -131,7 +128,6 @@ func newAgentServices(
 		sink:                  sink,
 		gate:                  gate,
 		extensions:            opts.Extensions,
-		planTrust:             planTrust,
 		sandboxEscape:         sandboxEscape,
 		configWrite:           configWrite,
 		hooks:                 hooks,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -24,9 +23,9 @@ func TestUsageAccumulatorTotalsMoreThanAuditLimit(t *testing.T) {
 	pricing := &provider.Pricing{Input: 1, Currency: "USD"}
 	for range 65 {
 		quote := billing.BuildQuote(billing.QuoteInput{
-			Usage:           billing.UsageTokens{PromptTokens: usage.PromptTokens},
-			Rates:           billing.RateCard{Input: pricing.Input, Currency: pricing.Currency},
-			DisplayCurrency: "USD",
+			Usage:   billing.UsageTokens{PromptTokens: usage.PromptTokens},
+			Rates:   billing.RateCard{Input: pricing.Input, Currency: pricing.Currency},
+			Display: billing.DisplayRequest{Currency: "USD", Source: billing.DisplaySourceExplicit},
 		})
 		accumulator.addQuoted(usage, pricing, &quote, event.UsageSourceExecutor)
 	}
@@ -78,9 +77,9 @@ func TestRestoredUsageKeepsFullScalarTotalAfterNewQuote(t *testing.T) {
 	usage := &provider.Usage{PromptTokens: 1_000_000}
 	pricing := &provider.Pricing{Input: 1, Currency: "USD"}
 	quote := billing.BuildQuote(billing.QuoteInput{
-		Usage:           billing.UsageTokens{PromptTokens: usage.PromptTokens},
-		Rates:           billing.RateCard{Input: pricing.Input, Currency: pricing.Currency},
-		DisplayCurrency: "USD",
+		Usage:   billing.UsageTokens{PromptTokens: usage.PromptTokens},
+		Rates:   billing.RateCard{Input: pricing.Input, Currency: pricing.Currency},
+		Display: billing.DisplayRequest{Currency: "USD", Source: billing.DisplaySourceExplicit},
 	})
 	accumulator.addQuoted(usage, pricing, &quote, event.UsageSourceExecutor)
 	wire := accumulator.wire()
@@ -230,11 +229,7 @@ func TestStatusNormalizesPhaseAndRedactsPublicText(t *testing.T) {
 	if got := telemetry.snapshot().phase; got != "working" {
 		t.Fatalf("unknown phase = %q, want working", got)
 	}
-	telemetry.finishTurn(&agent.FinalReadinessError{
-		Attempts: 1,
-		Reason:   "token=secret-reason credential " + opaqueSecret,
-		Missing:  []string{"api_key=secret-risk"},
-	}, false, "running", "authorization: bearer secret-summary")
+	telemetry.finishTurn(&agent.IncompleteReadError{Reason: "token=secret-reason credential " + opaqueSecret}, false, "running", "authorization: bearer secret-summary")
 	snapshot := telemetry.snapshot()
 	encoded, err := json.Marshal(snapshot.finalReadiness)
 	if err != nil {
@@ -253,16 +248,6 @@ func TestStatusNormalizesPhaseAndRedactsPublicText(t *testing.T) {
 	}
 	if !strings.Contains(string(empty), `"risks":[]`) {
 		t.Fatalf("empty risks must encode as [], got %s", empty)
-	}
-}
-
-func TestRestoreStatusNormalizesLegacyPresentationPhase(t *testing.T) {
-	restored := restoreStatusTelemetry(&persistedStatusTelemetry{
-		Phase:          "executor · implementing local patch",
-		FinalReadiness: DeepzoraFinalReadiness{},
-	})
-	if got := restored.snapshot().phase; got != "implementing" {
-		t.Fatalf("restored phase = %q, want implementing", got)
 	}
 }
 
@@ -319,58 +304,12 @@ func TestRestoreStatusMarksInterruptedTurnPaused(t *testing.T) {
 	}
 }
 
-func TestStatusWorkModeSetConfigOptionIsHiddenCompatibilityNoOp(t *testing.T) {
-	factory := &runtimeTrackingFactory{configurableFactory: &configurableFactory{}}
-	client, stop := startServer(t, factory)
-	defer stop()
-	client.call(t, "initialize", InitializeParams{ProtocolVersion: 1})
-	sessionID := openStatusSession(t, client, t.TempDir())
-	if status := getStatus(t, client, sessionID); status.WorkMode != "standard" || status.PlannerMode != "on" {
-		t.Fatalf("initial runtime status = %+v", status)
-	}
-	buildsBefore := factory.buildCount()
-
-	for _, value := range []string{"economy", "delivery", "light"} {
-		resp := client.call(t, "session/set_config_option", SetSessionConfigOptionParams{
-			SessionID: sessionID,
-			ConfigID:  "work_mode",
-			Value:     value,
-		})
-		if resp.Error != nil {
-			t.Fatalf("set work mode %q: %+v", value, resp.Error)
-		}
-		var set SetSessionConfigOptionResult
-		if err := json.Unmarshal(resp.Result, &set); err != nil {
-			t.Fatalf("set work mode %q result: %v", value, err)
-		}
-		var floorOpt *SessionConfigOption
-		for i := range set.ConfigOptions {
-			if set.ConfigOptions[i].ID == "quality_floor" {
-				floorOpt = &set.ConfigOptions[i]
-			}
-		}
-		if floorOpt != nil {
-			t.Fatalf("retired quality floor option still advertised after work_mode %q: %+v", value, floorOpt)
-		}
-		if set.DeprecatedNotice == "" {
-			t.Fatalf("work_mode %q missing retirement notice", value)
-		}
-		status := getStatus(t, client, sessionID)
-		if status.WorkMode != "standard" || status.PlannerMode != "on" {
-			t.Fatalf("runtime status after deprecated work_mode %q = %+v", value, status)
-		}
-	}
-	if got := factory.buildCount(); got != buildsBefore {
-		t.Fatalf("work_mode rebuilt controller: builds=%d, want %d", got, buildsBefore)
-	}
-}
-
 func TestStatusClassifiesPauseAndError(t *testing.T) {
 	telemetry := newStatusTelemetry()
 	telemetry.beginTurn()
-	pauseEvent := telemetry.finishTurn(&agent.FinalReadinessError{Attempts: 3, Reason: "missing verification", Missing: []string{"verify"}}, false, "running", "partial")
+	pauseEvent := telemetry.finishTurn(&agent.IncompleteReadError{Reason: "read is incomplete"}, false, "running", "partial")
 	paused := telemetry.snapshot()
-	if pauseEvent != "pause" || paused.turnOutcome.Kind != "paused" || len(paused.finalReadiness.Risks) != 1 {
+	if pauseEvent != "pause" || paused.turnOutcome.Kind != "paused" {
 		t.Fatalf("pause classification = event %q snapshot %+v", pauseEvent, paused)
 	}
 
@@ -392,12 +331,11 @@ func TestStatusSnapshotSurvivesSessionResume(t *testing.T) {
 		PromptTokens: 8, CompletionTokens: 2, CacheHitTokens: 6, CacheMissTokens: 2,
 	}, UsageSource: event.UsageSourceExecutor})
 	telemetry.finishTurn(nil, false, "", "persisted summary")
-	path := filepath.Join(dir, sessionID+".jsonl")
-	if err := agent.NewSession("system").Save(path); err != nil {
+	if err := seedACPHistory(t, dir, sessionID, agent.NewSession("system")); err != nil {
 		t.Fatalf("save transcript: %v", err)
 	}
-	if err := saveACPMeta(path, acpSessionMeta{
-		SessionID: sessionID, Cwd: cwd, Model: "fast", RuntimeProfile: "delivery",
+	if err := saveACPMeta(sessionMetadataPath(dir, sessionID), acpSessionMeta{
+		SessionID: sessionID, Cwd: cwd, Model: "fast",
 		Status: telemetry.persisted(),
 	}); err != nil {
 		t.Fatalf("save ACP metadata: %v", err)
@@ -427,12 +365,11 @@ func TestStatusInterruptedSnapshotResumesPaused(t *testing.T) {
 	telemetry.onEvent(event.Event{Kind: event.Usage, Usage: &provider.Usage{
 		PromptTokens: 5, CompletionTokens: 1,
 	}, UsageSource: event.UsageSourceExecutor})
-	path := filepath.Join(dir, sessionID+".jsonl")
-	if err := agent.NewSession("system").Save(path); err != nil {
+	if err := seedACPHistory(t, dir, sessionID, agent.NewSession("system")); err != nil {
 		t.Fatalf("save transcript: %v", err)
 	}
-	if err := saveACPMeta(path, acpSessionMeta{
-		SessionID: sessionID, Cwd: cwd, Model: "fast", RuntimeProfile: "balanced",
+	if err := saveACPMeta(sessionMetadataPath(dir, sessionID), acpSessionMeta{
+		SessionID: sessionID, Cwd: cwd, Model: "fast",
 		Status: telemetry.persisted(),
 	}); err != nil {
 		t.Fatalf("save ACP metadata: %v", err)

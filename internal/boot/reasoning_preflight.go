@@ -62,7 +62,6 @@ func resolveBuildSelection(root string, opts Options) (*config.Config, Options, 
 // frozen so no lazy resolver rereads the store during the runtime's lifetime.
 func resolveBuildConfiguration(root, modelRef string, snapshot *config.Config) (*config.Config, error) {
 	if snapshot != nil {
-		config.NormalizeLegacyMimoCustomProvidersForRefs(snapshot, modelRef)
 		snapshot.FreezeProviderCredentials()
 		return snapshot, nil
 	}
@@ -141,7 +140,7 @@ func preflightRoleReasoning(cfg *config.Config, opts Options, resolver provider.
 		if err != nil {
 			// A migrated account identity must still fail closed, and a
 			// configured invalid effort is checked whenever the model resolves.
-			if selection.optional && cfg.ModelReferenceError(ref) == nil && !extensionsOnly {
+			if selection.optional && !extensionsOnly {
 				continue
 			}
 			return fmt.Errorf("%s_model %q: %w", selection.role, ref, err)

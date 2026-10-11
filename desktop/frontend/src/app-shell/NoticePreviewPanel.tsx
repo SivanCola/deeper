@@ -1,5 +1,4 @@
 import { NoticeCard } from "../components/Transcript";
-import { t } from "../lib/i18n";
 import { localizedNoticeText, type Item } from "../lib/useController";
 import { browserMockScenarioParam } from "../lib/mockScenarios";
 
@@ -17,16 +16,6 @@ function noticePreviewItems(): Item[] {
     detail,
   });
   return [
-    {
-      kind: "notice",
-      id: "notice-preview-delivery",
-      level: "info",
-      variant: "delivery",
-      title: t("notice.deliveryIncompleteTitle"),
-      text: t("notice.deliveryIncompleteBody"),
-      detail: "legacy delivery record; current runs let the model judge completion",
-      action: "continue_delivery",
-    },
     notice(1, "info", "No visible answer was produced; asking the assistant to respond again.", "empty final answer blocked: qwen3.7-plus returned no visible answer text (finish=stop, reasoning=2314 chars); retrying", "empty_final"),
     notice(2, "info", "The assistant answered before taking action; asking it to use the required tools.", "executor handoff: assistant produced a proposal before running required repository commands; nudged to execute", "executor_handoff"),
     notice(3, "info", "Tool round limit reached; asking the assistant to summarize progress.", "tool budget reached after 128 tool calls; requesting a progress summary before continuing", "tool_budget"),
@@ -68,7 +57,6 @@ export function NoticePreviewPanel() {
               key={item.id}
               item={item}
               onAction={item.action ? () => undefined : undefined}
-              onAccept={item.action === "continue_delivery" ? () => undefined : undefined}
             />
           );
         })}

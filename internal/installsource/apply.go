@@ -94,7 +94,7 @@ func (t *installSourceTool) applySkillRoot(req request, act *action) error {
 }
 
 // applyCopySkill copies a single skill into the project/global skills dir.
-// We refuse to overwrite any existing canonical directory or legacy flat file.
+// We refuse to overwrite an existing canonical directory.
 // copyDir uses O_EXCL so any race that slips through the Lstat check still
 // loses atomically.
 func (t *installSourceTool) applyCopySkill(req request, act *action) error {

@@ -59,28 +59,28 @@ export function makeMockAttachmentBindings(): AttachmentBindings & Partial<AppBi
       mockImages.set(path, dataURL);
       return path;
     },
-    async SavePastedImageForComposerTarget(_target: ComposerTarget, dataURL: string) { return this.SavePastedImage(dataURL); },
-    async SavePastedImageForTab(_tabID: string, dataURL: string) { return this.SavePastedImage(dataURL); },
+    async SavePastedImageForComposerTarget(_target: ComposerTarget, dataURL: string) { return makeMockAttachmentBindings().SavePastedImage!(dataURL); },
+    async SavePastedImageForTab(_tabID: string, dataURL: string) { return makeMockAttachmentBindings().SavePastedImage!(dataURL); },
     async SavePastedFile(name: string, dataURL: string) {
       const path = `.deepzora/attachments/mock-${name}`;
       mockImages.set(path, dataURL);
       return path;
     },
-    async SavePastedFileForComposerTarget(_target: ComposerTarget, name: string, dataURL: string) { return this.SavePastedFile(name, dataURL); },
-    async SavePastedFileForTarget(token: string, name: string, dataURL: string) { return this.SavePastedFileForTab(token,name,dataURL); },
-    async SavePastedFileForTab(_tabID: string, name: string, dataURL: string) { return this.SavePastedFile(name, dataURL); },
+    async SavePastedFileForComposerTarget(_target: ComposerTarget, name: string, dataURL: string) { return makeMockAttachmentBindings().SavePastedFile!(name, dataURL); },
+    async SavePastedFileForTarget(token: string, name: string, dataURL: string) { return makeMockAttachmentBindings().SavePastedFileForTab(token,name,dataURL); },
+    async SavePastedFileForTab(_tabID: string, name: string, dataURL: string) { return makeMockAttachmentBindings().SavePastedFile!(name, dataURL); },
     async SaveClipboardImage() {
       const path = `.deepzora/attachments/mock-clipboard-${mockImages.size + 1}.png`;
       mockImages.set(path, mockPreviewImageDataURL);
       return path;
     },
-    async SaveClipboardImageForComposerTarget(_target: ComposerTarget) { return this.SaveClipboardImage(); },
-    async SaveClipboardImageForTarget(token: string) { return this.SaveClipboardImageForTab(token); },
-    async SaveClipboardImageForTab(_tabID: string) { return this.SaveClipboardImage(); },
+    async SaveClipboardImageForComposerTarget(_target: ComposerTarget) { return makeMockAttachmentBindings().SaveClipboardImage!(); },
+    async SaveClipboardImageForTarget(token: string) { return makeMockAttachmentBindings().SaveClipboardImageForTab(token); },
+    async SaveClipboardImageForTab(_tabID: string) { return makeMockAttachmentBindings().SaveClipboardImage!(); },
     async AttachmentDataURL(path: string) { return mockImages.get(path) ?? mockPreviewImageDataURL; },
-    async AttachmentDataURLForComposerTarget(_target: ComposerTarget, path: string) { return this.AttachmentDataURL(path); },
-    async AttachmentDataURLForTarget(token: string, path: string) { return this.AttachmentDataURLForTab(token,path); },
-    async AttachmentDataURLForTab(_tabID: string, path: string) { return this.AttachmentDataURL(path); },
+    async AttachmentDataURLForComposerTarget(_target: ComposerTarget, path: string) { return makeMockAttachmentBindings().AttachmentDataURL!(path); },
+    async AttachmentDataURLForTarget(token: string, path: string) { return makeMockAttachmentBindings().AttachmentDataURLForTab(token,path); },
+    async AttachmentDataURLForTab(_tabID: string, path: string) { return makeMockAttachmentBindings().AttachmentDataURL!(path); },
     async AttachDropped(path: string) {
       const name = path.split(/[/\\]/).filter(Boolean).pop() ?? path;
       if (!/\.\w{1,6}$/i.test(name)) {
@@ -91,9 +91,9 @@ export function makeMockAttachmentBindings(): AttachmentBindings & Partial<AppBi
       mockImages.set(attachmentPath, mockPreviewImageDataURL);
       return { kind: "attachment", path: attachmentPath };
     },
-    async AttachDroppedForComposerTarget(_target: ComposerTarget, path: string) { return this.AttachDropped(path); },
-    async AttachDroppedForTarget(token: string, path: string) { return this.AttachDroppedForTab(token,path); },
-    async AttachDroppedForTab(_tabID: string, path: string) { return this.AttachDropped(path); },
+    async AttachDroppedForComposerTarget(_target: ComposerTarget, path: string) { return makeMockAttachmentBindings().AttachDropped!(path); },
+    async AttachDroppedForTarget(token: string, path: string) { return makeMockAttachmentBindings().AttachDroppedForTab(token,path); },
+    async AttachDroppedForTab(_tabID: string, path: string) { return makeMockAttachmentBindings().AttachDropped!(path); },
     async ReadSessionAttachmentForTab(_tabID: string, digest: string, offset: number) {
       const image = mockImages.get(digest) ?? "data:image/png;base64,";
       const data = image.split(",", 2)[1] ?? "";

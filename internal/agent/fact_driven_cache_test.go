@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"deepzora/internal/event"
@@ -27,10 +26,7 @@ func TestFactDrivenModesShareExecutorSchemaBytes(t *testing.T) {
 		prov.chunks = []provider.Chunk{{Type: provider.ChunkText, Text: "ok"}, {Type: provider.ChunkDone}}
 		err := a.Run(ctx, input)
 		if err != nil {
-			var readiness *FinalReadinessError
-			if !errors.As(err, &readiness) {
-				t.Fatalf("Run(%q): %v", input, err)
-			}
+			t.Fatalf("Run(%q): %v", input, err)
 		}
 		if len(prov.lastReq.Messages) == 0 || prov.lastReq.Messages[0].Role != provider.RoleSystem {
 			t.Fatalf("missing system prefix for %q", input)

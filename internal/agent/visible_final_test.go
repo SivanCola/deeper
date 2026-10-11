@@ -132,10 +132,7 @@ func TestCoordinatorToolPlannerRetriesReasoningOnlyStopForVisiblePlan(t *testing
 	plannerTools := tool.NewRegistry()
 	plannerTools.Add(echoTool{})
 	executor := New(exec, tool.NewRegistry(), NewSession("exec-sys"), Options{}, event.Discard)
-	coord := NewCoordinator(
-		deepseekThinkingProvider{plannerScript}, NewSession("planner-sys"), nil,
-		PlannerToolRegistry(plannerTools), Options{}, executor, 0, event.Discard, nil,
-	)
+	coord := NewCoordinatorWithPlannerPolicy(deepseekThinkingProvider{plannerScript}, NewSession("planner-sys"), nil, PlannerToolRegistry(plannerTools), Options{}, executor, 0, event.Discard, nil)
 
 	if err := coord.Run(withNoClosedLoop(context.Background()), "fix the bug"); err != nil {
 		t.Fatalf("Run: %v", err)

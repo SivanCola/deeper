@@ -1,5 +1,5 @@
 // Frontmatter serialization for saved facts: the YAML shape render emits and
-// the legacy type-routing compatibility it preserves.
+// the independent fact category and scope.
 package memory
 
 import (
@@ -29,9 +29,8 @@ type memoryFrontmatter struct {
 	ExpiresAt      string `yaml:"expires_at,omitempty"`
 	LastVerifiedAt string `yaml:"last_verified_at,omitempty"`
 	Metadata       struct {
-		Type     string `yaml:"type"`
-		FactType string `yaml:"fact_type,omitempty"`
-		Scope    string `yaml:"scope"`
+		Type  string `yaml:"type"`
+		Scope string `yaml:"scope"`
 	} `yaml:"metadata"`
 }
 
@@ -57,11 +56,7 @@ func render(m Memory, name string) string {
 	}
 	actualType := NormalizeType(string(m.Type))
 	scope := NormalizeFactScope(string(m.Scope))
-	compatType := previousReleaseRoutingType(actualType, scope)
-	fm.Metadata.Type = string(compatType)
-	if compatType != actualType {
-		fm.Metadata.FactType = string(actualType)
-	}
+	fm.Metadata.Type = string(actualType)
 	fm.Metadata.Scope = string(scope)
 	var b strings.Builder
 	b.WriteString("---\n")
@@ -74,21 +69,4 @@ func render(m Memory, name string) string {
 	b.WriteString(strings.TrimSpace(m.Body))
 	b.WriteString("\n")
 	return b.String()
-}
-
-// previousReleaseRoutingType keeps scope safe when an older Deepzora binary
-// shares the same state directory. Previous releases routed user/feedback to
-// GlobalDir and project/reference to Dir, so metadata.type remains a compatible
-// routing hint while metadata.fact_type preserves the independent new category.
-func previousReleaseRoutingType(actual Type, scope FactScope) Type {
-	if scope == FactScopeGlobal {
-		if actual == TypeUser || actual == TypeFeedback {
-			return actual
-		}
-		return TypeUser
-	}
-	if actual == TypeProject || actual == TypeReference {
-		return actual
-	}
-	return TypeProject
 }

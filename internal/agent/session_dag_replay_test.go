@@ -275,7 +275,7 @@ func TestDAGUnknownTypeAndFutureSchemaAreHardErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	probe, err := probeSessionEventLog(path)
-	if err != nil || !probe.futureSchema || probe.dag || probe.native {
+	if err != nil || !probe.futureSchema || probe.dag || probe.creatable {
 		t.Fatalf("schema 3 probe = %+v err=%v", probe, err)
 	}
 	if _, err := LoadSession(path); err == nil || !strings.Contains(err.Error(), "schema 3") {
@@ -302,7 +302,7 @@ func TestLoadSessionReadsSelectedHeadOfDAGLog(t *testing.T) {
 		dagMessageEntry(t, "F", "A1", "", dagMsg(provider.RoleUser, "from-other-writer", "U9"), base.Add(31*time.Second)),
 	)
 	probe, err := probeSessionEventLog(path)
-	if err != nil || !probe.dag || probe.native || probe.futureSchema {
+	if err != nil || !probe.dag || probe.creatable || probe.futureSchema {
 		t.Fatalf("probe = %+v err=%v", probe, err)
 	}
 	s, err := LoadSession(path)
@@ -349,48 +349,17 @@ func TestLoadSessionReadsSelectedHeadOfDAGLog(t *testing.T) {
 	}
 }
 
-func TestSchemaOneReaderRefusesDAGLogWithoutTruncating(t *testing.T) {
-	path := dagTestSession(t)
-	dagLinearLog(t, path)
-	logPath := store.SessionEventLog(path)
-	before, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := replaySessionEventLog(logPath); err == nil || !strings.Contains(err.Error(), "unsupported schema version 2") {
-		t.Fatalf("schema-1 replay err = %v", err)
-	}
-	if err := repairSessionEventLogTail(path); err == nil {
-		t.Fatal("schema-1 tail repair must fail closed on a schema-2 log")
-	}
-	after, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(before) != string(after) {
-		t.Fatal("schema-1 tail repair modified a schema-2 log")
-	}
-}
-
 func dagChain(st *sessionDAGState, head string) []string {
 	msgs, _ := st.materialize(head)
 	return dagContents(msgs)
 }
 
-// useSchemaOneLog pins a test to the schema-1 writer: it exercises mechanics
-// (replace records, revision CAS, recovery copies) that only that path has.
-func useSchemaOneLog(t *testing.T) {
-	t.Helper()
-	t.Setenv(SessionLogSchemaEnv, "v1")
-}
-
 func schemaOneTempDir(t *testing.T) string {
 	t.Helper()
-	useSchemaOneLog(t)
 	return t.TempDir()
 }
 
-func schemaOneSessionPath(t *testing.T, name string) string {
+func currentDAGSessionPath(t *testing.T, name string) string {
 	t.Helper()
 	return filepath.Join(schemaOneTempDir(t), name)
 }

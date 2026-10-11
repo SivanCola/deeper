@@ -17,7 +17,7 @@ import (
 )
 
 func TestDesktopRewindCommitAndUndoUseAuthoritativeControllerState(t *testing.T) {
-	isolateDesktopUserDirsSchemaOne(t)
+	isolateDesktopUserDirs(t)
 	dir := t.TempDir()
 	root := t.TempDir()
 	sessionPath := filepath.Join(dir, "s.jsonl")
@@ -37,7 +37,7 @@ func TestDesktopRewindCommitAndUndoUseAuthoritativeControllerState(t *testing.T)
 	before := "before"
 	afterExists := true
 	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{
-		SchemaVersion: checkpoint.SchemaV2, Turn: 1, Time: time.Now(), Prompt: "edit", MsgIndex: 3,
+		SchemaVersion: checkpoint.SchemaV3, Turn: 1, Time: time.Now(), Prompt: "edit", MsgIndex: 3,
 		Coverage: checkpoint.CoverageComplete,
 		Files: []checkpoint.FileSnap{{
 			Path: "a.txt", Content: &before, SHA256: checkpoint.Digest([]byte(before)), Mode: diskMode,
@@ -153,11 +153,12 @@ func TestAttachForkedRewindTabFailsClosedWhenSourceIsGone(t *testing.T) {
 
 func seedCheckpoint(t *testing.T, ckptDir string, c checkpoint.Checkpoint) {
 	t.Helper()
-	b, err := json.Marshal(c)
+	c.SchemaVersion = checkpoint.SchemaV3
+	body, err := json.Marshal([]*checkpoint.Checkpoint{&c})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(ckptDir, "turn-"+strconv.Itoa(c.Turn)+".json"), b, 0o644); err != nil {
+	if err := checkpoint.New(ckptDir, "").RestoreCheckpointBackupPublic(body); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -199,14 +200,14 @@ func TestCheckpointsCanCodePropagatesToEarlierTurns(t *testing.T) {
 	content := "old"
 	afterExists := true
 	now := time.Now()
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV2, Turn: 0, Time: now, Prompt: "ask only", MsgIndex: 0})
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV2, Turn: 1, Time: now, Prompt: "edit a file", MsgIndex: 2,
+	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV3, Turn: 0, Time: now, Prompt: "ask only", MsgIndex: 0})
+	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV3, Turn: 1, Time: now, Prompt: "edit a file", MsgIndex: 2,
 		Coverage: checkpoint.CoverageComplete,
 		Files: []checkpoint.FileSnap{{
 			Path: "a.txt", Content: &content, SHA256: checkpoint.Digest([]byte(content)),
 			AfterExisted: &afterExists, AfterSHA256: checkpoint.Digest([]byte("new")), CaptureSource: checkpoint.CaptureBeforeMutation,
 		}}})
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV2, Turn: 2, Time: now, Prompt: "ask again", MsgIndex: 4})
+	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV3, Turn: 2, Time: now, Prompt: "ask again", MsgIndex: 4})
 
 	ag := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
 	ctrl := control.New(control.Options{Executor: ag, SessionDir: dir, Label: "test"})
@@ -249,37 +250,6 @@ func TestCheckpointsCanCodePropagatesToEarlierTurns(t *testing.T) {
 		t.Fatalf("turn 2 cumulative files = %#v, want empty", metas[2].Files)
 	}
 	assertCheckpointFilesEncodeAsArray(t, metas)
-}
-
-func TestCheckpointsCanCodeDoesNotReenableLegacySuffix(t *testing.T) {
-	dir := t.TempDir()
-	sessionPath := filepath.Join(dir, "s.jsonl")
-	ckptDir := sessionPath[:len(sessionPath)-len(".jsonl")] + ".ckpt"
-	if err := os.MkdirAll(ckptDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	content := "old"
-	now := time.Now()
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{SchemaVersion: checkpoint.SchemaV2, Turn: 0, Time: now, Prompt: "before", MsgIndex: 0})
-	seedCheckpoint(t, ckptDir, checkpoint.Checkpoint{Turn: 1, Time: now, Prompt: "legacy edit", MsgIndex: 2,
-		Files: []checkpoint.FileSnap{{Path: "a.txt", Content: &content}}})
-
-	ag := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	ctrl := control.New(control.Options{Executor: ag, SessionDir: dir, Label: "test"})
-	t.Cleanup(ctrl.Close)
-	ctrl.SetSessionPath(sessionPath)
-	app := &App{}
-	app.setTestCtrl(ctrl, "test")
-
-	metas := app.CheckpointsForTab("test")
-	if len(metas) != 2 {
-		t.Fatalf("checkpoints = %d, want 2", len(metas))
-	}
-	for _, meta := range metas {
-		if meta.CanCode {
-			t.Fatalf("legacy suffix re-enabled code rewind at turn %d: %+v", meta.Turn, meta)
-		}
-	}
 }
 
 func TestCheckpointsForTabLimitsCumulativeFilePreview(t *testing.T) {

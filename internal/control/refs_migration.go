@@ -6,9 +6,8 @@ import "maps"
 // access, and Plan-mode command trust a controller rebuild must carry forward; see
 // Controller.SessionAuthorizations / RestoreSessionAuthorizations.
 type SessionAuthorizations struct {
-	Grants                   []string
-	PlanModeReadOnlyCommands []string
-	WriteRoots               []string
+	Grants     []string
+	WriteRoots []string
 
 	// Keep exact session-issued aliases private and detached from controller state.
 	externalFolderRefs map[string]string

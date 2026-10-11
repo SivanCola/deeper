@@ -134,7 +134,7 @@ const deliverableItems: Item[] = [
   { kind: "tool", id: "present-doc", name: "present", args: '{"files":[{"path":"README.md"}]}', readOnly: true, status: "done", output: "Presented README.md", presentedFiles: [{ path: "README.md", description: "Instructions" }] },
   { kind: "tool", id: "present-new", name: "present", args: '{"files":[{"path":"game.html"}]}', readOnly: true, status: "done", output: "Presented game.html", presentedFiles: [{ path: "game.html", description: "Playable game" }] },
   { kind: "notice", id: "turn-result", level: "info", text: "Turn complete", completionSummary: {
-    preset: "balanced", verdict: "complete", mutations: 2, changed_files: 2, checks_passed: 0, checks_failed: 0,
+    verdict: "complete", mutations: 2, changed_files: 2, checks_passed: 0, checks_failed: 0,
     checks_suppressed: 0, review: "passed", constraint_degraded: false,
     receipt: { verdict: "complete", diff: { id: "5:result", turn: 5, coverage: "complete", added: 4, removed: 1, reasons: [], files: [
       { path: "game.html", kind: "create", added: 3, removed: 0 },

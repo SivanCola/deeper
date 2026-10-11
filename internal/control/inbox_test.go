@@ -732,29 +732,3 @@ func TestStructuredInboxInvocationSurvivesReopenAndRunsSkill(t *testing.T) {
 		t.Fatalf("structured item was not acknowledged: %+v", got)
 	}
 }
-
-func TestLegacySingularInboxInvocationInfersSkillKind(t *testing.T) {
-	dir := t.TempDir()
-	runner := &fakeTurnRunner{}
-	c := newOwnedTestController(t, Options{
-		Runner: runner, SessionPath: filepath.Join(dir, "s.jsonl"), SessionDir: dir, Sink: event.Discard,
-		Skills: []skill.Skill{{Name: "legacy", Body: "LEGACY_SKILL_BODY", RunAs: skill.RunInline, Scope: skill.ScopeGlobal}},
-	})
-	st, err := c.ensureInbox()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rec, err := st.Enqueue(sessioninbox.EnqueueRequest{Envelope: sessioninbox.PromptEnvelope{
-		DisplayText: "/legacy",
-		Invocation:  &sessioninbox.StructuredInvocation{Name: "legacy"},
-	}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := c.RunInboxTurn(context.Background(), rec.ItemID); err != nil {
-		t.Fatal(err)
-	}
-	if len(runner.inputs) != 1 || !strings.Contains(runner.inputs[0], "LEGACY_SKILL_BODY") {
-		t.Fatalf("legacy structured input = %q", runner.inputs)
-	}
-}

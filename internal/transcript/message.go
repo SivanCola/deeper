@@ -3,7 +3,6 @@
 package transcript
 
 import (
-	"deepzora/internal/event"
 	"deepzora/internal/eventwire"
 	"deepzora/internal/provider"
 )
@@ -58,7 +57,6 @@ type Message struct {
 	InputTokens       int                              `json:"inputTokens,omitempty"`
 	ResultTokens      int                              `json:"resultTokens,omitempty"`
 	DecisionReceipt   *provider.DecisionReceipt        `json:"decisionReceipt,omitempty"`
-	Readiness         *event.FinalReadiness            `json:"readiness,omitempty"`
 	ReadPause         *provider.ReadPause              `json:"readPause,omitempty"`
 	ReadCompletion    *provider.ReadCompletion         `json:"readCompletion,omitempty"`
 	ProtocolRecovery  *provider.ProtocolRecoveryAction `json:"protocolRecovery,omitempty"`

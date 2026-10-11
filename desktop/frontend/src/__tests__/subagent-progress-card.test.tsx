@@ -11,7 +11,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { ToolCard } from "../components/ToolCard";
 import { LocaleProvider } from "../lib/i18n";
-import { setReasoningSummaryEnabled } from "../lib/reasoningSummaryPreference";
+import { applySessionExperience } from "../lib/sessionExperience";
 import { hydrateSessionExperience } from "../lib/sessionExperience";
 import type { Item, SubagentProgress } from "../lib/useController";
 
@@ -229,7 +229,7 @@ console.log("\nsubagent progress card");
   ok(!!document.querySelector(".tool__subagent-preview .md strong"), "clicking the reasoning label expands the full Markdown");
 
   await act(async () => {
-    setReasoningSummaryEnabled(false);
+    applySessionExperience("standard");
     root.render(
       React.createElement(LocaleProvider, null, React.createElement(ToolCard, { key: "summary-off", item: running })),
     );
@@ -238,7 +238,7 @@ console.log("\nsubagent progress card");
   ok(!document.querySelector(".tool__subagent-preview .reasoning-summary"), "legacy summary-off cannot collapse active Standard reasoning");
   ok(!!document.querySelector(".tool__subagent-preview .md"), "legacy summary-off keeps active process Markdown reachable");
   await act(async () => {
-    setReasoningSummaryEnabled(true);
+    applySessionExperience("standard");
     root.render(
       React.createElement(LocaleProvider, null, React.createElement(ToolCard, { key: "summary-on", item: running })),
     );
@@ -309,7 +309,7 @@ console.log("\nsubagent progress card");
   const root = createRoot(rootEl);
   const live = makeItem("partial");
   live.status = "error";
-  live.subagentOutcome = ["sa_live", "partial", "completion_uncertain", true];
+  live.subagentOutcome = ["sa_live", "partial", "incomplete_read", true];
 
   await act(async () => {
     root.render(React.createElement(LocaleProvider, null, React.createElement(ToolCard, { item: live })));
@@ -324,7 +324,7 @@ console.log("\nsubagent progress card");
   });
   ok(document.querySelector(".tool__subagent-outcome")?.textContent?.includes("partially complete"), "live outcome tuple renders through the lazy card boundary");
   ok(document.querySelector(".tool__subagent-outcome")?.textContent?.includes("sa_live"), "live outcome keeps the stable subagent reference");
-  ok(document.querySelector(".tool__subagent-outcome")?.textContent?.includes("completion_uncertain"), "live outcome exposes the bounded error code");
+  ok(document.querySelector(".tool__subagent-outcome")?.textContent?.includes("incomplete_read"), "live outcome exposes the bounded error code");
 
   const history: ToolItem = {
     kind: "tool",

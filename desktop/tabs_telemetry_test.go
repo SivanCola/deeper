@@ -30,21 +30,6 @@ func (p usageProvider) Stream(_ context.Context, _ provider.Request) (<-chan pro
 	return ch, nil
 }
 
-func TestTelemetryLoadsLegacyReadFileArray(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl.telemetry.json")
-	if err := os.WriteFile(path, []byte(`[{"path":"README.md","turn":2,"time":1000}]`), 0o644); err != nil {
-		t.Fatalf("write legacy telemetry: %v", err)
-	}
-
-	got := loadTelemetry(path)
-	if len(got.ReadFiles) != 1 || got.ReadFiles[0].Path != "README.md" {
-		t.Fatalf("legacy read files = %+v", got.ReadFiles)
-	}
-	if got.Usage.RequestCount != 0 {
-		t.Fatalf("legacy usage request count = %d, want 0", got.Usage.RequestCount)
-	}
-}
-
 func TestWorkspaceTabAggregatesSessionUsageTelemetry(t *testing.T) {
 	tab := &WorkspaceTab{}
 	start := time.Now().Add(-2 * time.Second).UnixMilli()
@@ -151,8 +136,8 @@ func TestWorkspaceTabMarksEstimatedExecutorTurn(t *testing.T) {
 	}
 }
 
-func TestWorkspaceTabRepricesUsageWithoutMixingCurrencies(t *testing.T) {
-	// repriceUsage is now a display rebind: it must not recompute from new rates.
+func TestWorkspaceTabDisplayRebindPreservesOccurrenceCurrency(t *testing.T) {
+	// selectDisplayCurrency is now a display rebind: it must not recompute from new rates.
 	tab := &WorkspaceTab{}
 	tab.recordUsage(event.Event{
 		Usage:       &provider.Usage{PromptTokens: 1_000_000, CompletionTokens: 100_000, TotalTokens: 1_100_000},
@@ -160,10 +145,8 @@ func TestWorkspaceTabRepricesUsageWithoutMixingCurrencies(t *testing.T) {
 		Pricing:     &provider.Pricing{Input: 1, Output: 2, Currency: "CNY"},
 	})
 	before := tab.telemetrySnapshot().Usage.SessionCost
-	if ok := tab.repriceUsage(map[string]*provider.Pricing{
-		event.UsageSourceExecutor: {Input: 0.14, Output: 0.28, Currency: "USD"},
-	}); !ok {
-		t.Fatal("repriceUsage rejected display rebind")
+	if ok := tab.selectDisplayCurrency("CNY"); !ok {
+		t.Fatal("selectDisplayCurrency rejected display rebind")
 	}
 	got := tab.telemetrySnapshot().Usage
 	if got.SessionCost != before {
@@ -223,10 +206,8 @@ func TestWorkspaceTabRepricesCacheWritesWithoutLosingBillingTier(t *testing.T) {
 	}
 	// Display rebind must preserve occurrence-time cost.
 	before := got.SessionCost
-	if ok := tab.repriceUsage(map[string]*provider.Pricing{
-		event.UsageSourceExecutor: {Input: 1, Currency: "USD"},
-	}); !ok {
-		t.Fatal("repriceUsage rejected cache-write usage")
+	if ok := tab.selectDisplayCurrency("CNY"); !ok {
+		t.Fatal("selectDisplayCurrency rejected cache-write usage")
 	}
 	got = tab.telemetrySnapshot().Usage
 	if got.SessionCost != before {
@@ -240,7 +221,7 @@ func TestRepriceTabUsageLeavesAutoCurrencyUnresolved(t *testing.T) {
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save auto config: %v", err)
 	}
-	tab := &WorkspaceTab{WorkspaceRoot: t.TempDir(), model: "deepseek-flash/deepseek-v4-flash"}
+	tab := &WorkspaceTab{WorkspaceRoot: t.TempDir(), model: "deepseek-flash/deepseek-flash"}
 	tab.recordUsage(event.Event{
 		Usage:       &provider.Usage{PromptTokens: 1_000_000, TotalTokens: 1_000_000},
 		UsageSource: event.UsageSourceExecutor,
@@ -382,10 +363,10 @@ func TestWorkspaceTabKeepsLastContextScopedToExecutor(t *testing.T) {
 	}
 }
 
-func TestTelemetryLastContextRoundTripAndLegacyDefaults(t *testing.T) {
+func TestTelemetryLastContextRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.jsonl.telemetry.json")
 	want := tabTelemetrySnapshot{
-		Version: 2,
+		Version: 3,
 		Usage: sessionUsageStats{
 			PromptTokens:           100,
 			TotalTokens:            120,
@@ -415,21 +396,6 @@ func TestTelemetryLastContextRoundTripAndLegacyDefaults(t *testing.T) {
 		t.Fatalf("cache-write round trip = raw %d billed %v, want 5/10", got.CacheWriteTokens, got.CacheWriteBilledTokens)
 	}
 
-	if err := os.WriteFile(path, []byte(`{"version":2,"usage":{"promptTokens":50,"totalTokens":50}}`), 0o644); err != nil {
-		t.Fatalf("write pre-last-context telemetry: %v", err)
-	}
-	legacy := loadTelemetry(path).Usage
-	if legacy.CacheWriteTokens != 0 || legacy.CacheWriteBilledTokens != 0 {
-		t.Fatalf("legacy cache-write fields = raw %d billed %v, want zero defaults", legacy.CacheWriteTokens, legacy.CacheWriteBilledTokens)
-	}
-	if legacy.LastUsedTokens != 0 ||
-		legacy.LastPromptTokens != 0 ||
-		legacy.LastCompletionTokens != 0 ||
-		legacy.LastReasoningTokens != 0 ||
-		legacy.LastCacheHitTokens != 0 ||
-		legacy.LastCacheMissTokens != 0 {
-		t.Fatalf("legacy telemetry last context = %+v, want zero defaults", legacy)
-	}
 }
 
 // The gauge measures the rebound session's own view, so it no longer needs the
@@ -716,82 +682,5 @@ func TestNewSessionResetsTabUsageTelemetry(t *testing.T) {
 	}
 	if info := app.ContextUsageForTab("tab"); info.SessionCost != 0 || info.SessionTokens != 0 {
 		t.Fatalf("context after NewSession = cost %f tokens %d, want zeros", info.SessionCost, info.SessionTokens)
-	}
-}
-
-func TestSnapshotConflictRecoveryCarriesTelemetryToFork(t *testing.T) {
-	t.Setenv(agent.SessionLogSchemaEnv, "v1")
-	isolateDesktopUserDirs(t)
-
-	root := globalTabWorkspaceRoot()
-	dir := desktopSessionDir(root)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir sessions: %v", err)
-	}
-	originalPath := filepath.Join(dir, "session.jsonl")
-	current := agent.NewSession("sys")
-	current.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	current.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	current.Add(provider.Message{Role: provider.RoleUser, Content: "disk second"})
-	if err := current.Save(originalPath); err != nil {
-		t.Fatalf("Save current: %v", err)
-	}
-
-	staleSess := agent.NewSession("sys")
-	staleSess.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	staleSess.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	staleSess.Add(provider.Message{Role: provider.RoleUser, Content: "local second"})
-	staleExec := agent.New(stubProvider{}, tool.NewRegistry(), staleSess, agent.Options{}, event.Discard)
-	app := &App{
-		tabs:             map[string]*WorkspaceTab{},
-		detachedSessions: map[string]*WorkspaceTab{},
-		activeTabID:      "recovery_tab",
-	}
-	tab := &WorkspaceTab{
-		ID:            "recovery_tab",
-		Scope:         "global",
-		WorkspaceRoot: root,
-		SessionPath:   originalPath,
-		Ready:         true,
-		model:         "test-model",
-		disabledMCP:   map[string]ServerView{},
-	}
-	tab.sink = &tabEventSink{tabID: tab.ID, app: app}
-	tab.Ctrl = newFixtureController(t, control.Options{
-		Executor:            staleExec,
-		SessionDir:          dir,
-		SessionPath:         originalPath,
-		Label:               "test",
-		Sink:                tab.sink,
-		SessionRecoveryMeta: app.tabSessionRecoveryMeta(tab),
-		OnSessionRecovered:  app.handleTabSessionRecovered(tab),
-	})
-	app.tabs[tab.ID] = tab
-
-	tab.syncTelemetryToSession(originalPath)
-	tab.recordUsage(costedUsageEvent())
-	want := tab.telemetrySnapshot().Usage.SessionCost
-	if want <= 0 {
-		t.Fatalf("seed cost = %f, want positive", want)
-	}
-
-	if err := tab.Ctrl.Snapshot(); err != nil {
-		t.Fatalf("Snapshot: %v", err)
-	}
-	recoveryPath := tab.Ctrl.SessionPath()
-	if recoveryPath == "" || recoveryPath == originalPath {
-		t.Fatalf("recovery path = %q, want distinct path", recoveryPath)
-	}
-
-	// The fork continues the conversation: in-memory totals carry over and a
-	// later sync against the fork path must not wipe them.
-	tab.syncTelemetryToSession(recoveryPath)
-	if got := tab.telemetrySnapshot().Usage.SessionCost; got != want {
-		t.Fatalf("carried cost = %f, want %f", got, want)
-	}
-	// The fork's sidecar was persisted at retarget time, so cost survives an
-	// app exit before the next usage event.
-	if got := loadTelemetry(recoveryPath + ".telemetry.json").Usage.SessionCost; got != want {
-		t.Fatalf("fork sidecar cost = %f, want %f", got, want)
 	}
 }

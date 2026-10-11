@@ -1,7 +1,6 @@
 package main
 
 import (
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"fmt"
@@ -144,14 +143,6 @@ func (a *App) ResolvePlanDecisionTabForTurn(tabID, turnID, runtimeEpoch, id, act
 		return err
 	}
 	return ctrl.ResolvePlanDecision(id, control.PlanDecisionAction(action))
-}
-
-func (a *App) ResolveRecoveryTabForTurn(tabID, turnID, runtimeEpoch, id, action, feedback string) error {
-	ctrl, err := a.validatePromptIdentity(tabID, turnID, runtimeEpoch)
-	if err != nil {
-		return err
-	}
-	return ctrl.ResolveRecovery(id, agent.RecoveryAction(action), feedback)
 }
 
 func (a *App) AnswerMCPInteractionForTurn(tabID, turnID, runtimeEpoch, id, action string, content map[string]any) error {

@@ -35,11 +35,11 @@ func TestRebuildFromCompactRatioRefreshesActiveSession(t *testing.T) {
 		{Role: provider.RoleUser, Content: "keep my existing conversation"},
 		{Role: provider.RoleAssistant, Content: "existing response"},
 	}, "")
-	ctrl.SetToolApprovalMode(control.ToolApprovalYolo)
+	ctrl.SetToolApprovalMode(control.ToolApprovalDangerFullAccess)
 	ctrl.SetPlanMode(true)
 	ctrl.SetGoal("finish this conversation")
 	ctrl.RestoreSessionAuthorizations(control.SessionAuthorizations{
-		Grants: []string{"bash(go test ./...)"}, PlanModeReadOnlyCommands: []string{"git status"},
+		Grants: []string{"bash(go test ./...)"},
 	})
 	inboxID := queueRebuildInbox(t, ctrl)
 	history, authorizations := ctrl.History(), ctrl.SessionAuthorizations()
@@ -69,7 +69,7 @@ func TestRebuildFromCompactRatioRefreshesActiveSession(t *testing.T) {
 		t.Fatal("compact ratio rebuild changed conversation history")
 	}
 	if !reflect.DeepEqual(next.Controller.SessionAuthorizations(), authorizations) ||
-		next.Controller.ToolApprovalMode() != control.ToolApprovalYolo || !next.Controller.PlanMode() ||
+		next.Controller.ToolApprovalMode() != control.ToolApprovalDangerFullAccess || !next.Controller.PlanMode() ||
 		next.Controller.Goal() != ctrl.Goal() || next.Controller.SessionTemp() != ctrl.SessionTemp() {
 		t.Fatal("compact ratio rebuild lost session-owned state")
 	}

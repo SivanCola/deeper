@@ -152,22 +152,12 @@ type Policy struct {
 	// Code's --allowed-tools. Deny rules still win, while these rules override
 	// configured Ask entries for the current process only.
 	SessionAllow []Rule
-	// AllowDynamicBash is retained only so older integrations compile. Dynamic
-	// shell syntax now follows Mode and the active OS sandbox.
-	// Deprecated: ignored.
-	AllowDynamicBash bool
 }
 
 // WithSessionAllow returns a copy of p with additional ephemeral allow rules.
 // Malformed entries are ignored consistently with New.
 func (p Policy) WithSessionAllow(rules []string) Policy {
 	p.SessionAllow = append(append([]Rule(nil), p.SessionAllow...), parseRules(rules)...)
-	return p
-}
-
-// WithAllowDynamicBashFallback is a no-op compatibility shim.
-func (p Policy) WithAllowDynamicBashFallback(enabled bool) Policy {
-	_ = enabled
 	return p
 }
 

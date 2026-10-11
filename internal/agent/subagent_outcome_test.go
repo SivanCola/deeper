@@ -12,7 +12,7 @@ import (
 func TestSubagentRunErrorPreservesPartialAnswerAndReference(t *testing.T) {
 	run := &SubagentRun{Ref: "sa_partial", Session: NewSession("sys")}
 	run.Session.Add(provider.Message{Role: provider.RoleAssistant, Content: "partial findings"})
-	base := &CompletionUncertainError{Cause: CompletionUncertainContextTool}
+	base := &IncompleteReadError{Reason: "child read is incomplete"}
 	err := NewSubagentRunError(run, base)
 	if !errors.Is(err, base) {
 		t.Fatal("subagent error did not preserve its cause")
@@ -21,7 +21,7 @@ func TestSubagentRunErrorPreservesPartialAnswerAndReference(t *testing.T) {
 		t.Fatalf("outcome = %+v, want retryable partial", err.Outcome)
 	}
 	out := err.SubagentOutput()
-	for _, want := range []string{"status=partial", "retryable=true", "error_code=completion_uncertain", "sa_partial", "partial findings"} {
+	for _, want := range []string{"status=partial", "retryable=true", "error_code=incomplete_read", "sa_partial", "partial findings"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("output %q missing %q", out, want)
 		}
@@ -44,8 +44,8 @@ func TestSubagentRunErrorClassifiesCancellationAndProviderRetry(t *testing.T) {
 }
 
 func TestParseSubagentOutcomeFromFormattedResult(t *testing.T) {
-	outcome, ok := ParseSubagentOutcome("Subagent reference: sa_child\nSubagent outcome: status=partial retryable=true error_code=completion_uncertain\n\nFinal answer:\nfindings")
-	if !ok || outcome.Ref != "sa_child" || outcome.Status != SubagentOutcomePartial || !outcome.Retryable || outcome.ErrorCode != "completion_uncertain" {
+	outcome, ok := ParseSubagentOutcome("Subagent reference: sa_child\nSubagent outcome: status=partial retryable=true error_code=incomplete_read\n\nFinal answer:\nfindings")
+	if !ok || outcome.Ref != "sa_child" || outcome.Status != SubagentOutcomePartial || !outcome.Retryable || outcome.ErrorCode != "incomplete_read" {
 		t.Fatalf("parsed outcome = %+v, ok=%v", outcome, ok)
 	}
 }

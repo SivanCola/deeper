@@ -11,7 +11,7 @@ import (
 // their search requests use a separate official Messages endpoint. Explicit
 // request URL overrides are never redirected to a different endpoint.
 func IsOfficialDeepSeekSearchEndpoint(e *ProviderEntry) bool {
-	if e == nil || overridesBaseRoute(e, e.RequestURL) || overridesBaseRoute(e, e.ChatURL) {
+	if e == nil || overridesBaseRoute(e, e.RequestURL) {
 		return false
 	}
 	if IsOfficialDeepSeekWebSearchEndpoint(e) {
@@ -75,11 +75,9 @@ func (c *Config) resolveAutomaticWebSearchProvider(current *ProviderEntry) *Prov
 			copy.Kind = "anthropic"
 			copy.BaseURL = "https://api.deepseek.com/anthropic"
 			copy.RequestURL = ""
-			copy.ChatURL = ""
 			copy.ReasoningProtocol = ReasoningProtocolDeepSeek
 		}
 		copy.WebSearch = boolPointer(true)
-		copy.ResponsesStateful = boolPointer(false)
 		copy.ResponsesMode = "stateless"
 		return &copy
 	}
@@ -113,15 +111,6 @@ type WebSearchResolution struct {
 // ResolveWebSearchModel resolves an exact account/model without legacy account
 // retargeting: an explicit search assignment must never silently change accounts.
 func (c *Config) ResolveWebSearchModel(ref string) (*ProviderEntry, error) {
-	name, model, exact := strings.Cut(strings.TrimSpace(ref), "/")
-	entry, exists := c.Provider(name)
-	if !exact || !exists || !entry.HasModel(model) {
-		var aliasErr error
-		ref, aliasErr = c.resolveOpenCodeGoAlias(ref, true)
-		if aliasErr != nil {
-			return nil, aliasErr
-		}
-	}
 	name, model, ok := strings.Cut(strings.TrimSpace(ref), "/")
 	if !ok {
 		return nil, fmt.Errorf("search model must use provider/model")
@@ -182,22 +171,6 @@ func (c *Config) ResolveWebSearch(current *ProviderEntry) WebSearchResolution {
 	if current != nil && current.WebSearch != nil && !*current.WebSearch && (SupportsServerWebSearch(current) || IsOfficialDeepSeekSearchEndpoint(current) || isOpenCodeGoEntry(current)) {
 		return WebSearchResolution{Status: "disabled"}
 	}
-	if isOpenCodeGoEntry(current) && c.openCodeGoJournal != nil {
-		// A saved search identity is an assignment, including in auto mode.
-		// Its disappearance must not select another account from the catalog.
-		refs := make([]string, 0, len(c.openCodeGoJournal.SearchAliases))
-		for old, alias := range c.openCodeGoJournal.SearchAliases {
-			if alias.Identity == openCodeGoIdentity(*current) {
-				refs = append(refs, old)
-			}
-		}
-		slices.Sort(refs)
-		for _, old := range refs {
-			if _, err := c.resolveHistoricalWebSearchModel(old); err != nil {
-				return WebSearchResolution{Status: "invalid", Reason: err.Error()}
-			}
-		}
-	}
 	if entry := c.resolveAutomaticWebSearchProvider(current); entry != nil {
 		return WebSearchResolution{Entry: entry, Status: "ready"}
 	}
@@ -208,7 +181,7 @@ func isOpenCodeGoEntry(e *ProviderEntry) bool {
 	if e == nil {
 		return false
 	}
-	_, ok := provider.OpenCodeGoRequestRoute(e.Kind, e.BaseURL, e.RequestURL, e.ChatURL)
+	_, ok := provider.OpenCodeGoRequestRoute(e.Kind, e.BaseURL, e.RequestURL)
 	return ok
 }
 

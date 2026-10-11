@@ -59,7 +59,7 @@ func (s *Session) acceptTranscriptCommit(commit Commit) {
 				removed = append(removed, ids...)
 				messages = slices.DeleteFunc(messages, func(message provider.Message) bool { return slices.Contains(ids, message.ID) })
 			}
-		case "history/replace", "legacy/import":
+		case "history/replace":
 			var payload struct {
 				Messages []provider.Message `json:"messages"`
 			}

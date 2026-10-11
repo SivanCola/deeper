@@ -127,15 +127,10 @@ func (a *App) executeCanonicalPurge(ctx context.Context, ref session.SessionRef,
 		if observed != nil {
 			return store.ResumePurgeForRequest(ctx, ref.SessionID, expected, *observed)
 		}
-		return store.BeginPurgeWithSources(ctx, ref.SessionID, expected)
+		return store.BeginPurge(ctx, ref.SessionID, expected)
 	}
 	switch workspacestate.ClassifyPurge(state, ref.SessionID) {
 	case workspacestate.PurgeCommitted:
-		return prepare()
-	case workspacestate.PurgePreparedStale:
-		// A restore or later lifecycle mutation already superseded this legacy
-		// prepare. Clean only the observed registry record; do not touch the
-		// runtime or filesystem for an obsolete deletion intent.
 		return prepare()
 	case workspacestate.PurgeInvalid:
 		return workspacestate.ErrMutationConflict
@@ -165,9 +160,7 @@ func (a *App) executeCanonicalPurge(ctx context.Context, ref session.SessionRef,
 		return fmt.Errorf("purge cleanup pending: %w", err)
 	}
 	a.lifecycleCheckpoint("after-file-cleanup")
-	if err := a.purgeMigratedSources(ctx, ref.SessionID); err != nil {
-		return fmt.Errorf("source cleanup pending: %w", err)
-	}
+
 	a.lifecycleCheckpoint("after-source-cleanup")
 	if err := a.sessionUIStore().PurgeComposer(ctx, composerRecordKey(ref)); err != nil {
 		return err

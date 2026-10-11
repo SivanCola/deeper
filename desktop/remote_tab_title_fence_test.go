@@ -9,8 +9,8 @@ import (
 
 func TestRemoteTabTitleRefreshRejectsDifferentServeCurrent(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "a", Path: "/a.jsonl", Title: "Title A", Current: true},
-		{Name: "b", Path: "/b.jsonl", Title: "Title B"},
+		{Name: "a", Path: "session-id:a", Title: "Title A", Current: true},
+		{Name: "b", Path: "session-id:b", Title: "Title B"},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -19,7 +19,7 @@ func TestRemoteTabTitleRefreshRejectsDifferentServeCurrent(t *testing.T) {
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
 	cleanupRemoteTabPumps(t, a)
-	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "a", SessionPath: "/a.jsonl", SessionTitle: "Selected A"})
+	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "a", SessionPath: "session-id:a", SessionTitle: "Selected A"})
 	fs.mu.Lock()
 	fs.sessions[0].Current = false
 	fs.sessions[1].Current = true
@@ -29,9 +29,9 @@ func TestRemoteTabTitleRefreshRejectsDifferentServeCurrent(t *testing.T) {
 
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[meta.ID]
-	name, sessionPath, route, title := tab.session.name, tab.session.path, tab.routing.currentPath, tab.topicTitle
+	name, sessionPath, route, title := tab.session.name, remoteSessionIdentityRoute(tab.session.path, tab.session.sessionID), tab.routing.currentPath, tab.topicTitle
 	a.remoteTabMu.Unlock()
-	if name != "a" || sessionPath != "/a.jsonl" || route != "/a.jsonl" || title != "Selected A" {
+	if name != "a" || sessionPath != "session-id:a" || route != "session-id:a" || title != "Selected A" {
 		t.Fatalf("different Serve current replaced title-refresh target: %q/%q/%q/%q", name, sessionPath, route, title)
 	}
 }
@@ -54,7 +54,7 @@ func TestRemoteTabTitleRefreshKeepsBlankPreferencesAfterReconnect(t *testing.T) 
 	}
 
 	fs.mu.Lock()
-	fs.sessions = []serveSessionEntry{{Name: "stale", Path: "/stale.jsonl", Title: "Serve title", Current: true}}
+	fs.sessions = []serveSessionEntry{{Name: "stale", Path: "session-id:stale", Title: "Serve title", Current: true}}
 	fs.sessionsStarted = make(chan struct{}, 1)
 	fs.sessionsRelease = make(chan struct{})
 	started, release := fs.sessionsStarted, fs.sessionsRelease
@@ -102,7 +102,7 @@ func TestRemoteTabTitleRefreshMigratesPreferencesWithoutHoldingRegistryLock(t *t
 	}
 
 	fs.mu.Lock()
-	fs.sessions = []serveSessionEntry{{Name: "fresh", Path: "/fresh.jsonl", Title: "Serve title", Current: true}}
+	fs.sessions = []serveSessionEntry{{Name: "fresh", Path: "session-id:fresh", Title: "Serve title", Current: true}}
 	fs.sessionsStarted = make(chan struct{}, 1)
 	fs.sessionsRelease = make(chan struct{})
 	started, release := fs.sessionsStarted, fs.sessionsRelease
@@ -159,7 +159,7 @@ func TestRemoteTabTitleRefreshMigratesPreferencesWithoutHoldingRegistryLock(t *t
 	tab := a.remoteTabs[meta.ID]
 	name, path, title := tab.session.name, tab.session.path, tab.topicTitle
 	a.remoteTabMu.Unlock()
-	if name != "fresh" || path != "/fresh.jsonl" || title != "Unsaved title" {
+	if name != "fresh" || path != "session-id:fresh" || title != "Unsaved title" {
 		t.Fatalf("materialized identity/title = %q/%q/%q", name, path, title)
 	}
 }

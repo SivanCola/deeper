@@ -44,17 +44,17 @@ const navigation = {
   switchFolder: async (path?: string) => { effects.push(`project:${path}`); },
 };
 
-const source = { hostId: "local", path: "/fixture/session.jsonl" };
-const topicNode: ProjectNode = { key: "topic-A", kind: "topic", label: "A", topicId: "A", source };
+const ref = { hostId: "local", sessionId: "session-a" };
+const topicNode: ProjectNode = { key: "topic-A", kind: "topic", label: "A", topicId: "A", session: ref };
 const projectNode: ProjectNode = { key: "project", kind: "project", label: "Project folder", root: "/fixture", children: [topicNode] };
 assert.equal(mockSessionTitleTarget([projectNode], { topicId: "A" }), topicNode,
   "an unsaved titlebar session resolves by topic ID instead of its parent project");
-assert.equal(mockSessionTitleTarget([projectNode], { source }), topicNode,
-  "source selectors resolve the same session row");
+assert.equal(mockSessionTitleTarget([projectNode], { ref }), topicNode,
+  "canonical selectors resolve the same session row");
 assert.equal(mockSessionTitleTarget([projectNode], {}), undefined,
   "missing session identity never resolves to the project row");
-assert.equal(mockSessionTitleTarget([projectNode], { source: { ...source, path: "/fixture/other.jsonl" } }), undefined,
-  "an unknown source never resolves to the project row");
+assert.equal(mockSessionTitleTarget([projectNode], { ref: { ...ref, sessionId: "other" } }), undefined,
+  "an unknown canonical session never resolves to the project row");
 
 function Probe({ tab, remote = false }: { tab: string; remote?: boolean }) {
   commands = useProjectTopicCommands({ visible: { tabId: tab, sessionKey: tab },

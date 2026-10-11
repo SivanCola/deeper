@@ -16,19 +16,6 @@ type LayoutPreferences = {
 
 const STORAGE_KEY = "deepzora.layoutPreferences.v1";
 
-const LEGACY_SIZE_KEYS: Record<LayoutSizeKey, string[]> = {
-  sidebarWidth: ["deepzora.sidebar.width"],
-  sidebarWidthGraphite: [],
-  rightDockWidth: [],
-  rightDockTreeWidth: [],
-  rightDockPreviewWidth: [],
-  workspaceFileTreePanelWidth: [],
-  workspaceTreeWidth: ["deepzora.workspaceTree.width"],
-  composerHeight: ["deepzora.composerHeight"],
-  drawerWidth: ["deepzora.drawer.width"],
-  settingsDrawerWidth: ["deepzora.settingsDrawer.width"],
-};
-
 type ClampSize = (value: number) => number;
 
 function readPrefs(): LayoutPreferences {
@@ -52,19 +39,6 @@ function writePrefs(prefs: LayoutPreferences): void {
   }
 }
 
-function readLegacySize(key: LayoutSizeKey): number | null {
-  if (typeof window === "undefined") return null;
-  for (const legacyKey of LEGACY_SIZE_KEYS[key]) {
-    try {
-      const raw = Number(window.localStorage.getItem(legacyKey));
-      if (Number.isFinite(raw) && raw > 0) return raw;
-    } catch {
-      /* keep trying other keys */
-    }
-  }
-  return null;
-}
-
 function normalizeSize(value: number, clamp?: ClampSize): number {
   const rounded = Math.round(value);
   return clamp ? clamp(rounded) : rounded;
@@ -73,14 +47,14 @@ function normalizeSize(value: number, clamp?: ClampSize): number {
 export function loadLayoutSize(key: LayoutSizeKey, fallback: number, clamp?: ClampSize): number {
   const prefs = readPrefs();
   const saved = prefs.sizes?.[key];
-  const value = Number.isFinite(saved) && saved! > 0 ? saved! : readLegacySize(key);
+  const value = Number.isFinite(saved) && saved! > 0 ? saved! : null;
   return value === null ? normalizeSize(fallback, clamp) : normalizeSize(value, clamp);
 }
 
 export function loadOptionalLayoutSize(key: LayoutSizeKey, clamp?: ClampSize): number | null {
   const prefs = readPrefs();
   const saved = prefs.sizes?.[key];
-  const value = Number.isFinite(saved) && saved! > 0 ? saved! : readLegacySize(key);
+  const value = Number.isFinite(saved) && saved! > 0 ? saved! : null;
   return value === null ? null : normalizeSize(value, clamp);
 }
 

@@ -97,7 +97,7 @@ export function usePaletteCommands(input: PaletteCommandsInput) {
         compact: true,
         keywords: ["theme", "reset", "default", "恢复默认", "主题"],
         run: () => {
-          void app.ResetThemePack()
+          void app.DisableThemePack()
             .then(() => {
               clearThemePack();
               notice(t("settings.themeReset"));

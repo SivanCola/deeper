@@ -134,28 +134,23 @@ func (a *Agent) LoadProjectionSidecar(sessionPath string) {
 		a.resetCompactionState()
 		return
 	}
-	var msgs, preRepair []provider.Message
+	var msgs []provider.Message
 	if a.sess.conversation != nil {
-		msgs, preRepair = a.sess.conversation.projectionValidationMessages()
+		msgs, _ = a.sess.conversation.projectionValidationMessages()
 	}
-	needsNormalization := migratePromotedCoveredPrefixHash(&st, msgs)
+	needsNormalization := false
 	a.sess.compactionMu.Lock()
 	key := a.currentPromptCacheKeyLocked()
 	normalized, keyOK := lineageKeyCompatible(st.PromptCacheKey, key)
 	// Keep receipt-only blocked/failed sidecars (no projection body) and legacy
 	// top-level BlockedInputHash so generation-scoped suppressions survive restart.
 	hasMaintenanceSignal := st.Projection.CoveredPrefixHash != "" ||
-		st.BlockedInputHash != "" ||
 		(st.LastReceipt != nil && (st.LastReceipt.Status == "blocked" || st.LastReceipt.Status == "failed" ||
 			st.LastReceipt.Status == "applied"))
 	if key != "" && !keyOK {
 		// Lineage key changed (upgrade, model/workspace switch). Rebind when
 		// the projection body still matches the canonical covered prefix.
 		contentValid := projectionContentValid(st, msgs)
-		if !contentValid && migrateLegacyCoveredPrefixHash(&st, msgs, preRepair) {
-			contentValid = true
-			needsNormalization = true
-		}
 		if contentValid {
 			normalized, keyOK = key, true
 		}
@@ -172,9 +167,6 @@ func (a *Agent) LoadProjectionSidecar(sessionPath string) {
 		needsNormalization = true
 	}
 	// Only mark restored when the projection still matches the transcript.
-	if !projectionContentValid(st, msgs) && migrateLegacyCoveredPrefixHash(&st, msgs, preRepair) {
-		needsNormalization = true
-	}
 	valid := len(st.Projection.Messages) > 0 && projectionValid(st, msgs, key)
 	if !valid && len(st.Projection.Messages) > 0 {
 		// Keep blocked receipts / telemetry; drop unusable projection body.
@@ -194,29 +186,9 @@ func (a *Agent) LoadProjectionSidecar(sessionPath string) {
 	a.sess.compactionMu.Unlock()
 }
 
-// lineageKeyCompatible reports whether a stored PromptCacheKey still belongs to
-// the current session/model lineage. Legacy native context-editing keys used a
-// "|context-editing-native-..." suffix on an otherwise matching base key.
-func lineageKeyCompatible(stored, current string) (normalized string, ok bool) {
+func lineageKeyCompatible(stored, current string) (string, bool) {
 	stored, current = strings.TrimSpace(stored), strings.TrimSpace(current)
-	if current == "" {
-		// Unknown current lineage: accept any stored key as-is.
-		return stored, true
-	}
-	if stored == "" {
-		return "", false
-	}
-	if stored == current {
-		return current, true
-	}
-	const nativeSuffix = "|context-editing-native"
-	if strings.HasPrefix(stored, current+nativeSuffix) {
-		return current, true
-	}
-	if i := strings.Index(stored, nativeSuffix); i > 0 && stored[:i] == current {
-		return current, true
-	}
-	return "", false
+	return stored, current == "" || stored == current
 }
 
 func (a *Agent) resetCompactionState() {

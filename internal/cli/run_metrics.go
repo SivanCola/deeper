@@ -309,7 +309,7 @@ func (s *metricsSink) record(e event.Event) {
 				s.m.OriginalTotals = originalTotalsFromFloatMap(s.m.OriginalCosts)
 			}
 			if q.Selected != nil {
-				cur := q.LegacyCurrencyCode()
+				cur := q.SelectedCurrencyCode()
 				if s.m.Currency != "" && s.m.Currency != cur {
 					s.m.Cost = 0
 					s.m.Currency = ""

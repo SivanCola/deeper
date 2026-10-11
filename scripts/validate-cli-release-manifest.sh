@@ -15,35 +15,17 @@ case "$channel" in
 	stable)
 		tag_pattern="$stable_tag_pattern"
 		expected_prerelease=false
-		legacy=false
 		;;
 	preview)
 		tag_pattern="$preview_tag_pattern"
 		expected_prerelease=true
-		legacy=false
 		;;
 	any)
 		tag_pattern="$release_tag_pattern"
 		expected_prerelease=any
-		legacy=false
-		;;
-	legacy-stable)
-		tag_pattern="$stable_tag_pattern"
-		expected_prerelease=false
-		legacy=true
-		;;
-	legacy-preview)
-		tag_pattern="$preview_tag_pattern"
-		expected_prerelease=true
-		legacy=true
-		;;
-	legacy-any)
-		tag_pattern="$release_tag_pattern"
-		expected_prerelease=any
-		legacy=true
 		;;
 	*)
-		echo "CLI manifest channel must be stable, preview, any, legacy-stable, legacy-preview, or legacy-any: $channel" >&2
+		echo "CLI manifest channel must be stable, preview, or any: $channel" >&2
 		exit 2
 		;;
 esac
@@ -81,7 +63,6 @@ jq -e \
 	--arg notes_tag "$notes_tag" \
 	--arg repository "$repository" \
 	--arg expected_prerelease "$expected_prerelease" \
-	--argjson legacy "$legacy" \
 	--argjson required "$required_assets" '
 	(type == "object") and
 	(.tag_name == $tag) and
@@ -90,11 +71,7 @@ jq -e \
 		else (.prerelease == ($expected_prerelease == "true"))
 	end) and
 	(.html_url == ("https://github.com/" + $repository + "/releases/tag/" + $tag)) and
-	(if $legacy
-		then (.release_notes_url == null or
-			.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_tag + "/"))
-		else (.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_tag + "/"))
-	end) and
+	(.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_tag + "/")) and
 	(.assets | type == "array") and
 	(.assets | length == ($required | length)) and
 	((.assets | map(.name) | sort) == ($required | sort)) and

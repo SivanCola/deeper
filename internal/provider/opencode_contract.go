@@ -20,12 +20,10 @@ type OpenCodeGoContract struct {
 // OpenCodeGoRequestRoute recognizes the effective request endpoint, including
 // the exact URLs saved by Desktop. Custom overrides must never inherit facts
 // from an unrelated base URL.
-func OpenCodeGoRequestRoute(kind, baseURL, requestURL, chatURL string) (string, bool) {
+func OpenCodeGoRequestRoute(kind, baseURL, requestURL string) (string, bool) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	exact := strings.TrimSpace(requestURL)
-	if exact == "" && (kind == "openai" || kind == "chat") {
-		exact = strings.TrimSpace(chatURL)
-	}
+
 	if exact != "" {
 		path, ok := officialOpenCodeGoPath(exact)
 		if !ok {
@@ -79,8 +77,8 @@ func OpenCodeGoDeepSeekModel(model string) bool {
 	return false
 }
 
-func LookupOpenCodeGoContract(kind, baseURL, requestURL, chatURL, model string) (OpenCodeGoContract, bool) {
-	route, ok := OpenCodeGoRequestRoute(kind, baseURL, requestURL, chatURL)
+func LookupOpenCodeGoContract(kind, baseURL, requestURL, model string) (OpenCodeGoContract, bool) {
+	route, ok := OpenCodeGoRequestRoute(kind, baseURL, requestURL)
 	if !ok {
 		return OpenCodeGoContract{}, false
 	}
@@ -132,8 +130,8 @@ func OpenCodeGoContractForRoute(route, model string) (OpenCodeGoContract, bool) 
 
 // FilterOpenCodeGoRequestModels is shared by discovery and settings. The
 // effective request URL determines the protocol, including exact URL overrides.
-func FilterOpenCodeGoRequestModels(kind, baseURL, requestURL, chatURL string, models []string) []string {
-	route, ok := OpenCodeGoRequestRoute(kind, baseURL, requestURL, chatURL)
+func FilterOpenCodeGoRequestModels(kind, baseURL, requestURL string, models []string) []string {
+	route, ok := OpenCodeGoRequestRoute(kind, baseURL, requestURL)
 	if !ok {
 		return models
 	}
@@ -150,8 +148,7 @@ func FilterOpenCodeGoRequestModels(kind, baseURL, requestURL, chatURL string, mo
 // serialization. Explicit declarations still win; migrations repair old defaults.
 func ApplyOpenCodeGoContract(kind string, cfg Config) Config {
 	requestURL, _ := cfg.Extra["request_url"].(string)
-	chatURL, _ := cfg.Extra["chat_url"].(string)
-	c, ok := LookupOpenCodeGoContract(kind, cfg.BaseURL, requestURL, chatURL, cfg.Model)
+	c, ok := LookupOpenCodeGoContract(kind, cfg.BaseURL, requestURL, cfg.Model)
 	if !ok {
 		return cfg
 	}

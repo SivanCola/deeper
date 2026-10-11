@@ -99,7 +99,7 @@ func TestTurnOrchestratorRunsForegroundUnit(t *testing.T) {
 	}
 }
 
-func TestNonGoalTurnDoesNotInvokeGoalEvaluator(t *testing.T) {
+func TestNonGoalTurnRunsOnce(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*turnOrchestrator) error
@@ -120,17 +120,13 @@ func TestNonGoalTurnDoesNotInvokeGoalEvaluator(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &fakeTurnRunner{}
-			evaluator := &fakeGoalEvaluator{}
-			c := newOwnedTestController(t, Options{Runner: runner, GoalEvaluator: evaluator})
+			c := newOwnedTestController(t, Options{Runner: runner})
 
 			if err := tt.run(newTurnOrchestrator(c)); err != nil {
 				t.Fatal(err)
 			}
 			if len(runner.inputs) != 1 {
 				t.Fatalf("runner inputs = %d, want 1", len(runner.inputs))
-			}
-			if evaluator.calls != 0 {
-				t.Fatalf("goal evaluator calls = %d, want 0 outside Goal mode", evaluator.calls)
 			}
 		})
 	}
@@ -160,12 +156,10 @@ func TestTurnOrchestratorTypedSyntheticTurnDoesNotDependOnPrefix(t *testing.T) {
 func TestGoalTurnOutputCannotAdvanceReplacementGoal(t *testing.T) {
 	executor := agent.New(nil, tool.NewRegistry(), agent.NewSession("system"), agent.Options{}, event.Discard)
 	runner := &goalReplacingRunner{executor: executor}
-	evaluator := &fakeGoalEvaluator{}
 	c := newOwnedTestController(t, Options{
-		Runner:        runner,
-		Executor:      executor,
-		GoalEvaluator: evaluator,
-		SessionDir:    t.TempDir(),
+		Runner:     runner,
+		Executor:   executor,
+		SessionDir: t.TempDir(),
 	})
 	runner.c = c
 	c.SetGoal("old goal")
@@ -186,9 +180,6 @@ func TestGoalTurnOutputCannotAdvanceReplacementGoal(t *testing.T) {
 	}
 	if got := c.GoalStatus(); got != GoalStatusRunning {
 		t.Fatalf("GoalStatus() = %q, want replacement Goal to remain running", got)
-	}
-	if evaluator.calls != 0 {
-		t.Fatalf("stale Goal evaluator calls = %d, want 0", evaluator.calls)
 	}
 }
 

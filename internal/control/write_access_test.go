@@ -258,6 +258,7 @@ func TestDangerFullAccessRetryRequiresRealExactDenialAndCanGrantSession(t *testi
 			}
 		}),
 	})
+	c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
 	c.writeAccess.interactive = true
 	request := func(id, cmd string) (agent.WriteAccessDecision, error) {
 		args, _ := json.Marshal(map[string]string{"command": cmd, "sandbox_permissions": "danger-full-access", "justification": "complete the requested install", "denial_id": id})
@@ -374,10 +375,10 @@ func TestWriteAccessNotDrainedByAutoOrYolo(t *testing.T) {
 	id, reply := c.approval.registerWriteAccess("bash", extra, "test", json.RawMessage(`{}`), &event.WriteAccessApproval{
 		Directories: []string{extra},
 	})
-	if drained := c.approval.setMode(ToolApprovalAuto); len(drained) != 0 {
+	if drained := c.approval.setMode(ToolApprovalWorkspaceWrite); len(drained) != 0 {
 		t.Fatalf("Auto drained write-access: %+v", drained)
 	}
-	if drained := c.approval.setMode(ToolApprovalYolo); len(drained) != 0 {
+	if drained := c.approval.setMode(ToolApprovalDangerFullAccess); len(drained) != 0 {
 		t.Fatalf("YOLO drained write-access: %+v", drained)
 	}
 	pending := c.approval.peek(id)

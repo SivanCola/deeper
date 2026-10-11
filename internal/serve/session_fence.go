@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 )
 
@@ -34,8 +33,8 @@ func writeSessionIDHeader(w http.ResponseWriter, ctrl control.SessionAPI) {
 var errExpectedSessionChanged = errors.New(SubmitSessionChangedMessage + "; retry on the current session")
 
 // expectedSessionErrorLocked fences a foreground mutation to the session the
-// caller displayed when it issued the request. The header is optional for
-// compatibility with browser clients and older Desktop builds. bindMu must be
+// caller displayed when it issued the request. Unscoped browser commands target
+// the foreground; identity-scoped commands pin that binding. bindMu must be
 // held so validation and controller use share one publication epoch.
 func (s *Server) expectedSessionErrorLocked(r *http.Request) error {
 	if expectedID := strings.TrimSpace(r.Header.Get(expectedSessionIDHeader)); expectedID != "" {
@@ -49,7 +48,10 @@ func (s *Server) expectedSessionErrorLocked(r *http.Request) error {
 		}
 		return nil
 	}
-	return s.expectedSessionPathErrorLocked(r.Header.Get(expectedSessionPathHeader))
+	if strings.TrimSpace(r.Header.Get(expectedSessionPathHeader)) != "" {
+		return errExpectedSessionChanged
+	}
+	return nil
 }
 
 func (s *Server) expectedSessionPathErrorLocked(rawExpected string) error {
@@ -71,12 +73,7 @@ func (s *Server) expectedSessionPathErrorLocked(rawExpected string) error {
 		}
 		return nil
 	}
-	canonical := agent.CanonicalSessionPath(expected)
-	actual := agent.CanonicalSessionPath(strings.TrimSpace(s.ctl().SessionPath()))
-	if actual != canonical {
-		return errExpectedSessionChanged
-	}
-	return nil
+	return errExpectedSessionChanged
 }
 
 // expectedSessionIsSpectatorPinLocked reports whether the caller's expected
@@ -85,7 +82,7 @@ func (s *Server) expectedSessionPathErrorLocked(rawExpected string) error {
 // refused with the takeover wording, while foreground-switch commands may pass
 // (validated by validateSwitchExpectedLocked).
 func (s *Server) expectedSessionIsSpectatorPinLocked(r *http.Request) bool {
-	return s.sessionMirrored(r.Header.Get(expectedSessionPathHeader))
+	return s.sessionMirrored(remoteSessionIDQueryPrefix + r.Header.Get(expectedSessionIDHeader))
 }
 
 func (s *Server) validateExpectedSessionLocked(w http.ResponseWriter, r *http.Request) bool {

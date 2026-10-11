@@ -569,15 +569,14 @@ func TestForkAvailabilityRejectsActiveToolAtClosingBoundary(t *testing.T) {
 }
 
 func TestForkTargetSetUnverifiableForMessageOnlyHistory(t *testing.T) {
-	service, _, runtime := newSourceService(t, "legacy")
+	service, _, runtime := newSourceService(t, "message-only")
 	payload, err := json.Marshal(map[string]any{
-		"source":   Source{Path: "/legacy/old.jsonl", Size: 128, SHA256: strings.Repeat("a", 64), Version: Codec},
 		"messages": []provider.Message{{ID: "message-1", Role: provider.RoleUser, Content: "hello"}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := runtime.Session().Append(t.Context(), Batch{OperationID: "legacy-import", Events: []Event{{Kind: "legacy/import", Payload: payload}}}); err != nil {
+	if _, err := runtime.Session().Append(t.Context(), Batch{OperationID: "replace", Events: []Event{{Kind: "history/replace", Payload: payload}}}); err != nil {
 		t.Fatal(err)
 	}
 	set, err := service.ForkTargetSetFor(t.Context(), runtime.Ref())

@@ -12,7 +12,7 @@ func completePluginHookExecutionConfig(h pluginpkg.Hook, root, goos string, mode
 	if candidate != "" && !filepath.IsAbs(candidate) {
 		candidate = filepath.Join(root, filepath.FromSlash(candidate))
 	}
-	autoPOSIXScript := goos == "windows" && mode == ExecutionLegacy && h.Args == nil && isPOSIXShellScriptFile(candidate)
+	autoPOSIXScript := goos == "windows" && mode == ExecutionShell && h.Args == nil && isPOSIXShellScriptFile(candidate)
 	if autoPOSIXScript {
 		mode = ExecutionShell
 		h.Shell = "bash"
@@ -28,9 +28,7 @@ func completePluginHookExecutionConfig(h pluginpkg.Hook, root, goos string, mode
 	if command != "" && resolveFromPluginRoot && !filepath.IsAbs(command) {
 		command = filepath.Join(root, filepath.FromSlash(command))
 	}
-	if mode == ExecutionLegacy {
-		command = NormalizeCommand(command)
-	} else if goos == "windows" && windowsShellMayUsePOSIXPath(h.Shell) {
+	if goos == "windows" && windowsShellMayUsePOSIXPath(h.Shell) {
 		if scriptPath, ok := windowsPOSIXScriptPath(command, root); ok {
 			h.Shell = "bash"
 			command = bashSingleQuote(filepath.ToSlash(scriptPath))
@@ -94,7 +92,7 @@ func windowsPOSIXScriptPath(command, cwd string) (string, bool) {
 }
 
 func normalizeWindowsHookSpawnInputForPlatform(in SpawnInput, goos string) SpawnInput {
-	if goos != "windows" || in.Mode != ExecutionLegacy || in.Args != nil {
+	if goos != "windows" || in.Mode != "" && in.Mode != ExecutionShell || in.Args != nil {
 		return in
 	}
 	if scriptPath, ok := windowsPOSIXScriptPath(in.Command, in.Cwd); ok {
@@ -107,7 +105,7 @@ func normalizeWindowsHookSpawnInputForPlatform(in SpawnInput, goos string) Spawn
 
 func requiresWindowsBashForHook(config HookConfig) bool {
 	switch config.ExecutionMode {
-	case ExecutionShell:
+	case "", ExecutionShell:
 		if strings.EqualFold(strings.TrimSpace(config.Shell), "bash") {
 			return true
 		}
@@ -117,15 +115,6 @@ func requiresWindowsBashForHook(config HookConfig) bool {
 		}()
 	case ExecutionExec:
 		return isBarePOSIXShellWord(config.Command) && hasCommandStringFlag(config.Argv)
-	case ExecutionLegacy:
-		if config.Argv != nil {
-			return isBarePOSIXShellWord(config.Command) && hasCommandStringFlag(config.Argv)
-		}
-		if _, ok := windowsPOSIXScriptPath(config.Command, config.Cwd); ok {
-			return true
-		}
-		fields, _, _, ok := parseSimpleHookCommandFields(config.Command)
-		return ok && len(fields) >= 3 && isBarePOSIXShellWord(fields[0]) && hasCommandStringFlag(fields[1:])
 	default:
 		return false
 	}

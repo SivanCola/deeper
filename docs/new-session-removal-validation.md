@@ -1,5 +1,7 @@
 # 新建会话删除与草稿生命周期：实施与验证
 
+> 本文记录当时的实施与验证过程。当前支持范围以[当前版本基线](current-version-baseline.md)为准。
+
 ## English overview
 
 This change gives each removable new conversation an explicit action based on

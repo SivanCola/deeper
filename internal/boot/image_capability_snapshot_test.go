@@ -17,7 +17,7 @@ system_prompt = "stable prefix"
 name = "relay"
 kind = "openai"
 base_url = "http://localhost:1"
-model = "x"
+models = ["x"]
 `
 	writeFile(t, dir, "deepzora.toml", base)
 	approveWorkspace(t, dir)

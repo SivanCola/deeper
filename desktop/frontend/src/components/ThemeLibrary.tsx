@@ -213,7 +213,7 @@ export function ThemeLibrarySection() {
   const resetDefault = async () => {
     setBusy(true);
     try {
-      await app.ResetThemePack();
+      await app.DisableThemePack();
       cancelThemePreview();
       applyThemePack(null);
       await reload();

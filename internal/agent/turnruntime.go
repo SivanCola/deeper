@@ -7,8 +7,7 @@ import (
 
 // turnRuntime is the host state for exactly one Agent.Run. beginRunTurn builds
 // it in a single assignment, so a field added here starts the next turn zeroed.
-// State an external caller arms before a Run lives in pendingTurn; state that
-// outlives the Run lives in taskRuntime or sessionRuntime.
+// State that outlives the Run lives in taskRuntime or sessionRuntime.
 type turnRuntime struct {
 	runMaxSteps    int
 	runMaxStepsKey string
@@ -64,15 +63,4 @@ type terminalProtocolState struct {
 	// emptyFinalBlocks counts consecutive reasoning-only stops retried for a
 	// visible final answer.
 	emptyFinalBlocks int
-}
-
-// pendingTurn is what someone outside the Run arms for the next one: a
-// sub-agent spawner, the turn that just failed readiness, or the fork capture.
-// It is deliberately not in turnRuntime — beginRunTurn builds that fresh, and
-// state armed before it exists would be wiped by the same assignment that makes
-// turnRuntime safe.
-type pendingTurn struct {
-	// forkRestore, when armed, swaps the frozen fork-bundle conversation in
-	// right after beginRunTurn — the counterfactual-continuation seam.
-	forkRestore func(*turnRuntime)
 }

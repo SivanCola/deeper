@@ -308,14 +308,14 @@ console.log("\nsubagent progress reducer");
     id: "outcome-1",
     name: "task",
     readOnly: true,
-    output: "Subagent reference: sa_child\nSubagent outcome: status=partial retryable=true error_code=completion_uncertain",
+    output: "Subagent reference: sa_child\nSubagent outcome: status=partial retryable=true error_code=incomplete_read",
     subagentRef: "sa_child",
     subagentStatus: "partial",
-    subagentErrorCode: "completion_uncertain",
+    subagentErrorCode: "incomplete_read",
     subagentRetryable: true,
   });
   const archived = toolById(s, "outcome-1");
-  eq(JSON.stringify(archived.subagentOutcome), JSON.stringify(["sa_child", "partial", "completion_uncertain", true]), "terminal outcome is normalized once at the result boundary");
+  eq(JSON.stringify(archived.subagentOutcome), JSON.stringify(["sa_child", "partial", "incomplete_read", true]), "terminal outcome is normalized once at the result boundary");
   eq(archived.output, undefined, "outcome metadata survives without retaining archived tool output");
 }
 

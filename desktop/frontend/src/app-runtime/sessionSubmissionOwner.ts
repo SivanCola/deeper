@@ -35,16 +35,13 @@ export function buildInitialGoalSubmission(
     initialGoal: { goal: display, collaborationMode, toolApprovalMode },
   };
 }
-const legacyFlags = new Set(["--research", "--auto-research", "--deep", "--simple", "--no-research"]);
 export function goalCommand(input: string) {
   const match = /^\/goal(?:\s+(.*))?$/.exec(input);
   if (!match) return undefined;
   const parts = (match[1] ?? "").trim().split(/\s+/).filter(Boolean);
-  const legacy = legacyFlags.has(parts[0]?.toLowerCase());
-  while (legacyFlags.has(parts[0]?.toLowerCase())) parts.shift();
   const value = parts.join(" ");
   const action = value.toLowerCase();
-  return { value, legacy, activate: Boolean(value) && !["status", "clear", "off", "stop", "done", "pause", "resume"].includes(action),
+  return { value, activate: Boolean(value) && !value.startsWith("--") && !["status", "clear", "off", "stop", "done", "pause", "resume"].includes(action),
     clear: ["clear", "off", "stop", "done"].includes(action) };
 }
 
@@ -77,8 +74,7 @@ export async function executeSubmission(input: SubmissionInput, authority: Sessi
   const command = goalCommand(display);
   if (command) {
     if (command.activate) {
-      if (command.legacy) input.ports.patchGoal(input.target.tabId, command.value);
-      else await applyGoal(input, command.value, authority);
+      await applyGoal(input, command.value, authority);
     } else if (command.clear) await applyGoal(input, "", authority);
     authority.checkpoint();
     if (input.read(input.target).ready) await send(input, { ...content, display, submit: submit.trim() }, authority);

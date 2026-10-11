@@ -132,28 +132,6 @@ func canonicalRepairPath(path string) string {
 	return identity.Key
 }
 
-// legacyCanonicalRepairPath freezes the lock and persisted-target identity used
-// before path identity v2. New writers acquire both names during the supported
-// cross-version window.
-func legacyCanonicalRepairPath(path string) string {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return ""
-	}
-	absolute, err := filepath.Abs(filepath.Clean(path))
-	if err != nil {
-		absolute = filepath.Clean(path)
-	}
-	absolute = resolveParentSymlinkPath(absolute)
-	absolute = filepath.Clean(absolute)
-	caseInsensitive := repairPathCaseInsensitive(absolute)
-	absolute = platformRepairPathUnicodeNormalized(absolute)
-	if caseInsensitive {
-		return strings.ToLower(filepath.ToSlash(absolute))
-	}
-	return absolute
-}
-
 // resolveParentSymlinkPath resolves symlink parents of path and re-attaches the
 // original leaf base name. The leaf is intentionally not EvalSymlinks'd: two
 // different symlink leaves that share a referent must stay distinct targets.

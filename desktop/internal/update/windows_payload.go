@@ -16,9 +16,8 @@ import (
 
 const (
 	// WindowsPayloadManifestSchemaVersion lists the flat release unit plus every
-	// file of the app/ shell tree; schema 1 manifests carry the flat list only.
+	// file of the app/ shell tree.
 	WindowsPayloadManifestSchemaVersion = 2
-	windowsPayloadFlatSchemaVersion     = 1
 	WindowsPayloadManifestName          = "deepzora-payload.json"
 	WindowsPayloadSignatureName         = WindowsPayloadManifestName + ".minisig"
 	// WindowsPayloadTreePrefix starts every shell tree entry name.
@@ -27,7 +26,7 @@ const (
 
 var windowsPayloadFileNames = [...]string{
 	"deepzora-desktop.exe",
-	"deepzora-guard.exe",
+	"deepzora-layout-installer.exe",
 	"deepzora-launcher.exe",
 	"deepzora-update-helper.exe",
 	"deepzora-cli.exe",
@@ -144,7 +143,7 @@ func DecodeWindowsPayloadManifest(data []byte, expectedVersion string) (map[stri
 }
 
 func windowsPayloadSchemaSupported(schemaVersion int) bool {
-	return schemaVersion == windowsPayloadFlatSchemaVersion || schemaVersion == WindowsPayloadManifestSchemaVersion
+	return schemaVersion == WindowsPayloadManifestSchemaVersion
 }
 
 func windowsPayloadMemberAllowed(name string, schemaVersion int) bool {

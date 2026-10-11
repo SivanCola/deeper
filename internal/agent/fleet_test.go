@@ -23,7 +23,7 @@ func TestBackgroundFleetRegistersEveryWriterUntilCompletion(t *testing.T) {
 	prov := &fleetHoldProvider{started: make(chan struct{}, 2), release: make(chan struct{})}
 	store := checkpoint.New("", root)
 	observer := checkpoint.NewMutationObserver(checkpoint.ObserverOptions{Store: store})
-	task := NewTaskTool(prov, nil, tool.NewRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: prov, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), root, "base", "high").
 		WithScheduler(NewSubagentScheduler(2, 2)).
 		WithMutationObserver(observer)
@@ -75,7 +75,7 @@ func TestBackgroundFleetProgressLifecycleUsesStableIDs(t *testing.T) {
 	root := t.TempDir()
 	rec := &recordSink{}
 	prov := &fleetHoldProvider{started: make(chan struct{}, 2), release: make(chan struct{})}
-	task := NewTaskTool(prov, nil, tool.NewRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: prov, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), root, "base", "high").
 		WithScheduler(NewSubagentScheduler(2, 2))
 	fleet := NewFleetTool(task)
@@ -168,7 +168,7 @@ func TestBackgroundFleetRegistersReservationWhileItemsAreQueued(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	task := NewTaskTool(&mockProvider{name: "sub"}, nil, tool.NewRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: &mockProvider{name: "sub"}, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), root, "base", "high").
 		WithScheduler(scheduler).
 		WithMutationObserver(observer)
@@ -269,7 +269,7 @@ func TestFleetCancellationPreservesStartedItemStatus(t *testing.T) {
 		release:  make(chan struct{}),
 	}
 	reg := tool.NewRegistry()
-	task := NewTaskTool(prov, nil, reg, 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: prov, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), root, "base", "high").
 		WithScheduler(NewSubagentScheduler(2, 2))
 	f := NewFleetTool(task)
@@ -350,7 +350,7 @@ func TestFleetParallelDisjointWriters(t *testing.T) {
 	}
 	reg := tool.NewRegistry()
 	// No writer tools needed — provider finishes without tools.
-	task := NewTaskTool(prov, nil, reg, 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: prov, Pricing: nil, ParentRegistry: reg, MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), root, "base", "high").
 		WithScheduler(NewSubagentScheduler(10, 10))
 	f := NewFleetTool(task)

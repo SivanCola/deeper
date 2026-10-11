@@ -64,13 +64,12 @@ func prepareCanonicalControllerRuntime(candidate control.SessionAPI, snap tabRun
 	runtime := snap.normalizedRuntime()
 	runtime.toolApprovalMode = normalizeToolApprovalMode(preset)
 	applyTabToolApprovalModeToController(candidate, runtime.toolApprovalMode)
-	applyTabQualityFloorToController(candidate, runtime.qualityFloor)
-	runtime.collaborationMode, runtime.legacyGoal = "normal", ""
+	runtime.collaborationMode, runtime.goal = "normal", ""
 	if candidate.PlanMode() {
 		runtime.collaborationMode = "plan"
 	}
 	if candidate.GoalStatus() == control.GoalStatusRunning && strings.TrimSpace(candidate.Goal()) != "" && !candidate.PlanMode() {
-		runtime.collaborationMode, runtime.legacyGoal = "goal", strings.TrimSpace(candidate.Goal())
+		runtime.collaborationMode, runtime.goal = "goal", strings.TrimSpace(candidate.Goal())
 	}
 	return runtime
 }

@@ -31,7 +31,7 @@ let commands!: ReturnType<typeof useControllerProfileCommands>;
 function Probe({ tab, generation, plan, ready, epoch, remote }: { tab: string; generation: number; plan: boolean; ready: boolean; epoch: string; remote: boolean }) {
   const profiles: ControllerProfileResource[] = ["A", "B"].map(tabId => ({
     target: { tabId, sessionKey: tabId + generation }, remote: remote && tabId === "A",
-    profile: { collaboration: tabId === "A" && plan ? "plan" : "normal", approval: "ask", goal: tabId === "B" ? "B goal" : "" },
+    profile: { collaboration: tabId === "A" && plan ? "plan" : "normal", approval: "workspace-write", goal: tabId === "B" ? "B goal" : "" },
   }));
   const target = profiles.find(value => value.target.tabId === tab)!.target;
   const operations = useSessionOperations({ visible: target, resources: profiles.map(value => value.target) });
@@ -46,7 +46,7 @@ try {
   const change = commands.switchModel("first");
   await paint("B", false);
   pending.resolve(true); assert.equal(await change, false, "a completed source write does not regain UI ownership on B");
-  assert.deepEqual(calls, ["model:A:first", "profile:A:normal:ask:"], "post-rebuild profile is the latest committed source value, not the old render or B");
+  assert.deepEqual(calls, ["model:A:first", "profile:A:normal:workspace-write:"], "post-rebuild profile is the latest committed source value, not the old render or B");
 
   calls.length = 0; pending = deferred(); await paint();
   const stale = commands.switchModel("replaced");
@@ -60,7 +60,7 @@ try {
   const second = commands.switchModel("new");
   old.resolve(true); assert.equal(await first, false);
   pending.resolve(true); assert.equal(await second, true);
-  assert.deepEqual(calls, ["model:A:old", "model:A:new", "profile:A:plan:ask:"], "superseded model cannot restore its profile or clear the new request");
+  assert.deepEqual(calls, ["model:A:old", "model:A:new", "profile:A:plan:workspace-write:"], "superseded model cannot restore its profile or clear the new request");
 
   calls.length = 0; errors.length = 0; pending = deferred();
   const failure = commands.switchModelFromUi("failure");
@@ -83,12 +83,12 @@ try {
   profileFailure = undefined; errors.length = 0; await paint();
 
   calls.length = 0; await paint("A", true, 1, true);
-  assert.deepEqual(calls, ["profile:A:plan:ask:"], "ready restoration shares source-profile execution");
+  assert.deepEqual(calls, ["profile:A:plan:workspace-write:"], "ready restoration shares source-profile execution");
   await paint("A", false, 1, true);
-  assert.equal(calls.at(-1), "profile:A:normal:ask:");
+  assert.equal(calls.at(-1), "profile:A:normal:workspace-write:");
   calls.length = 0;
   await paint("A", false, 1, true, "runtime-2");
-  assert.deepEqual(calls, ["profile:A:normal:ask:"], "same profile on a replacement runtime is restored without relying on object churn");
+  assert.deepEqual(calls, ["profile:A:normal:workspace-write:"], "same profile on a replacement runtime is restored without relying on object churn");
 
   for (const modelFirst of [true, false]) {
     await paint(); calls.length = 0; errors.length = 0;

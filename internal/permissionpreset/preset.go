@@ -13,16 +13,14 @@ const (
 	DangerFullAccess Preset = "danger-full-access"
 )
 
-// Normalize maps persisted and cross-version values to a runtime preset.
-// Legacy YOLO is deliberately migrated to workspace-write: older YOLO skipped
-// prompts but did not mean that the filesystem sandbox was disabled.
+// Normalize resolves current values conservatively; invalid values are read-only.
 func Normalize(value string) Preset {
 	switch strings.ToLower(strings.TrimSpace(value)) {
-	case string(ReadOnly), "readonly", "read_only", "ask":
+	case string(ReadOnly):
 		return ReadOnly
-	case string(WorkspaceWrite), "workspace", "workspace_write", "auto", "yolo":
+	case string(WorkspaceWrite):
 		return WorkspaceWrite
-	case string(DangerFullAccess), "danger_full_access", "full", "full-access", "bypass":
+	case string(DangerFullAccess):
 		return DangerFullAccess
 	default:
 		return ReadOnly

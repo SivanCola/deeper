@@ -92,18 +92,6 @@ func (a *App) CreateIsolatedWorktree(workspaceRoot string) (IsolatedWorktreeOpen
 	}, nil
 }
 
-// DeliveryWorktreeAvailability is the deprecated alias of
-// IsolatedWorktreeAvailability, kept bound for one compatibility version.
-func (a *App) DeliveryWorktreeAvailability(workspaceRoot string) worktree.Availability {
-	return a.IsolatedWorktreeAvailability(workspaceRoot)
-}
-
-// CreateDeliveryWorktree is the deprecated alias of CreateIsolatedWorktree,
-// kept bound for one compatibility version.
-func (a *App) CreateDeliveryWorktree(workspaceRoot string) (DeliveryWorktreeOpenResult, error) {
-	return a.CreateIsolatedWorktree(workspaceRoot)
-}
-
 var (
 	inspectWorktreeMerge  = worktree.InspectMerge
 	mergeWorktreeBack     = worktree.MergeBack
@@ -356,7 +344,7 @@ func (a *App) CloseMergedWorktreeTab(request CloseMergedWorktreeTabRequest) (Clo
 	if a.workspaceHub != nil {
 		a.workspaceHub.reconcileRoots()
 	}
-	a.emitProjectTreeRuntimeChangedWithLegacy()
+	a.emitProjectTreeRuntimeChanged()
 	return CloseMergedWorktreeTabResult{Closed: true}, nil
 }
 

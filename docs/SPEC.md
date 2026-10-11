@@ -97,9 +97,8 @@ type Config struct {
   compatible model is a config edit, not a code change.
 - **A provider is a vendor endpoint** (one `base_url` + `api_key_env`) that offers
   one or more models. `request_url`, when set, is the exact request target for
-  OpenAI-compatible, Anthropic-compatible, and Responses providers. Legacy
-  `chat_url` retains its historical OpenAI-only behavior; other legacy entries
-  derive the protocol path from `base_url`. An entry declares either a single `model = "..."` or a
+  OpenAI-compatible, Anthropic-compatible, and Responses providers. Without
+  `request_url`, providers derive the protocol path from `base_url`. An entry declares either a single `model = "..."` or a
   `models = ["...", "..."]` list (with an optional `default`); the list form lets
   one vendor expose several models without re-declaring the endpoint/key. A
   **model reference** (`default_model`, the `--model` flag, the desktop switcher)

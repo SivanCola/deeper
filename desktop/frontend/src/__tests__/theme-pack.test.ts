@@ -528,7 +528,7 @@ ok(
 ok(themeBgSlice.includes(".theme-bg__overlay"), "overlay wash element styled");
 ok(exportOwnerSource.includes("applyThemeScene"), "session export owner wires scene from session content");
 ok(appViewSource.includes("ThemeBackground"), "App mounts background layer");
-ok(composerRouterSource.includes("ResetThemePack") || composerRouterSource.includes("theme reset") || composerRouterSource.includes('arg === "reset"'), "reset entry exists");
+ok(composerRouterSource.includes("DisableThemePack") || composerRouterSource.includes("theme reset") || composerRouterSource.includes('arg === "reset"'), "reset entry exists");
 
 console.log("\nofficial themes (kind/grouping/i18n)");
 

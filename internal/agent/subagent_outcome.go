@@ -83,39 +83,20 @@ func subagentOutcomeFromError(err error) *SubagentOutcome {
 	return &outcome
 }
 
-func (t *TaskTool) failedSubagentResult(run *SubagentRun, cause error) (string, error) {
+func (t *TaskTool) FailedSubagentResult(run *SubagentRun, cause error) (string, error) {
 	subErr := NewSubagentRunError(run, cause)
 	var saveErr error
 	if t != nil && t.transcripts != nil {
 		saveErr = t.transcripts.SaveOutcome(run, subErr.Outcome)
 	}
 	return subErr.SubagentOutput(), errors.Join(subErr, saveErr)
-}
-
-// resolveAmbiguousSubagentFailure preserves the child result envelope for
-// callers that still use the historical method name. Completion is decided by
-// the child Agent's deterministic stream/tool state; no second model opinion is
-// requested here.
-func (t *TaskTool) resolveAmbiguousSubagentFailure(ctx context.Context, run *SubagentRun, taskText, modelRef string, sink event.Sink, cause error) (string, error) {
-	subErr := NewSubagentRunError(run, cause)
-	var saveErr error
-	if t != nil && t.transcripts != nil {
-		saveErr = t.transcripts.SaveOutcome(run, subErr.Outcome)
-	}
-	return subErr.SubagentOutput(), errors.Join(subErr, saveErr)
-}
-
-// ResolveAmbiguousSubagentFailure applies the same bounded child completion
-// policy to boot-wired skill runners.
-func (t *TaskTool) ResolveAmbiguousSubagentFailure(ctx context.Context, run *SubagentRun, taskText, modelRef string, sink event.Sink, cause error) (string, error) {
-	return t.resolveAmbiguousSubagentFailure(ctx, run, taskText, modelRef, sink, cause)
 }
 
 // failBeforeSubagentRelease preserves the run envelope on setup failures that
 // occur after a reference was allocated but before the normal RunProfileSpec
 // cleanup/defer is installed.
 func (t *TaskTool) failBeforeSubagentRelease(run *SubagentRun, cause error) (string, error) {
-	result, err := t.failedSubagentResult(run, cause)
+	result, err := t.FailedSubagentResult(run, cause)
 	if run != nil {
 		run.Release()
 	}
@@ -126,18 +107,7 @@ func subagentErrorDisposition(err error) (string, SubagentOutcomeStatus, bool) {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return "cancelled", SubagentOutcomeCancelled, false
 	}
-	var completion *CompletionUncertainError
-	if errors.As(err, &completion) {
-		return "completion_uncertain", SubagentOutcomePartial, true
-	}
-	var readiness *FinalReadinessError
-	if errors.As(err, &readiness) {
-		return "final_readiness", SubagentOutcomePartial, true
-	}
-	var review *ReviewUnavailableError
-	if errors.As(err, &review) {
-		return "review_unavailable", SubagentOutcomePartial, true
-	}
+
 	var steps *maxStepsPause
 	if errors.As(err, &steps) {
 		return "max_steps", SubagentOutcomePartial, true

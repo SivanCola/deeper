@@ -11,7 +11,7 @@ import (
 )
 
 func TestCurrentMessageOriginIsAuthoritativeAcrossDesktopHistory(t *testing.T) {
-	quotedHostText := agent.CompletionValidationContinuationPrefix + " explain what this message means"
+	quotedHostText := "[Completion validation continuation]" + " explain what this message means"
 	msgs := []provider.Message{
 		{Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "wrapped", RawContent: quotedHostText},
 		{Role: provider.RoleAssistant, Content: "answer"},
@@ -36,7 +36,7 @@ func TestCurrentMessageOriginIsAuthoritativeAcrossDesktopHistory(t *testing.T) {
 func TestPromptHistoryUsesOriginAndRawContentForCurrentJSONL(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "session.jsonl")
-	quotedHostText := agent.CompletionValidationContinuationPrefix + " show this literally"
+	quotedHostText := "[Completion validation continuation]" + " show this literally"
 	raw := `{"role":"user","origin":"host","content":"ordinary looking host text"}` + "\n" +
 		`{"role":"user","origin":"user","content":"wrapped provider text","raw_content":` + strconv.Quote(quotedHostText) + `}` + "\n"
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {

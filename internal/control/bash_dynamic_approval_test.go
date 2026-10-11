@@ -86,8 +86,11 @@ func TestExactOnlyBashDoesNotPromptInAutoOrApprovedPlan(t *testing.T) {
 		name  string
 		setup func(*Controller)
 	}{
-		{name: "auto", setup: func(c *Controller) { c.SetToolApprovalMode(ToolApprovalAuto) }},
-		{name: "approved plan", setup: func(c *Controller) { c.approval.setPlanAutoApprove(true) }},
+		{name: "auto", setup: func(c *Controller) { c.SetToolApprovalMode(ToolApprovalWorkspaceWrite) }},
+		{name: "approved plan", setup: func(c *Controller) {
+			c.SetToolApprovalMode(ToolApprovalWorkspaceWrite)
+			c.approval.setPlanAutoApprove(true)
+		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			approvals := make(chan event.Approval, len(commands))
@@ -244,10 +247,10 @@ func TestHeadlessDynamicBashApprovalModes(t *testing.T) {
 		mode string
 		want bool
 	}{
-		{mode: ToolApprovalAsk},
-		{mode: ToolApprovalAuto, want: true},
-		{mode: ToolApprovalDontAsk},
-		{mode: ToolApprovalYolo, want: true},
+		{mode: ToolApprovalReadOnly},
+		{mode: ToolApprovalWorkspaceWrite, want: true},
+		{mode: ToolApprovalReadOnly},
+		{mode: ToolApprovalDangerFullAccess, want: true},
 	} {
 		t.Run(tt.mode, func(t *testing.T) {
 			allow, reason, err := BuildHeadlessApprovalGate(permission.New("ask", []string{"Bash(git*)"}, nil, nil), tt.mode).Check(context.Background(), "bash", args, false)
@@ -261,13 +264,13 @@ func TestHeadlessDynamicBashApprovalModes(t *testing.T) {
 	}
 
 	exact := permission.New("ask", []string{"Bash=" + dynamicBashCommand}, nil, nil)
-	allow, reason, err := BuildHeadlessApprovalGate(exact, ToolApprovalAsk).Check(context.Background(), "bash", args, false)
+	allow, reason, err := BuildHeadlessApprovalGate(exact, ToolApprovalReadOnly).Check(context.Background(), "bash", args, false)
 	if err != nil || !allow || reason != "" {
 		t.Fatalf("headless exact literal = (%v,%q,%v), want allow", allow, reason, err)
 	}
 
-	optIn := permission.New("ask", nil, nil, nil).WithAllowDynamicBashFallback(true)
-	allow, reason, err = BuildHeadlessApprovalGate(optIn, ToolApprovalAuto).Check(context.Background(), "bash", args, false)
+	optIn := permission.New("ask", nil, nil, nil)
+	allow, reason, err = BuildHeadlessApprovalGate(optIn, ToolApprovalWorkspaceWrite).Check(context.Background(), "bash", args, false)
 	if err != nil || !allow || reason != "" {
 		t.Fatalf("headless dynamic fallback opt-in = (%v,%q,%v), want allow", allow, reason, err)
 	}
@@ -279,10 +282,10 @@ func TestHeadlessExactOnlyBashApprovalModes(t *testing.T) {
 		mode string
 		want bool
 	}{
-		{mode: ToolApprovalAsk},
-		{mode: ToolApprovalAuto, want: true},
-		{mode: ToolApprovalDontAsk},
-		{mode: ToolApprovalYolo, want: true},
+		{mode: ToolApprovalReadOnly},
+		{mode: ToolApprovalWorkspaceWrite, want: true},
+		{mode: ToolApprovalReadOnly},
+		{mode: ToolApprovalDangerFullAccess, want: true},
 	} {
 		t.Run(tt.mode, func(t *testing.T) {
 			allow, _, err := BuildHeadlessApprovalGate(permission.New("ask", []string{"Bash(rm*)"}, nil, nil), tt.mode).Check(context.Background(), "bash", args, false)

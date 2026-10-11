@@ -27,13 +27,11 @@ type Command struct {
 	Source      string // originating file path, for diagnostics
 	Plugin      string // installed plugin package name; empty for user/project commands
 	ShortName   string // original plugin command name before the package qualifier
-	Hidden      bool   // compatibility-only short alias; invocable but omitted from listings
 }
 
 // Root is one command directory and its optional plugin-package owner. Plugin
 // ownership is carried through loading so plugin commands can use stable,
-// package-qualified display names without losing unambiguous short-name
-// compatibility.
+// package-qualified display names.
 type Root struct {
 	Path   string
 	Plugin string
@@ -74,11 +72,7 @@ func Load(dirs ...string) ([]Command, error) {
 	return LoadRoots(roots...)
 }
 
-// LoadRoots is Load with optional plugin ownership. Every plugin command is
-// exposed canonically as /<plugin>:<name>. A short /<name> compatibility alias
-// is retained only when exactly one plugin contributes that name and no user or
-// project command owns it; the alias is hidden from completion and model-visible
-// listings. An explicit command occupying the qualified name still wins.
+// LoadRoots loads plugin commands as /<plugin>:<name>; explicit commands win name collisions.
 func LoadRoots(roots ...Root) ([]Command, error) {
 	byName := map[string]Command{}
 	pluginCommands := map[string]map[string]Command{}
@@ -114,11 +108,9 @@ func LoadRoots(roots ...Root) ([]Command, error) {
 			}
 		})
 	}
-	byShortName := map[string][]Command{}
 	for plugin, commands := range pluginCommands {
 		for shortName, pluginCommand := range commands {
 			pluginCommand.ShortName = shortName
-			byShortName[shortName] = append(byShortName[shortName], pluginCommand)
 			qualified := plugin + ":" + shortName
 			if _, occupied := byName[qualified]; occupied {
 				continue
@@ -126,15 +118,6 @@ func LoadRoots(roots ...Root) ([]Command, error) {
 			pluginCommand.Name = qualified
 			byName[qualified] = pluginCommand
 		}
-	}
-	for shortName, candidates := range byShortName {
-		if _, occupied := byName[shortName]; occupied || len(candidates) != 1 {
-			continue
-		}
-		compat := candidates[0]
-		compat.Name = shortName
-		compat.Hidden = true
-		byName[shortName] = compat
 	}
 	cmds := make([]Command, 0, len(byName))
 	for _, c := range byName {
@@ -209,10 +192,4 @@ func parseFile(root, path string) (Command, error) {
 		Body:        strings.TrimSpace(body),
 		Source:      path,
 	}, nil
-}
-
-// splitFrontmatter is a thin wrapper kept for test compatibility; the real
-// parser lives in internal/frontmatter.
-func splitFrontmatter(s string) (map[string]string, string) {
-	return frontmatter.Split(s)
 }

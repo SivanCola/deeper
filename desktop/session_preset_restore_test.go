@@ -64,7 +64,7 @@ func restartDesktopFromTabsFile(t *testing.T, first *App, tab *WorkspaceTab) (*A
 	app.ctx = context.Background()
 	installNoopRuntimeEvents(app)
 	t.Cleanup(app.closeSessionServices)
-	finishSavedTabMigration(app)
+	finishSavedTabRecovery(app)
 	app.tabsRestored = make(chan struct{})
 	app.restoreOrBuildTabs()
 	restored := app.tabs[tab.ID]
@@ -248,7 +248,7 @@ func TestForkStartsAtNewSessionDefault(t *testing.T) {
 	app.mu.RLock()
 	got, mode := forked.toolApprovalMode, forked.mode
 	app.mu.RUnlock()
-	if got != fresh || mode != tabModeFromAxes(false, fresh == control.ToolApprovalDangerFullAccess) {
+	if got != fresh || mode != tabModeForPlan(false) {
 		t.Fatalf("fork preset = %q (mode %q), want %q", got, mode, fresh)
 	}
 	app.saveTabsFromRemote()

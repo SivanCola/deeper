@@ -32,7 +32,7 @@ func compactWithSink(t *testing.T, sess *Session) []event.Event {
 	var got []event.Event
 	sink := event.FuncSink(func(e event.Event) { got = append(got, e) })
 	a := New(&fakeProvider{reply: "digest"}, tool.NewRegistry(), sess,
-		Options{ContextWindow: 8_000, CompactRatio: 0.85, RecentKeep: 2}, sink)
+		Options{ContextWindow: 8_000, CompactRatio: 0.85}, sink)
 	if err := a.compact(context.Background(), "manual", "", true); err != nil {
 		t.Fatalf("compact: %v", err)
 	}

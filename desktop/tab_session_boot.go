@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"deepzora/internal/boot"
@@ -135,20 +134,6 @@ func (a *App) bindTabCanonicalSession(
 				ref, workspaceID, err = a.bindFreshDesktopSessionWithIDs(ctx, scope, workspaceRoot, identity, sessionID, operationID)
 			}
 		}
-	case strings.TrimSpace(legacyPath) != "":
-		ref, err = a.openOrImportDesktopLegacySession(ctx, identity, legacyPath, session.CreateOptions{
-			CWD: desktopWorkspaceRoot(scope, workspaceRoot), Origin: session.SessionOriginLegacyImport,
-		})
-		if errors.Is(err, errUnadoptedLegacySourceMissing) {
-			evidence := a.loadSavedTabReconcileEvidence(ctx)
-			if evidence.registryErr != nil {
-				return ref, "", errors.Join(errLegacySourceRecoveryPending, evidence.registryErr)
-			}
-			if savedTabHasRecoveryOwner(desktopTabEntry{SessionPath: legacyPath}, evidence) {
-				return ref, "", errLegacySourceRecoveryPending
-			}
-			ref, workspaceID, err = a.bindFreshDesktopSession(ctx, scope, workspaceRoot, identity)
-		}
 	default:
 		ref, workspaceID, err = a.bindFreshDesktopSession(ctx, scope, workspaceRoot, identity)
 	}
@@ -171,32 +156,6 @@ func (a *App) tabForSessionBoot(scope, workspaceRoot, sessionID string) *Workspa
 		}
 	}
 	return nil
-}
-
-var errUnadoptedLegacySourceMissing = errors.New("unadopted legacy source is missing")
-var errLegacySourceRecoveryPending = errors.New("legacy session recovery is pending")
-
-// The Desktop registry owns adoption. Re-freezing a previously imported source
-// can generate a different identity after a catalog sidecar refresh, even when
-// the historical messages have not changed. Resolve adoption before inspecting
-// the source so a retained canonical session also survives source removal.
-func (a *App) openOrImportDesktopLegacySession(ctx context.Context, identity control.IdentityLifecycle, path string, options session.CreateOptions) (session.SessionRef, error) {
-	if ref, adopted, err := a.legacyCanonicalRef(ctx, path); adopted || err != nil {
-		if err != nil {
-			return session.SessionRef{}, err
-		}
-		return identity.OpenSession(ctx, ref)
-	}
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return session.SessionRef{}, errUnadoptedLegacySourceMissing
-		}
-		return session.SessionRef{}, err
-	}
-	if creator, ok := identity.(control.IdentityCreateLifecycle); ok {
-		return creator.ContinueLegacySessionWithOptions(ctx, path, "", options)
-	}
-	return identity.ContinueLegacySession(ctx, path, "")
 }
 
 func (a *App) buildSessionOpenControllerCandidate(

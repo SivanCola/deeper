@@ -48,7 +48,7 @@ func (a *App) queueRuntimeProjection(update localRuntimeUpdate) {
 			c.pending = nil
 			c.mu.Unlock()
 			bindings := a.sampleLocalRuntimeBindingsWithUpdates(updates, true)
-			a.emitRuntimeProjection(a.projectRuntimeBindings(bindings), true)
+			a.emitRuntimeProjection(a.projectRuntimeBindings(bindings))
 			c.mu.Lock()
 			if len(c.pending) == 0 {
 				close(c.done)

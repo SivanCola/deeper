@@ -174,7 +174,7 @@ func TestRemoteTabSnapshotMergesServeMembers(t *testing.T) {
 // without ever ensuring a serve.
 func TestRemoteProjectSessionsWithoutOpenTab(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/x.jsonl", Title: "First", Turns: 2},
+		{Name: "s1", Path: "session-id:x", Title: "First", Turns: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -469,7 +469,7 @@ func TestListTabsIncludesRemoteEntries(t *testing.T) {
 // default and reaches the chrome through the metadata-only update channel.
 func TestRemoteTabTitleAdoptsServeSession(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/x.jsonl", Title: "Fix the login bug", Turns: 1, Current: true},
+		{Name: "s1", Path: "session-id:x", Title: "Fix the login bug", Turns: 1, Current: true},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -514,7 +514,7 @@ func TestRemoteTabTitleAdoptsServeSession(t *testing.T) {
 }
 
 func TestRemoteTabTitleRefreshRejectsRotatedSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "a", Path: "/a.jsonl", Title: "Title A", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "a", Path: "session-id:a", Title: "Title A", Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -537,8 +537,8 @@ func TestRemoteTabTitleRefreshRejectsRotatedSession(t *testing.T) {
 	}
 	a.remoteTabMu.Lock()
 	tab := a.remoteTabs[meta.ID]
-	tab.session.name, tab.session.path = "b", "/b.jsonl"
-	tab.routing.currentPath, tab.topicTitle = "/b.jsonl", "Selected B"
+	tab.session.name, tab.session.path = "b", "session-id:b"
+	tab.routing.currentPath, tab.topicTitle = "session-id:b", "Selected B"
 	a.remoteTabMu.Unlock()
 	close(release)
 	select {
@@ -549,7 +549,7 @@ func TestRemoteTabTitleRefreshRejectsRotatedSession(t *testing.T) {
 	a.remoteTabMu.Lock()
 	name, path, route, title := tab.session.name, tab.session.path, tab.routing.currentPath, tab.topicTitle
 	a.remoteTabMu.Unlock()
-	if name != "b" || path != "/b.jsonl" || route != "/b.jsonl" || title != "Selected B" {
+	if name != "b" || path != "session-id:b" || route != "session-id:b" || title != "Selected B" {
 		t.Fatalf("stale title refresh replaced rotated session: name=%q path=%q route=%q title=%q", name, path, route, title)
 	}
 }
@@ -559,7 +559,7 @@ func TestRemoteTabTitleRefreshRejectsRotatedSession(t *testing.T) {
 // re-emits ready so the frontend re-syncs its snapshot.
 func TestRemoteTabNewSessionResetsServeSession(t *testing.T) {
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/remote/sessions/s1.jsonl", Title: "Serve title", Turns: 1, Current: true},
+		{Name: "s1", Path: "session-id:s1", Title: "Serve title", Turns: 1, Current: true},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -649,7 +649,7 @@ func TestRenameRemoteProjectSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "s1", Path: "/x.jsonl", Title: "Serve title", Turns: 1, Current: true, MtimeMilli: 1700000000000},
+		{Name: "s1", Path: "session-id:x", Title: "Serve title", Turns: 1, Current: true, MtimeMilli: 1700000000000},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -714,8 +714,8 @@ func TestRemoteSessionPinnedOrderingAndProjectTitle(t *testing.T) {
 		t.Fatal(err)
 	}
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{
-		{Name: "a", Path: "/a.jsonl", Title: "First", Current: false, MtimeMilli: 1},
-		{Name: "b", Path: "/b.jsonl", Title: "Second", Current: true, MtimeMilli: 2},
+		{Name: "a", Path: "session-id:a", Title: "First", Current: false, MtimeMilli: 1},
+		{Name: "b", Path: "session-id:b", Title: "Second", Current: true, MtimeMilli: 2},
 	})
 	kernel := &fakeRemoteKernel{
 		statuses:    []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},

@@ -37,7 +37,7 @@ func TestBackgroundTaskReturnsBeforeSlotFrees(t *testing.T) {
 	ctx = jobs.WithSession(ctx, "sess-bg")
 	ctx = WithParentSession(ctx, "sess-bg")
 
-	task := NewTaskTool(prov, nil, tool.NewRegistry(), 20, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: prov, Pricing: nil, ParentRegistry: tool.NewRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), root, "base", "high").
 		WithScheduler(sched).
 		WithMutationObserver(observer)

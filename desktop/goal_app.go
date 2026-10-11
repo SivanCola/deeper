@@ -17,7 +17,6 @@ func (a *App) SetGoalForTab(tabID, goal string) error {
 	tab.turnStartMu.Lock()
 	defer tab.turnStartMu.Unlock()
 	goal = strings.TrimSpace(goal)
-	approvalMode := a.tabRuntimeSnapshot(tab).currentToolApprovalMode()
 	a.mu.Lock()
 	if a.tabs[tab.ID] != tab {
 		a.mu.Unlock()
@@ -36,7 +35,7 @@ func (a *App) SetGoalForTab(tabID, goal string) error {
 	if a.tabs[tab.ID] == tab {
 		tab.goal = goal
 		if goal != "" {
-			tab.mode = tabModeFromAxes(false, approvalMode == control.ToolApprovalYolo)
+			tab.mode = tabModeForPlan(false)
 		}
 		a.saveTabsLocked()
 	}

@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
@@ -24,19 +23,14 @@ import (
 )
 
 func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	session := agent.NewSession("system")
-	session.Add(provider.Message{Role: provider.RoleUser, Content: "question"})
-	session.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("body", 20000)})
-	if err := session.Save(path); err != nil {
+	srv, ctrl, _, ref := newExclusiveSessionServe(t)
+	path := remoteSessionIDQueryPrefix + ref.SessionID
+	msgs := []provider.Message{{ID: "sys", Role: provider.RoleSystem, Content: "system"}}
+	msgs = append(msgs, provider.Message{ID: "u", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "question"}, provider.Message{ID: "a", Role: provider.RoleAssistant, Content: strings.Repeat("body", 20000)})
+	if err := ctrl.RecordSessionMessages(t.Context(), "fixture", msgs); err != nil {
 		t.Fatal(err)
 	}
-	bc := NewBroadcaster()
-	executor := agent.New(nil, nil, session, agent.Options{}, bc)
-	ctrl := control.New(control.Options{Executor: executor, SessionDir: dir, SessionPath: path, Sink: bc})
-	defer ctrl.Close()
-	server := httptest.NewServer(operatorHandler(New(ctrl, bc, config.ServeConfig{})))
+	server := httptest.NewServer(operatorHandler(srv))
 	defer server.Close()
 	response, err := http.Get(server.URL + "/transcript/snapshot?session=" + url.QueryEscape(path))
 	if err != nil {
@@ -53,8 +47,8 @@ func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
 	if snapshot.ProtocolVersion != 1 || len(snapshot.Records) != 2 {
 		t.Fatalf("snapshot=%+v", snapshot)
 	}
-	ref := snapshot.Records[1].Refs[0]
-	encoded, _ := json.Marshal(transcript.ContentRequest{ContentRef: ref})
+	contentRef := snapshot.Records[1].Refs[0]
+	encoded, _ := json.Marshal(transcript.ContentRequest{ContentRef: contentRef})
 	contentResponse, err := http.Get(server.URL + "/transcript/content?session=" + url.QueryEscape(path) + "&request=" + url.QueryEscape(string(encoded)))
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +58,7 @@ func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
 	if err := json.NewDecoder(contentResponse.Body).Decode(&content); err != nil || len(content.Data) != 64<<10 {
 		t.Fatalf("content bytes=%d err=%v", len(content.Data), err)
 	}
-	wrong, err := http.Get(server.URL + "/transcript/snapshot?session=" + url.QueryEscape(filepath.Join(dir, "different.jsonl")))
+	wrong, err := http.Get(server.URL + "/transcript/snapshot?session=" + url.QueryEscape(remoteSessionIDQueryPrefix+"different"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,20 +82,15 @@ func TestTranscriptHTTPBindsSessionAndImmutableContent(t *testing.T) {
 type outlineLessController struct{ control.SessionAPI }
 
 func TestTranscriptOutlineHTTPPaginatesAndAdvertisesCapability(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "session.jsonl")
-	session := agent.NewSession("system")
+	srv, ctrl, _, ref := newExclusiveSessionServe(t)
+	path := remoteSessionIDQueryPrefix + ref.SessionID
+	msgs := []provider.Message{{ID: "sys", Role: provider.RoleSystem, Content: "system"}}
 	for i := range 4 {
-		session.Add(provider.Message{Role: provider.RoleUser, Content: fmt.Sprintf("question %d", i)})
-		session.Add(provider.Message{Role: provider.RoleAssistant, Content: fmt.Sprintf("answer %d", i)})
+		msgs = append(msgs, provider.Message{ID: fmt.Sprintf("u%d", i), Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: fmt.Sprintf("question %d", i)}, provider.Message{ID: fmt.Sprintf("a%d", i), Role: provider.RoleAssistant, Content: fmt.Sprintf("answer %d", i)})
 	}
-	if err := session.Save(path); err != nil {
+	if err := ctrl.RecordSessionMessages(t.Context(), "fixture", msgs); err != nil {
 		t.Fatal(err)
 	}
-	bc := NewBroadcaster()
-	ctrl := control.New(control.Options{Executor: agent.New(nil, nil, session, agent.Options{}, bc), SessionDir: dir, SessionPath: path, Sink: bc})
-	defer ctrl.Close()
-	srv := New(ctrl, bc, config.ServeConfig{})
 	server := httptest.NewServer(operatorHandler(srv))
 	defer server.Close()
 
@@ -145,7 +134,7 @@ func TestTranscriptOutlineHTTPPaginatesAndAdvertisesCapability(t *testing.T) {
 	}
 
 	// Session binding failures stay conflicts, not empty outlines.
-	wrong, err := http.Get(server.URL + "/transcript/outline?session=" + url.QueryEscape(filepath.Join(dir, "different.jsonl")))
+	wrong, err := http.Get(server.URL + "/transcript/outline?session=" + url.QueryEscape(remoteSessionIDQueryPrefix+"different"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,9 +145,9 @@ func TestTranscriptOutlineHTTPPaginatesAndAdvertisesCapability(t *testing.T) {
 
 	// A controller without the optional capability declines the route so a
 	// client can fall back to its loaded-turn rail.
-	plain := httptest.NewServer(operatorHandler(New(outlineLessController{ctrl}, bc, config.ServeConfig{})))
+	plain := httptest.NewServer(operatorHandler(New(outlineLessController{ctrl}, NewBroadcaster(), config.ServeConfig{})))
 	defer plain.Close()
-	unsupported, err := http.Get(plain.URL + "/transcript/outline?session=" + url.QueryEscape(path))
+	unsupported, err := http.Get(plain.URL + "/transcript/outline")
 	if err != nil {
 		t.Fatal(err)
 	}

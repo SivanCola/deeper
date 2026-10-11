@@ -11,7 +11,7 @@ import (
 func TestProjectShellSetupPreservesUnknownFields(t *testing.T) {
 	t.Setenv("DEEPZORA_HOME", t.TempDir())
 	path := filepath.Join(t.TempDir(), "deepzora.toml")
-	body := "future_setting='keep-top'\n[[providers]]\nname='relay'\nkind='openai'\nbase_url='https://relay.invalid/v1'\nmodel='chat'\napi_key_env='OLD_KEY'\nfuture_option='keep-provider'\n[providers.future_table]\nvalue='keep-nested'\n"
+	body := "future_setting='keep-top'\n[[providers]]\nname='relay'\nkind='openai'\nbase_url='https://relay.invalid/v1'\nmodels = ['chat']\napi_key_env='OLD_KEY'\nfuture_option='keep-provider'\n[providers.future_table]\nvalue='keep-nested'\n"
 	if err := os.WriteFile(path, []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}

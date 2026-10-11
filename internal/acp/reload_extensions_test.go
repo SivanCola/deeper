@@ -41,8 +41,7 @@ func reloadExtensionsSession(t *testing.T, id string, ctrl acpController, notifi
 		sink:             newUpdateSink(notifier, id),
 		cwd:              t.TempDir(),
 		model:            "fast",
-		runtimeProfile:   "balanced",
-		toolApprovalMode: control.ToolApprovalAsk,
+		toolApprovalMode: control.ToolApprovalReadOnly,
 		modeID:           sessionModeNormal,
 	}
 }

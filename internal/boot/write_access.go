@@ -24,7 +24,6 @@ func newSubagentSkillOptionsFactory(
 	cfg config.AgentConfig,
 	quoteCtx *event.QuoteContext,
 	gate agent.Gate,
-	keepPolicy agent.KeepPolicy,
 	maxDepth int,
 	ablationSet ablation.Set,
 	lease *workspacelease.Owner,
@@ -36,11 +35,9 @@ func newSubagentSkillOptionsFactory(
 	return func(ctx context.Context, steps int, price *provider.Pricing, ctxWin, childDepth int) agent.Options {
 		opts := agent.Options{
 			MaxSteps: steps, Temperature: cfg.Temperature, Pricing: price, QuoteContext: quoteCtx, UsageSource: event.UsageSourceSubagent,
-			Gate: gate, ContextWindow: ctxWin, RecentKeep: cfg.RecentKeep,
-			SoftCompactRatio: cfg.SoftCompactRatio, ToolResultSnipRatio: cfg.ToolResultSnipRatio,
-			CompactRatio: cfg.CompactRatio, CompactForceRatio: cfg.CompactForceRatio, ContextEditing: cfg.ContextEditing,
-			ArchiveDir: config.ArchiveDir(), KeepPolicy: keepPolicy,
-			ResponseLanguage: agent.ResponseLanguageFromContext(ctx), ReasoningLanguage: agent.ReasoningLanguageFromContext(ctx),
+			Gate: gate, ContextWindow: ctxWin,
+			CompactRatio: cfg.CompactRatio,
+			ArchiveDir:   config.ArchiveDir(), ResponseLanguage: agent.ResponseLanguageFromContext(ctx), ReasoningLanguage: agent.ReasoningLanguageFromContext(ctx),
 			SubagentDepth: childDepth, MaxSubagentDepth: maxDepth,
 			Ablation: ablationSet, WorkspaceLease: lease, WriteRoots: writeRoots,
 			DisableWriteAccessExpand: true, HomeDir: home, StateRoot: stateRoot,

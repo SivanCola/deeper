@@ -24,8 +24,7 @@ const diagnostics = createTranscriptScrollDiagnostics({
     contentWidth: 960,
     fontSize: 14,
     lineHeight: 23.52,
-    processFoldPreference: "auto",
-    reasoningDisplayMode: "summary",
+    sessionExperience: "standard",
   }),
 });
 
@@ -109,8 +108,7 @@ const markerOverflow = createTranscriptScrollDiagnostics({
     contentWidth: 960,
     fontSize: 14,
     lineHeight: 23.52,
-    processFoldPreference: "expanded",
-    reasoningDisplayMode: "expanded",
+    sessionExperience: "deep",
   }),
 });
 markerOverflow.start();
@@ -136,8 +134,7 @@ const detailDiagnostics = createTranscriptScrollDiagnostics({
     contentWidth: 960,
     fontSize: 15,
     lineHeight: 25.2,
-    processFoldPreference: "auto",
-    reasoningDisplayMode: "legacy-collapsed",
+    sessionExperience: "standard",
   }),
 });
 detailDiagnostics.start();

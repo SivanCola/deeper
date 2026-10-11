@@ -1,5 +1,7 @@
 # Manual session rollback: submission race review
 
+> 已归档：本文记录旧版验证，其兼容、迁移及降级结论不适用于当前 Deepzora。当前支持范围见[当前版本基线](../current-version-baseline.md)。旧证据生成脚本已移除。
+
 2026-09-22 的补充检查聚焦正式会话输入持久化与发送、导航、重启核对之间的边界。
 没有修改数据库 schema、旧草稿格式、会话事件或 provider 请求。
 

@@ -1,47 +1,9 @@
 package config
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
-
-func rewriteDeepSeekProviderBlockAs(lines []string, block providerTOMLBlock, kind, baseURL string) error {
-	kindLine, baseURLLine := -1, -1
-	state := tomlOutside
-	for i := block.start + 1; i < block.end; i++ {
-		if state != tomlOutside {
-			state = advanceTOMLStringState(state, lines[i])
-			continue
-		}
-		nextState := advanceTOMLStringState(tomlOutside, lines[i])
-		if nextState != tomlOutside {
-			state = nextState
-			continue
-		}
-		switch {
-		case kind == "openai" && (isTOMLKeyAssignment(lines[i], "request_url") || isTOMLKeyAssignment(lines[i], "chat_url")):
-			// Only reached for an eligible official endpoint. Clear the standard
-			// override so the derived endpoint applies and independent search
-			// stays enabled.
-			_, value, _ := tomlKeyValue(lines[i])
-			if value != `""` && value != `''` {
-				lines[i] = replaceTOMLStringAssignment(lines[i], "")
-			}
-		case isTOMLKeyAssignment(lines[i], "kind"):
-			kindLine = i
-		case isTOMLKeyAssignment(lines[i], "base_url"):
-			baseURLLine = i
-		}
-		state = nextState
-	}
-	if kindLine < 0 || baseURLLine < 0 {
-		return fmt.Errorf("upgrade DeepSeek protocol: provider table is missing kind or base_url")
-	}
-	lines[kindLine] = replaceTOMLStringAssignment(lines[kindLine], kind)
-	lines[baseURLLine] = replaceTOMLStringAssignment(lines[baseURLLine], baseURL)
-	return nil
-}
 
 func replaceTOMLStringAssignment(line, value string) string {
 	return replaceTOMLScalarAssignment(line, strconv.Quote(value))

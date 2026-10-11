@@ -25,45 +25,6 @@ func TestPurgeCommandUnrelatedSessionMustNotBlockPurge(t *testing.T) {
 	}
 }
 
-func TestPurgeCommandValidPreparedAfterStartupWriterReleased(t *testing.T) {
-	a, ref := lifecycleFixture(t)
-	store := a.workspaceRegistry()
-	if err := a.ArchiveCanonicalSession(ref); err != nil {
-		t.Fatal(err)
-	}
-	state, err := store.Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	legacy := workspacestate.Operation{ID: "purge-" + ref.SessionID, Kind: "purge", Phase: "prepared", Lifecycle: workspacestate.Deleted, SessionIDs: []string{ref.SessionID}, ExpectedGeneration: state.SessionStates[ref.SessionID].Generation}
-	rewriteLifecycleRegistry(t, store, func(s *workspacestate.State) { s.PendingOperations[legacy.ID] = legacy })
-	fs := session.NewFilesystemPersistence(a.desktopSessions.root)
-	release, err := fs.AcquireMaintenance(ref.SessionID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	replayErr := a.recoverDesktopSessionOperations(t.Context())
-	release()
-	if replayErr == nil {
-		t.Fatal("expected startup writer conflict")
-	}
-	page, err := a.ListTrashEntries("", "", 50)
-	if err != nil || len(page.Items) != 1 || !page.Items[0].CanPurge {
-		t.Fatalf("page=%+v err=%v", page, err)
-	}
-	req := lifecycleRequest(t, a, ref, "resume-prepared", "purge")
-	for range 2 {
-		result, err := a.ApplySessionLifecycle(req)
-		if err != nil || !result.Committed {
-			t.Errorf("fresh delete after writer released: result=%+v err=%v", result, err)
-		}
-	}
-	page, err = a.ListTrashEntries("", "", 50)
-	if err != nil || len(page.Items) != 0 {
-		t.Fatalf("completed purge still in trash: %+v %v", page, err)
-	}
-}
-
 func TestPurgeCommandSnapshotConflictIsTerminal(t *testing.T) {
 	a, ref := lifecycleFixture(t)
 	if err := a.ArchiveCanonicalSession(ref); err != nil {

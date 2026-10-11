@@ -70,8 +70,6 @@ let hosts: RemoteHostView[] = [{
 }];
 let removeCalls = 0;
 const recordedUpdates: Array<RemoteHostInput & { id: string }> = [];
-let legacyView = { mirrorCount: 0, mirrorBytes: 0, trustFile: false };
-let cleanCalls: string[] = [];
 const bindings = {
   async RemoteHosts() { return hosts.slice(); },
   async RemoteConnectionStatuses() { return []; },
@@ -82,11 +80,6 @@ const bindings = {
   async UpdateRemoteHost(id: string, input: RemoteHostInput) {
     recordedUpdates.push({ id, ...input });
     return { ...hosts.find((host) => host.id === id)!, ...input, id } as RemoteHostView;
-  },
-  async ScanRemoteLegacyWorkbenchData() { return legacyView; },
-  async CleanRemoteLegacyWorkbenchData(target: "mirrors" | "trust") {
-    cleanCalls.push(target);
-    legacyView = { mirrorCount: 0, mirrorBytes: 0, trustFile: false };
   },
 } as unknown as AppBindings;
 installDesktopHostStub(({ main: { App: bindings } }).main.App);
@@ -157,46 +150,7 @@ await act(async () => {
 ok(removeCalls === 1, "confirmed removal invokes the backend exactly once");
 ok(document.body.textContent?.includes("No remote hosts yet") === true, "host list refreshes after removal");
 
-// Legacy Remote Workbench data card: hidden when no data, and cleans mirrors
-// and trust separately after confirmation.
-ok(document.querySelector(".remote-hosts__legacy") === null, "legacy data card is hidden when no legacy files exist");
-let legacyRoot = root;
-await act(async () => {
-  legacyRoot.unmount();
-  legacyView = { mirrorCount: 3, mirrorBytes: 2048, trustFile: true };
-  legacyRoot = createRoot(rootElement);
-  legacyRoot.render(<LocaleProvider><RemoteHostsPage /></LocaleProvider>);
-  await flush();
-});
-ok(document.querySelector(".remote-hosts__legacy") !== null, "legacy data card appears when legacy files are detected");
-ok(document.body.textContent?.includes("3") === true, "legacy card shows the mirror file count");
-ok(document.body.textContent?.includes("trust") === true, "legacy card names the trust file");
-await act(async () => {
-  button("Delete mirrors")?.click();
-  await flush();
-});
-await act(async () => {
-  button("Delete", document.querySelector(".deepzora-confirm-dialog") ?? document)?.click();
-  await flush();
-});
-ok(cleanCalls.join(",") === "mirrors", "confirmed mirror cleanup calls the backend once");
-ok(document.querySelector(".remote-hosts__legacy") === null, "card hides after both artifacts are cleaned");
-await act(async () => {
-  legacyRoot.unmount();
-  legacyView = { mirrorCount: 1, mirrorBytes: 512, trustFile: false };
-  legacyRoot = createRoot(rootElement);
-  legacyRoot.render(<LocaleProvider><RemoteHostsPage /></LocaleProvider>);
-  await flush();
-});
-await act(async () => {
-  button("Delete mirrors")?.click();
-  await flush();
-  button("Cancel", document.querySelector(".deepzora-confirm-dialog") ?? document)?.click();
-  await flush();
-});
-ok(cleanCalls.length === 1, "cancelled cleanup does not call the backend");
-
-await act(async () => legacyRoot.unmount());
+await act(async () => root.unmount());
 dom.window.close();
 
 process.stdout.write(`\n${passed} passed, ${failed} failed\n`);

@@ -1,13 +1,9 @@
 package main
 
-import "errors"
-
 // registerProjectRoot indexes workspaceRoot, realigns open tabs to its
 // canonical spelling, and discovers existing sessions once per process.
 func (a *App) registerProjectRoot(workspaceRoot string) error {
-	if err := addProject(workspaceRoot, ""); errors.Is(err, errProjectStateCollisionAssignment) {
-		return err
-	}
+	_ = addProject(workspaceRoot, "")
 	a.syncTabWorkspaceRootSpellings()
 	root := normalizeProjectRoot(workspaceRoot)
 	if root == "" {

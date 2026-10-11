@@ -14,7 +14,6 @@
 package checkpoint
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -26,7 +25,6 @@ import (
 	"time"
 
 	"deepzora/internal/diff"
-	"deepzora/internal/fileutil"
 	fileenc "deepzora/internal/fileutil/encoding"
 )
 
@@ -84,7 +82,6 @@ type Checkpoint struct {
 	ActiveWriters      []ActiveWriter `json:"activeWriters,omitempty"`
 	LastMutationSeq    int64          `json:"lastMutationSeq,omitempty"`
 	SessionRevision    int64          `json:"sessionRevision,omitempty"`
-	Legacy             bool           `json:"legacy,omitempty"`
 	ExpiredFilePayload bool           `json:"expiredFilePayload,omitempty"`
 }
 
@@ -137,7 +134,6 @@ type Meta struct {
 	CoverageGaps       []CoverageGap
 	ExpiredFilePayload bool
 	ActiveWriters      []ActiveWriter
-	Legacy             bool
 	CanUndoFiles       bool
 	DisabledReason     string
 }
@@ -473,10 +469,6 @@ func (s *Store) recomputeCoverageLocked(c *Checkpoint) {
 	if c == nil {
 		return
 	}
-	if c.Legacy || c.SchemaVersion < SchemaV2 {
-		c.Coverage = CoverageLegacy
-		return
-	}
 	if c.ExpiredFilePayload {
 		c.Coverage = CoveragePartial
 		return
@@ -508,43 +500,14 @@ func (s *Store) detectEncoding(p string) *fileenc.Kind {
 	return &enc
 }
 
-func (s *Store) expiredDir() string {
-	return filepath.Join(s.dir, "expired")
-}
-
-func (s *Store) checkpointPath(c *Checkpoint) string {
-	dir := s.dir
-	if c != nil && c.ExpiredFilePayload {
-		dir = s.expiredDir()
-	}
-	return filepath.Join(dir, fmt.Sprintf("turn-%d.json", c.Turn))
-}
-
 func (s *Store) persist(c *Checkpoint) error {
 	if s.dir == "" || c == nil {
 		return nil
 	}
-	if c.SchemaVersion >= SchemaV3 {
-		return s.persistV3(c)
+	if c.SchemaVersion != SchemaV3 {
+		return fmt.Errorf("unsupported checkpoint schema %d", c.SchemaVersion)
 	}
-	// Keep inline Content even when BlobRef is present. Previous Deepzora builds
-	// ignore BlobRef and interpret nil Content as "the file did not exist";
-	// omitting it would make an older concurrently running binary delete files.
-	wire := *c
-	wire.Files = make([]FileSnap, len(c.Files))
-	copy(wire.Files, c.Files)
-	b, err := json.Marshal(&wire)
-	if err != nil {
-		return err
-	}
-	path := s.checkpointPath(c)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	if err := fileutil.AtomicWriteFileStrict(path, b, 0o644); err != nil {
-		return err
-	}
-	return nil
+	return s.persistV3(c)
 }
 
 func (s *Store) persistBestEffort(c *Checkpoint) {
@@ -553,63 +516,7 @@ func (s *Store) persistBestEffort(c *Checkpoint) {
 	}
 }
 
-// gcLocked removes old v3 turn directories and retains the legacy v1/v2 blob
-// quota policy for checkpoints written by older releases.
-// Caller holds s.mu.
-func (s *Store) gcLocked() {
-	s.pruneV3TurnsLocked()
-	if s.blobs == nil || s.retainN <= 0 {
-		return
-	}
-	// Collect recoverable checkpoints (have file payloads) oldest first.
-	all := s.all()
-	type entry struct {
-		c *Checkpoint
-	}
-	var withFiles []entry
-	for _, c := range all {
-		if c.SchemaVersion < SchemaV3 && len(c.Files) > 0 {
-			withFiles = append(withFiles, entry{c: c})
-		}
-	}
-	// Expire payloads for all but the newest retainN.
-	if len(withFiles) > s.retainN {
-		expiredAny := false
-		for _, e := range withFiles[:len(withFiles)-s.retainN] {
-			if s.protectTurns[e.c.Turn] {
-				continue
-			}
-			if err := s.expirePayloadLocked(e.c); err != nil {
-				slog.Warn("checkpoint: expire payload failed", "turn", e.c.Turn, "err", err)
-				continue
-			}
-			expiredAny = true
-		}
-		if expiredAny {
-			s.pruneBlobsLocked()
-		}
-	}
-	// Blob quota.
-	size, err := s.blobs.Size()
-	if err != nil || size <= s.blobQuota {
-		return
-	}
-	for _, e := range withFiles {
-		if size <= s.blobQuota {
-			break
-		}
-		if s.protectTurns[e.c.Turn] || e.c.ExpiredFilePayload {
-			continue
-		}
-		// Rough: expire and recompute size.
-		if err := s.expirePayloadLocked(e.c); err != nil {
-			slog.Warn("checkpoint: expire payload failed", "turn", e.c.Turn, "err", err)
-			continue
-		}
-		s.pruneBlobsLocked()
-		size, _ = s.blobs.Size()
-	}
-}
+func (s *Store) gcLocked() { s.pruneV3TurnsLocked(); s.pruneBlobsLocked() }
 
 // pruneBlobsLocked performs mark-and-sweep after checkpoint metadata has been
 // persisted. Transaction manifests and the current undo slot also keep their
@@ -693,12 +600,8 @@ func (s *Store) List() []Meta {
 			CoverageGaps:       append([]CoverageGap(nil), c.CoverageGaps...),
 			ExpiredFilePayload: c.ExpiredFilePayload,
 			ActiveWriters:      append([]ActiveWriter(nil), c.ActiveWriters...),
-			Legacy:             c.Legacy || c.Coverage == CoverageLegacy,
 		}
 		switch {
-		case meta.Legacy:
-			meta.CanUndoFiles = false
-			meta.DisabledReason = "legacy checkpoint cannot verify later manual edits"
 		case meta.ExpiredFilePayload:
 			meta.CanUndoFiles = false
 			meta.DisabledReason = "file recovery payload expired"
@@ -819,23 +722,18 @@ func (s *Store) TruncateFrom(fromTurn int) error {
 }
 
 // RestoreCode reverts the workspace to its state at the start of turn `fromTurn`
-// using a transactional prepare+commit. Legacy checkpoints are refused because
-// they cannot prove that a later manual edit is safe to overwrite. Returns the
+// using a transactional prepare+commit with ownership checks. Returns the
 // paths written and deleted.
 //
 // On any failure after partial publish, compensation restores the pre-rewind
-// workspace. Unlike the pre-v2 loop, a mid-way error does not leave a half-applied
-// restore.
+// workspace.
 func (s *Store) RestoreCode(fromTurn int) (written, deleted []string, err error) {
 	plan, err := s.PrepareRewind(fromTurn, RewindCode, 0, 0, false)
 	if err != nil {
 		return nil, nil, err
 	}
-	if plan.Legacy && len(plan.Files) > 0 {
-		return nil, nil, fmt.Errorf("legacy checkpoint cannot safely restore files without explicit conflict confirmation")
-	}
 	// When complete/partial with no conflicts, commit.
-	if !plan.CanFiles && !plan.Legacy {
+	if !plan.CanFiles {
 		if plan.DisabledReason != "" {
 			return nil, nil, fmt.Errorf("%s", plan.DisabledReason)
 		}

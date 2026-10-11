@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -65,34 +64,6 @@ func containsUserText(messages []provider.Message, text string) bool {
 		}
 	}
 	return false
-}
-
-func TestKilledLegacyTurnKeepsItsPrompt(t *testing.T) {
-	if root := os.Getenv("DEEPZORA_LEGACY_TURN_KILL_FIXTURE"); root != "" {
-		a := agent.New(&killMidStreamProvider{exitIn: 300 * time.Millisecond}, tool.NewRegistry(), agent.NewSession("sys"), agent.Options{}, event.Discard)
-		c := newOwnedTestController(t, Options{Executor: a, Runner: a, SessionPath: filepath.Join(root, "session.jsonl"), SessionDir: root, Sink: event.Discard, NativeLegacySession: true})
-		if err := c.RunTurn(context.Background(), "first question"); err != nil {
-			t.Fatal(err)
-		}
-		_ = c.RunTurn(context.Background(), "second question")
-		t.Fatal("fixture was not killed")
-	}
-	root := runKillFixture(t, "TestKilledLegacyTurnKeepsItsPrompt", "DEEPZORA_LEGACY_TURN_KILL_FIXTURE")
-	path := filepath.Join(root, "session.jsonl")
-	sess, err := agent.LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	a := agent.New(nil, tool.NewRegistry(), sess, agent.Options{}, event.Discard)
-	c := newOwnedTestController(t, Options{Executor: a, SessionPath: path, SessionDir: root, Sink: event.Discard, NativeLegacySession: true})
-	c.recoverInterruptedTurn(path)
-	history := c.History()
-	if !containsUserText(history, "first question") {
-		t.Fatalf("completed turn lost after restart:\n%s", requestMessagesText(history))
-	}
-	if !containsUserText(history, "second question") {
-		t.Fatalf("prompt of the killed turn lost after restart:\n%s", requestMessagesText(history))
-	}
 }
 
 func openKilledV3Session(t *testing.T, root string) (*session.Service, *session.ClientBinding, session.SessionRef) {

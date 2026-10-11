@@ -120,26 +120,8 @@ type Coordinator struct {
 	plannerHasPrefix    bool
 }
 
-// NewCoordinator wires a planner provider (with its own session) to an executor.
-// sink receives the planner's phase/text/usage events; the executor emits its
-// own events to its own sink (the CLI wires the same sink into both). A nil
-// sink is replaced with event.Discard.
-func NewCoordinator(planner provider.Provider, plannerSession *Session, plannerPricing *provider.Pricing, plannerTools *tool.Registry, plannerOptions Options, executor *Agent, temperature float64, sink event.Sink, shouldPlan func(context.Context, string) bool) *Coordinator {
-	var policy PlannerPolicy
-	if shouldPlan != nil {
-		policy = func(ctx context.Context, input string) PlannerDecision {
-			if !shouldPlan(ctx, input) {
-				return PlannerDecision{Route: PlannerRouteExecutorOnly, Reason: "legacy_skip"}
-			}
-			return PlannerDecision{Route: PlannerRoutePlanAndExecute, Reason: "legacy_plan"}
-		}
-	}
-	return newCoordinator(planner, plannerSession, plannerPricing, plannerTools, plannerOptions, executor, temperature, sink, policy)
-}
-
 // NewCoordinatorWithPlannerPolicy wires the structured deterministic planner
-// router used by the product boot path. NewCoordinator remains as a compatibility
-// adapter for direct callers and older tests that still provide a bool gate.
+// router used by the product boot path.
 func NewCoordinatorWithPlannerPolicy(planner provider.Provider, plannerSession *Session, plannerPricing *provider.Pricing, plannerTools *tool.Registry, plannerOptions Options, executor *Agent, temperature float64, sink event.Sink, policy PlannerPolicy) *Coordinator {
 	return newCoordinator(planner, plannerSession, plannerPricing, plannerTools, plannerOptions, executor, temperature, sink, policy)
 }
@@ -271,20 +253,6 @@ func (c *Coordinator) SetPlanMode(v bool) {
 	}
 	if c.executor != nil {
 		c.executor.SetPlanMode(v)
-	}
-}
-
-// SetPlanModeReadOnlyTrustGate propagates plan-mode bash read-only command
-// approvals to both tool-using agents in two-model mode.
-func (c *Coordinator) SetPlanModeReadOnlyTrustGate(g PlanModeReadOnlyTrustGate) {
-	if c == nil {
-		return
-	}
-	if c.plannerAgent != nil {
-		c.plannerAgent.SetPlanModeReadOnlyTrustGate(g)
-	}
-	if c.executor != nil {
-		c.executor.SetPlanModeReadOnlyTrustGate(g)
 	}
 }
 

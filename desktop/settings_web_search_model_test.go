@@ -14,7 +14,7 @@ func TestWebSearchModelSettingsCandidatesAndStaleRef(t *testing.T) {
 	on := true
 	cfg := &config.Config{Providers: []config.ProviderEntry{
 		{Name: "search", Kind: "responses", BaseURL: "http://localhost:1234", Models: []string{"m", "org/fast"}, Default: "m", WebSearch: &on},
-		{Name: "hidden", Kind: "responses", BaseURL: "http://localhost:1234", Model: "m", WebSearch: &on},
+		{Models: []string{"m"}, Default: "m", Name: "hidden", Kind: "responses", BaseURL: "http://localhost:1234", Model: "m", WebSearch: &on},
 	}, Desktop: config.DesktopConfig{ProviderAccess: []string{"search"}}, Agent: config.AgentConfig{WebSearchModel: "missing/m"}}
 	a := NewApp()
 	var v SettingsView

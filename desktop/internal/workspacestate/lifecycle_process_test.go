@@ -175,37 +175,3 @@ func TestWorkspaceLifecycleProcessHelper(t *testing.T) {
 		fmt.Printf("error:%v\n", err)
 	}
 }
-
-func TestWorkspaceOldPurgeProcessCannotReplaceNewOperation(t *testing.T) {
-	store, expected := seedArchivedProcessState(t)
-	if err := store.mutate(t.Context(), func(s *State) error {
-		s.PendingOperations["purge-victim"] = Operation{ID: "purge-victim", Kind: "purge", Phase: "prepared", Lifecycle: Deleted, SessionIDs: []string{"victim"}, ExpectedGeneration: expected}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	old := startLifecycleProcess(t, store.Path(), "resume", expected)
-	if err := store.RestoreSession(t.Context(), "victim"); err != nil {
-		t.Fatal(err)
-	}
-	if err := store.ArchiveSession(t.Context(), "victim"); err != nil {
-		t.Fatal(err)
-	}
-	state, err := store.Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.BeginPurge(t.Context(), "victim", state.Generation); err != nil {
-		t.Fatal(err)
-	}
-	if got := old.run(t); got != "conflict" {
-		t.Fatalf("old replay=%s", got)
-	}
-	state, err = store.Load(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ClassifyPurge(state, "victim") != PurgeTombstoned {
-		t.Fatal("old process changed new deletion")
-	}
-}

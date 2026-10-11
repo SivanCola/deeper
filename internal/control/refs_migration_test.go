@@ -51,7 +51,7 @@ func TestSessionAuthorizationsPreservesExternalFolderBindingsWithoutAliasing(t *
 	}
 	for _, ctrl := range []*Controller{original, replacement, another} {
 		auth := ctrl.SessionAuthorizations()
-		if len(auth.Grants) != 0 || len(auth.PlanModeReadOnlyCommands) != 0 || len(auth.WriteRoots) != 0 {
+		if len(auth.Grants) != 0 || len(auth.WriteRoots) != 0 {
 			t.Fatal("external-folder read authorization widened tool or write grants")
 		}
 	}

@@ -19,7 +19,7 @@ func (f *durableQueueFactory) SessionDir() string { return f.dir }
 
 func (f *durableQueueFactory) NewSession(_ context.Context, p SessionParams) (*control.Controller, error) {
 	runner := &fakeRunner{sink: p.Sink, behavior: f.behavior}
-	return control.New(control.Options{Runner: runner, Sink: p.Sink, SessionDir: f.dir}), nil
+	return control.New(control.Options{Runner: runner, Executor: testACPExecutor(p.Sink), Sink: p.Sink, SessionDir: f.dir, SessionService: testACPService(f.dir), SessionRuntime: p.SessionRuntime, ExclusiveSession: f.dir != ""}), nil
 }
 
 func TestSessionPromptDrainsDurableFollowupBeforeResponding(t *testing.T) {

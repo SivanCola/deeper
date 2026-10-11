@@ -45,7 +45,6 @@ import (
 	"deepzora/internal/serve"
 	"deepzora/internal/sessiontemp"
 	"deepzora/internal/telemetry"
-	"deepzora/internal/winaclresidue"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/pflag"
@@ -70,7 +69,6 @@ func Run(args []string, version string) int {
 func RunWithBuildInfo(args []string, info BuildInfo) int {
 	// Older Windows builds could leave sandbox ACL residue behind after a
 	// crash; sweep it in the background so no tool output waits on icacls.
-	go winaclresidue.SweepStaleMarkers()
 	info = info.withDefaults()
 	version := info.Version
 	// Usage recording is asynchronous so provider/UI paths never wait on disk.
@@ -100,9 +98,6 @@ func RunWithBuildInfo(args []string, info BuildInfo) int {
 		cmd = ""
 	}
 	doctorRepair := isDoctorRepairCommand(args)
-	if shouldMigrateLegacyConfigForCLI(cmd) && !doctorRepair {
-		migrateLegacyConfigForCLI()
-	}
 	if !doctorRepair {
 		if cfg, err := config.Load(); err == nil {
 			if cfg.Language != "" {
@@ -222,23 +217,6 @@ func isDefaultInteractiveFlag(arg string) bool {
 	return false
 }
 
-func shouldMigrateLegacyConfigForCLI(cmd string) bool {
-	switch cmd {
-	case "", "run", "chat", "code", "serve", "web", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot", "upgrade", "update":
-		return true
-	default:
-		return false
-	}
-}
-
-func migrateMCPConfigForCLIWorkspace() {
-	if wd, err := os.Getwd(); err == nil {
-		if _, err := config.MigrateMCPToUserConfigOnUpgrade([]string{wd}); err != nil {
-			fmt.Fprintln(os.Stderr, "warning: MCP config migration failed:", err)
-		}
-	}
-}
-
 func configureCLIThemeFromConfig() {
 	if cfg, err := config.Load(); err == nil {
 		configureCLIThemeWithStyle(cfg.UITheme(), cfg.UIThemeStyle())
@@ -267,7 +245,6 @@ func setupProfile(ctx context.Context, modelName string, maxStepsOverride int, r
 }
 
 type cliBuildOverrides struct {
-	Preset               string
 	Effort               *string
 	EffortModel          string
 	PermissionAllow      []string
@@ -282,7 +259,6 @@ type cliBuildOverrides struct {
 	InteractiveHost bool
 	// NativeLegacySession is selected only for an existing path-addressed
 	// transcript. New CLI sessions remain on the canonical session service.
-	NativeLegacySession bool
 	// SessionTemp carries the previous Controller's private temporary directory
 	// manager across model/profile rebuilds so temporary files survive.
 	SessionTemp     *sessiontemp.Manager
@@ -302,7 +278,6 @@ func sessionTempFromCLIController(ctrl control.SessionAPI) *sessiontemp.Manager 
 }
 
 func setupProfileWithOverrides(ctx context.Context, modelName string, maxStepsOverride int, requireKey bool, sink event.Sink, overrides cliBuildOverrides) (*control.Controller, error) {
-	migrateMCPConfigForCLIWorkspace()
 	return boot.Build(ctx, cliProfileBuildOptions(modelName, maxStepsOverride, requireKey, sink, overrides))
 }
 
@@ -316,9 +291,7 @@ func cliProfileBuildOptions(modelName string, maxStepsOverride int, requireKey b
 		Sink:                 sink,
 		SessionDir:           sessionDir,
 		SessionService:       cliSessionService(sessionDir),
-		NativeLegacySession:  overrides.NativeLegacySession,
 		SessionHostID:        "local",
-		AgentPreset:          overrides.Preset,
 		WorkspaceRoot:        overrides.WorkspaceRoot,
 		EffortOverride:       overrides.Effort,
 		EffortModel:          overrides.EffortModel,
@@ -360,7 +333,7 @@ func parsePermissionMode(value string) (cliPermissionMode, error) {
 	case "dontask", "dont-ask":
 		return cliPermissionMode{approval: control.ToolApprovalReadOnly}, nil
 	case "plan":
-		return cliPermissionMode{approval: control.ToolApprovalAsk, plan: true}, nil
+		return cliPermissionMode{approval: control.ToolApprovalReadOnly, plan: true}, nil
 	default:
 		return cliPermissionMode{}, fmt.Errorf("unknown permission mode %q (want read-only, workspace-write, danger-full-access, or plan)", value)
 	}
@@ -406,21 +379,6 @@ func setupQuietProfile(ctx context.Context, modelName string, maxStepsOverride i
 		overrides.Stderr = io.Discard
 	}
 	return boot.Build(ctx, cliProfileBuildOptions(modelName, maxStepsOverride, requireKey, sink, overrides))
-}
-
-// parseRuntimeProfile validates a retired role flag. Recognized legacy values
-// all fold to the standard runtime behavior.
-func parseRuntimeProfile(value string) (string, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", "balanced", "standard", boot.TokenModeFull:
-		return "standard", nil
-	case "economy", "light", "lite", "eco":
-		return "standard", nil
-	case boot.TokenModeDelivery, "deliver", "quality":
-		return "standard", nil
-	default:
-		return "", fmt.Errorf("unknown retired execution setting %q", value)
-	}
 }
 
 // chdirTo honours --dir: it switches the working directory before anything reads
@@ -481,11 +439,6 @@ func registerContinueFlag(fs *pflag.FlagSet) *bool {
 
 func runAgent(args []string, version string) int {
 	defer closeCLIUsageCatalogs()
-	args, deprecatedMode, err := consumeDeprecatedModeFlags(args, "profile", "preset")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
 	fs := pflag.NewFlagSet("run", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
 	model := fs.String("model", "", "provider name (default: config default_model)")
@@ -537,10 +490,7 @@ func runAgent(args []string, version string) int {
 		}
 		format = runOutputEventsJSONL
 	}
-	if err := acceptDeprecatedModeFlag(deprecatedMode); err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
+
 	ablated, err := ablation.Parse(*ablateFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
@@ -681,7 +631,6 @@ func runAgent(args []string, version string) int {
 	// UI can answer; unattended writes require explicit --auto/-y,
 	// legacy permission aliases.
 	overrides := cliBuildOverrides{
-		Preset:               deprecatedMode,
 		Effort:               effortOverride,
 		PermissionAllow:      allowedTools,
 		AdditionalDirs:       additionalDirs,
@@ -689,7 +638,6 @@ func runAgent(args []string, version string) int {
 		HeadlessApprovalMode: permissions.approval,
 		OnSessionRecovered:   cliSessionRecoveredHandler(leases),
 		Ablation:             ablated,
-		NativeLegacySession:  resumePath != "",
 	}
 	ctrl, err := setupProfileWithOverrides(ctx, *model, *maxSteps, true, sink, overrides)
 	if err != nil {
@@ -730,7 +678,6 @@ func runAgent(args []string, version string) int {
 	reclaimCLIRecoveryBranches(ctrl.SessionDir())
 
 	runErr := ctrl.Run(ctx, prompt)
-	reporter.RecordRecovery(ctrl.DrainRecoveryMetrics())
 	completion := classifyRunCompletion(runErr)
 	if cfg != nil {
 		notify.SendEvent(newNotificationSender(), cfg.Notifications, event.Event{
@@ -779,11 +726,6 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	if opts.command == "" {
 		opts.command = "serve"
 	}
-	args, deprecatedMode, err := consumeDeprecatedModeFlags(args, "profile", "preset")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
 	fs := flag.NewFlagSet(opts.command, flag.ContinueOnError)
 	model := fs.String("model", "", "provider name (default: config default_model)")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
@@ -827,10 +769,6 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 			return 2
 		}
-	}
-	if err := acceptDeprecatedModeFlag(deprecatedMode); err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
 	}
 
 	// --hash-password: generate a bcrypt hash and exit.
@@ -927,7 +865,7 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 	// Keep the browser reachable when the selected provider has no saved key.
 	// The loopback-only provider setup surface stores the missing credential and
 	// rebuilds this controller in place before the normal web UI is exposed.
-	ctrl, serveBuildOpts, err := setupCLIMultiSessionProfile(ctx, *model, *maxSteps, deprecatedMode, sessionTag, leases)
+	ctrl, serveBuildOpts, err := setupCLIMultiSessionProfile(ctx, *model, *maxSteps, sessionTag, leases)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 1
@@ -961,11 +899,6 @@ func runServeWithOptions(args []string, opts serveRunOptions) int {
 // prompt loop that keeps conversation context across turns. Exit with
 // 'exit'/'quit' or Ctrl-D.
 func chatREPL(args []string, version string) int {
-	args, deprecatedMode, err := consumeDeprecatedModeFlags(args, "profile", "preset")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
 	fs := pflag.NewFlagSet("deepzora", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
 	model := fs.String("model", "", "provider name (default: config default_model)")
@@ -974,10 +907,6 @@ func chatREPL(args []string, version string) int {
 	resume := fs.StringP("resume", "r", "", "resume by session ID/query, or open the picker when no value is given")
 	fs.Lookup("resume").NoOptDefVal = resumePickerSentinel
 	copySession := fs.Bool("copy", false, "with --resume/--continue: duplicate the selected session and continue in the copy (escape hatch when the original is held by another Deepzora process)")
-	legacyYolo := fs.Bool("dangerously-skip-permissions", false, "deprecated: use --permission-mode danger-full-access")
-	fs.BoolVar(legacyYolo, "yolo", false, "deprecated alias; migrates to workspace-write")
-	_ = fs.MarkHidden("dangerously-skip-permissions")
-	_ = fs.MarkHidden("yolo")
 	dir := fs.String("dir", "", "change to this directory first (project root); config, sandbox and file tools resolve from here")
 	effort := fs.String("effort", "", "session reasoning effort override")
 	permissionMode := fs.String("permission-mode", "workspace-write", "permission mode: read-only | workspace-write | danger-full-access | plan")
@@ -994,10 +923,7 @@ func chatREPL(args []string, version string) int {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 2
 	}
-	if err := acceptDeprecatedModeFlag(deprecatedMode); err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
+
 	permissions, err := parsePermissionMode(*permissionMode)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
@@ -1108,15 +1034,13 @@ func chatREPL(args []string, version string) int {
 		effortOverride = effort
 	}
 	overrides := cliBuildOverrides{
-		Preset:              deprecatedMode,
-		Effort:              effortOverride,
-		PermissionAllow:     allowedTools,
-		AdditionalDirs:      additionalDirs,
-		WorkspaceRoot:       workspaceRoot,
-		InteractiveHost:     true,
-		Stderr:              diagnostics.Writer(),
-		OnSessionRecovered:  cliSessionRecoveredHandler(leases),
-		NativeLegacySession: resumePath != "",
+		Effort:             effortOverride,
+		PermissionAllow:    allowedTools,
+		AdditionalDirs:     additionalDirs,
+		WorkspaceRoot:      workspaceRoot,
+		InteractiveHost:    true,
+		Stderr:             diagnostics.Writer(),
+		OnSessionRecovered: cliSessionRecoveredHandler(leases),
 	}
 	diagnostics.Milestone("controller_build_begin")
 	ctrl, err := setupProfileWithOverrides(ctx, *model, *maxSteps, false, sink, overrides)
@@ -1189,11 +1113,6 @@ func chatREPL(args []string, version string) int {
 	// task tool) keep their headless gate from setup — no UI to prompt through.
 	ctrl.EnableInteractiveApproval()
 	applyPermissionMode(ctrl, permissions)
-	// Legacy bypass flags migrate conservatively to the workspace preset. Full
-	// access is only reachable through an explicit canonical preset selection.
-	if *legacyYolo {
-		ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
-	}
 
 	m := newChatTUI(ctrl, missing, eventCh, termW)
 	m.diagnostics = diagnostics
@@ -1316,25 +1235,19 @@ func chatREPL(args []string, version string) int {
 		reportShutdownFailure(fm.shutdownErr)
 		launchWeb = fm.launchWebOnExit
 		for _, oc := range fm.oldControllers {
-			if c, ok := oc.(*control.Controller); ok {
-				reporter.RecordRecovery(c.DrainRecoveryMetrics())
-			}
+
 			oc.Close()
 		}
 		if fm.ctrl != nil {
 			launchWebPath = fm.launchWebResumePath
 			launchWebSessionID = fm.launchWebSessionID
 			launchWebModelRef = fm.launchWebModelRef
-			if c, ok := fm.ctrl.(*control.Controller); ok {
-				reporter.RecordRecovery(c.DrainRecoveryMetrics())
-			}
+
 			fm.ctrl.Close()
 		} else {
-			reporter.RecordRecovery(ctrl.DrainRecoveryMetrics())
 			ctrl.Close()
 		}
 	} else {
-		reporter.RecordRecovery(ctrl.DrainRecoveryMetrics())
 		ctrl.Close()
 	}
 	if runErr != nil {
@@ -1370,7 +1283,9 @@ func adoptCarriedHistoryPreservingProfileAndGrants(c *control.Controller, carry 
 			carry = append([]provider.Message{fresh[0]}, carry...)
 		}
 	}
-	c.AdoptHistory(carry, path)
+	if err := c.AdoptHistory(carry, path); err != nil {
+		return fmt.Errorf("adopt history after runtime switch: %w", err)
+	}
 	if prev, ok := oldCtrl.(*control.Controller); ok {
 		c.RestoreSessionAuthorizations(prev.SessionAuthorizations())
 	}
@@ -1747,29 +1662,6 @@ func buildFamilyEntry(probe config.ProviderEntry, selected []string) config.Prov
 
 func containsString(xs []string, v string) bool {
 	return slices.Contains(xs, v)
-}
-
-// filterStaleCustomEntries drops the wizard's own magic-name entries
-// (Name="custom" with Kind="openai" or Name="anthropic" with Kind="anthropic")
-// that older versions of the wizard wrote into deepzora.toml. They collide
-// with the wizard's "custom" / "anthropic" menu items on re-run, showing up
-// as duplicate broken entries. The new wizard writes host-derived slugs
-// (e.g. "custom-token-sensenova-cn") so a hit on the magic name is
-// unambiguously stale. The returned slice is the dropped set so the caller
-// can warn the user to clean up deepzora.toml by hand.
-func filterStaleCustomEntries(providers []config.ProviderEntry) (kept, dropped []config.ProviderEntry) {
-	for _, p := range providers {
-		if p.Name == "custom" && p.Kind == "openai" {
-			dropped = append(dropped, p)
-			continue
-		}
-		if p.Name == "anthropic" && p.Kind == "anthropic" {
-			dropped = append(dropped, p)
-			continue
-		}
-		kept = append(kept, p)
-	}
-	return
 }
 
 // providerSlug derives a stable, human-readable entry name for a custom
@@ -2351,8 +2243,6 @@ func configCommand(args []string) int {
 		return 2
 	}
 	switch args[0] {
-	case "auto-plan":
-		return configAutoPlanCompatibilityCommand(args[1:])
 	case "reasoning-language":
 		return configReasoningLanguageCommand(args[1:])
 	case "compact-ratio":
@@ -2388,7 +2278,7 @@ func configCurrencyCommand(args []string) int {
 			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 			return 1
 		}
-		fmt.Printf("currency = %q (display: %s)\n", pricingCurrencyDisplay(cfg.DisplayCurrencyPref()), cfg.ResolveDisplayCurrency())
+		fmt.Printf("currency = %q (display: %s)\n", pricingCurrencyDisplay(cfg.DisplayCurrencyPref()), cfg.ExplicitDisplayCurrency())
 		return 0
 	}
 	mode, err := parseCLIPricingCurrency(rest[0])
@@ -2408,7 +2298,7 @@ func configCurrencyCommand(args []string) int {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 2
 	}
-	resolved := cfg.ResolveDisplayCurrency()
+	resolved := cfg.ExplicitDisplayCurrency()
 	if err := cfg.SaveTo(path); err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 1
@@ -2480,37 +2370,6 @@ func configTelemetryCommand(args []string) int {
 		}
 	}
 	fmt.Printf("cli_metrics = %q (%s)\n", cfg.CLITelemetryMode(), displayPath(path))
-	return 0
-}
-
-// configAutoPlanCompatibilityCommand preserves the released shell interface
-// without restoring Automatic Plan Mode. Reading and writing "off" are safe
-// no-ops; every attempt to enable the retired feature is rejected.
-func configAutoPlanCompatibilityCommand(args []string) int {
-	fs := flag.NewFlagSet("config auto-plan", flag.ContinueOnError)
-	local := fs.Bool("local", false, "unsupported; automatic plan mode is retired")
-	if code, ok := parseCommandFlags(fs, args); !ok {
-		return code
-	}
-	if *local {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "auto-plan is user-level only; --local is not supported")
-		return 2
-	}
-	rest := fs.Args()
-	if len(rest) > 1 {
-		configAutoPlanCompatibilityUsage()
-		return 2
-	}
-	if len(rest) == 0 {
-		fmt.Println(`auto_plan = "off"`)
-		return 0
-	}
-	cfg := config.Default()
-	if err := cfg.SetAutoPlan(rest[0]); err != nil {
-		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
-		return 2
-	}
-	fmt.Println(`auto_plan = "off"`)
 	return 0
 }
 
@@ -2753,12 +2612,6 @@ func cliTelemetrySessionMode(cont, resume, copySession bool) string {
 	default:
 		return "fresh"
 	}
-}
-
-func configAutoPlanCompatibilityUsage() {
-	fmt.Print(`Usage:
-  deepzora config auto-plan [off]
-`)
 }
 
 func configReasoningLanguageUsage() {

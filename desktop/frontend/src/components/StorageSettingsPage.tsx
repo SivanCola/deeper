@@ -2,15 +2,11 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Copy, Check } from "lucide-react";
 import { app } from "../lib/bridge";
 import { useT } from "../lib/i18n";
-import { HistoricalImportList } from "./HistoricalImportList";
-import { HistoricalRecoveryList } from "./HistoricalRecoveryList";
-import { useManagementT } from "../lib/managementLocale";
 
 type StorageSettingsView = Awaited<ReturnType<typeof app.StorageSettings>>;
 
 export function StorageSettingsPage() {
   const t = useT();
-  const m = useManagementT();
   const [view, setView] = useState<StorageSettingsView | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -55,16 +51,6 @@ export function StorageSettingsPage() {
         <StoragePathField label={t("settings.storageState")} value={view.statePath} />
         <StoragePathField label={t("settings.storageCache")} value={view.cachePath} />
         <StoragePathField label={t("settings.storageExtensions")} value={view.extensionsPath} />
-      </div>
-    </section>
-    <section className="settings-section">
-      <div className="settings-section__head"><div>
-        <div className="settings-section__title">{m("historicalTitle")}</div>
-        <div className="settings-section__desc">{m("historicalDescription")}</div>
-      </div></div>
-      <div className="settings-section__body">
-        <HistoricalImportList active />
-        <details><summary>{t("history.recoveryReview")}</summary><HistoricalRecoveryList active /></details>
       </div>
     </section>
   </>);

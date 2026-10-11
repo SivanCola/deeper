@@ -1,9 +1,7 @@
 package config
 
 import (
-	"bytes"
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -70,26 +67,6 @@ func TestUICursorShapeNormalizes(t *testing.T) {
 		c.UI.CursorShape = tt.in
 		if got := c.UICursorShape(); got != tt.want {
 			t.Errorf("UICursorShape(%q) = %q, want %q", tt.in, got, tt.want)
-		}
-	}
-}
-
-func TestUICloseBehaviorNormalizes(t *testing.T) {
-	c := Default()
-	for _, tt := range []struct {
-		in   string
-		want string
-	}{
-		{"", "background"},
-		{"QUIT", "quit"},
-		{"exit", "quit"},
-		{" background ", "background"},
-		{"hide", "background"},
-		{"unknown", "background"},
-	} {
-		c.UI.CloseBehavior = tt.in
-		if got := c.UICloseBehavior(); got != tt.want {
-			t.Errorf("UICloseBehavior(%q) = %q, want %q", tt.in, got, tt.want)
 		}
 	}
 }
@@ -173,10 +150,10 @@ func TestDesktopCurrencyNormalizesAndRefreshesOfficialPricing(t *testing.T) {
 	// Capture frozen list price before display switches.
 	wantOutput := flash.Price.Output
 	wantCurrency := flash.Price.Currency
-	if err := c.SetDesktopCurrency("usd"); err != nil {
-		t.Fatalf("SetDesktopCurrency USD: %v", err)
+	if err := c.SetDisplayCurrency("usd"); err != nil {
+		t.Fatalf("SetDisplayCurrency USD: %v", err)
 	}
-	if got := c.DesktopCurrency(); got != "USD" {
+	if got := c.DisplayCurrencyPref(); got != "USD" {
 		t.Fatalf("desktop currency = %q, want USD", got)
 	}
 	if got := c.DisplayCurrencyPref(); got != "USD" {
@@ -186,17 +163,17 @@ func TestDesktopCurrencyNormalizesAndRefreshesOfficialPricing(t *testing.T) {
 	if flash.Price == nil || flash.Price.Output != wantOutput || flash.Price.Currency != wantCurrency {
 		t.Fatalf("list price mutated by display switch: %+v", flash.Price)
 	}
-	if err := c.SetDesktopCurrency("auto"); err != nil {
-		t.Fatalf("SetDesktopCurrency auto: %v", err)
+	if err := c.SetDisplayCurrency("auto"); err != nil {
+		t.Fatalf("SetDisplayCurrency auto: %v", err)
 	}
-	if got := c.DesktopCurrency(); got != "" {
+	if got := c.DisplayCurrencyPref(); got != "" {
 		t.Fatalf("auto desktop currency = %q, want empty", got)
 	}
 	if flash.Price == nil || flash.Price.Output != wantOutput || flash.Price.Currency != wantCurrency {
 		t.Fatalf("list price mutated after auto: %+v", flash.Price)
 	}
-	if err := c.SetDesktopCurrency("EUR"); err == nil {
-		t.Fatal("SetDesktopCurrency accepted unsupported EUR")
+	if err := c.SetDisplayCurrency("EUR"); err == nil {
+		t.Fatal("SetDisplayCurrency accepted unsupported EUR")
 	}
 }
 
@@ -210,9 +187,9 @@ func TestDesktopLayoutStyleNormalizes(t *testing.T) {
 		wantErr bool
 	}{
 		{"", "workbench", false},
-		{"classic", "workbench", false},
+		{"classic", "workbench", true},
 		{" workbench ", "workbench", false},
-		{"workspace", "workbench", false},
+		{"workspace", "workbench", true},
 		{"creation", "creation", false},
 		{" Creation ", "creation", false},
 		{"later", "workbench", true},
@@ -358,33 +335,21 @@ func TestDesktopStatusBarItemsNormalizeAndValidate(t *testing.T) {
 	}
 }
 
-func TestDesktopCloseBehaviorFallsBackToLegacyUI(t *testing.T) {
+func TestSetDesktopCloseBehavior(t *testing.T) {
 	c := Default()
-	c.UI.CloseBehavior = "quit"
-	if got := c.DesktopCloseBehavior(); got != "quit" {
-		t.Fatalf("legacy close behavior = %q, want quit", got)
+	if err := c.SetDesktopCloseBehavior("background"); err != nil {
+		t.Fatalf("SetDesktopCloseBehavior background: %v", err)
 	}
-	c.Desktop.CloseBehavior = "background"
 	if got := c.DesktopCloseBehavior(); got != "background" {
-		t.Fatalf("desktop close behavior = %q, want background", got)
-	}
-}
-
-func TestSetUICloseBehavior(t *testing.T) {
-	c := Default()
-	if err := c.SetUICloseBehavior("background"); err != nil {
-		t.Fatalf("SetUICloseBehavior background: %v", err)
-	}
-	if got := c.UICloseBehavior(); got != "background" {
 		t.Fatalf("close behavior = %q, want background", got)
 	}
-	if err := c.SetUICloseBehavior("quit"); err != nil {
-		t.Fatalf("SetUICloseBehavior quit: %v", err)
+	if err := c.SetDesktopCloseBehavior("quit"); err != nil {
+		t.Fatalf("SetDesktopCloseBehavior quit: %v", err)
 	}
-	if got := c.UICloseBehavior(); got != "quit" {
+	if got := c.DesktopCloseBehavior(); got != "quit" {
 		t.Fatalf("close behavior = %q, want quit", got)
 	}
-	if err := c.SetUICloseBehavior("later"); err == nil {
+	if err := c.SetDesktopCloseBehavior("later"); err == nil {
 		t.Fatal("expected error for invalid close behavior")
 	}
 }
@@ -405,21 +370,6 @@ func TestSetPlannerModel(t *testing.T) {
 	}
 }
 
-func TestSetAutoPlanRejectsRetiredModes(t *testing.T) {
-	c := Default()
-	if err := c.SetAutoPlan("off"); err != nil {
-		t.Fatalf("SetAutoPlan(off): %v", err)
-	}
-	if c.Agent.AutoPlan != "off" || c.Agent.AutoPlanClassifier != "" {
-		t.Fatalf("retired auto-plan state = (%q, %q), want off/empty", c.Agent.AutoPlan, c.Agent.AutoPlanClassifier)
-	}
-	for _, mode := range []string{"on", "ask", "auto"} {
-		if err := c.SetAutoPlan(mode); err == nil || !strings.Contains(err.Error(), "retired") {
-			t.Fatalf("SetAutoPlan(%q) err = %v, want retired error", mode, err)
-		}
-	}
-}
-
 func TestSetDesktopDefaultToolApprovalMode(t *testing.T) {
 	c := Default()
 	if got := c.DesktopDefaultToolApprovalMode(); got != "workspace-write" {
@@ -429,9 +379,6 @@ func TestSetDesktopDefaultToolApprovalMode(t *testing.T) {
 		{"read-only", "read-only"},
 		{"workspace-write", "workspace-write"},
 		{"danger-full-access", "danger-full-access"},
-		{"ask", "read-only"},
-		{"auto", "workspace-write"},
-		{"yolo", "workspace-write"},
 	} {
 		mode := tc.in
 		if err := c.SetDesktopDefaultToolApprovalMode(mode); err != nil {
@@ -441,11 +388,10 @@ func TestSetDesktopDefaultToolApprovalMode(t *testing.T) {
 			t.Fatalf("desktop default tool approval mode = %q, want %q", c.DesktopDefaultToolApprovalMode(), tc.want)
 		}
 	}
-	if err := c.SetDesktopDefaultToolApprovalMode("full-access"); err != nil {
-		t.Fatalf("legacy full-access should be accepted: %v", err)
-	}
-	if c.DesktopDefaultToolApprovalMode() != "danger-full-access" {
-		t.Fatalf("legacy full-access should save as danger-full-access, got %q", c.DesktopDefaultToolApprovalMode())
+	for _, mode := range []string{"ask", "auto", "yolo", "full-access"} {
+		if err := c.SetDesktopDefaultToolApprovalMode(mode); err == nil {
+			t.Fatalf("accepted unsupported preset %q", mode)
+		}
 	}
 	if err := c.SetDesktopDefaultToolApprovalMode("maybe"); err == nil {
 		t.Fatal("expected error for invalid desktop default tool approval mode")
@@ -454,39 +400,11 @@ func TestSetDesktopDefaultToolApprovalMode(t *testing.T) {
 
 func TestLoadForEditMissingDesktopApprovalDefaultsWorkspaceWrite(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")
-	if err := os.WriteFile(path, []byte("config_version = 4\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("config_version = 12\n"), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 	if got := LoadForEdit(path).DesktopDefaultToolApprovalMode(); got != "workspace-write" {
 		t.Fatalf("missing desktop default tool approval mode = %q, want workspace-write", got)
-	}
-}
-
-func TestSetUIShortcutLayout(t *testing.T) {
-	c := Default()
-	if got := c.UIShortcutLayout(); got != "classic" {
-		t.Fatalf("default shortcut layout = %q, want classic", got)
-	}
-	if err := c.SetUIShortcutLayout("desktop"); err != nil {
-		t.Fatalf("SetUIShortcutLayout desktop: %v", err)
-	}
-	if got := c.UIShortcutLayout(); got != "desktop" {
-		t.Fatalf("shortcut layout = %q, want desktop", got)
-	}
-	if err := c.SetUIShortcutLayout("dual-axis"); err != nil {
-		t.Fatalf("SetUIShortcutLayout alias: %v", err)
-	}
-	if got := c.UIShortcutLayout(); got != "desktop" {
-		t.Fatalf("shortcut layout alias = %q, want desktop", got)
-	}
-	if err := c.SetUIShortcutLayout("classic"); err != nil {
-		t.Fatalf("SetUIShortcutLayout classic: %v", err)
-	}
-	if got := c.UIShortcutLayout(); got != "classic" {
-		t.Fatalf("shortcut layout = %q, want classic", got)
-	}
-	if err := c.SetUIShortcutLayout("surprise"); err == nil {
-		t.Fatal("expected error for invalid shortcut layout")
 	}
 }
 
@@ -594,38 +512,6 @@ func TestSetReasoningLanguage(t *testing.T) {
 	}
 }
 
-func TestSetCompactRatio(t *testing.T) {
-	c := Default()
-	for _, ratio := range []float64{0.30, 0.64, 0.65, 0.7, 0.8, 0.85} {
-		if err := c.SetCompactRatio(ratio); err != nil {
-			t.Fatalf("SetCompactRatio(%v): %v", ratio, err)
-		}
-		if c.Agent.CompactRatio != ratio {
-			t.Fatalf("compact ratio = %v, want %v", c.Agent.CompactRatio, ratio)
-		}
-	}
-
-	previous := c.Agent.CompactRatio
-	for _, ratio := range []float64{0.29, 0.86, math.NaN(), math.Inf(1), math.Inf(-1)} {
-		if err := c.SetCompactRatio(ratio); err == nil {
-			t.Fatalf("SetCompactRatio(%v) should fail", ratio)
-		}
-		if c.Agent.CompactRatio != previous {
-			t.Fatalf("rejected ratio %v changed compact ratio to %v", ratio, c.Agent.CompactRatio)
-		}
-	}
-
-	// Deprecated snip/force ratios no longer constrain SetCompactRatio.
-	c.Agent.ToolResultSnipRatio = 0.75
-	c.Agent.CompactForceRatio = 0.8
-	if err := c.SetCompactRatio(0.7); err != nil {
-		t.Fatalf("SetCompactRatio(0.7) with legacy snip/force fields: %v", err)
-	}
-	if err := c.SetCompactRatio(0.8); err != nil {
-		t.Fatalf("SetCompactRatio(0.8) with legacy force field: %v", err)
-	}
-}
-
 func TestNormalizeEffortDeepSeek(t *testing.T) {
 	e := &ProviderEntry{Name: "deepseek", Kind: "openai", BaseURL: "https://api.deepseek.com", Model: "deepseek-v4"}
 	cap := EffortCapabilityForEntry(e)
@@ -647,24 +533,6 @@ func TestNormalizeEffortDeepSeek(t *testing.T) {
 	// "off" is the retired DeepSeek "no thinking" spelling — now maps to disabled.
 	if got, err := NormalizeEffort(e, "off"); err == nil {
 		t.Fatalf("NormalizeEffort(\"off\") = %q/%v, want \"disabled\"/nil", got, err)
-	}
-}
-
-func TestNormalizeLegacyEffortMigratesProviderDefaults(t *testing.T) {
-	c := &Config{Providers: []ProviderEntry{
-		{Name: "deepseek", Effort: "off"},
-		{Name: "deepseek-upper", Effort: "OFF"},
-		{Name: "deepseek-auto", Effort: "auto"},
-		{Name: "deepseek-auto-upper", Effort: "AUTO"},
-		{Name: "keep", Effort: "high"},
-	}}
-	normalizeLegacyEffort(c)
-	normalizeEffortConfig(c)
-	if c.Providers[0].Effort != "" || c.Providers[1].Effort != "" || c.Providers[2].Effort != "" || c.Providers[3].Effort != "" {
-		t.Fatalf("provider default efforts should migrate to empty, got %q/%q/%q/%q", c.Providers[0].Effort, c.Providers[1].Effort, c.Providers[2].Effort, c.Providers[3].Effort)
-	}
-	if c.Providers[4].Effort != "high" {
-		t.Fatalf("non-legacy effort changed: %q", c.Providers[4].Effort)
 	}
 }
 
@@ -707,37 +575,6 @@ func TestResolveModelPreservesProviderEffort(t *testing.T) {
 	}
 }
 
-func TestEffectiveVisionForMimoEndpointModels(t *testing.T) {
-	c := Default()
-	c.Providers = append(c.Providers, legacyMimoCustomProvider("mimo-api"))
-	c.Desktop.ProviderAccess = []string{"mimo-api"}
-	normalizeDesktopOfficialProviderAccess(c)
-
-	pro, ok := c.ResolveModel("mimo-api/mimo-v2.5-pro")
-	if !ok {
-		t.Fatal("ResolveModel did not find mimo-api/mimo-v2.5-pro")
-	}
-	if EffectiveVision(pro) {
-		t.Fatalf("mimo-v2.5-pro should remain text-only by default")
-	}
-
-	vision, ok := c.ResolveModel("mimo-api/mimo-v2.5")
-	if !ok {
-		t.Fatal("ResolveModel did not find mimo-api/mimo-v2.5")
-	}
-	if !EffectiveVision(vision) {
-		t.Fatalf("mimo-v2.5 on the official MiMo API should enable vision")
-	}
-
-	omni, ok := c.ResolveModel("mimo-api/mimo-v2-omni")
-	if !ok {
-		t.Fatal("ResolveModel did not find mimo-api/mimo-v2-omni")
-	}
-	if !EffectiveVision(omni) {
-		t.Fatalf("mimo-v2-omni on the official MiMo API should enable vision")
-	}
-}
-
 func TestEffectiveVisionDoesNotInferCustomMimoProxy(t *testing.T) {
 	custom := &ProviderEntry{
 		Name:    "mimo-proxy",
@@ -748,7 +585,7 @@ func TestEffectiveVisionDoesNotInferCustomMimoProxy(t *testing.T) {
 	if EffectiveVision(custom) {
 		t.Fatalf("custom MiMo proxy should require explicit vision=true")
 	}
-	custom.Vision = true
+	custom.ModelOverrides = map[string]ProviderModelOverride{custom.Model: {Vision: boolPointer(true)}}
 	if !EffectiveVision(custom) {
 		t.Fatalf("explicit vision=true should still enable custom providers")
 	}
@@ -790,11 +627,11 @@ func TestEffectiveVisionRejectsOfficialDeepSeekOverridesButPreservesCustomGatewa
 	}
 
 	future := &ProviderEntry{
-		Name:         "deepseek",
-		Kind:         "openai",
-		BaseURL:      "https://api.deepseek.com",
-		Model:        "deepseek-v5-vision",
-		VisionModels: []string{"deepseek-v5-vision"},
+		Name:           "deepseek",
+		Kind:           "openai",
+		BaseURL:        "https://api.deepseek.com",
+		Model:          "deepseek-v5-vision",
+		ModelOverrides: map[string]ProviderModelOverride{"deepseek-v5-vision": {Vision: boolPointer(true)}},
 	}
 	if !EffectiveVision(future) {
 		t.Fatal("explicit vision model list must support unknown DeepSeek models")
@@ -823,27 +660,26 @@ func TestEffectiveVisionRejectsOfficialDeepSeekOverridesButPreservesCustomGatewa
 		Kind:              "openai",
 		BaseURL:           "https://gateway.example/v1",
 		Model:             "deepseek-v4-pro",
-		Vision:            true,
+		ModelOverrides:    map[string]ProviderModelOverride{"deepseek-v4-pro": {Vision: boolPointer(true)}},
 		ReasoningProtocol: ReasoningProtocolDeepSeek,
 	}
 	if !CanConfigureVision(custom) || !EffectiveVision(custom) {
 		t.Fatal("explicit vision=true must remain available for custom DeepSeek gateways")
 	}
-	custom.Vision = false
-	custom.VisionModels = []string{"deepseek-v4-pro"}
+	custom.visionOverride = boolPointer(true)
 	if !ExplicitModelVision(custom) {
 		t.Fatal("custom DeepSeek gateway must expose positive model-scoped vision metadata")
 	}
 }
 
-func TestEffectiveVisionUsesPerModelVisionList(t *testing.T) {
+func TestEffectiveVisionUsesPerModelOverrides(t *testing.T) {
 	c := &Config{Providers: []ProviderEntry{{
-		Name:         "custom",
-		Kind:         "openai",
-		BaseURL:      "https://proxy.example.com/v1",
-		Models:       []string{"text-only", "qwen-vl-plus"},
-		Default:      "text-only",
-		VisionModels: []string{"qwen-vl-plus"},
+		Name:           "custom",
+		Kind:           "openai",
+		BaseURL:        "https://proxy.example.com/v1",
+		Models:         []string{"text-only", "qwen-vl-plus"},
+		Default:        "text-only",
+		ModelOverrides: map[string]ProviderModelOverride{"text-only": {Vision: boolPointer(false)}, "qwen-vl-plus": {Vision: boolPointer(true)}},
 	}}}
 
 	textOnly, ok := c.ResolveModel("custom/text-only")
@@ -862,7 +698,7 @@ func TestEffectiveVisionUsesPerModelVisionList(t *testing.T) {
 		t.Fatalf("model listed in vision_models should enable image input")
 	}
 
-	textOnly.Vision = true
+	textOnly.ModelOverrides["text-only"] = ProviderModelOverride{Vision: boolPointer(true)}
 	if !EffectiveVision(textOnly) {
 		t.Fatalf("provider-level vision=true should still enable every selected model")
 	}
@@ -1175,27 +1011,6 @@ func TestAutoStartPlugins(t *testing.T) {
 	}
 }
 
-func TestPluginResolvedTierDefaultsToBackground(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		tier string
-		want string
-	}{
-		{name: "empty", tier: "", want: "background"},
-		{name: "legacy lazy", tier: "lazy", want: "background"},
-		{name: "background", tier: "background", want: "background"},
-		{name: "eager", tier: "eager", want: "eager"},
-		{name: "unknown", tier: "startup", want: "background"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got := (PluginEntry{Name: "mcp", Command: "mcp-server", Tier: tc.tier}).ResolvedTier()
-			if got != tc.want {
-				t.Fatalf("ResolvedTier(%q) = %q, want %q", tc.tier, got, tc.want)
-			}
-		})
-	}
-}
-
 func TestClearPluginAuthentication(t *testing.T) {
 	c := Default()
 	c.Plugins = []PluginEntry{{
@@ -1210,7 +1025,6 @@ func TestClearPluginAuthentication(t *testing.T) {
 			"DIDA_TOKEN": "${DIDA_TOKEN}",
 			"DEBUG":      "1",
 		},
-		Tier: "lazy",
 	}}
 	updated, changed, err := c.ClearPluginAuthentication("dida")
 	if err != nil {
@@ -1305,47 +1119,6 @@ func TestSaveToRoundTrips(t *testing.T) {
 	}
 }
 
-func TestRetiredRecoveryReviewerSettingsAreNotWrittenOnSave(t *testing.T) {
-	isolateUserConfigHome(t)
-	c := Default()
-	c.Agent.RecoveryModel = "deepseek-pro"
-	c.Agent.RecoveryTemperature = 0.25
-
-	path := UserConfigPath()
-	if err := c.SaveTo(path); err != nil {
-		t.Fatalf("SaveTo: %v", err)
-	}
-	got := LoadForEdit(path)
-	if got.Agent.RecoveryModel != "" || got.Agent.RecoveryTemperature != 0 {
-		t.Fatalf("retired recovery settings survived save: %+v", got.Agent)
-	}
-}
-
-func TestRetiredAutoGuardKeysAreIgnoredAndRemovedOnSave(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "deepzora.toml")
-	if err := os.WriteFile(path, []byte("[desktop]\ndefault_auto_recovery_checkpoint = false\n\n[agent]\nauto_recovery_checkpoint = \"off\"\nrecovery_model = \"deepseek-pro\"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	c := LoadForEdit(path)
-	if c.Agent.RecoveryModel != "deepseek-pro" {
-		t.Fatalf("unrelated recovery model was not loaded: %+v", c.Agent)
-	}
-	if err := c.SaveTo(path); err != nil {
-		t.Fatal(err)
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(raw)
-	if strings.Contains(text, "default_auto_recovery_checkpoint") || strings.Contains(text, "auto_recovery_checkpoint") {
-		t.Fatalf("retired Auto Guard keys survived save:\n%s", text)
-	}
-	if strings.Contains(text, "recovery_model") {
-		t.Fatalf("retired recovery model survived save:\n%s", text)
-	}
-}
-
 func TestSaveToScopesUserAndProjectFiles(t *testing.T) {
 	home := isolateUserConfigHome(t)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
@@ -1392,416 +1165,6 @@ func TestSaveToScopesUserAndProjectFiles(t *testing.T) {
 	}
 }
 
-func TestMigrateDeprecatedAgentStepLimitsForRootRunsOnce(t *testing.T) {
-	isolateUserConfigHome(t)
-	root := t.TempDir()
-	userPath := UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(userPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(userPath, []byte(`
-[agent]
-max_steps = 17
-planner_max_steps = 9
-temperature = 0.4
-
-[bot]
-max_steps = 21
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(`
-default_model = "deepseek-pro"
-
-[agent]
-max_steps = 3
-planner_max_steps = 4
-temperature = 0.8
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	approveWorkspace(t, root)
-
-	changed, err := MigrateLegacyAgentStepLimitsForRoot(root)
-	if err != nil {
-		t.Fatalf("MigrateLegacyAgentStepLimitsForRoot: %v", err)
-	}
-	if !changed {
-		t.Fatal("first migration should remove deprecated step-limit keys")
-	}
-
-	cfg, err := LoadForRoot(root)
-	if err != nil {
-		t.Fatalf("LoadForRoot: %v", err)
-	}
-	if cfg.Agent.MaxSteps != 0 || cfg.Agent.PlannerMaxSteps != 0 {
-		t.Fatalf("deprecated agent steps = max:%d planner:%d, want automatic 0/0", cfg.Agent.MaxSteps, cfg.Agent.PlannerMaxSteps)
-	}
-	if cfg.IgnoredLegacyAgentStepLimits() {
-		t.Fatal("migrated config should no longer report legacy step limits")
-	}
-	if cfg.Agent.Temperature != 0.8 {
-		t.Fatalf("agent temperature = %v, want project override to keep working for other agent settings", cfg.Agent.Temperature)
-	}
-	if cfg.DefaultModel != "deepseek-pro" {
-		t.Fatalf("default_model = %q, want project config to keep overriding unrelated fields", cfg.DefaultModel)
-	}
-	if cfg.Bot.MaxSteps != 21 {
-		t.Fatalf("bot.max_steps = %d, want independent bot limit preserved", cfg.Bot.MaxSteps)
-	}
-	for _, path := range []string{userPath, filepath.Join(root, "deepzora.toml")} {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, changed := stripLegacyAgentStepLimitLines(string(raw)); changed {
-			t.Fatalf("runtime migration left deprecated [agent] step limits in %s:\n%s", path, raw)
-		}
-	}
-	userRaw, err := os.ReadFile(userPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(userRaw), "[bot]\nmax_steps = 21") {
-		t.Fatalf("migration removed independent bot.max_steps:\n%s", userRaw)
-	}
-
-	again, err := MigrateLegacyAgentStepLimitsForRoot(root)
-	if err != nil {
-		t.Fatalf("second migration: %v", err)
-	}
-	if again {
-		t.Fatal("migration notice should be one-shot after deprecated keys are removed")
-	}
-}
-
-func TestMigrateLegacyRedactToolOutputForRoot(t *testing.T) {
-	isolateUserConfigHome(t)
-	root := t.TempDir()
-	userPath := UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(userPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(userPath, []byte(`[secrets]
-redact_tool_output = true
-filter_subprocess_env = true
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	projectPath := filepath.Join(root, "deepzora.toml")
-	if err := os.WriteFile(projectPath, []byte(`[secrets]
-redact_tool_output = false
-protect_sensitive_files = true
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	changed, err := MigrateLegacyRedactToolOutputForRoot(root)
-	if err != nil {
-		t.Fatalf("MigrateLegacyRedactToolOutputForRoot: %v", err)
-	}
-	if !changed {
-		t.Fatal("first migration should remove deprecated redact_tool_output keys")
-	}
-	for _, path := range []string{userPath, projectPath} {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(raw), "redact_tool_output") {
-			t.Fatalf("deprecated redact_tool_output remains in %s:\n%s", path, raw)
-		}
-	}
-	userRaw, err := os.ReadFile(userPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(userRaw), "filter_subprocess_env = true") {
-		t.Fatalf("migration removed an active secrets setting:\n%s", userRaw)
-	}
-	projectRaw, err := os.ReadFile(projectPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(projectRaw), "protect_sensitive_files = true") {
-		t.Fatalf("migration removed an unrelated project setting:\n%s", projectRaw)
-	}
-
-	again, err := MigrateLegacyRedactToolOutputForRoot(root)
-	if err != nil {
-		t.Fatalf("second migration: %v", err)
-	}
-	if again {
-		t.Fatal("migration should be a no-op after deprecated keys are removed")
-	}
-}
-
-func TestMigrateLegacyMemoryCompilerForRoot(t *testing.T) {
-	isolateUserConfigHome(t)
-	root := t.TempDir()
-	userPath := UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(userPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(userPath, []byte(`[agent]
-memory_compiler = { enabled = true, verbosity = "compact" }
-temperature = 0.4
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	projectPath := filepath.Join(root, "deepzora.toml")
-	if err := os.WriteFile(projectPath, []byte(`[agent]
-memory_compiler = { enabled = false }
-reasoning_language = "zh"
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	changed, err := MigrateLegacyMemoryCompilerForRoot(root)
-	if err != nil {
-		t.Fatalf("MigrateLegacyMemoryCompilerForRoot: %v", err)
-	}
-	if !changed {
-		t.Fatal("first migration should remove deprecated memory_compiler keys")
-	}
-	for _, path := range []string{userPath, projectPath} {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(raw), "memory_compiler") {
-			t.Fatalf("deprecated memory_compiler remains in %s:\n%s", path, raw)
-		}
-	}
-	userRaw, err := os.ReadFile(userPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(userRaw), "temperature = 0.4") {
-		t.Fatalf("migration removed an active agent setting:\n%s", userRaw)
-	}
-	projectRaw, err := os.ReadFile(projectPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(projectRaw), `reasoning_language = "zh"`) {
-		t.Fatalf("migration removed an unrelated project setting:\n%s", projectRaw)
-	}
-
-	again, err := MigrateLegacyMemoryCompilerForRoot(root)
-	if err != nil {
-		t.Fatalf("second migration: %v", err)
-	}
-	if again {
-		t.Fatal("migration should be a no-op after deprecated keys are removed")
-	}
-}
-
-func TestRetiredConfigMigrationRequiresConfigFileLock(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.toml")
-	const original = "[agent]\nmemory_compiler = \"compact\"\n"
-	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	release, err := acquireConfigFileEditLockWithTimeout(path, time.Second)
-	if err != nil {
-		t.Fatalf("hold config file lock: %v", err)
-	}
-	defer release()
-
-	previousTimeout := configEditLockTimeout
-	configEditLockTimeout = 30 * time.Millisecond
-	t.Cleanup(func() { configEditLockTimeout = previousTimeout })
-
-	changed, err := migrateLegacyMemoryCompilerFile(path)
-	if err == nil || changed {
-		t.Fatalf("migration while file lock held = (%v, %v), want unchanged lock error", changed, err)
-	}
-	got, readErr := os.ReadFile(path)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if string(got) != original {
-		t.Fatalf("blocked migration changed config:\n%s", got)
-	}
-}
-
-func TestLegacyMCPTierMigrationRequiresConfigFileLock(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.toml")
-	const original = "[[plugins]]\nname = \"playwright\"\ntier = \"lazy\"\n"
-	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	release, err := acquireConfigFileEditLockWithTimeout(path, time.Second)
-	if err != nil {
-		t.Fatalf("hold config file lock: %v", err)
-	}
-	defer release()
-
-	previousTimeout := configEditLockTimeout
-	configEditLockTimeout = 30 * time.Millisecond
-	t.Cleanup(func() { configEditLockTimeout = previousTimeout })
-
-	err = migrateLegacyMCPTiersFile(path)
-	if err == nil {
-		t.Fatal("migration succeeded while another process-equivalent config transaction held the file lock")
-	}
-	got, readErr := os.ReadFile(path)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if string(got) != original {
-		t.Fatalf("blocked migration changed config:\n%s", got)
-	}
-}
-
-// TestMigrateLegacyMemoryCompilerKeepsMultilineSystemPrompt reproduces the
-// review finding: a multiline system_prompt quoting a `memory_compiler = ...`
-// example line must survive the retired-key migration byte-for-byte.
-func TestMigrateLegacyMemoryCompilerKeepsMultilineSystemPrompt(t *testing.T) {
-	isolateUserConfigHome(t)
-	root := t.TempDir()
-	userPath := UserConfigPath()
-	if err := os.MkdirAll(filepath.Dir(userPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	original := `[agent]
-system_prompt = """
-You are Deepzora. Historical config example:
-memory_compiler = { enabled = true, verbosity = "compact" }
-Keep answers short.
-"""
-temperature = 0.2
-`
-	if err := os.WriteFile(userPath, []byte(original), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	changed, err := MigrateLegacyMemoryCompilerForRoot(root)
-	if err != nil {
-		t.Fatalf("MigrateLegacyMemoryCompilerForRoot: %v", err)
-	}
-	if changed {
-		t.Fatal("migration must not rewrite a config whose only memory_compiler text lives inside a multiline string")
-	}
-	raw, err := os.ReadFile(userPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(raw) != original {
-		t.Fatalf("multiline system_prompt was modified:\n--- got ---\n%s\n--- want ---\n%s", raw, original)
-	}
-}
-
-// TestStripTOMLKeyLinesPreservesMultilineStrings pins the shared stripper used
-// by every retired-config-key migration: lines inside TOML multiline strings
-// are never treated as section headers or key assignments, while real retired
-// keys outside strings are still removed.
-func TestStripTOMLKeyLinesPreservesMultilineStrings(t *testing.T) {
-	cases := []struct {
-		name        string
-		raw         string
-		section     string
-		keys        []string
-		wantChanged bool
-		wantSame    bool   // raw must round-trip unchanged
-		wantKept    string // substring that must survive
-		wantGone    string // substring that must be removed
-	}{
-		{
-			name:    "multiline basic string keeps quoted example",
-			raw:     "[agent]\nsystem_prompt = \"\"\"\nmemory_compiler = { enabled = true }\n\"\"\"\n",
-			section: "agent", keys: []string{"memory_compiler"},
-			wantChanged: false, wantSame: true,
-		},
-		{
-			name:    "multiline literal string keeps quoted example",
-			raw:     "[agent]\nsystem_prompt = '''\nmemory_compiler = { enabled = true }\n'''\n",
-			section: "agent", keys: []string{"memory_compiler"},
-			wantChanged: false, wantSame: true,
-		},
-		{
-			name:    "section header inside multiline string does not switch sections",
-			raw:     "[agent]\nsystem_prompt = \"\"\"\n[secrets]\nredact_tool_output = true\n\"\"\"\n",
-			section: "secrets", keys: []string{"redact_tool_output"},
-			wantChanged: false, wantSame: true,
-		},
-		{
-			name:    "real key next to a multiline string is still removed",
-			raw:     "[agent]\nsystem_prompt = \"\"\"\nmemory_compiler = { enabled = true }\n\"\"\"\nmemory_compiler = { enabled = true, verbosity = \"compact\" }\n",
-			section: "agent", keys: []string{"memory_compiler"},
-			wantChanged: true,
-			wantKept:    "system_prompt = \"\"\"\nmemory_compiler = { enabled = true }\n\"\"\"",
-			wantGone:    "verbosity",
-		},
-		{
-			name:    "single-line triple-quoted value does not open a multiline state",
-			raw:     "[agent]\nsystem_prompt = \"\"\"one line\"\"\"\nmax_steps = 40\n",
-			section: "agent", keys: []string{"max_steps", "planner_max_steps"},
-			wantChanged: true,
-			wantKept:    "system_prompt = \"\"\"one line\"\"\"",
-			wantGone:    "max_steps",
-		},
-		{
-			name:    "comment containing triple quotes does not open a multiline state",
-			raw:     "[plugins]\n# docs say \"\"\" starts a multiline string\ntier = 2\n",
-			section: "plugins", keys: []string{"tier"},
-			wantChanged: true,
-			wantKept:    "# docs say \"\"\" starts a multiline string",
-			wantGone:    "tier = 2",
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got, changed := stripTOMLKeyLines(tc.raw, tc.section, tc.keys...)
-			if changed != tc.wantChanged {
-				t.Fatalf("changed = %v, want %v\n--- got ---\n%s", changed, tc.wantChanged, got)
-			}
-			if tc.wantSame && got != tc.raw {
-				t.Fatalf("content was modified:\n--- got ---\n%s\n--- want ---\n%s", got, tc.raw)
-			}
-			if tc.wantKept != "" && !strings.Contains(got, tc.wantKept) {
-				t.Fatalf("expected content was removed:\n--- got ---\n%s\n--- want kept ---\n%s", got, tc.wantKept)
-			}
-			if tc.wantGone != "" && strings.Contains(got, tc.wantGone) {
-				t.Fatalf("retired key survived:\n--- got ---\n%s\n--- want gone ---\n%s", got, tc.wantGone)
-			}
-		})
-	}
-}
-
-func TestLoadForRootReadOnlyIgnoresDeprecatedAgentStepLimitsWithoutRewriting(t *testing.T) {
-	isolateUserConfigHome(t)
-	root := t.TempDir()
-	path := filepath.Join(root, "deepzora.toml")
-	original := []byte(`
-[agent]
-max_steps = 3
-planner_max_steps = 4
-`)
-	if err := os.WriteFile(path, original, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg, err := LoadForRootReadOnly(root)
-	if err != nil {
-		t.Fatalf("LoadForRootReadOnly: %v", err)
-	}
-	if cfg.Agent.MaxSteps != 0 || cfg.Agent.PlannerMaxSteps != 0 {
-		t.Fatalf("deprecated steps = max:%d planner:%d, want automatic 0/0", cfg.Agent.MaxSteps, cfg.Agent.PlannerMaxSteps)
-	}
-	if !cfg.IgnoredLegacyAgentStepLimits() {
-		t.Fatal("read-only load should report ignored deprecated step limits")
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(raw, original) {
-		t.Fatalf("read-only load rewrote config:\n%s", raw)
-	}
-}
-
 func TestSaveForRootPreservesShadowedProjectProvider(t *testing.T) {
 	isolateUserConfigHome(t)
 	root := t.TempDir()
@@ -1814,7 +1177,7 @@ func TestSaveForRootPreservesShadowedProjectProvider(t *testing.T) {
 name = "shared"
 kind = "openai"
 base_url = "https://global.example/v1"
-model = "global-model"
+models = ["global-model"]
 api_key_env = "GLOBAL_SHARED_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -1825,7 +1188,7 @@ api_key_env = "GLOBAL_SHARED_KEY"
 name = "shared"
 kind = "openai"
 base_url = "https://project.example/v1"
-model = "project-model"
+models = ["project-model"]
 api_key_env = "PROJECT_SHARED_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -1859,27 +1222,27 @@ func TestSaveForRootDoesNotWriteUserProvidersIntoProjectConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(userPath, []byte(`
-config_version = 2
+config_version = 12
 
 [[providers]]
 name = "global"
 kind = "openai"
 base_url = "https://global.example/v1"
-model = "global-model"
+models = ["global-model"]
 api_key_env = "GLOBAL_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	projectPath := filepath.Join(root, "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte(`
-config_version = 2
+config_version = 12
 default_model = "project-local/project-model"
 
 [[providers]]
 name = "project-local"
 kind = "openai"
 base_url = "https://project.example/v1"
-model = "project-model"
+models = ["project-model"]
 api_key_env = "PROJECT_KEY"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -1918,7 +1281,6 @@ func TestSaveToExistingProjectPersistsTopLevelDelta(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := Default()
-	cfg.ConfigVersion = 2
 	if err := cfg.SetDefaultModel("deepseek-pro"); err != nil {
 		t.Fatal(err)
 	}
@@ -1932,18 +1294,12 @@ func TestSaveToExistingProjectPersistsTopLevelDelta(t *testing.T) {
 	if !strings.Contains(string(body), `default_model = "deepseek-pro"`) {
 		t.Fatalf("project config dropped top-level default_model delta:\n%s", body)
 	}
-	if !strings.Contains(string(body), "config_version = 2") {
-		t.Fatalf("project config dropped top-level config_version delta:\n%s", body)
-	}
 	var got Config
 	if _, err := toml.DecodeFile(projectPath, &got); err != nil {
 		t.Fatalf("saved project config does not parse: %v", err)
 	}
 	if got.DefaultModel != "deepseek-pro" {
 		t.Fatalf("default_model = %q, want deepseek-pro", got.DefaultModel)
-	}
-	if got.ConfigVersion != 2 {
-		t.Fatalf("config_version = %d, want 2", got.ConfigVersion)
 	}
 }
 
@@ -2390,37 +1746,6 @@ func TestSaveToExistingProjectRemovesPluginDelta(t *testing.T) {
 	}
 }
 
-func TestSaveToNewProjectKeepsPluginSourcesSeparate(t *testing.T) {
-	projectPath := filepath.Join(t.TempDir(), "deepzora.toml")
-	cfg := Default()
-	cfg.Plugins = []PluginEntry{
-		{Name: "unknown", Command: "unknown-mcp"},
-		{Name: "user", Command: "user-mcp", Source: MCPSourceUserConfig},
-		{Name: "project", Command: "project-mcp", Source: MCPSourceProjectConfig},
-		{Name: "mcp-json", Command: "json-mcp", Source: MCPSourceProjectMCPJSON},
-		{Name: "legacy", Command: "legacy-mcp", Source: MCPSourceLegacyUser},
-		{Name: "package", Command: "package-mcp", Source: MCPSourcePluginPackage},
-	}
-	if err := cfg.SaveTo(projectPath); err != nil {
-		t.Fatalf("SaveTo: %v", err)
-	}
-	body, err := os.ReadFile(projectPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(body)
-	for _, name := range []string{"unknown", "project"} {
-		if !strings.Contains(text, `name    = "`+name+`"`) {
-			t.Fatalf("new project config missing plugin %q:\n%s", name, text)
-		}
-	}
-	for _, name := range []string{"user", "mcp-json", "legacy", "package"} {
-		if strings.Contains(text, `name    = "`+name+`"`) {
-			t.Fatalf("new project config leaked plugin %q:\n%s", name, text)
-		}
-	}
-}
-
 func TestSaveToExistingProjectKeepsPluginSourcesSeparate(t *testing.T) {
 	projectPath := filepath.Join(t.TempDir(), "deepzora.toml")
 	if err := os.WriteFile(projectPath, []byte("# keep\n"), 0o644); err != nil {
@@ -2442,30 +1767,6 @@ func TestSaveToExistingProjectKeepsPluginSourcesSeparate(t *testing.T) {
 	text := string(body)
 	if !strings.Contains(text, `name    = "project"`) || strings.Contains(text, `name    = "user"`) || strings.Contains(text, `name    = "mcp-json"`) {
 		t.Fatalf("existing project config crossed plugin source boundaries:\n%s", text)
-	}
-}
-
-func TestSaveToExistingProjectRemovesPluginDeltaWithOnlyForeignSources(t *testing.T) {
-	projectPath := filepath.Join(t.TempDir(), "deepzora.toml")
-	if err := os.WriteFile(projectPath, []byte("[[plugins]]\nname = \"old\"\ncommand = \"old-mcp\"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	cfg := Default()
-	cfg.Plugins = []PluginEntry{
-		{Name: "user", Command: "user-mcp", Source: MCPSourceUserConfig},
-		{Name: "mcp-json", Command: "json-mcp", Source: MCPSourceProjectMCPJSON},
-		{Name: "legacy", Command: "legacy-mcp", Source: MCPSourceLegacyUser},
-		{Name: "package", Command: "package-mcp", Source: MCPSourcePluginPackage},
-	}
-	if err := cfg.SaveTo(projectPath); err != nil {
-		t.Fatalf("SaveTo: %v", err)
-	}
-	body, err := os.ReadFile(projectPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(body), "[[plugins]]") {
-		t.Fatalf("project plugin block remained after its last owned entry was removed:\n%s", body)
 	}
 }
 

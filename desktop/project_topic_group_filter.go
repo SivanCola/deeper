@@ -145,13 +145,7 @@ func projectNodeSessionKey(node ProjectNode) string {
 		}
 		return "ref\x00" + hostID + "\x00" + strings.TrimSpace(node.Session.SessionID)
 	}
-	if node.Source != nil && node.Source.SourceKey != "" {
-		host := node.Source.HostID
-		if host == "" {
-			host = localDesktopHostID
-		}
-		return "source\x00" + host + "\x00" + node.Source.SourceKey
-	}
+
 	if path := strings.TrimSpace(node.SessionPath); path != "" {
 		return "path\x00" + path
 	}

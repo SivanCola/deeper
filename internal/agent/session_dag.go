@@ -118,10 +118,9 @@ type sessionDAGEntry struct {
 	Hostname        string `json:"hostname,omitempty"`
 	LeaseGeneration uint64 `json:"lease_generation,omitempty"`
 
-	Generation   int64             `json:"generation,omitempty"`
-	RotatedFrom  int64             `json:"rotated_from,omitempty"`
-	UpgradedFrom int               `json:"upgraded_from_schema,omitempty"`
-	Origin       *sessionDAGOrigin `json:"origin,omitempty"`
+	Generation  int64             `json:"generation,omitempty"`
+	RotatedFrom int64             `json:"rotated_from,omitempty"`
+	Origin      *sessionDAGOrigin `json:"origin,omitempty"`
 
 	SelectedHead string        `json:"selected_head,omitempty"`
 	Heads        []SessionHead `json:"heads,omitempty"`

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/i18n"
@@ -69,8 +68,6 @@ func approvalChoiceLabels(a *event.Approval) []string {
 		choices = i18n.M.SandboxEscapeApprovalChoices
 	case control.ManagedConfigWriteApprovalTool:
 		choices = i18n.M.ConfigWriteApprovalChoices
-	case agent.PlanModeReadOnlyCommandApprovalTool:
-		choices = i18n.M.PlanModeReadOnlyCommandChoices
 	}
 	if a.Kind == event.ApprovalKindWriteAccess || a.WriteAccess != nil {
 		choices = i18n.M.WriteAccessApprovalChoices

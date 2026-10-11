@@ -5,7 +5,6 @@ import { useCommittedAsyncCommand } from "../lib/useCommittedAsyncCommand";
 import { useConfigLoadWarnings } from "../lib/useConfigLoadWarnings";
 import { useI18n, useT } from "../lib/i18n";
 import { DEFAULT_STATUS_BAR_ITEMS, normalizeStatusBarItems } from "../lib/statusBarItems";
-import { hydrateReasoningDisplayMode, setReasoningDisplayPending } from "../lib/reasoningDisplayPreference";
 import { hydrateSessionExperience } from "../lib/sessionExperience";
 import type { BotRuntimeStatusView } from "../lib/types";
 import { app } from "../lib/bridge";
@@ -31,7 +30,6 @@ export function useDesktopPreferences() {
     setStartupFailed(true);
     if (!snapshot) {
       hydrateSessionExperience("standard");
-      hydrateReasoningDisplayMode("auto", false);
     }
     console.warn("desktop preferences sync failed", error);
   });
@@ -40,7 +38,6 @@ export function useDesktopPreferences() {
     if (result.status === "failed") failed(result.error);
   });
   useEffect(() => {
-    setReasoningDisplayPending();
     void reload(undefined, true);
   }, [reload]);
   useEffect(() => { void app.SetTrayLocale(locale).catch(() => {}); }, [locale]);

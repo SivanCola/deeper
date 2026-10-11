@@ -74,104 +74,12 @@ func otherProjectResumeEntries(excludeDir string) []resumeEntry {
 		out = append(out, resumeEntry{session: rows[0], project: name, target: cliResumeTarget{path: rows[0].Path}})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].session.ModTime.After(out[j].session.ModTime)
+		return out[i].session.LastActivityAt.After(out[j].session.LastActivityAt)
 	})
 	if len(out) > resumeOtherProjectsCap {
 		out = out[:resumeOtherProjectsCap]
 	}
 	return out
-}
-
-// orderResumeSessions keeps conflict-recovery copies next to the session they
-// came from. Groups remain newest-first, while the newest visible leaf is first
-// within each group so interactive picker and numbered resume surfaces present
-// the most likely writable continuation before its ancestors.
-func orderResumeSessions(sessions []agent.SessionInfo) []agent.SessionInfo {
-	if len(sessions) < 2 {
-		return sessions
-	}
-	byID := make(map[string]agent.SessionInfo, len(sessions))
-	for _, session := range sessions {
-		byID[agent.BranchID(session.Path)] = session
-	}
-	type resumeGroup struct {
-		items    []agent.SessionInfo
-		newest   int
-		activity int64
-	}
-	groups := make(map[string]*resumeGroup, len(sessions))
-	order := make([]*resumeGroup, 0, len(sessions))
-	for i, session := range sessions {
-		key := recoveryResumeGroupKey(session, byID)
-		group := groups[key]
-		if group == nil {
-			group = &resumeGroup{newest: i}
-			groups[key] = group
-			order = append(order, group)
-		}
-		group.items = append(group.items, session)
-		if stamp := session.ModTime.UnixNano(); stamp > group.activity {
-			group.activity = stamp
-		}
-	}
-	sort.SliceStable(order, func(i, j int) bool {
-		if order[i].activity == order[j].activity {
-			return order[i].newest < order[j].newest
-		}
-		return order[i].activity > order[j].activity
-	})
-
-	out := make([]agent.SessionInfo, 0, len(sessions))
-	for _, group := range order {
-		children := make(map[string]bool, len(group.items))
-		members := make(map[string]bool, len(group.items))
-		for _, session := range group.items {
-			members[agent.BranchID(session.Path)] = true
-		}
-		for _, session := range group.items {
-			parentID := strings.TrimSpace(session.ParentID)
-			if members[parentID] {
-				children[parentID] = true
-			}
-		}
-		sort.SliceStable(group.items, func(i, j int) bool {
-			iLeaf := !children[agent.BranchID(group.items[i].Path)]
-			jLeaf := !children[agent.BranchID(group.items[j].Path)]
-			if iLeaf != jLeaf {
-				return iLeaf
-			}
-			return group.items[i].ModTime.After(group.items[j].ModTime)
-		})
-		out = append(out, group.items...)
-	}
-	return out
-}
-
-func recoveryResumeGroupKey(session agent.SessionInfo, byID map[string]agent.SessionInfo) string {
-	id := agent.BranchID(session.Path)
-	if !session.Recovered {
-		return id
-	}
-	seen := map[string]bool{id: true}
-	current := session
-	for {
-		parentID := strings.TrimSpace(current.ParentID)
-		if parentID == "" {
-			return agent.BranchID(current.Path)
-		}
-		if seen[parentID] {
-			return "recovery-cycle:" + parentID
-		}
-		seen[parentID] = true
-		parent, ok := byID[parentID]
-		if !ok {
-			return "recovery-parent:" + parentID
-		}
-		if !parent.Recovered {
-			return parentID
-		}
-		current = parent
-	}
 }
 
 // runResumeCommand handles "/resume": with no argument it opens the recent
@@ -425,7 +333,7 @@ func (m *chatTUI) resumeArgItems(val string) ([]compItem, int, bool) {
 		if cur != "" && !strings.HasPrefix(idx, cur) {
 			continue
 		}
-		hint := fmt.Sprintf("%s · %s", entry.session.ModTime.Local().Format("01-02 15:04"), sessionSummary(entry.session))
+		hint := fmt.Sprintf("%s · %s", entry.session.LastActivityAt.Local().Format("01-02 15:04"), sessionSummary(entry.session))
 		if entry.project != "" {
 			hint = fmt.Sprintf("[%s] %s", entry.project, hint)
 		}

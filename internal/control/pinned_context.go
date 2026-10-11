@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 	"time"
 
 	"deepzora/internal/agent"
@@ -31,7 +32,7 @@ func newControllerPromptState(base string, executor *agent.Agent) controllerProm
 	}
 	state := controllerPromptState{base: base}
 	if executor != nil && executor.Session() != nil && state.base != current {
-		executor.Session().SetLeadingSystemPromptWithReason(state.base, "legacy_pinned_system_migration")
+		executor.Session().SetLeadingSystemPromptWithReason(state.base, "host-system-prompt")
 	}
 	return state
 }
@@ -85,7 +86,11 @@ func (c *Controller) runModelTurn(ctx context.Context, input string) error {
 		ctx = agent.WithContinuationPolicy(ctx, agent.ContinuationExplicitFlow)
 	}
 	if c.pinnedContextLoader != nil && c.executor != nil {
-		snapshot, err := c.pinnedContextLoader(ctx, c.SessionPath())
+		path, err := c.SessionStatePath(ctx)
+		if err != nil {
+			return err
+		}
+		snapshot, err := c.pinnedContextLoader(ctx, path)
 		if err != nil {
 			return err
 		}
@@ -96,4 +101,17 @@ func (c *Controller) runModelTurn(ctx context.Context, input string) error {
 	work := c.beginGoalWork()
 	defer func() { c.recordGoalWork(work, time.Now()) }()
 	return c.runner.Run(ctx, input)
+}
+
+// SessionStatePath locates optional session state by the bound immutable
+// identity. It is never accepted as an execution or history selector.
+func (c *Controller) SessionStatePath(ctx context.Context) (string, error) {
+	if ref, bound := c.SessionRef(); bound {
+		dir, err := c.SessionService().SessionDir(ctx, ref)
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(dir, ref.SessionID+".jsonl"), nil
+	}
+	return c.SessionPath(), nil
 }

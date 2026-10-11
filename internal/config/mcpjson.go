@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -75,9 +74,7 @@ func LoadMCPJSONPlugin(path, name string) (PluginEntry, bool, error) {
 	return PluginEntry{}, false, nil
 }
 
-// specsToEntries converts an mcpServers map to PluginEntry values, sorted by name
-// for a stable connection order. Names in skip are dropped (used for v0.x's
-// mcpDisabled list).
+// specsToEntries converts an mcpServers map to PluginEntry values in stable name order.
 func specsToEntries(specs map[string]mcpServerSpec, skip map[string]bool) []PluginEntry {
 	names := make([]string, 0, len(specs))
 	for name := range specs {
@@ -93,112 +90,6 @@ func specsToEntries(specs map[string]mcpServerSpec, skip map[string]bool) []Plug
 		entries = append(entries, entry)
 	}
 	return entries
-}
-
-// legacyConfigPath is the v0.x (TypeScript line) config file, ~/.deepzora/config.json.
-func legacyConfigPath() string {
-	if IsolatedHomeDir() != "" {
-		return ""
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(home, ".deepzora", "config.json")
-}
-
-// loadLegacyMCP reads the v0.x ~/.deepzora/config.json and returns its enabled
-// MCP servers as PluginEntry values — both the canonical mcpServers map and the
-// older `mcp` string list (mcpServers wins on a name collision, matching v0.x;
-// servers listed in mcpDisabled are skipped) — so upgrading from v0.x keeps MCP
-// servers working without rewriting them as [[plugins]]. Absent or malformed →
-// nil: a stale legacy file must never block startup, and it is the
-// lowest-priority source anyway (the v2 config and .mcp.json win on a name
-// collision — see Load).
-func loadLegacyMCP(path string) []PluginEntry {
-	if path == "" {
-		return nil
-	}
-	b, err := fileencoding.ReadFileUTF8(path)
-	if err != nil {
-		return nil
-	}
-	var doc struct {
-		MCP         []string                     `json:"mcp"`
-		MCPServers  map[string]mcpServerSpec     `json:"mcpServers"`
-		MCPEnv      map[string]map[string]string `json:"mcpEnv"`
-		MCPDisabled []string                     `json:"mcpDisabled"`
-	}
-	if err := json.Unmarshal(b, &doc); err != nil {
-		return nil
-	}
-	disabled := make(map[string]bool, len(doc.MCPDisabled))
-	for _, n := range doc.MCPDisabled {
-		disabled[n] = true
-	}
-	entries := specsToEntries(doc.MCPServers, disabled)
-	have := make(map[string]bool, len(entries))
-	for _, e := range entries {
-		have[e.Name] = true
-	}
-	for i, raw := range doc.MCP {
-		pe, ok := parseLegacyMCPSpec(raw)
-		if !ok || disabled[pe.Name] {
-			continue
-		}
-		if pe.Name == "" {
-			pe.Name = anonymousMCPName(i)
-		} else if pe.Command != "" {
-			pe.Env = doc.MCPEnv[pe.Name]
-		}
-		if have[pe.Name] {
-			continue
-		}
-		have[pe.Name] = true
-		pe, _ = NormalizePluginCommandLine(pe)
-		entries = append(entries, pe)
-	}
-	for i := range entries {
-		entries[i].Source = MCPSourceLegacyUser
-	}
-	return entries
-}
-
-var legacyMCPSpecName = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_-]*)=(.*)$`)
-
-// parseLegacyMCPSpec parses one v0.x `--mcp`-format string: "name=cmd args...",
-// "name=https://url" (SSE), or "name=streamable+https://url" (streamable HTTP);
-// the name= prefix is optional.
-func parseLegacyMCPSpec(raw string) (PluginEntry, bool) {
-	body := strings.TrimSpace(raw)
-	var name string
-	if m := legacyMCPSpecName.FindStringSubmatch(body); m != nil {
-		name, body = m[1], strings.TrimSpace(m[2])
-	}
-	if body == "" {
-		return PluginEntry{}, false
-	}
-	lower := strings.ToLower(body)
-	if strings.HasPrefix(lower, "streamable+http://") || strings.HasPrefix(lower, "streamable+https://") {
-		return PluginEntry{Name: name, Type: "http", URL: body[len("streamable+"):]}, true
-	}
-	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
-		return PluginEntry{Name: name, Type: "sse", URL: body}, true
-	}
-	parts, ok := splitPluginCommandLine(body)
-	if !ok || len(parts) == 0 {
-		return PluginEntry{}, false
-	}
-	if shouldSplitPluginCommand(body, parts[0]) {
-		return PluginEntry{Name: name, Command: parts[0], Args: parts[1:]}, true
-	}
-	return PluginEntry{Name: name, Command: body}, true
-}
-
-// anonymousMCPName names a v0.x spec that carried no name= prefix (its tools
-// registered unprefixed in v0.x; v1+ plugins require a name).
-func anonymousMCPName(i int) string {
-	return fmt.Sprintf("mcp-%d", i+1)
 }
 
 func pluginEntryFromMCPSpec(name string, s mcpServerSpec) PluginEntry {
@@ -345,56 +236,7 @@ func applyPluginEntryToMCPJSONServer(server map[string]json.RawMessage, entry Pl
 	setMCPJSONInt(server, "startup_timeout_seconds", entry.StartupTimeoutSeconds)
 	setMCPJSONInt(server, "call_timeout_seconds", entry.CallTimeoutSeconds)
 	setMCPJSONIntMap(server, "tool_timeout_seconds", entry.ToolTimeoutSeconds)
-	// The removed per-tool reader list is accepted on load for compatibility but
-	// never persisted. Explicitly delete it when updating an existing shared
-	// .mcp.json entry so the obsolete setting disappears naturally.
-	delete(server, "trusted_read_only_tools")
-	delete(server, "default_tools_approval_mode")
-	delete(server, "approvals_reviewer")
 	setMCPJSONBool(server, "auto_start", entry.AutoStart)
-	if err := removeMCPJSONApprovalModes(server); err != nil {
-		return err
-	}
-	return nil
-}
-
-func removeMCPJSONApprovalModes(server map[string]json.RawMessage) error {
-	const key = "tools"
-	tools := map[string]json.RawMessage{}
-	if raw, ok := server[key]; ok && len(raw) > 0 && strings.TrimSpace(string(raw)) != "null" {
-		if err := json.Unmarshal(raw, &tools); err != nil || tools == nil {
-			return fmt.Errorf("%s must be an object", key)
-		}
-	}
-
-	// Remove Deepzora's retired approval_mode while preserving tool fields owned
-	// by other MCP clients.
-	for name, raw := range tools {
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
-			continue
-		}
-		delete(fields, "approval_mode")
-		if len(fields) == 0 {
-			delete(tools, name)
-			continue
-		}
-		updated, err := json.Marshal(fields)
-		if err != nil {
-			return fmt.Errorf("%s[%q]: %w", key, name, err)
-		}
-		tools[name] = updated
-	}
-
-	if len(tools) == 0 {
-		delete(server, key)
-		return nil
-	}
-	raw, err := json.Marshal(tools)
-	if err != nil {
-		return fmt.Errorf("%s: %w", key, err)
-	}
-	server[key] = raw
 	return nil
 }
 

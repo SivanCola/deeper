@@ -4,7 +4,6 @@ package appidentity
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"syscall"
@@ -20,10 +19,10 @@ func TestOwnedShortcutTargetCoversStableAndVersionedEntries(t *testing.T) {
 		target string
 		want   bool
 	}{
-		{filepath.Join(root, "deepzora-launcher.exe"), true},
+		{filepath.Join(root, "deepzora-launcher.exe"), false},
 		{filepath.Join(root, "Deepzora.exe"), true},
-		{filepath.Join(root, "deepzora-desktop.exe"), true},
-		{filepath.Join(root, "versions", "v1.20.0", "deepzora-desktop.exe"), true},
+		{filepath.Join(root, "deepzora-desktop.exe"), false},
+		{filepath.Join(root, "versions", "v1.20.0", "deepzora-desktop.exe"), false},
 		{filepath.Join(root, "versions", "v1.20.0", "deepzora-cli.exe"), false},
 		{filepath.Join(`D:\Apps`, "Deepzora", "deepzora-launcher.exe"), false},
 	}
@@ -49,30 +48,6 @@ func TestDeepzoraShortcutName(t *testing.T) {
 		if got := deepzoraShortcutName(test.name); got != test.want {
 			t.Errorf("deepzoraShortcutName(%q) = %v, want %v", test.name, got, test.want)
 		}
-	}
-}
-
-func TestOwnedShortcutTargetAcceptsVersionedDesktopThroughJunction(t *testing.T) {
-	root := t.TempDir()
-	versionDir := filepath.Join(root, "versions", "v1.20.0")
-	if err := os.MkdirAll(versionDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(versionDir, "deepzora-desktop.exe"), []byte("desktop"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	junction := filepath.Join(t.TempDir(), "current")
-	if output, err := exec.Command("cmd", "/c", "mklink", "/J", junction, root).CombinedOutput(); err != nil {
-		t.Fatalf("create directory junction: %v: %s", err, output)
-	}
-	target := filepath.Join(junction, "versions", "v1.20.0", "deepzora-desktop.exe")
-	if !ownedShortcutTarget(target, root) {
-		resolvedRoot, rootErr := existingShortcutPath(root)
-		resolvedTarget, targetErr := resolveShortcutTarget(target)
-		linkTarget, linkErr := os.Readlink(junction)
-		_, statErr := os.Stat(target)
-		t.Logf("junction value=%q (%v), target stat=%v", linkTarget, linkErr, statErr)
-		t.Fatalf("junction target %q was not recognised under %q; resolved root=%q (%v), target=%q (%v)", target, root, resolvedRoot, rootErr, resolvedTarget, targetErr)
 	}
 }
 
@@ -143,7 +118,7 @@ func TestRepairOwnedShortcutLeavesSeparateDeepzora053InstallUntouched(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := shortcut.setAppUserModelID(legacyTauriAppUserModelID); err != nil {
+	if err := shortcut.setAppUserModelID("com.deepzora.desktop.dev"); err != nil {
 		shortcut.release()
 		t.Fatal(err)
 	}
@@ -173,8 +148,8 @@ func TestRepairOwnedShortcutLeavesSeparateDeepzora053InstallUntouched(t *testing
 	if !migrationSamePath(gotTarget, legacyTarget) {
 		t.Fatalf("legacy shortcut target = %q, want %q", gotTarget, legacyTarget)
 	}
-	if gotID != legacyTauriAppUserModelID {
-		t.Fatalf("legacy shortcut AppUserModelID = %q, want %q", gotID, legacyTauriAppUserModelID)
+	if gotID != "com.deepzora.desktop.dev" {
+		t.Fatalf("legacy shortcut AppUserModelID = %q, want %q", gotID, "com.deepzora.desktop.dev")
 	}
 }
 

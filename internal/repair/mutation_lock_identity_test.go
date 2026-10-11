@@ -1,18 +1,10 @@
 package repair
 
 import (
-	"context"
-	"crypto/sha256"
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
-
-	"deepzora/internal/config"
-	"deepzora/internal/filelock"
 )
 
 func TestRepairMutationLockRejectsLeafRedirectBeforeWrite(t *testing.T) {
@@ -98,40 +90,5 @@ func TestRepairMutationRejectsRedirectEvenWithReusedNativeIdentity(t *testing.T)
 	}
 	if err := revalidateRepairMutationTargets(targets); err == nil || !strings.Contains(err.Error(), "identity changed") {
 		t.Fatalf("redirect with reused identity accepted: %v", err)
-	}
-}
-
-func TestRepairMutationLockContendsWithLegacyLockBothDirections(t *testing.T) {
-	t.Setenv("DEEPZORA_HOME", t.TempDir())
-	target := filepath.Join(t.TempDir(), "state.json")
-	legacyKey := legacyCanonicalRepairPath(target)
-	digest := sha256.Sum256([]byte(legacyKey))
-	legacyLock := filepath.Join(config.RepairMutationLockDir(), fmt.Sprintf("%x.lock", digest))
-	if err := os.MkdirAll(filepath.Dir(legacyLock), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	holdLegacy, err := filelock.Acquire(context.Background(), legacyLock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if unlock, err := LockRepairMutationsTimeout(80*time.Millisecond, target); !errors.Is(err, context.DeadlineExceeded) {
-		if unlock != nil {
-			unlock()
-		}
-		holdLegacy()
-		t.Fatalf("new writer bypassed legacy lock: %v", err)
-	}
-	holdLegacy()
-
-	holdNew, err := LockRepairMutations(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer holdNew()
-	if release, err := filelock.TryAcquire(legacyLock); !errors.Is(err, filelock.ErrHeld) {
-		if release != nil {
-			release()
-		}
-		t.Fatalf("legacy writer bypassed new lock set: %v", err)
 	}
 }

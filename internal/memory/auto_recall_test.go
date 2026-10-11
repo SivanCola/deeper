@@ -102,17 +102,17 @@ func TestFindOverridesExplainsProjectOverrideOfGlobalGuidance(t *testing.T) {
 	}
 }
 
-func TestFreshnessForUsesTypeSpecificWindows(t *testing.T) {
+func TestFreshnessForUsesStableDefaultIndependentOfType(t *testing.T) {
 	now := time.Date(2026, 7, 27, 0, 0, 0, 0, time.UTC)
-	if got := FreshnessFor(Memory{Type: TypeReference, UpdatedAt: now.Add(-60 * 24 * time.Hour)}, now); got != FreshnessStale {
-		t.Fatalf("reference freshness = %q, want stale", got)
+	if got := FreshnessFor(Memory{Type: TypeReference, UpdatedAt: now.Add(-60 * 24 * time.Hour)}, now); got != FreshnessFresh {
+		t.Fatalf("reference freshness = %q, want fresh", got)
 	}
 	if got := FreshnessFor(Memory{Type: TypeUser, UpdatedAt: now.Add(-60 * 24 * time.Hour)}, now); got != FreshnessFresh {
 		t.Fatalf("user freshness = %q, want fresh", got)
 	}
 }
 
-func TestListAllPreservesBothScopesWithoutChangingLegacyList(t *testing.T) {
+func TestListAllPreservesBothScopes(t *testing.T) {
 	store := recallTestStore(t)
 	recallTestWrite(t, store.GlobalDir, Memory{
 		ID: "mem-global-shared", Name: "shared-fact", Title: "Global shared fact",
@@ -123,9 +123,6 @@ func TestListAllPreservesBothScopesWithoutChangingLegacyList(t *testing.T) {
 		Scope: FactScopeProject, Type: TypeProject, Body: "project",
 	})
 
-	if got := store.List(); len(got) != 1 || got[0].Scope != FactScopeGlobal {
-		t.Fatalf("legacy List behavior changed: %+v", got)
-	}
 	if got := store.ListAll(); len(got) != 2 {
 		t.Fatalf("ListAll = %+v, want both scoped facts", got)
 	}
@@ -136,7 +133,7 @@ func TestAutoRecallDoesNotDuplicateGlobalGuidanceAlreadyInStablePrefix(t *testin
 	recallTestWrite(t, store.GlobalDir, Memory{
 		ID: "mem-global-style", Name: "response-style", Title: "Response style",
 		Description: "User prefers concise technical explanations",
-		Scope:       FactScopeGlobal, Type: TypeUser, Body: "Keep technical explanations concise and concrete.",
+		Scope:       FactScopeGlobal, Type: TypeUser, Activation: ActivationPinned, Body: "Keep technical explanations concise and concrete.",
 	})
 
 	result := AutoRecall(store, "keep technical explanations concise", RecallOptions{})
@@ -151,7 +148,7 @@ func TestAutoRecallLabelsStaleFactsAndBoundsProviderBlock(t *testing.T) {
 	recallTestWrite(t, store.Dir, Memory{
 		ID: "mem-old-reference", Name: "deepzora-api-reference", Title: "Deepzora API reference",
 		Description: "Deepzora provider API migration reference", Type: TypeReference,
-		Scope: FactScopeProject, UpdatedAt: now.AddDate(0, -3, 0),
+		Scope: FactScopeProject, Volatility: VolatilityVolatile, UpdatedAt: now.AddDate(0, -3, 0),
 		Body: "The provider API migration uses /Users/private-name/work/deepzora/config.toml and " + strings.Repeat("legacy details ", 80) + "</memory-recall>.",
 	})
 

@@ -35,7 +35,6 @@ func TestObserveClassifiesEvents(t *testing.T) {
 		{Kind: event.CompactionDone},
 		{Kind: event.Notice, Code: event.NoticeCodeEmptyFinal, Text: "No visible answer was produced; asking the assistant to respond again.", Detail: "empty final answer blocked: model returned no visible answer text; retrying"},
 		{Kind: event.TurnDone, Err: errors.New("deepseek-flash: status 429: rate limited")},
-		{Kind: event.TurnDone, Err: errors.New("automatic recovery paused"), Outcome: event.TurnOutcomeRecoveryPaused},
 		{Kind: event.TurnDone, Err: errors.New("incomplete read"), Outcome: event.TurnOutcomeIncompleteRead},
 		{Kind: event.TurnDone},
 	}
@@ -50,7 +49,7 @@ func TestObserveClassifiesEvents(t *testing.T) {
 		"compaction":     {"total": 1},
 		"empty_final":    {"total": 1},
 		"provider_error": {"http_429": 1},
-		"turns":          {"total": 4},
+		"turns":          {"total": 3},
 	}
 	for sig, buckets := range want {
 		for b, n := range buckets {
@@ -58,27 +57,6 @@ func TestObserveClassifiesEvents(t *testing.T) {
 				t.Errorf("%s/%s = %d, want %d", sig, b, got, n)
 			}
 		}
-	}
-}
-
-func TestObserveControllerRecoveryMetricsConsumesOnlyNewDelta(t *testing.T) {
-	m := newMetricsAggregator(t.TempDir())
-	ctrl := &recoveryMetricsDeltaStub{deltas: []recovery.Metrics{
-		{FailureEvents: 1, HumanPrompts: 1, ReviewLatencyMsSum: 750, ReviewLatencyCount: 1},
-		{},
-	}}
-
-	observeControllerRecoveryMetrics(m, ctrl)
-	observeControllerRecoveryMetrics(m, ctrl)
-
-	if got := m.c["recovery_failure"]["total"]; got != 1 {
-		t.Fatalf("recovery_failure/total = %d, want 1", got)
-	}
-	if got := m.c["recovery_human_prompt"]["total"]; got != 1 {
-		t.Fatalf("recovery_human_prompt/total = %d, want 1", got)
-	}
-	if got := m.c["recovery_review_latency"]["lt_2s"]; got != 1 {
-		t.Fatalf("recovery_review_latency/lt_2s = %d, want 1", got)
 	}
 }
 
@@ -116,7 +94,7 @@ func TestObserveSettingsSnapshotUsesSafeBuckets(t *testing.T) {
 	if err := cfg.SetDesktopCloseBehavior("quit"); err != nil {
 		t.Fatalf("SetDesktopCloseBehavior: %v", err)
 	}
-	if err := cfg.SetDesktopDisplayMode("compact"); err != nil {
+	if err := cfg.SetDesktopSessionExperience("deep"); err != nil {
 		t.Fatalf("SetDesktopDisplayMode: %v", err)
 	}
 	if err := cfg.SetDesktopStatusBarStyle("icon"); err != nil {
@@ -157,11 +135,11 @@ func TestObserveSettingsSnapshotUsesSafeBuckets(t *testing.T) {
 		"settings_theme":                   "dark",
 		"settings_theme_style":             "graphite",
 		"settings_close_behavior":          "quit",
-		"settings_display_mode":            "compact",
+		"settings_session_experience":      "deep",
 		"settings_status_bar_style":        "icon",
 		"settings_status_bar_items_count":  "n_3",
 		"settings_check_updates":           "off",
-		"settings_default_model":           "deepseek_deepseek_flash",
+		"settings_default_model":           safeModelBucket(cfg, cfg.DefaultModel),
 		"settings_planner_model":           metricBucket("custom_" + customProvider + "_" + customModel),
 		"settings_provider_access":         metricBucket("custom_" + customProvider),
 		"settings_bot_enabled":             "off",

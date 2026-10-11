@@ -40,15 +40,15 @@ vision_model = "vision-model"
 name = "parent"
 kind = "boot-subagent-test"
 base_url = "https://api.deepseek.com/anthropic"
-model = "x"
+models = ["x"]
 api_key_env = "BOOT_DEEPSEEK_TEST_KEY"
 
 [[providers]]
 name = "vision-model"
 kind = "boot-subagent-test"
 base_url = "https://vision.example.invalid"
-model = "x"
-vision = true
+models = ["x"]
+model_overrides = { x = { vision = true } }
 `)
 	approveWorkspace(t, dir)
 	png, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")

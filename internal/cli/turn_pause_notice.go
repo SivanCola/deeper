@@ -18,12 +18,6 @@ func (m *chatTUI) commitTurnPauseNotice(e event.Event) {
 	switch e.Outcome {
 	case event.TurnOutcomeIncompleteRead:
 		text = "⏸ " + i18n.M.IncompleteReadFinishBlocked
-	case event.TurnOutcomeRecoveryPaused:
-		text = "⏸ " + i18n.M.RecoveryPaused
-	case event.TurnOutcomeCompletionUncertain:
-		text = "⏸ " + i18n.M.CompletionUncertain
-	case event.TurnOutcomeFinalReadiness:
-		text = "ⓘ " + i18n.M.FinalReadinessRecovery
 	default:
 		if e.Err != nil && e.Err.Error() != "" && !strings.Contains(e.Err.Error(), "context canceled") {
 			m.commitLine(wrapForViewport(i18n.M.ErrorPrefix+" "+e.Err.Error(), m.width, activeCLITheme.warn))

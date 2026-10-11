@@ -39,6 +39,6 @@ func (a *App) organizationImportKey(scope, root string, state workspacestate.Sta
 	if !availability.usable || !availability.complete {
 		return zero, false
 	}
-	body, err := json.Marshal([]any{state.Workspaces[id], state.SourceMappings, state.Presentation, projects, a.currentSessionCatalogStatus().Revision})
+	body, err := json.Marshal([]any{state.Workspaces[id], state.Presentation, projects, a.currentSessionCatalogStatus().Revision})
 	return sha256.Sum256(body), err == nil
 }

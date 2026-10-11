@@ -17,9 +17,6 @@ import (
 func TestDesktopBotRuntimePlanStartsSavedConnections(t *testing.T) {
 	cfg := config.Default()
 	cfg.Bot.Enabled = true
-	cfg.Bot.Allowlist.Enabled = true
-	cfg.Bot.Allowlist.FeishuUsers = []string{"ou-installer"}
-	cfg.Bot.Allowlist.WeixinUsers = []string{"wx-user"}
 	cfg.Bot.Connections = []config.BotConnectionConfig{
 		{ID: "feishu-feishu", Provider: "feishu", Domain: "feishu", Enabled: true},
 		{ID: "feishu-lark", Provider: "feishu", Domain: "lark", Enabled: true},
@@ -35,10 +32,9 @@ func TestDesktopBotRuntimePlanStartsSavedConnections(t *testing.T) {
 	}
 }
 
-func TestDesktopBotRuntimePlanBlocksWithoutAllowlist(t *testing.T) {
+func TestDesktopBotRuntimePlanBlocksWithoutConnectionAccess(t *testing.T) {
 	cfg := config.Default()
 	cfg.Bot.Enabled = true
-	cfg.Bot.Allowlist.Enabled = true
 	cfg.Bot.Pairing.Enabled = false
 	cfg.Bot.Connections = []config.BotConnectionConfig{
 		{ID: "feishu-lark", Provider: "feishu", Domain: "lark", Enabled: true},
@@ -46,14 +42,13 @@ func TestDesktopBotRuntimePlanBlocksWithoutAllowlist(t *testing.T) {
 
 	plan := desktopBotRuntimePlan(cfg)
 	if plan.Start || plan.Status != "blocked" {
-		t.Fatalf("plan = %+v, want blocked without allowlist", plan)
+		t.Fatalf("plan = %+v, want blocked without connection access", plan)
 	}
 }
 
 func TestDesktopBotRuntimePlanStartsWithPairing(t *testing.T) {
 	cfg := config.Default()
 	cfg.Bot.Enabled = true
-	cfg.Bot.Allowlist.Enabled = true
 	cfg.Bot.Pairing.Enabled = true
 	cfg.Bot.Connections = []config.BotConnectionConfig{
 		{ID: "feishu-lark", Provider: "feishu", Domain: "lark", Enabled: true},
@@ -65,33 +60,9 @@ func TestDesktopBotRuntimePlanStartsWithPairing(t *testing.T) {
 	}
 }
 
-func TestDesktopBotChannelsWithLegacyQQConfig(t *testing.T) {
-	channels, connectionChannels := desktopBotChannelsWithLegacyQQ(config.QQBotConfig{
-		Model:            "qq-model",
-		ToolApprovalMode: "auto",
-		WorkspaceRoot:    "/tmp/qq-project",
-	}, nil, nil)
-
-	channel, ok := channels[bot.PlatformQQ]
-	if !ok {
-		t.Fatalf("platform QQ channel missing: %+v", channels)
-	}
-	if channel.Model != "qq-model" || channel.ToolApprovalMode != "workspace-write" || channel.WorkspaceRoot != "/tmp/qq-project" {
-		t.Fatalf("platform channel = %+v, want QQ-specific runtime fields", channel)
-	}
-	connectionChannel, ok := connectionChannels["qq"]
-	if !ok {
-		t.Fatalf("connection QQ channel missing: %+v", connectionChannels)
-	}
-	if connectionChannel.Model != "qq-model" || connectionChannel.ToolApprovalMode != "workspace-write" || connectionChannel.WorkspaceRoot != "/tmp/qq-project" {
-		t.Fatalf("connection channel = %+v, want QQ-specific runtime fields", connectionChannel)
-	}
-}
-
 func TestDesktopBotRuntimePlanStopsWhenBotDisabled(t *testing.T) {
 	cfg := config.Default()
 	cfg.Bot.Enabled = false
-	cfg.Bot.Allowlist.FeishuUsers = []string{"ou-installer"}
 	cfg.Bot.Connections = []config.BotConnectionConfig{
 		{ID: "feishu-lark", Provider: "feishu", Domain: "lark", Enabled: true},
 	}
@@ -138,8 +109,6 @@ func TestDesktopBotRuntimeConfigUsesUserBotSettings(t *testing.T) {
 
 	userCfg := config.LoadForEdit(config.UserConfigPath())
 	userCfg.Bot.Enabled = true
-	userCfg.Bot.Allowlist.Enabled = true
-	userCfg.Bot.Allowlist.FeishuUsers = []string{"ou-installer"}
 	userCfg.Bot.Connections = []config.BotConnectionConfig{
 		{ID: "feishu-lark", Provider: "feishu", Domain: "lark", Enabled: true, Status: "connected"},
 	}
@@ -180,9 +149,6 @@ func TestDesktopBotRuntimeConfigLoadsAllSavedCredentialsAfterRestart(t *testing.
 
 	userCfg := config.Default()
 	userCfg.Bot.Enabled = true
-	userCfg.Bot.Allowlist.Enabled = true
-	userCfg.Bot.Allowlist.FeishuUsers = []string{"ou-feishu-installer", "ou-lark-installer"}
-	userCfg.Bot.Allowlist.WeixinUsers = []string{"wx-installer"}
 	userCfg.Bot.Feishu.Enabled = true
 	userCfg.Bot.Weixin.Enabled = true
 	userCfg.Bot.Weixin.AccountID = "weixin-account"
@@ -316,8 +282,6 @@ func TestDesktopBotRuntimeKeepsUserBotSettingsBesideAProjectBot(t *testing.T) {
 
 	userCfg := config.Default()
 	userCfg.Bot.Enabled = true
-	userCfg.Bot.Allowlist.Enabled = true
-	userCfg.Bot.Allowlist.WeixinUsers = []string{"wx-user"}
 	userCfg.Bot.Connections = []config.BotConnectionConfig{
 		{ID: "weixin-weixin", Provider: "weixin", Domain: "weixin", Enabled: true, Status: "connected"},
 	}

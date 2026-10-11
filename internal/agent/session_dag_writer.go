@@ -20,8 +20,7 @@ import (
 const sessionDAGTailRepairMinAge = 2 * time.Second
 
 type sessionDAGHeader struct {
-	generation   int64
-	upgradedFrom int
+	generation int64
 }
 
 // encodeSessionDAGEntries serializes entries one per line, filling in the
@@ -119,7 +118,7 @@ func readSessionDAGHeader(sessionPath string) (sessionDAGHeader, bool, error) {
 	if e.SchemaVersion != sessionDAGSchemaVersion || e.Type != sessionDAGTypeLog {
 		return sessionDAGHeader{}, false, nil
 	}
-	return sessionDAGHeader{generation: e.Generation, upgradedFrom: e.UpgradedFrom}, true, nil
+	return sessionDAGHeader{generation: e.Generation}, true, nil
 }
 
 // repairSessionDAGTail truncates a torn tail found by replay once the log has

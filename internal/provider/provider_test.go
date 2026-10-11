@@ -108,9 +108,6 @@ func TestModelMessagesAndSanitizeDropLocalOnlyInterruptedOutput(t *testing.T) {
 		Content: "partial answer", ReasoningContent: "partial reasoning", LocalOnly: true,
 		ToolCalls:       []ToolCall{{ID: "partial", Name: "write_file"}},
 		InterruptedTurn: &InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"write_file"}},
-		FinalReadinessRecovery: &FinalReadinessRecovery{
-			Pending: true, Missing: []string{"verification"}, Checkpoint: json.RawMessage(`{"receipts":[]}`),
-		},
 	}
 	in := []Message{
 		{Role: RoleUser, Content: "task"},
@@ -126,7 +123,7 @@ func TestModelMessagesAndSanitizeDropLocalOnlyInterruptedOutput(t *testing.T) {
 		t.Fatalf("SanitizeToolPairing leaked local-only record: %+v", wire)
 	}
 	session := NormalizeSessionMessages(in)
-	if len(session) != len(in) || !session[1].LocalOnly || session[1].Content != local.Content || session[1].FinalReadinessRecovery == nil {
+	if len(session) != len(in) || !session[1].LocalOnly || session[1].Content != local.Content {
 		t.Fatalf("session normalization did not preserve local display: %+v", session)
 	}
 }
@@ -196,28 +193,6 @@ func TestNormalizeSessionMessagesMigratesInterleavedDecisionReceipt(t *testing.T
 	}
 	if got[2].Role != RoleTool || got[2].Content != "actual result" || strings.Contains(got[2].Content, "interrupted") {
 		t.Fatalf("migrated tool result = %+v, want the actual result without a placeholder", got[2])
-	}
-}
-
-func TestModelMessagesUsesProviderContentWithoutMutatingStoredMessage(t *testing.T) {
-	stored := []Message{{
-		Role:            RoleUser,
-		Content:         "fix the bug",
-		ProviderContent: "<reasoning-language>zh</reasoning-language>\n\nfix the bug",
-	}}
-
-	model := ModelMessages(stored)
-	if len(model) != 1 {
-		t.Fatalf("ModelMessages length = %d, want 1", len(model))
-	}
-	if got := model[0].Content; got != stored[0].ProviderContent {
-		t.Fatalf("model content = %q, want provider content %q", got, stored[0].ProviderContent)
-	}
-	if model[0].ProviderContent != "" {
-		t.Fatalf("provider-local field leaked into model message: %q", model[0].ProviderContent)
-	}
-	if stored[0].Content != "fix the bug" || stored[0].ProviderContent == "" {
-		t.Fatalf("stored message was mutated: %+v", stored[0])
 	}
 }
 
@@ -429,90 +404,6 @@ func TestSanitizeToolPairingBackfillsMissingToolResultName(t *testing.T) {
 }
 
 // Pricing.Cost
-
-func TestPricingCostNil(t *testing.T) {
-	var p *Pricing
-	if got := p.Cost(&Usage{PromptTokens: 100}); got != 0 {
-		t.Errorf("nil Pricing.Cost = %f, want 0", got)
-	}
-}
-
-func TestPricingCostNilUsage(t *testing.T) {
-	p := &Pricing{Input: 2.0, Output: 10.0}
-	if got := p.Cost(nil); got != 0 {
-		t.Errorf("nil Usage.Cost = %f, want 0", got)
-	}
-}
-
-func TestPricingCostBothNil(t *testing.T) {
-	var p *Pricing
-	if got := p.Cost(nil); got != 0 {
-		t.Errorf("both nil.Cost = %f, want 0", got)
-	}
-}
-
-func TestPricingCostCalculation(t *testing.T) {
-	p := &Pricing{
-		CacheHit: 0.5,  // ¥0.5 per 1M cached tokens
-		Input:    2.0,  // ¥2.0 per 1M uncached tokens
-		Output:   10.0, // ¥10.0 per 1M completion tokens
-	}
-	u := &Usage{
-		CacheHitTokens:   1_000_000,
-		CacheMissTokens:  500_000,
-		CompletionTokens: 200_000,
-	}
-	// Expected: (1M * 0.5 + 500K * 2.0 + 200K * 10.0) / 1M
-	//         = (0.5 + 1.0 + 2.0) = 3.5
-	got := p.Cost(u)
-	if got != 3.5 {
-		t.Errorf("Cost = %f, want 3.5", got)
-	}
-}
-
-func TestPricingCostUsesCacheWriteBillingTier(t *testing.T) {
-	p := &Pricing{Input: 2.0}
-	u := &Usage{
-		CacheMissTokens:        500_000,
-		CacheWriteTokens:       100_000,
-		CacheWriteBilledTokens: 200_000, // 1h write at 2x input
-	}
-	// 400K ordinary misses + 100K cache writes billed as 200K input units.
-	if got := p.Cost(u); got != 1.2 {
-		t.Errorf("Cost = %f, want 1.2", got)
-	}
-}
-
-func TestPricingCostCacheWriteFieldsAreBackwardCompatible(t *testing.T) {
-	p := &Pricing{Input: 2.0}
-
-	// Old usage records have neither cache-write field and retain the original
-	// one-input-rate calculation.
-	if got := p.Cost(&Usage{CacheMissTokens: 500_000}); got != 1.0 {
-		t.Errorf("legacy Cost = %f, want 1.0", got)
-	}
-	// A producer that reports raw write tokens without a billing tier also
-	// falls back to the ordinary input rate instead of making writes free.
-	if got := p.Cost(&Usage{CacheMissTokens: 500_000, CacheWriteTokens: 100_000}); got != 1.0 {
-		t.Errorf("unpriced write Cost = %f, want 1.0", got)
-	}
-}
-
-func TestPricingCostFallsBackToPromptTokensAsMiss(t *testing.T) {
-	p := &Pricing{Input: 2.0, Output: 10.0}
-	u := &Usage{PromptTokens: 500_000, CompletionTokens: 100_000}
-	if got := p.Cost(u); got != 2.0 {
-		t.Errorf("Cost = %f, want 2.0", got)
-	}
-}
-
-func TestPricingCostZeroTokens(t *testing.T) {
-	p := &Pricing{Input: 2.0, Output: 10.0}
-	u := &Usage{}
-	if got := p.Cost(u); got != 0 {
-		t.Errorf("zero tokens Cost = %f, want 0", got)
-	}
-}
 
 // Pricing.Symbol
 

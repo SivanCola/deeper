@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/config"
 	"deepzora/internal/history"
 	"deepzora/internal/historycatalog"
 )
@@ -26,7 +25,6 @@ func isolateConfigHome(t *testing.T) string {
 	t.Setenv("AppData", filepath.Join(dir, "AppData"))
 	t.Setenv("LocalAppData", filepath.Join(dir, "LocalAppData"))
 	t.Setenv("DEEPZORA_CREDENTIALS_STORE", "file")
-	t.Setenv(config.CompletionValidationModeEnv, config.CompletionValidationOff)
 	t.Cleanup(func() { closeBootTestHistoryCatalog(t) })
 	return dir
 }

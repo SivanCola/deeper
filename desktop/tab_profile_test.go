@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/internal/boot"
 	"deepzora/internal/control"
 )
 
@@ -18,7 +17,7 @@ func testTab(id, root string) *WorkspaceTab {
 		WorkspaceRoot: root,
 		Ready:         true,
 		Ctrl:          control.New(control.Options{Label: id}),
-		model:         "deepseek-flash/deepseek-v4-flash",
+		model:         "deepseek-flash/deepseek-flash",
 		mode:          "normal",
 		disabledMCP:   map[string]ServerView{},
 	}
@@ -74,7 +73,7 @@ func TestEffortForTabResolvesProjectProviderConfig(t *testing.T) {
 name = "project-provider"
 kind = "openai"
 base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "PROJECT_API_KEY"
 effort = "max"
 `
@@ -105,7 +104,7 @@ func TestEffortForTabUsesKnownModelRegistry(t *testing.T) {
 name = "project-provider"
 kind = "openai"
 base_url = "https://proxy.example.com/v1"
-model = "deepseek-v4-flash"
+models = ["deepseek-v4-flash"]
 api_key_env = "PROJECT_API_KEY"
 `
 	if err := os.WriteFile(filepath.Join(projectRoot, "deepzora.toml"), []byte(configBody), 0o644); err != nil {
@@ -168,87 +167,6 @@ func TestSaveTabsPersistsModelAndEffort(t *testing.T) {
 	}
 }
 
-func TestBuildTabControllerMigratesPersistedBareMimoModel(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	root := t.TempDir()
-	configBody := `default_model = "deepseek-flash"
-[[providers]]
-name = "deepseek-flash"
-kind = "openai"
-base_url = "https://example.invalid/v1"
-model = "deepseek-v4-flash"
-api_key_env = "DEEPZORA_TEST_KEY_UNSET"
-`
-	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(configBody), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	approveWorkspace(t, root)
-
-	app := NewApp()
-	app.readyHook = func() {}
-	tab := testTab("mimo", root)
-	tab.model = "mimo-v2.5-pro"
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-
-	app.buildTabController(tab)
-	if tab.StartupErr != "" {
-		t.Fatalf("tab startup error = %q", tab.StartupErr)
-	}
-	defer tab.Ctrl.Close()
-	if tab.model != "mimo-pro/mimo-v2.5-pro" {
-		t.Fatalf("tab model = %q, want migrated MiMo provider ref", tab.model)
-	}
-}
-
-func TestSaveTabsPersistsNonBalancedTokenModes(t *testing.T) {
-	// New writes pin the deprecated dual-write compat labels; economy/delivery
-	// must not be persisted as live modes.
-	isolateDesktopUserDirs(t)
-
-	app := NewApp()
-	tab := testTab("a", t.TempDir())
-	tab.qualityFloor = control.QualityFloorStandard
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-
-	for _, inMemory := range []string{"", "delivery", ""} {
-		tab.qualityFloor = inMemory
-		app.mu.Lock()
-		app.saveTabsLocked()
-		app.mu.Unlock()
-
-		got := loadTabsFile()
-		if len(got.Tabs) != 1 {
-			t.Fatalf("tabs len = %d, want 1", len(got.Tabs))
-		}
-		wantToken, wantPreset := boot.TokenModeFull, boot.AgentPresetStandard
-		if got.Tabs[0].TokenMode != wantToken || got.Tabs[0].AgentPreset != wantPreset {
-			t.Fatalf("saved compat after in-memory %q = token:%q preset:%q, want %q/%q",
-				inMemory, got.Tabs[0].TokenMode, got.Tabs[0].AgentPreset, wantToken, wantPreset)
-		}
-	}
-}
-
-func TestLoadTabsFileDecodesLegacyTokenModes(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := desktopConfigDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	body := `{"tabs":[{"id":"old","scope":"global","tokenMode":"economy","agentPreset":"light"}],"activeTab":"old"}`
-	if err := os.WriteFile(filepath.Join(dir, tabsFileName), []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	got := loadTabsFile()
-	if len(got.Tabs) != 1 || got.Tabs[0].TokenMode != "economy" || got.Tabs[0].AgentPreset != "light" {
-		t.Fatalf("legacy tabs decode = %+v", got.Tabs)
-	}
-}
-
 func TestSaveTabsPersistsFullAccessSeparatelyFromCollaborationMode(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
@@ -306,9 +224,9 @@ func TestSaveTabsPersistsGoalAndToolApprovalMode(t *testing.T) {
 	app := NewApp()
 	tab := testTab("a", t.TempDir())
 	tab.goal = "finish the mode redesign"
-	tab.toolApprovalMode = control.ToolApprovalAuto
+	tab.toolApprovalMode = control.ToolApprovalWorkspaceWrite
 	tab.Ctrl.SetGoal(tab.goal)
-	tab.Ctrl.SetToolApprovalMode(control.ToolApprovalAuto)
+	tab.Ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
@@ -324,7 +242,7 @@ func TestSaveTabsPersistsGoalAndToolApprovalMode(t *testing.T) {
 	if got.Tabs[0].Goal != "finish the mode redesign" {
 		t.Fatalf("saved goal = %q", got.Tabs[0].Goal)
 	}
-	if got.Tabs[0].ToolApprovalMode != control.ToolApprovalAuto {
+	if got.Tabs[0].ToolApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("saved tool approval mode = %q, want auto", got.Tabs[0].ToolApprovalMode)
 	}
 }
@@ -339,7 +257,7 @@ func TestCollaborationModesPreserveToolApprovalMode(t *testing.T) {
 	app.activeTabID = tab.ID
 	defer tab.Ctrl.Close()
 
-	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalAuto)
+	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalWorkspaceWrite)
 	app.SetGoalForTab(tab.ID, "finish the approval redesign")
 	if got := currentTabCollaborationMode(tab); got != "goal" {
 		t.Fatalf("collaboration mode = %q, want goal", got)
@@ -347,7 +265,7 @@ func TestCollaborationModesPreserveToolApprovalMode(t *testing.T) {
 	if tab.Ctrl.PlanMode() {
 		t.Fatal("goal mode should leave plan mode off")
 	}
-	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalAuto {
+	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("tool approval after goal = %q, want auto", got)
 	}
 
@@ -358,7 +276,7 @@ func TestCollaborationModesPreserveToolApprovalMode(t *testing.T) {
 	if got := tab.Ctrl.Goal(); got != "" {
 		t.Fatalf("plan mode should clear goal, got %q", got)
 	}
-	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalAuto {
+	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("tool approval after plan = %q, want auto", got)
 	}
 
@@ -369,7 +287,7 @@ func TestCollaborationModesPreserveToolApprovalMode(t *testing.T) {
 	if tab.Ctrl.PlanMode() {
 		t.Fatal("normal mode should leave plan mode off")
 	}
-	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalAuto {
+	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("tool approval after normal = %q, want auto", got)
 	}
 }
@@ -385,7 +303,7 @@ func TestToolApprovalModesPreserveCollaborationMode(t *testing.T) {
 	defer tab.Ctrl.Close()
 
 	app.SetCollaborationModeForTab(tab.ID, "plan")
-	for _, mode := range []string{control.ToolApprovalAsk, control.ToolApprovalAuto, control.ToolApprovalYolo} {
+	for _, mode := range []string{control.ToolApprovalReadOnly, control.ToolApprovalWorkspaceWrite, control.ToolApprovalDangerFullAccess} {
 		app.SetToolApprovalModeForTab(tab.ID, mode)
 		if got := currentTabCollaborationMode(tab); got != "plan" {
 			t.Fatalf("collaboration after tool mode %q = %q, want plan", mode, got)
@@ -396,15 +314,15 @@ func TestToolApprovalModesPreserveCollaborationMode(t *testing.T) {
 	}
 
 	app.SetGoalForTab(tab.ID, "ship the goal runner")
-	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalAsk)
+	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalReadOnly)
 	if got := currentTabCollaborationMode(tab); got != "goal" {
 		t.Fatalf("collaboration after ask = %q, want goal", got)
 	}
-	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalAuto)
+	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalWorkspaceWrite)
 	if got := currentTabCollaborationMode(tab); got != "goal" {
 		t.Fatalf("collaboration after auto = %q, want goal", got)
 	}
-	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalYolo)
+	app.SetToolApprovalModeForTab(tab.ID, control.ToolApprovalDangerFullAccess)
 	if got := currentTabCollaborationMode(tab); got != "goal" {
 		t.Fatalf("collaboration after yolo = %q, want goal", got)
 	}
@@ -414,7 +332,7 @@ func TestSetComposerProfileForTabAppliesAllAxes(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if drained, err := app.SetComposerProfileForTab("missing", "normal", control.ToolApprovalAsk, ""); err == nil || drained == nil {
+	if drained, err := app.SetComposerProfileForTab("missing", "normal", control.ToolApprovalReadOnly, ""); err == nil || drained == nil {
 		t.Fatal("missing tab returned a nil drained-id slice")
 	}
 	tab := testTab("a", t.TempDir())
@@ -423,7 +341,7 @@ func TestSetComposerProfileForTabAppliesAllAxes(t *testing.T) {
 	app.activeTabID = tab.ID
 	defer tab.Ctrl.Close()
 
-	if _, err := app.SetComposerProfileForTab(tab.ID, "plan", control.ToolApprovalYolo, ""); err != nil {
+	if _, err := app.SetComposerProfileForTab(tab.ID, "plan", control.ToolApprovalDangerFullAccess, ""); err != nil {
 		t.Fatal(err)
 	}
 	if got := currentTabCollaborationMode(tab); got != "plan" {
@@ -432,11 +350,11 @@ func TestSetComposerProfileForTabAppliesAllAxes(t *testing.T) {
 	if !tab.Ctrl.PlanMode() {
 		t.Fatal("controller plan mode is off")
 	}
-	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalYolo {
+	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalDangerFullAccess {
 		t.Fatalf("tool approval mode = %q, want yolo", got)
 	}
 
-	if _, err := app.SetComposerProfileForTab(tab.ID, "goal", control.ToolApprovalAuto, "finish the profile migration"); err != nil {
+	if _, err := app.SetComposerProfileForTab(tab.ID, "goal", control.ToolApprovalWorkspaceWrite, "finish the profile migration"); err != nil {
 		t.Fatal(err)
 	}
 	if got := currentTabCollaborationMode(tab); got != "goal" {
@@ -445,7 +363,7 @@ func TestSetComposerProfileForTabAppliesAllAxes(t *testing.T) {
 	if tab.Ctrl.PlanMode() {
 		t.Fatal("goal profile kept controller plan mode on")
 	}
-	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalAuto {
+	if got := tab.Ctrl.ToolApprovalMode(); got != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("tool approval mode = %q, want auto", got)
 	}
 	if got := tab.Ctrl.Goal(); got != "finish the profile migration" {
@@ -453,7 +371,7 @@ func TestSetComposerProfileForTabAppliesAllAxes(t *testing.T) {
 	}
 
 	got := loadTabsFile()
-	if len(got.Tabs) != 1 || got.Tabs[0].Goal != "finish the profile migration" || got.Tabs[0].ToolApprovalMode != control.ToolApprovalAuto {
+	if len(got.Tabs) != 1 || got.Tabs[0].Goal != "finish the profile migration" || got.Tabs[0].ToolApprovalMode != control.ToolApprovalWorkspaceWrite {
 		t.Fatalf("persisted profile = %+v", got.Tabs)
 	}
 }
@@ -478,7 +396,7 @@ func TestMetaReportsGoalStatus(t *testing.T) {
 
 	app.SetGoalForTab(tab.ID, "finish the goal runner")
 	meta = app.MetaForTab(tab.ID)
-	if meta.Goal != "finish the goal runner" || meta.GoalStatus != control.GoalStatusRunning || meta.CollaborationMode != "goal" {
+	if meta.Goal != "finish the goal runner" || meta.GoalStatus != control.GoalStatusRunning || meta.CollaborationMode != "normal" {
 		t.Fatalf("goal meta = %+v, want running goal", meta)
 	}
 
@@ -490,10 +408,9 @@ func TestMetaReportsGoalStatus(t *testing.T) {
 
 	app.SetCollaborationModeForTab(tab.ID, "plan")
 	app.mu.Lock()
-	tab.qualityFloor = ""
 	app.mu.Unlock()
 	meta = app.MetaForTab(tab.ID)
-	if meta.CollaborationMode != "plan" || meta.TokenMode != boot.TokenModeFull || meta.AgentPreset != boot.AgentPresetStandard {
+	if meta.CollaborationMode != "plan" {
 		t.Fatalf("profile meta = %+v, want plan + full/standard", meta)
 	}
 }
@@ -505,21 +422,21 @@ func TestMetaReportsStoredCollaborationModeWhileControllerRebuilds(t *testing.T)
 	tab := testTab("a", t.TempDir())
 	tab.Ctrl.Close()
 	tab.Ctrl = nil
-	tab.mode = "plan-yolo"
-	tab.toolApprovalMode = control.ToolApprovalYolo
+	tab.mode = "plan"
+	tab.toolApprovalMode = control.ToolApprovalDangerFullAccess
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
 	meta := app.MetaForTab(tab.ID)
-	if meta.CollaborationMode != "plan" || meta.ToolApprovalMode != control.ToolApprovalYolo {
+	if meta.CollaborationMode != "plan" || meta.ToolApprovalMode != control.ToolApprovalDangerFullAccess {
 		t.Fatalf("rebuilding plan-yolo meta = %+v, want plan/yolo", meta)
 	}
 
 	tab.mode = "normal"
 	tab.goal = "finish the goal runner"
 	meta = app.MetaForTab(tab.ID)
-	if meta.CollaborationMode != "goal" || meta.Goal != "finish the goal runner" || meta.GoalStatus != control.GoalStatusRunning {
+	if meta.CollaborationMode != "normal" || meta.Goal != "finish the goal runner" || meta.GoalStatus != control.GoalStatusRunning {
 		t.Fatalf("rebuilding goal meta = %+v, want running goal", meta)
 	}
 }
@@ -545,30 +462,6 @@ func TestSetPlanModePreservesFullAccess(t *testing.T) {
 	app.SetPlanMode(false)
 	if tab.Ctrl.PlanMode() || !tab.Ctrl.AutoApproveTools() {
 		t.Fatalf("after SetPlanMode(false): plan=%v autoApproveTools=%v, want false/true", tab.Ctrl.PlanMode(), tab.Ctrl.AutoApproveTools())
-	}
-}
-
-func TestLegacyBypassMigratesToWorkspaceWriteAndPreservesPlanMode(t *testing.T) {
-	isolateDesktopUserDirs(t)
-
-	app := NewApp()
-	tab := testTab("a", t.TempDir())
-	tab.Ctrl.SetPlanMode(true)
-	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
-	app.tabOrder = []string{tab.ID}
-	app.activeTabID = tab.ID
-
-	app.SetBypass(true)
-	if !tab.Ctrl.PlanMode() || tab.Ctrl.ToolApprovalMode() != control.ToolApprovalWorkspaceWrite {
-		t.Fatalf("after SetBypass(true): plan=%v permission=%v, want true/workspace-write", tab.Ctrl.PlanMode(), tab.Ctrl.ToolApprovalMode())
-	}
-	if got := currentTabCollaborationMode(tab); got != "plan" {
-		t.Fatalf("collaboration mode = %q, want plan", got)
-	}
-
-	app.SetBypass(false)
-	if !tab.Ctrl.PlanMode() || tab.Ctrl.ToolApprovalMode() != control.ToolApprovalWorkspaceWrite {
-		t.Fatalf("after SetBypass(false): plan=%v permission=%v, want true/workspace-write", tab.Ctrl.PlanMode(), tab.Ctrl.ToolApprovalMode())
 	}
 }
 

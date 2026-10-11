@@ -50,7 +50,6 @@ func holdUserScope(c *Config) heldScope {
 		endpoints:       holdUserEndpoints(c),
 		bot:             cloneBotConfig(c.Bot),
 		language:        c.Desktop.Language,
-		currency:        c.Desktop.Currency,
 		displayCurrency: c.Billing.DisplayCurrency,
 	}
 }
@@ -127,7 +126,7 @@ func (h heldScope) narrow(c *Config, root string) {
 	}
 	h.permissions.Allow = appendMissing(h.permissions.Allow, grant.Allow...)
 	h.sandbox.AllowWrite = appendMissing(h.sandbox.AllowWrite, grant.AllowWrite...)
-	c.Desktop.Language, c.Desktop.Currency, c.Billing.DisplayCurrency = h.language, h.currency, h.displayCurrency
+	c.Desktop.Language, c.Billing.DisplayCurrency = h.language, h.displayCurrency
 	h.narrowSandbox(c, ws)
 	h.narrowPermissions(c)
 	if permissionpreset.NormalizeDefault(c.Desktop.DefaultToolApprovalMode) != permissionpreset.NormalizeDefault(h.approvalMode) {
@@ -193,15 +192,13 @@ func (h heldScope) narrowPermissions(c *Config) {
 	if normalizedMode(p.Mode) != normalizedMode(u.Mode) {
 		c.ignoreProject("permissions.mode", p.Mode, ProjectUserOnly)
 	}
-	if p.AllowDynamicBash && !u.AllowDynamicBash {
-		c.ignoreProject("permissions.allow_dynamic_bash", "true", ProjectUserOnly)
-	}
+
 	for _, rule := range p.Allow {
 		if !slices.Contains(u.Allow, rule) && !slices.ContainsFunc(u.Allow, func(allowed string) bool { return permission.RuleCoversString(allowed, rule) }) {
 			c.ignoreProject("permissions.allow", rule, ProjectUserOnly)
 		}
 	}
-	p.Mode, p.AllowDynamicBash, p.Allow = u.Mode, u.AllowDynamicBash, u.Allow
+	p.Mode, p.Allow = u.Mode, u.Allow
 	p.Ask = appendMissing(u.Ask, p.Ask...)
 	p.Deny = appendMissing(u.Deny, p.Deny...)
 }

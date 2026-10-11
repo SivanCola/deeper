@@ -83,67 +83,35 @@ type crashDiagnostics struct {
 	Signal              string `json:"signal,omitempty"`
 	Evidence            string `json:"evidence,omitempty"`
 	Category            string `json:"category,omitempty"`
-	LegacyParsed        bool   `json:"legacyParsed,omitempty"`
-}
-
-// webRuntimeDiagnostic and webView2Diagnostic are decode-only: pending reports
-// written by the retired WebView2/WebKitGTK shell must still decode and forward
-// after upgrade. No producer remains under the Electron shell.
-type webRuntimeDiagnostic struct {
-	Engine              string `json:"engine"`
-	Kind                string `json:"kind"`
-	Reason              string `json:"reason"`
-	ExitCode            *int32 `json:"exitCode,omitempty"`
-	ProcessDescription  string `json:"processDescription,omitempty"`
-	FailureSourceModule string `json:"failureSourceModule,omitempty"`
-	RuntimeVersion      string `json:"runtimeVersion"`
-	GPUMode             string `json:"gpuMode"`
-	CompatibilityMode   bool   `json:"compatibilityMode,omitempty"`
-	Recovery            string `json:"recovery"`
-}
-
-type webView2Diagnostic struct {
-	Kind                string `json:"kind"`
-	Reason              string `json:"reason"`
-	ExitCode            *int32 `json:"exitCode,omitempty"`
-	ProcessDescription  string `json:"processDescription,omitempty"`
-	FailureSourceModule string `json:"failureSourceModule,omitempty"`
-	RuntimeVersion      string `json:"runtimeVersion"`
-	GPUDisabled         bool   `json:"gpuDisabled"`
-	Recovery            string `json:"recovery"`
 }
 
 type crashReport struct {
-	EventID         string                `json:"eventId,omitempty"`
-	DedupKey        string                `json:"dedupKey,omitempty"`
-	InstallID       string                `json:"installId,omitempty"`
-	Kind            string                `json:"kind"`
-	Version         string                `json:"version"`
-	OS              string                `json:"os"`
-	Arch            string                `json:"arch"`
-	Message         string                `json:"message"`
-	Device          deviceInfo            `json:"device"`
-	SchemaVersion   int                   `json:"schemaVersion,omitempty"`
-	Source          string                `json:"source,omitempty"`
-	Label           string                `json:"label,omitempty"`
-	ErrorType       string                `json:"errorType,omitempty"`
-	ErrorMessage    string                `json:"errorMessage,omitempty"`
-	ErrorFamily     string                `json:"errorFamily,omitempty"`
-	Stack           string                `json:"stack,omitempty"`
-	ComponentStack  string                `json:"componentStack,omitempty"`
-	TopFrame        string                `json:"topFrame,omitempty"`
-	FingerprintHint string                `json:"fingerprintHint,omitempty"`
-	BuildCommit     string                `json:"buildCommit,omitempty"`
-	Channel         string                `json:"channel,omitempty"`
-	Language        string                `json:"language,omitempty"`
-	View            string                `json:"view,omitempty"`
-	Breadcrumbs     []crashBreadcrumb     `json:"breadcrumbs,omitempty"`
-	OccurredAt      string                `json:"occurredAt,omitempty"`
-	Diagnostics     *crashDiagnostics     `json:"diagnostics,omitempty"`
-	WebRuntime      *webRuntimeDiagnostic `json:"webRuntime,omitempty"`
-	// WebView2 is retained only so pending reports written by the retired
-	// WebView2 shell can still be decoded and forwarded after upgrade.
-	WebView2 *webView2Diagnostic `json:"webview2,omitempty"`
+	EventID         string            `json:"eventId,omitempty"`
+	DedupKey        string            `json:"dedupKey,omitempty"`
+	InstallID       string            `json:"installId,omitempty"`
+	Kind            string            `json:"kind"`
+	Version         string            `json:"version"`
+	OS              string            `json:"os"`
+	Arch            string            `json:"arch"`
+	Message         string            `json:"message"`
+	Device          deviceInfo        `json:"device"`
+	SchemaVersion   int               `json:"schemaVersion,omitempty"`
+	Source          string            `json:"source,omitempty"`
+	Label           string            `json:"label,omitempty"`
+	ErrorType       string            `json:"errorType,omitempty"`
+	ErrorMessage    string            `json:"errorMessage,omitempty"`
+	ErrorFamily     string            `json:"errorFamily,omitempty"`
+	Stack           string            `json:"stack,omitempty"`
+	ComponentStack  string            `json:"componentStack,omitempty"`
+	TopFrame        string            `json:"topFrame,omitempty"`
+	FingerprintHint string            `json:"fingerprintHint,omitempty"`
+	BuildCommit     string            `json:"buildCommit,omitempty"`
+	Channel         string            `json:"channel,omitempty"`
+	Language        string            `json:"language,omitempty"`
+	View            string            `json:"view,omitempty"`
+	Breadcrumbs     []crashBreadcrumb `json:"breadcrumbs,omitempty"`
+	OccurredAt      string            `json:"occurredAt,omitempty"`
+	Diagnostics     *crashDiagnostics `json:"diagnostics,omitempty"`
 }
 
 type frontendCrashPayload struct {
@@ -209,12 +177,13 @@ func sanitizeBreadcrumbs(in []crashBreadcrumb) []crashBreadcrumb {
 
 func baseCrashReport(kind string) crashReport {
 	return crashReport{
-		Kind:    kind,
-		Version: version,
-		OS:      runtime.GOOS,
-		Arch:    runtime.GOARCH,
-		Device:  collectDeviceInfo(),
-		Channel: channel,
+		SchemaVersion: currentCrashSchema,
+		Kind:          kind,
+		Version:       version,
+		OS:            runtime.GOOS,
+		Arch:          runtime.GOARCH,
+		Device:        collectDeviceInfo(),
+		Channel:       channel,
 	}
 }
 
@@ -333,12 +302,7 @@ func crashReportFromDetail(kind, detail string) (crashReport, error) {
 		return r, nil
 	}
 
-	r.SchemaVersion = 1
-	r.Source = "legacy"
-	r.Label = kind
-	r.Message = sanitizeCrashText(detail, maxCrashDetailBytes)
-	r.Message = appendNativeResourceContext(r.Kind, r.Message)
-	return r, nil
+	return crashReport{}, fmt.Errorf("unsupported frontend crash payload")
 }
 
 func (a *App) ReportCrash(kind, detail string) error {

@@ -39,9 +39,9 @@ func dropRemoteTabPump(a *App, tabID string) {
 // publishing ready without re-entering would let the next /status adopt that
 // foreign session and silently swap the user's conversation.
 func TestRemoteTabReattachReentersSelectedSessionWhenServeMoved(t *testing.T) {
-	const selected = "/sessions/s2.jsonl"
+	const selected = "session-id:s2"
 	fs, a := reattachSelectionFixture(t, []serveSessionEntry{
-		{Name: "s1", Path: "/sessions/s1.jsonl", Current: true},
+		{Name: "s1", Path: "session-id:s1", Current: true},
 		{Name: "s2", Path: selected},
 	})
 	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s2", SessionPath: selected})
@@ -82,9 +82,9 @@ func TestRemoteTabReattachReentersSelectedSessionWhenServeMoved(t *testing.T) {
 // When Serve still runs the selected session the reattach only rebuilds the
 // stream: no redundant /resume transition is issued.
 func TestRemoteTabReattachKeepsStreamWhenServeStillRunsSelection(t *testing.T) {
-	const selected = "/sessions/s2.jsonl"
+	const selected = "session-id:s2"
 	fs, a := reattachSelectionFixture(t, []serveSessionEntry{
-		{Name: "s1", Path: "/sessions/s1.jsonl", Current: true},
+		{Name: "s1", Path: "session-id:s1", Current: true},
 		{Name: "s2", Path: selected},
 	})
 	meta := openReadyRemoteTab(t, a, RemoteTabOpenOptions{SessionName: "s2", SessionPath: selected})
@@ -111,8 +111,8 @@ func TestRemoteTabReattachKeepsStreamWhenServeStillRunsSelection(t *testing.T) {
 // reattach loop that recovers it must still create the requested blank instead
 // of publishing ready on whatever session Serve happens to run.
 func TestRemoteTabFirstOpenReattachEntersRequestedNewSession(t *testing.T) {
-	const fresh = "/sessions/fresh.jsonl"
-	fs, a := reattachSelectionFixture(t, []serveSessionEntry{{Name: "s1", Path: "/sessions/s1.jsonl", Current: true}})
+	const fresh = "session-id:fresh"
+	fs, a := reattachSelectionFixture(t, []serveSessionEntry{{Name: "s1", Path: "session-id:s1", Current: true}})
 	fs.mu.Lock()
 	fs.eventsFailCount = 1
 	fs.newSessionPath = fresh

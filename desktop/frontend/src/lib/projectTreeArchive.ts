@@ -244,7 +244,7 @@ export function useProjectTreeArchiveController({
     const queued = enqueueProjectTreeArchive(archiveQueueRef.current, async () => {
       await runProjectTreeArchiveJob({
         archive: async () => {
-          const receipt = await app.ArchiveSessionTarget({ ref: target.session, source: target.source, sessionPath });
+          const receipt = await app.ArchiveSessionTarget({ ref: target.session, sessionPath });
           if (receipt.committed) sessionLifecycleFences.archive(target, receipt);
           if (receipt.committed && receipt.outcome === "archived_copy") showToast(t("projectTree.archivedCopy"), "info");
           if (receipt.committed && receipt.outcome === "already_removed") showToast(t("projectTree.alreadyRemovedSource"), "info");

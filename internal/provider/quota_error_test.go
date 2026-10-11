@@ -31,7 +31,7 @@ func TestObservedQuotaResponsesNeverRetryOrBlameCredentials(t *testing.T) {
 				if managed {
 					ctx = WithManagedRecovery(ctx)
 				}
-				_, err := SendWithRetry(ctx, srv.Client(), SendOptions{Provider: "fixture", KeyPresent: true, RetryAuth: true}, func(ctx context.Context) (*http.Request, error) {
+				_, err := SendWithRetry(ctx, srv.Client(), SendOptions{Provider: "fixture", KeyPresent: true}, func(ctx context.Context) (*http.Request, error) {
 					return http.NewRequestWithContext(ctx, http.MethodPost, srv.URL, nil)
 				})
 				var quota *QuotaError

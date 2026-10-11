@@ -16,7 +16,7 @@ func (a *App) AddOfficialProviderAccess(kind, key string) (string, error) {
 }
 
 func addOfficialProviderAccessConfig(c *config.Config, kind, key string) error {
-	entries, keyEnv, err := officialProviderTemplate(kind, c.DeepSeekOfficialPricingLanguage())
+	entries, keyEnv, err := officialProviderTemplate(kind)
 	if err != nil {
 		return err
 	}
@@ -73,87 +73,13 @@ func installOfficialProviderAccess(c *config.Config, kind string, entries []conf
 			if officialProviderKindFromEntry(*existing) != wantKind {
 				return nil, fmt.Errorf("official provider %q cannot be added because provider name %q already belongs to a custom endpoint; edit, rename, or remove the existing provider first", kind, name)
 			}
-			// Re-adding access must not reset customized official transport fields.
-			// Only repair an unusable legacy entry that has no model declaration.
 			if len(existing.ModelList()) == 0 {
-				repaired := repairOfficialProviderCatalog(*existing, entry)
-				if err := c.UpsertProvider(repaired); err != nil {
-					return nil, err
-				}
+				return nil, fmt.Errorf("provider %q has no current model catalog", name)
 			}
 		} else if err := c.UpsertProvider(entry); err != nil {
 			return nil, err
 		}
 		names = append(names, name)
 	}
-	if wantKind == "deepseek" && slices.Contains(names, "deepseek") {
-		retargetDeepSeekOfficialReferences(c)
-	}
 	return names, nil
-}
-
-func repairOfficialProviderCatalog(existing, template config.ProviderEntry) config.ProviderEntry {
-	existing.Model = ""
-	existing.Models = append([]string(nil), template.ModelList()...)
-	existing.Default = template.DefaultModel()
-	if existing.ContextWindow == 0 {
-		existing.ContextWindow = template.ContextWindow
-	}
-	if existing.MaxOutputTokens == 0 {
-		existing.MaxOutputTokens = template.MaxOutputTokens
-	}
-	if strings.TrimSpace(existing.BalanceURL) == "" {
-		existing.BalanceURL = template.BalanceURL
-	}
-	if strings.TrimSpace(existing.Thinking) == "" {
-		existing.Thinking = template.Thinking
-	}
-	if existing.WebSearch == nil && template.WebSearch != nil {
-		enabled := *template.WebSearch
-		existing.WebSearch = &enabled
-	}
-	if existing.Prices == nil {
-		existing.Prices = template.Prices
-	}
-	if existing.Price == nil {
-		existing.Price = template.Price
-	}
-	if existing.ModelOverrides == nil {
-		existing.ModelOverrides = map[string]config.ProviderModelOverride{}
-	}
-	for model, override := range template.ModelOverrides {
-		if _, ok := existing.ModelOverrides[model]; !ok {
-			existing.ModelOverrides[model] = override
-		}
-	}
-	return existing
-}
-
-func retargetDeepSeekOfficialReferences(c *config.Config) {
-	if c == nil {
-		return
-	}
-	retarget := func(ref string) string {
-		ref = strings.TrimSpace(ref)
-		providerName, model, hasModel := strings.Cut(ref, "/")
-		switch providerName {
-		case "deepseek-flash":
-			if !hasModel || strings.TrimSpace(model) == "" {
-				model = "deepseek-v4-flash"
-			}
-		case "deepseek-pro":
-			if !hasModel || strings.TrimSpace(model) == "" {
-				model = "deepseek-v4-pro"
-			}
-		default:
-			return ref
-		}
-		return "deepseek/" + model
-	}
-	c.DefaultModel = retarget(c.DefaultModel)
-	c.Agent.PlannerModel = retarget(c.Agent.PlannerModel)
-	c.Agent.SubagentModel = retarget(c.Agent.SubagentModel)
-	for skillName, ref := range c.Agent.SubagentModels {
-		c.Agent.SubagentModels[skillName] = retarget(ref)
-	}
 }

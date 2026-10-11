@@ -4,8 +4,6 @@ func ManifestPath(kind string) string {
 	switch kind {
 	case "deepzora":
 		return NativeManifest
-	case "deeper":
-		return LegacyNativeManifest
 	case "codex":
 		return CodexManifest
 	case "claude":
@@ -16,5 +14,5 @@ func ManifestPath(kind string) string {
 }
 
 func ManifestPaths() []string {
-	return []string{NativeManifest, LegacyNativeManifest, CodexManifest, ClaudeManifest}
+	return []string{NativeManifest, CodexManifest, ClaudeManifest}
 }

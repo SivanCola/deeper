@@ -13,6 +13,8 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/jobs"
+	"deepzora/internal/provider"
+	"deepzora/internal/tool"
 )
 
 func TestProjectTreeShowsDetachedRuntimeStatus(t *testing.T) {
@@ -31,7 +33,7 @@ func TestProjectTreeShowsDetachedRuntimeStatus(t *testing.T) {
 	app := NewApp()
 	sink := &tabEventSink{tabID: "detached", app: app}
 	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
-	ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionPath: path, Label: "detached", Sink: sink})
+	ctrl := control.New(control.Options{Runner: runner, SessionDir: dir, SessionService: app.desktopSessionService(dir), SessionCreateService: app.desktopSessionService(dir), Executor: agent.New(nil, tool.NewRegistry(), agent.NewSession(""), agent.Options{}, event.Discard), Label: "detached", Sink: sink})
 	defer ctrl.Close()
 	app.detachedSessions[sessionRuntimeKey(path)] = &WorkspaceTab{
 		ID:            "detached",
@@ -46,9 +48,10 @@ func TestProjectTreeShowsDetachedRuntimeStatus(t *testing.T) {
 		disabledMCP:   map[string]ServerView{},
 	}
 
+	bindRuntimeStatusSession(t, app, ctrl, path, app.detachedSessions[sessionRuntimeKey(path)])
 	ctrl.Submit("keep detached runtime running")
 	<-runner.started
-	nodes := mustListProjectTree(t, app)
+	nodes := currentRuntimeStatusTree(t, app)
 	if len(nodes) != 1 || len(nodes[0].Children) != 1 {
 		t.Fatalf("project tree = %#v, want one global topic", nodes)
 	}
@@ -79,12 +82,12 @@ func TestProjectTreeSplitsMultipleRuntimeSessionsInSameTopic(t *testing.T) {
 	runnerA := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
 	runnerB := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
 	asks := make(chan struct{}, 1)
-	ctrlA := control.New(control.Options{Runner: runnerA, SessionDir: dir, SessionPath: sessionA, Label: "a", Sink: event.FuncSink(func(e event.Event) {
+	ctrlA := control.New(control.Options{Runner: runnerA, SessionDir: dir, SessionService: app.desktopSessionService(dir), SessionCreateService: app.desktopSessionService(dir), Executor: agent.New(nil, tool.NewRegistry(), agent.NewSession(""), agent.Options{}, event.Discard), Label: "a", Sink: event.FuncSink(func(e event.Event) {
 		if e.Kind == event.AskRequest {
 			asks <- struct{}{}
 		}
 	})})
-	ctrlB := control.New(control.Options{Runner: runnerB, SessionDir: dir, SessionPath: sessionB, Label: "b", Sink: event.Discard})
+	ctrlB := control.New(control.Options{Runner: runnerB, SessionDir: dir, SessionService: app.desktopSessionService(dir), SessionCreateService: app.desktopSessionService(dir), Executor: agent.New(nil, tool.NewRegistry(), agent.NewSession(""), agent.Options{}, event.Discard), Label: "b", Sink: event.Discard})
 	defer ctrlA.Close()
 	defer ctrlB.Close()
 
@@ -112,6 +115,8 @@ func TestProjectTreeSplitsMultipleRuntimeSessionsInSameTopic(t *testing.T) {
 		ActivityStatus: topicStatusThinking,
 		disabledMCP:    map[string]ServerView{},
 	}
+	bindRuntimeStatusSession(t, app, ctrlA, sessionA, detached)
+	bindRuntimeStatusSession(t, app, ctrlB, sessionB, visible)
 	app.detachedSessions[sessionRuntimeKey(sessionA)] = detached
 	app.tabs[visible.ID] = visible
 	app.tabOrder = []string{visible.ID}
@@ -134,7 +139,7 @@ func TestProjectTreeSplitsMultipleRuntimeSessionsInSameTopic(t *testing.T) {
 		t.Fatal("waiting prompt was not committed")
 	}
 
-	nodes := mustListProjectTree(t, app)
+	nodes := currentRuntimeStatusTree(t, app)
 	if len(nodes) != 1 || len(nodes[0].Children) != 2 {
 		t.Fatalf("project tree = %#v, want two independent global sessions", nodes)
 	}
@@ -143,13 +148,13 @@ func TestProjectTreeSplitsMultipleRuntimeSessionsInSameTopic(t *testing.T) {
 		if child.TopicID != topicID || len(child.Children) != 0 {
 			t.Fatalf("session projection = %#v, want flat independent row", child)
 		}
-		statusByPath[sessionRuntimeKey(child.SessionPath)] = child.Status
+		statusByPath[child.Session.SessionID] = child.Status
 	}
-	if statusByPath[sessionRuntimeKey(sessionA)] != topicStatusWaitingConfirmation {
-		t.Fatalf("session A status = %q, want waiting; sessions=%#v", statusByPath[sessionRuntimeKey(sessionA)], nodes[0].Children)
+	if statusByPath[agent.BranchID(sessionA)] != topicStatusWaitingConfirmation {
+		t.Fatalf("session A status = %q, want waiting; sessions=%#v", statusByPath[agent.BranchID(sessionA)], nodes[0].Children)
 	}
-	if statusByPath[sessionRuntimeKey(sessionB)] != topicStatusThinking {
-		t.Fatalf("session B status = %q, want thinking; sessions=%#v", statusByPath[sessionRuntimeKey(sessionB)], nodes[0].Children)
+	if statusByPath[agent.BranchID(sessionB)] != topicStatusThinking {
+		t.Fatalf("session B status = %q, want thinking; sessions=%#v", statusByPath[agent.BranchID(sessionB)], nodes[0].Children)
 	}
 
 	close(runnerA.release)
@@ -182,9 +187,9 @@ func TestProjectTreeShowsBackgroundJobStatus(t *testing.T) {
 			return "", nil
 		}
 	})
-	ctrl := control.New(control.Options{SessionDir: dir, SessionPath: path, Label: "job", Jobs: jm})
-	defer ctrl.Close()
 	app := NewApp()
+	ctrl := control.New(control.Options{SessionDir: dir, SessionService: app.desktopSessionService(dir), SessionCreateService: app.desktopSessionService(dir), Executor: agent.New(nil, tool.NewRegistry(), agent.NewSession(""), agent.Options{}, event.Discard), Label: "job", Jobs: jm})
+	defer ctrl.Close()
 	app.tabs["job"] = &WorkspaceTab{
 		ID:            "job",
 		Scope:         "global",
@@ -196,10 +201,11 @@ func TestProjectTreeShowsBackgroundJobStatus(t *testing.T) {
 		Ready:         true,
 		disabledMCP:   map[string]ServerView{},
 	}
+	bindRuntimeStatusSession(t, app, ctrl, path, app.tabs["job"])
 	app.tabOrder = []string{"job"}
 	app.activeTabID = "job"
 
-	nodes := mustListProjectTree(t, app)
+	nodes := currentRuntimeStatusTree(t, app)
 	if len(nodes) != 1 || len(nodes[0].Children) != 1 {
 		t.Fatalf("project tree = %#v, want one global topic", nodes)
 	}
@@ -283,31 +289,6 @@ func waitNoJobs(t *testing.T, ctrl control.SessionAPI) {
 	}
 }
 
-func TestTopicActivityStatusPresentsReadinessSeparatelyFromPause(t *testing.T) {
-	readiness := event.Event{
-		Kind:    event.TurnDone,
-		Err:     &agent.FinalReadinessError{Attempts: 3, Reason: "missing verification"},
-		Outcome: event.TurnOutcomeFinalReadiness,
-	}
-	if status, ok := topicActivityStatusFromEvent(readiness); !ok || status != topicStatusAwaitingDelivery {
-		t.Fatalf("readiness turn end = (%q, %v), want (%q, true)", status, ok, topicStatusAwaitingDelivery)
-	}
-	recoveryPause := event.Event{
-		Kind:    event.TurnDone,
-		Err:     &agent.RecoveryPauseError{Message: "automatic recovery paused"},
-		Outcome: event.TurnOutcomeRecoveryPaused,
-	}
-	if status, ok := topicActivityStatusFromEvent(recoveryPause); !ok || status != topicStatusPaused {
-		t.Fatalf("recovery pause turn end = (%q, %v), want (%q, true)", status, ok, topicStatusPaused)
-	}
-	if status, ok := topicActivityStatusFromEvent(event.Event{Kind: event.TurnDone, Err: io.EOF}); !ok || status != topicStatusError {
-		t.Fatalf("ordinary turn error = (%q, %v), want (%q, true)", status, ok, topicStatusError)
-	}
-	if status, ok := topicActivityStatusFromEvent(event.Event{Kind: event.TurnDone}); !ok || status != "" {
-		t.Fatalf("clean turn end = (%q, %v), want cleared status", status, ok)
-	}
-}
-
 func TestTopicActivityStatusClearsOnCompactionDone(t *testing.T) {
 	if status, ok := topicActivityStatusFromEvent(event.Event{Kind: event.CompactionStarted}); !ok || status != topicStatusThinking {
 		t.Fatalf("compaction start = (%q, %v), want (%q, true)", status, ok, topicStatusThinking)
@@ -340,4 +321,45 @@ func TestCatalogRuntimeStatusPreservesDeliveryCheckWhenIdle(t *testing.T) {
 	if got != topicStatusPaused {
 		t.Fatalf("idle recovery pause = %q, want %q", got, topicStatusPaused)
 	}
+}
+
+func bindRuntimeStatusSession(t *testing.T, app *App, ctrl *control.Controller, path string, tab *WorkspaceTab) {
+	t.Helper()
+	ref, workspaceID, err := app.bindFreshDesktopSessionWithIDs(t.Context(), "global", "", ctrl, agent.BranchID(path), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tab.SessionID, tab.SessionPath, tab.SessionWorkspace.ID = ref.SessionID, "", workspaceID
+	if err := app.workspaceRegistry().EnsureSessionTopic(t.Context(), ref.SessionID, tab.TopicID, tab.TopicTitle); err != nil {
+		t.Fatal(err)
+	}
+	_, runtime, _ := ctrl.SessionBinding()
+	appendSessionTestMessage(t, runtime, "initial-user", provider.Message{ID: "initial-user", Role: provider.RoleUser, Origin: provider.MessageOriginUser, Content: "runtime status"})
+	if _, _, err := app.ensureSessionOrganization("global", ""); err != nil {
+		t.Fatal(err)
+	}
+	app.newSessionRuntimeLocked(tab, sessionRuntimeKey(tab.currentSessionIdentity()))
+	t.Cleanup(func() { ctrl.Close(); app.closeSessionServices() })
+}
+
+func currentRuntimeStatusTree(t *testing.T, app *App) []ProjectNode {
+	t.Helper()
+	nodes := mustListProjectTree(t, app)
+	live := map[string]ProjectNode{}
+	for _, topic := range app.GetProjectTreeRuntimeSnapshot().Topics {
+		if topic.Node.Session != nil {
+			live[topic.Node.Session.SessionID] = topic.Node
+		}
+	}
+	for i := range nodes {
+		for j := range nodes[i].Children {
+			row := &nodes[i].Children[j]
+			if row.Session != nil {
+				if runtime, ok := live[row.Session.SessionID]; ok {
+					row.Status, row.Running = runtime.Status, runtime.Running
+				}
+			}
+		}
+	}
+	return nodes
 }

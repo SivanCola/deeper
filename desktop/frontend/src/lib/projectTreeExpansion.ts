@@ -4,7 +4,7 @@ import { topicIsActive } from "./projectTreeTopic";
 import type { ProjectNode } from "./types";
 
 export function projectTreeNodeKey(node: ProjectNode, depth: number): string {
-  if (node.session || node.sessionPath || node.source || node.remoteSession || node.tabId) return projectSessionRowKey(node);
+  if (node.session || node.sessionPath || node.remoteSession || node.tabId) return projectSessionRowKey(node);
   return node.key || `${node.kind}-${node.root ?? ""}-${node.topicId ?? ""}-${node.sessionPath ?? ""}-${depth}`;
 }
 

@@ -18,7 +18,7 @@ func (m *chatTUI) runCurrencySubcommand(input string) tea.Cmd {
 			m.notice("currency: " + err.Error())
 			return nil
 		}
-		m.notice(i18n.M.CurrencyHeader + "\n" + describePricingCurrencies(pricingCurrencyDisplay(cfg.DisplayCurrencyPref()), cfg.ResolveDisplayCurrency()) + "\n" + i18n.M.CurrencyHint)
+		m.notice(i18n.M.CurrencyHeader + "\n" + describePricingCurrencies(pricingCurrencyDisplay(cfg.DisplayCurrencyPref()), cfg.ExplicitDisplayCurrency()) + "\n" + i18n.M.CurrencyHint)
 		return nil
 	}
 	if len(args) > 2 {
@@ -47,7 +47,7 @@ func (m *chatTUI) runCurrencySubcommand(input string) tea.Cmd {
 		if err := edit.SetDisplayCurrency(mode); err != nil {
 			return err
 		}
-		resolved = edit.ResolveDisplayCurrency()
+		resolved = edit.ExplicitDisplayCurrency()
 		return edit.SaveTo(path)
 	}(); err != nil {
 		m.notice("currency: " + err.Error())

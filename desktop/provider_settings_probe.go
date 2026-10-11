@@ -61,7 +61,6 @@ func (a *App) FetchProviderModelCatalogDraft(p ProviderView, key string) ([]Prov
 		Headers:    p.Headers,
 		AuthHeader: p.AuthHeader,
 		NoProxy:    p.NoProxy,
-		ChatURL:    p.ChatURL,
 		RequestURL: p.RequestURL,
 	}
 	started := time.Now()
@@ -101,10 +100,12 @@ func (a *App) FetchProviderModelCatalogDraft(p ProviderView, key string) ([]Prov
 			}
 		}
 	}
-	e.VisionModels = p.VisionModels
 	e.ModelOverrides = providerModelOverridesForSave(p.ModelOverrides, nil)
 	result := make([]ProviderModelCapabilityView, 0, len(models))
 	for _, model := range models {
+		if !config.IsLikelyChatModel(model.ID) {
+			continue
+		}
 		entry := e
 		entry.Model = model.ID
 		resolved := capabilities.Resolve(&entry)

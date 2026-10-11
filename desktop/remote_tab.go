@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -451,7 +452,7 @@ func serveGet(ctx context.Context, client *http.Client, url string, expectedPath
 		if sessionID, ok := strings.CutPrefix(expectedPath[0], remoteSessionIDRoutePrefix); ok {
 			req.Header.Set(expectedSessionIDHeader, sessionID)
 		} else {
-			req.Header.Set(expectedSessionPathHeader, expectedPath[0])
+			return nil, errors.New("remote requests require a session identity")
 		}
 	}
 	resp, err := client.Do(req)
@@ -970,8 +971,4 @@ func (a *App) requireRemoteGoalLifecycle(tabID string) error {
 		return fmt.Errorf("this remote Deepzora Serve does not support %s; upgrade it before creating or controlling goals", serveCapabilityGoalLifecycleV2)
 	}
 	return nil
-}
-
-func (a *App) SetRemoteTabQualityFloor(tabID, floor string) error {
-	return a.validateRemoteQualityFloor(tabID, floor)
 }

@@ -24,7 +24,6 @@ const session: SessionMeta = {
   turns: 1,
   createdAt: 1,
   lastActivityAt: 1,
-  modTime: 1,
   current: false,
   open: false,
 };

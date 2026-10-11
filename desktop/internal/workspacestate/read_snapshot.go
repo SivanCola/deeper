@@ -19,7 +19,6 @@ type ReadSnapshot struct {
 	conflicts     map[string]bool
 	activeTopics  map[string]int
 	adoptedTopics map[string]map[string]bool
-	headSources   map[string]bool
 	versions      *ReadVersions
 }
 
@@ -42,8 +41,7 @@ type snapshotVerification struct {
 }
 
 func (s *Store) publishSnapshotLocked(body []byte, state State) {
-	state.sourceIdentities = newSourceIdentityIndex(state)
-	r := &ReadSnapshot{state: state, owners: make(map[string]string), conflicts: make(map[string]bool), activeTopics: make(map[string]int), headSources: make(map[string]bool), versions: NewReadVersions(state)}
+	r := &ReadSnapshot{state: state, owners: make(map[string]string), conflicts: make(map[string]bool), activeTopics: make(map[string]int), versions: NewReadVersions(state)}
 	r.adoptedTopics = adoptedTopicIndex(state)
 	for key, workspace := range state.Workspaces {
 		for _, id := range workspace.SessionIDs {
@@ -58,15 +56,7 @@ func (s *Store) publishSnapshotLocked(body []byte, state State) {
 			r.activeTopics[p.TopicID]++
 		}
 	}
-	for _, mapping := range state.SourceMappings {
-		if mapping.HeadID != "" {
-			// This is a locator hint only. Exact source/head mappings and the
-			// selected head still decide adoption; it never proves content.
-			if key, err := sourcePathKey(mapping.Path); err == nil {
-				r.headSources[key] = true
-			}
-		}
-	}
+
 	s.readBody = body
 	s.readSnapshot.Store(r)
 }
@@ -148,15 +138,6 @@ func (r *ReadSnapshot) Session(id string) SessionMetadata {
 		OwnershipConflict: r.conflicts[id], SharedTopic: p.TopicID != "" && others > 0}
 }
 
-func (r *ReadSnapshot) Source(key string) (SourceMapping, bool) {
-	mapping, ok, _ := r.state.ResolveSource(key)
-	return mapping, ok
-}
-
-func (r *ReadSnapshot) ResolveSource(key string) (SourceMapping, bool, error) {
-	return r.state.ResolveSource(key)
-}
-
 func sourcePathKey(path string) (string, error) {
 	if strings.TrimSpace(path) == "" {
 		return "", errors.New("source path is required")
@@ -167,12 +148,4 @@ func sourcePathKey(path string) (string, error) {
 	}
 	identity, err := pathidentity.Resolve(abs, pathidentity.Options{FollowLeaf: true})
 	return identity.Key, err
-}
-
-func (r *ReadSnapshot) HasHeadSource(path string) (bool, error) {
-	if len(r.headSources) == 0 {
-		return false, nil
-	}
-	key, err := sourcePathKey(path)
-	return r.headSources[key], err
 }

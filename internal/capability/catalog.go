@@ -47,12 +47,11 @@ type CatalogOptions struct {
 // CacheKeyOK=false) so MCPServerEntries can mark them stale instead of
 // hiding them; servers without a usable cache are simply absent. Call once at
 // session start and reuse — the cache lives on disk. The profile selects the
-// cache identity: capability-declaring profiles never read the legacy shared
-// file, whose catalog was negotiated under different client capabilities.
+// cache identity, isolating catalogs negotiated with different capabilities.
 func LoadCachedToolsForSpecs(specs []plugin.Spec, profile plugin.HostProfile) (map[string][]plugin.CachedTool, map[string]bool) {
 	cached := map[string][]plugin.CachedTool{}
 	keyOK := map[string]bool{}
-	if profile.UsesEnhancedCache() {
+	if profile.Normalize() != plugin.HostProfileCore {
 		for _, s := range specs {
 			name := strings.TrimSpace(s.Name)
 			if name == "" {

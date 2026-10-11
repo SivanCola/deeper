@@ -10,21 +10,6 @@ import (
 	"deepzora/internal/provider"
 )
 
-func (s *Session) classifySnapshotWriteForCommit(path string, msgs []provider.Message, digest [sha256.Size]byte, version uint64, ownedRewrite bool, mode sessionSaveMode) (snapshotWriteDecision, error) {
-	decision, err := s.classifySnapshotWrite(path, msgs, digest, version, ownedRewrite)
-	if err != nil || decision.upToDate && mode != sessionSaveRewriteCompact && !decision.ledgerStale {
-		return decision, err
-	}
-	// Invalidate before any transcript mutation or stale-ledger repair so an
-	// interrupted commit cannot leave the previous listing self-certified.
-	reservedRevision, err := invalidateSessionListingProjection(path)
-	if err != nil {
-		return decision, fmt.Errorf("invalidate session listing projection: %w", err)
-	}
-	decision.reservedRevision = reservedRevision
-	return decision, nil
-}
-
 func (s *Session) markPersistedWithListing(path string, digest [sha256.Size]byte, version uint64, revision int64, rewriteVersion int, msgs []provider.Message) {
 	// Pair the persisted-message view with the baseline: writer-bound saves
 	// use it to classify append shapes without reloading the transcript.

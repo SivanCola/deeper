@@ -12,7 +12,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -25,16 +24,14 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/installlayout"
 	"deepzora/internal/proc"
-	"deepzora/internal/repair"
 )
 
-// resolveWindowsUpdateHelperSource finds the on-disk helper for the running
-// install: versioned active dir first, then the flat InstallRoot layout.
 func resolveWindowsUpdateHelperSource(installDir string) string {
-	if path, err := installlayout.ActiveUpdateHelperPath(installDir); err == nil {
-		return path
+	path, err := installlayout.ActiveUpdateHelperPath(installDir)
+	if err != nil {
+		return ""
 	}
-	return filepath.Join(installDir, windowsUpdateHelperFileName)
+	return path
 }
 
 const windowsUpdateHelperFileName = "deepzora-update-helper.exe"
@@ -51,14 +48,6 @@ func installerCommand(name, dir string) *exec.Cmd {
 	cmd := proc.VisibleCommand(name)
 	cmd.SysProcAttr = &syscall.SysProcAttr{CmdLine: installerCommandLine(name, dir)}
 	return cmd
-}
-
-func startWindowsUpdateHandoff(installerPath, installerSHA256, installDir, relaunchPath string, prepared *repair.UpdateTransaction) error {
-	// The helper is the only process that can observe an installer failure after
-	// the desktop exits and route recovery back through Guard. Starting NSIS
-	// directly here would make a failed/partial install indistinguishable from a
-	// successful handoff, so a missing or quarantined helper must fail safely.
-	return startWindowsUpdateHelper(installerPath, installerSHA256, installDir, relaunchPath, prepared)
 }
 
 func startWindowsVersionedUpdateHandoff(installerPath, installerSHA256, installDir, relaunchPath, targetVersion string) error {
@@ -87,62 +76,6 @@ func startWindowsVersionedUpdateHandoff(installerPath, installerSHA256, installD
 	return nil
 }
 
-func startWindowsUpdateHelper(installerPath, installerSHA256, installDir, relaunchPath string, prepared *repair.UpdateTransaction) error {
-	if installDir == "" {
-		return os.ErrNotExist
-	}
-	preparedHelperSHA256, err := preparedWindowsUpdateHelperSHA256(prepared, installDir)
-	if err != nil {
-		return err
-	}
-	helperPath, helperSHA256, err := prepareWindowsUpdateHelper(installDir, preparedHelperSHA256)
-	if err != nil {
-		return err
-	}
-	releaseExecution, err := claimWindowsUpdateHelperExecutionFn(helperPath, helperSHA256)
-	if err != nil {
-		return fmt.Errorf("claim copied Windows update helper: %w", err)
-	}
-	defer releaseExecution()
-	err = retryWindowsUpdateHelperStart(func() error {
-		cmd := proc.Command(helperPath, windowsUpdateHandoffArgs(
-			windowsUpdateOwnerPID(),
-			installerPath,
-			installerSHA256,
-			installDir,
-			relaunchPath,
-			prepared.ToVersion,
-			prepared.CreatedAt,
-			repair.UpdateTransactionID(prepared),
-		)...)
-		cmd.Env = instanceidentity.UpdateEnvironment(os.Environ(), config.DeepzoraHomeDir())
-		return cmd.Start()
-	})
-	if err != nil {
-		return windowsUpdateHelperStartError(err)
-	}
-	return nil
-}
-
-func preparedWindowsUpdateHelperSHA256(prepared *repair.UpdateTransaction, installDir string) (string, error) {
-	if prepared == nil || prepared.TargetKind != "file" || repair.UpdateTransactionID(prepared) == "" {
-		return "", fmt.Errorf("prepare Windows update helper: transaction identity is incomplete")
-	}
-	// Match by basename so versioned layouts (versions/<ver>/helper) and flat
-	// layouts (InstallRoot/helper) share one prepare path.
-	for _, file := range prepared.Files {
-		if !strings.EqualFold(filepath.Base(file.TargetPath), windowsUpdateHelperFileName) {
-			continue
-		}
-		if file.MissingBefore || !validWindowsSHA256(file.SHA256) {
-			return "", fmt.Errorf("prepare Windows update helper: prepared helper identity is incomplete")
-		}
-		return strings.TrimSpace(file.SHA256), nil
-	}
-	_ = installDir
-	return "", fmt.Errorf("prepare Windows update helper: helper is outside the prepared release unit")
-}
-
 func validWindowsSHA256(value string) bool {
 	value = strings.TrimSpace(value)
 	if len(value) != sha256.Size*2 {
@@ -150,30 +83,6 @@ func validWindowsSHA256(value string) bool {
 	}
 	_, err := hex.DecodeString(value)
 	return err == nil
-}
-
-func prepareWindowsUpdateHelper(installDir, preparedSHA256 string) (string, [sha256.Size]byte, error) {
-	src := resolveWindowsUpdateHelperSource(installDir)
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return "", [sha256.Size]byte{}, err
-	}
-	expectedSHA256 := sha256.Sum256(data)
-	if !strings.EqualFold(hex.EncodeToString(expectedSHA256[:]), strings.TrimSpace(preparedSHA256)) {
-		return "", [sha256.Size]byte{}, fmt.Errorf("packaged Windows update helper changed after transaction prepare")
-	}
-	if err := validateWindowsUpdateHelper(data, runtime.GOARCH); err != nil {
-		return "", [sha256.Size]byte{}, fmt.Errorf("validate packaged Windows update helper: %w", err)
-	}
-	dir, err := updateCacheDir()
-	if err != nil {
-		return "", [sha256.Size]byte{}, err
-	}
-	dst, err := stageWindowsUpdateHelperCopy(dir, data)
-	if err != nil {
-		return "", [sha256.Size]byte{}, err
-	}
-	return dst, expectedSHA256, nil
 }
 
 func prepareVersionedWindowsUpdateHelper(installDir string) (string, [sha256.Size]byte, error) {

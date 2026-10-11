@@ -188,10 +188,10 @@ eq(contextWindowStatus(140, 80), { tone: "warn", key: "context.windowStatusOverL
 console.log("\ncontext panel cost");
 
 const infoCost = contextCostDisplay({
-  info: { sessionCost: 0.1759, sessionCurrency: "$", sessionCostUsd: 0.1759 },
+  info: { sessionCost: 0.1759, sessionCurrency: "$" },
   sessionCost: 0,
   sessionCurrency: "¥",
-  usage: { cost: 0, costUsd: 0, currency: "¥" },
+  usage: { cost: 0, currency: "¥" },
 });
 eq(
   infoCost,
@@ -199,10 +199,10 @@ eq(
   "panel cost keeps the panel currency instead of state default",
 );
 const singleRequestOnly = contextCostDisplay({
-  info: { sessionCost: 0, sessionCurrency: "", sessionCostUsd: 0 },
+  info: { sessionCost: 0, sessionCurrency: "" },
   sessionCost: 0,
   sessionCurrency: "¥",
-  usage: { cost: 0.42, costUsd: 0.42, currency: "¥" },
+  usage: { cost: 0.42, currency: "¥" },
 });
 eq(
   singleRequestOnly,
@@ -210,10 +210,10 @@ eq(
   "a single request's cost never renders under the session-cost label",
 );
 const localAccumulated = contextCostDisplay({
-  info: { sessionCost: 0, sessionCurrency: "", sessionCostUsd: 0 },
+  info: { sessionCost: 0, sessionCurrency: "" },
   sessionCost: 1.5,
   sessionCurrency: "¥",
-  usage: { cost: 0.42, costUsd: 0.42, currency: "$" },
+  usage: { cost: 0.42, currency: "$" },
 });
 eq(
   localAccumulated,

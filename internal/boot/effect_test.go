@@ -80,11 +80,11 @@ enabled = false
 [[providers]]
 name = "test-model"
 kind = "`+kind+`"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 
-	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, TokenMode: tokenMode, Ablation: arm})
+	ctrl, err := Build(context.Background(), Options{Sink: event.Discard, Ablation: arm})
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -219,7 +219,7 @@ task_time_budget_minutes = 0.0005
 [[providers]]
 name = "test-model"
 kind = "boot-budget-gate"
-model = "x"
+models = ["x"]
 `)
 	approveWorkspace(t, dir)
 

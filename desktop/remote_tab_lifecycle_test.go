@@ -85,8 +85,8 @@ func TestRemoteTabSnapshotReplaysAndClearsPendingPrompt(t *testing.T) {
 }
 
 func TestRemoteTabSnapshotRehydratesAndDropsPriorSessionPromptOnStatusAdoption(t *testing.T) {
-	const firstPath = "/sessions/first.jsonl"
-	const nextPath = "/sessions/next.jsonl"
+	const firstPath = "session-id:first"
+	const nextPath = "session-id:next"
 	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "first", Path: firstPath, Current: true}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -184,7 +184,7 @@ func TestRemoteTabDoesNotPublishReadyWhenEventStreamClosesDuringAttach(t *testin
 }
 
 func TestRemoteTabReviveAppliesRequestedNamedSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	feed := make(chan string, 1)
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
@@ -226,7 +226,7 @@ func TestRemoteTabReviveAppliesRequestedNamedSession(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("revived resume request did not start")
 	}
-	feed <- `{"kind":"notice","text":"revived output","sessionPath":"/saved.jsonl"}`
+	feed <- `{"kind":"notice","text":"revived output","sessionPath":"session-id:saved"}`
 	deadline := time.Now().Add(time.Second)
 	for log.count("remote-tab:"+meta.ID+":event") < 3 {
 		if time.Now().After(deadline) {
@@ -237,7 +237,7 @@ func TestRemoteTabReviveAppliesRequestedNamedSession(t *testing.T) {
 	close(release)
 	waitForTabState(t, a, meta.ID, "ready")
 	_, resumed, _ := fs.snapshot()
-	if resumed != "/saved.jsonl" {
+	if resumed != "session-id:saved" {
 		t.Fatalf("revived shell resumed %q, want the selected session", resumed)
 	}
 }
@@ -264,8 +264,8 @@ func TestRemoteTabServeDownCanRetry(t *testing.T) {
 }
 
 func TestRemoteTabServeDownNewSessionClearsPendingBeforeDelayedMarker(t *testing.T) {
-	const oldPath = "/sessions/old.jsonl"
-	const freshPath = "/sessions/fresh.jsonl"
+	const oldPath = "session-id:old"
+	const freshPath = "session-id:fresh"
 	feed := make(chan string, 1)
 	fs := newFakeServe(t, "s3cret", nil)
 	kernel := &fakeRemoteKernel{
@@ -311,7 +311,7 @@ func TestRemoteTabServeDownNewSessionClearsPendingBeforeDelayedMarker(t *testing
 
 	eventPrefix := "remote-tab:" + meta.ID + ":event"
 	before := log.count(eventPrefix)
-	feed <- `{"kind":"session_changed","sessionPath":"/sessions/fresh.jsonl","sessionCurrent":true,"sessionReset":true}`
+	feed <- `{"kind":"session_changed","sessionPath":"session-id:fresh","sessionCurrent":true,"sessionReset":true}`
 	waitForRemoteEventCount(t, log, eventPrefix, before+1)
 	a.remoteTabMu.Lock()
 	pending, prompt = len(tab.pendingEvents), tab.runtime.pendingPrompt
@@ -322,7 +322,7 @@ func TestRemoteTabServeDownNewSessionClearsPendingBeforeDelayedMarker(t *testing
 }
 
 func TestRemoteTabFocusOnlyAttachPreservesCurrentServeSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: "/current.jsonl", Title: "Current", Current: true}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "current", Path: "session-id:current", Title: "Current", Current: true}})
 	kernel := &fakeRemoteKernel{statuses: []RemoteConnectionStatusView{{HostID: "box", State: "connected"}}, ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret"}
 	seedBridgeTestHost(t, "box")
 	a := &App{remoteRuntime: kernel}
@@ -339,7 +339,7 @@ func TestRemoteTabFocusOnlyAttachPreservesCurrentServeSession(t *testing.T) {
 }
 
 func TestRemoteSavedSessionLookupCannotReviveDisconnectedGeneration(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	fs.sessionsStarted = make(chan struct{}, 1)
 	fs.sessionsRelease = make(chan struct{})
 	kernel := &fakeRemoteKernel{statuses: []RemoteConnectionStatusView{{HostID: "box", State: "connected"}}, ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret"}
@@ -372,7 +372,7 @@ func TestRemoteSavedSessionLookupCannotReviveDisconnectedGeneration(t *testing.T
 
 func TestRemoteTabReplacementServeReentersLearnedSessionBeforeReady(t *testing.T) {
 	oldServe := newFakeServe(t, "s3cret", nil)
-	newServe := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "generated", Path: "/generated.jsonl", Title: "Generated"}})
+	newServe := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "generated", Path: "session-id:generated", Title: "Generated"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: oldServe.server.URL, InstanceID: "serve-old"}, ensureToken: "s3cret",
@@ -406,7 +406,7 @@ func TestRemoteTabReplacementServeReentersLearnedSessionBeforeReady(t *testing.T
 		t.Fatal("replacement serve reattach failed")
 	}
 	_, resumed, _ := newServe.snapshot()
-	if resumed != "/generated.jsonl" {
+	if resumed != "session-id:generated" {
 		t.Fatalf("replacement serve resumed %q, want /generated.jsonl", resumed)
 	}
 	a.remoteTabMu.Lock()
@@ -427,7 +427,7 @@ func TestRemoteTabReplacementServeReentersLearnedSessionBeforeReady(t *testing.T
 }
 
 func TestRemoteTabServeDownRetryPreservesNamedSession(t *testing.T) {
-	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "/saved.jsonl", Title: "Saved"}})
+	fs := newFakeServe(t, "s3cret", []serveSessionEntry{{Name: "saved", Path: "session-id:saved", Title: "Saved"}})
 	kernel := &fakeRemoteKernel{
 		statuses:   []RemoteConnectionStatusView{{HostID: "box", State: "connected"}},
 		ensureView: RemoteServerView{HostID: "box", State: "ready", LocalURL: fs.server.URL}, ensureToken: "s3cret",
@@ -442,7 +442,7 @@ func TestRemoteTabServeDownRetryPreservesNamedSession(t *testing.T) {
 	}
 	waitForTabState(t, a, meta.ID, "ready")
 	_, resumed, _ := fs.snapshot()
-	if resumed != "/saved.jsonl" {
+	if resumed != "session-id:saved" {
 		t.Fatalf("retry resumed %q, want the parked named session", resumed)
 	}
 }

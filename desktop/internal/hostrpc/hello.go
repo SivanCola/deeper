@@ -78,11 +78,10 @@ type HelloResult struct {
 	DiagnosticsEnabled bool   `json:"diagnosticsEnabled"`
 }
 
-// InstanceInfo extends the handshake without invalidating older shells.
+// InstanceInfo identifies the current desktop host.
 type InstanceInfo struct {
 	IdentityVersion int    `json:"identityVersion"`
 	IdentityDigest  string `json:"identityDigest"`
-	LegacyID        string `json:"legacyId"`
 }
 
 type ShutdownParams struct {

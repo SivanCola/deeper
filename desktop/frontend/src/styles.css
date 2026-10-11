@@ -2245,34 +2245,6 @@ a[href] {
   grid-row: 4;
 }
 
-/* Keep the old layout--terminal-open rules for backward compat — they are
-/* Keep the old layout--terminal-open rules for backward compat — they are
-   no longer added by App.tsx but may remain in cached localStorage styles. */
-.layout--terminal-open {
-  grid-template-columns: var(--sidebar-expanded-width) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) minmax(220px, min(42vh, 440px)) var(--statusbar-height);
-}
-.layout--terminal-open.layout--sidebar-collapsed {
-  grid-template-columns: 0px minmax(0, 1fr);
-}
-.layout--terminal-open .workbench-dock {
-  grid-row: 3;
-  grid-column: 2;
-  width: 100%;
-  height: auto;
-  max-width: none;
-  border-top: 1px solid var(--border-soft);
-  border-left: 0;
-}
-.layout--terminal-open .workbench-dock__tools {
-  display: none;
-}
-.layout--terminal-open .workspace-panel-resizer {
-  display: none;
-}
-.layout--terminal-open .statusbar {
-  grid-row: 4;
-}
 .layout--workspace-maximized .chat-pane {
   display: none;
 }

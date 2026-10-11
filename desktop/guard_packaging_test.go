@@ -57,13 +57,6 @@ func TestVerifyWindowsPortableVersionedLayout(t *testing.T) {
 	if out, err := exec.Command("bash", verify, good).CombinedOutput(); err == nil {
 		t.Fatalf("canonical package accepted legacy entry: %s", out)
 	}
-	if out, err := exec.Command("bash", verify, good, "legacy-dual").CombinedOutput(); err != nil {
-		t.Fatalf("explicit legacy package rejected: %v\n%s", err, out)
-	}
-	writePortableFixture(t, good, "deepzora-launcher.exe", "mismatch")
-	if out, err := exec.Command("bash", verify, good, "legacy-dual").CombinedOutput(); err == nil {
-		t.Fatalf("legacy package accepted mismatched entries: %s", out)
-	}
 	if err := os.Remove(filepath.Join(good, "deepzora-launcher.exe")); err != nil {
 		t.Fatal(err)
 	}
@@ -113,27 +106,24 @@ func TestDesktopPackagesPreserveNativePlatformLaunchers(t *testing.T) {
 		`CLINAME="deepzora"`,
 		`WINDOWS_CLINAME="deepzora-cli"`,
 		`./cmd/deepzora`,
-		`./cmd/deepzora-legacy-migrator`,
 		`./cmd/deepzora-launcher`,
 		`cp "$cli_out" "$app/Contents/Resources/service/$CLINAME"`,
 		`ln -s "../Resources/service/$BINNAME" "$app/Contents/MacOS/$BINNAME"`,
-		`macOS bundle must not include $GUARDNAME`,
 		`[ "$bundle_executable" = "$APPNAME" ]`,
 		`Print :CFBundleIconFile`,
 		`darwin_icon="$ROOT/desktop/build/darwin/icon.icns"`,
 		`[ -s "$app/Contents/Resources/$bundle_icon" ]`,
 		`macOS bundle icon is missing: $bundle_icon`,
 		`-H windowsgui`,
-		`stamp_windows_executable "$guard_out" "Deepzora Legacy Migrator"`,
+		`stamp_windows_executable "$layout_installer_out" "Deepzora Layout Installer"`,
 		`stamp_windows_executable "$launcher_out" "Deepzora Launcher"`,
 		`stamp_windows_executable "$installer_dir/$UPDATE_HELPER" "Deepzora Update Helper"`,
 		`payload_dir="$ROOT/desktop/build/windows/signing-payload"`,
-		`for name in "$BINNAME.exe" "$GUARDNAME.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deepzora-uninstall.exe"; do`,
+		`for name in "$BINNAME.exe" "$LAYOUT_INSTALLER.exe" "$LAUNCHERNAME.exe" "$UPDATE_HELPER" "$WINDOWS_CLINAME.exe" "deepzora-uninstall.exe"; do`,
 		`cp "$installer_dir/$name" "$payload_dir/$name"`,
 		`cp -R "$installer_dir/app" "$payload_dir/app"`,
 		`node "$ROOT/desktop/packaging/signing-files.mjs" "$payload_dir"`,
 		`"$ROOT/scripts/package-windows-desktop.sh" "$arch" "$payload_dir"`,
-		`"$BINNAME" "$LAUNCHERNAME" "$GUARDNAME" "$CLINAME"`,
 		`Exec=deepzora-launcher`,
 	} {
 		if !strings.Contains(build, want) {
@@ -231,14 +221,13 @@ func TestDesktopPackagesPreserveNativePlatformLaunchers(t *testing.T) {
 		`!uninstfinalize '${DEEPZORA_UNINST_FINALIZE}'`,
 		`File "/oname=uninstall.exe" "${ARG_DEEPZORA_SIGNED_UNINSTALLER}"`,
 		`StrCpy $R9 "$INSTDIR\versions\.installer-${DEEPZORA_VERSION_TAG}-$R8"`,
-		`File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_GUARD}"`,
+		`File "/oname=${DEEPZORA_LAYOUT_INSTALLER}" "${DEEPZORA_LAYOUT_INSTALLER}"`,
 		`nsExec::ExecToLog /OEM`,
 		`Deepzora layout activator output:`,
-		`--activate-staging "$R9" --no-relaunch`,
+		`--activate-staging "$R9" $R7`,
 		`CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${DEEPZORA_PORTABLE_ENTRY}" "" "$INSTDIR\${DEEPZORA_PORTABLE_ENTRY}" 0`,
 		`CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${DEEPZORA_PORTABLE_ENTRY}" "" "$INSTDIR\${DEEPZORA_PORTABLE_ENTRY}" 0`,
 		`StrCmp $DeepzoraStageMode "1" deepzora_stage_payload`,
-		`File "/oname=${DEEPZORA_GUARD}" "${DEEPZORA_GUARD}"`,
 	} {
 		if !strings.Contains(windows, want) {
 			t.Errorf("Windows installer missing versioned-layout contract %q", want)

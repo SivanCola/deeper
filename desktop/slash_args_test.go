@@ -11,7 +11,7 @@ func TestSlashArgsEffortUsesActiveTabCapability(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "SLASH_ARGS_KEY", "sk-test")
 	cfg := config.Default()
-	entry := config.ProviderEntry{
+	entry := config.ProviderEntry{Models: []string{"model"}, Default: "model",
 		Name: "slash-args", Kind: "openai", BaseURL: "https://example.invalid/v1",
 		Model: "model", APIKeyEnv: "SLASH_ARGS_KEY",
 		SupportedEfforts: []string{"low"}, DefaultEffort: "low",

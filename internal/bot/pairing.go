@@ -167,32 +167,8 @@ func ApprovePairingCode(code string) (PairingRequest, error) {
 		}
 		return req, nil
 	}
-	cfg.Bot.Allowlist.Enabled = true
-	switch req.Platform {
-	case PlatformQQ:
-		cfg.Bot.Allowlist.QQUsers, _ = appendUnique(cfg.Bot.Allowlist.QQUsers, req.UserID)
-	case PlatformFeishu:
-		cfg.Bot.Allowlist.FeishuUsers, _ = appendUnique(cfg.Bot.Allowlist.FeishuUsers, req.UserID)
-	case PlatformWeixin:
-		cfg.Bot.Allowlist.WeixinUsers, _ = appendUnique(cfg.Bot.Allowlist.WeixinUsers, req.UserID)
-	}
-	if allowlistAdminCount(cfg.Bot.Allowlist) == 0 {
-		switch req.Platform {
-		case PlatformQQ:
-			cfg.Bot.Allowlist.QQAdmins, _ = appendUnique(cfg.Bot.Allowlist.QQAdmins, req.UserID)
-			cfg.Bot.Allowlist.QQApprovers, _ = appendUnique(cfg.Bot.Allowlist.QQApprovers, req.UserID)
-		case PlatformFeishu:
-			cfg.Bot.Allowlist.FeishuAdmins, _ = appendUnique(cfg.Bot.Allowlist.FeishuAdmins, req.UserID)
-			cfg.Bot.Allowlist.FeishuApprovers, _ = appendUnique(cfg.Bot.Allowlist.FeishuApprovers, req.UserID)
-		case PlatformWeixin:
-			cfg.Bot.Allowlist.WeixinAdmins, _ = appendUnique(cfg.Bot.Allowlist.WeixinAdmins, req.UserID)
-			cfg.Bot.Allowlist.WeixinApprovers, _ = appendUnique(cfg.Bot.Allowlist.WeixinApprovers, req.UserID)
-		}
-	}
-	if err := cfg.SaveTo(userPath); err != nil {
-		return PairingRequest{}, err
-	}
-	return req, nil
+	return PairingRequest{}, errors.New("pairing connection is unavailable")
+
 }
 
 func approvePairingForConnectionAccess(botCfg *config.BotConfig, req PairingRequest) bool {
@@ -208,8 +184,12 @@ func approvePairingForConnectionAccess(botCfg *config.BotConfig, req PairingRequ
 			}
 		}
 	}
-	if req.Platform == PlatformQQ && (connectionID == "" || connectionID == string(PlatformQQ)) {
+	if req.Platform == PlatformQQ && connectionID == string(PlatformQQ) {
 		approvePairingAccess(&botCfg.QQ.Access, req.UserID)
+		return true
+	}
+	if req.Platform == PlatformDingtalk && connectionID == string(PlatformDingtalk) {
+		approvePairingAccess(&botCfg.Dingtalk.Access, req.UserID)
 		return true
 	}
 	return false
@@ -351,10 +331,6 @@ func newPairingCode() (string, error) {
 		b.WriteByte(pairingAlphabet[n.Int64()])
 	}
 	return b.String(), nil
-}
-
-func allowlistAdminCount(a config.BotAllowlist) int {
-	return len(a.QQAdmins) + len(a.FeishuAdmins) + len(a.WeixinAdmins)
 }
 
 func appendUnique(values []string, next string) ([]string, bool) {

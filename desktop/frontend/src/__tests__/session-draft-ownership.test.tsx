@@ -12,7 +12,7 @@ dom.window.requestAnimationFrame = globalThis.requestAnimationFrame;
 dom.window.cancelAnimationFrame = globalThis.cancelAnimationFrame;
 function deferred<T>() { let resolve!: (v: T) => void; const promise = new Promise<T>(r => { resolve = r; }); return { promise, resolve }; }
 const content = (text: string) => ({ text, invocations: [], attachments: [], workspaceRefs: [], pastedBlocks: [], openPastedLabels: [], sessionRefs: [], selectedTextRefs: [] });
-const settings = { model: "fixture/old", effort: "high", mode: "normal", collaborationMode: "normal", toolApprovalMode: "ask", disabledMcp: {}, mcpOrder: [] };
+const settings = { model: "fixture/old", effort: "high", mode: "normal", collaborationMode: "normal", toolApprovalMode: "workspace-write", disabledMcp: {}, mcpOrder: [] };
 async function fixture(overrides: Record<string, unknown> = {}) {
   const records = new Map(["a", "b"].map(id => [id, { id, workspaceId: `ws-${id}`, scope: "project", workspaceRoot: `/tmp/${id}`, revision: 1, contentJson: JSON.stringify(content(`text-${id}`)), settings: structuredClone(settings), status: "active", updatedAt: 1 }]));
   const deleted: string[] = [];

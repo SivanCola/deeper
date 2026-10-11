@@ -261,7 +261,10 @@ func (s *Server) switchModelLocked(ctx context.Context, ref string) error {
 	// Keep the carried conversation in its existing file so the switch doesn't
 	// orphan a duplicate (#2807).
 	newPath := agent.ContinueSessionPath(prevPath, newCtrl.SessionDir(), newCtrl.Label())
-	newCtrl.AdoptHistory(carryProfileSystemMessage(newCtrl, carried), newPath)
+	if err := newCtrl.AdoptHistory(carryProfileSystemMessage(newCtrl, carried), newPath); err != nil {
+		s.closeTaggedController(newCtrl)
+		return fmt.Errorf("switch model: adopt history: %w", err)
+	}
 	tag.PrimePath(newCtrl.SessionPath())
 	newCtrl.SetOnSessionRecovered(s.sessionRecoveryHandler(newCtrl, s.leases))
 	if prev, ok := cur.(*control.Controller); ok {
@@ -557,8 +560,6 @@ func (s *Server) handler() http.Handler {
 	mux.HandleFunc("POST /permission/grants/revoke", s.foregroundMutation(s.permissionGrantRevoke))
 	mux.HandleFunc("POST /providers/reload", s.providersReload)
 	mux.HandleFunc("POST /browser/broker", s.browserBrokerRebind)
-	mux.HandleFunc("POST /auto-approve-tools", s.foregroundMutation(s.autoApproveTools))
-	mux.HandleFunc("POST /bypass", s.foregroundMutation(s.bypass))
 	mux.HandleFunc("POST /goal", s.foregroundMutation(s.goal))
 	mux.HandleFunc("POST /goal/edit", s.foregroundMutation(s.goalEdit))
 	mux.HandleFunc("POST /goal/pause", s.foregroundMutation(s.goalPause))
@@ -578,7 +579,6 @@ func (s *Server) handler() http.Handler {
 	mux.HandleFunc("GET /model-settings", s.modelSettingsStatus)
 	mux.HandleFunc("POST /model-settings", s.applyModelSettings)
 	mux.HandleFunc("POST /effort", s.effortSwitch)
-	mux.HandleFunc("POST /quality-floor", s.qualityFloorSwitch)
 	mux.HandleFunc("POST /extensions/reload", s.reloadExtensionsHTTP)
 	mux.HandleFunc("POST /extension-form", s.foregroundMutation(s.submitExtensionForm))
 	s.registerRuntimeRecoveryRoutes(mux)
@@ -667,7 +667,6 @@ func (s *Server) index(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = config.MigrateLegacyIfNeeded()
 	lang := "auto"
 	if cfg, err := config.Load(); err == nil {
 		if dl := cfg.DesktopLanguage(); dl != "" {
@@ -776,12 +775,10 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 	}
 	// A read-only surface can select a specific session a local runtime owns
 	// (spectator attach): serve the local writer's transcript from the file.
-	if raw := r.URL.Query().Get("session"); raw != "" {
-		if path, msgs, ok := s.externalReadView(raw); ok {
-			writeJSONCached(w, r, historyMessages(msgs))
-			_ = path
-			return
-		}
+
+	if strings.TrimSpace(r.URL.Query().Get("session")) != "" {
+		http.Error(w, "immutable session identity required", http.StatusBadRequest)
+		return
 	}
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
@@ -1005,31 +1002,7 @@ func (s *Server) summarize(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// autoApproveTools is a legacy compatibility endpoint. New clients set the
-// canonical permission preset through /permission-preset.
-func (s *Server) autoApproveTools(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		On bool `json:"on"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "bad body", http.StatusBadRequest)
-		return
-	}
-	if ctrl, ok := s.ctl().(*control.Controller); ok && ctrl.UsesExclusiveSession() {
-		if _, bound := ctrl.SessionRef(); bound {
-			if _, _, err := ctrl.SetSessionPermissionPreset(r.Context(), control.ToolApprovalWorkspaceWrite, ctrl.PermissionSnapshot().Revision); err != nil {
-				http.Error(w, err.Error(), http.StatusConflict)
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-	}
-	s.ctl().SetAutoApproveTools(body.On)
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s *Server) setLegacyPermissionPreset(ctx context.Context, preset string) error {
+func (s *Server) setPermissionPreset(ctx context.Context, preset string) error {
 	if ctrl, ok := s.ctl().(*control.Controller); ok && ctrl.UsesExclusiveSession() {
 		if _, bound := ctrl.SessionRef(); bound {
 			_, _, err := ctrl.SetSessionPermissionPreset(ctx, preset, ctrl.PermissionSnapshot().Revision)
@@ -1041,7 +1014,7 @@ func (s *Server) setLegacyPermissionPreset(ctx context.Context, preset string) e
 }
 
 // toolApprovalMode selects the canonical permission preset for interactive
-// frontends. Legacy values are accepted only for conservative migration.
+// frontends. Only current explicit presets are accepted.
 func (s *Server) toolApprovalMode(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Mode string `json:"mode"`
@@ -1052,8 +1025,8 @@ func (s *Server) toolApprovalMode(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := strings.ToLower(strings.TrimSpace(body.Mode))
 	switch raw {
-	case "read-only", "workspace-write", "danger-full-access", "ask", "auto", "yolo", "full", "full-access", "bypass":
-		if err := s.setLegacyPermissionPreset(r.Context(), config.NormalizeToolApprovalMode(raw)); err != nil {
+	case "read-only", "workspace-write", "danger-full-access":
+		if err := s.setPermissionPreset(r.Context(), config.NormalizeToolApprovalMode(raw)); err != nil {
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
@@ -1132,63 +1105,18 @@ func (s *Server) permissionGrantRevoke(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(snapshot)
 }
 
-// bypass is the legacy HTTP alias for autoApproveTools.
-func (s *Server) bypass(w http.ResponseWriter, r *http.Request) {
-	s.autoApproveTools(w, r)
-}
-
-// resume loads a previous session from a JSONL file.
 func (s *Server) resume(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Path      string `json:"path"`
 		HostID    string `json:"hostId"`
 		SessionID string `json:"sessionId"`
-		Name      string `json:"name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "bad body", http.StatusBadRequest)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil || strings.TrimSpace(body.SessionID) == "" {
+		http.Error(w, "sessionId is required", http.StatusBadRequest)
 		return
 	}
-	body.Path = strings.TrimSpace(body.Path)
-	body.HostID = strings.TrimSpace(body.HostID)
-	body.SessionID = strings.TrimSpace(body.SessionID)
-	body.Name = strings.TrimSpace(body.Name)
-	if body.SessionID == "" && body.Path == "" && body.Name != "" {
-		// Canonical /sessions rows intentionally expose identity in sessionId and
-		// leave the legacy path empty. Accept the name as a compatibility
-		// fallback for older clients that know the row but omit sessionId.
-		if identity, ok := s.ctl().(control.IdentityLifecycle); ok && identity.UsesExclusiveSession() {
-			body.SessionID = body.Name
-		} else if filepath.Base(body.Name) == body.Name && !strings.ContainsAny(body.Name, `/\\`) {
-			body.Path = filepath.Join(s.ctl().SessionDir(), body.Name+".jsonl")
-		}
-	}
-	if body.SessionID != "" {
-		s.resumeIdentitySession(w, r, body.HostID, body.SessionID)
-		return
-	}
-	if body.Path == "" {
-		http.Error(w, "missing path or sessionId", http.StatusBadRequest)
-		return
-	}
-	realPath, err := s.resolveSessionPath(body.Path)
-	if err != nil {
-		http.Error(w, err.Error(), resolveSessionPathStatus(err))
-		return
-	}
-	// A session another local runtime owns — mirrored, or merely lease-held —
-	// must not become the foreground. Mount the caller as a read-only
-	// spectator instead, so Serve never takes ownership or strands the writer.
-	if s.sessionMirrored(realPath) || leaseHeldByForeignRuntime(realPath) {
-		w.Header().Set(sessionPathHeader, agent.CanonicalSessionPath(realPath))
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	// Serialize with /new, /fork, and switchModel so the controller and lease
-	// cannot land on different sessions. Validate first to avoid slow holders.
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	s.resumeSession(w, r, realPath)
+	s.resumeIdentitySession(w, r, strings.TrimSpace(body.HostID), strings.TrimSpace(body.SessionID))
 }
 
 func (s *Server) resumeIdentitySession(w http.ResponseWriter, r *http.Request, hostID, sessionID string) {
@@ -1279,44 +1207,6 @@ func resolveSessionPathStatus(err error) int {
 		return http.StatusForbidden
 	}
 	return http.StatusBadRequest
-}
-
-// resumeSession moves the foreground to realPath. Callers hold bindMu.
-func (s *Server) resumeSession(w http.ResponseWriter, r *http.Request, realPath string) {
-	cur := s.ctl()
-	if s.resumeActiveSession(w, r, cur, realPath) {
-		return
-	}
-	// Snapshot the current session before switching away — while this process
-	// still holds its lease (skipped when a local writer owns it).
-	s.snapshotForeground(cur)
-	// Refuse to bind a session another runtime is writing (a desktop window,
-	// another CLI); on success the lease now guards the resume target.
-	if s.leases != nil {
-		if err := s.leases.Rebind(realPath); err != nil {
-			if errors.Is(err, agent.ErrSessionLeaseHeld) {
-				http.Error(w, sessionInUseError(err), http.StatusConflict)
-			} else {
-				http.Error(w, "session lease: "+err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-	}
-	loaded, err := agent.LoadSession(realPath)
-	if err != nil {
-		// The lease already moved to the target; re-point it at the session the
-		// controller still owns (best-effort).
-		_ = s.rebindSessionLease(cur.SessionPath())
-		http.Error(w, "load session: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	if !s.commitLoadedResume(w, cur, loaded, realPath) {
-		return
-	}
-	s.bc.ResetSessionPath(realPath)
-	s.announceSessionChanged(realPath, false)
-	w.WriteHeader(http.StatusNoContent)
-	s.replayPendingPromptsBroadcast()
 }
 
 // forget deletes a saved memory by name.

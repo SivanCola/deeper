@@ -111,7 +111,7 @@ function Fixture() {
     <Transcript items={current.items} tabId={tab} running={current.running} localSubmissions={orderedLocalSubmissions(current)}
       visibleSubmissionHandoffs={current.visibleSubmissionHandoffs} localSubmissionSendRevision={current.localSubmissionSendRevision}
       hasOlderHistory={current.historyHasOlder} hasNewerHistory={current.historyHasNewer} onPrompt={() => {}} onFork={() => {}} />
-    <Composer running={current.running} collaborationMode="normal" toolApprovalMode="ask" modelLabel="Fixture" tabId={tab}
+    <Composer running={current.running} collaborationMode="normal" toolApprovalMode="workspace-write" modelLabel="Fixture" tabId={tab}
       onSend={send} onCancel={async () => ({ discardedItemIds: [] })} onCycleMode={() => {}} onSetMode={() => {}} onSetCollaborationMode={() => {}}
       onSetToolApprovalMode={() => {}} onClearGoal={() => {}} onPauseGoal={() => {}} onResumeGoal={() => {}}
       onEditGoal={() => {}}

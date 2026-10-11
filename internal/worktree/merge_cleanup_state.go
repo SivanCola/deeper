@@ -18,15 +18,11 @@ import (
 )
 
 const (
-	cleanupStateVersion       = 2
-	legacyCleanupStateVersion = 1
-	cleanupStateName          = "cleanup-state.json"
+	cleanupStateVersion = 2
+	cleanupStateName    = "cleanup-state.json"
 
 	cleanupStagePlanned  = "planned"
 	cleanupStageRetained = "retained"
-
-	legacyCleanupStagePrepared     = "prepared"
-	legacyCleanupStageUnregistered = "unregistered"
 )
 
 type cleanupManifestEntry struct {
@@ -46,22 +42,8 @@ type cleanupState struct {
 	Stage          string `json:"stage"`
 }
 
-// legacyCleanupState is read-only compatibility for v1 journals that may
-// have stopped between checkout detachment and physical deletion.
-type legacyCleanupState struct {
-	Version        int                    `json:"version"`
-	OriginalRoot   string                 `json:"originalRoot"`
-	RegisteredRoot string                 `json:"registeredRoot"`
-	DetachedRoot   string                 `json:"detachedRoot"`
-	WorktreeBranch string                 `json:"worktreeBranch"`
-	WorktreeHead   string                 `json:"worktreeHead"`
-	Stage          string                 `json:"stage"`
-	Manifest       []cleanupManifestEntry `json:"manifest"`
-}
-
 type cleanupJournal struct {
 	Current *cleanupState
-	Legacy  *legacyCleanupState
 }
 
 func cleanupJournalPath(metadata mergeMetadata) string {
@@ -133,15 +115,6 @@ func readCleanupState(metadata mergeMetadata, expectedHead string) (cleanupJourn
 			return cleanupJournal{}, false, err
 		}
 		return cleanupJournal{Current: &state}, true, nil
-	case legacyCleanupStateVersion:
-		var state legacyCleanupState
-		if err := decodeCleanupJSON(body, &state); err != nil {
-			return cleanupJournal{}, false, err
-		}
-		if err := validateLegacyCleanupState(metadata, expectedHead, state); err != nil {
-			return cleanupJournal{}, false, err
-		}
-		return cleanupJournal{Legacy: &state}, true, nil
 	default:
 		return cleanupJournal{}, false, fmt.Errorf("unsupported cleanup state version %d", envelope.Version)
 	}
@@ -171,42 +144,6 @@ func validateCleanupState(metadata mergeMetadata, expectedHead string, state cle
 		return fmt.Errorf("unsupported cleanup stage %q", state.Stage)
 	}
 	return validateCleanupRecoveryPath(metadata, state.RecoveryRoot)
-}
-
-func validateLegacyCleanupState(metadata mergeMetadata, expectedHead string, state legacyCleanupState) error {
-	if state.Version != legacyCleanupStateVersion {
-		return fmt.Errorf("unsupported cleanup state version %d", state.Version)
-	}
-	if !sameCleanupPath(state.OriginalRoot, metadata.WorktreeRoot) ||
-		state.WorktreeBranch != metadata.WorktreeBranch || state.WorktreeHead != expectedHead {
-		return errors.New("cleanup state identity does not match the merge receipt")
-	}
-	if state.Stage != legacyCleanupStagePrepared && state.Stage != legacyCleanupStageUnregistered {
-		return fmt.Errorf("unsupported cleanup stage %q", state.Stage)
-	}
-	if err := validateCleanupRecoveryPath(metadata, state.RegisteredRoot); err != nil {
-		return err
-	}
-	if err := validateCleanupRecoveryPath(metadata, state.DetachedRoot); err != nil {
-		return err
-	}
-	if sameCleanupPath(state.RegisteredRoot, state.DetachedRoot) {
-		return errors.New("cleanup state paths are not distinct")
-	}
-	if state.Manifest == nil {
-		return errors.New("cleanup state manifest is missing")
-	}
-	seen := map[string]struct{}{}
-	for _, entry := range state.Manifest {
-		if err := validateStatePath(entry.Path); err != nil {
-			return fmt.Errorf("invalid cleanup manifest path: %w", err)
-		}
-		if _, ok := seen[entry.Path]; ok {
-			return fmt.Errorf("duplicate cleanup manifest path %q", entry.Path)
-		}
-		seen[entry.Path] = struct{}{}
-	}
-	return nil
 }
 
 func validateCleanupRecoveryPath(metadata mergeMetadata, path string) error {

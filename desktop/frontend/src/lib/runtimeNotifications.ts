@@ -7,7 +7,7 @@ export type NotificationOperation = { event: AttentionChimeEvent & { err?: strin
 
 // Outcomes where the turn stopped to wait on the user; the host records them as
 // paused or awaiting_delivery (desktop/topic_status.go), never as a finish.
-const PAUSED_TURN_OUTCOMES = new Set(["final_readiness", "recovery_paused", "incomplete_read", "completion_uncertain"]);
+const PAUSED_TURN_OUTCOMES = new Set(["incomplete_read"]);
 type NotificationPorts = { activeTabId: string | undefined; t: Translator; showToast: ToastContextValue["showToast"] };
 
 /** One owner deduplicates view events and authoritative background snapshots. */

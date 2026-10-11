@@ -69,7 +69,7 @@ func botStart(args []string, version string) int {
 		return 1
 	}
 	if !botruntime.BotConfigHasAccessControl(cfg.Bot) {
-		fmt.Fprintln(os.Stderr, "error: bot requires explicit access control; set per-connection access, enable pairing, configure [bot.allowlist], or set allow_all = true intentionally")
+		fmt.Fprintln(os.Stderr, "error: bot requires explicit access control; set per-connection access or enable pairing")
 		return 1
 	}
 
@@ -98,14 +98,12 @@ func botStart(args []string, version string) int {
 	// 构建网关配置
 	botChannels := botruntime.ChannelConfigs(cfg.Bot.Connections, *model == "", *dir == "")
 	botConnectionChannels := botruntime.ConnectionChannelConfigs(cfg.Bot.Connections, *model == "", *dir == "")
-	botChannels, botConnectionChannels = botruntime.MergeLegacyDingtalkChannel(cfg.Bot.Dingtalk, botChannels, botConnectionChannels)
 	gwCfg := bot.GatewayConfig{
 		Model:              modelName,
 		ToolApprovalMode:   cfg.Bot.ToolApprovalMode,
 		MaxSteps:           cfg.Bot.MaxSteps,
 		QueueMode:          cfg.Bot.QueueMode,
 		QueueCap:           cfg.Bot.QueueCap,
-		QueueDrop:          cfg.Bot.QueueDrop,
 		PairingEnabled:     cfg.Bot.Pairing.Enabled,
 		PairingTTL:         time.Duration(cfg.Bot.Pairing.RequestTTLMinutes) * time.Minute,
 		PairingMaxPending:  cfg.Bot.Pairing.MaxPendingPerPlatform,
@@ -125,7 +123,6 @@ func botStart(args []string, version string) int {
 		Routes:             botruntime.RouteConfigs(cfg.Bot.Routes, *model == "", *dir == ""),
 		ConnectionAccess:   botruntime.ConnectionAccessConfigs(cfg),
 		Enabled:            enabledPlatforms,
-		Allowlist:          botAllowlistConfig(cfg.Bot.Allowlist),
 		Debounce:           time.Duration(cfg.Bot.DebounceMs) * time.Millisecond,
 		ModelResolver:      botruntime.ModelResolver(cfg),
 		OnInbound:          rememberInboundRemote,
@@ -220,7 +217,7 @@ func botDoctor(args []string) int {
 	if queueCap <= 0 {
 		queueCap = bot.DefaultQueueCap
 	}
-	addCheck("bot.queue", "ok", fmt.Sprintf("mode=%s cap=%d drop=%s", queueMode, queueCap, bot.NormalizeQueueDrop(bc.QueueDrop)))
+	addCheck("bot.queue", "ok", fmt.Sprintf("mode=%s cap=%d", queueMode, queueCap))
 	if bc.Pairing.Enabled {
 		addCheck("bot.pairing", "enabled", fmt.Sprintf("ttl=%dm max_pending=%d", bc.Pairing.RequestTTLMinutes, bc.Pairing.MaxPendingPerPlatform))
 	} else {
@@ -344,25 +341,13 @@ func botDoctor(args []string) int {
 			fmt.Sprintf("provider=%s mappings=%d", conn.Provider, len(conn.SessionMappings)))
 	}
 
-	// Allowlist 检查
-	if bc.Allowlist.AllowAll {
-		addCheck("bot.allowlist", "open", "allow_all=true — every reachable user can trigger local tools")
-	} else if bc.Allowlist.Enabled {
-		addCheck("bot.allowlist", "enabled",
-			fmt.Sprintf("qq=%d feishu=%d weixin=%d users approvers=%d admins=%d",
-				len(bc.Allowlist.QQUsers),
-				len(bc.Allowlist.FeishuUsers),
-				len(bc.Allowlist.WeixinUsers),
-				len(bc.Allowlist.QQApprovers)+len(bc.Allowlist.FeishuApprovers)+len(bc.Allowlist.WeixinApprovers),
-				len(bc.Allowlist.QQAdmins)+len(bc.Allowlist.FeishuAdmins)+len(bc.Allowlist.WeixinAdmins)))
-	} else {
-		addCheck("bot.allowlist", "missing", "bot start will refuse without allowlist or allow_all=true")
-	}
 	if *deep {
-		addCheck("bot.roles", "ok",
-			fmt.Sprintf("approvers=%d admins=%d",
-				len(bc.Allowlist.QQApprovers)+len(bc.Allowlist.FeishuApprovers)+len(bc.Allowlist.WeixinApprovers),
-				len(bc.Allowlist.QQAdmins)+len(bc.Allowlist.FeishuAdmins)+len(bc.Allowlist.WeixinAdmins)))
+		approvers, admins := 0, 0
+		for _, access := range botruntime.ConnectionAccessConfigs(cfg) {
+			approvers += len(access.Approvers)
+			admins += len(access.Admins)
+		}
+		addCheck("bot.roles", "ok", fmt.Sprintf("approvers=%d admins=%d", approvers, admins))
 	}
 
 	if *jsonOut {
@@ -511,23 +496,7 @@ func loadBotCommandConfig() (*config.Config, error) {
 }
 
 func botConfigIsUserOwned(bc config.BotConfig) bool {
-	if bc.Enabled || len(bc.Connections) > 0 || bc.QQ.Enabled || bc.Feishu.Enabled || bc.Weixin.Enabled {
-		return true
-	}
-	if bc.Allowlist.AllowAll || botruntime.AllowlistUserCount(bc.Allowlist) > 0 {
-		return true
-	}
-	if botruntime.BotAccessActive(bc.QQ.Access) {
-		return true
-	}
-	for _, conn := range bc.Connections {
-		if botruntime.BotAccessActive(conn.Access) {
-			return true
-		}
-	}
-	return len(bc.Allowlist.QQGroups)+len(bc.Allowlist.FeishuGroups)+len(bc.Allowlist.WeixinGroups)+
-		len(bc.Allowlist.QQApprovers)+len(bc.Allowlist.FeishuApprovers)+len(bc.Allowlist.WeixinApprovers)+
-		len(bc.Allowlist.QQAdmins)+len(bc.Allowlist.FeishuAdmins)+len(bc.Allowlist.WeixinAdmins) > 0
+	return bc.Enabled || len(bc.Connections) > 0 || bc.QQ.Enabled || bc.Feishu.Enabled || bc.Weixin.Enabled || bc.Dingtalk.Enabled || botruntime.BotConfigHasAccessControl(bc)
 }
 
 func botUsage() {
@@ -553,45 +522,13 @@ Examples:
 Configuration:
   Edit deepzora.toml:
     [bot]           enabled / model / max_steps
-    [bot]           queue_mode / queue_cap / queue_drop
+    [bot]           queue_mode / queue_cap
     [bot.pairing]   enabled / request_ttl_minutes / max_pending_per_platform
-    [bot.allowlist]  enabled / users / approvers / admins / groups
+    [[bot.connections]] access / credentials / session_mappings
     [bot.qq]         enabled / app_id / app_secret_env
     [bot.feishu]     enabled / app_id / app_secret_env / verification_token / mode
     [bot.weixin]     enabled / account_id / token_env / api_base
 
   All secrets are read from environment variables; never put keys in config files.
 `)
-}
-
-// botAllowlistConfig 把 [bot.allowlist] 全局名单合成进网关 Allowlist（含钉钉）。
-func botAllowlistConfig(al config.BotAllowlist) bot.AllowlistConfig {
-	return bot.AllowlistConfig{
-		Enabled:  al.Enabled,
-		AllowAll: al.AllowAll,
-		Users: map[bot.Platform][]string{
-			bot.PlatformQQ:       al.QQUsers,
-			bot.PlatformFeishu:   al.FeishuUsers,
-			bot.PlatformWeixin:   al.WeixinUsers,
-			bot.PlatformDingtalk: al.DingtalkUsers,
-		},
-		Approvers: map[bot.Platform][]string{
-			bot.PlatformQQ:       al.QQApprovers,
-			bot.PlatformFeishu:   al.FeishuApprovers,
-			bot.PlatformWeixin:   al.WeixinApprovers,
-			bot.PlatformDingtalk: al.DingtalkApprovers,
-		},
-		Admins: map[bot.Platform][]string{
-			bot.PlatformQQ:       al.QQAdmins,
-			bot.PlatformFeishu:   al.FeishuAdmins,
-			bot.PlatformWeixin:   al.WeixinAdmins,
-			bot.PlatformDingtalk: al.DingtalkAdmins,
-		},
-		Groups: map[bot.Platform][]string{
-			bot.PlatformQQ:       al.QQGroups,
-			bot.PlatformFeishu:   al.FeishuGroups,
-			bot.PlatformWeixin:   al.WeixinGroups,
-			bot.PlatformDingtalk: al.DingtalkGroups,
-		},
-	}
 }

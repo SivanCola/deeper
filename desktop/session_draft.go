@@ -25,7 +25,6 @@ type SessionDraftSettings struct {
 	Model             string                `json:"model"`
 	ModelSource       string                `json:"modelSource,omitempty"`
 	Effort            string                `json:"effort,omitempty"`
-	QualityFloor      string                `json:"qualityFloor,omitempty"`
 	Mode              string                `json:"mode"`
 	CollaborationMode string                `json:"collaborationMode,omitempty"`
 	ToolApprovalMode  string                `json:"toolApprovalMode"`
@@ -212,15 +211,14 @@ func (a *App) defaultDraftSettings(scope, workspaceRoot string) SessionDraftSett
 		scope, workspaceRoot, actualRoot = "global", "", globalWorkspaceRoot()
 	}
 	model, approval := desktopNewSessionDefaults(scope, actualRoot)
-	settings := SessionDraftSettings{Model: model, ModelSource: draftModelSourceDefault, QualityFloor: tabQualityFloor(workspaceRoot, "standard"),
-		Mode: tabModeFromAxes(false, approval == control.ToolApprovalDangerFullAccess), ToolApprovalMode: approval,
+	settings := SessionDraftSettings{Model: model, ModelSource: draftModelSourceDefault,
+		Mode: tabModeForPlan(false), ToolApprovalMode: approval,
 		DisabledMCP: map[string]ServerView{}, MCPOrder: []string{}}
 	a.mu.RLock()
 	if active := a.activeTabLocked(); active != nil {
 		if effort := config.RebindSessionEffort(nil, active.model, settings.Model, active.effort); effort != nil {
 			settings.Effort = *effort
 		}
-		settings.QualityFloor = tabQualityFloor(workspaceRoot, active.qualityFloorSafe())
 		settings.DisabledMCP = cloneServerViewMap(active.disabledMCP)
 		settings.MCPOrder = append([]string(nil), active.mcpOrder...)
 	}
@@ -237,10 +235,6 @@ func (a *App) OpenSessionDraft(workspaceID string) (SessionDraftView, error) {
 	for _, record := range records {
 		if record.WorkspaceID != strings.TrimSpace(workspaceID) {
 			continue
-		}
-		record, err = a.migrateLegacyUntouchedDraftModel(record)
-		if err != nil {
-			return SessionDraftView{}, err
 		}
 		return a.draftView(record)
 	}
@@ -265,10 +259,6 @@ func (a *App) RestoreSessionDraft() (*SessionDraftView, error) {
 	if errors.Is(err, draftstate.ErrNotFound) {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	record, err = a.migrateLegacyUntouchedDraftModel(record)
 	if err != nil {
 		return nil, err
 	}
@@ -446,9 +436,6 @@ func draftCommandInfos(record draftstate.Draft) []CommandInfo {
 	out := builtinCommandInfos()
 	commands, _ := command.LoadRoots(config.CommandRootsForRoot(root)...)
 	for _, item := range commands {
-		if item.Hidden {
-			continue
-		}
 		out = append(out, CommandInfo{Name: item.Name, Description: item.Description, Hint: item.ArgHint, Kind: "custom", Group: "actions", Plugin: item.Plugin})
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
@@ -502,7 +489,7 @@ func (a *App) BeginDraftSubmission(request SessionDraftSubmissionRequest) (resul
 			resultErr = draftAdmissionError(resultErr)
 		}
 	}()
-	if request.SnapshotVersion > draftstate.SnapshotVersion {
+	if request.SnapshotVersion != draftstate.SnapshotVersion {
 		return SessionDraftSubmissionView{}, errors.New("unsupported draft execution snapshot version")
 	}
 	request.DraftID = strings.TrimSpace(request.DraftID)
@@ -544,7 +531,7 @@ func (a *App) BeginDraftSubmission(request SessionDraftSubmissionRequest) (resul
 	if err != nil {
 		return SessionDraftSubmissionView{}, err
 	}
-	if request.SnapshotVersion >= 4 {
+	if request.SnapshotVersion == draftstate.SnapshotVersion {
 		profile, _ := json.Marshal(request.Settings)
 		digest, digestErr := draftstate.SnapshotDigest(record.ContentJSON, string(profile))
 		if digestErr != nil || request.SourceDigest == "" || request.SourceDigest != view.SnapshotDigest || digest != view.SnapshotDigest {
@@ -925,10 +912,7 @@ func (a *App) ensureDraftSessionTab(op draftstate.Operation) (TabMeta, error) {
 	if err != nil {
 		return TabMeta{}, err
 	}
-	mode := tabModeFromAxes(
-		normalizeCollaborationMode(settings.CollaborationMode) == "plan" || (settings.CollaborationMode == "" && tabModeHasPlan(settings.Mode)),
-		normalizeToolApprovalMode(settings.ToolApprovalMode) == control.ToolApprovalDangerFullAccess,
-	)
+	mode := tabModeForPlan(normalizeCollaborationMode(settings.CollaborationMode) == "plan" || (settings.CollaborationMode == "" && tabModeHasPlan(settings.Mode)))
 	workspaceID, err := a.ensureDesktopWorkspace(a.bootContext(), record.Scope, record.WorkspaceRoot)
 	if err != nil {
 		return TabMeta{}, err
@@ -953,7 +937,7 @@ func (a *App) ensureDraftSessionTab(op draftstate.Operation) (TabMeta, error) {
 	_ = prependTopicInProjectsFile(record.WorkspaceRoot, topicID, false)
 	tab := &WorkspaceTab{Scope: record.Scope, WorkspaceRoot: actualRoot,
 		TopicID: topicID, TopicTitle: topicTitleForTab(record.Scope, record.WorkspaceRoot, topicID), topicTitleSource: topicTitleSourceAuto,
-		SessionID: op.SessionID, PendingCreateOperationID: op.ID, model: settings.Model, qualityFloor: settings.QualityFloor,
+		SessionID: op.SessionID, PendingCreateOperationID: op.ID, model: settings.Model,
 		mode: mode, toolApprovalMode: settings.ToolApprovalMode, disabledMCP: cloneServerViewMap(settings.DisabledMCP), mcpOrder: append([]string(nil), settings.MCPOrder...)}
 	if settings.Effort != "" {
 		effort := settings.Effort
@@ -980,26 +964,13 @@ func (a *App) draftOperationSettings(op draftstate.Operation) (SessionDraftSetti
 	if err := json.Unmarshal([]byte(op.RequestJSON), &request); err != nil {
 		return SessionDraftSettings{}, err
 	}
-	if request.SnapshotVersion > draftstate.SnapshotVersion {
+	if request.SnapshotVersion != draftstate.SnapshotVersion {
 		return SessionDraftSettings{}, errors.New("unsupported draft execution snapshot version")
 	}
-	if request.SnapshotVersion >= 3 && request.SnapshotVersion <= draftstate.SnapshotVersion && strings.TrimSpace(request.Settings.Model) != "" {
-		return request.Settings, nil
+	if strings.TrimSpace(request.Settings.Model) == "" {
+		return SessionDraftSettings{}, errors.New("draft execution model is required")
 	}
-	// A pre-v3 operation may only inherit the current draft settings when the
-	// revision still proves that they are the settings it froze.
-	record, err := a.draftStore().Get(a.bootContext(), op.DraftID)
-	if err != nil {
-		return SessionDraftSettings{}, err
-	}
-	if record.Revision != op.DraftRevision {
-		return SessionDraftSettings{}, errors.New("draft operation predates frozen settings and cannot be resumed safely")
-	}
-	view, err := a.draftView(record)
-	if err != nil {
-		return SessionDraftSettings{}, err
-	}
-	return view.Settings, nil
+	return request.Settings, nil
 }
 
 func (a *App) applyDraftOperationSettings(op draftstate.Operation, settings SessionDraftSettings) error {
@@ -1015,11 +986,7 @@ func (a *App) publishDraftSettingsLocked(op draftstate.Operation, settings Sessi
 		tab.PendingCreateOperationID = op.ID
 		tab.model = settings.Model
 		tab.Label = settings.Model
-		tab.qualityFloor = settings.QualityFloor
-		tab.mode = tabModeFromAxes(
-			normalizeCollaborationMode(settings.CollaborationMode) == "plan" || (settings.CollaborationMode == "" && tabModeHasPlan(settings.Mode)),
-			normalizeToolApprovalMode(settings.ToolApprovalMode) == control.ToolApprovalDangerFullAccess,
-		)
+		tab.mode = tabModeForPlan(normalizeCollaborationMode(settings.CollaborationMode) == "plan" || (settings.CollaborationMode == "" && tabModeHasPlan(settings.Mode)))
 		tab.toolApprovalMode = settings.ToolApprovalMode
 		// The source editor owns the initial objective until atomic Goal
 		// submission accepts it. Runtime preparation must not start a Goal.

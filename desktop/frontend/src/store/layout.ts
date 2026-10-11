@@ -190,12 +190,6 @@ export function loadWorkspacePanelOpen(workspaceRoot: string): boolean {
   try {
     const raw = window.localStorage.getItem(workspacePanelOpenStorageKey(workspaceRoot));
     if (raw !== null) return raw !== "0";
-    // Migration: the legacy single global key predates per-project keys.
-    // When a project has no stored preference yet, seed it from the old
-    // global value so an upgrade does not flip a user's existing choice
-    // (e.g. they had the dock closed; first open of any project stays closed).
-    const legacyRaw = window.localStorage.getItem(WORKSPACE_PANEL_OPEN_KEY);
-    if (legacyRaw !== null) return legacyRaw !== "0";
     return WORKSPACE_PANEL_DEFAULT_OPEN;
   } catch {
     return WORKSPACE_PANEL_DEFAULT_OPEN;

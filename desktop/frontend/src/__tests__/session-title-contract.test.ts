@@ -42,7 +42,6 @@ function session(overrides: Partial<SessionMeta> = {}): SessionMeta {
     turns: 3,
     createdAt: 100,
     lastActivityAt: 200,
-    modTime: 200,
     current: false,
     open: false,
     workspaceRoot: "/work/project-alpha",

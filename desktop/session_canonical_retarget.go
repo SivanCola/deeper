@@ -93,62 +93,14 @@ func (a *App) resumeSessionPageForTab(tabID, path string, limit int) (HistoryPag
 }
 
 func (a *App) resumeSessionForTranscript(tabID, path string, limit int, includeHistory bool) (HistoryPage, error) {
-	if ref, adopted, err := a.legacyCanonicalRef(a.bootContext(), path); err != nil {
-		return HistoryPage{}, err
-	} else if adopted {
-		path = sessionRoute(ref.SessionID)
-	}
-	started := time.Now()
-	phases := HistorySwitchPhases{Outcome: "ok"}
-	defer func() { logSessionSwitchPhases(phases, started) }()
 	tab, ctrl := a.tabAndCtrlByID(tabID)
 	if tab == nil || ctrl == nil {
-		phases.Outcome = "tab_not_ready"
 		return HistoryPage{}, fmt.Errorf("tab is not ready")
 	}
-	if _, isV3 := parseSessionRoute(path); isV3 {
-		page, err := a.resumeCanonicalSessionForTranscript(tab, ctrl, path, limit, includeHistory)
-		if err != nil {
-			phases.Outcome = "v3_rebind_failed"
-			return HistoryPage{}, err
-		}
-		phases.TotalMs = elapsedMs(started)
-		page.Switch = &phases
-		return page, nil
+	if _, ok := parseSessionRoute(path); !ok {
+		return HistoryPage{}, newSessionOperationError("unsupported", "Use a current session identity.")
 	}
-	// Resolve the continuation before the first read so the loaded session, the
-	// rebound path, and the returned fingerprint all name the same file.
-	resolveStarted := time.Now()
-	if continued := a.continuePathForOpen(path); continued != "" {
-		current := tab.currentSessionPath()
-		if !tab.hasActiveRuntimeWork() || sessionRuntimeKey(current) != sessionRuntimeKey(path) {
-			path = continued
-		}
-	}
-	sessionPath, _, err := validateSessionPath(controllerSessionDir(ctrl), path)
-	if err != nil {
-		phases.Outcome = "invalid_path"
-		return HistoryPage{}, err
-	}
-	phases.ResolveMs = elapsedMs(resolveStarted)
-	loadStarted := time.Now()
-	phases.DurableReads++
-	loaded, err := loadResumableSession(sessionPath)
-	if err != nil {
-		phases.Outcome = "load_failed"
-		return HistoryPage{}, err
-	}
-	phases.LoadMs = elapsedMs(loadStarted)
-	phases.LoadedCount = loaded.Len()
-	phases.LoadedBytes = sessionFileBytes(sessionPath)
-
-	page, err := a.switchToLoadedSessionPage(tab, loaded, sessionPath, false, includeHistory, limit, &phases)
-	if err != nil {
-		return HistoryPage{}, err
-	}
-	phases.TotalMs = elapsedMs(started)
-	page.Switch = &phases
-	return page, nil
+	return a.resumeCanonicalSessionForTranscript(tab, ctrl, path, limit, includeHistory)
 }
 
 // switchToLoadedSessionPage commits tab onto a session that is already loaded

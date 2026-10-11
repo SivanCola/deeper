@@ -13,7 +13,7 @@ func TestReadProjectionDoesNotCopyOrDiscardJournals(t *testing.T) {
 	state.Generation = 7
 	state.Workspaces["w"] = Workspace{ID: "w", Title: "original", SessionIDs: []string{"s"}}
 	state.SessionStates["s"] = SessionState{Lifecycle: "active"}
-	state.PendingOperations["op"] = Operation{ID: "op", Lifecycle: "active", Kind: "import", Phase: "committed", Request: []byte(`{"large":"journal"}`)}
+	state.PendingOperations["op"] = Operation{ID: "op", Lifecycle: "active", Kind: "archive", Phase: "committed", Request: []byte(`{"large":"journal"}`)}
 	body, err := json.Marshal(state)
 	if err != nil {
 		t.Fatal(err)
@@ -77,15 +77,15 @@ func TestReadCacheObservesReplacementWithoutGenerationOrTimestampChange(t *testi
 func TestReadCacheIsolatesOperationAndUnknownFields(t *testing.T) {
 	state := newState()
 	state.PendingOperations["op"] = Operation{ID: "op", Request: []byte(`{"value":1}`), Result: []byte(`{"value":2}`),
-		SessionIDs: []string{"s"}, Dependencies: []string{"dep"}, Mapping: &SourceMapping{RetainedArtifacts: []string{"artifact"}},
+		SessionIDs:   []string{"s"},
 		Presentation: &Presentation{Title: "title"}}
 	copy := cloneSnapshot(state)
 	operation := copy.PendingOperations["op"]
 	operation.Request[0], operation.Result[0] = '!', '!'
-	operation.SessionIDs[0], operation.Dependencies[0] = "changed", "changed"
-	operation.Mapping.RetainedArtifacts[0], operation.Presentation.Title = "changed", "changed"
+	operation.SessionIDs[0] = "changed"
+	operation.Presentation.Title = "changed"
 	original := state.PendingOperations["op"]
-	if original.Request[0] != '{' || original.Result[0] != '{' || original.SessionIDs[0] != "s" || original.Dependencies[0] != "dep" || original.Mapping.RetainedArtifacts[0] != "artifact" || original.Presentation.Title != "title" {
+	if original.Request[0] != '{' || original.Result[0] != '{' || original.SessionIDs[0] != "s" || original.Presentation.Title != "title" {
 		t.Fatal("snapshot aliases cached operation storage")
 	}
 }

@@ -2,20 +2,17 @@ package cli
 
 import (
 	"context"
-	"os/exec"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/charmbracelet/colorprofile"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/agent/testutil"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/i18n"
@@ -46,26 +43,6 @@ func TestRunStatuslineCmd(t *testing.T) {
 	// A failing command yields an empty line, not an error.
 	if got := runStatuslineCmd(failCmd, "{}"); got != "" {
 		t.Errorf("failed command should yield empty, got %q", got)
-	}
-}
-
-func TestRunStatuslineCmdNormalizesQuotedNodeEval(t *testing.T) {
-	if _, err := exec.LookPath("node"); err != nil {
-		t.Skip("node not available")
-	}
-	script := "let input = ''; process.stdin.setEncoding('utf8'); process.stdin.on('data', chunk => input += chunk); process.stdin.on('end', () => { const payload = JSON.parse(input); console.log(payload.model) })"
-	cmd := `node -e "\"` + script + `\""`
-	timeout := statuslineCommandTimeout
-	if runtime.GOOS == "windows" {
-		// Windows CI cold-starts node.exe through Defender scanning while the
-		// rest of the module compiles and tests in parallel; a fresh toolchain
-		// (empty setup-go cache) pushes that past 10s. The production timeout
-		// is not under test here — only the quoted-eval normalization is.
-		timeout = 30 * time.Second
-	}
-
-	if got := runStatuslineCmdWithTimeout(cmd, `{"model":"deepseek"}`, timeout); got != "deepseek" {
-		t.Fatalf("normalized statusline node -e output = %q, want deepseek", got)
 	}
 }
 
@@ -196,16 +173,6 @@ func TestStatuslineCycleHintFollowsLanguage(t *testing.T) {
 	}
 }
 
-func TestDesktopShortcutStatuslineUsesPlanToggleHint(t *testing.T) {
-	i18n.DetectLanguage("en")
-
-	content := renderStatuslineViewWithShortcutLayout(t, "desktop")
-	plain := bottomStatusPlain(content)
-	if !strings.Contains(plain, "Read only") || !strings.Contains(plain, "Shift+Tab read-only/workspace/YOLO/plan") || !strings.Contains(plain, "Ctrl+Y YOLO") {
-		t.Fatalf("desktop shortcut status line missing unified plan-toggle hint:\n%s", plain)
-	}
-}
-
 func TestStatuslineShowsEffortInPersistentFooter(t *testing.T) {
 	i18n.DetectLanguage("en")
 
@@ -303,7 +270,7 @@ func TestRefreshEffortStatusUsesCurrentModel(t *testing.T) {
 
 	ctrl := newOwnedTestController(t, control.Options{})
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
-	m.modelRef = "deepseek-flash/deepseek-v4-flash"
+	m.modelRef = "deepseek-flash/deepseek-flash"
 	m.refreshEffortStatus()
 	if m.effortLevel != "auto" {
 		t.Fatalf("effortLevel = %q, want auto", m.effortLevel)
@@ -320,19 +287,6 @@ func renderStatuslineView(t *testing.T, yolo bool) string {
 		ctrl.SetToolApprovalMode(control.ToolApprovalWorkspaceWrite)
 	}
 	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
-	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
-	return next.(chatTUI).View().Content
-}
-
-func renderStatuslineViewWithShortcutLayout(t *testing.T, layout string) string {
-	t.Helper()
-
-	ctrl := newOwnedTestController(t, control.Options{})
-	m := newChatTUI(ctrl, "", make(chan event.Event, 1), 80)
-	m.cfg = config.Default()
-	if err := m.cfg.SetUIShortcutLayout(layout); err != nil {
-		t.Fatal(err)
-	}
 	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	return next.(chatTUI).View().Content
 }

@@ -58,7 +58,7 @@ func TestValidateUpdaterRequestBindsChannelVersionAndID(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "stable", request: "web-stable-1", channel: "stable", version: "v1.18.0"},
-		{name: "legacy preview selects official", request: "web-preview-1", channel: "preview", version: "v1.18.0"},
+		{name: "historical preview is rejected", request: "web-preview-1", channel: "preview", version: "v1.18.0", wantErr: true},
 		{name: "legacy preview rejects prerelease", request: "web-preview-2", channel: "preview", version: "v1.18.0-preview.1", wantErr: true},
 		{name: "stable rejects preview version", request: "web-stable-2", channel: "stable", version: "v1.18.0-preview.1", wantErr: true},
 		{name: "empty request", channel: "stable", version: "v1.18.0", wantErr: true},
@@ -81,8 +81,8 @@ func TestValidateUpdaterRequestBindsChannelVersionAndID(t *testing.T) {
 }
 
 func TestValidateAssetInstallLayout(t *testing.T) {
-	if err := validateAssetInstallLayout(""); err != nil {
-		t.Fatalf("empty layout must remain accepted for legacy assets: %v", err)
+	if err := validateAssetInstallLayout(""); err == nil {
+		t.Fatal("asset without a layout was accepted")
 	}
 	if err := validateAssetInstallLayout("versioned-v1"); err != nil {
 		t.Fatalf("versioned-v1 must be accepted: %v", err)
@@ -149,17 +149,14 @@ func TestUpdaterNativeOperationsFailFastWhileBusy(t *testing.T) {
 
 func TestUpdaterReconcilesPendingUpdateBeforeInstallModeDispatch(t *testing.T) {
 	originalExists := pendingUpdateExistsForInstall
-	originalArchive := archiveSupersededPendingUpdateForInstall
 	originalReconcile := reconcilePendingUpdateForInstall
 	t.Cleanup(func() {
 		pendingUpdateExistsForInstall = originalExists
-		archiveSupersededPendingUpdateForInstall = originalArchive
 		reconcilePendingUpdateForInstall = originalReconcile
 	})
 
 	called := false
 	pendingUpdateExistsForInstall = func() bool { return true }
-	archiveSupersededPendingUpdateForInstall = func() (bool, error) { return false, nil }
 	reconcilePendingUpdateForInstall = func(runningVersion string) (repair.PendingUpdateReconcileResult, error) {
 		called = true
 		if runningVersion != version {
@@ -176,46 +173,15 @@ func TestUpdaterReconcilesPendingUpdateBeforeInstallModeDispatch(t *testing.T) {
 	}
 }
 
-func TestUpdaterArchivesSupersededUpdateBeforeReconciliation(t *testing.T) {
-	originalExists := pendingUpdateExistsForInstall
-	originalArchive := archiveSupersededPendingUpdateForInstall
-	originalReconcile := reconcilePendingUpdateForInstall
-	t.Cleanup(func() {
-		pendingUpdateExistsForInstall = originalExists
-		archiveSupersededPendingUpdateForInstall = originalArchive
-		reconcilePendingUpdateForInstall = originalReconcile
-	})
-
-	archived := false
-	pendingUpdateExistsForInstall = func() bool { return true }
-	archiveSupersededPendingUpdateForInstall = func() (bool, error) {
-		archived = true
-		return true, nil
-	}
-	reconcilePendingUpdateForInstall = func(string) (repair.PendingUpdateReconcileResult, error) {
-		if !archived {
-			t.Fatal("reconciliation ran before superseded update archival")
-		}
-		return repair.PendingUpdateReconcileResult{}, nil
-	}
-	meta := &cachedUpdate{Channel: "stable", Version: "v1.20.0", Size: 42}
-	if err := (&App{}).reconcilePendingUpdateForRequest("install-1", meta); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestUpdaterReconcilesBeforeDownloading(t *testing.T) {
 	setDesktopBuildIdentityForTest(t, "v1.20.0", "stable")
 	originalExists := pendingUpdateExistsForInstall
-	originalArchive := archiveSupersededPendingUpdateForInstall
 	originalReconcile := reconcilePendingUpdateForInstall
 	t.Cleanup(func() {
 		pendingUpdateExistsForInstall = originalExists
-		archiveSupersededPendingUpdateForInstall = originalArchive
 		reconcilePendingUpdateForInstall = originalReconcile
 	})
 	pendingUpdateExistsForInstall = func() bool { return true }
-	archiveSupersededPendingUpdateForInstall = func() (bool, error) { return false, nil }
 	reconcilePendingUpdateForInstall = func(string) (repair.PendingUpdateReconcileResult, error) {
 		return repair.PendingUpdateReconcileResult{Pending: true}, errors.New("blocked before download")
 	}
@@ -225,54 +191,12 @@ func TestUpdaterReconcilesBeforeDownloading(t *testing.T) {
 	}
 }
 
-func TestUpdaterBlocksInstallWhilePreviousReleaseAwaitsHealth(t *testing.T) {
-	originalExists := pendingUpdateExistsForInstall
-	originalArchive := archiveSupersededPendingUpdateForInstall
-	originalReconcile := reconcilePendingUpdateForInstall
-	t.Cleanup(func() {
-		pendingUpdateExistsForInstall = originalExists
-		archiveSupersededPendingUpdateForInstall = originalArchive
-		reconcilePendingUpdateForInstall = originalReconcile
-	})
-
-	pendingUpdateExistsForInstall = func() bool { return true }
-	archiveSupersededPendingUpdateForInstall = func() (bool, error) {
-		return false, errors.New("not a superseded flat-layout transaction")
-	}
-	reconcilePendingUpdateForInstall = func(string) (repair.PendingUpdateReconcileResult, error) {
-		return repair.PendingUpdateReconcileResult{Pending: true, AwaitingHealth: true}, repair.ErrPendingUpdateAwaitingHealth
-	}
-	meta := &cachedUpdate{Channel: "preview", Version: "v1.18.0-preview.65", Size: 42}
-	err := (&App{}).reconcilePendingUpdateForRequest("install-1", meta)
-	if err == nil || !strings.Contains(err.Error(), "startup health check") {
-		t.Fatalf("health-check recovery error = %v", err)
-	}
-}
-
 func TestExpectedUpdateVersionRejectsAdvancedPointer(t *testing.T) {
 	if err := ensureExpectedUpdateVersion("preview", "v1.18.0-preview.1", "v1.18.0-preview.2"); err == nil {
 		t.Fatal("advanced pointer unexpectedly matched the checked version")
 	}
 	if err := ensureExpectedUpdateVersion("stable", "v1.18.0", "v1.18.0"); err != nil {
 		t.Fatalf("identical pointer rejected: %v", err)
-	}
-}
-
-func TestUpdateSiblingNamesCoverEveryReplacedEntryPoint(t *testing.T) {
-	windows := strings.Join(updateSiblingNames("windows"), "\x00")
-	for _, want := range []string{"deepzora-guard.exe", "deepzora-launcher.exe", "deepzora-update-helper.exe", "deepzora-cli.exe", "Deepzora.exe"} {
-		if !strings.Contains(windows, want) {
-			t.Errorf("Windows release unit omits %q: %q", want, windows)
-		}
-	}
-	if strings.Contains(windows, "deepzora.exe") {
-		t.Fatalf("Windows release unit reintroduces the case-only CLI/launcher collision: %q", windows)
-	}
-	if got := updateSiblingNames("linux"); len(got) != 2 || got[0] != "deepzora-guard" || got[1] != "deepzora" {
-		t.Fatalf("Linux release unit = %q", got)
-	}
-	if got := updateSiblingNames("darwin"); got != nil {
-		t.Fatalf("macOS app-bundle update must not list file siblings: %q", got)
 	}
 }
 
@@ -375,33 +299,6 @@ func TestManualUpdateRequiredErrorPreservesReason(t *testing.T) {
 	}
 }
 
-func TestLegacyChannelsSelectOfficialPointers(t *testing.T) {
-	stable := manifestEndpoints("stable")
-	preview := manifestEndpoints("preview")
-	want := []string{githubManifestEndpoint}
-	if !reflect.DeepEqual(stable, want) || !reflect.DeepEqual(preview, want) {
-		t.Fatalf("manifest endpoints: stable=%q preview=%q want=%q", stable, preview, want)
-	}
-	if got := downloadPage("preview"); got != "https://github.com/SivanCola/deepzora/releases" {
-		t.Errorf("legacy preview download page = %q", got)
-	}
-	if got := manifestDownloadPage("preview", "https://github.com/SivanCola/deepzora/?channel=preview&download=desktop#start"); got != "https://github.com/SivanCola/deepzora/releases" {
-		t.Errorf("manifest official page = %q", got)
-	}
-	if got := manifestDownloadPage("preview", "https://example.com/releases"); got != "https://example.com/releases" {
-		t.Errorf("external manifest download page = %q, want unchanged", got)
-	}
-	for _, unsafe := range []string{
-		"javascript:alert(1)",
-		"http://deepzora.com/#start",
-		"https://user@deepzora.com/#start",
-	} {
-		if got := manifestDownloadPage("preview", unsafe); got != downloadPage("stable") {
-			t.Errorf("unsafe manifest page %q = %q, want official fallback", unsafe, got)
-		}
-	}
-}
-
 func TestManifestChannelValidation(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -410,8 +307,8 @@ func TestManifestChannelValidation(t *testing.T) {
 		wantError bool
 	}{
 		{name: "stable release", channel: "stable", version: "v1.17.21"},
-		{name: "legacy preview selects official", channel: "preview", version: "v1.17.21"},
-		{name: "legacy canary selects official", channel: "canary", version: "v1.17.21"},
+		{name: "historical preview is rejected", channel: "preview", version: "v1.17.21", wantError: true},
+		{name: "historical canary is rejected", channel: "canary", version: "v1.17.21", wantError: true},
 		{name: "legacy preview rejects prerelease", channel: "preview", version: "v1.18.0-preview.7", wantError: true},
 		{name: "legacy canary rejects prerelease", channel: "canary", version: "v1.17.21-canary.56", wantError: true},
 		{name: "Stable rejects Preview", channel: "stable", version: "v1.18.0-preview.7", wantError: true},
@@ -434,11 +331,12 @@ func validDesktopManifest(t *testing.T, selected, manifestVersion string) update
 	t.Helper()
 	tag := desktopReleaseTag(selected, manifestVersion)
 	manifest := update.Manifest{
-		Version:        manifestVersion,
-		DownloadPage:   manifestDownloadPageURL,
-		Platforms:      map[string]update.Asset{},
-		NativePackages: map[string]update.Asset{},
-		Downloads:      map[string]update.Asset{},
+		Version:         manifestVersion,
+		ReleaseNotesURL: "https://github.com/SivanCola/deepzora/releases/tag/" + strings.SplitN(manifestVersion, "-pr", 2)[0] + "/",
+		DownloadPage:    manifestDownloadPageURL,
+		Platforms:       map[string]update.Asset{},
+		NativePackages:  map[string]update.Asset{},
+		Downloads:       map[string]update.Asset{},
 	}
 	requiredAssets := append([]requiredDesktopAsset(nil), requiredDesktopUpdaterAssets...)
 	requiredAssets = append(requiredAssets, requiredDesktopDownloadAssets...)
@@ -448,7 +346,7 @@ func validDesktopManifest(t *testing.T, selected, manifestVersion string) update
 			URL:    assetURL,
 			Sig:    assetURL + ".minisig",
 			Size:   1024,
-			SHA256: strings.Repeat("a", 64),
+			SHA256: strings.Repeat("a", 64), InstallLayout: update.ElectronInstallLayout,
 		}
 		switch required.group {
 		case "platforms":
@@ -591,14 +489,14 @@ func TestDesktopManifestValidation(t *testing.T) {
 	if err := validateDesktopManifest("stable", ptr(validDesktopManifest(t, "stable", "v1.18.0"))); err != nil {
 		t.Fatalf("valid Stable manifest: %v", err)
 	}
-	if err := validateDesktopManifest("preview", ptr(validDesktopManifest(t, "stable", "v1.19.0"))); err != nil {
-		t.Fatalf("legacy Preview selection did not accept official manifest: %v", err)
+	if err := validateDesktopManifest("preview", ptr(validDesktopManifest(t, "stable", "v1.19.0"))); err == nil {
+		t.Fatal("historical Preview selection accepted")
 	}
-	t.Run("legacy manifests remain upgradeable", func(t *testing.T) {
+	t.Run("rejects manifests without required downloads", func(t *testing.T) {
 		stable := validDesktopManifest(t, "stable", "v1.17.21")
 		stable.Downloads = nil
-		if err := validateDesktopManifest("stable", &stable); err != nil {
-			t.Fatalf("legacy Stable manifest: %v", err)
+		if err := validateDesktopManifest("stable", &stable); err == nil {
+			t.Fatal("manifest without required downloads was accepted")
 		}
 	})
 	t.Run("empty downloads is not a legacy manifest", func(t *testing.T) {
@@ -631,7 +529,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 			t.Fatal("official manifest accepted mutable rolling assets")
 		}
 	})
-	t.Run("unified GitHub release base", func(t *testing.T) {
+	t.Run("historical GitHub release base is rejected", func(t *testing.T) {
 		manifest := validDesktopManifest(t, "stable", "v1.19.0")
 		oldBase := githubReleaseAssetBase + "/desktop-v1.19.0/"
 		newBase := "https://github.com/SivanCola/deepzora/releases/download/v1.19.0/"
@@ -650,8 +548,8 @@ func TestDesktopManifestValidation(t *testing.T) {
 			asset.Sig = asset.URL + ".minisig"
 			manifest.Downloads[key] = asset
 		}
-		if err := validateDesktopManifest("stable", &manifest); err != nil {
-			t.Fatalf("unified GitHub release manifest: %v", err)
+		if err := validateDesktopManifest("stable", &manifest); err == nil {
+			t.Fatal("historical release base accepted")
 		}
 	})
 	for _, tt := range tests {
@@ -866,7 +764,7 @@ func TestCachedUpdateRejectsTamperedArtifact(t *testing.T) {
 	}
 }
 
-func TestCachedUpdateAcceptsLegacyChannelAlias(t *testing.T) {
+func TestCachedUpdateRejectsHistoricalChannelAlias(t *testing.T) {
 	withUpdateCacheDir(t)
 
 	data := []byte("verified artifact")
@@ -878,12 +776,12 @@ func TestCachedUpdateAcceptsLegacyChannelAlias(t *testing.T) {
 	if _, err := saveCachedUpdateForChannel("stable", "v9.9.9", asset, data, artifactKindTarball, nil); err != nil {
 		t.Fatalf("saveCachedUpdateForChannel: %v", err)
 	}
-	if _, _, err := readVerifiedCachedUpdateForChannel("preview"); err != nil {
-		t.Fatalf("legacy Preview alias did not read official cache: %v", err)
+	if _, _, err := readVerifiedCachedUpdateForChannel("preview"); err == nil {
+		t.Fatal("historical Preview alias read the current cache")
 	}
 }
 
-func TestLegacyChannelAliasDoesNotPermitDowngrade(t *testing.T) {
+func TestStableUpdateDoesNotPermitDowngradeFromHistoricalBuild(t *testing.T) {
 	oldChannel := channel
 	channel = "preview"
 	t.Cleanup(func() { channel = oldChannel })
@@ -901,7 +799,7 @@ func TestLegacyChannelAliasDoesNotPermitDowngrade(t *testing.T) {
 		installProfile{Mode: installModePortable, CanSelfUpdate: true},
 	)
 	if got.Available {
-		t.Fatalf("legacy Preview alias permitted an official downgrade: %+v", got)
+		t.Fatalf("update permitted a downgrade from a historical build: %+v", got)
 	}
 	if got.Channel != "stable" {
 		t.Fatalf("channel = %q, want stable", got.Channel)
@@ -946,7 +844,7 @@ func TestDebCacheRequiresSignatureAndRejectsTarballReuse(t *testing.T) {
 		t.Fatal("deb cache without signature file must not match")
 	}
 
-	// Portable legacy cache (no artifactKind) remains valid for tarball.
+	// Current tarball caches require an explicit artifact kind.
 	tarball := []byte("tarball-bytes")
 	tAsset := update.Asset{
 		URL:    "https://github.com/SivanCola/deepzora/releases/download/desktop-v9.9.9/Deepzora-linux-amd64.tar.gz",
@@ -957,6 +855,9 @@ func TestDebCacheRequiresSignatureAndRejectsTarballReuse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !cachedUpdateMatches("v9.9.9", tAsset, artifactKindTarball) {
+		t.Fatal("current tarball cache should match")
+	}
 	// Simulate pre-artifactKind metadata.
 	meta.ArtifactKind = ""
 	raw, _ := json.MarshalIndent(meta, "", "  ")
@@ -964,8 +865,8 @@ func TestDebCacheRequiresSignatureAndRejectsTarballReuse(t *testing.T) {
 	if err := os.WriteFile(path, append(raw, '\n'), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if !cachedUpdateMatches("v9.9.9", tAsset, artifactKindTarball) {
-		t.Fatal("legacy portable cache should still match tarball")
+	if cachedUpdateMatches("v9.9.9", tAsset, artifactKindTarball) {
+		t.Fatal("historical portable cache accepted")
 	}
 	if cachedUpdateMatches("v9.9.9", tAsset, artifactKindDeb) {
 		t.Fatal("legacy portable cache must not match deb")
@@ -1028,60 +929,6 @@ func TestExtractBinary(t *testing.T) {
 	}
 }
 
-func TestExtractLinuxReleaseUnitRejectsAmbiguousMembers(t *testing.T) {
-	makeArchive := func(t *testing.T, headers []tar.Header, bodies [][]byte) []byte {
-		t.Helper()
-		var buf bytes.Buffer
-		gz := gzip.NewWriter(&buf)
-		tw := tar.NewWriter(gz)
-		for i, header := range headers {
-			if err := tw.WriteHeader(&header); err != nil {
-				t.Fatal(err)
-			}
-			if i < len(bodies) {
-				if _, err := tw.Write(bodies[i]); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
-		if err := tw.Close(); err != nil {
-			t.Fatal(err)
-		}
-		if err := gz.Close(); err != nil {
-			t.Fatal(err)
-		}
-		return buf.Bytes()
-	}
-	base := func(name string, body []byte) tar.Header {
-		return tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}
-	}
-	headers := []tar.Header{
-		base("deepzora-desktop", []byte("desktop")),
-		base("deepzora-guard", []byte("guard")),
-		base("deepzora", []byte("cli")),
-	}
-	bodies := [][]byte{[]byte("desktop"), []byte("guard"), []byte("cli")}
-	if got, err := extractLinuxReleaseUnit(makeArchive(t, headers, bodies)); err != nil ||
-		string(got["deepzora-desktop"]) != "desktop" {
-		t.Fatalf("complete release extraction = %v, %q", err, got["deepzora-desktop"])
-	}
-
-	duplicateHeaders := append(append([]tar.Header(nil), headers...), base("nested/deepzora", []byte("duplicate")))
-	duplicateBodies := append(append([][]byte(nil), bodies...), []byte("duplicate"))
-	if _, err := extractLinuxReleaseUnit(makeArchive(t, duplicateHeaders, duplicateBodies)); err == nil ||
-		!strings.Contains(err.Error(), "appears more than once") {
-		t.Fatalf("duplicate release member error = %v", err)
-	}
-
-	nonRegular := append([]tar.Header(nil), headers...)
-	nonRegular[1] = tar.Header{Name: "deepzora-guard", Typeflag: tar.TypeSymlink, Linkname: "outside"}
-	nonRegularBodies := [][]byte{bodies[0], nil, bodies[2]}
-	if _, err := extractLinuxReleaseUnit(makeArchive(t, nonRegular, nonRegularBodies)); err == nil ||
-		!strings.Contains(err.Error(), "not a regular file") {
-		t.Fatalf("non-regular release member error = %v", err)
-	}
-}
-
 func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 	root := robustTempDir(t)
 	source := robustTempDir(t)
@@ -1128,92 +975,6 @@ func TestApplyLinuxVersionedActivatesWithoutPersistingGuard(t *testing.T) {
 		if _, err := os.Lstat(guardPath); !os.IsNotExist(err) {
 			t.Fatalf("Guard persisted at %s: %v", guardPath, err)
 		}
-	}
-}
-
-func TestApplyLinuxHoldsReleaseUnitLockDuringReplace(t *testing.T) {
-	dir := robustTempDir(t)
-	t.Setenv("DEEPZORA_HOME", robustTempDir(t))
-	exe := filepath.Join(dir, "deepzora-desktop")
-	releasePaths := releaseUnitPathsFor(dir, "linux")
-	for _, path := range releasePaths {
-		if err := os.WriteFile(path, []byte("old"), 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	prepared, err := repair.PrepareFileUpdate("v1", "v2", exe, releasePaths[1:]...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	originalPath := currentExecutablePathForLinux
-	originalApply := applyLinuxReleaseUnit
-	currentExecutablePathForLinux = func() string { return exe }
-	entered := make(chan struct{})
-	releaseReplace := make(chan struct{})
-	applyLinuxReleaseUnit = func(
-		tx *repair.UpdateTransaction,
-		exe string,
-		bin, guard, cli []byte,
-	) ([]repair.FileUpdateInstallReceipt, error) {
-		close(entered)
-		<-releaseReplace
-		return originalApply(tx, exe, bin, guard, cli)
-	}
-	t.Cleanup(func() {
-		currentExecutablePathForLinux = originalPath
-		applyLinuxReleaseUnit = originalApply
-	})
-
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(gz)
-	for _, name := range []string{"deepzora-desktop", "deepzora-guard", "deepzora"} {
-		body := []byte(name)
-		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := tw.Write(body); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := tw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := gz.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	applyDone := make(chan error, 1)
-	go func() { applyDone <- applyLinux(buf.Bytes(), prepared) }()
-	select {
-	case <-entered:
-	case err := <-applyDone:
-		t.Fatalf("applyLinux failed before replacement: %v", err)
-	}
-
-	lockDone := make(chan error, 1)
-	go func() {
-		unlock, err := repair.LockRepairMutations(releasePaths...)
-		if err == nil {
-			unlock()
-		}
-		lockDone <- err
-	}()
-	select {
-	case err := <-lockDone:
-		close(releaseReplace)
-		t.Fatalf("competing updater lock acquired during Linux replacement: %v", err)
-	case <-time.After(300 * time.Millisecond):
-	}
-	close(releaseReplace)
-	if err := <-applyDone; err != nil {
-		t.Fatalf("applyLinux: %v", err)
-	}
-	if err := <-lockDone; err != nil {
-		t.Fatalf("competing lock after replacement: %v", err)
-	}
-	if _, ok := repair.ReadUpdateApplyFailure(); ok {
-		t.Fatal("successful Linux release-unit publish left an interruption marker")
 	}
 }
 
@@ -1538,3 +1299,18 @@ func TestDownloadRejectsAssetSizeAboveMaximum(t *testing.T) {
 type rtFunc func(*http.Request) (*http.Response, error)
 
 func (f rtFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestHistoricalUpdateChannelsAreUnavailable(t *testing.T) {
+	for _, ch := range []string{"preview", "canary", "beta", "next", "unknown"} {
+		if normalizeUpdateChannel(ch) != "" {
+			t.Fatalf("historical channel %q normalized", ch)
+		}
+		if _, _, _, err := validateUpdaterRequest("current-request", ch, "v1.0.0"); err == nil {
+			t.Fatalf("historical channel %q admitted", ch)
+		}
+		m := validDesktopManifest(t, "stable", "v1.0.0")
+		if err := validateDesktopManifest(ch, &m); err == nil {
+			t.Fatalf("historical manifest channel %q admitted", ch)
+		}
+	}
+}

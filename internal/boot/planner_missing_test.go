@@ -25,7 +25,7 @@ planner_model = "OpenRouter/moonshotai/kimi-k2.6:free"
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "executor-model"
+models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 

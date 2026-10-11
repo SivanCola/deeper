@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -379,9 +378,9 @@ func TestCLIReleaseChannelContract(t *testing.T) {
 	}{
 		{"", cliReleaseStable, true},
 		{"stable", cliReleaseStable, true},
-		{"PREVIEW", cliReleaseStable, true},
-		{"canary", cliReleaseStable, true},
-		{"next", cliReleaseStable, true},
+		{"PREVIEW", "", false},
+		{"canary", "", false},
+		{"next", "", false},
 		{"rc", "", false},
 	} {
 		got, err := parseCLIReleaseChannel(tc.value)
@@ -405,41 +404,6 @@ func TestCLIReleaseChannelContract(t *testing.T) {
 	}
 }
 
-func TestParseAndResolveCLIUpgradeChannel(t *testing.T) {
-	for _, tc := range []struct {
-		name       string
-		args       []string
-		configured string
-		want       cliReleaseChannel
-		wantSave   bool
-		wantCheck  bool
-		wantForce  bool
-	}{
-		{name: "fresh default", configured: "", want: cliReleaseStable},
-		{name: "saved preview migrates", configured: "preview", want: cliReleaseStable},
-		{name: "legacy preview positional", args: []string{"preview"}, configured: "stable", want: cliReleaseStable},
-		{name: "stable positional", args: []string{"--check", "stable"}, configured: "preview", want: cliReleaseStable, wantCheck: true},
-		{name: "legacy flags after positional", args: []string{"preview", "--force"}, configured: "stable", want: cliReleaseStable, wantForce: true},
-		{name: "legacy one off override", args: []string{"--channel", "preview"}, configured: "stable", want: cliReleaseStable},
-		{name: "mixed legacy aliases", args: []string{"preview", "--channel=stable"}, configured: "stable", want: cliReleaseStable},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			syntax, err := parseCLIUpgradeSyntax(tc.args)
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, save, err := resolveCLIUpgradeChannel(syntax, tc.configured)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != tc.want || save != tc.wantSave || syntax.checkOnly != tc.wantCheck || syntax.force != tc.wantForce {
-				t.Fatalf("resolved = (%q, save=%v, check=%v, force=%v), want (%q, save=%v, check=%v, force=%v)",
-					got, save, syntax.checkOnly, syntax.force, tc.want, tc.wantSave, tc.wantCheck, tc.wantForce)
-			}
-		})
-	}
-}
-
 func TestParseCLIUpgradeChannelRejectsAmbiguousArguments(t *testing.T) {
 	for _, args := range [][]string{
 		{"stable", "preview"},
@@ -460,37 +424,8 @@ func TestUpgradeCommandRejectsMalformedConfigWithoutPanicking(t *testing.T) {
 	}
 	t.Cleanup(func() { loadCLIUpgradeConfig = oldLoad })
 
-	if code := upgradeCommand([]string{"--channel", "stable"}, "v1.17.0"); code != 1 {
+	if code := upgradeCommand(nil, "v1.17.0"); code != 1 {
 		t.Fatalf("upgradeCommand exit = %d, want 1", code)
-	}
-}
-
-func TestPersistCLIReleaseChannelRemovesLegacyConfig(t *testing.T) {
-	for _, legacy := range []string{"stable", "preview", "canary", "beta", "next"} {
-		t.Run(legacy, func(t *testing.T) {
-			home := t.TempDir()
-			t.Setenv("DEEPZORA_HOME", home)
-			if err := os.WriteFile(config.UserConfigPath(), []byte("[cli]\nupdate_channel = \""+legacy+"\"\n"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			if err := persistCLIReleaseChannel(cliReleaseStable); err != nil {
-				t.Fatalf("migrate legacy channel: %v", err)
-			}
-			cfg, err := config.LoadForEditReadOnlyStrict(config.UserConfigPath())
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got := cfg.CLIUpdateChannel(); got != "stable" {
-				t.Fatalf("saved CLI channel = %q, want stable", got)
-			}
-			raw, err := os.ReadFile(config.UserConfigPath())
-			if err != nil {
-				t.Fatal(err)
-			}
-			if strings.Contains(string(raw), "[cli]") || strings.Contains(string(raw), "update_channel") {
-				t.Fatalf("saved config retained retired CLI channel:\n%s", raw)
-			}
-		})
 	}
 }
 

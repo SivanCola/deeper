@@ -26,7 +26,7 @@ func (f *skillRawFactory) NewSession(_ context.Context, p SessionParams) (*contr
 		agent.Options{MaxSteps: 2}, p.Sink)
 	ctrl := control.New(control.Options{
 		Runner: executor, Executor: executor, Sink: p.Sink,
-		SessionDir: f.dir,
+		SessionDir: f.dir, SessionService: testACPService(f.dir), SessionRuntime: p.SessionRuntime, ExclusiveSession: f.dir != "",
 		Skills: []skill.Skill{
 			{Name: "probe", Description: "probe skill", Body: "PROBE BODY\nthen /other", Triggers: []string{"probe", "tidy"}, AutoUse: "require"},
 			{Name: "other", Description: "other skill", Body: "OTHER BODY", Triggers: []string{"other"}, AutoUse: "require"},

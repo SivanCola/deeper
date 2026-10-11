@@ -357,7 +357,7 @@ func populateSearchIndex(ctx context.Context, dir string, db *sql.DB, startOffse
 }
 
 func indexSearchEvent(ctx context.Context, tx *sql.Tx, content *sessioncontent.Store, state *searchBuildState, event Event) error {
-	if event.Kind != "message/complete" && event.Kind != "message/upsert" && event.Kind != "message/retract" && event.Kind != "history/replace" && event.Kind != "legacy/import" {
+	if event.Kind != "message/complete" && event.Kind != "message/upsert" && event.Kind != "message/retract" && event.Kind != "history/replace" {
 		return nil
 	}
 	payload := event.Payload
@@ -389,7 +389,7 @@ func indexSearchEvent(ctx context.Context, tx *sql.Tx, content *sessioncontent.S
 			return damagedPayload(event, err)
 		}
 		return indexSearchMessage(ctx, tx, state, *body.Message, event.Sequence, event.Kind == "message/upsert")
-	case "history/replace", "legacy/import":
+	case "history/replace":
 		messages, err := replacementEventMessages(event, payload)
 		if err != nil {
 			return err

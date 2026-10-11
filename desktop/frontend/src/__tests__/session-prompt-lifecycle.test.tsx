@@ -35,7 +35,7 @@ function Probe({ tab, generation = "1", remote = false }: { tab: string; generat
   const target = { tabId: tab, sessionKey: tab + generation };
   const operations = useSessionOperations({ visible: target, resources: ["A", "B"].map(tabId => ({ tabId, sessionKey: tabId + generation })) });
   commands = useSessionPromptCommands({ target, session: { hostId: "local", sessionId: `session-${tab}` }, sessionGeneration: Number(generation), approval: { id: prompt, tool: "exit_plan_mode", subject: "plan", turnId: `turn-${tab}`, runtimeEpoch: `runtime-${tab}` },
-    remote, goal: "fixture", toolApprovalMode: "ask", ports, operations, reportError: error => { throw error; } });
+    remote, goal: "fixture", toolApprovalMode: "workspace-write", ports, operations, reportError: error => { throw error; } });
   return null;
 }
 async function paint(tab: string, generation = "1", remote = false) {

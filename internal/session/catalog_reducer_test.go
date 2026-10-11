@@ -42,7 +42,7 @@ func TestCatalogReducerMatchesCanonicalProjection(t *testing.T) {
 	message := func(id, text string) provider.Message {
 		return provider.Message{ID: id, Role: provider.RoleUser, RawContent: text, Content: text}
 	}
-	add("legacy/import", map[string]any{"messages": []provider.Message{message("old", "old request")}, "modelRef": "old-model"})
+	add("history/replace", map[string]any{"messages": []provider.Message{message("old", "old request")}})
 	add("session/title", map[string]any{"title": "custom title"})
 	add("session/config", map[string]any{"modelRef": "new-model", "modelIdentity": "identity"})
 	add("turn/start", map[string]any{})
@@ -52,7 +52,7 @@ func TestCatalogReducerMatchesCanonicalProjection(t *testing.T) {
 	add("compaction", map[string]any{"messages": []provider.Message{message("compact", "not a preview either")}})
 	add("turn/end", map[string]any{"status": "completed"})
 	add("turn/end", map[string]any{"status": "completed"})
-	add("history/replace", map[string]any{"messages": []provider.Message{message("x", "first"), message("x", "duplicate allowed by replacement"), message("y", "last")}})
+	add("history/replace", map[string]any{"messages": []provider.Message{message("x", "first"), message("y", "last")}})
 	add("message/upsert", map[string]any{"message": message("x", "")})
 	add("message/upsert", map[string]any{"message": provider.Message{ID: "y", Role: provider.RoleUser, Origin: provider.MessageOriginHost, Content: "host"}})
 	add("history/replace", map[string]any{"messages": []provider.Message{}})

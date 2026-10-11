@@ -66,7 +66,7 @@ function paint() {
       <div style={{ flex: 1, minHeight: 0, position: "relative" }}><Transcript items={state.items} tabId={active} geometrySessionKey={active}
         localSubmissions={orderedLocalSubmissions(state)} running={state.running} onPrompt={noop} /></div>
       <div style={{ width: "100%", padding: "16px 24px", boxSizing: "border-box" }}><Composer tabId={active} sessionKey={active} inboxSessionPath={`fixture-${active}`} running={state.running} commandCatalog={[]}
-        ready collaborationMode="normal" toolApprovalMode="ask" modelLabel="Fixture" onSend={send}
+        ready collaborationMode="normal" toolApprovalMode="workspace-write" modelLabel="Fixture" onSend={send}
         onCancel={async () => ({ discardedItemIds: [] })} onCycleMode={noop} onSetMode={noop} onSetCollaborationMode={noop}
         onSetToolApprovalMode={noop} onClearGoal={noop} onEditGoal={noop} onPauseGoal={noop} onResumeGoal={noop}
         onSwitchModel={() => true} onSetEffort={noop} /></div>

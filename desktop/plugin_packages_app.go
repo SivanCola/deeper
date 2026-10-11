@@ -137,7 +137,7 @@ func decoratePluginCommandConflicts(view *PluginView, commands []command.Command
 		detail := &view.CommandDetails[i]
 		qualified := view.Name + ":" + detail.Name
 		winner, ok := byName[qualified]
-		if !ok || winner.Plugin == view.Name && winner.ShortName == detail.Name && !winner.Hidden {
+		if !ok || winner.Plugin == view.Name && winner.ShortName == detail.Name {
 			continue
 		}
 		detail.Shadowed = true

@@ -31,9 +31,6 @@ var (
 	waitForProcessExitFn                    = waitForProcessExit
 	runInstallerFn                          = runInstaller
 	startRelaunchFn                         = startRelaunch
-	claimPendingFileUpdateFn                = repair.ClaimPendingFileUpdateExact
-	installStagedReleaseUnitFn              = installStagedWindowsReleaseUnit
-	recordInstalledUpdateFn                 = repair.RecordClaimedFileUpdateInstalled
 	stageInstallerFn                        = stageVerifiedInstaller
 	claimInstallerExecutionFn               = claimVerifiedInstallerForExecution
 	lstatUpdateStagingFn                    = os.Lstat
@@ -47,7 +44,7 @@ func main() {
 
 func run(args []string) int {
 	var parentPID uint
-	var installer, installerSHA256, installDir, relaunch, toVersion, createdAt, transactionID, installLayout string
+	var installer, installerSHA256, installDir, relaunch, toVersion, installLayout string
 	fs := flag.NewFlagSet("deepzora-update-helper", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	fs.UintVar(&parentPID, "parent-pid", 0, "Deepzora process id to wait for before installing")
@@ -56,8 +53,6 @@ func run(args []string) int {
 	fs.StringVar(&installDir, "install-dir", "", "Deepzora installation directory")
 	fs.StringVar(&relaunch, "relaunch", "", "Deepzora executable to start after the installer succeeds")
 	fs.StringVar(&toVersion, "to-version", "", "Deepzora version being installed")
-	fs.StringVar(&createdAt, "created-at", "", "pending update creation timestamp")
-	fs.StringVar(&transactionID, "transaction-id", "", "complete pending update identity")
 	fs.StringVar(&installLayout, "install-layout", "", "installation layout contract")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -75,16 +70,8 @@ func run(args []string) int {
 		logger.Print("missing --to-version")
 		return 2
 	}
-	if installLayout != "" && installLayout != installlayout.InstallLayoutVersionedV1 {
+	if installLayout != installlayout.InstallLayoutVersionedV1 {
 		logger.Printf("unsupported --install-layout %q", installLayout)
-		return 2
-	}
-	if installLayout != installlayout.InstallLayoutVersionedV1 && createdAt == "" {
-		logger.Print("missing --created-at")
-		return 2
-	}
-	if installLayout != installlayout.InstallLayoutVersionedV1 && transactionID == "" {
-		logger.Print("missing --transaction-id")
 		return 2
 	}
 	if installDir == "" {
@@ -98,133 +85,7 @@ func run(args []string) int {
 			return 1
 		}
 	}
-	if installLayout == installlayout.InstallLayoutVersionedV1 {
-		return runVersionedWindowsUpdate(logger, installer, installerSHA256, installDir, relaunch, toVersion)
-	}
-	recoverExisting := func(reason string) int {
-		if relaunch != "" {
-			if relaunchErr := startRelaunchFn(preferRelaunchPath(relaunch, installDir), installDir); relaunchErr != nil {
-				logger.Printf("relaunch after %s: %v", reason, relaunchErr)
-			}
-		}
-		return 1
-	}
-	// The detached helper runs from the update cache, so a plain
-	// repair.ReadPendingUpdate would validate the transaction against the cache
-	// directory and reject every legitimate flat install. Claim through the
-	// explicit install-local launcher path instead; the repair package validates
-	// the complete transaction identity and exact release-unit path set while it
-	// acquires the pending + target locks.
-	claimTargets := windowsReleaseUnitPaths(installDir)
-	claimLauncher := filepath.Join(installDir, "deepzora-desktop.exe")
-	// The old desktop may acquire the pending lock during its normal shutdown.
-	// Wait for that exact process first, then claim the transaction and hold both
-	// pending and target locks across the installer replacement window.
-	claimed, releaseClaim, err := claimPendingFileUpdateFn(
-		toVersion,
-		createdAt,
-		transactionID,
-		claimLauncher,
-		claimTargets,
-		parentExitTimeout,
-	)
-	if err != nil {
-		logger.Printf("claim pending update: %v", err)
-		return recoverExisting("pending update claim failure")
-	}
-	defer releaseClaim()
-	recoverUnstarted := func() int {
-		releaseClaim()
-		if cancelErr := repair.CancelPendingUpdateExact(claimed); cancelErr != nil {
-			logger.Printf("cancel unstarted update: %v", cancelErr)
-		}
-		if relaunch != "" {
-			if relaunchErr := startRelaunchFn(preferRelaunchPath(relaunch, installDir), installDir); relaunchErr != nil {
-				logger.Printf("relaunch after unstarted update failure: %v", relaunchErr)
-			}
-		}
-		return 1
-	}
-	claimedInstaller, cleanupInstaller, err := stageInstallerFn(installer, installerSHA256)
-	if err != nil {
-		logger.Printf("bind update installer: %v", err)
-		return recoverUnstarted()
-	}
-	defer func() {
-		if cleanupErr := cleanupInstaller(); cleanupErr != nil {
-			logger.Printf("preserving update installer staging: %v", cleanupErr)
-		}
-	}()
-	stagingDir, err := os.MkdirTemp("", "deepzora-update-stage-*")
-	if err != nil {
-		logger.Printf("create update staging: %v", err)
-		return recoverUnstarted()
-	}
-	stagingOwner, err := lstatUpdateStagingFn(stagingDir)
-	if err != nil {
-		logger.Printf("bind update staging: %v", err)
-		return recoverUnstarted()
-	}
-	defer func() {
-		if cleanupErr := cleanupOwnedWindowsUpdateDirectory(stagingDir, stagingOwner); cleanupErr != nil {
-			logger.Printf("preserving update staging: %v", cleanupErr)
-		}
-	}()
-	releaseInstallerExecution, err := claimInstallerExecutionFn(claimedInstaller, installerSHA256)
-	if err != nil {
-		logger.Printf("recheck staged installer: %v", err)
-		return recoverUnstarted()
-	}
-	installerErr := runInstallerFn(claimedInstaller, stagingDir)
-	releaseInstallerExecution()
-	if installerErr != nil {
-		logger.Printf("extract installer payload: %v", installerErr)
-		return recoverUnstarted()
-	}
-	publishStarted, receipts, err := installStagedReleaseUnitFn(claimed, stagingDir)
-	if err != nil {
-		logger.Printf("publish staged release unit: %v", err)
-		if !publishStarted {
-			releaseClaim()
-			if cancelErr := repair.CancelPendingUpdateExact(claimed); cancelErr != nil {
-				logger.Printf("cancel unstarted update: %v", cancelErr)
-			}
-		}
-		if relaunch != "" {
-			if relaunchErr := startRelaunchFn(preferRelaunchPath(relaunch, installDir), installDir); relaunchErr != nil {
-				logger.Printf("relaunch after publish failure: %v", relaunchErr)
-			}
-		}
-		return 1
-	}
-	if receipts == nil {
-		// Versioned-v1 activation: no flat publish receipts and no health
-		// probation. Clear the pending transaction and relaunch the launcher.
-		releaseClaim()
-		if cancelErr := repair.CancelPendingUpdateExact(claimed); cancelErr != nil {
-			logger.Printf("clear pending after versioned activate: %v", cancelErr)
-		}
-		if clearErr := repair.ClearUpdateApplyFailureExact(claimed); clearErr != nil {
-			logger.Printf("clear apply failure after versioned activate: %v", clearErr)
-		}
-	} else {
-		if _, err := recordInstalledUpdateFn(claimed, receipts...); err != nil {
-			logger.Printf("record installed release unit: %v", err)
-			if markErr := repair.MarkUpdateApplyFailedExact(claimed, err.Error()); markErr != nil {
-				logger.Printf("record install failure: %v", markErr)
-			}
-			if relaunch != "" {
-				if relaunchErr := startRelaunchFn(preferRelaunchPath(relaunch, installDir), installDir); relaunchErr != nil {
-					logger.Printf("relaunch after failed install verification: %v", relaunchErr)
-				}
-			}
-			return 1
-		}
-		if err := repair.ClearUpdateApplyFailureExact(claimed); err != nil {
-			logger.Printf("clear completed update marker: %v", err)
-		}
-	}
-	return relaunchPublishedInstall(logger, relaunch, installDir, "relaunch")
+	return runVersionedWindowsUpdate(logger, installer, installerSHA256, installDir, relaunch, toVersion)
 }
 
 func runVersionedWindowsUpdate(logger *log.Logger, installer, installerSHA256, installDir, relaunch, toVersion string) int {
@@ -464,40 +325,6 @@ func claimVerifiedInstallerForExecution(path, expectedSHA256 string) (func(), er
 	return func() {
 		once.Do(func() { _ = file.Close() })
 	}, nil
-}
-
-func installStagedWindowsReleaseUnit(
-	claimed *repair.UpdateTransaction,
-	stagingDir string,
-) (bool, []repair.FileUpdateInstallReceipt, error) {
-	// v1.20+: versioned-v1 is the only publish path. Incomplete staged payloads
-	// fail closed without mutating the live install or leaving flat pending state.
-	if !preferVersionedWindowsActivation(stagingDir) {
-		return false, nil, fmt.Errorf("staged payload is incomplete for versioned-v1 activation")
-	}
-	if err := activateVersionedWindowsFromStaging(claimed, stagingDir); err != nil {
-		return false, nil, fmt.Errorf("versioned activate: %w", err)
-	}
-	return true, nil, nil
-}
-
-func windowsReleaseUnitPaths(installDir string) []string {
-	if installDir == "" {
-		return nil
-	}
-	names := []string{
-		"deepzora-desktop.exe",
-		"deepzora-guard.exe",
-		"deepzora-launcher.exe",
-		"deepzora-update-helper.exe",
-		"deepzora-cli.exe",
-		"Deepzora.exe",
-	}
-	paths := make([]string, 0, len(names))
-	for _, name := range names {
-		paths = append(paths, filepath.Join(installDir, name))
-	}
-	return paths
 }
 
 func newLogger() *log.Logger {

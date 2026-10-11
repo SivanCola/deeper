@@ -27,7 +27,7 @@ func RewindPlanRequiresConfirmation(plan checkpoint.RewindPlan) bool {
 	if !wantsFiles || !plan.CanFiles {
 		return false
 	}
-	if plan.ExpiredFilePayload || plan.Legacy {
+	if plan.ExpiredFilePayload {
 		return true
 	}
 	return checkpoint.HasProjectCoverageGap(plan.CoverageGaps)

@@ -187,11 +187,11 @@ func TestProjectWorkspaceRootSharingANamePrefixIsOutside(t *testing.T) {
 
 func TestProjectPermissionsOnlyNarrow(t *testing.T) {
 	user := "[permissions]\nmode = \"ask\"\ndeny = [\"Bash(rm -rf*)\"]\nask = [\"Edit(src/**)\"]\nallow = [\"Bash(go test:*)\"]\n"
-	project := "[permissions]\nmode = \"allow\"\nallow_dynamic_bash = true\nallow = [\"Bash\"]\ndeny = [\"Bash(git push*)\"]\nask = [\"Write\"]\n"
+	project := "[permissions]\nmode = \"allow\"\nallow = [\"Bash\"]\ndeny = [\"Bash(git push*)\"]\nask = [\"Write\"]\n"
 	cfg, _ := loadScoped(t, user, project)
 	p := cfg.Permissions
-	if p.Mode != "ask" || p.AllowDynamicBash {
-		t.Fatalf("mode = %q dynamic = %v, want the user's ask and false", p.Mode, p.AllowDynamicBash)
+	if p.Mode != "ask" {
+		t.Fatalf("mode = %q, want the user's ask", p.Mode)
 	}
 	if !slices.Equal(p.Allow, []string{"Bash(go test:*)"}) {
 		t.Fatalf("allow = %v, want only the user's rule", p.Allow)
@@ -202,7 +202,7 @@ func TestProjectPermissionsOnlyNarrow(t *testing.T) {
 	if !slices.Equal(p.Ask, []string{"Edit(src/**)", "Write"}) {
 		t.Fatalf("ask = %v, want the union", p.Ask)
 	}
-	for _, key := range []string{"permissions.mode", "permissions.allow", "permissions.allow_dynamic_bash"} {
+	for _, key := range []string{"permissions.mode", "permissions.allow"} {
 		if !slices.Contains(ignoredKeys(cfg), key) {
 			t.Fatalf("ignored = %v, want %s reported", ignoredKeys(cfg), key)
 		}
@@ -307,15 +307,14 @@ func TestProjectCannotChooseTheNetworkProxy(t *testing.T) {
 	}
 }
 
-// A checkout's [bot] never reaches the gateway, with or without a user [bot].
 func TestProjectCannotConfigureTheBot(t *testing.T) {
-	user := "[bot]\nenabled = false\n[bot.allowlist]\nfeishu_users = [\"ou-user\"]\n"
-	project := "[bot]\nenabled = true\n[bot.allowlist]\nallow_all = true\nfeishu_users = [\"ou-project\"]\n[[bot.connections]]\nid = \"feishu-lark\"\nprovider = \"feishu\"\nenabled = true\n"
+	user := "[bot]\nenabled = false\n[bot.qq]\naccess = {enabled=true,users=[\"qq-user\"]}\n"
+	project := "[bot]\nenabled = true\n[bot.qq]\naccess = {allow_all=true}\n[[bot.connections]]\nid = \"feishu-lark\"\nprovider = \"feishu\"\nenabled = true\n"
 	for name, u := range map[string]string{"user bot": user, "no user bot": ""} {
 		t.Run(name, func(t *testing.T) {
 			cfg, _ := loadScoped(t, u, project)
-			if cfg.Bot.Enabled || cfg.Bot.Allowlist.AllowAll || len(cfg.Bot.Connections) != 0 || slices.Contains(cfg.Bot.Allowlist.FeishuUsers, "ou-project") {
-				t.Fatalf("bot = %+v, want the user's", cfg.Bot)
+			if cfg.Bot.Enabled || cfg.Bot.QQ.Access.AllowAll || len(cfg.Bot.Connections) != 0 {
+				t.Fatalf("bot = %+v, want user's", cfg.Bot)
 			}
 			if !slices.Contains(ignoredKeys(cfg), "bot") {
 				t.Fatalf("ignored = %v, want bot reported", ignoredKeys(cfg))
@@ -323,7 +322,7 @@ func TestProjectCannotConfigureTheBot(t *testing.T) {
 		})
 	}
 	cfg, _ := loadScoped(t, user, project)
-	if !slices.Equal(cfg.Bot.Allowlist.FeishuUsers, []string{"ou-user"}) {
-		t.Fatalf("feishu users = %v, want the user's list intact", cfg.Bot.Allowlist.FeishuUsers)
+	if !slices.Equal(cfg.Bot.QQ.Access.Users, []string{"qq-user"}) {
+		t.Fatalf("users = %v", cfg.Bot.QQ.Access.Users)
 	}
 }

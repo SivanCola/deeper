@@ -119,7 +119,7 @@ func testTopicRemovalCanonicalConfirmation(t *testing.T, checkpoint string) {
 	}
 	// The archive child is durable by this point. Generic startup replay must
 	// enforce the same confirmation fence instead of bypassing the topic RPC.
-	if err := a.recoverDesktopOperations(t.Context(), false); err == nil {
+	if err := a.recoverDesktopSessionOperations(t.Context()); err == nil {
 		t.Fatal("replay accepted stale confirmation")
 	}
 	state, err = a.workspaceRegistry().Load(t.Context())

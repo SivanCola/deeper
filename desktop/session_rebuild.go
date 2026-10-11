@@ -8,16 +8,6 @@ import (
 	"deepzora/internal/session"
 )
 
-func desktopLegacyImportOptions(workspaceRoot string) session.CreateOptions {
-	cwd := canonicalRuntimeRoot(workspaceRoot)
-	if cwd == "" {
-		cwd = globalWorkspaceRoot()
-	}
-	return session.CreateOptions{
-		CWD: cwd, Origin: session.SessionOriginLegacyImport,
-	}
-}
-
 // sessionBinding is intentionally smaller than the public desktop control
 // surface. It lets rebuild code preserve the exact host-owned Runtime without
 // making legacy test controllers implement the final identity API.
@@ -50,9 +40,6 @@ func buildDesktopControllerReplacement(ctx context.Context, old control.SessionA
 	}
 	if opts.SessionTemp == nil {
 		opts.SessionTemp = concrete.SessionTemp()
-	}
-	if _, _, bound := exclusiveSessionBinding(old); !bound {
-		opts.SessionCreateOptions = desktopLegacyImportOptions(opts.WorkspaceRoot)
 	}
 	result, err := boot.Rebuild(ctx, concrete, opts)
 	if err != nil {

@@ -185,7 +185,7 @@ export function parseSigningFileList(text) {
 
 export const WINDOWS_FLAT_PAYLOAD = Object.freeze([
   "deepzora-desktop.exe",
-  "deepzora-guard.exe",
+  "deepzora-layout-installer.exe",
   "deepzora-launcher.exe",
   "deepzora-update-helper.exe",
   "deepzora-cli.exe",
@@ -244,14 +244,14 @@ const MEMBERS = {
       new RegExp(`^${VERSION_DIR}/app/resources/app/index\\.html$`),
       new RegExp(`^${VERSION_DIR}/app/resources/build\\.json$`),
     ],
-    forbidden: ["deepzora-guard.exe", "deepzora-desktop.exe"],
+    forbidden: ["deepzora-layout-installer.exe", "deepzora-desktop.exe"],
   },
   "linux-app-dir": {
     required: [PRODUCT.executable, "chrome-sandbox", "chrome_crashpad_handler", "libffmpeg.so", "resources.pak", "locales/en-US.pak", ...APP_RESOURCES],
     forbidden: [],
   },
   "linux-tar": {
-    required: ["deepzora-desktop", "deepzora-launcher", "deepzora-guard", "deepzora", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
+    required: ["deepzora-desktop", "deepzora-launcher", "deepzora", `app/${PRODUCT.executable}`, "app/chrome-sandbox", ...APP_RESOURCES.map((name) => `app/${name}`)],
     forbidden: [],
   },
   "linux-deb": {
@@ -363,7 +363,7 @@ export function elfInterpreter(bytes) {
 }
 
 const LINUX_GO_MEMBERS = {
-  "linux-tar": ["deepzora-desktop", "deepzora-launcher", "deepzora-guard", "deepzora"],
+  "linux-tar": ["deepzora-desktop", "deepzora-launcher", "deepzora"],
   "linux-deb": ["usr/bin/deepzora-desktop", "usr/bin/deepzora-launcher", "usr/bin/deepzora", "usr/lib/deepzora/deepzora-update-helper"],
 };
 

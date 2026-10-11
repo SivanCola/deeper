@@ -35,9 +35,7 @@ func (a *App) snapshotTopicRuntimeBindings(captured []removedSessionRuntime) err
 		if item.ctrl.Running() {
 			return errTopicHasActiveWork
 		}
-		if historicalPreview(item.ctrl) {
-			continue
-		}
+
 		if err := item.ctrl.Snapshot(); err != nil {
 			if item.failedStartup && failedStartupSnapshotError(err) {
 				slog.Warn("desktop: skipping unavailable failed runtime snapshot before removing topic")

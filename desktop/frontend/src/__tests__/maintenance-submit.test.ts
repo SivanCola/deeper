@@ -175,7 +175,7 @@ test("legacy compact bindings and conversational display submissions retain thei
   await submitTurn(bridge, "A", "chat", "visible", "hidden context\nvisible", "");
   await submitTurn(bridge, "A", "structured", "/compact", "/compact", "", { display: "tool task", input: "tool input", invocations: [] });
   assert.deepEqual(await submitTurn(bridge, "A", "goal", "task", "/compact", "", undefined,
-    { goal: "task", collaborationMode: "goal", toolApprovalMode: "ask" }), [1, ["approval"]]);
+    { goal: "task", collaborationMode: "goal", toolApprovalMode: "workspace-write" }), [1, ["approval"]]);
   assert.deepEqual(calls.map(call => call[0]), ["legacy", "display", "structured", "goal"]);
   assert.deepEqual(calls[0], ["legacy", "A", "/compact decisions", "legacy"]);
   assert.deepEqual(calls[1], ["display", "A", "visible", "hidden context\nvisible", "chat"]);

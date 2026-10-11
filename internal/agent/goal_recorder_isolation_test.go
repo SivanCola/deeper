@@ -73,7 +73,7 @@ func TestCoordinatorPlannerCannotReportExecutorGoalDisposition(t *testing.T) {
 	executor := New(exec, reg, NewSession("exec-sys"), Options{}, event.Discard)
 	customPlannerReg := tool.NewRegistry()
 	customPlannerReg.Add(goalTool)
-	coord := NewCoordinator(planner, plannerSess, nil, PlannerToolRegistry(customPlannerReg), Options{}, executor, 0, event.Discard, nil)
+	coord := NewCoordinatorWithPlannerPolicy(planner, plannerSess, nil, PlannerToolRegistry(customPlannerReg), Options{}, executor, 0, event.Discard, nil)
 	owner := &childIsolationGoalOwner{}
 	ctx := withNoClosedLoop(tool.WithGoalLifecycle(context.Background(), owner, tool.GoalAuthority{Source: tool.GoalSourceDirectHuman}))
 	if err := coord.Run(ctx, "fix the goal bug"); err != nil {

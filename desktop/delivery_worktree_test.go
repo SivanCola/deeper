@@ -18,7 +18,7 @@ func TestDeliveryWorktreeAvailabilityDelegatesWithoutRequiringGit(t *testing.T) 
 		root := filepath.Base(repo.Dir)
 		return worktree.Availability{Available: false, Reason: "Git is not installed", RepoRoot: root}
 	}
-	got := NewApp().DeliveryWorktreeAvailability("project")
+	got := NewApp().IsolatedWorktreeAvailability("project")
 	if got.Available || got.Reason != "Git is not installed" || got.RepoRoot != "project" {
 		t.Fatalf("availability = %+v", got)
 	}
@@ -56,7 +56,7 @@ func TestCreateDeliveryWorktreeRegistersAndOpensManagedProject(t *testing.T) {
 
 	app := NewApp()
 	t.Cleanup(func() { app.shutdown(context.Background()) })
-	result, err := app.CreateDeliveryWorktree("source-project")
+	result, err := app.CreateIsolatedWorktree("source-project")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,10 +66,5 @@ func TestCreateDeliveryWorktreeRegistersAndOpensManagedProject(t *testing.T) {
 	if result.Tab.WorkspaceRoot != isolatedRoot || !result.Tab.IsolatedWorktree || !result.Tab.Active {
 		t.Fatalf("opened tab = %+v", result.Tab)
 	}
-	if result.Tab.TokenMode != "full" {
-		t.Fatalf("isolated worktree tokenMode = %q, want full", result.Tab.TokenMode)
-	}
-	if result.Tab.QualityFloor != "standard" || result.Tab.FloorInferred {
-		t.Fatalf("isolated worktree floor = %q inferred=%v, want standard/false", result.Tab.QualityFloor, result.Tab.FloorInferred)
-	}
+
 }

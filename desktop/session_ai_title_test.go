@@ -277,7 +277,7 @@ func newCanonicalTitleFixture(t *testing.T) (*App, *control.Controller, *session
 	app := NewApp()
 	t.Cleanup(app.closeSessionServices)
 	service := app.desktopSessionService(dir)
-	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "canonical-title", CWD: globalWorkspaceRoot()})
+	runtime, err := service.Create(t.Context(), session.CreateOptions{SessionID: "canonical-title", CWD: globalWorkspaceRoot(), Origin: session.SessionOriginNew})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func newCanonicalTitleFixture(t *testing.T) (*App, *control.Controller, *session
 	t.Cleanup(server.Close)
 	cfg := config.LoadForEdit(config.UserConfigPath())
 	cfg.DefaultModel = "test/title-model"
-	cfg.Providers = []config.ProviderEntry{{Name: "test", Kind: "openai", Model: "title-model", BaseURL: server.URL, NoProxy: true}}
+	cfg.Providers = []config.ProviderEntry{{Models: []string{"title-model"}, Default: "title-model", Name: "test", Kind: "openai", Model: "title-model", BaseURL: server.URL, NoProxy: true}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}
@@ -341,6 +341,10 @@ func newCanonicalTitleFixture(t *testing.T) (*App, *control.Controller, *session
 	t.Cleanup(ctrl.Close)
 	installDesktopSessionTitleTab(app, ctrl, "topic-canonical", path)
 	app.tabs["test"].SessionID = runtime.Ref().SessionID
+	app.tabs["test"].SessionWorkspace.ID = workspace
+	if _, _, err := app.ensureSessionOrganization("global", ""); err != nil {
+		t.Fatal(err)
+	}
 	return app, ctrl, runtime, prov, path
 }
 
@@ -399,22 +403,6 @@ func TestAIRenameCanonicalSessionPreservesManualRenameAndSurvivesTabClose(t *tes
 	}
 }
 
-func TestAIRenameSessionReadFailureIsNotEmptyHistory(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := agent.NewSessionPath(dir, "unreadable")
-	if err := os.WriteFile(path, []byte("invalid JSON\n"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	ctrl := newDesktopSessionTitleController(dir, path, &desktopSessionTitleProvider{})
-	defer ctrl.Close()
-	app := NewApp()
-	installDesktopSessionTitleTab(app, ctrl, "topic-error", path)
-	if _, err := app.AIRenameSession("topic-error"); err == nil || !strings.Contains(err.Error(), "session_operation:operation_failed:") || strings.Contains(err.Error(), dir) {
-		t.Fatalf("read error = %v", err)
-	}
-}
-
 func newDesktopSessionTitleController(dir, path string, prov provider.Provider) *control.Controller {
 	return control.New(control.Options{
 		SessionDir:  dir,
@@ -436,174 +424,44 @@ func installDesktopSessionTitleTab(app *App, ctrl *control.Controller, topicID, 
 	app.mu.Unlock()
 }
 
-func TestAIRenameSessionWritesCanonicalAndLegacyTitles(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := agent.NewSessionPath(dir, "title-test")
-	writeHistoryTestSession(t, path, "debug the login redirect loop")
-	chunks := make(chan provider.Chunk, 2)
-	chunks <- provider.Chunk{Type: provider.ChunkText, Text: `"Debug login redirect loop"`}
-	chunks <- provider.Chunk{Type: provider.ChunkDone}
-	close(chunks)
-	ctrl := newDesktopSessionTitleController(dir, path, &desktopSessionTitleProvider{chunks: chunks})
-	app := NewApp()
-	installDesktopSessionTitleTab(app, ctrl, "topic-login", path)
-	defer ctrl.Close()
-
-	title, err := app.AIRenameSession("topic-login")
-	if err != nil {
-		t.Fatalf("AIRenameSession: %v", err)
-	}
-	if title != "Debug login redirect loop" {
-		t.Fatalf("title = %q", title)
-	}
-	meta, ok, err := agent.LoadBranchMeta(path)
-	if err != nil || !ok || meta.CustomTitle != title {
-		t.Fatalf("meta = %+v, ok=%v, err=%v", meta, ok, err)
-	}
-	if got := loadSessionTitles(dir)[filepath.Base(path)]; got != title {
-		t.Fatalf("legacy title = %q", got)
-	}
-}
-
-func TestAIRenameSessionRejectsStaleProviderCompletion(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	first := agent.NewSessionPath(dir, "first")
-	second := agent.NewSessionPath(dir, "second")
-	writeHistoryTestSession(t, first, "first conversation")
-	writeHistoryTestSession(t, second, "second conversation")
-	started := make(chan struct{})
-	chunks := make(chan provider.Chunk, 2)
-	ctrl := newDesktopSessionTitleController(dir, first, &desktopSessionTitleProvider{started: started, chunks: chunks})
-	app := NewApp()
-	installDesktopSessionTitleTab(app, ctrl, "topic-race", first)
-	defer ctrl.Close()
-
-	result := make(chan error, 1)
-	go func() {
-		_, err := app.AIRenameSession("topic-race")
-		result <- err
-	}()
-	<-started
-	ctrl.SetSessionPath(second)
-	app.mu.Lock()
-	app.tabs["test"].SessionPath = second
-	app.mu.Unlock()
-	chunks <- provider.Chunk{Type: provider.ChunkText, Text: "Stale title"}
-	chunks <- provider.Chunk{Type: provider.ChunkDone}
-	close(chunks)
-
-	if err := <-result; err == nil || !strings.Contains(err.Error(), "session_operation:target_changed:") {
-		t.Fatalf("stale completion error = %v", err)
-	}
-	for _, path := range []string{first, second} {
-		meta, ok, err := agent.LoadBranchMeta(path)
-		if err != nil {
+func TestDelayedTitleCallbackProjectsCurrentCanonicalTitle(t *testing.T) {
+	app, tab, _, ref := canonicalTitleFixture(t)
+	service := app.desktopSessionService("")
+	for _, title := range []string{"AI title", "Newer manual title"} {
+		if err := service.SetTitle(t.Context(), ref, title); err != nil {
 			t.Fatal(err)
 		}
-		if ok && meta.CustomTitle != "" {
-			t.Fatalf("stale completion renamed %s to %q", path, meta.CustomTitle)
+	}
+	for _, callbackTitle := range []string{"Newer manual title", "AI title"} {
+		if err := app.onSessionTitleChanged("", ref.SessionID, callbackTitle); err != nil {
+			t.Fatal(err)
 		}
 	}
-}
-
-func TestAIRenameSessionRejectsCompletionAfterManualRename(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := agent.NewSessionPath(dir, "manual-wins")
-	writeHistoryTestSession(t, path, "original conversation")
-	started := make(chan struct{})
-	chunks := make(chan provider.Chunk, 2)
-	ctrl := newDesktopSessionTitleController(dir, path, &desktopSessionTitleProvider{started: started, chunks: chunks})
-	app := NewApp()
-	installDesktopSessionTitleTab(app, ctrl, "topic-manual", path)
-	defer ctrl.Close()
-
-	result := make(chan error, 1)
-	go func() {
-		_, err := app.AIRenameSession("topic-manual")
-		result <- err
-	}()
-	<-started
-	if err := app.RenameSession(path, "Newer manual title"); err != nil {
-		t.Fatal(err)
+	if tab.TopicTitle != "Newer manual title" {
+		t.Fatalf("stale callback title: %q", tab.TopicTitle)
 	}
-	chunks <- provider.Chunk{Type: provider.ChunkText, Text: "Stale AI title"}
-	chunks <- provider.Chunk{Type: provider.ChunkDone}
-	close(chunks)
-
-	if err := <-result; err == nil || !strings.Contains(err.Error(), "title changed") {
-		t.Fatalf("stale AI completion error = %v", err)
-	}
-	meta, ok, err := agent.LoadBranchMeta(path)
-	if err != nil || !ok || meta.CustomTitle != "Newer manual title" {
-		t.Fatalf("manual title was overwritten: meta=%+v ok=%v err=%v", meta, ok, err)
-	}
-}
-
-func TestDelayedTitleCallbackProjectsCurrentCanonicalTitle(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	path := agent.NewSessionPath(dir, "projection-race")
-	writeHistoryTestSession(t, path, "original conversation")
-	app := NewApp()
-
-	if err := agent.RenameSession(path, "AI title"); err != nil {
-		t.Fatal(err)
-	}
-	if err := agent.RenameSession(path, "Newer manual title"); err != nil {
-		t.Fatal(err)
-	}
-	if err := app.onSessionTitleChanged(dir, path, "Newer manual title"); err != nil {
-		t.Fatal(err)
-	}
-	// Simulate the older AI callback resuming after the newer manual callback.
-	if err := app.onSessionTitleChanged(dir, path, "AI title"); err != nil {
-		t.Fatal(err)
-	}
-
-	meta, ok, err := agent.LoadBranchMeta(path)
-	if err != nil || !ok || meta.CustomTitle != "Newer manual title" {
-		t.Fatalf("canonical title = %+v, ok=%v, err=%v", meta, ok, err)
-	}
-	if got := loadSessionTitles(dir)[filepath.Base(path)]; got != "Newer manual title" {
-		t.Fatalf("legacy projection = %q, want canonical newer title", got)
+	state, err := app.workspaceRegistry().Load(t.Context())
+	if err != nil || state.Presentation[ref.SessionID].Title != "Newer manual title" {
+		t.Fatalf("projection: %+v %v", state.Presentation[ref.SessionID], err)
 	}
 }
 
 func TestIndependentSessionTitleOverridesSharedTopicTitle(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	dir := t.TempDir()
-	topicID := "metadata-title"
-	path := writeTopicSessionWithPrompt(t, dir, "metadata-title.jsonl", topicID, "Original topic", "", "first prompt", time.Now())
-	if err := ensureTopicIndexed("global", "", topicID, "Original topic", topicTitleSourceManual); err != nil {
+	app, root, refs := canonicalOrganizationFixtureWithTopic(t, "shared", "one", "two")
+	if err := app.RenameSession(sessionRoute(refs["one"].SessionID), "Independent title"); err != nil {
 		t.Fatal(err)
 	}
-	app := NewApp()
-	installSessionCatalogForTest(t, app, dir, "global", "")
-	catalog := app.sessionCatalog.Load()
-	if err := app.syncSessionCatalogMetadata(context.Background(), catalog); err != nil {
-		t.Fatal(err)
+	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "project", WorkspaceRoot: root})
+	if err != nil || len(page.Items) != 2 {
+		t.Fatalf("current page=%+v %v", page, err)
 	}
-	if err := agent.RenameSession(path, "AI session title"); err != nil {
-		t.Fatal(err)
-	}
-	if err := catalog.IndexSessionPath(context.Background(), sessioncatalog.DirectoryTarget{Path: dir, Scope: "global"}, path); err != nil {
-		t.Fatal(err)
-	}
-	if err := app.syncSessionCatalogMetadata(context.Background(), catalog); err != nil {
-		t.Fatal(err)
-	}
-	page, err := app.ListProjectTopics(ProjectTopicPageRequest{Scope: "global", Limit: 50})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].Label != "AI session title" {
-		t.Fatalf("independent session title was not projected: %+v", page.Items)
-	}
-	if meta, ok, err := agent.LoadBranchMeta(path); err != nil || !ok || meta.CustomTitle != "AI session title" {
-		t.Fatalf("independent session title was not preserved: meta=%+v ok=%v err=%v", meta, ok, err)
+	for _, row := range page.Items {
+		if row.Session.SessionID == "one" && row.Label != "Independent title" {
+			t.Fatal("session title did not override the shared topic")
+		}
+		if row.Session.SessionID == "two" && row.Label == "Independent title" {
+			t.Fatal("session title leaked to its sibling")
+		}
 	}
 }
 

@@ -92,7 +92,7 @@ func TestTurnContextPublishesBackgroundMemoryReplacementWithoutLegacyUpdate(t *t
 	}
 	if _, err := c.SaveMemory(memory.Memory{
 		Name: "currency", Description: "balance currency", Scope: memory.FactScopeGlobal,
-		Type: memory.TypeUser, Body: "Use RMB.",
+		Type: memory.TypeUser, Activation: memory.ActivationPinned, Body: "Use RMB.",
 	}); err != nil {
 		t.Fatal(err)
 	}

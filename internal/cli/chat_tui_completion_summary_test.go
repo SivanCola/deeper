@@ -9,7 +9,7 @@ import (
 
 func TestCompletionSummaryOutputIsTiered(t *testing.T) {
 	complete := &event.CompletionSummaryInfo{
-		Preset: "balanced", Verdict: "complete", Mutations: 2,
+		Verdict: "complete", Mutations: 2,
 		ChecksPassed: 4, Review: "passed",
 	}
 	m := newTestChatTUI()
@@ -19,7 +19,7 @@ func TestCompletionSummaryOutputIsTiered(t *testing.T) {
 	}
 
 	partial := &event.CompletionSummaryInfo{
-		Preset: "balanced", Verdict: "partial", Mutations: 2,
+		Verdict: "partial", Mutations: 2,
 		ChecksPassed: 3, ChecksFailed: 1, Review: "passed", GapKinds: []string{"stale_check"},
 	}
 	m = newTestChatTUI()
@@ -44,26 +44,5 @@ func TestCompletionSummaryOutputIsTiered(t *testing.T) {
 	m.ingestEvent(event.Event{Kind: event.CompletionSummary, Completion: unreviewed})
 	if len(*m.pendingCommit) != 0 {
 		t.Fatalf("standard unreviewed changes must stay silent, committed=%v", *m.pendingCommit)
-	}
-}
-
-func TestCompletionSummaryUsesTurnTimeAttention(t *testing.T) {
-	requiredSuppressed := &event.CompletionSummaryInfo{
-		Verdict: "partial", ChecksSuppressed: 1, GapKinds: []string{"suppressed_requirement"},
-		Floor: "delivery", Attention: true,
-	}
-	if !completionSummaryNeedsAttention(requiredSuppressed, "standard") {
-		t.Fatal("backend attention must survive a later floor change")
-	}
-	quietStandard := &event.CompletionSummaryInfo{
-		Verdict: "partial", GapKinds: []string{"unverified_change"},
-		Floor: "standard", Attention: false,
-	}
-	if completionSummaryNeedsAttention(quietStandard, "delivery") {
-		t.Fatal("historical standard summary must not be reclassified by the current floor")
-	}
-	legacySuppressed := &event.CompletionSummaryInfo{Verdict: "partial", ChecksSuppressed: 1}
-	if !completionSummaryNeedsAttention(legacySuppressed, "delivery") {
-		t.Fatal("legacy suppressed checks must fail closed")
 	}
 }

@@ -98,7 +98,7 @@ func TestSaveSnapshotLeaseHeldSameRevisionAllowsReshapedPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sessionContentRevision: %v", err)
 	}
-	if err := appendSessionReplaceEvent(path, foreignMsgs, foreignDigest, revision, "snapshot"); err != nil {
+	if err := appendDAGFixture(path, foreignMsgs, foreignDigest, revision, "snapshot"); err != nil {
 		t.Fatalf("append foreign reshape: %v", err)
 	}
 	if err := writeSessionMessages(path, foreignMsgs); err != nil {
@@ -161,43 +161,6 @@ func TestSaveSnapshotChainAfterRecoveryForkDoesNotCascade(t *testing.T) {
 	}
 	if got := recoveryJSONL(dir); len(got) != 1 {
 		t.Fatalf("recovery files = %v (want only the intentional fork)", got)
-	}
-}
-
-// Without a lease, foreign bytes at the same revision still conflict.
-func TestSaveSnapshotRejectsInterruptedForeignWriteWithoutLease(t *testing.T) {
-	path := schemaOneSessionPath(t, "session.jsonl")
-	base := NewSession("sys")
-	base.Add(provider.Message{Role: provider.RoleUser, Content: "base"})
-	if err := base.Save(path); err != nil {
-		t.Fatal(err)
-	}
-	stale, err := LoadSession(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	revision, _, err := sessionContentRevision(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	foreignMessages := append(stale.Snapshot(),
-		provider.Message{Role: provider.RoleAssistant, Content: "foreign writer tail"})
-	foreignDigest, err := digestSessionMessages(foreignMessages)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := appendSessionReplaceEvent(path, foreignMessages, foreignDigest, revision, "snapshot"); err != nil {
-		t.Fatal(err)
-	}
-	if err := writeSessionMessages(path, foreignMessages); err != nil {
-		t.Fatal(err)
-	}
-	// Crash before recordSessionContentRevision: revision still equals baseline.
-
-	stale.Add(provider.Message{Role: provider.RoleAssistant, Content: "stale writer tail"})
-	err = stale.SaveSnapshot(path)
-	if !errors.Is(err, ErrSessionSnapshotConflict) {
-		t.Fatalf("SaveSnapshot err = %v, want ErrSessionSnapshotConflict", err)
 	}
 }
 

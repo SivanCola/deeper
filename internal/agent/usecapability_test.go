@@ -790,7 +790,7 @@ func TestRunSubAgentRequiresReviewReport(t *testing.T) {
 		{{Type: provider.ChunkText, Text: "looks fine"}, {Type: provider.ChunkDone}},
 	}}
 	answer, err := RunSubAgentWithSession(context.Background(), prov, tool.NewRegistry(), NewSession("sys"), "review it",
-		Options{RequireReviewReportKind: evidence.ReviewKindReview}, event.Discard)
+		Options{}, event.Discard)
 	if err != nil || answer != "looks fine" || prov.call != 1 {
 		t.Fatalf("review prose should finish directly: answer=%q calls=%d err=%v", answer, prov.call, err)
 	}

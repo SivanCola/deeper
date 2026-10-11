@@ -42,7 +42,7 @@ func linuxShellArchive(t *testing.T, extra *tar.Header, omit string) []byte {
 	var out bytes.Buffer
 	gz := gzip.NewWriter(&out)
 	tw := tar.NewWriter(gz)
-	names := append([]string{"deepzora-desktop", "deepzora", "deepzora-launcher", "deepzora-guard"}, installlayout.ShellRequiredNames("linux")...)
+	names := append([]string{"deepzora-desktop", "deepzora", "deepzora-launcher"}, installlayout.ShellRequiredNames("linux")...)
 	names = append(names, "app/chrome-sandbox", "app/locales/en-US.pak")
 	for _, name := range names {
 		if name == omit {

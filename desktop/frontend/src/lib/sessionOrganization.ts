@@ -4,8 +4,8 @@ import type { ProjectNode, ProjectTreeOrganizationBindings } from "./types";
 export function projectNodeSelector(node: ProjectNode): SessionSelector {
   const remote = node.remoteSession;
   if (remote) return remote.sessionId ? { ref: { hostId: remote.hostId, sessionId: remote.sessionId } }
-    : { source: { hostId: remote.hostId, path: remote.path || remote.name } };
-  return { ref: node.session, source: node.source, sessionPath: node.sessionPath };
+    : { ref: { hostId: remote.hostId, sessionId: "" } };
+  return { ref: node.session, sessionPath: node.sessionPath };
 }
 
 export async function mutateSessionOrganization(bindings: ProjectTreeOrganizationBindings, workspace: SessionOrganizationWorkspace,

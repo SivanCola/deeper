@@ -15,8 +15,8 @@ func TestIsSyntheticUserMessageHostRecovery(t *testing.T) {
 		{name: "persisted steer", input: agent.MidTurnSteerPrefix + "\n" + agent.HostRecoveryGuidanceToolFailedPrefix + ", continue unrelated work automatically."},
 	}
 	for _, tc := range cases {
-		if !IsSyntheticUserMessage(tc.input) {
-			t.Errorf("%s: IsSyntheticUserMessage() = false, want true", tc.name)
+		if got := IsSyntheticUserMessage(tc.input); got != (tc.name == "plain guidance") {
+			t.Errorf("%s: guidance classification must not infer origin from persisted steer text", tc.name)
 		}
 	}
 }

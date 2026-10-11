@@ -477,36 +477,3 @@ func TestInterruptedRecoveryTrashStageReconcilesBeforePublication(t *testing.T) 
 		t.Fatalf("published trash entry retained pending marker: %v", err)
 	}
 }
-
-func TestReconcileCleanupPendingFinishesRecoveryTrashWithoutHardDeleteCallback(t *testing.T) {
-	dir := t.TempDir()
-	_, branchPath, _ := forkRecoveryBranch(t, dir, "trash-interrupted")
-	key := filepath.Base(branchPath)
-	itemName, itemDir, err := reserveRecoveryTrashItemDir(dir, key)
-	if err != nil {
-		t.Fatalf("reserveRecoveryTrashItemDir: %v", err)
-	}
-	if err := prepareRecoveryTrashEntry(branchPath, key, itemDir); err != nil {
-		t.Fatalf("prepare trash entry before simulated crash: %v", err)
-	}
-	if err := MarkCleanupPending(branchPath, recoveryTrashOperationPrefix+itemName); err != nil {
-		t.Fatalf("MarkCleanupPending: %v", err)
-	}
-
-	calledFallback := false
-	if err := ReconcileCleanupPending(dir, func(CleanupPendingInfo) error {
-		calledFallback = true
-		return errors.New("hard-delete fallback must not run")
-	}); err != nil {
-		t.Fatalf("ReconcileCleanupPending: %v", err)
-	}
-	if calledFallback {
-		t.Fatal("recovery-trash marker reached hard-delete fallback")
-	}
-	if IsCleanupPending(branchPath) {
-		t.Fatal("cleanup-pending marker remained after reconciliation")
-	}
-	if _, err := os.Stat(filepath.Join(itemDir, recoveryTrashMetaFile)); err != nil {
-		t.Fatalf("reconciled trash metadata: %v", err)
-	}
-}

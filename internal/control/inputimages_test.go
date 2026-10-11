@@ -21,11 +21,11 @@ func writeVisionTestConfig(t *testing.T, root string) {
 	cfg := config.Default()
 	cfg.DefaultModel = "custom/vision-pro"
 	cfg.Providers = []config.ProviderEntry{{
-		Name:         "custom",
-		Kind:         "openai",
-		BaseURL:      "https://example.invalid/v1",
-		Models:       []string{"text-only", "vision-pro"},
-		VisionModels: []string{"vision-pro"},
+		Name:           "custom",
+		Kind:           "openai",
+		BaseURL:        "https://example.invalid/v1",
+		Models:         []string{"text-only", "vision-pro"},
+		ModelOverrides: map[string]config.ProviderModelOverride{"vision-pro": {Vision: new(true)}, "text-only": {Vision: new(false)}},
 	}}
 	if err := cfg.SaveTo(filepath.Join(root, "deepzora.toml")); err != nil {
 		t.Fatalf("save config: %v", err)
@@ -335,11 +335,11 @@ func TestControllerInputImagesSkipsModelImagesWhenSelectedModelIsTextOnly(t *tes
 	cfg := config.Default()
 	cfg.DefaultModel = "custom/text-only"
 	cfg.Providers = []config.ProviderEntry{{
-		Name:         "custom",
-		Kind:         "openai",
-		BaseURL:      "https://example.invalid/v1",
-		Models:       []string{"text-only", "vision-pro"},
-		VisionModels: []string{"vision-pro"},
+		Name:           "custom",
+		Kind:           "openai",
+		BaseURL:        "https://example.invalid/v1",
+		Models:         []string{"text-only", "vision-pro"},
+		ModelOverrides: map[string]config.ProviderModelOverride{"vision-pro": {Vision: new(true)}, "text-only": {Vision: new(false)}},
 	}}
 	if err := cfg.SaveTo(filepath.Join(workspace, "deepzora.toml")); err != nil {
 		t.Fatalf("save workspace config: %v", err)
@@ -365,11 +365,11 @@ func TestControllerResolvesSubagentImageCandidatesForTextParent(t *testing.T) {
 	workspace := t.TempDir()
 	cfg := config.Default()
 	cfg.Providers = []config.ProviderEntry{{
-		Name:         "custom",
-		Kind:         "openai",
-		BaseURL:      "https://example.invalid/v1",
-		Models:       []string{"text-only", "vision-pro"},
-		VisionModels: []string{"vision-pro"},
+		Name:           "custom",
+		Kind:           "openai",
+		BaseURL:        "https://example.invalid/v1",
+		Models:         []string{"text-only", "vision-pro"},
+		ModelOverrides: map[string]config.ProviderModelOverride{"vision-pro": {Vision: new(true)}, "text-only": {Vision: new(false)}},
 	}}
 	if err := cfg.SaveTo(filepath.Join(workspace, "deepzora.toml")); err != nil {
 		t.Fatalf("save workspace config: %v", err)

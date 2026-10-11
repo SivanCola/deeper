@@ -122,7 +122,6 @@ export function buildDecisionFooterSurface(input: DecisionFooterSurfaceInput): D
         insertRequest: view.insertRequest,
         onRevisionActiveChange: input.onRevisionActiveChange,
         onAnswer: prompts.handleApprovalAnswer,
-        onResolveRecovery: prompts.handleRecoveryAnswer,
         onRevisePlan: prompts.handleRevisePlan,
         onExitPlan: prompts.handleExitPlan,
         onStop: input.onStop,

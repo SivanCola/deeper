@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"deepzora/internal/agent"
+	"deepzora/internal/session"
 )
 
 // Sanitized errors surfaced when a destructive or restore session operation
@@ -43,7 +44,7 @@ func friendlySessionFileError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, agent.ErrSessionFileLockHeld) {
+	if errors.Is(err, agent.ErrSessionFileLockHeld) || errors.Is(err, session.ErrWriterOwned) {
 		return errSessionBusyElsewhere
 	}
 	var errno syscall.Errno

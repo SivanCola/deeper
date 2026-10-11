@@ -25,7 +25,7 @@ guardian_model = "missing-guardian"
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "executor-model"
+models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 
@@ -46,12 +46,11 @@ func TestBuildIgnoresRetiredRecoveryModel(t *testing.T) {
 default_model = "executor"
 
 [agent]
-recovery_model = "missing-recovery"
 
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "executor-model"
+models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 
@@ -75,7 +74,7 @@ default_model = "executor"
 [[providers]]
 name = "executor"
 kind = "boot-token-profile-test"
-model = "executor-model"
+models = ["executor-model"]
 `)
 	approveWorkspace(t, dir)
 

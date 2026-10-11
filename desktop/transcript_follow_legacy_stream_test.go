@@ -155,17 +155,6 @@ func (p *legacyStreamProvider) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 type legacyFollowTurn struct{ name, mode, reasoning, text string }
 
-func TestLegacyTopicTranscriptFollowStreamsDeltasTheRendererAccepts(t *testing.T) {
-	reply := legacyFollowTurn{"streamed reply", "stream", "weigh it", "streamed"}
-	for _, first := range []legacyFollowTurn{
-		reply,
-		{"tool-call-only round", "tool", "weigh it", "streamed"},
-		{"cancelled round", "stall", "pondering", ""},
-	} {
-		t.Run(first.name, func(t *testing.T) { followLegacyTopicTurns(t, first, reply) })
-	}
-}
-
 func followLegacyTopicTurns(t *testing.T, turns ...legacyFollowTurn) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "TEST_MODEL_KEY", "sk-test")
@@ -175,7 +164,7 @@ func followLegacyTopicTurns(t *testing.T, turns ...legacyFollowTurn) {
 	cfg := config.Default()
 	cfg.DefaultModel = "test/test-model"
 	cfg.Desktop.ProviderAccess = []string{"test"}
-	cfg.Providers = []config.ProviderEntry{{Name: "test", Kind: "openai", BaseURL: stub.URL, Model: "test-model", APIKeyEnv: "TEST_MODEL_KEY"}}
+	cfg.Providers = []config.ProviderEntry{{Models: []string{"test-model"}, Default: "test-model", Name: "test", Kind: "openai", BaseURL: stub.URL, Model: "test-model", APIKeyEnv: "TEST_MODEL_KEY"}}
 	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatal(err)
 	}

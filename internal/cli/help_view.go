@@ -67,9 +67,6 @@ func builtinHelpItems() []compItem {
 func customHelpItems(commands []command.Command) []compItem {
 	items := make([]compItem, 0, len(commands))
 	for _, c := range commands {
-		if c.Hidden {
-			continue
-		}
 		items = append(items, compItem{label: "/" + c.Name, hint: customCommandHint(c)})
 	}
 	return items

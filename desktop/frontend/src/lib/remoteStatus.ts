@@ -1,4 +1,4 @@
-import { normalizeToolApprovalMode, type CheckpointMeta, type EffortInfo, type GoalLifecycleView, type GoalRuntime, type GoalStatus, type QualityFloor, type ToolApprovalMode } from "./types";
+import { normalizeToolApprovalMode, type CheckpointMeta, type EffortInfo, type GoalLifecycleView, type GoalRuntime, type GoalStatus,  type ToolApprovalMode } from "./types";
 
 // Raw /status payload mapping for the remote session surface. The serve reports
 // the fields it knows; everything else stays undefined so callers keep prior
@@ -40,7 +40,6 @@ export type RemoteStatus = {
   balance?: unknown;
   sessionCostQuote?: unknown;
   jobs?: unknown;
-  qualityFloor?: unknown;
   sessionName?: unknown;
   goalRuntime?: unknown;
   /** Ownership flag for sessions a local runtime on the serve host holds. */
@@ -78,7 +77,6 @@ export function remoteComposerState(status: unknown) {
   const goalStatus: GoalStatus | undefined = rawGoalStatus === "running" || rawGoalStatus === "complete"
     || rawGoalStatus === "blocked" || rawGoalStatus === "stopped" ? rawGoalStatus : undefined;
   const effort = raw?.effort as Partial<EffortInfo> | undefined;
-  const qualityFloor: QualityFloor = raw?.qualityFloor === "delivery" ? "delivery" : "standard";
   return {
     modelLabel: typeof raw?.label === "string" ? raw.label : "",
     composerProfile: {
@@ -86,7 +84,6 @@ export function remoteComposerState(status: unknown) {
       toolApprovalMode,
       goal,
       goalStatus,
-      qualityFloor,
     },
     effort: effort && typeof effort.supported === "boolean"
       ? {

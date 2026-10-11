@@ -40,16 +40,9 @@ type BranchMeta struct {
 	// independent from the transcript Revision: saving the same title again
 	// still advances this token so a delayed AI completion cannot pass an
 	// A→B→A value comparison.
-	TitleRevision string `json:"title_revision,omitempty"`
-	Model         string `json:"model,omitempty"`
-	ModelIdentity string `json:"model_identity,omitempty"`
-	// TokenMode and AgentPreset are deprecated dual-write fields derived from
-	// QualityFloor; delivery writes "delivery", standard writes "full"/"".
-	TokenMode   string `json:"token_mode,omitempty"`
-	AgentPreset string `json:"agent_preset,omitempty"`
-	// QualityFloor is the session delivery floor (standard|delivery). Loading
-	// a meta without it maps legacy AgentPreset/TokenMode "delivery" here.
-	QualityFloor     string `json:"quality_floor,omitempty"`
+	TitleRevision    string `json:"title_revision,omitempty"`
+	Model            string `json:"model,omitempty"`
+	ModelIdentity    string `json:"model_identity,omitempty"`
 	Mode             string `json:"mode,omitempty"`
 	ToolApprovalMode string `json:"tool_approval_mode,omitempty"`
 	Goal             string `json:"goal,omitempty"`
@@ -77,7 +70,7 @@ type BranchMeta struct {
 	WriterID                string `json:"writer_id,omitempty"`
 	// SchemaVersion identifies which BranchMeta version last wrote content-derived
 	// listing fields (Turns/Preview). Only snapshot/Fork/Branch stamp it; readers
-	// use it to distinguish authoritative current counts from legacy zeros.
+	// use it to distinguish authoritative current counts from uncertified counts.
 	SchemaVersion int `json:"schema_version,omitempty"`
 	// Turns/Preview accelerate listings; the listing identity binds them to the
 	// transcript generation they describe, so a failed projection write makes
@@ -133,11 +126,7 @@ func (m BranchMeta) EffectiveVersionState() SessionVersionState {
 }
 
 const (
-	// branchMetaCountsInitialVersion introduced content-derived Turns/Preview.
-	// Positive counts from this version remain authoritative.
-	branchMetaCountsInitialVersion = 1
-	// BranchMetaCountsVersion certifies that zero turns came from a successful,
-	// error-aware decode. Version 1 could cache a preview failure as zero turns.
+	// BranchMetaCountsVersion certifies content-derived counts.
 	BranchMetaCountsVersion = 2
 )
 
@@ -278,7 +267,7 @@ func loadBranchMetaRetry(sessionPath string) (BranchMeta, bool, error) {
 
 func SaveBranchMeta(sessionPath string, m BranchMeta) error {
 	return UpdateBranchMeta(sessionPath, true, func(current *BranchMeta) error {
-		// SaveBranchMeta is the compatibility full-record writer. Callers that
+		// SaveBranchMeta is the full-record writer. Callers that
 		// intentionally supply CustomTitle must still be able to change it; the
 		// cross-process lock held by UpdateBranchMeta makes that replacement
 		// authoritative. Transcript/listing writers use saveBranchMeta below,
@@ -498,14 +487,8 @@ func SetSessionInFlightTurn(sessionPath string, marker InFlightTurnMeta) error {
 	return saveBranchMeta(sessionPath, m, false)
 }
 
-func ClearSessionInFlightTurn(sessionPath string) error {
-	_, err := ClearSessionInFlightTurnIfMatch(sessionPath, InFlightTurnMeta{})
-	return err
-}
-
 // ClearSessionInFlightTurnIfMatch clears a marker only when it still matches
-// expected. A non-empty ID is authoritative; legacy markers without IDs fall
-// back to the complete persisted marker shape for compatibility.
+// expected. Only a matching current marker ID grants ownership.
 func ClearSessionInFlightTurnIfMatch(sessionPath string, expected InFlightTurnMeta) (bool, error) {
 	unlock, err := LockSessionMetaPath(sessionPath)
 	if err != nil {
@@ -519,15 +502,10 @@ func ClearSessionInFlightTurnIfMatch(sessionPath string, expected InFlightTurnMe
 	if m.InFlightTurn == nil {
 		return false, nil
 	}
-	if expected.ID != "" {
-		if m.InFlightTurn.ID != expected.ID {
-			return false, nil
-		}
-	} else if expected.StartMessageIndex != 0 || expected.PreserveUser || !expected.StartedAt.IsZero() || expected.StartRevision != 0 || expected.StartDigest != "" {
-		if !sameInFlightTurn(*m.InFlightTurn, expected) {
-			return false, nil
-		}
+	if expected.ID == "" || m.InFlightTurn.ID != expected.ID {
+		return false, nil
 	}
+
 	m.InFlightTurn = nil
 	return true, saveBranchMeta(sessionPath, m, false)
 }
@@ -560,16 +538,6 @@ func PrepareSessionInFlightTurnCommit(sessionPath string, expected InFlightTurnM
 		return InFlightTurnMeta{}, false, err
 	}
 	return updated, true, nil
-}
-
-func sameInFlightTurn(a, b InFlightTurnMeta) bool {
-	return a.ID == b.ID &&
-		a.StartMessageIndex == b.StartMessageIndex &&
-		a.PreserveUser == b.PreserveUser &&
-		a.StartedAt.Equal(b.StartedAt) &&
-		a.StartRevision == b.StartRevision &&
-		a.StartDigest == b.StartDigest &&
-		a.CommitDigest == b.CommitDigest
 }
 
 func ListBranches(dir string) ([]BranchInfo, error) {

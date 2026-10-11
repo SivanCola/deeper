@@ -1,15 +1,14 @@
-import type { ResolvedReasoningDisplayMode } from "./reasoningDisplayPreference";
 import type { SessionExperience, WorkProcessPresentation } from "./sessionExperience";
 import type { Item } from "./useController";
 type ToolItem = Extract<Item, { kind: "tool" }>;
 export function resolveToolCardDefaultOpen(
   item: ToolItem,
   nestedCount: number,
-  reasoningDisplayMode: ResolvedReasoningDisplayMode | SessionExperience | WorkProcessPresentation,
+  reasoningDisplayMode: SessionExperience | WorkProcessPresentation,
 ): boolean {
   const experience = typeof reasoningDisplayMode === "object"
     ? reasoningDisplayMode.experience
-    : reasoningDisplayMode === "deep" || reasoningDisplayMode === "expanded"
+    : reasoningDisplayMode === "deep"
       ? "deep"
       : "standard";
   const subagentReasoningRunning = item.subagentProgress?.phase === "reasoning";

@@ -729,7 +729,7 @@ export function useSessionDraftSurface(options: DraftSurfaceOptions) {
         const themeModule = await import("../lib/theme");
         const known = new Set(["graphite", "aurora", "slate", "carbon", "nocturne", "amber", "ember", "midnight", "sandstone", "porcelain", "linen", "glacier"]);
         if (!known.has(value)) throw new Error(`Unknown theme: ${value}`);
-        await experience.activateBaseStyle(themeModule.normalizeThemeStyleForTheme(value));
+        await experience.activateBaseStyle(themeModule.normalizeThemeStyle(value));
         return;
       }
       if (command?.draftBehavior === "direct") throw new Error("This command needs an argument and does not create a session.");

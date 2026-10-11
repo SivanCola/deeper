@@ -5,7 +5,6 @@ import { CopyButton } from "./CopyButton";
 import { parseAttachmentRefsForDisplay } from "../lib/attachmentDisplay";
 import { useT } from "../lib/i18n";
 import { Tooltip } from "./Tooltip";
-import { stripMemoryCompilerExecution } from "../lib/memoryCompilerDisplay";
 import { invocationSegmentsFromMessage, type InvocationMetadataMap } from "../lib/invocationDisplay";
 import type { Item } from "../lib/useController";
 import { InvocationBadge } from "./InvocationBadge";
@@ -151,7 +150,7 @@ export function UserMessage({
   const t = useT();
   const invocationMetadata = useContext(InvocationMetadataContext);
   const imSource = parseImSourceMessage(text);
-  const actionText = stripMemoryCompilerExecution(imSource?.text ?? text);
+  const actionText = imSource?.text ?? text;
   const hasMemoryCompiler = Boolean(submitText?.includes("<memory-compiler-execution>"));
   const selectedTextEntries = useMemo(() => parseSelectedTextContext(submitText), [submitText]);
   const editableActionText = stripSelectionLabels(actionText, selectedTextEntries);

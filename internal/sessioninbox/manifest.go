@@ -172,6 +172,9 @@ func decodeManifest(data []byte) (*manifest, error) {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, err
 	}
+	if m.SchemaVersion < SchemaVersion {
+		return nil, ErrUnsupportedSchema
+	}
 	if m.Items == nil {
 		m.Items = []InboxItemMeta{}
 	}
@@ -194,7 +197,7 @@ func validateManifest(m *manifest, allowUnknownEnums bool) error {
 	if m == nil {
 		return fmt.Errorf("nil manifest")
 	}
-	if m.SchemaVersion < 0 || m.Revision < 0 {
+	if m.SchemaVersion < SchemaVersion || m.Revision < 0 {
 		return fmt.Errorf("invalid manifest version or revision")
 	}
 	ids := make(map[string]struct{}, len(m.Items))
@@ -227,11 +230,7 @@ func validateManifest(m *manifest, allowUnknownEnums bool) error {
 			return fmt.Errorf("idempotency key references missing item")
 		}
 		hash := m.IdempotencyHashes[key]
-		if hash == "" {
-			if m.SchemaVersion >= 2 {
-				return fmt.Errorf("missing idempotency request hash")
-			}
-		} else if !validSHA256(hash) {
+		if !validSHA256(hash) {
 			return fmt.Errorf("invalid idempotency request hash")
 		}
 	}

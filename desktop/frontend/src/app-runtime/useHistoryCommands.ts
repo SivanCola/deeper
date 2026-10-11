@@ -71,7 +71,6 @@ export function useHistoryCommands(input: HistoryCommandsInput) {
     if (running) return;
     await app.RenameSessionTarget({
       ref: session.sessionId ? { hostId: session.hostId || "local", sessionId: session.sessionId } : undefined,
-      source: session.source,
       sessionPath: session.path,
     }, title);
     const sessions = await ports.listSessions();

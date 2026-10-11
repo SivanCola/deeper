@@ -27,7 +27,7 @@ func TestReviewSubagentUnderUncappedParentFinishesPastEightRounds(t *testing.T) 
 	turns = append(turns, testutil.Turn{Text: "verdict: approve"})
 	parent := tool.NewRegistry()
 	parent.Add(echoTool{})
-	task := NewTaskTool(testutil.NewMock("sub", turns...), nil, parent, 0, 0, 0, 0, 0, 0, 0, 0.0, "", "sys", nil, 0, "", "", nil).
+	task := NewTaskToolWithOptions(TaskToolOptions{Provider: testutil.NewMock("sub", turns...), Pricing: nil, ParentRegistry: parent, MaxSteps: 0, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).
 		WithTranscripts(mustSubagentStore(t), t.TempDir(), "base", "high").
 		WithProfileLookup(func(name string) (ProfileDefinition, bool) {
 			return ProfileDefinition{Name: name, Body: "You review changes."}, name == "review"

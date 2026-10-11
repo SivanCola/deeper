@@ -76,34 +76,6 @@ func TestRemoteRuntimeGETCannotConfirmLaterUncertainty(t *testing.T) {
 	}
 }
 
-func TestRemoteRuntimeLegacyRecoveryConfirmsOnlySelectedSession(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.URL.Path == "/runtime-states" {
-			return remoteRuntimeTestResponse(req, 404, "unsupported"), nil
-		}
-		return remoteRuntimeTestResponse(req, 200, `{"sessionPath":"/sessions/current.jsonl","running":false}`), nil
-	})}
-	a, tab := remoteRuntimeTestApp(client)
-	state := remoteRuntimeTestSnapshot("previous-server", 1, "executing")
-	acceptRemoteRuntimeStateLocked(tab, runtimeRemoteTestPath, state, true)
-	acceptRemoteRuntimeStateLocked(tab, "/sessions/background.jsonl", state, true)
-	markRemoteRuntimeUnknownLocked(tab, runtimeRemoteTestPath)
-	markRemoteRuntimeUnknownLocked(tab, "/sessions/background.jsonl")
-	if _, err := a.SyncRuntimeState(); err != nil {
-		t.Fatal(err)
-	}
-	for _, session := range a.GetRuntimeStateSnapshot().Sessions {
-		if session.Open {
-			if session.State.SchemaVersion != 0 || session.State.Running || session.Freshness != "synced" {
-				t.Fatalf("legacy recovery = %+v", session)
-			}
-		} else if session.Freshness != "unknown" {
-			t.Fatal("legacy foreground status confirmed background")
-		}
-	}
-}
-
 func TestRuntimeProjectionDoesNotReadPreviewFiles(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := t.TempDir()

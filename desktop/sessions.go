@@ -20,14 +20,8 @@ import (
 	"deepzora/internal/store"
 )
 
-// sessions.go holds the desktop-only session-management state that the shared
-// kernel doesn't model: custom display titles. A session on disk is just a JSONL
-// transcript named by timestamp+model, with no title slot — so the history panel
-// stores user-chosen names in a sidecar map (basename → title) next to the .jsonl
-// files. The preview (first user message) is the default name; a title overrides
-// it. Deleting a session also drops its title entry.
+// Current native session display sidecars and trash artifact operations.
 
-const sessionTitlesFile = ".titles.json"
 const sessionDisplayFile = ".display.json"
 const sessionPlannerDisplayFile = ".planner-display.json"
 const sessionTrashDir = ".trash"
@@ -43,12 +37,10 @@ const (
 )
 
 var (
-	sessionTitlesQueueTimeout                = sessionSidecarQueueTimeout
 	sessionPlannerDisplayExternalLockTimeout = sessionSidecarExternalLockTimeout
 	sessionDisplayExternalLockTimeout        = sessionSidecarExternalLockTimeout
 )
 
-func sessionTitlesPath(dir string) string  { return filepath.Join(dir, sessionTitlesFile) }
 func sessionDisplayPath(dir string) string { return filepath.Join(dir, sessionDisplayFile) }
 func sessionTrashPath(dir string) string   { return filepath.Join(dir, sessionTrashDir) }
 
@@ -65,48 +57,6 @@ func desktopSessionDir(root string) string {
 		return dir
 	}
 	return config.SessionDir()
-}
-
-func loadSessionTitlesForUpdate(dir string) (map[string]string, error) {
-	return loadStringMapForUpdate(sessionTitlesPath(dir))
-}
-
-func updateSessionTitles(dir string, mutate func(map[string]string) bool) error {
-	if strings.TrimSpace(dir) == "" {
-		return errors.New("title directory is empty")
-	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), sessionTitlesQueueTimeout)
-	defer cancel()
-	release, err := filelock.AcquireWithExternalTimeout(ctx, sessionTitlesPath(dir)+".lock", sessionSidecarExternalLockTimeout)
-	if err != nil {
-		return fmt.Errorf("lock title sidecar: %w", err)
-	}
-	defer release()
-
-	m, err := loadSessionTitlesForUpdate(dir)
-	if err != nil {
-		return err
-	}
-	if !mutate(m) {
-		return nil
-	}
-	return saveSessionTitles(dir, m)
-}
-
-// saveSessionTitles writes the map durably and atomically. Keep this on the
-// shared helper so the temporary file is fsynced before it is published.
-func saveSessionTitles(dir string, m map[string]string) error {
-	b, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	return fileutil.AtomicWriteFile(sessionTitlesPath(dir), b, 0o600)
 }
 
 type sessionTrashArtifact struct {
@@ -366,9 +316,6 @@ func trashSessionArtifactsBeforeMove(dir, sessionPath, key string, beforeMove fu
 		return err
 	}
 	defer guard.Release()
-	if err := invalidateTopicDirMarkers(dir); err != nil {
-		return err
-	}
 	itemDir := target.itemDir
 	if target.allocateUnique {
 		itemDir, err = reserveUniqueSessionTrashItemDir(dir, key)
@@ -464,15 +411,6 @@ func purgeTrashedSessionFile(dir, path string) error {
 		return err
 	}
 	if err := os.RemoveAll(itemDir); err != nil {
-		return err
-	}
-	if err := updateSessionTitles(dir, func(m map[string]string) bool {
-		if _, ok := m[key]; !ok {
-			return false
-		}
-		delete(m, key)
-		return true
-	}); err != nil {
 		return err
 	}
 	if err := removeSessionDisplayKey(dir, key); err != nil {

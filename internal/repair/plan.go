@@ -575,12 +575,11 @@ func pendingUpdateBoundPreview(tx *UpdateTransaction) (string, map[string]string
 	if tx == nil {
 		return "", nil
 	}
-	files := pendingUpdateFiles(tx)
 	type unitState struct {
 		State string `json:"state"`
 	}
-	current := make([]unitState, 0, len(files)+2)
-	fileStates := make(map[string]string, len(files)+2)
+	current := make([]unitState, 0, 2)
+	fileStates := make(map[string]string, 2)
 	bind := func(path string) {
 		path = strings.TrimSpace(path)
 		if path == "" {
@@ -593,15 +592,7 @@ func pendingUpdateBoundPreview(tx *UpdateTransaction) (string, map[string]string
 		fileStates[path] = stateID
 		current = append(current, unitState{State: stateID})
 	}
-	for _, f := range files {
-		bind(f.TargetPath)
-		if strings.TrimSpace(f.BackupPath) != "" {
-			bind(f.BackupPath)
-		}
-	}
-	if tx.TargetKind == "file" {
-		bind(installedFileUpdateStatePath(tx))
-	}
+
 	bind(tx.TargetPath)
 	if strings.EqualFold(strings.TrimSpace(tx.TargetKind), "app-bundle") || strings.TrimSpace(tx.BackupPath) != "" {
 		bind(tx.BackupPath)
@@ -716,26 +707,11 @@ func repairPlanTreeStateIDFor(readRoot, identityRoot string) string {
 	}{repairPlanTargetIdentity(identityRoot), entries})
 }
 
-func pendingUpdateFiles(tx *UpdateTransaction) []UpdateTransactionFile {
-	if tx == nil {
-		return nil
-	}
-	if len(tx.Files) > 0 {
-		return tx.Files
-	}
-	return []UpdateTransactionFile{{
-		TargetPath: tx.TargetPath,
-		BackupPath: tx.BackupPath,
-		SHA256:     tx.BackupSHA256,
-	}}
-}
-
 func pendingUpdateTargetPaths(tx *UpdateTransaction) []string {
 	if tx == nil {
 		return nil
 	}
-	files := pendingUpdateFiles(tx)
-	paths := make([]string, 0, len(files)+1)
+	paths := make([]string, 0, 2)
 	seen := map[string]struct{}{}
 	add := func(path string) {
 		path = strings.TrimSpace(path)
@@ -748,13 +724,10 @@ func pendingUpdateTargetPaths(tx *UpdateTransaction) []string {
 		seen[path] = struct{}{}
 		paths = append(paths, path)
 	}
-	for _, f := range files {
-		add(f.TargetPath)
-	}
+
 	add(tx.TargetPath)
 	if strings.EqualFold(strings.TrimSpace(tx.TargetKind), "app-bundle") {
 		add(tx.BackupPath)
-		add(tx.OrphanedBackupPath)
 	}
 	return paths
 }

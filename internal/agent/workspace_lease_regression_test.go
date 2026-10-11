@@ -145,7 +145,7 @@ func TestKillShellDoesNotWaitForBackgroundWriterLease(t *testing.T) {
 		t.Fatal("background writer did not acquire its path lease")
 	}
 
-	tools := (builtin.Workspace{Dir: root}).Tools("kill_shell")
+	tools := (builtin.Workspace{Dir: root}).Tools("job_kill")
 	if len(tools) != 1 {
 		t.Fatalf("kill_shell tools = %d, want 1", len(tools))
 	}
@@ -161,7 +161,7 @@ func TestKillShellDoesNotWaitForBackgroundWriterLease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := a.executeOne(ctx, &a.turn, provider.ToolCall{ID: "kill", Name: "kill_shell", Arguments: string(args)})
+	out := a.executeOne(ctx, &a.turn, provider.ToolCall{ID: "kill", Name: "job_kill", Arguments: string(args)})
 	if out.blocked || out.errMsg != "" {
 		t.Fatalf("kill_shell waited for the background writer lease: %+v", out)
 	}

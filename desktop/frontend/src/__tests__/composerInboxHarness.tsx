@@ -82,7 +82,7 @@ export async function renderComposer(props: Partial<Parameters<typeof Composer>[
   let currentProps: Parameters<typeof Composer>[0] = {
     running: false,
     collaborationMode: "normal" as CollaborationMode,
-    toolApprovalMode: "ask" as ToolApprovalMode,
+    toolApprovalMode: "workspace-write" as ToolApprovalMode,
 
     goal: "",
     cwd: "/repo",

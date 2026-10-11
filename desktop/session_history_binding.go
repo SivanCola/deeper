@@ -52,22 +52,11 @@ func (a *App) BeginSessionHistoryReadForTab(tabID string) (SessionHistoryReadHan
 		handle: SessionHistoryReadHandle{ID: newSessionRuntimeID("history"), StorageBackend: "legacy", SessionGeneration: generation, Capabilities: []string{"history-read-binding-v1"}}}
 	ctx, cancel := context.WithCancel(a.bootContext())
 	reader.ctx, reader.release = ctx, cancel
-	if id != "" || nativeStoredDirectory(path) {
+	if id != "" {
 		var query *session.Query
 		var ref session.SessionRef
 		var err error
-		if id != "" {
-			query, ref, err = a.canonicalSessionQuery(tabID)
-		} else {
-			// Prototype/v3/v4 directories retain their original store. A cold
-			// query needs neither import nor a leased execution runtime.
-			var service *session.Service
-			service, err = a.historicalSessionService(filepath.Dir(path))
-			if err == nil {
-				query = service.Query()
-				ref = session.SessionRef{HostID: localDesktopHostID, SessionID: filepath.Base(path)}
-			}
-		}
+		query, ref, err = a.canonicalSessionQuery(tabID)
 		if err != nil {
 			cancel()
 			return SessionHistoryReadHandle{Capabilities: []string{}}, err
@@ -197,7 +186,7 @@ func (a *App) ReadSessionHistorySlice(id string, req HistorySliceRequest) (Sessi
 	if err != nil {
 		return SessionHistoryReadSlice{Status: "stale_cursor", Page: emptyHistorySlice()}, nil
 	}
-	if r.query != nil || r.path == "" || nativeStoredDirectory(r.path) {
+	if r.query != nil || r.path == "" {
 		return SessionHistoryReadSlice{Status: "unsupported", Page: emptyHistorySlice()}, nil
 	}
 	if r.native == nil {

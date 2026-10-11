@@ -28,7 +28,7 @@ type FollowMode = "ok" | "deferred";
 const followMode = new Map<string, FollowMode>();
 const deferred = new Map<string, (response: TranscriptFollowResponse) => void>();
 const answerFor = new Map<string, string>();
-const statusFor = () => ({ running: false, label: "Model", plan: false, toolApprovalMode: "ask", goal: "", takenOver: false });
+const statusFor = () => ({ running: false, label: "Model", plan: false, toolApprovalMode: "workspace-write", goal: "", takenOver: false });
 const inline = (id: string, content: string) => ({ messageId: id, position: 0, version: 1, role: "assistant", eventSequence: 1, visibleTurn: 1, preview: "", inline: { id, role: "assistant", content } });
 const followResponse = (tabId: string): TranscriptFollowResponse => ({
   protocolVersion: 2, subscription: `sub-${tabId}`, changes: [], resetRequired: false,

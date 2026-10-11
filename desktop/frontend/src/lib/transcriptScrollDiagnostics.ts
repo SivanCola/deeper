@@ -1,6 +1,5 @@
 import { setTranscriptScrollDiagnosticSink } from "./transcriptScrollProbe";
-import { getProcessFoldPreference } from "./processFoldPreference";
-import { getReasoningDisplayMode } from "./reasoningDisplayPreference";
+import { getSessionExperience, type SessionExperience } from "./sessionExperience";
 
 export const TRANSCRIPT_SCROLL_DIAGNOSTIC_SCHEMA_VERSION = 2;
 export const MAX_TRANSCRIPT_SCROLL_DIAGNOSTIC_EVENTS = 4_096;
@@ -114,8 +113,7 @@ export type TranscriptScrollDiagnosticEnvironment = {
   contentWidth: number;
   fontSize: number;
   lineHeight: number;
-  processFoldPreference: "auto" | "expanded";
-  reasoningDisplayMode: "hidden" | "summary" | "auto" | "expanded" | "legacy-collapsed" | "pending";
+  sessionExperience: SessionExperience;
 };
 
 export type TranscriptScrollDiagnosticPayload = {
@@ -284,8 +282,7 @@ function defaultEnvironment(): TranscriptScrollDiagnosticEnvironment {
     contentWidth: finiteNumber(contentWidth) ?? 0,
     fontSize: finiteNumber(Number.parseFloat(style?.fontSize ?? "")) ?? 0,
     lineHeight: finiteNumber(Number.parseFloat(style?.lineHeight ?? "")) ?? 0,
-    processFoldPreference: getProcessFoldPreference(),
-    reasoningDisplayMode: getReasoningDisplayMode(),
+    sessionExperience: getSessionExperience(),
   };
 }
 

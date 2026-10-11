@@ -39,7 +39,7 @@ func (c *tabScopedActionController) PlanMode() bool         { return false }
 func (c *tabScopedActionController) AutoApproveTools() bool { return false }
 func (c *tabScopedActionController) Goal() string           { return "" }
 func (c *tabScopedActionController) ToolApprovalMode() string {
-	return control.ToolApprovalAsk
+	return control.ToolApprovalReadOnly
 }
 func (c *tabScopedActionController) History() []provider.Message {
 	return append([]provider.Message(nil), c.history...)

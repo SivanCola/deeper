@@ -4,14 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/control"
-	"deepzora/internal/sessioncatalog"
 )
 
 func TestProjectTreeRuntimeSnapshotWailsArraysAreNonNil(t *testing.T) {
@@ -150,7 +147,6 @@ func TestKeepOnlyVisibleTabPublishesDetachedRuntimeProjection(t *testing.T) {
 
 	deadline := time.After(time.Second)
 	foundRuntime := false
-	foundLegacy := false
 	for {
 		select {
 		case emitted := <-events:
@@ -171,44 +167,15 @@ func TestKeepOnlyVisibleTabPublishesDetachedRuntimeProjection(t *testing.T) {
 						foundRuntime = !topic.Node.Open && topic.Node.Running
 					}
 				}
-			case "project-tree:changed":
-				if len(emitted.payload) != 1 {
-					t.Fatalf("legacy runtime invalidation payload = %#v, want one tagged payload", emitted.payload)
-				}
-				reason, ok := emitted.payload[0].(map[string]string)
-				foundLegacy = ok && reason["reason"] == "runtime"
 			}
-			if foundRuntime && foundLegacy {
+			if foundRuntime {
 				return
 			}
 		case <-deadline:
 			if !foundRuntime {
 				t.Fatal("detaching project A emitted no runtime snapshot; the running conversation stays invisible")
 			}
-			if !foundLegacy {
-				t.Fatal("detaching project A emitted an untagged or missing compatibility invalidation")
-			}
 		}
-	}
-}
-
-func TestProjectTreeCatalogV2CompatibilityEventIsTagged(t *testing.T) {
-	app := NewApp()
-	app.ctx = context.Background()
-	events := make(chan runtimeEventEnvelope, 2)
-	app.runtimeEvents.emit = func(ctx context.Context, name string, payload ...any) {
-		events <- runtimeEventEnvelope{ctx: ctx, name: name, payload: append([]any(nil), payload...)}
-	}
-
-	app.emitProjectTreeChangedV2(7, nil, "metadata")
-	first := <-events
-	second := <-events
-	if first.name != "project-tree:changed-v2" || second.name != "project-tree:changed" {
-		t.Fatalf("catalog events = %#v, %#v, want v2 followed by compatibility event", first, second)
-	}
-	reason, ok := second.payload[0].(map[string]string)
-	if !ok || reason["reason"] != "catalog-v2" {
-		t.Fatalf("catalog compatibility payload = %#v, want reason catalog-v2", second.payload)
 	}
 }
 
@@ -234,42 +201,15 @@ func TestOpenProjectTabPublishesTaggedRuntimeInvalidation(t *testing.T) {
 	for {
 		select {
 		case event := <-events:
-			if event.name != "project-tree:changed" {
+			if event.name != "project-tree:runtime-changed" {
 				continue
 			}
 			if len(event.payload) != 1 {
-				continue
-			}
-			reason, ok := event.payload[0].(map[string]string)
-			if !ok || reason["reason"] != "runtime" {
 				continue
 			}
 			return
 		case <-deadline:
 			t.Fatal("opening a project topic emitted no tagged runtime invalidation")
 		}
-	}
-}
-
-// A tab opened from a legacy row carries the identity that row is listed by,
-// so the sidebar overlays the tab on it instead of adding a second row.
-func TestProjectTreeRuntimeLegacyTabSharesHistoricalRowIdentity(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "20260926-091447.469029500-fake-model.jsonl")
-	if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	app := NewApp()
-	app.tabs["legacy"] = &WorkspaceTab{
-		ID: "legacy", Scope: "global", TopicID: "topic-legacy", SessionPath: path,
-		Ctrl: &activationStubController{sessionPath: path}, Ready: true,
-	}
-	snapshot := app.GetProjectTreeRuntimeSnapshot()
-	if len(snapshot.Topics) != 1 {
-		t.Fatalf("runtime topics = %+v, want one", snapshot.Topics)
-	}
-	source := snapshot.Topics[0].Node.Source
-	want := agent.SessionSourceKeyFromIdentity(sessioncatalog.PathIdentityKey(path), "")
-	if source == nil || source.SourceKey != want {
-		t.Fatalf("runtime source = %+v, want the historical row's key %s", source, want)
 	}
 }

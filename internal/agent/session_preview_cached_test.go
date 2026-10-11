@@ -1,58 +1,22 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"deepzora/internal/provider"
 )
 
-// seedPreviewSessions writes synthetic sessions with fresh BranchMeta
-// sidecars so the cached-preview contract can be checked against the full
-// decode on the same files.
 func seedPreviewSessions(t *testing.T, dir string, n, turns int) {
 	t.Helper()
 	for i := range n {
 		path := filepath.Join(dir, fmt.Sprintf("preview-session-%03d.jsonl", i))
-		f, err := os.Create(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		enc := json.NewEncoder(f)
 		var msgs []provider.Message
 		for turn := range turns {
-			u := provider.Message{Role: provider.RoleUser, Content: fmt.Sprintf("turn %d: help me refactor the cold-start path for host %d", turn, i)}
-			a := provider.Message{Role: provider.RoleAssistant, Content: "assistant answer"}
-			msgs = append(msgs, u, a)
-			if err := enc.Encode(u); err != nil {
-				t.Fatal(err)
-			}
-			if err := enc.Encode(a); err != nil {
-				t.Fatal(err)
-			}
+			msgs = append(msgs, provider.Message{Role: provider.RoleUser, Content: fmt.Sprintf("turn %d: help me refactor the cold-start path for host %d", turn, i)}, provider.Message{Role: provider.RoleAssistant, Content: "assistant answer"})
 		}
-		if err := f.Close(); err != nil {
-			t.Fatal(err)
-		}
-		preview, previewTurns := SessionPreviewFromMessages(msgs)
-		digest, err := digestSessionMessages(msgs)
-		if err != nil {
-			t.Fatal(err)
-		}
-		meta := BranchMeta{
-			Turns:         previewTurns,
-			Preview:       preview,
-			SchemaVersion: BranchMetaCountsVersion,
-			Revision:      1,
-			ContentDigest: digestString(digest),
-		}
-		stampSessionListingProjection(&meta)
-		if err := saveBranchMeta(path, meta, false); err != nil {
-			t.Fatal(err)
-		}
+		writeSessionFile(t, path, msgs)
 	}
 }
 
@@ -78,10 +42,8 @@ func TestSessionPreviewCachedMatchesDecode(t *testing.T) {
 	// A stale sidecar (pre-counts schema) must report ok=false and the decode
 	// fallback still sees the real content.
 	stale := filepath.Join(dir, "stale.jsonl")
-	if err := os.WriteFile(stale, []byte(`{"role":"user","content":"hello stale"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := saveBranchMeta(stale, BranchMeta{SchemaVersion: 0}, false); err != nil {
+	writeSessionFile(t, stale, []provider.Message{{Role: provider.RoleUser, Content: "hello stale"}})
+	if err := saveBranchMeta(stale, BranchMeta{SchemaVersion: BranchMetaCountsVersion, Revision: 99, ContentDigest: "stale"}, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, ok := SessionPreviewCached(stale); ok {
@@ -128,6 +90,10 @@ func TestSessionPreviewCachedRejectsProjectionFromPreviousTranscriptGeneration(t
 		// listing projection write failing. The old binding must remain stale.
 		current.Revision = 2
 		current.ContentDigest = digestString(newDigest)
+		current.ListingRevision = 1
+		current.ListingContentDigest = digestString(oldDigest)
+		current.Preview = "old preview"
+		current.Turns = 1
 		return nil
 	}); err != nil {
 		t.Fatal(err)

@@ -25,7 +25,6 @@ import (
 
 	"deepzora/internal/ablation"
 	"deepzora/internal/agent"
-	"deepzora/internal/agentpreset"
 	"deepzora/internal/billing"
 	"deepzora/internal/browser"
 	"deepzora/internal/capability"
@@ -50,7 +49,6 @@ import (
 	"deepzora/internal/lsp"
 	"deepzora/internal/mcplaunch"
 	"deepzora/internal/memory"
-	"deepzora/internal/migration"
 	"deepzora/internal/netclient"
 	"deepzora/internal/outputstyle"
 	"deepzora/internal/permission"
@@ -76,22 +74,6 @@ import (
 // resolved to a provider — e.g. a default_model left over from a renamed or
 // removed provider. Callers can detect it (errors.Is) to re-run setup.
 var ErrUnknownModel = errors.New("unknown model")
-
-func agentKeepPolicy(keep []string) agent.KeepPolicy {
-	if keep == nil {
-		return agent.KeepErrors | agent.KeepUserMarked
-	}
-	var p agent.KeepPolicy
-	for _, k := range keep {
-		switch strings.TrimSpace(k) {
-		case "errors":
-			p |= agent.KeepErrors
-		case "user_marked":
-			p |= agent.KeepUserMarked
-		}
-	}
-	return p
-}
 
 // Options carries the per-run knobs a frontend chooses; everything else is
 // read from configuration. Model "" falls back to default_model; MaxSteps 0
@@ -148,10 +130,6 @@ type Options struct {
 	// (for example ACP session/new). They are connected eagerly for this
 	// controller but are not persisted to deepzora.toml.
 	ExtraPlugins []plugin.Spec
-	// AgentPreset and TokenMode are retired compatibility inputs. Recognized
-	// values use standard execution; unknown values keep the standard default.
-	AgentPreset string
-	TokenMode   string
 	// SessionDir overrides where persisted chat transcripts are written. When
 	// empty, the shared CLI/global session directory is used.
 	SessionDir string
@@ -163,10 +141,6 @@ type Options struct {
 	SessionRuntime       *session.Runtime
 	SessionHostID        string
 	SessionCreateOptions session.CreateOptions
-	// NativeLegacySession keeps a controller on the path-addressed session
-	// backend. Hosts set it only when opening an existing legacy transcript;
-	// fresh and already-canonical sessions continue to use SessionService.
-	NativeLegacySession bool
 	// SharedHost is an optional plugin.Host shared across controllers for the
 	// same workspace root. When set, boot.Build reuses its running clients
 	// instead of creating new subprocesses, and the caller manages the host's
@@ -187,7 +161,7 @@ type Options struct {
 	// prompt can't wedge the session indefinitely (#4626, #4402).
 	ApprovalTimeout time.Duration
 	// HeadlessApprovalMode selects the non-interactive tool-approval contract
-	// (control.ToolApprovalAuto/DontAsk/Yolo) applied to every headless-only gate
+	// (control.ToolApprovalWorkspaceWrite/DontAsk/Yolo) applied to every headless-only gate
 	// this boot constructs: the top-level executor, task/read_only_task,
 	// writer-capable skill sub-agents, and the planner runner. Empty (or "ask")
 	// keeps the default fail-closed headless gate. Callers that later call
@@ -201,8 +175,8 @@ type Options struct {
 	OnSessionTransition func(control.SessionTransitionInfo) error
 	OnSessionRotation   func(context.Context, control.SessionRotationRequest) (control.SessionRotationPlan, error)
 	BeforeInboxDispatch func(*control.Controller) (func(), error)
-	// OnSessionTitleChanged lets a host project the canonical BranchMeta title
-	// into compatibility indexes and refresh notifications after the current
+	// OnSessionTitleChanged lets a host project the committed event-log title
+	// into current presentation state and refresh notifications after the current
 	// conversation renames itself through set_session_title.
 	OnSessionTitleChanged sessiontool.TitleChangedFunc
 	// SubagentParentLive reports whether this process currently owns or is
@@ -264,21 +238,12 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Import v1/v0.5 config before Load so this boot sees the new config + ~/.env.
-	// CLI Run also calls this before config-only commands; keep a shared fallback.
-	migrated, migErr := config.MigrateLegacyIfNeededForRoot(root)
-	deepSeekProtocolMigrated, deepSeekProtocolMigErr := config.ApplyUserConfigUpgradesOnStartup(config.UserConfigPath())
-	stepLimitsMigrated, stepLimitMigErr := config.MigrateLegacyAgentStepLimitsForRoot(root)
-	redactToolOutputMigrated, redactToolOutputMigErr := config.MigrateLegacyRedactToolOutputForRoot(root)
-	memoryCompilerMigrated, memoryCompilerMigErr := config.MigrateLegacyMemoryCompilerForRoot(root)
-	multiThresholdMigrated, multiThresholdMigErr := config.MigrateLegacyMultiThresholdCompactionForRoot(root)
-	config.MigrateLegacyMCPTiersForRoot(root)
 	cfg, opts, err := resolveBuildSelection(root, opts)
 	if err != nil {
 		return nil, err
 	}
 	liveSettings := newLiveRuntimeSettings(cfg.Agent.CompactRatio)
-	deepSeekProtocolMigErr = deepSeekProtocolMigrationNoticeError(handleConfigLoadWarnings(opts, cfg), deepSeekProtocolMigErr)
+	handleConfigLoadWarnings(opts, cfg)
 	if err := preflightRoleReasoning(cfg, opts, opts.ProviderResolver, false); err != nil {
 		return nil, err
 	}
@@ -466,9 +431,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			modelName = resolved
 		}
 	}
-	// opts.AgentPreset/opts.TokenMode now seed the session quality floor (see
-	// the SetQualityFloor call after control.New); light folds to standard.
-	keepPolicy := agentKeepPolicy(cfg.Agent.Keep)
 	// Entry resolution: the caller-owned broker is authoritative for every
 	// ref; the extension-merged resolver only owns plugin refs — a config ref
 	// keeps the full config entry (kind, endpoint, credentials, balance URL,
@@ -501,66 +463,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		}
 	}
 
-	if migErr != nil {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Config migration did not complete.", Detail: "config migration from ~/.deepzora failed: " + migErr.Error()})
-	} else if migrated != nil {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: migrated.Notice()})
-	}
-	emitUserConfigUpgradeNotice(sink, cfg, deepSeekProtocolMigrated, deepSeekProtocolMigErr, config.TakeProviderEndpointRepairReceipts(config.UserConfigPath()))
-	if stepLimitsMigrated || cfg.IgnoredLegacyAgentStepLimits() {
-		level := event.LevelInfo
-		text := "Deprecated agent step limits were removed."
-		detail := "[agent].max_steps and planner_max_steps are no longer used; Deepzora now manages interactive progress automatically. " +
-			"Use the CLI --max-steps flag for a one-off run or [bot].max_steps for unattended bot sessions."
-		if stepLimitMigErr != nil {
-			level = event.LevelWarn
-			text = "Deprecated agent step limits were ignored."
-			detail += " The old keys were ignored but could not be removed: " + stepLimitMigErr.Error()
-		}
-		sink.Emit(event.Event{
-			Kind:   event.Notice,
-			Level:  level,
-			Text:   text,
-			Detail: detail,
-		})
-	} else if stepLimitMigErr != nil {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Deprecated agent step-limit migration did not complete.", Detail: stepLimitMigErr.Error()})
-	}
-	if redactToolOutputMigrated || redactToolOutputMigErr != nil {
-		level := event.LevelInfo
-		text := "Deprecated redact_tool_output setting was removed."
-		detail := "[secrets].redact_tool_output no longer has any effect: ordinary model/tool content and local session/job artifacts now preserve their original text. Explicit diagnostics and deepzora doctor redact-sessions still redact credential values."
-		if redactToolOutputMigErr != nil {
-			level = event.LevelWarn
-			text = "Deprecated redact_tool_output setting was ignored."
-			detail += " The old key could not be removed: " + redactToolOutputMigErr.Error()
-		}
-		sink.Emit(event.Event{Kind: event.Notice, Level: level, Text: text, Detail: detail})
-	}
-	if memoryCompilerMigrated || memoryCompilerMigErr != nil {
-		level := event.LevelInfo
-		text := "Deprecated memory_compiler setting was removed."
-		detail := "The Memory v5 execution compiler has been removed from Deepzora: [agent].memory_compiler no longer has any effect, user turns are never replaced by compiled execution contracts, and no compiler state is written. Old transcripts containing compiled turns still display normally."
-		if memoryCompilerMigErr != nil {
-			level = event.LevelWarn
-			text = "Deprecated memory_compiler setting was ignored."
-			detail += " The old key could not be removed: " + memoryCompilerMigErr.Error()
-		}
-		sink.Emit(event.Event{Kind: event.Notice, Level: level, Text: text, Detail: detail})
-	}
-	if multiThresholdMigrated || multiThresholdMigErr != nil {
-		level := event.LevelInfo
-		text := "上下文维护已简化为单一自动压缩阈值。"
-		detail := "Context maintenance now uses a single automatic compact_ratio (default 0.80). soft_compact_ratio, tool_result_snip_ratio, compact_force_ratio, cold_resume_prune, and context_editing were removed from config."
-		if multiThresholdMigErr != nil {
-			level = event.LevelWarn
-			text = "Deprecated multi-threshold compaction keys were ignored."
-			detail += " The old keys could not be removed: " + multiThresholdMigErr.Error()
-		}
-		sink.Emit(event.Event{Kind: event.Notice, Level: level, Text: text, Detail: detail})
-	}
-	migration.MigrateLegacyMemorySources(sink)
-	migration.MigrateLegacySessionSources(sink)
 	if ignored := cfg.IgnoredProjectDefaultModel(); ignored != "" {
 		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Ignored the project config's default_model.", Detail: fmt.Sprintf("./deepzora.toml sets default_model = %q but no configured provider serves it; using %q from your user config instead. Edit or remove that default_model line to silence this notice.", ignored, cfg.DefaultModel)})
 	}
@@ -666,9 +568,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// Stable memory policy and DEEPZORA.md / AGENTS.md standing instructions
 	// enter the system prompt. Pinned facts and the background index remain in
 	// the controller-owned session-context snapshot.
-	if _, err := memory.StoreFor(config.MemoryUserDir(), root).MigrateV2(); err != nil {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Memory metadata migration did not complete.", Detail: err.Error()})
-	}
 	mem := memory.Load(memory.Options{CWD: root, UserDir: config.MemoryUserDir()})
 	sysPrompt = memory.Compose(sysPrompt, mem)
 
@@ -798,10 +697,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			enabledMCPNames[name] = true
 		}
 	}
-	// Legacy eager/background tiers are still parsed for config compatibility
-	// but no longer change process start timing. Keep the partition only so
-	// demotion notices remain meaningful for chronically slow eager configs.
-	eagerEntries, bgEntries := partitionByTier(autoStartEntries)
 	extraSpecs := applyDefaultMCPStartupTimeout(
 		applyDefaultMCPCallTimeout(
 			applyKnownPluginOverrides(opts.ExtraPlugins, root),
@@ -827,36 +722,13 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		}
 		applyMCPIsolation(&extraSpecs[i], root, pluginSpecOptions)
 	}
-	// Auto-demote: any eager plugin that has been chronically slow (recent
-	// samples repeatedly hit the blocking startup budget) drops to background
-	// for this session. The user keeps eager intent, just doesn't pay for it
-	// on a server that's been misbehaving. A notice surfaces the demotion.
-	var demoteMessages []string
-	budget := plugin.DefaultStartupBudget()
-	kept := eagerEntries[:0]
-	for _, e := range eagerEntries {
-		rec := plugin.Recommend(e.Name, budget, 0)
-		if rec.Demote {
-			demoteMessages = append(demoteMessages, rec.Reason)
-			bgEntries = append(bgEntries, e)
-			continue
-		}
-		kept = append(kept, e)
-	}
-	eagerEntries = kept
-
-	eagerSpecs := PluginSpecsForRootWithOptions(eagerEntries, root, pluginSpecOptions)
-	bgSpecs := PluginSpecsForRootWithOptions(bgEntries, root, pluginSpecOptions)
-
-	eagerSpecs = append(eagerSpecs, extraSpecs...)
-
-	// Apply caller-supplied stderr override to every spec across tiers.
+	configSpecs := PluginSpecsForRootWithOptions(autoStartEntries, root, pluginSpecOptions)
 	if opts.Stderr != nil {
-		for i := range eagerSpecs {
-			eagerSpecs[i].Stderr = opts.Stderr
+		for i := range configSpecs {
+			configSpecs[i].Stderr = opts.Stderr
 		}
-		for i := range bgSpecs {
-			bgSpecs[i].Stderr = opts.Stderr
+		for i := range extraSpecs {
+			extraSpecs[i].Stderr = opts.Stderr
 		}
 	}
 
@@ -923,28 +795,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			}
 		}
 	}
-	// eagerSpecs already includes extraSpecs; avoid double
-	// registration of host-session servers that connected above.
-	configSpecs := append(append([]plugin.Spec{}, eagerSpecs...), bgSpecs...)
-	if len(extraSpecs) > 0 {
-		extraNames := map[string]bool{}
-		for _, s := range extraSpecs {
-			extraNames[s.Name] = true
-		}
-		filtered := configSpecs[:0]
-		for _, s := range configSpecs {
-			if extraNames[s.Name] {
-				continue
-			}
-			filtered = append(filtered, s)
-		}
-		configSpecs = filtered
-	}
 	registerEnabledMCP(configSpecs)
-
-	for _, msg := range demoteMessages {
-		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: msg})
-	}
 
 	cleanup := func() {
 		skillCleanup()
@@ -1131,29 +982,23 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	imageConfig := &imageinput.Config{Model: cfg.Agent.VisionModel, Resolve: visionProviderResolver, Select: visionModelSelector}
 	newTaskTool := func() *agent.TaskTool {
 		return agent.NewTaskToolWithOptions(agent.TaskToolOptions{
-			ImageInput:          imageConfig,
-			Provider:            execProv,
-			Pricing:             entry.Price,
-			QuoteContext:        quoteCtx,
-			HooksForSession:     func(id string) agent.ToolHooks { return hookRunner.ForSession(id) },
-			ParentRegistry:      reg,
-			MaxSteps:            maxSteps,
-			ContextWindow:       entry.ContextWindow,
-			RecentKeep:          cfg.Agent.RecentKeep,
-			SoftCompactRatio:    cfg.Agent.SoftCompactRatio,
-			ToolResultSnipRatio: cfg.Agent.ToolResultSnipRatio,
-			CompactRatio:        cfg.Agent.CompactRatio,
-			CompactRatioSource:  liveSettings.compactRatio,
-			CompactForceRatio:   cfg.Agent.CompactForceRatio,
-			ContextEditing:      cfg.Agent.ContextEditing,
-			Temperature:         cfg.Agent.Temperature,
-			ArchiveDir:          config.ArchiveDir(),
-			SysPrompt:           "",
-			Gate:                headlessGate,
-			KeepPolicy:          keepPolicy,
-			SubagentModel:       taskModel,
-			SubagentEffort:      firstNonEmpty(cfg.Agent.SubagentEfforts["task"], subagentEffort),
-			ResolveProvider:     resolveSubagentProvider,
+			ImageInput:         imageConfig,
+			Provider:           execProv,
+			Pricing:            entry.Price,
+			QuoteContext:       quoteCtx,
+			HooksForSession:    func(id string) agent.ToolHooks { return hookRunner.ForSession(id) },
+			ParentRegistry:     reg,
+			MaxSteps:           maxSteps,
+			ContextWindow:      entry.ContextWindow,
+			CompactRatio:       cfg.Agent.CompactRatio,
+			CompactRatioSource: liveSettings.compactRatio,
+			Temperature:        cfg.Agent.Temperature,
+			ArchiveDir:         config.ArchiveDir(),
+			SysPrompt:          "",
+			Gate:               headlessGate,
+			SubagentModel:      taskModel,
+			SubagentEffort:     firstNonEmpty(cfg.Agent.SubagentEfforts["task"], subagentEffort),
+			ResolveProvider:    resolveSubagentProvider,
 		}).
 			WithTranscripts(subagentStore, root, modelName, entry.Effort).
 			WithTranscriptIdentityResolver(subagentIdentity).
@@ -1268,10 +1113,10 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	// read_only_task, so they cannot write, install, mutate memory, resume/fork
 	// transcripts, or delegate further.
 	//
-	subagentSkillOptions := liveSettings.skillOptions(newSubagentSkillOptionsFactory(cfg.Agent, quoteCtx, headlessGate, keepPolicy, maxSubagentDepth, opts.Ablation, workspaceLease, writeRootSet, hookRunner, childImageRouting{ctrlRef.Load, imageConfig}))
+	subagentSkillOptions := liveSettings.skillOptions(newSubagentSkillOptionsFactory(cfg.Agent, quoteCtx, headlessGate, maxSubagentDepth, opts.Ablation, workspaceLease, writeRootSet, hookRunner, childImageRouting{ctrlRef.Load, imageConfig}))
 	readOnlySkillRunner := func(sctx context.Context, sk skill.Skill, task string, runOpts skill.SubagentRunOptions) (string, error) {
-		if strings.TrimSpace(runOpts.ContinueFrom) != "" || strings.TrimSpace(runOpts.ForkFrom) != "" {
-			return "", fmt.Errorf("read_only_skill does not support continue_from/fork_from")
+		if strings.TrimSpace(runOpts.ContinueFrom) != "" {
+			return "", fmt.Errorf("read_only_skill does not support continue_from")
 		}
 		releaseSlot, err := subagentScheduler.Acquire(sctx, agent.AcquireRequest{
 			Writer: false,
@@ -1319,7 +1164,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		// Review gates consume typed, host-verifiable reports so a review
 		// cannot end in unverifiable prose. Review skills run only for
 		// mid/high-risk work under the standard policy.
-		runOptions.RequireReviewReportKind = ""
 		// Provider serializers decide whether these images are wire-visible from
 		// the child model's own vision capability. Text-only children retain the
 		// attachment metadata locally but never receive image parts on the wire.
@@ -1374,10 +1218,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		// the mismatch).
 		subReg, childWriteRoots := skillSubagentRegistry(sk, reg, childDepth, maxSubagentDepth, capRuntime, writeRootSet)
 		continueFrom := strings.TrimSpace(runOpts.ContinueFrom)
-		legacyForkFrom := strings.TrimSpace(runOpts.ForkFrom)
-		if continueFrom != "" && legacyForkFrom != "" {
-			return "", fmt.Errorf("continue_from and fork_from are mutually exclusive; pass only continue_from")
-		}
+
 		parentID, parentSink, _, _ := agent.CallContext(sctx)
 		if runOpts.HostInitiated {
 			parentID = ""
@@ -1389,7 +1230,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			// own a transcript. Run the skill sub-agent ephemerally, as before
 			// persisted transcripts existed, instead of failing. Continuation needs
 			// a persisted owner, so it errors here.
-			if continueFrom != "" || legacyForkFrom != "" {
+			if continueFrom != "" {
 				return "", fmt.Errorf("subagent continuation requires a persisted session; none is active in this run")
 			}
 			run = agent.EphemeralSubagentRun(sk.Body)
@@ -1409,8 +1250,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			var prepErr error
 			if continueFrom != "" {
 				run, prepErr = subagentStore.PrepareContinue(continueFrom, spec)
-			} else if legacyForkFrom != "" {
-				run, prepErr = subagentStore.PrepareLegacyForkFrom(legacyForkFrom, spec)
+
 			} else {
 				run, prepErr = subagentStore.PrepareFresh(spec)
 			}
@@ -1433,11 +1273,10 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		runOptions.WriteRoots = childWriteRoots
 		usageModelRef, _ := subagentIdentity(modelRef, effortRef)
 		runOptions.ModelRef = usageModelRef
-		announceSkillSubagentStart(parentSink, parentID, sk.Name, usageModelRef, effortRef, run, continueFrom != "" || legacyForkFrom != "")
+		announceSkillSubagentStart(parentSink, parentID, sk.Name, usageModelRef, effortRef, run, continueFrom != "")
 		// Review gates consume typed, host-verifiable reports so a review
 		// cannot end in unverifiable prose. Review skills run only for
 		// mid/high-risk work under the standard policy.
-		runOptions.RequireReviewReportKind = ""
 		var answer string
 		// The child provider owns the final vision decision, as in read-only runs.
 		childCtx := agent.WithUserImages(sctx, agent.SubagentImageCandidates(sctx))
@@ -1492,9 +1331,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			}
 		}
 		for _, cmd := range cmds {
-			if cmd.Hidden {
-				continue
-			}
 
 			slashEntries = append(slashEntries, command.SlashEntry{
 				Name:        cmd.Name,
@@ -1717,17 +1553,10 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		CapabilityAudit:              capAudit,
 		ContextWindow:                entry.ContextWindow,
 		MaxOutputTokens:              entry.MaxOutputTokens,
-		SoftCompactRatio:             cfg.Agent.SoftCompactRatio,
-		ToolResultSnipRatio:          cfg.Agent.ToolResultSnipRatio,
 		CompactRatio:                 cfg.Agent.CompactRatio,
 		CompactRatioSource:           liveSettings.compactRatio,
-		CompactForceRatio:            cfg.Agent.CompactForceRatio,
-		ContextEditing:               cfg.Agent.ContextEditing,
-		RecentKeep:                   cfg.Agent.RecentKeep,
 		ArchiveDir:                   config.ArchiveDir(),
-		KeepPolicy:                   keepPolicy,
 		ReasoningLanguage:            config.ReasoningLanguageForEntry(entry, cfg.ReasoningLanguage()),
-		PlanModeReadOnlyCommands:     cfg.Agent.PlanModeReadOnlyCommands,
 		SubagentDepth:                0,
 		MaxSubagentDepth:             maxSubagentDepth,
 		MissingReasoningWarnStateDir: config.MissingReasoningWarnStateDir(),
@@ -1798,17 +1627,10 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 			ModelRef:                     modelRefFromEntry(pe),
 			QuoteContext:                 quoteCtx,
 			ContextWindow:                pe.ContextWindow,
-			SoftCompactRatio:             cfg.Agent.SoftCompactRatio,
-			ToolResultSnipRatio:          cfg.Agent.ToolResultSnipRatio,
 			CompactRatio:                 cfg.Agent.CompactRatio,
 			CompactRatioSource:           liveSettings.compactRatio,
-			CompactForceRatio:            cfg.Agent.CompactForceRatio,
-			ContextEditing:               cfg.Agent.ContextEditing,
-			RecentKeep:                   cfg.Agent.RecentKeep,
 			ArchiveDir:                   config.ArchiveDir(),
-			KeepPolicy:                   keepPolicy,
 			ReasoningLanguage:            config.ReasoningLanguageForEntry(pe, cfg.ReasoningLanguage()),
-			PlanModeReadOnlyCommands:     cfg.Agent.PlanModeReadOnlyCommands,
 			CapabilityLedger:             plannerLedger,
 			CapabilityAudit:              plannerAudit,
 			MissingReasoningWarnStateDir: config.MissingReasoningWarnStateDir(),
@@ -1851,8 +1673,7 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		SessionService:                 sessionService,
 		SessionCreateService:           opts.SessionCreateService,
 		SessionRuntime:                 opts.SessionRuntime,
-		ExclusiveSession:               sessionService != nil && !opts.NativeLegacySession,
-		NativeLegacySession:            opts.NativeLegacySession,
+		ExclusiveSession:               sessionService != nil,
 		Host:                           pluginHost,
 		Commands:                       cmds,
 		Skills:                         skills,
@@ -1911,9 +1732,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		OnRemember: func(rule string) control.RememberResult {
 			return rememberPermissionRule(root, rule)
 		},
-		OnRememberPlanModeReadOnlyCommand: func(prefix string) control.PlanModeReadOnlyCommandTrustResult {
-			return rememberPlanModeReadOnlyCommand(root, prefix)
-		},
 		SessionRecoveryMeta: opts.SessionRecoveryMeta,
 		OnSessionRecovered:  opts.OnSessionRecovered,
 		OnSessionTransition: opts.OnSessionTransition,
@@ -1956,7 +1774,6 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 		ctrl.PublishBackgroundScope()
 	}
 	// Validate and consume retired role inputs without changing runtime policy.
-	_, _ = agentpreset.Normalize(firstNonEmpty(opts.AgentPreset, opts.TokenMode))
 	// Publish the controller to the extension UI hub's indirection: from here
 	// on, host/ui/* publishes ride ctrl.EmitExtensionEvent and blocking prompts
 	// ride ctrl.Ask, exactly as if the hub had been built after control.New.
@@ -2134,63 +1951,6 @@ func rememberPermissionConfigPath(workspaceRoot string) string {
 		path = "deepzora.toml" // match Config.Save() fallback
 	}
 	return path
-}
-
-func rememberPlanModeReadOnlyCommand(workspaceRoot, prefix string) control.PlanModeReadOnlyCommandTrustResult {
-	prefix = strings.TrimSpace(prefix)
-	path := rememberPermissionConfigPath(workspaceRoot)
-	result := control.PlanModeReadOnlyCommandTrustResult{Prefix: prefix, Path: path}
-	if prefix == "" {
-		result.Err = fmt.Errorf("empty plan-mode read-only command prefix")
-		return result
-	}
-	unlock, err := config.LockConfigFileEdits(path)
-	if err != nil {
-		result.Err = err
-		return result
-	}
-	defer unlock()
-	edit, err := config.LoadForEditReadOnlyStrict(path)
-	if err != nil {
-		result.Err = err
-		return result
-	}
-	if coveredBy := coveredPlanModeReadOnlyCommand(edit.Agent.PlanModeReadOnlyCommands, prefix); coveredBy != "" {
-		result.CoveredBy = coveredBy
-		return result
-	}
-	edit.Agent.PlanModeReadOnlyCommands = append(edit.Agent.PlanModeReadOnlyCommands, prefix)
-	if err := edit.SaveTo(path); err != nil {
-		slog.Warn("persist plan-mode read-only command trust", "prefix", prefix, "err", err)
-		result.Err = err
-		return result
-	}
-	result.Saved = true
-	return result
-}
-
-func coveredPlanModeReadOnlyCommand(existing []string, candidate string) string {
-	candidateFields := strings.Fields(strings.TrimSpace(candidate))
-	if len(candidateFields) == 0 {
-		return ""
-	}
-	for _, item := range existing {
-		itemFields := strings.Fields(strings.TrimSpace(item))
-		if len(itemFields) == 0 || len(itemFields) > len(candidateFields) {
-			continue
-		}
-		matches := true
-		for i, field := range itemFields {
-			if candidateFields[i] != field {
-				matches = false
-				break
-			}
-		}
-		if matches {
-			return strings.Join(itemFields, " ")
-		}
-	}
-	return ""
 }
 
 func coveredPermissionRule(rules []string, rule string) string {
@@ -2579,21 +2339,6 @@ func addBuiltins(reg *tool.Registry, enabled, writeRoots []string, writeRootSet 
 		}
 	}
 	registerShellBuiltin(reg, bashTool, writeRootSet)
-}
-
-// partitionByTier splits configured plugin entries into eager (block boot until
-// ready) and background (placeholder + start spawn now). Entries with an empty,
-// legacy lazy, or unrecognised tier land in background.
-func partitionByTier(entries []config.PluginEntry) (eager, bg []config.PluginEntry) {
-	for _, e := range entries {
-		switch e.ResolvedTier() {
-		case "eager":
-			eager = append(eager, e)
-		default:
-			bg = append(bg, e)
-		}
-	}
-	return eager, bg
 }
 
 // PluginSpecs maps configured plugin entries to plugin.Spec, expanding ${VAR}

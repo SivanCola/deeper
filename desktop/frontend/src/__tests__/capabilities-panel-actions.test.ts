@@ -33,7 +33,7 @@ function ok(value: unknown, message: string) {
     ready: true,
     running: false,
     mode: "normal",
-    toolApprovalMode: "auto",
+    toolApprovalMode: "danger-full-access",
     active: true,
     cwd: "/tmp/deepzora-test",
   }];
@@ -338,7 +338,7 @@ console.log("capabilities panel MCP actions");
     ready: true,
     running: false,
     mode: "normal",
-    toolApprovalMode: "auto",
+    toolApprovalMode: "danger-full-access",
     active: true,
     cwd: "/tmp/deepzora-test",
   }];
@@ -416,7 +416,7 @@ console.log("capabilities panel MCP actions");
     ready: true,
     running: false,
     mode: "normal",
-    toolApprovalMode: "auto",
+    toolApprovalMode: "danger-full-access",
     active: true,
     cwd: "/tmp/deepzora-test",
   }];
@@ -548,7 +548,7 @@ console.log("capabilities panel MCP actions");
     ready: true,
     running: false,
     mode: "normal",
-    toolApprovalMode: "auto",
+    toolApprovalMode: "danger-full-access",
     active: true,
     cwd: "/tmp/deepzora-test",
   }];
@@ -620,7 +620,7 @@ console.log("capabilities panel MCP actions");
     ready: true,
     running: false,
     mode: "normal",
-    toolApprovalMode: "auto",
+    toolApprovalMode: "danger-full-access",
     active: true,
     cwd: "/tmp/deepzora-test",
   }];
@@ -682,7 +682,7 @@ console.log("capabilities panel MCP actions");
     ready: true,
     running: false,
     mode: "normal",
-    toolApprovalMode: "auto",
+    toolApprovalMode: "danger-full-access",
     active: true,
     cwd: "/tmp/deepzora-test",
   }];
