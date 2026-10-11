@@ -155,8 +155,7 @@ Bot。`--dir` 用来把远端消息绑定到某个项目工作区，`--model` �
   因此不同 IM 渠道可以路由到不同本地项目或审批模式。
 - `access` 也可以按连接单独设置，包括 `enabled`、`allow_all`、
   `pairing_enabled`、`users`、`groups`、`admins` 和 `approvers`。当某个连接
-  有启用中的 access 配置时，会优先检查该连接自己的访问控制，再退回旧的全局
-  `[bot.allowlist]`。
+  有启用中的 access 配置时，由该连接自己的访问控制决定是否准入。
 - `[[bot.routes]]` 可以继续按远端连接、平台、会话类型、chat ID、用户 ID
   或 thread ID 做更细粒度路由；空匹配字段表示通配，按配置顺序第一个命中。
   命中后可覆盖 `workspace_root`、`model` 和 `tool_approval_mode`。
@@ -171,14 +170,11 @@ Bot。`--dir` 用来把远端消息绑定到某个项目工作区，`--model` �
 
 访问控制仍然是必需项。桌面端新建的 Bot 通常建议在该 Bot 自己的详情面板里
 设置谁可以使用，这会保存到 `[[bot.connections]]` 或 `[bot.qq].access`。
-旧的全局 `[bot.allowlist]` 仍然作为兼容兜底，适用于旧配置或没有启用单
-Bot access 的连接。你可以有意设置 `allow_all = true`，也可以为单个 Bot
+你可以有意设置 `allow_all = true`，也可以为单个 Bot
 启用 `pairing_enabled`，或全局启用 `[bot.pairing]`，让未知私聊用户先收到
 一次性配对码。配对码需要在本机执行 `deepzora bot pairing approve <code>`
 后才会放行；如果该请求带有连接 ID，批准后会把发送者加入对应 Bot 自己的
-access 名单。列在 `admins` / `approvers` 或旧的 `*_admins` /
-`*_approvers` 里的用户也会获得基础 bot 准入，不需要再重复写进 `users` /
-`*_users`。群聊不会因为私聊配对或角色准入自动开放，群 ID 仍是额外收窄
+access 名单。列在 `admins` / `approvers` 里的用户也会获得基础 bot 准入，不需要再重复写进 `users`。群聊不会因为私聊配对或角色准入自动开放，群 ID 仍是额外收窄
 条件。常用配对管理命令：
 
 ```sh
@@ -187,53 +183,17 @@ deepzora bot pairing approve CODE
 deepzora bot pairing reject CODE
 ```
 
-如果配置了 `qq_admins`、`feishu_admins`、`weixin_admins` 或对应
-`*_approvers`，`/mode` 等权限模式命令只允许 admin 使用；
-`/projects`、`/use project`、`/sessions`、`/attach session` 和
-`/search all` 也只允许 admin 使用。`/approve` 和 `/deny` 只允许 approver
-或 admin 使用。没有配置角色列表时，为兼容旧配置，已允许的用户保持原有
-命令能力。远端用户进入的是同一个 Deepzora controller、权限策略、工具
-审批模式和沙盒边界，和本地桌面端或 CLI 回合一致。
+连接的 `admins` 管理 Bot，`approvers` 或 `admins` 审批工具请求。远程用户与本地会话使用同一控制器、权限策略、工具审批模式和沙盒边界。
 
 ```toml
-[bot.allowlist]
+[[bot.connections]]
+id = "team"
+provider = "feishu"
+[bot.connections.access]
 enabled = true
-feishu_users = ["ou_member"]
-feishu_admins = ["ou_admin"]
-feishu_approvers = ["ou_approver"]
-```
-
-默认启用 `ignore_self_messages = true`。网关会记录刚发出的平台
-`message_id`，并忽略平台回传的同 ID 消息；如果某个平台不会稳定回传同一
-消息 ID，可以在 `[bot.self_user_ids]` 里配置 bot 自己的用户 ID 作为第二层
-回声防护。`/status` 会显示当前会话队列模式和各连接的健康状态，例如
-`feishu-lark=running` 或 `weixin-weixin=degraded`。
-
-可选的 `[bot.control]` 提供本机 loopback HTTP API，默认关闭。启用后必须
-设置 `token_env` 对应的环境变量，所有请求都需要
-`Authorization: Bearer <token>`；地址只能绑定 `localhost`、`127.0.0.1`
-或 `::1`。当前接口包括 `GET /status`（会话与连接健康快照）和
-`GET /metrics`（Prometheus 文本指标）以及 `POST /send`（向指定连接发送
-文本或媒体消息）。
-
-示例：
-
-```sh
-export DEEPZORA_BOT_CONTROL_TOKEN="change-me"
-
-curl -H "Authorization: Bearer $DEEPZORA_BOT_CONTROL_TOKEN" \
-  http://127.0.0.1:37913/status
-
-curl -X POST http://127.0.0.1:37913/send \
-  -H "Authorization: Bearer $DEEPZORA_BOT_CONTROL_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "connection_id": "feishu-lark",
-    "domain": "lark",
-    "chat_id": "oc_xxx",
-    "chat_type": "dm",
-    "text": "hello from local control API"
-  }'
+users = ["ou_member"]
+admins = ["ou_admin"]
+approvers = ["ou_approver"]
 ```
 
 ## 使用流程

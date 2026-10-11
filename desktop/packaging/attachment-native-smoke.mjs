@@ -51,7 +51,7 @@ const provider = createServer(async (req, res) => {
     + `data: ${JSON.stringify({ id: "attachment-fixture", choices: [{ index: 0, delta: {}, finish_reason: readTool ? "tool_calls" : "stop" }] })}\n\ndata: [DONE]\n\n`);
 });
 await new Promise(resolve => provider.listen(0, "127.0.0.1", resolve));
-writeFileSync(join(home, "config.toml"), `default_model = "fixture/vision"\n[desktop]\nprovider_access = ["fixture"]\n[[providers]]\nname = "fixture"\nkind = "openai"\nbase_url = "http://127.0.0.1:${provider.address().port}/v1"\nmodels = ["vision", "vision-alt"]\nvision_models = ["vision", "vision-alt"]\ndefault = "vision"\napi_key_env = "ATTACHMENT_FIXTURE_KEY"\n`);
+writeFileSync(join(home, "config.toml"), `default_model = "fixture/vision"\n[desktop]\nprovider_access = ["fixture"]\n[[providers]]\nname = "fixture"\nkind = "openai"\nbase_url = "http://127.0.0.1:${provider.address().port}/v1"\nmodels = ["vision", "vision-alt"]\ndefault = "vision"\napi_key_env = "ATTACHMENT_FIXTURE_KEY"\n[providers.model_overrides.vision]\nvision = true\n[providers.model_overrides."vision-alt"]\nvision = true\n`);
 writeFileSync(join(project, "tool.png"), Buffer.from(png, "base64"));
 const invoke = (method, args = []) => page.evaluate(({ method, args }) => window.deepzoraDesktop.invoke(method, args), { method, args });
 const active = async () => (await invoke("ListTabs")).find(tab => tab.active);
@@ -162,13 +162,15 @@ try {
   });
   assert.match(cli.stdout, /ATTACHMENT_FIXTURE_OK/);
   assert.ok(requests.slice(beforeCLI).some(request => imageURLs(request).includes(dataURL)));
-  record("bundled CLI sends exact legacy workspace attachment bytes to the provider");
+  record("bundled CLI sends exact workspace attachment bytes to the provider");
   await invoke("EnsureBlankSurface", ["global", ""]);
   const global = await active();
   await invoke("SubmitToTabWithID", [global.id, "PIN_GLOBAL_SESSION", "pin-global"]);
   await settle();
   const target = await invoke("CaptureAttachmentTarget", [composerTarget(global)]);
-  const other = await invoke("EnsureBlankTab", ["project", project]);
+  const opened = await invoke("OpenProjectTab", [project, ""]);
+  await waitForSmokeCondition(async () => (await invoke("ListTabs")).some(tab => tab.id === opened.id && tab.ready));
+  const other = (await invoke("ListTabs")).find(tab => tab.id === opened.id);
   await invoke("SetActiveTab", [other.id]);
   const draft = await invoke("StageImageForTarget", [target.token, "focus", "focus.png", "image/png", dataURL]);
   assert.equal(await invoke("ReadDraftImageForTarget", [target.token, draft.draftId]), dataURL);

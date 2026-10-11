@@ -6,9 +6,9 @@ import { pathToFileURL } from "node:url";
 
 const ZERO_SHA = /^0{40}$/;
 const ROOT_DOC = /^[^/]+\.md$/;
-const DESKTOP_DOC = /^(?:desktop\/(?:AGENTS|README)\.md|desktop\/electron\/README\.md|desktop\/third_party\/systray\/PATCHES\.md)$/;
-const ROOT_UNRELATED = /^(?:docs\/|site\/|release-notes\/|desktop\/|workers\/)/;
-const KNOWN_INDEPENDENT = /^(?:docs\/|site\/|release-notes\/|workers\/|benchmarks\/|npm\/|sdk\/|\.github\/|tools\/|scripts\/)/;
+const DESKTOP_DOC = /^(?:desktop\/(?:AGENTS|README)\.md|desktop\/electron\/README\.md)$/;
+const ROOT_UNRELATED = /^(?:docs\/|release-notes\/|desktop\/|workers\/)/;
+const KNOWN_INDEPENDENT = /^(?:docs\/|release-notes\/|workers\/|benchmarks\/|npm\/|sdk\/|\.github\/|tools\/|scripts\/)/;
 const ROOT_TOOLING = /^(?:Makefile|\.golangci[^/]*)$/;
 const FRONTEND = /^desktop\/frontend\//;
 const DESKTOP_MANIFEST = /^(?:desktop\/(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)|desktop\/frontend\/(?:package\.json|pnpm-lock\.yaml|vite\.config\.[cm]?[jt]s|tsconfig[^/]*\.json))$/;
@@ -22,7 +22,7 @@ const CI_CONTROL = /^(?:\.github\/workflows\/ci\.yml|scripts\/ci-paths(?:\.test)
 const MEMORY_CONTROL = /^(?:\.github\/workflows\/app-memory\.yml|scripts\/ci-paths(?:\.test)?\.mjs)$/;
 const MEMORY_FULL = /^(?:desktop\/frontend\/(?:bench\/app-(?:memory|browser|page-actions)[^/]*|src\/(?:App(?:Runtime)?\.tsx|app-runtime\/.*|app-shell\/.*|components\/Transcript(?:Cards)?\.tsx|lib\/(?:useController[^/]*|subscriptionScope|useNavigationSurface|navigationSurfaceTransition|keyedResource|fileResource|useWorkspaceChangesResource|mcpServerLifecycle|fileNavigationLifetime|bridge(?:BenchFixtures|HistoryFixtures)?)\.[^/]+))|\.github\/workflows\/app-memory\.yml|scripts\/ci-paths(?:\.test)?\.mjs)$/;
 
-const FLAG_NAMES = ["code", "desktop", "desktop_go", "frontend", "browser", "memory", "memory_full", "electron", "native", "packaging", "site", "sdk", "windows_builtin", "release_control", "notes_only"];
+const FLAG_NAMES = ["code", "desktop", "desktop_go", "frontend", "browser", "memory", "memory_full", "electron", "native", "packaging", "sdk", "windows_builtin", "release_control", "notes_only"];
 
 function normalized(path) {
   return path.replaceAll("\\", "/").replace(/^\.\//, "");
@@ -52,10 +52,6 @@ export function classifyPaths(input, { full = false } = {}) {
   const unknown = [];
   for (const path of files) {
     const explicitDoc = ROOT_DOC.test(path) || DESKTOP_DOC.test(path);
-    if (path.startsWith("site/")) {
-      flags.site = true;
-      setReason(reasons, "site", path, "site source");
-    }
     const releaseControl = RELEASE_CONTROL.test(path) || /^scripts\/(?:reconcile-release-publication|fetch-stable-release-manifest|check-release-public-access|test-release-control-contracts|validate-release-control-plane)[^/]*$/.test(path);
     if (releaseControl) {
       flags.release_control = true;
@@ -69,11 +65,10 @@ export function classifyPaths(input, { full = false } = {}) {
       flags.windows_builtin = true;
       setReason(reasons, "windows_builtin", path, "Windows shell, workspace or sandbox contract");
     }
-    // site and sdk belong here too: a PR that edits the routing contract must
-    // exercise every gate it can change, and without them such a PR skips site
-    // and no-ops sdk while the aggregates trivially accept those skips.
+    // A routing change must exercise every affected surface, including the
+    // SDK, whose required context otherwise accepts an intentional no-op.
     if (CI_CONTROL.test(path)) {
-      for (const flag of ["desktop_go", "frontend", "browser", "electron", "native", "packaging", "site", "sdk", "windows_builtin"]) {
+      for (const flag of ["desktop_go", "frontend", "browser", "electron", "native", "packaging", "sdk", "windows_builtin"]) {
         flags[flag] = true;
         setReason(reasons, flag, path, "CI routing contract");
       }

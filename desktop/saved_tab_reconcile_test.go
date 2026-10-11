@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"context"
+	"deepzora/internal/config"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"deepzora/desktop/internal/draftstate"
 	"deepzora/desktop/internal/workspacestate"
 	"deepzora/internal/session"
 )
@@ -23,7 +22,6 @@ func newSavedTabReconcileTestApp(t *testing.T) *App {
 	app.ctx = t.Context()
 	pinDesktopSessionRoot(t, app)
 	installNoopRuntimeEvents(app)
-	t.Cleanup(func() { _ = app.draftStore().Close() })
 	return app
 }
 
@@ -219,7 +217,7 @@ func TestReconcileSavedTabsPreservesEmptyWorkspaceConflictWithoutRetiredDraftRea
 	if state.SessionStates[ref.SessionID].Lifecycle != workspacestate.Active {
 		t.Fatalf("empty formal session lifecycle = %q, want active", state.SessionStates[ref.SessionID].Lifecycle)
 	}
-	if _, err := os.Stat(app.draftStore().Path()); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(filepath.Dir(config.DesktopSessionUIStatePath()), "drafts-v1.sqlite")); !os.IsNotExist(err) {
 		t.Fatalf("workspace conflict opened the retired draft database: %v", err)
 	}
 	if len(app.tabs) != 0 || len(app.runtimeByID) != 0 {
@@ -299,7 +297,6 @@ func TestRestoreDropsStaleSavedTabWithoutReplacementRuntime(t *testing.T) {
 	second := NewApp()
 	second.ctx = t.Context()
 	pinDesktopSessionRoot(t, second)
-	t.Cleanup(func() { _ = second.draftStore().Close() })
 	finishSavedTabRecovery(second)
 	second.tabsRestored = make(chan struct{})
 	second.restoreOrBuildTabs()
@@ -349,32 +346,6 @@ func mustMarshalJSON(t *testing.T, value any) []byte {
 		t.Fatal(err)
 	}
 	return body
-}
-
-func TestReconcileSavedTabsDropsRetiredDraftOperation(t *testing.T) {
-	app := newSavedTabReconcileTestApp(t)
-	finishSavedTabRecovery(app)
-	root := t.TempDir()
-	workspaceID, err := app.ensureDesktopWorkspace(t.Context(), "project", root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	draft, _, err := app.draftStore().Open(t.Context(), workspaceID, "project", root, "draft-reconcile", `{}`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	op, _, err := app.draftStore().BeginOperation(context.Background(), draftstate.Operation{
-		ID: "draft-op-retired", DraftID: draft.ID, WorkspaceID: workspaceID, DraftRevision: draft.Revision,
-		SessionID: "draft-session", SubmissionID: "submission", Fingerprint: "fingerprint", RequestJSON: `{}`,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	file := desktopTabsFile{Tabs: []desktopTabEntry{savedProjectTab("draft", op.SessionID, op.ID, root, workspaceID)}, ActiveTab: "draft"}
-	got, changed := app.reconcileSavedTabs(t.Context(), file)
-	if !changed || len(got.Tabs) != 0 {
-		t.Fatalf("retired draft operation was restored: changed=%v file=%+v", changed, got)
-	}
 }
 
 func TestReconcileSavedTabsPreservesResidualCanonicalArtifacts(t *testing.T) {

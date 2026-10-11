@@ -9,16 +9,16 @@ import (
 func TestDraftEffortFollowsItsModel(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
-	baseline := app.defaultDraftSettings("global", "")
+	baseline := app.defaultSessionSettings("global", "")
 	high := "high"
 	tab := &WorkspaceTab{ID: "active", model: "another/model", effort: &high}
 	app.tabs = map[string]*WorkspaceTab{tab.ID: tab}
 	app.activeTabID = tab.ID
-	if got := app.defaultDraftSettings("global", ""); got.Model != baseline.Model || got.Effort != "" {
+	if got := app.defaultSessionSettings("global", ""); got.Model != baseline.Model || got.Effort != "" {
 		t.Fatalf("cross-model inherited effort: %+v", got)
 	}
 	tab.model = baseline.Model
-	if got := app.defaultDraftSettings("global", ""); got.Effort != high {
+	if got := app.defaultSessionSettings("global", ""); got.Effort != high {
 		t.Fatalf("same model lost effort: %+v", got)
 	}
 }

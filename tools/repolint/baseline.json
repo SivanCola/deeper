@@ -16,9 +16,6 @@
     "cmd/e2ebench/main.go": {
       "essay": 1
     },
-    "cmd/deepzora-legacy-migrator/main.go": {
-      "essay": 1
-    },
     "cmd/deepzora-plugin-example/main.go": {
       "essay": 19
     },
@@ -59,9 +56,6 @@
     "desktop/deferred_rebuild.go": {
       "essay": 2
     },
-    "desktop/draft_runtime.go": {
-      "complexity": 3
-    },
     "desktop/extensions_app.go": {
       "narrative": 1
     },
@@ -91,9 +85,6 @@
     },
     "desktop/frontend/src/__tests__/tab-switch-hydration.test.tsx": {
       "test-file-size": 125
-    },
-    "desktop/frontend/src/app-runtime/useSessionDraftSurface.ts": {
-      "file-size": 281
     },
     "desktop/frontend/src/components/ApprovalModal.tsx": {
       "file-size": 233
@@ -173,9 +164,6 @@
     "desktop/history_test.go": {
       "test-file-size": 735
     },
-    "desktop/internal/draftstate/store.go": {
-      "file-size": 11
-    },
     "desktop/internal/update/manifest.go": {
       "essay": 1
     },
@@ -225,11 +213,6 @@
     },
     "desktop/session_catalog_runtime.go": {
       "essay": 2
-    },
-    "desktop/session_draft.go": {
-      "complexity": 12,
-      "file-size": 532,
-      "function-size": 5
     },
     "desktop/session_key_test.go": {
       "essay": 3
@@ -307,9 +290,6 @@
       "essay": 1,
       "narrative": 1
     },
-    "desktop/theme_state_compat_test.go": {
-      "essay": 3
-    },
     "desktop/topic_activation.go": {
       "banner": 1,
       "essay": 28,
@@ -317,10 +297,6 @@
     },
     "desktop/topic_activation_test.go": {
       "essay": 2
-    },
-    "desktop/topic_legacy_migration.go": {
-      "complexity": 8,
-      "function-size": 19
     },
     "desktop/tray.go": {
       "essay": 1
@@ -438,15 +414,6 @@
       "essay": 3,
       "function-size": 24
     },
-    "internal/agent/migrate.go": {
-      "complexity": 32,
-      "essay": 12,
-      "file-size": 198,
-      "function-size": 73
-    },
-    "internal/agent/migrate_test.go": {
-      "test-file-size": 341
-    },
     "internal/agent/normalize.go": {
       "essay": 4
     },
@@ -485,9 +452,6 @@
     },
     "internal/agent/session.go": {
       "essay": 14
-    },
-    "internal/agent/session_compat_legacy_test.go": {
-      "essay": 3
     },
     "internal/agent/session_display_index.go": {
       "essay": 1
@@ -584,9 +548,6 @@
       "essay": 24,
       "function-size": 1,
       "narrative": 7
-    },
-    "internal/boot/token_profile.go": {
-      "essay": 1
     },
     "internal/bot/connloop.go": {
       "essay": 4
@@ -835,12 +796,6 @@
     },
     "internal/config/mcpjson_test.go": {
       "test-file-size": 499
-    },
-    "internal/config/migrate.go": {
-      "file-size": 27
-    },
-    "internal/config/migrate_test.go": {
-      "test-file-size": 358
     },
     "internal/config/model_credential_commit.go": {
       "complexity": 1
@@ -1197,10 +1152,6 @@
       "essay": 3,
       "function-size": 6
     },
-    "internal/pluginpkg/manifest_v1.go": {
-      "essay": 4,
-      "narrative": 1
-    },
     "internal/pluginpkg/pluginpkg.go": {
       "complexity": 1,
       "file-size": 407
@@ -1320,10 +1271,6 @@
     "internal/repair/update_handoff_test.go": {
       "test-file-size": 11
     },
-    "internal/repair/update_legacy.go": {
-      "complexity": 1,
-      "essay": 1
-    },
     "internal/repair/update_test.go": {
       "test-file-size": 3092
     },
@@ -1360,18 +1307,8 @@
       "essay": 17,
       "file-size": 309
     },
-    "internal/serve/session_ownership_test.go": {
-      "test-file-size": 169
-    },
     "internal/session/history_index.go": {
       "essay": 4
-    },
-    "internal/session/import_resolver.go": {
-      "essay": 1
-    },
-    "internal/session/prototype_import.go": {
-      "complexity": 4,
-      "function-size": 34
     },
     "internal/session/session.go": {
       "essay": 1
@@ -1505,9 +1442,6 @@
     },
     "tools/sessioncapacity/main.go": {
       "function-size": 9
-    },
-    "workers/crash-report/src/index.ts": {
-      "file-size": 874
     }
   }
 }

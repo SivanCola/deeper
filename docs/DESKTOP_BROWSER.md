@@ -142,7 +142,7 @@ defaults to 20 seconds, and is limited to 90 seconds / 64 MiB. Only a completed,
 decoded WebM is published. The View menu and Ctrl/Command+Shift+R stop recording
 even when the panel is closed.
 
-See the [implementation and acceptance record](BROWSER_RUNTIME_UPGRADE_ACCEPTANCE.md)
+See the [Current contract](DESKTOP_BROWSER.md)
 for evidence, platform gates and outstanding installed-package verification.
 
 Snapshot format: an accessibility-style tree (`role "name" [state] ref=e12`)
@@ -259,5 +259,5 @@ navigation history, temporary partitions, shared and isolated logins;
 take-over before approval, after approval before dispatch, lost receipt after
 execution, restart after crash, duplicate operation IDs; remote SSH drop,
 generation change, stale grant, cross-session misrouting. The real tasks in
-[the migration record](DESKTOP_SHELL_MIGRATION.md#acceptance-gates) close
+[the architecture contract](DESKTOP_ARCHITECTURE.md#verification) close
 the phase.

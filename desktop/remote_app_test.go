@@ -29,6 +29,7 @@ func TestReloadServeProvidersCancelsBusyTurn(t *testing.T) {
 	reloadCalls := 0
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /auth/token", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set(serveCapabilitiesHeader, "deepzora-baseline-v1")
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /cancel", func(w http.ResponseWriter, _ *http.Request) {
@@ -104,7 +105,10 @@ func TestCredentialProviderHealBudgetScalesWithTrackedWorkspaces(t *testing.T) {
 func TestReloadServeProvidersRejectsReplacedHostGeneration(t *testing.T) {
 	var reloadCalls int
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /auth/token", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	mux.HandleFunc("POST /auth/token", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set(serveCapabilitiesHeader, "deepzora-baseline-v1")
+		w.WriteHeader(http.StatusNoContent)
+	})
 	mux.HandleFunc("POST /providers/reload", func(w http.ResponseWriter, _ *http.Request) { reloadCalls++; w.WriteHeader(http.StatusNoContent) })
 	srv := httptest.NewServer(mux)
 	defer srv.Close()

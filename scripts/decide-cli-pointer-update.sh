@@ -17,7 +17,7 @@ candidate_file="$2"
 current_file="$3"
 
 case "$channel" in
-	stable | preview) ;;
+	stable) ;;
 	*)
 		echo "unsupported CLI pointer channel: $channel" >&2
 		exit 2

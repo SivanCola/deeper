@@ -30,7 +30,7 @@ func TestConcurrentActivateTopicSerializesSingleSurfacePruning(t *testing.T) {
 		go func(topicID string) {
 			defer wg.Done()
 			<-start
-			_, err := app.ActivateTopic("global", "", topicID, "")
+			_, err := app.activateTopic("global", "", topicID, "")
 			errs <- err
 		}(topicID)
 	}

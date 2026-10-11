@@ -123,7 +123,7 @@ canonical 选择器仍指向已登记的会话；source 选择器明确指向保
 业务调用会被拒绝，但 shutdown 与 shutdown-status 继续复用现有服务会话。正常退出会删除
 `diagnostics/lifecycle` 下当前运行对应的临时文件，因此退出后 lifecycle 目录为空属于预期行为；
 退出后的长期证据以轮转的 `logs/shell.log` 为准。详见
-[Windows 关闭与 transcript 诊断验收说明](WINDOWS_CLOSE_TRANSCRIPT_VALIDATION.zh-CN.md)。
+[当前契约](DESKTOP_HOST_PROTOCOL.zh-CN.md)。
 
 ## 业务命令
 

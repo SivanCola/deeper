@@ -52,6 +52,7 @@ type fakeServe struct {
 	eventsStatus                   int  // non-zero makes /events fail before opening
 	eventsFailCount                int  // refuse this many /events opens with 503, then serve normally
 	eventsCloseEarly               bool // return immediately after the initial 200 frames
+	statusRevision                 uint64
 	statusPayload                  string
 	statusAfterCancel              string
 	contextExpected                string
@@ -102,7 +103,7 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 			return
 		}
 		http.SetCookie(w, &http.Cookie{Name: "deepzora_token", Value: fs.token, Path: "/", HttpOnly: true})
-		w.Header().Set(serveCapabilitiesHeader, "permission-presets-v1,present-files-v1,execution-v2,session-history-v1,session-identity-v1,session-ownership-v1")
+		w.Header().Set(serveCapabilitiesHeader, "deepzora-baseline-v1,permission-presets-v1,present-files-v1,execution-v2,session-history-v1,session-identity-v1,session-ownership-v1")
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /new", func(w http.ResponseWriter, r *http.Request) {
@@ -365,12 +366,14 @@ func newFakeServe(t *testing.T, token string, sessions []serveSessionEntry) *fak
 		fs.record(r.Method, "/status", "")
 		fs.mu.Lock()
 		payload := fs.statusPayload
+		fs.statusRevision++
+		revision := fs.statusRevision
 		fs.mu.Unlock()
 		if payload == "" {
 			payload = `{"state":"ready"}`
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(payload))
+		_, _ = w.Write([]byte(currentFakeStatus(payload, revision)))
 	})
 	snapshot("/branches", `{"branches":[]}`)
 	snapshot("/skills", `[]`)
@@ -478,4 +481,22 @@ func openReadyRemoteTab(t *testing.T, a *App, opts RemoteTabOpenOptions) TabMeta
 
 func remoteSessionIDFromRoute(route string) string {
 	return strings.TrimPrefix(route, remoteSessionIDRoutePrefix)
+}
+
+func currentFakeStatus(body string, revision uint64) string {
+	var payload map[string]any
+	if json.Unmarshal([]byte(body), &payload) != nil || payload == nil {
+		return body
+	}
+	if _, present := payload["runtimeState"]; !present {
+		state := map[string]any{"schemaVersion": 1, "runtimeEpoch": "fake-runtime", "revision": revision, "phase": "idle", "running": false, "pendingPrompt": false, "backgroundJobs": 0, "cancelRequested": false, "cancellable": false}
+		for _, key := range []string{"running", "pendingPrompt", "backgroundJobs", "cancelRequested", "cancellable"} {
+			if value, ok := payload[key]; ok {
+				state[key] = value
+			}
+		}
+		payload["runtimeState"] = state
+	}
+	data, _ := json.Marshal(payload)
+	return string(data)
 }

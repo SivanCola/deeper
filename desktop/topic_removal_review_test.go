@@ -89,7 +89,7 @@ func TestTopicRemovalCanonicalConfirmationFencedAtArchiveAdmission(t *testing.T)
 
 func testTopicRemovalCanonicalConfirmation(t *testing.T, checkpoint string) {
 	a, _, _ := topicRemovalFixture(t, "global", "")
-	tab, err := a.EnsureBlankTab("global", "")
+	tab, err := a.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatal(err)
 	}

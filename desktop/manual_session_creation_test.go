@@ -28,7 +28,7 @@ func newManualSessionTestApp(t *testing.T) *App {
 		}
 		a.closeSessionServices()
 		_ = a.sessionUI.Close()
-		_ = a.desktopDrafts.Close()
+
 	})
 	return a
 }
@@ -69,9 +69,6 @@ func TestManualCreationUniqueIdempotentAndVisibleBeforeFirstSend(t *testing.T) {
 				t.Fatal("creation submitted a non-system message")
 			}
 		}
-	}
-	if drafts, err := a.ListSessionDraftSummaries(); err != nil || len(drafts) != 0 {
-		t.Fatalf("new path created drafts: %+v %v", drafts, err)
 	}
 }
 
@@ -120,17 +117,6 @@ func TestComposerRestartConflictAndUnknownSubmission(t *testing.T) {
 	}
 	if !json.Valid([]byte(accepted.ContentJSON)) {
 		t.Fatal("invalid saved content")
-	}
-}
-
-func TestPreviousDraftAPIWillNotCreateNewRecords(t *testing.T) {
-	a := newManualSessionTestApp(t)
-	if _, err := a.OpenSessionDraftForTarget("global", ""); err == nil {
-		t.Fatal("legacy API created a draft")
-	}
-	rows, err := a.ListSessionDraftSummaries()
-	if err != nil || len(rows) != 0 {
-		t.Fatalf("legacy rows=%+v %v", rows, err)
 	}
 }
 

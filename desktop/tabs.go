@@ -91,8 +91,7 @@ type WorkspaceTab struct {
 	SessionPath      string              // exact .jsonl file this tab continues
 	SessionID        string              // immutable v3 identity; empty for legacy/read-only tabs
 	nativeSessionSelection
-	PendingCreateOperationID string // durable create reservation used before the first turn
-	draftAdmission           *draftAdmissionProfile
+	PendingCreateOperationID string                     // durable create reservation used before the first turn
 	persistenceExtra         map[string]json.RawMessage // unknown desktop-tabs.json fields retained across rewrites
 	SessionGeneration        uint64                     // bumps on session rotation (clear/new); frontend hydrate identity
 	ReadOnly                 bool                       // true for external channel transcripts opened for browsing
@@ -2437,10 +2436,6 @@ func (a *App) openTopicTabWithHead(scope, workspaceRoot, topicID, sessionPath, h
 
 // OpenGlobalTab opens a new global-scope tab (no project root). The global
 // workspace root is the deepzora user config directory.
-func (a *App) OpenGlobalTab(topicID string) (TabMeta, error) {
-	return a.openGlobalTab(topicID)
-}
-
 func (a *App) openGlobalTab(topicID string) (TabMeta, error) {
 	globalRoot := globalWorkspaceRoot()
 	if err := os.MkdirAll(globalRoot, 0o755); err != nil {
@@ -2457,10 +2452,6 @@ func (a *App) openGlobalTab(topicID string) (TabMeta, error) {
 // OpenTopicSession opens a concrete saved session from the sidebar. Unlike
 // OpenProjectTab/OpenGlobalTab, it does not resolve the topic to the latest
 // session first; sessionPath is the runtime identity being selected.
-func (a *App) OpenTopicSession(scope, workspaceRoot, topicID, sessionPath string) (TabMeta, error) {
-	return a.openTopicSession(scope, workspaceRoot, topicID, sessionPath)
-}
-
 func (a *App) openTopicSession(scope, workspaceRoot, topicID, sessionPath string) (TabMeta, error) {
 	return a.openTopicSessionWithNavigation(scope, workspaceRoot, topicID, sessionPath, a.desktopSessions.navigationSeq.Add(1))
 }
@@ -2491,7 +2482,7 @@ func (a *App) openTopicSessionWithNavigation(scope, workspaceRoot, topicID, rout
 // "cancelled" event is emitted for the old requestId), and ticketed
 // activations supersede each other the same way. The synchronous return
 // contract — TabMeta after the prune — is unchanged.
-func (a *App) ActivateTopic(scope, workspaceRoot, topicID, sessionPath string) (TabMeta, error) {
+func (a *App) activateTopic(scope, workspaceRoot, topicID, sessionPath string) (TabMeta, error) {
 	navigation := a.desktopSessions.navigationSeq.Add(1)
 	a.singleSurfaceMu.Lock()
 	defer a.singleSurfaceMu.Unlock()
@@ -2569,10 +2560,6 @@ func tabInWorkspace(tab *WorkspaceTab, workspaceRoot string) bool {
 // EnsureBlankTab activates the existing blank tab for the target scope, or
 // creates one if none exists. Reusing a blank tab keeps repeated "new session"
 // clicks from piling up empty conversations.
-func (a *App) EnsureBlankTab(scope, workspaceRoot string) (TabMeta, error) {
-	return a.ensureBlankTab(scope, workspaceRoot)
-}
-
 func (a *App) ensureBlankTab(scope, workspaceRoot string) (TabMeta, error) {
 	scope = strings.TrimSpace(scope)
 	if scope != "project" {
@@ -3601,7 +3588,6 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 	buildEffort := cloneStringPtr(tab.effort)
 	buildMode := tab.mode
 	buildToolApprovalMode := tab.toolApprovalMode
-	buildDisabledMCP := cloneServerViewMap(tab.disabledMCP)
 	buildGoal := tab.goal
 	buildSink := tab.sink
 	a.saveTabsLocked()
@@ -3660,11 +3646,6 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 	}
 	a.bindControllerDisplayRecorder(ctrl)
 	configureControllerRuntime(ctrl, nil, buildRuntime)
-	if strings.HasPrefix(tabCreateOperationID, "draft-op-") {
-		for name := range buildDisabledMCP {
-			ctrl.UnregisterMCPServerTools(name)
-		}
-	}
 
 	acquiredLeaseKey := ""
 	restoredRuntime := buildRuntime
@@ -3714,14 +3695,6 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 	// config, history, lease, and extension work above remains cancellable and
 	// cannot prevent shutdown from acquiring the write side.
 	a.reportManualBuildStage(tab, buildGeneration, "publishing_controller")
-	releaseDraftPublication, draftPublicationErr := a.lockDraftRuntimePublication(tabCreateOperationID)
-	if draftPublicationErr != nil {
-		registration.rollback()
-		a.abandonSupersededBuild(tab, ctrl, rootKey, acquiredLeaseKey)
-		a.recordTabStartupFailure(tab, buildGeneration, appCtx, draftPublicationErr)
-		return
-	}
-	defer releaseDraftPublication()
 	releasePublication, extensionsCurrent := a.lockTabControllerPublication(extensionGen, tabScope, tabWorkspaceRoot)
 	if !extensionsCurrent {
 		registration.rollback()

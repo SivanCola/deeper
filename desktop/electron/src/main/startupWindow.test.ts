@@ -98,7 +98,7 @@ test("app window flushes the renderer draft through a fixed internal script", as
   f.window.create(f.geometry);
   const app = f.window.loadApp();
   await f.window.flushSessionDraft();
-  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__deepzoraFlushSessionDraft?.())"]);
+  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__deepzoraFlushComposerInput?.())"]);
   f.loads.shift()!();
   await app;
 });
@@ -108,7 +108,7 @@ test("app window can release the renderer draft exit barrier after a veto", asyn
   f.window.create(f.geometry);
   const app = f.window.loadApp();
   await f.window.resumeSessionDraftEditing();
-  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__deepzoraResumeSessionDraftEditing?.())"]);
+  assert.deepEqual(f.scripts, ["Promise.resolve(globalThis.__deepzoraResumeComposerEditing?.())"]);
   f.loads.shift()!();
   await app;
 });

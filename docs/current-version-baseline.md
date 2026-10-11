@@ -1,53 +1,21 @@
-# Deepzora 当前版本基线
+# Current baseline / 当前基线
 
-本版本是 Deepzora 的首个支持基线。后续开发以本版本生成的配置、会话、插件和客户端协议为准；不再导入、升级、映射或降级到 Reasonix 及更早版本的数据和行为。存储格式的版本号保留其当前值，避免把不同格式误认为同一版本。
+Deepzora starts with the current implementation as its first supported version. It does not inherit upstream release numbering or historical migrations. LICENSE and NOTICE preserve attribution.
 
-## 当前唯一支持的格式
+Deepzora 将当前实现作为第一个受支持版本，不继承上游发布编号和历史迁移逻辑，LICENSE 与 NOTICE 保留署名。
 
-| 对象 | 当前基线 |
-| --- | --- |
-| 用户配置 | schema 12，模型使用完整 provider/model 引用 |
-| 桌面会话 | deepzora.session.linear/v4，schema 4，storage revision 3 |
-| 原生代理会话 | 当前 DAG schema 2；保留当前分支、租约和崩溃恢复 |
-| 原生插件 | deepzora.com/plugin/v2 |
-| 执行权限 | read-only、workspace-write、danger-full-access；协作模式为 normal 或 plan |
-| 机器人连接 | bot.connections，连接独立持有凭据、访问权限及会话身份 |
-| 远程会话 | 当前 SessionID 路由和版本化客户端协议；模型设置须得到当前 Serve 的确认 |
-| 发布与更新 | 当前平台布局及带 SHA256 校验的正式发布产物 |
+- CLI, Electron desktop, Serve, ACP, bots, and SDK remain current product surfaces.
+- Formal sessions own durable composer input and attachments. Workspace-draft databases and APIs are removed.
+- Desktop navigation uses scoped tickets; cancellation returns current receipts.
+- Remote handshakes require `deepzora-baseline-v1`. Capabilities still express features provided by the active controller.
+- Electron owns the tray. The Go host has no native tray fallback.
+- Official releases use sealed candidates, immutable source identity, signatures, checksums, and provenance. Interrupted current releases can resume.
+- Product-document embedding uses an explicit allowlist. Research and implementation notes are development material.
 
-## 已移除的历史支持
-
-- Reasonix 的名称、目录、环境变量和存储 codec 别名；旧数据扫描、自动导入和升级脚本。
-- 旧会话正文及事件格式、旧配置字段映射、旧权限和协作模式别名、旧插件 manifest。
-- 本地文件路径作为桌面或远程会话的写入身份、旧标题映射回写、旧 Serve 的协议降级和跳过模型设置确认。
-- 旧 EBM／reasoning-governor 实验 fork bundle 重放、捕获及兼容状态，以及旧版回滚兼容证据脚本。
-- 旧版自动规划、质量门槛、续检任务、历史恢复写入命令、旧计划模式提示清洗及信任桥接、旧目标 strict 开关及远程目标标志解析、状态栏升级标记和美元费用别名。
-- 机器人旧全局白名单、配对及安装流程向旧白名单写入的路径。
-- 旧机器人直配持久字段、旧主题迁移及旧主题/会话目录回填、旧主题样式迁移和旧更新布局。
-- 只为旧客户端发送的重复目录事件，以及旧 Remote Workbench 数据清理入口。
-- 旧 MCP 缓存键升级、共享缓存与匿名统计文件认领；旧记忆文件身份补齐和旧版本类型双写；已退役 Windows 沙箱的历史 ACL 标记扫描与修复。
-- 旧记忆隐式全局置顶、按类型计算时效及同名跨作用域自动清理；当前默认使用 relevant / stable 并显式保存。
-- 旧更新通道别名和跨通道降级安装、旧 Windows/Linux 平铺更新助手、文件更新事务及整组二进制回滚，以及旧 Serve 自动替换和桌面握手冗余身份字段。
-
-首次使用应新建当前配置、会话及原生插件清单。历史数据不会被程序自动删除，也不会自动转换。当前版本的会话归档、恢复、分支、持久消息队列、权限检查、机器人连接，以及外部模型厂商和 Claude/MCP 的现行协议仍是正常功能。
-
-## 验证范围
-
-配置、存储、控制器、CLI、Serve、桌面模块及前端使用当前格式的测试验证。历史兼容正向用例随对应入口删除；旧格式拒绝、身份隔离和当前数据不回退到旧文件的验证保留。平台打包脚本和发布清单另有自动检查；本地测试结果不等同于实际多平台发布验证。
-
-2026-10-11 本地验证结果：
-
-| 检查 | 结果 |
-| --- | --- |
-| 根 Go 模块 | 全量测试通过；代理、目标状态和基准工具的补充测试通过 |
-| 桌面 Go 模块 | 全量测试通过；标题、机器人及更新的补充测试通过 |
-| Go SDK | 全量测试通过 |
-| 前端 | 483 个测试套件通过；生产构建、类型、样式及包体积检查通过 |
-| Electron | 318 个测试通过；类型检查及构建通过 |
-| 平台与发布脚本 | 249 个测试通过 |
-| 并发检查 | 配置、记忆、会话、插件包、目标持久化及桌面标题的 race 检查通过 |
-| 接口清单 | 854 项桌面接口清单检查通过 |
-| 浏览器 | 当前连接权限设置正常；会话阅读窗口回归通过 |
-| Windows/Linux | 根模块和桌面模块交叉编译通过；未在这两个操作系统上执行原生测试或发布安装包 |
-
-本次清理在 `codex/current-version-baseline` 分支维护。
+- 保留 CLI、Electron 桌面端、Serve、ACP、机器人及 SDK。
+- 正式会话持久化输入和附件，删除工作区草稿数据库及 API。
+- 桌面导航使用带作用域的票据，取消操作返回当前回执。
+- 远程握手必须声明 `deepzora-baseline-v1`；能力标识仍表达当前控制器实际提供的功能。
+- 托盘由 Electron 管理，Go 主机不再提供原生托盘回退。
+- 正式发布保留封存候选、不可变来源、签名、校验和与来源证明，允许恢复当前发布的中断。
+- 产品文档通过明确清单嵌入，研究和实现记录仅供开发使用。

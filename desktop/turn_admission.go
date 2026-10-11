@@ -132,10 +132,6 @@ func (a *App) beginRuntimeTurnWithModelChoice(tabID string, reclaim, detached bo
 			a.runtimeAdmissionMu.RUnlock()
 		}
 		tab.turnStartMu.Lock()
-		if err := a.validateDraftAdmission(tab, firstSubmissionID(submissionID)); err != nil {
-			abort()
-			return nil, nil, err
-		}
 		if a.tabIsReadOnly(tab) {
 			abort()
 			return nil, nil, readOnlyChannelErr()

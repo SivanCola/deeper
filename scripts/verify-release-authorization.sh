@@ -23,20 +23,9 @@ if [ "$caller_ref_protected" != "true" ]; then
 	echo "::error::orchestrated release caller ref is not protected: $caller_ref" >&2
 	exit 1
 fi
-case "$approved_channel" in
-stable)
-	approved_tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-	approved_tag_description='vMAJOR.MINOR.PATCH'
-	;;
-preview)
-	approved_tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.([1-9][0-9]*)$'
-	approved_tag_description='vMAJOR.MINOR.PATCH-preview.N'
-	;;
-*)
-	echo "::error::approved release channel must be stable or preview, got: $approved_channel" >&2
-	exit 1
-	;;
-esac
+[ "$approved_channel" = stable ] || { echo "::error::unsupported release channel" >&2; exit 1; }
+approved_tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+approved_tag_description='vMAJOR.MINOR.PATCH'
 if [[ ! "$approved_cli_tag" =~ $approved_tag_pattern ]]; then
 	echo "::error::approved CLI tag must be $approved_tag_description, got: $approved_cli_tag" >&2
 	exit 1

@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # Resolve and authorize the immutable source commit for a Desktop publication.
-# The workflow control plane must run from protected main. Stable/RC builds
-# use an existing tag on main history; Preview builds use the exact main
-# commit selected when the protected workflow was dispatched.
+# The protected control plane verifies a sealed candidate or an immutable official tag.
 set -euo pipefail
 
 channel="${RELEASE_CHANNEL:?RELEASE_CHANNEL is required}"
@@ -30,9 +28,9 @@ true | false) ;;
 esac
 if [ "$orchestrated" = "true" ]; then
 	case "$orchestrator" in
-	stable | preview | candidate | promote) ;;
+	stable | candidate | promote) ;;
 	*)
-		echo "::error::IN_ORCHESTRATOR must be stable or preview for an orchestrated Desktop release, got: $orchestrator" >&2
+		echo "::error::IN_ORCHESTRATOR must be stable, candidate or promote for an orchestrated Desktop release, got: $orchestrator" >&2
 		exit 2
 		;;
 	esac
@@ -74,27 +72,9 @@ true | false) ;;
 	;;
 esac
 
-stable_tag_pattern='^desktop-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?$'
-preview_tag_pattern='^desktop-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.(0|[1-9][0-9]*)$'
-
-case "$channel" in
-stable)
-	if [[ ! "$tag" =~ $stable_tag_pattern ]] || [[ "$tag" =~ $preview_tag_pattern ]]; then
-		echo "::error::Stable Desktop candidate requires desktop-vMAJOR.MINOR.PATCH[-PRERELEASE], excluding -preview.N: $tag" >&2
-		exit 1
-	fi
-	;;
-preview)
-	if [[ ! "$tag" =~ $preview_tag_pattern ]]; then
-		echo "::error::Preview Desktop candidate requires desktop-vMAJOR.MINOR.PATCH-preview.N: $tag" >&2
-		exit 1
-	fi
-	;;
-*)
-	echo "::error::Desktop release channel must be stable or preview, got: $channel" >&2
-	exit 2
-	;;
-esac
+[ "$channel" = stable ] || { echo "::error::unsupported Desktop release channel" >&2; exit 1; }
+stable_tag_pattern='^desktop-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+[[ "$tag" =~ $stable_tag_pattern ]] || { echo "::error::Desktop tag must be desktop-vMAJOR.MINOR.PATCH" >&2; exit 1; }
 
 git fetch "$release_remote" main --tags
 main_sha="$(git rev-parse "$release_remote/main^{commit}")"
@@ -112,11 +92,7 @@ else
 		echo "::error::standalone Desktop workflow SHA is $caller_workflow_sha, expected caller SHA $caller_sha" >&2
 		exit 1
 	fi
-	if [ "$channel" = "preview" ]; then
-		candidate="$caller_sha"
-	else
-		candidate="$(git rev-parse "$tag^{commit}")"
-	fi
+	candidate="$(git rev-parse "$tag^{commit}")"
 fi
 
 if [[ ! "$candidate" =~ ^[0-9a-f]{40}$ ]]; then
@@ -145,12 +121,6 @@ if [ "$channel" = "stable" ]; then
 			exit 1
 		fi
 	fi
-elif git show-ref --verify --quiet "refs/tags/$tag"; then
-	echo "::error::Desktop Preview uses an immutable asset directory, not a Git tag: $tag" >&2
-	exit 1
-elif [ "$orchestrated" != "true" ] && [ "$require_current_main" = "true" ] && [ "$candidate" != "$main_sha" ]; then
-	echo "::error::Desktop Preview must use current main $main_sha, got: $candidate" >&2
-	exit 1
 fi
 
 if [ "$verify_checkout" = "true" ]; then

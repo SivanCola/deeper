@@ -252,7 +252,7 @@ func TestTopicRemovalCorruptOrganizationIsNotEmpty(t *testing.T) {
 
 func TestTopicRemovalCanonicalBlankRetainsArchiveSemantics(t *testing.T) {
 	a, _, _ := topicRemovalFixture(t, "global", "")
-	tab, err := a.EnsureBlankTab("global", "")
+	tab, err := a.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatal(err)
 	}

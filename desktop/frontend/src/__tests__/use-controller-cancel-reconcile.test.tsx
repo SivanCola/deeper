@@ -189,15 +189,11 @@ const desktopStub = installDesktopHostStub(({
         backendHistory.push({ role: "user", content: text, messageId, submissionId, createdAt });
         desktopStub.emit("agent:event", { kind: "user_message", tabId, text, messageId, submissionId, createdAt });
       },
-      CancelTab: async () => {
+      CancelSessionForTab: async () => {
         cancelCalls += 1;
         backendRunning = false;
         desktopStub.emit("agent:event", { kind: "turn_done", tabId: "tab-a", status: "cancelled" });
-      },
-      CancelTabWithInboxItems: async () => {
-        cancelInboxCalls += 1;
-        if (cancelInboxError) throw cancelInboxError;
-        backendRunning = false;
+        return {accepted:true, alreadyIdle:false, recoveryRequired:false};
       },
       CancelTabWithInboxItemsResult: async () => {
         cancelInboxCalls += 1;
@@ -206,11 +202,12 @@ const desktopStub = installDesktopHostStub(({
         desktopStub.emit("agent:event", { kind: "turn_done", tabId: "tab-a", status: "cancelled" });
         return { discardedItemIds: [...cancelDiscardedItemIDs] };
       },
-      InterruptTurnForTab: async () => {
+      InterruptTurnWithInboxItemsForTab: async () => {
         interruptCalls += 1;
         if (interruptError) throw interruptError;
         backendRunning = false;
         desktopStub.emit("agent:event", { kind: "turn_done", tabId: "tab-a", status: "cancelled" });
+        return { discardedItemIds: [...cancelDiscardedItemIDs] };
       },
     } as Partial<AppBindings> as AppBindings,
   },
@@ -288,7 +285,7 @@ for (let attempt = 0; attempt < 20 && controller?.state.running; attempt += 1) {
 }
 
 eq(controller?.state.running, false, "cancel reconciliation clears the running state");
-eq(cancelCalls, 1, "CancelTab is called once");
+eq(cancelCalls, 1, "CancelSessionForTab is called once");
 eq(controller?.state.cancelRequested, false, "cancel reconciliation clears cancelRequested");
 await waitFor("cancelled checkpoint refresh", () => checkpointLoads > 0);
 eq(historyLoads, 0, "cancellation never reloads or replaces the transcript");
@@ -380,8 +377,8 @@ await act(async () => {
   await controller?.cancel();
   await flushPromises();
 });
-eq(interruptCalls, 1, "exact-turn stop is attempted first");
-eq(cancelCalls, cancelCallsBefore + 1, "fence rejection falls back to the unconditional CancelTab");
+eq(interruptCalls, 0, "session-level stop does not depend on the observed turn fence");
+eq(cancelCalls, cancelCallsBefore + 1, "fence rejection falls back to the current CancelSessionForTab");
 eq(controller?.state.items.filter((item) => item.kind === "notice").length, noticesBefore, "fence rejection does not surface a Cancel failed notice");
 await waitFor("fallback cancel reconciliation", () => controller?.state.running === false);
 
@@ -396,8 +393,8 @@ await act(async () => {
   await controller?.cancel();
   await flushPromises();
 });
-eq(interruptCalls, 2, "idle stop still asks the backend once");
-eq(cancelCalls, cancelCallsBefore + 1, "idle stop does not retry through CancelTab");
+eq(interruptCalls, 0, "idle session stop uses the current receipt endpoint");
+eq(cancelCalls, cancelCallsBefore + 2, "idle stop issues one session cancellation");
 eq(controller?.state.items.filter((item) => item.kind === "notice").length, noticesBefore, "idle stop does not surface a Cancel failed notice");
 await waitFor("idle stop reconciliation", () => controller?.state.running === false);
 

@@ -8,21 +8,13 @@ manifest="${4:-}"
 notes_version="${5:-$version}"
 
 stable_version_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-preview_version_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.(0|[1-9][0-9]*)$'
-release_version_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?$'
 
 case "$channel" in
 	stable)
 		version_pattern="$stable_version_pattern"
 		;;
-	preview)
-		version_pattern="$preview_version_pattern"
-		;;
-	any)
-		version_pattern="$release_version_pattern"
-		;;
 	*)
-		echo "Desktop manifest channel must be stable, preview, or any: $channel" >&2
+		echo "Desktop manifest channel must be stable: $channel" >&2
 		exit 2
 		;;
 esac
@@ -31,15 +23,14 @@ if [[ ! "$version" =~ $version_pattern ]]; then
 	echo "invalid $channel Desktop manifest version: $version" >&2
 	exit 1
 fi
-if [[ ! "$notes_version" =~ $release_version_pattern ]]; then
+if [[ ! "$notes_version" =~ $stable_version_pattern ]]; then
 	echo "invalid Desktop release-notes version: $notes_version" >&2
 	exit 1
 fi
 
 expected_tag="desktop-${version}"
 github_base="https://github.com/SivanCola/deepzora/releases/download/${expected_tag}/"
-r2_base="https://github.com/SivanCola/deepzora/releases/download/${expected_tag}/"
-if [ "$asset_base" != "$github_base" ] && [ "$asset_base" != "$r2_base" ]; then
+if [ "$asset_base" != "$github_base" ]; then
 	echo "invalid official Desktop asset base: $asset_base" >&2
 	exit 1
 fi

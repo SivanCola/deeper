@@ -290,18 +290,6 @@ func (a *App) SteerInboxItemForTurn(tabID, turnID, itemID string) (InboxReceiptV
 
 // CancelTabWithInboxItems cancels the turn and atomically discards only the
 // durable pending items currently shown by that tab's Composer.
-func (a *App) CancelTabWithInboxItems(tabID string, itemIDs []string) error {
-	ctrl, err := a.inboxCtrl(tabID)
-	if err != nil {
-		return err
-	}
-	if err := ctrl.CancelWithInboxItems(itemIDs, "desktop"); err != nil {
-		return inboxBridgeError(err)
-	}
-	a.emitInboxChanged(tabID)
-	return nil
-}
-
 // CancelTabWithInboxItemsResult is the receipt-capable cancellation API. It is
 // additive so older desktop frontends can continue using the legacy method.
 func (a *App) CancelTabWithInboxItemsResult(tabID string, itemIDs []string) (InboxCancelResultView, error) {

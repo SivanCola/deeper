@@ -15,7 +15,6 @@
 #
 # Usage: scripts/desktop-build.sh <os/arch> <version> [channel]
 #   e.g. scripts/desktop-build.sh darwin/arm64 v1.1.0
-#        scripts/desktop-build.sh darwin/arm64 v1.5.0-preview.42 preview
 #
 # Requirements:
 #   - Go toolchain matching desktop/go.mod (>= 1.25; the `toolchain` directive
@@ -151,7 +150,7 @@ fi
 # build_service compiles the Go desktop service (deepzora-desktop). It stays
 # the active version entry the thin launcher starts: without --host-rpc it
 # bootstraps the Electron shell from app/ and exits; the shell then spawns it
-# with --host-rpc as the service (see docs/DESKTOP_SHELL_MIGRATION.md phase E).
+# with --host-rpc as the service (see docs/DESKTOP_ARCHITECTURE.md).
 build_service() {
 	echo "==> go build Deepzora desktop service"
 	mkdir -p "$(dirname "$service_out")"

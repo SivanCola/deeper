@@ -19,7 +19,7 @@ server is driven by the Electron shell through the desktop host protocol — the
 Go binary runs as a supervised service (`deepzora-desktop --host-rpc` over
 stdio), the shell owns the window, tray, menu and renderer lifecycle. See
 [the host protocol](../docs/DESKTOP_HOST_PROTOCOL.md) and
-[the migration record](../docs/DESKTOP_SHELL_MIGRATION.md).
+[the architecture contract](../docs/DESKTOP_ARCHITECTURE.md).
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

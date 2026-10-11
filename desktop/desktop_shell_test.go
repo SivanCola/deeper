@@ -99,31 +99,6 @@ func TestTrayLossWhileBackgroundHiddenRequestsPresentation(t *testing.T) {
 	}
 }
 
-func TestEvaluateStatusNotifierSnapshot(t *testing.T) {
-	const item = "org.kde.StatusNotifierItem-42-1"
-	tests := []struct {
-		name   string
-		state  statusNotifierSnapshot
-		ready  bool
-		reason string
-	}{
-		{name: "no watcher", reason: "no_watcher"},
-		{name: "no host", state: statusNotifierSnapshot{WatcherOwner: ":1.2"}, reason: "no_host"},
-		{name: "item has no owner", state: statusNotifierSnapshot{WatcherOwner: ":1.2", Host: true}, reason: "item_no_owner"},
-		{name: "item absent", state: statusNotifierSnapshot{WatcherOwner: ":1.2", Host: true, ItemOwner: ":1.9"}, reason: "item_not_registered"},
-		{name: "well-known registered", state: statusNotifierSnapshot{WatcherOwner: ":1.2", Host: true, ItemOwner: ":1.9", Items: []string{item + "/StatusNotifierItem"}}, ready: true},
-		{name: "unique owner registered", state: statusNotifierSnapshot{WatcherOwner: ":1.2", Host: true, ItemOwner: ":1.9", Items: []string{":1.9/StatusNotifierItem"}}, ready: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ready, reason := evaluateStatusNotifierSnapshot(tt.state, item)
-			if ready != tt.ready || reason != tt.reason {
-				t.Fatalf("evaluate = (%v, %q), want (%v, %q)", ready, reason, tt.ready, tt.reason)
-			}
-		})
-	}
-}
-
 func TestProcessEnvWithOverridesReplacesInsteadOfDuplicating(t *testing.T) {
 	got := processEnvWithOverrides([]string{"A=old", "B=kept", "A=duplicate"}, map[string]string{"A": "new", "C": "added"})
 	counts := map[string]int{}

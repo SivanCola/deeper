@@ -16,7 +16,7 @@ func TestFormalComposerTargetPreservesFileBrowserAndIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.manualCreationTasks.Wait()
-	meta := a.metaForDraftSession(view.Ref.SessionID)
+	meta := a.metaForSession(view.Ref.SessionID)
 	if meta == nil {
 		t.Fatal("missing created tab")
 	}

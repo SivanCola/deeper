@@ -1,5 +1,7 @@
 # 远程会话系统
 
+桌面端与 Serve 必须协商 `deepzora-baseline-v1`。旧服务在认证握手时会被拒绝；连接前请安装匹配的 Deepzora 服务。运行时状态、会话标记与命令回执均采用当前协议。
+
 <a href="../README.zh-CN.md">README</a>
 &nbsp;·&nbsp;
 <a href="./REMOTE_SESSIONS.md">English</a>

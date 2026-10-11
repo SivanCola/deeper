@@ -13,8 +13,6 @@ Deepzora 记录执行事实，保证 provider 请求的每个工具调用都有�
 
 恢复不会自动重放调用，不会根据当前状态合成成功，不会拦截相同参数，也不会安装全局只读屏障。重建上下文只列出未启动、已完成和未知调用，并建议按需重试只读或幂等操作；对有副作用的未知调用，应先核实外部状态。每条未知记录只持久化加入上下文一次，不会每轮动态改写系统提示。
 
-Desktop 与 Serve 暂时保留 `GET /tool-recovery`、`POST /tool-recovery`、`GetToolRecoveryForTab` 和 `ResolveToolRecoveryForTab`。查询返回 `retired=true`、`retryEnabled=false` 的只读历史事实；动作端点稳定返回 `tool_recovery_retired`，不能确认、拒绝、重放或恢复操作。旧恢复卡只读显示，不再提供按钮。
-
-当前运行只把 `unknown` 写成执行事实。旧 `user_confirmed`、决策字段、Auto Guard sidecar 和恢复动作状态保持原值可读；当前运行不再创建这些状态，它们也不能恢复门禁。旧配置中的 `recovery_model` 和 Auto Guard 字段可解码，当前保存会省略。
+Desktop `GetToolRecoveryForTab` 与 Serve `GET /tool-recovery` 提供绑定会话的执行事实快照。恢复由模型处理，没有宿主确认、拒绝、重放或继续执行的动作接口。旧 Auto Guard 配置与 sidecar 不受支持。
 
 对于没有权威回执或幂等机制的外部服务，宿主不再提供 exactly-once 保证。重复未知副作用前需要由模型或用户检查服务端状态。

@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 concurrency:
-  # Push cancellation is handled by Supersede CI, which preserves the code
-  # ancestor still required by a release-notes-only candidate.
+  # Keep main SHA runs distinct so release qualification can verify the exact
+  # code ancestor; superseded PR runs share a group and are cancelled.
   group: ci-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true
 
@@ -227,8 +227,6 @@ jobs:
           if-no-files-found: error
           overwrite: true
           retention-days: 1
-      - name: Verify frontend test inventory
-        run: node --test frontend/scripts/ci-test-plan.test.mjs
       - name: Test frontend once per suite
         run: node frontend/scripts/run-ci-tests.mjs
       - name: Test and build Electron

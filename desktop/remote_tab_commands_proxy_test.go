@@ -20,7 +20,7 @@ func TestDeleteRemoteProjectSessionSendsCanonicalIdentity(t *testing.T) {
 	if err := a.DeleteRemoteProjectSession("box", "~/app", "canonical-target"); err != nil {
 		t.Fatal(err)
 	}
-	want := `POST /delete-session {"name":"canonical-target","sessionId":"canonical-target"}`
+	want := `POST /delete-session {"sessionId":"canonical-target"}`
 	if !slices.Contains(fs.recorded(), want) {
 		t.Fatalf("delete request missing canonical identity: %v", fs.recorded())
 	}

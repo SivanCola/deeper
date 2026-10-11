@@ -15,10 +15,8 @@ A call-start record is persisted before entering the tool body. Cancellation sto
 
 Recovery never automatically replays a call, synthesizes success from current state, blocks the same arguments, or installs a global read-only barrier. The reconstructed context lists which calls did not start, completed, or remain unknown. It advises retrying read-only or idempotent work as needed and checking external state before repeating a side effect. Each unknown record is added once to durable context rather than dynamically changing the system prompt every round.
 
-## Compatibility API
+## Recovery facts
 
-Desktop and Serve retain `GET /tool-recovery`, `POST /tool-recovery`, `GetToolRecoveryForTab`, and `ResolveToolRecoveryForTab` for wire compatibility. Queries return immutable historical facts with `retired=true` and `retryEnabled=false`. Action endpoints return `tool_recovery_retired`; they cannot inspect hidden arguments, confirm, reject, replay, or resume an operation. Old recovery cards render as read-only history without action buttons.
-
-Current runs write `unknown` only as an execution fact. Legacy `user_confirmed`, decision fields, Auto Guard sidecars, and recovery-action state are decoded without rewriting their facts; current runs do not create them, and none can recreate a gate. The `recovery_model` and Auto Guard settings are accepted when reading old configuration but omitted when saving current configuration.
+Desktop `GetToolRecoveryForTab` and Serve `GET /tool-recovery` expose a session-scoped snapshot of current unknown execution facts. Recovery is model-directed; there are no host confirm, reject, replay, or resume action endpoints. Retired Auto Guard configuration and sidecars are unsupported.
 
 There is no host-level exactly-once guarantee for an external service that offers no authoritative receipt or idempotency mechanism. The model and user must inspect that service before repeating an uncertain side effect.

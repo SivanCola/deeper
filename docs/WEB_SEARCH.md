@@ -127,12 +127,11 @@ Later manual protocol edits remain authoritative. Project configs and session
 files are not rewritten. Version 7 and 8 files receive a scalar-only edit preserving comments and unknown data;
 earlier versions first run the existing config upgrades. Previous releases can
 read the OpenAI route but lack independent search. An older binary with the old
-startup migration may change minimal legacy provider entries again.
+Historical binaries are unsupported.
 
 | Field / format | New reader of old data | Previous reader of new data | Conclusion |
 | --- | --- | --- | --- |
 | `kind` / `base_url` / request URLs | Official standard endpoints are migrated | Existing OpenAI values remain readable | No new protocol enum |
-| `config_version` | One-time v9 upgrade; future versions remain untouched | Number remains readable; old automatic migrations have the limit above | Avoid mixing binaries with the retired migration |
 | Models, pricing, effort, search switch | Preserved by this protocol migration | Unchanged field formats | User settings retained |
 | Sessions | Unchanged files; existing adapter history projection | Unchanged file format | No session migration |
 

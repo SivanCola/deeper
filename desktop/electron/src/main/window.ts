@@ -307,7 +307,7 @@ export class MainWindow {
     const win = this.browserWindow;
     if (!win || this.content !== "app" || win.webContents.isDestroyed()) return;
     await win.webContents.executeJavaScript(
-      "Promise.resolve(globalThis.__deepzoraFlushSessionDraft?.())",
+      "Promise.resolve(globalThis.__deepzoraFlushComposerInput?.())",
       true,
     );
   }
@@ -316,7 +316,7 @@ export class MainWindow {
     const win = this.browserWindow;
     if (!win || this.content !== "app" || win.webContents.isDestroyed()) return;
     await win.webContents.executeJavaScript(
-      "Promise.resolve(globalThis.__deepzoraResumeSessionDraftEditing?.())",
+      "Promise.resolve(globalThis.__deepzoraResumeComposerEditing?.())",
       true,
     );
   }

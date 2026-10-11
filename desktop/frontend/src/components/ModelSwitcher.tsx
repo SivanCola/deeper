@@ -16,7 +16,6 @@ import { useModelApplicationStatus } from "../lib/useModelApplicationStatus";
 export function ModelSwitcher({
   label,
   tabId,
-  draftId,
   ready = true,
   sessionKey,
   onPick,
@@ -34,7 +33,6 @@ export function ModelSwitcher({
   disabled?: boolean;
   dismissSignal?: number;
   tabId?: string;
-  draftId?: string;
   ready?: boolean;
   sessionKey?: string;
   onPick: (name: string) => boolean | Promise<boolean>;
@@ -51,14 +49,14 @@ export function ModelSwitcher({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const loadSeqRef = useRef(0);
-  const currentTabKeyRef = useRef(draftId ? `draft:${draftId}` : tabId ?? "");
+  const currentTabKeyRef = useRef(tabId ?? "");
   const pendingPickCountByTabRef = useRef(new Map<string, number>());
   const pickSeqByTabRef = useRef(new Map<string, number>());
-  currentTabKeyRef.current = draftId ? `draft:${draftId}` : tabId ?? "";
+  currentTabKeyRef.current = tabId ?? "";
 
   useEffect(() => {
     setOpen(false);
-  }, [disabled, dismissSignal, draftId, sessionKey, tabId]);
+  }, [disabled, dismissSignal, sessionKey, tabId]);
 
   // Measure trigger width off the render path to avoid forced layout
   useEffect(() => {
@@ -71,10 +69,10 @@ export function ModelSwitcher({
     return () => observer.disconnect();
   }, []);
 
-  const loadModelsForTab = useCallback((targetTabId?: string, targetDraftId?: string) => {
-    const targetKey = targetDraftId ? `draft:${targetDraftId}` : targetTabId ?? "";
+  const loadModelsForTab = useCallback((targetTabId?: string) => {
+    const targetKey = targetTabId ?? "";
     const seq = ++loadSeqRef.current;
-    return (targetDraftId ? app.ModelsForDraft(targetDraftId) : targetTabId ? app.ModelsForTab(targetTabId) : app.Models())
+    return (targetTabId ? app.ModelsForTab(targetTabId) : app.Models())
       .then((next) => {
         if (seq === loadSeqRef.current && currentTabKeyRef.current === targetKey) {
           setModels(asArray(next).map(normalizeModelInfo));
@@ -84,8 +82,8 @@ export function ModelSwitcher({
   }, []);
 
   const loadModels = useCallback(
-    () => loadModelsForTab(tabId, draftId),
-    [draftId, loadModelsForTab, tabId],
+    () => loadModelsForTab(tabId),
+    [loadModelsForTab, tabId],
   );
 
   useEffect(() => {
@@ -169,7 +167,7 @@ export function ModelSwitcher({
 
   const pick = (model: ModelInfo) => {
     setOpen(false);
-    const pendingKey = draftId ? `draft:${draftId}` : tabId ?? "";
+    const pendingKey = tabId ?? "";
     const pendingPickCount = pendingPickCountByTabRef.current.get(pendingKey) ?? 0;
     // A catalog refresh can still report the outgoing model as current while
     // an earlier switch is rebuilding. In that window, selecting it again is
@@ -200,7 +198,7 @@ export function ModelSwitcher({
         return;
       }
       setModels(previousModels);
-      void loadModelsForTab(tabId, draftId);
+      void loadModelsForTab(tabId);
     };
     try {
       void Promise.resolve(onPick(model.ref)).then(

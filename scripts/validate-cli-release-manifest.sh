@@ -8,24 +8,14 @@ manifest="${4:-}"
 notes_tag="${5:-$tag}"
 
 stable_tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-preview_tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.(0|[1-9][0-9]*)$'
-release_tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+)(\.[0-9A-Za-z-]+)*)?$'
 
 case "$channel" in
 	stable)
 		tag_pattern="$stable_tag_pattern"
 		expected_prerelease=false
 		;;
-	preview)
-		tag_pattern="$preview_tag_pattern"
-		expected_prerelease=true
-		;;
-	any)
-		tag_pattern="$release_tag_pattern"
-		expected_prerelease=any
-		;;
 	*)
-		echo "CLI manifest channel must be stable, preview, or any: $channel" >&2
+		echo "CLI manifest channel must be stable: $channel" >&2
 		exit 2
 		;;
 esac
@@ -38,7 +28,7 @@ if [[ ! "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
 	echo "invalid GitHub repository: $repository" >&2
 	exit 1
 fi
-if [[ ! "$notes_tag" =~ $release_tag_pattern ]]; then
+if [[ ! "$notes_tag" =~ $stable_tag_pattern ]]; then
 	echo "invalid CLI release-notes tag: $notes_tag" >&2
 	exit 1
 fi
@@ -66,10 +56,7 @@ jq -e \
 	--argjson required "$required_assets" '
 	(type == "object") and
 	(.tag_name == $tag) and
-	(if $expected_prerelease == "any"
-		then (.prerelease | type == "boolean")
-		else (.prerelease == ($expected_prerelease == "true"))
-	end) and
+	(.prerelease == ($expected_prerelease == "true")) and
 	(.html_url == ("https://github.com/" + $repository + "/releases/tag/" + $tag)) and
 	(.release_notes_url == ("https://github.com/SivanCola/deepzora/releases/tag/" + $notes_tag + "/")) and
 	(.assets | type == "array") and

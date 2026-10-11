@@ -67,7 +67,7 @@ func TestEnsureBlankTabReusesExistingBlankTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	first, err := app.EnsureBlankTab("global", "")
+	first, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestEnsureBlankTabReusesExistingBlankTab(t *testing.T) {
 	if _, err := service.Query().Snapshot(t.Context(), session.SessionRef{HostID: service.HostID(), SessionID: first.SessionID}); err != nil {
 		t.Fatalf("pre-created blank v3 session should exist: %v", err)
 	}
-	second, err := app.EnsureBlankTab("global", "")
+	second, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestEnsureBlankTabReusesPrecreatedBlankBeforeControllerReady(t *testing.T) 
 	app.tabOrder = []string{"blank"}
 	app.activeTabID = "blank"
 
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestEnsureBlankTabReusesIndexedTopicWithEmptyStub(t *testing.T) {
 		t.Fatalf("save branch meta: %v", err)
 	}
 
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -174,7 +174,7 @@ func TestEnsureBlankTabStoresCreatedAt(t *testing.T) {
 
 	app := NewApp()
 	before := time.Now().UnixMilli()
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	after := time.Now().UnixMilli()
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
@@ -209,7 +209,7 @@ func TestEnsureBlankTabRepairsMissingCreatedAtForReusedTopic(t *testing.T) {
 	}
 
 	app := NewApp()
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -230,11 +230,11 @@ func TestEnsureBlankTabCreatesOneBlankPerProject(t *testing.T) {
 
 	projectRoot := t.TempDir()
 	app := NewApp()
-	first, err := app.EnsureBlankTab("project", projectRoot)
+	first, err := app.ensureBlankTab("project", projectRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := app.EnsureBlankTab("project", projectRoot)
+	second, err := app.ensureBlankTab("project", projectRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +259,7 @@ func TestEnsureBlankTabStartsProjectRuntimeWithCurrentWorkspaceContext(t *testin
 	}
 
 	app := NewApp()
-	first, err := app.EnsureBlankTab("project", projectA)
+	first, err := app.ensureBlankTab("project", projectA)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab(project A): %v", err)
 	}
@@ -268,7 +268,7 @@ func TestEnsureBlankTabStartsProjectRuntimeWithCurrentWorkspaceContext(t *testin
 		t.Fatalf("project A controller workspace root = %q, want %q", got, normalizeProjectRoot(projectA))
 	}
 
-	second, err := app.EnsureBlankTab("project", projectB)
+	second, err := app.ensureBlankTab("project", projectB)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab(project B): %v", err)
 	}
@@ -336,13 +336,13 @@ func TestForkKeepsProjectWorkspaceContext(t *testing.T) {
 	}
 
 	app := NewApp()
-	first, err := app.EnsureBlankTab("project", projectA)
+	first, err := app.ensureBlankTab("project", projectA)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab(project A): %v", err)
 	}
 	waitForTabReady(t, app, first.ID)
 
-	second, err := app.EnsureBlankTab("project", projectB)
+	second, err := app.ensureBlankTab("project", projectB)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab(project B): %v", err)
 	}
@@ -386,13 +386,13 @@ func TestRewindReinjectsProjectWorkspaceContext(t *testing.T) {
 	}
 
 	app := NewApp()
-	first, err := app.EnsureBlankTab("project", projectA)
+	first, err := app.ensureBlankTab("project", projectA)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab(project A): %v", err)
 	}
 	waitForTabReady(t, app, first.ID)
 
-	second, err := app.EnsureBlankTab("project", projectB)
+	second, err := app.ensureBlankTab("project", projectB)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab(project B): %v", err)
 	}
@@ -452,7 +452,7 @@ func TestEnsureBlankTabResetsReusableAutoTopicTitle(t *testing.T) {
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
-	meta, err := app.EnsureBlankTab("project", projectRoot)
+	meta, err := app.ensureBlankTab("project", projectRoot)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -481,7 +481,7 @@ func TestEnsureBlankTabPreservesReusableManualTopicTitle(t *testing.T) {
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
-	meta, err := app.EnsureBlankTab("project", projectRoot)
+	meta, err := app.ensureBlankTab("project", projectRoot)
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}
@@ -508,7 +508,7 @@ func TestEnsureBlankTabOpensExistingSidebarBlankTopic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	meta, err := app.EnsureBlankTab("global", "")
+	meta, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -533,7 +533,7 @@ func TestEnsureBlankTabOpensExistingProjectSidebarBlankTopic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	meta, err := app.EnsureBlankTab("project", projectRoot)
+	meta, err := app.ensureBlankTab("project", projectRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,7 +557,7 @@ func TestEnsureBlankTabDoesNotReuseProjectTopicWithSession(t *testing.T) {
 	before := refs["existing"]
 	installNoopRuntimeEvents(app)
 	app.readyHook = func() {}
-	meta, err := app.EnsureBlankTab("project", root)
+	meta, err := app.ensureBlankTab("project", root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -588,7 +588,7 @@ func TestEnsureBlankTabDoesNotReuseTombstonedTopic(t *testing.T) {
 		t.Fatalf("seed tombstone: %v", err)
 	}
 
-	meta, err := NewApp().EnsureBlankTab("global", "")
+	meta, err := NewApp().ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatalf("EnsureBlankTab: %v", err)
 	}

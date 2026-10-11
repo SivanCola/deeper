@@ -14,7 +14,7 @@ import (
 
 // forkTestCapabilities is what a current Serve advertises; the fork token is
 // appended only for the serve that actually mounts the fork routes.
-const forkTestCapabilities = "execution-v2,session-history-v1,session-identity-v1,session-ownership-v1"
+const forkTestCapabilities = "deepzora-baseline-v1,execution-v2,session-history-v1,session-identity-v1,session-ownership-v1"
 
 const forkTestSessionID = "parent-1"
 
@@ -271,7 +271,7 @@ func TestLocalTabMetaForkTargetsSupportedIsFalse(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	tab, err := app.EnsureBlankTab("global", "")
+	tab, err := app.ensureBlankTab("global", "")
 	if err != nil {
 		t.Fatal(err)
 	}

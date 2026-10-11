@@ -1090,12 +1090,12 @@ func TestSubmitDocsShowsLocalOverviewAndGroundsModelTurn(t *testing.T) {
 		t.Fatalf("bare /docs should not start a model turn, inputs=%q", runner.inputs)
 	}
 
-	c.Submit("/docs 1.19.5 更新日志")
+	c.Submit("/docs 1.0.0 更新日志")
 	waitForTurnDone(t, events)
 	if len(runner.inputs) != 1 {
 		t.Fatalf("/docs query model turns = %d, inputs=%q", len(runner.inputs), runner.inputs)
 	}
-	for _, want := range []string{"1.19.5 更新日志", "changelog/v1.19.5.zh-CN.md", "embedded_docs_search_results"} {
+	for _, want := range []string{"1.0.0 更新日志", "changelog/v1.0.0.zh-CN.md", "embedded_docs_search_results"} {
 		if !strings.Contains(runner.inputs[0], want) {
 			t.Fatalf("grounded /docs prompt missing %q:\n%s", want, runner.inputs[0])
 		}
@@ -1147,12 +1147,12 @@ func TestSubmitQualifiedDeepzoraDocsPreservesExistingCommandAndUsesNextFallback(
 	}
 	waitIdle(t, c)
 
-	c.Submit("/deepzora:builtin:docs 1.19.5 update notes")
+	c.Submit("/deepzora:builtin:docs 1.0.0 update notes")
 	waitForTurnDone(t, events)
 	if len(runner.inputs) != 2 {
 		t.Fatalf("generated docs fallback model turns = %d, inputs=%q", len(runner.inputs), runner.inputs)
 	}
-	for _, want := range []string{"1.19.5 update notes", "changelog/v1.19.5.md", "embedded_docs_search_results"} {
+	for _, want := range []string{"1.0.0 update notes", "changelog/v1.0.0.md", "embedded_docs_search_results"} {
 		if !strings.Contains(runner.inputs[1], want) {
 			t.Fatalf("qualified docs prompt missing %q:\n%s", want, runner.inputs[1])
 		}

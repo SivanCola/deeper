@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -175,7 +176,7 @@ func servePostForSession(ctx context.Context, client *http.Client, url string, b
 
 // servePostSessionPath preserves the ordinary 2xx contract while reading the
 // optional path header returned by session-rotation endpoints. Older Serve
-// binaries omit it and keep their legacy untagged single-session behavior.
+// controllers without a bound session may omit it.
 func servePostSessionPath(ctx context.Context, client *http.Client, url string, body []byte) (string, error) {
 	identity, err := servePostSessionIdentityForSession(ctx, client, url, body, "")
 	return identity.Path, err
@@ -287,6 +288,9 @@ func serveHandshakeCapabilities(ctx context.Context, client *http.Client, base, 
 		if cap = strings.TrimSpace(cap); cap != "" {
 			caps = append(caps, cap)
 		}
+	}
+	if !slices.Contains(caps, servecontract.BaselineV1) {
+		return nil, fmt.Errorf("remote service does not support the current Deepzora baseline; install a matching Deepzora service")
 	}
 	return caps, nil
 }
@@ -508,7 +512,7 @@ func (a *App) remoteProjectSessions(ctx context.Context, client *http.Client, ba
 				continue
 			}
 			// Known current path: blank while the serve listing cannot see it
-			// yet. Unknown path (a legacy /new without a path header): blank
+			// yet. A controller without a bound session keeps the path blank
 			// while the fresh-session marker is still set.
 			if route := tab.routing.currentPath; route != "" {
 				if !listedRoutes[route] {

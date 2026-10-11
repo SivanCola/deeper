@@ -19,7 +19,7 @@ func TestNewBlankSessionCanBeArchived(t *testing.T) {
 			if scope == "project" {
 				root = t.TempDir()
 			}
-			meta, err := a.EnsureBlankTab(scope, root)
+			meta, err := a.ensureBlankTab(scope, root)
 			if err != nil {
 				t.Fatal(err)
 			}

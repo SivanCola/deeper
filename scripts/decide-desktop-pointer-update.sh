@@ -12,7 +12,7 @@ channel="$1"
 candidate_file="$2"
 current_file="$3"
 case "$channel" in
-  stable | preview) ;;
+  stable) ;;
   *) echo "unsupported Desktop pointer channel: $channel" >&2; exit 2 ;;
 esac
 if [ ! -f "$candidate_file" ]; then

@@ -32,8 +32,8 @@ if (args[0] === "view" && args[1].includes("@1.19.2") && args.at(-1) === "--json
   fs.writeFileSync(statePath, String(reads + 1));
   const stale = reads < Number(process.env.NPM_FAKE_STALE_READS || 0);
   const tags = stale
-    ? { latest: "1.19.2", canary: "1.19.2-canary.1", next: "1.19.0-rc.3" }
-    : { latest: "1.19.2", canary: "1.19.2", next: "1.19.2" };
+    ? { latest: "1.19.1" }
+    : { latest: "1.19.2" };
   if (process.env.NPM_FAKE_STAGING === "1") tags["latest-staging"] = "1.19.2";
   console.log(JSON.stringify(tags));
 } else if (args[0] === "dist-tag" && (args[1] === "add" || args[1] === "rm")) {
@@ -104,8 +104,8 @@ test("writes only the aliases that are missing", () => {
   assert.equal(result.status, 0, result.stderr);
   const added = result.writes.filter((args) => args[1] === "add").map((args) => args.at(-1));
   assert.ok(added.length > 0, "a stale alias must still be written");
-  assert.ok(!added.includes("latest"), `latest was already current: ${JSON.stringify(result.writes)}`);
-  assert.deepEqual([...new Set(added)].sort(), ["canary", "next"]);
+
+  assert.deepEqual([...new Set(added)].sort(), ["latest"]);
 });
 
 // The publisher stages under "<dist-tag>-staging"; cleanup used to name

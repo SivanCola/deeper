@@ -7,7 +7,7 @@ automatic mode follows the system language. The UI language is independent of
 the language used by the backend or model.
 
 - Classify known errors using stable codes and explicitly labelled HTTP statuses
-  before narrow legacy text matches. Give unknown failures a neutral summary.
+  before bounded text classification. Give unknown failures a neutral summary.
 - In English mode, an unclassified Chinese exception gets an English fallback;
   the Chinese original remains available in details.
 - Render original diagnostics as escaped, selectable text in expandable details.

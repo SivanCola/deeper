@@ -8,7 +8,8 @@ import { discoveredTests, testPlan } from "./ci-test-plan.mjs";
 
 process.chdir(path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."));
 const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts;
-const plan = testPlan(scripts, discoveredTests());
+const groupIndex = process.argv.indexOf("--group");
+const plan = testPlan(scripts, discoveredTests(), groupIndex < 0 ? "all" : process.argv[groupIndex + 1]);
 if (process.argv.includes("--list")) {
   console.log(JSON.stringify(plan, null, 2));
 } else {
@@ -18,6 +19,7 @@ if (process.argv.includes("--list")) {
   const commands = { tsx: require.resolve("tsx/cli"), tsc: require.resolve("typescript/bin/tsc") };
   const logs = mkdtempSync(path.join(tmpdir(), "deepzora-ci-tests-"));
   let failed = false;
+  const keepGoing = process.argv.includes("--keep-going");
   let completed = 0;
   const children = new Set();
   for (const signal of ["SIGTERM", "SIGINT"]) process.on(signal, () => {
@@ -53,9 +55,9 @@ if (process.argv.includes("--list")) {
     const queue = plan.filter(entry => !entry.serial);
     console.log(`CI: ${plan.length} unique commands; concurrency=${concurrency}; performance benchmark runs alone`);
     await Promise.all(Array.from({ length: concurrency }, async () => {
-      while (queue.length && !failed) await run(queue.shift());
+      while (queue.length && (!failed || keepGoing)) await run(queue.shift());
     }));
-    for (const entry of plan.filter(entry => entry.serial)) if (!failed) await run(entry);
+    for (const entry of plan.filter(entry => entry.serial)) if (!failed || keepGoing) await run(entry);
   } finally {
     rmSync(logs, { recursive: true, force: true });
   }

@@ -175,13 +175,6 @@ const appStubTable = ({
       HistorySliceForTab: async (tabID: string, req: HistorySliceRequest) =>
         historySliceFromMessages(tabID, await appStubTable.HistoryForTab(tabID), req),
       HistoryCheckpointTurnsForTab: async () => [],
-      ActivateTopic: async (_scope: string, workspaceRoot: string, topicId: string) => {
-        const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === workspaceRoot && tab.topicId === topicId) ?? tabA;
-        const hold = activationHolds.get(target.id);
-        if (hold) await hold;
-        backendActiveId = target.id;
-        return { ...target, active: true };
-      },
       StartTopicActivation: async (req: TopicActivationRequest) => {
         const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === req.workspaceRoot && tab.topicId === req.topicId) ?? tabA;
         const hold = activationHolds.get(target.id);

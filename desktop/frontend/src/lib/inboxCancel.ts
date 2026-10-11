@@ -12,12 +12,9 @@ export type CancelOutcome = InboxCancelReceipt & {
 };
 
 type InboxCancelBridge = {
-  CancelTab(tabId: string): Promise<void>;
-  CancelSessionForTab?(tabId: string): Promise<{ accepted: boolean; alreadyIdle: boolean; recoveryRequired: boolean }>;
-  CancelTabWithInboxItems(tabId: string, itemIds: string[]): Promise<void>;
-  CancelTabWithInboxItemsResult?(tabId: string, itemIds: string[]): Promise<InboxCancelReceipt>;
-  InterruptTurnForTab?(tabId: string, turnId: string): Promise<void>;
-  InterruptTurnWithInboxItemsForTab?(tabId: string, turnId: string, itemIds: string[]): Promise<InboxCancelReceipt>;
+  CancelSessionForTab(tabId: string): Promise<{ accepted: boolean; alreadyIdle: boolean; recoveryRequired: boolean }>;
+  CancelTabWithInboxItemsResult(tabId: string, itemIds: string[]): Promise<InboxCancelReceipt>;
+  InterruptTurnWithInboxItemsForTab(tabId: string, turnId: string, itemIds: string[]): Promise<InboxCancelReceipt>;
 };
 
 // Stop is a session-level request: a turn-id fence rejection (stale or
@@ -44,34 +41,23 @@ export async function requestInboxCancel(
   itemIds: string[],
   turnId?: string,
 ): Promise<InboxCancelReceipt> {
-  if (itemIds.length === 0 && typeof app.CancelSessionForTab === "function") {
+  if (itemIds.length === 0) {
     await app.CancelSessionForTab(tabId);
     return { discardedItemIds: [] };
   }
-  if (turnId && itemIds.length > 0 && typeof app.InterruptTurnWithInboxItemsForTab === "function") {
+  if (turnId && itemIds.length > 0) {
     const receipt = await app.InterruptTurnWithInboxItemsForTab(tabId, turnId, itemIds);
     return {
       discardedItemIds: Array.isArray(receipt?.discardedItemIds) ? receipt.discardedItemIds.map(String) : [],
       warning: receipt?.warning?.trim() || undefined,
     };
   }
-  if (turnId && itemIds.length === 0 && typeof app.InterruptTurnForTab === "function") {
-    await app.InterruptTurnForTab(tabId, turnId);
-    return { discardedItemIds: [] };
-  }
-  if (itemIds.length > 0 && typeof app.CancelTabWithInboxItemsResult === "function") {
+  if (itemIds.length > 0) {
     const receipt = await app.CancelTabWithInboxItemsResult(tabId, itemIds);
     return {
       discardedItemIds: Array.isArray(receipt?.discardedItemIds) ? receipt.discardedItemIds.map(String) : [],
       warning: receipt?.warning?.trim() || undefined,
     };
   }
-  if (itemIds.length > 0) {
-    // Compatibility fallback: an old backend has no per-item receipt, so
-    // durable messages remain in the queue instead of returning to the draft.
-    await app.CancelTabWithInboxItems(tabId, itemIds);
-  } else {
-    await app.CancelTab(tabId);
-  }
-  return { discardedItemIds: [] };
+  throw new Error("invalid cancellation request");
 }

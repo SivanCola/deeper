@@ -74,7 +74,7 @@ function onlyReadOnlyQueriesAreCoalesced() {
   for (const readOnly of ["GetProjectTreeSnapshot", "ContextPanel", "MetaForTab", "BalanceForTab"]) {
     assert.equal(coalescesQuery(readOnly), true, `${readOnly} should coalesce`);
   }
-  for (const mutating of ["Send", "SetActiveTab", "OpenGlobalTab", "Cancel", "ApproveTool"]) {
+  for (const mutating of ["Send", "SetActiveTab", "StartTopicActivation", "Cancel", "ApproveTool"]) {
     assert.equal(coalescesQuery(mutating), false, `${mutating} must never be coalesced`);
   }
 }

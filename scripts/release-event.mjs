@@ -25,7 +25,7 @@ export function validateReleaseEvent(event, release) {
   invariant(event.schemaVersion === 1, "release event schemaVersion must be 1");
   invariant(event.releaseId === release.version, "release event releaseId does not match reviewed notes");
   invariant(
-    event.channel === (release.channel === "prerelease" ? "preview" : "stable"),
+    event.channel === "stable",
     "release event channel does not match reviewed notes",
   );
   invariant(/^[0-9a-f]{40}$/.test(event.candidateSha), "release event candidateSha must be a full commit SHA");
@@ -56,7 +56,7 @@ async function main() {
     const event = validateReleaseEvent({
       schemaVersion: 1,
       releaseId: release.version,
-      channel: release.channel === "prerelease" ? "preview" : "stable",
+      channel: "stable",
       candidateSha: args.sha,
       publishedAt: args["published-at"] || new Date().toISOString(),
       releaseNotesUrl: `https://github.com/SivanCola/deepzora/releases/tag/v${release.version}/`,

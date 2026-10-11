@@ -42,7 +42,7 @@ func (p *remoteTabStatusPayload) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(wire.State) == 0 {
-		return nil
+		return fmt.Errorf("runtime state is required by the current baseline")
 	}
 	state, err := decodeRemoteRuntimeState(wire.State)
 	if err != nil {

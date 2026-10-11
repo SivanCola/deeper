@@ -102,40 +102,11 @@ HTML 沿用现有媒体 URL 和独立预览源：iframe 为 `sandbox="allow-scri
 
 当前 `present` schema、描述、工具排序、provider 请求序列化、system prompt 和历史格式保持不变。新增的远程宿主方法是可选的客户端能力；旧端缺少能力时只显示已有能力，不把远程路径替换为本机路径。
 
-旧历史继续读取。派生调用、轮次和文件索引不落盘。未知内容由局部兜底 renderer 处理，不修改原始历史。
+历史通过当前存储契约读取。派生调用、轮次和文件索引不落盘。未知内容由局部兜底 renderer 处理，不修改原始历史。
 
-## 2026-09-13 验收结果
-
-| 宿主 | 场景 | 输入 P95 | 切换 P95 | 最大长任务 | 锚点漂移 |
-|---|---:|---:|---:|---:|---:|
-| Chromium 153 | 240 轮 | 34.4 ms | 37.6 ms | 63 ms | 0 px |
-| Chromium 153 | 1,000 轮 | 105.7 ms | 37.6 ms | 243 ms | 0 px |
-| WebKit 26.6 | 240 轮 | 57 ms | 54 ms | 不可测 | 0 px |
-| WebKit 26.6 | 1,000 轮 | 63 ms | 54 ms | 不可测 | 0 px |
-| Electron 44.2 | 240 轮 | 30.1 ms | 24.6 ms | 72 ms | 0 px |
-| Electron 44.2 | 1,000 轮 | 43.2 ms | 24.6 ms | 272 ms | 0 px |
-
-Chromium 强制回收后的 20 次会话切换堆增长为 223,692 字节，低于 20 MiB 门槛。三个宿主的历史 prepend 锚点变化均为 0.09375 px。WebKit 没有 Long Tasks API，因此该列保持“不可测”。
-
-通过的检查包括前端 typecheck、test typecheck、lint、build、bundle 预算、单滚动写入、transcript、stream、composer、workspace、remote、app lifecycle、MCP、性能投影、Chromium/WebKit/Electron 完整聊天回放和 Electron 42 个几何场景；根 Go 包、Desktop Go 模块和相关 race 检查通过。
-
-原始结果和关键截图：
-
-- [Chromium 原始数据](evidence/chat-content-host-2026-09-13/chromium/chromium-results.json)
-- [WebKit 原始数据](evidence/chat-content-host-2026-09-13/webkit/webkit-results.json)
-- [Electron 原始数据](evidence/chat-content-host-2026-09-13/electron/electron-results.json)
-- [Chromium 聊天](evidence/chat-content-host-2026-09-13/chromium/chromium-chat.png)
-- [Chromium 文件卡](evidence/chat-content-host-2026-09-13/chromium/chromium-presented-files.png)
-- [Chromium 折叠过程](evidence/chat-content-host-2026-09-13/chromium/chromium-weather-collapsed.png)
-- [Chromium 展开过程](evidence/chat-content-host-2026-09-13/chromium/chromium-weather-expanded.png)
-- [Electron 聊天布局](evidence/chat-content-host-2026-09-13/electron/electron-chat.png)
-- [完整证据索引](evidence/chat-content-host-2026-09-13/README.md)
-
-## 未验证项
+## 原生验证范围
 
 - 未连接实际远程服务器执行网络端到端回放；远程来源隔离和降级由协议、宿主与 UI 测试覆盖。
 - 未在 Windows 和 Linux 原生桌面运行系统打开、编码器和输入法验证。
 - WebKit 的长任务指标不可测；没有将缺失值记录为零。
 - 本次 Electron 回放使用真实 Electron 宿主和生产组件 fixture，没有启动签名后的发布包，也没有在隔离图形环境运行小时级 macOS 原生输入法浸泡。
-
-这些项目不会由浏览器结果替代，也不阻塞当前 macOS 实现和自动化回归结论。

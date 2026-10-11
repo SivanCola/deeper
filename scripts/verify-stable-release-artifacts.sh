@@ -86,20 +86,6 @@ jq -e '
      all(. as $required | ($names | index($required)) and ($names | index($required + ".minisig")))))
 ' "$tmp_dir/desktop.json" >/dev/null
 
-if [ "${DESKTOP_MANUAL_ONLY:-false}" = "true" ]; then
-	bash "$script_dir/manual-desktop-exception.sh" validate "$desktop_tag"
-	# Neither updater entry point may serve the manual release: the exception
-	# publishes downloads without advancing automatic updates. Assert that
-	# invariant rather than one release's prior version.
-	gh_latest="$(gh api "repos/$repository/releases/latest" --jq .tag_name)"
-	if [ "$gh_latest" = "$desktop_tag" ]; then
-		echo "::error::GitHub latest advanced to the manual release $desktop_tag" >&2
-		exit 1
-	fi
-	bash "$script_dir/fetch-stable-release-manifest.sh" "$version" "$tmp_dir/desktop-pointer.json"
-	jq -e --arg v "v$version" '.version != $v' "$tmp_dir/desktop-pointer.json" >/dev/null
-	gh release view "$desktop_tag" --repo "$repository" --json body --jq .body | grep -F 'manual-download only'
-fi
 
 npm_names=(
 	"@sivancola/deepzora"

@@ -20,7 +20,7 @@ function splitPackageSpec(spec) {
 
 function fixture(
   t,
-  version = "1.5.0-canary.42",
+  version = "1.5.42",
   { forbidCleanup = false, visibilityDelayReads = 0 } = {},
 ) {
   const root = mkdtempSync(join(tmpdir(), "deepzora-npm-publish-test-"));
@@ -129,21 +129,21 @@ test("reuses a fully published npm candidate without republishing", (t) => {
   const fx = fixture(t);
   for (const { name } of fx.packages) {
     fx.addVersion(name);
-    fx.registry.get(name).tags.set("canary", "1.5.0-canary.42");
+    fx.registry.get(name).tags.set("latest", "1.5.42");
   }
 
   assert.deepEqual(fx.publish(), {
-    distTag: "canary",
-    version: "1.5.0-canary.42",
+    distTag: "latest",
+    version: "1.5.42",
   });
   assert.equal(fx.calls.filter(({ args }) => args[0] === "publish").length, 0);
 });
 
-test("fills a partially published package set before advancing canary", (t) => {
+test("fills a partially published package set before advancing latest", (t) => {
   const fx = fixture(t);
   fx.addVersion(fx.packages[0].name);
   for (const { name } of fx.packages) {
-    fx.registry.get(name).tags.set("canary", "1.5.0-canary.41");
+    fx.registry.get(name).tags.set("latest", "1.5.41");
   }
 
   fx.publish();
@@ -153,14 +153,14 @@ test("fills a partially published package set before advancing canary", (t) => {
   assert.equal(publishes[0].cwd, fx.packages[1].dir);
   assert.ok(publishes[0].args.includes("--provenance"), "every publish attaches a provenance attestation");
   for (const { name } of fx.packages) {
-    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.42");
-    assert.equal(fx.registry.get(name).tags.has("canary-staging"), false);
+    assert.equal(fx.registry.get(name).tags.get("latest"), "1.5.42");
+    assert.equal(fx.registry.get(name).tags.has("latest-staging"), false);
   }
 });
 
 test("publishes the exact prepared tarball instead of rebuilding a package directory", (t) => {
   const fx = fixture(t);
-  const tarball = join(fx.packages[0].dir, "deepzora-cli-linux-x64-1.5.0-canary.42.tgz");
+  const tarball = join(fx.packages[0].dir, "deepzora-cli-linux-x64-1.5.42.tgz");
   writeFileSync(tarball, "sealed tarball bytes");
   fx.packages[0].tarball = tarball;
 
@@ -172,7 +172,7 @@ test("publishes the exact prepared tarball instead of rebuilding a package direc
 });
 
 test("waits through multi-minute npm registry visibility lag", (t) => {
-  const fx = fixture(t, "1.5.0-canary.42", { visibilityDelayReads: 45 });
+  const fx = fixture(t, "1.5.42", { visibilityDelayReads: 45 });
 
   assert.doesNotThrow(() => fx.publish({ attempts: null }));
   const firstSleep = fx.calls.findIndex(({ args }) => args[0] === "sleep");
@@ -180,20 +180,20 @@ test("waits through multi-minute npm registry visibility lag", (t) => {
   // One shared visibility window, not one sequential wait per package.
   assert.equal(fx.calls.filter(({ args }) => args[0] === "sleep").length, 45);
   for (const { name } of fx.packages) {
-    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.42");
+    assert.equal(fx.registry.get(name).tags.get("latest"), "1.5.42");
   }
 });
 
 test("a visibility timeout uploads the full set but preserves aliases and staging for recovery", (t) => {
-  const fx = fixture(t, "1.5.0-canary.42", { visibilityDelayReads: 5 });
-  for (const { name } of fx.packages) fx.registry.get(name).tags.set("canary", "1.5.0-canary.41");
+  const fx = fixture(t, "1.5.42", { visibilityDelayReads: 5 });
+  for (const { name } of fx.packages) fx.registry.get(name).tags.set("latest", "1.5.41");
 
   assert.throws(() => fx.publish(), /did not become visible/);
   assert.equal(fx.calls.filter(({ args }) => args[0] === "publish").length, fx.packages.length);
   assert.equal(fx.calls.some(({ args }) => args[0] === "dist-tag"), false);
   for (const { name } of fx.packages) {
-    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.41");
-    assert.equal(fx.registry.get(name).tags.get("canary-staging"), "1.5.0-canary.42");
+    assert.equal(fx.registry.get(name).tags.get("latest"), "1.5.41");
+    assert.equal(fx.registry.get(name).tags.get("latest-staging"), "1.5.42");
   }
   const uploaded = fx.calls.filter(({ args }) => args[0] === "publish").length;
   // Once npm exposes the uploaded versions, recovery reuses them.
@@ -201,14 +201,14 @@ test("a visibility timeout uploads the full set but preserves aliases and stagin
   assert.doesNotThrow(() => fx.publish());
   assert.equal(fx.calls.filter(({ args }) => args[0] === "publish").length, uploaded);
   for (const { name } of fx.packages) {
-    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.42");
-    assert.equal(fx.registry.get(name).tags.has("canary-staging"), false);
+    assert.equal(fx.registry.get(name).tags.get("latest"), "1.5.42");
+    assert.equal(fx.registry.get(name).tags.has("latest-staging"), false);
   }
 });
 
 test("rejects an immutable package owned by another candidate", (t) => {
   const fx = fixture(t);
-  fx.addVersion(fx.packages[0].name, "1.5.0-canary.42", "b".repeat(40));
+  fx.addVersion(fx.packages[0].name, "1.5.42", "b".repeat(40));
 
   assert.throws(
     () => fx.publish(),
@@ -217,12 +217,12 @@ test("rejects an immutable package owned by another candidate", (t) => {
   assert.equal(fx.calls.filter(({ args }) => args[0] === "publish").length, 0);
 });
 
-test("stale recovery publishes missing packages without rolling canary back", (t) => {
+test("stale recovery publishes missing packages without rolling latest back", (t) => {
   const fx = fixture(t);
   fx.addVersion(fx.packages[0].name);
   for (const { name } of fx.packages) {
-    fx.addVersion(name, "1.5.0-canary.43");
-    fx.registry.get(name).tags.set("canary", "1.5.0-canary.43");
+    fx.addVersion(name, "1.5.43");
+    fx.registry.get(name).tags.set("latest", "1.5.43");
   }
 
   fx.publish();
@@ -230,17 +230,17 @@ test("stale recovery publishes missing packages without rolling canary back", (t
   assert.ok(
     fx.registry
       .get(fx.packages[1].name)
-      .versions.has("1.5.0-canary.42"),
+      .versions.has("1.5.42"),
   );
   for (const { name } of fx.packages) {
-    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.43");
+    assert.equal(fx.registry.get(name).tags.get("latest"), "1.5.43");
   }
   assert.equal(
     fx.calls.some(
       ({ args }) =>
         args[0] === "dist-tag" &&
         args[1] === "add" &&
-        args[3] === "canary",
+        args[3] === "latest",
     ),
     false,
   );
@@ -249,26 +249,26 @@ test("stale recovery publishes missing packages without rolling canary back", (t
 test("rejects packages without current candidate provenance", (t) => {
   const fx = fixture(t);
   for (const { name } of fx.packages) {
-    fx.registry.get(name).versions.set("1.5.0-canary.42", {
+    fx.registry.get(name).versions.set("1.5.42", {
       name,
-      version: "1.5.0-canary.42",
+      version: "1.5.42",
       gitHead: candidateSha,
     });
-    fx.registry.get(name).tags.set("canary", "1.5.0-canary.42");
+    fx.registry.get(name).tags.set("latest", "1.5.42");
   }
 
   assert.throws(() => fx.publish(), /belongs to candidate/);
 });
 
 test("does not fail a completed publish when npm forbids staging cleanup", (t) => {
-  const fx = fixture(t, "1.5.0-canary.42", { forbidCleanup: true });
+  const fx = fixture(t, "1.5.42", { forbidCleanup: true });
 
   assert.doesNotThrow(() => fx.publish());
   for (const { name } of fx.packages) {
-    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.42");
+    assert.equal(fx.registry.get(name).tags.get("latest"), "1.5.42");
     assert.equal(
-      fx.registry.get(name).tags.get("canary-staging"),
-      "1.5.0-canary.42",
+      fx.registry.get(name).tags.get("latest-staging"),
+      "1.5.42",
     );
   }
 });
@@ -276,9 +276,9 @@ test("does not fail a completed publish when npm forbids staging cleanup", (t) =
 test("compares channel versions without integer truncation", () => {
   assert.equal(
     compareDistTagVersions(
-      "canary",
-      "1.5.0-canary.100000000000000000000",
-      "1.5.0-canary.99999999999999999999",
+      "latest",
+      "1.5.100000000000000000000",
+      "1.5.99999999999999999999",
     ),
     1,
   );
@@ -287,7 +287,7 @@ test("compares channel versions without integer truncation", () => {
     -1,
   );
   assert.equal(
-    compareDistTagVersions("next", "1.5.0-rc.10", "1.5.0-rc.2"),
+    compareDistTagVersions("latest", "1.5.10", "1.5.2"),
     1,
   );
 });

@@ -19,11 +19,10 @@ export const defaultCatalogPath = resolve(repoRoot, "release-notes/releases.json
 const localizedFields = ["title", "body"];
 const changeKinds = ["new", "improved", "fixed"];
 const itemKinds = new Set(["new", "improved", "fixed", "security"]);
-const releaseChannels = new Set(["stable", "prerelease"]);
+const releaseChannels = new Set(["stable"]);
 const releaseStatuses = new Set(["reviewed", "published"]);
 const releaseTargetOrder = ["desktop", "cli", "site", "service"];
 const releaseTargets = new Set(releaseTargetOrder);
-const releaseTargetingRequiredFrom = "1.31.4";
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -148,7 +147,7 @@ export function validateCatalog(catalog) {
       }
     }
     if (release.status !== undefined) {
-      for (const field of ["releaseId", "baseVersion", "previousRelease", "builds"]) {
+      for (const field of ["releaseId", "baseVersion", "builds"]) {
         invariant(release[field] !== undefined, `${path}.${field} is required for managed release records`);
       }
       if (release.channel === "stable") {
@@ -156,27 +155,12 @@ export function validateCatalog(catalog) {
         invariant(release.builds.cli === `v${release.version}`, `${path}.builds.cli does not match Stable version`);
         invariant(release.builds.desktop === `v${release.version}`, `${path}.builds.desktop does not match Stable version`);
         invariant(release.builds.npm === release.version, `${path}.builds.npm does not match Stable version`);
-      } else {
-        const preview = release.version.match(/^(\d+\.\d+\.\d+)-preview\.([1-9][0-9]*)$/);
-        invariant(preview, `${path}.managed prerelease must use MAJOR.MINOR.PATCH-preview.N`);
-        invariant(preview[1] === release.baseVersion, `${path}.Preview baseVersion does not match version`);
-        invariant(release.builds.cli === `v${release.version}`, `${path}.builds.cli does not match Preview version`);
-        invariant(release.builds.desktop === `v${release.version}`, `${path}.builds.desktop does not match Preview version`);
-        invariant(
-          release.builds.npm === `${release.baseVersion}-canary.${preview[2]}`,
-          `${path}.builds.npm does not match Preview ordinal`,
-        );
+      }
+      if (index < catalog.releases.length - 1) {
+        invariant(release.previousRelease !== undefined, `${path}.previousRelease is required after the first release`);
       }
     }
-    const targetingRequiredByVersion = isCoreVersionAtLeast(release.version, releaseTargetingRequiredFrom);
-    if (targetingRequiredByVersion) {
-      invariant(
-        release.targetingVersion === 1,
-        `${path}.targetingVersion must be 1 for v${releaseTargetingRequiredFrom} and newer`,
-      );
-    } else if (release.targetingVersion !== undefined) {
-      invariant(release.targetingVersion === 1, `${path}.targetingVersion is invalid`);
-    }
+    invariant(release.targetingVersion === 1, `${path}.targetingVersion must be 1`);
     const targetsRequired = release.targetingVersion === 1;
     validateLocalized(release.title, `${path}.title`);
     validateLocalized(release.summary, `${path}.summary`);
@@ -340,7 +324,7 @@ export function releaseRepository(release) {
 export function renderGitHubRelease(release, lang = "zh", credits = new Map()) {
   const isZh = lang === "zh";
   const repository = releaseRepository(release);
-  const product = repository === "esengine/DeepSeek-Reasonix" ? "Reasonix" : "Deepzora";
+  const product = "Deepzora";
   const notesURL = release.links.github;
   const isPreview = release.channel === "prerelease";
   const channelLabel = isPreview ? (isZh ? "预览版" : "Preview") : (isZh ? "稳定版" : "Stable");

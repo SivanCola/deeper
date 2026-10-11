@@ -57,22 +57,6 @@ func (a *App) ModelsForTab(tabID string) []ModelInfo {
 	return a.desktopModelCatalog(curModel, workspaceRoot, ctrl)
 }
 
-func (a *App) ModelsForDraft(draftID string) []ModelInfo {
-	record, op, err := a.draftStore().State(a.bootContext(), draftID)
-	if err != nil {
-		return []ModelInfo{}
-	}
-	view, err := a.draftViewForOperation(record, op)
-	if err != nil {
-		return []ModelInfo{}
-	}
-	root := record.WorkspaceRoot
-	if record.Scope != "project" {
-		root = globalWorkspaceRoot()
-	}
-	return a.desktopModelCatalog(view.Settings.Model, root, nil)
-}
-
 func (a *App) remoteProxyModelCatalog(curModel string) []ModelInfo {
 	cfg, err := config.Load()
 	if err != nil {

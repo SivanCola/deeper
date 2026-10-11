@@ -367,7 +367,7 @@ desktopStub.replaceCommands({
   },
   HistoryCheckpointTurnsForTab: async () => [],
   ReplayPendingPrompts: async () => {},
-  EnsureBlankTab: async () => ({ ...reusedTab, sessionPath: "/sessions/new.jsonl", active: true }),
+  EnsureBlankSurface: async () => ({ ...reusedTab, sessionPath: "/sessions/new.jsonl", active: true }),
 } as Partial<AppBindings> as AppBindings);
 
 controller = undefined;
@@ -379,7 +379,7 @@ await act(async () => {
 await waitFor("reused tab startup history", () => reusedHistoryCalls.length === 1);
 
 await act(async () => {
-  await controller?.ensureBlankTab("project", "/repo");
+  await controller?.ensureBlankSurface("project", "/repo");
   await flushPromises();
 });
 eq(reusedHistoryCalls.length, 2, "reusing a blank tab forces a fresh history request");
@@ -396,7 +396,7 @@ await act(async () => {
   reuseRoot.unmount();
 });
 
-// A tab-bar click can overtake EnsureBlankTab while its backend call is still
+// A tab-bar click can overtake EnsureBlankSurface while its backend call is still
 // in flight. Its intent must invalidate the older completion immediately, and
 // the stale backend activation must be repaired after it eventually returns.
 const queuedBlank = deferred<TabMeta>();
@@ -425,7 +425,7 @@ desktopStub.replaceCommands({
   },
   HistoryCheckpointTurnsForTab: async () => [],
   ReplayPendingPrompts: async () => {},
-  EnsureBlankTab: async () => {
+  EnsureBlankSurface: async () => {
     const tab = await queuedBlank.promise;
     raceBackendActiveId = tab.id;
     return tab;
@@ -446,7 +446,7 @@ await waitFor("queued blank race startup", () => controller?.activeTabId === rac
 
 let pendingBlank: Promise<TabMeta> | undefined;
 await act(async () => {
-  pendingBlank = controller?.ensureBlankTab("project", "/repo");
+  pendingBlank = controller?.ensureBlankSurface("project", "/repo");
   await flushPromises();
 });
 const tabClickIntent = controller?.noteNavigationIntent();

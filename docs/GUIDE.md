@@ -37,16 +37,14 @@ Provider model capability metadata is documented in
 ## Configuration
 
 Resolution order: **flag > `./deepzora.toml` > the user config file >
-built-in defaults**. Starting with **Deepzora v1.8.1**, the user config lives at
+built-in defaults**. The user config lives at
 `~/.deepzora/config.toml` on macOS/Linux and
 `%AppData%\deepzora\config.toml` on Windows; see
-[Configuration paths](./CONFIG_PATHS.md) for migration and related data paths.
+[Configuration paths](./CONFIG_PATHS.md) for related data paths.
 Fields marked user/global only are not overridden by `./deepzora.toml`.
 Provider entries name secrets with `api_key_env`, while the secret values live in
 Deepzora's global `<Deepzora home>/.env`, shared by CLI and desktop. Project
-`.env`, home `.env`, inherited shell environment variables, legacy credentials,
-and the OS keyring are not provider-key runtime fallbacks; legacy credentials are
-only migration sources. Project `.env` still feeds workspace-scoped,
+`.env`, home `.env`, inherited shell environment variables, and the OS keyring are not provider-key runtime sources. Project `.env` still feeds workspace-scoped,
 non-provider `${VAR}` expansion for MCP/plugin settings without importing
 provider keys or Deepzora control variables. See
 [Configuration paths](./CONFIG_PATHS.md) for the full `config.toml` and `.env`
@@ -60,13 +58,11 @@ default_model = "deepseek-flash"   # executor; set [agent].planner_model to add 
 # language    = "zh"               # ui language; empty = auto-detect from $LANG / $DEEPZORA_LANG
 
 [ui]
-# shortcut_layout = "desktop"      # classic|desktop; compatibility setting
 # cursor_shape = "bar"             # block|underline|bar; CLI/TUI text cursor
 show_turn_usage = false             # hide per-request token/cost receipts in the TUI; default true
 
 [agent]
 reasoning_language = "auto"      # visible reasoning text: auto|zh|en
-# plan_mode_read_only_commands = ["gh issue view"]   # legacy compatibility only; Plan bash now uses Permissions
 # planner_model = "deepseek-pro"      # optional low-frequency planner
 # subagent_model = "deepseek-pro"     # optional default for runAs=subagent skills
 # subagent_models = { review = "deepseek-pro", security_review = "deepseek-pro" }
@@ -137,9 +133,7 @@ list. The dedicated two-model Planner may use every non-destructive MCP tool,
 even when the server omits `readOnlyHint`; strict read-only sub-agents still
 require `readOnlyHint: true` and no `destructiveHint`.
 
-`[agent].plan_mode_read_only_commands` is also retained for config round trips,
-but the main Plan workflow no longer has a separate bash allowlist or trust
-prompt. Bash classification and approval use the same Permissions rules in Plan
+The main Plan workflow uses the shared bash classification and approval rules. Bash classification and approval use the same Permissions rules in Plan
 and Standard mode; the Sandbox remains the filesystem, process, and network
 boundary. Dedicated planner and read-only subagent runners keep their own strict
 read-only tool registry and foreground-command classifier.
@@ -246,7 +240,7 @@ the terminal; stop it with Ctrl-C.
 
 An explicit `deepzora web --auth none` disables the default token and should be
 used only when the listener is intentionally trusted. `deepzora serve` keeps its
-backward-compatible, config-driven `auth_mode = "none"` default on
+config-driven `auth_mode = "none"` default on
 `127.0.0.1:8787`.
 
 Without authentication (`auth_mode = "none"`, the `serve` default) reads stay
@@ -347,67 +341,7 @@ the OpenAI-compatible chat API or Anthropic-compatible Messages API.
 For common providers, choose **Add model service -> Recommended preset** instead.
 New official DeepSeek entries use Chat Completions by default and enable
 independent `web_search`; the same `DEEPSEEK_API_KEY` works across supported
-protocols. On startup, Deepzora upgrades unmodified legacy
-`deepseek-flash` / `deepseek-pro` entries that still use the official endpoint
-and standard key/model settings. Customized official Chat Completions entries
-keep their protocol choice and show an **Upgrade protocol** action in Settings.
-Proxy endpoints, custom headers, and capability overrides do not trigger a
-protocol migration. Separately, the version 11 catalog upgrade appends
-`deepseek-flash` once to existing official model lists, including customized
-lists. It preserves the selected/default model and later user deletion. Existing
-separately named `deepseek-anthropic` entries remain compatible, but that
-redundant preset is no longer offered for new access. Deepzora can prefill editable custom-provider entries for Kimi CN,
-Kimi Global,
-Kimi Coding Plan, MiMo API, MiMo Anthropic, MiMo Token Plan CN/SGP/AMS and their
-Anthropic-compatible variants, MiniMax CN/Global API, MiniMax CN/Global
-Anthropic, GLM CN, Z.AI Global, GLM/Z.AI Coding Plan OpenAI-compatible and
-Anthropic-compatible endpoints, OpenCode Go, OpenCode Go Anthropic, OpenCode Go
-DeepSeek Anthropic, OpenCode Go DeepSeek Responses, OpenCode Zen
-Anthropic, Qwen/DashScope CN/Global, Qwen Coding Plan CN/Global
-OpenAI-compatible and Anthropic-compatible endpoints, StepFun OpenAI-compatible
-and Anthropic-compatible endpoints, NovitaAI, GMI Cloud, Vercel AI Gateway,
-HuggingFace Router, ModelScope, NVIDIA NIM, KiloCode, and Ollama Cloud. Plan names describe
-the access/payment route; they include CN/Global only when the provider exposes
-distinct regional endpoints. Kimi Coding Plan is therefore a dedicated plan
-endpoint, while Kimi direct API is split into CN and Global. The preset path
-usually needs only the provider API key: the key value is stored in Deepzora home
-`.env`, while `config.toml` stores the endpoint, model list, key
-environment-variable name, context window, model capability metadata, proxy bypass
-for China-only endpoints, MiniMax `reasoning_split`, GLM/MiniMax thinking
-heuristics, Anthropic-compatible Bearer auth where needed, Ollama Cloud
-max-effort support, and OpenCode Go per-model reasoning overrides. New official DeepSeek Anthropic, Responses, and Chat Completions catalogs offer
-`deepseek-flash` and `deepseek-v4-pro`. The retired `deepseek-v4-flash` and
-`deepseek-v4-flash-vision-exp` IDs remain valid for saved references. Settings derives image support from
-model capability metadata. Each model also has an Image input Auto / On / Off
-selector. For an ID-only relay list, unknown means unrecognized, not confirmed
-text-only: select On after confirming support with the relay, then save. See the
-[image input guide](MODEL_CAPABILITIES.md#set-image-input-for-a-relay-model).
-Composer
-and `@` user images are sent as official visual input using the three documented
-shapes: inline base64 `data:` URLs for local files, `http(s)` image URLs as-is,
-and Files API `file-api-` ids (local images over 32 MiB on official DeepSeek are
-uploaded automatically). Chat Completions uses `image_url` or `file`, Anthropic
-uses `image`+`source.base64|url|file`, and Responses uses `input_image`.
-Flash and its retired aliases accept images; V4 Pro remains text-only. The dedicated
-OpenCode Go DeepSeek Anthropic and DeepSeek Responses presets expose the verified
-Flash routes and enable provider-side `web_search` by default; the Responses
-variant uses stateless context replay. The existing mixed OpenCode Go Anthropic
-preset remains scoped to Qwen and MiniMax so server tools are not sent to
-unverified models. DeepSeek Pro remains on the Chat Completions preset because
-live Anthropic and Responses requests currently fail in the OpenCode Go upstream
-conversion. The OpenCode Go preset includes its native `kimi-k3` subscription
-route with image input,
-`high`/`max` reasoning effort, and a 1,048,576-token context window. Existing untouched
-OpenCode Go preset installs are upgraded automatically; edited model catalogs
-are preserved. The Kimi CN and Kimi Global direct-API presets also include
-`kimi-k3` with image input, a 1,048,576-token context window, and the official
-`low`/`high`/`max` effort scale (default `max`). For the official K3 endpoints,
-Deepzora preserves complete assistant messages across turns, sends output limits
-as `max_completion_tokens`, and omits K3's fixed sampling parameters. Untouched
-legacy Kimi direct-API catalogs are upgraded automatically without changing the
-default model; custom catalogs and endpoints are preserved. After adding a
-preset, open its provider card if you need to change models, headers, endpoint,
-or compatibility settings.
+protocols. Custom endpoints, headers, and model settings remain explicit user choices.
 
 Fill **API address** with the provider endpoint that should receive the standard
 chat path. In this mode Deepzora previews and sends chat requests to:
@@ -558,9 +492,6 @@ directly. YOLO is the visible label for the canonical `danger-full-access`
 permission preset. Desktop paste stays on the platform paste key; in the CLI,
 terminal-native text paste and application-owned image paste use separate shortcuts.
 
-`[ui].shortcut_layout` is still accepted for old configs, but the shortcut
-behavior below is unified across layouts.
-
 For CLI/TUI text input, `[ui].cursor_shape` accepts `underline`, `block`, or
 `bar`. The default is `bar`: it remains easy to locate without covering
 double-width CJK characters in mixed-language input. Set it to `block` for a
@@ -680,7 +611,6 @@ Mode and display shortcuts:
 | `Ctrl+O` | Toggles verbose reasoning display | Also available through `/verbose`. |
 | `Ctrl+B` | Expands or collapses long shell output | Long shell-output hint lines can also be clicked in the transcript; text selection is handled in-app while the full-screen TUI has mouse reporting enabled. |
 | `/goal <objective>`, `/goal status`, `/goal pause`, `/goal resume`, `/goal clear` | Starts, checks, pauses, resumes, or clears Goal | A Goal is unbounded unless `[agent].goal_token_budget` is set. |
-| `/migrate`, `/migrate --from <legacy-dir>` | Retries legacy migration or imports sessions from a chosen v0.x source | Use `--from` for custom Windows v0.52 install/data directories; it imports sessions only. See [Configuration paths](./CONFIG_PATHS.md). |
 
 Picker and approval shortcuts:
 
@@ -1187,11 +1117,7 @@ memory scopes and instruction bodies, but nothing is saved until the user
 accepts it. Remote workspaces never fall back to local desktop memory or
 sessions.
 
-Legacy facts are upgraded in place with deterministic IDs and revision 1;
-missing scope is inferred from the containing directory. Migration is
-idempotent, old clients retain safe routing, and legacy Memory v5 transcripts
-remain readable. For the complete behavior and privacy/cache contract, see
-[`Context Engine v2`](SESSION_MEMORY_RETRIEVAL.md).
+For the current memory behavior and cache/privacy contract, see [Context Engine](SESSION_MEMORY_RETRIEVAL.md).
 
 ```markdown
 ---
@@ -1206,12 +1132,12 @@ MCP prompts also appear here as `/mcp__<server>__<prompt>`.
 
 ## Embedded documentation retrieval
 
-Deepzora bundles the Markdown files from `docs/` and the reviewed
+Deepzora bundles an explicit selection of current product Markdown documents from `docs/` and the reviewed
 `release-notes/releases.json` catalog into each CLI and Desktop build. The
 read-only `docs` tool searches that exact offline corpus with local BM25
 retrieval and can read a complete matching section with source provenance. It
 renders every release in both languages under paths such as
-`changelog/v1.19.5.md` and `changelog/v1.19.5.zh-CN.md`, so questions about a
+`changelog/v1.0.0.md` and `changelog/v1.0.0.zh-CN.md`, so questions about a
 specific version, upgrades, fixes, or known risks work offline. The agent should
 use the tool before web search or assumptions when a question concerns Deepzora
 configuration, CLI/Desktop behavior, release history, permissions, MCP, memory,
@@ -1287,13 +1213,7 @@ for autonomous work. It keeps going with sensible defaults unless the next step
 requires an irreversible or externally visible operation, a scope change, or
 information only the user can provide.
 
-Legacy simple/write/research classes and Goal sidecars are read only at the
-explicit compatibility/import boundary. There is no separate research runtime
-to configure. Current Goal state is a versioned `goal/state` projection in the
-linear v3 session, and activation is process-local. Legacy
-`.deepzora/autoresearch/<task-id>/` archives remain read-only. Deprecated
-budget flags are accepted for compatibility but hidden from help and
-completion.
+Current Goal state is a versioned `goal/state` projection in the current session. Activation is process-local. Historical Goal sidecars and retired budget aliases are unsupported.
 
 ### Model task progress
 
@@ -1542,9 +1462,7 @@ For interactive frontends, Plan Mode is always an explicit user choice. Select
 Plan in the desktop collaboration-mode control or cycle to Plan with
 `Shift+Tab` in the CLI. Deepzora first drafts a plan, then waits for approval
 before the workflow switches to implementation. Tool calls made while drafting
-still use the current Permissions and Sandbox. Legacy `agent.auto_plan` and
-`agent.auto_plan_classifier` values are ignored and removed from the user config
-during upgrade. The visible reasoning language can be changed with
+still use the current Permissions and Sandbox. The visible reasoning language can be changed with
 `/reasoning-language auto|zh|en` in the
 session, or `deepzora config reasoning-language auto|zh|en` in a shell/script.
 Pass `--local`

@@ -1,283 +1,30 @@
 # 配置路径
 
-从 **Deepzora v1.8.1** 开始，Deepzora 使用一个用户可见的全局目录存放配置和用户状态。CLI 与桌面端共用这个目录。
+CLI 与桌面端共用 Deepzora home：macOS/Linux 为 `~/.deepzora`，Windows 为 `%APPDATA%\deepzora`。便携安装、测试和隔离开发可通过 `DEEPZORA_HOME` 指定目录。
 
-## Deepzora Home
+配置优先级为命令行参数、项目 `deepzora.toml`、全局 `config.toml`、内置默认值。Provider 密钥只保存在 `<home>/.env`，通过 `api_key_env` 引用。项目 `.env` 可以为 MCP/plugin 展开工作区变量，但不提供 Provider 密钥。没有旧凭据导入、系统 keyring 兜底或自动数据迁移。
 
-| 平台 | Deepzora home |
+`DEEPZORA_STATE_HOME` 可单独调整状态根目录，不改变配置和凭据的位置；`DEEPZORA_CACHE_HOME` 调整缓存目录。只设置 `DEEPZORA_HOME` 时，缓存放在 `<home>/cache`，否则使用系统用户缓存目录。工作区写入锁和修复锁始终使用共享的系统用户缓存，防止不同隔离配置同时取得同一工作区的写入权。
+
+| 数据 | 当前路径 |
 | --- | --- |
-| macOS | `~/.deepzora` |
-| Linux | `~/.deepzora` |
-| Windows | `%APPDATA%\deepzora` |
+| 全局配置 | `<home>/config.toml` |
+| Provider 密钥 | `<home>/.env` |
+| 凭据事务 | `<home>/transactions/model-credentials/` |
+| 模型设置回执 | `<home>/transactions/model-settings-receipts/` |
+| 命令、技能、hooks | `<home>/commands/`、`<home>/skills/`、`<home>/settings.json` |
+| 远程 SSH 主机密钥 | `<home>/remote/known_hosts` |
+| CLI 会话记录 | `<state>/sessions/`、`<state>/sessions-v4/` |
+| 桌面会话记录 | `<state>/desktop-sessions-v5/by-id/` |
+| 工作区登记 | `<state>/desktop/workspace-state-v1.json` |
+| 会话未发送输入 | `<state>/desktop/session-ui-v1.sqlite` |
+| 主题元数据 | `<state>/desktop/topic-state-v1.sqlite` 或对应项目状态目录 |
+| 归档与记忆 | `<state>/archive/`、`<state>/memory/`、`<state>/projects/` |
+| 用量统计 | `<state>/stats/` |
+| 可重建索引 | `<cache>/session-catalog/v6.sqlite`、`history-search/v1.sqlite`、`usage-catalog/v1.sqlite`、`task-catalog/v1.sqlite` |
 
-可以设置 `DEEPZORA_HOME` 覆盖 Deepzora home，主要用于测试、CI 或便携安装。普通用户通常不需要设置。
+桌面记录通过 SessionID 定位。工作区归属保存在登记表中，调整归属不会搬动 transcript。未发送输入和图片暂存与已提交 transcript 分开保存。
 
-设置 `DEEPZORA_HOME` 后，运行时会变成完整自包含模式：配置、状态、缓存和数据都会位于该目录树下。
-Legacy 迁移、OS home 约定目录扫描以及其他 fallback 路径都会跳过，避免从系统级正式安装带入或写回数据。
+凭据通过模型设置事务写入，不得进入项目文件、日志或发布产物。索引可以重建，会话、工作区归属、输入、密钥和事务回执属于持久数据。
 
-高级测试或便携安装可以设置 `DEEPZORA_STATE_HOME` 来移动 sessions、archive、memory 等运行状态。
-它不会移动全局配置或 provider 凭据；这些仍然位于 `DEEPZORA_HOME` 下。如果旧版本曾把 provider key
-写到 `DEEPZORA_STATE_HOME/.env`，Deepzora 会在 `<Deepzora home>/.env` 缺少对应 key 时非破坏性导入。
-
-## 目录内容
-
-| 数据 | 路径 |
-| --- | --- |
-| 全局配置 | `<Deepzora home>/config.toml` |
-| 全局 provider 凭据 | `<Deepzora home>/.env` |
-| 进行中的模型凭据提交 | `<Deepzora home>/transactions/model-credentials/` |
-| 已完成的模型设置回执 | `<Deepzora home>/transactions/model-settings-receipts/` |
-| 旧 credentials 导入来源 | `<Deepzora home>/credentials` |
-| 全局斜杠命令 | `<Deepzora home>/commands/` |
-| 全局 skills | `<Deepzora home>/skills/` |
-| 全局 hooks | `<Deepzora home>/settings.json` |
-| 远程 SSH 托管 known_hosts | `<Deepzora home>/remote/known_hosts` |
-| 会话 | `<state root>/sessions/` |
-| 归档 | `<state root>/archive/` |
-| 记忆 | `<state root>/memory/` 与 `<state root>/projects/` |
-| 全局 Desktop Topic 元数据 | `<state root>/desktop/topic-state-v1.sqlite` |
-| 项目 Desktop Topic 元数据 | `<state root>/projects/<workspace slug>/desktop/topic-state-v1.sqlite` |
-| 可丢弃的会话 Catalog | `<cache root>/session-catalog/v6.sqlite` |
-| 可丢弃的 Task Catalog | `<cache root>/task-catalog/v1.sqlite` |
-
-`<state root>` 默认等于 `<Deepzora home>`；只有设置 `DEEPZORA_STATE_HOME`
-时才会不同。
-
-Desktop 在将新项目写入 `desktop-projects.json` 时检测项目目录名冲突。只有另一个已登记
-项目仍实际指向同一个旧目录时，才给新项目分配目录。已有项目和从旧工作区记录导入的
-项目都继续使用原来的 `<state root>/projects/<workspace slug>/` 目录；原项目在冲突
-项目分配到别处后移除并重新加入，也仍使用该旧目录。只有满足上述冲突条件的新项目使用
-`<state root>/projects/@<项目绝对路径的 SHA-256>/`；其中的
-`.workspace-root` 文件记录目录归属。会话、Topic 和项目记忆路径都遵循该归属记录。
-读取项目列表不会创建或修改归属记录，也不会移动已有文件。如果两个项目在此修复之前就
-已经以同一个 slug 登记，其历史共享文件仍保留在原目录，因为旧目录无法证明每个文件的
-所属项目。
-Studio 目前只解析 `<state root>/projects/<workspace slug>/`，不会读取 `.workspace-root`；
-因此新分配目录的项目状态暂时不会与 Studio 共享，直到 Studio 支持此归属记录。
-
-Desktop Topic 的标题、标题来源、创建时间和自动标题状态以这些 SQLite 文件为权威存储。
-首次访问时，Desktop 会导入项目 `.deepzora/` 目录（或全局 Deepzora 目录）中的旧
-`desktop-topic-*.json`。检测到旧文件的 scope 会继续镜像旧格式以支持降级；全新 scope
-不会创建这些 JSON。旧文件不会被删除，项目本地 settings、skills、commands、attachments
-以及 `deepzora.toml` 均不受影响。
-
-会话 Catalog 是可重建的查询投影，不是用户数据；JSONL、event log、
-metadata sidecar 和 `desktop-projects.json` 仍是权威数据。详见
-[Session Catalog and Desktop Startup](./SESSION_CATALOG.zh-CN.md)。Task snapshot 和
-event log 也仍是权威数据；可重建的跨项目投影见
-[Task Catalog](./TASK_CATALOG.zh-CN.md)。
-
-全局用户配置文件名是 `config.toml`。项目本地配置文件仍叫 `deepzora.toml`。
-如果有人说“全局 deepzora.toml”，通常指的是 `<Deepzora home>/config.toml`。
-
-## 全局 `config.toml`
-
-`<Deepzora home>/config.toml` 存放 CLI 与桌面端共用的非密钥配置。它可以包含
-Deepzora 写入用户配置的 provider、plugin、UI、desktop、tool、skill、sandbox、
-bot 和 agent 设置。Provider 条目只保存 `api_key_env` 里的凭据变量名，不保存真实密钥值。
-
-已保存的 provider 与 bot 凭据变量不会进入任何由模型控制的子进程环境。在 macOS
-和 Linux 上，Deepzora 的文件读取工具、受沙盒保护的 shell 命令和 MCP server 也
-无法读取全局凭据 `.env`；项目自身的普通 `.env` 可见性保持不变。Windows 没有 OS 级
-Shell 沙箱：Shell 命令和本地工具都以当前系统用户运行，可以主动读取该用户可读的文件，
-包括凭据存储；因此受限权限在 Windows 上应视为工具层写入边界，而不是凭据保险库。
-
-如果已退役的 Windows 沙箱（v1.38.8 至 v1.38.10）遗留的拒绝项锁住了凭据存储，
-Deepzora 会在该沙箱运行留下的标记能证明拒绝项来自 Deepzora 时自动移除它。即使没有
-这份证明，保存密钥也能成功：保存会在不读取现有 ACL 的情况下把文件 ACL 重置为当前
-用户；如果连这一步也被拒绝，则把被锁的文件改名为 `.env.locked-<时间戳>` 放在旁边，
-并写入新的凭据存储，因此重新填写密钥总能成功。普通读取绝不会改写 ACL，只会连同修复
-结果一起报告原始的访问错误。
-
-示例：
-
-```toml
-config_version = 11
-default_model = "deepseek/deepseek-flash"
-language = "zh"
-credentials_store = "auto"   # 旧兼容字段；provider key 保存在 .env
-
-[ui]
-theme = "auto"
-cursor_shape = "bar"         # CLI/TUI 输入光标：underline|block|bar
-show_turn_usage = false       # 隐藏 TUI 每轮 token/费用回执；默认 true
-
-[desktop]
-provider_access = ["deepseek"]
-
-[[providers]]
-name        = "deepseek"
-kind        = "openai"
-base_url    = "https://api.deepseek.com"
-models      = ["deepseek-flash", "deepseek-v4-pro"]
-default     = "deepseek-flash"
-api_key_env = "DEEPSEEK_API_KEY"
-web_search  = true
-
-[[plugins]]
-name    = "example"
-command = "example-mcp-server"
-```
-
-不要把 API key 的真实值写进 `config.toml`。这个文件是普通配置：可以查看、编辑、
-迁移，也可以在常规脱敏后用于诊断。密钥值属于下面的全局 `.env`。
-
-`[ui].cursor_shape` 只影响 CLI/TUI 的输入框。默认值 `bar` 清晰可见，同时不会覆盖
-CJK 双宽字符；如果偏好其它形状，可以设为 `block` 或 `underline`。
-
-`[ui].show_turn_usage = false` 会隐藏 TUI transcript 中每次模型请求完成后的 token 与
-费用回执；统计和运行中状态仍正常更新。默认值为 `true`。
-
-### 自定义 provider 的 `api_key_env` 命名
-
-通过桌面端设置、TUI `/setup` 或 `deepzora setup` 新增、替换或明确清空 provider
-凭据时，Deepzora 会分配新的 `DEEPZORA_CONNECTION_*_KEY` 独立槽位，先写入槽位，再
-原子发布所选 provider 的新 `api_key_env` 引用。其他 provider 即使此前共享固定变量，也
-会保留原引用。已有固定名称继续可读，启动时不会批量迁移。
-
-旧版或手工 provider 条目仍可能根据 provider 名称生成默认变量。能规范化成 ASCII 的名称会得到可读的
-env 名，例如 `LOCAL_GATEWAY_API_KEY`；如果名称全部由中文等非 ASCII 字符组成，则会
-生成带稳定 hash 后缀的名称，例如 `CUSTOM_d39b9067_API_KEY`，避免多个中文 provider
-都共用 `CUSTOM_API_KEY`。如果名称以数字开头，则会添加 `CUSTOM_` 前缀以保证生成的
-环境变量名合法；例如 `9router` 会生成 `CUSTOM_9ROUTER_API_KEY`。
-
-CLI 的自定义 provider 向导会先根据 base URL 生成 provider 名称，再套用同一规则得到草稿
-变量名。在变量名提示处直接回车时，这个草稿名只在保存 key 之前使用；保存后连接会切换到
-新分配的独立槽位。
-
-在 `deepzora setup` 的这个提示处手动输入的变量名会被保留，方便脚本引用固定名称，前提是
-写入它不会改变其他读取方拿到的值：配置里没有其他 provider、机器人或远程主机设置读取它，
-全局 `.env` 里没有它的值（或清空标记），Deepzora 运行的环境变量里也没有设置它。否则向导
-会说明是什么占用了它，并请你重新输入；直接回车则改用独立槽位。如果在提示之后、保存之前这个名字被占用，保存会被拒绝，
-不写入任何内容。
-
-之后再为用户配置里的 provider 保存新 key 时，如果这个 provider（或本次一起保存 key 的那组
-provider）在用户配置里是该变量唯一的读取方（编辑前后都是），且全局 `.env` 里已有它的值，
-Deepzora 会原地改写这个变量；读取同名变量的项目会像之前读到旧 key 一样读到新 key。项目
-`deepzora.toml` 里声明的 provider 始终改用独立槽位。配置发布之前，旧值以一个临时变量名保存在全局 `.env` 里：
-保存失败或中断时会写回旧值，除非这期间有别的写入方改过这个变量。如果还有其他 provider
-或设置读取这个变量，新 key 仍写入独立槽位，共享变量保持不变。
-
-升级时不会自动改写已有配置。旧配置中已经使用 `CUSTOM_API_KEY` 的自定义 provider 会继续
-读取这个 key。若多个旧自定义 provider 已经意外共用了 `CUSTOM_API_KEY`，重新保存每个
-连接的 API key，即可将对应连接轮换到独立槽位。
-
-### 自定义 provider 的端点 URL
-
-桌面端自定义 provider 表单会把「API 地址」作为完整请求地址写入 `request_url`，
-Deepzora 不会追加或改写路径。只有 `request_url` 指定完整请求地址，历史字段 `chat_url` 不再受支持。
-未设置 `request_url` 时，各协议根据 `base_url` 推导请求路径。
-模型发现需要单独地址时可设置 `models_url`；否则 Deepzora 会继续从 `base_url`
-推测模型发现地址。
-
-## 全局 `.env`
-
-`<Deepzora home>/.env` 是 Deepzora 保存的 provider API key 的唯一运行时来源。
-setup 向导、桌面端设置页、CLI 缺 key 提示以及删除 provider key 的操作，都会通过同一套凭据 helper 读写这个文件。
-
-结构：
-
-```dotenv
-DEEPSEEK_API_KEY=sk-...
-GEMINI_API_KEY=...
-ANTHROPIC_API_KEY=...
-# deepzora-cleared OLD_API_KEY
-```
-
-规则：
-
-- 每行一个 `KEY=value`；
-- 空行和 `#` 注释会被忽略；
-- 读取时接受 `export KEY=value` 和带引号的值；
-- Deepzora 写入时会拒绝多行值；
-- key 必须是类似 `DEEPSEEK_API_KEY` 的 shell 风格变量名；
-- `# deepzora-cleared KEY` 是删除 key 后写入的非密钥标记，用来防止旧存储把它静默迁回；
-- 在操作系统支持的情况下，Deepzora 会用受限权限写入该文件。
-
-Provider 请求只会从这个全局 `.env` 解析 key。项目 `.env`、home `.env`、继承的 shell
-环境变量、旧 `credentials` 文件和系统 keyring 都不再作为运行时 provider key fallback。项目 `.env`、home `.env` 和继承的 shell 环境变量不会自动导入到全局凭据文件。
-旧 `credentials` 文件和旧 keyring 条目只会在新全局 `.env` 缺少对应 key 时作为非破坏性迁移来源读取。
-项目 `.env` 仍会作为当前 workspace 范围内的非 provider 变量展开来源，例如 MCP/plugin 的 env、headers、URL、command 和 args 中的 `${VAR}`；这些值不会写入进程环境，`DEEPZORA_HOME`、`DEEPZORA_STATE_HOME`、`XDG_CONFIG_HOME` 等 Deepzora 控制变量也会被忽略。
-
-缓存仍放在系统缓存目录，例如 macOS 的 `~/Library/Caches/deepzora`、
-Linux 的 `$XDG_CACHE_HOME/deepzora` 或 `~/.cache/deepzora`、Windows 的
-`%LOCALAPPDATA%\deepzora\cache`。可以设置 `DEEPZORA_CACHE_HOME` 覆盖缓存根目录。
-设置 `DEEPZORA_HOME` 后，缓存会放在 `$DEEPZORA_HOME/cache`；如果同时设置
-`DEEPZORA_CACHE_HOME`，后者优先。
-
-## 配置优先级
-
-运行时配置按下面顺序解析：
-
-```text
-命令行参数
-> 项目 ./deepzora.toml
-> 全局 <Deepzora home>/config.toml
-> 兼容读取的旧全局配置
-> 内置默认值
-```
-
-写配置时始终写入新的全局路径：
-
-```text
-macOS/Linux: ~/.deepzora/config.toml
-Windows:     %APPDATA%\deepzora\config.toml
-```
-
-## 旧路径迁移
-
-从 **v1.8.1** 开始，Deepzora 启动时会在第一次加载配置前自动检查旧路径。迁移是同步、一次性、非破坏性的：旧文件会被复制或转换到 Deepzora home，原文件保留。
-
-旧配置来源包括：
-
-```text
-~/Library/Application Support/deepzora/config.toml
-~/.config/deepzora/config.toml
-~/.deepzora/deepzora.toml
-~/.deepzora/config.json
-```
-
-旧 credentials、memory 文件和 sessions 也会在新目标不存在时导入到 Deepzora home。
-旧 provider key 只会在 `<Deepzora home>/.env` 尚未包含同名 key 时复制进去。若新的全局配置已经存在，则新配置优先；旧配置只作为兼容 fallback 保留。
-
-从 **v1.9.1** 开始，Deepzora 还会在升级时把已知旧路径、legacy `config.json`、
-桌面端已登记项目和恢复 tabs 对应项目里的 MCP 配置汇总补齐到全局
-`<Deepzora home>/config.toml`。已有的全局 `[[plugins]]` 按名称优先，不会被旧
-配置或项目配置覆盖；源文件会保留不变。该补齐会写入一次性 marker，避免用户之后
-主动删除某个全局 MCP 时又被旧项目配置反复恢复。
-
-## 手动补救迁移
-
-如果 Deepzora 已经创建了新的 home 目录，但当时旧数据还不在可扫描路径里；或者先打开了桌面端，导致自动迁移没有把旧路径数据补齐，可以在任一前端运行补救命令：
-
-```text
-/migrate
-```
-
-在 CLI TUI 中，把 `/migrate` 输入到聊天输入框。在桌面端中，把同一个命令输入到 composer。命令会显示进度提示：
-
-1. 检查旧配置和 credentials；
-2. 扫描已知旧 memory 位置；
-3. 扫描已知旧 sessions 目录；
-4. 导入尚未迁移过的 memory 文件和 sessions；
-5. 输出最终汇总。
-
-如果旧 v0.x sessions 不在上述已知旧路径里，例如 Windows v0.52 安装时选择了自定义安装/数据目录，可以显式指定旧目录：
-
-```text
-/migrate --from "D:\OldDeepzora"
-```
-
-显式形式只导入 sessions。这个路径可以是旧安装目录、`.deepzora`/数据目录，或者
-`sessions` 目录本身；Deepzora 会在该根目录下检查常见布局，并使用按来源目录区分的
-marker，因此之前已经运行过普通 `/migrate` 也不会挡住这次后补导入。
-
-该补救命令仍然是非破坏性的。它不会覆盖已有的
-`<Deepzora home>/config.toml`；如果新配置已经存在，需要手动把旧配置里缺失的设置复制过去。旧 memory 文件只会在目标文件不存在时复制。它也会尊重 session 导入 marker，因此已经迁移过、之后又被用户删除的会话，不会在后续 `/migrate` 中被重新恢复。
-
-版本限制：
-
-- 自动迁移从 **v1.8.1** 开始。
-- `/migrate` 只存在于包含该命令的 Go 版 Deepzora 构建中。如果 Deepzora 提示 `unknown command`，请先升级后再运行。
-- legacy `0.x` TypeScript 线没有这个命令。
-- 普通 `/migrate` 只会重新扫描上面列出的旧路径。只有确认某个目录是 v0.x session 来源时，才使用 `/migrate --from <path>`；它不是备份恢复工具或降级导入工具。
+目录数字后缀代表当前数据结构。首版基线不会重命名这些目录，也不会把旧格式解释成新格式；只支持当前格式。参见[当前基线](current-version-baseline.md)和[配置规范](SPEC.zh-CN.md#5-配置toml)。

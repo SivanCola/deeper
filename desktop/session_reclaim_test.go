@@ -194,7 +194,7 @@ func TestReclaimBarrierDefersWhileTurnInFlight(t *testing.T) {
 		case "/status":
 			// The post-reclaim refresh observes the surface idle and free.
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"sessionPath":"/sessions/held.jsonl","sessionId":"held","running":false,"takenOver":false}`))
+			_, _ = w.Write([]byte(currentFakeStatus(`{"sessionPath":"/sessions/held.jsonl","sessionId":"held","running":false,"takenOver":false}`, 1)))
 			return
 		}
 		http.Error(w, "not available", http.StatusServiceUnavailable)
@@ -276,7 +276,7 @@ func TestStaleStatusCannotRepinTakenOverAfterReclaim(t *testing.T) {
 	}
 	tab.ownership.reclaimRevision = 5
 	a.remoteTabs[tab.id] = tab
-	payload := []byte(`{"sessionId":"held","takenOver":true}`)
+	payload := []byte(currentFakeStatus(`{"sessionId":"held","takenOver":true}`, 1))
 
 	if !a.recordRemoteTabSessionStatus(tab.id, client, 2, 3, payload) {
 		t.Fatal("fenced recorder rejected the payload entirely")
@@ -288,6 +288,7 @@ func TestStaleStatusCannotRepinTakenOverAfterReclaim(t *testing.T) {
 	// A post-reclaim observation (reserved after the epoch) still applies in
 	// both directions — including a genuine re-takeover by the local runtime.
 	tab.runtime.revision = 5
+	payload = []byte(currentFakeStatus(`{"sessionId":"held","takenOver":true}`, 2))
 	if !a.recordRemoteTabSessionStatus(tab.id, client, 2, 5, payload) {
 		t.Fatal("post-reclaim status payload was rejected")
 	}
@@ -296,7 +297,7 @@ func TestStaleStatusCannotRepinTakenOverAfterReclaim(t *testing.T) {
 	}
 	tab.runtime.revision = 6
 	tab.ownership.reclaimRevision = 6
-	released := []byte(`{"sessionId":"held","takenOver":false}`)
+	released := []byte(currentFakeStatus(`{"sessionId":"held","takenOver":false}`, 3))
 	if !a.recordRemoteTabSessionStatus(tab.id, client, 2, 6, released) {
 		t.Fatal("fresh release observation was rejected")
 	}

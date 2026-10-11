@@ -27,7 +27,7 @@ Context Engine v2 为 Deepzora 提供两个权限不同的持久上下文层：
 
 - Run `go test ./...` before reporting completion.
 - Do not edit generated files under `desktop/frontend/src/generated/`.
-- Keep public API changes backward compatible.
+- Use the current versioned fact and session contracts.
 ```
 
 在 CLI 中，`/remember <note>` 和 `# <note>` 会直接把内容追加到项目指令文档。它们是
@@ -104,10 +104,6 @@ subject key 是知识冲突模型：同一 scope 内每个 subject 至多一个 
 执行，超限会提示把"永远必须遵守的规则"移入 DEEPZORA.md/AGENTS.md instructions。
 一个事实要么 pinned（在 `session-context` 里）、要么 relevant（可被召回）：不会两者皆是，也不会
 两者皆非。
-
-为兼容旧数据，早于该字段的全局 `user`/`feedback` 事实保持 pinned，直到显式 unpin。
-存在等价项目事实时，它会在背景快照构建前屏蔽对应的全局 pinned 指导，因此"项目覆盖
-全局"不依赖后续查询是否恰好触发召回。
 
 ## 自动召回
 
@@ -241,21 +237,6 @@ scope、freshness 与存储来源。CLI、Desktop 和 remote workspace 都提供
 | `/memory recover <path>` | 把当前 store 拥有的 archive 恢复为新 revision |
 
 Context Center 用图形界面展示同一模型，还会显示冲突和 project-over-global 解释。
-
-## 升级兼容
-
-Context Engine v2 会自动升级旧 store，不需要设置：
-
-- 没有 ID 的旧事实获得确定性的 `legacy-*` identity；
-- 缺少 revision 的事实从 revision 1 开始；
-- 缺少 scope 时，根据所在 project/global 目录推导；
-- migration 幂等，只写入一次新 metadata；
-- 新旧版本共享 state root 时，兼容路由字段可避免旧客户端把事实移错目录；
-- 旧 `MEMORY.md` 作为派生数据处理，并根据事实文件重建；
-- 旧 Memory v5 `<memory-compiler-execution>` transcript 仍可读取，退役的
-  `[agent].memory_compiler` 设置会被移除。
-
-不需要 vector database、embedding service、setup wizard 或手动 re-index 命令。
 
 ## Cache 与隐私契约
 

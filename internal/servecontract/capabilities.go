@@ -3,6 +3,9 @@
 // drift through independently maintained string literals.
 package servecontract
 
+// BaselineV1 identifies the first supported Deepzora client/service contract.
+const BaselineV1 = "deepzora-baseline-v1"
+
 // HistoryOutlineV1 exposes paged durable turn summaries independently of the live tail.
 const HistoryOutlineV1 = "history-outline-v1"
 

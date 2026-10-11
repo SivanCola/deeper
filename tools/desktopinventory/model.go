@@ -9,11 +9,11 @@ type class string
 
 const (
 	classKeepBusiness class = "keep-business"
-	classMigrateHost  class = "migrate-host"
+	classHostManaged  class = "host-managed"
 	classDeleteShell  class = "delete-shell"
 )
 
-// entry is one desktop shell entry point with its migration destination.
+// entry is one desktop shell entry point with its current owner.
 type entry struct {
 	Kind     string `json:"kind"`
 	Name     string `json:"name"`

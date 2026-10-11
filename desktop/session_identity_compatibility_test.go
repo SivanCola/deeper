@@ -134,7 +134,7 @@ func auditCurrentTab(t *testing.T) (*App, *WorkspaceTab, *control.Controller, st
 
 func TestAuditCurrentSessionReopen(t *testing.T) {
 	app, tab, ctrl, path := auditCurrentTab(t)
-	_, err := app.OpenTopicSession("project", tab.WorkspaceRoot, tab.TopicID, path)
+	_, err := app.openTopicSession("project", tab.WorkspaceRoot, tab.TopicID, path)
 	if err != nil {
 		t.Fatalf("reopen current session: %v", err)
 	}

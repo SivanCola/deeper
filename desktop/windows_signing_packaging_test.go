@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/xml"
 	"errors"
 	"os"
 	"os/exec"
@@ -13,32 +12,6 @@ import (
 	"time"
 )
 
-type signPathArtifactConfiguration struct {
-	Zip signPathZip `xml:"zip-file"`
-}
-
-type signPathZip struct {
-	Files    []signPathPEFile    `xml:"pe-file"`
-	FileSets []signPathPEFileSet `xml:"pe-file-set"`
-}
-
-type signPathPEFile struct {
-	Path   string    `xml:"path,attr"`
-	Sign   *struct{} `xml:"authenticode-sign"`
-	Verify *struct{} `xml:"authenticode-verify"`
-}
-
-type signPathPEFileSet struct {
-	Includes []struct {
-		Path       string `xml:"path,attr"`
-		MinMatches string `xml:"min-matches,attr"`
-	} `xml:"include"`
-	ForEach struct {
-		Sign   *struct{} `xml:"authenticode-sign"`
-		Verify *struct{} `xml:"authenticode-verify"`
-	} `xml:"for-each"`
-}
-
 func readTestFile(t *testing.T, path string) string {
 	t.Helper()
 	data, err := os.ReadFile(path)
@@ -46,19 +19,6 @@ func readTestFile(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	return string(data)
-}
-
-func parseSignPathConfiguration(t *testing.T, name string) signPathArtifactConfiguration {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join("..", ".signpath", "artifact-configurations", name))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var config signPathArtifactConfiguration
-	if err := xml.Unmarshal(data, &config); err != nil {
-		t.Fatalf("parse %s: %v", name, err)
-	}
-	return config
 }
 
 func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
@@ -93,10 +53,10 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`uses: ./release-control/.github/actions/setup-certum`,
 		`github.repository == 'SivanCola/deepzora'`,
 		`Certum credentials are required for public Windows releases`,
-		`SIGNPATH_RELEASE_SIGNING_ATTESTATION does not match the current protected signing contract`,
-		`(needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.preflight_artifact_prefix != '' && inputs.orchestrated && inputs.signing_preflight_verified))`,
+		`RELEASE_SIGNING_ATTESTATION does not match the current protected signing contract`,
+		`needs.build.result == 'success'`,
 		`needs.windows-sign.result == 'success'`,
-		`go run ./cmd/signpath-contract fingerprint`,
+		`go run ./cmd/release-signing-contract fingerprint`,
 		`ref: ${{ github.workflow_sha }}`,
 		`path: release-control`,
 		`node desktop/packaging/smoke.mjs`,
@@ -195,25 +155,6 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		}
 	}
 
-	completer := readTestFile(t, "../scripts/complete-signpath-request.ps1")
-	for _, want := range []string{
-		`$request.signingPolicySlug -ne $ExpectedSigningPolicySlug`,
-		`$status.status -eq "WaitingForApproval"`,
-		`"$requestBaseUrl/Approve"`,
-		`"$requestBaseUrl/Status"`,
-		`"$requestBaseUrl/SignedArtifact"`,
-		`$status.status -ne "Completed"`,
-		`[switch]$WaitForExternalApproval`,
-		`if ($WaitForExternalApproval)`,
-		`Waiting for an authorized SignPath user to approve request`,
-		`OutputArtifactDirectory must resolve inside GITHUB_WORKSPACE`,
-		`[string]$ApiUrl = "https://app.signpath.io/api"`,
-		`Expand-Archive`,
-	} {
-		if !strings.Contains(completer, want) {
-			t.Errorf("SignPath request completer is missing %q", want)
-		}
-	}
 }
 
 // requireRealBash skips when PATH resolves bash to the System32 WSL relay
@@ -291,13 +232,11 @@ func TestWindowsPackagerRejectsMissingOrPartialRequiredPayloadManifest(t *testin
 }
 
 func TestProductionSigningRunsOnlyFromProtectedControlPlane(t *testing.T) {
-	stable := readTestFile(t, "../.github/workflows/release-stable.yml")
 	candidate := readTestFile(t, "../.github/workflows/release-candidate.yml")
 	promote := readTestFile(t, "../.github/workflows/release-promote.yml")
 	desktop := readTestFile(t, "../.github/workflows/release-desktop.yml")
-	if strings.Contains(stable, "\n  push:\n") ||
-		strings.Contains(promote, "\n  push:\n") || strings.Contains(desktop, "\n  push:\n") {
-		t.Fatal("production workflows must not run directly with a tag-shaped SignPath origin")
+	if strings.Contains(promote, "\n  push:\n") || strings.Contains(desktop, "\n  push:\n") {
+		t.Fatal("production workflows must not run directly with a tag-triggered signing origin")
 	}
 	if strings.Contains(candidate, "\n    tags:") || strings.Contains(candidate, "\n  pull_request") ||
 		!strings.Contains(candidate, "\n  push:\n    branches: [main]\n    paths:\n      - release-notes/releases.json") {
@@ -328,100 +267,6 @@ func TestProductionSigningRunsOnlyFromProtectedControlPlane(t *testing.T) {
 	} {
 		if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 			t.Errorf("retired public prerelease workflow %s still exists or cannot be checked: %v", path, err)
-		}
-	}
-}
-
-func TestSignPathConfigurationsCoverExactWindowsPayload(t *testing.T) {
-	flatPayload := map[string]bool{
-		"deepzora-desktop.exe":          true,
-		"deepzora-layout-installer.exe": true,
-		"deepzora-launcher.exe":         true,
-		"deepzora-update-helper.exe":    true,
-		"deepzora-cli.exe":              true,
-		"deepzora-uninstall.exe":        true,
-	}
-
-	payload := parseSignPathConfiguration(t, "windows-payload.xml")
-	// The signed unit is the flat Go payload plus every PE file in the Electron
-	// app/ tree: Deepzora.exe is explicit, the rest ride the pe-file-set glob.
-	if len(payload.Zip.Files) != len(flatPayload)+1 {
-		t.Fatalf("windows-payload.xml files = %d, want %d", len(payload.Zip.Files), len(flatPayload)+1)
-	}
-	for _, file := range payload.Zip.Files {
-		if !flatPayload[file.Path] && file.Path != "app/Deepzora.exe" {
-			t.Errorf("windows-payload.xml contains unexpected path %q", file.Path)
-		}
-		if file.Sign == nil || file.Verify != nil {
-			t.Errorf("windows-payload.xml %q must sign, not verify", file.Path)
-		}
-	}
-	if len(payload.Zip.FileSets) != 1 {
-		t.Fatalf("windows-payload.xml pe-file-sets = %d, want 1", len(payload.Zip.FileSets))
-	}
-	payloadSet := payload.Zip.FileSets[0]
-	if payloadSet.ForEach.Sign == nil || payloadSet.ForEach.Verify != nil {
-		t.Error("windows-payload.xml pe-file-set must sign every app/ PE file")
-	}
-	for _, want := range []string{"app/**/*.exe", "app/**/*.dll"} {
-		found := false
-		for _, include := range payloadSet.Includes {
-			if include.Path == want && include.MinMatches == "1" {
-				found = true
-			}
-		}
-		if !found {
-			t.Errorf("windows-payload.xml pe-file-set must include %s with min-matches=1", want)
-		}
-	}
-
-	installer := parseSignPathConfiguration(t, "windows-installer-v2.xml")
-	if len(installer.Zip.Files) != len(flatPayload)+1 {
-		t.Fatalf("windows-installer.xml files = %d, want %d", len(installer.Zip.Files), len(flatPayload)+1)
-	}
-	verified := 0
-	signedInstaller := 0
-	for _, file := range installer.Zip.Files {
-		switch {
-		case file.Path == "*installer*.exe":
-			if file.Sign == nil || file.Verify != nil {
-				t.Error("windows-installer.xml must sign the outer installer")
-			}
-			signedInstaller++
-		case flatPayload[file.Path]:
-			if file.Verify == nil || file.Sign != nil {
-				t.Errorf("windows-installer.xml %q must verify, not re-sign", file.Path)
-			}
-			verified++
-		default:
-			t.Errorf("windows-installer.xml contains unexpected path %q", file.Path)
-		}
-	}
-	if signedInstaller != 1 || verified != len(flatPayload) {
-		t.Fatalf("windows-installer.xml signed installers=%d verified payload=%d", signedInstaller, verified)
-	}
-	if len(installer.Zip.FileSets) != 1 {
-		t.Fatalf("windows-installer.xml pe-file-sets = %d, want 1", len(installer.Zip.FileSets))
-	}
-	installerSet := installer.Zip.FileSets[0]
-	if installerSet.ForEach.Verify == nil || installerSet.ForEach.Sign != nil {
-		t.Error("windows-installer.xml pe-file-set must verify, not re-sign, the app/ tree")
-	}
-	for _, want := range []string{"app/**/*.exe", "app/**/*.dll"} {
-		found := false
-		for _, include := range installerSet.Includes {
-			if include.Path == want {
-				found = true
-			}
-		}
-		if !found {
-			t.Errorf("windows-installer.xml pe-file-set must include %s", want)
-		}
-	}
-
-	for _, name := range []string{"windows-installer.xml", "windows-installer-test-v2.xml"} {
-		if _, err := os.Stat(filepath.Join("..", ".signpath", "artifact-configurations", name)); !errors.Is(err, os.ErrNotExist) {
-			t.Fatalf("historical signing configuration %s still present: %v", name, err)
 		}
 	}
 }

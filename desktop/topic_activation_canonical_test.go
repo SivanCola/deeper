@@ -270,7 +270,7 @@ func TestCanonicalTopicOpenRejectsConflictingWorkspaceBeforePublishing(t *testin
 	if err := os.WriteFile(app.workspaceRegistry().Path(), data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err = app.OpenTopicSession("project", root, "", sessionRoute(target.Ref().SessionID))
+	_, err = app.openTopicSession("project", root, "", sessionRoute(target.Ref().SessionID))
 	if !errors.Is(err, errSessionWorkspaceConflict) {
 		t.Fatalf("conflicting canonical workspace accepted: %v", err)
 	}

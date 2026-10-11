@@ -29,7 +29,7 @@ func seedManualCreation(t *testing.T, a *App, id, phase string) (ManualSessionCr
 	sum := sha256.Sum256([]byte(id))
 	v := ManualSessionCreationView{OperationID: id, WorkspaceID: workspace, Scope: "global", Phase: phase,
 		Ref:     session.SessionRef{HostID: "local", SessionID: fmt.Sprintf("desktop-manual-%x", sum[:16])},
-		TopicID: fmt.Sprintf("manual-%x", sum[:16]), Settings: a.defaultDraftSettings("global", "")}
+		TopicID: fmt.Sprintf("manual-%x", sum[:16]), Settings: a.defaultSessionSettings("global", "")}
 	b, _ := json.Marshal(v)
 	var fields map[string]json.RawMessage
 	_ = json.Unmarshal(b, &fields)

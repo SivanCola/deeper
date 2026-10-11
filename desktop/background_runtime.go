@@ -242,7 +242,7 @@ func (a *App) RevealBackgroundRuntime(tabID string) (TabMeta, error) {
 	if strings.TrimSpace(sessionPath) == "" {
 		return TabMeta{}, fmt.Errorf("background task session is unavailable")
 	}
-	return a.OpenTopicSession(scope, workspaceRoot, topicID, sessionPath)
+	return a.openTopicSession(scope, workspaceRoot, topicID, sessionPath)
 }
 
 type workspaceLeaseReporter interface {

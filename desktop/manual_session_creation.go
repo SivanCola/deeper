@@ -31,7 +31,7 @@ type ManualSessionCreationView struct {
 	TopicID       string                  `json:"topicId"`
 	Phase         string                  `json:"phase"`
 	Error         string                  `json:"error,omitempty"`
-	Settings      SessionDraftSettings    `json:"settings"`
+	Settings      SessionCreationSettings `json:"settings"`
 	Progress      *ManualCreationProgress `json:"progress,omitempty"`
 	SurfaceReady  bool                    `json:"surfaceReady,omitempty"`
 }
@@ -97,8 +97,8 @@ func (a *App) BeginManualSessionCreation(req ManualSessionCreationRequest) (resu
 	sum := sha256.Sum256([]byte(id))
 	view := ManualSessionCreationView{OperationID: id, WorkspaceID: workspaceID, Scope: scope, WorkspaceRoot: root,
 		Ref:     session.SessionRef{HostID: localDesktopHostID, SessionID: fmt.Sprintf("desktop-manual-%x", sum[:16])},
-		TopicID: fmt.Sprintf("manual-%x", sum[:16]), Phase: "reserved", Settings: a.defaultDraftSettings(scope, root)}
-	view.Settings.ModelSource = draftModelSourceExplicit
+		TopicID: fmt.Sprintf("manual-%x", sum[:16]), Phase: "reserved", Settings: a.defaultSessionSettings(scope, root)}
+	view.Settings.ModelSource = "explicit"
 	payload, err := json.Marshal(view)
 	if err != nil {
 		return view, err
@@ -227,7 +227,7 @@ func (a *App) reserveManualSessionTab(ctx context.Context, view ManualSessionCre
 		return nil, err
 	}
 	a.emitProjectTreeChanged()
-	if meta := a.metaForDraftSession(view.Ref.SessionID); meta != nil {
+	if meta := a.metaForSession(view.Ref.SessionID); meta != nil {
 		tab, _ := a.tabAndCtrlByID(meta.ID)
 		if tab != nil {
 			return tab, nil

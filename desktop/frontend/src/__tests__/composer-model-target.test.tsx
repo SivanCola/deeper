@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { act } from "react";
 import { installDom, installBridgeApp, renderComposer } from "./composerInboxHarness";
-import { emptySessionInput } from "../lib/sessionComposerPersistence";
 import { makeSessionUIMock } from "../lib/sessionUIMock";
 
 const dom = installDom();
@@ -15,10 +14,6 @@ const catalog = [
 installBridgeApp({
   ...makeSessionUIMock(async () => {}),
   ModelsForTab: async (id: string) => { calls.push(`tab:${id}`); return catalog; },
-  ModelsForDraft: async (id: string) => {
-    calls.push(`draft:${id}`);
-    return id === "legacy-draft" ? catalog : [];
-  },
 });
 async function waitFor(check: () => boolean) {
   for (let i = 0; i < 100 && !check(); i++) {
@@ -48,15 +43,7 @@ try {
   await waitFor(() => calls.length > 0);
   assert.ok(calls.every(call => call === "tab:other-tab"), "navigation must query the new formal tab");
 
-  calls.length = 0;
-  await rerender({ tabId: undefined, formalSessionRef: undefined, sessionKey: "legacy-draft",
-    composerTarget: { kind: "draft", draftId: "legacy-draft", generation: 1 },
-    persistentDraft: { draftId: "legacy-draft", generation: 1, revision: 1, initial: emptySessionInput(), onChange() {} } });
-  await waitFor(() => calls.length > 0);
-  assert.ok(calls.every(call => call === "draft:legacy-draft"), "recovered legacy drafts retain their catalog route");
-  await act(async () => { document.querySelector<HTMLButtonElement>(".modelsw__trigger")!.click(); });
-  await waitFor(() => document.querySelectorAll("[role=option]").length === 2);
-  console.log("PASS composer model catalog: formal persisted input, switching, navigation and recovered legacy draft");
+  console.log("PASS formal-session model catalog and navigation");
 } finally {
   await act(async () => root.unmount());
   dom.window.close();

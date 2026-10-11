@@ -288,12 +288,8 @@ const appStubTable = ({
         backendActiveId = target.id;
         return { ...target, active: true };
       },
-      ActivateTopic: async (_scope: string, workspaceRoot: string, topicId: string) => {
-        const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === workspaceRoot && tab.topicId === topicId) ?? tabG;
-        backendActiveId = target.id;
-        return { ...target, active: true };
-      },
       StartTopicActivation: async (req: TopicActivationRequest) => {
+        if (req.sessionPath && failSetActiveFor) throw new Error("source was pruned");
         const target = Array.from(tabsById.values()).find((tab) => tab.workspaceRoot === req.workspaceRoot && tab.topicId === req.topicId) ?? tabG;
         backendActiveId = target.id;
         const requestId = req.requestId || "mock-activation";
@@ -365,9 +361,10 @@ const appStubTable = ({
         if (tabID === failSetActiveFor) throw new Error("persist failed");
         backendActiveId = tabID;
       },
-      CancelTab: async (tabID: string) => {
+      CancelSessionForTab: async (tabID: string) => {
         cancelCalls.push(tabID);
         runningTabs.delete(tabID);
+        return {accepted:true, alreadyIdle:false, recoveryRequired:false};
       },
       CloseTabWithPolicy: async (tabID: string) => {
         tabsById.delete(tabID);

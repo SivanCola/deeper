@@ -36,8 +36,8 @@ deepzora --permission-mode danger-full-access
 deepzora run --permission-mode workspace-write "运行测试"
 ```
 
-交互式 CLI 中，`Shift+Tab` 按“仅可查看 → 工作区内修改 → YOLO → 计划”循环，`Ctrl+Y` 可直接切换 YOLO。两个快捷键进入 YOLO 时都会设置规范权限值 `danger-full-access`。旧配置仍保守迁移：`ask` 映射为仅可查看，`auto` 和 `yolo` 映射为工作区内修改，旧值不会开启完全权限。
+交互式 CLI 中，`Shift+Tab` 按“仅可查看 → 工作区内修改 → YOLO → 计划”循环，`Ctrl+Y` 可直接切换 YOLO。两个快捷键进入 YOLO 时都会设置规范权限值 `danger-full-access`。只接受当前规范权限值。
 
-## 远程兼容
+## 远程执行
 
-Serve 通过 `permission-presets-v1` 声明真实强制能力。未声明该能力的旧远程仍可查看历史，但执行和权限修改会被禁用，直到远程服务完成升级。
+桌面端与 Serve 要求当前协议基线，执行还会核实 `permission-presets-v1` 和真实的权限执行能力。未获能力的控制器不能通过历史兜底扩大权限。

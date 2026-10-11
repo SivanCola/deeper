@@ -43,7 +43,6 @@ func TestSessionLocatorSeparatesCanonicalRoutesFromLegacyPaths(t *testing.T) {
 func TestTabSessionMetaRejectsRouteBeforeCreatingSidecars(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
-	t.Cleanup(func() { _ = app.draftStore().Close() })
 	tab := &WorkspaceTab{ID: "route", Scope: "global", SessionPath: "session-id:valid-id"}
 	app.tabs[tab.ID] = tab
 
@@ -63,7 +62,6 @@ func TestTabSessionMetaRejectsRouteBeforeCreatingSidecars(t *testing.T) {
 func TestCanonicalTabSessionMetaNeverWritesLegacySidecar(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	app := NewApp()
-	t.Cleanup(func() { _ = app.draftStore().Close() })
 	tab := &WorkspaceTab{ID: "canonical", Scope: "global", SessionID: "canonical-id", SessionPath: "session-id:canonical-id"}
 	app.tabs[tab.ID] = tab
 
