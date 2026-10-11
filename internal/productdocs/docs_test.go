@@ -439,7 +439,7 @@ func TestDocsToolContractIsStableAndReadOnly(t *testing.T) {
 	}
 	contract := tl.Name() + "\n" + tl.Description() + "\n" + string(canonical)
 	got := fmt.Sprintf("%x", sha256.Sum256([]byte(contract)))
-	const want = "f4c49105609283a1b5b08369a83a95c83f6ebd37dd44153f01e603336c1925ba"
+	const want = "6fc94bae457ee136078ca6a4740cb726630293d31fa1b091e35a6a5ade5ecc08"
 	if got != want {
 		t.Fatalf("provider-visible docs contract changed: got %s, want %s", got, want)
 	}
