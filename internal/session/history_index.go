@@ -60,7 +60,10 @@ func (q *Query) ReadContent(ctx context.Context, ref SessionRef, contentRef sess
 }
 
 func ensureHistoryIndex(ctx context.Context, persistence *FilesystemPersistence, sessionID, path string) error {
-	dir := filepath.Join(persistence.Root, sessionID)
+	dir, err := persistence.sessionDir(sessionID, true)
+	if err != nil {
+		return err
+	}
 	revision, err := revisionOfLog(dir)
 	if err != nil {
 		return err

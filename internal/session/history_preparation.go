@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"path/filepath"
 )
 
 // Existing but obsolete indexes need the same background lifecycle as missing
@@ -15,7 +14,11 @@ func (q *Query) historyLocatorReady(ctx context.Context, filesystem *FilesystemP
 	if !lock.TryLock() {
 		return false, nil
 	}
-	dir := filepath.Join(filesystem.Root, sessionID)
+	dir, err := filesystem.sessionDir(sessionID, true)
+	if err != nil {
+		lock.Unlock()
+		return false, err
+	}
 	revision, err := revisionOfLog(dir)
 	current := err == nil && historyIndexCurrent(ctx, dir, path, sessionID, revision)
 	lock.Unlock()

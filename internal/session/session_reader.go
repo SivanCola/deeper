@@ -62,7 +62,10 @@ func (q *Query) Recent(ctx context.Context, ref SessionRef) (RecentSnapshot, err
 		}
 		return RecentSnapshot{}, ErrRecentSnapshotPreparing
 	}
-	dir := filepath.Join(filesystem.Root, ref.SessionID)
+	dir, err := filesystem.sessionDir(ref.SessionID, true)
+	if err != nil {
+		return RecentSnapshot{}, err
+	}
 	manifest, err := readStoredManifest(filepath.Join(dir, "manifest.json"))
 	if err != nil {
 		return RecentSnapshot{}, err
@@ -196,11 +199,15 @@ func (q *Query) StreamSession(ctx context.Context, ref SessionRef, visit func(Co
 func (q *Query) InspectSession(ctx context.Context, ref SessionRef) (SessionInspection, error) {
 	result := SessionInspection{Ref: ref}
 	if filesystem, ok := q.persistence.(*FilesystemPersistence); ok {
-		manifest, err := readStoredManifest(filepath.Join(filesystem.Root, ref.SessionID, "manifest.json"))
+		dir, err := filesystem.sessionDir(ref.SessionID, true)
 		if err != nil {
 			return SessionInspection{}, err
 		}
-		identity, err := readStorageIdentity(filepath.Join(filesystem.Root, ref.SessionID), manifest)
+		manifest, err := readStoredManifest(filepath.Join(dir, "manifest.json"))
+		if err != nil {
+			return SessionInspection{}, err
+		}
+		identity, err := readStorageIdentity(dir, manifest)
 		if err != nil {
 			return SessionInspection{}, err
 		}

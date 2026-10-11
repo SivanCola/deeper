@@ -1,12 +1,14 @@
 package session
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestQueryStorageGenerationUsesConfinedSessionIdentity(t *testing.T) {
+func queryPathFixture(t *testing.T) (*Query, string, string) {
+	t.Helper()
 	base := t.TempDir()
 	root := filepath.Join(base, "sessions")
 	seed := func(dir, id string) {
@@ -24,6 +26,11 @@ func TestQueryStorageGenerationUsesConfinedSessionIdentity(t *testing.T) {
 	seed(outside, "outside")
 	query := newQuery("local", NewFilesystemPersistence(root), nil)
 	t.Cleanup(query.Close)
+	return query, root, outside
+}
+
+func TestQueryStorageGenerationUsesConfinedSessionIdentity(t *testing.T) {
+	query, root, outside := queryPathFixture(t)
 	if got := query.storageGeneration("current"); got == "" {
 		t.Fatal("current identity lost its storage generation")
 	}
@@ -40,4 +47,35 @@ func TestQueryStorageGenerationUsesConfinedSessionIdentity(t *testing.T) {
 			t.Fatalf("symlink read outside storage generation %q", got)
 		}
 	})
+}
+
+func TestQueryDerivedIndexesRejectUnconfinedIdentities(t *testing.T) {
+	for name, ensure := range map[string]func(context.Context, *FilesystemPersistence, string, string) error{
+		"history": ensureHistoryIndex,
+		"search":  ensureSearchIndex,
+	} {
+		t.Run(name, func(t *testing.T) {
+			query, root, outside := queryPathFixture(t)
+			persistence := query.persistence.(*FilesystemPersistence)
+			cache := filepath.Join(root, ".query-cache", "probe", name+".sqlite")
+			if err := ensure(t.Context(), persistence, "current", cache); err != nil {
+				t.Fatalf("current identity: %v", err)
+			}
+			ids := []string{"../outside", outside, `..\outside`}
+			if err := os.Symlink(outside, filepath.Join(root, "linked")); err == nil {
+				ids = append(ids, "linked")
+			} else {
+				t.Logf("symlink unavailable: %v", err)
+			}
+			for _, id := range ids {
+				rejectedCache := filepath.Join(root, ".query-cache", "rejected", name+".sqlite")
+				if err := ensure(t.Context(), persistence, id, rejectedCache); err == nil {
+					t.Fatalf("index read unconfined identity %q", id)
+				}
+				if _, err := os.Stat(filepath.Dir(rejectedCache)); !os.IsNotExist(err) {
+					t.Fatalf("rejected identity created a cache: %v", err)
+				}
+			}
+		})
+	}
 }

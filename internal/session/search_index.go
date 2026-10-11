@@ -237,7 +237,10 @@ func readSearchMetadata(ctx context.Context, db *sql.DB) (searchMetadata, error)
 }
 
 func ensureSearchIndex(ctx context.Context, persistence *FilesystemPersistence, sessionID, path string) error {
-	dir := filepath.Join(persistence.Root, sessionID)
+	dir, err := persistence.sessionDir(sessionID, true)
+	if err != nil {
+		return err
+	}
 	revision, err := revisionOfLog(dir)
 	if err != nil {
 		return err
