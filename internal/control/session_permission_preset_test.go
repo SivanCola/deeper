@@ -287,6 +287,8 @@ func TestUnmanagedCanonicalSessionKeepsReadOnlyAcrossTransitions(t *testing.T) {
 }
 
 func TestServeForkStartsNoBroaderThanInheritedReadOnly(t *testing.T) {
+	restoreSandbox := SetPresetSandboxForTest(true)
+	t.Cleanup(restoreSandbox)
 	service, _, c := newForkTargetsHarness(t, "readonly-parent", testutil.Turn{Text: "answer"})
 	c.EnableServeSessionPermissionPresets(true)
 	if _, _, err := c.SetSessionPermissionPreset(t.Context(), ToolApprovalReadOnly, c.PermissionSnapshot().Revision); err != nil {

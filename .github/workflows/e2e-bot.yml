@@ -167,14 +167,14 @@ jobs:
             "$RUNNER_TEMP/e2ebench" -bin "${{ steps.agent.outputs.bin }}" -suite "$RUNNER_TEMP/suite" \
               -task "compaction,fix-add-bug,fizzbuzz,palindrome,subagent-delegation" \
               -model e2e -out report.md -json report.json -budget 800000
-            node -e '
+            node <<'JS'
               const results = require("./report.json");
               const unsuccessful = results.filter((result) => !result.Passed || result.Skipped);
               if (results.length === 0 || unsuccessful.length > 0) {
                 console.error(`e2e suite incomplete: ${unsuccessful.length}/${results.length} unsuccessful`);
                 process.exit(1);
               }
-            '
+          JS
           fi
 
       - name: Post report

@@ -478,10 +478,6 @@ jobs:
             exit 0
           fi
 
-            echo "CLI publication is frozen; the $channel pointer stays where it is and $TAG keeps only its immutable record"
-            exit 0
-          fi
-
           current_tag=""
           pointer_error="$(mktemp)"
           if aws s3 cp "s3://${R2_BUCKET}/cli/${channel}/latest.json" /tmp/cli-release.pointer.json \
@@ -626,9 +622,6 @@ jobs:
           if ! git ls-remote --exit-code origin "refs/tags/npm-v$version" >/dev/null; then
             echo "::error::the npm-v$version tag was never pushed — the npm channel is being left behind and 'npm update -g' users will be downgraded to the old 'latest'. Push it: git tag npm-v$version ${TAG} && git push origin npm-v$version (or 'npm dist-tag add deepzora@$version latest' for an already-published version)."
             exit 1
-          fi
-            echo "CLI publication is frozen; npm latest belongs to another line, only the npm-v$version tag is required"
-            exit 0
           fi
           for attempt in 1 2 3 4 5 6; do
             got="$(npm view deepzora dist-tags.latest 2>/dev/null || true)"

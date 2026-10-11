@@ -77,7 +77,15 @@ jobs:
           go-version-file: go.mod
       - name: Install Linux sandbox backend
         if: env.RUN_STEPS == 'true' && runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          if sysctl -n kernel.unprivileged_userns_clone >/dev/null 2>&1; then
+            sudo sysctl -w kernel.unprivileged_userns_clone=1
+          fi
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --ro-bind / / --dev /dev --proc /proc -- true
       - name: Build and test root module
         if: env.RUN_STEPS == 'true'
         run: |
@@ -150,7 +158,16 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
-      - run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - name: Install Linux sandbox backend
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          if sysctl -n kernel.unprivileged_userns_clone >/dev/null 2>&1; then
+            sudo sysctl -w kernel.unprivileged_userns_clone=1
+          fi
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --ro-bind / / --dev /dev --proc /proc -- true
       - name: Check concurrent runtime owners
         run: |
           go test -race -timeout=15m ./internal/agent/... ./internal/plugin/... ./internal/jobs/... \
@@ -261,6 +278,17 @@ jobs:
           node frontend/scripts/artifact-identity.mjs verify --shell electron --channel stable \
             --source-sha "$(git rev-parse HEAD)" --run-id "$GITHUB_RUN_ID" \
             --attempt "${{ needs.desktop-frontend.outputs.producer_attempt }}" --pnpm-version "$(pnpm --version)"
+      - name: Install Linux sandbox backend
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          if sysctl -n kernel.unprivileged_userns_clone >/dev/null 2>&1; then
+            sudo sysctl -w kernel.unprivileged_userns_clone=1
+          fi
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --ro-bind / / --dev /dev --proc /proc -- true
       - name: Test desktop module
         run: |
           go vet ./...

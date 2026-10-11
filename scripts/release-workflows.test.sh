@@ -255,21 +255,12 @@ test ! -e "$repo_root/scripts/test-webview2-approval-smoke.ps1"
 test ! -e "$repo_root/scripts/test-webview2-native-smoke.ps1"
 test ! -e "$repo_root/scripts/test-transcript-selection-webview2.ps1"
 test ! -e "$repo_root/.github/workflows/transcript-native-smoke.yml"
-grep -Fq 'name: Package Electron shell for native startup smoke' "$repo_root/.github/workflows/ci.yml"
-grep -Fq 'name: Smoke-test Electron native startup' "$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/package.mjs windows/amd64 v0.0.0-ci canary' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq -- '-X main.version=v0.0.0-ci -X main.channel=canary' "$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/smoke.mjs build/electron/windows-amd64/app --service build/bin/deepzora-desktop.exe' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/verify.mjs ../dist/Deepzora-darwin-arm64.zip' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/verify.mjs ../dist/Deepzora-windows-amd64.zip' \
-	"$repo_root/.github/workflows/ci.yml"
-grep -Fq 'node packaging/signing-files.mjs build/windows/signing-payload --check' \
-	"$repo_root/.github/workflows/ci.yml"
+# Ordinary CI owns packaging unit tests; the release workflow above owns
+# packaged startup, installer verification, and signing qualification.
+grep -Fq 'node --test packaging/*.test.mjs' "$repo_root/.github/workflows/ci.yml"
+! grep -Fq 'node packaging/package.mjs' "$repo_root/.github/workflows/ci.yml"
 if grep -Fq 'wails build' "$repo_root/.github/workflows/ci.yml"; then
-	echo "CI must package the Electron shell, not wails build" >&2
+	echo "CI must not build the retired Wails shell" >&2
 	exit 1
 fi
 for retired_review_gate in \

@@ -68,6 +68,8 @@ func newExclusiveSessionServe(t *testing.T) (*Server, *control.Controller, *sess
 }
 
 func TestExclusiveSessionPermissionPresetDoesNotFollowTheForegroundController(t *testing.T) {
+	restoreSandbox := control.SetPresetSandboxForTest(true)
+	t.Cleanup(restoreSandbox)
 	srv, ctrl, service, first := newExclusiveSessionServe(t)
 	httpServer := httptest.NewServer(operatorHandler(srv))
 	defer httpServer.Close()
@@ -114,6 +116,8 @@ func TestExclusiveSessionPermissionPresetDoesNotFollowTheForegroundController(t 
 }
 
 func TestExclusiveSessionPermissionPresetRoutesRememberTheSelectedSession(t *testing.T) {
+	restoreSandbox := control.SetPresetSandboxForTest(true)
+	t.Cleanup(restoreSandbox)
 	routes := []struct {
 		name   string
 		path   string

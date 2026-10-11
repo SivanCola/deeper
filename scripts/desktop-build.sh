@@ -112,7 +112,7 @@ numver="${VERSION#v}"; numver="${numver%%-*}"
 
 # Regenerate the desktop host contract and fail on drift: the packaged shell
 # embeds desktopContract.json, so a stale frontend/src/generated would ship a
-# shell/service protocol mismatch. CI's desktop-prepare job runs the same check.
+# shell/service protocol mismatch. CI's desktop-frontend job runs the same check.
 echo "==> desktop host contract drift check"
 contract_snapshot=$(mktemp -d)
 cp -R frontend/src/generated "$contract_snapshot/generated"
@@ -167,6 +167,9 @@ build_service() {
 		GOOS=linux GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $service_ldflags" -o "$service_out" .
 	else
 		GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags="-s -w $service_ldflags" -o "$service_out" .
+	fi
+	if [ "$os" = windows ]; then
+		node "$ROOT/scripts/verify-windows-gui-subsystem.mjs" "$service_out"
 	fi
 }
 
