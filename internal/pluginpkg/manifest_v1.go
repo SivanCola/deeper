@@ -585,8 +585,10 @@ func globThemePattern(root, pattern string) ([]string, error) {
 // the package root. Launch-time expansion lives with the runtime supervisor
 // (a later stage); this exists so diagnostics can resolve the on-disk path.
 func ExpandRuntimeCommand(command, root string) string {
-	if rest, ok := strings.CutPrefix(command, PluginRootEnvVar); ok {
-		return filepath.Join(root, filepath.FromSlash(rest))
+	for _, prefix := range []string{PluginRootEnvVar, "${DEEPER_PLUGIN_ROOT}"} {
+		if rest, ok := strings.CutPrefix(command, prefix); ok {
+			return filepath.Join(root, filepath.FromSlash(rest))
+		}
 	}
 	return command
 }

@@ -9,9 +9,13 @@ import (
 )
 
 func (c *Client) initializeParams() protocol.InitializeParams {
+	identity := protocol.ProtocolID
+	if c.legacyIdentity {
+		identity = "deeper.extension.v2"
+	}
 	return protocol.InitializeParams{
 		ProtocolVersion:         protocol.ProtocolVersion,
-		ProtocolID:              protocol.ProtocolID,
+		ProtocolID:              identity,
 		Manifest:                c.manifestExpectation(),
 		Session:                 c.session,
 		DependencySchemaVersion: protocol.DependencySchemaVersion,

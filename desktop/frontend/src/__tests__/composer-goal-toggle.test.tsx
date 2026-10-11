@@ -11,6 +11,7 @@ import type { AppBindings } from "../lib/bridge";
 import type { ComposerInvocation, StructuredInvocationSubmit } from "../lib/invocationDisplay";
 import type { CollaborationMode, CommandInfo, DirEntry, ToolApprovalMode } from "../lib/types";
 import { dispatchNativeFileDrop, installDesktopHostStub, type DesktopHostStubOptions } from "./desktopHostStub";
+import { waitForComposerReadiness as waitFor } from "./composerReadiness";
 
 let passed = 0;
 let failed = 0;
@@ -209,19 +210,6 @@ function nativeFileDropEvent(): Event {
     },
   });
   return drop;
-}
-
-async function waitFor(label: string, predicate: () => boolean) {
-  // Completion includes a 120ms debounce and a React commit; zero-delay
-  // event-loop turns do not bound either phase under concurrent CI load.
-  const deadline = performance.now() + 2000;
-  while (performance.now() < deadline) {
-    await act(async () => {
-      await flushTimers(10);
-    });
-    if (predicate()) return;
-  }
-  throw new Error(`timed out waiting for ${label}`);
 }
 
 type RenderedComposer = Awaited<ReturnType<typeof renderComposer>>;

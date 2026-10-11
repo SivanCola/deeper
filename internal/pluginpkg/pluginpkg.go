@@ -134,6 +134,7 @@ type MCPServerRef struct {
 
 // Manifest is the normalized manifest shape used by Deepzora.
 type Manifest struct {
+	LegacyIdentity bool `json:"-"` // Derived from the exact pre-rename v2 API identity.
 	// APIVersion is deepzora.com/plugin/v2 for native packages; empty for Claude/Codex.
 	APIVersion  string
 	Name        string
