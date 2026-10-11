@@ -362,7 +362,7 @@ export function elfInterpreter(bytes) {
   return null;
 }
 
-const LINUX_GO_MEMBERS = {
+export const LINUX_GO_MEMBERS = {
   "linux-tar": ["deepzora-desktop", "deepzora-launcher", "deepzora-guard", "deepzora"],
   "linux-deb": ["usr/bin/deepzora-desktop", "usr/bin/deepzora-launcher", "usr/bin/deepzora", "usr/lib/deepzora/deepzora-update-helper"],
 };
@@ -370,10 +370,15 @@ const LINUX_GO_MEMBERS = {
 export function checkStaticGoMembers(kind, readMember) {
   const errors = [];
   for (const name of LINUX_GO_MEMBERS[kind] ?? []) {
-    const interpreter = elfInterpreter(readMember(name));
-    if (interpreter !== null) errors.push(`${name} is dynamically linked (interpreter ${interpreter}); Linux Go binaries must be built with CGO_ENABLED=0`);
+    const error = staticGoMemberError(name, readMember(name));
+    if (error) errors.push(error);
   }
   return errors;
+}
+
+export function staticGoMemberError(name, bytes) {
+  const interpreter = elfInterpreter(bytes);
+  return interpreter === null ? null : `${name} is dynamically linked (interpreter ${interpreter}); Linux Go binaries must be built with CGO_ENABLED=0`;
 }
 
 export function validateMacServiceLink(appDir) {

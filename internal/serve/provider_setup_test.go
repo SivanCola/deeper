@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -128,12 +129,16 @@ func TestProviderSetupStoresRemoteCredentialAndRebuildsController(t *testing.T) 
 func TestProviderSetupActivationFailureKeepsCredentialAndHidesDetails(t *testing.T) {
 	s, secret := newProviderSetupTestServer(t)
 	defer s.Close()
+	var logOutput bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logOutput, nil)))
+	t.Cleanup(func() { slog.SetDefault(previousLogger) })
 	s.EnableProviderSetupForListener("127.0.0.1:8787")
 	built := 0
 	s.buildController = func(_ context.Context, ref string) (*control.Controller, error) {
 		built++
 		if built == 1 {
-			return nil, errors.New("sensitive remote path: /srv/private/config.toml")
+			return nil, errors.New("sensitive remote path: /srv/private/config.toml; api_key=" + secret)
 		}
 		return control.New(control.Options{
 			Sink:       s.bc,
@@ -153,6 +158,9 @@ func TestProviderSetupActivationFailureKeepsCredentialAndHidesDetails(t *testing
 	}
 	if bytes.Contains(body, []byte(secret)) || bytes.Contains(body, []byte("/srv/private")) {
 		t.Fatalf("activation failure reflected sensitive details: %s", body)
+	}
+	if logged := logOutput.String(); strings.Contains(logged, secret) || !strings.Contains(logged, "remote provider setup failed") {
+		t.Fatalf("activation failure must be logged without the credential: %s", logged)
 	}
 	resolved := config.ResolveCredentialForRootGlobalFirst(".", providerSetupTestKeyEnv)
 	if !resolved.Set || resolved.Value != secret {

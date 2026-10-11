@@ -293,8 +293,8 @@ func (a *App) retryDeferredRebuild(tabID string, request deferredRebuildRequest)
 		}
 		a.mu.Unlock()
 	}
-	slog.Warn("desktop: deferred settings rebuild failed", "setting", setting, "tab", tabID, "err", err)
-	a.warnForTab(tabID, fmt.Sprintf("%s was saved but the session could not refresh: %s", setting, err.Error()))
+	slog.Warn("desktop: deferred settings rebuild failed", "setting", setting, "tab", tabID, "err", secrets.RedactError(err))
+	a.warnForTab(tabID, fmt.Sprintf("%s was saved but the session could not refresh: %s", setting, secrets.RedactError(err)))
 }
 
 // retryDeferredRuntimeReload drives one queued ReloadRuntime pass. The
@@ -385,7 +385,7 @@ func (a *App) retryDeferredStartupBuild(tabID string, tab *WorkspaceTab, queuedS
 		return
 	}
 	a.clearDeferredRebuildVersion(tabID, sequence)
-	slog.Warn("desktop: deferred session startup failed", "tab", tabID, "err", err)
+	slog.Warn("desktop: deferred session startup failed", "tab", tabID, "err", secrets.RedactError(err))
 }
 
 func (a *App) tabHasRetryableStartupLeaseError(tab *WorkspaceTab) bool {

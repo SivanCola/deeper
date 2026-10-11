@@ -8,7 +8,8 @@
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { ARTIFACT_KINDS, WINDOWS_PORTABLE_LAYOUTS, checkEntryModes, checkMembers, checkStaticGoMembers, normalizeEntry, inferArtifactKind, isDirectory, listZipEntries, readZipMember, parseVerboseListing, validateMacServiceLink, walkFiles } from "./lib.mjs";
+import { readLinuxArchiveMember } from "./linux-members.mjs";
+import { ARTIFACT_KINDS, WINDOWS_PORTABLE_LAYOUTS, LINUX_GO_MEMBERS, checkEntryModes, checkMembers, staticGoMemberError, normalizeEntry, inferArtifactKind, isDirectory, listZipEntries, readZipMember, parseVerboseListing, validateMacServiceLink, walkFiles } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const artifactArg = args.find((arg) => !arg.startsWith("--"));
@@ -55,13 +56,11 @@ if (kind === "windows-portable-zip" && missing.length === 0 && forbidden.length 
 const modeErrors = checkEntryModes(rows, kind);
 if ((kind === "linux-tar" || kind === "linux-deb") && missing.length === 0) {
   const archived = new Map(rows.map((row) => [normalizeEntry(row.name), row.name]));
-  const extract = kind === "linux-tar" ? 'tar -xzOf "$1" "$2"' : 'dpkg-deb --fsys-tarfile "$1" | tar -xOf - "$2"';
-  const readMember = (name) => {
-    const result = spawnSync("sh", ["-c", extract, "sh", artifact, archived.get(name)], { maxBuffer: 512 * 1024 * 1024 });
-    if (result.status !== 0) throw new Error(`extracting ${name} failed: ${result.stderr?.toString() || result.error?.message || result.status}`);
-    return result.stdout;
-  };
-  layoutErrors.push(...checkStaticGoMembers(kind, readMember));
+  for (const name of LINUX_GO_MEMBERS[kind]) {
+    const archivedName = archived.get(name);
+    const error = staticGoMemberError(name, await readLinuxArchiveMember(artifact, archivedName, kind));
+    if (error) layoutErrors.push(error);
+  }
 }
 for (const name of missing) console.error(`verify: ${kind} is missing ${name}`);
 for (const name of forbidden) console.error(`verify: ${kind} must not contain ${name}`);

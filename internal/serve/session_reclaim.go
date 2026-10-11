@@ -375,7 +375,17 @@ func (s *Server) maybeAutoReclaimMirrored(path string) <-chan struct{} {
 	if time.Since(m.lastContact) < mirrorStaleAfter {
 		return nil
 	}
-	if leaseHeldByForeignRuntime(path) {
+	legacyPath, ref, identityDir, err := s.autoReclaimTarget(path)
+	if err != nil {
+		return nil
+	}
+	held := false
+	if ref.SessionID != "" {
+		held = session.ProbeWriterHeld(identityDir)
+	} else {
+		held = leaseHeldByForeignRuntime(legacyPath)
+	}
+	if held {
 		// The writer is alive but quiet (or another runtime took the file).
 		// Push the staleness window so a chatty-but-healthy writer never
 		// gets reclaimed under itself.
@@ -386,7 +396,7 @@ func (s *Server) maybeAutoReclaimMirrored(path string) <-chan struct{} {
 		// The vanished writer's OS lock is gone, so finish the request. Skipping
 		// it leaves the mirror stuck in read-only spectator mode.
 		slog.Info("serve: completing outstanding reclaim for vanished writer",
-			"session", agent.CanonicalSessionPath(path))
+			"session", path)
 	}
 	done := make(chan struct{})
 	go func() {
@@ -398,12 +408,10 @@ func (s *Server) maybeAutoReclaimMirrored(path string) <-chan struct{} {
 			return
 		}
 		recorder := &statusRecorder{header: http.Header{}}
-		if isSessionIDRoute(path) {
-			if ref, _, err := s.resolveSessionIdentity(path); err == nil {
-				s.reclaimIdentityLocked(recorder, context.Background(), path, ref, current)
-			}
+		if ref.SessionID != "" {
+			s.reclaimIdentityLocked(recorder, context.Background(), path, ref, current)
 		} else {
-			s.reclaimMirroredLocked(recorder, path, current)
+			s.reclaimMirroredLocked(recorder, legacyPath, current)
 		}
 		if recorder.status >= http.StatusBadRequest {
 			slog.Warn("serve: auto-reclaim of stale mirror failed", "session", path, "status", recorder.status)
