@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 concurrency:
-  # Push cancellation is handled by Supersede CI, which preserves the code
-  # ancestor still required by a release-notes-only candidate.
+  # Keep main SHA runs distinct so release qualification can verify the exact
+  # code ancestor; superseded PR runs share a group and are cancelled.
   group: ci-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true
 

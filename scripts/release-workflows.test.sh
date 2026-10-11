@@ -3,10 +3,18 @@
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
 for surface in cli desktop npm; do
   case "$surface" in cli) tag=v1.0.0;; desktop) tag=desktop-v1.0.0;; npm) tag=npm-v1.0.0;; esac
-  output="$(IN_TAG="$tag" IN_BASE_VERSION=1.0.0 IN_CHANNEL=stable bash "scripts/resolve-$surface-release.sh")"
-  [[ "$output" == *1.0.0* ]]
+  GITHUB_OUTPUT="$scratch/$surface.output" IN_TAG="$tag" IN_BASE_VERSION=1.0.0 IN_CHANNEL=stable \
+    bash "scripts/resolve-$surface-release.sh"
+  if [ "$surface" = npm ]; then
+    grep -Fxq 'arg=v1.0.0' "$scratch/$surface.output"
+  else
+    grep -Fxq "tag=$tag" "$scratch/$surface.output"
+    grep -Fxq 'prerelease=false' "$scratch/$surface.output"
+  fi
   for bad in "$tag-preview.1" "$tag-rc.1" invalid; do
     if IN_TAG="$bad" bash "scripts/resolve-$surface-release.sh" >/dev/null 2>&1; then
       echo "unsupported release accepted: $bad" >&2; exit 1

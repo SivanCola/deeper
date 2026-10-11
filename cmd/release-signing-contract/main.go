@@ -54,7 +54,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "validate":
-		fmt.Println("release signing release signing contract is valid")
+		fmt.Println("release signing contract is valid")
 	case "fingerprint":
 		fingerprint, err := contractFingerprint(root, contract)
 		if err != nil {

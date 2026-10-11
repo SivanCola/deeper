@@ -3,7 +3,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const files = execFileSync("git", ["ls-files", "README.md", "docs/*.md", "site/src/pages/*", "site/src/pages/**/*"], {
+const files = execFileSync("git", ["ls-files", "README.md", "README.zh-CN.md", "docs/*.md"], {
   encoding: "utf8",
 }).trim().split("\n").filter(file => file && existsSync(file));
 const rules = [

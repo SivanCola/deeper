@@ -20,13 +20,12 @@ function stageKind(job, step) {
   if (step === "Build each CLI binary once and package both surfaces") return "shared CLI/npm build";
   if (step === "Build and package") return "Desktop build";
   if (/^Finalize (amd64|arm64) in the shared Certum session$/.test(step)) return "Windows signing";
-  if (/^Install and smoke-test (final manual Windows|exact signed) installer$/.test(step)) return "Windows acceptance";
+  if (step === "Install and smoke-test exact signed installer") return "Windows acceptance";
   if (step === "Run universal DMG smoke on Intel hardware") return "macOS acceptance";
   if (step === "Seal candidate record") return "candidate sealing";
   if (step === "Verify payload provenance, bytes, source, and operation") return "candidate verification";
   if (step === "Create or verify all implementation tags") return "release activation";
   if (step === "Verify public artifacts") return "public verification";
-  if (step === "Dispatch and wait for the owned Pages deployment") return "site deployment";
   if (/Install (frontend|memory) dependencies/.test(step)) return "dependency install";
   if (step === "Install browser runtimes") return "browser setup";
   if (/Build (stable|canary|memory) frontend/.test(step)) return "frontend build";
