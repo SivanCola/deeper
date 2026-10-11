@@ -201,7 +201,7 @@ func assertUserConfigLockSerializesAcrossProcesses(t *testing.T, firstHome, seco
 		t.Helper()
 		cmd := exec.Command(os.Args[0], "-test.run=^TestLockUserConfigEditsHelperProcess$")
 		cmd.Env = testEnvWithOverrides(map[string]string{
-			"TMPDIR":                      processTmp,
+			"TMPDIR":                        processTmp,
 			"DEEPZORA_HOME":                 processHome,
 			"DEEPZORA_CONFIG_LOCK_HELPER":   "1",
 			"DEEPZORA_CONFIG_LOCK_MODE":     mode,

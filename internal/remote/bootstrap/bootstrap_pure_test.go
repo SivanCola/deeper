@@ -38,9 +38,9 @@ func TestParseUname(t *testing.T) {
 func TestParseVersion(t *testing.T) {
 	cases := map[string]string{
 		"deepzora v1.9.0":        "1.9.0",
-		"1.9.0":                "1.9.0",
+		"1.9.0":                  "1.9.0",
 		"deepzora version 2.0.1": "2.0.1",
-		"v1.10.0-rc.1":         "1.10.0-rc.1",
+		"v1.10.0-rc.1":           "1.10.0-rc.1",
 	}
 	for in, want := range cases {
 		got, err := ParseVersion(in)

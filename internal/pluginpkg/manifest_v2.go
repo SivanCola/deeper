@@ -413,6 +413,9 @@ func parseNative(path, root string) (Package, []string, error) {
 	if err != nil {
 		return Package{}, nil, err
 	}
+	if apiVersion == "" {
+		return Package{}, nil, rejectNonV2Native(apiVersion)
+	}
 	if err := checkAPIVersionV2(apiVersion); err != nil {
 		return Package{}, nil, err
 	}

@@ -344,7 +344,7 @@ test("the Linux package inputs install the Electron tree beside the update helpe
   const nfpm = read("build/linux/nfpm.yaml");
   assert.match(nfpm, /src: \.\/build\/bin\/app\n\s+dst: \/usr\/lib\/deepzora\/app\n\s+type: tree/);
   assert.match(nfpm, /dst: \/usr\/lib\/deepzora\/deepzora-update-helper/);
-  assert.match(nfpm, /dst: \/usr\/share\/polkit-1\/actions\/io\.github\.sivancola\.deepzora\.update\.policy/);
+  assert.match(nfpm, /dst: \/usr\/share\/polkit-1\/actions\/com\.deepzora\.desktop\.update\.policy/);
   assert.match(nfpm, /dst: \/usr\/bin\/deepzora-launcher/);
   assert.doesNotMatch(nfpm, /dst: \/usr\/bin\/deepzora-guard/);
   assert.match(nfpm, /postinstall: \.\/build\/linux\/postinstall\.sh/);

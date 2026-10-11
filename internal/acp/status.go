@@ -20,8 +20,8 @@ import (
 
 const (
 	deepzoraStatusSchemaVersion = 1
-	sessionStatusMethod       = "_deepzora.com/session/status"
-	sessionStatusUpdateMethod = "_deepzora.com/session/status_update"
+	sessionStatusMethod         = "_deepzora.com/session/status"
+	sessionStatusUpdateMethod   = "_deepzora.com/session/status_update"
 )
 
 // DeepzoraSchemaCapability advertises one versioned vendor extension in
@@ -116,19 +116,19 @@ type DeepzoraSessionStatus struct {
 	Mode             string                           `json:"mode"`
 	WorkMode         string                           `json:"workMode"`
 	PlannerMode      string                           `json:"plannerMode"`
-	Goal             DeepzoraStatusGoal                 `json:"goal"`
+	Goal             DeepzoraStatusGoal               `json:"goal"`
 	Phase            string                           `json:"phase"`
-	TurnOutcome      DeepzoraTurnOutcome                `json:"turnOutcome"`
-	FinalReadiness   DeepzoraFinalReadiness             `json:"finalReadiness"`
+	TurnOutcome      DeepzoraTurnOutcome              `json:"turnOutcome"`
+	FinalReadiness   DeepzoraFinalReadiness           `json:"finalReadiness"`
 	Sandbox          SessionSandboxState              `json:"sandbox"`
-	Usage            DeepzoraStatusUsage                `json:"usage"`
+	Usage            DeepzoraStatusUsage              `json:"usage"`
 }
 
 type DeepzoraStatusUpdate struct {
-	SchemaVersion int                 `json:"schemaVersion"`
-	Sequence      uint64              `json:"sequence"`
-	SessionID     string              `json:"sessionId"`
-	Event         string              `json:"event"`
+	SchemaVersion int                   `json:"schemaVersion"`
+	Sequence      uint64                `json:"sequence"`
+	SessionID     string                `json:"sessionId"`
+	Event         string                `json:"event"`
 	Status        DeepzoraSessionStatus `json:"status"`
 }
 
@@ -425,8 +425,8 @@ type persistedStatusTelemetry struct {
 	Sequence       uint64                    `json:"sequence"`
 	State          string                    `json:"state"`
 	Phase          string                    `json:"phase"`
-	TurnOutcome    DeepzoraTurnOutcome         `json:"turnOutcome"`
-	FinalReadiness DeepzoraFinalReadiness      `json:"finalReadiness"`
+	TurnOutcome    DeepzoraTurnOutcome       `json:"turnOutcome"`
+	FinalReadiness DeepzoraFinalReadiness    `json:"finalReadiness"`
 	TurnUsage      persistedUsageAccumulator `json:"turnUsage"`
 	Cumulative     persistedUsageAccumulator `json:"cumulative"`
 	GoalOverride   string                    `json:"goalOverride,omitempty"`

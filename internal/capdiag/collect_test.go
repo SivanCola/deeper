@@ -50,10 +50,10 @@ auto_start = false
 	write(t, filepath.Join(root, "AGENTS.md"), "# Agents\nUse go test.\n@../secret.md\n")
 
 	r := capdiag.Collect(capdiag.Options{
-		Root:          root,
-		HomeDir:       home,
+		Root:            root,
+		HomeDir:         home,
 		DeepzoraHomeDir: filepath.Join(home, ".deepzora"),
-		Live:          false,
+		Live:            false,
 	})
 
 	if r.SchemaVersion != 1 {
@@ -133,8 +133,8 @@ func TestCollectUsesExactDeepzoraHomeForGlobalHooks(t *testing.T) {
 }`)
 
 	report := capdiag.Collect(capdiag.Options{
-		Root:          root,
-		HomeDir:       home,
+		Root:            root,
+		HomeDir:         home,
 		DeepzoraHomeDir: deepzoraHome,
 	})
 	if report.Summary.Hooks != 1 || len(report.Hooks.Entries) != 1 {

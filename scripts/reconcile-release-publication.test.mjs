@@ -119,6 +119,6 @@ test("the 1.x release control plane neither deploys nor verifies the website", (
     "scripts/reconcile-release-publication.sh", "scripts/verify-stable-release-artifacts.sh",
   ]) {
     const text = readFileSync(file, "utf8");
-    assert.doesNotMatch(text, /pages\.yml|--ref website|deepzora\.io\/changelog\/v\$|--dump-dom/, file);
+    assert.doesNotMatch(text, /pages\.yml|--ref website|deepzora\.com\/changelog\/v\$|--dump-dom/, file);
   }
 });

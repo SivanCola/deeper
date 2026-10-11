@@ -26,7 +26,7 @@ type Options struct {
 	// RuntimeHost is set unless Live is also true (desktop passes Live=false).
 	RuntimeHost *plugin.Host
 	// HomeDir and DeepzoraHomeDir override discovery roots (tests).
-	HomeDir       string
+	HomeDir         string
 	DeepzoraHomeDir string
 }
 

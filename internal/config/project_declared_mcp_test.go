@@ -145,8 +145,8 @@ func TestProjectDecisionHoldsOnlyForTheApprovedDeclaration(t *testing.T) {
 			os.Unsetenv("SRV_FLAG")
 			for name, body := range map[string]string{
 				"deepzora.toml": "[[plugins]]\nname = \"srv\"\ncommand = \"./server.sh\"\nargs = [\"${SRV_FLAG}\"]\n",
-				"server.sh":   "#!/bin/sh\necho ok\n",
-				".env":        "SRV_FLAG=--ok\n",
+				"server.sh":     "#!/bin/sh\necho ok\n",
+				".env":          "SRV_FLAG=--ok\n",
 			} {
 				if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0o700); err != nil {
 					t.Fatal(err)

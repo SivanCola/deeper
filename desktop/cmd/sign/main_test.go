@@ -81,7 +81,7 @@ func TestGenManifest(t *testing.T) {
 		"Deepzora-linux-amd64.tar.gz",
 		"Deepzora-linux-amd64.deb",            // human download, not the updater channel
 		"Deepzora-linux-amd64.tar.gz.minisig", // must be skipped
-		"README.txt",                        // unmatched, must be skipped
+		"README.txt",                          // unmatched, must be skipped
 	}
 	for _, n := range names {
 		if err := os.WriteFile(filepath.Join(dir, n), []byte(n), 0o644); err != nil {

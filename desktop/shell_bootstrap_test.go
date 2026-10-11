@@ -145,7 +145,7 @@ func TestLinuxBootstrapMatchesPackagedLayouts(t *testing.T) {
 	for exe, want := range map[string]string{
 		"/opt/deepzora/deepzora-desktop":                  "/opt/deepzora/app/Deepzora",
 		"/opt/deepzora/versions/v1.39.0/deepzora-desktop": "/opt/deepzora/versions/v1.39.0/app/Deepzora",
-		"/usr/bin/deepzora-desktop":                     "/usr/lib/deepzora/app/Deepzora",
+		"/usr/bin/deepzora-desktop":                       "/usr/lib/deepzora/app/Deepzora",
 	} {
 		if got := shellPathForExecutable(exe, "linux"); got != want {
 			t.Errorf("%s: got %s want %s", exe, got, want)

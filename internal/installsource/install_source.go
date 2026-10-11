@@ -60,7 +60,7 @@ type Options struct {
 type installSourceTool struct {
 	root         string
 	home         string
-	deepzoraHome   string
+	deepzoraHome string
 	httpClient   *http.Client
 	connectMCP   MCPConnector
 	onDisconnect OnDisconnectFunc
@@ -111,7 +111,7 @@ func NewTool(opts Options) tool.Tool {
 	return &installSourceTool{
 		root:         root,
 		home:         home,
-		deepzoraHome:   deepzoraHome,
+		deepzoraHome: deepzoraHome,
 		httpClient:   client,
 		connectMCP:   opts.ConnectMCP,
 		onDisconnect: opts.OnDisconnect,
