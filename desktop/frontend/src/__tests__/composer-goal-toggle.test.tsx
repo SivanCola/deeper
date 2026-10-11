@@ -212,9 +212,12 @@ function nativeFileDropEvent(): Event {
 }
 
 async function waitFor(label: string, predicate: () => boolean) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  // Completion includes a 120ms debounce and a React commit; zero-delay
+  // event-loop turns do not bound either phase under concurrent CI load.
+  const deadline = performance.now() + 2000;
+  while (performance.now() < deadline) {
     await act(async () => {
-      await flushTimers();
+      await flushTimers(10);
     });
     if (predicate()) return;
   }
