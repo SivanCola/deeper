@@ -26,10 +26,10 @@ func TestHTTP2ClassificationUsesTypeAndCode(t *testing.T) {
 	for _, cause := range []error{
 		http2.ConnectionError(http2.ErrCodeFrameSize),
 		http2.StreamError{StreamID: 1, Code: http2.ErrCodeFrameSize},
-		http2.GoAwayError{ErrCode: http2.ErrCodeFrameSize},
+		http2.GoAwayError{ErrCode: http2.ErrCodeFrameSize}, //nolint:staticcheck // SA1019: preserve exact typed legacy GOAWAY classification coverage.
 		new(http2.ConnectionError(http2.ErrCodeFrameSize)),
 		&http2.StreamError{StreamID: 1, Code: http2.ErrCodeFrameSize},
-		&http2.GoAwayError{ErrCode: http2.ErrCodeFrameSize},
+		&http2.GoAwayError{ErrCode: http2.ErrCodeFrameSize}, //nolint:staticcheck // SA1019: preserve pointer-wrapped legacy GOAWAY coverage.
 	} {
 		if got := HTTP2TransportCode(opaqueTransportWrapper{errors.Join(errors.New("unrelated"), cause)}); got != "FRAME_SIZE_ERROR" {
 			t.Fatalf("typed code = %q", got)

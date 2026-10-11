@@ -15,7 +15,7 @@ func TestOpenCodeGoChatModelsMatchPinnedLimits(t *testing.T) {
 		"deepseek-v4-flash-vision-exp": {Context: 1_000_000, MaxOutput: 384_000},
 		"mimo-v2.5-pro":                {Context: 1_048_576, MaxOutput: 128_000},
 		"mimo-v2.5":                    {Context: 1_000_000, MaxOutput: 128_000},
-		"hy3":                          {Context: 256_000, MaxOutput: 64_000},
+		"hy3":                          {Context: 256_000, MaxOutput: 128_000},
 	}
 	got := OpenCodeGoChatModels()
 	for id, lim := range want {
@@ -135,9 +135,9 @@ func TestOpenCodeGoModelInfoUsesExactLocalCatalog(t *testing.T) {
 	if _, ok := OpenCodeGoModelInfo("openai", "https://opencode.ai/zen/go/v1", "omen-alpha"); ok {
 		t.Fatal("uncatalogued model must not be inferred from its endpoint")
 	}
-	kimi, ok := OpenCodeGoModelInfo("openai", "https://opencode.ai/zen/go/v1", "kimi-k2.6")
+	kimi, ok := OpenCodeGoModelInfo("openai", "https://opencode.ai/zen/go/v1", "kimi-k3")
 	if !ok || !kimi.SupportsInput(ModalityImage) {
-		t.Fatalf("pi catalog kimi-k2.6 metadata = %+v, ok=%t", kimi, ok)
+		t.Fatalf("pi catalog kimi-k3 metadata = %+v, ok=%t", kimi, ok)
 	}
 	if kimi.ContextWindow == 0 || kimi.MaxOutputTokens == 0 || kimi.API == "" {
 		t.Fatalf("pi catalog should preserve model metadata, got %+v", kimi)
@@ -153,12 +153,34 @@ func TestPiCatalogModelInfosContainsMultipleProviders(t *testing.T) {
 }
 
 func TestPiCatalogModelInfoForProviderRequiresExactServingRoute(t *testing.T) {
-	model, ok := PiCatalogModelInfoForProvider("opencode-go", "openai", "https://opencode.ai/zen/go/v1", "qwen3.6-plus")
+	model, ok := PiCatalogModelInfoForProvider("opencode-go", "openai", "https://opencode.ai/zen/go/v1", "qwen3.7-plus")
 	if !ok || !model.SupportsInput(ModalityImage) || model.API != "openai-completions" {
 		t.Fatalf("OpenCode catalog model = %+v, ok=%t", model, ok)
 	}
-	if _, ok := PiCatalogModelInfoForProvider("opencode-go", "openai", "https://gateway.example/v1", "qwen3.6-plus"); ok {
+	if _, ok := PiCatalogModelInfoForProvider("opencode-go", "openai", "https://gateway.example/v1", "qwen3.7-plus"); ok {
 		t.Fatal("custom endpoint must not inherit pi catalog metadata")
+	}
+}
+
+func TestOpenCodeGoCompatibilityMetadataSurvivesCatalogRemoval(t *testing.T) {
+	const endpoint = "https://opencode.ai/zen/go/v1"
+	for _, id := range []string{"kimi-k2.6", "qwen3.6-plus", "qwen3.7-max"} {
+		if _, ok := PiCatalogModelInfoForProvider("opencode-go", "openai", endpoint, id); ok {
+			t.Fatalf("%s unexpectedly remains in the pinned Pi snapshot", id)
+		}
+		info, ok := OpenCodeGoModelInfo("openai", endpoint, id)
+		if !ok || info.API != "openai-completions" || info.BaseURL != endpoint || info.ContextWindow == 0 || info.MaxOutputTokens != 65_536 {
+			t.Fatalf("%s lost verified compatibility metadata: %+v, ok=%t", id, info, ok)
+		}
+		if wantImage := id != "qwen3.7-max"; info.SupportsInput(ModalityImage) != wantImage {
+			t.Fatalf("%s image capability = %t, want %t", id, info.SupportsInput(ModalityImage), wantImage)
+		}
+		if _, ok := OpenCodeGoModelInfo("openai", "https://gateway.example/v1", id); ok {
+			t.Fatalf("%s leaked official metadata onto a custom gateway", id)
+		}
+		if id == "kimi-k2.6" && !info.Reasoning {
+			t.Fatal("Kimi K2.6 lost its known reasoning capability")
+		}
 	}
 }
 

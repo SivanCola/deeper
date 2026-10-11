@@ -20,7 +20,7 @@ func TestHTTP2FailureClassificationDoesNotEnableRetries(t *testing.T) {
 	for _, cause := range []error{
 		http2.ConnectionError(http2.ErrCodeProtocol),
 		http2.StreamError{StreamID: 3, Code: http2.ErrCodeProtocol},
-		http2.GoAwayError{LastStreamID: 3, ErrCode: http2.ErrCodeProtocol, DebugData: "private"},
+		http2.GoAwayError{LastStreamID: 3, ErrCode: http2.ErrCodeProtocol, DebugData: "private"}, //nolint:staticcheck // SA1019: fixture guards classification of the legacy error still emitted by x/net Transport.
 	} {
 		t.Run(cause.Error(), func(t *testing.T) {
 			calls := 0

@@ -37,6 +37,8 @@ func OpenCodeGoChatModels() map[string]OpenCodeGoModelLimits {
 		"deepseek-flash": {Context: 1_000_000, MaxOutput: 384_000}, "deepseek-v4-pro": {Context: 1_000_000, MaxOutput: 384_000}, "deepseek-v4-flash": {Context: 1_000_000, MaxOutput: 384_000},
 		"deepseek-v4-flash-vision-exp": {Context: 1_000_000, MaxOutput: 384_000}, "mimo-v2.5-pro": {Context: 1_048_576, MaxOutput: 128_000},
 		"mimo-v2.5": {Context: 1_000_000, MaxOutput: 128_000}, "hy3": {Context: 256_000, MaxOutput: 64_000},
+		// Keep verified serving routes when a newer Pi snapshot removes old SKUs.
+		"qwen3.6-plus": {Context: 1_000_000, MaxOutput: 65_536}, "qwen3.7-max": {Context: 1_000_000, MaxOutput: 65_536},
 	})
 }
 
@@ -207,16 +209,23 @@ func OpenCodeGoModelInfo(kind, baseURL, model string) (ModelInfo, bool) {
 	if !ok {
 		return ModelInfo{}, false
 	}
-	if _, ok := LookupOfficialOpenCodeGo(kind, baseURL, model); !ok {
+	limits, ok := LookupOfficialOpenCodeGo(kind, baseURL, model)
+	if !ok {
 		return ModelInfo{}, false
 	}
-	info := ModelInfo{ID: strings.TrimSpace(model), InputModalities: []ModelModality{ModalityText}}
+	info := ModelInfo{
+		ID: strings.TrimSpace(model), API: expectedCatalogAPI(kind), BaseURL: routeURL(route),
+		InputModalities: []ModelModality{ModalityText}, ContextWindow: limits.Context, MaxOutputTokens: limits.MaxOutput,
+	}
+	if model == "kimi-k2.6" {
+		info.Reasoning = true
+	}
 	if model == "deepseek-v4-flash-vision-exp" {
 		info.InputModalities = []ModelModality{ModalityText, ModalityImage}
 		return info, true
 	}
 	vision := map[string]map[string]bool{
-		OpenCodeGoRouteChat:      {"kimi-k3": true},
+		OpenCodeGoRouteChat:      {"kimi-k3": true, "kimi-k2.6": true, "qwen3.6-plus": true},
 		OpenCodeGoRouteAnthropic: {"qwen3.8-max": true, "qwen3.7-plus": true, "qwen3.6-plus": true},
 		OpenCodeGoRouteResponses: {"grok-4.5": true, "gpt-5.6-luna": true, "muse-spark-1.2-contributor": true},
 	}[route]

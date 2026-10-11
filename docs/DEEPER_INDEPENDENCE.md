@@ -71,6 +71,25 @@ escaping it, including dangling outside targets, fail before manifest mutation.
 
 ## CI and release setup / CI 和发布配置
 
+The frontend and Electron use the shared `desktop/pnpm-lock.yaml`; dependency
+updates must refresh that workspace lockfile. Keep TypeScript 6 while the
+architecture checks depend on its compiler API. React and its type packages
+stay on the 19.2 patch line until a newer runtime passes the existing startup
+bundle budget. Dependency upgrades do not relax performance or security gates.
+
+前端和 Electron 共用 `desktop/pnpm-lock.yaml`，升级依赖时必须同步更新工作区锁文件。
+架构检查仍依赖 TypeScript 6 的编译器 API；React 及其类型包暂时保持 19.2 补丁版本，
+后续运行时通过现有首屏体积预算后再升级。依赖升级不放宽性能或安全检查门槛。
+
+The root and desktop modules use Go 1.26.9 and `golang.org/x/net` 0.60.0
+to address the reachable standard-library and HTTP/2 vulnerabilities reported
+by the release validation scanner. When a local Go configuration disables
+automatic toolchain selection, run validation with `GOTOOLCHAIN=go1.26.9`.
+
+根模块和桌面模块使用 Go 1.26.9 与 `golang.org/x/net` 0.60.0，修复发布验证
+扫描器发现的可达标准库与 HTTP/2 漏洞。本地 Go 配置若关闭自动工具链选择，
+验证时应显式设置 `GOTOOLCHAIN=go1.26.9`。
+
 Windows controller tests run in two complementary `A-M` and `N-Z` partitions.
 Each partition retains the 8-minute Go timeout; CI verifies the native test,
 example and fuzz-seed inventory has exactly one execution owner before running.
