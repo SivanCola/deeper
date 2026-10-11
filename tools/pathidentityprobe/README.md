@@ -45,8 +45,8 @@ A failure on the alias in Go/Deeper, native success on that same alias, and Go/D
 From the repository root, using the affected release's Go version:
 
 ```sh
-GOTOOLCHAIN=go1.26.6 go test ./tools/pathidentityprobe ./internal/pathidentity
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 GOTOOLCHAIN=go1.26.6 go build -trimpath -o deeper-path-probe.exe ./tools/pathidentityprobe
+GOTOOLCHAIN=go1.26.9 go test ./tools/pathidentityprobe ./internal/pathidentity
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 GOTOOLCHAIN=go1.26.9 go build -trimpath -o deeper-path-probe.exe ./tools/pathidentityprobe
 ```
 
 随包构建信息记录完整源码提交、工具链、源码校验值及验证范围。Windows 交叉编译通过不等于 Windows 实机执行通过。
