@@ -66,6 +66,9 @@ try {
   assert.equal(await page.getByPlaceholder("Filter files…", { exact: true }).inputValue(), "mod", "reopen restores filtering");
   await page.reload();
   await page.locator('[data-workspace-path="go.mod"]').waitFor();
+  // Tree entries load independently of the async path resolution that restores
+  // the dock's navigation record. A visible row is not a restored selection.
+  await page.waitForFunction(() => document.querySelector(".workspace-tree__row--active")?.getAttribute("data-workspace-path") === "go.mod");
   assert.equal(await tabs.count(), 2, "restart restores both views");
   assert.equal(await page.evaluate(selected), "go.mod", "restart restores the active view");
   assert.equal(await page.getByPlaceholder("Filter files…", { exact: true }).inputValue(), "mod", "restart restores filtering");
