@@ -27,6 +27,7 @@ func TestSignFiles(t *testing.T) {
 	}
 	t.Setenv("MINISIGN_PRIVATE_KEY", string(enc))
 	t.Setenv("MINISIGN_PASSWORD", "pw")
+	t.Setenv("MINISIGN_PUBLIC_KEY", pub.String())
 
 	dir := t.TempDir()
 	artifact := filepath.Join(dir, "Deeper-linux-amd64.tar.gz")
@@ -44,6 +45,21 @@ func TestSignFiles(t *testing.T) {
 	}
 	if !minisign.Verify(pub, payload, sig) {
 		t.Fatal("produced signature does not verify under the signing key")
+	}
+	other, _, err := minisign.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MINISIGN_PUBLIC_KEY", other.String())
+	rejected := filepath.Join(dir, "mismatched-key.tar.gz")
+	if err := os.WriteFile(rejected, payload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := signFiles([]string{rejected}); err == nil || !strings.Contains(err.Error(), "configured public key does not match") {
+		t.Fatalf("mismatched public key was not rejected: %v", err)
+	}
+	if _, err := os.Stat(rejected + ".minisig"); !os.IsNotExist(err) {
+		t.Fatalf("signature published with a mismatched key: %v", err)
 	}
 }
 

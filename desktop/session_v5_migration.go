@@ -363,7 +363,7 @@ func (a *App) migrateCanonicalStore(ctx context.Context, source desktopMigration
 			if source.pairedIDs[info.SessionID] || source.handledStores[canonicalRuntimeRoot(filepath.Join(source.root, info.SessionID))] {
 				continue
 			}
-			if info.Codec == session.PrototypeCodec || info.Codec == session.LegacyLinearCodec || info.Codec == session.FinalV31Codec {
+			if session.IsLegacyCodec(info.Codec) {
 				joined = errors.Join(joined, a.migratePreviewSession(ctx, source, info.SessionID))
 				continue
 			}

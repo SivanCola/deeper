@@ -92,7 +92,7 @@ func loadOrBuildSparseIndex(ctx context.Context, dir, cacheDir string) (sparseIn
 		rebuilt.LastSequence = commit.LastSequence()
 		return true
 	}
-	if manifest.Codec == Codec {
+	if IsFramedCodec(manifest.Codec) {
 		err = scanV4CommitFileRefs(ctx, file, 0, 1, contentStoreForSessionDir(dir), nil, visit)
 	} else {
 		err = scanCommitFileCodec(file, 0, 1, manifest.Codec, nil, visit)

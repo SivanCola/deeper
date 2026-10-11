@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -79,10 +80,13 @@ func encodeV4Commits(ctx context.Context, dst io.Writer, content *sessioncontent
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
+		if commit.SchemaVersion != V4SchemaVersion || !IsFramedCodec(commit.Codec) {
+			return nil, fmt.Errorf("%w: v4 commit codec", ErrUnsupportedVersion)
+		}
 		counting := &countingWriter{writer: dst}
 		digest := sha256.New()
 		begin := v4Record{
-			SchemaVersion: V4SchemaVersion, Codec: V4Codec, RecordType: "batch/begin",
+			SchemaVersion: V4SchemaVersion, Codec: commit.Codec, RecordType: "batch/begin",
 			CommitID: commit.ID, OperationID: commit.OperationID, OperationHash: commit.OperationHash,
 			FirstSequence: commit.FirstSequence, EventCount: commit.EventCount, TurnID: commit.TurnID,
 			WriterGeneration: commit.WriterGeneration, CreatedAt: commit.CreatedAt,
@@ -117,13 +121,13 @@ func encodeV4Commits(ctx context.Context, dst io.Writer, content *sessioncontent
 				recordEvent.Payload = append([]byte(nil), event.Payload...)
 			}
 			if err := writeV4DigestRecord(ctx, counting, encoder, digest, v4Record{
-				SchemaVersion: V4SchemaVersion, Codec: V4Codec, RecordType: "batch/event", Event: recordEvent,
+				SchemaVersion: V4SchemaVersion, Codec: commit.Codec, RecordType: "batch/event", Event: recordEvent,
 			}); err != nil {
 				return nil, err
 			}
 		}
 		end := v4Record{
-			SchemaVersion: V4SchemaVersion, Codec: V4Codec, RecordType: "batch/end",
+			SchemaVersion: V4SchemaVersion, Codec: commit.Codec, RecordType: "batch/end",
 			CommitID: commit.ID, FirstSequence: commit.FirstSequence, EventCount: commit.EventCount,
 			SHA256: hex.EncodeToString(digest.Sum(nil)),
 		}
@@ -193,6 +197,39 @@ func scanV4CommitFileRefs(ctx context.Context, file io.ReadSeeker, startOffset i
 	return scanV4CommitFileMode(ctx, file, startOffset, nextSequence, content, knownKinds, false, visit)
 }
 
+func validateStoredLogCodec(ctx context.Context, dir string, manifest Manifest) error {
+	if !IsFramedCodec(manifest.Codec) {
+		return nil
+	}
+	// Keep the fixed log leaf inside the caller's confined session directory,
+	// including when a stored log is a symlink. Cleaning a full path is not a fence.
+	file, err := os.OpenInRoot(dir, currentLogName)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	decoder, err := zstd.NewReader(nil, zstd.WithDecoderConcurrency(1), zstd.WithDecoderMaxMemory(v4MaxFrameBytes))
+	if err != nil {
+		return err
+	}
+	defer decoder.Close()
+	raw, _, complete, err := readV4Frame(ctx, file, decoder)
+	if err != nil || !complete {
+		return err
+	}
+	var record v4Record
+	if err := json.Unmarshal(raw, &record); err != nil {
+		return fmt.Errorf("%w: decode v4 codec: %w", ErrDamagedStore, err)
+	}
+	if !validV4RecordCodec(record, manifest.Codec) {
+		return fmt.Errorf("%w: manifest and v4 log codecs disagree", ErrUnsupportedVersion)
+	}
+	return nil
+}
+
 func scanV4CommitFileMode(ctx context.Context, file io.ReadSeeker, startOffset int64, nextSequence uint64, content *sessioncontent.Store, knownKinds map[string]bool, resolvePayloads bool, visit func(int64, Commit) bool) error {
 	if knownKinds == nil {
 		knownKinds = ProjectionKinds
@@ -210,6 +247,7 @@ func scanV4CommitFileMode(ctx context.Context, file io.ReadSeeker, startOffset i
 	defer decoder.Close()
 
 	var pending *Commit
+	var logCodec string
 	var pendingOffset int64
 	var digest hash.Hash
 	offset := startOffset
@@ -228,9 +266,10 @@ func scanV4CommitFileMode(ctx context.Context, file io.ReadSeeker, startOffset i
 		if err := json.Unmarshal(raw, &record); err != nil {
 			return fmt.Errorf("%w: decode v4 record at %d: %w", ErrDamagedStore, recordOffset, err)
 		}
-		if record.SchemaVersion != V4SchemaVersion || record.Codec != V4Codec {
+		if !validV4RecordCodec(record, logCodec) {
 			return fmt.Errorf("%w: v4 physical record at %d", ErrUnsupportedVersion, recordOffset)
 		}
+		logCodec = record.Codec
 		switch record.RecordType {
 		case "batch/begin":
 			if pending != nil {
@@ -240,7 +279,7 @@ func scanV4CommitFileMode(ctx context.Context, file io.ReadSeeker, startOffset i
 				return fmt.Errorf("%w: invalid v4 batch boundary at sequence %d", ErrDamagedStore, nextSequence)
 			}
 			pending = &Commit{
-				SchemaVersion: V4SchemaVersion, Codec: V4Codec, RecordType: "commit",
+				SchemaVersion: V4SchemaVersion, Codec: record.Codec, RecordType: "commit",
 				ID: record.CommitID, OperationID: record.OperationID, OperationHash: record.OperationHash,
 				FirstSequence: record.FirstSequence, EventCount: record.EventCount, TurnID: record.TurnID,
 				WriterGeneration: record.WriterGeneration, CreatedAt: record.CreatedAt,

@@ -285,6 +285,10 @@ jobs:
     needs: changes
     if: ${{ !cancelled() }}
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [A-M, N-Z]
     env:
       RUN_STEPS: ${{ (github.event_name != 'pull_request' && needs.changes.outputs.notes_only != 'true') || needs.changes.outputs.code != 'false' }}
     steps:
@@ -327,7 +331,7 @@ jobs:
         timeout-minutes: 10
         env:
           DEEPER_RELEASE_CACHE_GUARD: "1"
-        run: node scripts/windows-go-tests.mjs control
+        run: node scripts/windows-go-tests.mjs control ${{ matrix.shard }}
 
   windows-isolated:
     needs: changes

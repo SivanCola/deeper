@@ -128,9 +128,32 @@ func testNativeLinearStore(t *testing.T, codec string) {
 }
 
 func TestNativePrototypeHistoryRewriteRoundTrip(t *testing.T) {
+	for _, codec := range []string{PrototypeCodec, "reasonix.session.events/v3"} {
+		t.Run(codec, func(t *testing.T) { testNativePrototypeHistoryRewriteRoundTrip(t, codec) })
+	}
+}
+
+func testNativePrototypeHistoryRewriteRoundTrip(t *testing.T, codec string) {
 	dir := filepath.Join(t.TempDir(), "prototype")
 	payload, _ := json.Marshal(map[string]any{"messages": []provider.Message{{ID: "old", Role: provider.RoleUser, Content: "old"}}})
 	writePrototypeStore(t, dir, []Event{{Kind: "context/replace", Payload: payload}}, "")
+	manifestPath := filepath.Join(dir, "manifest.json")
+	manifest, err := readStoredManifest(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest.Codec = codec
+	if err := writeManifestFile(manifestPath, manifest); err != nil {
+		t.Fatal(err)
+	}
+	logPath := filepath.Join(dir, legacyLogName)
+	log, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(logPath, bytes.ReplaceAll(log, []byte(PrototypeCodec), []byte(codec)), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	s, err := Open(dir, "prototype")
 	if err != nil {
 		t.Fatal(err)

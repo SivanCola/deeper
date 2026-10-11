@@ -18,8 +18,7 @@ func isDesktopStoredPreview(path string) (bool, error) {
 	if err := json.Unmarshal(body, &manifest); err != nil {
 		return false, err
 	}
-	return (manifest.SchemaVersion == 3 && (manifest.Codec == session.PrototypeCodec || manifest.Codec == session.LegacyLinearCodec || manifest.Codec == session.FinalV31Codec)) ||
-		(manifest.SchemaVersion == session.SchemaVersion && manifest.Codec == session.Codec && manifest.StorageRevision == 0), nil
+	return manifest.IsPreview(), nil
 }
 
 func stageDesktopStoredPreview(ctx context.Context, path string) (*session.Service, session.SessionRef, func(), error) {

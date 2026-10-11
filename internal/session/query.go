@@ -271,7 +271,7 @@ func (q *Query) enrichInfo(info *SessionInfo) {
 			return
 		}
 	}
-	if !q.metadataOnlyListings && info.Codec == Codec && info.MetadataStatus != MetadataReady {
+	if !q.metadataOnlyListings && IsFramedCodec(info.Codec) && info.MetadataStatus != MetadataReady {
 		q.rebuildMu.Lock()
 		failure := q.metadataFailures[info.SessionID]
 		q.rebuildMu.Unlock()

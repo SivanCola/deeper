@@ -131,8 +131,8 @@ func freezePreviewCodec(ctx context.Context, sourceDir string, allowCurrent bool
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
 		return frozenPreview{}, fmt.Errorf("%w: prototype manifest: %w", ErrDamagedStore, err)
 	}
-	legacyCodec := manifest.SchemaVersion == 3 && (manifest.Codec == PrototypeCodec || manifest.Codec == LegacyLinearCodec || manifest.Codec == FinalV31Codec)
-	draftCodec := allowCurrent && manifest.SchemaVersion == SchemaVersion && manifest.Codec == Codec && manifest.StorageRevision == 0
+	legacyCodec := manifest.SchemaVersion == 3 && IsLegacyCodec(manifest.Codec)
+	draftCodec := allowCurrent && manifest.SchemaVersion == SchemaVersion && IsFramedCodec(manifest.Codec) && manifest.StorageRevision == 0
 	if (!legacyCodec && !draftCodec) || strings.TrimSpace(manifest.SessionID) == "" {
 		return frozenPreview{}, fmt.Errorf("%w: unsupported preview codec %q", ErrUnsupportedVersion, manifest.Codec)
 	}
@@ -247,7 +247,7 @@ func importFrozenPreview(ctx context.Context, frozen frozenPreview, targetRoot s
 		return err
 	}
 	knownKinds := ProjectionKinds
-	if prototype.Codec == PrototypeCodec {
+	if isPrototypeCodec(prototype.Codec) {
 		knownKinds = PrototypeProjectionKinds
 	}
 	visit := func(_ int64, commit Commit) bool {
@@ -269,7 +269,7 @@ func importFrozenPreview(ctx context.Context, frozen frozenPreview, targetRoot s
 		lastSequence = converted.LastSequence()
 		return ctx.Err() == nil
 	}
-	if prototype.Codec == Codec && prototype.StorageRevision == 0 {
+	if IsFramedCodec(prototype.Codec) && prototype.StorageRevision == 0 {
 		err = scanV4CommitFile(ctx, frozenLog, 0, 1, contentStoreForSessionDir(sourceDir), knownKinds, visit)
 	} else {
 		err = scanCommitFileCodec(frozenLog, 0, 1, prototype.Codec, knownKinds, visit)
@@ -372,7 +372,7 @@ func convertPrototypeCommit(original Commit, sourceID, targetID, sourceCodec str
 	commit.OperationID = "prototype:" + sourceID + ":" + original.ID
 	commit.WriterGeneration = 1
 	for eventIndex := range commit.Events {
-		if sourceCodec == PrototypeCodec && commit.Events[eventIndex].Kind == "context/replace" {
+		if isPrototypeCodec(sourceCodec) && commit.Events[eventIndex].Kind == "context/replace" {
 			commit.Events[eventIndex].Kind = "history/replace"
 		}
 	}

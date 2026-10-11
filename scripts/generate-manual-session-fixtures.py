@@ -19,7 +19,7 @@ def git(*args):
 
 
 for version, tag in [(v, "desktop-v" + v) for v in ("1.38.9", "1.38.10", "1.38.11")] + [
-        ("main-pr10469", "e8762acc9"), ("main-pr10572", "54826e46a")]:
+        ("main-v2-pr10469", "e8762acc9"), ("main-v2-pr10572", "54826e46a")]:
     output = OUTPUT / version
     output.mkdir(parents=True, exist_ok=True)
     temporary = pathlib.Path(tempfile.mkdtemp(prefix="rollbackfixture", dir=DESKTOP / "internal"))
