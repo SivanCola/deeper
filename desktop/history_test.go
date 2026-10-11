@@ -598,30 +598,6 @@ func TestHistoryForTabUsesPinnedSessionBeforeControllerReady(t *testing.T) {
 	}
 }
 
-func historyMemoryCompilerContract(t *testing.T, sourceEvent string) string {
-	t.Helper()
-	body, err := json.Marshal(map[string]any{
-		"type": "memory_v5_execution_contract",
-		"planner_ir": map[string]any{
-			"source_event": sourceEvent,
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return "<memory-compiler-execution>\n" + string(body) + "\n</memory-compiler-execution>"
-}
-
-func assertNoHistoryMemoryContract(t *testing.T, text string) {
-	t.Helper()
-	if strings.Contains(text, "<memory-compiler-execution>") ||
-		strings.Contains(text, "</memory-compiler-execution>") ||
-		strings.Contains(text, "memory_v5_execution_contract") ||
-		strings.Contains(text, "planner_ir") {
-		t.Fatalf("history leaked Memory v5 contract content: %q", text)
-	}
-}
-
 func TestHistoryMessagesArchiveCompletedToolPayloads(t *testing.T) {
 	largeArgs := `{"command":"` + strings.Repeat("printf x;", 300) + `"}`
 	largeOutput := strings.Repeat("line of output\n", 600)

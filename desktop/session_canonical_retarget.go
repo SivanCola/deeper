@@ -3,10 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"os"
 	"strings"
-	"time"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/sessioncatalog"
@@ -101,68 +98,6 @@ func (a *App) resumeSessionForTranscript(tabID, path string, limit int, includeH
 		return HistoryPage{}, newSessionOperationError("unsupported", "Use a current session identity.")
 	}
 	return a.resumeCanonicalSessionForTranscript(tab, ctrl, path, limit, includeHistory)
-}
-
-// switchToLoadedSessionPage commits tab onto a session that is already loaded
-// and optionally builds a legacy page from a matching preload. Modern callers
-// take their first screen from the authoritative transcript snapshot instead.
-func (a *App) switchToLoadedSessionPage(tab *WorkspaceTab, loaded *agent.Session, sessionPath string, readOnly, includeHistory bool, limit int, phases *HistorySwitchPhases) (HistoryPage, error) {
-	rebindStarted := time.Now()
-	if sessionRuntimeKey(tab.currentSessionPath()) != sessionRuntimeKey(sessionPath) {
-		if err := a.rebindTabToLoadedSessionPath(tab, sessionPath, loaded); err != nil {
-			phases.Outcome = "rebind_failed"
-			return HistoryPage{}, err
-		}
-	}
-	a.setTabReadOnly(tab.ID, readOnly)
-	// The rebind republishes tab.Ctrl; a nil controller here means the switch did
-	// not commit, and the caller must keep the previous surface recoverable.
-	_, reboundCtrl := a.tabAndCtrlByID(tab.ID)
-	if reboundCtrl == nil {
-		phases.Outcome = "controller_missing"
-		return HistoryPage{}, fmt.Errorf("tab is not ready after session rebind")
-	}
-	phases.RebindMs = elapsedMs(rebindStarted)
-	if !includeHistory {
-		return HistoryPage{Messages: []HistoryMessage{}}, nil
-	}
-
-	buildStarted := time.Now()
-	page, durableRead := historyPageForController(tab, reboundCtrl, loaded, sessionPath, 0, limit)
-	phases.HistoryMs = elapsedMs(buildStarted)
-	if durableRead {
-		phases.DurableReads++
-	}
-	phases.HistoryCount = len(page.Messages)
-	return page, nil
-}
-
-func elapsedMs(started time.Time) int64 {
-	return time.Since(started).Milliseconds()
-}
-
-// sessionFileBytes reports the durable log size for switch diagnostics. Only the
-// size leaves this function; the path is never logged with it.
-func sessionFileBytes(path string) int64 {
-	if info, err := os.Stat(path); err == nil && !info.IsDir() {
-		return info.Size()
-	}
-	return 0
-}
-
-func logSessionSwitchPhases(phases HistorySwitchPhases, started time.Time) {
-	slog.Debug("desktop: session switch",
-		"outcome", phases.Outcome,
-		"resolve_ms", phases.ResolveMs,
-		"load_ms", phases.LoadMs,
-		"rebind_ms", phases.RebindMs,
-		"history_ms", phases.HistoryMs,
-		"total_ms", elapsedMs(started),
-		"loaded_messages", phases.LoadedCount,
-		"loaded_bytes", phases.LoadedBytes,
-		"history_entries", phases.HistoryCount,
-		"durable_reads", phases.DurableReads,
-	)
 }
 
 func (a *App) retargetOpenTabsToContinuations() {

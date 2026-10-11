@@ -12,7 +12,7 @@ import (
 func TestRegistryRejectsPastVersionsWithoutRewriting(t *testing.T) {
 	for _, version := range []int{1, 2} {
 		path := filepath.Join(t.TempDir(), "state.json")
-		raw := []byte(fmt.Sprintf("{\"version\":%d}", version))
+		raw := fmt.Appendf(nil, "{\"version\":%d}", version)
 		if err := os.WriteFile(path, raw, 0600); err != nil {
 			t.Fatal(err)
 		}

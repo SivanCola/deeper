@@ -124,8 +124,11 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		}
 	}
 	ciWorkflow := readTestFile(t, "../.github/workflows/ci.yml")
-	if !strings.Contains(ciWorkflow, `node packaging/smoke.mjs build/electron/windows-amd64/app`) {
-		t.Error("Windows CI must smoke the packaged Electron shell startup")
+	if !strings.Contains(workflow, `Smoke-test packaged Electron startup`) {
+		t.Error("Windows release qualification must smoke the packaged Electron shell startup")
+	}
+	if strings.Contains(ciWorkflow, `node packaging/package.mjs`) {
+		t.Error("ordinary CI must keep packaged acceptance in the release workflow")
 	}
 	if strings.Contains(ciWorkflow, "webview2") || strings.Contains(ciWorkflow, "WebView2") {
 		t.Error("Windows CI must not reference the retired WebView2 smoke harness")

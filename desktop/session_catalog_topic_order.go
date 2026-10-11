@@ -86,15 +86,3 @@ func encodeProjectTopicCursor(topic sessioncatalog.TopicRecord, sortMode string,
 	}
 	return sessioncatalog.EncodeTopicCursorBound(pinned, activity, topic.TopicID, binding)
 }
-
-func encodeProjectNodeCursor(topic ProjectNode, sortMode string, manualOrder bool, binding string) string {
-	pinned := 0
-	if topic.Pinned {
-		pinned = 1
-	}
-	activity := projectTopicSortValue(topic.CreatedAt, topic.LastActivityAt, sortMode)
-	if manualOrder {
-		return sessioncatalog.EncodeOrderedTopicCursorBound(pinned, topic.SortOrder, activity, topic.TopicID, binding)
-	}
-	return sessioncatalog.EncodeTopicCursorBound(pinned, activity, topic.TopicID, binding)
-}

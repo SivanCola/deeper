@@ -144,11 +144,6 @@ func (s *Server) ctl() control.SessionAPI {
 	return s.ctrl
 }
 
-// resumeBindHookForTest, when set, runs inside /resume's critical sequence
-// between the lease rebind and the controller Resume. Tests use it to force
-// the interleaving bindMu exists to prevent; production never sets it.
-var resumeBindHookForTest func()
-
 // registerDetachedHookForTest pauses after recovery callback installation but
 // before the registry publication. Production never sets it.
 var registerDetachedHookForTest func()

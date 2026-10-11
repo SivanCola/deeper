@@ -654,19 +654,6 @@ func connectionMatchesInbound(conn config.BotConnectionConfig, msg bot.InboundMe
 	return true
 }
 
-func appendUniqueString(values []string, next string) ([]string, bool) {
-	next = strings.TrimSpace(next)
-	if next == "" {
-		return values, false
-	}
-	for _, value := range values {
-		if strings.TrimSpace(value) == next {
-			return values, false
-		}
-	}
-	return append(values, next), true
-}
-
 func firstNonEmptyString(vals ...string) string {
 	for _, val := range vals {
 		if strings.TrimSpace(val) != "" {

@@ -30,7 +30,7 @@ type heldScope struct {
 	endpoints    heldEndpoints
 	bot          BotConfig
 	// Regional display preferences: a repository must not alter how spend reads.
-	language, currency, displayCurrency string
+	language, displayCurrency string
 }
 
 func holdUserScope(c *Config) heldScope {

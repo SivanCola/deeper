@@ -4,26 +4,9 @@ package winaclresidue
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"golang.org/x/sys/windows"
 )
-
-// canonicalWindowsPath expands 8.3 aliases without opening the protected file.
-// The original spelling is kept on failure so the exact-path comparison still
-// works on volumes without long-name expansion.
-func canonicalWindowsPath(path string) string {
-	input, err := windows.UTF16PtrFromString(filepath.Clean(path))
-	if err != nil {
-		return filepath.Clean(path)
-	}
-	buffer := make([]uint16, 32768)
-	n, err := windows.GetLongPathName(input, &buffer[0], uint32(len(buffer)))
-	if err != nil || n == 0 || n >= uint32(len(buffer)) {
-		return filepath.Clean(path)
-	}
-	return filepath.Clean(windows.UTF16ToString(buffer[:n]))
-}
 
 // ResetCredentialDACL replaces the DACL of the credential store with a
 // protected entry that grants only the current user full control. It opens

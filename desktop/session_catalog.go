@@ -96,9 +96,7 @@ type ProjectTopicPageRequest struct {
 	pinnedOnly       bool
 	timeCutoff       int64
 	readContext      context.Context
-	metadataSnapshot *[]ProjectNode
 	readAllSources   bool
-	readAvailability *catalogWorkspaceAvailability
 }
 
 type ProjectTopicKey struct {
@@ -315,30 +313,6 @@ func (a *App) cancelAllTabBuilds() {
 		a.supersedeTabBuildLocked(tab)
 	}
 	a.mu.Unlock()
-}
-
-func listCatalogSessionsForDirectory(ctx context.Context, catalog *sessioncatalog.Catalog,
-	target sessioncatalog.DirectoryTarget, directory string) ([]sessioncatalog.SessionRecord, error) {
-	for range 2 {
-		records := []sessioncatalog.SessionRecord{}
-		cursor := ""
-		for {
-			page, err := catalog.ListSessions(ctx, sessioncatalog.SessionPageRequest{Scope: target.Scope,
-				WorkspaceRoot: target.WorkspaceRoot, Directory: directory, Cursor: cursor, Limit: sessioncatalog.MaxLimit})
-			if err != nil {
-				return nil, err
-			}
-			if page.StaleCursor {
-				break
-			}
-			records = append(records, page.Items...)
-			if page.NextCursor == "" {
-				return records, nil
-			}
-			cursor = page.NextCursor
-		}
-	}
-	return []sessioncatalog.SessionRecord{}, nil
 }
 
 // Metadata-only projection bounds each writer slice inside the catalog. A

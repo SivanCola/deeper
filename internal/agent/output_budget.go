@@ -159,10 +159,6 @@ func outputBudgetOf(p provider.Provider) int {
 	return 0
 }
 
-func sharesContextWindow(p provider.Provider) bool {
-	return contextBudgetPolicyOf(p).WindowMode == provider.ContextWindowShared
-}
-
 func contextBudgetPolicyOf(p provider.Provider) provider.ContextBudgetPolicy {
 	if nilutil.IsNil(p) {
 		return provider.ContextBudgetPolicy{}

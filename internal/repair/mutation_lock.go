@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -33,8 +31,6 @@ var repairMutationAfterRename = func(string) {}
 // repairMutationAfterPrepare is a test seam for simulating process exit after
 // the write-ahead repair intent is durable but before the filesystem rename.
 var repairMutationAfterPrepare = func(string) {}
-
-var repairPathCaseInsensitive = platformRepairPathCaseInsensitive
 
 func lockRepairTransaction() (func(), error) {
 	expectedPendingState := repairPlanReleaseNodeState(pendingRepairTransactionPath())
@@ -130,45 +126,6 @@ func canonicalRepairPath(path string) string {
 		return ""
 	}
 	return identity.Key
-}
-
-// resolveParentSymlinkPath resolves symlink parents of path and re-attaches the
-// original leaf base name. The leaf is intentionally not EvalSymlinks'd: two
-// different symlink leaves that share a referent must stay distinct targets.
-func resolveParentSymlinkPath(path string) string {
-	if path == "" {
-		return ""
-	}
-	parent := filepath.Dir(path)
-	base := filepath.Base(path)
-	if parent == path {
-		// Root or volume path: nothing to resolve above the leaf.
-		return path
-	}
-	if resolved, err := filepath.EvalSymlinks(parent); err == nil {
-		return filepath.Join(resolved, base)
-	}
-	// Parent may not exist yet (create-only targets). Resolve the longest
-	// existing ancestor and rejoin the missing components including the leaf.
-	var missing []string
-	dir := parent
-	missing = append(missing, base)
-	for {
-		if resolved, err := filepath.EvalSymlinks(dir); err == nil {
-			parts := make([]string, 0, 1+len(missing))
-			parts = append(parts, resolved)
-			for _, v := range slices.Backward(missing) {
-				parts = append(parts, v)
-			}
-			return filepath.Join(parts...)
-		}
-		next := filepath.Dir(dir)
-		if next == dir {
-			return path
-		}
-		missing = append(missing, filepath.Base(dir))
-		dir = next
-	}
 }
 
 // LockRepairMutations is the exported form of lockRepairMutations for desktop

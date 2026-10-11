@@ -1,105 +1,16 @@
 package session
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 )
-
-func testNativeLinearStore(t *testing.T, codec string) {
-	root := t.TempDir()
-	dir := filepath.Join(root, "legacy-linear")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	manifest := Manifest{SchemaVersion: 3, Codec: codec, SessionID: "legacy-linear", CreatedAt: time.Now().UTC(), WriterGeneration: 1}
-	if err := writeManifestFile(filepath.Join(dir, "manifest.json"), manifest); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "events.jsonl"), nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	s, err := OpenWithOptions(dir, "legacy-linear", OpenOptions{ExternalHistory: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = s.Close(context.Background()) })
-	_, err = s.Append(t.Context(), Batch{OperationID: "continue-old", Events: []Event{{Kind: "turn/start"}}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.Flush(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Close(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	got, err := readStoredManifest(filepath.Join(dir, "manifest.json"))
-	if err != nil || got.Codec != codec || got.SchemaVersion != 3 {
-		t.Fatalf("manifest = %+v, err=%v", got, err)
-	}
-	commits, err := Replay(dir, nil)
-	if err != nil || len(commits) != 1 || commits[0].Codec != codec {
-		t.Fatalf("commits = %+v, err=%v", commits, err)
-	}
-	// Preserve the byte boundary of records produced by a different JSON
-	// encoder. Re-marshalling a record to derive its end would truncate this.
-	logPath := filepath.Join(dir, "events.jsonl")
-	original, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	original = append([]byte("  "), original...)
-	if err := os.WriteFile(logPath, original, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	s, err = OpenWithOptions(dir, "legacy-linear", OpenOptions{ExternalHistory: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, err := os.ReadFile(logPath); err != nil || !bytes.Equal(got, original) {
-		t.Fatalf("opening changed original log bytes: %v", err)
-	}
-	if _, err := s.Append(t.Context(), Batch{OperationID: "finish-old", Events: []Event{{Kind: "turn/end", Payload: json.RawMessage(`{"status":"completed"}`)}}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Close(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	commits, err = Replay(dir, nil)
-	if err != nil || len(commits) != 2 || commits[1].FirstSequence != 2 {
-		t.Fatalf("reopened commits = %+v, err=%v", commits, err)
-	}
-	complete, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(logPath, append(append([]byte(nil), complete...), []byte(`{"partial":`)...), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	s, err = OpenWithOptions(dir, "legacy-linear", OpenOptions{ExternalHistory: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, err := os.ReadFile(logPath); err != nil || !bytes.Equal(got, complete) {
-		t.Fatalf("torn repair changed complete prefix: %v", err)
-	}
-	backups, err := filepath.Glob(filepath.Join(dir, "events.torn-*.tail"))
-	if err != nil || len(backups) != 1 {
-		t.Fatalf("torn evidence missing: %v %v", backups, err)
-	}
-	if got, err := os.ReadFile(backups[0]); err != nil || string(got) != `{"partial":` {
-		t.Fatalf("torn evidence changed: %q %v", got, err)
-	}
-}
 
 func TestCommitBatchAndProjectionAreAtomic(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "s")
@@ -439,20 +350,4 @@ func TestOpenUsesSingleWriterLeaseAndAdvancesGeneration(t *testing.T) {
 	if second.manifest.WriterGeneration != firstGeneration+1 {
 		t.Fatalf("writer generation = %d, want %d", second.manifest.WriterGeneration, firstGeneration+1)
 	}
-}
-
-func mustRead(t *testing.T, path string) []byte {
-	t.Helper()
-	b, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
-}
-
-func containsJSONKey(raw []byte, key string) bool {
-	var value map[string]any
-	_ = json.Unmarshal(raw, &value)
-	_, ok := value[key]
-	return ok
 }

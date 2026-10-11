@@ -52,24 +52,6 @@ func representativeSessionMessages() []provider.Message {
 	}
 }
 
-func writeLegacyJSONLSession(t *testing.T, path string, msgs []provider.Message) {
-	t.Helper()
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		t.Fatalf("open jsonl: %v", err)
-	}
-	enc := json.NewEncoder(f)
-	for _, m := range msgs {
-		if err := enc.Encode(m); err != nil {
-			f.Close()
-			t.Fatalf("encode jsonl: %v", err)
-		}
-	}
-	if err := f.Close(); err != nil {
-		t.Fatalf("close jsonl: %v", err)
-	}
-}
-
 // loadAndDigestSessionMessages loads like LoadSession does and returns the
 // decode-fused digest alongside the messages.
 func loadAndDigestSessionMessages(path string) (msgs []provider.Message, fromEvents, damaged bool, digest [sha256.Size]byte, digestOK bool, err error) {

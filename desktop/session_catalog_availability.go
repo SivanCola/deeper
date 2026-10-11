@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"sort"
 
 	"deepzora/internal/sessioncatalog"
 )
@@ -14,15 +13,6 @@ type catalogWorkspaceAvailability struct {
 	ready    int
 	pending  int
 	failed   int
-}
-
-func (availability catalogWorkspaceAvailability) decorate(page ProjectTopicPage, revision uint64) ProjectTopicPage {
-	page.Revision = max(page.Revision, revision)
-	page.Complete = availability.complete
-	page.ReadyDirectories = availability.ready
-	page.PendingDirectories = availability.pending
-	page.FailedDirectories = availability.failed
-	return page
 }
 
 func (a *App) catalogWorkspaceAvailability(catalog *sessioncatalog.Catalog, scope, workspaceRoot string, views ...context.Context) catalogWorkspaceAvailability {
@@ -64,45 +54,4 @@ func (a *App) catalogWorkspaceAvailability(catalog *sessioncatalog.Catalog, scop
 		availability.complete = true
 	}
 	return availability
-}
-
-func (a *App) mergeMetadataTopics(req ProjectTopicPageRequest, page ProjectTopicPage) (ProjectTopicPage, error) {
-	metadata, err := a.metadataTopicPage(req)
-	if err != nil {
-		return page, err
-	}
-	manualOrder := manualTopicOrderFor(req.Scope, req.WorkspaceRoot)
-	if req.readAllSources {
-		manualOrder = false
-	}
-	seen := make(map[string]struct{}, len(page.Items)+len(metadata.Items))
-	for _, item := range page.Items {
-		seen[item.TopicID] = struct{}{}
-	}
-	for _, item := range metadata.Items {
-		if _, exists := seen[item.TopicID]; exists {
-			continue
-		}
-		seen[item.TopicID] = struct{}{}
-		page.Items = append(page.Items, item)
-	}
-	sort.SliceStable(page.Items, func(i, j int) bool {
-		return projectTopicLess(page.Items[i], page.Items[j], req.SortMode, manualOrder)
-	})
-	limit := req.Limit
-	if limit <= 0 {
-		limit = sessioncatalog.DefaultLimit
-	}
-	if limit > sessioncatalog.MaxLimit {
-		limit = sessioncatalog.MaxLimit
-	}
-	hasMore := page.NextCursor != "" || metadata.NextCursor != "" || len(page.Items) > limit
-	if len(page.Items) > limit {
-		page.Items = page.Items[:limit]
-	}
-	page.NextCursor = ""
-	if hasMore && len(page.Items) > 0 {
-		page.NextCursor = encodeProjectNodeCursor(page.Items[len(page.Items)-1], req.SortMode, manualOrder, req.groupCursorBind)
-	}
-	return page, nil
 }

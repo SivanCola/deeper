@@ -985,7 +985,6 @@ func applyLinuxVersioned(targz []byte, targetVersion string) error {
 	return activateLinuxShellRelease(targz, targetVersion, currentInstallDirForLinuxUpdate())
 }
 
-var currentExecutablePathForLinux = currentExecutablePath
 var currentInstallDirForLinuxUpdate = currentInstallDir
 
 func applyWindowsFile(path, expectedSHA256, targetVersion string) error {

@@ -2,8 +2,6 @@ package serve
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -38,32 +36,6 @@ func (s *Server) sessions(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].MtimeMilli > out[j].MtimeMilli })
 	writeJSON(w, out)
-}
-
-// readSessionDir reports ok=false only when the directory exists but cannot be
-// read; a missing directory is an empty session list, not a failure.
-func readSessionDir(dir string) ([]os.DirEntry, bool) {
-	if dir == "" {
-		return nil, true
-	}
-	entries, err := os.ReadDir(dir)
-	switch {
-	case os.IsNotExist(err):
-		return nil, true
-	case err != nil:
-		return nil, false
-	}
-	return entries, true
-}
-
-func (s *Server) detachedRuntimeWork() map[string]bool {
-	running := map[string]bool{}
-	s.detachedMu.Lock()
-	defer s.detachedMu.Unlock()
-	for path, detached := range s.detached {
-		running[filepath.Clean(path)] = controllerHasActiveRuntimeWork(detached.ctrl)
-	}
-	return running
 }
 
 // canonicalSessionRows follows the catalog cursor to the end. One List call

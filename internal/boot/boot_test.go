@@ -385,30 +385,6 @@ func toolSchemaNames(tools []provider.ToolSchema) []string {
 	return names
 }
 
-func firstTokenProfileRequest(t *testing.T, tokenMode string) provider.Request {
-	t.Helper()
-	registerBootTokenProfileTestProvider()
-	prov := testutil.NewMock("token-profile", testutil.Turn{Text: "done"})
-	setBootTokenProfileTestProvider(t, prov)
-
-	opts := Options{Sink: event.Discard}
-	if tokenMode != "" {
-	}
-	ctrl, err := Build(context.Background(), opts)
-	if err != nil {
-		t.Fatalf("Build(%q): %v", tokenMode, err)
-	}
-	defer ctrl.Close()
-	if err := ctrl.Run(context.Background(), "capture request prefix"); err != nil {
-		t.Fatalf("Run(%q): %v", tokenMode, err)
-	}
-	reqs := mainConversationRequests(prov.Requests())
-	if len(reqs) != 1 {
-		t.Fatalf("requests(%q) = %d, want 1", tokenMode, len(reqs))
-	}
-	return reqs[0]
-}
-
 func captureTokenProfileSurface(t *testing.T, tokenMode string) (provider.Request, []tool.ContractEntry) {
 	t.Helper()
 	registerBootTokenProfileTestProvider()
@@ -416,8 +392,6 @@ func captureTokenProfileSurface(t *testing.T, tokenMode string) (provider.Reques
 	setBootTokenProfileTestProvider(t, prov)
 
 	opts := Options{Sink: event.Discard}
-	if tokenMode != "" {
-	}
 	ctrl, err := Build(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Build(%q): %v", tokenMode, err)
@@ -2957,15 +2931,6 @@ func hasPermissionRule(rules []string, want string) bool {
 	return slices.Contains(rules, want)
 }
 
-func hasPlanModeReadOnlyCommand(commands []string, want string) bool {
-	for _, cmd := range commands {
-		if strings.TrimSpace(cmd) == want {
-			return true
-		}
-	}
-	return false
-}
-
 func TestPluginSpecsMapConfiguredMCPTimeouts(t *testing.T) {
 	specs := PluginSpecsForRootWithOptions([]config.PluginEntry{{
 		Name:                  "maker",
@@ -3362,23 +3327,6 @@ models = ["x"]
 	}
 	if got, err := os.ReadFile(target); err != nil || string(got) != "ok" {
 		t.Fatalf("sandboxed file = %q, err=%v", got, err)
-	}
-}
-
-func waitForMCPFailure(t *testing.T, h *plugin.Host, name string, timeout time.Duration) []plugin.Failure {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for {
-		failures := h.Failures()
-		for _, f := range failures {
-			if f.Name == name {
-				return failures
-			}
-		}
-		if time.Now().After(deadline) {
-			return failures
-		}
-		time.Sleep(10 * time.Millisecond)
 	}
 }
 

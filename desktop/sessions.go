@@ -393,18 +393,6 @@ func listTrashedSessionFiles(dir string) ([]string, error) {
 	return paths, nil
 }
 
-func trashedSessionDeletedAt(path string) int64 {
-	b, err := readFileUTF8(filepath.Join(filepath.Dir(path), sessionTrashMetaFile))
-	if err != nil {
-		return 0
-	}
-	var meta trashedSessionMeta
-	if err := json.Unmarshal(b, &meta); err != nil {
-		return 0
-	}
-	return meta.DeletedAt
-}
-
 func purgeTrashedSessionFile(dir, path string) error {
 	_, key, itemDir, err := validateTrashedSessionPath(dir, path)
 	if err != nil {

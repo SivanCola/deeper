@@ -361,12 +361,6 @@ func TestSlashNewRefreshesControllerTagAndForegroundRoute(t *testing.T) {
 	}
 }
 
-type backgroundJobOnlyController struct{ *control.Controller }
-
-func (c *backgroundJobOnlyController) RuntimeStatus() control.RuntimeStatus {
-	return control.RuntimeStatus{BackgroundJobs: 1, Cancellable: true}
-}
-
 type detachedProviderHealProbe struct {
 	*control.Controller
 	closed atomic.Bool

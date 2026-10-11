@@ -116,17 +116,6 @@ func TestResumePickerEscDismisses(t *testing.T) {
 	}
 }
 
-// mergedResumeSessions projects the merged picker rows onto the legacy row
-// shape the older listing tests assert against.
-func mergedResumeSessions(dir string) []agent.SessionInfo {
-	entries := mergedResumeEntries(dir, resumeListCap)
-	out := make([]agent.SessionInfo, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, entry.session)
-	}
-	return out
-}
-
 func saveTestSession(t *testing.T, path, prompt string) {
 	t.Helper()
 	s := agent.NewSession("sys")
@@ -179,14 +168,5 @@ func TestResumeAcceptChainsIntoSessionMenu(t *testing.T) {
 	}
 	if !m.completion.active || m.completion.kind != compSlashArg {
 		t.Fatalf("accepting /resume should chain into the session menu: %+v", m.completion)
-	}
-}
-
-func saveResumeTestSession(t *testing.T, path, content string) {
-	t.Helper()
-	s := agent.NewSession("sys")
-	s.Add(provider.Message{Role: provider.RoleUser, Content: content})
-	if err := s.Save(path); err != nil {
-		t.Fatal(err)
 	}
 }

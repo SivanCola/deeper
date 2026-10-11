@@ -54,7 +54,6 @@ import (
 	"regexp"
 	goruntime "runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -2524,16 +2523,6 @@ func (a *App) SummarizeUpToForTab(tabID string, turn int) error {
 	return ctrl.SummarizeUpTo(a.ctx, turn)
 }
 
-type channelSessionRoute struct {
-	channel       string
-	channelLabel  string
-	remoteID      string
-	chatType      string
-	userID        string
-	threadID      string
-	sessionSource string
-}
-
 type WorkspaceMeta struct {
 	Path    string `json:"path"`
 	Name    string `json:"name"`
@@ -2589,15 +2578,6 @@ func (a *App) activeSessionDir() string {
 	return tabSessionDir(tab)
 }
 
-func (a *App) trashedSessionDir(path string) (string, error) {
-	for _, dir := range a.knownSessionDirs() {
-		if _, _, _, err := validateTrashedSessionPath(dir, path); err == nil {
-			return dir, nil
-		}
-	}
-	return "", fmt.Errorf("trashed session path outside known session dirs: %s", path)
-}
-
 func (a *App) sessionDirForPath(path string) (string, string, error) {
 	for _, dir := range a.knownSessionDirs() {
 		sessionPath, _, err := validateSessionPath(dir, path)
@@ -2606,103 +2586,6 @@ func (a *App) sessionDirForPath(path string) (string, string, error) {
 		}
 	}
 	return "", "", fmt.Errorf("session path outside known session dirs: %s", path)
-}
-
-func applyChannelSessionRoute(meta *SessionMeta, route channelSessionRoute) {
-	if meta == nil {
-		return
-	}
-	meta.Kind = "channel"
-	meta.Channel = route.channel
-	meta.ChannelLabel = route.channelLabel
-	meta.RemoteID = route.remoteID
-	meta.ChatType = route.chatType
-	meta.UserID = route.userID
-	meta.ThreadID = route.threadID
-	meta.SessionSource = route.sessionSource
-}
-
-func channelSessionRoutesForDir(dir string) map[string]channelSessionRoute {
-	userPath := config.UserConfigPath()
-	if strings.TrimSpace(userPath) == "" {
-		return nil
-	}
-	cfg := config.LoadForEdit(userPath)
-	out := map[string]channelSessionRoute{}
-	for _, conn := range cfg.Bot.Connections {
-		channel := strings.TrimSpace(conn.Provider)
-		if channel == "" {
-			continue
-		}
-		channelLabel := strings.TrimSpace(conn.Label)
-		if channelLabel == "" {
-			channelLabel = channelDisplayName(channel, conn.Domain)
-		}
-		for _, mapping := range conn.SessionMappings {
-			if strings.TrimSpace(mapping.SessionSource) != "auto" {
-				continue
-			}
-			sessionPath := botSessionPathTarget(mapping.SessionID)
-			if sessionPath == "" {
-				continue
-			}
-			validPath, _, err := validateSessionPath(dir, sessionPath)
-			if err != nil {
-				continue
-			}
-			key := sessionRuntimeKey(validPath)
-			if key == "" {
-				continue
-			}
-			out[key] = channelSessionRoute{
-				channel:       channel,
-				channelLabel:  channelLabel,
-				remoteID:      strings.TrimSpace(mapping.RemoteID),
-				chatType:      strings.TrimSpace(mapping.ChatType),
-				userID:        strings.TrimSpace(mapping.UserID),
-				threadID:      strings.TrimSpace(mapping.ThreadID),
-				sessionSource: strings.TrimSpace(mapping.SessionSource),
-			}
-		}
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-func botSessionPathTarget(sessionID string) string {
-	sessionID = strings.TrimSpace(sessionID)
-	if sessionID == "" {
-		return ""
-	}
-	if strings.HasPrefix(strings.ToLower(sessionID), "path:") {
-		return strings.TrimSpace(sessionID[5:])
-	}
-	if strings.HasSuffix(sessionID, ".jsonl") || strings.Contains(sessionID, "/") || strings.Contains(sessionID, `\`) || strings.HasPrefix(sessionID, "~") {
-		return sessionID
-	}
-	return ""
-}
-
-func channelDisplayName(provider, domain string) string {
-	provider = strings.TrimSpace(provider)
-	domain = strings.TrimSpace(domain)
-	switch provider {
-	case "feishu":
-		if strings.EqualFold(domain, "lark") {
-			return "Lark"
-		}
-		return "Feishu"
-	case "weixin":
-		return "WeChat"
-	case "qq":
-		return "QQ"
-	case "dingtalk":
-		return "DingTalk"
-	default:
-		return provider
-	}
 }
 
 var errRecoveryCopyNotRedundant = errors.New("recovery session contains content not preserved by its parent")
@@ -3042,26 +2925,6 @@ func (a *App) beginDestroySessionJobs(dir, sessionPath string) []control.Session
 	return destroys
 }
 
-func (a *App) openSessionPaths(dir string) map[string]struct{} {
-	a.mu.RLock()
-	paths := make([]string, 0, len(a.tabs)+len(a.detachedSessions))
-	for _, tab := range a.runtimeTabsLocked() {
-		if tab != nil {
-			paths = append(paths, tab.currentSessionPath())
-		}
-	}
-	a.mu.RUnlock()
-
-	out := make(map[string]struct{}, len(paths))
-	for _, path := range paths {
-		currentPath, _, err := validateSessionPath(dir, path)
-		if err == nil {
-			out[currentPath] = struct{}{}
-		}
-	}
-	return out
-}
-
 func (a *App) activeSessionPath(dir string) string {
 	a.mu.RLock()
 	var path string
@@ -3074,31 +2937,6 @@ func (a *App) activeSessionPath(dir string) string {
 		return ""
 	}
 	return currentPath
-}
-
-func (a *App) sessionDestroying(dir, sessionPath string) bool {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	for _, tab := range a.runtimeTabsLocked() {
-		if tab == nil || tab.Ctrl == nil || tabRuntimeSessionDir(tab) != dir {
-			continue
-		}
-		if tab.Ctrl.IsDestroyingSession(sessionPath) {
-			return true
-		}
-	}
-	return false
-}
-
-func (a *App) sessionOpen(dir, sessionPath string) bool {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	for _, tab := range a.runtimeTabsLocked() {
-		if tabMatchesSession(tab, dir, sessionPath) {
-			return true
-		}
-	}
-	return false
 }
 
 // RenameSession renames a durable session identified by the current route.
@@ -3148,21 +2986,6 @@ func (a *App) ResumeSessionForTab(tabID, path string) ([]HistoryMessage, error) 
 		return nil, err
 	}
 	return a.HistoryForTab(tabID), nil
-}
-
-// validateChannelSessionPath 校验 bot/channel 会话路径：channel 会话可能位于
-// 当前 controller 的 session dir（project scope）或全局 session dir
-// （global scope），单 tab 无法同时覆盖两者，因此都放行。
-func validateChannelSessionPath(ctrlDir, path string) (string, string, error) {
-	if p, b, err := validateSessionPath(ctrlDir, path); err == nil {
-		return p, b, nil
-	}
-	if globalDir := config.SessionDir(); globalDir != "" && globalDir != ctrlDir {
-		if p, b, err := validateSessionPath(globalDir, path); err == nil {
-			return p, b, nil
-		}
-	}
-	return validateSessionPath(ctrlDir, path)
 }
 
 func (a *App) OpenChannelSessionForTab(tabID, path string) ([]HistoryMessage, error) {
@@ -3742,13 +3565,6 @@ func loadResumableSession(sessionPath string) (*agent.Session, error) {
 	return agent.LoadSession(sessionPath)
 }
 
-func loadResumableSessionContext(ctx context.Context, sessionPath string) (*agent.Session, error) {
-	if agent.IsCleanupPending(sessionPath) {
-		return nil, fmt.Errorf("session is pending cleanup")
-	}
-	return agent.LoadSessionContext(ctx, sessionPath)
-}
-
 // PreviewSession reads a saved session for display only. It does not snapshot or
 // swap the active controller, so the history drawer can call it while a turn runs.
 func (a *App) PreviewSession(path string) ([]HistoryMessage, error) {
@@ -4152,80 +3968,6 @@ func promptHistoryFallbackMillis(path string, info os.FileInfo) int64 {
 		return info.ModTime().UnixMilli()
 	}
 	return 0
-}
-
-func parseJSONTimestampMillis(raw json.RawMessage) (int64, bool) {
-	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
-		return 0, false
-	}
-
-	var s string
-	if err := json.Unmarshal(raw, &s); err == nil {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return 0, false
-		}
-		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return normalizeTimestampMillis(n)
-		}
-		if f, err := strconv.ParseFloat(s, 64); err == nil {
-			return normalizeTimestampMillisFloat(f)
-		}
-		if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-			return t.UnixMilli(), true
-		}
-		return 0, false
-	}
-
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.UseNumber()
-	var n json.Number
-	if err := dec.Decode(&n); err != nil {
-		return 0, false
-	}
-	if i, err := strconv.ParseInt(n.String(), 10, 64); err == nil {
-		return normalizeTimestampMillis(i)
-	}
-	if f, err := strconv.ParseFloat(n.String(), 64); err == nil {
-		return normalizeTimestampMillisFloat(f)
-	}
-	return 0, false
-}
-
-func normalizeTimestampMillis(v int64) (int64, bool) {
-	if v <= 0 {
-		return 0, false
-	}
-	switch {
-	case v >= 1_000_000_000_000_000_000:
-		return v / 1_000_000, true // nanoseconds
-	case v >= 1_000_000_000_000_000:
-		return v / 1_000, true // microseconds
-	case v >= 100_000_000_000:
-		return v, true // milliseconds
-	case v >= 1_000_000_000:
-		return v * 1_000, true // seconds
-	default:
-		return 0, false
-	}
-}
-
-func normalizeTimestampMillisFloat(v float64) (int64, bool) {
-	if v <= 0 {
-		return 0, false
-	}
-	switch {
-	case v >= 1_000_000_000_000_000_000:
-		return int64(v / 1_000_000), true
-	case v >= 1_000_000_000_000_000:
-		return int64(v / 1_000), true
-	case v >= 100_000_000_000:
-		return int64(v), true
-	case v >= 1_000_000_000:
-		return int64(v * 1_000), true
-	default:
-		return 0, false
-	}
 }
 
 // PickWorkspace opens a folder chooser and, on a pick, opens a new project tab

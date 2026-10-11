@@ -111,24 +111,6 @@ func topicIDFilter(ids []string) (string, map[string]struct{}) {
 	return string(encoded), set
 }
 
-func projectTopicRequestAllows(req ProjectTopicPageRequest, topicID string, pinned bool) bool {
-	if req.pinnedOnly && !pinned {
-		return false
-	}
-	if req.ExcludePinned && pinned {
-		return false
-	}
-	if req.groupInclude != nil {
-		_, ok := req.groupInclude[topicID]
-		return ok
-	}
-	if req.groupExclude != nil {
-		_, excluded := req.groupExclude[topicID]
-		return !excluded
-	}
-	return true
-}
-
 func groupHasSessionRules(group desktopGroup) bool {
 	return len(group.SessionKeys) > 0 || len(group.ExcludedSessionKeys) > 0
 }

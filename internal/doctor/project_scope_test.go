@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,5 +47,30 @@ func TestDoctorPreservesUnknownPresetKeyValueAndProjectOrigin(t *testing.T) {
 	text := RenderText(Collect(Options{Config: cfg}))
 	if !strings.Contains(text, "project config sets desktop.default_tool_approval_mode") || !strings.Contains(text, "unknown-project-preset") {
 		t.Fatalf("warning lost project origin or key/value: %s", text)
+	}
+}
+
+func TestDoctorRedactsCredentialsInIgnoredProjectDeclaration(t *testing.T) {
+	t.Setenv("DEEPZORA_HOME", t.TempDir())
+	root := t.TempDir()
+	t.Chdir(root)
+	const secret = "synthetic-key-9876543210"
+	project := "[permissions]\nallow=['Bash=echo api_key=" + secret + "']\n"
+	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.LoadForRootReadOnly(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := Collect(Options{Config: cfg})
+	raw, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, rendered := range []string{RenderText(report), string(raw)} {
+		if strings.Contains(rendered, secret) || !strings.Contains(rendered, "permissions.allow") {
+			t.Fatalf("diagnostic must preserve declaration context without its credential: %s", rendered)
+		}
 	}
 }

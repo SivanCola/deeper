@@ -9,15 +9,6 @@ import (
 	"deepzora/internal/agent"
 )
 
-func listSessionsAfterPinnedOwnerReconcile(t *testing.T, app *App, dir, workspaceRoot string) []SessionMeta {
-	t.Helper()
-	if active := app.activeSessionDir(); !sameDesktopPath(active, dir) {
-		t.Fatalf("active session dir = %q, want pinned dir %q", active, dir)
-	}
-	reconcileSessionCatalogForTest(t, app, dir, "project", workspaceRoot)
-	return app.ListSessions()
-}
-
 func TestPinNewEmptySessionBranchMetaStoresBinding(t *testing.T) {
 	isolateDesktopUserDirs(t)
 

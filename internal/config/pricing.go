@@ -55,10 +55,6 @@ func DeepSeekV4PricesForCurrency(currency string) map[string]*provider.Pricing {
 	return deepSeekV4PricesUSD()
 }
 
-func deepSeekV4PricesForConfig(c *Config) map[string]*provider.Pricing {
-	return DeepSeekV4PricesForCurrency(c.DeepSeekOfficialPricingCurrency())
-}
-
 func deepSeekV4PriceForModel(currency, model string) *provider.Pricing {
 	return clonePricing(DeepSeekV4PricesForCurrency(currency)[strings.TrimSpace(model)])
 }

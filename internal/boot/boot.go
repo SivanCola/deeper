@@ -255,12 +255,9 @@ func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	secrets.SetProtectSensitiveFiles(cfg.Secrets.ProtectSensitiveFiles)
 	secrets.RegisterCredentialEnvKeys(cfg.CredentialEnvNames())
 
-	// Serialize the frontend's sink once: background jobs (below) emit from their
-	// own goroutines, which can overlap a running turn's emission, so every emitter
-	// shares this synchronized sink. It is created before extension preflight so
-	// sidecar warnings and host/ui/* publishes land on the same channel as every
-	// later notice. The job manager is session-scoped — its jobs outlive a turn
-	// and are cancelled by Controller.Close.
+	// Share one synchronized sink across turns, background jobs, and extension
+	// preflight so concurrent emissions use the same channel. Session-scoped
+	// jobs outlive turns and are cancelled by Controller.Close.
 	//
 	// CostQuote must run before every host consumer (stats recorder, CLI
 	// metrics via opts.Sink, ACP/eventwire bridges, Desktop) so all see the
@@ -1939,18 +1936,6 @@ func rememberPermissionRule(workspaceRoot, rule string) control.RememberResult {
 	}
 	result.Saved = result.Err == nil && result.CoveredBy == ""
 	return result
-}
-
-func rememberPermissionConfigPath(workspaceRoot string) string {
-	workspaceRoot = strings.TrimSpace(workspaceRoot)
-	if workspaceRoot != "" {
-		return filepath.Join(workspaceRoot, "deepzora.toml")
-	}
-	path := config.SourcePath()
-	if path == "" {
-		path = "deepzora.toml" // match Config.Save() fallback
-	}
-	return path
 }
 
 func coveredPermissionRule(rules []string, rule string) string {

@@ -75,14 +75,14 @@ automatic toolchain selection, run validation with `GOTOOLCHAIN=go1.26.9`.
 扫描器发现的可达标准库与 HTTP/2 漏洞。本地 Go 配置若关闭自动工具链选择，
 验证时应显式设置 `GOTOOLCHAIN=go1.26.9`。
 
-Windows controller tests run in two complementary `A-M` and `N-Z` partitions.
-Each partition retains the 8-minute Go timeout; CI verifies the native test,
-example and fuzz-seed inventory has exactly one execution owner before running.
-Both partitions must pass for the `root` gate.
+The compact CI runs the root and desktop Go suites once on each of Linux,
+macOS, and Windows. It builds the frontend once, reuses its verified artifact,
+and keeps lint, race, SDK, renderer, and release-control checks. Packaged release
+qualification stays in the release workflows; see [CI baseline](CI_BASELINE.md).
 
-Windows 控制器测试分为互补的 `A-M` 与 `N-Z` 两组，每组保留 Go 的 8 分钟超时。
-CI 在执行前验证当前平台的测试、示例和 fuzz 种子清单，保证每项只属于一组；
-两组都通过后 `root` 检查才可通过。
+精简后的 CI 在 Linux、macOS 和 Windows 各执行一次根模块和桌面 Go 测试，
+前端只构建一次并复用经过校验的产物。lint、race、SDK、渲染器及发布控制检查
+仍然保留，正式安装包验收由发布工作流负责，详见 [CI 基线](CI_BASELINE.md)。
 
 Push and PR CI runs against `main`. CI checks do not require publishing keys.
 Protect `main` and create a GitHub environment named `release` with required

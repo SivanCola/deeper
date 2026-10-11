@@ -48,13 +48,6 @@ const (
 	externalFramesMaxCount = 512
 )
 
-// leaseHeldByForeignRuntime probes whether a runtime other than this Serve
-// process holds a session's lease. It is a variable only so tests can model
-// the local writer as a separate process: the real probe answers false for
-// leases held by the calling process, and tests hold the writer's lease
-// in-process.
-var leaseHeldByForeignRuntime = agent.SessionLeaseHeldByOtherRuntime
-
 // errSessionTakenOver is the stable refusal every mutating endpoint returns
 // while the foreground session is mirrored to a local writer. Clients match
 // the leading sentence to surface the read-only state.
@@ -353,14 +346,6 @@ func (s *Server) appendServeIdentity(view *ownershipView) {
 	view.HolderHost = strings.TrimSpace(host)
 }
 
-func (s *Server) detachedHasActiveWork(path string) bool {
-	path = agent.CanonicalSessionPath(path)
-	s.detachedMu.Lock()
-	defer s.detachedMu.Unlock()
-	d := s.detached[path]
-	return d != nil && controllerHasActiveRuntimeWork(d.ctrl)
-}
-
 type externalFramesRequest struct {
 	SessionPath string            `json:"sessionPath"`
 	MirrorID    string            `json:"mirrorId"`
@@ -583,8 +568,6 @@ func (s *Server) adopt(w http.ResponseWriter, r *http.Request) {
 		SessionPath: m.path,
 	})
 	writeJSON(w, m.grant("adopted"))
-	return
-
 }
 
 // mirrorEnd is the local writer's farewell: it has closed its tab and dropped

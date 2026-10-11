@@ -214,16 +214,6 @@ func repairProviderEndpointContracts(c *Config) []ProviderEndpointRepair {
 	return repairs
 }
 
-func recordProviderEndpointRepairs(path string, repairs []ProviderEndpointRepair) {
-	path = strings.TrimSpace(path)
-	if path == "" || len(repairs) == 0 {
-		return
-	}
-	providerEndpointRepairReceipts.Lock()
-	providerEndpointRepairReceipts.byPath[path] = append(providerEndpointRepairReceipts.byPath[path], repairs...)
-	providerEndpointRepairReceipts.Unlock()
-}
-
 // TakeProviderEndpointRepairReceipts returns startup repairs that occurred
 // before the active runtime had an event sink, then clears the process-local
 // receipt so concurrent tab builds do not repeat the notice.

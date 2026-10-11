@@ -40,15 +40,6 @@ var readOnlyCommands = map[string]bool{
 	"compare-object": true,
 }
 
-// workspaceNonMutatingCommands holds commands that do not write workspace
-// state but are not safe to auto-allow as permission-layer readers. Keep this
-// separate from readOnlyCommands: Test-NetConnection performs network I/O and
-// must still pass through the user's permission policy even though Delivery
-// does not need to serialize it behind the workspace writer.
-var workspaceNonMutatingCommands = map[string]bool{
-	"test-netconnection": true,
-}
-
 // readOnlyPrefixes maps a base command to the set of subcommands (the second
 // word) that are read-only. A subcommand not listed here is treated as not
 // read-only (fail-closed): write-capable subcommands (git branch/remote/config,

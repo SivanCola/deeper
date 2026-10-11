@@ -348,15 +348,6 @@ func TestACPSubagentProviderResolverRejectsInvalidEffort(t *testing.T) {
 	}
 }
 
-func findACPConfigOption(options []acp.SessionConfigOption, id string) (acp.SessionConfigOption, bool) {
-	for _, opt := range options {
-		if opt.ID == id {
-			return opt, true
-		}
-	}
-	return acp.SessionConfigOption{}, false
-}
-
 func toolMap(tools []tool.Tool) map[string]tool.Tool {
 	out := make(map[string]tool.Tool, len(tools))
 	for _, t := range tools {

@@ -16,7 +16,6 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/fileutil"
 	filelock "deepzora/internal/identitylock"
-	"deepzora/internal/session"
 )
 
 // crash_pending.go captures Go-side panics to disk and ships them on the next
@@ -92,28 +91,6 @@ func writePendingCrashWithDiagnostics(site string, r any, stack []byte, diagnost
 	if writePendingReport(report) {
 		markFatalCrashCovered()
 	}
-}
-
-// queueTranscriptInitializationFailure preserves visibility after the panic is
-// fixed and the migration can fail without terminating the process. Online
-// diagnostics receive only an aggregate classification; session/source keys
-// and record fingerprints stay in the local service log.
-func queueTranscriptInitializationFailure(diagnostic *session.TranscriptInitializationError) bool {
-	if diagnostic == nil {
-		return false
-	}
-	classification := diagnostic.Classification()
-	report := baseCrashReport("exception")
-	report.SchemaVersion = currentCrashSchema
-	report.Source = "desktop.session_migration"
-	report.Label = "transcript.initialization"
-	report.ErrorType = "TranscriptInitializationError"
-	report.ErrorMessage = "Transcript initialization failed during legacy session migration."
-	report.TopFrame = "internal/transcript.NewProjection"
-	report.FingerprintHint = "desktop.session_migration.transcript_initialization." + classification
-	report.OccurredAt = time.Now().UTC().Format(time.RFC3339Nano)
-	report.Message = "[transcript initialization]\n\nstage: legacy_import\nclassification: " + classification
-	return writePendingReport(report)
 }
 
 func writePendingReport(report crashReport) bool {

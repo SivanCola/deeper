@@ -6,14 +6,12 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"debug/pe"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -33,8 +31,6 @@ func resolveWindowsUpdateHelperSource(installDir string) string {
 	}
 	return path
 }
-
-const windowsUpdateHelperFileName = "deepzora-update-helper.exe"
 
 var claimWindowsUpdateHelperExecutionFn = claimVerifiedWindowsUpdateHelperExecution
 
@@ -74,15 +70,6 @@ func startWindowsVersionedUpdateHandoff(installerPath, installerSHA256, installD
 		return windowsUpdateHelperStartError(err)
 	}
 	return nil
-}
-
-func validWindowsSHA256(value string) bool {
-	value = strings.TrimSpace(value)
-	if len(value) != sha256.Size*2 {
-		return false
-	}
-	_, err := hex.DecodeString(value)
-	return err == nil
 }
 
 func prepareVersionedWindowsUpdateHelper(installDir string) (string, [sha256.Size]byte, error) {

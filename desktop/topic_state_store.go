@@ -206,12 +206,6 @@ func (m *topicStateManager) replaceSources(workspaceRoot string, values map[stri
 	})
 }
 
-func (m *topicStateManager) mergeMissingTitleIndex(workspaceRoot string, titles, sources map[string]string) error {
-	return m.mutate(workspaceRoot, func(ctx context.Context, store *topicstate.Store) (topicstate.State, error) {
-		return store.MergeMissingTitleIndex(ctx, titles, sources, deletedTopicSet())
-	})
-}
-
 func (m *topicStateManager) replaceCreatedAts(workspaceRoot string, values map[string]int64) error {
 	return m.mutate(workspaceRoot, func(ctx context.Context, store *topicstate.Store) (topicstate.State, error) {
 		return store.ReplaceCreatedAts(ctx, values)
@@ -277,25 +271,6 @@ func loadTopicAutoTitleMeta(workspaceRoot string) map[string]topicAutoTitleMeta 
 		}
 	}
 	return values
-}
-
-func saveTopicTitleIndex(workspaceRoot string, titles, sources map[string]string) error {
-	if titles == nil {
-		titles = loadTopicTitles(workspaceRoot)
-	}
-	if sources == nil {
-		sources = loadTopicTitleSources(workspaceRoot)
-	}
-	return desktopTopicState.mergeMissingTitleIndex(workspaceRoot, titles, sources)
-}
-
-func deletedTopicSet() map[string]bool {
-	deleted := loadProjectsFile().DeletedTopics
-	set := make(map[string]bool, len(deleted))
-	for _, topicID := range deleted {
-		set[strings.TrimSpace(topicID)] = true
-	}
-	return set
 }
 
 func mergeKnownAutoMeta(existing json.RawMessage, value topicAutoTitleMeta) json.RawMessage {

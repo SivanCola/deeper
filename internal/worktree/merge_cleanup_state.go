@@ -1,9 +1,6 @@
 package worktree
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 
 	"deepzora/internal/fileutil"
@@ -24,12 +20,6 @@ const (
 	cleanupStagePlanned  = "planned"
 	cleanupStageRetained = "retained"
 )
-
-type cleanupManifestEntry struct {
-	Path   string `json:"path"`
-	Mode   uint32 `json:"mode"`
-	Digest string `json:"digest,omitempty"`
-}
 
 // cleanupState v2 records a retained, registered recovery checkout. It never
 // describes deletion work: old and unknown writers can only preserve it.
@@ -165,102 +155,4 @@ func validateCleanupRecoveryPath(metadata mergeMetadata, path string) error {
 		return errors.New("cleanup state path escapes the allocation recovery directory")
 	}
 	return nil
-}
-
-func captureCleanupManifest(ctx context.Context, root string) ([]cleanupManifestEntry, error) {
-	rootInfo, err := os.Lstat(root)
-	if err != nil {
-		return nil, fmt.Errorf("inspect cleanup root: %w", err)
-	}
-	if !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
-		return nil, errors.New("cleanup root is not a real directory")
-	}
-	manifest := []cleanupManifestEntry{}
-	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if path == root {
-			return nil
-		}
-		relative, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-		relative = filepath.ToSlash(relative)
-		if err := validateStatePath(relative); err != nil {
-			return err
-		}
-		info, err := os.Lstat(path)
-		if err != nil {
-			return err
-		}
-		item := cleanupManifestEntry{Path: relative, Mode: uint32(info.Mode())}
-		switch {
-		case info.IsDir():
-		case info.Mode().IsRegular():
-			item.Digest, err = digestCleanupFile(ctx, path)
-		case info.Mode()&os.ModeSymlink != 0:
-			var target string
-			target, err = os.Readlink(path)
-			if err == nil {
-				digest := sha256.Sum256([]byte(target))
-				item.Digest = hex.EncodeToString(digest[:])
-			}
-		default:
-			err = fmt.Errorf("cleanup path %q has unsupported type %s", relative, info.Mode().Type())
-		}
-		if err != nil {
-			return err
-		}
-		manifest = append(manifest, item)
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("snapshot cleanup checkout: %w", err)
-	}
-	sort.Slice(manifest, func(left, right int) bool { return manifest[left].Path < manifest[right].Path })
-	return manifest, nil
-}
-
-func digestCleanupFile(ctx context.Context, path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	hash := sha256.New()
-	buffer := make([]byte, 128*1024)
-	for {
-		if err := ctx.Err(); err != nil {
-			return "", err
-		}
-		count, readErr := file.Read(buffer)
-		if count > 0 {
-			if _, err := hash.Write(buffer[:count]); err != nil {
-				return "", err
-			}
-		}
-		if errors.Is(readErr, io.EOF) {
-			return hex.EncodeToString(hash.Sum(nil)), nil
-		}
-		if readErr != nil {
-			return "", readErr
-		}
-	}
-}
-
-func manifestsEqual(expected, actual []cleanupManifestEntry) bool {
-	if len(expected) != len(actual) {
-		return false
-	}
-	for index := range expected {
-		if expected[index] != actual[index] {
-			return false
-		}
-	}
-	return true
 }

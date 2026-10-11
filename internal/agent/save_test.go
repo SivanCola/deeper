@@ -1997,7 +1997,7 @@ func TestListSessionsOrdersByLastActivityMeta(t *testing.T) {
 	if got[0].Path != aPath {
 		t.Fatalf("first entry = %s, want activity-newer a.jsonl despite older file mtime", got[0].Path)
 	}
-	if !got[0].LastActivityAt.Equal(newerActivity) || !got[0].LastActivityAt.Equal(newerActivity) {
+	if !got[0].LastActivityAt.Equal(newerActivity) {
 		t.Fatalf("activity fields = %s / %s, want %s", got[0].LastActivityAt, got[0].LastActivityAt, newerActivity)
 	}
 }

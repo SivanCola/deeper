@@ -3,7 +3,6 @@ package agent
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -281,42 +280,4 @@ func (s *Session) requireWriteAuthorityForSave(path string) (func(), error) {
 		return nil, ErrSessionWriteAuthorityMissing
 	}
 	return auth.BeginSave(path)
-}
-
-// hasValidWriteAuthority reports whether the session currently holds a live
-// authority covering path. Used by conflict classification for owned rewrite.
-func (s *Session) hasValidWriteAuthority(path string) bool {
-	if s == nil {
-		return false
-	}
-	s.mu.RLock()
-	auth := s.writeAuth
-	s.mu.RUnlock()
-	return auth.Covers(path)
-}
-
-// authorityErrorForPath returns a typed authority error when the session has
-// bound (or required) authority that no longer covers path. A never-bound
-// session returns nil so low-level CAS tests keep their existing conflict path.
-func (s *Session) authorityErrorForPath(path string) error {
-	if s == nil {
-		return nil
-	}
-	s.mu.RLock()
-	auth := s.writeAuth
-	required := s.authRequired
-	s.mu.RUnlock()
-	if !required {
-		return nil
-	}
-	if auth == nil {
-		return ErrSessionWriteAuthorityMissing
-	}
-	if auth.Covers(path) {
-		return nil
-	}
-	if strings.TrimSpace(auth.path) == "" || auth.generation == 0 {
-		return ErrSessionWriteAuthorityMissing
-	}
-	return ErrSessionWriteAuthorityStale
 }

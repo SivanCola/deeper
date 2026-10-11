@@ -28,8 +28,6 @@ type SessionMutationResult struct {
 	PendingSiblings     int      `json:"pendingSiblings,omitempty"`
 }
 
-const sessionOutcomeArchivedPartial = "archived_partial"
-
 // SessionCreationResult reports a durable child created from an explicit
 // source without implying that Desktop opened or selected it.
 type SessionCreationResult struct {

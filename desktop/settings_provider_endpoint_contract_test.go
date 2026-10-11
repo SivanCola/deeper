@@ -30,7 +30,6 @@ func TestSaveProviderRejectsProtocolEndpointMismatch(t *testing.T) {
 	view := providerViewFromEntry(cfg.Providers[0], false, true)
 	view.Kind = "openai"
 	view.RequestURL = "https://api.deepseek.com/anthropic/v1/chat/completions"
-	view.RequestURL = view.RequestURL
 	if err := saveProviderConfig(cfg, view); err == nil || !strings.Contains(err.Error(), "https://api.deepseek.com/v1/chat/completions") {
 		t.Fatalf("save mismatch error = %v", err)
 	}
@@ -72,7 +71,6 @@ func TestProtocolSwitchKeepsStableProviderAndModelReferences(t *testing.T) {
 	view.Kind = "openai"
 	view.BaseURL = "https://api.deepseek.com/v1"
 	view.RequestURL = "https://api.deepseek.com/v1/chat/completions"
-	view.RequestURL = view.RequestURL
 	if err := saveProviderConfig(cfg, view); err != nil {
 		t.Fatalf("save protocol switch: %v", err)
 	}

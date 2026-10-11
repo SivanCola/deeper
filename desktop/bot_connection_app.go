@@ -957,19 +957,6 @@ func firstNonEmptyBot(values ...string) string {
 	return ""
 }
 
-func appendUniqueBotString(values []string, next string) []string {
-	next = strings.TrimSpace(next)
-	if next == "" {
-		return values
-	}
-	for _, value := range values {
-		if strings.TrimSpace(value) == next {
-			return values
-		}
-	}
-	return append(values, next)
-}
-
 func stringValue(value any) string {
 	if value == nil {
 		return ""

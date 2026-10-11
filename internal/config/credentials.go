@@ -244,34 +244,6 @@ func StoreCredentialLines(lines []string) (string, error) {
 	return storeCredentialAssignmentsLocked(assignments)
 }
 
-// storeCredentialIfAbsentAndNotCleared writes key=value only when the current
-// credential store still lacks a value and a cleared tombstone for key. The
-// re-check and write share LockUserCredentialEdits so a concurrent settings
-// save or tombstone cannot be overwritten by a stale keyring import.
-// stored is false when the write was skipped because the key is already present
-// or cleared; err is non-nil only on lock/IO failures.
-func storeCredentialIfAbsentAndNotCleared(key, value string) (stored bool, err error) {
-	key = strings.TrimSpace(key)
-	if key == "" || !isCredentialKey(key) {
-		return false, nil
-	}
-	if strings.ContainsAny(value, "\r\n") {
-		return false, fmt.Errorf("credential value for %s contains a newline", key)
-	}
-	unlock, err := LockUserCredentialEdits()
-	if err != nil {
-		return false, err
-	}
-	defer unlock()
-	if credentialCurrentStoreHasKey(key) || credentialCurrentStoreClearedKey(key) {
-		return false, nil
-	}
-	if _, err := storeCredentialAssignmentsLocked(map[string]string{key: value}); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func storeCredentialAssignmentsLocked(assignments map[string]string) (string, error) {
 	if err := storeCredentialsInFile(UserCredentialsPath(), assignments); err != nil {
 		return "", err

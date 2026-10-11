@@ -28,6 +28,7 @@ import (
 	"deepzora/internal/netclient"
 	"deepzora/internal/provider"
 	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
 	"deepzora/internal/tool"
 )
 
@@ -1404,7 +1405,7 @@ func (a *App) deferredRebuildWarningForTab(setting string, err error, tab *Works
 	}
 	userErr := userFacingSessionLeaseError(setting, err)
 	warning := fmt.Sprintf("%s saved, but the current session could not refresh yet: %s", setting, userErr.Error())
-	slog.Warn("desktop: deferred settings rebuild", "setting", setting, "err", err)
+	slog.Warn("desktop: deferred settings rebuild", "setting", setting, "err", secrets.RedactError(err))
 	// Bind both the warning and the retry to the tab whose refresh failed, so a
 	// tab switch or a multi-tab mutation cannot misroute either one.
 	if tab != nil {
@@ -1487,85 +1488,6 @@ func (a *App) loadDesktopUserConfigReadOnlyForRoot(_ string, load func(string) (
 		return nil, "", err
 	}
 	return cfg, userPath, nil
-}
-
-func desktopBotConfigConfigured(bot config.BotConfig) bool {
-	defaults := config.Default().Bot
-	if bot.Enabled || strings.TrimSpace(bot.Model) != "" || len(bot.Connections) > 0 {
-		return true
-	}
-	if (bot.MaxSteps != 0 && bot.MaxSteps != defaults.MaxSteps) ||
-		(bot.DebounceMs != 0 && bot.DebounceMs != defaults.DebounceMs) ||
-		(strings.TrimSpace(bot.QueueMode) != "" && bot.QueueMode != defaults.QueueMode) ||
-		(bot.QueueCap != 0 && bot.QueueCap != defaults.QueueCap) ||
-		bot.IgnoreSelfMessages != defaults.IgnoreSelfMessages ||
-		bot.Pairing.Enabled != defaults.Pairing.Enabled ||
-		(bot.Pairing.RequestTTLMinutes != 0 && bot.Pairing.RequestTTLMinutes != defaults.Pairing.RequestTTLMinutes) ||
-		(bot.Pairing.MaxPendingPerPlatform != 0 && bot.Pairing.MaxPendingPerPlatform != defaults.Pairing.MaxPendingPerPlatform) ||
-		bot.Control.Enabled != defaults.Control.Enabled ||
-		(strings.TrimSpace(bot.Control.Addr) != "" && bot.Control.Addr != defaults.Control.Addr) ||
-		(strings.TrimSpace(bot.Control.TokenEnv) != "" && bot.Control.TokenEnv != defaults.Control.TokenEnv) ||
-		len(bot.Routes) > 0 ||
-		len(bot.SelfUserIDs.QQ)+len(bot.SelfUserIDs.Feishu)+len(bot.SelfUserIDs.Weixin)+len(bot.SelfUserIDs.Dingtalk) > 0 {
-		return true
-	}
-	if bot.QQ.Enabled ||
-		strings.TrimSpace(bot.QQ.AppID) != "" ||
-		bot.QQ.AppSecretEnv != defaults.QQ.AppSecretEnv ||
-		bot.QQ.Sandbox != defaults.QQ.Sandbox ||
-		strings.TrimSpace(bot.QQ.Model) != "" ||
-		strings.TrimSpace(bot.QQ.ToolApprovalMode) != "" ||
-		strings.TrimSpace(bot.QQ.WorkspaceRoot) != "" ||
-		botruntime.BotAccessActive(bot.QQ.Access) {
-		return true
-	}
-	if bot.Feishu.Enabled ||
-		strings.TrimSpace(bot.Feishu.AppID) != "" ||
-		bot.Feishu.Domain != defaults.Feishu.Domain ||
-		bot.Feishu.AppSecretEnv != defaults.Feishu.AppSecretEnv ||
-		strings.TrimSpace(bot.Feishu.VerificationToken) != "" ||
-		bot.Feishu.Mode != defaults.Feishu.Mode ||
-		bot.Feishu.WebhookPort != defaults.Feishu.WebhookPort ||
-		bot.Feishu.RequireMention != defaults.Feishu.RequireMention {
-		return true
-	}
-	if bot.Weixin.Enabled ||
-		bot.Weixin.AccountID != defaults.Weixin.AccountID ||
-		bot.Weixin.TokenEnv != defaults.Weixin.TokenEnv ||
-		bot.Weixin.APIBase != defaults.Weixin.APIBase {
-		return true
-	}
-	if bot.Dingtalk.Enabled ||
-		strings.TrimSpace(bot.Dingtalk.ClientID) != "" ||
-		strings.TrimSpace(bot.Dingtalk.ClientSecret) != "" ||
-		strings.TrimSpace(bot.Dingtalk.ClientIDEnv) != "" ||
-		strings.TrimSpace(bot.Dingtalk.SecretEnv) != "" ||
-		strings.TrimSpace(bot.Dingtalk.BotName) != "" ||
-		bot.Dingtalk.RequireMention != defaults.Dingtalk.RequireMention {
-		return true
-	}
-	return false
-}
-
-func configDeclaresProviderAccess(path string) bool {
-	if strings.TrimSpace(path) == "" {
-		return false
-	}
-	body, err := readFileUTF8(path)
-	if err != nil {
-		return false
-	}
-	for line := range strings.SplitSeq(string(body), "\n") {
-		if before, _, ok := strings.Cut(line, "#"); ok {
-			line = before
-		}
-		line = strings.TrimSpace(line)
-		if after, ok := strings.CutPrefix(line, "provider_access"); ok {
-			rest := strings.TrimSpace(after)
-			return strings.HasPrefix(rest, "=")
-		}
-	}
-	return false
 }
 
 func (a *App) activeWorkspaceRoot() string {
@@ -2042,20 +1964,6 @@ func chatProviderModels(models []string) []string {
 		}
 		seen[model] = true
 		out = append(out, model)
-	}
-	return out
-}
-
-func providerVisionModels(models, visionModels []string) []string {
-	enabled := map[string]bool{}
-	for _, model := range models {
-		enabled[model] = true
-	}
-	out := make([]string, 0, len(visionModels))
-	for _, model := range chatProviderModels(visionModels) {
-		if enabled[model] {
-			out = append(out, model)
-		}
 	}
 	return out
 }

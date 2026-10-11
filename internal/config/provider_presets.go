@@ -126,7 +126,6 @@ var (
 	// step_plan channel rejects images outright.
 	stepfunAPIModels                 = []string{"step-3.7-flash", "step-3.5-flash", "step-3.5-flash-2603"}
 	stepfunAPIVisionModels           = []string{"step-3.7-flash"}
-	preVisionOpenCodeGoVisionModels  = []string{"kimi-k3"}
 	opencodeGoModels                 = provider.OpenCodeGoModelIDs(provider.OpenCodeGoRouteChat)
 	opencodeGoVisionModels           = provider.OpenCodeGoVisionModelIDs(provider.OpenCodeGoRouteChat)
 	opencodeZenAnthropicModels       = []string{"claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5", "qwen3.6-plus", "qwen3.5-plus", "qwen3.6-plus-free"}

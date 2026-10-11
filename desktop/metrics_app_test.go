@@ -10,21 +10,7 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
-	"deepzora/internal/recovery"
 )
-
-type recoveryMetricsDeltaStub struct {
-	deltas []recovery.Metrics
-}
-
-func (s *recoveryMetricsDeltaStub) DrainRecoveryMetrics() recovery.Metrics {
-	if len(s.deltas) == 0 {
-		return recovery.Metrics{}
-	}
-	next := s.deltas[0]
-	s.deltas = s.deltas[1:]
-	return next
-}
 
 func TestObserveClassifiesEvents(t *testing.T) {
 	m := newMetricsAggregator(t.TempDir())

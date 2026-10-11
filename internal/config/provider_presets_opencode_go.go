@@ -9,12 +9,6 @@ var (
 	opencodeGoResponsesVisionModels = provider.OpenCodeGoVisionModelIDs(provider.OpenCodeGoRouteResponses)
 )
 
-// Chat preset lists v1.37.0-v1.39.1 shipped while minimax-m2.7 sat on the chat route.
-var shippedMiniMaxChatOpenCodeGoModels = [][]string{
-	{"deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "deepseek-v4-pro", "glm-5.1", "glm-5.2", "glm-5.3", "glm-5.3-flash", "hy3", "hy4-preview", "kimi-k2.6", "kimi-k2.7-code", "kimi-k3", "longcat-2.0", "mimo-v2.5", "mimo-v2.5-pro", "minimax-m2.7", "qwen3.6-plus", "qwen3.7-max", "qwen3.7-plus", "qwen3.8-max"},
-	{"deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "deepseek-v4-pro", "glm-5.1", "glm-5.2", "glm-5.3", "glm-5.3-flash", "hy3", "hy4-preview", "kimi-k2.6", "kimi-k2.7-code", "kimi-k3", "longcat-2.0", "mimo-v2.5", "mimo-v2.5-pro", "minimax-m2.7", "qwen3.6-plus", "qwen3.7-max", "qwen3.7-plus", "qwen3.8-max"},
-}
-
 func withOpenCodeGoChatContextOverrides(base map[string]ProviderModelOverride) map[string]ProviderModelOverride {
 	if base == nil {
 		base = map[string]ProviderModelOverride{}

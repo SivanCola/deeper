@@ -272,16 +272,14 @@ const MEMBERS = {
 
 export const ARTIFACT_KINDS = Object.freeze(Object.keys(MEMBERS));
 
-export const WINDOWS_PORTABLE_LAYOUTS = Object.freeze(["canonical", "legacy-dual"]);
+export const WINDOWS_PORTABLE_LAYOUTS = Object.freeze(["canonical"]);
 
 function memberSpec(kind, portableLayout) {
   if (!WINDOWS_PORTABLE_LAYOUTS.includes(portableLayout)) throw new Error(`unknown Windows portable layout ${JSON.stringify(portableLayout)}`);
   const spec = MEMBERS[kind];
   if (!spec) throw new Error(`unknown artifact kind ${JSON.stringify(kind)}`);
   if (kind !== "windows-portable-zip") return spec;
-  return portableLayout === "legacy-dual"
-    ? { required: [...spec.required, "deepzora-launcher.exe"], forbidden: spec.forbidden }
-    : { required: spec.required, forbidden: [...spec.forbidden, "deepzora-launcher.exe"] };
+  return { required: spec.required, forbidden: [...spec.forbidden, "deepzora-launcher.exe"] };
 }
 
 export function requiredMembers(kind, portableLayout = "canonical") {
@@ -294,7 +292,7 @@ export function checkMembers(entries, kind, portableLayout = "canonical") {
   const matches = (rule) => (rule instanceof RegExp ? [...names].some((name) => rule.test(name)) : names.has(rule));
   const forbidden = [...spec.forbidden, PACKAGING_JUNK].filter((rule) => matches(rule)).map(String);
   if (kind === "windows-portable-zip") {
-    const rootEntries = new Set(["Deepzora.exe", "deepzora-cli.exe", ...(portableLayout === "legacy-dual" ? ["deepzora-launcher.exe"] : [])]);
+    const rootEntries = new Set(["Deepzora.exe", "deepzora-cli.exe"]);
     for (const name of names) {
       if (!name.includes("/") && /\.(exe|dll)$/i.test(name) && !rootEntries.has(name) && !forbidden.includes(name)) forbidden.push(name);
     }
@@ -362,7 +360,7 @@ export function elfInterpreter(bytes) {
   return null;
 }
 
-const LINUX_GO_MEMBERS = {
+export const LINUX_GO_MEMBERS = {
   "linux-tar": ["deepzora-desktop", "deepzora-launcher", "deepzora"],
   "linux-deb": ["usr/bin/deepzora-desktop", "usr/bin/deepzora-launcher", "usr/bin/deepzora", "usr/lib/deepzora/deepzora-update-helper"],
 };
@@ -370,10 +368,15 @@ const LINUX_GO_MEMBERS = {
 export function checkStaticGoMembers(kind, readMember) {
   const errors = [];
   for (const name of LINUX_GO_MEMBERS[kind] ?? []) {
-    const interpreter = elfInterpreter(readMember(name));
-    if (interpreter !== null) errors.push(`${name} is dynamically linked (interpreter ${interpreter}); Linux Go binaries must be built with CGO_ENABLED=0`);
+    const error = staticGoMemberError(name, readMember(name));
+    if (error) errors.push(error);
   }
   return errors;
+}
+
+export function staticGoMemberError(name, bytes) {
+  const interpreter = elfInterpreter(bytes);
+  return interpreter === null ? null : `${name} is dynamically linked (interpreter ${interpreter}); Linux Go binaries must be built with CGO_ENABLED=0`;
 }
 
 export function validateMacServiceLink(appDir) {

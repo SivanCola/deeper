@@ -149,8 +149,7 @@ func (a *App) classifySavedTab(entry desktopTabEntry, evidence savedTabReconcile
 		}
 	}
 
-	if strings.HasPrefix(entry.SessionPath, embeddedBotSessionPrefix) {
-		id := strings.TrimPrefix(entry.SessionPath, embeddedBotSessionPrefix)
+	if id, ok := strings.CutPrefix(entry.SessionPath, embeddedBotSessionPrefix); ok {
 		if entry.SessionID != "" && entry.SessionID != id {
 			return savedTabReconcileDecision{outcome: preserveError, reason: "bot_identity_conflict", identityKind: "bot"}, true
 		}
@@ -261,45 +260,6 @@ func savedTabHasMatchingPendingCreate(entry desktopTabEntry, evidence savedTabRe
 		return true
 	}
 	return false
-}
-
-func savedTabPendingSessionIdentity(entry desktopTabEntry, evidence savedTabReconcileEvidence) (string, bool, bool) {
-	if strings.TrimSpace(entry.SessionID) != "" {
-		return "", false, false
-	}
-	operationID := strings.TrimSpace(entry.CreateOperationID)
-	if operationID == "" || evidence.registryErr != nil {
-		return "", false, false
-	}
-	resolved := ""
-	accept := func(sessionID string) bool {
-		sessionID = strings.TrimSpace(sessionID)
-		if sessionID == "" {
-			return true
-		}
-		if resolved != "" && resolved != sessionID {
-			return false
-		}
-		resolved = sessionID
-		return true
-	}
-	for sessionID, pending := range evidence.registry.PendingCreates {
-		if pending.OperationID == operationID && !accept(sessionID) {
-			return "", false, true
-		}
-	}
-	for _, operation := range evidence.registry.PendingOperations {
-		if strings.TrimSpace(operation.ID) != operationID {
-			continue
-		}
-		for _, sessionID := range operation.SessionIDs {
-			if !accept(sessionID) {
-				return "", false, true
-			}
-		}
-
-	}
-	return resolved, resolved != "", false
 }
 
 func savedTabHasRecoveryOwner(entry desktopTabEntry, evidence savedTabReconcileEvidence) bool {

@@ -121,15 +121,6 @@ func (g *goalMachine) goalText() string {
 	return g.goal
 }
 
-// continuationToken captures the Goal lifecycle that owns an outgoing turn.
-// The matching assistant output may advance the FSM only while this epoch is
-// still current.
-func (g *goalMachine) continuationToken() uint64 {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return g.continuationEpoch
-}
-
 func (g *goalMachine) deliveryScope() (id, task string, ok bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -428,16 +419,6 @@ func (g *goalMachine) restoreDecodedState(raw []byte, state goalState) {
 	g.continuationEpoch++
 }
 
-// clipGoalReason bounds a recorded reason for storage and display.
-func clipGoalReason(reason string) string {
-	reason = strings.TrimSpace(reason)
-	const max = 400
-	if r := []rune(reason); len(r) > max {
-		return string(r[:max]) + "..."
-	}
-	return reason
-}
-
 // ShortGoalForNotice collapses whitespace and truncates a goal for one-line UI.
 func ShortGoalForNotice(goal string) string {
 	goal = strings.Join(strings.Fields(goal), " ")
@@ -465,12 +446,4 @@ func (c *Controller) persistGoalState(path string, data []byte, ok bool) {
 		return
 	}
 	c.goals.writeState(path, data)
-}
-
-func (c *Controller) persistGoalStateAtEpoch(epoch uint64) (bool, error) {
-	applied, err := c.goals.writeStateAtEpoch(epoch)
-	if err != nil {
-		slog.Warn("controller: write goal state", "err", err)
-	}
-	return applied, err
 }

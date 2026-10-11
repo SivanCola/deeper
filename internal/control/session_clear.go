@@ -40,11 +40,8 @@ func (c *Controller) ClearSession() error {
 			return err
 		}
 	}
-	// Retire the old recovery state before deleting its artifacts. Async gate
-	// snapshots are path-bound, so wait for every already-scheduled old-path
-	// write; otherwise one can recreate the sidecar after removeSessionArtifacts.
-	// Let session_policy rule before destroying artifacts. A required failure
-	// keeps the old session intact; the fresh path arrives with session.start.
+	// Consult session_policy before removing artifacts; a required failure
+	// keeps the existing session intact until the new session starts.
 	if err := c.extensionSessionPhase(context.Background(), extension.PointSessionRotate, dispatch.PhaseRotate, oldPath); err != nil {
 		return err
 	}

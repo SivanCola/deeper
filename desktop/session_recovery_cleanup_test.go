@@ -25,40 +25,6 @@ func saveSnapshotTurns(t *testing.T, path string, turns int) *agent.Session {
 	return s
 }
 
-func forkDesktopRecoveryBranch(t *testing.T, dir, name string) (parentPath, branchPath string, branchMsgs []provider.Message) {
-	t.Helper()
-	parentPath = filepath.Join(dir, name+".jsonl")
-	parent := agent.NewSession("sys")
-	parent.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	parent.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	parent.Add(provider.Message{Role: provider.RoleUser, Content: "disk " + name})
-	if err := parent.Save(parentPath); err != nil {
-		t.Fatalf("Save recovery parent: %v", err)
-	}
-	branch := agent.NewSession("sys")
-	branch.Add(provider.Message{Role: provider.RoleUser, Content: "first"})
-	branch.Add(provider.Message{Role: provider.RoleAssistant, Content: "one"})
-	branch.Add(provider.Message{Role: provider.RoleUser, Content: "local " + name})
-	info, err := branch.SaveRecoveryBranch(agent.RecoveryBranchOptions{OriginalPath: parentPath})
-	if err != nil {
-		t.Fatalf("SaveRecoveryBranch: %v", err)
-	}
-	return parentPath, info.Path, branch.Snapshot()
-}
-
-func coverDesktopRecoveryParent(t *testing.T, parentPath string, branchMsgs []provider.Message) {
-	t.Helper()
-	parent, err := agent.LoadSession(parentPath)
-	if err != nil {
-		t.Fatalf("Load covering recovery parent: %v", err)
-	}
-	parent.Replace(append([]provider.Message(nil), branchMsgs...))
-	parent.Add(provider.Message{Role: provider.RoleAssistant, Content: "parent kept the recovery content"})
-	if err := parent.SaveRewrite(parentPath); err != nil {
-		t.Fatalf("Save covering recovery parent: %v", err)
-	}
-}
-
 func TestTopicHiddenAsRecoveryOnly(t *testing.T) {
 	recoveryOnly := topicSummary{hasRecoveryOnly: true}
 	cases := []struct {

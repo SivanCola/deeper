@@ -22,38 +22,19 @@ function jobBody(name) {
 
 for (const [job, body, command] of [
   ["desktop-frontend", jobBody("desktop-frontend"), "node frontend/scripts/run-ci-tests.mjs"],
-  ["required lint", jobBody("lint"), "FRONTEND_RESULT: ${{ needs.desktop-frontend.result }}"],
+  ["required desktop", jobBody("desktop"), "FRONTEND_RESULT: ${{ needs.desktop-frontend.result }}"],
 ]) {
   if (!body.includes(command)) {
     throw new Error(`motion-ci-contract: ${job} must run test:motion`);
   }
 }
-if (jobBody("lint-code").includes("test:motion") || jobBody("lint").includes("test:motion")) {
+if (jobBody("lint").includes("test:motion")) {
   throw new Error("motion-ci-contract: test:motion must run only through the deduplicated frontend plan");
 }
 
-const windowsJob = jobBody("desktop-windows", "lint");
-for (const required of [
-  "node packaging/package.mjs windows/amd64 v0.0.0-ci canary",
-  "Smoke-test Electron native startup",
-  "node packaging/smoke.mjs build/electron/windows-amd64/app --service build/bin/deepzora-desktop.exe",
-]) {
-  if (!windowsJob.includes(required)) {
-    throw new Error(`motion-ci-contract: desktop-windows must include ${required}`);
-  }
-}
-for (const retired of ["WebView2", "webview2", "test-transcript-selection"]) {
-  if (windowsJob.includes(retired)) {
-    throw new Error(`motion-ci-contract: desktop-windows must not reference the retired native smoke harness (${retired})`);
-  }
-}
-// Electron ships one Chromium on every OS, so the Playwright replays that
-// desktop-frontend and desktop-browser run on ubuntu are the renderer
-// evidence; the Windows leg keeps only the native Electron steps.
-for (const linuxOnly of ["test:motion", "test:transcript-browser", "test:settings-browser"]) {
-  if (windowsJob.includes(`pnpm --dir frontend ${linuxOnly}`)) {
-    throw new Error(`motion-ci-contract: desktop-windows must not repeat the ubuntu Chromium suite ${linuxOnly}`);
-  }
+const nativeJob = jobBody("desktop-go");
+if (!nativeJob.includes("os: [ubuntu-latest, macos-latest, windows-latest]") || !nativeJob.includes("go test -timeout=15m ./...")) {
+  throw new Error("motion-ci-contract: native desktop tests must cover all three platforms");
 }
 
 for (const [path, source] of [
@@ -115,7 +96,7 @@ if (motionScript.includes("transcript-virtualization.test.tsx")) {
 
 const motionBrowserCommand = "pnpm --dir frontend test:motion-browser";
 const motionBrowserRuns = workflow.match(/pnpm --dir frontend test:motion-browser(?:\s|$)/g)?.length ?? 0;
-if (!jobBody("desktop-browser-group").includes(motionBrowserCommand) || motionBrowserRuns !== 1) {
+if (!jobBody("desktop-frontend").includes(motionBrowserCommand) || motionBrowserRuns !== 1) {
   throw new Error("motion-ci-contract: the Linux browser job must run test:motion-browser exactly once");
 }
 if (!packageJSON.scripts?.["test:motion-browser"]?.includes("approval-animation.mjs")) {
@@ -160,7 +141,7 @@ if (/transition-duration/.test(globalReducedMotion[1])) {
 if (!ciUnitScripts.includes("test:motion") || !ciUnitScripts.includes("test:transcript")) {
   throw new Error("motion-ci-contract: Linux CI must include all dedicated motion and transcript suites");
 }
-const desktopLinuxJob = jobBody("desktop-browser-group");
+const desktopLinuxJob = jobBody("desktop-frontend");
 
 const transcriptBrowserCommand = "pnpm --dir frontend test:transcript-browser";
 const transcriptBrowserRuns = desktopLinuxJob.match(/pnpm --dir frontend test:transcript-browser(?:\s|$)/g)?.length ?? 0;
@@ -194,4 +175,4 @@ for (const required of [
   }
 }
 
-console.log("motion-ci-contract: browser gates and packaged Electron startup are separate release gates without production smoke instrumentation");
+console.log("motion-ci-contract: deduplicated renderer gates and native desktop tests run before merge without production smoke instrumentation");

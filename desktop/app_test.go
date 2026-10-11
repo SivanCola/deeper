@@ -4733,19 +4733,6 @@ func TestSetEffortRebuildsController(t *testing.T) {
 	}
 }
 
-func captureTabNotices(app *App, tab *WorkspaceTab) *[]string {
-	var notices []string
-	if tab.sink == nil {
-		tab.sink = &tabEventSink{tabID: tab.ID, app: app, ctx: context.Background()}
-	}
-	tab.sink.SetBotSink(event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice && strings.TrimSpace(e.Text) != "" {
-			notices = append(notices, e.Text)
-		}
-	}))
-	return &notices
-}
-
 func TestMetaForTabReportsImageInputCapability(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	setDesktopTestCredential(t, "CUSTOM_KEY", "sk-test")
@@ -5282,44 +5269,6 @@ func TestTrashTopicRejectsBackgroundJob(t *testing.T) {
 	}
 	if got := loadTopicTitle(projectRoot, topicID); got != "Stuck trash" {
 		t.Fatalf("rejected archive topic title = %q, want Stuck trash", got)
-	}
-}
-
-func teardownNoticeSink(out chan<- event.Event) event.Sink {
-	return event.FuncSink(func(e event.Event) {
-		if e.Kind == event.Notice && strings.Contains(e.Detail, "background job teardown timed out") {
-			out <- e
-		}
-	})
-}
-
-func assertSingleTeardownTimeoutNotice(t *testing.T, notices <-chan event.Event, grace time.Duration) {
-	t.Helper()
-	var notice event.Event
-	select {
-	case notice = <-notices:
-	default:
-		t.Fatal("missing background-job teardown timeout notice")
-	}
-	var waited time.Duration
-	for field := range strings.FieldsSeq(notice.Detail) {
-		if !strings.HasPrefix(field, "waited=") {
-			continue
-		}
-		parsed, err := time.ParseDuration(strings.TrimSuffix(strings.TrimPrefix(field, "waited="), ";"))
-		if err != nil {
-			t.Fatalf("parse teardown waited field %q: %v", field, err)
-		}
-		waited = parsed
-		break
-	}
-	if waited < grace-10*time.Millisecond || waited > grace+250*time.Millisecond {
-		t.Fatalf("teardown notice waited %s, want one %s grace; detail: %s", waited, grace, notice.Detail)
-	}
-	select {
-	case extra := <-notices:
-		t.Fatalf("duplicate teardown timeout notice: %+v", extra)
-	default:
 	}
 }
 

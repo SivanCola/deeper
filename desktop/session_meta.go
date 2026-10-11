@@ -1,7 +1,5 @@
 package main
 
-import "deepzora/internal/agent"
-
 // SessionMeta summarises one saved session for the history panel.
 type SessionMeta struct {
 	Path           string `json:"path"`
@@ -36,27 +34,4 @@ type SessionMeta struct {
 	RecoveryGroupID   string `json:"recoveryGroupId,omitempty"`
 	RecoveryRole      string `json:"recoveryRole,omitempty"` // normal|covered_copy|adopted|diverged
 	RecoveryCanonical bool   `json:"recoveryCanonical,omitempty"`
-}
-
-func sessionMetaFromInfo(s agent.SessionInfo, title string, current, open bool, deletedAt int64, parentDir string) SessionMeta {
-	turnsState := "unknown"
-	if s.CountsKnown {
-		turnsState = "valid"
-	}
-	return SessionMeta{
-		Path:           s.Path,
-		Preview:        s.Preview,
-		Title:          title,
-		Turns:          s.Turns,
-		TurnsState:     turnsState,
-		CreatedAt:      s.CreatedAt.UnixMilli(),
-		LastActivityAt: s.LastActivityAt.UnixMilli(),
-		DeletedAt:      deletedAt,
-		Current:        current,
-		Open:           open,
-		Scope:          s.Scope,
-		WorkspaceRoot:  s.WorkspaceRoot,
-		TopicID:        s.TopicID,
-		TopicTitle:     s.TopicTitle,
-	}
 }

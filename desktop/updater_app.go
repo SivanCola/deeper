@@ -279,10 +279,6 @@ func (a *App) installUpdateRequest(selectedChannel, expectedVersion, requestID s
 func (a *App) reconcilePendingUpdateForRequest(requestID string, meta *cachedUpdate) error {
 	if pendingUpdateExistsForInstall() {
 		a.emitProgress(requestID, meta.Channel, meta.Version, "recovering", meta.Size, meta.Size, "")
-		// A user-initiated update proves the desktop reached a usable UI. Retire
-		// an eligible superseded app-bundle or flat-layout transaction here as
-		// well as in the delayed post-DOM health task, so an immediate click never
-		// has to fail once and ask the user to retry.
 		// Visible UI at the pending target is health evidence — heal before
 		// reconcile so a missed post-DOM task does not block the next update.
 		// Exact and probationary commits are independent best-effort paths.

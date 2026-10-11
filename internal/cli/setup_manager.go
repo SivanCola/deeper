@@ -258,7 +258,6 @@ func (s *providerSetupSession) addProviderAccess(entries []config.ProviderEntry)
 					s.cfg.Desktop.ProviderAccess = append(s.cfg.Desktop.ProviderAccess, name)
 				}
 			}
-		} else {
 		}
 		s.accessDeclared = true
 		s.operations = append(s.operations, providerSetupOperation{
@@ -836,7 +835,6 @@ func (s *providerSetupSession) replayOperations(cfg *config.Config, accessDeclar
 						cfg.Desktop.ProviderAccess = append(cfg.Desktop.ProviderAccess, name)
 					}
 				}
-			} else {
 			}
 			*accessDeclared = true
 			if cfg.Desktop.ProviderAccess == nil {

@@ -11,7 +11,6 @@ import (
 
 	"deepzora/internal/agent"
 	"deepzora/internal/control"
-	"deepzora/internal/store"
 )
 
 var (
@@ -68,14 +67,6 @@ func (a *App) trashTopic(topicID string) (retErr error) {
 	} else if fallback.needs {
 		changedDirs = append(changedDirs, desktopSessionDir(globalWorkspaceRoot()))
 	}
-	// The last visible topic leaves no replacement runtime (the frontend lands
-	// on the workspace draft). Abandoned transient blanks still go, or
-	// reconciliation could promote a default-titled blank into the registry.
-	a.mu.RLock()
-	if tab := a.tabs[a.activeTabID]; tab != nil {
-	}
-	a.mu.RUnlock()
-	trace.phase = "discard_unused_blanks"
 	trace.phase = "notify"
 	if len(changedDirs) > 0 {
 		a.emitProjectTreeChangedForSessionDirs(changedDirs...)
@@ -317,76 +308,4 @@ func unusedTransientBlankSession(dir, path string) bool {
 	// The caller's keep set protects every visible or detached runtime; registry
 	// presence alone cannot prove user content.
 	return true
-}
-
-func transientTopicHasSibling(dirs []string, excludedPath string, target agent.BranchMeta) bool {
-	seen := make(map[string]bool, len(dirs))
-	for _, dir := range dirs {
-		dir = strings.TrimSpace(dir)
-		key := projectRootKey(dir)
-		if dir == "" || seen[key] {
-			continue
-		}
-		seen[key] = true
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		for _, entry := range entries {
-			if entry.IsDir() || !store.IsSessionTranscriptName(entry.Name()) {
-				continue
-			}
-			path := filepath.Join(dir, entry.Name())
-			if sameDesktopPath(path, excludedPath) {
-				continue
-			}
-			meta, ok, err := agent.LoadBranchMeta(path)
-			if err != nil || !ok || strings.TrimSpace(meta.TopicID) != strings.TrimSpace(target.TopicID) {
-				continue
-			}
-			sameRoot := meta.DefaultScope() != "project" || sameProjectRoot(meta.WorkspaceRoot, target.WorkspaceRoot)
-			if meta.DefaultScope() == target.DefaultScope() && sameRoot {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func cleanupTransientBlankTopicRegistration(meta agent.BranchMeta) {
-	topicID := strings.TrimSpace(meta.TopicID)
-	if topicID == "" {
-		return
-	}
-	scope, root := meta.DefaultScope(), normalizeProjectRoot(meta.WorkspaceRoot)
-	_ = updateProjectsFile(func(f *desktopProjectFile) (bool, error) {
-		changed := false
-		if scope != "project" {
-			if next := removeString(f.GlobalTopics, topicID); !sameStringList(next, f.GlobalTopics) {
-				f.GlobalTopics, changed = next, true
-			}
-			if next := removeString(f.GlobalPinnedTopics, topicID); !sameStringList(next, f.GlobalPinnedTopics) {
-				f.GlobalPinnedTopics, changed = next, true
-			}
-			if next, removed := groupsWithoutTopic(f.GlobalGroups, topicID); removed {
-				f.GlobalGroups, f.GlobalGroupsRevision, changed = next, f.GlobalGroupsRevision+1, true
-			}
-			return changed, nil
-		}
-		if index := projectIndexByRoot(f.Projects, root); index >= 0 {
-			project := &f.Projects[index]
-			if next := removeString(project.Topics, topicID); !sameStringList(next, project.Topics) {
-				project.Topics, changed = next, true
-			}
-			if next := removeString(project.PinnedTopics, topicID); !sameStringList(next, project.PinnedTopics) {
-				project.PinnedTopics, changed = next, true
-			}
-			if next, removed := groupsWithoutTopic(project.Groups, topicID); removed {
-				project.Groups, project.GroupsRevision, changed = next, project.GroupsRevision+1, true
-			}
-		}
-		return changed, nil
-	})
-	titleRoot := topicTitleRoot(scope, root)
-	_ = deleteTopicState(titleRoot, topicID)
 }

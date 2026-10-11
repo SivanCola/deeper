@@ -192,18 +192,6 @@ func TestIsolateCLIConfigHomeOverridesExistingDeepzoraHome(t *testing.T) {
 	}
 }
 
-func hasPluginNamed(cfg *config.Config, name string) bool {
-	if cfg == nil {
-		return false
-	}
-	for _, plugin := range cfg.Plugins {
-		if plugin.Name == name {
-			return true
-		}
-	}
-	return false
-}
-
 func TestMetadataCommandsDoNotProbeTerminalTheme(t *testing.T) {
 	defer func(prev func() (terminalRGB, bool)) { terminalProbe = prev }(terminalProbe)
 	terminalProbe = func() (terminalRGB, bool) {

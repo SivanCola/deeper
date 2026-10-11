@@ -14,19 +14,6 @@ import (
 	"deepzora/internal/store"
 )
 
-// holdSessionLease simulates another runtime owning path for the duration of
-// the test (the in-process lease registry plus the OS lock behave exactly as a
-// foreign holder for acquisition purposes).
-func holdSessionLease(t *testing.T, path string) *agent.SessionLease {
-	t.Helper()
-	lease, err := agent.TryAcquireSessionLease(path)
-	if err != nil {
-		t.Fatalf("test holder acquire: %v", err)
-	}
-	t.Cleanup(lease.Release)
-	return lease
-}
-
 func TestRunCopyRequiresResumeTarget(t *testing.T) {
 	isolateCLIConfigHome(t)
 

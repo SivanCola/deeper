@@ -360,16 +360,6 @@ func (s *loadedShortcut) targetPath() (string, error) {
 	return windows.UTF16ToString(buffer), nil
 }
 
-func (s *loadedShortcut) workingDirectory() (string, error) {
-	buffer := make([]uint16, windowsPathBuffer)
-	hr, _, _ := syscall.SyscallN(s.link.VTable.GetWorkingDirectory,
-		uintptr(unsafe.Pointer(s.link)), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
-	if err := checkHRESULT("IShellLinkW.GetWorkingDirectory", hr); err != nil {
-		return "", err
-	}
-	return windows.UTF16ToString(buffer), nil
-}
-
 func (s *loadedShortcut) appUserModelID() (string, error) {
 	var value propVariant
 	hr, _, _ := syscall.SyscallN(

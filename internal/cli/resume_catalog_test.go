@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"deepzora/internal/agent"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
 )
@@ -86,25 +85,6 @@ func TestCanonicalResumeHidden(t *testing.T) {
 	if canonicalResumeHidden(session.SessionInfo{MetadataStatus: session.MetadataPending}) {
 		t.Fatal("pending metadata must stay listed while the rebuild runs")
 	}
-}
-
-func resumeStoreLegacyRow(name string, at time.Time) agent.SessionInfo {
-	return agent.SessionInfo{Path: "/sessions/" + name + ".jsonl", LastActivityAt: at, Preview: name, Turns: 1}
-}
-
-func resumeStoreCanonicalRow(id string, at time.Time) resumeEntry {
-	return resumeEntry{
-		session: agent.SessionInfo{Path: "/sessions-v4/" + id, LastActivityAt: at, Preview: id, Turns: 1},
-		target:  cliResumeTarget{ref: session.SessionRef{HostID: "local", SessionID: id}},
-	}
-}
-
-func resumeEntryPreviews(entries []resumeEntry) []string {
-	out := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, entry.session.Preview)
-	}
-	return out
 }
 
 // fakeSessionCatalog pages a synthetic catalog in session-id order with the

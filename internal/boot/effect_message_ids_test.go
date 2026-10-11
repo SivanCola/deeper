@@ -9,16 +9,6 @@ import (
 	"deepzora/internal/provider"
 )
 
-// withoutMessageIDs strips the per-session local ids so two independent runs
-// can be compared on provider-visible content.
-func withoutMessageIDs(msgs []provider.Message) []provider.Message {
-	out := append([]provider.Message(nil), msgs...)
-	for i := range out {
-		out[i].ID = ""
-	}
-	return out
-}
-
 // TestEffectMessageIDsPersistThroughRealBuild pins the identity contract at
 // both boundaries the real stack crosses: every message handed to the provider
 // carries an id, and the transcript reloaded from disk carries the same ids.

@@ -86,40 +86,6 @@ func writeSessionHeader(dir string, header SessionHeader) error {
 	return fileutil.AtomicWriteFileStrict(filepath.Join(dir, sessionHeaderName), append(body, '\n'), 0o600)
 }
 
-func writeSessionHeaderForCreate(dir, sessionID string, createdAt time.Time, options CreateOptions) error {
-	options.SessionID = sessionID
-	header, err := headerForCreate(options)
-	if err != nil || header == nil {
-		return err
-	}
-	header.CreatedAt = createdAt
-	return writeSessionHeader(dir, *header)
-}
-
-func validateSessionHeaderForCreate(dir, sessionID string, options CreateOptions) error {
-	expected, err := headerForCreate(options)
-	if err != nil || expected == nil {
-		return err
-	}
-	header, found, err := readSessionHeader(dir, sessionID)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return fmt.Errorf("%w: session header is missing", ErrDamagedStore)
-	}
-	if header.CWD != expected.CWD {
-		return fmt.Errorf("%w: session header workspace does not match requested ownership", ErrDamagedStore)
-	}
-	if header.ParentSessionID != expected.ParentSessionID {
-		return fmt.Errorf("%w: session header lineage does not match requested ownership", ErrDamagedStore)
-	}
-	if header.Origin != expected.Origin {
-		return fmt.Errorf("%w: session header origin does not match requested ownership", ErrDamagedStore)
-	}
-	return nil
-}
-
 func readSessionHeader(dir, sessionID string) (SessionHeader, bool, error) {
 	body, err := os.ReadFile(filepath.Join(dir, sessionHeaderName))
 	if errors.Is(err, os.ErrNotExist) {

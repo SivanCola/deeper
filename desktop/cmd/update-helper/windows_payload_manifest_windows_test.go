@@ -1,3 +1,5 @@
+//go:build windows
+
 package main
 
 import (
@@ -64,18 +66,4 @@ func acceptWindowsPayloadManifestForTest(t *testing.T) {
 		return nil
 	}
 	t.Cleanup(func() { verifyWindowsPayloadManifestFn = original })
-}
-
-func useTestWindowsPayloadManifest(t *testing.T, staging, version string) {
-	t.Helper()
-	writeWindowsPayloadManifestForTest(t, staging, version)
-	acceptWindowsPayloadManifestForTest(t)
-	useUnverifiedPayloadReaderForTest(t)
-}
-
-func useUnverifiedPayloadReaderForTest(t *testing.T) {
-	t.Helper()
-	original := readVerifiedWindowsStagedPayloadFn
-	readVerifiedWindowsStagedPayloadFn = os.ReadFile
-	t.Cleanup(func() { readVerifiedWindowsStagedPayloadFn = original })
 }

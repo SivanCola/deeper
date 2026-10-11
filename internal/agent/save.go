@@ -688,16 +688,6 @@ func newSessionTranscriptHasher() *sessionTranscriptHasher {
 	return &sessionTranscriptHasher{h: sha256.New()}
 }
 
-// rehash restarts accumulation over msgs (event-log replace records).
-func (s *sessionTranscriptHasher) rehash(msgs []provider.Message) {
-	if s == nil {
-		return
-	}
-	s.h.Reset()
-	s.err = nil
-	s.addAll(msgs)
-}
-
 func (s *sessionTranscriptHasher) addAll(msgs []provider.Message) {
 	for _, m := range msgs {
 		s.add(m)
@@ -926,10 +916,6 @@ func LoadSessionContext(ctx context.Context, path string) (*Session, error) {
 
 func loadSessionUnlocked(path string) (*Session, error) {
 	return loadSessionUnlockedWithContext(context.Background(), path, defaultSessionReplayLimits)
-}
-
-func loadSessionUnlockedWithLimits(path string, limits sessionReplayLimits) (*Session, error) {
-	return loadSessionUnlockedWithContext(context.Background(), path, limits)
 }
 
 func loadSessionUnlockedWithContext(ctx context.Context, path string, limits sessionReplayLimits) (*Session, error) {

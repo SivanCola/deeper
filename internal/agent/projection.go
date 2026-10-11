@@ -248,16 +248,6 @@ func coveredPrefixHash(msgs []provider.Message, n int) string {
 	return providerVisibleFingerprint(provider.SanitizeToolPairing(visible))
 }
 
-// boundedCoveredPrefixHash is the v3 bounded provider fingerprint. Keep the
-// named helper for old sidecar and load-repair compatibility tests.
-func boundedCoveredPrefixHash(msgs []provider.Message, n int) string {
-	if n <= 0 || n > len(msgs) {
-		return ""
-	}
-	visible := provider.ModelMessages(msgs[:n])
-	return providerVisibleFingerprint(provider.SanitizeToolPairing(visible))
-}
-
 // providerVisibleFingerprint is the stable hash of fields that reach a provider.
 func providerVisibleFingerprint(msgs []provider.Message) string {
 	type wireCall struct {

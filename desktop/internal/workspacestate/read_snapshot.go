@@ -3,11 +3,8 @@ package workspacestate
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"slices"
 	"strings"
-
-	"deepzora/internal/pathidentity"
 )
 
 // ReadSnapshot is an immutable, coherent view of verified registry bytes. It
@@ -136,16 +133,4 @@ func (r *ReadSnapshot) Session(id string) SessionMetadata {
 	}
 	return SessionMetadata{Workspace: w, State: status, Presentation: p, Registered: registered,
 		OwnershipConflict: r.conflicts[id], SharedTopic: p.TopicID != "" && others > 0}
-}
-
-func sourcePathKey(path string) (string, error) {
-	if strings.TrimSpace(path) == "" {
-		return "", errors.New("source path is required")
-	}
-	abs, err := filepath.Abs(strings.TrimSpace(path))
-	if err != nil {
-		return "", err
-	}
-	identity, err := pathidentity.Resolve(abs, pathidentity.Options{FollowLeaf: true})
-	return identity.Key, err
 }

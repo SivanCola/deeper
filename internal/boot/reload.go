@@ -239,10 +239,6 @@ func migrateRuntimeState(ctrl, old *control.Controller, m runtimeMigration, crea
 	if m.goalRunning && strings.TrimSpace(m.goal) != "" && strings.TrimSpace(ctrl.Goal()) == "" {
 		ctrl.SetGoal(m.goal)
 	}
-	if m.prevPath == "" {
-		// No persisted recovery sidecar; carry the live checkpoint.
-	}
-
 	if err := ctrl.InheritLifecycleFrom(old); err != nil {
 		return fmt.Errorf("inherit controller lifecycle: %w", err)
 	}

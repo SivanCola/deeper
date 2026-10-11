@@ -91,26 +91,12 @@ func TestRestoredUsageKeepsFullScalarTotalAfterNewQuote(t *testing.T) {
 	}
 }
 
-type runtimeTrackingFactory struct {
-	*configurableFactory
-}
-
 func (f *statusFactory) SessionRuntimeState(_ context.Context, p SessionRuntimeStateParams) (SessionRuntimeState, error) {
 	return SessionRuntimeState{
 		PlannerMode: "off",
 		Sandbox: SessionSandboxState{
 			Mode: "enforce", Engine: "bubblewrap", Available: true, WorkspaceRoot: p.Cwd,
 			WriteRoots: []string{p.Cwd}, NetworkEnabled: false,
-		},
-	}, nil
-}
-
-func (f *runtimeTrackingFactory) SessionRuntimeState(_ context.Context, p SessionRuntimeStateParams) (SessionRuntimeState, error) {
-	return SessionRuntimeState{
-		PlannerMode: "on",
-		Sandbox: SessionSandboxState{
-			Mode: "enforce", Engine: "bubblewrap", Available: true, WorkspaceRoot: p.Cwd,
-			WriteRoots: []string{p.Cwd},
 		},
 	}, nil
 }

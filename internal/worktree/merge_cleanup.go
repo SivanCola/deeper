@@ -281,17 +281,6 @@ func cleanupBranchHead(ctx context.Context, sourceRoot gitcmd.Repo, branch strin
 	return "", false, fmt.Errorf("inspect temporary branch: %w%s", err, stderrSuffix(stderr))
 }
 
-func cleanupPathExists(path string) (bool, error) {
-	_, err := os.Lstat(path)
-	if err == nil {
-		return true, nil
-	}
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
-	}
-	return false, err
-}
-
 func sameCleanupPath(left, right string) bool {
 	leftAbs, leftErr := filepath.Abs(left)
 	rightAbs, rightErr := filepath.Abs(right)

@@ -79,17 +79,6 @@ const realSpawnTimeout = 60 * time.Second
 
 const sampleSettings = `{"hooks":{"PreToolUse":[{"match":"bash","command":"echo pre"}],"Stop":[{"command":"echo stop"}]}}`
 
-func hookSettingsWithCommand(t *testing.T, event Event, command string) string {
-	t.Helper()
-	body, err := json.Marshal(Settings{Hooks: map[Event][]HookConfig{
-		event: []HookConfig{{Match: "bash", Command: command, Timeout: int(realSpawnTimeout / time.Millisecond)}},
-	}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(body)
-}
-
 func TestLoadDecodesGB18030GlobalSettings(t *testing.T) {
 	home := t.TempDir()
 	body := `{"hooks":{"Stop":[{"command":"echo 中文","description":"全局"}]}}`

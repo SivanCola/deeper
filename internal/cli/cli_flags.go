@@ -162,23 +162,3 @@ type ambiguousSessionQueryError struct {
 func (e *ambiguousSessionQueryError) Error() string {
 	return fmt.Sprintf("session query %q is ambiguous (%d matches)", e.query, len(e.matches))
 }
-
-// looksLikeMachineSessionID reports whether query is the opaque HMAC form
-// emitted by machineSessionIDWithKey (`session_` + 32 lowercase hex chars).
-func looksLikeMachineSessionID(query string) bool {
-	const prefix = "session_"
-	if !strings.HasPrefix(query, prefix) {
-		return false
-	}
-	hexPart := query[len(prefix):]
-	if len(hexPart) != 32 {
-		return false
-	}
-	for i := range len(hexPart) {
-		c := hexPart[i]
-		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return false
-		}
-	}
-	return true
-}

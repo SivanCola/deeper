@@ -1,7 +1,6 @@
 package config
 
 import (
-	"net/url"
 	"slices"
 	"strings"
 
@@ -166,24 +165,4 @@ func (e *ProviderEntry) HasVisionModel(model string) bool {
 		}
 	}
 	return false
-}
-
-func isOfficialMimoVisionEntry(e *ProviderEntry) bool {
-	if !isOpenAIProviderKind(e) || !mimoVisionModels[strings.ToLower(strings.TrimSpace(e.Model))] {
-		return false
-	}
-	switch officialMimoHost(e.BaseURL) {
-	case "api.xiaomimimo.com", "token-plan-cn.xiaomimimo.com", "token-plan-sgp.xiaomimimo.com", "token-plan-ams.xiaomimimo.com":
-		return true
-	default:
-		return false
-	}
-}
-
-func officialMimoHost(baseURL string) string {
-	u, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return ""
-	}
-	return strings.ToLower(u.Hostname())
 }

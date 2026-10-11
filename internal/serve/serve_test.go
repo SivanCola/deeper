@@ -708,30 +708,6 @@ func TestResumeRejectsCleanupPendingSession(t *testing.T) {
 	}
 }
 
-func writeServeSubagentArtifact(t *testing.T, dir, ref, parentSession string) {
-	t.Helper()
-	subagentDir := filepath.Join(dir, "subagents")
-	if err := os.MkdirAll(subagentDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(subagentDir, ref+".jsonl"), []byte(`{"role":"user","content":"sub"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	data, err := json.Marshal(agent.SubagentMeta{
-		Ref:           ref,
-		Status:        agent.SubagentCompleted,
-		Kind:          "task",
-		Name:          "task",
-		ParentSession: parentSession,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(subagentDir, ref+".meta.json"), data, 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestServeSubmitMalformedJSON(t *testing.T) {
 	bc := NewBroadcaster()
 	ctrl := control.New(control.Options{Sink: bc})

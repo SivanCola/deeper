@@ -407,8 +407,6 @@ func TestMetaReportsGoalStatus(t *testing.T) {
 	}
 
 	app.SetCollaborationModeForTab(tab.ID, "plan")
-	app.mu.Lock()
-	app.mu.Unlock()
 	meta = app.MetaForTab(tab.ID)
 	if meta.CollaborationMode != "plan" {
 		t.Fatalf("profile meta = %+v, want plan + full/standard", meta)

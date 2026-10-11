@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -245,19 +244,6 @@ func seedRuntimeSession(ctx context.Context, runtime *session.Runtime, operation
 		return nil
 	}
 	_, err := runtime.Session().AppendBatch(ctx, operationID, events)
-	return err
-}
-
-func seedRuntimeConfig(ctx context.Context, runtime *session.Runtime, operationID, modelRef, modelIdentity string) error {
-	if runtime == nil || strings.TrimSpace(modelRef) == "" {
-		return nil
-	}
-	event, err := sessionConfigEvent(modelRef, modelIdentity)
-	if err != nil {
-		return err
-	}
-	digest := sha256.Sum256(event.Payload)
-	_, err = runtime.Session().AppendBatch(ctx, fmt.Sprintf("%s:%x", operationID, digest[:16]), []session.Event{event})
 	return err
 }
 

@@ -97,23 +97,6 @@ func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 	}
 }
 
-// primarySessionFiles filters a recovery-branch glob down to primary session
-// transcripts, dropping lifecycle/diagnostic sidecars that the broad recovery
-// glob also matches.
-func primarySessionFiles(paths []string) []string {
-	out := make([]string, 0, len(paths))
-	for _, path := range paths {
-		base := filepath.Base(path)
-		if strings.HasSuffix(base, ".jsonl") &&
-			!strings.HasSuffix(base, ".events.jsonl") &&
-			!strings.HasSuffix(base, ".guardian.jsonl") &&
-			!strings.HasSuffix(base, ".turns.jsonl") {
-			out = append(out, path)
-		}
-	}
-	return out
-}
-
 // TestSwitchModelRefreshesLeadingSystemPrompt pins the fix for the bug where
 // switchModel rebuilt the controller with the target model/profile's own
 // system prompt, only for AdoptHistory to immediately overwrite it with the

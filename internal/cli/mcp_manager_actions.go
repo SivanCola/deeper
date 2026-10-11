@@ -459,5 +459,3 @@ func expandLeadingTilde(p string) string {
 	}
 	return home + p[1:]
 }
-
-func mcpBoolPtr(v bool) *bool { return &v }

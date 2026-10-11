@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -521,27 +520,6 @@ func cancelPendingAppBundleUpdateHandoff(
 	return current, nil
 }
 
-func sameRepairMutationPaths(a, b []string) bool {
-	keys := func(paths []string) []string {
-		seen := make(map[string]struct{}, len(paths))
-		result := make([]string, 0, len(paths))
-		for _, path := range paths {
-			key := canonicalRepairPath(path)
-			if key == "" {
-				continue
-			}
-			if _, ok := seen[key]; ok {
-				continue
-			}
-			seen[key] = struct{}{}
-			result = append(result, key)
-		}
-		sort.Strings(result)
-		return result
-	}
-	return reflect.DeepEqual(keys(a), keys(b))
-}
-
 // VerifyAppBundleUpdateHandoffSource checks the real staging containment and
 // the complete staged tree immediately before a handoff mutates the install.
 // The lexical metadata check remains readable after staging cleanup, while this
@@ -1043,17 +1021,6 @@ func ReadPendingUpdate() (*UpdateTransaction, error) {
 		return nil, err
 	}
 	if err := validateUpdateTransaction(tx); err != nil {
-		return nil, err
-	}
-	return tx, nil
-}
-
-func readPendingUpdateForLauncher(launcherPath string) (*UpdateTransaction, error) {
-	tx, err := readPendingUpdateUnchecked()
-	if err != nil {
-		return nil, err
-	}
-	if err := validateUpdateTransactionForLauncher(tx, launcherPath); err != nil {
 		return nil, err
 	}
 	return tx, nil
@@ -2078,29 +2045,6 @@ func validateUpdateTransactionForLauncher(tx *UpdateTransaction, launcher string
 		return fmt.Errorf("pending update target kind is invalid")
 	}
 	return nil
-}
-
-func pathInsideResolvedRoot(root, path string) bool {
-	root = filepath.Clean(strings.TrimSpace(root))
-	path = filepath.Clean(strings.TrimSpace(path))
-	if root == "" || path == "" {
-		return false
-	}
-	lexicalRel, err := filepath.Rel(root, path)
-	if err != nil || lexicalRel == ".." || strings.HasPrefix(lexicalRel, ".."+string(filepath.Separator)) {
-		return false
-	}
-	resolvedRoot, err := filepath.EvalSymlinks(root)
-	if err != nil {
-		return false
-	}
-	resolvedPath, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		return false
-	}
-	resolvedRel, err := filepath.Rel(resolvedRoot, resolvedPath)
-	return err == nil && resolvedRel != ".." &&
-		!strings.HasPrefix(resolvedRel, ".."+string(filepath.Separator))
 }
 
 func validateAppBundleHandoffMetadata(tx *UpdateTransaction) error {

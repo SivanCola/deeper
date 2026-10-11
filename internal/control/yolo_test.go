@@ -548,20 +548,6 @@ func (r *planModeCountingRunner) SetPlanMode(v bool) {
 	r.last = v
 }
 
-type plannerUnsafeReadTool struct {
-	calls *int
-}
-
-func (plannerUnsafeReadTool) Name() string            { return "planner_phase_only" }
-func (plannerUnsafeReadTool) Description() string     { return "planner phase test tool" }
-func (plannerUnsafeReadTool) Schema() json.RawMessage { return json.RawMessage(`{"type":"object"}`) }
-func (plannerUnsafeReadTool) ReadOnly() bool          { return true }
-func (plannerUnsafeReadTool) PlanModeSafe() bool      { return false }
-func (t plannerUnsafeReadTool) Execute(context.Context, json.RawMessage) (string, error) {
-	(*t.calls)++
-	return "executed", nil
-}
-
 type askCallResult struct {
 	answers []event.AskAnswer
 	err     error

@@ -190,20 +190,9 @@ func sortedKeys[V any](m map[string]V) []string {
 	return keys
 }
 
-// hookIdentity is the merge key for a hook entry: the event (applied by the
-// caller) plus what the entry runs. Two entries with the same identity but
-// different remaining fields are a conflict, not two hooks.
-func hookIdentity(h Hook) string {
-	return h.Command + "\x00" + h.ContextFile
-}
-
-// The interceptor points, replacement slots, and priority bounds below
-// duplicate internal/extension (intercept.go, replace.go). They are NOT
-// imported: extension depends on pluginpkg transitively
-// (extension -> hook -> pluginpkg), so pluginpkg importing extension would
-// create an import cycle. Keep these lists in sync with extension — the
-// adapter tests in the extension package pin them together by parsing a
-// manifest that exercises every value.
+// Runtime points, slots, and priorities mirror internal/extension to avoid
+// the extension -> hook -> pluginpkg import cycle. Extension adapter tests
+// exercise every value to keep both definitions in sync.
 
 const (
 	minRuntimePriority = -1000 // mirrors extension.MinInterceptorPriority
@@ -246,7 +235,7 @@ var runtimeCapabilities = []string{"interceptors", "strategies", "providers", "u
 // validateRuntimeSlot mirrors extension.ParseSlot: bare names must be
 // declared slots; tool:/provider: forms must carry a well-formed target.
 // Provider targets are <name>/<model>, or plugin/<pluginID>/<name>/<model>
-// for extension-hosted providers (stage 7).
+// for extension-hosted providers.
 func validateRuntimeSlot(s string) error {
 	if runtimeNamedSlots[s] {
 		return nil

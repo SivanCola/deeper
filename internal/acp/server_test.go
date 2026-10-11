@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -1791,55 +1790,6 @@ func TestServeRejectsPathLikeSessionID(t *testing.T) {
 	}
 	if resp.Error.Code != ErrInvalidParams || !strings.Contains(resp.Error.Message, "invalid sessionId") {
 		t.Fatalf("session/delete error = %+v, want invalid sessionId", resp.Error)
-	}
-}
-
-func writeACPSubagentArtifact(t *testing.T, dir, ref, parentSession string) {
-	t.Helper()
-	subagentDir := filepath.Join(dir, "subagents")
-	if err := os.MkdirAll(subagentDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(subagentDir, ref+".jsonl"), []byte(`{"role":"user","content":"sub"}`+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	data, err := json.Marshal(agent.SubagentMeta{
-		Ref:           ref,
-		Status:        agent.SubagentCompleted,
-		Kind:          "task",
-		Name:          "task",
-		ParentSession: parentSession,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(subagentDir, ref+".meta.json"), data, 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func startNonCooperativeACPJob(t *testing.T, jm *jobs.Manager, sessionPath string) func() {
-	t.Helper()
-	started := make(chan struct{})
-	release := make(chan struct{})
-	jm.StartForSession(agent.BranchID(sessionPath), "bash", "stuck job", func(ctx context.Context, _ io.Writer) (string, error) {
-		close(started)
-		<-ctx.Done()
-		<-release
-		return "", ctx.Err()
-	})
-	select {
-	case <-started:
-	case <-time.After(2 * time.Second):
-		t.Fatal("background job never started")
-	}
-	released := false
-	return func() {
-		if released {
-			return
-		}
-		released = true
-		close(release)
 	}
 }
 

@@ -1,13 +1,7 @@
-// Package control is the transport-agnostic session driver. A Controller owns
-// the agent run loop and session lifecycle, takes commands (Send/Cancel/Approve/
-// SetPlanMode/Compact/NewSession/…), and emits everything that happens —
-// reasoning, tool calls, approvals, turn completion — as a typed event stream to
-// a single event.Sink.
-//
-// The point is one orchestration layer behind every frontend: a terminal TUI, a
-// desktop webview, or an HTTP/SSE server each drive the Controller identically
-// (issue commands, render events) and none of them re-implement turn lifecycle,
-// cancellation, or approval. The Controller depends on no frontend.
+// Package control drives sessions independently of their frontend. A Controller
+// owns the agent loop, lifecycle, cancellation, and approval handling. Terminal,
+// desktop, and HTTP/SSE clients issue commands and consume its typed event stream
+// through a single event.Sink without implementing separate lifecycle logic.
 package control
 
 import (
@@ -2495,11 +2489,8 @@ func askAnswersHaveSelection(answers []event.AskAnswer) bool {
 // are replayed from the same registry; the frontend presents them in order.
 func (c *Controller) ReplayPendingPrompts() {
 	c.approval.promptEmitMu.Lock()
-	noApprovals := c.replayPendingPromptsTo(c.sink)
+	c.replayPendingPromptsTo(c.sink)
 	c.approval.promptEmitMu.Unlock()
-	if noApprovals {
-		// Retained compatibility hook; live Auto Guard cards are ordinary approvals.
-	}
 }
 
 // ReplayPendingPromptsTo re-emits pending prompts to one frontend sink. Serve
@@ -3913,7 +3904,6 @@ func (c *Controller) setSessionPath(p string, fresh bool) {
 		// session's temporary files (e.g. after EnsureSessionPath on a
 		// controller that already ran commands).
 		c.rotateSessionTemp()
-	} else {
 	}
 	c.snapshotMu.Unlock()
 	c.rebindInbox()

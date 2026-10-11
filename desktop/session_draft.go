@@ -208,7 +208,7 @@ func (a *App) draftView(record draftstate.Draft) (SessionDraftView, error) {
 func (a *App) defaultDraftSettings(scope, workspaceRoot string) SessionDraftSettings {
 	actualRoot := workspaceRoot
 	if scope != "project" {
-		scope, workspaceRoot, actualRoot = "global", "", globalWorkspaceRoot()
+		scope, actualRoot = "global", globalWorkspaceRoot()
 	}
 	model, approval := desktopNewSessionDefaults(scope, actualRoot)
 	settings := SessionDraftSettings{Model: model, ModelSource: draftModelSourceDefault,

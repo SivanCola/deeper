@@ -283,14 +283,6 @@ func readSettings(path string) *Settings {
 	return &s
 }
 
-func pathExists(path string) bool {
-	if strings.TrimSpace(path) == "" {
-		return false
-	}
-	_, err := os.Stat(path)
-	return err == nil || !os.IsNotExist(err)
-}
-
 func appendResolved(out *[]ResolvedHook, s *Settings, scope Scope, source string) {
 	if s.Hooks == nil {
 		return
@@ -1399,13 +1391,6 @@ func powerShellCommand(ctx context.Context, path, command string) *exec.Cmd {
 	return proc.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)
 }
 
-func shellInvocation(command string) (string, []string) {
-	if runtime.GOOS == "windows" {
-		return "cmd", []string{"/c", command}
-	}
-	return "sh", []string{"-c", command}
-}
-
 // cappedBuffer is an io.Writer that stops storing after outputCapBytes and
 // records that it truncated, but keeps reporting full writes so the child never
 // sees a short-write error.
@@ -1450,17 +1435,4 @@ func deepzoraHomeForOptions(opts LoadOptions) string {
 		return filepath.Clean(dir)
 	}
 	return deepzoraHome(opts.HomeDir)
-}
-
-func sameCleanPath(a, b string) bool {
-	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
-		return false
-	}
-	if aa, err := filepath.Abs(a); err == nil {
-		a = aa
-	}
-	if bb, err := filepath.Abs(b); err == nil {
-		b = bb
-	}
-	return filepath.Clean(a) == filepath.Clean(b)
 }

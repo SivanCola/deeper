@@ -1660,15 +1660,6 @@ func TestCloseTabKeepsIndexedBlankSession(t *testing.T) {
 	}
 }
 
-func hasHistoryContent(messages []HistoryMessage, content string) bool {
-	for _, m := range messages {
-		if m.Content == content {
-			return true
-		}
-	}
-	return false
-}
-
 func TestFindTopicSessionIndexRefreshesWhenMetaChanges(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	dir := config.SessionDir()

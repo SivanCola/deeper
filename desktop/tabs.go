@@ -5294,59 +5294,13 @@ func (a *App) localizedTopicTitle(title, source string) string {
 	return title
 }
 
-const topicFileReadTimeout = 200 * time.Millisecond
-
 var readFileWithTimeoutSlots = make(chan struct{}, 16)
-
-func readFileWithTimeout(path string, timeout time.Duration) ([]byte, error) {
-	if timeout <= 0 {
-		return readFileUTF8(path)
-	}
-	select {
-	case readFileWithTimeoutSlots <- struct{}{}:
-	default:
-		return nil, fmt.Errorf("too many pending file reads")
-	}
-	type result struct {
-		data []byte
-		err  error
-	}
-	ch := make(chan result, 1)
-	go func() {
-		data, err := readFileUTF8(path)
-		<-readFileWithTimeoutSlots
-		ch <- result{data: data, err: err}
-	}()
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-	select {
-	case r := <-ch:
-		return r.data, r.err
-	case <-timer.C:
-		return nil, fmt.Errorf("timed out after %v reading %s", timeout, filepath.Base(path))
-	}
-}
 
 type topicAutoTitleMeta struct {
 	Stage     int    `json:"stage,omitempty"`
 	UserTurns int    `json:"userTurns,omitempty"`
 	BasisHash string `json:"basisHash,omitempty"`
 	UpdatedAt int64  `json:"updatedAt,omitempty"`
-}
-
-func loadStringMapForUpdate(path string) (map[string]string, error) {
-	m := map[string]string{}
-	b, err := readFileUTF8(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return m, nil
-		}
-		return nil, err
-	}
-	if err := json.Unmarshal(b, &m); err != nil || m == nil {
-		return map[string]string{}, nil
-	}
-	return m, nil
 }
 
 func loadTopicTitlesForUpdate(workspaceRoot string) (map[string]string, error) {
@@ -5359,21 +5313,6 @@ func loadTopicTitlesForUpdate(workspaceRoot string) (map[string]string, error) {
 	for id, record := range snapshot.Records {
 		if record.Title != "" {
 			values[id] = agent.UserPreviewText(record.Title)
-		}
-	}
-	return values, nil
-}
-
-func loadTopicTitleSourcesForUpdate(workspaceRoot string) (map[string]string, error) {
-	snapshot, err := desktopTopicState.snapshot(workspaceRoot)
-
-	if err != nil {
-		return nil, err
-	}
-	values := make(map[string]string, len(snapshot.Records))
-	for id, record := range snapshot.Records {
-		if record.TitleSource != "" {
-			values[id] = record.TitleSource
 		}
 	}
 	return values, nil
@@ -5561,20 +5500,6 @@ func createTopicState(workspaceRoot, topicID, title, source string, createdAt in
 	return desktopTopicState.createTopic(workspaceRoot, topicID, title, source, createdAt)
 }
 
-func recordTopicAutoTitleMeta(workspaceRoot, topicID string, proposal autoTopicTitleProposal) error {
-	topicID = strings.TrimSpace(topicID)
-	if topicID == "" || proposal.Stage <= 0 || proposal.BasisHash == "" {
-		return nil
-	}
-	value := topicAutoTitleMeta{
-		Stage:     proposal.Stage,
-		UserTurns: proposal.UserTurns,
-		BasisHash: proposal.BasisHash,
-		UpdatedAt: time.Now().UnixMilli(),
-	}
-	return desktopTopicState.setAutoMeta(workspaceRoot, topicID, &value)
-}
-
 func applyAutoTopicTitle(workspaceRoot, topicID, title string, proposal autoTopicTitleProposal) (bool, error) {
 	topicID = strings.TrimSpace(topicID)
 	if topicID == "" || proposal.Stage <= 0 || proposal.BasisHash == "" {
@@ -5713,22 +5638,6 @@ func normalizeTopicStatus(status string) string {
 	default:
 		return ""
 	}
-}
-
-func restoredSessionTopicTitle(dir, sessionPath string, meta agent.BranchMeta) string {
-	if title := storedSessionTopicTitle(dir, sessionPath, meta); title != "" {
-		return title
-	}
-	if s, err := agent.LoadSession(sessionPath); err == nil {
-		for _, msg := range s.Messages {
-			if agent.IsUserAuthoredTurnMessage(msg) {
-				if title := topicTitleFromText(agent.UserMessageText(msg)); title != "" {
-					return title
-				}
-			}
-		}
-	}
-	return ""
 }
 
 func storedSessionTopicTitle(dir, sessionPath string, meta agent.BranchMeta) string {
@@ -6136,13 +6045,6 @@ type topicSummary struct {
 	hasNormalSession     bool
 	hasRecoveryOnly      bool
 	hasAdoptedRecovery   bool
-}
-
-func (s topicSummary) displayTurns() int {
-	if s.adoptedRecoveryTurns > s.turns {
-		return s.adoptedRecoveryTurns
-	}
-	return s.turns
 }
 
 // runtimeSessionStatus is one open or detached runtime session, as shown in
@@ -6624,29 +6526,6 @@ func pinnedTabSessionPath(dir, sessionPath string) (string, bool) {
 		if err != nil {
 			return "", false
 		}
-	}
-	return path, true
-}
-
-func pinnedTabSessionPathForBuild(scope, workspaceRoot, targetDir, sessionPath string) (string, bool) {
-	if path, ok := pinnedTabSessionPath(targetDir, sessionPath); ok {
-		return path, true
-	}
-	// Before per-project storage, desktop tabs persisted exact paths under the
-	// global session directory. Accept only that owned legacy root, and require
-	// project ownership metadata before routing a project tab through it.
-	legacyDir := config.SessionDir()
-	path, ok := pinnedTabSessionPath(legacyDir, sessionPath)
-	if !ok {
-		return "", false
-	}
-	meta, hasMeta, err := agent.LoadBranchMeta(path)
-	if strings.TrimSpace(scope) == "project" {
-		if err != nil || !hasMeta || meta.Scope != "project" || !sameProjectRoot(meta.WorkspaceRoot, workspaceRoot) {
-			return "", false
-		}
-	} else if err == nil && hasMeta && meta.Scope == "project" {
-		return "", false
 	}
 	return path, true
 }
@@ -7143,35 +7022,6 @@ type topicSessionMatch struct {
 type topicSessionDirIndex struct {
 	signature []topicSessionFileSignature
 	byTopic   map[string][]topicSessionMatch
-}
-
-// mergeSessionInfos merges one directory's session listing into the maps used by
-// ListProjectTree. The result collection loop calls it serially.
-func mergeSessionInfos(dir string, infos []agent.SessionInfo, titles map[string]string, sessionInfos map[string]agent.SessionInfo, sessionTitles map[string]string, topicSummaries map[string]topicSummary) {
-	for _, info := range infos {
-		sessionKey := sessionRuntimeKey(info.Path)
-		if sessionKey != "" {
-			sessionInfos[sessionKey] = info
-			title := strings.TrimSpace(info.CustomTitle)
-			if title == "" {
-				title = titles[filepath.Base(info.Path)]
-			}
-			sessionTitles[sessionKey] = title
-		}
-		if strings.TrimSpace(info.TopicID) == "" {
-			continue
-		}
-		key := topicSummaryKey(info.Scope, info.WorkspaceRoot, info.TopicID)
-		summary := topicSummaries[key]
-		lastActivityAt := info.LastActivityAt.UnixMilli()
-
-		summary.hasNormalSession = true
-		summary.turns += info.Turns
-		if lastActivityAt > summary.lastActivityAt {
-			summary.lastActivityAt = lastActivityAt
-		}
-		topicSummaries[key] = summary
-	}
 }
 
 var topicSessionIndexCache = struct {

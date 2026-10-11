@@ -26,18 +26,16 @@ type freshSessionCreator interface {
 // desktopSessionState groups the Desktop-only persistence and navigation
 // authority so App does not grow a second set of independent scalar owners.
 type desktopSessionState struct {
-	readSnapshots                 readSnapshotStore
-	layoutWrites                  tabLayoutWriter
-	organizations                 organizationReadCache
-	beforeMigrationRegistryCommit func() error
-	root                          string
-	workspaceState                *workspacestate.Store
-	navigationSeq                 atomic.Uint64
-	navigationMu                  sync.Mutex
-	navigationGeneration          uint64
-	navigationCancel              context.CancelFunc
-	pruneBlockedPersistence       atomic.Uint64
-	pendingCreateRecovered        atomic.Uint64
+	readSnapshots           readSnapshotStore
+	layoutWrites            tabLayoutWriter
+	root                    string
+	workspaceState          *workspacestate.Store
+	navigationSeq           atomic.Uint64
+	navigationMu            sync.Mutex
+	navigationGeneration    uint64
+	navigationCancel        context.CancelFunc
+	pruneBlockedPersistence atomic.Uint64
+	pendingCreateRecovered  atomic.Uint64
 }
 
 func (a *App) beginSessionNavigationContext(navigation ...uint64) (context.Context, func()) {
@@ -163,14 +161,6 @@ func isGlobalWorkspacePath(global workspacestate.Workspace, root string) bool {
 		return true
 	}
 	return slices.ContainsFunc(global.FormerRoots, func(former string) bool { return sameDesktopPath(root, former) })
-}
-
-func (a *App) isGlobalWorkspacePath(ctx context.Context, root string) bool {
-	if sameDesktopPath(root, globalWorkspaceRoot()) {
-		return true
-	}
-	state, err := a.workspaceRegistry().Load(ctx)
-	return err == nil && isGlobalWorkspacePath(state.Workspaces[workspacestate.GlobalWorkspaceID], root)
 }
 
 func (a *App) workspaceRegistry() *workspacestate.Store {

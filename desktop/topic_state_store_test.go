@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -38,9 +37,4 @@ func TestFreshTopicStateUsesSQLiteWithoutLegacyFiles(t *testing.T) {
 			t.Fatalf("fresh workspace created legacy file %s: %v", filepath.Base(path), err)
 		}
 	}
-}
-
-func containsJSONKey(data []byte, key string) bool {
-	var fields map[string]json.RawMessage
-	return json.Unmarshal(data, &fields) == nil && fields[key] != nil
 }

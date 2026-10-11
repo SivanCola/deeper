@@ -163,20 +163,6 @@ func UserConfigPath() string { return userConfigPath() }
 // DeepzoraManagedConfigPaths lists the current user configuration file.
 func DeepzoraManagedConfigPaths() []string { return []string{UserConfigPath()} }
 
-func appendUniquePath(paths []string, path string) []string {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return paths
-	}
-	clean := filepath.Clean(path)
-	for _, existing := range paths {
-		if samePath(existing, clean) {
-			return paths
-		}
-	}
-	return append(paths, clean)
-}
-
 // DeepzoraHomeDir is the current Deepzora home directory. It honors
 // DEEPZORA_HOME, then uses ~/.deepzora on macOS/Linux or %APPDATA%/deepzora on
 // Windows, with a %USERPROFILE%/AppData/Roaming fallback when %APPDATA% is

@@ -16,20 +16,3 @@ func normalizeOfficialDeepSeekModels(c *Config) {
 		backfillDeepSeekAnthropicCapabilities(p)
 	}
 }
-
-func isOfficialDeepSeekModelReferenceEndpoint(p *ProviderEntry) bool {
-	endpoint, exact := normalizedExactProviderRequestURL(ProviderEffectiveRequestURL(p))
-	if !exact {
-		return false
-	}
-	switch normalizedProviderProtocol(p.Kind) {
-	case "openai":
-		return endpoint == "https://api.deepseek.com/chat/completions" || endpoint == "https://api.deepseek.com/v1/chat/completions"
-	case "responses":
-		return endpoint == "https://api.deepseek.com/responses" || endpoint == "https://api.deepseek.com/v1/responses"
-	case "anthropic":
-		return endpoint == "https://api.deepseek.com/anthropic/v1/messages"
-	default:
-		return false
-	}
-}

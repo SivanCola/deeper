@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -24,15 +23,6 @@ func TestCoveredPrefixHashIgnoresLocalToolRawContent(t *testing.T) {
 	if second := coveredPrefixHash(msgs, len(msgs)); second == first {
 		t.Fatal("provider-visible Content edit did not invalidate the covered-prefix hash")
 	}
-}
-
-func projectionJSON(t *testing.T, value any) string {
-	t.Helper()
-	b, err := json.Marshal(value)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(b)
 }
 
 func TestLoadProjectionSidecarDropsUnverifiableBodyButKeepsReceipt(t *testing.T) {

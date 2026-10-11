@@ -3,22 +3,12 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/BurntSushi/toml"
 
 	"deepzora/internal/provider"
 )
-
-func hasModel(c *Config, model string) *ProviderEntry {
-	for i := range c.Providers {
-		if slices.Contains(c.Providers[i].ModelList(), model) {
-			return &c.Providers[i]
-		}
-	}
-	return nil
-}
 
 func TestLoadAndSavePreserveStepFunRegionalBaseURLs(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")

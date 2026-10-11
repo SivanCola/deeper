@@ -905,10 +905,6 @@ func desktopProviderAccessMap(names []string) map[string]bool {
 	return out
 }
 
-func isOpenAIProviderKind(e *ProviderEntry) bool {
-	return e != nil && strings.EqualFold(strings.TrimSpace(e.Kind), "openai")
-}
-
 func mergeCuratedModelsIntoProvider(e *ProviderEntry, models []string, fallback string) {
 	// If the user has explicitly curated a model list (via Settings), respect
 	// that choice and do not merge additional curated models.
@@ -936,29 +932,6 @@ func pricingForModelKey(prices map[string]*provider.Pricing, model string) (*pro
 		}
 	}
 	return nil, false
-}
-
-func mergeProviderModelOverride(dst *ProviderModelOverride, src ProviderModelOverride) {
-	if dst == nil {
-		return
-	}
-	if strings.TrimSpace(src.ReasoningProtocol) != "" {
-		dst.ReasoningProtocol = src.ReasoningProtocol
-	}
-	if len(src.SupportedEfforts) > 0 {
-		dst.SupportedEfforts = append([]string(nil), src.SupportedEfforts...)
-		dst.DefaultEffort = src.DefaultEffort
-	}
-	if src.Vision != nil {
-		vision := *src.Vision
-		dst.Vision = &vision
-	}
-	if src.ContextWindow > 0 {
-		dst.ContextWindow = src.ContextWindow
-	}
-	if src.MaxOutputTokens != 0 {
-		dst.MaxOutputTokens = src.MaxOutputTokens
-	}
 }
 
 func mergeModelLists(primary, extra []string) []string {
@@ -992,6 +965,3 @@ func firstKnownModel(current string, models []string, fallback string) string {
 }
 
 func CanonicalDesktopOfficialProviderName(name string) string { return strings.TrimSpace(name) }
-func desktopProviderAccessNameForConfig(c *Config, name string) string {
-	return strings.TrimSpace(name)
-}

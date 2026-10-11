@@ -23,10 +23,6 @@ func (c *Controller) startGoalCommandTurnWithAdmission(cmd GoalCommand, display 
 	}
 }
 
-func (c *Controller) applyGoalCommand(input, display string) bool {
-	return c.applyGoalCommandWithAdmission(input, display, turnAdmission{})
-}
-
 func (c *Controller) applyGoalCommandWithAdmission(input, display string, admission turnAdmission) bool {
 	cmd, ok := ParseGoalCommand(input)
 	if !ok {

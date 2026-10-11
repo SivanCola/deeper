@@ -426,22 +426,6 @@ func (k *unsupportedModelSettingsKernel) SwitchCredentialProxyModel(context.Cont
 	return &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint, unsupported: true}
 }
 
-type reconnectingUnsupportedKernel struct {
-	remoteKernel
-	switches  int
-	reconnect func()
-}
-
-func (k *reconnectingUnsupportedKernel) SwitchCredentialProxyModel(context.Context, string, string, string, string, string) error {
-	k.switches++
-	if k.reconnect != nil {
-		reconnect := k.reconnect
-		k.reconnect = nil
-		reconnect()
-	}
-	return &remoteModelSettingsRejection{message: remoteModelSettingsUpgradeHint, unsupported: true}
-}
-
 // Fresh and restored tabs run generation 0 with an unrecorded verdict; they
 // must stay pending in the application status instead of claiming
 // not_required before any capability probe has run.
