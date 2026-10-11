@@ -2,7 +2,6 @@ package serve
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -35,10 +34,23 @@ func (s *Server) resolveSessionPath(raw string) (string, error) {
 		return "", errors.New("invalid session path")
 	}
 	rel, err := filepath.Rel(dirIdentity.Key, pathIdentity.Key)
-	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+	if err != nil || rel == "." || !filepath.IsLocal(rel) {
 		return "", errors.New("path outside session dir")
 	}
-	realPath := pathIdentity.PhysicalPath
+	// Comparison keys can case-fold directory names on macOS/Windows. Reuse
+	// only the checked suffix depth, preserving the physical component spelling.
+	physicalRel := ""
+	physical := pathIdentity.PhysicalPath
+	for suffix := rel; suffix != "."; suffix = filepath.Dir(suffix) {
+		physicalRel = filepath.Join(filepath.Base(physical), physicalRel)
+		physical = filepath.Dir(physical)
+	}
+	if !filepath.IsLocal(physicalRel) {
+		return "", errors.New("path outside session dir")
+	}
+	// Rebuild from the trusted root and the checked relative path. Keep the
+	// returned value tied to the containment check, including Windows devices.
+	realPath := filepath.Join(dirIdentity.PhysicalPath, physicalRel)
 	if agent.IsCleanupPending(realPath) {
 		return "", errors.New("session is pending cleanup")
 	}

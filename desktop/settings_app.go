@@ -30,6 +30,7 @@ import (
 	"deepzora/internal/netclient"
 	"deepzora/internal/provider"
 	"deepzora/internal/sandbox"
+	"deepzora/internal/secrets"
 	"deepzora/internal/tool"
 )
 
@@ -1478,7 +1479,7 @@ func (a *App) deferredRebuildWarningForTab(setting string, err error, tab *Works
 	}
 	userErr := userFacingSessionLeaseError(setting, err)
 	warning := fmt.Sprintf("%s saved, but the current session could not refresh yet: %s", setting, userErr.Error())
-	slog.Warn("desktop: deferred settings rebuild", "setting", setting, "err", err)
+	slog.Warn("desktop: deferred settings rebuild", "setting", setting, "err", secrets.RedactError(err))
 	// Bind both the warning and the retry to the tab whose refresh failed, so a
 	// tab switch or a multi-tab mutation cannot misroute either one.
 	if tab != nil {

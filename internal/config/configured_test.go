@@ -64,7 +64,16 @@ func TestValidateExplainsInvalidCredentialVariableName(t *testing.T) {
 	if err == nil {
 		t.Fatal("Validate should reject an invalid api_key_env")
 	}
-	if got := err.Error(); !strings.Contains(got, `api_key_env "grok-4.5" is invalid`) || !strings.Contains(got, "not a model name") {
+	if got := err.Error(); !strings.Contains(got, "api_key_env is invalid") || !strings.Contains(got, "not a model name") {
 		t.Fatalf("Validate error = %q, want actionable credential variable guidance", got)
+	}
+}
+
+func TestValidateDoesNotEchoCredentialPastedAsVariableName(t *testing.T) {
+	const secret = "sk-project-test-only-secret-123456789"
+	c := &Config{Providers: []ProviderEntry{{Name: "relay", Kind: "openai", BaseURL: "https://example.invalid/v1", Model: "chat", APIKeyEnv: secret}}}
+	err := c.Validate("relay")
+	if err == nil || strings.Contains(err.Error(), secret) || !strings.Contains(err.Error(), "api_key_env is invalid") {
+		t.Fatalf("credential-name validation must retain guidance without echoing the supplied value: %v", err)
 	}
 }
