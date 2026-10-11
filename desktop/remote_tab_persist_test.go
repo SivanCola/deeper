@@ -256,10 +256,7 @@ func TestSetActiveRemoteTabPersistsAndUnknownKeepsSelection(t *testing.T) {
 }
 
 func TestSetActiveRemoteTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "blocked.jsonl")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatalf("mkdir blocked path: %v", err)
-	}
+	path := blockedPersistenceSessionPath(t)
 	a, _ := appWithTab(t, path)
 	a.remoteTabMu.Lock()
 	a.remoteTabs = map[string]*remoteTab{
@@ -281,10 +278,7 @@ func TestSetActiveRemoteTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
 }
 
 func TestSetActiveLocalTabKeepsRemoteSelectionWhenSessionCannotPersist(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "blocked.jsonl")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatalf("mkdir blocked path: %v", err)
-	}
+	path := blockedPersistenceSessionPath(t)
 	a, _ := appWithTab(t, path)
 	seedLocalTab(a, "target")
 	a.remoteTabMu.Lock()
@@ -315,10 +309,7 @@ func TestOpenRemoteProjectTabBlocksBeforeMutationWhenLocalSessionCannotPersist(t
 	t.Setenv("DEEPZORA_HOME", home)
 	t.Setenv("HOME", home)
 	seedBridgeTestHost(t, "box")
-	path := filepath.Join(t.TempDir(), "blocked.jsonl")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatalf("mkdir blocked path: %v", err)
-	}
+	path := blockedPersistenceSessionPath(t)
 	a, _ := appWithTab(t, path)
 
 	_, err := a.OpenRemoteProjectTab("box", "~/app", RemoteTabOpenOptions{NewSession: true})

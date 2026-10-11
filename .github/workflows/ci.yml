@@ -290,10 +290,12 @@ jobs:
           fi
           bwrap --ro-bind / / --dev /dev --proc /proc -- true
       - name: Test desktop module
+        env:
+          DESKTOP_TEST_TIMEOUT: ${{ runner.os == 'Windows' && '25m' || '15m' }}
         run: |
           go vet ./...
           go build ./...
-          go test -timeout=15m ./...
+          go test -timeout="$DESKTOP_TEST_TIMEOUT" ./...
       - name: Check desktop lifecycle races on macOS
         if: runner.os == 'macOS'
         run: go test -race -timeout=10m -run 'Test.*(Title|BotConnection|Deferred|Terminal|DarwinWorkspaceWatcher)' .

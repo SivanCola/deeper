@@ -40,12 +40,17 @@ repair, or legacy sandbox mutexes. Keep current shortcut ownership, credential
 ACL protection, durable-write errors, and full Windows package coverage.
 Attachment integration tests await staging completion instead of assuming a
 fixed delay is enough on a CI runner.
+Native Windows desktop tests have a 25-minute package deadline: the complete
+suite continued executing new tests at the former 15-minute limit. Other
+desktop targets retain 15 minutes, within the existing 35-minute job budget.
 
 当前平台测试使用已注册的原生 Shell（Windows 为 `pwsh`）、规范入口
 `Deepzora.exe` 和由测试明确管理的会话服务。删除要求迁移旧启动器、修复旧
 沙箱拒绝标记或等待旧沙箱互斥锁的测试。保留当前快捷方式归属、凭据 ACL
 保护、持久化写入错误及 Windows 全包覆盖。附件集成测试等待暂存完成，
 避免用固定延时假定 CI 机器已经完成异步操作。
+Windows 原生桌面全量测试在原先 15 分钟上限时仍在执行新用例，因此包级
+期限调整为 25 分钟；其他桌面平台仍为 15 分钟，任务总预算保持 35 分钟。
 
 The ProjectTree file budget increases by exactly two lines for explicit shared
 query invalidation: refresh must observe the current title after a committed

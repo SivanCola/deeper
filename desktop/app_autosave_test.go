@@ -195,10 +195,7 @@ func TestAutosaveFailureRetriesAndRecoversOnNextTurnDone(t *testing.T) {
 }
 
 func TestSetActiveTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "blocked.jsonl")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatalf("mkdir blocked path: %v", err)
-	}
+	path := blockedPersistenceSessionPath(t)
 	a, _ := appWithTab(t, path)
 	a.tabs["target_tab"] = &WorkspaceTab{
 		ID:          "target_tab",
@@ -218,10 +215,7 @@ func TestSetActiveTabBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
 }
 
 func TestRebindSessionBlocksWhenCurrentSessionCannotPersist(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "blocked.jsonl")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatalf("mkdir blocked path: %v", err)
-	}
+	path := blockedPersistenceSessionPath(t)
 	a, tab := appWithTab(t, path)
 	target := filepath.Join(t.TempDir(), "target.jsonl")
 	sess := agent.NewSession("system")
@@ -298,10 +292,7 @@ func TestCloseTabNoResurrectionFromAutosave(t *testing.T) {
 }
 
 func TestCloseTabBlocksWhenSessionCannotPersist(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "blocked.jsonl")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatalf("mkdir blocked path: %v", err)
-	}
+	path := blockedPersistenceSessionPath(t)
 	a, tab := appWithTab(t, path)
 	survivor := &WorkspaceTab{
 		ID:          "survivor_tab",

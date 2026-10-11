@@ -14,9 +14,11 @@ test("required contexts retain real checks on each platform", () => {
   for (const name of ["lint", "root", "desktop", "race", "test"]) assert.ok(job(name));
   for (const name of ["test", "desktop-go"]) {
     assert.match(job(name), /os: \[ubuntu-latest, macos-latest, windows-latest\]/);
-    assert.match(job(name), /go test -timeout=15m \.\/\.\.\./);
     assert.match(job(name), /fail-fast: false/);
   }
+  assert.match(job("test"), /go test -timeout=15m \.\/\.\.\./);
+  assert.match(job("desktop-go"), /DESKTOP_TEST_TIMEOUT: \$\{\{ runner\.os == 'Windows' && '25m' \|\| '15m' \}\}/);
+  assert.match(job("desktop-go"), /go test -timeout="\$DESKTOP_TEST_TIMEOUT" \.\/\.\.\./);
   assert.match(job("test"), /RUN_STEPS:[^\n]+needs\.changes\.result != 'success'/);
   assert.match(job("race"), /go test -race/);
   assert.match(job("lint"), /go run \.\/tools\/repolint/);
