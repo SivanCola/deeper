@@ -16,10 +16,10 @@ func HTTP2TransportCode(err error) string {
 	}
 	var connection http2.ConnectionError
 	var stream http2.StreamError
-	var goAway http2.GoAwayError
+	var goAway http2.GoAwayError //nolint:staticcheck // SA1019: x/net's Transport still returns this typed GOAWAY evidence; retain diagnosis for existing transports.
 	var connectionPtr *http2.ConnectionError
 	var streamPtr *http2.StreamError
-	var goAwayPtr *http2.GoAwayError
+	var goAwayPtr *http2.GoAwayError //nolint:staticcheck // SA1019: retain pointer-wrapped legacy GOAWAY evidence without parsing error text.
 	switch {
 	case errors.As(err, &connection):
 		return http2CodeName(uint64(connection))

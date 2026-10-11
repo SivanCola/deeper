@@ -25,7 +25,8 @@ updates:
         update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
-    directory: "/desktop/frontend"
+    # The frontend and Electron share this workspace's pnpm lockfile.
+    directory: "/desktop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
@@ -33,6 +34,10 @@ updates:
       npm:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # Our architecture checks use the TypeScript 6 compiler API.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/site"
