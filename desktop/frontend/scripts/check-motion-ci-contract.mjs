@@ -31,11 +31,7 @@ for (const [job, body, command] of [
 if (jobBody("lint").includes("test:motion")) {
   throw new Error("motion-ci-contract: test:motion must run only through the deduplicated frontend plan");
 }
-
-const nativeJob = jobBody("desktop-go");
-if (!nativeJob.includes("os: [ubuntu-latest, macos-latest, windows-latest]") || !nativeJob.includes("go test -timeout=15m ./...")) {
-  throw new Error("motion-ci-contract: native desktop tests must cover all three platforms");
-}
+// Native platform coverage and budgets belong to scripts/ci-baseline.test.mjs.
 
 for (const [path, source] of [
   ["desktop/main.go", desktopMainSource],
@@ -175,4 +171,4 @@ for (const required of [
   }
 }
 
-console.log("motion-ci-contract: deduplicated renderer gates and native desktop tests run before merge without production smoke instrumentation");
+console.log("motion-ci-contract: deduplicated renderer gates run before merge without production smoke instrumentation");
