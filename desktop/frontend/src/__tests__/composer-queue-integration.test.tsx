@@ -14,14 +14,17 @@ let cancelled: string[] | undefined;
 let otherHost = false;
 let failSave = false;
 let departOnSave = false;
+let finishImageStaging!: () => void;
+const imageStaged = new Promise<void>(resolve => { finishImageStaging = resolve; });
 installBridgeApp({
   ...fixture,
   CaptureAttachmentTarget: async () => ({ token: "queue-test-attachment", capabilities: ["attachments-v2"] }),
   ReleaseAttachmentTarget: async () => {},
   StageImageForTarget: async () => ({ draftId: "0123456789abcdef0123456789abcdef", displayName: "draft.png", mime: "image/png", width: 1, height: 1, bytes: 12 }),
-  ReadDraftImageForTarget: async () => "data:image/png;base64,iVBORw0KGgo=",
-  SavePastedImageForTab: async () => ".deepzora/attachments/draft.png",
-  AttachmentDataURLForTab: async () => "data:image/png;base64,iVBORw0KGgo=",
+  ReadDraftImageForTarget: async () => {
+    finishImageStaging();
+    return "data:image/png;base64,iVBORw0KGgo=";
+  },
   InboxSnapshot: async () => otherHost ? { revision: 1, sessionPath: "session-a", mutationsSupported: true, items: [{ id: "other-host", preview: "other host queue", state: "queued" }] } : fixture.InboxSnapshot("tab-a"),
   ListTabs: async () => [{ id: "tab-a", turnId: "live-turn" }],
   InboxQueueForTarget: async (target: InboxTarget, request: InboxQueueRequest) => {
@@ -54,7 +57,10 @@ assert.ok(calls.at(-1)?.idempotencyKey);
 await view.rerender({ insertRequest: { id: 8003, text: "main draft survives editing", mode: "replace" } });
 const paste = new Event("paste", { bubbles: true, cancelable: true });
 Object.defineProperty(paste, "clipboardData", { value: { files: [new File(["fixture"], "draft.png", { type: "image/png" })], items: [], types: [], getData: () => "" } });
-await act(async () => { document.querySelector("textarea.composer__input")!.dispatchEvent(paste); await flush(); });
+await act(async () => {
+  document.querySelector("textarea.composer__input")!.dispatchEvent(paste);
+  await imageStaged;
+});
 const attachmentCard = document.querySelector(".composer-context__item");
 assert.ok(attachmentCard, "main composer has an attachment before editing");
 const edit = document.querySelector('.inbox-queue__row[data-item-id="queue-save"] button[aria-label="Edit"]') as HTMLButtonElement;

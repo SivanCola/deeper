@@ -27,9 +27,8 @@ func TestRunStatuslineCmd(t *testing.T) {
 	stdinCmd := "cat"
 	failCmd := "exit 3"
 	if runtime.GOOS == "windows" {
-		firstLineCmd = "echo row-one & echo row-two"
-		stdinCmd = "more"
-		failCmd = "exit /b 3"
+		firstLineCmd = "'row-one'; 'row-two'"
+		stdinCmd = "[Console]::In.ReadToEnd()"
 	}
 
 	// Multi-line output collapses to the first row.
@@ -61,7 +60,7 @@ func TestModelSwitchRefreshesCustomStatusline(t *testing.T) {
 	m := newChatTUI(oldCtrl, "", make(chan event.Event, 1), 80)
 	statuslineCmd := "cat"
 	if runtime.GOOS == "windows" {
-		statuslineCmd = "more"
+		statuslineCmd = "[Console]::In.ReadToEnd()"
 	}
 	m.statuslineCmd = statuslineCmd
 	m.statuslineOut = `{"model":"old-model"}`

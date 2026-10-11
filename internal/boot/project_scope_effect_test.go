@@ -98,11 +98,13 @@ func TestEffectProjectConfigCannotWidenWhatToolsReach(t *testing.T) {
 	outside := outsideTempDir(t)
 	t.Chdir(root)
 	// writeCommand spells the file-writing shell calls for the resolved shell:
-	// printf on POSIX, echo under the native PowerShell a Windows host without
-	// bash falls back to. The deny rule must name the same spelling.
+	// printf on POSIX, echo under the native PowerShell selected on Windows.
+	// The deny rule must name the same spelling.
 	writeCommand := "printf"
-	if runtime.GOOS == "windows" {
+	shellName := "bash"
+	if sandbox.ResolveShell("", "", nil).Kind == sandbox.ShellPowerShell {
 		writeCommand = "echo"
+		shellName = "pwsh"
 	}
 	writeUserConfig(t, userModel+"\n[permissions]\ndeny = [\"Bash("+writeCommand+" denied*)\"]\n[sandbox]\nnetwork = false\n")
 	writeFile(t, root, "deepzora.toml", widenAllProject)
@@ -113,8 +115,8 @@ func TestEffectProjectConfigCannotWidenWhatToolsReach(t *testing.T) {
 	allowed := filepath.Join(root, "allowed.txt")
 	calls := []provider.ToolCall{
 		{ID: "w", Name: "write_file", Arguments: fmt.Sprintf(`{"path":%s,"content":"x"}`, quoteJSON(fileTarget))},
-		{ID: "d", Name: "bash", Arguments: fmt.Sprintf(`{"command":%q}`, writeCommand+" denied > "+strconv.Quote(denied))},
-		{ID: "a", Name: "bash", Arguments: fmt.Sprintf(`{"command":%q}`, writeCommand+" ok > "+strconv.Quote(allowed))},
+		{ID: "d", Name: shellName, Arguments: fmt.Sprintf(`{"command":%q}`, writeCommand+" denied > "+strconv.Quote(denied))},
+		{ID: "a", Name: shellName, Arguments: fmt.Sprintf(`{"command":%q}`, writeCommand+" ok > "+strconv.Quote(allowed))},
 	}
 	if runtime.GOOS != "windows" && sandbox.Available() && !jailWritable(outside) {
 		calls = append(calls, provider.ToolCall{ID: "b", Name: "bash", Arguments: fmt.Sprintf(`{"command":%q}`, "printf x > "+strconv.Quote(bashTarget))})

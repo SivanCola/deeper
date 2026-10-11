@@ -417,11 +417,6 @@ func TestSessionLeaseHeldByOtherRuntime(t *testing.T) {
 	})
 	t.Run("foreign info with live lock", func(t *testing.T) {
 		userPath, key := leaseTestPath(t)
-		unlock, err := tryLockSessionLeaseFile(key)
-		if err != nil {
-			t.Fatalf("tryLockSessionLeaseFile: %v", err)
-		}
-		defer unlock()
 		if err := writeLeaseOwnerFixture(key, SessionLeaseInfo{
 			SessionPath: key,
 			WriterID:    "other-host-1234-deadbeef",
@@ -430,6 +425,12 @@ func TestSessionLeaseHeldByOtherRuntime(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("SaveSessionLeaseInfo: %v", err)
 		}
+		// Windows byte-range locks also exclude writes by this process.
+		unlock, err := tryLockSessionLeaseFile(key)
+		if err != nil {
+			t.Fatalf("tryLockSessionLeaseFile: %v", err)
+		}
+		defer unlock()
 		t.Cleanup(func() { _ = os.Remove(store.SessionLeaseLock(key)) })
 		if !SessionLeaseHeldByOtherRuntime(userPath) {
 			t.Fatal("foreign-held session not reported as held by another runtime")

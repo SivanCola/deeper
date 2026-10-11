@@ -14,9 +14,18 @@ import (
 
 func installReadDeny(t *testing.T, path, userSID string) {
 	t.Helper()
-	if err := icacls(path, "/deny", "*"+userSID+":(RX)"); err != nil {
+	sd, err := windows.SecurityDescriptorFromString("D:P(D;;FR;;;" + userSID + ")(A;;FA;;;" + userSID + ")")
+	if err != nil {
 		t.Fatal(err)
 	}
+	acl, _, err := sd.DACL()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := windows.SetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION|windows.PROTECTED_DACL_SECURITY_INFORMATION, nil, nil, acl, nil); err != nil {
+		t.Fatal(err)
+	}
+	runtime.KeepAlive(sd)
 	t.Cleanup(func() { _ = icacls(path, "/remove:d", "*"+userSID, "/C") })
 }
 

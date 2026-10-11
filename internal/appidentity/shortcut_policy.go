@@ -58,8 +58,8 @@ func classifyShortcutTarget(target, root string) shortcutTargetKind {
 	return foreignShortcutTarget
 }
 
-// Resolve the existing ancestor even after an updater prunes a version. A
-// junction inside versions must not make another installation look owned.
+// Resolve the existing ancestor without treating a junction into another
+// installation as an owned shortcut target.
 func resolveShortcutTarget(path string) (string, error) {
 	path = filepath.Clean(path)
 	if _, err := os.Lstat(path); err == nil {

@@ -11,6 +11,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/sandbox"
 )
 
 // readThenMutateProvider reads a large file, then runs git commit, then lists
@@ -20,6 +21,7 @@ type readThenMutateProvider struct {
 	mu    sync.Mutex
 	reqs  []provider.Request
 	round int
+	shell string
 }
 
 func (p *readThenMutateProvider) Name() string { return "boot-read-then-mutate" }
@@ -41,7 +43,7 @@ func (p *readThenMutateProvider) Stream(_ context.Context, req provider.Request)
 	case 2:
 		return streamChunks(
 			provider.Chunk{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{
-				ID: "commit-1", Name: "bash", Arguments: `{"command":"git commit -m test-commit"}`,
+				ID: "commit-1", Name: p.shell, Arguments: `{"command":"git commit -m test-commit"}`,
 			}},
 			provider.Chunk{Type: provider.ChunkDone},
 		), nil
@@ -96,7 +98,11 @@ func TestEffectTruncatedReadDoesNotBlockCommitOrFinalThroughRealBuild(t *testing
 	}
 	writeFile(t, dir, "big.txt", body.String())
 
-	rec := &readThenMutateProvider{}
+	shellName := "bash"
+	if sandbox.ResolveShell("", "", nil).Kind == sandbox.ShellPowerShell {
+		shellName = "pwsh"
+	}
+	rec := &readThenMutateProvider{shell: shellName}
 	provider.Register("boot-read-then-mutate", func(provider.Config) (provider.Provider, error) {
 		return rec, nil
 	})

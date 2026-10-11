@@ -33,6 +33,20 @@ CI run is not packaged release qualification.
 选择器；发布工作流继续承担签名、安装包启动、安装器验收和发布检查。
 手动诊断与应用内存工作流仍可使用，普通 CI 通过不代表安装包已经完成发布验收。
 
+Current platform tests use the registered native shell (`pwsh` on Windows),
+the canonical `Deepzora.exe` entrypoint, and explicitly owned test services.
+Remove fixtures requiring historical launcher migration, sandbox deny-marker
+repair, or legacy sandbox mutexes. Keep current shortcut ownership, credential
+ACL protection, durable-write errors, and full Windows package coverage.
+Attachment integration tests await staging completion instead of assuming a
+fixed delay is enough on a CI runner.
+
+当前平台测试使用已注册的原生 Shell（Windows 为 `pwsh`）、规范入口
+`Deepzora.exe` 和由测试明确管理的会话服务。删除要求迁移旧启动器、修复旧
+沙箱拒绝标记或等待旧沙箱互斥锁的测试。保留当前快捷方式归属、凭据 ACL
+保护、持久化写入错误及 Windows 全包覆盖。附件集成测试等待暂存完成，
+避免用固定延时假定 CI 机器已经完成异步操作。
+
 The ProjectTree file budget increases by exactly two lines for explicit shared
 query invalidation: refresh must observe the current title after a committed
 identity-based rename. Oversized test files are split by responsibility instead

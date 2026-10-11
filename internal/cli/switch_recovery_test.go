@@ -234,11 +234,13 @@ func TestAdoptCarriedHistoryPersistsRefreshedSystemPromptToDisk(t *testing.T) {
 	}
 }
 
-func TestAdoptCarriedHistoryReportsSnapshotFailure(t *testing.T) {
-	invalidPath := filepath.Join(t.TempDir(), "transcript-is-a-directory")
-	if err := os.Mkdir(invalidPath, 0o755); err != nil {
-		t.Fatalf("mkdir invalid transcript path: %v", err)
+func TestAdoptCarriedHistoryReportsPersistenceFailure(t *testing.T) {
+	blocker := filepath.Join(t.TempDir(), "parent-is-a-file")
+	if err := os.WriteFile(blocker, []byte("not a directory"), 0o600); err != nil {
+		t.Fatalf("create invalid storage parent: %v", err)
 	}
+	// Fail the authoritative append, not just the replaceable display snapshot.
+	invalidPath := filepath.Join(blocker, "session.jsonl")
 	fresh := newOwnedTestController(t, control.Options{
 		Executor: agent.New(nil, nil, agent.NewSession("system prompt for profile delivery"), agent.Options{}, event.Discard),
 	})
@@ -248,7 +250,7 @@ func TestAdoptCarriedHistoryReportsSnapshotFailure(t *testing.T) {
 	}
 
 	err := adoptCarriedHistoryPreservingProfileAndGrants(fresh, carry, invalidPath, nil)
-	if err == nil || !strings.Contains(err.Error(), "snapshot after runtime switch") {
-		t.Fatalf("adopt error = %v, want snapshot failure", err)
+	if err == nil || !strings.Contains(err.Error(), "runtime switch") {
+		t.Fatalf("adopt error = %v, want persistence failure", err)
 	}
 }

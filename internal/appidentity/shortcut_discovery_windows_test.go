@@ -16,7 +16,7 @@ import (
 func TestRepairOwnedShortcutsDiscoversPublicAndProductProgramFolders(t *testing.T) {
 	migrationTestCOM(t)
 	root := t.TempDir()
-	launcher := filepath.Join(root, "deepzora-launcher.exe")
+	launcher := filepath.Join(root, "Deepzora.exe")
 	migrationTestFile(t, launcher)
 	studioTarget := filepath.Join(t.TempDir(), "deepzora-studio.exe")
 	migrationTestFile(t, studioTarget)
@@ -59,7 +59,7 @@ func TestRepairOwnedShortcutsDiscoversPublicAndProductProgramFolders(t *testing.
 		}
 		owned := filepath.Join(location, "Deepzora.lnk")
 		migrationTestShortcut(t, owned, migrationShortcutState{
-			target: launcher, id: "Deepzora", icon: launcher, workingDirectory: root, showCmd: 1,
+			target: launcher, icon: launcher, workingDirectory: root, showCmd: 1,
 		})
 		ownedPaths = append(ownedPaths, owned)
 		studio := filepath.Join(location, "Deepzora Studio.lnk")

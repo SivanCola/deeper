@@ -44,10 +44,7 @@ func createCanonicalTestSession(t *testing.T, v4root, id, prompt string) {
 func waitForCatalogMetadata(t *testing.T, sessionDir string, ids ...string) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
-	service := cliSessionService(sessionDir)
-	if service == nil {
-		t.Fatal("no session service for test workspace")
-	}
+	service := testCLISessionService(t, sessionDir)
 	for time.Now().Before(deadline) {
 		page, err := service.Query().List(context.Background(), "", 100)
 		if err != nil {
@@ -70,6 +67,28 @@ func waitForCatalogMetadata(t *testing.T, sessionDir string, ids ...string) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	t.Fatalf("catalog metadata for %v did not become ready", ids)
+}
+
+// The test owns each temporary host service, including its cold-query workers.
+// Register this before controller cleanup so controllers finish saves first.
+func testCLISessionService(t *testing.T, sessionDir string) *session.Service {
+	t.Helper()
+	service := cliSessionService(sessionDir)
+	if service == nil {
+		t.Fatal("no session service for test workspace")
+	}
+	t.Cleanup(func() {
+		if err := service.Shutdown(context.Background()); err != nil {
+			t.Errorf("shutdown test session service: %v", err)
+		}
+		root := session.RootForSessionDir(sessionDir)
+		cliSessionServices.Lock()
+		if cliSessionServices.byRoot[root] == service {
+			delete(cliSessionServices.byRoot, root)
+		}
+		cliSessionServices.Unlock()
+	})
+	return service
 }
 
 func TestCanonicalResumeHidden(t *testing.T) {

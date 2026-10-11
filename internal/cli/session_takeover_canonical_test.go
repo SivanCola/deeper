@@ -35,7 +35,7 @@ func newCanonicalTakeoverTUI(t *testing.T) (*chatTUI, *control.Controller, *sess
 	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	service := cliSessionService(sessionDir)
+	service := testCLISessionService(t, sessionDir)
 	if service == nil {
 		t.Fatal("session service unavailable for test workspace")
 	}

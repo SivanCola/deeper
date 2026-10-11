@@ -58,11 +58,11 @@ func TestSessionPickerLabelIdentifiesRecoveryParent(t *testing.T) {
 func TestResumePickerNavigateAndSelect(t *testing.T) {
 	dir := t.TempDir()
 	exec := agent.New(nil, nil, agent.NewSession("sys"), agent.Options{}, event.Discard)
-	ctrl := newOwnedTestController(t, control.Options{Executor: exec, SessionDir: dir, Label: "test", SessionService: cliSessionService(dir), ExclusiveSession: true})
 
 	createCanonicalTestSession(t, session.RootForSessionDir(dir), "first", "first session prompt")
 	createCanonicalTestSession(t, session.RootForSessionDir(dir), "second", "SECOND-SESSION-PROMPT")
 	waitForCatalogMetadata(t, dir, "first", "second")
+	ctrl := newOwnedTestController(t, control.Options{Executor: exec, SessionDir: dir, Label: "test", SessionService: testCLISessionService(t, dir), ExclusiveSession: true})
 
 	m := newTestChatTUI()
 	m.width = 80
