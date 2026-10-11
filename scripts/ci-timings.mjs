@@ -20,7 +20,7 @@ function stageKind(job, step) {
   if (step === "Build each CLI binary once and package both surfaces") return "shared CLI/npm build";
   if (step === "Build and package") return "Desktop build";
   if (/^Finalize (amd64|arm64) in the shared Certum session$/.test(step)) return "Windows signing";
-  if (/Install, launch, migrate, restart, and preserve legacy session/.test(step)) return "Windows acceptance";
+  if (/^Install and smoke-test (final manual Windows|exact signed) installer$/.test(step)) return "Windows acceptance";
   if (step === "Run universal DMG smoke on Intel hardware") return "macOS acceptance";
   if (step === "Seal candidate record") return "candidate sealing";
   if (step === "Verify payload provenance, bytes, source, and operation") return "candidate verification";
@@ -30,8 +30,9 @@ function stageKind(job, step) {
   if (/Install (frontend|memory) dependencies/.test(step)) return "dependency install";
   if (step === "Install browser runtimes") return "browser setup";
   if (/Build (stable|canary|memory) frontend/.test(step)) return "frontend build";
-  if (job.startsWith("desktop-browser-group") && step === "Test desktop browser group") return "browser group";
-  if (job === "desktop-windows-go" && step === "test (Windows desktop and update helper)") return "Go test";
+  if (step === "Build frontend once") return "frontend build";
+  if (step === "Check transcript and approval behavior in Chromium") return "browser group";
+  if (step === "Test desktop module" || step === "Build and test root module") return "Go test";
   if (job.startsWith("shard (") && step === "Run complete independent memory process") return "memory shard";
   return null;
 }

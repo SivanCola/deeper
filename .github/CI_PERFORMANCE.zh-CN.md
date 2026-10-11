@@ -10,22 +10,24 @@ Go、生成协议、Electron、原生平台和打包输入。`desktop/AGENTS.md`
 未知路径或无法获得可靠 diff 时保守失败。PR 使用 merge-base 差异，push 使用
 `before..sha`；保留纯 release-notes 例外后，普通 `main` push 仍运行完整验证矩阵。
 
-桌面 race 检测（`desktop-go-race`，11 个分片）只在 `main` push 和手动触发时运行，
-PR 上不运行。PR 仍以不带 `-race` 的方式运行同样的分片（`desktop-go` 与 Windows 分组），
-因此 PR 引入的数据竞争会在合并后的 push 运行中报告。
+普通 CI 有 8 类任务，保留全部 7 个必需检查；完整范围见
+[CI 基线](../docs/CI_BASELINE.md)。根模块和桌面 Go 模块各在 Linux、macOS、Windows
+执行一次全量测试。`race` 检查根模块并发所有者，`desktop-go` 在 macOS 上执行
+重点桌面生命周期并发回归，两者均在合并前运行。
 
-`desktop-prepare` 重新生成桌面宿主契约（有漂移即失败），并在 Linux 上分别生成一次
-`electron/stable` 与 `electron/canary` 前端。每份产物都带版本化 manifest，记录
-checkout、workflow attempt、变体、构建输入、工具链以及每个 `dist` 文件的摘要。
+`desktop-frontend` 重新生成桌面宿主契约（有漂移即失败），并在 Linux 上生成一次
+`electron/stable` 前端。每份产物都带版本化 manifest，记录 checkout、生产 attempt、
+变体、构建输入、工具链以及每个 `dist` 文件的摘要。
 Linux、macOS 和 Windows 消费者在编译或打包前校验。显式复用遇到 manifest 缺失、
 过期、身份不符或文件损坏会直接失败，不会暗中重建。跨平台只共享静态前端文件，
 不共享依赖目录、原生模块或 Electron 二进制。构建输入校验通过一个 Git 批处理进程
-读取全部已提交 blob，不再为每个文件单独启动进程；版本 1 摘要保持逐字节兼容。
+读取全部已提交 blob，不再为每个文件单独启动进程。
 
-required `lint` 汇总 `lint-code` 和路径要求执行时的完整 `desktop-frontend` 结果。
-动画单测保留在统一前端计划中且只执行一次。`desktop-browser-group` 将应用、设置与动画
-合为一组，Transcript 独立为另一组，`max-parallel: 2`；`desktop-browser` 汇总拒绝失败、
-取消和意外跳过。仅修改 Go 时继续执行协议和原生验证，不启动浏览器或内存长测。
+required `lint` 检查格式、仓库规范和根模块 Go 平台构建标签。required `desktop`
+要求前端与原生矩阵均成功，路径判断失败或意外跳过不能获准合并。
+动画单测保留在统一前端计划中且只执行一次；同一个生产任务执行重点审批和
+Transcript Chromium 回归。安装包构建、签名后启动及原生验收由发布流程负责。
+内存筛查保留为独立手动工作流。
 
 `node desktop/frontend/scripts/run-ci-tests.mjs --list` 可以查看单测清单。
 它展开原有专用脚本和生命周期钩子，自动发现新增测试，并保留每个 TypeScript
@@ -35,22 +37,19 @@ CI 同时运行两个隔离进程，历史性能基准在它们结束后单独�
 
 ## 耗时报告
 
-普通 CI 与内存工作流的 Summary 会分别显示不含排队的阶段执行时间、工作流总等待、
-已记录的 job 排队时间之和及 runner 执行时长之和。前端构建、依赖与浏览器安装、
-各浏览器分组和每个内存 shard 单独列出。单次数据只描述该次运行；对比应针对同一
-候选各重复三次，并报告中位数和范围，避免把 runner 波动当作收益。Windows Desktop
-Go 步骤保留原生非 verbose 输出，因为 Go JSON 模式会让 Windows 花费数分钟收尾
-verbose 测试缓存；统一耗时报告直接从 Actions API 记录该步骤的执行时间，不再包装
-测试进程。
+手动内存工作流的 Summary 会分别显示不含排队的阶段执行时间、工作流总等待、
+已记录的 job 排队时间之和及 runner 执行时长之和。普通 CI 可从 Actions 读取任务和
+步骤时间戳，使用 `scripts/ci-timings.mjs` 渲染导出的 run/jobs 数据。
+对比应针对同一候选各重复三次，并报告中位数和范围，避免把 runner 波动当作收益。
+原生 Go 测试保留非 verbose 输出，不用 Windows 收尾成本较高的 JSON 输出包装进程。
 
 ## 内存筛查
 
-协议 v4 会在 manifest、分片报告和汇总中记录筛查档位。普通前端 PR 使用
-`short`：一个进程执行 32 轮 full、32 轮 windowed、32 轮 safety 和 128 轮
-mixed 往返。涉及 App 生命周期、Transcript、导航、订阅所有权、内存夹具或
-CI 路由的 PR 使用 `full`。推送到 `main`、每日定时任务及手动触发也使用
-`full`：三个独立进程各执行 128 轮 full、128 轮 windowed、128 轮 safety 和
-512 轮 mixed 往返。
+协议 v4 会在 manifest、分片报告和汇总中记录筛查档位。手动触发 App memory
+工作流使用 `full`：三个独立进程各执行 128 轮 full、128 轮 windowed、128 轮
+safety 和 512 轮 mixed 往返。本地仍可运行 `short`：一个进程执行 32 轮 full、
+32 轮 windowed、32 轮 safety 和 128 轮 mixed 往返。普通 PR 和 main push
+不自动启动内存筛查。
 
 两个档位都要求精确检查点、每进程五份堆快照、GC、稳定帧等待、源码与构建身份
 及相同判定阈值。汇总会拒绝缺失分片、档位不一致和协议不一致。只有明确启用

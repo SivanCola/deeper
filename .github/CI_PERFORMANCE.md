@@ -12,28 +12,30 @@ Unknown paths and unavailable diffs fail closed. Pull requests use merge-base
 diffs; pushes use `before..sha`; normal `main` pushes keep the complete
 qualification matrix after the existing release-notes-only exception.
 
-The desktop race sweep (`desktop-go-race`, eleven partitions) runs on `main`
-pushes and manual dispatch, never on pull requests. Pull requests still run the
-same partitions without `-race` (`desktop-go` and the Windows groups), so a data
-race introduced by a pull request is reported by the push run after it merges.
+Ordinary CI has eight job definitions and retains all seven required contexts;
+see [the CI baseline](../docs/CI_BASELINE.md) for the complete coverage map.
+Root and desktop Go suites run once on each of Linux, macOS, and Windows.
+The `race` job checks root concurrency owners, and `desktop-go` checks focused
+desktop lifecycle races on macOS before merge.
 
-`desktop-prepare` regenerates the desktop host contract (failing on drift) and
-produces the required `electron/stable` and `electron/canary` frontend variants
-once on Linux. Each artifact carries a versioned manifest with checkout,
-workflow attempt, variant, build inputs, toolchain and every `dist` file hash.
+`desktop-frontend` regenerates the desktop host contract (failing on drift) and
+produces one `electron/stable` frontend build on Linux. Each artifact carries
+a versioned manifest with checkout, producer attempt, variant, build inputs,
+toolchain and every `dist` file hash.
 Linux, macOS and Windows consumers verify it before compilation or packaging.
 Explicit reuse fails on a missing, stale or damaged manifest and never falls
 back to a hidden rebuild. Static frontend files are portable; dependencies,
 native modules and Electron binaries are not shared. Build-input verification
 streams every committed blob through one Git batch process instead of starting
-one process per file; the version-one digest remains byte-for-byte compatible.
+one process per file.
 
-The protected `lint` job aggregates `lint-code` and, when selected, the
-complete `desktop-frontend` result. Motion unit tests remain in that frontend
-plan and run once. `desktop-browser-group` runs application/settings/motion and
-Transcript as two groups with `max-parallel: 2`; the `desktop-browser` summary
-rejects failed, cancelled or unexpected skips. Go-only changes retain protocol
-and native validation without launching browser or memory work.
+The protected `lint` job checks formatting, repository standards and root Go
+platform tags. The protected `desktop` job requires successful frontend and
+native matrix results; failed detection and unexpected skips cannot approve a
+change. Motion unit tests run once in the frontend plan; the same producer job
+runs focused approval and transcript Chromium regressions. Installer packaging,
+signed-package startup and native acceptance belong to the release workflows.
+Memory screening is a separate manual workflow.
 
 `node desktop/frontend/scripts/run-ci-tests.mjs --list` prints the unit test
 plan. It expands the existing dedicated scripts and lifecycle hooks, discovers
@@ -44,25 +46,22 @@ runs alone after them. Local dedicated `pnpm test:*` commands remain available.
 
 ## Timing reports
 
-The CI and memory workflow summaries report stage execution without queue time,
+The manual memory workflow summary reports stage execution without queue time,
 workflow wall time, recorded job queue time and the sum of runner execution.
-Frontend builds, dependency and browser installation, each browser group and
-each memory shard are listed separately. These measurements describe a single
-run; comparisons should use the same candidate and report the median and range
-of three runs so runner variance is visible. The Windows Desktop Go step keeps
-native non-verbose output because Go's JSON mode made Windows spend several
-minutes finalizing verbose test-cache output; the central report records its
-step execution time from the Actions API without wrapping the test process.
+Ordinary CI timing is available from the Actions job and step timestamps;
+`scripts/ci-timings.mjs` can render an exported run/jobs payload. Compare the
+same candidate over three runs and report the median and range so runner
+variance is visible. Native Go tests retain non-verbose output rather than
+wrapping the process in Go's expensive Windows JSON test-cache output.
 
 ## Memory screening
 
 Protocol v4 records the selected screening profile in every manifest, shard and
-aggregate. Ordinary frontend pull requests use the `short` profile: one process
-completes 32 full, 32 windowed, 32 safety and 128 mixed round trips. Pull requests
-that change App lifecycle, Transcript, navigation, subscription ownership, memory
-fixtures or CI routing use the `full` profile. Pushes to `main`, the daily
-scheduled run and manual dispatches also use `full`: three independent processes
-each complete 128 full, 128 windowed, 128 safety and 512 mixed round trips.
+aggregate. The manually dispatched App memory workflow uses `full`: three
+independent processes each complete 128 full, 128 windowed, 128 safety and 512
+mixed round trips. Local `short` screening remains available: one process
+completes 32 full, 32 windowed, 32 safety and 128 mixed round trips. Ordinary
+pull requests and main pushes do not automatically run memory screening.
 
 Both profiles keep the same evidence requirements: exact checkpoints, five heap
 snapshots per process, GC, frame settling, source/build identity and screening
