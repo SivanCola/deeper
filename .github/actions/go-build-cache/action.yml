@@ -9,12 +9,10 @@ description: >-
   so no save can ever freeze, and each job class owns its own namespace so a
   light job cannot claim a key a heavy job depends on. Keys are restored by
   prefix, so a dependency bump downloads only the delta. GOMODCACHE holds
-  extracted module source and is byte-identical on every platform, so it is
-  shared across operating systems; GOCACHE holds compiled output and stays keyed
-  per OS and architecture. Because the module key carries no platform, every leg
-  of a matrix targets the same key, so only save_mod_os may write it; otherwise
-  each leg uploads the same archive and the last one to finish decides which
-  platform's tar becomes the shared copy, under enableCrossOsArchive: false.
+  extracted module source and uses a workspace-relative path and cross-OS archive
+  so every platform can restore the same cache version. GOCACHE holds compiled
+  output and stays keyed per OS and architecture. Only save_mod_os may write the
+  module cache, so matrix legs do not compete to upload the same archive.
   Saving is restricted to a main push; pull requests restore only.
 
 inputs:
@@ -59,18 +57,23 @@ runs:
         if [ -z "$build_ns" ]; then build_ns="${{ inputs.module }}"; fi
         mod_base="go-${{ inputs.module }}-${sums}"
         build_base="go-${build_ns}-${sums}"
-        # actions/cache resolves paths itself; backslashes from the Windows
-        # runner survive tar extraction more reliably as forward slashes.
-        mod_dir="$(go env GOMODCACHE | sed 's#\\#/#g')"
+        # Cache versions include the input path. Use one relative path for every
+        # OS, then give Go its absolute counterpart even in nested module jobs.
+        mod_path=".go-mod-cache"
+        mod_dir="${GITHUB_WORKSPACE//\\//}/$mod_path"
+        if [ "${{ runner.os }}" = Windows ]; then
+          mod_dir="$(cygpath -am "$mod_dir")"
+        fi
+        echo "GOMODCACHE=$mod_dir" >> "$GITHUB_ENV"
+        # Build output remains local to the platform; normalize Windows slashes
+        # for the cache action's archive paths.
         build_dir="$(go env GOCACHE | sed 's#\\#/#g')"
-        # A cache restore over a path that does not exist yet reports a
-        # validation warning and matches nothing; Go creates neither directory
-        # until its first command, so create them up front.
+        # Create both paths before restore; mkdir is safe again during save.
         mkdir -p "$mod_dir" "$build_dir"
         {
           echo "mod_key=${mod_base}-mod-${{ github.run_id }}-${{ github.run_attempt }}"
           echo "mod_restore=${mod_base}-mod-"
-          echo "mod_paths=${mod_dir}"
+          echo "mod_paths=${mod_path}"
           echo "build_key=${build_base}-build-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}"
           echo "build_restore=${build_base}-build-${{ runner.os }}-${{ runner.arch }}-"
           echo "build_paths=${build_dir}"
@@ -81,6 +84,7 @@ runs:
       with:
         path: ${{ steps.key.outputs.mod_paths }}
         key: ${{ steps.key.outputs.mod_key }}
+        enableCrossOsArchive: true
         restore-keys: ${{ steps.key.outputs.mod_restore }}
 
     - if: inputs.mode == 'restore'
@@ -98,6 +102,7 @@ runs:
       with:
         path: ${{ steps.key.outputs.mod_paths }}
         key: ${{ steps.key.outputs.mod_key }}
+        enableCrossOsArchive: true
 
     - if: inputs.mode == 'save' && always() && github.event_name == 'push'
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

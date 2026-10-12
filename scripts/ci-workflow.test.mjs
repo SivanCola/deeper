@@ -25,6 +25,133 @@ const ci = workflow("ci");
 const release = workflow("release-desktop");
 const promote = workflow("release-promote");
 const appMemory = workflow("app-memory");
+const goCache = readFileSync(new URL("../.github/actions/go-build-cache/action.yml", import.meta.url), "utf8");
+const cacheSteps = source => source.split(/\n    - /).filter(step => step.includes("uses: actions/cache/"));
+const cacheGate = (step, context) => vm.runInNewContext(step.match(/if: ([^\n]+)/)[1], {
+  always: () => true, success: () => false, ...context,
+});
+
+test("module archives share a portable version while build archives stay per-platform", () => {
+  const steps = cacheSteps(goCache);
+  assert.equal(steps.length, 4);
+  for (const step of steps) {
+    if (step.includes("outputs.mod_paths")) assert.match(step, /enableCrossOsArchive: true/);
+    else assert.doesNotMatch(step, /enableCrossOsArchive: true/);
+  }
+  const moduleSave = steps.find(step => step.includes("cache/save@") && step.includes("outputs.mod_paths"));
+  const buildSave = steps.find(step => step.includes("cache/save@") && step.includes("outputs.build_paths"));
+  for (const event_name of ["push", "pull_request", "workflow_dispatch"]) {
+    for (const runnerOs of ["Linux", "macOS", "Windows"]) {
+      for (const save_mod_os of ["Linux", ""]) {
+        const context = { inputs: { mode: "save", save_mod_os }, github: { event_name }, runner: { os: runnerOs } };
+        assert.equal(cacheGate(moduleSave, context), event_name === "push" && runnerOs === save_mod_os);
+        assert.equal(cacheGate(buildSave, context), event_name === "push");
+        assert.equal(cacheGate(moduleSave, { ...context, inputs: { ...context.inputs, mode: "restore" } }), false);
+      }
+    }
+  }
+});
+
+test("cache keys and Go consumers use the same module directory from nested jobs", t => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "deepzora-go-cache-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(path.join(root, "desktop"));
+  mkdirSync(path.join(root, "sdk/go"), { recursive: true });
+  mkdirSync(path.join(root, "bin"));
+  writeFileSync(path.join(root, "desktop/go.sum"), "fixture dependency identity\n");
+  writeFileSync(path.join(root, "sdk/go/go.mod"), "module example.com/cache-consumer\n\ngo 1.26\n");
+  const nativeRoot = root.replaceAll("\\", "/");
+  writeFileSync(path.join(root, "bin/cygpath"), '#!/usr/bin/env bash\n[ "$1" = -am ] || exit 1\nprintf "%s\\n" "$2" >> "$CYGPATH_LOG"\nprintf "%s\\n" "${CYGPATH_RESULT:-$2}"\n', { mode: 0o755 });
+  const script = goCache.match(/      run: \|\n([\s\S]*?)(?=\n    - )/)[1].replace(/^        /gm, "");
+  let identity;
+  for (const runnerOs of ["Linux", "macOS", "Windows"]) {
+    for (const directory of ["desktop", "sdk/go"]) {
+      const output = path.join(root, `output-${runnerOs}-${directory.replaceAll("/", "-")}`);
+      const environment = `${output}-env`;
+      const values = { "inputs.dependency": "desktop/go.sum", "inputs.module": "desktop", "inputs.build_module": "desktop-contract", "github.run_id": "123", "github.run_attempt": "1", "runner.os": runnerOs, "runner.arch": "X64" };
+      const run = () => spawnSync("bash", ["-c", script.replace(/\$\{\{ ([^}]+) \}\}/g, (_, key) => {
+        assert.ok(key in values, key);
+        return values[key];
+      })], { cwd: path.join(root, directory), encoding: "utf8", env: {
+        ...process.env, PATH: `${path.join(root, "bin")}${path.delimiter}${process.env.PATH}`,
+        GITHUB_WORKSPACE: root, GITHUB_OUTPUT: output, GITHUB_ENV: environment,
+        GOCACHE: path.join(root, "build"), CYGPATH_LOG: `${output}-cygpath`,
+      } });
+      for (const mode of ["restore", "save"]) {
+        const result = run();
+        assert.equal(result.status, 0, `${runnerOs} ${directory} ${mode}: ${result.stderr}`);
+      }
+      const outputs = Object.fromEntries(readFileSync(output, "utf8").trim().split("\n").map(line => line.split("=")));
+      assert.equal(outputs.mod_paths, ".go-mod-cache");
+      assert.equal(outputs.build_paths, `${nativeRoot}/build`);
+      assert.match(outputs.build_key, new RegExp(`^go-desktop-contract-[a-f0-9]{16}-build-${runnerOs}-X64-123-1$`));
+      identity ??= [outputs.mod_key, outputs.mod_restore, outputs.mod_paths];
+      assert.deepEqual([outputs.mod_key, outputs.mod_restore, outputs.mod_paths], identity);
+      const gomodcache = readFileSync(environment, "utf8").trim().split("\n").at(-1).slice("GOMODCACHE=".length);
+      assert.equal(gomodcache, `${nativeRoot}/.go-mod-cache`);
+      if (runnerOs === "Windows") assert.deepEqual(readFileSync(`${output}-cygpath`, "utf8").trim().split("\n"), [gomodcache, gomodcache]);
+      const consumed = spawnSync("go", ["env", "GOMODCACHE"], { cwd: path.join(root, directory), encoding: "utf8", env: { ...process.env, GOMODCACHE: gomodcache } });
+      assert.equal(consumed.status, 0, consumed.stderr);
+      assert.equal(consumed.stdout.trim().replaceAll("\\", "/"), gomodcache);
+    }
+  }
+  const windowsWorkspace = "D:\\a\\deepzora\\deepzora";
+  const windowsCache = "D:/a/deepzora/deepzora/.go-mod-cache";
+  const windowsOutput = path.join(root, "windows-output");
+  const windowsScript = script.replace(/\$\{\{ ([^}]+) \}\}/g, (_, key) => ({
+    "inputs.dependency": "desktop/go.sum", "inputs.module": "desktop", "inputs.build_module": "desktop-contract",
+    "github.run_id": "123", "github.run_attempt": "1", "runner.os": "Windows", "runner.arch": "X64",
+  })[key]).replace('cd "$GITHUB_WORKSPACE"', 'cd "$FIXTURE_WORKSPACE"');
+  const windowsRun = spawnSync("bash", ["-c", windowsScript], { cwd: root, encoding: "utf8", env: {
+    ...process.env, PATH: `${path.join(root, "bin")}${path.delimiter}${process.env.PATH}`, FIXTURE_WORKSPACE: root,
+    GITHUB_WORKSPACE: windowsWorkspace, GITHUB_OUTPUT: windowsOutput, GITHUB_ENV: `${windowsOutput}-env`,
+    GOCACHE: path.join(root, "build"), CYGPATH_LOG: `${windowsOutput}-cygpath`, CYGPATH_RESULT: windowsCache,
+  } });
+  assert.equal(windowsRun.status, 0, windowsRun.stderr);
+  assert.equal(readFileSync(`${windowsOutput}-env`, "utf8").trim(), `GOMODCACHE=${windowsCache}`);
+  assert.equal(readFileSync(`${windowsOutput}-cygpath`, "utf8").trim(), windowsCache);
+  assert.match(readFileSync(windowsOutput, "utf8"), /^mod_paths=\.go-mod-cache$/m);
+  const ignored = spawnSync("git", ["check-ignore", ".go-mod-cache/example/go.mod"], {
+    cwd: new URL("..", import.meta.url), encoding: "utf8",
+  });
+  assert.equal(ignored.status, 0, ignored.stderr);
+  const download = spawnSync("go", ["mod", "download"], { cwd: path.join(root, "sdk/go"), encoding: "utf8", env: {
+    ...process.env, GOMODCACHE: `${nativeRoot}/.go-mod-cache`, GOPROXY: "off", GOSUMDB: "off",
+  } });
+  assert.equal(download.status, 0, download.stderr);
+});
+
+test("each CI module namespace has one writer and skipped checks never save", () => {
+  const moduleSave = cacheSteps(goCache).find(step => step.includes("cache/save@") && step.includes("outputs.mod_paths"));
+  const owners = new Map();
+  for (const name of ["test", "root", "race", "desktop-frontend", "desktop-go", "lint"]) {
+    const body = job(ci, name);
+    const steps = body.split(/\n      - /).filter(step => step.includes("uses: ./.github/actions/go-build-cache"));
+    assert.equal(steps.length, 2, name);
+    assert.ok(body.indexOf("uses: actions/setup-go@") < body.indexOf("uses: ./.github/actions/go-build-cache"), name);
+    const parsed = steps.map(step => Object.fromEntries([...step.matchAll(/^          ([a-z_]+): (.+)$/gm)].map(([, key, value]) => [key, value.replace(/^['"]|['"]$/g, "")])));
+    assert.equal(parsed[0].module, parsed[1].module, name);
+    assert.equal(parsed[0].dependency, parsed[1].dependency, name);
+    assert.equal(parsed[0].build_module ?? parsed[0].module, parsed[1].build_module ?? parsed[1].module, name);
+    for (const runnerOs of name === "test" || name === "desktop-go" ? ["Linux", "macOS", "Windows"] : ["Linux"]) {
+      const inputs = { save_mod_os: "Linux", ...parsed[1] };
+      if (cacheGate(moduleSave, { inputs, github: { event_name: "push" }, runner: { os: runnerOs } })) {
+        const namespace = `${inputs.module}:${inputs.dependency}`;
+        assert.equal(owners.has(namespace), false, `${namespace} has more than one writer`);
+        owners.set(namespace, name);
+      }
+    }
+    if (["test", "root", "lint"].includes(name)) {
+      const saveCondition = steps[1].match(/^if: (.+)$/m)[1];
+      assert.equal(vm.runInNewContext(saveCondition, { always: () => true, env: { RUN_STEPS: "false" } }), false, name);
+      assert.equal(vm.runInNewContext(saveCondition, { always: () => true, env: { RUN_STEPS: "true" } }), true, name);
+    } else assert.match(steps[1], /^if: always\(\)/);
+    if (["test", "race", "desktop-frontend", "desktop-go"].includes(name)) assert.match(body, /run: go mod download/);
+  }
+  assert.deepEqual(Object.fromEntries(owners), {
+    "root:go.sum": "test", "root-race:go.sum": "race", "desktop:desktop/go.sum": "desktop-go", "root-tools:go.sum": "lint",
+  });
+});
 
 test("App memory artifacts support rerunning only failed shards", () => {
   const prepare = job(appMemory, "prepare");

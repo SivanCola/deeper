@@ -168,11 +168,13 @@ jobs:
           bash scripts/verify-release-authorization.test.sh
           bash scripts/release-workflows.test.sh
           node scripts/check-single-release-public-contract.mjs
+      # The lint job owns module-cache writes for root-tools.
       - if: always() && env.RUN_STEPS == 'true'
         uses: ./.github/actions/go-build-cache
         with:
           module: root-tools
           dependency: go.sum
+          save_mod_os: ''
           mode: save
 
   race:
