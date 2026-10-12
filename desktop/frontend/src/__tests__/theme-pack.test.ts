@@ -57,7 +57,6 @@ const bridgeSource = readFileSync(resolve(testDir, "../lib/bridge.ts"), "utf8");
 const viteSource = readFileSync(resolve(testDir, "../../vite.config.ts"), "utf8");
 const localeEn = readFileSync(resolve(testDir, "../locales/en.ts"), "utf8");
 const localeZh = readFileSync(resolve(testDir, "../locales/zh.ts"), "utf8");
-const localeZhTW = readFileSync(resolve(testDir, "../locales/zh-TW.ts"), "utf8");
 
 let passed = 0;
 let failed = 0;
@@ -659,7 +658,6 @@ for (const id of OFFICIAL_IDS) {
     const key = `settings.themes.official.${id}.${suffix}`;
     ok(localeEn.includes(`"${key}"`), `en has ${key}`);
     ok(localeZh.includes(`"${key}"`), `zh has ${key}`);
-    ok(localeZhTW.includes(`"${key}"`), `zh-TW has ${key}`);
   }
 }
 for (const key of [
@@ -679,7 +677,7 @@ for (const key of [
   "settings.themeLibrary.exportRightsTitle",
   "settings.themeLibrary.exportConfirm",
 ]) {
-  ok(localeEn.includes(`"${key}"`) && localeZh.includes(`"${key}"`) && localeZhTW.includes(`"${key}"`), `gallery key ${key} in all locales`);
+  ok(localeEn.includes(`"${key}"`) && localeZh.includes(`"${key}"`), `gallery key ${key} in all locales`);
 }
 
 // Mock parity: 6 base + 8 official mock packs so browser dev matches the shell.
@@ -708,9 +706,7 @@ ok(
 );
 ok(
   localeZh.includes('"settings.themeGallery.restoreGraphite": "恢复石墨基础外观"') &&
-    localeZh.includes("保留明暗模式、字体、字号及详细排版设置") &&
-    localeZhTW.includes('"settings.themeGallery.restoreGraphite": "恢復石墨基礎外觀"') &&
-    localeZhTW.includes("保留明暗模式、字型、字號及詳細排版設定"),
+    localeZh.includes("保留明暗模式、字体、字号及详细排版设置"),
   "Chinese restore copy localizes Graphite as 石墨 and preserves detailed typography",
 );
 ok(stylesSource.includes(".theme-gallery__detail-user-actions") && stylesSource.includes("grid-template-columns: repeat(2, minmax(0, 1fr))"), "user theme edit and export actions share a balanced row");

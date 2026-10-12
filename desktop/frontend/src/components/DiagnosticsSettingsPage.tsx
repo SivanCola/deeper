@@ -16,16 +16,11 @@ const FRONTEND_COPY: Record<Locale, { title: string; hint: string }> = {
     title: "前端交互记录",
     hint: "遇到滚动闪回、会话切换或界面抖动时，打开记录开关，复现问题后关闭并选择路径导出。仅记录时间、事件和几何信息，不记录对话内容、输入值、路径或密钥。",
   },
-  "zh-TW": {
-    title: "前端互動記錄",
-    hint: "遇到捲動閃回、工作階段切換或介面抖動時，開啟記錄開關，重現問題後關閉並選擇路徑匯出。僅記錄時間、事件與幾何資訊，不記錄對話內容、輸入值、路徑或密鑰。",
-  },
 };
 
 const CREDENTIAL_COPY: Record<Locale, { title: string; probe: string; preview: string; repair: string }> = {
   en: { title: "Credential diagnostics", probe: "Check write access", preview: "Preview repair", repair: "Repair credential access" },
   zh: { title: "凭据诊断", probe: "检查写入能力", preview: "预览修复", repair: "修复凭据访问" },
-  "zh-TW": { title: "憑據診斷", probe: "檢查寫入能力", preview: "預覽修復", repair: "修復憑據存取" },
 };
 
 export function DiagnosticsSettingsPage({

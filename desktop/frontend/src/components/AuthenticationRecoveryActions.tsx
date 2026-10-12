@@ -22,14 +22,6 @@ const COPY = {
     retry: "重试一次",
     authorized: "已允许一次认证重试，可以重新发送消息。",
   },
-  "zh-TW": {
-    missing: "目前模型連線需要 API Key。",
-    rejected: "Provider 拒絕了目前連線的憑據。",
-    unavailable: "Deepzora 無法讀取憑據儲存。",
-    configure: "設定憑據",
-    retry: "重試一次",
-    authorized: "已允許一次認證重試，可以重新傳送訊息。",
-  },
 } as const;
 
 export function AuthenticationRecoveryActions({

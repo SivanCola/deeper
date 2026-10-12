@@ -3,7 +3,6 @@
 import { workspaceGitStatusLabel, workspaceGitStatusLabelKey } from "../lib/workspaceChanges";
 import { en } from "../locales/en";
 import { zh } from "../locales/zh";
-import { zhTW } from "../locales/zh-TW";
 
 let passed = 0;
 let failed = 0;
@@ -38,7 +37,7 @@ eq(workspaceGitStatusLabelKey("DD"), "workspace.gitStatusUnmerged", "DD is a mer
 eq(workspaceGitStatusLabelKey("AA"), "workspace.gitStatusUnmerged", "AA is a merge conflict, not a plain addition");
 eq(workspaceGitStatusLabelKey("UD"), "workspace.gitStatusUnmerged", "UD is a merge conflict");
 
-for (const [name, dict] of [["zh", zh], ["zh-TW", zhTW]] as const) {
+for (const [name, dict] of [["zh", zh]] as const) {
   const missing = Object.keys(en)
     .filter((key) => key.startsWith("workspace.gitStatus"))
     .filter((key) => !(key in (dict as Record<string, string>)));

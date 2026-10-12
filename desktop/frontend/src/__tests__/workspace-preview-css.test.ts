@@ -11,12 +11,10 @@ const appGo = readFileSync(resolve(testDir, "../../../app.go"), "utf8");
 const localeNotices = [
   [readFileSync(resolve(testDir, "../locales/en.ts"), "utf8"), '"workspace.truncated": "Preview truncated to the first 2 MiB."'],
   [readFileSync(resolve(testDir, "../locales/zh.ts"), "utf8"), '"workspace.truncated": "预览已截断到前 2 MiB。"'],
-  [readFileSync(resolve(testDir, "../locales/zh-TW.ts"), "utf8"), '"workspace.truncated": "預覽已截斷到前 2 MiB。"'],
 ];
 const localeSearchLabels = [
   [readFileSync(resolve(testDir, "../locales/en.ts"), "utf8"), '"workspace.searchPlaceholder": "Find"'],
   [readFileSync(resolve(testDir, "../locales/zh.ts"), "utf8"), '"workspace.searchPlaceholder": "查找"'],
-  [readFileSync(resolve(testDir, "../locales/zh-TW.ts"), "utf8"), '"workspace.searchPlaceholder": "尋找"'],
 ];
 
 let passed = 0;

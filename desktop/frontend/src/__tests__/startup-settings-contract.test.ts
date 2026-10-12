@@ -34,7 +34,6 @@ const stylesSource = readFileSync(resolve(here, "../styles.css"), "utf8") +
   readFileSync(resolve(here, "../components/SettingsPanel.css"), "utf8");
 const enLocaleSource = readFileSync(resolve(here, "../locales/en.ts"), "utf8");
 const zhLocaleSource = readFileSync(resolve(here, "../locales/zh.ts"), "utf8");
-const zhTWLocaleSource = readFileSync(resolve(here, "../locales/zh-TW.ts"), "utf8");
 
 console.log("\nstartup settings contract");
 
@@ -69,18 +68,18 @@ ok(
   "provider setup uses the brand catalog instead of the former flat preset cards",
 );
 ok(
-  [enLocaleSource, zhLocaleSource, zhTWLocaleSource].every(source =>
+  [enLocaleSource, zhLocaleSource].every(source =>
     ["settings.catalog.region", "settings.catalog.product", "settings.catalog.productCoding", "settings.providerProtocol"].every(key => source.includes(`"${key}"`))),
   "account platform, plan and API format labels exist in every locale",
 );
 ok(
-  [enLocaleSource, zhLocaleSource, zhTWLocaleSource].every((source) =>
+  [enLocaleSource, zhLocaleSource].every((source) =>
     source.includes('"settings.reasoningProtocol.glm"'),
   ),
   "GLM reasoning protocol is localized in every supported locale",
 );
 ok(
-  [enLocaleSource, zhLocaleSource, zhTWLocaleSource].every((source) =>
+  [enLocaleSource, zhLocaleSource].every((source) =>
     source.includes('"settings.sessionExperience"') &&
     source.includes('"settings.sessionExperienceHint"') &&
     source.includes('"settings.sessionExperience.standard"') &&
@@ -102,7 +101,7 @@ ok(
     settingsNavigationSource.includes('SETTINGS_TAB_GROUPS') &&
     settingsNavigationSource.includes('settings-center__navgroup') &&
     settingsNavigationSource.includes('settingsTabIcon(id)') &&
-    [enLocaleSource, zhLocaleSource, zhTWLocaleSource].every((source) =>
+    [enLocaleSource, zhLocaleSource].every((source) =>
       source.includes('"settings.navGroup.preferences"') &&
       source.includes('"settings.searchNoResults"'),
     ),
@@ -113,20 +112,18 @@ ok(
     enLocaleSource.includes('"settings.tab.skills": "Agent Skills"') &&
     enLocaleSource.includes('"settings.tabSub.skills": "Reusable instructions, tools & workflows"') &&
     zhLocaleSource.includes('"settings.tab.skills": "Agent Skills"') &&
-    zhLocaleSource.includes('"settings.tabSub.skills": "可复用的指令、工具与工作流"') &&
-    zhTWLocaleSource.includes('"settings.tab.skills": "Agent Skills"') &&
-    zhTWLocaleSource.includes('"settings.tabSub.skills": "可重複使用的指令、工具與工作流程"'),
+    zhLocaleSource.includes('"settings.tabSub.skills": "可复用的指令、工具与工作流"'),
   "Agent Skills navigation uses the dedicated reusable-workflow description in every supported locale",
 );
 ok(
-  [settingsSource, enLocaleSource, zhLocaleSource, zhTWLocaleSource, stylesSource].every((source) =>
+  [settingsSource, enLocaleSource, zhLocaleSource, stylesSource].every((source) =>
     !source.includes("settings.workProcess") &&
     !source.includes("settings-work-process"),
   ),
   "the superseded work-process-only visual group does not return",
 );
 ok(
-  [settingsSource, enLocaleSource, zhLocaleSource, zhTWLocaleSource].every((source) =>
+  [settingsSource, enLocaleSource, zhLocaleSource].every((source) =>
     !source.includes("settings.reasoningSummary"),
   ),
   "the retired standalone reasoning-summary setting does not return",
@@ -134,7 +131,7 @@ ok(
 ok(
   settingsSource.includes('t("settings.notificationVolume")') &&
     settingsSource.includes("<NotificationVolumeSlider") &&
-    [enLocaleSource, zhLocaleSource, zhTWLocaleSource].every((source) =>
+    [enLocaleSource, zhLocaleSource].every((source) =>
       source.includes('"settings.notificationVolume"'),
     ),
   "sound settings expose the persisted notification volume control in every locale",
@@ -190,7 +187,7 @@ ok(
   "narrow settings section headings stretch so descriptions wrap inside the viewport",
 );
 ok(
-  [enLocaleSource, zhLocaleSource, zhTWLocaleSource].every((source) =>
+  [enLocaleSource, zhLocaleSource].every((source) =>
     source.includes('"settings.upgradeRecommendedProtocol"') &&
     source.includes('"settings.providerAccess"') &&
     source.includes('"settings.providerBaseUrlLabel"') &&
@@ -201,8 +198,7 @@ ok(
 );
 ok(
   enLocaleSource.includes('"settings.serverWebSearchHint": "Searches only when needed; content is sent to the current model provider') &&
-    zhLocaleSource.includes('"settings.serverWebSearchHint": "仅在需要时搜索；内容会发送给当前供应商') &&
-    zhTWLocaleSource.includes('"settings.serverWebSearchHint": "僅在需要時搜尋；內容會傳送給目前供應商'),
+    zhLocaleSource.includes('"settings.serverWebSearchHint": "仅在需要时搜索；内容会发送给当前供应商'),
   "server web-search disclosure stays provider-neutral for compatible services",
 );
 ok(
