@@ -24,7 +24,6 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/billing"
 	"deepzora/internal/boot"
-	"deepzora/internal/bot"
 	"deepzora/internal/command"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
@@ -1171,9 +1170,6 @@ func TestDesktopStartupSettingsUsesUserDesktopPreferencesWithoutFullSettingsPayl
 		t.Fatalf("set desktop check updates: %v", err)
 	}
 
-	userCfg.Bot.Enabled = true
-	userCfg.Bot.QQ.Access.Enabled = true
-	userCfg.Bot.QQ.Access.Users = []string{"alice"}
 	if err := userCfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save user config: %v", err)
 	}
@@ -1184,9 +1180,6 @@ func TestDesktopStartupSettingsUsesUserDesktopPreferencesWithoutFullSettingsPayl
 	}
 	if want := []string{"workspace", "git_branch", "model"}; !reflect.DeepEqual(got.StatusBarItems, want) {
 		t.Fatalf("DesktopStartupSettings status bar items = %v, want %v", got.StatusBarItems, want)
-	}
-	if !got.Bot.Enabled || !got.Bot.QQ.Access.Enabled || !reflect.DeepEqual(got.Bot.QQ.Access.Users, []string{"alice"}) {
-		t.Fatalf("DesktopStartupSettings bot settings = %+v, want lightweight bot snapshot", got.Bot)
 	}
 
 	raw, err := json.Marshal(got)
@@ -6502,24 +6495,6 @@ func waitForRuntimeAdmissionBarrier(t *testing.T, app *App) {
 		return
 	}
 	t.Fatal("lifecycle mutation never acquired the work-admission barrier")
-}
-
-func TestBridgeDriveReleasesRuntimeAdmissionWhenTakeoverWasReclaimed(t *testing.T) {
-	fixture := newGatedDesktopMCPLaunchFixture(t, "")
-	fixture.app.tabs["active"].sink = &tabEventSink{tabID: "active", app: fixture.app}
-	fixture.app.botBridge = &botBridgeHub{
-		takeovers:    make(map[string]bot.DesktopWatchRoute),
-		takeoverTabs: make(map[string]string),
-	}
-
-	err := fixture.app.bridgeDrive("active", "hello", bot.DesktopWatchRoute{})
-	if err == nil || !strings.Contains(err.Error(), "接管已解除") {
-		t.Fatalf("bridgeDrive error = %v, want lost-takeover error", err)
-	}
-	if !fixture.app.runtimeAdmissionMu.TryLock() {
-		t.Fatal("bridgeDrive leaked the runtime-admission read lock")
-	}
-	fixture.app.runtimeAdmissionMu.Unlock()
 }
 
 func TestBeginTabTurnWorkspaceRepairStaysOutsideLifecycleAdmission(t *testing.T) {

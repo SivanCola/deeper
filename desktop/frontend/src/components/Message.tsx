@@ -18,49 +18,6 @@ const MemoryCitations = lazy(() => import("./MemoryCitations").then((module) => 
 const SearchSourcesPanel = lazy(() => import("./SearchSourcesPanel").then((module) => ({ default: module.SearchSourcesPanel }))); type AssistantItem = Extract<Item, { kind: "assistant" }>;
 const MessageAttachments = lazy(() => import("./MessageAttachments").then(module => ({ default: module.MessageAttachments })));
 export const InvocationMetadataContext = createContext<InvocationMetadataMap>({});
-type ImSourceMessage = {
-  provider: string;
-  label: string;
-  sender: string;
-  chat: string;
-  text: string;
-};
-
-const IM_SOURCE_START = "[[deepzora-im]]";
-const IM_SOURCE_END = "[[/deepzora-im]]";
-
-function parseImSourceMessage(text: string): ImSourceMessage | null {
-  // Display-only metadata: keep IM sender/chat details out of model prompts.
-  if (!text.startsWith(IM_SOURCE_START)) return null;
-  const end = text.indexOf(IM_SOURCE_END);
-  if (end < 0) return null;
-  const metaBlock = text.slice(IM_SOURCE_START.length, end).trim();
-  const body = text.slice(end + IM_SOURCE_END.length).replace(/^\r?\n/, "");
-  const meta: Record<string, string> = {};
-  for (const line of metaBlock.split(/\r?\n/)) {
-    const index = line.indexOf("=");
-    if (index <= 0) continue;
-    const key = line.slice(0, index).trim().toLowerCase();
-    const value = line.slice(index + 1).trim();
-    if (key) meta[key] = value;
-  }
-  return {
-    provider: meta.provider || "",
-    label: meta.label || "",
-    sender: meta.sender || meta.senderid || "",
-    chat: meta.chat || meta.chat_type || "",
-    text: body,
-  };
-}
-
-function imSourceLabel(source: ImSourceMessage, t: ReturnType<typeof useT>): string {
-  if (source.label.trim()) return source.label.trim();
-  const provider = source.provider.trim().toLowerCase();
-  if (provider === "lark") return "Lark";
-  if (provider === "weixin" || provider === "wechat") return t("settings.botWeixin");
-  return t("settings.botFeishu");
-}
-
 type PastedBlockInfo = {
   label: string;
   content: string;
@@ -149,17 +106,15 @@ export function UserMessage({
 }) {
   const t = useT();
   const invocationMetadata = useContext(InvocationMetadataContext);
-  const imSource = parseImSourceMessage(text);
-  const actionText = imSource?.text ?? text;
+  const actionText = text;
   const hasMemoryCompiler = Boolean(submitText?.includes("<memory-compiler-execution>"));
   const selectedTextEntries = useMemo(() => parseSelectedTextContext(submitText), [submitText]);
   const editableActionText = stripSelectionLabels(actionText, selectedTextEntries);
   const { text: editableDisplayText, attachments: parsedAttachments } = parseAttachmentRefsForDisplay(editableActionText);
   const selectionLabels = formatSelectionLabels(selectedTextEntries);
   const displayText = [editableDisplayText, selectionLabels].filter(Boolean).join(editableDisplayText && selectionLabels ? " " : "");
-  const invocationSegments = imSource ? [] : invocationSegmentsFromMessage(displayText, submitText, invocationMetadata);
+  const invocationSegments = invocationSegmentsFromMessage(displayText, submitText, invocationMetadata);
   const hasInvocationSegments = invocationSegments.some((segment) => segment.type === "invocation");
-  const sourceLabel = imSource ? imSourceLabel(imSource, t) : "";
   const sentAt = createdAt === undefined ? null : messageDate(createdAt);
   const pasteBlocks = useMemo(() => parsePastedBlocks(displayText, submitText), [displayText, submitText]);
   const selectedTextBlocks = useMemo(() => parseSelectedTextBlocks(displayText, submitText), [displayText, submitText]);
@@ -215,78 +170,59 @@ export function UserMessage({
   };
   return (
     <div
-      className={`msg msg--user${imSource ? " msg--im-source" : ""}${failed ? " msg--user-failed" : ""}`}
+      className={`msg msg--user${failed ? " msg--user-failed" : ""}`}
       id={anchorId}
       data-question-anchor={anchorId}
       data-turn={turn}
-      data-im-source={imSource?.provider || undefined}
       data-history-restore={id && id.startsWith("h") ? "" : undefined}
       data-entrance={id || undefined}
     >
       <div className="msg__body" data-transcript-selectable="message">
-        {imSource ? (
-          <div className="im-source-card">
-            <div className="im-source-card__head" data-transcript-selection-ignore>
-              <MessageSquare size={14} />
-              <span>{t("msg.fromIm", { source: sourceLabel })}</span>
+          {hasInvocationSegments && pasteBlocks.length === 0 && selectedTextBlocks.length === 0 ? (
+            <div className="msg__text msg__rich-text">
+              {invocationSegments.map((segment, index) => segment.type === "text"
+                ? <span key={`text:${segment.start}:${index}`}>{segment.content}</span>
+                : (
+                  <InvocationBadge
+                    key={`invocation:${segment.invocation.name}:${segment.offset}:${index}`}
+                    invocation={segment.invocation}
+                    kind={segment.invocation.kind}
+                    variant="message"
+                  />
+                ))}
             </div>
-            {displayText && <div className="im-source-card__text">{displayText}</div>}
-            {(imSource.sender || imSource.chat) && (
-              <div className="im-source-card__meta" data-transcript-selection-ignore>
-                {imSource.sender && <span>{t("msg.imSender", { id: imSource.sender })}</span>}
-                {imSource.chat && <span>{imSource.chat}</span>}
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            {hasInvocationSegments && pasteBlocks.length === 0 && selectedTextBlocks.length === 0 ? (
-              <div className="msg__text msg__rich-text">
-                {invocationSegments.map((segment, index) => segment.type === "text"
-                  ? <span key={`text:${segment.start}:${index}`}>{segment.content}</span>
-                  : (
-                    <InvocationBadge
-                      key={`invocation:${segment.invocation.name}:${segment.offset}:${index}`}
-                      invocation={segment.invocation}
-                      kind={segment.invocation.kind}
-                      variant="message"
-                    />
-                  ))}
-              </div>
-            ) : displaySegments.map((seg, i) => {
-              if (seg.type === "text") {
-                return seg.content ? <div className="msg__text" key={`s${i}`}>{seg.content}</div> : null;
-              }
-              const expanded = Boolean(expandedBlockKeys[seg.key]);
-              return (
-                <div className="msg-pasted" key={seg.key}>
-                  <div className="msg-pasted-block">
-                    <div className="msg-pasted-head" data-transcript-selection-ignore>
-                      {seg.kind === "code" ? <FileText size={15} /> : <MessageSquare size={15} />}
-                      <span className="msg-pasted-label">{seg.block.label}</span>
-                      <div className="msg-pasted-actions">
-                        <Tooltip label={t(expanded ? "msg.pastedCollapseTooltip" : "msg.pastedExpandTooltip")}>
-                          <button type="button" onClick={() => toggleBlockExpand(seg.key)}>
-                            {expanded ? t("common.collapse") : t("composer.pastedExpand")}
-                          </button>
-                        </Tooltip>
-                      </div>
+          ) : displaySegments.map((seg, i) => {
+            if (seg.type === "text") {
+              return seg.content ? <div className="msg__text" key={`s${i}`}>{seg.content}</div> : null;
+            }
+            const expanded = Boolean(expandedBlockKeys[seg.key]);
+            return (
+              <div className="msg-pasted" key={seg.key}>
+                <div className="msg-pasted-block">
+                  <div className="msg-pasted-head" data-transcript-selection-ignore>
+                    {seg.kind === "code" ? <FileText size={15} /> : <MessageSquare size={15} />}
+                    <span className="msg-pasted-label">{seg.block.label}</span>
+                    <div className="msg-pasted-actions">
+                      <Tooltip label={t(expanded ? "msg.pastedCollapseTooltip" : "msg.pastedExpandTooltip")}>
+                        <button type="button" onClick={() => toggleBlockExpand(seg.key)}>
+                          {expanded ? t("common.collapse") : t("composer.pastedExpand")}
+                        </button>
+                      </Tooltip>
                     </div>
-                    {expanded && (
-                      <div className="msg-pasted-expanded">
-                        {seg.kind === "chat"
-                          ? <Markdown text={seg.block.content} />
-                          : seg.kind === "code" || seg.kind === "terminal"
-                            ? <CodeViewer value={seg.block.content} language={seg.kind === "terminal" ? "console" : languageFor(seg.block.path ?? "")} maxHeight={360} />
-                            : seg.block.content}
-                      </div>
-                    )}
                   </div>
+                  {expanded && (
+                    <div className="msg-pasted-expanded">
+                      {seg.kind === "chat"
+                        ? <Markdown text={seg.block.content} />
+                        : seg.kind === "code" || seg.kind === "terminal"
+                          ? <CodeViewer value={seg.block.content} language={seg.kind === "terminal" ? "console" : languageFor(seg.block.path ?? "")} maxHeight={360} />
+                          : seg.block.content}
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </>
-        )}
+              </div>
+            );
+          })}
         {failed && <div className="msg__send-failed" data-transcript-selection-ignore>{t("msg.sendFailed")}</div>}
         {parsedAttachments.length > 0 && <Suspense fallback={null}><MessageAttachments attachments={parsedAttachments} /></Suspense>}
       </div>

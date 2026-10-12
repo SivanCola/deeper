@@ -9,7 +9,6 @@ export type AppChromeCommandsInput = {
   platform: DesktopPlatform;
   windowsFrameless: boolean;
   closeTransientOverlays: () => void;
-  clearImDetail: () => void;
   setSettingsFocus: Dispatch<SetStateAction<SettingsInitialFocus | null>>;
   setSettingsTarget: Dispatch<SetStateAction<SettingsTab | null>>;
   setSidebarSearchOpen: Dispatch<SetStateAction<boolean>>;
@@ -26,25 +25,11 @@ function reportNativeWindowFailure(error: unknown): void {
 /**
  * Owns the window-chrome and settings-surface commands: native window
  * minimize/toggle/close with the maximised re-sync, the frameless titlebar
- * double-click zoom, settings open/close/changed, bot settings entries and
+ * double-click zoom, settings open/close/changed and
  * the sidebar search toggle. All are stable committed commands; consumers in
- * the chrome, sidebar, IM detail and overlay regions only wire them.
+ * the chrome, sidebar and overlay regions only wire them.
  */
 export function useAppChromeCommands(input: AppChromeCommandsInput) {
-  const openBotSettings = useCommittedCommand(() => {
-    input.closeTransientOverlays();
-    input.clearImDetail();
-    input.setSettingsFocus(null);
-    input.setSettingsTarget("bots");
-  });
-
-  const openBotAllowlistSettings = useCommittedCommand((connectionId: string) => {
-    input.closeTransientOverlays();
-    input.clearImDetail();
-    input.setSettingsFocus({ target: "bot-allowlist", connectionId });
-    input.setSettingsTarget("bots");
-  });
-
   // The OS drag region ignores anything with detail !== 1, so a double click
   // on a --deepzora-draggable region never reaches the shell. Both platforms that hide
   // their native title bar need this handled here.
@@ -89,8 +74,6 @@ export function useAppChromeCommands(input: AppChromeCommandsInput) {
   });
 
   return {
-    openBotSettings,
-    openBotAllowlistSettings,
     handleChromeTitlebarDoubleClick,
     minimizeMainWindow,
     toggleMainWindowMaximized,

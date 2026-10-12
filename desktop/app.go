@@ -9,7 +9,6 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/billing"
 	"deepzora/internal/boot"
-	"deepzora/internal/botruntime"
 	"deepzora/internal/checkpoint"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
@@ -349,12 +348,6 @@ type App struct {
 
 	mediaTokens    *mediaTokenStore
 	presentPreview *workspacePreviewOrigin
-	botInstalls    map[string]*botInstallSession
-	botRuntime     *desktopBotRuntime
-	// botBridge gives the embedded bot gateway a god view over desktop
-	// sessions (/desktop commands). Set once in NewApp before any tab exists,
-	// read-only afterwards, so tabEventSink.Emit reads it without a lock.
-	botBridge *botBridgeHub
 
 	metrics atomic.Pointer[metricsAggregator] // non-nil only when desktop.metrics is opted in; swapped live by SetDesktopMetrics
 
@@ -485,8 +478,6 @@ func NewApp() *App {
 		detachedSessions:        map[string]*WorkspaceTab{},
 		mediaTokens:             newMediaTokenStore(),
 		presentPreview:          newWorkspacePreviewOrigin(),
-		botInstalls:             map[string]*botInstallSession{},
-		botRuntime:              newDesktopBotRuntime(),
 		remoteWindows:           newRemoteWindowRegistry(),
 		topicState:              desktopTopicState,
 		worktreeReservations: worktreeRuntimeReservations{
@@ -498,7 +489,6 @@ func NewApp() *App {
 	a.desktopShell.coordinator = newDesktopShellCoordinator(a)
 	a.workspaceHub = newWorkspaceChangeHub(a)
 	a.terminals = newTerminalManager(a)
-	a.botBridge = a.newBotBridge()
 	return a
 }
 
@@ -548,7 +538,6 @@ func (a *App) startup(ctx context.Context) {
 	a.startDesktopPersistenceReconciliation()
 	a.registerHistoryIndexEvents()
 	a.startSessionCatalog()
-	a.goSafe("refreshBotRuntime", a.refreshBotRuntime)
 	a.goSafe("sendStartupPing", a.sendStartupPing)
 	a.goSafe("flushMetrics", a.flushMetrics)
 	a.goSafe("flushPendingCrash", a.flushPendingCrash)
@@ -988,40 +977,27 @@ func (a *App) SubmitToTab(tabID, input string) error {
 	if err := validateTurnInput(input); err != nil {
 		return err
 	}
-	return a.submitToTab(tabID, input, false)
+	return a.submitToTab(tabID, input)
 }
 
-// submitToTab is the shared submit body. fromBridge marks submissions driven
-// by the IM takeover bridge; local (frontend) submissions on a taken-over tab
-// reclaim remote control first — typing locally is the grab-back gesture.
-func (a *App) submitToTab(tabID, input string, fromBridge bool, submissionID ...string) error {
-	_, err := a.submitToTabResult(tabID, input, fromBridge, false, submissionID...)
+// submitToTab is the shared submit body.
+func (a *App) submitToTab(tabID, input string, submissionID ...string) error {
+	_, err := a.submitToTabResult(tabID, input, false, submissionID...)
 	return err
 }
 
-func (a *App) submitUserTurnToTabWithSink(tabID, input string, forwarder event.Sink) bool {
-	admission, ctrl, err := a.beginTabTurn(tabID, false)
+func (a *App) submitUserTurnToTab(tabID, input string) bool {
+	admission, ctrl, err := a.beginTabTurn(tabID, true)
 	if err != nil {
 		return false
 	}
 	defer admission.abort()
 	tab := admission.tab
-	var generation uint64
-	if forwarder != nil {
-		generation = tab.sink.SetBotSink(forwarder)
-	}
 	if err := a.ensureTabTopicIndexedForUserTurn(tab); err != nil {
-		if forwarder != nil {
-			tab.sink.clearBotSink(generation)
-		}
 		return false
 	}
 	ctrl.SubmitUserTurn(input, input)
-	started := admission.finish(ctrl)
-	if !started && forwarder != nil {
-		tab.sink.clearBotSink(generation)
-	}
-	return started
+	return admission.finish(ctrl)
 }
 
 func (a *App) RunShellForTab(tabID, command string) error {
@@ -2636,9 +2612,6 @@ func (a *App) deleteSession(path string) error {
 		return nil
 	}(); err != nil {
 		return err
-	}
-	if err := botruntime.ForgetAutoSessionMappingsForPath(sessionPath); err != nil {
-		slog.Warn("desktop: failed to clear auto bot session mapping", "err", err)
 	}
 	if fallback.needs {
 		fallback = a.sessionDeleteFallbackTarget(fallback)

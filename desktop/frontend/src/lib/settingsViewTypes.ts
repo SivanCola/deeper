@@ -1,5 +1,5 @@
 import type { ProviderPresetView } from "./providerCatalogTypes";
-import type { AgentView, BotSettingsView, NetworkView, PermissionsView, ProviderView, SandboxView, ToolApprovalMode } from "./types";
+import type { AgentView, NetworkView, PermissionsView, ProviderView, SandboxView, ToolApprovalMode } from "./types";
 
 export interface SettingsView {
   modelSettingsFingerprint?: string;
@@ -21,7 +21,6 @@ export interface SettingsView {
   sandbox: SandboxView;
   network: NetworkView;
   agent: AgentView;
-  bot: BotSettingsView;
   desktopLanguage: string; // "" | "en" | "zh"; empty = auto
   desktopCurrency?: string; // "" | "CNY" | "USD"; absent/empty = follow language
   desktopTheme: string; // "auto" | "dark" | "light"

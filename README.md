@@ -1,8 +1,8 @@
 # Deepzora
 
-Deepzora is an AI coding assistant with a CLI, an Electron desktop app, a remote Serve service, ACP integration, bots, and an SDK. It is derived from DeepSeek-Reasonix; upstream authorship and licensing are recorded in [NOTICE](NOTICE) and [LICENSE](LICENSE).
+Deepzora is an AI coding assistant with a CLI, an Electron desktop app, a remote Serve service, ACP integration, and an SDK. It is derived from DeepSeek-Reasonix; upstream authorship and licensing are recorded in [NOTICE](NOTICE) and [LICENSE](LICENSE).
 
-Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成、机器人和 SDK。项目源自 DeepSeek-Reasonix，上游作者与许可信息保留在 [NOTICE](NOTICE) 和 [LICENSE](LICENSE)。
+Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成和 SDK。项目源自 DeepSeek-Reasonix，上游作者与许可信息保留在 [NOTICE](NOTICE) 和 [LICENSE](LICENSE)。
 
 This repository treats the current implementation as its first-version baseline. Historical Reasonix data formats, old desktop interfaces, and migration paths are unsupported. The first Deepzora release is being prepared; see [Releases](https://github.com/SivanCola/deepzora/releases) for published artifacts.
 

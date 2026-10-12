@@ -865,18 +865,6 @@
       ]
     }
   },
-  "BotRuntimeStatus": {
-    "domain": "desktop/bot_runtime_app.go",
-    "owner": "App.BotRuntimeStatus",
-    "sources": [
-      "desktop/bot_runtime_app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.BotRuntimeStatus",
-      "inputs": []
-    }
-  },
   "Cancel": {
     "domain": "desktop/app.go",
     "owner": "App.Cancel",
@@ -1242,20 +1230,6 @@
       "resolver": "App.CleanRecoveryLineage",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "ClearBotSecret": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.ClearBotSecret",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ClearBotSecret",
-      "inputs": [
-        "envName"
       ]
     }
   },
@@ -1964,20 +1938,6 @@
       "kind": "owner-state",
       "resolver": "App.DesktopStartupSettings",
       "inputs": []
-    }
-  },
-  "DiagnoseBotConnection": {
-    "domain": "desktop/bot_connection_app.go",
-    "owner": "App.DiagnoseBotConnection",
-    "sources": [
-      "desktop/bot_connection_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.DiagnoseBotConnection",
-      "inputs": [
-        "id"
-      ]
     }
   },
   "DisableThemePack": {
@@ -4711,20 +4671,6 @@
       "kind": "owner-state",
       "resolver": "App.Plugins",
       "inputs": []
-    }
-  },
-  "PollBotConnectionInstall": {
-    "domain": "desktop/bot_connection_app.go",
-    "owner": "App.PollBotConnectionInstall",
-    "sources": [
-      "desktop/bot_connection_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.PollBotConnectionInstall",
-      "inputs": [
-        "installID"
-      ]
     }
   },
   "PrepareWorktreeMerge": {
@@ -7873,50 +7819,6 @@
       ]
     }
   },
-  "SetBotConnectionToolApprovalMode": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.SetBotConnectionToolApprovalMode",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetBotConnectionToolApprovalMode",
-      "inputs": [
-        "connID",
-        "mode"
-      ]
-    }
-  },
-  "SetBotSecret": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.SetBotSecret",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetBotSecret",
-      "inputs": [
-        "envName",
-        "value"
-      ]
-    }
-  },
-  "SetBotSettings": {
-    "domain": "desktop/settings_app.go",
-    "owner": "App.SetBotSettings",
-    "sources": [
-      "desktop/settings_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetBotSettings",
-      "inputs": [
-        "b"
-      ]
-    }
-  },
   "SetCloseBehavior": {
     "domain": "desktop/settings_preferences.go",
     "owner": "App.SetCloseBehavior",
@@ -9016,21 +8918,6 @@
       ]
     }
   },
-  "StartBotConnectionInstall": {
-    "domain": "desktop/bot_connection_app.go",
-    "owner": "App.StartBotConnectionInstall",
-    "sources": [
-      "desktop/bot_connection_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.StartBotConnectionInstall",
-      "inputs": [
-        "provider",
-        "domain"
-      ]
-    }
-  },
   "StartTopicActivation": {
     "domain": "desktop/topic_activation.go",
     "owner": "App.StartTopicActivation",
@@ -9720,33 +9607,6 @@
       "inputs": [
         "tabID"
       ]
-    }
-  },
-  "TestBotConnection": {
-    "domain": "desktop/bot_connection_app.go",
-    "owner": "App.TestBotConnection",
-    "sources": [
-      "desktop/bot_connection_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.TestBotConnection",
-      "inputs": [
-        "id",
-        "target"
-      ]
-    }
-  },
-  "TestDingtalkBot": {
-    "domain": "desktop/bot_connection_app.go",
-    "owner": "App.TestDingtalkBot",
-    "sources": [
-      "desktop/bot_connection_app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.TestDingtalkBot",
-      "inputs": []
     }
   },
   "TestProviderModel": {

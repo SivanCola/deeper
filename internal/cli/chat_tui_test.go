@@ -117,18 +117,41 @@ func (r *recordingTurnRunner) Run(ctx context.Context, input string) error {
 	return nil
 }
 
+// cliEventWait bounds every CLI test wait on a controller event or teardown
+// signal. Controller teardown and the durable inbox tail can stall for seconds
+// on a contended runner (Windows CI has run past 2s), so the bound is
+// deliberately generous: a genuinely missing event still fails the test, but a
+// slow runner no longer turns a green change red.
+const cliEventWait = 30 * time.Second
+
 func waitForCLIEvent(t *testing.T, ch <-chan event.Event, kind event.Kind) {
 	t.Helper()
-	deadline := time.After(2 * time.Second)
+	deadline := time.After(cliEventWait)
+	var seen []event.Kind
 	for {
 		select {
-		case e := <-ch:
+		case e, ok := <-ch:
+			if !ok {
+				t.Fatalf("event channel closed before event %v (saw %v)", kind, seen)
+			}
 			if e.Kind == kind {
 				return
 			}
+			seen = append(seen, e.Kind)
 		case <-deadline:
-			t.Fatalf("timed out waiting for event %v", kind)
+			t.Fatalf("timed out after %s waiting for event %v (saw %v)", cliEventWait, kind, seen)
 		}
+	}
+}
+
+// waitForCLISignal waits for a fixture teardown signal under the same bound, so
+// a controller that never finishes closing fails the test instead of hanging it.
+func waitForCLISignal(t *testing.T, what string, ch <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(cliEventWait):
+		t.Fatalf("timed out after %s waiting for %s", cliEventWait, what)
 	}
 }
 

@@ -20,7 +20,7 @@ import (
 // own connection, and the second save silently erases the first one's entry —
 // the bot auto-session persistence vs. settings-save race this lock exists for.
 func TestLockUserConfigEditsSerializesRMW(t *testing.T) {
-	// Point the user config at a temp home: SaveTo renders bot connections only
+	// Point the user config at a temp home: SaveTo renders the provider list only
 	// for user-scope paths (project configs save incrementally without them).
 	home := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
@@ -38,10 +38,11 @@ func TestLockUserConfigEditsSerializesRMW(t *testing.T) {
 			unlock := LockUserConfigEdits()
 			defer unlock()
 			cfg := LoadForEdit(path)
-			cfg.Bot.Connections = append(cfg.Bot.Connections, BotConnectionConfig{
-				ID:       fmt.Sprintf("conn-%d", n),
-				Provider: "qq",
-				Enabled:  true,
+			cfg.Providers = append(cfg.Providers, ProviderEntry{
+				Name:      fmt.Sprintf("conn-%d", n),
+				Kind:      "openai",
+				Model:     "chat",
+				APIKeyEnv: fmt.Sprintf("CONN_%d_API_KEY", n),
 			})
 			if err := cfg.SaveTo(path); err != nil {
 				t.Errorf("save: %v", err)
@@ -51,13 +52,24 @@ func TestLockUserConfigEditsSerializesRMW(t *testing.T) {
 	wg.Wait()
 
 	cfg := LoadForEdit(path)
-	if got := len(cfg.Bot.Connections); got != writers {
-		t.Fatalf("connections = %d, want %d (concurrent read-modify-write dropped updates)", got, writers)
+	// Default() already ships providers, so the writers must all have survived
+	// alongside them rather than overwriting one another.
+	seen := map[string]bool{}
+	for _, entry := range cfg.Providers {
+		if strings.HasPrefix(entry.Name, "conn-") {
+			if seen[entry.Name] {
+				t.Fatalf("provider %q was written twice", entry.Name)
+			}
+			seen[entry.Name] = true
+		}
+	}
+	if len(seen) != writers {
+		t.Fatalf("concurrent writers wrote %d distinct connections, want %d (read-modify-write dropped updates)", len(seen), writers)
 	}
 }
 
-// TestConcurrentBotAndSettingsWritersKeepBothFields reproduces the reviewed
-// P1 scenario: a bot auto-session mapping writer and a settings writer race
+// TestConcurrentWritersKeepBothFields reproduces the reviewed
+// P1 scenario: a background writer and a settings writer race
 // on the user config. Both hold LockUserConfigEdits around their
 // load-modify-save cycle, so neither may ever overwrite the other's field
 // with a stale copy. Each writer also checks, under the lock, that its own
@@ -65,7 +77,7 @@ func TestLockUserConfigEditsSerializesRMW(t *testing.T) {
 // one on the final round. Fault check: removing either writer's lock/unlock
 // pair makes this test fail (at least intermittently) with "previous ...
 // update lost".
-func TestConcurrentBotAndSettingsWritersKeepBothFields(t *testing.T) {
+func TestConcurrentWritersKeepBothFields(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
 	path := UserConfigPath()
@@ -78,8 +90,8 @@ func TestConcurrentBotAndSettingsWritersKeepBothFields(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	// Bot mapping writer: rewrites Bot.Connections like the botruntime
-	// auto-session persistence path.
+	// Background writer: rewrites the provider list like an
+	// auto-provisioning persistence path.
 	go func() {
 		defer wg.Done()
 		<-start
@@ -88,21 +100,22 @@ func TestConcurrentBotAndSettingsWritersKeepBothFields(t *testing.T) {
 			cfg := LoadForEdit(path)
 			if i > 1 {
 				wantID := fmt.Sprintf("conn-%d", i-1)
-				if len(cfg.Bot.Connections) != 1 || cfg.Bot.Connections[0].ID != wantID {
+				if len(cfg.Providers) != 1 || cfg.Providers[0].Name != wantID {
 					unlock()
-					t.Errorf("round %d: previous bot update lost: got %+v, want single connection %q", i, cfg.Bot.Connections, wantID)
+					t.Errorf("round %d: previous background update lost: got %+v, want single provider %q", i, cfg.Providers, wantID)
 					return
 				}
 			}
-			cfg.Bot.Connections = []BotConnectionConfig{{
-				ID:       fmt.Sprintf("conn-%d", i),
-				Provider: "feishu",
-				Enabled:  true,
+			cfg.Providers = []ProviderEntry{{
+				Name:      fmt.Sprintf("conn-%d", i),
+				Kind:      "openai",
+				Model:     "chat",
+				APIKeyEnv: fmt.Sprintf("CONN_%d_API_KEY", i),
 			}}
 			err := cfg.SaveTo(path)
 			unlock()
 			if err != nil {
-				t.Errorf("bot writer save: %v", err)
+				t.Errorf("background writer save: %v", err)
 				return
 			}
 		}
@@ -138,8 +151,8 @@ func TestConcurrentBotAndSettingsWritersKeepBothFields(t *testing.T) {
 
 	final := LoadForEdit(path)
 	wantID := fmt.Sprintf("conn-%d", rounds)
-	if len(final.Bot.Connections) != 1 || final.Bot.Connections[0].ID != wantID {
-		t.Fatalf("bot writer's last update lost: got %+v, want single connection %q", final.Bot.Connections, wantID)
+	if len(final.Providers) != 1 || final.Providers[0].Name != wantID {
+		t.Fatalf("background writer's last update lost: got %+v, want single provider %q", final.Providers, wantID)
 	}
 	if final.Agent.Temperature != rounds {
 		t.Fatalf("settings writer's last update lost: Temperature = %v, want %d", final.Agent.Temperature, rounds)
@@ -229,7 +242,7 @@ func assertUserConfigLockSerializesAcrossProcesses(t *testing.T, firstHome, seco
 		t.Fatalf("timed out waiting for %s", path)
 	}
 
-	first, firstOutput := startHelper("bot", firstHome, firstTmp, aStarted, aAcquired, aRelease)
+	first, firstOutput := startHelper("background", firstHome, firstTmp, aStarted, aAcquired, aRelease)
 	waitForFile(aAcquired)
 	second, secondOutput := startHelper("cli", secondHome, secondTmp, bStarted, bAcquired, "")
 	waitForFile(bStarted)
@@ -257,8 +270,8 @@ func assertUserConfigLockSerializesAcrossProcesses(t *testing.T, firstHome, seco
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(final.Bot.Connections) != 1 || final.Bot.Connections[0].ID != "cross-process" {
-		t.Fatalf("bot update was lost: %+v", final.Bot.Connections)
+	if len(final.Providers) != 1 || final.Providers[0].Name != "cross-process" {
+		t.Fatalf("background update was lost: %+v", final.Providers)
 	}
 	if got := final.DisplayCurrencyPref(); got != "CNY" {
 		t.Fatalf("display currency update was lost: %q", got)
@@ -357,11 +370,12 @@ func TestLockUserConfigEditsHelperProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	switch os.Getenv("DEEPZORA_CONFIG_LOCK_MODE") {
-	case "bot":
-		cfg.Bot.Connections = []BotConnectionConfig{{
-			ID:       "cross-process",
-			Provider: "qq",
-			Enabled:  true,
+	case "background":
+		cfg.Providers = []ProviderEntry{{
+			Name:      "cross-process",
+			Kind:      "openai",
+			Model:     "chat",
+			APIKeyEnv: "CROSS_PROCESS_API_KEY",
 		}}
 	case "cli":
 		if err := cfg.SetDisplayCurrency("CNY"); err != nil {

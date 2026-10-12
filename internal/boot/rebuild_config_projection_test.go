@@ -36,7 +36,6 @@ func TestRuntimeConfigFingerprintIgnoresPresentation(t *testing.T) {
 		{"notifications", func(c *config.Config) { c.Notifications.Enabled = !c.Notifications.Enabled }},
 		{"telemetry", func(c *config.Config) { c.Telemetry.CLIMetrics = "off" }},
 		{"status line", func(c *config.Config) { c.Statusline.Command = "printf test" }},
-		{"bot transport", func(c *config.Config) { c.Bot.QueueCap++ }},
 		{"serve transport", func(c *config.Config) { c.Serve.BehindProxy = !c.Serve.BehindProxy }},
 		{"provider label", func(c *config.Config) { c.Providers[0].DisplayName = "Renamed" }},
 		{"provider preset", func(c *config.Config) { c.Providers[0].PresetID = "preset"; c.Providers[0].PresetVersion++ }},
@@ -83,7 +82,9 @@ func TestRuntimeConfigFingerprintRetainsRuntimeDependencies(t *testing.T) {
 		{"sandbox network", func(c *config.Config) { c.Sandbox.Network = !c.Sandbox.Network }},
 		{"subprocess filtering", func(c *config.Config) { c.Secrets.FilterSubprocessEnv = !c.Secrets.FilterSubprocessEnv }},
 		{"sensitive files", func(c *config.Config) { c.Secrets.ProtectSensitiveFiles = !c.Secrets.ProtectSensitiveFiles }},
-		{"bot credential protection", func(c *config.Config) { c.Bot.QQ.AppSecretEnv = "BOT_FIXTURE_SECRET" }},
+		{"remote credential protection", func(c *config.Config) {
+			c.Remote.Hosts = append(c.Remote.Hosts, config.RemoteHostEntry{Name: "fixture", PasswordEnv: "FIXTURE_BOX_PASSWORD"})
+		}},
 		{"proxy", func(c *config.Config) { c.Network.ProxyMode = "off" }},
 		{"offline tools", func(c *config.Config) { c.Environment.Offline = !c.Environment.Offline }},
 		{"skills", func(c *config.Config) { c.Skills.DisabledSkills = []string{"fixture"} }},

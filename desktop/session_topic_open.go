@@ -2,7 +2,6 @@ package main
 
 import (
 	"deepzora/internal/session"
-	"strings"
 )
 
 // Resolve the durable identity before publishing a readable topic surface.
@@ -76,9 +75,6 @@ func (a *App) newTopicTabLocked(scope, workspaceRoot, actualRoot, topicID, sessi
 		canonical.applyLocked(tab)
 	}
 	applyTabSessionProfile(tab, profile)
-	if strings.HasPrefix(sessionPath, embeddedBotSessionPrefix) {
-		tab.ReadOnly = true
-	}
 	tab.sink = &tabEventSink{tabID: tab.ID, app: a}
 	return tab
 }

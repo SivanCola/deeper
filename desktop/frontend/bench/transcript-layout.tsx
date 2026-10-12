@@ -90,7 +90,7 @@ function Fixture() {
       <header className="topicbar">Transcript layout fixture</header>
       <aside className="sidebar">Sidebar</aside>
       <div className="chat-pane">
-        <ChatPaneRegion transitioning={false} t={t} imDetail={null} remote={undefined} commands={commands}
+        <ChatPaneRegion transitioning={false} t={t} remote={undefined} commands={commands}
           transcript={transcript} onRetryHistory={async () => {}}
           launcher={options.launcher ? <DockLauncher tabId="layout-fixture" scopeKey="layout-fixture"
             workspaceRoot="" visible onSelect={noAction} overlay={options.dock} /> : undefined} />

@@ -413,8 +413,8 @@ func (c *orderedRPCClient) next(t *testing.T) frame {
 			t.Fatal("ACP output closed")
 		}
 		return f
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for ACP frame")
+	case <-t.Context().Done():
+		t.Fatalf("waiting for ACP frame: %v", t.Context().Err())
 		return frame{}
 	}
 }

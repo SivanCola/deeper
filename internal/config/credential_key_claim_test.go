@@ -127,10 +127,9 @@ func TestClaimableRefusesNamesOtherReadersHold(t *testing.T) {
 	cfg := Default()
 	cfg.Remote.Hosts = append(cfg.Remote.Hosts, RemoteHostEntry{PasswordEnv: "BOX_PASSWORD"})
 	cases := map[string]CredentialKeyHolder{
-		cfg.Bot.QQ.AppSecretEnv: CredentialKeyHeldBySetting,
-		"BOX_PASSWORD":          CredentialKeyHeldBySetting,
-		"PATH":                  CredentialKeyHeldByEnvironment,
-		"OPENAI_API_KEY":        CredentialKeyHeldByEnvironment,
+		"BOX_PASSWORD":   CredentialKeyHeldBySetting,
+		"PATH":           CredentialKeyHeldByEnvironment,
+		"OPENAI_API_KEY": CredentialKeyHeldByEnvironment,
 	}
 	for key, want := range cases {
 		err := cfg.CredentialKeyClaimable(key, "p")
