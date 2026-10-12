@@ -55,14 +55,7 @@ func TestBashCancelKillsWindowsChildProcessTree(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected cancel to return an error")
 	}
-	for range 50 {
-		if !windowsProcessAlive(childPID) {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	killWindowsPID(childPID)
-	t.Fatalf("child process %d survived bash cancel", childPID)
+	waitForWindowsProcessExit(t, childPID, "bash cancel")
 }
 
 func TestBashWindowsReapsChildAfterForegroundShellExit(t *testing.T) {
@@ -88,14 +81,7 @@ func TestBashWindowsReapsChildAfterForegroundShellExit(t *testing.T) {
 		killWindowsPID(childPID)
 		t.Fatalf("foreground command failed: %v (out=%q)", err, out)
 	}
-	for range 50 {
-		if !windowsProcessAlive(childPID) {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	killWindowsPID(childPID)
-	t.Fatalf("child process %d survived foreground bash cleanup", childPID)
+	waitForWindowsProcessExit(t, childPID, "foreground bash cleanup")
 }
 
 func TestBashCancelKillsGitBashHereDocPython(t *testing.T) {
@@ -131,19 +117,24 @@ func TestBashCancelKillsGitBashHereDocPython(t *testing.T) {
 		killWindowsPID(childPID)
 		t.Fatal("cancel did not interrupt Git Bash here-doc python within 20s")
 	}
-	for range 50 {
-		if !windowsProcessAlive(childPID) {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	killWindowsPID(childPID)
-	t.Fatalf("Git Bash here-doc python process %d survived bash cancel", childPID)
+	waitForWindowsProcessExit(t, childPID, "Git Bash here-doc python cancel")
 }
+
+// windowsPIDFileWait and windowsProcessExitWait are liveness watchdogs rather
+// than correctness deadlines. Publishing the pid file costs two PowerShell
+// launches plus a disk write, and observing a killed child costs one PowerShell
+// probe per poll; both can stall past a small bound on a runner executing the
+// whole suite in parallel. Windows CI has failed this file at 10s waiting for
+// the pid file, so keep the bounds generous and let the assertions decide
+// whether the child tree was actually killed.
+const (
+	windowsPIDFileWait     = 60 * time.Second
+	windowsProcessExitWait = 60 * time.Second
+)
 
 func waitForWindowsPIDFile(t *testing.T, path string) int {
 	t.Helper()
-	deadline := time.Now().Add(30 * time.Second)
+	deadline := time.Now().Add(windowsPIDFileWait)
 	for time.Now().Before(deadline) {
 		data, err := os.ReadFile(path)
 		if err == nil {
@@ -156,6 +147,22 @@ func waitForWindowsPIDFile(t *testing.T, path string) int {
 	}
 	t.Fatalf("timed out waiting for child pid file %s", path)
 	return 0
+}
+
+// waitForWindowsProcessExit waits for the caller's already-requested kill to
+// land. Only the observation is bounded, so a slow probe cannot turn a correct
+// kill into a failure.
+func waitForWindowsProcessExit(t *testing.T, pid int, what string) {
+	t.Helper()
+	deadline := time.Now().Add(windowsProcessExitWait)
+	for time.Now().Before(deadline) {
+		if !windowsProcessAlive(pid) {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	killWindowsPID(pid)
+	t.Fatalf("child process %d survived %s", pid, what)
 }
 
 func gitBashPython(t *testing.T, bashPath string) string {

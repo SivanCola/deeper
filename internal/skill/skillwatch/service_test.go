@@ -86,9 +86,16 @@ func flatHash(ctx context.Context, root string, maxDepth int) ([sha256.Size]byte
 	return sum, count, true
 }
 
+// watchdogWait bounds every wait in this package's tests. Helper registration,
+// restart, and degradation all depend on spawning a process and on the runner's
+// scheduling, so the bound is a liveness watchdog rather than a correctness
+// deadline: Windows CI has timed out at 5s waiting for a degraded root while the
+// helper was in fact restarting correctly.
+const watchdogWait = 60 * time.Second
+
 func waitFor(t *testing.T, what string, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(watchdogWait)
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
