@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Deepzora">
+  <!-- Favicon framing: the app-icon squircle, with the mark enlarged versus
+       appicon.svg so the D and its fluke counter stay legible down to 16px. -->
+  <rect width="64" height="64" rx="14" ry="14" fill="#F2610C"/>
+  <g transform="translate(8 11.09) scale(0.085714)">
+    <path fill="#fff" fill-rule="evenodd" d="M0 0H140C372 0 560 109.2 560 244C560 378.8 372 488 140 488H0ZM280 345.5C232.5 341.2 176.3 302.3 143.9 244C122.3 207.3 102.9 177 89.9 149C154.7 174.9 217.4 211.6 280 244C342.6 211.6 405.3 174.9 470.1 149C457.1 177 437.7 207.3 416.1 244C383.7 302.3 327.5 341.2 280 345.5Z"/>
+  </g>
+</svg>
