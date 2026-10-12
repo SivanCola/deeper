@@ -25,9 +25,15 @@ func sameCatalogNames(a, b CatalogSnapshot) bool {
 	return slices.Equal(catalogNames(a), catalogNames(b))
 }
 
+// watchdogWait bounds the wait helpers in this package's tests. A catalog
+// refresh rides on the watcher goroutine being scheduled and on file events
+// landing, so the bound is a liveness watchdog rather than a correctness
+// deadline: a loaded runner may defer either past a small bound.
+const watchdogWait = 60 * time.Second
+
 func waitForCatalog(t *testing.T, what string, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(watchdogWait)
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
