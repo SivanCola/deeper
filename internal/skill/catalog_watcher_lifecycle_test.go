@@ -36,7 +36,7 @@ func TestCatalogWatchDrainsBackendErrorsDuringRegistrationAndClose(t *testing.T)
 	}()
 	select {
 	case <-registering:
-	case <-time.After(5 * time.Second):
+	case <-time.After(watchdogWait):
 		t.Fatal("registration did not start")
 	}
 	// Cancel while Add is blocked: the consumer must still drain backend
@@ -45,7 +45,7 @@ func TestCatalogWatchDrainsBackendErrorsDuringRegistrationAndClose(t *testing.T)
 	close(release)
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(watchdogWait):
 		t.Fatal("watcher stopped draining errors during shutdown")
 	}
 	select {

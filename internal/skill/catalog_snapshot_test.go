@@ -133,7 +133,7 @@ func TestCatalogWatcherInvalidatesCreateRenameAndDelete(t *testing.T) {
 
 func waitCatalogCount(t *testing.T, store *Store, want int) CatalogSnapshot {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(watchdogWait)
 	for time.Now().Before(deadline) {
 		snapshot, err := store.Snapshot(context.Background())
 		if err == nil && len(snapshot.Candidates) == want {
@@ -147,7 +147,7 @@ func waitCatalogCount(t *testing.T, store *Store, want int) CatalogSnapshot {
 
 func waitCatalogName(t *testing.T, store *Store, want string) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(watchdogWait)
 	for time.Now().Before(deadline) {
 		snapshot, err := store.Snapshot(context.Background())
 		if err == nil && len(snapshot.Candidates) == 1 && snapshot.Candidates[0].Name == want {
