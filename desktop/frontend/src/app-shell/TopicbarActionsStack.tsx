@@ -2,7 +2,6 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { TopicbarActionsRegion } from "./TopicbarActionsRegion";
 import { shouldMountExternalOpener } from "../components/ExternalOpener";
 import { tabWorkspaceTitle, topicDisplayTitle, topicTitle } from "../lib/sessionTitles";
-import { sidebarImScopeLabel, type SidebarImTopicSource, type SidebarImConnection } from "../app-runtime/sidebarImProjection";
 import type { TopicbarView } from "./TopicbarRegion";
 import type { TabMeta } from "../lib/types";
 import type { Translator } from "../lib/i18n";
@@ -18,8 +17,6 @@ export function buildTopicbarView(input: {
   locale: string;
   activeTab: TabMeta | undefined;
   cwd: string | undefined;
-  imDetail: SidebarImConnection | null;
-  imTopicSources: Record<string, SidebarImTopicSource>;
   chromeHidden: boolean;
   windowsBrand: boolean;
   automationReturn: boolean;
@@ -27,32 +24,25 @@ export function buildTopicbarView(input: {
   rename: { editing: boolean; draft: string };
   draft?: { title: string; workspaceLabel: string };
 }): TopicbarView {
-  const { t, locale, activeTab, imDetail } = input;
-  const topicbarTitle = input.draft?.title ?? (imDetail ? t("botDetail.title", { name: imDetail.title }) : topicDisplayTitle(activeTab));
-  const topicbarWorkspaceLabel = input.draft?.workspaceLabel ?? (imDetail ? t("botDetail.subtitle") : activeTab ? tabWorkspaceTitle(activeTab) : "");
+  const { t, locale, activeTab } = input;
+  const topicbarTitle = input.draft?.title ?? topicDisplayTitle(activeTab);
+  const topicbarWorkspaceLabel = input.draft?.workspaceLabel ?? (activeTab ? tabWorkspaceTitle(activeTab) : "");
   const topicbarWorkspacePath = activeTab?.scope === "project" ? activeTab.workspaceRoot || input.cwd : "";
-  const topicbarImSource = activeTab?.scope === "global" && activeTab.topicId ? input.imTopicSources[activeTab.topicId] : undefined;
-  const topicbarImSourceLabel = imDetail
-    ? imDetail.platformLabel
-    : topicbarImSource ? t("msg.fromIm", { source: topicbarImSource.label }) : "";
-  const topicbarImSourcePlatform = imDetail?.platform ?? topicbarImSource?.platform;
-  const topicbarSubtitleVisible = Boolean(activeTab?.isolatedWorktree || topicbarImSourceLabel);
-  const topicbarSubtitleTitle = imDetail
-    ? [topicbarWorkspaceLabel, topicbarImSourceLabel, sidebarImScopeLabel(imDetail, t)].filter(Boolean).join(" · ")
-    : [topicbarWorkspacePath || topicbarWorkspaceLabel, topicbarImSourceLabel].filter(Boolean).join(" · ");
-  const topicbarCanRename = !input.draft && !imDetail && (Boolean(activeTab?.topicId) || Boolean(activeTab?.remote));
+  const topicbarSubtitleVisible = Boolean(activeTab?.isolatedWorktree);
+  const topicbarSubtitleTitle = topicbarWorkspacePath || topicbarWorkspaceLabel;
+  const topicbarCanRename = !input.draft && (Boolean(activeTab?.topicId) || Boolean(activeTab?.remote));
   return {
     automationReturn: input.automationReturn,
-    automationReturnLabel: locale === "en" ? "Back to automation" : locale === "zh-TW" ? "返回自動化" : "返回自动化",
+    automationReturnLabel: locale === "en" ? "Back to automation" : "返回自动化",
     chromeHidden: input.chromeHidden,
     brand: input.windowsBrand,
     sidebar: input.sidebar,
-    title: { text: topicbarTitle, hover: !topicbarCanRename && imDetail ? topicbarTitle : topicTitle(activeTab),
+    title: { text: topicbarTitle, hover: topicTitle(activeTab),
       renameLabel: t("topicBar.renameSession"), editing: input.rename.editing, draft: input.rename.draft,
       canRename: topicbarCanRename, workspaceLabel: topicbarWorkspaceLabel },
     subtitle: { visible: topicbarSubtitleVisible, title: topicbarSubtitleTitle, worktreeTabId: activeTab?.isolatedWorktree ? activeTab.id : undefined,
       mergeLabel: t("worktree.mergeAction"), mergeTooltip: t("worktree.mergeButtonTooltip"),
-      sourcePlatform: topicbarImSourcePlatform, sourceLabel: topicbarImSourceLabel },
+      sourcePlatform: undefined, sourceLabel: "" },
   };
 }
 
@@ -62,7 +52,6 @@ export function TopicbarActionsStack(props: {
   t: Translator;
   activeTab: TabMeta | undefined;
   activeTabId: string | undefined;
-  imDetailActive: boolean;
   dismissSignal: number;
   sessionHasContent: boolean;
   exportCommands: {
@@ -77,21 +66,21 @@ export function TopicbarActionsStack(props: {
   dockToggle: ReactNode;
   launcherToggle?: ReactNode;
 }) {
-  const { t, activeTab, imDetailActive } = props;
+  const { t, activeTab } = props;
   return (
     <div className="topicbar__actions">
       {props.launcherToggle}
       <TopicbarActionsRegion sessionIdentity={activeTab?.id}
-        external={shouldMountExternalOpener(activeTab, imDetailActive) && activeTab
+        external={shouldMountExternalOpener(activeTab) && activeTab
           ? { tabId: activeTab.id, dismissSignal: props.dismissSignal } : undefined}
-        session={!imDetailActive ? {
+        session={{
           sessionHasContent: props.sessionHasContent,
           getSessionMarkdown: props.exportCommands.getSessionMarkdown,
           exportSession: (format) => void props.exportCommands.exportSession(format),
           toggleTerminal: props.terminal.toggle, terminalEnabled: props.terminal.enabled,
           terminalOpen: props.terminal.open, prefetchTerminal: props.terminal.prefetch,
           openSessionSummary: () => props.setTasksOpen((open) => open ? false : "session"), tasksOpen: Boolean(props.tasksOpen),
-        } : undefined}
+        }}
       />
       {props.dockToggle}
       {props.tasksOpen && (

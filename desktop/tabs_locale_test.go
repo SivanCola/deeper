@@ -19,7 +19,8 @@ func TestDefaultTopicTitleLocalizesAtAPIBoundary(t *testing.T) {
 	}{
 		{locale: "en-US", want: defaultTopicTitleEn},
 		{locale: "zh-CN", want: defaultTopicTitle},
-		{locale: "zh-TW", want: defaultTopicTitleZhTW},
+		// zh-TW retired: a traditional locale resolves to the simplified title.
+		{locale: "zh-TW", want: defaultTopicTitle},
 	} {
 		app.setDesktopLocale(tt.locale)
 		if got := app.localizedTopicTitle(defaultTopicTitle, topicTitleSourceAuto); got != tt.want {
@@ -36,7 +37,7 @@ func TestManualDefaultTopicTitleIsNotLocalized(t *testing.T) {
 	}{
 		{locale: "zh-CN", title: defaultTopicTitleEn},
 		{locale: "en-US", title: defaultTopicTitle},
-		{locale: "zh-CN", title: defaultTopicTitleZhTW},
+		{locale: "zh-CN", title: "新的會話"},
 	} {
 		app.setDesktopLocale(tt.locale)
 		if got := app.localizedTopicTitle(tt.title, topicTitleSourceManual); got != tt.title {
@@ -86,7 +87,9 @@ func TestCreateTopicPreservesManualDefaultTitle(t *testing.T) {
 }
 
 func TestDefaultTopicTitleVariantsRemainPersistenceSentinels(t *testing.T) {
-	for _, title := range []string{defaultTopicTitle, defaultTopicTitleEn, defaultTopicTitleZhTW} {
+	// Includes the retired zh-TW default so legacy stored titles keep counting
+	// as untitled.
+	for _, title := range []string{defaultTopicTitle, defaultTopicTitleEn, "新的會話"} {
 		if !isDefaultTopicTitle(title) {
 			t.Fatalf("title %q was not recognized as a default sentinel", title)
 		}
@@ -103,8 +106,8 @@ func TestForkTopicTitleUsesHarnessNumbering(t *testing.T) {
 		t.Fatalf("English fork title = %q", got)
 	}
 	app.setDesktopLocale("zh-TW")
-	if got := app.forkTopicTitle(defaultTopicTitle); got != "新的會話 (1)" {
-		t.Fatalf("Traditional Chinese fork title = %q", got)
+	if got := app.forkTopicTitle(defaultTopicTitle); got != "新的会话 (1)" {
+		t.Fatalf("Traditional Chinese locale fork title = %q, want simplified default", got)
 	}
 	app.desktopLocale.Store(desktopLocaleUnknown)
 	if got := app.forkTopicTitle(""); got != "新的会话 (1)" {
@@ -156,7 +159,7 @@ func TestSetTrayLocalePublishesPresentationWithoutHistoryDiscovery(t *testing.T)
 	app.projectTreeChangedHook = func() { notifications++ }
 	// The renderer sends this after every mount, including a restored launch
 	// whose initial background discovery may already have dispatched.
-	for _, locale := range []string{"en", "en", "zh-CN", "zh-TW"} {
+	for _, locale := range []string{"en", "en", "zh-CN", "zh"} {
 		if err := app.SetTrayLocale(locale); err != nil {
 			t.Fatal(err)
 		}

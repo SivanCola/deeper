@@ -75,8 +75,6 @@ export type AppRuntimeViewProps = {
   local: {
     tasksOpen: false | "session" | "all";
     setTasksOpen: React.Dispatch<React.SetStateAction<false | "session" | "all">>;
-    sidebarImDetailConnectionId: string;
-    setSidebarImDetailConnectionId: React.Dispatch<React.SetStateAction<string>>;
     tabRevealSignal: number;
     histView: HistoryViewState | null;
     projectRevision: number;
@@ -115,7 +113,7 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
   const { windowsFramelessChrome, mainWindowMaximised } = shell;
   const activeRemoteRef = useActiveRemoteRef(activeTab);
   const {
-    conversationView, visibleRuntimeState, sidebarImDetailConnection,
+    conversationView, visibleRuntimeState,
     surfaceWorkspacePanelRenderable, surfaceWorkspacePanelGridOpen, surfaceWorkspacePanelOverlay, terminalSurfaceOpen,
     controllerReady, decisionSurface, visibleDecisionSurface, composerSurfaceHidden,
     shellGeometry, appRef, layoutRef, footerHeight, footerRef,
@@ -155,7 +153,6 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
     platform: shell.desktopPlatform,
     windowsFrameless: windowsFramelessChrome,
     browserPreview: browserPreviewChrome,
-    imDetailActive: Boolean(sidebarImDetailConnection),
     sidebarCollapsed: shell.sidebarCollapsed,
     sidebarResizing: shell.sidebarResizing,
     dockGridOpen: surfaceWorkspacePanelGridOpen,
@@ -244,7 +241,7 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
           projectTree: {
             activeTab: activeTab,
             activeRemote: activeRemoteRef,
-            imTopicSources: shell.preferences.imTopicSources, refreshSignal: local.projectRevision,
+            refreshSignal: local.projectRevision,
             searchExpanded: true, searchFocusSignal: shell.sidebarSearchFocusSignal,
             showShortcutBadges: navigation.topicShortcuts.showTopicBadges, shortcutPlatform: shell.desktopPlatform,
             onVisibleTopicsChange: navigation.topicShortcuts.handleVisibleTopicsChange,
@@ -263,7 +260,6 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
 
         <TopicbarRegion view={buildTopicbarView({
             t, locale, activeTab: activeTab, cwd: state.meta?.cwd,
-            imDetail: sidebarImDetailConnection, imTopicSources: shell.preferences.imTopicSources,
             chromeHidden: workbenchChromeHidden, windowsBrand: windowsFramelessChrome,
             automationReturn: shell.automationReturn,
             sidebar: { title: navigation.sidebarToggleTitle, blocked: navigation.sidebarExpandBlocked, pressed: shell.sidebarTogglePressed, collapsed: shell.sidebarCollapsed },
@@ -277,7 +273,6 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
               t={t}
               activeTab={activeTab}
               activeTabId={activeTabId}
-              imDetailActive={Boolean(sidebarImDetailConnection)}
               dismissSignal={shell.transientOverlayDismissSignal}
               sessionHasContent={session.sessionHasContent}
               exportCommands={session.sessionExportCommands}
@@ -319,13 +314,6 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
             // not share the local runtime/cache ownership model.
             transitioning={presentationTransitioning}
             t={t}
-            imDetail={sidebarImDetailConnection ? {
-              connection: sidebarImDetailConnection,
-              onClose: () => local.setSidebarImDetailConnectionId(""),
-              onOpenSettings: chromeCommands.openBotSettings,
-              onManageAllowlist: chromeCommands.openBotAllowlistSettings,
-              onOpenSession: (connection) => void navigationCommands.openSidebarImConnectionSession(connection),
-            } : null}
             remote={activeTab?.remote ? { tab: activeTab, session: core.remoteSession } : undefined}
             launcher={session.workspacePanelCommands.launcherCardMounted && !core.remoteSurfaceActive ? (
               <Suspense fallback={null}>
@@ -333,7 +321,7 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
                   tabId={activeTabId ?? ""}
                   scopeKey={session.workspaceScopeKey}
                   workspaceRoot={activeTab?.workspaceRoot ?? state.meta?.cwd ?? ""}
-                  visible={!shell.managementActive && !sidebarImDetailConnection}
+                  visible={!shell.managementActive}
                   onSelect={session.workspacePanelCommands.openDockEntry}
                   gitBranch={state.meta?.gitBranch}
                   onSpaceModeChange={session.workspacePanelCommands.setLauncherSpaceMode}
@@ -372,8 +360,8 @@ export function AppRuntimeView(props: AppRuntimeViewProps) {
             }}
           />
           <DecisionFooterRegion
-            hidden={Boolean(sidebarImDetailConnection)}
-            creationNotice={!core.remoteSurfaceActive && !sidebarImDetailConnection ? <Suspense fallback={null}>
+            hidden={false}
+            creationNotice={!core.remoteSurfaceActive ? <Suspense fallback={null}>
               <ManualSessionRecovery
                 key={`${runtime.navigation.currentNavigationIntent()}:${activeTab?.session?.sessionId ?? ""}`}
                 sessionId={core.surface.surface?.phase === "source-retained" ? undefined : activeTab?.session?.sessionId}

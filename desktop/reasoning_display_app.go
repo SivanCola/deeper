@@ -12,15 +12,15 @@ import (
 func desktopStartupSettingsFromConfig(cfg *config.Config) DesktopStartupSettingsView {
 	if cfg == nil {
 		return DesktopStartupSettingsView{
-			Bot: botSettingsView(config.BotConfig{}), DesktopLayoutStyle: "workbench",
-			DesktopTheme: "auto", DesktopThemeStyle: "graphite", DesktopTerminalTheme: "auto",
+			DesktopLayoutStyle: "workbench",
+			DesktopTheme:       "auto", DesktopThemeStyle: "graphite", DesktopTerminalTheme: "auto",
 			SessionExperience: "standard", StatusBarStyle: "icon",
 			StatusBarItems: config.DefaultDesktopStatusBarItems(), CheckUpdates: false, UpdaterEnabled: desktopUpdaterEnabled(),
 			UpdateChannel: "stable", ConversationWidth: "standard",
 		}
 	}
 	return DesktopStartupSettingsView{
-		Bot: botSettingsView(cfg.Bot), DesktopLanguage: cfg.DesktopLanguage(),
+		DesktopLanguage:    cfg.DesktopLanguage(),
 		DesktopLayoutStyle: cfg.DesktopLayoutStyle(), DesktopTheme: cfg.DesktopTheme(),
 		DesktopThemeStyle: cfg.DesktopThemeStyle(), DesktopTerminalTheme: cfg.DesktopTerminalTheme(),
 		SessionExperience: cfg.DesktopSessionExperience(),
@@ -52,8 +52,8 @@ func (a *App) defaultSettingsView() SettingsView {
 			ReasoningLanguage: "auto",
 			CompactRatio:      defaults.Agent.CompactRatio, EffectiveCompactRatio: defaults.Agent.CompactRatio,
 		},
-		Bot: botSettingsView(config.BotConfig{}), DesktopLayoutStyle: "workbench",
-		DesktopTheme: "auto", DesktopThemeStyle: "graphite", DesktopTerminalTheme: "auto",
+		DesktopLayoutStyle: "workbench",
+		DesktopTheme:       "auto", DesktopThemeStyle: "graphite", DesktopTerminalTheme: "auto",
 		CloseBehavior:  "background",
 		StatusBarStyle: "icon", StatusBarItems: config.DefaultDesktopStatusBarItems(), SessionExperience: "standard",
 		DefaultToolApprovalMode: "workspace-write", CheckUpdates: false, UpdaterEnabled: desktopUpdaterEnabled(), UpdateChannel: "stable",

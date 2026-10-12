@@ -3,7 +3,6 @@ import { Transcript, type TranscriptProps } from "../components/Transcript";
 import { SessionRecoveryBanner, SessionRecoveryPlaceholder } from "../components/SessionRecoveryBanner";
 import { SessionLoadingIndicator } from "../components/SessionLoadingIndicator";
 import { NoticePreviewPanel, noticePreviewMockEnabled } from "./NoticePreviewPanel";
-import type { SidebarImConnection } from "../app-runtime/sidebarImProjection";
 import type { TabMeta } from "../lib/types";
 import type { State } from "../lib/useController";
 import type { RemoteSessionApi } from "../lib/useRemoteSession";
@@ -13,7 +12,6 @@ import type { SessionAvailability } from "../lib/sessionAvailability";
 import { orderedLocalSubmissions } from "../lib/localSubmissionState";
 
 const RemoteSessionSurface = lazy(() => import("../components/RemoteSessionSurface").then((module) => ({ default: module.RemoteSessionSurface })));
-const SidebarImConnectionDetail = lazy(() => import("./SidebarImConnectionDetail").then((module) => ({ default: module.SidebarImConnectionDetail })));
 
 export type ChatPaneTranscriptInput = {
   state: State;
@@ -41,13 +39,6 @@ export type ChatPaneTranscriptInput = {
 export type ChatPaneRegionProps = {
   transitioning: boolean;
   t: Translator;
-  imDetail: {
-    connection: SidebarImConnection;
-    onClose: () => void;
-    onOpenSettings: () => void;
-    onManageAllowlist: (connectionId: string) => void;
-    onOpenSession: (connection: SidebarImConnection) => void;
-  } | null;
   remote: { tab: TabMeta; session: RemoteSessionApi } | undefined;
   /** Floating dock launcher card, mounted over the transcript's right edge. */
   launcher?: ReactNode;
@@ -83,7 +74,7 @@ export function ChatPaneRegion(props: ChatPaneRegionProps) {
       ? "loading"
       : null;
   const noticePreview = noticePreviewMockEnabled();
-  if (props.remote && !(props.imDetail && !transitioning) && !noticePreview) {
+  if (props.remote && !noticePreview) {
     return <Suspense fallback={null}><RemoteSessionSurface tab={props.remote.tab} session={props.remote.session}
       surfaceCommitToken={transcript.surfaceCommitToken} onSurfacePaintReady={commands.onSurfacePaintReady} /></Suspense>;
   }
@@ -94,18 +85,10 @@ export function ChatPaneRegion(props: ChatPaneRegionProps) {
     || (transcript.availability.kind === "loading" && (transcript.availability.source !== "runtime" || recoveringEmpty)));
   return (
     <>
-    {!transitioning && !props.imDetail && !noticePreview && <SessionRecoveryBanner key={transcript.geometrySessionKey ?? transcript.tabId}
+    {!transitioning && !noticePreview && <SessionRecoveryBanner key={transcript.geometrySessionKey ?? transcript.tabId}
       availability={transcript.availability} onRetry={props.onRetryHistory} />}
     <main className="main">
-      {props.imDetail && !transitioning ? (
-        <SidebarImConnectionDetail
-          connection={props.imDetail.connection}
-          onClose={props.imDetail.onClose}
-          onOpenSettings={props.imDetail.onOpenSettings}
-          onManageAllowlist={() => props.imDetail!.onManageAllowlist(props.imDetail!.connection.connectionId)}
-          onOpenSession={() => props.imDetail!.onOpenSession(props.imDetail!.connection)}
-        />
-      ) : noticePreview ? (
+      {noticePreview ? (
         <NoticePreviewPanel />
       ) : (
         <>

@@ -24,6 +24,23 @@ func (r *exactTurnRunner) Run(ctx context.Context, _ string) error {
 	return ctx.Err()
 }
 
+// waitTabSinkSettled blocks until the sink's turn reservation has been released
+// by TurnDone, i.e. the turn reached its terminal state.
+func waitTabSinkSettled(t *testing.T, sink *tabEventSink) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		sink.mu.RLock()
+		idle := sink.turn.phase == turnSubmissionIdle
+		sink.mu.RUnlock()
+		if idle {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("turn did not reach terminal state")
+}
+
 func cleanupExactTurnController(t *testing.T, ctrl *control.Controller) {
 	t.Helper()
 	t.Cleanup(func() {
@@ -40,12 +57,6 @@ func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 	dir := t.TempDir()
 	runner := &exactTurnRunner{started: make(chan struct{})}
 	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
-	terminal := make(chan event.Event, 1)
-	sink.SetBotSink(event.FuncSink(func(e event.Event) {
-		if e.Kind == event.TurnDone {
-			terminal <- e
-		}
-	}))
 	ctrl := control.New(control.Options{
 		Runner: runner, Sink: sink, SessionDir: dir,
 		SessionPath: filepath.Join(dir, "session.jsonl"),
@@ -88,14 +99,7 @@ func TestTurnRuntimeAPIRoutesStopAnswerAndReplayByExactTurn(t *testing.T) {
 	if err := app.InterruptTurnForTab(tab.ID, start.TurnID); err != nil {
 		t.Fatalf("InterruptTurnForTab: %v", err)
 	}
-	select {
-	case done := <-terminal:
-		if done.Status != event.TurnInterrupted {
-			t.Fatalf("terminal status = %q, want interrupted", done.Status)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("turn did not reach terminal state after exact interrupt")
-	}
+	waitTabSinkSettled(t, sink)
 	after, err := app.TurnEventsForTab(tab.ID, before.Events[len(before.Events)-1].Sequence)
 	if err != nil {
 		t.Fatalf("TurnEventsForTab after cancel: %v", err)
@@ -118,12 +122,6 @@ func TestInterruptTurnForTabStopsActiveWorkDespiteStaleTurnID(t *testing.T) {
 	dir := t.TempDir()
 	runner := &exactTurnRunner{started: make(chan struct{})}
 	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
-	terminal := make(chan event.Event, 1)
-	sink.SetBotSink(event.FuncSink(func(e event.Event) {
-		if e.Kind == event.TurnDone {
-			terminal <- e
-		}
-	}))
 	ctrl := control.New(control.Options{
 		Runner: runner, Sink: sink, SessionDir: dir,
 		SessionPath: filepath.Join(dir, "session.jsonl"),
@@ -151,13 +149,9 @@ func TestInterruptTurnForTabStopsActiveWorkDespiteStaleTurnID(t *testing.T) {
 	if err := app.InterruptTurnForTab(tab.ID, "turn_stale"); err != nil {
 		t.Fatalf("stale-id stop = %v, want the active turn interrupted", err)
 	}
-	select {
-	case done := <-terminal:
-		if done.Status != event.TurnInterrupted {
-			t.Fatalf("terminal status = %q, want interrupted", done.Status)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("turn did not reach terminal state after stale-id stop")
+	waitTabSinkSettled(t, sink)
+	if status := ctrl.RuntimeStatus(); status.Running || status.Status != event.TurnInterrupted {
+		t.Fatalf("terminal status = %q (running=%v), want interrupted", status.Status, status.Running)
 	}
 }
 
@@ -190,12 +184,6 @@ func TestStartTurnForTabRejectsManagementDuringActiveTurn(t *testing.T) {
 	dir := t.TempDir()
 	runner := &exactTurnRunner{started: make(chan struct{})}
 	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
-	terminal := make(chan event.Event, 1)
-	sink.SetBotSink(event.FuncSink(func(e event.Event) {
-		if e.Kind == event.TurnDone {
-			terminal <- e
-		}
-	}))
 	ctrl := control.New(control.Options{
 		Runner: runner, Sink: sink, SessionDir: dir,
 		SessionPath: filepath.Join(dir, "session.jsonl"),
@@ -222,11 +210,7 @@ func TestStartTurnForTabRejectsManagementDuringActiveTurn(t *testing.T) {
 		t.Fatalf("active turn changed after rejected management command: %+v", status)
 	}
 	ctrl.Cancel()
-	select {
-	case <-terminal:
-	case <-time.After(5 * time.Second):
-		t.Fatal("turn did not finish after cancellation")
-	}
+	waitTabSinkSettled(t, sink)
 }
 
 // The turn id belongs to the controller that admitted the submission. A tab

@@ -153,40 +153,35 @@ func TestMaintenanceLifecycleDurableOutsideTurn(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer reader.CloseAll(context.Background())
-			deadline := time.Now().Add(5 * time.Second)
-			for {
-				window, err := reader.Query().ReadHistoryWindow(t.Context(), runtime.Ref(), session.HistoryWindowRequest{Anchor: "newest", Limit: 10})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if window.Status == "preparing" && time.Now().Before(deadline) {
-					time.Sleep(time.Millisecond)
-					continue
-				}
-				if window.Status != "ready" {
-					t.Fatalf("history status = %s", window.Status)
-				}
-				var count int
-				for _, row := range window.Messages {
-					if row.MessageID == "maintenance:"+op.id {
-						count++
-						var message provider.Message
-						if err := json.Unmarshal(row.Inline, &message); err != nil {
-							t.Fatal(err)
-						}
-						var info event.SessionOperationInfo
-						if err := json.Unmarshal([]byte(message.Content), &info); err != nil {
-							t.Fatal(err)
-						}
-						if info.Status != status || info.OperationRevision != 3 {
-							t.Fatalf("history terminal = %+v", info)
-						}
+			if _, err := reader.Query().HistoryShape(t.Context(), runtime.Ref()); err != nil {
+				t.Fatal(err)
+			}
+			window, err := reader.Query().ReadHistoryWindow(t.Context(), runtime.Ref(), session.HistoryWindowRequest{Anchor: "newest", Limit: 10})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if window.Status != "ready" {
+				t.Fatalf("history status = %s", window.Status)
+			}
+			var count int
+			for _, row := range window.Messages {
+				if row.MessageID == "maintenance:"+op.id {
+					count++
+					var message provider.Message
+					if err := json.Unmarshal(row.Inline, &message); err != nil {
+						t.Fatal(err)
+					}
+					var info event.SessionOperationInfo
+					if err := json.Unmarshal([]byte(message.Content), &info); err != nil {
+						t.Fatal(err)
+					}
+					if info.Status != status || info.OperationRevision != 3 {
+						t.Fatalf("history terminal = %+v", info)
 					}
 				}
-				if count != 1 {
-					t.Fatalf("maintenance history rows = %d", count)
-				}
-				break
+			}
+			if count != 1 {
+				t.Fatalf("maintenance history rows = %d", count)
 			}
 		})
 	}

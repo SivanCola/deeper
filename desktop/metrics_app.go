@@ -251,26 +251,6 @@ func (m *metricsAggregator) observeSettingsSnapshot(c *config.Config) {
 	for _, name := range c.Desktop.ProviderAccess {
 		m.inc("settings_provider_access", safeProviderAccessBucket(c, name))
 	}
-	m.observeBotSettingsSnapshot(c)
-}
-
-func (m *metricsAggregator) observeBotSettingsSnapshot(c *config.Config) {
-	bot := c.Bot
-	m.inc("settings_bot_enabled", boolBucket(bot.Enabled))
-	m.inc("settings_bot_model", safeModelBucket(c, bot.Model))
-	m.inc("settings_bot_tool_approval", knownBucketDefault(bot.ToolApprovalMode, "workspace-write", "read-only", "workspace-write", "danger-full-access", "ask", "auto", "yolo"))
-	m.inc("settings_bot_qq_enabled", boolBucket(bot.QQ.Enabled))
-	m.inc("settings_bot_feishu_enabled", boolBucket(bot.Feishu.Enabled))
-	m.inc("settings_bot_weixin_enabled", boolBucket(bot.Weixin.Enabled))
-	m.inc("settings_bot_connection_count", countBucket(len(bot.Connections)))
-	for _, conn := range bot.Connections {
-		provider := knownBucket(conn.Provider, "qq", "feishu", "weixin")
-		m.inc("settings_bot_connection_provider", provider)
-		m.inc("settings_bot_connection_enabled", boolBucket(conn.Enabled))
-		m.inc("settings_bot_connection_status", knownBucket(conn.Status, "disconnected", "pending", "connected", "error"))
-		m.inc("settings_bot_connection_model", safeModelBucket(c, conn.Model))
-		m.inc("settings_bot_connection_approval", knownBucketDefault(conn.ToolApprovalMode, "default", "default", "read-only", "workspace-write", "danger-full-access", "ask", "auto", "yolo"))
-	}
 }
 
 func (a *App) recordSettingsMetricsSnapshot(c *config.Config) {

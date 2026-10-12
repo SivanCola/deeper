@@ -8,7 +8,7 @@ This record distinguishes implemented behavior from release qualification. The c
 | Validate and compare before persistence; unknown fields retained | `internal/config/model_settings_edit.go`, unified API operation allowlist | `TestModelSettingsRequestRejectsStaleEdit`, `TestSaveModelSettingsPreservesUnknownFields`, catalog overlap tests |
 | Copy-on-write credentials, grouped connections, failure recovery | `internal/config/model_credential_commit.go` | `TestModelSettingsGroupedCredentialCommitAndReceipt`, `TestModelSettingsFailedCommitCleansOnlyItsStagedCredential`, `TestModelSettingsCredentialWriteFailureKeepsConfig` |
 | Current tool continuation retains its connection; next run refreshes | `internal/config/model_runtime_snapshot.go`, `internal/boot/boot.go`, `desktop/turn_admission.go` | `TestModelSettingsRunningToolContinuationKeepsOldConnection`, frozen-credential tests |
-| FIFO follow-ups and bot requests use the new-run boundary | `internal/control/inbox_dispatch.go`, `internal/bot/model_settings.go` | `TestModelSettingsQueuedFollowupAppliesLatestBeforeDispatch`, `TestBotNewRunAppliesModelSettingsAndKeepsSessionOnFailure` |
+| FIFO follow-ups use the new-run boundary | `internal/control/inbox_dispatch.go` | `TestModelSettingsQueuedFollowupAppliesLatestBeforeDispatch` |
 | Per-project and inactive/detached application | Runtime-owner lookup and existing Desktop rebuild boundary | `TestModelSettingsProjectOverrideSkipsRebuild`, `TestModelSettingsRemovalRetryKeepsFailedTargetAndAppliesInactiveSibling`, `TestModelSettingsRetryAppliesDetachedRuntimeWithoutCreatingTab` |
 | Startup and consecutive-save publication fencing | Startup model revision check and versioned deferred rebuild entries | `TestModelSettingsStartupPublicationRejectsCandidateBuiltBeforeSave`, deferred rebuild tests |
 | Final lease invalidation preserves the old runtime and permits a safe retry | Final authority bind, fail-closed admission and refreshed authority before migration snapshot | `TestModelSettingsFinalAuthorityFailurePreservesRuntimeAndRecovers` releases the real lease immediately before final bind |
@@ -34,7 +34,7 @@ Run focused tests first, then race coverage for shared ownership, both Go module
 
 ```sh
 go test -p 4 ./...
-go test -race ./internal/config ./internal/boot ./internal/control ./internal/bot ./internal/serve
+go test -race ./internal/config ./internal/boot ./internal/control ./internal/serve
 (cd desktop && node ../scripts/desktop-windows-go-tests.mjs --all)
 (cd desktop && go test -race . -run 'TestModelSettings|TestRemoteModel|TestCredentialProxy|TestDeferred')
 (cd desktop/frontend && pnpm typecheck && pnpm test:all && pnpm build)

@@ -8,7 +8,6 @@ import { ToolCard } from "../components/ToolCard";
 import { localizedNoticeText } from "../lib/controllerNotices";
 import { LocaleProvider } from "../lib/i18n";
 import { zh } from "../locales/zh";
-import { zhTW } from "../locales/zh-TW";
 import { initialState, reducer, type Item } from "../lib/useController";
 
 type ToolItem = Extract<Item, { kind: "tool" }>;
@@ -221,7 +220,6 @@ eq(
   "localizedNoticeText maps turn_stalled to the English copy",
 );
 eq(zh["notice.turnStalled"], "已经有一段时间没有任何进展。回合仍在运行；如果看起来卡住了，请点击停止。", "zh copy for turn_stalled");
-eq(zhTW["notice.turnStalled"], "已經有一段時間沒有任何進展。回合仍在執行；如果看起來卡住了，請點擊停止。", "zh-TW copy for turn_stalled");
 
 Date.now = originalNow;
 console.log(`\n${passed} passed, ${failed} failed, ${passed + failed} total`);

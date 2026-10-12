@@ -1,7 +1,7 @@
 import { useCommittedCommand } from "../lib/useCommittedCommand";
 import { asArray } from "../lib/array";
 import { resolveTaskMonitorSession } from "../lib/taskMonitorNavigation";
-import { taskSessionIDFromPath, type SidebarImConnection } from "./sidebarImProjection";
+import { taskSessionIDFromPath } from "./sessionPathId";
 import { sessionCreationTargetForTab } from "./sessionCreationTarget";
 import type { useDesktopNavigation } from "./useDesktopNavigation";
 import type { WorkspaceNavigationPorts } from "./navigationOwner";
@@ -17,7 +17,6 @@ export type SessionNavigationCommandsInput = {
   activeTab: TabMeta | undefined;
   showToast: (message: string, level: "error") => void;
   closeTransientOverlays: () => void;
-  clearImDetail: () => void;
   prepareBlankWorkspace: (workspaceRoot?: string) => void;
   navigation: Pick<ReturnType<typeof useDesktopNavigation>, "enqueueNavigation" | "enqueueNavigationWithIntent" | "openRemoteProject">;
   noteNavigationIntent: () => number;
@@ -92,7 +91,6 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
 
   const handleNewTab = useCommittedCommand(async () => {
     input.closeTransientOverlays();
-    input.clearImDetail();
     if (activeTab?.remote) {
       const navigationIntentSeq = input.noteNavigationIntent();
       if (!input.isNavigationIntentCurrent(navigationIntentSeq)) return;
@@ -109,18 +107,10 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     const navigationIntentSeq = input.noteNavigationIntent();
     if (!input.isNavigationIntentCurrent(navigationIntentSeq)) return;
     input.closeTransientOverlays();
-    input.clearImDetail();
     if (sessionPath?.startsWith("session-id:")) {
       return navigation.enqueueNavigationWithIntent({ kind: "canonical-session", ref: { hostId: "local", sessionId: sessionPath.slice("session-id:".length) } }, navigationIntentSeq);
     }
     return navigation.enqueueNavigationWithIntent({ kind: "topic", scope, workspaceRoot, topicId, sessionPath }, navigationIntentSeq);
-  });
-
-  const openSidebarImConnectionSession = useCommittedCommand(async (connection: SidebarImConnection): Promise<void> => {
-    const navigationIntentSeq = input.noteNavigationIntent();
-    if (!input.isNavigationIntentCurrent(navigationIntentSeq)) return;
-    input.clearImDetail();
-    return navigation.enqueueNavigationWithIntent({ kind: "sidebar-im", connection }, navigationIntentSeq);
   });
 
   const onResumeSession = useCommittedCommand(async (session: SessionMeta): Promise<void> => {
@@ -132,7 +122,6 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     const navigationIntentSeq = input.noteNavigationIntent();
     if (!input.isNavigationIntentCurrent(navigationIntentSeq)) return;
     input.closeTransientOverlays();
-    input.clearImDetail();
     return navigation.enqueueNavigationWithIntent({ kind: "canonical-session", ref }, navigationIntentSeq);
   });
 
@@ -205,7 +194,6 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     openBlankSession,
     handleNewTab,
     handleOpenTopic,
-    openSidebarImConnectionSession,
     onResumeSession,
     onRecoveryCreated,
     onRecoveryLineageChanged,

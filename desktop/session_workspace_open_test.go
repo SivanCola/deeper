@@ -9,11 +9,9 @@ import (
 	"testing"
 
 	"deepzora/internal/boot"
-	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
-	"deepzora/internal/transcript"
 )
 
 func canonicalWorkspaceOpenFixture(t *testing.T) (*App, *WorkspaceTab, *session.Runtime, string, string) {
@@ -113,92 +111,6 @@ func TestCanonicalOpenFailurePreservesSource(t *testing.T) {
 	}
 	if err := ctrl.Snapshot(); err != nil {
 		t.Fatalf("source lost its writer: %v", err)
-	}
-}
-
-func TestEmbeddedBotSessionOpensReadOnlyFromSidebar(t *testing.T) {
-	app, _, _, root, _ := canonicalWorkspaceOpenFixture(t)
-	botRoot := session.RootForSessionDir(config.ProjectSessionDir(root))
-	bot, err := app.projectSessionService(botRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtime, err := bot.Create(t.Context(), session.CreateOptions{SessionID: "bot-conversation", CWD: root, Origin: session.SessionOriginNew})
-	if err != nil {
-		t.Fatal(err)
-	}
-	appendSessionTestMessage(t, runtime, "bot-message", provider.Message{ID: "bot-message", Role: provider.RoleAssistant, Content: "reply from bot"})
-	meta, err := app.openTopicSession("project", root, "", embeddedBotSessionPrefix+runtime.Ref().SessionID)
-	if err != nil {
-		t.Fatalf("open project bot session from Bots sidebar: %v", err)
-	}
-	if !meta.ReadOnly {
-		t.Fatal("bot transcript was opened writable")
-	}
-	opened := waitForTabReady(t, app, meta.ID)
-	if opened.Ctrl == nil || !opened.ReadOnly {
-		t.Fatal("bot transcript did not finish as a read-only controller")
-	}
-	if history := opened.Ctrl.History(); len(history) == 0 || history[len(history)-1].Content != "reply from bot" {
-		t.Fatalf("read project bot history: %+v", history)
-	}
-	update, err := json.Marshal(map[string]any{"message": provider.Message{ID: "bot-live", Role: provider.RoleAssistant, Content: "continued from bot"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := runtime.Session().AppendBatch(t.Context(), "bot-live", []session.Event{{Kind: "message/complete", Payload: update}}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := runtime.Session().Flush(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	if history := opened.Ctrl.History(); len(history) == 0 || history[len(history)-1].Content != "continued from bot" {
-		t.Fatalf("desktop missed bot's live append: %+v", history)
-	}
-	snapshot, err := app.TranscriptSnapshotForTab(meta.ID, transcript.PageRequest{})
-	if err != nil || snapshot.Identity.SessionID != runtime.Ref().SessionID || snapshot.TotalRecords < 2 {
-		t.Fatalf("desktop transcript projection missed bot update: %+v, %v", snapshot, err)
-	}
-}
-
-func TestEmbeddedBotSessionOpenRejectsAnotherWorkspace(t *testing.T) {
-	app, tab, _, root, _ := canonicalWorkspaceOpenFixture(t)
-	botRoot := session.RootForSessionDir(config.ProjectSessionDir(root))
-	bot, err := app.projectSessionService(botRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := bot.Create(t.Context(), session.CreateOptions{SessionID: "wrong-workspace", CWD: tab.WorkspaceRoot, Origin: session.SessionOriginNew}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := app.openTopicSession("project", root, "", embeddedBotSessionPrefix+"wrong-workspace"); !errors.Is(err, errSessionWorkspaceConflict) {
-		t.Fatalf("cross-workspace bot session was accepted: %v", err)
-	}
-}
-
-func TestEmbeddedGlobalBotSessionOpensFromSidebar(t *testing.T) {
-	app, _, _, _, _ := canonicalWorkspaceOpenFixture(t)
-	root := globalTabWorkspaceRoot()
-	botRoot := session.RootForSessionDir(config.ProjectSessionDir(root))
-	bot, err := app.projectSessionService(botRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtime, err := bot.Create(t.Context(), session.CreateOptions{SessionID: "global-bot", CWD: root, Origin: session.SessionOriginNew})
-	if err != nil {
-		t.Fatal(err)
-	}
-	appendSessionTestMessage(t, runtime, "global-bot-message", provider.Message{ID: "global-bot-message", Role: provider.RoleAssistant, Content: "global bot reply"})
-	meta, err := app.openTopicSession("global", "", "", embeddedBotSessionPrefix+runtime.Ref().SessionID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	opened := waitForTabReady(t, app, meta.ID)
-	if !opened.ReadOnly {
-		t.Fatal("global bot transcript opened writable")
-	}
-	if history := opened.Ctrl.History(); len(history) == 0 || history[len(history)-1].Content != "global bot reply" {
-		t.Fatalf("global bot history = %+v", history)
 	}
 }
 

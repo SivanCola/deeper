@@ -53,7 +53,7 @@ const appShellCSSGzip = appShellCSS.reduce((total, path) => total + gzipBytes(pa
 const largestInitialJS = Math.max(...initialJS.map(gzipBytes));
 const largestInitialJSRaw = Math.max(...initialJS.map((path) => statSync(path).size));
 const localeChunks = readdirSync(resolve(distDir, "assets"))
-  .filter((name) => /^(?:zh|zh-TW)-.+\.js$/.test(name))
+  .filter((name) => /^zh-.+\.js$/.test(name))
   .map((name) => resolve(distDir, "assets", name));
 
 console.log("\nbundle budgets");
@@ -236,8 +236,8 @@ if (initialCSS.length > 0) {
 // card, branch switcher, tab strip, add menu, empty-state picker and the
 // spacer that starts the panel below the topic bar).
 assertBudget("deferred app-shell CSS gzip", appShellCSSGzip, 121.2 * 1024);
-if (localeChunks.length !== 2) {
-  throw new Error(`expected 2 on-demand Chinese locale chunks, found ${localeChunks.length}`);
+if (localeChunks.length !== 1) {
+  throw new Error(`expected 1 on-demand Chinese locale chunk, found ${localeChunks.length}`);
 }
 for (const path of localeChunks) {
   const name = basename(path);
@@ -314,7 +314,9 @@ for (const path of localeChunks) {
   // 64606 / 65349 B, so both dialect ceilings ratchet to the next tenth.
   // Model-application copy on the read-pause base measures 64734 / 65499 B,
   // adding 128 / 150 B. Retain only the next one-decimal ceiling.
-  const budget = name.startsWith("zh-TW-") ? 64.0 * 1024 : 63.3 * 1024;
+  // The zh-TW locale was retired from the product; the single zh chunk keeps
+  // the next one-decimal ceiling it last measured under.
+  const budget = 63.3 * 1024;
   assertBudget(`${name} gzip`, gzipBytes(path), budget);
 }
 
@@ -561,6 +563,13 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // Ready-event cold-history joining adds 163 B locally (2106326 B versus
 // 2106163 B); retain the producer margin and round to the smallest 2057.2 KiB
 // ceiling that covers the same Linux build. Other bundle budgets stay fixed.
-const rawInitialBudgetKiB = 2_057.2;
+// Dependabot's npm group update (React 19.2.8 -> 19.3.0 and its type
+// packages) regrew the initial payload; the lockfile also restores
+// lucide-react 1.55.0 after the group snapshot briefly pinned 1.53.0. The
+// same-toolchain local build measures 2112631 B; preserve the established
+// 186 B Linux producer difference (2112817 B) and round to the smallest
+// 2063.4 KiB ceiling. Compressed, chunk, CSS, locale, and residency gates
+// stay unchanged.
+const rawInitialBudgetKiB = 2_063.4;
 assertBudget("initial raw JavaScript and CSS", rawInitialBytes, rawInitialBudgetKiB * 1024);
 assertBudget("largest initial JavaScript chunk raw", largestInitialJSRaw, 1_000 * 1024);

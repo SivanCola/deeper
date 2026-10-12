@@ -5,7 +5,7 @@ import { ProjectTreeSessionBadges } from "./ProjectTreeSessionBadges";
 import { sessionLifecycleFences } from "../lib/sessionLifecycleFences";
 import { projectSessionIdentity, projectSessionRowKey } from "../lib/projectSessionIdentity";
 import type { CSSProperties, DragEvent as ReactDragEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
-import { Archive, Pencil, Plus, Folder, FolderPlus, Search, BriefcaseBusiness, Copy, FolderOpen, XCircle, Check, ListCollapse, ListRestart, MessageSquare, Clock, Pin, MoreHorizontal, Minimize2, Maximize2, GitBranch, Sparkles, Cloud } from "lucide-react";
+import { Archive, Pencil, Plus, Folder, FolderPlus, Search, BriefcaseBusiness, Copy, FolderOpen, XCircle, Check, ListCollapse, ListRestart, Clock, Pin, MoreHorizontal, Minimize2, Maximize2, GitBranch, Sparkles, Cloud } from "lucide-react";
 import { asArray } from "../lib/array";
 import { defaultWorkspaceTitle } from "../lib/sessionTitles";
 import { useToast } from "../lib/toast";
@@ -107,7 +107,6 @@ export function ProjectTree({
   activeTopicId,
   activeSessionPath,
   activeRemote,
-  imTopicSources = {},
   variant = "workbench",
   onOpenTopic,
   onAddProject,
@@ -1223,10 +1222,6 @@ export function ProjectTree({
       const sessionPath = node.sessionPath?.trim() ?? "";
       const sessionTrashing = trashingSessions.has(projectSessionIdentity(node));
       const archiveTargetKey = sessionPath ? projectTreeSessionArchiveTargetKey(sessionPath) : projectTreeTopicArchiveTargetKey(scope, node.root ?? "", topicId);
-      const imSource = scope === "global" && topicId ? imTopicSources[topicId] : undefined;
-      const imSourceLabel = imSource?.label || "";
-      const imSourceTitle = imSourceLabel ? t("msg.fromIm", { source: imSourceLabel }) : "";
-      const imSourcePlatform = (imSource?.platform || "im").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "im";
       const recoveryLabel = node.recoveryState === "recovery_only"
         ? t("projectTree.recoveryOnly")
         : node.recovered
@@ -1235,7 +1230,7 @@ export function ProjectTree({
       const forkedFromLabel = node.sessionOrigin === "fork" && node.parentSession?.sessionId
         ? t("projectTree.forkedFrom", { source: node.parentSession.sessionId })
         : "";
-      const title = [node.preview || "", label, forkedFromLabel, recoveryLabel, imSourceTitle, statusLabel, metaFull, projectTreeDedupedExactTime(metaFull, exactTimeLabel)].filter(Boolean).join(" · ");
+      const title = [node.preview || "", label, forkedFromLabel, recoveryLabel, statusLabel, metaFull, projectTreeDedupedExactTime(metaFull, exactTimeLabel)].filter(Boolean).join(" · ");
       const topicMenuOpen = menuNodeKey === key;
       const pinned = Boolean(node.pinned);
       const pinLabel = t(pinned ? "projectTree.unpinTopic" : "projectTree.pinTopic");
@@ -1291,7 +1286,7 @@ export function ProjectTree({
         return (
           <div
             key={key}
-            className={`project-tree__topic project-tree__topic--editing${active ? " project-tree__topic--active" : ""}${imSource ? " project-tree__topic--im-source" : ""}${metaFull ? " project-tree__topic--has-meta" : ""}`}
+            className={`project-tree__topic project-tree__topic--editing${active ? " project-tree__topic--active" : ""}${metaFull ? " project-tree__topic--has-meta" : ""}`}
             style={{ paddingLeft: 14 + depth * 16 }}
           >
             <input
@@ -1327,7 +1322,7 @@ export function ProjectTree({
       const topicDrag = organization.topicRow(node, section === "pinned" || isSessionNode || Boolean(query || menuNodeKey || editingTopic || dragProjectRoot || creatingProject));
       const row = (
         <div
-          className={`project-tree__topic${scopeClass}${isSessionNode ? " project-tree__topic--session" : ""}${active ? " project-tree__topic--active" : ""}${node.running ? " project-tree__topic--running" : ""}${status ? ` project-tree__topic--status-${status}` : ""}${unread ? " project-tree__topic--unread" : ""}${!isSessionNode && pinned ? " project-tree__topic--pinned" : ""}${topicMenuOpen ? " project-tree__topic--menu-open" : ""}${topicDrag.className}${sideTimeVisible && (timeLabel || showStatusInSide || showWaitingPill) ? " project-tree__topic--with-side" : metaFull ? " project-tree__topic--has-meta" : ""}${imSource ? " project-tree__topic--im-source" : ""}${shortcutIndex > 0 ? " project-tree__topic--show-shortcut" : ""}`}
+          className={`project-tree__topic${scopeClass}${isSessionNode ? " project-tree__topic--session" : ""}${active ? " project-tree__topic--active" : ""}${node.running ? " project-tree__topic--running" : ""}${status ? ` project-tree__topic--status-${status}` : ""}${unread ? " project-tree__topic--unread" : ""}${!isSessionNode && pinned ? " project-tree__topic--pinned" : ""}${topicMenuOpen ? " project-tree__topic--menu-open" : ""}${topicDrag.className}${sideTimeVisible && (timeLabel || showStatusInSide || showWaitingPill) ? " project-tree__topic--with-side" : metaFull ? " project-tree__topic--has-meta" : ""}${shortcutIndex > 0 ? " project-tree__topic--show-shortcut" : ""}`}
           style={accentStyle}
           {...topicDrag.props}
           onContextMenu={openTopicMenu}
@@ -1381,16 +1376,6 @@ export function ProjectTree({
               <span className="project-tree__topic-heading">
                 <span className="project-tree__topic-label">{label}</span>
                 <ProjectTreeSessionBadges forkedFromLabel={forkedFromLabel} recoveryLabel={recoveryLabel} />
-                {imSource && (
-                  <span
-                    className={`project-tree__topic-im project-tree__topic-im--${imSourcePlatform}`}
-                    title={imSourceTitle}
-                    aria-label={imSourceTitle}
-                  >
-                    <MessageSquare size={11} />
-                    <span>{imSourceLabel}</span>
-                  </span>
-                )}
                 {!compactTopics && statusLabel && (
                   <span className={`project-tree__topic-status project-tree__topic-status--${status}`}>{statusLabel}</span>
                 )}

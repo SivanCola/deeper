@@ -8,10 +8,9 @@ import { LocaleProvider, preloadLocale, useI18n, type Locale, type Translator } 
 import { ToastProvider, useToast } from "../lib/toast";
 import { en } from "../locales/en";
 import { zh } from "../locales/zh";
-import { zhTW } from "../locales/zh-TW";
 
-const dictionaries = { en, zh, "zh-TW": zhTW };
-for (const locale of ["en", "zh", "zh-TW"] as const) {
+const dictionaries = { en, zh };
+for (const locale of ["en", "zh"] as const) {
   const dict = dictionaries[locale];
   const translate: Translator = key => dict[key];
   for (const [error, key] of [
@@ -60,7 +59,7 @@ assert.equal(original.message, "upstream unavailable", "presentation must not re
 const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { url: "http://localhost/", pretendToBeVisual: true });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true });
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: dom.window.navigator });
-await Promise.all([preloadLocale("zh"), preloadLocale("zh-TW")]);
+await preloadLocale("zh");
 let changeLocale: (locale: Locale) => void;
 let toast: ReturnType<typeof useToast>["showToast"];
 const raw = "unknown library failure <img src=x onerror=alert(1)>";
@@ -81,27 +80,24 @@ await act(async () => toggle.click());
 assert.equal(toggle.getAttribute("aria-expanded"), "true");
 assert.equal(document.querySelector(".user-error__detail")?.textContent, raw);
 assert.equal(document.querySelector("#inline-error img"), null, "diagnostics are text, never executable markup");
-await act(async () => changeLocale("zh-TW"));
-assert.equal(document.querySelector("#transport-error .user-error__summary")?.textContent, zhTW["error.transportProtocol"]);
-assert.equal(document.querySelector("#inline-error .user-error__summary")?.textContent, zhTW["error.unknown"]);
-assert.equal(document.querySelector(".user-error__detail")?.textContent, raw, "language switching preserves diagnostics");
 await act(async () => changeLocale("en"));
 assert.equal(document.querySelector("#transport-error .user-error__summary")?.textContent, en["error.transportProtocol"]);
+assert.equal(document.querySelector("#inline-error .user-error__toggle"), null, "an English-locale unknown error shows raw text as the summary without a duplicate detail toggle");
 await act(async () => document.querySelector<HTMLButtonElement>("#transport-error .user-error__toggle")!.click());
 assert.equal(document.querySelector("#transport-error .user-error__detail")?.textContent, `${protocolError}\nHTTP/2: PROTOCOL_ERROR`);
 assert.equal(document.querySelector("#transport-error img"), null);
 assert.equal(document.querySelector("#inline-error .user-error__summary")?.textContent, raw, "English errors follow the active English UI locale");
-await act(async () => changeLocale("zh-TW"));
+await act(async () => changeLocale("zh"));
 
 await act(async () => toast("HTTP 503: trace request-unique", "error", { durationMs: 80 }));
-assert.equal(document.querySelector(".toast .user-error__summary")?.textContent, zhTW["error.service"]);
+assert.equal(document.querySelector(".toast .user-error__summary")?.textContent, zh["error.service"]);
 await act(async () => document.querySelector<HTMLButtonElement>(".toast .user-error__toggle")!.click());
 await act(async () => new Promise(resolve => setTimeout(resolve, 100)));
 assert.ok(document.querySelector(".toast"), "inspecting details pins the toast instead of dismissing it");
 assert.match(document.querySelector(".toast .user-error__detail")!.textContent!, /request-unique/);
 assert.equal(document.querySelector("button button"), null, "no nested buttons");
-await act(async () => document.querySelector<HTMLButtonElement>('.toast button[aria-label="關閉提示"]')!.click());
+await act(async () => document.querySelector<HTMLButtonElement>('.toast button[aria-label="关闭提示"]')!.click());
 assert.equal(document.querySelector(".toast"), null);
 await act(async () => root.unmount());
 dom.window.close();
-console.log("PASS error presentation: three locales, known/unknown causes, unchanged errors, escaped details, live language switching and toast lifecycle");
+console.log("PASS error presentation: both locales, known/unknown causes, unchanged errors, escaped details, live language switching and toast lifecycle");

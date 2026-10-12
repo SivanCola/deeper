@@ -22,7 +22,7 @@ import { useSessionOperations } from "./useSessionOperations";
 import { useComposerInsertCommands } from "./useComposerInsertCommands";
 import { useSessionClearCommands } from "./useSessionClearCommands";
 import { useRuntimeStatus } from "./useRuntimeStatus";
-import { useAppDiagnostics, useRecoverableErrorToasts, useSidebarConnectionValidity } from "./useAppEffectHosts";
+import { useAppDiagnostics, useRecoverableErrorToasts } from "./useAppEffectHosts";
 import { useActiveTabUiReset, useDecisionSurfaceFocus } from "./useLocalUiLifecycles";
 import { useActiveTabMirrorCommit } from "./activeTabMirror";
 import { useInvocationMetadata } from "./useInvocationMetadata";
@@ -110,8 +110,6 @@ export type AppSessionCompositionInput = {
   local: {
     setHistView: React.Dispatch<React.SetStateAction<import("./historyViewProjection").HistoryViewState | null>>;
     setTabRevealSignal: React.Dispatch<React.SetStateAction<number>>;
-    sidebarImDetailConnectionId: string;
-    setSidebarImDetailConnectionId: React.Dispatch<React.SetStateAction<string>>;
     workspaceScopeActiveTabRef: { current: string | undefined };
     workspaceControllerEpoch: number;
     setWorkspaceControllerEpoch: React.Dispatch<React.SetStateAction<number>>;
@@ -176,14 +174,13 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     workspacePanelOpen, workspacePanelMaximized, liveTerminalHeight, setLiveWorkspacePanelRenderWidth,
     setRightDockTreeWidth, terminalPanelOpen, setSettingsTarget, enterConversation,
   } = shell;
-  const { sidebarImConnections, reloadConfigWarnings } = shell.preferences;
+  const { reloadConfigWarnings } = shell.preferences;
   const {
     composerProfilesByTab, setComposerProfilesByTab, tabMetas, setTabMetas, tabOrderIds, setTabOrderIds,
     userPlanModeByTabRef,
   } = input.stores;
   const {
     setHistView, setTabRevealSignal,
-    sidebarImDetailConnectionId, setSidebarImDetailConnectionId,
     workspaceScopeActiveTabRef, workspaceControllerEpoch, setWorkspaceControllerEpoch,
     setDockRefreshKey, projectRevision, setProjectRevision,
   } = input.local;
@@ -233,7 +230,6 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     setTransientOverlayDismissSignal((signal) => signal + 1);
   });
 
-  useSidebarConnectionValidity({ connections: sidebarImConnections, setConnectionId: setSidebarImDetailConnectionId });
 
   useNativeSettingsEvent({ closeTransientOverlays, setSettingsTarget });
 
@@ -256,10 +252,6 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
   const conversationView = projectConversation({ local: state, remote: remoteSurfaceActive ? remoteSession : undefined,
     tab: activeTab, activeTabId, backgroundRuntimes, connectingLabel: t("status.connecting") });
   const visibleRuntimeState = conversationView.runtime;
-  const sidebarImDetailConnection = useMemo(
-    () => sidebarImConnections.find((connection) => connection.id === sidebarImDetailConnectionId) ?? null,
-    [sidebarImConnections, sidebarImDetailConnectionId],
-  );
   const chatSurfaceVisible = true;
   const { dockVisible: surfaceWorkspacePanelRenderable, dockGridOpen: surfaceWorkspacePanelGridOpen,
     dockOverlay: surfaceWorkspacePanelOverlay,
@@ -268,7 +260,7 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     dockRenderable: workspacePanelRenderable, dockGridOpen: workspacePanelGridOpen, dockOverlay: workspacePanelOverlay,
     dockOpen: workspacePanelOpen, dockMaximized: workspacePanelMaximized, terminalOpen: terminalPanelOpen,
   });
-  const statusBarVisible = chatSurfaceVisible && !sidebarImDetailConnection;
+  const statusBarVisible = chatSurfaceVisible;
   const composerSessionKey = useMemo(() => {
     return composerDraftKeyForTab(activeTab, activeTabId);
   }, [activeTab, activeTabId]);
@@ -674,7 +666,6 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     sessionActivity: Boolean(conversationView.runtime.running || conversationView.runtime.pendingPrompt
       || conversationView.runtime.approval || conversationView.runtime.ask || conversationView.runtime.extensionForm
       || conversationView.runtime.mcpInteraction || (remoteSurfaceActive && (remoteSession.promptError || remoteSession.error))),
-    imDetailActive: Boolean(sidebarImDetailConnection),
     sessionHasContent,
     commitRendered: commitRenderedTranscriptSurface,
     commitPaint: commitNavigationSurfacePaint,
@@ -741,7 +732,6 @@ export function useAppSessionComposition(input: AppSessionCompositionInput) {
     sessionHasContent,
     conversationView,
     visibleRuntimeState,
-    sidebarImDetailConnection,
     surfaceWorkspacePanelRenderable,
     surfaceWorkspacePanelGridOpen,
     surfaceWorkspacePanelOverlay,

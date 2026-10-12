@@ -105,7 +105,7 @@ what the user configured and never widen it.
 | `permissions.deny`, `permissions.ask` | Add to the user's rules |
 | `permissions.mode`, `permissions.allow`, `permissions.allow_dynamic_bash` | Nothing |
 | `desktop.default_tool_approval_mode` | Nothing |
-| `[network]` proxy settings, `[bot]` | Nothing |
+| `[network]` proxy settings | Nothing |
 | `[[providers]]` | Declare them; they stay out of use until approved, and model settings naming them fall back to the user's |
 
 An "always allow" answer, or extra write access, granted in a workspace is
