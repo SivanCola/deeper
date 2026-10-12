@@ -12,7 +12,6 @@ import { LocaleProvider } from "../lib/i18n";
 import type { ProviderView } from "../lib/types";
 import { en } from "../locales/en";
 import { zh } from "../locales/zh";
-import { zhTW } from "../locales/zh-TW";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const styles = readFileSync(resolve(here, "../styles.css"), "utf8");
@@ -113,7 +112,6 @@ console.log("\nprovider name readonly");
 
 eq(en["settings.customProviderNameReadonlyHint"], "Changing the provider name is not supported yet", "English rename hint");
 eq(zh["settings.customProviderNameReadonlyHint"], "暂不支持供应商名称修改", "Simplified Chinese rename hint");
-eq(zhTW["settings.customProviderNameReadonlyHint"], "暫不支援供應商名稱修改", "Traditional Chinese rename hint");
 
 eq(finalDeclaration(".provider-name-input:disabled", "opacity"), "0.6", "disabled provider-name input is faded");
 eq(finalDeclaration(".provider-name-input:disabled", "cursor"), "not-allowed", "disabled provider-name input uses not-allowed cursor");

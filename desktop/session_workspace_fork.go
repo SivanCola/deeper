@@ -170,8 +170,6 @@ func (a *App) localizedForkTitleSuffix() string {
 	switch a.desktopLocale.Load() {
 	case desktopLocaleEn:
 		return " · Fork"
-	case desktopLocaleZhTW:
-		return " · 分叉"
 	default:
 		return " · 分叉"
 	}

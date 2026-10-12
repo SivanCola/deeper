@@ -46,18 +46,6 @@ const COPY: Record<Locale, {
     mark: "标记当前问题",
     cancel: "取消记录",
   },
-  "zh-TW": {
-    start: "前端診斷",
-    startHint: "開始記錄一段僅儲存在本機的前端互動時間線",
-    recordingLabel: "前端診斷 · 已開啟",
-    readyLabel: "前端診斷 · 待匯出",
-    recording: (seconds, events) => `記錄中 - ${seconds} 秒 - ${events} 筆事件`,
-    ready: (events) => `記錄完成 - ${events} 筆事件`,
-    export: "匯出",
-    stopExport: "停止並匯出",
-    mark: "標記目前問題",
-    cancel: "取消記錄",
-  },
 };
 
 export type FrontendDiagnosticsControlProps = {

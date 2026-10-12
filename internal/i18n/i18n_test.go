@@ -13,7 +13,7 @@ import (
 func TestCatalogsComplete(t *testing.T) {
 	en := reflect.ValueOf(English)
 	typ := en.Type()
-	catalogs := map[string]reflect.Value{"zh": reflect.ValueOf(Chinese), "zh-TW": reflect.ValueOf(ChineseTraditional)}
+	catalogs := map[string]reflect.Value{"zh": reflect.ValueOf(Chinese)}
 	for tag, cat := range catalogs {
 		for i := range typ.NumField() {
 			name := typ.Field(i).Name
@@ -41,10 +41,6 @@ func TestCatalogsAgreeOnPlaceholders(t *testing.T) {
 		if want != got {
 			t.Errorf("%s: en has %d verbs, zh has %d", name, want, got)
 		}
-		gotTW := countVerbs(reflect.ValueOf(ChineseTraditional).Field(i).String())
-		if want != gotTW {
-			t.Errorf("%s: en has %d verbs, zh-TW has %d", name, want, gotTW)
-		}
 	}
 }
 
@@ -56,7 +52,6 @@ func TestPlanApprovalChoicesExposeThreeExplicitActions(t *testing.T) {
 	}{
 		{tag: "en", value: English.PlanApprovalChoices, want: []string{"Start execution", "Revise plan", "Exit without executing"}},
 		{tag: "zh", value: Chinese.PlanApprovalChoices, want: []string{"开始执行", "修改计划", "暂不执行，退出计划模式"}},
-		{tag: "zh-TW", value: ChineseTraditional.PlanApprovalChoices, want: []string{"開始執行", "修改計畫", "暫不執行，退出計畫模式"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.tag, func(t *testing.T) {
@@ -98,7 +93,8 @@ func countVerbs(s string) int {
 
 // TestNormalize covers the locale-string shapes likely to land in $LANG /
 // $LC_ALL / $DEEPZORA_LANG. Unknown locales return "" so DetectLanguage falls
-// through to the next candidate instead of mis-routing.
+// through to the next candidate instead of mis-routing. Traditional Chinese
+// locale strings resolve to "zh" — the catalogue set is en + zh only.
 func TestNormalize(t *testing.T) {
 	cases := map[string]string{
 		"":                    "",
@@ -109,14 +105,13 @@ func TestNormalize(t *testing.T) {
 		"zh-Hans-CN":          "zh",
 		"Chinese (China)":     "zh",
 		"中文":                  "zh",
-		"zh-TW":               "zh-TW",
-		"zh_TW.UTF-8":         "zh-TW",
-		"zh-Hant-TW":          "zh-TW",
-		"zh-Hant":             "zh-TW",
-		"Chinese Traditional": "zh-TW",
-		"繁體":                  "zh-TW",
+		"zh-TW":               "zh",
+		"zh_TW.UTF-8":         "zh",
+		"zh-Hant-TW":          "zh",
+		"zh-Hant":             "zh",
+		"Chinese Traditional": "zh",
 		"fr_FR.UTF-8":         "",
-		"  ZH_TW  ":           "zh-TW",
+		"  ZH_TW  ":           "zh",
 	}
 	for in, want := range cases {
 		if got := normalize(in); got != want {
@@ -154,7 +149,9 @@ func TestDetectLanguagePriority(t *testing.T) {
 	if got := CurrentLanguage(); got != "zh" {
 		t.Errorf("current language = %q, want zh", got)
 	}
-	if got := DetectLanguage("zh-TW"); got != "zh-TW" || CurrentLanguage() != "zh-TW" {
-		t.Errorf("traditional Chinese current language = %q/%q, want zh-TW", got, CurrentLanguage())
+	// zh-TW is no longer a catalogue: a traditional Chinese override resolves
+	// to the simplified Chinese catalogue.
+	if got := DetectLanguage("zh-TW"); got != "zh" || CurrentLanguage() != "zh" {
+		t.Errorf("traditional Chinese current language = %q/%q, want zh", got, CurrentLanguage())
 	}
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func TestProviderFailureCopyDoesNotClaimAutomaticRetry(t *testing.T) {
-	for locale, messages := range map[string]Messages{"en": English, "zh": Chinese, "zh-TW": ChineseTraditional} {
+	for locale, messages := range map[string]Messages{"en": English, "zh": Chinese} {
 		for _, copy := range []string{messages.ProviderErrAuthRejected, messages.ProviderErrRateLimited, messages.ProviderErrServer, messages.ProviderErrServerBusy} {
 			for _, retired := range []string{"Retried", "retried", "已退避重试", "已退避重試"} {
 				if strings.Contains(copy, retired) {

@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 import { normalizeToolApprovalMode } from "../lib/types";
 import { en } from "../locales/en";
 import { zh } from "../locales/zh";
-import { zhTW } from "../locales/zh-TW";
 
 let passed = 0;
 let failed = 0;
@@ -37,14 +36,11 @@ eq(zh["composer.permissionRecommended"], "推荐", "Simplified Chinese workspace
 eq(zh["composer.permissionWorkspaceWriteDesc"], "可读写当前工作区；越界操作需要你授权", "Simplified Chinese workspace description");
 // Windows has no OS-level shell sandbox; the workspace preset copy must not
 // promise a shell boundary the platform cannot enforce.
-for (const [name, dict] of [["English", en], ["Simplified Chinese", zh], ["Traditional Chinese", zhTW]] as const) {
+for (const [name, dict] of [["English", en], ["Simplified Chinese", zh]] as const) {
   const desc = dict["composer.permissionWorkspaceWriteDescWindows"];
   eq(typeof desc === "string" && desc.length > 0 && /shell/i.test(desc), true, `${name} Windows workspace description names the shell`);
   eq(desc !== dict["composer.permissionWorkspaceWriteDesc"], true, `${name} Windows workspace description differs from the sandboxed copy`);
 }
-eq(zhTW["composer.permissionReadOnly"], "僅可查看", "Traditional Chinese read-only label");
-eq(zhTW["composer.permissionWorkspaceWrite"], "工作區內修改", "Traditional Chinese workspace label");
-eq(zhTW["composer.permissionFullAccess"], "完全權限", "Traditional Chinese full-access label");
 
 const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 eq(styles.includes(".composer-choice--permission-read-only { color: var(--composer-permission-ask); }"), true, "read-only uses the read-only color");

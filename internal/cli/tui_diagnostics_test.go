@@ -114,7 +114,6 @@ func TestCLIProfileBuildOptionsDoNotResolveLocalePricing(t *testing.T) {
 	}{
 		{language: "en", want: ""},
 		{language: "zh", want: ""},
-		{language: "zh-TW", want: ""},
 	} {
 		i18n.DetectLanguage(tt.language)
 		opts := cliProfileBuildOptions("provider/model", 0, false, event.Discard, cliBuildOverrides{})
