@@ -1,7 +1,6 @@
 import { defaultSidebarWidth, SIDEBAR_MAX_WIDTH } from "../store/layout";
 import type { Translator } from "../lib/i18n";
 import type { Meta, RemoteTabRefView, TabMeta } from "../lib/types";
-import type { SidebarImTopicSource } from "../app-runtime/sidebarImProjection";
 import type { useSessionBannerCommands } from "../app-runtime/useSessionBannerCommands";
 import type { useProjectTopicCommands } from "../app-runtime/useProjectTopicCommands";
 import type { useOnboardingCommands } from "../app-runtime/useOnboardingCommands";
@@ -31,7 +30,6 @@ export function buildSidebarRegionProps(input: {
     activeRemote: RemoteTabRefView | undefined;
     activeScope?: string;
     activeWorkspaceRoot?: string;
-    imTopicSources: Record<string, SidebarImTopicSource>;
     refreshSignal: number;
     searchExpanded: boolean;
     searchFocusSignal: number;
@@ -72,7 +70,7 @@ export function buildSidebarRegionProps(input: {
       activeWorkspaceRoot: input.projectTree.activeWorkspaceRoot ?? input.projectTree.activeTab?.workspaceRoot,
       activeTopicId: input.projectTree.activeTab?.topicId, activeSessionPath: sessionIdentityRoute(input.projectTree.activeTab),
       activeRemote: input.projectTree.activeRemote,
-      imTopicSources: input.projectTree.imTopicSources, onOpenTopic: commands.onOpenTopic,
+      onOpenTopic: commands.onOpenTopic,
       onCreateTopic: topics.onCreateTopic, onCreateIsolatedWorktree: topics.onCreateIsolatedWorktree,
       onTopicsChanged: topics.refreshProjectsAndTabs, onRenameTopic: topics.renameTopic, refreshSignal: input.projectTree.refreshSignal,
       onAddProject: topics.onAddProject,
@@ -126,7 +124,6 @@ export function buildAppShellClassNames(input: {
   platform: string;
   windowsFrameless: boolean;
   browserPreview: boolean;
-  imDetailActive: boolean;
   sidebarCollapsed: boolean;
   sidebarResizing: boolean;
   dockGridOpen: boolean;
@@ -148,7 +145,6 @@ export function buildAppShellClassNames(input: {
     layout: [
       "layout",
       "layout--workbench",
-      input.imDetailActive ? "layout--statusbar-hidden" : "",
       input.sidebarCollapsed ? "layout--sidebar-collapsed" : "",
       input.sidebarResizing ? "layout--resizing layout--sidebar-resizing" : "",
       input.dockGridOpen ? "layout--workspace-open" : "",

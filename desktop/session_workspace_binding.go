@@ -173,9 +173,9 @@ func (a *App) commitCanonicalSessionBinding(tab *WorkspaceTab, ctrl control.Sess
 // cold surface, and only when the header and registry independently name B.
 func (a *App) reconcileCanonicalTabWorkspace(ctx context.Context, tab *WorkspaceTab, generation uint64) error {
 	a.mu.RLock()
-	id, ctrl, route := tab.SessionID, tab.Ctrl, tab.SessionPath
+	id, ctrl := tab.SessionID, tab.Ctrl
 	a.mu.RUnlock()
-	if id == "" || ctrl != nil || strings.HasPrefix(route, embeddedBotSessionPrefix) {
+	if id == "" || ctrl != nil {
 		return nil
 	}
 	workspace, err := a.canonicalSessionWorkspace(ctx, session.SessionRef{HostID: localDesktopHostID, SessionID: id})

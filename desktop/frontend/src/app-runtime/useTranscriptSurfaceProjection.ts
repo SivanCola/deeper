@@ -24,7 +24,6 @@ export type TranscriptSurfaceProjectionInput = {
   controllerReady: boolean;
   availability: SessionAvailability;
   sessionActivity: boolean;
-  imDetailActive: boolean;
   sessionHasContent: boolean;
   commitRendered: NavigationSurfaceApi["commitRendered"];
   commitPaint: NavigationSurfaceApi["commitPaint"];
@@ -54,7 +53,6 @@ export function useTranscriptSurfaceProjection(input: TranscriptSurfaceProjectio
     input.availability.kind === "ready" &&
     !input.sessionActivity &&
     !transitioning &&
-    !input.imDetailActive &&
     !input.sessionHasContent &&
     !transcriptHydrating &&
     !input.hydratePlaceholderActive;

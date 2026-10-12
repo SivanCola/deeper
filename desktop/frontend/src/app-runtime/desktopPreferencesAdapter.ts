@@ -5,9 +5,8 @@ import { applyConfiguredBaseAppearance, applyThemePack, clearThemePack } from ".
 import { applyTerminalThemePreference } from "../lib/terminalTheme";
 import { applyConversationWidth } from "../lib/conversationWidth";
 import { hydrateSessionExperience } from "../lib/sessionExperience";
-import { loadBotRuntimeStatus } from "./botRuntimeAdapter";
 import type { CommandAuthority } from "../lib/commandOutcome";
-import type { BotRuntimeStatusView, DesktopStartupSettingsView, SettingsView } from "../lib/types";
+import type { DesktopStartupSettingsView, SettingsView } from "../lib/types";
 
 export type DesktopPreferencesSnapshot = DesktopStartupSettingsView | SettingsView;
 export function applyPreferencesAppearance(settings: DesktopPreferencesSnapshot) {
@@ -21,17 +20,15 @@ export function applyPreferencesAppearance(settings: DesktopPreferencesSnapshot)
 type Input = {
   provided?: DesktopPreferencesSnapshot | null;
   loadTheme: boolean;
-  publish: (settings: DesktopPreferencesSnapshot, runtime: BotRuntimeStatusView | null) => void;
+  publish: (settings: DesktopPreferencesSnapshot) => void;
 };
 
 /** Every async boundary is fenced before publishing preferences or theme DOM. */
 export async function synchronizeDesktopPreferences(input: Input, authority: CommandAuthority) {
   authority.checkpoint();
-  const [settings, runtime] = await Promise.all([
-    input.provided ?? app.DesktopStartupSettings(), loadBotRuntimeStatus(),
-  ]);
+  const settings = input.provided ?? await app.DesktopStartupSettings();
   authority.checkpoint();
-  input.publish(settings, runtime);
+  input.publish(settings);
   if (!input.loadTheme) return;
   try {
     const { loadThemeExperience, applyExperienceToDOM } = await import("../lib/themeExperience");

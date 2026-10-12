@@ -3,20 +3,12 @@ import type { ShortcutPlatform } from "../lib/keyboardShortcuts";
 import type { TopicShortcutEntry } from "../lib/topicShortcuts";
 import type { ProjectTreeVariant } from "../lib/projectTreeTopic";
 
-type ProjectTreeImTopicSource = {
-  platform?: string;
-  label: string;
-  title?: string;
-  remoteId?: string;
-};
-
 export interface ProjectTreeProps {
   activeScope?: string;
   activeWorkspaceRoot?: string;
   activeTopicId?: string;
   activeSessionPath?: string;
   activeRemote?: RemoteTabRefView;
-  imTopicSources?: Record<string, ProjectTreeImTopicSource>;
   variant?: ProjectTreeVariant;
   onOpenTopic: (scope: string, workspaceRoot: string, topicId: string, sessionPath?: string) => Promise<void> | void;
   onAddProject: (path?: string) => Promise<void>;

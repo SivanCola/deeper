@@ -72,7 +72,7 @@ func TestQueuedFoldedPasteExpandsBeforeInterjectSend(t *testing.T) {
 	m = model.(chatTUI)
 	// Wait for the completed dispatch with admission already sealed.
 	waitForCLIEvent(t, events, event.TurnDone)
-	<-finalized
+	waitForCLISignal(t, "controller teardown after the sealed TurnDone", finalized)
 
 	if len(runner.inputs) != 1 {
 		t.Fatalf("runner should receive queued interject, inputs=%q", runner.inputs)

@@ -30,7 +30,7 @@ const common: TranscriptSurfaceProjectionInput = {
   hydrating: false, hydrateHistoryLoaded: undefined, hydratePlaceholderItems: undefined, hydratePlaceholderActive: false,
   items: [], remote: false, remoteItems: [], activeTabId: "A", geometrySessionKey: "A", transitioning: false,
   navigationDataReady: true, preserved: null, controllerReady: true,
-  availability: projectSessionAvailability({ local: readyLocal }), sessionActivity: false, imDetailActive: false,
+  availability: projectSessionAvailability({ local: readyLocal }), sessionActivity: false,
   sessionHasContent: false, commitRendered: noop, commitPaint: () => null, commitSingleSurface: noop,
   ports: { loadOlderHistory: async () => false, commitThenSend: async () => {} },
 };
@@ -93,7 +93,7 @@ try {
   assert.equal(document.querySelector(".session-recovery"), null);
 
   await act(async () => root.render(<LocaleProvider><ChatPaneRegion transitioning={false} t={((key: string) => key) as Translator}
-    imDetail={null} transcript={{ state: failedLocal, items: [], tabId: "local", geometrySessionKey: "local", footerHeight: 140,
+    transcript={{ state: failedLocal, items: [], tabId: "local", geometrySessionKey: "local", footerHeight: 140,
       transcriptHydrating: false, navigationDataReady: true, readOnly: false, controllerReady: true, hydratePlaceholderActive: false,
       clearContextPending: false, availability: projectSessionAvailability({ local: failedLocal }),
       rewind: { stateActive: false, committing: false, signal: undefined }, revealSignal: 0, invocationMetadata: undefined,

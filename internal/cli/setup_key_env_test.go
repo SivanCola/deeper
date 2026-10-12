@@ -154,21 +154,22 @@ func TestSetupSaveRefusesATypedNameClaimedAfterTheWizard(t *testing.T) {
 	}
 }
 
-func TestSetupRefusesATypedNameABotSettingReads(t *testing.T) {
+func TestSetupRefusesATypedNameARemoteHostSettingReads(t *testing.T) {
 	s, path := newKeyEnvTestSession(t, nil)
-	secret := s.cfg.Bot.QQ.AppSecretEnv
+	secret := "DEEPZORA_TEST_BOX_PASSWORD"
+	s.cfg.Remote.Hosts = append(s.cfg.Remote.Hosts, config.RemoteHostEntry{Name: "fixture", PasswordEnv: secret})
 	var out bytes.Buffer
 	if !addOpencodeThroughWizard(t, s, "chat\n"+secret+"\n\n\n", &out) {
 		t.Fatalf("wizard refused the provider: %s", out.String())
 	}
-	if !strings.Contains(out.String(), secret+" is read by a bot or remote-host setting") {
+	if !strings.Contains(out.String(), secret+" is read by a remote-host setting") {
 		t.Fatalf("wizard did not say why %s was refused: %q", secret, out.String())
 	}
 	if _, err := commitProviderSetupSession(s, path); err != nil {
 		t.Fatal(err)
 	}
 	if config.CredentialStored(secret) {
-		t.Fatalf("the provider key was written into the bot secret %s", secret)
+		t.Fatalf("the provider key was written into the remote-host secret %s", secret)
 	}
 }
 

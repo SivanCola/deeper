@@ -105,7 +105,7 @@ func (a *App) StartTurnForTab(tabID, input, submissionID string) (TurnStartView,
 			}
 		}
 	}
-	result, err := a.submitToTabResult(tabID, input, false, true, submissionID)
+	result, err := a.submitToTabResult(tabID, input, true, submissionID)
 	if err != nil {
 		if result.Disposition == control.SubmitManagementHandled && result.OperationID != "" {
 			code := ""
