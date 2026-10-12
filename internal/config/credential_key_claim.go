@@ -37,7 +37,7 @@ func (e *CredentialKeyInUseError) Error() string {
 	case CredentialKeyHeldByProvider:
 		return fmt.Sprintf("%s is referenced by provider %q", e.Key, e.Provider)
 	case CredentialKeyHeldBySetting:
-		return fmt.Sprintf("%s is read by a bot or remote-host setting", e.Key)
+		return fmt.Sprintf("%s is read by a remote-host setting", e.Key)
 	case CredentialKeyHeldByEnvironment:
 		return fmt.Sprintf("%s is already set in the environment", e.Key)
 	default:

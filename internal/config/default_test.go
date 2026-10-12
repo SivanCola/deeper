@@ -14,12 +14,6 @@ func TestDefaultReasoningLanguageAuto(t *testing.T) {
 	}
 }
 
-func TestDefaultBotRunsWithoutStepLimit(t *testing.T) {
-	if got := Default().Bot.MaxSteps; got != 0 {
-		t.Fatalf("default bot max_steps = %d, want continuous 0", got)
-	}
-}
-
 func TestDefaultDeepSeekUsesChatWithIndependentSearch(t *testing.T) {
 	cfg := Default()
 	for _, name := range []string{"deepseek-flash", "deepseek-pro"} {

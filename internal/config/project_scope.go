@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
@@ -28,7 +27,6 @@ type heldScope struct {
 	browser      BrowserConfig
 	network      NetworkConfig
 	endpoints    heldEndpoints
-	bot          BotConfig
 	// Regional display preferences: a repository must not alter how spend reads.
 	language, displayCurrency string
 }
@@ -48,7 +46,6 @@ func holdUserScope(c *Config) heldScope {
 		browser:         b,
 		network:         c.Network,
 		endpoints:       holdUserEndpoints(c),
-		bot:             cloneBotConfig(c.Bot),
 		language:        c.Desktop.Language,
 		displayCurrency: c.Billing.DisplayCurrency,
 	}
@@ -137,12 +134,6 @@ func (h heldScope) narrow(c *Config, root string) {
 		c.ignoreProject("network", "proxy_mode="+c.Network.ProxyMode, ProjectUserOnly)
 	}
 	c.Network = h.network
-	// [bot] opens the machine to chat accounts and routes their messages into
-	// sessions; only the user's own config may say which.
-	if !reflect.DeepEqual(c.Bot, h.bot) {
-		c.ignoreProject("bot", "", ProjectUserOnly)
-	}
-	c.Bot = h.bot
 	home := deepzoraHomeDir()
 	store := NewProjectProgramStore(home)
 	h.gatePrograms(c, store, ws)
@@ -250,20 +241,6 @@ func appendMissing(base []string, extra ...string) []string {
 		if !slices.Contains(out, v) {
 			out = append(out, v)
 		}
-	}
-	return out
-}
-
-// cloneBotConfig deep-copies b: the project decode writes into the maps and
-// slices the user's decode left behind.
-func cloneBotConfig(b BotConfig) BotConfig {
-	data, err := json.Marshal(b)
-	if err != nil {
-		return BotConfig{}
-	}
-	var out BotConfig
-	if json.Unmarshal(data, &out) != nil {
-		return BotConfig{}
 	}
 	return out
 }
