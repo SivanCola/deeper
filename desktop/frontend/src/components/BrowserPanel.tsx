@@ -17,9 +17,9 @@ import { BrowserEvidenceControls } from "./BrowserEvidenceControls";
 
 const DOWNLOAD_STRIP_LIMIT = 5;
 
-// The dock tab's label bypasses the shared dictionaries because both locale
-// chunks sit on their bundle ratchet (check-bundle-budget.mjs).
-const DOCK_TAB_LABEL: Record<string, string> = { zh: "浏览器", "zh-TW": "瀏覽器" };
+// The dock tab's label bypasses the shared dictionaries because the zh locale
+// chunk sits on its bundle ratchet (check-bundle-budget.mjs).
+const DOCK_TAB_LABEL: Record<string, string> = { zh: "浏览器" };
 
 /** Browser entry in the workspace dock's tab bar; mirrors the DockTab markup. */
 export function BrowserDockTab({ active, onSelect }: { active: boolean; onSelect: () => void }) {

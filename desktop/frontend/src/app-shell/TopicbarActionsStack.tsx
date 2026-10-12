@@ -33,7 +33,7 @@ export function buildTopicbarView(input: {
   const topicbarCanRename = !input.draft && (Boolean(activeTab?.topicId) || Boolean(activeTab?.remote));
   return {
     automationReturn: input.automationReturn,
-    automationReturnLabel: locale === "en" ? "Back to automation" : locale === "zh-TW" ? "返回自動化" : "返回自动化",
+    automationReturnLabel: locale === "en" ? "Back to automation" : "返回自动化",
     chromeHidden: input.chromeHidden,
     brand: input.windowsBrand,
     sidebar: input.sidebar,

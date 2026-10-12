@@ -750,7 +750,7 @@ func TestConfigCurrencyCommandWritesUserConfig(t *testing.T) {
 
 func TestConfigCurrencyAutoRemainsUnresolved(t *testing.T) {
 	isolateCLIConfigHome(t)
-	i18n.DetectLanguage("zh-TW")
+	i18n.DetectLanguage("zh")
 	t.Cleanup(func() { i18n.DetectLanguage("en") })
 
 	out := captureStdout(t, func() {
@@ -1152,7 +1152,7 @@ func TestCLITelemetryConsentPromptIsLocalized(t *testing.T) {
 	persistCLITelemetryConsent = func(string) error { return nil }
 	startCLITelemetryReporter = func(telemetry.Options) *telemetry.Reporter { return nil }
 
-	for _, lang := range []string{"en", "zh", "zh-TW"} {
+	for _, lang := range []string{"en", "zh"} {
 		i18n.DetectLanguage(lang)
 		var out bytes.Buffer
 		startCLITelemetryWithIO(config.Default(), telemetry.Options{

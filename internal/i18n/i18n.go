@@ -732,9 +732,6 @@ func envCandidates() []string {
 
 func setLanguage(tag string) string {
 	switch tag {
-	case "zh-tw", "zh-TW":
-		M = ChineseTraditional
-		currentLanguage = "zh-TW"
 	case "zh":
 		M = Chinese
 		currentLanguage = "zh"
@@ -748,14 +745,13 @@ func setLanguage(tag string) string {
 // normalize maps a locale string (e.g. "zh_CN.UTF-8", "zh-Hans-CN", "Chinese
 // (China)") to a short tag this package knows about. Returns "" for empty or
 // unrecognised input so DetectLanguage can fall through to the next candidate.
+// Traditional Chinese locale strings (zh-TW, zh-Hant) resolve to "zh" — the
+// catalogue set is English and Simplified Chinese only.
 func normalize(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	s = strings.ReplaceAll(s, "_", "-") // zh_TW.UTF-8 → zh-tw.utf-8 (POSIX locales use underscores)
 	if s == "" {
 		return ""
-	}
-	if strings.HasPrefix(s, "zh-tw") || strings.HasPrefix(s, "zh-hant") || strings.Contains(s, "chinese traditional") || strings.Contains(s, "繁體") {
-		return "zh-TW"
 	}
 	if strings.HasPrefix(s, "zh") || strings.Contains(s, "chinese") || strings.Contains(s, "中文") {
 		return "zh"

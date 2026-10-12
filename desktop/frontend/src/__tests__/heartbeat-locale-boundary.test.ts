@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { heartbeatFeatureKeys } from "../custom/features/heartbeat/heartbeat.i18n";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
-const globalLocales = ["en.ts", "zh.ts", "zh-TW.ts"].map((name) =>
+const globalLocales = ["en.ts", "zh.ts"].map((name) =>
   readFileSync(resolve(testDir, "../locales", name), "utf8"),
 );
 

@@ -75,40 +75,8 @@ const zh: BrowserCopy = {
   actionFailed: (message) => `浏览器：${message}`,
 };
 
-const zhTW: BrowserCopy = {
-  panel: "瀏覽器",
-  tabs: "瀏覽器分頁",
-  newTab: "以網址列內容新增分頁",
-  untitled: "未命名",
-  temporary: "暫時",
-  loading: "載入中",
-  closeTab: (title) => `關閉 ${title}`,
-  address: "網址",
-  addressPlaceholder: "輸入網址",
-  back: "上一頁",
-  forward: "下一頁",
-  reload: "重新載入",
-  stop: "停止載入",
-  zoomIn: "放大",
-  zoomOut: "縮小",
-  zoomReset: (percent) => `重設縮放（${percent}%）`,
-  devTools: "切換開發人員工具",
-  takeover: "你正在操作此頁面；代理已暫停",
-  takeControl: "接管",
-  resume: "繼續",
-  errorTitle: "無法載入此頁面",
-  errorDetail: (code, description) => `${description}（${code}）`,
-  retry: "重試",
-  emptyTitle: "沒有開啟的頁面",
-  emptyHint: "輸入網址，為目前任務開啟頁面。",
-  downloads: "下載",
-  clearDownloads: "清除已完成的下載",
-  downloadState: { progressing: "下載中", completed: "已完成", cancelled: "已取消", interrupted: "失敗" },
-  actionFailed: (message) => `瀏覽器：${message}`,
-};
-
 export function browserCopy(locale: Locale): BrowserCopy {
-  return locale === "zh" ? zh : locale === "zh-TW" ? zhTW : en;
+  return locale === "zh" ? zh : en;
 }
 
 export function useBrowserCopy(): BrowserCopy {

@@ -158,13 +158,11 @@ ok(
   "Markdown local-path support avoids RegExp lookbehind required by newer WebKit",
 );
 ok(
-  !/import\s+\{\s*zh\s*\}\s+from\s+["']\.\.\/locales\/zh["']/.test(i18nSource) &&
-    !/import\s+\{\s*zhTW\s*\}\s+from\s+["']\.\.\/locales\/zh-TW["']/.test(i18nSource),
+  !/import\s+\{\s*zh\s*\}\s+from\s+["']\.\.\/locales\/zh["']/.test(i18nSource),
   "i18n keeps Chinese dictionaries out of the unconditional initial chunk",
 );
 ok(
-  i18nSource.includes('import("../locales/zh")') &&
-    i18nSource.includes('import("../locales/zh-TW")'),
+  i18nSource.includes('import("../locales/zh")'),
   "i18n loads Chinese dictionaries on demand",
 );
 ok(

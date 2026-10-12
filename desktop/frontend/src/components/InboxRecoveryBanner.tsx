@@ -6,7 +6,6 @@ import { useI18n } from "../lib/i18n";
 const COPY = {
   en: ["Recovered {n} pending instructions", "Inbox is paused", "Review queued work before continuing.", "Review queue", "Continue", "Keep paused", "Paused"],
   zh: ["已恢复 {n} 条待处理指令", "收件箱已暂停", "请检查队列后再继续。", "查看队列", "继续执行", "保持暂停", "已暂停"],
-  "zh-TW": ["已恢復 {n} 條待處理指令", "收件匣已暫停", "請檢查佇列後再繼續。", "查看佇列", "繼續執行", "保持暫停", "已暫停"],
 } as const;
 
 export function InboxRecoveryBanner({

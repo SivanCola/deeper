@@ -108,65 +108,12 @@ const zh: Record<keyof typeof en, string> = {
   "providerUI.exactURLHint": "可选，优先于 Base URL，保留自定义网关的完整路径。",
   "providerUI.draftHint": "更改暂存于表单，点击保存后生效。",
 };
-const zhTW: Record<keyof typeof en, string> = {
-  "providerUI.modelHelpLabel": "{name}說明",
-  "providerUI.defaultModelHelp": "用於新建對話。已有對話繼續使用各自儲存的模型，需要時可在對話中切換。",
-  "providerUI.plannerModelHelp": "跟隨對話模型：使用同一個模型進行規劃與執行。\n\n指定其他模型後，由它獨立負責規劃，執行仍使用對話模型。",
-  "providerUI.visionModelHelp": "對話模型無法直接讀取圖片時，由圖片理解模型提供輔助。\n\n自動：從目前連線選擇支援圖片的模型。也可指定模型及連線；選擇「無」關閉此輔助，不影響主模型原生圖片能力。",
-  "providerUI.searchModelHelp": "自動：優先使用對話帳號，否則選擇已開啟搜尋的可用帳號。\n\n指定模型：透過所選連線搜尋，查詢和用量歸屬該連線；失敗不會改用其他帳號。\n\n執行階段重建後生效，進行中的任務繼續使用原設定。",
-  "providerUI.subagentModelHelp": "跟隨主代理模型：使用發起任務時主代理的模型。\n\n指定模型後，作為子代理任務的預設模型；任務或技能明確指定的模型優先，不改變主代理模型。",
-  "providerUI.subagentEffortHelp": "設定子代理任務的預設推理強度。auto 使用模型服務預設值；任務單獨指定時優先使用任務設定。\n\n較高強度可能增加耗時和用量，可選級別取決於所選模型。",
-
-  "providerUI.providers": "供應商",
-  "providerUI.builtin": "內建供應商",
-  "providerUI.custom": "自訂供應商",
-  "providerUI.chooseProvider": "選擇供應商",
-  "providerUI.searchProviders": "搜尋供應商…",
-  "providerUI.presetHint": "位址、協定和模型將使用所選供應商的預設。",
-  "providerUI.manualAdd": "手動新增",
-  "providerUI.addModel": "新增模型",
-  "providerUI.editModel": "編輯模型",
-  "providerUI.deleteModel": "刪除模型",
-  "providerUI.modelID": "模型 ID",
-  "providerUI.context": "上下文視窗",
-  "providerUI.output": "最大輸出 Token",
-  "providerUI.auto": "自動",
-  "providerUI.inherit": "留空沿用模型預設值。",
-  "providerUI.outputHint": "留空沿用預設值；-1 表示不傳送可選輸出限制。",
-  "providerUI.text": "文字",
-  "providerUI.supported": "支援",
-  "providerUI.unsupported": "不支援",
-  "providerUI.capabilityHint": "自動使用模型中繼資料；僅在端點確實支援時手動覆寫能力。",
-  "providerUI.saveDraft": "儲存至草稿",
-  "providerUI.applyModel": "套用至表單",
-  "providerUI.emptyModels": "尚未新增模型。可取得模型清單或手動輸入模型 ID。",
-  "providerUI.discoveryHint": "僅新增選取的新模型，保留既有模型。",
-  "providerUI.noDiscoveredModels": "未回傳模型，仍可手動新增。",
-  "providerUI.alreadyAdded": "已新增",
-  "providerUI.selected": "已選取 {n} 個新模型",
-  "providerUI.addSelected": "新增所選模型",
-  "providerUI.validation.required": "模型 ID 不可為空。",
-  "providerUI.validation.syntax": "模型 ID 不可包含空格或逗號。",
-  "providerUI.validation.duplicate": "此模型 ID 已存在。",
-  "providerUI.validation.context": "上下文視窗必須為正整數，或留空使用預設值。",
-  "providerUI.validation.output": "輸出限制必須為正整數、-1，或留空。",
-  "providerUI.test": "測試模型",
-  "providerUI.testing": "正在測試連線…",
-  "providerUI.testSuccess": "連線成功 · 剛剛",
-  "providerUI.keySet": "金鑰已設定 · 輸入以替換",
-  "providerUI.saveFailed": "儲存失敗，草稿已保留。",
-  "providerUI.baseURL": "Base URL",
-  "providerUI.finalURL": "最終請求位址：",
-  "providerUI.exactURL": "覆寫完整請求 URL",
-  "providerUI.exactURLHint": "可選，優先於 Base URL，保留自訂閘道的完整路徑。",
-  "providerUI.draftHint": "變更暫存於表單，按下儲存後生效。",
-};
 
 export function useProviderT() {
   const { locale, t } = useI18n();
   return useCallback((key: DictKey | keyof typeof en, vars?: Record<string, string | number>): string => {
     if (!(key in en)) return t(key as DictKey, vars);
-    const dict = locale === "zh" ? zh : locale === "zh-TW" ? zhTW : en;
+    const dict = locale === "zh" ? zh : en;
     const value = dict[key as keyof typeof en];
     return vars ? value.replace(/\{(\w+)\}/g, (_, k) => vars[k] === undefined ? `{${k}}` : String(vars[k])) : value;
   }, [locale, t]);

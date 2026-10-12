@@ -5108,7 +5108,6 @@ const (
 	topicAutoTitlesFile    = "desktop-topic-auto-title-meta.json"
 	defaultTopicTitle      = "新的会话"
 	defaultTopicTitleEn    = "New session"
-	defaultTopicTitleZhTW  = "新的會話"
 	topicTitleSourceAuto   = "auto"
 	topicTitleSourceManual = "manual"
 )
@@ -5117,14 +5116,11 @@ const (
 	desktopLocaleUnknown int32 = iota
 	desktopLocaleEn
 	desktopLocaleZh
-	desktopLocaleZhTW
 )
 
 func (a *App) setDesktopLocale(locale string) {
 	normalized := strings.ToLower(strings.TrimSpace(locale))
 	switch {
-	case strings.HasPrefix(normalized, "zh-tw"), strings.HasPrefix(normalized, "zh-hant"):
-		a.desktopLocale.Store(desktopLocaleZhTW)
 	case strings.HasPrefix(normalized, "zh"):
 		a.desktopLocale.Store(desktopLocaleZh)
 	default:
@@ -5136,8 +5132,6 @@ func (a *App) localizedDefaultTopicTitle() string {
 	switch a.desktopLocale.Load() {
 	case desktopLocaleZh:
 		return defaultTopicTitle
-	case desktopLocaleZhTW:
-		return defaultTopicTitleZhTW
 	case desktopLocaleEn:
 		return defaultTopicTitleEn
 	default:
@@ -5146,9 +5140,10 @@ func (a *App) localizedDefaultTopicTitle() string {
 }
 
 func isDefaultTopicTitle(title string) bool {
+	// "新建會話"/"新的會話" stay recognised so topics titled by zh-TW builds
+	// before that locale was retired still count as untitled.
 	switch strings.TrimSpace(title) {
-	case "", defaultTopicTitle, defaultTopicTitleEn, defaultTopicTitleZhTW,
-		"新建会话", "新建會話", "新会话":
+	case "", defaultTopicTitle, defaultTopicTitleEn, "新建会话", "新建會話", "新会话", "新的會話":
 		return true
 	default:
 		return false
@@ -5261,8 +5256,6 @@ func (a *App) forkTopicTitle(title string) string {
 		switch a.desktopLocale.Load() {
 		case desktopLocaleEn:
 			base = defaultTopicTitleEn
-		case desktopLocaleZhTW:
-			base = defaultTopicTitleZhTW
 		default:
 			base = defaultTopicTitle
 		}

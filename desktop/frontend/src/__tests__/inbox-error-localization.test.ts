@@ -40,7 +40,7 @@ for (const [code, expected] of stableCases) {
 
 eq(formatInboxError(new Error("inbox is paused"), "zh"), "收件箱已暂停", "legacy backend English is localized");
 eq(formatInboxError(new Error("workspace failed to start: internal detail"), "zh"), "工作区启动失败", "legacy startup detail is sanitized and localized");
-eq(formatInboxError("deepzora_error:inbox_paused", "zh-TW"), "收件匣已暫停", "traditional Chinese maps stable code");
+eq(formatInboxError("deepzora_error:inbox_paused", "zh"), "收件箱已暂停", "simplified Chinese maps stable code");
 eq(formatInboxError(new Error("deepzora_error:inbox_paused"), "en"), "Inbox is paused", "English maps stable code");
 eq(
   formatInboxCancelError(new Error("deepzora_error:inbox_invalid_state"), "zh"),

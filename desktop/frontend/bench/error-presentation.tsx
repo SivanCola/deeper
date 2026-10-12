@@ -5,7 +5,7 @@ import { LocaleProvider, preloadLocale, useI18n } from "../src/lib/i18n";
 import { ToastProvider, useToast } from "../src/lib/toast";
 import "../src/styles.css";
 
-await Promise.all([preloadLocale("zh"), preloadLocale("zh-TW")]);
+await preloadLocale("zh");
 function Fixture() {
   const { setPref } = useI18n();
   const { showToast } = useToast();
@@ -13,7 +13,6 @@ function Fixture() {
     <h1>错误提示验证</h1>
     <nav style={{ display: "flex", gap: 12, margin: "24px 0" }}>
       <button onClick={() => setPref("zh")}>简体中文</button>
-      <button onClick={() => setPref("zh-TW")}>繁體中文</button>
       <button onClick={() => setPref("en")}>English</button>
       <button onClick={() => showToast("HTTP 503: upstream unavailable; trace=browser-fixture", "error")}>测试错误弹窗</button>
     </nav>
