@@ -561,6 +561,13 @@ const rawInitialBytes = [...initialJS, ...initialCSS, ...appShellCSS]
 // Ready-event cold-history joining adds 163 B locally (2106326 B versus
 // 2106163 B); retain the producer margin and round to the smallest 2057.2 KiB
 // ceiling that covers the same Linux build. Other bundle budgets stay fixed.
-const rawInitialBudgetKiB = 2_057.2;
+// Dependabot's npm group update (React 19.2.8 -> 19.3.0 and its type
+// packages) regrew the initial payload; the lockfile also restores
+// lucide-react 1.55.0 after the group snapshot briefly pinned 1.53.0. The
+// same-toolchain local build measures 2112631 B; preserve the established
+// 186 B Linux producer difference (2112817 B) and round to the smallest
+// 2063.4 KiB ceiling. Compressed, chunk, CSS, locale, and residency gates
+// stay unchanged.
+const rawInitialBudgetKiB = 2_063.4;
 assertBudget("initial raw JavaScript and CSS", rawInitialBytes, rawInitialBudgetKiB * 1024);
 assertBudget("largest initial JavaScript chunk raw", largestInitialJSRaw, 1_000 * 1024);
