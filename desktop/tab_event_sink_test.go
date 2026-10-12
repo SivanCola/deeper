@@ -10,27 +10,6 @@ import (
 	"deepzora/internal/event"
 )
 
-type closeTrackingSink struct {
-	closed atomic.Bool
-}
-
-func (s *closeTrackingSink) Emit(event.Event) {}
-
-func (s *closeTrackingSink) Close() {
-	s.closed.Store(true)
-}
-
-type blockingCloseTrackingSink struct {
-	closeTrackingSink
-	entered chan struct{}
-	release chan struct{}
-}
-
-func (s *blockingCloseTrackingSink) Emit(event.Event) {
-	close(s.entered)
-	<-s.release
-}
-
 func TestTabEventSinkDoesNotBlockOnRuntimeEventsEmit(t *testing.T) {
 	entered := make(chan struct{})
 	release := make(chan struct{})

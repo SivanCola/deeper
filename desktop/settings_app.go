@@ -1184,28 +1184,13 @@ func (a *App) loadDesktopUserConfigForEditForRoot(_ string) (*config.Config, str
 // legacy config merge) are applied to the returned copy in memory only;
 // the on-disk file migrates the first time a locked write path runs
 // loadDesktopUserConfigForEdit. Credentials (Deepzora global .env) are not
-// loaded; callers that hand the config to a runtime resolving secrets from the
-// process env must use loadDesktopUserConfigForViewWithCredentials.
+// loaded here.
 func (a *App) loadDesktopUserConfigForView() (*config.Config, string, error) {
 	return a.loadDesktopUserConfigForViewForRoot(a.activeWorkspaceRoot())
 }
 
 func (a *App) loadDesktopUserConfigForViewForRoot(root string) (*config.Config, string, error) {
 	return a.loadDesktopUserConfigReadOnlyForRoot(root, config.LoadForEditWithoutCredentialsReadOnlyStrict)
-}
-
-// loadDesktopUserConfigForViewWithCredentials is loadDesktopUserConfigForView
-// plus credential resolution: like config.LoadForEdit it loads Deepzora's
-// global .env into the process env. Use it for read-only loads whose result
-// feeds a runtime that resolves env-based secrets — the background
-// (app-secret/control-token envs) and MCP server connects. It still never
-// writes to disk.
-func (a *App) loadDesktopUserConfigForViewWithCredentials() (*config.Config, string, error) {
-	return a.loadDesktopUserConfigForViewWithCredentialsForRoot(a.activeWorkspaceRoot())
-}
-
-func (a *App) loadDesktopUserConfigForViewWithCredentialsForRoot(root string) (*config.Config, string, error) {
-	return a.loadDesktopUserConfigReadOnlyForRoot(root, config.LoadForEditReadOnlyStrict)
 }
 
 // loadDesktopUserConfigReadOnlyForRoot is the shared pure-read loader behind
