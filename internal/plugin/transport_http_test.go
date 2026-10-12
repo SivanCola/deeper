@@ -719,6 +719,14 @@ func TestHTTPTransportRPCError(t *testing.T) {
 // TestSSETransportUnsupported documents that the legacy sse transport is
 // recognised but deferred with a clear, actionable error.
 func TestSSETransportUnsupported(t *testing.T) {
+	// Dial directly: an inherited proxy answers for the unroutable host with its
+	// own "Service Unavailable", burying the hint under test. ProxyFromEnvironment
+	// caches on first use, so clearing the variables alone would not help.
+	if base, ok := http.DefaultTransport.(*http.Transport); ok {
+		prev := base.Proxy
+		base.Proxy = nil
+		t.Cleanup(func() { base.Proxy = prev })
+	}
 	_, _, err := StartAll(context.Background(), []Spec{{Name: "legacy", Type: "sse", URL: "http://x"}})
 	if err == nil || !strings.Contains(err.Error(), "http") {
 		t.Fatalf("sse should error pointing to http, got %v", err)

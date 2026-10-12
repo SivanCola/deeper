@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"deepzora/internal/netclient"
 )
 
 func TestBlockedFetchIP(t *testing.T) {
@@ -68,6 +70,13 @@ func TestWebFetchRefusesLinkLocal(t *testing.T) {
 	}
 }
 
+// directFetchSpec pins webFetch to a direct dial. The SSRF guard resolves hosts
+// itself and vets each address; a developer's environment proxy would hand DNS
+// to the proxy instead, bypassing the stubbed lookup these cases depend on.
+func directFetchSpec() netclient.ProxySpec {
+	return netclient.ProxySpec{Mode: netclient.ModeOff}
+}
+
 func stubFetchLookup(t *testing.T, addrs ...string) {
 	t.Helper()
 	prev := lookupFetchHost
@@ -92,7 +101,7 @@ func TestWebFetchDialsAllowedAddressBesideBlockedOne(t *testing.T) {
 	stubFetchLookup(t, "fdfe:dcba:9876::152", "127.0.0.1")
 
 	args, _ := json.Marshal(map[string]any{"url": "http://api-docs.example:" + port + "/"})
-	out, err := webFetch{}.Execute(context.Background(), args)
+	out, err := webFetch{proxySpec: directFetchSpec()}.Execute(context.Background(), args)
 	if err != nil {
 		t.Fatalf("fetch should use the allowed address, got %v", err)
 	}
@@ -104,7 +113,7 @@ func TestWebFetchDialsAllowedAddressBesideBlockedOne(t *testing.T) {
 func TestWebFetchRefusesHostWithOnlyBlockedAddresses(t *testing.T) {
 	stubFetchLookup(t, "fdfe:dcba:9876::152", "10.0.0.7")
 	args, _ := json.Marshal(map[string]any{"url": "http://internal.example/"})
-	_, err := webFetch{}.Execute(context.Background(), args)
+	_, err := webFetch{proxySpec: directFetchSpec()}.Execute(context.Background(), args)
 	if err == nil || !strings.Contains(err.Error(), "refusing to fetch internal address") {
 		t.Fatalf("want SSRF refusal, got %v", err)
 	}
