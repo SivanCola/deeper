@@ -1,0 +1,6 @@
+- description: In-source alert suppression queries for Go
+- queries: .
+  from: codeql/go-queries
+- include:
+    id:
+      - go/alert-suppression
