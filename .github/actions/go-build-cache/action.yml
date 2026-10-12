@@ -11,8 +11,11 @@ description: >-
   prefix, so a dependency bump downloads only the delta. GOMODCACHE holds
   extracted module source and is byte-identical on every platform, so it is
   shared across operating systems; GOCACHE holds compiled output and stays keyed
-  per OS and architecture. Saving is restricted to a main push; pull requests
-  restore only.
+  per OS and architecture. Because the module key carries no platform, every leg
+  of a matrix targets the same key, so only save_mod_os may write it; otherwise
+  each leg uploads the same archive and the last one to finish decides which
+  platform's tar becomes the shared copy, under enableCrossOsArchive: false.
+  Saving is restricted to a main push; pull requests restore only.
 
 inputs:
   module:
@@ -26,6 +29,12 @@ inputs:
     description: Namespace for GOCACHE when a job builds less than its module's other jobs
     required: false
     default: ""
+  save_mod_os:
+    description: >-
+      runner.os allowed to write the shared module cache; empty disables that
+      write, for a job that should only seed its own build cache
+    required: false
+    default: Linux
   mode:
     description: restore (default) or save
     required: false
@@ -84,7 +93,7 @@ runs:
     # always() so a failing test suite still leaves the download it performed
     # for the next run; push-only so fork pull requests never write and the
     # repository cache stays bounded by main traffic.
-    - if: inputs.mode == 'save' && always() && github.event_name == 'push'
+    - if: inputs.mode == 'save' && always() && github.event_name == 'push' && runner.os == inputs.save_mod_os
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ${{ steps.key.outputs.mod_paths }}

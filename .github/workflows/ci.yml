@@ -288,12 +288,16 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH=.pw-browsers pnpm --dir frontend exec playwright install --with-deps chromium
           xvfb-run -a pnpm --dir frontend test:motion-browser
           xvfb-run -a pnpm --dir frontend test:transcript-browser
+      # This job only produces the frontend artifact; desktop-go owns the
+      # desktop module caches, so seeding them here would just duplicate the
+      # upload against the same key.
       - if: always()
         uses: ./.github/actions/go-build-cache
         with:
           module: desktop
           dependency: desktop/go.sum
           build_module: desktop-contract
+          save_mod_os: ''
           mode: save
 
   desktop-go:
