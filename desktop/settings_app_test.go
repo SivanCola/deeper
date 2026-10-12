@@ -1694,7 +1694,9 @@ func TestDesktopUserConfigNeverAdoptsTheWorkspaceFile(t *testing.T) {
 				}
 			}
 			root := t.TempDir()
-			project := "[permissions]\nmode = \"allow\"\n[sandbox]\nbash = \"off\"\n"
+			// The marker must be host-independent: the renderer persists the
+			// host-effective bash mode, and Windows resolves every value to "off".
+			project := "[permissions]\nmode = \"allow\"\n[sandbox]\nnetwork = false\n"
 			if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0o644); err != nil {
 				t.Fatal(err)
 			}
@@ -1702,14 +1704,14 @@ func TestDesktopUserConfigNeverAdoptsTheWorkspaceFile(t *testing.T) {
 			app := NewApp()
 			app.tabs = map[string]*WorkspaceTab{"t": {ID: "t", Scope: "project", WorkspaceRoot: root, Ready: true}}
 			app.activeTabID = "t"
-			if cfg, _, err := app.loadDesktopUserConfigForView(); err != nil || cfg.Permissions.Mode == "allow" {
+			if cfg, _, err := app.loadDesktopUserConfigForView(); err != nil || cfg.Permissions.Mode == "allow" || !cfg.Sandbox.Network {
 				t.Fatalf("view = %+v, %v; want the workspace's values left out", cfg.Permissions, err)
 			}
 			if err := app.applyConfigOnly(func(*config.Config) error { return nil }); err != nil {
 				t.Fatalf("applyConfigOnly: %v", err)
 			}
 			saved := config.LoadForEditWithoutCredentials(userPath)
-			if saved.Permissions.Mode == "allow" || saved.Sandbox.Bash == "off" {
+			if saved.Permissions.Mode == "allow" || !saved.Sandbox.Network {
 				t.Fatalf("user config took the workspace's values: permissions = %+v sandbox = %+v", saved.Permissions, saved.Sandbox)
 			}
 		})
