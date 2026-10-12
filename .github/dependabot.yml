@@ -38,6 +38,11 @@ updates:
       # Our architecture checks use the TypeScript 6 compiler API.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # desktop/electron/scripts/playwright-page-resource.mjs inlines and
+      # patches playwright-core's injected script under a reviewed,
+      # version-bound contract (see ariaSnapshotWithRefs gating there).
+      # Do not float this dependency in grouped updates.
+      - dependency-name: "playwright"
 
   - package-ecosystem: "github-actions"
     directory: "/"
