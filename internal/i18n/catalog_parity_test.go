@@ -18,14 +18,11 @@ import (
 //
 // Example regression this test exists for: a zh translation of
 // ChatStatusPlanApproval read "PgUp/PgDn 捲動" while en also carries
-// Ctrl+Home/End. Because the check is a pure set comparison per key,
-// re-introducing that drift deterministically fails the test (en has
-// {Ctrl+Home, End} tokens the translation lacks).
-//
-// The test enumerates fields of the baseline catalogue (English) — the same
-// Messages type every catalogue uses — exactly like TestCatalogsComplete,
-// so newly added keys are covered automatically. Fields that are deliberately
-// out of scope are skipped via the explicit list below.
+// Ctrl+Home/End. The pure set comparison per key catches that drift
+// deterministically (en has {Ctrl+Home, End} tokens the translation lacks).
+// Fields of the baseline catalogue (English) are enumerated exactly like
+// TestCatalogsComplete, so new keys are covered automatically; deliberately
+// out-of-scope fields are skipped via the explicit list below.
 func TestCatalogsAgreeOnCodeTokens(t *testing.T) {
 	// UsageBody and ReportUsageBody are multi-line free-form translated prose
 	// (help text), not code tokens. All other fields are checked automatically.
