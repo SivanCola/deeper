@@ -75,6 +75,14 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
+          cache: false
+      - if: env.RUN_STEPS == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root
+          dependency: go.sum
+      - if: env.RUN_STEPS == 'true'
+        run: go mod download
       - name: Install Linux sandbox backend
         if: env.RUN_STEPS == 'true' && runner.os == 'Linux'
         run: |
@@ -100,6 +108,12 @@ jobs:
             go test -timeout=2m -run '^TestPowerShell' ./internal/persistentshell
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - if: always() && env.RUN_STEPS == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root
+          dependency: go.sum
+          mode: save
 
   # The nested SDK and release-control contracts are platform-independent.
   root:
@@ -116,6 +130,15 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
+          cache: false
+      # The root namespace belongs to the test matrix; this job resolves only
+      # the SDK and actionlint, so it restores and saves its own namespace
+      # rather than freezing a small cache under the one test depends on.
+      - if: env.RUN_STEPS == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root-tools
+          dependency: go.sum
       - if: env.RUN_STEPS == 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -145,6 +168,12 @@ jobs:
           bash scripts/verify-release-authorization.test.sh
           bash scripts/release-workflows.test.sh
           node scripts/check-single-release-public-contract.mjs
+      - if: always() && env.RUN_STEPS == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root-tools
+          dependency: go.sum
+          mode: save
 
   race:
     needs: changes
@@ -158,6 +187,12 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
+          cache: false
+      - uses: ./.github/actions/go-build-cache
+        with:
+          module: root-race
+          dependency: go.sum
+      - run: go mod download
       - name: Install Linux sandbox backend
         run: |
           sudo apt-get update && sudo apt-get install -y bubblewrap
@@ -175,6 +210,12 @@ jobs:
             ./internal/remote/... ./internal/extension/... ./internal/boot/... ./internal/control/... \
             ./internal/tool/... ./internal/config/... ./internal/session/... \
             ./internal/serve/... ./internal/sessioninbox/...
+      - if: always()
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root-race
+          dependency: go.sum
+          mode: save
 
   desktop-frontend:
     needs: changes
@@ -194,6 +235,13 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: desktop/go.mod
+          cache: false
+      - uses: ./.github/actions/go-build-cache
+        with:
+          module: desktop
+          dependency: desktop/go.sum
+          build_module: desktop-contract
+      - run: go mod download
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 10.34.5
@@ -240,6 +288,13 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH=.pw-browsers pnpm --dir frontend exec playwright install --with-deps chromium
           xvfb-run -a pnpm --dir frontend test:motion-browser
           xvfb-run -a pnpm --dir frontend test:transcript-browser
+      - if: always()
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: desktop
+          dependency: desktop/go.sum
+          build_module: desktop-contract
+          mode: save
 
   desktop-go:
     needs: [changes, desktop-frontend]
@@ -259,7 +314,12 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: desktop/go.mod
-          cache-dependency-path: desktop/go.sum
+          cache: false
+      - uses: ./.github/actions/go-build-cache
+        with:
+          module: desktop
+          dependency: desktop/go.sum
+      - run: go mod download
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 10.34.5
@@ -303,6 +363,12 @@ jobs:
           version: v2.12.2
           working-directory: desktop
           args: --timeout=5m
+      - if: always()
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: desktop
+          dependency: desktop/go.sum
+          mode: save
 
   desktop:
     needs: [changes, desktop-frontend, desktop-go]
@@ -337,6 +403,12 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
+          cache: false
+      - if: env.RUN_STEPS == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root-tools
+          dependency: go.sum
       - name: Check formatting and repository standards
         if: env.RUN_STEPS == 'true'
         run: |
@@ -354,3 +426,9 @@ jobs:
           for target in darwin windows; do
             GOOS="$target" golangci-lint run --timeout=5m ./...
           done
+      - if: always() && env.RUN_STEPS == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          module: root-tools
+          dependency: go.sum
+          mode: save
