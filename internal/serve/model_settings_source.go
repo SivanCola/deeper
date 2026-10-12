@@ -36,6 +36,7 @@ func requestModelSettingsSource(ctx context.Context, settings *config.ModelRunti
 	}
 	req.Header.Set("Authorization", "Bearer "+settings.SourceToken)
 	req.Header.Set("Content-Type", "application/json")
+	// codeql[go/request-forgery] The endpoint above is pinned to a literal http loopback host (127.0.0.1/::1) with a fixed path and no user info; only the desktop tunnel's port varies.
 	res, err := modelSettingsSourceClient.Do(req)
 	if err != nil {
 		return response, fmt.Errorf("Desktop model settings source is unavailable")

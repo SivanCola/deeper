@@ -1,0 +1,11 @@
+# CodeQL configuration for code scanning (advanced setup).
+#
+# The default security suites do not evaluate in-source suppression comments
+# (`// codeql[<query-id>]`), so `go/command-injection` alerts suppressed in
+# source kept reopening on every push. These suites run the alert-suppression
+# interpretation queries alongside the defaults; each language's analysis picks
+# its own query and ignores the other entries.
+name: "deepzora CodeQL configuration"
+queries:
+  - uses: ./.github/codeql/go-alert-suppression.qls
+  - uses: ./.github/codeql/javascript-alert-suppression.qls
