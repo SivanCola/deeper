@@ -361,9 +361,6 @@ func (t *WorkspaceTab) currentSessionIdentity() string {
 	if t == nil {
 		return ""
 	}
-	if strings.HasPrefix(t.SessionPath, embeddedBotSessionPrefix) {
-		return t.SessionPath
-	}
 	if id := strings.TrimSpace(t.SessionID); id != "" {
 		return remoteSessionIDRoutePrefix + id
 	}
@@ -1430,8 +1427,6 @@ type tabEventSink struct {
 	runtimeEpoch      string
 	sessionGeneration uint64 // source session binding generation
 	runtimeEvents     asyncRuntimeEmitter
-	botSink           event.Sink // optional: when set, events are also forwarded here
-	botSinkGen        uint64
 	turn              turnSubmissionState // stays reserved through the end of TurnDone fan-out
 	// takeoverMirror, when set, forwards every event to the serve that used to
 	// own this session so the remote tab keeps rendering after a local
@@ -1445,10 +1440,6 @@ func (s *tabEventSink) setTakeoverMirror(m *takeoverMirror) {
 		return
 	}
 	s.takeoverMirror.Store(m)
-}
-
-type closeableEventSink interface {
-	Close()
 }
 
 // binding snapshots the sink's current tab routing under the sink lock.
@@ -1533,68 +1524,10 @@ func (s *tabEventSink) Emit(e event.Event) {
 	if e.Kind == event.TurnDone && app != nil {
 		app.scheduleTabSnapshot(tabID)
 	}
-	// Forward event to bot channels when a bot forwarder is attached.
-	// Read the sink under the read lock so SetBotSink can safely swap it
-	// from another goroutine.
-	bs, botSinkGen := s.botSinkSnapshot()
-	if bs != nil {
-		bs.Emit(e)
-		// Detach the forwarder after TurnDone so subsequent turns on the
-		// same tab do not keep pushing to bot channels.
-		if e.Kind == event.TurnDone {
-			s.clearBotSink(botSinkGen)
-		}
-	}
-	// Unlike the transient botSink above, the bridge observes every tab for
-	// its whole lifetime (god view: /desktop status, watch subscriptions,
-	// remote approvals). observe only does in-memory bookkeeping and queueing.
-	if app != nil && app.botBridge != nil {
-		app.botBridge.observe(tabID, e)
-	}
 	if e.Kind == event.TurnDone {
 		s.mu.Lock()
 		s.turn = turnSubmissionState{}
 		s.mu.Unlock()
-	}
-}
-
-// SetBotSink atomically sets or clears the bot event forwarder on this sink.
-// It is safe to call concurrently with Emit.
-func (s *tabEventSink) SetBotSink(sink event.Sink) uint64 {
-	s.mu.Lock()
-	old := s.botSink
-	s.botSink = sink
-	s.botSinkGen++
-	generation := s.botSinkGen
-	s.mu.Unlock()
-	if old != nil && old != sink {
-		if closer, ok := old.(closeableEventSink); ok {
-			closer.Close()
-		}
-	}
-	return generation
-}
-
-func (s *tabEventSink) botSinkSnapshot() (event.Sink, uint64) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.botSink, s.botSinkGen
-}
-
-// clearBotSink clears only the forwarder generation observed by the finishing
-// turn. A delayed TurnDone must not detach a replacement installed meanwhile.
-func (s *tabEventSink) clearBotSink(generation uint64) {
-	s.mu.Lock()
-	if s.botSinkGen != generation {
-		s.mu.Unlock()
-		return
-	}
-	old := s.botSink
-	s.botSink = nil
-	s.botSinkGen++
-	s.mu.Unlock()
-	if closer, ok := old.(closeableEventSink); ok {
-		closer.Close()
 	}
 }
 
@@ -2205,9 +2138,6 @@ func (a *App) tabMeta(tab *WorkspaceTab, active bool) TabMeta {
 		m.TurnEventSeq = status.TurnEventSeq
 		m.TurnReplayAfter = status.ReplayAfterSeq
 	}
-	if a.botBridge != nil {
-		m.RemoteControlled = a.botBridge.remoteControlledTabs()[tab.ID]
-	}
 	legacyMetaPath, legacyMetaOK := validatedLegacySessionPathForRead(tab.currentSessionPath())
 	if legacyMetaOK {
 		if meta, ok, err := agent.LoadBranchMeta(string(legacyMetaPath)); err == nil && ok {
@@ -2459,12 +2389,6 @@ func (a *App) openTopicSession(scope, workspaceRoot, topicID, sessionPath string
 func (a *App) openTopicSessionWithNavigation(scope, workspaceRoot, topicID, route string, navigation uint64) (TabMeta, error) {
 	if a.desktopSessions.navigationSeq.Load() != navigation {
 		return TabMeta{}, errSessionNavigationSuperseded
-	}
-	if strings.HasPrefix(route, embeddedBotSessionPrefix) {
-		if _, err := a.embeddedBotSessionPath(scope, workspaceRoot, route); err != nil {
-			return TabMeta{}, err
-		}
-		return a.openTopicTabWithActivation(scope, workspaceRoot, topicID, route, true, navigation)
 	}
 	if _, ok := parseSessionRoute(route); !ok {
 		return TabMeta{}, newSessionOperationError("unsupported", "Use a current session identity.")
@@ -3506,19 +3430,6 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 
 	sessionDir, startupSessionPath := currentStartupSession(tab, root, tabScope, tabSessionPath)
 	buildSessionService := a.desktopSessionService(sessionDir)
-	botSession := strings.HasPrefix(tabSessionPath, embeddedBotSessionPrefix)
-	if botSession {
-		if _, err := a.embeddedBotSessionPath(tabScope, root, tabSessionPath); err != nil {
-			a.recordTabStartupFailure(tab, buildGeneration, appCtx, err)
-			return
-		}
-		buildSessionService, err = a.projectSessionService(session.RootForSessionDir(config.ProjectSessionDir(root)))
-		if err != nil {
-			a.recordTabStartupFailure(tab, buildGeneration, appCtx, err)
-			return
-		}
-		tabSessionID = strings.TrimPrefix(tabSessionPath, embeddedBotSessionPrefix)
-	}
 	model := strings.TrimSpace(tabModel)
 	// The v3 event projection owns model selection. desktop-tabs.json only
 	// remembers which immutable session to open, so stale UI state cannot select
@@ -3650,23 +3561,7 @@ func (a *App) buildTabControllerWithContextCore(tab *WorkspaceTab, loadedSession
 	acquiredLeaseKey := ""
 	restoredRuntime := buildRuntime
 	identity, usesExclusiveV3 := ctrl.(control.IdentityLifecycle)
-	if usesExclusiveV3 && identity.UsesExclusiveSession() && botSession {
-		ref, bindErr := identity.OpenSession(buildCtx, session.SessionRef{HostID: buildSessionService.HostID(), SessionID: tabSessionID})
-		if bindErr != nil {
-			a.recordTabStartupFailure(tab, buildGeneration, appCtx, friendlySessionLoadError(bindErr))
-			ctrl.Close()
-			a.releaseSharedHost(rootKey)
-			return
-		}
-		a.mu.Lock()
-		if a.tabBuildSupersededLocked(tab, buildGeneration) {
-			a.mu.Unlock()
-			a.abandonSupersededBuild(tab, ctrl, rootKey, "")
-			return
-		}
-		tab.SessionID, tab.ReadOnly = ref.SessionID, true
-		a.mu.Unlock()
-	} else if usesExclusiveV3 && identity.UsesExclusiveSession() {
+	if usesExclusiveV3 && identity.UsesExclusiveSession() {
 		bound, bindErr := a.bindTabCanonicalSessionTopic(
 			buildCtx, identity, cfg, tabScope, tabWorkspaceRoot, tabSessionID, startupSessionPath, model, modelFallback, tabTopicID, tabSeedTitle,
 		)

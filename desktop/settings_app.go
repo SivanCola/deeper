@@ -16,13 +16,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
 	"deepzora/internal/agent"
 	"deepzora/internal/boot"
-	"deepzora/internal/botruntime"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/netclient"
@@ -187,112 +185,6 @@ type AgentView struct {
 	CompactRatioOverridden bool    `json:"compactRatioOverridden,omitempty"`
 }
 
-type BotAccessView struct {
-	Enabled        bool     `json:"enabled"`
-	AllowAll       bool     `json:"allowAll"`
-	PairingEnabled bool     `json:"pairingEnabled"`
-	Users          []string `json:"users"`
-	Groups         []string `json:"groups"`
-	Approvers      []string `json:"approvers"`
-	Admins         []string `json:"admins"`
-}
-
-type BotSelfUserIDsView struct {
-	QQ       []string `json:"qq"`
-	Feishu   []string `json:"feishu"`
-	Weixin   []string `json:"weixin"`
-	Dingtalk []string `json:"dingtalk"`
-}
-
-type BotPairingView struct {
-	Enabled               bool `json:"enabled"`
-	RequestTTLMinutes     int  `json:"requestTtlMinutes"`
-	MaxPendingPerPlatform int  `json:"maxPendingPerPlatform"`
-}
-
-type BotControlView struct {
-	Enabled  bool   `json:"enabled"`
-	Addr     string `json:"addr"`
-	TokenEnv string `json:"tokenEnv"`
-}
-
-type BotRouteView struct {
-	ConnectionID     string `json:"connectionId"`
-	Platform         string `json:"platform"`
-	ChatType         string `json:"chatType"`
-	ChatID           string `json:"chatId"`
-	UserID           string `json:"userId"`
-	ThreadID         string `json:"threadId"`
-	Model            string `json:"model"`
-	ToolApprovalMode string `json:"toolApprovalMode"`
-	WorkspaceRoot    string `json:"workspaceRoot"`
-}
-
-type QQBotView struct {
-	Enabled          bool          `json:"enabled"`
-	AppID            string        `json:"appId"`
-	AppSecretEnv     string        `json:"appSecretEnv"`
-	SecretSet        bool          `json:"secretSet"`
-	Sandbox          bool          `json:"sandbox"`
-	Model            string        `json:"model"`
-	ToolApprovalMode string        `json:"toolApprovalMode"`
-	WorkspaceRoot    string        `json:"workspaceRoot"`
-	Access           BotAccessView `json:"access"`
-}
-
-type FeishuBotView struct {
-	Enabled           bool   `json:"enabled"`
-	Domain            string `json:"domain"`
-	AppID             string `json:"appId"`
-	AppSecretEnv      string `json:"appSecretEnv"`
-	SecretSet         bool   `json:"secretSet"`
-	VerificationToken string `json:"verificationToken"`
-	Mode              string `json:"mode"`
-	WebhookPort       int    `json:"webhookPort"`
-	RequireMention    bool   `json:"requireMention"`
-}
-
-type WeixinBotView struct {
-	Enabled   bool   `json:"enabled"`
-	AccountID string `json:"accountId"`
-	TokenEnv  string `json:"tokenEnv"`
-	TokenSet  bool   `json:"tokenSet"`
-	APIBase   string `json:"apiBase"`
-}
-
-type DingtalkBotView struct {
-	Enabled          bool          `json:"enabled"`
-	ClientID         string        `json:"clientId"`
-	ClientSecretEnv  string        `json:"clientSecretEnv"`
-	SecretSet        bool          `json:"secretSet"`
-	BotName          string        `json:"botName"`
-	RequireMention   bool          `json:"requireMention"`
-	Model            string        `json:"model"`
-	ToolApprovalMode string        `json:"toolApprovalMode"`
-	WorkspaceRoot    string        `json:"workspaceRoot"`
-	Access           BotAccessView `json:"access"`
-}
-
-type BotSettingsView struct {
-	Enabled            bool                `json:"enabled"`
-	Model              string              `json:"model"`
-	ToolApprovalMode   string              `json:"toolApprovalMode"`
-	MaxSteps           int                 `json:"maxSteps"`
-	DebounceMs         int                 `json:"debounceMs"`
-	QueueMode          string              `json:"queueMode"`
-	QueueCap           int                 `json:"queueCap"`
-	IgnoreSelfMessages bool                `json:"ignoreSelfMessages"`
-	SelfUserIDs        BotSelfUserIDsView  `json:"selfUserIds"`
-	Control            BotControlView      `json:"control"`
-	Pairing            BotPairingView      `json:"pairing"`
-	Routes             []BotRouteView      `json:"routes"`
-	QQ                 QQBotView           `json:"qq"`
-	Feishu             FeishuBotView       `json:"feishu"`
-	Weixin             WeixinBotView       `json:"weixin"`
-	Dingtalk           DingtalkBotView     `json:"dingtalk"`
-	Connections        []BotConnectionView `json:"connections"`
-}
-
 // SettingsView is the whole Settings panel payload.
 type SettingsView struct {
 	ModelSettingsFingerprint string               `json:"modelSettingsFingerprint"`
@@ -314,7 +206,6 @@ type SettingsView struct {
 	Sandbox                  SandboxView          `json:"sandbox"`
 	Network                  NetworkView          `json:"network"`
 	Agent                    AgentView            `json:"agent"`
-	Bot                      BotSettingsView      `json:"bot"`
 	DesktopLanguage          string               `json:"desktopLanguage"`
 	DesktopCurrency          string               `json:"desktopCurrency"`
 	DesktopLayoutStyle       string               `json:"desktopLayoutStyle"`
@@ -1030,7 +921,6 @@ func (a *App) Settings() SettingsView {
 			CompactRatio:           cfg.Agent.CompactRatio,
 			EffectiveCompactRatio:  cfg.Agent.CompactRatio,
 		},
-		Bot:                     botSettingsView(cfg.Bot),
 		DesktopLanguage:         cfg.DesktopLanguage(),
 		DesktopCurrency:         cfg.DisplayCurrencyPref(),
 		DesktopLayoutStyle:      cfg.DesktopLayoutStyle(),
@@ -1073,169 +963,11 @@ func (a *App) Settings() SettingsView {
 	return v
 }
 
-func botSettingsView(b config.BotConfig) BotSettingsView {
-	b = botConfigWithConnectionViews(b)
-	mode := strings.TrimSpace(b.Feishu.Mode)
-	if mode == "" {
-		mode = "webhook"
-	}
-	return BotSettingsView{
-		Enabled:            b.Enabled,
-		Model:              b.Model,
-		ToolApprovalMode:   normalizeBotConnectionToolApprovalMode(b.ToolApprovalMode),
-		MaxSteps:           b.MaxSteps,
-		DebounceMs:         b.DebounceMs,
-		QueueMode:          b.QueueMode,
-		QueueCap:           b.QueueCap,
-		IgnoreSelfMessages: b.IgnoreSelfMessages,
-		SelfUserIDs: BotSelfUserIDsView{
-			QQ:       nonNil(b.SelfUserIDs.QQ),
-			Feishu:   nonNil(b.SelfUserIDs.Feishu),
-			Weixin:   nonNil(b.SelfUserIDs.Weixin),
-			Dingtalk: nonNil(b.SelfUserIDs.Dingtalk),
-		},
-		Control: BotControlView{
-			Enabled:  b.Control.Enabled,
-			Addr:     b.Control.Addr,
-			TokenEnv: b.Control.TokenEnv,
-		},
-		Pairing: BotPairingView{
-			Enabled:               b.Pairing.Enabled,
-			RequestTTLMinutes:     b.Pairing.RequestTTLMinutes,
-			MaxPendingPerPlatform: b.Pairing.MaxPendingPerPlatform,
-		},
-		Routes: botRouteViews(b.Routes),
-		QQ: QQBotView{
-			Enabled:          b.QQ.Enabled,
-			AppID:            b.QQ.AppID,
-			AppSecretEnv:     b.QQ.AppSecretEnv,
-			SecretSet:        strings.TrimSpace(b.QQ.AppSecretEnv) != "" && os.Getenv(b.QQ.AppSecretEnv) != "",
-			Sandbox:          b.QQ.Sandbox,
-			Model:            b.QQ.Model,
-			ToolApprovalMode: normalizeBotConnectionToolApprovalMode(b.QQ.ToolApprovalMode),
-			WorkspaceRoot:    b.QQ.WorkspaceRoot,
-			Access:           botAccessViewFromConfig(b.QQ.Access),
-		},
-		Feishu: FeishuBotView{
-			Enabled:           b.Feishu.Enabled,
-			Domain:            orDefault(strings.TrimSpace(b.Feishu.Domain), "feishu"),
-			AppID:             b.Feishu.AppID,
-			AppSecretEnv:      b.Feishu.AppSecretEnv,
-			SecretSet:         strings.TrimSpace(b.Feishu.AppSecretEnv) != "" && os.Getenv(b.Feishu.AppSecretEnv) != "",
-			VerificationToken: b.Feishu.VerificationToken,
-			Mode:              mode,
-			WebhookPort:       b.Feishu.WebhookPort,
-			RequireMention:    b.Feishu.RequireMention,
-		},
-		Weixin: WeixinBotView{
-			Enabled:   b.Weixin.Enabled,
-			AccountID: b.Weixin.AccountID,
-			TokenEnv:  b.Weixin.TokenEnv,
-			TokenSet:  strings.TrimSpace(b.Weixin.TokenEnv) != "" && os.Getenv(b.Weixin.TokenEnv) != "",
-			APIBase:   b.Weixin.APIBase,
-		},
-		Dingtalk: DingtalkBotView{
-			Enabled:          b.Dingtalk.Enabled,
-			ClientID:         b.Dingtalk.ClientID,
-			ClientSecretEnv:  b.Dingtalk.SecretEnv,
-			SecretSet:        (strings.TrimSpace(b.Dingtalk.SecretEnv) != "" && os.Getenv(b.Dingtalk.SecretEnv) != "") || strings.TrimSpace(b.Dingtalk.ClientSecret) != "",
-			BotName:          b.Dingtalk.BotName,
-			RequireMention:   b.Dingtalk.RequireMention,
-			Model:            strings.TrimSpace(b.Dingtalk.Model),
-			ToolApprovalMode: normalizeBotConnectionToolApprovalMode(b.Dingtalk.ToolApprovalMode),
-			WorkspaceRoot:    strings.TrimSpace(b.Dingtalk.WorkspaceRoot),
-			Access:           botAccessViewFromConfig(b.Dingtalk.Access),
-		},
-		Connections: botConnectionViews(b.Connections),
-	}
-}
-
 func orDefault(s, def string) string {
 	if strings.TrimSpace(s) == "" {
 		return def
 	}
 	return s
-}
-
-func botRouteViews(routes []config.BotRouteConfig) []BotRouteView {
-	if len(routes) == 0 {
-		return []BotRouteView{}
-	}
-	out := make([]BotRouteView, 0, len(routes))
-	for _, route := range routes {
-		out = append(out, BotRouteView{
-			ConnectionID:     route.ConnectionID,
-			Platform:         route.Platform,
-			ChatType:         route.ChatType,
-			ChatID:           route.ChatID,
-			UserID:           route.UserID,
-			ThreadID:         route.ThreadID,
-			Model:            route.Model,
-			ToolApprovalMode: normalizeBotConnectionToolApprovalMode(route.ToolApprovalMode),
-			WorkspaceRoot:    route.WorkspaceRoot,
-		})
-	}
-	return out
-}
-
-func botRouteConfigs(routes []BotRouteView) []config.BotRouteConfig {
-	if len(routes) == 0 {
-		return nil
-	}
-	out := make([]config.BotRouteConfig, 0, len(routes))
-	for _, route := range routes {
-		cfg := config.BotRouteConfig{
-			ConnectionID:     strings.TrimSpace(route.ConnectionID),
-			Platform:         strings.TrimSpace(route.Platform),
-			ChatType:         strings.TrimSpace(route.ChatType),
-			ChatID:           strings.TrimSpace(route.ChatID),
-			UserID:           strings.TrimSpace(route.UserID),
-			ThreadID:         strings.TrimSpace(route.ThreadID),
-			Model:            strings.TrimSpace(route.Model),
-			ToolApprovalMode: normalizeBotConnectionToolApprovalMode(route.ToolApprovalMode),
-			WorkspaceRoot:    strings.TrimSpace(route.WorkspaceRoot),
-		}
-		if cfg.ConnectionID == "" && cfg.Platform == "" && cfg.ChatType == "" && cfg.ChatID == "" && cfg.UserID == "" && cfg.ThreadID == "" &&
-			cfg.Model == "" && cfg.ToolApprovalMode == "" && cfg.WorkspaceRoot == "" {
-			continue
-		}
-		out = append(out, cfg)
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-func botAccessViewFromConfig(access config.BotAccessConfig) BotAccessView {
-	return BotAccessView{
-		Enabled:        access.Enabled,
-		AllowAll:       access.AllowAll,
-		PairingEnabled: access.PairingEnabled,
-		Users:          nonNil(access.Users),
-		Groups:         nonNil(access.Groups),
-		Approvers:      nonNil(access.Approvers),
-		Admins:         nonNil(access.Admins),
-	}
-}
-
-func botAccessConfigFromView(access BotAccessView) config.BotAccessConfig {
-	return config.BotAccessConfig{
-		Enabled:        access.Enabled,
-		AllowAll:       access.AllowAll,
-		PairingEnabled: access.PairingEnabled,
-		Users:          trimList(access.Users),
-		Groups:         trimList(access.Groups),
-		Approvers:      trimList(access.Approvers),
-		Admins:         trimList(access.Admins),
-	}
-}
-
-func botDomainOrDefault(domain string) string {
-	if strings.EqualFold(strings.TrimSpace(domain), "lark") {
-		return "lark"
-	}
-	return "feishu"
 }
 
 // apply (write config, then rebuild the controller so it's live)
@@ -1313,8 +1045,8 @@ func (a *App) applyConfigChangeWithSave(setting string, mutate func(*config.Conf
 	}
 	if err := func() error {
 		// Serialize the load-modify-save against other in-process config editors
-		// (bot auto-session persistence, applyConfigOnly) so neither drops the
-		// other's fields. rebuild() runs after unlocking — it does slow work and
+		// (applyConfigOnly) so neither drops the other's fields. rebuild() runs
+		// after unlocking — it does slow work and
 		// must not hold the config edit lock.
 		unlock := config.LockUserConfigEdits()
 		defer unlock()
@@ -1432,7 +1164,7 @@ func (a *App) loadDesktopUserConfigForEdit() (*config.Config, string, error) {
 
 // loadDesktopUserConfigForEditForRoot reads the user config alone. A
 // workspace's deepzora.toml is never adopted into it: that file arrives with a
-// checkout, and copying it would turn its sandbox, permission and [bot] values
+// checkout, and copying it would turn its sandbox and permission values
 // into the user's own.
 func (a *App) loadDesktopUserConfigForEditForRoot(_ string) (*config.Config, string, error) {
 	userPath := config.UserConfigPath()
@@ -1449,7 +1181,7 @@ func (a *App) loadDesktopUserConfigForEditForRoot(_ string) (*config.Config, str
 // loadDesktopUserConfigForView loads the user config for read-only callers.
 // Contract: it never writes to disk, so it is safe without
 // config.LockUserConfigEdits(). Legacy migrations (provider-access normalize,
-// legacy bot-config merge) are applied to the returned copy in memory only;
+// legacy config merge) are applied to the returned copy in memory only;
 // the on-disk file migrates the first time a locked write path runs
 // loadDesktopUserConfigForEdit. Credentials (Deepzora global .env) are not
 // loaded; callers that hand the config to a runtime resolving secrets from the
@@ -1465,7 +1197,7 @@ func (a *App) loadDesktopUserConfigForViewForRoot(root string) (*config.Config, 
 // loadDesktopUserConfigForViewWithCredentials is loadDesktopUserConfigForView
 // plus credential resolution: like config.LoadForEdit it loads Deepzora's
 // global .env into the process env. Use it for read-only loads whose result
-// feeds a runtime that resolves env-based secrets — the bot runtime
+// feeds a runtime that resolves env-based secrets — the background
 // (app-secret/control-token envs) and MCP server connects. It still never
 // writes to disk.
 func (a *App) loadDesktopUserConfigForViewWithCredentials() (*config.Config, string, error) {
@@ -2609,127 +2341,6 @@ func (a *App) SetNetwork(n NetworkView) error {
 			},
 		})
 	})
-}
-
-func (a *App) SetBotSettings(b BotSettingsView) error {
-	err := a.applyConfigOnly(func(c *config.Config) error {
-		previous := c.Bot
-		c.Bot.Enabled = b.Enabled
-		c.Bot.Model = strings.TrimSpace(b.Model)
-		c.Bot.ToolApprovalMode = normalizeBotConnectionToolApprovalMode(b.ToolApprovalMode)
-		c.Bot.MaxSteps = b.MaxSteps
-		c.Bot.DebounceMs = b.DebounceMs
-		c.Bot.QueueMode = strings.TrimSpace(b.QueueMode)
-		c.Bot.QueueCap = b.QueueCap
-		c.Bot.IgnoreSelfMessages = b.IgnoreSelfMessages
-		c.Bot.SelfUserIDs = config.BotSelfUserIDs{
-			QQ:       trimList(b.SelfUserIDs.QQ),
-			Feishu:   trimList(b.SelfUserIDs.Feishu),
-			Weixin:   trimList(b.SelfUserIDs.Weixin),
-			Dingtalk: trimList(b.SelfUserIDs.Dingtalk),
-		}
-		c.Bot.Control = config.BotControlConfig{
-			Enabled:  b.Control.Enabled,
-			Addr:     strings.TrimSpace(b.Control.Addr),
-			TokenEnv: strings.TrimSpace(b.Control.TokenEnv),
-		}
-		c.Bot.Pairing = config.BotPairingConfig{
-			Enabled:               b.Pairing.Enabled,
-			RequestTTLMinutes:     b.Pairing.RequestTTLMinutes,
-			MaxPendingPerPlatform: b.Pairing.MaxPendingPerPlatform,
-		}
-		c.Bot.Routes = botRouteConfigs(b.Routes)
-		c.Bot.QQ = config.QQBotConfig{
-			Enabled:          b.QQ.Enabled,
-			AppID:            strings.TrimSpace(b.QQ.AppID),
-			AppSecretEnv:     strings.TrimSpace(b.QQ.AppSecretEnv),
-			Sandbox:          b.QQ.Sandbox,
-			Model:            strings.TrimSpace(b.QQ.Model),
-			ToolApprovalMode: normalizeBotConnectionToolApprovalMode(b.QQ.ToolApprovalMode),
-			WorkspaceRoot:    strings.TrimSpace(b.QQ.WorkspaceRoot),
-			Access:           botAccessConfigFromView(b.QQ.Access),
-		}
-		c.Bot.Feishu = config.FeishuBotConfig{
-			Enabled:            b.Feishu.Enabled,
-			Domain:             botDomainOrDefault(b.Feishu.Domain),
-			AppID:              strings.TrimSpace(b.Feishu.AppID),
-			AppSecretEnv:       strings.TrimSpace(b.Feishu.AppSecretEnv),
-			VerificationToken:  strings.TrimSpace(b.Feishu.VerificationToken),
-			Mode:               strings.TrimSpace(b.Feishu.Mode),
-			WebhookPort:        b.Feishu.WebhookPort,
-			RequireMention:     b.Feishu.RequireMention,
-			OutboundMediaRoots: append([]string(nil), c.Bot.Feishu.OutboundMediaRoots...),
-		}
-		c.Bot.Weixin = config.WeixinBotConfig{
-			Enabled:   b.Weixin.Enabled,
-			AccountID: strings.TrimSpace(b.Weixin.AccountID),
-			TokenEnv:  strings.TrimSpace(b.Weixin.TokenEnv),
-			APIBase:   strings.TrimRight(strings.TrimSpace(b.Weixin.APIBase), "/"),
-		}
-		c.Bot.Dingtalk = dingtalkConfigFromView(b.Dingtalk)
-		c.Bot.Connections = botConnectionConfigs(b.Connections)
-		c.Bot.Connections = updateDedicatedBotConnections(c.Bot, previous)
-		return nil
-	})
-	if err == nil {
-		a.refreshBotRuntimeAsync()
-	}
-	return err
-}
-
-// SetBotConnectionToolApprovalMode updates a single connection's tool approval
-// mode without restarting the bot gateway. Only the connection's mode field is
-// persisted; existing sessions on the running gateway are updated in-place.
-func (a *App) SetBotConnectionToolApprovalMode(connID, mode string) error {
-	connID = strings.TrimSpace(connID)
-	mode = normalizeBotConnectionToolApprovalMode(mode)
-	runtimeConnID := connID
-	err := a.applyConfigOnly(func(c *config.Config) error {
-		for i := range c.Bot.Connections {
-			candidateRuntimeID := botruntime.ConnectionRuntimeID(c.Bot.Connections[i])
-			if candidateRuntimeID == "" {
-				candidateRuntimeID = strings.TrimSpace(c.Bot.Connections[i].ID)
-			}
-			if c.Bot.Connections[i].ID == connID || candidateRuntimeID == connID {
-				c.Bot.Connections[i].ToolApprovalMode = mode
-				c.Bot.Connections[i].UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-				runtimeConnID = candidateRuntimeID
-				return nil
-			}
-		}
-		return fmt.Errorf("connection %q not found", connID)
-	})
-	if err != nil {
-		return err
-	}
-	if a.botRuntime != nil {
-		a.botRuntime.updateConnectionToolApprovalMode(runtimeConnID, mode)
-	}
-	return nil
-}
-
-func (a *App) SetBotSecret(envName, value string) error {
-	envName = strings.TrimSpace(envName)
-	if envName == "" {
-		return fmt.Errorf("bot secret env name is empty")
-	}
-	if err := upsertDotEnv(envName, value); err != nil {
-		return err
-	}
-	a.refreshBotRuntimeAsync()
-	return nil
-}
-
-func (a *App) ClearBotSecret(envName string) error {
-	envName = strings.TrimSpace(envName)
-	if envName == "" {
-		return fmt.Errorf("bot secret env name is empty")
-	}
-	if err := removeDotEnv(envName); err != nil {
-		return err
-	}
-	a.refreshBotRuntimeAsync()
-	return nil
 }
 
 // SetAgentParams updates sampling temperature and the base system prompt. The

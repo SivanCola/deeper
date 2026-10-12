@@ -103,37 +103,25 @@ func TestObserveSettingsSnapshotUsesSafeBuckets(t *testing.T) {
 	})
 	cfg.Agent.PlannerModel = customProvider + "/" + customModel
 	cfg.Desktop.ProviderAccess = []string{customProvider}
-	cfg.Bot.Connections = []config.BotConnectionConfig{{
-		Provider: "feishu",
-		Enabled:  true,
-		Status:   "connected",
-		Model:    customProvider + "/" + customModel,
-	}}
 
 	m := newMetricsAggregator(t.TempDir())
 	m.observeSettingsSnapshot(cfg)
 
 	want := map[string]string{
-		"settings_language":                "auto",
-		"client_surface":                   "desktop",
-		"client_version":                   metricBucket(version),
-		"settings_desktop_layout":          "workbench",
-		"settings_theme":                   "dark",
-		"settings_theme_style":             "graphite",
-		"settings_close_behavior":          "quit",
-		"settings_session_experience":      "deep",
-		"settings_status_bar_style":        "icon",
-		"settings_status_bar_items_count":  "n_3",
-		"settings_check_updates":           "off",
-		"settings_default_model":           safeModelBucket(cfg, cfg.DefaultModel),
-		"settings_planner_model":           metricBucket("custom_" + customProvider + "_" + customModel),
-		"settings_provider_access":         metricBucket("custom_" + customProvider),
-		"settings_bot_enabled":             "off",
-		"settings_bot_connection_count":    "n_1",
-		"settings_bot_connection_provider": "feishu",
-		"settings_bot_connection_enabled":  "on",
-		"settings_bot_connection_status":   "connected",
-		"settings_bot_connection_model":    metricBucket("custom_" + customProvider + "_" + customModel),
+		"settings_language":               "auto",
+		"client_surface":                  "desktop",
+		"client_version":                  metricBucket(version),
+		"settings_desktop_layout":         "workbench",
+		"settings_theme":                  "dark",
+		"settings_theme_style":            "graphite",
+		"settings_close_behavior":         "quit",
+		"settings_session_experience":     "deep",
+		"settings_status_bar_style":       "icon",
+		"settings_status_bar_items_count": "n_3",
+		"settings_check_updates":          "off",
+		"settings_default_model":          safeModelBucket(cfg, cfg.DefaultModel),
+		"settings_planner_model":          metricBucket("custom_" + customProvider + "_" + customModel),
+		"settings_provider_access":        metricBucket("custom_" + customProvider),
 	}
 	for signal, bucket := range want {
 		if got := m.c[signal][bucket]; got != 1 {

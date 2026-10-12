@@ -197,7 +197,7 @@ func (a *App) SubmitToTabWithID(tabID, input, submissionID string) error {
 	if err := validateTurnInput(input); err != nil {
 		return err
 	}
-	return a.submitToTab(tabID, input, false, submissionID)
+	return a.submitToTab(tabID, input, submissionID)
 }
 
 func (a *App) SubmitDisplayToTabWithID(tabID, display, input, submissionID string) error {
@@ -297,14 +297,14 @@ func (a *App) submitEditedDisplayToTab(tabID, display, input, original, submissi
 	return nil
 }
 
-func (a *App) submitToTabResult(tabID, input string, fromBridge, classifyManagement bool, submissionID ...string) (control.SubmitResult, error) {
+func (a *App) submitToTabResult(tabID, input string, classifyManagement bool, submissionID ...string) (control.SubmitResult, error) {
 	if receipt, found, err := a.knownSubmissionReceipt(tabID, control.SubmissionRequest{ID: firstSubmissionID(submissionID), Input: input, Display: input}); found || err != nil {
 		return control.SubmitResult{Disposition: control.SubmitTurnStarted, TurnID: receipt.TurnID}, err
 	}
 	management := control.SubmitResult{Disposition: control.SubmitManagementHandled}
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "/reload" {
-		return a.submitReloadCommand(tabID, fromBridge)
+		return a.submitReloadCommand(tabID)
 	}
 	if trimmed == "/effort" || strings.HasPrefix(trimmed, "/effort ") {
 		tab, _ := a.tabAndCtrlByID(tabID)
@@ -313,9 +313,6 @@ func (a *App) submitToTabResult(tabID, input string, fromBridge, classifyManagem
 		}
 		if tab == nil {
 			return control.SubmitResult{}, a.workspaceNotReadyErr(tab)
-		}
-		if !fromBridge && a.botBridge != nil {
-			a.botBridge.reclaimFromDesktop(tab.ID)
 		}
 		a.runEffortCommandForTab(tabID, trimmed)
 		return management, nil
@@ -344,7 +341,7 @@ func (a *App) submitToTabResult(tabID, input string, fromBridge, classifyManagem
 		if managementRoute {
 			// Management commands still take the tab admission lock so they cannot
 			// race an active turn or a controller replacement.
-			admission, admittedCtrl, err := a.beginRuntimeTurnChecked(tabID, !fromBridge, false, func(owner control.SessionAPI) error {
+			admission, admittedCtrl, err := a.beginRuntimeTurnChecked(tabID, true, false, func(owner control.SessionAPI) error {
 				if result, err := control.MaintenanceCommandConflict(owner, trimmed); err != nil {
 					return &managementAdmissionError{result: result, cause: err}
 				}
@@ -374,7 +371,7 @@ func (a *App) submitToTabResult(tabID, input string, fromBridge, classifyManagem
 			return management, nil
 		}
 	}
-	admission, ctrl, err := a.beginTabTurn(tabID, !fromBridge, submissionID...)
+	admission, ctrl, err := a.beginTabTurn(tabID, true, submissionID...)
 	if err != nil {
 		return control.SubmitResult{Disposition: control.SubmitTurnStarted}, a.submissionAdmissionError(tabID,
 			control.SubmissionRequest{ID: firstSubmissionID(submissionID), Input: input, Display: input}, err)
@@ -402,7 +399,7 @@ func (a *App) submitToTabResult(tabID, input string, fromBridge, classifyManagem
 	return result, nil
 }
 
-func (a *App) submitReloadCommand(tabID string, fromBridge bool) (control.SubmitResult, error) {
+func (a *App) submitReloadCommand(tabID string) (control.SubmitResult, error) {
 	management := control.SubmitResult{Disposition: control.SubmitManagementHandled}
 	tab, _ := a.tabAndCtrlByID(tabID)
 	if a.tabIsReadOnly(tab) {
@@ -410,9 +407,6 @@ func (a *App) submitReloadCommand(tabID string, fromBridge bool) (control.Submit
 	}
 	if tab == nil {
 		return control.SubmitResult{}, a.workspaceNotReadyErr(tab)
-	}
-	if !fromBridge && a.botBridge != nil {
-		a.botBridge.reclaimFromDesktop(tab.ID)
 	}
 	return management, a.ReloadRuntime(tab.ID)
 }

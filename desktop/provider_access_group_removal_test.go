@@ -21,14 +21,6 @@ func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testi
 	cfg.Agent.VisionModel = "opencode-go/kimi-k3"
 	cfg.Agent.SubagentModel = "opencode-go-responses/grok-4.5"
 	cfg.Agent.SubagentModels = map[string]string{"review": "opencode-go/glm-5.3"}
-	cfg.Bot.Model = "opencode-go-anthropic/qwen3.7-plus"
-	cfg.Bot.QQ.Model = "opencode-go/glm-5.3"
-	cfg.Bot.Dingtalk.Model = "opencode-go-responses/grok-4.5"
-	cfg.Bot.Routes = []config.BotRouteConfig{{ConnectionID: "route", Model: "opencode-go-anthropic/qwen3.7-plus"}}
-	cfg.Bot.Connections = []config.BotConnectionConfig{
-		{ID: "opencode", Provider: "feishu", Model: "opencode-go-responses/grok-4.5"},
-		{ID: "fallback", Provider: "weixin", Model: "mimo-pro/mimo-v2.5-pro"},
-	}
 	cfg.Desktop.ProviderAccess = []string{
 		"opencode-go", "opencode-go-anthropic", "opencode-go-responses",
 		"opencode-go-deepseek-responses", "mimo-pro",
@@ -90,9 +82,6 @@ func TestRemoveProviderAccessesRemovesGroupedOpenCodeGoRoutesAtomically(t *testi
 	if got.Agent.VisionModel != "" {
 		t.Fatalf("vision_model = %q, want cleared removed provider reference", got.Agent.VisionModel)
 	}
-	if got.Bot.Model != wantFallback || len(got.Bot.Routes) != 1 || got.Bot.Routes[0].Model != wantFallback || len(got.Bot.Connections) != 2 || got.Bot.Connections[0].Model != wantFallback || got.Bot.Connections[1].Model != "mimo-pro/mimo-v2.5-pro" {
-		t.Fatalf("bot refs were not retargeted selectively: model=%q qq=%q dingtalk=%q routes=%+v connections=%+v", got.Bot.Model, got.Bot.QQ.Model, got.Bot.Dingtalk.Model, got.Bot.Routes, got.Bot.Connections)
-	}
 	for index, tab := range tabs {
 		if tab.model != []string{cfg.DefaultModel, cfg.Agent.PlannerModel, cfg.Agent.SubagentModel}[index] {
 			t.Fatalf("saving grouped removal changed tab %q model = %q", tab.ID, tab.model)
@@ -113,13 +102,6 @@ func TestProviderRemovalStateFingerprintCoversAuxiliaryModelReferences(t *testin
 	}{
 		{name: "vision", mutate: func(cfg *config.Config) { cfg.Agent.VisionModel = "provider/model" }},
 		{name: "guardian", mutate: func(cfg *config.Config) { cfg.Agent.GuardianModel = "provider/model" }},
-		{name: "bot default", mutate: func(cfg *config.Config) { cfg.Bot.Model = "provider/model" }},
-		{name: "qq", mutate: func(cfg *config.Config) { cfg.Bot.QQ.Model = "provider/model" }},
-		{name: "dingtalk", mutate: func(cfg *config.Config) { cfg.Bot.Dingtalk.Model = "provider/model" }},
-		{name: "route", mutate: func(cfg *config.Config) { cfg.Bot.Routes = []config.BotRouteConfig{{Model: "provider/model"}} }},
-		{name: "connection", mutate: func(cfg *config.Config) {
-			cfg.Bot.Connections = []config.BotConnectionConfig{{Model: "provider/model"}}
-		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
