@@ -2,13 +2,17 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"testing"
+
+	"deepzora/internal/identitylock"
 )
 
 func installMachineTestIdentity(t *testing.T) []byte {
@@ -66,6 +70,30 @@ func TestMachineIdentityKeyInitializesOnceAcrossConcurrentReaders(t *testing.T) 
 	}
 	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("identity key permissions = %o, want 600", info.Mode().Perm())
+	}
+}
+
+func TestMachineIdentityReaderJoinsPublicationLock(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, machineIdentityKeyFile)
+	key := bytes.Repeat([]byte{0x5a}, machineIdentityKeyBytes)
+	if err := os.WriteFile(path, key, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	unlock, err := identitylock.Acquire(t.Context(), path+".lock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := loadMachineIdentityKeyAt(ctx, root); !errors.Is(err, context.Canceled) {
+		t.Fatalf("reader bypassed publication lock: %v", err)
+	}
+	unlock()
+	got, err := loadMachineIdentityKeyAt(t.Context(), root)
+	if err != nil || !bytes.Equal(got, key) {
+		t.Fatalf("released publication key = %x, %v", got, err)
 	}
 }
 
