@@ -1,49 +1,97 @@
 name: Go build cache
 description: >-
-  Restore the newest Go build and module cache for this runner and module.
+  Restore or save the newest Go module and build cache for one module namespace.
   setup-go keys its cache on go.sum alone and GitHub never rewrites an existing
   key, so that snapshot freezes at the last dependency change and every package
-  touched since misses. This cache is keyed per run and restored by prefix; a
-  main push saves it from one job per OS and module (actions/cache/save with
-  the outputs below), pull requests only restore. Windows jobs do not use it:
-  restoring it there measured slower than setup-go's frozen cache.
+  touched since misses. A short job sharing the key can freeze a cache far
+  smaller than a long job then restores, which is how one Linux root cache ended
+  up holding almost nothing. Two invariants follow: every key carries the run id
+  so no save can ever freeze, and each job class owns its own namespace so a
+  light job cannot claim a key a heavy job depends on. Keys are restored by
+  prefix, so a dependency bump downloads only the delta. GOMODCACHE holds
+  extracted module source and is byte-identical on every platform, so it is
+  shared across operating systems; GOCACHE holds compiled output and stays keyed
+  per OS and architecture. Saving is restricted to a main push; pull requests
+  restore only.
 
 inputs:
   module:
-    description: Cache namespace, e.g. root, root-race, desktop, desktop-race
+    description: Cache namespace, e.g. root, root-race, root-tools, desktop
     required: true
-
-outputs:
-  key:
-    description: Exact key for this run's save step
-    value: ${{ steps.key.outputs.key }}
-  paths:
-    description: GOCACHE and GOMODCACHE, one per line
-    value: ${{ steps.key.outputs.paths }}
+  dependency:
+    description: Space-separated go.sum paths that define this module's cache identity
+    required: false
+    default: go.sum
+  build_module:
+    description: Namespace for GOCACHE when a job builds less than its module's other jobs
+    required: false
+    default: ""
+  mode:
+    description: restore (default) or save
+    required: false
+    default: restore
 
 runs:
   using: composite
   steps:
+    # Defaults in the calling job can set a working directory, and the desktop
+    # jobs set one, so every path here is resolved from the workspace root.
     - id: key
       shell: bash
       run: |
         set -euo pipefail
-        sums="$(git hash-object go.sum desktop/go.sum | git hash-object --stdin)"
-        base="go-${{ runner.os }}-${{ runner.arch }}-${{ inputs.module }}"
+        cd "$GITHUB_WORKSPACE"
+        sums="$(git hash-object ${{ inputs.dependency }} | git hash-object --stdin)"
+        sums="${sums:0:16}"
+        # Dependencies are the same for every job of a module, so they share one
+        # namespace; compiled output is not, so a job that builds a subset keeps
+        # its own instead of letting a narrower build claim the shared key.
+        build_ns="${{ inputs.build_module }}"
+        if [ -z "$build_ns" ]; then build_ns="${{ inputs.module }}"; fi
+        mod_base="go-${{ inputs.module }}-${sums}"
+        build_base="go-${build_ns}-${sums}"
+        # actions/cache resolves paths itself; backslashes from the Windows
+        # runner survive tar extraction more reliably as forward slashes.
+        mod_dir="$(go env GOMODCACHE | sed 's#\\#/#g')"
+        build_dir="$(go env GOCACHE | sed 's#\\#/#g')"
+        # A cache restore over a path that does not exist yet reports a
+        # validation warning and matches nothing; Go creates neither directory
+        # until its first command, so create them up front.
+        mkdir -p "$mod_dir" "$build_dir"
         {
-          echo "key=${base}-${sums:0:16}-${{ github.run_id }}-${{ github.run_attempt }}"
-          echo "sums=${base}-${sums:0:16}-"
-          echo "base=${base}-"
-          echo "paths<<EOF"
-          go env GOCACHE
-          go env GOMODCACHE
-          echo "EOF"
+          echo "mod_key=${mod_base}-mod-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "mod_restore=${mod_base}-mod-"
+          echo "mod_paths=${mod_dir}"
+          echo "build_key=${build_base}-build-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "build_restore=${build_base}-build-${{ runner.os }}-${{ runner.arch }}-"
+          echo "build_paths=${build_dir}"
         } >> "$GITHUB_OUTPUT"
 
-    - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    - if: inputs.mode == 'restore'
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
-        path: ${{ steps.key.outputs.paths }}
-        key: ${{ steps.key.outputs.key }}
-        restore-keys: |
-          ${{ steps.key.outputs.sums }}
-          ${{ steps.key.outputs.base }}
+        path: ${{ steps.key.outputs.mod_paths }}
+        key: ${{ steps.key.outputs.mod_key }}
+        restore-keys: ${{ steps.key.outputs.mod_restore }}
+
+    - if: inputs.mode == 'restore'
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ${{ steps.key.outputs.build_paths }}
+        key: ${{ steps.key.outputs.build_key }}
+        restore-keys: ${{ steps.key.outputs.build_restore }}
+
+    # always() so a failing test suite still leaves the download it performed
+    # for the next run; push-only so fork pull requests never write and the
+    # repository cache stays bounded by main traffic.
+    - if: inputs.mode == 'save' && always() && github.event_name == 'push'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ${{ steps.key.outputs.mod_paths }}
+        key: ${{ steps.key.outputs.mod_key }}
+
+    - if: inputs.mode == 'save' && always() && github.event_name == 'push'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ${{ steps.key.outputs.build_paths }}
+        key: ${{ steps.key.outputs.build_key }}
