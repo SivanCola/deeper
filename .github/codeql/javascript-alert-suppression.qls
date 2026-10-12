@@ -1,0 +1,6 @@
+- description: In-source alert suppression queries for JavaScript/TypeScript
+- queries: .
+  from: codeql/javascript-queries
+- include:
+    id:
+      - js/alert-suppression

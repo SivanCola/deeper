@@ -9,6 +9,7 @@ import (
 // default so new Git/probe/index/update checks cannot accidentally flash a
 // console window.
 func Command(name string, args ...string) *exec.Cmd {
+	// codeql[go/command-injection] Name and args stay separate argv values, with any shell explicit at the caller.
 	cmd := exec.Command(name, args...)
 	HideWindow(cmd)
 	return cmd
@@ -16,9 +17,8 @@ func Command(name string, args ...string) *exec.Cmd {
 
 // CommandContext is Command with cancellation.
 func CommandContext(ctx context.Context, name string, args ...string) *exec.Cmd {
-	// Dynamic executables are intentional for approved tools and terminals; name
-	// and args remain separate argv values, with any shell explicit at the caller.
-	// codeql[go/command-injection]
+	// Dynamic executables are intentional for approved tools and terminals.
+	// codeql[go/command-injection] Name and args remain separate argv values, with any shell explicit at the caller.
 	cmd := exec.CommandContext(ctx, name, args...)
 	HideWindow(cmd)
 	return cmd
