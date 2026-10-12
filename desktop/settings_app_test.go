@@ -1678,8 +1678,8 @@ func TestSaveHooksSettingsForRootUsesDisplayedProjectRoot(t *testing.T) {
 	}
 }
 
-// A checkout's deepzora.toml never becomes the user's config: not its [bot]
-// connections, not its sandbox, whether or not the user has a config yet.
+// A checkout's deepzora.toml never becomes the user's config: not its sandbox,
+// not its permissions, whether or not the user has a config yet.
 func TestDesktopUserConfigNeverAdoptsTheWorkspaceFile(t *testing.T) {
 	for name, userBody := range map[string]string{"no user config": "", "user config": "default_model = \"local/m1\"\n"} {
 		t.Run(name, func(t *testing.T) {
@@ -1694,7 +1694,9 @@ func TestDesktopUserConfigNeverAdoptsTheWorkspaceFile(t *testing.T) {
 				}
 			}
 			root := t.TempDir()
-			project := "[bot]\nenabled = true\nmodel = \"local/m1\"\n[permissions]\nmode = \"allow\"\n"
+			// The marker must be host-independent: the renderer persists the
+			// host-effective bash mode, and Windows resolves every value to "off".
+			project := "[permissions]\nmode = \"allow\"\n[sandbox]\nnetwork = false\n"
 			if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0o644); err != nil {
 				t.Fatal(err)
 			}
@@ -1702,38 +1704,16 @@ func TestDesktopUserConfigNeverAdoptsTheWorkspaceFile(t *testing.T) {
 			app := NewApp()
 			app.tabs = map[string]*WorkspaceTab{"t": {ID: "t", Scope: "project", WorkspaceRoot: root, Ready: true}}
 			app.activeTabID = "t"
-			if cfg, _, err := app.loadDesktopUserConfigForView(); err != nil || cfg.Bot.Enabled {
-				t.Fatalf("view = %+v, %v; want the workspace's [bot] left out", cfg.Bot, err)
+			if cfg, _, err := app.loadDesktopUserConfigForView(); err != nil || cfg.Permissions.Mode == "allow" || !cfg.Sandbox.Network {
+				t.Fatalf("view = %+v, %v; want the workspace's values left out", cfg.Permissions, err)
 			}
 			if err := app.applyConfigOnly(func(*config.Config) error { return nil }); err != nil {
 				t.Fatalf("applyConfigOnly: %v", err)
 			}
 			saved := config.LoadForEditWithoutCredentials(userPath)
-			if saved.Bot.Enabled || saved.Permissions.Mode == "allow" {
-				t.Fatalf("user config took the workspace's values: bot = %+v permissions = %+v", saved.Bot, saved.Permissions)
+			if saved.Permissions.Mode == "allow" || !saved.Sandbox.Network {
+				t.Fatalf("user config took the workspace's values: permissions = %+v sandbox = %+v", saved.Permissions, saved.Sandbox)
 			}
 		})
-	}
-}
-
-func TestSetBotSettingsPreservesFeishuOutboundMediaRoots(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	root := t.TempDir()
-	cfg := config.Default()
-	cfg.Bot.Feishu.OutboundMediaRoots = []string{root}
-	if err := cfg.SaveTo(config.UserConfigPath()); err != nil {
-		t.Fatalf("save initial config: %v", err)
-	}
-
-	app := NewApp()
-	view := botSettingsView(cfg.Bot)
-	view.QueueCap++
-	if err := app.SetBotSettings(view); err != nil {
-		t.Fatalf("SetBotSettings: %v", err)
-	}
-
-	got := config.LoadForEditWithoutCredentials(config.UserConfigPath())
-	if !reflect.DeepEqual(got.Bot.Feishu.OutboundMediaRoots, []string{root}) {
-		t.Fatalf("outbound media roots = %v, want preserved %q", got.Bot.Feishu.OutboundMediaRoots, root)
 	}
 }

@@ -34,7 +34,7 @@ export function SessionLoadingFixture({ surface, identity, generation = 1, phase
       topicId: identity, topicTitle: identity, label: "Fixture", ready: true, running: false, mode: "normal", active: true, cwd: "/fixture",
       remote: { hostId: "fixture", workspace: "/fixture" } }} session={session} />;
   }
-  return <ChatPaneRegion transitioning={false} imDetail={null} remote={undefined} t={t}
+  return <ChatPaneRegion transitioning={false} remote={undefined} t={t}
     transcript={{ state, items, tabId: identity, geometrySessionKey: `${identity}:${generation}`,
       footerHeight: 100, transcriptHydrating: state.hydrating, navigationDataReady: phase === "ready",
       readOnly: false, controllerReady: phase === "ready", hydratePlaceholderActive: cached && phase === "loading",

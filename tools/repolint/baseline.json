@@ -30,15 +30,6 @@
       "essay": 1,
       "test-file-size": 9612
     },
-    "desktop/bot_bridge.go": {
-      "essay": 3
-    },
-    "desktop/bot_connection_app.go": {
-      "file-size": 234
-    },
-    "desktop/bot_runtime_app.go": {
-      "essay": 2
-    },
     "desktop/cmd/sign/main.go": {
       "essay": 12
     },
@@ -549,45 +540,6 @@
       "function-size": 1,
       "narrative": 7
     },
-    "internal/bot/connloop.go": {
-      "essay": 4
-    },
-    "internal/bot/feishu/feishu.go": {
-      "essay": 1,
-      "file-size": 210
-    },
-    "internal/bot/gateway.go": {
-      "complexity": 63,
-      "essay": 19,
-      "file-size": 2371,
-      "function-size": 290
-    },
-    "internal/bot/gateway_lock_test.go": {
-      "essay": 1
-    },
-    "internal/bot/gateway_session_rebuild.go": {
-      "complexity": 4,
-      "function-size": 12
-    },
-    "internal/bot/gateway_test.go": {
-      "test-file-size": 1906
-    },
-    "internal/bot/project_index.go": {
-      "file-size": 31
-    },
-    "internal/bot/qq/gateway.go": {
-      "function-size": 10
-    },
-    "internal/bot/render.go": {
-      "essay": 5,
-      "function-size": 2
-    },
-    "internal/bot/turn_dispatch_test.go": {
-      "essay": 1
-    },
-    "internal/botruntime/runtime.go": {
-      "file-size": 33
-    },
     "internal/capability/audit.go": {
       "struct-state": 12
     },
@@ -607,10 +559,6 @@
       "essay": 2,
       "file-size": 955,
       "function-size": 78
-    },
-    "internal/cli/bot.go": {
-      "complexity": 18,
-      "function-size": 102
     },
     "internal/cli/branch.go": {
       "essay": 2

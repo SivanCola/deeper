@@ -72,9 +72,11 @@ type PersistenceBinding struct {
 	reservedBytes int64
 	spaceChanged  chan struct{}
 
-	drainMu   sync.Mutex
-	closeOnce sync.Once
-	closeErr  error
+	drainMu             sync.Mutex
+	recoveryPublication durablePublication
+	catalogPublication  durablePublication
+	closeOnce           sync.Once
+	closeErr            error
 
 	afterFunc func(time.Duration, func()) timerHandle
 	writeFn   func(context.Context, io.Writer, []byte) error
@@ -428,17 +430,24 @@ func (b *PersistenceBinding) refreshCatalogMetadata() {
 	b.mu.Unlock()
 	recoveryPublished := false
 	if !b.disableRecoveryPublish && b.recoverySource != nil {
-		if state, ok := b.recoverySource(durable); ok {
-			if store, ok := b.handle.(*Store); ok && store.recovery != nil {
+		if store, ok := b.handle.(*Store); ok && store.recovery != nil {
+			path := store.recovery.recent
+			if b.recoveryPublication.current(path, durable) {
+				recoveryPublished = true
+			} else if state, ok := b.recoverySource(durable); ok {
 				if err := store.recovery.publish(context.Background(), state.checkpoint, state.operations); err == nil {
+					b.recoveryPublication.record(path, durable)
 					recoveryPublished = true
 				}
 			}
 		}
 	}
-	if b.metadataSource != nil {
+	cacheDir := filepath.Join(filepath.Dir(b.dir), ".query-cache", filepath.Base(b.dir))
+	if b.metadataSource != nil && !b.catalogPublication.current(catalogMetadataPath(cacheDir), durable) {
 		if metadata, ok := b.metadataSource(durable); ok {
-			_ = writeCatalogMetadataForSession(filepath.Join(filepath.Dir(b.dir), ".query-cache", filepath.Base(b.dir)), b.dir, metadata)
+			if err := writeCatalogMetadataForSession(cacheDir, b.dir, metadata); err == nil {
+				b.catalogPublication.record(catalogMetadataPath(cacheDir), durable)
+			}
 		}
 	}
 	if (recoveryPublished || b.disableRecoveryPublish || b.recoverySource == nil) && b.recoveryPublished != nil {

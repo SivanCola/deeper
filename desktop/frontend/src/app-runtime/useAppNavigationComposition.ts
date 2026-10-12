@@ -41,7 +41,6 @@ export type AppNavigationCompositionInput = {
   local: {
     setHistView: React.Dispatch<React.SetStateAction<HistoryViewState | null>>;
     setProjectRevision: React.Dispatch<React.SetStateAction<number>>;
-    setSidebarImDetailConnectionId: React.Dispatch<React.SetStateAction<string>>;
     setTasksOpen: React.Dispatch<React.SetStateAction<false | "session" | "all">>;
   };
   session: SessionComposition;
@@ -59,7 +58,7 @@ export function useAppNavigationComposition(input: AppNavigationCompositionInput
   const { begin: beginNavigationSurface, maskTarget: settleNavigationSurface } = input.surface;
   const {
     setHistView, setProjectRevision,
-    setSidebarImDetailConnectionId, setTasksOpen,
+    setTasksOpen,
   } = input.local;
   const {
     noteNavigationIntent, registeredNavigationIntent,
@@ -103,7 +102,6 @@ export function useAppNavigationComposition(input: AppNavigationCompositionInput
     activeTab,
     showToast,
     closeTransientOverlays,
-    clearImDetail: () => setSidebarImDetailConnectionId(""),
     prepareBlankWorkspace: (workspaceRoot) => {
       session.workspacePanelCommands.prepareBlankWorkspace(workspaceRoot);
     },
@@ -190,7 +188,6 @@ export function useAppNavigationComposition(input: AppNavigationCompositionInput
     platform: desktopPlatform,
     windowsFrameless: windowsFramelessChrome,
     closeTransientOverlays,
-    clearImDetail: () => setSidebarImDetailConnectionId(""),
     setSettingsFocus,
     setSettingsTarget,
     setSidebarSearchOpen,

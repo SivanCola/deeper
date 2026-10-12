@@ -14,7 +14,6 @@ func TestLayeringContract(t *testing.T) {
 		{"diagnostics may not reach the composition root", "internal/capdiag", "internal/boot", true},
 		{"frontend may use the controller", "internal/serve", "internal/control", false},
 		{"frontend may use another frontend", "internal/cli", "internal/serve", false},
-		{"frontend subpackage may use its parent", "internal/bot/qq", "internal/bot", false},
 		{"entrypoint may use a frontend", "cmd/deepzora", "internal/cli", false},
 		{"desktop host may use the controller", "desktop", "internal/control", false},
 		{"controller may use the kernel", "internal/control", "internal/agent", false},

@@ -10,7 +10,3 @@ func upsertDotEnv(key, value string) error {
 	_, err := config.SetCredential(key, value)
 	return err
 }
-
-func removeDotEnv(key string) error {
-	return config.RemoveCredential(key)
-}

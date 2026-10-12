@@ -11,13 +11,6 @@ import (
 	"deepzora/internal/event"
 )
 
-type turnFanoutGate struct {
-	kind    event.Kind
-	once    sync.Once
-	entered chan struct{}
-	release chan struct{}
-}
-
 type admissionResult struct {
 	admission *tabTurnAdmission
 	err       error
@@ -31,6 +24,21 @@ type expiredTurnFinishingController struct {
 	control.SessionAPI
 	mu              sync.Mutex
 	boundaryChecked bool
+}
+
+type observedTurnFinishingController struct {
+	control.SessionAPI
+	waiter   turnFinishingWaiter
+	observed chan struct{}
+	once     sync.Once
+}
+
+func (c *observedTurnFinishingController) TurnFinishingDone() (<-chan struct{}, bool) {
+	done, finishing := c.waiter.TurnFinishingDone()
+	if finishing {
+		c.once.Do(func() { close(c.observed) })
+	}
+	return done, finishing
 }
 
 func (c *activeTurnStatusController) RuntimeStatus() control.RuntimeStatus {
@@ -56,12 +64,55 @@ func (c *expiredTurnFinishingController) TurnFinishingDone() (<-chan struct{}, b
 	return nil, false
 }
 
-func (s *turnFanoutGate) Emit(e event.Event) {
-	if e.Kind != s.kind {
-		return
+type turnFanoutGate struct {
+	sink    *tabEventSink
+	mirror  *takeoverMirror
+	entered chan struct{}
+}
+
+func (g *turnFanoutGate) Emit(e event.Event) {
+	if e.Kind == event.TurnDone {
+		g.sink.setTakeoverMirror(g.mirror)
 	}
-	s.once.Do(func() { close(s.entered) })
-	<-s.release
+	g.sink.Emit(e)
+}
+
+func (g *turnFanoutGate) wait(t *testing.T) {
+	t.Helper()
+	select {
+	case <-g.entered:
+	case <-t.Context().Done():
+		t.Fatalf("waiting for TurnDone fan-out: %v", t.Context().Err())
+	}
+}
+
+// Arm before submitting; attach the locked mirror only for TurnDone so earlier
+// events can finish. Runtime publication then proves the real sink is in fan-out.
+func holdTabFanout(t *testing.T, sink *tabEventSink) (*turnFanoutGate, func()) {
+	t.Helper()
+	gate := &turnFanoutGate{sink: sink, mirror: &takeoverMirror{}, entered: make(chan struct{})}
+	gate.mirror.mu.Lock()
+	var enteredOnce, releaseOnce sync.Once
+	release := func() { releaseOnce.Do(gate.mirror.mu.Unlock) }
+	t.Cleanup(release)
+	sink.runtimeEvents.emit = func(_ context.Context, _ string, payload ...any) {
+		if len(payload) != 1 {
+			return
+		}
+		var wire wireEventTab
+		switch typed := payload[0].(type) {
+		case wireEventTab:
+			wire = typed
+		case correlatedWireEventTab:
+			wire = typed.wireEventTab
+		default:
+			return
+		}
+		if wire.Kind == "turn_done" {
+			enteredOnce.Do(func() { close(gate.entered) })
+		}
+	}
+	return gate, release
 }
 
 func correlatedSubmissionID(t *testing.T, payload any) (string, *int) {
@@ -186,20 +237,19 @@ func TestSubmitToTabWithIDCorrelatesOnlyAdmittedGuardedTurn(t *testing.T) {
 }
 
 func TestBeginTabTurnWaitsForTurnDoneFanoutBeforeRetry(t *testing.T) {
-	app, tab, _, _, _ := canonicalWorkspaceOpenFixture(t)
-	sink := tab.sink
-	sink.ctx = context.Background()
-	gate := &turnFanoutGate{kind: event.TurnDone, entered: make(chan struct{}), release: make(chan struct{})}
-	sink.SetBotSink(gate)
-
+	sink := &tabEventSink{tabID: "tab", ctx: context.Background()}
+	gate, release := holdTabFanout(t, sink)
+	base := control.New(control.Options{Sink: gate})
+	t.Cleanup(base.Close)
+	defer release()
+	ctrl := &observedTurnFinishingController{SessionAPI: base, waiter: base, observed: make(chan struct{})}
+	tab := &WorkspaceTab{ID: "tab", Scope: "global", Ready: true, Ctrl: ctrl, sink: sink}
+	app := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}, activeTabID: tab.ID}
+	sink.app = app
 	if err := app.SubmitToTabWithID(tab.ID, "/mcp__definitely_missing", "u-first"); err != nil {
 		t.Fatalf("first submit: %v", err)
 	}
-	select {
-	case <-gate.entered:
-	case <-time.After(5 * time.Second):
-		t.Fatal("first TurnDone did not enter the held fan-out")
-	}
+	gate.wait(t)
 
 	result := make(chan admissionResult, 1)
 	go func() {
@@ -207,16 +257,21 @@ func TestBeginTabTurnWaitsForTurnDoneFanoutBeforeRetry(t *testing.T) {
 		result <- admissionResult{admission: admission, err: err}
 	}()
 	select {
+	case <-ctrl.observed:
+	case <-t.Context().Done():
+		t.Fatalf("waiting for next submit to reach the finishing boundary: %v", t.Context().Err())
+	}
+	select {
 	case got := <-result:
 		if got.admission != nil {
 			got.admission.abort()
 		}
-		close(gate.release)
+		release()
 		t.Fatalf("next submit returned inside TurnDone fan-out: %v", got.err)
 	default:
 	}
 
-	close(gate.release)
+	release()
 	select {
 	case got := <-result:
 		if got.err != nil {
@@ -226,8 +281,8 @@ func TestBeginTabTurnWaitsForTurnDoneFanoutBeforeRetry(t *testing.T) {
 			t.Fatal("next submit returned without an admission token")
 		}
 		got.admission.abort()
-	case <-time.After(5 * time.Second):
-		t.Fatal("next submit did not retry after TurnDone fan-out")
+	case <-t.Context().Done():
+		t.Fatalf("waiting for retry after TurnDone fan-out: %v", t.Context().Err())
 	}
 }
 

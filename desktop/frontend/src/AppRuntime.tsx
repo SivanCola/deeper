@@ -101,7 +101,6 @@ export function AppRuntime() {
   const shell = useAppShellStores();
   const [tabRevealSignal, setTabRevealSignal] = useState(0);
   const [histView, setHistView] = useState<HistoryViewState | null>(null);
-  const [sidebarImDetailConnectionId, setSidebarImDetailConnectionId] = useState("");
   useRetiredProjectTreeUiMigration();
   const [tasksOpen, setTasksOpen] = useState<false | "session" | "all">(false);
   const workspaceScopeActiveTabRef = useRef(activeTabId);
@@ -131,7 +130,6 @@ export function AppRuntime() {
     },
     local: {
       setHistView, setTabRevealSignal,
-      sidebarImDetailConnectionId, setSidebarImDetailConnectionId,
       workspaceScopeActiveTabRef, workspaceControllerEpoch, setWorkspaceControllerEpoch,
       dockRefreshKey, setDockRefreshKey, fileRefRefreshKey, setFileRefRefreshKey, projectRevision, setProjectRevision,
     },
@@ -151,7 +149,7 @@ export function AppRuntime() {
     surface: navigationSurface,
     local: {
       setHistView, setProjectRevision,
-      setSidebarImDetailConnectionId, setTasksOpen,
+      setTasksOpen,
     },
     session,
   });
@@ -169,8 +167,7 @@ export function AppRuntime() {
       runtime={runtime}
       local={{
         tasksOpen, setTasksOpen,
-        sidebarImDetailConnectionId, setSidebarImDetailConnectionId,
-        tabRevealSignal, histView,
+          tabRevealSignal, histView,
         projectRevision, dockRefreshKey, composerFileRefRefreshKey, refreshComposerFileRefs,
         terminalContentVisible, terminalFitEnabled, prefetchTerminalPanel,
       }}

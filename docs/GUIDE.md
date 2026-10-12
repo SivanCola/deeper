@@ -1293,8 +1293,8 @@ Existing `[agent].max_steps` and `planner_max_steps` keys remain syntactically
 accepted during upgrades, but their values are ignored and removed with a
 one-time notice. This prevents a stale hidden limit from truncating automatic
 progress or inherited subagent work. Use the one-off CLI `--max-steps` flag when
-an explicit run budget is needed; unattended bots retain `[bot].max_steps`,
-where `0` means continuous execution and a positive value is explicit.
+an explicit run budget is needed, where `0` means continuous execution and a
+positive value is explicit.
 
 **An ordinary chat task has no limit of any kind by default** — not rounds, not
 tokens, not time, not money. It runs until the model finishes, an adaptive

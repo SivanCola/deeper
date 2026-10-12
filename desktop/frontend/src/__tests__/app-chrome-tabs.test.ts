@@ -347,9 +347,9 @@ ok(
 
 ok(
   /return navigation\.enqueueNavigationWithIntent\(\{ kind: "topic", scope, workspaceRoot, topicId, sessionPath \}, navigationIntentSeq\);/.test(sessionNavigationSource) &&
-    /return navigation\.enqueueNavigationWithIntent\(\{ kind: "sidebar-im", connection \}, navigationIntentSeq\);/.test(sessionNavigationSource) &&
+    !/sidebar-im/.test(sessionNavigationSource) && !/sidebar-im/.test(desktopNavigationOwnerSource) &&
     /navigation\.enqueueNavigationWithIntent\(\{ kind: "resume-session", session \}, navigationIntentSeq\)/.test(sessionNavigationSource),
-  "topic, IM, and history navigation use the shared intent-fenced formal-session path",
+  "topic and history navigation use the shared intent-fenced formal-session path",
 );
 
 ok(

@@ -2,7 +2,6 @@ package main
 
 import (
 	"deepzora/internal/control"
-	"strings"
 )
 
 // nativeSessionSelection belongs to the durable source, including detached views.
@@ -28,7 +27,7 @@ func currentStartupSession(tab *WorkspaceTab, root, scope, route string) (string
 	if scope == "global" {
 		dir = desktopSessionDir(globalWorkspaceRoot())
 	}
-	if _, ok := parseSessionRoute(route); !ok && !strings.HasPrefix(route, embeddedBotSessionPrefix) {
+	if _, ok := parseSessionRoute(route); !ok {
 		route = ""
 	}
 	prepareStartupPinnedContext(tab, route, route)

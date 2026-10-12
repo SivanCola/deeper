@@ -5,7 +5,6 @@ import { JSDOM } from "jsdom";
 import { useDesktopNavigation } from "../app-runtime/useDesktopNavigation";
 import type { DesktopNavigationPorts } from "../app-runtime/desktopNavigationOwner";
 import type { SessionMeta, TabMeta } from "../lib/types";
-import type { SidebarImConnection } from "../app-runtime/sidebarImProjection";
 import type { Translator } from "../lib/i18n";
 import { __emitMockRemoteTabOpened } from "../lib/remoteTabEvents";
 import { useRemoteTabOpened } from "../lib/useRemoteTabOpened";
@@ -95,24 +94,6 @@ try {
   assert.deepEqual(calls.filter(value => /^(seed|tabs|notice|reveal|settle)/.test(value)), [], "ABA never restores old UI rights");
 
   calls.length = 0;
-  const connection = { sessionId: "path:channel.jsonl", sessionSource: "auto", scope: "project", workspaceRoot: "im", title: "fixture" } as SidebarImConnection;
-  const im = api.enqueueNavigation({ kind: "sidebar-im", connection });
-  intent++;
-  await finish("blank:im", im);
-  assert.ok(!calls.some(value => value.startsWith("channel:")), "cancellation between blank activation and hydrate prevents a second mutation");
-  calls.length = 0;
-  const validIM = api.enqueueNavigation({ kind: "sidebar-im", connection });
-  await finish("blank:im", validIM);
-  assert.ok(calls.includes("channel:blank:im:channel.jsonl"));
-
-  calls.length = 0;
-  const botConnection = { ...connection, sessionId: "session:local:bot-conversation" };
-  const botNavigation = api.enqueueNavigation({ kind: "sidebar-im", connection: botConnection });
-  await finish("", botNavigation);
-  assert.equal(lastTopicPath, "bot-session:local:bot-conversation");
-  assert.ok(!calls.some(value => value.startsWith("open:blank:") || value.startsWith("channel:")),
-    "canonical bot sessions open through the shared runtime surface, not a new blank tab");
-
   calls.length = 0;
   const isolated = api.enqueueNavigation({ kind: "isolated-worktree", workspaceRoot: "dirty" });
   await paint(); // Normal commits do not change the request epoch.

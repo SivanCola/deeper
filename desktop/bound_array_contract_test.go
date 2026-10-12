@@ -58,12 +58,10 @@ func TestBoundArrayPayloadsAreNonNilBeforeStartup(t *testing.T) {
 	}
 	if got := app.Settings(); got.Providers == nil || got.OfficialProviders == nil || got.ProviderPresets == nil || got.ProviderKinds == nil ||
 		got.Permissions.Allow == nil || got.Permissions.Ask == nil || got.Permissions.Deny == nil ||
-		got.Sandbox.AllowWrite == nil || got.Sandbox.EffectiveWriteRoots == nil ||
-		got.Bot.QQ.Access.Users == nil || got.Bot.QQ.Access.Groups == nil {
+		got.Sandbox.AllowWrite == nil || got.Sandbox.EffectiveWriteRoots == nil {
 		t.Fatalf("Settings() contains nil array fields: %+v", got)
 	}
-	if got := app.DesktopStartupSettings(); got.StatusBarItems == nil ||
-		got.Bot.QQ.Access.Users == nil || got.Bot.QQ.Access.Groups == nil {
+	if got := app.DesktopStartupSettings(); got.StatusBarItems == nil {
 		t.Fatalf("DesktopStartupSettings() contains nil array fields: %+v", got)
 	}
 

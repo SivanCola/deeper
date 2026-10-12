@@ -208,7 +208,7 @@ jobs:
           go test -race -timeout=15m ./internal/agent/... ./internal/plugin/... ./internal/jobs/... \
             ./internal/proc/... ./internal/sandbox/... ./internal/filelock/... ./internal/eventwire/... \
             ./internal/remote/... ./internal/extension/... ./internal/boot/... ./internal/control/... \
-            ./internal/tool/... ./internal/bot/... ./internal/config/... ./internal/session/... \
+            ./internal/tool/... ./internal/config/... ./internal/session/... \
             ./internal/serve/... ./internal/sessioninbox/...
       - if: always()
         uses: ./.github/actions/go-build-cache

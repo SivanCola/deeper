@@ -136,9 +136,6 @@ func (a *App) beginRuntimeTurnWithModelChoice(tabID string, reclaim, detached bo
 			abort()
 			return nil, nil, readOnlyChannelErr()
 		}
-		if reclaim && a.botBridge != nil {
-			a.botBridge.reclaimFromDesktop(tab.ID)
-		}
 		ctrl = a.controllerForTab(tab)
 		if err := a.workspaceRuntimeAdmissionErr(tab, ctrl); err != nil {
 			abort()
