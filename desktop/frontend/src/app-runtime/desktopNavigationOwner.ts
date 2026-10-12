@@ -3,7 +3,6 @@ import { sessionTitleErrorKey } from "../lib/sessionTitleOperation";
 import type { SessionRef } from "../lib/sessionRef";
 import type { RemoteTabOpenOptions, RemoteTabRefView, SessionMeta, TabMeta } from "../lib/types";
 import type { useAppRuntimeAdapter } from "./useAppRuntimeAdapter";
-import { isChannelSession, sidebarImSessionTarget, type SidebarImConnection } from "./sidebarImProjection";
 import type { SessionOperationAuthority } from "./useResourceOperations";
 
 export type DesktopNavigationIntent =
@@ -11,7 +10,6 @@ export type DesktopNavigationIntent =
   | { kind: "topic"; scope: string; workspaceRoot: string; topicId: string; sessionPath?: string }
   | { kind: "blank"; scope: string; workspaceRoot: string }
   | { kind: "isolated-worktree"; workspaceRoot: string }
-  | { kind: "sidebar-im"; connection: SidebarImConnection }
   | { kind: "resume-session"; session: SessionMeta }
   | { kind: "remote-project"; remote: RemoteTabRefView; options: RemoteTabOpenOptions };
 type Runtime = ReturnType<typeof useAppRuntimeAdapter>;
@@ -32,7 +30,7 @@ export type DesktopNavigationPorts = Pick<Runtime["navigation"],
     notice(notice: NavigationNotice): void;
   };
 export type NavigationNotice = {
-  key: "history.failedOpenSession" | "history.missingWorkspaceRoot" | "history.failedOpenProject" | "sidebar.imWaiting" | "sidebar.imOpenFailed"
+  key: "history.failedOpenSession" | "history.missingWorkspaceRoot" | "history.failedOpenProject"
     | "projectTree.worktreeCreated" | "projectTree.worktreeCreatedDirty" | ReturnType<typeof sessionTitleErrorKey>;
   params?: Record<string, string>;
   tone?: "error" | "warn" | "info";
@@ -102,29 +100,10 @@ export async function executeDesktopNavigation(input: DesktopNavigationCapture, 
         params: { branch: result.branch }, tone: result.sourceDirty ? "warn" : "info", durationMs: result.sourceDirty ? 7000 : 3500 });
       ports.reveal(); return;
     }
-    if (request.kind === "sidebar-im") {
-      const { connection } = request;
-      const target = sidebarImSessionTarget(connection);
-      if (!target) { ports.notice({ key: "sidebar.imWaiting", params: { name: connection.title } }); return; }
-      let tab: TabMeta;
-      if (target.kind === "path") {
-        tab = await openBlank(connection.scope, connection.workspaceRoot);
-        checkpoint();
-        if (connection.sessionSource === "auto") await ports.openChannelSession(target.value, tab.id, seq);
-        else await ports.resumeSession(target.value, tab.id, seq);
-      } else if (target.kind === "bot-session") {
-        tab = await openTopic(connection.scope, connection.workspaceRoot, "", `bot-session:local:${target.value}`);
-      } else tab = await openTopic(connection.scope, connection.workspaceRoot, target.value);
-      checkpoint(); ports.seedTab(tab);
-      await refresh(); checkpoint(); ports.reveal(); ports.projectChanged(); return;
-    }
     const { session } = request;
     const scope = session.scope || (session.workspaceRoot ? "project" : "global");
     let tab: TabMeta;
-    if (isChannelSession(session)) {
-      tab = await openBlank(scope === "project" ? "project" : "global", session.workspaceRoot || "");
-      checkpoint(); await ports.openChannelSession(session.path, tab.id, seq);
-    } else if (session.sessionId && (!session.hostId || session.hostId === "local")) {
+    if (session.sessionId && (!session.hostId || session.hostId === "local")) {
       tab = await openTopic(scope, session.workspaceRoot || "", session.topicId || `canonical-${session.sessionId}`, `session-id:${session.sessionId}`);
     } else if (scope === "project" && session.workspaceRoot && session.topicId) {
       tab = await openTopic("project", session.workspaceRoot, session.topicId, session.path);
@@ -149,7 +128,6 @@ export async function executeDesktopNavigation(input: DesktopNavigationCapture, 
     if (request.kind === "isolated-worktree") {
       ports.notice({ message: error instanceof Error ? error.message : String(error), tone: "error", durationMs: 6000 }); return;
     }
-    if (request.kind === "sidebar-im") { ports.notice({ key: "sidebar.imOpenFailed", params: { name: request.connection.title } }); return; }
     const history = await ports.listSessions().catch(() => null);
     checkpoint();
     if (history) ports.applyHistorySessions(history);

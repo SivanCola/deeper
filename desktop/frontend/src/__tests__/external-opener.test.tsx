@@ -106,9 +106,9 @@ ok(
 
 ok(topicbarActionsSource.includes('key="external-opener"') && topicbarActionsSource.includes("key={external.tabId}"), "external opener has a distinct React key namespace");
 ok(topicbarActionsSource.includes('key="session-actions"') && topicbarActionsSource.includes("key={sessionIdentity}"), "session actions have a distinct React key namespace");
-ok(shouldMountExternalOpener({ id: "tab-project", scope: "project" }, false), "mounts for a Project tab");
-ok(shouldMountExternalOpener({ id: "tab-global", scope: "global" }, false), "mounts for a Global tab without guessing from scope");
-ok(!shouldMountExternalOpener({ id: "tab-global", scope: "global" }, true), "stays hidden while an IM detail surface owns the header");
+ok(shouldMountExternalOpener({ id: "tab-project", scope: "project" }), "mounts for a Project tab");
+ok(shouldMountExternalOpener({ id: "tab-global", scope: "global" }), "mounts for a Global tab without guessing from scope");
+ok(!shouldMountExternalOpener(null), "stays hidden without a tab");
 
 const container = document.getElementById("root")!;
 const root = createRoot(container);

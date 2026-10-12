@@ -138,12 +138,8 @@ ok(
   "SettingsPanel loads secondary settings pages on demand",
 );
 ok(
-  !/from\s+["']qrcode\.react["']/.test(settingsSource),
-  "SettingsPanel keeps QR rendering code out of the first settings chunk",
-);
-ok(
-  settingsSource.includes('import("qrcode.react")'),
-  "SettingsPanel loads QR rendering code on demand",
+  !/qrcode\.react/.test(settingsSource),
+  "SettingsPanel carries no QR rendering dependency",
 );
 ok(
   !/from\s+["']react-markdown["']/.test(markdownSource) &&
