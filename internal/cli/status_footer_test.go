@@ -319,7 +319,6 @@ func TestStatusFooterUsesReadableLocalizedHintAndWrapsCleanly(t *testing.T) {
 	}{
 		{lang: "en", compact: "Shift+Tab read-only/workspace/YOLO/plan · Ctrl+Y YOLO", session: "MODEL deepseek-v4-flash   EFFORT auto"},
 		{lang: "zh", compact: "Shift+Tab 仅可查看/工作区内修改/YOLO/计划 · Ctrl+Y YOLO", session: "模型 deepseek-v4-flash   强度 auto"},
-		{lang: "zh-TW", compact: "Shift+Tab 僅可查看/工作區內修改/YOLO/計畫 · Ctrl+Y YOLO", session: "模型 deepseek-v4-flash   強度 auto"},
 	} {
 		t.Run(tt.lang, func(t *testing.T) {
 			i18n.DetectLanguage(tt.lang)
@@ -371,11 +370,6 @@ func TestStatusFooterLocalizesMetricLabelsAndKeepsNarrowRows(t *testing.T) {
 			lang:      "zh",
 			session:   "模型 deepseek-v4-flash   强度 auto",
 			telemetry: []string{"缓存", "上下文", "压缩", "任务", "余额"},
-		},
-		{
-			lang:      "zh-TW",
-			session:   "模型 deepseek-v4-flash   強度 auto",
-			telemetry: []string{"快取", "上下文", "壓縮", "任務", "餘額"},
 		},
 	} {
 		t.Run(tt.lang, func(t *testing.T) {

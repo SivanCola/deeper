@@ -12,7 +12,7 @@ const bridge = readFileSync(resolve(testDir, "../lib/bridge.ts"), "utf8");
 const backend = readFileSync(resolve(testDir, "../../../storage_app.go"), "utf8");
 const styles = readFileSync(resolve(testDir, "../styles.css"), "utf8");
 const types = readFileSync(resolve(testDir, "../lib/types.ts"), "utf8");
-const locales = ["zh.ts", "zh-TW.ts", "en.ts"].map((name) => readFileSync(resolve(testDir, `../locales/${name}`), "utf8"));
+const locales = ["zh.ts", "en.ts"].map((name) => readFileSync(resolve(testDir, `../locales/${name}`), "utf8"));
 
 let passed = 0;
 let failed = 0;

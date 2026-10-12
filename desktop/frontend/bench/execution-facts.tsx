@@ -26,7 +26,7 @@ function Fixture() {
   const [selected, setSelected] = useState(0);
   return <main style={{ maxWidth: 760, margin: "24px auto", padding: 24 }}>
     <h1>Execution facts regression</h1>
-    <nav><button onClick={() => setPref("en")}>English</button><button onClick={() => setPref("zh")}>中文</button><button onClick={() => setPref("zh-TW")}>繁體中文</button></nav>
+    <nav><button onClick={() => setPref("en")}>English</button><button onClick={() => setPref("zh")}>中文</button></nav>
     <p role="status">{t(warning)}</p>
     <nav>{cases.map(([label], index) => <button key={label} onClick={() => setSelected(index)}>{label}</button>)}</nav>
     <article style={{ marginTop: 24 }}><h2>{cases[selected][0]}</h2><WorkspaceTurnVerification summary={cases[selected][1]} /></article>

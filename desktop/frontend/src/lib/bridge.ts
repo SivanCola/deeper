@@ -726,7 +726,7 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   SetAgentParams(temperature: number, systemPrompt: string): Promise<void>;
   SetCompactRatio(ratio: number): Promise<void>;
   SetReasoningLanguage(lang: string): Promise<void>;
-  SetTrayLocale(locale: "en" | "zh" | "zh-TW"): Promise<void>;
+  SetTrayLocale(locale: "en" | "zh"): Promise<void>;
   Version(): Promise<string>;
   CheckUpdate(channel: string): Promise<UpdateInfo | null>;
   /** v1.20+ single-action update: download, verify, install, relaunch. */
@@ -5025,7 +5025,7 @@ function makeMockApp(): MockAppBindings {
     async CancelTaskForTab() { return { schema_version: 1, command: "cancel", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     async RequeueTaskForTab() { return { schema_version: 1, command: "requeue", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     async OpenTaskSessionForTab() { return { schema_version: 1, command: "open_session", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async SetTrayLocale(_locale: "en" | "zh" | "zh-TW") {},
+    async SetTrayLocale(_locale: "en" | "zh") {},
     async Version() {
       return "v1.0.0 (browser dev)";
     },
