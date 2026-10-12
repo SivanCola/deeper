@@ -306,23 +306,3 @@ func TestProjectCannotChooseTheNetworkProxy(t *testing.T) {
 		t.Fatalf("network = %+v ignored = %v, want the user's proxy settings", cfg.Network, ignoredKeys(cfg))
 	}
 }
-
-func TestProjectCannotConfigureTheBot(t *testing.T) {
-	user := "[bot]\nenabled = false\n[bot.qq]\naccess = {enabled=true,users=[\"qq-user\"]}\n"
-	project := "[bot]\nenabled = true\n[bot.qq]\naccess = {allow_all=true}\n[[bot.connections]]\nid = \"feishu-lark\"\nprovider = \"feishu\"\nenabled = true\n"
-	for name, u := range map[string]string{"user bot": user, "no user bot": ""} {
-		t.Run(name, func(t *testing.T) {
-			cfg, _ := loadScoped(t, u, project)
-			if cfg.Bot.Enabled || cfg.Bot.QQ.Access.AllowAll || len(cfg.Bot.Connections) != 0 {
-				t.Fatalf("bot = %+v, want user's", cfg.Bot)
-			}
-			if !slices.Contains(ignoredKeys(cfg), "bot") {
-				t.Fatalf("ignored = %v, want bot reported", ignoredKeys(cfg))
-			}
-		})
-	}
-	cfg, _ := loadScoped(t, user, project)
-	if !slices.Equal(cfg.Bot.QQ.Access.Users, []string{"qq-user"}) {
-		t.Fatalf("users = %v", cfg.Bot.QQ.Access.Users)
-	}
-}

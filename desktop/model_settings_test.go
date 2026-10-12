@@ -187,12 +187,6 @@ func TestModelSettingsQueuedFollowupAppliesLatestBeforeDispatch(t *testing.T) {
 	if _, err := app.SaveProviderWithKey(view, "new-queued-key"); err != nil {
 		t.Fatal(err)
 	}
-	done := make(chan struct{}, 1)
-	tab.sink.SetBotSink(event.FuncSink(func(e event.Event) {
-		if e.Kind == event.TurnDone {
-			done <- struct{}{}
-		}
-	}))
 	if err := old.SetInboxPaused(false); err != nil {
 		t.Fatal(err)
 	}
@@ -204,8 +198,25 @@ func TestModelSettingsQueuedFollowupAppliesLatestBeforeDispatch(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
+	// Wait for the resumed queued turn to settle: the runtime swap it triggers is
+	// the thing under test, so the assertion must follow the turn, not race it.
+	settled := make(chan struct{})
+	go func() {
+		defer close(settled)
+		deadline := time.Now().Add(10 * time.Second)
+		for time.Now().Before(deadline) {
+			tab.sink.mu.RLock()
+			idle := tab.sink.turn.phase == turnSubmissionIdle
+			tab.sink.mu.RUnlock()
+			if idle {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		t.Error("resumed queued turn never settled")
+	}()
 	select {
-	case <-done:
+	case <-settled:
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
