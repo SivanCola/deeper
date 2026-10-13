@@ -387,7 +387,7 @@ func TestTailRewindKeepsCompactionProjection(t *testing.T) {
 		t.Fatalf("compact: %v", err)
 	}
 	before := ag.ContextMaintenanceSnapshot()
-	if before.ProjectionVersion == 0 || before.ProjectedTokens >= before.FoldTrigger {
+	if before.ProjectionVersion == 0 || before.ProjectedTokens >= before.TriggerTokens {
 		t.Fatalf("pre-rewind snapshot = %+v, want an installed projection under the fold trigger", before)
 	}
 
@@ -403,9 +403,9 @@ func TestTailRewindKeepsCompactionProjection(t *testing.T) {
 		t.Fatalf("projection version %d -> %d, want the fold kept across a tail-only rewind",
 			before.ProjectionVersion, after.ProjectionVersion)
 	}
-	if after.ProjectedTokens >= after.FoldTrigger {
+	if after.ProjectedTokens >= after.TriggerTokens {
 		t.Fatalf("post-rewind view %d tokens at or above fold %d, want the compacted size kept",
-			after.ProjectedTokens, after.FoldTrigger)
+			after.ProjectedTokens, after.TriggerTokens)
 	}
 }
 

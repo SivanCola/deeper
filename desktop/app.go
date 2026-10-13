@@ -8449,10 +8449,6 @@ func (a *App) EffortForTab(tabID string) EffortInfo {
 	return EffortInfo{Supported: true, Current: config.EffortDisplay(entry), Default: cap.Default, Levels: levels, Options: config.ReasoningCapabilityForEntry(entry).Options}
 }
 
-func (a *App) SetEffort(level string) error {
-	return a.SetEffortForTab("", level)
-}
-
 func (a *App) SetEffortForTab(tabID, level string) error {
 	tab := a.tabByID(tabID)
 	if tab == nil {
@@ -8611,11 +8607,6 @@ func (a *App) SetEffortForTab(tabID, level string) error {
 	a.notifyTabRuntimeRebuilt(tab)
 	return nil
 }
-
-// SetAgentPresetDeprecatedNotice is returned by the deprecated execution-mode
-// Wails methods. Deepzora runs one adaptive standard execution; these methods
-// remain bound for one compatibility version as no-op wrappers: they never
-// require an idle tab, never save a mode, and never rebuild an agent.
 
 func (a *App) applyProviderEffortConfig(entry *config.ProviderEntry, effort string) error {
 	return a.applyConfigChange(func(cfg *config.Config) error {

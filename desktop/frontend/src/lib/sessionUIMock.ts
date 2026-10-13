@@ -26,7 +26,6 @@ export function makeSessionUIMock(create: (scope: string, root: string, id: stri
     async ListManualSessionCreations() { return [...operations.values()].filter(op => op.phase !== "ready").map(op => structuredClone(op)); },
     async RetryManualSessionCreation(id) { return this.GetManualSessionCreation(id); },
     GetSessionComposerState: read,
-    async ListSessionComposerConflicts() { return []; },
     async SaveSessionComposerState(req) {
       const state = await read(req.ref);
       if (state.revision !== req.expectedRevision) return { ...state, conflict: true };

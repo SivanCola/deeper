@@ -14,7 +14,6 @@ type ContextMaintenanceSnapshot struct {
 	ProjectedTokens   int
 	SummaryTokens     int
 	LastSavedTokens   int
-	FoldTrigger       int
 	TriggerTokens     int
 	CheckpointState   string
 	HardInputCeiling  int
@@ -72,7 +71,6 @@ func (a *Agent) ContextMaintenanceSnapshot() ContextMaintenanceSnapshot {
 	snapshot := ContextMaintenanceSnapshot{
 		CanonicalTokens:   a.estimatedVisibleRequestTokens(canonical),
 		ProjectedTokens:   a.estimatedVisibleRequestTokens(visible),
-		FoldTrigger:       trigger,
 		TriggerTokens:     trigger,
 		CheckpointState:   uiCheckpoint,
 		HardInputCeiling:  a.hardInputCeiling(),

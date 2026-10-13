@@ -3106,20 +3106,6 @@
       ]
     }
   },
-  "InboxHasItems": {
-    "domain": "desktop/inbox_app.go",
-    "owner": "App.InboxHasItems",
-    "sources": [
-      "desktop/inbox_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.InboxHasItems",
-      "inputs": [
-        "tabID"
-      ]
-    }
-  },
   "InboxQueueForTarget": {
     "domain": "desktop/inbox_queue.go",
     "owner": "App.InboxQueueForTarget",
@@ -3443,20 +3429,6 @@
       "kind": "owner-state",
       "resolver": "App.ListRemoteProjects",
       "inputs": []
-    }
-  },
-  "ListSessionComposerConflicts": {
-    "domain": "desktop/session_composer_conflicts.go",
-    "owner": "App.ListSessionComposerConflicts",
-    "sources": [
-      "desktop/session_composer_conflicts.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListSessionComposerConflicts",
-      "inputs": [
-        "ref"
-      ]
     }
   },
   "ListSessions": {
@@ -4996,21 +4968,6 @@
       "resolver": "App.RecordUIPerf",
       "inputs": [
         "signals"
-      ]
-    }
-  },
-  "RefreshInboxItem": {
-    "domain": "desktop/inbox_app.go",
-    "owner": "App.RefreshInboxItem",
-    "sources": [
-      "desktop/inbox_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.RefreshInboxItem",
-      "inputs": [
-        "tabID",
-        "id"
       ]
     }
   },
@@ -7914,20 +7871,6 @@
       "resolver": "App.SetDesktopZoomFactor",
       "inputs": [
         "factor"
-      ]
-    }
-  },
-  "SetEffort": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetEffort",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetEffort",
-      "inputs": [
-        "level"
       ]
     }
   },

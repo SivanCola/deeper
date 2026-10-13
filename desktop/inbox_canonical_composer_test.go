@@ -9,9 +9,6 @@ func TestManualSessionComposerGuidanceReceiptRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.manualCreationTasks.Wait()
-	if copies, err := a.ListSessionComposerConflicts(created.Ref); err != nil || copies == nil || len(copies) != 0 {
-		t.Fatalf("retired input copies must remain an empty compatibility response: %v %v", copies, err)
-	}
 	meta := a.metaForSession(created.Ref.SessionID)
 	if meta == nil || meta.Session == nil || meta.SessionPath != "" {
 		t.Fatalf("formal session must not need a fabricated legacy path: %+v", meta)

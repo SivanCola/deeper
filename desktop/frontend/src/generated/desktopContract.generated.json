@@ -5854,31 +5854,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "InboxHasItems",
-      "owner": "App.InboxHasItems",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "boolean"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.InboxHasItems"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/inbox_queue.go",
       "name": "InboxQueueForTarget",
       "owner": "App.InboxQueueForTarget",
@@ -6522,35 +6497,6 @@
       },
       "sources": [
         "desktop/remote_project_registry.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/session_composer_conflicts.go",
-      "name": "ListSessionComposerConflicts",
-      "owner": "App.ListSessionComposerConflicts",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "session.SessionRef"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "string"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "ref"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListSessionComposerConflicts"
-      },
-      "sources": [
-        "desktop/session_composer_conflicts.go"
       ]
     },
     {
@@ -9436,32 +9382,6 @@
       },
       "sources": [
         "desktop/uiperf_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "RefreshInboxItem",
-      "owner": "App.RefreshInboxItem",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "id"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RefreshInboxItem"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
       ]
     },
     {
@@ -14932,28 +14852,6 @@
       },
       "sources": [
         "desktop/zoom_factor.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetEffort",
-      "owner": "App.SetEffort",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "level"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetEffort"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -25547,13 +25445,6 @@
         },
         {
           "name": "lastSavedTokens",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "foldTrigger",
           "optional": true,
           "type": {
             "kind": "integer"

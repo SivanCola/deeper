@@ -175,7 +175,6 @@ export interface WireUsage {
   cost?: number;
   currency?: string;
   currencyCode?: string;
-  // Deprecated compatibility alias. Prefer cost + currencyCode / costQuote.
   costComplete?: boolean;
   displayComplete?: boolean;
   displayStatus?: string;
@@ -466,7 +465,6 @@ export interface WireEvent extends RecoveryEventFields {
   sessionMissTokens?: number;
   sessionCost?: number;
   sessionCurrency?: string;
-  // Deprecated compatibility alias. Prefer sessionCost + sessionCurrency.
 }
 
 export interface WireCompletionSummary {
@@ -736,7 +734,6 @@ export interface ContextPanelInfo {
   activeTurnStartedAt?: number;
   sessionCost?: number;
   sessionCurrency?: string;
-  // Deprecated compatibility alias. Prefer sessionCost + sessionCurrency.
   sessionCostComplete?: boolean;
   sessionCostEstimated?: boolean;
   sessionBillingMode?: string;
