@@ -163,7 +163,6 @@ import type {
   SkillRootView,
   SkillSuggestion,
   SkillView,
-  TaskSnapshot,
   SlashArgsResult,
   SubagentProfileInput,
   TabMeta,
@@ -451,12 +450,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   BalanceForTab(tabID: string): Promise<BalanceInfo>;
   UsageStats(req: UsageStatsRequest): Promise<UsageStatsRange>;
   Jobs(): Promise<JobView[]>;
-  ListTasks(): Promise<TaskSnapshot[]>;
-  CurrentTaskSessionID(): Promise<string>;
-  ListTasksForSession(sessionID: string): Promise<TaskSnapshot[]>;
-  GetTask(taskID: string): Promise<TaskSnapshot | null>;
-  StopTask(taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  CancelTask(taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
   OpenTaskSessionForTab(tabID: string, taskID: string): Promise<ControlResult>;
   JobsForTab(tabID: string): Promise<JobView[]>;
   CancelJob(jobID: string): Promise<boolean>;
@@ -4776,12 +4769,6 @@ function makeMockApp(): MockAppBindings {
     },
     async HeartbeatTriggerNow(_id: string) {},
     async HeartbeatGenerateID() { return "mock-" + Date.now().toString(36); },
-    async ListTasks() { return []; },
-    async CurrentTaskSessionID() { return ""; },
-    async ListTasksForSession() { return []; },
-    async GetTask() { return null; },
-    async StopTask() { return { schema_version: 1, command: "stop", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async CancelTask() { return { schema_version: 1, command: "cancel", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     ...makeMockTaskCatalogBindings(),
     async OpenTaskSessionForTab() { return { schema_version: 1, command: "open_session", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     async SetTrayLocale(_locale: "en" | "zh") {},

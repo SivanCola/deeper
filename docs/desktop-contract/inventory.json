@@ -555,14 +555,6 @@
     },
     {
       "kind": "command",
-      "name": "CancelTask",
-      "detail": "(taskID string, expectedVersion uint64, reason string, idemKey string) (taskmonitor.ControlResult, error)",
-      "location": "desktop/app.go:10398",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
       "name": "CancelTaskByKey",
       "detail": "(req TaskActionRequest) (taskmonitor.ControlResult, error)",
       "location": "desktop/task_catalog.go:266",
@@ -813,7 +805,7 @@
       "kind": "command",
       "name": "ConfirmAction",
       "detail": "(req NativeConfirmRequest) (bool, error)",
-      "location": "desktop/app.go:10489",
+      "location": "desktop/app.go:10433",
       "class": "host-managed",
       "owner": "business in Go; native step through nativeHost host/*"
     },
@@ -837,7 +829,7 @@
       "kind": "command",
       "name": "ConnectKey",
       "detail": "(apiKey string) (string, error)",
-      "location": "desktop/app.go:10556",
+      "location": "desktop/app.go:10500",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -966,14 +958,6 @@
       "name": "CredentialDiagnostics",
       "detail": "(probe bool) (config.CredentialDiagnosticReport, error)",
       "location": "desktop/credential_diagnostics_app.go:7",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
-      "name": "CurrentTaskSessionID",
-      "detail": "() string",
-      "location": "desktop/app.go:10357",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1507,14 +1491,6 @@
     },
     {
       "kind": "command",
-      "name": "GetTask",
-      "detail": "(taskID string) (*taskmonitor.TaskSnapshot, error)",
-      "location": "desktop/app.go:10386",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
       "name": "GetTaskCatalogStatus",
       "detail": "() TaskCatalogStatus",
       "location": "desktop/task_catalog.go:56",
@@ -1995,22 +1971,6 @@
     },
     {
       "kind": "command",
-      "name": "ListTasks",
-      "detail": "() ([]taskmonitor.TaskSnapshot, error)",
-      "location": "desktop/app.go:10350",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
-      "name": "ListTasksForSession",
-      "detail": "(sessionID string) ([]taskmonitor.TaskSnapshot, error)",
-      "location": "desktop/app.go:10368",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
       "name": "ListThemePacks",
       "detail": "() ([]ThemePackView, error)",
       "location": "desktop/theme_app.go:61",
@@ -2293,7 +2253,7 @@
       "kind": "command",
       "name": "NeedsOnboarding",
       "detail": "() bool",
-      "location": "desktop/app.go:10537",
+      "location": "desktop/app.go:10481",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -2429,7 +2389,7 @@
       "kind": "command",
       "name": "OpenTaskSessionForTab",
       "detail": "(tabID string, taskID string) (taskmonitor.ControlResult, error)",
-      "location": "desktop/app.go:10406",
+      "location": "desktop/app.go:10350",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4958,14 +4918,6 @@
       "name": "StopRemoteServer",
       "detail": "(hostID string, workspace string) error",
       "location": "desktop/remote_server_stop.go:3",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
-      "name": "StopTask",
-      "detail": "(taskID string, expectedVersion uint64, reason string, idemKey string) (taskmonitor.ControlResult, error)",
-      "location": "desktop/app.go:10390",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },

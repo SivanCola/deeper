@@ -1023,23 +1023,6 @@
       ]
     }
   },
-  "CancelTask": {
-    "domain": "desktop/app.go",
-    "owner": "App.CancelTask",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CancelTask",
-      "inputs": [
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
-      ]
-    }
-  },
   "CancelTaskByKey": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.CancelTaskByKey",
@@ -1766,18 +1749,6 @@
       "inputs": [
         "probe"
       ]
-    }
-  },
-  "CurrentTaskSessionID": {
-    "domain": "desktop/app.go",
-    "owner": "App.CurrentTaskSessionID",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.CurrentTaskSessionID",
-      "inputs": []
     }
   },
   "DeleteInboxItem": {
@@ -2718,20 +2689,6 @@
       ]
     }
   },
-  "GetTask": {
-    "domain": "desktop/app.go",
-    "owner": "App.GetTask",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetTask",
-      "inputs": [
-        "taskID"
-      ]
-    }
-  },
   "GetTaskCatalogStatus": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.GetTaskCatalogStatus",
@@ -3565,32 +3522,6 @@
       "resolver": "App.ListTaskPage",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "ListTasks": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTasks",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ListTasks",
-      "inputs": []
-    }
-  },
-  "ListTasksForSession": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTasksForSession",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListTasksForSession",
-      "inputs": [
-        "sessionID"
       ]
     }
   },
@@ -9008,23 +8939,6 @@
       "inputs": [
         "hostID",
         "workspace"
-      ]
-    }
-  },
-  "StopTask": {
-    "domain": "desktop/app.go",
-    "owner": "App.StopTask",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.StopTask",
-      "inputs": [
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
       ]
     }
   },

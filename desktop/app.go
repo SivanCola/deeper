@@ -10347,62 +10347,6 @@ func (a *App) taskMonitorTargetForTab(tabID string) (taskMonitorTabTarget, error
 	return target, nil
 }
 
-func (a *App) ListTasks() ([]taskmonitor.TaskSnapshot, error) {
-	return a.taskStore().ListTasks(a.ctx, a.projectDir())
-}
-
-// CurrentTaskSessionID returns the stable branch ID for the active desktop
-// session. Task Monitor uses this as an optional view filter; an empty value
-// means that the active tab has no session controller yet.
-func (a *App) CurrentTaskSessionID() string {
-	_, ctrl := a.activeTabAndCtrl()
-	if ctrl == nil {
-		return ""
-	}
-	return controllerTaskSessionID(ctrl)
-}
-
-// ListTasksForSession limits the project task view to one desktop session.
-// The unfiltered ListTasks method remains for compatibility with existing
-// callers and project-wide diagnostics.
-func (a *App) ListTasksForSession(sessionID string) ([]taskmonitor.TaskSnapshot, error) {
-	tasks, err := a.ListTasks()
-	if err != nil || strings.TrimSpace(sessionID) == "" {
-		return tasks, err
-	}
-	return filterTasksBySession(tasks, sessionID), nil
-}
-
-func filterTasksBySession(tasks []taskmonitor.TaskSnapshot, sessionID string) []taskmonitor.TaskSnapshot {
-	filtered := make([]taskmonitor.TaskSnapshot, 0, len(tasks))
-	for _, task := range tasks {
-		if task.SessionID == sessionID {
-			filtered = append(filtered, task)
-		}
-	}
-	return filtered
-}
-
-func (a *App) GetTask(taskID string) (*taskmonitor.TaskSnapshot, error) {
-	return a.taskStore().GetTask(a.ctx, a.projectDir(), taskID)
-}
-
-func (a *App) StopTask(taskID string, expectedVersion uint64, reason, idemKey string) (taskmonitor.ControlResult, error) {
-	projectDir := a.projectDir()
-	return a.taskControl().StopTaskWithKiller(
-		a.ctx, projectDir, taskID, expectedVersion, reason, idemKey,
-		desktopTaskJobKiller{app: a, projectDir: projectDir},
-	)
-}
-
-func (a *App) CancelTask(taskID string, expectedVersion uint64, reason, idemKey string) (taskmonitor.ControlResult, error) {
-	projectDir := a.projectDir()
-	return a.taskControl().CancelTaskWithKiller(
-		a.ctx, projectDir, taskID, expectedVersion, reason, idemKey,
-		desktopTaskJobKiller{app: a, projectDir: projectDir},
-	)
-}
-
 func (a *App) OpenTaskSessionForTab(tabID, taskID string) (taskmonitor.ControlResult, error) {
 	target, err := a.taskMonitorTargetForTab(tabID)
 	if err != nil {

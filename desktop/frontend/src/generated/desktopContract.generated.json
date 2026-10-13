@@ -1960,44 +1960,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "CancelTask",
-      "owner": "App.CancelTask",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "taskmonitor.ControlResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "taskID",
-          "expectedVersion",
-          "reason",
-          "idemKey"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CancelTask"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/task_catalog.go",
       "name": "CancelTaskByKey",
       "owner": "App.CancelTaskByKey",
@@ -3323,24 +3285,6 @@
       },
       "sources": [
         "desktop/credential_diagnostics_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "CurrentTaskSessionID",
-      "owner": "App.CurrentTaskSessionID",
-      "params": [],
-      "result": {
-        "kind": "string"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.CurrentTaskSessionID"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -5133,35 +5077,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "GetTask",
-      "owner": "App.GetTask",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskSnapshot"
-        },
-        "kind": "nullable"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "taskID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.GetTask"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/task_catalog.go",
       "name": "GetTaskCatalogStatus",
       "owner": "App.GetTaskCatalogStatus",
@@ -6760,58 +6675,6 @@
       },
       "sources": [
         "desktop/task_catalog.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ListTasks",
-      "owner": "App.ListTasks",
-      "params": [],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskSnapshot"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ListTasks"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ListTasksForSession",
-      "owner": "App.ListTasksForSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskSnapshot"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "sessionID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListTasksForSession"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -16910,44 +16773,6 @@
       },
       "sources": [
         "desktop/remote_server_stop.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "StopTask",
-      "owner": "App.StopTask",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "taskmonitor.ControlResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "taskID",
-          "expectedVersion",
-          "reason",
-          "idemKey"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.StopTask"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {

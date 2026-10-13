@@ -150,7 +150,8 @@ func TestTaskActionProjectResolvesAllowlistWithoutCatalog(t *testing.T) {
 	}
 }
 
-func TestStopTaskRoutesMonitorIdentityToRuntimeJob(t *testing.T) {
+func TestStopTaskByKeyRoutesMonitorIdentityToRuntimeJob(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	root := t.TempDir()
 	path := agent.NewSessionPath(t.TempDir(), "session")
 	ctrl := &taskKillController{SessionAPI: control.New(control.Options{Label: "session", SessionPath: path})}
@@ -173,9 +174,12 @@ func TestStopTaskRoutesMonitorIdentityToRuntimeJob(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res, err := app.StopTask(monitorID, 1, "", "desktop-route")
+	res, err := app.StopTaskByKey(TaskActionRequest{
+		ProjectKey: taskcatalog.ProjectKey(root), TaskID: monitorID,
+		ExpectedVersion: 1, IdempotencyKey: "desktop-route",
+	})
 	if err != nil || !res.Accepted {
-		t.Fatalf("StopTask: result=%+v err=%v", res, err)
+		t.Fatalf("StopTaskByKey: result=%+v err=%v", res, err)
 	}
 	ids := ctrl.killedIDs()
 	if len(ids) != 1 || ids[0] != "task-1" {
