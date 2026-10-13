@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -60,18 +61,6 @@ func windowIDs(t *testing.T, page HistoryWindowPage) []string {
 	return ids
 }
 
-func idsEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func TestHistoryWindowNewestAndOlderPaging(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "sessions-v4")
 	service, err := NewService("local", NewFilesystemPersistence(root))
@@ -89,25 +78,25 @@ func TestHistoryWindowNewestAndOlderPaging(t *testing.T) {
 	query := service.Query()
 
 	newest := windowReady(t, query, ref, HistoryWindowRequest{Anchor: "newest", Limit: 2})
-	if newest.Status != "ready" || !idsEqual(windowIDs(t, newest), []string{"m4", "m5"}) {
+	if newest.Status != "ready" || !slices.Equal(windowIDs(t, newest), []string{"m4", "m5"}) {
 		t.Fatalf("newest page = %v", windowIDs(t, newest))
 	}
 	if !newest.HasOlder || newest.OlderCursor == "" || newest.HasNewer {
 		t.Fatalf("newest page cursors = %+v", newest)
 	}
 	older := windowReady(t, query, ref, HistoryWindowRequest{Anchor: "cursor", Cursor: newest.OlderCursor, Limit: 2})
-	if !idsEqual(windowIDs(t, older), []string{"m2", "m3"}) {
+	if !slices.Equal(windowIDs(t, older), []string{"m2", "m3"}) {
 		t.Fatalf("older page = %v", windowIDs(t, older))
 	}
 	if !older.HasNewer || older.NewerCursor == "" {
 		t.Fatalf("older page must expose a newer cursor: %+v", older)
 	}
 	newer := windowReady(t, query, ref, HistoryWindowRequest{Anchor: "cursor", Cursor: older.NewerCursor, Limit: 5})
-	if !idsEqual(windowIDs(t, newer), []string{"m4", "m5"}) {
+	if !slices.Equal(windowIDs(t, newer), []string{"m4", "m5"}) {
 		t.Fatalf("newer continuation = %v", windowIDs(t, newer))
 	}
 	oldest := windowReady(t, query, ref, HistoryWindowRequest{Anchor: "cursor", Cursor: older.OlderCursor, Limit: 5})
-	if !idsEqual(windowIDs(t, oldest), []string{"m1"}) || oldest.HasOlder {
+	if !slices.Equal(windowIDs(t, oldest), []string{"m1"}) || oldest.HasOlder {
 		t.Fatalf("oldest page = %v hasOlder=%v", windowIDs(t, oldest), oldest.HasOlder)
 	}
 }
@@ -131,14 +120,14 @@ func TestHistoryWindowMessageAndTurnAnchors(t *testing.T) {
 	// A search-hit-style jump lands a window around the target without
 	// walking from the newest page.
 	byMessage := windowReady(t, query, ref, HistoryWindowRequest{Anchor: "message", MessageID: "a2", Limit: 2})
-	if !idsEqual(windowIDs(t, byMessage), []string{"a1", "a2"}) {
+	if !slices.Equal(windowIDs(t, byMessage), []string{"a1", "a2"}) {
 		t.Fatalf("message anchor page = %v", windowIDs(t, byMessage))
 	}
 	if !byMessage.HasNewer || byMessage.NewerCursor == "" {
 		t.Fatalf("message anchor must continue newer: %+v", byMessage)
 	}
 	afterTarget := windowReady(t, query, ref, HistoryWindowRequest{Anchor: "cursor", Cursor: byMessage.NewerCursor, Limit: 2})
-	if !idsEqual(windowIDs(t, afterTarget), []string{"a3", "a4"}) {
+	if !slices.Equal(windowIDs(t, afterTarget), []string{"a3", "a4"}) {
 		t.Fatalf("newer continuation = %v", windowIDs(t, afterTarget))
 	}
 

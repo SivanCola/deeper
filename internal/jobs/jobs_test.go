@@ -10,6 +10,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
+	"deepzora/internal/testutil"
 )
 
 type recordingSink struct {
@@ -49,18 +50,6 @@ func (s *blockingFinishedSink) Emit(ev event.Event) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.events = append(s.events, ev)
-}
-
-func waitFor(t *testing.T, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("condition not met within deadline")
 }
 
 func TestStartForSessionStampsJobContext(t *testing.T) {
@@ -366,7 +355,7 @@ func TestOutputStreamsIncrementally(t *testing.T) {
 		return "", nil
 	})
 
-	waitFor(t, func() bool {
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool {
 		txt, _, _ := m.Output(j.ID)
 		return strings.Contains(txt, "first")
 	})
@@ -418,7 +407,7 @@ func TestJobPanicRecoveredAsFailed(t *testing.T) {
 	if !strings.Contains(res[0].Output, "internal error: panic: boom") {
 		t.Fatalf("panic output = %q, want internal panic message", res[0].Output)
 	}
-	waitFor(t, func() bool {
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool {
 		sink.mu.Lock()
 		defer sink.mu.Unlock()
 		for _, ev := range sink.events {
@@ -441,7 +430,7 @@ func TestStalledWarningEmitsNoticeAndDrainNote(t *testing.T) {
 	})
 	defer m.Kill(j.ID)
 
-	waitFor(t, func() bool {
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool {
 		for _, text := range sink.texts() {
 			if strings.Contains(text, "still running after") && strings.Contains(text, j.ID) && !strings.Contains(text, "may be stalled") && strings.Contains(text, "heads-up, not an error") && strings.Contains(text, "stalled_warning_seconds") {
 				return true
@@ -527,13 +516,13 @@ func TestRunning(t *testing.T) {
 		<-release
 		return "answer", nil
 	})
-	waitFor(t, func() bool { return len(m.Running()) == 1 })
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool { return len(m.Running()) == 1 })
 	if r := m.Running()[0]; r.ID != j.ID || r.Label != "label" {
 		t.Errorf("running view = %+v, want id=%s label=label", r, j.ID)
 	}
 	close(release)
 	m.Wait(context.Background(), []string{j.ID}, 5)
-	waitFor(t, func() bool { return len(m.Running()) == 0 })
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool { return len(m.Running()) == 0 })
 }
 
 func TestSessionScopedOperations(t *testing.T) {
@@ -553,7 +542,7 @@ func TestSessionScopedOperations(t *testing.T) {
 		return "", nil
 	})
 
-	waitFor(t, func() bool {
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool {
 		txt, _, ok := m.OutputForSession("session-a", a.ID)
 		return ok && strings.Contains(txt, "from-a")
 	})
@@ -615,7 +604,7 @@ func TestSessionScopedNoticesUseActiveSession(t *testing.T) {
 
 	close(releaseA)
 	m.Wait(context.Background(), []string{a.ID}, 5)
-	waitFor(t, func() bool {
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool {
 		for _, text := range sink.texts() {
 			if strings.Contains(text, a.ID) {
 				return true
@@ -675,7 +664,7 @@ func TestDestroySessionWaitsForAlreadyKilledJobs(t *testing.T) {
 	if !m.KillForSession("session-a", j.ID) {
 		t.Fatal("KillForSession on a running job returned false")
 	}
-	waitFor(t, func() bool {
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool {
 		_, status, ok := m.OutputForSession("session-a", j.ID)
 		return ok && status == Killed
 	})

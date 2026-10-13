@@ -341,106 +341,103 @@ func TestEffortCapabilityOllamaCloud(t *testing.T) {
 	}
 }
 
-func TestNormalizeEffortOllamaCloud(t *testing.T) {
-	e := &ProviderEntry{Kind: "openai", BaseURL: "https://ollama.com/v1", Model: "nemotron-3-nano:30b"}
-	cases := []struct {
-		in, want string
-	}{
-		{"auto", ""},
-		{"none", "none"},
-		{"disabled", "none"},
-		{"off", "none"},
-		{"low", "low"},
-		{"medium", "medium"},
-		{"high", "high"},
-		{"xhigh", "max"},
-		{"max", "max"},
-	}
-	for _, tc := range cases {
-		got, err := NormalizeEffort(e, tc.in)
-		if tc.in != tc.want && tc.in != "auto" {
-			if err == nil {
-				t.Errorf("undeclared %q was silently mapped to %q", tc.in, got)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("NormalizeEffort(%q) returned error: %v", tc.in, err)
-			continue
-		}
-		if got != tc.want {
-			t.Errorf("NormalizeEffort(%q) = %q, want %q", tc.in, got, tc.want)
-		}
-	}
+type effortCase struct {
+	in, want string
 }
 
-func TestNormalizeEffortZhipu(t *testing.T) {
-	e := &ProviderEntry{Kind: "openai", BaseURL: "https://open.bigmodel.cn/api/paas/v4", Model: "glm-4.5-air"}
-	cases := []struct {
-		in, want string
+func TestNormalizeEffortProviderVocabularies(t *testing.T) {
+	tests := []struct {
+		name  string
+		entry *ProviderEntry
+		cases []effortCase
 	}{
-		{"auto", ""}, // auto == leave to provider default == empty
-		{"enabled", "enabled"},
-		{"disabled", "disabled"},
-		{"ENABLED", "enabled"}, // case-insensitive
-		// Stale values from other vendors resolve to a valid GLM level rather
-		// than failing the /effort command.
-		{"off", "disabled"}, // retired DeepSeek "no thinking"
-		{"low", "enabled"},
-		{"medium", "enabled"},
-		{"high", "enabled"},
-		{"xhigh", "enabled"},
-		{"max", "enabled"},
+		{
+			name:  "ollama-cloud",
+			entry: &ProviderEntry{Kind: "openai", BaseURL: "https://ollama.com/v1", Model: "nemotron-3-nano:30b"},
+			cases: []effortCase{
+				{"auto", ""},
+				{"none", "none"},
+				{"disabled", "none"},
+				{"off", "none"},
+				{"low", "low"},
+				{"medium", "medium"},
+				{"high", "high"},
+				{"xhigh", "max"},
+				{"max", "max"},
+			},
+		},
+		{
+			name:  "zhipu",
+			entry: &ProviderEntry{Kind: "openai", BaseURL: "https://open.bigmodel.cn/api/paas/v4", Model: "glm-4.5-air"},
+			cases: []effortCase{
+				{"auto", ""}, // auto == leave to provider default == empty
+				{"enabled", "enabled"},
+				{"disabled", "disabled"},
+				{"ENABLED", "enabled"}, // case-insensitive
+				// Stale values from other vendors resolve to a valid GLM level rather
+				// than failing the /effort command.
+				{"off", "disabled"}, // retired DeepSeek "no thinking"
+				{"low", "enabled"},
+				{"medium", "enabled"},
+				{"high", "enabled"},
+				{"xhigh", "enabled"},
+				{"max", "enabled"},
+			},
+		},
+		{
+			name:  "longcat",
+			entry: &ProviderEntry{Kind: "openai", BaseURL: "https://api.longcat.chat/openai/v1", Model: "LongCat-2.0"},
+			cases: []effortCase{
+				{"auto", ""},
+				{"enabled", "enabled"},
+				{"disabled", "disabled"},
+				{"ENABLED", "enabled"},
+				{"off", "disabled"},
+				{"low", "enabled"},
+				{"medium", "enabled"},
+				{"high", "enabled"},
+				{"xhigh", "enabled"},
+				{"max", "enabled"},
+			},
+		},
+		{
+			name:  "minimax",
+			entry: &ProviderEntry{Kind: "openai", BaseURL: "https://api.minimaxi.com/v1", Model: "MiniMax-M3"},
+			cases: []effortCase{
+				{"auto", ""}, // auto == "leave to provider default" == empty
+				{"adaptive", "adaptive"},
+				{"disabled", "disabled"},
+				{"ADAPTIVE", "adaptive"}, // case-insensitive
+				// Stale values from other vendors still resolve to a valid M3 level
+				// rather than failing the /effort command.
+				{"off", "disabled"}, // retired DeepSeek "no thinking" → M3 actually supports "disabled"
+				{"low", "adaptive"},
+				{"medium", "adaptive"},
+				{"high", "adaptive"},
+				{"xhigh", "disabled"},
+				{"max", "disabled"},
+			},
+		},
 	}
-	for _, tc := range cases {
-		got, err := NormalizeEffort(e, tc.in)
-		if tc.in != tc.want && tc.in != "auto" {
-			if err == nil {
-				t.Errorf("undeclared %q was silently mapped to %q", tc.in, got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, tc := range tt.cases {
+				got, err := NormalizeEffort(tt.entry, tc.in)
+				if tc.in != tc.want && tc.in != "auto" {
+					if err == nil {
+						t.Errorf("undeclared %q was silently mapped to %q", tc.in, got)
+					}
+					continue
+				}
+				if err != nil {
+					t.Errorf("NormalizeEffort(%q) returned error: %v", tc.in, err)
+					continue
+				}
+				if got != tc.want {
+					t.Errorf("NormalizeEffort(%q) = %q, want %q", tc.in, got, tc.want)
+				}
 			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("NormalizeEffort(%q) returned error: %v", tc.in, err)
-			continue
-		}
-		if got != tc.want {
-			t.Errorf("NormalizeEffort(%q) = %q, want %q", tc.in, got, tc.want)
-		}
-	}
-}
-
-func TestNormalizeEffortLongCat(t *testing.T) {
-	e := &ProviderEntry{Kind: "openai", BaseURL: "https://api.longcat.chat/openai/v1", Model: "LongCat-2.0"}
-	cases := []struct {
-		in, want string
-	}{
-		{"auto", ""},
-		{"enabled", "enabled"},
-		{"disabled", "disabled"},
-		{"ENABLED", "enabled"},
-		{"off", "disabled"},
-		{"low", "enabled"},
-		{"medium", "enabled"},
-		{"high", "enabled"},
-		{"xhigh", "enabled"},
-		{"max", "enabled"},
-	}
-	for _, tc := range cases {
-		got, err := NormalizeEffort(e, tc.in)
-		if tc.in != tc.want && tc.in != "auto" {
-			if err == nil {
-				t.Errorf("undeclared %q was silently mapped to %q", tc.in, got)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("NormalizeEffort(%q) returned error: %v", tc.in, err)
-			continue
-		}
-		if got != tc.want {
-			t.Errorf("NormalizeEffort(%q) = %q, want %q", tc.in, got, tc.want)
-		}
+		})
 	}
 }
 
@@ -464,49 +461,13 @@ func TestEffortCapabilityMiniMax(t *testing.T) {
 	}
 }
 
-func TestNormalizeEffortMiniMax(t *testing.T) {
-	e := &ProviderEntry{Kind: "openai", BaseURL: "https://api.minimaxi.com/v1", Model: "MiniMax-M3"}
-	cases := []struct {
-		in, want string
-	}{
-		{"auto", ""}, // auto == "leave to provider default" == empty
-		{"adaptive", "adaptive"},
-		{"disabled", "disabled"},
-		{"ADAPTIVE", "adaptive"}, // case-insensitive
-		// Stale values from other vendors still resolve to a valid M3 level
-		// rather than failing the /effort command.
-		{"off", "disabled"}, // retired DeepSeek "no thinking" → M3 actually supports "disabled"
-		{"low", "adaptive"},
-		{"medium", "adaptive"},
-		{"high", "adaptive"},
-		{"xhigh", "disabled"},
-		{"max", "disabled"},
-	}
-	for _, tc := range cases {
-		got, err := NormalizeEffort(e, tc.in)
-		if tc.in != tc.want && tc.in != "auto" {
-			if err == nil {
-				t.Errorf("undeclared %q was silently mapped to %q", tc.in, got)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("NormalizeEffort(%q) returned error: %v", tc.in, err)
-			continue
-		}
-		if got != tc.want {
-			t.Errorf("NormalizeEffort(%q) = %q, want %q", tc.in, got, tc.want)
-		}
-	}
-}
-
 func TestNormalizeEffortMiniMaxRejectsGarbage(t *testing.T) {
 	e := &ProviderEntry{Kind: "openai", BaseURL: "https://api.minimaxi.com/v1", Model: "MiniMax-M3"}
 	// "turbo" and similar unrecognised inputs reach the MiniMax switch and
 	// are rejected with the MiniMax-specific usage hint. Empty input is
 	// rejected earlier with the generic hint; both are valid user-facing
 	// errors. "off" is *not* in this list — it's a retired level we now
-	// migrate to "adaptive" (tested in TestNormalizeEffortMiniMax above).
+	// migrate to "adaptive" (tested in TestNormalizeEffortProviderVocabularies above).
 	cases := map[string]string{
 		"turbo": "UNSUPPORTED_REASONING_EFFORT",
 		"":      "auto|<level>",

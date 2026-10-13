@@ -34,7 +34,9 @@ func TestChildConstructionForksStayEnumerated(t *testing.T) {
 	var found []string
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
-			if d != nil && d.IsDir() && (d.Name() == ".git" || d.Name() == "node_modules" || d.Name() == ".claude") {
+			// Nested worktrees and tool scratch dirs are separate checkouts of
+			// the repo, not this tree's source.
+			if d != nil && d.IsDir() && (d.Name() == ".git" || d.Name() == ".claude" || d.Name() == ".worktrees" || d.Name() == "node_modules") {
 				return filepath.SkipDir
 			}
 			return nil

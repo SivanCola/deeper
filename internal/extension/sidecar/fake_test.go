@@ -338,19 +338,6 @@ func startFakeClient(t testing.TB, configure func(rt *pluginpkg.RuntimeSpec), op
 	return client
 }
 
-// waitFor polls cond until it holds or the deadline expires.
-func waitFor(t *testing.T, what string, timeout time.Duration, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("timed out waiting for %s", what)
-}
-
 // protocolReason extracts the frozen protocol error reason from err, whether
 // it travels as a local *protocol.ProtocolError or as the wire-shaped
 // *rpcwire.RPCError handlers return.

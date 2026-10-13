@@ -224,9 +224,3 @@ func TestSummaryKeepsToolHeavySessionBounded(t *testing.T) {
 		t.Errorf("compaction fired on %d consecutive turns; content-driven summary should reclaim headroom", c)
 	}
 }
-
-// Keep the old name as an alias so external references still resolve during the
-// rename window; the body asserts the new no-prune contract.
-func TestPruneKeepsToolHeavySessionBounded(t *testing.T) {
-	TestSummaryKeepsToolHeavySessionBounded(t)
-}

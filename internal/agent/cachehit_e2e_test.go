@@ -17,6 +17,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/provider/openai"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -482,7 +483,7 @@ func verifyLargeToolOutputCacheContract(t *testing.T, size int) int {
 	}
 	first := modelInputMessages(canonical)
 	firstWire := encodeProviderMessages(t, first)
-	if bytes.Contains(mustCacheJSON(t, firstWire), []byte(rawSentinel)) {
+	if bytes.Contains(testutil.MustJSON(t, firstWire), []byte(rawSentinel)) {
 		t.Fatal("provider-visible request contains RawContent sentinel")
 	}
 	if got := first[len(first)-1]; got.RawContent != "" || len(got.Content) > maxToolOutputBytes {
@@ -501,7 +502,7 @@ func verifyLargeToolOutputCacheContract(t *testing.T, size int) int {
 	beforeSchemas, afterSchemas := reg.Schemas(), reg.Schemas()
 	beforeShape := CaptureShape(systemPrompt, beforeSchemas, 0)
 	afterShape := CaptureShape(systemPrompt, afterSchemas, 0)
-	if !bytes.Equal(mustCacheJSON(t, beforeSchemas), mustCacheJSON(t, afterSchemas)) {
+	if !bytes.Equal(testutil.MustJSON(t, beforeSchemas), testutil.MustJSON(t, afterSchemas)) {
 		t.Fatal("large tool result changed provider tool schema bytes or order")
 	}
 	if diag := CompareShape(beforeShape, afterShape, nil, nil); diag.PrefixChanged {
@@ -517,18 +518,9 @@ func encodeProviderMessages(t *testing.T, msgs []provider.Message) []json.RawMes
 	t.Helper()
 	out := make([]json.RawMessage, len(msgs))
 	for i, msg := range msgs {
-		out[i] = append(json.RawMessage(nil), mustCacheJSON(t, msg)...)
+		out[i] = append(json.RawMessage(nil), testutil.MustJSON(t, msg)...)
 	}
 	return out
-}
-
-func mustCacheJSON(t *testing.T, value any) []byte {
-	t.Helper()
-	b, err := json.Marshal(value)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
 }
 
 func cacheCurve(t *testing.T, mock *mockDeepSeek, turns int) []int {

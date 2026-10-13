@@ -116,10 +116,6 @@ func (s *scriptedProvider) Stream(_ context.Context, req provider.Request) (<-ch
 	return ch, nil
 }
 
-func toolCallChunk(id, name, args string) provider.Chunk {
-	return provider.Chunk{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: id, Name: name, Arguments: args}}
-}
-
 func toolResult(s *Session, name string) string {
 	for _, message := range s.Messages {
 		if message.Role == provider.RoleTool && message.Name == name {

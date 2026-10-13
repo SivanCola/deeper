@@ -3,6 +3,7 @@ package fileref
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -94,26 +95,13 @@ func TestSearchKeepsBasenameMatch(t *testing.T) {
 	got := Search(root, "planind", 50)
 	gotPaths := resultPaths(got)
 	want := []string{"src/planind", "planind.go", "src/planind/index.tsx"}
-	if !equalSlices(gotPaths, want) {
+	if !slices.Equal(gotPaths, want) {
 		t.Fatalf("Search(%q) order mismatch:\n  want %v\n  got  %v", "planind", want, gotPaths)
 	}
 	// Verify the directory hit has IsDir=true.
 	if !containsDirHit(got, "src/planind") {
 		t.Fatalf("Search(%q) should return %q with IsDir=true", "planind", "src/planind")
 	}
-}
-
-// equalSlices reports whether two []string are element-wise equal.
-func equalSlices(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // TestSearchHandlesBasenamePathQuery verifies that searching for the basename

@@ -21,6 +21,7 @@ import (
 	"deepzora/internal/extension/providerext"
 	"deepzora/internal/extension/sidecar"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 )
 
 // First-boot coverage for extension-hosted providers (stage 7 follow-up):
@@ -185,7 +186,7 @@ func TestBootSwitchToPluginModelStreams(t *testing.T) {
 
 	// Closing the old controller after the swap retires only its generation.
 	oldRes.Controller.Close()
-	waitForCond(t, "old sidecar exit", 10*time.Second, oldClient.Exited)
+	testutil.WaitFor(t, "old sidecar exit", 10*time.Second, oldClient.Exited)
 	newClient := newRes.Extensions.Client(name)
 	if newClient == nil || newClient.Exited() {
 		t.Fatal("the switched generation's sidecar died with the old controller")
@@ -261,7 +262,7 @@ func TestBootRedactsExtensionStartupWarnings(t *testing.T) {
 func readFakePID(t *testing.T, path string) int {
 	t.Helper()
 	pid := 0
-	waitForCond(t, "fake sidecar PID file", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "fake sidecar PID file", 10*time.Second, func() bool {
 		body, err := os.ReadFile(path)
 		if err != nil {
 			return false
@@ -298,7 +299,7 @@ func TestBootRequiredExitLeavesNoSidecarProcess(t *testing.T) {
 		t.Fatalf("error %v is not a RequiredStartError", err)
 	}
 	pid := readFakePID(t, pidFile)
-	waitForCond(t, "required sidecar process exit", 10*time.Second, func() bool { return !pidAlive(pid) })
+	testutil.WaitFor(t, "required sidecar process exit", 10*time.Second, func() bool { return !pidAlive(pid) })
 }
 
 // TestBootProviderConflictLeavesNoSidecarProcess: a provider-ref conflict
@@ -324,7 +325,7 @@ func TestBootProviderConflictLeavesNoSidecarProcess(t *testing.T) {
 		t.Fatalf("error %v is not a providerext.ConflictError", err)
 	}
 	pid := readFakePID(t, pidFile)
-	waitForCond(t, "conflicted sidecar process exit", 10*time.Second, func() bool { return !pidAlive(pid) })
+	testutil.WaitFor(t, "conflicted sidecar process exit", 10*time.Second, func() bool { return !pidAlive(pid) })
 }
 
 // TestRebuildPluginPreflightFailureKeepsOldRuntime pins reload atomicity with

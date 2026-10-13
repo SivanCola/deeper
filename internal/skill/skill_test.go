@@ -717,7 +717,7 @@ func TestBuiltinSubagentSkillsDeclareAllowedTools(t *testing.T) {
 		if sk.RunAs != RunSubagent {
 			t.Fatalf("%s RunAs = %s, want subagent", name, sk.RunAs)
 		}
-		if !sameStrings(sk.AllowedTools, want) {
+		if !slices.Equal(sk.AllowedTools, want) {
 			t.Errorf("%s AllowedTools = %v, want %v", name, sk.AllowedTools, want)
 		}
 		for _, meta := range []string{"task", "run_skill", "install_skill", "install_source", "explore", "research", "review", "security_review"} {
@@ -800,18 +800,6 @@ func TestDisabledSkillsAreFilteredFromListAndRead(t *testing.T) {
 	if _, ok := st.Read("review"); ok {
 		t.Fatal("disabled builtin skill should not be readable")
 	}
-}
-
-func sameStrings(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func containsString(ss []string, want string) bool {

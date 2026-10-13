@@ -19,6 +19,7 @@ import (
 	"deepzora/internal/pluginpkg"
 	"deepzora/internal/skill"
 	"deepzora/internal/testenv"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -804,14 +805,14 @@ func TestApplyRemoteMCPURLDefaultsGlobal(t *testing.T) {
 		t.Fatalf("response = %+v, want global user config %q", resp, config.UserConfigPath())
 	}
 	userCfg := config.LoadForEdit(config.UserConfigPath())
-	if p, ok := findPlugin(userCfg.Plugins, "global-default"); !ok || p.URL != "https://global.example.com/mcp" {
+	if p, ok := testutil.FindPlugin(userCfg.Plugins, "global-default"); !ok || p.URL != "https://global.example.com/mcp" {
 		t.Fatalf("global config plugins = %+v, want global-default", userCfg.Plugins)
 	}
 	if len(stub.connected) != 1 || stub.connected[0].Source != config.MCPSourceUserConfig {
 		t.Fatalf("global install live source = %+v, want source %q", stub.connected, config.MCPSourceUserConfig)
 	}
 	projectCfg := config.LoadForEdit(filepath.Join(project, "deepzora.toml"))
-	if _, ok := findPlugin(projectCfg.Plugins, "global-default"); ok {
+	if _, ok := testutil.FindPlugin(projectCfg.Plugins, "global-default"); ok {
 		t.Fatalf("project config should not receive default-global MCP: %+v", projectCfg.Plugins)
 	}
 }
@@ -1501,7 +1502,7 @@ func TestUninstallWithoutScopeFallsBackToGlobalMCP(t *testing.T) {
 		t.Errorf("OnDisconnect should fire once, got %d", disconnects.Load())
 	}
 	reloaded := config.LoadForEdit(config.UserConfigPath())
-	if _, ok := findPlugin(reloaded.Plugins, name); ok {
+	if _, ok := testutil.FindPlugin(reloaded.Plugins, name); ok {
 		t.Fatalf("global MCP should be removed, got %+v", reloaded.Plugins)
 	}
 }
@@ -1740,19 +1741,10 @@ func TestApplyLocalExecutableHonorsCommandOverride(t *testing.T) {
 		t.Fatalf("connected entry = %+v, want node [%s]", stub.connected, server)
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	p, ok := findPlugin(cfg.Plugins, "wrapped")
+	p, ok := testutil.FindPlugin(cfg.Plugins, "wrapped")
 	if !ok || p.Command != "node" || len(p.Args) != 1 || p.Args[0] != server {
 		t.Fatalf("persisted plugins = %+v, want wrapped node [%s]", cfg.Plugins, server)
 	}
-}
-
-func findPlugin(entries []config.PluginEntry, name string) (config.PluginEntry, bool) {
-	for _, entry := range entries {
-		if entry.Name == name {
-			return entry, true
-		}
-	}
-	return config.PluginEntry{}, false
 }
 
 func writeLocalExecutable(t *testing.T, dir, name string) string {

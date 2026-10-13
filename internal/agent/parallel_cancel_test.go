@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -61,7 +62,7 @@ func TestParallelBatchAbandonsToolThatIgnoresCancellation(t *testing.T) {
 	reg.Add(stub)
 	reg.Add(fast)
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("stubborn-1", "stubborn", `{}`), toolCallChunk("fast-1", "fast", `{}`)},
+		{testutil.ToolCallChunk("stubborn-1", "stubborn", `{}`), testutil.ToolCallChunk("fast-1", "fast", `{}`)},
 		{{Type: provider.ChunkText, Text: "done"}},
 	}}
 	sess := NewSession("")

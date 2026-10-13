@@ -14,6 +14,7 @@ import (
 	"deepzora/internal/fileops"
 	"deepzora/internal/provider"
 	"deepzora/internal/sandbox"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 	"deepzora/internal/tool/builtin"
 )
@@ -165,7 +166,7 @@ func TestBoundedLargeReadDoesNotGateCommandOrFinalAnswer(t *testing.T) {
 	var bashCalls int32
 	reg.Add(fakeTool{name: "bash", calls: &bashCalls})
 	prov := &scriptedProvider{name: "bounded-read", turns: [][]provider.Chunk{
-		{toolCallChunk("r", "read_file", `{"path":"large.txt","limit":1}`), toolCallChunk("b", "bash", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("r", "read_file", `{"path":"large.txt","limit":1}`), testutil.ToolCallChunk("b", "bash", `{}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done after one useful window"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession(""), Options{}, event.Discard)

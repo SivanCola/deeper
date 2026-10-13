@@ -17,6 +17,7 @@ import (
 	"deepzora/internal/control"
 	"deepzora/internal/mcpregistry"
 	"deepzora/internal/plugin"
+	"deepzora/internal/testutil"
 )
 
 func stubMCPReadinessProbe(t *testing.T) {
@@ -275,22 +276,13 @@ command = "project-mcp"
 	}
 
 	userCfg := config.LoadForEdit(config.UserConfigPath())
-	if entry, ok := findCLIPlugin(userCfg.Plugins, "global-mcp"); !ok || entry.Command != "global-mcp" {
+	if entry, ok := testutil.FindPlugin(userCfg.Plugins, "global-mcp"); !ok || entry.Command != "global-mcp" {
 		t.Fatalf("global config entry = %+v, found=%v", entry, ok)
 	}
 	projectCfg := config.LoadForEdit(projectPath)
-	if _, ok := findCLIPlugin(projectCfg.Plugins, "global-mcp"); ok {
+	if _, ok := testutil.FindPlugin(projectCfg.Plugins, "global-mcp"); ok {
 		t.Fatalf("CLI-installed global MCP leaked into project config: %+v", projectCfg.Plugins)
 	}
-}
-
-func findCLIPlugin(entries []config.PluginEntry, name string) (config.PluginEntry, bool) {
-	for _, entry := range entries {
-		if entry.Name == name {
-			return entry, true
-		}
-	}
-	return config.PluginEntry{}, false
 }
 
 func TestMCPUpdateProbesCandidateWithoutRewritingConfig(t *testing.T) {

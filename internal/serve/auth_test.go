@@ -94,58 +94,39 @@ func TestInvalidAuthModeFailsClosed(t *testing.T) {
 
 // ── Token mode tests ──
 
-func TestTokenModeNoAuthReturns401(t *testing.T) {
-	ag := newAuthGate(config.ServeConfig{AuthMode: "token", Token: "secret"})
-	ts := httptest.NewServer(ag.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})))
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/status")
-	if err != nil {
-		t.Fatal(err)
+func TestTokenModeAuth(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+		cookie string
+		want   int
+	}{
+		{"no auth returns 401", "/status", "", http.StatusUnauthorized},
+		{"invalid query param returns 401", "/?token=wrong", "", http.StatusUnauthorized},
+		{"valid cookie passes", "/status", "secret", http.StatusOK},
+		{"invalid cookie returns 401", "/status", "wrong", http.StatusUnauthorized},
 	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("status = %d, want 401", resp.StatusCode)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ag := newAuthGate(config.ServeConfig{AuthMode: "token", Token: "secret"})
+			ts := httptest.NewServer(ag.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			})))
+			defer ts.Close()
 
-func TestTokenModeValidCookie(t *testing.T) {
-	ag := newAuthGate(config.ServeConfig{AuthMode: "token", Token: "secret"})
-	ts := httptest.NewServer(ag.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})))
-	defer ts.Close()
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/status", nil)
-	req.AddCookie(&http.Cookie{Name: cookieToken, Value: "secret"})
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("status = %d, want 200", resp.StatusCode)
-	}
-}
-
-func TestTokenModeInvalidCookie(t *testing.T) {
-	ag := newAuthGate(config.ServeConfig{AuthMode: "token", Token: "secret"})
-	ts := httptest.NewServer(ag.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})))
-	defer ts.Close()
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/status", nil)
-	req.AddCookie(&http.Cookie{Name: cookieToken, Value: "wrong"})
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("status = %d, want 401", resp.StatusCode)
+			req, _ := http.NewRequest(http.MethodGet, ts.URL+tt.target, nil)
+			if tt.cookie != "" {
+				req.AddCookie(&http.Cookie{Name: cookieToken, Value: tt.cookie})
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp.Body.Close()
+			if resp.StatusCode != tt.want {
+				t.Errorf("status = %d, want %d", resp.StatusCode, tt.want)
+			}
+		})
 	}
 }
 
@@ -241,23 +222,6 @@ func TestTokenModeNonLoopbackCookieAllowsPlainHTTP(t *testing.T) {
 	}
 	if c.Secure {
 		t.Fatal("plain HTTP token cookie should stay usable without Secure")
-	}
-}
-
-func TestTokenModeInvalidQueryParam(t *testing.T) {
-	ag := newAuthGate(config.ServeConfig{AuthMode: "token", Token: "secret"})
-	ts := httptest.NewServer(ag.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})))
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/?token=wrong")
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("status = %d, want 401", resp.StatusCode)
 	}
 }
 

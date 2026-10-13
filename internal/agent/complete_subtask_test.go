@@ -9,6 +9,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -102,8 +103,8 @@ func TestSubAgentAnswerSeparatesModelReportFromExecutionFacts(t *testing.T) {
 	reg.Add(fakeWriteFileTool{})
 	AttachCompleteSubtaskTool(reg)
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("1", "write_file", `{"path":"parser.go"}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("2", "complete_subtask", `{"status":"complete","summary":"fixed the parser","acceptance_criteria":[{"id":"AC1","status":"satisfied","evidence":[{"kind":"diff","summary":"the fix","paths":["parser.go"]}]},{"id":"AC2","status":"satisfied","evidence":[{"kind":"verification","summary":"suite","command":"go test ./..."}]}],"unresolved":["integration suite not executed"]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("1", "write_file", `{"path":"parser.go"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("2", "complete_subtask", `{"status":"complete","summary":"fixed the parser","acceptance_criteria":[{"id":"AC1","status":"satisfied","evidence":[{"kind":"diff","summary":"the fix","paths":["parser.go"]}]},{"id":"AC2","status":"satisfied","evidence":[{"kind":"verification","summary":"suite","command":"go test ./..."}]}],"unresolved":["integration suite not executed"]}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "all good"}, {Type: provider.ChunkDone}},
 	}}
 

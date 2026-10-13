@@ -13,6 +13,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -83,7 +84,7 @@ func TestSessionToolResultPagesReconstructCompleteUTF8Output(t *testing.T) {
 		if header.Offset != offset || header.ResultRef != ref || header.TotalBytes != len(full) || header.SHA256 == "" {
 			t.Fatalf("unexpected page header: %+v", header)
 		}
-		if len(page) > toolResultPageDefaultBytes || len(page)+len(toolResultMustJSON(t, header))+1 > maxToolOutputBytes {
+		if len(page) > toolResultPageDefaultBytes || len(page)+len(testutil.MustJSON(t, header))+1 > maxToolOutputBytes {
 			t.Fatalf("page exceeded bounded output: page=%d", len(page))
 		}
 		rebuilt.WriteString(page)
@@ -138,15 +139,6 @@ func TestToolResultProviderBoundaryAndRecoveryMarker(t *testing.T) {
 			}
 		})
 	}
-}
-
-func toolResultMustJSON(t *testing.T, value any) []byte {
-	t.Helper()
-	b, err := json.Marshal(value)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
 }
 
 func TestSessionToolResultRequiresExactRefForDuplicateCallID(t *testing.T) {

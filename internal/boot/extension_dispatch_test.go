@@ -13,6 +13,7 @@ import (
 	"deepzora/internal/config"
 	"deepzora/internal/extension"
 	"deepzora/internal/extension/dispatch"
+	"deepzora/internal/testutil"
 )
 
 // Stage 6b1 dispatch wiring tests: the boot builds the dispatcher, runs the
@@ -255,7 +256,7 @@ func TestBootSystemPromptBuildEventObserved(t *testing.T) {
 	// The notification is delivered when the host writes the frame; the fake
 	// logs it on its own read loop, so poll instead of reading once.
 	var line string
-	waitForCond(t, "system_prompt.build event observation", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "system_prompt.build event observation", 10*time.Second, func() bool {
 		data, err := os.ReadFile(eventLog)
 		if err != nil {
 			return false

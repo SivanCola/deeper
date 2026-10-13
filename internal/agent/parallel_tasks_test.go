@@ -14,6 +14,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/runtimepolicy"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 	"deepzora/internal/workspacelease"
 )
@@ -407,7 +408,7 @@ func (writerCallingProvider) Name() string { return "writer-calling" }
 func (writerCallingProvider) Stream(_ context.Context, req provider.Request) (<-chan provider.Chunk, error) {
 	ch := make(chan provider.Chunk, 2)
 	if !hasToolResult(req, "write_file") {
-		ch <- toolCallChunk("write-1", "write_file", `{"path":"x","content":"y"}`)
+		ch <- testutil.ToolCallChunk("write-1", "write_file", `{"path":"x","content":"y"}`)
 		ch <- provider.Chunk{Type: provider.ChunkDone}
 		close(ch)
 		return ch, nil
@@ -425,7 +426,7 @@ func (proxyWriterCallingProvider) Name() string { return "proxy-writer-calling" 
 func (proxyWriterCallingProvider) Stream(_ context.Context, req provider.Request) (<-chan provider.Chunk, error) {
 	ch := make(chan provider.Chunk, 2)
 	if !hasToolResult(req, "use_capability") {
-		ch <- toolCallChunk("proxy-write-1", "use_capability", `{"action":"call","capability_id":"mcp-tool:test/write","arguments":{}}`)
+		ch <- testutil.ToolCallChunk("proxy-write-1", "use_capability", `{"action":"call","capability_id":"mcp-tool:test/write","arguments":{}}`)
 		ch <- provider.Chunk{Type: provider.ChunkDone}
 		close(ch)
 		return ch, nil

@@ -9,7 +9,7 @@ GOEXE := $(shell go env GOEXE)
 # One pin for the Makefile and the CI lint job; see .github/workflows/ci.yml.
 GOLANGCI_VERSION := $(shell cat .golangci-version)
 
-.PHONY: build vet fmt lint lint-go lint-install lint-cross lint-update test desktop-test desktop-test-short desktop-test-times sdk-test sdk-test-race hooks cross clean
+.PHONY: build vet fmt lint lint-go lint-install lint-cross lint-update testdup test desktop-test desktop-test-short desktop-test-times sdk-test sdk-test-race hooks cross clean
 
 build:
 	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/deepzora$(GOEXE) ./cmd/deepzora
@@ -40,6 +40,12 @@ lint-install:
 
 lint-update:
 	go run ./tools/repolint -update
+
+# Flags test bodies duplicated across files and tests that only re-exercise a
+# shared helper through a one-line forwarding wrapper. CI runs the same command
+# with -strict in the lint job.
+testdup:
+	go run ./tools/testdup -strict
 
 # Linting one GOOS leaves every //go:build windows and darwin file unchecked.
 lint-cross:

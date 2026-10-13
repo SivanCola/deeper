@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"deepzora/internal/projectiondb"
@@ -133,7 +134,7 @@ func TestDuplicateCompleteOnDiskKeepsFirstOccurrence(t *testing.T) {
 	want := []string{"claimed", "answer", "tail"}
 	firstKept := func(where string, messages []provider.Message) {
 		t.Helper()
-		if got := messageIDs(messages); !idsEqual(got, want) {
+		if got := messageIDs(messages); !slices.Equal(got, want) {
 			t.Fatalf("%s ids = %v, want %v", where, got, want)
 		}
 		if messages[0].Content != "the user's request" {
@@ -175,7 +176,7 @@ func TestDuplicateCompleteOnDiskKeepsFirstOccurrence(t *testing.T) {
 		if err != nil || page.Status != "ready" {
 			t.Fatalf("read history (caches removed=%v): %+v, %v", removeCaches, page, err)
 		}
-		if got := windowIDs(t, page); !idsEqual(got, want) {
+		if got := windowIDs(t, page); !slices.Equal(got, want) {
 			t.Fatalf("history ids (caches removed=%v) = %v, want %v", removeCaches, got, want)
 		}
 		if search := searchHistoryReady(t, query, ref, "approved", "", 10); len(search.Hits) != 0 {
@@ -192,7 +193,7 @@ func TestDuplicateCompleteOnDiskKeepsFirstOccurrence(t *testing.T) {
 			if got := opened.Runtime().Session().CatalogMetadata().Preview; got != "the user's request" {
 				t.Fatalf("replayed preview = %q, want the first occurrence", got)
 			}
-			if got := messageIDs(opened.Runtime().Session().DeriveMessages()); !idsEqual(got, []string{"answer", "tail"}) {
+			if got := messageIDs(opened.Runtime().Session().DeriveMessages()); !slices.Equal(got, []string{"answer", "tail"}) {
 				t.Fatalf("replayed model workset = %v, want the compacted context without the repeat", got)
 			}
 		}
@@ -262,7 +263,7 @@ func TestDuplicateCompleteInCheckpointTailKeepsFirstOccurrence(t *testing.T) {
 	t.Cleanup(func() { _ = reopened.Release(context.Background()) })
 	s := reopened.Runtime().Session()
 	model := s.DeriveMessages()
-	if got := messageIDs(model); !idsEqual(got, []string{"claimed", "answer", "tail"}) || model[0].Content != "the user's request" {
+	if got := messageIDs(model); !slices.Equal(got, []string{"claimed", "answer", "tail"}) || model[0].Content != "the user's request" {
 		t.Fatalf("model workset after the checkpoint tail = %v (%q), want the first occurrence only", got, model[0].Content)
 	}
 	if got := s.CatalogMetadata().Preview; got != "the user's request" {

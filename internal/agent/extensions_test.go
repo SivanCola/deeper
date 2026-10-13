@@ -363,58 +363,79 @@ func TestContextPrepareReplaceIsEphemeral(t *testing.T) {
 	}
 }
 
-func TestContextPrepareBlock(t *testing.T) {
-	client := &fakeDispatchClient{interceptFn: func(ev protocol.InterceptEvent, _ json.RawMessage) (protocol.InterceptResult, error) {
-		if ev == protocol.EventContextPrepare {
-			return blockWith("context denied"), nil
-		}
-		return protocol.InterceptResult{Decision: protocol.DecisionContinue}, nil
-	}}
-	d := newExtDispatcher(client, true, nil, extension.PointContextPrepare)
-	mp := &mockProvider{name: "p", chunks: []provider.Chunk{
-		{Type: provider.ChunkText, Text: "answer"}, {Type: provider.ChunkDone},
-	}}
-	a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-	err := a.Run(context.Background(), "hello")
-	if err == nil || !strings.Contains(err.Error(), "context denied") {
-		t.Fatalf("Run err = %v, want the block reason", err)
-	}
-	if len(mp.requests) != 0 {
-		t.Fatalf("blocked request still hit the provider: %d requests", len(mp.requests))
+func TestExtensionPointBlockStopsTurn(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		point  extension.InterceptorPoint
+		event  protocol.InterceptEvent
+		reason string
+	}{
+		{"context.prepare", extension.PointContextPrepare, protocol.EventContextPrepare, "context denied"},
+		{"provider.request", extension.PointProviderRequest, protocol.EventProviderRequest, "request denied"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &fakeDispatchClient{interceptFn: func(ev protocol.InterceptEvent, _ json.RawMessage) (protocol.InterceptResult, error) {
+				if ev == tc.event {
+					return blockWith(tc.reason), nil
+				}
+				return protocol.InterceptResult{Decision: protocol.DecisionContinue}, nil
+			}}
+			d := newExtDispatcher(client, true, nil, tc.point)
+			mp := &mockProvider{name: "p", chunks: []provider.Chunk{
+				{Type: provider.ChunkText, Text: "answer"}, {Type: provider.ChunkDone},
+			}}
+			a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
+			err := a.Run(context.Background(), "hello")
+			if err == nil || !strings.Contains(err.Error(), tc.reason) {
+				t.Fatalf("Run err = %v, want the block reason", err)
+			}
+			if len(mp.requests) != 0 {
+				t.Fatalf("blocked request still hit the provider: %d requests", len(mp.requests))
+			}
+		})
 	}
 }
 
-func TestContextPrepareFailurePolicy(t *testing.T) {
+func TestExtensionPointFailurePolicy(t *testing.T) {
 	boom := errors.New("sidecar timeout")
-	t.Run("required fails the turn", func(t *testing.T) {
-		client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
-			return protocol.InterceptResult{}, boom
-		}}
-		d := newExtDispatcher(client, true, nil, extension.PointContextPrepare)
-		mp := &mockProvider{name: "p", chunks: []provider.Chunk{{Type: provider.ChunkDone}}}
-		a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-		err := a.Run(context.Background(), "hello")
-		if err == nil || !strings.Contains(err.Error(), "extension fake failed at context.prepare") {
-			t.Fatalf("Run err = %v, want the required failure", err)
-		}
-	})
-	t.Run("optional warns and proceeds", func(t *testing.T) {
-		client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
-			return protocol.InterceptResult{}, boom
-		}}
-		warns := &extWarnRecorder{}
-		d := newExtDispatcher(client, false, warns.warn, extension.PointContextPrepare)
-		mp := &mockProvider{name: "p", chunks: []provider.Chunk{
-			{Type: provider.ChunkText, Text: "answer"}, {Type: provider.ChunkDone},
-		}}
-		a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-		if err := a.Run(context.Background(), "hello"); err != nil {
-			t.Fatalf("Run: %v", err)
-		}
-		if !warns.contains("skipping this optional extension") {
-			t.Fatalf("warnings = %v, want an optional-extension skip warning", warns.msgs)
-		}
-	})
+	for _, tc := range []struct {
+		name  string
+		point extension.InterceptorPoint
+		want  string
+	}{
+		{"context.prepare", extension.PointContextPrepare, "extension fake failed at context.prepare"},
+		{"provider.request", extension.PointProviderRequest, "extension fake failed at provider.request"},
+	} {
+		t.Run(tc.name+"/required fails the turn", func(t *testing.T) {
+			client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
+				return protocol.InterceptResult{}, boom
+			}}
+			d := newExtDispatcher(client, true, nil, tc.point)
+			mp := &mockProvider{name: "p", chunks: []provider.Chunk{{Type: provider.ChunkDone}}}
+			a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
+			err := a.Run(context.Background(), "hello")
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Run err = %v, want the required failure", err)
+			}
+		})
+		t.Run(tc.name+"/optional warns and proceeds", func(t *testing.T) {
+			client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
+				return protocol.InterceptResult{}, boom
+			}}
+			warns := &extWarnRecorder{}
+			d := newExtDispatcher(client, false, warns.warn, tc.point)
+			mp := &mockProvider{name: "p", chunks: []provider.Chunk{
+				{Type: provider.ChunkText, Text: "answer"}, {Type: provider.ChunkDone},
+			}}
+			a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
+			if err := a.Run(context.Background(), "hello"); err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+			if !warns.contains("skipping this optional extension") {
+				t.Fatalf("warnings = %v, want an optional-extension skip warning", warns.msgs)
+			}
+		})
+	}
 }
 
 // provider.request
@@ -451,60 +472,6 @@ func TestProviderRequestReplace(t *testing.T) {
 	if n := client.notifyCountFor(protocol.EventProviderRequest); n != 1 {
 		t.Fatalf("provider.request events = %d, want 1", n)
 	}
-}
-
-func TestProviderRequestBlock(t *testing.T) {
-	client := &fakeDispatchClient{interceptFn: func(ev protocol.InterceptEvent, _ json.RawMessage) (protocol.InterceptResult, error) {
-		if ev == protocol.EventProviderRequest {
-			return blockWith("request denied"), nil
-		}
-		return protocol.InterceptResult{Decision: protocol.DecisionContinue}, nil
-	}}
-	d := newExtDispatcher(client, true, nil, extension.PointProviderRequest)
-	mp := &mockProvider{name: "p", chunks: []provider.Chunk{
-		{Type: provider.ChunkText, Text: "answer"}, {Type: provider.ChunkDone},
-	}}
-	a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-	err := a.Run(context.Background(), "hello")
-	if err == nil || !strings.Contains(err.Error(), "request denied") {
-		t.Fatalf("Run err = %v, want the block reason", err)
-	}
-	if len(mp.requests) != 0 {
-		t.Fatalf("blocked request still hit the provider: %d requests", len(mp.requests))
-	}
-}
-
-func TestProviderRequestFailurePolicy(t *testing.T) {
-	boom := errors.New("sidecar timeout")
-	t.Run("required fails the turn", func(t *testing.T) {
-		client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
-			return protocol.InterceptResult{}, boom
-		}}
-		d := newExtDispatcher(client, true, nil, extension.PointProviderRequest)
-		mp := &mockProvider{name: "p", chunks: []provider.Chunk{{Type: provider.ChunkDone}}}
-		a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-		err := a.Run(context.Background(), "hello")
-		if err == nil || !strings.Contains(err.Error(), "extension fake failed at provider.request") {
-			t.Fatalf("Run err = %v, want the required failure", err)
-		}
-	})
-	t.Run("optional warns and proceeds", func(t *testing.T) {
-		client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
-			return protocol.InterceptResult{}, boom
-		}}
-		warns := &extWarnRecorder{}
-		d := newExtDispatcher(client, false, warns.warn, extension.PointProviderRequest)
-		mp := &mockProvider{name: "p", chunks: []provider.Chunk{
-			{Type: provider.ChunkText, Text: "answer"}, {Type: provider.ChunkDone},
-		}}
-		a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-		if err := a.Run(context.Background(), "hello"); err != nil {
-			t.Fatalf("Run: %v", err)
-		}
-		if !warns.contains("skipping this optional extension") {
-			t.Fatalf("warnings = %v, want an optional-extension skip warning", warns.msgs)
-		}
-	})
 }
 
 // TestProviderRequestReplacementCacheEphemerality is the cache contract: a
@@ -1325,19 +1292,30 @@ func TestContextPrepareSlotOwnerFinalSayAfterChain(t *testing.T) {
 	}
 }
 
-func TestContextPrepareSlotOwnerFailureIsFatal(t *testing.T) {
-	// Slot ownership alone makes the extension required-class (required=false
-	// here): its timeout fails the operation.
-	client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
-		return protocol.InterceptResult{}, errors.New("sidecar timeout")
-	}}
-	d := newExtSlotDispatcher(client, false, nil, nil,
-		map[extension.Slot]string{extension.SlotContext: extTestPlugin})
-	mp := &mockProvider{name: "p", chunks: []provider.Chunk{{Type: provider.ChunkDone}}}
-	a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-	err := a.Run(context.Background(), "hello")
-	if err == nil || !strings.Contains(err.Error(), "extension fake failed at context.prepare") {
-		t.Fatalf("Run err = %v, want the owner failure", err)
+// TestSlotOwnerFailureIsFatal: slot ownership alone makes the extension
+// required-class (required=false here): its timeout fails the operation.
+func TestSlotOwnerFailureIsFatal(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		slot extension.Slot
+		want string
+	}{
+		{"context.prepare", extension.SlotContext, "extension fake failed at context.prepare"},
+		{"provider.request", extension.SlotProviderRequest, "extension fake failed at provider.request"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
+				return protocol.InterceptResult{}, errors.New("sidecar timeout")
+			}}
+			d := newExtSlotDispatcher(client, false, nil, nil,
+				map[extension.Slot]string{tc.slot: extTestPlugin})
+			mp := &mockProvider{name: "p", chunks: []provider.Chunk{{Type: provider.ChunkDone}}}
+			a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
+			err := a.Run(context.Background(), "hello")
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Run err = %v, want the owner failure", err)
+			}
+		})
 	}
 }
 
@@ -1416,20 +1394,6 @@ func TestProviderRequestSlotOwnerFinalSayAfterChain(t *testing.T) {
 	got := requestContents(mp.requests[0])
 	if !strings.Contains(got, "OWNER MARKER") || !strings.Contains(got, "CHAIN MARKER") {
 		t.Fatalf("request = %q, want both chain and owner replacements", got)
-	}
-}
-
-func TestProviderRequestSlotOwnerFailureIsFatal(t *testing.T) {
-	client := &fakeDispatchClient{interceptFn: func(protocol.InterceptEvent, json.RawMessage) (protocol.InterceptResult, error) {
-		return protocol.InterceptResult{}, errors.New("sidecar timeout")
-	}}
-	d := newExtSlotDispatcher(client, false, nil, nil,
-		map[extension.Slot]string{extension.SlotProviderRequest: extTestPlugin})
-	mp := &mockProvider{name: "p", chunks: []provider.Chunk{{Type: provider.ChunkDone}}}
-	a := New(mp, tool.NewRegistry(), NewSession("sys"), Options{Extensions: d}, event.Discard)
-	err := a.Run(context.Background(), "hello")
-	if err == nil || !strings.Contains(err.Error(), "extension fake failed at provider.request") {
-		t.Fatalf("Run err = %v, want the owner failure", err)
 	}
 }
 
