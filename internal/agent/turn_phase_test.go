@@ -11,6 +11,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -82,7 +83,7 @@ func TestToolRoundAlternatesProviderAndToolPhases(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("r1", "read_file", `{"path":"a.go"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("r1", "read_file", `{"path":"a.go"}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession("sys"), Options{}, sink)
@@ -122,7 +123,7 @@ func TestToolRoundBillsPhaseDurations(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(fakeTool{name: "read_file", readOnly: true, delay: 5 * time.Millisecond})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("r1", "read_file", `{"path":"a.go"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("r1", "read_file", `{"path":"a.go"}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession("sys"), Options{CapabilityAudit: audit}, event.Discard)

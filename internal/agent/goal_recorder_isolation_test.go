@@ -9,6 +9,7 @@ import (
 	"deepzora/internal/event"
 	goaldomain "deepzora/internal/goal"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -31,7 +32,7 @@ func TestSubAgentDoesNotInheritParentGoalRecorder(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(goalTool)
 	prov := &scriptedProvider{name: "goal-child", turns: [][]provider.Chunk{
-		{toolCallChunk("goal", "update_goal", `{"goal_id":"goal-1","revision":1,"action":"complete"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("goal", "update_goal", `{"goal_id":"goal-1","revision":1,"action":"complete"}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "Child result."}, {Type: provider.ChunkDone}},
 	}}
 	owner := &childIsolationGoalOwner{}
@@ -65,8 +66,8 @@ func TestCoordinatorPlannerCannotReportExecutorGoalDisposition(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(goalTool)
 	planner := &mockProvider{name: "planner", streams: [][]provider.Chunk{
-		{toolCallChunk("planner-goal", "update_goal", `{"goal_id":"goal-1","revision":1,"action":"complete"}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("plan-1", "submit_plan", `{"objective":"inspect the implementation","steps":[{"title":"apply and verify the fix"}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("planner-goal", "update_goal", `{"goal_id":"goal-1","revision":1,"action":"complete"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("plan-1", "submit_plan", `{"objective":"inspect the implementation","steps":[{"title":"apply and verify the fix"}]}`), {Type: provider.ChunkDone}},
 	}}
 	exec := &mockProvider{name: "executor", chunks: []provider.Chunk{{Type: provider.ChunkText, Text: "Implemented and verified."}, {Type: provider.ChunkDone}}}
 	plannerSess := NewSession("planner-sys")

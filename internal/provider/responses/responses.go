@@ -25,7 +25,6 @@ import (
 )
 
 const (
-	defaultStreamIdleTimeout     = 300 * time.Second
 	maxReplayableSearchItemBytes = 512 * 1024
 )
 
@@ -175,7 +174,7 @@ func New(cfg Config) provider.Provider {
 		vendor: vendor, caps: cap, mode: cfg.mode(), sessionCache: sessionCache, search: provider.SearchPolicy{NativeEnabled: cfg.WebSearch, ClientEnabled: clientWebSearch}, maxOutputTokens: maxOutputTokens,
 		vision:    vision,
 		modelInfo: modelInfo,
-		http:      httpClient, idleTimeout: defaultStreamIdleTimeout,
+		http:      httpClient, idleTimeout: provider.DefaultStreamIdleTimeout,
 	}
 }
 
@@ -412,7 +411,7 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	idle := c.idleTimeout
 	if idle <= 0 {
-		idle = defaultStreamIdleTimeout
+		idle = provider.DefaultStreamIdleTimeout
 	}
 	watchDone := make(chan struct{})
 	activity := make(chan struct{}, 1)

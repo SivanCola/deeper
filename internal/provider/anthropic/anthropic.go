@@ -36,13 +36,6 @@ import (
 	"deepzora/internal/provider/openai"
 )
 
-// defaultStreamIdleTimeout caps how long a started SSE stream may go silent before
-// it's treated as a dropped connection — a half-open TCP connection (proxy switched
-// mid-stream) sends no RST, so scanner.Scan() would block forever. Generous on
-// purpose; live streams emit far more often. Stored per-client (client.idleTimeout)
-// so a test can shorten it without a shared global that races other watchdogs.
-const defaultStreamIdleTimeout = 300 * time.Second
-
 const (
 	// anthropicVersion is the required API version header value.
 	anthropicVersion = "2023-06-01"
@@ -158,7 +151,7 @@ func New(cfg provider.Config) (provider.Provider, error) {
 		authHeader:       authHeader,
 		defaultMaxTokens: maxOutputTokens,
 		http:             httpClient, // no overall timeout; lifecycle is ctx-driven
-		idleTimeout:      defaultStreamIdleTimeout,
+		idleTimeout:      provider.DefaultStreamIdleTimeout,
 	}, nil
 }
 
@@ -198,7 +191,7 @@ type client struct {
 	authHeader       bool // send Authorization: Bearer instead of Anthropic's x-api-key header
 	defaultMaxTokens int
 	http             *http.Client
-	idleTimeout      time.Duration // SSE stall watchdog window; defaultStreamIdleTimeout unless a test overrides
+	idleTimeout      time.Duration // SSE stall watchdog window; provider.DefaultStreamIdleTimeout unless a test overrides
 	authed           atomic.Bool   // a request has succeeded — gate transient-401 retry
 }
 
@@ -422,7 +415,7 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 	// race). A context cancel already unblocks the scan via the transport.
 	idleTimeout := c.idleTimeout
 	if idleTimeout <= 0 { // zero-value client (constructed without New)
-		idleTimeout = defaultStreamIdleTimeout
+		idleTimeout = provider.DefaultStreamIdleTimeout
 	}
 	done := make(chan struct{})
 	defer close(done)

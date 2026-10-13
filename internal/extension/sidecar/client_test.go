@@ -13,6 +13,7 @@ import (
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/extension/rpcwire"
 	"deepzora/internal/pluginpkg"
+	"deepzora/internal/testutil"
 )
 
 func TestHandshakeSuccess(t *testing.T) {
@@ -315,7 +316,7 @@ func TestCrashFailsPendingAndFastAfter(t *testing.T) {
 		_, err := client.Intercept(context.Background(), protocol.EventToolBefore, json.RawMessage(`{}`), 30*time.Second)
 		pending <- err
 	}()
-	waitFor(t, "the intercept to reach the sidecar", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "the intercept to reach the sidecar", 5*time.Second, func() bool {
 		return strings.Contains(client.proc.stderr.String(), "intercept-stalled")
 	})
 
@@ -330,8 +331,8 @@ func TestCrashFailsPendingAndFastAfter(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("pending Intercept did not error after the sidecar was killed")
 	}
-	waitFor(t, "crash detection", 5*time.Second, client.Crashed)
-	waitFor(t, "process reaping", 5*time.Second, client.Exited)
+	testutil.WaitFor(t, "crash detection", 5*time.Second, client.Crashed)
+	testutil.WaitFor(t, "process reaping", 5*time.Second, client.Exited)
 	// Detection and reaping precede callback completion. Force that ordering
 	// rather than relying on the supervisor winning a scheduler race.
 	if got := crashes.Load(); got != 0 {
@@ -482,8 +483,8 @@ func TestWriteStallKillsWedgedSidecar(t *testing.T) {
 		t.Fatalf("stall took %s to abort, want near 100ms", elapsed)
 	}
 
-	waitFor(t, "client marked crashed", 5*time.Second, client.Crashed)
-	waitFor(t, "wedged sidecar killed", 5*time.Second, client.Exited)
+	testutil.WaitFor(t, "client marked crashed", 5*time.Second, client.Crashed)
+	testutil.WaitFor(t, "wedged sidecar killed", 5*time.Second, client.Exited)
 }
 
 // TestWriteStallWatchdogOutlivesCallerTimeout: a per-call timeout shorter
@@ -523,6 +524,6 @@ func TestWriteStallWatchdogOutlivesCallerTimeout(t *testing.T) {
 		t.Fatalf("caller cancel took %s, want near 200ms", elapsed)
 	}
 
-	waitFor(t, "client marked crashed after caller cancel", 10*time.Second, client.Crashed)
-	waitFor(t, "wedged sidecar killed after caller cancel", 10*time.Second, client.Exited)
+	testutil.WaitFor(t, "client marked crashed after caller cancel", 10*time.Second, client.Crashed)
+	testutil.WaitFor(t, "wedged sidecar killed after caller cancel", 10*time.Second, client.Exited)
 }

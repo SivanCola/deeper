@@ -12,6 +12,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 	"deepzora/internal/workspacelease"
 )
@@ -193,14 +194,14 @@ func TestPathWriteReleasesLeaseAfterToolReturns(t *testing.T) {
 	defer second.EndRun()
 	out1 := a1.executeOne(context.Background(), &a1.turn, provider.ToolCall{
 		ID: "w1", Name: "write_file",
-		Arguments: string(mustJSON(t, map[string]string{"path": filepath.Join(repo, "a.go"), "content": "a"})),
+		Arguments: string(testutil.MustJSON(t, map[string]string{"path": filepath.Join(repo, "a.go"), "content": "a"})),
 	})
 	if out1.blocked || out1.errMsg != "" {
 		t.Fatalf("first write: %+v", out1)
 	}
 	out2 := a2.executeOne(context.Background(), &a2.turn, provider.ToolCall{
 		ID: "w2", Name: "write_file",
-		Arguments: string(mustJSON(t, map[string]string{"path": filepath.Join(repo, "b.go"), "content": "b"})),
+		Arguments: string(testutil.MustJSON(t, map[string]string{"path": filepath.Join(repo, "b.go"), "content": "b"})),
 	})
 	if out2.blocked || out2.errMsg != "" {
 		t.Fatalf("second write after first tool returned: %+v", out2)
@@ -250,7 +251,7 @@ func TestNestedRepoWriteFileLeasesDoNotBlock(t *testing.T) {
 	out1 := a1.executeOne(context.Background(), &a1.turn, provider.ToolCall{
 		ID:   "w1",
 		Name: "write_file",
-		Arguments: string(mustJSON(t, map[string]string{
+		Arguments: string(testutil.MustJSON(t, map[string]string{
 			"path": filepath.Join(repoA, "a.go"), "content": "a",
 		})),
 	})
@@ -260,7 +261,7 @@ func TestNestedRepoWriteFileLeasesDoNotBlock(t *testing.T) {
 	out2 := a2.executeOne(context.Background(), &a2.turn, provider.ToolCall{
 		ID:   "w2",
 		Name: "write_file",
-		Arguments: string(mustJSON(t, map[string]string{
+		Arguments: string(testutil.MustJSON(t, map[string]string{
 			"path": filepath.Join(repoB, "b.go"), "content": "b",
 		})),
 	})

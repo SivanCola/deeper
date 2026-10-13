@@ -4,6 +4,7 @@ import (
 	"context"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 	"testing"
 )
@@ -23,7 +24,7 @@ func standardTodoTestAgent(t *testing.T, turns [][]provider.Chunk) (*Agent, *scr
 
 func TestOrdinaryTurnDoesNotContinueForPendingTodos(t *testing.T) {
 	a, prov := standardTodoTestAgent(t, [][]provider.Chunk{
-		{toolCallChunk("todo", "todo_write", `{"todos":[{"content":"Edit code","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("todo", "todo_write", `{"todos":[{"content":"Edit code","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "I will edit it next."}, {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "must not be consumed"}, {Type: provider.ChunkDone}},
 	})

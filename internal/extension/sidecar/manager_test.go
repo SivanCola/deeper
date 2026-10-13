@@ -15,6 +15,7 @@ import (
 	"deepzora/internal/extension"
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/pluginpkg"
+	"deepzora/internal/testutil"
 )
 
 // installFakePlugin writes a v1 manifest for a fake sidecar package and
@@ -382,7 +383,7 @@ func TestStartPackagesBindsUIHandlerPerPlugin(t *testing.T) {
 	}
 	// The doomed sidecar exits right after initialized: the host observes an
 	// unexpected EOF and reports the crash through the binder.
-	waitFor(t, "crash notification", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "crash notification", 10*time.Second, func() bool {
 		return binder.crashedCount("doomed") == 1
 	})
 	if got := binder.crashedCount("live"); got != 0 {

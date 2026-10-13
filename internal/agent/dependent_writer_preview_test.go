@@ -11,6 +11,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 	"deepzora/internal/tool/builtin"
 )
@@ -40,9 +41,9 @@ func TestLegacyDependentSameBatchEditRefreshesPreviewBeforeExecution(t *testing.
 	}
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
 		{
-			toolCallChunk("r1", "read_file", `{"path":"task.txt","limit":1}`),
-			toolCallChunk("c1", "edit_file", `{"path":"task.txt","old_string":"draft","new_string":"ready"}`),
-			toolCallChunk("c2", "edit_file", `{"path":"task.txt","old_string":"ready","new_string":"done"}`),
+			testutil.ToolCallChunk("r1", "read_file", `{"path":"task.txt","limit":1}`),
+			testutil.ToolCallChunk("c1", "edit_file", `{"path":"task.txt","old_string":"draft","new_string":"ready"}`),
+			testutil.ToolCallChunk("c2", "edit_file", `{"path":"task.txt","old_string":"ready","new_string":"done"}`),
 			{Type: provider.ChunkDone},
 		},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
@@ -123,9 +124,9 @@ func TestFailedWriterDoesNotSkipLaterReadAndEdit(t *testing.T) {
 	}
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
 		{
-			toolCallChunk("c1", "mutate_then_fail", `{}`),
-			toolCallChunk("r1", "read_file", `{"path":"task.txt","limit":1}`),
-			toolCallChunk("c2", "edit_file", `{"path":"task.txt","old_string":"ready","new_string":"done"}`),
+			testutil.ToolCallChunk("c1", "mutate_then_fail", `{}`),
+			testutil.ToolCallChunk("r1", "read_file", `{"path":"task.txt","limit":1}`),
+			testutil.ToolCallChunk("c2", "edit_file", `{"path":"task.txt","old_string":"ready","new_string":"done"}`),
 			{Type: provider.ChunkDone},
 		},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},

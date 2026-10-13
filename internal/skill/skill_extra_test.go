@@ -70,45 +70,6 @@ func TestIsValidName(t *testing.T) {
 	}
 }
 
-// splitFrontmatter
-
-func TestSplitFrontmatterNoFence(t *testing.T) {
-	fm, body := splitFrontmatter("just body")
-	if len(fm) != 0 {
-		t.Errorf("expected empty fm, got %v", fm)
-	}
-	if body != "just body" {
-		t.Errorf("body = %q", body)
-	}
-}
-
-func TestSplitFrontmatterUnclosed(t *testing.T) {
-	fm, body := splitFrontmatter("---\nkey: val\n\nno closing")
-	if len(fm) != 0 {
-		t.Errorf("unclosed fence should return empty fm, got %v", fm)
-	}
-	if !strings.Contains(body, "---") {
-		t.Errorf("body should contain original: %q", body)
-	}
-}
-
-func TestSplitFrontmatterEmpty(t *testing.T) {
-	fm, body := splitFrontmatter("")
-	if len(fm) != 0 {
-		t.Errorf("empty input should return empty fm, got %v", fm)
-	}
-	if body != "" {
-		t.Errorf("body = %q", body)
-	}
-}
-
-func TestSplitFrontmatterQuotedValues(t *testing.T) {
-	fm, _ := splitFrontmatter("---\ndescription: \"quoted\"\n---\n")
-	if fm["description"] != "quoted" {
-		t.Errorf("description = %q", fm["description"])
-	}
-}
-
 // parseAllowedTools
 
 func TestParseAllowedToolsEmpty(t *testing.T) {

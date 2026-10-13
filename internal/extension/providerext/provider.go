@@ -171,7 +171,7 @@ func (r *Resolver) open(ctx context.Context, p *Provider, client ProviderClient,
 	}
 	idleTimeout := r.idleTimeout
 	if idleTimeout <= 0 {
-		idleTimeout = defaultStreamIdleTimeout
+		idleTimeout = provider.DefaultStreamIdleTimeout
 	}
 	openCtx, cancelOpen := context.WithTimeout(ctx, idleTimeout)
 	opened, err := client.ProviderStreamOpen(openCtx, protocol.StreamOpenParams{
@@ -236,7 +236,7 @@ func mapStreamOpenError(client ProviderClient, err error) error {
 func (r *Resolver) watchStream(ctx context.Context, id string, stream *extensionStream) {
 	idleTimeout := r.idleTimeout
 	if idleTimeout <= 0 {
-		idleTimeout = defaultStreamIdleTimeout
+		idleTimeout = provider.DefaultStreamIdleTimeout
 	}
 	timer := time.NewTimer(idleTimeout)
 	defer timer.Stop()

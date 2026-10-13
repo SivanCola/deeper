@@ -1,61 +1,11 @@
 package command
 
 import (
-	"deepzora/internal/frontmatter"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
-
-// splitFrontmatter
-
-func TestSplitFrontmatterNoFence(t *testing.T) {
-	fm, body := frontmatter.Split("just body text\nno fence")
-	if len(fm) != 0 {
-		t.Errorf("expected empty fm, got %v", fm)
-	}
-	if !strings.Contains(body, "just body text") {
-		t.Errorf("body = %q", body)
-	}
-}
-
-func TestSplitFrontmatterUnclosed(t *testing.T) {
-	fm, body := frontmatter.Split("---\nkey: val\n\nbody without closing")
-	if len(fm) != 0 {
-		t.Errorf("unclosed fence should return empty fm, got %v", fm)
-	}
-	if !strings.Contains(body, "---") {
-		t.Errorf("body should contain original content: %q", body)
-	}
-}
-
-func TestSplitFrontmatterEmptyBody(t *testing.T) {
-	fm, body := frontmatter.Split("---\nkey: val\n---\n")
-	if fm["key"] != "val" {
-		t.Errorf("key = %q", fm["key"])
-	}
-	if strings.TrimSpace(body) != "" {
-		t.Errorf("expected empty body, got %q", body)
-	}
-}
-
-func TestSplitFrontmatterQuotedValues(t *testing.T) {
-	fm, _ := frontmatter.Split("---\ndescription: \"quoted\"\n---\n")
-	if fm["description"] != "quoted" {
-		t.Errorf("description should be unquoted: %q", fm["description"])
-	}
-}
-
-func TestSplitFrontmatterCRLF(t *testing.T) {
-	fm, body := frontmatter.Split("---\r\nkey: val\r\n---\r\nbody\r\n")
-	if fm["key"] != "val" {
-		t.Errorf("key = %q", fm["key"])
-	}
-	if !strings.Contains(body, "body") {
-		t.Errorf("body = %q", body)
-	}
-}
 
 // Render edge cases
 

@@ -10,6 +10,7 @@ import (
 	"deepzora/internal/evidence"
 	"deepzora/internal/planmode"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -455,7 +456,7 @@ func TestPlanModeOffStillUsesSamePermissionGate(t *testing.T) {
 func TestRunSubAgentWithSessionInheritsPlanWorkflow(t *testing.T) {
 	reg := tool.NewRegistry()
 	prov := &scriptedProvider{name: "plan-child", turns: [][]provider.Chunk{
-		{toolCallChunk("phase", "complete_step", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("phase", "complete_step", `{}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "Plan ready."}, {Type: provider.ChunkDone}},
 	}}
 	sess := NewSession("CHILD-SYSTEM")

@@ -8,6 +8,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -39,7 +40,7 @@ func TestToolResultImagesBypassTruncation(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(&fakeImageTool{text: longText, images: []string{dataURL}})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("c1", "shot", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c1", "shot", `{}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession(""), Options{}, event.Discard)

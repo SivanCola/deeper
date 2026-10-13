@@ -8,12 +8,6 @@ import (
 	"time"
 )
 
-func TestDefaultStreamIdleTimeoutIsFiveMinutes(t *testing.T) {
-	if defaultStreamIdleTimeout != 300*time.Second {
-		t.Fatalf("default stream idle timeout = %s, want 5m", defaultStreamIdleTimeout)
-	}
-}
-
 // openTestStream resolves the demo ref and opens a stream, returning the
 // chunk channel and the stream ID the sidecar would address.
 func openTestStream(t *testing.T, r *Resolver, fc *fakeClient, effort *string) (<-chan provider.Chunk, string) {

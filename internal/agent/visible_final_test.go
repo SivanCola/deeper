@@ -8,6 +8,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -50,7 +51,7 @@ func TestRunSubAgentDoesNotReturnStalePreToolTextAfterReasoningOnlyStop(t *testi
 		{
 			{Type: provider.ChunkReasoning, Text: "I need to inspect the input."},
 			{Type: provider.ChunkText, Text: "I'll inspect first."},
-			toolCallChunk("call-1", "echo", `{"text":"input"}`),
+			testutil.ToolCallChunk("call-1", "echo", `{"text":"input"}`),
 			{Type: provider.ChunkUsage, Usage: &provider.Usage{FinishReason: "tool_calls", TotalTokens: 10}},
 			{Type: provider.ChunkDone},
 		},
@@ -109,7 +110,7 @@ func TestCoordinatorToolPlannerRetriesReasoningOnlyStopForVisiblePlan(t *testing
 		{
 			{Type: provider.ChunkReasoning, Text: "I need to inspect the input."},
 			{Type: provider.ChunkText, Text: "I'll inspect first."},
-			toolCallChunk("call-1", "echo", `{"text":"input"}`),
+			testutil.ToolCallChunk("call-1", "echo", `{"text":"input"}`),
 			{Type: provider.ChunkUsage, Usage: &provider.Usage{FinishReason: "tool_calls", TotalTokens: 10}},
 			{Type: provider.ChunkDone},
 		},
@@ -120,7 +121,7 @@ func TestCoordinatorToolPlannerRetriesReasoningOnlyStopForVisiblePlan(t *testing
 		},
 		{
 			{Type: provider.ChunkReasoning, Text: "Submitting the plan now."},
-			toolCallChunk("call-2", "submit_plan", `{"objective":"apply the fix","steps":[{"title":"apply the verified fix"}]}`),
+			testutil.ToolCallChunk("call-2", "submit_plan", `{"objective":"apply the fix","steps":[{"title":"apply the verified fix"}]}`),
 			{Type: provider.ChunkUsage, Usage: &provider.Usage{FinishReason: "tool_calls", TotalTokens: 10}},
 			{Type: provider.ChunkDone},
 		},

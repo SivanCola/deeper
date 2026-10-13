@@ -13,6 +13,7 @@ import (
 	"deepzora/internal/evidence"
 	"deepzora/internal/jobs"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -773,8 +774,8 @@ func TestTaskToolBackgroundRunPublishesEvidenceForCollection(t *testing.T) {
 	reg := evidenceRegistry()
 	finalText := []provider.Chunk{{Type: provider.ChunkText, Text: "done, explanations added"}, {Type: provider.ChunkDone}}
 	sub := &scriptedProvider{name: "sub", turns: [][]provider.Chunk{
-		{toolCallChunk("criteria", "todo_write", `{"todos":[{"content":"Add explanations","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("write", "write_file", `{"path":"qa/bank.md"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("criteria", "todo_write", `{"todos":[{"content":"Add explanations","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("write", "write_file", `{"path":"qa/bank.md"}`), {Type: provider.ChunkDone}},
 		finalText,
 		finalText,
 		finalText,
@@ -859,7 +860,7 @@ func TestBackgroundEvidenceNotCommittedWhenTurnFails(t *testing.T) {
 	reg := evidenceRegistry()
 	waitBuiltin(t, reg)
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("w", "job_output", `{"job_id":"`+jobID+`","wait":true}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("w", "job_output", `{"job_id":"`+jobID+`","wait":true}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}}, // no sign-off
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}},
@@ -896,7 +897,7 @@ func TestBackgroundEvidenceCommittedWhenTurnDelivers(t *testing.T) {
 	reg.Add(fakeTool{name: "read_file", readOnly: true})
 	waitBuiltin(t, reg)
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("w", "job_output", `{"job_id":"`+jobID+`","wait":true}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("w", "job_output", `{"job_id":"`+jobID+`","wait":true}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "collected the result"}, {Type: provider.ChunkDone}},
 	}}
 	// No delivery profile: the turn succeeds immediately after collecting, so the
@@ -928,7 +929,7 @@ func TestFailedTurnBackgroundMutationForcesReadinessOnNextRunWithoutWait(t *test
 	reg := evidenceRegistry()
 	waitBuiltin(t, reg)
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("w", "job_output", `{"job_id":"`+jobID+`","wait":true}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("w", "job_output", `{"job_id":"`+jobID+`","wait":true}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}}, // no sign-off
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "all set"}, {Type: provider.ChunkDone}},

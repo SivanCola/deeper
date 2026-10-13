@@ -1,6 +1,7 @@
 package skillwatch
 
 import (
+	"deepzora/internal/testutil"
 	"io"
 	"os"
 	"path/filepath"
@@ -18,14 +19,14 @@ func TestDefaultHelperCommandServesTheRealBinaryEntry(t *testing.T) {
 	defer svc.Close()
 
 	svc.Subscribe(dir, 2, countingScope, flatHash, func(string) {})
-	waitFor(t, "helper registration through the re-executed binary", func() bool {
+	testutil.WaitFor(t, "helper registration through the re-executed binary", watchdogWait, func() bool {
 		return svc.Diagnostics().PhysicalWatches == 1
 	})
 
 	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: x\n---\nbody"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, "helper event delivery", func() bool {
+	testutil.WaitFor(t, "helper event delivery", watchdogWait, func() bool {
 		return svc.Diagnostics().EventsReceived >= 1
 	})
 }

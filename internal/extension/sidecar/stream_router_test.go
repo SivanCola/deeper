@@ -8,6 +8,7 @@ import (
 
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/pluginpkg"
+	"deepzora/internal/testutil"
 )
 
 // recordingRouter captures routed provider stream notifications.
@@ -63,7 +64,7 @@ func TestStreamRouterReceivesWireNotifications(t *testing.T) {
 	})
 
 	openProviderStream(t, client, "es_route")
-	waitFor(t, "chunk and end routed", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "chunk and end routed", 5*time.Second, func() bool {
 		chunks, ends := recorder.counts()
 		return chunks == 1 && ends == 1
 	})
@@ -121,7 +122,7 @@ func TestRollbackAfterStageKeepsOldRouterConsumingRealStream(t *testing.T) {
 	}
 
 	openProviderStream(t, client, "es_after_rollback")
-	waitFor(t, "old router receives chunk and end after rollback", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "old router receives chunk and end after rollback", 5*time.Second, func() bool {
 		chunks, ends := old.counts()
 		return chunks == 1 && ends == 1
 	})
@@ -152,7 +153,7 @@ func TestSetStreamRouterSwapsMidFlight(t *testing.T) {
 	second := &recordingRouter{}
 	client.SetStreamRouter(second)
 	openProviderStream(t, client, "es_swapped")
-	waitFor(t, "chunk routed to the swapped router", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "chunk routed to the swapped router", 5*time.Second, func() bool {
 		chunks, _ := second.counts()
 		return chunks == 1
 	})

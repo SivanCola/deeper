@@ -13,6 +13,7 @@ import (
 	"deepzora/internal/imageinput"
 	"deepzora/internal/plugin"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -33,7 +34,7 @@ func TestPlannerFirstOnDemandMCPCallPreservesImages(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(proxy)
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("image-call", "use_capability", `{"action":"call","capability_id":"mcp-tool:image/screenshot","arguments":{}}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("image-call", "use_capability", `{"action":"call","capability_id":"mcp-tool:image/screenshot","arguments":{}}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
 	}}
 	session := NewSession("sys")

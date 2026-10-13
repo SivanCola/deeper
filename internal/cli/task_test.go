@@ -216,43 +216,30 @@ func TestTaskStatus_JSON_NotFound(t *testing.T) {
 	}
 }
 
-func TestTaskStatus_JSON_SchemaVersion(t *testing.T) {
-	s := testStore(t)
-	taskStore = s
+func TestTaskJSON_SchemaVersion(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		run  func(taskmonitor.Store) int
+	}{
+		{"status", func(s taskmonitor.Store) int { return taskStatusCmd(s, []string{"--json", "a1"}) }},
+		{"events", func(s taskmonitor.Store) int { return taskEventsCmd(s, []string{"--json", "a1"}) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := testStore(t)
+			taskStore = s
 
-	exit, out := captureOut(func() int {
-		return taskStatusCmd(s, []string{"--json", "a1"})
-	})
-	if exit != 0 {
-		t.Fatalf("exit=%d", exit)
-	}
-	var v struct {
-		SchemaVersion int `json:"schema_version"`
-	}
-	json.Unmarshal([]byte(out), &v)
-	if v.SchemaVersion != 1 {
-		t.Errorf("schema_version=%d", v.SchemaVersion)
-	}
-}
-
-// events
-
-func TestTaskEvents_JSON_SchemaVersion(t *testing.T) {
-	s := testStore(t)
-	taskStore = s
-
-	exit, out := captureOut(func() int {
-		return taskEventsCmd(s, []string{"--json", "a1"})
-	})
-	if exit != 0 {
-		t.Fatalf("exit=%d", exit)
-	}
-	var v struct {
-		SchemaVersion int `json:"schema_version"`
-	}
-	json.Unmarshal([]byte(out), &v)
-	if v.SchemaVersion != 1 {
-		t.Errorf("schema_version=%d", v.SchemaVersion)
+			exit, out := captureOut(func() int { return tc.run(s) })
+			if exit != 0 {
+				t.Fatalf("exit=%d", exit)
+			}
+			var v struct {
+				SchemaVersion int `json:"schema_version"`
+			}
+			json.Unmarshal([]byte(out), &v)
+			if v.SchemaVersion != 1 {
+				t.Errorf("schema_version=%d", v.SchemaVersion)
+			}
+		})
 	}
 }
 
@@ -649,52 +636,31 @@ func (m *mockJobKiller) Kill(sessionID, id string) bool {
 	return true
 }
 
-func TestCLI_StopCallsKill(t *testing.T) {
-	s := taskmonitor.NewInMemoryStore()
-	taskStore = s
-	taskJobKiller = newMockKiller()
-	defer func() { taskJobKiller = nil }()
+func TestCLI_StopAndCancelCallKill(t *testing.T) {
+	for _, sub := range []string{"stop", "cancel"} {
+		t.Run(sub, func(t *testing.T) {
+			s := taskmonitor.NewInMemoryStore()
+			taskStore = s
+			taskJobKiller = newMockKiller()
+			defer func() { taskJobKiller = nil }()
 
-	mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{
-		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
-		State: taskmonitor.TaskStateRunning, Version: 1,
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
-	})
+			mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{
+				SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
+				State: taskmonitor.TaskStateRunning, Version: 1,
+				CreatedAt: time.Now(), UpdatedAt: time.Now(),
+			})
 
-	exit, out := captureOut(func() int {
-		ec := taskCommand([]string{"stop", "t1", "--json", "--expected-version", "1"})
-		return ec
-	})
-	if exit != 0 {
-		t.Fatalf("exit=%d out=%s", exit, out)
-	}
-	mk := taskJobKiller.(*mockJobKiller)
-	if mk.called["s1/t1"] != 1 {
-		t.Errorf("expected Kill(s1, t1) called once, got %v", mk.called)
-	}
-}
-
-func TestCLI_CancelCallsKill(t *testing.T) {
-	s := taskmonitor.NewInMemoryStore()
-	taskStore = s
-	taskJobKiller = newMockKiller()
-	defer func() { taskJobKiller = nil }()
-
-	mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{
-		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
-		State: taskmonitor.TaskStateRunning, Version: 1,
-		CreatedAt: time.Now(), UpdatedAt: time.Now(),
-	})
-
-	exit, out := captureOut(func() int {
-		return taskCommand([]string{"cancel", "t1", "--json", "--expected-version", "1"})
-	})
-	if exit != 0 {
-		t.Fatalf("exit=%d out=%s", exit, out)
-	}
-	mk := taskJobKiller.(*mockJobKiller)
-	if mk.called["s1/t1"] != 1 {
-		t.Errorf("expected Kill(s1, t1) called once, got %v", mk.called)
+			exit, out := captureOut(func() int {
+				return taskCommand([]string{sub, "t1", "--json", "--expected-version", "1"})
+			})
+			if exit != 0 {
+				t.Fatalf("exit=%d out=%s", exit, out)
+			}
+			mk := taskJobKiller.(*mockJobKiller)
+			if mk.called["s1/t1"] != 1 {
+				t.Errorf("expected Kill(s1, t1) called once, got %v", mk.called)
+			}
+		})
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/extension/sidecar"
 	"deepzora/internal/pluginpkg"
+	"deepzora/internal/testutil"
 )
 
 // Boot-level fake sidecar (re-exec helper-process pattern, mirroring the
@@ -393,7 +394,7 @@ func TestBootStartsExtensionSidecar(t *testing.T) {
 	// Controller teardown retires the sidecar: process exits, runtime set
 	// closes with the controller generation.
 	res.Controller.Close()
-	waitForCond(t, "sidecar process exit", 10*time.Second, client.Exited)
+	testutil.WaitFor(t, "sidecar process exit", 10*time.Second, client.Exited)
 	if !res.Runtime.Closed() {
 		t.Fatal("runtime set was not closed by controller teardown")
 	}
@@ -501,14 +502,14 @@ func TestRebuildRetiresOldSidecars(t *testing.T) {
 
 	// Closing the old controller retires the old sidecar only.
 	oldRes.Controller.Close()
-	waitForCond(t, "old sidecar exit", 10*time.Second, oldClient.Exited)
+	testutil.WaitFor(t, "old sidecar exit", 10*time.Second, oldClient.Exited)
 	result, err := newClient.Intercept(context.Background(), protocol.EventSessionStart, json.RawMessage(`{}`), 5*time.Second)
 	if err != nil || result.Decision != protocol.DecisionContinue {
 		t.Fatalf("new sidecar Intercept after old close = %+v, %v", result, err)
 	}
 
 	newRes.Controller.Close()
-	waitForCond(t, "new sidecar exit", 10*time.Second, newClient.Exited)
+	testutil.WaitFor(t, "new sidecar exit", 10*time.Second, newClient.Exited)
 }
 
 // TestExplicitReloadReplacesUnchangedSidecar pins the linked-development
@@ -563,7 +564,7 @@ func TestExplicitReloadReplacesUnchangedSidecar(t *testing.T) {
 	}
 
 	oldRes.Controller.Close()
-	waitForCond(t, "outgoing sidecar exit", 10*time.Second, oldClient.Exited)
+	testutil.WaitFor(t, "outgoing sidecar exit", 10*time.Second, oldClient.Exited)
 	if newClient.Exited() {
 		t.Fatal("replacement sidecar exited with the outgoing controller")
 	}
@@ -615,16 +616,4 @@ func TestExplicitReloadSidecarFailureKeepsOldProcess(t *testing.T) {
 	if interceptErr != nil || result.Decision != protocol.DecisionContinue {
 		t.Fatalf("outgoing sidecar after failed reload = %+v, %v", result, interceptErr)
 	}
-}
-
-func waitForCond(t *testing.T, what string, timeout time.Duration, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("timed out waiting for %s", what)
 }

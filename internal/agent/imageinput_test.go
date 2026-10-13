@@ -11,6 +11,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/imageinput"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -59,7 +60,7 @@ func TestToolImageFallbackPreservesOriginalResult(t *testing.T) {
 			}
 			reg := tool.NewRegistry()
 			reg.Add(&fakeImageTool{text: "screenshot saved", images: []string{"data:image/png;base64,QUFB"}})
-			script := &scriptedProvider{name: "text", turns: [][]provider.Chunk{{toolCallChunk("c1", "shot", `{}`), {Type: provider.ChunkDone}}, {{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}}}}
+			script := &scriptedProvider{name: "text", turns: [][]provider.Chunk{{testutil.ToolCallChunk("c1", "shot", `{}`), {Type: provider.ChunkDone}}, {{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}}}}
 			var p provider.Provider = script
 			if mode == "native" {
 				p = nativeImageProvider{script}
@@ -119,7 +120,7 @@ func TestDetailedImageFailureDoesNotRepeatTool(t *testing.T) {
 	imageTool := &detailedImageTool{fakeImageTool: fakeImageTool{text: "operation completed", images: []string{"data:image/png;base64,QUFB"}}}
 	reg := tool.NewRegistry()
 	reg.Add(imageTool)
-	p := &scriptedProvider{name: "text", turns: [][]provider.Chunk{{toolCallChunk("c1", "shot", `{}`), {Type: provider.ChunkDone}}, {{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}}}}
+	p := &scriptedProvider{name: "text", turns: [][]provider.Chunk{{testutil.ToolCallChunk("c1", "shot", `{}`), {Type: provider.ChunkDone}}, {{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}}}}
 	a := New(p, reg, NewSession("sys"), Options{ImageInput: cfg, ModelRef: "text/model"}, event.Discard)
 	if err := a.Run(context.Background(), "inspect"); err != nil {
 		t.Fatal(err)

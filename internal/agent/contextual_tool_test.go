@@ -9,6 +9,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -48,7 +49,7 @@ func TestMixedContextualBatchExecutesAvailableCallsOnce(t *testing.T) {
 	reg.Add(unavailableTool{fakeTool: fakeTool{name: "phase_tool", readOnly: true}, calls: &executions})
 	reg.Add(fakeTool{name: "read_file", readOnly: true, calls: &executions})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("phase", "phase_tool", `{}`), toolCallChunk("read", "read_file", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("phase", "phase_tool", `{}`), testutil.ToolCallChunk("read", "read_file", `{}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "answer after the available read"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession("sys"), Options{}, event.Discard)
@@ -69,8 +70,8 @@ func TestRepeatedMixedContextualBatchKeepsIndependentCallsRunning(t *testing.T) 
 	reg.Add(unavailableTool{fakeTool: fakeTool{name: "phase_tool", readOnly: true}, calls: &executions})
 	reg.Add(fakeTool{name: "read_file", readOnly: true, calls: &executions})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("phase-1", "phase_tool", `{}`), toolCallChunk("read-1", "read_file", `{}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("phase-2", "phase_tool", `{}`), toolCallChunk("read-2", "read_file", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("phase-1", "phase_tool", `{}`), testutil.ToolCallChunk("read-1", "read_file", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("phase-2", "phase_tool", `{}`), testutil.ToolCallChunk("read-2", "read_file", `{}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "answer after repeated local failures"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession("sys"), Options{}, event.Discard)
@@ -92,8 +93,8 @@ func TestRepeatedPureContextualCallWithAnswerRemainsRecoverable(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(unavailableTool{fakeTool: fakeTool{name: "phase_tool", readOnly: true}})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("phase-1", "phase_tool", `{}`), {Type: provider.ChunkDone}},
-		{{Type: provider.ChunkText, Text: "占位 Lorem 占位 ipsum — the request is fully handled."}, toolCallChunk("phase-2", "phase_tool", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("phase-1", "phase_tool", `{}`), {Type: provider.ChunkDone}},
+		{{Type: provider.ChunkText, Text: "占位 Lorem 占位 ipsum — the request is fully handled."}, testutil.ToolCallChunk("phase-2", "phase_tool", `{}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "final answer"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession("sys"), Options{}, event.Discard)

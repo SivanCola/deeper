@@ -7,6 +7,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -17,7 +18,7 @@ func TestMalformedToolArgsReturnHostValidationContract(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(NewAskTool())
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("c1", "ask", `{"questions":["q":1]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c1", "ask", `{"questions":["q":1]}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession(""), Options{}, event.Discard)
@@ -41,7 +42,7 @@ func TestValidArgsErrorOmitsSchema(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(NewAskTool())
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("c1", "ask", `{"questions":[{"question":"q","header":"h","options":[{"label":"a"}]}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c1", "ask", `{"questions":[{"question":"q","header":"h","options":[{"label":"a"}]}]}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}},
 	}}
 	a := New(prov, reg, NewSession(""), Options{}, event.Discard)

@@ -174,11 +174,11 @@ func setupReviewCheckout(t *testing.T, extraTOML func(dir string) string) string
 		{"config", "user.email", "test@example.com"},
 		{"config", "user.name", "test"},
 	} {
-		runReviewTestGit(t, dir, args...)
+		runReviewGit(t, dir, args...)
 	}
 	writeReviewTestFile(t, dir, "marker.txt", "review hook probe\n")
-	runReviewTestGit(t, dir, "add", "marker.txt")
-	runReviewTestGit(t, dir, "commit", "-q", "-m", "init")
+	runReviewGit(t, dir, "add", "marker.txt")
+	runReviewGit(t, dir, "commit", "-q", "-m", "init")
 	writeReviewTestFile(t, dir, "marker.txt", "review hook probe\nchanged\n")
 	extra := ""
 	if extraTOML != nil {
@@ -237,7 +237,7 @@ func readReviewHookLog(t *testing.T, path string) []reviewHookPayload {
 	return out
 }
 
-func runReviewTestGit(t *testing.T, dir string, args ...string) {
+func runReviewGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
