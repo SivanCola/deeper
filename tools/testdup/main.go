@@ -350,8 +350,11 @@ func collect(root string) []string {
 			return nil
 		}
 		if info.IsDir() {
-			switch filepath.Base(path) {
-			case ".git", "node_modules", ".worktrees", "testdata":
+			// Dot-directories (.git, .worktrees, the CI workspace's .go-mod-cache),
+			// vendored dependencies, and fixtures are not this repository's source;
+			// scanning them would flag vendored test bodies as duplicates.
+			name := filepath.Base(path)
+			if path != root && (strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" || name == "testdata") {
 				return filepath.SkipDir
 			}
 			return nil
