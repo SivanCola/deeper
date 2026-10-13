@@ -229,10 +229,6 @@ func (a *App) submitDisplayToTab(tabID, display, input, submissionID string) err
 }
 
 func (a *App) SubmitInvocationsToTabWithID(tabID, display, input string, invocations []InvocationRequest, submissionID string) error {
-	return a.submitInvocationsToTab(tabID, display, input, invocations, submissionID)
-}
-
-func (a *App) submitInvocationsToTab(tabID, display, input string, invocations []InvocationRequest, submissionID string) error {
 	if err := validateInvocationTurnInput(input, invocations); err != nil {
 		return err
 	}
@@ -270,10 +266,6 @@ func (a *App) SubmitInitialGoalToTabWithID(
 }
 
 func (a *App) SubmitEditedDisplayToTabWithID(tabID, display, input, original, submissionID string) error {
-	return a.submitEditedDisplayToTab(tabID, display, input, original, submissionID)
-}
-
-func (a *App) submitEditedDisplayToTab(tabID, display, input, original, submissionID string) error {
 	if err := validateTurnInput(input); err != nil {
 		return err
 	}

@@ -646,94 +646,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/mcp_interaction_app.go",
-      "name": "AnswerMCPInteractionForTab",
-      "owner": "App.AnswerMCPInteractionForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "any"
-          },
-          "key": {
-            "kind": "string"
-          },
-          "kind": "map"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "id",
-          "action",
-          "content"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AnswerMCPInteractionForTab"
-      },
-      "sources": [
-        "desktop/mcp_interaction_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/decision_runtime_api.go",
-      "name": "AnswerMCPInteractionForTurn",
-      "owner": "App.AnswerMCPInteractionForTurn",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "any"
-          },
-          "key": {
-            "kind": "string"
-          },
-          "kind": "map"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "turnID",
-          "runtimeEpoch",
-          "id",
-          "action",
-          "content"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AnswerMCPInteractionForTurn"
-      },
-      "sources": [
-        "desktop/decision_runtime_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/turn_runtime_api.go",
       "name": "AnswerPromptForTab",
       "owner": "App.AnswerPromptForTab",
@@ -1074,52 +986,6 @@
       },
       "sources": [
         "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/decision_runtime_api.go",
-      "name": "ApproveTabForTurn",
-      "owner": "App.ApproveTabForTurn",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "boolean"
-        },
-        {
-          "kind": "boolean"
-        },
-        {
-          "kind": "boolean"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "turnID",
-          "runtimeEpoch",
-          "id",
-          "allow",
-          "session",
-          "persist"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ApproveTabForTurn"
-      },
-      "sources": [
-        "desktop/decision_runtime_api.go"
       ]
     },
     {
@@ -11512,44 +11378,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/decision_runtime_api.go",
-      "name": "ResolvePlanDecisionTabForTurn",
-      "owner": "App.ResolvePlanDecisionTabForTurn",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "turnID",
-          "runtimeEpoch",
-          "id",
-          "action"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResolvePlanDecisionTabForTurn"
-      },
-      "sources": [
-        "desktop/decision_runtime_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
       "name": "ResolvePresentedPathForTab",
       "owner": "App.ResolvePresentedPathForTab",
@@ -16833,40 +16661,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SubmitEditedDisplayToTab",
-      "owner": "App.SubmitEditedDisplayToTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "input",
-          "original"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitEditedDisplayToTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/turn_submission_app.go",
       "name": "SubmitEditedDisplayToTabWithID",
       "owner": "App.SubmitEditedDisplayToTabWithID",
@@ -16978,62 +16772,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SubmitInitialGoalToTab",
-      "owner": "App.SubmitInitialGoalToTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.InvocationRequest"
-          },
-          "kind": "array"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "string"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "goal",
-          "display",
-          "input",
-          "invocations",
-          "collaborationMode",
-          "toolApprovalMode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitInitialGoalToTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/turn_submission_app.go",
       "name": "SubmitInitialGoalToTabWithID",
       "owner": "App.SubmitInitialGoalToTabWithID",
@@ -17090,44 +16828,6 @@
       },
       "sources": [
         "desktop/turn_submission_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SubmitInvocationsToTab",
-      "owner": "App.SubmitInvocationsToTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.InvocationRequest"
-          },
-          "kind": "array"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "input",
-          "invocations"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitInvocationsToTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {

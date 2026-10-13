@@ -1042,10 +1042,6 @@ func controlInvocationRequests(invocations []InvocationRequest) []control.Invoca
 	return out
 }
 
-func (a *App) SubmitInvocationsToTab(tabID, display, input string, invocations []InvocationRequest) error {
-	return a.submitInvocationsToTab(tabID, display, input, invocations, "")
-}
-
 func validateInvocationTurnInput(input string, invocations []InvocationRequest) error {
 	// A skill-only turn legitimately has no explicit task: the resolved
 	// invocation content becomes the provider input. Without an invocation,
@@ -1109,25 +1105,6 @@ func (a *App) submitInitialGoalToLocalTab(
 	}
 	admission.finish(ctrl)
 	return drained, nil
-}
-
-// SubmitInitialGoalToTab activates a Goal and submits its first turn on the
-// requested tab.
-func (a *App) SubmitInitialGoalToTab(
-	tabID, goal, display, input string,
-	invocations []InvocationRequest,
-	collaborationMode, toolApprovalMode string,
-) ([]string, error) {
-	if err := validateInvocationTurnInput(input, invocations); err != nil {
-		return []string{}, err
-	}
-	return a.submitInitialGoalToLocalTab(
-		tabID, toolApprovalMode, goal, display, input, invocations,
-	)
-}
-
-func (a *App) SubmitEditedDisplayToTab(tabID, display, input, original string) error {
-	return a.submitEditedDisplayToTab(tabID, display, input, original, "")
 }
 
 func (a *App) bindControllerDisplayRecorder(ctrl control.SessionAPI) {

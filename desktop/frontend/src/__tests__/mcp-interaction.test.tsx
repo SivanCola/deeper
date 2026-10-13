@@ -176,19 +176,23 @@ globalThis.MouseEvent = dom.window.MouseEvent;
   ok(interaction?.mcpInteraction?.server === "github", "browser mock identifies the requesting MCP server");
   const schema = interaction?.mcpInteraction?.requestedSchema as { properties?: Record<string, unknown> } | undefined;
   ok(Object.keys(schema?.properties ?? {}).join(",") === "code,environment,permissions,remember", "browser mock exposes old and new structured controls");
-  await app.AnswerMCPInteractionForTab("mock-mcp-tab", interaction?.mcpInteraction?.id ?? "", "accept", {
-    code: "123-456",
-    environment: "staging",
-    permissions: ["repo:read"],
-    remember: false,
-  });
+  await app.ResolvePromptForTab!(
+    "mock-mcp-tab", interaction?.mcpInteraction?.id ?? "", interaction?.turnId ?? "", interaction?.runtimeEpoch ?? "", "mcp",
+    { action: "accept", content: {
+      code: "123-456",
+      environment: "staging",
+      permissions: ["repo:read"],
+      remember: false,
+    } },
+  );
   ok(events.some((event) => event.kind === "prompt_answered" && event.tabId === "mock-mcp-tab"), "browser mock acknowledges the MCP answer on the origin tab");
   ok(events.some((event) => event.kind === "turn_done" && event.tabId === "mock-mcp-tab"), "browser mock completes the preview turn after an answer");
   await app.SubmitToTabWithID("mock-mcp-tab", DECISION_SURFACE_MOCK_TRIGGERS.mcp_interaction, "mock-mcp-submission-2");
   const interactions = events.filter((event) => event.kind === "mcp_interaction");
   ok(interactions.length === 2, "browser mock can be triggered repeatedly");
   ok(interactions[0].mcpInteraction?.id !== interactions[1].mcpInteraction?.id, "repeated browser mocks use distinct prompt ids");
-  await app.AnswerMCPInteractionForTab("mock-mcp-tab", interactions[1].mcpInteraction?.id ?? "", "cancel", null);
+  await app.ResolvePromptForTab!("mock-mcp-tab", interactions[1].mcpInteraction?.id ?? "", interactions[1].turnId ?? "", interactions[1].runtimeEpoch ?? "", "mcp", { action: "cancel", content: null });
+  ok(events.filter((event) => event.kind === "prompt_answered" && event.tabId === "mock-mcp-tab").length === 2, "browser mock acknowledges cancellation on the origin tab");
   unsubscribe();
 }
 

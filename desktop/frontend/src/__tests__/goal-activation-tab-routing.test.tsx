@@ -164,9 +164,6 @@ const appStubTable = ({
         );
         return [];
       },
-      SubmitInvocationsToTab: async () => {
-        throw new Error("split SubmitInvocationsToTab must not be used for initial Goals");
-      },
       SubmitInvocationsToTabWithID: async () => {
         throw new Error("split SubmitInvocationsToTabWithID must not be used for initial Goals");
       },
@@ -246,7 +243,7 @@ appStubTable.SubmitInitialGoalToTabWithID = async (tabID: string) => {
   failedInitialGoalCalls.push(tabID);
   throw new Error("workbench target changed");
 };
-appStubTable.SubmitInvocationsToTab = async (tabID: string) => {
+appStubTable.SubmitInvocationsToTabWithID = async (tabID: string) => {
   failInvokeCalls.push(tabID);
 };
 
@@ -269,7 +266,7 @@ await act(async () => {
 });
 eq(activationFailed, true, "controller propagates atomic Goal bridge rejection");
 eq(failedInitialGoalCalls.join("|"), "tab-a", "failed atomic submit still targeted source tab A");
-eq(failInvokeCalls.length, 0, "failed atomic Goal submit does not call split SubmitInvocationsToTab");
+eq(failInvokeCalls.length, 0, "failed atomic Goal submit does not call split SubmitInvocationsToTabWithID");
 
 await act(async () => {
   root.unmount();

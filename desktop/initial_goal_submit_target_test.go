@@ -25,12 +25,12 @@ func TestSubmitInitialGoalStopsBeforeProviderWhenPersistenceFails(t *testing.T) 
 	tab := app.tabs["a"]
 	tab.Ctrl = &rejectingGoalSession{SessionAPI: recorder, err: errors.New("disk full")}
 
-	_, err := app.SubmitInitialGoalToTab(
+	_, err := app.SubmitInitialGoalToTabWithID(
 		tab.ID, "ship the fix", "ship the fix", "ship the fix", nil,
-		"normal", "ask",
+		"normal", "ask", "goal-persistence-failure",
 	)
 	if err == nil || !strings.Contains(err.Error(), "disk full") {
-		t.Fatalf("SubmitInitialGoalToTab error = %v, want persistence failure", err)
+		t.Fatalf("SubmitInitialGoalToTabWithID error = %v, want persistence failure", err)
 	}
 	if recorder.input != "" || recorder.display != "" {
 		t.Fatalf("provider submission escaped failed goal mutation: display=%q input=%q", recorder.display, recorder.input)
@@ -56,7 +56,7 @@ func TestSubmitInitialGoalRejectsMissingImageBeforeGoalMutation(t *testing.T) {
 	}
 	app := &App{tabs: map[string]*WorkspaceTab{"a": tab}, tabOrder: []string{"a"}, activeTabID: "a"}
 
-	_, err := app.SubmitInitialGoalToTab(
+	_, err := app.SubmitInitialGoalToTabWithID(
 		tab.ID,
 		"inspect the image",
 		"inspect missing.png",
@@ -64,6 +64,7 @@ func TestSubmitInitialGoalRejectsMissingImageBeforeGoalMutation(t *testing.T) {
 		nil,
 		"normal",
 		"ask",
+		"goal-missing-image",
 	)
 	if err == nil || err.Error() != "deepzora_error:image_attachment_unreadable" {
 		t.Fatalf("error = %v, want stable image failure", err)
@@ -101,7 +102,7 @@ func TestSubmitInitialGoalAcceptsCurrentLocalTarget(t *testing.T) {
 	tab := app.tabs["a"]
 	tab.Ctrl = recorder
 
-	_, err := app.SubmitInitialGoalToTab(
+	_, err := app.SubmitInitialGoalToTabWithID(
 		tab.ID,
 		"ship the fix",
 		"/ui-ux-pro-max ship the fix",
@@ -109,6 +110,7 @@ func TestSubmitInitialGoalAcceptsCurrentLocalTarget(t *testing.T) {
 		[]InvocationRequest{{Name: "ui-ux-pro-max", Kind: "skill", Offset: 4}},
 		"normal",
 		"ask",
+		"goal-local-target",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -138,7 +140,7 @@ func TestSubmitInitialGoalAppliesToolApprovalProfileBeforeSubmit(t *testing.T) {
 	tab := app.tabs["a"]
 	tab.Ctrl = recorder
 
-	_, err := app.SubmitInitialGoalToTab(
+	_, err := app.SubmitInitialGoalToTabWithID(
 		tab.ID,
 		"ship with YOLO",
 		"ship with YOLO",
@@ -146,6 +148,7 @@ func TestSubmitInitialGoalAppliesToolApprovalProfileBeforeSubmit(t *testing.T) {
 		nil,
 		"normal",
 		string(control.ToolApprovalDangerFullAccess),
+		"goal-approval-profile",
 	)
 	if err != nil {
 		t.Fatal(err)

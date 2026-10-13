@@ -5369,13 +5369,13 @@ func TestSubmitEntryPointsRejectEmptyProviderInput(t *testing.T) {
 		{name: "plain", call: func() error { return app.SubmitToTab("missing", " \n\t ") }},
 		{name: "display", call: func() error { return app.SubmitDisplayToTab("missing", "visible prompt", " ") }},
 		{name: "invocations", call: func() error {
-			return app.SubmitInvocationsToTab("missing", "/skill visible", "", nil)
+			return app.SubmitInvocationsToTabWithID("missing", "/skill visible", "", nil, "empty-invocation")
 		}},
 		{name: "edited display", call: func() error {
-			return app.SubmitEditedDisplayToTab("missing", "visible prompt", "\n", "original prompt")
+			return app.SubmitEditedDisplayToTabWithID("missing", "visible prompt", "\n", "original prompt", "empty-edit")
 		}},
 		{name: "initial goal", call: func() error {
-			_, err := app.SubmitInitialGoalToTab("missing", "goal", "visible prompt", "", nil, "normal", "auto")
+			_, err := app.SubmitInitialGoalToTabWithID("missing", "goal", "visible prompt", "", nil, "normal", "auto", "empty-goal")
 			return err
 		}},
 	} {

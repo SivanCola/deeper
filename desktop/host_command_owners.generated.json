@@ -348,42 +348,6 @@
       ]
     }
   },
-  "AnswerMCPInteractionForTab": {
-    "domain": "desktop/mcp_interaction_app.go",
-    "owner": "App.AnswerMCPInteractionForTab",
-    "sources": [
-      "desktop/mcp_interaction_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AnswerMCPInteractionForTab",
-      "inputs": [
-        "tabID",
-        "id",
-        "action",
-        "content"
-      ]
-    }
-  },
-  "AnswerMCPInteractionForTurn": {
-    "domain": "desktop/decision_runtime_api.go",
-    "owner": "App.AnswerMCPInteractionForTurn",
-    "sources": [
-      "desktop/decision_runtime_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AnswerMCPInteractionForTurn",
-      "inputs": [
-        "tabID",
-        "turnID",
-        "runtimeEpoch",
-        "id",
-        "action",
-        "content"
-      ]
-    }
-  },
   "AnswerPromptForTab": {
     "domain": "desktop/turn_runtime_api.go",
     "owner": "App.AnswerPromptForTab",
@@ -551,26 +515,6 @@
       "resolver": "App.ApproveTab",
       "inputs": [
         "tabID",
-        "id",
-        "allow",
-        "session",
-        "persist"
-      ]
-    }
-  },
-  "ApproveTabForTurn": {
-    "domain": "desktop/decision_runtime_api.go",
-    "owner": "App.ApproveTabForTurn",
-    "sources": [
-      "desktop/decision_runtime_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ApproveTabForTurn",
-      "inputs": [
-        "tabID",
-        "turnID",
-        "runtimeEpoch",
         "id",
         "allow",
         "session",
@@ -6125,24 +6069,6 @@
       ]
     }
   },
-  "ResolvePlanDecisionTabForTurn": {
-    "domain": "desktop/decision_runtime_api.go",
-    "owner": "App.ResolvePlanDecisionTabForTurn",
-    "sources": [
-      "desktop/decision_runtime_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResolvePlanDecisionTabForTurn",
-      "inputs": [
-        "tabID",
-        "turnID",
-        "runtimeEpoch",
-        "id",
-        "action"
-      ]
-    }
-  },
   "ResolvePresentedPathForTab": {
     "domain": "desktop/app.go",
     "owner": "App.ResolvePresentedPathForTab",
@@ -8973,23 +8899,6 @@
       ]
     }
   },
-  "SubmitEditedDisplayToTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SubmitEditedDisplayToTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitEditedDisplayToTab",
-      "inputs": [
-        "tabID",
-        "display",
-        "input",
-        "original"
-      ]
-    }
-  },
   "SubmitEditedDisplayToTabWithID": {
     "domain": "desktop/turn_submission_app.go",
     "owner": "App.SubmitEditedDisplayToTabWithID",
@@ -9040,26 +8949,6 @@
       ]
     }
   },
-  "SubmitInitialGoalToTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SubmitInitialGoalToTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitInitialGoalToTab",
-      "inputs": [
-        "tabID",
-        "goal",
-        "display",
-        "input",
-        "invocations",
-        "collaborationMode",
-        "toolApprovalMode"
-      ]
-    }
-  },
   "SubmitInitialGoalToTabWithID": {
     "domain": "desktop/turn_submission_app.go",
     "owner": "App.SubmitInitialGoalToTabWithID",
@@ -9078,23 +8967,6 @@
         "collaborationMode",
         "toolApprovalMode",
         "submissionID"
-      ]
-    }
-  },
-  "SubmitInvocationsToTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SubmitInvocationsToTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitInvocationsToTab",
-      "inputs": [
-        "tabID",
-        "display",
-        "input",
-        "invocations"
       ]
     }
   },

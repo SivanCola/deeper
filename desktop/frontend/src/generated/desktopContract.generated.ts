@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:46a3c188fe677ca787ff747a9de19359aa7609ff4711e7c8bcf98e0909af1c7d";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:7ccd0d87194e1a86c770fd0b7d2e083d7748ea0cba80173cdb8f2299639d6de4";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -30,8 +30,6 @@ export const DESKTOP_COMMANDS = [
   "AddRemoteHost",
   "AddRemoteProject",
   "AddSkillPath",
-  "AnswerMCPInteractionForTab",
-  "AnswerMCPInteractionForTurn",
   "AnswerPromptForTab",
   "AnswerQuestion",
   "AnswerQuestionForTab",
@@ -43,7 +41,6 @@ export const DESKTOP_COMMANDS = [
   "Approve",
   "ApproveRemoteTab",
   "ApproveTab",
-  "ApproveTabForTurn",
   "ArchiveCanonicalSession",
   "ArchiveSessionTarget",
   "AttachDropped",
@@ -432,7 +429,6 @@ export const DESKTOP_COMMANDS = [
   "ResolveMarkdownImageForTab",
   "ResolvePlanDecision",
   "ResolvePlanDecisionTab",
-  "ResolvePlanDecisionTabForTurn",
   "ResolvePresentedPathForTab",
   "ResolvePromptForSession",
   "ResolvePromptForTab",
@@ -623,13 +619,10 @@ export const DESKTOP_COMMANDS = [
   "SubmitDisplay",
   "SubmitDisplayToTab",
   "SubmitDisplayToTabWithID",
-  "SubmitEditedDisplayToTab",
   "SubmitEditedDisplayToTabWithID",
   "SubmitExtensionForm",
   "SubmitExtensionFormExact",
-  "SubmitInitialGoalToTab",
   "SubmitInitialGoalToTabWithID",
-  "SubmitInvocationsToTab",
   "SubmitInvocationsToTabWithID",
   "SubmitRemoteTab",
   "SubmitRemoteTabExtensionForm",
@@ -5357,8 +5350,6 @@ export interface GeneratedDesktopCommands {
   AddRemoteHost(arg0: RemoteHostInput): Promise<RemoteHostView>;
   AddRemoteProject(arg0: string, arg1: string): Promise<RemoteProjectView>;
   AddSkillPath(arg0: string): Promise<void>;
-  AnswerMCPInteractionForTab(arg0: string, arg1: string, arg2: string, arg3: Record<string, unknown>): Promise<void>;
-  AnswerMCPInteractionForTurn(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: Record<string, unknown>): Promise<void>;
   AnswerPromptForTab(arg0: string, arg1: string, arg2: string, arg3: QuestionAnswer[]): Promise<void>;
   AnswerQuestion(arg0: string, arg1: QuestionAnswer[]): Promise<void>;
   AnswerQuestionForTab(arg0: string, arg1: string, arg2: QuestionAnswer[]): Promise<void>;
@@ -5370,7 +5361,6 @@ export interface GeneratedDesktopCommands {
   Approve(arg0: string, arg1: boolean, arg2: boolean, arg3: boolean): Promise<void>;
   ApproveRemoteTab(arg0: string, arg1: string, arg2: string): Promise<void>;
   ApproveTab(arg0: string, arg1: string, arg2: boolean, arg3: boolean, arg4: boolean): Promise<void>;
-  ApproveTabForTurn(arg0: string, arg1: string, arg2: string, arg3: string, arg4: boolean, arg5: boolean, arg6: boolean): Promise<void>;
   ArchiveCanonicalSession(arg0: SessionRef): Promise<void>;
   ArchiveSessionTarget(arg0: SessionSelector): Promise<SessionMutationResult>;
   AttachDropped(arg0: string): Promise<DroppedItem>;
@@ -5759,7 +5749,6 @@ export interface GeneratedDesktopCommands {
   ResolveMarkdownImageForTab(arg0: string, arg1: string): Promise<MarkdownImageView>;
   ResolvePlanDecision(arg0: string, arg1: string): Promise<void>;
   ResolvePlanDecisionTab(arg0: string, arg1: string, arg2: string): Promise<void>;
-  ResolvePlanDecisionTabForTurn(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<void>;
   ResolvePresentedPathForTab(arg0: string, arg1: string, arg2: string): Promise<string>;
   ResolvePromptForSession(arg0: InteractionTargetView, arg1: PromptAnswerView): Promise<void>;
   ResolvePromptForTab(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: PromptAnswerView): Promise<void>;
@@ -5950,13 +5939,10 @@ export interface GeneratedDesktopCommands {
   SubmitDisplay(arg0: string, arg1: string): Promise<void>;
   SubmitDisplayToTab(arg0: string, arg1: string, arg2: string): Promise<void>;
   SubmitDisplayToTabWithID(arg0: string, arg1: string, arg2: string, arg3: string): Promise<void>;
-  SubmitEditedDisplayToTab(arg0: string, arg1: string, arg2: string, arg3: string): Promise<void>;
   SubmitEditedDisplayToTabWithID(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<void>;
   SubmitExtensionForm(arg0: string, arg1: string, arg2: string, arg3: Record<string, unknown>): Promise<void>;
   SubmitExtensionFormExact(arg0: ExtensionFormTarget, arg1: Record<string, unknown>): Promise<void>;
-  SubmitInitialGoalToTab(arg0: string, arg1: string, arg2: string, arg3: string, arg4: main_InvocationRequest[], arg5: string, arg6: string): Promise<string[]>;
   SubmitInitialGoalToTabWithID(arg0: string, arg1: string, arg2: string, arg3: string, arg4: main_InvocationRequest[], arg5: string, arg6: string, arg7: string): Promise<string[]>;
-  SubmitInvocationsToTab(arg0: string, arg1: string, arg2: string, arg3: main_InvocationRequest[]): Promise<void>;
   SubmitInvocationsToTabWithID(arg0: string, arg1: string, arg2: string, arg3: main_InvocationRequest[], arg4: string): Promise<void>;
   SubmitRemoteTab(arg0: string, arg1: string): Promise<void>;
   SubmitRemoteTabExtensionForm(arg0: string, arg1: string, arg2: string, arg3: Record<string, unknown>): Promise<void>;

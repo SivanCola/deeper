@@ -25,24 +25,6 @@ type TurnStartView struct {
 	SubmissionID        string `json:"submissionId,omitempty"`
 }
 
-// validatePromptIdentity fences a decision to the runtime and turn that
-// rendered its card. It is intentionally shared by every decision surface;
-// callers must still resolve the prompt on the same controller instance.
-func (a *App) validatePromptIdentity(tabID, turnID, runtimeEpoch string) (control.SessionAPI, error) {
-	tab, ctrl := a.tabAndCtrlByID(tabID)
-	if ctrl == nil {
-		return nil, a.workspaceNotReadyErr(tab)
-	}
-	status := ctrl.RuntimeStatus()
-	if strings.TrimSpace(turnID) == "" || status.TurnID != strings.TrimSpace(turnID) {
-		return nil, fmt.Errorf("turn %q is not the active turn for tab %q", turnID, tabID)
-	}
-	if epoch := strings.TrimSpace(runtimeEpoch); epoch != "" && tab != nil && tab.sink != nil && tab.sink.runtimeEpochSnapshot() != epoch {
-		return nil, fmt.Errorf("runtime changed while resolving prompt for tab %q", tabID)
-	}
-	return ctrl, nil
-}
-
 // stoppableCtrl resolves and captures the controller a Stop request targets.
 // The request is session-scoped and idle cancellation is idempotent.
 func (a *App) stoppableCtrl(tabID, turnID string) (control.SessionAPI, error) {

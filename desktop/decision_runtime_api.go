@@ -125,36 +125,3 @@ func (a *App) ResolvePromptForSession(target InteractionTargetView, answer Promp
 		control.PromptAnswer{Questions: questions, Allow: answer.Allow, Session: answer.Session, Persist: answer.Persist, Action: answer.Action, Feedback: answer.Feedback, Content: answer.Content, Generation: answer.Generation, PermissionRevision: answer.PermissionRevision},
 	)
 }
-
-// ApproveTabForTurn is the exact-identity approval entry point for new
-// frontends. The legacy ApproveTab method remains available to old clients.
-func (a *App) ApproveTabForTurn(tabID, turnID, runtimeEpoch, id string, allow, session, persist bool) error {
-	ctrl, err := a.validatePromptIdentity(tabID, turnID, runtimeEpoch)
-	if err != nil {
-		return err
-	}
-	ctrl.Approve(id, allow, session, persist)
-	return nil
-}
-
-func (a *App) ResolvePlanDecisionTabForTurn(tabID, turnID, runtimeEpoch, id, action string) error {
-	ctrl, err := a.validatePromptIdentity(tabID, turnID, runtimeEpoch)
-	if err != nil {
-		return err
-	}
-	return ctrl.ResolvePlanDecision(id, control.PlanDecisionAction(action))
-}
-
-func (a *App) AnswerMCPInteractionForTurn(tabID, turnID, runtimeEpoch, id, action string, content map[string]any) error {
-	ctrl, err := a.validatePromptIdentity(tabID, turnID, runtimeEpoch)
-	if err != nil {
-		return err
-	}
-	resolver, ok := ctrl.(interface {
-		AnswerMCPInteractionChecked(string, string, map[string]any) error
-	})
-	if !ok {
-		return errMCPPromptUnsupported
-	}
-	return resolver.AnswerMCPInteractionChecked(id, action, content)
-}

@@ -20,6 +20,7 @@ type bindingRuntimeReader struct {
 	release  chan struct{}
 	once     sync.Once
 	resolved []control.PromptIdentity
+	answers  []control.PromptAnswer
 }
 
 func (*bindingRuntimeReader) AutoApproveTools() bool { return false }
@@ -31,10 +32,11 @@ func (*bindingRuntimeReader) GoalRuntime() control.GoalRuntimeView {
 }
 func (*bindingRuntimeReader) ToolApprovalMode() string { return "ask" }
 
-func (r *bindingRuntimeReader) ResolvePromptExact(identity control.PromptIdentity, _ control.PromptAnswer) error {
+func (r *bindingRuntimeReader) ResolvePromptExact(identity control.PromptIdentity, answer control.PromptAnswer) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.resolved = append(r.resolved, identity)
+	r.answers = append(r.answers, answer)
 	return nil
 }
 
@@ -166,6 +168,40 @@ func TestResolvePromptForSessionAcceptsInitialGeneration(t *testing.T) {
 	defer reader.mu.Unlock()
 	if len(reader.resolved) != 1 || reader.resolved[0].PromptID != target.PromptID {
 		t.Fatalf("initial prompt calls = %+v", reader.resolved)
+	}
+}
+
+func TestResolveMCPPromptPreservesExactTargetAndAnswer(t *testing.T) {
+	for _, route := range []string{"tab", "session"} {
+		for _, action := range []string{"accept", "decline", "cancel"} {
+			t.Run(route+"/"+action, func(t *testing.T) {
+				reader := &bindingRuntimeReader{}
+				tab := &WorkspaceTab{ID: "mcp-source", SessionID: "session-a", SessionGeneration: 3, Ctrl: reader}
+				a := &App{tabs: map[string]*WorkspaceTab{tab.ID: tab}}
+				target := InteractionTargetView{TabID: tab.ID, HostID: localDesktopHostID,
+					SessionID: tab.SessionID, SessionGeneration: tab.SessionGeneration,
+					PromptID: "mcp-card", TurnID: "turn-a", RuntimeEpoch: "runtime-a", Kind: "mcp"}
+				answer := PromptAnswerView{Action: action}
+				if action == "accept" {
+					answer.Content = map[string]any{"code": "123-456", "remember": false, "permissions": []string{"repo:read"}}
+				}
+				var err error
+				if route == "session" {
+					err = a.ResolvePromptForSession(target, answer)
+				} else {
+					err = a.ResolvePromptForTab(target.TabID, target.PromptID, target.TurnID, target.RuntimeEpoch, target.Kind, answer)
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantIdentity := control.PromptIdentity{PromptID: target.PromptID, TurnID: target.TurnID,
+					RuntimeEpoch: target.RuntimeEpoch, Kind: control.PromptMCP}
+				if !reflect.DeepEqual(reader.resolved, []control.PromptIdentity{wantIdentity}) ||
+					!reflect.DeepEqual(reader.answers, []control.PromptAnswer{{Action: action, Content: answer.Content, Questions: []event.AskAnswer{}}}) {
+					t.Fatalf("MCP dispatch changed identity or answer: identities=%+v answers=%+v", reader.resolved, reader.answers)
+				}
+			})
+		}
 	}
 }
 
