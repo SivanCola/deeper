@@ -2,11 +2,11 @@ import type { GeneratedDesktopCommands } from "../generated/desktopContract.gene
 
 export type SessionUIBindings = Pick<GeneratedDesktopCommands,
   "BeginManualSessionCreation" | "GetManualSessionCreation" | "RetryManualSessionCreation" | "ListManualSessionCreations" |
-  "GetSessionComposerState" | "SaveSessionComposerState" | "BeginSessionComposerSubmission" | "CompleteSessionComposerSubmission" | "ListSessionComposerConflicts">;
+  "GetSessionComposerState" | "SaveSessionComposerState" | "BeginSessionComposerSubmission" | "CompleteSessionComposerSubmission">;
 
 export function makeLazySessionUIMock(create: (scope: string, root: string, id: string) => Promise<void>): SessionUIBindings {
   let loaded: Promise<SessionUIBindings> | undefined;
-  const names: (keyof SessionUIBindings)[] = ["BeginManualSessionCreation","GetManualSessionCreation","RetryManualSessionCreation","ListManualSessionCreations","GetSessionComposerState","SaveSessionComposerState","BeginSessionComposerSubmission","CompleteSessionComposerSubmission","ListSessionComposerConflicts"];
+  const names: (keyof SessionUIBindings)[] = ["BeginManualSessionCreation","GetManualSessionCreation","RetryManualSessionCreation","ListManualSessionCreations","GetSessionComposerState","SaveSessionComposerState","BeginSessionComposerSubmission","CompleteSessionComposerSubmission"];
   return Object.fromEntries(names.map(name=>[name,async (...args:unknown[])=> {
     loaded ??= import("./sessionUIMock").then(module=>module.makeSessionUIMock(create));
     const binding=await loaded;

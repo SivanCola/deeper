@@ -35,10 +35,6 @@ export interface ContextMaintenanceInfo {
   projectedTokens?: number;
   summaryTokens?: number;
   lastSavedTokens?: number;
-  /** @deprecated always 0; use triggerTokens */
-  /** @deprecated alias of triggerTokens */
-  foldTrigger?: number;
-  /** @deprecated always 0; use triggerTokens */
   triggerTokens?: number;
   /** none | restored | applied — runtime only */
   checkpointState?: "none" | "restored" | "applied";

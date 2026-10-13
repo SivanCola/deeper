@@ -492,7 +492,7 @@ func controllerHasActiveRuntimeWork(ctrl control.SessionAPI) bool {
 }
 
 // applyEffortEdit writes effort onto entry within edit, mirroring CLI/desktop
-// SetEffort: upsert the provider when the user config has no block for it yet, and
+// SetEffortForTab: upsert the provider when the user config has no block for it yet, and
 // enable adaptive thinking for Anthropic so the effort knob actually engages.
 func applyEffortEdit(edit *config.Config, entry *config.ProviderEntry, effort string) error {
 	if _, ok := edit.Provider(entry.Name); !ok {

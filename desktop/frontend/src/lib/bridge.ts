@@ -334,8 +334,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   MoveInboxItem(tabID: string, id: string, toIndex: number): Promise<void>;
   SetInboxPaused(tabID: string, paused: boolean): Promise<void>;
   RetryInboxItem(tabID: string, id: string): Promise<void>;
-  RefreshInboxItem(tabID: string, id: string): Promise<void>;
-  InboxHasItems(tabID: string): Promise<boolean>;
   Cancel(): Promise<void>;
   CancelTab(tabID: string): Promise<void>;
   CancelSessionForTab(tabID: string): Promise<CancelReceipt>;
@@ -590,7 +588,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ModelsForTab(tabID: string): Promise<ModelInfo[]>;
   SetModelForTab(tabID: string, name: string): Promise<void>;
   Effort(): Promise<EffortInfo>;
-  SetEffort(level: string): Promise<void>;
   EffortForTab(tabID: string): Promise<EffortInfo>;
   SetEffortForTab(tabID: string, level: string): Promise<void>;
   // ReloadRuntime rebuilds the tab's agent runtime in place (tools, skills,
@@ -2828,8 +2825,6 @@ function makeMockApp(): MockAppBindings {
         async MoveInboxItem() {},
         async SetInboxPaused(_tabID, paused) { if (recoveryMock) (await import("./inboxRecoveryPreview")).setInboxRecoveryPreviewPaused(paused); },
         async RetryInboxItem() {},
-        async RefreshInboxItem() {},
-        async InboxHasItems() { return recoveryMock; },
         async Cancel() {
           cancelled = true;
           emitMockTurnDone();
@@ -4125,11 +4120,8 @@ function makeMockApp(): MockAppBindings {
         async EffortForTab() {
           return this.Effort();
         },
-        async SetEffort(level: string) {
-          mockEffort = level || "auto";
-        },
         async SetEffortForTab(_tabID, level) {
-          await this.SetEffort(level);
+          mockEffort = level || "auto";
         },
         async ReloadRuntime(_tabID) {},
     async Memory() {

@@ -31,12 +31,10 @@ type Meta struct {
 	AutoApproveTools      bool                        `json:"autoApproveTools"`
 	CollaborationMode     string                      `json:"collaborationMode"`
 	ToolApprovalMode      string                      `json:"toolApprovalMode"`
-	// TokenMode and AgentPreset are deprecated dual-write wire values pinned to
-	// their safe defaults; one-version-old frontends still parse them.
-	Goal        string           `json:"goal,omitempty"`
-	GoalStatus  string           `json:"goalStatus,omitempty"`
-	GoalView    *goaldomain.View `json:"goalView,omitempty"`
-	GoalRuntime *GoalRuntimeView `json:"goalRuntime,omitempty"`
+	Goal                  string                      `json:"goal,omitempty"`
+	GoalStatus            string                      `json:"goalStatus,omitempty"`
+	GoalView              *goaldomain.View            `json:"goalView,omitempty"`
+	GoalRuntime           *GoalRuntimeView            `json:"goalRuntime,omitempty"`
 	// Nil means no authoritative snapshot; non-nil empty means clear the panel.
 	CanonicalTodos *[]evidence.TodoItem `json:"canonicalTodos,omitempty"`
 	// PinnedFiles holds metadata about standing pinned context files for this tab.

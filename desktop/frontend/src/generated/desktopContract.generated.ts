@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:cb269bcbe9a8ef95048e565269ba89bc1a89f739b1a5a82d747e8659d472368c";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:46a3c188fe677ca787ff747a9de19359aa7609ff4711e7c8bcf98e0909af1c7d";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -222,7 +222,6 @@ export const DESKTOP_COMMANDS = [
   "HistorySliceForTarget",
   "HooksSettings",
   "ImportThemePack",
-  "InboxHasItems",
   "InboxQueueForTarget",
   "InboxSnapshot",
   "InspectTopicRemoval",
@@ -246,7 +245,6 @@ export const DESKTOP_COMMANDS = [
   "ListProjectTopics",
   "ListRemoteDir",
   "ListRemoteProjects",
-  "ListSessionComposerConflicts",
   "ListSessions",
   "ListSessionsForTab",
   "ListTabs",
@@ -355,7 +353,6 @@ export const DESKTOP_COMMANDS = [
   "ReconcileRecoveryVersions",
   "ReconnectMCPServer",
   "RecordUIPerf",
-  "RefreshInboxItem",
   "RefreshSkills",
   "RegisterNavigationIntent",
   "ReleaseAttachmentTarget",
@@ -552,7 +549,6 @@ export const DESKTOP_COMMANDS = [
   "SetDesktopTelemetry",
   "SetDesktopTerminalTheme",
   "SetDesktopZoomFactor",
-  "SetEffort",
   "SetEffortForTab",
   "SetGoal",
   "SetGoalForTab",
@@ -1942,7 +1938,6 @@ export interface ContextMaintenanceInfo {
   projectedTokens?: number;
   summaryTokens?: number;
   lastSavedTokens?: number;
-  foldTrigger?: number;
   triggerTokens?: number;
   checkpointState?: string;
   hardInputCeiling?: number;
@@ -5554,7 +5549,6 @@ export interface GeneratedDesktopCommands {
   HistorySliceForTarget(arg0: SessionSelector, arg1: HistorySliceRequest): Promise<HistorySlice>;
   HooksSettings(arg0: string): Promise<HooksSettingsView>;
   ImportThemePack(arg0: string, arg1: boolean): Promise<ThemeImportResult>;
-  InboxHasItems(arg0: string): Promise<boolean>;
   InboxQueueForTarget(arg0: InboxTargetView, arg1: InboxQueueRequest): Promise<InboxQueueResultView>;
   InboxSnapshot(arg0: string): Promise<InboxSnapshotView>;
   InspectTopicRemoval(arg0: TopicRemovalTarget): Promise<TopicRemovalInspection>;
@@ -5578,7 +5572,6 @@ export interface GeneratedDesktopCommands {
   ListProjectTopics(arg0: ProjectTopicPageRequest): Promise<ProjectTopicPage>;
   ListRemoteDir(arg0: string, arg1: string): Promise<RemoteDirEntry[]>;
   ListRemoteProjects(): Promise<RemoteProjectView[]>;
-  ListSessionComposerConflicts(arg0: SessionRef): Promise<string[]>;
   ListSessions(): Promise<SessionMeta[]>;
   ListSessionsForTab(arg0: string): Promise<SessionMeta[]>;
   ListTabs(): Promise<TabMeta[]>;
@@ -5687,7 +5680,6 @@ export interface GeneratedDesktopCommands {
   ReconcileRecoveryVersions(arg0: ProjectTopicKey): Promise<void>;
   ReconnectMCPServer(arg0: string): Promise<void>;
   RecordUIPerf(arg0: Record<string, string>): Promise<void>;
-  RefreshInboxItem(arg0: string, arg1: string): Promise<void>;
   RefreshSkills(): Promise<void>;
   RegisterNavigationIntent(arg0: string): Promise<void>;
   ReleaseAttachmentTarget(arg0: string): Promise<void>;
@@ -5884,7 +5876,6 @@ export interface GeneratedDesktopCommands {
   SetDesktopTelemetry(arg0: boolean): Promise<void>;
   SetDesktopTerminalTheme(arg0: string): Promise<void>;
   SetDesktopZoomFactor(arg0: number): Promise<void>;
-  SetEffort(arg0: string): Promise<void>;
   SetEffortForTab(arg0: string, arg1: string): Promise<void>;
   SetGoal(arg0: string): Promise<void>;
   SetGoalForTab(arg0: string, arg1: string): Promise<void>;

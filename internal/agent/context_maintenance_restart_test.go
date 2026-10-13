@@ -68,8 +68,8 @@ func TestContextMaintenanceWaitsForCompactRatioAcrossRestart(t *testing.T) {
 	firstSink := &recordSink{}
 	first := newRestartMaintenanceAgent(path, messages, firstSink)
 	before := first.ContextMaintenanceSnapshot()
-	if before.ProjectedTokens < 600_000 || before.ProjectedTokens >= before.FoldTrigger {
-		t.Fatalf("fixture prompt/trigger = %d/%d, want prompt in [600000, fold)", before.ProjectedTokens, before.FoldTrigger)
+	if before.ProjectedTokens < 600_000 || before.ProjectedTokens >= before.TriggerTokens {
+		t.Fatalf("fixture prompt/trigger = %d/%d, want prompt in [600000, trigger)", before.ProjectedTokens, before.TriggerTokens)
 	}
 	if _, err := first.contextManager().Prepare(context.Background(), ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
 		t.Fatal(err)
@@ -111,8 +111,8 @@ func TestContextMaintenanceRestoresAppliedProjectionWithoutReapplying(t *testing
 			ModelRef:      "provider/model",
 		}, firstSink)
 	before := first.ContextMaintenanceSnapshot()
-	if before.ProjectedTokens < before.FoldTrigger {
-		t.Fatalf("fixture prompt/trigger = %d/%d, want prompt at or above fold", before.ProjectedTokens, before.FoldTrigger)
+	if before.ProjectedTokens < before.TriggerTokens {
+		t.Fatalf("fixture prompt/trigger = %d/%d, want prompt at or above trigger", before.ProjectedTokens, before.TriggerTokens)
 	}
 	if _, err := first.contextManager().Prepare(context.Background(), ContextPreparePolicy{Trigger: CompactionTriggerPressure}); err != nil {
 		t.Fatal(err)
