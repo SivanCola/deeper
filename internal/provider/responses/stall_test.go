@@ -15,12 +15,6 @@ import (
 	"deepzora/internal/provider"
 )
 
-func TestDefaultStreamIdleTimeoutIsFiveMinutes(t *testing.T) {
-	if defaultStreamIdleTimeout != 300*time.Second {
-		t.Fatalf("default stream idle timeout = %s, want 5m", defaultStreamIdleTimeout)
-	}
-}
-
 func flush(w http.ResponseWriter) {
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()

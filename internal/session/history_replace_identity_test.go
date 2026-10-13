@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"deepzora/internal/provider"
@@ -64,7 +65,7 @@ func TestHistoryReplacementPreservesMessageVersions(t *testing.T) {
 				}
 				if incremental || i == 2 {
 					page := read()
-					if !idsEqual(windowIDs(t, page), ids) {
+					if !slices.Equal(windowIDs(t, page), ids) {
 						t.Fatalf("replacement %d ids: %v", i, windowIDs(t, page))
 					}
 					if page.Messages[0].Version != i+2 {

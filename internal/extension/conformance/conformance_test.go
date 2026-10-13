@@ -26,6 +26,7 @@ import (
 	"deepzora/internal/extension/rpcwire"
 	"deepzora/internal/extension/sidecar"
 	"deepzora/internal/pluginpkg"
+	"deepzora/internal/testutil"
 )
 
 // examplePath is the built fullsidecar binary, shared by every test.
@@ -197,19 +198,6 @@ func (s *stubStreams) snapshot() (chunks []protocol.StreamChunkParams, ends []pr
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]protocol.StreamChunkParams(nil), s.chunks...), append([]protocol.StreamEndParams(nil), s.ends...)
-}
-
-// waitFor polls cond until it holds or the deadline expires.
-func waitFor(t *testing.T, what string, timeout time.Duration, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("timed out waiting for %s", what)
 }
 
 // protocolReason extracts the frozen protocol error reason from err, whether
@@ -411,7 +399,7 @@ func TestProviderStream(t *testing.T) {
 	if !opened.Accepted {
 		t.Fatal("stream open was not accepted")
 	}
-	waitFor(t, "stream end", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "stream end", 10*time.Second, func() bool {
 		_, ends := streams.snapshot()
 		return len(ends) == 1
 	})
@@ -463,12 +451,12 @@ func TestProviderStreamCancel(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("ProviderStreamOpen: %v", err)
 	}
-	waitFor(t, "first chunk", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "first chunk", 10*time.Second, func() bool {
 		chunks, _ := streams.snapshot()
 		return len(chunks) >= 1
 	})
 	client.ProviderStreamCancel("s-cancel")
-	waitFor(t, "stream end", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "stream end", 10*time.Second, func() bool {
 		_, ends := streams.snapshot()
 		return len(ends) == 1
 	})
@@ -527,7 +515,7 @@ func TestSessionStartPublishes(t *testing.T) {
 	if err := client.NotifyEvent(protocol.EventSessionStart, json.RawMessage(`{"sessionPath":"/s/1","phase":"start"}`)); err != nil {
 		t.Fatalf("NotifyEvent: %v", err)
 	}
-	waitFor(t, "status and card publish", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "status and card publish", 10*time.Second, func() bool {
 		return ui.publishedCount() >= 2
 	})
 
@@ -609,7 +597,7 @@ func TestUISubmitRoundTrip(t *testing.T) {
 	if !result.Accepted {
 		t.Fatalf("submit rejected: %+v", result)
 	}
-	waitFor(t, "submit status publish", 10*time.Second, func() bool {
+	testutil.WaitFor(t, "submit status publish", 10*time.Second, func() bool {
 		return len(ui.publishedOfKind(protocol.UISurfaceStatus)) == 1
 	})
 	statuses := ui.publishedOfKind(protocol.UISurfaceStatus)
@@ -655,7 +643,7 @@ func TestCrashMidIntercept(t *testing.T) {
 	if err == nil {
 		t.Fatal("Intercept succeeded though the extension exited mid-intercept")
 	}
-	waitFor(t, "crash detection", 10*time.Second, client.Crashed)
+	testutil.WaitFor(t, "crash detection", 10*time.Second, client.Crashed)
 
 	started := time.Now()
 	_, err = client.Intercept(context.Background(), protocol.EventInputReceive, json.RawMessage(`{"text":"ok"}`), 10*time.Second)

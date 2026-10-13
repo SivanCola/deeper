@@ -11,6 +11,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/evidence"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -104,7 +105,7 @@ func TestSubAgentAnswerCarriesHostReceipts(t *testing.T) {
 	reg := tool.NewRegistry()
 	reg.Add(fakeWriteFileTool{})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{toolCallChunk("1", "write_file", `{"path":"parser.go"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("1", "write_file", `{"path":"parser.go"}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "all done"}, {Type: provider.ChunkDone}},
 	}}
 

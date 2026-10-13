@@ -35,6 +35,7 @@ import (
 	"deepzora/internal/session"
 	"deepzora/internal/skill"
 	"deepzora/internal/store"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -93,15 +94,6 @@ func isolateControlConfigHome(t *testing.T) string {
 	t.Setenv("AppData", filepath.Join(home, "AppData"))
 	t.Chdir(t.TempDir())
 	return home
-}
-
-func controlTestPluginByName(entries []config.PluginEntry, name string) (config.PluginEntry, bool) {
-	for _, entry := range entries {
-		if entry.Name == name {
-			return entry, true
-		}
-	}
-	return config.PluginEntry{}, false
 }
 
 type appendingRunner struct {
@@ -2653,15 +2645,15 @@ command = "project-only"
 		t.Fatalf("AddMCPServer(global-docs) = (%d, %v), want one connected tool", n, err)
 	}
 	globalCfg := config.LoadForEdit(config.UserConfigPath())
-	globalEntry, found := controlTestPluginByName(globalCfg.Plugins, "global-docs")
+	globalEntry, found := testutil.FindPlugin(globalCfg.Plugins, "global-docs")
 	if !found || globalEntry.URL != server.URL {
 		t.Fatalf("global config entry = %+v, found=%v", globalEntry, found)
 	}
 	projectCfg := config.LoadForEdit(projectPath)
-	if _, found := controlTestPluginByName(projectCfg.Plugins, "global-docs"); found {
+	if _, found := testutil.FindPlugin(projectCfg.Plugins, "global-docs"); found {
 		t.Fatalf("global install leaked into project config: %+v", projectCfg.Plugins)
 	}
-	if _, found := controlTestPluginByName(projectCfg.Plugins, "project-only"); !found {
+	if _, found := testutil.FindPlugin(projectCfg.Plugins, "project-only"); !found {
 		t.Fatalf("project config was not preserved: %+v", projectCfg.Plugins)
 	}
 }
@@ -2682,7 +2674,7 @@ command = "project-shared"
 	if _, err := ctrl.AddMCPServer(config.PluginEntry{Name: "shared", Command: "global-shared"}); err == nil || !strings.Contains(err.Error(), "already configured") {
 		t.Fatalf("AddMCPServer(shared) error = %v, want project collision", err)
 	}
-	if _, found := controlTestPluginByName(config.LoadForEdit(config.UserConfigPath()).Plugins, "shared"); found {
+	if _, found := testutil.FindPlugin(config.LoadForEdit(config.UserConfigPath()).Plugins, "shared"); found {
 		t.Fatal("rejected project collision created a global shadow")
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/imageinput"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -30,7 +31,7 @@ func TestImageFailureKeepsEachBatchResult(t *testing.T) {
 		reg := tool.NewRegistry()
 		shot := &detailedImageTool{fakeImageTool: fakeImageTool{text: "saved", images: []string{"data:image/png;base64,QUFB"}}}
 		reg.Add(shot)
-		p := &scriptedProvider{name: "text", turns: [][]provider.Chunk{{toolCallChunk("a", "shot", `{}`), toolCallChunk("b", "shot", `{}`), {Type: provider.ChunkDone}}, {{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}}}}
+		p := &scriptedProvider{name: "text", turns: [][]provider.Chunk{{testutil.ToolCallChunk("a", "shot", `{}`), testutil.ToolCallChunk("b", "shot", `{}`), {Type: provider.ChunkDone}}, {{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}}}}
 		a := New(p, reg, NewSession("sys"), Options{ImageInput: cfg, ModelRef: "text/model"}, event.Discard)
 		if err := a.Run(context.Background(), "inspect"); err != nil {
 			t.Fatal(err)

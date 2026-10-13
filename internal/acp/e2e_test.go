@@ -15,6 +15,7 @@ import (
 	"deepzora/internal/permission"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -113,11 +114,11 @@ func (f *e2eFactory) NewSession(_ context.Context, p SessionParams) (*control.Co
 
 func TestE2EExplicitMaxStepsReturnsSuccessfulPause(t *testing.T) {
 	responses := [][]provider.Chunk{
-		{toolCallChunk("c1", "peek", `{}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("c2", "peek", `{}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("c3", "peek", `{}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("c4", "peek", `{}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("c5", "peek", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c1", "peek", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c2", "peek", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c3", "peek", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c4", "peek", `{}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c5", "peek", `{}`), {Type: provider.ChunkDone}},
 		{{Type: provider.ChunkText, Text: "Saved progress summary."}, {Type: provider.ChunkDone}},
 	}
 	assertE2ERunPause(t, responses, nil, StopMaxTurnRequests, "paused after 5 tool-call rounds")
@@ -126,7 +127,7 @@ func TestE2EExplicitMaxStepsReturnsSuccessfulPause(t *testing.T) {
 func TestE2ETaskBudgetReturnsSuccessfulPause(t *testing.T) {
 	responses := [][]provider.Chunk{
 		{
-			toolCallChunk("c1", "peek", `{}`),
+			testutil.ToolCallChunk("c1", "peek", `{}`),
 			{Type: provider.ChunkUsage, Usage: &provider.Usage{PromptTokens: 100, CacheMissTokens: 100}},
 			{Type: provider.ChunkDone},
 		},
@@ -201,10 +202,6 @@ func assertE2ERunPause(t *testing.T, responses [][]provider.Chunk, options *agen
 	}
 }
 
-func toolCallChunk(id, name, args string) provider.Chunk {
-	return provider.Chunk{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: id, Name: name, Arguments: args}}
-}
-
 // openSession runs initialize + session/new and returns the session id.
 func openSession(t *testing.T, c *rpcClient) string {
 	t.Helper()
@@ -226,7 +223,7 @@ func TestE2EToolTurnAndPersistence(t *testing.T) {
 	prov := &scriptedProvider{name: "fake", responses: [][]provider.Chunk{
 		{
 			{Type: provider.ChunkText, Text: "Reading the file."},
-			toolCallChunk("c1", "peek", `{"path":"x"}`),
+			testutil.ToolCallChunk("c1", "peek", `{"path":"x"}`),
 			{Type: provider.ChunkDone},
 		},
 		{
@@ -322,7 +319,7 @@ func TestE2ESessionLoad(t *testing.T) {
 			prov: &scriptedProvider{name: "fake", responses: [][]provider.Chunk{
 				{
 					{Type: provider.ChunkText, Text: "Reading the file."},
-					toolCallChunk("c1", "peek", `{"path":"x"}`),
+					testutil.ToolCallChunk("c1", "peek", `{"path":"x"}`),
 					{Type: provider.ChunkDone},
 				},
 				{{Type: provider.ChunkText, Text: "All done."}, {Type: provider.ChunkDone}},
@@ -513,7 +510,7 @@ func TestE2EDeleteActiveSessionDoesNotRecreateFiles(t *testing.T) {
 	prov := &scriptedProvider{name: "fake", responses: [][]provider.Chunk{
 		{
 			{Type: provider.ChunkText, Text: "Starting."},
-			toolCallChunk("c1", "slow", `{}`),
+			testutil.ToolCallChunk("c1", "slow", `{}`),
 			{Type: provider.ChunkDone},
 		},
 		{{Type: provider.ChunkText, Text: "unreachable"}, {Type: provider.ChunkDone}},
@@ -579,7 +576,7 @@ func TestE2EApprovalRoundTrip(t *testing.T) {
 	prov := &scriptedProvider{name: "fake", responses: [][]provider.Chunk{
 		{
 			{Type: provider.ChunkText, Text: "Writing."},
-			toolCallChunk("w1", "writeit", `{"path":"README.md"}`),
+			testutil.ToolCallChunk("w1", "writeit", `{"path":"README.md"}`),
 			{Type: provider.ChunkDone},
 		},
 		{
@@ -703,7 +700,7 @@ func TestE2ECancelMidTurn(t *testing.T) {
 	prov := &scriptedProvider{name: "fake", responses: [][]provider.Chunk{
 		{
 			{Type: provider.ChunkText, Text: "Starting."},
-			toolCallChunk("c1", "slow", `{}`),
+			testutil.ToolCallChunk("c1", "slow", `{}`),
 			{Type: provider.ChunkDone},
 		},
 		{{Type: provider.ChunkText, Text: "unreachable"}, {Type: provider.ChunkDone}},

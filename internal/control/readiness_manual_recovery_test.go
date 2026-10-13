@@ -8,6 +8,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -55,11 +56,11 @@ func TestStandardStopsAfterOneVisibleTurn(t *testing.T) {
 
 func TestStandardStartReplyContinuesCurrentTodoInsideVisibleTurn(t *testing.T) {
 	c, prov := manualReadinessController(t, [][]provider.Chunk{
-		{toolCallChunk("todo-1", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("todo-1", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
 		textTurn("让我先列出待办，接下来会重写。"),
 		{
-			toolCallChunk("write-1", "write_file", `{"path":"PRD.md"}`),
-			toolCallChunk("todo-2", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"completed"}]}`),
+			testutil.ToolCallChunk("write-1", "write_file", `{"path":"PRD.md"}`),
+			testutil.ToolCallChunk("todo-2", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"completed"}]}`),
 			{Type: provider.ChunkDone},
 		},
 		textTurn("第 4 节已经完成重写。"),
@@ -80,7 +81,7 @@ func TestStandardStartReplyContinuesCurrentTodoInsideVisibleTurn(t *testing.T) {
 
 func TestStandardStartWithoutConversationDoesNotArmTodoContinuation(t *testing.T) {
 	c, prov := manualReadinessController(t, [][]provider.Chunk{
-		{toolCallChunk("todo-1", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("todo-1", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
 		textTurn("等待下一步。"),
 		textTurn("不应被隐藏续跑消费"),
 	})
@@ -95,7 +96,7 @@ func TestStandardStartWithoutConversationDoesNotArmTodoContinuation(t *testing.T
 
 func TestStandardTodoContinuationYieldsToPendingUserWork(t *testing.T) {
 	c, prov := manualReadinessController(t, [][]provider.Chunk{
-		{toolCallChunk("todo-1", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("todo-1", "todo_write", `{"todos":[{"content":"重写第 4 节","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
 		textTurn("等待下一步。"),
 		textTurn("不应被隐藏续跑消费"),
 	})
@@ -115,7 +116,7 @@ func TestStandardTodoContinuationYieldsToPendingUserWork(t *testing.T) {
 
 func TestRetiredDeliverySettingEndsOrdinaryTurnWithoutRecoveryPause(t *testing.T) {
 	c, prov := manualReadinessController(t, [][]provider.Chunk{
-		{toolCallChunk("write", "write_file", `{"path":"main.go"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("write", "write_file", `{"path":"main.go"}`), {Type: provider.ChunkDone}},
 		textTurn("已完成修改，但没有执行验证。"),
 		textTurn("显式恢复才允许消费这一轮"),
 	})

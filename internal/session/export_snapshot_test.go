@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -79,7 +80,7 @@ func TestExportSnapshotIncludesAllPagesAndExcludesLaterAppends(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !idsEqual(ids, got) {
+	if !slices.Equal(ids, got) {
 		t.Fatalf("export got %d records, want %d", len(got), len(ids))
 	}
 }
@@ -257,7 +258,7 @@ func TestExportSnapshotSurvivesLaterHistoryReplacement(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if !idsEqual(ids, got) {
+	if !slices.Equal(ids, got) {
 		t.Fatalf("fixed snapshot after replacement = %v, want %v", got, ids)
 	}
 }

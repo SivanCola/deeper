@@ -199,118 +199,88 @@ func (f fakeTool) Execute(ctx context.Context, _ json.RawMessage) (string, error
 	return f.name + " done", nil
 }
 
-func TestPartitionToolCallsAllReadOnly(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "ro1", readOnly: true})
-	reg.Add(fakeTool{name: "ro2", readOnly: true})
-	calls := []provider.ToolCall{{Name: "ro1"}, {Name: "ro2"}}
-	got := partitionToolCalls(reg, calls)
-	want := []toolCallBatch{{start: 0, end: 2, parallel: true}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("partitionToolCalls = %+v, want %+v", got, want)
+func TestPartitionToolCalls(t *testing.T) {
+	tests := []struct {
+		name  string
+		tools []fakeTool
+		calls []provider.ToolCall
+		want  []toolCallBatch
+	}{
+		{
+			name:  "all read-only stays one parallel batch",
+			tools: []fakeTool{{name: "ro1", readOnly: true}, {name: "ro2", readOnly: true}},
+			calls: []provider.ToolCall{{Name: "ro1"}, {Name: "ro2"}},
+			want:  []toolCallBatch{{start: 0, end: 2, parallel: true}},
+		},
+		{
+			name:  "a writer only serializes its own provider-order position",
+			tools: []fakeTool{{name: "ro", readOnly: true}, {name: "rw"}},
+			calls: []provider.ToolCall{{Name: "ro"}, {Name: "rw"}, {Name: "ro"}},
+			want: []toolCallBatch{
+				{start: 0, end: 1, parallel: true},
+				{start: 1, end: 2},
+				{start: 2, end: 3, parallel: true},
+			},
+		},
+		{
+			name:  "unknown tool forces a single-call serial batch",
+			tools: []fakeTool{{name: "ro", readOnly: true}},
+			calls: []provider.ToolCall{{Name: "ro"}, {Name: "vanished"}, {Name: "ro"}},
+			want: []toolCallBatch{
+				{start: 0, end: 1, parallel: true},
+				{start: 1, end: 2},
+				{start: 2, end: 3, parallel: true},
+			},
+		},
+		{
+			name:  "retired tool carries no barrier",
+			tools: []fakeTool{{name: "read_file", readOnly: true}, {name: "complete_step", readOnly: true}},
+			calls: []provider.ToolCall{{Name: "read_file"}, {Name: "complete_step"}},
+			want:  []toolCallBatch{{start: 0, end: 2, parallel: true}},
+		},
+		{
+			name:  "compress is serial",
+			tools: []fakeTool{{name: "read_file", readOnly: true}, {name: "compress", readOnly: true}},
+			calls: []provider.ToolCall{{Name: "read_file"}, {Name: "compress"}, {Name: "read_file"}},
+			want: []toolCallBatch{
+				{start: 0, end: 1, parallel: true},
+				{start: 1, end: 2},
+				{start: 2, end: 3, parallel: true},
+			},
+		},
+		{
+			name:  "todo_write is serial",
+			tools: []fakeTool{{name: "read_file", readOnly: true}, {name: "todo_write", readOnly: true}},
+			calls: []provider.ToolCall{{Name: "read_file"}, {Name: "todo_write"}, {Name: "read_file"}},
+			want: []toolCallBatch{
+				{start: 0, end: 1, parallel: true},
+				{start: 1, end: 2},
+				{start: 2, end: 3, parallel: true},
+			},
+		},
+		{
+			name:  "background collectors are serial",
+			tools: []fakeTool{{name: "read_file", readOnly: true}, {name: "wait", readOnly: true}, {name: "bash_output", readOnly: true}},
+			calls: []provider.ToolCall{{Name: "read_file"}, {Name: "wait"}, {Name: "bash_output"}, {Name: "read_file"}},
+			want: []toolCallBatch{
+				{start: 0, end: 1, parallel: true},
+				{start: 1, end: 2},
+				{start: 2, end: 3},
+				{start: 3, end: 4, parallel: true},
+			},
+		},
 	}
-}
-
-// TestPartitionToolCallsSegmentsAroundWriters verifies a writer only serializes
-// its own provider-order position; read-only runs on either side stay batchable.
-func TestPartitionToolCallsSegmentsAroundWriters(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "ro", readOnly: true})
-	reg.Add(fakeTool{name: "rw", readOnly: false})
-	calls := []provider.ToolCall{{Name: "ro"}, {Name: "rw"}, {Name: "ro"}}
-	got := partitionToolCalls(reg, calls)
-	want := []toolCallBatch{
-		{start: 0, end: 1, parallel: true},
-		{start: 1, end: 2},
-		{start: 2, end: 3, parallel: true},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("partitionToolCalls = %+v, want %+v", got, want)
-	}
-}
-
-// TestPartitionToolCallsUnknownToolSerial keeps unknown-tool errors
-// deterministic by forcing unknown calls into single-call serial batches.
-func TestPartitionToolCallsUnknownToolSerial(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "ro", readOnly: true})
-	calls := []provider.ToolCall{{Name: "ro"}, {Name: "vanished"}, {Name: "ro"}}
-	got := partitionToolCalls(reg, calls)
-	want := []toolCallBatch{
-		{start: 0, end: 1, parallel: true},
-		{start: 1, end: 2},
-		{start: 2, end: 3, parallel: true},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("partitionToolCalls = %+v, want %+v", got, want)
-	}
-}
-
-// A retired tool accidentally present in an embedding registry carries no
-// active receipt semantics and does not change read-only partitioning.
-func TestPartitionToolCallsRetiredToolHasNoBarrier(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "read_file", readOnly: true})
-	reg.Add(fakeTool{name: "complete_step", readOnly: true})
-
-	calls := []provider.ToolCall{{Name: "read_file"}, {Name: "complete_step"}}
-	got := partitionToolCalls(reg, calls)
-	want := []toolCallBatch{{start: 0, end: 2, parallel: true}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("partitionToolCalls = %+v, want %+v", got, want)
-	}
-}
-
-func TestPartitionToolCallsCompressSerial(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "read_file", readOnly: true})
-	reg.Add(fakeTool{name: "compress", readOnly: true})
-
-	calls := []provider.ToolCall{{Name: "read_file"}, {Name: "compress"}, {Name: "read_file"}}
-	got := partitionToolCalls(reg, calls)
-	want := []toolCallBatch{
-		{start: 0, end: 1, parallel: true},
-		{start: 1, end: 2},
-		{start: 2, end: 3, parallel: true},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("partitionToolCalls = %+v, want %+v", got, want)
-	}
-}
-
-func TestPartitionToolCallsTodoWriteSerial(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "read_file", readOnly: true})
-	reg.Add(fakeTool{name: "todo_write", readOnly: true})
-
-	calls := []provider.ToolCall{{Name: "read_file"}, {Name: "todo_write"}, {Name: "read_file"}}
-	got := partitionToolCalls(reg, calls)
-	want := []toolCallBatch{
-		{start: 0, end: 1, parallel: true},
-		{start: 1, end: 2},
-		{start: 2, end: 3, parallel: true},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("partitionToolCalls = %+v, want %+v", got, want)
-	}
-}
-
-func TestPartitionToolCallsBackgroundCollectorsSerial(t *testing.T) {
-	reg := tool.NewRegistry()
-	reg.Add(fakeTool{name: "read_file", readOnly: true})
-	reg.Add(fakeTool{name: "wait", readOnly: true})
-	reg.Add(fakeTool{name: "bash_output", readOnly: true})
-
-	calls := []provider.ToolCall{{Name: "read_file"}, {Name: "wait"}, {Name: "bash_output"}, {Name: "read_file"}}
-	got := partitionToolCalls(reg, calls)
-	want := []toolCallBatch{
-		{start: 0, end: 1, parallel: true},
-		{start: 1, end: 2},
-		{start: 2, end: 3},
-		{start: 3, end: 4, parallel: true},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("partitionToolCalls = %+v, want %+v", got, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := tool.NewRegistry()
+			for _, ft := range tt.tools {
+				reg.Add(ft)
+			}
+			got := partitionToolCalls(reg, tt.calls)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("partitionToolCalls = %+v, want %+v", got, tt.want)
+			}
+		})
 	}
 }
 

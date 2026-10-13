@@ -16,6 +16,7 @@ import (
 	"deepzora/internal/store"
 	"deepzora/internal/tool"
 
+	"deepzora/internal/testutil"
 	_ "deepzora/internal/tool/builtin"
 )
 
@@ -51,7 +52,7 @@ func goalToolTurn(status, reason, nextAction string) [][]provider.Chunk {
 	}
 	id := fmt.Sprintf("ug-%d", goalToolCallSeq.Add(1))
 	return [][]provider.Chunk{
-		{toolCallChunk(id, "update_goal", string(args)), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk(id, "update_goal", string(args)), {Type: provider.ChunkDone}},
 		textTurn("worked on the goal"),
 	}
 }
@@ -66,11 +67,6 @@ func flattenTurns(groups ...[][]provider.Chunk) [][]provider.Chunk {
 		out = append(out, g...)
 	}
 	return out
-}
-
-// toolCallChunk builds a provider turn carrying one tool call.
-func toolCallChunk(id, name, args string) provider.Chunk {
-	return provider.Chunk{Type: provider.ChunkToolCall, ToolCall: &provider.ToolCall{ID: id, Name: name, Arguments: args}}
 }
 
 func TestActiveGoalBlockCarriesTaskContractAndPausePolicy(t *testing.T) {

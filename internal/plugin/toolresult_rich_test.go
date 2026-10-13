@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"deepzora/internal/testutil"
 	"encoding/base64"
 	"encoding/json"
 	"strings"
@@ -137,7 +138,7 @@ func TestParseToolResultRichProjectionIsBounded(t *testing.T) {
 		t.Fatal(err)
 	}
 	embeddedText := strings.Repeat("r", maxToolResultRichItemBytes+1)
-	res := json.RawMessage(`{"content":[{"type":"resource","resource":{"uri":"file:///large.txt","mimeType":"text/plain","text":` + string(mustJSON(t, embeddedText)) + `}}],"structuredContent":` + string(structured) + `}`)
+	res := json.RawMessage(`{"content":[{"type":"resource","resource":{"uri":"file:///large.txt","mimeType":"text/plain","text":` + string(testutil.MustJSON(t, embeddedText)) + `}}],"structuredContent":` + string(structured) + `}`)
 
 	text, images, err := parseToolResult(res)
 	if err != nil {
@@ -155,13 +156,4 @@ func TestParseToolResultRichProjectionIsBounded(t *testing.T) {
 	if len(images) != 0 {
 		t.Fatalf("images = %v, want none", images)
 	}
-}
-
-func mustJSON(t *testing.T, value any) json.RawMessage {
-	t.Helper()
-	b, err := json.Marshal(value)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
 }

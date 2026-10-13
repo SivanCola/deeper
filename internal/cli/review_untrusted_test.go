@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -38,11 +37,11 @@ func TestReviewCommandIgnoresCheckoutToolsAndSkills(t *testing.T) {
 		{"config", "user.email", "test@example.com"},
 		{"config", "user.name", "test"},
 	} {
-		runUntrustedReviewGit(t, dir, args...)
+		runReviewGit(t, dir, args...)
 	}
 	writeUntrustedReviewFile(t, dir, "main.go", "package main\n", 0o644)
-	runUntrustedReviewGit(t, dir, "add", "main.go")
-	runUntrustedReviewGit(t, dir, "commit", "-q", "-m", "init")
+	runReviewGit(t, dir, "add", "main.go")
+	runReviewGit(t, dir, "commit", "-q", "-m", "init")
 	writeUntrustedReviewFile(t, dir, "main.go", "package main\n\nfunc main() {}\n", 0o644)
 
 	rgMarker := filepath.Join(dir, "rg-ran")
@@ -92,15 +91,6 @@ rg_path = "tools/rg"
 }
 
 const untrustedReviewSkillBody = "CHECKOUT-REVIEW-SKILL-BODY"
-
-func runUntrustedReviewGit(t *testing.T, dir string, args ...string) {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-}
 
 func writeUntrustedReviewFile(t *testing.T, dir, name, body string, mode os.FileMode) {
 	t.Helper()

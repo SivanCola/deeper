@@ -7,12 +7,13 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/jobs"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 )
 
 func TestBackgroundTaskToolEventsStayNestedUnderParentCall(t *testing.T) {
 	finalText := []provider.Chunk{{Type: provider.ChunkText, Text: "done"}, {Type: provider.ChunkDone}}
 	sub := &scriptedProvider{name: "sub", turns: [][]provider.Chunk{
-		{toolCallChunk("c1", "bash", `{"command":"ls"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("c1", "bash", `{"command":"ls"}`), {Type: provider.ChunkDone}},
 		finalText, finalText,
 	}}
 	task := NewTaskToolWithOptions(TaskToolOptions{Provider: sub, Pricing: nil, ParentRegistry: evidenceRegistry(), MaxSteps: 20, ContextWindow: 0, CompactRatio: 0, Temperature: 0.0, ArchiveDir: "", SysPrompt: "sys", Gate: nil, SubagentModel: "", SubagentEffort: "", ResolveProvider: nil}).

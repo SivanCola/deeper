@@ -6,6 +6,7 @@ import (
 
 	"deepzora/internal/evidence"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -21,8 +22,8 @@ func TestOpenTurnMayEndWithIncompleteTodosAfterWrite(t *testing.T) {
 	reg.Add(todoWrite)
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
 		{
-			toolCallChunk("c1", "write_file", `{"path":"changed.go","content":"package main"}`),
-			toolCallChunk("c2", "todo_write", `{"todos":[{"content":"Edit code","status":"in_progress"}]}`),
+			testutil.ToolCallChunk("c1", "write_file", `{"path":"changed.go","content":"package main"}`),
+			testutil.ToolCallChunk("c2", "todo_write", `{"todos":[{"content":"Edit code","status":"in_progress"}]}`),
 			{Type: provider.ChunkDone},
 		},
 		{{Type: provider.ChunkText, Text: "done, more steps remain for later turns"}, {Type: provider.ChunkDone}},

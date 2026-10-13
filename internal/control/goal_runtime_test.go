@@ -8,6 +8,7 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -129,8 +130,8 @@ func TestOrdinaryTurnDoesNotCreateRecoveryCard(t *testing.T) {
 	reg.Add(todoWrite)
 	reg.Add(minimalFakeTool{name: "write_file"})
 	prov := &scriptedTurns{turns: [][]provider.Chunk{
-		{toolCallChunk("w1", "write_file", `{"path":"main.go"}`), {Type: provider.ChunkDone}},
-		{toolCallChunk("t0", "todo_write", `{"todos":[{"content":"Ship main","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("w1", "write_file", `{"path":"main.go"}`), {Type: provider.ChunkDone}},
+		{testutil.ToolCallChunk("t0", "todo_write", `{"todos":[{"content":"Ship main","status":"in_progress"}]}`), {Type: provider.ChunkDone}},
 		textTurn("premature final"),
 		textTurn("must not be consumed by a hidden readiness retry"),
 	}}

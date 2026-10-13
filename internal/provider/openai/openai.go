@@ -39,15 +39,6 @@ import (
 	"deepzora/internal/provider"
 )
 
-// defaultStreamIdleTimeout caps how long a started SSE stream may go without any
-// bytes before it's treated as a dropped connection. A half-open TCP connection
-// (e.g. a proxy switched mid-stream) sends no RST, so scanner.Scan() would block
-// forever; this turns that hang into a recoverable error. Generous on purpose —
-// live streams emit tokens/keepalives far more often. Stored per-client
-// (client.idleTimeout) so a test can shorten it without a shared global that
-// would race other streams' watchdogs.
-const defaultStreamIdleTimeout = 300 * time.Second
-
 // maxPrefixContinuations keeps automatic recovery bounded. A second length
 // finish is surfaced through the existing truncation notice instead of opening
 // an unbounded (and billable) continuation loop against the Beta endpoint.
@@ -261,7 +252,7 @@ func New(cfg provider.Config) (provider.Provider, error) {
 		maxOutputTokens: maxOutputTokens,
 		effort:          effort,
 		http:            httpClient,
-		idleTimeout:     defaultStreamIdleTimeout,
+		idleTimeout:     provider.DefaultStreamIdleTimeout,
 	}, nil
 }
 
@@ -305,7 +296,7 @@ type client struct {
 	visionDetail    string        // image_url detail hint (low|high); "" = auto/omit
 	maxOutputTokens int           // resolved total output budget; <=0 omits the optional field
 	effort          string        // reasoning_effort for OpenAI; thinking.type for MiniMax; "" = auto/provider default
-	idleTimeout     time.Duration // SSE stall watchdog window; defaultStreamIdleTimeout unless a test overrides
+	idleTimeout     time.Duration // SSE stall watchdog window; provider.DefaultStreamIdleTimeout unless a test overrides
 	authed          atomic.Bool   // a request has succeeded — gate transient-401 retry
 }
 
@@ -831,7 +822,7 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 	// pings the buffered activity channel, so there's no Timer.Reset race.
 	idleTimeout := c.idleTimeout
 	if idleTimeout <= 0 { // zero-value client (constructed without New)
-		idleTimeout = defaultStreamIdleTimeout
+		idleTimeout = provider.DefaultStreamIdleTimeout
 	}
 	done := make(chan struct{})
 	defer close(done)

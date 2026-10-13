@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"deepzora/internal/testutil"
 	"io"
 	"path/filepath"
 	"sync"
@@ -223,7 +224,7 @@ func TestRuntimeStateUnsubscribeDiscardsPendingCallbacks(t *testing.T) {
 	<-returned
 	// Wait for the already-entered callback to leave the dispatcher. This is
 	// an observation barrier, not a delay used to infer no future callbacks.
-	waitFor(t, func() bool {
+	testutil.WaitFor(t, "jobs condition", 2*time.Second, func() bool {
 		subscription.mu.Lock()
 		defer subscription.mu.Unlock()
 		return !subscription.draining

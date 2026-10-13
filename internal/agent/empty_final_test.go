@@ -8,6 +8,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -248,7 +249,7 @@ func countUserMessagesContaining(s *Session, needle string) int {
 
 func TestRunRetriesReasoningOnlyStopAfterToolRoundOnce(t *testing.T) {
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{{Type: provider.ChunkReasoning, Text: "read the file"}, toolCallChunk("call-1", "read_file", `{}`), {Type: provider.ChunkUsage, Usage: &provider.Usage{FinishReason: "tool_calls", TotalTokens: 10}}, {Type: provider.ChunkDone}},
+		{{Type: provider.ChunkReasoning, Text: "read the file"}, testutil.ToolCallChunk("call-1", "read_file", `{}`), {Type: provider.ChunkUsage, Usage: &provider.Usage{FinishReason: "tool_calls", TotalTokens: 10}}, {Type: provider.ChunkDone}},
 		reasoningOnlyStop("I have the file contents; the answer is ready."),
 		{{Type: provider.ChunkText, Text: "The file says contents."}, {Type: provider.ChunkDone}},
 	}}
@@ -272,7 +273,7 @@ func TestRunRetriesReasoningOnlyStopAfterToolRoundOnce(t *testing.T) {
 
 func TestRunAcceptsSecondReasoningOnlyStopAfterToolRound(t *testing.T) {
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
-		{{Type: provider.ChunkReasoning, Text: "read the file"}, toolCallChunk("call-1", "read_file", `{}`), {Type: provider.ChunkUsage, Usage: &provider.Usage{FinishReason: "tool_calls", TotalTokens: 10}}, {Type: provider.ChunkDone}},
+		{{Type: provider.ChunkReasoning, Text: "read the file"}, testutil.ToolCallChunk("call-1", "read_file", `{}`), {Type: provider.ChunkUsage, Usage: &provider.Usage{FinishReason: "tool_calls", TotalTokens: 10}}, {Type: provider.ChunkDone}},
 		reasoningOnlyStop("done thinking"),
 		reasoningOnlyStop("still only thinking"),
 	}}

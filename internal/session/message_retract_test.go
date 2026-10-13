@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"deepzora/internal/provider"
@@ -42,7 +43,7 @@ func TestMessageRetractProjectionAndRestore(t *testing.T) {
 			for i := range messages {
 				ids[i] = messages[i].ID
 			}
-			if !idsEqual(ids, want) {
+			if !slices.Equal(ids, want) {
 				t.Fatalf("%s ids=%v, want=%v", name, ids, want)
 			}
 		}
@@ -181,7 +182,7 @@ func TestMessageRetractHistorySearchAndRestart(t *testing.T) {
 			}
 			appendEvent("retract", "message/retract", `{"messageIds":["removed"],"reason":"synthetic-turn-interrupted"}`)
 			page := read(HistoryWindowRequest{Anchor: "newest"})
-			if !idsEqual(windowIDs(t, page), []string{"retained", "tail"}) {
+			if !slices.Equal(windowIDs(t, page), []string{"retained", "tail"}) {
 				t.Fatalf("retracted ids=%v", windowIDs(t, page))
 			}
 			if found := searchHistoryReady(t, query, ref, "removed", "", 10); len(found.Hits) != 0 {
@@ -189,7 +190,7 @@ func TestMessageRetractHistorySearchAndRestart(t *testing.T) {
 			}
 			if incremental {
 				old := read(HistoryWindowRequest{Anchor: "cursor", Cursor: oldCursor, Limit: 10})
-				if !idsEqual(windowIDs(t, old), []string{"retained", "removed"}) {
+				if !slices.Equal(windowIDs(t, old), []string{"retained", "removed"}) {
 					t.Fatalf("fixed snapshot changed: %v", windowIDs(t, old))
 				}
 			}
@@ -199,7 +200,7 @@ func TestMessageRetractHistorySearchAndRestart(t *testing.T) {
 			checkRestored := func() {
 				t.Helper()
 				page := read(HistoryWindowRequest{Anchor: "newest"})
-				if !idsEqual(windowIDs(t, page), []string{"retained", "tail", "removed"}) {
+				if !slices.Equal(windowIDs(t, page), []string{"retained", "tail", "removed"}) {
 					t.Fatalf("restored ids=%v", windowIDs(t, page))
 				}
 				if page.Messages[2].Version != 2 {
@@ -307,7 +308,7 @@ func TestMessageRetractRenumbersTurnsWithoutChangingOldSnapshot(t *testing.T) {
 					}
 				}
 				past := read(HistoryWindowRequest{Anchor: "cursor", Cursor: old.OlderCursor, Limit: 10})
-				if past.TotalTurns != 3 || !idsEqual(windowIDs(t, past), []string{"u1", "a1", "u2", "a2", "u3"}) {
+				if past.TotalTurns != 3 || !slices.Equal(windowIDs(t, past), []string{"u1", "a1", "u2", "a2", "u3"}) {
 					t.Fatalf("old snapshot changed: %+v", past)
 				}
 				for i, m := range past.Messages {
@@ -371,7 +372,7 @@ func TestMessageRetractCatalogAndRecentFollowVisibleHistory(t *testing.T) {
 				t.Errorf("%s recent %s visible turn=%d", label, m.MessageID, m.VisibleTurn)
 			}
 		}
-		if !idsEqual(ids, []string{"second", "second-answer"}) {
+		if !slices.Equal(ids, []string{"second", "second-answer"}) {
 			t.Errorf("%s recent ids=%v", label, ids)
 		}
 	}

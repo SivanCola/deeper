@@ -289,61 +289,54 @@ func TestReadOnlySkillSubagentRunsWithoutContinuation(t *testing.T) {
 	}
 }
 
-func TestReadOnlySkillSubagentRequiresArgs(t *testing.T) {
-	home := t.TempDir()
-	writeSkill(t, home, ".deepzora/skills/dig.md", "---\ndescription: dig\nrunAs: subagent\n---\nbody")
+func TestSkillSubagentResolvesProfile(t *testing.T) {
+	tests := []struct {
+		name string
+		make func(*Store) tool.Tool
+	}{
+		{"read_only_skill", func(s *Store) tool.Tool { return NewReadOnlySkillTool(s, nil) }},
+		{"run_skill", func(s *Store) tool.Tool { return NewRunSkillTool(s, nil) }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			writeSkill(t, home, ".deepzora/skills/deep.md", "---\ndescription: deep\nrunAs: subagent\nmodel: deepseek-pro\neffort: max\n---\nbody")
+			tl := tt.make(New(Options{HomeDir: home, DisableBuiltins: true}))
+
+			pr, ok := tl.(interface {
+				ResolveProfile(json.RawMessage) *event.Profile
+			})
+			if !ok {
+				t.Fatalf("%s should expose ResolveProfile", tt.name)
+			}
+			got := pr.ResolveProfile(json.RawMessage(`{"name":"deep","arguments":"x"}`))
+			if got == nil || got.Model != "deepseek-pro" || got.Effort != "max" {
+				t.Fatalf("profile = %+v, want deepseek-pro/max", got)
+			}
+		})
+	}
+}
+
+func TestSkillSubagentRequiresArgs(t *testing.T) {
 	runner := func(_ context.Context, _ Skill, _ string, _ SubagentRunOptions) (string, error) {
 		return "x", nil
 	}
-	tl := NewReadOnlySkillTool(New(Options{HomeDir: home, DisableBuiltins: true}), runner)
-	if _, err := tl.Execute(context.Background(), json.RawMessage(`{"name":"dig"}`)); err == nil {
-		t.Error("read_only_skill subagent should require arguments")
+	tests := []struct {
+		name string
+		make func(*Store, SubagentRunner) tool.Tool
+	}{
+		{"read_only_skill", func(s *Store, r SubagentRunner) tool.Tool { return NewReadOnlySkillTool(s, r) }},
+		{"run_skill", func(s *Store, r SubagentRunner) tool.Tool { return NewRunSkillTool(s, r) }},
 	}
-}
-
-func TestReadOnlySkillSubagentResolvesProfile(t *testing.T) {
-	home := t.TempDir()
-	writeSkill(t, home, ".deepzora/skills/deep.md", "---\ndescription: deep\nrunAs: subagent\nmodel: deepseek-pro\neffort: max\n---\nbody")
-	tl := NewReadOnlySkillTool(New(Options{HomeDir: home, DisableBuiltins: true}), nil)
-
-	pr, ok := tl.(interface {
-		ResolveProfile(json.RawMessage) *event.Profile
-	})
-	if !ok {
-		t.Fatal("read_only_skill should expose ResolveProfile")
-	}
-	got := pr.ResolveProfile(json.RawMessage(`{"name":"deep","arguments":"x"}`))
-	if got == nil || got.Model != "deepseek-pro" || got.Effort != "max" {
-		t.Fatalf("profile = %+v, want deepseek-pro/max", got)
-	}
-}
-
-func TestRunSkillSubagentResolvesProfile(t *testing.T) {
-	home := t.TempDir()
-	writeSkill(t, home, ".deepzora/skills/deep.md", "---\ndescription: deep\nrunAs: subagent\nmodel: deepseek-pro\neffort: max\n---\nbody")
-	tl := NewRunSkillTool(New(Options{HomeDir: home, DisableBuiltins: true}), nil)
-
-	pr, ok := tl.(interface {
-		ResolveProfile(json.RawMessage) *event.Profile
-	})
-	if !ok {
-		t.Fatal("run_skill should expose ResolveProfile")
-	}
-	got := pr.ResolveProfile(json.RawMessage(`{"name":"deep","arguments":"x"}`))
-	if got == nil || got.Model != "deepseek-pro" || got.Effort != "max" {
-		t.Fatalf("profile = %+v, want deepseek-pro/max", got)
-	}
-}
-
-func TestRunSkillSubagentRequiresArgs(t *testing.T) {
-	home := t.TempDir()
-	writeSkill(t, home, ".deepzora/skills/dig.md", "---\ndescription: dig\nrunAs: subagent\n---\nbody")
-	runner := func(_ context.Context, _ Skill, _ string, _ SubagentRunOptions) (string, error) {
-		return "x", nil
-	}
-	tl := NewRunSkillTool(New(Options{HomeDir: home, DisableBuiltins: true}), runner)
-	if _, err := tl.Execute(context.Background(), json.RawMessage(`{"name":"dig"}`)); err == nil {
-		t.Error("subagent skill should require arguments")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			writeSkill(t, home, ".deepzora/skills/dig.md", "---\ndescription: dig\nrunAs: subagent\n---\nbody")
+			tl := tt.make(New(Options{HomeDir: home, DisableBuiltins: true}), runner)
+			if _, err := tl.Execute(context.Background(), json.RawMessage(`{"name":"dig"}`)); err == nil {
+				t.Errorf("%s subagent should require arguments", tt.name)
+			}
+		})
 	}
 }
 

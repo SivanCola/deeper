@@ -11,6 +11,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/sandbox"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 	"deepzora/internal/tool/builtin"
 )
@@ -143,7 +144,7 @@ func TestTaskExplicitWritePathsCannotBypassBoundaryThroughCapabilityProxy(t *tes
 func TestParentWriteReservationBlocksOverlappingSubagentAcquire(t *testing.T) {
 	root := t.TempDir()
 	sched := NewSubagentScheduler(4, 2)
-	claim, err := parentWriteReservation(root, "write_file", mustJSON(t, map[string]string{
+	claim, err := parentWriteReservation(root, "write_file", testutil.MustJSON(t, map[string]string{
 		"path":    filepath.Join(root, "a.md"),
 		"content": "x",
 	}))
@@ -185,7 +186,7 @@ func TestParentWriteReservationClosesTOCTOU(t *testing.T) {
 	root := t.TempDir()
 	sched := NewSubagentScheduler(4, 2)
 	path := filepath.Join(root, "race.md")
-	args := mustJSON(t, map[string]string{"path": path, "content": "parent"})
+	args := testutil.MustJSON(t, map[string]string{"path": path, "content": "parent"})
 
 	parentStarted := make(chan struct{})
 	releaseParent := make(chan struct{})
@@ -252,7 +253,7 @@ func TestAgentReservesParentWriteBeforePreToolUse(t *testing.T) {
 	out := a.executeOne(context.Background(), &a.turn, provider.ToolCall{
 		ID:        "write-1",
 		Name:      "write_file",
-		Arguments: string(mustJSON(t, map[string]string{"path": "hook-race.md", "content": "parent"})),
+		Arguments: string(testutil.MustJSON(t, map[string]string{"path": "hook-race.md", "content": "parent"})),
 	})
 	if out.errMsg != "" {
 		t.Fatalf("executeOne failed: %+v", out)
@@ -316,7 +317,7 @@ func TestAgentSubagentRealizeOnPathBoundWrite(t *testing.T) {
 	out := a.executeOne(WithSubagentClaimID(context.Background(), id1), &a.turn, provider.ToolCall{
 		ID:        "write-1",
 		Name:      "write_file",
-		Arguments: string(mustJSON(t, map[string]string{"path": filepath.Join(root, "src", "a.go"), "content": "one"})),
+		Arguments: string(testutil.MustJSON(t, map[string]string{"path": filepath.Join(root, "src", "a.go"), "content": "one"})),
 	})
 	if out.blocked || out.errMsg != "" {
 		t.Fatalf("first write: %+v", out)
@@ -324,7 +325,7 @@ func TestAgentSubagentRealizeOnPathBoundWrite(t *testing.T) {
 	out = a.executeOne(WithSubagentClaimID(context.Background(), id2), &a.turn, provider.ToolCall{
 		ID:        "write-2",
 		Name:      "write_file",
-		Arguments: string(mustJSON(t, map[string]string{"path": filepath.Join(root, "src", "a.go"), "content": "two"})),
+		Arguments: string(testutil.MustJSON(t, map[string]string{"path": filepath.Join(root, "src", "a.go"), "content": "two"})),
 	})
 	if !out.blocked {
 		t.Fatalf("second write of the same file must be blocked, got %+v", out)
@@ -336,7 +337,7 @@ func TestAgentReserveParentWriteSkipsSubagentDepth(t *testing.T) {
 	sched := NewSubagentScheduler(4, 2)
 	a := &Agent{agentConfig: agentConfig{writeWorkspaceRoot: root, subagentDepth: 1}, svc: agentServices{writeScheduler: sched}}
 	inner := &recordingWriter{name: "write_file"}
-	release, err := a.reserveParentWrite(inner, mustJSON(t, map[string]string{
+	release, err := a.reserveParentWrite(inner, testutil.MustJSON(t, map[string]string{
 		"path": filepath.Join(root, "a.md"), "content": "x",
 	}), false)
 	if err != nil {
@@ -354,7 +355,7 @@ func TestAgentReserveParentWriteHoldsClaim(t *testing.T) {
 	sched := NewSubagentScheduler(4, 2)
 	a := &Agent{agentConfig: agentConfig{writeWorkspaceRoot: root, subagentDepth: 0}, svc: agentServices{writeScheduler: sched}}
 	inner := &recordingWriter{name: "write_file"}
-	release, err := a.reserveParentWrite(inner, mustJSON(t, map[string]string{
+	release, err := a.reserveParentWrite(inner, testutil.MustJSON(t, map[string]string{
 		"path": filepath.Join(root, "a.md"), "content": "x",
 	}), false)
 	if err != nil {
@@ -376,15 +377,6 @@ func mustGet(t *testing.T, reg *tool.Registry, name string) tool.Tool {
 		t.Fatalf("missing %s", name)
 	}
 	return tl
-}
-
-func mustJSON(t *testing.T, v any) json.RawMessage {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
 }
 
 type recordingWriter struct {

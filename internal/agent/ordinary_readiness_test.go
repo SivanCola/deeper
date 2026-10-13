@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -14,7 +15,7 @@ func TestTargetedTurnReturnsIncompleteReceiptInsteadOfReadinessRecovery(t *testi
 	reg.Add(fakeTool{name: "bash", readOnly: false})
 	prov := &scriptedProvider{name: "p", turns: [][]provider.Chunk{
 		{
-			toolCallChunk("c1", "write_file", `{"path":"changed.go","content":"package main"}`),
+			testutil.ToolCallChunk("c1", "write_file", `{"path":"changed.go","content":"package main"}`),
 			{Type: provider.ChunkDone},
 		},
 		{{Type: provider.ChunkText, Text: "changed, verification not run"}, {Type: provider.ChunkDone}},

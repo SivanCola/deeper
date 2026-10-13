@@ -9,6 +9,7 @@ import (
 
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
+	"deepzora/internal/testutil"
 	"deepzora/internal/tool"
 )
 
@@ -54,7 +55,7 @@ func TestToolCheckpointFailurePreventsToolBody(t *testing.T) {
 	registry := tool.NewRegistry()
 	registry.Add(target)
 	providerStub := &scriptedProvider{name: "model", turns: [][]provider.Chunk{{
-		toolCallChunk("call-1", target.Name(), `{}`),
+		testutil.ToolCallChunk("call-1", target.Name(), `{}`),
 		{Type: provider.ChunkDone},
 	}, {
 		{Type: provider.ChunkText, Text: "tool did not run"},
