@@ -87,6 +87,13 @@ func flatHash(ctx context.Context, root string, maxDepth int) ([sha256.Size]byte
 	return sum, count, true
 }
 
+// watchdogWait bounds every wait in this package's tests. Helper registration,
+// restart, and degradation all depend on spawning a process and on the runner's
+// scheduling, so the bound is a liveness watchdog rather than a correctness
+// deadline: Windows CI has timed out at 5s waiting for a degraded root while the
+// helper was in fact restarting correctly.
+const watchdogWait = 60 * time.Second
+
 func TestSharedSubscriptionsCoalesceEvents(t *testing.T) {
 	dir := t.TempDir()
 	svc := NewService(Options{Stderr: io.Discard})
@@ -99,7 +106,7 @@ func TestSharedSubscriptionsCoalesceEvents(t *testing.T) {
 
 	// Helper registration is bounded rather than unconditionally blocking, so
 	// keep this assertion tolerant of either backend.
-	testutil.WaitFor(t, "physical watch registration", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "physical watch registration", watchdogWait, func() bool {
 		return svc.Diagnostics().PhysicalWatches == 1
 	})
 	diag := svc.Diagnostics()
@@ -113,7 +120,7 @@ func TestSharedSubscriptionsCoalesceEvents(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: x\n---\nbody"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	testutil.WaitFor(t, "coalesced notifications", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "coalesced notifications", watchdogWait, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
 		return hits["one"] >= 1 && hits["two"] >= 1
@@ -139,7 +146,7 @@ func TestSharedSubscriptionsCoalesceEvents(t *testing.T) {
 		t.Fatalf("after release subscriptions = %d, want 1", diag.LogicalSubscriptions)
 	}
 	sub2.Release()
-	testutil.WaitFor(t, "physical watch teardown", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "physical watch teardown", watchdogWait, func() bool {
 		d := svc.Diagnostics()
 		return d.LogicalSubscriptions == 0 && d.PhysicalWatches == 0
 	})
@@ -161,7 +168,7 @@ func TestScopeSkippedBodyChangesDoNotNotify(t *testing.T) {
 	svc.Subscribe(dir, 3, countingScope, flatHash, func(string) { mu.Lock(); hits++; mu.Unlock() })
 	// Helper registration is bounded rather than unconditionally blocking, so
 	// the count settles shortly after Subscribe returns on that backend.
-	testutil.WaitFor(t, "physical watch registration", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "physical watch registration", watchdogWait, func() bool {
 		return svc.Diagnostics().PhysicalWatches == 1
 	})
 
@@ -188,13 +195,13 @@ func TestScanFallbackNotifiesOnHashDiff(t *testing.T) {
 	svc.Subscribe(dir, 2, countingScope, flatHash, func(string) { mu.Lock(); hits++; mu.Unlock() })
 
 	// First pass runs after the shortest backoff and establishes the baseline.
-	testutil.WaitFor(t, "degraded root diagnostics", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "degraded root diagnostics", watchdogWait, func() bool {
 		return svc.Diagnostics().DegradedRoots == 1
 	})
 	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("changed"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	testutil.WaitFor(t, "scan fallback notification", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "scan fallback notification", watchdogWait, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
 		return hits >= 1

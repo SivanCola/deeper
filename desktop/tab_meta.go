@@ -45,7 +45,6 @@ type TabMeta struct {
 	Running              bool                         `json:"running"`
 	TurnStartedAt        int64                        `json:"turnStartedAt,omitempty"`
 	PendingPrompt        bool                         `json:"pendingPrompt,omitempty"`
-	RemoteControlled     bool                         `json:"remoteControlled,omitempty"`
 	BackgroundJobs       int                          `json:"backgroundJobs,omitempty"`
 	CancelRequested      bool                         `json:"cancelRequested,omitempty"`
 	Cancellable          bool                         `json:"cancellable"`

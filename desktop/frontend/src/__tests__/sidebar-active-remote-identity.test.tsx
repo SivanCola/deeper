@@ -65,7 +65,7 @@ try {
     topics: {} as Input["topics"], commands: {} as Input["commands"],
     projectTree: {
       activeTab: remoteTab, activeRemote: first,
-      imTopicSources: {}, refreshSignal: 0, searchExpanded: false, searchFocusSignal: 0,
+      refreshSignal: 0, searchExpanded: false, searchFocusSignal: 0,
       showShortcutBadges: false, shortcutPlatform: undefined, onVisibleTopicsChange: () => {},
     },
   });

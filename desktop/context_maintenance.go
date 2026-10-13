@@ -26,14 +26,12 @@ type ContextInfo struct {
 	ContextBudget       *ContextBudgetInfo          `json:"contextBudget,omitempty"`
 }
 
-// ContextMaintenanceInfo is the bridge-safe current-view snapshot. Optional
-// fields preserve compatibility with older desktop/front-end combinations.
+// ContextMaintenanceInfo is the bridge-safe current-view snapshot.
 type ContextMaintenanceInfo struct {
 	CanonicalTokens   int                            `json:"canonicalTokens,omitempty"`
 	ProjectedTokens   int                            `json:"projectedTokens,omitempty"`
 	SummaryTokens     int                            `json:"summaryTokens,omitempty"`
 	LastSavedTokens   int                            `json:"lastSavedTokens,omitempty"`
-	FoldTrigger       int                            `json:"foldTrigger,omitempty"` // alias of TriggerTokens
 	TriggerTokens     int                            `json:"triggerTokens,omitempty"`
 	CheckpointState   string                         `json:"checkpointState,omitempty"` // none|restored|applied
 	HardInputCeiling  int                            `json:"hardInputCeiling,omitempty"`
@@ -95,8 +93,7 @@ func contextMaintenanceInfo(snapshot agent.ContextMaintenanceSnapshot) *ContextM
 	info := &ContextMaintenanceInfo{
 		CanonicalTokens: snapshot.CanonicalTokens, ProjectedTokens: snapshot.ProjectedTokens,
 		SummaryTokens: snapshot.SummaryTokens, LastSavedTokens: snapshot.LastSavedTokens,
-		// Snip/Force remain zero for one-version compatibility with older frontends.
-		FoldTrigger: snapshot.TriggerTokens, TriggerTokens: snapshot.TriggerTokens,
+		TriggerTokens:   snapshot.TriggerTokens,
 		CheckpointState: snapshot.CheckpointState, HardInputCeiling: snapshot.HardInputCeiling,
 		Headroom: snapshot.Headroom, ProjectionVersion: snapshot.ProjectionVersion,
 		Blocked: snapshot.Blocked,

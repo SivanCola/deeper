@@ -326,26 +326,25 @@ func loadMachineIdentityKey() ([]byte, error) {
 	if root == "" {
 		return nil, fmt.Errorf("machine identity: Deepzora state directory is unavailable")
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return loadMachineIdentityKeyAt(ctx, root)
+}
+
+func loadMachineIdentityKeyAt(ctx context.Context, root string) ([]byte, error) {
 	path := filepath.Join(root, machineIdentityKeyFile)
-	key, err := readMachineIdentityKey(path)
-	if err == nil {
-		return key, nil
-	}
-	if !os.IsNotExist(err) {
-		return nil, err
-	}
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return nil, fmt.Errorf("machine identity: create state directory: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Readers must join publication too: Windows can reject an unlocked read
+	// while the writer or its filesystem filter still holds the destination.
 	unlock, err := filelock.Acquire(ctx, path+".lock")
 	if err != nil {
 		return nil, fmt.Errorf("machine identity: initialize key: %w", err)
 	}
 	defer unlock()
 
-	key, err = readMachineIdentityKey(path)
+	key, err := readMachineIdentityKey(path)
 	if err == nil {
 		return key, nil
 	}

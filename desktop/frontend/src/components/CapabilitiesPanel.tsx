@@ -899,7 +899,7 @@ function ServerRow({
       : s.status === "deferred"
         ? t("caps.deferred")
       : s.status === "disabled"
-        ? s.configured && !s.autoStart
+        ? s.configured && !s.enabled
           ? t("caps.disabledAutoStart")
           : t("caps.disabled")
         : t("caps.counts", { tools: s.tools, prompts: s.prompts, resources: s.resources });
@@ -1265,20 +1265,7 @@ function parseKeyValueText(text: string): Record<string, string> {
 }
 
 function serverStatusLabel(s: ServerView, t: ReturnType<typeof useT>): string {
-  // Prefer product availability so idle enabled servers are not shown as disconnected.
-  const availability = s.availability
-    || (s.enabled === false || s.status === "disabled"
-      ? "disabled"
-      : s.status === "connected"
-        ? "connected"
-        : s.status === "initializing"
-          ? "starting"
-          : s.status === "failed"
-            ? (s.authStatus === "required" ? "auth_required" : "start_failed")
-            : s.status === "deferred"
-              ? "available_on_demand"
-              : s.status);
-  switch (availability) {
+  switch (s.availability) {
     case "connected":
       return t("caps.connected");
     case "available_on_demand":
@@ -1294,21 +1281,7 @@ function serverStatusLabel(s: ServerView, t: ReturnType<typeof useT>): string {
     case "start_failed":
       return t("caps.failed");
     default:
-      switch (s.status) {
-        case "connected":
-          return t("caps.connected");
-        case "deferred":
-          return t("caps.deferred");
-        case "initializing":
-          return t("caps.initializing");
-        case "disabled":
-          return t("caps.disabled");
-        case "failed":
-          if (s.authStatus === "required") return t("caps.authRequired");
-          return t("caps.failed");
-        default:
-          return s.status;
-      }
+      return s.availability;
   }
 }
 
@@ -2626,7 +2599,7 @@ function mcpServerEditorDraft(server?: ServerView): MCPServerEditorDraft {
 		url: server && transport !== "stdio" ? server.url || serverCommand(server) : "",
 		env: "",
 		headers: "",
-		autoStart: server?.autoStart,
+		autoStart: server?.enabled,
 		callTimeoutSeconds: server?.callTimeoutSeconds,
 		toolTimeoutSeconds: server?.toolTimeoutSeconds ? { ...server.toolTimeoutSeconds } : undefined,
 	};

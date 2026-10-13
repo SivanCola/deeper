@@ -175,7 +175,6 @@ export interface WireUsage {
   cost?: number;
   currency?: string;
   currencyCode?: string;
-  // Deprecated compatibility alias. Prefer cost + currencyCode / costQuote.
   costComplete?: boolean;
   displayComplete?: boolean;
   displayStatus?: string;
@@ -466,7 +465,6 @@ export interface WireEvent extends RecoveryEventFields {
   sessionMissTokens?: number;
   sessionCost?: number;
   sessionCurrency?: string;
-  // Deprecated compatibility alias. Prefer sessionCost + sessionCurrency.
 }
 
 export interface WireCompletionSummary {
@@ -661,17 +659,11 @@ export interface DeliveryWorktreeAvailability {
   sourceDirty?: boolean;
 }
 
-export interface DeliveryWorktreeOpenResult {
-  workspaceRoot: string;
-  worktreeRoot: string;
-  sourceRoot: string;
-	branch: string;
-	sourceDirty: boolean;
-	sourceRevision?: string;
-	taskId?: string;
-	conversationId?: string;
-	tab: TabMeta;
-}
+// Reuse the host result fields with the frontend's typed runtime/tab projection.
+export type IsolatedWorktreeOpenResult = Omit<
+  import("../generated/desktopContract.generated").IsolatedWorktreeOpenResult,
+  "tab"
+> & { tab: TabMeta };
 
 export * from "./worktreeMergeTypes";
 
@@ -742,7 +734,6 @@ export interface ContextPanelInfo {
   activeTurnStartedAt?: number;
   sessionCost?: number;
   sessionCurrency?: string;
-  // Deprecated compatibility alias. Prefer sessionCost + sessionCurrency.
   sessionCostComplete?: boolean;
   sessionCostEstimated?: boolean;
   sessionBillingMode?: string;
@@ -1181,26 +1172,20 @@ export interface ServerView {
   name: string;
   transport: string;
   status: "connected" | "deferred" | "failed" | "initializing" | "disabled";
-  /** @deprecated derived from enabled */
-  startIntent?: "off" | "automatic" | string;
-  runtimeState?: "idle" | "connecting" | "ready" | "issue" | string;
+  runtimeState: "idle" | "connecting" | "ready" | "issue";
   protocolVersion?: string;
   sessionState?: "connecting" | "listening" | "ready" | "reconnecting" | "failed" | "closed" | string;
   reconnectAttempts?: number;
   errorKind?: "auth_required" | "session_missing" | "stream_closed" | "timeout" | "protocol" | "transport" | string;
   /** Product availability: available_on_demand | starting | connected | auth_required | project_auth_changed | start_failed | disabled */
-  availability?: string;
-  enabled?: boolean;
+  availability: string;
+  enabled: boolean;
   installed?: boolean;
   action?: "none" | "authenticate" | "authorize" | "retry" | string;
   source?: "project" | "user" | "plugin" | "builtin" | string;
   configSource?: string;
   builtIn?: boolean;
   configured?: boolean;
-  /** @deprecated same as enabled */
-  autoStart: boolean;
-  /** @deprecated ignored by runtime */
-  tier?: "background" | "eager" | string;
   command?: string;
   args?: string[];
   url?: string;
@@ -1561,7 +1546,7 @@ export interface MemoryView {
 }
 
 // SettingsTab is the top-level navigation item in the Settings Centre modal.
-export type SettingsTab = "general" | "models" | "model-stats" | "providers" | "bots" | "mcp" | "remote" | "skills" | "subagents" | "plugins" | "memory" | "hooks" | "diagnostics" | "shortcuts" | "permissions" | "sandbox" | "network" | "browser" | "appearance" | "storage" | "updates";
+export type SettingsTab = "general" | "models" | "model-stats" | "providers" | "mcp" | "remote" | "skills" | "subagents" | "plugins" | "memory" | "hooks" | "diagnostics" | "shortcuts" | "permissions" | "sandbox" | "network" | "browser" | "appearance" | "storage" | "updates";
 
 export type { RuntimeDoctorReport } from "./runtimeDoctorTypes";
 
@@ -1762,7 +1747,7 @@ export interface BalanceInfo {
 // filter for the usage statistics panel. Range is "7" | "14" | "30" | "90" |
 // "custom"; custom requires from/to as "2006-01-02" (inclusive, local dates).
 // Source "" or "all" aggregates every entry point; "desktop" | "cli" | "serve"
-// | "bot" | "remote" filters to that source's records.
+// | "remote" filters to that source's records.
 export interface UsageStatsRequest {
   range: string;
   from?: string;
@@ -1931,180 +1916,6 @@ export interface AgentView {
   compactRatioOverridden?: boolean;
 }
 
-export interface BotAccessView {
-  enabled: boolean;
-  allowAll: boolean;
-  pairingEnabled: boolean;
-  users: string[];
-  groups: string[];
-  approvers: string[];
-  admins: string[];
-}
-
-export interface BotSelfUserIDsView {
-  qq: string[];
-  feishu: string[];
-  weixin: string[];
-  dingtalk: string[];
-}
-
-export interface BotPairingView {
-  enabled: boolean;
-  requestTtlMinutes: number;
-  maxPendingPerPlatform: number;
-}
-
-export interface BotControlView {
-  enabled: boolean;
-  addr: string;
-  tokenEnv: string;
-}
-
-export interface BotRouteView {
-  connectionId: string;
-  platform: string;
-  chatType: string;
-  chatId: string;
-  userId: string;
-  threadId: string;
-  model: string;
-  toolApprovalMode: ToolApprovalMode | "" | string;
-  workspaceRoot: string;
-}
-
-export interface QQBotView {
-  enabled: boolean;
-  appId: string;
-  appSecretEnv: string;
-  secretSet: boolean;
-  sandbox: boolean;
-  model: string;
-  toolApprovalMode: ToolApprovalMode | "" | string;
-  workspaceRoot: string;
-  access: BotAccessView;
-}
-
-export interface FeishuBotView {
-  enabled: boolean;
-  domain: string;
-  appId: string;
-  appSecretEnv: string;
-  secretSet: boolean;
-  verificationToken: string;
-  mode: string;
-  webhookPort: number;
-  requireMention: boolean;
-}
-
-export interface WeixinBotView {
-  enabled: boolean;
-  accountId: string;
-  tokenEnv: string;
-  tokenSet: boolean;
-  apiBase: string;
-}
-
-export interface DingtalkBotView {
-  enabled: boolean;
-  clientId: string;
-  clientSecretEnv: string;
-  secretSet: boolean;
-  botName: string;
-  requireMention: boolean;
-  model: string;
-  toolApprovalMode: string;
-  workspaceRoot: string;
-  access: BotAccessView;
-}
-
-export interface BotConnectionCredentialView {
-  appId: string;
-  appSecretEnv: string;
-  accountId: string;
-  tokenEnv: string;
-  secretSet: boolean;
-}
-
-export interface BotConnectionSessionMappingView {
-  remoteId: string;
-  sessionId: string;
-  sessionSource: string;
-  chatType: string;
-  userId: string;
-  threadId: string;
-  scope: "global" | "project" | string;
-  workspaceRoot: string;
-  updatedAt: string;
-}
-
-export interface BotConnectionView {
-  id: string;
-  provider: "qq" | "feishu" | "weixin" | string;
-  domain: "qq" | "feishu" | "lark" | "weixin" | string;
-  label: string;
-  enabled: boolean;
-  status: "disconnected" | "pending" | "connected" | "error" | string;
-  model: string;
-  toolApprovalMode: ToolApprovalMode | "" | string;
-  workspaceRoot: string;
-  access: BotAccessView;
-  credential: BotConnectionCredentialView;
-  sessionMappings: BotConnectionSessionMappingView[];
-  lastError: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BotSettingsView {
-  enabled: boolean;
-  model: string;
-  toolApprovalMode: ToolApprovalMode | "" | string;
-  maxSteps: number;
-  debounceMs: number;
-  queueMode: string;
-  queueCap: number;
-  ignoreSelfMessages: boolean;
-  selfUserIds: BotSelfUserIDsView;
-  control: BotControlView;
-  pairing: BotPairingView;
-  routes: BotRouteView[];
-  qq: QQBotView;
-  feishu: FeishuBotView;
-  weixin: WeixinBotView;
-  dingtalk: DingtalkBotView;
-  connections: BotConnectionView[];
-}
-
-export interface BotRuntimeStatusView {
-  running: boolean;
-  status: string;
-  message: string;
-  connections: number;
-  startedAt: string;
-  platforms: Record<string, string>;
-}
-
-export interface BotInstallStartResult {
-  ok: boolean;
-  provider: string;
-  domain: string;
-  installId: string;
-  url: string;
-  deviceCode: string;
-  userCode: string;
-  interval: number;
-  expireIn: number;
-  message: string;
-}
-
-export interface BotInstallPollResult {
-  done: boolean;
-  connection: BotConnectionView;
-  status: string;
-  message: string;
-  error: string;
-}
-
 export interface HookConfigView {
   event: string;
   match?: string;
@@ -2123,23 +1934,9 @@ export interface HooksSettingsView {
   events: string[];
 }
 
-export interface BotConnectionDiagnostic {
-  id: string;
-  label: string;
-  status: string;
-  message: string;
-  messageId: string;
-  phase: string;
-  code: string;
-  reportKind: string;
-  reportDetail: string;
-  occurredAt: string;
-}
-
 export type { ModelSettingsChange, ModelSettingsResult } from "./modelSettingsTypes";
 
 export interface DesktopStartupSettingsView {
-  bot: BotSettingsView;
   desktopLanguage: string; // "" | "en" | "zh"; empty = auto
   desktopTheme: string; // "auto" | "dark" | "light"
   desktopThemeStyle: string;

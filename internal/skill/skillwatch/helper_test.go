@@ -68,13 +68,13 @@ func TestHelperProtocolEvents(t *testing.T) {
 
 	// Subscribe waits (bounded) for the helper's registered confirmation; a
 	// write after that must arrive as an event and coalesce into one notify.
-	testutil.WaitFor(t, "helper registration", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "helper registration", watchdogWait, func() bool {
 		return svc.helper != nil && svc.helper.physicalWatches() > 0
 	})
 	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	testutil.WaitFor(t, "helper event notification", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "helper event notification", watchdogWait, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
 		return hits >= 1
@@ -89,7 +89,7 @@ func TestHelperRestartBudgetDegradesThenScans(t *testing.T) {
 	var hits int
 	var mu sync.Mutex
 	svc.Subscribe(dir, 2, countingScope, flatHash, func(string) { mu.Lock(); hits++; mu.Unlock() })
-	testutil.WaitFor(t, "initial registration", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "initial registration", watchdogWait, func() bool {
 		return svc.helper.physicalWatches() > 0
 	})
 
@@ -106,7 +106,7 @@ func TestHelperRestartBudgetDegradesThenScans(t *testing.T) {
 			t.Fatal(err)
 		}
 		if i < 2 {
-			testutil.WaitFor(t, "restart to re-register", 5*time.Second, func() bool {
+			testutil.WaitFor(t, "restart to re-register", watchdogWait, func() bool {
 				// The restart counter advances before spawn/replay. Join the
 				// replacement so the next kill cannot hit the already dead process.
 				svc.helper.mu.Lock()
@@ -116,7 +116,7 @@ func TestHelperRestartBudgetDegradesThenScans(t *testing.T) {
 			})
 		}
 	}
-	testutil.WaitFor(t, "degraded root after restart budget", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "degraded root after restart budget", watchdogWait, func() bool {
 		return svc.Diagnostics().DegradedRoots == 1
 	})
 
@@ -124,7 +124,7 @@ func TestHelperRestartBudgetDegradesThenScans(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("after degradation"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	testutil.WaitFor(t, "scan fallback notification after degradation", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "scan fallback notification after degradation", watchdogWait, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
 		return hits >= 1
@@ -151,7 +151,7 @@ func TestSubscribeOnDegradedHelperStillServesScans(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "note.md"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	testutil.WaitFor(t, "degraded scan fallback", 5*time.Second, func() bool {
+	testutil.WaitFor(t, "degraded scan fallback", watchdogWait, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
 		return hits >= 1

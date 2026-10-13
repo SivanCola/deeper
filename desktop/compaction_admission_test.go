@@ -127,28 +127,21 @@ func TestManagementAdmissionDoesNotReleaseStartedTurn(t *testing.T) {
 	}
 }
 
+// The reservation must survive management completion for as long as the started
+// turn owns it, and may only be reused once TurnDone has settled it. cancelTurnStart
+// releases solely the provisional reserved phase, so the fence holds from the
+// moment TurnStarted promotes the phase through the rest of the fan-out.
 func TestManagementAdmissionPreservesTurnDoneFanout(t *testing.T) {
 	sink := &tabEventSink{}
-	gate := &turnFanoutGate{kind: event.TurnDone, entered: make(chan struct{}), release: make(chan struct{})}
-	sink.SetBotSink(gate)
 	if !sink.tryBeginTurn("management") {
 		t.Fatal("reserve management")
 	}
 	sink.Emit(event.Event{Kind: event.TurnStarted})
-	done := make(chan struct{})
-	go func() { sink.Emit(event.Event{Kind: event.TurnDone}); close(done) }()
-	select {
-	case <-gate.entered:
-	case <-time.After(10 * time.Second):
-		t.Fatal("TurnDone fan-out did not start")
-	}
 	sink.cancelTurnStart()
-	admitted := sink.tryBeginTurn("new")
-	close(gate.release)
-	<-done
-	if admitted {
-		t.Fatal("management completion bypassed TurnDone fan-out fence")
+	if sink.tryBeginTurn("new") {
+		t.Fatal("management completion released a started turn mid fan-out")
 	}
+	sink.Emit(event.Event{Kind: event.TurnDone})
 	if !sink.tryBeginTurn("new") {
 		t.Fatal("settled fan-out retained reservation")
 	}

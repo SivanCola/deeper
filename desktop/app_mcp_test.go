@@ -401,7 +401,7 @@ url = "https://mcp.dida365.com"
 	view := app.Capabilities()
 	for _, s := range view.Servers {
 		if s.Name == "dida" {
-			if s.Status != "deferred" || s.StartIntent != "automatic" || s.RuntimeState != "idle" || s.AuthStatus != "possible" || s.AuthURL != "https://mcp.dida365.com" {
+			if s.Status != "deferred" || !s.Enabled || s.RuntimeState != "idle" || s.AuthStatus != "possible" || s.AuthURL != "https://mcp.dida365.com" {
 				t.Fatalf("dida auth diagnosis = %+v", s)
 			}
 			return

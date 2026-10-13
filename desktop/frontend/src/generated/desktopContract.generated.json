@@ -1671,25 +1671,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/bot_runtime_app.go",
-      "name": "BotRuntimeStatus",
-      "owner": "App.BotRuntimeStatus",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.BotRuntimeStatusView"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.BotRuntimeStatus"
-      },
-      "sources": [
-        "desktop/bot_runtime_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
       "name": "Cancel",
       "owner": "App.Cancel",
@@ -1925,21 +1906,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/shell_support.go",
-      "name": "CancelShellInstall",
-      "owner": "App.CancelShellInstall",
-      "params": [],
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.CancelShellInstall"
-      },
-      "sources": [
-        "desktop/shell_support.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
       "name": "CancelTab",
       "owner": "App.CancelTab",
@@ -1994,44 +1960,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "CancelTask",
-      "owner": "App.CancelTask",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "taskmonitor.ControlResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "taskID",
-          "expectedVersion",
-          "reason",
-          "idemKey"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CancelTask"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/task_catalog.go",
       "name": "CancelTaskByKey",
       "owner": "App.CancelTaskByKey",
@@ -2055,48 +1983,6 @@
       },
       "sources": [
         "desktop/task_catalog.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "CancelTaskForTab",
-      "owner": "App.CancelTaskForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "taskmonitor.ControlResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "taskID",
-          "expectedVersion",
-          "reason",
-          "idemKey"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.CancelTaskForTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -2363,28 +2249,6 @@
       },
       "sources": [
         "desktop/recovery_lineage.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "ClearBotSecret",
-      "owner": "App.ClearBotSecret",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "envName"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ClearBotSecret"
-      },
-      "sources": [
-        "desktop/settings_app.go"
       ]
     },
     {
@@ -3425,24 +3289,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "CurrentTaskSessionID",
-      "owner": "App.CurrentTaskSessionID",
-      "params": [],
-      "result": {
-        "kind": "string"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.CurrentTaskSessionID"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/inbox_app.go",
       "name": "DeleteInboxItem",
       "owner": "App.DeleteInboxItem",
@@ -3663,32 +3509,6 @@
       },
       "sources": [
         "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/bot_connection_app.go",
-      "name": "DiagnoseBotConnection",
-      "owner": "App.DiagnoseBotConnection",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.BotConnectionDiagnostic"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.DiagnoseBotConnection"
-      },
-      "sources": [
-        "desktop/bot_connection_app.go"
       ]
     },
     {
@@ -5257,35 +5077,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "GetTask",
-      "owner": "App.GetTask",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskSnapshot"
-        },
-        "kind": "nullable"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "taskID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.GetTask"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/task_catalog.go",
       "name": "GetTaskCatalogStatus",
       "owner": "App.GetTaskCatalogStatus",
@@ -6063,31 +5854,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "InboxHasItems",
-      "owner": "App.InboxHasItems",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "boolean"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.InboxHasItems"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/inbox_queue.go",
       "name": "InboxQueueForTarget",
       "owner": "App.InboxQueueForTarget",
@@ -6735,35 +6501,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/session_composer_conflicts.go",
-      "name": "ListSessionComposerConflicts",
-      "owner": "App.ListSessionComposerConflicts",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "session.SessionRef"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "string"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "ref"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListSessionComposerConflicts"
-      },
-      "sources": [
-        "desktop/session_composer_conflicts.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/session_history_listing.go",
       "name": "ListSessions",
       "owner": "App.ListSessions",
@@ -6862,43 +6599,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ListTaskEventsForTab",
-      "owner": "App.ListTaskEventsForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskEvent"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "taskID",
-          "afterSequence"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListTaskEventsForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/task_catalog.go",
       "name": "ListTaskPage",
       "owner": "App.ListTaskPage",
@@ -6921,87 +6621,6 @@
       },
       "sources": [
         "desktop/task_catalog.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ListTasks",
-      "owner": "App.ListTasks",
-      "params": [],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskSnapshot"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ListTasks"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ListTasksForSession",
-      "owner": "App.ListTasksForSession",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskSnapshot"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "sessionID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListTasksForSession"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ListTasksForTab",
-      "owner": "App.ListTasksForTab",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "taskmonitor.TaskSnapshot"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ListTasksForTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -8896,32 +8515,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/bot_connection_app.go",
-      "name": "PollBotConnectionInstall",
-      "owner": "App.PollBotConnectionInstall",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.BotInstallPollResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "installID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.PollBotConnectionInstall"
-      },
-      "sources": [
-        "desktop/bot_connection_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/delivery_worktree.go",
       "name": "PrepareWorktreeMerge",
       "owner": "App.PrepareWorktreeMerge",
@@ -9789,32 +9382,6 @@
       },
       "sources": [
         "desktop/uiperf_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/inbox_app.go",
-      "name": "RefreshInboxItem",
-      "owner": "App.RefreshInboxItem",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "id"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RefreshInboxItem"
-      },
-      "sources": [
-        "desktop/inbox_app.go"
       ]
     },
     {
@@ -11763,44 +11330,6 @@
       },
       "sources": [
         "desktop/task_catalog.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "RequeueTaskForTab",
-      "owner": "App.RequeueTaskForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "taskmonitor.ControlResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "taskID",
-          "expectedVersion",
-          "idemKey"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RequeueTaskForTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -14920,81 +14449,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "SetBotConnectionToolApprovalMode",
-      "owner": "App.SetBotConnectionToolApprovalMode",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "connID",
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetBotConnectionToolApprovalMode"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "SetBotSecret",
-      "owner": "App.SetBotSecret",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "envName",
-          "value"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetBotSecret"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/settings_app.go",
-      "name": "SetBotSettings",
-      "owner": "App.SetBotSettings",
-      "params": [
-        {
-          "kind": "object",
-          "ref": "main.BotSettingsView"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "b"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetBotSettings"
-      },
-      "sources": [
-        "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/settings_preferences.go",
       "name": "SetCloseBehavior",
       "owner": "App.SetCloseBehavior",
@@ -15398,28 +14852,6 @@
       },
       "sources": [
         "desktop/zoom_factor.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetEffort",
-      "owner": "App.SetEffort",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "level"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetEffort"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -16902,36 +16334,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/bot_connection_app.go",
-      "name": "StartBotConnectionInstall",
-      "owner": "App.StartBotConnectionInstall",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.BotInstallStartResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "provider",
-          "domain"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.StartBotConnectionInstall"
-      },
-      "sources": [
-        "desktop/bot_connection_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/topic_activation.go",
       "name": "StartTopicActivation",
       "owner": "App.StartTopicActivation",
@@ -17273,44 +16675,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "StopTask",
-      "owner": "App.StopTask",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "taskmonitor.ControlResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "taskID",
-          "expectedVersion",
-          "reason",
-          "idemKey"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.StopTask"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/task_catalog.go",
       "name": "StopTaskByKey",
       "owner": "App.StopTaskByKey",
@@ -17334,48 +16698,6 @@
       },
       "sources": [
         "desktop/task_catalog.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "StopTaskForTab",
-      "owner": "App.StopTaskForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "taskmonitor.ControlResult"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "taskID",
-          "expectedVersion",
-          "reason",
-          "idemKey"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.StopTaskForTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -18320,56 +17642,6 @@
       },
       "sources": [
         "desktop/terminal.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/bot_connection_app.go",
-      "name": "TestBotConnection",
-      "owner": "App.TestBotConnection",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.BotConnectionDiagnostic"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id",
-          "target"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.TestBotConnection"
-      },
-      "sources": [
-        "desktop/bot_connection_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/bot_connection_app.go",
-      "name": "TestDingtalkBot",
-      "owner": "App.TestDingtalkBot",
-      "params": [],
-      "result": {
-        "kind": "object",
-        "ref": "main.BotConnectionDiagnostic"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.TestDingtalkBot"
-      },
-      "sources": [
-        "desktop/bot_connection_app.go"
       ]
     },
     {
@@ -25477,729 +24749,6 @@
         }
       ]
     },
-    "main.BotAccessView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "allowAll",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "pairingEnabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "users",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "groups",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "approvers",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "admins",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.BotConnectionCredentialView": {
-      "fields": [
-        {
-          "name": "appId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "appSecretEnv",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "accountId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "tokenEnv",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "secretSet",
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.BotConnectionDiagnostic": {
-      "fields": [
-        {
-          "name": "id",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "label",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "message",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "messageId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "phase",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "code",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "reportKind",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "reportDetail",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "occurredAt",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.BotConnectionSessionMappingView": {
-      "fields": [
-        {
-          "name": "remoteId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sessionId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sessionSource",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "chatType",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "userId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "threadId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "scope",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "updatedAt",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.BotConnectionView": {
-      "fields": [
-        {
-          "name": "id",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "provider",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "domain",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "label",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "model",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "toolApprovalMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "access",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotAccessView"
-          }
-        },
-        {
-          "name": "credential",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotConnectionCredentialView"
-          }
-        },
-        {
-          "name": "sessionMappings",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.BotConnectionSessionMappingView"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "lastError",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "createdAt",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "updatedAt",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.BotControlView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "addr",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "tokenEnv",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.BotInstallPollResult": {
-      "fields": [
-        {
-          "name": "done",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "connection",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotConnectionView"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "message",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "error",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.BotInstallStartResult": {
-      "fields": [
-        {
-          "name": "ok",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "provider",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "domain",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "installId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "url",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "deviceCode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "userCode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "interval",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "expireIn",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "message",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.BotPairingView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "requestTtlMinutes",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "maxPendingPerPlatform",
-          "type": {
-            "kind": "integer"
-          }
-        }
-      ]
-    },
-    "main.BotRouteView": {
-      "fields": [
-        {
-          "name": "connectionId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "platform",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "chatType",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "chatId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "userId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "threadId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "model",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "toolApprovalMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.BotRuntimeStatusView": {
-      "fields": [
-        {
-          "name": "running",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "status",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "message",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "connections",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "startedAt",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "platforms",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "key": {
-              "kind": "string"
-            },
-            "kind": "map"
-          }
-        }
-      ]
-    },
-    "main.BotSelfUserIDsView": {
-      "fields": [
-        {
-          "name": "qq",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "feishu",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "weixin",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "dingtalk",
-          "type": {
-            "elem": {
-              "kind": "string"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
-    "main.BotSettingsView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "model",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "toolApprovalMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "maxSteps",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "debounceMs",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "queueMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "queueCap",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "ignoreSelfMessages",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "selfUserIds",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotSelfUserIDsView"
-          }
-        },
-        {
-          "name": "control",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotControlView"
-          }
-        },
-        {
-          "name": "pairing",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotPairingView"
-          }
-        },
-        {
-          "name": "routes",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.BotRouteView"
-            },
-            "kind": "array"
-          }
-        },
-        {
-          "name": "qq",
-          "type": {
-            "kind": "object",
-            "ref": "main.QQBotView"
-          }
-        },
-        {
-          "name": "feishu",
-          "type": {
-            "kind": "object",
-            "ref": "main.FeishuBotView"
-          }
-        },
-        {
-          "name": "weixin",
-          "type": {
-            "kind": "object",
-            "ref": "main.WeixinBotView"
-          }
-        },
-        {
-          "name": "dingtalk",
-          "type": {
-            "kind": "object",
-            "ref": "main.DingtalkBotView"
-          }
-        },
-        {
-          "name": "connections",
-          "type": {
-            "elem": {
-              "kind": "object",
-              "ref": "main.BotConnectionView"
-            },
-            "kind": "array"
-          }
-        }
-      ]
-    },
     "main.CapabilitiesView": {
       "fields": [
         {
@@ -26902,13 +25451,6 @@
           }
         },
         {
-          "name": "foldTrigger",
-          "optional": true,
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "triggerTokens",
           "optional": true,
           "type": {
@@ -27344,13 +25886,6 @@
     "main.DesktopStartupSettingsView": {
       "fields": [
         {
-          "name": "bot",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotSettingsView"
-          }
-        },
-        {
           "name": "desktopLanguage",
           "type": {
             "kind": "string"
@@ -27482,71 +26017,6 @@
           "name": "maximised",
           "type": {
             "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.DingtalkBotView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "clientId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "clientSecretEnv",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "secretSet",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "botName",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "requireMention",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "model",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "toolApprovalMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "access",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotAccessView"
           }
         }
       ]
@@ -27845,64 +26315,6 @@
         {
           "name": "workspaceOpenable",
           "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        }
-      ]
-    },
-    "main.FeishuBotView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "domain",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "appId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "appSecretEnv",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "secretSet",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "verificationToken",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "mode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "webhookPort",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
-          "name": "requireMention",
           "type": {
             "kind": "boolean"
           }
@@ -28581,16 +26993,6 @@
           "optional": true,
           "type": {
             "kind": "string"
-          }
-        },
-        {
-          "name": "notifyChannels",
-          "optional": true,
-          "type": {
-            "elem": {
-              "kind": "boolean"
-            },
-            "kind": "nullable"
           }
         }
       ]
@@ -33815,65 +32217,6 @@
         }
       ]
     },
-    "main.QQBotView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "appId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "appSecretEnv",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "secretSet",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "sandbox",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "model",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "toolApprovalMode",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "workspaceRoot",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "access",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotAccessView"
-          }
-        }
-      ]
-    },
     "main.QuestionAnswer": {
       "fields": [
         {
@@ -35752,15 +34095,7 @@
           }
         },
         {
-          "name": "startIntent",
-          "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
           "name": "runtimeState",
-          "optional": true,
           "type": {
             "kind": "string"
           }
@@ -35795,7 +34130,6 @@
         },
         {
           "name": "availability",
-          "optional": true,
           "type": {
             "kind": "string"
           }
@@ -35843,12 +34177,6 @@
         {
           "name": "configured",
           "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "autoStart",
           "type": {
             "kind": "boolean"
           }
@@ -37586,13 +35914,6 @@
           }
         },
         {
-          "name": "bot",
-          "type": {
-            "kind": "object",
-            "ref": "main.BotSettingsView"
-          }
-        },
-        {
           "name": "desktopLanguage",
           "type": {
             "kind": "string"
@@ -38516,13 +36837,6 @@
         },
         {
           "name": "pendingPrompt",
-          "optional": true,
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "remoteControlled",
           "optional": true,
           "type": {
             "kind": "boolean"
@@ -40296,40 +38610,6 @@
         {
           "name": "source",
           "optional": true,
-          "type": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    "main.WeixinBotView": {
-      "fields": [
-        {
-          "name": "enabled",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "accountId",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "tokenEnv",
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "tokenSet",
-          "type": {
-            "kind": "boolean"
-          }
-        },
-        {
-          "name": "apiBase",
           "type": {
             "kind": "string"
           }

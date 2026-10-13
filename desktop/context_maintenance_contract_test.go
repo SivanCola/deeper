@@ -4,17 +4,19 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"deepzora/internal/agent"
 )
 
 func TestContextMaintenanceInfoUsesOptionalCamelCaseWailsFields(t *testing.T) {
-	b, err := json.Marshal(ContextInfo{Maintenance: &ContextMaintenanceInfo{
+	b, err := json.Marshal(ContextInfo{Maintenance: contextMaintenanceInfo(agent.ContextMaintenanceSnapshot{
 		CanonicalTokens: 800_000, ProjectedTokens: 160_000,
 		TriggerTokens: 850_000, CheckpointState: "applied",
-		LastReceipt: &ContextMaintenanceReceiptInfo{
+		LastReceipt: &agent.ContextMaintenanceReceipt{
 			OperationID: "op", Action: "summary", SavedTokens: 4096,
 		},
-		ContextBudget: &ContextBudgetInfo{WindowMode: "shared", Source: "official", WindowTokens: 1_048_576},
-	}})
+		ContextBudget: &agent.ContextBudgetSnapshot{WindowMode: "shared", Source: "official", WindowTokens: 1_048_576},
+	})})
 	if err != nil {
 		t.Fatal(err)
 	}

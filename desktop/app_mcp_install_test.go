@@ -542,7 +542,7 @@ func TestAddMCPServerPersistsConnectionConfiguration(t *testing.T) {
 	}
 
 	views := app.MCPServers()
-	if len(views) != 1 || views[0].Transport != "http" || views[0].AutoStart ||
+	if len(views) != 1 || views[0].Transport != "http" || views[0].Enabled ||
 		views[0].CallTimeoutSeconds != 45 || views[0].ToolTimeoutSeconds["wipe"] != 120 {
 		t.Fatalf("advanced MCP ServerView = %+v", views)
 	}

@@ -148,22 +148,13 @@ func providerRemovalStateFingerprint(c *config.Config, credentialsRevision strin
 		_, _ = fmt.Fprintf(h, "%d:", len(value))
 		_, _ = h.Write([]byte(value))
 	}
-	write("provider-removal-state-v3")
+	write("provider-removal-state-v4")
 	write(credentialsRevision)
 	write(c.DefaultModel)
 	write(c.Agent.PlannerModel)
 	write(c.Agent.VisionModel)
 	write(c.Agent.GuardianModel)
 	write(c.Agent.SubagentModel)
-	write(c.Bot.Model)
-	write(c.Bot.QQ.Model)
-	write(c.Bot.Dingtalk.Model)
-	for i := range c.Bot.Routes {
-		write(c.Bot.Routes[i].Model)
-	}
-	for i := range c.Bot.Connections {
-		write(c.Bot.Connections[i].Model)
-	}
 	for _, name := range c.Desktop.ProviderAccess {
 		write(name)
 	}
@@ -242,25 +233,6 @@ func retargetProviderReferences(c *config.Config, names []string, fallbackRef st
 			} else {
 				c.Agent.SubagentModels[skill] = fallbackRef
 			}
-		}
-	}
-	if providerRefMatchesAny(c, c.Bot.Model, names) {
-		c.Bot.Model = fallbackRef
-	}
-	if providerRefMatchesAny(c, c.Bot.QQ.Model, names) {
-		c.Bot.QQ.Model = fallbackRef
-	}
-	if providerRefMatchesAny(c, c.Bot.Dingtalk.Model, names) {
-		c.Bot.Dingtalk.Model = fallbackRef
-	}
-	for i := range c.Bot.Routes {
-		if providerRefMatchesAny(c, c.Bot.Routes[i].Model, names) {
-			c.Bot.Routes[i].Model = fallbackRef
-		}
-	}
-	for i := range c.Bot.Connections {
-		if providerRefMatchesAny(c, c.Bot.Connections[i].Model, names) {
-			c.Bot.Connections[i].Model = fallbackRef
 		}
 	}
 }

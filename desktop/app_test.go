@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"deepzora/internal/agent"
-	"deepzora/internal/bot"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
 	"deepzora/internal/event"
@@ -391,24 +390,6 @@ func waitForRuntimeAdmissionBarrier(t *testing.T, app *App) {
 		return
 	}
 	t.Fatal("lifecycle mutation never acquired the work-admission barrier")
-}
-
-func TestBridgeDriveReleasesRuntimeAdmissionWhenTakeoverWasReclaimed(t *testing.T) {
-	fixture := newGatedDesktopMCPLaunchFixture(t, "")
-	fixture.app.tabs["active"].sink = &tabEventSink{tabID: "active", app: fixture.app}
-	fixture.app.botBridge = &botBridgeHub{
-		takeovers:    make(map[string]bot.DesktopWatchRoute),
-		takeoverTabs: make(map[string]string),
-	}
-
-	err := fixture.app.bridgeDrive("active", "hello", bot.DesktopWatchRoute{})
-	if err == nil || !strings.Contains(err.Error(), "接管已解除") {
-		t.Fatalf("bridgeDrive error = %v, want lost-takeover error", err)
-	}
-	if !fixture.app.runtimeAdmissionMu.TryLock() {
-		t.Fatal("bridgeDrive leaked the runtime-admission read lock")
-	}
-	fixture.app.runtimeAdmissionMu.Unlock()
 }
 
 func TestCapabilitiesMarksAuthFailureRequired(t *testing.T) {

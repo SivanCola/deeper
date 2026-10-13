@@ -83,7 +83,10 @@ let browser;
 try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await page.setContent(`<!doctype html><html><head><style>${styles}</style></head><body>${fixtures}<div class="transcript__loading">muted</div></body></html>`);
+  await page.setContent(`<!doctype html><html><head><style>${styles}</style></head><body>${fixtures}<div class="transcript__loading">muted</div>
+    <div class="theme-bg"><div class="theme-bg__image"></div></div>
+    <div class="app"><div class="chat-pane"><main class="main"><div class="transcript-shell"><div class="transcript"></div></div></main></div></div>
+  </body></html>`);
 
   for (const style of themeStyles) {
     for (const mode of modes) {
@@ -196,6 +199,42 @@ try {
           Math.abs(alpha - expectedAlpha) <= 1 / 255,
           `${scene} ${selector} follows paneOpacity ${paneOpacity} (${alpha})`,
         );
+      }
+    }
+  }
+
+  for (const scene of ["home", "task"]) {
+    for (const background of ["home-only", "two-scenes", "none"]) {
+      const expectedImage = background === "none" ? "none" : scene === "task" && background === "two-scenes" ? "task.png" : "home.png";
+      const expectedPosition = background === "none" ? "50% 50%" : scene === "task" && background === "two-scenes" ? "80% 30%" : "20% 70%";
+      const rendered = await page.evaluate(({ scene, background }) => {
+        const root = document.documentElement;
+        root.setAttribute("data-platform", "windows");
+        root.setAttribute("data-theme-pack", "surface-contract");
+        root.setAttribute("data-theme-has-bg", "true");
+        root.setAttribute("data-theme-scene", scene);
+        for (const name of ["home", "task"]) {
+          for (const field of ["image", "focus-x", "focus-y"]) root.style.removeProperty(`--theme-bg-${name}-${field}`);
+        }
+        if (background !== "none") {
+          root.style.setProperty("--theme-bg-home-image", 'url("/home.png")');
+          root.style.setProperty("--theme-bg-home-focus-x", "20%");
+          root.style.setProperty("--theme-bg-home-focus-y", "70%");
+        }
+        if (background === "two-scenes") {
+          root.style.setProperty("--theme-bg-task-image", 'url("/task.png")');
+          root.style.setProperty("--theme-bg-task-focus-x", "80%");
+          root.style.setProperty("--theme-bg-task-focus-y", "30%");
+        }
+        return [
+          getComputedStyle(document.querySelector(".theme-bg__image")),
+          getComputedStyle(document.querySelector(".transcript"), "::before"),
+        ].map(style => ({ image: style.backgroundImage, position: style.backgroundPosition }));
+      }, { scene, background });
+      for (const [index, layer] of rendered.entries()) {
+        const label = index === 0 ? "background layer" : "Windows transcript layer";
+        assert(expectedImage === "none" ? layer.image === "none" : layer.image.includes(expectedImage), `${scene} ${background} ${label} uses ${expectedImage}`);
+        assert(layer.position === expectedPosition, `${scene} ${background} ${label} keeps focus ${expectedPosition}`);
       }
     }
   }

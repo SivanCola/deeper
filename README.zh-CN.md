@@ -1,6 +1,6 @@
 # Deepzora
 
-Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成、机器人和 SDK。项目源自 DeepSeek-Reasonix，上游作者与许可信息保留在 [NOTICE](NOTICE) 和 [LICENSE](LICENSE)。
+Deepzora 是一个 AI 编程助手，提供 CLI、Electron 桌面端、远程 Serve 服务、ACP 集成和 SDK。项目源自 DeepSeek-Reasonix，上游作者与许可信息保留在 [NOTICE](NOTICE) 和 [LICENSE](LICENSE)。
 
 本仓库以当前实现作为首版基线，不支持 Reasonix 历史数据格式、旧桌面接口及迁移路径。Deepzora 首版正在准备中，实际发布产物以 [Releases](https://github.com/SivanCola/deepzora/releases) 为准。
 

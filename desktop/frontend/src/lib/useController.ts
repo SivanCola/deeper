@@ -112,7 +112,7 @@ import type {
   CheckpointMeta,
   CollaborationMode,
   ContextInfo,
-  DeliveryWorktreeOpenResult,
+  IsolatedWorktreeOpenResult,
   EffortInfo,
   HistoryMessage,
   HistoryPage,
@@ -4630,7 +4630,7 @@ export function useController() {
     return meta;
   }, [beginActiveNavigation, confirmBackendActiveTab, dispatchRuntimeStatusForTab, dispatchTo, loadSessionDataForTab, monitorNavigationHydration, navigationCompletionCurrent, reassertVisibleTabAfterStaleNavigation, reconcileTabRuntime, requireRegisteredNavigationIntent, snapshotNavigationSourceTab]);
 
-  const createIsolatedWorktree = useCallback(async (workspaceRoot: string, navigationIntentSeq?: number): Promise<DeliveryWorktreeOpenResult> => {
+  const createIsolatedWorktree = useCallback(async (workspaceRoot: string, navigationIntentSeq?: number): Promise<IsolatedWorktreeOpenResult> => {
     const navigationSeq = navigationIntentSeq ?? beginActiveNavigation();
     await requireRegisteredNavigationIntent(navigationSeq);
     snapshotNavigationSourceTab(navigationSeq);

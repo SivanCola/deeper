@@ -470,7 +470,7 @@ var English = Messages{
 	SetupSharedKeyWarningFmt: "%s is also used by %s at %s. Share this credential?",
 	SetupKeyEnvTakenFmt:      "%s is already used by provider %s; saving this key under it would replace that provider's key.",
 	SetupKeyEnvStoredFmt:     "%s already holds a saved credential; saving this key under it would overwrite that value.",
-	SetupKeyEnvSettingFmt:    "%s is read by a bot or remote-host setting; saving this key under it would hand that setting your key.",
+	SetupKeyEnvSettingFmt:    "%s is read by a remote-host setting; saving this key under it would hand that setting your key.",
 	SetupKeyEnvShellFmt:      "%s is already set in the environment Deepzora runs in; saving this key under it would override that value.",
 	SetupKeyEnvRetry:         "Enter another name, or press Enter to let Deepzora choose a private variable.",
 	SetupPromptAPIKeyFmt:     "Enter new value for %s",

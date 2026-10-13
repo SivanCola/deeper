@@ -570,7 +570,7 @@ env = { FIGMA_TOKEN = "${FIGMA_TOKEN}", DEBUG = "1" }
 	view := app.Capabilities()
 	for _, s := range view.Servers {
 		if s.Name == "figma" {
-			if s.Status != "deferred" || s.StartIntent != "automatic" || s.RuntimeState != "idle" || s.AuthStatus != "possible" {
+			if s.Status != "deferred" || !s.Enabled || s.RuntimeState != "idle" || s.AuthStatus != "possible" {
 				t.Fatalf("figma should return to background possible auth: %+v", s)
 			}
 			return
@@ -603,7 +603,7 @@ name = "codegraph"
 	for _, s := range view.Servers {
 		if s.Name == "codegraph" {
 			foundIdle = true
-			if s.Status != "deferred" || s.StartIntent != "automatic" || s.RuntimeState != "idle" {
+			if s.Status != "deferred" || !s.Enabled || s.RuntimeState != "idle" {
 				t.Fatalf("initial codegraph server = %+v, want automatic idle background state", s)
 			}
 		}

@@ -130,7 +130,6 @@ function windowsSettings(overrides: {
   document.body.appendChild(rootEl);
   const root = createRoot(rootEl);
   let installCalls = 0;
-  let cancelCalls = 0;
   let reloadCalls = 0;
   let settingsCalls = 0;
   const shellPreferenceCalls: string[] = [];
@@ -147,7 +146,6 @@ function windowsSettings(overrides: {
           installCalls += 1;
           return { status: "manual_required", manualUrl: "https://git-scm.com/download/win" };
         },
-        CancelShellInstall: async () => { cancelCalls += 1; },
         ReloadSettings: async () => { reloadCalls += 1; },
       } as Partial<AppBindings> as AppBindings,
     },
@@ -189,7 +187,6 @@ function windowsSettings(overrides: {
   eq(copiedCommands.at(-1), "C:\\Program Files\\Git\\bin\\bash.exe", "detected executable paths can be copied in full");
   eq(openedURLs.length, 0, "rendering Windows settings opens no external installer page");
   eq(installCalls, 0, "rendering Windows repair never calls InstallShellSupport");
-  eq(cancelCalls, 0, "manual-only Windows repair never calls CancelShellInstall");
 
   const repairReloadButton = Array.from(rootEl.querySelectorAll("button")).find((button) => button.textContent?.includes("Reload current session"));
   ok(Boolean(repairReloadButton), "Windows shows reload only when the resolved runtime changed");
@@ -265,7 +262,6 @@ function windowsSettings(overrides: {
         Settings: async () => linuxSettings,
         SetShellPreference: async () => {},
         InstallShellSupport: async () => ({ status: "unsupported_platform" }),
-        CancelShellInstall: async () => {},
         ReloadSettings: async () => { reloadCalls += 1; },
       } as Partial<AppBindings> as AppBindings,
     },
@@ -332,7 +328,6 @@ function windowsSettings(overrides: {
         Settings: async () => macSettings,
         SetShellPreference: async () => {},
         InstallShellSupport: async () => ({ status: "unsupported_platform" }),
-        CancelShellInstall: async () => {},
         ReloadSettings: async () => {},
       } as Partial<AppBindings> as AppBindings,
     },

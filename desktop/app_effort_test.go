@@ -42,18 +42,18 @@ func TestEffortDefaultsBeforeStartup(t *testing.T) {
 	}
 }
 
-func TestSetEffortPersistsAndAutoClears(t *testing.T) {
+func TestSetEffortForTabPersistsAndAutoClearsWithoutTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if err := app.SetEffort("max"); err != nil {
-		t.Fatalf("SetEffort(max): %v", err)
+	if err := app.SetEffortForTab("", "max"); err != nil {
+		t.Fatalf("SetEffortForTab(max): %v", err)
 	}
 	if got := app.Effort().Current; got != "max" {
 		t.Fatalf("Effort current = %q, want max", got)
 	}
-	if err := app.SetEffort("auto"); err != nil {
-		t.Fatalf("SetEffort(auto): %v", err)
+	if err := app.SetEffortForTab("", "auto"); err != nil {
+		t.Fatalf("SetEffortForTab(auto): %v", err)
 	}
 	if got := app.Effort().Current; got != "auto" {
 		t.Fatalf("Effort current = %q, want auto", got)
@@ -609,7 +609,7 @@ reasoning_protocol = "none"
 	}
 }
 
-func TestSetEffortRebuildsController(t *testing.T) {
+func TestSetEffortForTabRebuildsController(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
@@ -623,21 +623,21 @@ func TestSetEffortRebuildsController(t *testing.T) {
 		}
 	}()
 
-	if err := app.SetEffort("max"); err != nil {
-		t.Fatalf("SetEffort(max): %v", err)
+	if err := app.SetEffortForTab("", "max"); err != nil {
+		t.Fatalf("SetEffortForTab(max): %v", err)
 	}
 	if c := app.activeCtrl(); c == nil {
-		t.Fatal("SetEffort should leave a rebuilt controller")
+		t.Fatal("SetEffortForTab should leave a rebuilt controller")
 	}
 	if c := app.activeCtrl(); c == old {
-		t.Fatal("SetEffort should rebuild the active controller so the provider sees the new effort")
+		t.Fatal("SetEffortForTab should rebuild the active controller so the provider sees the new effort")
 	}
 	if got := app.Effort().Current; got != "max" {
 		t.Fatalf("Effort current = %q, want max", got)
 	}
 }
 
-func TestSetEffortRejectsRunningTurn(t *testing.T) {
+func TestSetEffortForTabRejectsRunningTurn(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	runner := &blockingRunner{started: make(chan struct{}), release: make(chan struct{})}
@@ -646,9 +646,9 @@ func TestSetEffortRejectsRunningTurn(t *testing.T) {
 	app.activeCtrl().Submit("work")
 	<-runner.started
 
-	err := app.SetEffort("max")
+	err := app.SetEffortForTab("", "max")
 	if err == nil || !strings.Contains(err.Error(), "finish or cancel") {
-		t.Fatalf("SetEffort while running error = %v, want finish/cancel guard", err)
+		t.Fatalf("SetEffortForTab while running error = %v, want finish/cancel guard", err)
 	}
 
 	close(runner.release)

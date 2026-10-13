@@ -283,7 +283,10 @@ ok(themePreviewPaneAlpha(draft, "home") === 0.5, "background preview applies con
 applyThemePack(draft);
 ok(attrs.get("data-theme-pack") === "preview-pack", "sets data-theme-pack");
 ok(attrs.get("data-theme-has-bg") === "true", "marks background present");
-ok(styleProps.has("--theme-bg-image"), "sets background image var");
+ok(styleProps.get("--theme-bg-home-image")?.includes("background.png") === true, "sets home background image var");
+ok(styleProps.get("--theme-bg-task-image") === styleProps.get("--theme-bg-home-image"), "task scene inherits the home image when no task image is configured");
+ok(styleProps.get("--theme-bg-task-focus-x") === styleProps.get("--theme-bg-home-focus-x"), "task scene inherits the home horizontal focus");
+ok(styleProps.get("--theme-bg-task-focus-y") === styleProps.get("--theme-bg-home-focus-y"), "task scene inherits the home vertical focus");
 ok(styleText("deepzora-theme-pack-overlay").includes("--accent:#ff0000"), "injects dark accent override");
 ok(styleText("deepzora-theme-pack-overlay").includes("--code-bg:#101115"), "injects an opaque code readability island");
 ok(styleText("deepzora-theme-pack-overlay").includes("--hl-comment:"), "injects contrast-checked syntax roles");

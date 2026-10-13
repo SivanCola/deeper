@@ -3,8 +3,8 @@ import type { ServerView } from "../lib/types";
 
 function server(overrides: Partial<ServerView>): ServerView {
   return {
-    name: "server", transport: "http", status: "failed", configured: true,
-    autoStart: true, tools: 0, prompts: 0, resources: 0,
+    name: "server", transport: "http", status: "failed", runtimeState: "issue", availability: "start_failed", configured: true,
+    enabled: true, tools: 0, prompts: 0, resources: 0,
     url: "https://mcp.example.test/mcp", ...overrides,
   };
 }

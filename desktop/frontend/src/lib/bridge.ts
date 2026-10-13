@@ -82,11 +82,6 @@ import type {
   BalanceInfo,
   UsageStatsRange,
   UsageStatsRequest,
-  BotConnectionDiagnostic,
-  BotInstallPollResult,
-  BotInstallStartResult,
-  BotRuntimeStatusView,
-  BotSettingsView,
   CapabilitiesView,
   CapabilityDiagnosticsReport,
   CredentialDiagnosticReport,
@@ -99,7 +94,7 @@ import type {
   DirEntry,
   DesktopStartupSettingsView,
   DeliveryWorktreeAvailability,
-  DeliveryWorktreeOpenResult,
+  IsolatedWorktreeOpenResult,
   WorktreeMergeInspection,
   WorktreeMergeRequest,
   WorktreeMergeResult,
@@ -168,8 +163,6 @@ import type {
   SkillRootView,
   SkillSuggestion,
   SkillView,
-  TaskEvent,
-  TaskSnapshot,
   SlashArgsResult,
   SubagentProfileInput,
   TabMeta,
@@ -341,8 +334,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   MoveInboxItem(tabID: string, id: string, toIndex: number): Promise<void>;
   SetInboxPaused(tabID: string, paused: boolean): Promise<void>;
   RetryInboxItem(tabID: string, id: string): Promise<void>;
-  RefreshInboxItem(tabID: string, id: string): Promise<void>;
-  InboxHasItems(tabID: string): Promise<boolean>;
   Cancel(): Promise<void>;
   CancelTab(tabID: string): Promise<void>;
   CancelSessionForTab(tabID: string): Promise<CancelReceipt>;
@@ -457,17 +448,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   BalanceForTab(tabID: string): Promise<BalanceInfo>;
   UsageStats(req: UsageStatsRequest): Promise<UsageStatsRange>;
   Jobs(): Promise<JobView[]>;
-  ListTasks(): Promise<TaskSnapshot[]>;
-  CurrentTaskSessionID(): Promise<string>;
-  ListTasksForSession(sessionID: string): Promise<TaskSnapshot[]>;
-  GetTask(taskID: string): Promise<TaskSnapshot | null>;
-  StopTask(taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  CancelTask(taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  ListTasksForTab(tabID: string): Promise<TaskSnapshot[]>;
-  ListTaskEventsForTab(tabID: string, taskID: string, afterSequence: number): Promise<TaskEvent[]>;
-  StopTaskForTab(tabID: string, taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  CancelTaskForTab(tabID: string, taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  RequeueTaskForTab(tabID: string, taskID: string, expectedVersion: number, idemKey: string): Promise<ControlResult>;
   OpenTaskSessionForTab(tabID: string, taskID: string): Promise<ControlResult>;
   JobsForTab(tabID: string): Promise<JobView[]>;
   CancelJob(jobID: string): Promise<boolean>;
@@ -608,7 +588,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ModelsForTab(tabID: string): Promise<ModelInfo[]>;
   SetModelForTab(tabID: string, name: string): Promise<void>;
   Effort(): Promise<EffortInfo>;
-  SetEffort(level: string): Promise<void>;
   EffortForTab(tabID: string): Promise<EffortInfo>;
   SetEffortForTab(tabID: string, level: string): Promise<void>;
   // ReloadRuntime rebuilds the tab's agent runtime in place (tools, skills,
@@ -679,19 +658,8 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ReloadSettings(): Promise<void>;
   SetShellPreference(prefer: string): Promise<void>;
   InstallShellSupport(id: string): Promise<ShellInstallResult>;
-  CancelShellInstall(): Promise<void>;
   SetSandbox(bash: string, network: boolean, workspaceRoot: string, allowWrite: string[], shell: string): Promise<void>;
   SetNetwork(n: NetworkView): Promise<void>;
-  SetBotSettings(b: BotSettingsView): Promise<void>;
-  SetBotConnectionToolApprovalMode(connID: string, mode: string): Promise<void>;
-  SetBotSecret(envName: string, value: string): Promise<void>;
-  ClearBotSecret(envName: string): Promise<void>;
-  StartBotConnectionInstall(provider: string, domain: string): Promise<BotInstallStartResult>;
-  PollBotConnectionInstall(installID: string): Promise<BotInstallPollResult>;
-  BotRuntimeStatus(): Promise<BotRuntimeStatusView>;
-  DiagnoseBotConnection(id: string): Promise<BotConnectionDiagnostic>;
-  TestBotConnection(id: string, target?: string): Promise<BotConnectionDiagnostic>;
-  TestDingtalkBot(): Promise<BotConnectionDiagnostic>;
   SetCloseBehavior(mode: string): Promise<void>;
   SetSessionExperience(mode: "standard" | "deep"): Promise<void>;
   SetStatusBarStyle(style: string): Promise<void>;
@@ -746,7 +714,7 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ListTabs(): Promise<TabMeta[]>;
   OpenProjectTab(workspaceRoot: string, topicID: string): Promise<TabMeta>;
   IsolatedWorktreeAvailability(workspaceRoot: string): Promise<DeliveryWorktreeAvailability>;
-  CreateIsolatedWorktree(workspaceRoot: string): Promise<DeliveryWorktreeOpenResult>;
+  CreateIsolatedWorktree(workspaceRoot: string): Promise<IsolatedWorktreeOpenResult>;
   InspectWorktreeMerge(tabID: string): Promise<WorktreeMergeInspection>;
   GetWorktreeStatus(tabID: string): Promise<WorktreeMergeInspection>;
   PrepareWorktreeMerge(tabID: string): Promise<WorktreeMergeInspection>;
@@ -1426,14 +1394,27 @@ function makeMockApp(): MockAppBindings {
   const day = 86_400_000;
   const t0 = Date.now();
   // Mutable so MCP add/remove/retry are observable in browser dev.
+  // Browser fixtures must publish the same current state contract as the host.
+  function mockMCPServerView(server: ServerView): ServerView {
+    let availability = "available_on_demand";
+    if (!server.enabled) availability = "disabled";
+    else if (server.runtimeState === "ready") availability = "connected";
+    else if (server.runtimeState === "connecting") availability = "starting";
+    else if (server.runtimeState === "issue") {
+      availability = server.requiresLaunchApproval ? "project_auth_changed"
+        : server.authStatus === "required" || server.authStatus === "possible" ? "auth_required" : "start_failed";
+    }
+    return { ...server, availability };
+  }
   let capServers: ServerView[] = [
     {
       name: "project-knowledge",
       transport: "http",
       status: "connected",
+      enabled: true,
+      runtimeState: "ready",
+      availability: "connected",
       configured: true,
-      autoStart: true,
-      tier: "background",
       source: "project",
       configSource: "deepzora.toml",
       url: "https://mcp.example.test/project",
@@ -1450,9 +1431,10 @@ function makeMockApp(): MockAppBindings {
       name: "github",
       transport: "stdio",
       status: "connected",
+      enabled: true,
+      runtimeState: "ready",
+      availability: "connected",
       configured: true,
-      autoStart: true,
-      tier: "background",
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-github"],
       tools: 4,
@@ -1469,9 +1451,10 @@ function makeMockApp(): MockAppBindings {
       name: "linear",
       transport: "http",
       status: "initializing",
+      enabled: true,
+      runtimeState: "connecting",
+      availability: "starting",
       configured: true,
-      autoStart: true,
-      tier: "background",
       url: "https://mcp.linear.app/mcp",
       authStatus: "possible",
       authUrl: "https://mcp.linear.app/mcp",
@@ -1489,7 +1472,7 @@ function makeMockApp(): MockAppBindings {
         { name: "search", description: "Search Linear workspace objects." },
       ],
     },
-    { name: "figma", transport: "http", status: "failed", configured: true, autoStart: true, tier: "background", url: "https://mcp.figma.com/mcp", authStatus: "required", authUrl: "https://mcp.figma.com/mcp", tools: 0, prompts: 0, resources: 0, error: "connect: 401 unauthorized" },
+    { name: "figma", transport: "http", status: "failed", enabled: true, runtimeState: "issue", availability: "auth_required", configured: true, url: "https://mcp.figma.com/mcp", authStatus: "required", authUrl: "https://mcp.figma.com/mcp", tools: 0, prompts: 0, resources: 0, error: "connect: 401 unauthorized" },
   ];
   const capSkills: SkillView[] = [
     {
@@ -1635,136 +1618,6 @@ function makeMockApp(): MockAppBindings {
       proxy: { type: "socks5", server: "127.0.0.1", port: 7890, username: "", password: "" },
     },
     agent: { temperature: 0.2, maxSteps: 0, plannerMaxSteps: 0, maxSubagentDepth: 2, maxSubagentConcurrency: 6, maxParallelWriters: 3, systemPrompt: "You are Deepzora, a coding agent.", reasoningLanguage: "auto", compactRatio: 0.8 },
-    bot: {
-      enabled: !freshMock,
-      model: "",
-      toolApprovalMode: "read-only",
-      maxSteps: 0,
-      debounceMs: 1500,
-      queueMode: "steer",
-      queueCap: 20,
-      ignoreSelfMessages: true,
-      selfUserIds: {
-        qq: [],
-        feishu: [],
-        weixin: [],
-        dingtalk: [],
-      },
-      control: {
-        enabled: false,
-        addr: "127.0.0.1:37913",
-        tokenEnv: "DEEPZORA_BOT_CONTROL_TOKEN",
-      },
-      pairing: {
-        enabled: true,
-        requestTtlMinutes: 60,
-        maxPendingPerPlatform: 3,
-      },
-      routes: [],
-      qq: { enabled: false, appId: "", appSecretEnv: "QQ_BOT_APP_SECRET", secretSet: false, sandbox: false, model: "", toolApprovalMode: "read-only", workspaceRoot: "", access: { enabled: true, allowAll: false, pairingEnabled: true, users: [], groups: [], approvers: [], admins: [] } },
-      feishu: {
-        enabled: false,
-        domain: "feishu",
-        appId: "",
-        appSecretEnv: "FEISHU_BOT_APP_SECRET",
-        secretSet: false,
-        verificationToken: "",
-        mode: "webhook",
-        webhookPort: 8080,
-        requireMention: true,
-      },
-      weixin: {
-        enabled: false,
-        accountId: "default",
-        tokenEnv: "WEIXIN_BOT_TOKEN",
-        tokenSet: false,
-        apiBase: "https://ilinkai.weixin.qq.com",
-      },
-      dingtalk: {
-        enabled: false,
-        clientId: "",
-        clientSecretEnv: "DINGTALK_CLIENT_SECRET",
-        secretSet: false,
-        botName: "",
-        requireMention: true,
-        model: "",
-        toolApprovalMode: "",
-        workspaceRoot: "",
-        access: { enabled: true, allowAll: false, pairingEnabled: true, users: [], groups: [], approvers: [], admins: [] },
-      },
-      connections: freshMock ? [] : [
-        {
-          id: "mock-lark-kun",
-          provider: "feishu",
-          domain: "lark",
-          label: "kun",
-          enabled: true,
-          status: "connected",
-	          model: "",
-	          toolApprovalMode: "",
-	          workspaceRoot: "",
-	          access: { enabled: true, allowAll: false, pairingEnabled: true, users: ["ou_mock_user_001"], groups: [], approvers: [], admins: [] },
-	          credential: {
-            appId: "cli_mock_lark",
-            appSecretEnv: "FEISHU_BOT_APP_SECRET",
-            accountId: "",
-            tokenEnv: "",
-            secretSet: true,
-          },
-          sessionMappings: [
-            {
-              remoteId: "ou_mock_user_001",
-              sessionId: "topic:topic_product",
-              sessionSource: "",
-              chatType: "",
-              userId: "",
-              threadId: "",
-              scope: "global",
-              workspaceRoot: "",
-              updatedAt: new Date(Date.now() - 4 * 60_000).toISOString(),
-            },
-          ],
-          lastError: "",
-          createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-          updatedAt: new Date(Date.now() - 4 * 60_000).toISOString(),
-        },
-        {
-          id: "mock-weixin-kun",
-          provider: "weixin",
-          domain: "weixin",
-          label: "kun",
-          enabled: true,
-          status: "connected",
-	          model: "",
-	          toolApprovalMode: "",
-	          workspaceRoot: "",
-	          access: { enabled: true, allowAll: false, pairingEnabled: true, users: ["wxid_mock_user_001"], groups: [], approvers: [], admins: [] },
-	          credential: {
-            appId: "",
-            appSecretEnv: "",
-            accountId: "default",
-            tokenEnv: "WEIXIN_BOT_TOKEN",
-            secretSet: true,
-          },
-          sessionMappings: [
-            {
-              remoteId: "wxid_mock_user_001",
-              sessionId: "topic:topic_ai",
-              sessionSource: "",
-              chatType: "",
-              userId: "",
-              threadId: "",
-              scope: "global",
-              workspaceRoot: "",
-              updatedAt: new Date(Date.now() - 12 * 60_000).toISOString(),
-            },
-          ],
-          lastError: "",
-          createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-          updatedAt: new Date(Date.now() - 12 * 60_000).toISOString(),
-        },
-      ],
-    },
     desktopLanguage: "",
     desktopCurrency: "",
     desktopTheme: "auto",
@@ -2972,8 +2825,6 @@ function makeMockApp(): MockAppBindings {
         async MoveInboxItem() {},
         async SetInboxPaused(_tabID, paused) { if (recoveryMock) (await import("./inboxRecoveryPreview")).setInboxRecoveryPreviewPaused(paused); },
         async RetryInboxItem() {},
-        async RefreshInboxItem() {},
-        async InboxHasItems() { return recoveryMock; },
         async Cancel() {
           cancelled = true;
           emitMockTurnDone();
@@ -3545,14 +3396,14 @@ function makeMockApp(): MockAppBindings {
     },
     async Capabilities() {
       return {
-        servers: capServers.map((s) => ({ ...s })),
+        servers: capServers.map(mockMCPServerView),
         skills: capSkills.map((s) => ({ ...s })),
         skillRoots: capSkillRoots.map((s) => ({ ...s })),
         plugins: capPlugins.map((p) => ({ ...p })),
       };
     },
     async MCPServers() {
-      return capServers.map((s) => ({ ...s }));
+      return capServers.map(mockMCPServerView);
     },
     async MCPCapabilityMatrix() {
       return { views: [], hostProfile: "desktop-apps-2026-01-26-v1" };
@@ -3662,7 +3513,7 @@ function makeMockApp(): MockAppBindings {
           servers: capServers.map((s) => ({
             name: s.name,
             transport: s.transport || "stdio",
-            start_intent: s.startIntent === "off" ? "off" : "automatic",
+            start_intent: !s.enabled ? "off" : "automatic",
             source: "toml",
             runtime_status: includeSessionRuntime ? s.status || "connected" : undefined,
             tool_count: s.tools,
@@ -3760,10 +3611,11 @@ function makeMockApp(): MockAppBindings {
       capServers.push({
         name: input.name,
         transport: input.transport,
-        status: "connected",
+        status: input.autoStart === false ? "disabled" : "connected",
+        enabled: input.autoStart !== false,
+        runtimeState: input.autoStart === false ? "idle" : "ready",
+        availability: input.autoStart === false ? "disabled" : "connected",
         configured: true,
-        autoStart: true,
-        tier: "background",
         command: input.command,
         args: input.args,
         url: input.url,
@@ -3786,13 +3638,16 @@ function makeMockApp(): MockAppBindings {
     async UpdateMCPServer(name: string, input: MCPServerInput) {
       capServers = capServers.map((s) => {
         if (s.name !== name) return s;
-        const connected = s.status === "connected" || s.status === "failed" || s.autoStart !== false;
-        const nextStatus = s.status === "disabled" ? "disabled" : connected ? "connected" : "deferred";
+        const connected = s.status === "connected" || s.status === "failed" || s.enabled;
+        const enabled = input.autoStart ?? s.enabled;
+        const nextStatus = !enabled ? "disabled" : connected ? "connected" : "deferred";
         const nextTools = nextStatus === "connected" ? s.tools || (input.transport === "stdio" ? 3 : 5) : 0;
         return {
           ...s,
           transport: input.transport,
           status: nextStatus,
+          enabled,
+          runtimeState: nextStatus === "connected" ? "ready" : "idle",
           command: input.transport === "stdio" ? input.command : "",
           args: input.transport === "stdio" ? input.args : [],
           url: input.transport === "stdio" ? "" : input.url,
@@ -3810,23 +3665,23 @@ function makeMockApp(): MockAppBindings {
     },
     async AuthorizeAndConnectMCPServer(name: string) {
       capServers = capServers.map((s) => s.name === name
-        ? { ...s, status: "connected", runtimeState: "ready", tools: s.tools || 4, error: undefined, requiresLaunchApproval: false }
+        ? { ...s, status: "connected", runtimeState: "ready", enabled: true, tools: s.tools || 4, error: undefined, requiresLaunchApproval: false }
         : s);
     },
     async AuthenticateMCPServer(name: string) {
       capServers = capServers.map((s) => s.name === name
-        ? { ...s, status: "connected", runtimeState: "ready", tools: s.tools || 4, error: undefined, authStatus: "none", authUrl: undefined }
+        ? { ...s, status: "connected", runtimeState: "ready", enabled: true, tools: s.tools || 4, error: undefined, authStatus: "none", authUrl: undefined }
         : s);
     },
     async ReconnectMCPServer(name: string) {
       capServers = capServers.map((s) =>
         s.name === name
-          ? { ...s, status: "initializing", error: undefined, authStatus: undefined, authUrl: undefined }
+          ? { ...s, status: "initializing", runtimeState: "connecting", error: undefined, authStatus: undefined, authUrl: undefined }
           : s,
       );
       await new Promise((r) => setTimeout(r, 400));
       capServers = capServers.map((s) =>
-        s.name === name ? { ...s, status: "connected", tools: s.tools || 4 } : s,
+        s.name === name ? { ...s, status: "connected", runtimeState: "ready", tools: s.tools || 4 } : s,
       );
     },
     async ClearMCPServerAuthentication(name: string) {
@@ -3834,7 +3689,8 @@ function makeMockApp(): MockAppBindings {
         s.name === name
           ? {
               ...s,
-              status: s.autoStart === false ? "disabled" : "initializing",
+              status: s.enabled ? "initializing" : "disabled",
+              runtimeState: s.enabled ? "connecting" : "idle",
               tools: 0,
               error: undefined,
               authStatus: s.transport !== "stdio" ? "possible" : undefined,
@@ -3951,7 +3807,8 @@ function makeMockApp(): MockAppBindings {
           ? {
               ...s,
               status: enabled ? "connected" : "disabled",
-              autoStart: s.builtIn ? enabled : s.autoStart,
+              enabled,
+              runtimeState: enabled ? "ready" : "idle",
               tools: enabled ? s.tools || 4 : 0,
               error: undefined,
               authStatus: !enabled && s.transport !== "stdio" ? "possible" : undefined,
@@ -4263,11 +4120,8 @@ function makeMockApp(): MockAppBindings {
         async EffortForTab() {
           return this.Effort();
         },
-        async SetEffort(level: string) {
-          mockEffort = level || "auto";
-        },
         async SetEffortForTab(_tabID, level) {
-          await this.SetEffort(level);
+          mockEffort = level || "auto";
         },
         async ReloadRuntime(_tabID) {},
     async Memory() {
@@ -4445,9 +4299,8 @@ function makeMockApp(): MockAppBindings {
       return this.SaveDoc(path, body);
     },
     async DesktopStartupSettings() {
-      const { bot, desktopLanguage, desktopTheme, desktopThemeStyle, desktopTerminalTheme, sessionExperience, statusBarStyle, statusBarItems, checkUpdates, updaterEnabled, conversationWidth } = settings;
+      const { desktopLanguage, desktopTheme, desktopThemeStyle, desktopTerminalTheme, sessionExperience, statusBarStyle, statusBarItems, checkUpdates, updaterEnabled, conversationWidth } = settings;
       return JSON.parse(JSON.stringify({
-        bot,
         desktopLanguage,
         desktopTheme,
         desktopThemeStyle,
@@ -4714,7 +4567,6 @@ function makeMockApp(): MockAppBindings {
             manualUrl: "https://git-scm.com/download/win",
           };
         },
-        async CancelShellInstall() {},
         async SetSandbox(bash: string, network: boolean, workspaceRoot: string, allowWrite: string[], shell: string) {
           const effectiveWorkspaceRoot = workspaceRoot.trim() || cwd;
           const prev = settings.sandbox;
@@ -4729,119 +4581,16 @@ function makeMockApp(): MockAppBindings {
         async SetNetwork(n: NetworkView) {
           settings.network = n;
         },
-        async SetBotSettings(b: BotSettingsView) {
-          settings.bot = JSON.parse(JSON.stringify(b)) as BotSettingsView;
-        },
-        async SetBotConnectionToolApprovalMode(connID, mode) {
-          const conn = settings.bot.connections.find((c) => c.id === connID);
-          if (conn) conn.toolApprovalMode = mode as any;
-        },
-        async SetBotSecret(envName: string, _value: string) {
-          const name = envName.trim();
-          if (settings.bot.qq.appSecretEnv === name) settings.bot.qq.secretSet = true;
-          if (settings.bot.feishu.appSecretEnv === name) settings.bot.feishu.secretSet = true;
-          if (settings.bot.weixin.tokenEnv === name) settings.bot.weixin.tokenSet = true;
-          settings.bot.connections = settings.bot.connections.map((connection) => ({
-            ...connection,
-            credential: connection.credential.appSecretEnv === name || connection.credential.tokenEnv === name
-              ? { ...connection.credential, secretSet: true }
-              : connection.credential,
-          }));
-        },
-        async ClearBotSecret(envName: string) {
-          const name = envName.trim();
-          if (settings.bot.qq.appSecretEnv === name) settings.bot.qq.secretSet = false;
-          if (settings.bot.feishu.appSecretEnv === name) settings.bot.feishu.secretSet = false;
-          if (settings.bot.weixin.tokenEnv === name) settings.bot.weixin.tokenSet = false;
-          settings.bot.connections = settings.bot.connections.map((connection) => ({
-            ...connection,
-            credential: connection.credential.appSecretEnv === name || connection.credential.tokenEnv === name
-              ? { ...connection.credential, secretSet: false }
-              : connection.credential,
-          }));
-        },
-        async BotRuntimeStatus() {
-          const qqRunning = settings.bot.qq.enabled && settings.bot.qq.appId.trim() && settings.bot.qq.secretSet;
-          const runningConnections = (qqRunning ? 1 : 0) + settings.bot.connections.filter((connection) => connection.enabled && connection.status === "connected").length;
-          const dingtalkRunning = Boolean(settings.bot.dingtalk.enabled && settings.bot.dingtalk.clientId.trim() && settings.bot.dingtalk.secretSet);
-          const running = settings.bot.enabled && runningConnections > 0;
-          return {
-            running,
-            status: running ? "running" : "stopped",
-            message: running ? `${runningConnections} bot connection(s) running` : "bot runtime is not started",
-            connections: runningConnections,
-            startedAt: running ? new Date(t0).toISOString() : "",
-            platforms: {
-              dingtalk: dingtalkRunning ? "running" : settings.bot.dingtalk.clientId.trim() ? "configured" : "",
-              qq: qqRunning ? "running" : settings.bot.qq.appId.trim() ? "configured" : "",
-              ...Object.fromEntries(settings.bot.connections
-                .filter((connection) => connection.provider !== "qq")
-                .map((connection) => [connection.provider, connection.enabled && connection.status === "connected" ? "running" : connection.credential.secretSet ? "configured" : ""])),
-            },
-          };
-        },
-        async StartBotConnectionInstall(provider: string, domain: string) {
-          const normalizedProvider = provider === "weixin" ? "weixin" : "feishu";
-          const normalizedDomain = normalizedProvider === "weixin" ? "weixin" : domain === "lark" ? "lark" : "feishu";
-          return {
-            ok: true,
-            provider: normalizedProvider,
-            domain: normalizedDomain,
-            installId: `mock-${normalizedProvider}-${normalizedDomain}`,
-            url: "https://example.com/deepzora-bot-qr",
-            deviceCode: "MOCKDEVICE",
-            userCode: normalizedProvider === "weixin" ? "" : "MOCK-CODE",
-            interval: 3,
-            expireIn: 300,
-            message: "",
-          };
-        },
-        async PollBotConnectionInstall(installID: string) {
-          const isWeixin = installID.includes("weixin");
-          const domain = installID.includes("lark") ? "lark" : isWeixin ? "weixin" : "feishu";
-          const provider = isWeixin ? "weixin" : "feishu";
-          const connection = {
-            id: `${provider}-${domain}`,
-            provider,
-            domain,
-            label: domain === "lark" ? "Lark" : domain === "weixin" ? "微信" : "飞书",
-            enabled: true,
-            status: "connected",
-	            model: "",
-	            toolApprovalMode: "",
-	            workspaceRoot: "",
-	            access: { enabled: true, allowAll: false, pairingEnabled: true, users: [provider === "weixin" ? "wxid_mock_user_001" : "ou_mock_user_001"], groups: [], approvers: [], admins: [] },
-	            credential: {
-              appId: provider === "feishu" ? "cli_mock" : "",
-              appSecretEnv: provider === "feishu" ? (domain === "lark" ? "LARK_BOT_APP_SECRET" : "FEISHU_BOT_APP_SECRET") : "",
-              accountId: provider === "weixin" ? "mock-account" : "",
-              tokenEnv: provider === "weixin" ? "WEIXIN_BOT_TOKEN" : "",
-              secretSet: true,
-            },
-            sessionMappings: [],
-            lastError: "",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          settings.bot.connections = [...settings.bot.connections.filter((c) => c.id !== connection.id), connection];
-          return { done: true, connection, status: "connected", message: "connected", error: "" };
-        },
-        async DiagnoseBotConnection(id: string) {
-          const connection = settings.bot.connections.find((c) => c.id === id);
-          const occurredAt = new Date().toISOString();
-          return connection
-            ? { id, label: connection.label, status: connection.enabled ? "ok" : "disabled", message: connection.enabled ? "连接配置已保存。" : "连接已保存但未启用。", messageId: "", phase: "config", code: connection.enabled ? "config_ok" : "connection_disabled", reportKind: "", reportDetail: "", occurredAt }
-            : { id, label: "", status: "missing", message: "未找到连接。", messageId: "", phase: "config", code: "connection_missing", reportKind: "bot", reportDetail: JSON.stringify({ schemaVersion: 2, kind: "bot", source: "bot.runtime", label: "bot.mock.config", message: "mock missing bot connection", errorType: "BotConnectionDiagnostic", errorMessage: "bot connection record was not found", topFrame: "bot.config", occurredAt }), occurredAt };
-        },
-        async TestBotConnection(id: string, target?: string) {
-          const diag = await this.DiagnoseBotConnection(id);
-          if (target?.trim()) return { ...diag, message: `Mock test sent to ${target.trim()}`, messageId: "mock-message-id" };
-          return diag;
-        },
-        async TestDingtalkBot() {
-          const occurredAt = new Date().toISOString();
-          return { id: "dingtalk", label: "DingTalk", status: "ok", message: "Mock dingtalk test sent", messageId: "mock-dingtalk-id", phase: "send", code: "dingtalk_test_send_ok", reportKind: "", reportDetail: "", occurredAt };
-        },
+
+
+
+
+
+
+
+
+
+
         ...createDesktopPreferencesMock(settings),
         async SetDesktopAppearance(theme: string, style: string) {
           settings.desktopTheme = theme === "auto" || theme === "light" ? theme : "dark";
@@ -5012,18 +4761,7 @@ function makeMockApp(): MockAppBindings {
     },
     async HeartbeatTriggerNow(_id: string) {},
     async HeartbeatGenerateID() { return "mock-" + Date.now().toString(36); },
-    async ListTasks() { return []; },
-    async CurrentTaskSessionID() { return ""; },
-    async ListTasksForSession() { return []; },
-    async GetTask() { return null; },
-    async StopTask() { return { schema_version: 1, command: "stop", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async CancelTask() { return { schema_version: 1, command: "cancel", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async ListTasksForTab() { return []; },
     ...makeMockTaskCatalogBindings(),
-    async ListTaskEventsForTab() { return []; },
-    async StopTaskForTab() { return { schema_version: 1, command: "stop", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async CancelTaskForTab() { return { schema_version: 1, command: "cancel", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async RequeueTaskForTab() { return { schema_version: 1, command: "requeue", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     async OpenTaskSessionForTab() { return { schema_version: 1, command: "open_session", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     async SetTrayLocale(_locale: "en" | "zh") {},
     async Version() {

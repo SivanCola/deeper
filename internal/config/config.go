@@ -65,7 +65,6 @@ type Config struct {
 	Statusline    StatuslineConfig    `toml:"statusline"`
 	LSP           LSPConfig           `toml:"lsp"`
 	Browser       BrowserConfig       `toml:"browser"`
-	Bot           BotConfig           `toml:"bot"`
 	Serve         ServeConfig         `toml:"serve"`
 	Secrets       SecretsConfig       `toml:"secrets"`
 	Remote        RemoteConfig        `toml:"remote"`
@@ -653,178 +652,6 @@ type CheckpointsConfig struct {
 	// BlobQuotaBytes is the soft byte budget for retained file payloads. A
 	// protected or current turn may temporarily exceed it.
 	BlobQuotaBytes int64 `toml:"blob_quota_bytes"`
-}
-
-// BotConfig 控制多渠道 IM bot 消息网关。
-type BotConfig struct {
-	Enabled            bool                  `toml:"enabled"`
-	Model              string                `toml:"model"` // 用于 bot 的模型名，空则用 default_model
-	ToolApprovalMode   string                `toml:"tool_approval_mode"`
-	MaxSteps           int                   `toml:"max_steps"`
-	DebounceMs         int                   `toml:"debounce_ms"` // 消息合并窗口，毫秒
-	QueueMode          string                `toml:"queue_mode"`  // steer|followup|collect|interrupt
-	QueueCap           int                   `toml:"queue_cap"`
-	IgnoreSelfMessages bool                  `toml:"ignore_self_messages"`
-	SelfUserIDs        BotSelfUserIDs        `toml:"self_user_ids"`
-	Control            BotControlConfig      `toml:"control"`
-	Pairing            BotPairingConfig      `toml:"pairing"`
-	QQ                 QQBotConfig           `toml:"qq"`
-	Feishu             FeishuBotConfig       `toml:"feishu"`
-	Weixin             WeixinBotConfig       `toml:"weixin"`
-	Dingtalk           DingtalkBotConfig     `toml:"dingtalk"`
-	Routes             []BotRouteConfig      `toml:"routes"`
-	Connections        []BotConnectionConfig `toml:"connections"`
-	// DesktopWatchers persists /desktop watch subscriptions so god-view
-	// notifications survive a desktop restart. Managed by the desktop bot
-	// bridge, not the settings UI.
-	DesktopWatchers []BotDesktopWatcherConfig `toml:"desktop_watchers"`
-}
-
-// BotDesktopWatcherConfig is one bot chat subscribed to desktop events
-// (/desktop watch on).
-type BotDesktopWatcherConfig struct {
-	Platform     string `toml:"platform"`
-	ConnectionID string `toml:"connection_id"`
-	Domain       string `toml:"domain"`
-	ChatType     string `toml:"chat_type"`
-	ChatID       string `toml:"chat_id"`
-}
-
-type BotSelfUserIDs struct {
-	QQ       []string `toml:"qq"`
-	Feishu   []string `toml:"feishu"`
-	Weixin   []string `toml:"weixin"`
-	Dingtalk []string `toml:"dingtalk"`
-}
-
-type BotControlConfig struct {
-	Enabled  bool   `toml:"enabled"`
-	Addr     string `toml:"addr"`
-	TokenEnv string `toml:"token_env"`
-}
-
-type BotRouteConfig struct {
-	ConnectionID     string `toml:"connection_id"`
-	Platform         string `toml:"platform"`
-	ChatType         string `toml:"chat_type"`
-	ChatID           string `toml:"chat_id"`
-	UserID           string `toml:"user_id"`
-	ThreadID         string `toml:"thread_id"`
-	Model            string `toml:"model"`
-	ToolApprovalMode string `toml:"tool_approval_mode"`
-	WorkspaceRoot    string `toml:"workspace_root"`
-}
-
-type BotPairingConfig struct {
-	Enabled               bool `toml:"enabled"`
-	RequestTTLMinutes     int  `toml:"request_ttl_minutes"`
-	MaxPendingPerPlatform int  `toml:"max_pending_per_platform"`
-}
-
-// BotAccessConfig controls who may use one concrete bot connection.
-type BotAccessConfig struct {
-	Enabled        bool     `toml:"enabled"`
-	AllowAll       bool     `toml:"allow_all"`
-	PairingEnabled bool     `toml:"pairing_enabled"`
-	Users          []string `toml:"users"`
-	Groups         []string `toml:"groups"`
-	Approvers      []string `toml:"approvers"`
-	Admins         []string `toml:"admins"`
-}
-
-// QQBotConfig QQ 官方 Bot API v2 配置。
-type QQBotConfig struct {
-	Enabled          bool            `toml:"-"`
-	AppID            string          `toml:"-"`
-	AppSecretEnv     string          `toml:"-"`       // 环境变量名，如 QQ_BOT_APP_SECRET
-	Sandbox          bool            `toml:"sandbox"` // true 使用 QQ 沙箱 API / gateway
-	Model            string          `toml:"-"`
-	ToolApprovalMode string          `toml:"-"`
-	WorkspaceRoot    string          `toml:"-"`
-	Access           BotAccessConfig `toml:"access"`
-}
-
-// FeishuBotConfig 飞书自建应用 Bot 配置。
-type FeishuBotConfig struct {
-	Enabled           bool   `toml:"-"`
-	Domain            string `toml:"domain"` // feishu（默认）| lark
-	AppID             string `toml:"-"`
-	AppSecretEnv      string `toml:"-"`                  // 如 FEISHU_BOT_APP_SECRET
-	VerificationToken string `toml:"verification_token"` // 事件订阅验证 token
-	Mode              string `toml:"mode"`               // webhook（默认）| websocket
-	WebhookPort       int    `toml:"webhook_port"`       // webhook 模式端口
-	RequireMention    bool   `toml:"require_mention"`
-	// OutboundMediaRoots contains absolute local directories the loopback /send
-	// control API may attach files from. Media refs must be bare filenames and
-	// must exist in exactly one configured root. Empty (the default) disables
-	// outbound file sending.
-	OutboundMediaRoots []string `toml:"outbound_media_roots"`
-}
-
-// WeixinBotConfig 微信 iLink Bot 配置。
-type WeixinBotConfig struct {
-	Enabled   bool   `toml:"-"`
-	AccountID string `toml:"-"`
-	TokenEnv  string `toml:"-"`        // 环境变量名，如 WEIXIN_BOT_TOKEN
-	APIBase   string `toml:"api_base"` // iLink API base URL
-}
-
-// DingtalkBotConfig 钉钉企业内部应用机器人（Stream 模式）配置。
-type DingtalkBotConfig struct {
-	Enabled          bool            `toml:"-"`
-	ClientID         string          `toml:"-"`               // 钉钉应用 AppKey（ClientID）
-	ClientSecret     string          `toml:"-"`               // 钉钉应用 AppSecret（ClientSecret）
-	ClientIDEnv      string          `toml:"-"`               // 环境变量名，如 DINGTALK_CLIENT_ID
-	SecretEnv        string          `toml:"-"`               // 环境变量名，如 DINGTALK_CLIENT_SECRET
-	BotName          string          `toml:"bot_name"`        // 机器人昵称；群聊 @ 剥离时匹配
-	RequireMention   bool            `toml:"require_mention"` // 群聊是否必须 @ 机器人
-	Model            string          `toml:"-"`               // 会话模型；空 = 全局默认
-	ToolApprovalMode string          `toml:"-"`               // read-only|workspace-write|danger-full-access；空 = 全局默认
-	WorkspaceRoot    string          `toml:"-"`               // 会话工作目录；空 = 启动 Bot 时的 cwd
-	Access           BotAccessConfig `toml:"access"`          // 该渠道访问控制（allowlist）
-	// SessionMappings 是当前连接实例运行时使用的会话绑定视图。
-	SessionMappings []BotConnectionSessionMapping `toml:"-"`
-}
-
-// BotConnectionConfig is the desktop-friendly connection record for IM bot
-// channels. It keeps install/runtime state separate from legacy per-provider
-// knobs so the UI can expose a simple "connect first" flow while old configs
-// keep working.
-type BotConnectionConfig struct {
-	ID               string                        `toml:"id"`
-	Provider         string                        `toml:"provider"` // qq|feishu|weixin
-	Domain           string                        `toml:"domain"`   // feishu|lark|weixin|qq
-	Label            string                        `toml:"label"`
-	Enabled          bool                          `toml:"enabled"`
-	Status           string                        `toml:"status"` // disconnected|pending|connected|error
-	Model            string                        `toml:"model"`
-	ToolApprovalMode string                        `toml:"tool_approval_mode"`
-	WorkspaceRoot    string                        `toml:"workspace_root"`
-	Access           BotAccessConfig               `toml:"access"`
-	Credential       BotConnectionCredential       `toml:"credential"`
-	SessionMappings  []BotConnectionSessionMapping `toml:"session_mappings"`
-	LastError        string                        `toml:"last_error"`
-	CreatedAt        string                        `toml:"created_at"`
-	UpdatedAt        string                        `toml:"updated_at"`
-}
-
-type BotConnectionCredential struct {
-	AppID        string `toml:"app_id"`
-	AppSecretEnv string `toml:"app_secret_env"`
-	AccountID    string `toml:"account_id"`
-	TokenEnv     string `toml:"token_env"`
-}
-
-type BotConnectionSessionMapping struct {
-	RemoteID      string `toml:"remote_id"`
-	SessionID     string `toml:"session_id"`
-	SessionSource string `toml:"session_source"`
-	ChatType      string `toml:"chat_type"`
-	UserID        string `toml:"user_id"`
-	ThreadID      string `toml:"thread_id"`
-	Scope         string `toml:"scope"`
-	WorkspaceRoot string `toml:"workspace_root"`
-	UpdatedAt     string `toml:"updated_at"`
 }
 
 // ServeConfig controls the HTTP serve frontend security settings.
@@ -1688,19 +1515,6 @@ func Default() *Config {
 		// a missing server yields an install hint rather than an error.
 		LSP:     LSPConfig{Enabled: true},
 		Network: NetworkConfig{ProxyMode: netclient.ModeAuto},
-		Bot: BotConfig{
-			ToolApprovalMode:   "workspace-write",
-			DebounceMs:         1500,
-			QueueMode:          "steer",
-			QueueCap:           20,
-			IgnoreSelfMessages: true,
-			Control:            BotControlConfig{Addr: "127.0.0.1:37913", TokenEnv: "DEEPZORA_BOT_CONTROL_TOKEN"},
-			Pairing:            BotPairingConfig{Enabled: true, RequestTTLMinutes: 60, MaxPendingPerPlatform: 3},
-			QQ:                 QQBotConfig{AppSecretEnv: "QQ_BOT_APP_SECRET"},
-			Feishu:             FeishuBotConfig{Domain: "feishu", AppSecretEnv: "FEISHU_BOT_APP_SECRET", Mode: "webhook", WebhookPort: 8080, RequireMention: true},
-			Dingtalk:           DingtalkBotConfig{RequireMention: true},
-			Weixin:             WeixinBotConfig{AccountID: "default", TokenEnv: "WEIXIN_BOT_TOKEN", APIBase: "https://ilinkai.weixin.qq.com"},
-		},
 		// Main conversations use Chat Completions; independent web_search uses
 		// the official Messages endpoint with the same account.
 		Providers: []ProviderEntry{

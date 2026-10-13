@@ -716,12 +716,27 @@ func TestHTTPTransportRPCError(t *testing.T) {
 	}
 }
 
-// TestSSETransportUnsupported documents that the legacy sse transport is
-// recognised but deferred with a clear, actionable error.
-func TestSSETransportUnsupported(t *testing.T) {
-	_, _, err := StartAll(context.Background(), []Spec{{Name: "legacy", Type: "sse", URL: "http://x"}})
-	if err == nil || !strings.Contains(err.Error(), "http") {
-		t.Fatalf("sse should error pointing to http, got %v", err)
+// TestSSETransportRejectsInvalidEndpoint checks the endpoint's failure reaches
+// the caller. Loopback bypasses environment proxies, including cached settings.
+func TestSSETransportRejectsInvalidEndpoint(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		if r.Method != http.MethodGet || r.URL.Path != "/sse" {
+			t.Errorf("SSE request = %s %s, want GET /sse", r.Method, r.URL.Path)
+		}
+		http.Error(w, "SSE endpoint unavailable", http.StatusMethodNotAllowed)
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	_, _, err := StartAll(ctx, []Spec{{Name: "legacy", Type: "sse", URL: server.URL + "/sse"}})
+	if err == nil || !strings.Contains(err.Error(), "failed to connect: Method Not Allowed") {
+		t.Fatalf("want SSE endpoint failure, got %v", err)
+	}
+	if got := requests.Load(); got != 1 {
+		t.Fatalf("SSE endpoint requests = %d, want 1", got)
 	}
 }
 

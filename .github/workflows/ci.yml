@@ -168,11 +168,13 @@ jobs:
           bash scripts/verify-release-authorization.test.sh
           bash scripts/release-workflows.test.sh
           node scripts/check-single-release-public-contract.mjs
+      # The lint job owns module-cache writes for root-tools.
       - if: always() && env.RUN_STEPS == 'true'
         uses: ./.github/actions/go-build-cache
         with:
           module: root-tools
           dependency: go.sum
+          save_mod_os: ''
           mode: save
 
   race:
@@ -208,7 +210,7 @@ jobs:
           go test -race -timeout=15m ./internal/agent/... ./internal/plugin/... ./internal/jobs/... \
             ./internal/proc/... ./internal/sandbox/... ./internal/filelock/... ./internal/eventwire/... \
             ./internal/remote/... ./internal/extension/... ./internal/boot/... ./internal/control/... \
-            ./internal/tool/... ./internal/bot/... ./internal/config/... ./internal/session/... \
+            ./internal/tool/... ./internal/config/... ./internal/session/... \
             ./internal/serve/... ./internal/sessioninbox/...
       - if: always()
         uses: ./.github/actions/go-build-cache
@@ -288,12 +290,16 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH=.pw-browsers pnpm --dir frontend exec playwright install --with-deps chromium
           xvfb-run -a pnpm --dir frontend test:motion-browser
           xvfb-run -a pnpm --dir frontend test:transcript-browser
+      # This job only produces the frontend artifact; desktop-go owns the
+      # desktop module caches, so seeding them here would just duplicate the
+      # upload against the same key.
       - if: always()
         uses: ./.github/actions/go-build-cache
         with:
           module: desktop
           dependency: desktop/go.sum
           build_module: desktop-contract
+          save_mod_os: ''
           mode: save
 
   desktop-go:
@@ -347,13 +353,14 @@ jobs:
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
           bwrap --ro-bind / / --dev /dev --proc /proc -- true
+      - name: Vet desktop module
+        run: go vet ./...
+      - name: Build desktop module
+        run: go build ./...
       - name: Test desktop module
         env:
           DESKTOP_TEST_TIMEOUT: ${{ runner.os == 'Windows' && '25m' || '15m' }}
-        run: |
-          go vet ./...
-          go build ./...
-          go test -timeout="$DESKTOP_TEST_TIMEOUT" ./...
+        run: go test -timeout="$DESKTOP_TEST_TIMEOUT" ./... -json
       - name: Check desktop lifecycle races on macOS
         if: runner.os == 'macOS'
         run: go test -race -timeout=10m -run 'Test.*(Title|BotConnection|Deferred|Terminal|DarwinWorkspaceWatcher)' .

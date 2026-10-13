@@ -9,7 +9,6 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/billing"
 	"deepzora/internal/boot"
-	"deepzora/internal/botruntime"
 	"deepzora/internal/checkpoint"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
@@ -349,12 +348,6 @@ type App struct {
 
 	mediaTokens    *mediaTokenStore
 	presentPreview *workspacePreviewOrigin
-	botInstalls    map[string]*botInstallSession
-	botRuntime     *desktopBotRuntime
-	// botBridge gives the embedded bot gateway a god view over desktop
-	// sessions (/desktop commands). Set once in NewApp before any tab exists,
-	// read-only afterwards, so tabEventSink.Emit reads it without a lock.
-	botBridge *botBridgeHub
 
 	metrics atomic.Pointer[metricsAggregator] // non-nil only when desktop.metrics is opted in; swapped live by SetDesktopMetrics
 
@@ -485,8 +478,6 @@ func NewApp() *App {
 		detachedSessions:        map[string]*WorkspaceTab{},
 		mediaTokens:             newMediaTokenStore(),
 		presentPreview:          newWorkspacePreviewOrigin(),
-		botInstalls:             map[string]*botInstallSession{},
-		botRuntime:              newDesktopBotRuntime(),
 		remoteWindows:           newRemoteWindowRegistry(),
 		topicState:              desktopTopicState,
 		worktreeReservations: worktreeRuntimeReservations{
@@ -498,7 +489,6 @@ func NewApp() *App {
 	a.desktopShell.coordinator = newDesktopShellCoordinator(a)
 	a.workspaceHub = newWorkspaceChangeHub(a)
 	a.terminals = newTerminalManager(a)
-	a.botBridge = a.newBotBridge()
 	return a
 }
 
@@ -548,7 +538,6 @@ func (a *App) startup(ctx context.Context) {
 	a.startDesktopPersistenceReconciliation()
 	a.registerHistoryIndexEvents()
 	a.startSessionCatalog()
-	a.goSafe("refreshBotRuntime", a.refreshBotRuntime)
 	a.goSafe("sendStartupPing", a.sendStartupPing)
 	a.goSafe("flushMetrics", a.flushMetrics)
 	a.goSafe("flushPendingCrash", a.flushPendingCrash)
@@ -988,40 +977,27 @@ func (a *App) SubmitToTab(tabID, input string) error {
 	if err := validateTurnInput(input); err != nil {
 		return err
 	}
-	return a.submitToTab(tabID, input, false)
+	return a.submitToTab(tabID, input)
 }
 
-// submitToTab is the shared submit body. fromBridge marks submissions driven
-// by the IM takeover bridge; local (frontend) submissions on a taken-over tab
-// reclaim remote control first — typing locally is the grab-back gesture.
-func (a *App) submitToTab(tabID, input string, fromBridge bool, submissionID ...string) error {
-	_, err := a.submitToTabResult(tabID, input, fromBridge, false, submissionID...)
+// submitToTab is the shared submit body.
+func (a *App) submitToTab(tabID, input string, submissionID ...string) error {
+	_, err := a.submitToTabResult(tabID, input, false, submissionID...)
 	return err
 }
 
-func (a *App) submitUserTurnToTabWithSink(tabID, input string, forwarder event.Sink) bool {
-	admission, ctrl, err := a.beginTabTurn(tabID, false)
+func (a *App) submitUserTurnToTab(tabID, input string) bool {
+	admission, ctrl, err := a.beginTabTurn(tabID, true)
 	if err != nil {
 		return false
 	}
 	defer admission.abort()
 	tab := admission.tab
-	var generation uint64
-	if forwarder != nil {
-		generation = tab.sink.SetBotSink(forwarder)
-	}
 	if err := a.ensureTabTopicIndexedForUserTurn(tab); err != nil {
-		if forwarder != nil {
-			tab.sink.clearBotSink(generation)
-		}
 		return false
 	}
 	ctrl.SubmitUserTurn(input, input)
-	started := admission.finish(ctrl)
-	if !started && forwarder != nil {
-		tab.sink.clearBotSink(generation)
-	}
-	return started
+	return admission.finish(ctrl)
 }
 
 func (a *App) RunShellForTab(tabID, command string) error {
@@ -2636,9 +2612,6 @@ func (a *App) deleteSession(path string) error {
 		return nil
 	}(); err != nil {
 		return err
-	}
-	if err := botruntime.ForgetAutoSessionMappingsForPath(sessionPath); err != nil {
-		slog.Warn("desktop: failed to clear auto bot session mapping", "err", err)
 	}
 	if fallback.needs {
 		fallback = a.sessionDeleteFallbackTarget(fallback)
@@ -5788,8 +5761,8 @@ type SkillsSettingsView struct {
 // "disabled".
 //
 // Product fields for the simplified MCP panel are Enabled/Installed/
-// Availability/RuntimeState/ToolCount/ToolList/Action. Legacy AutoStart, Tier,
-// and StartIntent remain for one major as derived compatibility fields only.
+// Availability/RuntimeState/ToolCount/ToolList/Action. Status describes the
+// host registration; RuntimeState also reflects the live session lifecycle.
 type ServerView struct {
 	Name                   string         `json:"name"`
 	Transport              string         `json:"transport"`
@@ -5797,13 +5770,12 @@ type ServerView struct {
 	HostProfile            string         `json:"hostProfile,omitempty"`
 	ElicitationNegotiated  bool           `json:"elicitationNegotiated,omitempty"`
 	AppsNegotiated         bool           `json:"appsNegotiated,omitempty"`
-	StartIntent            string         `json:"startIntent,omitempty"` // deprecated: derived from Enabled
-	RuntimeState           string         `json:"runtimeState,omitempty"`
+	RuntimeState           string         `json:"runtimeState"`
 	ProtocolVersion        string         `json:"protocolVersion,omitempty"`
 	SessionState           string         `json:"sessionState,omitempty"`
 	ReconnectAttempts      int            `json:"reconnectAttempts,omitempty"`
 	ErrorKind              string         `json:"errorKind,omitempty"`
-	Availability           string         `json:"availability,omitempty"`
+	Availability           string         `json:"availability"`
 	Enabled                bool           `json:"enabled"`
 	Installed              bool           `json:"installed"`
 	Action                 string         `json:"action,omitempty"`
@@ -5811,7 +5783,6 @@ type ServerView struct {
 	ConfigSource           string         `json:"configSource,omitempty"`
 	BuiltIn                bool           `json:"builtIn,omitempty"`
 	Configured             bool           `json:"configured,omitempty"`
-	AutoStart              bool           `json:"autoStart"` // deprecated: same as Enabled
 	Command                string         `json:"command,omitempty"`
 	Args                   []string       `json:"args,omitempty"`
 	URL                    string         `json:"url,omitempty"`
@@ -6445,7 +6416,6 @@ func (a *App) mcpServersView() []ServerView {
 			if disabledView, ok := disabled[s.Name]; ok {
 				disabledView.Status = "disabled"
 				disabledView.RuntimeState = "idle"
-				disabledView.StartIntent = "off"
 				disabledView.Error = ""
 				if p, ok := configured[s.Name]; ok {
 					disabledView = withPluginConfigInWorkspace(disabledView, p, workspaceRoot)
@@ -6497,7 +6467,6 @@ func (a *App) mcpServersView() []ServerView {
 			if s, ok := disabled[p.Name]; ok {
 				s.Status = "disabled"
 				s.RuntimeState = "idle"
-				s.StartIntent = "off"
 				s = withPluginConfigInWorkspace(s, p, workspaceRoot)
 				s.Error = ""
 				out = append(out, s)
@@ -6507,12 +6476,10 @@ func (a *App) mcpServersView() []ServerView {
 				continue
 			}
 			status := "disabled"
-			startIntent := "off"
 			if mcpEntryEnabled(p, workspaceRoot) {
 				status = "deferred"
-				startIntent = "automatic"
 			}
-			out = append(out, withPluginConfigInWorkspace(ServerView{Name: p.Name, Status: status, StartIntent: startIntent, RuntimeState: "idle"}, p, workspaceRoot))
+			out = append(out, withPluginConfigInWorkspace(ServerView{Name: p.Name, Status: status, RuntimeState: "idle"}, p, workspaceRoot))
 			seen[p.Name] = true
 		}
 	}
@@ -6623,13 +6590,6 @@ func finalizeServerView(v ServerView) ServerView {
 	if v.Action == "" {
 		v.Action = mcpActionForView(v)
 	}
-	// Keep deprecated fields derived from the new product state.
-	v.AutoStart = v.Enabled
-	if !v.Enabled {
-		v.StartIntent = "off"
-	} else if v.StartIntent == "" {
-		v.StartIntent = "automatic"
-	}
 	return v
 }
 
@@ -6647,17 +6607,8 @@ func withPluginConfigInWorkspace(v ServerView, p config.PluginEntry, workspace s
 	v.Installed = true
 	v.Source, v.ConfigSource = mcpServerSource(p.Source)
 	v.Enabled = mcpEntryEnabled(p, workspace)
-	v.AutoStart = v.Enabled
-	if v.StartIntent == "" {
-		if v.Enabled {
-			v.StartIntent = "automatic"
-		} else {
-			v.StartIntent = "off"
-		}
-	}
 	if !v.Enabled || v.Status == "disabled" {
 		v.Status = "disabled"
-		v.StartIntent = "off"
 		v.RuntimeState = "idle"
 	}
 	if v.RuntimeState == "" {
@@ -8498,10 +8449,6 @@ func (a *App) EffortForTab(tabID string) EffortInfo {
 	return EffortInfo{Supported: true, Current: config.EffortDisplay(entry), Default: cap.Default, Levels: levels, Options: config.ReasoningCapabilityForEntry(entry).Options}
 }
 
-func (a *App) SetEffort(level string) error {
-	return a.SetEffortForTab("", level)
-}
-
 func (a *App) SetEffortForTab(tabID, level string) error {
 	tab := a.tabByID(tabID)
 	if tab == nil {
@@ -8660,11 +8607,6 @@ func (a *App) SetEffortForTab(tabID, level string) error {
 	a.notifyTabRuntimeRebuilt(tab)
 	return nil
 }
-
-// SetAgentPresetDeprecatedNotice is returned by the deprecated execution-mode
-// Wails methods. Deepzora runs one adaptive standard execution; these methods
-// remain bound for one compatibility version as no-op wrappers: they never
-// require an idle tab, never save a mode, and never rebuild an agent.
 
 func (a *App) applyProviderEffortConfig(entry *config.ProviderEntry, effort string) error {
 	return a.applyConfigChange(func(cfg *config.Config) error {
@@ -10394,117 +10336,6 @@ func (a *App) taskMonitorTargetForTab(tabID string) (taskMonitorTabTarget, error
 		target.sessionID = id
 	}
 	return target, nil
-}
-
-func (a *App) ListTasks() ([]taskmonitor.TaskSnapshot, error) {
-	return a.taskStore().ListTasks(a.ctx, a.projectDir())
-}
-
-// CurrentTaskSessionID returns the stable branch ID for the active desktop
-// session. Task Monitor uses this as an optional view filter; an empty value
-// means that the active tab has no session controller yet.
-func (a *App) CurrentTaskSessionID() string {
-	_, ctrl := a.activeTabAndCtrl()
-	if ctrl == nil {
-		return ""
-	}
-	return controllerTaskSessionID(ctrl)
-}
-
-// ListTasksForSession limits the project task view to one desktop session.
-// The unfiltered ListTasks method remains for compatibility with existing
-// callers and project-wide diagnostics.
-func (a *App) ListTasksForSession(sessionID string) ([]taskmonitor.TaskSnapshot, error) {
-	tasks, err := a.ListTasks()
-	if err != nil || strings.TrimSpace(sessionID) == "" {
-		return tasks, err
-	}
-	return filterTasksBySession(tasks, sessionID), nil
-}
-
-// ListTasksForTab returns the task view owned by tabID and filters it to that
-// tab's session when one is available. It deliberately avoids active-tab state.
-func (a *App) ListTasksForTab(tabID string) ([]taskmonitor.TaskSnapshot, error) {
-	target, err := a.taskMonitorTargetForTab(tabID)
-	if err != nil {
-		return nil, err
-	}
-	if target.sessionID == "" {
-		return []taskmonitor.TaskSnapshot{}, nil
-	}
-	tasks, err := a.taskStore().ListTasks(a.ctx, target.projectDir)
-	if err != nil {
-		return tasks, err
-	}
-	return filterTasksBySession(tasks, target.sessionID), nil
-}
-
-func filterTasksBySession(tasks []taskmonitor.TaskSnapshot, sessionID string) []taskmonitor.TaskSnapshot {
-	filtered := make([]taskmonitor.TaskSnapshot, 0, len(tasks))
-	for _, task := range tasks {
-		if task.SessionID == sessionID {
-			filtered = append(filtered, task)
-		}
-	}
-	return filtered
-}
-
-func (a *App) GetTask(taskID string) (*taskmonitor.TaskSnapshot, error) {
-	return a.taskStore().GetTask(a.ctx, a.projectDir(), taskID)
-}
-
-func (a *App) ListTaskEventsForTab(tabID, taskID string, afterSequence int) ([]taskmonitor.TaskEvent, error) {
-	target, err := a.taskMonitorTargetForTab(tabID)
-	if err != nil {
-		return nil, err
-	}
-	return a.taskStore().ListEvents(a.ctx, target.projectDir, taskID, afterSequence)
-}
-
-func (a *App) StopTask(taskID string, expectedVersion uint64, reason, idemKey string) (taskmonitor.ControlResult, error) {
-	projectDir := a.projectDir()
-	return a.taskControl().StopTaskWithKiller(
-		a.ctx, projectDir, taskID, expectedVersion, reason, idemKey,
-		desktopTaskJobKiller{app: a, projectDir: projectDir},
-	)
-}
-
-func (a *App) StopTaskForTab(tabID, taskID string, expectedVersion uint64, reason, idemKey string) (taskmonitor.ControlResult, error) {
-	target, err := a.taskMonitorTargetForTab(tabID)
-	if err != nil {
-		return taskmonitor.ControlResult{}, err
-	}
-	return a.taskControl().StopTaskWithKiller(
-		a.ctx, target.projectDir, taskID, expectedVersion, reason, idemKey,
-		desktopTaskJobKiller{app: a, projectDir: target.projectDir},
-	)
-}
-
-func (a *App) CancelTask(taskID string, expectedVersion uint64, reason, idemKey string) (taskmonitor.ControlResult, error) {
-	projectDir := a.projectDir()
-	return a.taskControl().CancelTaskWithKiller(
-		a.ctx, projectDir, taskID, expectedVersion, reason, idemKey,
-		desktopTaskJobKiller{app: a, projectDir: projectDir},
-	)
-}
-
-func (a *App) CancelTaskForTab(tabID, taskID string, expectedVersion uint64, reason, idemKey string) (taskmonitor.ControlResult, error) {
-	target, err := a.taskMonitorTargetForTab(tabID)
-	if err != nil {
-		return taskmonitor.ControlResult{}, err
-	}
-	return a.taskControl().CancelTaskWithKiller(
-		a.ctx, target.projectDir, taskID, expectedVersion, reason, idemKey,
-		desktopTaskJobKiller{app: a, projectDir: target.projectDir},
-	)
-}
-
-func (a *App) RequeueTaskForTab(tabID, taskID string, expectedVersion uint64, idemKey string) (taskmonitor.ControlResult, error) {
-	target, err := a.taskMonitorTargetForTab(tabID)
-	if err != nil {
-		return taskmonitor.ControlResult{}, err
-	}
-	return a.taskControl().RequeueTask(a.ctx, target.projectDir, taskID, expectedVersion, idemKey)
 }
 
 func (a *App) OpenTaskSessionForTab(tabID, taskID string) (taskmonitor.ControlResult, error) {

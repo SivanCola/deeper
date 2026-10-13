@@ -460,33 +460,9 @@ func (a *App) RetryInboxItem(tabID, id string) error {
 	return nil
 }
 
-// RefreshInboxReferences re-freezes @-refs for an item.
-func (a *App) RefreshInboxItem(tabID, id string) error {
-	ctrl, err := a.inboxCtrl(tabID)
-	if err != nil {
-		return err
-	}
-	if err := ctrl.RefreshInboxReferences(id); err != nil {
-		return inboxBridgeError(err)
-	}
-	a.emitInboxChanged(tabID)
-	return nil
-}
-
-// SteerForTab still works for compatibility; prefer EnqueueInboxSteer so the
-// guidance is durable before admission.
 func (a *App) emitInboxChanged(tabID string) {
 	if a == nil || a.ctx == nil {
 		return
 	}
 	runtimeEventsEmitFallback(a.ctx, "InboxChanged", map[string]string{"tabId": tabID})
-}
-
-// ClearSessionConfirm checks for a non-empty inbox before clear.
-func (a *App) InboxHasItems(tabID string) (bool, error) {
-	ctrl, err := a.inboxCtrl(tabID)
-	if err != nil {
-		return false, err
-	}
-	return len(ctrl.InboxSnapshot().Items) > 0, nil
 }

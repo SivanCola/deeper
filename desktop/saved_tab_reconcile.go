@@ -149,15 +149,6 @@ func (a *App) classifySavedTab(entry desktopTabEntry, evidence savedTabReconcile
 		}
 	}
 
-	if id, ok := strings.CutPrefix(entry.SessionPath, embeddedBotSessionPrefix); ok {
-		if entry.SessionID != "" && entry.SessionID != id {
-			return savedTabReconcileDecision{outcome: preserveError, reason: "bot_identity_conflict", identityKind: "bot"}, true
-		}
-		if _, err := a.embeddedBotSessionPath(entry.Scope, entry.WorkspaceRoot, entry.SessionPath); err != nil {
-			return savedTabReconcileDecision{outcome: preserveError, reason: "bot_session_unavailable", identityKind: "bot"}, true
-		}
-		return savedTabReconcileDecision{outcome: restoreTab, reason: "bot_session_active", identityKind: "bot"}, true
-	}
 	if sessionID := strings.TrimSpace(entry.SessionID); sessionID != "" {
 		return a.classifyCanonicalSavedTab(entry, sessionID, evidence, afterRecovery)
 	}
@@ -328,9 +319,6 @@ func repairReconciledTabSelection(file *desktopTabsFile, removed map[string]bool
 }
 
 func savedTabIdentityKind(entry desktopTabEntry) string {
-	if strings.HasPrefix(entry.SessionPath, embeddedBotSessionPrefix) {
-		return "bot"
-	}
 	if strings.TrimSpace(entry.SessionID) != "" {
 		return "canonical"
 	}

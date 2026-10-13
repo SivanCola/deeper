@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:a6151216a28857f522c28d19af806b949f53c9da7938553fb04d55d1acc91543";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:46a3c188fe677ca787ff747a9de19359aa7609ff4711e7c8bcf98e0909af1c7d";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -64,7 +64,6 @@ export const DESKTOP_COMMANDS = [
   "BeginSessionComposerSubmission",
   "BeginSessionExportForTarget",
   "BeginSessionHistoryReadForTab",
-  "BotRuntimeStatus",
   "Cancel",
   "CancelJob",
   "CancelJobForTab",
@@ -74,12 +73,9 @@ export const DESKTOP_COMMANDS = [
   "CancelRemoteTabJobs",
   "CancelSessionExport",
   "CancelSessionForTab",
-  "CancelShellInstall",
   "CancelTab",
   "CancelTabWithInboxItemsResult",
-  "CancelTask",
   "CancelTaskByKey",
-  "CancelTaskForTab",
   "CancelTrySubagentProfile",
   "Capabilities",
   "CapabilityDiagnostics",
@@ -91,7 +87,6 @@ export const DESKTOP_COMMANDS = [
   "CheckpointsForTab",
   "ChooseRecoveryBranch",
   "CleanRecoveryLineage",
-  "ClearBotSecret",
   "ClearGoalForTab",
   "ClearMCPServerAuthentication",
   "ClearProviderKey",
@@ -131,7 +126,6 @@ export const DESKTOP_COMMANDS = [
   "CreateTopic",
   "CreateWorkspaceBrowserPreviewForTab",
   "CredentialDiagnostics",
-  "CurrentTaskSessionID",
   "DeleteInboxItem",
   "DeleteProvider",
   "DeleteRemotePath",
@@ -141,7 +135,6 @@ export const DESKTOP_COMMANDS = [
   "DeleteThemePack",
   "DeleteTopic",
   "DesktopStartupSettings",
-  "DiagnoseBotConnection",
   "DisableThemePack",
   "DisconnectRemoteHost",
   "EditGoalForTab",
@@ -199,7 +192,6 @@ export const DESKTOP_COMMANDS = [
   "GetSessionComposerState",
   "GetSessionOrganization",
   "GetSessionVersionState",
-  "GetTask",
   "GetTaskCatalogStatus",
   "GetThemeExperience",
   "GetToolRecoveryForTab",
@@ -230,7 +222,6 @@ export const DESKTOP_COMMANDS = [
   "HistorySliceForTarget",
   "HooksSettings",
   "ImportThemePack",
-  "InboxHasItems",
   "InboxQueueForTarget",
   "InboxSnapshot",
   "InspectTopicRemoval",
@@ -254,16 +245,11 @@ export const DESKTOP_COMMANDS = [
   "ListProjectTopics",
   "ListRemoteDir",
   "ListRemoteProjects",
-  "ListSessionComposerConflicts",
   "ListSessions",
   "ListSessionsForTab",
   "ListTabs",
   "ListTaskEventPage",
-  "ListTaskEventsForTab",
   "ListTaskPage",
-  "ListTasks",
-  "ListTasksForSession",
-  "ListTasksForTab",
   "ListThemePacks",
   "ListTrashEntries",
   "ListWorkspaceSessions",
@@ -336,7 +322,6 @@ export const DESKTOP_COMMANDS = [
   "Platform",
   "PluginDoctor",
   "Plugins",
-  "PollBotConnectionInstall",
   "PrepareWorktreeMerge",
   "PreviewRewindForTab",
   "PreviewSession",
@@ -368,7 +353,6 @@ export const DESKTOP_COMMANDS = [
   "ReconcileRecoveryVersions",
   "ReconnectMCPServer",
   "RecordUIPerf",
-  "RefreshInboxItem",
   "RefreshSkills",
   "RegisterNavigationIntent",
   "ReleaseAttachmentTarget",
@@ -442,7 +426,6 @@ export const DESKTOP_COMMANDS = [
   "ReportCrash",
   "ReportDesktopWebViewReady",
   "RequeueTaskByKey",
-  "RequeueTaskForTab",
   "ResetProviderPresetAccess",
   "ResizeTerminalForTab",
   "ResolveChatFileReferencesForTab",
@@ -549,9 +532,6 @@ export const DESKTOP_COMMANDS = [
   "SetActiveSessionVersion",
   "SetActiveTab",
   "SetAgentParams",
-  "SetBotConnectionToolApprovalMode",
-  "SetBotSecret",
-  "SetBotSettings",
   "SetCloseBehavior",
   "SetCollaborationModeForTab",
   "SetCompactRatio",
@@ -569,7 +549,6 @@ export const DESKTOP_COMMANDS = [
   "SetDesktopTelemetry",
   "SetDesktopTerminalTheme",
   "SetDesktopZoomFactor",
-  "SetEffort",
   "SetEffortForTab",
   "SetGoal",
   "SetGoalForTab",
@@ -627,7 +606,6 @@ export const DESKTOP_COMMANDS = [
   "SlashArgs",
   "StageImageForTab",
   "StageImageForTarget",
-  "StartBotConnectionInstall",
   "StartTopicActivation",
   "StartTurnForAttachmentTarget",
   "StartTurnForTab",
@@ -639,9 +617,7 @@ export const DESKTOP_COMMANDS = [
   "SteerInboxItemForTurn",
   "SteerRemoteTab",
   "StopRemoteServer",
-  "StopTask",
   "StopTaskByKey",
-  "StopTaskForTab",
   "StorageSettings",
   "Submit",
   "SubmitDisplay",
@@ -672,8 +648,6 @@ export const DESKTOP_COMMANDS = [
   "TakeoverSession",
   "TerminalOutputForTab",
   "TerminalWorkspaceForTab",
-  "TestBotConnection",
-  "TestDingtalkBot",
   "TestProviderModel",
   "ToggleMaximiseMainWindow",
   "ToolResultForTab",
@@ -1837,148 +1811,6 @@ export interface BalanceInfo {
   err?: string;
 }
 
-export interface BotAccessView {
-  enabled: boolean;
-  allowAll: boolean;
-  pairingEnabled: boolean;
-  users: string[];
-  groups: string[];
-  approvers: string[];
-  admins: string[];
-}
-
-export interface BotConnectionCredentialView {
-  appId: string;
-  appSecretEnv: string;
-  accountId: string;
-  tokenEnv: string;
-  secretSet: boolean;
-}
-
-export interface BotConnectionDiagnostic {
-  id: string;
-  label: string;
-  status: string;
-  message: string;
-  messageId: string;
-  phase: string;
-  code: string;
-  reportKind: string;
-  reportDetail: string;
-  occurredAt: string;
-}
-
-export interface BotConnectionSessionMappingView {
-  remoteId: string;
-  sessionId: string;
-  sessionSource: string;
-  chatType: string;
-  userId: string;
-  threadId: string;
-  scope: string;
-  workspaceRoot: string;
-  updatedAt: string;
-}
-
-export interface BotConnectionView {
-  id: string;
-  provider: string;
-  domain: string;
-  label: string;
-  enabled: boolean;
-  status: string;
-  model: string;
-  toolApprovalMode: string;
-  workspaceRoot: string;
-  access: BotAccessView;
-  credential: BotConnectionCredentialView;
-  sessionMappings: BotConnectionSessionMappingView[];
-  lastError: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BotControlView {
-  enabled: boolean;
-  addr: string;
-  tokenEnv: string;
-}
-
-export interface BotInstallPollResult {
-  done: boolean;
-  connection: BotConnectionView;
-  status: string;
-  message: string;
-  error: string;
-}
-
-export interface BotInstallStartResult {
-  ok: boolean;
-  provider: string;
-  domain: string;
-  installId: string;
-  url: string;
-  deviceCode: string;
-  userCode: string;
-  interval: number;
-  expireIn: number;
-  message: string;
-}
-
-export interface BotPairingView {
-  enabled: boolean;
-  requestTtlMinutes: number;
-  maxPendingPerPlatform: number;
-}
-
-export interface BotRouteView {
-  connectionId: string;
-  platform: string;
-  chatType: string;
-  chatId: string;
-  userId: string;
-  threadId: string;
-  model: string;
-  toolApprovalMode: string;
-  workspaceRoot: string;
-}
-
-export interface BotRuntimeStatusView {
-  running: boolean;
-  status: string;
-  message: string;
-  connections: number;
-  startedAt: string;
-  platforms?: Record<string, string>;
-}
-
-export interface BotSelfUserIDsView {
-  qq: string[];
-  feishu: string[];
-  weixin: string[];
-  dingtalk: string[];
-}
-
-export interface BotSettingsView {
-  enabled: boolean;
-  model: string;
-  toolApprovalMode: string;
-  maxSteps: number;
-  debounceMs: number;
-  queueMode: string;
-  queueCap: number;
-  ignoreSelfMessages: boolean;
-  selfUserIds: BotSelfUserIDsView;
-  control: BotControlView;
-  pairing: BotPairingView;
-  routes: BotRouteView[];
-  qq: QQBotView;
-  feishu: FeishuBotView;
-  weixin: WeixinBotView;
-  dingtalk: DingtalkBotView;
-  connections: BotConnectionView[];
-}
-
 export interface CapabilitiesView {
   servers: ServerView[];
   skills: SkillView[];
@@ -2106,7 +1938,6 @@ export interface ContextMaintenanceInfo {
   projectedTokens?: number;
   summaryTokens?: number;
   lastSavedTokens?: number;
-  foldTrigger?: number;
   triggerTokens?: number;
   checkpointState?: string;
   hardInputCeiling?: number;
@@ -2177,7 +2008,6 @@ export interface DesktopShellStatusView {
 }
 
 export interface DesktopStartupSettingsView {
-  bot: BotSettingsView;
   desktopLanguage: string;
   desktopLayoutStyle: string;
   desktopTheme: string;
@@ -2201,19 +2031,6 @@ export interface DesktopWindowState {
   x: number;
   y: number;
   maximised: boolean;
-}
-
-export interface DingtalkBotView {
-  enabled: boolean;
-  clientId: string;
-  clientSecretEnv: string;
-  secretSet: boolean;
-  botName: string;
-  requireMention: boolean;
-  model: string;
-  toolApprovalMode: string;
-  workspaceRoot: string;
-  access: BotAccessView;
 }
 
 export interface DirEntry {
@@ -2279,18 +2096,6 @@ export interface ExternalOpenersView {
   openers: ExternalOpenerView[];
   preferred: string;
   workspaceOpenable?: boolean;
-}
-
-export interface FeishuBotView {
-  enabled: boolean;
-  domain: string;
-  appId: string;
-  appSecretEnv: string;
-  secretSet: boolean;
-  verificationToken: string;
-  mode: string;
-  webhookPort: number;
-  requireMention: boolean;
 }
 
 export interface FileBrowserPreviewRequest {
@@ -2428,7 +2233,6 @@ export interface HeartbeatTask {
   approvalMode: string;
   timeWindowStart?: string;
   timeWindowEnd?: string;
-  notifyChannels?: boolean | null;
 }
 
 export interface HistoryContentChunk {
@@ -3400,18 +3204,6 @@ export interface ProviderView {
   modelCatalogFingerprint: string;
 }
 
-export interface QQBotView {
-  enabled: boolean;
-  appId: string;
-  appSecretEnv: string;
-  secretSet: boolean;
-  sandbox: boolean;
-  model: string;
-  toolApprovalMode: string;
-  workspaceRoot: string;
-  access: BotAccessView;
-}
-
 export interface QuestionAnswer {
   questionId: string;
   selected: string[];
@@ -3776,13 +3568,12 @@ export interface ServerView {
   hostProfile?: string;
   elicitationNegotiated?: boolean;
   appsNegotiated?: boolean;
-  startIntent?: string;
-  runtimeState?: string;
+  runtimeState: string;
   protocolVersion?: string;
   sessionState?: string;
   reconnectAttempts?: number;
   errorKind?: string;
-  availability?: string;
+  availability: string;
   enabled: boolean;
   installed: boolean;
   action?: string;
@@ -3790,7 +3581,6 @@ export interface ServerView {
   configSource?: string;
   builtIn?: boolean;
   configured?: boolean;
-  autoStart: boolean;
   command?: string;
   args?: string[];
   url?: string;
@@ -4115,7 +3905,6 @@ export interface SettingsView {
   sandbox: SandboxView;
   network: NetworkView;
   agent: AgentView;
-  bot: BotSettingsView;
   desktopLanguage: string;
   desktopCurrency: string;
   desktopLayoutStyle: string;
@@ -4286,7 +4075,6 @@ export interface TabMeta {
   running: boolean;
   turnStartedAt?: number;
   pendingPrompt?: boolean;
-  remoteControlled?: boolean;
   backgroundJobs?: number;
   cancelRequested?: boolean;
   cancellable: boolean;
@@ -4627,14 +4415,6 @@ export interface UsageStatsRequest {
   from?: string;
   to?: string;
   source?: string;
-}
-
-export interface WeixinBotView {
-  enabled: boolean;
-  accountId: string;
-  tokenEnv: string;
-  tokenSet: boolean;
-  apiBase: string;
 }
 
 export interface WorkspaceChangeDetailView {
@@ -5611,7 +5391,6 @@ export interface GeneratedDesktopCommands {
   BeginSessionComposerSubmission(arg0: SessionRef, arg1: string, arg2: string, arg3: string): Promise<SessionComposerState>;
   BeginSessionExportForTarget(arg0: SessionSelector, arg1: string, arg2: string, arg3: string, arg4: string): Promise<SessionExportHandle>;
   BeginSessionHistoryReadForTab(arg0: string): Promise<SessionHistoryReadHandle>;
-  BotRuntimeStatus(): Promise<BotRuntimeStatusView>;
   Cancel(): Promise<void>;
   CancelJob(arg0: string): Promise<boolean>;
   CancelJobForTab(arg0: string, arg1: string): Promise<boolean>;
@@ -5621,12 +5400,9 @@ export interface GeneratedDesktopCommands {
   CancelRemoteTabJobs(arg0: string, arg1: string[]): Promise<void>;
   CancelSessionExport(arg0: string): Promise<void>;
   CancelSessionForTab(arg0: string): Promise<CancelReceipt>;
-  CancelShellInstall(): Promise<void>;
   CancelTab(arg0: string): Promise<void>;
   CancelTabWithInboxItemsResult(arg0: string, arg1: string[]): Promise<InboxCancelResultView>;
-  CancelTask(arg0: string, arg1: number, arg2: string, arg3: string): Promise<ControlResult>;
   CancelTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
-  CancelTaskForTab(arg0: string, arg1: string, arg2: number, arg3: string, arg4: string): Promise<ControlResult>;
   CancelTrySubagentProfile(): Promise<void>;
   Capabilities(): Promise<CapabilitiesView>;
   CapabilityDiagnostics(arg0: boolean): Promise<Report>;
@@ -5638,7 +5414,6 @@ export interface GeneratedDesktopCommands {
   CheckpointsForTab(arg0: string): Promise<CheckpointMeta[]>;
   ChooseRecoveryBranch(arg0: RecoveryPreferenceRequest): Promise<void>;
   CleanRecoveryLineage(arg0: RecoveryCleanupRequest): Promise<RecoveryCleanupResult>;
-  ClearBotSecret(arg0: string): Promise<void>;
   ClearGoalForTab(arg0: string): Promise<void>;
   ClearMCPServerAuthentication(arg0: string): Promise<void>;
   ClearProviderKey(arg0: string): Promise<void>;
@@ -5678,7 +5453,6 @@ export interface GeneratedDesktopCommands {
   CreateTopic(arg0: string, arg1: string, arg2: string): Promise<TopicMeta>;
   CreateWorkspaceBrowserPreviewForTab(arg0: string, arg1: string): Promise<string>;
   CredentialDiagnostics(arg0: boolean): Promise<CredentialDiagnosticReport>;
-  CurrentTaskSessionID(): Promise<string>;
   DeleteInboxItem(arg0: string, arg1: string): Promise<void>;
   DeleteProvider(arg0: string): Promise<void>;
   DeleteRemotePath(arg0: string, arg1: string, arg2: boolean): Promise<void>;
@@ -5688,7 +5462,6 @@ export interface GeneratedDesktopCommands {
   DeleteThemePack(arg0: string): Promise<void>;
   DeleteTopic(arg0: string): Promise<void>;
   DesktopStartupSettings(): Promise<DesktopStartupSettingsView>;
-  DiagnoseBotConnection(arg0: string): Promise<BotConnectionDiagnostic>;
   DisableThemePack(): Promise<void>;
   DisconnectRemoteHost(arg0: string): Promise<void>;
   EditGoalForTab(arg0: string, arg1: string, arg2: number | null): Promise<void>;
@@ -5746,7 +5519,6 @@ export interface GeneratedDesktopCommands {
   GetSessionComposerState(arg0: SessionRef): Promise<SessionComposerState>;
   GetSessionOrganization(arg0: SessionOrganizationWorkspace): Promise<SessionOrganizationSnapshot>;
   GetSessionVersionState(arg0: ProjectTopicKey): Promise<SessionVersionStateView>;
-  GetTask(arg0: string): Promise<TaskSnapshot | null>;
   GetTaskCatalogStatus(): Promise<taskcatalog_Status>;
   GetThemeExperience(): Promise<ThemeExperienceView>;
   GetToolRecoveryForTab(arg0: string): Promise<ToolRecoverySnapshot>;
@@ -5777,7 +5549,6 @@ export interface GeneratedDesktopCommands {
   HistorySliceForTarget(arg0: SessionSelector, arg1: HistorySliceRequest): Promise<HistorySlice>;
   HooksSettings(arg0: string): Promise<HooksSettingsView>;
   ImportThemePack(arg0: string, arg1: boolean): Promise<ThemeImportResult>;
-  InboxHasItems(arg0: string): Promise<boolean>;
   InboxQueueForTarget(arg0: InboxTargetView, arg1: InboxQueueRequest): Promise<InboxQueueResultView>;
   InboxSnapshot(arg0: string): Promise<InboxSnapshotView>;
   InspectTopicRemoval(arg0: TopicRemovalTarget): Promise<TopicRemovalInspection>;
@@ -5801,16 +5572,11 @@ export interface GeneratedDesktopCommands {
   ListProjectTopics(arg0: ProjectTopicPageRequest): Promise<ProjectTopicPage>;
   ListRemoteDir(arg0: string, arg1: string): Promise<RemoteDirEntry[]>;
   ListRemoteProjects(): Promise<RemoteProjectView[]>;
-  ListSessionComposerConflicts(arg0: SessionRef): Promise<string[]>;
   ListSessions(): Promise<SessionMeta[]>;
   ListSessionsForTab(arg0: string): Promise<SessionMeta[]>;
   ListTabs(): Promise<TabMeta[]>;
   ListTaskEventPage(arg0: TaskEventPageRequest): Promise<EventPage>;
-  ListTaskEventsForTab(arg0: string, arg1: string, arg2: number): Promise<TaskEvent[]>;
   ListTaskPage(arg0: TaskPageRequest): Promise<TaskPage>;
-  ListTasks(): Promise<TaskSnapshot[]>;
-  ListTasksForSession(arg0: string): Promise<TaskSnapshot[]>;
-  ListTasksForTab(arg0: string): Promise<TaskSnapshot[]>;
   ListThemePacks(): Promise<ThemePackView[]>;
   ListTrashEntries(arg0: string, arg1: string, arg2: number): Promise<TrashEntryPage>;
   ListWorkspaceSessions(arg0: string, arg1: string, arg2: string, arg3: number, arg4: boolean): Promise<WorkspaceSessionPage>;
@@ -5883,7 +5649,6 @@ export interface GeneratedDesktopCommands {
   Platform(): Promise<string>;
   PluginDoctor(arg0: string): Promise<PluginView>;
   Plugins(): Promise<PluginView[]>;
-  PollBotConnectionInstall(arg0: string): Promise<BotInstallPollResult>;
   PrepareWorktreeMerge(arg0: string): Promise<MergeInspection>;
   PreviewRewindForTab(arg0: string, arg1: number, arg2: string): Promise<RewindPlanView>;
   PreviewSession(arg0: string): Promise<Message[]>;
@@ -5915,7 +5680,6 @@ export interface GeneratedDesktopCommands {
   ReconcileRecoveryVersions(arg0: ProjectTopicKey): Promise<void>;
   ReconnectMCPServer(arg0: string): Promise<void>;
   RecordUIPerf(arg0: Record<string, string>): Promise<void>;
-  RefreshInboxItem(arg0: string, arg1: string): Promise<void>;
   RefreshSkills(): Promise<void>;
   RegisterNavigationIntent(arg0: string): Promise<void>;
   ReleaseAttachmentTarget(arg0: string): Promise<void>;
@@ -5989,7 +5753,6 @@ export interface GeneratedDesktopCommands {
   ReportCrash(arg0: string, arg1: string): Promise<void>;
   ReportDesktopWebViewReady(): Promise<void>;
   RequeueTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
-  RequeueTaskForTab(arg0: string, arg1: string, arg2: number, arg3: string): Promise<ControlResult>;
   ResetProviderPresetAccess(arg0: string): Promise<void>;
   ResizeTerminalForTab(arg0: string, arg1: string, arg2: number, arg3: number): Promise<void>;
   ResolveChatFileReferencesForTab(arg0: string, arg1: string, arg2: ChatFileReferenceRequest[]): Promise<ChatFileReferenceResult>;
@@ -6096,9 +5859,6 @@ export interface GeneratedDesktopCommands {
   SetActiveSessionVersion(arg0: RecoveryPreferenceRequest): Promise<void>;
   SetActiveTab(arg0: string): Promise<void>;
   SetAgentParams(arg0: number, arg1: string): Promise<void>;
-  SetBotConnectionToolApprovalMode(arg0: string, arg1: string): Promise<void>;
-  SetBotSecret(arg0: string, arg1: string): Promise<void>;
-  SetBotSettings(arg0: BotSettingsView): Promise<void>;
   SetCloseBehavior(arg0: string): Promise<void>;
   SetCollaborationModeForTab(arg0: string, arg1: string): Promise<void>;
   SetCompactRatio(arg0: number): Promise<void>;
@@ -6116,7 +5876,6 @@ export interface GeneratedDesktopCommands {
   SetDesktopTelemetry(arg0: boolean): Promise<void>;
   SetDesktopTerminalTheme(arg0: string): Promise<void>;
   SetDesktopZoomFactor(arg0: number): Promise<void>;
-  SetEffort(arg0: string): Promise<void>;
   SetEffortForTab(arg0: string, arg1: string): Promise<void>;
   SetGoal(arg0: string): Promise<void>;
   SetGoalForTab(arg0: string, arg1: string): Promise<void>;
@@ -6174,7 +5933,6 @@ export interface GeneratedDesktopCommands {
   SlashArgs(arg0: string): Promise<SlashArgsResult>;
   StageImageForTab(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<DraftImageView>;
   StageImageForTarget(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<DraftImageView>;
-  StartBotConnectionInstall(arg0: string, arg1: string): Promise<BotInstallStartResult>;
   StartTopicActivation(arg0: TopicActivationRequest): Promise<TopicActivationTicket>;
   StartTurnForAttachmentTarget(arg0: string, arg1: string, arg2: SubmissionRequest): Promise<TurnStartView>;
   StartTurnForTab(arg0: string, arg1: string, arg2: string): Promise<TurnStartView>;
@@ -6186,9 +5944,7 @@ export interface GeneratedDesktopCommands {
   SteerInboxItemForTurn(arg0: string, arg1: string, arg2: string): Promise<InboxReceiptView>;
   SteerRemoteTab(arg0: string, arg1: string): Promise<void>;
   StopRemoteServer(arg0: string, arg1: string): Promise<void>;
-  StopTask(arg0: string, arg1: number, arg2: string, arg3: string): Promise<ControlResult>;
   StopTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
-  StopTaskForTab(arg0: string, arg1: string, arg2: number, arg3: string, arg4: string): Promise<ControlResult>;
   StorageSettings(): Promise<StorageSettingsView>;
   Submit(arg0: string): Promise<void>;
   SubmitDisplay(arg0: string, arg1: string): Promise<void>;
@@ -6219,8 +5975,6 @@ export interface GeneratedDesktopCommands {
   TakeoverSession(arg0: string, arg1: string): Promise<void>;
   TerminalOutputForTab(arg0: string, arg1: string): Promise<string>;
   TerminalWorkspaceForTab(arg0: string): Promise<TerminalWorkspaceView>;
-  TestBotConnection(arg0: string, arg1: string): Promise<BotConnectionDiagnostic>;
-  TestDingtalkBot(): Promise<BotConnectionDiagnostic>;
   TestProviderModel(arg0: ProviderView, arg1: string, arg2: string): Promise<void>;
   ToggleMaximiseMainWindow(): Promise<void>;
   ToolResultForTab(arg0: string, arg1: string): Promise<ToolResultData | null>;

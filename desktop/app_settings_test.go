@@ -171,9 +171,6 @@ func TestDesktopStartupSettingsUsesUserDesktopPreferencesWithoutFullSettingsPayl
 		t.Fatalf("set desktop check updates: %v", err)
 	}
 
-	userCfg.Bot.Enabled = true
-	userCfg.Bot.QQ.Access.Enabled = true
-	userCfg.Bot.QQ.Access.Users = []string{"alice"}
 	if err := userCfg.SaveTo(config.UserConfigPath()); err != nil {
 		t.Fatalf("save user config: %v", err)
 	}
@@ -184,9 +181,6 @@ func TestDesktopStartupSettingsUsesUserDesktopPreferencesWithoutFullSettingsPayl
 	}
 	if want := []string{"workspace", "git_branch", "model"}; !reflect.DeepEqual(got.StatusBarItems, want) {
 		t.Fatalf("DesktopStartupSettings status bar items = %v, want %v", got.StatusBarItems, want)
-	}
-	if !got.Bot.Enabled || !got.Bot.QQ.Access.Enabled || !reflect.DeepEqual(got.Bot.QQ.Access.Users, []string{"alice"}) {
-		t.Fatalf("DesktopStartupSettings bot settings = %+v, want lightweight bot snapshot", got.Bot)
 	}
 
 	raw, err := json.Marshal(got)
