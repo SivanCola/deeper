@@ -479,10 +479,6 @@ function applyBackgroundCSSVars(root: HTMLElement, pack: ThemePackView): void {
     root.style.setProperty("--theme-pane-child-pct", `${Math.min((homePane + 0.30) * 100, 100)}%`);
     root.style.setProperty("--theme-pane-interact-pct", `${Math.min((homePane + 0.40) * 100, 100)}%`);
     root.style.setProperty("--theme-pane-overlay-pct", `${Math.min((homePane + 0.40) * 100, 100)}%`);
-    // Legacy aliases keep V1 tests and third-party diagnostics stable.
-    root.style.setProperty("--theme-bg-image", `url("${cssUrlEscape(homeUrl)}")`);
-    root.style.setProperty("--theme-bg-focus-x", `${clamp01(home.focusX) * 100}%`);
-    root.style.setProperty("--theme-bg-focus-y", `${clamp01(home.focusY) * 100}%`);
   } else {
     root.style.setProperty("--theme-bg-home-image", "none");
   }
@@ -523,9 +519,6 @@ function clearBackgroundCSSVars(root: HTMLElement): void {
   root.style.removeProperty("--theme-bg-task-focus-x");
   root.style.removeProperty("--theme-bg-task-focus-y");
   root.style.removeProperty("--theme-bg-task-overlay");
-  root.style.removeProperty("--theme-bg-image");
-  root.style.removeProperty("--theme-bg-focus-x");
-  root.style.removeProperty("--theme-bg-focus-y");
   root.style.removeProperty("--theme-bg-home-opacity");
   root.style.removeProperty("--theme-bg-task-opacity");
   root.style.removeProperty("--theme-bg-overlay");

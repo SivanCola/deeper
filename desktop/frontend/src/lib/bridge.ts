@@ -94,7 +94,7 @@ import type {
   DirEntry,
   DesktopStartupSettingsView,
   DeliveryWorktreeAvailability,
-  DeliveryWorktreeOpenResult,
+  IsolatedWorktreeOpenResult,
   WorktreeMergeInspection,
   WorktreeMergeRequest,
   WorktreeMergeResult,
@@ -674,7 +674,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ReloadSettings(): Promise<void>;
   SetShellPreference(prefer: string): Promise<void>;
   InstallShellSupport(id: string): Promise<ShellInstallResult>;
-  CancelShellInstall(): Promise<void>;
   SetSandbox(bash: string, network: boolean, workspaceRoot: string, allowWrite: string[], shell: string): Promise<void>;
   SetNetwork(n: NetworkView): Promise<void>;
   SetCloseBehavior(mode: string): Promise<void>;
@@ -731,7 +730,7 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ListTabs(): Promise<TabMeta[]>;
   OpenProjectTab(workspaceRoot: string, topicID: string): Promise<TabMeta>;
   IsolatedWorktreeAvailability(workspaceRoot: string): Promise<DeliveryWorktreeAvailability>;
-  CreateIsolatedWorktree(workspaceRoot: string): Promise<DeliveryWorktreeOpenResult>;
+  CreateIsolatedWorktree(workspaceRoot: string): Promise<IsolatedWorktreeOpenResult>;
   InspectWorktreeMerge(tabID: string): Promise<WorktreeMergeInspection>;
   GetWorktreeStatus(tabID: string): Promise<WorktreeMergeInspection>;
   PrepareWorktreeMerge(tabID: string): Promise<WorktreeMergeInspection>;
@@ -4568,7 +4567,6 @@ function makeMockApp(): MockAppBindings {
             manualUrl: "https://git-scm.com/download/win",
           };
         },
-        async CancelShellInstall() {},
         async SetSandbox(bash: string, network: boolean, workspaceRoot: string, allowWrite: string[], shell: string) {
           const effectiveWorkspaceRoot = workspaceRoot.trim() || cwd;
           const prev = settings.sandbox;

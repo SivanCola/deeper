@@ -1906,21 +1906,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/shell_support.go",
-      "name": "CancelShellInstall",
-      "owner": "App.CancelShellInstall",
-      "params": [],
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.CancelShellInstall"
-      },
-      "sources": [
-        "desktop/shell_support.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
       "name": "CancelTab",
       "owner": "App.CancelTab",

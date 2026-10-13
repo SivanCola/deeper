@@ -38,10 +38,6 @@ type IsolatedWorktreeOpenResult struct {
 	Tab            TabMeta `json:"tab"`
 }
 
-// DeliveryWorktreeOpenResult is the deprecated alias of
-// IsolatedWorktreeOpenResult kept bound for one compatibility version.
-type DeliveryWorktreeOpenResult = IsolatedWorktreeOpenResult
-
 // IsolatedWorktreeAvailability reports whether workspaceRoot can use the
 // optional Git isolation path. A false result never disables writing itself;
 // the cross-platform workspace writer lease remains the no-Git fallback.

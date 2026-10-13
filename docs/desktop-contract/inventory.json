@@ -125,7 +125,7 @@
       "kind": "command",
       "name": "AddPermissionRule",
       "detail": "(list string, rule string) error",
-      "location": "desktop/settings_app.go:2268",
+      "location": "desktop/settings_app.go:2253",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -133,7 +133,7 @@
       "kind": "command",
       "name": "AddProviderConnection",
       "detail": "(presetID string, sourceName string, key string) (string, error)",
-      "location": "desktop/settings_app.go:2453",
+      "location": "desktop/settings_app.go:2438",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -141,7 +141,7 @@
       "kind": "command",
       "name": "AddProviderConnectionWithOptions",
       "detail": "(presetID string, sourceName string, key string, baseURL string, kind string) (string, error)",
-      "location": "desktop/settings_app.go:2468",
+      "location": "desktop/settings_app.go:2453",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -149,7 +149,7 @@
       "kind": "command",
       "name": "AddProviderConnectionWithURL",
       "detail": "(presetID string, sourceName string, key string, baseURL string) (string, error)",
-      "location": "desktop/settings_app.go:2458",
+      "location": "desktop/settings_app.go:2443",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -157,7 +157,7 @@
       "kind": "command",
       "name": "AddProviderPresetAccess",
       "detail": "(id string, key string) (string, error)",
-      "location": "desktop/settings_app.go:1983",
+      "location": "desktop/settings_app.go:1968",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -539,14 +539,6 @@
     },
     {
       "kind": "command",
-      "name": "CancelShellInstall",
-      "detail": "()",
-      "location": "desktop/shell_support.go:108",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
       "name": "CancelTab",
       "detail": "(tabID string)",
       "location": "desktop/app.go:1151",
@@ -693,7 +685,7 @@
       "kind": "command",
       "name": "ClearProviderKey",
       "detail": "(apiKeyEnv string) error",
-      "location": "desktop/settings_app.go:2257",
+      "location": "desktop/settings_app.go:2242",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -733,7 +725,7 @@
       "kind": "command",
       "name": "CloseMergedWorktreeTab",
       "detail": "(request CloseMergedWorktreeTabRequest) (CloseMergedWorktreeTabResult, error)",
-      "location": "desktop/delivery_worktree.go:259",
+      "location": "desktop/delivery_worktree.go:255",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -869,7 +861,7 @@
       "kind": "command",
       "name": "ContextPanel",
       "detail": "(tabID string) ContextPanelInfo",
-      "location": "desktop/tabs.go:6002",
+      "location": "desktop/tabs.go:5995",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -925,7 +917,7 @@
       "kind": "command",
       "name": "CreateIsolatedWorktree",
       "detail": "(workspaceRoot string) (IsolatedWorktreeOpenResult, error)",
-      "location": "desktop/delivery_worktree.go:60",
+      "location": "desktop/delivery_worktree.go:56",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -965,7 +957,7 @@
       "kind": "command",
       "name": "CreateTopic",
       "detail": "(scope string, workspaceRoot string, title string) (TopicMeta, error)",
-      "location": "desktop/tabs.go:5530",
+      "location": "desktop/tabs.go:5523",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1237,7 +1229,7 @@
       "kind": "command",
       "name": "FetchAllProviderModelCatalogs",
       "detail": "(providers []ProviderView) map[string][]ProviderModelCapabilityView",
-      "location": "desktop/settings_app.go:2183",
+      "location": "desktop/settings_app.go:2168",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1245,7 +1237,7 @@
       "kind": "command",
       "name": "FetchProviderModelCatalog",
       "detail": "(p ProviderView) ([]ProviderModelCapabilityView, error)",
-      "location": "desktop/settings_app.go:2144",
+      "location": "desktop/settings_app.go:2129",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1261,7 +1253,7 @@
       "kind": "command",
       "name": "FinalizeWorktreeMerge",
       "detail": "(request worktree.CleanupRequest) (worktree.CleanupResult, error)",
-      "location": "desktop/delivery_worktree.go:209",
+      "location": "desktop/delivery_worktree.go:205",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1333,7 +1325,7 @@
       "kind": "command",
       "name": "ForkSessionTarget",
       "detail": "(selector SessionSelector, turnBoundary string) (session.SessionRef, error)",
-      "location": "desktop/session_workspace_fork.go:183",
+      "location": "desktop/session_workspace_fork.go:181",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1573,7 +1565,7 @@
       "kind": "command",
       "name": "GetWorktreeStatus",
       "detail": "(tabID string) (worktree.MergeInspection, error)",
-      "location": "desktop/delivery_worktree.go:152",
+      "location": "desktop/delivery_worktree.go:148",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1805,7 +1797,7 @@
       "kind": "command",
       "name": "InspectWorktreeMerge",
       "detail": "(tabID string) (worktree.MergeInspection, error)",
-      "location": "desktop/delivery_worktree.go:130",
+      "location": "desktop/delivery_worktree.go:126",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -1869,7 +1861,7 @@
       "kind": "command",
       "name": "IsolatedWorktreeAvailability",
       "detail": "(workspaceRoot string) worktree.Availability",
-      "location": "desktop/delivery_worktree.go:48",
+      "location": "desktop/delivery_worktree.go:44",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -2237,7 +2229,7 @@
       "kind": "command",
       "name": "MergeWorktreeBack",
       "detail": "(request MergeWorktreeBackRequest) (worktree.MergeResult, error)",
-      "location": "desktop/delivery_worktree.go:166",
+      "location": "desktop/delivery_worktree.go:162",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -2621,7 +2613,7 @@
       "kind": "command",
       "name": "PrepareWorktreeMerge",
       "detail": "(tabID string) (worktree.MergeInspection, error)",
-      "location": "desktop/delivery_worktree.go:159",
+      "location": "desktop/delivery_worktree.go:155",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -2941,7 +2933,7 @@
       "kind": "command",
       "name": "ReloadRuntime",
       "detail": "(tabID string) error",
-      "location": "desktop/settings_app.go:1495",
+      "location": "desktop/settings_app.go:1480",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -2949,7 +2941,7 @@
       "kind": "command",
       "name": "ReloadSettings",
       "detail": "() error",
-      "location": "desktop/settings_app.go:2297",
+      "location": "desktop/settings_app.go:2282",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3197,7 +3189,7 @@
       "kind": "command",
       "name": "RemovePermissionRule",
       "detail": "(list string, rule string) error",
-      "location": "desktop/settings_app.go:2288",
+      "location": "desktop/settings_app.go:2273",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3285,7 +3277,7 @@
       "kind": "command",
       "name": "RenameProject",
       "detail": "(workspaceRoot string, title string) error",
-      "location": "desktop/tabs.go:5564",
+      "location": "desktop/tabs.go:5557",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3293,7 +3285,7 @@
       "kind": "command",
       "name": "RenameProviderConnections",
       "detail": "(names []string, displayName string) error",
-      "location": "desktop/settings_app.go:1788",
+      "location": "desktop/settings_app.go:1773",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3349,7 +3341,7 @@
       "kind": "command",
       "name": "RenameTopic",
       "detail": "(topicID string, title string) error",
-      "location": "desktop/tabs.go:5674",
+      "location": "desktop/tabs.go:5667",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3365,7 +3357,7 @@
       "kind": "command",
       "name": "ReorderProjects",
       "detail": "(workspaceRoots []string) error",
-      "location": "desktop/tabs.go:5620",
+      "location": "desktop/tabs.go:5613",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -3469,7 +3461,7 @@
       "kind": "command",
       "name": "ResetProviderPresetAccess",
       "detail": "(id string) error",
-      "location": "desktop/settings_app.go:2054",
+      "location": "desktop/settings_app.go:2039",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4029,7 +4021,7 @@
       "kind": "command",
       "name": "SaveProvider",
       "detail": "(p ProviderView) error",
-      "location": "desktop/settings_app.go:1808",
+      "location": "desktop/settings_app.go:1793",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4037,7 +4029,7 @@
       "kind": "command",
       "name": "SaveProviderKey",
       "detail": "(apiKeyEnv string, value string) (string, error)",
-      "location": "desktop/settings_app.go:2248",
+      "location": "desktop/settings_app.go:2233",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4045,7 +4037,7 @@
       "kind": "command",
       "name": "SaveProviderModelCatalogs",
       "detail": "(updates []ProviderModelCatalogUpdate) ([]string, error)",
-      "location": "desktop/settings_app.go:1910",
+      "location": "desktop/settings_app.go:1895",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4053,7 +4045,7 @@
       "kind": "command",
       "name": "SaveProviderWithKey",
       "detail": "(p ProviderView, key string) (string, error)",
-      "location": "desktop/settings_app.go:1961",
+      "location": "desktop/settings_app.go:1946",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4309,7 +4301,7 @@
       "kind": "command",
       "name": "SetAgentParams",
       "detail": "(temperature float64, systemPrompt string) error",
-      "location": "desktop/settings_app.go:2347",
+      "location": "desktop/settings_app.go:2332",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4333,7 +4325,7 @@
       "kind": "command",
       "name": "SetCompactRatio",
       "detail": "(ratio float64) error",
-      "location": "desktop/settings_app.go:2355",
+      "location": "desktop/settings_app.go:2340",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4349,7 +4341,7 @@
       "kind": "command",
       "name": "SetConnectionKey",
       "detail": "(name string, value string) (string, error)",
-      "location": "desktop/settings_app.go:2448",
+      "location": "desktop/settings_app.go:2433",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4357,7 +4349,7 @@
       "kind": "command",
       "name": "SetDefaultModel",
       "detail": "(ref string) error",
-      "location": "desktop/settings_app.go:1535",
+      "location": "desktop/settings_app.go:1520",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4365,7 +4357,7 @@
       "kind": "command",
       "name": "SetDefaultToolApprovalMode",
       "detail": "(mode string) error",
-      "location": "desktop/settings_app.go:1654",
+      "location": "desktop/settings_app.go:1639",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4501,7 +4493,7 @@
       "kind": "command",
       "name": "SetMaxParallelWriters",
       "detail": "(n int) error",
-      "location": "desktop/settings_app.go:1648",
+      "location": "desktop/settings_app.go:1633",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4509,7 +4501,7 @@
       "kind": "command",
       "name": "SetMaxSubagentConcurrency",
       "detail": "(n int) error",
-      "location": "desktop/settings_app.go:1643",
+      "location": "desktop/settings_app.go:1628",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4517,7 +4509,7 @@
       "kind": "command",
       "name": "SetMaxSubagentDepth",
       "detail": "(depth int) error",
-      "location": "desktop/settings_app.go:1628",
+      "location": "desktop/settings_app.go:1613",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4557,7 +4549,7 @@
       "kind": "command",
       "name": "SetNetwork",
       "detail": "(n NetworkView) error",
-      "location": "desktop/settings_app.go:2329",
+      "location": "desktop/settings_app.go:2314",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4565,7 +4557,7 @@
       "kind": "command",
       "name": "SetPermissionMode",
       "detail": "(mode string) error",
-      "location": "desktop/settings_app.go:2263",
+      "location": "desktop/settings_app.go:2248",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4589,7 +4581,7 @@
       "kind": "command",
       "name": "SetPlannerModel",
       "detail": "(ref string) error",
-      "location": "desktop/settings_app.go:1540",
+      "location": "desktop/settings_app.go:1525",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4613,7 +4605,7 @@
       "kind": "command",
       "name": "SetProjectColor",
       "detail": "(workspaceRoot string, color string) error",
-      "location": "desktop/tabs.go:5575",
+      "location": "desktop/tabs.go:5568",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4621,7 +4613,7 @@
       "kind": "command",
       "name": "SetProjectPinned",
       "detail": "(workspaceRoot string, pinned bool) error",
-      "location": "desktop/tabs.go:5586",
+      "location": "desktop/tabs.go:5579",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4629,7 +4621,7 @@
       "kind": "command",
       "name": "SetProviderKey",
       "detail": "(apiKeyEnv string, value string) (string, error)",
-      "location": "desktop/settings_app.go:2216",
+      "location": "desktop/settings_app.go:2201",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4637,7 +4629,7 @@
       "kind": "command",
       "name": "SetProviderWebSearch",
       "detail": "(names []string, enabled bool) error",
-      "location": "desktop/settings_app.go:1818",
+      "location": "desktop/settings_app.go:1803",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4645,7 +4637,7 @@
       "kind": "command",
       "name": "SetReasoningLanguage",
       "detail": "(lang string) error",
-      "location": "desktop/settings_app.go:2362",
+      "location": "desktop/settings_app.go:2347",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4717,7 +4709,7 @@
       "kind": "command",
       "name": "SetSandbox",
       "detail": "(bash string, network bool, workspaceRoot string, allowWrite []string, shell string) error",
-      "location": "desktop/settings_app.go:2317",
+      "location": "desktop/settings_app.go:2302",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4741,7 +4733,7 @@
       "kind": "command",
       "name": "SetShellPreference",
       "detail": "(prefer string) error",
-      "location": "desktop/shell_support.go:113",
+      "location": "desktop/shell_support.go:109",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4789,7 +4781,7 @@
       "kind": "command",
       "name": "SetSubagentEffort",
       "detail": "(level string) error",
-      "location": "desktop/settings_app.go:1586",
+      "location": "desktop/settings_app.go:1571",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4797,7 +4789,7 @@
       "kind": "command",
       "name": "SetSubagentModel",
       "detail": "(ref string) error",
-      "location": "desktop/settings_app.go:1550",
+      "location": "desktop/settings_app.go:1535",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4805,7 +4797,7 @@
       "kind": "command",
       "name": "SetSubagentProfileEffort",
       "detail": "(name string, level string) error",
-      "location": "desktop/settings_app.go:1613",
+      "location": "desktop/settings_app.go:1598",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4813,7 +4805,7 @@
       "kind": "command",
       "name": "SetSubagentProfileModel",
       "detail": "(name string, ref string) error",
-      "location": "desktop/settings_app.go:1607",
+      "location": "desktop/settings_app.go:1592",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4837,7 +4829,7 @@
       "kind": "command",
       "name": "SetTopicPinned",
       "detail": "(topicID string, pinned bool) error",
-      "location": "desktop/tabs.go:5861",
+      "location": "desktop/tabs.go:5854",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -4853,7 +4845,7 @@
       "kind": "command",
       "name": "SetVisionModel",
       "detail": "(ref string) error",
-      "location": "desktop/settings_app.go:1545",
+      "location": "desktop/settings_app.go:1530",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
@@ -5647,7 +5639,7 @@
     {
       "kind": "event",
       "name": "session:recovered",
-      "location": "desktop/tabs.go:5355",
+      "location": "desktop/tabs.go:5348",
       "class": "keep-business",
       "owner": "desktop/event frame (seq + generation), same payload"
     },

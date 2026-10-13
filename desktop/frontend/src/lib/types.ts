@@ -661,17 +661,11 @@ export interface DeliveryWorktreeAvailability {
   sourceDirty?: boolean;
 }
 
-export interface DeliveryWorktreeOpenResult {
-  workspaceRoot: string;
-  worktreeRoot: string;
-  sourceRoot: string;
-	branch: string;
-	sourceDirty: boolean;
-	sourceRevision?: string;
-	taskId?: string;
-	conversationId?: string;
-	tab: TabMeta;
-}
+// Reuse the host result fields with the frontend's typed runtime/tab projection.
+export type IsolatedWorktreeOpenResult = Omit<
+  import("../generated/desktopContract.generated").IsolatedWorktreeOpenResult,
+  "tab"
+> & { tab: TabMeta };
 
 export * from "./worktreeMergeTypes";
 

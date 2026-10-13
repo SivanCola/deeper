@@ -994,18 +994,6 @@
       ]
     }
   },
-  "CancelShellInstall": {
-    "domain": "desktop/shell_support.go",
-    "owner": "App.CancelShellInstall",
-    "sources": [
-      "desktop/shell_support.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.CancelShellInstall",
-      "inputs": []
-    }
-  },
   "CancelTab": {
     "domain": "desktop/app.go",
     "owner": "App.CancelTab",

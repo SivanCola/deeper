@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:f5994622481f9b35502e57f8a337012065c05aad9fbabe606f3d62203dd40897";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:d786a2e8b95d12d6224d5115b8fccf2a04ee11f7f7438b3c2a0251fcf0a3de6a";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -73,7 +73,6 @@ export const DESKTOP_COMMANDS = [
   "CancelRemoteTabJobs",
   "CancelSessionExport",
   "CancelSessionForTab",
-  "CancelShellInstall",
   "CancelTab",
   "CancelTabWithInboxItemsResult",
   "CancelTask",
@@ -5419,7 +5418,6 @@ export interface GeneratedDesktopCommands {
   CancelRemoteTabJobs(arg0: string, arg1: string[]): Promise<void>;
   CancelSessionExport(arg0: string): Promise<void>;
   CancelSessionForTab(arg0: string): Promise<CancelReceipt>;
-  CancelShellInstall(): Promise<void>;
   CancelTab(arg0: string): Promise<void>;
   CancelTabWithInboxItemsResult(arg0: string, arg1: string[]): Promise<InboxCancelResultView>;
   CancelTask(arg0: string, arg1: number, arg2: string, arg3: string): Promise<ControlResult>;
