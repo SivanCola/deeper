@@ -1054,24 +1054,6 @@
       ]
     }
   },
-  "CancelTaskForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.CancelTaskForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CancelTaskForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
-      ]
-    }
-  },
   "CancelTrySubagentProfile": {
     "domain": "desktop/subagents_app.go",
     "owner": "App.CancelTrySubagentProfile",
@@ -3572,22 +3554,6 @@
       ]
     }
   },
-  "ListTaskEventsForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTaskEventsForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListTaskEventsForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "afterSequence"
-      ]
-    }
-  },
   "ListTaskPage": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.ListTaskPage",
@@ -3625,20 +3591,6 @@
       "resolver": "App.ListTasksForSession",
       "inputs": [
         "sessionID"
-      ]
-    }
-  },
-  "ListTasksForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTasksForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListTasksForTab",
-      "inputs": [
-        "tabID"
       ]
     }
   },
@@ -6189,23 +6141,6 @@
       "resolver": "App.RequeueTaskByKey",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "RequeueTaskForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.RequeueTaskForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.RequeueTaskForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "expectedVersion",
-        "idemKey"
       ]
     }
   },
@@ -9104,24 +9039,6 @@
       "resolver": "App.StopTaskByKey",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "StopTaskForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.StopTaskForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.StopTaskForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
       ]
     }
   },

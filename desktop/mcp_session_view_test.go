@@ -41,3 +41,42 @@ func TestMCPServerViewSessionDiagnosticsRemainOptional(t *testing.T) {
 		}
 	}
 }
+
+func TestMCPServerViewPublishesCurrentLifecycleContract(t *testing.T) {
+	for _, test := range []struct {
+		name, runtime, auth, availability string
+		enabled                           bool
+	}{
+		{"ready", "ready", "", "connected", true},
+		{"reconnecting", "connecting", "", "starting", true},
+		{"authentication", "issue", "required", "auth_required", true},
+		{"failure", "issue", "", "start_failed", true},
+		{"on-demand", "idle", "", "available_on_demand", true},
+		{"disabled", "idle", "", "disabled", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			view := finalizeServerView(ServerView{Name: test.name, Status: "connected", Enabled: test.enabled, RuntimeState: test.runtime, AuthStatus: test.auth})
+			if view.Status != "connected" || view.RuntimeState != test.runtime || view.Availability != test.availability {
+				t.Fatalf("registration and session state were conflated: %+v", view)
+			}
+			payload, err := json.Marshal(view)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(payload, &fields); err != nil {
+				t.Fatal(err)
+			}
+			for _, field := range []string{"enabled", "runtimeState", "availability"} {
+				if _, ok := fields[field]; !ok {
+					t.Fatalf("missing current state %s: %s", field, payload)
+				}
+			}
+			for _, field := range []string{"autoStart", "startIntent", "tier"} {
+				if _, ok := fields[field]; ok {
+					t.Fatalf("redundant display alias %s: %s", field, payload)
+				}
+			}
+		})
+	}
+}

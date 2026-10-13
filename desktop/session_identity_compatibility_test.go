@@ -11,6 +11,7 @@ import (
 	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/session"
+	"deepzora/internal/taskcatalog"
 	"deepzora/internal/taskmonitor"
 )
 
@@ -187,12 +188,17 @@ func TestAuditCanonicalTaskFilter(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	tasks, err := app.ListTasksForTab(tab.ID)
-	if err != nil {
-		t.Fatal(err)
+	var page TaskPage
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		page = app.ListTaskPage(TaskPageRequest{Scope: "session", TabID: tab.ID, Limit: 50})
+		if !page.Partial || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
-	if len(tasks) != 1 {
-		t.Errorf("current-session task list includes %d sessions, want 1", len(tasks))
+	if page.Partial || len(page.Items) != 1 || page.Items[0].Task.SessionID != tab.SessionID {
+		t.Fatalf("current-session task page = %+v", page)
 	}
 	_, sessionID, err := app.taskProjectKeys(TaskPageRequest{Scope: "session", TabID: tab.ID})
 	if err != nil {
@@ -224,7 +230,7 @@ func TestAuditCanonicalTaskStop(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	result, err := app.StopTaskForTab(tab.ID, id, 1, "audit", "audit-stop")
+	result, err := app.StopTaskByKey(TaskActionRequest{ProjectKey: taskcatalog.ProjectKey(tab.WorkspaceRoot), TaskID: id, ExpectedVersion: 1, Reason: "audit", IdempotencyKey: "audit-stop"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +252,7 @@ func TestTaskControlRejectsOldRecorderGeneration(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		result, err := app.StopTaskForTab(tab.ID, id, 1, "test", "old-owner-"+owner)
+		result, err := app.StopTaskByKey(TaskActionRequest{ProjectKey: taskcatalog.ProjectKey(tab.WorkspaceRoot), TaskID: id, ExpectedVersion: 1, Reason: "test", IdempotencyKey: "old-owner-" + owner})
 		if err != nil || result.Accepted || wrapper.killed {
 			t.Fatalf("old owner accepted: %+v %v", result, err)
 		}

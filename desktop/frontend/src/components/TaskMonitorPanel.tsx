@@ -12,15 +12,10 @@ import {
   XCircle,
 } from "lucide-react";
 import { app } from "../lib/bridge";
-import { desktopHost } from "../lib/desktopHost";
 import { useT } from "../lib/i18n";
 import type { TaskEvent, TaskSnapshot } from "../lib/types";
 
 type CatalogTask = TaskSnapshot & { __projectKey: string; __projectLabel: string; __catalogKey: string };
-
-function hasTaskCatalogBinding(): boolean {
-  return typeof desktopHost().app?.ListTaskPage === "function";
-}
 
 // --- helpers ---
 
@@ -164,19 +159,17 @@ export function TaskMonitorPanel({
 	const seq = ++requestSeq.current;
     try {
       setError(null);
-			if (!hasTaskCatalogBinding()) {
-				const legacy = await app.ListTasksForTab(tabID);
-				if (seq !== requestSeq.current) return;
-				const filtered = legacy.filter((task) => !query.trim() || [task.task_id, task.session_id, task.error_code, task.error_summary].some((value) => (value || "").toLowerCase().includes(query.trim().toLowerCase())));
-				setTasks(filtered.map((task) => ({ ...task, __projectKey: "", __projectLabel: "", __catalogKey: task.task_id })));
-				setNextCursor("");
-				setIndexProgress({ indexed: filtered.length, total: filtered.length, partial: false });
-				return;
-			}
-			const page = await app.ListTaskPage({ scope, tabId: tabID, projectKey: "", states: [], query, cursor, limit: 50 });
+			const request = { scope, tabId: tabID, projectKey: "", states: [], query, cursor, limit: 50 };
+			let page = await app.ListTaskPage(request);
 			if (seq !== requestSeq.current) return;
+			const append = Boolean(cursor) && !page.staleCursor;
+			if (page.staleCursor) {
+				page = await app.ListTaskPage({ ...request, cursor: "" });
+				if (seq !== requestSeq.current) return;
+			}
+			setError(page.status.lastError || null);
 			const decorated = (page.items ?? []).map((item) => ({ ...item.task, __projectKey: item.projectKey, __projectLabel: item.projectLabel, __catalogKey: `${item.projectKey}:${item.task.task_id}` }));
-			setTasks((current) => cursor ? [...current, ...decorated.filter((item) => !current.some((existing) => existing.__catalogKey === item.__catalogKey))] : decorated);
+			setTasks((current) => append ? [...current, ...decorated.filter((item) => !current.some((existing) => existing.__catalogKey === item.__catalogKey))] : decorated);
 			setNextCursor(page.nextCursor || "");
 			setIndexProgress({ indexed: page.status.indexed, total: page.status.total, partial: page.partial });
     } catch (e) {
@@ -198,9 +191,7 @@ export function TaskMonitorPanel({
     });
     try {
       const cursor = eventCursors.current.get(taskID) ?? 0;
-			const events = hasTaskCatalogBinding()
-				? (await app.ListTaskEventPage({ projectKey: task.__projectKey, taskId: task.task_id, after: cursor, limit: 50 })).items ?? []
-				: await app.ListTaskEventsForTab(tabID, task.task_id, cursor);
+			const events = (await app.ListTaskEventPage({ projectKey: task.__projectKey, taskId: task.task_id, after: cursor, limit: 50 })).items ?? [];
       if (events.length > 0) {
         setTaskEvents((prev) => {
           const next = new Map(prev);
@@ -232,7 +223,7 @@ export function TaskMonitorPanel({
         return next;
       });
     }
-	}, [tabID]);
+	}, []);
 
   // Initial fetch + periodic polling
   useEffect(() => {
@@ -298,17 +289,11 @@ export function TaskMonitorPanel({
         return;
       }
 			const request = { projectKey: task.__projectKey, taskId: task.task_id, expectedVersion: task.version, reason: "desktop request", idempotencyKey: `desktop-${action}-${task.task_id}-${task.version}` };
-			const result = hasTaskCatalogBinding()
-				? action === "stop"
-					? await app.StopTaskByKey(request)
-					: action === "requeue"
-						? await app.RequeueTaskByKey(request)
-						: await app.OpenTaskSessionByKey({ projectKey: task.__projectKey, taskId: task.task_id })
-				: action === "stop"
-					? await app.StopTaskForTab(tabID, task.task_id, task.version, request.reason, request.idempotencyKey)
-					: action === "requeue"
-						? await app.RequeueTaskForTab(tabID, task.task_id, task.version, request.idempotencyKey)
-						: await app.OpenTaskSessionForTab(tabID, task.task_id);
+			const result = action === "stop"
+				? await app.StopTaskByKey(request)
+				: action === "requeue"
+					? await app.RequeueTaskByKey(request)
+					: await app.OpenTaskSessionByKey({ projectKey: task.__projectKey, taskId: task.task_id });
       if (result.error) {
         setActionError(`${result.error.code}: ${result.error.message}`);
       } else if (action === "open") {

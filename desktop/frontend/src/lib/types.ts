@@ -1175,26 +1175,20 @@ export interface ServerView {
   name: string;
   transport: string;
   status: "connected" | "deferred" | "failed" | "initializing" | "disabled";
-  /** @deprecated derived from enabled */
-  startIntent?: "off" | "automatic" | string;
-  runtimeState?: "idle" | "connecting" | "ready" | "issue" | string;
+  runtimeState: "idle" | "connecting" | "ready" | "issue";
   protocolVersion?: string;
   sessionState?: "connecting" | "listening" | "ready" | "reconnecting" | "failed" | "closed" | string;
   reconnectAttempts?: number;
   errorKind?: "auth_required" | "session_missing" | "stream_closed" | "timeout" | "protocol" | "transport" | string;
   /** Product availability: available_on_demand | starting | connected | auth_required | project_auth_changed | start_failed | disabled */
-  availability?: string;
-  enabled?: boolean;
+  availability: string;
+  enabled: boolean;
   installed?: boolean;
   action?: "none" | "authenticate" | "authorize" | "retry" | string;
   source?: "project" | "user" | "plugin" | "builtin" | string;
   configSource?: string;
   builtIn?: boolean;
   configured?: boolean;
-  /** @deprecated same as enabled */
-  autoStart: boolean;
-  /** @deprecated ignored by runtime */
-  tier?: "background" | "eager" | string;
   command?: string;
   args?: string[];
   url?: string;

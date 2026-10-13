@@ -6,6 +6,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { LocaleProvider } from "../lib/i18n";
 import { installDesktopHostStub } from "../__tests__/desktopHostStub";
 
+import type { TaskActionRequest, TaskEventPageRequest, TaskPageRequest } from "../lib/taskCatalogTypes";
+
 type Task = Record<string, unknown>;
 type Event = Record<string, unknown>;
 
@@ -72,57 +74,37 @@ globalThis.cancelAnimationFrame = dom.window.cancelAnimationFrame.bind(dom.windo
 let listTasksImpl: () => Promise<Task[]> = async () => [];
 let listEventsImpl: () => Promise<Event[]> = async () => [];
 const listTaskTabIDs: string[] = [];
-const listEventCalls: unknown[][] = [];
-const stopCalls: unknown[][] = [];
-const requeueCalls: unknown[][] = [];
+const pageRequests: TaskPageRequest[] = [];
+const listEventCalls: TaskEventPageRequest[] = [];
+const stopCalls: TaskActionRequest[] = [];
+const requeueCalls: TaskActionRequest[] = [];
 const mockApp = {
-  ListTasks: () => listTasksImpl(),
-  GetTask: async () => null,
-  ListTaskEvents: () => listEventsImpl(),
-  StopTask: async () => ({ schema_version: 1, command: "stop", task_id: "", accepted: true, idempotent: false }),
-  CancelTask: async () => ({ schema_version: 1, command: "cancel", task_id: "", accepted: true, idempotent: false }),
-  RequeueTask: async (...args: unknown[]) => {
-    requeueCalls.push(args);
+  ListTaskPage: async (request: TaskPageRequest) => {
+    pageRequests.push(request);
+    listTaskTabIDs.push(request.tabId);
+    const tasks = await listTasksImpl();
     return {
-      schema_version: 1,
-      command: "requeue",
-      task_id: String(args[0] ?? ""),
-      state: "queued",
-      runtime_state: "exited",
-      version: 2,
-      accepted: true,
-      idempotent: false,
+      items: tasks.map((task) => ({ projectKey: "project-a", projectLabel: "Project A", task })),
+      nextCursor: "", revision: 1, partial: false, staleCursor: false,
+      status: { state: "ready", mode: "memory", revision: 1, indexed: tasks.length, total: tasks.length, pending: 0, failed: 0 },
     };
   },
-  OpenTaskSession: async () => ({ schema_version: 1, command: "open_session", task_id: "", session_id: "sess-1", accepted: true, idempotent: false }),
-  ListTasksForTab: async (tabID: string) => {
-    listTaskTabIDs.push(tabID);
-    return listTasksImpl();
+  ListTaskEventPage: async (request: TaskEventPageRequest) => {
+    listEventCalls.push(request);
+    const items = await listEventsImpl();
+    return { items, nextSequence: items[items.length - 1]?.sequence ?? request.after, partial: false };
   },
-  ListTaskEventsForTab: async (...args: unknown[]) => {
-    listEventCalls.push(args);
-    return listEventsImpl();
+  StopTaskByKey: async (request: TaskActionRequest) => {
+    stopCalls.push(request);
+    return { schema_version: 1, command: "stop", task_id: request.taskId, accepted: true, idempotent: false };
   },
-  StopTaskForTab: async (...args: unknown[]) => {
-    stopCalls.push(args);
-    return { schema_version: 1, command: "stop", task_id: "", accepted: true, idempotent: false };
+  RequeueTaskByKey: async (request: TaskActionRequest) => {
+    requeueCalls.push(request);
+    return { schema_version: 1, command: "requeue", task_id: request.taskId, state: "queued", runtime_state: "exited", version: 2, accepted: true, idempotent: false };
   },
-  CancelTaskForTab: async () => ({ schema_version: 1, command: "cancel", task_id: "", accepted: true, idempotent: false }),
-  RequeueTaskForTab: async (...args: unknown[]) => {
-    requeueCalls.push(args);
-    return {
-      schema_version: 1,
-      command: "requeue",
-      task_id: String(args[1] ?? ""),
-      state: "queued",
-      runtime_state: "exited",
-      version: 2,
-      accepted: true,
-      idempotent: false,
-    };
-  },
-  OpenTaskSessionForTab: async () => ({ schema_version: 1, command: "open_session", task_id: "", session_id: "sess-1", accepted: true, idempotent: false }),
+  OpenTaskSessionByKey: async () => ({ schema_version: 1, command: "open_session", task_id: "", session_id: "sess-1", accepted: true, idempotent: false }),
 };
+const defaultListTaskPage = mockApp.ListTaskPage;
 installDesktopHostStub(mockApp);
 
 const { TaskMonitorPanel } = await import("./TaskMonitorPanel");
@@ -162,6 +144,8 @@ async function cleanup() {
   listTasksImpl = async () => [];
   listEventsImpl = async () => [];
   listTaskTabIDs.length = 0;
+  pageRequests.length = 0;
+  mockApp.ListTaskPage = defaultListTaskPage;
   listEventCalls.length = 0;
   stopCalls.length = 0;
   requeueCalls.length = 0;
@@ -236,6 +220,67 @@ await check("binds task reads to the source tab", async () => {
   return listTaskTabIDs.length === 1 && listTaskTabIDs[0] === "tab-source";
 });
 
+await check("shows catalog errors returned in the page status", async () => {
+  mockApp.ListTaskPage = async (request) => {
+    const page = await defaultListTaskPage(request);
+    return { ...page, partial: true, status: { ...page.status, lastError: "Catalog unavailable" } };
+  };
+  await renderPanel();
+  await openPanel();
+  return document.body.textContent?.includes("Catalog unavailable") === true;
+});
+
+await check("keeps colliding task IDs separate across paginated projects", async () => {
+  mockApp.ListTaskPage = async (request) => {
+    const page = await defaultListTaskPage(request);
+    const second = Boolean(request.cursor);
+    return {
+      ...page,
+      items: [{ projectKey: second ? "project-b" : "project-a", projectLabel: second ? "Project B" : "Project A", task: snap({ state: "failed", runtime_state: "exited" }) }],
+      nextCursor: second ? "" : "next-project",
+    };
+  };
+  await renderPanel();
+  await openPanel();
+  const select = document.querySelector<HTMLSelectElement>('select[aria-label="Task scope"]');
+  if (!select) throw new Error("missing task scope");
+  await act(async () => {
+    select.value = "all";
+    select.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+    await flush();
+  });
+  await click(buttonByText("Load more"));
+  const rows = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label="Task task-000 — Failed"]'));
+  if (rows.length !== 2) return false;
+  await click(rows[1]);
+  await click(buttonByText("Requeue"));
+  return pageRequests.some((request) => request.scope === "all" && request.cursor === "next-project" && request.limit === 50)
+    && listEventCalls[0]?.projectKey === "project-b"
+    && requeueCalls[0]?.projectKey === "project-b";
+});
+
+await check("restarts pagination when the catalog cursor is stale", async () => {
+  let refreshed = false;
+  mockApp.ListTaskPage = async (request) => {
+    const page = await defaultListTaskPage(request);
+    if (request.cursor) {
+      refreshed = true;
+      return { ...page, staleCursor: true };
+    }
+    return {
+      ...page,
+      items: [{ projectKey: "project-a", projectLabel: "Project A", task: snap({ task_id: refreshed ? "new-task" : "old-task" }) }],
+      nextCursor: refreshed ? "" : "old-cursor",
+    };
+  };
+  await renderPanel();
+  await openPanel();
+  await click(buttonByText("Load more"));
+  return pageRequests.length === 3 && pageRequests[2].cursor === ""
+    && Boolean(document.querySelector('button[aria-label="Task new-task — Running"]'))
+    && !document.querySelector('button[aria-label="Task old-task — Running"]');
+});
+
 await check("renders lifecycle badges", async () => {
   listTasksImpl = async () => [snap({ task_id: "a1" }), snap({ task_id: "b2", state: "failed" })];
   await renderPanel();
@@ -276,13 +321,7 @@ await check("offers one working stop action for active tasks", async () => {
   await click(confirmStop);
   return hasMergedActions
     && hasReplacementConfirmation
-    && JSON.stringify(stopCalls[0]) === JSON.stringify([
-      "tab-a",
-      "task-0001",
-      1,
-      "desktop request",
-      "desktop-stop-task-0001-1",
-    ]);
+    && JSON.stringify(stopCalls[0]) === JSON.stringify({ projectKey: "project-a", taskId: "task-0001", expectedVersion: 1, reason: "desktop request", idempotencyKey: "desktop-stop-task-0001-1" });
 });
 
 await check("dismisses stop confirmation with Escape and restores focus", async () => {
@@ -317,7 +356,7 @@ await check("requeues failed exited tasks", async () => {
   await openPanel();
   await click(buttonByLabel("Task failed-1 — Failed"));
   await click(buttonByText("Requeue"));
-  return JSON.stringify(requeueCalls[0]) === JSON.stringify(["tab-a", "failed-1", 7, "desktop-requeue-failed-1-7"]);
+  return JSON.stringify(requeueCalls[0]) === JSON.stringify({ projectKey: "project-a", taskId: "failed-1", expectedVersion: 7, reason: "desktop request", idempotencyKey: "desktop-requeue-failed-1-7" });
 });
 
 await check("expands and collapses task details", async () => {
@@ -338,7 +377,7 @@ await check("loads recent task events", async () => {
   await openPanel();
   await click(buttonByLabel("Task task-000 — Failed"));
   return document.body.textContent?.includes("CRASH") === true
-    && JSON.stringify(listEventCalls[0]) === JSON.stringify(["tab-a", "task-0001", 0]);
+    && JSON.stringify(listEventCalls[0]) === JSON.stringify({ projectKey: "project-a", taskId: "task-0001", after: 0, limit: 50 });
 });
 
 await check("shows task-event errors", async () => {

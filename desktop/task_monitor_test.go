@@ -183,9 +183,13 @@ func TestStopTaskRoutesMonitorIdentityToRuntimeJob(t *testing.T) {
 	}
 }
 
-func TestStopTaskForTabKeepsSourceWorkspaceAfterActiveTabSwitch(t *testing.T) {
+func TestStopTaskByKeyKeepsSourceWorkspaceAfterActiveTabSwitch(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	projectA := t.TempDir()
 	projectB := t.TempDir()
+	if err := saveProjectsFile(desktopProjectFile{Projects: []desktopProject{{Root: projectA}, {Root: projectB}}}); err != nil {
+		t.Fatal(err)
+	}
 	pathA := filepath.Join(t.TempDir(), "shared-session.jsonl")
 	pathB := filepath.Join(t.TempDir(), "shared-session.jsonl")
 	ctrlA := &taskKillController{SessionAPI: control.New(control.Options{Label: "a", SessionPath: pathA})}
@@ -217,9 +221,9 @@ func TestStopTaskForTabKeepsSourceWorkspaceAfterActiveTabSwitch(t *testing.T) {
 		}
 	}
 
-	res, err := app.StopTaskForTab("tab-a", monitorID, 1, "", "tab-bound-stop")
+	res, err := app.StopTaskByKey(TaskActionRequest{ProjectKey: taskcatalog.ProjectKey(projectA), TaskID: monitorID, ExpectedVersion: 1, IdempotencyKey: "project-bound-stop"})
 	if err != nil || !res.Accepted {
-		t.Fatalf("StopTaskForTab: result=%+v err=%v", res, err)
+		t.Fatalf("StopTaskByKey: result=%+v err=%v", res, err)
 	}
 	if ctrlA.killCount() != 1 || ctrlB.killCount() != 0 {
 		t.Fatalf("kill routed away from source tab: projectA=%d projectB=%d", ctrlA.killCount(), ctrlB.killCount())

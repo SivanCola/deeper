@@ -103,7 +103,7 @@ args = ["-y", "@playwright/mcp"]
 	view := app.Capabilities()
 	for _, s := range view.Servers {
 		if s.Name == "playwright" {
-			if s.Status != "deferred" || s.StartIntent != "automatic" || s.RuntimeState != "idle" {
+			if s.Status != "deferred" || !s.Enabled || s.RuntimeState != "idle" {
 				t.Fatalf("default MCP view = %+v, want deferred automatic idle", s)
 			}
 			return
