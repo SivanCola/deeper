@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:7ccd0d87194e1a86c770fd0b7d2e083d7748ea0cba80173cdb8f2299639d6de4";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:4bdef8401bdabd1f7a204b53a6c8739b2370486659fa901f553989606d346db9";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -30,7 +30,6 @@ export const DESKTOP_COMMANDS = [
   "AddRemoteHost",
   "AddRemoteProject",
   "AddSkillPath",
-  "AnswerPromptForTab",
   "AnswerQuestion",
   "AnswerQuestionForTab",
   "AnswerRemoteTab",
@@ -5350,7 +5349,6 @@ export interface GeneratedDesktopCommands {
   AddRemoteHost(arg0: RemoteHostInput): Promise<RemoteHostView>;
   AddRemoteProject(arg0: string, arg1: string): Promise<RemoteProjectView>;
   AddSkillPath(arg0: string): Promise<void>;
-  AnswerPromptForTab(arg0: string, arg1: string, arg2: string, arg3: QuestionAnswer[]): Promise<void>;
   AnswerQuestion(arg0: string, arg1: QuestionAnswer[]): Promise<void>;
   AnswerQuestionForTab(arg0: string, arg1: string, arg2: QuestionAnswer[]): Promise<void>;
   AnswerRemoteTab(arg0: string, arg1: string, arg2: RemoteAskAnswer[]): Promise<void>;

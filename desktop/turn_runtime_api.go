@@ -208,33 +208,6 @@ func (a *App) InterruptTurnWithInboxItemsForTab(tabID, turnID string, itemIDs []
 	return view, nil
 }
 
-// AnswerPromptForTab resolves an Ask only when it belongs to the exact active
-// turn. Controller-side prompt ids remain independently idempotent.
-func (a *App) AnswerPromptForTab(tabID, turnID, promptID string, answers []QuestionAnswer) error {
-	tab, ctrl := a.tabAndCtrlByID(tabID)
-	if ctrl == nil {
-		return a.workspaceNotReadyErr(tab)
-	}
-	status := ctrl.RuntimeStatus()
-	if strings.TrimSpace(turnID) == "" || status.TurnID != strings.TrimSpace(turnID) {
-		return fmt.Errorf("turn %q is not the active turn for tab %q", turnID, tabID)
-	}
-	// Resolve on the controller instance that passed the turn-id fence. Calling
-	// the legacy app wrapper here would re-resolve the tab and could deliver a
-	// late answer to a replacement controller after a runtime rebuild.
-	out := make([]event.AskAnswer, len(answers))
-	for i, answer := range answers {
-		out[i] = event.AskAnswer{QuestionID: answer.QuestionID, Selected: answer.Selected}
-	}
-	if checked, ok := ctrl.(interface {
-		AnswerQuestionChecked(string, []event.AskAnswer) error
-	}); ok {
-		return checked.AnswerQuestionChecked(promptID, out)
-	}
-	ctrl.AnswerQuestion(promptID, out)
-	return nil
-}
-
 type turnEventReader interface {
 	TurnEventReplay(after uint64) (turnevent.ReplayView, error)
 }

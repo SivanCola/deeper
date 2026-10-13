@@ -348,23 +348,6 @@
       ]
     }
   },
-  "AnswerPromptForTab": {
-    "domain": "desktop/turn_runtime_api.go",
-    "owner": "App.AnswerPromptForTab",
-    "sources": [
-      "desktop/turn_runtime_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AnswerPromptForTab",
-      "inputs": [
-        "tabID",
-        "turnID",
-        "promptID",
-        "answers"
-      ]
-    }
-  },
   "AnswerQuestion": {
     "domain": "desktop/app.go",
     "owner": "App.AnswerQuestion",

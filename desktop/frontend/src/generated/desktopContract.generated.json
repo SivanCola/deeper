@@ -646,44 +646,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/turn_runtime_api.go",
-      "name": "AnswerPromptForTab",
-      "owner": "App.AnswerPromptForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.QuestionAnswer"
-          },
-          "kind": "array"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "turnID",
-          "promptID",
-          "answers"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AnswerPromptForTab"
-      },
-      "sources": [
-        "desktop/turn_runtime_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
       "name": "AnswerQuestion",
       "owner": "App.AnswerQuestion",

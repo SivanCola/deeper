@@ -338,7 +338,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   AcceptDeliveryToTab(tabID: string): Promise<void>;
   AnswerQuestion(id: string, answers: QuestionAnswer[]): Promise<void>;
   AnswerQuestionForTab(tabID: string, id: string, answers: QuestionAnswer[]): Promise<void>;
-  AnswerPromptForTab?(tabID: string, turnID: string, id: string, answers: QuestionAnswer[]): Promise<void>;
   ResolvePromptForTab?(tabID: string, promptID: string, turnID: string, runtimeEpoch: string, kind: string, answer: {
     questions?: QuestionAnswer[]; allow?: boolean; session?: boolean; persist?: boolean;
     action?: string; feedback?: string; content?: Record<string, unknown> | null;

@@ -6,7 +6,7 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 
 | Kind | keep-business | host-managed | delete-shell | total |
 | --- | ---: | ---: | ---: | ---: |
-| command | 653 | 18 | 0 | 671 |
+| command | 652 | 18 | 0 | 670 |
 | native-call | 0 | 0 | 0 | 0 |
 | event | 17 | 0 | 0 | 17 |
 | frontend-native | 0 | 0 | 0 | 0 |
@@ -16,7 +16,7 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | shell-file | 1 | 26 | 4 | 31 |
 | artifact | 5 | 0 | 0 | 5 |
 | ci-job | 18 | 0 | 0 | 18 |
-| **all** | | | | **777** |
+| **all** | | | | **776** |
 
 ## Desktop commands (Go `App` methods bound to the UI)
 
@@ -46,7 +46,6 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | `AddRemoteHost` | `(in RemoteHostInput) (RemoteHostView, error)` | desktop/remote_app.go:309 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AddRemoteProject` | `(hostID string, workspace string) (RemoteProjectView, error)` | desktop/remote_project_registry.go:25 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AddSkillPath` | `(path string) error` | desktop/app.go:6995 | keep-business (保留业务实现) | hostrpc desktop/invoke |
-| `AnswerPromptForTab` | `(tabID string, turnID string, promptID string, answers []QuestionAnswer) error` | desktop/turn_runtime_api.go:213 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AnswerQuestion` | `(id string, answers []QuestionAnswer)` | desktop/app.go:1710 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AnswerQuestionForTab` | `(tabID string, id string, answers []QuestionAnswer)` | desktop/app.go:1714 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `AnswerRemoteTab` | `(tabID string, callID string, answers []RemoteAskAnswer) error` | desktop/remote_tab.go:728 | keep-business (保留业务实现) | hostrpc desktop/invoke |
@@ -671,7 +670,7 @@ Every entry carries one class: `keep-business` is implemented in Go and exposed 
 | `TrustProjectHooksForRoot` | `(root string) error` | desktop/hooks_settings_app.go:114 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `TrySubagentProfile` | `(input SubagentProfileInput, task string) (string, error)` | desktop/subagents_app.go:288 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `TurnCheckLog` | `(tabID string, sessionPath string, toolID string, resultID string) *TurnCheckLogView` | desktop/workspace_turn_changes.go:16 | keep-business (保留业务实现) | hostrpc desktop/invoke |
-| `TurnEventsForTab` | `(tabID string, afterSeq uint64) (TurnEventReplayView, error)` | desktop/turn_runtime_api.go:258 | keep-business (保留业务实现) | hostrpc desktop/invoke |
+| `TurnEventsForTab` | `(tabID string, afterSeq uint64) (TurnEventReplayView, error)` | desktop/turn_runtime_api.go:231 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `UndoRewindForTab` | `(tabID string, transactionID string) RewindResultView` | desktop/rewind_tab.go:60 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `UnpinFileForTab` | `(tabID string, relPath string) error` | desktop/pinned_files.go:388 | keep-business (保留业务实现) | hostrpc desktop/invoke |
 | `UpdateInboxItem` | `(tabID string, id string, display string, submit string) error` | desktop/inbox_app.go:399 | keep-business (保留业务实现) | hostrpc desktop/invoke |

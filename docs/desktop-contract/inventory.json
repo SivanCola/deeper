@@ -195,14 +195,6 @@
     },
     {
       "kind": "command",
-      "name": "AnswerPromptForTab",
-      "detail": "(tabID string, turnID string, promptID string, answers []QuestionAnswer) error",
-      "location": "desktop/turn_runtime_api.go:213",
-      "class": "keep-business",
-      "owner": "hostrpc desktop/invoke"
-    },
-    {
-      "kind": "command",
       "name": "AnswerQuestion",
       "detail": "(id string, answers []QuestionAnswer)",
       "location": "desktop/app.go:1710",
@@ -5197,7 +5189,7 @@
       "kind": "command",
       "name": "TurnEventsForTab",
       "detail": "(tabID string, afterSeq uint64) (TurnEventReplayView, error)",
-      "location": "desktop/turn_runtime_api.go:258",
+      "location": "desktop/turn_runtime_api.go:231",
       "class": "keep-business",
       "owner": "hostrpc desktop/invoke"
     },
