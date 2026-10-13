@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import {
-  loadWorkbenchSortMode,
-  WORKBENCH_SORT_CREATED_DEFAULT_MIGRATION_KEY,
-  WORKBENCH_SORT_KEY,
-} from "../lib/projectTreeTopic";
+import { loadWorkbenchSortMode, WORKBENCH_SORT_KEY } from "../lib/projectTreeTopic";
 
 function installLocalStorage(seed: Record<string, string> = {}): Storage {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost/" });
@@ -16,50 +12,37 @@ function installLocalStorage(seed: Record<string, string> = {}): Storage {
 {
   const storage = installLocalStorage();
   assert.equal(loadWorkbenchSortMode(), "created", "a fresh install defaults to creation time");
-  assert.equal(storage.getItem(WORKBENCH_SORT_KEY), "created", "the new default is persisted");
-  assert.equal(storage.getItem(WORKBENCH_SORT_CREATED_DEFAULT_MIGRATION_KEY), "1", "the reset runs only once");
+  assert.equal(storage.length, 0, "reading the default does not write storage");
+}
+
+for (const mode of ["created", "updated"] as const) {
+  const storage = installLocalStorage({ [WORKBENCH_SORT_KEY]: mode });
+  assert.equal(loadWorkbenchSortMode(), mode, "a saved sort preference remains authoritative");
+  assert.equal(storage.getItem(WORKBENCH_SORT_KEY), mode, "reading preserves the saved preference");
+  assert.equal(storage.length, 1, "reading does not create migration markers");
 }
 
 {
-  const storage = installLocalStorage({ [WORKBENCH_SORT_KEY]: "updated" });
-  assert.equal(loadWorkbenchSortMode(), "created", "an existing updated-time choice is reset on upgrade");
-  assert.equal(storage.getItem(WORKBENCH_SORT_KEY), "created", "the legacy choice is overwritten for older readers too");
-}
-
-{
-  const storage = installLocalStorage({ [WORKBENCH_SORT_KEY]: "updated" });
+  const storage = installLocalStorage();
   assert.equal(loadWorkbenchSortMode(), "created");
   storage.setItem(WORKBENCH_SORT_KEY, "updated");
-  assert.equal(loadWorkbenchSortMode(), "updated", "a manual choice made after migration remains authoritative");
+  assert.equal(loadWorkbenchSortMode(), "updated", "a manual choice remains authoritative on the next read");
 }
 
 {
-  const storage = installLocalStorage({ [WORKBENCH_SORT_KEY]: "updated" });
-  const interruptedStorage = {
-    get length() { return storage.length; },
-    clear: () => storage.clear(),
-    getItem: (key: string) => storage.getItem(key),
-    key: (index: number) => storage.key(index),
-    removeItem: (key: string) => storage.removeItem(key),
-    setItem: (key: string, value: string) => {
-      if (key === WORKBENCH_SORT_CREATED_DEFAULT_MIGRATION_KEY) throw new Error("interrupted migration");
-      storage.setItem(key, value);
-    },
-  } satisfies Storage;
-  globalThis.localStorage = interruptedStorage;
-  assert.equal(loadWorkbenchSortMode(), "created", "an interrupted migration still uses creation time");
-  assert.equal(storage.getItem(WORKBENCH_SORT_CREATED_DEFAULT_MIGRATION_KEY), null, "an interrupted migration remains retryable");
-  globalThis.localStorage = storage;
-  assert.equal(loadWorkbenchSortMode(), "created", "the next launch completes an interrupted migration");
-  assert.equal(storage.getItem(WORKBENCH_SORT_CREATED_DEFAULT_MIGRATION_KEY), "1");
+  const storage = installLocalStorage({ [WORKBENCH_SORT_KEY]: "invalid" });
+  assert.equal(loadWorkbenchSortMode(), "created", "invalid preferences use the default");
+  assert.equal(storage.getItem(WORKBENCH_SORT_KEY), "invalid", "reading does not rewrite invalid storage");
 }
 
 {
-  installLocalStorage({
-    [WORKBENCH_SORT_CREATED_DEFAULT_MIGRATION_KEY]: "1",
-    [WORKBENCH_SORT_KEY]: "created",
+  installLocalStorage();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    get() { throw new Error("storage unavailable"); },
   });
-  assert.equal(loadWorkbenchSortMode(), "created", "a migrated creation-time choice remains authoritative");
+  assert.equal(loadWorkbenchSortMode(), "created", "unavailable storage uses the default");
+  delete (globalThis as { localStorage?: Storage }).localStorage;
 }
 
-console.log("  PASS  project tree sort preference migration");
+console.log("  PASS  project tree sort preference");

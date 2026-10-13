@@ -7366,7 +7366,7 @@ func TestAddMCPServerPersistsConnectionConfiguration(t *testing.T) {
 	}
 
 	views := app.MCPServers()
-	if len(views) != 1 || views[0].Transport != "http" || views[0].AutoStart ||
+	if len(views) != 1 || views[0].Transport != "http" || views[0].Enabled ||
 		views[0].CallTimeoutSeconds != 45 || views[0].ToolTimeoutSeconds["wipe"] != 120 {
 		t.Fatalf("advanced MCP ServerView = %+v", views)
 	}
@@ -7482,7 +7482,7 @@ url = "https://mcp.dida365.com"
 	view := app.Capabilities()
 	for _, s := range view.Servers {
 		if s.Name == "dida" {
-			if s.Status != "deferred" || s.StartIntent != "automatic" || s.RuntimeState != "idle" || s.AuthStatus != "possible" || s.AuthURL != "https://mcp.dida365.com" {
+			if s.Status != "deferred" || !s.Enabled || s.RuntimeState != "idle" || s.AuthStatus != "possible" || s.AuthURL != "https://mcp.dida365.com" {
 				t.Fatalf("dida auth diagnosis = %+v", s)
 			}
 			return
@@ -7607,7 +7607,7 @@ env = { FIGMA_TOKEN = "${FIGMA_TOKEN}", DEBUG = "1" }
 	view := app.Capabilities()
 	for _, s := range view.Servers {
 		if s.Name == "figma" {
-			if s.Status != "deferred" || s.StartIntent != "automatic" || s.RuntimeState != "idle" || s.AuthStatus != "possible" {
+			if s.Status != "deferred" || !s.Enabled || s.RuntimeState != "idle" || s.AuthStatus != "possible" {
 				t.Fatalf("figma should return to background possible auth: %+v", s)
 			}
 			return
@@ -7730,7 +7730,7 @@ name = "codegraph"
 	for _, s := range view.Servers {
 		if s.Name == "codegraph" {
 			foundIdle = true
-			if s.Status != "deferred" || s.StartIntent != "automatic" || s.RuntimeState != "idle" {
+			if s.Status != "deferred" || !s.Enabled || s.RuntimeState != "idle" {
 				t.Fatalf("initial codegraph server = %+v, want automatic idle background state", s)
 			}
 		}

@@ -72,9 +72,9 @@ function ok(value: unknown, message: string) {
           servers = [{
             name: input.name,
             transport: input.transport,
-            status: "connected",
+            status: "connected", runtimeState: "ready", availability: "connected",
             configured: true,
-            autoStart: true,
+            enabled: true,
             tools: 1,
             prompts: 0,
             resources: 0,
@@ -255,8 +255,9 @@ function server(status: ServerView["status"]): ServerView {
     transport: "stdio",
     status,
     configured: true,
-    autoStart: true,
-    tier: "background",
+    enabled: status !== "disabled",
+    runtimeState: status === "connected" ? "ready" : status === "initializing" ? "connecting" : status === "failed" ? "issue" : "idle",
+    availability: status === "connected" ? "connected" : status === "initializing" ? "starting" : status === "failed" ? "start_failed" : status === "disabled" ? "disabled" : "available_on_demand",
     tools: 0,
     prompts: 0,
     resources: 0,
@@ -273,23 +274,26 @@ const connected = mcpServerLifecycleActions(server("connected"));
 ok(!connected.showRetryInRow, "connected server row should keep the toggle UI");
 ok(connected.canReconnect, "connected server details should expose reconnect");
 
-const manuallyConnected = mcpServerLifecycleActions({ ...server("connected"), autoStart: false, startIntent: "off", runtimeState: "ready" });
+const manuallyConnected = mcpServerLifecycleActions({ ...server("connected"), enabled: false, runtimeState: "ready" });
 ok(manuallyConnected.enabled, "connected manual server should still render as enabled");
 ok(!manuallyConnected.canConnectNow, "connected manual server should not expose connect-now");
 ok(manuallyConnected.canReconnect, "connected manual server should expose reconnect");
 
-const automaticIdle = mcpServerLifecycleActions({ ...server("deferred"), startIntent: "automatic" });
+const automaticIdle = mcpServerLifecycleActions({ ...server("deferred"), enabled: true });
 ok(!automaticIdle.canConnectNow, "automatic idle server should not look like a manual connector");
 ok(!automaticIdle.canReconnect, "automatic idle server should wait for background connection or failure");
 
 const failed = mcpServerLifecycleActions({ ...server("failed"), runtimeState: "issue" });
 ok(failed.showRetryInRow, "failed server row should expose retry");
 
+const reconnectingServer: ServerView = { ...server("connected"), runtimeState: "connecting", availability: "starting", sessionState: "reconnecting", reconnectAttempts: 2 };
+ok(!mcpServerLifecycleActions(reconnectingServer).canReconnect, "registered server must not reconnect again while its live session is reconnecting");
+
 ok(mcpServerRetryableFromAvailableList(server("initializing")), "connecting server should be included in available-list retry all");
-ok(!mcpServerRetryableFromAvailableList({ ...server("deferred"), startIntent: "automatic" }), "healthy on-demand server should not be included in retry all");
-ok(mcpServerRetryableFromAvailableList({ ...server("deferred"), startIntent: "automatic", action: "retry" }), "explicit retry action should remain available for an idle server");
+ok(!mcpServerRetryableFromAvailableList({ ...server("deferred"), enabled: true }), "healthy on-demand server should not be included in retry all");
+ok(mcpServerRetryableFromAvailableList({ ...server("deferred"), enabled: true, action: "retry" }), "explicit retry action should remain available for an idle server");
 ok(!mcpServerRetryableFromAvailableList(server("connected")), "connected server should be excluded from available-list retry all");
-ok(!mcpServerRetryableFromAvailableList({ ...server("disabled"), startIntent: "off" }), "disabled server should be excluded from available-list retry all");
+ok(!mcpServerRetryableFromAvailableList({ ...server("disabled"), enabled: false }), "disabled server should be excluded from available-list retry all");
 ok(!mcpServerRetryableFromAvailableList({ ...server("failed"), runtimeState: "issue" }), "failed server is handled by the failure banner retry all");
 
 
@@ -345,9 +349,9 @@ console.log("capabilities panel MCP actions");
   let servers: ServerView[] = [{
     name: "github",
     transport: "stdio",
-    status: "connected",
+    status: "connected", runtimeState: "ready", availability: "connected",
     configured: true,
-    autoStart: true,
+    enabled: true,
     tools: 2,
     prompts: 0,
     resources: 0,
@@ -423,12 +427,11 @@ console.log("capabilities panel MCP actions");
   let servers: ServerView[] = [{
     name: "github",
     transport: "stdio",
-    status: "connected",
-    runtimeState: "ready",
+    status: "connected", runtimeState: "ready", availability: "connected",
     configured: true,
     source: "project",
     configSource: "deepzora.toml",
-    autoStart: true,
+    enabled: true,
     tools: 3,
     prompts: 0,
     resources: 0,
@@ -440,11 +443,10 @@ console.log("capabilities panel MCP actions");
   }, {
     name: "linear",
     transport: "http",
-    status: "connected",
-    runtimeState: "ready",
+    status: "connected", runtimeState: "ready", availability: "connected",
     configured: true,
     source: "user",
-    autoStart: true,
+    enabled: true,
     tools: 1,
     prompts: 0,
     resources: 0,
@@ -486,8 +488,8 @@ console.log("capabilities panel MCP actions");
 
   servers = servers.map((item) => ({
     ...item,
-    status: "failed",
-    runtimeState: "issue",
+    status: "failed", runtimeState: "issue",
+    availability: "auth_required",
     error: "authentication required",
     authStatus: "required",
     authUrl: "https://mcp.example.test/authorize",
@@ -497,8 +499,7 @@ console.log("capabilities panel MCP actions");
   ok(!findButton("Review changes"), "OAuth failure does not expose a removed change-review action");
   servers = servers.map((item) => ({
     ...item,
-    status: "failed",
-    runtimeState: "issue",
+    status: "failed", runtimeState: "issue", availability: "start_failed",
     error: "connection refused",
     authStatus: "none",
     authUrl: "",
@@ -509,8 +510,7 @@ console.log("capabilities panel MCP actions");
 
   servers = servers.map((item) => ({
     ...item,
-    status: "connected",
-    runtimeState: "ready",
+    status: "connected", runtimeState: "ready", availability: "connected",
     error: "",
     requiresLaunchApproval: false,
   }));
@@ -555,11 +555,11 @@ console.log("capabilities panel MCP actions");
   const servers: ServerView[] = [{
     name: "helper",
     transport: "http",
-    status: "connected",
+    status: "connected", runtimeState: "ready", availability: "connected",
     configured: true,
     managedByPlugin: "superpowers",
     authConfigured: true,
-    autoStart: true,
+    enabled: true,
     tools: 1,
     prompts: 0,
     resources: 0,
@@ -627,9 +627,9 @@ console.log("capabilities panel MCP actions");
   const servers: ServerView[] = [{
     name: "runtime-only",
     transport: "stdio",
-    status: "failed",
+    status: "failed", runtimeState: "issue", availability: "start_failed",
     configured: false,
-    autoStart: false,
+    enabled: false,
     tools: 0,
     prompts: 0,
     resources: 0,
@@ -691,9 +691,9 @@ console.log("capabilities panel MCP actions");
     {
       name: "github",
       transport: "stdio",
-      status: "connected",
+      status: "connected", runtimeState: "ready", availability: "connected",
       configured: true,
-      autoStart: true,
+      enabled: true,
       command: "github-mcp-server",
       tools: 1,
       prompts: 0,
@@ -703,9 +703,9 @@ console.log("capabilities panel MCP actions");
     {
       name: "yakit",
       transport: "stdio",
-      status: "connected",
+      status: "connected", runtimeState: "ready", availability: "connected",
       configured: true,
-      autoStart: true,
+      enabled: true,
       command: "yakit-mcp",
       tools: 1,
       prompts: 0,
@@ -724,9 +724,9 @@ console.log("capabilities panel MCP actions");
           servers = [...servers, {
             name: input.name,
             transport: input.transport,
-            status: "connected",
+            status: "connected", runtimeState: "ready", availability: "connected",
             configured: true,
-            autoStart: true,
+            enabled: true,
             command: input.command,
             args: input.args,
             url: input.url,
@@ -741,9 +741,9 @@ console.log("capabilities panel MCP actions");
           servers = [...servers, {
             name: input.name,
             transport: input.transport,
-            status: "connected",
+            status: "connected", runtimeState: "ready", availability: "connected",
             configured: true,
-            autoStart: true,
+            enabled: true,
             command: input.command,
             args: input.args,
             url: input.url,

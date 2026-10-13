@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:f5994622481f9b35502e57f8a337012065c05aad9fbabe606f3d62203dd40897";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:cb269bcbe9a8ef95048e565269ba89bc1a89f739b1a5a82d747e8659d472368c";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -73,12 +73,9 @@ export const DESKTOP_COMMANDS = [
   "CancelRemoteTabJobs",
   "CancelSessionExport",
   "CancelSessionForTab",
-  "CancelShellInstall",
   "CancelTab",
   "CancelTabWithInboxItemsResult",
-  "CancelTask",
   "CancelTaskByKey",
-  "CancelTaskForTab",
   "CancelTrySubagentProfile",
   "Capabilities",
   "CapabilityDiagnostics",
@@ -129,7 +126,6 @@ export const DESKTOP_COMMANDS = [
   "CreateTopic",
   "CreateWorkspaceBrowserPreviewForTab",
   "CredentialDiagnostics",
-  "CurrentTaskSessionID",
   "DeleteInboxItem",
   "DeleteProvider",
   "DeleteRemotePath",
@@ -196,7 +192,6 @@ export const DESKTOP_COMMANDS = [
   "GetSessionComposerState",
   "GetSessionOrganization",
   "GetSessionVersionState",
-  "GetTask",
   "GetTaskCatalogStatus",
   "GetThemeExperience",
   "GetToolRecoveryForTab",
@@ -256,11 +251,7 @@ export const DESKTOP_COMMANDS = [
   "ListSessionsForTab",
   "ListTabs",
   "ListTaskEventPage",
-  "ListTaskEventsForTab",
   "ListTaskPage",
-  "ListTasks",
-  "ListTasksForSession",
-  "ListTasksForTab",
   "ListThemePacks",
   "ListTrashEntries",
   "ListWorkspaceSessions",
@@ -438,7 +429,6 @@ export const DESKTOP_COMMANDS = [
   "ReportCrash",
   "ReportDesktopWebViewReady",
   "RequeueTaskByKey",
-  "RequeueTaskForTab",
   "ResetProviderPresetAccess",
   "ResizeTerminalForTab",
   "ResolveChatFileReferencesForTab",
@@ -631,9 +621,7 @@ export const DESKTOP_COMMANDS = [
   "SteerInboxItemForTurn",
   "SteerRemoteTab",
   "StopRemoteServer",
-  "StopTask",
   "StopTaskByKey",
-  "StopTaskForTab",
   "StorageSettings",
   "Submit",
   "SubmitDisplay",
@@ -3585,13 +3573,12 @@ export interface ServerView {
   hostProfile?: string;
   elicitationNegotiated?: boolean;
   appsNegotiated?: boolean;
-  startIntent?: string;
-  runtimeState?: string;
+  runtimeState: string;
   protocolVersion?: string;
   sessionState?: string;
   reconnectAttempts?: number;
   errorKind?: string;
-  availability?: string;
+  availability: string;
   enabled: boolean;
   installed: boolean;
   action?: string;
@@ -3599,7 +3586,6 @@ export interface ServerView {
   configSource?: string;
   builtIn?: boolean;
   configured?: boolean;
-  autoStart: boolean;
   command?: string;
   args?: string[];
   url?: string;
@@ -5419,12 +5405,9 @@ export interface GeneratedDesktopCommands {
   CancelRemoteTabJobs(arg0: string, arg1: string[]): Promise<void>;
   CancelSessionExport(arg0: string): Promise<void>;
   CancelSessionForTab(arg0: string): Promise<CancelReceipt>;
-  CancelShellInstall(): Promise<void>;
   CancelTab(arg0: string): Promise<void>;
   CancelTabWithInboxItemsResult(arg0: string, arg1: string[]): Promise<InboxCancelResultView>;
-  CancelTask(arg0: string, arg1: number, arg2: string, arg3: string): Promise<ControlResult>;
   CancelTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
-  CancelTaskForTab(arg0: string, arg1: string, arg2: number, arg3: string, arg4: string): Promise<ControlResult>;
   CancelTrySubagentProfile(): Promise<void>;
   Capabilities(): Promise<CapabilitiesView>;
   CapabilityDiagnostics(arg0: boolean): Promise<Report>;
@@ -5475,7 +5458,6 @@ export interface GeneratedDesktopCommands {
   CreateTopic(arg0: string, arg1: string, arg2: string): Promise<TopicMeta>;
   CreateWorkspaceBrowserPreviewForTab(arg0: string, arg1: string): Promise<string>;
   CredentialDiagnostics(arg0: boolean): Promise<CredentialDiagnosticReport>;
-  CurrentTaskSessionID(): Promise<string>;
   DeleteInboxItem(arg0: string, arg1: string): Promise<void>;
   DeleteProvider(arg0: string): Promise<void>;
   DeleteRemotePath(arg0: string, arg1: string, arg2: boolean): Promise<void>;
@@ -5542,7 +5524,6 @@ export interface GeneratedDesktopCommands {
   GetSessionComposerState(arg0: SessionRef): Promise<SessionComposerState>;
   GetSessionOrganization(arg0: SessionOrganizationWorkspace): Promise<SessionOrganizationSnapshot>;
   GetSessionVersionState(arg0: ProjectTopicKey): Promise<SessionVersionStateView>;
-  GetTask(arg0: string): Promise<TaskSnapshot | null>;
   GetTaskCatalogStatus(): Promise<taskcatalog_Status>;
   GetThemeExperience(): Promise<ThemeExperienceView>;
   GetToolRecoveryForTab(arg0: string): Promise<ToolRecoverySnapshot>;
@@ -5602,11 +5583,7 @@ export interface GeneratedDesktopCommands {
   ListSessionsForTab(arg0: string): Promise<SessionMeta[]>;
   ListTabs(): Promise<TabMeta[]>;
   ListTaskEventPage(arg0: TaskEventPageRequest): Promise<EventPage>;
-  ListTaskEventsForTab(arg0: string, arg1: string, arg2: number): Promise<TaskEvent[]>;
   ListTaskPage(arg0: TaskPageRequest): Promise<TaskPage>;
-  ListTasks(): Promise<TaskSnapshot[]>;
-  ListTasksForSession(arg0: string): Promise<TaskSnapshot[]>;
-  ListTasksForTab(arg0: string): Promise<TaskSnapshot[]>;
   ListThemePacks(): Promise<ThemePackView[]>;
   ListTrashEntries(arg0: string, arg1: string, arg2: number): Promise<TrashEntryPage>;
   ListWorkspaceSessions(arg0: string, arg1: string, arg2: string, arg3: number, arg4: boolean): Promise<WorkspaceSessionPage>;
@@ -5784,7 +5761,6 @@ export interface GeneratedDesktopCommands {
   ReportCrash(arg0: string, arg1: string): Promise<void>;
   ReportDesktopWebViewReady(): Promise<void>;
   RequeueTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
-  RequeueTaskForTab(arg0: string, arg1: string, arg2: number, arg3: string): Promise<ControlResult>;
   ResetProviderPresetAccess(arg0: string): Promise<void>;
   ResizeTerminalForTab(arg0: string, arg1: string, arg2: number, arg3: number): Promise<void>;
   ResolveChatFileReferencesForTab(arg0: string, arg1: string, arg2: ChatFileReferenceRequest[]): Promise<ChatFileReferenceResult>;
@@ -5977,9 +5953,7 @@ export interface GeneratedDesktopCommands {
   SteerInboxItemForTurn(arg0: string, arg1: string, arg2: string): Promise<InboxReceiptView>;
   SteerRemoteTab(arg0: string, arg1: string): Promise<void>;
   StopRemoteServer(arg0: string, arg1: string): Promise<void>;
-  StopTask(arg0: string, arg1: number, arg2: string, arg3: string): Promise<ControlResult>;
   StopTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
-  StopTaskForTab(arg0: string, arg1: string, arg2: number, arg3: string, arg4: string): Promise<ControlResult>;
   StorageSettings(): Promise<StorageSettingsView>;
   Submit(arg0: string): Promise<void>;
   SubmitDisplay(arg0: string, arg1: string): Promise<void>;

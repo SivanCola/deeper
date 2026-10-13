@@ -994,18 +994,6 @@
       ]
     }
   },
-  "CancelShellInstall": {
-    "domain": "desktop/shell_support.go",
-    "owner": "App.CancelShellInstall",
-    "sources": [
-      "desktop/shell_support.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.CancelShellInstall",
-      "inputs": []
-    }
-  },
   "CancelTab": {
     "domain": "desktop/app.go",
     "owner": "App.CancelTab",
@@ -1035,23 +1023,6 @@
       ]
     }
   },
-  "CancelTask": {
-    "domain": "desktop/app.go",
-    "owner": "App.CancelTask",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CancelTask",
-      "inputs": [
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
-      ]
-    }
-  },
   "CancelTaskByKey": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.CancelTaskByKey",
@@ -1063,24 +1034,6 @@
       "resolver": "App.CancelTaskByKey",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "CancelTaskForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.CancelTaskForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.CancelTaskForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
       ]
     }
   },
@@ -1796,18 +1749,6 @@
       "inputs": [
         "probe"
       ]
-    }
-  },
-  "CurrentTaskSessionID": {
-    "domain": "desktop/app.go",
-    "owner": "App.CurrentTaskSessionID",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.CurrentTaskSessionID",
-      "inputs": []
     }
   },
   "DeleteInboxItem": {
@@ -2748,20 +2689,6 @@
       ]
     }
   },
-  "GetTask": {
-    "domain": "desktop/app.go",
-    "owner": "App.GetTask",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.GetTask",
-      "inputs": [
-        "taskID"
-      ]
-    }
-  },
   "GetTaskCatalogStatus": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.GetTaskCatalogStatus",
@@ -3584,22 +3511,6 @@
       ]
     }
   },
-  "ListTaskEventsForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTaskEventsForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListTaskEventsForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "afterSequence"
-      ]
-    }
-  },
   "ListTaskPage": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.ListTaskPage",
@@ -3611,46 +3522,6 @@
       "resolver": "App.ListTaskPage",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "ListTasks": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTasks",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ListTasks",
-      "inputs": []
-    }
-  },
-  "ListTasksForSession": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTasksForSession",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListTasksForSession",
-      "inputs": [
-        "sessionID"
-      ]
-    }
-  },
-  "ListTasksForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.ListTasksForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ListTasksForTab",
-      "inputs": [
-        "tabID"
       ]
     }
   },
@@ -6201,23 +6072,6 @@
       "resolver": "App.RequeueTaskByKey",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "RequeueTaskForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.RequeueTaskForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.RequeueTaskForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "expectedVersion",
-        "idemKey"
       ]
     }
   },
@@ -9088,23 +8942,6 @@
       ]
     }
   },
-  "StopTask": {
-    "domain": "desktop/app.go",
-    "owner": "App.StopTask",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.StopTask",
-      "inputs": [
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
-      ]
-    }
-  },
   "StopTaskByKey": {
     "domain": "desktop/task_catalog.go",
     "owner": "App.StopTaskByKey",
@@ -9116,24 +8953,6 @@
       "resolver": "App.StopTaskByKey",
       "inputs": [
         "req"
-      ]
-    }
-  },
-  "StopTaskForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.StopTaskForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.StopTaskForTab",
-      "inputs": [
-        "tabID",
-        "taskID",
-        "expectedVersion",
-        "reason",
-        "idemKey"
       ]
     }
   },

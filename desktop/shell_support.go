@@ -103,10 +103,6 @@ func installShellSupportForGOOS(goos, id string) (ShellInstallResult, error) {
 	}, nil
 }
 
-// CancelShellInstall is retained as an idempotent compatibility no-op. No
-// installer can be running under the manual-only policy.
-func (a *App) CancelShellInstall() {}
-
 // SetShellPreference updates only [tools.shell] prefer, preserving the
 // configured shell path and every other sandbox field, so switching the
 // interpreter never rewrites unrelated settings.

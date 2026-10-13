@@ -30746,18 +30746,18 @@ body > .mermaid-diagram--fullscreen {
 .theme-bg__image {
   position: absolute;
   inset: -4%;
-  background-image: var(--theme-bg-home-image, var(--theme-bg-image, none));
+  background-image: var(--theme-bg-home-image, none);
   background-repeat: no-repeat;
   background-size: cover;
-  background-position: var(--theme-bg-home-focus-x, var(--theme-bg-focus-x, 50%)) var(--theme-bg-home-focus-y, var(--theme-bg-focus-y, 50%));
+  background-position: var(--theme-bg-home-focus-x, 50%) var(--theme-bg-home-focus-y, 50%);
   opacity: var(--theme-bg-home-opacity, 1);
   transition: opacity 180ms ease;
 }
 
 /* Task scene: reduce background strength for chat readability */
 :root[data-theme-scene="task"] .theme-bg__image {
-  background-image: var(--theme-bg-task-image, var(--theme-bg-home-image, var(--theme-bg-image, none)));
-  background-position: var(--theme-bg-task-focus-x, var(--theme-bg-focus-x, 50%)) var(--theme-bg-task-focus-y, var(--theme-bg-focus-y, 50%));
+  background-image: var(--theme-bg-task-image, var(--theme-bg-home-image, none));
+  background-position: var(--theme-bg-task-focus-x, var(--theme-bg-home-focus-x, 50%)) var(--theme-bg-task-focus-y, var(--theme-bg-home-focus-y, 50%));
   opacity: var(--theme-bg-task-opacity, 0.28);
 }
 
@@ -31266,9 +31266,9 @@ body > .mermaid-diagram--fullscreen {
   the real background remains opaque for WebView2's scrolling compositor.
 */
 :root[data-platform="windows"][data-theme-pack][data-theme-has-bg="true"] .app:not(.app--creation) .chat-pane > .main > .transcript-shell > .transcript {
-  --windows-transcript-scene-image: var(--theme-bg-home-image, var(--theme-bg-image, none));
-  --windows-transcript-scene-focus-x: var(--theme-bg-home-focus-x, var(--theme-bg-focus-x, 50%));
-  --windows-transcript-scene-focus-y: var(--theme-bg-home-focus-y, var(--theme-bg-focus-y, 50%));
+  --windows-transcript-scene-image: var(--theme-bg-home-image, none);
+  --windows-transcript-scene-focus-x: var(--theme-bg-home-focus-x, 50%);
+  --windows-transcript-scene-focus-y: var(--theme-bg-home-focus-y, 50%);
   --windows-transcript-image-opacity: var(--theme-bg-home-opacity, 1);
   --windows-transcript-pane-alpha: var(--theme-pane-alpha, 0.72);
   --windows-transcript-scene-overlay: linear-gradient(transparent, transparent);
@@ -31314,9 +31314,9 @@ body > .mermaid-diagram--fullscreen {
 }
 
 :root[data-platform="windows"][data-theme-pack][data-theme-has-bg="true"][data-theme-scene="task"] .app:not(.app--creation) .chat-pane > .main > .transcript-shell > .transcript {
-  --windows-transcript-scene-image: var(--theme-bg-task-image, var(--theme-bg-home-image, var(--theme-bg-image, none)));
-  --windows-transcript-scene-focus-x: var(--theme-bg-task-focus-x, var(--theme-bg-focus-x, 50%));
-  --windows-transcript-scene-focus-y: var(--theme-bg-task-focus-y, var(--theme-bg-focus-y, 50%));
+  --windows-transcript-scene-image: var(--theme-bg-task-image, var(--theme-bg-home-image, none));
+  --windows-transcript-scene-focus-x: var(--theme-bg-task-focus-x, var(--theme-bg-home-focus-x, 50%));
+  --windows-transcript-scene-focus-y: var(--theme-bg-task-focus-y, var(--theme-bg-home-focus-y, 50%));
   --windows-transcript-image-opacity: var(--theme-bg-task-opacity, 0.28);
   --windows-transcript-pane-alpha: var(--theme-pane-task-alpha, 0.80);
   --windows-transcript-scene-overlay: radial-gradient(

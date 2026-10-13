@@ -94,7 +94,7 @@ import type {
   DirEntry,
   DesktopStartupSettingsView,
   DeliveryWorktreeAvailability,
-  DeliveryWorktreeOpenResult,
+  IsolatedWorktreeOpenResult,
   WorktreeMergeInspection,
   WorktreeMergeRequest,
   WorktreeMergeResult,
@@ -163,8 +163,6 @@ import type {
   SkillRootView,
   SkillSuggestion,
   SkillView,
-  TaskEvent,
-  TaskSnapshot,
   SlashArgsResult,
   SubagentProfileInput,
   TabMeta,
@@ -452,17 +450,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   BalanceForTab(tabID: string): Promise<BalanceInfo>;
   UsageStats(req: UsageStatsRequest): Promise<UsageStatsRange>;
   Jobs(): Promise<JobView[]>;
-  ListTasks(): Promise<TaskSnapshot[]>;
-  CurrentTaskSessionID(): Promise<string>;
-  ListTasksForSession(sessionID: string): Promise<TaskSnapshot[]>;
-  GetTask(taskID: string): Promise<TaskSnapshot | null>;
-  StopTask(taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  CancelTask(taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  ListTasksForTab(tabID: string): Promise<TaskSnapshot[]>;
-  ListTaskEventsForTab(tabID: string, taskID: string, afterSequence: number): Promise<TaskEvent[]>;
-  StopTaskForTab(tabID: string, taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  CancelTaskForTab(tabID: string, taskID: string, expectedVersion: number, reason: string, idemKey: string): Promise<ControlResult>;
-  RequeueTaskForTab(tabID: string, taskID: string, expectedVersion: number, idemKey: string): Promise<ControlResult>;
   OpenTaskSessionForTab(tabID: string, taskID: string): Promise<ControlResult>;
   JobsForTab(tabID: string): Promise<JobView[]>;
   CancelJob(jobID: string): Promise<boolean>;
@@ -674,7 +661,6 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ReloadSettings(): Promise<void>;
   SetShellPreference(prefer: string): Promise<void>;
   InstallShellSupport(id: string): Promise<ShellInstallResult>;
-  CancelShellInstall(): Promise<void>;
   SetSandbox(bash: string, network: boolean, workspaceRoot: string, allowWrite: string[], shell: string): Promise<void>;
   SetNetwork(n: NetworkView): Promise<void>;
   SetCloseBehavior(mode: string): Promise<void>;
@@ -731,7 +717,7 @@ export interface AppBindings extends AttachmentBindings, SessionExportBindings, 
   ListTabs(): Promise<TabMeta[]>;
   OpenProjectTab(workspaceRoot: string, topicID: string): Promise<TabMeta>;
   IsolatedWorktreeAvailability(workspaceRoot: string): Promise<DeliveryWorktreeAvailability>;
-  CreateIsolatedWorktree(workspaceRoot: string): Promise<DeliveryWorktreeOpenResult>;
+  CreateIsolatedWorktree(workspaceRoot: string): Promise<IsolatedWorktreeOpenResult>;
   InspectWorktreeMerge(tabID: string): Promise<WorktreeMergeInspection>;
   GetWorktreeStatus(tabID: string): Promise<WorktreeMergeInspection>;
   PrepareWorktreeMerge(tabID: string): Promise<WorktreeMergeInspection>;
@@ -1411,14 +1397,27 @@ function makeMockApp(): MockAppBindings {
   const day = 86_400_000;
   const t0 = Date.now();
   // Mutable so MCP add/remove/retry are observable in browser dev.
+  // Browser fixtures must publish the same current state contract as the host.
+  function mockMCPServerView(server: ServerView): ServerView {
+    let availability = "available_on_demand";
+    if (!server.enabled) availability = "disabled";
+    else if (server.runtimeState === "ready") availability = "connected";
+    else if (server.runtimeState === "connecting") availability = "starting";
+    else if (server.runtimeState === "issue") {
+      availability = server.requiresLaunchApproval ? "project_auth_changed"
+        : server.authStatus === "required" || server.authStatus === "possible" ? "auth_required" : "start_failed";
+    }
+    return { ...server, availability };
+  }
   let capServers: ServerView[] = [
     {
       name: "project-knowledge",
       transport: "http",
       status: "connected",
+      enabled: true,
+      runtimeState: "ready",
+      availability: "connected",
       configured: true,
-      autoStart: true,
-      tier: "background",
       source: "project",
       configSource: "deepzora.toml",
       url: "https://mcp.example.test/project",
@@ -1435,9 +1434,10 @@ function makeMockApp(): MockAppBindings {
       name: "github",
       transport: "stdio",
       status: "connected",
+      enabled: true,
+      runtimeState: "ready",
+      availability: "connected",
       configured: true,
-      autoStart: true,
-      tier: "background",
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-github"],
       tools: 4,
@@ -1454,9 +1454,10 @@ function makeMockApp(): MockAppBindings {
       name: "linear",
       transport: "http",
       status: "initializing",
+      enabled: true,
+      runtimeState: "connecting",
+      availability: "starting",
       configured: true,
-      autoStart: true,
-      tier: "background",
       url: "https://mcp.linear.app/mcp",
       authStatus: "possible",
       authUrl: "https://mcp.linear.app/mcp",
@@ -1474,7 +1475,7 @@ function makeMockApp(): MockAppBindings {
         { name: "search", description: "Search Linear workspace objects." },
       ],
     },
-    { name: "figma", transport: "http", status: "failed", configured: true, autoStart: true, tier: "background", url: "https://mcp.figma.com/mcp", authStatus: "required", authUrl: "https://mcp.figma.com/mcp", tools: 0, prompts: 0, resources: 0, error: "connect: 401 unauthorized" },
+    { name: "figma", transport: "http", status: "failed", enabled: true, runtimeState: "issue", availability: "auth_required", configured: true, url: "https://mcp.figma.com/mcp", authStatus: "required", authUrl: "https://mcp.figma.com/mcp", tools: 0, prompts: 0, resources: 0, error: "connect: 401 unauthorized" },
   ];
   const capSkills: SkillView[] = [
     {
@@ -3400,14 +3401,14 @@ function makeMockApp(): MockAppBindings {
     },
     async Capabilities() {
       return {
-        servers: capServers.map((s) => ({ ...s })),
+        servers: capServers.map(mockMCPServerView),
         skills: capSkills.map((s) => ({ ...s })),
         skillRoots: capSkillRoots.map((s) => ({ ...s })),
         plugins: capPlugins.map((p) => ({ ...p })),
       };
     },
     async MCPServers() {
-      return capServers.map((s) => ({ ...s }));
+      return capServers.map(mockMCPServerView);
     },
     async MCPCapabilityMatrix() {
       return { views: [], hostProfile: "desktop-apps-2026-01-26-v1" };
@@ -3517,7 +3518,7 @@ function makeMockApp(): MockAppBindings {
           servers: capServers.map((s) => ({
             name: s.name,
             transport: s.transport || "stdio",
-            start_intent: s.startIntent === "off" ? "off" : "automatic",
+            start_intent: !s.enabled ? "off" : "automatic",
             source: "toml",
             runtime_status: includeSessionRuntime ? s.status || "connected" : undefined,
             tool_count: s.tools,
@@ -3615,10 +3616,11 @@ function makeMockApp(): MockAppBindings {
       capServers.push({
         name: input.name,
         transport: input.transport,
-        status: "connected",
+        status: input.autoStart === false ? "disabled" : "connected",
+        enabled: input.autoStart !== false,
+        runtimeState: input.autoStart === false ? "idle" : "ready",
+        availability: input.autoStart === false ? "disabled" : "connected",
         configured: true,
-        autoStart: true,
-        tier: "background",
         command: input.command,
         args: input.args,
         url: input.url,
@@ -3641,13 +3643,16 @@ function makeMockApp(): MockAppBindings {
     async UpdateMCPServer(name: string, input: MCPServerInput) {
       capServers = capServers.map((s) => {
         if (s.name !== name) return s;
-        const connected = s.status === "connected" || s.status === "failed" || s.autoStart !== false;
-        const nextStatus = s.status === "disabled" ? "disabled" : connected ? "connected" : "deferred";
+        const connected = s.status === "connected" || s.status === "failed" || s.enabled;
+        const enabled = input.autoStart ?? s.enabled;
+        const nextStatus = !enabled ? "disabled" : connected ? "connected" : "deferred";
         const nextTools = nextStatus === "connected" ? s.tools || (input.transport === "stdio" ? 3 : 5) : 0;
         return {
           ...s,
           transport: input.transport,
           status: nextStatus,
+          enabled,
+          runtimeState: nextStatus === "connected" ? "ready" : "idle",
           command: input.transport === "stdio" ? input.command : "",
           args: input.transport === "stdio" ? input.args : [],
           url: input.transport === "stdio" ? "" : input.url,
@@ -3665,23 +3670,23 @@ function makeMockApp(): MockAppBindings {
     },
     async AuthorizeAndConnectMCPServer(name: string) {
       capServers = capServers.map((s) => s.name === name
-        ? { ...s, status: "connected", runtimeState: "ready", tools: s.tools || 4, error: undefined, requiresLaunchApproval: false }
+        ? { ...s, status: "connected", runtimeState: "ready", enabled: true, tools: s.tools || 4, error: undefined, requiresLaunchApproval: false }
         : s);
     },
     async AuthenticateMCPServer(name: string) {
       capServers = capServers.map((s) => s.name === name
-        ? { ...s, status: "connected", runtimeState: "ready", tools: s.tools || 4, error: undefined, authStatus: "none", authUrl: undefined }
+        ? { ...s, status: "connected", runtimeState: "ready", enabled: true, tools: s.tools || 4, error: undefined, authStatus: "none", authUrl: undefined }
         : s);
     },
     async ReconnectMCPServer(name: string) {
       capServers = capServers.map((s) =>
         s.name === name
-          ? { ...s, status: "initializing", error: undefined, authStatus: undefined, authUrl: undefined }
+          ? { ...s, status: "initializing", runtimeState: "connecting", error: undefined, authStatus: undefined, authUrl: undefined }
           : s,
       );
       await new Promise((r) => setTimeout(r, 400));
       capServers = capServers.map((s) =>
-        s.name === name ? { ...s, status: "connected", tools: s.tools || 4 } : s,
+        s.name === name ? { ...s, status: "connected", runtimeState: "ready", tools: s.tools || 4 } : s,
       );
     },
     async ClearMCPServerAuthentication(name: string) {
@@ -3689,7 +3694,8 @@ function makeMockApp(): MockAppBindings {
         s.name === name
           ? {
               ...s,
-              status: s.autoStart === false ? "disabled" : "initializing",
+              status: s.enabled ? "initializing" : "disabled",
+              runtimeState: s.enabled ? "connecting" : "idle",
               tools: 0,
               error: undefined,
               authStatus: s.transport !== "stdio" ? "possible" : undefined,
@@ -3806,7 +3812,8 @@ function makeMockApp(): MockAppBindings {
           ? {
               ...s,
               status: enabled ? "connected" : "disabled",
-              autoStart: s.builtIn ? enabled : s.autoStart,
+              enabled,
+              runtimeState: enabled ? "ready" : "idle",
               tools: enabled ? s.tools || 4 : 0,
               error: undefined,
               authStatus: !enabled && s.transport !== "stdio" ? "possible" : undefined,
@@ -4568,7 +4575,6 @@ function makeMockApp(): MockAppBindings {
             manualUrl: "https://git-scm.com/download/win",
           };
         },
-        async CancelShellInstall() {},
         async SetSandbox(bash: string, network: boolean, workspaceRoot: string, allowWrite: string[], shell: string) {
           const effectiveWorkspaceRoot = workspaceRoot.trim() || cwd;
           const prev = settings.sandbox;
@@ -4763,18 +4769,7 @@ function makeMockApp(): MockAppBindings {
     },
     async HeartbeatTriggerNow(_id: string) {},
     async HeartbeatGenerateID() { return "mock-" + Date.now().toString(36); },
-    async ListTasks() { return []; },
-    async CurrentTaskSessionID() { return ""; },
-    async ListTasksForSession() { return []; },
-    async GetTask() { return null; },
-    async StopTask() { return { schema_version: 1, command: "stop", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async CancelTask() { return { schema_version: 1, command: "cancel", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async ListTasksForTab() { return []; },
     ...makeMockTaskCatalogBindings(),
-    async ListTaskEventsForTab() { return []; },
-    async StopTaskForTab() { return { schema_version: 1, command: "stop", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async CancelTaskForTab() { return { schema_version: 1, command: "cancel", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
-    async RequeueTaskForTab() { return { schema_version: 1, command: "requeue", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     async OpenTaskSessionForTab() { return { schema_version: 1, command: "open_session", task_id: "", accepted: false, idempotent: false, error: { code: "mock", message: "not available in browser mock" } }; },
     async SetTrayLocale(_locale: "en" | "zh") {},
     async Version() {
