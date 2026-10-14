@@ -15,7 +15,7 @@ func TestFileStoreSaveTaskWaitsForTransientSnapshotReader(t *testing.T) {
 	store := NewFileStore(".deepzora/tasks")
 	ctx := context.Background()
 	now := time.Now()
-	snapshot := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s1", State: TaskStateRunning, Version: 1, CreatedAt: now, UpdatedAt: now}
+	snapshot := TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown, SchemaVersion: 1, TaskID: "t1", SessionID: "s1", State: TaskStateRunning, Version: 1, CreatedAt: now, UpdatedAt: now}
 	if err := store.SaveTask(ctx, dir, snapshot); err != nil {
 		t.Fatal(err)
 	}

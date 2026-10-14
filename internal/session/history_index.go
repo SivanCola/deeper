@@ -603,21 +603,21 @@ func replaceIndexedMessages(ctx context.Context, content *sessioncontent.Store, 
 	state.turns = map[string]int{}
 	// Keep each identity's version watermark when replacing its visible row.
 	// Retired versions remain in SQLite for fixed-snapshot readers.
-	legacyTurn := 0
+	seedTurn := 0
 	var final *provider.Message
-	flushLegacyTurn := func() error {
+	flushSeedTurn := func() error {
 		if final == nil {
 			return nil
 		}
-		_, err := state.tx.ExecContext(ctx, `INSERT OR REPLACE INTO turn_summaries(turn_id,start_sequence,end_sequence,started_at,ended_at,final_message_id) VALUES(?,?,?,?,?,?)`, fmt.Sprintf("legacy:%d:%d", sequence, legacyTurn), sequence, sequence, 0, final.WorkDurationMs, final.ID)
+		_, err := state.tx.ExecContext(ctx, `INSERT OR REPLACE INTO turn_summaries(turn_id,start_sequence,end_sequence,started_at,ended_at,final_message_id) VALUES(?,?,?,?,?,?)`, fmt.Sprintf("seed:%d:%d", sequence, seedTurn), sequence, sequence, 0, final.WorkDurationMs, final.ID)
 		return err
 	}
 	for _, message := range messages {
 		if message.Role == provider.RoleUser {
-			if err := flushLegacyTurn(); err != nil {
+			if err := flushSeedTurn(); err != nil {
 				return err
 			}
-			legacyTurn++
+			seedTurn++
 			final = nil
 		}
 		if message.Role == provider.RoleAssistant && !message.LocalOnly && (strings.TrimSpace(message.Content) != "" || strings.TrimSpace(message.RawContent) != "") {
@@ -628,7 +628,7 @@ func replaceIndexedMessages(ctx context.Context, content *sessioncontent.Store, 
 			return err
 		}
 	}
-	return flushLegacyTurn()
+	return flushSeedTurn()
 }
 
 func renumberVisibleTurns(ctx context.Context, state *historyBuildState, sequence uint64) error {

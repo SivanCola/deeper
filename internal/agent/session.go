@@ -182,8 +182,8 @@ func (s *Session) AddDecisionReceipt(receipt *provider.DecisionReceipt) {
 	}
 	s.Messages = append(s.Messages, provider.Message{
 		Role:            provider.RoleTool,
-		ToolCallID:      provider.LocalOnlyToolID,
-		Name:            provider.LocalOnlyToolName,
+		ToolCallID:      "",
+		Name:            "",
 		LocalOnly:       true,
 		DecisionReceipt: receipt,
 	})

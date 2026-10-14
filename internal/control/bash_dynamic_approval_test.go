@@ -263,7 +263,7 @@ func TestHeadlessDynamicBashApprovalModes(t *testing.T) {
 		})
 	}
 
-	exact := permission.New("ask", []string{"Bash=" + dynamicBashCommand}, nil, nil)
+	exact := permission.New("ask", []string{permission.ExactRule("Bash", dynamicBashCommand)}, nil, nil)
 	allow, reason, err := BuildHeadlessApprovalGate(exact, ToolApprovalReadOnly).Check(context.Background(), "bash", args, false)
 	if err != nil || !allow || reason != "" {
 		t.Fatalf("headless exact literal = (%v,%q,%v), want allow", allow, reason, err)

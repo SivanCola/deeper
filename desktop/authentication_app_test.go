@@ -34,7 +34,7 @@ func TestDesktopAuthenticationAdmissionDoesNotCreateTurn(t *testing.T) {
 	})
 	app.activeTabID = tab.ID
 
-	err := app.SubmitToTab(tab.ID, "must remain a draft")
+	err := app.SubmitToTabWithID(tab.ID, "must remain a draft", newSessionRuntimeID("test-submit"))
 	var authErr *control.AuthenticationError
 	if !errors.As(err, &authErr) || authErr.State.Status != control.AuthenticationMissingCredential {
 		t.Fatalf("SubmitToTab error = %v, want missing-credential AuthenticationError", err)

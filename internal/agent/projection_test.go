@@ -269,7 +269,7 @@ func TestLocalOnlyExcludedFromCompactionRequest(t *testing.T) {
 		sess.Add(provider.Message{Role: provider.RoleAssistant, Content: strings.Repeat("a", 120)})
 	}
 	sess.Add(provider.Message{
-		Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+		Role: provider.RoleTool, ToolCallID: "", Name: "",
 		Content: "secret local only", LocalOnly: true,
 	})
 	a := New(fp, nil, sess, Options{ContextWindow: 2000, ArchiveDir: t.TempDir()}, event.Discard)

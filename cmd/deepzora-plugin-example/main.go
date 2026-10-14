@@ -71,7 +71,7 @@ type rpcError struct {
 }
 
 const (
-	protocolVersion    = "2024-11-05"
+	protocolVersion    = "2026-07-28"
 	codeMethodNotFound = -32601
 	codeInvalidParams  = -32602
 )

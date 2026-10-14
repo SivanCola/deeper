@@ -2021,10 +2021,10 @@ export type RuntimeState = "unknown" | "alive" | "exited" | string;
 export interface TaskSnapshot {
   schema_version: number;
   task_id: string;
-  job_id?: string; // jobs.Manager-local runtime identifier
+  job_id: string; // jobs.Manager-local runtime identifier
   session_id: string;
   state: TaskState;
-  runtime_state?: RuntimeState; // absent in snapshots written before this field existed
+  runtime_state: RuntimeState;
   version: number;
   created_at: string; // ISO 8601
   updated_at: string; // ISO 8601
@@ -2051,6 +2051,7 @@ export interface TaskEvent {
   sequence: number;
   timestamp: string; // ISO 8601
   event_type: string;
+  job_id: string;
   task_id: string;
   session_id: string;
   state: TaskState;

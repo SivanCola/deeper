@@ -1,6 +1,7 @@
 package main
 
 import (
+	"deepzora/internal/event"
 	"os"
 	"path/filepath"
 	"testing"
@@ -221,4 +222,8 @@ func TestWorkspaceConflictAllowsAcquiredOwnerToWaitForAnotherFile(t *testing.T) 
 	if conflict.State != "local" || conflict.OwnerTabID != "owner" {
 		t.Fatalf("WorkspaceConflictForTab = %+v, want local owner", conflict)
 	}
+}
+
+func (c *backgroundRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

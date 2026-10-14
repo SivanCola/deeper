@@ -294,16 +294,6 @@ func LaunchAndVerify(root, home string, interactive bool, start func() error, ar
 		writeRecoveryLog(home, fmt.Sprintf("inspect pid=%d created=%d image=%q status=%+v", p.pid, p.created.Nanoseconds(), p.image, p.status))
 	}
 	for _, p := range list {
-		if p.status == nil && p.legacyProfile != "" && focusLegacyWindow(p) {
-			// A legacy instance cannot prove readiness. Showing its existing
-			// window handles an ordinary double-click without interrupting work;
-			// update acceptance still uses VerifyCurrent's strict checks.
-			writeRecoveryLog(home, "existing legacy window displayed; health remains unverified")
-			closeProcesses(list)
-			return nil
-		}
-	}
-	for _, p := range list {
 		if p.status != nil && p.status.Lifecycle == "failed" {
 			// A responsive failed shell owns its recovery UI and may still hold
 			// an unsaved renderer. Let the user choose retry/exit there.

@@ -49,7 +49,7 @@ func (c *Controller) TranscriptFollow(ctx context.Context, req transcript.Follow
 			return TranscriptFollowResponse{}, err
 		}
 		view, err := projection.Follow(ctx, req)
-		return TranscriptFollowResponse{FollowResponse: view, StorageBackend: "legacy"}, err
+		return TranscriptFollowResponse{FollowResponse: view, StorageBackend: "agent-dag"}, err
 	}
 	view, err := runtime.FollowTranscript(ctx, req)
 	out := TranscriptFollowResponse{FollowResponse: view}

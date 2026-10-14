@@ -301,7 +301,7 @@ func TestBackendRejectsSubmitWhenRuntimeIsNotReady(t *testing.T) {
 	app.setSessionRuntimePhaseLocked(tab, sessionRuntimeLeaseBlocked, &sessionLeaseBusyError{})
 	app.mu.Unlock()
 
-	err := app.SubmitToTab(tab.ID, "must not send")
+	err := app.SubmitToTabWithID(tab.ID, "must not send", newSessionRuntimeID("test-submit"))
 	if err == nil || !strings.Contains(err.Error(), "workspace failed to start") {
 		t.Fatalf("SubmitToTab error = %v, want runtime readiness failure", err)
 	}

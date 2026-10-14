@@ -38,7 +38,7 @@ func TestSubmitToTabHistoryDisplaysRawInputAfterStandingMemoryCompose(t *testing
 	}
 
 	const prompt = "不要，删了"
-	app.SubmitToTab("test", prompt)
+	app.SubmitToTabWithID("test", prompt, newSessionRuntimeID("test-submit"))
 	composed := <-runner.started
 	waitNotRunning(t, ctrl)
 	if !strings.Contains(composed, "<memory-update>") || !strings.HasSuffix(composed, prompt) {

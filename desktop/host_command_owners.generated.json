@@ -39,18 +39,6 @@
       "inputs": []
     }
   },
-  "AcceptDelivery": {
-    "domain": "desktop/delivery_accept.go",
-    "owner": "App.AcceptDelivery",
-    "sources": [
-      "desktop/delivery_accept.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.AcceptDelivery",
-      "inputs": []
-    }
-  },
   "AcceptDeliveryToTab": {
     "domain": "desktop/delivery_accept.go",
     "owner": "App.AcceptDeliveryToTab",
@@ -993,18 +981,6 @@
       ]
     }
   },
-  "Checkpoints": {
-    "domain": "desktop/app.go",
-    "owner": "App.Checkpoints",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.Checkpoints",
-      "inputs": []
-    }
-  },
   "CheckpointsForTab": {
     "domain": "desktop/app.go",
     "owner": "App.CheckpointsForTab",
@@ -1129,18 +1105,6 @@
       ]
     }
   },
-  "CloseMainWindow": {
-    "domain": "desktop/window_controls.go",
-    "owner": "App.CloseMainWindow",
-    "sources": [
-      "desktop/window_controls.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.CloseMainWindow",
-      "inputs": []
-    }
-  },
   "CloseMergedWorktreeTab": {
     "domain": "desktop/delivery_worktree.go",
     "owner": "App.CloseMergedWorktreeTab",
@@ -1256,18 +1220,6 @@
         "planID",
         "resolution"
       ]
-    }
-  },
-  "Compact": {
-    "domain": "desktop/app.go",
-    "owner": "App.Compact",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.Compact",
-      "inputs": []
     }
   },
   "CompactForTab": {
@@ -2168,20 +2120,6 @@
       "inputs": [
         "tabID",
         "name"
-      ]
-    }
-  },
-  "Fork": {
-    "domain": "desktop/app.go",
-    "owner": "App.Fork",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.Fork",
-      "inputs": [
-        "turn"
       ]
     }
   },
@@ -3114,18 +3052,6 @@
       ]
     }
   },
-  "IsMainWindowMaximised": {
-    "domain": "desktop/window_controls.go",
-    "owner": "App.IsMainWindowMaximised",
-    "sources": [
-      "desktop/window_controls.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.IsMainWindowMaximised",
-      "inputs": []
-    }
-  },
   "IsolatedWorktreeAvailability": {
     "domain": "desktop/delivery_worktree.go",
     "owner": "App.IsolatedWorktreeAvailability",
@@ -3746,18 +3672,6 @@
       "inputs": [
         "tabID"
       ]
-    }
-  },
-  "MinimiseMainWindow": {
-    "domain": "desktop/window_controls.go",
-    "owner": "App.MinimiseMainWindow",
-    "sources": [
-      "desktop/window_controls.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.MinimiseMainWindow",
-      "inputs": []
     }
   },
   "MkdirRemote": {
@@ -6506,37 +6420,6 @@
       ]
     }
   },
-  "Rewind": {
-    "domain": "desktop/app.go",
-    "owner": "App.Rewind",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.Rewind",
-      "inputs": [
-        "turn",
-        "scope"
-      ]
-    }
-  },
-  "RewindForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.RewindForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.RewindForTab",
-      "inputs": [
-        "tabID",
-        "turn",
-        "scope"
-      ]
-    }
-  },
   "RewindRemoteTab": {
     "domain": "desktop/remote_tab.go",
     "owner": "App.RewindRemoteTab",
@@ -7687,20 +7570,6 @@
       ]
     }
   },
-  "SetGoal": {
-    "domain": "desktop/goal_app.go",
-    "owner": "App.SetGoal",
-    "sources": [
-      "desktop/goal_app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetGoal",
-      "inputs": [
-        "goal"
-      ]
-    }
-  },
   "SetGoalForTab": {
     "domain": "desktop/goal_app.go",
     "owner": "App.SetGoalForTab",
@@ -7785,20 +7654,6 @@
       "resolver": "App.SetMaxSubagentDepth",
       "inputs": [
         "depth"
-      ]
-    }
-  },
-  "SetMode": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetMode",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetMode",
-      "inputs": [
-        "mode"
       ]
     }
   },
@@ -7888,20 +7743,6 @@
         "expectedSessionID",
         "preset",
         "expectedRevision"
-      ]
-    }
-  },
-  "SetPlanMode": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetPlanMode",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetPlanMode",
-      "inputs": [
-        "on"
       ]
     }
   },
@@ -8338,20 +8179,6 @@
       ]
     }
   },
-  "SetToolApprovalMode": {
-    "domain": "desktop/app.go",
-    "owner": "App.SetToolApprovalMode",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SetToolApprovalMode",
-      "inputs": [
-        "mode"
-      ]
-    }
-  },
   "SetToolApprovalModeForTab": {
     "domain": "desktop/app.go",
     "owner": "App.SetToolApprovalModeForTab",
@@ -8709,51 +8536,6 @@
       "inputs": []
     }
   },
-  "Submit": {
-    "domain": "desktop/app.go",
-    "owner": "App.Submit",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.Submit",
-      "inputs": [
-        "input"
-      ]
-    }
-  },
-  "SubmitDisplay": {
-    "domain": "desktop/app.go",
-    "owner": "App.SubmitDisplay",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitDisplay",
-      "inputs": [
-        "display",
-        "input"
-      ]
-    }
-  },
-  "SubmitDisplayToTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SubmitDisplayToTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitDisplayToTab",
-      "inputs": [
-        "tabID",
-        "display",
-        "input"
-      ]
-    }
-  },
   "SubmitDisplayToTabWithID": {
     "domain": "desktop/turn_submission_app.go",
     "owner": "App.SubmitDisplayToTabWithID",
@@ -8940,21 +8722,6 @@
       ]
     }
   },
-  "SubmitToTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.SubmitToTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SubmitToTab",
-      "inputs": [
-        "tabID",
-        "input"
-      ]
-    }
-  },
   "SubmitToTabWithID": {
     "domain": "desktop/turn_submission_app.go",
     "owner": "App.SubmitToTabWithID",
@@ -8968,20 +8735,6 @@
         "tabID",
         "input",
         "submissionID"
-      ]
-    }
-  },
-  "SummarizeFrom": {
-    "domain": "desktop/app.go",
-    "owner": "App.SummarizeFrom",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SummarizeFrom",
-      "inputs": [
-        "turn"
       ]
     }
   },
@@ -9013,20 +8766,6 @@
         "tabID",
         "turn",
         "mode"
-      ]
-    }
-  },
-  "SummarizeUpTo": {
-    "domain": "desktop/app.go",
-    "owner": "App.SummarizeUpTo",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.SummarizeUpTo",
-      "inputs": [
-        "turn"
       ]
     }
   },
@@ -9129,18 +8868,6 @@
         "model",
         "key"
       ]
-    }
-  },
-  "ToggleMaximiseMainWindow": {
-    "domain": "desktop/window_controls.go",
-    "owner": "App.ToggleMaximiseMainWindow",
-    "sources": [
-      "desktop/window_controls.go"
-    ],
-    "scope": {
-      "kind": "owner-state",
-      "resolver": "App.ToggleMaximiseMainWindow",
-      "inputs": []
     }
   },
   "ToolResultForTab": {

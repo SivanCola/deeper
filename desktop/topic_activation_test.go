@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -610,4 +611,8 @@ func TestMetaForTabFastPathCachesExpensiveFields(t *testing.T) {
 	if got := loads.Load(); got != 2 {
 		t.Fatalf("config loads after root change = %d, want 2", got)
 	}
+}
+
+func (c *activationStubController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

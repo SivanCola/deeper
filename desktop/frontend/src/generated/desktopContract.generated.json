@@ -71,22 +71,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/delivery_accept.go",
-      "name": "AcceptDelivery",
-      "owner": "App.AcceptDelivery",
-      "params": [],
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.AcceptDelivery"
-      },
-      "sources": [
-        "desktop/delivery_accept.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/delivery_accept.go",
       "name": "AcceptDeliveryToTab",
       "owner": "App.AcceptDeliveryToTab",
       "params": [
@@ -1851,28 +1835,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
-      "name": "Checkpoints",
-      "owner": "App.Checkpoints",
-      "params": [],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "main.CheckpointMeta"
-        },
-        "kind": "array"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.Checkpoints"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
       "name": "CheckpointsForTab",
       "owner": "App.CheckpointsForTab",
       "params": [
@@ -2079,21 +2041,6 @@
       },
       "sources": [
         "desktop/session_clear.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/window_controls.go",
-      "name": "CloseMainWindow",
-      "owner": "App.CloseMainWindow",
-      "params": [],
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.CloseMainWindow"
-      },
-      "sources": [
-        "desktop/window_controls.go"
       ]
     },
     {
@@ -2306,22 +2253,6 @@
         ],
         "kind": "owner-inputs",
         "resolver": "App.CommitWorkspaceFileRevertForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "Compact",
-      "owner": "App.Compact",
-      "params": [],
-      "returnsError": true,
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.Compact"
       },
       "sources": [
         "desktop/app.go"
@@ -4080,32 +4011,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
-      "name": "Fork",
-      "owner": "App.Fork",
-      "params": [
-        {
-          "kind": "integer"
-        }
-      ],
-      "result": {
-        "kind": "object",
-        "ref": "main.TabMeta"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "turn"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.Fork"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
       "name": "ForkForTab",
       "owner": "App.ForkForTab",
       "params": [
@@ -5846,24 +5751,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/window_controls.go",
-      "name": "IsMainWindowMaximised",
-      "owner": "App.IsMainWindowMaximised",
-      "params": [],
-      "result": {
-        "kind": "boolean"
-      },
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.IsMainWindowMaximised"
-      },
-      "sources": [
-        "desktop/window_controls.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/delivery_worktree.go",
       "name": "IsolatedWorktreeAvailability",
       "owner": "App.IsolatedWorktreeAvailability",
@@ -7080,21 +6967,6 @@
       },
       "sources": [
         "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/window_controls.go",
-      "name": "MinimiseMainWindow",
-      "owner": "App.MinimiseMainWindow",
-      "params": [],
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.MinimiseMainWindow"
-      },
-      "sources": [
-        "desktop/window_controls.go"
       ]
     },
     {
@@ -12187,62 +12059,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "Rewind",
-      "owner": "App.Rewind",
-      "params": [
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "turn",
-          "scope"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.Rewind"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "RewindForTab",
-      "owner": "App.RewindForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "integer"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "turn",
-          "scope"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.RewindForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/remote_tab.go",
       "name": "RewindRemoteTab",
       "owner": "App.RewindRemoteTab",
@@ -14456,28 +14272,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/goal_app.go",
-      "name": "SetGoal",
-      "owner": "App.SetGoal",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "goal"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetGoal"
-      },
-      "sources": [
-        "desktop/goal_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/goal_app.go",
       "name": "SetGoalForTab",
       "owner": "App.SetGoalForTab",
       "params": [
@@ -14617,27 +14411,6 @@
       },
       "sources": [
         "desktop/settings_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetMode",
-      "owner": "App.SetMode",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetMode"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -14797,27 +14570,6 @@
         ],
         "kind": "owner-inputs",
         "resolver": "App.SetPermissionPresetForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SetPlanMode",
-      "owner": "App.SetPlanMode",
-      "params": [
-        {
-          "kind": "boolean"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "on"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetPlanMode"
       },
       "sources": [
         "desktop/app.go"
@@ -15591,27 +15343,6 @@
     {
       "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
-      "name": "SetToolApprovalMode",
-      "owner": "App.SetToolApprovalMode",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "mode"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SetToolApprovalMode"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
       "name": "SetToolApprovalModeForTab",
       "owner": "App.SetToolApprovalModeForTab",
       "params": [
@@ -16294,84 +16025,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "Submit",
-      "owner": "App.Submit",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "input"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.Submit"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SubmitDisplay",
-      "owner": "App.SubmitDisplay",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "display",
-          "input"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitDisplay"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SubmitDisplayToTab",
-      "owner": "App.SubmitDisplayToTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "display",
-          "input"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitDisplayToTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/turn_submission_app.go",
       "name": "SubmitDisplayToTabWithID",
       "owner": "App.SubmitDisplayToTabWithID",
@@ -16783,32 +16436,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SubmitToTab",
-      "owner": "App.SubmitToTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "input"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SubmitToTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/turn_submission_app.go",
       "name": "SubmitToTabWithID",
       "owner": "App.SubmitToTabWithID",
@@ -16835,28 +16462,6 @@
       },
       "sources": [
         "desktop/turn_submission_app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SummarizeFrom",
-      "owner": "App.SummarizeFrom",
-      "params": [
-        {
-          "kind": "integer"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "turn"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SummarizeFrom"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -16913,28 +16518,6 @@
       },
       "sources": [
         "desktop/remote_tab_commands.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "SummarizeUpTo",
-      "owner": "App.SummarizeUpTo",
-      "params": [
-        {
-          "kind": "integer"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "turn"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.SummarizeUpTo"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -17118,21 +16701,6 @@
       },
       "sources": [
         "desktop/provider_settings_probe.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/window_controls.go",
-      "name": "ToggleMaximiseMainWindow",
-      "owner": "App.ToggleMaximiseMainWindow",
-      "params": [],
-      "scope": {
-        "inputs": [],
-        "kind": "owner-state",
-        "resolver": "App.ToggleMaximiseMainWindow"
-      },
-      "sources": [
-        "desktop/window_controls.go"
       ]
     },
     {
@@ -40930,6 +40498,12 @@
           }
         },
         {
+          "name": "job_id",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "session_id",
           "type": {
             "kind": "string"
@@ -40980,7 +40554,6 @@
         },
         {
           "name": "job_id",
-          "optional": true,
           "type": {
             "kind": "string"
           }
@@ -40999,7 +40572,6 @@
         },
         {
           "name": "runtime_state",
-          "optional": true,
           "type": {
             "kind": "string"
           }

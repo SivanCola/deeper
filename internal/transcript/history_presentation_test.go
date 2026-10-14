@@ -10,7 +10,7 @@ import (
 
 func TestHTTP2FailureHistoryKeepsTransportIdentity(t *testing.T) {
 	rows := History([]provider.Message{{ID: "failure", Role: provider.RoleTool, LocalOnly: true,
-		ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+		ToolCallID: "", Name: "",
 		InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, TerminalStatus: "failed",
 			FailureDiagnostic: &provider.FailureDiagnostic{Kind: provider.FailureKindTransportProtocol, TransportCode: "PROTOCOL_ERROR", ProviderID: "saved-provider", ProviderDisplayName: "DeepSeek", Protocol: "openai"}}}}, HistoryOptions{})
 	if len(rows) != 1 || rows[0].Code != event.NoticeCodeProviderRequestFailed || rows[0].Level != "warn" || rows[0].Diagnostic == nil || rows[0].Diagnostic.Kind != provider.FailureKindTransportProtocol || rows[0].Diagnostic.TransportCode != "PROTOCOL_ERROR" || !strings.Contains(rows[0].Detail, "saved-provider") {
@@ -57,7 +57,7 @@ func TestHistorySteersRetainDistinctCanonicalMessageIdentities(t *testing.T) {
 func TestHistoryUnappliedSteerKeepsLegacyRecordAddressAndMessageIdentity(t *testing.T) {
 	const content = "[Mid-turn steer queued by the user. Do not treat this as a new task; use it only as additional guidance for the current task after completing the current step.]\nUse plan B"
 	rows := History([]provider.Message{{ID: "queued", Role: provider.RoleTool, LocalOnly: true,
-		ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName, Content: content}}, HistoryOptions{})
+		ToolCallID: "", Name: "", Content: content}}, HistoryOptions{})
 	if len(rows) != 1 || rows[0].Role != "notice" || rows[0].Code != event.NoticeCodeUnappliedSteer ||
 		rows[0].MessageID != "queued" || rows[0].RecordID != "m:queued:notice:0" {
 		t.Fatalf("unapplied steer identity = %+v", rows)

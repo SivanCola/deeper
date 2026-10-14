@@ -15,7 +15,7 @@ func TestControlService_StopTask(t *testing.T) {
 	cs := NewControlService(s)
 	ctx := context.Background()
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -55,17 +55,17 @@ func TestControlService_StopRoutesNamespacedTaskToRuntimeJobID(t *testing.T) {
 	}
 }
 
-func TestRuntimeJobIDSupportsSnapshotsBeforeJobIDField(t *testing.T) {
+func TestRuntimeJobIDRequiresExplicitIdentity(t *testing.T) {
 	longSession := strings.Repeat("s", maxFieldLen)
 	for _, tc := range []struct {
 		name string
 		snap TaskSnapshot
 		want string
 	}{
-		{name: "legacy raw id", snap: TaskSnapshot{TaskID: "task-1", SessionID: "session-1"}, want: "task-1"},
-		{name: "namespaced id", snap: TaskSnapshot{TaskID: "session-1--task-1", SessionID: "session-1"}, want: "task-1"},
-		{name: "hashed namespace", snap: TaskSnapshot{TaskID: monitorTaskID(longSession, "task-1"), SessionID: longSession}, want: "task-1"},
-		{name: "explicit id", snap: TaskSnapshot{TaskID: "monitor-id", JobID: "bash-2", SessionID: "session-1"}, want: "bash-2"},
+		{name: "missing raw id", snap: TaskSnapshot{TaskID: "task-1", SessionID: "session-1"}, want: ""},
+		{name: "missing namespaced id", snap: TaskSnapshot{TaskID: "session-1--task-1", SessionID: "session-1"}, want: ""},
+		{name: "missing hashed namespace", snap: TaskSnapshot{TaskID: monitorTaskID(longSession, "task-1"), SessionID: longSession}, want: ""},
+		{name: "explicit id", snap: TaskSnapshot{RuntimeState: RuntimeStateUnknown, TaskID: "monitor-id", JobID: "bash-2", SessionID: "session-1"}, want: "bash-2"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := runtimeJobID(&tc.snap); got != tc.want {
@@ -78,7 +78,7 @@ func TestRuntimeJobIDSupportsSnapshotsBeforeJobIDField(t *testing.T) {
 func TestControlService_StopRequiresRuntimeOwner(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -97,7 +97,7 @@ func TestControlService_StopRequiresRuntimeOwner(t *testing.T) {
 func TestControlService_CancelRejectsUnreachableRuntime(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -118,7 +118,7 @@ func TestControlService_VersionConflict(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 3,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -141,7 +141,7 @@ func TestControlService_NotFound(t *testing.T) {
 func TestControlService_TerminalGuard(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateSucceeded, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -155,7 +155,7 @@ func TestControlService_TerminalGuard(t *testing.T) {
 func TestControlService_RequeueFailedTaskDoesNotClaimLiveRuntime(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "failed",
 		SchemaVersion: 1, TaskID: "failed", SessionID: "s1",
 		State: TaskStateFailed, RuntimeState: RuntimeStateExited, Version: 3,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -173,7 +173,7 @@ func TestControlService_RequeueFailedTaskDoesNotClaimLiveRuntime(t *testing.T) {
 func TestControlService_RequeueRejectsLiveRuntime(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "failed",
 		SchemaVersion: 1, TaskID: "failed", SessionID: "s1",
 		State: TaskStateFailed, RuntimeState: RuntimeStateAlive, Version: 3,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -188,7 +188,7 @@ func TestControlService_RequeueAllowsExpiredRuntimeLease(t *testing.T) {
 	now := time.Now().UTC()
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "failed",
 		SchemaVersion: 1, TaskID: "failed", SessionID: "s1",
 		State: TaskStateFailed, RuntimeState: RuntimeStateAlive, RuntimeLeaseUntil: now.Add(-time.Minute), Version: 3,
 		CreatedAt: now.Add(-time.Hour), UpdatedAt: now.Add(-time.Minute),
@@ -202,7 +202,7 @@ func TestControlService_RequeueAllowsExpiredRuntimeLease(t *testing.T) {
 func TestControlService_RequeueRejectsNonFailedState(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "done",
 		SchemaVersion: 1, TaskID: "done", SessionID: "s1",
 		State: TaskStateSucceeded, RuntimeState: RuntimeStateExited, Version: 3,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -217,7 +217,7 @@ func TestControlService_Idempotency(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -245,7 +245,7 @@ func TestControlService_IdempotencyConflict_DifferentOp(t *testing.T) {
 	cs := NewControlService(s)
 	killer := &mockKiller{fn: func(string, string) bool { return true }}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -264,7 +264,7 @@ func TestControlService_IdempotencyConflict_DifferentVersion(t *testing.T) {
 	cs := NewControlService(s)
 	killer := &mockKiller{fn: func(string, string) bool { return true }}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -282,7 +282,7 @@ func TestControlService_AuditEvent(t *testing.T) {
 	cs := NewControlService(s)
 	killer := &mockKiller{fn: func(string, string) bool { return true }}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -319,7 +319,7 @@ func TestControlService_StopPreservesRuntimeLeaseUntilExit(t *testing.T) {
 	cs := NewControlService(s)
 	now := time.Now()
 	leaseUntil := now.Add(time.Minute)
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1",
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, RuntimeState: RuntimeStateAlive,
 		RuntimeLeaseUntil: leaseUntil, RuntimeOwnerID: "owner-1", Version: 1,
@@ -344,11 +344,11 @@ func TestControlService_StopPreservesRuntimeLeaseUntilExit(t *testing.T) {
 	}
 }
 
-func TestControlService_StopBoundsLegacyLeaseLessRuntime(t *testing.T) {
+func TestControlService_StopDoesNotFabricateRuntimeLease(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
 	now := time.Now()
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1",
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, RuntimeState: RuntimeStateAlive,
 		RuntimeOwnerID: "owner-1", Version: 1, CreatedAt: now, UpdatedAt: now,
@@ -362,16 +362,8 @@ func TestControlService_StopBoundsLegacyLeaseLessRuntime(t *testing.T) {
 	if err != nil || snap == nil {
 		t.Fatalf("snapshot: %+v err=%v", snap, err)
 	}
-	if snap.RuntimeState != RuntimeStateAlive || snap.RuntimeLeaseUntil.IsZero() || snap.RuntimeOwnerID != "owner-1" {
-		t.Fatalf("legacy runtime did not receive bounded lease: %+v", snap)
-	}
-	if got := snap.RuntimeLeaseUntil.Sub(snap.UpdatedAt); got != runtimeLeaseTTL {
-		t.Fatalf("lease duration = %v, want %v", got, runtimeLeaseTTL)
-	}
-	reconciled := *snap
-	reconcileRuntime(&reconciled, snap.RuntimeLeaseUntil.Add(time.Second))
-	if reconciled.State != TaskStateCancelled || reconciled.RuntimeState != RuntimeStateExited {
-		t.Fatalf("expired legacy runtime did not reconcile: %+v", reconciled)
+	if snap.RuntimeState != RuntimeStateAlive || !snap.RuntimeLeaseUntil.IsZero() || snap.RuntimeOwnerID != "owner-1" {
+		t.Fatalf("stop fabricated a runtime lease: %+v", snap)
 	}
 }
 
@@ -379,7 +371,7 @@ func TestControlService_FileStoreClaimsIdempotencyBeforeSideEffects(t *testing.T
 	project := t.TempDir()
 	store := NewFileStore(".deepzora/tasks")
 	now := time.Now()
-	if err := store.SaveTask(context.Background(), project, TaskSnapshot{
+	if err := store.SaveTask(context.Background(), project, TaskSnapshot{JobID: "t1",
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1", State: TaskStateRunning,
 		RuntimeState: RuntimeStateAlive, Version: 1, CreatedAt: now, UpdatedAt: now,
 	}); err != nil {
@@ -460,7 +452,7 @@ func TestControlService_AuditSequenceMonotonic(t *testing.T) {
 	cs := NewControlService(s)
 	killer := &mockKiller{fn: func(string, string) bool { return true }}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -470,7 +462,7 @@ func TestControlService_AuditSequenceMonotonic(t *testing.T) {
 	cs.StopTaskWithKiller(context.Background(), "/p", "t1", 1, "", "", killer)
 
 	// Reset task to running (simulate a new execution lifecycle)
-	s.UpsertTask("/p", TaskSnapshot{
+	s.UpsertTask("/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 2,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -501,7 +493,7 @@ func TestControlService_KillJob(t *testing.T) {
 		return sessionID == "s1" && id == "t1"
 	}}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -523,7 +515,7 @@ func TestControlService_KillNotCalledForTerminalTask(t *testing.T) {
 	killed := false
 	mk := &mockKiller{fn: func(_, _ string) bool { killed = true; return true }}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateSucceeded, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -540,8 +532,8 @@ func TestControlService_ConcurrentKillersRemainCallScoped(t *testing.T) {
 	cs := NewControlService(s)
 	now := time.Now()
 	for _, snap := range []TaskSnapshot{
-		{SchemaVersion: 1, TaskID: "task-a", SessionID: "session-a", State: TaskStateRunning, RuntimeState: RuntimeStateAlive, Version: 1, CreatedAt: now, UpdatedAt: now},
-		{SchemaVersion: 1, TaskID: "task-b", SessionID: "session-b", State: TaskStateRunning, RuntimeState: RuntimeStateAlive, Version: 1, CreatedAt: now, UpdatedAt: now},
+		{SchemaVersion: 1, TaskID: "task-a", JobID: "task-a", SessionID: "session-a", State: TaskStateRunning, RuntimeState: RuntimeStateAlive, Version: 1, CreatedAt: now, UpdatedAt: now},
+		{SchemaVersion: 1, TaskID: "task-b", JobID: "task-b", SessionID: "session-b", State: TaskStateRunning, RuntimeState: RuntimeStateAlive, Version: 1, CreatedAt: now, UpdatedAt: now},
 	} {
 		mustUpsertControl(t, s, "/p", snap)
 	}
@@ -587,7 +579,7 @@ func TestControlService_ConcurrentAccess(t *testing.T) {
 	cs := NewControlService(s)
 	killer := &mockKiller{fn: func(string, string) bool { return true }}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -619,7 +611,7 @@ func TestControlService_CancelTask(t *testing.T) {
 	cs := NewControlService(s)
 	killer := &mockKiller{fn: func(string, string) bool { return true }}
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateWaiting, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -635,7 +627,7 @@ func TestControlService_OpenSession(t *testing.T) {
 	s := NewInMemoryStore()
 	cs := NewControlService(s)
 
-	mustUpsertControl(t, s, "/p", TaskSnapshot{
+	mustUpsertControl(t, s, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "sess-abc",
 		State: TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),

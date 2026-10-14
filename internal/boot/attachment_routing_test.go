@@ -81,7 +81,7 @@ model_overrides = { x = { vision = true } }
 		switch request.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2024-11-05",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "vision-reader", "version": "1"},
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 			}

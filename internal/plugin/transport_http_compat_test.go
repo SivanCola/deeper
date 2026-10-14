@@ -388,7 +388,56 @@ func TestHTTPTransportUnsupportedProtocolClosesNegotiatedSession(t *testing.T) {
 	}
 }
 
-func TestHTTPTransportLegacySessionlessJSONPostOnly(t *testing.T) {
+func TestHTTPTransportRejectsOldProtocolAndClosesSession(t *testing.T) {
+	deleted := make(chan struct{}, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			deleted <- struct{}{}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			ID     json.RawMessage `json:"id"`
+			Method string          `json:"method"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad body", http.StatusBadRequest)
+			return
+		}
+		switch req.Method {
+		case "server/discover":
+			writeRawHTTPRPCError(w, req.ID, -32601, "method not found")
+		case "initialize":
+			w.Header().Set("Mcp-Session-Id", "old-protocol")
+			writeRawHTTPRPCResult(w, req.ID, map[string]any{"protocolVersion": "2025-11-25", "serverInfo": map[string]any{"name": "old", "version": "1"}, "capabilities": map[string]any{}})
+		case "notifications/initialized":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			t.Errorf("old session dispatched %s", req.Method)
+			http.Error(w, "unsupported", http.StatusBadRequest)
+		}
+	}))
+	defer server.Close()
+	transport, err := newHTTPTransport(Spec{Name: "old", Type: "http", URL: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer transport.close()
+	if _, err := transport.call(t.Context(), "tools/list", map[string]any{}); err == nil || !strings.Contains(err.Error(), "require 2026-07-28") {
+		t.Fatalf("old protocol result = %v", err)
+	}
+	select {
+	case <-deleted:
+	case <-time.After(time.Second):
+		t.Fatal("old negotiated session was not closed")
+	}
+}
+
+func TestHTTPTransportCurrentSessionlessJSONPostOnly(t *testing.T) {
 	var discoverCount atomic.Int32
 	var initializeCount atomic.Int32
 	var getCount atomic.Int32
@@ -419,15 +468,15 @@ func TestHTTPTransportLegacySessionlessJSONPostOnly(t *testing.T) {
 		case "initialize":
 			initializeCount.Add(1)
 			writeRawHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": "2025-11-25",
-				"serverInfo":      map[string]any{"name": "legacy-post", "version": "1"},
+				"protocolVersion": "2026-07-28",
+				"serverInfo":      map[string]any{"name": "current-post", "version": "1"},
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 			})
 		case "notifications/initialized":
 			w.WriteHeader(http.StatusAccepted)
 		case "tools/list":
 			writeRawHTTPRPCResult(w, req.ID, map[string]any{"tools": []map[string]any{{
-				"name": "legacy_tool", "inputSchema": map[string]any{"type": "object"},
+				"name": "current_tool", "inputSchema": map[string]any{"type": "object"},
 			}}})
 		default:
 			http.Error(w, "unknown method", http.StatusBadRequest)
@@ -435,21 +484,21 @@ func TestHTTPTransportLegacySessionlessJSONPostOnly(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	host, tools, err := StartAll(t.Context(), []Spec{{Name: "legacy-post", Type: "http", URL: srv.URL}})
+	host, tools, err := StartAll(t.Context(), []Spec{{Name: "current-post", Type: "http", URL: srv.URL}})
 	if err != nil {
 		t.Fatalf("StartAll: %v", err)
 	}
 	defer host.Close()
-	if got := names(tools); len(got) != 1 || got[0] != "mcp__legacy-post__legacy_tool" {
-		t.Fatalf("tools = %v, want [mcp__legacy-post__legacy_tool]", got)
+	if got := names(tools); len(got) != 1 || got[0] != "mcp__current-post__current_tool" {
+		t.Fatalf("tools = %v, want [mcp__current-post__current_tool]", got)
 	}
 	if got := discoverCount.Load(); got != 1 {
 		t.Fatalf("server/discover count = %d, want one bounded modern probe", got)
 	}
 	if got := initializeCount.Load(); got != 1 {
-		t.Fatalf("initialize count = %d, want one legacy fallback", got)
+		t.Fatalf("initialize count = %d, want one initialization", got)
 	}
-	if got := getCount.Load(); got != 1 {
-		t.Fatalf("standalone GET count = %d, want one optional probe accepted as HTTP 405", got)
+	if got := getCount.Load(); got != 0 {
+		t.Fatalf("standalone GET count = %d, want no retired standalone GET probe", got)
 	}
 }

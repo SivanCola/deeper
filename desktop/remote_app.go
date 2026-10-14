@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -837,11 +838,10 @@ func (a *App) OpenRemoteWorkspace(hostID, workspace string) error {
 }
 
 // serveURLWithToken appends the one-shot Serve token to the first-visit URL.
-// The remote serve converts it to an HttpOnly cookie on the first request and
-// redirects to a token-free URL.
+// The browser exchanges the fragment token for an HttpOnly cookie via /auth/token.
 func serveURLWithToken(localURL, token string) string {
 	if token != "" && !strings.Contains(localURL, "token=") {
-		return fmt.Sprintf("%s?token=%s", strings.TrimRight(localURL, "/"), token)
+		return fmt.Sprintf("%s/#token=%s", strings.TrimRight(localURL, "/"), url.QueryEscape(token))
 	}
 	return localURL
 }

@@ -22,18 +22,18 @@ func testStore(t *testing.T) *taskmonitor.InMemoryStore {
 	seed := func(i int) time.Time { return time.Date(2025, 1, 1, 0, 0, i, 0, time.UTC) }
 
 	// Project A: two tasks
-	mustUpsert(t, s, "/proj-a", taskmonitor.TaskSnapshot{
+	mustUpsert(t, s, "/proj-a", taskmonitor.TaskSnapshot{JobID: "a1", RuntimeState: taskmonitor.RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "a1", SessionID: "s1",
 		State: taskmonitor.TaskStateRunning, CreatedAt: seed(1), UpdatedAt: seed(10),
 	})
-	mustUpsert(t, s, "/proj-a", taskmonitor.TaskSnapshot{
+	mustUpsert(t, s, "/proj-a", taskmonitor.TaskSnapshot{JobID: "a2", RuntimeState: taskmonitor.RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "a2", SessionID: "s2",
 		State: taskmonitor.TaskStateSucceeded, CreatedAt: seed(2), UpdatedAt: seed(11),
 	})
 
 	// Events for a1
 	for i := 1; i <= 3; i++ {
-		event := taskmonitor.TaskEvent{
+		event := taskmonitor.TaskEvent{JobID: "a1",
 			Sequence: i, Timestamp: seed(i), EventType: "state_change",
 			TaskID: "a1", SessionID: "s1", State: taskmonitor.TaskStateRunning,
 		}
@@ -44,7 +44,7 @@ func testStore(t *testing.T) *taskmonitor.InMemoryStore {
 	}
 
 	// Project B: one task
-	mustUpsert(t, s, "/proj-b", taskmonitor.TaskSnapshot{
+	mustUpsert(t, s, "/proj-b", taskmonitor.TaskSnapshot{JobID: "b1", RuntimeState: taskmonitor.RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "b1", SessionID: "s3",
 		State: taskmonitor.TaskStateFailed, CreatedAt: seed(3), UpdatedAt: seed(12),
 		ErrorCode: "EXIT_1",
@@ -467,7 +467,7 @@ func writeTaskData(t *testing.T, dir string) {
 		t.Fatal(err)
 	}
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	snap := taskmonitor.TaskSnapshot{
+	snap := taskmonitor.TaskSnapshot{JobID: "task-1", RuntimeState: taskmonitor.RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "task-1", SessionID: "s1",
 		State: taskmonitor.TaskStateFailed, CreatedAt: now.Add(-time.Hour), UpdatedAt: now,
 		ErrorCode: "TIMEOUT", ErrorSummary: legacySensitiveSummary,
@@ -476,9 +476,9 @@ func writeTaskData(t *testing.T, dir string) {
 	if err := os.WriteFile(filepath.Join(taskDir, "snapshot.json"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	events := `{"sequence":1,"timestamp":"2025-01-01T00:00:01Z","event_type":"state_change","task_id":"task-1","session_id":"s1","state":"queued"}
-{"sequence":2,"timestamp":"2025-01-01T00:00:02Z","event_type":"state_change","task_id":"task-1","session_id":"s1","state":"running"}
-{"sequence":3,"timestamp":"2025-01-01T00:00:03Z","event_type":"error","task_id":"task-1","session_id":"s1","state":"failed","error_code":"TIMEOUT","error_summary":"command deploy failed in /Users/alice/private"}
+	events := `{"sequence":1,"timestamp":"2025-01-01T00:00:01Z","event_type":"state_change","task_id":"task-1","job_id":"task-1","session_id":"s1","state":"queued"}
+{"sequence":2,"timestamp":"2025-01-01T00:00:02Z","event_type":"state_change","task_id":"task-1","job_id":"task-1","session_id":"s1","state":"running"}
+{"sequence":3,"timestamp":"2025-01-01T00:00:03Z","event_type":"error","task_id":"task-1","job_id":"task-1","session_id":"s1","state":"failed","error_code":"TIMEOUT","error_summary":"command deploy failed in /Users/alice/private"}
 `
 	if err := os.WriteFile(filepath.Join(taskDir, "events.jsonl"), []byte(events), 0o644); err != nil {
 		t.Fatal(err)
@@ -644,7 +644,7 @@ func TestCLI_StopAndCancelCallKill(t *testing.T) {
 			taskJobKiller = newMockKiller()
 			defer func() { taskJobKiller = nil }()
 
-			mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{
+			mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{JobID: "t1", RuntimeState: taskmonitor.RuntimeStateUnknown,
 				SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 				State: taskmonitor.TaskStateRunning, Version: 1,
 				CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -667,7 +667,7 @@ func TestCLI_StopAndCancelCallKill(t *testing.T) {
 func TestCLI_RequeueReportsQueuedButExited(t *testing.T) {
 	s := taskmonitor.NewInMemoryStore()
 	taskStore = s
-	mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{
+	mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{JobID: "failed",
 		SchemaVersion: 1, TaskID: "failed", SessionID: "s1",
 		State: taskmonitor.TaskStateFailed, RuntimeState: taskmonitor.RuntimeStateExited, Version: 2,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -691,7 +691,7 @@ func TestCLI_RequeueReportsQueuedButExited(t *testing.T) {
 func TestCLI_OpenSessionAcceptsDocumentedIDBeforeFlags(t *testing.T) {
 	s := taskmonitor.NewInMemoryStore()
 	taskStore = s
-	mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{
+	mustUpsert(t, s, "/p", taskmonitor.TaskSnapshot{JobID: "t1", RuntimeState: taskmonitor.RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: taskmonitor.TaskStateRunning, Version: 1,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),

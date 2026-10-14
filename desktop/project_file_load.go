@@ -21,9 +21,5 @@ func (m desktopPathMatcher) loadProjectsFile() desktopProjectFile {
 	if organization, ok := loadProjectOrganizationFile(); ok {
 		return m.applyProjectOrganization(f, organization)
 	}
-	// Persist inline organization before returning the normalized projection.
-	if projectsFileHasOrganization(f) {
-		_ = saveProjectOrganizationFile(f)
-	}
 	return f
 }

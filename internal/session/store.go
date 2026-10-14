@@ -438,11 +438,7 @@ func openExistingHandle(dir, sessionID string, opts OpenOptions) (*Store, error)
 			startup.operations = map[string]operationRecord{}
 		}
 	}
-	// Keep the source codec stable. Legacy stored sessions are writable through
-	// their original line codec; explicit conversion is the only codec change.
-	if IsFramedCodec(manifest.Codec) && manifest.StorageRevision > 0 {
-		manifest.StorageRevision = StorageRevision
-	}
+	// Admission already validated the current codec and storage revision.
 	manifest.WriterGeneration++
 	if err := writeManifestFile(manifestPath, manifest); err != nil {
 		return failRecovery(err)

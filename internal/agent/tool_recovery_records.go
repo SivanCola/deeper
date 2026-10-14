@@ -163,7 +163,7 @@ func retainUnresolvedToolRecords(previous, next []provider.Message) []provider.M
 				continue
 			}
 			seen[c.Recovery.Identity.AttemptID] = true
-			next = append(append([]provider.Message(nil), next...), provider.Message{Role: provider.RoleTool, LocalOnly: true, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName, ToolCalls: []provider.ToolCall{c}})
+			next = append(append([]provider.Message(nil), next...), provider.Message{Role: provider.RoleTool, LocalOnly: true, ToolCallID: "", Name: "", ToolCalls: []provider.ToolCall{c}})
 		}
 	}
 	return next

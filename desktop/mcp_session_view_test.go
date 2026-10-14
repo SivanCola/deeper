@@ -20,13 +20,10 @@ func TestMCPServerViewSessionDiagnosticsRemainOptional(t *testing.T) {
 	}
 
 	var current ServerView
-	if err := json.Unmarshal([]byte(`{
-		"name":"current","status":"connected","protocolVersion":"2025-11-25",
-		"sessionState":"reconnecting","reconnectAttempts":2,"errorKind":"session_missing"
-	}`), &current); err != nil {
+	if err := json.Unmarshal([]byte("{\n\t\t\"name\":\"current\",\"status\":\"connected\",\"protocolVersion\":\"2026-07-28\",\n\t\t\"sessionState\":\"reconnecting\",\"reconnectAttempts\":2,\"errorKind\":\"session_missing\"\n\t}"), &current); err != nil {
 		t.Fatal(err)
 	}
-	if current.ProtocolVersion != "2025-11-25" || current.SessionState != "reconnecting" ||
+	if current.ProtocolVersion != "2026-07-28" || current.SessionState != "reconnecting" ||
 		current.ReconnectAttempts != 2 || current.ErrorKind != "session_missing" {
 		t.Fatalf("current session diagnostics = %+v", current)
 	}

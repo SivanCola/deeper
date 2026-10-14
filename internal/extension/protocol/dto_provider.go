@@ -56,14 +56,23 @@ func PluginRefOwner(ref string) string {
 // JSON field names (snake_case) so transcripts read identically, and drops
 // the local-only UI metadata fields that never belong on the wire.
 type ProviderMessage struct {
-	Role               ProviderRole       `json:"role,omitempty"`
-	Content            string             `json:"content,omitempty" externalizable:"true"`
-	Images             []string           `json:"images,omitempty"`
-	ReasoningContent   string             `json:"reasoning_content,omitempty"`
-	ReasoningSignature string             `json:"reasoning_signature,omitempty"`
-	ToolCalls          []ProviderToolCall `json:"tool_calls,omitempty"`
-	ToolCallID         string             `json:"tool_call_id,omitempty"`
-	Name               string             `json:"name,omitempty"`
+	Role               ProviderRole            `json:"role,omitempty"`
+	Content            string                  `json:"content,omitempty" externalizable:"true"`
+	Images             []string                `json:"images,omitempty"`
+	ReasoningContent   string                  `json:"reasoning_content,omitempty"`
+	ReasoningSignature string                  `json:"reasoning_signature,omitempty"`
+	ThinkingBlocks     []ProviderThinkingBlock `json:"thinking_blocks,omitempty"`
+	ToolCalls          []ProviderToolCall      `json:"tool_calls,omitempty"`
+	ToolCallID         string                  `json:"tool_call_id,omitempty"`
+	Name               string                  `json:"name,omitempty"`
+}
+
+// ProviderThinkingBlock carries each current provider-issued proof separately.
+type ProviderThinkingBlock struct {
+	Type      string `json:"type"`
+	Thinking  string `json:"thinking,omitempty"`
+	Signature string `json:"signature,omitempty"`
+	Data      string `json:"data,omitempty"`
 }
 
 // ProviderToolCall is the public copy of provider.ToolCall: provider-visible

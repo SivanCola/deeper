@@ -363,3 +363,11 @@ func TestTabEventSinkDropsCorrelationWhenFrontendBindingChanges(t *testing.T) {
 		})
 	}
 }
+
+func (c *activeTurnStatusController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
+}
+
+func (c *expiredTurnFinishingController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
+}

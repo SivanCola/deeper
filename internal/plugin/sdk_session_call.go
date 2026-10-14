@@ -12,7 +12,7 @@ func (t *sdkSessionTransport) call(ctx context.Context, method string, params an
 	if err != nil {
 		return nil, t.sanitizeError(err, nil)
 	}
-	result, err := t.invokeManaged(ctx, managed, method, params)
+	result, err := invokeSDKMethod(ctx, managed.session, method, params)
 	if err == nil {
 		t.clearRuntimeError(managed)
 		return result, nil
@@ -30,7 +30,7 @@ func (t *sdkSessionTransport) call(ctx context.Context, method string, params an
 		if rebuildErr != nil {
 			return nil, t.sanitizeError(fmt.Errorf("MCP session expired; rebuild failed: %w", rebuildErr), managed)
 		}
-		result, err = t.invokeManaged(ctx, replacement, method, params)
+		result, err = invokeSDKMethod(ctx, replacement.session, method, params)
 		if err == nil {
 			t.clearRuntimeError(replacement)
 			return result, nil
@@ -52,7 +52,7 @@ func (t *sdkSessionTransport) call(ctx context.Context, method string, params an
 			if rebuildErr != nil {
 				return nil, t.sanitizeError(fmt.Errorf("MCP connection closed; rebuild failed: %w", rebuildErr), managed)
 			}
-			result, err = t.invokeManaged(ctx, replacement, method, params)
+			result, err = invokeSDKMethod(ctx, replacement.session, method, params)
 			if err == nil {
 				t.clearRuntimeError(replacement)
 				return result, nil

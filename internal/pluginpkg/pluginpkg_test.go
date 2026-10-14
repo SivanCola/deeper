@@ -403,7 +403,7 @@ func TestParseClaudeHooksWarnOnUnsupportedSemantics(t *testing.T) {
 	}{
 		{
 			name:      "conditional-if-runs-unconditionally",
-			hooksJSON: `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"bin/guard","if":"Bash(git *)"}]}]}}`,
+			hooksJSON: "{\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"bin/guard\",\"if\":\"Bash(git:*)\"}]}]}}",
 			wantSub:   `does not evaluate`,
 		},
 		{

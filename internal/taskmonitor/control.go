@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 )
@@ -16,24 +15,12 @@ type JobKiller interface {
 	Kill(sessionID, jobID string) bool
 }
 
-// runtimeJobID returns the jobs.Manager-local ID for runtime control. JobID is
-// present on new snapshots. The prefix fallback keeps snapshots written by the
-// short-lived namespaced-ID implementation controllable after an upgrade, while
-// legacy snapshots continue to use their unnamespaced TaskID.
+// runtimeJobID returns the explicit jobs.Manager-local runtime identity.
 func runtimeJobID(snap *TaskSnapshot) string {
 	if snap == nil {
 		return ""
 	}
-	if snap.JobID != "" {
-		return snap.JobID
-	}
-	if snap.SessionID != "" {
-		prefix := monitorTaskID(snap.SessionID, "")
-		if strings.HasPrefix(snap.TaskID, prefix) && len(snap.TaskID) > len(prefix) {
-			return strings.TrimPrefix(snap.TaskID, prefix)
-		}
-	}
-	return snap.TaskID
+	return snap.JobID
 }
 
 // ControlResult is the unified response for all task control operations.
@@ -102,8 +89,8 @@ func (cs *ControlService) CancelTaskWithKiller(ctx context.Context, projectDir, 
 }
 
 // RequeueTask moves a failed or stale task back to queued. It does not start a
-// new runtime; RuntimeState therefore remains exited (or unknown for legacy
-// data) until a scheduler starts the task and records a new lifecycle.
+// new runtime; RuntimeState therefore remains exited or explicitly unknown
+// until a scheduler starts the task and records a new lifecycle.
 func (cs *ControlService) RequeueTask(ctx context.Context, projectDir, taskID string, expectedVersion uint64, idemKey string) (ControlResult, error) {
 	return cs.controlOp(ctx, projectDir, taskID, expectedVersion, "requeue", TaskStateQueued, "", idemKey, nil)
 }
@@ -223,7 +210,7 @@ func (cs *ControlService) controlOp(ctx context.Context, projectDir, taskID stri
 			Error: &CtrlError{Code: ErrTaskNotRequeueable, Message: "task is not failed or stale"},
 		}, nil
 	}
-	if requeueable && snap.RuntimeState.Effective() == RuntimeStateAlive {
+	if requeueable && snap.RuntimeState == RuntimeStateAlive {
 		releaseClaim()
 		return ControlResult{
 			SchemaVersion: 1, Command: cmd, TaskID: taskID, SessionID: snap.SessionID,
@@ -286,13 +273,6 @@ func (cs *ControlService) controlOp(ctx context.Context, projectDir, taskID stri
 			next.RuntimeLeaseUntil = time.Time{}
 			next.RuntimeOwnerID = ""
 		}
-		if runtimeControl && next.RuntimeState.Effective() == RuntimeStateAlive && next.RuntimeLeaseUntil.IsZero() {
-			// A successful kill request is only an admission signal: the runtime
-			// may still be exiting. Preserve an existing owner lease, and give
-			// legacy lease-less snapshots a bounded deadline so observers can
-			// eventually reconcile alive to exited if RecordDone never arrives.
-			next.RuntimeLeaseUntil = next.UpdatedAt.Add(runtimeLeaseTTL)
-		}
 		if err := cs.store.SaveTask(ctx, projectDir, next); err == nil {
 			snap = &next
 			claimed = false
@@ -341,6 +321,7 @@ func (cs *ControlService) controlOp(ctx context.Context, projectDir, taskID stri
 		Timestamp:    timeNow(),
 		EventType:    "control_" + cmd,
 		TaskID:       taskID,
+		JobID:        snap.JobID,
 		SessionID:    snap.SessionID,
 		State:        targetState,
 		RuntimeState: snap.RuntimeState,

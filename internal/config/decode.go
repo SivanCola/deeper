@@ -31,6 +31,9 @@ func decodeTOMLBytes(data []byte, v any) (toml.MetaData, error) {
 		return meta, err
 	}
 	if cfg, ok := v.(*Config); ok {
+		if err := validateCurrentConfigInputs(cfg); err != nil {
+			return meta, err
+		}
 		if meta.IsDefined("config_version") && cfg.ConfigVersion != CurrentConfigVersion {
 			return meta, fmt.Errorf("unsupported config_version %d; current schema is %d", cfg.ConfigVersion, CurrentConfigVersion)
 		}

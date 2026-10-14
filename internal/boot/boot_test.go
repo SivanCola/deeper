@@ -2864,7 +2864,7 @@ func TestRememberDynamicBashLiteralIsNotCoveredByBroadRule(t *testing.T) {
 	workspace := robustTempDir(t)
 	seedProjectGrant(t, workspace, "Bash(git*)")
 
-	const literal = "Bash=git status $(touch /tmp/deepzora-dynamic-approval)"
+	const literal = "Bash(\"git status $(touch /tmp/deepzora-dynamic-approval)\")"
 	res := rememberPermissionRule(workspace, literal)
 	if !res.Saved || res.CoveredBy != "" || res.Err != nil {
 		t.Fatalf("remember dynamic literal = %+v, want newly saved rule", res)
@@ -3257,7 +3257,7 @@ models = ["x"]
 	baseline := captureSchemas(Options{})
 	withOverrides := captureSchemas(Options{
 		AdditionalDirs:  []string{extra},
-		PermissionAllow: []string{"Bash(git *)", "Edit"},
+		PermissionAllow: []string{"Bash(git:*)", "Edit"},
 	})
 	if !bytes.Equal(baseline, withOverrides) {
 		t.Fatalf("session access overrides changed provider-visible tool schemas\nbaseline=%s\nwith=%s", baseline, withOverrides)
@@ -3420,7 +3420,7 @@ func TestHelperProcess(t *testing.T) {
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2024-11-05",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "mock", "version": "0"},
 				"capabilities":    map[string]any{},
 			}

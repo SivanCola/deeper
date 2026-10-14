@@ -22,13 +22,12 @@ import (
 var user32 = windows.NewLazySystemDLL("user32.dll")
 
 type process struct {
-	pid           uint32
-	parent        uint32
-	handle        windows.Handle
-	image         string
-	created       windows.Filetime
-	status        *Status
-	legacyProfile string
+	pid     uint32
+	parent  uint32
+	handle  windows.Handle
+	image   string
+	created windows.Filetime
+	status  *Status
 }
 
 func canonical(path string) (string, error) {
@@ -239,29 +238,6 @@ func processList() ([]windows.ProcessEntry32, error) {
 	return entries, nil
 }
 
-func messageProfile(pid uint32) string {
-	class, _ := windows.UTF16PtrFromString("Chrome_MessageWindow")
-	find := user32.NewProc("FindWindowExW")
-	var after uintptr
-	for {
-		hwnd, _, _ := find.Call(^uintptr(2), after, uintptr(unsafe.Pointer(class)), 0)
-		if hwnd == 0 {
-			return ""
-		}
-		after = hwnd
-		var owner uint32
-		user32.NewProc("GetWindowThreadProcessId").Call(hwnd, uintptr(unsafe.Pointer(&owner)))
-		if owner != pid {
-			continue
-		}
-		text := make([]uint16, 32768)
-		n, _, _ := user32.NewProc("GetWindowTextW").Call(hwnd, uintptr(unsafe.Pointer(&text[0])), uintptr(len(text)))
-		if n > 0 {
-			return windows.UTF16ToString(text[:n])
-		}
-	}
-}
-
 func closeWindows(p *process) {
 	callback := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
 		var owner uint32
@@ -272,27 +248,6 @@ func closeWindows(p *process) {
 		return 1
 	})
 	user32.NewProc("EnumWindows").Call(callback, 0)
-}
-
-func focusLegacyWindow(p *process) bool {
-	shown := false
-	callback := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
-		var owner uint32
-		user32.NewProc("GetWindowThreadProcessId").Call(hwnd, uintptr(unsafe.Pointer(&owner)))
-		if owner != p.pid || !p.alive() {
-			return 1
-		}
-		n, _, _ := user32.NewProc("GetWindowTextLengthW").Call(hwnd)
-		if n == 0 {
-			return 1
-		}
-		user32.NewProc("ShowWindow").Call(hwnd, 9) // SW_RESTORE also unhides tray windows.
-		user32.NewProc("SetForegroundWindow").Call(hwnd)
-		shown = true
-		return 0
-	})
-	user32.NewProc("EnumWindows").Call(callback, 0)
-	return shown
 }
 
 func lockInstall(root string) (func(), error) {
@@ -406,13 +361,8 @@ func inspect(root, profile string, all bool) ([]*process, error) {
 					p.close()
 					return fail(outcome(UnknownOwner, "shell status could not be verified for PID %d: %v", e.ProcessID, statusErr))
 				}
-				p.legacyProfile = messageProfile(p.pid)
-				if p.legacyProfile != "" {
-					if real, err := canonical(p.legacyProfile); err == nil && strings.EqualFold(real, profile) && role == "" {
-						p.close()
-						return fail(outcome(OtherInstallation, "another legacy Deepzora installation owns this data home"))
-					}
-				}
+				p.close()
+				return fail(outcome(UnknownOwner, "current shell status is required for PID %d", e.ProcessID))
 			}
 		}
 		if role == "" {
@@ -421,11 +371,6 @@ func inspect(root, profile string, all bool) ([]*process, error) {
 		}
 		if !all {
 			matches := p.status != nil && p.status.HomeKey == ProfileKey(profile)
-			if !matches && p.legacyProfile != "" {
-				if real, err := canonical(p.legacyProfile); err == nil {
-					matches = strings.EqualFold(real, profile)
-				}
-			}
 			if !matches {
 				p.close()
 				continue

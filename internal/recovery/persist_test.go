@@ -11,7 +11,7 @@ import (
 )
 
 func TestTaskScopePersistenceIsBackwardCompatible(t *testing.T) {
-	const oldJSON = `{"tasks":{"root":{"phase":"diagnosing","failure":{"tool":"write_file","task_id":"root"},"consecutive_fails":3}}}`
+	const oldJSON = `{"tasks":{"root":{"phase":"diagnosing","failure":{"tool":"write_file","task_id":"root","job_id":"root"},"consecutive_fails":3}}}`
 	var old Snapshot
 	if err := json.Unmarshal([]byte(oldJSON), &old); err != nil {
 		t.Fatalf("decode old snapshot: %v", err)

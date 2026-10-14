@@ -627,7 +627,7 @@ func TestTurnOrchestratorProviderErrorPreservesCompletedPairAndLocalPartial(t *t
 			{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{{ID: "c1", Name: "write_file", Arguments: `{"path":"a.txt","content":"ok"}`, Added: 1}}},
 			{Role: provider.RoleTool, ToolCallID: "c1", Name: "write_file", Content: "wrote a.txt"},
 			{
-				Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+				Role: provider.RoleTool, ToolCallID: "", Name: "",
 				LocalOnly: true, Content: "partial final answer", ReasoningContent: "partial reasoning",
 				InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true, DroppedPartialText: true, DroppedPartialReasoning: true},
 			},
@@ -763,8 +763,12 @@ func TestTurnOrchestratorCancelBeforeRunnerAddsUserPreservesVisiblePrompt(t *tes
 	if len(msgs) != 3 || msgs[1].Role != provider.RoleUser || !strings.Contains(msgs[1].Content, "inspect the diagnostic") || !msgs[2].LocalOnly {
 		t.Fatalf("session after pre-executor cancel = %+v, want user plus recovery marker", msgs)
 	}
-	if len(msgs[1].Images) != 1 || !strings.HasPrefix(msgs[1].Images[0], "data:image/png;base64,") {
-		t.Fatalf("session after pre-executor cancel lost user image: %+v", msgs[1].Images)
+	if len(msgs[1].ImageInputs) != 1 {
+		t.Fatalf("session after pre-executor cancel lost user image: %+v", msgs[1].ImageInputs)
+	}
+	images, imageErr := c.resolveImageInputsForRoute(context.Background(), msgs[1].ImageInputs, ImageRequestRoute{})
+	if imageErr != nil || len(images) != 1 || images[0] != "data:image/png;base64,"+tinyPNG {
+		t.Fatalf("cancelled prompt image no longer readable: %v", imageErr)
 	}
 }
 
@@ -966,7 +970,7 @@ func (r *compactingErrorRunner) Run(_ context.Context, input string) error {
 		{Role: provider.RoleAssistant, ToolCalls: []provider.ToolCall{{ID: "write-1", Name: "write_file", Arguments: `{"path":"a.txt","content":"ok"}`}}},
 		{Role: provider.RoleTool, ToolCallID: "write-1", Name: "write_file", Content: "wrote a.txt"},
 		{
-			Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+			Role: provider.RoleTool, ToolCallID: "", Name: "",
 			LocalOnly: true, Content: "partial final answer", ReasoningContent: "private partial reasoning",
 			InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true},
 		},

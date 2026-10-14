@@ -594,7 +594,7 @@ reasoning_protocol = "none"
 		}
 	})
 
-	if err := app.SubmitToTab(tab.ID, "/effort max"); err != nil {
+	if err := app.SubmitToTabWithID(tab.ID, "/effort max", newSessionRuntimeID("test-submit")); err != nil {
 		t.Fatalf("SubmitToTab(/effort max): %v", err)
 	}
 	waitNotRunning(t, tab.Ctrl)

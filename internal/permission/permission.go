@@ -65,25 +65,18 @@ type Rule struct {
 	Literal bool
 }
 
-// ParseRule parses "ToolName", "ToolName(glob)", or the legacy
-// "ToolName=literal" form. Surrounding whitespace is trimmed. The "=literal"
-// form (taken when the '=' precedes any '(') matches the rest of the string
-// verbatim — no globbing — and is kept for existing configs that were written
-// before the Claude Code-style Tool(specifier) approval rules. ok is false for
-// a malformed entry (empty tool name) so the caller can warn rather than
-// silently install a rule that matches nothing.
+// ParseRule accepts Tool, Tool(glob), and Tool("JSON-quoted exact subject").
 func ParseRule(s string) (Rule, bool) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return Rule{}, false
 	}
+	if isCaseInsensitivePowerShellCmdlet(s) {
+		return Rule{}, false
+	}
 	if eq := strings.IndexByte(s, '='); eq > 0 {
 		if paren := strings.IndexByte(s, '('); paren < 0 || eq < paren {
-			tool := strings.TrimSpace(s[:eq])
-			if tool == "" {
-				return Rule{}, false
-			}
-			return Rule{Tool: tool, Subject: s[eq+1:], Literal: true}, true
+			return Rule{}, false
 		}
 	}
 	if i := strings.IndexByte(s, '('); i >= 0 && strings.HasSuffix(s, ")") {
@@ -91,22 +84,23 @@ func ParseRule(s string) (Rule, bool) {
 		if tool == "" {
 			return Rule{}, false
 		}
-		return Rule{Tool: tool, Subject: s[i+1 : len(s)-1]}, true
+		subject := s[i+1 : len(s)-1]
+		var exact string
+		if strings.HasPrefix(subject, "\"") && json.Unmarshal([]byte(subject), &exact) == nil {
+			return Rule{Tool: tool, Subject: exact, Literal: true}, true
+		}
+		if canonicalRuleTool(tool) == "bash" && strings.HasSuffix(subject, " *") {
+			return Rule{}, false
+		}
+		return Rule{Tool: tool, Subject: subject}, true
 	}
 	return Rule{Tool: s}, true
 }
 
-func legacyBarePowerShellDenyCmdlet(s string) (string, bool) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "set-content":
-		return "Set-Content", true
-	case "add-content":
-		return "Add-Content", true
-	case "out-file":
-		return "Out-File", true
-	default:
-		return "", false
-	}
+// ExactRule encodes literal subjects without treating wildcard characters as grants.
+func ExactRule(tool, subject string) string {
+	encoded, _ := json.Marshal(subject)
+	return tool + "(" + string(encoded) + ")"
 }
 func parseRules(ss []string) []Rule {
 	var out []Rule
@@ -125,16 +119,7 @@ func parseDenyRules(ss []string) []Rule {
 		if !ok {
 			continue
 		}
-		// Preserve the generic ToolName meaning while also recognizing the three
-		// bare PowerShell write cmdlets accepted by older Desktop settings as
-		// command prefixes. The compatibility expansion is deny-only and
-		// additive, so it cannot broaden an allow or weaken an exact tool deny.
 		out = append(out, r)
-		if r.Subject == "" {
-			if cmdlet, ok := legacyBarePowerShellDenyCmdlet(r.Tool); ok {
-				out = append(out, Rule{Tool: "Bash", Subject: cmdlet + ":*"})
-			}
-		}
 	}
 	return out
 }
@@ -472,8 +457,12 @@ func rawBashPrefixMatches(base, subject string) bool {
 }
 
 func isCaseInsensitivePowerShellCmdlet(s string) bool {
-	_, ok := legacyBarePowerShellDenyCmdlet(s)
-	return ok
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "set-content", "add-content", "out-file":
+		return true
+	default:
+		return false
+	}
 }
 
 func matchAnyExact(rules []Rule, toolName, subject string) bool {
@@ -778,7 +767,7 @@ func RememberRuleForScope(toolName, subject string) string {
 		if pattern := BashCommandPrefix(subject); pattern != "" {
 			return "Bash(" + pattern + ")"
 		}
-		return "Bash=" + subject
+		return ExactRule("Bash", subject)
 	}
 	if IsFileMutationTool(toolName) {
 		return "Edit"
@@ -802,7 +791,7 @@ func SessionGrantRuleForScope(toolName, subject string) string {
 		if pattern := BashCommandPrefix(subject); pattern != "" {
 			return "Bash(" + pattern + ")"
 		}
-		return "Bash=" + subject
+		return ExactRule("Bash", subject)
 	}
 	if IsFileMutationTool(toolName) {
 		return "Edit"
@@ -892,9 +881,6 @@ func ruleSubjectMatches(rule Rule, subject string) bool {
 		if base, ok := bashColonPrefixBase(rule.Subject); ok {
 			return bashPrefixMatches(base, subject)
 		}
-		if base, ok := legacyBashSpaceStarPrefixBase(rule.Subject); ok {
-			return bashPrefixMatches(base, subject)
-		}
 	}
 	return matchGlob(rule.Subject, subject)
 }
@@ -907,19 +893,8 @@ func bashColonPrefixBase(pattern string) (string, bool) {
 	return base, base != ""
 }
 
-func legacyBashSpaceStarPrefixBase(pattern string) (string, bool) {
-	if !strings.HasSuffix(pattern, " *") {
-		return "", false
-	}
-	base := strings.TrimSuffix(pattern, " *")
-	return base, base != ""
-}
-
 func bashPrefixBase(pattern string) (string, bool) {
-	if base, ok := bashColonPrefixBase(pattern); ok {
-		return base, true
-	}
-	return legacyBashSpaceStarPrefixBase(pattern)
+	return bashColonPrefixBase(pattern)
 }
 
 func bashPrefixMatches(base, subject string) bool {

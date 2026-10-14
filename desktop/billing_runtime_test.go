@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"errors"
 	"testing"
 	"time"
@@ -172,3 +173,7 @@ func TestBalanceForTabFailureDoesNotChangeDisplayBinding(t *testing.T) {
 }
 
 func nowUTC() time.Time { return time.Now().UTC() }
+
+func (c *billingRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
+}

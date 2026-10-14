@@ -37,11 +37,14 @@ func TestBuildStagesAndRendersAuthorizedImageInputs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	message := provider.Message{ID: "user-image", Role: provider.RoleUser, Content: "inspect", Images: []string{"https://example.test/legacy.png"}, ImageInputs: []attachment.ImageInput{{
+	message := provider.Message{ID: "user-image", Role: provider.RoleUser, Content: "inspect", ImageInputs: []attachment.ImageInput{{Kind: attachment.KindURL, URL: "https://example.test/current.png"}, {
 		Kind:       attachment.KindAttachment,
 		Attachment: &attachment.AttachmentRef{Version: attachment.RefVersion, Content: contentRef, Width: 1, Height: 1, DisplayName: "shot.png"},
 	}}}
-	payload, _ := json.Marshal(map[string]any{"message": message})
+	payload, err := json.Marshal(map[string]any{"message": message})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err = runtime.Session().AppendBatch(t.Context(), "user-image", []session.Event{{Kind: "message/complete", Payload: payload}}); err != nil {
 		t.Fatal(err)
 	}
@@ -62,8 +65,8 @@ func TestBuildStagesAndRendersAuthorizedImageInputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantDataURL := attachment.DataURL("image/png", raw)
-	if !strings.Contains(string(markdown), "![attachment](https://example.test/legacy.png)") || !strings.Contains(string(markdown), "![attachment]("+wantDataURL+")") {
-		t.Fatalf("markdown did not preserve legacy and durable images: %s", markdown)
+	if !strings.Contains(string(markdown), "![attachment](https://example.test/current.png)") || !strings.Contains(string(markdown), "![attachment]("+wantDataURL+")") {
+		t.Fatalf("markdown did not preserve current URL and durable images: %s", markdown)
 	}
 	var document struct {
 		Items []Item `json:"items"`
@@ -76,7 +79,7 @@ func TestBuildStagesAndRendersAuthorizedImageInputs(t *testing.T) {
 		t.Fatalf("items = %d", len(document.Items))
 	}
 	images, ok := document.Items[0]["images"].([]any)
-	if !ok || len(images) != 2 || images[0] != "https://example.test/legacy.png" || images[1] != wantDataURL {
+	if !ok || len(images) != 2 || images[0] != "https://example.test/current.png" || images[1] != wantDataURL {
 		t.Fatalf("export images = %#v", document.Items[0]["images"])
 	}
 }

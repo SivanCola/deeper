@@ -70,9 +70,9 @@ func TestThinkingUnclosedBlockRemainsIncomplete(t *testing.T) {
 
 func TestAdaptiveReplayPreservesHistoricalProofAcrossEffortChange(t *testing.T) {
 	c := &client{thinking: "adaptive", effort: "disabled"}
-	msg := provider.Message{Role: provider.RoleAssistant, ReasoningContent: "original", ReasoningSignature: "proof"}
-	block, ok := c.replayReasoningBlock(msg)
-	if !ok || block.Thinking != "original" || block.Signature != "proof" {
-		t.Fatalf("historical proof changed: %+v", block)
+	msg := provider.Message{Role: provider.RoleAssistant, ThinkingBlocks: []provider.ThinkingBlock{{Type: "thinking", Thinking: "original", Signature: "proof"}}}
+	blocks := c.replayReasoningBlocks(msg)
+	if len(blocks) != 1 || blocks[0].Thinking != "original" || blocks[0].Signature != "proof" {
+		t.Fatalf("historical proof changed: %+v", blocks)
 	}
 }

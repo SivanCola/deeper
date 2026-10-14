@@ -237,7 +237,6 @@ type SettingsView struct {
 	// config), so the panel's toggle reflects whether tool approvals are currently
 	// being skipped this session.
 	AutoApproveTools bool `json:"autoApproveTools"`
-	// Bypass is the legacy JSON key for the same live state.
 }
 
 // shadowingConfigPath returns the config file that outranks writePath for the

@@ -1189,7 +1189,6 @@ function EditServerForm({
           <SettingsSelect className="mem-select" value={transport} disabled={busy} onValueChange={(value) => setTransport(value)}>
             <option value="stdio">stdio</option>
             <option value="http">http</option>
-            <option value="sse">sse</option>
           </SettingsSelect>
         </label>
         {isStdio ? (
@@ -1248,7 +1247,6 @@ function serverCommand(s: ServerView): string {
 function normalizeTransportValue(transport: string): string {
   const value = transport.trim().toLowerCase();
   if (value === "http" || value === "streamable-http") return "http";
-  if (value === "sse") return "sse";
   if (value === "" || value === "stdio") return "stdio";
   return value;
 }
@@ -1428,7 +1426,7 @@ function canClearAuth(s: ServerView): boolean {
 
 function isRemoteTransport(transport?: string): boolean {
   const value = (transport || "").trim().toLowerCase();
-  return value === "http" || value === "streamable-http" || value === "sse";
+  return value === "http" || value === "streamable-http";
 }
 
 function SkillRow({
@@ -2754,7 +2752,7 @@ export function parseMCPServerJSON(raw: string, fixedName?: string, options?: { 
 	if (value.type != null && value.transport != null) throw new Error("unsupported" satisfies MCPServerJSONError);
 	const transportValue = typeof value.type === "string" ? value.type : value.transport;
 	const transport = normalizeTransportValue(typeof transportValue === "string" ? transportValue : (typeof value.url === "string" ? "http" : "stdio"));
-	if (transport !== "stdio" && transport !== "http" && transport !== "sse") throw new Error("invalid" satisfies MCPServerJSONError);
+	if (transport !== "stdio" && transport !== "http") throw new Error("invalid" satisfies MCPServerJSONError);
 	if (transport === "stdio" && (value.url != null || value.headers != null)) throw new Error("unsupported" satisfies MCPServerJSONError);
 	if (transport !== "stdio" && (value.command != null || value.args != null)) throw new Error("unsupported" satisfies MCPServerJSONError);
 	const command = typeof value.command === "string" ? value.command.trim() : "";
@@ -2955,7 +2953,6 @@ function MCPServerSettingsEditor({
 						<SettingsSelect className="mem-select" value={draft.transport} disabled={busy} onValueChange={(value) => updateDraft({ transport: normalizeTransportValue(value) })}>
 							<option value="stdio">stdio</option>
 							<option value="http">http</option>
-							<option value="sse">sse</option>
 						</SettingsSelect>
 					</label>
 					{isStdio ? (

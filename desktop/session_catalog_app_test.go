@@ -5,6 +5,7 @@ import (
 	"deepzora/internal/agent"
 	"deepzora/internal/config"
 	"deepzora/internal/control"
+	"deepzora/internal/event"
 	"deepzora/internal/provider"
 	"deepzora/internal/sessioncatalog"
 	"os"
@@ -496,4 +497,8 @@ func TestRetargetOpenTabsSkipsRunningSessions(t *testing.T) {
 	if running.SessionPath != root {
 		t.Fatalf("running tab path = %q, want original parent %q", running.SessionPath, root)
 	}
+}
+
+func (c *retargetRuntimeController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

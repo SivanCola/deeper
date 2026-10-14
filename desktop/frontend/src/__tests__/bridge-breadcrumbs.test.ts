@@ -40,11 +40,8 @@ ensureWindow();
 const desktopStub = installDesktopHostStub(({
   main: {
     App: {
-      async IsMainWindowMaximised() {
-        now = 42;
-        return true;
-      },
       async CheckUpdate() {
+        if (now === 10) { now = 42; return null; }
         now = 125;
         throw new Error("offline");
       },
@@ -54,11 +51,11 @@ const desktopStub = installDesktopHostStub(({
 
 const successStart = snapshotBreadcrumbs().length;
 now = 10;
-await app.IsMainWindowMaximised();
+await app.CheckUpdate("");
 const successBridge = newBreadcrumbMessages(successStart, "bridge");
 ok(
-  successBridge.includes("window IsMainWindowMaximised") &&
-    successBridge.includes("window IsMainWindowMaximised done ms=32"),
+  successBridge.includes("update CheckUpdate") &&
+    successBridge.includes("update CheckUpdate done ms=32"),
   "records bridge start and completion timing breadcrumbs",
 );
 

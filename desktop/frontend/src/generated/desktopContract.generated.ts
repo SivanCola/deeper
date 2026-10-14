@@ -3,13 +3,12 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:e7ac00dcfb85962a24b6b508f0ef5c794d5b42eaa59f0b6719999d44fbc5326b";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:5b660a4472128f1edf89c6680f1ad03c54b6c1359776f573786d732ffd292c31";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
   "AIRenameSessionTarget",
   "AbandonPendingUpdate",
-  "AcceptDelivery",
   "AcceptDeliveryToTab",
   "AcceptMemorySuggestion",
   "AcceptMemorySuggestionForTab",
@@ -75,7 +74,6 @@ export const DESKTOP_COMMANDS = [
   "CaptureInboxTarget",
   "CheckRemotePlatform",
   "CheckUpdate",
-  "Checkpoints",
   "CheckpointsForTab",
   "ChooseRecoveryBranch",
   "CleanRecoveryLineage",
@@ -85,7 +83,6 @@ export const DESKTOP_COMMANDS = [
   "ClearRemoteTabSession",
   "ClearSession",
   "ClearSessionForTab",
-  "CloseMainWindow",
   "CloseMergedWorktreeTab",
   "CloseRemoteTab",
   "CloseTab",
@@ -94,7 +91,6 @@ export const DESKTOP_COMMANDS = [
   "Commands",
   "CommitRewindForTab",
   "CommitWorkspaceFileRevertForTab",
-  "Compact",
   "CompactForTab",
   "CompactRemoteTab",
   "CompleteSessionComposerSubmission",
@@ -156,7 +152,6 @@ export const DESKTOP_COMMANDS = [
   "Forget",
   "ForgetForTab",
   "ForgetRemoteTab",
-  "Fork",
   "ForkForTab",
   "ForkRemoteTab",
   "ForkSession",
@@ -224,7 +219,6 @@ export const DESKTOP_COMMANDS = [
   "InterruptTurnForTab",
   "InterruptTurnWithInboxItemsForTab",
   "InvokeExtensionAction",
-  "IsMainWindowMaximised",
   "IsolatedWorktreeAvailability",
   "Jobs",
   "JobsForTab",
@@ -269,7 +263,6 @@ export const DESKTOP_COMMANDS = [
   "MergeWorktreeBack",
   "Meta",
   "MetaForTab",
-  "MinimiseMainWindow",
   "MkdirRemote",
   "Models",
   "ModelsForTab",
@@ -459,8 +452,6 @@ export const DESKTOP_COMMANDS = [
   "RevokePermissionGrantForTab",
   "RevokeWorkspaceBrowserPreview",
   "RevokeWorkspaceMediaPreview",
-  "Rewind",
-  "RewindForTab",
   "RewindRemoteTab",
   "RunShellForTab",
   "RuntimeDoctor",
@@ -538,21 +529,18 @@ export const DESKTOP_COMMANDS = [
   "SetDesktopTerminalTheme",
   "SetDesktopZoomFactor",
   "SetEffortForTab",
-  "SetGoal",
   "SetGoalForTab",
   "SetInboxPaused",
   "SetMCPServerEnabled",
   "SetMaxParallelWriters",
   "SetMaxSubagentConcurrency",
   "SetMaxSubagentDepth",
-  "SetMode",
   "SetModeForTab",
   "SetModel",
   "SetModelForTab",
   "SetNetwork",
   "SetPermissionMode",
   "SetPermissionPresetForTab",
-  "SetPlanMode",
   "SetPlannerModel",
   "SetPluginEnabled",
   "SetPreferredExternalOpener",
@@ -582,7 +570,6 @@ export const DESKTOP_COMMANDS = [
   "SetSubagentModel",
   "SetSubagentProfileEffort",
   "SetSubagentProfileModel",
-  "SetToolApprovalMode",
   "SetToolApprovalModeForTab",
   "SetTopicPinned",
   "SetTrayLocale",
@@ -607,9 +594,6 @@ export const DESKTOP_COMMANDS = [
   "StopRemoteServer",
   "StopTaskByKey",
   "StorageSettings",
-  "Submit",
-  "SubmitDisplay",
-  "SubmitDisplayToTab",
   "SubmitDisplayToTabWithID",
   "SubmitEditedDisplayToTabWithID",
   "SubmitExtensionForm",
@@ -621,12 +605,9 @@ export const DESKTOP_COMMANDS = [
   "SubmitRemoteTabExtensionFormExact",
   "SubmitRemoteTabWithModelApplication",
   "SubmitRemoteTabWithSubmission",
-  "SubmitToTab",
   "SubmitToTabWithID",
-  "SummarizeFrom",
   "SummarizeFromForTab",
   "SummarizeRemoteTab",
-  "SummarizeUpTo",
   "SummarizeUpToForTab",
   "SwitchWorkspace",
   "SyncRuntimeState",
@@ -634,7 +615,6 @@ export const DESKTOP_COMMANDS = [
   "TerminalOutputForTab",
   "TerminalWorkspaceForTab",
   "TestProviderModel",
-  "ToggleMaximiseMainWindow",
   "ToolResultForTab",
   "TranscriptContentForTab",
   "TranscriptFollowForTab",
@@ -4968,6 +4948,7 @@ export interface TaskEvent {
   timestamp: string;
   event_type: string;
   task_id: string;
+  job_id: string;
   session_id: string;
   state: string;
   runtime_state?: string;
@@ -4978,10 +4959,10 @@ export interface TaskEvent {
 export interface TaskSnapshot {
   schema_version: number;
   task_id: string;
-  job_id?: string;
+  job_id: string;
   session_id: string;
   state: string;
-  runtime_state?: string;
+  runtime_state: string;
   runtime_lease_until?: string;
   runtime_owner_id?: string;
   version: number;
@@ -5321,7 +5302,6 @@ export interface GeneratedDesktopCommands {
   AIRenameSession(arg0: string): Promise<string>;
   AIRenameSessionTarget(arg0: SessionSelector): Promise<SessionMutationResult>;
   AbandonPendingUpdate(): Promise<void>;
-  AcceptDelivery(): Promise<void>;
   AcceptDeliveryToTab(arg0: string): Promise<void>;
   AcceptMemorySuggestion(arg0: MemorySuggestion): Promise<string>;
   AcceptMemorySuggestionForTab(arg0: string, arg1: MemorySuggestion): Promise<string>;
@@ -5387,7 +5367,6 @@ export interface GeneratedDesktopCommands {
   CaptureInboxTarget(arg0: string, arg1: string): Promise<InboxTargetView>;
   CheckRemotePlatform(arg0: string): Promise<void>;
   CheckUpdate(arg0: string): Promise<UpdateInfo | null>;
-  Checkpoints(): Promise<CheckpointMeta[]>;
   CheckpointsForTab(arg0: string): Promise<CheckpointMeta[]>;
   ChooseRecoveryBranch(arg0: RecoveryPreferenceRequest): Promise<void>;
   CleanRecoveryLineage(arg0: RecoveryCleanupRequest): Promise<RecoveryCleanupResult>;
@@ -5397,7 +5376,6 @@ export interface GeneratedDesktopCommands {
   ClearRemoteTabSession(arg0: string): Promise<void>;
   ClearSession(): Promise<SessionClearResult>;
   ClearSessionForTab(arg0: string): Promise<SessionClearResult>;
-  CloseMainWindow(): Promise<void>;
   CloseMergedWorktreeTab(arg0: CloseMergedWorktreeTabRequest): Promise<CloseMergedWorktreeTabResult>;
   CloseRemoteTab(arg0: string): Promise<void>;
   CloseTab(arg0: string): Promise<void>;
@@ -5406,7 +5384,6 @@ export interface GeneratedDesktopCommands {
   Commands(): Promise<CommandInfo[]>;
   CommitRewindForTab(arg0: string, arg1: string, arg2: number, arg3: string): Promise<RewindResultView>;
   CommitWorkspaceFileRevertForTab(arg0: string, arg1: string, arg2: string): Promise<RewindResultView>;
-  Compact(): Promise<void>;
   CompactForTab(arg0: string): Promise<void>;
   CompactRemoteTab(arg0: string, arg1: string): Promise<void>;
   CompleteSessionComposerSubmission(arg0: SessionRef, arg1: string, arg2: string): Promise<SessionComposerState>;
@@ -5468,7 +5445,6 @@ export interface GeneratedDesktopCommands {
   Forget(arg0: string): Promise<void>;
   ForgetForTab(arg0: string, arg1: string): Promise<void>;
   ForgetRemoteTab(arg0: string, arg1: string): Promise<void>;
-  Fork(arg0: number): Promise<TabMeta>;
   ForkForTab(arg0: string, arg1: number): Promise<TabMeta>;
   ForkRemoteTab(arg0: string, arg1: number, arg2: string): Promise<void>;
   ForkSession(arg0: SessionRef, arg1: string): Promise<SessionRef>;
@@ -5536,7 +5512,6 @@ export interface GeneratedDesktopCommands {
   InterruptTurnForTab(arg0: string, arg1: string): Promise<void>;
   InterruptTurnWithInboxItemsForTab(arg0: string, arg1: string, arg2: string[]): Promise<InboxCancelResultView>;
   InvokeExtensionAction(arg0: string, arg1: string, arg2: Record<string, string>): Promise<string>;
-  IsMainWindowMaximised(): Promise<boolean>;
   IsolatedWorktreeAvailability(arg0: string): Promise<Availability>;
   Jobs(): Promise<JobView[]>;
   JobsForTab(arg0: string): Promise<JobView[]>;
@@ -5581,7 +5556,6 @@ export interface GeneratedDesktopCommands {
   MergeWorktreeBack(arg0: MergeWorktreeBackRequest): Promise<MergeResult>;
   Meta(): Promise<Meta>;
   MetaForTab(arg0: string): Promise<Meta>;
-  MinimiseMainWindow(): Promise<void>;
   MkdirRemote(arg0: string, arg1: string): Promise<void>;
   Models(): Promise<ModelInfo[]>;
   ModelsForTab(arg0: string): Promise<ModelInfo[]>;
@@ -5771,8 +5745,6 @@ export interface GeneratedDesktopCommands {
   RevokePermissionGrantForTab(arg0: string, arg1: string, arg2: string, arg3: number): Promise<PermissionSnapshot>;
   RevokeWorkspaceBrowserPreview(arg0: string): Promise<void>;
   RevokeWorkspaceMediaPreview(arg0: string): Promise<void>;
-  Rewind(arg0: number, arg1: string): Promise<void>;
-  RewindForTab(arg0: string, arg1: number, arg2: string): Promise<void>;
   RewindRemoteTab(arg0: string, arg1: string, arg2: string): Promise<void>;
   RunShellForTab(arg0: string, arg1: string): Promise<void>;
   RuntimeDoctor(): Promise<RuntimeDoctorReport>;
@@ -5850,21 +5822,18 @@ export interface GeneratedDesktopCommands {
   SetDesktopTerminalTheme(arg0: string): Promise<void>;
   SetDesktopZoomFactor(arg0: number): Promise<void>;
   SetEffortForTab(arg0: string, arg1: string): Promise<void>;
-  SetGoal(arg0: string): Promise<void>;
   SetGoalForTab(arg0: string, arg1: string): Promise<void>;
   SetInboxPaused(arg0: string, arg1: boolean): Promise<void>;
   SetMCPServerEnabled(arg0: string, arg1: boolean): Promise<void>;
   SetMaxParallelWriters(arg0: number): Promise<void>;
   SetMaxSubagentConcurrency(arg0: number): Promise<void>;
   SetMaxSubagentDepth(arg0: number): Promise<void>;
-  SetMode(arg0: string): Promise<void>;
   SetModeForTab(arg0: string, arg1: string): Promise<string[]>;
   SetModel(arg0: string): Promise<void>;
   SetModelForTab(arg0: string, arg1: string): Promise<void>;
   SetNetwork(arg0: NetworkView): Promise<void>;
   SetPermissionMode(arg0: string): Promise<void>;
   SetPermissionPresetForTab(arg0: string, arg1: string, arg2: string, arg3: number): Promise<PermissionSnapshot>;
-  SetPlanMode(arg0: boolean): Promise<void>;
   SetPlannerModel(arg0: string): Promise<void>;
   SetPluginEnabled(arg0: string, arg1: boolean): Promise<void>;
   SetPreferredExternalOpener(arg0: string): Promise<void>;
@@ -5894,7 +5863,6 @@ export interface GeneratedDesktopCommands {
   SetSubagentModel(arg0: string): Promise<void>;
   SetSubagentProfileEffort(arg0: string, arg1: string): Promise<void>;
   SetSubagentProfileModel(arg0: string, arg1: string): Promise<void>;
-  SetToolApprovalMode(arg0: string): Promise<void>;
   SetToolApprovalModeForTab(arg0: string, arg1: string): Promise<string[]>;
   SetTopicPinned(arg0: string, arg1: boolean): Promise<void>;
   SetTrayLocale(arg0: string): Promise<void>;
@@ -5919,9 +5887,6 @@ export interface GeneratedDesktopCommands {
   StopRemoteServer(arg0: string, arg1: string): Promise<void>;
   StopTaskByKey(arg0: TaskActionRequest): Promise<ControlResult>;
   StorageSettings(): Promise<StorageSettingsView>;
-  Submit(arg0: string): Promise<void>;
-  SubmitDisplay(arg0: string, arg1: string): Promise<void>;
-  SubmitDisplayToTab(arg0: string, arg1: string, arg2: string): Promise<void>;
   SubmitDisplayToTabWithID(arg0: string, arg1: string, arg2: string, arg3: string): Promise<void>;
   SubmitEditedDisplayToTabWithID(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<void>;
   SubmitExtensionForm(arg0: string, arg1: string, arg2: string, arg3: Record<string, unknown>): Promise<void>;
@@ -5933,12 +5898,9 @@ export interface GeneratedDesktopCommands {
   SubmitRemoteTabExtensionFormExact(arg0: ExtensionFormTarget, arg1: Record<string, unknown>): Promise<void>;
   SubmitRemoteTabWithModelApplication(arg0: string, arg1: string, arg2: string, arg3: ModelApplicationChoice): Promise<void>;
   SubmitRemoteTabWithSubmission(arg0: string, arg1: string, arg2: string): Promise<void>;
-  SubmitToTab(arg0: string, arg1: string): Promise<void>;
   SubmitToTabWithID(arg0: string, arg1: string, arg2: string): Promise<void>;
-  SummarizeFrom(arg0: number): Promise<void>;
   SummarizeFromForTab(arg0: string, arg1: number): Promise<void>;
   SummarizeRemoteTab(arg0: string, arg1: number, arg2: string): Promise<void>;
-  SummarizeUpTo(arg0: number): Promise<void>;
   SummarizeUpToForTab(arg0: string, arg1: number): Promise<void>;
   SwitchWorkspace(arg0: string): Promise<string>;
   SyncRuntimeState(): Promise<RuntimeStateProjection>;
@@ -5946,7 +5908,6 @@ export interface GeneratedDesktopCommands {
   TerminalOutputForTab(arg0: string, arg1: string): Promise<string>;
   TerminalWorkspaceForTab(arg0: string): Promise<TerminalWorkspaceView>;
   TestProviderModel(arg0: ProviderView, arg1: string, arg2: string): Promise<void>;
-  ToggleMaximiseMainWindow(): Promise<void>;
   ToolResultForTab(arg0: string, arg1: string): Promise<ToolResultData | null>;
   TranscriptContentForTab(arg0: string, arg1: ContentRequest): Promise<ContentChunk>;
   TranscriptFollowForTab(arg0: string, arg1: FollowRequest): Promise<TranscriptFollowResponse>;
