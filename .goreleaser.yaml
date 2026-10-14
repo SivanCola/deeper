@@ -25,6 +25,16 @@ archives:
     ids: [deepzora]
     name_template: "deepzora-{{ .Os }}-{{ .Arch }}"
     formats: [tar.gz]
+    files:
+      - CHANGELOG.md
+      - README.md
+      - README.zh-CN.md
+      - LICENSE
+      - LICENSE-MIT
+      - NOTICE
+      - LICENSING.md
+      - TRADEMARK_POLICY.md
+      - TRADEMARK_POLICY.zh-CN.md
     format_overrides:
       - goos: windows
         formats: [zip]

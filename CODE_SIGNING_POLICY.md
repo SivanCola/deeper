@@ -6,10 +6,12 @@ Last updated: 2026-10-14.
 
 ## Project and authorization
 
-Deepzora is an independently maintained MIT-licensed AI coding assistant at
+Deepzora is an independently maintained AI coding assistant under AGPL-3.0-only at
 <https://github.com/SivanCola/deepzora>. Its CLI, desktop application and release
 channels belong to this project. It is derived from DeepSeek-Reasonix; upstream
-copyrights and provenance are retained in [NOTICE](NOTICE). A Deepzora signature
+copyrights and provenance are retained in [NOTICE](NOTICE), with the original
+MIT text in [LICENSE-MIT](LICENSE-MIT). See [LICENSING.md](LICENSING.md) and the
+[brand policy](TRADEMARK_POLICY.md). A Deepzora signature
 does not designate an official Reasonix release.
 
 An independent SignPath Foundation application has been submitted and is pending

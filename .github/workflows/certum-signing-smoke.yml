@@ -41,7 +41,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          # This minimal probe is covered by the repository's MIT license.
+          # This minimal probe is covered by the repository's AGPL-3.0-only license.
           New-Item -ItemType Directory payload | Out-Null
           'package main; func main() { println("Deepzora Certum signing probe") }' | Set-Content probe.go
           $env:GOOS = 'windows'

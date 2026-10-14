@@ -17,7 +17,8 @@ test("required contexts retain real checks on each platform", () => {
     assert.match(job(name), /fail-fast: false/);
   }
   assert.match(job("test"), /go test -timeout=15m \.\/\.\.\./);
-  assert.match(job("desktop-go"), /DESKTOP_TEST_TIMEOUT: \$\{\{ runner\.os == 'Windows' && '25m' \|\| '15m' \}\}/);
+  assert.match(job("desktop-go"), /DESKTOP_TEST_TIMEOUT: \$\{\{ runner\.os == 'Windows' && '35m' \|\| '15m' \}\}/);
+  assert.match(job("desktop-go"), /timeout-minutes: \$\{\{ matrix\.os == 'windows-latest' && 65 \|\| 35 \}\}/);
   assert.match(job("desktop-go"), /go test -timeout="\$DESKTOP_TEST_TIMEOUT" \.\/\.\.\./);
   assert.match(job("test"), /RUN_STEPS:[^\n]+needs\.changes\.result != 'success'/);
   assert.match(job("race"), /go test -race/);

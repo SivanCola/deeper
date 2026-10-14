@@ -233,5 +233,14 @@ Open an issue on GitHub with:
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the
-same license as the project.
+New contributions are licensed under the GNU Affero General Public License,
+version 3 only (`AGPL-3.0-only`), unless an explicitly separately licensed
+component requires its existing license. By submitting a contribution, you
+confirm that you have the rights needed to offer it under the applicable license.
+Contributors retain their copyright; no copyright assignment or separate
+commercial relicensing permission is required or implied.
+
+Preserve upstream copyright and license notices, including the original
+Reasonix MIT text in [LICENSE-MIT](LICENSE-MIT). See [LICENSING.md](LICENSING.md)
+for scope and component exceptions, and [the brand policy](TRADEMARK_POLICY.md)
+([中文](TRADEMARK_POLICY.zh-CN.md)) for use of the Deepzora name and logos.

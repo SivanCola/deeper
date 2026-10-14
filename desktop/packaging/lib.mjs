@@ -85,7 +85,7 @@ export function shellIgnore(path) {
 }
 
 export function sanitizeShellPackageJson(pkg, { version, productName }) {
-  const keep = ["name", "description", "main", "type"];
+  const keep = ["name", "description", "main", "type", "license"];
   const out = {};
   for (const key of keep) if (key in pkg) out[key] = pkg[key];
   out.productName = productName;
