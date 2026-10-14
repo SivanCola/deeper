@@ -100,7 +100,7 @@ type PromptHistoryResult struct {
 }
 
 // App is the Wails-bound application object: the desktop frontend's command
-// surface. Its exported methods (Submit/Cancel/Approve/…) are generated into JS
+// surface. Its exported methods (Submit/Cancel/ResolvePromptForSession/…) are generated into JS
 // bindings. The app manages multiple WorkspaceTabs — each with its own controller
 // scoped to a project workspace — and routes commands to the active tab. Events
 // flow the other way: each tab's controller emits to a tabEventSink that
@@ -1443,43 +1443,6 @@ func safeControllerSessionDir(ctrl control.SessionAPI) (dir string, ok bool) {
 	return ctrl.SessionDir(), true
 }
 
-// Approve answers a pending approval_request by ID: allow runs the call, session
-// also remembers the grant for the rest of the session.
-func (a *App) Approve(id string, allow, session, persist bool) {
-	ctrl := a.ctrlByTabID("")
-	if ctrl != nil {
-		ctrl.Approve(id, allow, session, persist)
-	}
-}
-
-// ApproveTab is like Approve but scoped to a specific tab.
-func (a *App) ApproveTab(tabID, id string, allow, session, persist bool) {
-	ctrl := a.ctrlForRuntimeTabID(tabID)
-	if ctrl != nil {
-		ctrl.Approve(id, allow, session, persist)
-	}
-}
-
-// ResolvePlanDecision answers a Plan card while preserving whether the user
-// chose to start execution, revise the plan, or exit without executing.
-func (a *App) ResolvePlanDecision(id, action string) error {
-	ctrl := a.ctrlByTabID("")
-	if ctrl == nil {
-		return fmt.Errorf("no active session")
-	}
-	return ctrl.ResolvePlanDecision(id, control.PlanDecisionAction(action))
-}
-
-// ResolvePlanDecisionTab is like ResolvePlanDecision but scoped to a runtime
-// tab so a delayed bridge call cannot answer a prompt in another tab.
-func (a *App) ResolvePlanDecisionTab(tabID, id, action string) error {
-	ctrl := a.ctrlForRuntimeTabID(tabID)
-	if ctrl == nil {
-		return fmt.Errorf("no active session")
-	}
-	return ctrl.ResolvePlanDecision(id, control.PlanDecisionAction(action))
-}
-
 // ReplayPendingPrompts asks every tab's controller to re-emit any approval/ask
 // prompt that is currently blocking its run loop. The frontend calls this once
 // its event subscription is live (on load/reconnect) so a session that was
@@ -1703,24 +1666,6 @@ func (a *App) SetCollaborationModeForTab(tabID, mode string) error {
 type QuestionAnswer struct {
 	QuestionID string   `json:"questionId"`
 	Selected   []string `json:"selected"`
-}
-
-// AnswerQuestion resolves a pending ask_request (the `ask` tool) by ID with the
-// user's selections per question.
-func (a *App) AnswerQuestion(id string, answers []QuestionAnswer) {
-	a.AnswerQuestionForTab("", id, answers)
-}
-
-func (a *App) AnswerQuestionForTab(tabID, id string, answers []QuestionAnswer) {
-	ctrl := a.ctrlByTabID(tabID)
-	if ctrl == nil {
-		return
-	}
-	out := make([]event.AskAnswer, len(answers))
-	for i, an := range answers {
-		out[i] = event.AskAnswer{QuestionID: an.QuestionID, Selected: an.Selected}
-	}
-	ctrl.AnswerQuestion(id, out)
 }
 
 // Compact runs a plain compaction pass (the "compact now" button). Focus-guided

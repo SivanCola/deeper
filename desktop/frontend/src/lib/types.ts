@@ -389,7 +389,7 @@ export interface ExtensionActionView {
   description?: string;
 }
 
-// QuestionAnswer is the reply for one question, sent back via AnswerQuestion.
+// QuestionAnswer is one question's reply in the exact prompt answer.
 export interface QuestionAnswer {
   questionId: string;
   selected: string[];

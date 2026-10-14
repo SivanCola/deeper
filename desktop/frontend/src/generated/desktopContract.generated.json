@@ -646,68 +646,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "AnswerQuestion",
-      "owner": "App.AnswerQuestion",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.QuestionAnswer"
-          },
-          "kind": "array"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "id",
-          "answers"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AnswerQuestion"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "AnswerQuestionForTab",
-      "owner": "App.AnswerQuestionForTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "elem": {
-            "kind": "object",
-            "ref": "main.QuestionAnswer"
-          },
-          "kind": "array"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "tabID",
-          "id",
-          "answers"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.AnswerQuestionForTab"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/remote_tab.go",
       "name": "AnswerRemoteTab",
       "owner": "App.AnswerRemoteTab",
@@ -852,39 +790,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "Approve",
-      "owner": "App.Approve",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "boolean"
-        },
-        {
-          "kind": "boolean"
-        },
-        {
-          "kind": "boolean"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "id",
-          "allow",
-          "session",
-          "persist"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.Approve"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/remote_tab.go",
       "name": "ApproveRemoteTab",
       "owner": "App.ApproveRemoteTab",
@@ -911,43 +816,6 @@
       },
       "sources": [
         "desktop/remote_tab.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ApproveTab",
-      "owner": "App.ApproveTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "boolean"
-        },
-        {
-          "kind": "boolean"
-        },
-        {
-          "kind": "boolean"
-        }
-      ],
-      "scope": {
-        "inputs": [
-          "tabID",
-          "id",
-          "allow",
-          "session",
-          "persist"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ApproveTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {
@@ -11004,35 +10872,6 @@
     },
     {
       "cancellation": "before-dispatch",
-      "domain": "desktop/decision_runtime_api.go",
-      "name": "ReplayPendingPromptIdentitiesForTab",
-      "owner": "App.ReplayPendingPromptIdentitiesForTab",
-      "params": [
-        {
-          "kind": "string"
-        }
-      ],
-      "result": {
-        "elem": {
-          "kind": "object",
-          "ref": "main.PromptIdentityView"
-        },
-        "kind": "array"
-      },
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ReplayPendingPromptIdentitiesForTab"
-      },
-      "sources": [
-        "desktop/decision_runtime_api.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
       "domain": "desktop/app.go",
       "name": "ReplayPendingPrompts",
       "owner": "App.ReplayPendingPrompts",
@@ -11280,62 +11119,6 @@
       },
       "sources": [
         "desktop/markdown_image_resolver.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResolvePlanDecision",
-      "owner": "App.ResolvePlanDecision",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "id",
-          "action"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResolvePlanDecision"
-      },
-      "sources": [
-        "desktop/app.go"
-      ]
-    },
-    {
-      "cancellation": "before-dispatch",
-      "domain": "desktop/app.go",
-      "name": "ResolvePlanDecisionTab",
-      "owner": "App.ResolvePlanDecisionTab",
-      "params": [
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        },
-        {
-          "kind": "string"
-        }
-      ],
-      "returnsError": true,
-      "scope": {
-        "inputs": [
-          "tabID",
-          "id",
-          "action"
-        ],
-        "kind": "owner-inputs",
-        "resolver": "App.ResolvePlanDecisionTab"
-      },
-      "sources": [
-        "desktop/app.go"
       ]
     },
     {

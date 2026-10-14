@@ -348,37 +348,6 @@
       ]
     }
   },
-  "AnswerQuestion": {
-    "domain": "desktop/app.go",
-    "owner": "App.AnswerQuestion",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AnswerQuestion",
-      "inputs": [
-        "id",
-        "answers"
-      ]
-    }
-  },
-  "AnswerQuestionForTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.AnswerQuestionForTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.AnswerQuestionForTab",
-      "inputs": [
-        "tabID",
-        "id",
-        "answers"
-      ]
-    }
-  },
   "AnswerRemoteTab": {
     "domain": "desktop/remote_tab.go",
     "owner": "App.AnswerRemoteTab",
@@ -454,23 +423,6 @@
       ]
     }
   },
-  "Approve": {
-    "domain": "desktop/app.go",
-    "owner": "App.Approve",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.Approve",
-      "inputs": [
-        "id",
-        "allow",
-        "session",
-        "persist"
-      ]
-    }
-  },
   "ApproveRemoteTab": {
     "domain": "desktop/remote_tab.go",
     "owner": "App.ApproveRemoteTab",
@@ -484,24 +436,6 @@
         "tabID",
         "callID",
         "decision"
-      ]
-    }
-  },
-  "ApproveTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.ApproveTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ApproveTab",
-      "inputs": [
-        "tabID",
-        "id",
-        "allow",
-        "session",
-        "persist"
       ]
     }
   },
@@ -5864,20 +5798,6 @@
       ]
     }
   },
-  "ReplayPendingPromptIdentitiesForTab": {
-    "domain": "desktop/decision_runtime_api.go",
-    "owner": "App.ReplayPendingPromptIdentitiesForTab",
-    "sources": [
-      "desktop/decision_runtime_api.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ReplayPendingPromptIdentitiesForTab",
-      "inputs": [
-        "tabID"
-      ]
-    }
-  },
   "ReplayPendingPrompts": {
     "domain": "desktop/app.go",
     "owner": "App.ReplayPendingPrompts",
@@ -6018,37 +5938,6 @@
       "inputs": [
         "tabID",
         "source"
-      ]
-    }
-  },
-  "ResolvePlanDecision": {
-    "domain": "desktop/app.go",
-    "owner": "App.ResolvePlanDecision",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResolvePlanDecision",
-      "inputs": [
-        "id",
-        "action"
-      ]
-    }
-  },
-  "ResolvePlanDecisionTab": {
-    "domain": "desktop/app.go",
-    "owner": "App.ResolvePlanDecisionTab",
-    "sources": [
-      "desktop/app.go"
-    ],
-    "scope": {
-      "kind": "owner-inputs",
-      "resolver": "App.ResolvePlanDecisionTab",
-      "inputs": [
-        "tabID",
-        "id",
-        "action"
       ]
     }
   },

@@ -115,7 +115,6 @@ let rejectListTabs = false;
 let listTabsCalls = 0;
 let pendingPromptIdentityCalls = 0;
 const exactAnswerCalls: Array<{ tabId: string; turnId: string; promptId: string; answer: unknown }> = [];
-const legacyAnswerCalls: string[] = [];
 
 const desktopStub = installDesktopHostStub(({
   main: {
@@ -153,7 +152,6 @@ const desktopStub = installDesktopHostStub(({
         submitCalls += tabId === "tab-send" ? 1 : 0;
         if (rejectSubmit) throw new Error("turn already running");
       },
-      AnswerQuestionForTab: async (_tabId: string, promptId: string) => { legacyAnswerCalls.push(promptId); },
       ResolvePromptForSession: async (target, answer) => {
         exactAnswerCalls.push({ tabId: target.tabId, turnId: target.turnId, promptId: target.promptId, answer });
         if (rejectAnswer && rejectAnswerMessage.includes("not the active turn")) desktopStub.emit("agent:event", { kind: "prompt_answered", tabId: target.tabId, itemId: target.promptId });
@@ -219,7 +217,7 @@ await act(async () => {
 eq(listTabsCalls, beforeAnswerListCalls, "Ask answer does not borrow the latest tab turn");
 eq(pendingPromptIdentityCalls, beforePendingPromptIdentityCalls + 1, "Ask answer resolves one exact pending-prompt identity");
 eq(exactAnswerCalls.at(-1)?.turnId, "turn-authoritative", "Ask answer uses the authoritative turn fence");
-eq(legacyAnswerCalls.length, 0, "Ask answer never falls back to the unfenced endpoint");
+eq(exactAnswerCalls.at(-1)?.promptId, "ask-fallback", "Ask answer resolves the original prompt through the session endpoint");
 eq(controller?.state.ask, undefined, "successful exact answer clears the matching Ask without replay");
 
 await act(async () => {

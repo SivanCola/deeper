@@ -58,13 +58,6 @@ func (a *App) PendingPromptIdentitiesForTab(tabID string) ([]PromptIdentityView,
 	return views, nil
 }
 
-// ReplayPendingPromptIdentitiesForTab returns the authoritative identity list
-// without re-emitting cards. The existing ReplayPendingPromptsForTab method
-// remains the event replay compatibility surface.
-func (a *App) ReplayPendingPromptIdentitiesForTab(tabID string) ([]PromptIdentityView, error) {
-	return a.PendingPromptIdentitiesForTab(tabID)
-}
-
 // ResolvePromptForTab is the canonical exact-identity decision endpoint.
 func (a *App) ResolvePromptForTab(tabID, promptID, turnID, runtimeEpoch, kind string, answer PromptAnswerView) error {
 	tab, ctrl := a.tabAndCtrlByID(tabID)
