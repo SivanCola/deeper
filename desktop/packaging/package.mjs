@@ -182,7 +182,8 @@ try {
     identity,
     root: desktop,
     electronVersion,
-    extraResources: [join(staging, "app"), join(staging, "icons"), join(staging, "build.json"), join(repo, "LICENSE"), join(repo, "NOTICE")],
+    extraResources: [join(staging, "app"), join(staging, "icons"), join(staging, "build.json"),
+      ...["LICENSE", "LICENSE-MIT", "NOTICE", "LICENSING.md", "TRADEMARK_POLICY.md", "TRADEMARK_POLICY.zh-CN.md"].map(name => join(repo, name))],
     icon,
   });
   options.sanitizePackageJson = [defaultSanitizePackageJson, (pkg) => sanitizeShellPackageJson(pkg, { version, productName: PRODUCT.name })];

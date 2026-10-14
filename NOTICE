@@ -3,9 +3,24 @@ Upstream: https://github.com/esengine/DeepSeek-Reasonix
 Initial source: main-v2, bddb48202a92e4a20b728d1b4485242137ea615d
 
 Copyright (c) 2026 Reasonix Contributors
-The original MIT license is preserved verbatim in LICENSE.
+The original upstream MIT license is preserved verbatim in LICENSE-MIT.
 Original commit authors, contribution history, acknowledgments, release notes,
 and historical validation evidence remain credited to their original authors.
 
 Independent repository: https://github.com/SivanCola/deepzora
 Deepzora is not an official Reasonix release or update channel.
+
+Copyright (c) 2026 Deepzora Contributors
+From the license change dated 2026-10-14, Deepzora is distributed as a combined
+work under the GNU Affero General Public License, version 3 only
+(SPDX-License-Identifier: AGPL-3.0-only). The complete text is in LICENSE.
+See LICENSING.md for scope, third-party exceptions and source obligations.
+
+The combined-work license does not revoke or replace the MIT permissions for
+inherited upstream code, or permissions already granted for earlier versions.
+Separately licensed third-party code and assets retain their own licenses and
+notices. This is not an offer to use all of Deepzora under MIT.
+
+The Deepzora name, logos and official release identity are subject to the
+separate TRADEMARK_POLICY.md / TRADEMARK_POLICY.zh-CN.md brand policy.
+That policy does not restrict rights granted by the software licenses.

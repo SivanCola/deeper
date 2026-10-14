@@ -14,7 +14,8 @@ fully reproducible). The visual *direction* was inspired by the MIT-licensed
 - Backgrounds contain no windows, sidebars, cards, buttons, inputs or readable text, and are
   stripped of EXIF/author metadata.
 
-Assets are released under the MIT License as part of the Deepzora repository,
+These assets remain separately licensed under MIT; the application's AGPL license
+does not replace their asset license. See [LICENSING.md](../LICENSING.md).
 © Deepzora Contributors. Human review: Deepzora Contributors (release PR review).
 
 Generation date: 2026-07-17
