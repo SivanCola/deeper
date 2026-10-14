@@ -1,4 +1,5 @@
 import { ErrorMessage } from "./ErrorMessage";
+import { FeedbackReportForm } from "./FeedbackReportForm";
 import { saveModelSettings, isModelSettingsResult } from "../lib/modelSettings";
 import { ModelSettingHelp } from "./ModelSettingHelp";
 import { desktopHost } from "../lib/desktopHost";
@@ -4684,7 +4685,7 @@ function AboutSection({
         </button>
       </SettingsField>
       <SettingsField
-        className="settings-field--wide-copy"
+        className="settings-field--wide-copy settings-field--stacked"
         label={t("feedback.title")}
         hint={t("feedback.subtitle")}
       >
@@ -4704,6 +4705,7 @@ function AboutSection({
             <ExternalLink size={14} aria-hidden="true" />
           </button>
         </div>
+        <FeedbackReportForm />
       </SettingsField>
       {updaterEnabled && <details
         className="provider-editor-advanced"

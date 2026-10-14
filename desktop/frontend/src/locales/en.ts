@@ -3241,6 +3241,10 @@ export const en = {
   "feedback.subtitle": "Report bugs or suggest features. Do not include secrets, chats, or private paths.",
   "feedback.submitIssue": "Submit issue",
   "feedback.viewIssues": "View issues",
+  "feedback.message": "Feedback message",
+  "feedback.placeholder": "Describe the problem or suggestion…",
+  "feedback.send": "Send feedback",
+  "feedback.sent": "Feedback sent. Thank you!",
 
   // onboarding — first-run model provider guide
   "onboarding.repairConnection": "Complete this connection’s key and models to get started.",

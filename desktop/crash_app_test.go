@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestScrubUserPaths(t *testing.T) {
@@ -24,6 +25,33 @@ func TestScrubUserPaths(t *testing.T) {
 	for in, want := range cases {
 		if got := scrubUserPaths(in); got != want {
 			t.Errorf("scrubUserPaths(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestCrashReportByteLimitsPreserveUTF8ForIngest(t *testing.T) {
+	payload := frontendCrashPayload{
+		SchemaVersion: 2, Kind: "feedback", Source: "frontend",
+		Message:      strings.Repeat("中", maxCrashDetailBytes),
+		Stack:        strings.Repeat("中", maxCrashStackBytes),
+		ErrorMessage: strings.Repeat("中", maxCrashFieldBytes),
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := crashReportFromDetail("feedback", string(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []struct {
+		value string
+		limit int
+	}{
+		{report.Message, maxCrashDetailBytes}, {report.Stack, maxCrashStackBytes}, {report.ErrorMessage, maxCrashFieldBytes},
+	} {
+		if !utf8.ValidString(field.value) || len(field.value) > field.limit {
+			t.Fatal("report field would exceed ingest byte limit after JSON encoding")
 		}
 	}
 }
@@ -48,6 +76,7 @@ func TestScrubSensitiveText(t *testing.T) {
 }
 
 func TestPostCrashReport(t *testing.T) {
+	t.Setenv("DEEPZORA_REPORT_TOKEN", strings.Repeat("a", 64))
 	var got crashReport
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -55,6 +84,9 @@ func TestPostCrashReport(t *testing.T) {
 		}
 		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
 			t.Errorf("content-type = %q", ct)
+		}
+		if r.Header.Get("X-Deepzora-Report-Token") != strings.Repeat("a", 64) {
+			t.Error("desktop report omitted ingest token")
 		}
 		body, _ := io.ReadAll(r.Body)
 		if err := json.Unmarshal(body, &got); err != nil {

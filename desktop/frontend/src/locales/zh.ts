@@ -3244,6 +3244,10 @@ export const zh: Record<DictKey, string> = {
   "feedback.subtitle": "报告问题或提出建议。请勿提交密钥、对话内容或私人路径。",
   "feedback.submitIssue": "提交问题",
   "feedback.viewIssues": "查看已有问题",
+  "feedback.message": "反馈内容",
+  "feedback.placeholder": "描述遇到的问题或建议…",
+  "feedback.send": "发送反馈",
+  "feedback.sent": "反馈已发送，谢谢！",
 
   // onboarding — 首次使用模型服务引导
   "onboarding.repairConnection": "补全当前连接的密钥与模型，即可开始使用。",

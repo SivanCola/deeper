@@ -101,6 +101,19 @@ provide installation disclosure and a way to disable unexpected collection.
 
 ## Retention, deletion and third parties
 
+This repository includes an optional [Supabase report backend](supabase/README.md).
+It uses the process-configured `DEEPZORA_REPORT_ENDPOINT` and a separate
+`DEEPZORA_REPORT_TOKEN`; no hosted address is embedded or enabled automatically.
+The submission-only token is sent to that collector and is not a Supabase
+database credential. The backend stores the report fields described above,
+event IDs, error grouping identifiers and receipt times. Only the submission
+token's SHA-256 digest is stored server-side. Installation IDs keep
+their existing send-time controls. Ordinary clients cannot read or write the
+report tables. Reports are not automatically deleted; the operator must define
+retention and deletion arrangements. The tables do not store IP addresses, but
+Supabase can see network metadata and retain platform logs or backups under its
+own policies. Existing desktop and CLI consent and opt-out behavior still applies.
+
 Local data remains until you delete it or the relevant feature's cleanup/rotation
 removes it. There is no single retention period for all histories, logs, caches
 and backups. Uninstalling the program does not necessarily delete its user data.

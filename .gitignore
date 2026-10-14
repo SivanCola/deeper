@@ -47,6 +47,8 @@ mem.prof
 
 # Node / frontend dependencies and caches
 node_modules/
+/supabase/.temp/
+/supabase/.branches/
 .pnpm-store/
 .npm/
 

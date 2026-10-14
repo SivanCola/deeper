@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -13,8 +12,10 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"unicode/utf8"
 
 	"deepzora/internal/config"
+	"deepzora/internal/reporttransport"
 )
 
 // crash_app.go is the crash/feedback/performance reporting surface. Frontend
@@ -146,6 +147,9 @@ func normalizeReportKind(kind string) (string, bool) {
 
 func clipCrashField(s string, max int) string {
 	if len(s) > max {
+		for max > 0 && !utf8.RuneStart(s[max]) {
+			max--
+		}
 		return s[:max]
 	}
 	return s
@@ -338,22 +342,5 @@ func postCrashReport(ctx context.Context, c *http.Client, endpoint string, r cra
 			r.InstallID = id
 		}
 	}
-	body, err := json.Marshal(r)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("crash endpoint returned %s", resp.Status)
-	}
-	return nil
+	return reporttransport.Post(ctx, c, endpoint, r)
 }

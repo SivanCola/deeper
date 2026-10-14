@@ -120,6 +120,7 @@ func TestListBackfillsStableIdentityForOldPendingReport(t *testing.T) {
 }
 
 func TestSendUsesSharedProtocolWithoutDeletingLocalReport(t *testing.T) {
+	t.Setenv("DEEPZORA_REPORT_TOKEN", strings.Repeat("a", 64))
 	home := t.TempDir()
 	if err := CapturePanic(home, "v1.20.0", "boom", []byte("goroutine 1 [running]:\nnix.run()\n\t/home/alice/deepzora/main.go:12")); err != nil {
 		t.Fatal(err)
@@ -135,6 +136,9 @@ func TestSendUsesSharedProtocolWithoutDeletingLocalReport(t *testing.T) {
 		}
 		if got := req.Header.Get("Content-Type"); got != "application/json" {
 			t.Fatalf("content type = %q", got)
+		}
+		if req.Header.Get("X-Deepzora-Report-Token") != strings.Repeat("a", 64) {
+			t.Fatal("CLI report omitted ingest token")
 		}
 		if err := json.NewDecoder(req.Body).Decode(&uploaded); err != nil {
 			t.Fatal(err)
