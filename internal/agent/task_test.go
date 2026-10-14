@@ -590,7 +590,7 @@ func TestTaskToolBackgroundPanicPersistsFailedMetadata(t *testing.T) {
 	if jobID == "" {
 		t.Fatalf("no background job id in output:\n%s", out)
 	}
-	res := jm.WaitForSession(context.Background(), "parent-session", []string{jobID}, 5)
+	res := awaitTaskJobs(t, jm, "parent-session", []string{jobID})
 	if len(res) != 1 || res[0].Status != jobs.Failed {
 		t.Fatalf("background job result = %+v, want failed", res)
 	}
@@ -637,7 +637,7 @@ func TestTaskToolBackgroundResultIncludesReferenceGuidance(t *testing.T) {
 	if jobID == "" {
 		t.Fatalf("no background job id in output:\n%s", out)
 	}
-	res := jm.WaitForSession(context.Background(), "parent-session", []string{jobID}, 5)
+	res := awaitTaskJobs(t, jm, "parent-session", []string{jobID})
 	if len(res) != 1 || res[0].Status != jobs.Done {
 		t.Fatalf("background job result = %+v, want succeeded", res)
 	}
@@ -701,7 +701,7 @@ func TestTaskToolBackgroundAncestorContinuationIncludesForkGuidance(t *testing.T
 	if jobID == "" {
 		t.Fatalf("no background job id in output:\n%s", startOut)
 	}
-	res := jm.WaitForSession(context.Background(), "child", []string{jobID}, 5)
+	res := awaitTaskJobs(t, jm, "child", []string{jobID})
 	if len(res) != 1 || res[0].Status != jobs.Done {
 		t.Fatalf("background job result = %+v, want succeeded", res)
 	}
@@ -756,7 +756,7 @@ func TestTaskToolBackgroundCapRefusesFanOut(t *testing.T) {
 
 	// Collecting the running jobs frees the cap.
 	close(release)
-	jm.WaitForSession(context.Background(), "parent-session", ids, 5)
+	awaitTaskJobs(t, jm, "parent-session", ids)
 	out, err := task.Execute(ctx, []byte(`{"prompt":"after drain","run_in_background":true}`))
 	if err != nil {
 		t.Fatalf("Execute after drain: %v", err)
@@ -765,7 +765,7 @@ func TestTaskToolBackgroundCapRefusesFanOut(t *testing.T) {
 	if jobID == "" {
 		t.Fatalf("no background job id in output:\n%s", out)
 	}
-	if res := jm.WaitForSession(context.Background(), "parent-session", []string{jobID}, 5); len(res) != 1 || res[0].Status != jobs.Done {
+	if res := awaitTaskJobs(t, jm, "parent-session", []string{jobID}); len(res) != 1 || res[0].Status != jobs.Done {
 		t.Fatalf("post-drain job = %+v, want done", res)
 	}
 }
@@ -796,7 +796,7 @@ func TestTaskToolBackgroundRunPublishesEvidenceForCollection(t *testing.T) {
 		t.Fatalf("Execute: %v", err)
 	}
 	jobID := extractJobID(out)
-	res := jm.WaitForSession(context.Background(), "parent-session", []string{jobID}, 5)
+	res := awaitTaskJobs(t, jm, "parent-session", []string{jobID})
 	if len(res) != 1 || res[0].Status != jobs.Done {
 		t.Fatalf("background task = %+v, want done", res)
 	}
@@ -833,7 +833,7 @@ func startTerminalBackgroundMutation(t *testing.T, jm *jobs.Manager, session, pa
 		}}})
 		return "background answer", nil
 	})
-	if res := jm.WaitForSession(context.Background(), session, []string{j.ID}, 5); len(res) != 1 || res[0].Status != jobs.Done {
+	if res := awaitTaskJobs(t, jm, session, []string{j.ID}); len(res) != 1 || res[0].Status != jobs.Done {
 		t.Fatalf("background job = %+v, want done", res)
 	}
 	return j.ID
@@ -974,7 +974,7 @@ func TestRestartRecoversPendingBackgroundMutationForcesReadinessWithoutWait(t *t
 		}}})
 		return "background answer", nil
 	})
-	if res := first.WaitForSession(context.Background(), "parent-session", []string{j.ID}, 5); len(res) != 1 || res[0].Status != jobs.Done {
+	if res := awaitTaskJobs(t, first, "parent-session", []string{j.ID}); len(res) != 1 || res[0].Status != jobs.Done {
 		t.Fatalf("background job = %+v, want done", res)
 	}
 	first.Close() // the process exits before any turn ever leased this evidence

@@ -79,7 +79,7 @@ func TestBackgroundTaskReturnsBeforeSlotFrees(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("background job never acquired slot / started provider")
 	}
-	result := jm.WaitForSession(context.Background(), "sess-bg", []string{jobID}, 5)
+	result := awaitTaskJobs(t, jm, "sess-bg", []string{jobID})
 	if len(result) != 1 || result[0].Status != jobs.Done {
 		t.Fatalf("background job result = %+v, want one completed job", result)
 	}
