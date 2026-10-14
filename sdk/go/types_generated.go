@@ -385,14 +385,15 @@ type ProviderRequest struct {
 
 // ProviderMessage is a generated Extension Protocol v2 wire DTO.
 type ProviderMessage struct {
-	Role               ProviderRole       `json:"role,omitempty"`
-	Content            string             `json:"content,omitempty" externalizable:"true"`
-	Images             []string           `json:"images,omitempty"`
-	ReasoningContent   string             `json:"reasoning_content,omitempty"`
-	ReasoningSignature string             `json:"reasoning_signature,omitempty"`
-	ToolCalls          []ProviderToolCall `json:"tool_calls,omitempty"`
-	ToolCallID         string             `json:"tool_call_id,omitempty"`
-	Name               string             `json:"name,omitempty"`
+	Role               ProviderRole            `json:"role,omitempty"`
+	Content            string                  `json:"content,omitempty" externalizable:"true"`
+	Images             []string                `json:"images,omitempty"`
+	ReasoningContent   string                  `json:"reasoning_content,omitempty"`
+	ReasoningSignature string                  `json:"reasoning_signature,omitempty"`
+	ThinkingBlocks     []ProviderThinkingBlock `json:"thinking_blocks,omitempty"`
+	ToolCalls          []ProviderToolCall      `json:"tool_calls,omitempty"`
+	ToolCallID         string                  `json:"tool_call_id,omitempty"`
+	Name               string                  `json:"name,omitempty"`
 }
 
 // ProviderRole is a generated Extension Protocol v2 string enum.
@@ -404,6 +405,14 @@ const (
 	ProviderRoleAssistant ProviderRole = "assistant"
 	ProviderRoleTool      ProviderRole = "tool"
 )
+
+// ProviderThinkingBlock is a generated Extension Protocol v2 wire DTO.
+type ProviderThinkingBlock struct {
+	Type      string `json:"type"`
+	Thinking  string `json:"thinking,omitempty"`
+	Signature string `json:"signature,omitempty"`
+	Data      string `json:"data,omitempty"`
+}
 
 // ProviderToolSchema is a generated Extension Protocol v2 wire DTO.
 type ProviderToolSchema struct {

@@ -70,11 +70,10 @@ func (a *App) CancelSessionForTab(tabID string) (control.CancelReceipt, error) {
 	return control.CancelReceipt{SessionRef: ctrl.SessionPath(), HeadID: agent.BranchID(ctrl.SessionPath()), Accepted: true, AlreadyIdle: !status.Running && !status.PendingPrompt}, nil
 }
 
-// StartTurnForTab is the turn-id-aware replacement for SubmitToTab. Existing
-// Submit entry points remain compatibility wrappers during the protocol cutover.
+// StartTurnForTab returns the admitted turn identity and management receipt.
 func (a *App) StartTurnForTab(tabID, input, submissionID string) (TurnStartView, error) {
-	if strings.TrimSpace(submissionID) == "" {
-		return TurnStartView{}, fmt.Errorf("submissionId is required")
+	if err := validateTurnSubmissionIdentity(tabID, submissionID); err != nil {
+		return TurnStartView{}, err
 	}
 	if _, ctrl := a.tabAndCtrlByID(tabID); ctrl != nil {
 		if identified, ok := ctrl.(*control.Controller); ok {
@@ -131,8 +130,8 @@ func (a *App) StartTurnForTab(tabID, input, submissionID string) (TurnStartView,
 }
 
 func (a *App) StartTurnForTabWithDrafts(tabID, input, submissionID string, draftIDs []string) (TurnStartView, error) {
-	if strings.TrimSpace(submissionID) == "" {
-		return TurnStartView{}, fmt.Errorf("submissionId is required")
+	if err := validateTurnSubmissionIdentity(tabID, submissionID); err != nil {
+		return TurnStartView{}, err
 	}
 	req := control.SubmissionRequest{ID: submissionID, Input: input, Display: input, DraftIDs: append([]string(nil), draftIDs...)}
 	if _, ctrl := a.tabAndCtrlByID(tabID); ctrl != nil {

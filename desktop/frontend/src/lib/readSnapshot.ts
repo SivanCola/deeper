@@ -8,12 +8,9 @@ export type ReadSnapshotPage = {
   readError?: { code: string; reason: string; message: string };
 };
 
-// Older hosts encode SessionOperationError in the message; keep that protocol
-// compatibility at the bridge boundary rather than in individual components.
 export function isStaleRead(error: unknown): boolean {
   const value = error as { code?: string; data?: { sessionCode?: string }; message?: string };
-  return value?.code === "stale_cursor" || value?.data?.sessionCode === "stale_cursor"
-    || String(value?.message ?? error).includes("stale_cursor");
+  return value?.code === "stale_cursor" || value?.data?.sessionCode === "stale_cursor";
 }
 
 export function assertReadPage(page: ReadSnapshotPage): void {

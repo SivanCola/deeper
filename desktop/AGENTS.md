@@ -50,9 +50,8 @@ window adapter, measurement ledger, geometry revision loop or logical selection.
   answer rather than a transport error.
 - History reads route by the tab's binding identity, never by the result of a
   failed call: a local error must not be answered by a remote service holding
-  a different session. A remote service that never negotiated
-  `history-window-v1` answers with the typed `unsupported` status and keeps
-  its protocol-7 pages.
+  a different session. Remote canonical history requires `history-window-v1`;
+  services missing that capability are rejected without protocol-7 fallback.
 - No geometry snapshots are stored in React state. Layout observers must
   converge without a render/measurement feedback loop.
 - Native selection is browser-owned. No cross-window selection overlay or

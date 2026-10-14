@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -14,7 +15,7 @@ func TestDoctorPreservesProjectSandboxHintAndDeclarationValues(t *testing.T) {
 	home, root := t.TempDir(), t.TempDir()
 	t.Setenv("DEEPZORA_HOME", home)
 	t.Chdir(root)
-	project := "[sandbox]\nnetwork=false\n[permissions]\nallow=['Bash=echo synthetic-rule']\n"
+	project := "[sandbox]\nnetwork=false\n[permissions]\nallow=['Bash(\"echo synthetic-rule\")']\n"
 	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +27,7 @@ func TestDoctorPreservesProjectSandboxHintAndDeclarationValues(t *testing.T) {
 		t.Fatalf("ordinary declaration produced a banner warning: %v", cfg.LoadWarnings())
 	}
 	text := RenderText(Collect(Options{Config: cfg}))
-	for _, want := range []string{"sets [sandbox]", "narrow user-level Settings", "permissions.allow", "Bash=echo synthetic-rule", "approval is required"} {
+	for _, want := range []string{"sets [sandbox]", "narrow user-level Settings", "permissions.allow", strconv.Quote(`Bash("echo synthetic-rule")`), "approval is required"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q: %s", want, text)
 		}
@@ -55,7 +56,7 @@ func TestDoctorRedactsCredentialsInIgnoredProjectDeclaration(t *testing.T) {
 	root := t.TempDir()
 	t.Chdir(root)
 	const secret = "synthetic-key-9876543210"
-	project := "[permissions]\nallow=['Bash=echo api_key=" + secret + "']\n"
+	project := "[permissions]\nallow=['Bash(\"echo api_key=" + secret + "\")']\n"
 	if err := os.WriteFile(filepath.Join(root, "deepzora.toml"), []byte(project), 0o600); err != nil {
 		t.Fatal(err)
 	}

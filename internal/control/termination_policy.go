@@ -50,8 +50,8 @@ func planCancelledMessages(msgs []provider.Message, idx int, fallback provider.M
 		m := msgs[i]
 		if m.LocalOnly {
 			m.Role = provider.RoleTool
-			m.ToolCallID = provider.LocalOnlyToolID
-			m.Name = provider.LocalOnlyToolName
+			m.ToolCallID = ""
+			m.Name = ""
 			previousRecovery := m.InterruptedTurn
 			m.InterruptedTurn = nil
 			next = append(next, m)
@@ -88,8 +88,8 @@ func planCancelledMessages(msgs []provider.Message, idx int, fallback provider.M
 			local := m
 			local.Role = provider.RoleTool
 			local.LocalOnly = true
-			local.ToolCallID = provider.LocalOnlyToolID
-			local.Name = provider.LocalOnlyToolName
+			local.ToolCallID = ""
+			local.Name = ""
 			local.InterruptedTurn = nil
 			next = append(next, local)
 			localIndexes = append(localIndexes, len(next)-1)
@@ -99,8 +99,8 @@ func planCancelledMessages(msgs []provider.Message, idx int, fallback provider.M
 			local := m
 			local.LocalOnly = true
 			local.ToolCalls = []provider.ToolCall{{ID: m.ToolCallID, Name: m.Name}}
-			local.ToolCallID = provider.LocalOnlyToolID
-			local.Name = provider.LocalOnlyToolName
+			local.ToolCallID = ""
+			local.Name = ""
 			next = append(next, local)
 			localIndexes = append(localIndexes, len(next)-1)
 		}
@@ -108,8 +108,8 @@ func planCancelledMessages(msgs []provider.Message, idx int, fallback provider.M
 	}
 	if len(localIndexes) == 0 {
 		next = append(next, provider.Message{
-			Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID,
-			Name: provider.LocalOnlyToolName, LocalOnly: true,
+			Role: provider.RoleTool, ToolCallID: "",
+			Name: "", LocalOnly: true,
 		})
 		localIndexes = append(localIndexes, len(next)-1)
 	}

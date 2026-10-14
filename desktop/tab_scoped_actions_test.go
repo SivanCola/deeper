@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -122,8 +123,8 @@ func TestTabScopedSessionActionsIgnoreFocusedTab(t *testing.T) {
 	if _, err := app.ClearSessionForTab("target"); err != nil {
 		t.Fatalf("ClearSessionForTab: %v", err)
 	}
-	if err := app.RewindForTab("target", 1, "conversation"); err != nil {
-		t.Fatalf("RewindForTab: %v", err)
+	if result := app.CommitRewindForTab("target", "", 1, "conversation"); !result.OK {
+		t.Fatalf("CommitRewindForTab: %+v", result)
 	}
 	if err := app.CompactForTab("target"); err != nil {
 		t.Fatalf("CompactForTab: %v", err)
@@ -210,4 +211,8 @@ func TestForkForTabDoesNotOverrideLaterActiveTab(t *testing.T) {
 	if app.activeTabID != "other" {
 		t.Fatalf("active tab = %q, want later selection %q", app.activeTabID, "other")
 	}
+}
+
+func (c *tabScopedActionController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
 }

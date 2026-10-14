@@ -4466,11 +4466,6 @@ func loadProjectsFile() desktopProjectFile {
 	if organization, ok := loadProjectOrganizationFile(); ok {
 		return applyProjectOrganization(f, organization)
 	}
-	// Upgrade existing inline organization state immediately. The sidecar is
-	// what makes a later old-version save non-destructive.
-	if projectsFileHasOrganization(f) {
-		_ = saveProjectOrganizationFile(f)
-	}
 	return f
 }
 

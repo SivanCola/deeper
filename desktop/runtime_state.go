@@ -196,21 +196,14 @@ func controllerRuntimeState(ctrl control.SessionAPI) event.RuntimeStateSnapshot 
 	if reader, ok := ctrl.(control.PublishedRuntimeStateReader); ok {
 		return reader.PublishedRuntimeStateSnapshot()
 	}
-	// Compatibility for embedders without the committed observation boundary.
+	// Current embedders can expose the same snapshot without a publication layer.
 	if reader, ok := ctrl.(control.RuntimeStateReader); ok {
 		return reader.RuntimeStateSnapshot()
 	}
 	if ctrl == nil {
 		return event.RuntimeStateSnapshot{Phase: "idle"}
 	}
-	legacy := ctrl.RuntimeStatus()
-	phase := "idle"
-	if legacy.Running {
-		phase = "executing"
-	}
-	return event.RuntimeStateSnapshot{Phase: phase, Running: legacy.Running, PendingPrompt: legacy.PendingPrompt,
-		BackgroundJobs: legacy.BackgroundJobs, Cancellable: legacy.Cancellable, CancelRequested: legacy.CancelRequested,
-		TurnID: legacy.TurnID, TurnStatus: legacy.Status, TurnEventSeq: legacy.TurnEventSeq}
+	return event.RuntimeStateSnapshot{Phase: "unknown"}
 }
 
 func runtimeDisplayStatus(state event.RuntimeStateSnapshot, result string) string {

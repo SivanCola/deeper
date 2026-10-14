@@ -14,7 +14,7 @@ func TestReadEventTailKeepsIncompleteLineForRetry(t *testing.T) {
 	root := t.TempDir()
 	store := NewFileStore(filepath.Join(".deepzora", "tasks"))
 	now := time.Now()
-	first := TaskEvent{Timestamp: now, EventType: "state_change", TaskID: "task", State: TaskStateRunning}
+	first := TaskEvent{JobID: "task", Timestamp: now, EventType: "state_change", TaskID: "task", State: TaskStateRunning}
 	if err := store.AppendAuditEvent(context.Background(), root, first); err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func TestReadEventTailKeepsIncompleteLineForRetry(t *testing.T) {
 		t.Fatalf("first tail=%#v err=%v", tail, err)
 	}
 	checkpoint := tail.NextOffset
-	second := TaskEvent{Sequence: 2, Timestamp: now.Add(time.Second), EventType: "state_change", TaskID: "task", State: TaskStateSucceeded}
+	second := TaskEvent{JobID: "task", Sequence: 2, Timestamp: now.Add(time.Second), EventType: "state_change", TaskID: "task", State: TaskStateSucceeded}
 	line, _ := json.Marshal(second)
 	path := filepath.Join(root, ".deepzora", "tasks", "task", "events.jsonl")
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600)

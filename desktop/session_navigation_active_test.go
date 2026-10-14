@@ -218,6 +218,10 @@ func TestCanonicalNavigationPreservesActiveSource(t *testing.T) {
 	}
 }
 
+func (c *activeNavigationController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
+}
+
 func TestCanonicalNavigationBetweenTwoActiveOwners(t *testing.T) {
 	app, tab, target, _, _ := canonicalWorkspaceOpenFixture(t)
 	source := session.SessionRef{HostID: localDesktopHostID, SessionID: tab.SessionID}

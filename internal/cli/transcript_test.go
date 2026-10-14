@@ -69,7 +69,7 @@ func TestReplaySectionsRestoreInterruptedLocalOutput(t *testing.T) {
 	sections := replaySectionsFor([]provider.Message{
 		{Role: provider.RoleUser, Content: "change config"},
 		{
-			Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName,
+			Role: provider.RoleTool, ToolCallID: "", Name: "",
 			LocalOnly: true, Content: "partial answer", ReasoningContent: "checking config",
 			ToolCalls:       []provider.ToolCall{{ID: "p1", Name: "write_file"}},
 			InterruptedTurn: &provider.InterruptedTurnRecovery{Pending: true},

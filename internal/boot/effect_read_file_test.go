@@ -128,7 +128,7 @@ models = ["x"]
 
 	ctrl, err := Build(context.Background(), Options{
 		Sink:            event.Discard,
-		PermissionAllow: []string{"Bash(git *)"},
+		PermissionAllow: []string{"Bash(git:*)"},
 	})
 	if err != nil {
 		t.Fatalf("Build: %v", err)

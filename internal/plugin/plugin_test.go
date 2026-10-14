@@ -1300,7 +1300,7 @@ func TestHelperProcess(t *testing.T) {
 				caps["prompts"] = map[string]any{}
 			}
 			result = map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "mock", "version": "0"},
 				"capabilities":    caps,
 			}

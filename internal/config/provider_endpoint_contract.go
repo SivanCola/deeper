@@ -96,14 +96,12 @@ func ProviderEffectiveRequestURL(e *ProviderEntry) string {
 	return ProviderRequestURL(e.Kind, e.BaseURL)
 }
 
-// CatalogForProviderEntry resolves metadata for installed connections. Falling
-// back to Name keeps hidden legacy presets useful without listing them for new
-// connections.
+// CatalogForProviderEntry resolves metadata by the persisted preset identity.
 func CatalogForProviderEntry(e *ProviderEntry) (string, ProviderCatalog, bool) {
 	if e == nil {
 		return "", ProviderCatalog{}, false
 	}
-	ids := []string{strings.TrimSpace(e.PresetID), strings.TrimSpace(e.Name)}
+	ids := []string{strings.TrimSpace(e.PresetID)}
 	for _, id := range ids {
 		if id == "" {
 			continue

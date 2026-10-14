@@ -18,10 +18,7 @@ const (
 
 var desktopProjectOrganizationFileMu sync.Mutex
 
-// Project-tree organization lives in a sidecar older Deepzora builds do not
-// know about and therefore cannot rewrite. desktop-projects.json retains the
-// inline fields for one-release interoperability, while this file is the
-// durable source when a user temporarily downgrades and the old build saves.
+// Project-tree organization has one durable source, separate from project metadata.
 type desktopProjectOrganization struct {
 	Root               string         `json:"root,omitempty"`
 	ManualTopicOrder   bool           `json:"manualTopicOrder,omitempty"`
@@ -36,18 +33,6 @@ type desktopProjectOrganizationFileData struct {
 	Version  int                          `json:"version"`
 	Global   desktopProjectOrganization   `json:"global"`
 	Projects []desktopProjectOrganization `json:"projects"`
-}
-
-func projectsFileHasOrganization(f desktopProjectFile) bool {
-	if f.GlobalManualTopicOrder || f.GlobalManualSessionOrder || len(f.GlobalSessionOrder) > 0 || len(f.GlobalGroups) > 0 || f.GlobalGroupsRevision > 0 {
-		return true
-	}
-	for _, project := range f.Projects {
-		if project.ManualTopicOrder || project.ManualSessionOrder || len(project.SessionOrder) > 0 || len(project.Groups) > 0 || project.GroupsRevision > 0 {
-			return true
-		}
-	}
-	return false
 }
 
 func organizationFromProjectsFile(f desktopProjectFile) desktopProjectOrganizationFileData {
@@ -154,7 +139,7 @@ func loadProjectOrganizationFile() (desktopProjectOrganizationFileData, bool) {
 		return desktopProjectOrganizationFileData{}, false
 	}
 	var organization desktopProjectOrganizationFileData
-	if json.Unmarshal(b, &organization) != nil || organization.Version < 1 || organization.Version > desktopProjectOrganizationVersion {
+	if json.Unmarshal(b, &organization) != nil || organization.Version != desktopProjectOrganizationVersion {
 		return desktopProjectOrganizationFileData{}, false
 	}
 	if organization.Global.Groups == nil {

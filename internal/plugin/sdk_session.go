@@ -108,10 +108,6 @@ type sdkSessionTransport struct {
 	lastStartupStderr string
 	endpointFactory   func(context.Context) (sdkEndpoint, error)
 	wg                sync.WaitGroup
-
-	legacyElicitationMu   sync.Mutex
-	legacyElicitationNext uint64
-	legacyElicitation     map[uint64]legacyElicitationCall
 }
 
 var defaultSessionReconnectDelays = []time.Duration{
@@ -154,12 +150,12 @@ func newSDKSessionTransport(ctx context.Context, s Spec, profile HostProfile) (*
 		if strings.TrimSpace(s.Command) == "" {
 			return nil, fmt.Errorf("stdio plugin %q: command is required", s.Name)
 		}
-	case "streamable-http", "sse":
+	case "streamable-http":
 		if err := validateMCPURL(s.Name, typeName, s.URL); err != nil {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("unknown transport type %q (want stdio|http|sse)", s.Type)
+		return nil, fmt.Errorf("unknown transport type %q (want stdio|http)", s.Type)
 	}
 
 	var oauth *mcpOAuthClient
@@ -317,7 +313,7 @@ func (t *sdkSessionTransport) build(ctx context.Context, generation uint64) (*ma
 
 	capabilities := &mcpsdk.ClientCapabilities{}
 	if len(mcpRoots(t.spec.WorkspaceRoot)) > 0 {
-		//nolint:staticcheck // Legacy MCP servers still require roots during the SDK deprecation window.
+		//nolint:staticcheck // Current servers can still request workspace roots through the SDK.
 		capabilities.RootsV2 = &mcpsdk.RootCapabilities{ListChanged: false}
 	}
 	profileCaps := t.profile.Capabilities()
@@ -358,7 +354,7 @@ func (t *sdkSessionTransport) build(ctx context.Context, generation uint64) (*ma
 		client.AddSendingMiddleware(asyncStreamableHTTPSubscriptions)
 	}
 	for _, root := range mcpRoots(t.spec.WorkspaceRoot) {
-		//nolint:staticcheck // Preserve the existing workspace-root contract for legacy MCP servers.
+		//nolint:staticcheck // Preserve the current server workspace-context feature.
 		client.AddRoots(&mcpsdk.Root{URI: root.URI, Name: root.Name})
 	}
 
@@ -390,6 +386,11 @@ func (t *sdkSessionTransport) build(ctx context.Context, generation uint64) (*ma
 	if result := session.InitializeResult(); result != nil {
 		protocol = result.ProtocolVersion
 	}
+	if protocol < "2026-07-28" {
+		_ = session.Close()
+		endpoint.close()
+		return nil, fmt.Errorf("MCP protocol %q is unsupported; require 2026-07-28 or newer", protocol)
+	}
 	return &managedMCPSession{
 		generation: generation,
 		session:    session,
@@ -407,8 +408,7 @@ func (t *sdkSessionTransport) setStateIfBuilding(generation uint64, state Sessio
 }
 
 // handleElicitation answers server-initiated elicitation. MCP 2026 middleware
-// preserves the tools/call context; legacy push requests use the fail-closed,
-// unambiguous active-call registry. Without one exact broker the request is
+// preserves the tools/call context. Without one exact broker the request is
 // cancelled — the model must never guess an answer or cross tabs.
 func (t *sdkSessionTransport) handleElicitation(ctx context.Context, req *mcpsdk.ElicitRequest) (*mcpsdk.ElicitResult, error) {
 	if ctx == nil {
@@ -416,22 +416,9 @@ func (t *sdkSessionTransport) handleElicitation(ctx context.Context, req *mcpsdk
 	}
 	broker := mcpinteraction.FromContext(ctx)
 	decisionCtx := ctx
-	cleanup := func() {}
 	if broker == nil {
-		legacyBroker, callCtx, ok := t.unambiguousLegacyElicitation()
-		if !ok {
-			return &mcpsdk.ElicitResult{Action: mcpinteraction.ActionCancel}, nil
-		}
-		broker = legacyBroker
-		var cancel context.CancelFunc
-		decisionCtx, cancel = context.WithCancel(callCtx)
-		stop := context.AfterFunc(ctx, cancel)
-		cleanup = func() {
-			stop()
-			cancel()
-		}
+		return &mcpsdk.ElicitResult{Action: mcpinteraction.ActionCancel}, nil
 	}
-	defer cleanup()
 	interactReq := mcpinteraction.Request{
 		Server:        t.name,
 		Mode:          req.Params.Mode,

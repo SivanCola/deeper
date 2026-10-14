@@ -79,7 +79,7 @@ globalThis.MouseEvent = dom.window.MouseEvent;
       code: { type: "string", title: "Device code", minLength: 4, maxLength: 8 },
       count: { type: "integer", minimum: 1, maximum: 5, default: 2 },
       ok: { type: "boolean" },
-      flavor: { enum: ["vanilla", "mint"], enumNames: ["Vanilla bean", "Fresh mint"] },
+      flavor: { oneOf: [{const: "vanilla", title: "Vanilla bean"}, {const: "mint", title: "Fresh mint"}] },
       region: { type: "string", oneOf: [{ const: "us", title: "United States" }, { const: "sg", title: "Singapore" }] },
       scopes: {
         type: "array",
@@ -91,19 +91,21 @@ globalThis.MouseEvent = dom.window.MouseEvent;
       email: { type: "string", format: "email" },
     },
   });
-  ok(fields.length === 7, "old and new flat schema properties become fields");
+  ok(fields.length === 7, "current flat schema properties become fields");
   const code = fields.find((f) => f.key === "code");
   ok(code?.kind === "string" && code.required && code.minLength === 4, "string field carries required + bounds");
   const count = fields.find((f) => f.key === "count");
   ok(count?.kind === "integer" && count.defaultValue === 2 && count.maximum === 5, "integer field carries default + max");
   ok(fields.find((f) => f.key === "ok")?.kind === "boolean", "boolean field detected");
-  ok(fields.find((f) => f.key === "flavor")?.options?.[0].label === "Vanilla bean", "legacy enumNames labels stay compatible");
+  ok(fields.find((f) => f.key === "flavor")?.options?.[0].label === "Vanilla bean", "current oneOf titles render");
   ok(fields.find((f) => f.key === "region")?.options?.[1].label === "Singapore", "2025-11-25 titled single-select is normalized");
   const scopes = fields.find((f) => f.key === "scopes");
   ok(scopes?.kind === "multi-enum" && Array.isArray(scopes.defaultValue) && scopes.defaultValue[0] === "read", "2025-11-25 titled multi-select carries defaults");
   ok(fields.find((f) => f.key === "email")?.format === "email", "string formats reach the renderer");
   const nested = parseStructuredSchema({ type: "object", properties: { account: { type: "object" } } });
   ok(nested.unsupported && nested.fields[0]?.kind === "unsupported", "nested schemas fail closed instead of becoming text");
+  const retired = parseStructuredSchema({ type: "object", properties: {choice: {enum: ["old"], enumNames: ["Old"]}} });
+  ok(retired.unsupported && retired.fields[0]?.kind === "unsupported", "retired enum/enumNames format is rejected");
   ok(normalizeStructuredSchema(null).length === 0, "null schema yields no fields");
   ok(normalizeStructuredSchema({}).length === 0, "schema without properties yields no fields");
 }
@@ -119,7 +121,7 @@ globalThis.MouseEvent = dom.window.MouseEvent;
       age: { type: "integer" },
       pi: { type: "number" },
       ok: { type: "boolean", default: true },
-      roles: { type: "array", items: { type: "string", enum: ["reader", "writer"] }, minItems: 1 },
+      roles: { type: "array", items: { type: "string", anyOf: [{const: "reader"}, {const: "writer"}] }, minItems: 1 },
     },
   });
   const defaults = initialStructuredValues(fields);

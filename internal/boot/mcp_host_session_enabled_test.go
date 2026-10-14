@@ -36,7 +36,7 @@ func mcpHostSessionStub(t *testing.T, name string, calls *atomic.Int32) *httptes
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2024-11-05",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": name, "version": "1"},
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 			}

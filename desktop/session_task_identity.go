@@ -5,8 +5,8 @@ import (
 	"deepzora/internal/control"
 )
 
-// controllerTaskSessionID never derives a canonical identity from its empty
-// compatibility path. Legacy controllers keep their persisted branch IDs.
+// Canonical controllers use SessionRef. Current internal Agent controllers
+// use their DAG branch identity; an unbound canonical controller has no fallback.
 func controllerTaskSessionID(ctrl control.SessionAPI) string {
 	if ctrl == nil {
 		return ""

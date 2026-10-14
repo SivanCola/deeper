@@ -317,7 +317,7 @@ func forwardServe(ctx context.Context, client *remote.Client, remoteAddr string,
 	if err != nil {
 		return "", err
 	}
-	return remoteServeBrowserURL(ctx, bound, token), nil
+	return remoteServeBrowserURL(bound, token), nil
 }
 
 func normalizeBind(bind string) string {

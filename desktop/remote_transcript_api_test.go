@@ -308,7 +308,7 @@ func TestRemoteSessionHistoryWindowRequiresCapability(t *testing.T) {
 	// all, so a window request must not reach the network.
 	app, tab := remoteTranscriptFixture(server)
 	tab.session.sessionID = "canonical"
-	if page, err := app.RemoteSessionHistoryWindowForTab(tab.id, session.HistoryWindowRequest{Anchor: "newest"}); err != nil || page.Status != session.HistoryWindowUnsupported {
+	if page, err := app.RemoteSessionHistoryWindowForTab(tab.id, session.HistoryWindowRequest{Anchor: "newest"}); err == nil {
 		t.Fatalf("window read without canonical history = %+v, %v", page, err)
 	}
 
@@ -317,7 +317,7 @@ func TestRemoteSessionHistoryWindowRequiresCapability(t *testing.T) {
 	// status and still no round trip, so no service fakes a bounded window.
 	tab.capabilities = map[string]bool{serveCapabilitySessionContentV1: true}
 	page, err := app.RemoteSessionHistoryWindowForTab(tab.id, session.HistoryWindowRequest{Anchor: "newest"})
-	if err != nil || page.Status != session.HistoryWindowUnsupported {
+	if err == nil {
 		t.Fatalf("unadvertised window = %+v, %v", page, err)
 	}
 	field, err := app.RemoteSessionMessageFieldForTab(tab.id, "m1", 0, "content", 0, 64)

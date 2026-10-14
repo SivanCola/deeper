@@ -44,7 +44,7 @@ func gatedMCPServer(t *testing.T) (url string, started <-chan struct{}, release 
 			case <-r.Context().Done():
 				return
 			}
-			result = map[string]any{"protocolVersion": "2025-03-26", "serverInfo": map[string]any{"name": "docs", "version": "1"}}
+			result = map[string]any{"protocolVersion": "2026-07-28", "serverInfo": map[string]any{"name": "docs", "version": "1"}}
 		case "tools/list":
 			result = map[string]any{"tools": []map[string]any{{"name": "search", "description": "Search.", "inputSchema": map[string]any{"type": "object"}}}}
 		}

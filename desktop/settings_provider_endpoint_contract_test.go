@@ -9,7 +9,7 @@ import (
 
 func TestProviderViewCarriesHiddenCatalogIdentity(t *testing.T) {
 	view := providerViewFromEntry(config.ProviderEntry{Models: []string{"deepseek-v4-flash"}, Default: "deepseek-v4-flash",
-		Name: "deepseek-anthropic", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic", Model: "deepseek-v4-flash",
+		Name: "deepseek-anthropic", PresetID: "deepseek-anthropic", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic", Model: "deepseek-v4-flash",
 	}, false, true)
 	if view.PresetID != "deepseek-anthropic" || view.Catalog == nil {
 		t.Fatalf("catalog identity missing: %+v", view)

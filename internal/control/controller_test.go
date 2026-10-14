@@ -756,13 +756,13 @@ func TestResumeRestoresCurrentGoalFromSidecar(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, ".deepzora", "autoresearch", taskID, "logs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "task_spec.json"), []byte(`{"task_id":"investigate-runtime-resume","goal":"investigate runtime resume","allowed_operations":{"write":true},"success_criteria":[{"id":"criterion-1","description":"resume keeps Goal active","required":true}]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "task_spec.json"), []byte(`{"task_id":"investigate-runtime-resume","job_id":"investigate-runtime-resume","goal":"investigate runtime resume","allowed_operations":{"write":true},"success_criteria":[{"id":"criterion-1","description":"resume keeps Goal active","required":true}]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "progress.json"), []byte(`{"task_id":"investigate-runtime-resume","iteration":2,"current_direction":"verify resume","stale_count":1,"pivot_count":0,"updated_at":"2026-06-30T00:00:00Z"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "progress.json"), []byte(`{"task_id":"investigate-runtime-resume","job_id":"investigate-runtime-resume","iteration":2,"current_direction":"verify resume","stale_count":1,"pivot_count":0,"updated_at":"2026-06-30T00:00:00Z"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "directions_tried.json"), []byte(`{"task_id":"investigate-runtime-resume","directions":[]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "directions_tried.json"), []byte(`{"task_id":"investigate-runtime-resume","job_id":"investigate-runtime-resume","directions":[]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, ".deepzora", "autoresearch", taskID, "state", "findings.jsonl"), nil, 0o644); err != nil {
@@ -2486,7 +2486,7 @@ func TestRegisterMCPServerOnDemandDefersConnectionUntilFirstUse(t *testing.T) {
 		case "initialize":
 			initializes.Add(1)
 			result = map[string]any{
-				"protocolVersion": "2025-03-26",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "on-demand", "version": "1"},
 			}
 		case "tools/list":
@@ -2623,7 +2623,7 @@ command = "project-only"
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2025-03-26",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "global-docs", "version": "1"},
 			}
 		case "tools/list":
@@ -2701,7 +2701,7 @@ func TestConnectConfiguredProjectMCPIsTrustedByDefault(t *testing.T) {
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2025-03-26",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "project-docs", "version": "1"},
 			}
 		case "tools/list":
@@ -2788,7 +2788,7 @@ func TestConnectMCPServerAppliesConfiguredCallTimeouts(t *testing.T) {
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2025-03-26",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "timeout-test", "version": "1"},
 			}
 		case "tools/list":

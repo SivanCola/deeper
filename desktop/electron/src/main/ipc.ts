@@ -198,14 +198,6 @@ export function registerRendererIpc(deps: RendererIpcDeps): void {
     if (!isAllowedCommand(deps.contract, method)) {
       throw new RpcError(-32601, `-32601 method not found: ${typeof method === "string" ? method : typeof method}`);
     }
-    // Older renderers reached native title-bar controls through generated Go
-    // bindings. Keep those command names compatible while the Electron shell
-    // owns window lifetime and can accept repeated close requests after the Go
-    // service has begun shutting down.
-    if (method === "MinimiseMainWindow") return deps.window.minimise();
-    if (method === "ToggleMaximiseMainWindow") return deps.window.toggleMaximise();
-    if (method === "IsMainWindowMaximised") return deps.window.isMaximised();
-    if (method === "CloseMainWindow") return deps.window.close();
     return deps.invoke(method, Array.isArray(args) ? args : []);
   });
   handle(IPC.serviceStateGet, () => deps.serviceState());

@@ -441,8 +441,10 @@ func TestSubmitEntryPointsRejectEmptyProviderInput(t *testing.T) {
 		name string
 		call func() error
 	}{
-		{name: "plain", call: func() error { return app.SubmitToTab("missing", " \n\t ") }},
-		{name: "display", call: func() error { return app.SubmitDisplayToTab("missing", "visible prompt", " ") }},
+		{name: "plain", call: func() error { return app.SubmitToTabWithID("missing", " \n\t ", newSessionRuntimeID("test-submit")) }},
+		{name: "display", call: func() error {
+			return app.SubmitDisplayToTabWithID("missing", "visible prompt", " ", newSessionRuntimeID("test-submit"))
+		}},
 		{name: "invocations", call: func() error {
 			return app.SubmitInvocationsToTabWithID("missing", "/skill visible", "", nil, "empty-invocation")
 		}},

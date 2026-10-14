@@ -263,9 +263,6 @@ func (c *Config) SetDesktopLayoutStyle(style string) error {
 	case "creation":
 		c.Desktop.LayoutStyle = "creation"
 	case "", "workbench":
-		// "classic" is retired and stores as workbench, matching the read path
-		// in normalizeDesktopLayoutStyle. An older caller that still sends it
-		// gets the surviving style rather than an error.
 		c.Desktop.LayoutStyle = "workbench"
 	default:
 		return fmt.Errorf("desktop layout style %q: must be workbench|creation", style)
@@ -1348,12 +1345,12 @@ func validatePlugin(e PluginEntry) error {
 		if strings.TrimSpace(e.Command) == "" {
 			return fmt.Errorf("plugin %q: command is required for a stdio server", e.Name)
 		}
-	case "http", "sse", "streamable-http":
+	case "http", "streamable-http":
 		if strings.TrimSpace(e.URL) == "" {
 			return fmt.Errorf("plugin %q: url is required for a %s server", e.Name, e.Type)
 		}
 	default:
-		return fmt.Errorf("plugin %q: unknown type %q (want stdio|http|sse)", e.Name, e.Type)
+		return fmt.Errorf("plugin %q: unknown type %q (want stdio|http)", e.Name, e.Type)
 	}
 	return nil
 }

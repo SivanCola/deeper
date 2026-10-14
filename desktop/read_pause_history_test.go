@@ -25,7 +25,7 @@ func TestReadPauseSurvivesColdHistorySlice(t *testing.T) {
 	_, tab.SessionPath = saveHistorySliceSession(t, dir, "read-pause.jsonl", []provider.Message{
 		{Role: provider.RoleUser, Content: "read all"},
 		{Role: provider.RoleAssistant, Content: "candidate"},
-		{Role: provider.RoleTool, LocalOnly: true, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName, ReadPause: &provider.ReadPause{ID: "run", Reads: []provider.PausedRead{{Path: "fixture.txt", Reason: "no_progress"}}}},
+		{Role: provider.RoleTool, LocalOnly: true, ToolCallID: "", Name: "", ReadPause: &provider.ReadPause{ID: "run", Reads: []provider.PausedRead{{Path: "fixture.txt", Reason: "no_progress"}}}},
 	})
 	page := app.HistorySliceForTab(tab.ID, HistorySliceRequest{Turns: 12})
 	if page.Error != "" {

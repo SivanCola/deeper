@@ -70,7 +70,7 @@ func TestBashSubjectRequiresExplicitApproval(t *testing.T) {
 
 func TestPowerShellCmdletDenyPrefixIsCaseInsensitive(t *testing.T) {
 	p := New("allow", nil, nil, []string{
-		"Set-Content",
+		"Bash(Set-Content:*)",
 		"Bash(Add-Content:*)",
 		"Bash(Out-File:*)",
 	})
@@ -103,15 +103,15 @@ func TestPolicyDynamicBashFollowsPresetAndExplicitRules(t *testing.T) {
 		{name: "dynamic opt-in keeps deny precedence", p: New("allow", nil, nil, []string{"Bash(git*)"}), want: Deny},
 		{name: "bare allow remains bounded by sandbox", p: New("ask", []string{"Bash"}, nil, nil), want: Ask},
 		{name: "ordinary glob does not grant an indirect command", p: New("ask", []string{"Bash(git*)"}, nil, nil), want: Ask},
-		{name: "legacy prefix does not grant an indirect command", p: New("ask", []string{"Bash(git *)"}, nil, nil), want: Ask},
+		{name: "legacy prefix does not grant an indirect command", p: New("ask", []string{"Bash(git:*)"}, nil, nil), want: Ask},
 		{name: "session glob cannot bypass", p: New("ask", nil, nil, nil).WithSessionAllow([]string{"Bash(git*)"}), want: Ask},
 		{name: "explicit ask remains ask", p: New("allow", []string{"Bash"}, []string{"Bash(git*)"}, nil), want: Ask},
 		{name: "raw deny wins", p: New("allow", []string{"Bash"}, nil, []string{"Bash(git*)"}), want: Deny},
 		{name: "scoped raw deny wins", p: New("allow", []string{"Bash"}, nil, []string{"Bash(git status:*)"}), want: Deny},
 		{name: "scoped raw ask remains ask", p: New("allow", []string{"Bash"}, []string{"Bash(git status:*)"}, nil), want: Ask},
-		{name: "literal allow matches exactly", p: New("ask", []string{"Bash=" + command}, nil, nil), want: Allow},
+		{name: "literal allow matches exactly", p: New("ask", []string{ExactRule("Bash", command)}, nil, nil), want: Allow},
 		{name: "legacy exact allow matches exactly", p: New("ask", []string{"Bash(" + command + ")"}, nil, nil), want: Allow},
-		{name: "literal session grant matches exactly", p: New("ask", nil, []string{"Bash(git*)"}, nil).WithSessionAllow([]string{"Bash=" + command}), want: Allow},
+		{name: "literal session grant matches exactly", p: New("ask", nil, []string{"Bash(git*)"}, nil).WithSessionAllow([]string{ExactRule("Bash", command)}), want: Allow},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -167,7 +167,7 @@ func TestPolicyExactOnlyBashUsesFallbackWithoutReusableAllow(t *testing.T) {
 		if got := New("deny", []string{"Bash"}, nil, nil).DecideSubject("bash", false, command); got != Deny {
 			t.Errorf("deny fallback for %q = %v, want Deny", command, got)
 		}
-		if got := New("ask", []string{"Bash=" + command}, nil, nil).DecideSubject("bash", false, command); got != Allow {
+		if got := New("ask", []string{ExactRule("Bash", command)}, nil, nil).DecideSubject("bash", false, command); got != Allow {
 			t.Errorf("exact literal for %q = %v, want Allow", command, got)
 		}
 	}
@@ -179,7 +179,7 @@ func TestPolicyStaticBashRulesRemainReusable(t *testing.T) {
 		command string
 	}{
 		{rule: "Bash(git status:*)", command: "git status --short"},
-		{rule: "Bash(git *)", command: "git status --short"},
+		{rule: "Bash(git:*)", command: "git status --short"},
 		{rule: "Bash(git*)", command: "git status --short"},
 		{rule: "Bash", command: "git status --short"},
 	}
@@ -196,16 +196,16 @@ func TestDynamicBashRuleMatchingAndCoverage(t *testing.T) {
 	if RuleMatchesString("Bash(git*)", "bash", command) {
 		t.Fatal("broad session allow matched dynamic command")
 	}
-	if !RuleMatchesString("Bash="+command, "bash", command) {
+	if !RuleMatchesString(ExactRule("Bash", command), "bash", command) {
 		t.Fatal("literal session allow did not match exact dynamic command")
 	}
-	if RuleCoversString("Bash(git*)", "Bash="+command) {
+	if RuleCoversString("Bash(git*)", ExactRule("Bash", command)) {
 		t.Fatal("broad glob covered dynamic literal rule")
 	}
-	if RuleCoversString("Bash", "Bash="+command) {
+	if RuleCoversString("Bash", ExactRule("Bash", command)) {
 		t.Fatal("bare Bash rule covered dynamic literal rule")
 	}
-	if !RuleCoversString("Bash="+command, "Bash="+command) {
+	if !RuleCoversString(ExactRule("Bash", command), ExactRule("Bash", command)) {
 		t.Fatal("identical dynamic literal rules were not deduplicated")
 	}
 	if !RuleCoversString("Bash", "Bash") {
@@ -220,7 +220,7 @@ func TestDynamicBashRememberedAsLiteral(t *testing.T) {
 		`eval "touch /tmp/x"`,
 	}
 	for _, command := range commands {
-		want := "Bash=" + command
+		want := ExactRule("Bash", command)
 		if got := RememberRuleForScope("bash", command); got != want {
 			t.Errorf("RememberRuleForScope(%q) = %q, want %q", command, got, want)
 		}

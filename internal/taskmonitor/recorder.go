@@ -164,7 +164,7 @@ func (r *TaskRecorder) RecordStart(id, kind, label string) {
 	}
 	_ = r.store.AppendAuditEvent(ctx, r.projectDir, TaskEvent{
 		Timestamp: now, EventType: "state_change",
-		TaskID: monitorID, SessionID: sessionID, State: TaskStateRunning,
+		TaskID: monitorID, JobID: id, SessionID: sessionID, State: TaskStateRunning,
 		RuntimeState: RuntimeStateAlive,
 	})
 	r.startHeartbeat(monitorID)
@@ -210,7 +210,7 @@ func (r *TaskRecorder) RecordDone(id string, st jobs.Status, jobErr error) {
 		}
 		_ = r.store.AppendAuditEvent(ctx, r.projectDir, TaskEvent{
 			Timestamp: now, EventType: "state_change",
-			TaskID: monitorID, SessionID: cur.SessionID, State: target,
+			TaskID: monitorID, JobID: cur.JobID, SessionID: cur.SessionID, State: target,
 			RuntimeState: RuntimeStateExited,
 			ErrorCode:    cur.ErrorCode, ErrorSummary: cur.ErrorSummary,
 		})

@@ -20,7 +20,7 @@ func TestCollectQualityProducesPublicSafeSummary(t *testing.T) {
 		`{"role":"user","content":"fix /private/example/repo and keep ` + secret + `"}`,
 		`{"role":"assistant","tool_calls":[{"id":"edit-1","name":"edit_file","arguments":"{\"path\":\"/private/example/repo/app.go\"}"}]}`,
 		`{"role":"tool","tool_call_id":"edit-1","name":"edit_file","content":"updated ` + secret + `"}`,
-		`{"role":"assistant","reasoning_content":"verify the change","tool_calls":[{"id":"test-1","name":"bash","arguments":"{\"command\":\"go test ./...\"}"}]}`,
+		`{"role":"assistant","reasoning_content":"verify the change","reasoning_state":"complete","tool_calls":[{"id":"test-1","name":"bash","arguments":"{\"command\":\"go test ./...\"}"}]}`,
 		`{"role":"tool","tool_call_id":"test-1","name":"bash","content":"ok"}`,
 		`{"role":"user","content":"<compaction-summary>\nprivate summary ` + secret + `"}`,
 		`{"role":"assistant","content":"done"}`,

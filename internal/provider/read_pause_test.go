@@ -8,7 +8,7 @@ import (
 
 func TestReadPauseRoundTripAndProviderIsolation(t *testing.T) {
 	pause := &ReadPause{ID: "turn-receipt", Reads: []PausedRead{{ReadID: "r", Path: "file", Reason: "page_budget"}}}
-	msg := Message{Role: RoleTool, ToolCallID: LocalOnlyToolID, Name: LocalOnlyToolName, LocalOnly: true, ReadPause: pause}
+	msg := Message{Role: RoleTool, ToolCallID: "", Name: "", LocalOnly: true, ReadPause: pause}
 	data, err := json.Marshal(msg)
 	if err != nil {
 		t.Fatal(err)

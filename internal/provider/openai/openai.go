@@ -750,10 +750,7 @@ func (c *client) buildRequest(req provider.Request) chatRequest {
 			wire.Function.Arguments = tc.Arguments
 			if tc.ThoughtSignature != "" && usesGeminiThoughtSignatures(c.baseURL, c.model) {
 				// Gemini's current OpenAI compatibility schema carries the
-				// opaque signature beside the function payload. Keep the
-				// legacy function.thought_signature field decode-only below so
-				// older gateways remain readable without sending an unknown
-				// function parameter to current Google endpoints.
+				// opaque signature beside the function payload.
 				wire.ExtraContent = &chatToolCallExtraContent{}
 				wire.ExtraContent.Google.ThoughtSignature = tc.ThoughtSignature
 			}
@@ -1209,19 +1206,15 @@ type chatToolCall struct {
 	Function     struct {
 		Name      string `json:"name"`
 		Arguments string `json:"arguments"`
-		// Decode compatibility for the early Gemini OpenAI shape. New requests
-		// use extra_content.google.thought_signature.
-		ThoughtSignature string `json:"thought_signature,omitempty"`
 	} `json:"function"`
 }
 
-// thoughtSignature also accepts the early Gemini shape that placed the field in
-// function, still emitted by some compatibility gateways and older sessions.
+// thoughtSignature reads the current Gemini tool-call proof.
 func (tc chatToolCall) thoughtSignature() string {
 	if tc.ExtraContent != nil && tc.ExtraContent.Google.ThoughtSignature != "" {
 		return tc.ExtraContent.Google.ThoughtSignature
 	}
-	return tc.Function.ThoughtSignature
+	return ""
 }
 
 type chatToolCallExtraContent struct {

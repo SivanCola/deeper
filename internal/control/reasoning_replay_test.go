@@ -65,7 +65,7 @@ func TestInterruptedPartialBatchKeepsCompletedAndUnknownSeparate(t *testing.T) {
 	if r == nil || len(r.CompletedTools) != 1 || r.CompletedTools[0].ID != "done" || len(r.UnknownTools) != 1 || r.UnknownTools[0].ID != "uncertain" || len(r.NotStartedTools) != 1 {
 		t.Fatalf("recovery=%+v", r)
 	}
-	if msgs[2].ReasoningSignature != "original-proof" || msgs[2].ToolCalls[0].Arguments == "" {
+	if len(msgs[2].ThinkingBlocks) != 1 || msgs[2].ThinkingBlocks[0].Signature != "original-proof" || msgs[2].ToolCalls[0].Arguments == "" {
 		t.Fatalf("canonical evidence lost: %+v", msgs[2])
 	}
 }

@@ -337,10 +337,7 @@ func (a *App) RemoteSessionHistoryWindowForTab(tabID string, req session.History
 	supportedWindow := tab != nil && tab.capabilities[serveCapabilityHistoryWindowV1]
 	a.remoteTabMu.Unlock()
 	if !supportedWindow {
-		// A typed status, not an error: an older Serve is a capability answer
-		// the reader keeps working against (protocol-7 pages) rather than a
-		// failure, and the string carries the upgrade hint to the surface.
-		return session.HistoryWindowPage{Status: session.HistoryWindowUnsupported, Messages: []session.PersistentMessage{}}, nil
+		return session.HistoryWindowPage{}, fmt.Errorf("remote service requires history-window-v1; install a matching Deepzora service")
 	}
 	query := make(url.Values)
 	query.Set("anchor", req.Anchor)

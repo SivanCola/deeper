@@ -49,7 +49,7 @@ func (a *App) BeginSessionHistoryReadForTab(tabID string) (SessionHistoryReadHan
 	path, head, id, generation := tab.currentSessionPath(), tab.SessionHeadID, tab.SessionID, tab.SessionGeneration
 	a.mu.RUnlock()
 	reader := &desktopHistoryReader{tab: tab, tabID: tabID, path: path, head: head, identity: id,
-		handle: SessionHistoryReadHandle{ID: newSessionRuntimeID("history"), StorageBackend: "legacy", SessionGeneration: generation, Capabilities: []string{"history-read-binding-v1"}}}
+		handle: SessionHistoryReadHandle{ID: newSessionRuntimeID("history"), StorageBackend: "agent-dag", SessionGeneration: generation, Capabilities: []string{"history-read-binding-v1"}}}
 	ctx, cancel := context.WithCancel(a.bootContext())
 	reader.ctx, reader.release = ctx, cancel
 	if id != "" {

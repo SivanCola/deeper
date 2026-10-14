@@ -420,7 +420,7 @@ func TestRunRecoveryKeepsCompletedToolPairAndSummarizesChangedFile(t *testing.T)
 	}}})
 	session.Add(provider.Message{Role: provider.RoleTool, ToolCallID: "done-1", Name: "write_file", Content: "wrote config.json"})
 	session.Add(provider.Message{
-		Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID, Name: provider.LocalOnlyToolName, LocalOnly: true,
+		Role: provider.RoleTool, ToolCallID: "", Name: "", LocalOnly: true,
 		ReasoningContent: "unsafe partial reasoning",
 		InterruptedTurn: &provider.InterruptedTurnRecovery{
 			Pending: true,

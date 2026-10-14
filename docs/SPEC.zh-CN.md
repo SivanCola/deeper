@@ -229,7 +229,7 @@ type Policy struct { Mode Decision; Allow, Ask, Deny []Rule }
 func (p Policy) Decide(toolName string, readOnly bool, args json.RawMessage) Decision
 ```
 
-- rule 可以是 `Tool` 或 `Tool(specifier)`，例如 `Bash(go test:*)`、`Edit(docs/**)`；`Bash=<literal>` 是整条 Bash 命令的精确授权格式，其中 glob 与 Shell 元字符都按普通字符匹配。
+- rule 可以是 `Tool` 或 `Tool(specifier)`，例如 `Bash(go test:*)`、`Edit(docs/**)`；`Bash("<literal>")` 使用 JSON 引号，是整条 Bash 命令的精确授权格式，其中 glob 与 Shell 元字符都按普通字符匹配。
 - 优先级为 `deny > ask > allow > fallback`；只读工具 fallback 为 Allow，写工具 fallback 使用 `Mode`。
 - 交互授权只有单次允许、本会话允许当前范围和拒绝；会话授权绑定具体命令、规范目录或服务器能力，不写入项目配置。
 - 非交互 `deepzora run` 与无头子智能体没有授权界面：当前预设不覆盖的操作失败关闭。显式 `deny` 在所有预设下都不可绕过。

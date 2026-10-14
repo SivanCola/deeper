@@ -318,9 +318,7 @@ func normalizeThemeStyle(style string) string {
 	}
 }
 
-// The retired "classic" style normalizes to workbench, like any other value
-// this build does not know, so a config written before the style was removed
-// keeps working and the Go side and the UI agree on what it means.
+// normalizeDesktopLayoutStyle supplies the current default after load validation.
 func normalizeDesktopLayoutStyle(style string) string {
 	switch strings.ToLower(strings.TrimSpace(style)) {
 	case "creation":
@@ -388,9 +386,7 @@ func (c *Config) DesktopTerminalTheme() string {
 	}
 }
 
-// DesktopLayoutStyle defaults to workbench. The retired "classic" value is
-// normalized on read rather than migrated to disk: nothing behaves differently
-// for it, so there is no rewritten value worth persisting.
+// DesktopLayoutStyle defaults to workbench.
 func (c *Config) DesktopLayoutStyle() string {
 
 	return normalizeDesktopLayoutStyle(c.Desktop.LayoutStyle)

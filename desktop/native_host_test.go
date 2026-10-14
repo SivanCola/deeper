@@ -276,9 +276,9 @@ func TestConfirmActionMapsButtonsThroughHost(t *testing.T) {
 
 func TestWindowControlsWithoutHostAreNoops(t *testing.T) {
 	app := &App{ctx: context.Background()}
-	app.MinimiseMainWindow()
-	app.ToggleMaximiseMainWindow()
-	if app.IsMainWindowMaximised() {
+	app.nativeHost().MinimiseWindow(app.ctx)
+	app.nativeHost().ToggleMaximiseWindow(app.ctx)
+	if app.nativeHost().WindowIsMaximised(app.ctx) {
 		t.Fatal("the no-op host must report an unmaximised window")
 	}
 	if got, err := app.PickSkillFolder(); err != nil || got != "" {

@@ -118,7 +118,15 @@ api_key_env = "DEEPZORA_TEST_REMOTE_MISSING_KEY"
 		t.Fatal(err)
 	}
 	client := &http.Client{Jar: jar, Timeout: 5 * time.Second}
-	resp, err := client.Get("http://" + addr + "/?token=serve-setup-test-token")
+	resp, err := client.Post("http://"+addr+"/auth/token", "application/json", strings.NewReader(`{"token":"serve-setup-test-token"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("bootstrap status = %d", resp.StatusCode)
+	}
+	resp, err = client.Get("http://" + addr + "/")
 	if err != nil {
 		t.Fatalf("open missing-key Serve: %v\n%s", err, output.String())
 	}

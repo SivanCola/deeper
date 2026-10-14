@@ -104,7 +104,7 @@ func TestSanitizeToolPairingLeavesWellFormedUnchanged(t *testing.T) {
 
 func TestModelMessagesAndSanitizeDropLocalOnlyInterruptedOutput(t *testing.T) {
 	local := Message{
-		Role: RoleTool, ToolCallID: LocalOnlyToolID, Name: LocalOnlyToolName,
+		Role: RoleTool, ToolCallID: "", Name: "",
 		Content: "partial answer", ReasoningContent: "partial reasoning", LocalOnly: true,
 		ToolCalls:       []ToolCall{{ID: "partial", Name: "write_file"}},
 		InterruptedTurn: &InterruptedTurnRecovery{Pending: true, InterruptedTools: []string{"write_file"}},
@@ -175,27 +175,6 @@ func TestAttachedDecisionReceiptPreservesCurrentAndLegacyToolPairing(t *testing.
 	}
 }
 
-func TestNormalizeSessionMessagesMigratesInterleavedDecisionReceipt(t *testing.T) {
-	receipt := &DecisionReceipt{ID: "approval-1", Kind: "tool", Tool: "bash", Outcome: "allow_once"}
-	old := []Message{
-		{Role: RoleUser, Content: "run it"},
-		{Role: RoleAssistant, ToolCalls: []ToolCall{{ID: "call-1", Name: "bash", Arguments: `{}`}}},
-		{Role: RoleAssistant, LocalOnly: true, DecisionReceipt: receipt},
-		{Role: RoleTool, ToolCallID: "call-1", Name: "bash", Content: "actual result"},
-	}
-
-	got := NormalizeSessionMessages(old)
-	if len(got) != 3 {
-		t.Fatalf("migrated messages = %d, want receipt folded into assistant: %+v", len(got), got)
-	}
-	if len(got[1].DecisionReceipts) != 1 || got[1].DecisionReceipts[0] != receipt {
-		t.Fatalf("migrated assistant receipt = %+v, want original receipt", got[1].DecisionReceipts)
-	}
-	if got[2].Role != RoleTool || got[2].Content != "actual result" || strings.Contains(got[2].Content, "interrupted") {
-		t.Fatalf("migrated tool result = %+v, want the actual result without a placeholder", got[2])
-	}
-}
-
 func TestModelMessagesStripsRawContentWithoutChangingLegacyContent(t *testing.T) {
 	const rendered = "<reasoning-language>zh</reasoning-language>\n\nfix the bug"
 	stored := []Message{{Role: RoleUser, Content: rendered, RawContent: "fix the bug"}}
@@ -243,27 +222,6 @@ func TestProjectionMessagesKeepsExecutionThatModelMessagesStrips(t *testing.T) {
 	}
 	if stored[1].ToolExecution == nil {
 		t.Fatal("stored message was mutated")
-	}
-}
-
-func TestLocalOnlySentinelIsSafeWhenNewFieldsAreIgnoredByLegacyReader(t *testing.T) {
-	legacyView := []Message{
-		{Role: RoleUser, Content: "task"},
-		{Role: RoleAssistant, ToolCalls: []ToolCall{{ID: "c1", Name: "read_file", Arguments: `{}`}}},
-		{Role: RoleTool, ToolCallID: "c1", Name: "read_file", Content: "ok"},
-		// Simulate an older binary: unknown local_only/interrupted_turn JSON fields
-		// were ignored, leaving only the orphan tool sentinel and partial content.
-		{Role: RoleTool, ToolCallID: LocalOnlyToolID, Name: LocalOnlyToolName, Content: "partial reasoning that must not leak"},
-		{Role: RoleUser, Content: "continue"},
-	}
-	wire := SanitizeToolPairing(legacyView)
-	if len(wire) != 4 {
-		t.Fatalf("legacy normalization kept local sentinel: %+v", wire)
-	}
-	for _, message := range wire {
-		if message.ToolCallID == LocalOnlyToolID || strings.Contains(message.Content, "must not leak") {
-			t.Fatalf("legacy normalization leaked display-only content: %+v", wire)
-		}
 	}
 }
 
@@ -332,57 +290,17 @@ func TestSanitizeToolPairingClosesTruncatedArgs(t *testing.T) {
 	}
 }
 
-func TestBackfillToolCallNamesByID(t *testing.T) {
-	calls := []ToolCall{{ID: "c1"}, {ID: "c2", Name: "grep"}}
-	results := []Message{
-		{Role: RoleTool, ToolCallID: "c2", Name: "grep"},
-		{Role: RoleTool, ToolCallID: "c1", Name: "ls"}, // returned out of call order
-	}
-	out := backfillToolCallNames(calls, results)
-	if out[0].Name != "ls" {
-		t.Fatalf("empty name not backfilled by id: got %q want ls", out[0].Name)
-	}
-	if out[1].Name != "grep" {
-		t.Fatalf("non-empty name clobbered: got %q want grep", out[1].Name)
-	}
-	if calls[0].Name != "" {
-		t.Fatalf("input slice mutated: %+v", calls)
-	}
-}
-
-func TestBackfillToolCallNamesPositional(t *testing.T) {
-	// Empty ids defeat idDistinct, so names pair by position instead.
-	calls := []ToolCall{{}, {}}
-	results := []Message{{Role: RoleTool, Name: "ls"}, {Role: RoleTool, Name: "cat"}}
-	out := backfillToolCallNames(calls, results)
-	if out[0].Name != "ls" || out[1].Name != "cat" {
-		t.Fatalf("positional backfill wrong: %+v", out)
-	}
-}
-
-func TestBackfillToolCallNamesUnpairedStaysEmpty(t *testing.T) {
-	out := backfillToolCallNames([]ToolCall{{ID: "c1"}}, nil)
-	if out[0].Name != "" {
-		t.Fatalf("unpaired call should keep its empty name, got %q", out[0].Name)
-	}
-}
-
-func TestBackfillToolCallNamesNoEmptyReturnsInput(t *testing.T) {
-	calls := []ToolCall{{ID: "c1", Name: "ls"}, {ID: "c2", Name: "grep"}}
-	out := backfillToolCallNames(calls, []Message{{Role: RoleTool, ToolCallID: "c1", Name: "x"}})
-	if &out[0] != &calls[0] {
-		t.Fatalf("no empty names: want the input slice back without copying")
-	}
-}
-
-func TestSanitizeToolPairingBackfillsEmptyName(t *testing.T) {
+func TestReplayDoesNotInferMissingCallName(t *testing.T) {
 	in := []Message{
 		{Role: RoleAssistant, ToolCalls: []ToolCall{{ID: "c1"}}}, // old session: name lost
 		{Role: RoleTool, ToolCallID: "c1", Name: "ls", Content: "main.go"},
 	}
 	out := SanitizeToolPairing(in)
-	if out[0].ToolCalls[0].Name != "ls" {
-		t.Fatalf("empty tool-call name not backfilled on replay: %+v", out[0].ToolCalls)
+	if out[0].ToolCalls[0].Name != "" {
+		t.Fatalf("missing call name was inferred: %+v", out[0].ToolCalls)
+	}
+	if err := ValidateModelTranscript(in); err == nil {
+		t.Fatal("missing call name passed transcript gate")
 	}
 	if in[0].ToolCalls[0].Name != "" {
 		t.Fatalf("stored history mutated: %+v", in[0].ToolCalls)

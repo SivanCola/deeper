@@ -4,55 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"deepzora/internal/fileutil"
 )
-
-func TestHeartbeatRunHistoryLegacySidecarReadable(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	engine := &HeartbeatEngine{}
-	if err := os.MkdirAll(filepath.Dir(engine.configPath()), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	config := []byte(`{"schemaVersion":2,"revision":7,"tasks":[{"id":"t1","title":"task"}]}`)
-	legacySidecar := []byte(`{"runs":{"t1":[{"at":100,"topicId":"legacy"}]}}`)
-	if err := os.WriteFile(engine.configPath(), config, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(engine.runHistoryPath(), legacySidecar, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	got := engine.ReloadTasks()
-	if len(got) != 1 || len(got[0].RunHistory) != 1 || got[0].RunHistory[0].TopicID != "legacy" {
-		t.Fatalf("legacy sidecar was not loaded: %+v", got)
-	}
-}
-
-func TestHeartbeatRunHistorySidecarSurvivesOlderFullTableSave(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	engine := &HeartbeatEngine{}
-	if err := engine.ReplaceTasks([]HeartbeatTask{{
-		ID:         "t1",
-		Title:      "task",
-		RunHistory: []HeartbeatRun{{At: 100, TopicID: "a"}, {At: 200, TopicID: "b"}},
-	}}); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	legacySave := `{"schemaVersion":1,"tasks":[{"id":"t1","title":"task"}]}`
-	if err := os.WriteFile(engine.configPath(), []byte(legacySave), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	reloaded := &HeartbeatEngine{}
-	snap, err := reloaded.readConfigSnapshot()
-	if err != nil {
-		t.Fatalf("read snapshot: %v", err)
-	}
-	if len(snap.cfg.Tasks) != 1 || len(snap.cfg.Tasks[0].RunHistory) != 2 {
-		t.Fatalf("sidecar did not survive older full-table save: %+v", snap.cfg.Tasks)
-	}
-}
 
 func TestHeartbeatRunHistorySidecarTrimmedOnSave(t *testing.T) {
 	isolateDesktopUserDirs(t)

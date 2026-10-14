@@ -405,14 +405,11 @@ func TestHeartbeatConfigSchemaVersionWritten(t *testing.T) {
 	if err := os.WriteFile(engine.configPath(), []byte(legacy), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	engine.ReloadTasks()
-	if err := engine.ReplaceTasks(engine.ListTasks()); err != nil {
-		t.Fatalf("legacy upgrade save: %v", err)
+	if _, err := engine.readConfigSnapshot(); err == nil {
+		t.Fatal("unversioned config was accepted")
 	}
-	data, _ = os.ReadFile(engine.configPath())
-	_ = json.Unmarshal(data, &cfg)
-	if cfg.SchemaVersion != heartbeatSchemaVersion {
-		t.Fatalf("legacy upgrade schemaVersion = %d, want %d", cfg.SchemaVersion, heartbeatSchemaVersion)
+	if err := engine.ReplaceTasks(engine.ListTasks()); err == nil {
+		t.Fatal("unversioned config was overwritten")
 	}
 }
 
