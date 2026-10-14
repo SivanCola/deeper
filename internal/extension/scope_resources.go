@@ -138,7 +138,7 @@ func TrackControllerCleanup(scope EffectScope, id string, cleanup func() error) 
 // TrackIrreversible records an irreversible external action (message send,
 // provider request submitted) for recovery assessment — dispose never claims
 // rollback success.
-func TrackIrreversible(scope EffectScope, id, owner string) error {
+func (o *RuntimeOwner) TrackIrreversible(scope EffectScope, id, owner string) error {
 	if scope == nil {
 		return nil
 	}
@@ -151,7 +151,7 @@ func TrackIrreversible(scope EffectScope, id, owner string) error {
 		},
 	})
 	if err == nil {
-		RuntimeOwnerOrDefault(nil).Receipts.Record(EffectReceipt{
+		o.Receipts.Record(EffectReceipt{
 			ID:                 id,
 			Owner:              owner,
 			Class:              Irreversible,

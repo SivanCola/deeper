@@ -30,3 +30,18 @@ func TestTrackPublishedHostStreamUsesContextOwner(t *testing.T) {
 		t.Fatal("owning runtime did not cancel its host stream")
 	}
 }
+
+func TestUnboundHostStreamDoesNotJoinPublishedRuntime(t *testing.T) {
+	owner := extension.NewRuntimeOwner()
+	owner.Gate.Publish(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	untrack := trackPublishedHostStream(ctx, cancel)
+	defer untrack()
+	owner.Gate.ForceExpireDrain(1)
+	select {
+	case <-ctx.Done():
+		t.Fatal("unbound stream was cancelled by another runtime")
+	default:
+	}
+}

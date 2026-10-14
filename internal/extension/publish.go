@@ -386,22 +386,6 @@ func (g *PublishGate) DrainingGenerations() []uint64 {
 	return out
 }
 
-// DefaultPublishGate returns the compatibility owner gate. Product boot paths
-// bind an isolated RuntimeOwner instead.
-func DefaultPublishGate() *PublishGate {
-	return RuntimeOwnerOrDefault(nil).Gate
-}
-
-// RegisterDrainCancel preserves the package-level compatibility API.
-func RegisterDrainCancel(gen uint64, cancel func()) func() {
-	return DefaultPublishGate().RegisterDrainCancel(gen, cancel)
-}
-
-// FireDrainCancels preserves the package-level compatibility API.
-func FireDrainCancels(gen uint64) {
-	DefaultPublishGate().FireDrainCancels(gen)
-}
-
 // AwaitReady waits until ctx is done or ready is closed. Used by activation
 // transactions to gate publish on component readiness.
 func AwaitReady(ctx context.Context, ready <-chan struct{}) error {

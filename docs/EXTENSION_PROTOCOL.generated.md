@@ -5,7 +5,7 @@
 - Protocol ID: `deepzora.extension.v2`
 - Protocol major: `2`
 - Schema: `internal/extension/protocol/schema.generated.json`
-- Schema hash: `sha256:38b01f8a7f3728455f8f5a225731efd429fe3800cef3a2b1fad45d71377376dd`
+- Schema hash: `sha256:14bab895dedce538537845a9605e0b7a40bca5c1e31fcc1ac18d9befab8f63e7`
 
 Within major v2 only optional fields, new enum values, and new methods may
 be added; existing required fields, directions, limits, error reasons, and

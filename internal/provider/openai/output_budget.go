@@ -2,12 +2,6 @@ package openai
 
 import "deepzora/internal/provider"
 
-// OutputBudget reports the default total output budget sent by this client.
-func (c *client) OutputBudget() int { return c.maxOutputTokens }
-
-// SharesContextWindow is true only for the recognized DeepSeek protocol mode.
-func (c *client) SharesContextWindow() bool { return c.deepseek }
-
 // SharedWindowInputPolicy mirrors the assistant replay rule in chat message
 // conversion: these adapters send reasoning_content on every history turn that
 // carries it, not only on tool-call turns, so admission must count it too.

@@ -57,7 +57,7 @@ func (r *LocalProviderResolver) Catalog() []provider.Descriptor {
 			}
 			d := provider.Descriptor{
 				Ref: ref, DisplayName: entry.Name, Model: entry.Model,
-				ContextWindow: entry.ContextWindow, Vision: capability.State == config.CapabilitySupported,
+				ContextWindow:   entry.ContextWindow,
 				InputModalities: append([]provider.ModelModality(nil), capability.InputModalities...),
 				Tools:           true, DefaultEffort: config.EffectiveEffort(&entry),
 			}
@@ -133,7 +133,7 @@ func resolveProvider(resolver provider.Resolver, cfg *config.Config, proxy netcl
 // It does not install stream routers — call installSidecarStreamRouters after
 // commit so failed narrow rebuilds never leave adopted clients on a discarded
 // generation resolver.
-func mergeSidecarProviders(base provider.Resolver, mgr *sidecar.Manager, claims map[extension.Slot]extension.ContributionSource, owners ...*extension.RuntimeOwner) (provider.Resolver, error) {
+func mergeSidecarProviders(base provider.Resolver, mgr *sidecar.Manager, claims map[extension.Slot]extension.ContributionSource, owner *extension.RuntimeOwner) (provider.Resolver, error) {
 	if mgr == nil {
 		return base, nil
 	}
@@ -155,7 +155,7 @@ func mergeSidecarProviders(base provider.Resolver, mgr *sidecar.Manager, claims 
 		}
 		return out
 	}
-	return providerext.New(base, clientsFn, claims, owners...)
+	return providerext.New(base, clientsFn, claims, owner)
 }
 
 // installSidecarStreamRouters binds merged as the stream router on every live
@@ -266,7 +266,8 @@ func syntheticEntryFromResolver(r provider.Resolver, ref string) *config.Provide
 		Name: name, Model: model, ContextWindow: contextWindow,
 		SupportedEfforts:         append([]string(nil), match.Efforts...),
 		ReasoningMetadataUnknown: match.ReasoningUnknown,
-		DefaultEffort:            match.DefaultEffort, Vision: match.Vision,
+		DefaultEffort:            match.DefaultEffort,
+		Vision:                   (provider.ModelInfo{InputModalities: match.InputModalities}).SupportsInput(provider.ModalityImage),
 	}
 	if match.CacheHitPerMillion > 0 || match.InputPerMillion > 0 || match.OutputPerMillion > 0 {
 		entry.Price = &provider.Pricing{CacheHit: match.CacheHitPerMillion, Input: match.InputPerMillion, Output: match.OutputPerMillion, Currency: match.PricingCurrency}

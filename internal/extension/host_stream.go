@@ -19,14 +19,10 @@ type HostStreamRegistry struct {
 	drainHooked map[uint64]struct{}
 }
 
-// DefaultHostStreams belongs to the compatibility runtime owner.
-var DefaultHostStreams = DefaultRuntimeOwner.HostStreams
-
-// NewHostStreamRegistry returns an empty registry.
-func NewHostStreamRegistry(gates ...*PublishGate) *HostStreamRegistry {
-	var gate *PublishGate
-	if len(gates) > 0 {
-		gate = gates[0]
+// NewHostStreamRegistry returns an empty registry bound to the required gate.
+func NewHostStreamRegistry(gate *PublishGate) *HostStreamRegistry {
+	if gate == nil {
+		panic("host stream registry requires a publish gate")
 	}
 	return &HostStreamRegistry{
 		byGen:       make(map[uint64]map[uint64]context.CancelFunc),
@@ -57,11 +53,7 @@ func (r *HostStreamRegistry) Track(gen uint64, cancel context.CancelFunc) (untra
 		// Fan-in: one drain cancel per generation cancels every tracked stream.
 		// Register outside r.mu because an already-expired generation fires the
 		// callback synchronously and re-enters CancelGeneration.
-		gate := r.gate
-		if gate == nil {
-			gate = DefaultPublishGate()
-		}
-		gate.RegisterDrainCancel(gen, func() { r.CancelGeneration(gen) })
+		r.gate.RegisterDrainCancel(gen, func() { r.CancelGeneration(gen) })
 	}
 	var once sync.Once
 	return func() {
@@ -103,9 +95,4 @@ func (r *HostStreamRegistry) Count(gen uint64) int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return len(r.byGen[gen])
-}
-
-// TrackHostStream is a convenience over DefaultHostStreams.Track.
-func TrackHostStream(gen uint64, cancel context.CancelFunc) (untrack func()) {
-	return RuntimeOwnerOrDefault(nil).HostStreams.Track(gen, cancel)
 }

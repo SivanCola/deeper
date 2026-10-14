@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"deepzora/internal/extension"
 	"deepzora/internal/extension/protocol"
 )
 
@@ -25,7 +26,7 @@ func TestSubmitExactPinsInstanceAndRejectsDuplicate(t *testing.T) {
 	started := make(chan struct{}, 1)
 	release := make(chan struct{})
 	fake := &fakeActionClient{submitResult: protocol.UISubmitResult{Accepted: true}, submitStarted: started, submitRelease: release}
-	h := New(Options{SessionID: "sess-1", Generation: 7, Resolve: func(string) ActionClient { return fake }})
+	h := New(Options{Owner: extension.NewRuntimeOwner(), SessionID: "sess-1", Generation: 7, Resolve: func(string) ActionClient { return fake }})
 	handler := h.HandlerFor("alpha")
 	first := publishTestForm(t, h, handler, "f1")
 	second := publishTestForm(t, h, handler, "f1")
@@ -60,7 +61,7 @@ func TestOldSubmitCompletionDoesNotDeleteReplacement(t *testing.T) {
 	started := make(chan struct{}, 1)
 	release := make(chan struct{})
 	fake := &fakeActionClient{submitResult: protocol.UISubmitResult{Accepted: true}, submitStarted: started, submitRelease: release}
-	h := New(Options{SessionID: "sess-1", Generation: 7, Resolve: func(string) ActionClient { return fake }})
+	h := New(Options{Owner: extension.NewRuntimeOwner(), SessionID: "sess-1", Generation: 7, Resolve: func(string) ActionClient { return fake }})
 	handler := h.HandlerFor("alpha")
 	oldInstance := publishTestForm(t, h, handler, "f1")
 	done := make(chan error, 1)

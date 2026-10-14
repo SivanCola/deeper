@@ -46,10 +46,10 @@ deepzora doctor runtime --json
 deepzora plugin doctor <name>
 ```
 
-Reports component status, plan, effect receipts, recoverability, lifecycle
-metrics, and the process-local `runtimeOwnerFallbacks` count. Product boot binds
-an isolated owner; a non-zero fallback count identifies compatibility code that
-reached the shared default owner and needs explicit wiring.
+Reports component status, plan, effect receipts, recoverability, and lifecycle
+metrics. Each boot/controller root creates an isolated `RuntimeOwner`; rebuilds
+and adapters explicitly retain that owner. Unbound contexts have no owner, and
+diagnostics without a live owner do not claim a clean rollback.
 Plan diagnostics separate two facts: `prefixChanged` is computed after build by
 comparing the previous and current snapshot `CacheHash`; `providerChanged`
 reports provider capability additions, removals, or reloads. A provider-only

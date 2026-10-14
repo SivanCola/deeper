@@ -35,9 +35,6 @@ type ReceiptStore struct {
 	onEvict            func(EffectReceipt)
 }
 
-// DefaultReceiptStore is the compatibility owner's ledger.
-var DefaultReceiptStore = DefaultRuntimeOwner.Receipts
-
 // NewReceiptStore returns an empty store.
 func NewReceiptStore() *ReceiptStore {
 	return newReceiptStore(defaultReceiptGenerationLimit, defaultReceiptPerGenerationLimit, nil)

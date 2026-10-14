@@ -244,7 +244,7 @@ export function DiagnosticsSettingsPage({
                     <div className="diag-summary__meta">
                       <span>
                         no-op={runtimeDoctor.noOpRebuilds} subgraph={runtimeDoctor.subgraphRebuilds} full={runtimeDoctor.fullRebuilds}{" "}
-                        staleDrops={runtimeDoctor.staleDrops} admitReject={runtimeDoctor.admissionRejected} ownerFallbacks={runtimeDoctor.runtimeOwnerFallbacks}
+                        staleDrops={runtimeDoctor.staleDrops} admitReject={runtimeDoctor.admissionRejected}
                       </span>
                     </div>
                   </div>

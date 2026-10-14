@@ -31,7 +31,6 @@ var learnedOutputBudgetCache = struct {
 }{entries: make(map[string]learnedOutputBudgetCacheEntry)}
 
 type outputBudgetState struct {
-	outputBudget int
 	// lastUsage caches the latest provider telemetry for per-turn readouts.
 	// The run loop writes it while a frontend reads it, so it is atomic.
 	lastUsage         atomic.Pointer[provider.Usage]
@@ -147,16 +146,6 @@ func (a *Agent) setPromptTokenCalibrationFromUsage(usage *provider.Usage) {
 		return
 	}
 	a.setPromptTokenCalibrationFromActive(usage.LatestPromptTokens())
-}
-
-func outputBudgetOf(p provider.Provider) int {
-	if nilutil.IsNil(p) {
-		return 0
-	}
-	if budget, ok := p.(provider.OutputBudgetProvider); ok {
-		return budget.OutputBudget()
-	}
-	return 0
 }
 
 func contextBudgetPolicyOf(p provider.Provider) provider.ContextBudgetPolicy {

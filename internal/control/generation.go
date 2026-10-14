@@ -38,13 +38,9 @@ func (c *Controller) RuntimeGeneration() uint64 {
 // RuntimeOwner returns the lifecycle owner for this controller lineage.
 func (c *Controller) RuntimeOwner() *extension.RuntimeOwner {
 	if c == nil {
-		return runtimeOwnerOrDefault(nil)
+		return nil
 	}
-	return runtimeOwnerOrDefault(c.runtimeOwner)
-}
-
-func runtimeOwnerOrDefault(owner *extension.RuntimeOwner) *extension.RuntimeOwner {
-	return extension.RuntimeOwnerOrDefault(owner)
+	return c.runtimeOwner
 }
 
 // RuntimePhase reports Active when this generation is published, Draining

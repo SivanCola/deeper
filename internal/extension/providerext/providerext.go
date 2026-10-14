@@ -123,18 +123,17 @@ const catalogFetchTimeout = 10 * time.Second
 // Replacements). A sidecar ref colliding exactly with a base catalog ref is
 // legal only when the plugin owns the provider:<ref> slot — then the sidecar
 // descriptor replaces the base entry — and is a *ConflictError otherwise.
-func New(base provider.Resolver, clients func() []ProviderClient, claims map[extension.Slot]extension.ContributionSource, owners ...*extension.RuntimeOwner) (*Resolver, error) {
+// owner is required and must be the controller's runtime lineage owner.
+func New(base provider.Resolver, clients func() []ProviderClient, claims map[extension.Slot]extension.ContributionSource, owner *extension.RuntimeOwner) (*Resolver, error) {
+	if owner == nil {
+		return nil, fmt.Errorf("provider resolver requires a runtime owner")
+	}
 	if base == nil {
 		base = &provider.StaticResolver{}
 	}
 	if clients == nil {
 		clients = func() []ProviderClient { return nil }
 	}
-	var owner *extension.RuntimeOwner
-	if len(owners) > 0 && owners[0] != nil {
-		owner = owners[0]
-	}
-	owner = extension.RuntimeOwnerOrDefault(owner)
 	r := &Resolver{
 		base:         base,
 		clients:      clients,

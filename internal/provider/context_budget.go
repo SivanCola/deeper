@@ -29,9 +29,7 @@ type ContextBudgetPolicy struct {
 	LimitMode        OutputLimitMode
 }
 
-// ContextBudgetPolicyProvider reports the unified budget contract. Existing
-// OutputBudgetProvider and SharedWindowOutputProvider implementations remain
-// valid fallbacks through ResolveContextBudgetPolicy.
+// ContextBudgetPolicyProvider reports the provider-owned budget contract.
 type ContextBudgetPolicyProvider interface {
 	ContextBudgetPolicy() ContextBudgetPolicy
 }
@@ -68,9 +66,8 @@ func (m OutputLimitMode) String() string {
 	}
 }
 
-// ResolveContextBudgetPolicy prefers the new capability and otherwise maps the
-// older output-budget interfaces so tests, fork wrappers, and unmigrated
-// adapters keep working.
+// ResolveContextBudgetPolicy returns declared policy. Providers without budget
+// metadata keep an unknown window and no assumed output ceiling.
 func ResolveContextBudgetPolicy(p Provider) ContextBudgetPolicy {
 	if p == nil {
 		return ContextBudgetPolicy{}
@@ -78,19 +75,5 @@ func ResolveContextBudgetPolicy(p Provider) ContextBudgetPolicy {
 	if owned, ok := p.(ContextBudgetPolicyProvider); ok {
 		return owned.ContextBudgetPolicy()
 	}
-	policy := ContextBudgetPolicy{WindowMode: ContextWindowUnknown, LimitMode: OutputLimitOmitWhenSafe}
-	if shared, ok := p.(SharedWindowOutputProvider); ok && shared.SharesContextWindow() {
-		policy.WindowMode = ContextWindowShared
-	}
-	if budget, ok := p.(OutputBudgetProvider); ok {
-		n := budget.OutputBudget()
-		if n > 0 {
-			policy.AutoOutputTokens = n
-			policy.MaxOutputTokens = n
-			if policy.WindowMode == ContextWindowShared {
-				policy.LimitMode = OutputLimitAlways
-			}
-		}
-	}
-	return policy
+	return ContextBudgetPolicy{}
 }

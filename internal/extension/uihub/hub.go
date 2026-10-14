@@ -74,7 +74,7 @@ type RequestFunc func(ctx context.Context, req HubRequest) (values map[string]an
 type Options struct {
 	SessionID  string
 	Generation uint64
-	Owner      *extension.RuntimeOwner
+	Owner      *extension.RuntimeOwner // Required; shares the controller's runtime lineage.
 	Emit       func(event.Event)
 	Request    RequestFunc
 	Warn       func(string)
@@ -114,7 +114,7 @@ type Hub struct {
 func New(opts Options) *Hub {
 	owner := opts.Owner
 	if owner == nil {
-		owner = extension.RuntimeOwnerOrDefault(nil)
+		panic("extension UI hub requires a runtime owner")
 	}
 	return &Hub{
 		sessionID: strings.TrimSpace(opts.SessionID), generation: opts.Generation,

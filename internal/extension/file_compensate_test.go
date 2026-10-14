@@ -49,13 +49,13 @@ func TestApplyFileWriteCompensationUpdatesReceipt(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "x.txt")
 	_ = os.WriteFile(path, []byte("v1"), 0o644)
-	id := "file-write:" + path
-	DefaultFilePriorStore.Capture(id, path, []byte("v1"), true)
+	owner := NewRuntimeOwner()
+	id := owner.RecordFileWrite(path, true, []byte("v1"))
 	_ = os.WriteFile(path, []byte("v2"), 0o644)
-	if err := ApplyFileWriteCompensation(id); err != nil {
+	if err := owner.ApplyFileWriteCompensation(id); err != nil {
 		t.Fatal(err)
 	}
-	r, ok := DefaultReceiptStore.Get(id)
+	r, ok := owner.Receipts.Get(id)
 	if !ok || r.CompensationStatus != "applied" {
 		t.Fatalf("receipt = %+v ok=%v", r, ok)
 	}

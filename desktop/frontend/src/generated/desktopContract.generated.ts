@@ -3,7 +3,7 @@
 
 export const DESKTOP_PROTOCOL_VERSION = 11;
 
-export const DESKTOP_CONTRACT_DIGEST = "sha256:5b660a4472128f1edf89c6680f1ad03c54b6c1359776f573786d732ffd292c31";
+export const DESKTOP_CONTRACT_DIGEST = "sha256:aaccfc84d0722b383d2925f3b6cee24df2897d7a60ab96d02bbdef0fcb85fda5";
 
 export const DESKTOP_COMMANDS = [
   "AIRenameSession",
@@ -3482,7 +3482,6 @@ export interface RuntimeDoctorReport {
   subgraphRebuilds: number;
   staleDrops: number;
   admissionRejected: number;
-  runtimeOwnerFallbacks: number;
   skillWatch?: skillwatch_Diagnostics | null;
 }
 

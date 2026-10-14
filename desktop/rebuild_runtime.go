@@ -52,18 +52,17 @@ func (a *App) setTabLastBuildResult(tab *WorkspaceTab, res *boot.BuildResult) {
 
 // RuntimeDoctorReport is the desktop/Wails view of extension runtime diagnostics.
 type RuntimeDoctorReport struct {
-	Text                  string                  `json:"text"`
-	PublishedGen          uint64                  `json:"publishedGeneration"`
-	AllowResume           bool                    `json:"allowResume"`
-	CleanRollback         bool                    `json:"cleanRollback"`
-	HasIrreversible       bool                    `json:"hasIrreversible"`
-	NoOpRebuilds          uint64                  `json:"noOpRebuilds"`
-	FullRebuilds          uint64                  `json:"fullRebuilds"`
-	SubgraphRebuilds      uint64                  `json:"subgraphRebuilds"`
-	StaleDrops            uint64                  `json:"staleDrops"`
-	AdmissionRejected     uint64                  `json:"admissionRejected"`
-	RuntimeOwnerFallbacks uint64                  `json:"runtimeOwnerFallbacks"`
-	SkillWatch            *skillwatch.Diagnostics `json:"skillWatch,omitempty"`
+	Text              string                  `json:"text"`
+	PublishedGen      uint64                  `json:"publishedGeneration"`
+	AllowResume       bool                    `json:"allowResume"`
+	CleanRollback     bool                    `json:"cleanRollback"`
+	HasIrreversible   bool                    `json:"hasIrreversible"`
+	NoOpRebuilds      uint64                  `json:"noOpRebuilds"`
+	FullRebuilds      uint64                  `json:"fullRebuilds"`
+	SubgraphRebuilds  uint64                  `json:"subgraphRebuilds"`
+	StaleDrops        uint64                  `json:"staleDrops"`
+	AdmissionRejected uint64                  `json:"admissionRejected"`
+	SkillWatch        *skillwatch.Diagnostics `json:"skillWatch,omitempty"`
 }
 
 // RuntimeDoctor returns process-wide + active-tab extension runtime diagnostics
@@ -84,17 +83,16 @@ func (a *App) RuntimeDoctor() RuntimeDoctorReport {
 	}
 	report := boot.CollectRuntimeDoctor(res)
 	return RuntimeDoctorReport{
-		Text:                  boot.RenderRuntimeDoctorText(report),
-		PublishedGen:          report.PublishedGen,
-		AllowResume:           report.Resume.AllowResume,
-		CleanRollback:         report.Resume.CleanRollback,
-		HasIrreversible:       report.Resume.HasIrreversible,
-		NoOpRebuilds:          report.Metrics.NoOpRebuilds,
-		FullRebuilds:          report.Metrics.FullRebuilds,
-		SubgraphRebuilds:      report.Metrics.SubgraphRebuilds,
-		StaleDrops:            report.Metrics.StaleDrops,
-		AdmissionRejected:     report.Metrics.AdmissionRejected,
-		RuntimeOwnerFallbacks: report.RuntimeOwnerFallbacks,
-		SkillWatch:            report.SkillWatch,
+		Text:              boot.RenderRuntimeDoctorText(report),
+		PublishedGen:      report.PublishedGen,
+		AllowResume:       report.Resume.AllowResume,
+		CleanRollback:     report.Resume.CleanRollback,
+		HasIrreversible:   report.Resume.HasIrreversible,
+		NoOpRebuilds:      report.Metrics.NoOpRebuilds,
+		FullRebuilds:      report.Metrics.FullRebuilds,
+		SubgraphRebuilds:  report.Metrics.SubgraphRebuilds,
+		StaleDrops:        report.Metrics.StaleDrops,
+		AdmissionRejected: report.Metrics.AdmissionRejected,
+		SkillWatch:        report.SkillWatch,
 	}
 }

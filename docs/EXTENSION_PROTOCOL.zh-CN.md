@@ -71,9 +71,12 @@ Extension Protocol 是 Deepzora（**宿主**）与以独立进程运行的代码
 ## 流式 Provider
 
 具备 `providers` 能力的扩展应答 `extension/provider/catalog`，返回与
-宿主 Provider 等价的描述符（模型、上下文窗口、价格、视觉、推理、
+宿主 Provider 等价的描述符（模型、上下文窗口、价格、输入模态、推理、
 effort）——绝不包含凭据。模型以 `plugin/<plugin>/<provider>/<model>`
 形式出现。
+
+输入能力通过 `inputModalities` 声明（例如 `["text", "image"]`）；缺少元数据
+时保持未知状态。
 
 流式调用遵循 `extension/provider/stream/open` → `stream/chunk` →
 `stream/end`：

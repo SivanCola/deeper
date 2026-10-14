@@ -21,6 +21,5 @@ export interface RuntimeDoctorReport {
   subgraphRebuilds: number;
   staleDrops: number;
   admissionRejected: number;
-  runtimeOwnerFallbacks: number;
   skillWatch?: SkillWatchDiagnostics;
 }

@@ -6,14 +6,10 @@ import (
 	"deepzora/internal/provider"
 )
 
-func TestSharedWindowOutputBudgetCapability(t *testing.T) {
-	deepseek := &client{deepseek: true, defaultMaxTokens: 32 * 1024}
-	if !deepseek.SharesContextWindow() || deepseek.OutputBudget() != 32*1024 {
-		t.Fatalf("DeepSeek capability = shared:%v budget:%d", deepseek.SharesContextWindow(), deepseek.OutputBudget())
-	}
-	anthropic := &client{defaultMaxTokens: 16 * 1024}
-	if anthropic.SharesContextWindow() {
-		t.Fatal("native Anthropic mode must keep its independent output ceiling")
+func TestNativeAnthropicBudgetPolicy(t *testing.T) {
+	c := &client{defaultMaxTokens: 16 * 1024}
+	if got := c.ContextBudgetPolicy(); got.WindowMode != provider.ContextWindowUnknown || got.AutoOutputTokens != 0 || got.LimitMode != provider.OutputLimitRequired {
+		t.Fatalf("native Anthropic policy = %+v", got)
 	}
 }
 

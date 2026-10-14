@@ -955,7 +955,6 @@ func New(prov provider.Provider, tools *tool.Registry, session *Session, opts Op
 		capabilityAudit:        opts.CapabilityAudit,
 		strictAlternatingRoles: opts.StrictAlternatingRoles,
 	}
-	a.sess.output.outputBudget = outputBudgetOf(prov)
 	if a.sess.path != "" {
 		a.LoadProjectionSidecar(a.sess.path)
 	}

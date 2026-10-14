@@ -100,3 +100,19 @@ func TestRunTurnBindsRuntimeOwnerToRunnerContext(t *testing.T) {
 		t.Fatal("turn context did not carry the controller runtime owner")
 	}
 }
+
+func TestControllerRootsAllocateIndependentRuntimeOwners(t *testing.T) {
+	first := newOwnedTestController(t, Options{Sink: event.Discard})
+	second := newOwnedTestController(t, Options{Sink: event.Discard})
+	if first.RuntimeOwner() == nil || second.RuntimeOwner() == nil || first.RuntimeOwner() == second.RuntimeOwner() {
+		t.Fatal("independent controller roots must have independent owners")
+	}
+	for _, c := range []*Controller{first, second} {
+		c.RuntimeOwner().Gate.Publish(1)
+		c.SetRuntimeGeneration(1)
+	}
+	first.RuntimeOwner().Gate.Publish(2)
+	if first.RuntimePhase() != RuntimePhaseDraining || second.RuntimePhase() != RuntimePhaseActive {
+		t.Fatalf("phases after first root rebuilt = %s, %s", first.RuntimePhase(), second.RuntimePhase())
+	}
+}

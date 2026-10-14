@@ -299,7 +299,7 @@ func registerControllerDrainCancel(owner *extension.RuntimeOwner, gen uint64, ct
 		return
 	}
 	if owner == nil {
-		owner = extension.RuntimeOwnerOrDefault(nil)
+		panic("controller drain requires a runtime owner")
 	}
 	owner.Gate.RegisterDrainCancel(gen, func() {
 		if ctrl.Running() && (ctrl.RuntimeGeneration() == gen || ctrl.RuntimeGeneration() == 0) {

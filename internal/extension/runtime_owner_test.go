@@ -7,13 +7,14 @@ import (
 	"testing"
 )
 
-func TestRuntimeOwnerFallbackIsObservable(t *testing.T) {
-	before := RuntimeOwnerFallbackCount()
-	if got := RuntimeOwnerFromContext(context.Background()); got != DefaultRuntimeOwner {
-		t.Fatal("unbound context must use the compatibility owner")
+func TestRuntimeOwnerContextRequiresExplicitBinding(t *testing.T) {
+	if RuntimeOwnerFromContext(context.Background()) != nil || RuntimeOwnerFromContext(nil) != nil {
+		t.Fatal("unbound work must not acquire another runtime's owner")
 	}
-	if after := RuntimeOwnerFallbackCount(); after <= before {
-		t.Fatalf("fallback count = %d, want greater than %d", after, before)
+	owner := NewRuntimeOwner()
+	ctx := ContextWithRuntimeOwner(context.Background(), owner)
+	if RuntimeOwnerFromContext(ctx) != owner {
+		t.Fatal("bound context lost its runtime owner")
 	}
 }
 

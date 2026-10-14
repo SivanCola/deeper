@@ -2,12 +2,6 @@ package responses
 
 import "deepzora/internal/provider"
 
-// OutputBudget reports the default total output budget sent by this client.
-func (c *client) OutputBudget() int { return c.maxOutputTokens }
-
-// SharesContextWindow is true only for the official DeepSeek vendor mode.
-func (c *client) SharesContextWindow() bool { return c.vendor == "deepseek" }
-
 func (c *client) ContextBudgetPolicy() provider.ContextBudgetPolicy {
 	if lim, ok := provider.LookupOfficialOpenCodeGo("responses", c.baseURL, c.model); ok {
 		return provider.ContextBudgetPolicy{

@@ -30,9 +30,6 @@ type filePrior struct {
 	Existed bool
 }
 
-// DefaultFilePriorStore belongs to the compatibility runtime owner.
-var DefaultFilePriorStore = DefaultRuntimeOwner.FilePriors
-
 // NewFilePriorStore returns an empty store.
 func NewFilePriorStore() *FilePriorStore {
 	return newFilePriorStore(defaultFilePriorMaxBytes, defaultFilePriorMaxEntryBytes)
@@ -76,7 +73,7 @@ func (s *FilePriorStore) Capture(id, path string, content []byte, existed bool) 
 
 // Compensate restores the prior content (or removes a created file). Returns
 // error if unknown or IO fails; updates receipt compensation status when store
-// is DefaultReceiptStore-linked via caller.
+// is linked to the owning runtime's receipt store by the caller.
 func (s *FilePriorStore) Compensate(id string) error {
 	if s == nil {
 		return fmt.Errorf("extension: nil file prior store")
@@ -113,9 +110,4 @@ func (s *FilePriorStore) Forget(id string) {
 		delete(s.byID, id)
 	}
 	s.mu.Unlock()
-}
-
-// ApplyFileWriteCompensation restores prior content and marks the receipt applied.
-func ApplyFileWriteCompensation(receiptID string) error {
-	return RuntimeOwnerOrDefault(nil).ApplyFileWriteCompensation(receiptID)
 }

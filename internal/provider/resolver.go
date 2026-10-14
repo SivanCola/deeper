@@ -17,7 +17,6 @@ type Descriptor struct {
 	CacheHitPerMillion             float64         `json:"cacheHitPerMillion,omitempty"`
 	InputPerMillion                float64         `json:"inputPerMillion,omitempty"`
 	OutputPerMillion               float64         `json:"outputPerMillion,omitempty"`
-	Vision                         bool            `json:"vision,omitempty"`
 	InputModalities                []ModelModality `json:"inputModalities,omitempty"`
 	Tools                          bool            `json:"tools,omitempty"`
 	Reasoning                      bool            `json:"reasoning,omitempty"`

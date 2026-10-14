@@ -7,7 +7,7 @@ import (
 )
 
 func TestHostStreamRegistryCancelGeneration(t *testing.T) {
-	r := NewHostStreamRegistry()
+	r := NewHostStreamRegistry(NewPublishGate())
 	ctx, cancel := context.WithCancel(context.Background())
 	untrack := r.Track(5, cancel)
 	if r.Count(5) != 1 {
@@ -26,7 +26,7 @@ func TestHostStreamRegistryCancelGeneration(t *testing.T) {
 }
 
 func TestHostStreamUntrack(t *testing.T) {
-	r := NewHostStreamRegistry()
+	r := NewHostStreamRegistry(NewPublishGate())
 	_, cancel := context.WithCancel(context.Background())
 	untrack := r.Track(3, cancel)
 	untrack()

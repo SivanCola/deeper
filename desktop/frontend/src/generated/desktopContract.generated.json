@@ -32807,12 +32807,6 @@
           }
         },
         {
-          "name": "runtimeOwnerFallbacks",
-          "type": {
-            "kind": "integer"
-          }
-        },
-        {
           "name": "skillWatch",
           "optional": true,
           "type": {

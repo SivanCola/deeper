@@ -11,35 +11,38 @@ import (
 // RuntimeDoctorReport is the structured runtime diagnostics document for
 // `deepzora doctor runtime` and desktop status panels.
 type RuntimeDoctorReport struct {
-	Status                *extension.RuntimeStatus           `json:"status,omitempty"`
-	Metrics               extension.LifecycleMetricsSnapshot `json:"metrics"`
-	Recoverability        extension.Recoverability           `json:"recoverability"`
-	Resume                extension.ResumeDecision           `json:"resume"`
-	PublishedGen          uint64                             `json:"publishedGeneration"`
-	DrainingGens          []uint64                           `json:"drainingGenerations,omitempty"`
-	RuntimeOwnerFallbacks uint64                             `json:"runtimeOwnerFallbacks"`
-	SkillWatch            *skillwatch.Diagnostics            `json:"skillWatch,omitempty"`
-	Text                  string                             `json:"-"`
+	Status         *extension.RuntimeStatus           `json:"status,omitempty"`
+	Metrics        extension.LifecycleMetricsSnapshot `json:"metrics"`
+	Recoverability extension.Recoverability           `json:"recoverability"`
+	Resume         extension.ResumeDecision           `json:"resume"`
+	PublishedGen   uint64                             `json:"publishedGeneration"`
+	DrainingGens   []uint64                           `json:"drainingGenerations,omitempty"`
+	SkillWatch     *skillwatch.Diagnostics            `json:"skillWatch,omitempty"`
+	Text           string                             `json:"-"`
 }
 
 // CollectRuntimeDoctor builds a report from an optional live BuildResult and
 // its session-lineage owner. Also sweeps expired drains so doctor is a natural
 // product trigger for drain-timeout force-expire.
 func CollectRuntimeDoctor(res *BuildResult) RuntimeDoctorReport {
-	owner := extension.DefaultRuntimeOwner
-	if res != nil && res.Owner != nil {
-		owner = res.Owner
-	}
-	gate := owner.Gate
-	_ = gate.SweepAndForceExpire()
-	gen := gate.Published()
 	report := RuntimeDoctorReport{
-		Metrics:               extension.DefaultLifecycleMetrics.Snapshot(),
-		PublishedGen:          gen,
-		DrainingGens:          gate.DrainingGenerations(),
-		RuntimeOwnerFallbacks: extension.RuntimeOwnerFallbackCount(),
-		Recoverability:        owner.AssessRecoverability(gen),
-		Resume:                owner.DecideResume(gen),
+		Metrics: extension.DefaultLifecycleMetrics.Snapshot(),
+		Resume:  extension.ResumeDecision{AllowResume: true},
+	}
+	if res != nil && res.Owner != nil {
+		owner := res.Owner
+		gate := owner.Gate
+		_ = gate.SweepAndForceExpire()
+		gen := gate.Published()
+		report.PublishedGen = gen
+		report.DrainingGens = gate.DrainingGenerations()
+		report.Recoverability = owner.AssessRecoverability(gen)
+		report.Resume = owner.DecideResume(gen)
+		if res.Snapshot != nil {
+			g := res.Snapshot.Generation()
+			report.Recoverability = owner.AssessRecoverability(g)
+			report.Resume = owner.DecideResume(g)
+		}
 	}
 	if res != nil {
 		if res.SkillWatchService != nil {
@@ -49,11 +52,6 @@ func CollectRuntimeDoctor(res *BuildResult) RuntimeDoctorReport {
 		report.Status = res.Status
 		if res.Status != nil {
 			report.Text = FormatRuntimeStatus(res.Status)
-		}
-		if res.Snapshot != nil {
-			g := res.Snapshot.Generation()
-			report.Recoverability = owner.AssessRecoverability(g)
-			report.Resume = owner.DecideResume(g)
 		}
 	}
 	if report.Text == "" {
@@ -73,7 +71,6 @@ func RenderRuntimeDoctorText(report RuntimeDoctorReport) string {
 	if body == "" {
 		body = "runtime status: unavailable\n"
 	}
-	body += fmt.Sprintf("runtime owner fallbacks: %d\n", report.RuntimeOwnerFallbacks)
 	if watch := report.SkillWatch; watch != nil {
 		body += fmt.Sprintf("skill watch: physical=%d logical=%d scans=%d entries=%d events=%d notifications=%d degraded=%d helper-restarts=%d\n",
 			watch.PhysicalWatches, watch.LogicalSubscriptions, watch.Scans, watch.ScannedEntries,

@@ -6,14 +6,11 @@ import (
 	"deepzora/internal/provider"
 )
 
-func TestSharedWindowOutputBudgetCapability(t *testing.T) {
-	deepseek := &client{deepseek: true, maxOutputTokens: 32 * 1024}
-	if !deepseek.SharesContextWindow() || deepseek.OutputBudget() != 32*1024 {
-		t.Fatalf("DeepSeek capability = shared:%v budget:%d", deepseek.SharesContextWindow(), deepseek.OutputBudget())
-	}
-	openai := &client{maxOutputTokens: 32 * 1024}
-	if openai.SharesContextWindow() {
-		t.Fatal("ordinary OpenAI mode must keep its independent output ceiling")
+func TestUnknownEndpointBudgetPolicy(t *testing.T) {
+	for _, c := range []*client{{deepseek: true, maxOutputTokens: 32 * 1024}, {maxOutputTokens: 32 * 1024}} {
+		if got := c.ContextBudgetPolicy(); got.WindowMode != provider.ContextWindowUnknown || got.AutoOutputTokens != 0 || got.LimitMode != provider.OutputLimitOmitWhenSafe {
+			t.Fatalf("unknown endpoint policy = %+v", got)
+		}
 	}
 }
 

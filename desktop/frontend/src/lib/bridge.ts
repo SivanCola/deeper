@@ -3343,7 +3343,7 @@ function makeMockApp(): MockAppBindings {
         fullRebuilds: 0,
         subgraphRebuilds: 0,
         staleDrops: 0,
-        admissionRejected: 0, runtimeOwnerFallbacks: 0,
+        admissionRejected: 0,
       };
     },
     async CapabilityDiagnostics(includeSessionRuntime: boolean) {

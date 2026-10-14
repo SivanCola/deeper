@@ -127,7 +127,7 @@ const testBudget = 5 * time.Second
 
 func testResolver(t *testing.T, base provider.Resolver, claims map[extension.Slot]extension.ContributionSource, clients ...ProviderClient) *Resolver {
 	t.Helper()
-	r, err := New(base, func() []ProviderClient { return clients }, claims)
+	r, err := New(base, func() []ProviderClient { return clients }, claims, extension.NewRuntimeOwner())
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -152,6 +152,34 @@ func demoDescriptor() protocol.ProviderDescriptor {
 	return protocol.ProviderDescriptor{
 		Ref: "plugin/demo/fake/x", DisplayName: "Fake Demo", Model: "x",
 		ContextWindow: 64_000, Tools: true, Reasoning: true,
+		InputModalities: []string{"text"},
+	}
+}
+
+func TestResolverRequiresRuntimeOwner(t *testing.T) {
+	if _, err := New(nil, nil, nil, nil); err == nil {
+		t.Fatal("resolver accepted an unbound runtime")
+	}
+}
+
+func TestModelInfoPreservesDeclaredModalities(t *testing.T) {
+	for _, modalities := range [][]provider.ModelModality{nil, {}, {provider.ModalityText}, {provider.ModalityText, provider.ModalityImage}} {
+		p := &Provider{descriptor: provider.Descriptor{Model: "x", InputModalities: modalities}}
+		info := p.ModelInfo()
+		if info.ID != "x" || (info.InputModalities == nil) != (modalities == nil) || len(info.InputModalities) != len(modalities) {
+			t.Fatalf("declared modalities %v became %+v", modalities, info)
+		}
+		for i, want := range modalities {
+			if info.InputModalities[i] != want {
+				t.Fatalf("modality %d = %q, want %q", i, info.InputModalities[i], want)
+			}
+		}
+		if len(info.InputModalities) > 0 {
+			info.InputModalities[0] = provider.ModalityImage
+			if p.descriptor.InputModalities[0] != provider.ModalityText {
+				t.Fatal("ModelInfo exposed mutable descriptor storage")
+			}
+		}
 	}
 }
 
@@ -280,7 +308,7 @@ func TestConflictWithoutClaimFails(t *testing.T) {
 		Descriptors: []provider.Descriptor{{Ref: "plugin/demo/fake/x", DisplayName: "host copy"}},
 	}
 	fc := newFakeClient("demo", demoDescriptor())
-	_, err := New(base, func() []ProviderClient { return []ProviderClient{fc} }, nil)
+	_, err := New(base, func() []ProviderClient { return []ProviderClient{fc} }, nil, extension.NewRuntimeOwner())
 	if err == nil {
 		t.Fatal("New succeeded with an unclaimed provider conflict")
 	}
@@ -313,7 +341,7 @@ func TestConflictClaimedByOtherPluginFails(t *testing.T) {
 	claims := map[extension.Slot]extension.ContributionSource{
 		extension.SlotProviderRef("plugin/demo/fake/x"): {PluginID: "someone-else"},
 	}
-	_, err := New(base, func() []ProviderClient { return []ProviderClient{fc} }, claims)
+	_, err := New(base, func() []ProviderClient { return []ProviderClient{fc} }, claims, extension.NewRuntimeOwner())
 	var conflictErr *ConflictError
 	if !errors.As(err, &conflictErr) {
 		t.Fatalf("error %v is not a ConflictError", err)

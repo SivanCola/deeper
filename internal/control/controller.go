@@ -637,7 +637,7 @@ type Options struct {
 	CapabilityRuntime *agent.MCPCapabilityRuntime
 	RuntimeGeneration uint64 // PublishGate generation for admission
 	// RuntimeOwner isolates publish/drain gates and receipts to one
-	// controller/session rebuild lineage. Nil preserves compatibility behavior.
+	// controller/session rebuild lineage. Nil creates an isolated owner.
 	RuntimeOwner *extension.RuntimeOwner
 	// WorkspaceRoot is the project root checkpoint restores are confined to ("" =
 	// no confinement). Frontends pass the cwd they launched the session in.
@@ -757,7 +757,10 @@ func New(opts Options) *Controller {
 	if pluginCtx == nil {
 		pluginCtx = context.Background()
 	}
-	runtimeOwner := runtimeOwnerOrDefault(opts.RuntimeOwner)
+	runtimeOwner := opts.RuntimeOwner
+	if runtimeOwner == nil {
+		runtimeOwner = extension.NewRuntimeOwner()
+	}
 	pluginCtx = extension.ContextWithRuntimeOwner(pluginCtx, runtimeOwner)
 	goalDriverCtx, goalDriverCancel := context.WithCancel(context.Background())
 	if opts.Hooks != nil {

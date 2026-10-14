@@ -289,14 +289,15 @@ func fakeRef(pluginID string) string { return "plugin/" + pluginID + "/fake/" + 
 
 func fakeDescriptor(pluginID string) extension.ProviderDescriptor {
 	return extension.ProviderDescriptor{
-		Ref:           fakeRef(pluginID),
-		DisplayName:   "fullsidecar fake",
-		Model:         fakeModel,
-		ContextWindow: 64000,
-		Tools:         true,
-		Reasoning:     true,
-		Efforts:       []string{"low", "high"},
-		DefaultEffort: "low",
+		Ref:             fakeRef(pluginID),
+		DisplayName:     "fullsidecar fake",
+		Model:           fakeModel,
+		ContextWindow:   64000,
+		InputModalities: []string{"text"},
+		Tools:           true,
+		Reasoning:       true,
+		Efforts:         []string{"low", "high"},
+		DefaultEffort:   "low",
 	}
 }
 
