@@ -15,7 +15,7 @@ does not designate an official Reasonix release.
 An independent SignPath Foundation application has been submitted and is pending
 review. Submission is not signing authorization. Deepzora has no provisioned
 SignPath project or integrated SignPath release workflow at this policy's review
-date. The existing Windows workflow uses Certum and still requires its own valid
+date. Signed Windows releases use Certum and require their own valid
 credentials. Reasonix's SignPath project, token and authorization must not be
 used for Deepzora.
 
