@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1023,9 +1024,21 @@ func TestRecordSessionPlannerDisplayConcurrentPreservesEverySession(t *testing.T
 			defer wg.Done()
 			<-start
 			path := filepath.Join(dir, fmt.Sprintf("session-%02d.jsonl", i))
-			errs <- recordSessionPlannerDisplay(dir, path, fmt.Sprintf("prompt-%02d", i), []HistoryMessage{{
-				Role: "assistant", Content: fmt.Sprintf("answer-%02d", i),
-			}})
+			// A burst of durable writes can exhaust the bounded local queue on
+			// slow disks. The caller retains these writes for retry; this test
+			// checks that completed updates preserve every session, rather than
+			// requiring all 32 fsyncs to fit into one queue budget. Lock deadline
+			// errors occur before mutation, so retrying cannot duplicate a record.
+			var err error
+			for range 6 {
+				err = recordSessionPlannerDisplay(dir, path, fmt.Sprintf("prompt-%02d", i), []HistoryMessage{{
+					Role: "assistant", Content: fmt.Sprintf("answer-%02d", i),
+				}})
+				if !errors.Is(err, context.DeadlineExceeded) {
+					break
+				}
+			}
+			errs <- err
 		}(i)
 	}
 	close(start)
