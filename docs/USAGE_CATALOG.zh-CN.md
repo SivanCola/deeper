@@ -1,7 +1,9 @@
 # 用量 Catalog
 
 Deepzora 将可丢弃的用量聚合保存到 `<cache root>/usage-catalog/v1.sqlite`。每日统计
-JSONL 继续作为权威数据，并与旧版保持字节兼容。Catalog 记录文件 offset 和行 hash，
+JSONL 继续作为权威数据。金额通过 `cost_amount`/`cost_currency` 和
+`selected_amount`/`selected_currency` 保存为精确小数字符串；新记录不再写入没有读取方的
+浮点镜像 `selected_cost`。Catalog 记录文件 offset 和行 hash，
 用于跨进程幂等，再派生按日、source、model/provider 的 rollup。
 
 只有 JSONL append 成功后才会非阻塞提交 receipt；重复 receipt 不会重复累计。同一

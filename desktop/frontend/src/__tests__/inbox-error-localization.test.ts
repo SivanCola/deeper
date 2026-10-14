@@ -1,6 +1,6 @@
 // Run: tsx src/__tests__/inbox-error-localization.test.ts
 
-import { formatInboxCancelError, formatInboxError } from "../lib/inboxError";
+import { formatInboxCancelError, formatInboxError, isInboxItemMissing } from "../lib/inboxError";
 
 let passed = 0;
 let failed = 0;
@@ -38,8 +38,10 @@ for (const [code, expected] of stableCases) {
   eq(formatInboxError(new Error(`deepzora_error:${code}`), "zh"), expected, `zh maps ${code}`);
 }
 
-eq(formatInboxError(new Error("inbox is paused"), "zh"), "收件箱已暂停", "legacy backend English is localized");
-eq(formatInboxError(new Error("workspace failed to start: internal detail"), "zh"), "工作区启动失败", "legacy startup detail is sanitized and localized");
+eq(formatInboxError(new Error("inbox is paused"), "zh"), "inbox is paused", "uncoded errors remain diagnostics");
+eq(formatInboxError(new Error("workspace failed to start: internal detail"), "zh"), "workspace failed to start: internal detail", "uncoded startup errors retain their details");
+eq(isInboxItemMissing(new Error("deepzora_error:inbox_item_not_found")), true, "stable missing-item code enables reconciliation");
+eq(isInboxItemMissing(new Error("inbox item not found")), false, "plain text cannot trigger missing-item reconciliation");
 eq(formatInboxError("deepzora_error:inbox_paused", "zh"), "收件箱已暂停", "simplified Chinese maps stable code");
 eq(formatInboxError(new Error("deepzora_error:inbox_paused"), "en"), "Inbox is paused", "English maps stable code");
 eq(

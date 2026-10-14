@@ -5,7 +5,6 @@ export type LayoutSizeKey =
   | "rightDockTreeWidth"
   | "rightDockPreviewWidth"
   | "workspaceFileTreePanelWidth"
-  | "workspaceTreeWidth"
   | "composerHeight"
   | "drawerWidth"
   | "settingsDrawerWidth";

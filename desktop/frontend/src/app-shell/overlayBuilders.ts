@@ -71,7 +71,8 @@ export function buildOverlayHostProps(input: {
         agentRunning: input.running, desktopPlatform: shell.desktopPlatform,
         activeWorkspaceKey: `${input.activeTab?.id ?? input.activeTabId ?? ""}\u0000${input.activeTab?.workspaceRoot ?? input.activeTab?.cwd ?? input.cwd ?? ""}`,
       },
-      commands: { onUseSubagent: input.prefillSubagentCommand, onClose: chrome.closeSettings, onNavigate: input.setSettingsTarget, onChanged: chrome.handleSettingsChanged },
+      commands: { onUseSubagent: input.prefillSubagentCommand, onClose: chrome.closeSettings, onNavigate: input.setSettingsTarget, onChanged: chrome.handleSettingsChanged,
+        onOnboardingStart: navigation.startInitialConversation },
     } : undefined,
     palette: shell.paletteOpen ? {
       view: { open: true, items: input.paletteItems, placeholder: t("palette.placeholder"), emptyText: t("palette.empty") },

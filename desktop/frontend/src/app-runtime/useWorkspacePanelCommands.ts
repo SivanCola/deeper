@@ -10,6 +10,7 @@ import { useRemoteStore } from "../store/remote";
 type Input = {
   sessionId: string;
   workspaceRoot: string;
+  globalWorkspace?: boolean;
   visible: boolean;
   closeOverlays: () => void;
   clearLiveWidth: (width: null) => void;
@@ -55,6 +56,10 @@ function labelKeyForTab(type: TabType): string {
 export function useWorkspacePanelCommands(input: Input) {
   const t = input.t;
   const defaultTabSessionRef = useRef("");
+  const unboundLayoutTouched = useRef(false);
+  const noteLayoutChoice = () => {
+    if (input.globalWorkspace && !input.workspaceRoot) unboundLayoutTouched.current = true;
+  };
   const mode = useLayoutStore(state => state.rightDockMode);
   const explorerOpen = useRemoteStore(state => state.explorerOpen);
   const hostCount = useRemoteStore(state => state.hosts.length);
@@ -79,6 +84,7 @@ export function useWorkspacePanelCommands(input: Input) {
     if (input.gridOpen) setLauncherDismissed(true);
   }, [input.gridOpen]);
   const openRightDockMode = useCommittedCommand((requestedMode?: RightDockMode) => {
+    noteLayoutChoice();
     input.closeOverlays();
     const layout = useLayoutStore.getState();
     const next = requestedMode ?? layout.rightDockMode;
@@ -94,6 +100,7 @@ export function useWorkspacePanelCommands(input: Input) {
     saveWorkspacePanelOpen(true, input.workspaceRoot);
   });
   const closeWorkspacePanel = useCommittedCommand(() => {
+    noteLayoutChoice();
     input.closeOverlays();
     const layout = useLayoutStore.getState();
     if (!layout.workspacePanelOpen) return;
@@ -117,6 +124,7 @@ export function useWorkspacePanelCommands(input: Input) {
     setLauncherDismissed((dismissed) => !dismissed);
   }, [launcherCardSpaceMode]);
   const prepareBlankWorkspace = useCommittedCommand((workspaceRoot = input.workspaceRoot) => {
+    unboundLayoutTouched.current = false;
     input.closeOverlays();
     input.clearLiveWidth(null);
     const layout = useLayoutStore.getState();
@@ -134,6 +142,7 @@ export function useWorkspacePanelCommands(input: Input) {
   // Plain open/close restores the project's tabs. The session initialization
   // effect below fills an expanded empty dock with Overview once per session.
   const toggleWorkspacePanel = useCommittedCommand(() => {
+    noteLayoutChoice();
     const layout = useLayoutStore.getState();
     if (layout.workspacePanelOpen) { closeWorkspacePanel(); return; }
     input.closeOverlays();
@@ -164,17 +173,23 @@ export function useWorkspacePanelCommands(input: Input) {
     // Restore the preference, not its temporary narrow-window rendering.
     input.setTreeWidth(treeWidth);
   });
+  useLayoutEffect(() => {
+    const activity = useActivityBarStore.getState();
+    // The first canonical global session binds the welcome's unbound layout
+    // to its real directory. Only a choice made on this welcome may transfer;
+    // ordinary project navigation and startup restoration keep their own data.
+    const inheritUnbound = Boolean(unboundLayoutTouched.current && input.globalWorkspace
+      && input.workspaceRoot && activity.workspaceRoot === "");
+    if (inheritUnbound) saveWorkspacePanelOpen(useLayoutStore.getState().workspacePanelOpen, input.workspaceRoot);
+    activity.setWorkspaceRoot(input.workspaceRoot, { inheritUnbound });
+    if (input.workspaceRoot) unboundLayoutTouched.current = false;
+  }, [input.workspaceRoot, input.globalWorkspace]);
   // Keep the legacy mode mirror on the active tab's type.
   useEffect(() => {
     if (!activeTabType) return;
     const next = dockModeForTab(activeTabType);
     if (useLayoutStore.getState().rightDockMode !== next) useLayoutStore.getState().setRightDockMode(next);
   }, [activeTabType]);
-  // The tab list is per workspace root; switching projects restores that
-  // project's own tabs instead of carrying the previous one's over.
-  useLayoutEffect(() => {
-    useActivityBarStore.getState().setWorkspaceRoot(input.workspaceRoot);
-  }, [input.workspaceRoot]);
   useLayoutEffect(() => {
     // Resolve the restored tab before sizing the first open dock. Overview has
     // a smaller default; an existing width remains shared across all tabs.

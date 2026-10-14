@@ -20,6 +20,9 @@ type RenameDraft = { id: string; target: TopicRenameTarget; title: string };
 export function useProjectTopicCommands(input: Input) {
   const operations = useResourceOperations({ visible: { tabId: input.visible.tabId || "application", sessionKey: input.visible.sessionKey } });
   const [draft, setDraft] = useState<RenameDraft | null>(null);
+  const [addingProject, setAddingProject] = useState(false);
+  const addingProjectRef = useRef(false);
+  const settleProjectPicker = useCommittedCommand(() => setAddingProject(false));
   const handled = useRef(false);
   const activeIdentity = input.topic ? JSON.stringify([input.topic.id, input.topic.target]) : "";
   const draftIdentity = draft ? JSON.stringify([draft.id, draft.target]) : "";
@@ -54,10 +57,17 @@ export function useProjectTopicCommands(input: Input) {
   const setTopicTitleDraft = useCommittedCommand((title: string) => setDraft(current => current ? { ...current, title } : current));
   const onCreateTopic = useCommittedCommand((scope: string, workspace: string) => input.navigation.openBlank(scope, workspace));
   const onCreateIsolatedWorktree = useCommittedCommand((workspaceRoot: string) => input.navigation.enqueue({ kind: "isolated-worktree", workspaceRoot }));
-  const onAddProject = useCommittedCommand(async (path?: string) => { await input.navigation.switchFolder(path); });
+  const onAddProject = useCommittedCommand(async (path?: string) => {
+    if (addingProjectRef.current) return;
+    addingProjectRef.current = true;
+    setAddingProject(true);
+    try { await input.navigation.switchFolder(path); }
+    catch (error) { report(error); }
+    finally { addingProjectRef.current = false; settleProjectPicker(); }
+  });
   return {
     topicTitleDraft: draft?.title ?? "", topicbarEditing: Boolean(draft && draftIdentity === activeIdentity),
     setTopicTitleDraft, startActiveTopicRename, cancelActiveTopicRename, commitActiveTopicRename,
-    renameTopic, refreshProjectsAndTabs, onCreateTopic, onCreateIsolatedWorktree, onAddProject,
+    renameTopic, refreshProjectsAndTabs, onCreateTopic, onCreateIsolatedWorktree, onAddProject, addingProject,
   };
 }

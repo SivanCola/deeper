@@ -155,6 +155,12 @@ Rotating `logs/shell.log` is the durable post-exit record. See
 
 ## Business commands
 
+Known Inbox product errors use `deepzora_error:<code>` in the RPC error
+message. The renderer localizes that code and reconciles missing items only
+for `deepzora_error:inbox_item_not_found`; uncoded text remains diagnostic
+detail. MCP tools/list attribution uses notice `code: "mcp_tools_list"` and
+structured `detail`, independently of the display title.
+
 ```jsonc
 {"method":"desktop/invoke","params":{"method":"OpenProjectTab","args":["/path", true]}}
 {"result": {...}}                                  // the method's JSON result, null for void

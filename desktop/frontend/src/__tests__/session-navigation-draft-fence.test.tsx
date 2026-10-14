@@ -58,6 +58,7 @@ function Probe() {
     noteNavigationIntent: () => ++intent,
     beginNavigationSurface: seq => { begun.push(seq); },
     settleNavigationSurface: () => {},
+    cancelNavigationSurface: () => {},
     isNavigationIntentCurrent: (candidate) => candidate === intent,
     markProjectChanged: () => {},
     refreshTabMetas: async () => {},

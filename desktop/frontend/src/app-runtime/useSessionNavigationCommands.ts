@@ -22,6 +22,7 @@ export type SessionNavigationCommandsInput = {
   noteNavigationIntent: () => number;
   beginNavigationSurface: (seq: number) => void;
   settleNavigationSurface: (seq: number) => void;
+  cancelNavigationSurface: (seq: number) => void;
   isNavigationIntentCurrent: (seq: number) => boolean;
   markProjectChanged: Dispatch<SetStateAction<number>>;
   refreshTabMetas: (apply?: () => boolean, options?: { afterMutation?: boolean }) => Promise<unknown>;
@@ -72,13 +73,13 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     }
   });
 
-  const openBlankSession = useCommittedCommand(async (scope: string, workspaceRoot: string): Promise<void> => {
+  const openBlankSession = useCommittedCommand(async (scope: string, workspaceRoot: string, preserveLayout = false): Promise<void> => {
     const seq = input.noteNavigationIntent();
     const operationId = `manual-${crypto.randomUUID()}`;
     const targetRoot = scope === "project" ? workspaceRoot : "";
     lastLocalTarget.current = { scope: scope === "project" ? "project" : "global", workspaceRoot: targetRoot };
     // UI preferences use the actual directory; global navigation uses an empty wire root.
-    input.prepareBlankWorkspace(workspaceRoot);
+    if (!preserveLayout) input.prepareBlankWorkspace(workspaceRoot);
     input.enterConversation();
     input.beginNavigationSurface(seq);
     // Creation is an explicit mutation, not a coalescible navigation request.
@@ -101,6 +102,11 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     }
     const target = blankSessionTarget();
     await openBlankSession(target.scope, target.workspaceRoot);
+  });
+  const startInitialConversation = useCommittedCommand(async () => {
+    if (activeTab?.session || activeTab?.remote) { input.enterConversation(); return; }
+    const target = blankSessionTarget();
+    await openBlankSession(target.scope, target.workspaceRoot, true);
   });
 
   const handleOpenTopic = useCommittedCommand(async (scope: string, workspaceRoot: string, topicId: string, sessionPath?: string): Promise<void> => {
@@ -180,6 +186,7 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
       markProjectChanged: input.markProjectChanged,
       refreshTabsAfterMutation,
       maskTarget: input.settleNavigationSurface,
+      cancelSurface: input.cancelNavigationSurface,
     }));
   });
 
@@ -193,6 +200,7 @@ export function useSessionNavigationCommands(input: SessionNavigationCommandsInp
     openCanonicalSession,
     openBlankSession,
     handleNewTab,
+    startInitialConversation,
     handleOpenTopic,
     onResumeSession,
     onRecoveryCreated,

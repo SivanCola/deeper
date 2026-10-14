@@ -55,6 +55,10 @@ export function useNavigationSurface(target: {
   const maskTarget = useCommittedCommand((completedIntent: number) => {
     setSurface((current) => markNavigationTargetMasked(current, completedIntent));
   });
+  const cancel = useCommittedCommand((completedIntent: number) => {
+    recordFrontendDiagnostic("navigation", "navigation.terminal", { intent: completedIntent, outcome: "cancelled" });
+    setSurface(current => settleNavigationSurfaceState(current, completedIntent));
+  });
   const settle = useCommittedCommand((completedIntent: number, outcome: "ready" | "degraded" | "failed") => {
     if (outcome !== "failed") {
       noteNavigationFirstPaint(completedIntent);
@@ -124,6 +128,7 @@ export function useNavigationSurface(target: {
     commitRendered,
     begin,
     maskTarget,
+    cancel,
     commitPaint,
   };
 }

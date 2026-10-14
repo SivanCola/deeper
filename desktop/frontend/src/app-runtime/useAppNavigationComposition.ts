@@ -37,7 +37,7 @@ export type AppNavigationCompositionInput = {
   activeTabId: string | undefined;
   activeSessionIdentity: string;
   remoteSurfaceActive: boolean;
-  surface: Pick<ReturnType<typeof useNavigationSurface>, "begin" | "maskTarget">;
+  surface: Pick<ReturnType<typeof useNavigationSurface>, "begin" | "maskTarget" | "cancel">;
   local: {
     setHistView: React.Dispatch<React.SetStateAction<HistoryViewState | null>>;
     setProjectRevision: React.Dispatch<React.SetStateAction<number>>;
@@ -55,7 +55,7 @@ export type AppNavigationCompositionInput = {
 export function useAppNavigationComposition(input: AppNavigationCompositionInput) {
   const { runtime, t, notice, showToast, shell, state, activeTab, activeTabId, activeSessionIdentity, session } = input;
   const { remoteSurfaceActive } = input;
-  const { begin: beginNavigationSurface, maskTarget: settleNavigationSurface } = input.surface;
+  const { begin: beginNavigationSurface, maskTarget: settleNavigationSurface, cancel: cancelNavigationSurface } = input.surface;
   const {
     setHistView, setProjectRevision,
     setTasksOpen,
@@ -109,6 +109,7 @@ export function useAppNavigationComposition(input: AppNavigationCompositionInput
     noteNavigationIntent,
     beginNavigationSurface,
     settleNavigationSurface,
+    cancelNavigationSurface,
     isNavigationIntentCurrent,
     markProjectChanged: setProjectRevision,
     refreshTabMetas,

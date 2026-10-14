@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Deepzora">
-  <!-- Legacy ICNS renderers do not apply the modern macOS icon mask. Keep the
-       rounded-square artwork in the 824px icon grid used by peer applications. -->
+  <!-- Keep the 824px legacy icon grid. The background must remain close to
+       macOS's rounded-square silhouette: overly round corners make macOS 26+
+       shrink the artwork into a gray compatibility tile. -->
   <g transform="translate(100 100) scale(0.8046875)">
-    <rect width="1024" height="1024" rx="323.5" ry="323.5" fill="#F2610C"/>
+    <rect width="1024" height="1024" rx="220" ry="220" fill="#F2610C"/>
     <path fill="#fff" fill-rule="evenodd" d="M232 268H372C604 268 792 377.2 792 512C792 646.8 604 756 372 756H232ZM512 613.5C464.5 609.2 408.3 570.3 375.9 512C354.3 475.3 334.9 445 321.9 417C386.7 442.9 449.4 479.6 512 512C574.6 479.6 637.3 442.9 702.1 417C689.1 445 669.7 475.3 648.1 512C615.7 570.3 559.5 609.2 512 613.5Z"/>
   </g>
 </svg>
