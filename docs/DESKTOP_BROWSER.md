@@ -232,8 +232,10 @@ in the `X-Deepzora-Serve-Capabilities` header of the `/auth/token` handshake.
 
 ### Right panel sizing
 
-Without an existing width preference, the first opening targets 45% of the
-window width. Normal split layout uses a 300px minimum and a 70% window cap,
+Without an existing width preference, the first opening targets 30% of the
+window width for Overview and 45% for other pages. Switching tabs retains the
+width, and a user-adjusted width takes precedence on restoration.
+Normal split layout uses a 300px minimum and a 70% window cap,
 protects 400px for chat, and falls back to an overlay when there is insufficient
 room. Pointer and keyboard resizing retain the existing local preference
 format across closing, reopening, and restarting. Responsive compression never

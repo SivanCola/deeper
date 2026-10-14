@@ -15,7 +15,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { create } from "zustand";
 
 import { loadLayoutSize, loadOptionalLayoutSize, saveLayoutSize } from "../lib/layoutPreferences";
-import { DOCK_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE_WIDTH } from "../lib/workspaceLayout";
+import { DOCK_DEFAULT_RATIO, DOCK_OVERVIEW_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE_WIDTH } from "../lib/workspaceLayout";
 import { useWindowChromeStore } from "./windowChrome";
 
 import { applySetState } from "./setState";
@@ -64,8 +64,9 @@ export function defaultSidebarWidth(): number {
   return SIDEBAR_DEFAULT_WIDTH;
 }
 
-export function defaultRightDockTreeWidth(): number {
-  return Math.max(RIGHT_DOCK_TREE_MIN_WIDTH, Math.round(useWindowChromeStore.getState().viewportWidth * DOCK_DEFAULT_RATIO));
+export function defaultRightDockTreeWidth(mode: RightDockMode = "context"): number {
+  const ratio = mode === "context" ? DOCK_OVERVIEW_DEFAULT_RATIO : DOCK_DEFAULT_RATIO;
+  return Math.max(RIGHT_DOCK_TREE_MIN_WIDTH, Math.round(useWindowChromeStore.getState().viewportWidth * ratio));
 }
 
 /** Responsive presentation never overwrites the user's wide-window preference. */
@@ -269,7 +270,7 @@ export const useLayoutStore = create<LayoutState>((set) => ({
     return {
       workspacePanelOpen: open,
       ...(open && !s.dockWidthReady
-        ? { rightDockTreeWidth: defaultRightDockTreeWidth(), dockWidthReady: true } : {}),
+        ? { rightDockTreeWidth: defaultRightDockTreeWidth(s.rightDockMode), dockWidthReady: true } : {}),
     };
   }),
   setWorkspacePanelMaximized: (update) => set((s) => ({ workspacePanelMaximized: applySetState(s.workspacePanelMaximized, update) })),

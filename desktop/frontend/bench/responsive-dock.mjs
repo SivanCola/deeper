@@ -5,7 +5,7 @@ import { createServer } from "vite";
 import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { selectSession } from "./app-page-actions.mjs";
+import { newSessionButton, selectSession } from "./app-page-actions.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.env.PLAYWRIGHT_BROWSERS_PATH ||= path.join(root, ".pw-browsers");
@@ -35,9 +35,12 @@ try {
   await resize(1600, 1000);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.addInitScript(() => localStorage.setItem("deepzora-lang", "en"));
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "language", { get: () => "en" });
+  });
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?mock=bench&bench=1`);
   await page.locator("textarea.composer__input:not([aria-hidden=true])").waitFor();
+  await page.locator(".startup-splash").waitFor({ state: "detached" });
   await selectSession(page, "bench:small-6t");
   await page.getByRole("tab", { name: "Overview", exact: true }).waitFor();
   const dock = page.locator(".workbench-dock");
@@ -52,16 +55,46 @@ try {
       throw error;
     }
   };
-  await near(720);
+  await near(480);
+  if (process.env.DEEPZORA_DOCK_SCREENSHOT) {
+    await newSessionButton(page).click();
+    await page.locator(".chat-pane--creation-empty").waitFor();
+    await page.locator(".topicbar__chrome-btn--workspace[aria-pressed=false]").click();
+    await near(480);
+    await page.mouse.move(800, 100);
+    const originalTheme = await page.evaluate(async () => {
+      const { applyTheme, getTheme } = await import("/src/lib/theme.ts");
+      const original = getTheme();
+      applyTheme("light");
+      return original;
+    });
+    await page.screenshot({ path: process.env.DEEPZORA_DOCK_SCREENSHOT });
+    await page.evaluate(async theme => {
+      const { applyTheme } = await import("/src/lib/theme.ts");
+      applyTheme(theme);
+    }, originalTheme);
+    await selectSession(page, "bench:small-6t");
+    await near(480);
+  }
+  // Without a saved manual width, mounting Files must retain Overview's width.
+  await page.evaluate(async () => {
+    const { useActivityBarStore } = await import("/src/store/activityBar.ts");
+    useActivityBarStore.getState().openEntry("file", "Files");
+  });
+  await page.getByRole("tab", { name: "Files", exact: true }).waitFor();
+  await page.locator(".workspace-panel").waitFor();
+  await near(480);
+  await page.getByRole("tab", { name: "Overview", exact: true }).click();
+  await near(480);
   const splitter = page.locator(".workspace-panel-resizer");
   await splitter.focus();
   await page.keyboard.press("ArrowLeft");
-  await near(736);
+  await near(496);
   const saved = await page.evaluate(() => localStorage.getItem("deepzora.layoutPreferences.v1"));
   await dock.getByRole("button", { name: "Close workspace panel", exact: true }).click();
   await dock.waitFor({ state: "detached" });
   await page.locator(".topicbar__chrome-btn--workspace[aria-pressed=false]").click();
-  await near(736);
+  await near(496);
   // Browser-only mock has no Electron host/menu entry. Mount the actual browser
   // panel through its tab store; native page sizing has separate host tests.
   await page.evaluate(async () => {
@@ -102,16 +135,38 @@ try {
     await near(width);
   }
   await resize(1600, 1000);
-  await near(736);
+  await near(496);
   assert.equal(await page.evaluate(() => localStorage.getItem("deepzora.layoutPreferences.v1")), saved);
   await page.reload();
-  await near(736);
+  await near(496);
   const handle = await splitter.boundingBox();
   await page.mouse.move(handle.x, handle.y + handle.height / 2);
   await page.mouse.down();
   await page.mouse.move(handle.x - 64, handle.y + handle.height / 2, { steps: 5 });
   await page.mouse.up();
-  await near(800);
+  await near(560);
+  await page.getByRole("tab", { name: "Overview", exact: true }).click();
+  await near(560);
+  await dock.getByRole("button", { name: "Close workspace panel", exact: true }).click();
+  await dock.waitFor({ state: "detached" });
+  await page.locator(".topicbar__chrome-btn--workspace[aria-pressed=false]").click();
+  await near(560);
+  await page.reload();
+  await near(560);
+  // Restored non-Overview tabs must select their own first-open default before
+  // the mode mirror's passive effect, even though the layout store starts in context.
+  for (const type of ["file", "browser", "context"]) {
+    await page.evaluate(async type => {
+      const { useActivityBarStore } = await import("/src/store/activityBar.ts");
+      const { workspaceRoot } = useActivityBarStore.getState();
+      localStorage.clear();
+      const tab = { id: "restored-tab", type, label: type === "file" ? "Files" : type === "browser" ? "Browser" : "Overview" };
+      localStorage.setItem(`deepzora.dock.tabs${workspaceRoot ? `.${workspaceRoot}` : ""}`,
+        JSON.stringify({ tabs: [tab], activeTabId: tab.id }));
+    }, type);
+    await page.reload();
+    await near(type === "context" ? 480 : 720);
+  }
   assert.deepEqual(errors, []);
   console.log(`responsive dock ${native ? "Electron" : "browser"}: initial ratio, keyboard/pointer resize, Browser tab, narrow fullscreen, close/reopen and restart passed`);
 } finally {

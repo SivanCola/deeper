@@ -45,7 +45,7 @@ export function buildWorkspaceDockProps(input: {
   onOpenInTerminal: WorkspaceDockRegionProps["workspace"]["onOpenInTerminal"];
 }): WorkspaceDockRegionProps {
   const { surface, geometry, panels } = input;
-  const workspacePanelResetWidth = defaultRightDockTreeWidth();
+  const workspacePanelResetWidth = defaultRightDockTreeWidth(input.mode);
   const workspacePanelResizeMinWidth = workspacePanelAriaMinWidth(geometry.workspacePanelMinWidth, geometry.workspacePanelRenderWidth);
   return {
     visible: surface.renderable,

@@ -10,8 +10,20 @@ const { loadOptionalLayoutSize } = await import("../lib/layoutPreferences");
 const layout = useLayoutStore.getState;
 setViewportSize(1600, 900);
 layout().setWorkspacePanelOpen(true);
-assert.equal(layout().rightDockTreeWidth, 720, "first opening uses the current viewport, not startup width");
+assert.equal(layout().rightDockTreeWidth, 480, "Overview first opening uses 30 percent of the current viewport, not startup width");
 assert.equal(loadOptionalLayoutSize("rightDockTreeWidth"), null, "automatic sizing does not persist a manual preference");
+for (const mode of ["files", "changed", "browser", "remote"] as const) {
+  useLayoutStore.setState({ workspacePanelOpen: false, dockWidthReady: false });
+  layout().setRightDockMode(mode);
+  layout().setWorkspacePanelOpen(true);
+  assert.equal(layout().rightDockTreeWidth, 720, `${mode} first opening keeps the 45 percent default`);
+}
+useLayoutStore.setState({ workspacePanelOpen: false, dockWidthReady: false });
+layout().setRightDockMode("context");
+layout().setWorkspacePanelOpen(true);
+layout().setRightDockMode("files");
+assert.equal(layout().rightDockTreeWidth, 480, "switching tabs retains the initial dock width");
+layout().setRightDockMode("context");
 layout().setRightDockTreeWidth(810);
 saveRightDockTreeWidth(810);
 layout().setWorkspacePanelOpen(false);
