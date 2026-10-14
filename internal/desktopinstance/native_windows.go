@@ -344,6 +344,13 @@ func inspect(root, profile string, all bool) ([]*process, error) {
 			continue
 		}
 		role := ImageRole(root, p.image)
+		if stableLauncherImage(root, p.image) {
+			p.close()
+			if !ordinaryProduct(p.image) {
+				return fail(outcome(UnknownOwner, "launcher product identity could not be verified for PID %d", e.ProcessID))
+			}
+			continue
+		}
 		if role != "" && !ordinaryProduct(p.image) {
 			p.close()
 			return fail(outcome(UnknownOwner, "product identity could not be verified for PID %d", e.ProcessID))
@@ -357,28 +364,24 @@ func inspect(root, profile string, all bool) ([]*process, error) {
 					return fail(outcome(OtherInstallation, "another Deepzora installation owns this data home"))
 				}
 			} else {
-				if role != "" && !errors.Is(statusErr, windows.ERROR_FILE_NOT_FOUND) {
+				if role != "shell" || !errors.Is(statusErr, windows.ERROR_FILE_NOT_FOUND) {
 					p.close()
 					return fail(outcome(UnknownOwner, "shell status could not be verified for PID %d: %v", e.ProcessID, statusErr))
 				}
-				p.close()
-				return fail(outcome(UnknownOwner, "current shell status is required for PID %d", e.ProcessID))
+				// Chromium children do not expose their own status endpoint.
+				// Validate their owner after collecting the full snapshot.
 			}
 		}
 		if role == "" {
 			p.close()
 			continue
 		}
-		if !all {
-			matches := p.status != nil && p.status.HomeKey == ProfileKey(profile)
-			if !matches {
-				p.close()
-				continue
-			}
-		}
 		found = append(found, p)
 	}
-	return found, nil
+	if err := requireShellOwners(root, found); err != nil {
+		return fail(err)
+	}
+	return selectProfileProcesses(found, ProfileKey(profile), all), nil
 }
 
 // Windows can deny opening a terminating process from an older snapshot.
