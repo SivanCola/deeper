@@ -53,7 +53,7 @@ test("renderer invokes are gated by sender identity and the contract allowlist",
   const performanceCalls: string[] = [];
   registerRendererIpc({
     ipcMain,
-    contract: parseContract({ digest: "sha256:a", commands: ["OpenProjectTab", "MinimiseMainWindow", "ToggleMaximiseMainWindow", "IsMainWindowMaximised", "CloseMainWindow"] }),
+    contract: parseContract({ digest: "sha256:a", commands: ["OpenProjectTab"] }),
     window: {
       isTrustedSender: (sender, frame) => sender === trustedSender && frame === trustedFrame,
       minimise() { nativeCalls.push("minimise"); },
@@ -106,10 +106,10 @@ test("renderer invokes are gated by sender identity and the contract allowlist",
   assert.deepEqual(await invoke(trusted, "OpenProjectTab", ["/p"]), { ok: true, value: { opened: "/p" } });
   assert.deepEqual(await invoke(trusted, "OpenProjectTab", ["/missing"]), { ok: false, message: "workspace not found" });
   assert.deepEqual(await invoke(trusted,"OpenProjectTab",["/pending-settings"]),{ok:false,message:"settings pending",code:-32000,data:{submissionOutcome:"not_accepted",modelApplication:{code:"model_settings_pending"}}});
-  assert.deepEqual(await invoke(trusted, "MinimiseMainWindow", []), { ok: true, value: undefined });
-  assert.deepEqual(await invoke(trusted, "ToggleMaximiseMainWindow", []), { ok: true, value: undefined });
-  assert.deepEqual(await invoke(trusted, "IsMainWindowMaximised", []), { ok: true, value: true });
-  assert.deepEqual(await invoke(trusted, "CloseMainWindow", []), { ok: true, value: undefined });
+  assert.deepEqual(await handlers.get(IPC.windowMinimise)!(trusted), { ok: true, value: undefined });
+  assert.deepEqual(await handlers.get(IPC.windowToggleMaximise)!(trusted), { ok: true, value: undefined });
+  assert.deepEqual(await handlers.get(IPC.windowIsMaximised)!(trusted), { ok: true, value: true });
+  assert.deepEqual(await handlers.get(IPC.windowClose)!(trusted), { ok: true, value: undefined });
   assert.deepEqual(nativeCalls, ["minimise", "toggle", "close"]);
   assert.deepEqual(await invoke(trusted, "DeleteEverything", []), { ok: false, message: "-32601 method not found: DeleteEverything",code:-32601,data:undefined });
   assert.deepEqual(await invoke(trusted, "__proto__", []), { ok: false, message: "-32601 method not found: __proto__",code:-32601,data:undefined });
@@ -122,7 +122,7 @@ test("renderer invokes are gated by sender identity and the contract allowlist",
   assert.deepEqual(event.returnValue, {
     protocolVersion: 1,
     digest: "sha256:a",
-    commands: ["OpenProjectTab", "MinimiseMainWindow", "ToggleMaximiseMainWindow", "IsMainWindowMaximised", "CloseMainWindow"],
+    commands: ["OpenProjectTab"],
   });
   const untrusted: { sender: unknown; senderFrame: unknown; returnValue?: unknown } = { sender: { id: 9 }, senderFrame: trustedFrame };
   contract(untrusted);

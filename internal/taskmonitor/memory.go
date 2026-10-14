@@ -99,6 +99,7 @@ func (s *InMemoryStore) AppendEvent(projectDir string, ev TaskEvent) error {
 		s.tasks[ev.TaskID] = &TaskSnapshot{
 			SchemaVersion: defaultSchemaVersion,
 			TaskID:        ev.TaskID,
+			JobID:         ev.JobID,
 			SessionID:     ev.SessionID,
 			State:         ev.State,
 			RuntimeState:  ev.RuntimeState,
@@ -280,7 +281,7 @@ func (s *InMemoryStore) RenewRuntimeLease(ctx context.Context, projectDir, taskI
 		}
 	}
 	snap, ok := s.tasks[taskID]
-	if !ok || snap.RuntimeOwnerID != ownerID || snap.State.Terminal() || snap.RuntimeState.Effective() != RuntimeStateAlive {
+	if !ok || snap.RuntimeOwnerID != ownerID || snap.State.Terminal() || snap.RuntimeState != RuntimeStateAlive {
 		return false, nil
 	}
 	snap.Version++

@@ -2,6 +2,7 @@ package acp
 
 import (
 	"context"
+	"deepzora/internal/permission"
 	"encoding/json"
 	"path/filepath"
 	"strings"
@@ -645,7 +646,7 @@ func TestDynamicBashApprovalOptionsUseExactSessionLiteral(t *testing.T) {
 	if len(options) != 3 || options[1].Kind != OptAllowAlways {
 		t.Fatalf("dynamic Bash options = %+v, want ordinary options with session grant", options)
 	}
-	want := "Bash=" + command
+	want := permission.ExactRule("Bash", command)
 	if !strings.Contains(options[1].Name, want) {
 		t.Fatalf("dynamic Bash session option = %q, want exact rule %q", options[1].Name, want)
 	}

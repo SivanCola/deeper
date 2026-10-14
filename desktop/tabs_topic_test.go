@@ -1,6 +1,7 @@
 package main
 
 import (
+	"deepzora/internal/event"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -657,6 +658,10 @@ func TestBuildTabControllerSkipsCleanupPendingPinnedSession(t *testing.T) {
 			t.Fatalf("startup loaded cleanup-pending history: %+v", tab.Ctrl.History())
 		}
 	}
+}
+
+func (c *runtimeStatusSessionController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
 }
 
 func TestReorderProjectsPersistsSidebarAndWorkspaceOrder(t *testing.T) {

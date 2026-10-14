@@ -209,3 +209,9 @@ func TestCompactButtonConflictUsesAdmissionReceipt(t *testing.T) {
 		t.Fatalf("button conflict lost its identity: %+v, %v", receipt, err)
 	}
 }
+
+func (c *compactDuringStatusController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	snapshot := runtimeSnapshotForTest(c.RuntimeStatus())
+	snapshot.Maintenance = c.maintenance
+	return snapshot
+}

@@ -193,7 +193,20 @@ func toWireTabWithSubmission(e event.Event, tabID, runtimeEpoch, submissionID st
 
 // The WithID entry points correlate one optimistic desktop user item with the
 // raw TurnDone produced by the turn that this call actually admits.
+func validateTurnSubmissionIdentity(tabID, submissionID string) error {
+	if strings.TrimSpace(tabID) == "" {
+		return errors.New("tabId is required")
+	}
+	if strings.TrimSpace(submissionID) == "" {
+		return errors.New("submissionId is required")
+	}
+	return nil
+}
+
 func (a *App) SubmitToTabWithID(tabID, input, submissionID string) error {
+	if err := validateTurnSubmissionIdentity(tabID, submissionID); err != nil {
+		return err
+	}
 	if err := validateTurnInput(input); err != nil {
 		return err
 	}
@@ -201,6 +214,9 @@ func (a *App) SubmitToTabWithID(tabID, input, submissionID string) error {
 }
 
 func (a *App) SubmitDisplayToTabWithID(tabID, display, input, submissionID string) error {
+	if err := validateTurnSubmissionIdentity(tabID, submissionID); err != nil {
+		return err
+	}
 	return a.submitDisplayToTab(tabID, display, input, submissionID)
 }
 
@@ -229,6 +245,9 @@ func (a *App) submitDisplayToTab(tabID, display, input, submissionID string) err
 }
 
 func (a *App) SubmitInvocationsToTabWithID(tabID, display, input string, invocations []InvocationRequest, submissionID string) error {
+	if err := validateTurnSubmissionIdentity(tabID, submissionID); err != nil {
+		return err
+	}
 	if err := validateInvocationTurnInput(input, invocations); err != nil {
 		return err
 	}
@@ -257,6 +276,9 @@ func (a *App) SubmitInitialGoalToTabWithID(
 	invocations []InvocationRequest,
 	collaborationMode, toolApprovalMode, submissionID string,
 ) ([]string, error) {
+	if err := validateTurnSubmissionIdentity(tabID, submissionID); err != nil {
+		return []string{}, err
+	}
 	if err := validateInvocationTurnInput(input, invocations); err != nil {
 		return []string{}, err
 	}
@@ -266,6 +288,9 @@ func (a *App) SubmitInitialGoalToTabWithID(
 }
 
 func (a *App) SubmitEditedDisplayToTabWithID(tabID, display, input, original, submissionID string) error {
+	if err := validateTurnSubmissionIdentity(tabID, submissionID); err != nil {
+		return err
+	}
 	if err := validateTurnInput(input); err != nil {
 		return err
 	}

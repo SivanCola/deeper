@@ -1,12 +1,21 @@
 package providerconv
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
 	"deepzora/internal/extension/protocol"
 	"deepzora/internal/provider"
 )
+
+func TestCurrentThinkingBlocksRoundTripPreservesEveryProof(t *testing.T) {
+	blocks := []provider.ThinkingBlock{{Type: "thinking", Thinking: "one", Signature: "proof-1"}, {Type: "redacted_thinking", Data: "opaque-proof"}, {Type: "thinking", Thinking: "two", Signature: "proof-2"}}
+	back := MessagesFromProtocol(MessagesToProtocol([]provider.Message{{Role: provider.RoleAssistant, ThinkingBlocks: blocks}}))
+	if len(back) != 1 || !reflect.DeepEqual(back[0].ThinkingBlocks, blocks) {
+		t.Fatalf("blocks changed: %+v", back)
+	}
+}
 
 // Round trips through the wire DTOs must preserve every provider-visible
 // field and drop nothing the extension side needs.

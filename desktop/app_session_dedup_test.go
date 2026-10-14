@@ -350,7 +350,7 @@ func TestForkKeepsProjectWorkspaceContext(t *testing.T) {
 	ctrl := installStubControllerWithCurrentPrompt(t, app, tabB)
 	turn := submitStubTurnAndWaitForCheckpoint(t, ctrl, "project B turn")
 
-	forked, err := app.Fork(turn)
+	forked, err := app.ForkForTab(tabB.ID, turn)
 	if err != nil {
 		t.Fatalf("Fork: %v", err)
 	}
@@ -400,8 +400,8 @@ func TestRewindReinjectsProjectWorkspaceContext(t *testing.T) {
 	ctrl := installStubControllerWithCurrentPrompt(t, app, tabB)
 	turn := submitStubTurnAndWaitForCheckpoint(t, ctrl, "project B turn")
 
-	if err := app.Rewind(turn, "conversation"); err != nil {
-		t.Fatalf("Rewind: %v", err)
+	if result := app.CommitRewindForTab(tabB.ID, "", turn, "conversation"); !result.OK {
+		t.Fatalf("CommitRewindForTab: %+v", result)
 	}
 	if got := normalizeProjectRoot(tabB.Ctrl.WorkspaceRoot()); got != normalizeProjectRoot(projectB) {
 		t.Fatalf("rewound controller workspace root = %q, want %q", got, normalizeProjectRoot(projectB))

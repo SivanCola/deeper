@@ -850,8 +850,8 @@ Deepzora is an MCP client. A `[[plugins]]` entry's `type` selects the transport:
 `stdio` (default) launches a local subprocess (`command`/`args`/`env`); `http`
 (Streamable HTTP) connects to a remote `url` with optional static `headers`
 (`${VAR}` / `${VAR:-default}` expanded from the environment, so tokens stay out
-of the file); `sse` connects to servers that still use the legacy persistent
-GET + announced POST endpoint transport.
+of the file). MCP requires protocol 2026-07-28 or newer. Legacy HTTP+SSE servers
+are unsupported; use a current stdio or Streamable HTTP server.
 
 For a remote HTTP server without a static `Authorization` header, an
 authentication challenge is shown as **Sign in**. Run

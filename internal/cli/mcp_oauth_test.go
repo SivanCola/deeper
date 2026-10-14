@@ -56,7 +56,14 @@ func TestMCPAuthCLIRejectsIneligibleConfigurations(t *testing.T) {
 			workspace := t.TempDir()
 			t.Chdir(workspace)
 			tc.entry.Source = config.MCPSourceUserConfig
-			if _, err := config.InstallUserPluginForRoot(workspace, tc.entry, true); err != nil {
+			_, installErr := config.InstallUserPluginForRoot(workspace, tc.entry, true)
+			if tc.entry.Type == "sse" {
+				if installErr == nil {
+					t.Fatal("retired transport was installed")
+				}
+				return
+			}
+			if err := installErr; err != nil {
 				t.Fatal(err)
 			}
 

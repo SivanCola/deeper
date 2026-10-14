@@ -6,10 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
-	fileencoding "deepzora/internal/fileutil/encoding"
 	"deepzora/internal/proc"
 	"deepzora/internal/secrets"
 )
@@ -20,16 +18,6 @@ type ccSwitchMCPRow struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
 	ServerConfig string `json:"server_config"`
-}
-
-type ccSwitchLegacyServer struct {
-	ID     string        `json:"id"`
-	Name   string        `json:"name"`
-	Server mcpServerSpec `json:"server"`
-	Apps   struct {
-		Codex    bool  `json:"codex"`
-		Deepzora *bool `json:"deepzora"`
-	} `json:"apps"`
 }
 
 type MCPImportCandidate struct {
@@ -50,13 +38,7 @@ func LoadCCSwitchMCPCandidates() ([]MCPImportCandidate, error) {
 	return candidates, nil
 }
 
-// LoadCCSwitchMCP reads MCP servers enabled for Deepzora from cc-switch and maps
-// them to Deepzora plugin entries. Newer cc-switch stores servers in SQLite;
-// older installs kept them in config.json(.migrated/.bak), so we support both.
-//
-// CC Switch v16+ stores dedicated enabled_deepzora / apps.deepzora flags.
-// Treat those as authoritative when present, and fall back to Codex only for
-// pre-v16 SQLite schemas or legacy JSON entries without Deepzora enablement.
+// LoadCCSwitchMCP reads explicitly Deepzora-enabled MCP servers from CC Switch SQLite.
 func LoadCCSwitchMCP() ([]PluginEntry, error) {
 	if IsolatedHomeDir() != "" {
 		return nil, nil
@@ -70,26 +52,7 @@ func LoadCCSwitchMCP() ([]PluginEntry, error) {
 
 func loadCCSwitchMCPFromRoot(root string) ([]PluginEntry, error) {
 	dbPath := filepath.Join(root, "cc-switch.db")
-	if _, err := os.Stat(dbPath); err == nil {
-		entries, err := loadCCSwitchMCPDB(dbPath)
-		if err != nil {
-			return nil, err
-		}
-		return entries, nil
-	} else if !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	for _, name := range []string{"config.json", "config.json.migrated", "config.json.bak"} {
-		entries, err := loadCCSwitchLegacyConfig(filepath.Join(root, name))
-		if err == nil && len(entries) > 0 {
-			return entries, nil
-		}
-		if err != nil && !os.IsNotExist(err) {
-			return nil, err
-		}
-	}
-	return nil, fmt.Errorf("cc-switch import: no Deepzora-enabled MCP servers found in %s", root)
+	return loadCCSwitchMCPDB(dbPath)
 }
 
 func ImportCCSwitchMCPEntries(entries []PluginEntry) (total, added, updated int, err error) {
@@ -144,14 +107,14 @@ func loadCCSwitchMCPDB(path string) ([]PluginEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cc-switch import: sqlite3 not found to read %s", path)
 	}
-	query := `SELECT id, name, server_config FROM mcp_servers WHERE enabled_codex = 1 ORDER BY name, id`
 	hasDeepzora, err := ccSwitchDBHasDeepzoraColumn(sqlite, path)
 	if err != nil {
 		return nil, err
 	}
-	if hasDeepzora {
-		query = `SELECT id, name, server_config FROM mcp_servers WHERE enabled_deepzora = 1 ORDER BY name, id`
+	if !hasDeepzora {
+		return nil, fmt.Errorf("cc-switch import: enabled_deepzora is required")
 	}
+	const query = `SELECT id, name, server_config FROM mcp_servers WHERE enabled_deepzora = 1 ORDER BY name, id`
 	cmd := proc.Command(sqlite, "-readonly", "-json", path, query)
 	cmd.Env = secrets.ProcessEnv()
 	out, err := cmd.Output()
@@ -198,50 +161,6 @@ func ccSwitchRowsToPlugins(rows []ccSwitchMCPRow) ([]PluginEntry, error) {
 			name = row.Name
 		}
 		e := pluginFromMCPServerSpec(name, s)
-		if err := validatePlugin(e); err != nil {
-			return nil, fmt.Errorf("cc-switch import: %w", err)
-		}
-		entries = append(entries, e)
-	}
-	return entries, nil
-}
-
-func loadCCSwitchLegacyConfig(path string) ([]PluginEntry, error) {
-	b, err := fileencoding.ReadFileUTF8(path)
-	if err != nil {
-		return nil, err
-	}
-	var doc struct {
-		MCP struct {
-			Servers map[string]ccSwitchLegacyServer `json:"servers"`
-		} `json:"mcp"`
-	}
-	if err := json.Unmarshal(b, &doc); err != nil {
-		return nil, fmt.Errorf("cc-switch import: parse %s: %w", path, err)
-	}
-	keys := make([]string, 0, len(doc.MCP.Servers))
-	for key := range doc.MCP.Servers {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	var entries []PluginEntry
-	for _, key := range keys {
-		srv := doc.MCP.Servers[key]
-		enabled := srv.Apps.Codex
-		if srv.Apps.Deepzora != nil {
-			enabled = *srv.Apps.Deepzora
-		}
-		if !enabled {
-			continue
-		}
-		name := srv.Name
-		if name == "" {
-			name = srv.ID
-		}
-		if name == "" {
-			name = key
-		}
-		e := pluginFromMCPServerSpec(name, srv.Server)
 		if err := validatePlugin(e); err != nil {
 			return nil, fmt.Errorf("cc-switch import: %w", err)
 		}

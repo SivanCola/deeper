@@ -60,8 +60,8 @@ func interruptedDisplayRecord(messageID, text, reasoning string, calls []provide
 		Content:          text,
 		ReasoningContent: reasoning,
 		ToolCalls:        displayCalls,
-		ToolCallID:       provider.LocalOnlyToolID,
-		Name:             provider.LocalOnlyToolName,
+		ToolCallID:       "",
+		Name:             "",
 		LocalOnly:        true,
 		InterruptedTurn: &provider.InterruptedTurnRecovery{
 			TerminalStatus:          terminalStatus,

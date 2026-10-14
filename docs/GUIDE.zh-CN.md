@@ -712,7 +712,7 @@ deepzora doctor capabilities --live --timeout 5s
 Deepzora 是一个 MCP 客户端。`[[plugins]]` 的 `type` 选择传输：`stdio`（默认）启动本地子进
 程（`command`/`args`/`env`）；`http`（Streamable HTTP）连接远程 `url`，可带静态
 `headers`（`${VAR}` / `${VAR:-default}` 从环境展开，密钥不入文件）。
-`sse` 则兼容仍使用持久 GET 与 server 公布 POST endpoint 的旧版远程 server。
+MCP 要求协议 2026-07-28 或更新版本；不支持旧版 HTTP+SSE transport。
 
 远程 HTTP server 未配置静态 `Authorization` header 时，认证要求会显示为 **登录**。
 CLI 可运行 `deepzora mcp auth <name>`，桌面端则在 MCP 面板点击该 server 的 **登录**。

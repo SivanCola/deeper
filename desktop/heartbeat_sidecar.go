@@ -10,8 +10,7 @@ import (
 	"deepzora/internal/fileutil"
 )
 
-// The top-level runs field remains readable by the previous sidecar reader;
-// current readers use revision/previous to make the two-file commit consistent.
+// Revision/previous make the two-file commit consistent.
 const heartbeatRunHistorySchemaVersion = 1
 
 type heartbeatRunHistoryGeneration struct {
@@ -46,21 +45,17 @@ func (e *HeartbeatEngine) readRunHistorySidecar(cfg heartbeatConfig) (map[string
 		log.Printf("[heartbeat] invalid run-history sidecar: %v", err)
 		return nil, nil
 	}
-	if sidecar.SchemaVersion > heartbeatRunHistorySchemaVersion {
-		return nil, fmt.Errorf("heartbeat run-history sidecar schemaVersion %d is newer than this binary supports (%d); upgrade Deepzora", sidecar.SchemaVersion, heartbeatRunHistorySchemaVersion)
+	if sidecar.SchemaVersion != heartbeatRunHistorySchemaVersion {
+		return nil, fmt.Errorf("unsupported heartbeat run-history sidecar schemaVersion %d; expected %d", sidecar.SchemaVersion, heartbeatRunHistorySchemaVersion)
 	}
-	if sidecar.SchemaVersion == 0 && sidecar.Revision == 0 && sidecar.Previous == nil {
-		return sidecar.Runs, nil
+	if sidecar.Revision == 0 {
+		return nil, fmt.Errorf("heartbeat run-history sidecar revision is required")
 	}
 	if sidecar.Revision == cfg.Revision {
 		return sidecar.Runs, nil
 	}
 	if sidecar.Previous != nil && sidecar.Previous.Revision == cfg.Revision {
 		return sidecar.Previous.Runs, nil
-	}
-	// An older writer can replace only the main config and omit Revision.
-	if cfg.Revision == 0 || cfg.Revision > sidecar.Revision {
-		return sidecar.Runs, nil
 	}
 	log.Printf("[heartbeat] run-history sidecar revision %d does not match config revision %d; ignoring staged generation", sidecar.Revision, cfg.Revision)
 	return nil, nil

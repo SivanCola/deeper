@@ -219,9 +219,9 @@ func TestSnapshotCannotMutateAcceptedMessageMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	snapshot := runtime.Session().Snapshot()
-	snapshot.Projection.Messages[0].Images[0] = "changed"
+	snapshot.Projection.Messages[0].ImageInputs[0].URL = "changed"
 	snapshot.Projection.ModelMessages[0].Images[0] = "changed-again"
-	if got := runtime.Session().Snapshot().Projection.Messages[0].Images[0]; got != "original" {
+	if got := runtime.Session().Snapshot().Projection.Messages[0].ImageInputs[0].URL; got != "original" {
 		t.Fatalf("observer mutated accepted message: %q", got)
 	}
 }

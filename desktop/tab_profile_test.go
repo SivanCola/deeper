@@ -449,7 +449,9 @@ func TestSetPlanModePreservesFullAccess(t *testing.T) {
 	app.tabOrder = []string{tab.ID}
 	app.activeTabID = tab.ID
 
-	app.SetPlanMode(true)
+	if err := app.SetCollaborationModeForTab(tab.ID, "plan"); err != nil {
+		t.Fatal(err)
+	}
 	if !tab.Ctrl.PlanMode() || !tab.Ctrl.AutoApproveTools() {
 		t.Fatalf("after SetPlanMode(true): plan=%v autoApproveTools=%v, want true/true", tab.Ctrl.PlanMode(), tab.Ctrl.AutoApproveTools())
 	}
@@ -457,7 +459,9 @@ func TestSetPlanModePreservesFullAccess(t *testing.T) {
 		t.Fatalf("collaboration mode = %q, want plan", got)
 	}
 
-	app.SetPlanMode(false)
+	if err := app.SetCollaborationModeForTab(tab.ID, "normal"); err != nil {
+		t.Fatal(err)
+	}
 	if tab.Ctrl.PlanMode() || !tab.Ctrl.AutoApproveTools() {
 		t.Fatalf("after SetPlanMode(false): plan=%v autoApproveTools=%v, want false/true", tab.Ctrl.PlanMode(), tab.Ctrl.AutoApproveTools())
 	}

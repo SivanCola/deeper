@@ -1,5 +1,4 @@
 package plugin
 
-// Production negotiation belongs to the SDK. Handwritten legacy fixtures use
-// this old, supported revision to exercise the fallback path deterministically.
-const testLegacyProtocolVersion = "2024-11-05"
+// Fixtures speak the current supported protocol.
+const testCurrentProtocolVersion = "2026-07-28"

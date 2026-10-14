@@ -6,8 +6,8 @@ import (
 	"maps"
 )
 
-// SubmissionReceipt is host-only metadata in an optional event. Keeping it out
-// of provider.Message lets older strict message decoders read new sessions.
+// SubmissionReceipt is host-only admission metadata in a dedicated event,
+// separate from provider-visible message content.
 type SubmissionReceipt struct {
 	FingerprintVersion        int    `json:"fingerprintVersion,omitempty"`
 	AcceptedAttachmentDigests string `json:"acceptedAttachmentDigests,omitempty"`

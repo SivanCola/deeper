@@ -20,10 +20,10 @@ type desktopProject struct {
 	Color              string         `json:"color,omitempty"`
 	Topics             []string       `json:"topics"`
 	PinnedTopics       []string       `json:"pinnedTopics,omitempty"`
-	ManualTopicOrder   bool           `json:"manualTopicOrder,omitempty"`
-	SessionOrder       []string       `json:"sessionOrder,omitempty"`
-	ManualSessionOrder bool           `json:"manualSessionOrder,omitempty"`
-	Groups             []desktopGroup `json:"groups,omitempty"`
+	ManualTopicOrder   bool           `json:"-"`
+	SessionOrder       []string       `json:"-"`
+	ManualSessionOrder bool           `json:"-"`
+	Groups             []desktopGroup `json:"-"`
 	GroupsRevision     uint64         `json:"-"`
 }
 
@@ -46,10 +46,10 @@ type desktopProjectFile struct {
 	GlobalColor              string           `json:"globalColor,omitempty"`
 	GlobalTopics             []string         `json:"globalTopics,omitempty"`
 	GlobalPinnedTopics       []string         `json:"globalPinnedTopics,omitempty"`
-	GlobalManualTopicOrder   bool             `json:"globalManualTopicOrder,omitempty"`
-	GlobalSessionOrder       []string         `json:"globalSessionOrder,omitempty"`
-	GlobalManualSessionOrder bool             `json:"globalManualSessionOrder,omitempty"`
-	GlobalGroups             []desktopGroup   `json:"globalGroups,omitempty"`
+	GlobalManualTopicOrder   bool             `json:"-"`
+	GlobalSessionOrder       []string         `json:"-"`
+	GlobalManualSessionOrder bool             `json:"-"`
+	GlobalGroups             []desktopGroup   `json:"-"`
 	GlobalGroupsRevision     uint64           `json:"-"`
 	DeletedTopics            []string         `json:"deletedTopics,omitempty"`
 	PinnedProjects           []string         `json:"pinnedProjects,omitempty"`
@@ -57,9 +57,7 @@ type desktopProjectFile struct {
 	Projects                 []desktopProject `json:"projects"`
 }
 
-// ReorderSessions enables stable per-session manual ordering. Older topic
-// order fields remain available for downgrade compatibility and for rows that
-// have not yet acquired an explicit session identity.
+// ReorderSessions enables stable per-session manual ordering.
 func (a *App) ReorderSessions(scope, workspaceRoot string, orderedSessionKeys []string) error {
 	id, _, err := a.ensureSessionOrganizationSources(scope, workspaceRoot, true)
 	if err != nil {

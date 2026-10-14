@@ -46,7 +46,6 @@ func TestCCSwitchRowsPreferIDForDuplicateDisplayNames(t *testing.T) {
 func TestCCSwitchImportClassifiesRiskyServers(t *testing.T) {
 	rows := []ccSwitchMCPRow{
 		{Name: "@modelcontextprotocol/server-chrome-devtools", ServerConfig: `{"command":"npx","args":["-y","chrome-devtools-mcp@latest"]}`},
-		{Name: "legacy", ServerConfig: `{"type":"sse","url":"https://example.test/sse"}`},
 	}
 	got, err := ccSwitchRowsToPlugins(rows)
 	if err != nil {
@@ -57,76 +56,6 @@ func TestCCSwitchImportClassifiesRiskyServers(t *testing.T) {
 		if candidate.Recommended {
 			t.Fatalf("%s should not be recommended: %+v", e.Name, candidate)
 		}
-	}
-}
-
-func TestLoadCCSwitchLegacyConfig(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.json.migrated")
-	body := `{
-		"mcp": {
-			"servers": {
-				"off": {
-					"name": "off",
-					"server": {"command": "node", "args": ["off.js"]},
-					"apps": {"codex": false}
-				},
-				"time": {
-					"name": "@modelcontextprotocol/server-time",
-					"server": {"type":"stdio", "command": "uvx", "args": ["mcp-server-time"]},
-					"apps": {"codex": true}
-				}
-			}
-		}
-	}`
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	got, err := loadCCSwitchLegacyConfig(path)
-	if err != nil {
-		t.Fatalf("loadCCSwitchLegacyConfig: %v", err)
-	}
-	if len(got) != 1 {
-		t.Fatalf("entries = %d, want 1: %+v", len(got), got)
-	}
-	if got[0].Name != "@modelcontextprotocol/server-time" || got[0].Command != "uvx" {
-		t.Fatalf("entry = %+v", got[0])
-	}
-}
-
-func TestLoadCCSwitchLegacyConfigPrefersDeepzoraFlag(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.json")
-	body := `{
-		"mcp": {
-			"servers": {
-				"legacy": {
-					"name": "legacy",
-					"server": {"command": "node", "args": ["legacy.js"]},
-					"apps": {"codex": true}
-				},
-				"deepzora-off": {
-					"name": "deepzora-off",
-					"server": {"command": "node", "args": ["off.js"]},
-					"apps": {"codex": true, "deepzora": false}
-				},
-				"deepzora-on": {
-					"name": "deepzora-on",
-					"server": {"command": "node", "args": ["on.js"]},
-					"apps": {"codex": false, "deepzora": true}
-				}
-			}
-		}
-	}`
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	got, err := loadCCSwitchLegacyConfig(path)
-	if err != nil {
-		t.Fatalf("loadCCSwitchLegacyConfig: %v", err)
-	}
-	if len(got) != 2 || got[0].Name != "deepzora-on" || got[1].Name != "legacy" {
-		t.Fatalf("entries = %+v, want legacy fallback and explicit Deepzora enablement", got)
 	}
 }
 
@@ -156,7 +85,7 @@ func TestLoadCCSwitchMCPDBPrefersDeepzoraColumn(t *testing.T) {
 	}
 }
 
-func TestLoadCCSwitchMCPDBFallsBackToCodexWithoutDeepzoraColumn(t *testing.T) {
+func TestLoadCCSwitchMCPDBRejectsMissingDeepzoraColumn(t *testing.T) {
 	if _, err := exec.LookPath("sqlite3"); err != nil {
 		t.Skip("sqlite3 not available")
 	}
@@ -172,12 +101,8 @@ func TestLoadCCSwitchMCPDBFallsBackToCodexWithoutDeepzoraColumn(t *testing.T) {
 	if out, err := exec.Command("sqlite3", dbPath, setup).CombinedOutput(); err != nil {
 		t.Fatalf("create sqlite db: %v\n%s", err, out)
 	}
-	got, err := loadCCSwitchMCPDB(dbPath)
-	if err != nil {
-		t.Fatalf("loadCCSwitchMCPDB: %v", err)
-	}
-	if len(got) != 1 || got[0].Name != "codex-on" {
-		t.Fatalf("entries = %+v, want legacy Codex fallback", got)
+	if _, err := loadCCSwitchMCPDB(dbPath); err == nil {
+		t.Fatal("database without explicit Deepzora enablement was accepted")
 	}
 }
 
@@ -191,7 +116,8 @@ func TestLoadCCSwitchMCPEmptyDBDoesNotReadLegacyBackups(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
 		server_config TEXT NOT NULL,
-		enabled_codex BOOLEAN NOT NULL DEFAULT 0
+		enabled_codex BOOLEAN NOT NULL DEFAULT 0,
+		enabled_deepzora BOOLEAN NOT NULL DEFAULT 0
 	);`).CombinedOutput(); err != nil {
 		t.Fatalf("create sqlite db: %v\n%s", err, out)
 	}

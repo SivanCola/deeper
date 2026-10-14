@@ -4,11 +4,6 @@ package main
 // renders once per finished turn, so a session reopened while still awaiting
 // delivery would otherwise have no exit (#9036).
 
-// AcceptDelivery accepts the active tab's pending delivery checks.
-func (a *App) AcceptDelivery() error {
-	return a.AcceptDeliveryToTab("")
-}
-
 // AcceptDeliveryToTab clears one tab's awaiting-delivery state. It touches no
 // other status, starts no turn, and is idempotent: accepting a tab that is not
 // awaiting delivery succeeds and changes nothing.

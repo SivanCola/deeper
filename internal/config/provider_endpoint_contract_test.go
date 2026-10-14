@@ -37,14 +37,14 @@ func TestProviderEndpointMismatchIsConservative(t *testing.T) {
 		mismatch bool
 	}{
 		{"foreign standard suffix", ProviderEntry{Kind: "openai", RequestURL: "https://gateway.test/v1/messages"}, true},
-		{"deepseek hybrid path", ProviderEntry{Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/anthropic/v1/chat/completions"}, true},
-		{"deepseek official chat", ProviderEntry{Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/v1/chat/completions"}, false},
+		{"deepseek hybrid path", ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/anthropic/v1/chat/completions"}, true},
+		{"deepseek official chat", ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/v1/chat/completions"}, false},
 		{"mimo shared openai and responses root", ProviderEntry{Name: "mimo-api", Kind: "openai", BaseURL: "https://api.xiaomimimo.com/v1"}, false},
-		{"deepseek accepted root alias", ProviderEntry{Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/chat/completions"}, false},
-		{"custom host", ProviderEntry{Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://gateway.test/anthropic/v1/chat/completions"}, false},
-		{"query override", ProviderEntry{Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/anthropic/v1/chat/completions?token=x"}, false},
-		{"unknown path", ProviderEntry{Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/custom/route"}, false},
-		{"custom path in foreign namespace", ProviderEntry{Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/anthropic/custom/chat/completions"}, false},
+		{"deepseek accepted root alias", ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/chat/completions"}, false},
+		{"custom host", ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://gateway.test/anthropic/v1/chat/completions"}, false},
+		{"query override", ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/anthropic/v1/chat/completions?token=x"}, false},
+		{"unknown path", ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/custom/route"}, false},
+		{"custom path in foreign namespace", ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "openai", RequestURL: "https://api.deepseek.com/anthropic/custom/chat/completions"}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -59,8 +59,8 @@ func TestProviderEndpointMismatchIsConservative(t *testing.T) {
 	}
 }
 
-func TestCatalogForProviderEntryUsesHiddenLegacyPreset(t *testing.T) {
-	id, catalog, ok := CatalogForProviderEntry(&ProviderEntry{Name: "deepseek-anthropic"})
+func TestCatalogForProviderEntryUsesExplicitPreset(t *testing.T) {
+	id, catalog, ok := CatalogForProviderEntry(&ProviderEntry{PresetID: "deepseek-anthropic", Name: "renamed"})
 	if !ok || id != "deepseek-anthropic" || catalog.BrandID != "deepseek" || catalog.Region != "global" || catalog.Product != "api" {
 		t.Fatalf("catalog identity = %q %+v %v", id, catalog, ok)
 	}
@@ -113,14 +113,14 @@ func TestRepairProviderEndpointContractAppliesTargetRouteOptions(t *testing.T) {
 	}{
 		{
 			name: "responses",
-			entry: ProviderEntry{Name: "deepseek-anthropic", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
+			entry: ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
 				RequestURL: "https://api.deepseek.com/responses", AuthHeader: true},
 			wantKind: "responses", wantBaseURL: "https://api.deepseek.com", wantMode: "stateless",
 			wantRequest: "https://api.deepseek.com/responses",
 		},
 		{
 			name: "openai",
-			entry: ProviderEntry{Name: "deepseek-anthropic", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
+			entry: ProviderEntry{PresetID: "deepseek-anthropic", Name: "deepseek-anthropic", Kind: "anthropic", BaseURL: "https://api.deepseek.com/anthropic",
 				RequestURL: "https://api.deepseek.com/v1/chat/completions", AuthHeader: true, ResponsesMode: "stateful"},
 			wantKind: "openai", wantBaseURL: "https://api.deepseek.com/v1",
 			wantRequest: "https://api.deepseek.com/v1/chat/completions",

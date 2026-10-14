@@ -115,12 +115,12 @@ func TestTaskStateUnmarshalJSON_Known(t *testing.T) {
 	}
 }
 
-func TestRuntimeStateEffective_LegacyAndKnownValues(t *testing.T) {
-	if got := (RuntimeState("")).Effective(); got != RuntimeStateUnknown {
-		t.Fatalf("legacy empty runtime state = %q, want unknown", got)
+func TestRuntimeStateRequiresKnownValue(t *testing.T) {
+	if got := RuntimeState(""); got.IsKnown() {
+		t.Fatalf("empty runtime state must remain invalid: %q", got)
 	}
 	for _, state := range []RuntimeState{RuntimeStateUnknown, RuntimeStateAlive, RuntimeStateExited} {
-		if !state.IsKnown() || state.Effective() != state {
+		if !state.IsKnown() {
 			t.Fatalf("runtime state %q was not preserved as known", state)
 		}
 	}
@@ -132,7 +132,7 @@ func TestRuntimeStateEffective_LegacyAndKnownValues(t *testing.T) {
 // TaskSnapshot
 
 func TestTaskSnapshotValidate_Valid(t *testing.T) {
-	ts := TaskSnapshot{
+	ts := TaskSnapshot{JobID: "task-1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "task-1", SessionID: "sess-1",
 		State: TaskStateRunning, CreatedAt: time.Now().Add(-time.Hour), UpdatedAt: time.Now(),
 	}
@@ -148,8 +148,8 @@ func TestTaskSnapshotValidate_MissingFields(t *testing.T) {
 		want string
 	}{
 		{"no TaskID", TaskSnapshot{SessionID: "s", State: TaskStateQueued, SchemaVersion: 1}, "TaskID"},
-		{"no State", TaskSnapshot{TaskID: "t", SessionID: "s", SchemaVersion: 1}, "State"},
-		{"bad SchemaVersion", TaskSnapshot{TaskID: "t", SessionID: "s", State: TaskStateQueued, SchemaVersion: 0, CreatedAt: time.Now(), UpdatedAt: time.Now()}, "SchemaVersion"},
+		{"no State", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown, TaskID: "t", SessionID: "s", SchemaVersion: 1}, "State"},
+		{"bad SchemaVersion", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown, TaskID: "t", SessionID: "s", State: TaskStateQueued, SchemaVersion: 0, CreatedAt: time.Now(), UpdatedAt: time.Now()}, "SchemaVersion"},
 	}
 	for _, tc := range tests {
 		err := tc.snap.Validate()
@@ -164,7 +164,7 @@ func TestTaskSnapshotValidate_MissingFields(t *testing.T) {
 }
 
 func TestTaskSnapshotValidate_UpdatedBeforeCreated(t *testing.T) {
-	ts := TaskSnapshot{
+	ts := TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t", SessionID: "s",
 		State: TaskStateQueued, CreatedAt: time.Now(), UpdatedAt: time.Now().Add(-time.Hour),
 	}
@@ -182,29 +182,29 @@ func TestTaskSnapshotValidate_FieldLengthLimits(t *testing.T) {
 		snap TaskSnapshot
 		want string
 	}{
-		{"TaskID too long", TaskSnapshot{
+		{"TaskID too long", TaskSnapshot{JobID: long, RuntimeState: RuntimeStateUnknown,
 			SchemaVersion: 1, TaskID: long, SessionID: "s",
 			State: TaskStateQueued, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 		}, "TaskID exceeds"},
-		{"JobID too long", TaskSnapshot{
+		{"JobID too long", TaskSnapshot{RuntimeState: RuntimeStateUnknown,
 			SchemaVersion: 1, TaskID: "t", JobID: long, SessionID: "s",
 			State: TaskStateQueued, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 		}, "JobID exceeds"},
-		{"SessionID too long", TaskSnapshot{
+		{"SessionID too long", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 			SchemaVersion: 1, TaskID: "t", SessionID: long,
 			State: TaskStateQueued, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 		}, "SessionID exceeds"},
-		{"ErrorCode too long", TaskSnapshot{
+		{"ErrorCode too long", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 			SchemaVersion: 1, TaskID: "t", SessionID: "s",
 			State: TaskStateFailed, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 			ErrorCode: long,
 		}, "ErrorCode exceeds"},
-		{"RuntimeState too long", TaskSnapshot{
+		{"RuntimeState too long", TaskSnapshot{JobID: "t",
 			SchemaVersion: 1, TaskID: "t", SessionID: "s",
 			State: TaskStateRunning, RuntimeState: RuntimeState(long),
 			CreatedAt: time.Now(), UpdatedAt: time.Now(),
 		}, "RuntimeState exceeds"},
-		{"ErrorSummary too long", TaskSnapshot{
+		{"ErrorSummary too long", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 			SchemaVersion: 1, TaskID: "t", SessionID: "s",
 			State: TaskStateFailed, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 			ErrorSummary: longSummary,
@@ -241,7 +241,7 @@ func TestTaskSnapshotJSON_RoundTrip(t *testing.T) {
 
 func TestReconcileRuntimeExpiredLease(t *testing.T) {
 	now := time.Now().UTC()
-	snap := TaskSnapshot{
+	snap := TaskSnapshot{JobID: "task-1",
 		SchemaVersion: 1, TaskID: "task-1", SessionID: "s1", State: TaskStateRunning,
 		RuntimeState: RuntimeStateAlive, RuntimeLeaseUntil: now.Add(-time.Second),
 		CreatedAt: now.Add(-time.Minute), UpdatedAt: now.Add(-time.Minute),
@@ -258,21 +258,18 @@ func TestTaskSnapshotJSON_LegacyMissingRuntimeState(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &snap); err != nil {
 		t.Fatalf("unmarshal legacy snapshot: %v", err)
 	}
-	if got := snap.RuntimeState.Effective(); got != RuntimeStateUnknown {
-		t.Fatalf("legacy runtime state = %q, want unknown", got)
+	if runtimeJobID(&snap) != "" || snap.RuntimeState.IsKnown() {
+		t.Fatal("old snapshot acquired inferred runtime identity/state")
 	}
-	if snap.JobID != "" || runtimeJobID(&snap) != snap.TaskID {
-		t.Fatalf("legacy job identity = %q/%q", snap.JobID, runtimeJobID(&snap))
-	}
-	if err := snap.Validate(); err != nil {
-		t.Fatalf("legacy snapshot should remain valid: %v", err)
+	if err := snap.Validate(); err == nil {
+		t.Fatal("old snapshot must be rejected")
 	}
 }
 
 // TaskEvent
 
 func TestTaskEventValidate_Valid(t *testing.T) {
-	ev := TaskEvent{
+	ev := TaskEvent{JobID: "t1",
 		Sequence: 1, Timestamp: time.Now(), EventType: "state_change",
 		TaskID: "t1", SessionID: "s1", State: TaskStateRunning,
 	}
@@ -287,11 +284,11 @@ func TestTaskEventValidate_MissingFields(t *testing.T) {
 		event TaskEvent
 		want  string
 	}{
-		{"zero Sequence", TaskEvent{Timestamp: time.Now(), EventType: "e", TaskID: "t", SessionID: "s", State: TaskStateQueued}, "Sequence"},
+		{"zero Sequence", TaskEvent{JobID: "t", Timestamp: time.Now(), EventType: "e", TaskID: "t", SessionID: "s", State: TaskStateQueued}, "Sequence"},
 		{"no TaskID", TaskEvent{Sequence: 1, Timestamp: time.Now(), EventType: "e", SessionID: "s", State: TaskStateQueued}, "TaskID"},
-		{"no EventType", TaskEvent{Sequence: 1, Timestamp: time.Now(), TaskID: "t", SessionID: "s", State: TaskStateQueued}, "EventType"},
-		{"no State", TaskEvent{Sequence: 1, Timestamp: time.Now(), EventType: "e", TaskID: "t", SessionID: "s"}, "State"},
-		{"no Timestamp", TaskEvent{Sequence: 1, EventType: "e", TaskID: "t", SessionID: "s", State: TaskStateQueued}, "Timestamp"},
+		{"no EventType", TaskEvent{JobID: "t", Sequence: 1, Timestamp: time.Now(), TaskID: "t", SessionID: "s", State: TaskStateQueued}, "EventType"},
+		{"no State", TaskEvent{JobID: "t", Sequence: 1, Timestamp: time.Now(), EventType: "e", TaskID: "t", SessionID: "s"}, "State"},
+		{"no Timestamp", TaskEvent{JobID: "t", Sequence: 1, EventType: "e", TaskID: "t", SessionID: "s", State: TaskStateQueued}, "Timestamp"},
 	}
 	for _, tc := range tests {
 		err := tc.event.Validate()
@@ -304,7 +301,7 @@ func TestTaskEventValidate_MissingFields(t *testing.T) {
 func TestTaskEventValidate_FieldLengthLimits(t *testing.T) {
 	long := strings.Repeat("x", maxFieldLen+1)
 	longSummary := strings.Repeat("y", maxErrorSummaryLen+1)
-	base := TaskEvent{
+	base := TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: time.Now(), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateQueued,
 	}
@@ -383,11 +380,11 @@ func TestInMemoryStore_ListTasks_Empty(t *testing.T) {
 
 func TestInMemoryStore_ListTasks_ProjectIsolation(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/proj-a", TaskSnapshot{
+	mustUpsert(t, store, "/proj-a", TaskSnapshot{JobID: "a1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "a1", SessionID: "s1",
 		State: TaskStateRunning, CreatedAt: seedTime(1), UpdatedAt: seedTime(10),
 	})
-	mustUpsert(t, store, "/proj-b", TaskSnapshot{
+	mustUpsert(t, store, "/proj-b", TaskSnapshot{JobID: "b1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "b1", SessionID: "s3",
 		State: TaskStateFailed, CreatedAt: seedTime(3), UpdatedAt: seedTime(12),
 	})
@@ -403,11 +400,11 @@ func TestInMemoryStore_ListTasks_ProjectIsolation(t *testing.T) {
 
 func TestInMemoryStore_ListTasks_AllProjects(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/proj-a", TaskSnapshot{
+	mustUpsert(t, store, "/proj-a", TaskSnapshot{JobID: "a1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "a1", SessionID: "s",
 		State: TaskStateRunning, CreatedAt: seedTime(1), UpdatedAt: seedTime(10),
 	})
-	mustUpsert(t, store, "/proj-b", TaskSnapshot{
+	mustUpsert(t, store, "/proj-b", TaskSnapshot{JobID: "b1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "b1", SessionID: "s",
 		State: TaskStateFailed, CreatedAt: seedTime(2), UpdatedAt: seedTime(11),
 	})
@@ -419,11 +416,11 @@ func TestInMemoryStore_ListTasks_AllProjects(t *testing.T) {
 
 func TestInMemoryStore_ListTasks_SortOrder(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/p", TaskSnapshot{
+	mustUpsert(t, store, "/p", TaskSnapshot{JobID: "old", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "old", SessionID: "s", State: TaskStateQueued,
 		CreatedAt: seedTime(1), UpdatedAt: seedTime(5),
 	})
-	mustUpsert(t, store, "/p", TaskSnapshot{
+	mustUpsert(t, store, "/p", TaskSnapshot{JobID: "new", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "new", SessionID: "s", State: TaskStateRunning,
 		CreatedAt: seedTime(2), UpdatedAt: seedTime(10),
 	})
@@ -435,7 +432,7 @@ func TestInMemoryStore_ListTasks_SortOrder(t *testing.T) {
 
 func TestInMemoryStore_GetTask_ProjectIsolation(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/proj-a", TaskSnapshot{
+	mustUpsert(t, store, "/proj-a", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s",
 		State: TaskStateRunning, CreatedAt: seedTime(1), UpdatedAt: seedTime(2),
 	})
@@ -453,7 +450,7 @@ func TestInMemoryStore_GetTask_ProjectIsolation(t *testing.T) {
 
 func TestInMemoryStore_GetTask_Found(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/p", TaskSnapshot{
+	mustUpsert(t, store, "/p", TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateFailed, CreatedAt: seedTime(1), UpdatedAt: seedTime(2),
 		ErrorCode: "EXIT_42",
@@ -489,7 +486,7 @@ func TestInMemoryStore_ListEvents_Empty(t *testing.T) {
 func TestInMemoryStore_ListEvents_SequenceOrder(t *testing.T) {
 	store := NewInMemoryStore()
 	for i := 1; i <= 5; i++ {
-		mustAppend(t, store, "/p", TaskEvent{
+		mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 			Sequence: i, Timestamp: seedTime(i), EventType: "e",
 			TaskID: "t", SessionID: "s", State: TaskStateRunning,
 		})
@@ -508,7 +505,7 @@ func TestInMemoryStore_ListEvents_SequenceOrder(t *testing.T) {
 func TestInMemoryStore_ListEvents_Cursor(t *testing.T) {
 	store := NewInMemoryStore()
 	for i := 1; i <= 5; i++ {
-		mustAppend(t, store, "/p", TaskEvent{
+		mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 			Sequence: i, Timestamp: seedTime(i), EventType: "e",
 			TaskID: "t", SessionID: "s", State: TaskStateRunning,
 		})
@@ -521,7 +518,7 @@ func TestInMemoryStore_ListEvents_Cursor(t *testing.T) {
 
 func TestInMemoryStore_ListEvents_ProjectIsolation(t *testing.T) {
 	store := NewInMemoryStore()
-	mustAppend(t, store, "/proj-a", TaskEvent{
+	mustAppend(t, store, "/proj-a", TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: seedTime(1), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
@@ -536,11 +533,11 @@ func TestInMemoryStore_ListEvents_ProjectIsolation(t *testing.T) {
 
 func TestInMemoryStore_AppendEvent_RejectsDuplicateSequence(t *testing.T) {
 	store := NewInMemoryStore()
-	mustAppend(t, store, "/p", TaskEvent{
+	mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: seedTime(1), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
-	err := store.AppendEvent("/p", TaskEvent{
+	err := store.AppendEvent("/p", TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: seedTime(2), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
@@ -551,11 +548,11 @@ func TestInMemoryStore_AppendEvent_RejectsDuplicateSequence(t *testing.T) {
 
 func TestInMemoryStore_AppendEvent_RejectsRegressingSequence(t *testing.T) {
 	store := NewInMemoryStore()
-	mustAppend(t, store, "/p", TaskEvent{
+	mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 		Sequence: 5, Timestamp: seedTime(1), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
-	err := store.AppendEvent("/p", TaskEvent{
+	err := store.AppendEvent("/p", TaskEvent{JobID: "t",
 		Sequence: 3, Timestamp: seedTime(2), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
@@ -566,11 +563,11 @@ func TestInMemoryStore_AppendEvent_RejectsRegressingSequence(t *testing.T) {
 
 func TestInMemoryStore_AppendEvent_RejectsTerminalAppend(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/p", TaskSnapshot{
+	mustUpsert(t, store, "/p", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t", SessionID: "s",
 		State: TaskStateSucceeded, CreatedAt: seedTime(1), UpdatedAt: seedTime(2),
 	})
-	err := store.AppendEvent("/p", TaskEvent{
+	err := store.AppendEvent("/p", TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: seedTime(3), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
@@ -581,11 +578,11 @@ func TestInMemoryStore_AppendEvent_RejectsTerminalAppend(t *testing.T) {
 
 func TestInMemoryStore_AppendEvent_RejectsSessionIDMismatch(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/p", TaskSnapshot{
+	mustUpsert(t, store, "/p", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t", SessionID: "s-original",
 		State: TaskStateRunning, CreatedAt: seedTime(1), UpdatedAt: seedTime(2),
 	})
-	err := store.AppendEvent("/p", TaskEvent{
+	err := store.AppendEvent("/p", TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: seedTime(3), EventType: "e",
 		TaskID: "t", SessionID: "s-different", State: TaskStateRunning,
 	})
@@ -596,15 +593,15 @@ func TestInMemoryStore_AppendEvent_RejectsSessionIDMismatch(t *testing.T) {
 
 func TestInMemoryStore_AppendEvent_UpdatesSnapshot(t *testing.T) {
 	store := NewInMemoryStore()
-	mustAppend(t, store, "/p", TaskEvent{
+	mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: seedTime(1), EventType: "state_change",
 		TaskID: "t", SessionID: "s", State: TaskStateQueued,
 	})
-	mustAppend(t, store, "/p", TaskEvent{
+	mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 		Sequence: 2, Timestamp: seedTime(2), EventType: "state_change",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
-	mustAppend(t, store, "/p", TaskEvent{
+	mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 		Sequence: 3, Timestamp: seedTime(3), EventType: "error",
 		TaskID: "t", SessionID: "s", State: TaskStateFailed,
 		ErrorCode: "CRASH", ErrorSummary: "unexpected panic",
@@ -634,11 +631,11 @@ func TestInMemoryStore_AppendEvent_Invalid(t *testing.T) {
 
 func TestInMemoryStore_ContextCancellation(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/p", TaskSnapshot{
+	mustUpsert(t, store, "/p", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t", SessionID: "s",
 		State: TaskStateRunning, CreatedAt: seedTime(1), UpdatedAt: seedTime(2),
 	})
-	mustAppend(t, store, "/p", TaskEvent{
+	mustAppend(t, store, "/p", TaskEvent{JobID: "t",
 		Sequence: 1, Timestamp: seedTime(1), EventType: "e",
 		TaskID: "t", SessionID: "s", State: TaskStateRunning,
 	})
@@ -662,7 +659,7 @@ func TestInMemoryStore_ContextCancellation(t *testing.T) {
 
 func TestStore_DoesNotLeakSensitiveViaInterface(t *testing.T) {
 	store := NewInMemoryStore()
-	mustUpsert(t, store, "/p", TaskSnapshot{
+	mustUpsert(t, store, "/p", TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t", SessionID: "s",
 		State: TaskStateFailed, CreatedAt: seedTime(1), UpdatedAt: seedTime(2),
 		ErrorCode: "ERR", ErrorSummary: "safe summary",
@@ -695,14 +692,14 @@ func mustAppend(t *testing.T, store *InMemoryStore, proj string, ev TaskEvent) {
 
 func TestTaskSnapshotValidate_SessionIDOptional(t *testing.T) {
 	now := time.Now()
-	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "t", State: TaskStateQueued, CreatedAt: now, UpdatedAt: now}
+	snap := TaskSnapshot{JobID: "t", RuntimeState: RuntimeStateUnknown, SchemaVersion: 1, TaskID: "t", State: TaskStateQueued, CreatedAt: now, UpdatedAt: now}
 	if err := snap.Validate(); err != nil {
 		t.Fatalf("empty SessionID should be valid, got %v", err)
 	}
 }
 
 func TestTaskEventValidate_SessionIDOptional(t *testing.T) {
-	ev := TaskEvent{Sequence: 1, Timestamp: time.Now(), EventType: "e", TaskID: "t", State: TaskStateQueued}
+	ev := TaskEvent{JobID: "t", Sequence: 1, Timestamp: time.Now(), EventType: "e", TaskID: "t", State: TaskStateQueued}
 	if err := ev.Validate(); err != nil {
 		t.Fatalf("empty SessionID should be valid, got %v", err)
 	}

@@ -36,7 +36,7 @@ func TestFileStore_RoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now().Truncate(time.Second)
-	snap := TaskSnapshot{
+	snap := TaskSnapshot{JobID: "task-1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "task-1", SessionID: "s1",
 		State: TaskStateFailed, CreatedAt: now.Add(-time.Hour), UpdatedAt: now,
 		ErrorCode: "TIMEOUT", ErrorSummary: "deadline exceeded",
@@ -68,9 +68,9 @@ func TestFileStore_ListEvents_RoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Write events as JSONL
-	events := `{"sequence":1,"timestamp":"2025-01-01T00:00:01Z","event_type":"state_change","task_id":"t1","session_id":"s","state":"queued"}
-{"sequence":2,"timestamp":"2025-01-01T00:00:02Z","event_type":"state_change","task_id":"t1","session_id":"s","state":"running"}
-{"sequence":3,"timestamp":"2025-01-01T00:00:03Z","event_type":"error","task_id":"t1","session_id":"s","state":"failed","error_code":"E1"}
+	events := `{"sequence":1,"timestamp":"2025-01-01T00:00:01Z","event_type":"state_change","task_id":"t1","job_id":"t1","session_id":"s","state":"queued"}
+{"sequence":2,"timestamp":"2025-01-01T00:00:02Z","event_type":"state_change","task_id":"t1","job_id":"t1","session_id":"s","state":"running"}
+{"sequence":3,"timestamp":"2025-01-01T00:00:03Z","event_type":"error","task_id":"t1","job_id":"t1","session_id":"s","state":"failed","error_code":"E1"}
 `
 	if err := os.WriteFile(filepath.Join(taskDir, "events.jsonl"), []byte(events), 0o644); err != nil {
 		t.Fatal(err)
@@ -93,8 +93,8 @@ func TestFileStore_ListEvents_AfterCursor(t *testing.T) {
 	store := NewFileStore(".deepzora/tasks")
 	taskDir := filepath.Join(dir, ".deepzora", "tasks", "t1")
 	os.MkdirAll(taskDir, 0o755)
-	events := `{"sequence":1,"timestamp":"2025-01-01T00:00:01Z","event_type":"e","task_id":"t1","session_id":"s","state":"queued"}
-{"sequence":2,"timestamp":"2025-01-01T00:00:02Z","event_type":"e","task_id":"t1","session_id":"s","state":"running"}
+	events := `{"sequence":1,"timestamp":"2025-01-01T00:00:01Z","event_type":"e","task_id":"t1","job_id":"t1","session_id":"s","state":"queued"}
+{"sequence":2,"timestamp":"2025-01-01T00:00:02Z","event_type":"e","task_id":"t1","job_id":"t1","session_id":"s","state":"running"}
 `
 	os.WriteFile(filepath.Join(taskDir, "events.jsonl"), []byte(events), 0o644)
 
@@ -126,7 +126,7 @@ func TestFileStore_AcceptsCleanableProjectDir(t *testing.T) {
 		if err := os.MkdirAll(filepath.Clean(projectDir), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		snap := TaskSnapshot{
+		snap := TaskSnapshot{JobID: "task-1", RuntimeState: RuntimeStateUnknown,
 			SchemaVersion: 1, TaskID: "task-1", SessionID: "session-1",
 			State: TaskStateRunning, Version: 1, CreatedAt: now, UpdatedAt: now,
 		}
@@ -180,7 +180,7 @@ func TestFileStore_RejectsSymlinkTaskDirectory(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(root, "evil")); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
-	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "evil", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	snap := TaskSnapshot{JobID: "evil", RuntimeState: RuntimeStateUnknown, SchemaVersion: 1, TaskID: "evil", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	if err := NewFileStore(".deepzora/tasks").SaveTask(context.Background(), project, snap); err == nil {
 		t.Fatal("expected symlink task directory to be rejected")
 	}
@@ -195,7 +195,7 @@ func TestFileStore_RejectsSymlinkStoreParent(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(project, ".deepzora")); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
-	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	snap := TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown, SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	if err := NewFileStore(".deepzora/tasks").SaveTask(context.Background(), project, snap); err == nil {
 		t.Fatal("expected symlink store parent to be rejected")
 	}
@@ -223,7 +223,7 @@ func TestFileStore_DefaultProjectRejectsSymlinkStoreParent(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	snap := TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown, SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	if err := NewFileStore(".deepzora/tasks").SaveTask(context.Background(), "", snap); err == nil {
 		t.Fatal("expected default project scope to reject symlink store parent")
 	}
@@ -257,11 +257,11 @@ func TestFileStore_WritablePathsUsePrivateModes(t *testing.T) {
 	project := t.TempDir()
 	store := NewFileStore(".deepzora/tasks")
 	now := time.Now()
-	snap := TaskSnapshot{SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: now, UpdatedAt: now}
+	snap := TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown, SchemaVersion: 1, TaskID: "t1", SessionID: "s", Version: 1, State: TaskStateRunning, CreatedAt: now, UpdatedAt: now}
 	if err := store.SaveTask(context.Background(), project, snap); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.AppendAuditEvent(context.Background(), project, TaskEvent{TaskID: "t1", SessionID: "s", EventType: "state_change", State: TaskStateRunning, Timestamp: now}); err != nil {
+	if err := store.AppendAuditEvent(context.Background(), project, TaskEvent{JobID: "t1", TaskID: "t1", SessionID: "s", EventType: "state_change", State: TaskStateRunning, Timestamp: now}); err != nil {
 		t.Fatal(err)
 	}
 	if runtime.GOOS == "windows" {
@@ -290,7 +290,7 @@ func TestFileStore_SaveTask_VersionConflict(t *testing.T) {
 	store := NewFileStore(".deepzora/tasks")
 	ctx := context.Background()
 	now := time.Now().Truncate(time.Second)
-	v1 := TaskSnapshot{
+	v1 := TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1, CreatedAt: now, UpdatedAt: now,
 	}
@@ -324,7 +324,7 @@ func TestFileStore_SaveTask_ConcurrentCAS(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().Truncate(time.Second)
 	seed := NewFileStore(".deepzora/tasks")
-	v1 := TaskSnapshot{
+	v1 := TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1, CreatedAt: now, UpdatedAt: now,
 	}
@@ -387,7 +387,7 @@ func TestFileStore_SaveTask_CorruptSnapshotRejected(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(taskDir, "snapshot.json"), []byte("{not json"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	snap := TaskSnapshot{
+	snap := TaskSnapshot{JobID: "t1", RuntimeState: RuntimeStateUnknown,
 		SchemaVersion: 1, TaskID: "t1", SessionID: "s1",
 		State: TaskStateRunning, Version: 1, CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}

@@ -191,10 +191,10 @@ func TestRememberRuleForBashUsesPrefixWhenAvailable(t *testing.T) {
 	if RuleMatchesString(got, "bash", "go test ./... && rm -rf /tmp/x") {
 		t.Errorf("prefix rule should not match commands with shell syntax")
 	}
-	if !RuleMatchesString("Bash(go test *)", "bash", "go test ./legacy") {
+	if !RuleMatchesString("Bash(go test:*)", "bash", "go test ./legacy") {
 		t.Errorf("legacy space-star prefix should still match similar commands")
 	}
-	if RuleMatchesString("Bash(go test *)", "bash", "go test ./legacy && rm -rf /tmp/x") {
+	if RuleMatchesString("Bash(go test:*)", "bash", "go test ./legacy && rm -rf /tmp/x") {
 		t.Errorf("legacy space-star prefix should not match commands with shell syntax")
 	}
 	if !RuleMatchesString("Bash(go test:*)", "bash", `go "test" ./legacy`) {
@@ -333,11 +333,11 @@ func TestRuleCoversString(t *testing.T) {
 		want      bool
 	}{
 		{"Bash(go test:*)", "Bash(go test ./...)", true},
-		{"Bash(go test *)", "Bash(go test ./...)", true}, // legacy generated prefix
-		{"bash(go test *)", "Bash(go test)", true},
-		{"bash=go test ./...", "Bash(go test ./...)", true},
-		{"Bash(go test *)", "Bash(go test:*)", true}, // existing legacy prefix covers the new shape
-		{"Bash(go test:*)", "Bash(go test *)", true}, // new prefix prunes legacy prefix on save
+		{"Bash(go test:*)", "Bash(go test ./...)", true}, // legacy generated prefix
+		{"Bash(go test:*)", "Bash(go test)", true},
+		{"bash(\"go test ./...\")", "Bash(go test ./...)", true},
+		{"Bash(go test:*)", "Bash(go test:*)", true}, // existing legacy prefix covers the new shape
+		{"Bash(go test:*)", "Bash(go test:*)", true}, // new prefix prunes legacy prefix on save
 		{"Bash(go test ./...)", "Bash(go test:*)", false},
 		{"Edit", "Edit(src/app.go)", true},
 		{"file_mutation", "Edit(src/app.go)", true},

@@ -47,7 +47,7 @@ func desktopMCPHTTPServerWithTool(t *testing.T, serverName, toolName string) *ht
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2024-11-05",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": serverName, "version": "0"},
 			}
 		case "tools/list":
@@ -113,7 +113,7 @@ func TestDesktopMCPHelperProcess(t *testing.T) {
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2024-11-05",
+				"protocolVersion": "2026-07-28",
 				"serverInfo":      map[string]any{"name": "desktop-helper", "version": "0"},
 			}
 		case "tools/list":

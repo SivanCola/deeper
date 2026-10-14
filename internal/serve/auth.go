@@ -237,7 +237,7 @@ func (ag *authGate) middleware(next http.Handler) http.Handler {
 				return
 			}
 			// Let the inert shell trade its URL fragment for an HttpOnly cookie
-			// before API or SSE calls; query-token links use the legacy path below.
+			// before API or SSE calls.
 			if r.URL.Query().Get("token") == "" && tokenBootstrapPublicPath(r) {
 				next.ServeHTTP(w, r)
 				return
@@ -315,9 +315,7 @@ func (ag *authGate) handleTokenBootstrap(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// checkToken validates the token from a cookie or the legacy query parameter.
-// New links use a URL fragment and handleTokenBootstrap; query links remain
-// supported so previously shared URLs keep working.
+// checkToken validates the cookie or Authorization bearer established by bootstrap.
 func (ag *authGate) checkToken(w http.ResponseWriter, r *http.Request, next http.Handler) {
 	// 1. Cookie or Authorization bearer (fast path).
 	if ag.presentsLaunchToken(r) {
@@ -325,33 +323,6 @@ func (ag *authGate) checkToken(w http.ResponseWriter, r *http.Request, next http
 		return
 	}
 
-	// 2. Check query parameter.
-	if q := r.URL.Query().Get("token"); q != "" {
-		if subtle.ConstantTimeCompare([]byte(q), []byte(ag.token)) == 1 {
-			// Set a persistent cookie so future requests (including SSE) are
-			// authenticated without the token in the URL.
-			ag.setAuthCookie(w, r, &http.Cookie{
-				Name:     cookieToken,
-				Value:    ag.token,
-				Path:     "/",
-				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
-				MaxAge:   int(sessionDuration.Seconds()),
-			})
-			// Redirect to the same path without the token query parameter.
-			cleanURL := *r.URL
-			qry := cleanURL.Query()
-			qry.Del("token")
-			cleanURL.RawQuery = qry.Encode()
-			if cleanURL.RawQuery == "" {
-				cleanURL.RawQuery = ""
-			}
-			redirectToSafeTarget(w, r, cleanURL.RequestURI(), http.StatusFound)
-			return
-		}
-	}
-
-	// 3. Not authenticated.
 	ag.deny(w, r)
 }
 

@@ -160,10 +160,8 @@ and resources.
     discovery, registration, and token requests honor Deepzora's resolved
     network-proxy settings. Removing a declaration clears this state unless the
     effective fallback uses the same OAuth resource.
-  - `sse` — the legacy 2024-11-05 HTTP+SSE transport. A persistent GET stream
-    receives an announced relative POST endpoint, JSON-RPC responses, and server
-    messages. Cross-origin announced endpoints are rejected so static headers
-    cannot leak.
+  MCP requires protocol 2026-07-28 or newer. The retired HTTP+SSE transport
+  is rejected; Streamable HTTP may still stream responses as text/event-stream.
 - `${VAR}` / `${VAR:-default}` are expanded in `command`, `args`, `env`, `url`,
   and `headers` so secrets come from the environment, not the config file.
 - Lifecycle: `initialize` → `notifications/initialized` → `tools/list`;
@@ -427,15 +425,14 @@ func (p Policy) Decide(toolName string, readOnly bool, args json.RawMessage) Dec
   Bash and file mutation approvals use Claude Code-style families such as
   `Bash(npm run build)`, `Bash(npm run test:*)`, and `Edit(docs/**)`. Built-in
   file mutations include writes, edits, notebook edits, symbol/range deletes,
-  and `move_file` renames/moves. Legacy lowercase tool IDs still load for
-  compatibility. `Bash=<literal>` is the exact-command form: metacharacters in
-  the literal are ordinary characters and only the identical complete command
-  matches. The
+  and `move_file` renames/moves. `Bash("<literal>")` uses a JSON-quoted exact
+  subject: metacharacters remain ordinary characters and only the identical
+  complete command matches. The
   `:*` suffix marks a Bash command-prefix approval; generated prefix rules also
   reject later commands that introduce shell operators, so `Bash(go test:*)`
   does not cover `go test ./... && rm -rf tmp`.
-  Legacy `Bash(go test *)` prefix rules still load, but new rules are saved as
-  `Bash(go test:*)`. The subject is extracted generically from the call's JSON
+  `Tool=literal`, `Bash(go test *)`, and bare PowerShell cmdlet deny rules are
+  rejected. The subject is extracted generically from the call's JSON
   args by a small set of
   known keys — `command` (bash), `path` / `file_path` (file tools), `pattern`
   (grep/glob) — so tools need not change. A rule whose subject the args don't

@@ -141,6 +141,10 @@ func TestForkedSessionLocatorRejectsCatalogPseudoPaths(t *testing.T) {
 	}
 }
 
+func (c *forkTargetsStubController) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(c.RuntimeStatus())
+}
+
 func TestForkTargetsForTabMapsTargetsForReadOnlyTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
 

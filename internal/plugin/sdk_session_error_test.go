@@ -65,7 +65,7 @@ func TestHTTPTransportApplicationSessionErrorDoesNotReplayToolCall(t *testing.T)
 			initializeCount.Add(1)
 			w.Header().Set("Mcp-Session-Id", "application-session")
 			writeRawHTTPRPCResult(w, req.ID, map[string]any{
-				"protocolVersion": testLegacyProtocolVersion,
+				"protocolVersion": testCurrentProtocolVersion,
 				"serverInfo":      map[string]any{"name": "application-error", "version": "1"},
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 			})

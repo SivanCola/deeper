@@ -46,24 +46,12 @@ function titledOptions(raw: unknown, keyword: "oneOf" | "anyOf"): StructuredFiel
   return options.length === choices.length && options.length > 0 ? options : undefined;
 }
 
-function legacyOptions(raw: Record<string, unknown>): StructuredField["options"] {
-  if (!Array.isArray(raw.enum) || raw.enum.length === 0 || !raw.enum.every((value) => typeof value === "string")) {
-    return undefined;
-  }
-  const names = Array.isArray(raw.enumNames) ? raw.enumNames : [];
-  return raw.enum.map((value, index) => ({
-    value: value as string,
-    label: typeof names[index] === "string" && names[index] ? String(names[index]) : (value as string),
-  }));
-}
-
 function optionalNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 // MCP form elicitation deliberately supports a flat, bounded subset of JSON
-// Schema. This accepts both the 2025-06-18 enumNames form and the 2025-11-25
-// oneOf/anyOf select forms while failing closed for nested or unknown fields.
+// Schema. Select fields use oneOf/anyOf const/title entries.
 export function parseStructuredSchema(schema: unknown): StructuredSchemaResult {
   if (schema === undefined || schema === null) return { fields: [], unsupported: false };
   if (typeof schema !== "object" || Array.isArray(schema)) return { fields: [], unsupported: true };
@@ -90,14 +78,17 @@ export function parseStructuredSchema(schema: unknown): StructuredSchemaResult {
       required: required.has(key),
       description: typeof prop.description === "string" ? prop.description : undefined,
     };
-    const singleOptions = titledOptions(prop, "oneOf") ?? legacyOptions(prop);
+    const singleOptions = titledOptions(prop, "oneOf");
     const itemSchema = prop.items && typeof prop.items === "object" && !Array.isArray(prop.items)
       ? (prop.items as Record<string, unknown>)
       : undefined;
-    const multiOptions = itemSchema ? titledOptions(itemSchema, "anyOf") ?? legacyOptions(itemSchema) : undefined;
+    const multiOptions = itemSchema ? titledOptions(itemSchema, "anyOf") : undefined;
 
     let kind: StructuredField["kind"];
-    if (prop.type === "array" && multiOptions) kind = "multi-enum";
+    if ("enum" in prop || "enumNames" in prop || (itemSchema && ("enum" in itemSchema || "enumNames" in itemSchema))) {
+      kind = "unsupported";
+      unsupported = true;
+    } else if (prop.type === "array" && multiOptions) kind = "multi-enum";
     else if (singleOptions) kind = "enum";
     else if (prop.type === "string" || prop.type === "number" || prop.type === "integer" || prop.type === "boolean") {
       kind = prop.type;

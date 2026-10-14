@@ -20,8 +20,6 @@ type TaskState string
 // RuntimeState reports whether a task still has live execution behind its
 // persisted lifecycle state. It is intentionally independent from TaskState:
 // for example, a requeued task is queued but its previous runtime has exited.
-// The empty value is accepted for snapshots written before this field existed
-// and is interpreted as unknown.
 type RuntimeState string
 
 const (
@@ -46,19 +44,9 @@ const (
 	maxErrorSummaryLen = 1024
 )
 
-// Effective returns unknown for legacy snapshots and events that predate the
-// runtime_state field.
-func (s RuntimeState) Effective() RuntimeState {
-	if s == "" {
-		return RuntimeStateUnknown
-	}
-	return s
-}
-
-// IsKnown reports whether s is one of the well-known runtime states. The empty
-// legacy value is treated as the known unknown state.
+// IsKnown reports whether s is one of the current runtime states.
 func (s RuntimeState) IsKnown() bool {
-	switch s.Effective() {
+	switch s {
 	case RuntimeStateUnknown, RuntimeStateAlive, RuntimeStateExited:
 		return true
 	default:
@@ -70,7 +58,7 @@ func (s RuntimeState) IsKnown() bool {
 // expired. It is deliberately pure; callers decide whether to persist the
 // reconciled value.
 func reconcileRuntime(snap *TaskSnapshot, now time.Time) {
-	if snap == nil || snap.RuntimeState.Effective() != RuntimeStateAlive || snap.RuntimeLeaseUntil.IsZero() {
+	if snap == nil || snap.RuntimeState != RuntimeStateAlive || snap.RuntimeLeaseUntil.IsZero() {
 		return
 	}
 	if now.Before(snap.RuntimeLeaseUntil) {
@@ -161,12 +149,12 @@ type TaskSnapshot struct {
 	// JobID is the jobs.Manager-local runtime identifier. TaskID is the
 	// project-wide monitor identity and may be namespaced by session, so runtime
 	// control must not pass TaskID directly to jobs.Manager.
-	JobID string `json:"job_id,omitempty"`
+	JobID string `json:"job_id"`
 	// SessionID is the session the task was created in; it may be empty when
 	// the recorder attached before a session path was resolved.
 	SessionID         string       `json:"session_id"`
 	State             TaskState    `json:"state"`
-	RuntimeState      RuntimeState `json:"runtime_state,omitempty"`
+	RuntimeState      RuntimeState `json:"runtime_state"`
 	RuntimeLeaseUntil time.Time    `json:"runtime_lease_until,omitempty"`
 	// RuntimeOwnerID identifies the recorder generation that owns the live
 	// runtime lease. It prevents a delayed heartbeat from an older controller
@@ -185,6 +173,9 @@ func (ts TaskSnapshot) Validate() error {
 	if ts.TaskID == "" {
 		return fmt.Errorf("TaskSnapshot.TaskID is required")
 	}
+	if ts.JobID == "" {
+		return fmt.Errorf("TaskSnapshot.JobID is required")
+	}
 	if ts.State == "" {
 		return fmt.Errorf("TaskSnapshot.State is required")
 	}
@@ -198,8 +189,8 @@ func (ts TaskSnapshot) Validate() error {
 		return fmt.Errorf("TaskSnapshot.UpdatedAt (%v) is before CreatedAt (%v)",
 			ts.UpdatedAt, ts.CreatedAt)
 	}
-	if ts.SchemaVersion <= 0 {
-		return fmt.Errorf("TaskSnapshot.SchemaVersion must be positive, got %d",
+	if ts.SchemaVersion != 1 {
+		return fmt.Errorf("TaskSnapshot.SchemaVersion must be 1, got %d",
 			ts.SchemaVersion)
 	}
 	if len(ts.TaskID) > maxFieldLen {
@@ -216,6 +207,9 @@ func (ts TaskSnapshot) Validate() error {
 	}
 	if len(ts.RuntimeState) > maxFieldLen {
 		return fmt.Errorf("TaskSnapshot.RuntimeState exceeds max length %d", maxFieldLen)
+	}
+	if !ts.RuntimeState.IsKnown() {
+		return fmt.Errorf("unsupported TaskSnapshot.RuntimeState %q", ts.RuntimeState)
 	}
 	if len(ts.RuntimeOwnerID) > maxFieldLen {
 		return fmt.Errorf("TaskSnapshot.RuntimeOwnerID exceeds max length %d", maxFieldLen)
@@ -236,6 +230,7 @@ type TaskEvent struct {
 	Timestamp    time.Time    `json:"timestamp"`
 	EventType    string       `json:"event_type"`
 	TaskID       string       `json:"task_id"`
+	JobID        string       `json:"job_id"`
 	SessionID    string       `json:"session_id"`
 	State        TaskState    `json:"state"`
 	RuntimeState RuntimeState `json:"runtime_state,omitempty"`
@@ -250,6 +245,9 @@ func (te TaskEvent) Validate() error {
 	}
 	if te.TaskID == "" {
 		return fmt.Errorf("TaskEvent.TaskID is required")
+	}
+	if te.JobID == "" {
+		return fmt.Errorf("TaskEvent.JobID is required")
 	}
 	if te.State == "" {
 		return fmt.Errorf("TaskEvent.State is required")

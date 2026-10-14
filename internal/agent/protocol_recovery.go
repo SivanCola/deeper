@@ -254,7 +254,7 @@ func (s *Session) prepareProtocolRecord(id string, raw json.RawMessage) provider
 			return message
 		}
 	}
-	return provider.Message{ID: NewMessageID(), Role: provider.RoleTool, Name: provider.LocalOnlyToolName, ToolCallID: provider.LocalOnlyToolID, LocalOnly: true, ProtocolRecovery: append(json.RawMessage(nil), raw...)}
+	return provider.Message{ID: NewMessageID(), Role: provider.RoleTool, Name: "", ToolCallID: "", LocalOnly: true, ProtocolRecovery: append(json.RawMessage(nil), raw...)}
 }
 
 func (s *Session) applyProtocolRecord(message provider.Message) {

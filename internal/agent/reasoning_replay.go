@@ -189,8 +189,8 @@ func (a *Agent) ensureUnreplayableHistoryRecovery() {
 		}
 	}
 	_ = a.appendCommittedMessages(context.Background(), "reasoning-replay-recovery", provider.Message{
-		Role: provider.RoleTool, ToolCallID: provider.LocalOnlyToolID,
-		Name: provider.LocalOnlyToolName, LocalOnly: true, InterruptedTurn: recovery,
+		Role: provider.RoleTool, ToolCallID: "",
+		Name: "", LocalOnly: true, InterruptedTurn: recovery,
 	})
 	event.RecordProtocolRecovery(a.svc.sink, event.ProtocolRecoveryAudit{Kind: event.ProtocolRecoveryHistoryRepaired})
 }

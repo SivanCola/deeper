@@ -275,7 +275,7 @@ func explicitReaderMCPServer(t *testing.T, schemaDrift *atomic.Bool, toolCalls *
 		var result any
 		switch request.Method {
 		case "initialize":
-			result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "explicit-reader", "version": "1"}}
+			result = map[string]any{"protocolVersion": "2026-07-28", "serverInfo": map[string]any{"name": "explicit-reader", "version": "1"}}
 		case "tools/list":
 			schemaType := "string"
 			if schemaDrift != nil && schemaDrift.Load() {
@@ -313,7 +313,7 @@ func imageMCPServer(t *testing.T, toolCalls *atomic.Int32, payload string) *http
 		var result any
 		switch request.Method {
 		case "initialize":
-			result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "image", "version": "1"}}
+			result = map[string]any{"protocolVersion": "2026-07-28", "serverInfo": map[string]any{"name": "image", "version": "1"}}
 		case "tools/list":
 			result = map[string]any{"tools": []map[string]any{{
 				"name": "screenshot", "description": "capture screenshot",
@@ -349,7 +349,7 @@ func blockingReaderMCPServer(t *testing.T, callStarted chan<- struct{}, releaseC
 		var result any
 		switch request.Method {
 		case "initialize":
-			result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "blocking-reader", "version": "1"}}
+			result = map[string]any{"protocolVersion": "2026-07-28", "serverInfo": map[string]any{"name": "blocking-reader", "version": "1"}}
 		case "tools/list":
 			result = map[string]any{"tools": []map[string]any{{
 				"name": "search", "description": "search",
@@ -392,7 +392,7 @@ func opaqueMCPServer(t *testing.T, toolCalls *atomic.Int32) *httptest.Server {
 		var result any
 		switch request.Method {
 		case "initialize":
-			result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "opaque", "version": "1"}}
+			result = map[string]any{"protocolVersion": "2026-07-28", "serverInfo": map[string]any{"name": "opaque", "version": "1"}}
 		case "tools/list":
 			result = map[string]any{"tools": []map[string]any{{
 				"name": "query", "description": "query without MCP safety hints",

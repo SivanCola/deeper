@@ -10,7 +10,7 @@ import (
 )
 
 func snapshot(id, session string, version uint64, updated time.Time) taskmonitor.TaskSnapshot {
-	return taskmonitor.TaskSnapshot{SchemaVersion: 1, TaskID: id, SessionID: session, State: taskmonitor.TaskStateRunning,
+	return taskmonitor.TaskSnapshot{JobID: id, SchemaVersion: 1, TaskID: id, SessionID: session, State: taskmonitor.TaskStateRunning,
 		RuntimeState: taskmonitor.RuntimeStateAlive, RuntimeLeaseUntil: updated.Add(time.Hour), Version: version,
 		CreatedAt: updated.Add(-time.Minute), UpdatedAt: updated}
 }
@@ -33,7 +33,7 @@ func TestObservedStoreIndexesSnapshotsAndEvents(t *testing.T) {
 	if err := store.SaveTask(ctx, projectRoot, snapshot("task-1", "session-1", 1, now)); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.AppendAuditEvent(ctx, projectRoot, taskmonitor.TaskEvent{Timestamp: now, EventType: "state_change", TaskID: "task-1", SessionID: "session-1", State: taskmonitor.TaskStateRunning}); err != nil {
+	if err := store.AppendAuditEvent(ctx, projectRoot, taskmonitor.TaskEvent{JobID: "task-1", Timestamp: now, EventType: "state_change", TaskID: "task-1", SessionID: "session-1", State: taskmonitor.TaskStateRunning}); err != nil {
 		t.Fatal(err)
 	}
 	flushCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -49,7 +49,7 @@ func TestObservedStoreIndexesSnapshotsAndEvents(t *testing.T) {
 	if err != nil || len(events.Items) != 1 || events.NextSequence != 1 {
 		t.Fatalf("events=%#v err=%v", events, err)
 	}
-	if err := store.AppendAuditEvent(ctx, projectRoot, taskmonitor.TaskEvent{Timestamp: now.Add(time.Second), EventType: "state_change",
+	if err := store.AppendAuditEvent(ctx, projectRoot, taskmonitor.TaskEvent{JobID: "task-1", Timestamp: now.Add(time.Second), EventType: "state_change",
 		TaskID: "task-1", SessionID: "session-1", State: taskmonitor.TaskStateSucceeded}); err != nil {
 		t.Fatal(err)
 	}

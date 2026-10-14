@@ -12,7 +12,14 @@
       "role": "assistant",
       "content": "ASSISTANT REPLY",
       "reasoning_content": "THINKING",
-      "reasoning_signature": "sig",
+      "reasoning_state": "complete",
+      "thinking_blocks": [
+        {
+          "type": "thinking",
+          "thinking": "THINKING",
+          "signature": "sig"
+        }
+      ],
       "tool_calls": [
         {
           "id": "call_1",

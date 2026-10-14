@@ -226,6 +226,6 @@ func TestNativeExplicitFixtureInspection(t *testing.T) {
 		t.Fatal("isolated fixture shell was not identified")
 	}
 	for _, p := range list {
-		t.Logf("pid=%d legacyProfile=%q status=%+v", p.pid, p.legacyProfile, p.status)
+		t.Logf("pid=%d status=%+v", p.pid, p.status)
 	}
 }

@@ -1,6 +1,9 @@
 package provider
 
-import "slices"
+import (
+	"deepzora/internal/attachment"
+	"slices"
+)
 
 // Two copies of a transcript are derived from the stored one: the bytes a
 // provider receives, and the projection compaction writes back. They differ in
@@ -20,6 +23,9 @@ func ProjectionMessages(msgs []Message) []Message { return projectMessages(msgs,
 
 func messagesNeedProjection(msgs []Message, keepExecution, keepOrigin bool) bool {
 	for _, m := range msgs {
+		if !keepExecution && len(m.ImageInputs) > 0 {
+			return true
+		}
 		if m.InterruptedTurn != nil || slices.ContainsFunc(m.ToolCalls, func(c ToolCall) bool { return c.Recovery != nil }) || m.ReadPause != nil || m.ReadCompletion != nil || len(m.ToolDiagnostic) > 0 {
 			return true
 		}
@@ -63,6 +69,19 @@ func projectMessages(msgs []Message, keepExecution, keepOrigin bool) []Message {
 		// Apps presentation stays local; it must never change provider bytes.
 		candidate.MCPApp = nil
 		if !keepExecution {
+			// Standalone Agent messages can contain current URL/files inputs.
+			// Content references are resolved by the controller before this boundary.
+			if len(candidate.Images) == 0 && len(candidate.ImageInputs) > 0 && !slices.ContainsFunc(candidate.ImageInputs, func(input attachment.ImageInput) bool { return input.Kind == attachment.KindAttachment }) {
+				for _, input := range candidate.ImageInputs {
+					switch input.Kind {
+					case attachment.KindURL:
+						candidate.Images = append(candidate.Images, input.URL)
+					case attachment.KindFiles:
+						candidate.Images = append(candidate.Images, input.FilesID)
+					}
+				}
+				candidate.ImageInputs = nil
+			}
 			// Local shell metadata must never enter provider request bytes.
 			candidate.ToolExecution = nil
 			candidate.ToolRunState = ""

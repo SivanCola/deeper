@@ -73,7 +73,7 @@ test("a replaced source retires the stale preparation before a fresh window", as
 test("native anchors carry the outline cut only after capability negotiation", async () => {
   let navigation = false;
   const requests: Record<string, unknown>[] = [];
-  commands.BeginSessionHistoryReadForTab = () => ({ ...handle("native"), storageBackend: "legacy",
+  commands.BeginSessionHistoryReadForTab = () => ({ ...handle("native"), storageBackend: "agent-dag",
     capabilities: ["history-read-binding-v1", ...(navigation ? ["history-native-navigation-v1"] : [])] });
   commands.ReadSessionHistorySlice = (_id: string, req: Record<string, unknown>) => {
     requests.push(req);
@@ -96,7 +96,7 @@ test("native anchors carry the outline cut only after capability negotiation", a
 
 test("bound search negotiates native support and fences a late reply after navigation", async () => {
   let enabled = false, reads = 0;
-  commands.BeginSessionHistoryReadForTab = () => ({ ...handle("search"), storageBackend: "legacy",
+  commands.BeginSessionHistoryReadForTab = () => ({ ...handle("search"), storageBackend: "agent-dag",
     capabilities: ["history-read-binding-v1", ...(enabled ? ["history-native-search-v1"] : [])] });
   const result = { hits: [{ messageId: "old", preview: "old", position: 1, role: "user", eventSequence: 1 }],
     status: "ready", snapshotSequence: 1, coverageSequence: 1, hasMore: false };

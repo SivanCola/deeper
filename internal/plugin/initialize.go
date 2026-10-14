@@ -62,8 +62,8 @@ func parseServerExtensions(raw json.RawMessage) map[string]bool {
 	return extensions
 }
 
-// elicitationUsable reports that a live negotiated session can deliver either
-// legacy push-style or 2026 multi-round-trip elicitation to the client handler.
+// elicitationUsable reports that a live negotiated session can deliver
+// request-scoped multi-round-trip elicitation to the client handler.
 func (c *Client) elicitationUsable() bool {
 	return c.protocolVersion != ""
 }

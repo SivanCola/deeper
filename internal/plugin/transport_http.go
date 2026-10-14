@@ -221,15 +221,6 @@ func (t *sdkSessionTransport) newEndpoint(ctx context.Context) (sdkEndpoint, err
 			},
 			close: client.CloseIdleConnections,
 		}, nil
-	case "sse":
-		client, err := newMCPHTTPClient(ctx, t.spec)
-		if err != nil {
-			return sdkEndpoint{}, err
-		}
-		return sdkEndpoint{
-			transport: &mcpsdk.SSEClientTransport{Endpoint: t.spec.URL, HTTPClient: client},
-			close:     client.CloseIdleConnections,
-		}, nil
 	default:
 		return sdkEndpoint{}, fmt.Errorf("unknown MCP transport %q", t.spec.Type)
 	}

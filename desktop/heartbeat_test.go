@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"deepzora/internal/event"
 	"encoding/json"
 	"errors"
 	"os"
@@ -21,45 +22,6 @@ func TestHeartbeatConfigPathUsesDeepzoraUserStateDir(t *testing.T) {
 
 	if got := engine.configPath(); got != want {
 		t.Fatalf("configPath = %q, want %q", got, want)
-	}
-}
-
-func TestHeartbeatConfigRevisionKeepsLegacyFilesReadable(t *testing.T) {
-	isolateDesktopUserDirs(t)
-	engine := &HeartbeatEngine{}
-	legacy := `{"tasks":[{"id":"legacy","title":"Legacy","interval":"1h","enabled":false}]}`
-	if err := os.MkdirAll(filepath.Dir(engine.configPath()), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(engine.configPath(), []byte(legacy), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	tasks := engine.ReloadTasks()
-	if len(tasks) != 1 || tasks[0].ID != "legacy" {
-		t.Fatalf("legacy tasks = %+v, want one readable task", tasks)
-	}
-	if engine.cfgRevision != 0 {
-		t.Fatalf("legacy revision = %d, want zero", engine.cfgRevision)
-	}
-	if err := engine.ReplaceTasks(tasks); err != nil {
-		t.Fatalf("upgrade save: %v", err)
-	}
-	data, err := os.ReadFile(engine.configPath())
-	if err != nil {
-		t.Fatal(err)
-	}
-	var cfg heartbeatConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		t.Fatal(err)
-	}
-	if cfg.Revision != 1 || len(cfg.Tasks) != 1 {
-		t.Fatalf("upgraded config = %+v, want revision 1 with legacy task", cfg)
-	}
-	var previousReader struct {
-		Tasks []HeartbeatTask `json:"tasks"`
-	}
-	if err := json.Unmarshal(data, &previousReader); err != nil || len(previousReader.Tasks) != 1 {
-		t.Fatalf("previous reader could not ignore revision: tasks=%+v err=%v", previousReader.Tasks, err)
 	}
 }
 
@@ -96,7 +58,7 @@ func TestHeartbeatReplaceConfigRejectsSameRevisionExternalEditByETag(t *testing.
 		t.Fatal(err)
 	}
 	loaded := engine.ReloadConfig()
-	external := heartbeatConfig{Revision: loaded.Revision, Tasks: []HeartbeatTask{{ID: "same", Title: "edited externally", Interval: "2h", Enabled: false}}}
+	external := heartbeatConfig{SchemaVersion: heartbeatSchemaVersion, Revision: loaded.Revision, Tasks: []HeartbeatTask{{ID: "same", Title: "edited externally", Interval: "2h", Enabled: false}}}
 	data, err := json.MarshalIndent(external, "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -121,7 +83,7 @@ func TestHeartbeatReplaceConfigRejectsSameRevisionExternalEditByETag(t *testing.
 func TestHeartbeatLoadTasksDecodesGB18030Config(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	engine := &HeartbeatEngine{}
-	body := `{"tasks":[{"id":"daily","title":"每日检查","prompt":"总结中文状态","interval":"1h","enabled":true}]}`
+	body := `{"schemaVersion":2,"revision":1,"tasks":[{"id":"daily","title":"每日检查","prompt":"总结中文状态","interval":"1h","enabled":true}]}`
 	if err := os.MkdirAll(filepath.Dir(engine.configPath()), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -781,4 +743,12 @@ func TestHeartbeatExternalDeletionDoesNotResurrectTasks(t *testing.T) {
 	if _, err := os.Stat(engine.configPath()); !os.IsNotExist(err) {
 		t.Fatalf("deleted heartbeat config was recreated, stat err=%v", err)
 	}
+}
+
+func (s heartbeatStatusStub) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(s.RuntimeStatus())
+}
+
+func (s *heartbeatExecuteTaskCtrlStub) RuntimeStateSnapshot() event.RuntimeStateSnapshot {
+	return runtimeSnapshotForTest(s.RuntimeStatus())
 }

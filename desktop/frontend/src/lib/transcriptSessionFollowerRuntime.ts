@@ -240,9 +240,9 @@ export class TranscriptSessionFollowerRuntime {
     this.observeSubmissions();
     const page = response.history;
     this.releaseNativeHistory?.();
-    this.releaseNativeHistory = response.storageBackend === "legacy"
+    this.releaseNativeHistory = response.storageBackend === "agent-dag"
       ? bindNativeTranscriptHistory(this.tabId, snapshot as unknown as TranscriptSnapshot, this.remote) : undefined;
-    const nativeWindow = response.storageBackend === "legacy" ? nativeSnapshotWindow(snapshot as unknown as TranscriptSnapshot) : undefined;
+    const nativeWindow = response.storageBackend === "agent-dag" ? nativeSnapshotWindow(snapshot as unknown as TranscriptSnapshot) : undefined;
     this.turn = page?.totalTurns ?? snapshot.totalTurns;
     this.orders.clear();
     const entries = nativeWindow?.entries ?? entriesFor(page?.messages ?? [], page?.snapshotSequence ?? snapshot.coveredThroughSeq);

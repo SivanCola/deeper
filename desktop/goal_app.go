@@ -6,8 +6,6 @@ import (
 	"deepzora/internal/control"
 )
 
-func (a *App) SetGoal(goal string) error { return a.SetGoalForTab("", goal) }
-
 // SetGoalForTab activates or clears a Goal only after the session accepts it.
 func (a *App) SetGoalForTab(tabID, goal string) error {
 	tab := a.tabByID(tabID)
