@@ -22,6 +22,7 @@ required=(
 	scripts/reconcile-release-publication.sh
 	scripts/release-publication-ledger.mjs
 	scripts/check-release-public-access.sh
+	scripts/github-release-bootstrap.mjs
 	scripts/fetch-stable-release-manifest.sh
 	scripts/release-manifest-fetch/main.go
 	scripts/resolve-release-candidate.mjs
