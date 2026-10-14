@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -430,11 +429,14 @@ func TestCloseTabWaitsForPendingTurnAdmission(t *testing.T) {
 type recordingTabShellController struct {
 	*control.Controller
 	commands []string
+	cancels  int
 }
 
 func (c *recordingTabShellController) RunShell(command string) {
 	c.commands = append(c.commands, command)
 }
+
+func (c *recordingTabShellController) Cancel() { c.cancels++ }
 
 func TestRunShellForTabRoutesToRequestedTab(t *testing.T) {
 	isolateDesktopUserDirs(t)
@@ -467,30 +469,16 @@ func TestRunShellForTabRoutesToRequestedTab(t *testing.T) {
 }
 
 func TestRunShellForTabStaysBoundDuringRapidProjectTabSwitching(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping shell cancellation integration test in short mode")
-	}
-
 	isolateDesktopUserDirs(t)
 
 	projectA := t.TempDir()
 	projectB := t.TempDir()
 	globalRoot := t.TempDir()
-	shellEvents := make(chan event.Event, 64)
-	projectEvents := make(chan event.Event, 64)
-	globalEvents := make(chan event.Event, 64)
-	shellCtrl := control.New(control.Options{
-		Sink:          event.FuncSink(func(e event.Event) { shellEvents <- e }),
-		WorkspaceRoot: projectA,
-	})
-	projectCtrl := control.New(control.Options{
-		Sink:          event.FuncSink(func(e event.Event) { projectEvents <- e }),
-		WorkspaceRoot: projectB,
-	})
-	globalCtrl := control.New(control.Options{
-		Sink:          event.FuncSink(func(e event.Event) { globalEvents <- e }),
-		WorkspaceRoot: globalRoot,
-	})
+	// Exercise tab ownership independently of host shell startup and filesystem
+	// latency. Real shell execution/cancellation is covered in internal/control.
+	shellCtrl := &recordingTabShellController{Controller: control.New(control.Options{WorkspaceRoot: projectA})}
+	projectCtrl := &recordingTabShellController{Controller: control.New(control.Options{WorkspaceRoot: projectB})}
+	globalCtrl := &recordingTabShellController{Controller: control.New(control.Options{WorkspaceRoot: globalRoot})}
 	defer shellCtrl.Close()
 	defer projectCtrl.Close()
 	defer globalCtrl.Close()
@@ -505,12 +493,10 @@ func TestRunShellForTabStaysBoundDuringRapidProjectTabSwitching(t *testing.T) {
 		activeTabID: "shell",
 	}
 
-	marker := "shell-route-marker.txt"
-	if err := app.RunShellForTab("shell", longRunningMarkerCommand(marker)); err != nil {
+	command := "echo shell-route-test"
+	if err := app.RunShellForTab("shell", command); err != nil {
 		t.Fatalf("RunShellForTab: %v", err)
 	}
-	waitForShellDispatch(t, shellEvents, marker)
-	waitForFile(t, filepath.Join(projectA, marker), "shell")
 
 	for range 8 {
 		if err := app.SetActiveTab("project-b"); err != nil {
@@ -528,31 +514,14 @@ func TestRunShellForTabStaysBoundDuringRapidProjectTabSwitching(t *testing.T) {
 	}
 	app.CancelTab("shell")
 
-	cancelled := false
-	deadline := time.After(15 * time.Second)
-	for {
-		select {
-		case e := <-shellEvents:
-			if e.Kind == event.ToolResult && e.Tool.Name == "bash" {
-				cancelled = e.Tool.Err != ""
-			}
-			if e.Kind == event.TurnDone {
-				if !cancelled {
-					t.Fatal("shell tab finished without a cancelled shell result")
-				}
-				if _, err := os.Stat(filepath.Join(projectB, marker)); !errors.Is(err, os.ErrNotExist) {
-					t.Fatalf("shell marker appeared in project-b workspace: %v", err)
-				}
-				if got := activeTabIDForTest(app); got != "project-b" {
-					t.Fatalf("active tab = %q, want project-b after background shell cancel", got)
-				}
-				assertNoEvents(t, projectEvents, "project-b")
-				assertNoEvents(t, globalEvents, "global")
-				return
-			}
-		case <-deadline:
-			t.Fatal("timed out waiting for shell tab cancellation")
-		}
+	if len(shellCtrl.commands) != 1 || shellCtrl.commands[0] != command || shellCtrl.cancels != 1 {
+		t.Fatalf("shell tab commands = %q, cancels = %d, want the exact command and one cancellation", shellCtrl.commands, shellCtrl.cancels)
+	}
+	if len(projectCtrl.commands) != 0 || projectCtrl.cancels != 0 || len(globalCtrl.commands) != 0 || globalCtrl.cancels != 0 {
+		t.Fatal("shell execution or cancellation was routed to another tab")
+	}
+	if got := activeTabIDForTest(app); got != "project-b" {
+		t.Fatalf("active tab = %q, want project-b after background shell cancel", got)
 	}
 }
 

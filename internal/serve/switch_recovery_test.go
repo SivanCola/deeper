@@ -50,6 +50,7 @@ func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 		Sink:       bc,
 	})
 	old.EnableInteractiveApproval()
+	t.Cleanup(func() { old.Close(); <-old.Closed() })
 
 	askCh := make(chan event.Ask, 1)
 	s := &Server{ctrl: old, bc: bc}
@@ -75,24 +76,44 @@ func TestSwitchModelKeepsAskInteractive(t *testing.T) {
 	}
 
 	newCtrl := s.ctl().(*control.Controller)
+	t.Cleanup(func() { newCtrl.Close(); <-newCtrl.Closed() })
+	// This integration crosses durable session and tool-receipt publication.
+	// Bound the complete round trip, rather than asserting a two-second disk
+	// latency. Cancellation also releases an unanswered ask on test failure.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	runDone := make(chan error, 1)
-	go func() { runDone <- newCtrl.Executor().Run(context.Background(), "ask the user") }()
+	finished := false
+	defer func() {
+		cancel()
+		if !finished {
+			select {
+			case <-runDone:
+			case <-time.After(30 * time.Second):
+				t.Error("cancelled ask run did not finish")
+			}
+		}
+	}()
+	go func() { runDone <- newCtrl.Executor().Run(ctx, "ask the user") }()
 
 	select {
 	case ask := <-askCh:
-		newCtrl.AnswerQuestion(ask.ID, []event.AskAnswer{{QuestionID: "q1", Selected: []string{"A"}}})
+		if err := newCtrl.AnswerQuestionChecked(ask.ID, []event.AskAnswer{{QuestionID: "q1", Selected: []string{"A"}}}); err != nil {
+			t.Fatalf("answer ask_request: %v", err)
+		}
 	case err := <-runDone:
+		finished = true
 		t.Fatalf("ask tool returned without an ask_request after model switch: %v", err)
-	case <-time.After(2 * time.Second):
+	case <-ctx.Done():
 		t.Fatal("ask tool did not emit ask_request after model switch")
 	}
 
 	select {
 	case err := <-runDone:
+		finished = true
 		if err != nil {
 			t.Fatalf("run after answering ask_request: %v", err)
 		}
-	case <-time.After(2 * time.Second):
+	case <-ctx.Done():
 		t.Fatal("run stayed blocked after answering ask_request")
 	}
 }
