@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { createCoreLedger, createPointerLedger, mergeLedgers, npmPackageNames } from "./release-publication-ledger.mjs";
 
 const sha = "a".repeat(40);
-function fixture(t) {
+function fixture(t, parentEnv = process.env) {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), "release-reconcile-")));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const scripts = path.join(root, "scripts"), bin = path.join(root, "bin");
@@ -46,7 +46,7 @@ else if(args[0]==='release' && args[1]==='download') {
   if(path.basename(args.at(-1))!=='release-event.json') process.exit(3);
 } else process.exit(4);
 `, { mode: 0o755 });
-  const env = { ...process.env, FIXTURE: root, PATH: `${bin}:${process.env.PATH}`, GITHUB_ACTIONS: "true", GITHUB_REPOSITORY: "SivanCola/deepzora", GITHUB_REF: "refs/heads/main", GITHUB_REF_PROTECTED: "true", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2", RELEASE_REPOSITORY: "SivanCola/deepzora", RELEASE_VERSION: "1.2.3", RELEASE_OPERATION: "recover", RELEASE_EXPECTED_SHA: sha, RELEASE_LEDGER_OUTPUT: path.join(root, "ledger.json") };
+  const env = { ...parentEnv, DEEPZORA_RELEASE_BOOTSTRAP_CHECK: "false", FIXTURE: root, PATH: `${bin}:${process.env.PATH}`, GITHUB_ACTIONS: "true", GITHUB_REPOSITORY: "SivanCola/deepzora", GITHUB_REF: "refs/heads/main", GITHUB_REF_PROTECTED: "true", GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2", RELEASE_REPOSITORY: "SivanCola/deepzora", RELEASE_VERSION: "1.2.3", RELEASE_OPERATION: "recover", RELEASE_EXPECTED_SHA: sha, RELEASE_LEDGER_OUTPUT: path.join(root, "ledger.json") };
   return { root, scripts, env,
     run: extra => spawnSync("bash", [path.join(scripts, "reconcile-release-publication.sh")], { env: { ...env, ...extra }, encoding: "utf8" }),
     ledger: () => JSON.parse(readFileSync(env.RELEASE_LEDGER_OUTPUT, "utf8")),
@@ -107,7 +107,14 @@ test("real public verifier rejects tag drift before inspecting any packages", t 
   assert.equal(f.calls(), "");
 });
 
-test("the 1.x release control plane neither deploys nor verifies the website", () => {
+test("offline public access fixture does not inherit live bootstrap mode", t => {
+  const f = fixture(t, { ...process.env, DEEPZORA_RELEASE_BOOTSTRAP_CHECK: "true" });
+  const result = spawnSync("bash", [path.join(f.scripts, "check-release-public-access.sh"), "1.2.3"], { env: f.env, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /public Stable manifest preflight: PASS/);
+});
+
+test("the Deepzora release control plane neither deploys nor verifies the website", () => {
   const promote = readFileSync(".github/workflows/release-promote.yml", "utf8");
   assert.match(promote, /group: stable-release-publication/);
   assert.match(promote, /bash scripts\/reconcile-release-publication.sh/);
